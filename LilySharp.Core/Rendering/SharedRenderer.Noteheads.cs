@@ -449,7 +449,15 @@ internal static partial class SharedRenderer
         if (note.Accidental != null)
         {
             double accScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
-            if (AccidentalColumn.CalculateSinglePosition(note, accScale) is { } al)
+            // ⚠️ THE CUE ISLAND STILL READS THE 20 DESIGN AT A ROUNDED SCALE. CueScale is 0.66,
+            // 4.8% away from the magstep(-4) = 0.629961 LilyPond's CueVoice recipe asks for
+            // (ly/engraver-init.ly), so this font is deliberately Design20.Scaled and not
+            // AtFontSize: the cue port is its own island and needs its own ledger points first
+            // (HANDOFF ▶). What DID move here on 2026-08-02 is the PADDINGS, which never
+            // scaled in LilyPond — see AccidentalPlacementParameters.
+            var cueFont = note.IsCue
+                ? GlyphMetrics.Design20.Scaled(EngravingDefaults.CueScale) : null;
+            if (AccidentalColumn.CalculateSinglePosition(note, cueFont, cueFont) is { } al)
                 DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy, x + al.XOffset, noteY,
                     note.SourcePosition, gc, accScale);
         }
@@ -575,10 +583,14 @@ internal static partial class SharedRenderer
         // aware of the shifted head ink — drawing each one at the same fixed
         // offset overprints them for seconds (e.g. <fis gis>).
         // LILYPOND-REF: lily/accidental-placement.cc position_apes.
-        // Cue chords scale the whole accidental column (placement widths/paddings
-        // AND glyphs) by the head scale — LP runs the cue grobs at fontSize -4, so
-        // the accidentals shrink and pack closer together, as a pair.
-        var accLayouts = AccidentalColumn.CalculatePositions(chord.Notes, headOffsets, headScale);
+        // A cue chord's accidentals shrink with its heads — LP runs the cue grobs at
+        // fontSize -4 — but the PADDINGS between them and the heads do not (they are the
+        // staff's, not the font's; see AccidentalPlacementParameters). Same 20-at-0.66 font as
+        // the single-note path above, and the same reason it is not AtFontSize yet.
+        var cueChordFont = chord.IsCue
+            ? GlyphMetrics.Design20.Scaled(EngravingDefaults.CueScale) : null;
+        var accLayouts = AccidentalColumn.CalculatePositions(
+            chord.Notes, headOffsets, cueChordFont, cueChordFont);
         foreach (var al in accLayouts)
         {
             double ay = staffMiddleY + al.StaffPosition / 2.0;

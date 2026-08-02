@@ -225,6 +225,131 @@ public sealed class EmmentalerDesignMetricsTests
         Assert.Contains("<text class=\"music\" x=", svg);
     }
 
+    /// <summary>
+    /// A grace's ACCIDENTAL is the THIRTEEN design at magstep(−4) — one step BELOW its own
+    /// head, which is the fourteen at magstep(−3). Two grobs of one note, two faces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 <c>general-grace-settings</c> —
+    ///   <c>(Voice NoteHead font-size -3)</c> and <c>(Voice Accidental font-size -4)</c>.
+    /// MEASURED (LilyPond 2.26.0, <c>\grace { d'16 eis' }</c>): the grace sharp's stencil is
+    /// <b>0.6929565774421802</b> wide and the Accidental grob answers <c>font-size = -4</c>
+    /// when asked (audit/lp-geometry/probes/grace-column-width.ly book GCWA dumps the extent;
+    /// the font-size dump is the same probe shape). Reading the accidental at the grace's own
+    /// −3 makes it 0.777817 — 0.084861 too wide, which is one of the two terms
+    /// <c>grace.column.accidental.step</c> carried until 2026-08-02. The other was the padding
+    /// (<see cref="AccidentalPaddingsAreTheStaffsNotTheFonts"/>), and the two had OPPOSITE
+    /// signs: −0.102513 + 0.084861 = −0.017652, the whole residual to six places. Either one
+    /// alone would have looked like an over-correction — and the glyph term alone would have
+    /// made the column WORSE.
+    /// </remarks>
+    [Fact]
+    public void AGraceAccidentalIsTheThirteenDesign()
+    {
+        const double lilyPondsOwn = 0.6929565774421802;
+
+        Assert.Equal(-4.0, GraceNoteItem.AccidentalFontSizeStep);
+        Assert.Equal(13, EmmentalerDesignSize.ForFontSizeStep(-4).Rounded);
+        // ⚠️ 2e-6, not nine places: the thirteen's LILC sharp is tabulated as 1.099997 where
+        // the drawing is 1.100000, so the generator's six-decimal convention is the whole of
+        // the gap. Naming the tolerance keeps it a KNOWN residual instead of a fitted digit —
+        // the term this test is about is 0.084860, four orders of magnitude larger.
+        Assert.True(
+            Math.Abs(GraceNoteItem.AccidentalFont.AccidentalSharp.Width - lilyPondsOwn) < 3e-6,
+            $"grace sharp {GraceNoteItem.AccidentalFont.AccidentalSharp.Width} vs LilyPond's {lilyPondsOwn}");
+
+        // The head of the SAME grace is a different design, one step up.
+        Assert.Equal(14, GraceNoteItem.Font.Rounded);
+        Assert.Equal(0.084861,
+            GlyphMetrics.AccidentalSharp.Width * Magstep(-3) - lilyPondsOwn, 6);
+    }
+
+    /// <summary>
+    /// The accidental's outline SKYLINE comes out of the same design as its box: the thirteen's
+    /// sharp is its own drawing, not the twenty's scaled.
+    /// </summary>
+    /// <remarks>
+    /// The pair is the point. A per-design metric with a twenty-design skyline packs the glyph
+    /// by an outline it does not have, and nothing downstream can tell — which is why the
+    /// generator bakes all eight (audit/scripts/Extract-EmmentalerSkylines.py) and why this
+    /// asserts the two designs really differ rather than that the plumbing compiles.
+    /// </remarks>
+    [Fact]
+    public void AnAccidentalSkylineIsPerDesignToo()
+    {
+        var (_, twentyRight) = GlyphMetrics.AccidentalSkylinePair("flat", 20);
+        var (_, thirteenRight) = GlyphMetrics.AccidentalSkylinePair("flat", 13);
+
+        // Same glyph, two drawings: the flat's stem reach at the top of its box differs by
+        // more than any rounding could (the LILC boxes differ by 0.02 in the design's own
+        // staff spaces — see EachDesignDrawsItsOwnNotehead for the head's version of this).
+        Assert.NotEqual(twentyRight.X(1.4), thirteenRight.X(1.4), 3);
+        // …and the default is still the twenty, so every full-size caller is untouched.
+        var (_, defaultRight) = GlyphMetrics.AccidentalSkylinePair("flat");
+        Assert.Equal(twentyRight.X(1.4), defaultRight.X(1.4), 9);
+    }
+
+    /// <summary>
+    /// ONE DECISION, TWO READERS, for the accidental as well: the design a grace's accidental
+    /// is MEASURED with is the design it is DRAWN from.
+    /// </summary>
+    /// <remarks>
+    /// Same argument as <see cref="AGraceIsMeasuredAndDrawnFromOneDesign"/>, and it needs its
+    /// own observer because the accidental is the one grob of the group at a DIFFERENT size:
+    /// a renderer that reused the head's face here would draw a 14 glyph in a 13-sized box
+    /// and both the ledger point and the head's own observer would stay green.
+    /// </remarks>
+    [Fact]
+    public void AGraceAccidentalIsMeasuredAndDrawnFromOneDesign()
+    {
+        Assert.Equal(GraceNoteItem.AccidentalDesignSize, GraceNoteItem.AccidentalFont.Rounded);
+        Assert.Equal(13, GraceNoteItem.AccidentalDesignSize);
+        // …and it is NOT the head's design, which is the whole reason for the second pair.
+        Assert.NotEqual(GraceNoteItem.DesignSize, GraceNoteItem.AccidentalDesignSize);
+
+        var svg = LiveRender.Svg("grace { d16 eis } f4 g2 r4");
+
+        Assert.Contains($"font-family=\"Emmentaler-{GraceNoteItem.AccidentalDesignSize},", svg);
+        Assert.Contains($"font-family: 'Emmentaler-{GraceNoteItem.AccidentalDesignSize}'", svg);
+        // The heads of the same run still name their own, one design up.
+        Assert.Contains($"font-family=\"Emmentaler-{GraceNoteItem.DesignSize},", svg);
+    }
+
+    /// <summary>
+    /// An accidental's paddings belong to the STAFF, not to the font: a grace's sharp ends the
+    /// same 0.35 left of its head as a full-size one, though the glyph is a third smaller.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-placement.cc:391-416 position_apes reads
+    ///   <c>padding</c> (0.2), <c>right-padding</c> (0.15) and the literal 0.1 horizon raw —
+    ///   there is no magstep on that path at all.
+    /// MEASURED: the GRACE sharp of book GCWA has extent (−1.042957 . −0.350000) in its
+    /// column, i.e. exactly 0.15 + 0.2 clear of the head at 0. Lily# multiplied all three by
+    /// the grace's magstep until 2026-08-02, which pulled the accidental 0.102513 too close.
+    /// </remarks>
+    [Fact]
+    public void AccidentalPaddingsAreTheStaffsNotTheFonts()
+    {
+        const double rightPaddingPlusPadding = 0.35;
+
+        double GapToTheHead(GlyphMetrics.DesignMetrics? accFont, GlyphMetrics.DesignMetrics? headFont)
+        {
+            var layout = new AccidentalPlacement().CalculateSinglePosition(
+                staffPosition: 0, "sharp", isCourtesy: false, accFont, headFont);
+            Assert.NotNull(layout);
+            var box = GlyphMetrics.GetAccidentalBBox(accFont ?? GlyphMetrics.Design20, "sharp");
+            return -(layout!.Value.XOffset + box.Width);   // head's left edge is 0
+        }
+
+        Assert.Equal(rightPaddingPlusPadding, GapToTheHead(null, null), 9);
+        // Five places for the grace, and the two missing ones are named: the packer binds on
+        // the glyph's OUTLINE while the box subtracted here is the LILC one, and in the
+        // thirteen's table those differ by 3e-6 (see AGraceAccidentalIsTheThirteenDesign).
+        // In the twenty they agree exactly, which is why the line above holds to nine.
+        Assert.Equal(rightPaddingPlusPadding,
+            GapToTheHead(GraceNoteItem.AccidentalFont, GraceNoteItem.Font), 5);
+    }
+
     /// <summary>There are eight designs and nothing between them: 12 is not a rounded size.</summary>
     /// <remarks>
     /// The caller is meant to arrive with what <see cref="EmmentalerDesignSize.BestRounded"/>

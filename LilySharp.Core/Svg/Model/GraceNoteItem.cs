@@ -100,13 +100,39 @@ public sealed record GraceNoteItem
     /// The <c>font-size</c> a grace note's voice carries, in LilyPond's sixths of an octave.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/grace-init.ly <c>graceSettings</c> — <c>Voice.fontSize = #-3</c>.
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 <c>general-grace-settings</c> —
+    /// <c>(Voice NoteHead font-size -3)</c>, and the same −3 for Stem, Flag, Dots and Script.
     /// This is the number a grace grob STATES; everything else about its size follows from
     /// it — which Emmentaler design its glyphs come out of
     /// (<see cref="Svg.Layout.EmmentalerDesignSize.ForFontSizeStep"/>) and the magnification
     /// that design is then read at (<see cref="ScaleFactor"/>).
+    /// <para>
+    /// ⚠️ NOT EVERY GRACE GROB IS AT THIS SIZE, and the recipe is per-grob rather than a voice
+    /// <c>fontSize</c>: the same list gives the Accidental −4
+    /// (<see cref="AccidentalFontSizeStep"/>), Fingering and StringNumber −8, TabNoteHead −4.
+    /// This doc said "ly/grace-init.ly graceSettings — Voice.fontSize = #-3" until 2026-08-02;
+    /// grace-init.ly holds the slurs and the acciaccatura slash and nothing about size.
+    /// </para>
     /// </remarks>
     public const double FontSizeStep = -3.0;
+
+    /// <summary>
+    /// The <c>font-size</c> a grace note's ACCIDENTAL carries — one step below the head's.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 <c>general-grace-settings</c> —
+    /// <c>(Voice Accidental font-size -4)</c> and <c>(Voice AccidentalCautionary font-size -4)</c>,
+    /// against <c>(Voice NoteHead font-size -3)</c> two lines above.
+    /// <para>
+    /// MEASURED, not read off alone: LilyPond prints a grace sharp 0.692957 wide =
+    /// 1.100000 × magstep(−4), where the head of the same grace is 0.917939 = the 14 design's
+    /// 1.298161 × magstep(−3) (audit/lp-geometry/probes/grace-column-width.ly book GCWA, and
+    /// scratch acc-size.ly asks the Accidental grob its own <c>font-size</c> and gets −4).
+    /// So a grace's accidental reads the THIRTEEN design and its head the FOURTEEN — the two
+    /// grobs of one note are two faces, which is why the placement takes two fonts.
+    /// </para>
+    /// </remarks>
+    public const double AccidentalFontSizeStep = -4.0;
 
     /// <summary>
     /// Scale factor for grace notes relative to normal notes.
@@ -147,6 +173,21 @@ public sealed record GraceNoteItem
     /// </remarks>
     internal static Svg.Layout.GlyphMetrics.DesignMetrics Font
         => Svg.Layout.GlyphMetrics.AtFontSize(FontSizeStep);
+
+    /// <summary>
+    /// The FONT a grace's ACCIDENTAL reads — <see cref="AccidentalFontSizeStep"/>'s design at
+    /// its magstep, which is not <see cref="Font"/>.
+    /// </summary>
+    internal static Svg.Layout.GlyphMetrics.DesignMetrics AccidentalFont
+        => Svg.Layout.GlyphMetrics.AtFontSize(AccidentalFontSizeStep);
+
+    /// <summary>
+    /// The Emmentaler design a grace's ACCIDENTAL is DRAWN from — the number a drawing
+    /// context's music-face scope takes, paired with <see cref="AccidentalFont"/> the way
+    /// <see cref="DesignSize"/> is paired with <see cref="Font"/>.
+    /// </summary>
+    internal static int AccidentalDesignSize
+        => Svg.Layout.EmmentalerDesignSize.ForFontSizeStep(AccidentalFontSizeStep).Rounded;
 
     /// <summary>
     /// The Emmentaler design a grace is DRAWN from — the rounded size in the file name, the

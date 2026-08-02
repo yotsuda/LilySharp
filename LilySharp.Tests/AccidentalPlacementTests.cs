@@ -126,7 +126,7 @@ public class AccidentalPlacementTests
     [Fact]
     public void CourtesySharp_SkylineIsParenOutline_NotABox()
     {
-        var (left, right) = AccidentalPlacement.GlyphSkylinePair("sharp", isCourtesy: true, scale: 1.0);
+        var (left, right) = AccidentalPlacement.GlyphSkylinePair("sharp", isCourtesy: true, GlyphMetrics.Design20);
 
         // Paren bellies at y=0: right = bbox.Right 1.1 + paren 0.6, left = 0 - 0.6.
         Assert.Equal(1.7, right.X(0), 9);
@@ -140,7 +140,7 @@ public class AccidentalPlacementTests
     [Fact]
     public void CourtesyFlat_SkipsTheFattenBranch()
     {
-        var (left, right) = AccidentalPlacement.GlyphSkylinePair("flat", isCourtesy: true, scale: 1.0);
+        var (left, right) = AccidentalPlacement.GlyphSkylinePair("flat", isCourtesy: true, GlyphMetrics.Design20);
 
         Assert.Equal(1.4, right.X(0), 9);    // bbox.Right 0.8 + paren 0.6
         Assert.Equal(-0.72, left.X(0), 9);   // bbox.Left -0.12 - paren 0.6
@@ -157,7 +157,7 @@ public class AccidentalPlacementTests
     {
         // The fatten moved from the baked data to a runtime branch; a bare flat must
         // still show the 0.30 wall (bbox.Right 0.8 * 0.375) over the stencil Y-extent.
-        var (_, right) = AccidentalPlacement.GlyphSkylinePair("flat", isCourtesy: false, scale: 1.0);
+        var (_, right) = AccidentalPlacement.GlyphSkylinePair("flat", isCourtesy: false, GlyphMetrics.Design20);
 
         Assert.Equal(0.3, right.X(1.5), 9);
     }
@@ -165,7 +165,7 @@ public class AccidentalPlacementTests
     [Fact]
     public void CourtesyNatural_ParenSpanIsNarrowerThanTheGlyph()
     {
-        var (_, right) = AccidentalPlacement.GlyphSkylinePair("natural", isCourtesy: true, scale: 1.0);
+        var (_, right) = AccidentalPlacement.GlyphSkylinePair("natural", isCourtesy: true, GlyphMetrics.Design20);
 
         Assert.Equal(1.2666, right.X(0), 9); // bbox.Right 0.6666 + paren 0.6
         // At y=1.3 (above the paren top 1.052) only the natural's own stem remains:

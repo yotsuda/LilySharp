@@ -2028,8 +2028,11 @@ internal static class SpacingRules
         if (note.Accidental is not { } acc)
             return DefaultExtraSpacingWidth;
         var placement = new AccidentalPlacement();
+        // Two fonts, because the two grobs carry two font-sizes: the accidental is −4 and the
+        // head it clears is −3 (scm/music-functions.scm:635-648 general-grace-settings).
         var layout = placement.CalculateSinglePosition(
-            note.StaffPosition, acc, isCourtesy: false, GraceNoteItem.ScaleFactor);
+            note.StaffPosition, acc, isCourtesy: false,
+            GraceNoteItem.AccidentalFont, GraceNoteItem.Font);
         return layout is { } al
             ? Math.Abs(al.XOffset) + AccidentalExtraSpacingWidthLeft
             : DefaultExtraSpacingWidth;

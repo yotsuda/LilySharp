@@ -79,6 +79,11 @@ internal static partial class SharedRenderer
             var graceFont = unit == 1.0
                 ? GraceNoteItem.Font
                 : GraceNoteItem.Font.Scaled(unit);
+            // The ACCIDENTAL's font is a different one — font-size −4, not the head's −3
+            // (GraceNoteItem.AccidentalFontSizeStep) — carried through the same ossia factor.
+            var graceAccFont = unit == 1.0
+                ? GraceNoteItem.AccidentalFont
+                : GraceNoteItem.AccidentalFont.Scaled(unit);
             var colX = g.ColumnOffsets;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;
@@ -113,21 +118,20 @@ internal static partial class SharedRenderer
                             unit: os.Size(1.0, g.StaffIndex));
                     // Same single-ape skyline path as full notes (draw = reserve): a grace
                     // natural clears its head by its real right skyline, not the fixed gap.
-                    // ⚠️ STILL THE 20 DESIGN, metric AND face alike, and deliberately the pair:
-                    // the accidental is PLACED by its glyph's real outline skyline
-                    // (AccidentalPlacement.GlyphSkylinePair) and those skylines are baked for
-                    // the 20 only (GlyphSkylinesGenerated.cs). Drawing this one from the 14
-                    // while packing it with the 20's outline is exactly the metric/ink split
-                    // this island exists to remove, so the accidental moves as a pair when the
-                    // skyline generator goes per-design. Ledger grace.column.accidental.step
-                    // carries what is left.
+                    // ⚠️ NOT THE GRACE'S OWN SIZE: general-grace-settings gives the Accidental
+                    // font-size −4 while the head above is −3, so this glyph comes out of the
+                    // THIRTEEN design (GraceNoteItem.AccidentalFont / .AccidentalDesignSize) —
+                    // measured, see GraceNoteItem.AccidentalFontSizeStep. Metric, outline
+                    // skyline and face all three come from that one font; splitting them is
+                    // what this island exists to remove.
                     if (note.Accidental is { } acc
                         && AccidentalColumn.CalculateSinglePosition(
-                            note.StaffPosition, acc, isCourtesy: false, eff) is { } al)
+                            note.StaffPosition, acc, isCourtesy: false,
+                            graceAccFont, graceFont) is { } al)
                     {
-                        using (gc.MusicFace(EmmentalerFaces.DefaultDesign))
+                        using (gc.MusicFace(GraceNoteItem.AccidentalDesignSize))
                             DrawAccidentalAtInkLeft(acc, isCourtesy: false, currentX + al.XOffset, y,
-                                g.SourcePosition, gc, eff);
+                                g.SourcePosition, gc, graceAccFont.Magnification);
                     }
                     gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize, null,
                         graceFont.NoteheadBlackAdvance,

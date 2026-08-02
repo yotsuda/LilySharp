@@ -134,6 +134,11 @@ internal static partial class GlyphMetrics
     public static double AccidentalParensInkWidth =>
         AccidentalLeftParen.Width + AccidentalRightParen.Width;
 
+    /// <summary>The same width out of a given font, for an accidental whose font-size picked
+    /// another design (a grace's is −4, a cue's −4, an editorial one's −2).</summary>
+    public static double GetAccidentalParensInkWidth(DesignMetrics font) =>
+        font.AccidentalLeftParen.Width + font.AccidentalRightParen.Width;
+
     /// <summary>
     /// Maxima (8-measure) rest ink width, in staff spaces — the church-rest glyph for
     /// duration-log -3 (<see cref="EmmentalerGlyphs.RestMaxima"/>, rests.M3).

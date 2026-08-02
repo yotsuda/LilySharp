@@ -732,7 +732,8 @@ internal sealed class ElementCoordinator
             {
                 case NoteItem note when note.Accidental != null:
                     if (BeamAccidentalColumn.CalculateSinglePosition(
-                            note, note.IsCue ? CueAccidentalScale : 1.0) is { } single)
+                            note, CueAccidentalFont(note.IsCue),
+                            CueAccidentalFont(note.IsCue)) is { } single)
                         AddAccidentalCollision(
                             collisions, single, itemX, note.IsCue ? CueAccidentalScale : 1.0,
                             beamEdgeLeftX, beamEdgeRightX, beamOriginX);
@@ -757,6 +758,13 @@ internal sealed class ElementCoordinator
     /// at <see cref="EngravingDefaults.CueScale"/>, which is Lily#'s own number and not
     /// magstep(-4). One home, so the port moves the head and its accidental together.</summary>
     private const double CueAccidentalScale = EngravingDefaults.CueScale;
+
+    /// <summary>The font a cue note's accidental is measured with — the 20 design at
+    /// <see cref="CueAccidentalScale"/>, or null (the plain 20) for an ordinary note. Not
+    /// <c>AtFontSize(-4)</c> yet: the cue island still runs on Lily#'s own 0.66, and the two
+    /// have to move together with a ledger point of their own (HANDOFF ▶).</summary>
+    private static GlyphMetrics.DesignMetrics? CueAccidentalFont(bool isCue) =>
+        isCue ? GlyphMetrics.Design20.Scaled(CueAccidentalScale) : null;
 
     /// <summary>
     /// One accidental as a covered grob: its LILC extent, booked at BOTH x edges.
