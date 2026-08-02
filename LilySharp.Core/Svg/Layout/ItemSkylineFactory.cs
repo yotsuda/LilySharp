@@ -131,19 +131,51 @@ internal static class ItemSkylineFactory
                     double stemHeight = EngravingDefaults.IdealStemLength;
                     double stemEndY = note2.StemUp ? noteY - stemHeight : noteY + stemHeight;
 
-                    // Flag position (attached at stem)
-                    // ⚠️ KNOWN NOT TO BE THE STEM, and left alone on purpose (2026-08-02).
-                    // The renderer draws this flag at LayoutUtilities.StemX
-                    // (SharedRenderer.DrawNoteheads), which for a DOWN stem is the head's
-                    // left edge PLUS half a stem thickness — 0.065 right of where this
-                    // reserves it, so draw and reserve disagree by that much on every
-                    // flagged down-stem note. Moving it here is a 0.065 spacing change with
-                    // NO ledger point on it (the corpus moves ~0.02 in 30 books), and the
-                    // rule is that an output change needs an observer first: open a point
-                    // on a flagged down-stem column before touching this line.
+                    // Flag position: a flag hangs on the STEM, so its ink is reserved in the
+                    // STEM's frame and not the head's — LayoutUtilities.StemX is the one
+                    // house that spells that x, and it is where SharedRenderer draws it.
+                    // ⚠️ THE FRAME IS THE STEM'S CENTRE, NOT ITS RIGHT EDGE, and that is not
+                    //   readable off either callback alone — they are a SELF-CANCELLING PAIR:
+                    // LILYPOND-REF: lily/flag.cc:198-205 Flag::calc_x_offset — the offset is
+                    //   stem->extent(stem, X_AXIS)[RIGHT], i.e. +thickness/2.
+                    // LILYPOND-REF: lily/flag.cc:49-67 Flag::width, stem via get_x_parent —
+                    //   the DECLARED X-extent is the stencil's extent MINUS that same [RIGHT]
+                    //   (the file calls it a bad hard-coding and leaves it). Offset + extent
+                    //   puts the reserved ink back on the stem's centre exactly.
+                    // LILYPOND-REF: lily/stem.cc:889-906 Stem::width — an is_invisible stem
+                    //   aside, a stem's own extent is (-1,1)·thickness/2, so that [RIGHT] is
+                    //   0.065 and nothing else.
+                    // MEASURED (ledger flag.down.reach.low-neighbour with its
+                    //   high-neighbour-control): moving ONLY the neighbour's pitch into the
+                    //   flag's Y band closes LilyPond's gap by 0.172400 and Lily#'s by
+                    //   0.237400 — Lily# let the neighbour tuck 0.065000 further under the
+                    //   flag, half a stem thickness to four digits. The PAIR is the reading:
+                    //   both points also carry a common +0.100 that is a DIFFERENT and still
+                    //   undiagnosed defect, so neither one alone is this flag.
+                    // ⚠️ WHAT THIS DOES *NOT* CLOSE, and it is worth writing down before the
+                    //   next reader rediscovers it and "fixes" this line back: LilyPond's own
+                    //   draw and reserve disagree here too. lily/flag.cc:118-165 Flag::print
+                    //   returns the glyph stencil UNTRANSLATED, so it is drawn at the grob's
+                    //   X-offset — the stem's RIGHT EDGE — while the cancellation above puts
+                    //   the reserved extent on the stem's CENTRE. SharedRenderer draws this
+                    //   glyph at the centre (DrawNote/DrawChord pass LayoutUtilities.StemX
+                    //   straight to DrawGlyph), so Lily#'s flag ink is 0.065 LEFT of
+                    //   LilyPond's while its spacing now agrees. ⚠️ READ OFF THE SOURCE AND
+                    //   NOT MEASURED — no ledger point reads a flag's draw x, and the last
+                    //   read-off-the-source claim on this very line (the 0.065) only became
+                    //   trustworthy when a pair measured it. Open a point before moving it.
+                    // ⚠️ THE UP BRANCH IS DELIBERATELY NOT CHANGED WITH IT. It still reads the
+                    //   ADVANCE (StemUpSE.X = NoteheadBlackAdvance = 1.304000) where the stem
+                    //   stands at 1.239200 = the attachment EXTENT 1.304200 − 0.065, so it is
+                    //   wrong by 0.064800 the other way. But ledger flag.up.reach says Lily#
+                    //   answers 2.504200 for that column, which is LilyPond's number for the
+                    //   same shape with NO flag reach and NO accidental reach in it: an
+                    //   up-stem column is not reserving this ink AT ALL. Not reserving it is a
+                    //   different defect from reserving it in the wrong PLACE, and it has to
+                    //   be measured before it is moved — flag.up.reach must not move here.
                     double stemX = note2.StemUp
                         ? noteheadLeftX + GlyphMetrics.StemUpSE.X
-                        : noteheadLeftX + GlyphMetrics.StemDownNW.X;
+                        : LayoutUtilities.StemX(noteheadLeftX, up: false);
 
                     double flagYBottom, flagYTop;
                     if (note2.StemUp)
