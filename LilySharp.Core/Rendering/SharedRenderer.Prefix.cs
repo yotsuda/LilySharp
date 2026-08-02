@@ -191,6 +191,48 @@ internal static partial class SharedRenderer
         return null;
     }
 
+    /// <summary>
+    /// Returns the TIME change that opens the measure after this system's last one — the
+    /// trigger for the end-of-line courtesy meter, the twin of
+    /// <see cref="GetSystemEndKeyChange"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A CHANGED METER PRINTS ON BOTH SIDES OF THE BREAK, AND ONLY A CHANGED ONE DOES.
+    /// The TimeSignature grob's own <c>break-visibility</c> is <c>all-visible</c>
+    /// (scm/define-grobs.scm:3922-3953 break-visibility), so a meter change at a break shows a courtesy
+    /// at the end of the previous line as well as in the new line's prefix. What never shows
+    /// there is the INITIAL meter: Time_signature_engraver stamps
+    /// <c>initialTimeSignatureVisibility</c> — <c>end-of-line-invisible</c> — on the FIRST
+    /// signature only, so every later one keeps the all-visible default. That is why this
+    /// asks for a change rather than for the meter in force.
+    /// LILYPOND-REF: lily/time-signature-engraver.cc:114-118 Time_signature_engraver::process_music
+    ///   — the override is guarded by <c>scm_is_null (last_spec_)</c>, i.e. applied to the
+    ///   first signature alone.
+    /// LILYPOND-REF: ly/engraver-init.ly:867 initialTimeSignatureVisibility = end-of-line-invisible,
+    ///   against <c>explicitKeySignatureVisibility</c> = <c>all-visible</c> one line above it.
+    /// MEASURED (LilyPond 2.26.0, bass staff, one line break):
+    ///   key AND meter change → line end carries cancellation, new key, then the meter;
+    ///   meter only            → line end carries the meter alone;
+    ///   neither               → line end stays bare.
+    /// </remarks>
+    private static TimeSignatureChangeItem? GetSystemEndTimeChange(Staff staff, SystemLayout system)
+    {
+        if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return null;
+        var voice = staff.PrimaryVoice;
+        int nextMeasureIndex = system.Measures[^1].MeasureIndex + 1;
+        if (nextMeasureIndex >= voice.Measures.Length)
+            return null;
+        foreach (var item in voice.Measures[nextMeasureIndex].Items)
+        {
+            if (item is TimeSignatureChangeItem tc)
+                return tc;
+            if (item.Duration > Fraction.Zero)
+                break;
+        }
+        return null;
+    }
+
     /// <summary>True when this key change is the one folded into its system's
     /// start prefix (see GetSystemStartKeyChange) — the per-measure pass must
     /// not draw it again.</summary>

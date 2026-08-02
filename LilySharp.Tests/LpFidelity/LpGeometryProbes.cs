@@ -4366,6 +4366,139 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A neighbour that ONLY THE STEM CAN REACH: <c>g</c> two positions below the middle line
+    /// (so its stem is up, standing at the head's right edge and running seven positions
+    /// upward) and a double-flatted <c>ceses'</c> three positions above it. The two HEADS are
+    /// 1.5 staff spaces apart and never share a Y; the accidental's ink sits in the stem's
+    /// band and in nothing else's.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe stem-reach.ly, score SRA): <c>\time 4/4 g'4 ceses''4 r2</c> —
+    /// 3.822200 = 1.404200 (the head's ink plus its own 0.1 extra-spacing-width) + 2.118000
+    /// (the double flat's ink plus the Accidental grob's declared 0.2 on the left) + 0.3.
+    /// <para>
+    /// ⚠️ LILYPOND CANNOT TELL THIS BOOK FROM <see cref="SRH"/>, AND THAT IDENTITY IS THE
+    /// POINT. A stem never reaches past its own head horizontally — an up stem's right edge IS
+    /// the head's right edge (lily/stem.cc:889-906 Stem::width) — so whether the head or the
+    /// stem is the part standing opposite the accidental, the DISTANCE is the same 3.822200.
+    /// What the stem changes is not how far the column reaches but AT WHICH Y it reaches at
+    /// all. So the pair cannot be read on the LilyPond side: both books are 3.822200 there,
+    /// and the whole reading is that Lily# must answer with ONE number too.
+    /// </para>
+    /// <para>
+    /// MEASURED, with the stem taken back out of the skyline: this book falls to
+    /// <b>3.163357961</b> (residual −0.658842039) while <see cref="SRH"/> stays EXACT. That is
+    /// the defect the point was opened for, and it is why the two books are worth carrying:
+    /// either one alone is green under it.
+    /// ⚠️ THE PREDICTION FOR THAT NUMBER WAS WRONG AND THE MEASUREMENT CORRECTED IT — it was
+    /// written as the bare quarter duration space 3.002244999, and the 0.161112962 on top is
+    /// the optical stem correction this pair carries (the two stems point opposite ways) and
+    /// which no skyline ever touched. NAMED FROM THE ARITHMETIC, not separately measured.
+    /// </para>
+    /// </remarks>
+    private static readonly string SRA = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g4 ceses'4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "SRA" { staff m }
+        """;
+
+    /// <summary>
+    /// The control, moving ONE thing — the neighbour's pitch. <c>aeses</c> is one position
+    /// above <c>g</c>, so the two heads share a Y and the HEAD answers. The stem stands at
+    /// that same right edge and cannot change the number, so this book reads 3.822200 with
+    /// the stem in the skyline and with it out. It is what says <see cref="SRA"/>'s reading
+    /// is about stems and not about the accidental, the duration or the double flat's width.
+    /// </summary>
+    /// <remarks>LilyPond twin (probe stem-reach.ly, score SRH):
+    /// <c>\time 4/4 g'4 aeses'4 r2</c>.</remarks>
+    private static readonly string SRH = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g4 aeses4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "SRH" { staff m }
+        """;
+
+    /// <summary>
+    /// A COURTESY METER at a line end, standing alone: only the meter changes across the
+    /// break, so the gap measured off the final bar line is the meter's own.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe courtesy-meter.ly, score CMT):
+    /// <c>\clef bass \key ees \major \time 2/4 r2 | \break \time 4/4 d2 e |</c> — bar line ink
+    /// right edge 31.193307, meter 31.943307, so <b>0.750000</b>.
+    /// <para>
+    /// ⚠️ THE BOOK HAS TO CHANGE THE METER, not merely have one. TimeSignature's
+    /// <c>break-visibility</c> is <c>all-visible</c>, but Time_signature_engraver stamps
+    /// <c>initialTimeSignatureVisibility</c> (<c>end-of-line-invisible</c>) on the FIRST
+    /// signature, so a book with one meter throughout prints nothing at any line end. That
+    /// third case is an assertion rather than a point: nothing is drawn, so there is nothing
+    /// to measure, and a corpus that only measures ink cannot see a courtesy that should NOT
+    /// have appeared.
+    /// </para>
+    /// </remarks>
+    private static readonly string CMT = """
+        octave absolute
+        time 2/4
+        key ees major
+
+        part m { clef bass }
+
+        section A { m { r2 | } }
+        section B { time 4/4 m { d,2 e, | } }
+
+        form main { A break B }
+
+        score main "CMT" { staff m }
+        """;
+
+    /// <summary>
+    /// The same break with the KEY changing too — the shape a real book has. The line end
+    /// carries cancellation, new key, then the meter, so what this one measures off the bar
+    /// line is the CANCELLATION, not the meter.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe courtesy-meter.ly, score CMK): bar line ink right edge 23.543507,
+    /// cancellation 24.543507 — <b>1.000000</b>, against CMT's 0.750000 off the same edge.
+    /// ⚠️ TWO NUMBERS, NOT ONE. LilyPond has no single "space after the bar line": each
+    /// break-aligned grob brings its own space-alist entry. Lily# spells one constant
+    /// (SpacingRules.BarlineToCourtesyKey = 0.8) for both, which is why this point opens
+    /// non-zero while CMT opens exact.
+    /// </remarks>
+    private static readonly string CMK = """
+        octave absolute
+        time 2/4
+        key ees major
+
+        part m { clef bass }
+
+        section A { m { r2 | } }
+        section B { time 4/4 key a major m { d,2 e, | } }
+
+        form main { A break B }
+
+        score main "CMK" { staff m }
+        """;
+
+    /// <summary>
     /// A cue REGION, whose columns read the cue head's own metric.
     /// </summary>
     /// <remarks>
@@ -8001,6 +8134,23 @@ internal static class LpGeometryProbes
         new("column.floor.accidental.spring-control", CFQN, g => g.NoteheadAnchorStep(0)),
         new("column.floor.accidental.wide", CFQD, g => g.NoteheadAnchorStep(0)),
         new("column.floor.accidental.wide-flagged", CFFD, g => g.NoteheadAnchorStep(0)),
+
+        // …and the part of the column those four could not see, because in every one of them
+        // the HEAD already stood opposite the accidental. A stem is in LilyPond's skyline
+        // because nothing takes it out (paper-column-engraver.cc:246-261), and it reaches no
+        // further right than its own head — so it is only ever legible at a Y the head does
+        // not occupy. LilyPond answers 3.822200 to BOTH books; the pair is readable only on
+        // this side, where the stem's absence made SRA fall to the bare duration space.
+        new("stem.reach.accidental-above-head", SRA, g => g.NoteheadAnchorStep(0)),
+        new("stem.reach.accidental-in-head-band-control", SRH, g => g.NoteheadAnchorStep(0)),
+
+        // The END of a line, which until now only the key was allowed to reach. Bar line 0 is
+        // the one the break falls on, so its right edge → the next glyph IS the courtesy
+        // group's first member: the meter when it stands alone, the cancellation when a key
+        // change stands in front of it. LilyPond's two gaps differ (0.75 / 1.00), so the pair
+        // is what says a single "space after the bar line" constant cannot be right.
+        new("courtesy.meter.barline-to-meter", CMT, g => g.BarlineRightToNextGlyph(0)),
+        new("courtesy.meter.barline-to-cancellation", CMK, g => g.BarlineRightToNextGlyph(0)),
 
         // A CUE region's own metric. EngravingDefaults.CueScale = 0.66 is declared
         // LILYSHARP-OWN and is an invented rounding; these are what it has to be replaced by.

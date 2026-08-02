@@ -355,7 +355,12 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/key-engraver.cc — process_music()
     /// </remarks>
-    private static void DrawKeySignatureChange(KeySignatureChangeItem change, double x, double staffY,
+    /// <returns>
+    /// The x AFTER the signature it drew. The end-of-line courtesy needs it so the meter that
+    /// follows can stand on the key's real right edge — computing that edge a second time from
+    /// the widths would be the same quantity spelled twice, and the two spellings drift.
+    /// </returns>
+    private static double DrawKeySignatureChange(KeySignatureChangeItem change, double x, double staffY,
         ClefType clef, IDrawingContext gc)
     {
         int prev = change.PreviousKey.Sharps;
@@ -392,8 +397,7 @@ internal static partial class SharedRenderer
             if (anyNatural)
                 dx += GlyphMetrics.AccidentalNatural.Width + 0.4;
             using (gc.Source(change.SourcePosition))
-                DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc);
-            return;
+                return DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc);
         }
 
         // Cancellation naturals when the sign flips or count shrinks. Their
@@ -440,8 +444,9 @@ internal static partial class SharedRenderer
             dx += 0.4;
         }
 
-        if (next != 0)
-            DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc);
+        return next != 0
+            ? DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc)
+            : x + dx;
     }
 
     /// <summary>

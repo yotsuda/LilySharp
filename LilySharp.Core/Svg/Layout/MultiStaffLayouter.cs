@@ -1037,23 +1037,30 @@ internal sealed class MultiStaffLayouter
         double startX = CurrentIndent + prefixWidth;
         double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - CurrentIndent - prefixWidth;
 
-        // End-of-line courtesy: the NEXT measure (first of the next system)
-        // opening with a key change reserves room after this line's final
-        // barline for the cancellation + new signature.
-        // LILYPOND-REF: explicitKeySignatureVisibility default all-visible.
+        // End-of-line courtesy: the NEXT measure (first of the next system) opening with a
+        // key and/or time change reserves room after this line's final barline for the
+        // cancellation + new signature, and for the new meter after it.
+        // ⚠️ BOTH CAN OPEN THE SAME MEASURE, so this walk must not stop at the first one it
+        // recognises — it reads the leading zero-duration items until real music starts.
+        // LILYPOND-REF: explicitKeySignatureVisibility default all-visible;
+        //   scm/define-grobs.scm:3922-3953 TimeSignature break-visibility all-visible.
         if (endMeasureIndex < primaryVoice.Measures.Length)
         {
+            KeySignatureChangeItem? leadKey = null;
+            TimeSignatureChangeItem? leadTime = null;
             foreach (var lead in primaryVoice.Measures[endMeasureIndex].Items)
             {
-                if (lead is KeySignatureChangeItem kcNext)
-                {
-                    availableWidth -= SpacingRules.KeyCourtesySuffixWidth(
-                        kcNext.PreviousKey.Sharps, kcNext.NewKey.Sharps);
-                    break;
-                }
+                if (lead is KeySignatureChangeItem kcNext) leadKey ??= kcNext;
+                else if (lead is TimeSignatureChangeItem tcNext) leadTime ??= tcNext;
                 if (lead.Duration > Fraction.Zero)
                     break;
             }
+            if (leadKey is { } k)
+                availableWidth -= SpacingRules.KeyCourtesySuffixWidth(
+                    k.PreviousKey.Sharps, k.NewKey.Sharps);
+            if (leadTime is { } t)
+                availableWidth -= SpacingRules.TimeCourtesySuffixWidth(
+                    t, afterCourtesyKey: leadKey is not null);
         }
 
         // LILYPOND-REF: lily/spacing-spanner.cc — collect springs from ALL columns across

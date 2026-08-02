@@ -516,7 +516,7 @@ internal static class SpacingRules
             ? Math.Abs(prevSharps) - (Math.Sign(prevSharps) == Math.Sign(nextSharps) ? Math.Abs(nextSharps) : 0)
             : 0;
 
-        double w = 0.8; // barline → signature gap
+        double w = BarlineToCourtesyKey;
         if (natCount > 0)
             // Upper bound of the LP natural kerning (0.3 per overlapping pair).
             w += natCount * GlyphMetrics.AccidentalNatural.Width
@@ -525,6 +525,80 @@ internal static class SpacingRules
             w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0) + 0.4;
         return w;
     }
+
+    /// <summary>
+    /// The final barline's right edge → the courtesy KEY that opens the end-of-line group.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ MEASURED AGAINST LILYPOND AND LEFT ALONE, because moving it is not this change:
+    /// LilyPond stands the cancellation <b>1.000000</b> past the barline's ink right edge
+    /// (2.26.0, bass staff, one break: barline 23.353507 ext 0..0.19, cancellation
+    /// 24.543507), so this is 0.200000 short. It is the value the key suffix has always
+    /// used and the key's ledger points are pinned to it (courtesy.meter.barline-to-cancellation
+    /// records the −0.2); a courtesy meter arriving beside it is no reason to move the key.
+    /// </para>
+    /// <para>
+    /// ★ THE HOUSE FOR ALL THREE COURTESY GAPS' PROVENANCE — <see cref="BarlineToCourtesyTime"/>
+    /// and <see cref="CourtesyKeyToTimeGap"/> point here rather than repeating the address,
+    /// because one number wants one home and three copies rot separately.
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:228-243 Break_alignment_interface::calc_positioning_done
+    ///   — the walk these three are the NET of. Each break-aligned group carries a space-alist
+    ///   entry (TimeSignature's is <c>(staff-bar . (extra-space . 1.0))</c> at
+    ///   scm/define-grobs.scm:3953) and :241-243 places the next group at
+    ///   <c>extents[idx][RIGHT] + distance - extents[next_idx][LEFT]</c>.
+    /// ⚠️ THE DECLARED ENTRY IS NOT THE PRINTED GAP — 1.0 is declared and 0.750000 is what
+    ///   comes out, because the walk runs on GROUP extents and the anchors
+    ///   (<c>break-align-anchor</c>) move it afterwards. So these constants are MEASURED NETS,
+    ///   not transcribed values, and citing them as the space-alist numbers would be a false
+    ///   citation. THIS IS THE DEBT (HANDOFF §7.6 ⒝): what it would take to make them literal
+    ///   is running the end-of-line group through <see cref="BreakAlignSpacing"/> the way the
+    ///   line-START prefix already goes — LilyPond has ONE break-align group at each end of a
+    ///   line, not a solver at one end and constants at the other. That port deletes all three.
+    /// </para>
+    /// </remarks>
+    internal const double BarlineToCourtesyKey = 0.8;
+
+    /// <summary>
+    /// The final barline's right edge → a courtesy METER standing there ALONE, i.e. when the
+    /// next line changes the meter but not the key.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0, same book with the key change taken out): barline
+    /// 31.003307 ext 0..0.19, meter 31.943307 — <b>0.750000</b> past the ink edge.
+    /// ⚠️ IT IS NOT THE SAME NUMBER AS <see cref="BarlineToCourtesyKey"/> AND SHOULD NOT BE
+    /// FOLDED INTO ONE: LilyPond has no single "gap after the barline" either — each
+    /// break-aligned grob brings its own space-alist entry.
+    /// Provenance and the debt it carries: <see cref="BarlineToCourtesyKey"/>.
+    /// </remarks>
+    internal const double BarlineToCourtesyTime = 0.75;
+
+    /// <summary>
+    /// The gap between the end-of-line courtesy KEY and the courtesy METER that follows it.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0): the key's ink ends at 30.793307 and the meter starts at
+    /// 31.943307 — <b>1.150000</b>. The same number the line-START prefix puts between key
+    /// and meter (7.603400 → 8.753400), which is what says it is the break-align spacing and
+    /// not something the courtesy invented.
+    /// Provenance and the debt it carries: <see cref="BarlineToCourtesyKey"/>.
+    /// </remarks>
+    internal const double CourtesyKeyToTimeGap = 1.15;
+
+    /// <summary>
+    /// Width reserved at the END of a line for the courtesy meter when the NEXT line opens
+    /// with a time-signature change, given whether a courtesy KEY is already standing there.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3922-3953 break-visibility — the TimeSignature
+    ///   grob's is <c>all-visible</c>, so a CHANGED meter prints on both
+    ///   sides of the break. See SharedRenderer.GetSystemEndTimeChange for why only a
+    ///   changed one does.
+    /// </remarks>
+    public static double TimeCourtesySuffixWidth(
+        TimeSignatureChangeItem change, bool afterCourtesyKey)
+        => (afterCourtesyKey ? CourtesyKeyToTimeGap : BarlineToCourtesyTime)
+           + GlyphMetrics.GetTimeSigWidth(change.NewTime.Beats, change.NewTime.BeatType);
 
     /// <summary>
     /// Gets the width of a barline type.
@@ -1305,8 +1379,14 @@ internal static class SpacingRules
     /// (<see cref="NoteItem.BeamId"/>; null when unbeamed). Null for stemless items
     /// (rests, whole notes) — LilyPond's <c>if (!stem || Stem::is_invisible (stem))
     /// return;</c> at note-spacing.cc:248-249.
+    /// <para>
+    /// The SAME range is the stem's box in the column's horizontal skyline
+    /// (<see cref="ItemSkylineFactory"/>) — LilyPond reads one Y-extent for both, so
+    /// this stays one house. The two are otherwise unrelated mechanisms: the optical
+    /// correction moves the spring's IDEAL, the skyline sets its MINIMUM.
+    /// </para>
     /// </summary>
-    private static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
+    internal static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
                     int? BeamId)?
         StemSpacingInfo(MusicItem? item)
     {
@@ -4063,9 +4143,20 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// Calculates the item's RIGHTward ink reach from its column, excluding stems and flags.
+    /// Calculates the item's RIGHTward ink reach from its column: the HEAD's right edge,
+    /// which is what the bar-line pair is measured from.
     /// </summary>
     /// <remarks>
+    /// ⚠️ STEMS AND FLAGS ARE OUT OF THIS ONE, AND THAT IS A FACT ABOUT THE BAR-LINE PAIR,
+    /// NOT ABOUT THE COLUMN'S SKYLINE. This doc used to say "excluding stems and flags" with
+    /// the separation-item citation below standing right under it, and the next reader (twice)
+    /// took that as "LilyPond's column skyline has no stem in it". It has one — every Item in
+    /// the column is a box (see <see cref="ItemSkylineFactory"/>), and a bass line in E-flat
+    /// found the omission by running a flat through a stem. What LilyPond really reads for
+    /// THIS quantity is the first head's own extent:
+    /// LILYPOND-REF: lily/note-spacing.cc:46-70 Note_spacing::get_spacing —
+    ///   <c>left_head_end = g->extent (col, X_AXIS)[RIGHT]</c> where <c>g</c> is the rest or
+    ///   <c>Note_column::first_head</c>, and it is that end the ideal is measured from at :77.
     /// The reference point is the column, which coincides with the note head's LEFT edge —
     /// the same convention <see cref="CalculateLeftExtent"/> documents and LilyPond uses
     /// (dumping <c>ly:grob-relative-coordinate</c> for a PaperColumn and its NoteHead in

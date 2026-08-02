@@ -319,15 +319,19 @@ internal static partial class SharedRenderer
             ? system.Measures[^1].X + system.Measures[^1].Width
             : system.Width;
 
-        // An end-of-line courtesy key signature sits ON the staff after the
-        // final barline — the staff lines extend over the reserved suffix
-        // (tab staves keep the unextended width; they print no signatures).
+        // An end-of-line courtesy key signature — and the courtesy meter after it — sit ON
+        // the staff after the final barline, so the staff lines extend over the reserved
+        // suffix (tab staves keep the unextended width; they print no signatures).
         double notationStaffRight = staffRight;
-        if (system.Measures.Length > 0
-            && GetSystemEndKeyChange(score.PrimaryContentStaff, system) is { } eolCourtesy)
+        if (system.Measures.Length > 0)
         {
-            notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
-                eolCourtesy.PreviousKey.Sharps, eolCourtesy.NewKey.Sharps);
+            var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
+            if (eolCourtesy is { } key)
+                notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
+                    key.PreviousKey.Sharps, key.NewKey.Sharps);
+            if (GetSystemEndTimeChange(score.PrimaryContentStaff, system) is { } eolMeter)
+                notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
+                    eolMeter, afterCourtesyKey: eolCourtesy is not null);
         }
 
         // Left-edge system bar + span bars through grand-staff gaps.
@@ -590,18 +594,39 @@ internal static partial class SharedRenderer
                 DrawBarlines(system, staff, localStaffY, layout, sgc,
                     fromMeasure: fragFrom, toMeasure: fragTo);
 
-                // End-of-line courtesy cancellation + new key signature when
-                // the NEXT line opens with a key change; the layouter reserved
-                // this room after the final barline.
-                // LILYPOND-REF: lily/key-engraver.cc +
-                // explicitKeySignatureVisibility default all-visible — the
-                // changed signature prints on BOTH sides of the break.
-                if (!isOssia && GetSystemEndKeyChange(staff, system) is { } eolKeyChange
-                    && system.Measures.Length > 0)
+                // End-of-line courtesy group: the cancellation + new key signature when the
+                // NEXT line opens with a key change, then the new METER when it opens with a
+                // time change. The layouter reserved this room after the final barline.
+                // LILYPOND-REF: lily/key-engraver.cc + explicitKeySignatureVisibility
+                //   default all-visible — the changed signature prints on BOTH sides.
+                // LILYPOND-REF: scm/define-grobs.scm:3922-3953 break-visibility — the
+                //   TimeSignature grob's is all-visible, so a CHANGED meter does the same.
+                //   Only a changed one: see GetSystemEndTimeChange.
+                if (!isOssia && system.Measures.Length > 0)
                 {
                     var lastMl = system.Measures[^1];
-                    DrawKeySignatureChange(eolKeyChange,
-                        lastMl.X + lastMl.Width + 0.8, localStaffY, clef, sgc);
+                    // lastMl.X + lastMl.Width is the final barline's RIGHT edge (measured:
+                    // the barline rect ends there), which is what both courtesies hang off.
+                    double barlineRight = lastMl.X + lastMl.Width;
+                    double? meterX = null;
+
+                    if (GetSystemEndKeyChange(staff, system) is { } eolKeyChange)
+                        // A meter after a key stands off the KEY's real right edge, which is
+                        // what the draw returns — not off a width computed a second time.
+                        meterX = DrawKeySignatureChange(
+                            eolKeyChange, barlineRight + SpacingRules.BarlineToCourtesyKey,
+                            localStaffY, clef, sgc)
+                            + SpacingRules.CourtesyKeyToTimeGap;
+
+                    if (GetSystemEndTimeChange(staff, system) is { } eolTimeChange)
+                        using (sgc.Source(eolTimeChange.SourcePosition))
+                            DrawTimeSignature(
+                                eolTimeChange.NewTime,
+                                // Alone, the meter takes its OWN gap off the barline — not the
+                                // key's. LilyPond's two are 0.750000 and 1.000000, so one
+                                // number for both would be wrong on one side by construction.
+                                meterX ?? barlineRight + SpacingRules.BarlineToCourtesyTime,
+                                localStaffY, sgc);
                 }
             }
             finally
