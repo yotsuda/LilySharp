@@ -58,6 +58,70 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-02（第69セッション＝**⑬⑵＝grace を「デザイン 14 で測り、デザイン 14 で描く」ようにした**）。
+**閉じたもの**（**ユーザー承認のうえ snapshot 9 枚を再ベース**）:
+```
+⑬⑵ grace の光学サイズ  c25f74c0  snapshot 9 枚  台帳 11 点が EXACT・テスト +3
+```
+★★★ **入ったもの**は 2 つだけ:
+`GraceNoteItem.Font`（＝`GlyphMetrics.AtFontSize(-3)`＝**14 の表に magstep を掛け済み**）と
+`IDrawingContext.MusicFace(rounded)`（**面のスコープ**・**既定 20 ＝ 出力不変**）。
+⚠️ **メトリクスと描画は同じ commit で載せ替えた**（ユーザー指摘のとおり。片方だけは同じ欠陥の小型版）。
+```
+測る  SpacingRules.GraceHeadEnd / GraceColumnRightReach・GraceNoteEngraver.GraceInkRight・
+      BeamScoringProblem(headFont:) ＝**読み手は掛け算を 1 つもしない**
+描く  SVG  グリフごとに font-family ＋ **使ったデザインだけ** @font-face
+           （header は body の後に組まれていた＝障害でなかった。fallback は `, Emmentaler, serif`）
+      PDF  デザインごとに 1 face（resolver）／PNG  デザインごとに 1 file
+      decorator 3 つ（YFlip / TextFont / UnscaledX）は**明示転送**——既定は no-op なので忘れると黙って 20 で描く
+```
+★★★ **台帳 11 点が EXACT**（`grace.column.*`）。**残差は −0.000000173 ＝ テーブルの 6 桁丸め**で
+項ではない（tolerance 1e-6）。**ss 非ゼロ 85 → 74・総和 0.238008611 → 0.189714412。**
+★★ **残る 2 点は原因が名前つきで割れている**（両方とも台帳の `why` に全文）:
+```
+grace.column.single.to-main   0.069066 → 0.063472
+   旗を head の ADVANCE に吊っている。LP は STEM に吊る＝extent − 太さ/2:
+   0.852939 + 0.585689 = 1.438627 が LP の答え（9 桁）。
+   ⚠️ 対の片割れ＝LayoutUtilities.StemAttachX が advance(1.304000) を読む（LP は extent 1.304200）
+   ＝**全部の符尾が動く**ので別 commit。2 つで 1 つの claim。
+grace.column.accidental.step  −0.013382 → −0.017652
+   ＝**この点が前もって書いていた第 2 項そのもの**（予測が 6 桁で当たった）。
+   臨時記号だけ 20 のまま（**メトリクスも顔も対で**）＝skyline が 20 しか焼かれていないため。
+```
+★★★ **観測者を 3 つ足した**——**この不変条件は片側からは見えない**: 台帳の点は描画を見ないので
+renderer が 20 に戻っても EXACT のまま、snapshot はレイアウトを見ないので layout が 20 に戻っても緑のまま。
+（`EmmentalerDesignMetricsTests.AGraceIsMeasuredAndDrawnFromOneDesign` ／ `BeamStemFrameTests` の grace 版 ／
+PNG が 2 つのデザインに同じ file を返したら落ちる点。**Skia は黙って fallback する**ので PNG には観測者が要る。）
+**未 push 84**（**この引継ぎ commit まで数えた値**）・
+テスト **3841 passed / 0 failed / 3 skipped**（**+3**）・
+台帳 **388 点**（**ss 非ゼロ 74・総和 0.189714412**／**count 点 99・うち非ゼロ 2**）。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ▶ 次の一手
+
+★★★ **⑬⑵ の続き＝ossia と cue**（**grace と同じ形**——`AtFontSize` と `MusicFace` を**対で**入れる。
+grace の 1 経路が手本で、`DesignMetrics.Scaled(unit)` も ossia のためにもう使ってある）。
+**ユーザー決定 ⒝ は出ている**（2026-08-02）＝**丸め済みの縮尺を LP の magstep に直す**:
+```
+EngravingDefaults.OssiaScale     = 0.7071 → magstep(-3) = 0.70710678
+ArticulationEngraver.EditorialScale = 0.7937 → magstep(-2) = 0.79370053 に見える（**着手時に裏取り**）
+cue の 0.66（SharedRenderer.Noteheads ほか） ⚠️ **LP の出所が見えない**＝**決定に含まれない**。先に調べる
+```
+⚠️⚠️ **メトリクスだけ per-design にしてはいけない**（ユーザー指摘＝「そもそも同じグリフを選ぶべき」）。
+★ **ossia は grace と違って staff-space そのものも縮む**（`StaffSize.Span`）＝**面のスコープを開く場所は
+`SharedRenderer` の ossia group スコープ**。⚠️ ossia は fontSize が**合成**する（grace on ossia は既に対応済）。
+★ **⑬⑶ ＝ 上の残り 2 点。どちらも「対でしか閉じられない」**:
+```
+⒜ 旗の吊り先 ＋ StemAttachX の advance→extent   ← 全符尾が 0.0002 動く＝snapshot 大量・要承認
+⒝ 臨時記号の skyline を per-design に            ← Extract-EmmentalerSkylines.py を 8 デザインぶんへ
+```
+★ **tab の残り 3 冊**（**弦を明示しない本は LP と比較できない**・第67セッション §1 ⑨）——
+**触るなら fixture 側（`\N` で弦を固定）。描画が動く＝要承認。**
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第68セッションの経緯
+
 最終更新 2026-08-02（第68セッション＝**⑬⑴b＝光学サイズの「テーブル」を 8 デザインぶん焼いた**）。
 **閉じたもの**（**出力不変・承認不要のぶんだけ**）:
 ```
@@ -104,7 +168,7 @@ emmentaler-{11,13,14,16,18,23,26}.woff2 を新規同梱（各 52KB／.otf は 10
 台帳 **388 点**（**ss 非ゼロ 85・総和 0.238008611**／**count 点 99・うち非ゼロ 2**）＝**不変**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
-## ▶ 次の一手
+## ▶ 次の一手（**第68セッション当時。この節は読まないこと**——**grace は第69セッションで landed**）
 
 ★★★ **⑬⑵＝scaled な経路を `AtFontSize` に載せ替える**（**grace → ossia → cue**）。
 **ユーザー決定は 2 つとも出ている**（2026-08-02）:
