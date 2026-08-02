@@ -67,7 +67,7 @@ public static class TextFontMetrics
 
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style), SKTypeface> Faces = new();
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text),
-        (double Advance, double Bottom, double Top, double Left, double Right)>
+        (double Advance, double Bottom, double Top)>
         Cache = new();
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text), SKPath> Paths = new();
 
@@ -127,30 +127,24 @@ public static class TextFontMetrics
         return top - bottom;
     }
 
-    /// <summary>
-    /// The HORIZONTAL ink extent of <paramref name="text"/> in staff spaces, relative to
-    /// the PEN origin: where the drawn glyphs actually start and stop, which is shorter
-    /// than <see cref="Advance"/> by the side bearings.
-    /// </summary>
-    /// <remarks>
-    /// LilyPond's text stencils carry INK extents, not advances, so a port that measures
-    /// off a label's right edge wants this and not the advance — e.g. the ottava's
-    /// <c>text_size = text.extent (X_AXIS)[RIGHT] + 0.3</c>
-    /// (lily/ottava-bracket.cc:124-135 Ottava_bracket::print).
-    /// </remarks>
-    public static (double Left, double Right) InkX(string text, double fontSize,
-        bool sans = false, FontStyle style = FontStyle.Regular)
-    {
-        var m = Measure(text, sans, style);
-        return (m.Left * fontSize, m.Right * fontSize);
-    }
+    // (There is no horizontal-ink accessor, and that absence is deliberate. An `InkX` lived
+    // here for one day, 2026-08-02, put in to serve the ottava's
+    // `text_size = text.extent (X_AXIS)[RIGHT] + 0.3` — but a text stencil's box takes X
+    // from Pango's LOGICAL rectangle and only Y from the ink one
+    // (LILYPOND-REF: lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil),
+    // so what that port wanted was the ADVANCE.
+    // Ledger text.width.* measures the same conclusion from the outside: LilyPond's widths
+    // are whole 1200-dpi pixels, and the ottava's number is a whole one only as an advance.
+    // Nothing else asked for horizontal ink — the outline walk reads the path itself
+    // (TextOutlineSkylines) — so the accessor came back out rather than waiting to be
+    // misread a second time.)
 
     /// <summary>Per-em metrics of one string, cached.</summary>
-    private static (double Advance, double Bottom, double Top, double Left, double Right) Measure(
+    private static (double Advance, double Bottom, double Top) Measure(
         string text, bool sans, FontStyle style)
     {
         if (string.IsNullOrEmpty(text))
-            return (0, 0, 0, 0, 0);
+            return (0, 0, 0);
         return Cache.GetOrAdd((sans, style, text), static key =>
         {
             var typeface = Face(key.Sans, key.Style);
@@ -160,12 +154,11 @@ public static class TextFontMetrics
             double advance = AdvancePerEm(key.Text, typeface, paint);
             var path = OutlinePath(key.Text, key.Sans, key.Style);
             if (path.IsEmpty)
-                return (advance, 0, 0, 0, 0);
+                return (advance, 0, 0);
             var b = path.Bounds;
             // Skia's path is Y-DOWN about the baseline: Top is negative above it. Reflect
-            // to this engine's Y-up ink convention. X needs no reflection.
-            return (advance, -b.Bottom / 1000.0, -b.Top / 1000.0,
-                    b.Left / 1000.0, b.Right / 1000.0);
+            // to this engine's Y-up ink convention.
+            return (advance, -b.Bottom / 1000.0, -b.Top / 1000.0);
         });
     }
 

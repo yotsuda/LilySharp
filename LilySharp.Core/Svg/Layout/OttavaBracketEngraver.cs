@@ -145,27 +145,42 @@ internal static class OttavaBracketEngraver
     private const double RightShorten = -0.6;
 
     /// <summary>
-    /// The gap between the label's INK right and the dashed line's left end.
+    /// The gap between the label's right edge and the dashed line's left end.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/ottava-bracket.cc:124-135 Ottava_bracket::print —
     /// <c>text_size = text.extent (X_AXIS)[RIGHT] + 0.3</c>, and the source's own comment
     /// beside it is "0.3 is ~ italic correction".
-    /// MEASURED: ledger ottava.x.line-start-to-notehead — the 0.5 spent off the ADVANCE
+    /// MEASURED: ledger ottava.x.line-start-to-notehead — the 0.5 spent off the advance
     /// until 2026-08-02 put the line 2.937897638 too far right in the OTC book, which the
     /// bracket's 2.0-early bound then partly cancelled.</remarks>
     private const double LabelLineItalicCorrection = 0.3;
 
     /// <summary>
-    /// Where the dashed line starts: past the label's INK right plus
+    /// Where the dashed line starts: past the label's ADVANCE plus
     /// <see cref="LabelLineItalicCorrection"/>. The one spelling the draw and the
     /// reservations share.
     /// </summary>
-    /// <remarks>⚠️ The INK right, not the advance — LilyPond's text stencils carry ink
-    /// extents, and the side bearing is exactly what the 0.3 italic correction is sized
-    /// against.</remarks>
+    /// <remarks>
+    /// ⚠️ THE ADVANCE, NOT THE INK, and the distinction was got wrong here once (ported as
+    /// the ink on 2026-08-02, corrected the same day). <c>text.extent (X_AXIS)</c> is a
+    /// STENCIL X-extent, and LilyPond builds a text stencil's box with X from Pango's
+    /// LOGICAL rectangle and only Y from the ink one —
+    /// LILYPOND-REF: lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil,
+    /// <c>Box (Interval (PANGO_LBEARING (logical_rect), PANGO_RBEARING (logical_rect)),
+    /// Interval (-PANGO_DESCENT (ink_rect), PANGO_ASCENT (ink_rect)))</c>. A text grob's
+    /// left edge is therefore its pen origin, which ledger
+    /// <c>textscript.x.pen-to-notehead-left</c> pins from the other side for two strings
+    /// with different first-glyph bearings.
+    /// MEASURED (audit/lp-geometry/probes/text-advance.ly, ledger <c>text.width.*</c>): the
+    /// arithmetic says the same thing without the source — LilyPond's widths are whole
+    /// 1200-dpi pixels of 0.034143307086614 ss, the ottava book's derived 1.213302362 for a
+    /// bold-italic "8" is not one (35.539), and the ADVANCE is exactly 37 of them
+    /// (1.263302362). The 0.05 between them is the drawn dashed line's half thickness: the
+    /// OTC dump read the LINE'S STENCIL, not <c>bracket_span_points[LEFT]</c>.
+    /// </remarks>
     internal static double LineStartX(string text, double startX, double fontSize)
         => startX
-           + TextFontMetrics.InkX(text, fontSize, sans: false, FontStyle.BoldItalic).Right
+           + TextFontMetrics.Advance(text, fontSize, sans: false, FontStyle.BoldItalic)
            + LabelLineItalicCorrection;
 
     /// <summary>

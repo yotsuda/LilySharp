@@ -735,7 +735,8 @@ internal sealed class RenderedGeometry
     /// two drawn anchors, and it is deliberate — see audit/lp-geometry/probes/text-advance.ly
     /// for the argument and the measurements. LilyPond's counterpart is the text grob's
     /// X-extent, which is the SHAPED ADVANCE and not the ink:
-    /// <c>lily/pango-font.cc:351-362</c> takes the box's X from Pango's LOGICAL rectangle
+    /// <c>lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil</c> takes the
+    /// box's X from Pango's LOGICAL rectangle
     /// (and only its Y from the ink one), so the left edge is the pen origin — which the
     /// <c>textscript.x.pen-to-notehead-left</c> pair already pins from the other side, for
     /// two strings whose first glyphs have different side bearings.

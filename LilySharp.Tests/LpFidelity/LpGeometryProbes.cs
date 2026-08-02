@@ -1735,12 +1735,14 @@ internal static class LpGeometryProbes
     /// and not per step:
     /// </para>
     /// <list type="number">
-    /// <item>LilyPond's text X-extent is the LOGICAL box (lily/pango-font.cc:351-362 takes X
+    /// <item>LilyPond's text X-extent is the LOGICAL box
+    /// (lily/pango-font.cc:351-362 <c>Pango_font::pango_item_string_stencil</c> takes X
     /// from the logical rectangle, Y from the ink one), and the ladder proves it from the
     /// outside: "nn" is exactly 2 × "n" and "nnnn" exactly 4 × "n", so a single glyph is a
     /// whole advance.</item>
     /// <item>Every reading is an integer number of 0.034143307086614 ss — ONE PIXEL at
-    /// PANGO_RESOLUTION 1200 (lily/pango-font.hh:75, lily/pango-font.cc:109-111), predicted
+    /// <c>PANGO_RESOLUTION</c> 1200 (lily/pango-font.hh:75; the pixel reaches staff spaces
+    /// through lily/pango-font.cc:109-111 <c>Pango_font::Pango_font</c>'s scale_), predicted
     /// from those constants to fifteen digits — and every single glyph is
     /// <c>round(advance × ppem)</c> at ppem 64.434297. LilyPond rounds each glyph's advance
     /// to a whole pixel; Lily# sums the unrounded ones, so it is out by that glyph's
