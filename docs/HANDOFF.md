@@ -99,7 +99,7 @@ emmentaler-{11,13,14,16,18,23,26}.woff2 を新規同梱（各 52KB／.otf は 10
 `EngravingDefaults.OssiaScale = 0.7071`（**4 桁丸め**・magstep(-3) は 0.70710678）・
 `ArticulationEngraver.EditorialScale = 0.7937`・**cue の 0.66**（`SharedRenderer.Noteheads` ほか・
 **LP の出所が見えない**）。**テーブルを繋ぐ前にこの 3 つの出所を決めること。**
-**未 push 79**（**この引継ぎ commit まで数えた値**）・
+**未 push 80**（**この引継ぎ commit まで数えた値**）・
 テスト **3838 passed / 0 failed / 3 skipped**（**+14**）・
 台帳 **388 点**（**ss 非ゼロ 85・総和 0.238008611**／**count 点 99・うち非ゼロ 2**）＝**不変**。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
@@ -6941,6 +6941,12 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
       ⚠️ **`LILYPOND-REF` を足したなら、行範囲だけでなく「そこに何があるか」の記号名も書く**
       （`LpReferenceCitationTests` のラチェットが落ちる・§5.2.1⑦）。**名前を書くために
       その行を読むことが検査そのもの**——2026-07-28 に、範囲だけ書いて別の分岐を指した。
+      ⚠️ ★ **記号名は「住所と同じ行」に書く**（2026-08-02・**2 回直して 2 回とも落ちた**）。
+      ラチェットは **`LILYPOND-REF` を含む行だけ**を見て、**住所より*後ろ*の同じ行**から名前を探す
+      （`LpReferenceCitationTests.AllCitations` :224-235）。**折り返して次の行に名前を置くと
+      「名前なし」に数えられる**——住所が行末に来る折り返し方をしないこと。
+      ⚠️ **末尾がアンダースコアの綴りは名前に数えない**（`magnification_` は
+      `[_-][A-Za-z0-9]+` に一致しない）。**関数名を書くこと。**
 7.5 [ ] ★ **移植した差分を §5.2 片手に読み直したか**。
       ★ **まず数える**（30 秒・機械的・2026-07-27 に追加）:
       `git -c color.ui=false diff <base> HEAD -- LilySharp.Core` の **`+` 行**に対して
