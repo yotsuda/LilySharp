@@ -135,8 +135,24 @@ ossia は staff-space そのものも縮む（StaffSize.Span）＝面のスコ�
   ＝ StaffSize.Ink(box) は引き直せない。per-design にするには箱を作る側が staff の font を知る必要がある。
   ⇒ grace のような「1 経路まるごと」にはならない。着手前に site を数えること（size.Ink は 4 か所、
      glyph 量が Span を通っている site が 2 か所＝1492 と 1609 は型を間違えている）。
-cue の 0.66（SharedRenderer.Noteheads ほか） ⚠️ **LP の出所が見えない**＝**ユーザー決定に含まれない**。先に調べる
 ```
+★★★ **cue の出所は見つかった**（第69セッション・**「見えない」は誤りだった**）——
+**`ly/engraver-init.ly` の `CueVoice` に*レシピごと*書いてある**（⑧ と同じ教訓＝**`ly/` の context 定義を
+先に読む**）:
+```
+fontSize = #-4                                   → magstep(-4) = 0.629961
+\override Stem.length-fraction = #(magstep -4)   ← Lily# には無い
+\override Beam.length-fraction = #(magstep -4)   ← Lily# には無い
+\override Beam.beam-thickness = #0.35            ← 宣言値（grace の 0.384 と同じ形）・Lily# には無い
+\override StemTremolo.beam-thickness = #0.35     ← Lily# には無い
+```
+⚠️⚠️ **Lily# の 0.66 は magstep(-4) ではない**——**4.8% 大きい**。
+**コード内の注記は「fontSize −4 ≈ 0.66」と書いていた**＝**計算であって実測ではない**（**同じ形が 3 回目**:
+grace の「≈0.65」対 0.707107、ossia の 0.7071 対 0.70710678）。
+**0.66 は `EngravingDefaults.CueScale` 1 か所にまとめた**（**8 か所に散っていた**・出力不変）。
+★ **font-size −4 は 12.599pt ＝ 13 デザイン**⇒ **cue の port は grace / 編集臨時記号と同じ対**
+（`AtFontSize` ＋ `MusicFace`）**＋ 上の 4 つの override**。**要・台帳点を先に開く**（描画が動く）。
+⚠️ **`test/cue-accidentals` は snapshot がある**（`cue-notes` 系は今の文法で parse しない 5 本のうち）。
 ⚠️⚠️ **メトリクスだけ per-design にしてはいけない**（ユーザー指摘＝「そもそも同じグリフを選ぶべき」）。
 ★ **道具はもう per-design になっている**（⑬⑵ で入った）:
 ```

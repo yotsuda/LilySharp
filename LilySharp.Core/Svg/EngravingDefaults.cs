@@ -239,6 +239,38 @@ internal static class EngravingDefaults
     /// </summary>
     public const double OssiaScale = 0.7071;
 
+    /// <summary>
+    /// The scale a CUE note is engraved at — <b>an invention, and a wrong one</b>.
+    /// </summary>
+    /// <remarks>
+    /// 0.66 is not a LilyPond number and never was. LilyPond's cue is a CONTEXT with a
+    /// font-size on it, and the whole recipe is five lines of Scheme —
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice (at :429-444 in 2.26.0) declares
+    ///   <c>fontSize = #-4</c>, <c>Stem.length-fraction = (magstep -4)</c>,
+    ///   <c>Beam.length-fraction = (magstep -4)</c> and <c>Beam.beam-thickness = 0.35</c>
+    ///   (DECLARED, like the grace beam's 0.384 — not derived from the fraction).
+    ///   ⚠️ The line range is in prose on purpose: none of the names at those lines is a
+    ///   multi-part LilyPond identifier, so the citation ratchet cannot check it.
+    /// <para>
+    /// ⚠️ <c>magstep(-4) = 2^(-2/3) = 0.629961</c>, so this constant is <b>4.8% too large</b>,
+    /// and the comments that said "font-size −4 ≈ 0.66" were arithmetic, not a measurement.
+    /// It is the third time this exact shape has been found: a grace was "≈0.65" against
+    /// 0.707107 and an ossia "0.7071" against 0.70710678. See
+    /// <see cref="Layout.EmmentalerDesignSize.Magstep"/>, which is the one home for it.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHEN IT GOES it takes the rest of the recipe with it, exactly as the grace's did:
+    /// font-size −4 asks for 12.599pt, which lands on the THIRTEEN Emmentaler design, so a
+    /// cue head is that design's glyph and not the twenty's shrunk — the port is the same
+    /// pair the grace and the editorial accidental took (GlyphMetrics.AtFontSize plus
+    /// IDrawingContext.MusicFace), and it needs a ledger point opened first because it
+    /// moves drawn output.
+    /// </para>
+    /// </remarks>
+    // LILYSHARP-OWN: an invented rounding of magstep(-4) = 0.629961, wrong by 4.8%. It goes
+    // when the CueVoice recipe above is ported (a ledger point first — it moves output).
+    public const double CueScale = 0.66;
+
     // Rest collision avoidance
     /// <summary>Default staff position for rest center (middle line).</summary>
     public const double RestCenterPosition = 0.0;

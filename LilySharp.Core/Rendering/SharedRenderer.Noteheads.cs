@@ -370,7 +370,7 @@ internal static partial class SharedRenderer
             case NoteItem note:
             {
                 int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
-                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0);
+                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? EngravingDefaults.CueScale : 1.0);
                 CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
                     staffMiddleY, note.Accidental != null);
                 break;
@@ -378,7 +378,7 @@ internal static partial class SharedRenderer
             case ChordItem chord when chord.Notes.Length > 0:
             {
                 int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
-                double chordScale = chord.IsCue ? 0.66 : 1.0;
+                double chordScale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
                 double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * chordScale;
                 // Seconds shift reversed heads sideways — the ledger run
                 // follows the extreme head's real X.
@@ -432,9 +432,10 @@ internal static partial class SharedRenderer
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = staffMiddleY + note.StaffPosition / 2.0;
-        // Cue notes scale to ~0.66× (LP CueVoice fontSize = -4 → magstep(-4)).
-        // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
-        double noteFontSize = note.IsCue ? FontSize * 0.66 : FontSize;
+        // The cue scale, which is Lily#'s own 0.66 and NOT magstep(-4) = 0.629961 — see
+        // EngravingDefaults.CueScale for LilyPond's actual CueVoice recipe and what closing
+        // it involves.
+        double noteFontSize = note.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize;
 
         // Voice stem direction override (voice 1 up / voice 2 down); falls back
         // to the note's own position-based default in single-voice staves.
@@ -447,7 +448,7 @@ internal static partial class SharedRenderer
         // accidental with the head (LP CueVoice fontSize = -4 reduces the accidental grob too).
         if (note.Accidental != null)
         {
-            double accScale = note.IsCue ? 0.66 : 1.0;
+            double accScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
             if (AccidentalColumn.CalculateSinglePosition(note, accScale) is { } al)
                 DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy, x + al.XOffset, noteY,
                     note.SourcePosition, gc, accScale);
@@ -469,7 +470,7 @@ internal static partial class SharedRenderer
                 {
                     // Interactive preview gets a tight click target the size of the
                     // head ink (× the cue scale), centred on noteY — see DrawNotehead.
-                    double headInk = note.IsCue ? 0.66 : 1.0;
+                    double headInk = note.IsCue ? EngravingDefaults.CueScale : 1.0;
                     gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
                         GlyphMetrics.GetNoteheadAdvance(noteValue) * headInk,
                         GlyphMetrics.GetNoteheadBBox(noteValue).Height * headInk);
@@ -492,7 +493,7 @@ internal static partial class SharedRenderer
             // left edge, which doesn't move with the scale.
             // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head —
             // the offset comes from the (scaled) head extent.
-            double headScale = note.IsCue ? 0.66 : 1.0;
+            double headScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
             double stemX = x + LayoutUtilities.StemAttachX(stemUp, headScale);
             // Duration-dependent length + unnatural-direction shortening + the
             // extend-to-center-line rule, faithfully following LilyPond's
@@ -533,7 +534,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/output-lib.scm ly:dots::print — stack with
         //   padding = one dot width (advance per dot = 2 dot widths)
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
-        double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0) + dotWidth;
+        double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? EngravingDefaults.CueScale : 1.0) + dotWidth;
         if (note.Dots > 0)
         {
             // Same Dot_configuration machinery as chords (for a single dot
@@ -560,10 +561,10 @@ internal static partial class SharedRenderer
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
         bool stemUp = forcedStemUp ?? chord.StemUp;
 
-        // Cue chords scale like cue notes (LP CueVoice fontSize = -4 ≈ 0.66×).
-        // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
-        double headScale = chord.IsCue ? 0.66 : 1.0;
-        double noteFontSize = chord.IsCue ? FontSize * 0.66 : FontSize;
+        // Cue chords scale like cue notes — EngravingDefaults.CueScale, which is Lily#'s own
+        // 0.66 and not LilyPond's magstep(-4).
+        double headScale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
+        double noteFontSize = chord.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize;
 
         // Within-chord seconds/unisons: reversed heads shift to the far side
         // of the stem. LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.

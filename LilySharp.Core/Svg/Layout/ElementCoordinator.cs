@@ -753,8 +753,10 @@ internal sealed class ElementCoordinator
         }
     }
 
-    /// <summary>LilyPond's CueVoice fontSize = -4 shrinks the accidental grob with the head.</summary>
-    private const double CueAccidentalScale = 0.66;
+    /// <summary>LilyPond's CueVoice fontSize = -4 shrinks the accidental grob with the head —
+    /// at <see cref="EngravingDefaults.CueScale"/>, which is Lily#'s own number and not
+    /// magstep(-4). One home, so the port moves the head and its accidental together.</summary>
+    private const double CueAccidentalScale = EngravingDefaults.CueScale;
 
     /// <summary>
     /// One accidental as a covered grob: its LILC extent, booked at BOTH x edges.
@@ -981,7 +983,7 @@ internal sealed class ElementCoordinator
         if (measure.Items[itemIndex] is not ChordItem chord)
             return 0;
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
-        double scale = chord.IsCue ? 0.66 : 1.0;
+        double scale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
         var offsets = ChordHeadPositioning.CalculateOffsets(
             chord.Notes, chord.StemUp, noteValue, scale);
         for (int i = 0; i < chord.Notes.Length; i++)
