@@ -725,6 +725,42 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// How wide the sole custom text is RESERVED to be — the string's advance at the face,
+    /// size and style it was drawn with, which is the number Lily# spends wherever text
+    /// takes horizontal room (<c>TextFontMetrics.Advance</c>: marks, chord names, lyrics,
+    /// metronome marks, the ottava's line gap).
+    /// </summary>
+    /// <remarks>
+    /// The one entry family in this file that reads a METRIC rather than a distance between
+    /// two drawn anchors, and it is deliberate — see audit/lp-geometry/probes/text-advance.ly
+    /// for the argument and the measurements. LilyPond's counterpart is the text grob's
+    /// X-extent, which is the SHAPED ADVANCE and not the ink:
+    /// <c>lily/pango-font.cc:351-362</c> takes the box's X from Pango's LOGICAL rectangle
+    /// (and only its Y from the ink one), so the left edge is the pen origin — which the
+    /// <c>textscript.x.pen-to-notehead-left</c> pair already pins from the other side, for
+    /// two strings whose first glyphs have different side bearings.
+    /// <para>
+    /// ⚠️ The style is <c>Italic</c> because <c>DrawCustomTexts</c> draws <c>_"text"</c>
+    /// italic and <c>DrawnText</c> records no style — the same assumption
+    /// <see cref="SoleCustomTextPenToNotehead"/> makes, and the .ly twin's
+    /// <c>^\markup \italic</c> is what makes it true on the other side.
+    /// </para>
+    /// </remarks>
+    public double SoleCustomTextReservedWidth(int page = 0)
+    {
+        var texts = CustomTexts;
+        if (texts.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE custom text, found {texts.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var t = texts[0];
+        return LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.Italic);
+    }
+
+    /// <summary>
     /// The ottava bracket's dashed LINE above the first staff, measured from that staff's
     /// refpoint (middle line) — the mirror of the OttavaBracket grob's relative
     /// coordinate: <c>lily/ottava-bracket.cc</c> print puts the line at the stencil's own

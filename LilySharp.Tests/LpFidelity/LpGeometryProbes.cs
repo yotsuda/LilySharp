@@ -1721,6 +1721,76 @@ internal static class LpGeometryProbes
     private static readonly string TXL = TextScriptScore("TXL", "_\"mum\" _\"poco\"");
 
     /// <summary>
+    /// HOW WIDE A STRING IS RESERVED, per string — the mirrors of text-advance.ly's books.
+    /// The same score as the four above (only the string differs), because the width is
+    /// read off the drawn text itself and the music is there to put one on the page.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The book the ottava island asked for. <c>ottava.x.line-start-to-notehead</c> ended
+    /// session 73 decomposed into a spelling term and a +0.064862992 remainder that
+    /// "accumulates across glyphs, about 0.032 per inter-glyph step" — a per-step constant
+    /// nobody had measured, in the one entry in the ledger that touches a text width at all.
+    /// MEASURED (audit/lp-geometry/probes/text-advance.ly, 2026-08-02) it is not one term
+    /// and not per step:
+    /// </para>
+    /// <list type="number">
+    /// <item>LilyPond's text X-extent is the LOGICAL box (lily/pango-font.cc:351-362 takes X
+    /// from the logical rectangle, Y from the ink one), and the ladder proves it from the
+    /// outside: "nn" is exactly 2 × "n" and "nnnn" exactly 4 × "n", so a single glyph is a
+    /// whole advance.</item>
+    /// <item>Every reading is an integer number of 0.034143307086614 ss — ONE PIXEL at
+    /// PANGO_RESOLUTION 1200 (lily/pango-font.hh:75, lily/pango-font.cc:109-111), predicted
+    /// from those constants to fifteen digits — and every single glyph is
+    /// <c>round(advance × ppem)</c> at ppem 64.434297. LilyPond rounds each glyph's advance
+    /// to a whole pixel; Lily# sums the unrounded ones, so it is out by that glyph's
+    /// remainder, SIGNED: wide on n and o, narrow on 8 and a.</item>
+    /// <item>What is left is PAIR KERNING, which <c>TextFontMetrics.AdvancePerEm</c> cannot
+    /// produce at all (one <c>MeasureText</c> per code point — measured, its sum equals the
+    /// whole string's, so nothing is lost in Skia either). "AA" is 4 px WIDER than "A"
+    /// twice, "AAA" 8 px wider than three (per pair, not per string), "AV" and "VA" are both
+    /// 5 px narrower, "VV" is exactly twice "V".</item>
+    /// </list>
+    /// <para>
+    /// The em 2.2 and the face are NOT the mechanism, and both were live candidates: the
+    /// rounding model above holds at em 2.2 for every glyph, and C059-Italic (what
+    /// "LilyPond Serif" prefers) and the bundled TeX Gyre Schola Italic return the same
+    /// advance for every glyph in these books. HANDOFF §5: a "font quantity" label is weak
+    /// until the points say whether one scalar could move them all — here two of them move
+    /// in OPPOSITE directions, so none can.
+    /// </para>
+    /// </remarks>
+    private static string TextWidthScore(string name, string text) =>
+        TextScriptScore(name, "_\"" + text + "\"");
+
+    /// <summary>One glyph: the rounding remainder alone (Lily# 0.369 px wide).</summary>
+    private static readonly string TA1 = TextWidthScore("TA1", "n");
+
+    /// <summary>The same glyph four times: four times the same remainder, which is what
+    /// says the term is per GLYPH and not per inter-glyph step.</summary>
+    private static readonly string TA4 = TextWidthScore("TA4", "nnnn");
+
+    /// <summary>A second glyph, a different remainder (0.217 px) — the pair that keeps a
+    /// single scalar from explaining the ladder.</summary>
+    private static readonly string TB1 = TextWidthScore("TB1", "o");
+
+    /// <summary>The kern books' shared first glyph, alone.</summary>
+    private static readonly string TG1 = TextWidthScore("TG1", "A");
+
+    /// <summary>Its partner, alone — so "AV" is one equation in no unknowns.</summary>
+    private static readonly string TG2 = TextWidthScore("TG2", "V");
+
+    /// <summary>A POSITIVE pair adjustment: +4 px over "A" twice.</summary>
+    private static readonly string TAA = TextWidthScore("TAA", "AA");
+
+    /// <summary>A NEGATIVE one: −5 px, the same two glyphs, the other order of error.</summary>
+    private static readonly string TAV = TextWidthScore("TAV", "AV");
+
+    /// <summary>The ottava's string, in the weight a pair can reach: rounding +0.254 px and
+    /// one pixel of kern.</summary>
+    private static readonly string T8V = TextWidthScore("T8V", "8va");
+
+    /// <summary>
     /// THE NUMBER OF A FULLY BEAMED TUPLET as staff-to-staff binding ink — the mirrors of
     /// tuplet-number-beamed.ly's books TNB / TNC.
     /// </summary>
@@ -7325,6 +7395,27 @@ internal static class LpGeometryProbes
             g => g.CustomTextBaselineStep(), RaggedBottomPaper),
         new("textscript.stacked.outline-step", TXS,
             g => g.CustomTextBaselineStep(), RaggedBottomPaper),
+
+        // --- HOW WIDE A STRING IS, per string (books TA1/TA4/TB1/TG1/TG2/TAA/TAV/T8V) ---
+        // The first points that read a TEXT WIDTH directly. They are deliberately a family
+        // rather than one entry: the quantity has TWO mechanisms behind it (per-glyph pixel
+        // rounding and pair kerning), and a single point cannot tell them apart — which is
+        // exactly how the ottava's line-start entry ended up carrying an unnamed +0.0649.
+        // See TextWidthScore for the measured decomposition and the LP refs.
+        //   * the ladder (TA1/TA4/TB1) is ROUNDING only: no kern pairs in "n"/"o", so
+        //     TA4 must be four times TA1's residual and TB1's must differ from TA1's.
+        //     A reading where all three residuals scale together is a scale term instead,
+        //     and then the whole reading above is wrong — that is this family's falsifier.
+        //   * the kern books (TAA/TAV over TG1/TG2) are the pair term, in both signs.
+        //   * T8V is the string the ottava island could not read on its own.
+        new("text.width.n1", TA1, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.n4", TA4, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.o1", TB1, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.a1", TG1, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.v1", TG2, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.aa", TAA, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.av", TAV, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+        new("text.width.8va", T8V, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
 
         // --- the FULLY BEAMED tuplet's number as staff-staff binding ink (TNB/TNC) ---
         // The first points that reach SkylineBuilder's !ShowBracket skip. See
