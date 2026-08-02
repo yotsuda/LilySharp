@@ -4094,6 +4094,86 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A FLAGGED DOWN-STEM note whose neighbour is LOW enough to tuck under the flag.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (score FSF8): <c>\time 4/4 c''8 dis'4 r4 r8</c> — 3.181800, against
+    /// <see cref="FSFH8"/>'s 3.354200 with the SAME accidental one octave up.
+    /// <para>
+    /// ⚠️ THREE THINGS HAD TO BE TRUE AT ONCE and each one killed an earlier draft
+    /// (audit/lp-geometry/probes/flagged-stem-reach.ly has the null results):
+    /// the note must be FLAGGED (two eighths are one beat, LilyPond beams them and the Flag
+    /// grob suicides), the stem must be DOWN (an up stem's flag stands beside the head, where
+    /// it needs no help to be seen — 2.167400), and the neighbour must sit in the FLAG's Y
+    /// BAND (a down stem stands at the head's LEFT edge, so at the head's own height the flag
+    /// is inside the head's shadow and the column reaches 1.404200 whatever the flag does).
+    /// </para>
+    /// <para>
+    /// The gap is FLOOR-bound, and the pair proves it rather than assuming it: the duration
+    /// space is a function of the durations alone (lily/spacing-options.cc:71-107), so a
+    /// spring-bound gap could not move when only a PITCH moves. It moves by 0.172400, which
+    /// puts the flag's reach at 1.404200 − 0.172400 = 1.231800.
+    /// </para>
+    /// <para>
+    /// WHAT IT IS FOR: Lily# reserves this flag at the head's left edge and DRAWS it at the
+    /// stem, half a stem thickness (0.065) to the right — ItemSkylineFactory says so in a
+    /// comment and leaves it alone for want of an observer. This is the observer.
+    /// </para>
+    /// </remarks>
+    private static readonly string FSF8 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c''8 dis'4 r4 r8 | }
+        }
+
+        form main { ~Main }
+
+        score main "FSF8" { staff m }
+        """;
+
+    /// <summary>The same book with the accidental an octave UP, where it faces the notehead
+    /// instead of the flag — the control that holds everything but the pitch.</summary>
+    private static readonly string FSFH8 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c''8 dis''4 r4 r8 | }
+        }
+
+        form main { ~Main }
+
+        score main "FSFH8" { staff m }
+        """;
+
+    /// <summary>An UP stem's flag, which stands beside the head and sets the column's reach on
+    /// its own (2.167400) — no draw-versus-reserve split there, so this one says whether the
+    /// ordinary flagged case was already right.</summary>
+    private static readonly string FSFU8 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { d'8 fis''4 r4 r8 | }
+        }
+
+        form main { ~Main }
+
+        score main "FSFU8" { staff m }
+        """;
+
+    /// <summary>
     /// A note BEFORE the grace, so the approach spring is visible — with its control in the
     /// same book.
     /// </summary>
@@ -7518,6 +7598,13 @@ internal static class LpGeometryProbes
         new("grace.column.accidental.step", GCWA, g => g.NoteheadAnchorStep(0)),
         new("grace.column.approach", GCWP, g => g.NoteheadAnchorStep(0)),
         new("grace.column.approach.main-control", GCWP, g => g.NoteheadAnchorStep(3)),
+
+        // A FLAGGED DOWN-STEM column's reach, which needs a neighbour in the FLAG's own Y band
+        // to be visible at all. The pair moves ONE thing — the neighbour's pitch — and the
+        // control is what says the reading is the flag's and not the accidental's.
+        new("flag.down.reach.low-neighbour", FSF8, g => g.NoteheadAnchorStep(0)),
+        new("flag.down.reach.high-neighbour-control", FSFH8, g => g.NoteheadAnchorStep(0)),
+        new("flag.up.reach", FSFU8, g => g.NoteheadAnchorStep(0)),
 
         // A MUSICA FICTA accidental, which is a grob that STATES font-size −2 — so it is
         // read and drawn out of the SIXTEEN Emmentaler design, not the twenty scaled. The
