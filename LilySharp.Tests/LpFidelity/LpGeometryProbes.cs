@@ -7398,6 +7398,30 @@ internal static class LpGeometryProbes
         // This pair is what tells an arithmetic residual from a spelling one.
         new("ottava.string-control.staff-to-line", OTC,
             g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
+        // Round 5 — the ottava's X, which every entry above reads THROUGH: the string
+        // control's remaining +0.002169347 is the two labels sampling their outlines at
+        // different x, and nothing measured where the bracket starts. Both LilyPond
+        // numbers come from ottava-bracket.cc's own arithmetic and the OTS dump, so the
+        // spelling difference cannot reach them: the bound is read pen-to-notehead (the
+        // text's ORIGIN is what LilyPond translates), and the line start is read from the
+        // drawn rule.
+        //   * label-to-notehead: LilyPond -0.800000000 EXACTLY — span_points[LEFT] is the
+        //     bound COLUMN'S NOTE-HEADS' left extent, minus the shorten-pair LEFT.
+        //     PREDICTION for Lily# (before its run, sign certain NEGATIVE and LARGE):
+        //     OttavaBracketEngraver takes `segStartMeasure.X + LeftShorten`, the MEASURE's
+        //     X, which in this book sits 2.0 left of the first column ⇒ about -2.8,
+        //     residual about -2.0. FALSIFIER: a reading near -0.8 means the measure's X
+        //     and the column's coincide here and the book cannot see the defect — pick a
+        //     measure whose first column is not at its origin.
+        //   * line-start-to-notehead: LilyPond +0.713302362 = the label's INK right + 0.3
+        //     ("~ italic correction", its own comment) off the bound. PREDICTION for Lily#:
+        //     the bound is 2.0 early and the gap is `advance + 0.5` instead of `ink + 0.3`,
+        //     so it lands near +1.65 — it carries BOTH differences on purpose, which is why
+        //     the pen entry beside it carries only the bound.
+        new("ottava.x.label-to-notehead", OTC,
+            g => g.OttavaLabelPenToNotehead(), RaggedBottomPaper),
+        new("ottava.x.line-start-to-notehead", OTC,
+            g => g.OttavaLineStartToNotehead(), RaggedBottomPaper),
         // Round 2 (book OTL) — the ottava's face of the guard three above-staff movers
         // carry. LilyPond repeats OTC's number on the lower staff to fifteen digits (its
         // pass is per-VerticalAxisGroup); Lily#'s guard skips the pass, which for THIS grob

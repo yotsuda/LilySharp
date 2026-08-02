@@ -998,6 +998,57 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The ottava LABEL's drawn PEN, relative to notehead <paramref name="noteheadIndex"/>
+    /// — the bracket's LEFT BOUND on both sides, because LilyPond translates the text
+    /// stencil's ORIGIN to that bound.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ottava-bracket.cc:121-176 Ottava_bracket::print —
+    ///   <c>span_points[d] = ext[d]</c> where <c>ext</c> is the union of the BOUND NOTE
+    ///   COLUMN's note-heads' X extents (not the whole column), then
+    ///   <c>span_points[d] -= d * shorten[d]</c> with shorten-pair (-0.8 . -0.6), and
+    ///   finally <c>text.translate_axis (span_points[LEFT], X_AXIS)</c> — the text's
+    ///   ORIGIN, so this reads pen against pen with no left-bearing term on either side.
+    /// ⇒ LilyPond's answer is the shorten-pair LEFT, -0.8, exactly.
+    /// </remarks>
+    public double OttavaLabelPenToNotehead(int noteheadIndex = 0, int page = 0)
+    {
+        var t = SoleSerifText("the ottava label", page);
+        double advance = LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.BoldItalic);
+        double pen = t.Anchor switch
+        {
+            LilySharp.Core.Rendering.TextAnchor.Middle => t.X - advance / 2,
+            LilySharp.Core.Rendering.TextAnchor.End => t.X - advance,
+            _ => t.X,
+        };
+        return pen - NoteheadAnchor(noteheadIndex);
+    }
+
+    /// <summary>
+    /// Where the ottava's dashed LINE starts, relative to notehead
+    /// <paramref name="noteheadIndex"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ottava-bracket.cc:124-135 Ottava_bracket::print —
+    ///   <c>text_size = text.extent (X_AXIS)[RIGHT] + 0.3</c> ("0.3 is ~ italic
+    ///   correction", its own comment) and <c>bracket_span_points[LEFT] +=
+    ///   text_size</c>. So the gap is measured from the label's INK right, not its
+    ///   advance, and the constant is 0.3. Lily# spends <c>advance + 0.5</c>
+    ///   (OttavaBracketEngraver.LabelLineGap), which is why this entry carries BOTH
+    ///   differences and the label-pen entry carries only the bound.
+    /// </remarks>
+    public double OttavaLineStartToNotehead(int noteheadIndex = 0, int page = 0, int staff = -1)
+    {
+        var (_, ruleY) = SoleRuleAboveStaffRaw("the ottava line", page, staff);
+        var rule = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - ruleY) < 1e-9 && Math.Abs(l.Y1 - l.Y2) < 1e-9)
+            .OrderBy(l => Math.Min(l.X1, l.X2))
+            .First();
+        return Math.Min(rule.X1, rule.X2) - NoteheadAnchor(noteheadIndex);
+    }
+
+    /// <summary>
     /// The ottava LABEL's own ink height — the drawn "8va" measured at the face, size and
     /// style <c>DrawOttavaBrackets</c> draws it with.
     /// </summary>
