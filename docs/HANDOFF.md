@@ -58,6 +58,100 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-02（第70セッション＝**⑬⑵＝grace の臨時記号を閉じた。ただし引継ぎが名指していたデザインは誤りだった**）。
+**閉じたもの**（**snapshot 4 枚はユーザー承認のうえ再ベース**）:
+```
+skyline 生成器を per-design   411c7ea1  snapshot 0 枚  出力不変（20 のデータは byte 不変）
+⑬⑵ grace の臨時記号           018ff8c1  snapshot 4 枚  台帳 1 点が EXACT・テスト +4
+grace レシピの住所を訂正       1456a58c  snapshot 0 枚  出力不変（注 8 か所）
+```
+★★★ **▶ に書いてあった一手は前提が誤っていた**——「grace の臨時記号を **14** の skyline で閉じる」。
+**LP に訊いたら 14 ではなく 13 だった**（⑧ と同じ形＝**レシピごと `scm/` に書いてある**）:
+```
+scm/music-functions.scm:635-648 general-grace-settings は **grob ごとの表**
+  (Voice NoteHead font-size -3)      頭は −3 ＝ 14 デザイン
+  (Voice Accidental font-size -4)    ★ 臨時記号だけ −4 ＝ 13 デザイン（AccidentalCautionary も）
+  (Voice Script -3) (Voice Fingering -8) (Voice StringNumber -8) (Voice TabNoteHead -4)
+⚠️ ly/grace-init.ly には**サイズは 1 行も無い**（slur と acciaccatura の斜線だけ）。
+   注 8 か所が「ly/grace-init.ly graceSettings」と名指していた＝§5.2（値は正しく住所が嘘）。
+```
+★★★ **残差 −0.017651918 は 1 項ではなく、符号の違う 2 項だった**（**LP 実測から 9 桁で再構成**）:
+```
+グリフ  Lily# 1.100 × magstep(−3) = 0.777817  対  LP 1.100 × magstep(−4) = 0.692957   +0.084861
+padding Lily# 0.35 × magstep(−3) = 0.247487  対  LP **0.35**（縮まない）             −0.102513
+                                                                    合計 −0.017652
+```
+★★★ **だから台帳はこの点を「1 項」と読んでいて、しかもその 1 項を直すと悪化した**——
+**片方だけ入れると過補正に見える**。padding は `position_apes` が `padding`/`right-padding`/横 0.1 を
+**生で読む**（`lily/accidental-placement.cc:391-416`）ことと、**grace の♯がきっかり −0.350000 で終わる**
+実測（`grace-column-width.ly` GCWA の `ACC ext=(-1.0429565774 . -0.3500000000)`）の両方で裏が取れている。
+★★★ **入ったもの**:
+```
+Extract-EmmentalerSkylines.py   臨時記号族（5＋paren 2）だけ 8 デザイン。20 のデータは byte 不変
+                                （clef/dynamics/trill は 20 のまま＝**デザインを選ぶ grob がまだ無い**）
+GlyphMetrics.AccidentalSkylinePair(kind, design=20) / AccidentalParenSkylinePair(leftParen, design)
+DesignMetrics.Magnification     ＝ modified-font-metric.cc の magnification_（面と倍率で 1 つのフォント）
+AccidentalPlacement             scale(double) → **フォント 2 つ**（臨時記号用と頭用）。padding は縮めない
+GraceNoteItem.AccidentalFontSizeStep(−4) / AccidentalFont / AccidentalDesignSize(13)
+```
+★★★ **観測者 4 本**（`EmmentalerDesignMetricsTests`）——**どれも片側からは見えない**:
+`AGraceAccidentalIsTheThirteenDesign` ／ `AnAccidentalSkylineIsPerDesignToo` ／
+`AGraceAccidentalIsMeasuredAndDrawnFromOneDesign` ／ `AccidentalPaddingsAreTheStaffsNotTheFonts`。
+★ **cue も 0.119 動いた**（**padding が縮まなくなったぶんだけ**）。**glyph は 0.66 のまま**＝別島。
+★★ **`grace.column` の島は全点 EXACT になった**（残差 −0.000000173 ＝ テーブルの 6 桁丸め）。
+**未 push 94**（**この引継ぎ commit まで数えた値**＝`git rev-list --count origin/master..master`）・
+テスト **3848 passed / 0 failed / 3 skipped**（**+4**）・
+台帳 **391 点**（**ss 非ゼロ 72・総和 0.108590402**／**count 点 99・うち非ゼロ 2**）。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ▶ 次の一手
+
+★★★ **⑬⑵ の残り＝ossia と cue**。**cue は今回で半分だけ動いた**——**padding は LP 準拠になり、
+glyph は Lily# の 0.66 のまま**＝**今がいちばん中途半端な状態**なので、次に触るならここ。
+```
+cue のレシピ（ly/engraver-init.ly CueVoice）は第69セッションが読んである:
+  fontSize = #-4 → magstep(-4) = 0.629961（Lily# の 0.66 は **4.8% 大きい**）
+  \override Stem.length-fraction = #(magstep -4)   ← Lily# には無い
+  \override Beam.length-fraction = #(magstep -4)   ← Lily# には無い
+  \override Beam.beam-thickness = #0.35            ← 宣言値・Lily# には無い
+  \override StemTremolo.beam-thickness = #0.35     ← Lily# には無い
+★ font-size −4 は **13 デザイン**＝**grace の臨時記号と同じ道具がもう揃っている**
+  （AtFontSize / MusicFace / AccidentalSkylinePair(kind, 13) の 3 つとも per-design 済み）。
+⚠️ **CueVoice は grob ごとの override を持たない**＝**cue の臨時記号も −4**（grace と違って頭と同じ）。
+⚠️ **要・台帳点を先に開く**（描画が動く）。`test/cue-accidentals` は snapshot がある。
+```
+★★★ **ossia**（**着手前に読むこと**）:
+```
+ossia は staff-space そのものも縮む（StaffSize.Span）＝面のスコープは SharedRenderer の
+  ossia group スコープに開く。⚠️ ただし StaffSize は「倍率」を持っていて font-size を持っていない
+  ＝ StaffSize(FontSizeStep) に直すのが先（Magnification は magstep から出る・0.7071 の丸めも消える）。
+⚠️ そこで詰まる点：ossia の metric 読みには「上流で計算済みの箱」が流れ込む（articulation の Ink など）
+  ＝ StaffSize.Ink(box) は引き直せない。per-design にするには箱を作る側が staff の font を知る必要がある。
+  ⇒ grace のような「1 経路まるごと」にはならない。着手前に site を数えること（size.Ink は 4 か所、
+     glyph 量が Span を通っている site が 2 か所＝1492 と 1609 は型を間違えている）。
+```
+★★ **点を先に開く仕事が 1 つ溜まっている**（**⑬⑶ で見つけて、観測者が無いので直さなかった**）:
+```
+旗つき下向き符尾の予約が符頭の左端から始まる（描画は符尾＝左端+0.065）＝draw ≠ reserve。
+  ItemSkylineFactory の該当行に注記あり。⚠️ 直すとコーパス 30 冊が 0.02 動く。
+  ⇒ **LP に「旗つき下向き符尾の列」を訊く点を開いてから**（probes/jn-line-forces.ly が近い）。
+⚠️ ★ 点の設計に注意：**ふつうの 8 分音符 2 つでは旗が床を binding しない**（ばねの ideal が
+  ink より広いので、旗の予約が何ミリ動いても列間は動かない＝**何も観測しない点**になる）。
+  **GCW1 と同じ作り方**をすること＝**床が決める texture**（詰まった行・32 分・次の列に臨時記号）を
+  選び、**「この点は floor を読んでいる」ことを本文で先に確かめる**（grace-column-width.ly の
+  ヘッダが手本）。
+```
+★ **`general-grace-settings` の未実装が 2 行残っている**（**どちらも今は届く経路が無い**）——
+`(Voice Stem no-stem-extend #t)` と `(Voice TabNoteHead font-size -4)`。
+**Lily# の `GraceNoteInfo` は符頭・臨時記号・加線・音価しか持たない**（dots も script も無い）ので、
+`Dots -3` / `Script -3` / `Fingering -8` / `StringNumber -8` は**まだ観測できない**。
+★ **tab の残り 3 冊**（**弦を明示しない本は LP と比較できない**・第67セッション §1 ⑨）——
+**触るなら fixture 側（`\N` で弦を固定）。描画が動く＝要承認。**
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第69セッションの経緯
+
 最終更新 2026-08-02（第69セッション＝**⑬⑵＝grace と編集臨時記号を「そのデザインで測り、そのデザインで描く」ようにした**）。
 **閉じたもの**（**どちらもユーザー承認のうえ再ベース**）:
 ```
@@ -125,7 +219,7 @@ PNG が 2 つのデザインに同じ file を返したら落ちる点。**Skia 
 台帳 **391 点**（**ss 非ゼロ 73・総和 0.126242320**／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
-## ▶ 次の一手
+## ▶ 次の一手（**第69セッション当時。この節は読まないこと**——**⑬⑵ の臨時記号は第70セッションで landed。しかも「14 の skyline」は誤りで、正解は 13 デザイン＋padding だった**）
 
 ★★★ **⑬⑵ の残り＝ossia と cue**（**grace / 編集臨時記号と同じ形**）。**着手前に読むこと**:
 ```
@@ -6878,6 +6972,22 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   再現する**。数点を通る模型は複数ある。⇒ **摂動を 3 点目・4 点目と足すより、
   対象そのもの（ここでは paper column）を 1 回 dump するほうが速く、かつ決定的。**
   「grob が動いたのか、grob が乗っている**器**が動いたのか」は、器を dump しないと分からない。
+- ★★★ **台帳の `why` に書いてある「残りはこれ」も主張である。着手前に測り直す。**
+  （2026-08-02・第70セッション。**引継ぎと台帳と実装注記が 3 つとも同じ誤りを名指していた**）。
+  `grace.column.accidental.step` は「残りは AccidentalPlacement の読み**だけ**で、
+  臨時記号を**14** デザインにすれば閉じる」と書いてあり、▶ もコード注記も同じ文を運んでいた。
+  **どちらも外れ**だった——**14 ではなく 13**（LP は grace の臨時記号に **font-size −4** を与える）で、
+  **項も 1 つでなく 2 つ**（padding は縮まない）。⇒ **書いてあるとおりに直していたら、
+  この点は 0.0849 悪化していた**（もう一方の項が −0.1025 だったので、片方だけでは過補正になる）。
+  ⚠️ **裏取りは 30 分だった**——`ly:grob-property acc 'font-size` を印字する 20 行の probe 1 本。
+  ⇒ ★★ **判定法**: **台帳の `lilypond` 値は測ったもの、`why` の因果は書いたもの**。
+  **前者は再利用してよく、後者は着手前に 1 回反証しにいく**（§5.2.1 の falsifier をここにも当てる）。
+- ★★ **残差が 1 項に見えるとき、符号の違う 2 項かもしれない**（同セッション）。
+  −0.017652 は **+0.084861（グリフ）と −0.102513（padding）の和**で、
+  **どちらの項も残差より 5 倍大きい**。⇒ **「残差が小さい＝原因も小さい」は成り立たない。**
+  ⚠️ **見つけ方は「LP の答えを項に分解して並べる」**——LP は `0.35 + 1.100×magstep(−4)`、
+  Lily# は `0.35×magstep(−3) + 1.100×magstep(−3)` と**同じ形に書き下すと差が項ごとに出る**。
+  **合計だけを比べているかぎり、打ち消し合う 2 項は 1 項に見え続ける。**
 
 ### 5.4 テストの原則
 
