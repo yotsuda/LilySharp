@@ -128,6 +128,21 @@ emmentaler-{11,13,14,16,18,23,26}.woff2 を新規同梱（各 52KB／.otf は 10
             SvgDocumentContext.GetFontFaceRule は body より前に @font-face を書く
               ⇒ 「使ったデザイン」を集めてから書く形に変える必要がある
 ```
+★★★ **⑵ の形は設計まで済んでいる**（**第68セッションが実コードで確かめた・着手はしていない**）:
+```
+描画側は 3 backend とも「family 名」で顔を引いている＝顔を増やすのは表 1 行ずつ
+  PDF  Rendering/Pdf/EmmentalerFontResolver（"Emmentaler" → emmentaler-20.otf の表）
+  PNG  Png/PngGenerator.RegisterFont(svg, dir, file, family, providers)
+  SVG  <text class="music"> ＋ style の `.music { font-family: 'Emmentaler', serif; }`
+渡し方は「面のスコープ」が安い＝`IDrawingContext.Source(int)` と同じ形の
+  `IDisposable MusicFace(int rounded)` を 1 本足す（既定は 20＝出力不変）。
+  ⚠️ decorator（YFlip / TextFont / UnscaledX）は *必ず* override して _inner に転送すること——
+     interface の既定実装のままだと本物の backend にスコープが届かない。
+⚠️ 唯一の構造的な障害＝**SVG の style ブロックが body より先に書かれる**
+  （SvgDocumentContext.GetFontFaceRule）。「使ったデザインだけ埋める」には
+  header を後で組む（body を別の StringBuilder に書く）か placeholder を置く必要がある。
+  ⚠️ 逆に「8 デザインぶんの CSS を常に書く」は snapshot を全部動かすので選ばない。
+```
 ★ **⑵ は出力が動く**（**grace 列が 0.004270 狭くなる ⇒ spacing ⇒ snapshot**）＝**要承認**。
 ★ **台帳は `grace.column.*` の 12 点＋`beam.quant.grace.*`**（**`residual 0.004270045` を持つ点が観測者**・
 **閉じたら why に「⑬ で閉じた」と書いて residual を更新する**）。
