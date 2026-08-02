@@ -58,6 +58,135 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-03（第76セッション＝**引継ぎが名指した「決定だけが手前で短絡している」は当たっていたが、
+「問題本体は移植済み」は外れ。足りなかったのは項が 2 つと、**項ですらない量が 1 つ**。決め手は最後の
+ほうで、`Tie_configuration::height` は**曲線の中点**であって制御点の高さではなかった**）。
+
+**閉じたもの**（**snapshot 9 枚はユーザー承認のうえ再ベース**）:
+```
+台帳に方向の点を 6 つ開く（コード変更ゼロ）  b06087ee  snapshot 0 枚  台帳 +6（count・1 つが +2）
+方向を配置時へ移す＋足りない 3 つを移植      4c57d7a5  snapshot 9 枚  +2 → 0・台帳 +3（幅）
+```
+
+★★★ **① 対が claim そのものだった。** `TDBEAM`／`TDBEAMD` は**同じ音楽**（タイの 2 音・位置・第1符尾・
+小節の形が全部同じ）で、**第2音の梁の向きだけ**が違う。**LP は逆の答えを返す**（−1 / +1）。
+**第1音の符尾を読むどんな規則も 2 冊に同じ答えしか出せない**ので、**残差でなく対が反証**になる。
+実測: 移植前の Lily# は **2 冊とも +1 で幾何がバイト同一**だった。
+⚠️ `Tie::get_default_dir` は**まさにその規則の顔をしていて、それではない**——`tie.cc:203-208` は
+**壊れた片割れ**にしか呼ばない。
+
+★★★ **② 足りなかった項は 2 つ。**
+```
+score_aptitude の水平距離罰 :665-683   TieDetails が宣言し（テストが定数を assert）誰も計算していなかった
+方向の判定 :701-710                    LP は符尾を2本読み、2本が一致したときだけ罰する
+                                       （左↓右↑は何の罰も払わない＝距離項に落ちる）
+base 配置 :964-966 + :1026-1045        base は (position + dir, dir)。Lily# は position で始めていた
+```
+**1.01/端＝`10 × convex_amplifier(1.25,1.0,0.2)`**——箱の中の候補は**符頭の内エッジ**に付いて
+`note-head-gap` だけ外へ出る、箱を出た候補は**符頭の中心**に付いて**中に入る＝0**。
+
+★★★ **③ それでも閉じなかった。真犯人は「量」のほう。**
+`Tie_configuration::height` は `slur_shape(l).curve_point(0.5)[Y]`＝**中点**（`tie-configuration.cc:80-87`）。
+Lily# は**制御点の高さ**をその閾値に当てていた（**実際の盛り上がりの 4/3**）。
+```
+幅 3.6ss のタイ   中点 0.517 → intra-space の SHORT 枝（tip を 0.225 線から逃がす）
+                 制御 0.689 → TALL 枝（何も動かさない）
+```
+⇒ **近い数ではなく別の枝**。★★ **0.75 はこのファイルに 2 回書いてあった**
+（`center_tie_vertically`・tie-tie の中心）——**足りなかったのは係数ではなく「それが量に属する」こと**。
+`BezierBow.MidpointHeight` に名前を付け、`TieCandidate` は**2 つの高さ**を持つ。
+
+★★★ **④ 対を 1 度書き直した＝`@stemDown` は梁の中の音符に届かない。**
+`BeamDetector` が群の向きを音高から決め、`ResolveBeamStemDirections` が**全メンバーの
+`StemUpOverride` を上書きする**。⇒ 最初の `TDBEAMD` は **Lily# 側が上向き梁・双子が下向き梁**＝
+**対ですらなかった**。**片方が正しくなって片方が壊れて初めて見えた**。今は**梁の向きを音高で作る**
+（両エンジンが書ける綴り）。⚠️ **`lysc ly` は `@stemUp`/`@stemDown` を落とす**（別の欠陥・▶）。
+
+★★★ **⑤ 遠ざかった 3 本は 1 つの機構で、点が付いた。**
+`tie.width.clears-head` と `tie.width.seconds.lower` は **9 桁 EXACT**、
+`tie.width.seconds.upper` は **+0.888699999**＝**LP 自身が同じ和音の 2 本のタイに付けている差**
+（3.875445 − 2.986745）**そのもの**。Lily# は 2 本に同じ幅を出す。
+**他の 2 読みが exact なので未知数は 1 つ**——**Lily# は「このタイ自身の符頭の箱」しか知らない**。
+LP は列の**アウトライン全部**（各符頭・付点・符尾・旗、+ **列の一番外の符頭**から立てる後退箱
+`:96-287`・`:243-258`）を建て、そのうえで**符尾から attachment を引き戻す**（`:583-609`・`stem-gap 0.35`）。
+
+**未 push 134**（**この引継ぎ commit まで**）・テスト **3918 passed / 0 failed / 4 skipped**（**+9**）・
+台帳 **430 点**（**ss 非ゼロ 83・総和 5.332531510**／**count 点 105・うち非ゼロ 2**）。
+⚠️ **総和が +0.8887 増えたのは悪化ではない**——**一度も測られていなかった量を可視化した**ぶん。
+**比較は同じ点集合の中でのみ意味を持つ。**
+★ **perf は §7.9 のとおり測った**（Release・min-of-9・A/B を 2 往復）:
+```
+feature-tour  BASE 1675.8 / 1620.2   HEAD 1671.6 / 1549.3 ms
+repro-ties    BASE 1531.4 / 1511.2   HEAD 1559.1 / 1465.2 ms   ← ばらつき（max 3298）の中
+```
+**足したのは候補ごとに exp 2 回 + atan 1 回**（既存ループの中・タイあたり約 8 候補）**＋束ごとに配列参照 2 回**。
+**pass も skyline も profile も増えていない。**
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ▶ 次の一手
+
+★★★ **タイの列アウトライン＝次の島。点は開いている**（`tie.width.seconds.upper` +0.888699999）。
+**移植するのは 3 つ**:
+```
+tie-formatting-problem.cc:96-287   set_column_chord_outline   列の箱を全部（符頭・付点・符尾・旗）
+                       :243-258    updowndir の後退箱は「列の一番外の符頭」から立てる
+                                   ⇒ 和音の内側では centre へ後退しない
+                       :583-609    符尾の Y 範囲に入るなら attachment を stem端 − stem_gap(0.35) へ
+                       :565-579    close_by との intersect（短いタイ）
+```
+⚠️ **snapshot は動く**（今回動いた 9 枚のうち少なくとも 3 枚は戻る側）。**1 枚ずつ承認を取ること。**
+⚠️ **`tie.width.clears-head` と `tie.width.seconds.lower` は今 exact**＝**この移植の falsifier**。
+**壊したらアウトラインの建て方が違う。**
+
+★★ **`@stemUp`/`@stemDown` が梁の中の音符に届かない**（**起票・未修正**）。
+`MeasureCollector.ResolveBeamStemDirections` が `BeamDetector` の群方向で
+**全メンバーの `StemUpOverride` を上書きする**ので、注釈は黙って消える。
+**LP は `\stemDown` を梁ごと倒す。** ⚠️ **さらに `lysc ly` も `@stemUp`/`@stemDown` を落とす**
+（"articulation not mapped, dropped"）＝**双子が別の音楽になる**。**今回それで 1 度対を壊した。**
+★ **どちらも安い。直すなら両方同時に**（片方だけだと双子で検算できない）。
+
+★★ **行末 courtesy の定数 3 本＝⒝ の債務**（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
+`CourtesyKeyToTimeGap` 1.15）。**出所は `SpacingRules.BarlineToCourtesyKey` の remarks に 1 軒だけ置いた**
+（`break-alignment-interface.cc:228-243`。他の 2 本はそこを `see cref` で指す＝住所を 3 つに増やさない）。
+⚠️ **space-alist の値をそのまま写したのではない**——TimeSignature は `(staff-bar . (extra-space . 1.0))` と
+**宣言している**のに**印字は 0.750000**。**「宣言値＝定数」と書くと偽の住所になる。**
+⇒ ★ **点が −0.2 で開いている**（`courtesy.meter.barline-to-cancellation`）。0.8 を 1.0 にするだけでは**駄目**
+——予約 `KeyCourtesySuffixWidth` が同じ定数を読むので、描画と予約が一緒に動かないと信号が譜からはみ出る。
+⇒ **本筋は行末の群も `BreakAlignSpacing` に通すこと**（行頭 prefix は既に通っている。
+**LP は行の両端に break-align 群を 1 つずつ持つのであって、片側が solver・片側が定数ではない**）。
+**通せばこの 3 本は消える。**
+⚠️⚠️ ★ **0.75 は 1 冊でしか測っていない**（§7.7「プローブ 1 冊の texture だけ見て定数化しない」に触れる）。
+**1.15 のほうは独立に 2 か所で一致している**ので交差検証済み。⇒ **0.75 には texture を変えた 2 冊目が要る**
+——行末が**終止線 `|.` や複縦線**のとき、**拍子が 2/4 でなく C や 3/4** のとき。**今それを観測しているのは
+`courtesy.meter.barline-to-meter` 1 点だけ**なので、**倒れるとしたらそこ**。安い。
+
+★★ **ばねの最小値と臨時記号**（**未修正・宣言のみ**）。**LP のばねの最小値は臨時記号を原理的に見られない**：
+`note-spacing.cc:78-83` → `spacing-interface.cc:37-82` は列に**保存された** `horizontal-skylines`
+（＝`elements` のみ）を読む。臨時記号は `conditional-elements` で、**ロッドだけ**が合流させる。Lily# は
+ばねもロッドも両方見ている。⚠️ **臨時記号のある列を全部動かすので、点と測定が先**。
+コードの ⚠️ は `ItemSkylineFactory.CreateLeftSkyline` の remarks。
+
+★ **`lysc ly` が `@arpeggio` を落とす**（双子を作ると `<c e g>4` になる）。**arpeggio を LP と比べようと
+すると偽の一致が出る。** ★ **`@arpeggio` は残す（2026-08-02 ユーザー判断・確定）。撤去案は閉じた。**
+実測で `<<>>`＝**書き出された分散和音**、`@arpeggio`＝**積んだ和音＋波線**の別物。
+⇒ **残すと決まった以上、`lysc ly` が落としている件は直す側。**
+
+★★ **未測定が残っている（フォント）**: regular/bold/bold-italic 面のカーン差（italic のみ全走査）。**測るなら安い**。
+★★ **描画側 3 バックエンドがカーンを掛けているか未測定**（SVG のビューアは掛ける／PNG・PDF は素の Skia
+＝掛けない見込み。**推測**）。**実測して点で起票してから**直すこと。
+★ **`ottava.x.line-start-to-notehead` の 0.05 は harness の項**（閉じるなら両側で同じ縁を測る）。
+★★ **figbass の −0.0023332 が 5 点＋−0.0023334 が 2 点＝同じ数**＝**1 つの機構**（安い島）。
+★★★ **cue の `CueScale = 0.66` → per-design font-size の移植は点が開いたまま待っている**。
+★★ **オクターブ監査の「読めない 77 冊」**⇒ **やるなら実測で**（両エンジンに `staff-position` を吐かせる）。
+⚠️ **`audit/scripts/Audit-ProbeOctaves.ps1` の自己検査を外さないこと**（この監査は 3 回ウソをついた）。
+★ **旗の描画側に 0.065 が残っている**（ソースを読んだだけ・未実測・**点が無い**）。
+★ **実音入力スイッチ**（**未着手・要仕様**）——`octave` とは**直交した** concert-pitch トグル。
+★ **tab の残り 3 冊**（弦を明示しない本は LP と比較できない）。**触るなら fixture 側。要承認。**
+✅ **セリフ体の選択は決着した（§3・Schola 継続）**。`text.width.{aa,va}` は**閉じない点**。**追いかけない。**
+✅ **VS Code 拡張の再デプロイは解消済み**（第74セッションの必須項目）。
+
+## 以下は第75セッションの経緯
+
 最終更新 2026-08-02（第75セッション＝**ユーザーが自分の楽譜を読んで見つけた 3 件。どれも「LP と
 違う」ではなく「LP に無い発明が 1 つ混じっていた」で、3 件とも同じ形——参加する側を手で数え上げた
 一覧**）。
@@ -138,74 +267,6 @@ ON  min 1761 ms   OFF min 1722 ms   差 39 ms（2%）＝ばらつき（1761〜30
 ```
 符尾の箱のほうはセッション前半に min-of-N で **1050 → 1031 ms**（退行なし）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
-
-## ▶ 次の一手
-
-★★★ **タイの方向。ユーザー起票（`scratch/ベースタブLy/repro.lys` D 節 3 小節目）・診断は済んでいる・
-着手はここから。** `d,4\3~ d,8.` のタイが上に膨らむが **LP は下**。
-**現場は `Svg/Collector/TieDetector.cs:55-57`**:
-```csharp
-// 単一声部は符尾の反対側、と書いてある。これが発明。
-bool curveUp = VoiceScan.SpanCurvesUp(score.Voices.Length, v, !startNote.StemUp);
-```
-⚠️ **「position の符号」に直しても駄目**。低音部で 4 通り実測した:
-```
-d4~ d2.           pos 0   符尾↓          → UP     （Tie の neutral-direction は UP・define-grobs.scm:3899）
-e4~ e2.           pos +1  符尾↓          → UP
-c4~ c2.           pos −1  符尾↑          → DOWN
-\stemUp d4~ d2.   pos 0   符尾↑（強制）   → DOWN   ← 符尾が効く
-d4~ d8. a,16 …    pos 0   ↓ のあと ↑（連桁）→ DOWN   ← 本件。単独の d4~d2. と逆
-```
-**最後の 2 行が読み**——同じ pos・同じ第1音の符尾でも答えが違う。⇒ **方向は 2 本の符尾と周囲を見た
-スコアリングの出力**（`tie-formatting-problem.cc` `generate_optimal_configuration`。
-`same-dir-as-stem-penalty 8` / `wrong-direction-offset-penalty 10` / `staff-line-collision-penalty 5`)。
-`set_ties_config_standard_directions:1036-1041` の `sign(position_)` は**入口の初期値にすぎない**。
-⇒ **やること**: 方向を収集時（`TieDetector`）から配置時（`TieFormattingProblem`）へ移す。
-**問題本体は移植済みで `TieDetails.cs` に該当ペナルティもある——決定だけが手前で短絡している。**
-⚠️ `TieItem.CurveUp` は収集時に確定してレンダラと配置の両方が読むので**配線の付け替え**になる。
-⚠️ **snapshot は広く動く見込み**（連桁内のタイは全部候補）。**1 枚ずつ承認を取ること。**
-⚠️ **点を先に開くこと**（LP 側は上の 4 冊がそのまま probe になる）。
-
-★★ **行末 courtesy の定数 3 本＝⒝ の債務**（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
-`CourtesyKeyToTimeGap` 1.15）。**出所は `SpacingRules.BarlineToCourtesyKey` の remarks に 1 軒だけ置いた**
-（`break-alignment-interface.cc:228-243`。他の 2 本はそこを `see cref` で指す＝住所を 3 つに増やさない）。
-⚠️ **space-alist の値をそのまま写したのではない**——TimeSignature は `(staff-bar . (extra-space . 1.0))` と
-**宣言している**のに**印字は 0.750000**（walk は group extent で回り、そのあと `break-align-anchor` が
-動かす）。**「宣言値＝定数」と書くと偽の住所になる。**
-⇒ ★ **点が −0.2 で開いている**（`courtesy.meter.barline-to-cancellation`）。0.8 を 1.0 にするだけでは**駄目**
-——予約 `KeyCourtesySuffixWidth` が同じ定数を読むので、描画と予約が一緒に動かないと信号が譜からはみ出る。
-⇒ **本筋は行末の群も `BreakAlignSpacing` に通すこと**（行頭 prefix は既に通っている。
-**LP は行の両端に break-align 群を 1 つずつ持つのであって、片側が solver・片側が定数ではない**）。
-**通せばこの 3 本は消える。**
-⚠️⚠️ ★ **0.75 は 1 冊でしか測っていない**（§7.7「プローブ 1 冊の texture だけ見て定数化しない」に触れる。
-第75セッションの自己監査で自白した）。**1.15 のほうは独立に 2 か所で一致している**（行末群と、同じ本の
-行頭 prefix の 鍵→拍子）ので交差検証済み。⇒ **0.75 には texture を変えた 2 冊目が要る**——行末が
-**終止線 `|.` や複縦線**のとき、**拍子が 2/4 でなく C や 3/4** のとき。**今それを観測しているのは
-`courtesy.meter.barline-to-meter` 1 点だけ**なので、**倒れるとしたらそこ**。安い。
-★★ **ばねの最小値と臨時記号**（§1 の「未修正・宣言のみ」）。**臨時記号のある列を全部動かす**ので、
-点と測定を先に。コードの ⚠️ は `ItemSkylineFactory.CreateLeftSkyline` の remarks。
-★ **`lysc ly` が `@arpeggio` を落とす**（双子を作ると `<c e g>4` になる）。**arpeggio を LP と比べようと
-すると偽の一致が出る。**
-★ **`@arpeggio` は残す（2026-08-02 ユーザー判断・確定）。撤去案は閉じた。**
-「`<< >>` と機能が被るのでは」から始まったが、**実測で別物**——`<<>>`＝**書き出された分散和音**
-（符頭が別々・音価を分割・MIDI は順次 3 音）、`@arpeggio`＝**積んだ和音＋波線**（MIDI は同時 3 音）。
-消すとロールド・コードが書けなくなり、LP（`\arpeggio` と書き出しを別に持つ）からも離れる。
-⇒ **残すと決まった以上、`lysc ly` が落としている件は直す側**（上の ★）。
-
-✅ **VS Code 拡張の再デプロイは解消済み**（第74セッションの ▶ にあった必須項目）。実測: インストール済み
-`ytsuda.lilysharp-0.3.0-dev.15\server` に **HarfBuzz 19 ファイル**・exe は `0.3.0+e2538ea7`（08-02 21:33）。
-★★ **未測定が残っている**: regular/bold/bold-italic 面のカーン差（italic のみ全走査）。**測るなら安い**。
-★★ **描画側 3 バックエンドがカーンを掛けているか未測定**（SVG のビューアは掛ける／PNG・PDF は素の Skia
-＝掛けない見込み。**推測**）。**実測して点で起票してから**直すこと。
-★ **`ottava.x.line-start-to-notehead` の 0.05 は harness の項**（閉じるなら両側で同じ縁を測る）。
-★★ **figbass の −0.0023332 が 5 点＋−0.0023334 が 2 点＝同じ数**＝**1 つの機構**（安い島）。
-★★★ **cue の `CueScale = 0.66` → per-design font-size の移植は点が開いたまま待っている**。
-★★ **オクターブ監査の「読めない 77 冊」**⇒ **やるなら実測で**（両エンジンに `staff-position` を吐かせる）。
-⚠️ **`audit/scripts/Audit-ProbeOctaves.ps1` の自己検査を外さないこと**（この監査は 3 回ウソをついた）。
-★ **旗の描画側に 0.065 が残っている**（ソースを読んだだけ・未実測・**点が無い**）。
-★ **実音入力スイッチ**（**未着手・要仕様**）——`octave` とは**直交した** concert-pitch トグル。
-★ **tab の残り 3 冊**（弦を明示しない本は LP と比較できない）。**触るなら fixture 側。要承認。**
-✅ **セリフ体の選択は決着した（§3・Schola 継続）**。`text.width.{aa,va}` は**閉じない点**。**追いかけない。**
 
 ## 以下は第74セッションの経緯
 
@@ -6203,6 +6264,16 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **`LedgerLineSpannerEngraver` の出力（`LedgerLineSpan`）は `ScoreLayout` に載るだけで
   誰も描かない**（描くのは符頭経路）＝**加算メタデータのまま**。その engraver は
   `MergeThreshold 1.5` という独自装置を持つので、**短縮を移植する人はそこが家**。
+- ★★★ **タイの列アウトライン（2026-08-03・第76セッション・点あり＝`tie.width.seconds.upper`
+  +0.888699999）**。Lily# の `TieFormattingProblem` は**そのタイ自身の符頭の箱**しか知らないので、
+  候補が自分の箱を出た瞬間に**符頭の中心へ後退する**。LP は列の箱を全部持つ:
+  `set_column_chord_outline`（`tie-formatting-problem.cc:96-287`）＝各符頭・付点（LEFT のみ）・
+  **符尾**・旗（LEFT のみ）・臨時記号（RIGHT のみ）・同じ列の他の符頭。後退箱は `:243-258` で
+  **列の一番外の符頭**から立つので、**和音の内側では後退しない**。そのうえで `:583-609` が
+  **符尾の Y 範囲に入る attachment を `stem端 − stem_gap(0.35)` へ引き戻し**、`:565-579` が
+  短いタイで `close_by` と intersect する。
+  ⚠️ **`tie.width.clears-head` と `tie.width.seconds.lower` は今 9 桁 EXACT** ＝**この移植の
+  falsifier**。⚠️ **snapshot は動く**（第76セッションで動いた 9 枚のうち 3 枚は戻る側）。
 - **座標系の島2（device 島群）は繰延**: TieVariant / 水平 skyline の Y horizon / TabStaffGeometry /
   beam collision island。`StaffOffsetInSystemDown` の残り呼び出しは**意図的な device 境界＝消さない**。
   島1 が残した手順: ①格納を反転する前に格納値を主張するテストを書く ②生産側は全部同時に
@@ -6225,10 +6296,19 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ~~⑴ `voice { }`~~・~~⑵ `grandStaff` の入れ子~~・~~⑶ `ossia`／`part` 宣言なし~~・
   ~~⑷ section のヘッダ~~・~~⑸ 和音のオクターブ記号~~・~~⑹ grace のあとの音価~~ — **すべて完了**
   （第61〜63セッション。最後の 2 つは `275c12ee`）。
-  **残っているのは 1 つ**:
+  **残っているのは 2 つ**:
   ⑺ **度数和音が `<>` になる**（`<1 3 5>`・`<d 3 5 7,>`）。**今は警告を出すだけ**で、
      **解決は独立した移植**——`MeasureCollector.ItemFactory` が root ＋ 調に対して解決している
      側から**字面で写せる**。**閉じれば `chord-octave-marks` の bar check が消える。**
+  ⑻ **`@stemUp`/`@stemDown` を落とす**（"articulation @stemUp not mapped, dropped"・2026-08-03）。
+     **LP には `\stemUp`/`\stemDown` があるので写せる。**
+     ⚠️ ★★ **これは engine 側の欠陥と対になっている**——**Lily# の注釈は梁の中の音符に届かない**
+     （`BeamDetector` が群方向を音高から決め、`MeasureCollector.ResolveBeamStemDirections` が
+     **全メンバーの `StemUpOverride` を上書きする**）。**LP は `\stemDown` で梁ごと倒れる。**
+     ⇒ **片方だけ直すと双子で検算できない**（exporter だけ直すと Lily# 側が注釈を無視した本と
+     LP 側が従った本を比べることになる）。**両方同時に。**
+     ★ **第76セッションはこれで対を 1 度壊した**（`tie.direction.beam-agrees-with-stem` の
+     最初の綴り）——**片方が正しくなって片方が壊れて初めて見えた**。
   ⚠️ **「exporter が黙って空を返す」欠陥はこれで 6 度目**（第55・56・61・62・63）。
   ⇒ ★ **落とすなら必ず `Warnings` に出す**。**`<>` や空の part 変数を黙って書かない。**
   ⇒ ★ **塞いだら双子 199 本の before/after を全数比較する**（第62セッション ② の手順。
@@ -7168,6 +7248,26 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
 - ⚠️ **同名プロパティが grob ごとに別の値**を持つ（`stem-spacing-correction` は
   StaffSpacing 0.4 / NoteSpacing 0.5）。**単位も別**（staff-spacing.cc は staff-space、
   note-spacing.cc は staff position。どちらも /7 するので2倍ずれる）
+- ★★★ ⚠️ **「同じ名前の 2 つの量」を 1 つのフィールドで持たない**（2026-08-03・第76セッション。
+  **3 つの項を正しく移植してもまだ閉じなかった原因がこれ**）。LP の弓には**高さが 2 つ**ある——
+  `slur_shape` の**制御点**（`control_[1..2][Y]`）と、`Tie_configuration::height`＝
+  **その形を中点で評価した値**（`curve_point(0.5)[Y]`＝制御点の 0.75 倍・`tie-configuration.cc:80-87`）。
+  **LP は stencil を作るとき以外は必ず後者**を読む。Lily# は前者しか持たず、後者を要求する
+  閾値にそれを当てていた。⇒ **幅 3.6ss のタイで中点 0.517 対 制御 0.689**＝
+  **intra-space の閾値 0.625 をまたぐ**＝**近い数ではなく別の枝**（tip を線から逃がすか、何もしないか）。
+  ⚠️ ★★ **0.75 はそのファイルに既に 2 回書いてあった**（`center_tie_vertically`・tie-tie の中心）。
+  ⇒ **足りなかったのは係数ではなく「それが量に属する」こと**——**係数が散らばっている＝
+  量に名前が無い**の症状。⇒ ★ **判定法**: LP が **1 つのメソッド名**で呼んでいる量に、
+  こちらも**1 つの名前**があるか（`BezierBow.MidpointHeight`）。**呼び出し側で掛ける係数は、
+  たいてい名前の無い量の破片。**
+- ★★★ ⚠️ **「宣言してあるが誰も読んでいないパラメータ」は未移植の項の指紋**（同上）。
+  `TieDetails.HorizontalDistancePenaltyFactor = 10` は **`LILYPOND-REF` つきで宣言され、
+  テストが定数を assert してさえいた**のに、**エンジンのどこからも読まれていなかった**——
+  `score_aptitude` の水平距離項（`tie-formatting-problem.cc:665-683`）ごと落ちていた。
+  **REF が付いているので §7.5 の「REF が何本あるか」では出ない。テストが緑なので網も鳴らない。**
+  ⇒ ★ **判定法は 1 行**: `Details`／`Parameters` 系の record の**各プロパティを grep して
+  読み手を数える**。**0 件のものは、その名前が指す LP の項がまるごと未移植**。
+  ⚠️ **§5.2.1 の「潰して壊れるか」も効かない**（読まれていないので何も壊れない）。**数えるしかない。**
 
 ### 5.2.1 発明を機械に見つけさせる（3 つの仕組み）
 
