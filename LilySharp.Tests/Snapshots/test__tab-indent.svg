@@ -52,18 +52,18 @@
   <text x="36.68" y="21.95" font-size="3.30" font-weight="bold" text-anchor="middle" data-pos="319">0</text>
   <line x1="35.92" y1="22.15" x2="35.92" y2="26.65" stroke="#000000" stroke-width="0.130"/>
   <line x1="36.27" y1="22.15" x2="36.27" y2="26.65" stroke="#000000" stroke-width="0.130"/>
-  <line x1="8.50" y1="20.81" x2="29.73" y2="20.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="31.62" y1="20.81" x2="32.73" y2="20.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="34.63" y1="20.81" x2="35.73" y2="20.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="37.63" y1="20.81" x2="41.16" y2="20.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.50" y1="20.81" x2="29.74" y2="20.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="31.62" y1="20.81" x2="32.74" y2="20.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="34.62" y1="20.81" x2="35.74" y2="20.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="37.62" y1="20.81" x2="41.16" y2="20.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="22.31" x2="19.65" y2="22.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="21.54" y1="22.31" x2="22.65" y2="22.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="24.54" y1="22.31" x2="25.65" y2="22.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="21.53" y1="22.31" x2="22.66" y2="22.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="24.53" y1="22.31" x2="25.66" y2="22.31" stroke="#000000" stroke-width="0.100"/>
   <line x1="27.54" y1="22.31" x2="41.16" y2="22.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.50" y1="23.81" x2="16.62" y2="23.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="18.52" y1="23.81" x2="41.16" y2="23.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.50" y1="23.81" x2="16.63" y2="23.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="18.51" y1="23.81" x2="41.16" y2="23.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="25.31" x2="41.16" y2="25.31" stroke="#000000" stroke-width="0.100"/>
   <rect x="8.80" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="293"/>
-  <text x="9.83" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="293">A</text>
+  <text x="9.84" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="293">A</text>
   </g>
 </svg>

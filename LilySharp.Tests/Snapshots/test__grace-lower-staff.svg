@@ -73,7 +73,7 @@
   <line x1="33.90" y1="20.12" x2="33.90" y2="17.99" stroke="#000000" stroke-width="0.130" data-pos="461"/>
   <polygon points="32.42,18.07 33.97,17.78 33.97,18.17 32.42,18.45" data-pos="461"/>
   <polygon points="32.42,18.72 33.97,18.43 33.97,18.82 32.42,19.10" data-pos="461"/>
-  <rect x="8.80" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="384"/>
-  <text x="11.91" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="384">Main</text>
+  <rect x="8.80" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="384"/>
+  <text x="11.90" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="384">Main</text>
   </g>
 </svg>

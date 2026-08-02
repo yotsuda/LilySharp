@@ -83,7 +83,7 @@
   <line x1="49.95" y1="12.27" x2="49.95" y2="16.76" stroke="#000000" stroke-width="0.130"/>
   <line x1="55.06" y1="11.77" x2="55.06" y2="16.53" stroke="#000000" stroke-width="0.130"/>
   <line x1="59.76" y1="11.77" x2="59.76" y2="16.31" stroke="#000000" stroke-width="0.130"/>
-  <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="307"/>
-  <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="307">Main</text>
+  <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="307"/>
+  <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="307">Main</text>
   </g>
 </svg>

@@ -52,7 +52,7 @@
   <rect x="23.63" y="25.32" width="0.60" height="4.00" data-pos="463"/>
   <rect x="23.14" y="16.32" width="0.19" height="13.00"/>
   <rect x="23.63" y="16.32" width="0.60" height="13.00"/>
-  <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="408"/>
-  <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="408">Main</text>
+  <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="408"/>
+  <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="408">Main</text>
   </g>
 </svg>

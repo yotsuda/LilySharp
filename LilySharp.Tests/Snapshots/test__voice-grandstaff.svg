@@ -105,7 +105,7 @@
   <text class="music" x="5.00" y="17.20" font-size="3.56" data-pos="0"></text>
   <line x1="6.11" y1="17.03" x2="6.11" y2="14.52" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="6.78" y="17.68" font-size="2.20" data-pos="0">= 90</text>
-  <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="429"/>
-  <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="429">Main</text>
+  <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="429"/>
+  <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="429">Main</text>
   </g>
 </svg>

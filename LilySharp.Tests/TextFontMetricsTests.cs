@@ -70,39 +70,86 @@ public class TextFontMetricsTests
     /// Bold is a different face, not a synthesised emphasis of the regular one — so it must
     /// measure wider. Catches a FileName() mapping that silently serves one face for all.
     /// </summary>
+    /// <remarks>At LilyPond's own text size rather than at 1.0: advances are snapped to a
+    /// device pixel per glyph, and at size 1.0 that pixel is 3.4% of the em — coarse enough
+    /// for two faces to land on the same count and read as one face.</remarks>
     [Fact]
     public void EachStyleResolvesToItsOwnFace()
     {
-        double regular = TextFontMetrics.Advance("Allegro", 1.0);
-        double bold = TextFontMetrics.Advance("Allegro", 1.0, sans: false, FontStyle.Bold);
-        double italic = TextFontMetrics.Advance("Allegro", 1.0, sans: false, FontStyle.Italic);
-        double sans = TextFontMetrics.Advance("Allegro", 1.0, sans: true);
+        const double textSize = 11.0 / 5.0;
+        double regular = TextFontMetrics.Advance("Allegro", textSize);
+        double bold = TextFontMetrics.Advance("Allegro", textSize, sans: false, FontStyle.Bold);
+        double italic = TextFontMetrics.Advance("Allegro", textSize, sans: false, FontStyle.Italic);
+        double sans = TextFontMetrics.Advance("Allegro", textSize, sans: true);
 
         Assert.True(bold > regular, $"bold {bold} should exceed regular {regular}");
         Assert.NotEqual(regular, italic, 6);
         Assert.NotEqual(regular, sans, 6);
     }
 
-    /// <summary>Advances scale linearly with the font size, and an empty string is zero.</summary>
+    /// <summary>
+    /// Every advance is a whole number of Pango device pixels, and the count adds up PER
+    /// GLYPH — the two halves of what <see cref="TextFontMetrics.Advance"/> reproduces.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/text-advance.ly, ledger text.width.*): LilyPond
+    /// reads "n" as 39 pixels, "nn" as 78 and "nnnn" as 156 — exactly additive, which is
+    /// what says the snap is per glyph and not on the string's total.
+    /// </remarks>
     [Fact]
-    public void AdvanceScalesWithSizeAndHandlesEmpty()
+    public void Advances_AreWholePixelsAndAddPerGlyph()
     {
-        double one = TextFontMetrics.Advance("Andante", 1.0);
-        Assert.Equal(one * 2.4, TextFontMetrics.Advance("Andante", 2.4), 9);
+        double n = TextFontMetrics.Advance("n", 2.2, sans: false, FontStyle.Italic);
+        double nn = TextFontMetrics.Advance("nn", 2.2, sans: false, FontStyle.Italic);
+        double nnnn = TextFontMetrics.Advance("nnnn", 2.2, sans: false, FontStyle.Italic);
+
+        Assert.Equal(2 * n, nn, 9);
+        Assert.Equal(4 * n, nnnn, 9);
+        foreach (double width in new[] { n, nn, nnnn })
+        {
+            double pixels = width / TextFontMetrics.PangoPixelStaffSpaces;
+            Assert.Equal(Math.Round(pixels), pixels, 9);
+        }
+    }
+
+    /// <summary>
+    /// An advance is NOT linear in the font size, deliberately: the snap happens after the
+    /// size multiply, so the same string at two sizes is two pixel counts rather than one
+    /// number scaled. Empty stays zero.
+    /// </summary>
+    /// <remarks>
+    /// The italic "A" advances 0.704 em: 0.704 ss is 20.618 pixels → 21 → 0.717009, while
+    /// 0.704 × 2.4 = 1.6896 ss is 49.485 → 49 → 1.673022. Scaling the first by 2.4 gives
+    /// 1.720823, two thirds of a pixel out. This test exists because the OPPOSITE was
+    /// asserted here until 2026-08-02, and it was asserting the defect.
+    /// </remarks>
+    [Fact]
+    public void Advance_IsNotLinearInTheSize()
+    {
+        double atOne = TextFontMetrics.Advance("A", 1.0, sans: false, FontStyle.Italic);
+        double atSize = TextFontMetrics.Advance("A", 2.4, sans: false, FontStyle.Italic);
+        Assert.NotEqual(atOne * 2.4, atSize, 6);
+
         Assert.Equal(0.0, TextFontMetrics.Advance("", 2.4));
         Assert.Equal(0.0, TextFontMetrics.InkHeight("", 2.4));
     }
 
     /// <summary>
-    /// The bundled serif is LilyPond's own text face by metrics. C059 (which LilyPond
-    /// actually resolves to) and TeX Gyre Schola agree on every advance measured, so these
-    /// values double as a check that the right family got bundled.
+    /// The bundled serif is LilyPond's own text face by metrics, and the widths are
+    /// LilyPond's OWN — measured per string at its own text size, not derived from a table.
     /// </summary>
+    /// <remarks>
+    /// The strings are the kern-free rungs of audit/lp-geometry/probes/text-advance.ly
+    /// (ledger text.width.{n1,n4,o1,a1}, all EXACT), so this is the unit-level mirror of
+    /// those entries: it catches a font swap or a snap regression without rendering a page.
+    /// A string with a kerning pair would NOT belong here — Lily# cannot kern, and the
+    /// ledger carries those as the named whole-pixel residuals they are.
+    /// </remarks>
     [Theory]
-    [InlineData("Allegro", 3.3330)]
-    [InlineData("Andante con moto", 8.3520)]
-    [InlineData("Fine", 2.0930)]
-    [InlineData("3", 0.5560)]
-    public void SerifAdvances_AreTheLilyPondTextFaces(string text, double expectedPerEm)
-        => Assert.Equal(expectedPerEm, TextFontMetrics.Advance(text, 1.0), 4);
+    [InlineData("n", 1.331588976378)]
+    [InlineData("nnnn", 5.326355905512)]
+    [InlineData("o", 1.092585826772)]
+    [InlineData("A", 1.536448818898)]
+    public void ItalicAdvances_AreLilyPondsOwnWidths(string text, double lilyPond)
+        => Assert.Equal(lilyPond, TextFontMetrics.Advance(text, 2.2, sans: false, FontStyle.Italic), 9);
 }

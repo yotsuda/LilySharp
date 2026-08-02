@@ -29,8 +29,8 @@
   <rect x="22.80" y="14.50" width="0.19" height="4.00" data-pos="419"/>
   <rect x="30.95" y="14.50" width="0.19" height="4.00" data-pos="434"/>
   <rect x="31.44" y="14.50" width="0.60" height="4.00" data-pos="434"/>
-  <rect x="0.30" y="9.64" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="370"/>
-  <text x="3.41" y="11.84" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="370">Main</text>
+  <rect x="0.30" y="9.64" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="370"/>
+  <text x="3.40" y="11.84" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="370">Main</text>
   <line x1="8.59" y1="20.50" x2="16.24" y2="20.50" stroke="#000000" stroke-width="0.100" data-pos="395"/>
   <line x1="16.24" y1="20.50" x2="16.74" y2="19.50" stroke="#000000" stroke-width="0.100" data-pos="395"/>
   <line x1="8.59" y1="20.50" x2="8.59" y2="19.50" stroke="#000000" stroke-width="0.100" data-pos="395"/>

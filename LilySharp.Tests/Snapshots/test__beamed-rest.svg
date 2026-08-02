@@ -61,7 +61,7 @@
   <polygon points="50.53,14.11 55.36,14.11 55.36,14.59 50.53,14.59"/>
   <line x1="50.59" y1="11.50" x2="50.59" y2="14.35" stroke="#000000" stroke-width="0.130"/>
   <line x1="55.30" y1="11.50" x2="55.30" y2="14.35" stroke="#000000" stroke-width="0.130"/>
-  <rect x="0.30" y="7.49" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="634"/>
-  <text x="3.41" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="634">Main</text>
+  <rect x="0.30" y="7.49" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="634"/>
+  <text x="3.40" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="634">Main</text>
   </g>
 </svg>

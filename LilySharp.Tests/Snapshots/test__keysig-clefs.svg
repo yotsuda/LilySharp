@@ -81,7 +81,7 @@
   <text class="music" x="7.65" y="14.96" font-size="3.56" data-pos="0"></text>
   <line x1="8.76" y1="14.79" x2="8.76" y2="12.28" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="9.43" y="15.44" font-size="2.20" data-pos="0">= 120</text>
-  <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="345"/>
-  <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="345">Main</text>
+  <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="345"/>
+  <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="345">Main</text>
   </g>
 </svg>

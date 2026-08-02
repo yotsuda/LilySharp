@@ -431,8 +431,8 @@
   <text x="0.00" y="131.77" font-size="1.75" font-weight="bold" text-anchor="end">121</text>
   <text x="0.00" y="143.73" font-size="1.75" font-weight="bold" text-anchor="end">133</text>
   <text x="0.00" y="155.70" font-size="1.75" font-weight="bold" text-anchor="end">145</text>
-  <rect x="0.30" y="8.26" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1652"/>
-  <text x="3.41" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1652">Main</text>
+  <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1652"/>
+  <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1652">Main</text>
   </g>
 </g>
 <g class="page" data-page-top="169.01" data-page-height="169.01" transform="translate(0, 169.01)">

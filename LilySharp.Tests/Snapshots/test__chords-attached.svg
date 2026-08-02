@@ -51,7 +51,7 @@
   <text x="21.92" y="9.01" font-size="2.62" font-family="sans-serif" data-pos="532">Am</text>
   <text x="35.87" y="9.01" font-size="2.62" font-family="sans-serif" data-pos="539">C</text>
   <text x="43.17" y="9.01" font-size="2.62" font-family="sans-serif" data-pos="544">F</text>
-  <rect x="0.30" y="7.49" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="272"/>
-  <text x="3.41" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="272">Main</text>
+  <rect x="0.30" y="7.49" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="272"/>
+  <text x="3.40" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="272">Main</text>
   </g>
 </svg>

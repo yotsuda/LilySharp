@@ -33,7 +33,7 @@
   <rect x="27.71" y="16.32" width="0.60" height="4.00" data-pos="534"/>
   <path d="M 9.57,22.37 C 10.48,23.07 12.33,22.82 13.25,21.87 C 12.34,22.94 10.50,23.19 9.57,22.37 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 19.46,21.37 C 20.37,22.07 22.22,21.82 23.14,20.87 C 22.23,21.94 20.39,22.19 19.46,21.37 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="0.30" y="11.46" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="481"/>
-  <text x="3.41" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="481">Main</text>
+  <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="481"/>
+  <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="481">Main</text>
   </g>
 </svg>

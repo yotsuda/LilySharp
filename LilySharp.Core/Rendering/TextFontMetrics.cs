@@ -65,9 +65,43 @@ public static class TextFontMetrics
     /// Nimbus Sans that <c>"LilyPond Sans Serif"</c> prefers.</summary>
     public const string SansFamily = "TeX Gyre Heros";
 
+    /// <summary>
+    /// Pango's device-pixel quantum, in staff spaces — the grid every shaped advance is
+    /// snapped to, and the one home for it.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond measures text through Pango over FreeType at <c>PANGO_RESOLUTION</c> 1200
+    /// dpi, and a glyph's advance comes back hinted to a WHOLE DEVICE PIXEL. Pango scales a
+    /// logical width by <c>scale_ = INCH_TO_BP / (PANGO_SCALE · PANGO_RESOLUTION ·
+    /// output_scale)</c>, so one pixel measures <c>INCH_TO_BP / (PANGO_RESOLUTION ·
+    /// output_scale)</c> staff spaces, with <c>output_scale = staff-space · MM_PER_INCH /
+    /// INCH_TO_PT</c> over the default 5 pt staff space. DERIVED FROM LILYPOND'S OWN
+    /// CONSTANTS, not fitted — and MEASURED: ledger <c>text.width.*</c> found every one of
+    /// LilyPond's text widths to be a whole multiple of it (39 pixels for "n", 32 for "o",
+    /// 156 for "nnnn"), and <c>GetTimeSigDigitWidth</c> found the same grid from the
+    /// fetaText side before the text side knew about it.
+    /// <para>
+    /// ⚠️ SIZE-INDEPENDENT, which is why the quantising happens in staff spaces here rather
+    /// than at a ppem: a device pixel is a device pixel whatever the font size, and
+    /// <c>ppem × pixel = fontSize</c> makes the two spellings identical. A per-size ppem
+    /// constant would be a second home for the same number.
+    /// </para>
+    /// </remarks>
+    // LILYPOND-REF: lily/pango-font.cc:109-112 Pango_font::Pango_font (scale_);
+    //   lily/include/pango-font.hh:75 PANGO_RESOLUTION; lily/include/dimensions.hh:27,31
+    //   INCH_TO_PT, INCH_TO_BP.
+    public const double PangoPixelStaffSpaces =
+        72.0 * 72.27 / (1200.0 * 5.0 * 25.4); // INCH_TO_BP·INCH_TO_PT / (RES·staff_pt·mm_per_inch)
+
+    /// <summary>Snaps a width in staff spaces to <see cref="PangoPixelStaffSpaces"/>, as
+    /// LilyPond's hinted advances are.</summary>
+    public static double QuantiseToPangoPixel(double widthStaffSpaces)
+        => Math.Round(widthStaffSpaces / PangoPixelStaffSpaces, MidpointRounding.AwayFromZero)
+           * PangoPixelStaffSpaces;
+
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style), SKTypeface> Faces = new();
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text),
-        (double Advance, double Bottom, double Top)>
+        (double Bottom, double Top)>
         Cache = new();
     private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text), SKPath> Paths = new();
 
@@ -87,9 +121,50 @@ public static class TextFontMetrics
         });
 
     /// <summary>Advance width of <paramref name="text"/> in staff spaces.</summary>
+    /// <remarks>
+    /// PER GLYPH, then snapped to <see cref="PangoPixelStaffSpaces"/> — the size multiply
+    /// happens BEFORE the snap and the snap happens once per glyph, because that is what
+    /// LilyPond's advances are: <c>round(advance × ppem)</c> device pixels each, summed.
+    /// MEASURED (audit/lp-geometry/probes/text-advance.ly): "8va" is 36 + 33 + 37 = 106
+    /// pixels of rounding, not <c>round</c> of the string's total (which would be 106.254
+    /// → 106 here but 90 rather than 94 for "AA" either way) — the ladder rungs "n"/"nn"/
+    /// "nnnn" reading 39/78/156 are what pin it to the glyph.
+    /// <para>
+    /// ⚠️ WHAT THIS STILL DOES NOT DO is kerning: Pango shapes pairs through HarfBuzz, and
+    /// asking Skia per code point cannot see a pair at all. The residuals ledger
+    /// <c>text.width.{aa,av,8va}</c> keep after this are exactly that, and they are whole
+    /// pixels by construction (−4, +5, +1) — a leftover that is NOT a whole pixel would
+    /// mean this snap is in the wrong place.
+    /// </para>
+    /// </remarks>
     public static double Advance(string text, double fontSize, bool sans = false,
         FontStyle style = FontStyle.Regular)
-        => Measure(text, sans, style).Advance * fontSize;
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+        return AdvanceCache.GetOrAdd((sans, style, text, fontSize), static key =>
+        {
+            var typeface = Face(key.Sans, key.Style);
+            using var paint = new SKPaint { Typeface = typeface, TextSize = 1000f };
+            double total = 0;
+            for (int i = 0; i < key.Text.Length;)
+            {
+                int cp = char.ConvertToUtf32(key.Text, i);
+                int len = char.IsSurrogatePair(key.Text, i) ? 2 : 1;
+                double perEm = typeface.GetGlyph(cp) != 0
+                    ? paint.MeasureText(key.Text.Substring(i, len)) / 1000.0
+                    : MissingGlyphAdvance(cp);
+                total += QuantiseToPangoPixel(perEm * key.FontSize);
+                i += len;
+            }
+            return total;
+        });
+    }
+
+    // Keyed by SIZE as well as string, because the snap makes the advance non-linear in the
+    // size — one string at two sizes is two different pixel counts, not one number scaled.
+    private static readonly ConcurrentDictionary<
+        (bool Sans, FontStyle Style, string Text, double FontSize), double> AdvanceCache = new();
 
     // The three faces the engine RESERVES for, named so a call site reads as the face it
     // draws in. They are the whole of what the old hand-typed tables offered, which is why
@@ -139,26 +214,28 @@ public static class TextFontMetrics
     // (TextOutlineSkylines) — so the accessor came back out rather than waiting to be
     // misread a second time.)
 
-    /// <summary>Per-em metrics of one string, cached.</summary>
-    private static (double Advance, double Bottom, double Top) Measure(
-        string text, bool sans, FontStyle style)
+    /// <summary>Per-em INK of one string, cached.</summary>
+    /// <remarks>
+    /// Per em and NOT quantised, unlike <see cref="Advance"/>: the ink is what the outline
+    /// gives, and LilyPond takes a text stencil's Y from Pango's INK rectangle. That
+    /// rectangle is quantised too, by the same PANGO_RESOLUTION — the ledger's
+    /// <c>-0.000076</c> on DynamicText's height is that — but a height wants the whole
+    /// quantised OUTLINE rather than one snap, so it stays open and named rather than
+    /// half-ported here (GetTimeSigDigitWidth's remark makes the same split).
+    /// </remarks>
+    private static (double Bottom, double Top) Measure(string text, bool sans, FontStyle style)
     {
         if (string.IsNullOrEmpty(text))
-            return (0, 0, 0);
+            return (0, 0);
         return Cache.GetOrAdd((sans, style, text), static key =>
         {
-            var typeface = Face(key.Sans, key.Style);
-            // Measured at 1000 units/em and divided back, so the caller's font size
-            // multiplies a pure ratio and no size-dependent hinting enters.
-            using var paint = new SKPaint { Typeface = typeface, TextSize = 1000f };
-            double advance = AdvancePerEm(key.Text, typeface, paint);
             var path = OutlinePath(key.Text, key.Sans, key.Style);
             if (path.IsEmpty)
-                return (advance, 0, 0);
+                return (0, 0);
             var b = path.Bounds;
             // Skia's path is Y-DOWN about the baseline: Top is negative above it. Reflect
             // to this engine's Y-up ink convention.
-            return (advance, -b.Bottom / 1000.0, -b.Top / 1000.0);
+            return (-b.Bottom / 1000.0, -b.Top / 1000.0);
         });
     }
 
@@ -219,8 +296,8 @@ public static class TextFontMetrics
     }
 
     /// <summary>
-    /// The string's advance, per em, with a defined width for every character the bundled
-    /// face has no glyph for.
+    /// Width, per em, of a character the bundled face cannot draw — what
+    /// <see cref="Advance"/> spends for it before the pixel snap.
     /// </summary>
     /// <remarks>
     /// ⚠️ WITHOUT THIS, CJK COLLAPSES. TeX Gyre Schola is a Latin face (LilyPond's own
@@ -240,22 +317,6 @@ public static class TextFontMetrics
     /// reason this class refuses a system-font fallback.
     /// </para>
     /// </remarks>
-    private static double AdvancePerEm(string text, SKTypeface typeface, SKPaint paint)
-    {
-        double total = 0;
-        for (int i = 0; i < text.Length;)
-        {
-            int cp = char.ConvertToUtf32(text, i);
-            int len = char.IsSurrogatePair(text, i) ? 2 : 1;
-            total += typeface.GetGlyph(cp) != 0
-                ? paint.MeasureText(text.Substring(i, len)) / 1000.0
-                : MissingGlyphAdvance(cp);
-            i += len;
-        }
-        return total;
-    }
-
-    /// <summary>Width, per em, of a character the bundled face cannot draw.</summary>
     private static double MissingGlyphAdvance(int cp) => cp switch
     {
         >= 0x1100 and <= 0x115F => 1.0,   // Hangul Jamo

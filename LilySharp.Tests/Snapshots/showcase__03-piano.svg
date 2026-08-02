@@ -225,8 +225,8 @@
   <text class="music" x="5.00" y="18.84" font-size="3.56" data-pos="0"></text>
   <line x1="6.11" y1="18.68" x2="6.11" y2="16.17" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="6.78" y="19.33" font-size="2.20" data-pos="0">= 108</text>
-  <rect x="0.30" y="13.11" width="6.22" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="611"/>
-  <text x="3.41" y="15.31" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="611">Main</text>
+  <rect x="0.30" y="13.11" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="611"/>
+  <text x="3.40" y="15.31" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="611">Main</text>
   <line x1="59.23" y1="35.21" x2="71.96" y2="35.21" stroke="#000000" stroke-width="0.100" data-pos="509"/>
   <line x1="71.96" y1="35.21" x2="72.46" y2="34.21" stroke="#000000" stroke-width="0.100" data-pos="509"/>
   <line x1="59.23" y1="35.21" x2="59.23" y2="34.21" stroke="#000000" stroke-width="0.100" data-pos="509"/>

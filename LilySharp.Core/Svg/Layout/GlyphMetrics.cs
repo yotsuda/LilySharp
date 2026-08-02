@@ -374,6 +374,13 @@ internal static partial class GlyphMetrics
     /// to when LilyPond lays the time signature out as text.
     /// </summary>
     /// <remarks>
+    /// ⚠️ ONE HOME, and it is <see cref="Rendering.TextFontMetrics.PangoPixelStaffSpaces"/>.
+    /// This constant was discovered here, from the fetaText side, and stayed a private
+    /// number until the text side measured the SAME grid per string (ledger
+    /// <c>text.width.*</c>, 2026-08-02) and had to snap every advance to it. Two spellings
+    /// of one quantity is the address of the next defect (HANDOFF §5.2.1②), so this is the
+    /// alias and that is the value.
+    /// <para>
     /// A default TimeSignature is NOT a music glyph: ly:time-signature::print builds a
     /// markup and interprets it (scm/time-signature.scm:31-41), the markup is
     /// <c>(markup #:number "N")</c> (scm/time-signature-settings.scm:923), and
@@ -397,17 +404,19 @@ internal static partial class GlyphMetrics
     /// single snap.
     /// </para>
     /// </remarks>
-    // LILYPOND-REF: lily/pango-font.cc:109-112; lily/include/pango-font.hh:75;
-    //   lily/include/dimensions.hh:27,31.
+    // LILYPOND-REF: lily/pango-font.cc:109-112 Pango_font::Pango_font;
+    //   lily/include/pango-font.hh:75 PANGO_RESOLUTION;
+    //   lily/include/dimensions.hh:27,31 INCH_TO_PT, INCH_TO_BP.
     private const double PangoQuantumStaffSpaces =
-        72.0 * 72.27 / (1200.0 * 5.0 * 25.4); // INCH_TO_BP·INCH_TO_PT / (RES·staff_pt·mm_per_inch)
+        Rendering.TextFontMetrics.PangoPixelStaffSpaces;
 
     /// <summary>Snaps a text width to Pango's device-pixel grid, as LilyPond's layout does.</summary>
     /// <remarks>Pango rounds a logical width to a whole device pixel; the width in staff
-    /// spaces is therefore an integer multiple of <see cref="PangoQuantumStaffSpaces"/>.</remarks>
+    /// spaces is therefore an integer multiple of <see cref="PangoQuantumStaffSpaces"/>.
+    /// ⚠️ ONE glyph here, so snapping the total and snapping per glyph are the same thing —
+    /// <see cref="Rendering.TextFontMetrics.Advance"/> must snap PER GLYPH, and does.</remarks>
     private static double PangoQuantise(double widthStaffSpaces) =>
-        System.Math.Round(widthStaffSpaces / PangoQuantumStaffSpaces,
-            System.MidpointRounding.AwayFromZero) * PangoQuantumStaffSpaces;
+        Rendering.TextFontMetrics.QuantiseToPangoPixel(widthStaffSpaces);
 
     /// <summary>
     /// The engraved time-signature width. LilyPond's DEFAULT style prints 4/4 and 2/2 as

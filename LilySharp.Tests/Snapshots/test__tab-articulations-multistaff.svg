@@ -39,11 +39,11 @@
   <line x1="27.17" y1="22.46" x2="27.17" y2="17.96" stroke="#000000" stroke-width="0.130"/>
   <line x1="8.50" y1="20.81" x2="30.26" y2="20.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="22.31" x2="30.26" y2="22.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.50" y1="23.81" x2="16.62" y2="23.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="18.52" y1="23.81" x2="19.63" y2="23.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="21.52" y1="23.81" x2="22.63" y2="23.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="24.52" y1="23.81" x2="25.63" y2="23.81" stroke="#000000" stroke-width="0.100"/>
-  <line x1="27.53" y1="23.81" x2="30.26" y2="23.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.50" y1="23.81" x2="16.63" y2="23.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="18.51" y1="23.81" x2="19.64" y2="23.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="21.51" y1="23.81" x2="22.64" y2="23.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="24.52" y1="23.81" x2="25.64" y2="23.81" stroke="#000000" stroke-width="0.100"/>
+  <line x1="27.52" y1="23.81" x2="30.26" y2="23.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.50" y1="25.31" x2="30.26" y2="25.31" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="17.57" y="16.73" font-size="4.00" data-pos="341"></text>
   <text class="music" x="20.57" y="11.41" font-size="4.00" data-pos="350"></text>
@@ -54,6 +54,6 @@
   <text class="music" x="23.58" y="19.81" font-size="4.00" data-pos="362"></text>
   <text class="music" x="26.58" y="26.00" font-size="4.00" data-pos="372"></text>
   <rect x="8.80" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="327"/>
-  <text x="9.83" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="327">A</text>
+  <text x="9.84" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="327">A</text>
   </g>
 </svg>
