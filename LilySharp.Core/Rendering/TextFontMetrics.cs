@@ -66,9 +66,15 @@ public static class TextFontMetrics
     /// names the file it drew with (<c>ly:stencil-expr</c> prints
     /// <c>(glyph-string … C059-Italic … C059-Italic.otf …)</c>), and probe books TS1/TS2 pin
     /// the same LilyPond to THIS face and land on Lily#'s numbers exactly. So ledger
-    /// <c>text.width.{aa,va}</c> are a FONT FILE difference and not an arithmetic one — the
-    /// open question is which face to ship, which is a licensing decision (the URW exemption
-    /// covers embedding in a PostScript/PDF document, not shipping the font program).
+    /// <c>text.width.{aa,va}</c> are a FONT FILE difference and not an arithmetic one.
+    /// DECIDED 2026-08-02 (user, with the size measured first): the twin stays, because the
+    /// URW exemption covers embedding in a PostScript/PDF document and not shipping the font
+    /// program. What that costs, measured: 438 of 471 kerned pairs differ, 11.2% of
+    /// two-character combinations land on a different reserved width, real strings run 0–4
+    /// pixels (0–0.137 ss) apart — and the ff/ffi LIGATURES differ in width too (605 against
+    /// 686, 878 against 904), so the drawn page differs and not only the reservation.
+    /// ⚠️ Do not read a non-zero text-width entry as a defect without checking the string
+    /// for a pair these two kern differently. HANDOFF §3 holds the decision.
     /// </para>
     /// </remarks>
     public const string SerifFamily = "TeX Gyre Schola";
