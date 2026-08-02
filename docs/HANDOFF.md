@@ -67,8 +67,14 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 台帳に方向の点を 6 つ開く（コード変更ゼロ）  b06087ee  snapshot 0 枚  台帳 +6（count・1 つが +2）
 方向を配置時へ移す＋足りない 3 つを移植      4c57d7a5  snapshot 9 枚  +2 → 0・台帳 +3（幅）
 書き手の符尾と梁の符尾を分ける（+exporter）  fee853cd  snapshot 0 枚  台帳 +1・テスト +4
+⒜⒝⒞ を項ごとに名乗らせる（自己監査）      67ee4642  出力不変      REF 20 / OWN 1
 （この引継ぎ commit）
 ```
+★★ **最後の 1 本はユーザーの「字面移植できた？変なハックは無い？」で走らせた §7.5〜§7.7**。
+**出力は 1 バイトも動いていない**が、**⒝ が 4 件・⒞ が 1 件、どれも「⒜ に見える書き方」で
+放置されていた**（§7.6 の「⒝ は ⒜ への負債であって独自実装ではない。放っておくと ⒞ に見えてくる」）。
+**⒝ 4 件のうち 2 件は判断ではなく「器が無い」**——`Interval` 型と `Bezier` 型（§2 E に住所つきで出した）。
+⚠️ **このチェックは「無い」と即答しない**（§7.7）——今回も**候補ごとの配列確保**が 1 つ落ちてきた。
 
 ★★★ **① 対が claim そのものだった。** `TDBEAM`／`TDBEAMD` は**同じ音楽**（タイの 2 音・位置・第1符尾・
 小節の形が全部同じ）で、**第2音の梁の向きだけ**が違う。**LP は逆の答えを返す**（−1 / +1）。
@@ -129,7 +135,7 @@ beam.cc:946-956  群の向きは direction を持たない stem にだけ刻印�
 LP は列の**アウトライン全部**（各符頭・付点・符尾・旗、+ **列の一番外の符頭**から立てる後退箱
 `:96-287`・`:243-258`）を建て、そのうえで**符尾から attachment を引き戻す**（`:583-609`・`stem-gap 0.35`）。
 
-**未 push 138**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
+**未 push 140**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
 ⚠️ **push はしていない**）・テスト **3922 passed / 0 failed / 4 skipped**（**+13**）・
 台帳 **431 点**（**ss 非ゼロ 83・総和 5.332531510**／**count 点 106・うち非ゼロ 2**）。
 ⚠️ **総和が +0.8887 増えたのは悪化ではない**——**一度も測られていなかった量を可視化した**ぶん。
@@ -6287,6 +6293,15 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   短いタイで `close_by` と intersect する。
   ⚠️ **`tie.width.clears-head` と `tie.width.seconds.lower` は今 9 桁 EXACT** ＝**この移植の
   falsifier**。⚠️ **snapshot は動く**（第76セッションで動いた 9 枚のうち 3 枚は戻る側）。
+  ★★ **先に `Interval` 型を作ると字面移植になる**（2026-08-03 の自己監査で名前が付いた ⒝ 債務）。
+  LP の `Interval`（`lily/interval.hh`）は `distance` / `widen` / `linear_combination` /
+  `intersect` を持つ**一級の値**で、**タイのコードだけで 4 つ全部**を使う——
+  水平距離罰（今は手で展開）・`GetAttachment` の 2 つの `widen`・そして**この島が要る `intersect`**
+  （`:565-579` の `close_by`）。**器が無いから開いたコードになっている**のであって判断ではない。
+- ★★ **`Bezier` 型が無い**（同じ自己監査の ⒝ 債務）。`BezierBow.MidpointHeight` は LP の
+  `slur_shape(…).curve_point(0.5)` を **`0.75 * h` の閉じた式**で書いている（係数は厳密）。
+  **読み手は 2 つになる**——`SlurScoringProblem.InterpolateSlurY` も自前で曲線を標本化している。
+  ⇒ **`curve_point` を持つ Bezier を 1 つ作れば両方が LP の字面になる。**
 - **座標系の島2（device 島群）は繰延**: TieVariant / 水平 skyline の Y horizon / TabStaffGeometry /
   beam collision island。`StaffOffsetInSystemDown` の残り呼び出しは**意図的な device 境界＝消さない**。
   島1 が残した手順: ①格納を反転する前に格納値を主張するテストを書く ②生産側は全部同時に
