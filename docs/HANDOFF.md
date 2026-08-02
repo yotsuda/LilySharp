@@ -115,7 +115,7 @@ MISMATCH          0 冊
 （既存の `SeparationRodDistance` と同じ cost クラス）。`feature-tour.lys` を 7 回ずつ:
 **前 median 1540 ms / 後 1527 ms**＝**差はノイズの中**。⚠️ プロセス全体の時間なので数 ms は見えない。
 
-**未 push 104**（**この引継ぎ commit まで数えた値**＝`git rev-list --count origin/master..master`）・
+**未 push 112**（**この引継ぎ commit まで数えた値**＝`git rev-list --count origin/master..master`）・
 テスト **3880 passed / 0 failed / 4 skipped**（**+4**。skipped が 1 増えたのは
 オクターブ監査の `ProbeSourceDump` ＝**手で回す前段**で、Lily# については何も主張しない）・
 台帳 **403 点**（**ss 非ゼロ 76・総和 1.295801634**＝cue 5 点を開いたぶん増えた／**count 点 99・うち非ゼロ 2**）。
