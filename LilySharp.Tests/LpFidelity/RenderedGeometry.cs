@@ -2037,6 +2037,39 @@ internal sealed class RenderedGeometry
             "no notehead after the accidental.\nDrawn geometry:\n" + Describe());
     }
 
+    /// <summary>
+    /// A MUSICA FICTA (suggestion) accidental's draw origin against the origin of the
+    /// notehead it annotates — positive, because the small glyph is CENTRED over the head.
+    /// </summary>
+    /// <remarks>
+    /// The one reading that puts the whole editorial-accidental arithmetic on the page: the
+    /// head's own half-width minus the suggestion's own half-width, so it moves if either
+    /// glyph's box moves. Which is the point — the suggestion is drawn at font-size −2 and
+    /// therefore out of ANOTHER Emmentaler design (the 16), and reading it against the head
+    /// says whether that design reached the drawn page rather than only the metric table.
+    /// <para>
+    /// Selected by SIZE, not by glyph: a suggestion is drawn at <c>FontSize × magstep(-2)</c>
+    /// while an ordinary accidental of the same character is drawn at the full size, so this
+    /// stays unambiguous even in a book that carries both.
+    /// </para>
+    /// </remarks>
+    public double SuggestionToNoteheadAnchor(char accidentalGlyph)
+    {
+        const double fullSize = LilySharp.Core.Rendering.SharedRenderer.FontSize;
+        var acc = Glyphs.FirstOrDefault(
+            g => g.Glyph == accidentalGlyph && g.FontSize < fullSize - 1e-9,
+            throw_: $"no SMALL accidental U+{(int)accidentalGlyph:X4} in the probe — a "
+                    + "suggestion is the only accidental drawn below the score's font size.\n"
+                    + "Drawn geometry:\n" + Describe());
+        var heads = Glyphs.Where(g => IsNotehead(g.Glyph)).ToList();
+        if (heads.Count == 0)
+            throw new InvalidOperationException(
+                "no notehead in the probe.\nDrawn geometry:\n" + Describe());
+        var head = heads.OrderBy(g => Math.Abs(g.X - acc.X)).First();
+        // The SAME sign LilyPond's dump takes: the suggestion's origin minus its head's.
+        return acc.X - head.X;
+    }
+
     /// <summary>Single-note NATURAL accidental to the notehead it precedes (see the char overload).</summary>
     public double NaturalToNoteheadAnchor() =>
         AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural);

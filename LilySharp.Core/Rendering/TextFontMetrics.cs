@@ -153,20 +153,28 @@ public static class TextFontMetrics
     // skyline walk over a music glyph). The drawing backends keep their own loaders —
     // those are drawing devices per backend; this is the one measurement home. Null
     // when no bundled font directory is found (callers fall back to the designed box).
-    private static readonly Lazy<SKTypeface?> MusicFace = new(static () =>
-    {
-        var path = FontLocator.ResolveFile("emmentaler-20.otf");
-        return path != null ? SKTypeface.FromFile(path) : null;
-    });
+    // ⚠️ ONE FACE PER DESIGN. Emmentaler is optically sized, so a grob at another font-size
+    // walks ANOTHER FILE's outline, not this one scaled (EmmentalerFaces / GlyphMetrics.
+    // AtFontSize). Cached per design because a score asks for a handful and asks per glyph.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, SKTypeface?>
+        MusicFaces = new();
+
+    private static SKTypeface? MusicFace(int design) =>
+        MusicFaces.GetOrAdd(design, static d =>
+        {
+            var path = FontLocator.ResolveFile(EmmentalerFaces.OtfFile(d));
+            return path != null ? SKTypeface.FromFile(path) : null;
+        });
 
     /// <summary>
     /// Outline path of one Emmentaler glyph at 1000 units/em (the same frame
     /// <see cref="OutlinePath"/> serves for text), or null when the bundled music font
-    /// cannot be located.
+    /// cannot be located. <paramref name="design"/> is the Emmentaler design to walk —
+    /// the score's own unless the grob states another <c>font-size</c>.
     /// </summary>
-    internal static SKPath? MusicGlyphPath(char glyph)
+    internal static SKPath? MusicGlyphPath(char glyph, int design)
     {
-        var face = MusicFace.Value;
+        var face = MusicFace(design);
         if (face == null)
             return null;
         using var paint = new SKPaint { Typeface = face, TextSize = 1000f };

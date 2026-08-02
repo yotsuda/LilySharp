@@ -42,7 +42,11 @@ internal readonly record struct ArticulationLayout(
     string Glyph,           // SMuFL glyph to render
     bool IsAbove,           // Whether placed above the note
     int SourcePosition,     // For click-to-source mapping
-    double Scale = 1.0,     // Glyph scale (editorial accidentals: magstep(-2))
+    // The font-size this grob STATES, in LilyPond's sixths of an octave (0 = the score's
+    // own, an editorial accidental −2). It decides BOTH the magnification and WHICH
+    // Emmentaler design is read and drawn — see EmmentalerDesignSize / GlyphMetrics.
+    // AtFontSize. It replaced a bare Scale on 2026-08-02: a scale cannot say which design.
+    double FontSizeStep = 0.0,
     GlyphMetrics.BBox Ink = default, // Ink box relative to the anchor (for skyline seeding)
     int SourceIndex = -1,   // F3/B: index into score.Articulations (data-pos resolved at render)
     int StaffIndex = 0,     // Which staff this script sits on (per-staff below-staff seeding)
@@ -94,10 +98,30 @@ internal static class ArticulationEngraver
     private const double NoteheadHalfHeight = EngravingDefaults.NoteheadHalfHeight;
     private const double DefaultStemLength = EngravingDefaults.DefaultStemLength;
 
-    // Editorial (suggestion) accidentals print at font-size -2:
-    // magstep(-2) = 2^(-2/6) ≈ 0.7937.
+    // Editorial (suggestion) accidentals print at font-size -2.
     // LILYPOND-REF: scm/define-grobs.scm:101 AccidentalSuggestion (font-size . -2)
-    private const double EditorialScale = 0.7937;
+    private const double EditorialFontSizeStep = -2.0;
+
+    /// <summary>What that font-size multiplies a length by — <c>magstep(-2)</c>.</summary>
+    /// <remarks>
+    /// It was written down as 0.7937 until 2026-08-02, four digits of magstep(-2) =
+    /// 0.79370053. A rounded scale inside a placement law is the same defect the grace's
+    /// 0.65 was (see EmmentalerDesignSize.Magstep).
+    /// </remarks>
+    private static readonly double EditorialScale =
+        EmmentalerDesignSize.Magstep(EditorialFontSizeStep);
+
+    /// <summary>
+    /// The FONT an editorial accidental reads: the design font-size −2 selects (the 16),
+    /// already magnified. Nothing read out of it is multiplied again.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/font-select.cc:115-186 select_font — Emmentaler is optically
+    ///   sized, so this is NOT the 20's box scaled: the 16 design's own sharp is drawn
+    ///   wider in its own staff spaces. See GlyphMetrics.AtFontSize.
+    /// </remarks>
+    private static GlyphMetrics.DesignMetrics EditorialFont
+        => GlyphMetrics.AtFontSize(EditorialFontSizeStep);
 
     // Staff middle line position (see EngravingDefaults.StaffMiddle).
     private const double StaffMiddle = EngravingDefaults.StaffMiddle;
@@ -257,7 +281,8 @@ internal static class ArticulationEngraver
                 };
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, fx, fyUp,
-                    bendGlyph, true, articulation.SourcePosition, 1.0, SourceIndex: arti, StaffIndex: articulation.StaffIndex));
+                    bendGlyph, true, articulation.SourcePosition, FontSizeStep: 0.0,
+                    SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
 
@@ -285,7 +310,7 @@ internal static class ArticulationEngraver
                     articulation.GetGlyph(),
                     true,
                     articulation.SourcePosition,
-                    1.0,
+                    FontSizeStep: 0.0,
                     GetSeedBBox(articulation.Type), SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
@@ -444,7 +469,7 @@ internal static class ArticulationEngraver
                 double tabYUp = (StaffMiddle + staffOffset) - tabY;
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, colX, tabYUp,
-                    tabGlyph, tabAbove, articulation.SourcePosition, 1.0,
+                    tabGlyph, tabAbove, articulation.SourcePosition, FontSizeStep: 0.0,
                     GetSeedBBox(articulation.Type), SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
@@ -459,18 +484,20 @@ internal static class ArticulationEngraver
                     articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                 + NoteheadHalfWidth(item);
 
-            double scale = 1.0;
+            double fontSizeStep = 0.0;
             if (articulation.IsEditorialAccidental)
             {
-                scale = EditorialScale;
+                fontSizeStep = EditorialFontSizeStep;
                 // Accidental glyphs are anchored at the left baseline, not
                 // origin-centred like script glyphs — shift so the INK centre
                 // lands on the notehead centre.
                 // LILYPOND-REF: define-grobs.scm:104-106 AccidentalSuggestion
                 //   parent-alignment-X / self-alignment-X = CENTER
+                // The box comes from the font this grob's font-size selected, already at
+                // that size — so there is no scale factor on this line any more.
                 var accBBox = GlyphMetrics.GetAccidentalBBox(
-                    ArticulationItem.AccidentalKindFor(articulation.Type));
-                x -= scale * (accBBox.Left + accBBox.Width / 2.0);
+                    EditorialFont, ArticulationItem.AccidentalKindFor(articulation.Type));
+                x -= accBBox.Left + accBBox.Width / 2.0;
             }
 
             // Resolve the side against the BEAM-resolved stem: a stem-coupled script
@@ -509,7 +536,7 @@ internal static class ArticulationEngraver
                 effArt.GetGlyph(),
                 effArt.IsAbove,
                 effArt.SourcePosition,
-                scale,
+                fontSizeStep,
                 seedBBox,
                 SourceIndex: arti,
                 StaffIndex: effArt.StaffIndex,
@@ -585,7 +612,7 @@ internal static class ArticulationEngraver
 
             result.Add(new ArticulationLayout(
                 art.MeasureIndex, art.ItemIndex, colX, yUp, string.Empty, above,
-                art.SourcePosition, 1.0, GetSeedBBoxFor(art), StaffIndex: staffIndex,
+                art.SourcePosition, FontSizeStep: 0.0, GetSeedBBoxFor(art), StaffIndex: staffIndex,
                 // Carried so the record never lies about the grob, though this array
                 // only ever feeds the per-staff skyline that reserves the band — the
                 // outside-staff pass runs on Calculate's layouts.
@@ -664,11 +691,10 @@ internal static class ArticulationEngraver
     {
         if (IsEditorialType(type))
         {
-            // Scaled accidental ink box (anchored at the left baseline).
-            var b = GlyphMetrics.GetAccidentalBBox(ArticulationItem.AccidentalKindFor(type));
-            return new GlyphMetrics.BBox(
-                b.Left * EditorialScale, b.Bottom * EditorialScale,
-                b.Right * EditorialScale, b.Top * EditorialScale);
+            // The accidental's ink box (anchored at the left baseline) AT ITS OWN SIZE:
+            // read from the font font-size −2 selects, so nothing is scaled here.
+            return GlyphMetrics.GetAccidentalBBox(
+                EditorialFont, ArticulationItem.AccidentalKindFor(type));
         }
 
         return type switch
@@ -748,12 +774,18 @@ internal static class ArticulationEngraver
     internal static (VerticalSkyline Up, VerticalSkyline Down) ScriptSkylines(
         in ArticulationLayout a, double anchorY)
     {
-        // The size the renderer draws at (SharedRenderer: FontSize × the layout's scale);
+        // The size the renderer draws at (SharedRenderer: FontSize × the grob's magstep);
         // the flattening happens at the transformed size, which is why it is in the key.
+        // ⚠️ …and from the DESIGN the renderer draws with: an editorial accidental is the
+        // 16's outline, not the 20's shrunk, so walking the 20 here would profile a glyph
+        // the page does not carry (Emmentaler is optically sized).
         if (a.Glyph.Length == 1)
         {
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
-                a.Glyph[0], SharedRenderer.FontSize * a.Scale, a.X, anchorY);
+                a.Glyph[0],
+                SharedRenderer.FontSize * EmmentalerDesignSize.Magstep(a.FontSizeStep),
+                a.X, anchorY,
+                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded);
             if (!up.IsEmpty || !down.IsEmpty)
                 return (up, down);
         }

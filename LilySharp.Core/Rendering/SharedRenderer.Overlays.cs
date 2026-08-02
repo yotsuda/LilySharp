@@ -99,7 +99,10 @@ internal static partial class SharedRenderer
             // staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(a.StaffIndex, a.MeasureIndex, StaffHeight);
             double y = os.YUp(midYup + a.YUp, a.StaffIndex, a.MeasureIndex);
-            double scale = os.Size(a.Scale, a.StaffIndex);
+            // The grob's own font-size (0 for an ordinary script, −2 for an editorial
+            // accidental), composed with the ossia its staff may carry.
+            double scale = os.Size(
+                EmmentalerDesignSize.Magstep(a.FontSizeStep), a.StaffIndex);
             // Bend sentinels ("bendFall"/"bendDoit"): a trailing curve, not a glyph.
             if (a.Glyph is "bendFall" or "bendDoit")
             {
@@ -151,7 +154,12 @@ internal static partial class SharedRenderer
                 }
                 continue;
             }
+            // …and from the design that font-size selects: an editorial accidental is the
+            // 16 design's own outline (the same one ArticulationEngraver.ScriptSkylines
+            // profiled), not the 20's drawn small. IDrawingContext.MusicFace.
             using (gc.Source(a.SourcePosition))
+            using (gc.MusicFace(
+                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded))
                 gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * scale);
         }
     }

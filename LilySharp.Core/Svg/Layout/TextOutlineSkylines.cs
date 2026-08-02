@@ -93,8 +93,11 @@ internal static class TextOutlineSkylines
                 PlaceResolved(VerticalDirection.Down, down, x, yBaseline));
     }
 
-    // Music-glyph profiles, one per (glyph, size) — the metronome mark's note pieces.
-    private static readonly ConcurrentDictionary<(char Glyph, double Size),
+    // Music-glyph profiles, one per (glyph, size, design) — the metronome mark's note
+    // pieces, the scripts. The DESIGN is in the key because Emmentaler is optically sized:
+    // the 16's accidental is not the 20's scaled, so two grobs at different font-sizes walk
+    // two different outlines (EmmentalerFaces).
+    private static readonly ConcurrentDictionary<(char Glyph, double Size, int Design),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> MusicProfileCache = new();
 
     /// <summary>
@@ -118,23 +121,29 @@ internal static class TextOutlineSkylines
     /// font cannot be located.
     /// </summary>
     public static (IReadOnlyList<SkylineBuilding> Up, IReadOnlyList<SkylineBuilding> Down)
-        MusicGlyphProfile(char glyph, double fontSize)
-        => ResolvedMusicGlyph(glyph, fontSize);
+        MusicGlyphProfile(char glyph, double fontSize, int design = 0)
+        => ResolvedMusicGlyph(glyph, fontSize, design);
 
+    /// <param name="design">
+    /// The Emmentaler design to walk — 0 (or omitted) for the score's own. A grob that
+    /// states a <c>font-size</c> reads ANOTHER design's outline, not this one scaled.
+    /// </param>
     public static (VerticalSkyline Up, VerticalSkyline Down) PlaceMusicGlyph(
-        char glyph, double fontSize, double x, double y)
+        char glyph, double fontSize, double x, double y, int design = 0)
     {
-        var (up, down) = ResolvedMusicGlyph(glyph, fontSize);
+        var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design);
         return (PlaceResolved(VerticalDirection.Up, up, x, y),
                 PlaceResolved(VerticalDirection.Down, down, x, y));
     }
 
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedMusicGlyph(
-        char glyph, double fontSize)
+        char glyph, double fontSize, int design)
     {
-        return MusicProfileCache.GetOrAdd((glyph, fontSize), static key =>
+        if (design == 0)
+            design = Rendering.EmmentalerFaces.DefaultDesign;
+        return MusicProfileCache.GetOrAdd((glyph, fontSize, design), static key =>
         {
-            var path = TextFontMetrics.MusicGlyphPath(key.Glyph);
+            var path = TextFontMetrics.MusicGlyphPath(key.Glyph, key.Design);
             if (path == null || path.IsEmpty)
                 return (Array.Empty<SkylineBuilding>(), Array.Empty<SkylineBuilding>());
             var (upQuads, downQuads) = FlattenPath(path, key.Size / 1000.0);

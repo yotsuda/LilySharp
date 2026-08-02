@@ -132,7 +132,8 @@ public sealed record GraceNoteItem
     /// <c>AtFontSize</c> multiplies the chosen design's table by.
     /// </para>
     /// </remarks>
-    public static readonly double ScaleFactor = Math.Pow(2.0, FontSizeStep / 6.0);
+    public static readonly double ScaleFactor =
+        Svg.Layout.EmmentalerDesignSize.Magstep(FontSizeStep);
 
     /// <summary>
     /// The FONT a grace grob reads its glyph dimensions from: the design

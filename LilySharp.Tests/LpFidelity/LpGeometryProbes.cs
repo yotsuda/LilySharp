@@ -3991,6 +3991,32 @@ internal static class LpGeometryProbes
         score main "GCW1" { staff m }
         """;
 
+    /// <summary>
+    /// THREE MUSICA FICTA accidentals — a grob that states <c>font-size −2</c> and therefore
+    /// reads another Emmentaler design.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probes/editorial-accidental.ly): the same three notes under
+    /// <c>suggestAccidentals = ##t</c>, dumping each AccidentalSuggestion's extent and its
+    /// origin against its note head. All three heads are black quarters, so the reading is
+    /// a pure X quantity and the pitches do not enter it.
+    /// </remarks>
+    private static readonly string EDA = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { fis4@editorial bes@editorial c@editorial c | }
+        }
+
+        form main { ~Main }
+
+        score main "EDA" { staff m }
+        """;
+
     /// <summary>A sixteenth then an EIGHTH grace: the run splits, by log2 of the ratio.</summary>
     /// <remarks>
     /// LilyPond twin (score GCWM): <c>\grace { d'16 e'8 } f'4 g'2 r4</c> — 1.417939 then
@@ -7492,6 +7518,20 @@ internal static class LpGeometryProbes
         new("grace.column.accidental.step", GCWA, g => g.NoteheadAnchorStep(0)),
         new("grace.column.approach", GCWP, g => g.NoteheadAnchorStep(0)),
         new("grace.column.approach.main-control", GCWP, g => g.NoteheadAnchorStep(3)),
+
+        // A MUSICA FICTA accidental, which is a grob that STATES font-size −2 — so it is
+        // read and drawn out of the SIXTEEN Emmentaler design, not the twenty scaled. The
+        // reading is its draw origin against its notehead's: the head's half-width minus
+        // the suggestion's own, so it moves if either glyph's box moves. Three glyphs
+        // because optical sizing is PER GLYPH — the sharp's box barely changes between the
+        // designs (0.000049) while the flat's changes by 0.016384, and no single scale can
+        // produce both. The whole law is in the header of probes/editorial-accidental.ly.
+        new("editorial.accidental.sharp.head-offset", EDA,
+            g => g.SuggestionToNoteheadAnchor(EmmentalerGlyphs.AccidentalSharp)),
+        new("editorial.accidental.flat.head-offset", EDA,
+            g => g.SuggestionToNoteheadAnchor(EmmentalerGlyphs.AccidentalFlat)),
+        new("editorial.accidental.natural.head-offset", EDA,
+            g => g.SuggestionToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural)),
 
         // --- and the OTHER thing a beam group decides, which no point above can see: how
         // many beam lines reach each stem. Every point above reads a beam's HEIGHT, which

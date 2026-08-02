@@ -117,10 +117,25 @@ public static class EmmentalerDesignSize
     public static (int Rounded, double Actual) ForFontSizeStep(double fontSizeStep)
         => BestRounded(RequestedSize(fontSizeStep));
 
+    /// <summary>
+    /// LilyPond's <c>magstep</c>: what a <c>font-size</c> of <paramref name="fontSizeStep"/>
+    /// multiplies a length by — <c>2^(s/6)</c>, six steps to the octave.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/lily-library.scm <c>magstep</c>.
+    /// ⚠️ THE ONE SPELLING. Every rounded copy of this that has been found was wrong in the
+    /// fourth digit and sat inside a spacing law: a grace was 0.65 (against 0.707107) until
+    /// 2026-08-01, an ossia 0.7071 and an editorial accidental 0.7937 until 2026-08-02.
+    /// A caller that has a font-size asks here; a caller that has a glyph asks
+    /// <see cref="GlyphMetrics.AtFontSize"/>, which applies this itself.
+    /// </remarks>
+    public static double Magstep(double fontSizeStep)
+        => fontSizeStep == 0.0 ? 1.0 : Math.Pow(2.0, fontSizeStep / 6.0);
+
     /// <summary>The point size a grob with this <c>font-size</c> asks the font for.</summary>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:115-117 requested_size.</remarks>
     public static double RequestedSize(double fontSizeStep)
-        => BaseSizePoints * Math.Pow(2.0, fontSizeStep / 6.0);
+        => BaseSizePoints * Magstep(fontSizeStep);
 
     /// <summary>
     /// The magnification LilyPond then applies to the chosen file:

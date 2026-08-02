@@ -474,13 +474,19 @@ internal static partial class GlyphMetrics
     };
 
     /// <summary>Gets the bounding box for an accidental by name.</summary>
-    public static BBox GetAccidentalBBox(string? accidental) => accidental switch
+    public static BBox GetAccidentalBBox(string? accidental)
+        => GetAccidentalBBox(Design20, accidental);
+
+    /// <summary>The same lookup asked of ONE font — see
+    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
+    public static BBox GetAccidentalBBox(DesignMetrics font, string? accidental)
+        => accidental switch
     {
-        "sharp" => AccidentalSharp,
-        "flat" => AccidentalFlat,
-        "natural" => AccidentalNatural,
-        "doubleSharp" => AccidentalDoubleSharp,
-        "doubleFlat" => AccidentalDoubleFlat,
+        "sharp" => font.AccidentalSharp,
+        "flat" => font.AccidentalFlat,
+        "natural" => font.AccidentalNatural,
+        "doubleSharp" => font.AccidentalDoubleSharp,
+        "doubleFlat" => font.AccidentalDoubleFlat,
         _ => default
     };
 

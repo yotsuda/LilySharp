@@ -100,9 +100,16 @@ public class EditorialAccidentalTests
         var layout = new LayoutEngine(new LayoutOptions()).Layout(score);
 
         var editorial = Assert.Single(layout.ArticulationLayouts,
-            a => a.Scale < 1.0);
-        // magstep(-2) = 2^(-2/6)
-        Assert.Equal(0.7937, editorial.Scale, precision: 3);
+            a => a.FontSizeStep < 0.0);
+        // The grob STATES a font-size and the size follows from it — magstep(-2) =
+        // 2^(-2/6) = 0.79370053.
+        // LILYPOND-REF: scm/define-grobs.scm:101 accidental-suggestion-interface's grob
+        //   declares (font-size . -2) there (AccidentalSuggestion runs :96-123);
+        //   scm/lily-library.scm magstep is the 2^(s/6) a font-size means.
+        Assert.Equal(-2.0, editorial.FontSizeStep);
+        Assert.Equal(0.79370053, EmmentalerDesignSize.Magstep(editorial.FontSizeStep), 8);
+        // …and that font-size chooses the 16 design: the glyph is not the 20's shrunk.
+        Assert.Equal(16, EmmentalerDesignSize.ForFontSizeStep(editorial.FontSizeStep).Rounded);
         Assert.True(editorial.IsAbove);
         // c (C4? — relative anchor) sits below the middle line; the suggestion
         // must end up above the staff top minus padding, i.e. y < noteY.
