@@ -187,7 +187,8 @@ internal sealed class BeamScoringProblem
     /// </param>
     /// <param name="beamThickness">
     /// The beam's declared thickness. LilyPond STATES this per context rather than deriving
-    /// it from the fraction (ly/grace-init.ly declares 0.384 for a grace beam), so it is a
+    /// it from the fraction (scm/music-functions.scm:635-648 declares 0.384 for a grace beam,
+    /// ly/engraver-init.ly's CueVoice 0.35 for a cue one), so it is a
     /// separate argument and not <c>BeamThickness × lengthFraction</c>.
     /// </param>
     /// <param name="headFont">
@@ -332,7 +333,7 @@ internal sealed class BeamScoringProblem
         // lily/beam.cc:136 get_beam_translation and by lily/beam-quanting.cc:80-87
         // Beam_quant_parameters::fill; the STEM's by lily/stem.cc:1159-1160 calc_stem_info.
         // They agree for a grace,
-        // where ly/grace-init.ly sets both — and they do NOT for a TAB staff, where
+        // where scm/music-functions.scm:635-648 sets both — and they do NOT for a TAB staff, where
         // ly/engraver-init.ly:1238 overrides the Beam's alone (0.62) and \tabFullNotation
         // hands the Stem its ordinary details back.
         _beamLengthFraction = beamLengthFraction ?? lengthFraction;

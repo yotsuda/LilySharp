@@ -61,7 +61,7 @@ public readonly record struct GraceNoteLayout(
     // centre's height at each DRAWN end (half a stem thickness outside the outer stems), in
     // staff positions up from the middle line. Null when the group draws flags instead.
     // LILYPOND-REF: lily/beam-quanting.cc — a grace beam is quanted by the same machine as
-    //   any other, with beam-thickness 0.384 and length-fraction 0.8 (ly/grace-init.ly).
+    //   any other, with beam-thickness 0.384 and length-fraction 0.8 (scm/music-functions.scm:635-648).
     double? BeamLeftY = null,
     double? BeamRightY = null,
     // Where each grace column sits, relative to <see cref="X"/> — the SAME numbers the
@@ -88,7 +88,8 @@ public readonly record struct GraceNoteLayout(
 /// </remarks>
 internal static class GraceNoteEngraver
 {
-    // LILYPOND-REF: ly/grace-init.ly graceSettings — Voice.fontSize = -3, i.e.
+    // LILYPOND-REF: scm/music-functions.scm:635-648 general-grace-settings — NoteHead/Stem/
+    //   Flag font-size -3 (the list is PER-GROB: the Accidental is -4), i.e.
     //   scm/lily-library.scm magstep(-3) = 2^(-3/6). See GraceNoteItem.ScaleFactor.
     private static readonly double GraceScale = GraceNoteItem.ScaleFactor;
 
@@ -226,7 +227,8 @@ internal static class GraceNoteEngraver
     /// quarter-or-longer one, or a mixed group, all of which draw flags).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/grace-init.ly graceSettings — a grace beam is an ordinary Beam with
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 <c>general-grace-settings</c> — a grace
+    ///   beam is an ordinary Beam with
     ///   <c>beam-thickness 0.384</c> and <c>length-fraction 0.8</c> on it and on its Stems,
     ///   so it goes through lily/beam-quanting.cc like any other. There is no second
     ///   algorithm, and until 2026-08-01 Lily# had one: the renderer drew the beam parallel

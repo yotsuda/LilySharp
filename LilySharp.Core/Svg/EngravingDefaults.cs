@@ -106,9 +106,12 @@ internal static class EngravingDefaults
     public const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0;
     /// <summary>A GRACE beam's declared thickness — LilyPond states it, it is not derived.</summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/grace-init.ly graceSettings — <c>Voice.Beam.beam-thickness = #0.384</c>,
-    ///   alongside <c>Voice.Beam.length-fraction</c> and <c>Voice.Stem.length-fraction</c>
-    ///   (both <see cref="GraceBeamLengthFraction"/>) and <c>Voice.fontSize = #-3</c>.
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 <c>general-grace-settings</c> —
+    ///   <c>(Voice Beam beam-thickness 0.384)</c>, alongside <c>(Voice Beam length-fraction 0.8)</c>
+    ///   and <c>(Voice Stem length-fraction 0.8)</c> (both <see cref="GraceBeamLengthFraction"/>)
+    ///   and the per-grob font-sizes (<see cref="Model.GraceNoteItem.FontSizeStep"/>).
+    ///   ⚠️ NOT ly/grace-init.ly, which this said until 2026-08-02: that file holds the grace
+    ///   slur and the acciaccatura slash and states no sizes at all.
     /// MEASURED on 2.26.0 (audit/lp-geometry/probes/beam-grace.ly, score G): the Beam grob of
     /// <c>\grace { d'16 e' }</c> reports beam-thickness 0.384 and length-fraction 0.8, against
     /// 0.48 and unset for the same two pitches written as ordinary sixteenths (score H).
@@ -116,7 +119,8 @@ internal static class EngravingDefaults
     public const double GraceBeamThickness = 0.384;
     /// <summary>A grace Beam's and Stem's <c>length-fraction</c>.</summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/grace-init.ly graceSettings. ⚠️ NOT the notehead's scale: the heads
+    /// LILYPOND-REF: scm/music-functions.scm:635-648 <c>general-grace-settings</c>.
+    /// ⚠️ NOT the notehead's scale: the heads
     /// shrink with <c>fontSize = -3</c>, i.e. <c>magstep(-3)</c>, which is a different number
     /// again — <see cref="Model.GraceNoteItem.ScaleFactor"/>, which DERIVES it rather than
     /// writing the result down. ⚠️ This line used to say the heads were drawn at 0.65; that
@@ -135,7 +139,8 @@ internal static class EngravingDefaults
     ///   <c>(3·ss·fract + line·fract − beam-thickness) / 3</c> from four up.
     /// <para>
     /// ⚠️ THE STAFF SPACE AND THE LINE THICKNESS ARE SCALED BY <c>fract</c>; THE BEAM
-    /// THICKNESS IS NOT — it arrives already scaled (0.384 for a grace, ly/grace-init.ly).
+    /// THICKNESS IS NOT — it arrives already scaled (0.384 for a grace,
+    /// scm/music-functions.scm:635-648).
     /// LilyPond's own comment at :138-141 says exactly that: "if fract != 1.0, as is the case
     /// for grace notes, we want the gap to decrease too. To achieve this, we divide the
     /// thickness by fract." So a grace's translation is <c>(2×0.8 + 0.1×0.8 − 0.384)/2 =

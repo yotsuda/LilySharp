@@ -384,8 +384,9 @@ internal static partial class SharedRenderer
         for (int i = 0; i < n; i++)
             gc.DrawLine(StemX(i), ys[i], StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
 
-        // A grace beam's thickness is DECLARED, not scaled: ly/grace-init.ly sets
-        // Voice.Beam.beam-thickness = #0.384 where scm/define-grobs.scm declares 0.48, and the
+        // A grace beam's thickness is DECLARED, not scaled: scm/music-functions.scm:635-648
+        // general-grace-settings has (Voice Beam beam-thickness 0.384) where
+        // scm/define-grobs.scm declares 0.48, and the
         // gap between its lines follows from that (lily/beam.cc:130-145). Both are the numbers
         // the QUANTER was handed (GraceNoteEngraver passes the same two constants), so drawing
         // from anything else draws a beam that is not the configuration that was scored.
