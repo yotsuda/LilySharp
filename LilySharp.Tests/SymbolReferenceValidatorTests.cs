@@ -89,6 +89,50 @@ form main {
         Assert.Contains("NonExistent", validator.Diagnostics[0].Message);
     }
     
+    /// <summary>
+    /// A '~' hides the rehearsal LABEL. It must not hide a typo.
+    /// </summary>
+    /// <remarks>
+    /// The validator matched only <c>SectionReferenceSyntax</c>, so <c>~NonExistent</c>
+    /// passed `lysc check` clean and the section simply never appeared or played, while the
+    /// same name without the '~' was reported. Found while fixing the sibling omission in
+    /// the MIDI exporter (MidiSilentSectionTests) — a silent reference has to be answered
+    /// everywhere a plain one is.
+    /// </remarks>
+    [Fact]
+    public void Validate_UndefinedSilentSectionInStructure_ReportsError()
+    {
+        var source = @"
+section Intro { c4 d e f | }
+form main {
+    Intro
+    ~NonExistent
+}
+";
+        var validator = new SymbolReferenceValidator();
+        validator.Validate(SyntaxTree.Parse(source));
+
+        Assert.Single(validator.Diagnostics);
+        Assert.Equal(DiagnosticCodes.UndefinedSection, validator.Diagnostics[0].Code);
+        Assert.Contains("NonExistent", validator.Diagnostics[0].Message);
+    }
+
+    /// <summary>The other half: a DEFINED section behind a '~' stays clean.</summary>
+    [Fact]
+    public void Validate_DefinedSilentSectionInStructure_NoError()
+    {
+        var source = @"
+section Intro { c4 d e f | }
+form main {
+    ~Intro
+}
+";
+        var validator = new SymbolReferenceValidator();
+        validator.Validate(SyntaxTree.Parse(source));
+
+        Assert.Empty(validator.Diagnostics);
+    }
+
     [Fact]
     public void Validate_DefinedSectionInStructure_NoError()
     {

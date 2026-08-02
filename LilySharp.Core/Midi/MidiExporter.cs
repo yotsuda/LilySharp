@@ -605,6 +605,16 @@ public sealed class MidiExporter
     /// text are visual and skipped. D.C./D.S. jump SEMANTICS are not yet
     /// honored (they would need segno/fine targets in time).
     /// </summary>
+    /// <remarks>
+    /// ⚠️ A '~' REFERENCE HIDES A LABEL, NOT THE MUSIC. <c>~Name</c> is the same section
+    /// reference with its rehearsal label suppressed (Parser.Form.cs ParseSilentSectionReference),
+    /// so it has to play. Matching only <see cref="SectionReferenceSyntax"/> here silenced
+    /// the whole section: <c>form main { ~Main }</c> engraved correctly and exported ZERO
+    /// notes, while the same book with the '~' dropped exported eight.
+    /// The engraver has already been bitten by this once, in its repeat-block walk
+    /// (MeasureCollector.Form.cs, "without this the section's measures were dropped entirely,
+    /// not just its label") — a silent reference must be answered EVERYWHERE a plain one is.
+    /// </remarks>
     private void PlayForm(FormDeclarationSyntax structure, MidiTrack track, MidiTrack conductorTrack)
     {
         for (int i = 0; i < structure.SlotCount; i++)
@@ -615,12 +625,24 @@ public sealed class MidiExporter
                 case SectionReferenceSyntax reference:
                     PlaySectionByName(reference.SectionName, track, conductorTrack);
                     break;
+                case { Kind: SyntaxKind.SilentSectionReference }
+                    when SilentSectionName(child) is { } silentName:
+                    PlaySectionByName(silentName, track, conductorTrack);
+                    break;
                 case FormRepeatBlockSyntax repeatBlock:
                     PlayRepeatBlock(repeatBlock, track, conductorTrack);
                     break;
             }
         }
     }
+
+    /// <summary>
+    /// The section name inside a <c>~Name</c> reference. It has no red-node class of its own,
+    /// so the name is read off slot 1 — the same way every other consumer reads it
+    /// (MeasureCollector.Form.cs, MusicXmlExporter, SectionReferenceFinder).
+    /// </summary>
+    private static string? SilentSectionName(SyntaxNode? node)
+        => node?.GetChild(1) is SyntaxTokenNode name ? name.Text : null;
 
     private void PlayRepeatBlock(FormRepeatBlockSyntax repeatBlock, MidiTrack track, MidiTrack conductorTrack)
     {
@@ -632,6 +654,11 @@ public sealed class MidiExporter
             {
                 case SectionReferenceSyntax reference:
                     body.Add(reference.SectionName);
+                    break;
+                // …and inside a repeat body too. See the remark on PlayForm.
+                case { Kind: SyntaxKind.SilentSectionReference } silent
+                    when SilentSectionName(silent) is { } silentName:
+                    body.Add(silentName);
                     break;
                 case FormAlternativeSyntax alt:
                     alternatives.Add(alt.SectionName.Text);

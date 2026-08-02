@@ -112,15 +112,33 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 break;
                 
             case SectionReferenceSyntax sectionRef:
-                var sectionName = sectionRef.SectionName;
-                if (!_definedSections.Contains(sectionName))
-                {
-                    _diagnostics.Error(
-                        sectionRef.Span,
-                        DiagnosticCodes.UndefinedSection,
-                        $"Undefined section: '{sectionName}'");
-                }
+                ValidateSectionName(sectionRef.SectionName, sectionRef.Span);
+                break;
+
+            // `~Name` is the same reference with its rehearsal label hidden, so the NAME is
+            // checked the same way. It was not, and the failure was silent in the worst
+            // sense: `form main { ~Nope }` passed `lysc check` clean and simply never
+            // played, where `form main { Nope }` reported the typo. A '~' hides a label,
+            // not a mistake.
+            case { Kind: SyntaxKind.SilentSectionReference } silentRef
+                when silentRef.GetChild(1) is SyntaxTokenNode silentName:
+                ValidateSectionName(silentName.Text, silentRef.Span);
                 break;
         }
+    }
+
+    /// <summary>
+    /// One house for the check, because a form has TWO spellings of a section reference and
+    /// they must answer alike.
+    /// </summary>
+    /// <param name="span">
+    /// The whole reference, matching what the plain spelling underlines — so `~Nope` is
+    /// squiggled with its '~', which is the thing the author has to look at.
+    /// </param>
+    private void ValidateSectionName(string name, TextSpan span)
+    {
+        if (!_definedSections.Contains(name))
+            _diagnostics.Error(span, DiagnosticCodes.UndefinedSection,
+                $"Undefined section: '{name}'");
     }
 }
