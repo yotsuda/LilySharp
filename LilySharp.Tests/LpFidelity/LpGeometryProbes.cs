@@ -4119,6 +4119,20 @@ internal static class LpGeometryProbes
     /// stem, half a stem thickness (0.065) to the right — ItemSkylineFactory says so in a
     /// comment and leaves it alone for want of an observer. This is the observer.
     /// </para>
+    /// <para>
+    /// ⚠️⚠️ THE TWO SIDES DO NOT SPELL AN OCTAVE THE SAME WAY, and all three books here were
+    /// written with LilyPond's spelling on BOTH sides until 2026-08-02 (session 71) — so they
+    /// were not the same music, and <c>flag.up.reach</c> recorded a −1.613200 that was an
+    /// OCTAVE and not a defect: Lily#'s column had a DOWN stem where LilyPond's had an UP one.
+    /// MEASURED in this test project, <c>clef treble</c> and no instrument: Lily#'s absolute
+    /// <c>c</c> is staff position −6, i.e. C4, so Lily# <c>c</c> IS LilyPond <c>c'</c> and
+    /// every book here is spelled ONE APOSTROPHE LOWER than its twin.
+    /// <c>lysc ly</c> already bridges this — it emits <c>\fixed c' { … }</c> — which is why
+    /// the standing rule is to GENERATE twins rather than write them, and why the probes that
+    /// were generated have it right (grace-column-width.ly's GCWA: LilyPond <c>f'4</c>
+    /// against Lily# <c>f4</c>). Before trusting a residual here, check that the two
+    /// spellings differ by exactly one apostrophe.
+    /// </para>
     /// </remarks>
     private static readonly string FSF8 = """
         octave absolute
@@ -4128,7 +4142,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c''8 dis'4 r4 r8 | }
+          m { c'8 dis4 r4 r8 | }
         }
 
         form main { ~Main }
@@ -4146,7 +4160,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c''8 dis''4 r4 r8 | }
+          m { c'8 dis'4 r4 r8 | }
         }
 
         form main { ~Main }
@@ -4165,7 +4179,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { d'8 fis''4 r4 r8 | }
+          m { d8 fis'4 r4 r8 | }
         }
 
         form main { ~Main }

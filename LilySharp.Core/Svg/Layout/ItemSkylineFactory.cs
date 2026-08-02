@@ -164,18 +164,20 @@ internal static class ItemSkylineFactory
                     //   NOT MEASURED — no ledger point reads a flag's draw x, and the last
                     //   read-off-the-source claim on this very line (the 0.065) only became
                     //   trustworthy when a pair measured it. Open a point before moving it.
-                    // ⚠️ THE UP BRANCH IS DELIBERATELY NOT CHANGED WITH IT. It still reads the
-                    //   ADVANCE (StemUpSE.X = NoteheadBlackAdvance = 1.304000) where the stem
-                    //   stands at 1.239200 = the attachment EXTENT 1.304200 − 0.065, so it is
-                    //   wrong by 0.064800 the other way. But ledger flag.up.reach says Lily#
-                    //   answers 2.504200 for that column, which is LilyPond's number for the
-                    //   same shape with NO flag reach and NO accidental reach in it: an
-                    //   up-stem column is not reserving this ink AT ALL. Not reserving it is a
-                    //   different defect from reserving it in the wrong PLACE, and it has to
-                    //   be measured before it is moved — flag.up.reach must not move here.
-                    double stemX = note2.StemUp
-                        ? noteheadLeftX + GlyphMetrics.StemUpSE.X
-                        : LayoutUtilities.StemX(noteheadLeftX, up: false);
+                    // ⚠️ BOTH DIRECTIONS, and the UP one was wrong the other way: it read
+                    //   GlyphMetrics.StemUpSE.X = NoteheadBlackAdvance = 1.304000 where the
+                    //   stem stands at 1.239200 = the attachment EXTENT 1.304200 − 0.065.
+                    //   That is the FOURTH site of the advance-versus-extent claim three
+                    //   others were fixed for; it survived because ledger flag.up.reach read
+                    //   −1.613200 and hid it, and −1.613200 was not a defect at all but an
+                    //   OCTAVE in the twin (the .ly said d' = D4 while the Lily# book said
+                    //   d' = D5, so the two sides were not the same music and Lily#'s column
+                    //   had a DOWN stem). With the books at one pitch the point read
+                    //   +0.164800, and 0.164800 − 0.100000 is 0.064800 — this term exactly,
+                    //   on top of the same common +0.100 the down pair carries.
+                    // MEASURED: routing both directions through the one house took it to
+                    //   +0.100000, so all three flag points now read ONE number.
+                    double stemX = LayoutUtilities.StemX(noteheadLeftX, note2.StemUp);
 
                     double flagYBottom, flagYTop;
                     if (note2.StemUp)
