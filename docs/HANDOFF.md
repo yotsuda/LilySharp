@@ -66,6 +66,7 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ```
 台帳に方向の点を 6 つ開く（コード変更ゼロ）  b06087ee  snapshot 0 枚  台帳 +6（count・1 つが +2）
 方向を配置時へ移す＋足りない 3 つを移植      4c57d7a5  snapshot 9 枚  +2 → 0・台帳 +3（幅）
+書き手の符尾と梁の符尾を分ける（+exporter）  fee853cd  snapshot 0 枚  台帳 +1・テスト +4
 （この引継ぎ commit）
 ```
 
@@ -97,11 +98,28 @@ Lily# は**制御点の高さ**をその閾値に当てていた（**実際の�
 （`center_tie_vertically`・tie-tie の中心）——**足りなかったのは係数ではなく「それが量に属する」こと**。
 `BezierBow.MidpointHeight` に名前を付け、`TieCandidate` は**2 つの高さ**を持つ。
 
-★★★ **④ 対を 1 度書き直した＝`@stemDown` は梁の中の音符に届かない。**
+★★★ **④ 対を 1 度書き直した＝`@stemDown` は梁の中の音符に届かなかった。**
 `BeamDetector` が群の向きを音高から決め、`ResolveBeamStemDirections` が**全メンバーの
 `StemUpOverride` を上書きする**。⇒ 最初の `TDBEAMD` は **Lily# 側が上向き梁・双子が下向き梁**＝
-**対ですらなかった**。**片方が正しくなって片方が壊れて初めて見えた**。今は**梁の向きを音高で作る**
-（両エンジンが書ける綴り）。⚠️ **`lysc ly` は `@stemUp`/`@stemDown` を落とす**（別の欠陥・▶）。
+**対ですらなかった**。**片方が正しくなって片方が壊れて初めて見えた**。⇒ `TDBEAMD` は
+**梁の向きを音高で作る**綴りに直した（両エンジンが書ける）。**⑥ でその欠陥自体も閉じた。**
+
+★★★ **⑥ 「書き手が回した符尾」と「梁が導いた符尾」は別の量**（`fee853cd`・**snapshot 0 枚**）。
+注釈は `StemUpOverride`＝**梁が答えを書き込むのと同じスロット**に入っていたので、梁の中では
+**黙って上書き**されていた。しかも **`lysc ly` も落としていた**ので**双子が別の音楽**になり、
+**それを見せる対が作れなかった**。LP は **2 つのプロパティ**で持つ（`direction` ← `\stemUp` ／
+`default-direction` ← コールバック）:
+```
+beam.cc:894-905  direction を持つ stem はそれを投票し force_dir を立てる
+beam.cc:918      force_dir は「一番遠い符頭」規則を飛ばす ⇒ 群は投票で決まる
+beam.cc:946-956  群の向きは direction を持たない stem にだけ刻印される
+```
+⇒ `MusicItem.ForcedStemUp`（願い）を `StemUpOverride`（答え）と**分けた**。
+★★ **梁は願いに素直に従わない**——`d8. a,16` の片方だけ下げると**群は上のまま**で
+**その stem だけ下**＝**knee**。実測 `dir=1 stems=(-1 1)`、**Lily# も同じ 2 本**。
+★ **snapshot は 1 枚も動かない**（**その配置の本がコーパスに 1 冊も無い**）ので、
+**網は台帳 `tie.direction.beam-stem-turned-by-hand` と `ForcedStemInBeamTests` が全部**。
+⚠️ **効くことは潰して確かめた**（`ForcedStemUpOf` を null にすると対のテストが落ちる）。
 
 ★★★ **⑤ 遠ざかった 3 本は 1 つの機構で、点が付いた。**
 `tie.width.clears-head` と `tie.width.seconds.lower` は **9 桁 EXACT**、
@@ -111,9 +129,9 @@ Lily# は**制御点の高さ**をその閾値に当てていた（**実際の�
 LP は列の**アウトライン全部**（各符頭・付点・符尾・旗、+ **列の一番外の符頭**から立てる後退箱
 `:96-287`・`:243-258`）を建て、そのうえで**符尾から attachment を引き戻す**（`:583-609`・`stem-gap 0.35`）。
 
-**未 push 136**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
-⚠️ **push はしていない**）・テスト **3918 passed / 0 failed / 4 skipped**（**+9**）・
-台帳 **430 点**（**ss 非ゼロ 83・総和 5.332531510**／**count 点 105・うち非ゼロ 2**）。
+**未 push 138**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
+⚠️ **push はしていない**）・テスト **3922 passed / 0 failed / 4 skipped**（**+13**）・
+台帳 **431 点**（**ss 非ゼロ 83・総和 5.332531510**／**count 点 106・うち非ゼロ 2**）。
 ⚠️ **総和が +0.8887 増えたのは悪化ではない**——**一度も測られていなかった量を可視化した**ぶん。
 **比較は同じ点集合の中でのみ意味を持つ。**
 ★ **perf は §7.9 のとおり測った**（Release・min-of-9・A/B を 2 往復）:
@@ -139,13 +157,6 @@ tie-formatting-problem.cc:96-287   set_column_chord_outline   列の箱を全部
 ⚠️ **snapshot は動く**（今回動いた 9 枚のうち少なくとも 3 枚は戻る側）。**1 枚ずつ承認を取ること。**
 ⚠️ **`tie.width.clears-head` と `tie.width.seconds.lower` は今 exact**＝**この移植の falsifier**。
 **壊したらアウトラインの建て方が違う。**
-
-★★ **`@stemUp`/`@stemDown` が梁の中の音符に届かない**（**起票・未修正**）。
-`MeasureCollector.ResolveBeamStemDirections` が `BeamDetector` の群方向で
-**全メンバーの `StemUpOverride` を上書きする**ので、注釈は黙って消える。
-**LP は `\stemDown` を梁ごと倒す。** ⚠️ **さらに `lysc ly` も `@stemUp`/`@stemDown` を落とす**
-（"articulation not mapped, dropped"）＝**双子が別の音楽になる**。**今回それで 1 度対を壊した。**
-★ **どちらも安い。直すなら両方同時に**（片方だけだと双子で検算できない）。
 
 ★★ **行末 courtesy の定数 3 本＝⒝ の債務**（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
 `CourtesyKeyToTimeGap` 1.15）。**出所は `SpacingRules.BarlineToCourtesyKey` の remarks に 1 軒だけ置いた**
@@ -6298,19 +6309,12 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ~~⑴ `voice { }`~~・~~⑵ `grandStaff` の入れ子~~・~~⑶ `ossia`／`part` 宣言なし~~・
   ~~⑷ section のヘッダ~~・~~⑸ 和音のオクターブ記号~~・~~⑹ grace のあとの音価~~ — **すべて完了**
   （第61〜63セッション。最後の 2 つは `275c12ee`）。
-  **残っているのは 2 つ**:
+  ~~⑻ `@stemUp`/`@stemDown` を落とす~~ — **完了**（2026-08-03・engine 側と同じ commit で。
+  `\once \override Stem.direction`。理由は §1 ⑥）。
+  **残っているのは 1 つ**:
   ⑺ **度数和音が `<>` になる**（`<1 3 5>`・`<d 3 5 7,>`）。**今は警告を出すだけ**で、
      **解決は独立した移植**——`MeasureCollector.ItemFactory` が root ＋ 調に対して解決している
      側から**字面で写せる**。**閉じれば `chord-octave-marks` の bar check が消える。**
-  ⑻ **`@stemUp`/`@stemDown` を落とす**（"articulation @stemUp not mapped, dropped"・2026-08-03）。
-     **LP には `\stemUp`/`\stemDown` があるので写せる。**
-     ⚠️ ★★ **これは engine 側の欠陥と対になっている**——**Lily# の注釈は梁の中の音符に届かない**
-     （`BeamDetector` が群方向を音高から決め、`MeasureCollector.ResolveBeamStemDirections` が
-     **全メンバーの `StemUpOverride` を上書きする**）。**LP は `\stemDown` で梁ごと倒れる。**
-     ⇒ **片方だけ直すと双子で検算できない**（exporter だけ直すと Lily# 側が注釈を無視した本と
-     LP 側が従った本を比べることになる）。**両方同時に。**
-     ★ **第76セッションはこれで対を 1 度壊した**（`tie.direction.beam-agrees-with-stem` の
-     最初の綴り）——**片方が正しくなって片方が壊れて初めて見えた**。
   ⚠️ **「exporter が黙って空を返す」欠陥はこれで 6 度目**（第55・56・61・62・63）。
   ⇒ ★ **落とすなら必ず `Warnings` に出す**。**`<>` や空の part 変数を黙って書かない。**
   ⇒ ★ **塞いだら双子 199 本の before/after を全数比較する**（第62セッション ② の手順。
@@ -7262,6 +7266,14 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
   量に名前が無い**の症状。⇒ ★ **判定法**: LP が **1 つのメソッド名**で呼んでいる量に、
   こちらも**1 つの名前**があるか（`BezierBow.MidpointHeight`）。**呼び出し側で掛ける係数は、
   たいてい名前の無い量の破片。**
+  ⇒ ★★★ **鏡像もある＝「2 つの量を 1 つのスロットに入れる」**（同じセッションで 2 件目）。
+  LP は**書き手が回した符尾**と**梁が導いた符尾**を `direction` と `default-direction` の
+  **2 つのプロパティ**で持つ。Lily# は `StemUpOverride` 1 つに入れていたので、
+  **梁が答えを書き込んだ瞬間に注釈が黙って消えた**（`@stemDown` が梁の中で無効）。
+  ⚠️ **こちらは「上書きされる側」なので、テストも snapshot も台帳も 1 つも鳴らない**——
+  **消えた値を観測しているものが定義上どこにも無い**。
+  ⇒ ★ **判定法**: **LP がプロパティを 2 つ持っている**ところで、こちらがフィールド 1 つなら、
+  **後から書く側が先の値を壊していないか**を必ず読む。**LP の分け方は設計であって冗長ではない。**
 - ★★★ ⚠️ **「宣言してあるが誰も読んでいないパラメータ」は未移植の項の指紋**（同上）。
   `TieDetails.HorizontalDistancePenaltyFactor = 10` は **`LILYPOND-REF` つきで宣言され、
   テストが定数を assert してさえいた**のに、**エンジンのどこからも読まれていなかった**——
