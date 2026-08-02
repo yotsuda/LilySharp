@@ -58,6 +58,157 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-02（第75セッション＝**ユーザーが自分の楽譜を読んで見つけた 3 件。どれも「LP と
+違う」ではなく「LP に無い発明が 1 つ混じっていた」で、3 件とも同じ形——参加する側を手で数え上げた
+一覧**）。
+
+**閉じたもの**（**snapshot 2 枚はユーザー承認のうえ再ベース**）:
+```
+列スカイラインに符尾が無かった → LP の walk へ字面移植   snapshot 2 枚  台帳 +2 点（両方 EXACT）
+行末の courtesy 拍子が出ていなかった                      snapshot 0 枚  台帳 +2 点（1 EXACT / 1 が −0.2 を可視化）
+form の `~Name` が MIDI を無音にしていた                  テスト +4
+同じ `~Name` が未定義セクションの診断も黙らせていた        テスト +2
+```
+
+★★★ **① 符尾は「スカイラインに入れ忘れられていた」のではなく、「除外が移植済みとして書かれていた」。**
+`SpacingRules.CalculateNoteheadRightExtent` の doc が *"excluding stems and flags"* と書き、その真下に
+`lily/separation-item.cc:163-164` を引用していた。**引用は本物・除外は発明**。LP の参加は **opt-out**:
+```
+paper-column-engraver.cc:246-261  acknowledge した Item は全部 elements に入る
+                                  （外れるのは AccidentalPlacement / Arpeggio と裸の Accidental だけ）
+separation-item.cc:152-187        要素ごとに箱。:160-161 で axis group を飛ばすのは
+                                  符頭・符尾・付点を 1 つの外接箱にまとめないため
+```
+⇒ `ItemSkylineFactory` を **`ColumnParts` +`Boxes` の 2 段**に置き換えた（`Separation_item::boxes` の字面）。
+**Lily# が発明していた非対称も落とした**——LP の `calc_skylines` は**箱リスト 1 本**から Skyline_pair を
+作るので、付点も旗も両方向に届く（Lily# は「付点と旗は右だけ／臨時記号は左だけ」の 2 本立てだった）。
+**conditional 分割だけは LP の構造**なので残した。★ **出力はバイト不変**（⚠️ それは「移植した」証拠では
+なく「出力を保った」までで、忠実さの根拠はソースの読みのほう）。
+★★ **符尾は自分の符頭より右へ出ない**（`stem.cc:889-906`）＝**変えるのは「どこまで届くか」ではなく
+「どの Y で届くか」**。だから opt-in の一覧は 1 つ落としても緑のままでいられた。
+
+★★★ **② 拍子の courtesy は「調号だけ特別」ではなかった。** `TimeSignature` の `break-visibility` は
+`all-visible`（`define-grobs.scm:3922-3953`）。**初期拍子だけ**が `initialTimeSignatureVisibility`
+＝`end-of-line-invisible` を刻印される（`time-signature-engraver.cc:114-118`、`scm_is_null (last_spec_)`
+で守られている／`engraver-init.ly:867`）。⇒ **変更された拍子は全部、行末にも出る。** 3 通り実測:
+```
+拍子だけ変わる      行末＝C だけ            小節線インク右端 → 拍子  0.75
+調と拍子が変わる    取消 + 新調 + C          小節線インク右端 → 取消  1.00 ／ 新調右端 → 拍子 1.15
+どちらも変わらない  行末は空                 （初期拍子は end-of-line-invisible）
+```
+⚠️ **小節線からの間隔は 1 つの定数では書けない**（0.75 と 1.00 は別の数）。LP も break-align の grob ごとに
+`space-alist` を持つ。Lily# は 1 つ（0.8）で両方を綴っていた＝**`BarlineToCourtesyKey` の −0.2 が開いた**。
+
+★★★ **③ `~Name` はラベルを隠すだけ**（`Parser.Form.cs:82-83`）なのに、**MIDI が音符ごと落としていた**。
+`MidiExporter.PlayForm` が `SectionReferenceSyntax` しか受けていない。**engine は同じ穴を一度踏んでいる**
+（`MeasureCollector.Form.cs:83-86` に「これが無いとセクションの小節が丸ごと落ちた、ラベルだけでなく」）。
+`SymbolReferenceValidator` にも同じ穴があり、**`~Typo` が `lysc check` を素通り**していた。両方塞いだ。
+⚠️ **grep で当たった 9 か所のうち `MeasureCollector.cs:2897` だけは「穴に見えて実測で欠陥なし」**
+（`~A coda B` と `A coda B` の描画差は data-pos +1 と隠れたラベルだけ）。**読みだけで起票していたら偽の
+欠陥を 1 件足していた。**
+
+★★★ **コーパスは 3 件とも見えていなかった。** ①も②も **snapshot 210 枚が 1 枚も動かない**（②は 0 枚、
+①は動いた 2 枚も別要因）。**「緑だから正しい」ではなく「その本が 1 冊も無い」だった。** だから点を足した。
+⇒ ★★ **台帳が構造的に書けないものが 1 つある**——**「何も描かれない」**。行末に毎回拍子を出す実装でも
+台帳 2 点は EXACT のまま通る。`CourtesyMeterTests` を別に置いた（**落ちることを確認済み**：描画を殺すと
+3 本だけ fail し、「空のはず」「調だけのはず」の 2 本は緑のまま）。
+
+★★ **未修正・宣言のみ**: **LP のばねの最小値は臨時記号を原理的に見られない**。
+`note-spacing.cc:78-83` → `spacing-interface.cc:37-82` は列に**保存された** `horizontal-skylines`
+（＝`elements` のみ）を読む。臨時記号は `conditional-elements` で、**ロッドだけ**が合流させる。Lily# は
+ばねもロッドも両方見ている。⚠️ **臨時記号のある列を全部動かすので、点と測定が先**。コードに ⚠️ で名指し済み。
+
+**未 push 132**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。⚠️ **push は
+していない**）・テスト **3909 passed / 0 failed / 4 skipped**（**+14**）・台帳 **421 点**
+（**ss 非ゼロ 82・総和 4.443831511**／**count 点 99・うち非ゼロ 2**）。
+⚠️ **総和が増えたのは悪化ではない**——`courtesy.meter.barline-to-cancellation` が**一度も測られていなかった
+0.2** を可視化しただけ。**比較は同じ点集合の中でのみ意味を持つ。**
+```
+a1852276  spacing: LilyPond walks what a column has …   13 files  snapshot 2 枚（承認済）・台帳 +4
+cd081e45  form: a '~' hides a section's label, not …     4 files  テスト +6
+（この引継ぎ commit）
+```
+★ **perf は §7.9 のとおり測った。追加した計算は 2 つ**（列ごとに符尾の箱 1 個／system ごとに次小節の
+先頭 item を走査）。⚠️ **この日はマシンが他の負荷を抱えていて**（常駐 dotnet 7 個）、`feature-tour` の
+絶対値がセッション中に **min 1031 → 1722 ms** へ流れた。**だから絶対値では判定していない**——
+**同一バイナリの A/B を交互に 6 往復**した（行末 courtesy を env で殺す）:
+```
+ON  min 1761 ms   OFF min 1722 ms   差 39 ms（2%）＝ばらつき（1761〜3019 / 1722〜5051）の中
+⇒ 流れたのはマシン。OFF 側（新経路を 1 行も通らない）も同じだけ遅い＝対照が効いている
+```
+符尾の箱のほうはセッション前半に min-of-N で **1050 → 1031 ms**（退行なし）。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ▶ 次の一手
+
+★★★ **タイの方向。ユーザー起票（`scratch/ベースタブLy/repro.lys` D 節 3 小節目）・診断は済んでいる・
+着手はここから。** `d,4\3~ d,8.` のタイが上に膨らむが **LP は下**。
+**現場は `Svg/Collector/TieDetector.cs:55-57`**:
+```csharp
+// 単一声部は符尾の反対側、と書いてある。これが発明。
+bool curveUp = VoiceScan.SpanCurvesUp(score.Voices.Length, v, !startNote.StemUp);
+```
+⚠️ **「position の符号」に直しても駄目**。低音部で 4 通り実測した:
+```
+d4~ d2.           pos 0   符尾↓          → UP     （Tie の neutral-direction は UP・define-grobs.scm:3899）
+e4~ e2.           pos +1  符尾↓          → UP
+c4~ c2.           pos −1  符尾↑          → DOWN
+\stemUp d4~ d2.   pos 0   符尾↑（強制）   → DOWN   ← 符尾が効く
+d4~ d8. a,16 …    pos 0   ↓ のあと ↑（連桁）→ DOWN   ← 本件。単独の d4~d2. と逆
+```
+**最後の 2 行が読み**——同じ pos・同じ第1音の符尾でも答えが違う。⇒ **方向は 2 本の符尾と周囲を見た
+スコアリングの出力**（`tie-formatting-problem.cc` `generate_optimal_configuration`。
+`same-dir-as-stem-penalty 8` / `wrong-direction-offset-penalty 10` / `staff-line-collision-penalty 5`)。
+`set_ties_config_standard_directions:1036-1041` の `sign(position_)` は**入口の初期値にすぎない**。
+⇒ **やること**: 方向を収集時（`TieDetector`）から配置時（`TieFormattingProblem`）へ移す。
+**問題本体は移植済みで `TieDetails.cs` に該当ペナルティもある——決定だけが手前で短絡している。**
+⚠️ `TieItem.CurveUp` は収集時に確定してレンダラと配置の両方が読むので**配線の付け替え**になる。
+⚠️ **snapshot は広く動く見込み**（連桁内のタイは全部候補）。**1 枚ずつ承認を取ること。**
+⚠️ **点を先に開くこと**（LP 側は上の 4 冊がそのまま probe になる）。
+
+★★ **行末 courtesy の定数 3 本＝⒝ の債務**（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
+`CourtesyKeyToTimeGap` 1.15）。**出所は `SpacingRules.BarlineToCourtesyKey` の remarks に 1 軒だけ置いた**
+（`break-alignment-interface.cc:228-243`。他の 2 本はそこを `see cref` で指す＝住所を 3 つに増やさない）。
+⚠️ **space-alist の値をそのまま写したのではない**——TimeSignature は `(staff-bar . (extra-space . 1.0))` と
+**宣言している**のに**印字は 0.750000**（walk は group extent で回り、そのあと `break-align-anchor` が
+動かす）。**「宣言値＝定数」と書くと偽の住所になる。**
+⇒ ★ **点が −0.2 で開いている**（`courtesy.meter.barline-to-cancellation`）。0.8 を 1.0 にするだけでは**駄目**
+——予約 `KeyCourtesySuffixWidth` が同じ定数を読むので、描画と予約が一緒に動かないと信号が譜からはみ出る。
+⇒ **本筋は行末の群も `BreakAlignSpacing` に通すこと**（行頭 prefix は既に通っている。
+**LP は行の両端に break-align 群を 1 つずつ持つのであって、片側が solver・片側が定数ではない**）。
+**通せばこの 3 本は消える。**
+⚠️⚠️ ★ **0.75 は 1 冊でしか測っていない**（§7.7「プローブ 1 冊の texture だけ見て定数化しない」に触れる。
+第75セッションの自己監査で自白した）。**1.15 のほうは独立に 2 か所で一致している**（行末群と、同じ本の
+行頭 prefix の 鍵→拍子）ので交差検証済み。⇒ **0.75 には texture を変えた 2 冊目が要る**——行末が
+**終止線 `|.` や複縦線**のとき、**拍子が 2/4 でなく C や 3/4** のとき。**今それを観測しているのは
+`courtesy.meter.barline-to-meter` 1 点だけ**なので、**倒れるとしたらそこ**。安い。
+★★ **ばねの最小値と臨時記号**（§1 の「未修正・宣言のみ」）。**臨時記号のある列を全部動かす**ので、
+点と測定を先に。コードの ⚠️ は `ItemSkylineFactory.CreateLeftSkyline` の remarks。
+★ **`lysc ly` が `@arpeggio` を落とす**（双子を作ると `<c e g>4` になる）。**arpeggio を LP と比べようと
+すると偽の一致が出る。**
+★ **`@arpeggio` は残す（2026-08-02 ユーザー判断・確定）。撤去案は閉じた。**
+「`<< >>` と機能が被るのでは」から始まったが、**実測で別物**——`<<>>`＝**書き出された分散和音**
+（符頭が別々・音価を分割・MIDI は順次 3 音）、`@arpeggio`＝**積んだ和音＋波線**（MIDI は同時 3 音）。
+消すとロールド・コードが書けなくなり、LP（`\arpeggio` と書き出しを別に持つ）からも離れる。
+⇒ **残すと決まった以上、`lysc ly` が落としている件は直す側**（上の ★）。
+
+✅ **VS Code 拡張の再デプロイは解消済み**（第74セッションの ▶ にあった必須項目）。実測: インストール済み
+`ytsuda.lilysharp-0.3.0-dev.15\server` に **HarfBuzz 19 ファイル**・exe は `0.3.0+e2538ea7`（08-02 21:33）。
+★★ **未測定が残っている**: regular/bold/bold-italic 面のカーン差（italic のみ全走査）。**測るなら安い**。
+★★ **描画側 3 バックエンドがカーンを掛けているか未測定**（SVG のビューアは掛ける／PNG・PDF は素の Skia
+＝掛けない見込み。**推測**）。**実測して点で起票してから**直すこと。
+★ **`ottava.x.line-start-to-notehead` の 0.05 は harness の項**（閉じるなら両側で同じ縁を測る）。
+★★ **figbass の −0.0023332 が 5 点＋−0.0023334 が 2 点＝同じ数**＝**1 つの機構**（安い島）。
+★★★ **cue の `CueScale = 0.66` → per-design font-size の移植は点が開いたまま待っている**。
+★★ **オクターブ監査の「読めない 77 冊」**⇒ **やるなら実測で**（両エンジンに `staff-position` を吐かせる）。
+⚠️ **`audit/scripts/Audit-ProbeOctaves.ps1` の自己検査を外さないこと**（この監査は 3 回ウソをついた）。
+★ **旗の描画側に 0.065 が残っている**（ソースを読んだだけ・未実測・**点が無い**）。
+★ **実音入力スイッチ**（**未着手・要仕様**）——`octave` とは**直交した** concert-pitch トグル。
+★ **tab の残り 3 冊**（弦を明示しない本は LP と比較できない）。**触るなら fixture 側。要承認。**
+✅ **セリフ体の選択は決着した（§3・Schola 継続）**。`text.width.{aa,va}` は**閉じない点**。**追いかけない。**
+
+## 以下は第74セッションの経緯
+
 最終更新 2026-08-02（第74セッション＝**「1 段あたり 0.032」は存在しなかった。LP はグリフ 1 つずつ
 advance を 1200dpi の 1 px に丸め、その上でペアで詰めている。em も face も無罪。
 book → ⑴ 丸め → ⑵ カーニングまで通して 7 点 EXACT。**残った 2 点は「同梱フォントのカーン表が
@@ -153,32 +304,6 @@ v·a       −75 /        −75   ← 一致＝8va が EXACT
 ★ **依存が 1 つ増えた**: `HarfBuzzSharp` 8.3.1.3（MIT・Microsoft）＋ win32/linux/macOS の native。
 **測定経路のみ**。**描画側 3 バックエンドがカーンを掛けているかは未測定**（下記 ▶）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
-
-## ▶ 次の一手
-
-✅ **セリフ体の選択は決着した（§3・Schola 継続）**。`text.width.{aa,va}` は**閉じない点**として確定。
-**追いかけない。** ⚠️ **未測定だけ残っている**: regular/bold/bold-italic 面のカーン差（italic のみ全走査）。
-**測るなら安い**（`HarfBuzzSharp` で 2 ファイルを shape して差分を数えるだけ・§3 に手順の実例）。
-★★ **描画側がカーンを掛けているか未測定**（SVG のビューアは既定で掛ける／PNG・PDF は素の Skia
-＝掛けない見込み。**推測**）。**予約と描画が別経路**はこの repo が繰り返し踏んでいる形（§5.2.1②）なので、
-**3 バックエンドを実測して点で起票してから**直すこと。
-★ **`ottava.x.line-start-to-notehead` の 0.05 は harness の項**（§1・**閉じるなら両側で同じ縁を測る**
-＝LP 側の dump を `bracket_span_points[LEFT]` に変えるか、Lily# 側で線の ink 左端を測るか）。
-★★ **figbass の −0.0023332 が 5 点＋−0.0023334 が 2 点＝同じ数**＝**1 つの機構**（安い島）。
-★★★ **cue の `CueScale = 0.66` → per-design font-size の移植（③）は点が開いたまま待っている**
-（第72セッションが着手して分量を確認し、緑に戻した＝下の第72セッション節に触る場所が全部数えてある）。
-★★ **オクターブ監査の「読めない 77 冊」**（歌詞と `\relative` はテキスト比較では octave を決められない）
-⇒ **やるなら実測で**: 両エンジンに `staff-position` を吐かせて列ごとに突き合わせる。
-⚠️ **`audit/scripts/Audit-ProbeOctaves.ps1` の自己検査を外さないこと**（この監査は 3 回ウソをついた）。
-★ **旗の描画側に 0.065 が残っている**（ソースを読んだだけ・未実測・**点が無い**）。
-★ **実音入力スイッチ**（**未着手・要仕様**）——`octave` とは**直交した** concert-pitch トグル。
-★ **tab の残り 3 冊**（弦を明示しない本は LP と比較できない）。**触るなら fixture 側。要承認。**
-★★ ⚠️ **VS Code 拡張の再デプロイは「必須」になった**（ユーザー側作業）。第74セッションで
-`HarfBuzzSharp` を足したので、**デプロイ済みの `editors/vscode/server` は native を持っておらず**
-（実測: `libSkiaSharp.*` はあるが `libHarfBuzzSharp.*` は 1 つも無い）、**テキストを測った瞬間に
-`DllNotFoundException` で落ちる**。⚠️ **`editors/vscode/server` は git 管理外**（`git ls-files` で 0 件）
-＝**この不整合は diff に出ない**。**新規ビルドには native が入ることは確認済み**なので、
-手順は従来どおり **kill → copy**。
 
 ## 以下は第73セッションの経緯
 
@@ -6246,8 +6371,21 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   指す件が 3 つある**: ⑴ この `ownFixedFloor`（grace/歌詞の独立列）⑵ **和音行の command 列**
   （第28セッションで発見・`ApplyRowCommandColumnSprings` は 2 本のばねの**直列合成**で数値は
   厳密だが、LP は空の command 列を実体として持つ）⑶ **mid-measure clef/key/time**（LP はそれを
-  command 列に載せる。Lily# は `MidMeasureChangeGaps` が代役・§2B の mid-line clef 残件と同根）。
-  モデルに列を足す日はこの 3 つを一緒に見ること（⑵ grouper・⑸ 倍率と同じ「モデル追加が先」型）。
+  command 列に載せる。Lily# は `MidMeasureChangeGaps` が代役・§2B の mid-line clef 残件と同根）
+  ⑷ ★ **行末の courtesy 群**（2026-08-02・第75セッションで**点が出た**）。**LP は行の両端に
+  break-align 群を 1 つずつ持つ**のに、Lily# は**行頭だけ `BreakAlignSpacing` に通し、行末は定数
+  3 本**（`SpacingRules.BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
+  `CourtesyKeyToTimeGap` 1.15）で綴っている。**⑵ と同じ「合成が厳密なら乖離ゼロ」ではない**——
+  `courtesy.meter.barline-to-cancellation` が **−0.2**（LP は取消まで 1.00、拍子単独なら 0.75。
+  **小節線からの間隔は 1 つの数ではない**＝grob ごとの `space-alist`）。⚠️ **0.8 を 1.0 にするだけでは
+  駄目**：予約 `KeyCourtesySuffixWidth` が同じ定数を読むので描画と予約が一緒に動く必要がある。
+  ⚠️ **出所は 1 軒**＝`SpacingRules.BarlineToCourtesyKey` の remarks（`break-alignment-interface.cc:228-243`）。
+  **space-alist の値を写したのではない**——宣言は `extra-space 1.0` なのに印字は 0.750000（walk は
+  group extent で回り `break-align-anchor` が後で動かす）。**「宣言値＝定数」と書けば偽の住所になる。**
+  ⚠️⚠️ **0.75 は 1 冊でしか測っていない**（§7.7 の「1 冊の texture で定数化しない」に触れる・第75セッションの
+  自己監査で自白）。**1.15 は 2 か所独立一致で交差検証済み**。⇒ **0.75 には texture を変えた 2 冊目**
+  （行末が `|.` や複縦線／拍子が C や 3/4）**が要る。観測は `courtesy.meter.barline-to-meter` 1 点だけ。**
+  モデルに列を足す日はこの 4 つを一緒に見ること（⑵ grouper・⑸ 倍率と同じ「モデル追加が先」型）。
   ⚠️ ~~ただし**数値の乖離は現状ゼロ**（合成が厳密なので）——着手根拠は点が出た regime だけ~~
   ★★★ **2026-08-01（第59セッション）に⑴に点が出た**＝`grace.column.approach` **+0.850449**。
   **「合成が厳密だから乖離ゼロ」は grace については偽**だった: **LP は前のばねを*縮める***
