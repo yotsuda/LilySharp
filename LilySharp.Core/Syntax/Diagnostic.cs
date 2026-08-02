@@ -397,6 +397,16 @@ public static class DiagnosticCodes
     /// "polyphonic from here" gets a single-voice score with nothing said. A NAMED lone
     /// voice is exempt: its name is what a <c>lyrics NAME { … }</c> block binds to.</summary>
     public const string LoneVoiceBlock = "LYS4011";
+    /// <summary>Error: a <c>cue { … }</c> inside another <c>cue { … }</c>. LilyPond's cue is
+    /// a CONTEXT with one <c>fontSize</c>, so a second one nested inside the first says
+    /// nothing the outer one has not already said. Forbidden while the shape is young —
+    /// opening it later is cheap, un-opening it is not.</summary>
+    public const string NestedCueBlock = "LYS4013";
+    /// <summary>Error: a <c>voice { … } voice { … }</c> span inside a <c>cue { … }</c>.
+    /// LilyPond can spell it, but the meaning doubles up — a cue is already a voice of its
+    /// own — and nothing in Lily# decides which of the two the polyphony forcing belongs to.
+    /// Forbidden until there is a book that needs it.</summary>
+    public const string VoiceInsideCue = "LYS4014";
     /// <summary>Warning: an annotation on a broken-chord group
     /// (<c>&lt;&lt; … &gt;&gt;@staccato</c>) or on one of its bare pitch members is
     /// not applied — only a dynamic (<c>@f</c>) and a chord name (<c>@chord</c>)
