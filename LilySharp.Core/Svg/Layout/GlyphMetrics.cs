@@ -58,7 +58,8 @@ internal static partial class GlyphMetrics
     /// <remarks>
     /// LILYPOND-REF: lily/font-select.cc:115-186 select_font — the requested size picks the
     /// FILE (<see cref="EmmentalerDesignSize"/>), and every dimension is then read from THAT
-    /// file's table (lily/open-type-font.cc:390-408). Emmentaler is optically sized, so this is
+    /// file's table (lily/open-type-font.cc:390-408 Open_type_font::get_indexed_char_dimensions).
+    /// Emmentaler is optically sized, so this is
     /// not the same as reading one table and scaling it: the 14 design's black head is 1.298161
     /// where the 20's is 1.304200, in each design's own staff spaces.
     /// <para>
@@ -71,6 +72,37 @@ internal static partial class GlyphMetrics
     /// </remarks>
     public static DesignMetrics ForFontSizeStep(double fontSizeStep)
         => ForDesign(EmmentalerDesignSize.ForFontSizeStep(fontSizeStep).Rounded);
+
+    /// <summary>
+    /// The font a grob at <paramref name="fontSizeStep"/> reads: the design its size lands on,
+    /// already in the PAGE's staff spaces. Nothing a caller reads out of this needs scaling.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/font-select.cc:115-186 select_font picks the file and hands back a
+    ///   font scaled to the requested size; lily/modified-font-metric.cc:62-68
+    ///   Modified_font_metric::get_indexed_char_dimensions is where that
+    ///   scaling is applied, once, as the metric is read. A LilyPond grob therefore never
+    ///   multiplies a glyph box by its own font size — it asks a font that has already done it,
+    ///   and that is the shape this method exists to give Lily#'s seeds.
+    /// <para>
+    /// ⚠️ magstep, NOT LilyPond's requested/actual magnification: the design size the file
+    /// carries cancels out (a 14.14 design read at 14.142pt on a 20pt staff is
+    /// <c>14.142/20 = magstep(-3)</c> of the page's staff space), so what is left is exactly
+    /// the factor Lily#'s callers already used — with the numbers now coming out of the right
+    /// design. See <see cref="EmmentalerDesignSize.Magnification"/> for the part that cancels.
+    /// </para>
+    /// </remarks>
+    public static DesignMetrics AtFontSize(double fontSizeStep)
+        => _sizedFonts.GetOrAdd(fontSizeStep, static step =>
+            ForFontSizeStep(step).Scaled(System.Math.Pow(2.0, step / 6.0)));
+
+    /// <summary>
+    /// The sized fonts built so far. A score asks for a handful of sizes (full, grace, ossia,
+    /// cue) and asks for each of them on every grob, so the tables are built once and shared —
+    /// as LilyPond shares them out of <c>Font_metric</c>'s own cache.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<double, DesignMetrics>
+        _sizedFonts = new();
 
     // ========== Stem Anchors ==========
     // Stem attachment uses the notehead's advance width on the X axis (LP convention)

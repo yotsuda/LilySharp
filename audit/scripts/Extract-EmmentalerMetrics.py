@@ -624,7 +624,8 @@ def main() -> int:
     lines.append("    // constants above are in the 20's. A grob's box on the page is")
     lines.append("    //     designTable[chosen].Glyph * magstep(font-size)")
     lines.append("    // — LilyPond's own requested/actual magnification cancels against the design size")
-    lines.append("    // (lily/font-select.cc:185 with lily/modified-font-metric.cc:62-68), which is why")
+    lines.append("    // (lily/font-select.cc:185 find_scaled_font with lily/modified-font-metric.cc:62-68")
+    lines.append("    // Modified_font_metric::get_indexed_char_dimensions), which is why")
     lines.append("    // the multiplication a caller already does does not change; only the table does.")
     lines.append("")
     lines.append("    /// <summary>")
@@ -651,6 +652,31 @@ def main() -> int:
     for kind, name, summary, _get in members:
         lines.append(f"        /// <summary>{summary}</summary>")
         lines.append(f"        public {csharp_type[kind]} {name} {{ get; init; }}")
+    lines.append("")
+    lines.append("        /// <summary>")
+    lines.append("        /// Every metric multiplied by <paramref name=\"magnification\"/> — the same table in")
+    lines.append("        /// the PAGE's staff spaces instead of this design's.")
+    lines.append("        /// </summary>")
+    lines.append("        /// <remarks>")
+    lines.append("        /// LILYPOND-REF: lily/modified-font-metric.cc:62-68 Modified_font_metric::get_indexed_char_dimensions")
+    lines.append("        ///   is")
+    lines.append("        ///   <c>Box b = orig_-&gt;get_indexed_char_dimensions (i); b.scale (magnification_);</c>")
+    lines.append("        ///   — the scaling happens once, inside the font, so a grob never multiplies and so")
+    lines.append("        ///   can never forget to. GlyphMetrics.AtFontSize is that font.")
+    lines.append("        /// </remarks>")
+    lines.append("        public DesignMetrics Scaled(double magnification) => new()")
+    lines.append("        {")
+    lines.append("            Rounded = Rounded,")
+    lines.append("            DesignSize = DesignSize,")
+    for kind, name, _summary, _get in members:
+        if kind == "bbox":
+            lines.append(f"            {name} = new({name}.Left * magnification, {name}.Bottom * magnification,")
+            lines.append(f"                {name}.Right * magnification, {name}.Top * magnification),")
+        elif kind == "attach":
+            lines.append(f"            {name} = ({name}.X * magnification, {name}.Y * magnification),")
+        else:
+            lines.append(f"            {name} = {name} * magnification,")
+    lines.append("        };")
     lines.append("    }")
     lines.append("")
 

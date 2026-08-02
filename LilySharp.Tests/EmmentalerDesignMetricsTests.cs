@@ -133,6 +133,60 @@ public sealed class EmmentalerDesignMetricsTests
         Assert.Equal(14, EmmentalerDesignSize.ForFontSizeStep(-3).Rounded);
         Assert.Equal(lilyPondsOwn, fromTheDesignItLandsOn, 5);
         Assert.Equal(0.004270, fromScalingTheTwenty - lilyPondsOwn, 6);
+
+        // ...and the sized font does that multiply itself, so a reader never does.
+        Assert.Equal(lilyPondsOwn, GlyphMetrics.AtFontSize(-3).NoteheadBlack.Right, 5);
+    }
+
+    /// <summary>
+    /// A sized font is the design's table with the magstep already applied — the whole of
+    /// LilyPond's Modified_font_metric — so full size is the flat constants untouched.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/modified-font-metric.cc:62-68 Modified_font_metric::get_indexed_char_dimensions
+    ///   — the whole of it is <c>b.scale (magnification_)</c>.
+    /// The identity at step 0 is what says a reader can be moved onto
+    /// <see cref="GlyphMetrics.AtFontSize"/> without changing what it reads.
+    /// </remarks>
+    [Fact]
+    public void AtFontSizeZeroChangesNothing()
+    {
+        var full = GlyphMetrics.AtFontSize(0);
+
+        Assert.Equal(20, full.Rounded);
+        Assert.Equal(GlyphMetrics.NoteheadBlack, full.NoteheadBlack);
+        Assert.Equal(GlyphMetrics.NoteheadBlackAdvance, full.NoteheadBlackAdvance);
+        Assert.Equal(GlyphMetrics.ClefG, full.ClefG);
+        Assert.Equal(GlyphMetrics.NoteheadBlackStemAttachment, full.NoteheadBlackStemAttachment);
+        // ...and a sized font is its own design's table scaled, on BOTH axes — the vertical
+        // one has no other observer, and a scale applied to X alone would pass everything else.
+        var fourteen = GlyphMetrics.ForDesign(14);
+        var grace = GlyphMetrics.AtFontSize(-3);
+        Assert.Equal(fourteen.NoteheadBlack.Top * Magstep(-3), grace.NoteheadBlack.Top, 9);
+        Assert.Equal(fourteen.NoteheadBlack.Right * Magstep(-3), grace.NoteheadBlack.Right, 9);
+        Assert.Equal(fourteen.NoteheadBlackStemAttachment.Y * Magstep(-3),
+            grace.NoteheadBlackStemAttachment.Y, 9);
+    }
+
+    /// <summary>
+    /// Every design a table exists for is also a face that can be DRAWN with — both the
+    /// .otf the metrics were read from and the .woff2 an SVG embeds.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE DECISION, TWO READERS: the design a size lands on is what the metrics come out
+    /// of AND what the glyph is drawn from. A design whose face is missing would make the box
+    /// a column reserves stop being the box the glyph fills, and it would fail at RENDER time
+    /// in someone's score rather than here. The .woff2 files are built by
+    /// audit/scripts/Convert-EmmentalerWoff2.py.
+    /// </remarks>
+    [Fact]
+    public void EveryDesignHasABundledFaceToDrawWith()
+    {
+        foreach (var (rounded, _) in EmmentalerDesignSize.Designs)
+        {
+            Assert.NotNull(LilySharp.Core.Rendering.FontLocator.ResolveFile($"emmentaler-{rounded}.otf"));
+            Assert.NotNull(LilySharp.Core.Rendering.FontLocator.ResolveFile($"emmentaler-{rounded}.woff2"));
+        }
     }
 
     /// <summary>There are eight designs and nothing between them: 12 is not a rounded size.</summary>
