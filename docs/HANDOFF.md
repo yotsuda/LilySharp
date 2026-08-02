@@ -58,6 +58,66 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-02（第68セッション＝**⑬⑴b＝光学サイズの「テーブル」を 8 デザインぶん焼いた**）。
+**閉じたもの**（**出力不変・承認不要のぶんだけ**）:
+```
+⑬b 生成器の per-design 化   066b2f85   snapshot 0 枚・台帳不動   テスト +12
+```
+★★★ **入ったもの**: `GlyphMetricsGenerated.cs` が **8 つの `DesignMetrics`** を持つ——
+**BBox・skyline outline・advance・stem attachment を、そのデザイン自身の staff space で**。
+**橋は 2 本**: `GlyphMetrics.ForDesign(rounded)` と `GlyphMetrics.ForFontSizeStep(step)`（⑬⑴a の選択規則）。
+⇒ ★★★ **scaled な読みは `designTable[選択].Glyph × magstep(step)` の 1 本**になる——
+**LP の requested/actual 倍はデザインサイズと打ち消し合う**（`font-select.cc:185` ＋
+`modified-font-metric.cc:62-68`）ので、**呼び手の掛け算は 1 行も変わらない。変わるのは引くテーブルだけ。**
+★★ **20 のテーブルは平の定数を*名指す***（`NoteheadWhole = NoteheadWhole`）＝**20 の数字は 1 回しか
+書かれていない**・**「平＝design 20」をテストではなくコンパイラが持つ**。
+**生成物の先頭 813 行は byte 不変**（差分は header 1 行と +2613 行）。
+★★★ **LP 自身に訊いた**（★ **そのまま再実行できる形**・`scratch\s68\`）:
+```powershell
+# \grace c'8 c'1 に NoteHead.after-line-breaking で X extent を印字（dump-head.ily）
+cmd /c "lilypond.exe -dinclude-settings=dump-head.ily -dno-print-pages -o out grace-head.ly < NUL"
+HEAD fs=-3 extent=(0.0 . 0.9179386191980385)   ← grace
+HEAD fs=()  extent=(0.0 . 1.9619999999999997)   ← 全サイズの全音符＝ページの staff space だと分かる
+```
+**14 のテーブル × magstep(-3) が 2e-7 で再現**（**テーブルは 6 桁丸め**）／**20 を縮小すると 0.004270 外す**
+＝**`grace.column` の 12 点が運んでいる残差そのもの**。
+⚠️ **`GraceNoteItem` の注は `0.922205` / `0.004266` と書いていた**（**どちらも末桁違い**）＝**実測に直した**。
+★★★ **⑵ のために測った 2 件**（**どちらも「描画をどう出すか」を決めるのに要る**）:
+```
+8 デザインは cmap も glyph order も同一（差 0・各 664 グリフ）
+  ⇒ コードポイント生成器（EmmentalerGlyphs.Generated.cs）は per-design 化 不要
+描画側は emmentaler-20.woff2 を 1 枚だけ base64 で埋めている（52KB → 約 70KB/SVG）
+  SvgDocumentContext.GetFontFaceRule ＋ PngGenerator.RegisterFont ＝ family 'Emmentaler' 1 つ
+```
+⚠️ ★ **⑵ が触る「縮尺」には magstep でない綴りが混じっている**——
+`EngravingDefaults.OssiaScale = 0.7071`（**4 桁丸め**・magstep(-3) は 0.70710678）・
+`ArticulationEngraver.EditorialScale = 0.7937`・**cue の 0.66**（`SharedRenderer.Noteheads` ほか・
+**LP の出所が見えない**）。**テーブルを繋ぐ前にこの 3 つの出所を決めること。**
+**未 push 77**（**この引継ぎ commit まで数えた値**）・
+テスト **3836 passed / 0 failed / 3 skipped**（**+12**）・
+台帳 **388 点**（**ss 非ゼロ 85・総和 0.238008611**／**count 点 99・うち非ゼロ 2**）＝**不変**。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ▶ 次の一手
+
+★★★ **⑬⑵＝scaled な経路を「1 つの決定」に繋ぐ**（**grace → ossia → cue**・**§1 の第67セッション ⑬ に段取り**）。
+⚠️⚠️ **メトリクスだけ per-design にしてはいけない**（**ユーザー指摘＝「そもそも同じグリフを選ぶべき」**）。
+⇒ ★★★ **着手前にユーザー決定が 1 つ要る＝描画側のフェイスをどう出すか**:
+```
+⒜ 残り 7 デザインを woff2 に変換し、その本が使うデザインだけ埋める（+約 70KB/SVG・
+   fontTools と brotli は Python 3.13 に入っている）
+⒝ .otf をそのまま埋める（変換不要・さらに大きい）
+⒞ 使うグリフだけ subset して焼く（最小・道具が要る）
+```
+★ **⑵ は出力が動く**（**grace 列が 0.004270 狭くなる ⇒ spacing ⇒ snapshot**）＝**要承認**。
+★ **⑶ 残りのサイズと snapshot 再ベース（要承認）**。
+★ **tab の残り 3 冊**（**弦を明示しない本は LP と比較できない**・第67セッション §1 ⑨）——
+**触るなら fixture 側（`\N` で弦を固定）**。**描画が動く＝要承認。**
+★ **さらにその次**: **VS Code 拡張の再デプロイ**（第50セッションが tmLanguage と LSP を変えた・
+ユーザー側作業）。
+
+## 以下は第67セッションの経緯
+
 最終更新 2026-08-02（第67セッション＝**▶ の LP 忠実度の項目を全部空にし、次の島の入口まで作った**）。
 **閉じたもの**（**すべてユーザー承認のうえ再ベース**）:
 ```
@@ -401,7 +461,7 @@ design   11        13        14        16        18        20        23        2
 ⚠️ **`1.298161` を定数として書かないこと**——**台帳が同じ形で 2 度焼かれている**
 （figured-bass の 1.5・grace の 1.417939）。**デザインテーブルから引く。**
 
-## ▶ 次の一手
+## ▶ 次の一手（**第67セッション当時。この節は読まないこと**——**⑬⑴b は第68セッションで landed**）
 
 ⚠️ **⑨⑩（弦の選び方）は「次の一手」ではない**——**LP に合わせる話ではなく、
 ユーザーが仕様を決める設計改善**。**⑩ で一度書き直した。勝手に触らないこと。**
