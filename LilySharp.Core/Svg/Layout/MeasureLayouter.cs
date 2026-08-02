@@ -382,20 +382,39 @@ internal sealed class MeasureLayouter
         // MINIMUM, never an ideal — the natural length stays duration-based.
         // LILYPOND-REF: lily/spacing-spanner.cc — separation rods come from each staff's own
         // Separation_item, not a cross-staff aggregate.
+        // ⚠️ THE COLUMNS' INK ENTERS THIS SPRING TWICE, AS TWO DIFFERENT NUMBERS, and reading
+        // one of them for both jobs is what made every floor-bound pair 0.100000 too wide
+        // until 2026-08-02 (session 72). LilyPond raises TWO constraints over one column pair:
+        //   the SPRING's minimum   = the padding-free skyline distance   (note-spacing.cc:78-83)
+        //   the ROD                = that distance + the spanner's 0.1   (separation-item.cc:47-68)
+        // and merge_springs' headroom is measured from the FIRST of them
+        // (spring.cc:122 avg_distance = max (min_distance + 0.3, avg_distance)). This method
+        // used to compute only the rod and hand it to EnsureMinDistance BEFORE the headroom,
+        // so every gap the floor decided came out at skyline + 0.1 + 0.3. The rod is a floor
+        // on the COMPRESSED length alone: being 0.2 under the headroom's answer, it cannot
+        // bind at force >= 0, which is exactly what the note on ApplyMergeSpringsHeadroom
+        // already said in writing.
+        // MEASURED (scratch books beside audit/lp-geometry/probes/flagged-stem-reach.ly): a
+        // plain `c''4 dis''4` — no flag anywhere in it — carried the identical +0.100000 that
+        // the three flag points share, at every accidental width and both stem directions,
+        // while every spring-bound book in the same set stayed EXACT.
         double maxSkyDist = 0;
+        double maxRod = 0;
         foreach (var vm in measuresToScan)
         {
             var prev = ItemStartingAt(vm, timings[i - 1]);
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)
                 continue;
-            // A ROD, so it carries the spacing spanner's padding on top of the skyline
-            // distance — the spring's own minimum (which takes skyline-vertical-padding
-            // instead, and no spanner padding) is set in CreateSpring.
+            // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the
+            //   spring's own minimum, taken with the right column's skyline-vertical-padding
+            //   and with NO spanner padding.
+            maxSkyDist = Math.Max(maxSkyDist,
+                SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0));
             // LILYPOND-REF: lily/spacing-spanner.cc:229-296 Spacing_spanner::set_column_rods
             //   raises a rod over every pair of columns that can reach each other, via
             //   lily/separation-item.cc:47-68 Separation_item::set_distance.
-            maxSkyDist = Math.Max(maxSkyDist,
+            maxRod = Math.Max(maxRod,
                 SpacingRules.SeparationRodDistance(prev, next, staffY: 0));
         }
         // LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance — raising the
@@ -432,7 +451,12 @@ internal sealed class MeasureLayouter
         // LILYPOND-REF: lily/spacing-spanner.cc:380-393 note_spacing — `merge_springs`
         //   is taken whenever the wish list is non-empty, i.e. also for a single wish.
         // LILYPOND-REF: lily/spring.cc:122 — avg_distance = max (min_distance + 0.3, …).
-        return SpacingRules.ApplyMergeSpringsHeadroom(spring);
+        spring = SpacingRules.ApplyMergeSpringsHeadroom(spring);
+
+        // …and only NOW the rod, which is a floor on the COMPRESSED length and nothing else:
+        // it stands 0.1 above the same skyline distance the headroom just put 0.3 above, so
+        // it cannot reach the ideal and cannot move it.
+        return spring.EnsureMinDistance(maxRod);
     }
 
     /// <summary>

@@ -4188,6 +4188,107 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// TWO QUARTERS, the right one carrying a sharp — a column pair whose gap is decided by
+    /// the FLOOR and by nothing else, with no flag anywhere in the book.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe column-floor.ly, score XQS): <c>\time 4/4 c''4 dis''4 r2</c> —
+    /// 3.354200 = 1.404200 (the head's ink plus its own 0.1 extra-spacing-width) + 1.650000
+    /// (the sharp's ink 1.450000 plus the Accidental grob's declared 0.2 on the left) + 0.3.
+    /// <para>
+    /// WHAT IT IS FOR: the three points of <see cref="FSF8"/>'s island all carried the same
+    /// +0.100000 once the flag term was closed, and this book — which has no flag — carries
+    /// it too. MeasureLayouter raised the spring's minimum to the ROD (the skyline distance
+    /// plus the spacing spanner's 0.1) and only then applied merge_springs' headroom, so the
+    /// floor read skyline + 0.4. LilyPond keeps the two apart: the spring's minimum is the
+    /// padding-free skyline distance (lily/note-spacing.cc:78-83) and the rod stands beside
+    /// it (lily/separation-item.cc:47-68), 0.2 below what the headroom answers, so it cannot
+    /// bind at force &gt;= 0.
+    /// </para>
+    /// <para>
+    /// ⚠️ NO ACCIDENTAL-FREE BOOK CAN TAKE THIS POINT'S PLACE, and column-floor.ly measures
+    /// why rather than asserting it: the duration ideal bottoms out at 2.504200 (a 32nd pair
+    /// and a 64th pair both report it) while a head-to-head floor is only 1.804200, so an
+    /// accidental-free pair is spring-bound at every duration.
+    /// </para>
+    /// </remarks>
+    private static readonly string CFQS = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c'4 dis'4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "XQS" { staff m }
+        """;
+
+    /// <summary>The same book with the accidental taken away, which makes it SPRING-bound —
+    /// a null result kept as a point, because it is what says the duration side of the spring
+    /// was never the thing that moved (it was exact before the floor was fixed and after).
+    /// </summary>
+    private static readonly string CFQN = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c'4 d'4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "XQN" { staff m }
+        """;
+
+    /// <summary>The same floor with a WIDER accidental: the residual under the defect was the
+    /// same 0.100000 here as at <see cref="CFQS"/>'s 0.468000 narrower floor, which is what
+    /// said the term was a constant and not a glyph width or a padding of the accidental's own.
+    /// </summary>
+    private static readonly string CFQD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c'4 deses'4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "XQD" { staff m }
+        """;
+
+    /// <summary>…and the same wide accidental with the left column FLAGGED at an eighth. It
+    /// answers <see cref="CFQD"/> to six places in LilyPond, which is the arithmetic statement
+    /// that the flag contributes nothing to this gap — a down stem stands at the head's LEFT
+    /// edge, so its flag hangs inside the head's shadow.</summary>
+    private static readonly string CFFD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { c'8 deses'4 r4 r8 | }
+        }
+
+        form main { ~Main }
+
+        score main "XFD" { staff m }
+        """;
+
+    /// <summary>
     /// A note BEFORE the grace, so the approach spring is visible — with its control in the
     /// same book.
     /// </summary>
@@ -7619,6 +7720,15 @@ internal static class LpGeometryProbes
         new("flag.down.reach.low-neighbour", FSF8, g => g.NoteheadAnchorStep(0)),
         new("flag.down.reach.high-neighbour-control", FSFH8, g => g.NoteheadAnchorStep(0)),
         new("flag.up.reach", FSFU8, g => g.NoteheadAnchorStep(0)),
+
+        // …and what the three of them turned out to be measuring, which was not a flag. A
+        // column pair's FLOOR is the skyline distance + 0.3, and the rod (that same distance
+        // + 0.1) is a separate constraint that cannot reach it. These books have no flag, so
+        // they state the mechanism where the island above could only carry it.
+        new("column.floor.accidental", CFQS, g => g.NoteheadAnchorStep(0)),
+        new("column.floor.accidental.spring-control", CFQN, g => g.NoteheadAnchorStep(0)),
+        new("column.floor.accidental.wide", CFQD, g => g.NoteheadAnchorStep(0)),
+        new("column.floor.accidental.wide-flagged", CFFD, g => g.NoteheadAnchorStep(0)),
 
         // A MUSICA FICTA accidental, which is a grob that STATES font-size −2 — so it is
         // read and drawn out of the SIXTEEN Emmentaler design, not the twenty scaled. The
