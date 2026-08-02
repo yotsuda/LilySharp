@@ -62,7 +62,7 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 **閉じたもの**（**snapshot 21 枚はユーザー承認のうえ再ベース**）:
 ```
 床は rod でなく skyline+0.3   a68b5a12  snapshot 21 枚  台帳 −0.300000・点 +4
-probe オクターブ監査          （下記）  snapshot 0 枚   コード変更なし・不一致 0 冊
+probe オクターブ監査          597663d1  snapshot 0 枚   コード変更なし・不一致 0 冊
 ```
 ★★★ **`MeasureLayouter` が merge_springs の 0.3 を ROD から測っていた**——
 `SeparationRodDistance`（skyline ＋ spanner の 0.1）を `EnsureMinDistance` に渡した**あとで**
@@ -115,7 +115,7 @@ MISMATCH          0 冊
 （既存の `SeparationRodDistance` と同じ cost クラス）。`feature-tour.lys` を 7 回ずつ:
 **前 median 1540 ms / 後 1527 ms**＝**差はノイズの中**。⚠️ プロセス全体の時間なので数 ms は見えない。
 
-**未 push 102**（**この引継ぎ commit まで数えた値**＝`git rev-list --count origin/master..master`）・
+**未 push 104**（**この引継ぎ commit まで数えた値**＝`git rev-list --count origin/master..master`）・
 テスト **3862 passed / 0 failed / 4 skipped**（**+4**。skipped が 1 増えたのは
 オクターブ監査の `ProbeSourceDump` ＝**手で回す前段**で、Lily# については何も主張しない）・
 台帳 **398 点**（**ss 非ゼロ 72・総和 0.108590402**／**count 点 99・うち非ゼロ 2**）。
