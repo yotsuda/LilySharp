@@ -634,6 +634,24 @@ internal sealed class GraceExpressionGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>
+/// Cue expression: <c>cue { notes }</c> or <c>cue &lt;clef&gt; { notes }</c>.
+/// </summary>
+/// <remarks>
+/// The clef slot is always present and may be null — <see cref="GreenNode"/>'s child array
+/// admits nulls — so the body is always child 2 and no index shifts with the option.
+/// </remarks>
+internal sealed class CueExpressionGreen : GreenSyntaxNode
+{
+    public CueExpressionGreen(
+        SyntaxToken cueKeyword,
+        SyntaxToken? clefKeyword,
+        GreenNode body)
+        : base(SyntaxKind.CueExpression, [cueKeyword, clefKeyword, body])
+    {
+    }
+}
+
 // ============================================================
 // Tablature Green Nodes
 // ============================================================

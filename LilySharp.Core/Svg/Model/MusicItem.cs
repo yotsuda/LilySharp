@@ -486,11 +486,28 @@ public sealed record ClefChangeItem : MusicItem
     /// <summary>The clef change's source position in the syntax tree.</summary>
     public override int SourcePosition => _sourcePosition;
 
+    /// <summary>
+    /// True for the two clefs a <c>cue &lt;clef&gt; { … }</c> region raises — LilyPond's
+    /// <c>\cueClef</c> and <c>\cueClefUnset</c>.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/cue-span.ly, book D-WITH): a cue clef is the
+    /// PLAIN glyph at font-size −4, not the <c>_change</c> variant an ordinary mid-measure
+    /// change uses — <c>glyph=clefs.F fontsize=-4</c> going in and <c>glyph=clefs.G
+    /// fontsize=-4</c> coming back out. Both are drawn; the region's notes are positioned
+    /// in the cue clef, and without the closing one the change leaks into the rest of the
+    /// staff (book D-NOUNSET reads the following note 12 staff positions away).
+    /// LILYPOND-REF: ly/music-functions-init.ly cueClef / cueClefUnset;
+    ///   scm/define-grobs.scm CueClef / CueEndClef.
+    /// </remarks>
+    public bool IsCue { get; }
+
     /// <summary>Initializes a new <see cref="ClefChangeItem"/>.</summary>
-    public ClefChangeItem(ClefType newClef, int sourcePosition)
+    public ClefChangeItem(ClefType newClef, int sourcePosition, bool isCue = false)
     {
         NewClef = newClef;
         _sourcePosition = sourcePosition;
+        IsCue = isCue;
     }
 }
 

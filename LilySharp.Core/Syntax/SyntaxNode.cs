@@ -177,6 +177,7 @@ public abstract class SyntaxNode
             SyntaxKind.OctaveDirective => new OctaveDirectiveSyntax((OctaveDirectiveGreen)green, this, position),
             SyntaxKind.TupletExpression => new TupletExpressionSyntax((TupletExpressionGreen)green, this, position),
             SyntaxKind.GraceExpression => new GraceExpressionSyntax((GraceExpressionGreen)green, this, position),
+            SyntaxKind.CueExpression => new CueExpressionSyntax((CueExpressionGreen)green, this, position),
             SyntaxKind.LyricsBlock => new LyricsBlockSyntax((LyricsBlockGreen)green, this, position),
             SyntaxKind.ChordPartBlock => new ChordPartBlockSyntax((ChordPartBlockGreen)green, this, position),
             SyntaxKind.ChordEntry => new ChordEntrySyntax((ChordEntryGreen)green, this, position),

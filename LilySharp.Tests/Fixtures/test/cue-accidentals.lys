@@ -1,7 +1,10 @@
 // Cue accidentals: cue notes/chords scale their accidentals with the head
 // (LP CueVoice fontSize = -4 reduces the accidental grob too). Normal items
 // in the same measures give a same-size reference.
+// A cue is a REGION, not a note mark: LilyPond's cue is the CueVoice CONTEXT and its
+// size is a context property, so `cue { … }` maps 1:1 onto \new CueVoice { … }.
 // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
+// See docs/cue-context-design.md.
 
 title "Cue Accidentals"
 time 4/4
@@ -10,8 +13,8 @@ key c major
 part melody
 
 phrase test {
-  <cis e gis>4 <cis e gis>4@cue <des f aes>4@cue <bes d f>4@cue |
-  fis4 ges4@cue ais4@cue aes4@cue |
+  <cis e gis>4 cue { <cis e gis>4 <des f aes>4 <bes d f>4 } |
+  fis4 cue { ges4 ais4 aes4 } |
 }
 
 section Main {

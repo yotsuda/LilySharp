@@ -354,6 +354,17 @@ public sealed partial class MeasureCollector
                 _pendingGrace = grace;
                 break;
 
+            // A cue is a REGION, walked with the ordinary walker so that everything a voice
+            // can hold works inside it unchanged — MEASURED in
+            // audit/lp-geometry/probes/cue-span.ly, LilyPond draws a bar line, a tuplet, a
+            // grace, a script and a rest inside a CueVoice without complaint (books C-*).
+            // What the region does NOT let through is a beam, a tie or a slur (books B-*),
+            // and that is the whole reason a per-note @cue could not work: those three are
+            // invisible to a mark and would have to be guessed.
+            case CueExpressionSyntax cue:
+                ProcessCueRegion(cue, builder);
+                break;
+
             case ParallelExpressionSyntax parallel:
                 {
                     // << \\ >> span. Voice 0 joins the primary stream (this
@@ -393,7 +404,7 @@ public sealed partial class MeasureCollector
                     }
                     bool hasGliss = HasGlissandoArticulation(note);
                     int featherDir = GetFeatherDirection(note);
-                    bool isCue = HasCueAnnotation(note);
+                    bool isCue = _cueDepth > 0;
                     // Pre-scan for @courtesy annotation before creating note
                     if (HasCourtesyAnnotation(note))
                         _courtesySourcePositions.Add(note.Position);
@@ -489,7 +500,7 @@ public sealed partial class MeasureCollector
                         _pendingGrace = null;
                     }
                     bool hasArpeggio = HasArpeggioArticulation(chord);
-                    bool isCue = HasCueAnnotation(chord);
+                    bool isCue = _cueDepth > 0;
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
                     if (ExtractNoteheadStyle(chord) is var chStyle && chStyle != NoteheadStyle.Default)
                         chordItem = chordItem with { Notehead = chStyle };
@@ -746,6 +757,46 @@ public sealed partial class MeasureCollector
                 else if (onceModifier.Command is RevertDeclarationSyntax innerRevert)
                     CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _currentStaffIndex);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Walks one <c>cue { … }</c> / <c>cue &lt;clef&gt; { … }</c> region.
+    /// </summary>
+    /// <remarks>
+    /// The body goes through <see cref="ProcessMusicNodeSequence"/> unchanged; the only
+    /// state the region carries is <see cref="_cueDepth"/> (which makes the items cue-sized)
+    /// and, when a clef is given, LilyPond's <c>\cueClef</c> / <c>\cueClefUnset</c> pair.
+    /// <para>
+    /// ⚠️ BOTH clefs are emitted, and that is not tidiness: MEASURED
+    /// (audit/lp-geometry/probes/cue-span.ly, book D-NOUNSET) LilyPond leaks the cue clef
+    /// into the rest of the staff when the unset is missing — the note after the region read
+    /// staff position 13 instead of 1. The closing clef restores the staff's own clef and is
+    /// itself drawn small.
+    /// </para>
+    /// </remarks>
+    private void ProcessCueRegion(CueExpressionSyntax cue, MeasureBuilder builder)
+    {
+        string? outerClef = null;
+        if (cue.ClefKeyword is { } clefToken)
+        {
+            outerClef = _meta.Clef;
+            string cueClef = clefToken.Text.ToLowerInvariant();
+            _meta.Clef = cueClef;
+            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
+            builder.AddItem(new ClefChangeItem(ParseClefType(cueClef), clefToken.Position, isCue: true));
+        }
+
+        _cueDepth++;
+        ProcessMusicNodeSequence(cue.Body.Items.ToList(), builder);
+        _cueDepth--;
+
+        if (outerClef is not null)
+        {
+            _meta.Clef = outerClef;
+            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
+            builder.AddItem(new ClefChangeItem(
+                ParseClefType(outerClef), cue.Body.Position + cue.Body.FullWidth, isCue: true));
         }
     }
 

@@ -262,3 +262,38 @@ public sealed class GraceExpressionSyntax : SyntaxNode
     /// </summary>
     public bool IsAppoggiatura => GraceKeyword.Kind == SyntaxKind.AppoggiaturaKeyword;
 }
+
+/// <summary>
+/// Cue expression: <c>cue { notes }</c> or <c>cue &lt;clef&gt; { notes }</c> — a REGION of
+/// cue-sized music, which is the shape LilyPond actually has.
+/// </summary>
+/// <remarks>
+/// LilyPond has no "this note is a cue": its cue is the <c>CueVoice</c> CONTEXT and the size
+/// comes from <c>fontSize = #-4</c>, a context property (ly/engraver-init.ly). A per-note
+/// mark cannot say where the region starts and ends, and the boundary is observable —
+/// MEASURED in audit/lp-geometry/probes/cue-span.ly, a beam, a tie and a slur all fail to
+/// cross it (only the accidental state does), so all three would have to be guessed.
+/// <para>
+/// The optional clef is LilyPond's <c>\cueClef</c>, which is a property of the REGION: it
+/// draws a SMALL clef (font-size −4) before the region, positions the cue's notes in that
+/// clef, and needs <c>\cueClefUnset</c> after it or the change leaks into the rest of the
+/// staff (measured, same probe, books D-WITH / D-NOUNSET).
+/// </para>
+/// See docs/cue-context-design.md.
+/// </remarks>
+public sealed class CueExpressionSyntax : SyntaxNode
+{
+    internal CueExpressionSyntax(InternalSyntax.CueExpressionGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>cue</c> keyword token.</summary>
+    public SyntaxTokenNode CueKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The cue clef keyword, or null when the region keeps the staff's clef.</summary>
+    public SyntaxTokenNode? ClefKeyword => GetChild(1) as SyntaxTokenNode;
+
+    /// <summary>The cue region's music block.</summary>
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(2)!;
+}

@@ -1,6 +1,13 @@
 // Cue notes example
-// Notes marked with @cue are rendered at reduced size (66%)
+// A cue is a REGION: `cue { … }` maps 1:1 onto LilyPond's \new CueVoice { … }, whose
+// fontSize = #-4 is a CONTEXT property. The last measure shows the clef form, which is
+// LilyPond's \cueClef / \cueClefUnset — also a property of the region, not of a note.
 // LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
+// See docs/cue-context-design.md.
+//
+// ⚠️ The second part used to be called `chords`, which became a reserved word when the
+// chord-track grammar landed; this fixture had not parsed since (LYS0002) and nothing
+// noticed, because it has no snapshot.
 
 title "Cue Notes Demo"
 tempo 120
@@ -8,23 +15,23 @@ time 4/4
 key c major
 
 part melody
-part chords
+part harmony
 
-// Single notes: normal, then cue (each measure: 2 normal + 2 cue)
+// Single notes: normal, then a cue region (each measure: 2 normal + 2 cue)
 phrase cueMelody {
-  c4 d e@cue f@cue |
-  g4 a b@cue c@cue |
+  c4 d cue { e4 f } |
+  g4 a cue { b4 c' } |
 }
 
-// Chords: normal then cue
+// Chords: normal, then a cue region; then a cue region in another clef
 phrase cueChords {
-  <c, e g>4 <d f a>4 <e g b>4@cue <f a c>4@cue |
-  <c e g>1 |
+  <c, e g>4 <d f a>4 cue { <e g b>4 <f a c'>4 } |
+  <c e g>2 cue bass { <c, e, g,>2 } |
 }
 
 section Main {
   melody { cueMelody }
-  chords { cueChords }
+  harmony { cueChords }
 }
 
 form main { Main }
@@ -34,5 +41,5 @@ score main "cue-melody" {
 }
 
 score main "cue-chords" {
-  staff treble chords
+  staff treble harmony
 }

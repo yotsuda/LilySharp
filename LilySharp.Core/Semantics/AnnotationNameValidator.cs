@@ -45,7 +45,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             "starttrillspan", "stoptrillspan",
             "courtesy", "editorial",
             "glissando",
-            "cue",
             "cross",
             "arpeggio",
             "laissezvibrer", "repeattie",
@@ -68,7 +67,11 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "pppp", "ppppp", "ffff", "fffff",
         "trill", "mordent", "prall", "turn", "invertedturn", "pralltriller",
         "starttrillspan", "stoptrillspan", "courtesy", "editorial", "glissando",
-        "cue", "cross", "arpeggio", "laissezvibrer", "repeattie",
+        // ⚠️ "cue" is NOT here: a cue is a REGION (`cue { … }`), not a note annotation —
+        // LilyPond's cue is the CueVoice context and nothing attaches to a note. An `@cue`
+        // now falls through to the ordinary unknown-annotation diagnostic, which is the
+        // intended message. See docs/cue-context-design.md §5.
+        "cross", "arpeggio", "laissezvibrer", "repeattie",
         "segno", "coda", "fine", "rit", "accel", "cresc", "decresc", "dim",
         "ottava", "ottava.bassa", "loco", "ped", "ped.off",
         "sost", "sost.off", "una.corda", "tre.corde", "to.coda",

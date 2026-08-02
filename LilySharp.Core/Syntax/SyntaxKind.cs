@@ -155,6 +155,19 @@ public enum SyntaxKind : ushort
     AcciaccaturaKeyword,
     /// <summary>The <c>appoggiatura</c> grace-note keyword.</summary>
     AppoggiaturaKeyword,
+    /// <summary>
+    /// The <c>cue</c> keyword, which opens a REGION of cue-sized music
+    /// (<c>cue { … }</c>, optionally <c>cue &lt;clef&gt; { … }</c>).
+    /// </summary>
+    /// <remarks>
+    /// Named for LilyPond's FEATURE, not its context class: LilyPond's own user-facing
+    /// commands are all <c>cue*</c> (<c>cueDuring</c>, <c>cueClef</c>, …) and
+    /// <c>CueVoice</c> is the internal context, whose description says it is
+    /// "usually left to be created implicitly". Lily# already drops the structural
+    /// suffix elsewhere — <c>tab</c> for TabStaff, <c>chords</c> for ChordNames.
+    /// See docs/cue-context-design.md §2.
+    /// </remarks>
+    CueKeyword,
     /// <summary>The <c>lyrics</c> keyword.</summary>
     LyricsKeyword,
     /// <summary>The <c>chords</c> keyword (independent chord part: <c>chords name { ... }</c> plus a score row).</summary>
@@ -478,6 +491,8 @@ public enum SyntaxKind : ushort
     TupletExpression,
     /// <summary>A grace expression node.</summary>
     GraceExpression,
+    /// <summary>A cue expression node: <c>cue { … }</c> / <c>cue &lt;clef&gt; { … }</c>.</summary>
+    CueExpression,
 
     // === Nodes: Tablature ===
     /// <summary>A tablature staff declaration node.</summary>

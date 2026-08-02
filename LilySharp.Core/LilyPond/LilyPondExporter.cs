@@ -949,6 +949,7 @@ public sealed class LilyPondExporter
         TupletExpressionSyntax tup => EmitTuplet(tup),
         ParallelExpressionSyntax par => EmitParallel(par),
         GraceExpressionSyntax g => EmitGrace(g),
+        CueExpressionSyntax cue => EmitCue(cue),
         RepeatExpressionSyntax rep => EmitRepeat(rep),
         MusicMarkSyntax mk => EmitMark(mk),
         NavigationMarkSyntax nav => EmitNavMark(nav),
@@ -1539,6 +1540,36 @@ public sealed class LilyPondExporter
         // not. See EmitEventDuration.
         _forceNextDuration = true;
         return $"{kw} {{ {body} }}";
+    }
+
+    /// <summary>
+    /// Emits a cue region as LilyPond's own <c>\new CueVoice { … }</c>, with
+    /// <c>\cueClef</c> / <c>\cueClefUnset</c> around it when the region names a clef.
+    /// </summary>
+    /// <remarks>
+    /// This is the 1:1 that made a cue twin possible at all: LilyPond has no per-note cue,
+    /// so `lysc ly` used to drop `@cue` and emit a book with no cue in it. The region maps
+    /// straight across with nothing to infer. ⚠️ BOTH clefs are written — MEASURED
+    /// (audit/lp-geometry/probes/cue-span.ly, book D-NOUNSET) LilyPond leaks the cue clef
+    /// into the rest of the staff without the unset.
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice; ly/music-functions-init.ly cueClef /
+    ///   cueClefUnset.
+    /// </remarks>
+    private string EmitCue(CueExpressionSyntax cue)
+    {
+        var buf = new LilyPondExporter
+        { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
+        CarryFrameInto(buf);
+        buf.EmitMusicStream(MusicItems(cue.Body).ToList(), "");
+        // The body is written once and read once by the relative pass on both sides, so its
+        // frame carries out like a tuplet's or a repeat's.
+        CarryFrameBack(buf);
+        _warnings.AddRange(buf._warnings);
+        string body = buf._sb.ToString().Replace("\n", " ").Trim();
+        string region = $"\\new CueVoice {{ {body} }}";
+        return cue.ClefKeyword is { } clef
+            ? $"\\cueClef {clef.Text} {region} \\cueClefUnset"
+            : region;
     }
 
     private string EmitRepeat(RepeatExpressionSyntax rep)

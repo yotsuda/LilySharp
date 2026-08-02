@@ -134,7 +134,9 @@ internal sealed class MeasureValidator : ISemanticValidator
         // A tuplet/grace body is a nested MusicBlock, but its notes belong to the
         // enclosing measure (and are counted there with the correct tuplet scale).
         // Don't recurse into it, or it would be validated as a short standalone bar.
-        if (node is TupletExpressionSyntax or GraceExpressionSyntax)
+        // …and a cue region for the same reason: its body is metric material of the
+        // ENCLOSING bar (folded in by MeasureDurations.ItemDuration), never a bar of its own.
+        if (node is TupletExpressionSyntax or GraceExpressionSyntax or CueExpressionSyntax)
             return;
 
         // A tremolo repeat's body ("{ c32 }") is metric material of the

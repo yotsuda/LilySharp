@@ -73,6 +73,28 @@ sweep =
 \score { \sweep "C-TUP"   { \time 4/4 c''2 \new CueVoice { \tuplet 3/2 { e''4 f'' g'' } } } }
 \score { \sweep "C-REST"  { \time 4/4 c''2 \new CueVoice { r4 e''4 } } }
 
+% ---- D. THE CUE CLEF, which is a property of the REGION and not of any note --------------
+% \cueClef draws a SMALL clef before the region and \cueClefUnset a small one after it; the
+% cue notes are positioned IN the cue clef, and without the unset the change leaks into the
+% rest of the staff.
+#(define (dumpclef name)
+   (lambda (g)
+     (format #t "CUEP ~a CLEF glyph=~a fontsize=~a x=~a\n" name
+             (ly:grob-property g 'glyph) (ly:grob-property g 'font-size)
+             (ly:grob-relative-coordinate g (ly:grob-system g) X))))
+clefsweep =
+#(define-music-function (name music) (string? ly:music?)
+   #{ \new Staff \with {
+        \override Clef.after-line-breaking       = #(dumpclef name)
+        \override CueClef.after-line-breaking    = #(dumpclef name)
+        \override CueEndClef.after-line-breaking = #(dumpclef name)
+        \override NoteHead.after-line-breaking   = #(dumph name)
+      } { \clef treble $music } #})
+
+\score { \clefsweep "D-WITH"    { \time 4/4 c''2 \cueClef bass \new CueVoice { e2 } \cueClefUnset c''2 } }
+\score { \clefsweep "D-NONE"    { \time 4/4 c''2 \new CueVoice { e''2 } c''2 } }
+\score { \clefsweep "D-NOUNSET" { \time 4/4 c''2 \cueClef bass \new CueVoice { e2 } c''2 } }
+
 % ---------------------------------------------------------------------------------------
 % WHAT THIS FILE FOUND (2026-08-02, session 72)
 %
@@ -110,3 +132,12 @@ sweep =
 %   C-SCRIPT  a script inside a cue is drawn
 %   C-TUP     a tuplet inside a cue is drawn, all heads -4
 %   C-REST    a rest inside a cue is drawn
+%
+% E. THE CUE CLEF IS THE REGION'S, AND IT IS DRAWN SMALL
+%   D-WITH     \cueClef bass gives a CueClef grob glyph=clefs.F FONT-SIZE -4 before the region,
+%              and \cueClefUnset a CueEndClef glyph=clefs.G also at -4 after it. The cue note
+%              e2 reads staff-position 1, i.e. it is positioned IN THE CUE CLEF (E3 in bass),
+%              and the note after the unset is back to the staff's own clef.
+%   D-NOUNSET  WITHOUT the unset the change LEAKS: the following c''2 reads position 13, still
+%              in bass. ⇒ a Lily# `cue <clef> { … }` must emit BOTH \cueClef and \cueClefUnset.
+%   D-NONE     no cue clef, no CueClef/CueEndClef grob — the argument is genuinely optional.

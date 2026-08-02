@@ -87,6 +87,19 @@ internal static class MeasureDurations
                 // Grace notes are ornamental and consume no metric time.
                 return Fraction.Zero;
 
+            case CueExpressionSyntax cue:
+            {
+                // ⚠️ A cue region is ORDINARY METRIC TIME — unlike a grace, it is real music
+                // in a smaller type, and LilyPond's CueVoice occupies the bar like any voice.
+                // Leaving it at the default zero made every bar holding one look short:
+                // `c4 d cue { e4 f }` was validated as 1/2 of 4/4 and drew LYS2006 on a bar
+                // that is exactly full.
+                var cueTotal = Fraction.Zero;
+                foreach (var bodyItem in cue.Body.Items)
+                    cueTotal += ItemDuration(bodyItem, ref defaultDuration);
+                return cueTotal;
+            }
+
             case RepeatExpressionSyntax rep
                 when rep.RepeatType.Text == "tremolo"
                   && int.TryParse(rep.Count.Text, out int tremCount):

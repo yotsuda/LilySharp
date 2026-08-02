@@ -326,7 +326,7 @@ score main ""third"" { staff treble rh }
     public void CueNotes_RenderedWithScaleTransform()
     {
         // LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
-        var source = "{ c'4 d' e'@cue f'@cue | g'1 | }";
+        var source = "{ c'4 d' cue { e'4 f' } | g'1 | }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 
@@ -338,8 +338,8 @@ score main ""third"" { staff treble rh }
         Assert.True(items.Count >= 4, $"Should have at least 4 notes, but has {items.Count}");
         Assert.False(items[0].IsCue, "c' should not be cue");
         Assert.False(items[1].IsCue, "d' should not be cue");
-        Assert.True(items[2].IsCue, "e'@cue should be cue");
-        Assert.True(items[3].IsCue, "f'@cue should be cue");
+        Assert.True(items[2].IsCue, "e' inside cue { } should be cue");
+        Assert.True(items[3].IsCue, "f' inside cue { } should be cue");
 
         // Verify the live render shrinks cue noteheads: SharedRenderer scales the
         // glyph font size (4.0 × 0.66 = 2.64) rather than emitting a transform.
@@ -353,7 +353,7 @@ score main ""third"" { staff treble rh }
     [Fact]
     public void CueChords_RenderedWithScaleTransform()
     {
-        var source = "{ <c' e'>4 <d' f'>@cue | <c' e' g'>1 | }";
+        var source = "{ <c' e'>4 cue { <d' f'>4 } | <c' e' g'>1 | }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 

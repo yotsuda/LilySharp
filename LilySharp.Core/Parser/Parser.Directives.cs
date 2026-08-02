@@ -420,6 +420,22 @@ internal sealed partial class Parser
         return new GraceExpressionGreen(keyword, body);
     }
 
+    /// <summary>
+    /// Parses <c>cue { … }</c> or <c>cue &lt;clef&gt; { … }</c>.
+    /// </summary>
+    /// <remarks>
+    /// The clef is the same vocabulary a <c>clef</c> declaration takes
+    /// (<see cref="SyntaxFacts.IsClefKeyword"/>), and it is LilyPond's <c>\cueClef</c> —
+    /// a property of the REGION, not of any note. See docs/cue-context-design.md.
+    /// </remarks>
+    private CueExpressionGreen ParseCueExpression()
+    {
+        var keyword = Advance(); // cue
+        SyntaxToken? clef = SyntaxFacts.IsClefKeyword(Current.Kind) ? Advance() : null;
+        var body = ParseMusicBlock();
+        return new CueExpressionGreen(keyword, clef, body);
+    }
+
 
     // ========== New Section-Oriented Parsing ==========
 

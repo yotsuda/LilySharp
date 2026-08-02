@@ -836,6 +836,15 @@ public sealed partial class MeasureCollector
     private readonly Dictionary<int, int> _fingeringByPosition = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
+    /// <summary>
+    /// How many <c>cue { … }</c> regions enclose the item being collected. A cue is a
+    /// REGION in LilyPond — the size comes from the CueVoice context's <c>fontSize = #-4</c>
+    /// and nothing is attached to a note — so this depth, not an annotation, is what makes
+    /// an item a cue. Nesting is rejected (Diagnostic LYS4013), so in practice it is 0 or 1;
+    /// it is a depth rather than a flag so an unbalanced walk cannot leave it stuck on.
+    /// See docs/cue-context-design.md.
+    /// </summary>
+    private int _cueDepth = 0;
     // Grace-note infos of the just-collected leading grace group, stamped onto the
     // main note/chord so the spacing can reserve space in front of its column.
     private ImmutableArray<GraceNoteInfo> _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
@@ -3021,7 +3030,8 @@ public sealed partial class MeasureCollector
     private static bool IsCollectableMusicNode(SyntaxNode node) =>
         node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or ArpeggioSyntax
             or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
+            or GraceExpressionSyntax or CueExpressionSyntax
+            or TupletExpressionSyntax or RepeatExpressionSyntax
             or ParallelExpressionSyntax or InlineVoltaSyntax or MusicMarkSyntax
             or NavigationMarkSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax
@@ -3036,7 +3046,12 @@ public sealed partial class MeasureCollector
     private static bool IsInsideProcessedContainer(SyntaxNode node) =>
         IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
         || IsInsideInlineVolta(node) || IsInsideParallel(node) || IsInsideOnce(node)
-        || node.IsInside<ArpeggioSyntax>();
+        || node.IsInside<ArpeggioSyntax>()
+        // A cue REGION owns its body's walk (ProcessCueRegion), and the region is the only
+        // thing that knows the notes are cue-sized. Letting the outer walk flatten it drops
+        // the region silently: the notes still render, at FULL size, and the only symptom is
+        // a font-size in the SVG.
+        || node.IsInside<CueExpressionSyntax>();
 
     /// <summary>
     /// Collects dynamic markings from note/chord modifiers.
@@ -3269,24 +3284,6 @@ public sealed partial class MeasureCollector
         {
             if (art is ArticulationSyntax artSyntax &&
                 artSyntax.NameToken.Text is "glissando" or "slide")
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Checks if a note/chord has a @cue annotation.
-    /// LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
-    /// </summary>
-    private static bool HasCueAnnotation(SyntaxNode node)
-    {
-        var articulations = ArticulationsOf(node);
-
-        foreach (var art in articulations)
-        {
-            if (art is ArticulationSyntax artSyntax &&
-                artSyntax.Type == ArticulationType.None &&
-                artSyntax.NameToken.Text.Equals("cue", StringComparison.OrdinalIgnoreCase))
                 return true;
         }
         return false;

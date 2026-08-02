@@ -300,14 +300,27 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static void DrawClefChange(ClefChangeItem clefChange, double x, double staffY, IDrawingContext gc)
     {
-        char glyph = clefChange.NewClef switch
-        {
-            ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClefChange,
-            ClefType.Alto or ClefType.Tenor or ClefType.Soprano
-                or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClefChange,
-            ClefType.Percussion => EmmentalerGlyphs.PercussionClefChange,
-            _ => EmmentalerGlyphs.GClefChange,
-        };
+        // A CUE clef is the PLAIN glyph shrunk, not the "_change" variant: MEASURED
+        // (audit/lp-geometry/probes/cue-span.ly D-WITH) LilyPond's CueClef reads
+        // `glyph=clefs.F fontsize=-4` and its CueEndClef `glyph=clefs.G fontsize=-4`,
+        // where an ordinary mid-measure change would read clefs.F_change at full size.
+        char glyph = clefChange.IsCue
+            ? clefChange.NewClef switch
+            {
+                ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClef,
+                ClefType.Alto or ClefType.Tenor or ClefType.Soprano
+                    or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClef,
+                ClefType.Percussion => EmmentalerGlyphs.PercussionClef,
+                _ => EmmentalerGlyphs.GClef,
+            }
+            : clefChange.NewClef switch
+            {
+                ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClefChange,
+                ClefType.Alto or ClefType.Tenor or ClefType.Soprano
+                    or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClefChange,
+                ClefType.Percussion => EmmentalerGlyphs.PercussionClefChange,
+                _ => EmmentalerGlyphs.GClefChange,
+            };
         // LILYPOND-REF: scm/parser-clef.scm supported-clefs — each clef's middle
         // integer is the staff position of the named line (treble G=-2, bass F=2,
         // alto C=0); the glyph anchors on the line it names.
@@ -323,7 +336,8 @@ internal static partial class SharedRenderer
         };
         using (gc.Source(clefChange.SourcePosition))
         {
-            gc.DrawGlyph(glyph, x, clefY, FontSize);
+            gc.DrawGlyph(glyph, x, clefY,
+                clefChange.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize);
             if (clefChange.NewClef is ClefType.Treble8Below or ClefType.Bass8Below)
                 DrawClefModifier8(x, staffY, change: true, gc);
             else if (clefChange.NewClef == ClefType.Treble8Above)
