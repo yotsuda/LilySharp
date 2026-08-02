@@ -58,6 +58,18 @@ public static class TextFontMetrics
     /// 2.26.0, C059 and TeX Gyre Schola agree on every advance and on the digit's ink to
     /// six digits, so this is LilyPond's text face; C059 itself is AGPL and Schola is
     /// LPPL/GUST, which is why the twin is the one bundled.
+    /// <para>
+    /// ⚠️ "AGREE ON EVERY ADVANCE" IS TRUE AND IS NOT THE WHOLE STORY — they do NOT agree on
+    /// KERNS, found 2026-08-02 when the shaping port left two entries open. Shaped through
+    /// HarfBuzz, in font units: the A-A pair is +61 in C059 and 0 in Schola, V-A is −84
+    /// against −95, A-V −83 against −90, v-a −75 in both. LilyPond's own stencil expression
+    /// names the file it drew with (<c>ly:stencil-expr</c> prints
+    /// <c>(glyph-string … C059-Italic … C059-Italic.otf …)</c>), and probe books TS1/TS2 pin
+    /// the same LilyPond to THIS face and land on Lily#'s numbers exactly. So ledger
+    /// <c>text.width.{aa,va}</c> are a FONT FILE difference and not an arithmetic one — the
+    /// open question is which face to ship, which is a licensing decision (the URW exemption
+    /// covers embedding in a PostScript/PDF document, not shipping the font program).
+    /// </para>
     /// </remarks>
     public const string SerifFamily = "TeX Gyre Schola";
 

@@ -371,3 +371,37 @@ probeTag =
                         c''4^\markup \concat { \italic "A" \italic "A" } c'' c'' c'' |
                         c''4 c'' c'' c'' | c''1 \bar "|." } }
 }
+
+%% TS1 / TS2 — THE FACE CONTROL, and the book that ended the A·A hunt (2026-08-02).
+%%     Every other book here pins fonts.serif to "LilyPond Serif", which is LilyPond's own
+%%     alias and resolves to C059-Italic — the stencil expression says so out loud
+%%     (`(glyph-string ... C059-Italic 3.865234375 ...)` with the file path in it, which is
+%%     how this was finally settled: ASK THE STENCIL WHAT IT DREW). Lily# bundles TeX Gyre
+%%     Schola, chosen because the two agree on every ADVANCE and C059 is AGPL. They do NOT
+%%     agree on KERNS:
+%%       pair   C059    TeX Gyre Schola
+%%       A·A    +61      0          <- the whole of ledger text.width.aa
+%%       V·A    -84    -95          <- the whole of ledger text.width.va
+%%       A·V    -83    -90          <- both land on 40 px, which is why av reads EXACT
+%%       v·a    -75    -75          <- identical, which is why 8va reads EXACT
+%%     These two books pin the SAME LilyPond to the SAME face Lily# uses, so the comparison
+%%     stops carrying a face swap. PREDICTED before the run: TS1 "AA" 90 px (2 × 45, no pair
+%%     value in Schola) against "LilyPond Serif"'s 94, and TS2 "VA" 84 against 85.
+%%     ⚠️ THE LEDGER ENTRIES STAY ON THE C059 BOOKS. A stock LilyPond resolves C059, so that
+%%     is what fidelity means here; these two exist to say WHICH PART of a residual is the
+%%     face, not to lower it.
+\book {
+  \probeTag "TS1"
+  \paper { property-defaults.fonts.serif = "TeX Gyre Schola"
+           ragged-bottom = ##t indent = 0 }
+  \score { \new Staff { c''4 c'' c'' c'' | c''4^\markup \italic "AA" c'' c'' c'' |
+                        c''4 c'' c'' c'' | c''1 \bar "|." } }
+}
+
+\book {
+  \probeTag "TS2"
+  \paper { property-defaults.fonts.serif = "TeX Gyre Schola"
+           ragged-bottom = ##t indent = 0 }
+  \score { \new Staff { c''4 c'' c'' c'' | c''4^\markup \italic "VA" c'' c'' c'' |
+                        c''4 c'' c'' c'' | c''1 \bar "|." } }
+}
