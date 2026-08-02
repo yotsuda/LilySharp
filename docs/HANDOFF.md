@@ -116,7 +116,7 @@ MISMATCH          0 冊
 **前 median 1540 ms / 後 1527 ms**＝**差はノイズの中**。⚠️ プロセス全体の時間なので数 ms は見えない。
 
 **未 push 104**（**この引継ぎ commit まで数えた値**＝`git rev-list --count origin/master..master`）・
-テスト **3862 passed / 0 failed / 4 skipped**（**+4**。skipped が 1 増えたのは
+テスト **3870 passed / 0 failed / 4 skipped**（**+4**。skipped が 1 増えたのは
 オクターブ監査の `ProbeSourceDump` ＝**手で回す前段**で、Lily# については何も主張しない）・
 台帳 **398 点**（**ss 非ゼロ 72・総和 0.108590402**／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
@@ -141,8 +141,25 @@ LP     5.777520 = 列の**outline** 4.485489 + OttavaBracket padding 0.5 + ラ�
 ★ **旗の描画側に 0.065 が残っている**（**ソースを読んだだけ・未実測**）——
 `lily/flag.cc:118-165 Flag::print` は stencil を**訳さずに返す**ので LP は**符尾の右端**に描く。
 Lily# は中心に描く。**予約は一致したが、描画は 0.065 左**。**点が無い。開けてから触ること。**
-★★★ **cue の綴りは決まった＝`cue { … }`（範囲）にする**（ユーザー判断・第72セッション）。
-**仕様 `docs/cue-context-design.md`／根拠 `audit/lp-geometry/probes/cue-span.ly`。実装は未着手。**
+★★★ **cue は `cue { … }`（範囲）になった。文法・clef・診断・exporter は landed**（第72セッション）。
+**仕様 `docs/cue-context-design.md`／根拠 `audit/lp-geometry/probes/cue-span.ly`。**
+```
+da159be4  cue { } / cue <clef> { } ・@cue 廃止・\new CueVoice 出力   snapshot 実質 0 枚
+950a75c7  LYS4013 入れ子禁止 / LYS4014 cue 内 voice 禁止・テスト 8 本
+⇒ **描画は 1 バイトも動いていない**（data-pos を伏せると snapshot は完全一致）。CueScale=0.66 は据え置き。
+```
+★★ **残り 2 件**（ユーザー指示・**未着手**）:
+```
+⑴ MusicXML の <cue/> import。現在は ReadNote が "cue note dropped." で捨てている
+   ＝連続する cue 音符を範囲にまとめて cue { } を出す。**壊れるものは無い**（今は捨てているので）。
+⑵ **0.66 → per-design font-size**（LP と同じにする）。**描画が動く＝台帳点を先に開く＋要承認**。
+   測定済み: cue 符頭 0.815348908（原寸 1.304200）／cue ♯ 0.692956577（原寸 1.100000）
+   ⚠️ **1 つのスカラーでは両方出せない**——♯ の比だけが magstep(-4)=0.629961、符頭は 0.625172。
+   ⚠️ **cue の中の grace は font-size −7.0**（context −4 と grace −3 が合成）。どのデザインかは**未測定**。
+```
+★ **実装中に見つかった 2 つ**（どちらも「読んで」ではなく「動かして」出た・commit メッセージに詳細）:
+`IsInsideProcessedContainer` に cue を入れ忘れると**範囲が平坦化されて全部原寸**（症状は font-size だけ）／
+`MeasureDurations.ItemDuration` は cue を**実時間として数える**必要がある（grace と違う。忘れると LYS2006）。
 ```
 @cue（音符単位の印）を廃止 → cue { e4 f } → \new CueVoice { e'4 f' } の 1 対 1
 理由: LP の cue は context で、大きさは fontSize = #-4 という**コンテキストプロパティ**。
