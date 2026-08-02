@@ -100,6 +100,66 @@
 %% lower-staff bracket now costs exactly what a top-staff one costs, which is the shape of the
 %% claim; what is left is what OTC already names, not a staff-position term.
 
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% ROUND 3 (2026-08-02, session 73) — WHAT THE +0.027480 IS. The ledger's OTC entry had
+%% named it as the net of THREE term-pairs, the largest being "box-vs-outline support
+%% +0.0595", and told the next reader it "decomposes only when the support skyline holds
+%% outlines". That was WRONG, and it would have sent someone into an unrelated port.
+%%
+%% The books below now dump, besides the bracket's refpoint, the two profiles the
+%% constraint is actually made of: the bracket's OWN DOWN skyline (PROBEV DOWN) and every
+%% note column's UP skyline (PROBEV SUP). MEASURED in OTC (system frame, staff refpoint
+%% −6.569559342):
+%%   NoteHead / NoteColumn UP top   −2.024559342  = staff + 4.545000000  ← the BOX
+%%       (yext = (−0.545 . 0.545); NoteHead declares no vertical-skylines, so LilyPond
+%%        reads its EXTENT — scm/define-grobs.scm, HANDOFF 5.2. Lily# reads 4.545 too:
+%%        THE SUPPORT TERM IS ZERO. There is no box-vs-outline difference here.)
+%%   OttavaBracket rely              −0.792039352  = staff + 5.777519991, ext ±0.792031364
+%%   OttavaBracket DOWN profile      NOT a flat box: the "8va" label's own OUTLINE over
+%%       x∈[7.785, 8.997], empty over the gap, −0.05 under the dashed line, −0.85 at the hook.
+%% ⇒ The binding pair is the FIRST NOTEHEAD'S LEFT EDGE (x = 8.585) against the label's
+%%   sloped outline. Interpolating the profile segment (8.277822, −1.584070715) →
+%%   (8.600421587, −1.521571629) at x = 8.585 gives −1.524559342, i.e. EXACTLY 0.500000000
+%%   above the notehead's −2.024559342. That 0.5 is OttavaBracket's `padding` spent in
+%%   side-position-interface.cc:354-370 aligned_side (dim.distance(my_dim) + dir·ss·padding),
+%%   NOT the outside-staff pass's 0.46 — 0.5 > 0.46, so the pass then moves nothing.
+%%   The 0.059511373 the ledger had called a support term is the LABEL'S OWN outline rising
+%%   off its lowest point by the time it reaches that x. It is on the MOVER's side.
+%%
+%%   LP    5.777519991 = 4.545000000 + 0.500000000 + (0.792031364 − 0.059511373 = 0.732519991)
+%%   Lily# 5.805000000 = 4.545000000 + 0.460000000 + 0.800000000  (flat box at the HOOK depth)
+%%   residual +0.027480009 = TWO terms, not three:
+%%       A  padding   0.46 (outside-staff pass) vs 0.5 (aligned_side)   −0.040000000
+%%       B  own reach flat hook 0.8 vs the label's outline at that x    +0.067480009
+%%
+%% ⇒ THE PORT IS THREE PIECES, and piece 3 has no observer yet (point first):
+%%   1. the anchor is aligned_side's: support distance + the grob's OWN padding 0.5,
+%%      floored by staff-padding — the engraver's business, not the collision pass's
+%%      (OutsideStaffStacker's own note beside DynamicLineSpanner states that split);
+%%   2. the mover's skyline pair is the label's OUTLINE ∪ the dashed line ∪ the hook,
+%%      the way PlaceCustomTexts already builds one (TextOutlineSkylines.Place) —
+%%      the flat 0.8 box over the whole span over-reserves everywhere but the hook;
+%%   3. ⚠️ DrawOttavaBrackets puts the label's BASELINE on the line where LilyPond
+%%      centres its INK on it (ext ±0.792031364 is symmetric — that IS the centring).
+%%      Porting 2 without 3 splits what is measured from what is drawn, which is the
+%%      state HANDOFF 5.0 calls the worst one. No ledger point reads it yet.
+
+%% One grob's vertical skyline on side DIR, in the SYSTEM frame: the stored profile is
+%% about the grob's own origin, so it is shifted by rel X and raised by rel Y — exactly
+%% what axis-group-interface.cc:794-795 and side-position-interface.cc:306-307 do before
+%% taking a distance. A skyline pair is a Scheme pair, car = DOWN, cdr = UP (scm/c++.scm:242)
+%% — spelled out here because `index-cell` is not bound in a .ly's module.
+#(define (probe-dump-profile tag n i g sg dir)
+   (let ((skyp (ly:grob-property g 'vertical-skylines)))
+     (if (ly:skyline-pair? skyp)
+         (let ((relx (ly:grob-relative-coordinate g sg X))
+               (rely (ly:grob-relative-coordinate g sg Y)))
+           (format #t "PROBEV ~a ~a ~a relx=~a rely=~a" tag n i relx rely)
+           (for-each (lambda (p)
+                       (format #t " (~a,~a)" (+ (car p) relx) (+ (cdr p) rely)))
+                     (ly:skyline->points (if (> dir 0) (cdr skyp) (car skyp)) X))
+           (format #t "\n")))))
+
 #(define (probe-dump-pages layout pages)
    (format #t "\nPROBEV PAPER top-margin=~a paper-height=~a line-width=~a\n"
            (ly:output-def-lookup layout 'top-margin)
@@ -122,6 +182,12 @@
                            (car staff) (cdr staff))
                    ;; The OttavaBracket rides along: rel is its refpoint (= its dashed
                    ;; line) about the SYSTEM refpoint, ext its own ink about that line.
+                   ;; ROUND 3: the two PROFILES the constraint is made of ride along too —
+                   ;; the bracket's own DOWN skyline (the label's outline, the line, the
+                   ;; hook) and each note column's UP skyline. Points are printed in the
+                   ;; SYSTEM frame (the grob's own skyline shifted by its rel X and raised
+                   ;; by its rel Y), so a reader can take the distance between them by hand
+                   ;; and see which x binds and by how much.
                    (let ((sg (ly:prob-property sys 'system-grob)))
                      (if (ly:grob? sg)
                          (let ((all (ly:grob-object sg 'all-elements)))
@@ -130,15 +196,19 @@
                                 (lambda (g)
                                   (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
                                     (if (eq? nm 'OttavaBracket)
-                                        (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
-                                                n i nm
-                                                (ly:grob-relative-coordinate g sg Y)
-                                                (car (ly:grob-extent g g Y))
-                                                (cdr (ly:grob-extent g g Y))
-                                                (+ (ly:grob-relative-coordinate g sg X)
-                                                   (car (ly:grob-extent g g X)))
-                                                (+ (ly:grob-relative-coordinate g sg X)
-                                                   (cdr (ly:grob-extent g g X)))))))
+                                        (begin
+                                          (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
+                                                  n i nm
+                                                  (ly:grob-relative-coordinate g sg Y)
+                                                  (car (ly:grob-extent g g Y))
+                                                  (cdr (ly:grob-extent g g Y))
+                                                  (+ (ly:grob-relative-coordinate g sg X)
+                                                     (car (ly:grob-extent g g X)))
+                                                  (+ (ly:grob-relative-coordinate g sg X)
+                                                     (cdr (ly:grob-extent g g X))))
+                                          (probe-dump-profile "DOWN" n i g sg DOWN)))
+                                    (if (eq? nm 'NoteColumn)
+                                        (probe-dump-profile "SUP" n i g sg UP))))
                                 (ly:grob-array->list all))))))
                    (inner (cdr ls) (1+ i)))))
            (loop (cdr ps) (1+ n))))))
