@@ -58,11 +58,22 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-08-02（第69セッション＝**⑬⑵＝grace を「デザイン 14 で測り、デザイン 14 で描く」ようにした**）。
-**閉じたもの**（**ユーザー承認のうえ snapshot 9 枚を再ベース**）:
+最終更新 2026-08-02（第69セッション＝**⑬⑵＝grace と編集臨時記号を「そのデザインで測り、そのデザインで描く」ようにした**）。
+**閉じたもの**（**どちらもユーザー承認のうえ再ベース**）:
 ```
-⑬⑵ grace の光学サイズ  c25f74c0  snapshot 9 枚  台帳 11 点が EXACT・テスト +3
+⑬⑵ grace の光学サイズ        c25f74c0  snapshot 9 枚  台帳 11 点が EXACT・テスト +3
+⑬⑵ 編集臨時記号（font-size −2） d9d0c5f5  snapshot 1 枚  台帳 3 点を新規起票（LP 実測）
 ```
+★★★ **2 経路目は 16 デザイン**（`AccidentalSuggestion` は `font-size −2` を**宣言している**）。
+**同じ形**——`ArticulationEngraver.EditorialFont` ＋ 描画側の `MusicFace`、
+**さらに縦 skyline の outline も同じデザインを歩く**（`TextFontMetrics.MusicGlyphPath` が
+**デザインごとに 1 face** を読むようになった＝**profile cache のキーにデザインが入った**）。
+★★ **`ArticulationLayout` は `Scale` をやめて `FontSizeStep` を持つ**——**縮尺はどのデザインかを言えない**。
+**magstep の家は 1 つになった**（`EmmentalerDesignSize.Magstep`）＝**丸めコピー 0.65 / 0.7071 / 0.7937 は
+どれも 4 桁目が違っていた**（ユーザー決定 ⒝ の EditorialScale ぶんはこれで済んだ）。
+★★★ **falsifier が通った**: **デザイン差はグリフごと**（♯ 0.000049 / ♭ 0.016384 / ♮ 0.000053）＝
+**1 つの縮尺では作れない形**。20 を縮小していたなら**♭ だけ 0.008 外す**はずで、実際は
+**LP の extent 3 つとも 9 桁で再現**（♭ の左端 −0.111628 = −0.140643 × 0.79370053 まで）。
 ★★★ **入ったもの**は 2 つだけ:
 `GraceNoteItem.Font`（＝`GlyphMetrics.AtFontSize(-3)`＝**14 の表に magstep を掛け済み**）と
 `IDrawingContext.MusicFace(rounded)`（**面のスコープ**・**既定 20 ＝ 出力不変**）。
@@ -92,28 +103,46 @@ grace.column.accidental.step  −0.013382 → −0.017652
 renderer が 20 に戻っても EXACT のまま、snapshot はレイアウトを見ないので layout が 20 に戻っても緑のまま。
 （`EmmentalerDesignMetricsTests.AGraceIsMeasuredAndDrawnFromOneDesign` ／ `BeamStemFrameTests` の grace 版 ／
 PNG が 2 つのデザインに同じ file を返したら落ちる点。**Skia は黙って fallback する**ので PNG には観測者が要る。）
-**未 push 84**（**この引継ぎ commit まで数えた値**）・
-テスト **3841 passed / 0 failed / 3 skipped**（**+3**）・
-台帳 **388 点**（**ss 非ゼロ 74・総和 0.189714412**／**count 点 99・うち非ゼロ 2**）。
+★★★ **残ったのは 1 つのスカラーで、臨時記号の話ではない**——**3 点とも −0.000100**。
+**グリフで変わらない残差はグリフではない**＝**符頭の半分**: Lily# は **advance**(1.304000/2) で
+中心を取り、**LP は extent**(1.304200/2)。⇒ **同じ欠陥の 3 site 目**（`StemAttachX`・
+`GraceColumnRightReach` が他の 2 つ）＝**全部の符尾と全部の script が動く**ので**単独 commit**。
+**未 push 86**（**この引継ぎ commit まで数えた値**）・
+テスト **3844 passed / 0 failed / 3 skipped**（**+6**）・
+台帳 **391 点**（**ss 非ゼロ 77・総和 0.190014439**／**count 点 99・うち非ゼロ 2**）
+＝**非ゼロが 3 増えたのは新しい観測者のぶん**（**前からあった欠陥に点が付いただけ**）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
 ## ▶ 次の一手
 
-★★★ **⑬⑵ の続き＝ossia と cue**（**grace と同じ形**——`AtFontSize` と `MusicFace` を**対で**入れる。
-grace の 1 経路が手本で、`DesignMetrics.Scaled(unit)` も ossia のためにもう使ってある）。
-**ユーザー決定 ⒝ は出ている**（2026-08-02）＝**丸め済みの縮尺を LP の magstep に直す**:
+★★★ **⑬⑶＝advance と extent を 1 つの commit で直す**（**もう 5 点が観測している**・**要承認**）。
+**LP は符頭の EXTENT(1.304200) を読み、Lily# は ADVANCE(1.304000) を読む**。**3 site で 1 つの claim**:
 ```
-EngravingDefaults.OssiaScale     = 0.7071 → magstep(-3) = 0.70710678
-ArticulationEngraver.EditorialScale = 0.7937 → magstep(-2) = 0.79370053 に見える（**着手時に裏取り**）
-cue の 0.66（SharedRenderer.Noteheads ほか） ⚠️ **LP の出所が見えない**＝**決定に含まれない**。先に調べる
+LayoutUtilities.StemAttachX          全部の符尾（up）が 0.0001 右へ    実測 probes/beam-stem-x.ly の 1.2392
+SpacingRules.GraceColumnRightReach   旗を stem でなく advance に吊る   grace.column.single.to-main 0.063472
+ArticulationEngraver（script の中心） 全部の script が 0.0001 動く      editorial.accidental.* 3 点 −0.000100
+```
+⚠️ **snapshot は大量に動く**（が **0.0001 は 2 桁表示より下**なので、実際に動く枚数は**測ってから**言うこと）。
+★★★ **⑬⑵ の残り＝ossia と cue**（**grace / 編集臨時記号と同じ形**）。**着手前に読むこと**:
+```
+ossia は staff-space そのものも縮む（StaffSize.Span）＝面のスコープは SharedRenderer の
+  ossia group スコープに開く。⚠️ ただし StaffSize は「倍率」を持っていて font-size を持っていない
+  ＝ StaffSize(FontSizeStep) に直すのが先（Magnification は magstep から出る・0.7071 の丸めも消える）。
+⚠️ そこで詰まる点：ossia の metric 読みには「上流で計算済みの箱」が流れ込む（articulation の Ink など）
+  ＝ StaffSize.Ink(box) は引き直せない。per-design にするには箱を作る側が staff の font を知る必要がある。
+  ⇒ grace のような「1 経路まるごと」にはならない。着手前に site を数えること（size.Ink は 4 か所、
+     glyph 量が Span を通っている site が 2 か所＝1492 と 1609 は型を間違えている）。
+cue の 0.66（SharedRenderer.Noteheads ほか） ⚠️ **LP の出所が見えない**＝**ユーザー決定に含まれない**。先に調べる
 ```
 ⚠️⚠️ **メトリクスだけ per-design にしてはいけない**（ユーザー指摘＝「そもそも同じグリフを選ぶべき」）。
-★ **ossia は grace と違って staff-space そのものも縮む**（`StaffSize.Span`）＝**面のスコープを開く場所は
-`SharedRenderer` の ossia group スコープ**。⚠️ ossia は fontSize が**合成**する（grace on ossia は既に対応済）。
-★ **⑬⑶ ＝ 上の残り 2 点。どちらも「対でしか閉じられない」**:
+★ **道具はもう per-design になっている**（⑬⑵ で入った）:
 ```
-⒜ 旗の吊り先 ＋ StemAttachX の advance→extent   ← 全符尾が 0.0002 動く＝snapshot 大量・要承認
-⒝ 臨時記号の skyline を per-design に            ← Extract-EmmentalerSkylines.py を 8 デザインぶんへ
+GlyphMetrics.AtFontSize(step)                 表（8 デザイン）
+IDrawingContext.MusicFace(rounded)            描画（SVG/PDF/PNG＋decorator 3 つ）
+TextFontMetrics.MusicGlyphPath(glyph, design) 縦 skyline の outline（実行時にその .otf を読む）
+⚠️ 残る穴は 1 つ＝臨時記号の**横** skyline（GlyphSkylinesGenerated.cs は 20 だけ）。
+   grace の臨時記号が 20 のままなのはこれが理由（grace.column.accidental.step が観測者）。
+   ⇒ Extract-EmmentalerSkylines.py を 8 デザインぶんにするのが ⒝。
 ```
 ★ **tab の残り 3 冊**（**弦を明示しない本は LP と比較できない**・第67セッション §1 ⑨）——
 **触るなら fixture 側（`\N` で弦を固定）。描画が動く＝要承認。**
