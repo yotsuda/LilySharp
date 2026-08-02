@@ -143,6 +143,39 @@
 %%      centres its INK on it (ext ±0.792031364 is symmetric — that IS the centring).
 %%      Porting 2 without 3 splits what is measured from what is drawn, which is the
 %%      state HANDOFF 5.0 calls the worst one. No ledger point reads it yet.
+%%
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% ROUND 4 (2026-08-02, same session) — THE LABEL IS NOT THE SAME STRING, and that is what
+%% the three pieces above uncovered once the arithmetic stopped hiding it.
+%%
+%% ⚠️ LilyPond 2.26's DEFAULT ottavation is `ottavation-numbers`, so the label in OTF/OTC/OTL
+%% above is the single digit "8" — ly/engraver-init.ly:121 sets
+%% `ottavationMarkups = #ottavation-numbers` (scm/translation-functions.scm:1145). Lily#
+%% spells "8va"/"8vb"/"15ma"/"15mb", which is LilyPond's FORMER default, still shipped as
+%% `ottavation-simple-ordinals` (:1178). The ink HEIGHTS agree anyway — the "8" is the
+%% tallest glyph in "8va", so ledger ottava.label.ink-height is a valid em reading — but the
+%% ink is 1.212 wide against 3.845, and the ottava's whole support arithmetic is POINTWISE,
+%% so which glyph hangs over the first notehead decides the answer.
+%%
+%%   OTS — OTC with `\set Staff.ottavationMarkups = #ottavation-simple-ordinals`, i.e.
+%%         LilyPond asked the same question with LILY#'S string. Nothing else differs.
+%%
+%% MEASURED (2026-08-02): OTS 5.834830721 against OTC's 5.777519990. In OTS the binding is
+%% the "v"'s bottom (-1.581870073) over the FIRST notehead (-2.081870073) — again EXACTLY
+%% 0.500000000, the same aligned_side padding, just a different glyph over the column.
+%% Lily#, after the port: 5.837000068 ⇒ +0.002169347 against OTS and +0.059480068 against
+%% OTC. ⇒ The port's arithmetic is right to two thousandths and what is left in the shipped
+%% entries is the STRING (and, inside the 0.0022, the bracket's left bound: Lily# starts the
+%% bracket at the MEASURE's X - 0.8 where LilyPond starts it at the first note COLUMN's
+%% X - 0.8, so the two labels sample their outlines at different x. No point reads the
+%% ottava's X yet).
+%% ⚠️ Which string Lily# should draw is a NOTATION decision, not a fidelity one — "8va" is
+%% what most publishers set and what LilyPond itself shipped for years. This book exists so
+%% that the choice can be made with the geometry known, and so that the residual in
+%% ottava.support.staff-to-line is not read as an arithmetic defect.
+%% DECIDED 2026-08-02 (user, with these numbers in hand): Lily# KEEPS "8va". ⇒ OTC and OTL
+%% will not go to zero and must not be driven there; OTS is the book that reads the ottava's
+%% arithmetic from here on.
 
 %% One grob's vertical skyline on side DIR, in the SYSTEM frame: the stored profile is
 %% about the grob's own origin, so it is shifted by rel X and raised by rel Y — exactly
@@ -237,6 +270,20 @@ probeTag =
   \paper { ragged-bottom = ##t indent = 0 }
   \score {
     \new Staff { \ottava 1 c''''4 c'''' c'''' c'''' \ottava 0 | c'''4 c''' c''' c''' \bar "|." }
+  }
+}
+
+%% OTS — round 4: OTC asked with LILY#'S label string, and nothing else changed. It
+%%     isolates the STRING from the arithmetic, so ottava.support.staff-to-line's
+%%     residual can be read as what it is.
+\book {
+  \probeTag "OTS"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    \new Staff {
+      \set Staff.ottavationMarkups = #ottavation-simple-ordinals
+      \ottava 1 c''''4 c'''' c'''' c'''' \ottava 0 | c'''4 c''' c''' c''' \bar "|."
+    }
   }
 }
 

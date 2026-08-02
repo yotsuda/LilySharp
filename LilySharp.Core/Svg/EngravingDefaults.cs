@@ -672,6 +672,31 @@ internal static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2718 OttavaBracket staff-padding, read by aligned_side.</remarks>
     public const double OttavaBracketStaffPadding = 2.0;
 
+    /// <summary>OttavaBracket's padding — spent ONCE by aligned_side against the side
+    /// supports (the staff's note columns and, via <see cref="OttavaBracketStaffPadding"/>,
+    /// the staff itself). It is BIGGER than outside-staff-padding 0.46, so wherever a
+    /// column decides, this is the number that stands and the collision pass moves
+    /// nothing.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2716 OttavaBracket padding, whose Y-offset is side-position-interface::y-aligned-side
+    /// — spent at lily/side-position-interface.cc:360-370 aligned_side, total_off += dir * ss * padding.
+    /// MEASURED (audit/lp-geometry/probes/ottava-floor.ly OTC, session 73): the clearance
+    /// between the bracket's own DOWN skyline and the binding notehead's UP skyline is
+    /// 0.500000000 to nine digits, not 0.46 — the reading that named
+    /// ledger ottava.support.staff-to-line's residual.</remarks>
+    public const double OttavaBracketPadding = 0.5;
+
+    /// <summary>The ottava LABEL's text em ("8va" / "8vb" / "15ma" / "15mb"):
+    /// OttavaBracket declares font-series bold and font-shape italic and NO font-size, so
+    /// the paper text-font-size applies unstepped — the same derivation as
+    /// <see cref="TextScriptFontSize"/> and <see cref="MetronomeMarkFontSize"/>.</summary>
+    /// <remarks>LILYPOND-REF: scm/paper.scm:69-77 text-font-size;
+    /// scm/define-grobs.scm:2708-2731 OttavaBracket ly:ottava-bracket::print — the block declares no font-size.
+    /// MEASURED: ledger ottava.label.ink-height — LilyPond's centred label ink is
+    /// 1.5840627276 tall and this em reproduces it to 1.584000136, where the
+    /// <c>FontSize × 0.45 = 1.8</c> the draw used until 2026-08-02 gave 1.296000112. That
+    /// was the em mislabel's FOURTH instance (lyrics 3.2, chords 2.6, TextScript 2.4).</remarks>
+    public static readonly double OttavaBracketFontSize = TextScriptFontSize;
+
     // TrillWaveAmplitude (0.2, "half-amplitude of the drawn trill wave") is GONE
     // (2026-07-30). It was a LILYSHARP-OWN drawing device with no LilyPond counterpart at
     // all — LilyPond's trill line has no amplitude, being a run of scripts.trill_element

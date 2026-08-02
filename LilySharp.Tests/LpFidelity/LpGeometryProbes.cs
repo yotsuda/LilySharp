@@ -7389,6 +7389,15 @@ internal static class LpGeometryProbes
         new("ottava.label.ink-height", OTC, g => g.OttavaLabelInkHeight(), RaggedBottomPaper),
         new("ottava.label.line-to-ink-centre", OTC,
             g => g.OttavaLabelInkCentreToLine(), RaggedBottomPaper),
+        // Round 4 — the STRING control. The SAME Lily# book, against a LilyPond book that
+        // was asked the question with LILY#'S label spelling
+        // (`ottavationMarkups = #ottavation-simple-ordinals`, book OTS). LilyPond 2.26's
+        // default is `ottavation-numbers`, i.e. the single digit "8", so every ottava entry
+        // above compares a 1.212-wide label against Lily#'s 3.845-wide one — and the
+        // arithmetic is POINTWISE, so which glyph hangs over the first notehead decides.
+        // This pair is what tells an arithmetic residual from a spelling one.
+        new("ottava.string-control.staff-to-line", OTC,
+            g => g.OttavaLineAboveStaff(), RaggedBottomPaper),
         // Round 2 (book OTL) — the ottava's face of the guard three above-staff movers
         // carry. LilyPond repeats OTC's number on the lower staff to fifteen digits (its
         // pass is per-VerticalAxisGroup); Lily#'s guard skips the pass, which for THIS grob

@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -144,19 +145,108 @@ internal static class OttavaBracketEngraver
     private const double RightShorten = -0.6;
 
     /// <summary>
+    /// The gap between the label's advance and the dashed line's left end.
+    /// </summary>
+    /// <remarks>⚠️ LILYSHARP-OWN. LilyPond builds the line from the label stencil's own
+    /// right edge inside <c>Ottava_bracket::print</c>; its OTC dump has the label's ink
+    /// ending at 8.997254 and the line starting at 9.298302, i.e. 0.301 of INK-to-line
+    /// where this spends 0.5 of ADVANCE-to-line. No ledger point reads the ottava's X, so
+    /// this stays as it was rather than becoming a second unobserved invention — but it is
+    /// now spelled ONCE, for the draw and for both skyline consumers, instead of being
+    /// recomputed in the renderer.</remarks>
+    private const double LabelLineGap = 0.5;
+
+    /// <summary>
+    /// Where the dashed line starts: past the label's advance plus
+    /// <see cref="LabelLineGap"/>. The one spelling the draw and the reservations share.
+    /// </summary>
+    internal static double LineStartX(string text, double startX, double fontSize)
+        => startX + TextFontMetrics.SerifBold(text, fontSize) + LabelLineGap;
+
+    /// <summary>
+    /// The bracket's OWN vertical skyline pair about its LINE at <paramref name="lineY"/>:
+    /// the label's glyph OUTLINE, the dashed rule, and the end hook — the three pieces
+    /// LilyPond's stencil is built from, with the gap between label and line left EMPTY.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2721 OttavaBracket grob::unpure-vertical-skylines-from-stencil
+    ///   — the profile is the STENCIL's, not an extent box.
+    /// LILYPOND-REF: lily/ottava-bracket.cc <c>Ottava_bracket::print</c> — the text is
+    ///   centred on the line (<c>text.align_to (Y_AXIS, CENTER)</c>), the line is built at
+    ///   the stencil's own Y=0 and the bracket's Y-box is erased ("vertical lines should
+    ///   not take space"), so only the drawn ink is in the profile.
+    /// ⚠️ ONE profile does THREE jobs — the aligned_side distance, the collision pass's
+    /// move, and the entry a later grob clears — for the reason the trill's does
+    /// (<see cref="TrillSpannerEngraver"/>): LilyPond hands the same <c>v_skylines</c> to
+    /// both passes, so a second spelling is a defect waiting for a book.
+    /// MEASURED (ottava-floor.ly OTC): the flat box at the HOOK's depth this replaced
+    /// over-reserved by 0.067480009 at the binding x, which was the mover's half of
+    /// ledger ottava.support.staff-to-line.
+    /// </remarks>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) Skylines(
+        string text, double startX, double lineStartX, double endX,
+        double edgeHeight, bool isAbove, double lineY)
+    {
+        double fontSize = EngravingDefaults.OttavaBracketFontSize;
+        double half = EngravingDefaults.StaffLineThickness / 2.0;
+        // The label's ink is CENTRED on the line, so its baseline sits that much below.
+        var (up, down) = TextOutlineSkylines.Place(
+            text, fontSize, sans: false, FontStyle.BoldItalic,
+            startX, lineY - LabelInkCentre(text, fontSize));
+        if (lineStartX < endX)
+        {
+            up.Merge(VerticalSkyline.FromBox(
+                lineStartX, endX, lineY - half, lineY + half, VerticalDirection.Up));
+            down.Merge(VerticalSkyline.FromBox(
+                lineStartX, endX, lineY - half, lineY + half, VerticalDirection.Down));
+        }
+        if (edgeHeight > 0)
+        {
+            // The hook reaches TOWARD the staff, and it is drawn as a rule of the line's
+            // thickness standing at EndX (SharedRenderer.DrawOttavaBrackets), so that is
+            // what gets reserved.
+            double tip = lineY + (isAbove ? -edgeHeight : edgeHeight);
+            double lo = Math.Min(lineY - half, tip);
+            double hi = Math.Max(lineY + half, tip);
+            up.Merge(VerticalSkyline.FromBox(
+                endX - half, endX + half, lo, hi, VerticalDirection.Up));
+            down.Merge(VerticalSkyline.FromBox(
+                endX - half, endX + half, lo, hi, VerticalDirection.Down));
+        }
+        return (up, down);
+    }
+
+    /// <summary>How far the label's ink CENTRE sits above its baseline — the offset the
+    /// draw and the skylines both apply so the ink lands centred on the line.</summary>
+    /// <remarks>MEASURED: ledger ottava.label.line-to-ink-centre — LilyPond's answer is 0
+    /// by construction and Lily#'s was +0.621000054, the baseline sitting where the centre
+    /// belongs.</remarks>
+    internal static double LabelInkCentre(string text, double fontSize)
+    {
+        var ink = TextFontMetrics.Ink(text, fontSize, sans: false, FontStyle.BoldItalic);
+        return (ink.Top + ink.Bottom) / 2.0;
+    }
+
+    /// <summary>
     /// Calculates layout for all ottava brackets.
     /// </summary>
     public static ImmutableArray<OttavaBracketLayout> Calculate(
         ImmutableArray<OttavaBracketItem> ottavaBrackets,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        Func<int, int, double>? staffYAt = null)
+        Func<int, int, double>? staffYAt = null,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (ottavaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<OttavaBracketLayout>.Empty;
 
         // LILYPOND-REF: lily/ottava-bracket.cc — brackets split at system breaks.
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+        // A beamed support column's stem ends at the quanted beam face — the same map the
+        // dynamics and the trill read, so the three consumers cannot disagree about who is
+        // beamed.
+        var beamMembers = DynamicEngraver.BuildBeamMembers(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<OttavaBracketLayout>();
 
         foreach (var bracket in ottavaBrackets)
@@ -172,9 +262,10 @@ internal static class OttavaBracketEngraver
             // the lower staff sits above THAT staff, not the top one. Single-staff
             // (offset 0) is unchanged. Mirrors HairpinEngraver/TrillSpannerEngraver.
             double staffOffset = staffYAt?.Invoke(bracket.StartMeasureIndex, bracket.StaffIndex) ?? 0;
-            // Y-up from the system top; staffOffset is a within-system downward offset,
-            // so it SUBTRACTS.
-            double yUp = (isAbove ? AboveStaffYUp : BelowStaffYUp) - staffOffset;
+
+            var ottavaVoices = voicesByStaff != null
+                && voicesByStaff.TryGetValue(bracket.StaffIndex, out var vv)
+                ? vv : ImmutableArray<Voice>.Empty;
 
             string text = bracket.Type switch
             {
@@ -203,6 +294,19 @@ internal static class OttavaBracketEngraver
                 string segText = segment.IsFirst ? text : $"({text})";
                 double segEdgeHeight = segment.IsLast ? EndEdgeHeight : 0;
 
+                // EACH broken piece sides off ITS OWN system's columns, the way LilyPond's
+                // per-system clone does — and it must, now that the reading is pointwise:
+                // measure X restarts in every system.
+                // LILYPOND-REF: lily/spanner.cc:36-144 Spanner::do_break_processing.
+                double lineMiddleFrame = AlignedSideLineY(
+                    segText, startX, endX, segEdgeHeight, isAbove,
+                    segment, ottavaVoices, measureLayouts, beamMembers, bracket.StaffIndex);
+                // aligned_side answers in the staff-MIDDLE frame (the frame the ledger's
+                // staff-to-line entries read); this record's frame has its origin on the
+                // staff TOP line, 2 above it, and carries the staff's own within-system
+                // downward offset, which SUBTRACTS.
+                double yUp = lineMiddleFrame - 2.0 - staffOffset;
+
                 layouts.Add(new OttavaBracketLayout(
                     StartMeasureIndex: segment.StartMeasureIndex,
                     StartX: startX,
@@ -221,6 +325,101 @@ internal static class OttavaBracketEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// Where the bracket's LINE sits, in the staff-MIDDLE frame (up-positive), BEFORE the
+    /// outside-staff collision pass: LilyPond's <c>aligned_side</c> for this grob.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:188-455 aligned_side, transcribed for
+    ///   OttavaBracket (side axis Y, one staff space per <c>ss</c>):
+    /// <code>
+    ///   :225-259  my_dim = skyp[-dir], the grob's OWN vertical-skylines on the facing side
+    ///   :265-321  every side-support element's skyline merged into dim
+    ///   :323-330  if (include_staff) dim.set_minimum_height (staff_extents[dir])
+    ///   :354-358  total_off = dir * dim.distance (my_dim, horizon-padding)
+    ///   :370      total_off += dir * ss * padding          (OttavaBracket's 0.5)
+    ///   :433-453  diff = dir * staff_extent[dir] + staff_padding - dir * total_off;
+    ///             total_off += dir * max (diff, 0.0)       (the 2.0 floor)
+    /// </code>
+    ///   <c>horizon-padding</c> and <c>minimum-space</c> are ABSENT on OttavaBracket rather
+    ///   than zero-valued, so no term is written for them (:354-358 defaults 0.0, and
+    ///   :384-385 has nothing to read).
+    /// ⚠️ The support set is the STAFF's note columns — ALL its voices, not one — because
+    ///   Ottava_spanner_engraver lives in the Staff context, unlike the trill's and the
+    ///   dynamics' Voice-context engravers.
+    /// LILYPOND-REF: ly/engraver-init.ly:77 <c>\consists Ottava_spanner_engraver</c> inside
+    ///   the Staff block — DrumStaff and TabStaff are the two contexts that
+    ///   <c>\remove Ottava_spanner_engraver</c>, which is the same claim read backwards;
+    ///   scm/scheme-engravers.scm the note-column-interface acknowledger is what puts the
+    ///   columns into <c>side-support-elements</c>.
+    /// ⚠️ NOT LITERAL, and named rather than fixed: the columns enter through
+    ///   <see cref="DynamicEngraver.SpanSupportSkylines"/>, which builds the HEAD and the
+    ///   direction-matching STEM only, where LilyPond's support is each NoteColumn's whole
+    ///   skyline (dots, accidentals, flags too). The gap is inherited from that house and
+    ///   can only UNDER-reserve; no probe book has a column whose dot or accidental
+    ///   out-reaches both head and stem on the bracket's side, so the next step is a book,
+    ///   not a patch.
+    /// ⚠️ The BELOW side (8vb / 15mb) runs the same claim with dir = −1 and has NO ledger
+    ///   point — the ottava books are all above-staff. It moves with the above side because
+    ///   this IS one claim: splitting its two halves is the trap HANDOFF 5.0 records under
+    ///   cap/baseline, and the pre-2026-08-02 code already treated the floor that way.
+    /// </remarks>
+    private static double AlignedSideLineY(
+        string text, double startX, double endX, double edgeHeight, bool isAbove,
+        in SpannerBreakSegment segment, ImmutableArray<Voice> voices,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<(int Staff, int Voice, int Measure, int Item),
+            (BeamLayout Beam, double MemberX, bool StemUp)> beamMembers,
+        int staffIndex)
+    {
+        double dir = isAbove ? 1.0 : -1.0;
+        // :225-259 — my_dim, the grob's own profile about its line (Y = 0 here).
+        var my = Skylines(
+            text, startX, LineStartX(text, startX, EngravingDefaults.OttavaBracketFontSize),
+            endX, edgeHeight, isAbove, 0.0);
+
+        // :265-330 — the spanned columns of THIS piece, every voice of the staff, floored
+        // by the staff symbol's own extent (include_staff, which declaring staff-padding
+        // turns on).
+        var support = DynamicEngraver.SpanSupportSkylines(
+            voices, 0, Array.Empty<(int, int, double)>(), null);
+        for (int vi = 0; vi < voices.Length; vi++)
+        {
+            var columns = new List<(int Measure, int Item, double X)>();
+            for (int mi = segment.StartMeasureIndex;
+                 mi <= segment.EndMeasureIndex && mi < measureLayouts.Length; mi++)
+            {
+                var ml = measureLayouts[mi];
+                int count = mi < voices[vi].Measures.Length
+                    ? voices[vi].Measures[mi].Items.Length : 0;
+                for (int ii = 0; ii < count; ii++)
+                    columns.Add((mi, ii, ml.X + (ii < ml.Items.Length ? ml.Items[ii].X : 0.0)));
+            }
+            if (columns.Count == 0)
+                continue;
+            int voiceIndex = vi;
+            var (vUp, vDown) = DynamicEngraver.SpanSupportSkylines(
+                voices, voiceIndex, columns,
+                (v, m, i) => beamMembers.TryGetValue((staffIndex, v, m, i), out var b)
+                    ? b : null);
+            support.Up.Merge(vUp);
+            support.Down.Merge(vDown);
+        }
+
+        // :354-358 (horizon-padding absent) and :370.
+        double overlap = isAbove
+            ? my.Down.Distance(support.Up)
+            : my.Up.Distance(support.Down);
+        double totalOff = dir * overlap + dir * EngravingDefaults.OttavaBracketPadding;
+        // :433-453 — the refpoint floor. Unlike the trill's, this one really binds over a
+        // quiet staff: the label's downward reach (about 0.79) is well under
+        // staff-padding − padding = 1.5 (ledger ottava.floor.staff-to-line = 2.05 + 2.0).
+        double diff = DynamicEngraver.StaffExtent
+            + EngravingDefaults.OttavaBracketStaffPadding - dir * totalOff;
+        totalOff += dir * Math.Max(diff, 0.0);
+        return totalOff;
     }
 
     /// <summary>

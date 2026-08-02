@@ -2690,7 +2690,13 @@ internal sealed class LayoutEngine
 
         // Detect and layout ottava brackets from ottava/loco marks
         var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
-        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml, staffYAt);
+        // The staff's voices and the drawn beams ride along: the bracket's quiet height is
+        // aligned_side over its OWN staff's note columns (Ottava_spanner_engraver is a
+        // Staff-context engraver, so every voice counts), and a beamed support column's
+        // stem ends at the quanted beam face — the same ingredients the trill reads.
+        var ottavaLayouts = OttavaBracketEngraver.Calculate(
+            ottavaItems, systems, ml, staffYAt,
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty);
 
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff);

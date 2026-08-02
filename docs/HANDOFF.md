@@ -59,10 +59,13 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 2026-08-02（第73セッション＝**ottava の +0.027480 は「支持の箱対アウトライン」ではなかった。
-台帳が自分で誤って名指し、しかも次の人を無関係な大工事へ送っていた**）。
-**閉じたもの**（**コード変更なし・snapshot 0 枚・テスト 3880 のまま**）:
+台帳が自分で誤って名指し、しかも次の人を無関係な大工事へ送っていた。移植したら、その下から
+「両エンジンが別の文字列を描いている」が出た**）。
+**閉じたもの**（**snapshot 2 枚はユーザー承認のうえ再ベース**）:
 ```
-ottava 残差の命名を訂正 + probe に profile dump   台帳の数は不変（403 点・ss 非ゼロ 76・総和 1.295801634）
+ottava 残差の命名を訂正 + probe に profile dump  f58223b2  snapshot 0 枚  台帳の数は不変
+ラベル自身の点を 2 つ開く                        d5236ab9  snapshot 0 枚  台帳 +2（−0.288/+0.621）
+ottava 移植 3 点（padding/プロファイル/描画）             snapshot 2 枚  台帳 −0.842830596・点 +1
 ```
 ★★★ **総計の引き算で名前を付けてはいけない。プロファイルを 2 本とも出させる。**
 台帳の OTC は残差を **3 対の net**（支持 box-vs-outline +0.0595／padding −0.04／hook +0.008）と書き、
@@ -95,27 +98,50 @@ Lily# 5.805000000 = 4.545000000 + 0.460000000 + 0.800000000  ← フック深さ
 ★★ **probe を観測者にした**——`ottava-floor.ly` が両プロファイルを常設で吐く
 （`PROBEV SUP` / `PROBEV DOWN`）。⚠️ `index-cell` は .ly のモジュールに束縛が無い（car=DOWN/cdr=UP を直に書く）。
 
-**未 push 113**（この引継ぎ commit まで）・テスト **3880 passed / 0 failed / 4 skipped**（**不変**）・
-台帳 **403 点**（**ss 非ゼロ 76・総和 1.295801634**／**count 点 99・うち非ゼロ 2**）＝**数は 1 つも動いていない**
-（今回は**名前**だけを直した）。
+★★★ **移植は 3 つ同時に入れた**（`OttavaBracketEngraver` / `OutsideStaffStacker` / `SharedRenderer.Overlays`）:
+```
+⑴ aligned_side を engraver に  支持との pointwise 距離 + 自分の padding 0.5、床は staff-padding
+   （trill の `AlignedSideLineY` の字面移植。⚠️ ottava は **Staff context** なので支持は
+     その譜の**全 voice** の列＝trill/dynamics の「自分の voice だけ」と違う）
+⑵ ムーバーが本物の skyline 対  ラベル輪郭 ∪ 破線 ∪ フック（`OttavaBracketEngraver.Skylines`）
+   ＝**1 つの綴りが 3 役**（aligned_side / 衝突 pass / 後続 grob が避ける entry）。trill と同じ形
+⑶ 描画                        em 2.2・インク中心を線に（`LabelInkCentre` 1 か所から draw も予約も読む）
+```
+★★★ **着地**（予測どおり・**ゼロにしていないものは宣言済み**）:
+```
+ottava.label.line-to-ink-centre  +0.621000054 → **0.000000000 EXACT**
+ottava.label.ink-height          −0.288062616 → **−0.000062591**（face ノイズ・事前に「0 にはならない」と書いた）
+ottava.floor.staff-to-line       0 のまま（床は不動＝対の要件）
+```
+★★★ **そして下から出たのが「綴りが違う」**——**LP 2.26 の既定 ottavation は数字だけの "8"**
+（`ly/engraver-init.ly:121 ottavationMarkups = #ottavation-numbers`）。Lily# は "8va"＝LP の**旧既定**
+（`ottavation-simple-ordinals`）。**支持の計算は pointwise なので、どのグリフが第1符頭の上に来るかで答えが変わる**:
+```
+LP  "8"    5.777519990   binding＝「8」の立ち上がりが符頭左端 x=8.585 の上（隙間 0.500000000）
+LP  "8va"  5.834830721   binding＝「v」の底が第1符頭の上   （隙間 0.500000000）← 新 book OTS
+Lily#      5.837000068   ⇒ **同じ綴りに対して +0.002169347**＝移植の算術は 2/1000 まで合っている
+```
+⚠️ **高さの点が一致したのは「8」が "8va" の中で最も高いから**＝em 2.2 の結論は生きているが、
+**この点は「綴りが同じ」の証拠にならない**（why に明記）。
+★ **ユーザー判断**: **"8va" のまま**（出版社の慣習・LP 自身も出荷している）。
+⇒ **`ottava.{support,lower-staff}` は 0 にならない。0 へ追い込まない。算術を読むのは OTS の点。**
+★ **残った 0.002169347 の中身も名前がついている**——**ブラケットの左端**。Lily# は
+`小節の X − 0.8`、LP は`最初の音符列の X − 0.8`（この本で 2.0 差）＝ラベルが輪郭を**別の x で**
+サンプルしている。**ottava の X を読む点はまだ無い＝次は book であって patch ではない。**
+
+**未 push 115**（この引継ぎ commit まで）・テスト **3883 passed / 0 failed / 4 skipped**（**+3**）・
+台帳 **406 点**（**ss 非ゼロ 78・総和 1.362033708**／**count 点 99・うち非ゼロ 2**）。
+⚠️ **総和の増減の内訳**: 点を 3 つ開いて +0.909＋0.0022、移植で −0.843。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
 ## ▶ 次の一手
 
-★★★ **ottava の移植は 3 つで 1 つ。⚠️ 1 と 2 だけやると「測る形」と「描く形」が割れる**
-（§5.0 が最悪と呼ぶ状態・grace の島がそれを潰すために存在する）。**3 には点が無い＝点が先**:
-```
-⑴ アンカーを aligned_side にする＝**支持との距離 + 自分の padding 0.5**、床は staff-padding。
-   **これは engraver の仕事**——`OutsideStaffStacker` 自身が DynamicLineSpanner の隣で
-   「grob 自身の padding は engraver が supports に対して 1 回払う／stacker は 0.46 の衝突 pass だけ」
-   と書いている。今の `OttavaBracketEngraver` は**床しか出しておらず**、0.46 の pass が二役をしている。
-⑵ ムーバーに**本物の skyline 対**を持たせる＝ラベルの輪郭 ∪ 破線 ∪ フック。
-   道具は既にある（`TextOutlineSkylines.Place`／`PlaceCustomTexts` が同じ形で使っている）。
-   今の `bottomOffset: max(0.1, EdgeHeight)` は**全長にわたりフック深さで過剰予約**している。
-⑶ ⚠️ **描画**: `DrawOttavaBrackets` はラベルの**ベースライン**を線に置くが、LP は**インクの中心**を置く
-   （`ottava-bracket.cc` の `text.align_to(Y_AXIS, CENTER)`・ext ±0.792031364 の対称性がその証拠）。
-   **点が無い。開けてから触ること**（probe の header が第30セッションからそう書いていた）。
-```
+★★ **ottava の残り 0.002169347 ＝ ブラケットの左端**（**点が無い＝book が先**）。Lily# は
+`小節の X − 0.8`、LP は`最初の音符列の X − 0.8`。LP の `shorten-pair (-0.8 . -0.6)` は
+**spanner の bound**（音符列）に掛かるもので、小節ではない。
+⇒ **ottava の X を読む点を開いてから直す**（trill が `bound-details` で同じことをしてある）。
+⚠️ `OttavaBracketItem` は今 **item index を持っていない**（`DetectOttavaBrackets` は
+`MusicMarkItem` の measure だけを見る）ので、そこが最初の作業。
 ★★ **figbass の −0.0023332 が 5 点＋−0.0023334 が 2 点＝同じ数**＝**1 つの機構**（安い島）。
 ★★★ **cue の `CueScale = 0.66` → per-design font-size の移植（③）は点が開いたまま待っている**
 （第72セッションが着手して分量を確認し、緑に戻した＝下の第72セッション節に触る場所が全部数えてある）。

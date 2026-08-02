@@ -1119,16 +1119,30 @@ internal static class OutsideStaffStacker
             var o = b[i];
             if (!o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
                 continue;
-            // System-relative Y-up: o.YUp is Y-up from the system top, entering directly.
-            // anchor = text baseline / line Y; the label's ascent is its own ink at the
-            // size and face the draw uses (DrawOttavaBrackets: BoldItalic at 0.45 x 4sp);
-            // the end hook drops EdgeHeight below.
-            double newRel = Place(trackers(sysIdx, o.StaffIndex), o.StartX, o.EndX,
-                o.YUp,
-                topOffset: TextFontMetrics.Ink(
-                    o.Text, 0.45 * 4.0, sans: false, FontStyle.BoldItalic).Top,
-                bottomOffset: Math.Max(0.1, o.EdgeHeight));
-            b[i] = o with { YUp = newRel };
+            // System-relative Y-up: o.YUp is Y-up from the system top, entering directly,
+            // and it already carries LilyPond's FIRST step — aligned_side, which spent the
+            // bracket's own padding 0.5 against its side supports
+            // (OttavaBracketEngraver.AlignedSideLineY). This pass is the SECOND one, and it
+            // pays outside-staff-padding 0.46 against the accumulated skylines, which hold
+            // the ink aligned_side never sees (other voices, beams, scripts). Where a
+            // column decides, the engraver's 0.5 stands and this moves nothing — 0.5 > 0.46.
+            // LILYPOND-REF: lily/side-position-interface.cc:361-370 aligned_side padding;
+            //   lily/axis-group-interface.cc:747-749 add_grobs_of_one_priority — the
+            //   collision padding is outside-staff-padding (default 0.46).
+            //
+            // The mover is the bracket's OWN profile — label outline, dashed rule, hook,
+            // with the gap between label and line EMPTY — the same pair aligned_side read.
+            // ⚠️ Until 2026-08-02 this was a FLAT box at the hook's depth 0.8 over the whole
+            // span, which over-reserved by 0.067480009 at OTC's binding x (the first
+            // notehead's left edge, under the label's sloped outline) — the mover's half of
+            // ledger ottava.support.staff-to-line's residual.
+            var (myUp, myDown) = OttavaBracketEngraver.Skylines(
+                o.Text, o.StartX,
+                OttavaBracketEngraver.LineStartX(
+                    o.Text, o.StartX, EngravingDefaults.OttavaBracketFontSize),
+                o.EndX, o.EdgeHeight, o.IsAbove, o.YUp);
+            double move = trackers(sysIdx, o.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
+            b[i] = o with { YUp = o.YUp + move };
         }
         return b.ToImmutable();
     }

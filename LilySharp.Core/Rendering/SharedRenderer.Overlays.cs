@@ -421,14 +421,29 @@ internal static partial class SharedRenderer
             if (!sysTopYUp.TryGetValue(b.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top and add the stored offset, then ossia.
             double absY = os.YUp(syUp + b.YUp, b.StaffIndex, b.StartMeasureIndex);
-            double textFontSize = os.Size(FontSize * 0.45, b.StaffIndex);
+            // The label rides the paper's text-font-size, which OttavaBracket does not step
+            // (it declares only font-series and font-shape) — the em the TextScript pair
+            // measured, not the 0.45 × FontSize this drew until 2026-08-02
+            // (ledger ottava.label.ink-height, −0.288062616 before the port).
+            double textFontSize = os.Size(EngravingDefaults.OttavaBracketFontSize, b.StaffIndex);
             using (gc.Source(b.SourcePosition))
             {
-                gc.DrawText(b.Text, b.StartX, absY, textFontSize, "serif",
+                // LilyPond CENTRES the label's ink on the line — text.align_to (Y_AXIS,
+                // CENTER) in Ottava_bracket::print, which its symmetric grob extent shows
+                // through — so the baseline sits the ink's own centre BELOW it. Drawing the
+                // baseline on the line put the label 0.621000054 too high
+                // (ledger ottava.label.line-to-ink-centre), and the reservation reads the
+                // same offset (OttavaBracketEngraver.Skylines).
+                gc.DrawText(b.Text, b.StartX,
+                    absY - os.Size(
+                        OttavaBracketEngraver.LabelInkCentre(
+                            b.Text, EngravingDefaults.OttavaBracketFontSize),
+                        b.StaffIndex),
+                    textFontSize, "serif",
                     FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
 
-                double textWidth = TextFontMetrics.SerifBold(b.Text, textFontSize);
-                double lineStartX = b.StartX + textWidth + 0.5;
+                double lineStartX = OttavaBracketEngraver.LineStartX(
+                    b.Text, b.StartX, textFontSize);
                 if (lineStartX < b.EndX)
                 {
                     double dashOn = b.DashPeriod * b.DashFraction;
