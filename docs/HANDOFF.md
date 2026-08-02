@@ -63,6 +63,19 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ```
 ⑬⑵ grace の光学サイズ        c25f74c0  snapshot 9 枚  台帳 11 点が EXACT・テスト +3
 ⑬⑵ 編集臨時記号（font-size −2） d9d0c5f5  snapshot 1 枚  台帳 3 点を新規起票（LP 実測）
+⑬⑶ advance → extent（3 site） 8f4f019b  snapshot 29 枚 台帳 4 点が EXACT
+```
+★★★ **⑬⑶＝LP は符頭に何かを当てるとき hmtx の advance を読まない**——**必ず extent**
+（1.304200 対 1.304000）。**Lily# は 3 か所で advance を読んでいて、それは 1 つの claim だった**
+（**どの点も単独では閉じられず、4 点が同時に閉じた**）:
+```
+符尾の立つ位置  stem.cc:1050-1085 = head->extent(X).linear_combination(attach) − dir·太さ/2。
+                attach は note-head.cc:164-196 が同じ箱で正規化した値なので**往復して恒等**
+                ＝残るのは**フォント自身の attachment 座標**。⇒ **生成テーブルが最初から
+                per-design で持っていた**（`NoteheadBlackStemAttachment`）のに**誰も読んでいなかった**。
+旗の吊り先      その符尾に吊る（`StemAttachX` を通す）＝**描く場所と同じ house**
+script の中心   output-lib.scm:1906-1907 → self-alignment-interface.cc:116-160
+                ＝**親の EXTENT の linear_combination**。`NoteheadHalfWidth` は advance/2 だった
 ```
 ★★★ **2 経路目は 16 デザイン**（`AccidentalSuggestion` は `font-size −2` を**宣言している**）。
 **同じ形**——`ArticulationEngraver.EditorialFont` ＋ 描画側の `MusicFace`、
@@ -103,26 +116,16 @@ grace.column.accidental.step  −0.013382 → −0.017652
 renderer が 20 に戻っても EXACT のまま、snapshot はレイアウトを見ないので layout が 20 に戻っても緑のまま。
 （`EmmentalerDesignMetricsTests.AGraceIsMeasuredAndDrawnFromOneDesign` ／ `BeamStemFrameTests` の grace 版 ／
 PNG が 2 つのデザインに同じ file を返したら落ちる点。**Skia は黙って fallback する**ので PNG には観測者が要る。）
-★★★ **残ったのは 1 つのスカラーで、臨時記号の話ではない**——**3 点とも −0.000100**。
-**グリフで変わらない残差はグリフではない**＝**符頭の半分**: Lily# は **advance**(1.304000/2) で
-中心を取り、**LP は extent**(1.304200/2)。⇒ **同じ欠陥の 3 site 目**（`StemAttachX`・
-`GraceColumnRightReach` が他の 2 つ）＝**全部の符尾と全部の script が動く**ので**単独 commit**。
-**未 push 86**（**この引継ぎ commit まで数えた値**）・
+★★★ **3 点が同じ −0.000100 を読んだのが手がかりだった**——**グリフで変わらない残差はグリフではない**。
+**⇒ `grace.column` の島は `accidental.step` を除いて全部 EXACT**（残りは per-design skyline 待ち）。
+★★ **見つけたが直していない**＝**旗つき下向き符尾の draw ≠ reserve**（▶ に起票・注記はコード側）。
+**未 push 88**（**この引継ぎ commit まで数えた値**）・
 テスト **3844 passed / 0 failed / 3 skipped**（**+6**）・
-台帳 **391 点**（**ss 非ゼロ 77・総和 0.190014439**／**count 点 99・うち非ゼロ 2**）
-＝**非ゼロが 3 増えたのは新しい観測者のぶん**（**前からあった欠陥に点が付いただけ**）。
+台帳 **391 点**（**ss 非ゼロ 73・総和 0.126242320**／**count 点 99・うち非ゼロ 2**）。
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
 ## ▶ 次の一手
 
-★★★ **⑬⑶＝advance と extent を 1 つの commit で直す**（**もう 5 点が観測している**・**要承認**）。
-**LP は符頭の EXTENT(1.304200) を読み、Lily# は ADVANCE(1.304000) を読む**。**3 site で 1 つの claim**:
-```
-LayoutUtilities.StemAttachX          全部の符尾（up）が 0.0001 右へ    実測 probes/beam-stem-x.ly の 1.2392
-SpacingRules.GraceColumnRightReach   旗を stem でなく advance に吊る   grace.column.single.to-main 0.063472
-ArticulationEngraver（script の中心） 全部の script が 0.0001 動く      editorial.accidental.* 3 点 −0.000100
-```
-⚠️ **snapshot は大量に動く**（が **0.0001 は 2 桁表示より下**なので、実際に動く枚数は**測ってから**言うこと）。
 ★★★ **⑬⑵ の残り＝ossia と cue**（**grace / 編集臨時記号と同じ形**）。**着手前に読むこと**:
 ```
 ossia は staff-space そのものも縮む（StaffSize.Span）＝面のスコープは SharedRenderer の
@@ -142,7 +145,13 @@ IDrawingContext.MusicFace(rounded)            描画（SVG/PDF/PNG＋decorator 3
 TextFontMetrics.MusicGlyphPath(glyph, design) 縦 skyline の outline（実行時にその .otf を読む）
 ⚠️ 残る穴は 1 つ＝臨時記号の**横** skyline（GlyphSkylinesGenerated.cs は 20 だけ）。
    grace の臨時記号が 20 のままなのはこれが理由（grace.column.accidental.step が観測者）。
-   ⇒ Extract-EmmentalerSkylines.py を 8 デザインぶんにするのが ⒝。
+   ⇒ Extract-EmmentalerSkylines.py を 8 デザインぶんにする＝**grace の臨時記号を閉じる唯一の道**。
+```
+★★ **点を先に開く仕事が 1 つ溜まっている**（**⑬⑶ で見つけて、観測者が無いので直さなかった**）:
+```
+旗つき下向き符尾の予約が符頭の左端から始まる（描画は符尾＝左端+0.065）＝draw ≠ reserve。
+  ItemSkylineFactory の該当行に注記あり。⚠️ 直すとコーパス 30 冊が 0.02 動く。
+  ⇒ **LP に「旗つき下向き符尾の列」を訊く点を開いてから**（probes/jn-line-forces.ly が近い）。
 ```
 ★ **tab の残り 3 冊**（**弦を明示しない本は LP と比較できない**・第67セッション §1 ⑨）——
 **触るなら fixture 側（`\N` で弦を固定）。描画が動く＝要承認。**
