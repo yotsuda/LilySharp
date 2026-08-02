@@ -108,10 +108,12 @@ public sealed record GraceNoteItem
     /// approximately 0.65" — an evaluation, and a wrong one (magstep(-3) = 0.707107). It is
     /// not only the drawn size: the grace COLUMN's width reads the head's right edge
     /// (lily/note-spacing.cc:77 <c>left_head_end</c>), so the rounding sat inside the spacing
-    /// law as well. MEASURED: LilyPond's grace head ends at 0.917939 in its column against a
-    /// full-size 1.304200; 1.304200 × magstep(-3) = 0.922205, and the 0.004266 left over is
-    /// Emmentaler's OPTICAL sizing (LilyPond picks a different design size for a smaller
-    /// font, Lily# scales one face), which belongs to the glyph-metrics island.
+    /// law as well. MEASURED: LilyPond's grace head ends at 0.9179386 in its column against a
+    /// full-size 1.304200; 1.304200 × magstep(-3) = 0.922209, and the 0.004270 left over is
+    /// Emmentaler's OPTICAL sizing — LilyPond reads the FOURTEEN design's head (1.298161 in
+    /// its own staff spaces, <c>GlyphMetrics.ForFontSizeStep(-3)</c>) where Lily# scales the
+    /// twenty's. The tables are bundled; the drawn size still comes off the twenty until the
+    /// scaled paths are wired to them.
     /// </para>
     /// </remarks>
     public static readonly double ScaleFactor = Math.Pow(2.0, -3.0 / 6.0);

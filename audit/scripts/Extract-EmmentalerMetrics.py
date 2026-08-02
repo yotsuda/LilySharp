@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
-"""Extract glyph metrics from Emmentaler font and emit a C# partial class.
+"""Extract glyph metrics from the Emmentaler fonts and emit a C# partial class.
 
-Reads:  LilySharp.Core/Fonts/emmentaler-20.otf
+Reads:  LilySharp.Core/Fonts/emmentaler-{11,13,14,16,18,20,23,26}.otf
 Writes: LilySharp.Core/Svg/Layout/GlyphMetricsGenerated.cs
 
 The generated file holds every glyph metric (BBox / advance width) that can
 be derived directly from the font binary. Hand-tuned constants — engraving
 thicknesses, spacing heuristics, LP grob defaults — stay in GlyphMetrics.cs.
+
+EVERY DESIGN IS EXTRACTED, not just the 20. Emmentaler is optically sized: the
+designs are not scales of each other, so a glyph asked for at a smaller size is a
+DIFFERENT outline with a different box (the black notehead's right edge runs
+1.289478 in the 11 design against 1.304200 in the 20, in each design's OWN staff
+spaces). LilyPond picks the file by lily/font-select.cc:41-70's ratio rule —
+ported as EmmentalerDesignSize — and then scales it, so a metric is read as
+designTable[chosen] * magstep(step). The 20 design keeps the flat top-level
+constants it always had; the other seven are emitted as tables beside it.
 
 BBoxes come from the font's embedded LILC table, which is where LilyPond itself
 reads them (lily/open-type-font.cc:289 load_scheme_table("LILC"), :390-408
@@ -39,8 +48,18 @@ except ImportError:
     sys.exit(2)
 
 
-# 1 staff space = unitsPerEm / 4 = 250 font units (Emmentaler-20 convention).
+# 1 staff space = unitsPerEm / 4 = 250 font units (Emmentaler convention). Every design
+# normalises to the same em — the optical difference is in the outlines, not in the scale —
+# so this divisor is the same in all eight files (asserted per font below).
 STAFF_SPACE_UNITS = 250.0
+
+# The eight designs LilyPond ships, by the rounded size in the file name.
+# LILYPOND-REF: scm/lily-library.scm:1702-1710 feta-design-size-mapping.
+DESIGNS: list[int] = [11, 13, 14, 16, 18, 20, 23, 26]
+
+# The design whose metrics are ALSO emitted as the flat top-level constants: Lily#'s staff is
+# LilyPond's default 20pt, so an unscaled grob reads this one.
+BASE_DESIGN = 20
 
 
 @dataclass(frozen=True)
@@ -310,19 +329,43 @@ def load_lilc_bboxes(font) -> tuple[dict[str, tuple[float, float, float, float]]
     return out, staff_space
 
 
-def main() -> int:
-    repo = Path(__file__).resolve().parents[2]
-    font_path = repo / "LilySharp.Core" / "Fonts" / "emmentaler-20.otf"
-    out_path = repo / "LilySharp.Core" / "Svg" / "Layout" / "GlyphMetricsGenerated.cs"
+def load_design_size(font) -> float:
+    """The design size the file really carries, from its LILY table — 14.14 for
+    emmentaler-14.otf, not 14. This is the same number
+    scm/lily-library.scm:1702-1710 feta-design-size-mapping lists against the rounded
+    size in the file name, read from the font instead of copied, so that the ported
+    table (EmmentalerDesignSize.Designs) has something to be checked against."""
+    lily = font.getTableData("LILY").decode("latin-1")
+    m = re.search(r"design_size\s*\.\s*([0-9]+(?:\.[0-9]+)?)", lily)
+    if m is None:
+        raise ValueError("font has no design_size in its LILY table")
+    return float(m.group(1))
 
+
+@dataclass(frozen=True)
+class DesignMetrics:
+    """Every extracted metric of ONE design, in that design's own staff spaces."""
+
+    rounded: int
+    design_size: float
+    boxes: dict[str, tuple[float, float, float, float]]       # by C# name
+    outlines: dict[str, tuple[float, float, float, float]]    # by C# name
+    advances: dict[str, float]                                # by C# name
+    attachments: dict[str, tuple[float, float]]               # by C# name
+    codepoints: dict[str, int]                                # by feta glyph name
+
+
+def extract(font_path: Path, rounded: int) -> DesignMetrics | None:
+    """Read one design's metrics, or None after writing why it could not be read."""
     if not font_path.exists():
         sys.stderr.write(f"Font not found: {font_path}\n")
-        return 2
+        return None
 
     font = TTFont(str(font_path))
     upem = font["head"].unitsPerEm
     if upem != 1000:
-        sys.stderr.write(f"WARNING: unitsPerEm={upem}, expected 1000 (Emmentaler convention)\n")
+        sys.stderr.write(f"WARNING: {font_path.name}: unitsPerEm={upem}, expected 1000 "
+                         "(Emmentaler convention)\n")
     glyphSet = font.getGlyphSet()
     hmtx = font["hmtx"]
     order = set(font.getGlyphOrder())
@@ -333,13 +376,90 @@ def main() -> int:
     # LP reads glyph bboxes from the font's LILC table, not the raw outline.
     lilc_bboxes, _staff_space = load_lilc_bboxes(font)
     if not lilc_bboxes:
-        sys.stderr.write("WARNING: font has no LILC table; falling back to glyph outlines\n")
+        sys.stderr.write(f"WARNING: {font_path.name} has no LILC table; "
+                         "falling back to glyph outlines\n")
 
     missing = [s.glyph for s in (*BBOX_GLYPHS, *ADVANCE_GLYPHS) if s.glyph not in order]
     if missing:
         for glyph in missing:
-            sys.stderr.write(f"ERROR: glyph name not in font: {glyph}\n")
-        return 1
+            sys.stderr.write(f"ERROR: {font_path.name}: glyph name not in font: {glyph}\n")
+        return None
+
+    def outline_bbox(glyph: str):
+        pen = BoundsPen(glyphSet)
+        glyphSet[glyph].draw(pen)
+        if pen.bounds is None:
+            return None
+        xMin, yMin, xMax, yMax = pen.bounds
+        return (xMin / STAFF_SPACE_UNITS, yMin / STAFF_SPACE_UNITS,
+                xMax / STAFF_SPACE_UNITS, yMax / STAFF_SPACE_UNITS)
+
+    boxes: dict[str, tuple[float, float, float, float]] = {}
+    outlines: dict[str, tuple[float, float, float, float]] = {}
+    advances: dict[str, float] = {}
+
+    for spec in BBOX_GLYPHS:
+        if spec.source == "outline":
+            # Asked for explicitly: LilyPond measures THIS glyph through the text path,
+            # so its LILC entry — if it even has one — is the wrong number. See the
+            # dynamics block in BBOX_GLYPHS.
+            box = outline_bbox(spec.glyph)
+        elif spec.glyph in lilc_bboxes:
+            box = lilc_bboxes[spec.glyph]
+        else:
+            # No LILC entry (a font without the table, or a glyph feta never sized).
+            # Fall back to the outline and say so, rather than silently mixing sources.
+            sys.stderr.write(f"note: {font_path.name}: {spec.glyph} has no LILC bbox; "
+                             "using the outline\n")
+            box = outline_bbox(spec.glyph)
+        if box is None:
+            sys.stderr.write(f"ERROR: {font_path.name}: glyph {spec.glyph} has empty outline\n")
+            return None
+        boxes[spec.csharp_name] = box
+        # ...and the box a SKYLINE is built from, which is a different box.
+        skybox = outline_bbox(spec.glyph)
+        if skybox is not None:
+            outlines[spec.csharp_name] = skybox
+        adv, _ = hmtx[spec.glyph]
+        advances[spec.csharp_name] = adv / STAFF_SPACE_UNITS
+
+    attachment_points = load_lilc_attachments(font)
+    attachments: dict[str, tuple[float, float]] = {}
+    for cname, glyph in ATTACHMENT_GLYPHS:
+        if glyph not in attachment_points:
+            sys.stderr.write(f"ERROR: {font_path.name}: glyph {glyph} has no LILC attachment\n")
+            return None
+        attachments[cname] = attachment_points[glyph]
+
+    for spec in ADVANCE_GLYPHS:
+        adv, _lsb = hmtx[spec.glyph]
+        advances[spec.csharp_name] = adv / STAFF_SPACE_UNITS
+
+    return DesignMetrics(rounded=rounded, design_size=load_design_size(font), boxes=boxes,
+                         outlines=outlines, advances=advances, attachments=attachments,
+                         codepoints=reverse_cmap)
+
+
+def main() -> int:
+    repo = Path(__file__).resolve().parents[2]
+    fonts_dir = repo / "LilySharp.Core" / "Fonts"
+    out_path = repo / "LilySharp.Core" / "Svg" / "Layout" / "GlyphMetricsGenerated.cs"
+
+    designs: list[DesignMetrics] = []
+    for rounded in DESIGNS:
+        design = extract(fonts_dir / f"emmentaler-{rounded}.otf", rounded)
+        if design is None:
+            return 1
+        designs.append(design)
+    base = next(d for d in designs if d.rounded == BASE_DESIGN)
+
+    # A glyph that carries a skyline box in one design has to carry it in all of them, or
+    # the tables would not have the same members and a design would silently lose a reader.
+    for design in designs:
+        if design.outlines.keys() != base.outlines.keys():
+            sys.stderr.write(f"ERROR: design {design.rounded} has a different set of glyph "
+                             "outlines than the base design\n")
+            return 1
 
     def fmt(v: float) -> str:
         # SIX decimals. Four was enough while these values were only ever compared with each
@@ -351,7 +471,7 @@ def main() -> int:
         return f"{v + 0.0:.6f}"
 
     def cite(spec: GlyphSpec) -> str:
-        codepoint = reverse_cmap.get(spec.glyph)
+        codepoint = base.codepoints.get(spec.glyph)
         where = f"U+{codepoint:04X}" if codepoint is not None else "unmapped"
         return f"{spec.feta_ref} ({spec.glyph} = {where} in this build)"
 
@@ -359,8 +479,14 @@ def main() -> int:
     lines.append("// Lily# - Music notation compiler")
     lines.append("// AUTO-GENERATED by audit/scripts/Extract-EmmentalerMetrics.py — DO NOT EDIT MANUALLY.")
     lines.append("// Re-run the script after the bundled Emmentaler font is updated.")
-    lines.append("// Source font: LilySharp.Core/Fonts/emmentaler-20.otf")
+    lines.append("// Source fonts: LilySharp.Core/Fonts/emmentaler-"
+                 f"{{{','.join(str(d) for d in DESIGNS)}}}.otf")
     lines.append(f"// 1 staff space = unitsPerEm / 4 = {STAFF_SPACE_UNITS:.0f} font units")
+    lines.append("//")
+    lines.append(f"// The flat constants are the {BASE_DESIGN} design — Lily#'s staff is LilyPond's")
+    lines.append("// default 20pt, so an unscaled grob reads them. Emmentaler is optically sized, so")
+    lines.append("// a grob at another size does NOT read them scaled: it reads the table of the")
+    lines.append("// design its size lands on (see the per-design tables at the end of this file).")
     lines.append("//")
     lines.append("// BBoxes come from the font's LILC table, which is what LilyPond reads")
     lines.append("// (lily/open-type-font.cc:289, :390-408); advances come from hmtx. Glyphs are")
@@ -396,38 +522,9 @@ def main() -> int:
     lines.append("    // does not (0.024 of slack above), the F clef least of all (0.448 below).")
     lines.append("    // ⚠️ Use the EXTENT for widths and positions, the OUTLINE only for skylines.")
     lines.append("")
-    def outline_bbox(glyph: str):
-        pen = BoundsPen(glyphSet)
-        glyphSet[glyph].draw(pen)
-        if pen.bounds is None:
-            return None
-        xMin, yMin, xMax, yMax = pen.bounds
-        return (xMin / STAFF_SPACE_UNITS, yMin / STAFF_SPACE_UNITS,
-                xMax / STAFF_SPACE_UNITS, yMax / STAFF_SPACE_UNITS)
-
     for spec in BBOX_GLYPHS:
-        if spec.source == "outline":
-            # Asked for explicitly: LilyPond measures THIS glyph through the text path,
-            # so its LILC entry — if it even has one — is the wrong number. See the
-            # dynamics block in BBOX_GLYPHS.
-            box = outline_bbox(spec.glyph)
-            if box is None:
-                sys.stderr.write(f"ERROR: glyph {spec.glyph} has empty outline\n")
-                return 1
-            L, B, R, T = box
-        elif spec.glyph in lilc_bboxes:
-            L, B, R, T = lilc_bboxes[spec.glyph]
-        else:
-            # No LILC entry (a font without the table, or a glyph feta never sized).
-            # Fall back to the outline and say so, rather than silently mixing sources.
-            sys.stderr.write(f"note: {spec.glyph} has no LILC bbox; using the outline\n")
-            box = outline_bbox(spec.glyph)
-            if box is None:
-                sys.stderr.write(f"ERROR: glyph {spec.glyph} has empty outline\n")
-                return 1
-            L, B, R, T = box
-        adv, _ = hmtx[spec.glyph]
-        adv_ss = adv / STAFF_SPACE_UNITS
+        L, B, R, T = base.boxes[spec.csharp_name]
+        adv_ss = base.advances[spec.csharp_name]
         kind = "outline bbox" if spec.source == "outline" else "LILC bbox"
         lines.append(f"    /// <summary>{spec.summary} — BBox ({kind}).</summary>")
         lines.append(f"    /// <remarks>LILYPOND-REF: {cite(spec)}</remarks>")
@@ -436,7 +533,7 @@ def main() -> int:
         # LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments — the
         # skyline is built from the glyph OUTLINE (get_glyph_outline_bbox), not from the
         # extent, and the two coincide only for a glyph that fills its designed box.
-        skybox = outline_bbox(spec.glyph)
+        skybox = base.outlines.get(spec.csharp_name)
         if skybox is not None:
             SL, SB, SR, ST = skybox
             lines.append(f"    /// <summary>{spec.summary} — the box its SKYLINE is built from"
@@ -450,7 +547,6 @@ def main() -> int:
         lines.append("")
 
     # Stem attachment points (LILC `attachment`)
-    attachments = load_lilc_attachments(font)
     lines.append("    // ========== Up-stem attachment points (from the font's LILC table) ==========")
     lines.append("    // The point where an up stem's lower-right corner meets the head — X is the")
     lines.append("    // head's designed right edge, Y the height above the centre line the stem's")
@@ -460,10 +556,7 @@ def main() -> int:
     lines.append("    // (scm/define-markup-commands.scm attach-off).")
     lines.append("")
     for cname, glyph in ATTACHMENT_GLYPHS:
-        if glyph not in attachments:
-            sys.stderr.write(f"ERROR: glyph {glyph} has no LILC attachment\n")
-            return 1
-        ax, ay = attachments[glyph]
+        ax, ay = base.attachments[cname]
         lines.append(f"    /// <summary>{glyph} up-stem attachment point (staff spaces about the")
         lines.append("    /// glyph origin: X from the ink left, Y above the centre line).</summary>")
         lines.append("    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,")
@@ -475,18 +568,133 @@ def main() -> int:
     lines.append("    // ========== Advance widths (extracted from hmtx table) ==========")
     lines.append("")
     for spec in ADVANCE_GLYPHS:
-        adv, lsb = hmtx[spec.glyph]
-        adv_ss = adv / STAFF_SPACE_UNITS
+        adv_ss = base.advances[spec.csharp_name]
         lines.append(f"    /// <summary>{spec.summary}</summary>")
         lines.append(f"    /// <remarks>LILYPOND-REF: {cite(spec)}</remarks>")
         lines.append(f"    public const double {spec.csharp_name} = {fmt(adv_ss)};")
         lines.append("")
 
+    # ---- the same metrics, once per design ----
+    # kind, C# member name, doc summary, and how to read it out of a DesignMetrics.
+    members: list[tuple[str, str, str, object]] = []
+    for spec in BBOX_GLYPHS:
+        name = spec.csharp_name
+        kind = "outline bbox" if spec.source == "outline" else "LILC bbox"
+        members.append(("bbox", name, f"{spec.summary} — BBox ({kind}).",
+                        lambda d, n=name: d.boxes[n]))
+        if name in base.outlines:
+            members.append(("bbox", f"{name}Outline",
+                            f"{spec.summary} — the box its SKYLINE is built from (glyph outline).",
+                            lambda d, n=name: d.outlines[n]))
+        members.append(("double", f"{name}Advance",
+                        f"{spec.summary} — advance width (next-glyph horizontal feed).",
+                        lambda d, n=name: d.advances[n]))
+    for cname, glyph in ATTACHMENT_GLYPHS:
+        members.append(("attach", cname,
+                        f"{glyph} up-stem attachment point (staff spaces about the glyph origin).",
+                        lambda d, n=cname: d.attachments[n]))
+    for spec in ADVANCE_GLYPHS:
+        members.append(("double", spec.csharp_name, spec.summary,
+                        lambda d, n=spec.csharp_name: d.advances[n]))
+
+    seen: set[str] = set()
+    for _kind, name, _summary, _get in members:
+        if name in seen:
+            sys.stderr.write(f"ERROR: two metrics want the C# name {name}\n")
+            return 1
+        seen.add(name)
+
+    csharp_type = {"bbox": "BBox", "double": "double", "attach": "(double X, double Y)"}
+
+    def literal(kind: str, v) -> str:
+        if kind == "bbox":
+            return f"new({fmt(v[0])}, {fmt(v[1])}, {fmt(v[2])}, {fmt(v[3])})"
+        if kind == "attach":
+            return f"({fmt(v[0])}, {fmt(v[1])})"
+        return fmt(v)
+
+    lines.append("    // ========== The same metrics, per DESIGN ==========")
+    lines.append("    // Emmentaler is optically sized: emmentaler-11 is not emmentaler-20 shrunk, it is")
+    lines.append("    // a different drawing with different metrics. LilyPond therefore does not scale one")
+    lines.append("    // table — it picks the FILE whose design size is closest by ratio to the size asked")
+    lines.append("    // for (lily/font-select.cc:41-70 best_rounded_design_size, ported as")
+    lines.append("    // EmmentalerDesignSize) and reads that file's metrics, then scales them.")
+    lines.append("    //")
+    lines.append("    // Each table below is in ITS OWN design's staff spaces, exactly as the flat")
+    lines.append("    // constants above are in the 20's. A grob's box on the page is")
+    lines.append("    //     designTable[chosen].Glyph * magstep(font-size)")
+    lines.append("    // — LilyPond's own requested/actual magnification cancels against the design size")
+    lines.append("    // (lily/font-select.cc:185 with lily/modified-font-metric.cc:62-68), which is why")
+    lines.append("    // the multiplication a caller already does does not change; only the table does.")
+    lines.append("")
+    lines.append("    /// <summary>")
+    lines.append("    /// Every font-derived metric of ONE Emmentaler design, in that design's own staff")
+    lines.append("    /// spaces.")
+    lines.append("    /// </summary>")
+    lines.append("    /// <remarks>")
+    lines.append("    /// LILYPOND-REF: lily/open-type-font.cc:390-408 get_indexed_char_dimensions — one")
+    lines.append("    ///   loaded font file answers for one design; LilyPond holds as many as the score")
+    lines.append("    ///   asks for.")
+    lines.append("    /// ⚠️ These are NOT page staff spaces. Scale by the grob's magstep before use.")
+    lines.append("    /// </remarks>")
+    lines.append("    internal sealed class DesignMetrics")
+    lines.append("    {")
+    lines.append("        /// <summary>The rounded size in the file name (emmentaler-11.otf is 11).</summary>")
+    lines.append("        public int Rounded { get; init; }")
+    lines.append("")
+    lines.append("        /// <summary>The design size the file really carries — 11.22 for the 11.</summary>")
+    lines.append("        /// <remarks>Read from the font's own LILY table; the ported mapping it has to")
+    lines.append("        /// agree with is EmmentalerDesignSize.Designs")
+    lines.append("        /// (scm/lily-library.scm:1702-1710 feta-design-size-mapping).</remarks>")
+    lines.append("        public double DesignSize { get; init; }")
+    lines.append("")
+    for kind, name, summary, _get in members:
+        lines.append(f"        /// <summary>{summary}</summary>")
+        lines.append(f"        public {csharp_type[kind]} {name} {{ get; init; }}")
+    lines.append("    }")
+    lines.append("")
+
+    for design in designs:
+        is_base = design.rounded == BASE_DESIGN
+        lines.append(f"    /// <summary>emmentaler-{design.rounded}.otf"
+                     f" (design size {design.design_size:.2f}).</summary>")
+        if is_base:
+            lines.append("    /// <remarks>The flat constants above ARE this design, so this table names")
+            lines.append("    /// them rather than repeating them — the 20's numbers are written once.</remarks>")
+        lines.append(f"    public static readonly DesignMetrics Design{design.rounded} = new()")
+        lines.append("    {")
+        lines.append(f"        Rounded = {design.rounded},")
+        lines.append(f"        DesignSize = {design.design_size:.2f},")
+        for kind, name, _summary, get in members:
+            value = f"{name}" if is_base else literal(kind, get(design))
+            lines.append(f"        {name} = {value},")
+        lines.append("    };")
+        lines.append("")
+
+    lines.append("    /// <summary>Every design's table, smallest first — LilyPond's own mapping order.")
+    lines.append("    /// (EmmentalerDesignSize.Designs is the same eight designs as the SELECTION rule")
+    lines.append("    /// sees them; this is their metrics.)</summary>")
+    lines.append("    public static readonly DesignMetrics[] AllDesigns =")
+    lines.append("    {")
+    lines.append("        " + ", ".join(f"Design{d.rounded}" for d in designs) + ",")
+    lines.append("    };")
+    lines.append("")
+    lines.append("    /// <summary>The metrics of <c>emmentaler-&lt;rounded&gt;.otf</c>.</summary>")
+    lines.append("    /// <remarks>The argument is the ROUNDED size — what")
+    lines.append("    /// EmmentalerDesignSize.BestRounded returns, and the number in the file name.</remarks>")
+    lines.append("    public static DesignMetrics ForDesign(int rounded) => rounded switch")
+    lines.append("    {")
+    for design in designs:
+        lines.append(f"        {design.rounded} => Design{design.rounded},")
+    lines.append("        _ => throw new System.ArgumentOutOfRangeException(")
+    lines.append("            nameof(rounded), rounded, \"not an Emmentaler design size\"),")
+    lines.append("    };")
     lines.append("}")
     lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Wrote {out_path} ({len(BBOX_GLYPHS)} BBox + {len(ADVANCE_GLYPHS)} advance entries)")
+    print(f"Wrote {out_path} ({len(BBOX_GLYPHS)} BBox + {len(ADVANCE_GLYPHS)} advance entries"
+          f" x {len(designs)} designs)")
     return 0
 
 

@@ -51,6 +51,27 @@ internal static partial class GlyphMetrics
     /// </summary>
     public readonly record struct Anchor(double X, double Y);
 
+    /// <summary>
+    /// The metrics a grob carrying <paramref name="fontSizeStep"/> reads — LilyPond's
+    /// <c>font-size</c>, in sixths of an octave (full size 0, a grace −3).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/font-select.cc:115-186 select_font — the requested size picks the
+    /// FILE (<see cref="EmmentalerDesignSize"/>), and every dimension is then read from THAT
+    /// file's table (lily/open-type-font.cc:390-408). Emmentaler is optically sized, so this is
+    /// not the same as reading one table and scaling it: the 14 design's black head is 1.298161
+    /// where the 20's is 1.304200, in each design's own staff spaces.
+    /// <para>
+    /// ⚠️ WHAT COMES BACK IS IN THE CHOSEN DESIGN'S STAFF SPACES, not the page's. The page's
+    /// are <c>box · magstep(fontSizeStep)</c> — <see cref="StaffSize.Ink"/> is that multiply,
+    /// and optical sizing does not change it: LilyPond's own requested/actual magnification
+    /// (<see cref="EmmentalerDesignSize.Magnification"/>) cancels against the design size, so
+    /// the only thing that changes is WHICH table the number came out of.
+    /// </para>
+    /// </remarks>
+    public static DesignMetrics ForFontSizeStep(double fontSizeStep)
+        => ForDesign(EmmentalerDesignSize.ForFontSizeStep(fontSizeStep).Rounded);
+
     // ========== Stem Anchors ==========
     // Stem attachment uses the notehead's advance width on the X axis (LP convention)
     // and a small vertical offset to account for the notehead curve. The Y offset is
