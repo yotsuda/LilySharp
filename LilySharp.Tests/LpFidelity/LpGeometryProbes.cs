@@ -5190,6 +5190,96 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// The gap a cue leaves at the END of its measure — <see cref="CUE1"/> with a second
+    /// measure behind it, so its bar line is a genuine mid-line one.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS EXISTS BECAUSE THE PORT ASSERTED IT WITHOUT MEASURING IT.
+    /// <c>SpacingRules.CrossesVoiceBoundary</c> treats a null right side (a bar line) as NOT a
+    /// boundary, on the argument that the bar line's column belongs to both voices so the left
+    /// voice's wish reaches it — and carried "<c>barline.prev.*</c> measures that" as its
+    /// evidence. Those books contain no cue at all, so they measure the argument's CONCLUSION
+    /// on music where it cannot fail. Nothing in the corpus read a cue-to-bar-line gap.
+    /// <para>
+    /// LilyPond twin: score VBB-CUE of audit/lp-geometry/probes/voice-boundary-spacing.ly,
+    /// <c>\time 4/4 g''4 g'' \new CueVoice { g''4 g'' } | g''1</c>. MEASURED there: last head
+    /// 16.998683905407233 → bar line 19.3692206696881 (its ext is <c>(0.0 . 0.19)</c>, so the
+    /// x IS the left edge — the same convention <c>LastGlyphToBarlineLeft</c> and every
+    /// <c>barline.prev.*</c> already read), i.e. <b>2.370536764280867</b>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE DIRECTION IS RIGHT AND THE AMOUNT IS NOT, which is exactly what a point is for:
+    /// against <see cref="CUEB"/>'s 2.787959284848899 LilyPond narrows this gap by
+    /// 0.417422520568032, while Lily# narrows it by the whole head-width term of
+    /// lily/note-spacing.cc:77 — 1.304200 traded for the cue head's box, measured 0.488853432.
+    /// So the 2026-08-03 port IMPROVED this gap — before it, the refinement used the full-size
+    /// box here too — without closing it.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE LEFTOVER IS TWO TERMS, and one of them is already named:
+    /// <c>0.071428571431968</c> unnamed, plus <c>0.000002339853378</c>, which is
+    /// <c>GlyphMetricsGenerated.cs</c> holding design-13 black at 1.294282 where
+    /// <c>magstep(−4)</c> of it wants 0.815348908003396 — the SAME rounding that stopped
+    /// <c>cue.column.step</c>, reached here by a different reading, which is what says this gap
+    /// really is spending the head-width term.
+    /// </para>
+    /// <para>
+    /// ✔ AND THE OTHER TERM IS NAMED: it is <b>1/14 exactly</b> (6.4e-16), not the "3.4e-12
+    /// resemblance" first recorded — that came from subtracting the nine-digit 0.488851092
+    /// instead of 0.488851091996604. 1/14 is 0.5/7: <c>stem-spacing-correction</c> over the
+    /// hardcoded 7 of <c>different_directions_correction</c>, halved because the right side is
+    /// a bar line. LilyPond's cue stem is shorter, so it overlaps the bar's band by 4 staff
+    /// positions where the control's overlaps by 6; Lily#'s <c>StemSpacingInfo</c> does not
+    /// consult <c>IsCue</c> and spends −3/14 on both. Driven, decomposed and positively
+    /// controlled in probe voice-boundary-spacing.ly section D; the full account is in the
+    /// ledger's <c>why</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string CUEBAR = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g'4 g' cue { g'4 g' } | g'1 | }
+        }
+
+        form main { ~Main }
+
+        score main "CUEBAR" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="CUEBAR"/>'s one-variable control: the same two measures with no cue anywhere.
+    /// </summary>
+    /// <remarks>
+    /// The pair is what makes the reading a CUE reading. A single cue-to-bar-line number could
+    /// be off because the closing gap is wrong for every book, which is a different defect with
+    /// a different owner (<c>barline.prev.*</c>'s). With the control in the same shape, the two
+    /// residuals subtract and what is left is the cue's own.
+    /// <para>LilyPond twin: score VBB-CTL of the same probe,
+    /// <c>\time 4/4 g''4 g'' g''4 g'' | g''1</c> — last head 17.591734997403837 → bar line
+    /// 20.379694282252736, i.e. 2.787959284848899.</para>
+    /// </remarks>
+    private static readonly string CUEB = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g'4 g' g'4 g' | g'1 | }
+        }
+
+        form main { ~Main }
+
+        score main "CUEB" { staff m }
+        """;
+
+    /// <summary>
     /// A note BEFORE the grace, so the approach spring is visible — with its control in the
     /// same book.
     /// </summary>
@@ -8860,6 +8950,26 @@ internal static class LpGeometryProbes
         new("cue.accidental.to-notehead", CUEA,
             g => g.AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalSharp)),
         new("cue.grace.column.to-main", CUEG, g => g.NoteheadAnchorStep(1)),
+
+        // …and the CLOSING side of a cue measure, which none of the five above can see. Every
+        // point in the block above is a step between two note columns; the head-width term of
+        // lily/note-spacing.cc:77 is also spent at the gap into the BAR LINE, and that gap is
+        // where test/cue-accidentals actually lost its 0.489 per measure (inside those bars
+        // every column is bound by an accidental rod, so the term reaches the drawing nowhere
+        // else). The port's own predicate carried the claim "the bar line is not a voice
+        // boundary, and barline.prev.* measures that" — but those books have no cue in them,
+        // so they cannot fail. THE PAIR IS THE READING: the control shares the shape and says
+        // whether a divergence here is the cue's or the closing gap's in general.
+        // ⚠️ PREDICTED BEFORE MEASURING (session 84): the control opens EXACT, and the cue
+        // lands at −0.071428571431968 — LilyPond narrows this gap by 0.417422520568032 where
+        // Lily# narrows it by the full head-width trade. The control landed EXACT. The cue
+        // landed at −0.071430911, SHORT OF THE PREDICTION BY 0.000002340 — the metrics table's
+        // six-digit rounding, which the prediction had left out because it was derived from
+        // LilyPond's exact 0.815348908 rather than the number Lily# draws with. The miss is
+        // the confirmation: the already-named term arrived here on its own.
+        new("cue.barline.prev.cue-head", CUEBAR, g => g.LastGlyphToBarlineLeft(MidLineBarline)),
+        new("cue.barline.prev.full-head-control", CUEB,
+            g => g.LastGlyphToBarlineLeft(MidLineBarline)),
 
         // A MUSICA FICTA accidental, which is a grob that STATES font-size −2 — so it is
         // read and drawn out of the SIXTEEN Emmentaler design, not the twenty scaled. The

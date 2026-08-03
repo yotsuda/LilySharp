@@ -1164,7 +1164,7 @@ internal static class SpacingRules
     /// INTO a bar line, where the bar line stands in for the right-hand stem.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-spacing.cc:243-248 stem_dir_correction — when the right
+    /// LILYPOND-REF: lily/note-spacing.cc:281-286 stem_dir_correction — when the right
     /// column carries a bar line, LilyPond synthesises the right-hand stem from the bar:
     /// <code>
     ///   stem_dirs[RIGHT] = -stem_dirs[LEFT];
@@ -1172,8 +1172,13 @@ internal static class SpacingRules
     ///   stem_posns[RIGHT] *= 2;
     /// </code>
     /// so the directions are opposite BY CONSTRUCTION and
-    /// different_directions_correction always runs, then is HALVED (:263-264).
-    /// LILYPOND-REF: lily/staff-spacing.cc bar_y_positions — the bar's Y extent divided
+    /// different_directions_correction always runs, then is HALVED (:299-300).
+    /// ⚠️ THE THREE ADDRESSES IN THIS BLOCK WERE ALL WRONG UNTIL 2026-08-04 (session 84),
+    /// each by about thirty-eight lines: :243-248 is the accidentals check and the stemless
+    /// guard, :263-264 is the large-flag gate, and :200-201 is a comment. The citation
+    /// ratchet only checks that a symbol name shares the line with an address, so a stale
+    /// range that names the right function survives it — the range has to be opened.
+    /// LILYPOND-REF: lily/staff-spacing.cc:73 Staff_spacing::bar_y_positions — the bar's Y extent divided
     /// by the staff space, i.e. staff-spaces; the <c>*= 2</c> above converts it to staff
     /// POSITIONS (half-spaces), the unit StemSpacingInfo already reports.
     ///
@@ -1183,7 +1188,7 @@ internal static class SpacingRules
     /// like the item→bar-line skyline beside it, it assumes the standard staff.)
     ///
     /// Returns 0 when the left column has no visible stem — a whole note or a rest —
-    /// which is LilyPond's `if (!stem || Stem::is_invisible (stem)) return;` (:200-201)
+    /// which is LilyPond's `if (!stem || Stem::is_invisible (stem)) return;` (:248-249)
     /// and is why `c'1 c'1` needs no correction at all.
     /// </remarks>
     internal static double CalculateStemCorrectionToBarline(
@@ -1397,6 +1402,43 @@ internal static class SpacingRules
     /// (<see cref="ItemSkylineFactory"/>) — LilyPond reads one Y-extent for both, so
     /// this stays one house. The two are otherwise unrelated mechanisms: the optical
     /// correction moves the spring's IDEAL, the skyline sets its MINIMUM.
+    /// </para>
+    /// <para>
+    /// ⚠️ A CUE ITEM GETS A FULL-SIZE RANGE HERE, and that is a measured defect, not an
+    /// omission of interest only in principle. LilyPond's cue stem is shorter — dumped, its
+    /// Y-extent is (0.0 . 2.4052059400555286) against a full stem's (−1.0 . 2.3138) — so at a
+    /// bar line it overlaps the bar's band by 4 staff positions where the full stem overlaps
+    /// by 6, and the correction differs by exactly (6−4)/7 × 0.25 = 1/14. That 1/14 is the
+    /// whole of what ledger <c>cue.barline.prev.cue-head</c> records beyond the metrics
+    /// table's rounding. MEASURED, DRIVEN AND CONTROLLED: probe voice-boundary-spacing.ly
+    /// section D.
+    /// ⚠️ BUT THE FIX IS NOT LOCAL TO THIS METHOD. The drawing does not shorten a cue stem
+    /// either (<c>SharedRenderer</c> calls <c>StemCalculator.CalculateStemEndY</c> with no cue
+    /// scale), so this is not one wrong reader of a right number — both spellings are full
+    /// size, and moving this one alone moves the skyline too.
+    /// </para>
+    /// <para>
+    /// ✔ THE LAW IS MEASURED (probe section E), and it is NOT "multiply the range by
+    /// magstep(−4)". LILYPOND-REF: ly/engraver-init.ly:436 CueVoice — <c>\override
+    /// Stem.length-fraction = #(magstep -4)</c>, applied at lily/stem.cc:557
+    /// <c>length *= length-fraction</c> AFTER the shortening at :541-554. Three parts, and
+    /// only the first is a scale:
+    /// <list type="number">
+    /// <item>the length from the head's CENTRE is <c>(7 − shorten) × magstep(−4)</c> — measured
+    ///   on a middle-line note as 6.666666666666667 × magstep = 4.199736832982911, equal to the
+    ///   dumped value as doubles;</item>
+    /// <item>⚠️ the rule that a stem outside the staff reaches the middle line then FLOORS it.
+    ///   It is inactive at full size and active once scaled: a scaled g′′ stem would stop at
+    ///   +0.590276325367943 and LilyPond stops it at 0. Scaling without this floor makes cue
+    ///   stems short by 0.59 half-spaces on the very notes cues are written on;</item>
+    /// <item>⚠️ <c>stem-begin-position</c> does NOT scale — 0.3724 → 0.18958811988894286, a
+    ///   ratio of 0.509098 against magstep's 0.629961. It is the design-13 glyph's own
+    ///   attachment, exactly as the head WIDTH is (0.815348908 is not 1.304200 × magstep).</item>
+    /// </list>
+    /// ⚠️ EIGHTHS ARE STILL OPEN: a flagged stem is lengthened to carry its flag and the flag
+    /// scales by its own font size, so the two terms are not one product and the probe does not
+    /// separate them. Measure the flag term before porting anything about eighths.
+    /// </para>
     /// </para>
     /// </summary>
     internal static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
@@ -3188,13 +3230,27 @@ internal static class SpacingRules
     /// last-head-to-bar-line gap is 2.787959284848899 against 2.370536764280867. The cue book's
     /// gap IS narrower, so the refinement does run here — the direction is right.
     ///   departs from: the SIZE of it. LilyPond narrows that gap by 0.417422520568032 and this
-    ///     engine narrows it by the whole head-width term, 0.488851092. The port improved the
-    ///     reading (the gap used to be wrong by the full 0.417) without closing it.
-    ///   goes away when: the remaining 0.071428 is named. ⚠️ IT IS NOT NAMED AND MUST NOT BE
-    ///     FITTED — it is within 1e-10 of 1/14, which is exactly the kind of resemblance this
-    ///     corpus has been wrong about twice today.
-    ///   observed by: NOTHING. No ledger point reads a cue-to-bar-line gap; the LilyPond numbers
-    ///     above are recorded in the probe so the point can be opened without re-measuring.
+    ///     engine narrows it by the whole head-width term — 1.304200 traded for the cue head's
+    ///     box, measured 0.488853432. The port improved the reading (the gap used to be wrong by
+    ///     the full 0.417) without closing it.
+    ///   goes away when: a CUE ITEM CAN REPORT ITS OWN STEM RANGE. ⚠️ THE LEFTOVER IS NAMED
+    ///     (2026-08-04) AND IT IS NOT THIS PREDICATE'S: it is 1/14 exactly — 0.5/7, i.e.
+    ///     <see cref="NoteSpacingParameters.StemSpacingCorrection"/> over the hardcoded 7 of
+    ///     different_directions_correction, halved at a bar line. The earlier "3.4e-12
+    ///     resemblance, do not fit it" was an artefact of subtracting the nine-digit
+    ///     0.488851092; at full precision the trade is 0.488851091996604 and the difference is
+    ///     1/14 to 6.4e-16. See <see cref="CalculateStemCorrectionToBarline"/> — LilyPond's
+    ///     |intersect| is 4 staff positions for the cue book and 6 for the control, because
+    ///     ITS cue stem is shorter, and −(6−4)/7 × 0.25 is the whole of it. Lily#'s
+    ///     <see cref="StemSpacingInfo"/> does not consult <c>IsCue</c>, so it spends −3/14 on
+    ///     both. MEASURED, DRIVEN AND CONTROLLED: probe voice-boundary-spacing.ly section D.
+    ///   observed by: <c>cue.barline.prev.cue-head</c>, against
+    ///     <c>cue.barline.prev.full-head-control</c> (opened 2026-08-03 from the numbers above,
+    ///     without re-measuring). The control is EXACT and the cue records −0.071430911, which
+    ///     is the unnamed 0.071428571431968 PLUS the 0.000002340 six-digit rounding of
+    ///     design-13's head that already stopped <c>cue.column.step</c> — that term arriving
+    ///     here by a second, independent reading is what says this gap really is spending the
+    ///     head-width term and not some other quantity that happens to sit nearby.
     /// </para>
     /// <para>
     /// ⚠️ TWO PLACES WHERE THIS PREDICATE IS NARROWER THAN LilyPond'S CONDITION, both because
