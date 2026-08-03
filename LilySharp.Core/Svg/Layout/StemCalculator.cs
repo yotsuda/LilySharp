@@ -228,13 +228,25 @@ public static class StemCalculator
         else if (!stemUp && stemEndUp > 0)
             stemEndUp = 0;
 
-        // --- Minimum stem length ---
-        double minLength = EngravingDefaults.MinStemLength;
-        double actualLength = Math.Abs(stemEndUp - attachUp);
-        if (actualLength < minLength)
-        {
-            stemEndUp = attachUp + dir * minLength;
-        }
+        // THE MINIMUM-LENGTH FLOOR IS GONE (session 85), because LilyPond has none.
+        // internal_calc_stem_end_position runs :506-517 (the table), :519-555 (the
+        // unnatural-direction shortening), :557 (length-fraction), :559-586 (the tremolo,
+        // whose max() is the ONLY one in the function) and then :588-595 — the end position
+        // and the middle-line rule — and returns. Nothing else bounds `length`.
+        //
+        // Lily# had a 2.5-staff-space floor here, declared "conventional, no single named LP
+        // constant", and IT NEVER FIRED: the shortest length :506-555 can produce is
+        // 3.5 − 1.0 = 2.5 exactly, and the middle-line rule at :591-593 only ever makes a stem
+        // LONGER (it fires when the end has crossed the middle line, i.e. when the stem is
+        // already reaching past it). So the floor was dead code that became live the moment a
+        // length-fraction arrived — a cue quarter wants 2.099868416491456 and would have been
+        // clamped up to 2.5. Scaling the floor by the fraction was the first fix here and was
+        // an invention where a deletion was available: removing it is both the literal port
+        // and output-invariant, which was measured, not assumed (3976 tests, 657 snapshots,
+        // 462 ledger points — nothing moved).
+        // LILYPOND-REF: lily/stem.cc:481-596 internal_calc_stem_end_position — the whole
+        //   function, cited whole on purpose: the claim being made is about what it does NOT
+        //   contain.
 
         // Reflect back to device coordinates (Y-down): middle − Y-up.
         return staffMiddleDown - stemEndUp;

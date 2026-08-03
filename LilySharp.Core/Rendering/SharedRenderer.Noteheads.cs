@@ -514,8 +514,13 @@ internal static partial class SharedRenderer
             // then flip its device result back to page Y-up.
             double deviceNoteY = pageHeight - noteY;
             double deviceStaffTop = pageHeight - (staffMiddleY + StaffHeight / 2.0);
+            // A CUE STEM IS SHORTER, and by LilyPond's own declaration rather than by the
+            // head scale: EngravingDefaults.CueStemDetails carries Stem.length-fraction into
+            // the same house the spacing correction and the horizontal skyline read
+            // (SpacingRules.StemSpacingInfo), so the stem this draws is the stem they reserve.
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
-                deviceNoteY, stemUp, deviceStaffTop, durLog, note.StaffPosition);
+                deviceNoteY, stemUp, deviceStaffTop, durLog, note.StaffPosition,
+                note.IsCue ? EngravingDefaults.CueStemDetails : null);
             gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
                 stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
@@ -681,8 +686,10 @@ internal static partial class SharedRenderer
             // in DrawNote, then flip its device result back to page Y-up.
             double deviceTipY = pageHeight - (staffMiddleY + stemTipPos / 2.0);
             double deviceStaffTop = pageHeight - (staffMiddleY + StaffHeight / 2.0);
+            // Cue length-fraction, exactly as in DrawNote.
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
-                deviceTipY, stemUp, deviceStaffTop, durLog, stemTipPos);
+                deviceTipY, stemUp, deviceStaffTop, durLog, stemTipPos,
+                chord.IsCue ? EngravingDefaults.CueStemDetails : null);
             gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
         }

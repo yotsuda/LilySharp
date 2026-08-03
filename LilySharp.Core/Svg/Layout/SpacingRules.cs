@@ -1404,40 +1404,43 @@ internal static class SpacingRules
     /// correction moves the spring's IDEAL, the skyline sets its MINIMUM.
     /// </para>
     /// <para>
-    /// ⚠️ A CUE ITEM GETS A FULL-SIZE RANGE HERE, and that is a measured defect, not an
-    /// omission of interest only in principle. LilyPond's cue stem is shorter — dumped, its
-    /// Y-extent is (0.0 . 2.4052059400555286) against a full stem's (−1.0 . 2.3138) — so at a
-    /// bar line it overlaps the bar's band by 4 staff positions where the full stem overlaps
-    /// by 6, and the correction differs by exactly (6−4)/7 × 0.25 = 1/14. That 1/14 is the
-    /// whole of what ledger <c>cue.barline.prev.cue-head</c> records beyond the metrics
-    /// table's rounding. MEASURED, DRIVEN AND CONTROLLED: probe voice-boundary-spacing.ly
-    /// section D.
-    /// ⚠️ BUT THE FIX IS NOT LOCAL TO THIS METHOD. The drawing does not shorten a cue stem
-    /// either (<c>SharedRenderer</c> calls <c>StemCalculator.CalculateStemEndY</c> with no cue
-    /// scale), so this is not one wrong reader of a right number — both spellings are full
-    /// size, and moving this one alone moves the skyline too.
+    /// ✔ A CUE ITEM GETS A CUE RANGE (session 85). It used to get a full-size one, which the
+    /// ledger measured: LilyPond's cue stem is shorter — dumped, its Y-extent is
+    /// (0.0 . 2.4052059400555286) against a full stem's (−1.0 . 2.3138) — so at a bar line it
+    /// overlaps the bar's band by 4 staff positions where the full stem overlaps by 6, and the
+    /// correction differs by exactly (6−4)/7 × 0.25 = 1/14. That 1/14 was the whole of what
+    /// ledger <c>cue.barline.prev.cue-head</c> recorded beyond the metrics table's rounding.
+    /// MEASURED, DRIVEN AND CONTROLLED: probe voice-boundary-spacing.ly section D.
     /// </para>
     /// <para>
     /// ✔ THE LAW IS MEASURED (probe section E), and it is NOT "multiply the range by
     /// magstep(−4)". LILYPOND-REF: ly/engraver-init.ly:436 CueVoice — <c>\override
     /// Stem.length-fraction = #(magstep -4)</c>, applied at lily/stem.cc:557
     /// <c>length *= length-fraction</c> AFTER the shortening at :541-554. Three parts, and
-    /// only the first is a scale:
+    /// only the first is a scale — the port spends one line on each:
     /// <list type="number">
     /// <item>the length from the head's CENTRE is <c>(7 − shorten) × magstep(−4)</c> — measured
     ///   on a middle-line note as 6.666666666666667 × magstep = 4.199736832982911, equal to the
-    ///   dumped value as doubles;</item>
-    /// <item>⚠️ the rule that a stem outside the staff reaches the middle line then FLOORS it.
+    ///   dumped value as doubles. <see cref="EngravingDefaults.CueStemDetails"/> carries the
+    ///   fraction into the ONE length house;</item>
+    /// <item>the rule that a stem outside the staff reaches the middle line then FLOORS it.
     ///   It is inactive at full size and active once scaled: a scaled g′′ stem would stop at
-    ///   +0.590276325367943 and LilyPond stops it at 0. Scaling without this floor makes cue
-    ///   stems short by 0.59 half-spaces on the very notes cues are written on;</item>
-    /// <item>⚠️ <c>stem-begin-position</c> does NOT scale — 0.3724 → 0.18958811988894286, a
+    ///   +0.590276325367943 and LilyPond stops it at 0.
+    ///   <see cref="StemCalculator.CalculateStemEndY"/> already ran that rule after the length,
+    ///   so it needed nothing — but Lily#'s OWN 2.5 floor below it did (see there);</item>
+    /// <item><c>stem-begin-position</c> does NOT scale — 0.3724 → 0.18958811988894286, a
     ///   ratio of 0.509098 against magstep's 0.629961. It is the design-13 glyph's own
-    ///   attachment, exactly as the head WIDTH is (0.815348908 is not 1.304200 × magstep).</item>
+    ///   attachment, exactly as the head WIDTH is (0.815348908 is not 1.304200 × magstep), and
+    ///   <see cref="StemBeginPosition"/> asks the cue FONT for it.</item>
     /// </list>
     /// ⚠️ EIGHTHS ARE STILL OPEN: a flagged stem is lengthened to carry its flag and the flag
     /// scales by its own font size, so the two terms are not one product and the probe does not
-    /// separate them. Measure the flag term before porting anything about eighths.
+    /// separate them (4.039985 measured against this fraction's 4.252234 — nearer than the
+    /// 6.750000 a full-size stem gave, and still not the law). Measure the flag term before
+    /// porting anything about eighths.
+    /// ⚠️ BEAMED CUES ARE UNTOUCHED: a beamed stem ends on the quanter's beam, and
+    /// <see cref="BeamScoringProblem"/> takes a <c>lengthFraction</c> that only the grace and
+    /// tab callers pass. This method's <c>BeamId</c> hands beamed columns to that path.
     /// </para>
     /// </para>
     /// </summary>
@@ -1456,8 +1459,8 @@ internal static class SpacingRules
                 // The stem's y-extent runs from where it MEETS THE HEAD (not the head
                 // centre) to the tip; the head-side end sits a stem-attachment offset
                 // off centre. LILYPOND-REF: lily/stem.cc:934-963.
-                double beginPos = StemBeginPosition(n.StaffPosition, n.StemUp, noteValue);
-                double endPos = StemEndPosition(n.StaffPosition, n.StemUp, noteValue, n.StaffPosition);
+                double beginPos = StemBeginPosition(n.StaffPosition, n.StemUp, noteValue, n.IsCue);
+                double endPos = StemEndPosition(n.StaffPosition, n.StemUp, noteValue, n.StaffPosition, n.IsCue);
                 return (n.StemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     n.StaffPosition, n.StaffPosition, n.BeamId);
@@ -1474,8 +1477,8 @@ internal static class SpacingRules
                 // Head-side end: the reference head is the one the stem starts from
                 // (lowest for an up stem, highest for a down stem), offset by the
                 // stem attachment. LILYPOND-REF: lily/stem.cc:934-963.
-                double beginPos = StemBeginPosition(c.StemUp ? minPos : maxPos, c.StemUp, noteValue);
-                double endPos = StemEndPosition(tipPos, c.StemUp, noteValue, tipPos);
+                double beginPos = StemBeginPosition(c.StemUp ? minPos : maxPos, c.StemUp, noteValue, c.IsCue);
+                double endPos = StemEndPosition(tipPos, c.StemUp, noteValue, tipPos, c.IsCue);
                 return (c.StemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     minPos, maxPos, c.BeamId);
@@ -1486,53 +1489,97 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// Stem-attachment Y coordinate on the notehead, in LilyPond's −1..1 scale
-    /// (−1 = bottom edge, +1 = top edge of the head's bounding box). Font metric of
-    /// Emmentaler, dumped from <c>NoteHead.stem-attachment</c> on LilyPond 2.24.4;
-    /// the value for a down stem is the negation. Black head (s2) 0.34147639,
-    /// half/open head (s1) 0.47524055.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/note-head.cc:150-196 get_stem_attachment;
-    /// scm/define-grobs.scm NoteHead.stem-attachment (ly:note-head::calc-stem-attachment).</remarks>
-    private const double BlackHeadStemAttachY = 0.34147639283381404;
-    private const double HalfHeadStemAttachY = 0.4752405486932206;
-
-    /// <summary>
     /// Where the stem MEETS THE HEAD, in staff positions (+up) — the head-side end of
     /// the stem's y-extent. Not the head centre: the stem attaches a fraction of the
     /// head height off centre (up-stem above, down-stem below).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc:934-963 internal_calc_stem_begin_position —
-    ///   <c>pos = head_position + head_height.linear_combination (stem_attachment_Y) * 2 / ss</c>.
-    /// The notehead's own bounding box (GlyphMetricsGenerated) supplies head_height;
-    /// staff space is 1 here. Verified on LilyPond 2.24.4: a G4 (position −2) up-stem
-    /// quarter begins at −1.6285 (LP dumps the Stem Y-extent as −1.627788), which makes
-    /// the note → bar-line stem correction 0.20102 against LilyPond's 0.200992 — the
-    /// prior head-centre approximation (−2.0) gave 0.214286.
+    /// LILYPOND-REF: lily/stem.cc:934-963 internal_calc_stem_begin_position — :950 takes the
+    ///   reference head's staff position, :954-959 add
+    ///   <c>head_height.linear_combination (y_attach) * 2 / ss</c>.
+    /// LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment — the OTHER half of the
+    ///   round trip: LilyPond NORMALISES the font's attachment point out of the FONT's box
+    ///   (<c>att = 2 (wxwy − centre) / length</c>, over
+    ///   <c>b = fm-&gt;get_indexed_char_dimensions (k)</c>), and stem.cc:954-959 puts it back
+    ///   through <c>head-&gt;extent (head, Y_AXIS)</c> — the GROB's extent.
+    /// <para>
+    /// ⚠️ THIS METHOD IS NOT A LINE-FOR-LINE PORT, and the licence for collapsing it is a
+    /// MEASUREMENT rather than an algebraic identity. LilyPond's two steps read TWO DIFFERENT
+    /// EXPRESSIONS for the head's box — the font's char dimensions on the way out, the grob's
+    /// Y-extent on the way back — and they cancel only when those two agree. For a plain
+    /// notehead they do, and that was measured, not assumed: probe
+    /// notehead-stem-attachment.ly dumps the grob extent as ±0.545 against the font table's
+    /// ±0.545, and the resulting stem-begin-position as the attachment point itself. So this
+    /// returns the attachment point directly. ⇒ IF A HEAD EVER GETS A STENCIL EXTENT THAT IS
+    /// NOT ITS FONT BOX (a styled head, a scaled stencil, a grob with a custom stencil), this
+    /// collapse stops being valid and the two steps have to be spelled out. Lily# has ONE box
+    /// per head today, which is why writing them out would read as a round trip to nowhere.
+    /// </para>
+    /// <para>
+    /// ✔ MEASURED ON THE LILYPOND THIS CORPUS USES (2.26.0), probe
+    /// notehead-stem-attachment.ly, session 85 — both heads, on the middle line where the head
+    /// position contributes nothing, and again one space lower as the falsifier:
+    /// <code>
+    ///                 stem-attachment       Y-extent   stem-begin-position
+    ///   black s2      0.341651376146789     ±0.545     −0.372400   (= 0.186200 × 2)
+    ///   half  s1      0.475229357798165     ±0.545     −0.518000   (= 0.259000 × 2)
+    ///   the same heads at staff position −2, stem down:  −0.6276 and −0.4820
+    ///                                                    (= −2 + the offset, to 15 digits)
+    /// </code>
+    /// ⚠️ THIS METHOD HELD TWO SPELLINGS OF THAT ONE QUANTITY UNTIL THE PROBE ABOVE. It kept
+    /// LilyPond's normalised attachment as a pair of constants (black 0.34147639283381404,
+    /// half 0.4752405486932206) and put them back through our own box, which gave 0.372209268
+    /// and 0.518012198 — near, and not the dumps. THE BOX WAS NEVER THE PROBLEM: ours is
+    /// ±0.545 and so is LilyPond's. The constants were, and their own doc comment said why —
+    /// they were "dumped on LilyPond 2.24.4", and 2.26.0 REBUILT Emmentaler. A number copied
+    /// out of one release and read against another font is stale in a way no arithmetic can
+    /// show; only asking the version in use can. Reading the font removes the vintage
+    /// entirely — there is now nothing here to go stale when the bundled font moves.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE <c>dir *</c> BELOW IS A SECOND DEPARTURE, and it is measured too. LilyPond does
+    /// not multiply by the direction: <c>get_stem_attachment</c> asks the font for a point PER
+    /// DIRECTION (<c>fm-&gt;attachment_point (key, dir)</c>) and negates only when that lookup
+    /// says <c>rotate</c> (note-head.cc:182-192), so a font is free to give a head a down
+    /// attachment that is not the mirror of its up one. Lily#'s extracted table holds the UP
+    /// point only, so a sign flip is all it CAN do. That it is the right answer for these two
+    /// heads was measured rather than assumed — the probe reads both directions:
+    /// <c>(1.0 . 0.341651376146789)</c> for the up stem against
+    /// <c>(−1.0 . −0.341651376146789)</c> for the down, and the begin positions come out
+    /// −2 + 0.3724 and 0 − 0.3724. ⇒ The limit is that it has been measured for
+    /// <c>noteheads.s1</c> and <c>s2</c> and nothing else; a head style whose font disagrees
+    /// would need the down point extracted.
+    /// </para>
+    /// <para>
+    /// A CUE HEAD THEREFORE NEEDS NO SPECIAL CASE, only its own font: design 13's attachment
+    /// is 0.150476, and at magstep(−4) that is LilyPond's 0.18958811988894286 (probe
+    /// voice-boundary-spacing.ly section E (3)). Scaling design 20's 0.3724 would have given
+    /// 0.234598 and been wrong — the head WIDTH is not a scale either.
+    /// </para>
     /// </remarks>
-    private static double StemBeginPosition(int headPosition, bool stemUp, int noteValue)
+    private static double StemBeginPosition(int headPosition, bool stemUp, int noteValue,
+        bool isCue = false)
     {
-        double attachY = (stemUp ? 1.0 : -1.0)
-            * (noteValue == 2 ? HalfHeadStemAttachY : BlackHeadStemAttachY);
-        var head = GlyphMetrics.GetNoteheadBBox(noteValue);
-        // Interval::linear_combination(w): w=−1 → Bottom, +1 → Top.
-        double lc = head.Bottom + (attachY + 1.0) / 2.0 * (head.Top - head.Bottom);
-        return headPosition + lc * 2.0; // * 2 / ss, ss = 1
+        var font = isCue ? EngravingDefaults.CueFont : GlyphMetrics.Design20;
+        int dir = stemUp ? 1 : -1;
+        return headPosition
+               + dir * GlyphMetrics.GetNoteheadStemAttachment(font, noteValue).Y * 2.0;
     }
 
     /// <summary>
     /// Unbeamed stem end in staff positions (+up), via the LilyPond stem-length
     /// rules (stem.cc internal_calc_stem_end_position).
     /// </summary>
-    private static double StemEndPosition(int attachPos, bool stemUp, int noteValue, int staffPosition)
+    private static double StemEndPosition(int attachPos, bool stemUp, int noteValue,
+        int staffPosition, bool isCue = false)
     {
         // StemCalculator works in the renderer's Y-down staff-space frame with
         // the staff middle at staffTopDown + 2; use middle = 0 → staffTopDown = −2.
         double attachY = -attachPos * 0.5;
         double endY = StemCalculator.CalculateStemEndY(
             attachY, stemUp, staffTopDown: -2.0,
-            StemCalculator.GetDurationLog(noteValue), staffPosition);
+            StemCalculator.GetDurationLog(noteValue), staffPosition,
+            isCue ? EngravingDefaults.CueStemDetails : null);
         return -endY * 2.0;
     }
 

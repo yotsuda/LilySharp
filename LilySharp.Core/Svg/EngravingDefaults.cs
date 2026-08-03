@@ -91,8 +91,16 @@ internal static class EngravingDefaults
     // LILYPOND-REF: scm/define-grobs.scm:3448 Stem (lengths . (3.5 3.5 3.5 4.25 5.0 ...)) —
     // the first three entries (whole/half/quarter) are 3.5, LP's ideal single-note stem.
     public const double IdealStemLength = 3.5;
-    // Conventional 5-half-space floor for a shortened stem (LP never lets a lone stem
-    // drop below this via the details minima); no single named LP constant.
+    // LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
+    // ⚠️ ITS FIRST CONSUMER IS GONE (session 85). It used to floor the UNBEAMED stem too, in
+    // StemCalculator.CalculateStemEndY, on the claim that "LP never lets a lone stem drop
+    // below this via the details minima" — but LilyPond bounds `length` nowhere in
+    // internal_calc_stem_end_position, and the floor never fired anyway (the shortest length
+    // the rule can produce is 3.5 − 1.0 = 2.5 exactly). It became live only when a
+    // length-fraction arrived, so it was deleted there; removing it moved no test, no
+    // snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
+    // different mechanism and has not been audited against LilyPond.
+    // LILYPOND-REF: lily/stem.cc:481-596 internal_calc_stem_end_position.
     public const double MinStemLength = 2.5;
     public const double DefaultStemLength = 3.5;
 
@@ -312,6 +320,43 @@ internal static class EngravingDefaults
     /// </remarks>
     internal static int CueDesignSize
         => Layout.EmmentalerDesignSize.ForFontSizeStep(CueFontSizeStep).Rounded;
+
+    /// <summary>
+    /// The stem parameters a CUE note is measured and drawn with: the ordinary
+    /// <see cref="Layout.StemDetails.Default"/> table with LilyPond's own
+    /// <c>length-fraction</c> for a cue on it. Nothing else about a stem scales — the table
+    /// entries, the shortening and the middle-line rule are all the plain ones.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice (at :429-444 in 2.26.0) declares
+    ///   <c>\override Stem.length-fraction = #(magstep -4)</c> — the SAME magstep the font
+    ///   size takes, which is why this reads <see cref="CueScale"/> rather than restating it.
+    ///   ⚠️ The line range is in prose for the reason <see cref="CueFontSizeStep"/> gives.
+    /// LILYPOND-REF: lily/stem.cc:557 <c>length *= length-fraction</c> — applied AFTER the
+    ///   unnatural-direction shortening at :519-555 and BEFORE the middle-line rule at
+    ///   :591-593, which is the order <see cref="Layout.StemCalculator.CalculateStemEndY"/>
+    ///   already runs in.
+    /// <para>
+    /// MEASURED, NOT READ OFF THE SOURCE (probe voice-boundary-spacing.ly section E, session
+    /// 84): a cue quarter on the middle line runs <c>6.666666666666667 × magstep(-4) =
+    /// 4.199736832982911</c> half-spaces, equal to LilyPond's dumped <c>length</c> as doubles.
+    /// The two notes OFF the middle line cannot show the law at all, because there the
+    /// middle-line rule is what sets the end — which is the trap this fraction walks into if
+    /// it is applied without that rule (cue stems would come out 0.59 half-spaces short on
+    /// exactly the register cues are written in).
+    /// </para>
+    /// <para>
+    /// ⚠️ FLAGGED CUES ARE NOT CLOSED BY THIS. An eighth's stem is lengthened to carry its
+    /// flag and the flag scales by its own font size, so the two terms are not one product:
+    /// the same probe reads 4.039985 where this fraction gives 4.252234. The fraction still
+    /// moves an eighth much nearer than full size did (6.750000); it is not exact, and the
+    /// flag term wants its own measurement. ⚠️ BEAMED cues are untouched: a beam's stems come
+    /// from <see cref="Layout.BeamScoringProblem"/>, whose <c>lengthFraction</c> only the
+    /// grace and tab callers pass today.
+    /// </para>
+    /// </remarks>
+    internal static readonly Layout.StemDetails CueStemDetails =
+        Layout.StemDetails.Default with { LengthFraction = CueScale };
 
     // Rest collision avoidance.
     // ⚠️ THESE FOUR REPORTED AS SOURCED UNTIL 2026-08-03 AND NEVER WERE. The provenance

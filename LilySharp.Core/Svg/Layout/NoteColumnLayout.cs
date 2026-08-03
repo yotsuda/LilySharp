@@ -57,6 +57,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// └────────────────────────────────────────┴───────────────────────────────────────┴───────────────────────────┘
 /// </para>
 /// <para>
+/// ⚠️ AND ONE MORE COLUMN IN THAT TABLE, added in session 85: the first two reads take the
+/// CUE <c>length-fraction</c> (<see cref="IsCue"/>) and the third does not. The reason is at
+/// <see cref="RendererStemLength"/> — its consumer is cue-blind for the HEAD as well, so the
+/// stem alone would be half a port. Named here because a table that showed three identical
+/// stem models would now be lying.
+/// </para>
+/// <para>
 /// Direction POLICY stays with the consumers: multi-voice forcing, the beam's
 /// direction override and each consumer's beam-member lookup differ by call site
 /// (staff-keyed vs voice-keyed maps, knee/cross-staff gates), so each caller
@@ -83,6 +90,19 @@ public readonly record struct NoteColumnLayout
     /// direction override are the CALLER's policy, applied before construction.</summary>
     public bool StemUp { get; init; }
 
+    /// <summary>
+    /// Whether this is a CUE column — its stem is drawn to LilyPond's cue
+    /// <c>length-fraction</c> (<see cref="EngravingDefaults.CueStemDetails"/>), so every read
+    /// below that ends on the drawn stem has to ask for the same one.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT REACHES THE STEM ONLY. The HEAD ink in the reads below is still the twenty
+    /// design's, for a cue as for anything else — a separate quantity with a separate defect,
+    /// and no point measures it yet. Scaling it here would be the half of a port that looks
+    /// like the whole of one.
+    /// </remarks>
+    public bool IsCue { get; init; }
+
     /// <summary>The quanted beam this column's stem ends on, or null when unbeamed.
     /// LILYPOND-REF: lily/stem.cc Stem::get_beam — a beamed stem ends at its beam.</summary>
     public BeamLayout? Beam { get; init; }
@@ -106,6 +126,7 @@ public readonly record struct NoteColumnLayout
             NoteValue = LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration),
             BaseDuration = n.BaseDuration,
             StemUp = forcedStemUp ?? n.StemUp,
+            IsCue = n.IsCue,
             Beam = beam,
             BeamStemX = beamStemX,
         },
@@ -116,6 +137,7 @@ public readonly record struct NoteColumnLayout
             NoteValue = LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration),
             BaseDuration = c.BaseDuration,
             StemUp = forcedStemUp ?? c.StemUp,
+            IsCue = c.IsCue,
             Beam = beam,
             BeamStemX = beamStemX,
         },
@@ -180,7 +202,7 @@ public readonly record struct NoteColumnLayout
         //   articulations read).
         return StemCalculator.CalculateStemEndY(
             noteY, StemUp, 0.0, StemCalculator.GetDurationLog(NoteValue),
-            HeadPositionToward(towardUp));
+            HeadPositionToward(towardUp), StemDetailsHere);
     }
 
     /// <summary>
@@ -224,9 +246,15 @@ public readonly record struct NoteColumnLayout
 
         int durLog = StemCalculator.GetDurationLog(denominator);
         double tipY = StemCalculator.CalculateStemEndY(
-            anchorY, StemUp, 0.0, durLog, anchorPosition);
+            anchorY, StemUp, 0.0, durLog, anchorPosition, StemDetailsHere);
         return Math.Abs(anchorY - tipY);
     }
+
+    /// <summary>The stem parameters THIS column's stem is drawn with — the cue
+    /// <c>length-fraction</c> for a cue column, the plain table otherwise. Null is
+    /// <see cref="StemDetails.Default"/> at the callee.</summary>
+    private StemDetails? StemDetailsHere
+        => IsCue ? EngravingDefaults.CueStemDetails : null;
 
     // SupportEdgeUp is GONE (2026-07-30, session 39). It was the SCALAR support edge —
     // the head's glyph ink extended to the drawn stem end when the stem pointed that way
@@ -250,6 +278,15 @@ public readonly record struct NoteColumnLayout
     /// <remarks>
     /// LILYPOND-REF: lily/stem.cc:506-557 internal_calc_stem_end_position via
     ///   <see cref="StemCalculator.CalculateStemLength"/>.
+    /// <para>
+    /// ⚠️ THIS READ DOES NOT TAKE THE CUE FRACTION the other two now take (session 85), and
+    /// the asymmetry is deliberate. Its one consumer is the VERTICAL skyline
+    /// (<c>SkylineBuilder.AddNoteBoxToSkylines</c>), which is cue-blind throughout — a cue's
+    /// HEAD box is seeded at full size there too. Shortening only the stem in a seed whose
+    /// head is still the twenty design's would be the half of a port that reads as the whole
+    /// of one, and the quantity it feeds (staff-to-staff distance) has no cue point. Static
+    /// for the reason above, so a cue column cannot reach it by accident either.
+    /// </para>
     /// </remarks>
     public static double RendererStemLength(bool stemUp, int noteValue, int headPosition)
         => StemCalculator.CalculateStemLength(

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using Xunit;
 
@@ -179,5 +180,92 @@ public class StemCalculatorTests
     public void GetDurationLog_ReturnsCorrectValues(int noteValue, int expectedLog)
     {
         Assert.Equal(expectedLog, StemCalculator.GetDurationLog(noteValue));
+    }
+
+    // ─── The cue stem's length, against LilyPond's own dumps ────────────────────────────
+    // The three tests below are the two halves of one law and its falsifier, measured off
+    // LilyPond 2.24.4 in audit/lp-geometry/probes/voice-boundary-spacing.ly section E
+    // (score CSL-CUE, `\override Stem.after-line-breaking` dumping stem-end-position and
+    // length). ⚠️ They are NOT arithmetic done here and asserted here: every expected number
+    // below appears in that probe's transcript. The ledger point cue.barline.prev.cue-head
+    // watches the same law through the SPACING; these watch it in the length itself, which is
+    // what the drawing reads.
+    // LILYPOND-REF: ly/engraver-init.ly CueVoice — \override Stem.length-fraction = #(magstep -4);
+    // LILYPOND-REF: lily/stem.cc:557 internal_calc_stem_end_position — the one line that reads
+    //   the length-fraction property, after the shortening and before the middle-line rule.
+
+    [Fact]
+    public void CalculateStemEndY_CueOnTheMiddleLine_IsTheShortenedLengthTimesTheFraction()
+    {
+        // ONLY a middle-line note can show the law: everywhere else the "reach the middle
+        // line" rule is what sets the end (see the next test). LilyPond dumps this stem's
+        // length as 4.199736832982911 half-spaces from the head's centre, which is
+        // 6.666666666666667 (= 7 − 1/3 of shortening) × magstep(−4) — equal AS DOUBLES.
+        const double staffTopDown = 0.0;
+        double middleDown = staffTopDown + 2.0;
+
+        double endY = StemCalculator.CalculateStemEndY(
+            middleDown, stemUp: false, staffTopDown,
+            durationLog: 2, staffPosition: 0,
+            EngravingDefaults.CueStemDetails);
+
+        // Half-spaces, the frame LilyPond reports `length` in.
+        double lengthHalfSpaces = (endY - middleDown) * 2.0;
+        Assert.Equal(4.199736832982911, lengthHalfSpaces, 12);
+
+        // ⚠️ AND THIS IS WHERE A FLOOR WOULD SHOW. In staff spaces the stem is
+        // 2.099868416491456, BELOW the 2.5 that CalculateStemEndY used to clamp to — a floor
+        // Lily# had invented and LilyPond does not have (stem.cc:481-596 bounds `length`
+        // nowhere). Full size it never fired, because the shortest length the rule can
+        // produce is 3.5 − 1.0 = 2.5 exactly; a length-fraction is what made it live, and it
+        // was deleted rather than scaled. If one is ever reintroduced, this assertion is what
+        // it will trip over.
+        Assert.True(lengthHalfSpaces / 2.0 < 2.5);
+
+        // ✔ VERIFIED TO GUARD, not assumed to: with the floor still in place and left
+        // unscaled, THIS test fails and cue.barline.prev.cue-head STAYS GREEN — the bar-line
+        // book's cue note is above the staff, where the middle-line rule sets the end and a
+        // floor is invisible. The ledger point cannot see the length law's floor behaviour at
+        // all; this is the observer that can.
+    }
+
+    [Fact]
+    public void CalculateStemEndY_CueAboveTheStaff_IsFlooredAtTheMiddleLine()
+    {
+        // g′′ (staff position +5), stem down. Scaled, the length alone would be
+        // 7 × magstep(−4) = 4.409723674632057 half-spaces and would stop at
+        // +0.590276325367943 — LilyPond stops it at 0.000000000000000, because a stem on a
+        // note outside the staff reaches the MIDDLE LINE (stem.cc:591-593). That rule is
+        // INACTIVE at full size (7 half-spaces already carries g′′ past the middle) and
+        // becomes active the moment the length is scaled, so a port that took the fraction
+        // and not the rule would be short by 0.59 half-spaces on the register cues live in.
+        const double staffTopDown = 0.0;
+        double middleDown = staffTopDown + 2.0;
+        double headDown = middleDown - 5 * 0.5;
+
+        double endY = StemCalculator.CalculateStemEndY(
+            headDown, stemUp: false, staffTopDown,
+            durationLog: 2, staffPosition: 5,
+            EngravingDefaults.CueStemDetails);
+
+        Assert.Equal(middleDown, endY, 12);
+    }
+
+    [Fact]
+    public void CalculateStemEndY_FullSizeAboveTheStaff_ClearsTheMiddleLine_TheFalsifier()
+    {
+        // The control for the test above, and the reason its floor is invisible at full size:
+        // the SAME note full size ends at −2.0 staff positions (LilyPond's CSL-CTL dump), a
+        // whole staff space PAST the middle line, so the floor never fires. If it were firing
+        // at full size too, the previous test would prove nothing about the fraction.
+        const double staffTopDown = 0.0;
+        double middleDown = staffTopDown + 2.0;
+        double headDown = middleDown - 5 * 0.5;
+
+        double endY = StemCalculator.CalculateStemEndY(
+            headDown, stemUp: false, staffTopDown,
+            durationLog: 2, staffPosition: 5);
+
+        Assert.Equal(middleDown + 1.0, endY, 12);
     }
 }

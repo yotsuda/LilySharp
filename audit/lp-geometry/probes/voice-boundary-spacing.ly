@@ -322,6 +322,30 @@ stemsweepB =
 %     own font size, so the two terms are not one product. NOT FITTED, NOT NAMED: this probe
 %     does not separate them, and the number 4.039985 must not be written down as if it were a
 %     law. ⇒ measure the flag term on its own before porting anything about eighths.
+%
+% (5) ✔ PORTED (2026-08-04, session 85), and (1) and (2) are BOTH in the port -- the fraction
+%     in EngravingDefaults.CueStemDetails, the middle-line rule already in
+%     StemCalculator.CalculateStemEndY, and Lily#'s own 2.5 floor underneath it made to ride
+%     the fraction so it does not clamp what the fraction just shortened. (3) went to
+%     SpacingRules.StemBeginPosition, which now asks EngravingDefaults.CueFont. The ledger
+%     point cue.barline.prev.cue-head closed from -0.071430911 to -0.000002340, the metrics
+%     table's rounding alone, exactly as it predicted; no other ledger point moved.
+%     ⚠️ THE EIGHTH ABOVE IS STILL OPEN -- the port gives it 4.252234 against LilyPond's
+%     4.039985, which is nearer than the 6.750000 it had and is not the law.
+%     ⚠️ AND ONE THING THIS SECTION GOT WRONG ABOUT ITSELF: (3) says stem-begin-position "does
+%     not scale", which is true of magstep and hid a second finding. The full-size number
+%     0.3724 in the table above is the FONT's own LILC attachment (0.186200 * 2), and Lily#'s
+%     full-size spelling was not that -- it normalised out of a box and gave
+%     0.372209268188857. Two spellings of one quantity, disagreeing by 0.000190731811143, and
+%     this probe's own dump said the font one was right (section D's full-stem extent 2.3138
+%     is exactly (5 - 0.3724)/2, so the two dumps agreed with each other and not with us).
+%     ✔ CHASED DOWN AND CLOSED IN THE SAME SESSION, in probe notehead-stem-attachment.ly: the
+%     box was never wrong (LilyPond's head extent is +-0.545, ours exactly), the two
+%     NORMALISED CONSTANTS were, because they had been dumped on 2.24.4 and 2.26.0 rebuilt
+%     Emmentaler. StemBeginPosition now reads the font and the constants are gone. Ledger
+%     point barline.next.down-stems-after-clef -- which had recorded 5.449e-06 and written
+%     "appeared with the 2.26.0 font" without being able to say which metric carried it --
+%     went EXACT.
 
 % ---------------------------------------------------------------------------------------
 % WHAT THIS FILE FOUND (2026-08-03, session 83)
