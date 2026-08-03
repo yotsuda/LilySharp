@@ -686,32 +686,59 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
-        double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var a in layout.ArpeggioLayouts)
         {
             // MeasureIndex -1 = direct unit-test construction: no page identity,
             // draw unconditionally.
             if (a.MeasureIndex >= 0 && !sysTopYUp.ContainsKey(a.MeasureIndex))
                 continue; // other page
-            // Native page Y-up: the staff middle's Y-up refpoint, plus the stored
-            // Y-up offsets (higher position = larger Y-up), through the ossia affine.
-            // topY is now the visually top (larger Y-up); the wave runs DOWNWARD from
-            // it. `length` is frame-invariant, so the half-wave count (floored on it)
-            // is unchanged.
+            // ⚠️ EVERYTHING BELOW IS PAGE Y-UP, IN STAFF SPACES, UP-POSITIVE — the frame the
+            // layout stores and the frame this renderer draws in. Nothing here converts to
+            // device: YFlipDrawingContext does that at the output boundary, so a larger
+            // number is HIGHER ON THE PAGE and stepping DOWN means SUBTRACTING. The names
+            // carry the frame (…YUp) because a bare `topY` reads as device and cost a sign
+            // error in the bracket's end ticks on 2026-08-03.
             double midYUp = os.StaffMiddleYUp(a.StaffIndex, a.MeasureIndex, StaffHeight);
-            double topY = os.YUp(midYUp + a.TopYUp, a.StaffIndex, a.MeasureIndex);
-            double bottomY = os.YUp(midYUp + a.BottomYUp, a.StaffIndex, a.MeasureIndex);
             // Non-arpeggiate: a straight vertical bracket with end ticks — the chord is NOT
-            // rolled. LILYPOND-REF: lily/arpeggio.cc:191-201 Chord_bracket::print — the ticks
-            // are `protrusion` wide and the line is line-thickness * thickness (both 1).
+            // rolled.
+            // LILYPOND-REF: lily/lookup.cc:542-560 Lookup::bracket — three round_filled_box
+            //   calls, which is what lily/arpeggio.cc:191-201 Chord_bracket::print hands the
+            //   interval to. Both of the things that were wrong here are in their bounds:
+            //   :546-547  the SPINE spans the interval and is `thick` wide about the origin.
+            //   :551-554  the TOP tick lies at (iv[UP] - thick .. iv[UP]) — INSIDE the
+            //             interval, so it adds no length — and spans
+            //             (-thick/2 .. thick/2 + protrusion), i.e. it starts at the spine's
+            //             LEFT edge, not at its centre, which is why the grob is
+            //             `thick + protrusion` wide.
+            //   :556-557  the BOTTOM tick, the same box at (iv[DOWN] .. iv[DOWN] + thick).
+            // Drawn as strokes rather than boxes: a butt-capped line of width `thick` centred
+            // on each box's midline covers exactly that box.
+            // ⚠️ LILYSHARP-OWN: THE CORNERS. LilyPond's boxes are round_filled_box(b, blot)
+            //   with blot = thick, so its corners are rounded; a stroked line's are square.
+            //   The EXTENTS are identical — which is why the ledger's three bracket points
+            //   close — and this engine has no blot anywhere, so the difference is a standing
+            //   convention rather than something chosen here. Naming it so the next reader does
+            //   not take "covers exactly that box" for "is that stencil".
             if (a.Bracket)
             {
-                double tick = os.Size(ArpeggioEngraver.BracketProtrusion, a.StaffIndex);
+                double topYUp = os.YUp(midYUp + a.TopYUp, a.StaffIndex, a.MeasureIndex);
+                double bottomYUp = os.YUp(midYUp + a.BottomYUp, a.StaffIndex, a.MeasureIndex);
+                double t = os.Size(ArpeggioEngraver.BracketThickness, a.StaffIndex);
+                double half = t / 2;
+                // The ticks span the grob's own X extent — the one place it is spelled.
+                double left = a.X + os.Size(ArpeggioEngraver.BracketXExtent.Left, a.StaffIndex);
+                double right = a.X + os.Size(ArpeggioEngraver.BracketXExtent.Right, a.StaffIndex);
                 using (gc.Source(a.SourcePosition))
                 {
-                    gc.DrawLine(a.X, topY, a.X, bottomY, Color.Black, thickness);
-                    gc.DrawLine(a.X, topY, a.X + tick, topY, Color.Black, thickness);
-                    gc.DrawLine(a.X, bottomY, a.X + tick, bottomY, Color.Black, thickness);
+                    gc.DrawLine(a.X, topYUp, a.X, bottomYUp, Color.Black, t);
+                    // The ticks lie INSIDE the interval, so each steps half a thickness AWAY
+                    // from its own end — down from the top (subtract, this being Y-up) and up
+                    // from the bottom. Signed the other way they land just outside and
+                    // lengthen the bracket by a whole thickness: 3.700000 where LilyPond
+                    // draws 3.500000, which is what audit/lp-geometry chordbracket.y.length
+                    // caught the first time this was written.
+                    gc.DrawLine(left, topYUp - half, right, topYUp - half, Color.Black, t);
+                    gc.DrawLine(left, bottomYUp + half, right, bottomYUp + half, Color.Black, t);
                 }
                 continue;
             }

@@ -500,8 +500,19 @@ public sealed partial class MeasureCollector
                         _pendingGrace = null;
                     }
                     bool hasArpeggio = HasArpeggioArticulation(chord);
+                    // @arpeggio(bracket) = non-arpeggiate (do NOT roll) — LilyPond's
+                    // \nonArpeggiato, a ChordBracket rather than an Arpeggio.
+                    // ⚠️ READ BEFORE THE ITEM IS BUILT, not after it is added: the SPACING
+                    // reads this off the ChordItem (ItemSkylineFactory.AddArpeggio), so a
+                    // bracket discovered only in time for the _arpeggios list is drawn with
+                    // no room reserved for it.
+                    bool arpBracket = chord.Articulations.Any(art =>
+                        art is MusicMarkSyntax { } am
+                        && am.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
                     bool isCue = _cueDepth > 0;
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                    if (arpBracket)
+                        chordItem = chordItem with { HasArpeggioBracket = true };
                     if (ExtractNoteheadStyle(chord) is var chStyle && chStyle != NoteheadStyle.Default)
                         chordItem = chordItem with { Notehead = chStyle };
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty)
@@ -516,11 +527,7 @@ public sealed partial class MeasureCollector
                     CollectFiguredBass(chord, measureIndex, itemIndex);
                     CollectChordNames(chord, measureIndex, itemIndex);
                     CollectCrossStaff(chord, measureIndex, itemIndex);
-                    // Collect arpeggio if present
-                    // @arpeggio(bracket) = non-arpeggiate (do NOT roll).
-                    bool arpBracket = chord.Articulations.Any(art =>
-                        art is MusicMarkSyntax { } am
-                        && am.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
+                    // Collect arpeggio if present (bracket or wiggle — see arpBracket above).
                     if ((hasArpeggio || arpBracket) && chordItem.Notes.Length > 0)
                     {
                         int minPos = chordItem.Notes.Min(n => n.StaffPosition);

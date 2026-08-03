@@ -1989,6 +1989,157 @@ internal sealed class RenderedGeometry
         return left - before.Max(h => h.X);
     }
 
+    /// <summary>
+    /// A stroked line's INK — the rectangle a butt-capped stroke covers, which is the segment
+    /// widened by half the stroke width along its NORMAL only.
+    /// </summary>
+    /// <remarks>
+    /// Stated once, here, because it is the whole content of the chord bracket's reading: a
+    /// butt cap does not extend the stroke along its own direction, so a tick drawn from
+    /// <c>x</c> to <c>x + 0.4</c> has ink exactly that wide, while the spine it crosses is
+    /// <c>x ± thickness/2</c>. Reading a round or square cap instead would hand the bracket
+    /// half a thickness at every end and hide precisely the divergence these points hold.
+    /// </remarks>
+    private static (double Left, double Right, double Top, double Bottom) StrokeInk(DrawnLine l)
+    {
+        double half = l.StrokeWidth / 2;
+        bool vertical = Math.Abs(l.X1 - l.X2) < 1e-9;
+        double x0 = Math.Min(l.X1, l.X2), x1 = Math.Max(l.X1, l.X2);
+        double y0 = Math.Min(l.Y1, l.Y2), y1 = Math.Max(l.Y1, l.Y2);
+        return vertical
+            ? (x0 - half, x1 + half, y0, y1)
+            : (x0, x1, y0 - half, y1 + half);
+    }
+
+    /// <summary>
+    /// The EXTENT of the page's one chord BRACKET — the square bracket a NON-arpeggiated chord
+    /// gets instead of a wiggle — as the union of the three strokes that draw it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ INK IS THE RIGHT READING HERE, unlike for the wiggle. LilyPond's bracket is not a
+    /// glyph but three <c>round_filled_box</c>es (lily/lookup.cc:542-560 <c>Lookup::bracket</c>:
+    /// a spine <c>thick</c> wide and a tick at each end), so the grob extents this is compared
+    /// against ARE those boxes and there is no designed box overshooting its ink.
+    /// </para>
+    /// <para>
+    /// The bracket is found by ITS OWN SHAPE, not by where it sits: a vertical stroke with
+    /// exactly two horizontal strokes that begin at its x and end at its two ends' y. Nothing
+    /// else on a page is that — a stem has no ticks, staff and ledger lines are horizontal, a
+    /// bar line is a filled rect rather than a line, a beam is a quad. ⚠️ A rule keyed on
+    /// "left of every notehead" would have read the first two books and thrown on the third,
+    /// where the bracket stands BETWEEN two chords; that is exactly the book the spacing
+    /// defect lives in, so the instrument must not depend on the bracket being leftmost.
+    /// </para>
+    /// </remarks>
+    private (double Left, double Right, double Top, double Bottom) ChordBracketExtent()
+    {
+        var horizontals = _page.Lines.Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9).ToList();
+        var found = new List<(DrawnLine Spine, DrawnLine A, DrawnLine B)>();
+        foreach (var spine in _page.Lines.Where(l => Math.Abs(l.X1 - l.X2) < 1e-9))
+        {
+            double top = Math.Min(spine.Y1, spine.Y2), bottom = Math.Max(spine.Y1, spine.Y2);
+            // A tick STRADDLES the spine's x rather than starting at it — LilyPond's runs from
+            // the spine's LEFT EDGE — and is short. The length bound is what keeps a staff or
+            // ledger line from qualifying if a bracket end happens to land on one. The y is
+            // matched to within one thickness of an end rather than exactly on it, because
+            // LilyPond's ticks lie INSIDE the interval (their midlines sit half a thickness
+            // in); a rule demanding equality would read only an engine that draws them
+            // centred on the ends, i.e. only the spelling this port replaced.
+            double reach = spine.StrokeWidth + 1e-9;
+            var ticks = horizontals
+                .Where(l => Math.Min(l.X1, l.X2) <= spine.X1 + 1e-9
+                            && Math.Max(l.X1, l.X2) >= spine.X1 - 1e-9
+                            && Math.Abs(l.X1 - l.X2) < 1.0
+                            && (Math.Abs(l.Y1 - top) <= reach || Math.Abs(l.Y1 - bottom) <= reach))
+                .ToList();
+            if (ticks.Count == 2)
+                found.Add((spine, ticks[0], ticks[1]));
+        }
+
+        if (found.Count != 1)
+            throw new InvalidOperationException(
+                $"the probe drew {found.Count} vertical strokes carrying two end ticks and this "
+                + "reading claims one chord bracket.\nDrawn geometry:\n" + Describe());
+
+        var ink = new[] { found[0].Spine, found[0].A, found[0].B }.Select(StrokeInk).ToList();
+        return (ink.Min(b => b.Left), ink.Max(b => b.Right),
+                ink.Min(b => b.Top), ink.Max(b => b.Bottom));
+    }
+
+    /// <summary>
+    /// How wide the chord bracket is — LilyPond's <c>ly:chord-bracket::width</c>
+    /// (lily/arpeggio.cc:216-225), which is the stencil's own X extent
+    /// <c>(-thick/2 . thick/2 + protrusion)</c> and therefore <b>wider than the protrusion</b>:
+    /// the tick starts at the spine's LEFT edge, not at its centre.
+    /// </summary>
+    public double ChordBracketWidth()
+    {
+        var ext = ChordBracketExtent();
+        return ext.Right - ext.Left;
+    }
+
+    /// <summary>
+    /// The chord bracket's ink RIGHT edge → the chord's leftmost notehead ink LEFT edge: the
+    /// ChordBracket's own <c>padding</c>, 0.5 (scm/define-grobs.scm:811-835 — its own entry,
+    /// not the Arpeggio's), since it too is placed by <c>side-position-interface</c> toward
+    /// <c>LEFT</c> on the X axis.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE CONTROL, NOT THE DIVERGENCE, and deliberately so. An engine that both
+    /// stands the bracket half a thickness too far right AND draws it half a thickness too
+    /// narrow on the left reads EXACT here, because the two cancel. That is why
+    /// <see cref="ChordBracketWidth"/> is read beside it: a placement point on its own cannot
+    /// see an error that moves the shape and its own edge together.
+    /// </remarks>
+    public double ChordBracketRightToNoteheadLeft()
+    {
+        var heads = Noteheads;
+        if (heads.Count == 0)
+            throw new InvalidOperationException(
+                "the probe drew no notehead for the chord bracket to stand left of."
+                + "\nDrawn geometry:\n" + Describe());
+        return heads.Min(h => h.X) - ChordBracketExtent().Right;
+    }
+
+    /// <summary>
+    /// How LONG the chord bracket is — <c>positions</c> widened 0.75 either side
+    /// (lily/arpeggio.cc:207-214), with NO half-space drop and NO quantising to whole glyphs.
+    /// </summary>
+    /// <remarks>
+    /// Read beside <see cref="ArpeggioLength"/> on the same chord: both grobs are handed the
+    /// same head interval and LilyPond answers 3.500000 here against the wiggle's 3.000000, so
+    /// the two readings together pin which end treatment each one gets. The end ticks lie
+    /// INSIDE the interval in LilyPond (lily/lookup.cc:551-557), so they add no length.
+    /// </remarks>
+    public double ChordBracketLength()
+    {
+        var ext = ChordBracketExtent();
+        return ext.Bottom - ext.Top;   // device Y runs down
+    }
+
+    /// <summary>
+    /// The nearest notehead ANCHOR to the LEFT of the chord bracket → the bracket's ink left:
+    /// how much room the column before it was given.
+    /// </summary>
+    /// <remarks>
+    /// The reading the bracket's own clearance cannot take, and the counterpart of
+    /// <see cref="PreviousHeadToArpeggio"/>. A bracket and the head it clears move together,
+    /// so <see cref="ChordBracketRightToNoteheadLeft"/> stays exact whether or not the spacing
+    /// ever reserved for the bracket; only a reading from the PREVIOUS column notices. Both
+    /// sides are drawn quantities — no glyph box enters it.
+    /// </remarks>
+    public double PreviousHeadToChordBracket()
+    {
+        double left = ChordBracketExtent().Left;
+        var before = Noteheads.Where(h => h.X < left - 1e-9).ToList();
+        if (before.Count == 0)
+            throw new InvalidOperationException(
+                "no notehead is drawn left of the chord bracket, so there is no previous "
+                + "column to measure from.\nDrawn geometry:\n" + Describe());
+        return left - before.Max(h => h.X);
+    }
+
     /// <summary>Filled quadrilaterals in drawing order — the beam lines.</summary>
     public IReadOnlyList<DrawnQuad> Quads => _page.Quads;
 
@@ -2296,21 +2447,69 @@ internal sealed class RenderedGeometry
                    .OrderBy(r => r.X).ToList();
 
     /// <summary>
-    /// The <paramref name="index"/>-th thin bar line, 0-based, left to right.
+    /// The thin strokes GROUPED INTO BAR LINES — a double bar is one bar line, not two.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYPOND REPORTS ONE GROB PER BAR LINE WHATEVER ITS GLYPH, so a reading that took
+    /// each drawn stroke as a bar line would not be comparing like with like: on a
+    /// <c>\bar "||"</c> it names the FIRST stroke where LilyPond's extent covers both, and
+    /// every distance measured off it is short by the kern plus a stroke. That is what
+    /// <c>courtesy.meter.barline-to-meter.double-bar-numeral</c> read as 1.240000 against
+    /// LilyPond's 0.750000 on its first run — the engine was exact (both engines draw the
+    /// pair 0.680000 wide) and the instrument was wrong.
+    /// <para>
+    /// The strokes of ONE bar line are separated by its <c>kern</c>: LilyPond's BarLine
+    /// declares <c>(kern . 3.0)</c> and <c>(segno-kern . 3.0)</c> in line-thickness units
+    /// (scm/define-grobs.scm:284,289), i.e. 0.300000 staff spaces, while two DIFFERENT bar
+    /// lines are a whole measure apart. Anything under one staff space is therefore the same
+    /// bar line, with room to spare on both sides.
+    /// </para>
+    /// </remarks>
+    private IReadOnlyList<DrawnRect> BarlineGroups()
+    {
+        var groups = new List<DrawnRect>();
+        foreach (var r in Barlines)
+        {
+            if (groups.Count > 0)
+            {
+                var last = groups[^1];
+                double gap = r.X - (last.X + last.Width);
+                if (gap < MaxBarlineStrokeGap)
+                {
+                    groups[^1] = last with { Width = r.X + r.Width - last.X };
+                    continue;
+                }
+            }
+            groups.Add(r);
+        }
+        return groups;
+    }
+
+    /// <summary>
+    /// The widest gap that still belongs to ONE bar line — see <see cref="BarlineGroups"/>.
+    /// </summary>
+    private const double MaxBarlineStrokeGap = 1.0;
+
+    /// <summary>
+    /// The <paramref name="index"/>-th bar line, 0-based, left to right.
     /// </summary>
     /// <remarks>
     /// Index 0 is the bar line between the FIRST and SECOND measures: Lily# draws no bar
-    /// line at a system start, so there is no opening one to skip past. (A final <c>|.</c>
-    /// contributes its thin half here and its thick half is filtered out by
-    /// <see cref="ThinBarlineMaxWidth"/>.)
+    /// line at a system start, so there is no opening one to skip past. A compound bar
+    /// (<c>||</c>, <c>|:</c>) is ONE entry here — see <see cref="BarlineGroups"/>.
+    /// ⚠️ A final <c>|.</c> still contributes only its thin half, because
+    /// <see cref="ThinBarlineMaxWidth"/> filters the thick one out before the grouping runs;
+    /// no point reads one today, and closing that wants the thick stroke identified rather
+    /// than excluded.
     /// </remarks>
     private DrawnRect Barline(int index)
     {
-        var bars = Barlines;
+        var bars = BarlineGroups();
         if (index < 0 || index >= bars.Count)
         {
             throw new InvalidOperationException(
-                $"wanted thin bar line #{index} but the probe drew {bars.Count}. "
+                $"wanted bar line #{index} but the probe drew {bars.Count} "
+                + $"(from {Barlines.Count} thin stroke(s); a compound bar counts once). "
                 + "Index 0 is the bar line between measures 1 and 2 — Lily# draws none at a "
                 + "system start.\nDrawn geometry:\n" + Describe());
         }

@@ -474,7 +474,14 @@ internal static class ItemSkylineFactory
     private static void AddArpeggio(List<ColumnPart> parts, ChordItem chord,
                                     double noteheadLeftX, double staffY, double[] headOffsets)
     {
-        if (!chord.HasArpeggio || chord.Notes.Length == 0)
+        // ⚠️ A BRACKET RESERVES TOO, and until 2026-08-03 this read only HasArpeggio — which
+        // MeasureCollector.HasArpeggioArticulation sets for a plain @arpeggio and not for
+        // @arpeggio(bracket) — so a bracketed chord returned here and was drawn with no room
+        // kept for it. LilyPond makes no such distinction: lily/arpeggio-engraver.cc:124-129
+        // acknowledge_note_column adds whichever of Arpeggio / ChordBracket / ChordSlur
+        // process_music built, blind to the type. Measured as audit/lp-geometry
+        // chordbracket.x.previous-head-to-bracket.compressed: 0.300000 of column pitch.
+        if ((!chord.HasArpeggio && !chord.HasArpeggioBracket) || chord.Notes.Length == 0)
             return;
 
         // Placed and sized by the SAME house the drawing goes through, so the two cannot
@@ -490,12 +497,37 @@ internal static class ItemSkylineFactory
         // wiggle was drawn ON the previous chord's notehead.
         double minHeadOffset = headOffsets.Length == 0 ? 0 : Math.Min(0, headOffsets.Min());
         double arpRight = noteheadLeftX + minHeadOffset - ArpeggioEngraver.Padding;
-        double arpLeft = arpRight - ArpeggioEngraver.WiggleWidth;
-        var (pileBottomYUp, copies) = ArpeggioEngraver.Pile(
-            chord.Notes.Min(n => n.StaffPosition), chord.Notes.Max(n => n.StaffPosition));
-        // Y-up -> device (down): the pile's TOP is the smaller device y.
-        double arpYBottom = staffY - (pileBottomYUp + copies * ArpeggioEngraver.WiggleHeight);
-        double arpYTop = staffY - pileBottomYUp;
+        int minPosition = chord.Notes.Min(n => n.StaffPosition);
+        int maxPosition = chord.Notes.Max(n => n.StaffPosition);
+
+        // The two grobs have different widths AND different lengths, so the reservation asks
+        // the same house the drawing does for whichever one this chord has: a wiggle is the
+        // scripts.arpeggio glyph stacked to a whole number of its own heights, a bracket is
+        // one shape thick + protrusion across and the head interval widened 0.75 either side.
+        //
+        // ⚠️ THIS IS THE FRAME BOUNDARY. ArpeggioEngraver answers in Y-UP staff spaces (up
+        // positive, from the staff middle) and the skyline runs DEVICE Y-DOWN, so every value
+        // crossing here is `staffY − yUp` and the two ends SWAP: the visually TOP end has the
+        // numerically SMALLER device y, which is what ColumnPart calls yBottom. Units are
+        // staff spaces on both sides; only the direction turns over. SharedRenderer, the other
+        // consumer, does NOT convert — it draws in Y-up and the output context flips.
+        double arpLeft;
+        double arpYBottom, arpYTop;
+        if (chord.HasArpeggioBracket)
+        {
+            arpLeft = arpRight - ArpeggioEngraver.BracketWidth;
+            var (bracketBottomYUp, bracketTopYUp) =
+                ArpeggioEngraver.BracketExtent(minPosition, maxPosition);
+            arpYBottom = staffY - bracketTopYUp;
+            arpYTop = staffY - bracketBottomYUp;
+        }
+        else
+        {
+            arpLeft = arpRight - ArpeggioEngraver.WiggleWidth;
+            var (pileBottomYUp, copies) = ArpeggioEngraver.Pile(minPosition, maxPosition);
+            arpYBottom = staffY - (pileBottomYUp + copies * ArpeggioEngraver.WiggleHeight);
+            arpYTop = staffY - pileBottomYUp;
+        }
 
         parts.Add(new ColumnPart(arpYBottom, arpYTop, arpLeft, arpRight,
                                  -SpacingRules.DefaultExtraSpacingWidth,

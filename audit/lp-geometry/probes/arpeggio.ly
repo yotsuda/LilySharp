@@ -51,16 +51,50 @@
 %% that reserved from the un-reversed column left is a whole head width short of it. Lily#
 %% drew that collision (the wiggle sat on the previous notehead) until 2026-08-03.
 %%
+%% ⚠️ ABK/ABW ARE THE SAME CHORD NOT ROLLED — a ChordBracket instead of the wiggle, and the
+%% pair AQ-against-ABK is what says which END TREATMENT each grob gets. Both ask the staff for
+%% the same head interval, positions = (-3 . -1):
+%%
+%%   lily/arpeggio.cc:145-151,180-183   the WIGGLE drops its DOWN end half a space and then
+%%                                      stacks WHOLE glyphs until they cover what is left.
+%%   lily/arpeggio.cc:207-214           the BRACKET widens positions by 0.75 EITHER side and
+%%                                      draws one shape — no drop, no quantising.
+%%   lily/lookup.cc:542-560 Lookup::bracket   three round_filled_boxes: a spine `thick` wide
+%%                                      centred on the grob's origin, and a tick at each end
+%%                                      lying INSIDE the Y interval (iv[UP]-thick .. iv[UP])
+%%                                      and running from the spine's LEFT edge to `protrusion`
+%%                                      past its RIGHT one. So the grob is `thick + protrusion`
+%%                                      wide and the ticks cost it no height.
+%%
+%% ⚠️ `\nonArpeggiato`, NOT `\arpeggioBracket`. They are different grobs: the first makes a
+%% ChordBracket (lily/arpeggio-engraver.cc:91-98,140), which is what Lily#'s `@arpeggio(bracket)`
+%% means; the second keeps an Arpeggio and re-dresses it. LilyPond's own docstring
+%% (ly/property-init.ly:103-104) prefers the first for a non-arpeggiated chord.
+%%
 %%   AQ   <c e g>4\arpeggio         BLACK heads
 %%   AW   <c e g>1\arpeggio         WHOLE heads
 %%   AR   <g a>4\arpeggio <b c'>4\arpeggio   the second chord is stem-DOWN, head reversed LEFT
+%%   ABK  <c e g>4\nonArpeggiato    AQ's chord as a BRACKET
+%%   ABW  <c e g>1\nonArpeggiato    the same bracket over WHOLE heads (head-blindness falsifier)
+%%   ABR  <c e g>4 <c e g>4\nonArpeggiato   the room the column BEFORE a bracket is given
+%%
+%% ⚠️ ABR IS THE READING THE OTHER BRACKET BOOKS CANNOT TAKE, and it is here for the same
+%% reason AR is: a grob measured only by its distance from its OWN support cannot show an
+%% error that moves the shape and that support together. What it watches is whether the
+%% SPACING reserved for the bracket at all — LilyPond adds the ChordBracket to the note
+%% column as a conditional item exactly as it adds an Arpeggio
+%% (lily/arpeggio-engraver.cc:124-129 acknowledge_note_column, which is blind to which of
+%% the three types was made).
 
-#(define ((dump-arpeggio tag) g)
+%% `what` names the GROB, because two different ones are read here: an Arpeggio (the wiggle)
+%% and a ChordBracket (the non-arpeggiated bracket). The reading is the same either way —
+%% grob extents on the system — so it is one dump with a label, not two.
+#(define ((dump-arpeggio tag what) g)
    (let* ((sys (ly:grob-system g))
           (x (ly:grob-extent g sys X))
           (y (ly:grob-extent g sys Y)))
-     (format #t "\nPROBE ~a ARPEGGIO x=(~,6f . ~,6f) width=~,6f y=(~,6f . ~,6f) length=~,6f\n"
-             tag
+     (format #t "\nPROBE ~a ~a x=(~,6f . ~,6f) width=~,6f y=(~,6f . ~,6f) length=~,6f\n"
+             tag what
              (car x) (cdr x) (- (cdr x) (car x))
              (car y) (cdr y) (- (cdr y) (car y))))
    '())
@@ -75,7 +109,14 @@
    '())
 
 probe = #(define-music-function (tag) (string?)
-           #{ \override Arpeggio.after-line-breaking = #(dump-arpeggio tag)
+           #{ \override Arpeggio.after-line-breaking = #(dump-arpeggio tag "ARPEGGIO")
+              \override NoteHead.after-line-breaking = #(dump-head tag) #})
+
+%% The bracket is a DIFFERENT GROB, so it needs its own override — a book with
+%% \nonArpeggiato has no Arpeggio in it at all, and `\probe` would print nothing rather
+%% than fail, which is the shape a silently empty measurement takes.
+probeBracket = #(define-music-function (tag) (string?)
+           #{ \override ChordBracket.after-line-breaking = #(dump-arpeggio tag "BRACKET")
               \override NoteHead.after-line-breaking = #(dump-head tag) #})
 
 \paper {
@@ -91,3 +132,15 @@ probe = #(define-music-function (tag) (string?)
 
 \score { \new Staff { \clef treble \time 4/4 \key c \major \probe "AR"
   \fixed c' { <g a>4\arpeggio <b c'>4\arpeggio r2 \bar "|." } } }
+
+\score { \new Staff { \clef treble \time 4/4 \key c \major \probeBracket "ABK"
+  \fixed c' { <c e g>4\nonArpeggiato r4 r2 \bar "|." } } }
+
+\score { \new Staff { \clef treble \time 4/4 \key c \major \probeBracket "ABW"
+  \fixed c' { <c e g>1\nonArpeggiato \bar "|." } } }
+
+\score { \new Staff { \clef treble \time 4/4 \key c \major \probeBracket "ABR"
+  \fixed c' { <c e g>4 <c e g>4\nonArpeggiato r2 \bar "|." } } }
+
+\score { \new Staff { \clef treble \time 4/4 \key c \major \probeBracket "ABT"
+  \fixed c' { <c e g>8 <c e g>8\nonArpeggiato r4 r2 \bar "|." } } }

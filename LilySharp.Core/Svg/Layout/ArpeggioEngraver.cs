@@ -22,10 +22,24 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Layout for a single arpeggio marking. Vertical coordinates are stored in the
 /// LilyPond-native <b>Y-up</b> frame (staff-spaces above THIS arpeggio's staff
-/// middle line, up-positive — frame B), and reflected to device Y only at draw
-/// time (device = middle − Y-up) against the staff middle the renderer resolves.
-/// X is in staff spaces as before.
+/// middle line, up-positive — frame B), resolved against the staff middle the renderer
+/// resolves. X is in staff spaces as before.
 /// </summary>
+/// <remarks>
+/// ⚠️ THE TWO CONSUMERS READ THIS IN OPPOSITE DIRECTIONS, so anything taking these values
+/// must say which frame it is in:
+/// <list type="bullet">
+/// <item><description><c>SharedRenderer.DrawArpeggios</c> STAYS IN Y-UP — it adds the staff
+/// middle's page Y-up and draws, and <c>YFlipDrawingContext</c> flips at the output boundary.
+/// A larger number is higher on the page.</description></item>
+/// <item><description><c>ItemSkylineFactory.AddArpeggio</c> CONVERTS TO DEVICE
+/// (<c>staffY − yUp</c>), because the skyline runs Y-down. A larger number is lower on the
+/// page, and <c>ColumnPart</c>'s <c>yBottom</c> is the numerically smaller one.</description></item>
+/// </list>
+/// Units are staff spaces on both sides; only the direction differs. The frame is named in
+/// each consumer rather than assumed — a bare <c>topY</c> in the Y-up drawer read as device
+/// and put the bracket's end ticks outside its interval on 2026-08-03.
+/// </remarks>
 public readonly record struct ArpeggioLayout(
     double X,
     double TopYUp,
@@ -169,11 +183,50 @@ internal static class ArpeggioEngraver
     // LILYPOND-REF: lily/arpeggio.cc:211 Chord_bracket::print — y_extent.widen (0.75).
     private const double BracketWiden = 0.75;
 
-    // LILYPOND-REF: scm/define-grobs.scm:811-833 chord-bracket-interface — the ChordBracket
-    // entry's (protrusion . 0.4), the width of
-    // the bracket's end ticks, handed to Lookup::bracket at lily/arpeggio.cc:198-200. The
-    // bracket's own X extent is that protrusion, so it is what side-position clears.
+    // LILYPOND-REF: scm/define-grobs.scm:811-835 chord-bracket-interface — the ChordBracket
+    // entry's (protrusion . 0.4), how far the bracket's end ticks reach PAST the spine,
+    // handed to Lookup::bracket as `width` at lily/arpeggio.cc:198-200.
     internal const double BracketProtrusion = 0.4;
+
+    /// <summary>
+    /// The bracket's line thickness — its spine's width, and the height of each end tick.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:194-196 Chord_bracket::print — <c>line-thickness</c> from
+    ///   the layout times the grob's own <c>thickness</c>, which scm/define-grobs.scm:811-835
+    ///   declares as <c>(thickness . 1)</c> for ChordBracket.
+    /// ⚠️ NOT <c>EngravingDefaults.StaffLineThickness</c>, which is the same number by way of
+    /// the StaffSymbol's own <c>thickness</c> of 1. Two grobs arriving at one value is not one
+    /// quantity, and spelling it through the staff would put a false address on it.
+    /// </remarks>
+    internal const double BracketThickness = 1.0 * EngravingDefaults.LineThickness;
+
+    /// <summary>
+    /// The bracket's own X extent about its ORIGIN — negative to the left. This is the one
+    /// fact the placement, the reservation and the drawing all read; none of them restates it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:216-225 <c>Chord_bracket::width</c> — the grob's X-extent
+    ///   (scm/define-grobs.scm:824) is its own stencil's, and
+    /// LILYPOND-REF: lily/lookup.cc:542-560 <c>Lookup::bracket</c> — that stencil is a spine
+    ///   spanning <c>(-thick/2 . thick/2)</c> (:546-547) plus end ticks spanning
+    ///   <c>oi = (-thick/2 . thick/2 + protrusion)</c> (:552). So the extent runs from the
+    ///   spine's LEFT edge to <c>protrusion</c> past its RIGHT one — WIDER THAN THE PROTRUSION,
+    ///   by half a thickness at each end for different reasons.
+    /// <para>
+    /// ⚠️ IT IS SPELLED ONCE ON PURPOSE. Until 2026-08-03 the placement subtracted the
+    /// protrusion alone, standing every bracket half a thickness too far right, and the drawing
+    /// dropped the same half thickness off the ink's left edge, so the two cancelled and the
+    /// clearance reading stayed EXACT while both were wrong. Three sites each doing their own
+    /// arithmetic on <c>thick</c> and <c>protrusion</c> is what let that happen; they now read
+    /// this, and a fourth site would too.
+    /// </para>
+    /// </remarks>
+    internal static (double Left, double Right) BracketXExtent
+        => (-BracketThickness / 2, BracketThickness / 2 + BracketProtrusion);
+
+    /// <summary>How wide the bracket is — the span of <see cref="BracketXExtent"/>.</summary>
+    internal static double BracketWidth => BracketXExtent.Right - BracketXExtent.Left;
 
     /// <summary>
     /// Calculates layout positions for all arpeggio items.
@@ -247,11 +300,13 @@ internal static class ArpeggioEngraver
             double arpeggioX = WiggleOriginX(columnLeftX);
             if (arp.Bracket)
             {
-                // A bracket is one drawn shape rather than a stack, with its own extent
-                // and its own width — see BracketExtent.
+                // A bracket is one drawn shape rather than a stack, with its own Y extent and
+                // its own X extent — see BracketExtent and BracketXExtent. The stored X is the
+                // grob's ORIGIN, and side-position clears the grob's EXTENT, so the origin
+                // stands back by that extent's RIGHT edge rather than by the protrusion.
                 (bottomYUp, topYUp) = BracketExtent(arp.MinStaffPosition, arp.MaxStaffPosition);
                 copies = 0;
-                arpeggioX = columnLeftX - Padding - BracketProtrusion;
+                arpeggioX = columnLeftX - Padding - BracketXExtent.Right;
             }
 
             layouts.Add(new ArpeggioLayout(

@@ -3516,6 +3516,118 @@ internal static class LpGeometryProbes
     private static readonly string AR =
         ArpeggioBook("<g a>4@arpeggio <b c'>4@arpeggio r2 |", "AR");
 
+    // ------------------------------------------------------------------------------
+    // ...AND THE SAME CHORD NOT ROLLED — a square BRACKET instead of the wiggle.
+    //
+    // ⚠️ THE PAIR IS AQ AGAINST ABK: the same bar, the same chord, ONE ANNOTATION APART. The
+    // two grobs ask their staff for the SAME head interval and LilyPond answers them
+    // differently, so the difference is the end treatment and nothing else:
+    //
+    //   wiggle   lily/arpeggio.cc:145-151,180-183   positions (-3 . -1), the DOWN end dropped
+    //                                               half a space, then whole `scripts.arpeggio`
+    //                                               copies stacked until they cover it —
+    //                                               2.5 wanted, 3.000000 drawn.
+    //   bracket  lily/arpeggio.cc:207-214           positions (-3 . -1) widened 0.75 EITHER
+    //                                               side and drawn as one shape — 3.500000,
+    //                                               with no half-space drop and no quantising.
+    //
+    // A reading of the bracket ALONE cannot say which of those two rules Lily# is applying,
+    // because either one can be made to fit one number by choosing a constant. Read beside
+    // AQ's 3.000000 they pin each other: an engine that quantised the bracket, or widened the
+    // wiggle, moves exactly one of the two.
+    //
+    // ⚠️ AND THE BRACKET IS A DRAWN SHAPE, NOT A GLYPH, so unlike the wiggle its ink IS its
+    // extent — LilyPond's stencil is three `round_filled_box`es (lily/lookup.cc:542-560
+    // Lookup::bracket) and the grob extents these books report are those boxes. Reading the
+    // union of Lily#'s stroke rectangles is therefore like for like here, and the ink/extent
+    // hazard that retired the wiggle's old instrument does not arise.
+
+    /// <summary>
+    /// A NON-ARPEGGIATED chord of black heads — AQ's chord with a bracket instead of a wiggle.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond draws this as a vertical spine <c>line-thickness</c> wide with a tick at each
+    /// end, and both of the numbers it reports are made of that thickness:
+    /// <c>ly:chord-bracket::width</c> (lily/arpeggio.cc:216-225) is the stencil's own X extent,
+    /// <c>(-thick/2 . thick/2 + protrusion)</c>, so the bracket is <b>thicker than its
+    /// protrusion</b> — 0.4 of tick plus 0.1 of spine. The Y extent is <c>positions</c> widened
+    /// 0.75 either side, with the two ticks drawn INSIDE it (:551-557 puts them at
+    /// <c>iv[UP] - thick .. iv[UP]</c> and <c>iv[DOWN] .. iv[DOWN] + thick</c>), so the ticks
+    /// cost the bracket no height at all.
+    /// <para>
+    /// ⚠️ Written <c>@arpeggio(bracket)</c> here and <c>\nonArpeggiato</c> in the twin — NOT
+    /// <c>\arpeggioBracket</c>. The two are different grobs: <c>\nonArpeggiato</c> makes a
+    /// ChordBracket (lily/arpeggio-engraver.cc:91-98,140), which is what this annotation means,
+    /// while <c>\arpeggioBracket</c> re-dresses an Arpeggio. LilyPond's own docstring
+    /// (ly/property-init.ly:103-104) prefers the former for exactly this reason.
+    /// </para>
+    /// <para>LilyPond twin: score ABK of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;c e g&gt;4\nonArpeggiato r4 r2 }</c>.</para>
+    /// </remarks>
+    private static readonly string ABK =
+        ArpeggioBook("<c e g>4@arpeggio(bracket) r4 r2 |", "ABK");
+
+    /// <summary>
+    /// The same bracket over WHOLE heads — the falsifier that keeps the reading head-blind.
+    /// </summary>
+    /// <remarks>
+    /// Nothing LilyPond answers about a bracket looks at the head SHAPE: <c>positions</c> comes
+    /// from <c>Stem::head_positions</c> (lily/arpeggio.cc:101-114), which is staff positions,
+    /// and the placement clears the column's ink by <c>padding</c> whatever is in it. So this
+    /// book and <see cref="ABK"/> must give LilyPond the SAME three numbers, and any spread
+    /// Lily# shows between them is Lily#'s own — the shape the half-head-width defect took in
+    /// AQ/AW, kept here so the bracket cannot acquire it unseen.
+    /// <para>LilyPond twin: score ABW of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;c e g&gt;1\nonArpeggiato }</c>.</para>
+    /// </remarks>
+    private static readonly string ABW =
+        ArpeggioBook("<c e g>1@arpeggio(bracket) |", "ABW");
+
+    /// <summary>
+    /// A plain chord and then the SAME chord bracketed — the room the column BEFORE a bracket
+    /// is given, which is the one thing <see cref="ABK"/> and <see cref="ABW"/> cannot see.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE OTHER BRACKET BOOKS MEASURE THE BRACKET FROM ITS OWN HEAD, so they stay exact
+    /// however far left the pair sits — the same blindness that let a wiggle be drawn on the
+    /// previous notehead until a user saw it. This book asks the other question: did the
+    /// SPACING reserve for the bracket at all.
+    /// <para>
+    /// LilyPond adds the ChordBracket to the note column as a conditional item exactly as it
+    /// adds an Arpeggio — lily/arpeggio-engraver.cc:124-129 <c>acknowledge_note_column</c> is
+    /// blind to which of the three types <c>process_music</c> made — so its column pitch here
+    /// (3.002245) contains the bracket's full 1.000000 of padding plus width. Lily# gates its
+    /// reservation on <c>ChordItem.HasArpeggio</c>, which <c>HasArpeggioArticulation</c> sets
+    /// only for a plain <c>@arpeggio</c> ArticulationSyntax, so a bracketed chord reserves
+    /// NOTHING and its column pitch is the plain one.
+    /// </para>
+    /// <para>LilyPond twin: score ABR of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;c e g&gt;4 &lt;c e g&gt;4\nonArpeggiato r2 }</c>.</para>
+    /// </remarks>
+    private static readonly string ABR =
+        ArpeggioBook("<c e g>4 <c e g>4@arpeggio(bracket) r2 |", "ABR");
+
+    /// <summary>
+    /// The same two chords as EIGHTHS, where the duration spring is short enough that the
+    /// bracket's own extent is what holds the columns apart — the book that actually binds the
+    /// reservation.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ABR DOES NOT BIND IT, which is why both books are here. At quarter-note spacing the
+    /// plain spring is already wider than the bracket needs, so ABR's column pitch comes out
+    /// the same in both engines whether or not anything was reserved, and all it re-reads is
+    /// the width defect from a second anchor. At eighth-note spacing LilyPond's spring is
+    /// compressed onto the rod: MEASURED, the previous chord's ink stops at 9.889200 and the
+    /// bracket begins at 10.389200, i.e. exactly <c>padding</c> away, so this reading is that
+    /// head's own width plus 0.5 — 1.804200, the same form the wiggle's previous-column point
+    /// takes. An engine that reserves nothing for the bracket has no such rod and lets the
+    /// column come closer.
+    /// <para>LilyPond twin: score ABT of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;c e g&gt;8 &lt;c e g&gt;8\nonArpeggiato r4 r2 }</c>.</para>
+    /// </remarks>
+    private static readonly string ABT =
+        ArpeggioBook("<c e g>8 <c e g>8@arpeggio(bracket) r4 r2 |", "ABT");
+
     /// <summary>
     /// A single tie whose scored endpoint CLEARS its own head box, so both ends recede to the
     /// head centres. LilyPond: 2.602245 wide.
@@ -4841,6 +4953,43 @@ internal static class LpGeometryProbes
         form main { A break B }
 
         score main "CMK" { staff m }
+        """;
+
+    /// <summary>
+    /// <see cref="CMT"/>'s gap with BOTH glyphs changed — a DOUBLE bar line at the break and a
+    /// NUMERAL meter (3/4) instead of the C that <c>\time 4/4</c> prints.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ CMT MEASURED 0.750000 ON ONE BOOK, and a constant measured once is a constant whose
+    /// texture-dependence is untested (HANDOFF §7.7). This is the second texture, and the
+    /// prediction was structural rather than empirical: LilyPond takes the space-alist off the
+    /// LEFT grob and keys it by the RIGHT grob's <c>break-align-symbol</c>
+    /// (lily/break-alignment-interface.cc:180-210), then places the next group at
+    /// <c>extents[idx][RIGHT] + distance − extents[next_idx][LEFT]</c> (:241-243) — so the
+    /// INK-TO-INK gap is exactly <c>distance</c> and both extents cancel.
+    /// <para>
+    /// MEASURED, and it did not move: the double bar's ink is 0.680000 wide against the single
+    /// bar's 0.190000 and the 3/4 numerals' extent is 1.604735 against the C's 1.700000, yet
+    /// bar ink right 31.288572 → meter 32.038572 is <b>0.750000</b> again. That is
+    /// <c>BarLine</c>'s own <c>(time-signature . (extra-space . 0.75))</c>
+    /// (scm/define-grobs.scm:293), which does not depend on either glyph.
+    /// </para>
+    /// <para>LilyPond twin: score CMT3 of audit/lp-geometry/probes/courtesy-meter.ly,
+    /// <c>\clef bass \key ees \major \time 2/4 r2 \bar "||" \break \time 3/4 d,2.</c>.</para>
+    /// </remarks>
+    private static readonly string CMT3 = """
+        octave absolute
+        time 2/4
+        key ees major
+
+        part m { clef bass }
+
+        section A { m { r2 || } }
+        section B { time 3/4 m { d,2. | } }
+
+        form main { A break B }
+
+        score main "CMT3" { staff m }
         """;
 
     /// <summary>
@@ -8293,6 +8442,31 @@ internal static class LpGeometryProbes
         // See probe AR.
         new("arpeggio.x.previous-head-to-wiggle", AR, g => g.PreviousHeadToArpeggio(1)),
 
+        // ...and the SAME CHORD NOT ROLLED. A bracket is one drawn shape rather than a stack
+        // of glyphs, so LilyPond gives it neither the wiggle's half-space drop nor its
+        // quantisation: read beside arpeggio.y.length's 3.000000 on the same chord, the
+        // bracket's 3.500000 says which end treatment each grob gets, which neither reading
+        // can say alone. The width is the one that catches the placement — LilyPond's tick
+        // runs from the SPINE'S LEFT EDGE, so the grob is thick + protrusion wide, while the
+        // clearance reads exact either way (see ChordBracketRightToNoteheadLeft). ABW is the
+        // head-blindness falsifier: LilyPond gives it and ABK the same three numbers.
+        new("chordbracket.x.width.black-heads", ABK, g => g.ChordBracketWidth()),
+        new("chordbracket.x.width.whole-heads", ABW, g => g.ChordBracketWidth()),
+        new("chordbracket.x.right-edge-to-head.black-heads", ABK,
+            g => g.ChordBracketRightToNoteheadLeft()),
+        new("chordbracket.x.right-edge-to-head.whole-heads", ABW,
+            g => g.ChordBracketRightToNoteheadLeft()),
+        new("chordbracket.y.length", ABK, g => g.ChordBracketLength()),
+
+        // ...and the room the column BEFORE a bracket is given, which none of the five above
+        // can see: they all measure the bracket from its own head, and a bracket that was
+        // never reserved for moves together with that head. This is the counterpart of
+        // arpeggio.x.previous-head-to-wiggle, and it is the third book in a row to need one.
+        new("chordbracket.x.previous-head-to-bracket", ABR,
+            g => g.PreviousHeadToChordBracket()),
+        new("chordbracket.x.previous-head-to-bracket.compressed", ABT,
+            g => g.PreviousHeadToChordBracket()),
+
         // ...and again, shaped so a BEAM over forced-down eighth notes is what binds it -- the
         // first ledger points that reach a beam. The beam is DRAWN by the quanter but Lily#'s
         // SkylineBuilder reserves each note's box with a FIXED 3.5 stem and ignores the
@@ -8544,6 +8718,13 @@ internal static class LpGeometryProbes
         // is what says a single "space after the bar line" constant cannot be right.
         new("courtesy.meter.barline-to-meter", CMT, g => g.BarlineRightToNextGlyph(0)),
         new("courtesy.meter.barline-to-cancellation", CMK, g => g.BarlineRightToNextGlyph(0)),
+        // ...and the same gap with BOTH glyphs changed, which is what says 0.750000 is the
+        // space-alist entry and not a net of this book's extents: the bar is DOUBLE (ink
+        // 0.680000 against 0.190000) and the meter NUMERAL (1.604735 against the C's
+        // 1.700000), and LilyPond answers 0.750000 to both books. A constant measured on one
+        // texture cannot tell a transcribed value from a coincidence of that book's widths.
+        new("courtesy.meter.barline-to-meter.double-bar-numeral", CMT3,
+            g => g.BarlineRightToNextGlyph(0)),
 
         // A CUE region's own metric. EngravingDefaults.CueScale = 0.66 is declared
         // LILYSHARP-OWN and is an invented rounding; these are what it has to be replaced by.

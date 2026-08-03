@@ -50,6 +50,20 @@ sweep =
 \score { \sweep "CMK" { \clef bass \key ees \major \time 2/4 r2 | \break \key a \major \time 4/4 d2 e | }
          \layout {} }
 
+% C. THE SAME GAP WITH BOTH GLYPHS CHANGED — a DOUBLE bar line at the break and a NUMERAL
+%    meter (3/4) rather than the C that \time 4/4 prints. CMT measured 0.750000 on one book
+%    only, and a constant measured once is a constant whose texture-dependence is untested.
+%    ⚠️ THE PREDICTION IS THAT IT DOES NOT MOVE, and it is structural rather than empirical:
+%    lily/break-alignment-interface.cc:180-210 takes the space-alist off the LEFT grob and
+%    keys it by the RIGHT grob's break-align-symbol, and :241-243 places the next group at
+%    `extents[idx][RIGHT] + distance - extents[next_idx][LEFT]` -- so the INK-TO-INK gap is
+%    exactly `distance` and BOTH extents cancel. BarLine's entry for time-signature is
+%    (extra-space . 0.75) at scm/define-grobs.scm:293, and a bar line's space-alist does not
+%    depend on its glyph. If this book prints anything but 0.750000, that reading is wrong.
+\score { \sweep "CMT3" { \clef bass \key ees \major \time 2/4 r2 \bar "||" \break
+                         \time 3/4 d,2. | }
+         \layout {} }
+
 % ---------------------------------------------------------------------------------------
 % WHAT THIS FILE FOUND (2026-08-02, session 75)
 %

@@ -1,0 +1,60 @@
+// A KEY change that lands at a line break — the END-OF-LINE COURTESY GROUP.
+//
+// LilyPond prints a changed signature on BOTH sides of a break: the real one in the new
+// system's prefix, and a COURTESY at the end of the line before it. KeySignature's
+// break-visibility is all-visible (scm/define-grobs.scm:1979 begin-of-line-visible for the
+// cancellation, and the key engraver's explicitKeySignatureVisibility for the signature), so
+// what stands at the old line's end is: cancellation, then the new key, then the new meter if
+// that changed too.
+//
+// ⚠️ WHY THIS FIXTURE EXISTS. Until 2026-08-03 NO fixture changed key across a break, so the
+// whole end-of-line courtesy KEY path had no snapshot at all — only one ledger point
+// (courtesy.meter.barline-to-cancellation) watched it. That was found the hard way: moving
+// SpacingRules.BarlineToCourtesyKey from an invented 0.8 to LilyPond's declared 1.0 changed
+// the drawing and not one snapshot moved. test/timesig-change-linebreak covers the METER side
+// of the same group; this covers the key, and the second break covers both together.
+//
+// The three gaps this pins, all of them BarLine's or the left grob's own space-alist entry
+// (lily/break-alignment-interface.cc:180-210 keys the LEFT grob's alist by the RIGHT grob's
+// break-align-symbol, and :241-243 makes the ink-to-ink gap exactly that entry):
+//   bar → cancellation   1.00   BarLine         (key-cancellation . (extra-space . 1.0))  :297
+//   cancellation → key   0.50   KeyCancellation (key-signature    . (extra-space . 0.5))  :1944
+//   key → meter          1.15   KeySignature    (time-signature   . (extra-space . 1.15)) :1989
+//
+// ⚠️ THE BREAKS ARE EXPLICIT, not left to the line breaker. A fixture that relied on wide
+// measures to fall in the right place would stop testing this the day a spacing constant
+// moved, and would do it silently.
+//
+// ✔ VERIFIED TO GUARD, not assumed to: putting BarlineToCourtesyKey back to 0.8 fails THIS
+// snapshot and no other (200 pass, 1 fails). A fixture that does not move when the constant
+// moves is the very hole this one fills, so the check is part of adding it.
+
+title "Key Change at Line Break"
+composer "Lily#"
+
+time 4/4
+key ees major
+
+part melody { clef treble }
+
+section Main {
+  melody {
+    // Line 1 ends with a courtesy CANCELLATION + the new key: three flats go, three sharps come.
+    g4 a b a |
+    break
+    key a major
+    // Line 2 ends with cancellation, key AND meter — the shape a real book has, and the only
+    // one that puts the 1.15 key→meter gap at a line END rather than in a system prefix.
+    b4 a g a |
+    break
+    key f major
+    time 3/4
+    a4 g f |
+  }
+}
+
+form main { Main }
+
+score main "key-change-linebreak" {
+  staff melody
+}

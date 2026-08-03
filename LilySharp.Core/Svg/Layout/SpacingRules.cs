@@ -531,33 +531,64 @@ internal static class SpacingRules
     /// </summary>
     /// <remarks>
     /// <para>
-    /// ⚠️ MEASURED AGAINST LILYPOND AND LEFT ALONE, because moving it is not this change:
-    /// LilyPond stands the cancellation <b>1.000000</b> past the barline's ink right edge
-    /// (2.26.0, bass staff, one break: barline 23.353507 ext 0..0.19, cancellation
-    /// 24.543507), so this is 0.200000 short. It is the value the key suffix has always
-    /// used and the key's ledger points are pinned to it (courtesy.meter.barline-to-cancellation
-    /// records the −0.2); a courtesy meter arriving beside it is no reason to move the key.
+    /// LilyPond stands the courtesy group <b>1.000000</b> past the bar line's ink right edge —
+    /// its BarLine declares that for <c>key-cancellation</c> (:297) and for
+    /// <c>key-signature</c> (:296) alike, so the number is the same whether the group opens
+    /// with a cancellation or straight with the new signature, and one constant covers both.
+    /// Measured (2.26.0, bass staff, one break): bar line 23.353507 ext 0..0.19, cancellation
+    /// 24.543507.
     /// </para>
     /// <para>
     /// ★ THE HOUSE FOR ALL THREE COURTESY GAPS' PROVENANCE — <see cref="BarlineToCourtesyTime"/>
     /// and <see cref="CourtesyKeyToTimeGap"/> point here rather than repeating the address,
     /// because one number wants one home and three copies rot separately.
-    /// LILYPOND-REF: lily/break-alignment-interface.cc:228-243 Break_alignment_interface::calc_positioning_done
-    ///   — the walk these three are the NET of. Each break-aligned group carries a space-alist
-    ///   entry (TimeSignature's is <c>(staff-bar . (extra-space . 1.0))</c> at
-    ///   scm/define-grobs.scm:3953) and :241-243 places the next group at
-    ///   <c>extents[idx][RIGHT] + distance - extents[next_idx][LEFT]</c>.
-    /// ⚠️ THE DECLARED ENTRY IS NOT THE PRINTED GAP — 1.0 is declared and 0.750000 is what
-    ///   comes out, because the walk runs on GROUP extents and the anchors
-    ///   (<c>break-align-anchor</c>) move it afterwards. So these constants are MEASURED NETS,
-    ///   not transcribed values, and citing them as the space-alist numbers would be a false
-    ///   citation. THIS IS THE DEBT (HANDOFF §7.6 ⒝): what it would take to make them literal
-    ///   is running the end-of-line group through <see cref="BreakAlignSpacing"/> the way the
-    ///   line-START prefix already goes — LilyPond has ONE break-align group at each end of a
-    ///   line, not a solver at one end and constants at the other. That port deletes all three.
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:180-210 Break_alignment_interface::calc_positioning_done
+    ///   — the alist is taken off the <b>LEFT</b> grob (:180-186) and keyed by the <b>RIGHT</b>
+    ///   grob's <c>break-align-symbol</c> (:195-210), and
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:241-243 Break_alignment_interface::calc_positioning_done
+    ///   — places the next group at
+    ///   <c>extents[idx][RIGHT] + distance - extents[next_idx][LEFT]</c>, so the INK-TO-INK gap
+    ///   is exactly <c>distance</c> and both extents cancel.
+    /// <para>
+    /// ⚠️ ALL THREE ARE TRANSCRIBED VALUES, and the entry to cite is the LEFT grob's:
+    /// LILYPOND-REF: scm/define-grobs.scm:260-312 bar-line-interface — BarLine's own space-alist,
+    ///   <c>(time-signature . (extra-space . 0.75))</c> at :293 and
+    ///   <c>(key-cancellation . (extra-space . 1.0))</c> at :297.
+    /// LILYPOND-REF: scm/define-grobs.scm:1930-1964 key-cancellation-interface — KeyCancellation's,
+    ///   <c>(key-signature . (extra-space . 0.5))</c> at :1944.
+    /// LILYPOND-REF: scm/define-grobs.scm:1972-2010 key-signature-interface — KeySignature's,
+    ///   <c>(time-signature . (extra-space . 1.15))</c> at :1989.
+    /// Each matches its printed gap exactly (0.750000 / 1.000000 / 0.500000 / 1.150000).
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS CORRECTS WHAT STOOD HERE UNTIL 2026-08-03, which said the declared entry was NOT
+    /// the printed gap — that 1.0 was declared and 0.750000 came out, so these were "measured
+    /// nets" that could not be cited to the alist. It cited <b>TimeSignature's</b>
+    /// <c>(staff-bar . (extra-space . 1.0))</c>, and that entry governs a TimeSignature on the
+    /// LEFT with a bar line on the right, which is the opposite walk. Cross-checked on a second
+    /// texture: audit/lp-geometry <c>courtesy.meter.barline-to-meter.double-bar-numeral</c>
+    /// changes both glyphs (double bar, numeral meter) and LilyPond answers 0.750000 again.
+    /// </para>
+    /// <para>
+    /// ⇒ ★ WAS 0.8 UNTIL 2026-08-03, an invented number that held
+    /// <c>courtesy.meter.barline-to-cancellation</c> open at −0.2 — the whole of that residual.
+    /// Finding the right alist is what turned it from a measurement into an address, and the
+    /// port is this literal. ⚠️ IT MOVES BOTH SIDES AT ONCE BY CONSTRUCTION:
+    /// <see cref="KeyCourtesySuffixWidth"/> RESERVES the room off this same constant and
+    /// SharedRenderer DRAWS off it, so there is no way to move one without the other — which
+    /// is why it is one constant and not two. (Had they been two, this edit would have pushed
+    /// the signature off the reserved room, the shape §7.7 keeps naming.)
+    /// </para>
+    /// <para>
+    /// The standing debt (HANDOFF §7.6 ⒝) is unchanged in shape but smaller than it looked:
+    /// running the end-of-line group through <see cref="BreakAlignSpacing"/> the way the
+    /// line-START prefix already goes deletes all three constants, because LilyPond has ONE
+    /// break-align group at each end of a line rather than a solver at one end and constants at
+    /// the other. Until that port lands these three are at least LITERAL — alist entries, not
+    /// nets — which is what they were not before.
     /// </para>
     /// </remarks>
-    internal const double BarlineToCourtesyKey = 0.8;
+    internal const double BarlineToCourtesyKey = 1.0;
 
     /// <summary>
     /// The final barline's right edge → a courtesy METER standing there ALONE, i.e. when the

@@ -524,6 +524,14 @@ public class SvgSnapshotTests
         // system-start prefix (clef, key, time) instead of hanging far right of
         // the first note, and the key signature is reprinted at the system head.
         yield return new object[] { "test/timesig-change-linebreak" };
+        // ...and the KEY half of the same group, which nothing covered until 2026-08-03:
+        // a changed signature prints on BOTH sides of a break, so the line BEFORE one
+        // carries a courtesy cancellation + new key (and the new meter after them when that
+        // changed too). Moving SpacingRules.BarlineToCourtesyKey from an invented 0.8 to
+        // LilyPond's declared 1.0 changed that drawing and not one snapshot moved, which is
+        // how the hole was found. Both breaks are explicit, so a spacing change cannot
+        // silently stop the fixture from testing what it is for.
+        yield return new object[] { "test/key-change-linebreak" };
         // Part-option transpose: pitches re-spelled (c->d), key signature moved
         // (c major -> D major), in-key accidentals suppressed and an out-of-key
         // one (cis -> dis) kept. Verified against LilyPond \transpose c d.

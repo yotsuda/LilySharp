@@ -58,9 +58,144 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 2026-08-03（第79セッション＝**引継ぎが名指した島を、名指されたとおり
-コード変更ゼロで開いた。予測は 3 本とも 9 桁で当たり、対の開きは 0.328900000 ちょうど。
-そして同じプローブから 3 つ目の欠陥が落ちてきた——`protrusion` は波線の性質ではない**）。
+最終更新 2026-08-03（第80セッション＝**「記録された理由」を 2 回とも実測が倒した。
+⑴「双子に出せない」——LP には前置の要らない綴りがあった。⑵「これは measured net で
+space-alist に帰属できない」——読んでいた alist が違った。どちらも 10〜20 分で覆り、
+どちらも次の一手を変えた**）。
+
+**5 つの仕事・commit は 1 つ**（**`git show d7f537f2..` で引ける**——`d7f537f2` は第79セッションの
+最後＝この作業の親。**引継ぎに自分の commit のハッシュは書けない**——書くと必ず、もう存在しない
+ものを指す。⚠️ **この行は 3 度書き換わった**: 「1 commit」→「5 commit」→ squash して再び 1 つ。
+**§0 のとおり、数は毎回引き直すこと**）:
+```
+A bracket の島          @arpeggio(bracket) を双子に出し、開いて、閉じた   台帳 +7・出力不変
+B courtesy 2 冊目       0.75 に texture 違いの本。出所が偽だと判明        台帳 +1・出力不変
+C courtesy の移植       BarlineToCourtesyKey 0.8 → 1.0（**承認済**）      −0.2 が閉じた
+D fixture               key-change-linebreak（**被覆の穴を塞いだ**）      snapshot +1
+E 自己監査              extent を 1 か所に・blot を LILYSHARP-OWN         数値不変
+```
+**A の内訳**（島 1 つを開けて閉じた形の記録として残す）:
+```
+⑴ @arpeggio(bracket) を双子に出す   `\nonArpeggiato` 1 行            出力不変
+⑵ bracket の島を開く                probe 4 冊 ＋ 計器 ＋ 台帳 7 点   出力不変・テスト +7
+⑶ 幅と配置の移植                    thick/2 の項                     ★ 対で同時に動く
+⑷ 端ツメを区間の内側へ              Lookup::bracket の箱             ★ 符号を 1 度間違えた
+⑸ 予約を bracket にも                HasArpeggioBracket               0.300000 の列ピッチ
+⑹ 座標系の名前に枠を入れる          ユーザー指摘                     Y-up と device の境界
+```
+
+★★★ **① 「書けない」と書いてあった理由が偽だった。** `EmitMark` のコメントは
+「LP は `\arpeggioBracket` ＝**描画を変える override 2 本**なので prefix と suffix の両側が要る。
+だから双子に出せない」と書いていた。**それは `\arpeggioBracket` については正しい**。
+だが **LP には「見た目」ではなく「物」の綴りが別にある**——`\nonArpeggiato` は
+**ただの後置イベント**（`scm/define-music-types.scm:436-441` の syntax が `note-\nonArpeggiato`）で、
+`arpeggio-engraver.cc:91-98,132-148` は**それを見て ChordBracket を作る**。
+**`\arpeggioBracket` は Arpeggio grob に bracket の stencil を着せるだけで、grob が違う。**
+⇒ ★★ **LP 自身の docstring が先に言っていた**（`property-init.ly:103-104`
+「非アルペジオの bracket には `\arpeggio` を化粧するより `\nonArpeggiato` のほうがよい」）。
+⇒ ★★★ **教訓**: **「出せない」という記録は、*その綴りでは*出せないという意味しか持たない。
+LP に同じ grob へ至る別の綴りが無いかを、諦める前に 1 度だけ引くこと**（10 分で覆った）。
+
+★★★ **② 双子に出た最初の版は「compile は通るが別の音楽」だった**——`SplitAttachments` は
+**MusicMark を全部 prefix に送る**ので `\nonArpeggiato <c e g>4` になった。**`\mark` は前置の
+独立した音楽・`\nonArpeggiato` は後置イベント**で、前置に置くと LP は unattached post-event として
+**警告つきで捨てる**。⇒ **memory の「`lysc ly` の warning は必ず読む」の一段深い版**:
+**warning が出ないのに別物**という形があり、**双子の .ly を目で読む**しか捕まえられない。
+
+★★★ **③ 予測は LP のソースだけから 3 本立てて 3 本とも当たった**（測定前に `why` へ）:
+```
+幅    thick(0.1) ＋ protrusion(0.4)          → LP 0.500000  Lily# 0.450000
+長さ  positions を 0.75 ずつ広げるだけ        → LP 3.500000  Lily# 3.600000
+隙間  padding                                → LP 0.500000  Lily# 0.500000（**EXACT＝対照**）
+```
+★★ **③′ ABK/ABW（4分/全音符）は LP が完全な恒等**——x も y も 6 桁一致
+（`(7.785000 . 8.285000)` × `(-7.526000 . -4.026000)`）。**符頭幅 1.304200 と 1.962000 に対して不動**。
+
+★★★ **④ 隙間が EXACT なのは「合っている」からではない。2 つの誤りが打ち消していた。**
+**原点が thick/2 だけ右**（side-position が clear するのは grob の**extent**＝`thick/2 + protrusion`
+なのに protrusion だけ引いていた）**・ink の左端が thick/2 だけ内側**（ツメを**背骨の中心**から
+描いていた。LP は**背骨の左縁**から）。**右縁だけは正しい位置に落ちる。**
+⇒ ★★ **第79セッションの ⑫ の別形**: あれは「支持体ごと動く」だったが、**これは
+「同じ grob の中で 2 つの符号違いが相殺する」**。**幅の点を隣に置いて初めて名前が付いた。**
+
+★★★ **⑤ 移植の最初の版は点を*悪化*させた（3.600000 → 3.700000）。座標系の取り違え。**
+`SharedRenderer` は **page Y-up のまま描き**、`YFlipDrawingContext` が**出口で 1 回だけ**反転する。
+なのにローカルが `topY` / `bottomY` という**枠を言わない名前**で、私は device（下向き）と読んで
+**ツメを区間の外に出した**。⇒ ★★★ **点が無ければ出荷していた**——幅は EXACT になっていたので
+「移植は当たった」と書けてしまう。**「対の片方だけ良くなった」を疑うこと。**
+⇒ ★★ **ユーザー指摘で座標系を揃えた**（⑹）: **ローカル名に枠を入れ**（`topYUp`）、
+`ArpeggioLayout` の**古い doc を訂正**（「draw time に device へ反射する」は**もう嘘**）、
+**`ItemSkylineFactory` の側に「ここが枠の境界」と書いた**。⚠️ **単位は両側とも staff space。
+違うのは向きだけで、`ColumnPart.yBottom` は device の*小さいほう*＝視覚的に上**。
+
+★★★ **⑥ 3 つ目の欠陥は予約だった——draw/reserve 分裂の 3 例目。**
+`ItemSkylineFactory.AddArpeggio` は `chord.HasArpeggio` で門を作っていて、
+`HasArpeggioArticulation` は**素の `@arpeggio`（ArticulationSyntax）しか見ない**。
+`@arpeggio(bracket)` は **MusicMarkSyntax** なので**門で弾かれ、bracket は描かれるのに部屋が無い**。
+LP は区別しない（`arpeggio-engraver.cc:124-129` の acknowledge は**型を見ない**）。
+⇒ **`ChordItem.HasArpeggioBracket` を足し、collector が*item を作る前に*立て、予約は
+bracket 自身の箱**（`thick + protrusion` × `widen(0.75)`）**を取る。**
+
+★★★ **⑦ そして「前の列から測る点」は*それだけでは falsifier にならなかった*。**
+4分音符の対（ABR）を先に作ったが、**LP と Lily# の列ピッチが 3.002245 で完全一致**——
+**duration のばねが bracket の要求より最初から広く、ロッドが binding しない**。
+**残差 +0.05 は幅の欠陥を別のアンカーから読み直しただけ**だった（**予測は符号ごと外した**）。
+⇒ **8分にして初めて binding した**（ABT）: **LP は前の ink をちょうど padding の位置に落とし**、
+読みは `1.804200`（＝前の符頭幅 1.304200 ＋ 0.5）＝**波線の同名点と同じ数**。
+**Lily# は 1.554200000＝列ピッチが 0.300000 短い。**
+⇒ ★★★ **一般則（第79セッションの ⑵ を修正する）**: **「前の列から測る」は必要だが十分ではない。
+*予約*を見たいなら、その予約が列を押し広げているほど詰んだ本で測ること。**
+**緩い本は、予約がゼロでも両エンジン一致で通る。** ABR は**その対照として残した**。
+
+**未 push**（⚠️ **足し算しない。`git rev-list --count origin/master..master` で毎回数え直す**。
+第79セッション開始時は 10 で、**この commit を含めて 11 になるはず**だが、
+**origin がセッション外で動く**ので必ず引き直すこと。⚠️ **私は push していない**）・
+テスト **3946 passed / 0 failed / 4 skipped**（**+9＝台帳 8 点**＝bracket 7 ＋ courtesy 1、
+**＋snapshot 1 枚**＝`test/key-change-linebreak`）・台帳 **447 点**
+（**ss 非ゼロ 83・総和 4.243620921**／**count 点 106・うち非ゼロ 2**）。
+★ **非ゼロが 84 → 83・総和が ちょうど −0.2 なのは ⑨ の 1 点**（`BarlineToCourtesyKey` 0.8 → 1.0）。
+★★ **非ゼロが 83 → 84・総和が +0.000000001 だけ増えたのは「悪化」ではない**——
+`chordbracket.x.previous-head-to-bracket` が **−0.000000001**（9 桁 EXACT だが 0 ではない）。
+**第78セッションの `tie.width.seconds.upper` と同じ数え方**（§0）。
+★★★ **snapshot は 1 枚も動いていない・fixture も corpus も 1 冊も `@arpeggio(bracket)` を
+使っていない**⇒ **出荷済みの出力に対してこの移植は不変**。**承認ゲートは踏んでいない。**
+⚠️ **これは「byte 不変を構成にした」のではない**（CLAUDE.md の禁止）——**結果**である。
+**観測者が新しい 4 冊の probe 本の中にしか居ない**というだけで、除外も分岐も入れていない。
+★ **perf は測っていない**（§7.9 の「足していない例」）——**bracket を持つ本が corpus にゼロ**なので
+測る対象が無い。**pass も走査も確保も増えていない**（`AddArpeggio` の分岐 1 つ）。
+
+### 同じセッションの 2 件目＝**行末 courtesy の 0.75 に 2 冊目**（▶ の「安い」を消化）
+
+★★★ **⑧ 「安い」札は正しかったが、出てきたものは 3 つあった。**
+⑴ **0.75 は texture を変えても動かない**（複縦線＋数字の 3/4 で 0.750000）＝**債務は解消**。
+⑵ **1 発目の 1.240000 は計器**——`RenderedGeometry` が**複縦線を 2 本の小節線と数えていた**。
+**両エンジンとも 0.680000 で描いている**＝engine は最初から EXACT。**kern 未満をまとめて修正**（他の点は不動）。
+⑶ ★★★ **記録されていた出所そのものが偽だった**——「宣言値は印字値ではない／これらは measured net だ」は
+**alist を左の grob から取る**ことを見落としていた（詳細は ▶）。**4 本とも宣言値ちょうど**で、
+**`courtesy.meter.barline-to-cancellation` の −0.2 は「Lily# 0.8 対 LP 宣言 1.0」と名前が付いた**。
+⇒ ★★ **これで第80セッションは「記録された理由が偽だった」を 2 件踏んだ**（bracket の「双子に出せない」・
+courtesy の「measured net」）。**どちらも 10〜20 分の裏取りで覆り、どちらも次の一手を変えた。**
+
+### 3 件目＝**`BarlineToCourtesyKey` 0.8 → 1.0**（**ユーザー承認のうえ移植**）
+
+★★★ **⑨ 住所が付いた翌手で閉じた。** `courtesy.meter.barline-to-cancellation` **−0.2 → EXACT**。
+**台帳の ss 非ゼロ 84 → 83・総和 4.443620921 → 4.243620921**（**ちょうど 0.2 減**）。
+★★ **台帳の古い `why` は「0.8 を 1.0 にして閉じるな、予約が同じ定数を読む」と警告していた**が、
+**それは*守るべき条件*であって*禁止*ではなかった**——**定数が 1 本で予約も描画もそれを読む**ので、
+**予約幅が描画の移動量ちょうど 0.200000 だけ一緒に広がる**。**確認したうえで移植した。**
+⚠️⚠️ ★★★ **snapshot が 1 枚も動かなかったことは「安全の証拠」ではなく「被覆の穴の証拠」**——
+**corpus に改行をまたいで調号が変わる本が 1 冊も無かった**。**この定数の観測者は台帳 1 点だけだった。**
+
+### 4 件目＝**その穴を塞いだ**（`test/key-change-linebreak`）
+
+★★★ **⑩ 「動かなかった」を報告で終わらせず fixture にした。** 行末に**取消記号＋新しい調号**、
+2 つ目の改行で**取消＋調号＋拍子**（＝`1.15` の key→meter を*行末*に置く唯一の本）。**break は明示**。
+★★★ **⑪ fixture が本当に守るかを*測って*確かめた**——**定数を 0.8 に戻すとこの 1 枚だけが落ちる**
+（**200 pass / 1 fail**）。⇒ ★★ **「動かない fixture を足す」のは埋めようとした穴そのもの**なので、
+**この falsification は追加作業ではなく追加の一部**。
+⚠️ **`.lys` の本文（コメント含む）を触ると `data-pos` が全部ずれて snapshot が落ちる**＝**再 approve 必須**。
+
+## 以下は第79セッションの経緯（**波線の島**。bracket は上の第80セッションで閉じた）
 
 **開けて・道具を入れて・閉じて・ユーザーに 1 つ見つけてもらって閉じた**
 （**1 セッションで §5.0 の 1〜4 番を一周し、4 番＝「対の食い違いが第2の欠陥を出す」は
@@ -181,39 +316,86 @@ extent＝ink の止まるところ**だから。⚠️ **中心線で比べる�
 
 ## ▶ 次の一手
 
-✅ **arpeggio の島は閉じた**（6 点 EXACT）。**残っているのは次の 3 つだけ**:
-★ **⒜ `@arpeggio.bracket` の綴りは字面移植したが観測者ゼロ**（⑩）。**双子に出せるようにするのが
-先**（`EmitMark` が落としている理由は同メソッドのコメント）。**出せたら点は 2 つで足りる**
-（縦 extent＝`widen(0.75)`・ツメ 0.4）。
+✅ **arpeggio の島も bracket の島も閉じた**（波線 6 点・bracket 7 点、全部 EXACT）。
+**残っているのは次の 3 つだけ**:
 ★ **⒝ 上向き/下向き矢印**（`\arpeggioArrowUp` 等）は**未実装**。LP は `scripts.arpeggio.arrow.1` /
 `.M1` を積み上げの端に足し、**その分 heads を縮める**（`arpeggio.cc:171-178`）。
-**グリフは抽出していない**（今回入れたのは `scripts.arpeggio` 1 つだけ）。
-★ **⒞ 波線は今も「1 グリフ 1 空間」で積むだけ**——LP と同じだが、**cross-staff の arpeggio
-（`ly:arpeggio::calc-cross-staff`）は両者とも未確認**。fixture が無い。
+**グリフは抽出していない**（入れたのは `scripts.arpeggio` 1 つだけ）。
+★ **⒞ cross-staff の arpeggio**（`ly:arpeggio::calc-cross-staff`）は**両者とも未確認**。fixture が無い。
+★★ **⒟ 3 つ目の型 ChordSlur が丸ごと無い**（**第80セッションで見えるようになった**）。
+LP の `Arpeggio_engraver` は **Arpeggio / ChordBracket / ChordSlur の 3 型**を作り
+（`arpeggio-engraver.cc:132-148`）、`\chordSlur`（＝`ChordSlurEvent`）は**縦のスラー**
+（`arpeggio.cc:227-` `Chord_slur::print`）。**Lily# には型も注釈も無い。**
+⚠️ **やるなら bracket と同じ順で**——**注釈 → exporter（後置イベント）→ probe → 点 → 移植**。
+**bracket は `@arpeggio(bracket)` が既にあったので exporter だけで双子に乗った**が、
+**`\chordSlur` は注釈から要る**＝**文法の追加**なので、**先にユーザーに諮ること**。
 
-⚠️⚠️ ★★★ **この島から出た一般則を 2 つ、次の島でも使うこと**:
-**⑴ 予約と描画が同じ量を別々に綴っていないか**——今回**2 段とも**それだった
-（半符頭幅・反転符頭）。**片方だけ直すと「描いてあるのに部屋が無い」**という、
-**テストが緑のまま目にだけ見える欠陥**になる。
+⚠️⚠️ ★★★ **この 2 つの島から出た一般則を 3 つ、次の島でも使うこと**:
+**⑴ 予約と描画が同じ量を別々に綴っていないか**——**3 段ともそれだった**
+（半符頭幅・反転符頭・そして bracket は**予約が丸ごとゼロ**）。**片方だけ直すと
+「描いてあるのに部屋が無い」**という、**テストが緑のまま目にだけ見える欠陥**になる。
 **⑵ 配置を「自分の支持体からの距離」だけで測らない**——支持体ごと動く欠陥は永遠に EXACT。
 **前の列から測る点を 1 つ持つ**（`arpeggio.x.previous-head-to-wiggle` がその形）。
+⚠️ **ただし第80セッションで分かった**: **⑵ は必要だが十分ではない**。**予約を見たいなら
+ロッドが binding するほど詰んだ本で測る**——**緩い本は予約がゼロでも両エンジン一致で通る**
+（`chordbracket.x.previous-head-to-bracket` が緩いほう・`.compressed` が詰んだほう）。
+**⑶ 枠を言わない名前を信じない**（`topY` は Y-up だった）。**`SharedRenderer` は page Y-up の
+まま描き、`YFlipDrawingContext` が出口で 1 回だけ反転する。`ItemSkylineFactory` は device。
+同じ量が 2 つの向きで書かれている境界には、そう書いてあること。**
 
 ★★ **タイの列を「1 本ずつ」から「列ごと」へ**（`ScoreColumnSymmetry` と
 `ScoreDirectionAgainstStems` が**同じ restructuring を名指ししている**）。LP は
 `Ties_configuration` を丸ごと振る（`:915-1001`）ので、front も back との不一致を払う。
 **今は back だけが払う greedy**。⚠️ **踏む対がまだ無い**——3 本以上のタイを持つ和音の本を先に。
 
-★★ **行末 courtesy の定数 3 本＝⒝ の債務**（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
-`CourtesyKeyToTimeGap` 1.15）。**出所は `SpacingRules.BarlineToCourtesyKey` の remarks に 1 軒だけ置いた**
-（`break-alignment-interface.cc:228-243`。他の 2 本はそこを `see cref` で指す＝住所を 3 つに増やさない）。
-⚠️ **space-alist の値をそのまま写したのではない**——TimeSignature は `(staff-bar . (extra-space . 1.0))` と
-**宣言している**のに**印字は 0.750000**。**「宣言値＝定数」と書くと偽の住所になる。**
-⇒ ★ **点が −0.2 で開いている**（`courtesy.meter.barline-to-cancellation`）。0.8 を 1.0 にするだけでは**駄目**
-——予約 `KeyCourtesySuffixWidth` が同じ定数を読むので、描画と予約が一緒に動かないと信号が譜からはみ出る。
-⇒ **本筋は行末の群も `BreakAlignSpacing` に通すこと**（行頭 prefix は既に通っている）。**通せばこの 3 本は消える。**
-⚠️⚠️ ★ **0.75 は 1 冊でしか測っていない**（§7.7）。**1.15 は独立に 2 か所で一致**。
-⇒ **0.75 には texture を変えた 2 冊目が要る**（終止線 `|.`・複縦線・C や 3/4）。
-**今それを観測しているのは `courtesy.meter.barline-to-meter` 1 点だけ**なので、**倒れるとしたらそこ**。安い。
+★★★ **行末 courtesy の定数 3 本＝⒝ の債務——第80セッションで「出所不明」ではなくなった。**
+（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 / `CourtesyKeyToTimeGap` 1.15）
+⚠️⚠️ **「space-alist の値をそのまま写したのではない・宣言値＝定数と書くと偽の住所になる」と
+書いてあったが、それ自体が偽だった**——**読んでいた alist が違う**。
+`break-alignment-interface.cc:180-210` は **alist を*左*の grob から取り、*右*の grob の
+`break-align-symbol` で引く**。**TimeSignature の `(staff-bar . 1.0)` は「左が TimeSignature・
+右が小節線」のときの entry**で、この walk ではない。**4 本とも左の grob の宣言値ちょうど**:
+```
+bar → time          0.75   BarLine        (time-signature   . (extra-space . 0.75))  :293
+bar → cancellation  1.00   BarLine        (key-cancellation . (extra-space . 1.0 ))  :297
+cancellation → key  0.50   KeyCancellation(key-signature    . (extra-space . 0.5 ))  :1944
+key → time          1.15   KeySignature   (time-signature   . (extra-space . 1.15))  :1989
+```
+★ **:241-243 が `extents[idx][RIGHT] + distance − extents[next][LEFT]` なので
+「ink と ink の隙間」＝ distance ちょうど。両方の extent が相殺する。**
+✅ **0.75 の「1 冊でしか測っていない」は解消した**（`courtesy.meter.barline-to-meter.double-bar-numeral`）
+——**複縦線（ink 0.68 対 0.19）＋数字の 3/4（1.604735 対 C の 1.700000）**に変えても **0.750000 のまま**。
+⚠️ ★★ **その 1 発目は 1.240000 と出て、犯人は計器だった**——`RenderedGeometry` は**描かれた線を
+1 本ずつ小節線と数えて**いたので、**複縦線で 1 本目を指していた**（LP の BarLine は 1 つの grob で両方を覆う）。
+**両エンジンとも 0.680000 で描いている**。**kern 未満（<1 空間）でまとめる**ように直した（他の点は不動）。
+⇒ **§5.0「新しい計器の最初の食い違いは計器を疑う」の変種＝計器は古いが *texture* が新しい。**
+✅ **−0.2 は閉じた**（`courtesy.meter.barline-to-cancellation`・**ユーザー承認のうえ移植**）——
+**`BarlineToCourtesyKey` 0.8 → 1.0**。**BarLine は `key-cancellation`(:297) にも `key-signature`(:296) にも
+1.0 を宣言している**ので、**群が取消記号で始まっても新しい調号で始まっても同じ 1 本で足りる**。
+★★ **「予約と描画が一緒に動かないと危ない」という警告は、*守った*結果 安全だった**——
+**定数が 1 本で両方がそれを読む**ので、**予約幅が描画の移動量ちょうど 0.200000 だけ一緒に広がる**。
+**2 本に分かれていたら §7.7 の欠陥そのものだった。**
+⚠️⚠️ ★ **snapshot は 1 枚も動かなかった＝安心材料ではなく*被覆の穴***。
+**corpus に「改行をまたいで調号が変わる本」が 1 冊も無い**ので、**行末 courtesy 調号の観測者は
+この台帳 1 点だけ**。**fixture を 1 冊足すのは安い**（`BreakAlignSpacing` 移植でここが動く前に欲しい）。
+⇒ **本筋は行末の群も `BreakAlignSpacing` に通すこと**（行頭 prefix は既に通っている）。**通せば 3 本とも消える。**
+**それまでの間も、この 3 本は「net」ではなく *literal* として書ける**のが今回の差分。
+
+✅ **⒠ 行末 courtesy の fixture は足した**（`test/key-change-linebreak`・第80セッション）——
+**改行の前の行末に「取消記号＋新しい調号」、2 つ目の改行では「取消＋調号＋拍子」**（＝実際の本の形で、
+**1.15 の key→meter を*行末*に置く唯一の本**）。**break は明示**（行分割器に任せると、
+spacing 定数が動いた日に**黙って**この本が目的を失う）。
+★★ **「守っているか」は測って確かめた**——**`BarlineToCourtesyKey` を 0.8 に戻すとこの 1 枚だけが落ちる**
+（200 pass / 1 fail）。**動かない fixture を足すのはこの穴そのもの**なので、確認まで含めて 1 手。
+⚠️ **`.lys` のコメントを 1 行足すと `data-pos` が全部ずれて snapshot が落ちる**——
+**本文を触ったら再 approve**（`tools/Approve-Snapshots.ps1 -Name test/key-change-linebreak`）。
+
+⚠️⚠️ ★★ **⒡ exporter が form の `break` を落とす**（第80セッションの自己監査で判明・**安い**）——
+`lysc ly` に `form main { A break B }` を渡すと **`\break` の無い .ly** が出る。
+⇒ **`courtesy-meter.ly` の CMT / CMK / CMT3 は `\break` を手で挿してある**。
+**override の後差しと同じ形に見えるが、これは*音楽を変える*挿入**で、
+**memory の「双子は `lysc ly`・音楽は 1 文字も書かない」に触れている唯一の残り**。
+⇒ **exporter に `\break` を出させれば消える。** それまで**この 3 冊だけは純粋な生成物ではない**。
 
 ★★ **ばねの最小値と臨時記号**（**未修正・宣言のみ**）。**LP のばねの最小値は臨時記号を原理的に見られない**：
 `note-spacing.cc:78-83` → `spacing-interface.cc:37-82` は列に**保存された** `horizontal-skylines`
@@ -221,10 +403,13 @@ extent＝ink の止まるところ**だから。⚠️ **中心線で比べる�
 ばねもロッドも両方見ている。⚠️ **臨時記号のある列を全部動かすので、点と測定が先**。
 コードの ⚠️ は `ItemSkylineFactory.CreateLeftSkyline` の remarks。
 
-⚠️ **`@arpeggio.bracket` は今も落としている。意図的**——LP は `\arpeggio` の**描画を変える override**
-（`property-init.ly:99-108`）なので prefix と suffix の**両側**に要り、**しかもコーパスにも fixture にも
-1 冊も無い**＝**LP と突き合わせられない**。理由はコード（`EmitMark`）のコメントに置いた。
-★ **ただし移植 ⑶ で `Chord_bracket::print` を読む**ので、**そのとき bracket の綴りも一緒に見ること。**
+✅ **`@arpeggio(bracket)` は双子に出るようになった**（第80セッション。`\nonArpeggiato`）。
+⚠️⚠️ **ここに 3 セッション「意図的に落としている」と書いてあったが、理由が偽だった**——
+「LP は `\arpeggio` の描画を変える override（`property-init.ly:99-108`）なので prefix と suffix の
+両側に要る」は **`\arpeggioBracket` については正しく、この grob については誤り**。
+**`\nonArpeggiato` は後置イベント 1 つで ChordBracket を作る**（§1 の ①）。
+⇒ ★★ **「LP と突き合わせられない」という札は、*その綴りでは*の意味しか持たない。**
+**同じ grob へ至る別の綴りを、諦める前に 1 度引くこと。**
 
 ★ **全音符の符尾 attachment**（**観測者が無い**）。LP は invisible stem を**符頭の中心**に置く
 （`stem.cc:1063-1064 center_invisible`）が Lily# は黒玉の値。**読む経路が今は無い**

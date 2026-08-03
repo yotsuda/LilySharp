@@ -421,6 +421,27 @@ public sealed record ChordItem : MusicItem
     public bool IsBeamed => BeamId is not null;
     /// <summary>Whether this chord has an arpeggio marking.</summary>
     public bool HasArpeggio { get; }
+    /// <summary>
+    /// Whether that marking is a BRACKET rather than a wiggle — <c>@arpeggio(bracket)</c>,
+    /// LilyPond's <c>\nonArpeggiato</c>: the chord is NOT to be rolled.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ SEPARATE FROM <see cref="HasArpeggio"/> BECAUSE THEY ARE DIFFERENT GROBS AND THE
+    /// SPACING HAS TO TELL THEM APART. LilyPond's Arpeggio_engraver makes ONE item per chord
+    /// whose type is Arpeggio, ChordBracket or ChordSlur
+    /// (lily/arpeggio-engraver.cc:132-148 process_music), and their widths differ: a wiggle is
+    /// the <c>scripts.arpeggio</c> glyph's 0.800000, a bracket is line-thickness plus
+    /// protrusion, 0.500000. Both are reserved for — :124-129 <c>acknowledge_note_column</c>
+    /// adds whichever one was made to the note column as a conditional item, blind to type.
+    /// <para>
+    /// Until 2026-08-03 nothing carried this to the spacing: <c>ItemSkylineFactory.AddArpeggio</c>
+    /// gated on <see cref="HasArpeggio"/>, which <c>HasArpeggioArticulation</c> sets only for a
+    /// plain <c>@arpeggio</c>, so a bracketed chord reserved NOTHING and a compressed column
+    /// came closer than the bracket's own ink — measured as audit/lp-geometry
+    /// <c>chordbracket.x.previous-head-to-bracket.compressed</c>, 0.300000 of column pitch.
+    /// </para>
+    /// </remarks>
+    public bool HasArpeggioBracket { get; init; }
     /// <summary>Whether this chord is a cue chord (drawn at reduced size).</summary>
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue { get; }

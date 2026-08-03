@@ -1308,6 +1308,16 @@ public sealed class LilyPondExporter
         {
             switch (a)
             {
+                // ⚠️ THE ONE MARK THAT TRAILS ITS NOTE. `\mark` is standalone music written
+                // BEFORE the note it stands over, which is why marks default to the prefix;
+                // `\nonArpeggiato` is a POST-EVENT (scm/define-music-types.scm:436-441 gives
+                // its syntax as `note-\nonArpeggiato`), so written in the prefix it would be
+                // an unattached post-event that LilyPond drops with a warning — a twin that
+                // COMPILES but engraves different music, which is the one failure mode a twin
+                // generator must not have.
+                case MusicMarkSyntax mk when NonArpeggiato(mk) is { } na:
+                    suffix.Append(na);
+                    break;
                 case MusicMarkSyntax mk:
                     string m = EmitMark(mk);
                     if (m.Length > 0) prefix.Append(m).Append(' ');
@@ -1365,18 +1375,43 @@ public sealed class LilyPondExporter
             string label = name.Substring("mark.".Length).Trim('"');
             return $"\\mark \\markup {{ \\box {label} }}";
         }
-        // ⚠️ `@arpeggio.bracket` IS STILL DROPPED, and on purpose. LilyPond spells it as two
-        // overrides that change what a chord's `\arpeggio` DRAWS (ly/property-init.ly:99-108
-        // defines arpeggioBracket as ly:chord-bracket::print plus a matching X-extent), so the
-        // twin would need a
-        // `\once \override` pair in the prefix AND an `\arpeggio` in the suffix, where every
-        // other mark contributes to one side only. It is not written because NO BOOK USES IT:
-        // there is no .lys in the corpus or the fixtures with `@arpeggio.bracket`, so an
-        // export written now could not be checked against LilyPond and would be a guess in a
-        // twin generator — the one place a guess turns into a false agreement.
+        if (NonArpeggiato(mk) is { } na)
+            return na;
         _warnings.Add($"@{name} dropped (out of scope)");
         return "";
     }
+
+    /// <summary>
+    /// <c>@arpeggio(bracket)</c> as LilyPond's post-event for it, or null for any other mark.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS NOT <c>\arpeggioBracket</c>, and that is the whole reason it can be written
+    /// at all. <c>\arpeggioBracket</c> (ly/property-init.ly:99-108) is a pair of OVERRIDES that
+    /// change what an ordinary <c>\arpeggio</c> draws, so a twin would need a
+    /// <c>\once \override</c> pair in the PREFIX and an <c>\arpeggio</c> in the SUFFIX — and
+    /// every other mark here contributes to one side only, which is why this annotation was
+    /// dropped as unwritable until 2026-08-03.
+    /// <para>
+    /// LilyPond's spelling for the THING rather than for the appearance needs no prefix at all:
+    /// LILYPOND-REF: ly/property-init.ly:69 — <c>nonArpeggiato = #(make-music
+    ///   'NonArpeggiatoEvent)</c>, whose syntax (scm/define-music-types.scm:436-441) is
+    ///   <c>note-\nonArpeggiato</c>, a post-event like <c>\arpeggio</c> itself.
+    /// LILYPOND-REF: lily/arpeggio-engraver.cc:91-98 <c>listen_non_arpeggiato</c> — that event
+    ///   sets <c>Arpeggio_type::NON_ARPEGGIATED</c>, and
+    /// LILYPOND-REF: lily/arpeggio-engraver.cc:132-148 <c>process_music</c> — which then makes
+    ///   a <b>ChordBracket</b> item, the grob <c>ArpeggioItem.Bracket</c> means.
+    ///   <c>\arpeggioBracket</c> instead keeps an <b>Arpeggio</b> grob and re-dresses it.
+    /// </para>
+    /// <para>
+    /// LilyPond's own docstring (ly/property-init.ly:103-104) prefers this one for exactly this
+    /// case: "For a bracket designating a non-arpeggiated chord, it is better to use
+    /// <c>\nonArpeggiato</c> than to use <c>\arpeggio</c> and alter the appearance."
+    /// </para>
+    /// </remarks>
+    private static string? NonArpeggiato(MusicMarkSyntax mk)
+        => mk.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase)
+            ? "\\nonArpeggiato"
+            : null;
 
     private string EmitAttachment(SyntaxNode a) => a switch
     {
