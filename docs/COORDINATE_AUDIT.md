@@ -188,6 +188,7 @@ LP と同じ Y-down のまま残す。**
 | SlurScoringProblem.cs | `StaffLinePositions {0,-1,-2,-3,-4}` | Y | up+ | **ss（staff-相対・上線=0）** | :106 |
 | SlurScoringProblem.cs | `InterpolateSlurY` arc `4·h·t(1−t)` | Y | up+ | ss（放物・peak=h） | :176-182 |
 | TieFormattingProblem.cs | `y=pos·0.5`, `AttachmentY`, `tipPos/topPos` | Y | up+ | ss / staff-position | :211-350 |
+| **TieChordOutline.cs** | 列の箱・`Attachment(y)` | **X 値 / Y horizon** | **Y horizon=up+（中央線起点）**・X は page | ss | :17-24, :150-170 |
 | TieDetails.cs | Tip/CenterStaffLineClearance(0.225/0.3) | Y | n-a | ss（LP half-space ÷2） | :79,:86 |
 | TieVariantEngraver.cs | `noteY`,`Control*.Y` | Y | **down+（device）** | ss | :159-178 |
 | SharedRenderer.Curves.cs | `DrawBow` `pageHeight+YUp` flip, `perp=±0.5·thick` | Y | up→device flip | ss | :89-140 |
@@ -200,12 +201,13 @@ LP と同じ Y-down のまま残す。**
   （数十 ss）≫ `gapInside=0.2` となり、端点/peak の staffline ペナルティが**常時 no-op**。device-Y≈0 の譜
   以外で slur が staff line を避けない。**本監査で最も座標モデルに直結する不具合**（要修正: 配列を絶対-page 化 or
   config を staff-相対化）。
-- **[med] TieFormattingProblem.cs:256** — LP `center_tie_vertically` は `Δy=−dir·(edge+mid)/2`,
-  `mid=curve(0.5).y=0.75·h` ⇒ `−dir·0.375·h`。Lily# は `−dir·h/2=−dir·0.5·h`（制御点高を曲線 extent と誤認）。
-  → **定数誤り**。小 h の tie が ~0.12·h だけ dir 側にずれる。
-- **[med] TieFormattingProblem.cs:458-473** — tie-tie の center を `±Height`（1.0·h）とするが LP は
-  `curve(0.5).y=0.75·h`。両側 ±Height で内部一貫のため edge 距離は不変だが、高さの異なる積層 tie で
-  center-center 衝突/単調性判定が LP からドリフト。→ **係数誤り(1.0 vs 0.75)**。
+- ~~**[med] TieFormattingProblem.cs:256** — `center_tie_vertically` の 0.5·h 対 0.375·h~~ ／
+  ~~**[med] :458-473** — tie-tie center の 1.0·h 対 0.75·h~~ — **どちらも閉じた**（第76セッション・
+  `4c57d7a5`）。**2 つは同じ 1 件だった**: `Tie_configuration::height` は制御点の高さではなく
+  **曲線の中点**（`tie-configuration.cc:80-87`）で、`BezierBow.MidpointHeight` に名前が付いた瞬間に
+  両方が LP と一致した。**現コードを読んで確認済**（`deltaY = -dir * height / 2` の `height` が
+  midpoint＝0.75·control なので `−dir·0.375·control`／tie-tie center も同じ `Height`）。
+  ⇒ ★ **教訓は §5.2.1 と同じ形**——**係数が 2 か所ずれていたのではなく、量に名前が無かった**。
 - **[low] SlurScoringProblem.cs:176-182** — encompass/peak 標本を peak=Height 放物で近似するが実 bezier は
   0.75·Height。形状近似（方向は正）。
 - **[low] TieVariantEngraver.cs:159-178** — なお **device Y-down** で動作（移行済 Tie/Slur は page Y-up 格納）。
@@ -227,6 +229,7 @@ Y フリップは `StaffFrame`（device↔up の involution）に**集約**、pe
 | SkylineBuilder.cs | `noteUp=pos*0.5`, `ToSystemUp(up)=up+staffMiddleUp`, stem-up は加算。譜ごとは `staffMiddleUp=0`（原点＝refpoint）／上端線基準の seed は `+staffTopUp` | Y | Y-up native | ss（pos=half→×0.5） | :525-620 |
 | SkylineMath `Distance` | penetration=max(v1+v2) | scalar | 内部 | ss | `skyline.cc:618-649` |
 | HorizontalSkyline / ItemSkylineFactory / Skyline(flat) | 値=`sky*x`／`noteY-BBox.Top` | X値 / **Y horizon=device Y-down** | X sign-conv | ss | HorizontalSkyline:105-112, ItemSkylineFactory:64-283 |
+| HorizontalSkyline ← **TieChordOutline** | 同じクラス・**horizon だけ別**（`(p±1)·0.5`＝中央線から up+） | X値 / **Y horizon=up+** | X sign-conv | ss | TieChordOutline:150-170 |
 | AccidentalGlyphSkyline.cs | silhouette 矩形近似 | X/Y | device 近似 | 無次元×BBox | :49-145 |
 
 #### 忠実性所見
@@ -236,6 +239,14 @@ Y フリップは `StaffFrame`（device↔up の involution）に**集約**、pe
 - **[low] HorizontalSkyline / ItemSkylineFactory / Skyline** — 水平 skyline は Y horizon を
   **device Y-down** で持つ（vertical 経路の Y-up と非共有）。X 衝突には不変で正しいが**将来 Y-up
   前提で触ると壊れる** → 注意。
+  ⚠️★★ **2026-08-03 以降、`HorizontalSkyline` の horizon は 2 種類ある**——spacing 側
+  （`ItemSkylineFactory`）は **device Y-down**、tie 側（`TieChordOutline`）は
+  **中央線起点の up+**。**クラス自体は horizon 非依存**（`SkylineBuilding` は軸中立）なので
+  どちらも正しく、混ぜなければ壊れない。⇒ ⚠️ **`HorizontalSkyline` を受け渡す新しい経路を作るときは、
+  どちらの horizon かを署名か doc で名乗らせること**（今は呼び出し側の doc にしかない）。
+  ★ **tie 側が up+ なのは選択ではない**: LP の `set_column_chord_outline` は staff position
+  （`(p±1)*0.5`）で箱を建て、`get_attachment` は tie の scorer が使う Y をそのまま渡す
+  （`tie-formatting-problem.cc:117`, `:563-564`）ので、device へ直すと**そこだけ 2 回反転**する。
 - **[low] SkylineBuilder.cs:582,604** — stem X-extent を `noteRight±1`（2ss 幅箱）で近似（LP は
   thin stem ~0.13ss）。軸/単位は正（X, ss）だが横領土を過剰確保 → 近似 hack。
 - **[low] AccidentalGlyphSkyline** — LP の font 由来 `horizontal-skylines`（`accidental-placement.cc:254-301`）を
