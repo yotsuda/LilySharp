@@ -686,7 +686,6 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
-        const double wavePeriod = 0.8;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var a in layout.ArpeggioLayouts)
         {
@@ -702,45 +701,39 @@ internal static partial class SharedRenderer
             double midYUp = os.StaffMiddleYUp(a.StaffIndex, a.MeasureIndex, StaffHeight);
             double topY = os.YUp(midYUp + a.TopYUp, a.StaffIndex, a.MeasureIndex);
             double bottomY = os.YUp(midYUp + a.BottomYUp, a.StaffIndex, a.MeasureIndex);
-            double waveAmplitude = os.Size(0.2, a.StaffIndex);
-            // The wave length is the offset span (scaled on an ossia staff). Derive it
-            // from the offsets directly rather than topY − bottomY: those both carry
-            // the large staff-middle refpoint, and the cancellation there can drop a
-            // ULP and flip the floored half-wave count when the span sits exactly on a
-            // wavePeriod boundary. The offset difference is refpoint-free and exact.
-            double length = os.Size(a.TopYUp - a.BottomYUp, a.StaffIndex);
-            if (length <= 0) continue;
-            // Non-arpeggiate: a straight vertical bracket with end ticks —
-            // the chord is NOT rolled. LILYPOND-REF: \arpeggioBracket.
+            // Non-arpeggiate: a straight vertical bracket with end ticks — the chord is NOT
+            // rolled. LILYPOND-REF: lily/arpeggio.cc:191-201 Chord_bracket::print — the ticks
+            // are `protrusion` wide and the line is line-thickness * thickness (both 1).
             if (a.Bracket)
             {
+                double tick = os.Size(ArpeggioEngraver.BracketProtrusion, a.StaffIndex);
                 using (gc.Source(a.SourcePosition))
                 {
-                    gc.DrawLine(a.X, topY, a.X, bottomY, Color.Black, thickness * 1.6);
-                    gc.DrawLine(a.X, topY, a.X + 0.7, topY, Color.Black, thickness * 1.6);
-                    gc.DrawLine(a.X, bottomY, a.X + 0.7, bottomY, Color.Black, thickness * 1.6);
+                    gc.DrawLine(a.X, topY, a.X, bottomY, Color.Black, thickness);
+                    gc.DrawLine(a.X, topY, a.X + tick, topY, Color.Black, thickness);
+                    gc.DrawLine(a.X, bottomY, a.X + tick, bottomY, Color.Black, thickness);
                 }
                 continue;
             }
-            int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
-            double seg = length / halfWaves;
-            double prevX = a.X, prevY = topY;
-            const int subdivisions = 4;
+            if (a.Copies <= 0) continue;
+            // The wiggle is the GLYPH, stacked upward from the pile's bottom one designed
+            // height at a time — the same copies the engraver counted and the spacing
+            // reserved, so what is drawn and what is spaced for are one calculation.
+            // LILYPOND-REF: lily/arpeggio.cc:180-183 add_at_edge, translate_axis
+            //   (Arpeggio::print) — `mol.add_at_edge (Y_AXIS, UP, squiggle, 0.0)` per copy,
+            //   then `mol.translate_axis (heads[LEFT], Y_AXIS)`.
+            // ⚠️ The glyph's box starts at its baseline (0 . 1.0), so copy i's baseline is
+            // the pile's bottom raised i heights — no centring term, unlike the trill
+            // element's align_to (see TrillWaveOutline.GlyphBaselineOffset).
+            double glyphSize = os.Size(FontSize, a.StaffIndex);
             using (gc.Source(a.SourcePosition))
             {
-                for (int i = 0; i < halfWaves; i++)
+                for (int i = 0; i < a.Copies; i++)
                 {
-                    // Accumulate downward from the top (subtract in the Y-up frame).
-                    double startY = topY - i * seg;
-                    double sign = (i % 2 == 0) ? -1 : 1;
-                    for (int j = 1; j <= subdivisions; j++)
-                    {
-                        double t = (double)j / subdivisions;
-                        double y = startY - t * seg;
-                        double x = a.X + sign * waveAmplitude * 4 * t * (1 - t);
-                        gc.DrawLine(prevX, prevY, x, y, Color.Black, thickness);
-                        prevX = x; prevY = y;
-                    }
+                    double baseline = os.YUp(
+                        midYUp + a.BottomYUp + i * ArpeggioEngraver.WiggleHeight,
+                        a.StaffIndex, a.MeasureIndex);
+                    gc.DrawGlyph(EmmentalerGlyphs.Arpeggio, a.X, baseline, glyphSize);
                 }
             }
         }

@@ -38,12 +38,21 @@ namespace LilySharp.Core.Svg.Layout;
 /// plus digits that printed 0.112 through their own stem.
 /// </para>
 /// <para>
-/// ⚠️ NAMED RESIDUAL, not fitted away: LilyPond selects the Emmentaler DESIGN SIZE nearest
-/// the requested one (lily/font-select.cc:41-70 with scm/lily-library.scm:1702-1710's
-/// mapping), so a figure at 4 ss × magstep(−5) = 11.2246pt is drawn from
-/// <c>emmentaler-11</c>, whose digits are 2.004 design-ss where <c>emmentaler-20</c>'s are
-/// 2.000. Lily# bundles only <c>emmentaler-20</c>, which is worth −0.002333 of cap on every
-/// figure. That is a font-shipping decision, not an arithmetic one.
+/// ⚠️ NAMED RESIDUAL, not fitted away — AND ITS FIRST NAME WAS WRONG. It was recorded here
+/// as an optical-size difference (a figure is 11.2246pt, so LilyPond draws it from
+/// <c>emmentaler-11</c>, whose digits were said to be 2.004 design-ss against the 20's
+/// 2.000). ⚠️ THAT IS FALSIFIED: all eight designs are bundled and extracted now, and their
+/// <c>fattened.fixedwidth</c> digits share one cap — 2.000000, with 2.004000 for the four and
+/// 2.016000 for the one — in every table. The designs differ in WIDTH, not in height.
+/// <para>
+/// WHAT THE RESIDUAL ACTUALLY IS, measured 2026-08-03: LilyPond's per-digit ink at font-size
+/// −5 is 2.000117 design-ss for 6/7/8, 2.004157 for 4 AND FOR 5, and 2.023843 for 1 — while
+/// the five's own outline is 2.000000. The ledger books' top figure is a 5, so the whole
+/// −0.002333 is that one digit. HOW LilyPond arrives at it is the open question: a figure is
+/// the TEXT path (Pango over FreeType), so its extent may carry hinting the raw outline bbox
+/// does not, and LilyPond reports one X extent for every digit where the inks differ.
+/// audit/lp-geometry <c>figbass.alone.staff-to-baseline</c> carries the account and is the
+/// only address for it.
 /// </para>
 /// <para>
 /// ⚠️ NOT PORTED HERE: LilyPond puts the alteration on the LEFT of the digit by default

@@ -117,6 +117,17 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     # elt_true_len + n * elt_len for as many whole elements as fit, which is why a trill
     # line stops SHORT of its right bound.
     GlyphSpec("OrnTrillElementGlyph", "scripts.trill_element", "Trill line element (the wave's repeating unit)", "mf/feta-scripts.mf — scripts.trill_element"),
+    # The ARPEGGIO's unit, the same kind of fact as the trill element above: LilyPond's
+    # arpeggio stencil is this one glyph stacked upward while the pile is shorter than the
+    # chord asks for (lily/arpeggio.cc:34-41 get_squiggle, :180-183 add_at_edge), and the
+    # grob's X-extent is declared to BE this glyph's extent (:313-319 Arpeggio::width,
+    # scm/define-grobs.scm:218). So both of an arpeggio's own dimensions are here: the box is
+    # (0, 0, 0.8, 1.0) by design — mf/feta-scripts.mf:1892-1905 sets height# = staff_space#
+    # and width# = 0.8 * height# — which is why a wiggle is 0.800000 wide and its length is
+    # quantised to whole staff spaces. MEASURED against real LilyPond on
+    # audit/lp-geometry/probes/arpeggio.ly: width 0.800000, and a chord spanning two spaces
+    # draws 3.000000, i.e. three whole copies.
+    GlyphSpec("Arpeggio", "scripts.arpeggio", "Arpeggio wiggle (the stencil's repeating unit)", "mf/feta-scripts.mf — scripts.arpeggio"),
     GlyphSpec("OrnTurnGlyph", "scripts.turn", "Turn ornament", "mf/feta-scripts.mf — scripts.turn"),
     GlyphSpec("OrnReverseTurnGlyph", "scripts.reverseturn", "Inverted (reverse) turn ornament", "mf/feta-scripts.mf — scripts.reverseturn"),
     GlyphSpec("OrnPrallGlyph", "scripts.prall", "Prall (upper mordent) ornament", "mf/feta-scripts.mf — scripts.prall"),

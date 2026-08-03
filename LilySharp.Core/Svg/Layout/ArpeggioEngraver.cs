@@ -30,6 +30,7 @@ public readonly record struct ArpeggioLayout(
     double X,
     double TopYUp,
     double BottomYUp,
+    int Copies,              // whole wiggle glyphs stacked upward from BottomYUp; 0 = a bracket
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.Arpeggios (data-pos resolved at render)
     int MeasureIndex = -1,   // page membership for multi-page rendering (-1 = draw on every page)
@@ -40,9 +41,13 @@ public readonly record struct ArpeggioLayout(
 /// Calculates arpeggio layouts from detected arpeggio items.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/arpeggio.cc, scm/define-grobs.scm:201-224
-/// Parameters: padding=0.5, direction=LEFT, protrusion=0.4
-/// The arpeggio is a wavy vertical line placed to the left of a chord.
+/// LILYPOND-REF: lily/arpeggio.cc:117-188 get_squiggle, add_at_edge (Arpeggio::print) and
+/// LILYPOND-REF: scm/define-grobs.scm:205-229 side-position-interface — Arpeggio
+///   (padding . 0.5) (direction . LEFT) (side-axis . X).
+/// The arpeggio is a STACK OF GLYPHS placed to the left of a chord: the wiggle is
+/// <c>scripts.arpeggio</c>, whole copies of it are laid edge to edge until the pile covers
+/// the chord, and both of its dimensions are therefore the font's rather than this
+/// engraver's. <c>protrusion</c> belongs to the BRACKET spelling, not to the wiggle.
 /// </remarks>
 internal static class ArpeggioEngraver
 {
@@ -52,13 +57,123 @@ internal static class ArpeggioEngraver
     // from the notehead center.
     internal const double Padding = 0.5;
 
-    // Half-extent of the wavy line either side of its center; matches the
-    // amplitude the renderer (SharedRenderer.DrawArpeggios) draws with, so the
-    // wave's right edge lands exactly `Padding` left of the noteheads.
-    internal const double WaveAmplitude = 0.2;
+    /// <summary>
+    /// The wiggle's width — the <c>scripts.arpeggio</c> glyph's own designed extent, because
+    /// that is what the grob's X-extent IS.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:313-319 get_squiggle (Arpeggio::width) — the callback
+    ///   returns <c>get_squiggle (me).extent (X_AXIS)</c>, and
+    /// LILYPOND-REF: scm/define-grobs.scm:205-229 side-position-interface — the Arpeggio
+    ///   entry declares that callback as the grob's <c>X-extent</c>. So an arpeggio's width
+    ///   is a font metric and never a number the engraver chooses.
+    /// </remarks>
+    internal static double WiggleWidth => GlyphMetrics.Arpeggio.Right - GlyphMetrics.Arpeggio.Left;
 
-    // Vertical overhang past the outer noteheads. LILYPOND-REF: define-grobs.scm:212.
-    internal const double Protrusion = 0.4;
+    /// <summary>
+    /// One wiggle's height — the stacking STEP, since the stencil is whole copies laid edge
+    /// to edge. The glyph is designed one staff space tall (mf/feta-scripts.mf:1892-1905,
+    /// <c>height# := staff_space#</c>), which is why an arpeggio's drawn length always comes
+    /// out a whole number of spaces.
+    /// </summary>
+    internal static double WiggleHeight => GlyphMetrics.Arpeggio.Top - GlyphMetrics.Arpeggio.Bottom;
+
+    // LILYPOND-REF: lily/arpeggio.cc:161-181 add_at_edge (Arpeggio::print) — the epsilon the
+    // stacking loop tests with, which keeps a chord reaching the centre line from picking up
+    // one squiggle too many on a rounding error.
+    // Copied as the literal it is; LilyPond's own comment says it is far above the ~1e-16 the
+    // error runs at and far below anything that would change the count.
+    private const double StackEpsilon = 1e-3;
+
+    /// <summary>
+    /// Where the wiggle's glyph origin goes for a column whose ink starts at
+    /// <paramref name="columnLeftX"/>: its own width and the padding to the left of that.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:208-221 x-aligned-side — Arpeggio (direction . LEFT)
+    ///   (side-axis . X) (padding . 0.5) with
+    ///   <c>X-offset = ly:side-position-interface::x-aligned-side</c>, the grob's own extent
+    ///   is set <c>padding</c> clear of the SUPPORT's extent, and both are ink extents. The
+    ///   glyph's box starts at 0, so its origin IS its ink left.
+    /// <para>
+    /// ⚠️ THE COLUMN'S LEFT IS THE HEAD'S INK LEFT, not its centre. Until 2026-08-03 this
+    /// subtracted a further half head width on the stated ground that the column X was the
+    /// centre, which stood every wiggle that much too far left — measured as
+    /// audit/lp-geometry <c>arpeggio.x.right-edge-to-head.*</c>, whose two books differed by
+    /// exactly half the difference of their head widths.
+    /// </para>
+    /// </remarks>
+    internal static double WiggleOriginX(double columnLeftX)
+        => columnLeftX - Padding - WiggleWidth;
+
+    /// <summary>
+    /// The pile a chord spanning <paramref name="minPosition"/>..<paramref name="maxPosition"/>
+    /// (staff positions) gets: where its bottom sits in the staff's Y-up frame, and how many
+    /// whole glyphs stand on it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:117-188 add_at_edge, translate_axis (Arpeggio::print) —
+    ///   the head interval comes from <c>positions</c> (:83-115 calc_positions, the stems'
+    ///   head positions halved into
+    ///   staff spaces), then :145-146 drops the DOWN end half a space "to include note head
+    ///   in interval", :150-151 widens both ends by half a space when what is left is under
+    ///   1.5, :180-181 stacks squiggles with <c>add_at_edge</c> while the pile is shorter
+    ///   than the interval, and :183 translates the pile so it STARTS at the interval's down
+    ///   end. The quantisation is the whole point: the pile is whole glyphs, so its length is
+    ///   a whole number of spaces and reaches PAST what was asked for.
+    /// <para>
+    /// ⚠️ <c>protrusion</c> IS NOT PART OF THIS. That property belongs to the chord BRACKET,
+    /// where it is the horizontal tick width (:190-201 Chord_bracket::print hands it to
+    /// <c>Lookup::bracket</c>); the wiggle's stencil never reads it. Lily# used to extend the
+    /// head span by 0.4 at both ends and draw exactly that — no quantisation, and the wrong
+    /// end treatment — which is the residual audit/lp-geometry <c>arpeggio.y.length</c> holds.
+    /// </para>
+    /// </remarks>
+    internal static (double BottomYUp, int Copies) Pile(double minPosition, double maxPosition)
+    {
+        double lo = minPosition * 0.5 - 0.5;
+        double hi = maxPosition * 0.5;
+        if (hi - lo < 1.5)
+        {
+            lo -= 0.5;
+            hi += 0.5;
+        }
+
+        double wanted = hi - lo;
+        int copies = 0;
+        while (copies * WiggleHeight + StackEpsilon < wanted)
+            copies++;
+        return (lo, copies);
+    }
+
+    /// <summary>
+    /// A non-arpeggiated chord's BRACKET instead of the wiggle: the same head interval
+    /// widened by 0.75 either side.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:205-214 Chord_bracket::print —
+    ///   <c>y_extent.widen (0.75)</c> on <c>positions</c>, then :191-201 draws the bracket
+    ///   with <c>protrusion</c> as the tick width. ⚠️ It does NOT take the wiggle's
+    ///   half-space drop or its quantisation: a bracket is one drawn shape, not a stack.
+    /// <para>
+    /// ⚠️ NOTHING OBSERVES THIS. <c>@arpeggio.bracket</c> is dropped by the exporter and no
+    /// fixture carries one, so there is no ledger point and no twin — it is ported literally
+    /// because it lives in the function that was being ported and because the numbers it
+    /// replaced (a 0.4 overhang and a 0.7 tick) were invented.
+    /// </para>
+    /// </remarks>
+    internal static (double BottomYUp, double TopYUp) BracketExtent(
+        double minPosition, double maxPosition)
+        => (minPosition * 0.5 - BracketWiden, maxPosition * 0.5 + BracketWiden);
+
+    // LILYPOND-REF: lily/arpeggio.cc:211 Chord_bracket::print — y_extent.widen (0.75).
+    private const double BracketWiden = 0.75;
+
+    // LILYPOND-REF: scm/define-grobs.scm:811-833 chord-bracket-interface — the ChordBracket
+    // entry's (protrusion . 0.4), the width of
+    // the bracket's end ticks, handed to Lookup::bracket at lily/arpeggio.cc:198-200. The
+    // bracket's own X extent is that protrusion, so it is what side-position clears.
+    internal const double BracketProtrusion = 0.4;
 
     /// <summary>
     /// Calculates layout positions for all arpeggio items.
@@ -102,12 +217,6 @@ internal static class ArpeggioEngraver
             double itemX = measure.X + LayoutUtilities.GetItemXOffset(
                 arpMeasures, arp.MeasureIndex, arp.ItemIndex, measure);
 
-            // The wavy line must clear the LEFT edge of the noteheads, not the
-            // notehead center: place its right edge `Padding` left of the head's
-            // left edge. itemX is the notehead center, so subtract the head's
-            // half-width before the padding and the wave half-extent.
-            // LILYPOND-REF: scm/define-grobs.scm Arpeggio side-position (LEFT, X).
-            double noteheadCenterX = 0.65;
             // Most-negative within-chord head displacement. A head reversed to the
             // LEFT of the stem (a second in a stem-down chord) extends the column's
             // left ink past the un-displaced column, so the arpeggio must clear
@@ -122,27 +231,34 @@ internal static class ArpeggioEngraver
             {
                 int nv = arpChord.BaseDuration.Denominator <= 1 ? 1
                        : arpChord.BaseDuration.Denominator <= 2 ? 2 : 4;
-                noteheadCenterX = GlyphMetrics.GetNoteheadBBox(nv).CenterX;
                 foreach (var off in ChordHeadPositioning.CalculateOffsets(
                              arpChord.Notes, arpChord.StemUp, nv))
                     minHeadOffset = Math.Min(minHeadOffset, off);
             }
-            double arpeggioX = itemX + minHeadOffset - noteheadCenterX - Padding - WaveAmplitude;
+            double columnLeftX = itemX + minHeadOffset;
 
             // Y-up staff-space from the staff middle line (frame B): a head at
-            // staff-position p sits p/2 spaces above the middle, and the protrusion
-            // extends the wavy line OUTWARD past the outer heads — up past the top,
-            // down past the bottom. This reads sign-for-sign with LP's up-positive
-            // frame; the renderer reflects it to device at draw time against the
-            // staff middle it resolves, so no system.Y / staff offset is baked here.
-            // LILYPOND-REF: scm/define-grobs.scm:212 (protrusion . 0.4)
-            double topYUp = arp.MaxStaffPosition * 0.5 + Protrusion;
-            double bottomYUp = arp.MinStaffPosition * 0.5 - Protrusion;
+            // staff-position p sits p/2 spaces above the middle. This reads
+            // sign-for-sign with LP's up-positive frame; the renderer reflects it to
+            // device at draw time against the staff middle it resolves, so no
+            // system.Y / staff offset is baked here.
+            var (bottomYUp, copies) = Pile(arp.MinStaffPosition, arp.MaxStaffPosition);
+            double topYUp = bottomYUp + copies * WiggleHeight;
+            double arpeggioX = WiggleOriginX(columnLeftX);
+            if (arp.Bracket)
+            {
+                // A bracket is one drawn shape rather than a stack, with its own extent
+                // and its own width — see BracketExtent.
+                (bottomYUp, topYUp) = BracketExtent(arp.MinStaffPosition, arp.MaxStaffPosition);
+                copies = 0;
+                arpeggioX = columnLeftX - Padding - BracketProtrusion;
+            }
 
             layouts.Add(new ArpeggioLayout(
                 X: arpeggioX,
                 TopYUp: topYUp,
                 BottomYUp: bottomYUp,
+                Copies: copies,
                 SourcePosition: arp.SourcePosition,
                 SourceIndex: ai,
                 MeasureIndex: arp.MeasureIndex,

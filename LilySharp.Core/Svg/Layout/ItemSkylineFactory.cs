@@ -198,7 +198,7 @@ internal static class ItemSkylineFactory
             }
 
             AddAccidentals(parts, chord, noteheadLeftX, staffY, headOffsets, noteValue);
-            AddArpeggio(parts, chord, noteheadLeftX, staffY);
+            AddArpeggio(parts, chord, noteheadLeftX, staffY, headOffsets);
         }
         else
         {
@@ -472,17 +472,30 @@ internal static class ItemSkylineFactory
     ///   (X-extent . ly:arpeggio::width) — the grob participates in spacing.
     /// </remarks>
     private static void AddArpeggio(List<ColumnPart> parts, ChordItem chord,
-                                    double noteheadLeftX, double staffY)
+                                    double noteheadLeftX, double staffY, double[] headOffsets)
     {
         if (!chord.HasArpeggio || chord.Notes.Length == 0)
             return;
 
-        double arpRight = noteheadLeftX - ArpeggioEngraver.Padding;
-        double arpLeft = arpRight - 2 * ArpeggioEngraver.WaveAmplitude;
-        double arpYBottom = (staffY - chord.Notes.Max(n => n.StaffPosition) / 2.0)
-            - ArpeggioEngraver.Protrusion;
-        double arpYTop = (staffY - chord.Notes.Min(n => n.StaffPosition) / 2.0)
-            + ArpeggioEngraver.Protrusion;
+        // Placed and sized by the SAME house the drawing goes through, so the two cannot
+        // drift apart again: until 2026-08-03 this reserved from the head's ink left while
+        // ArpeggioEngraver drew from the head's centre, and the wiggle stood most of a
+        // head width left of the space kept for it.
+        //
+        // ⚠️ AND THE COLUMN'S LEFT INCLUDES A REVERSED HEAD. A second in a STEM-DOWN chord
+        // puts a head a full width LEFT of the column, the wiggle clears THAT head
+        // (ArpeggioEngraver reads the same offsets as minHeadOffset), and a reservation
+        // taken from the un-displaced column left would sit a head width right of the ink:
+        // measured on test/arpeggio-second, whose last chord is the only stem-down one, the
+        // wiggle was drawn ON the previous chord's notehead.
+        double minHeadOffset = headOffsets.Length == 0 ? 0 : Math.Min(0, headOffsets.Min());
+        double arpRight = noteheadLeftX + minHeadOffset - ArpeggioEngraver.Padding;
+        double arpLeft = arpRight - ArpeggioEngraver.WiggleWidth;
+        var (pileBottomYUp, copies) = ArpeggioEngraver.Pile(
+            chord.Notes.Min(n => n.StaffPosition), chord.Notes.Max(n => n.StaffPosition));
+        // Y-up -> device (down): the pile's TOP is the smaller device y.
+        double arpYBottom = staffY - (pileBottomYUp + copies * ArpeggioEngraver.WiggleHeight);
+        double arpYTop = staffY - pileBottomYUp;
 
         parts.Add(new ColumnPart(arpYBottom, arpYTop, arpLeft, arpRight,
                                  -SpacingRules.DefaultExtraSpacingWidth,

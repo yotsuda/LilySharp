@@ -3430,6 +3430,92 @@ internal static class LpGeometryProbes
     /// </remarks>
     private static readonly string SX = TieWidthBook("c2 c4 c4 |", "SX");
 
+    // ------------------------------------------------------------------------------
+    // WHERE AN ARPEGGIO STANDS, AND HOW WIDE IT IS.
+    //
+    // LilyPond's wiggle is a GLYPH, and both readings follow from that: its X-extent is the
+    // `scripts.arpeggio` glyph's extent (lily/arpeggio.cc:313-319 Arpeggio::width, declared as
+    // the grob's X-extent at scm/define-grobs.scm:218), and the stencil is that glyph stacked
+    // upward until the pile covers the head interval (:180-183 add_at_edge). It is then placed
+    // by side-position-interface on the X axis toward LEFT with padding 0.5 (:208-221), so its
+    // ink stops half a space short of the note column's ink.
+    //
+    // ⚠️ LILY# DRAWS THE WIGGLE INSTEAD OF SETTING IT — SharedRenderer.DrawArpeggios walks a
+    // parabola in four subdivisions per half wave, ArpeggioEngraver.WaveAmplitude 0.2 either
+    // side of the centre — so its width is a number the renderer chose. And the placement
+    // subtracts a HALF HEAD WIDTH (GetNoteheadBBox(nv).CenterX) from the column X on the
+    // stated ground that the column X is the head's CENTRE.
+    //
+    // THE PAIR SAYS WHETHER IT IS: same chord, same pitches, only the HEAD SHAPE changes.
+    // A padding constant, a frame or a wave amplitude is head-blind and moves both books
+    // together; a half-head-width term moves them apart by exactly half the difference of the
+    // two head widths, (1.962000 - 1.304200)/2 = 0.328900. MEASURED on the twin, LilyPond's
+    // side is an identity: 0.800000 wide and 0.500000 clear of the heads in BOTH books.
+
+    private static string ArpeggioBook(string music, string name) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// An arpeggiated chord of BLACK heads — the narrower of the pair.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NO SECONDS IN THE CHORD, deliberately: a head reversed to the far side of the stem
+    /// moves the column's own left ink (<c>ChordHeadPositioning.CalculateOffsets</c>, which
+    /// this placement reads as <c>minHeadOffset</c>), so the reading would then be measuring
+    /// the reversal too. At c'-e'-g' every head is below the middle line, so the stem points
+    /// UP and its ink stays on the far side from the wiggle.
+    /// <para>LilyPond twin: score AQ of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;c e g&gt;4\arpeggio r4 r2 }</c>.</para>
+    /// </remarks>
+    private static readonly string AQ = ArpeggioBook("<c e g>4@arpeggio r4 r2 |", "AQ");
+
+    /// <summary>
+    /// The same chord with WHOLE heads — 1.962000 wide against the black head's 1.304200.
+    /// </summary>
+    /// <remarks>
+    /// <para>LilyPond twin: score AW of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;c e g&gt;1\arpeggio }</c>.</para>
+    /// </remarks>
+    private static readonly string AW = ArpeggioBook("<c e g>1@arpeggio |", "AW");
+
+    /// <summary>
+    /// Two arpeggiated chords, the second a SECOND in a STEM-DOWN chord — so one head is
+    /// reversed a full width to the LEFT and the wiggle has to clear THAT head, which puts it
+    /// back where the previous chord's ink is.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ONE READING THE OTHER FOUR CANNOT TAKE, and a user found the defect it now
+    /// holds by looking at the page. The wiggle's own clearance stays exact however far left
+    /// the reversal pushes the pair, so nothing in AQ/AW notices when the SPACING fails to
+    /// reserve for it: <c>ItemSkylineFactory.AddArpeggio</c> measured from the un-reversed
+    /// column left while <c>ArpeggioEngraver</c> drew from the reversed one, and the wiggle
+    /// was drawn ON the previous chord's notehead in test/arpeggio-second.
+    /// <para>
+    /// The chord is stem-down because its heads sit at staff positions 0 and 1 — measured on
+    /// the twin, LilyPond turns the stem down here too and reverses the LOWER head left, so
+    /// the two engines agree about the shape and the reading is like for like.
+    /// </para>
+    /// <para>LilyPond twin: score AR of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;g a&gt;4\arpeggio &lt;b c'&gt;4\arpeggio r2 }</c>.</para>
+    /// </remarks>
+    private static readonly string AR =
+        ArpeggioBook("<g a>4@arpeggio <b c'>4@arpeggio r2 |", "AR");
+
     /// <summary>
     /// A single tie whose scored endpoint CLEARS its own head box, so both ends recede to the
     /// head centres. LilyPond: 2.602245 wide.
@@ -8185,6 +8271,27 @@ internal static class LpGeometryProbes
         // same stem direction, one head shape apart. See probe SX.
         new("stem.up.right-edge.half-head", SX, g => g.UpStemRightFromHeadAnchor(0)),
         new("stem.up.right-edge.black-head", SX, g => g.UpStemRightFromHeadAnchor(1)),
+
+        // ...and the arpeggio, read the same way: one chord, two head shapes, and everything
+        // LilyPond answers is head-BLIND because its wiggle is a glyph placed by padding. The
+        // width is that glyph's own extent and the clearance is the padding; the two books
+        // therefore give LilyPond the SAME two numbers, so any spread Lily# shows between
+        // them is entirely Lily#'s half-head-width term. The length is head-blind on both
+        // sides (LilyPond's own dump gives AQ and AW the same y extent to six digits), so it
+        // is read once. See probes AQ and AW.
+        new("arpeggio.width.black-heads", AQ, g => g.ArpeggioWidth()),
+        new("arpeggio.width.whole-heads", AW, g => g.ArpeggioWidth()),
+        new("arpeggio.x.right-edge-to-head.black-heads", AQ,
+            g => g.ArpeggioRightToNoteheadLeft()),
+        new("arpeggio.x.right-edge-to-head.whole-heads", AW,
+            g => g.ArpeggioRightToNoteheadLeft()),
+        new("arpeggio.y.length", AQ, g => g.ArpeggioLength()),
+
+        // ...and the room the column BEFORE a wiggle is given, which none of the four above
+        // can see: a reversed head moves the wiggle and its own clearance together, so only
+        // a reading taken from the previous column notices when the spacing did not follow.
+        // See probe AR.
+        new("arpeggio.x.previous-head-to-wiggle", AR, g => g.PreviousHeadToArpeggio(1)),
 
         // ...and again, shaped so a BEAM over forced-down eighth notes is what binds it -- the
         // first ledger points that reach a beam. The beam is DRAWN by the quanter but Lily#'s

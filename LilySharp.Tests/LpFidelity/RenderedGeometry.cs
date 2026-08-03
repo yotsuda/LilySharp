@@ -1841,6 +1841,154 @@ internal sealed class RenderedGeometry
     /// <summary>Straight strokes in drawing order — stems, staff lines, ledger lines.</summary>
     public IReadOnlyList<DrawnLine> Lines => _page.Lines;
 
+    /// <summary>
+    /// The EXTENT of the page's one arpeggio — the stack of <c>scripts.arpeggio</c> copies
+    /// as the drawn anchors plus the glyph's own designed box, in device coordinates.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ EXTENT, NOT INK, AND THAT IS THE WHOLE POINT. LilyPond's numbers here are grob
+    /// extents: the width is the glyph's box (lily/arpeggio.cc:313-319 <c>Arpeggio::width</c>
+    /// returns <c>get_squiggle(me).extent(X_AXIS)</c>, declared as the grob's X-extent at
+    /// scm/define-grobs.scm:218) and the length is whole copies of it. The glyph's INK
+    /// overshoots that box — (-0.004 . 0.804) by (-0.224 . 1.224) against (0 . 0.8) by
+    /// (0 . 1.0) — so copies blend where they meet and a pile's ink is 0.448 taller than its
+    /// extent. Reading ink would report that overshoot as a divergence from LilyPond that
+    /// LilyPond itself has.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT WAS AN INK READING UNTIL THE PORT, and the switch was predicted rather than
+    /// discovered: while Lily# DREW the wiggle as stroked line segments there was no declared
+    /// box to read, so the reading unioned the stroke rectangles instead. That mechanism is
+    /// gone; a reading of it would now find no slanted stroke at all.
+    /// </para>
+    /// <para>
+    /// The drawn SIZE is read from the glyph rather than assumed, so a wiggle set at the
+    /// wrong font size — an ossia's, say — fails here instead of passing on the font's box.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT REFUSES ANYTHING BUT ONE STACK: every copy must stand at the same X, since the
+    /// pile is one grob. A book with two arpeggios would otherwise have them merged into one
+    /// box and read as a very long single wiggle.
+    /// </para>
+    /// </remarks>
+    private IReadOnlyList<(double Left, double Right, double Bottom, double Top, int Copies)>
+        ArpeggioStacks()
+    {
+        var box = LilySharp.Core.Svg.Layout.GlyphMetrics.Arpeggio;
+        var stacks = _page.Glyphs
+            .Where(g => g.Glyph == LilySharp.Core.Svg.EmmentalerGlyphs.Arpeggio)
+            // One grob stands at one X, so the X groups ARE the arpeggios.
+            .GroupBy(g => Math.Round(g.X, 9))
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                var copies = g.OrderBy(c => c.Y).ToList();
+                double scale =
+                    copies[0].FontSize / LilySharp.Core.Rendering.SharedRenderer.FontSize;
+                // Device Y runs DOWN and a glyph's box runs UP from its baseline, so the
+                // topmost copy (smallest Y) carries the pile's top edge.
+                return (Left: copies[0].X + box.Left * scale,
+                        Right: copies[0].X + box.Right * scale,
+                        Bottom: copies[^1].Y - box.Bottom * scale,
+                        Top: copies[0].Y - box.Top * scale,
+                        Copies: copies.Count);
+            })
+            .ToList();
+        if (stacks.Count == 0)
+            throw new InvalidOperationException(
+                "the probe drew no arpeggio glyph, so there is no wiggle to measure."
+                + "\nDrawn geometry:\n" + Describe());
+        return stacks;
+    }
+
+    private (double Left, double Right, double Bottom, double Top, int Copies) ArpeggioExtent()
+    {
+        var stacks = ArpeggioStacks();
+        if (stacks.Count != 1)
+            throw new InvalidOperationException(
+                $"the probe drew {stacks.Count} arpeggios and this reading claims one — say "
+                + "which.\nDrawn geometry:\n" + Describe());
+        return stacks[0];
+    }
+
+    /// <summary>
+    /// How wide the arpeggio wiggle's ink is — LilyPond's <c>Arpeggio</c> X-extent, which is
+    /// the <c>scripts.arpeggio</c> glyph's own width and therefore a font metric.
+    /// </summary>
+    public double ArpeggioWidth()
+    {
+        var ext = ArpeggioExtent();
+        return ext.Right - ext.Left;
+    }
+
+    /// <summary>
+    /// The arpeggio wiggle's ink RIGHT edge → the chord's leftmost notehead ink LEFT edge:
+    /// LilyPond's <c>Arpeggio</c> <c>padding</c>, 0.5, since the grob is placed by
+    /// <c>side-position-interface</c> on the X axis toward <c>LEFT</c>
+    /// (scm/define-grobs.scm:208-221) and both edges of that placement are grob extents.
+    /// </summary>
+    /// <remarks>
+    /// The notehead anchor IS its ink left edge (see <see cref="UpStemRightFromHeadAnchor"/>,
+    /// where the same anchor plus the head's own width lands on LilyPond's stem to six
+    /// digits), and the LEFTMOST head is taken because the placement clears the column: a
+    /// head reversed to the far side of the stem is what moves that edge, which is why the
+    /// books this reads have no seconds.
+    /// </remarks>
+    public double ArpeggioRightToNoteheadLeft()
+    {
+        var heads = Noteheads;
+        if (heads.Count == 0)
+            throw new InvalidOperationException(
+                "the probe drew no notehead for the arpeggio to stand left of."
+                + "\nDrawn geometry:\n" + Describe());
+        return heads.Min(h => h.X) - ArpeggioExtent().Right;
+    }
+
+    /// <summary>
+    /// How LONG the arpeggio wiggle's ink is — LilyPond's stack of whole
+    /// <c>scripts.arpeggio</c> glyphs, so the length is quantised to the glyph's own height
+    /// (lily/arpeggio.cc:180-183: <c>add_at_edge</c> until the pile covers the head interval).
+    /// </summary>
+    public double ArpeggioLength()
+    {
+        var ext = ArpeggioExtent();
+        return ext.Bottom - ext.Top;   // device Y runs down
+    }
+
+    /// <summary>
+    /// The nearest notehead ANCHOR to the LEFT of arpeggio <paramref name="index"/> → that
+    /// wiggle's left edge: how much room the column before it was given.
+    /// </summary>
+    /// <remarks>
+    /// This is the reading the wiggle's OWN clearance cannot take. A second in a stem-down
+    /// chord puts a head a full width left of the column and the wiggle clears THAT head, so
+    /// <see cref="ArpeggioRightToNoteheadLeft"/> stays exact however far left the pair sits;
+    /// what moves is where they land relative to the PREVIOUS column, i.e. whether the
+    /// spacing reserved for the wiggle where it is actually drawn.
+    /// <para>
+    /// Taken from the head's ANCHOR rather than its ink right so that both sides of the
+    /// comparison are drawn quantities — no glyph box enters the reading. LilyPond's own
+    /// spring lands the previous ink exactly <c>padding</c> away, so the number is that
+    /// head's width plus 0.5.
+    /// </para>
+    /// </remarks>
+    public double PreviousHeadToArpeggio(int index)
+    {
+        var stacks = ArpeggioStacks();
+        if (index < 0 || index >= stacks.Count)
+            throw new InvalidOperationException(
+                $"asked for arpeggio {index} but the probe drew {stacks.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        double left = stacks[index].Left;
+        var before = Noteheads.Where(h => h.X < left - 1e-9).ToList();
+        if (before.Count == 0)
+            throw new InvalidOperationException(
+                $"no notehead is drawn left of arpeggio {index}, so there is no previous "
+                + "column to measure from.\nDrawn geometry:\n" + Describe());
+        return left - before.Max(h => h.X);
+    }
+
     /// <summary>Filled quadrilaterals in drawing order — the beam lines.</summary>
     public IReadOnlyList<DrawnQuad> Quads => _page.Quads;
 

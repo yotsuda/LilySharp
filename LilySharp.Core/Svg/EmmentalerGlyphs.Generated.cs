@@ -278,6 +278,10 @@ internal static partial class EmmentalerGlyphs
     /// <summary>scripts.prallprall</summary>
     public const char OrnPrallPrall = '\uE075';
 
+    // === Arpeggio ===
+    /// <summary>scripts.arpeggio (one staff space tall; the stencil stacks whole copies)</summary>
+    public const char Arpeggio = '\uE06F';
+
     // === Breathing signs ===
     /// <summary>scripts.rcomma (\breathe)</summary>
     public const char BreathComma = '\uE069';

@@ -214,6 +214,16 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("OrnMordent", "scripts.mordent", ""),
     ("OrnPrallPrall", "scripts.prallprall", ""),
 
+    # The wiggle's unit, and the same shape of fact as the trill element above: LilyPond's
+    # arpeggio stencil is this ONE glyph stacked upward until the pile covers the chord
+    # (lily/arpeggio.cc:34-41 get_squiggle, :180-183 add_at_edge), so the engraver places
+    # whole copies rather than stroking a wave of its own. The glyph is one staff space tall
+    # and 0.8 wide by design (mf/feta-scripts.mf:1892-1905 set_char_box (0, width#, 0,
+    # height#) with height# = staff_space# and width# = 0.8 * height#), which is why an
+    # arpeggio's drawn length always comes out a whole number of spaces.
+    ("#", "Arpeggio", ""),
+    ("Arpeggio", "scripts.arpeggio", "one staff space tall; the stencil stacks whole copies"),
+
     ("#", "Breathing signs", ""),
     ("BreathComma", "scripts.rcomma", "\\breathe"),
     ("CaesuraStraight", "scripts.caesura.straight", "\\caesura"),
