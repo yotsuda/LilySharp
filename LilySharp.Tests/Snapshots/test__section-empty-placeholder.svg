@@ -28,7 +28,7 @@
   <text class="music" x="31.63" y="14.85" font-size="4.00" data-pos="37"></text>
   <line x1="32.86" y1="14.70" x2="32.86" y2="11.35" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.63" y="15.35" font-size="4.00" data-pos="39"></text>
-  <line x1="35.87" y1="15.35" x2="35.87" y2="11.85" stroke="#000000" stroke-width="0.130"/>
+  <line x1="35.94" y1="15.35" x2="35.94" y2="11.85" stroke="#000000" stroke-width="0.130"/>
   <rect x="21.04" y="12.35" width="0.19" height="4.00" data-pos="31"/>
   <rect x="27.53" y="12.35" width="0.19" height="4.00" data-pos="33"/>
   <rect x="39.10" y="12.35" width="0.19" height="4.00" data-pos="40"/>

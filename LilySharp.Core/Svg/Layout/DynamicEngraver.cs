@@ -456,13 +456,13 @@ internal static class DynamicEngraver
 
                     // The REAL stem — drawn length (shortening, middle-line pull,
                     // beam-quanted face) at its own thin X: the renderer's attach (down
-                    // at the head's left edge, up at the black head's right edge),
+                    // at the head's left edge, up at THIS head's right edge),
                     // StemThickness wide.
                     if (col.HasStem)
                     {
                         double tipUp = StaffMiddle - col.OutwardTipDeviceY(col.StemUp);
                         double anchorUp = col.HeadPositionToward(col.StemUp) * 0.5;
-                        double stemCentre = LayoutUtilities.StemX(xColumn, col.StemUp);
+                        double stemCentre = LayoutUtilities.StemX(xColumn, col.StemUp, col.NoteValue);
                         double half = EngravingDefaults.StemThickness / 2;
                         if (col.StemUp)
                             up.Merge(VerticalSkyline.FromBox(stemCentre - half, stemCentre + half,

@@ -574,6 +574,19 @@ internal static partial class GlyphMetrics
             ? 0 // breve
             : baseDuration.Numerator == 1 ? baseDuration.Denominator : 1;
 
+    /// <summary>
+    /// The same bucket for whichever ITEM carries a head — the one place that knows a note
+    /// and a chord are asked the same question, so a caller that needs a head shape does not
+    /// grow its own switch. A headless item (a rest, a clef) answers 4, the shape whose
+    /// metrics every headless caller was already reading.
+    /// </summary>
+    public static int NoteValueOf(Model.MusicItem? item) => item switch
+    {
+        Model.NoteItem n => NoteValueOf(n.BaseDuration),
+        Model.ChordItem c => NoteValueOf(c.BaseDuration),
+        _ => 4,
+    };
+
     /// <summary>Gets the notehead advance width for a given note value.</summary>
     public static double GetNoteheadAdvance(int noteValue)
         => GetNoteheadAdvance(Design20, noteValue);
@@ -587,6 +600,50 @@ internal static partial class GlyphMetrics
         1 => font.NoteheadWholeAdvance,
         2 => font.NoteheadHalfAdvance,
         _ => font.NoteheadBlackAdvance,
+    };
+
+    /// <summary>
+    /// The stem-attachment point of the head a given note value draws, in staff spaces
+    /// about the head's own origin.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2608 ly:note-head::calc-stem-attachment is NoteHead's
+    ///   stem-attachment — a callback, so the coordinate is asked per HEAD and never fixed
+    ///   once for the whole column.
+    /// LILYPOND-REF: lily/note-head.cc:201-213 Note_head::calc_stem_attachment answers it
+    ///   through the head's OWN glyph name (<c>internal_print (me, &amp;key)</c>), which is
+    ///   what makes the answer a function of the head SHAPE.
+    /// LILYPOND-REF: lily/note-head.cc:164-196 Note_head::get_stem_attachment normalises the
+    ///   point out of that same glyph's box (<c>2·(wx − centre)/length</c>), and
+    /// LILYPOND-REF: lily/stem.cc:1051-1088 Stem::internal_calc_stem_offset_from_head puts it
+    ///   back with <c>head_wid.linear_combination (attach)</c>. The round trip is the
+    ///   identity, so what this returns is the font's attachment coordinate itself.
+    /// <para>
+    /// ⚠️ NOT A LITERAL PORT, and the difference is one indirection: LilyPond asks the FONT for
+    /// a glyph NAME's attachment at run time, while Lily#'s metrics are extracted per design
+    /// ahead of time and keyed by note value — the same shape
+    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/> already takes, because a name-keyed
+    /// lookup would need the extractor to keep glyph names. Making it literal means giving
+    /// DesignMetrics a name→metric map; nothing needs one yet.
+    /// </para>
+    /// <para>
+    /// A WHOLE note (and a breve) falls to the black head here, which is not LilyPond's
+    /// answer — LilyPond gives an invisible stem <c>attach = 0.0</c>, the head CENTRE
+    /// (stem.cc:1063-1064, <c>center_invisible</c>). Nothing asks: the drawing side gates on
+    /// <c>noteValue &gt;= 2</c> (Stem::is_normal_stem) before it reads a stem x at all. Left
+    /// as it was so this change moves half notes only; it wants its own point.
+    /// </para>
+    /// </remarks>
+    public static (double X, double Y) GetNoteheadStemAttachment(int noteValue)
+        => GetNoteheadStemAttachment(Design20, noteValue);
+
+    /// <summary>The same lookup asked of ONE font — see
+    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
+    public static (double X, double Y) GetNoteheadStemAttachment(
+        DesignMetrics font, int noteValue) => noteValue switch
+    {
+        2 => font.NoteheadHalfStemAttachment,
+        _ => font.NoteheadBlackStemAttachment,
     };
 
     /// <summary>

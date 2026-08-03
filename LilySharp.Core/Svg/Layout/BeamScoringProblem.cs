@@ -255,8 +255,12 @@ internal sealed class BeamScoringProblem
         // The stem's own x, not its column's — LayoutUtilities.StemX is the single house the
         // renderer and the collision collector already read, so the beam is scored in the
         // frame it is drawn in (BeamStemFrameTests asserts the two agree).
+        // Per MEMBER head shape: a two-note tremolo pair beams HALF notes
+        // (BeamDetector.IsBeamable), whose attachment is 0.073200 further out than a black
+        // head's — so this cannot be lifted out of the loop as one offset for the group.
         double StemXOf(BeamMember m) =>
-            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp, headFont);
+            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp,
+                GlyphMetrics.NoteValueOf(m.Item), headFont);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 

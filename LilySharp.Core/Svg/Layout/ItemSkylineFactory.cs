@@ -267,7 +267,8 @@ internal static class ItemSkylineFactory
         if (SpacingRules.StemSpacingInfo(item) is not { } stem)
             return;
 
-        double centreX = LayoutUtilities.StemX(noteheadLeftX, stem.StemUp);
+        double centreX = LayoutUtilities.StemX(noteheadLeftX, stem.StemUp,
+            GlyphMetrics.NoteValueOf(item));
         double half = EngravingDefaults.StemThickness / 2;
 
         // Staff positions are +up, the box frame is y-down: the MAX position is the
@@ -356,7 +357,7 @@ internal static class ItemSkylineFactory
         //   on top of the same common +0.100 the down pair carries.
         // MEASURED: routing both directions through the one house took it to
         //   +0.100000, so all three flag points now read ONE number.
-        double stemX = LayoutUtilities.StemX(noteheadLeftX, note.StemUp);
+        double stemX = LayoutUtilities.StemX(noteheadLeftX, note.StemUp, noteValue);
 
         double flagYBottom, flagYTop;
         if (note.StemUp)

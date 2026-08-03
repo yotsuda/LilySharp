@@ -1365,6 +1365,15 @@ public sealed class LilyPondExporter
             string label = name.Substring("mark.".Length).Trim('"');
             return $"\\mark \\markup {{ \\box {label} }}";
         }
+        // ⚠️ `@arpeggio.bracket` IS STILL DROPPED, and on purpose. LilyPond spells it as two
+        // overrides that change what a chord's `\arpeggio` DRAWS (ly/property-init.ly:99-108
+        // defines arpeggioBracket as ly:chord-bracket::print plus a matching X-extent), so the
+        // twin would need a
+        // `\once \override` pair in the prefix AND an `\arpeggio` in the suffix, where every
+        // other mark contributes to one side only. It is not written because NO BOOK USES IT:
+        // there is no .lys in the corpus or the fixtures with `@arpeggio.bracket`, so an
+        // export written now could not be checked against LilyPond and would be a guess in a
+        // twin generator — the one place a guess turns into a false agreement.
         _warnings.Add($"@{name} dropped (out of scope)");
         return "";
     }
@@ -1624,6 +1633,18 @@ public sealed class LilyPondExporter
         {
             case "fall": return "\\bendAfter #-4"; // a fall/drop off the note
             case "dead": return "\\deadNote";      // normally intercepted as a prefix
+            // ⚠️ NOT A SCRIPT, so it must answer here and never reach the `dir + glyph` tail
+            // below: LilyPond's arpeggio is an EVENT on the chord (`<c e g>1\arpeggio`), and
+            // `-\arpeggio` is not the same thing. Lily#'s ChordItem.HasArpeggio is a plain
+            // bool with no direction, so there is nothing for a direction prefix to carry.
+            // ⚠️ AND `<< … >>` IS A DIFFERENT CONSTRUCT — that is ArpeggioSyntax, a written-out
+            // broken chord, and it has its own emitter. This is the stacked chord plus wavy
+            // line. Confusing the two is what made the twins agree falsely.
+            // LILYPOND-REF: lily/arpeggio-engraver.cc:73-80 Arpeggio_engraver::listen_arpeggio
+            //   — an EVENT is listened for, not a script acknowledged, which is why the
+            //   spelling is `<c e g>1\arpeggio`. ly/property-init.ly:67 is where the command
+            //   itself is `#(make-music 'ArpeggioEvent)`.
+            case "arpeggio": return "\\arpeggio";
         }
 
         // Common LilyPond articulations. `@name.up/.down` → -^ / _^ direction.

@@ -305,7 +305,10 @@ internal static partial class SharedRenderer
         double stringSpace = EngravingDefaults.TabStringSpace(
             Tunings.GetStringCount(staff.Tuning ?? TuningType.Guitar));
         double stemLength = 3.0 * stringSpace;
-        double stemX = LayoutUtilities.StemX(columnX, stemUp);
+        // The companion NOTATION stem's x, head shape and all — a tab half note has to move
+        // with the notation half note it stands under or the pair stops sharing one vertical,
+        // which is the whole reason this reads a notehead offset a fret digit does not have.
+        double stemX = LayoutUtilities.StemX(columnX, stemUp, noteValue);
         // TabStemHeadY works in device coordinates; round-trip through it, then lift
         // both stem ends to the page Y-up frame.
         double nearYDev = TabStemHeadY(item, stemUp, pageHeight - staffY, staff);

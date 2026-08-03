@@ -484,6 +484,11 @@ internal static class EngravingDefaults
     // advance, 1.304000) until 2026-08-02; LilyPond reads the font's own attachment
     // coordinate, 1.304200 — see LayoutUtilities.StemAttachX, which is the house every
     // caller goes through, and audit/lp-geometry/probes/beam-stem-x.ly (1.2392, not 1.2390).
+    // ⚠️ AND IT IS THE BLACK HEAD'S, WHICH IS NOT EVERY HEAD'S. Since 2026-08-03
+    // LayoutUtilities.StemAttachX picks the attachment per head shape (a half head's is
+    // 1.377400), so this constant is that house's answer for a QUARTER at scale 1 and nothing
+    // wider. Nothing computes with it — it survives as the documented black-head reading, and
+    // a caller that needs "where does this stem stand" must go through the house.
     public static readonly double StemUpAttachX =
         LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackStemAttachment.X
         - StemThickness / 2;

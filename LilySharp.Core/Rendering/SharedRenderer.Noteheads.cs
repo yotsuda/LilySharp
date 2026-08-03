@@ -502,7 +502,7 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head —
             // the offset comes from the (scaled) head extent.
             double headScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
-            double stemX = x + LayoutUtilities.StemAttachX(stemUp, headScale);
+            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, headScale);
             // Duration-dependent length + unnatural-direction shortening + the
             // extend-to-center-line rule, faithfully following LilyPond's
             // Stem::internal_calc_stem_end_position (lily/stem.cc:481).
@@ -664,7 +664,7 @@ internal static partial class SharedRenderer
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
             // Up-stems attach at the (cue-scaled) head's right edge; see DrawNote.
-            double stemX = x + LayoutUtilities.StemAttachX(stemUp, headScale);
+            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, headScale);
             // Stem attaches at the far notehead; its length is reckoned from the
             // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
             // following LilyPond's Stem::internal_calc_stem_end_position (stem.cc:481).

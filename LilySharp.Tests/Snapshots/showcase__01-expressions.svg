@@ -74,7 +74,7 @@
   <text class="music" x="67.01" y="22.48" font-size="4.00" data-pos="545"></text>
   <line x1="68.25" y1="22.33" x2="68.25" y2="18.98" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="70.94" y="21.98" font-size="4.00" data-pos="549"></text>
-  <line x1="72.18" y1="21.98" x2="72.18" y2="18.48" stroke="#000000" stroke-width="0.130"/>
+  <line x1="72.25" y1="21.98" x2="72.25" y2="18.48" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="72.77" y="21.98" font-size="4.00"></text>
   <text class="music" x="75.23" y="21.48" font-size="4.00" data-pos="555"></text>
   <text class="music" x="78.61" y="23.98" font-size="4.00" data-pos="579"></text>

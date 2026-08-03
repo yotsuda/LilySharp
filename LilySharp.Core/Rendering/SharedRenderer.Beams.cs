@@ -130,8 +130,11 @@ internal static partial class SharedRenderer
             // The one house, shared with the QUANTER: BeamScoringProblem measures a covered
             // grob's x against the beam's stems, and that is only the same frame if the two
             // spell this offset the same way. See LayoutUtilities.StemAttachX.
+            // Per MEMBER head shape: a two-note tremolo pair beams HALF notes
+            // (BeamDetector.IsBeamable), and a half head's attachment is 0.073200 further out.
             double StemAttachX(int i) =>
-                LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i));
+                LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i),
+                    GlyphMetrics.NoteValueOf(grp.Members[i].Item));
 
             double leftBeamY = staffMiddleY + beam.LeftY / 2.0;
             double rightBeamY = staffMiddleY + beam.RightY / 2.0;

@@ -48,7 +48,7 @@
   <text class="music" x="42.96" y="19.82" font-size="4.00" data-pos="358"></text>
   <line x1="44.20" y1="19.67" x2="44.20" y2="16.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="47.16" y="19.32" font-size="4.00" data-pos="362"></text>
-  <line x1="48.40" y1="19.32" x2="48.40" y2="15.82" stroke="#000000" stroke-width="0.130"/>
+  <line x1="48.48" y1="19.32" x2="48.48" y2="15.82" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.99" y="18.82" font-size="4.00"></text>
   <text class="music" x="51.86" y="18.32" font-size="4.00" data-pos="366"></text>
   <text class="music" x="55.47" y="21.32" font-size="4.00" data-pos="249"></text>
@@ -76,7 +76,7 @@
   <text class="music" x="89.89" y="19.82" font-size="4.00" data-pos="358"></text>
   <line x1="91.13" y1="19.67" x2="91.13" y2="16.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="94.10" y="19.32" font-size="4.00" data-pos="362"></text>
-  <line x1="95.34" y1="19.32" x2="95.34" y2="15.82" stroke="#000000" stroke-width="0.130"/>
+  <line x1="95.41" y1="19.32" x2="95.41" y2="15.82" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="95.93" y="18.82" font-size="4.00"></text>
   <text class="music" x="98.79" y="18.32" font-size="4.00" data-pos="366"></text>
   <rect x="20.38" y="16.32" width="0.19" height="4.00" data-pos="260"/>

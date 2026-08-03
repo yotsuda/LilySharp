@@ -931,10 +931,14 @@ internal static class ArticulationEngraver
         // A tab beam's direction is string-based, not the notation pitch direction.
         bool up = geom.GroupStemUp(beam.Group.Members.Select(m => m.Item));
         int n = beam.Group.Members.Length;
-        double attach = LayoutUtilities.StemAttachX(up);
         var xs = new double[n];
+        // Per MEMBER head shape, as the renderer's own DrawBeams does — a tremolo pair beams
+        // HALF heads, whose attachment is 0.073200 further out, so one `attach` for the group
+        // would quant this line against stems the renderer does not draw.
         for (int i = 0; i < n; i++)
-            xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0) + attach;
+            xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0)
+                  + LayoutUtilities.StemAttachX(
+                        up, GlyphMetrics.NoteValueOf(beam.Group.Members[i].Item));
         var line = TabBeamQuant.Compute(beam.Group, xs, geom, up);
         double half = EngravingDefaults.BeamThickness / 2;
         return TabBeamMath.At(line, noteX) + (up ? -half : half);

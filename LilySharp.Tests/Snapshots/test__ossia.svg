@@ -76,9 +76,9 @@
   <text class="music" x="35.12" y="32.58" font-size="4.00" data-pos="628"></text>
   <line x1="36.36" y1="32.43" x2="36.36" y2="29.08" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="47.17" y="32.08" font-size="4.00" data-pos="634"></text>
-  <line x1="48.41" y1="32.08" x2="48.41" y2="28.58" stroke="#000000" stroke-width="0.130"/>
+  <line x1="48.48" y1="32.08" x2="48.48" y2="28.58" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="61.97" y="32.08" font-size="4.00" data-pos="637"></text>
-  <line x1="63.21" y1="32.08" x2="63.21" y2="28.58" stroke="#000000" stroke-width="0.130"/>
+  <line x1="63.29" y1="32.08" x2="63.29" y2="28.58" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="80.56" y="34.08" font-size="4.00" data-pos="641"></text>
   <rect x="44.46" y="29.08" width="0.19" height="4.00" data-pos="632"/>
   <rect x="76.85" y="29.08" width="0.19" height="4.00" data-pos="639"/>

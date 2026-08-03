@@ -43,9 +43,9 @@
   <text class="music" x="17.59" y="22.07" font-size="4.00" data-pos="236"></text>
   <line x1="18.83" y1="21.92" x2="18.83" y2="18.57" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.92" y="21.57" font-size="4.00" data-pos="240"></text>
-  <line x1="23.16" y1="21.57" x2="23.16" y2="18.07" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.23" y1="21.57" x2="23.23" y2="18.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="26.20" y="21.57" font-size="4.00" data-pos="243"></text>
-  <line x1="27.44" y1="21.57" x2="27.44" y2="18.07" stroke="#000000" stroke-width="0.130"/>
+  <line x1="27.51" y1="21.57" x2="27.51" y2="18.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="31.76" y="24.57" font-size="4.00" data-pos="265"></text>
   <line x1="33.00" y1="24.42" x2="33.00" y2="20.57" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.76" y="24.07" font-size="4.00" data-pos="270"></text>

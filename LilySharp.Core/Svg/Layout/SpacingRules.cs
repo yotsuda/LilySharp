@@ -2088,7 +2088,9 @@ internal static class SpacingRules
             var flag = GlyphMetrics.GetFlagBBox(font, note.BaseDuration.Denominator, stemUp: true);
             if (flag != default)
                 ink = Math.Max(ink,
-                    LayoutUtilities.StemAttachX(up: true, font) + flag.Width);
+                    LayoutUtilities.StemAttachX(
+                        up: true, GlyphMetrics.NoteValueOf(note.BaseDuration), font)
+                    + flag.Width);
         }
         return ink + DefaultExtraSpacingWidth;
     }

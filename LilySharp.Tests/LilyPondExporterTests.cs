@@ -169,6 +169,38 @@ public class LilyPondExporterTests
         Assert.Contains("\\mark \\markup { \\box Intro }", ly);
     }
 
+    /// <summary>
+    /// <c>@arpeggio</c> is the stacked chord's wavy line, and the twin has to carry it or the
+    /// two engines are not looking at the same music.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FAILURE THIS GUARDS IS A FALSE AGREEMENT, not a crash. Until 2026-08-03 the
+    /// exporter warned "articulation @arpeggio not mapped, dropped" and wrote a bare
+    /// <c>&lt;c e g&gt;1</c>, so anyone comparing an arpeggio book against LilyPond was
+    /// comparing a chord WITH a wavy line to a chord WITHOUT one — and the arpeggio adds ink
+    /// to the LEFT of the column, so the disagreement lands in exactly the x readings such a
+    /// comparison would be taken for.
+    /// <para>
+    /// MEASURED, not read off the source: the emitted twin was rendered by LilyPond 2.26.0 and
+    /// diffed against the same twin with <c>\arpeggio</c> deleted. The difference is three
+    /// <c>scripts.arpeggio</c> glyphs stacked a staff space apart at one x, and nothing else.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT a script: <c>\arpeggio</c> is an event on the chord, so it must not pick up the
+    /// <c>-</c> / <c>^</c> / <c>_</c> direction prefix every mapped articulation gets.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void Arpeggio_BecomesTheChordsArpeggioEvent()
+    {
+        var ly = Export(Score("<c, e, g,>1@arpeggio"));
+        Assert.Contains("\\arpeggio", ly);
+        // The event hangs on the chord itself, with no script direction in front of it.
+        Assert.DoesNotContain("-\\arpeggio", ly);
+        Assert.DoesNotContain("^\\arpeggio", ly);
+        Assert.DoesNotContain("_\\arpeggio", ly);
+    }
+
     [Fact]
     public void Tuplet_MapsToBackslashTuplet()
     {

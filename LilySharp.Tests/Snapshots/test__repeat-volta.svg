@@ -41,7 +41,7 @@
   <text class="music" x="17.59" y="21.62" font-size="4.00" data-pos="197"></text>
   <line x1="18.83" y1="21.47" x2="18.83" y2="18.12" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.92" y="21.12" font-size="4.00" data-pos="201"></text>
-  <line x1="23.16" y1="21.12" x2="23.16" y2="17.62" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.23" y1="21.12" x2="23.23" y2="17.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.75" y="20.62" font-size="4.00"></text>
   <text class="music" x="26.82" y="20.12" font-size="4.00" data-pos="205"></text>
   <text class="music" x="32.35" y="24.12" font-size="4.00" data-pos="228"></text>
@@ -53,7 +53,7 @@
   <text class="music" x="41.36" y="25.62" font-size="4.00" data-pos="235"></text>
   <line x1="42.60" y1="25.47" x2="42.60" y2="20.12" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="45.59" y="26.12" font-size="4.00" data-pos="239"></text>
-  <line x1="46.83" y1="26.12" x2="46.83" y2="20.12" stroke="#000000" stroke-width="0.130"/>
+  <line x1="46.91" y1="26.12" x2="46.91" y2="20.12" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="47.42" y="25.62" font-size="4.00"></text>
   <text class="music" x="50.50" y="20.12" font-size="4.00" data-pos="243"></text>
   <text class="music" x="54.24" y="22.12" font-size="4.00" data-pos="267"></text>
@@ -65,7 +65,7 @@
   <text class="music" x="63.24" y="20.62" font-size="4.00" data-pos="274"></text>
   <line x1="64.48" y1="20.47" x2="64.48" y2="17.12" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="67.50" y="21.12" font-size="4.00" data-pos="278"></text>
-  <line x1="68.74" y1="21.12" x2="68.74" y2="17.62" stroke="#000000" stroke-width="0.130"/>
+  <line x1="68.81" y1="21.12" x2="68.81" y2="17.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="69.33" y="20.62" font-size="4.00"></text>
   <text class="music" x="72.41" y="20.12" font-size="4.00" data-pos="282"></text>
   <text class="music" x="77.74" y="23.12" font-size="4.00" data-pos="306"></text>

@@ -68,12 +68,12 @@
   <text class="music" x="74.55" y="22.07" font-size="4.00" data-pos="433"></text>
   <text class="music" x="77.30" y="22.07" font-size="4.00" data-pos="433"></text>
   <text class="music" x="78.61" y="21.57" font-size="4.00" data-pos="437"></text>
-  <line x1="78.54" y1="22.07" x2="78.54" y2="18.07" stroke="#000000" stroke-width="0.130"/>
+  <line x1="78.61" y1="22.07" x2="78.61" y2="18.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="81.89" y="20.57" font-size="4.00" data-pos="448"></text>
   <text class="music" x="80.59" y="21.07" font-size="4.00" data-pos="444"></text>
   <text class="music" x="83.34" y="21.07" font-size="4.00" data-pos="444"></text>
   <text class="music" x="84.65" y="20.57" font-size="4.00" data-pos="448"></text>
-  <line x1="84.58" y1="21.07" x2="84.58" y2="17.23" stroke="#000000" stroke-width="0.130"/>
+  <line x1="84.65" y1="21.07" x2="84.65" y2="17.23" stroke="#000000" stroke-width="0.130"/>
   <rect x="21.51" y="18.57" width="0.19" height="4.00" data-pos="206"/>
   <rect x="35.17" y="18.57" width="0.19" height="4.00" data-pos="263"/>
   <rect x="50.34" y="18.57" width="0.19" height="4.00" data-pos="334"/>

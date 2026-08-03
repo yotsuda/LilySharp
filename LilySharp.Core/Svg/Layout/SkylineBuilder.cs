@@ -1599,14 +1599,14 @@ internal sealed class SkylineBuilder
         double stemLength = size.Span(
             NoteColumnLayout.RendererStemLength(stemUp, noteValue, staffPosition));
 
-        // The stem's REAL drawn span: the renderer attaches an up stem at the black
-        // head's right edge and a down stem at the head's left edge, StemThickness
-        // wide (SharedRenderer.Noteheads). The old seed gave the stem a ±1 ss box —
+        // The stem's REAL drawn span: the renderer attaches an up stem at THIS head's right
+        // edge (per shape — a half head's is 0.073200 wider) and a down stem at the head's
+        // left edge, StemThickness wide (SharedRenderer.Noteheads). The old seed gave a ±1 ss box —
         // wide enough that the below outside-staff pass would push a dynamic off a
         // stem LilyPond's thin sliver lets it tuck beside (DSQ).
         // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head;
         //   scm/define-grobs.scm Stem thickness 1.3 (line-thickness units).
-        double stemCentre = x + size.Span(LayoutUtilities.StemAttachX(stemUp));
+        double stemCentre = x + size.Span(LayoutUtilities.StemAttachX(stemUp, noteValue));
         double stemHalfWidth = size.Span(EngravingDefaults.StemThickness / 2);
         double flagWidth = size.Span(EngravingDefaults.FlagWidth);
 

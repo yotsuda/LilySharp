@@ -46,6 +46,21 @@ internal static class LayoutUtilities
     /// stem's X-offset is 1.2392 = 1.304200 − 0.065, and NOT 1.2390.
     /// </para>
     /// <para>
+    /// ⚠️ AND IT IS PER HEAD SHAPE — <paramref name="noteValue"/> is what picks it
+    /// (<see cref="GlyphMetrics.GetNoteheadStemAttachment(int)"/>), because the LilyPond
+    /// property above is a callback answered from the head's own glyph. This read the BLACK
+    /// head's 1.304200 for every head until 2026-08-03, so a half note's up stem stood
+    /// 1.377400 − 1.304200 = 0.073200 left of LilyPond's; MEASURED as exactly that by ledger
+    /// <c>stem.up.right-edge.half-head</c> against its control
+    /// <c>stem.up.right-edge.black-head</c>, one bar apart at one pitch.
+    /// ⚠️ A DOWN stem does not move, and that is a fact about the FONT rather than a
+    /// simplification: every Emmentaler head box starts at x 0.000000
+    /// (<see cref="GlyphMetrics.NoteheadHalf"/> and <see cref="GlyphMetrics.NoteheadBlack"/>
+    /// are (0, 1.377400) and (0, 1.304200)), so the left edge is shape-independent and
+    /// <see cref="EngravingDefaults.StemDownAttachX"/> stays a constant. It is also why each
+    /// attachment X equals its own box's RIGHT edge exactly.
+    /// </para>
+    /// <para>
     /// ⚠️ THE one house. This offset had SEVEN spellings, and the quanter's frame claim
     /// ("a beam is scored against ink in the beam's own frame, whose x is its STEMS") is a
     /// claim that the quanter and the renderer compute it the SAME way — which nothing
@@ -53,15 +68,20 @@ internal static class LayoutUtilities
     /// while every test stayed green. <c>BeamStemXMatchesTheDrawnStem</c> asserts it.
     /// </para>
     /// </remarks>
+    /// <param name="noteValue">
+    /// The head's own note value (1=whole, 2=half, else black), as
+    /// <see cref="GlyphMetrics.NoteValueOf"/> reads it. A BEAM member is not always a black
+    /// head: a two-note tremolo pair beams HALVES (<c>BeamDetector.IsBeamable</c>).
+    /// </param>
     /// <param name="headScale">
     /// The head's own scale. A cue head is drawn at 0.66×, so an UP stem attaches at the
     /// scaled head's attachment point or it floats off the small head; a down stem attaches at
-    /// the left edge, which does not move with the scale. At 1.0 this is
+    /// the left edge, which does not move with the scale. At noteValue 4 and scale 1.0 this is
     /// <see cref="EngravingDefaults.StemUpAttachX"/> exactly.
     /// </param>
-    public static double StemAttachX(bool up, double headScale = 1.0) =>
+    public static double StemAttachX(bool up, int noteValue, double headScale = 1.0) =>
         up
-            ? GlyphMetrics.NoteheadBlackStemAttachment.X * headScale
+            ? GlyphMetrics.GetNoteheadStemAttachment(noteValue).X * headScale
               - EngravingDefaults.StemThickness / 2
             : EngravingDefaults.StemDownAttachX;
 
@@ -75,22 +95,24 @@ internal static class LayoutUtilities
     /// MEASURED (ledger grace.stem.thickness against grace.stem.thickness.full-size-control)
     /// LilyPond draws both at 0.13.
     /// </remarks>
-    public static double StemAttachX(bool up, GlyphMetrics.DesignMetrics? font) =>
+    public static double StemAttachX(bool up, int noteValue, GlyphMetrics.DesignMetrics? font) =>
         up
-            ? (font?.NoteheadBlackStemAttachment.X
-               ?? GlyphMetrics.NoteheadBlackStemAttachment.X)
+            ? (font is { } f
+                   ? GlyphMetrics.GetNoteheadStemAttachment(f, noteValue).X
+                   : GlyphMetrics.GetNoteheadStemAttachment(noteValue).X)
               - EngravingDefaults.StemThickness / 2
             : EngravingDefaults.StemDownAttachX;
 
     /// <summary>The x a stem stands at, given its note column's x.</summary>
-    /// <remarks>See <see cref="StemAttachX(bool, double)"/>.</remarks>
-    public static double StemX(double columnX, bool up, double headScale = 1.0) =>
-        columnX + StemAttachX(up, headScale);
+    /// <remarks>See <see cref="StemAttachX(bool, int, double)"/>.</remarks>
+    public static double StemX(double columnX, bool up, int noteValue, double headScale = 1.0) =>
+        columnX + StemAttachX(up, noteValue, headScale);
 
     /// <summary>The x a stem stands at, for a head read from <paramref name="font"/>.</summary>
-    /// <remarks>See <see cref="StemAttachX(bool, GlyphMetrics.DesignMetrics)"/>.</remarks>
-    public static double StemX(double columnX, bool up, GlyphMetrics.DesignMetrics? font) =>
-        columnX + StemAttachX(up, font);
+    /// <remarks>See <see cref="StemAttachX(bool, int, GlyphMetrics.DesignMetrics)"/>.</remarks>
+    public static double StemX(double columnX, bool up, int noteValue,
+        GlyphMetrics.DesignMetrics? font) =>
+        columnX + StemAttachX(up, noteValue, font);
 
     /// <summary>
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.

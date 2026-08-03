@@ -329,7 +329,21 @@ internal static partial class SharedRenderer
         // reads. Spelling it a second time here is what let the two frames drift — the second
         // spelling pulled the stem back by half a SCALED thickness while the quanter used the
         // unscaled one, and nothing observed either.
-        double StemX(int i) => LayoutUtilities.StemX(xs[i], up: true, headFont);
+        // ⚠️ LILYSHARP-OWN: the head shape is BLACK for every grace duration, because that is
+        //   the glyph the loop above draws unconditionally
+        //   (gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, ...) never looks at the duration).
+        //   This line has to follow the glyph actually drawn, or the stem leaves the head.
+        //   departs from: lily/note-head.cc:207, internal_print (me, &key) — LilyPond resolves
+        //     the head glyph from the DURATION LOG, so `\grace c2` gets a half head and a stem
+        //     0.073200 further right.
+        //   goes away when: the grace head above is drawn per duration; then this argument
+        //     becomes GlyphMetrics.NoteValueOf of the grace's own BaseDuration and follows it.
+        //   observed by: NOTHING. The defect is in the drawn HEAD, not here, and no ledger
+        //     point reads a non-eighth grace — every grace book in audit/lp-geometry is 8th or
+        //     shorter, which is also why this has never shown up as a residual.
+        const int graceHeadNoteValue = 4;
+        double StemX(int i) =>
+            LayoutUtilities.StemX(xs[i], up: true, graceHeadNoteValue, headFont);
         // Stem end: the up-stem runs from the head to stemLen above it — up is larger
         // Y-up, so add in the native page Y-up frame.
         double StemEndY(int i) => ys[i] + stemLen;

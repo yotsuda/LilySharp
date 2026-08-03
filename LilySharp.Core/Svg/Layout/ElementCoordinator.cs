@@ -632,7 +632,7 @@ internal sealed class ElementCoordinator
 
         double chordStartY = chordStartPosition * 0.5;
         collisions.Add(new BeamCollision(
-            LayoutUtilities.StemX(itemX, up) - beamOriginX,
+            LayoutUtilities.StemX(itemX, up, noteValue) - beamOriginX,
             up ? chordStartY : double.NegativeInfinity,
             up ? double.PositiveInfinity : chordStartY,
             beamed ? stemCollisionFactor : 1.0));
@@ -697,7 +697,10 @@ internal sealed class ElementCoordinator
     private static double BeamStemX(BeamGroup group, int memberIndex, double columnX)
     {
         bool up = group.IsKnee ? group.Members[memberIndex].MemberStemUp : group.StemUp;
-        return LayoutUtilities.StemX(columnX, up);
+        // Per MEMBER head shape, not per beam: a two-note tremolo pair beams HALF notes
+        // (BeamDetector.IsBeamable), whose stem stands 0.073200 further right.
+        return LayoutUtilities.StemX(columnX, up,
+            GlyphMetrics.NoteValueOf(group.Members[memberIndex].Item));
     }
 
     /// <summary>Single-ape / chord accidental placement — the SAME instance path the
@@ -1082,22 +1085,18 @@ internal sealed class ElementCoordinator
         int lowPos = positions.Min(), highPos = positions.Max();
         int supportPos = stemUp ? lowPos : highPos;
         double supportLeft = columnX + offsets[positions.IndexOf(supportPos)];
-        // ⚠️ LILYSHARP-OWN, AND IT IS THE ENGINE'S OWN STEM AND NOT LILYPOND'S. LilyPond puts
-        //   the stem at its support head's ink RIGHT EDGE less half the stem thickness, per
-        //   HEAD SHAPE; LayoutUtilities.StemAttachX takes the BLACK head's edge whatever the
-        //   head is, so a half note's up stem stands 0.073200 left of LilyPond's
-        //   (1.377400 - 1.304200). Read here through the one house anyway, because the tie
-        //   must avoid the stem this engine DRAWS, not one it does not have.
-        //   departs from: :149, stem->relative_coordinate (x_refpoint_, X_AXIS).
-        //   goes away when: LayoutUtilities.StemAttachX reads the head's own attachment
-        //     (GlyphMetrics.NoteheadHalfStemAttachment already carries it) — a change to every
-        //     drawn half-note stem, so it wants its own point and its own approval.
-        //   observed by: audit/lp-geometry tie.width.seconds.upper, whose book is a HALF-note
-        //     chord and whose remaining residual is this number.
+        // The stem's x, through the one house — which reads the SUPPORT HEAD'S OWN attachment
+        // (per head shape) as LilyPond does, so this is :149's own quantity and no longer a
+        // Lily#-side stem the tie has to be told about. It was LILYSHARP-OWN until 2026-08-03,
+        // when LayoutUtilities.StemAttachX stopped answering with the black head's 1.304200
+        // for every head; that divergence was the whole of what ledger tie.width.seconds.upper
+        // had left (-0.073200 = 1.377400 - 1.304200 on this book's HALF-note chord).
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:149 Tie_formatting_problem::set_column_chord_outline
+        //   — stem->relative_coordinate (x_refpoint_, X_AXIS).
         var stemInfo = SpacingRules.StemSpacingInfo(item);
         var stem = new TieOutlineStem(
             IsNormal: stemInfo is not null,
-            CentreX: LayoutUtilities.StemX(supportLeft, stemUp),
+            CentreX: LayoutUtilities.StemX(supportLeft, stemUp, noteValue),
             TipY: stemInfo is { } si ? (stemUp ? si.StemMax : si.StemMin) * 0.5 : 0,
             NearHeadPosition: supportPos,
             SupportHeadCentreX: supportLeft + (headLeftInk + headRightInk) / 2.0);
@@ -1133,7 +1132,7 @@ internal sealed class ElementCoordinator
             if (flagBBox != default)
             {
                 double tipY = (stemUp ? stemInfo.Value.StemMax : stemInfo.Value.StemMin) * 0.5;
-                double flagX = LayoutUtilities.StemX(supportLeft, stemUp);
+                double flagX = LayoutUtilities.StemX(supportLeft, stemUp, noteValue);
                 flag.Add(new TieOutlineBox(
                     tipY + flagBBox.Bottom, tipY + flagBBox.Top, flagX, flagX + flagBBox.Width));
             }

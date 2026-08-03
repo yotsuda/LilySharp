@@ -42,7 +42,7 @@
   <text class="music" x="48.28" y="16.85" font-size="4.00" data-pos="401"></text>
   <text class="music" x="48.28" y="15.85" font-size="4.00" data-pos="403"></text>
   <text class="music" x="48.28" y="14.85" font-size="4.00" data-pos="405"></text>
-  <line x1="49.52" y1="16.85" x2="49.52" y2="11.35" stroke="#000000" stroke-width="0.130"/>
+  <line x1="49.59" y1="16.85" x2="49.59" y2="11.35" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="52.98" y="15.35" font-size="4.00" data-pos="419"></text>
   <text class="music" x="52.98" y="14.35" font-size="4.00" data-pos="421"></text>
   <text class="music" x="52.98" y="13.35" font-size="4.00" data-pos="423"></text>

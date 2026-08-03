@@ -21,9 +21,9 @@
   <line x1="43.08" y1="27.90" x2="45.03" y2="27.90" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="8.59" y="27.90" font-size="4.00" data-pos="332"></text>
   <text class="music" x="16.44" y="27.90" font-size="4.00" data-pos="386"></text>
-  <line x1="17.68" y1="27.90" x2="17.68" y2="24.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.75" y1="27.90" x2="17.75" y2="24.40" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.41" y="27.40" font-size="4.00" data-pos="395"></text>
-  <line x1="22.65" y1="27.40" x2="22.65" y2="23.90" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.73" y1="27.40" x2="22.73" y2="23.90" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.70" y="27.90" font-size="4.00" data-pos="442"></text>
   <line x1="28.94" y1="27.75" x2="28.94" y2="24.40" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="29.45" y="27.40" font-size="4.00"></text>
