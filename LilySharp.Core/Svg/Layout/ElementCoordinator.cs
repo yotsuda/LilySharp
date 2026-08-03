@@ -1247,6 +1247,19 @@ internal sealed class ElementCoordinator
                     // The fallback anchor, used only when there is no column to read — on a
                     // TAB, where the bound is a fret digit. It is this tie's own head's inner
                     // edge, past its dots, which is where the tab rule below hangs the bow.
+                    // ⚠️ LILYSHARP-OWN, AND IT IS A SECOND SPELLING OF "WHERE THE DOTS END".
+                    //   BuildTieColumn boxes the dots at DotGap + n*(width + DotGap) off the
+                    //   column's rightmost head, which is where they are DRAWN; this says
+                    //   2*n*width off this head. The two disagree, and only this one is left.
+                    //   departs from: nothing in LilyPond — a tab digit is not a Note_head, so
+                    //     LilyPond's tie has no such anchor at all (it builds the outline from
+                    //     the TabNoteHead like any other head).
+                    //   goes away when: the tab tie stops being a Lily#-own placement, i.e.
+                    //     when a fret digit carries a column the outline can be built from.
+                    //     That is the same decision named in the tab branch below.
+                    //   observed by: NOTHING. No ledger point reads a tab tie's width, and
+                    //     test/tab-tie holds the drawing only. A DOTTED tab tie is not in the
+                    //     corpus at all, which is why the disagreement is currently unreachable.
                     double startBase = startColumnX
                         + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
                     int noteValue = tie.StartNote.BaseDuration.Numerator != 1
