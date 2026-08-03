@@ -165,23 +165,21 @@ internal sealed class TieDetector
     }
 
     /// <summary>
-    /// Emits the chord's ties with LilyPond's standard direction assignment:
-    /// the bottom tie curves DOWN, the top tie UP, adjacent seconds split
-    /// (lower DOWN / upper UP), and remaining inner ties follow the sign of
-    /// their staff position (middle line → DOWN). A single matched tie is a
-    /// column of ONE and hands no direction over at all.
+    /// Emits the chord's ties, bottom to top, imposing a direction on NONE of them unless the
+    /// music really carries one.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tie-formatting-problem.cc:1026-1084 set_ties_config_standard_directions
+    /// ⚠️ THE STANDARD DIRECTION DISTRIBUTION USED TO BE HERE — bottom tie DOWN, top tie UP,
+    /// adjacent seconds split — handed on as an IMPOSED direction. It is not one:
+    /// <c>set_ties_config_standard_directions</c> only SEEDS the base configuration, and
+    /// <c>generate_collision_variations</c> may then flip what it wrote
+    /// (lily/tie-formatting-problem.cc:1025-1084 and :1153-1237). It could not live here while
+    /// Lily# solved a column one tie at a time; now that
+    /// <see cref="Layout.TieFormattingProblem"/> is handed the whole column, it lives where
+    /// LilyPond puts it and this collector is left with the directions the music states.
     /// <para>
-    /// ⚠️ A ONE-TIE COLUMN TAKES THE OTHER BRANCH. LilyPond's own distribution reads
-    /// <c>if (tie_configs-&gt;size () == 1) front.dir_ = Direction (sign (front.position_))</c>
-    /// and falls to <c>neutral_direction_</c> from there (:1036-1041) — it does NOT read a
-    /// stem, and the search that follows can still move it. So a chord whose single matching
-    /// pitch ties is left unforced here and decided by <see cref="Layout.TieFormattingProblem"/>,
-    /// exactly like a plain note-to-note tie. It is only the MULTI-tie distribution above
-    /// that is a decision this collector has to make, because Lily# solves a column's ties
-    /// one at a time rather than as one Ties_configuration.
+    /// What still arrives imposed is \voiceOne/\voiceTwo (ly/engraver-init.ly sets
+    /// <c>Tie.direction</c>, a real grob property), which is the polyphony branch below.
     /// </para>
     /// </remarks>
     private static void EmitChordTies(
@@ -198,42 +196,10 @@ internal sealed class TieDetector
         // Sort bottom → top like LilyPond's tie configs.
         matched.Sort((a, b) => a.Start.StaffPosition.CompareTo(b.Start.StaffPosition));
 
-        var dirs = new bool?[matched.Count]; // true = curve up
-        if (multiVoice)
-        {
-            // Polyphony: the voice fixes EVERY tie's direction (upper voice up,
-            // lower voice down), overriding the single-voice bottom-DOWN/top-UP
-            // distribution so a lower voice's whole chord ties below its notes.
-            // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo Tie.direction.
-            bool voiceUp = voiceIndex % 2 == 0;
-            for (int i = 0; i < matched.Count; i++)
-                dirs[i] = voiceUp;
-        }
-        else if (matched.Count == 1)
-        {
-            // A column of one: no direction is imposed (see the remarks).
-            dirs[0] = null;
-        }
-        else
-        {
-            dirs[0] = false;            // front: DOWN
-            dirs[^1] = true;            // back: UP
-
-            // Seconds: adjacent ties within one staff position split outward.
-            for (int i = 1; i < matched.Count; i++)
-            {
-                if (Math.Abs(matched[i].Start.StaffPosition
-                             - matched[i - 1].Start.StaffPosition) <= 1)
-                {
-                    dirs[i - 1] ??= false;
-                    dirs[i] ??= true;
-                }
-            }
-
-            // Remaining inner ties: sign of the position (0 → DOWN).
-            for (int i = 0; i < matched.Count; i++)
-                dirs[i] ??= matched[i].Start.StaffPosition > 0;
-        }
+        // Polyphony: the voice fixes EVERY tie's direction (upper voice up, lower voice down),
+        // so a lower voice's whole chord ties below its notes.
+        // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo Tie.direction.
+        bool? forcedCurveUp = multiVoice ? voiceIndex % 2 == 0 : null;
 
         for (int i = 0; i < matched.Count; i++)
         {
@@ -243,7 +209,7 @@ internal sealed class TieDetector
             ties.Add(new TieItem(
                 SynthesizeNote(startPitch, startChord), endNote,
                 startPitch.StaffPosition,
-                dirs[i],
+                forcedCurveUp,
                 startMeasureIdx, endMeasureIdx,
                 startItemIdx, endItemIdx,
                 voiceIndex: voiceIndex));

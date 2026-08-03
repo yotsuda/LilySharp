@@ -3662,14 +3662,16 @@ internal static class LpGeometryProbes
     /// LilyPond varies a whole <c>Ties_configuration</c> together
     /// (lily/tie-formatting-problem.cc:915-1001 generate_configuration, find_best_variation) and
     /// charges its two symmetry terms only to <c>ties->front ()</c> against <c>ties->back ()</c>
-    /// (:890-908). Lily# solves a column ONE TIE AT A TIME, bottom to top, against the finished
-    /// layouts of the ones below — so the front is already fixed when the symmetry term exists
-    /// and only the back pays. TieFormattingProblem.ScoreColumnSymmetry writes that down.
+    /// (:890-908). Lily# USED TO solve a column ONE TIE AT A TIME, bottom to top, against the
+    /// finished layouts of the ones below — so the front was already fixed when the symmetry
+    /// term existed and only the back paid. These books measured that; it cost
+    /// <c>tie.y.triad.lower</c> a quarter space, and <see cref="TieFormattingProblem"/> took the
+    /// whole column in 2026-08-04 (session 82).
     /// <para>
     /// ⚠️ TWO TIES CANNOT SEPARATE THE TWO READINGS. With two, front and back are the whole
     /// column and the orders differ only in WHO is charged. Three gives a MIDDLE tie that is in
     /// neither symmetry term, so the joint search may move the outer two to suit it where the
-    /// greedy one cannot move the front at all.
+    /// greedy one could not move the front at all.
     /// </para>
     /// <para>
     /// LilyPond twin: scores TW3 / TW3S of tie-direction.ly. ⚠️ MEASURED FIRST, and the pair
@@ -8496,8 +8498,8 @@ internal static class LpGeometryProbes
         new("tie.width.seconds.lower", TWSEC, g => g.BowSpan(0)),
         new("tie.width.seconds.upper", TWSEC, g => g.BowSpan(1)),
 
-        // ...and THREE ties, which is the pair the greedy-against-joint approximation has been
-        // waiting for (TieFormattingProblem.ScoreColumnSymmetry names the restructuring). Two
+        // ...and THREE ties, which is the pair the greedy-against-joint approximation had been
+        // waiting for (TieFormattingProblem now takes the whole column). Two
         // ties cannot separate the readings — front and back are the whole column — so the
         // middle tie, which is in NEITHER symmetry term, is the reading that did not exist.
         // The two books move the middle tie's own position and direction while LilyPond keeps
@@ -8514,7 +8516,8 @@ internal static class LpGeometryProbes
         // column — the same c, head position −6, takes variation −7 in TWSEC and −8 in TW3 —
         // while its WIDTH is 3.875445 in both. A greedy solve fixes the front before the others
         // exist and cannot follow that; a corpus of widths cannot see that it did not. The
-        // HEIGHT is where the chosen position shows, so these are the points that can fail.
+        // HEIGHT is where the chosen position shows, so these are the points that can fail —
+        // and tie.y.triad.lower did, at +0.250000, until the column went to one problem.
         new("tie.y.seconds.lower", TWSEC, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("tie.y.triad.lower", TW3, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("tie.y.triad.middle", TW3, g => g.BowAttachmentAboveStaffMiddle(1)),

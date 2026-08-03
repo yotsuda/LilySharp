@@ -49,13 +49,23 @@ public class TieFormattingProblemTests
         return new TieItem(note, note, staffPosition, forcedCurveUp: curveUp, 0, 0, 0, 1);
     }
 
+    /// <summary>
+    /// One tie's layout — the problem now solves a COLUMN and hands back one layout per tie,
+    /// so a lone tie is the column of one that every fixture here builds.
+    /// </summary>
+    private static TieLayout SolveOne(TieFormattingProblem problem)
+    {
+        var layouts = problem.Solve();
+        return Assert.Single(layouts);
+    }
+
     [Fact]
     public void Solve_BasicTie_ReturnsValidLayout()
     {
         var tie = CreateTie(0, curveUp: true);
         var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
-        var layout = problem.Solve();
+        var layout = SolveOne(problem);
 
         Assert.NotNull(layout);
         Assert.True(layout.StartX > 0);
@@ -68,7 +78,7 @@ public class TieFormattingProblemTests
         var tie = CreateTie(0, curveUp: true);
         var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
-        var layout = problem.Solve();
+        var layout = SolveOne(problem);
 
         // Curve up: control points sit ABOVE the baseline = LARGER value in the page
         // Y-up frame the layout now stores.
@@ -82,7 +92,7 @@ public class TieFormattingProblemTests
         var tie = CreateTie(0, curveUp: false);
         var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
-        var layout = problem.Solve();
+        var layout = SolveOne(problem);
 
         // Curve down: control points sit BELOW the baseline = SMALLER value in the
         // page Y-up frame the layout now stores.
@@ -90,21 +100,38 @@ public class TieFormattingProblemTests
         Assert.True(layout.Control2.Y < layout.EndYUp);
     }
 
+    /// <summary>
+    /// A COLUMN of two ties comes back ordered: the bottom tie below the top one. That is the
+    /// monotonicity term doing its work, and it is only reachable now that the problem is
+    /// handed both ties at once (it used to be handed one, plus the other's finished layout).
+    /// </summary>
     [Fact]
-    public void Solve_WithExistingTies_AvoidsCollision()
+    public void Solve_Column_KeepsItsTiesInOrder()
     {
-        var tie1 = CreateTie(0, curveUp: true);
-        var problem1 = new TieFormattingProblem(tie1, 5, 15, 2);
-        var layout1 = problem1.Solve();
+        var lower = CreateNote(-2);
+        var upper = CreateNote(2);
+        var specs = new[]
+        {
+            new TieSpecification
+            {
+                Tie = new TieItem(lower, lower, -2, null, 0, 0, 0, 1),
+                StartX = 5, EndX = 15, Y = 2 + 1.0,
+            },
+            new TieSpecification
+            {
+                Tie = new TieItem(upper, upper, 2, null, 0, 0, 0, 1),
+                StartX = 5, EndX = 15, Y = 2 - 1.0,
+            },
+        };
 
-        var tie2 = CreateTie(1, curveUp: true);
-        var existingTies = new[] { layout1 };
-        var problem2 = new TieFormattingProblem(tie2, 5, 15, 2.5, existingTies: existingTies);
-        var layout2 = problem2.Solve();
+        var layouts = new TieFormattingProblem(specs).Solve();
 
-        // The second tie should be positioned to avoid the first
-        Assert.NotNull(layout2);
-        Assert.True(layout2.EndX > layout2.StartX);
+        Assert.Equal(2, layouts.Count);
+        // Page Y-up: the upper tie's attachment must sit ABOVE the lower one's.
+        Assert.True(layouts[1].StartYUp > layouts[0].StartYUp);
+        // LilyPond's standard directions for a column: front DOWN, back UP.
+        Assert.False(layouts[0].CurveUp);
+        Assert.True(layouts[1].CurveUp);
     }
 
     [Fact]
@@ -114,8 +141,8 @@ public class TieFormattingProblemTests
         var shortProblem = new TieFormattingProblem(tie, 5, 7, 2);
         var longProblem = new TieFormattingProblem(tie, 5, 20, 2);
 
-        var shortLayout = shortProblem.Solve();
-        var longLayout = longProblem.Solve();
+        var shortLayout = SolveOne(shortProblem);
+        var longLayout = SolveOne(longProblem);
 
         double shortHeight = Math.Abs(shortLayout.Control1.Y - shortLayout.StartYUp);
         double longHeight = Math.Abs(longLayout.Control1.Y - longLayout.StartYUp);
@@ -128,7 +155,7 @@ public class TieFormattingProblemTests
         var tie = CreateTie(0, curveUp: true);
         var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
-        var layout = problem.Solve();
+        var layout = SolveOne(problem);
 
         Assert.NotNull(layout);
         Assert.True(layout.EndX > layout.StartX);
@@ -188,8 +215,8 @@ public class TieFormattingProblemTests
         var problemUp = new TieFormattingProblem(tieUp, 5, 15, 2, startDots: 1);
         var problemDown = new TieFormattingProblem(tieDown, 5, 15, 2, startDots: 1);
 
-        var layoutUp = problemUp.Solve();
-        var layoutDown = problemDown.Solve();
+        var layoutUp = SolveOne(problemUp);
+        var layoutDown = SolveOne(problemDown);
 
         // Both should produce valid ties
         Assert.NotNull(layoutUp);
@@ -206,8 +233,8 @@ public class TieFormattingProblemTests
         var problemNoDots = new TieFormattingProblem(tie, 5, 15, 2, startDots: 0);
         var problemWithDots = new TieFormattingProblem(tie, 5, 15, 2, startDots: 1);
 
-        var layoutNoDots = problemNoDots.Solve();
-        var layoutWithDots = problemWithDots.Solve();
+        var layoutNoDots = SolveOne(problemNoDots);
+        var layoutWithDots = SolveOne(problemWithDots);
 
         // Both should produce valid results
         Assert.NotNull(layoutNoDots);
@@ -224,7 +251,7 @@ public class TieFormattingProblemTests
         var tie = new TieItem(startNote, endNote, 1, forcedCurveUp: true, 0, 0, 0, 1);
 
         var problem = new TieFormattingProblem(tie, 5, 15, 1.5, startDots: 1);
-        var layout = problem.Solve();
+        var layout = SolveOne(problem);
 
         Assert.NotNull(layout);
         Assert.True(layout.EndX > layout.StartX);

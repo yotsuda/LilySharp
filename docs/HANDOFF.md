@@ -58,6 +58,134 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-04（第82セッション＝**引継ぎが名指した restructuring を入れた。開いていた
+唯一の非ゼロが閉じ、対照は動かず、コーパスは 1 ピクセルも動かなかった——「動かないから安全」
+ではなく、この分岐に届く本がリポジトリに 1 冊も無い**）。
+
+**1 つの仕事・commit は 1 つ**（**`git show 9e16efb3..` で引ける**——`9e16efb3` は第81セッションの
+最後＝この作業の親。**引継ぎに自分の commit のハッシュは書けない**——書くと必ず、もう存在しない
+ものを指す）:
+```
+A タイの列を joint へ   TieFormattingProblem が列を丸ごと受け取る   台帳 −1 点・snapshot 0 枚
+```
+
+★★★ **① 予測は 20 点とも当てた。移植の前に書いた**: 「`tie.y.triad.lower` だけが 0 へ動き、
+残り 19 点（`tie.y.seconds.lower`・`tie.y.triad.{middle,upper}`・`tie.width.*` 8 点・
+`tie.direction.*` 7 点）は 1 桁も動かない」。**そのとおりになった**——
+`tie.y.triad.lower` は **−4.000000000（残差 0.000000000・9 桁 EXACT）**、他 19 点は不動。
+⚠️ **台帳は 460 点のまま・ss 非ゼロ 83 → 82・総和 4.460577498 → 4.210577498**（差はちょうど 0.25）。
+
+★★★ **② 閉じた数が「どの枝が閉じたか」まで言っている。** **−3.750000 → −4.000000 は
+ちょうど半空間 1 つ下**＝front のタイが**base の −7 から extremal variation の −8 へ**移った
+（`generate_extremal_tie_variations`・`tie-formatting-problem.cc:1086-1118`）。
+**greedy が原理的に取れない 1 手はここだけ**——**front を、列の*他の*タイの都合で動かす**。
+⇒ **残差が「定数」でも「グリフの項」でもなく*探索の順序*だったという第81セッションの読みが、
+数の形で裏取りされた。**
+
+★★★ **③ 対照が守られた。** `tie.y.seconds.lower` は **−3.750000 のまま EXACT**。
+⇒ **「front を一律に 1/4 空間ずらしただけの修正ではない」と言えるのはこの点があるからで、
+これが対を開いた理由そのもの**（片方だけなら「たまたま合った」を排除できない）。
+
+⚠️⚠️ ★★★ **④ snapshot は 1 枚も動かなかった。これは安心材料ではなく*被覆の穴*。**
+**コーパスに 3 本タイの和音は 3 冊ある**（`grammar-tour` / `feature-tour` の `<g b d>`・
+`tab-chord-tie` の `<c' e' g'>`）が、**どれも front が中央線の近く**にあり **base 構成がそのまま
+勝つ regime**。⇒ **extremal 枝に届く本はリポジトリ中このプローブ 1 冊だけ**。
+**第80セッションの ⑨・第81セッションの ⒣ と同じ形が 3 例目**——
+**「動かない＝安全」ではなく「観測者が台帳 1 点しか居ない」。**
+
+★★ **⑤ 移植したのは LP の関数そのままの形**（発明は 1 つも足していない）:
+```
+generate_base_chord_configuration ＋ set_ties_config_standard_directions   :938-971 / :1025-1084
+generate_single_tie_variations / generate_collision_variations             :1120-1151 / :1153-1237
+generate_extremal_tie_variations ＋ find_best_variation（1-opt）           :1086-1118 / :978-998
+get_configuration の possibilities_ キャッシュ                             :455-472
+score_ties_configuration の **隣接ペアだけ**の monotonicity / tie-tie      :854-888
+front **と** back の両方が払う 2 つの symmetry 項                          :890-908
+```
+★★ **⑥ 直したのは「一致」ではなく「重複」だった**（第81セッションの ⑩ と同じ形）。
+**`ScoreColumnSymmetry` の `departs from:`・`ScoreDirectionAgainstStems` の
+「LP でない gate」・両者が名指していた restructuring——3 つとも、記述ごと消えた。**
+**逸脱の注記は直した証拠ではなく、直すまでの預り証。**
+
+★★ **⑦ 和音の bottom-DOWN / top-UP は `TieDetector` から出した。あれは*押し付けられた向き*
+ではなかった。** LP の `set_ties_config_standard_directions` は**base 構成に書き込むだけ**で、
+`generate_collision_variations` が**それを裏返しうる**。**`ForcedCurveUp` に残るのは
+`\voiceOne`/`\voiceTwo`（LP が本当に grob property を立てる）と Lily# 固有の tab 規則だけ。**
+
+⚠️ **⑧ tab は列でも「1 本ずつ別の錨」**。notation の列は中央線が 1 本だが、**Lily# の tab タイは
+弦ごとに違う `Y` に吊る**（固有の配置）。⇒ **`TieSpecification` に `Y` を持たせ、タイ間の項は
+page Y-up で比べる**——**中央線が 1 本なら LP の staff frame と定数だけずれた同じ量**なので
+notation では逐語、tab では今までの挙動がそのまま保たれる。**そう書いてある。**
+
+⚠️⚠️ ★★★ **⑨ perf: 「HEAD が 2 倍速い」が出て、順序を反転したら消えた**（第78・第81に続く
+**3 例目**）。**`dotnet test` の*その run の 1 発目*が常に ~150 ms、2 発目以降が常に ~300 ms**
+——**BASE を 1 発目に置いたら BASE が 145.70 ms を出した**ので、**見えていたのはツリーではなく
+「列の何番目に走ったか」**。⇒ **1 発目を捨てた後の最小値**:
+```
+                   HEAD      BASE     判定
+chordties(3本×120小節)  286.74   299.19   計測不能（帯 10% 内・符号は run ごとに反転）
+loneties               136.68   133.68   計測不能
+control(タイ無し)       91.50    90.47   計測不能 ← 共通経路は動いていない
+```
+★ **対照（タイを 1 本も含まない譜）が動いていない**＝**差が出たとしても列の中の話**、と言える。
+**ベンチは書いて捨てた**（`TieColumnBench.cs`・worktree も `git worktree remove` 済）。
+
+★ **⑩ `LayoutTies` の O(N²) が 1 つ消えた**（副産物・帰属はしない）。旧コードはタイ 1 本ごとに
+**それまでに積んだ `tieLayouts` 全体**を LINQ で走査して同じ列の仲間を集めていた。列は最初から
+グループなので、**その走査ごと無くなった。**
+
+### 2 件目＝**自己監査。ユーザーの「字面移植できたか／変なハックは／REF は付けたか」で 5 つ出た**
+
+★★★ **⑪ 住所を 2 つ間違えていた。検算は「その行を実際に開く」しかない。**
+**citation ratchet は「シンボル名が住所の後ろに書いてあるか」しか見ない**（`CitationsThatNameNothing_DoNotGrow` の
+doc が「reading them to find the name is the check」と自白している）ので、**名前が範囲の中に
+無くてもテストは緑**。⇒ **全 LILYPOND-REF を機械で引き直した**:
+```
+departs from: :1063-1068 span_diff 分岐   → 実際は :1055-1063。**書いた住所は移植した側の分岐だった**
+i == ties.size() の到達不能枝 :1208-1218 → 実際は :1209-1219
+```
+⚠️ **他の「範囲内にシンボルが無い」20 件は偽陽性**——この repo の作法は
+**「シグネチャの*次*から本体の範囲」＋名前**なので、機械的検査はそのまま使えない。**目で仕分けた。**
+
+★★★ **⑫ 同じ LP の 1 行が、この 1 ファイルの中で 2 通りに綴られていた**（§7.7・今日 2 度目）。
+`score_configuration` の tip-line ゲートは **`roundTipPos == 自分の position`**、
+`generate_configuration` の同じ述語は **`ContainsPosition`（列の head slice）**。
+LP はどちらも `head_positions_slice(columns[d]).contains(...)`（`:776-792` / `:526-527`）。
+⇒ **`ContainsPosition` に寄せた。出力は動かない**——⚠️ **ただしこれは検証ではない**：
+**単音の列では両者は*構成上*同一**（列の slice が [pos,pos]）で、**違いうるのは和音だけ**。
+**コーパスの和音列はタイの先端が他の頭の線位置に載らない**、それだけ。
+
+★★ **⑬ 逸脱を 3 つ、散文から `departs from: / goes away when: / observed by:` へ書き直した**
+（**散文の但し書きは grep できない**——第81セッション ㊱ と同じ指摘を、今度は自分で先に）:
+```
+⑴ タイ間の項を **page frame** で比べている   notation では定数ずれ＝同値／**tab だけ固有**
+⑵ `ScoreDotCollision` は LP の**別の式**       LP は描かれた bezier を dot の X で評価する
+⑶ 折れた列を**セグメントごとに解いている**    LP は列を 1 度解いてから spanner を折る
+```
+⚠️ ⑵ の `observed by: NOTHING` は**実際に数えた**——**fixture・sample に付点タイは 1 冊も無い**
+（grep 0 件）・台帳の `tie.direction.beam-opposes-stem` の点は**タイの*終わり*側**に付いている。
+
+⚠️⚠️ ★★★ **⑭ その `observed by:` を 1 つ書き損じ、監査の中で自分で倒した。**
+「`system.tie-{under,over}-notes` は EXACT なので折れたタイの順序は届いていない」と書いたが、
+**実測は +0.000442474**（EXACT ではない）。⇒ **「帰属されたことのない残差なので、この逸脱の
+証拠にも反証にもならない」に書き直した。** **第81セッション ㉟（過大主張）と同じ形が 1 件。**
+
+★ **⑮ `possibilities_` を「LP は複製・こちらは共有」と書いた**——`score_configuration` は
+configuration の純関数なので**算術は同一**、共有が安全なのは**構築後に誰も書き換えないから**、
+と条件つきで。**「同じだから大丈夫」ではなく「これが崩れたら複製に戻せ」と書いてある。**
+
+**未 push 13**（⚠️ **足し算しない**。`git rev-list --count origin/master..master` で毎回数え直す。
+**開始時は 12 で、この commit を含めて 13 になるはず**だが **origin がセッション外で動く**。
+⚠️ **私は push していない**）・
+テスト **3969 passed / 0 failed / 4 skipped**（開始時と同数——**テストを 1 本足して 1 本畳んだ**：
+`Solve_WithExistingTies_AvoidsCollision` は「他人の完成した layout を渡す」API ごと無くなり、
+`Solve_Column_KeepsItsTiesInOrder` が**列を丸ごと渡して順序と向きを見る**点に替わった）・
+台帳 **460 点**（**ss 非ゼロ 82・総和 4.210577498**／**count 点 106・うち非ゼロ 2**）。
+★ **開始時は 460 点・非ゼロ 83・総和 4.460577498**（数え方は §0 のコマンドで再現できる）。
+⚠️ **snapshot は 1 枚も動いていない＝再ベース無し・承認事項なし。**
+
+## 以下は第81セッションの経緯
+
 最終更新 2026-08-03（第81セッション＝**「安い」と札の貼られた穴を開けたら、同じ 1 行の下に
 1 段大きい穴があった。exporter の form 歩きは「名前」しか返しておらず、form item 8 種のうち
 5 種が警告なしで消えていた——うち 3 冊は今この瞬間、黙って別の音楽の双子を出していた**）。
@@ -630,26 +758,17 @@ LP の `Arpeggio_engraver` は **Arpeggio / ChordBracket / ChordSlur の 3 型**
 まま描き、`YFlipDrawingContext` が出口で 1 回だけ反転する。`ItemSkylineFactory` は device。
 同じ量が 2 つの向きで書かれている境界には、そう書いてあること。**
 
-★★★ **タイの列を「1 本ずつ」から「列ごと」へ**（`ScoreColumnSymmetry` と
-`ScoreDirectionAgainstStems` が**同じ restructuring を名指ししている**）。LP は
-`Ties_configuration` を丸ごと振る（`:915-1001`）ので、front も back との不一致を払う。
-**今は back だけが払う greedy**。
-✅ **踏む対は第81セッションで作った。そして*高さ*が観測者だった**（幅ではない）:
-```
-                       LP        Lily#     残差
-tie.y.seconds.lower    -3.750000 -3.750000  EXACT ← 対照（greedy と joint が一致する列）
-tie.y.triad.lower      -4.000000 -3.750000  +0.25 ← ★ 唯一の falsifier
-tie.y.triad.{middle,upper}                  EXACT
-tie.width.* 6 点（TW3 / TW3S）              全部 EXACT
-```
-★★★ **同じ音・同じ head position・同じ「front」の役なのに、LP は列の中身で答えを変える**
-（カードの選択位置が **−7 対 −8**）。**Lily# は front を他が居ないうちに決めるので両方に同じ数を出す。**
-⚠️⚠️ **幅は 6 点とも EXACT で、この近似を*原理的に*見られない**——front の幅は
-**どちらの列でも 3.875445**。**位置が動いても span が変わらない。** ⇒ ★★ **「点を開いたのに
-全部 EXACT」は、直っている証拠ではなく*読みが量を捉えていない*証拠**（今回それで 1 手戻った）。
-⇒ **閉じ方**: 列を丸ごと 1 つの problem に渡して ties を一緒に振る。**要承認**
-（3 本以上のタイを持つ和音の本が動く）。**対照 `tie.y.seconds.lower` を EXACT のまま保つこと**
-——**front を一律に 1/4 空間ずらしただけの「修正」はそれで落ちる。**
+✅✅ **タイの列は「列ごと」になった**（第82セッション。`TieFormattingProblem` が
+`TieSpecification` のリストを受け取り、`find_best_variation` の 1-opt で列ごと振る）。
+**`tie.y.triad.lower` +0.25 → 0.000000000・対照 `tie.y.seconds.lower` は −3.750000 のまま。**
+**閉じたのは `generate_extremal_tie_variations`**（front が base −7 から −8 へ）＝
+**greedy が原理的に取れない 1 手はそこだけだった**。
+⚠️⚠️ **snapshot は 0 枚**——**コーパスの 3 本タイ和音 3 冊は front が中央線の近くにあり
+base 構成がそのまま勝つ**。**extremal 枝に届く本はプローブ 1 冊だけ**＝**被覆の穴**であって
+安全の証拠ではない（§1 の ④）。⇒ **もしこの島に戻るなら、足すのは「front が譜の下方にある
+3 本タイの本」**（TW3 と同じ regime＝`<c e g>` 相当）を fixture 側に 1 冊。
+⚠️ **`ScoreColumnSymmetry` / `ScoreDirectionAgainstStems` の逸脱注記は消えた**——
+**コード内でこの近似を探しても、もう無い。**
 
 ★★★ **行末 courtesy の定数 3 本＝⒝ の債務——第80セッションで「出所不明」ではなくなった。**
 （`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 / `CourtesyKeyToTimeGap` 1.15）

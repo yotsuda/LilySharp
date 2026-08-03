@@ -185,16 +185,19 @@ widths = #(define-music-function (tag) (string?)
 %% LilyPond scores a whole Ties_configuration and varies its ties TOGETHER
 %% (tie-formatting-problem.cc:915-1001 generate_configuration / find_best_variation), and the
 %% column's two symmetry terms read only `ties->front ()` and `ties->back ()` (:890-908). Lily#
-%% solves the column ONE TIE AT A TIME against the finished layouts of the ones below it, so
-%% the front tie is already fixed by the time the symmetry term exists and only the back one
-%% pays — the approximation is written down at TieFormattingProblem.ScoreColumnSymmetry.
+%% USED TO solve the column ONE TIE AT A TIME against the finished layouts of the ones below it,
+%% so the front tie was already fixed by the time the symmetry term existed and only the back
+%% one paid. These books are what measured that; tie.y.triad.lower is what it cost, and
+%% 2026-08-04 (session 82) is when the whole column went to one problem.
 %%
 %% ⚠️ TWO TIES CANNOT SEPARATE THE TWO READINGS AS SHARPLY AS THREE. With two, front and back
-%% are the whole column, so the greedy order differs from the joint search only in WHO pays.
+%% are the whole column, so the greedy order differed from the joint search only in WHO pays.
 %% With three there is a MIDDLE tie that is in neither symmetry term, and the joint search may
-%% move the outer two to suit it while the greedy one cannot move the front at all. If the
-%% middle reading is exact and the outer two are not, the defect is the charging; if the middle
-%% one moves too, the whole configuration is being chosen differently.
+%% move the outer two to suit it while the greedy one could not move the front at all.
+%% ⚠️ AND THE ANSWER CAME FROM NEITHER: all six widths opened EXACT. It was the front's chosen
+%% POSITION that differed (−7 here against −8 in TW3), which only the HEIGHT can see — see the
+%% control-points[0].y note above. Keep both books: they are now the control that says the
+%% joint search still lands where it should on the two-tie column.
 %%
 %%   TW3    <c e g>2~ <c e g>2   ordinary thirds — nothing is squeezed
 %%   TW3S   <c d g>2~ <c d g>2   the lower pair is a SECOND, so the middle head is reversed

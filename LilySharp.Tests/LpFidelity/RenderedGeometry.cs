@@ -1373,11 +1373,12 @@ internal sealed class RenderedGeometry
     /// ⚠️ THIS EXISTS BECAUSE <see cref="BowSpan"/> CANNOT SEE THE COLUMN. LilyPond varies a
     /// whole <c>Ties_configuration</c> together (lily/tie-formatting-problem.cc:915-1001
     /// generate_configuration, find_best_variation), so a tie's chosen POSITION depends on the
-    /// other ties of its chord; Lily# solves a column one tie at a time and cannot follow that.
+    /// other ties of its chord; Lily# solved a column one tie at a time and could not follow that.
     /// MEASURED (probe tie-direction.ly): the same c, head position −6, front of its column,
     /// takes variation −7 in TWSEC and −8 in TW3 — and its WIDTH is 3.875445 in both. Six
     /// width points over two three-tie books therefore opened EXACT while the approximation
-    /// they were built for went on standing. The height is where the chosen position shows.
+    /// they were built for went on standing. The height is where the chosen position shows, and
+    /// it is what closed it: tie.y.triad.lower, +0.250000 until the column went to one problem.
     /// <para>
     /// ⚠️ The page must hold exactly ONE staff, the same demand
     /// <see cref="BeamPositionAboveStaffMiddle"/> makes and for the same reason: with two,
