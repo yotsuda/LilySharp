@@ -1,0 +1,64 @@
+// THREE ties in one column, with the FRONT tie low in the staff — the only regime in which
+// the column's joint search moves a tie that no greedy order could have moved.
+//
+// LilyPond scores a whole Ties_configuration and varies its ties together
+// (lily/tie-formatting-problem.cc:915-1001 generate_configuration / find_best_variation). The
+// last pass, generate_extremal_tie_variations (:1086-1118), pushes the column's OUTER ties one
+// half-space further out — the FRONT one for reasons that live in the rest of the column. A
+// solve that fixes the front before the ties above it exist cannot take that step at all.
+//
+// ⚠️ WHY THIS FIXTURE EXISTS. Session 82 gave TieFormattingProblem the whole column and closed
+// audit/lp-geometry tie.y.triad.lower (+0.250000 -> EXACT): the front tie moved from the base
+// -7 to the extremal -8. NOT ONE SNAPSHOT MOVED. The corpus does hold three-tie chords —
+// grammar-tour and feature-tour print <g b d>, tab-chord-tie prints <c' e' g'> — but in all of
+// them the front head sits near the middle line, where the BASE configuration wins outright.
+//
+// ⚠️ AND THE OBVIOUS ACCOUNT OF THAT — "the extremal pass has no observer" — IS FALSE. MEASURED
+// by deleting the pass and running the snapshots: test/tie-seconds fails too. What that book
+// watches is the BACK tie, the one a bottom-up greedy solve reached last and could move anyway.
+// Delete only the d = -1 half, the FRONT one, and before this fixture existed NOT ONE snapshot
+// noticed. So the hole was never the branch; it was the half of the branch that is the whole
+// reason the column went to one problem. This book is that half's first observer.
+//
+//   bar 1  <c e g>  front head at staff position -6, four half-spaces below the middle line.
+//          This is the LilyPond twin of probe TW3 (audit/lp-geometry/probes/tie-direction.ly),
+//          the book where the front takes -8 instead of -7.
+//   bar 2  <g b d'> front head at -2, the corpus regime: the base wins and the extremal pass
+//          changes nothing. It is the CONTROL — without it a snapshot that moved would not say
+//          WHICH regime moved, and a front tie shifted a quarter space by some unrelated
+//          constant would look exactly like the branch under test.
+//
+// ⚠️ THE WIDTHS CANNOT SEE THIS. All six triad WIDTH points opened EXACT while the height was
+// off: LilyPond gives the same c the same 3.875445 span at -7 and at -8. The tie's attachment
+// HEIGHT is the only place the chosen position shows, which is why this fixture has to be a
+// drawing and not a width.
+//
+// ✔ VERIFIED TO GUARD, not assumed to. Two runs, because the second is the one that says what
+// this book adds over the corpus that was already there:
+//   whole extremal pass removed        tie-seconds AND this book fail   (200 pass / 2 fail)
+//   only the FRONT half (d = -1)       THIS BOOK ALONE fails            (201 pass / 1 fail)
+// A fixture that does not move when the thing it names moves is the very hole it claims to
+// fill, so the check is part of adding it.
+
+octave absolute
+
+title "Tied Triads"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody { clef treble }
+
+section Main {
+  melody {
+    <c e g>2 ~ <c e g>2 |
+    <g b d'>2 ~ <g b d'>2 |
+  }
+}
+
+form main { Main }
+
+score main "tie-triad-extremal" {
+  staff melody
+}

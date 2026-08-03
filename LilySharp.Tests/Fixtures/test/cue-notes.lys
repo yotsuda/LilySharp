@@ -1,13 +1,35 @@
 // Cue notes example
-// A cue is a REGION: `cue { … }` maps 1:1 onto LilyPond's \new CueVoice { … }, whose
+// A cue is a REGION: `cue { … }` maps onto LilyPond's \new CueVoice { … }, whose
 // fontSize = #-4 is a CONTEXT property. The last measure shows the clef form, which is
 // LilyPond's \cueClef / \cueClefUnset — also a property of the region, not of a note.
 // LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
 // See docs/cue-context-design.md.
 //
+// ⚠️ "1:1" USED TO BE WRITTEN HERE AND IT IS TRUE ONLY WHERE THIS BOOK PUTS ITS CUES.
+// A `\new CueVoice { … }` ends its MUSIC, not its CONTEXT, so notes after it join the cue
+// when there is no earlier Voice to return to — i.e. when the block is the staff's FIRST
+// music. MEASURED (audit/lp-geometry/probes/voice-boundary-spacing.ly): VB-FIRST prints
+// four cue-sized heads where VB-AFTER prints two, same music otherwise; and VB-TWIN, which
+// is THIS staff's `lysc ly` output pasted verbatim, reads full, full, cue, cue, FULL, FULL,
+// cue, cue — identical to the spelling with an explicit \new Voice. Every cue here has notes
+// before it, so the twin is sound. A cue written first in a part is not, and is open.
+//
 // ⚠️ The second part used to be called `chords`, which became a reserved word when the
 // chord-track grammar landed; this fixture had not parsed since (LYS0002) and nothing
-// noticed, because it has no snapshot.
+// noticed, because it had no snapshot. It has one now — that hole was the whole lesson,
+// and until 2026-08-03 test/cue-accidentals was still the only cue DRAWING in the corpus,
+// which is how the cue spacing law came to be watched by one ledger point and nothing else.
+//
+// ✔ VERIFIED TO GUARD, not assumed to. Both halves of the cue spacing law were switched off
+// in turn and this book fails for each:
+//   ApplyLeftHeadWidth asking Design20 again (the head-width term)     201 pass / 2 fail
+//   CrossesVoiceBoundary disabled (the voice-boundary term)            201 pass / 2 fail
+// ⚠️ AND IT WATCHES THEM MORE DIRECTLY THAN test/cue-accidentals DOES. There, every column
+// inside a measure is bound by an accidental rod, so the head-width term only reaches the
+// drawing at the cue → barline gap. Here the cue notes carry no accidentals, so the
+// cue → cue step IS the refined ideal: measured 14.49 → 17.00 = 2.51, LilyPond's
+// 2.513393907138009, and the main → cue step 11.59 → 14.49 = 2.90 is its unrefined
+// 2.898044999134612. The two numbers this fixture prints are the two the law predicts.
 
 title "Cue Notes Demo"
 tempo 120

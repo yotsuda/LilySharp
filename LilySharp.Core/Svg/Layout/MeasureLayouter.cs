@@ -351,9 +351,12 @@ internal sealed class MeasureLayouter
         timingToItems.TryGetValue(timings[i], out var nextItems);
 
         // Refine the duration-based ideal to the LEFT column's actual head width
-        // (LilyPond's note-spacing.cc:77), BEFORE the stem correction.
+        // (LilyPond's note-spacing.cc:77), BEFORE the stem correction — unless the pair
+        // straddles a VOICE boundary, where LilyPond's wish does not reach the right column
+        // and the spring keeps its raw duration ideal (spacing-spanner.cc:352-358 / :380-391).
+        // That is why nextItems is passed: see SpacingRules.CrossesVoiceBoundary.
         if (prevItems != null)
-            spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems);
+            spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems, nextItems);
 
         // A mid-measure clef/key/time change (zero duration, so it shares the NEXT
         // column's timing) gets its own non-musical column in LilyPond, and the gaps

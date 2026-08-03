@@ -100,6 +100,19 @@ public class SvgSnapshotTests
         // Cue notes/chords scale their accidentals with the head (LP CueVoice
         // fontSize = -4), as a pair with the cue-scaled placement column.
         yield return new object[] { "test/cue-accidentals" };
+        // ...and the cue REGION itself. Registered 2026-08-03: until then
+        // cue-accidentals was the only cue drawing in the corpus, and this file
+        // had gone unparsed for weeks (its own comment says so) precisely
+        // because nothing rendered it.
+        // ⚠️ THIS COVERS THE FIRST SCORE ONLY. AssertSnapshotMatch calls
+        // SvgGenerator.Generate on the whole tree and gets one system back, so a
+        // .lys with two `score` blocks is snapshotted up to its first. Measured
+        // here: the baseline holds 8 heads — cue-notes' `cue-melody` staff — and
+        // none of `cue-chords`, so the cue CHORDS and the `cue bass { … }` clef
+        // form are still unwatched. Covering them needs either a score selector
+        // on the harness or a second fixture; naming which one this book is
+        // buying is the point.
+        yield return new object[] { "test/cue-notes" };
         // Arpeggio clears a chord-second's LEFT-reversed head (stem-down), not
         // just the un-displaced column.
         yield return new object[] { "test/arpeggio-second" };
@@ -173,6 +186,12 @@ public class SvgSnapshotTests
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };
+        // Three ties whose FRONT sits low in the staff — the only corpus book in
+        // which generate_extremal_tie_variations moves the FRONT tie, the step a
+        // bottom-up greedy solve could not take. tie-seconds already watched the
+        // pass's back half; deleting the d = -1 half alone moved nothing until
+        // this book existed.
+        yield return new object[] { "test/tie-triad-extremal" };
         // A phrasing slur can bind two chords (not just single notes).
         yield return new object[] { "test/slur-chords" };
         // Lead-sheet scores: text rows only (lyrics and/or chords, no staff) draw

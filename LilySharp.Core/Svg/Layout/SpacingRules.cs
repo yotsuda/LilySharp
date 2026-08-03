@@ -3148,8 +3148,95 @@ internal static class SpacingRules
     /// item wins (a safe choice for simultaneous voices); non-musical items leave
     /// the ideal unchanged.
     /// </remarks>
-    internal static Spring ApplyLeftHeadWidth(Spring spring, IEnumerable<MusicItem> leftItems)
+    /// <summary>Whether this item's heads are drawn in the cue font.</summary>
+    /// <remarks>
+    /// ⚠️ ONE DECISION, TWO READERS (EngravingDefaults.CueDesignSize says so in writing): the
+    /// box a cue column reserves has to be the box its head is drawn in. This predicate is the
+    /// spacing side of the pair SharedRenderer.Noteheads reads on the drawing side.
+    /// </remarks>
+    private static bool IsCueItem(MusicItem item) => item switch
     {
+        NoteItem n => n.IsCue,
+        ChordItem c => c.IsCue,
+        _ => false
+    };
+
+    /// <summary>
+    /// Whether the refinement runs at all over this column pair — it does not across a VOICE
+    /// boundary, where the spring keeps its raw duration ideal.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:352-358 uses a Note_spacing wish only when one of
+    /// its <c>right-items</c> IS the column being spaced to, and :380-391 leaves the base spring
+    /// untouched when no wish matches. A wish belongs to a VOICE, so the pair that straddles two
+    /// of them is refined by neither.
+    /// <para>
+    /// ⚠️ THE READING IS NOT ABOUT CUES, though a cue region is the only place Lily# can spell a
+    /// sequential voice change today. audit/lp-geometry/probes/voice-boundary-spacing.ly measured
+    /// it with no cue in the book at all: VB-VOICE is four full-size quarters whose last two sit
+    /// in a plain <c>\new Voice</c>, and its boundary loses the same 0.104200 that
+    /// <c>cue.column.main-to-cue</c> records. VB-OUT is the half that says the refinement is
+    /// ABSENT rather than fed a smaller number — leaving a cue, where the LEFT head is the small
+    /// one, costs the same 2.898044999134612 to fifteen digits instead of 2.409193907.
+    /// </para>
+    /// <para>
+    /// ⚠️ A NULL right side is NOT a boundary — a bar line is one column for both voices, so the
+    /// left voice's wish reaches it and the refinement runs. MEASURED, because the first version
+    /// of this note asserted it and cited <c>barline.prev.*</c>, which are non-cue books and
+    /// observe no such thing: voice-boundary-spacing.ly VBB-CTL / VBB-CUE put the same four
+    /// quarters before a plain bar line with and without the last two in a CueVoice, and the
+    /// last-head-to-bar-line gap is 2.787959284848899 against 2.370536764280867. The cue book's
+    /// gap IS narrower, so the refinement does run here — the direction is right.
+    ///   departs from: the SIZE of it. LilyPond narrows that gap by 0.417422520568032 and this
+    ///     engine narrows it by the whole head-width term, 0.488851092. The port improved the
+    ///     reading (the gap used to be wrong by the full 0.417) without closing it.
+    ///   goes away when: the remaining 0.071428 is named. ⚠️ IT IS NOT NAMED AND MUST NOT BE
+    ///     FITTED — it is within 1e-10 of 1/14, which is exactly the kind of resemblance this
+    ///     corpus has been wrong about twice today.
+    ///   observed by: NOTHING. No ledger point reads a cue-to-bar-line gap; the LilyPond numbers
+    ///     above are recorded in the probe so the point can be opened without re-measuring.
+    /// </para>
+    /// <para>
+    /// ⚠️ TWO PLACES WHERE THIS PREDICATE IS NARROWER THAN LilyPond'S CONDITION, both because
+    /// <see cref="NoteItem.IsCue"/> is a per-note flag and not a region identity:
+    ///   departs from: :352-358 for ADJACENT cue regions. <c>cue { … } cue { … }</c> is two
+    ///     CueVoice contexts in LilyPond (probe cue-span.ly C-TWO shows both are made), so their
+    ///     shared edge IS a voice boundary; here both sides answer IsCue and the pair is refined.
+    ///   departs from: :352-358 again when SIMULTANEOUS voices disagree about being cued — the
+    ///     loop below gives up and refines, where LilyPond builds one wish per voice and lets
+    ///     merge_springs (:380-393) combine whatever each of them decided.
+    ///   goes away when: an item can say WHICH region it belongs to, not merely that it is cued.
+    ///   observed by: NOTHING in either case. No fixture or sample writes two cue blocks back to
+    ///     back or a cue against a simultaneous non-cue voice (grep, 2026-08-03).
+    /// </para>
+    /// </remarks>
+    private static bool CrossesVoiceBoundary(
+        IEnumerable<MusicItem> leftItems, IEnumerable<MusicItem>? rightItems)
+    {
+        if (rightItems is null)
+            return false;
+        bool leftCue = false, sawLeft = false;
+        foreach (var l in leftItems)
+        {
+            if (sawLeft && IsCueItem(l) != leftCue)
+                return false;   // simultaneous voices disagree — see the second departure above
+            leftCue = IsCueItem(l);
+            sawLeft = true;
+        }
+        if (!sawLeft)
+            return false;
+        foreach (var r in rightItems)
+            if (IsCueItem(r) != leftCue)
+                return true;
+        return false;
+    }
+
+    internal static Spring ApplyLeftHeadWidth(
+        Spring spring, IEnumerable<MusicItem> leftItems, IEnumerable<MusicItem>? rightItems = null)
+    {
+        if (CrossesVoiceBoundary(leftItems, rightItems))
+            return spring;
+
         double leftHeadEnd = 0;
         bool any = false;
         foreach (var p in leftItems)
@@ -3161,7 +3248,18 @@ internal static class SpacingRules
                 // a whole head advances 1.960000 but its stencil reaches 1.962002. Feeding
                 // the advance made every closing gap 0.002 narrow than LilyPond's, which is
                 // the whole of barline.prev.whole-note's former residual.
-                NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(GetNoteValue(p)).Right,
+                // ...asked of the font the head is actually DRAWN in. A cue head is not the
+                // twenty design scaled — it is the THIRTEEN design read at magstep(-4)
+                // (EngravingDefaults.CueFont, the same object the renderer draws with), and
+                // 1.304200 * magstep(-4) = 0.821594517 is not LilyPond's 0.815348908. Reading the
+                // full-size box here was the whole of cue.column.step's +0.488851092: the
+                // renderer shrank the head and the spring did not hear about it.
+                //   ⚠️ A REST INSIDE A CUE STILL PRICES FULL SIZE. RestItem carries no IsCue,
+                //   so there is nothing to ask; LilyPond's left grob would be the cue-sized
+                //   rest. No point observes it — see the branch below.
+                NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(
+                    IsCueItem(p) ? EngravingDefaults.CueFont : GlyphMetrics.Design20,
+                    GetNoteValue(p)).Right,
                 // A rest is drawn glyph-left-aligned at its column, so its right
                 // extent from the column origin is the rest stencil's right edge.
                 // ⚠️ A SPACER rest engraves nothing: LilyPond's left head is a real
@@ -3301,7 +3399,7 @@ internal static class SpacingRules
             // width, exactly as the timing-column system does (MeasureLayouter) —
             // this is LilyPond's ideal, and leaving it out made every spring here
             // ~0.104 ss narrow for a black head.
-            spring = ApplyLeftHeadWidth(spring, One(prevItem));
+            spring = ApplyLeftHeadWidth(spring, One(prevItem), One(nextItem));
             spring = AdjustSpringForGraceNotes(
                 spring, GraceNotesOf(nextItem), graceParams: null, mainItem: nextItem);
             // A pair touching a mid-measure change column is priced by the change column,
