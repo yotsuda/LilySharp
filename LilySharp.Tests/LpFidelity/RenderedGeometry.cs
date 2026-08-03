@@ -2348,6 +2348,56 @@ internal sealed class RenderedGeometry
         Glyphs.Where(g => IsNotehead(g.Glyph)).ToList();
 
     /// <summary>
+    /// Note head <paramref name="index"/>'s ANCHOR → its own up stem's RIGHT edge, 0-based,
+    /// left to right. In LilyPond this reading IS the head's own ink width, because the stem
+    /// stands at the support head's right edge less half its thickness and is then drawn half
+    /// a thickness wide either side of that.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/stem-x.ly, score SX, one system, three columns at
+    /// one pitch): half head (8.585000 . 9.962400) with its stem at (9.832400 . 9.962400), and
+    /// black heads (12.860445 . 14.164645) / (15.862690 . 17.166890) with stems at
+    /// (14.034645 . 14.164645) / (17.036890 . 17.166890). Stem right and head right coincide
+    /// to six digits in all three.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT REFUSES A BOOK WITH MORE HEADS THAN STEMS, and that is not tidiness. In a CHORD of
+    /// seconds the stem's origin lands within a head width of the DISPLACED head, so "which
+    /// head does this stem stand on" stops being answerable from the drawing — and it stops
+    /// being answerable exactly because of the quantity these points measure, which would make
+    /// the instrument depend on the answer. HANDOFF 5.0: suspect the instrument first.
+    /// </para>
+    /// <para>
+    /// A stem is told from the other strokes by being VERTICAL and exactly stem-thickness wide:
+    /// staff and ledger lines are horizontal, bar lines are rectangles
+    /// (see <see cref="Barlines"/>), and beams are quads.
+    /// </para>
+    /// </remarks>
+    public double UpStemRightFromHeadAnchor(int index)
+    {
+        var heads = Noteheads;
+        var stems = Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
+                        && Math.Abs(l.StrokeWidth
+                                    - LilySharp.Core.Svg.EngravingDefaults.StemThickness) < 1e-9)
+            .OrderBy(l => l.X1)
+            .ToList();
+
+        if (stems.Count != heads.Count)
+            throw new InvalidOperationException(
+                $"this reading needs ONE head per stem and the probe drew {heads.Count} head(s) "
+                + $"against {stems.Count} stem(s); a chord makes 'which head does this stem "
+                + "stand on' undecidable from the drawing.\nDrawn geometry:\n" + Describe());
+        if (index < 0 || index >= heads.Count)
+            throw new InvalidOperationException(
+                $"wanted head #{index} but the probe drew {heads.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+
+        return stems[index].X1 + stems[index].StrokeWidth / 2 - heads[index].X;
+    }
+
+    /// <summary>
     /// The notehead anchors on ONE system, left to right — for probes that span several
     /// systems, where <see cref="Noteheads"/> sorts across the whole page and interleaves
     /// them.

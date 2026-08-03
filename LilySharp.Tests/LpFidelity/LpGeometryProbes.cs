@@ -3409,6 +3409,28 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// WHERE AN UP STEM STANDS ON ITS HEAD — a half note and two quarters at one pitch, so the
+    /// only thing that changes between the readings is the HEAD SHAPE.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond puts a stem at the support head's OWN ink right edge less half the stem
+    /// thickness (lily/stem.cc:889-906 Stem::width for the extent, and the X-offset callback
+    /// for the origin), so the reading comes out as the head's own width: 1.377400 for the half
+    /// head and 1.304200 for the black one. Lily#'s LayoutUtilities.StemAttachX reads
+    /// GlyphMetrics.NoteheadBlackStemAttachment.X whatever the head is, so the QUARTERS are the
+    /// control and the HALF is the divergence.
+    /// <para>
+    /// This is the pair the tie's remaining residual asked for: audit/lp-geometry
+    /// tie.width.seconds.upper sits at -0.073200001 and names this quantity, but its book is a
+    /// tie and cannot separate the stem from everything else the outline does. Here the stem is
+    /// the only thing measured.
+    /// </para>
+    /// <para>LilyPond twin: score SX of audit/lp-geometry/probes/stem-x.ly,
+    /// <c>\fixed c' { c2 c4 c4 }</c>.</para>
+    /// </remarks>
+    private static readonly string SX = TieWidthBook("c2 c4 c4 |", "SX");
+
+    /// <summary>
     /// A single tie whose scored endpoint CLEARS its own head box, so both ends recede to the
     /// head centres. LilyPond: 2.602245 wide.
     /// </summary>
@@ -8157,6 +8179,12 @@ internal static class LpGeometryProbes
         new("tie.width.clears-head", TWCLR, g => g.BowSpan(0)),
         new("tie.width.seconds.lower", TWSEC, g => g.BowSpan(0)),
         new("tie.width.seconds.upper", TWSEC, g => g.BowSpan(1)),
+
+        // ...and the one quantity that tie's residual is made of, measured on its own. The
+        // BLACK head is the control and the HALF head the divergence -- same bar, same pitch,
+        // same stem direction, one head shape apart. See probe SX.
+        new("stem.up.right-edge.half-head", SX, g => g.UpStemRightFromHeadAnchor(0)),
+        new("stem.up.right-edge.black-head", SX, g => g.UpStemRightFromHeadAnchor(1)),
 
         // ...and again, shaped so a BEAM over forced-down eighth notes is what binds it -- the
         // first ledger points that reach a beam. The beam is DRAWN by the quanter but Lily#'s
