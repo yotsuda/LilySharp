@@ -65,6 +65,9 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 **閉じたもの**（**snapshot 7 枚はユーザー承認のうえ再ベース**）:
 ```
 タイの列アウトライン一式（+ 対称項・テスト 6 本）  dc00c82c  snapshot 7 枚  +0.8887 → −0.0732
+半音符の符尾 X を引き継ぎへ（§1・§2 A）          89417bf7  出力不変
+tab の fallback が持つ付点の第2綴りに名前を付ける  e8231098  出力不変・コメントのみ
+（この引継ぎ commit）
 ```
 ★★★ **① 移植そのものは「LP を先に測る」で 6 桁まで決まっていた。** `<c d>2~ <c d>2`（TWSEC）を
 LP に通し、**system の X 系で全部**印字した:
@@ -106,7 +109,7 @@ LP に通し、**system の X 系で全部**印字した:
 ⚠️ **`origin/master` はセッション中（08:25）に別コンソールから push された**（第76セッションまでの
 140 commit）。**この引継ぎで数えている「未 push」はそれ以降の数**。
 
-**未 push 2**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
+**未 push 4**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
 ⚠️ **私は push していない**）・テスト **3928 passed / 0 failed / 4 skipped**（**+6**＝
 `TieChordOutlineTests`）・台帳 **431 点**（**ss 非ゼロ 83・総和 4.516820920**／
 **count 点 106・うち非ゼロ 2**）。
