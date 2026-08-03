@@ -228,6 +228,35 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
+    /// A COPY thickened along the horizon by <paramref name="horizonPadding"/> — the padded
+    /// skyline itself, for callers that go on to READ it (<see cref="X"/>) rather than to
+    /// measure a distance against it.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded (horizon_padding) — LilyPond returns a
+    /// Skyline there too; <see cref="Distance(HorizontalSkyline, double)"/> only ever needed
+    /// the building list, which is why the padding lived inside it until now.</remarks>
+    public HorizontalSkyline PaddedCopy(double horizonPadding)
+        => horizonPadding <= 0.0
+            ? Clone()
+            : new HorizontalSkyline(Padded(horizonPadding), _direction);
+
+    /// <summary>
+    /// Raises the whole skyline's floor to <paramref name="h"/> (real X): the outline no
+    /// longer recedes past <paramref name="h"/> anywhere, including at horizon coordinates no
+    /// building covers at all. Mutates.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:719-725 Skyline::set_minimum_height — it merges
+    /// a one-building skyline spanning the whole horizon at that height. Appending the same
+    /// building to this lazy list is that merge: <see cref="X"/> and
+    /// <see cref="SkylineMath.Distance"/> both take the maximum in the sign frame, so a
+    /// building the merge would have shadowed cannot win either way.</remarks>
+    public void SetMinimumHeight(double h)
+    {
+        int sky = (int)_direction;
+        _buildings.Add(new SkylineBuilding(NegativeInfinity, sky * h, sky * h, PositiveInfinity));
+    }
+
+    /// <summary>
     /// This skyline's buildings plus the sloped-and-flat pad buildings that thicken it by
     /// <paramref name="horizonPadding"/> along the horizon. The lazy-list envelope makes
     /// concatenation sufficient (a shadowed pad building never wins the distance max), so —

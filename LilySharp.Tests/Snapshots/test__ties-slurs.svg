@@ -80,7 +80,7 @@
   <path d="M 9.43,24.32 C 10.02,24.85 11.43,24.85 12.02,24.32 C 11.43,24.97 10.02,24.97 9.43,24.32 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 25.26,23.32 C 26.17,24.03 29.49,24.03 30.40,23.32 C 29.49,24.15 26.17,24.15 25.26,23.32 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 80.28,24.32 C 80.87,24.85 82.28,24.85 82.87,24.32 C 82.28,24.97 80.87,24.97 80.28,24.32 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 92.48,20.29 C 92.83,19.85 93.43,19.85 93.77,20.29 C 93.43,19.97 92.83,19.97 92.48,20.29 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 92.49,20.30 C 92.83,19.87 93.43,19.87 93.77,20.30 C 93.43,19.99 92.83,19.99 92.49,20.30 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 44.11,24.61 C 45.72,25.61 50.86,24.68 52.48,23.11 C 50.88,24.80 45.74,25.72 44.11,24.61 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 57.40,23.11 C 59.02,24.59 64.17,25.20 65.77,24.11 C 64.15,25.32 59.00,24.71 57.40,23.11 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text class="music" x="4.88" y="17.20" font-size="3.56" data-pos="0"></text>

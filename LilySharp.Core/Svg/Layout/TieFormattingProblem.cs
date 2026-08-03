@@ -73,14 +73,14 @@ internal sealed class TieCandidate
 internal sealed class TieFormattingProblem
 {
     private readonly TieItem _tie;
-    // Left/right attachment X at the head's INNER EDGE (right edge of the left head past
-    // its dots / left edge of the right head) and at the head CENTRE (dots ignored). Which
-    // one the tie attaches to depends on whether its scored endpoint Y clears the head's
-    // one-staff-space box — LilyPond reads the chord-outline skyline at that Y. See GetAttachment.
+    // The two bound columns' CHORD OUTLINES — the skylines every attachment is read off
+    // (see TieChordOutline). Null on a side that is not a note column at all: a piece broken
+    // at a system edge, or a tab digit. Those fall back to the fixed anchor below, which is
+    // where the caller reattached the bound.
+    private readonly TieChordOutline? _startOutline;
+    private readonly TieChordOutline? _endOutline;
     private readonly double _startX;
     private readonly double _endX;
-    private readonly double _startCenterX;
-    private readonly double _endCenterX;
     // A tie has a single vertical anchor (its endpoints share one Y — the page Y
     // of the staff's middle line); the scorer walks half-spaces out from there.
     private readonly double _y;
@@ -89,47 +89,51 @@ internal sealed class TieFormattingProblem
     private readonly int _startDots;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
-    // The two bound NOTE HEADS' X extents, and the two bound STEMS' directions (true = up).
-    // Null on a side that has neither -- a piece broken at a system edge, or a tab digit,
-    // which is not a NoteHead at all. LilyPond skips exactly the same sides:
-    // score_aptitude's loops read spec.note_head_drul_[d] and bail when it is null
-    // (tie-formatting-problem.cc:665-668, :690-691), and a stem enters only through
-    // Stem::is_normal_stem, which a whole note has none of.
-    private readonly (double Left, double Right)? _startHead;
-    private readonly (double Left, double Right)? _endHead;
+    // The two bound STEMS' directions (true = up). Null on a side that has none.
+    // LilyPond skips exactly the same sides: a stem enters score_aptitude only through
+    // Stem::is_normal_stem, which a whole note has none of (:690-691).
     private readonly bool? _startStemUp;
     private readonly bool? _endStemUp;
+    // Whether this tie is the BACK of its column -- LilyPond's ties->back (), the one the
+    // symmetry terms are charged to. False for a lone tie, which has no column to be
+    // symmetric with.
+    private readonly bool _isColumnBack;
 
     public TieFormattingProblem(
         TieItem tie,
         double startX,
         double endX,
-        double startCenterX,
-        double endCenterX,
         double y,
         TieDetails? details = null,
         IReadOnlyList<TieLayout>? existingTies = null,
         int startDots = 0,
         bool isBrokenLeft = false,
         bool isBrokenRight = false,
-        (double Left, double Right)? startHead = null,
-        (double Left, double Right)? endHead = null,
+        TieColumnParts? startColumn = null,
+        TieColumnParts? endColumn = null,
         bool? startStemUp = null,
-        bool? endStemUp = null)
+        bool? endStemUp = null,
+        bool isColumnBack = false)
     {
+        _isColumnBack = isColumnBack;
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
         _tie = tie;
         _startX = startX;
         _endX = endX;
-        _startCenterX = startCenterX;
-        _endCenterX = endCenterX;
         _y = y;
         _details = details ?? TieDetails.Default;
         _existingTies = existingTies;
         _startDots = startDots;
-        _startHead = startHead;
-        _endHead = endHead;
+        // set_column_chord_outline runs here, as it does in LilyPond's own constructor path
+        // (from_ties -> set_chord_outline -> set_column_chord_outline), so the problem owns
+        // its outlines and the caller only says what the column HAS.
+        _startOutline = startColumn is { } sc
+            ? TieChordOutline.Build(sc, isLeftBound: true, _details.SkylinePadding)
+            : null;
+        _endOutline = endColumn is { } ec
+            ? TieChordOutline.Build(ec, isLeftBound: false, _details.SkylinePadding)
+            : null;
         _startStemUp = startStemUp;
         _endStemUp = endStemUp;
     }
@@ -160,46 +164,104 @@ internal sealed class TieFormattingProblem
         BezierBow.Indent(_details.HeightLimit, width);
 
     /// <summary>
-    /// The tie's attachment interval — the drawn endpoints — for a candidate whose scored
-    /// endpoint sits at <paramref name="curveYFromMiddle"/> staff spaces above the middle line.
+    /// Where the two columns' outlines stand at <paramref name="curveYFromMiddle"/> staff
+    /// spaces above the middle line — the RAW attachment, before the note-head gap.
     /// </summary>
     /// <remarks>
-    /// LilyPond builds a per-column chord-outline skyline and reads the attachment X off it at
-    /// the tie's Y (get_attachment(y + delta_y)), then insets each end by the note-head gap
-    /// (attachment_x_.widen(-x_gap)). Within the head's one-staff-space box the outline stands
-    /// at the head's inner EDGE; beyond the box the up/down boxes recede it to the head CENTRE —
-    /// x[-dir] = b[X].linear_combination(-dir/2), where -dir/2 is INTEGER division on the ±1
-    /// Direction, so the argument is 0 and the interval collapses to its midpoint (not the
-    /// three-quarter point). Measured across whole/half/quarter/dotted notes: within the box the
-    /// span is c2c - headW - 2*x_gap, beyond it c2c - 2*x_gap, the step falling exactly at the
-    /// head-box edge (|delta| = 0.5). Both bounds share one anchor Y (the tie's pitch), so the
-    /// two ends switch together.
-    /// LILYPOND-REF: lily/tie-formatting-problem.cc:96-287 set_column_chord_outline
-    ///   (:243-258 updowndir boxes, :251 linear_combination(-dir/2)), :73-87 get_attachment,
-    ///   :563-581 attachment_x_ = get_attachment(...) then widen(-x_gap);
-    ///   lily/skyline.cc:104-110 Building(Box, ...); lily/interval.hh linear_combination.
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:72-87 get_attachment — one
+    /// <c>chord_outlines_[…].height (y)</c> per side. What that outline is built from, and why
+    /// a tie clearing its heads comes out a head wider than one alongside them, is
+    /// <see cref="TieChordOutline"/>.
+    /// <para>
+    /// A side with no outline is a bound that is not a note column — a piece broken at a
+    /// system edge (reattached to the system's edge X) or a tab digit (hung off the digit's
+    /// own edge). Those carry a fixed anchor instead, which is the whole of this engine's
+    /// counterpart to LilyPond's break-status branch at :262-270.
+    /// </para>
     /// </remarks>
-    private (double StartX, double EndX) GetAttachment(double curveYFromMiddle)
+    private (double Left, double Right) GetAttachment(double curveYFromMiddle)
+        => (_startOutline?.Attachment(curveYFromMiddle) ?? _startX,
+            _endOutline?.Attachment(curveYFromMiddle) ?? _endX);
+
+    /// <summary>
+    /// The attachment a candidate is finally DRAWN between: the raw outline reading, narrowed
+    /// to what a short tie can also reach a quarter of the intra-space threshold further out,
+    /// inset by the note-head gap, and then pulled back off either bound's stem.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:563-609 generate_configuration's tail, in
+    /// that order (get_attachment, then intersect, then widen, then get_stem_extent) — the ORDER is the
+    /// content: the height that gates the close-by intersect is measured on the RAW span
+    /// (:565), the gap comes off after it (:581), and the stem pull-back comes off after THAT
+    /// (:601-607), so it is the only term that can put an endpoint back inside a head.
+    /// </remarks>
+    private (double Left, double Right) FinalAttachment(double curveYFromMiddle, int dir)
     {
-        // The head box is one staff space tall, centred on the tied note's staff position.
-        double noteCenterY = _tie.StaffPosition * 0.5;
-        bool clearsHead = Math.Abs(curveYFromMiddle - noteCenterY) > 0.5;
-        double leftAttach = clearsHead ? _startCenterX : _startX;
-        double rightAttach = clearsHead ? _endCenterX : _endX;
-        return (leftAttach + _details.XGap, rightAttach - _details.XGap);
+        var att = GetAttachment(curveYFromMiddle);
+
+        // A short tie is more vertical, so where it would attach a little further out still
+        // constrains it; a long one is flat enough that LilyPond does not ask. :565-579.
+        if (BowHeight(att) < _details.IntraSpaceThreshold * 0.5)
+        {
+            var closeBy = GetAttachment(
+                curveYFromMiddle + dir * _details.IntraSpaceThreshold * 0.25);
+            att = (Math.Max(att.Left, closeBy.Left), Math.Min(att.Right, closeBy.Right));
+        }
+
+        // widen (-x_gap): note-head-gap off each end. :581.
+        att = (att.Left + _details.XGap, att.Right - _details.XGap);
+
+        // Avoid the stems we attach to. LilyPond skips this for a semi-tie, whose two column
+        // ranks are the same one (column_span_length () == 0); the counterpart here is a bound
+        // that is not a column at all, which has no stem extent to read either.
+        // :583-609, stem-gap 0.35.
+        if (_startOutline?.StemBox is { } ls && ls.Down <= curveYFromMiddle && curveYFromMiddle <= ls.Up)
+            att.Left = Math.Max(att.Left, ls.Right + _details.StemGap);
+        if (_endOutline?.StemBox is { } rs && rs.Down <= curveYFromMiddle && curveYFromMiddle <= rs.Up)
+            att.Right = Math.Min(att.Right, rs.Left - _details.StemGap);
+
+        return att;
     }
 
     /// <summary>
-    /// The width fed to the arc-height / min-length math for a candidate at
-    /// <paramref name="curveYFromMiddle"/>: the attachment span (post widen), floored at
-    /// the minimum tie length. LILYPOND-REF: tie-formatting-problem.cc:747-757.
+    /// The bow's midpoint height over an attachment interval — <c>Tie_configuration::height</c>.
     /// </summary>
-    private double WidthAt(double curveYFromMiddle)
-    {
-        var (startX, endX) = GetAttachment(curveYFromMiddle);
-        double width = endX - startX;
-        return width < _details.MinLength ? _details.MinLength : width;
-    }
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-configuration.cc:62-72 get_untransformed_bezier —
+    /// <c>slur_shape (attachment_x_.length (), …)</c>, so the width is whatever the interval
+    /// happens to be at the moment it is asked, gap or no gap.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: the MINIMUM-LENGTH FLOOR. LilyPond puts none here — <c>min-length</c>
+    /// only ever appears as a PENALTY (:751-754) — and this engine has floored the bow's width
+    /// at it for as long as the bow math has existed.
+    ///   departs from: :65, <c>Real l = attachment_x_.length ();</c> unconditionally.
+    ///   goes away when: a book measures a tie shorter than min-length. Nothing does today,
+    ///     so removing the floor here would be an unobserved change to degenerate ties rather
+    ///     than a port; it is left where it was found and named instead.
+    ///   observed by: NOTHING.
+    /// </para>
+    /// </remarks>
+    private double BowHeight((double Left, double Right) attachment)
+        => CalculateTieHeight(Math.Max(attachment.Right - attachment.Left, _details.MinLength));
+
+    /// <summary>
+    /// One bound's tied-head Y extent on the <paramref name="dir"/> side —
+    /// <c>get_head_extent (columns[d], d, Y_AXIS)[dir]</c>. A bound with no outline returns
+    /// the far side of infinity, exactly as LilyPond's empty Interval does, so the
+    /// head-edge hug cannot fire on a piece broken at a system edge.
+    /// </summary>
+    private static double HeadExtentAt(TieChordOutline? outline, int dir)
+        => outline is { } o
+            ? (dir > 0 ? o.HeadY.Up : o.HeadY.Down)
+            : dir * double.NegativeInfinity;
+
+    /// <summary>
+    /// Whether one bound's column has a head AT <paramref name="pos"/> — LilyPond's
+    /// <c>head_positions_slice (columns[d]).contains (pos)</c> (:526-527), a slice over EVERY
+    /// head on the stem and not just the tied ones.
+    /// </summary>
+    private static bool ContainsPosition(TieChordOutline? outline, int pos)
+        => outline?.HeadPositions is { } hp && pos >= hp.Low && pos <= hp.High;
 
     // ---------------------------------------------------------------
     // Solving
@@ -372,28 +434,33 @@ internal sealed class TieFormattingProblem
             }
         }
 
-        // Head-edge hug: the head spans one half-space either side of its
-        // position; a tie in the adjacent half-space (and not on a line)
-        // snaps to the head's outer edge + outer-tie-vertical-gap.
-        double headEdgeY = (notePos + dir) * 0.5;
-        if (yTune && Math.Abs(headEdgeY - y) < 0.25 && pos % 2 != 0)
+        // Head-edge hug: a tie in the half-space just outside the heads (and not on a line)
+        // snaps to their outer edge + outer-tie-vertical-gap.
+        // ⚠️ THE TEST READS BOTH BOUNDS AND THE ASSIGNMENT READS ONLY THE LEFT ONE, which is
+        //   LilyPond's own asymmetry (:496-504), and the extent is the union over ALL the
+        //   column's TIED heads — so a middle tie of a chord never hugs.
+        double leftHeadEdge = HeadExtentAt(_startOutline, dir);
+        double rightHeadEdge = HeadExtentAt(_endOutline, dir);
+        if (yTune
+            && Math.Max(Math.Abs(leftHeadEdge - y), Math.Abs(rightHeadEdge - y)) < 0.25
+            && pos % 2 != 0)
         {
-            deltaY = (headEdgeY - y) + dir * _details.OuterTieVerticalGap;
+            deltaY = (leftHeadEdge - y) + dir * _details.OuterTieVerticalGap;
         }
 
         if (yTune)
         {
-            // Provisional attachment/height at the post-hug endpoint drives the small-vs-tall
-            // branch below, the way LilyPond computes attachment_x_ = get_attachment(y+delta_y)
-            // and h = height() before the staff-line tuning. The attachment is Y-dependent
-            // (edge vs centre — see GetAttachment), so this must be read at the current delta_y,
-            // not from a width fixed up front. LILYPOND-REF: tie-formatting-problem.cc:507-511.
-            double height = CalculateTieHeight(WidthAt(y + deltaY));
+            // Provisional height at the post-hug endpoint drives the small-vs-tall branch
+            // below. ⚠️ IT IS MEASURED ON THE RAW ATTACHMENT, before the note-head gap comes
+            // off — LilyPond computes attachment_x_ = get_attachment(y + delta_y) at :509-510
+            // and asks for the height at :511, and only widens at :581. Measuring it on the
+            // GAPPED span (this engine's former reading) makes every tie 2*note-head-gap
+            // narrower here and so a little flatter than the branch it lands in expects.
+            double height = BowHeight(GetAttachment(y + deltaY));
 
-            // staff_span widened by -1: positions -3..3; head positions at
-            // the columns reduce to the note position for single notes.
+            // staff_span widened by -1: positions -3..3.
             bool withinStaff = Math.Abs(pos) <= 3;
-            bool nearHeads = pos == notePos;
+            bool nearHeads = ContainsPosition(_startOutline, pos) || ContainsPosition(_endOutline, pos);
             if (nearHeads || withinStaff)
             {
                 if (height < _details.IntraSpaceThreshold * 0.5)
@@ -431,11 +498,12 @@ internal sealed class TieFormattingProblem
         }
 
         // Final attachment (and hence width/height) at the tuned endpoint Y — LilyPond
-        // recomputes attachment_x_ = get_attachment(y + delta_y) here, after the tuning.
-        // LILYPOND-REF: tie-formatting-problem.cc:563-581.
+        // recomputes attachment_x_ = get_attachment(y + delta_y) here, after the tuning, and
+        // then narrows, gaps and stem-avoids it.
+        // LILYPOND-REF: tie-formatting-problem.cc:563-609 generate_configuration.
         double curveYFromMiddle = y + deltaY;        // sp, up+ from the middle line
-        var (attachStartX, attachEndX) = GetAttachment(curveYFromMiddle);
-        double finalWidth = WidthAt(curveYFromMiddle);
+        var (attachStartX, attachEndX) = FinalAttachment(curveYFromMiddle, dir);
+        double finalWidth = Math.Max(attachEndX - attachStartX, _details.MinLength);
         double finalHeight = CalculateTieHeight(finalWidth);
         double finalControlHeight = CalculateControlHeight(finalWidth);
         // Native page Y-up attachment. The whole vertical model is Y-up (= -device);
@@ -600,15 +668,16 @@ internal sealed class TieFormattingProblem
         // (and asserted by a test) and never read. audit/lp-geometry
         // tie.direction.beam-opposes-stem is decided by 2.02 against 2.04 and is the book
         // that says so.
-        config.Demerits += HorizontalDistancePenalty(_startHead, config.StartX);
-        config.Demerits += HorizontalDistancePenalty(_endHead, config.EndX);
+        config.Demerits += HorizontalDistancePenalty(_startOutline?.HeadX, config.StartX);
+        config.Demerits += HorizontalDistancePenalty(_endOutline?.HeadX, config.EndX);
 
         // --- Direction preference (same dir as stem) ---
         ScoreDirectionAgainstStems(config, dir);
 
-        // --- Tie-tie collision ---
+        // --- Tie-tie collision, and the column's symmetry ---
         // LILYPOND-REF: tie-formatting-problem.cc:847-912 score_ties_configuration()
         ScoreTieTieCollision(config);
+        ScoreColumnSymmetry(config, curveY, tieY);
     }
 
     /// <summary>
@@ -625,9 +694,10 @@ internal sealed class TieFormattingProblem
     /// <c>widen</c>, <c>linear_combination</c> and <c>intersect</c> on it (lily/interval.hh),
     /// and the tie code alone uses all four. The arithmetic is that function's, verbatim:
     /// zero inside, otherwise the gap to the nearer end. TO MAKE IT LITERAL, give the layout
-    /// an Interval — the two <c>widen</c>s in <see cref="GetAttachment"/> and the
-    /// <c>intersect</c> the chord outline still needs (:565-579) would all read as LilyPond's
-    /// own lines instead of as open code.
+    /// an Interval — this, the <c>widen</c> and the <c>intersect</c> in
+    /// <see cref="FinalAttachment"/> and the <c>linear_combination</c> in
+    /// <see cref="TieChordOutline"/> would then all read as LilyPond's own lines instead of
+    /// as open code.
     /// </para>
     /// </remarks>
     private double HorizontalDistancePenalty((double Left, double Right)? head, double attachment)
@@ -770,6 +840,57 @@ internal sealed class TieFormattingProblem
             if (configCenterY <= existingCenterY)
                 config.Demerits += _details.TieColumnMonotonicityPenalty;
         }
+    }
+
+    /// <summary>
+    /// What a chord's OUTER ties pay for disagreeing with each other — in LENGTH, and in how
+    /// far each sits from its own note. Charged once, to the column's TOP tie, against the
+    /// bottom one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:890-908 score_ties_configuration — both
+    /// terms read only <c>ties->front ()</c> and <c>ties->back ()</c>, so a middle tie of a
+    /// three-note chord is not in either of them.
+    /// <para>
+    /// ⚠️ WITHOUT THIS TERM THE OUTLINE PORT MAKES THE UPPER TIE WORSE, NOT BETTER, and that
+    /// is measured rather than argued. On <c>&lt;c d&gt;2 ~ &lt;c d&gt;2</c> the upper tie's own
+    /// aptitude prefers the candidate one half-space LOWER (it pays no vertical distance and
+    /// 1.01 less horizontal), and it is the length symmetry that overrules it: taking the
+    /// lower candidate makes the two ties differ by 1.577 rather than 0.962, which at factor
+    /// 10 is 6.2 against an aptitude margin of 0.16. audit/lp-geometry
+    /// tie.width.seconds.upper measured -0.760500 with the outline in and this term out.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS IS GREEDY WHERE LILYPOND IS JOINT, and the difference is stated rather than
+    /// hidden. LilyPond scores a whole <c>Ties_configuration</c> and varies the ties TOGETHER
+    /// (:915-1001), so its front tie also pays for disagreeing with the back one; this engine
+    /// solves a column one tie at a time against the finished layouts of the others, so the
+    /// front tie is already fixed by the time the term exists and only the back one pays.
+    ///   departs from: :890-908, which is symmetric in front and back.
+    ///   goes away when: the problem is handed the whole column at once — the same
+    ///     restructuring named at <see cref="ScoreDirectionAgainstStems"/>.
+    ///   observed by: audit/lp-geometry tie.width.seconds.{lower,upper}. The pair is what
+    ///     makes the approximation visible at all: the LOWER tie is the front, so it is exact
+    ///     under both readings, and only the upper one moves.
+    /// </para>
+    /// </remarks>
+    private void ScoreColumnSymmetry(TieCandidate config, double curveY, double tieY)
+    {
+        if (!_isColumnBack || _existingTies is not { Count: > 0 })
+            return;
+
+        var front = _existingTies[0];
+
+        config.Demerits += _details.OuterTieLengthSymmetryPenaltyFactor
+            * Math.Abs((front.EndX - front.StartX) - (config.EndX - config.StartX));
+
+        // Both ties of a column hang off ONE middle line, so the front tie's stored page-Y-up
+        // edge converts with this tie's own anchor. LILYPOND-REF: :897-907.
+        double staffMiddleY = _y + _tie.StaffPosition * 0.5;
+        double frontDistance = Math.Abs(
+            front.Tie.StaffPosition * 0.5 - (front.StartYUp + staffMiddleY));
+        config.Demerits += _details.OuterTieVerticalDistanceSymmetryPenaltyFactor
+            * Math.Abs(frontDistance - Math.Abs(tieY - curveY));
     }
 
     // ---------------------------------------------------------------

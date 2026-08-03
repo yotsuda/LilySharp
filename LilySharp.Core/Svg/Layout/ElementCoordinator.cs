@@ -1001,6 +1001,176 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// One bound COLUMN of a tie, reduced to the boxes LilyPond's
+    /// <c>set_column_chord_outline</c> walks — every head of the chord, the stem, the dots,
+    /// the flag, the accidentals — in the tie problem's frame (page X; Y in staff spaces above
+    /// the middle line, up-positive). Null when the item is not a note column.
+    /// </summary>
+    /// <param name="columnX">The column's X: the LEFT edge of an UNDISPLACED head.</param>
+    /// <param name="tiedPositions">
+    /// The staff positions this column's ties attach to — LilyPond's <c>bounds</c>. It is the
+    /// whole tie COLUMN's, not this one tie's, because the recession boxes and
+    /// <c>head_extents_</c> are built from all of them (tie-formatting-problem.cc:243-258, :282-286).
+    /// </param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:96-287 set_column_chord_outline.
+    /// </remarks>
+    private static TieColumnParts? BuildTieColumn(
+        Voice voice, int measureIndex, int itemIndex, double columnX,
+        IReadOnlyList<int> tiedPositions, bool isLeftBound)
+    {
+        var item = ItemAt(voice, measureIndex, itemIndex);
+        if (item is not (NoteItem or ChordItem))
+            return null;
+
+        int noteValue = GlyphMetrics.NoteValueOf(
+            item is ChordItem c0 ? c0.BaseDuration : ((NoteItem)item).BaseDuration);
+        // The head's INK EXTENT, not its advance. LilyPond's outline boxes each head with
+        // head->extent (x_refpoint_, X_AXIS) (:119), a stencil extent; the two differ by
+        // 0.000200 on a black head and 0.001400 on a half one. It is invisible on a tie whose
+        // BOTH ends recede to a head centre — the whole span shifts and the width does not —
+        // and it is 0.000700 on one whose other end is held by the stem.
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:119 set_column_chord_outline.
+        var headBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        double headLeftInk = headBBox.Left;
+        double headRightInk = headBBox.Right;
+        bool stemUp = item is ChordItem c1 ? c1.StemUp : ((NoteItem)item).StemUp;
+
+        // Every head of the column, with the seconds displacement the renderer draws it at.
+        var positions = new List<int>();
+        var offsets = new List<double>();
+        if (item is ChordItem chord)
+        {
+            double scale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
+            var chordOffsets = ChordHeadPositioning.CalculateOffsets(
+                chord.Notes, chord.StemUp, noteValue, scale);
+            for (int i = 0; i < chord.Notes.Length; i++)
+            {
+                positions.Add(chord.Notes[i].StaffPosition);
+                offsets.Add(chordOffsets[i]);
+            }
+        }
+        else
+        {
+            positions.Add(((NoteItem)item).StaffPosition);
+            offsets.Add(0);
+        }
+
+        // bounds vs the rest. TiedHeads must come out sorted by position ASCENDING — the
+        // recession boxes take the vector's ends and not its extremes by Y.
+        var tied = new List<TieOutlineHead>();
+        var others = new List<TieOutlineBox>();
+        for (int i = 0; i < positions.Count; i++)
+        {
+            double left = columnX + offsets[i] + headLeftInk;
+            double right = columnX + offsets[i] + headRightInk;
+            if (tiedPositions.Contains(positions[i]))
+                tied.Add(new TieOutlineHead(positions[i], left, right));
+            else
+                // An UNTIED chord member enters with its own ink height, not the tied heads'
+                // one-staff-space box (:221, Staff_symbol_referencer::extent_in_staff).
+                others.Add(new TieOutlineBox(
+                    positions[i] * 0.5 + headBBox.Bottom, positions[i] * 0.5 + headBBox.Top,
+                    left, right));
+        }
+        if (tied.Count == 0)
+            return null;
+        tied.Sort((a, b) => a.Position.CompareTo(b.Position));
+
+        // The stem. StemSpacingInfo is null exactly when LilyPond's Stem::is_normal_stem is
+        // false (a whole note), which is the branch that boxes a half-plane instead of a shaft.
+        int lowPos = positions.Min(), highPos = positions.Max();
+        int supportPos = stemUp ? lowPos : highPos;
+        double supportLeft = columnX + offsets[positions.IndexOf(supportPos)];
+        // ⚠️ LILYSHARP-OWN, AND IT IS THE ENGINE'S OWN STEM AND NOT LILYPOND'S. LilyPond puts
+        //   the stem at its support head's ink RIGHT EDGE less half the stem thickness, per
+        //   HEAD SHAPE; LayoutUtilities.StemAttachX takes the BLACK head's edge whatever the
+        //   head is, so a half note's up stem stands 0.073200 left of LilyPond's
+        //   (1.377400 - 1.304200). Read here through the one house anyway, because the tie
+        //   must avoid the stem this engine DRAWS, not one it does not have.
+        //   departs from: :149, stem->relative_coordinate (x_refpoint_, X_AXIS).
+        //   goes away when: LayoutUtilities.StemAttachX reads the head's own attachment
+        //     (GlyphMetrics.NoteheadHalfStemAttachment already carries it) — a change to every
+        //     drawn half-note stem, so it wants its own point and its own approval.
+        //   observed by: audit/lp-geometry tie.width.seconds.upper, whose book is a HALF-note
+        //     chord and whose remaining residual is this number.
+        var stemInfo = SpacingRules.StemSpacingInfo(item);
+        var stem = new TieOutlineStem(
+            IsNormal: stemInfo is not null,
+            CentreX: LayoutUtilities.StemX(supportLeft, stemUp),
+            TipY: stemInfo is { } si ? (stemUp ? si.StemMax : si.StemMin) * 0.5 : 0,
+            NearHeadPosition: supportPos,
+            SupportHeadCentreX: supportLeft + (headLeftInk + headRightInk) / 2.0);
+
+        // The dots hang off the column's rightmost head, and only the LEFT bound meets them.
+        var dots = new List<TieOutlineBox>();
+        int dotCount = SpacingRules.GetDots(item);
+        if (isLeftBound && dotCount > 0)
+        {
+            double maxRight = columnX + offsets.Max() + headRightInk;
+            var dotBBox = GlyphMetrics.AugmentationDot;
+            double dotRadius = dotBBox.Height / 2;
+            foreach (int p in positions)
+            {
+                // A dot on a staff line is pushed up half a space (dots-engraver.cc:62-80).
+                double dotY = p * 0.5 + (p % 2 == 0 ? 0.5 : 0);
+                for (int d = 0; d < dotCount; d++)
+                {
+                    double dotX = maxRight + EngravingDefaults.DotGap
+                                  + d * (dotBBox.Width + EngravingDefaults.DotGap);
+                    dots.Add(new TieOutlineBox(
+                        dotY - dotRadius, dotY + dotRadius, dotX, dotX + dotBBox.Width));
+                }
+            }
+        }
+
+        // The flag, on the LEFT bound of an unbeamed short note. Its ink hangs off the stem
+        // end, so the glyph's own box is already in the stem's frame (:186-188).
+        var flag = new List<TieOutlineBox>();
+        if (isLeftBound && stemInfo is not null && item is NoteItem fn && noteValue >= 8 && !fn.IsBeamed)
+        {
+            var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, stemUp);
+            if (flagBBox != default)
+            {
+                double tipY = (stemUp ? stemInfo.Value.StemMax : stemInfo.Value.StemMin) * 0.5;
+                double flagX = LayoutUtilities.StemX(supportLeft, stemUp);
+                flag.Add(new TieOutlineBox(
+                    tipY + flagBBox.Bottom, tipY + flagBBox.Top, flagX, flagX + flagBBox.Width));
+            }
+        }
+
+        // The accidentals, on the RIGHT bound only — they stand between the arriving tie and
+        // the head it is arriving at, and no other bound can meet them (:231-236).
+        var accidentals = new List<TieOutlineBox>();
+        if (!isLeftBound)
+        {
+            var placement = new AccidentalPlacement();
+            var laid = item is ChordItem ch
+                ? placement.CalculatePositions(ch.Notes, offsets.ToArray())
+                : placement.CalculateSinglePosition((NoteItem)item) is { } one ? [one] : [];
+            foreach (var layout in laid)
+            {
+                var accBBox = GlyphMetrics.GetAccidentalBBox(layout.Accidental);
+                double accX = columnX + layout.XOffset;
+                double accY = layout.StaffPosition * 0.5;
+                accidentals.Add(new TieOutlineBox(
+                    accY + accBBox.Bottom, accY + accBBox.Top, accX, accX + accBBox.Width));
+            }
+        }
+
+        return new TieColumnParts
+        {
+            TiedHeads = tied,
+            OtherHeads = others,
+            Stem = stem,
+            Dots = dots,
+            Flag = flag,
+            Accidentals = accidentals,
+            HeadPositions = positions,
+        };
+    }
+
+    /// <summary>
     /// Detects ties and calculates their layouts, splitting cross-system ties into broken pieces.
     /// </summary>
     /// <remarks>
@@ -1039,76 +1209,76 @@ internal sealed class ElementCoordinator
 
             int startDots = tie.StartNote.Dots;
 
+            // The whole tie COLUMN's bound heads, which is what the chord outline is built
+            // from: a chord's ties share a start chord, so they are the ties with this one's
+            // (voice, start measure, start item). LilyPond hands the problem all of them at
+            // once (tie-column.cc:81-93); this engine solves them one at a time but must still
+            // read the same outline, or a chord's upper tie recedes past a head that is there.
+            var tiedPositions = ties
+                .Where(t => t.VoiceIndex == tie.VoiceIndex
+                            && t.StartMeasureIndex == tie.StartMeasureIndex
+                            && t.StartItemIndex == tie.StartItemIndex)
+                .Select(t => t.StaffPosition)
+                .Distinct()
+                .ToList();
+
             foreach (var segment in segments)
             {
                 var segSystem = systems[segment.SystemIndex];
 
                 // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges for broken pieces.
-                // TieFormattingProblem attaches the bow to the head's inner EDGE (seg*X) when the
-                // scored endpoint stays within the head box and to the head CENTRE (seg*CenterX)
-                // when it clears the box — LilyPond reads the chord-outline skyline at the tie's Y.
-                // We supply both anchors; the scorer picks per candidate. See TieFormattingProblem.GetAttachment.
+                // The attachment itself is read off each bound column's CHORD OUTLINE
+                // (TieChordOutline); what is passed here is the column, plus the fixed anchor a
+                // bound that is NOT a column falls back to — a piece broken at a system edge, or
+                // a tab digit.
                 double segStartX;
-                double segStartCenterX;
-                // The bound HEAD's own X extent, which the horizontal-distance term reads and
-                // the attachment does not: LilyPond's outline carries the head's dots and its
-                // stem, its head_x carries neither (tie-formatting-problem.cc:670 against
-                // :103-140). Null on a side with no head — a piece broken at a system edge.
-                (double Left, double Right)? startHead = null;
-                (double Left, double Right)? endHead = null;
+                TieColumnParts? startColumn = null;
+                TieColumnParts? endColumn = null;
                 if (segment.IsFirst)
                 {
-                    // The item X is the head's LEFT edge; seconds displacement follows the head.
-                    double startBase = startMeasure.X
-                        + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure)
-                        + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
+                    // The item X is the LEFT edge of an undisplaced head; the seconds
+                    // displacement is per head and belongs to the outline, not to the column.
+                    double startColumnX = startMeasure.X
+                        + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure);
+                    startColumn = BuildTieColumn(
+                        score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex,
+                        startColumnX, tiedPositions, isLeftBound: true);
 
+                    // The fallback anchor, used only when there is no column to read — on a
+                    // TAB, where the bound is a fret digit. It is this tie's own head's inner
+                    // edge, past its dots, which is where the tab rule below hangs the bow.
+                    double startBase = startColumnX
+                        + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
                     int noteValue = tie.StartNote.BaseDuration.Numerator != 1
                         ? 1
                         : tie.StartNote.BaseDuration.Denominator;
-                    double advance = GlyphMetrics.GetNoteheadAdvance(noteValue);
-
-                    // Inner edge = right edge of the head plus its augmentation dots.
-                    // LILYPOND-REF: scm/define-grobs.scm DotColumn padding; scm/output-lib.scm ly:dots::print.
-                    double outlineRight = advance;
+                    double outlineRight = GlyphMetrics.GetNoteheadAdvance(noteValue);
                     if (startDots > 0)
-                    {
-                        double dotWidth = GlyphMetrics.AugmentationDot.Width;
-                        outlineRight += 2 * startDots * dotWidth;
-                    }
+                        outlineRight += 2 * startDots * GlyphMetrics.AugmentationDot.Width;
                     segStartX = startBase + outlineRight;
-                    // Head centre — dots are NOT subtracted (they sit on the note line, off the
-                    // cleared tie Y, so LilyPond's outline recedes past them to the head centre).
-                    segStartCenterX = startBase + advance / 2.0;
-                    startHead = (startBase, startBase + advance);
                 }
                 else
                 {
-                    // Broken piece: the bound is the system edge — no head, so centre == edge.
+                    // Broken piece: the bound is the system edge, and there is no column.
                     segStartX = segSystem.Measures[0].X;
-                    segStartCenterX = segStartX;
                 }
 
                 double segEndX;
-                double segEndCenterX;
                 if (segment.IsLast)
                 {
-                    double endBase = endMeasure.X
-                        + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
+                    double endColumnX = endMeasure.X
+                        + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure);
+                    endColumn = BuildTieColumn(
+                        score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex,
+                        endColumnX, tiedPositions, isLeftBound: false);
+                    // The fallback anchor (tab only): the right head's inner (left) edge.
+                    segEndX = endColumnX
                         + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, tie.StaffPosition);
-                    int endNoteValue = tie.EndNote.BaseDuration.Numerator != 1
-                        ? 1
-                        : tie.EndNote.BaseDuration.Denominator;
-                    segEndX = endBase;                                                      // inner (left) edge of the right head
-                    double endAdvance = GlyphMetrics.GetNoteheadAdvance(endNoteValue);
-                    segEndCenterX = endBase + endAdvance / 2.0;                             // right head centre
-                    endHead = (endBase, endBase + endAdvance);
                 }
                 else
                 {
                     var lastMeasure = segSystem.Measures[^1];
                     segEndX = lastMeasure.X + lastMeasure.Width;
-                    segEndCenterX = segEndX;
                 }
 
                 // Tie Y position is uniform (same pitch on both ends).
@@ -1129,10 +1299,11 @@ internal sealed class ElementCoordinator
                     // attachments to match — otherwise the tie detaches to the left.
                     if (segment.IsFirst) segStartX += EngravingDefaults.TabHeadCenterOffset;
                     if (segment.IsLast) segEndX += EngravingDefaults.TabHeadCenterOffset;
-                    // Tab ties hug the digit at a fixed edge (the notehead edge/centre skyline
-                    // does not apply to fret digits), so keep the edge/centre rule a no-op here.
-                    segStartCenterX = segStartX;
-                    segEndCenterX = segEndX;
+                    // A fret digit is not a note column: it has no chord outline to read, so the
+                    // tie hangs off the fixed anchors above and the whole Y-dependent
+                    // attachment (TieChordOutline) does not apply.
+                    startColumn = null;
+                    endColumn = null;
                     // LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
                     // (tie-formatting-problem.cc:665-683) scores 0 for BOTH ends here and the
                     // attachment is whatever the digit rule above chose.
@@ -1148,8 +1319,6 @@ internal sealed class ElementCoordinator
                     //   observed by: NOTHING. There is no ledger point on a tab tie's width,
                     //     and there cannot be one until the tab fixtures pin their strings
                     //     (HANDOFF 1's "tab の残り 3 冊"). test/tab-tie holds the drawing only.
-                    startHead = null;
-                    endHead = null;
                     // On a tab the tie connects two fret digits on ONE string, so it
                     // belongs on that string's line — NOT at the notation pitch height.
                     // It curves OPPOSITE the stem: below the digits when the stem
@@ -1222,15 +1391,19 @@ internal sealed class ElementCoordinator
                     : null;
 
                 var problem = new TieFormattingProblem(
-                    tieForProblem, segStartX, segEndX, segStartCenterX, segEndCenterX, y,
+                    tieForProblem, segStartX, segEndX, y,
                     existingTies: columnTies,
                     startDots: segment.IsFirst ? startDots : 0,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast,
-                    startHead: startHead,
-                    endHead: endHead,
+                    startColumn: startColumn,
+                    endColumn: endColumn,
                     startStemUp: startStemUp,
-                    endStemUp: endStemUp);
+                    endStemUp: endStemUp,
+                    // Ties are emitted bottom-to-top, so the column's BACK is its highest --
+                    // the one LilyPond charges the outer-tie symmetry to (:890-908).
+                    isColumnBack: tiedPositions.Count > 1
+                                  && tie.StaffPosition == tiedPositions.Max());
                 tieLayouts.Add(problem.Solve() with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }

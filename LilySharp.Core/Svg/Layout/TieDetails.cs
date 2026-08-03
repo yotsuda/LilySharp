@@ -213,14 +213,22 @@ public sealed record TieDetails
     public double OuterTieVerticalGap { get; init; } = 0.25;
 
     /// <summary>
-    /// Penalty factor for asymmetric outer tie lengths.
-    /// LILYPOND-REF: define-grobs.scm: outer-tie-length-symmetry-penalty-factor = 10
+    /// What a chord's OUTER ties pay for coming out different LENGTHS — the term that makes a
+    /// column's ties agree with each other rather than each take its own local best.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3881 outer-tie-length-symmetry-penalty-factor
+    /// <c>= 10</c> — the Tie's own declaration, not
+    /// lily/tie-details.cc:84-85's fallback of 3.0, which nothing reaches. Read by
+    /// <see cref="TieFormattingProblem"/>'s column symmetry; ⚠️ it was DECLARED HERE AND READ
+    /// NOWHERE until the chord outline made the book that needs it legible.
+    /// </remarks>
     public double OuterTieLengthSymmetryPenaltyFactor { get; init; } = 10.0;
 
     /// <summary>
-    /// Penalty factor for asymmetric outer tie vertical distances.
-    /// LILYPOND-REF: define-grobs.scm: outer-tie-vertical-distance-symmetry-penalty-factor = 10
+    /// The same for how far each OUTER tie sits from its own note.
     /// </summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3882 outer-tie-vertical-distance-symmetry-penalty-factor
+    /// <c>= 10</c>.</remarks>
     public double OuterTieVerticalDistanceSymmetryPenaltyFactor { get; init; } = 10.0;
 }
