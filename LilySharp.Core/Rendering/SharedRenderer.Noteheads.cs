@@ -432,9 +432,8 @@ internal static partial class SharedRenderer
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = staffMiddleY + note.StaffPosition / 2.0;
-        // The cue scale, which is Lily#'s own 0.66 and NOT magstep(-4) = 0.629961 — see
-        // EngravingDefaults.CueScale for LilyPond's actual CueVoice recipe and what closing
-        // it involves.
+        // A cue grob states font-size −4, so its glyphs are the THIRTEEN design's own outline
+        // read at magstep(−4) — EngravingDefaults.CueFontSizeStep / CueScale / CueDesignSize.
         double noteFontSize = note.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize;
 
         // Voice stem direction override (voice 1 up / voice 2 down); falls back
@@ -449,17 +448,16 @@ internal static partial class SharedRenderer
         if (note.Accidental != null)
         {
             double accScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
-            // ⚠️ THE CUE ISLAND STILL READS THE 20 DESIGN AT A ROUNDED SCALE. CueScale is 0.66,
-            // 4.8% away from the magstep(-4) = 0.629961 LilyPond's CueVoice recipe asks for
-            // (ly/engraver-init.ly), so this font is deliberately Design20.Scaled and not
-            // AtFontSize: the cue port is its own island and needs its own ledger points first
-            // (HANDOFF ▶). What DID move here on 2026-08-02 is the PADDINGS, which never
-            // scaled in LilyPond — see AccidentalPlacementParameters.
-            var cueFont = note.IsCue
-                ? GlyphMetrics.Design20.Scaled(EngravingDefaults.CueScale) : null;
+            // ⚠️ THE FONT IS THE DESIGN THE FONT-SIZE SELECTS, not the 20 shrunk. It was
+            // Design20.Scaled(0.66) until 2026-08-03 — a rounded scale off the wrong table,
+            // which is both halves of the same mistake: a cue states font-size −4, that asks
+            // for 12.599pt, and 12.599pt lands on the THIRTEEN design, whose glyphs are drawn
+            // differently and not merely smaller (Emmentaler is optically sized).
+            var cueFont = note.IsCue ? EngravingDefaults.CueFont : null;
             if (AccidentalColumn.CalculateSinglePosition(note, cueFont, cueFont) is { } al)
-                DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy, x + al.XOffset, noteY,
-                    note.SourcePosition, gc, accScale);
+                using (note.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
+                    DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy, x + al.XOffset, noteY,
+                        note.SourcePosition, gc, accScale);
         }
 
         // Notehead — skipped when this head merges with another voice's (head wipe)
@@ -471,6 +469,9 @@ internal static partial class SharedRenderer
         char head = EmmentalerGlyphs.GetNotehead(note.Notehead, noteValue);
         if (!headWiped && !headTransparent)
             using (gc.Source(note.SourcePosition))
+            // A cue head is drawn OUT OF ITS OWN DESIGN, paired with the CueFont the
+            // reservation measured — see EngravingDefaults.CueDesignSize.
+            using (note.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
             {
                 if (note.IsDead)
                     DrawDeadNotehead(x, noteY, noteheadColor, gc);
@@ -525,7 +526,10 @@ internal static partial class SharedRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
-                    gc.DrawGlyph(flag.Value, stemX, stemEndY, noteFontSize, stemColor);
+                    // The flag hangs on the stem's RIGHT EDGE — LayoutUtilities.FlagDrawX is the
+                    // one house for that term, and it is measured (ledger flag.x.*).
+                    gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                        noteFontSize, stemColor);
                     hasFlag = true;
                 }
             }
@@ -569,8 +573,7 @@ internal static partial class SharedRenderer
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
         bool stemUp = forcedStemUp ?? chord.StemUp;
 
-        // Cue chords scale like cue notes — EngravingDefaults.CueScale, which is Lily#'s own
-        // 0.66 and not LilyPond's magstep(-4).
+        // Cue chords take the same font-size −4 recipe as cue notes (EngravingDefaults.Cue*).
         double headScale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
         double noteFontSize = chord.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize;
 
@@ -585,10 +588,9 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: lily/accidental-placement.cc position_apes.
         // A cue chord's accidentals shrink with its heads — LP runs the cue grobs at
         // fontSize -4 — but the PADDINGS between them and the heads do not (they are the
-        // staff's, not the font's; see AccidentalPlacementParameters). Same 20-at-0.66 font as
-        // the single-note path above, and the same reason it is not AtFontSize yet.
-        var cueChordFont = chord.IsCue
-            ? GlyphMetrics.Design20.Scaled(EngravingDefaults.CueScale) : null;
+        // staff's, not the font's; see AccidentalPlacementParameters). The FONT is the design
+        // that font-size selects, the same one the single-note path takes.
+        var cueChordFont = chord.IsCue ? EngravingDefaults.CueFont : null;
         var accLayouts = AccidentalColumn.CalculatePositions(
             chord.Notes, headOffsets, cueChordFont, cueChordFont);
         foreach (var al in accLayouts)
@@ -599,8 +601,9 @@ internal static partial class SharedRenderer
             int accSource = chord.SourcePosition;
             foreach (var n in chord.Notes)
                 if (n.StaffPosition == al.StaffPosition && n.SourcePosition >= 0) { accSource = n.SourcePosition; break; }
-            DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
-                x + al.XOffset, ay, accSource, gc, headScale);
+            using (chord.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
+                DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
+                    x + al.XOffset, ay, accSource, gc, headScale);
         }
 
         // topY/bottomY are the visually top/bottom heads. In the Y-up frame the top

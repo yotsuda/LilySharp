@@ -37,11 +37,11 @@
   <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="10.61" y="13.06" font-size="2.52" data-pos="669"></text>
   <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="11.65" y="13.06" font-size="2.83" data-pos="669"></text>
   <line x1="12.50" y1="13.06" x2="12.50" y2="10.58" stroke="#000000" stroke-width="0.130" data-pos="669"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="12.50" y="10.58" font-size="2.83" data-pos="669"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="12.57" y="10.58" font-size="2.83" data-pos="669"></text>
   <text class="music" font-family="Emmentaler-13, Emmentaler, serif" x="18.82" y="12.06" font-size="2.52" data-pos="706"></text>
   <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="19.70" y="12.06" font-size="2.83" data-pos="706"></text>
   <line x1="20.56" y1="12.06" x2="20.56" y2="9.58" stroke="#000000" stroke-width="0.130" data-pos="706"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="20.56" y="9.58" font-size="2.83" data-pos="706"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="20.62" y="9.58" font-size="2.83" data-pos="706"></text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="644"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="644">Main</text>
   </g>

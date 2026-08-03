@@ -1365,6 +1365,45 @@ internal sealed class RenderedGeometry
     /// attaches at their EDGES — a difference of one notehead per end. Bows are indexed in
     /// draw order (ties bottom to top within a chord, then along the staff).
     /// </remarks>
+    /// <summary>
+    /// How high bow <paramref name="index"/> attaches, in staff spaces above the middle line —
+    /// LilyPond's <c>control-points</c> [0].y.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS EXISTS BECAUSE <see cref="BowSpan"/> CANNOT SEE THE COLUMN. LilyPond varies a
+    /// whole <c>Ties_configuration</c> together (lily/tie-formatting-problem.cc:915-1001
+    /// generate_configuration, find_best_variation), so a tie's chosen POSITION depends on the
+    /// other ties of its chord; Lily# solves a column one tie at a time and cannot follow that.
+    /// MEASURED (probe tie-direction.ly): the same c, head position −6, front of its column,
+    /// takes variation −7 in TWSEC and −8 in TW3 — and its WIDTH is 3.875445 in both. Six
+    /// width points over two three-tie books therefore opened EXACT while the approximation
+    /// they were built for went on standing. The height is where the chosen position shows.
+    /// <para>
+    /// ⚠️ The page must hold exactly ONE staff, the same demand
+    /// <see cref="BeamPositionAboveStaffMiddle"/> makes and for the same reason: with two,
+    /// "the middle line" is a question rather than a reference.
+    /// </para>
+    /// </remarks>
+    public double BowAttachmentAboveStaffMiddle(int index, int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        if (refs.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE staff, found {refs.Count} — the probe is "
+                + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        // Device y is down; the staff refpoint is the middle line.
+        return refs[0] - bows[index].P0.Y;
+    }
+
     public double BowSpan(int index, int page = 0)
     {
         var bows = _pages[page].Beziers;
@@ -2544,6 +2583,90 @@ internal sealed class RenderedGeometry
     {
         double bar = BarlineRight(barIndex);
         return FirstGlyphAfter(bar).X - bar;
+    }
+
+    /// <summary>
+    /// The FLAG's draw origin minus its own NOTEHEAD's — where the flag is DRAWN, with the
+    /// column's position divided out.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/flag.cc:198-205 Flag::calc_x_offset — the flag's X-offset is the
+    /// stem's own extent <c>[RIGHT]</c>, and lily/flag.cc:118-165 Flag::print returns the
+    /// stencil UNTRANSLATED, so the glyph lands exactly on that offset.
+    /// LILYPOND-REF: lily/stem.cc:889-906 ly:stem::width (Stem::width, past its is_invisible
+    ///   branch) — a stem's extent is <c>Interval (-1, 1) * thickness / 2</c>, so that offset is
+    ///   the stem CENTRE plus 0.065, on both stem directions.
+    /// <para>
+    /// ⚠️ WHY THE NOTEHEAD IS SUBTRACTED rather than reading the flag's absolute x: the two
+    /// engines do not put the column in the same place in a book this short, and the quantity
+    /// in question is the flag's placement WITHIN its column. Head-relative, the column drops
+    /// out of both sides and what is left is the term the source claim is about.
+    /// </para>
+    /// <para>
+    /// ⚠️ The reading is direction-sensitive on purpose: a down stem stands at the head's LEFT
+    /// edge and an up stem at its right, so a sign error in the placement would read as
+    /// agreement on one of the two. Both are points.
+    /// </para>
+    /// </remarks>
+    public double FlagOriginFromNotehead()
+    {
+        var flag = Glyphs.FirstOrDefault(g => IsFlag(g.Glyph),
+            throw_: "the probe drew no flag; a beamed pair has no Flag grob at all");
+        var head = Glyphs.FirstOrDefault(g => IsNotehead(g.Glyph),
+            throw_: "the probe drew no notehead");
+        return flag.X - head.X;
+    }
+
+    /// <summary>The flag glyphs, by codepoint (both directions, every duration).</summary>
+    private static bool IsFlag(char g) =>
+        Enumerable.Range(1, 6).SelectMany(i => new[]
+        {
+            EmmentalerGlyphs.GetFlag(1 << (i + 2), true),
+            EmmentalerGlyphs.GetFlag(1 << (i + 2), false),
+        }).Any(f => f == g);
+
+    /// <summary>
+    /// The courtesy CANCELLATION's ink right edge → the new KEY signature's ink left, in the
+    /// end-of-line group after bar line <paramref name="barIndex"/>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond keeps the cancellation and the signature as SEPARATE break-aligned grobs, so
+    /// this reads one space-alist entry:
+    /// LILYPOND-REF: scm/define-grobs.scm:1930-1964 key-cancellation-interface — KeyCancellation's
+    ///   <c>(key-signature . (extra-space . 0.5))</c> at :1944, which
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:241-243 Break_alignment_interface::calc_positioning_done
+    ///   turns into exactly that ink-to-ink gap (both extents cancel).
+    /// <para>
+    /// ⚠️ THE TWO SIDES DO NOT AGREE ON GLYPH COUNTS — the trap this file's notehead selector
+    /// already names. LilyPond dumps the cancellation as ONE KeyCancellation grob with an
+    /// X-extent; Lily# draws one natural per cancelled accidental. So the reading is GROUP ink
+    /// right → GROUP ink left on both sides: the LAST natural's anchor plus its own glyph
+    /// width, never "the n-th glyph after the bar line".
+    /// </para>
+    /// <para>
+    /// The naturals are the RUN of them that OPENS the group, so a new signature that itself
+    /// contained a natural could not be misread as more cancellation.
+    /// </para>
+    /// </remarks>
+    public double CancellationRightToKeyLeft(int barIndex)
+    {
+        double bar = BarlineRight(barIndex);
+        var after = Glyphs.Where(g => g.X > bar + 1e-9).OrderBy(g => g.X).ToList();
+        var naturals = after
+            .TakeWhile(g => g.Glyph == EmmentalerGlyphs.AccidentalNatural)
+            .ToList();
+        if (naturals.Count == 0)
+            throw new InvalidOperationException(
+                $"no cancellation naturals stand after bar line {barIndex}, so there is no "
+                + "cancellation-to-key gap to read.\nDrawn geometry:\n" + Describe());
+        if (naturals.Count == after.Count || !IsAccidental(after[naturals.Count].Glyph))
+            throw new InvalidOperationException(
+                "the glyph after the cancellation is not a key accidental.\nDrawn geometry:\n"
+                + Describe());
+
+        double cancellationRight = naturals[^1].X
+            + LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalNatural.Width;
+        return after[naturals.Count].X - cancellationRight;
     }
 
     /// <summary>The plain notehead glyphs, by codepoint.</summary>

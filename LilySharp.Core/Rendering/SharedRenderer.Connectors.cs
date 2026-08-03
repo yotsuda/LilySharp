@@ -395,7 +395,11 @@ internal static partial class SharedRenderer
                 anyNatural = true;
             }
             if (anyNatural)
-                dx += GlyphMetrics.AccidentalNatural.Width + 0.4;
+                // The same cancellation→key entry the standard branch reads — it was the same
+                // 0.4 written a THIRD time (draw, reserve, and here), so it moves with them.
+                dx += GlyphMetrics.AccidentalNatural.Width
+                    + SpacingRules.BreakAlignGap(
+                        BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
             using (gc.Source(change.SourcePosition))
                 return DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc);
         }
@@ -433,15 +437,27 @@ internal static partial class SharedRenderer
                 prevNatPos = staffPosition;
             }
             dx += GlyphMetrics.AccidentalNatural.Width;
-            // Gap before the new signature. LilyPond keeps the KeyCancellation and
-            // the following KeySignature as SEPARATE break-aligned grobs, so there is
-            // a deliberate gap between the cancellation naturals and the new key: it
-            // comes from KeyCancellation's space-alist entry
-            //   (key-signature . (extra-space . 0.5))
-            // trimmed by their (extra-spacing-width . (0.0 . 1.0)) overlap — a spring,
-            // not a fixed pad, whose net in this inline model is ~0.4.
-            // LILYPOND-REF: scm/define-grobs.scm — KeyCancellation space-alist.
-            dx += 0.4;
+            // Gap before the new signature. LilyPond keeps the KeyCancellation and the
+            // following KeySignature as SEPARATE break-aligned grobs, so this is one
+            // space-alist entry read like every other in the group.
+            // LILYPOND-REF: scm/define-grobs.scm:1930-1964 key-cancellation-interface — its
+            //   space-alist carries (key-signature . (extra-space . 0.5)) at :1944.
+            // ⚠️ WAS A BARE 0.4 UNTIL 2026-08-03, on the reasoning that LilyPond's 0.5 is
+            //   "trimmed by their (extra-spacing-width . (0.0 . 1.0)) overlap -- a spring, not
+            //   a fixed pad, whose net in this inline model is ~0.4". That is the same
+            //   measured-net claim that was false for the group's other three gaps:
+            // LILYPOND-REF: lily/break-alignment-interface.cc:241-243 Break_alignment_interface::calc_positioning_done
+            //   places the next group at
+            //   extents[l][RIGHT] + distance - extents[r][LEFT], so both extents cancel, the
+            //   ink-to-ink gap IS the entry, and extra-spacing-width never enters that walk.
+            //   LilyPond measured 0.500000 on probe courtesy-meter.ly (score CMK: the
+            //   cancellation's ink ends 26.993307, the key starts 27.493307). Ledger
+            //   courtesy.key.cancellation-to-key opened at -0.100000 and closes here.
+            // ⚠️ THE RESERVATION READS THE SAME ENTRY (SpacingRules.KeyCourtesySuffixWidth),
+            //   so the room widens by exactly what this moves. It was the same 0.4 spelled
+            //   twice, which is why both had to change in one commit.
+            dx += SpacingRules.BreakAlignGap(
+                BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
         }
 
         return next != 0

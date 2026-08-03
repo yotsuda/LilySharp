@@ -776,7 +776,7 @@ internal sealed class MusicMarkGreen : GreenSyntaxNode
 
 
 /// <summary>
-/// Repeat block in structure: |: ... :| or |: ... :| x3
+/// Repeat block in structure: |: ... :| or |: ... :|*3
 /// </summary>
 internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
 {
@@ -801,7 +801,11 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
     {
     }
 
-    // Repeat with count: |: items :| x3
+    // Repeat with count: |: items :|*3 — the SAME spelling the inline music stream uses on its
+    // own end-repeat bar line (Parser.Music.cs ParseBarline), which is LilyPond's `R1*20`
+    // multiplier idiom. It was `x3` until 2026-08-03, which was a second spelling of one thing
+    // AND unreachable: the lexer glues `x3` into one identifier, so the parser branch that read
+    // it never fired and the count landed as an undefined section reference instead.
     public FormRepeatBlockGreen(
         SyntaxToken repeatStart,
         GreenNode?[] items,
@@ -809,9 +813,9 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
         GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative,
-        SyntaxToken? xToken,
+        SyntaxToken? asterisk,
         SyntaxToken? repeatCount)
-        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, xToken, repeatCount))
+        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, asterisk, repeatCount))
     {
     }
 
@@ -822,7 +826,7 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
         GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative,
-        SyntaxToken? xToken,
+        SyntaxToken? asterisk,
         SyntaxToken? repeatCount)
     {
         var children = new List<GreenNode?> { repeatStart };
@@ -833,14 +837,17 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
             children.AddRange(alternativesBeforeEnd);
         }
         children.Add(repeatEnd);
+        // ⚠️ THE COUNT SITS ON THE BAR LINE, so it goes in right after it and BEFORE any final
+        // ending — `|: A [1. B] :|*3 [2. C]`. Children are in source order or ToFullString
+        // reorders the text, which is what the parser round-trip tests read.
+        if (asterisk != null)
+        {
+            children.Add(asterisk);
+            children.Add(repeatCount);
+        }
         if (finalAlternative != null)
         {
             children.Add(finalAlternative);
-        }
-        if (xToken != null)
-        {
-            children.Add(xToken);
-            children.Add(repeatCount);
         }
         return [.. children];
     }

@@ -184,7 +184,7 @@
   <path d="M 11.11,21.30 C 11.49,21.40 11.90,21.26 12.12,20.95 C 11.92,21.34 11.51,21.48 11.11,21.30 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
   <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="19.68" y="17.30" font-size="2.83" data-pos="297"></text>
   <line x1="20.53" y1="17.30" x2="20.53" y2="14.82" stroke="#000000" stroke-width="0.130" data-pos="297"/>
-  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="20.53" y="14.82" font-size="2.83" data-pos="297"></text>
+  <text class="music" font-family="Emmentaler-14, Emmentaler, serif" x="20.60" y="14.82" font-size="2.83" data-pos="297"></text>
   <line x1="20.11" y1="16.35" x2="21.12" y2="15.53" stroke="#000000" stroke-width="0.138" data-pos="297"/>
   <path d="M 20.14,18.30 C 20.60,18.48 21.16,18.33 21.47,17.95 C 21.18,18.41 20.62,18.56 20.14,18.30 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="297"/>
   <text class="music" x="6.43" y="14.82" font-size="3.56" data-pos="0"></text>

@@ -508,113 +508,90 @@ internal static class SpacingRules
     /// </remarks>
     public static double KeyCourtesySuffixWidth(int prevSharps, int nextSharps)
     {
-        bool needNaturals = (prevSharps != 0 && nextSharps == 0) ||
-                            (prevSharps > 0 && nextSharps < 0) || (prevSharps < 0 && nextSharps > 0) ||
-                            (Math.Sign(prevSharps) == Math.Sign(nextSharps)
-                             && Math.Abs(nextSharps) < Math.Abs(prevSharps));
-        int natCount = needNaturals
-            ? Math.Abs(prevSharps) - (Math.Sign(prevSharps) == Math.Sign(nextSharps) ? Math.Abs(nextSharps) : 0)
-            : 0;
+        int natCount = CancellationNaturalCount(prevSharps, nextSharps);
 
-        double w = BarlineToCourtesyKey;
+        // The bar line's gap to whichever grob OPENS the group — LilyPond keys the left grob's
+        // alist by the RIGHT grob's break-align-symbol, so a group that opens with the
+        // cancellation and one that opens with the signature read different entries (both 1.0
+        // as it happens, and reading the right one is what keeps that a fact rather than luck).
+        double w = BreakAlignGap(BreakAlignSymbol.StaffBar,
+            natCount > 0 ? BreakAlignSymbol.KeyCancellation : BreakAlignSymbol.KeySignature);
         if (natCount > 0)
-            // Upper bound of the LP natural kerning (0.3 per overlapping pair).
+            // Upper bound of the LP natural kerning (0.3 per overlapping pair), then the
+            // cancellation's own gap to the signature.
             w += natCount * GlyphMetrics.AccidentalNatural.Width
-               + Math.Max(0, natCount - 1) * 0.3 + 0.4;
+               + Math.Max(0, natCount - 1) * 0.3
+               + BreakAlignGap(BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
         if (nextSharps != 0)
             w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0) + 0.4;
         return w;
     }
 
     /// <summary>
-    /// The final barline's right edge → the courtesy KEY that opens the end-of-line group.
+    /// How many cancellation naturals a key change from <paramref name="prevSharps"/> to
+    /// <paramref name="nextSharps"/> prints — 0 when the new signature cancels nothing.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// LilyPond stands the courtesy group <b>1.000000</b> past the bar line's ink right edge —
-    /// its BarLine declares that for <c>key-cancellation</c> (:297) and for
-    /// <c>key-signature</c> (:296) alike, so the number is the same whether the group opens
-    /// with a cancellation or straight with the new signature, and one constant covers both.
-    /// Measured (2.26.0, bass staff, one break): bar line 23.353507 ext 0..0.19, cancellation
-    /// 24.543507.
-    /// </para>
-    /// <para>
-    /// ★ THE HOUSE FOR ALL THREE COURTESY GAPS' PROVENANCE — <see cref="BarlineToCourtesyTime"/>
-    /// and <see cref="CourtesyKeyToTimeGap"/> point here rather than repeating the address,
-    /// because one number wants one home and three copies rot separately.
+    /// ⚠️ ONE HOUSE, because the answer decides two things that must agree: how much room
+    /// <see cref="KeyCourtesySuffixWidth"/> reserves, and which space-alist entry opens the
+    /// group (a cancellation and a signature are different break-align symbols). It was spelled
+    /// twice — here and in SharedRenderer.DrawKeySignatureChange — which is the shape §7.7 keeps
+    /// naming.
+    /// LILYPOND-REF: lily/key-engraver.cc — the cancellation is the previous signature's
+    /// alterations that the new one no longer makes.
+    /// </remarks>
+    public static int CancellationNaturalCount(int prevSharps, int nextSharps)
+    {
+        bool needNaturals = (prevSharps != 0 && nextSharps == 0) ||
+                            (prevSharps > 0 && nextSharps < 0) || (prevSharps < 0 && nextSharps > 0) ||
+                            (Math.Sign(prevSharps) == Math.Sign(nextSharps)
+                             && Math.Abs(nextSharps) < Math.Abs(prevSharps));
+        return needNaturals
+            ? Math.Abs(prevSharps) - (Math.Sign(prevSharps) == Math.Sign(nextSharps) ? Math.Abs(nextSharps) : 0)
+            : 0;
+    }
+
+    /// <summary>
+    /// The ink-to-ink gap between two adjacent members of a break-align group.
+    /// </summary>
+    /// <remarks>
     /// LILYPOND-REF: lily/break-alignment-interface.cc:180-210 Break_alignment_interface::calc_positioning_done
-    ///   — the alist is taken off the <b>LEFT</b> grob (:180-186) and keyed by the <b>RIGHT</b>
-    ///   grob's <c>break-align-symbol</c> (:195-210), and
+    ///   — the space-alist is taken off the LEFT grob and keyed by the RIGHT grob's
+    ///   <c>break-align-symbol</c>.
     /// LILYPOND-REF: lily/break-alignment-interface.cc:241-243 Break_alignment_interface::calc_positioning_done
-    ///   — places the next group at
-    ///   <c>extents[idx][RIGHT] + distance - extents[next_idx][LEFT]</c>, so the INK-TO-INK gap
-    ///   is exactly <c>distance</c> and both extents cancel.
+    ///   — places the next group at <c>extents[idx][RIGHT] + distance - extents[next][LEFT]</c>,
+    ///   so for an <c>extra-space</c> entry BOTH extents cancel and the ink-to-ink gap IS the
+    ///   distance.
     /// <para>
-    /// ⚠️ ALL THREE ARE TRANSCRIBED VALUES, and the entry to cite is the LEFT grob's:
-    /// LILYPOND-REF: scm/define-grobs.scm:260-312 bar-line-interface — BarLine's own space-alist,
-    ///   <c>(time-signature . (extra-space . 0.75))</c> at :293 and
-    ///   <c>(key-cancellation . (extra-space . 1.0))</c> at :297.
-    /// LILYPOND-REF: scm/define-grobs.scm:1930-1964 key-cancellation-interface — KeyCancellation's,
-    ///   <c>(key-signature . (extra-space . 0.5))</c> at :1944.
-    /// LILYPOND-REF: scm/define-grobs.scm:1972-2010 key-signature-interface — KeySignature's,
-    ///   <c>(time-signature . (extra-space . 1.15))</c> at :1989.
-    /// Each matches its printed gap exactly (0.750000 / 1.000000 / 0.500000 / 1.150000).
-    /// </para>
-    /// <para>
-    /// ⚠️ THIS CORRECTS WHAT STOOD HERE UNTIL 2026-08-03, which said the declared entry was NOT
-    /// the printed gap — that 1.0 was declared and 0.750000 came out, so these were "measured
-    /// nets" that could not be cited to the alist. It cited <b>TimeSignature's</b>
-    /// <c>(staff-bar . (extra-space . 1.0))</c>, and that entry governs a TimeSignature on the
-    /// LEFT with a bar line on the right, which is the opposite walk. Cross-checked on a second
-    /// texture: audit/lp-geometry <c>courtesy.meter.barline-to-meter.double-bar-numeral</c>
-    /// changes both glyphs (double bar, numeral meter) and LilyPond answers 0.750000 again.
-    /// </para>
-    /// <para>
-    /// ⇒ ★ WAS 0.8 UNTIL 2026-08-03, an invented number that held
-    /// <c>courtesy.meter.barline-to-cancellation</c> open at −0.2 — the whole of that residual.
-    /// Finding the right alist is what turned it from a measurement into an address, and the
-    /// port is this literal. ⚠️ IT MOVES BOTH SIDES AT ONCE BY CONSTRUCTION:
-    /// <see cref="KeyCourtesySuffixWidth"/> RESERVES the room off this same constant and
-    /// SharedRenderer DRAWS off it, so there is no way to move one without the other — which
-    /// is why it is one constant and not two. (Had they been two, this edit would have pushed
-    /// the signature off the reserved room, the shape §7.7 keeps naming.)
-    /// </para>
-    /// <para>
-    /// The standing debt (HANDOFF §7.6 ⒝) is unchanged in shape but smaller than it looked:
-    /// running the end-of-line group through <see cref="BreakAlignSpacing"/> the way the
-    /// line-START prefix already goes deletes all three constants, because LilyPond has ONE
-    /// break-align group at each end of a line rather than a solver at one end and constants at
-    /// the other. Until that port lands these three are at least LITERAL — alist entries, not
-    /// nets — which is what they were not before.
+    /// ⚠️ That cancellation is why this returns the raw value, and why it refuses any other
+    /// style: a <c>minimum-space</c> entry is <c>max(extents[l][RIGHT], distance)</c> and does
+    /// NOT reduce to a gap, so a caller measuring off an ink edge would silently be wrong. Every
+    /// entry the end-of-line group reads is extra-space today (BarLine :293/:296/:297,
+    /// KeyCancellation :1944, KeySignature :1989); if that ever changes, this throws instead of
+    /// answering, and the caller has to be rewritten rather than quietly drift.
     /// </para>
     /// </remarks>
-    internal const double BarlineToCourtesyKey = 1.0;
+    internal static double BreakAlignGap(BreakAlignSymbol left, BreakAlignSymbol right)
+    {
+        var entry = BreakAlignSpacing.GetSpacing(left, right);
+        if (entry.Style != SpacingStyle.ExtraSpace)
+            throw new InvalidOperationException(
+                $"the {left}->{right} space-alist entry is {entry.Style}, which is not a plain "
+                + "ink-to-ink gap; this caller measures off an ink edge and must be rewritten.");
+        return entry.Value;
+    }
 
-    /// <summary>
-    /// The final barline's right edge → a courtesy METER standing there ALONE, i.e. when the
-    /// next line changes the meter but not the key.
-    /// </summary>
-    /// <remarks>
-    /// MEASURED (LilyPond 2.26.0, same book with the key change taken out): barline
-    /// 31.003307 ext 0..0.19, meter 31.943307 — <b>0.750000</b> past the ink edge.
-    /// ⚠️ IT IS NOT THE SAME NUMBER AS <see cref="BarlineToCourtesyKey"/> AND SHOULD NOT BE
-    /// FOLDED INTO ONE: LilyPond has no single "gap after the barline" either — each
-    /// break-aligned grob brings its own space-alist entry.
-    /// Provenance and the debt it carries: <see cref="BarlineToCourtesyKey"/>.
-    /// </remarks>
-    internal const double BarlineToCourtesyTime = 0.75;
-
-    /// <summary>
-    /// The gap between the end-of-line courtesy KEY and the courtesy METER that follows it.
-    /// </summary>
-    /// <remarks>
-    /// MEASURED (LilyPond 2.26.0): the key's ink ends at 30.793307 and the meter starts at
-    /// 31.943307 — <b>1.150000</b>. The same number the line-START prefix puts between key
-    /// and meter (7.603400 → 8.753400), which is what says it is the break-align spacing and
-    /// not something the courtesy invented.
-    /// Provenance and the debt it carries: <see cref="BarlineToCourtesyKey"/>.
-    /// </remarks>
-    internal const double CourtesyKeyToTimeGap = 1.15;
+    // ⚠️ THREE CONSTANTS STOOD HERE UNTIL 2026-08-03 — BarlineToCourtesyKey (1.0),
+    // BarlineToCourtesyTime (0.75) and CourtesyKeyToTimeGap (1.15), the end-of-line courtesy's
+    // gaps written out by hand. They are gone: the group now reads the same space-alist the
+    // line-START prefix does, through BreakAlignGap above, because LilyPond has ONE break-align
+    // group at each end of a line and not a solver at one end with constants at the other.
+    // Deleting them moved nothing — every one was already its alist entry exactly. What DID
+    // move was a FOURTH gap nobody had named: a bare 0.4 for cancellation→key, where LilyPond
+    // declares 0.5. It survived the audit that checked these three because it was not a
+    // constant with a name, and no ledger point reached it.
+    // The full account, with both engines measured, is in audit/lp-geometry ledger entries
+    // courtesy.meter.barline-to-{meter,cancellation} and courtesy.key.cancellation-to-key.
 
     /// <summary>
     /// Width reserved at the END of a line for the courtesy meter when the NEXT line opens
@@ -628,7 +605,12 @@ internal static class SpacingRules
     /// </remarks>
     public static double TimeCourtesySuffixWidth(
         TimeSignatureChangeItem change, bool afterCourtesyKey)
-        => (afterCourtesyKey ? CourtesyKeyToTimeGap : BarlineToCourtesyTime)
+        // The meter's gap is measured off whatever stands to its LEFT in the group — the key
+        // when one is there, otherwise the bar line — and those are different alist entries
+        // (1.15 against 0.75), which is why one "space after the bar line" cannot cover both.
+        => BreakAlignGap(
+               afterCourtesyKey ? BreakAlignSymbol.KeySignature : BreakAlignSymbol.StaffBar,
+               BreakAlignSymbol.TimeSignature)
            + GlyphMetrics.GetTimeSigWidth(change.NewTime.Beats, change.NewTime.BeatType);
 
     /// <summary>

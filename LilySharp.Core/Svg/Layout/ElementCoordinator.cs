@@ -757,17 +757,21 @@ internal sealed class ElementCoordinator
         }
     }
 
-    /// <summary>LilyPond's CueVoice fontSize = -4 shrinks the accidental grob with the head —
-    /// at <see cref="EngravingDefaults.CueScale"/>, which is Lily#'s own number and not
-    /// magstep(-4). One home, so the port moves the head and its accidental together.</summary>
-    private const double CueAccidentalScale = EngravingDefaults.CueScale;
+    /// <summary>LilyPond's CueVoice fontSize = -4 shrinks the accidental grob with the head, so
+    /// both read <see cref="EngravingDefaults.CueScale"/> — one home, and the port moved the
+    /// head and its accidental together.</summary>
+    private static readonly double CueAccidentalScale = EngravingDefaults.CueScale;
 
-    /// <summary>The font a cue note's accidental is measured with — the 20 design at
-    /// <see cref="CueAccidentalScale"/>, or null (the plain 20) for an ordinary note. Not
-    /// <c>AtFontSize(-4)</c> yet: the cue island still runs on Lily#'s own 0.66, and the two
-    /// have to move together with a ledger point of their own (HANDOFF ▶).</summary>
+    /// <summary>The font a cue note's accidental is measured with — the design font-size −4
+    /// selects, already magnified, or null (the plain 20) for an ordinary note.</summary>
+    /// <remarks>
+    /// ⚠️ It was <c>Design20.Scaled(0.66)</c> until 2026-08-03: the wrong table AND a rounded
+    /// factor. A cue states font-size −4, which asks 12.599pt and lands on the THIRTEEN design;
+    /// Emmentaler is optically sized, so that design's glyphs are drawn differently and not
+    /// merely smaller. See <see cref="EngravingDefaults.CueFont"/>.
+    /// </remarks>
     private static GlyphMetrics.DesignMetrics? CueAccidentalFont(bool isCue) =>
-        isCue ? GlyphMetrics.Design20.Scaled(CueAccidentalScale) : null;
+        isCue ? EngravingDefaults.CueFont : null;
 
     /// <summary>
     /// One accidental as a covered grob: its LILC extent, booked at BOTH x edges.

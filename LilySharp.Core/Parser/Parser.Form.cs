@@ -204,7 +204,7 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse repeat block: |: ... :| or |: ... :| x3
+    /// Parse repeat block: |: ... :| or |: ... :|*3
     /// </summary>
     private FormRepeatBlockGreen ParseFormRepeatBlock()
     {
@@ -265,6 +265,23 @@ internal sealed partial class Parser
 
         var endBar = Expect(SyntaxKind.RepeatEndBar);
 
+        // Explicit play count, written ON the bar line: `:|*3`. The SAME spelling the inline
+        // music stream takes (Parser.Music.cs ParseBarline), which is LilyPond's `R1*20`
+        // multiplier idiom — one thing, one spelling, in both places it can be written.
+        // ⚠️ IT WAS `x3` UNTIL 2026-08-03 AND COULD NEVER HAVE WORKED: the lexer reads `x3` as
+        // ONE identifier, so the `Current.Text == "x"` test never matched and the count fell
+        // through to the form's item list as a section reference nobody declared (LYS1005).
+        // Two ParserTests wrote `:| x4` and passed the whole time, because they assert only that
+        // nothing is a SYNTAX error and that the tree round-trips — never that the count
+        // arrived. `*` also cannot begin an identifier, so `*3` has no such ambiguity to have.
+        SyntaxToken? asterisk = null;
+        SyntaxToken? repeatCount = null;
+        if (Check(SyntaxKind.Asterisk))
+        {
+            asterisk = Advance();
+            repeatCount = Expect(SyntaxKind.IntegerLiteral);
+        }
+
         // Final alternative after :| — the bare "2. A2" form or the bracket form
         // "[2. A2]", so a structure repeat reads exactly like the inline volta:
         //   |: Intro2 B C A2 [1. D] :| [2. Outro]
@@ -274,16 +291,7 @@ internal sealed partial class Parser
         else if (Check(SyntaxKind.OpenBracket))
             finalAlternative = ParseVoltaBracket();
 
-        // Parse repeat count: x3
-        SyntaxToken? xToken = null;
-        SyntaxToken? repeatCount = null;
-        if (Check(SyntaxKind.Identifier) && Current.Text == "x")
-        {
-            xToken = Advance();
-            repeatCount = Expect(SyntaxKind.IntegerLiteral);
-        }
-
-        return new FormRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, xToken, repeatCount);
+        return new FormRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, asterisk, repeatCount);
 
     }
 

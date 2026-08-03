@@ -876,4 +876,136 @@ public class LilyPondExporterTests
             PhraseScore("phrase A { c d }\nphrase B { e f }", "A B", headers: "")));
         Assert.DoesNotContain(quiet.Warnings, w => w.Contains("a note follows the phrase reference"));
     }
+
+    // ---- what the FORM says, not just which sections it names ----------------
+    //
+    // ⚠️ WHY THESE EXIST. The form walk yielded only the section NAMES of the form's DIRECT
+    // children, so five of a form's eight item spellings (Parser.Form.cs ParseFormItem) left no
+    // trace in the twin AND no warning. The corpus could not see it: `|:` in a form is three
+    // books, a form-level `break` is zero, and nothing compares a twin against what Lily# draws.
+    // Every point below is a case where the old exporter produced a twin that COMPILES AND IS A
+    // DIFFERENT PIECE — which is the one failure a snapshot can never catch.
+
+    private static string FormScore(string form, string sections = """
+        section A { m { c'4 d' e' f' | } }
+        section B { m { g'4 a' b' c'' | } }
+        """) => $$"""
+        octave absolute
+        time 4/4
+        part m { clef treble }
+        {{sections}}
+        form main { {{form}} }
+        score main { staff m }
+        """;
+
+    /// <summary>A <c>break</c> written between sections reaches the twin.</summary>
+    /// <remarks>
+    /// Lily# breaks the system there (MeasureCollector.cs, the <c>BreakSyntax</c> case outside a
+    /// repeat block), so a twin without the <c>\break</c> lets LilyPond break wherever its own
+    /// spacing lands — and every geometry read off that twin is then measured on a different
+    /// line. The gap it hid is why the courtesy probe books carry a hand-written <c>\break</c>.
+    /// </remarks>
+    [Fact]
+    public void AFormLevelBreak_ReachesTheTwin()
+    {
+        var ly = Export(FormScore("A break B"));
+        Assert.Contains("\\break", ly);
+        // …and it stands BETWEEN the two sections, not at either end.
+        string flat = ly.Replace("\r\n", "\n");
+        Assert.InRange(flat.IndexOf("\\break"), flat.IndexOf("c'4 d'"), flat.IndexOf("g'4 a'"));
+    }
+
+    /// <summary>
+    /// A <c>|: … :|</c> block carries its sections, its bar lines and its play count.
+    /// </summary>
+    /// <remarks>
+    /// A repeat block is ONE child of the form, so a walk over direct children alone lost every
+    /// section inside it. <c>form main { A |: B :| A }</c> exported as <c>A A</c>: the twin was
+    /// a third shorter and had no repeat at all.
+    /// </remarks>
+    [Fact]
+    public void AFormRepeat_CarriesItsSections_AndBecomesRepeatVolta()
+    {
+        var ly = Export(FormScore("A |: B :| A"));
+        Assert.Contains("\\repeat volta 2 {", ly);
+        Assert.Contains("g'4 a' b' c''", ly);           // B is inside the repeat…
+        Assert.Equal(2, Occurrences(ly, "c'4 d' e' f'")); // …and A still plays twice.
+    }
+
+    /// <summary>An explicit play count rides the repeat into the twin.</summary>
+    /// <remarks>
+    /// The count is written ON the bar line — <c>:|*3</c> — which is the same spelling an inline
+    /// music-stream repeat takes and LilyPond's own <c>R1*20</c> multiplier idiom.
+    /// ⚠️ IT WAS <c>x3</c> UNTIL 2026-08-03 AND WAS UNREACHABLE: the lexer reads <c>x3</c> as one
+    /// identifier, so the parser branch that takes a count never fired and the token landed at
+    /// form level as a section reference nobody declared. Two ParserTests wrote <c>:| x4</c> and
+    /// passed throughout, because round-trip says the characters came back, not that anything
+    /// read them.
+    /// </remarks>
+    [Fact]
+    public void AFormRepeatPlayCount_IsCarried()
+    {
+        Assert.Contains("\\repeat volta 3 {", Export(FormScore("A |: B :|*3")));
+    }
+
+    /// <summary>
+    /// <c>:|:</c> is TWO bar lines, the same expansion the collector makes.
+    /// </summary>
+    /// <remarks>
+    /// MeasureCollector.Form.cs expands one written divider into <c>:|</c> then <c>|:</c>, so
+    /// <c>|: B :|: C :|</c> repeats B and then C. Expanding it on one side only would make the
+    /// twin repeat a different number of bars than Lily# draws — with no warning on either side.
+    /// </remarks>
+    [Fact]
+    public void ABackToBackRepeatDivider_BecomesTwoRepeats()
+    {
+        var ly = Export(FormScore("|: A :|: B :|"));
+        Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
+    }
+
+    /// <summary>Volta endings named by the form become <c>\alternative</c> blocks.</summary>
+    /// <remarks>
+    /// The two spellings differ only in where the music lives — an inline volta HOLDS its items,
+    /// a form ending NAMES a section — so the exporter rebuilds the inline node around the
+    /// section's own green nodes and lets the one existing grouper write it.
+    /// </remarks>
+    [Fact]
+    public void FormVoltaEndings_BecomeAlternativeBlocks()
+    {
+        var ly = Export(FormScore("|: A | [1. B] :| [2. B]"));
+        Assert.Contains("\\repeat volta 2 {", ly);
+        Assert.Contains("\\alternative {", ly);
+        Assert.Equal(2, Occurrences(ly, "g'4 a' b' c''"));   // both endings play B
+    }
+
+    /// <summary>A navigation mark standing in the form reaches the twin.</summary>
+    [Fact]
+    public void AFormLevelNavigationMark_ReachesTheTwin()
+    {
+        Assert.Contains("\\italic \"D.C.\"", Export(FormScore("A B dc")));
+    }
+
+    /// <summary>
+    /// A form item the exporter still cannot write is WARNED about, not dropped in silence.
+    /// </summary>
+    /// <remarks>
+    /// <c>_text</c> has no LilyPond spelling here yet. Filtering it out of the flattened stream
+    /// would have been easy and would have put the loss back below the waterline, which is the
+    /// property this whole group of tests exists to hold.
+    /// </remarks>
+    [Fact]
+    public void AFormItemWithNoSpelling_IsNamed_NotDroppedSilently()
+    {
+        var exporter = new LilyPondExporter();
+        exporter.Export(SyntaxTree.Parse(FormScore("A _\"note to self\" B")));
+        Assert.Contains(exporter.Warnings, w => w.Contains("not exported"));
+    }
+
+    private static int Occurrences(string haystack, string needle)
+    {
+        int n = 0;
+        for (int i = haystack.IndexOf(needle); i >= 0; i = haystack.IndexOf(needle, i + needle.Length))
+            n++;
+        return n;
+    }
 }

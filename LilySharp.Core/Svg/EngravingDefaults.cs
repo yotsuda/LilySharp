@@ -245,38 +245,86 @@ internal static class EngravingDefaults
     public const double OssiaScale = 0.7071;
 
     /// <summary>
-    /// The scale a CUE note is engraved at — <b>an invention, and a wrong one</b>.
+    /// The <c>font-size</c> a CUE grob states — LilyPond's CueVoice number.
     /// </summary>
     /// <remarks>
-    /// 0.66 is not a LilyPond number and never was. LilyPond's cue is a CONTEXT with a
-    /// font-size on it, and the whole recipe is five lines of Scheme —
     /// LILYPOND-REF: ly/engraver-init.ly CueVoice (at :429-444 in 2.26.0) declares
-    ///   <c>fontSize = #-4</c>, <c>Stem.length-fraction = (magstep -4)</c>,
+    ///   <c>fontSize = #-4</c>, and with it <c>Stem.length-fraction = (magstep -4)</c>,
     ///   <c>Beam.length-fraction = (magstep -4)</c> and <c>Beam.beam-thickness = 0.35</c>
     ///   (DECLARED, like the grace beam's 0.384 — not derived from the fraction).
     ///   ⚠️ The line range is in prose on purpose: none of the names at those lines is a
     ///   multi-part LilyPond identifier, so the citation ratchet cannot check it.
     /// <para>
-    /// ⚠️ <c>magstep(-4) = 2^(-2/3) = 0.629961</c>, so this constant is <b>4.8% too large</b>,
-    /// and the comments that said "font-size −4 ≈ 0.66" were arithmetic, not a measurement.
-    /// It is the third time this exact shape has been found: a grace was "≈0.65" against
-    /// 0.707107 and an ossia "0.7071" against 0.70710678. See
-    /// <see cref="Layout.EmmentalerDesignSize.Magstep"/>, which is the one home for it.
-    /// </para>
-    /// <para>
-    /// ⚠️ WHEN IT GOES it takes the rest of the recipe with it, exactly as the grace's did:
-    /// font-size −4 asks for 12.599pt, which lands on the THIRTEEN Emmentaler design, so a
-    /// cue head is that design's glyph and not the twenty's shrunk — the port is the same
-    /// pair the grace and the editorial accidental took (GlyphMetrics.AtFontSize plus
-    /// IDrawingContext.MusicFace), and it needs a ledger point opened first because it
-    /// moves drawn output.
+    /// This is the number a cue grob STATES; everything else about its size follows from it —
+    /// which Emmentaler design its glyphs come out of (<see cref="CueDesignSize"/>) and the
+    /// magnification that design is read at (<see cref="CueScale"/>). It is the same shape
+    /// <see cref="Svg.Model.GraceNoteItem.FontSizeStep"/> has, one grob family over.
     /// </para>
     /// </remarks>
-    // LILYSHARP-OWN: an invented rounding of magstep(-4) = 0.629961, wrong by 4.8%. It goes
-    // when the CueVoice recipe above is ported (a ledger point first — it moves output).
-    public const double CueScale = 0.66;
+    public const double CueFontSizeStep = -4.0;
 
-    // Rest collision avoidance
+    /// <summary>
+    /// What a cue's font-size multiplies a length by — <c>magstep(-4)</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/lily-library.scm <c>magstep</c> = <c>2^(s/6)</c>, over
+    ///   <see cref="CueFontSizeStep"/>, so the scale is <c>magstep(-4)</c> = <c>2^(-2/3)</c>.
+    /// <para>
+    /// ⚠️ IT WAS A HAND-WRITTEN 0.66 UNTIL 2026-08-03, declared LILYSHARP-OWN, and the
+    /// comments that reached it said "font-size −4 ≈ 0.66" — arithmetic, and wrong by 4.8%
+    /// against 0.629961. That was the FOURTH time this exact shape turned up: a grace was
+    /// "≈0.65" against 0.707107, an ossia "0.7071" against 0.70710678, an editorial
+    /// accidental "0.7937" against 0.79370053. <see cref="Layout.EmmentalerDesignSize.Magstep"/>
+    /// is the one home for all of them.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SCALE IS ONLY HALF OF WHAT A FONT-SIZE DECIDES, and the rounding hid the other
+    /// half: −4 asks for 12.599pt, which lands on the THIRTEEN Emmentaler design, so a cue
+    /// glyph is that design's own outline and not the twenty's shrunk. This factor stays
+    /// because it is still one of the two terms — it is what <c>GlyphMetrics.AtFontSize</c>
+    /// multiplies the chosen design's table by. See <see cref="CueFont"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly double CueScale = Layout.EmmentalerDesignSize.Magstep(CueFontSizeStep);
+
+    /// <summary>
+    /// The FONT a cue grob reads its glyph dimensions from: the design
+    /// <see cref="CueFontSizeStep"/> selects, already magnified into the page's staff spaces.
+    /// Nothing read out of it is multiplied again.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/font-select.cc:115-186 select_font — one call answers both halves,
+    ///   WHICH file and at WHAT magnification, and hands back a font that has applied the
+    ///   second (lily/modified-font-metric.cc:62-68 get_indexed_char_dimensions). The same
+    ///   pairing <see cref="Svg.Model.GraceNoteItem.Font"/> takes, one grob family over.
+    /// </remarks>
+    internal static Layout.GlyphMetrics.DesignMetrics CueFont
+        => Layout.GlyphMetrics.AtFontSize(CueFontSizeStep);
+
+    /// <summary>
+    /// The Emmentaler design a cue is DRAWN from — the number a drawing context's music-face
+    /// scope takes.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE DECISION, TWO READERS: this and <see cref="CueFont"/> must come from the same
+    /// <see cref="CueFontSizeStep"/>, or the box a cue column reserves stops being the box its
+    /// glyph fills.
+    /// </remarks>
+    internal static int CueDesignSize
+        => Layout.EmmentalerDesignSize.ForFontSizeStep(CueFontSizeStep).Rounded;
+
+    // Rest collision avoidance.
+    // ⚠️ THESE FOUR REPORTED AS SOURCED UNTIL 2026-08-03 AND NEVER WERE. The provenance
+    // ratchet looks back a fixed number of lines for a marker and does not stop at the
+    // previous declaration, so they were reading the LILYSHARP-OWN line that belonged to
+    // CueScale above them; when that line went with the cue port, four constants appeared
+    // at once. The count was propped up, not met — and a marker that can be inherited by
+    // whatever follows is worth knowing about wherever else this file is dense.
+    // LILYSHARP-OWN: Lily#'s own rest-shift heuristic. LilyPond's counterpart is the
+    // Rest_collision grob (lily/rest-collision.cc, RestCollision.minimum-distance), and these
+    // four numbers have NOT been matched to it — that match is the work, and stating the debt
+    // is what the ratchet asks for in the meantime. The wiring these feed is recorded in
+    // HANDOFF (the rest-shift island).
     /// <summary>Default staff position for rest center (middle line).</summary>
     public const double RestCenterPosition = 0.0;
     /// <summary>Extent of rest collision box in staff positions.</summary>

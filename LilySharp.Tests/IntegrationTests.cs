@@ -341,11 +341,17 @@ score main ""third"" { staff treble rh }
         Assert.True(items[2].IsCue, "e' inside cue { } should be cue");
         Assert.True(items[3].IsCue, "f' inside cue { } should be cue");
 
-        // Verify the live render shrinks cue noteheads: SharedRenderer scales the
-        // glyph font size (4.0 × 0.66 = 2.64) rather than emitting a transform.
+        // Verify the live render shrinks cue noteheads: SharedRenderer scales the glyph font
+        // size rather than emitting a transform.
+        // ⚠️ THE EXPECTED SIZE IS DERIVED, NOT TYPED. It read "2.64" until 2026-08-03 — 4.0 ×
+        // a hand-written 0.66 — so the day the cue took LilyPond's own font-size −4 this test
+        // failed for the improvement. A test that hard-codes what a constant computes to is a
+        // second spelling of that constant.
+        double cueSize = 4.0 * LilySharp.Core.Svg.EngravingDefaults.CueScale;
         var svg = LiveRender.Svg(source);
 
-        var cueGlyphCount = System.Text.RegularExpressions.Regex.Matches(svg, "font-size=\"2\\.64\"").Count;
+        var cueGlyphCount = System.Text.RegularExpressions.Regex.Matches(
+            svg, $"font-size=\"{cueSize:F2}\"").Count;
         Assert.True(cueGlyphCount >= 2,
             $"Should have at least 2 cue-sized glyphs (one per cue note), but has {cueGlyphCount}");
     }

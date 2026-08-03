@@ -3656,6 +3656,36 @@ internal static class LpGeometryProbes
     private static readonly string TWSEC = TieWidthBook("<c d>2~ <c d>2 |", "TWSEC");
 
     /// <summary>
+    /// THREE ties in one column — where a greedy solve and a joint one can first disagree.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond varies a whole <c>Ties_configuration</c> together
+    /// (lily/tie-formatting-problem.cc:915-1001 generate_configuration, find_best_variation) and
+    /// charges its two symmetry terms only to <c>ties->front ()</c> against <c>ties->back ()</c>
+    /// (:890-908). Lily# solves a column ONE TIE AT A TIME, bottom to top, against the finished
+    /// layouts of the ones below — so the front is already fixed when the symmetry term exists
+    /// and only the back pays. TieFormattingProblem.ScoreColumnSymmetry writes that down.
+    /// <para>
+    /// ⚠️ TWO TIES CANNOT SEPARATE THE TWO READINGS. With two, front and back are the whole
+    /// column and the orders differ only in WHO is charged. Three gives a MIDDLE tie that is in
+    /// neither symmetry term, so the joint search may move the outer two to suit it where the
+    /// greedy one cannot move the front at all.
+    /// </para>
+    /// <para>
+    /// LilyPond twin: scores TW3 / TW3S of tie-direction.ly. ⚠️ MEASURED FIRST, and the pair
+    /// says something before Lily# is consulted at all: the two books give LilyPond the SAME
+    /// THREE WIDTHS (3.875445 / 2.363045 / 3.051745) although their middle tie differs in both
+    /// position and direction (−4 down against −5 up). So the widths are not a function of the
+    /// middle tie's own placement, which is what makes them a clean reading of the column.
+    /// </para>
+    /// </remarks>
+    private static readonly string TW3 = TieWidthBook("<c e g>2~ <c e g>2 |", "TW3");
+
+    /// <summary>The same column with the bottom pair a SECOND, so the middle head is reversed
+    /// and its tie runs past a head the outer two never see.</summary>
+    private static readonly string TW3S = TieWidthBook("<c d g>2~ <c d g>2 |", "TW3S");
+
+    /// <summary>
     /// The slur pair (<see cref="SD"/>/<see cref="SU"/>) again with a TIE — the adjacent
     /// inside-staff grob, drooping DOWN into the staff gap from the upper staff.
     /// </summary>
@@ -4682,6 +4712,57 @@ internal static class LpGeometryProbes
         form main { ~Main }
 
         score main "FSF8" { staff m }
+        """;
+
+    /// <summary>
+    /// A lone flagged DOWN-stem eighth — the book that reads where the flag is DRAWN.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe flagged-stem-reach.ly, score FLXD): head x=8.585000,
+    /// flag x=8.715000 — the flag's origin is <b>0.130000</b> right of its head's, which is a
+    /// whole stem thickness because a down stem's LEFT edge sits on the head's left edge and
+    /// Flag::calc_x_offset takes the stem's <c>[RIGHT]</c>.
+    /// <para>
+    /// ⚠️ ONE APOSTROPHE FEWER THAN THE .ly, the trap FSF8's remarks name: Lily#'s absolute
+    /// <c>b</c> is LilyPond's <c>b'</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string FLXD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { b8 r8 r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "FLXD" { staff m }
+        """;
+
+    /// <summary>The same reading with an UP stem, where the stem stands at the head's RIGHT
+    /// edge instead — so a sign error in the placement cannot pass on both books.</summary>
+    /// <remarks>
+    /// LilyPond twin (score FLXU): head x=8.585000, flag x=9.889200 — <b>1.304200</b>, the
+    /// notehead's own width, i.e. the stem's centre 1.239200 plus the same 0.065.
+    /// </remarks>
+    private static readonly string FLXU = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { d8 r8 r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "FLXU" { staff m }
         """;
 
     /// <summary>The same book with the accidental an octave UP, where it faces the notehead
@@ -8415,6 +8496,30 @@ internal static class LpGeometryProbes
         new("tie.width.seconds.lower", TWSEC, g => g.BowSpan(0)),
         new("tie.width.seconds.upper", TWSEC, g => g.BowSpan(1)),
 
+        // ...and THREE ties, which is the pair the greedy-against-joint approximation has been
+        // waiting for (TieFormattingProblem.ScoreColumnSymmetry names the restructuring). Two
+        // ties cannot separate the readings — front and back are the whole column — so the
+        // middle tie, which is in NEITHER symmetry term, is the reading that did not exist.
+        // The two books move the middle tie's own position and direction while LilyPond keeps
+        // all three widths fixed, so the reading is the column and not the middle tie's place.
+        new("tie.width.triad.lower", TW3, g => g.BowSpan(0)),
+        new("tie.width.triad.middle", TW3, g => g.BowSpan(1)),
+        new("tie.width.triad.upper", TW3, g => g.BowSpan(2)),
+        new("tie.width.triad-second.lower", TW3S, g => g.BowSpan(0)),
+        new("tie.width.triad-second.middle", TW3S, g => g.BowSpan(1)),
+        new("tie.width.triad-second.upper", TW3S, g => g.BowSpan(2)),
+
+        // ...and the reading the six above turned out not to be. All six opened EXACT, and the
+        // probe says why: LilyPond's FRONT tie changes its chosen position with the rest of the
+        // column — the same c, head position −6, takes variation −7 in TWSEC and −8 in TW3 —
+        // while its WIDTH is 3.875445 in both. A greedy solve fixes the front before the others
+        // exist and cannot follow that; a corpus of widths cannot see that it did not. The
+        // HEIGHT is where the chosen position shows, so these are the points that can fail.
+        new("tie.y.seconds.lower", TWSEC, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("tie.y.triad.lower", TW3, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("tie.y.triad.middle", TW3, g => g.BowAttachmentAboveStaffMiddle(1)),
+        new("tie.y.triad.upper", TW3, g => g.BowAttachmentAboveStaffMiddle(2)),
+
         // ...and the one quantity that tie's residual is made of, measured on its own. The
         // BLACK head is the control and the HALF head the divergence -- same bar, same pitch,
         // same stem direction, one head shape apart. See probe SX.
@@ -8693,6 +8798,17 @@ internal static class LpGeometryProbes
         new("flag.down.reach.high-neighbour-control", FSFH8, g => g.NoteheadAnchorStep(0)),
         new("flag.up.reach", FSFU8, g => g.NoteheadAnchorStep(0)),
 
+        // …and where the flag is DRAWN, which those three cannot see: they read the column's
+        // skyline, i.e. what the flag RESERVES. ItemSkylineFactory carries a written claim that
+        // the two engines put the glyph in different places — LilyPond on the stem's RIGHT EDGE
+        // LILYPOND-REF: lily/flag.cc:198-205 Flag::calc_x_offset — the flag's X-offset is the
+        //   stem's own extent RIGHT, and Flag::print returns the stencil untranslated so the
+        //   glyph lands on it. Lily# passes the stem's CENTRE —
+        // and that claim was READ OFF THE SOURCE, never measured. The comment says so itself,
+        // and says to open a point before moving the line. This is that point.
+        new("flag.x.down.origin-from-head", FLXD, g => g.FlagOriginFromNotehead()),
+        new("flag.x.up.origin-from-head", FLXU, g => g.FlagOriginFromNotehead()),
+
         // …and what the three of them turned out to be measuring, which was not a flag. A
         // column pair's FLOOR is the skyline distance + 0.3, and the rod (that same distance
         // + 0.1) is a separate constraint that cannot reach it. These books have no flag, so
@@ -8718,6 +8834,12 @@ internal static class LpGeometryProbes
         // is what says a single "space after the bar line" constant cannot be right.
         new("courtesy.meter.barline-to-meter", CMT, g => g.BarlineRightToNextGlyph(0)),
         new("courtesy.meter.barline-to-cancellation", CMK, g => g.BarlineRightToNextGlyph(0)),
+        // ...and the NEXT gap in that same group, which nothing has ever watched. The three
+        // constants the courtesy draws off were audited on 2026-08-03 and all three turned out
+        // to be their alist entry exactly — but the cancellation→key gap is a FOURTH number,
+        // spelled 0.4 inside DrawKeySignatureChange, and it was not in that audit because no
+        // point reached it. LilyPond's entry is 0.5 (define-grobs.scm:1944). See the `why`.
+        new("courtesy.key.cancellation-to-key", CMK, g => g.CancellationRightToKeyLeft(0)),
         // ...and the same gap with BOTH glyphs changed, which is what says 0.750000 is the
         // space-alist entry and not a net of this book's extents: the bar is DOUBLE (ink
         // 0.680000 against 0.190000) and the meter NUMERAL (1.604735 against the C's

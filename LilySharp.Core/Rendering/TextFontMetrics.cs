@@ -62,17 +62,25 @@ public static class TextFontMetrics
     /// ⚠️ "AGREE ON EVERY ADVANCE" IS TRUE AND IS NOT THE WHOLE STORY — they do NOT agree on
     /// KERNS, found 2026-08-02 when the shaping port left two entries open. Shaped through
     /// HarfBuzz, in font units: the A-A pair is +61 in C059 and 0 in Schola, V-A is −84
-    /// against −95, A-V −83 against −90, v-a −75 in both. LilyPond's own stencil expression
+    /// against −95, A-V −83 against −90, v-a −20 in both. LilyPond's own stencil expression
     /// names the file it drew with (<c>ly:stencil-expr</c> prints
     /// <c>(glyph-string … C059-Italic … C059-Italic.otf …)</c>), and probe books TS1/TS2 pin
     /// the same LilyPond to THIS face and land on Lily#'s numbers exactly. So ledger
     /// <c>text.width.{aa,va}</c> are a FONT FILE difference and not an arithmetic one.
     /// DECIDED 2026-08-02 (user, with the size measured first): the twin stays, because the
     /// URW exemption covers embedding in a PostScript/PDF document and not shipping the font
-    /// program. What that costs, measured: 438 of 471 kerned pairs differ, 11.2% of
-    /// two-character combinations land on a different reserved width, real strings run 0–4
-    /// pixels (0–0.137 ss) apart — and the ff/ffi LIGATURES differ in width too (605 against
-    /// 686, 878 against 904), so the drawn page differs and not only the reservation.
+    /// program. What that costs, measured: real strings run 0–4 pixels (0–0.137 ss) apart, and
+    /// the ff/ffi LIGATURES differ in width too (605 against 686, 878 against 904), so the drawn
+    /// page differs and not only the reservation. SWEPT ACROSS ALL FOUR FACES on 2026-08-03 —
+    /// the 2026-08-02 reading was the italic face only, and it generalises with no face safer
+    /// than another. Over the 52 letters (2704 ordered pairs), C059 kerns 765–774 pairs and
+    /// Schola 273–287 — ABOUT A THIRD AS MANY — and 26.8–27.6% of all pairs land on a different
+    /// width; adding digits and title/dynamic punctuation (77 characters, 5929 pairs) gives
+    /// 1074–1085 against 344–357 and 17.5–17.8%. The spread across the four faces is under one
+    /// point, so weight and slant do not change the story.
+    /// ⚠️ The earlier note said "438 of 471 kerned pairs, 11.2%"; neither character set above
+    /// reproduces those counts, so that sweep used a third alphabet nobody wrote down. Counts
+    /// are meaningless without the set they were counted over — HANDOFF §0.
     /// ⚠️ Do not read a non-zero text-width entry as a defect without checking the string
     /// for a pair these two kern differently. HANDOFF §3 holds the decision.
     /// </para>
@@ -157,20 +165,64 @@ public static class TextFontMetrics
     /// </remarks>
     public static double Advance(string text, double fontSize, bool sans = false,
         FontStyle style = FontStyle.Regular)
-    {
-        if (string.IsNullOrEmpty(text))
-            return 0;
-        return AdvanceCache.GetOrAdd((sans, style, text, fontSize), static key =>
+        => string.IsNullOrEmpty(text) ? 0 : Run(text, fontSize, sans, style).Total;
+
+    /// <summary>
+    /// One glyph of a shaped run: the face's OWN glyph id, and the pen position it sits at,
+    /// in staff spaces from the run's origin.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="MissingCodepoint"/> is the source code point when the face has no glyph
+    /// for it (<see cref="MissingGlyphAdvance"/> decided its width); a backend that has a
+    /// fallback face should draw THAT character rather than this .notdef glyph id.
+    /// <para>
+    /// <paramref name="Cluster"/> is the index in the source string this glyph came from, for a
+    /// backend that cannot address glyphs and has to draw characters at these positions
+    /// instead. ⚠️ A LIGATURE IS ONE GLYPH OVER SEVERAL CHARACTERS, so clusters repeat and skip;
+    /// the run is authoritative about WIDTH, and a character-drawing backend is only promised
+    /// that each cluster starts where the reservation put it.
+    /// </para>
+    /// </remarks>
+    public readonly record struct ShapedGlyph(ushort GlyphId, double X, int? MissingCodepoint, int Cluster);
+
+    /// <summary>
+    /// The glyphs a backend must draw, at the positions it must draw them, for its ink to be
+    /// the width <see cref="Advance"/> reserved.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/pango-font.cc:407-435 Pango_font::pango_item_string_stencil — one
+    ///   glyph descriptor per SHAPED glyph (<c>pgs->num_glyphs</c>), each carrying its own box,
+    ///   and lily/pango-font.cc:494-503 Pango_font::pango_item_string_stencil wraps the list as
+    ///   the stencil's <c>glyph-string</c>. A LilyPond page is glyphs at positions; this is the
+    ///   same list, which is why a backend can draw from it without laying anything out itself.
+    /// ⚠️ THIS AND <see cref="Advance"/> ARE ONE COMPUTATION, deliberately — the advance is
+    /// this run's total. They were two before 2026-08-03, and the two disagreed: layout
+    /// reserved the shaped width while the PNG and PDF backends drew the string unshaped, so a
+    /// title's ink ran 3.16 staff spaces past the box it was given. That is the
+    /// reserve-versus-draw split this repo keeps finding, and the fix for it is not to make the
+    /// second spelling agree but to delete it.
+    /// </remarks>
+    public static IReadOnlyList<ShapedGlyph> ShapeRun(string text, double fontSize,
+        bool sans = false, FontStyle style = FontStyle.Regular)
+        => string.IsNullOrEmpty(text) ? [] : Run(text, fontSize, sans, style).Glyphs;
+
+    private static (ShapedGlyph[] Glyphs, double Total) Run(
+        string text, double fontSize, bool sans, FontStyle style)
+        => RunCache.GetOrAdd((sans, style, text, fontSize), static key =>
         {
-            double total = 0;
-            foreach (var (perEm, missingCodepoint) in ShapedAdvancesPerEm(key.Text, key.Sans, key.Style))
+            var glyphs = new List<ShapedGlyph>();
+            double pen = 0;
+            foreach (var (glyphId, perEm, xOffsetPerEm, missingCodepoint, cluster)
+                     in ShapedAdvancesPerEm(key.Text, key.Sans, key.Style))
             {
                 double advance = missingCodepoint is int cp ? MissingGlyphAdvance(cp) : perEm;
-                total += QuantiseToPangoPixel(advance * key.FontSize);
+                glyphs.Add(new ShapedGlyph(glyphId, pen + xOffsetPerEm * key.FontSize,
+                                           missingCodepoint, cluster));
+                // The snap is per glyph and AFTER the size multiply — see Advance's remarks.
+                pen += QuantiseToPangoPixel(advance * key.FontSize);
             }
-            return total;
+            return ([.. glyphs], pen);
         });
-    }
 
     /// <summary>
     /// The string SHAPED: one entry per output glyph, its advance per em with the pair
@@ -198,8 +250,9 @@ public static class TextFontMetrics
     /// code point so <see cref="MissingGlyphAdvance"/> keeps deciding those.
     /// </para>
     /// </remarks>
-    private static IEnumerable<(double PerEm, int? MissingCodepoint)> ShapedAdvancesPerEm(
-        string text, bool sans, FontStyle style)
+    private static IEnumerable<(ushort GlyphId, double PerEm, double XOffsetPerEm,
+                                int? MissingCodepoint, int Cluster)>
+        ShapedAdvancesPerEm(string text, bool sans, FontStyle style)
     {
         var (font, upem) = ShapingFont(sans, style);
         using var buffer = new HarfBuzzSharp.Buffer();
@@ -209,13 +262,17 @@ public static class TextFontMetrics
             font.Shape(buffer);
         var infos = buffer.GlyphInfos;
         var positions = buffer.GlyphPositions;
-        var result = new List<(double, int?)>(infos.Length);
+        var result = new List<(ushort, double, double, int?, int)>(infos.Length);
         for (int i = 0; i < infos.Length; i++)
         {
             int? missing = infos[i].Codepoint == 0
                 ? char.ConvertToUtf32(text, (int)infos[i].Cluster)
                 : null;
-            result.Add((positions[i].XAdvance / (double)upem, missing));
+            result.Add(((ushort)infos[i].Codepoint,
+                        positions[i].XAdvance / (double)upem,
+                        positions[i].XOffset / (double)upem,
+                        missing,
+                        (int)infos[i].Cluster));
         }
         return result;
     }
@@ -248,8 +305,11 @@ public static class TextFontMetrics
 
     // Keyed by SIZE as well as string, because the snap makes the advance non-linear in the
     // size — one string at two sizes is two different pixel counts, not one number scaled.
+    // Holds the glyphs beside the total so the measuring and the drawing paths cannot drift:
+    // asking for either shapes the run once.
     private static readonly ConcurrentDictionary<
-        (bool Sans, FontStyle Style, string Text, double FontSize), double> AdvanceCache = new();
+        (bool Sans, FontStyle Style, string Text, double FontSize),
+        (ShapedGlyph[] Glyphs, double Total)> RunCache = new();
 
     // The three faces the engine RESERVES for, named so a call site reads as the face it
     // draws in. They are the whole of what the old hand-typed tables offered, which is why

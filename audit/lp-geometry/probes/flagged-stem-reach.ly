@@ -98,6 +98,38 @@ sweep =
 \score { \sweep "FSFU8" { \time 4/4 d'8 fis''4 r4 r8 } }      % flagged UP stem, neighbour high
 
 % ---------------------------------------------------------------------------------------
+% E. WHERE THE FLAG IS DRAWN, which none of the books above can see.
+%    A / B / D all read the COLUMN's skyline, i.e. what the flag RESERVES. Lily#'s
+%    ItemSkylineFactory carries a written, never-measured claim that the two engines disagree
+%    about where the flag is DRAWN: LilyPond's Flag::print (lily/flag.cc:118-165) returns the
+%    stencil UNTRANSLATED so it lands on the grob's X-offset — the stem's RIGHT EDGE
+%    (flag.cc:198-205 Flag::calc_x_offset = stem extent [RIGHT]) — while Lily# passes
+%    LayoutUtilities.StemX, the stem's CENTRE, straight to DrawGlyph. Half a stem thickness
+%    is 0.065 (stem.cc:889-906: a stem's extent is (-1,1)·thickness/2).
+%    ⚠️ THAT CLAIM WAS READ OFF THE SOURCE AND NOT MEASURED, and on this very line the last
+%    read-off-the-source number only became trustworthy once a pair measured it. This is the
+%    measurement, and the reading is FLAG ORIGIN MINUS ITS OWN NOTEHEAD ORIGIN so that the
+%    column's position drops out and only the flag's placement is left.
+%    BOTH DIRECTIONS, because the stem stands on opposite sides of the head and a sign error
+%    would otherwise read as agreement on one of them.
+%
+% Output: PROBEFL <name> FLAG x=<x in system>  /  PROBEFL <name> HEAD x=<x in system>
+#(define (dump-x name what)
+   (lambda (grob)
+     (format #t "PROBEFL ~a ~a x=~a\n" name what
+             (ly:grob-relative-coordinate grob (ly:grob-system grob) X))))
+
+sweepflag =
+#(define-music-function (name music) (string? ly:music?)
+   #{ \new Staff \with {
+        \override Flag.after-line-breaking = #(dump-x name "FLAG")
+        \override NoteHead.after-line-breaking = #(dump-x name "HEAD")
+      } { $music } #})
+
+\score { \sweepflag "FLXD" { \time 4/4 b'8 r8 r4 r2 } }   % DOWN stem (b' is above the middle line)
+\score { \sweepflag "FLXU" { \time 4/4 d'8 r8 r4 r2 } }   % UP stem   (d' is below it)
+
+% ---------------------------------------------------------------------------------------
 % WHAT THIS FILE FOUND, AND WHICH BOOKS ARE THE POINT (2026-08-02, session 70)
 %
 % THE GAPS (column x at 1/8 minus column x at 0, all four with the same 1/8 duration space):

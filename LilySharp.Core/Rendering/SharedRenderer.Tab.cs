@@ -345,7 +345,9 @@ internal static partial class SharedRenderer
         {
             var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
             if (flag.HasValue)
-                gc.DrawGlyph(flag.Value, stemX, farY, FontSize, null);
+                // Same term as a notation staff's: the Flag grob and its rule do not change
+                // with the staff kind (LayoutUtilities.FlagDrawX).
+                gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), farY, FontSize, null);
         }
     }
 

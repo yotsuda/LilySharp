@@ -610,22 +610,59 @@ internal static partial class SharedRenderer
                     double barlineRight = lastMl.X + lastMl.Width;
                     double? meterX = null;
 
+                    // LilyPond's END-OF-LINE break-align order
+                    // (LILYPOND-REF: scm/define-grobs.scm:632-648 BreakAlignment.break-align-orders)
+                    // runs staff-bar → key-cancellation → key-signature → time-signature, and
+                    // every gap in it is the LEFT grob's space-alist entry — the same table the
+                    // line-START prefix walks. There is ONE break-align group at each end of a
+                    // line; until 2026-08-03 this end read three hand-written constants instead.
+                    //
+                    // ⚠️ THE TABLE IS SHARED, THE WALK IS NOT — say so rather than let
+                    // "runs through BreakAlignSpacing" be read off the call. This chains each
+                    // member off the PREVIOUS ONE'S DRAWN INK RIGHT EDGE plus its gap, which is
+                    // LILYPOND-REF: lily/break-alignment-interface.cc:241-243 Break_alignment_interface::calc_positioning_done
+                    //   — offsets[r] = extents[l][RIGHT] + distance − extents[r][LEFT], with
+                    //   both extents cancelling: the same arithmetic SolveColumns does.
+                    // SolveColumns is NOT called because it wants a WIDTH for each member, and
+                    // the drawn key's real right edge is what extents[l][RIGHT] actually is:
+                    // feeding it a modelled width would be a second spelling of that edge. The
+                    // reservation (SpacingRules.KeyCourtesySuffixWidth) does model it, as an
+                    // UPPER BOUND on the natural kerning, so the two sides do not agree to the
+                    // digit yet.
+                    //   departs from: nothing in the arithmetic; only in WHERE it lives.
+                    //   goes away when: the courtesy key's reserved width becomes the drawn
+                    //     width (one model, not a bound), after which this group can be handed
+                    //     to SolveColumns like the line-start prefix is.
+                    //   observed by: audit/lp-geometry courtesy.* — all EXACT, so the
+                    //     arithmetic is pinned; nothing yet observes the reserve/draw width gap.
                     if (GetSystemEndKeyChange(staff, system) is { } eolKeyChange)
+                    {
+                        // Which symbol OPENS the group decides which entry the bar line's alist
+                        // is keyed by — a cancellation and a signature are different break-align
+                        // symbols even where BarLine happens to declare 1.0 for both.
+                        bool opensWithCancellation = SpacingRules.CancellationNaturalCount(
+                            eolKeyChange.PreviousKey.Sharps, eolKeyChange.NewKey.Sharps) > 0;
+                        double groupLeft = barlineRight + SpacingRules.BreakAlignGap(
+                            BreakAlignSymbol.StaffBar,
+                            opensWithCancellation
+                                ? BreakAlignSymbol.KeyCancellation
+                                : BreakAlignSymbol.KeySignature);
                         // A meter after a key stands off the KEY's real right edge, which is
                         // what the draw returns — not off a width computed a second time.
-                        meterX = DrawKeySignatureChange(
-                            eolKeyChange, barlineRight + SpacingRules.BarlineToCourtesyKey,
-                            localStaffY, clef, sgc)
-                            + SpacingRules.CourtesyKeyToTimeGap;
+                        meterX = DrawKeySignatureChange(eolKeyChange, groupLeft, localStaffY, clef, sgc)
+                            + SpacingRules.BreakAlignGap(
+                                BreakAlignSymbol.KeySignature, BreakAlignSymbol.TimeSignature);
+                    }
 
                     if (GetSystemEndTimeChange(staff, system) is { } eolTimeChange)
                         using (sgc.Source(eolTimeChange.SourcePosition))
                             DrawTimeSignature(
                                 eolTimeChange.NewTime,
-                                // Alone, the meter takes its OWN gap off the barline — not the
-                                // key's. LilyPond's two are 0.750000 and 1.000000, so one
-                                // number for both would be wrong on one side by construction.
-                                meterX ?? barlineRight + SpacingRules.BarlineToCourtesyTime,
+                                // Alone, the meter takes its OWN entry off the bar line — not the
+                                // key's. LilyPond's two are 0.750000 and 1.150000, so one number
+                                // for both would be wrong on one side by construction.
+                                meterX ?? barlineRight + SpacingRules.BreakAlignGap(
+                                    BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
                                 localStaffY, sgc);
                 }
             }

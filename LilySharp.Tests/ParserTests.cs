@@ -1368,7 +1368,7 @@ form main {
 section A { melody { c4 | } }
 section B { melody { d4 | } }
 form main {
-    |: A [1-3. B] :| x4
+    |: A [1-3. B] :|*4
 }
 ";
         var tree = SyntaxTree.Parse(source);
@@ -1383,12 +1383,43 @@ form main {
 section A { melody { c4 | } }
 section B { melody { d4 | } }
 form main {
-    |: A [1,3. B] :| x4
+    |: A [1,3. B] :|*4
 }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         Assert.Equal(source, tree.ToFullString());
+    }
+
+    /// <summary>
+    /// A form repeat's play count is not merely PARSED — it reaches what is built from the tree.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE TWO TESTS ABOVE PASSED FOR MONTHS WHILE THE COUNT WAS UNREACHABLE. They assert
+    /// that nothing is a SYNTAX error and that the tree round-trips, and both stayed true when
+    /// the count was spelled <c>x4</c>: the lexer glued <c>x4</c> into one identifier, the
+    /// parser branch that reads a count never fired, and the token landed in the form's item
+    /// list as a section reference nobody declared. Round-trip says "the characters came back",
+    /// which is a property of PRESERVATION, not of interpretation — so a second point has to
+    /// read the value out of something DOWNSTREAM. This is that point.
+    /// </remarks>
+    [Fact]
+    public void FormRepeatPlayCount_ReachesTheOutput()
+    {
+        string Ly(string form) => new LilySharp.Core.LilyPond.LilyPondExporter()
+            .Export(SyntaxTree.Parse($$"""
+                octave absolute
+                time 4/4
+                part m { clef treble }
+                section A { m { c'4 d' e' f' | } }
+                form main { {{form}} }
+                score main { staff m }
+                """));
+
+        Assert.Contains("\\repeat volta 4 {", Ly("|: A :|*4"));
+        // …and the default when it is absent, so the assertion above is the COUNT and not just
+        // "a repeat was emitted".
+        Assert.Contains("\\repeat volta 2 {", Ly("|: A :|"));
     }
 
     [Fact]

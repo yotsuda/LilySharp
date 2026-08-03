@@ -152,13 +152,21 @@ dump = #(define-music-function (tag) (string?)
 %%   TWSEC  <c d>2~ <c d>2    a chord of tied SECONDS: the lower tie clears everything,
 %%                            the upper one runs past the stem
 
+%% ⚠️ THE Y IS READ AS WELL AS THE WIDTH, and the width alone was not enough. LilyPond's front
+%% tie CHANGES ITS CHOSEN POSITION with the rest of the column — the same c (head position −6)
+%% takes variation −7 in TWSEC and −8 in TW3 — while its WIDTH stays 3.875445 in both. A greedy
+%% solve that fixes the front before the others exist cannot follow that, and a corpus of widths
+%% cannot see that it did not: measured 2026-08-03, all six triad width points opened EXACT.
+%% control-points[0].y is the tie's own attachment height in its staff frame, which is where the
+%% chosen position actually shows up.
 #(define ((dump-width tag) g)
    (let ((cps (ly:grob-property g 'control-points)))
-     (format #t "\nPROBE ~a WIDTH pos=~a dir=~a w=~,6f card=~s\n"
+     (format #t "\nPROBE ~a WIDTH pos=~a dir=~a w=~,6f y=~,6f card=~s\n"
              tag
              (ly:grob-property (ly:spanner-bound g LEFT) 'staff-position)
              (ly:grob-property g 'direction)
              (- (car (cadddr cps)) (car (car cps)))
+             (cdr (car cps))
              (ly:grob-property g 'annotation)))
    '())
 
@@ -170,3 +178,29 @@ widths = #(define-music-function (tag) (string?)
 
 \score { \new Staff { \clef treble \time 4/4 \key c \major \widths "TWSEC"
   \fixed c' { <c d>2 ~ <c d>2 \bar "|." } } \layout { debug-tie-scoring = ##t } }
+
+%% ---------------------------------------------------------------------------------------
+%% THREE TIES, WHICH IS WHERE GREEDY AND JOINT CAN FIRST DISAGREE.
+%%
+%% LilyPond scores a whole Ties_configuration and varies its ties TOGETHER
+%% (tie-formatting-problem.cc:915-1001 generate_configuration / find_best_variation), and the
+%% column's two symmetry terms read only `ties->front ()` and `ties->back ()` (:890-908). Lily#
+%% solves the column ONE TIE AT A TIME against the finished layouts of the ones below it, so
+%% the front tie is already fixed by the time the symmetry term exists and only the back one
+%% pays — the approximation is written down at TieFormattingProblem.ScoreColumnSymmetry.
+%%
+%% ⚠️ TWO TIES CANNOT SEPARATE THE TWO READINGS AS SHARPLY AS THREE. With two, front and back
+%% are the whole column, so the greedy order differs from the joint search only in WHO pays.
+%% With three there is a MIDDLE tie that is in neither symmetry term, and the joint search may
+%% move the outer two to suit it while the greedy one cannot move the front at all. If the
+%% middle reading is exact and the outer two are not, the defect is the charging; if the middle
+%% one moves too, the whole configuration is being chosen differently.
+%%
+%%   TW3    <c e g>2~ <c e g>2   ordinary thirds — nothing is squeezed
+%%   TW3S   <c d g>2~ <c d g>2   the lower pair is a SECOND, so the middle head is reversed
+%%                               and its tie runs past a head the outer two do not see
+\score { \new Staff { \clef treble \time 4/4 \key c \major \widths "TW3"
+  \fixed c' { <c e g>2 ~ <c e g>2 \bar "|." } } \layout { debug-tie-scoring = ##t } }
+
+\score { \new Staff { \clef treble \time 4/4 \key c \major \widths "TW3S"
+  \fixed c' { <c d g>2 ~ <c d g>2 \bar "|." } } \layout { debug-tie-scoring = ##t } }

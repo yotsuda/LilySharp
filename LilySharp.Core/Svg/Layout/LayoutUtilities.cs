@@ -115,6 +115,39 @@ internal static class LayoutUtilities
         columnX + StemAttachX(up, noteValue, font);
 
     /// <summary>
+    /// Where a FLAG's glyph origin sits, given the x its stem stands at.
+    /// </summary>
+    /// <remarks>
+    /// A flag hangs on the stem's RIGHT EDGE, not on its centre.
+    /// LILYPOND-REF: lily/flag.cc:198-205 Flag::calc_x_offset — the grob's X-offset is
+    ///   <c>stem->extent (stem, X_AXIS)[RIGHT]</c>, and lily/flag.cc:118-165 Flag::print
+    ///   returns the stencil UNTRANSLATED, so the glyph lands exactly on that offset.
+    /// LILYPOND-REF: lily/stem.cc:889-906 ly:stem::width (Stem::width, past its is_invisible
+    ///   branch) — a stem's extent is <c>Interval (-1, 1) * thickness / 2</c>, so that RIGHT is
+    ///   half a stem thickness and nothing else.
+    /// <para>
+    /// MEASURED, both stem directions (ledger <c>flag.x.{down,up}.origin-from-head</c>, probe
+    /// flagged-stem-reach.ly scores FLXD/FLXU): LilyPond puts the flag 0.130000 right of the
+    /// head on a DOWN stem — a whole thickness, because a down stem's LEFT edge sits on the
+    /// head's left edge — and 1.304200 on an UP one, the head's own width, i.e. the stem's
+    /// centre 1.239200 plus this term. Both points opened at −0.065000 and close here.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE RESERVATION DOES NOT MOVE WITH IT, and that is LilyPond's own shape rather than a
+    /// split to be tidied away: <c>Flag::width</c> declares the stencil's extent MINUS that same
+    /// <c>[RIGHT]</c>, so offset + extent puts the RESERVED ink back on the stem's centre while
+    /// the DRAWN glyph stays on its right edge. ItemSkylineFactory's remarks carry the full
+    /// account; they are why the reserve side is deliberately left where it is.
+    /// </para>
+    /// <para>
+    /// ⚠️ The thickness is NOT scaled for a grace — LilyPond draws every stem 0.13 (ledger
+    /// <c>grace.stem.thickness</c> against its full-size control), so a grace flag takes the
+    /// same term as a full-size one.
+    /// </para>
+    /// </remarks>
+    public static double FlagDrawX(double stemX) => stemX + EngravingDefaults.StemThickness / 2;
+
+    /// <summary>
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.
     /// </summary>
     /// <remarks>

@@ -193,12 +193,6 @@ internal sealed class PdfDrawingContext : IDrawingContext
             _ => XFontStyle.Regular,
         };
         var font = GetFont(fontFamily, T(fontSize), pdfStyle);
-        var fmt = anchor switch
-        {
-            TextAnchor.Middle => XStringFormats.BaseLineCenter,
-            TextAnchor.End => XStringFormats.BaseLineRight,
-            _ => XStringFormats.BaseLineLeft,
-        };
         // SVG dominant-baseline parity: shift Y so the baseline sits where the
         // requested anchor would visually land. cap-height ≈ 0.7 × em, so
         // central baseline ≈ 0.35 × em below central, hanging ≈ 0.8 × em below top.
@@ -208,8 +202,81 @@ internal sealed class PdfDrawingContext : IDrawingContext
             VerticalAnchor.Hanging => y + fontSize * 0.8,
             _ => y,
         };
-        _gfx.DrawString(text, font, new XSolidBrush(ToXColor(fill)),
-            X(x), X(drawY), fmt);
+        var brush = new XSolidBrush(ToXColor(fill));
+
+        // A face the RESERVATION opened is drawn at the positions it reserved (see
+        // DrawShaped). Anything else — an embedded `font "X"`, a fallback — keeps
+        // PdfSharpCore's own layout, because the engine did not measure that file either.
+        if (TextFontMetrics.IsGenericTextFamily(fontFamily, out bool sans))
+        {
+            double width = TextFontMetrics.Advance(text, fontSize, sans, style);
+            double left = anchor switch
+            {
+                TextAnchor.Middle => x - width / 2,
+                TextAnchor.End => x - width,
+                _ => x,
+            };
+            DrawShaped(text, left, drawY, fontSize, sans, style, font, brush);
+            return;
+        }
+
+        var fmt = anchor switch
+        {
+            TextAnchor.Middle => XStringFormats.BaseLineCenter,
+            TextAnchor.End => XStringFormats.BaseLineRight,
+            _ => XStringFormats.BaseLineLeft,
+        };
+        _gfx.DrawString(text, font, brush, X(x), X(drawY), fmt);
+    }
+
+    /// <summary>
+    /// Draw the string CLUSTER BY CLUSTER at the positions the layout reserved for them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/pango-font.cc:407-435 Pango_font::pango_item_string_stencil — the
+    ///   loop that builds <c>glyph_exprs</c> emits ONE descriptor per SHAPED glyph, and
+    ///   lily/pango-font.cc:494-503 Pango_font::pango_item_string_stencil hands the list to the
+    ///   backend as a <c>glyph-string</c>. LilyPond's page is glyphs at positions.
+    /// ⚠️ PdfSharpCore emits the whole string as one <c>Tj</c> with no positioning array, so a
+    /// PDF viewer advances by the font's <c>/Widths</c> and nothing kerns. The engine reserves
+    /// the SHAPED width (<see cref="TextFontMetrics.Advance"/> — HarfBuzz, the way LilyPond
+    /// measures through Pango), so the ink and its box were different widths: measured
+    /// 2026-08-03 at 3.16 staff spaces on a ten-letter title. Nothing caught it because the
+    /// snapshot corpus holds no PDF at all.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at their own.
+    /// PdfSharpCore has no glyph-level API to hand a glyph id to, so each cluster's SOURCE TEXT
+    /// is drawn where the shaped run put that cluster.
+    ///   departs from: :411-426, one <c>glyph_desc</c> per <c>pgs->glyphs[i]</c>. Between
+    ///     clusters this agrees with LilyPond exactly — every cluster starts at its reserved
+    ///     position, so pair kerning is carried and the run ends where its box ends. INSIDE a
+    ///     cluster it does not: a ligature is one shaped glyph over several characters, and
+    ///     those characters are drawn side by side within the ligature's advance.
+    ///   goes away when: this backend can be handed a glyph id — a PdfSharpCore that exposes
+    ///     one, or another PDF writer. Nothing smaller fixes it: the alternative inside
+    ///     PdfSharpCore is to lay the string out by its own widths, which is a SECOND idea of
+    ///     the width and the defect this method exists to remove.
+    ///   observed by: BackendKerningTests.PdfPlacesTextWhereTheLayoutReservedIt, which reads
+    ///     the content stream's placements — so it pins the between-cluster half and is blind
+    ///     to the inside-cluster half. ⚠️ Nothing observes the ligature interior, and this
+    ///     backend drew every PAIR that way until 2026-08-03, so the change loses nothing that
+    ///     was ever right.
+    /// </para>
+    /// </remarks>
+    private void DrawShaped(string text, double left, double baselineY, double fontSize,
+        bool sans, FontStyle style, XFont font, XBrush brush)
+    {
+        var glyphs = TextFontMetrics.ShapeRun(text, fontSize, sans, style);
+        for (int i = 0; i < glyphs.Count; i++)
+        {
+            // The source characters this glyph stands for: from its cluster to the next one's.
+            int start = glyphs[i].Cluster;
+            int end = i + 1 < glyphs.Count ? glyphs[i + 1].Cluster : text.Length;
+            if (end <= start)
+                continue;   // a mark or a second glyph inside one cluster — already drawn
+            _gfx.DrawString(text[start..end], font, brush,
+                X(left + glyphs[i].X), X(baselineY), XStringFormats.BaseLineLeft);
+        }
     }
 
     public IDisposable Source(int sourcePosition)

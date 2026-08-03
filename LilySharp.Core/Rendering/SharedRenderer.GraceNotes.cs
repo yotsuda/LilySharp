@@ -365,7 +365,10 @@ internal static partial class SharedRenderer
                 int denom = 1 << (beamCounts[i] + 2);   // beams→denominator (1→8, 2→16, …)
                 var flag = EmmentalerGlyphs.GetFlag(denom, stemUp: true);
                 if (flag.HasValue)
-                    gc.DrawGlyph(flag.Value, StemX(i), StemEndY(i), FontSize * scale, Color.Black);
+                    // The stem's RIGHT EDGE, and the term is UNSCALED because the thickness is
+                    // (see LayoutUtilities.FlagDrawX and the stem thickness note above).
+                    gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(StemX(i)), StemEndY(i),
+                        FontSize * scale, Color.Black);
                 // Acciaccatura: diagonal slash through the stem just below the flag.
                 if (acciaccatura)
                     DrawGraceSlash(StemX(i), StemEndY(i), scale, gc);

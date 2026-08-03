@@ -184,6 +184,13 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         // per-character fallback SVG consumers get from the OS font stack.
         var runs = _fonts.SegmentByTypeface(text, font.Typeface ?? SKTypeface.Default, style);
 
+        // The one face the RESERVATION knows — a run still on it is drawn shaped, at the
+        // positions layout paid for; a run that fell through to a system fallback is a face
+        // TextFontMetrics never opened, so its glyph ids and its widths are its own.
+        SKTypeface? reserved = TextFontMetrics.IsGenericTextFamily(fontFamily, out bool sans)
+            ? TextFontMetrics.Typeface(sans, style)
+            : null;
+
         using var paint = new SKPaint
         {
             Color = ToSKColor(fill),
@@ -196,15 +203,9 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         float tx = X(x);
         if (anchor != TextAnchor.Start)
         {
-            // SKPaint.MeasureText accepts a string overload (SKFont.MeasureText
-            // requires glyph IDs in 2.88.x); use SKPaint as the measurer,
-            // summing run widths with each run's own typeface.
             float width = 0;
             foreach (var (segment, typeface) in runs)
-            {
-                paint.Typeface = typeface;
-                width += paint.MeasureText(segment);
-            }
+                width += RunWidth(segment, typeface, reserved, sans, fontSize, style, paint);
             if (anchor == TextAnchor.Middle) tx -= width / 2f;
             else /* End */ tx -= width;
         }
@@ -228,9 +229,77 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         {
             paint.Typeface = typeface;
             using var runFont = new SKFont(typeface, T(fontSize)) { Edging = SKFontEdging.SubpixelAntialias };
-            _canvas.DrawText(segment, cx, ty, runFont, paint);
-            cx += paint.MeasureText(segment);
+            if (ReferenceEquals(typeface, reserved))
+                DrawShaped(segment, cx, ty, fontSize, sans, style, runFont, paint);
+            else
+                _canvas.DrawText(segment, cx, ty, runFont, paint);
+            cx += RunWidth(segment, typeface, reserved, sans, fontSize, style, paint);
         }
+    }
+
+    /// <summary>
+    /// Draw one run GLYPH BY GLYPH at the positions the layout reserved for them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/pango-font.cc:407-435 Pango_font::pango_item_string_stencil — the
+    ///   loop that builds <c>glyph_exprs</c> emits ONE descriptor per SHAPED glyph
+    ///   (<c>pgs->num_glyphs</c>, <c>pgs->glyphs[i]</c>), and lily/pango-font.cc:494-503
+    ///   Pango_font::pango_item_string_stencil hands that list to the backend as a
+    ///   <c>glyph-string</c>. LilyPond's page is therefore glyphs at positions, never a string
+    ///   the backend is left to lay out — which is the whole of what this method does.
+    /// ⚠️ <c>SKCanvas.DrawText(string, …)</c> maps code points to glyphs one at a time and
+    /// steps by the face's raw advances: no pair kerning and no ligatures, because nothing in
+    /// that path shapes. The engine RESERVES the shaped width
+    /// (<see cref="TextFontMetrics.Advance"/>, which is HarfBuzz through Pango's rules, the
+    /// way LilyPond measures), so drawing that way put the ink and its box at different
+    /// widths — measured 2026-08-03 at 3.16 staff spaces on a ten-letter title, and invisible
+    /// because the snapshot corpus holds no PNG at all.
+    /// <para>
+    /// Positions come from <see cref="TextFontMetrics.ShapeRun"/>, which is the SAME
+    /// computation the reservation is the total of — not a second one that agrees.
+    /// </para>
+    /// <para>
+    /// ⚠️ ONLY FOR THE BUNDLED FACES. The glyph ids are that face's own, and the fallback
+    /// typeface a CJK run lands on is a different file where they would mean other glyphs.
+    /// Those runs keep the unshaped path (and the reservation keeps deciding their width by
+    /// <c>MissingGlyphAdvance</c>, which is a divergence of its own and not this one).
+    /// </para>
+    /// </remarks>
+    private void DrawShaped(string segment, float originX, float baselineY, double fontSize,
+        bool sans, FontStyle style, SKFont runFont, SKPaint paint)
+    {
+        var glyphs = TextFontMetrics.ShapeRun(segment, fontSize, sans, style);
+        if (glyphs.Count == 0)
+            return;
+
+        using var builder = new SKTextBlobBuilder();
+        var run = builder.AllocatePositionedRun(runFont, glyphs.Count);
+        var ids = run.GetGlyphSpan();
+        var positions = run.GetPositionSpan();
+        for (int i = 0; i < glyphs.Count; i++)
+        {
+            ids[i] = glyphs[i].GlyphId;
+            positions[i] = new SKPoint(originX + T(glyphs[i].X), baselineY);
+        }
+        using var blob = builder.Build();
+        _canvas.DrawText(blob, 0, 0, paint);
+    }
+
+    /// <summary>
+    /// How far the pen moves over one run — the reserved width for a bundled face, and the
+    /// face's own measure for a fallback the reservation never saw.
+    /// </summary>
+    private float RunWidth(string segment, SKTypeface typeface, SKTypeface? reserved, bool sans,
+        double fontSize, FontStyle style, SKPaint paint)
+    {
+        if (ReferenceEquals(typeface, reserved))
+            return T(TextFontMetrics.Advance(segment, fontSize, sans, style));
+        // SKPaint.MeasureText takes a string overload where SKFont.MeasureText wants glyph ids.
+        var previous = paint.Typeface;
+        paint.Typeface = typeface;
+        float width = paint.MeasureText(segment);
+        paint.Typeface = previous;
+        return width;
     }
 
     public IDisposable Source(int sourcePosition)

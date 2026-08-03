@@ -21,6 +21,12 @@ using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 
+// A using directive does not import NESTED namespaces, so the green layer needs its own name
+// here. Only the form walk touches it, to build the two nodes the source never wrote:
+// the `|:` / `:|` a form's repeat block spells with bare tokens, and the ending node
+// EmitInlineRepeat groups (AppendRepeatBlock / CreateEnding).
+using InternalSyntax = LilySharp.Core.Syntax.InternalSyntax;
+
 namespace LilySharp.Core.LilyPond;
 
 /// <summary>
@@ -677,12 +683,7 @@ public sealed class LilyPondExporter
         var result = new List<SyntaxNode>();
         if (form != null)
         {
-            foreach (var name in FormSectionOrder(form))
-                if (byName.TryGetValue(name, out var entry))
-                {
-                    result.AddRange(SectionHeaderMusic(entry.Section));
-                    result.AddRange(ContainerMusic(entry.Container));
-                }
+            AppendFormItems(EnumerateChildren(form), byName, result);
         }
         else
         {
@@ -777,23 +778,201 @@ public sealed class LilyPondExporter
         return body;
     }
 
-    private static IEnumerable<string> FormSectionOrder(FormDeclarationSyntax form)
+    /// <summary>
+    /// Flatten a form's items into the music stream IN DOCUMENT ORDER.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This replaced a walk that yielded only the section NAMES of the form's direct
+    /// children (<c>FormSectionOrder</c>). Everything else a form can hold — and a form item
+    /// has eight spellings (Parser.Form.cs ParseFormItem) — was dropped with no warning. Two of
+    /// those drops were structural, and both produced a twin that COMPILES AND IS A DIFFERENT
+    /// PIECE, which no warning and no snapshot can catch — only reading the .ly:
+    /// <list type="bullet">
+    /// <item><c>form main { A break B }</c> — the <c>\break</c> never reached the twin, so
+    /// LilyPond broke the line wherever its own spacing put it while Lily# broke it at B.</item>
+    /// <item><c>form main { A |: B :| dc A "A2" }</c> — a <c>|:</c> block is ONE child, so B
+    /// (and every other section inside the repeat), the repeat bar lines and the D.C. all
+    /// vanished. The twin was <c>A A</c>.</item>
+    /// </list>
+    /// <para>
+    /// The repeat is NOT grouped here: <c>|:</c> / <c>:|</c> enter the stream as bar lines and
+    /// <see cref="EmitInlineRepeat"/> groups them into <c>\repeat volta</c> / <c>\alternative</c>
+    /// — which is exactly what <see cref="OrderedMusic"/>'s own comment always said would happen
+    /// ("a repeat can span several sections, so grouping must happen AFTER this flattening").
+    /// That path existed and worked; nothing ever fed it a bar line.
+    /// </para>
+    /// </remarks>
+    private void AppendFormItems(
+        IEnumerable<SyntaxNode> items,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
+        List<SyntaxNode> result)
     {
-        foreach (var child in EnumerateChildren(form))
+        foreach (var child in items)
         {
             switch (child)
             {
-                case SectionReferenceSyntax r: yield return r.SectionName; break;
-                case FormAlternativeSyntax a: yield return a.SectionName.Text; break;
+                case SectionReferenceSyntax r:
+                    AppendSection(r.SectionName, byName, result);
+                    break;
+
+                // `~Section` (silent reference) has no red node of its own — it is a generic
+                // node whose slot 1 is the section-name token. The `~` hides the LABEL, not the
+                // music, so the twin carries the same notes as a plain reference.
+                case { Kind: SyntaxKind.SilentSectionReference }
+                        when child.GetChild(1) is SyntaxTokenNode silent:
+                    AppendSection(silent.Text, byName, result);
+                    break;
+
+                case FormRepeatBlockSyntax repeat:
+                    AppendRepeatBlock(repeat, byName, result);
+                    break;
+
+                // A volta ending OUTSIDE a repeat block is just its section: there is no
+                // \repeat for an \alternative to hang on.
+                case FormAlternativeSyntax alt:
+                    AppendSection(alt.SectionName.Text, byName, result);
+                    break;
+
+                // `break` / `nobreak`, navigation marks and `@` marks are music where they
+                // stand, and EmitItem already writes all three.
+                case BreakSyntax or NavigationMarkSyntax or MusicMarkSyntax:
+                    result.Add(child);
+                    break;
+
                 default:
-                    // `~Section` (silent reference) has no red node — it is a generic
-                    // node whose slot 1 is the section-name token.
-                    if (child.Kind == SyntaxKind.SilentSectionReference
-                        && child.GetChild(1) is SyntaxTokenNode name)
-                        yield return name.Text;
+                    // Anything left (today only `_text`) goes through so that EmitItem's Skip
+                    // WARNS about it. Filtering it here would put the drop back below the
+                    // waterline, which is the whole defect this method was rewritten for.
+                    if (child is not SyntaxTokenNode)
+                        result.Add(child);
                     break;
             }
         }
+    }
+
+    /// <summary>Append one referenced section's header directives and music.</summary>
+    private void AppendSection(
+        string name,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
+        List<SyntaxNode> result)
+    {
+        if (!byName.TryGetValue(name, out var entry))
+            return;
+        result.AddRange(SectionHeaderMusic(entry.Section));
+        result.AddRange(ContainerMusic(entry.Container));
+    }
+
+    /// <summary>
+    /// Flatten <c>|: … :|</c> into bar lines plus the sections between them.
+    /// </summary>
+    /// <remarks>
+    /// Document order is kept verbatim, including endings that sit BEFORE the <c>:|</c>
+    /// (<c>|: … [1. D] :| [2. Outro]</c> — the repeat bar belongs between the endings), because
+    /// <see cref="EmitInlineRepeat"/> collects every ending it meets and keeps scanning past the
+    /// <c>:|</c> for more. The play count rides the closing bar line the way an inline
+    /// <c>:|*N</c> does, since that is where <see cref="EmitInlineRepeat"/> reads it.
+    /// <para>
+    /// Mirrors MeasureCollector.ProcessRepeatBlock, including <c>:|:</c> — one written divider
+    /// is two bar lines (<c>:|</c> then <c>|:</c>), so <c>|: B :|: C :|</c> is
+    /// <c>|: B :| |: C :|</c>. ⚠️ That is the one item where the two walks MUST agree: expand it
+    /// on one side only and the twin repeats a different number of bars than Lily# does.
+    /// </para>
+    /// </remarks>
+    private void AppendRepeatBlock(
+        FormRepeatBlockSyntax repeat,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
+        List<SyntaxNode> result)
+    {
+        int playCount = RepeatBlockPlayCount(repeat);
+
+        foreach (var child in EnumerateChildren(repeat))
+        {
+            switch (child)
+            {
+                case SyntaxTokenNode { Kind: SyntaxKind.RepeatStartBar } open:
+                    result.Add(CreateBarline(SyntaxKind.RepeatStartBar, "|:", open.Position, 0));
+                    break;
+
+                case SyntaxTokenNode { Kind: SyntaxKind.RepeatEndBar } close:
+                    result.Add(CreateBarline(SyntaxKind.RepeatEndBar, ":|", close.Position, playCount));
+                    break;
+
+                case SyntaxTokenNode { Kind: SyntaxKind.RepeatBothBar } both:
+                    result.Add(CreateBarline(SyntaxKind.RepeatEndBar, ":|", both.Position, playCount));
+                    result.Add(CreateBarline(SyntaxKind.RepeatStartBar, "|:", both.Position, 0));
+                    break;
+
+                case FormAlternativeSyntax ending when byName.ContainsKey(ending.SectionName.Text):
+                    result.Add(CreateEnding(ending, byName));
+                    break;
+
+                default:
+                    AppendFormItems([child], byName, result);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The <c>:|*3</c> play count on a form repeat block, or 2 when it is absent.
+    /// </summary>
+    /// <remarks>
+    /// The parser keeps it as the <c>*</c> + integer token pair sitting on the block's end bar
+    /// line (Parser.Form.cs ParseFormRepeatBlock), not as a node — the same spelling and the
+    /// same place an inline <c>:|*3</c> carries it.
+    /// </remarks>
+    private static int RepeatBlockPlayCount(FormRepeatBlockSyntax repeat)
+    {
+        for (int i = 0; i + 1 < repeat.SlotCount; i++)
+            if (repeat.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Asterisk }
+                && repeat.GetChild(i + 1) is SyntaxTokenNode count
+                && int.TryParse(count.Text, out int n) && n >= 1)
+                return n;
+        return 2;
+    }
+
+    /// <summary>
+    /// A form ending (<c>[1. D]</c>) as the inline ending node the emitter groups.
+    /// </summary>
+    /// <remarks>
+    /// The two spellings differ only in where the music lives: an inline volta HOLDS its items,
+    /// a form ending NAMES a section that holds them. Rebuilding the inline node around the
+    /// section's own green nodes lets <see cref="EmitInlineRepeat"/> stay the single place that
+    /// knows how <c>\alternative</c> is written — the alternative was to teach it a second node
+    /// shape, i.e. a second spelling of the same thing (the defect this file keeps finding).
+    /// ⚠️ The rebuilt node carries the ENDING's source position, not the section's; nothing in
+    /// the .ly reads positions, but a warning raised on one of these items points at the form.
+    /// </remarks>
+    private InlineVoltaSyntax CreateEnding(
+        FormAlternativeSyntax ending,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
+    {
+        var items = new List<SyntaxNode>();
+        AppendSection(ending.SectionName.Text, byName, items);
+
+        var green = new InternalSyntax.InlineVoltaGreen(
+            new InternalSyntax.SyntaxToken(SyntaxKind.OpenBracket, "["),
+            new InternalSyntax.SyntaxToken(SyntaxKind.IntegerLiteral, ending.Number.Text),
+            ending.Separator is { } sep ? new InternalSyntax.SyntaxToken(sep.Kind, sep.Text) : null,
+            ending.EndNumber is { } end ? new InternalSyntax.SyntaxToken(end.Kind, end.Text) : null,
+            new InternalSyntax.SyntaxToken(SyntaxKind.Dot, "."),
+            [.. items.Select(n => n.Green)],
+            ending.IsClosed ? new InternalSyntax.SyntaxToken(SyntaxKind.CloseBracket, "]") : null);
+
+        return new InlineVoltaSyntax(green, null, ending.Position);
+    }
+
+    /// <summary>
+    /// A bar line node the source never wrote — the <c>|:</c> / <c>:|</c> a form's repeat block
+    /// spells with its own tokens. <paramref name="playCount"/> of 0 leaves the count off.
+    /// </summary>
+    private static BarlineSyntax CreateBarline(SyntaxKind kind, string text, int position, int playCount)
+    {
+        var green = new InternalSyntax.BarlineGreen(
+            new InternalSyntax.SyntaxToken(kind, text),
+            playCount > 2 ? new InternalSyntax.SyntaxToken(SyntaxKind.Asterisk, "*") : null,
+            playCount > 2 ? new InternalSyntax.SyntaxToken(SyntaxKind.IntegerLiteral, playCount.ToString()) : null);
+        return new BarlineSyntax(green, null, position);
     }
 
     private List<SyntaxNode> TopLevelMusic(CompilationUnitSyntax root)
