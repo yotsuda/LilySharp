@@ -67,6 +67,7 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 タイの列アウトライン一式（+ 対称項・テスト 6 本）  dc00c82c  snapshot 7 枚  +0.8887 → −0.0732
 半音符の符尾 X を引き継ぎへ（§1・§2 A）          89417bf7  出力不変
 tab の fallback が持つ付点の第2綴りに名前を付ける  e8231098  出力不変・コメントのみ
+符尾 X の対を開く（probe + 計器 + 点 2）          97737c2f  出力不変・コード変更ゼロ
 （この引継ぎ commit）
 ```
 ★★★ **① 移植そのものは「LP を先に測る」で 6 桁まで決まっていた。** `<c d>2~ <c d>2`（TWSEC）を
@@ -109,9 +110,14 @@ LP に通し、**system の X 系で全部**印字した:
 ⚠️ **`origin/master` はセッション中（08:25）に別コンソールから push された**（第76セッションまでの
 140 commit）。**この引継ぎで数えている「未 push」はそれ以降の数**。
 
-**未 push 4**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
-⚠️ **私は push していない**）・テスト **3928 passed / 0 failed / 4 skipped**（**+6**＝
-`TieChordOutlineTests`）・台帳 **431 点**（**ss 非ゼロ 83・総和 4.516820920**／
+★★★ **⑤ そのうえで符尾 X の対を開いた**（`97737c2f`・**コード変更ゼロ**・▶ の先頭）。
+**残差 −0.073200000 と対照 0 の両方が、読む前に `why` へ書いた予測どおり 9 桁で出た。**
+⚠️ **総和が +0.0732 増えたのは悪化ではない**——**tie の点の中に畳まれていた量を、単独で
+測れるようにしたぶん**。**比較は同じ点集合の中でのみ意味を持つ。**
+
+**未 push 6**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
+⚠️ **私は push していない**）・テスト **3930 passed / 0 failed / 4 skipped**（**+8**＝
+`TieChordOutlineTests` 6 ＋ 符尾 X の点 2）・台帳 **433 点**（**ss 非ゼロ 84・総和 4.590020920**／
 **count 点 106・うち非ゼロ 2**）。
 ★ **perf は §7.9 のとおり測った**（worktree A/B・Release・min-of-9×2 と min-of-15×3）:
 ```
@@ -124,14 +130,24 @@ ties-slurs    BASE 1166.7 / 970.0 / 864.3   HEAD 959.8 / 901.5 / 985.7 ms
 
 ## ▶ 次の一手
 
-★★★ **半音符の符尾 X＝残差 0.073200 の全量。点は開いている**（`tie.width.seconds.upper`）。
-`LayoutUtilities.StemAttachX` は `GlyphMetrics.NoteheadBlackStemAttachment.X` を**符頭によらず**返すが、
-**LP は符頭ごとの ink 右端 − thickness/2**（実測: 黒玉 1.304200 − 0.065 ／ 半玉 1.377400 − 0.065、
-どちらも LP の dump と 6 桁一致）。**`GlyphMetrics.NoteheadHalfStemAttachment` は既にある**
-（`MetronomeMarkGeometry` が拍単位で選び分けている＝**知識は engine にあり、house が 1 つ足りない**）。
-⚠️ **コーパスの全半音符の符尾が動く**ので **⑴ 直す前に符尾 X の点を対で開く**
-（黒玉＝対照・半玉＝発散）**⑵ snapshot は 1 枚ずつ承認**。
+★★★ **半音符の符尾 X。★ 対はもう開いてある**（`97737c2f`・**コード変更ゼロ**）——
+**次のセッションは移植から始められる**。
+```
+stem.up.right-edge.half-head    LP 1.377400   残差 −0.073200000   ← 発散
+stem.up.right-edge.black-head   LP 1.304200   残差  0             ← 対照（EXACT）
+probe: audit/lp-geometry/probes/stem-x.ly（score SX ＝ \fixed c' { c2 c4 c4 }）
+```
+**1 小節・1 音高・1 符尾向きで、変わるのは符頭の形だけ**。⇒ **frame / thickness / アンカー規約の
+誤りなら両方動く**ので、**対照が exact であること自体が「これは符頭の形の項だ」を言っている**。
+★ **予測は読む前に `why` へ書いて 9 桁で当たった**（§5.0 の 2 番）。
+**直し方**: `LayoutUtilities.StemAttachX` に**符頭自身の attachment を訊かせる**
+（`GlyphMetrics.NoteheadHalfStemAttachment` は既にあり、`MetronomeMarkGeometry.StemAttachment` は
+**同じ知識を拍単位で選び分けている**＝**知識は engine にあり house が 1 つ足りないだけ**）。
+⚠️ **コーパスの全半音符の符尾が動く**（**snapshot は 1 枚ずつ承認**）。
 ⚠️ **旗も道連れ**（`ItemSkylineFactory.AddFlag` が同じ house を読む）。
+⚠️ **計器は和音を拒否する**（`RenderedGeometry.UpStemRightFromHeadAnchor` は符頭数 ≠ 符尾数で throw）。
+**和音の 2 度では符尾の原点が変位した符頭の 1 幅以内に来るので、「この符尾はどの符頭に立つか」が
+*答えを知ってからでないと決まらない*＝計器が測る量に依存してしまう。** 外さないこと。
 
 ★★ **タイの列を「1 本ずつ」から「列ごと」へ**（`ScoreColumnSymmetry` と
 `ScoreDirectionAgainstStems` が**同じ restructuring を名指ししている**）。LP は
@@ -6184,7 +6200,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⇒ **半音符の上向き符尾は 0.073200 左**。⚠️ ★★ **これは「綴りが 2 つ」ではなく「house が 1 つ
   足りない」型**——`MetronomeMarkGeometry.StemAttachment` は**同じ知識を拍単位で選び分けている**
   ので、**engine は答えを持っていて 1 か所だけが訊いていない**。
-  ★ **観測者は `tie.width.seconds.upper`（−0.073200）だけ**。**直すなら符尾自身の対を先に開く。**
+  ★ **対はもう開いた**（`97737c2f`）: `stem.up.right-edge.{half,black}-head`＝発散 −0.073200000 と
+  **exact な対照**。⇒ **次は移植そのものから始められる**（▶ の先頭）。
 - ★★ **タイの列を「1 本ずつ」から「列ごと」へ**（第77セッションで 2 か所が同じ restructuring を
   名指しした: `TieFormattingProblem.ScoreColumnSymmetry` と `ScoreDirectionAgainstStems`）。
   LP は `Ties_configuration` を丸ごと振る（`tie-formatting-problem.cc:915-1001`）。
