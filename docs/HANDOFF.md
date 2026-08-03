@@ -68,8 +68,13 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 半音符の符尾 X を引き継ぎへ（§1・§2 A）          89417bf7  出力不変
 tab の fallback が持つ付点の第2綴りに名前を付ける  e8231098  出力不変・コメントのみ
 符尾 X の対を開く（probe + 計器 + 点 2）          97737c2f  出力不変・コード変更ゼロ
+COORDINATE_AUDIT に枠 1 つと horizon 2 種を記録    15086bab  出力不変・docs のみ
 （この引継ぎ commit）
 ```
+★ **`COORDINATE_AUDIT.md` の tie の [med] 2 件は落とした**——**あれは 1 件で、第76セッションが
+`BezierBow.MidpointHeight` に名前を付けた時点で閉じていた**（現コードで確認済）。
+⚠️ **`HorizontalSkyline` の horizon はこれで 2 種類**（spacing=device Y-down／tie=中央線 up+）。
+**渡す経路を新設するときは、どちらかを名乗らせること。**
 ★★★ **① 移植そのものは「LP を先に測る」で 6 桁まで決まっていた。** `<c d>2~ <c d>2`（TWSEC）を
 LP に通し、**system の X 系で全部**印字した:
 ```
@@ -115,7 +120,7 @@ LP に通し、**system の X 系で全部**印字した:
 ⚠️ **総和が +0.0732 増えたのは悪化ではない**——**tie の点の中に畳まれていた量を、単独で
 測れるようにしたぶん**。**比較は同じ点集合の中でのみ意味を持つ。**
 
-**未 push 6**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
+**未 push 8**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
 ⚠️ **私は push していない**）・テスト **3930 passed / 0 failed / 4 skipped**（**+8**＝
 `TieChordOutlineTests` 6 ＋ 符尾 X の点 2）・台帳 **433 点**（**ss 非ゼロ 84・総和 4.590020920**／
 **count 点 106・うち非ゼロ 2**）。
