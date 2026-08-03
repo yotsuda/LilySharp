@@ -58,6 +58,124 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 2026-08-03（第77セッション＝**引継ぎが名指した島は移植できた。ただし移植だけでは点が
+*悪化*し、決め手はアウトラインではなく「列ぜんたいの対称性」だった。そして残った残差は
+1 つの名前の付いた量ちょうどで、それはタイの欠陥ではなく*符尾の*欠陥**）。
+
+**閉じたもの**（**snapshot 7 枚はユーザー承認のうえ再ベース**）:
+```
+タイの列アウトライン一式（+ 対称項・テスト 6 本）  dc00c82c  snapshot 7 枚  +0.8887 → −0.0732
+```
+★★★ **① 移植そのものは「LP を先に測る」で 6 桁まで決まっていた。** `<c d>2~ <c d>2`（TWSEC）を
+LP に通し、**system の X 系で全部**印字した:
+```
+左列  下符頭 (8.585000 . 9.962400)   上符頭 (9.897400 . 11.274800)   stem 原点 9.897400
+右列  下符頭 (12.860445 . 14.237845) 上符頭 (14.172845 . 15.550245)  stem 原点 14.172845
+下のタイ  L=9.473700  R=13.349145  ＝両端とも符頭の**中心** ± note-head-gap
+上のタイ  L=10.786100 R=13.772845、**13.772845 = 14.122845 − 0.35**
+          ＝(stem 原点 − staff_space/20) − stem-gap
+```
+⚠️ **符尾の箱は 0.1 幅で、符尾自身の 0.13 ではない**（LP は原点を**点**として足し
+`staff_space/20` で広げる・`:150-151`）。**絵を読むと片側 0.015 ずつ多くなる。**
+
+★★★ **② アウトラインだけ入れると点は −0.760500 へ*悪化*した。** 上のタイの**自分の aptitude は
+半空 1 つ下の候補を好む**（vdist を払わず hdist が 1.01 少ない）。**LP はそれを列の
+`outer-tie-length-symmetry`（`:890-908`）で覆す**——**その係数は `TieDetails` に宣言されていて
+誰も読んでいなかった**。⇒ **⒝ の債務は「読まれていない宣言」の形でも溜まる。**
+⚠️ **Lily# は列の back のタイにだけ課す**（LP は front/back を**同時に**振る）。greedy 近似で、
+`ScoreColumnSymmetry` に住所つきで書いた。
+
+★★★ **③ 残差 −0.073200001 は `1.377400 − 1.304200` ちょうど**＝**符頭の attachment**。
+`LayoutUtilities.StemAttachX` は**どの符頭でも黒玉の attachment を返す**ので、
+**半音符の上向き符尾は LP より 0.0732 左に立っている**。⇒ **タイではなく*描かれる符尾*の欠陥**で、
+**コーパスの全半音符が動く**（**ユーザー判断で今回は閉じない・引き継ぎ**）。
+★ **観測者は既にある**——この点自身（`tie.width.seconds.upper`）が **0.0732 を名指しで持っている**。
+
+★★ **④ 移植と一緒に来た LP の読みが 2 つあり、どちらも単独でタイを動かす**:
+```
+:509-511 対 :581   枝を選ぶ高さは **gap を引く前の生の attachment** で測る
+                   （Lily# は gap 後の幅で測っていた＝毎回 0.4 狭く、その分平ら）
+:496-504           符頭の縁への吸着は列の**タイ付き符頭の和集合**を読む
+                   （⇒ 和音の**内側**のタイは吸着しない）
+```
+★ **`staff.staff.tie-{under,over}-notes` が 0.001391435 → 0.001286139 に動いたのはこの前者**。
+
+★ **snapshot 7 枚の差分は全部 tie の `<path>`**（他の要素は 1 行も動いていない・確認済み）。
+**tab は幅不変で Y だけ 0.03**（tab の bound は列ではないので固定アンカーのまま＝設計どおり）。
+
+⚠️ **`origin/master` はセッション中（08:25）に別コンソールから push された**（第76セッションまでの
+140 commit）。**この引継ぎで数えている「未 push」はそれ以降の数**。
+
+**未 push 2**（**この引継ぎ commit まで**＝`git rev-list --count origin/master..master`。
+⚠️ **私は push していない**）・テスト **3928 passed / 0 failed / 4 skipped**（**+6**＝
+`TieChordOutlineTests`）・台帳 **431 点**（**ss 非ゼロ 83・総和 4.516820920**／
+**count 点 106・うち非ゼロ 2**）。
+★ **perf は §7.9 のとおり測った**（worktree A/B・Release・min-of-9×2 と min-of-15×3）:
+```
+feature-tour  BASE 1548.8 / 1552.5   HEAD 1592.4 / 1467.8 ms
+ties-slurs    BASE 1166.7 / 970.0 / 864.3   HEAD 959.8 / 901.5 / 985.7 ms
+```
+**符号が RUN ごとに反転する**＝足した計算（タイの bound ごとに箱 6〜10 個の skyline を 1 本、
+候補ごとに読みが 2〜4 回）は**この台のノイズ帯の中**。
+⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
+
+## ▶ 次の一手
+
+★★★ **半音符の符尾 X＝残差 0.073200 の全量。点は開いている**（`tie.width.seconds.upper`）。
+`LayoutUtilities.StemAttachX` は `GlyphMetrics.NoteheadBlackStemAttachment.X` を**符頭によらず**返すが、
+**LP は符頭ごとの ink 右端 − thickness/2**（実測: 黒玉 1.304200 − 0.065 ／ 半玉 1.377400 − 0.065、
+どちらも LP の dump と 6 桁一致）。**`GlyphMetrics.NoteheadHalfStemAttachment` は既にある**
+（`MetronomeMarkGeometry` が拍単位で選び分けている＝**知識は engine にあり、house が 1 つ足りない**）。
+⚠️ **コーパスの全半音符の符尾が動く**ので **⑴ 直す前に符尾 X の点を対で開く**
+（黒玉＝対照・半玉＝発散）**⑵ snapshot は 1 枚ずつ承認**。
+⚠️ **旗も道連れ**（`ItemSkylineFactory.AddFlag` が同じ house を読む）。
+
+★★ **タイの列を「1 本ずつ」から「列ごと」へ**（`ScoreColumnSymmetry` と
+`ScoreDirectionAgainstStems` が**同じ restructuring を名指ししている**）。LP は
+`Ties_configuration` を丸ごと振る（`:915-1001`）ので、front も back との不一致を払う。
+**今は back だけが払う greedy**。⚠️ **踏む対がまだ無い**——3 本以上のタイを持つ和音の本を先に。
+
+★★ **行末 courtesy の定数 3 本＝⒝ の債務**（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
+`CourtesyKeyToTimeGap` 1.15）。**出所は `SpacingRules.BarlineToCourtesyKey` の remarks に 1 軒だけ置いた**
+（`break-alignment-interface.cc:228-243`。他の 2 本はそこを `see cref` で指す＝住所を 3 つに増やさない）。
+⚠️ **space-alist の値をそのまま写したのではない**——TimeSignature は `(staff-bar . (extra-space . 1.0))` と
+**宣言している**のに**印字は 0.750000**。**「宣言値＝定数」と書くと偽の住所になる。**
+⇒ ★ **点が −0.2 で開いている**（`courtesy.meter.barline-to-cancellation`）。0.8 を 1.0 にするだけでは**駄目**
+——予約 `KeyCourtesySuffixWidth` が同じ定数を読むので、描画と予約が一緒に動かないと信号が譜からはみ出る。
+⇒ **本筋は行末の群も `BreakAlignSpacing` に通すこと**（行頭 prefix は既に通っている。
+**LP は行の両端に break-align 群を 1 つずつ持つのであって、片側が solver・片側が定数ではない**）。
+**通せばこの 3 本は消える。**
+⚠️⚠️ ★ **0.75 は 1 冊でしか測っていない**（§7.7「プローブ 1 冊の texture だけ見て定数化しない」に触れる）。
+**1.15 のほうは独立に 2 か所で一致している**ので交差検証済み。⇒ **0.75 には texture を変えた 2 冊目が要る**
+——行末が**終止線 `|.` や複縦線**のとき、**拍子が 2/4 でなく C や 3/4** のとき。**今それを観測しているのは
+`courtesy.meter.barline-to-meter` 1 点だけ**なので、**倒れるとしたらそこ**。安い。
+
+★★ **ばねの最小値と臨時記号**（**未修正・宣言のみ**）。**LP のばねの最小値は臨時記号を原理的に見られない**：
+`note-spacing.cc:78-83` → `spacing-interface.cc:37-82` は列に**保存された** `horizontal-skylines`
+（＝`elements` のみ）を読む。臨時記号は `conditional-elements` で、**ロッドだけ**が合流させる。Lily# は
+ばねもロッドも両方見ている。⚠️ **臨時記号のある列を全部動かすので、点と測定が先**。
+コードの ⚠️ は `ItemSkylineFactory.CreateLeftSkyline` の remarks。
+
+★ **`lysc ly` が `@arpeggio` を落とす**（双子を作ると `<c e g>4` になる）。**arpeggio を LP と比べようと
+すると偽の一致が出る。** ★ **`@arpeggio` は残す（2026-08-02 ユーザー判断・確定）。撤去案は閉じた。**
+実測で `<<>>`＝**書き出された分散和音**、`@arpeggio`＝**積んだ和音＋波線**の別物。
+⇒ **残すと決まった以上、`lysc ly` が落としている件は直す側。**
+
+★★ **未測定が残っている（フォント）**: regular/bold/bold-italic 面のカーン差（italic のみ全走査）。**測るなら安い**。
+★★ **描画側 3 バックエンドがカーンを掛けているか未測定**（SVG のビューアは掛ける／PNG・PDF は素の Skia
+＝掛けない見込み。**推測**）。**実測して点で起票してから**直すこと。
+★ **`ottava.x.line-start-to-notehead` の 0.05 は harness の項**（閉じるなら両側で同じ縁を測る）。
+★★ **figbass の −0.0023332 が 5 点＋−0.0023334 が 2 点＝同じ数**＝**1 つの機構**（安い島）。
+★★★ **cue の `CueScale = 0.66` → per-design font-size の移植は点が開いたまま待っている**。
+★★ **オクターブ監査の「読めない 77 冊」**⇒ **やるなら実測で**（両エンジンに `staff-position` を吐かせる）。
+⚠️ **`audit/scripts/Audit-ProbeOctaves.ps1` の自己検査を外さないこと**（この監査は 3 回ウソをついた）。
+★ **旗の描画側に 0.065 が残っている**（ソースを読んだだけ・未実測・**点が無い**）。
+★ **実音入力スイッチ**（**未着手・要仕様**）——`octave` とは**直交した** concert-pitch トグル。
+★ **tab の残り 3 冊**（弦を明示しない本は LP と比較できない）。**触るなら fixture 側。要承認。**
+✅ **セリフ体の選択は決着した（§3・Schola 継続）**。`text.width.{aa,va}` は**閉じない点**。**追いかけない。**
+
+## 以下は第76セッションの経緯
+
 最終更新 2026-08-03（第76セッション＝**引継ぎが名指した「決定だけが手前で短絡している」は当たっていたが、
 「問題本体は移植済み」は外れ。足りなかったのは項が 2 つと、**項ですらない量が 1 つ**。決め手は最後の
 ほうで、`Tie_configuration::height` は**曲線の中点**であって制御点の高さではなかった**）。
@@ -149,20 +267,18 @@ repro-ties    BASE 1531.4 / 1511.2   HEAD 1559.1 / 1465.2 ms   ← ばらつき�
 **pass も skyline も profile も増えていない。**
 ⚠️ **この行は書いた直後に stale になる**。§0 のとおり**開始時に必ず実測すること**。
 
-## ▶ 次の一手
+## ▶ 次の一手（**第76セッション当時。この節は読まないこと**——先頭の「タイの列アウトライン」は
+第77セッションで閉じ、**残りは上の §1 の ▶ へそのまま繰り上げた**。**住所を 2 つ持たない**）
 
-★★★ **タイの列アウトライン＝次の島。点は開いている**（`tie.width.seconds.upper` +0.888699999）。
-**移植するのは 3 つ**:
+~~★★★ **タイの列アウトライン＝次の島。点は開いている**（`tie.width.seconds.upper` +0.888699999）。~~
+**閉じた**（第77セッション・`dc00c82c`）。**移植したのは 4 つ**:
 ```
 tie-formatting-problem.cc:96-287   set_column_chord_outline   列の箱を全部（符頭・付点・符尾・旗）
                        :243-258    updowndir の後退箱は「列の一番外の符頭」から立てる
-                                   ⇒ 和音の内側では centre へ後退しない
                        :583-609    符尾の Y 範囲に入るなら attachment を stem端 − stem_gap(0.35) へ
                        :565-579    close_by との intersect（短いタイ）
 ```
-⚠️ **snapshot は動く**（今回動いた 9 枚のうち少なくとも 3 枚は戻る側）。**1 枚ずつ承認を取ること。**
-⚠️ **`tie.width.clears-head` と `tie.width.seconds.lower` は今 exact**＝**この移植の falsifier**。
-**壊したらアウトラインの建て方が違う。**
+★ **falsifier は両方生き残った**（`tie.width.clears-head` / `tie.width.seconds.lower` は今も exact）。
 
 ★★ **行末 courtesy の定数 3 本＝⒝ の債務**（`BarlineToCourtesyKey` 0.8 / `BarlineToCourtesyTime` 0.75 /
 `CourtesyKeyToTimeGap` 1.15）。**出所は `SpacingRules.BarlineToCourtesyKey` の remarks に 1 軒だけ置いた**
@@ -6057,6 +6173,20 @@ LP は当該 spec で stretchability を**明示宣言**している）。**コ�
 
 LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量を計算する場所が 2 つ以上ある**なら
 それが次の欠陥の住所（§5.2.1②）。現在わかっている残り:
+
+- ★★★ **符尾の attachment X が「符頭ごと」でなく「黒玉固定」**（2026-08-03・第77セッション。
+  **測って名指しただけ・未修正**・▶ の先頭）。`LayoutUtilities.StemAttachX` は
+  `NoteheadBlackStemAttachment.X` を**符頭によらず**返す。LP は**符頭ごとの ink 右端 − thickness/2**
+  （実測 6 桁一致: 黒玉 1.304200 − 0.065 ／ 半玉 1.377400 − 0.065）。
+  ⇒ **半音符の上向き符尾は 0.073200 左**。⚠️ ★★ **これは「綴りが 2 つ」ではなく「house が 1 つ
+  足りない」型**——`MetronomeMarkGeometry.StemAttachment` は**同じ知識を拍単位で選び分けている**
+  ので、**engine は答えを持っていて 1 か所だけが訊いていない**。
+  ★ **観測者は `tie.width.seconds.upper`（−0.073200）だけ**。**直すなら符尾自身の対を先に開く。**
+- ★★ **タイの列を「1 本ずつ」から「列ごと」へ**（第77セッションで 2 か所が同じ restructuring を
+  名指しした: `TieFormattingProblem.ScoreColumnSymmetry` と `ScoreDirectionAgainstStems`）。
+  LP は `Ties_configuration` を丸ごと振る（`tie-formatting-problem.cc:915-1001`）。
+  **今は列の back のタイだけが対称性を払う greedy**。⚠️ **踏む対がまだ無い**（3 本以上のタイを
+  持つ和音の本）。
 
 - ~~**loose line の量の 4 モデル**~~ — **閉じた**（2026-07-27・§1）。`AlignmentWalk` 1 本。
   ★ **この島の教訓は「モデルが何個あるかを数える前に、どれが効いているかを摂動で測る」**——
