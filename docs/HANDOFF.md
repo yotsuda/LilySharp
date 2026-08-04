@@ -58,9 +58,116 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第91セッション（＝**引継ぎ ⑴ の島を閉じた。予告されていた「snapshot が動くから要承認」は
-測ったら偽で、0 枚・承認不要だった。そして塞ぎに行った先で、*部屋*の側テーブル自体が
-第2声部を見ていないという別の欠陥が出た**）。
+最終更新 第92セッション（＝**引継ぎ ⑴ の「支持箱と mover の食い違い」を測りに行って、
+⑴ その箱は*その regime では死んでいた*・⑵ 生きている箱は別の場所・⑶ そして道中で
+「下側の script が第2声部でなく第1声部の音符にぶら下がる」という別の欠陥が出た。
+直したのは ⑶。⑴⑵ は測って握った——LP の曲線量子化と対で入れないと片肺になる**）。
+
+⚠️ **仕事は 3 commit**（**`git show 851f6bb7..` で引ける**——`851f6bb7` は第91セッションの最後）。
+```
+A 点を 4 つ起票（DSK/DSM）        コード変更ゼロ            テスト +4・snapshot 0
+B 声部アンカーを直す              4 点とも大きく改善        テスト +2・snapshot 0
+C プロファイルの 3 つ目の綴りを名指し  出力不変・測定のみ      テスト ±0・snapshot 0
+```
+
+★★★ **① 新しい本は 2 冊**（`dynamic-support.ly` round 3）。**DSW ＋ 1 文字**なので
+**LP 側は「script の項」だけが差**になる。**箱をまたぐように選んだ**:
+**staccato は ink ±0.2**（名目箱は 0.4 深すぎ）・**dmarcato は (−1.1 . 0)**（名目箱は 0.5 足りない）。
+⇒ **1 つの定数が両方向に外れる**ので、**サイズ調整では直らないことが対で言える。**
+
+⚠️⚠️ ★★★ **② pointwise のフォークが DSM で鳴った。** **LP の `\f` は V の先端を 0.46 では
+避けない**——**先端より 0.067120 *上*に潜り込む**（`DSM − DSK = 0.483800` 対 2 グリフの
+ink 底差 `0.700000`＝**0.216200 は払われない**）。⇒ ★★★ **どんな箱でも再現できない。**
+★ **placement 側は LP が恒等**（**両グリフとも −4.745000**＝**頭の ink 底 − script padding 0.2**）。
+
+⚠️⚠️⚠️ ★★★ **③ Lily# の鏡は「どちらの予測にも無い枝」に落ちた——それが本当の欠陥だった。**
+**両本とも対照 DSW と 9 桁一致（＝script は dynamic を 1 mm も動かさない）**。理由は
+**「箱が小さい」ではなく「script がそこに居ない」**: **`ArticulationItem` は声部を持たず**、
+engraver は **staff の*第1声部*の item 列**で `ItemIndex` を引いていた ⇒ **第2声部に書いた
+staccato が第1声部の b' にぶら下がる**（**−1.5 に量子化・ink top −1.300000 が 9 桁一致**、
+**描いた頁でも b' の下に点が在る**）。★ **同じ音符の `@f` は正しい**——**`DynamicItem` は
+`VoiceIndex` を持っている**。⇒ ★★★ **第91セッション ④ と同じ形**（**家族の 1 人だけが直っている**）。
+✅ **直した**: `ArticulationItem.VoiceIndex`（**collector の 6 か所**で `_currentVoiceIndex` を押す）＋
+**`LayoutUtilities.VoiceItemAt` / `ResolveVoiceMeasures` に 1 本化**（**`DynamicEngraver.AnchorItem`
+はそこへ委譲**）＋ **beam の 2 つの表も声部キーに**（**「articulation は声部を持たないから」という
+除外理由が消えたので**）。**実測**:
+```
+                                        前 → 後              残差
+script.staccato-below.staff-to-ink-top  −1.300 → −4.700   +3.445 → +0.045
+script.marcato-below.staff-to-ink-top   −2.200 → −4.700   +2.545 → +0.045
+staff.staff.dynamic-staccato-avoid      10.783 → 10.9139  −0.149 → −0.018
+staff.staff.dynamic-marcato-avoid       10.783 → 11.8346  −0.633 → +0.419
+```
+★★ **placement の 2 点が同じ数になった＝LP の恒等が Lily# の恒等になった。**
+★★★ **残る +0.045 は既知の族**——**「頭の半分を名目 0.5 で読む」**（LILC は 0.545053）。
+**`script-priority.ly` の header が「直していない・もう観測者が無い」と書いていた項で、
+この 2 点がその最初の観測者。**
+⚠️ **コーパスは 1 冊も動かない**（**`voice{}`＋script の 3 冊は全部 script が第1声部**）。
+⇒ **網は unit test 2 本**（**陽性対照つき**＝アンカーを 0 に固定すると片方が落ちる）。
+
+⚠️⚠️⚠️ ★★★ **④ 引継ぎが名指した「±0.6 の支持箱」は、その regime では*死んでいた*。**
+**±3.0 に広げても DSK/DSM は 1 桁も動かない**——**tracker の土台が既に譜の down profile で、
+script のインクは*譜スカイライン側の ink 箱*（`SkylineBuilder.AddArticulationLayoutsToSkyline`）
+から届いていた**。⇒ ★★★ **1 つの grob のプロファイルの綴りは 3 つ**（**mover＝実アウトライン／
+譜スカイライン＝designed ink 箱／stacker seed＝名目 ±0.6 箱**）で、**下の dynamic を決めるのは
+2 つ目**。**引継ぎは 3 つ目を名指していた。**
+
+⚠️⚠️⚠️ ★★★ **⑤ その 2 つ目をアウトラインに替えると対が割れる。握った。**
+```
+                        箱（現状）        アウトライン
+DSM  残差              +0.418746        −0.031591   ← 13 倍良くなる
+DSK  残差              −0.018208        −0.136770   ← 0.12 悪くなる
+```
+⚠️⚠️⚠️ ★★★ **⑤' 最初の説明（「LP の曲線量子化が粗いから」）は*外れ*。撤回した。**
+**LP は確かに 3 次を `max(2, 弦長/0.2)` 本の直線にする**（`lily/freetype.cc:121-146`）が、
+**`TextOutlineSkylines.FlattenCubic` は既にそれを移植済み**（2 次は degree elevation）。
+⇒ **粒度は違わない。** ★★★ **実際に測ったら、LP の障害物は*グリフのアウトラインでもなかった***:
+```
+Script の vertical-skylines（pass が読む方）   0.200 が ±0.10 まで平ら / 0.142 が ±0.24 まで / ±0.30 でも 0.084
+ly:skylines-for-stencil（同じ grob の stencil）  0.200@0 / 0.159@±0.10 / 0.098@±0.16 / ±0.2 の外は空
+```
+⇒ **property 側は*グリフの ±0.2 extent より広い*。** ★★ **ラベル側のアウトラインは
+2 engine で 5e-5 一致**（点ごとにサンプルした）ので、**差はこの障害物 1 つ**。
+⇒ ★★★ **designed ink 箱のほうが「LP の実際の障害物」に*近い*** ——**だから幅 0.4 の点では箱が勝ち、
+幅 1.0 のシェブロンでは負ける**。**`skyline-horizontal-padding` ではない**（Script は宣言せず
+既定 0.0・`stencil-integral.cc:881-893`）。**stencil profile の max 窓 pad でもない**（実測値で否定）。
+⚠️⚠️⚠️ ★★★ **⑤'' 機構は同じ日に見つかった＝`skyline-horizontal-padding`。閉じた。**
+**`scm/script.scm` は 3 つの script にだけこれを宣言する**（**staccato 0.10 `:407`／
+staccatissimo 0.10 `:392`／downbow 0.20 `:86-94`**）。**`stencil-integral.cc:881-893`
+`Grob::vertical_skylines_from_stencil` が `Skyline::padded` で適用**し、
+**その形は「各建物の両側に *平ら h* → *45°の斜面 h*」**（`skyline.cc:558-615`）。
+⇒ **dump した stencil 多角形 (−0.2 . 0.2) の `padded(0.1)` が、dump した property
+(−0.4 . 0.4)・0.2 が ±0.1 まで平ら、と*頂点まで一致*。** ★ **marcato は宣言しない**ので
+**あちらは生アウトラインで最初から正しかった**。
+✅✅ **移植した**: **`ScriptSkylines` が padding 済みプロファイルになり、消費者 4 つが全部それを読む**
+（**譜スカイライン／below stacker の seed／system スカイライン（`AugmentSkylinesWithScripts`）／mover**）。
+★ **`VerticalSkyline.Padded` は `Skyline::padded` の逐語移植として既に在り、script に渡されていなかっただけ。**
+```
+                    箱（前）        padding 済みアウトライン（後）
+DSK  残差          −0.018208        −0.036130
+DSM  残差          +0.418746        −0.031591
+```
+★★★ **対が初めて*自分自身と一致*した**（**箱では −0.018 と +0.419 で符号すら違った**）。
+**残りは 2 冊とも同じ数**で、**隣で開いている placement の項**そのもの——
+**`script.{staccato,marcato}-below` が両方 +0.045000（名目 0.5 対 LILC 0.545053）**で、
+**script が 0.045 高く座れば下の dynamic はその分浅くなる**。⇒ **頭の半分を直せば 2 冊とも閉じる。**
+**snapshot 4 枚（承認済み）＝全部同じ向き**（**強弱記号が譜へ約 0.4 近づく＝±0.6 箱の過剰予約が外れた分**）。
+**4 つ目の綴りの統一は出力不変**（snapshot 追加ゼロ）。
+
+⚠️ **⑥ perf は測った**（`IncrementalSessionBenchmark`・**確保で見る。ms は StdDev が平均の 57%＝使えない**）。
+**benchmark の本は `@staccato`/`@accent`/`@tenuto`/`@marcato` を持つ**ので**新経路を実際に通る**
+（第91セッションの「benchmark が枝を通らない」罠には当たらない）:
+```
+                今日        第91セッションの記録
+multi reuse    1328.82 KB   1331.12 KB   ← −2.3 KB
+multi full     4486.59 KB   4485.96 KB
+single reuse    733.73 KB    733.36 KB
+```
+★ **横ばい**。**アウトライン走査は glyph ごとに memo 済み**（`MusicProfileCache`）で、
+**padding は 3 種の script でしか走らない**（他は `pad = 0` で生の skyline をそのまま返す）。
+⚠️ **⑦ 引用ラチェットに 1 度捕まった**（742→743）。`ly/engraver-init.ly` の行を**推測で書いた**
+のが正体（`:1080-1120`）。**実際に開いて `:359 \name Voice` と `:414 \consists Script_engraver` を
+読み**、**記号名を住所と同じ行に置いて 742 に戻した。§7 が効いた 8 例目。**
 
 ⚠️ **仕事は 3 つ・実装は 2 commit**（**`git show 8989e76b..` で引ける**——`8989e76b` は
 第90セッションの最後＝この作業の親。**引継ぎに自分の commit のハッシュは書けない**）。
@@ -74,6 +181,43 @@ C 残り 2 つの profile も同じ   摂動で 3 本の**assertion**が落ち�
 D 4 つ目＝鎖を閉じる下譜        摂動で 1 本の**assertion**が落ちる   テスト +1・snapshot 0
   （PAGE pass。remark の「無理」が古かった）
 ```
+
+**未 push 65**（**この handoff を含む commit まで**＝`--amend` で入れた。
+⚠️ **足し算しない**。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ 私は push していない**）・テスト **4034 passed / 0 failed / 4 skipped**（**開始時 4028**＝
+新テスト 6 本＝**台帳 4 点 ＋ unit 2 本**）・台帳 **470 点**
+（**ss 非ゼロ 85・総和 3.775246413**／**count 点 106・うち非ゼロ 2**）。
+⚠️ **総和が 0.158 増えたのは退行ではない**——**新しい 4 点が非ゼロで開いた分**
+（**+0.045 ×2・−0.036・−0.032**）。**開始時の 81 点・3.617525637 はそのまま。**
+**Core 0 warning。snapshot 再ベース 0 枚・承認事項なし。**
+⚠️ **開始時の §0 裏取りでは引継ぎが 1 桁も stale でなかった**（HEAD・未push・テスト・台帳 全一致）。
+
+⚠️⚠️ ★★★ **次に触るときの注意を 4 つ**:
+```
+⑴ 次の島＝**頭の半分**      **script のプロファイルは閉じた**（⑤''）。**残差は 2 冊とも −0.03 台で
+                        一致していて、その正体は隣で開いている placement の項**＝
+                        **`script.{staccato,marcato}-below.staff-to-ink-top` の +0.045000**。
+                        **Lily# は script を「音符中心 − 名目半分 0.5 − padding」で座らせ、
+                        LP は「その頭の LILC ink 底 0.545053 − padding」で座らせる。**
+                        ⇒ **`ArticulationEngraver` の `NoteheadHalfHeight` を頭ごとの実 ink に
+                        替える**。**観測者は 4 点ある**（placement 2 点が直接・gap 2 点が従属）。
+                        ⚠️ **符頭の種類ごとに違う**（全音符 0.545053・黒玉は別）ので、
+                        **`GlyphMetrics` の頭ごとの箱を引くこと**（`script-priority.ly` header の
+                        「aligned_side が勝つ regime」の項がこの族の親）。**snapshot は要測定**
+⑵ +0.045 の族           **頭の半分を名目 0.5 で読む**（LILC 0.545053）。**観測者は今
+                        できた**（script.{staccato,marcato}-below の 2 点）。
+                        `script-priority.ly` header の「もう観測者が無い」は**古い**
+⑶ dyn / script / beam の列  ▶ ⓪ の表の残り。**運ぶ表（`StaffInsideSpanners`）に無い**ので
+                        増やすならそこから。**ただし script は ⑴ が先**——
+                        **3 つの綴りが 1 つになる前に列を増やすと、綴りが 4 つになる**
+⑷ 梁の休符シフト        部屋にも鎖にも 4 か所にも無い。入れるなら 5 か所同時（第90セッション ⑤）
+```
+
+## 以下は第91セッションの経緯
+
+最終更新 第91セッション（＝**引継ぎ ⑴ の島を閉じた。予告されていた「snapshot が動くから要承認」は
+測ったら偽で、0 枚・承認不要だった。そして塞ぎに行った先で、*部屋*の側テーブル自体が
+第2声部を見ていないという別の欠陥が出た**）。
 
 ★★★ **① ⑴ は閉じた。`staffProfile`（stacker の seed）が `tupletBrackets`/`slurs`/`ties` を
 既定のまま `BuildStaffSkylines` に渡していた。** **測った 3 冊**（**部屋を陽性対照に**）:
@@ -9135,10 +9279,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **「要承認」という予告のほうが外れていた**）。**部屋が表を運び、4 か所は `SpannersOf` で引く。**
   ⚠️ **残るのは dyn / script / beam の列**——**運ぶ表（`StaffInsideSpanners`）に入っていない**。
   **入れるならそこから。`:2370` の 3 つは未測定。**
-  ⚠️ **もう 1 つ（未着手・ここが次の島）**: 同じ script を
-  **支持 ±0.6 の名目箱／mover 実アウトライン**で 2 回読んでいる（**0.598269 対 1.065278**）。
-  **コード内の `LILYSHARP-OWN` が「観測者が来るまで待つ」と書いているが、観測者は
-  部屋の数として既にできている。**
+  ✅ **script の列は閉じた**（2026-08-05・第92セッション。**プロファイルの 4 綴りを 1 本化**——
+  経緯は §1 と `probes/dynamic-support.ly` の round 3 に、規則は
+  `ArticulationSpacing.SkylineHorizontalPadding` の REF に）。**dyn / beam の列は残っている。**
 - ★★★ **符尾の attachment X が「符頭ごと」でなく「黒玉固定」**（2026-08-03・第77セッション。
   **測って名指しただけ・未修正**・▶ の先頭）。`LayoutUtilities.StemAttachX` は
   `NoteheadBlackStemAttachment.X` を**符頭によらず**返す。LP は**符頭ごとの ink 右端 − thickness/2**

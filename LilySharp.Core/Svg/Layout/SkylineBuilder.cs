@@ -1146,16 +1146,18 @@ internal sealed class SkylineBuilder
         {
             // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
             // translate it to this skyline's Y-up frame (its origin is the staff top).
-            // Ink.Top/Bottom stay up-positive, so they ADD in Y-up.
-            // Both the offset and the glyph's box belong to this staff; a.X is the column.
+            // Both the offset and the glyph belong to this staff; a.X is the column.
             double y = size.Span(a.YUp) + staffMiddleUp;
-            var ink = size.Ink(a.Ink);
-            double inkTop = y + ink.Top;
-            double inkBottom = y + ink.Bottom;
-            var box = VerticalSkyline.FromBox(
-                a.X + ink.Left, a.X + ink.Right, inkBottom, inkTop,
-                a.IsAbove ? VerticalDirection.Up : VerticalDirection.Down);
-            (a.IsAbove ? upSkyline : downSkyline).Merge(box);
+            // THE Script grob's profile, from its one house: the glyph's real outline padded
+            // by its own skyline-horizontal-padding. The same object the movers of this very
+            // grob are placed with, because LilyPond has ONE vertical-skylines per grob and
+            // hands it to every consumer.
+            // LILYPOND-REF: scm/define-grobs.scm:3006 grob::always-vertical-skylines-from-stencil
+            //   — the Script's own declaration; lily/axis-group-interface.cc:914-935
+            //   inside_staff_skylines merges exactly that property, and the outside-staff
+            //   movers then clear it.
+            var (up, down) = ArticulationEngraver.ScriptSkylines(a, y, size.Magnification);
+            (a.IsAbove ? upSkyline : downSkyline).Merge(a.IsAbove ? up : down);
         }
     }
 

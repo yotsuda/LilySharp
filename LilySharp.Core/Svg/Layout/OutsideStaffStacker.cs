@@ -280,18 +280,19 @@ internal static class OutsideStaffStacker
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
                     && staffYBySystem[sysIdx].TryGetValue(a.StaffIndex, out var sso) ? sso : 0;
                 double aYup = a.YUp - off - 2.0;
-                // Glyph roughly centered on its anchor; half-extent ~0.6sp below.
-                // Support ink: only the DOWN side carries information for a
-                // below-staff stack (the up side stays the staff-edge base).
-                // ⚠️ A nominal ±0.6 box (LILYSHARP-OWN): the same grob's MOVERS read the
-                // glyph's real outline (ArticulationEngraver.ScriptSkylines), which is the
-                // one profile LilyPond uses for both roles. Replacing it moves every
-                // below-staff dynamic that sits under a script (measured: ~0.4-0.5 closer to
-                // the staff, because a staccato's real ink is far smaller than this box), so
-                // it waits for the point that observes it — a dynamic under a script, which
-                // the dynamic island's books (dynamic-support.ly) do not have.
-                Track(sysIdx, a.StaffIndex).MergeSupport(down: VerticalSkyline.FromBox(
-                    a.X - 0.6, a.X + 0.6, aYup - 0.6, aYup + 0.6, VerticalDirection.Down));
+                // The Script grob's profile, from its one house (the padded outline) — the
+                // same object the staff skyline seeds and the movers of this grob are placed
+                // with. Only the DOWN side carries information for a below-staff stack (the
+                // up side stays the staff-edge base).
+                // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines —
+                //   a priority-less script's own profile is what goes into it.
+                // ⚠️ In the regime the ledger books measure this merge is INERT (the
+                // tracker's base is already the staff profile, which now carries the same
+                // object): widening the old ±0.6 box to ±3.0 moved neither DSK nor DSM. It is
+                // load-bearing where no staff profile is supplied, and it must not be a
+                // second spelling there either.
+                var (_, seedDown) = ArticulationEngraver.ScriptSkylines(a, aYup);
+                Track(sysIdx, a.StaffIndex).MergeSupport(down: seedDown);
             }
         }
 

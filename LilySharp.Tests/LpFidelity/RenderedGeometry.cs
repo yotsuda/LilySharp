@@ -857,6 +857,23 @@ internal sealed class RenderedGeometry
     /// says the book is multi-staff on purpose (the lower-staff regime, ledger
     /// <c>script.lower-staff.*</c>) and then only the count has to cover it.</param>
     public double FermataInkEdgeAboveStaff(bool above = true, int page = 0, int staff = -1)
+        => ScriptInkEdgeAboveStaff(
+            above ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow,
+            above ? GlyphMetrics.FermataAboveGlyph : GlyphMetrics.FermataBelowGlyph,
+            above, page, staff);
+
+    /// <summary>
+    /// <see cref="FermataInkEdgeAboveStaff"/> for ANY script glyph: the sole
+    /// <paramref name="glyph"/>'s staff-FACING ink edge above the named staff's refpoint,
+    /// signed up-positive. The fermata reading is this one with the fermata's glyph and box,
+    /// so a script whose placement a point measures is read one way only (the two entries of
+    /// dynamic-support.ly's round 3 are a staccato and a marcato, not fermatas).
+    /// </summary>
+    /// <param name="glyph">The drawn Emmentaler character; it must appear exactly once.</param>
+    /// <param name="box">That glyph's LILC box, whose facing edge is the quantity — the same
+    /// box LilyPond dumps as the Script grob's own Y-extent.</param>
+    public double ScriptInkEdgeAboveStaff(
+        char glyph, GlyphMetrics.BBox box, bool above = true, int page = 0, int staff = -1)
     {
         var refs = StaffRefpoints(page);
         if (staff < 0 ? refs.Count != 1 : refs.Count <= staff)
@@ -867,16 +884,14 @@ internal sealed class RenderedGeometry
                 + "\nDrawn geometry:\n" + Describe());
         }
         int staffIndex = staff < 0 ? 0 : staff;
-        char glyph = above ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow;
         var f = Glyphs.Where(g => g.Glyph == glyph).ToList();
         if (f.Count != 1)
         {
             throw new InvalidOperationException(
-                $"page {page}: expected exactly ONE {(above ? "above" : "below")} fermata "
-                + $"glyph, found {f.Count} — the probe is not measuring what it claims."
-                + "\nDrawn geometry:\n" + Describe());
+                $"page {page}: expected exactly ONE {(above ? "above" : "below")} script glyph "
+                + $"U+{(int)glyph:X4}, found {f.Count} — the probe is not measuring what it "
+                + "claims.\nDrawn geometry:\n" + Describe());
         }
-        var box = above ? GlyphMetrics.FermataAboveGlyph : GlyphMetrics.FermataBelowGlyph;
         // Device-down: an edge `e` staff-spaces up from the drawn origin sits at Y - e.
         double edge = above ? box.Bottom : box.Top;
         return refs[staffIndex] - (f[0].Y - edge);

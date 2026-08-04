@@ -68,6 +68,25 @@ public sealed record ArticulationItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>
+    /// Zero-based voice index within the staff this articulation was written in.
+    /// <see cref="ItemIndex"/> counts items of THAT voice, so the note a script hangs off
+    /// can only be found by going through it: a script resolved over the staff's primary
+    /// voice lands on whatever note happens to share the index — in a two-voice staff, the
+    /// upper voice's note, at the upper voice's pitch and (when the rhythms differ) at the
+    /// upper voice's column. The sibling on the same note has carried this since the
+    /// dynamics island: see <c>DynamicItem.VoiceIndex</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:359,414-416 Script_engraver — the <c>\name Voice</c>
+    ///   context consists it, so a script is a grob of its own voice's context, and
+    ///   lily/script-engraver.cc:234-250 acknowledge_rhythmic_head takes the heads of THAT
+    ///   context (:410 is where the same file consists Dynamic_align_engraver).
+    /// Measured: audit/lp-geometry <c>script.{staccato,marcato}-below.staff-to-ink-top</c>
+    /// (LilyPond reads one number for both glyphs; a primary-voice anchor spread them 0.9).
+    /// </remarks>
+    public int VoiceIndex { get; init; }
+
     /// <summary>Creates an articulation mark of the given type.</summary>
     public ArticulationItem(ArticulationType type, int measureIndex, int itemIndex,
         bool isAbove, int sourcePosition, int staffIndex = 0)

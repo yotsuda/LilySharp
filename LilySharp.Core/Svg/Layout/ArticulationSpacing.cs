@@ -97,4 +97,31 @@ internal static class ArticulationSpacing
             or ArticulationType.FermataLong => 75,
         _ => null,
     };
+
+    /// <summary>
+    /// How far this script's own skyline is PADDED along the horizon before anything reads
+    /// it — 0 for all but three scripts.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/script.scm:86-94 skyline-horizontal-padding (downbow 0.20), and the
+    ///   same key at :392 staccatissimo 0.10 / :407 staccato 0.10 — the
+    ///   only three entries in the whole file that declare it; every other script leaves it
+    ///   unset and scm/define-grobs.scm's Script declares none, so the default 0.0 stands.
+    /// LILYPOND-REF: lily/stencil-integral.cc:881-893 Grob::vertical_skylines_from_stencil —
+    ///   the property IS the stencil's skyline <c>.pad()</c>ed by that number, so every
+    ///   consumer of a Script's profile sees the padded shape, never the raw outline.
+    /// <para>
+    /// ⚠️ IT IS NOT COSMETIC ON A SMALL GLYPH. Measured out of LilyPond on the staccato dot
+    /// (audit/lp-geometry probes/dynamic-support.ly DSK): the raw outline is a polygon
+    /// 0.4 wide reaching 0.2 deep at ONE point, and the padded property is 0.8 wide with
+    /// that 0.2 held flat across ±0.1 — so a dynamic under a dot clears an obstacle twice
+    /// the glyph's width. Reading the unpadded outline there put the label 0.12 too close.
+    /// </para>
+    /// </remarks>
+    public static double SkylineHorizontalPadding(ArticulationType type) => type switch
+    {
+        ArticulationType.Staccato or ArticulationType.Staccatissimo => 0.10,
+        ArticulationType.DownBow => 0.20,
+        _ => 0.0,
+    };
 }

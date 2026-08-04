@@ -50,6 +50,12 @@ internal readonly record struct ArticulationLayout(
     GlyphMetrics.BBox Ink = default, // Ink box relative to the anchor (for skyline seeding)
     int SourceIndex = -1,   // F3/B: index into score.Articulations (data-pos resolved at render)
     int StaffIndex = 0,     // Which staff this script sits on (per-staff below-staff seeding)
+    // The script's DECLARED skyline-horizontal-padding (staccato/staccatissimo 0.10,
+    // downbow 0.20, everything else 0) — baked from the type exactly as the priority below
+    // is. It is not decoration: LilyPond's Script profile IS its stencil skyline PADDED by
+    // this number (lily/stencil-integral.cc:881-893), so every consumer of the profile sees
+    // a shape up to 2× the glyph's own width. See ArticulationSpacing.SkylineHorizontalPadding.
+    double SkylineHorizontalPadding = 0.0,
     int? OutsideStaffPriority = null // The script's DECLARED outside-staff-priority (the
                             // fermata family's 75), or null for the scripts that declare
                             // none — LilyPond's #f, which is not a zero (a grob declaring 0
@@ -219,10 +225,25 @@ internal static class ArticulationEngraver
                 && articulation.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
-            // Resolve this articulation's OWN staff (multi-staff): its measures
-            // (to read the right note's staff position) and the staff's vertical
-            // offset within the system, so it sits under its own staff.
-            var artMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, articulation.StaffIndex, score.Voice.Measures);
+            // Resolve this articulation's OWN staff (multi-staff) and, within it, its OWN
+            // VOICE: ItemIndex counts the items of the voice the script was written in, so
+            // the staff's primary-voice list answers with whatever note shares the index —
+            // in a two-voice staff, the upper voice's, at its pitch and (once the rhythms
+            // differ) at its column. The \f on the same note has resolved through its voice
+            // since the dynamics island; this is the same lookup, one house.
+            // LILYPOND-REF: lily/script-engraver.cc:234-250 acknowledge_rhythmic_head — the
+            //   heads it takes are its own Voice context's (ly/engraver-init.ly:414-416
+            //   Script_engraver).
+            // Measured: audit/lp-geometry script.{staccato,marcato}-below.staff-to-ink-top —
+            //   LilyPond reads ONE number for both glyphs; the primary-voice anchor spread
+            //   them by 0.9 and parked both inside the staff.
+            var artVoices = staffByIndex != null
+                && staffByIndex.TryGetValue(articulation.StaffIndex, out var voiceStaff)
+                && !voiceStaff.Voices.IsDefaultOrEmpty
+                    ? voiceStaff.Voices : score.Voices;
+            var staffMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, articulation.StaffIndex, score.Voice.Measures);
+            var artMeasures = LayoutUtilities.ResolveVoiceMeasures(
+                artVoices, articulation.VoiceIndex, staffMeasures);
             double staffOffset = staffYAt?.Invoke(articulation.MeasureIndex, articulation.StaffIndex) ?? 0;
 
             if (articulation.MeasureIndex >= artMeasures.Length)
@@ -334,17 +355,16 @@ internal static class ArticulationEngraver
             //   Side_position_interface::add_support (script, stem).
             // Here the note's pitch-natural StemUp is the WRONG direction for a
             // multi-voice staff (a high voice-1 note is drawn stem-UP), so the up-stem
-            // would pierce the glyph. Articulations resolve against the staff's
-            // PRIMARY voice (LayoutEngine sets measuresByStaff = PrimaryVoice), so use
-            // voice 1's forced direction. Mirrors SkylineBuilder / DynamicEngraver.
-            // (Beamed members refine this from the beam just below.)
+            // would pierce the glyph. The direction that governs is the one of the script's
+            // OWN voice — \voiceOne up, \voiceTwo down — the same voice its anchor note came
+            // from just above. (Beamed members refine this from the beam just below.)
             // Only inside the voice { } span, though — outside it voice 1 is the
             // only voice and keeps its pitch-natural direction.
             // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
             if (staffByIndex != null
                 && staffByIndex.TryGetValue(articulation.StaffIndex, out var ownStaff)
                 && VoiceDefaults.GetDefaultStemUpAt(
-                    ownStaff.Voices, 0, articulation.MeasureIndex) is { } voiceStemUp)
+                    ownStaff.Voices, articulation.VoiceIndex, articulation.MeasureIndex) is { } voiceStemUp)
                 stemUp = voiceStemUp;
 
             // A beamed member's stem ends on the BEAM, not at the unbeamed
@@ -352,7 +372,8 @@ internal static class ArticulationEngraver
             BeamLayout? memberBeam = null;
             double memberStemX = 0.0;
             if (beamedTips.TryGetValue(
-                (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
+                (articulation.StaffIndex, articulation.VoiceIndex,
+                 articulation.MeasureIndex, articulation.ItemIndex),
                 out var beamTip))
             {
                 memberBeam = beamTip.Beam;
@@ -381,7 +402,8 @@ internal static class ArticulationEngraver
                 var geom = new TabStaffGeometry(
                     tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
                 bool isTabBeamed = beamGroups.TryGetValue(
-                    (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
+                    (articulation.StaffIndex, articulation.VoiceIndex,
+                     articulation.MeasureIndex, articulation.ItemIndex),
                     out var tabBeam);
                 bool tabBeamUp = tabBeam is not null
                     && geom.GroupStemUp(tabBeam.Group.Members.Select(m => m.Item));
@@ -478,7 +500,10 @@ internal static class ArticulationEngraver
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, colX, tabYUp,
                     tabGlyph, tabAbove, articulation.SourcePosition, FontSizeStep: 0.0,
-                    GetSeedBBox(articulation.Type), SourceIndex: arti, StaffIndex: articulation.StaffIndex));
+                    GetSeedBBox(articulation.Type), SourceIndex: arti,
+                    StaffIndex: articulation.StaffIndex,
+                    SkylineHorizontalPadding:
+                        ArticulationSpacing.SkylineHorizontalPadding(articulation.Type)));
                 continue;
             }
 
@@ -548,6 +573,8 @@ internal static class ArticulationEngraver
                 seedBBox,
                 SourceIndex: arti,
                 StaffIndex: effArt.StaffIndex,
+                SkylineHorizontalPadding:
+                    ArticulationSpacing.SkylineHorizontalPadding(effArt.Type),
                 OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt.Type)
             ));
         }
@@ -743,8 +770,43 @@ internal static class ArticulationEngraver
     /// staff-local tab array, which carries no glyph string at all.
     /// </para>
     /// </remarks>
+    /// <param name="a">The script whose profile this is.</param>
+    /// <param name="anchorY">The glyph origin's Y in the caller's Y-up frame.</param>
+    /// <param name="magnification">The size the STAFF is engraved at (an ossia's
+    /// magstep(-3), 1.0 otherwise). LilyPond scales a glyph's whole metric by the context
+    /// magnification — LILYPOND-REF: lily/modified-font-metric.cc:62-68 get_indexed_char_dimensions,
+    /// whose whole body is <c>b.scale (magnification_)</c> — so it rides
+    /// the font size the outline is walked at, and the horizon padding (a staff-space
+    /// quantity of that staff) rides it too.
+    /// ⚠️ The optical DESIGN is still the one this grob's own font-size step selects: an
+    /// ossia is <c>fontSize = #-3</c> in LilyPond and would select the 14, which is a
+    /// separate island — the box spelling this replaced scaled the 20 the same way.</param>
     internal static (VerticalSkyline Up, VerticalSkyline Down) ScriptSkylines(
-        in ArticulationLayout a, double anchorY)
+        in ArticulationLayout a, double anchorY, double magnification = 1.0)
+    {
+        var (rawUp, rawDown) = RawScriptSkylines(a, anchorY, magnification);
+        // THE PROFILE IS THE PADDED ONE. LilyPond does not hand anybody the bare outline: the
+        // `vertical-skylines` property every consumer reads is the stencil's skyline PADDED
+        // along the horizon by this script's own declaration.
+        // LILYPOND-REF: lily/stencil-integral.cc:881-893 Grob::vertical_skylines_from_stencil
+        //   — skylines_from_stencil(...) then p.pad (skyline-horizontal-padding).
+        // ⚠️ MEASURED, and it is the difference between a right and a wrong obstacle: dumped
+        // out of LilyPond for a staccato (audit/lp-geometry probes/dynamic-support.ly, DSK),
+        // the stencil skyline is a polygon (±0.2 . 0) reaching 0.2 deep at ONE point, while
+        // the property reads 0.2 flat across ±0.1 and runs out to ±0.4 — Skyline::padded's
+        // flat-then-45°-sloped extension, corner for corner. Reading the bare outline put a
+        // dynamic under a dot 0.12 too close; the marcato, which declares no padding, was
+        // right either way.
+        double pad = a.SkylineHorizontalPadding * magnification;
+        return pad > 0.0 ? (rawUp.Padded(pad), rawDown.Padded(pad)) : (rawUp, rawDown);
+    }
+
+    /// <summary>The stencil's own outline, before the horizon padding — LilyPond's
+    /// <c>skylines_from_stencil</c> half of the callback above. Nothing outside
+    /// <see cref="ScriptSkylines"/> should read this: LilyPond has no consumer of the
+    /// unpadded profile.</summary>
+    private static (VerticalSkyline Up, VerticalSkyline Down) RawScriptSkylines(
+        in ArticulationLayout a, double anchorY, double magnification)
     {
         // The size the renderer draws at (SharedRenderer: FontSize × the grob's magstep);
         // the flattening happens at the transformed size, which is why it is in the key.
@@ -755,7 +817,7 @@ internal static class ArticulationEngraver
         {
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
                 a.Glyph[0],
-                SharedRenderer.FontSize * EmmentalerDesignSize.Magstep(a.FontSizeStep),
+                SharedRenderer.FontSize * EmmentalerDesignSize.Magstep(a.FontSizeStep) * magnification,
                 a.X, anchorY,
                 EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded);
             if (!up.IsEmpty || !down.IsEmpty)
@@ -763,10 +825,10 @@ internal static class ArticulationEngraver
         }
         // No walkable glyph: the designed box, as before.
         var box = a.Ink;
-        return (VerticalSkyline.FromBox(a.X + box.Left, a.X + box.Right,
-                    anchorY + box.Bottom, anchorY + box.Top, VerticalDirection.Up),
-                VerticalSkyline.FromBox(a.X + box.Left, a.X + box.Right,
-                    anchorY + box.Bottom, anchorY + box.Top, VerticalDirection.Down));
+        double l = a.X + box.Left * magnification, r = a.X + box.Right * magnification;
+        double b = anchorY + box.Bottom * magnification, t = anchorY + box.Top * magnification;
+        return (VerticalSkyline.FromBox(l, r, b, t, VerticalDirection.Up),
+                VerticalSkyline.FromBox(l, r, b, t, VerticalDirection.Down));
     }
 
     /// <summary>
@@ -850,35 +912,36 @@ internal static class ArticulationEngraver
     /// plus the beam-resolved stem direction. A beamed stem ends on the beam
     /// line — the unbeamed length formula under- or over-clears it — so the
     /// script support must read the quanted end.
-    /// Sub-voice beams (VoiceIndex &gt; 0) are excluded: an articulation only
-    /// carries measure/item indices, which are resolved against the PRIMARY
-    /// voice, so a sub-voice key could collide with a primary-voice item.
+    /// ⚠️ Keyed by VOICE as well, and every voice's beams are in it: the key used to drop
+    /// sub-voice groups because an articulation carried no voice and a sub-voice key could
+    /// collide with a primary-voice item. It carries one now
+    /// (<see cref="ArticulationItem.VoiceIndex"/>), so the exclusion would only hide a
+    /// lower voice's beam from its own script.
     /// LILYPOND-REF: lily/stem.cc — a beamed stem's end comes from the beam;
     /// side-position then sees that real extent via the stem support.
     /// </summary>
     /// <summary>
-    /// Maps each primary-voice beamed item to its beam group, so the tab branch can
-    /// find the group's outer beam edge (the tab beam Y lives only in the renderer's
-    /// geometry, recomputed here from the group's members via TabStaffGeometry).
+    /// Maps each beamed item to its beam group by (staff, voice, measure, item), so the tab
+    /// branch can find the group's outer beam edge (the tab beam Y lives only in the
+    /// renderer's geometry, recomputed here from the group's members via TabStaffGeometry).
     /// </summary>
-    private static Dictionary<(int Staff, int Measure, int Item), BeamLayout>
+    private static Dictionary<(int Staff, int Voice, int Measure, int Item), BeamLayout>
         BuildBeamGroupMap(ImmutableArray<BeamLayout> beamLayouts)
     {
-        var map = new Dictionary<(int, int, int), BeamLayout>();
+        var map = new Dictionary<(int, int, int, int), BeamLayout>();
         if (beamLayouts.IsDefaultOrEmpty)
             return map;
         foreach (var beam in beamLayouts)
         {
             var group = beam.Group;
-            if (group.VoiceIndex != 0)
-                continue;
             for (int i = 0; i < group.Members.Length; i++)
             {
                 var member = group.Members[i];
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty && i < beam.MemberStaffIndices.Length
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
-                map[(staff, member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] = beam;
+                map[(staff, group.VoiceIndex,
+                     member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] = beam;
             }
         }
         return map;
@@ -909,17 +972,15 @@ internal static class ArticulationEngraver
         return TabBeamMath.At(line, noteX) + (up ? -half : half);
     }
 
-    private static Dictionary<(int Staff, int Measure, int Item), (BeamLayout Beam, double MemberX, bool StemUp)>
+    private static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double MemberX, bool StemUp)>
         BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts)
     {
-        var tips = new Dictionary<(int, int, int), (BeamLayout, double, bool)>();
+        var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
         if (beamLayouts.IsDefaultOrEmpty)
             return tips;
         foreach (var beam in beamLayouts)
         {
             var group = beam.Group;
-            if (group.VoiceIndex != 0)
-                continue;
             for (int i = 0; i < group.Members.Length && i < beam.MemberXPositions.Length; i++)
             {
                 var member = group.Members[i];
@@ -931,7 +992,8 @@ internal static class ArticulationEngraver
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
-                tips[(staff, member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] =
+                tips[(staff, group.VoiceIndex,
+                      member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] =
                     (beam, beam.MemberXPositions[i], member.MemberStemUp);
             }
         }

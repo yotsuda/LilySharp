@@ -76,9 +76,9 @@
   <text x="44.53" y="25.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="264">f</text>
   <text x="48.86" y="25.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="273">f</text>
   <text x="57.89" y="25.29" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="289">p</text>
-  <text x="61.81" y="26.69" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="376">p</text>
-  <text x="64.81" y="27.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="387">f</text>
-  <text x="67.82" y="25.60" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="398">mf</text>
+  <text x="61.81" y="26.25" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="376">p</text>
+  <text x="64.81" y="26.61" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="387">f</text>
+  <text x="67.82" y="25.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="398">mf</text>
   <text class="music" x="61.81" y="24.47" font-size="4.00" data-pos="367"></text>
   <text class="music" x="64.81" y="24.19" font-size="4.00" data-pos="380"></text>
   <text class="music" x="67.82" y="23.35" font-size="4.00" data-pos="391"></text>

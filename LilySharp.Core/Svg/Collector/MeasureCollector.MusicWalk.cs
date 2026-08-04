@@ -454,7 +454,8 @@ public sealed partial class MeasureCollector
                                 ? ArticulationType.Stopped
                                 : ArticulationType.Flageolet,
                             drumMeasureIndex, drumItemIndex, true,
-                            drumNote.Position, _currentStaffIndex));
+                            drumNote.Position, _currentStaffIndex)
+                        { VoiceIndex = _currentVoiceIndex });
                     CollectDynamics(drumNote, drumMeasureIndex, drumItemIndex);
                     CollectArticulations(drumNote, drumMeasureIndex, drumItemIndex, drumItem.StemUp,
                         null, drumAnchorTiming);

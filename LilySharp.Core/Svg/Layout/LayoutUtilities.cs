@@ -190,6 +190,47 @@ internal static class LayoutUtilities
             ? mm : fallback;
 
     /// <summary>
+    /// The item an annotation hangs off: its OWN voice's item at (measure, index), or null
+    /// when the voice or the index is out of range. An annotation's ItemIndex counts the
+    /// items of the voice it was written in, so resolving it against the staff's PRIMARY
+    /// voice returns whatever note happens to share the index — a different pitch, and a
+    /// different column as soon as the two voices' rhythms differ.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:359,414-416 Script_engraver — the <c>\name Voice</c>
+    ///   context consists it (and :410 the Dynamic_align_engraver), so both grobs see their
+    ///   OWN context's heads: lily/script-engraver.cc:234-250 acknowledge_rhythmic_head and
+    ///   lily/dynamic-align-engraver.cc:108-117 acknowledge_rhythmic_head.
+    /// ONE house for both (HANDOFF §5.2.1②): the dynamics island grew this lookup first, and
+    /// the scripts' identical one was missing until the placement pair
+    /// <c>script.{staccato,marcato}-below.staff-to-ink-top</c> measured its price.
+    /// </remarks>
+    public static MusicItem? VoiceItemAt(
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (voices.IsDefaultOrEmpty)
+            return null;
+        var voice = voices[Math.Clamp(voiceIndex, 0, voices.Length - 1)];
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            return null;
+        var items = voice.Measures[measureIndex].Items;
+        return itemIndex >= 0 && itemIndex < items.Length ? items[itemIndex] : null;
+    }
+
+    /// <summary>
+    /// The measures an annotation's ItemIndex counts against: its own voice's when that
+    /// voice exists, else the staff's (a single-voice staff, where the two coincide).
+    /// The companion of <see cref="VoiceItemAt"/> for the callers that need the whole
+    /// measure list — item X resolution walks the voice's items to reach a timing
+    /// (<see cref="GetItemXOffset"/>), so it must walk the SAME list the index came from.
+    /// </summary>
+    public static ImmutableArray<Measure> ResolveVoiceMeasures(
+        ImmutableArray<Voice> voices, int voiceIndex, ImmutableArray<Measure> fallback)
+        => voices.IsDefaultOrEmpty
+            ? fallback
+            : voices[Math.Clamp(voiceIndex, 0, voices.Length - 1)].Measures;
+
+    /// <summary>
     /// Builds a map from measure index to (system, measureLayout) for quick lookup.
     /// </summary>
     public static Dictionary<int, (SystemLayout System, MeasureLayout Measure)> BuildMeasureMap(

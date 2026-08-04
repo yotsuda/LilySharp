@@ -118,6 +118,150 @@
 %% Unfittable without Pango (this header's own instruction: do NOT bake the measured
 %% widths); the family is named in the DSQ/DMF whys.
 
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% ROUND 3 (2026-08-04, session 92) — WHOSE PROFILE IS A SCRIPT? The books for the
+%% LILYSHARP-OWN that OutsideStaffStacker's below seed has carried since session 40.
+%%
+%% A below-staff script that declares NO outside-staff-priority (staccato, marcato,
+%% accent, the ornaments) is INSIDE-staff ink in LilyPond: axis-group-interface.cc:914-935
+%% seeds all_v_skylines with exactly the grobs whose priority is unset, and the movers at
+%% 250 (DynamicLineSpanner) then clear that accumulated profile by outside-staff-padding
+%% 0.46. The profile a Script contributes is its STENCIL skyline — define-grobs.scm:3006
+%% grob::always-vertical-skylines-from-stencil, i.e. the glyph's real OUTLINE, the same
+%% object side-position hands the mover half of the same grob (script-priority.ly's SPS is
+%% what proved it must be pointwise: a flat box cannot straddle a thin stem).
+%%
+%% Lily# spells that one profile THREE ways today, and this pair observes the third:
+%%   1. ArticulationEngraver.ScriptSkylines — the real outline (movers: the fermata family)
+%%   2. SkylineBuilder.AddArticulationLayoutsToSkyline — the designed INK BOX (staff skyline)
+%%   3. OutsideStaffStacker's below seed — a NOMINAL +-0.6 BOX around the glyph origin,
+%%      which is neither: `VerticalSkyline.FromBox(a.X +- 0.6, aYup +- 0.6)`. Its own
+%%      comment says it waits for "a dynamic under a script, which the dynamic island's
+%%      books do not have". These two books ARE that dynamic under a script.
+%%
+%% THE PAIR STRADDLES THE BOX (HANDOFF 5.0: put the points on BOTH sides of the boundary,
+%% because then the finding is "the shape is wrong", not "the number is wrong"):
+%%   DSK — a STACCATO forced below the whole a1: Emmentaler's dot is +-0.2, so the nominal
+%%         box reaches 0.4 DEEPER than the ink. Lily# must push the \f too far DOWN.
+%%   DSM — a MARCATO forced below the same note: dmarcato's box is (-0.5 . 0)x(-1.1 . 0)
+%%         with the origin at its TOP, so the nominal box stops 0.5 SHORT of the V's tip
+%%         (and claims 0.6 of ink ABOVE the origin, where the glyph has none). Lily# must
+%%         push the \f too LITTLE — the opposite sign, from the same one constant.
+%% Both are DSW plus one character, so LilyPond's whole no-stem chain (whole-head ink +
+%% 0.6 + dynamic ink + 3.05) is the base and the pair's difference from DSW is the SCRIPT
+%% TERM alone. Whole notes, so the structural claim of DSW holds here too: ZERO Stem rows.
+%% The direction is forced with `_` rather than left to \voiceTwo, because a script's
+%% default side is the one opposite the stem and there is no stem in these books.
+%%
+%% PREDICTIONS, written before running:
+%%   * BOTH: gap > DSW's 10.783076, i.e. the script IS in the collision pass. ★ FALSIFIER,
+%%     and it is the strong one: if either book reads 10.783076 to six digits, then a
+%%     priority-less below script reaches a dynamic in LilyPond NOT AT ALL, Lily#'s
+%%     MergeSupport is an invention with no LilyPond behind it, and the port is a DELETION
+%%     rather than a re-spelling. Record which book, because the two glyphs differ in
+%%     whether their ink leaves the note's own vertical band.
+%%   * DSK: the dot's ink bottom - 0.46 decides the DynamicText top, so
+%%     DSK - DSW = (head ink bottom - dot ink bottom) + (0.6 - 0.46) - as read off the
+%%     dumped Script row, NOT fitted. Order 0.5-1.0.
+%%   * DSM: the same chain with the V's tip, so DSM - DSK = the two glyphs' ink-bottom
+%%     difference exactly (both are centred on the same head, both clear by 0.46).
+%%     ⚠️ The pointwise term rides here and NOT in DSK: the dot is 0.4 wide and sits over
+%%     the f's own centre, where the f's ink top is a plateau; the V is 1.0 wide and its
+%%     underside RISES away from the tip, so if LilyPond's distance is pointwise the \f
+%%     may tuck INTO the V and DSM - DSK comes out SMALLER than the ink-bottom difference.
+%%     That tuck, if it happens, is the pointwise falsifier for the box shape itself.
+%%   * Lily# mirrors (written before its run, both signs named): the nominal box makes the
+%%     \f clear `origin - 0.6 - 0.46` in BOTH books whatever the glyph is, so
+%%     DSK and DSM must read NINE-DIGIT IDENTICAL to each other — the structural half of
+%%     the defect, exactly as DSQ/DSB read identical before session 37 — with residual
+%%     POSITIVE on DSK (box 0.4 deeper than the dot) and NEGATIVE on DSM (box 0.5 short of
+%%     the V), around +0.4 and -0.5 net of the placement term. ⚠️ Two of them reading
+%%     identical is the claim; the two signs are what says "one constant, two errors".
+%%   * The script's own PLACEMENT is a separate quantity and gets its own two entries
+%%     (script.staccato-below.* / script.marcato-below.*) off the same books, so the gap
+%%     residual can be decomposed into placement + profile rather than fitted as one lump.
+%%
+%% MEASURED (2026-08-04, session 92). The falsifier did NOT fire and the POINTWISE fork DID:
+%%   DSK 10.932103. Script rel -8.721 ext (-0.2 . 0.2) => ink bottom -8.921000; DynamicText
+%%     rel -10.966100 + top 1.896021 => ink top -9.070080, i.e. 0.149080 below the dot --
+%%     NOT 0.46. The dot is 0.4 wide over the f's centre and the f's outline runs 0.310920
+%%     below its own global top there, so the pass paid 0.46 AT THE DOT'S X. The move from
+%%     DSW is 0.149027, and before it the f's top stood level with the dot's bottom to
+%%     5.3e-5 -- the clean statement that the script IS in the collision pass.
+%%   DSM 11.415903. Script ink bottom -9.621000, DynamicText ink top -9.553880: the label's
+%%     ink is 0.067120 ABOVE the V's tip, TUCKED INTO the chevron. DSM - DSK = 0.483800
+%%     against the glyphs' ink-bottom difference 0.700000, so 0.216200 of the V is never
+%%     paid for. ⇒ No box of any size reproduces this pair: the seed's SHAPE is the defect.
+%%   Both books' Script ink TOP is -4.745000 about the staff refpoint = the whole head's ink
+%%     bottom -4.545053 less the script padding 0.200000 -- the SAME number for both glyphs,
+%%     i.e. LilyPond's placement half is an IDENTITY and any spread Lily# shows is defect.
+%%
+%% ⚠️⚠️ THE Lily# MIRROR LANDED ON A BRANCH NEITHER PREDICTION LISTED, and it is a SECOND
+%% DEFECT, upstream of the one these books were written for. Lily# reads DSK = DSM =
+%% 10.783000000 = the CONTROL: the script moves the label by NOTHING. The two books reading
+%% identical is what was predicted; the reason is not. The scripts are not where Lily# thinks:
+%% the placement pair reads -1.300000 (dot) and -2.200000 (chevron) against LilyPond's single
+%% -4.745000. ★ THE DOT IS HUNG ON THE WRONG VOICE'S NOTE -- ArticulationItem carries no
+%% voice index, so the engraver resolves its anchor over the staff's PRIMARY voice while the
+%% item index was recorded against the writing voice, and here that is voice one's middle-line
+%% b' instead of voice two's a. Every term follows exactly (noteUp 0, head half 0.5, near
+%% extent 0.2, padding 0.2, quantize floor(-1.8) = -2 => -1.0, on a line => -1.5, ink top
+%% -1.300000 to nine digits), and the drawn page shows the dot under the b'. The \f on the
+%% same note landed correctly because DynamicItem HAS a VoiceIndex -- one family, one member
+%% fixed (the session-91 shape again). ⇒ PORT ORDER: the voice anchor first; only then can
+%% these books see whether the seed is a box or an outline, because a script parked inside the
+%% staff has its +-0.6 box swallowed by the staff's own profile either way.
+%%
+%% PORTED, PART 1 (2026-08-05, same session): the voice anchor. Both placement readings land
+%% on ONE number (-4.700000000, LilyPond's identity reproduced) and the two gaps start
+%% moving: DSK 10.913894527 (-0.018208473), DSM 11.834649074 (+0.418746074), one nominal
+%% +-0.6 box now showing both signs exactly as the pair was designed to make it.
+%%
+%% ⚠️ PART 2 IS MEASURED AND HELD (same session). Two things were learned by trying it:
+%%   ⒜ THE +-0.6 BOX IS NOT WHAT THESE BOOKS READ. Widening it to +-3.0 moves neither book:
+%%      the below tracker's base is already the staff's own down profile, and the script
+%%      reached it through the STAFF SKYLINE's designed ink box
+%%      (SkylineBuilder.AddArticulationLayoutsToSkyline). That box is the third spelling of
+%%      one grob's profile, and it is the load-bearing one here.
+%%   ⒝ SWITCHING THAT BOX TO THE OUTLINE SPLITS THE PAIR: DSM 11.384312413 (-0.031591, a 13x
+%%      improvement) and DSK 10.795332563 (-0.136770, WORSE by 0.12).
+%%   ⒞ ⚠️ THE FIRST EXPLANATION OF ⒝ WAS WRONG AND IS RETRACTED. It said Lily# walks the
+%%      curve more finely than LilyPond (freetype.cc:121-146 quantizes cubics into
+%%      max(2, chord/0.2) lines). LilyPond does — and TextOutlineSkylines ALREADY PORTS it,
+%%      so it cannot be the difference. What IS: LILYPOND'S OBSTACLE IS NOT THE GLYPH
+%%      OUTLINE. Dumped from this very book, the Script's `vertical-skylines` property —
+%%      the one axis-group-interface.cc:914-935 collects — reads
+%%          0.200 flat over ±0.10 | 0.142 out to ±0.24 | 0.084 still at ±0.30
+%%      i.e. WIDER than the glyph's own ±0.2 X-extent, where `ly:skylines-for-stencil` on
+%%      the same grob's stencil gives the true dot (0.159 at ±0.10, EMPTY past ±0.2).
+%%      The two engines' LABEL outlines were sampled point by point and agree to 5e-5, so
+%%      the label is not the difference either. ⇒ The designed ink box is CLOSER to
+%%      LilyPond's real obstacle than the exact outline is — which is why the box wins on
+%%      the 0.4-wide dot and loses on the 1.0-wide chevron. Not skyline-horizontal-padding
+%%      (Script declares none; default 0.0, stencil-integral.cc:881-893) and not a
+%%      max-window pad of the stencil profile (checked against the dumped values).
+%%   ⒟ ★★★ THE MECHANISM, FOUND THE SAME DAY: skyline-horizontal-padding. scm/script.scm
+%%      declares it for exactly THREE scripts — staccato 0.10 (:407), staccatissimo 0.10
+%%      (:392), downbow 0.20 (:86-94) — and stencil-integral.cc:881-893
+%%      Grob::vertical_skylines_from_stencil applies it with Skyline::padded, whose shape is
+%%      "flat h, then 45°-sloped h" on each side of every building (skyline.cc:558-615).
+%%      padded(0.1) of the dumped stencil polygon (-0.2 . 0.2) IS the dumped property
+%%      (-0.4 . 0.4) with 0.2 flat across ±0.1 — corner for corner. The MARCATO declares
+%%      none, which is why its side was already right under the bare outline.
+%%   ⇒ PORTED (2026-08-05): ArticulationEngraver.ScriptSkylines is now the PADDED outline,
+%%     and all FOUR consumers read it — the staff skyline (SkylineBuilder), the below
+%%     stacker's seed, the system skyline (LayoutEngine.AugmentSkylinesWithScripts) and the
+%%     movers. Lily# already had VerticalSkyline.Padded as a literal port of Skyline::padded;
+%%     nothing had ever handed it a script.
+%%     DSK 10.895972811 (-0.036130) and DSM 11.384312413 (-0.031591): ★ THE PAIR NOW AGREES
+%%     WITH ITSELF, where the box read -0.018 / +0.419. What is left is the SAME number on
+%%     both books and it is the placement term already open next door — the nominal notehead
+%%     half 0.5 against LilyPond's LILC 0.545053 (script.{staccato,marcato}-below both
+%%     +0.045000): a script seated 0.045 too high lets the dynamic under it sit that much
+%%     shallower. Close the head half-ink and both close. Snapshots: 4, all approved and
+%%     all in the same direction (the dynamics move ~0.4 CLOSER to the staff, which is the
+%%     old ±0.6 box's over-reservation coming off).
+
 #(define (probe-dump-pages layout pages)
    (format #t "\nPROBEV PAPER top-margin=~a paper-height=~a line-width=~a\n"
            (ly:output-def-lookup layout 'top-margin)
@@ -150,7 +294,10 @@
                                 (lambda (g)
                                   (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
                                     (if (or (eq? nm 'DynamicText) (eq? nm 'DynamicLineSpanner)
-                                            (eq? nm 'Stem) (eq? nm 'Beam))
+                                            (eq? nm 'Stem) (eq? nm 'Beam)
+                                            ;; round 3: the Script whose profile the
+                                            ;; dynamic clears (no rows in books 1-5).
+                                            (eq? nm 'Script))
                                         (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
                                                 n i nm
                                                 (ly:grob-relative-coordinate g sg Y)
@@ -230,6 +377,34 @@ zeroStaffStaff = \layout {
   \score {
     <<
       \new Staff << { \voiceOne b'1 \bar "|." } \\ { \voiceTwo a4\fff r4 r2 } >>
+      \new Staff { \clef bass d1 \bar "|." }
+    >>
+    \layout { \zeroStaffStaff }
+  }
+}
+
+%% DSK — round 3: DSW plus a STACCATO forced below. The dot's ink is +-0.2, where Lily#'s
+%%     below seed claims a nominal +-0.6 box: the box is 0.4 too DEEP.
+\book {
+  \probeTag "DSK"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    <<
+      \new Staff << { \voiceOne b'1 \bar "|." } \\ { \voiceTwo a1_.\f } >>
+      \new Staff { \clef bass d1 \bar "|." }
+    >>
+    \layout { \zeroStaffStaff }
+  }
+}
+
+%% DSM — round 3's other side: the same book with a MARCATO below. dmarcato hangs 1.1
+%%     under its origin, so the same nominal box stops 0.5 SHORT — the opposite sign.
+\book {
+  \probeTag "DSM"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    <<
+      \new Staff << { \voiceOne b'1 \bar "|." } \\ { \voiceTwo a1_^\f } >>
       \new Staff { \clef bass d1 \bar "|." }
     >>
     \layout { \zeroStaffStaff }

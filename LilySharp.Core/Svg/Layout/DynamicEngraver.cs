@@ -552,15 +552,7 @@ internal static class DynamicEngraver
     /// centre the label aligns on), or null when out of range.</summary>
     internal static MusicItem? AnchorItem(
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex)
-    {
-        if (voices.IsDefaultOrEmpty)
-            return null;
-        var voice = voices[Math.Clamp(voiceIndex, 0, voices.Length - 1)];
-        if (measureIndex >= voice.Measures.Length)
-            return null;
-        var items = voice.Measures[measureIndex].Items;
-        return itemIndex < items.Length ? items[itemIndex] : null;
-    }
+        => LayoutUtilities.VoiceItemAt(voices, voiceIndex, measureIndex, itemIndex);
 
     /// <summary>
     /// The anchor column's extent CENTRE, right of the column X: half the head's

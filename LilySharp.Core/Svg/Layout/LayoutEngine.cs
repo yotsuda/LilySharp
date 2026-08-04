@@ -1634,24 +1634,21 @@ internal sealed class LayoutEngine
             var sys = systems[sysIdx];
             double staffMidUp = LayoutUtilities.StaffOffsetInSystemUp(sys, a.StaffIndex) - 2.0;
             double aY = a.YUp + staffMidUp;
-            double inkTop = aY + a.Ink.Top;
-            double inkBottom = aY + a.Ink.Bottom;
+            // The Script grob's one profile (the padded outline), as everywhere else that
+            // reads a script's silhouette — this used to be a fourth spelling of it.
+            var (scriptUp, scriptDown) = ArticulationEngraver.ScriptSkylines(a, aY);
             if (a.IsAbove)
             {
                 var up = new VerticalSkyline(VerticalDirection.Up);
                 up.Merge(augmented[sysIdx].up);
-                up.Merge(VerticalSkyline.FromBox(
-                    a.X + a.Ink.Left, a.X + a.Ink.Right,
-                    inkBottom, inkTop, VerticalDirection.Up));
+                up.Merge(scriptUp);
                 augmented[sysIdx] = (up, augmented[sysIdx].down);
             }
             else
             {
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(augmented[sysIdx].down);
-                down.Merge(VerticalSkyline.FromBox(
-                    a.X + a.Ink.Left, a.X + a.Ink.Right,
-                    inkBottom, inkTop, VerticalDirection.Down));
+                down.Merge(scriptDown);
                 augmented[sysIdx] = (augmented[sysIdx].up, down);
             }
         }

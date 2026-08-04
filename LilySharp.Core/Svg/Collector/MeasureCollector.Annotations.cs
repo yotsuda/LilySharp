@@ -384,7 +384,8 @@ public sealed partial class MeasureCollector
                     }
 
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove,
-                        articulationSyntax.Position, _currentStaffIndex) { DirectionForced = directionForced });
+                        articulationSyntax.Position, _currentStaffIndex)
+                    { DirectionForced = directionForced, VoiceIndex = _currentVoiceIndex });
                 }
                 else
                 {
@@ -414,7 +415,8 @@ public sealed partial class MeasureCollector
                         _articulations.Add(new ArticulationItem(
                             ArticulationItem.EditorialTypeFor(editorialAccidental),
                             measureIndex, itemIndex, isAbove: true,
-                            articulationSyntax.Position, _currentStaffIndex));
+                            articulationSyntax.Position, _currentStaffIndex)
+                        { VoiceIndex = _currentVoiceIndex });
                     }
                     else
                     {
@@ -457,7 +459,7 @@ public sealed partial class MeasureCollector
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.Pluck, measureIndex, itemIndex, false,
                         markSyntax.Position, _currentStaffIndex)
-                    { PluckLetter = markName[6..] });
+                    { PluckLetter = markName[6..], VoiceIndex = _currentVoiceIndex });
                 }
                 else if (markName.StartsWith("frame."))
                 {
@@ -469,7 +471,7 @@ public sealed partial class MeasureCollector
                         _articulations.Add(new ArticulationItem(
                             ArticulationType.FretFrame, measureIndex, itemIndex, true,
                             markSyntax.Position, _currentStaffIndex)
-                        { FrameSpec = spec });
+                        { FrameSpec = spec, VoiceIndex = _currentVoiceIndex });
                 }
                 else if (markName.StartsWith("bend."))
                 {
@@ -486,7 +488,7 @@ public sealed partial class MeasureCollector
                         _articulations.Add(new ArticulationItem(
                             ArticulationType.Bend, measureIndex, itemIndex, true,
                             markSyntax.Position, _currentStaffIndex)
-                        { BendSemitones = sv });
+                        { BendSemitones = sv, VoiceIndex = _currentVoiceIndex });
                 }
                 else if (markName.StartsWith("notehead."))
                 {

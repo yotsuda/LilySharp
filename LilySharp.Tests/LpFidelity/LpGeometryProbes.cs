@@ -2687,6 +2687,36 @@ internal static class LpGeometryProbes
     private static readonly string DMW = DynamicSupportScore("DMW", "a,1@fff");
 
     /// <summary>
+    /// DSW plus ONE character: a below-staff SCRIPT that declares no outside-staff-priority,
+    /// so it is INSIDE-staff ink the dynamic at 250 must clear. The books that observe
+    /// <c>OutsideStaffStacker</c>'s below seed — a NOMINAL ±0.6 box around the glyph origin,
+    /// where the same grob's movers read the real outline
+    /// (<c>ArticulationEngraver.ScriptSkylines</c>) and the staff skyline reads the designed
+    /// ink box. One grob, three spellings (HANDOFF §5.2.1②).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/dynamic-support.ly round 3, 2026-08-04). The pair
+    /// straddles the nominal box deliberately: Emmentaler's staccato dot is ±0.2 (the box is
+    /// 0.4 too DEEP) and dmarcato hangs (−1.1 . 0) below its origin (the box stops 0.5
+    /// SHORT), so ONE constant is wrong in BOTH directions and no value of it can be right.
+    /// <para>
+    /// ★ THE POINTWISE FORK FIRED on DSM: LilyPond's \f does not clear the V's tip by 0.46 —
+    /// its ink top sits 0.067120 ABOVE that tip, tucked into the V where the underside rises
+    /// away from it, so DSM − DSK = 0.483800 against the two glyphs' ink-bottom difference
+    /// 0.700000. A box profile — any box — cannot produce that, which is what makes these
+    /// books the observers the seed's own remark was waiting for.
+    /// </para>
+    /// LilyPond twin (DSK): <c>&lt;&lt; { \voiceOne b'1 } \\ { \voiceTwo a1_.\f } &gt;&gt;</c>
+    /// over <c>\clef bass d1</c>, default-staff-staff-spacing zeroed. The direction is forced
+    /// with <c>_</c> / <c>.down</c> on both sides because a script's default side is the one
+    /// opposite the stem and these books have no stem at all.
+    /// </remarks>
+    private static readonly string DSK = DynamicSupportScore("DSK", "a,1@staccato.down@f");
+
+    /// <summary>DSK's other side: dmarcato, whose ink runs 1.1 PAST the nominal box.</summary>
+    private static readonly string DSM = DynamicSupportScore("DSM", "a,1@marcato.down@f");
+
+    /// <summary>
     /// The system-clef-floor recipe applied to the STAFF-STAFF spring: ideal and minimum
     /// taken away (padding stays 1), so the gap IS the two staves' skyline distance + 1.
     /// Both the grouped and the ungrouped spelling are zeroed so the reading cannot
@@ -8405,6 +8435,29 @@ internal static class LpGeometryProbes
         new("staff.staff.dynamic-beam-avoid", DSB, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.dynamic-stem-binding", DMF, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.dynamic-stem-binding-control", DMW, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- the DYNAMIC under a SCRIPT (round 3: DSK/DSM) ---
+        // The points that observe OutsideStaffStacker's below seed, the last NOMINAL box in
+        // the script's profile: ±0.6 around the origin, where the movers of the same grob
+        // read the real outline and the staff skyline reads the designed ink box. Two glyphs
+        // chosen to straddle that box (dot ±0.2, dmarcato −1.1 . 0), so one constant is wrong
+        // in BOTH directions — a spread Lily# must show as the two books reading IDENTICAL.
+        // Each book carries TWO entries so the gap residual decomposes into the script's own
+        // PLACEMENT and the profile the dynamic clears, rather than one lump:
+        // LilyPond places both glyphs' facing edge at the SAME −4.745000 (head ink − the
+        // script padding 0.2), so the placement pair is an IDENTITY on the LP side.
+        new("staff.staff.dynamic-staccato-avoid", DSK, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.dynamic-marcato-avoid", DSM, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("script.staccato-below.staff-to-ink-top", DSK,
+            g => g.ScriptInkEdgeAboveStaff(
+                EmmentalerGlyphs.ArticStaccatoAbove, GlyphMetrics.ArticStaccato,
+                above: false, staff: 0),
+            ZeroStaffStaffPaper),
+        new("script.marcato-below.staff-to-ink-top", DSM,
+            g => g.ScriptInkEdgeAboveStaff(
+                EmmentalerGlyphs.ArticMarcatoBelow, GlyphMetrics.ArticMarcatoBelow,
+                above: false, staff: 0),
+            ZeroStaffStaffPaper),
 
         // --- where the OTTAVA BRACKET's LINE sits (books OTF/OTC) ---
         // The first points that reach OttavaBracket's staff-padding floor (2.0) — the
