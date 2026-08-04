@@ -96,6 +96,141 @@ public class IncrementalCompilerTests
         }
     }
 
+    /// <summary>
+    /// Commenting a staff OUT of the score and back IN returns the same picture — including
+    /// the grand-staff brace, whose glyph is chosen from the span it has to enclose.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE EDIT SHAPE IS THE POINT, and the suite had none like it: every other edit here
+    /// changes a note INSIDE a measure, so the score's staff SET is constant and nothing that
+    /// depends on it — the group's height, the brace rung, the system-start bar, the indent —
+    /// is ever asked to change and change back. Reported 2026-08-04 as a preview defect ("the
+    /// staff comes back, the brace does not grow with it"), and NOT reproduced here: both
+    /// steps are byte-identical to a full compile, through the same API and the same
+    /// <c>SvgRenderOptions.Preview()</c> the language server uses. Kept because a missing
+    /// dependency edge on the staff set is exactly what this would catch, and because a
+    /// defect that could not be reproduced deserves an observer more than one that could.
+    /// </remarks>
+    [Fact]
+    public void CommentingAStaffOutAndBackIn_MatchesFullBothWays()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part sop { clef treble }
+            part bas { clef bass }
+            section A {
+              sop { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | g'4 a' b' c'' | }
+              bas { c4 d e f | g4 a b c' | c4 d e f | g4 a b c' | }
+            }
+            form main { A }
+            score main "x" {
+              grandStaff {
+                staff sop "Soprano"
+                staff bas "Bass"
+              }
+            }
+            """;
+        const string line = "    staff bas \"Bass\"";
+        const string commented = "    // staff bas \"Bass\"";
+
+        var previewOpt = SvgRenderOptions.Preview();
+        string FullPreview(string t) =>
+            Norm(SvgGenerator.Generate(SyntaxTree.Parse(t), previewOpt));
+
+        var text = src;
+        var tree = SyntaxTree.Parse(text);
+        var session = new IncrementalCompiler(tree, previewOpt);
+        Assert.Equal(FullPreview(text), Norm(session.RenderIncremental(tree)));
+
+        foreach (var (find, rep) in new[] { (line, commented), (commented, line) })
+        {
+            var change = Replace(text, find, rep);
+            tree = tree.WithChange(change);
+            text = ApplyFirst(text, find, rep);
+            Assert.Equal(FullPreview(text), Norm(session.RenderIncremental(tree)));
+        }
+
+        // ...and the round trip really did return to the start, or the two assertions above
+        // could both hold while the score drifted.
+        Assert.Equal(src, text);
+    }
+
+    /// <summary>
+    /// Commenting a staff out of a <c>grandStaff { }</c> and back in, ONE KEYSTROKE AT A
+    /// TIME, returns the original picture — brace included.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE HALF-TYPED STATE IS THE DEFECT, which is why the atomic version of this edit
+    /// (<see cref="CommentingAStaffOutAndBackIn_MatchesFullBothWays"/>) passes and this one
+    /// did not. The editor inserts the two slashes one at a time, so the session sees a tree
+    /// with a single `/`, and THAT tree closes the group early: the staff moves OUT of the
+    /// brace while the score still has four staves, every staff's identity is unchanged and
+    /// every measure's content is unchanged. The content key could not see it, whole-layout
+    /// reuse fired, and the previous picture came back — then again on the way out, so the
+    /// restored score kept the three-staff brace.
+    /// <para>
+    /// MEASURED on the reported file before the fix: the brace stayed at y=24.69 where a full
+    /// compile puts it at y=30.98, and the SVG came back 13000 bytes against 13171.
+    /// </para>
+    /// <para>
+    /// ⚠️ ASSERTED AT EVERY STEP, not just the last. Step 1 was already wrong (it returned
+    /// step 0's picture), and a test that only compared the endpoints would have called the
+    /// round trip clean on the way out while the damage was done on the way in.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void HalfTypedComment_OnAGroupedStaff_MatchesFullAtEveryKeystroke()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part sop { clef treble }
+            part alt { clef treble }
+            part ten { clef treble }
+            part bas { clef bass }
+            section A {
+              sop { c'4 d' e' f' | g'4 a' b' c'' | }
+              alt { c'4 d' e' f' | g'4 a' b' c'' | }
+              ten { c'4 d' e' f' | g'4 a' b' c'' | }
+              bas { c4 d e f | g4 a b c' | }
+              lyrics verse { la le li lo | la le li lo | }
+            }
+            form main { A }
+            score main "x" {
+              grandStaff {
+                staff sop "Soprano" with lyrics verse
+                staff alt "Alto" with lyrics verse
+                staff ten "Tenor" with lyrics verse
+                staff bas "Bass" with lyrics verse
+              }
+            }
+            """;
+        const string line = "    staff bas \"Bass\" with lyrics verse";
+        int at = src.IndexOf(line, System.StringComparison.Ordinal);
+        Assert.True(at >= 0, "anchor line not found");
+
+        var previewOpt = SvgRenderOptions.Preview();
+        string FullPreview(string t) =>
+            Norm(SvgGenerator.Generate(SyntaxTree.Parse(t), previewOpt));
+        string With(string prefix) => src[..at] + prefix + src[at..];
+
+        // "" -> "/" -> "//" -> "/" -> "": the two valid states with a BROKEN one either side.
+        var prefixes = new[] { "", "/", "//", "/", "" };
+        var tree = SyntaxTree.Parse(With(prefixes[0]));
+        var session = new IncrementalCompiler(tree, previewOpt);
+
+        for (int i = 0; i < prefixes.Length; i++)
+        {
+            if (i > 0)
+                tree = tree.WithChange(prefixes[i].Length > prefixes[i - 1].Length
+                    ? new TextChange(new TextSpan(at, 0), "/")
+                    : new TextChange(new TextSpan(at, 1), ""));
+            Assert.Equal(With(prefixes[i]), tree.Text);   // precondition, both sides same text
+            Assert.Equal(FullPreview(With(prefixes[i])), Norm(session.RenderIncremental(tree)));
+        }
+    }
+
     [Fact]
     public void WidthPreservingEdit_SkipsLineBreak_AndMatchesFull()
     {

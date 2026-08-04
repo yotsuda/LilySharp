@@ -155,7 +155,7 @@ public readonly record struct MeasureContentKey(long Hash)
         for (int i = 0; i < n; i++)
             acc[i] = new Hash64();                    // seed the FNV basis (array init is zero)
 
-        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
+        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             var measures = staff.PrimaryVoice.Measures;
             var chain = MeasureContextChain.Compute(
@@ -165,6 +165,7 @@ public readonly record struct MeasureContentKey(long Hash)
             {
                 acc[i].Add(staffIndex);                 // discriminate which staff
                 AddStaffIdentity(ref acc[i], staff);    // per-staff (indent/name/tuning/…)
+                AddGroupIdentity(ref acc[i], group);    // ...and which brace/bracket it is in
                 AddIntrinsic(ref acc[i], measures[i]);
                 acc[i].Add(chain.Entry[i]);
 
@@ -258,6 +259,33 @@ public readonly record struct MeasureContentKey(long Hash)
     }
 
     // --- staff-level identity (per-staff fields, not per-measure) ---
+
+    /// <summary>
+    /// Which GROUP the staff is engraved in — the part of the score's shape that is not
+    /// visible in any staff's own fields or in any measure's content.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WITHOUT THIS THE KEY CANNOT SEE A STAFF LEAVING OR JOINING A BRACE, and the
+    /// whole-layout reuse in <c>IncrementalCompiler</c> hands back the previous picture.
+    /// Reported 2026-08-04 from the preview: commenting a staff out of a
+    /// <c>grandStaff { }</c> and back in left the brace spanning three staves with four
+    /// drawn. The intermediate state is what does it — a half-typed <c>/</c> closes the
+    /// group early, so the staff moves OUT of the brace while every staff's identity and
+    /// every measure's content stay exactly as they were, and the key does not move.
+    /// Measured on the reported file: the brace stayed at y=24.69 where a full compile
+    /// puts it at y=30.98.
+    /// <para>
+    /// Type AND size, because the two failures are different: the staves REMAINING in a
+    /// shrinking group see the count change, and the staff that LEFT it sees the type
+    /// change (a lone staff is its own single group). Folding only one of them leaves the
+    /// other direction blind.
+    /// </para>
+    /// </remarks>
+    private static void AddGroupIdentity(ref Hash64 hc, StaffGroup group)
+    {
+        hc.Add((int)group.Type);
+        hc.Add(group.StaffCount);
+    }
 
     private static void AddStaffIdentity(ref Hash64 hc, Staff staff)
     {

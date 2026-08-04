@@ -92,15 +92,6 @@ public sealed class LilyPondExporter
     /// </remarks>
     private readonly Dictionary<string, string> _instrumentNames = new(StringComparer.Ordinal);
 
-    /// <summary>Whether the page indents this score's first system, and by how much.</summary>
-    /// <remarks>
-    /// LILYPOND-REF: ly/paper-defaults-init.ly — <c>indent = 15\mm</c>, which LilyPond reads
-    /// as 8.535826771653543 staff spaces. Written explicitly because Lily# does NOT use the
-    /// paper default when a score carries no instrument name: it uses 0, and LilyPond would
-    /// indent anyway, so an unwritten indent makes every nameless twin a different page
-    /// (see LayoutEngine.CalculateIndentFromInstrumentNames, which records that divergence).
-    /// </remarks>
-    private const double LilyPondDefaultIndent = 8.535826771653543;
 
     /// <summary>
     /// The octave the part being emitted anchors its relative pitches to — Lily#'s

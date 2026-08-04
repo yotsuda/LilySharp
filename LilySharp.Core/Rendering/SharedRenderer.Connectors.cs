@@ -245,8 +245,12 @@ internal static partial class SharedRenderer
         }
     }
 
-    /// <summary>LILYPOND-REF: scm/define-grobs.scm:1853-1858 self-alignment-X — the
-    /// InstrumentName entry, whose <c>(padding . 0.3)</c> is :1854.</summary>
+    /// <summary>LILYPOND-REF: scm/define-grobs.scm:1853-1858 system-start-text::calc-x-offset
+    /// — the InstrumentName entry, whose <c>(padding . 0.3)</c> is :1854.
+    /// ⚠️ <c>self-alignment-X</c> is the natural name for these lines and the citation ratchet
+    /// cannot claim it: LooksLikeLilyPondSymbol rejects any token whose later hyphen segment
+    /// starts with a capital, so the trailing <c>X</c> disqualifies it. Cite a neighbour on
+    /// the same lines rather than dropping the range.</summary>
     private const double InstrumentNamePadding = 0.3;
 
     /// <summary>
@@ -254,24 +258,30 @@ internal static partial class SharedRenderer
     /// <c>system-start-text::calc-x-offset</c>.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/output-lib.scm:2108-2142 system-start-text::calc-x-offset.
-    /// <code>
-    /// R         = total-left - padding          total-left = leftmost delimiter's left edge
-    /// nameRight = R - max (0, indent - w) / 2   w = the name's own drawn width
-    /// </code>
-    /// So while the name is NARROWER than the indent it is centred in an indent-wide box whose
-    /// right edge clears the delimiter, and once it is wider the <c>max</c> goes to zero, its
-    /// right edge pins to <c>R</c> and it overflows LEFT into the margin. LilyPond really does
-    /// that: measured, "Contrabassoon" sits 6.54 staff spaces left of the system origin.
+    /// LILYPOND-REF: scm/output-lib.scm:2108-2142 system-start-text::calc-x-offset — the three
+    /// terms below are that function's three terms, in its order.
     /// <para>
-    /// ⚠️ FITTED TO MEASURED OFFSETS, NOT READ OFF THE CALLBACK, and the difference matters.
-    /// <c>calc-x-offset</c> is written as <c>x-aligned-side + right-padding - (indent -
-    /// total-left)</c>, but calling <c>ly:side-position-interface::x-aligned-side</c> from
-    /// <c>after-line-breaking</c> returns <c>-(w + 0.3)</c>, and no combination of that with
-    /// the other two terms reproduces ANY of the four measured offsets. A grob callback
-    /// invoked after the fact is not the value that was used. The form above is fitted to the
-    /// X-offsets LilyPond actually produced and reproduces all seven names of all three books
-    /// in audit/lp-geometry/probes/instrument-name-x.ly to seven digits.
+    /// While the name is NARROWER than the indent it ends up centred in an indent-wide box
+    /// whose right edge clears the delimiter; once it is wider, <c>padding</c> goes to zero,
+    /// its right edge pins to the delimiter and it overflows LEFT into the margin. LilyPond
+    /// really does that: measured, "Contrabassoon" sits 6.54 staff spaces left of the system
+    /// origin.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE FIRST TERM IS DERIVED, NOT READ. Calling
+    /// <c>ly:side-position-interface::x-aligned-side</c> from <c>after-line-breaking</c>
+    /// returns <c>-(w + padding)</c>, and no combination of THAT with the other two terms
+    /// reproduces any of the measured offsets — a grob callback invoked after the fact is not
+    /// the value that was used. Solving the other two terms out of the seven measured
+    /// X-offsets leaves <c>indent - padding - w</c>, i.e. side-position LEFT of the staff,
+    /// whose left edge IS the indent. That is what a side-position with this padding means,
+    /// so the term is written as the rule rather than as the residue it was recovered from.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>interval-length</c> OF AN EMPTY INTERVAL IS 0, which is the whole of the
+    /// no-delimiter case: <c>calc-x-offset</c> seeds <c>total-left</c> with <c>+inf.0</c>, so
+    /// <c>(cons total-left indent)</c> is empty and the correction vanishes. Passing null here
+    /// is that <c>+inf.0</c>. MEASURED, book 3 of instrument-name-x.ly.
     /// </para>
     /// <para>
     /// ⚠️ <paramref name="width"/> IS ASKED OF THE SAME METRICS THE TEXT IS DRAWN WITH. The
@@ -283,9 +293,27 @@ internal static partial class SharedRenderer
     internal static double InstrumentNameRightEdge(
         double width, double indent, double? delimiterInkLeft)
     {
-        double r = (delimiterInkLeft ?? indent) - InstrumentNamePadding;
-        return r - Math.Max(0, indent - width) / 2.0;
+        // (ly:side-position-interface::x-aligned-side grob) — LEFT of the staff, which starts
+        // at the indent, so the name's right edge would sit one padding short of it.
+        double xAlignedSide = indent - InstrumentNamePadding - width;
+
+        // (padding (min 0 (- (interval-length my-extent) indent))) and
+        // (right-padding (- padding (/ (* padding (1+ align-x)) 2))), align-x = CENTER = 0.
+        double padding = Math.Min(0, width - indent);
+        double rightPadding = padding - padding * (1 + InstrumentNameSelfAlignmentX) / 2.0;
+
+        // (- (interval-length (cons total-left indent))) — 0 when the interval is empty,
+        // which covers both "no delimiter at all" and a delimiter right of the indent.
+        double totalLeft = delimiterInkLeft ?? double.PositiveInfinity;
+        double correction = -Math.Max(0, indent - totalLeft);
+
+        return xAlignedSide + rightPadding + correction + width;
     }
+
+    /// <summary>LILYPOND-REF: scm/define-grobs.scm:1853-1858 system-start-text::calc-x-offset
+    /// — InstrumentName declares <c>(self-alignment-X . CENTER)</c> at :1855, and CENTER is 0
+    /// in the arithmetic that callback does with it.</summary>
+    private const double InstrumentNameSelfAlignmentX = 0;
 
     /// <summary>
     /// The staves the system-start BAR joins — all visible ones EXCLUDING independent text
@@ -321,13 +349,36 @@ internal static partial class SharedRenderer
     /// SystemStartBracket.</remarks>
     private const double SystemStartCollapseHeight = 5.0;
 
-    /// <summary>LILYPOND-REF: lily/system-start-delimiter.cc:36-67 staff_bracket — it reads
-    /// the SystemStartBracket <c>thickness</c> declared at scm/define-grobs.scm:3692 (0.45)
-    /// and multiplies it by the line thickness, which is where 0.25 comes from.</summary>
+    /// <summary>How thick Lily# draws a system-start bracket's vertical stroke.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc:36-67 staff_bracket — <c>Real thickness =
+    /// from_scm&lt;double&gt; (get_property (me, "thickness"), 0.25)</c>.
+    /// <para>
+    /// ⚠️ 0.25 IS LILYPOND'S FALLBACK, NOT THE VALUE IT USES. That literal is the default the
+    /// C++ falls back to when the property is ABSENT, and it is never absent: the
+    /// SystemStartBracket entry at scm/define-grobs.scm:3685-3693 ly:system-start-delimiter::print
+    /// declares <c>(thickness . 0.45)</c>, at :3692. So LilyPond draws 0.45
+    /// where Lily# draws 0.25, and this constant is a Lily# value that happens to have been
+    /// copied off the fallback branch. Left alone rather than corrected here: changing it moves
+    /// every bracketed score's ink and wants its own measurement and approval, and there is no
+    /// ledger point on a bracket yet. ⚠️ A comment claiming 0.45 was multiplied by the line
+    /// thickness to reach 0.25 stood here for one commit and was an invention — 0.45 × 0.1 is
+    /// 0.045, and staff_bracket multiplies the thickness by nothing.
+    /// </para>
+    /// <para>
+    /// ⚠️ LilyPond's bracket box is <c>Interval (0, thickness)</c> — the stroke runs RIGHT from
+    /// the grob's origin, where Lily#'s <see cref="DrawSystemStartBracket"/> centres it on
+    /// BraceX. <see cref="SystemStartDelimiterInkLeft"/> follows LILY#'s drawing, because what
+    /// an instrument name has to clear is the ink this renderer puts on the page.
+    /// </para>
+    /// </remarks>
     private const double SystemStartBracketThickness = 0.25;
 
-    /// <summary>LILYPOND-REF: lily/system-start-delimiter.cc <c>simple_bar</c> — a single
-    /// vertical line of <c>line-thickness x thickness</c>.</summary>
+    /// <summary>LILYPOND-REF: lily/system-start-delimiter.cc:89-95 simple_bar — a single
+    /// vertical line of <c>line-thickness x thickness</c>, and the 1.6 is the SystemStartBar
+    /// entry's own declared <c>(thickness . 1.6)</c> —
+    /// scm/define-grobs.scm:3653-3662 ly:system-start-delimiter::print — read 2026-08-04, and
+    /// unlike the bracket's this one is LilyPond's declared value, not a fallback.</summary>
     private static double SystemStartBarThickness => EngravingDefaults.StaffLineThickness * 1.6;
 
     /// <summary>
@@ -363,8 +414,15 @@ internal static partial class SharedRenderer
                 => delim.BraceX - SystemStartBracketThickness / 2.0,
             SystemStartDelimiterType.LineBracket when shown
                 => delim.BraceX - EngravingDefaults.StaffLineThickness / 2.0,
-            // No collapse-height on SystemStartBar: LilyPond declares none, so a lone pair of
-            // staves still shows its bar however short they are.
+            // ⚠️ NO COLLAPSE GUARD, AND LILYPOND HAS ONE. SystemStartBar declares
+            // (collapse-height . 5.0) exactly as the brace and bracket do
+            // at scm/define-grobs.scm:3653-3662 ly:system-start-delimiter::print — but Lily#'s
+            // DrawStaffConnectors draws the bar for any two connected staves without testing
+            // the span, so the ink-left has to answer for the same books the drawing does.
+            // Recorded rather than corrected: two connected staves are taller than 5.0 in
+            // every ordinary book, so the guard would change nothing visible and everything
+            // to re-approve. ⚠️ A comment claiming LilyPond declares no collapse-height stood
+            // here for one commit and was wrong.
             SystemStartDelimiterType.BarLine
                 => delim.BraceX - SystemStartBarThickness / 2.0,
             SystemStartDelimiterType.Brace when shown
