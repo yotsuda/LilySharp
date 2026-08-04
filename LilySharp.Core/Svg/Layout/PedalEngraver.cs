@@ -43,7 +43,17 @@ public readonly record struct PedalBracketLayout(
     // the outer ends stay vertical. LILYPOND-REF: scm/define-grobs.scm
     // PianoPedalBracket bracket-flare = (0.5 . 0.5).
     bool StartChange = false,
-    bool EndChange = false
+    bool EndChange = false,
+    // F3/B: index into the bracket list DetectPedalBrackets rebuilds from the live score,
+    // so a reused layout re-derives its data-pos instead of carrying a stale source offset.
+    // The same shape MusicMarkLayout uses against BuildAllMarks: the list is not a score
+    // side-table, it is reconstructed, and reconstructing it is deterministic.
+    // ⚠️ THIS IS WHAT MADE PEDAL SCORES REUSE-ELIGIBLE. IncrementalCompiler.ReuseSafe used
+    // to decline whole-layout reuse for any score carrying a pedal bracket, under a comment
+    // asserting the array was "always empty today" — showcase/03-piano has had pedals all
+    // along, and the benchmark that asserts reuse fires (IncrementalSessionBenchmark) had
+    // been failing on exactly that.
+    int SourceIndex = -1
 );
 
 /// <summary>
@@ -181,8 +191,9 @@ internal static class PedalEngraver
         }
         double bracketY = MusicMarkEngraver.BelowMarkBaseline(systemBottom);
 
-        foreach (var bracket in brackets)
+        for (int bi = 0; bi < brackets.Length; bi++)
         {
+            var bracket = brackets[bi];
             if (bracket.StartMeasureIndex >= measureLayouts.Length ||
                 bracket.EndMeasureIndex >= measureLayouts.Length)
                 continue;
@@ -206,7 +217,8 @@ internal static class PedalEngraver
                 EdgeHeight,
                 bracket.StartMeasureIndex,
                 bracket.SourcePosition,
-                isMixed));
+                isMixed,
+                SourceIndex: bi));
         }
 
         // Mark abutting ends as pedal CHANGES: where one bracket ends exactly where

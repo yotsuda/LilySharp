@@ -61,6 +61,69 @@ public class IncrementalCompilerTests
         Assert.Equal(Full(Base), Norm(session.Render()));
     }
 
+    /// <summary>
+    /// The two fixtures <c>LilySharp.Benchmarks.IncrementalSessionBenchmark</c> measures the
+    /// warm-session edit on. This test asserts the PREMISE that benchmark depends on — that a
+    /// width-preserving edit takes the whole-layout reuse path — so the premise is checked by
+    /// the suite instead of only by a benchmark nobody runs.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS EXISTS BECAUSE THE BENCHMARK WAS THROWING AND NOBODY SAW IT. Its
+    /// <c>VerifyReuses</c> had been failing on the multi-staff fixture since before
+    /// 2026-08-04 — a pedal bracket disqualified reuse wholesale — and the only way to find
+    /// out was to run <c>dotnet run -c Release -- --filter '*IncrementalSession*'</c> by
+    /// hand. A failing benchmark is not a failing test. Whole-layout reuse is the preview's
+    /// per-keystroke payoff (measured on the multi-staff fixture at 5.5 ms against 9.0 ms,
+    /// and a third of the allocation), so it is worth a test that costs milliseconds.
+    /// <para>
+    /// ⚠️ THE FIXTURES ARE NAMED HERE AND IN THE BENCHMARK, and they must stay the same two.
+    /// If one is edited into ineligibility — a grob override, or any future disqualifier —
+    /// this test fails and says so, where the benchmark would simply stop reporting.
+    /// </para>
+    /// <para>
+    /// ⚠️ BOTH ASSERTIONS, for the reason the pedal fix showed: making reuse FIRE is easy and
+    /// wrong on its own. The byte-identity check is what says the reused layout re-derives
+    /// everything an edit invalidated.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("showcase/03-piano")]              // multi-staff (grand staff), has pedals
+    [InlineData("showcase/grammar-2026-06-09")]    // the largest single-staff fixture
+    public void BenchmarkFixtures_WidthPreservingEdit_ReuseWholeLayout(string fixture)
+    {
+        string path = System.IO.Path.Combine(
+            FindFixturesDir(), fixture.Replace('/', System.IO.Path.DirectorySeparatorChar) + ".lys");
+        string src = System.IO.File.ReadAllText(path).Replace("\r\n", "\n");
+
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // A leading newline: pure trivia, so no measure's content and no line-break gate
+        // changes, but every source offset moves.
+        var change = new TextChange(new TextSpan(0, 0), "\n");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditReusedLayout,
+            $"{fixture}: expected whole-layout reuse to fire, but it did not — "
+            + "IncrementalSessionBenchmark measures the wrong thing when this is false.");
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    private static string FindFixturesDir()
+    {
+        var dir = System.AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            var candidate = System.IO.Path.Combine(dir, "LilySharp.Tests", "Fixtures");
+            if (System.IO.Directory.Exists(candidate))
+                return candidate;
+            dir = System.IO.Path.GetDirectoryName(dir);
+        }
+        throw new System.IO.DirectoryNotFoundException(
+            "Cannot find LilySharp.Tests/Fixtures/ directory");
+    }
+
     private static string ApplyFirst(string text, string find, string rep)
     {
         int at = text.IndexOf(find, System.StringComparison.Ordinal);
@@ -280,6 +343,42 @@ public class IncrementalCompilerTests
 
         Assert.True(session.LastEditReusedLayout);
         Assert.True(session.LastEditSkippedLineBreak); // reuse implies the gate was skipped
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
+    public void ContentUnchangedEdit_OnAScoreWithPedalBrackets_ReusesWholeLayout_AndMatchesFull()
+    {
+        // A pedal bracket used to DISQUALIFY whole-layout reuse outright: ReuseSafe declined
+        // any layout carrying one, under a comment asserting the array was "always empty
+        // today (pedals render as text marks, never a bracket layout)". Staff.PedalStyle
+        // defaults to Bracket, so that was false for every `@ped` in the corpus — including
+        // showcase/03-piano, the multi-staff fixture LilySharp.Benchmarks' warm-session
+        // benchmark uses, which had been throwing "expected whole-layout reuse to fire".
+        //
+        // ⚠️ THE ASSERTION THAT MATTERS IS THE SECOND ONE. Making reuse FIRE is easy and
+        // wrong on its own: the bracket baked an absolute source offset, so a reused layout
+        // would emit a stale data-pos after an edit that shifts every offset. The bracket now
+        // carries a SourceIndex into the list DetectPedalBrackets rebuilds from the live
+        // score, exactly as a music mark does against BuildAllMarks, and the byte-identity
+        // check below is what says the re-derivation is right rather than merely present.
+        string src = """
+            tempo 120
+            time 4/4
+            key c major
+            part lh { clef bass }
+            section Main { lh { <c e>2@ped <c g> | <f a>2@ped(off)@ped <d f> | } }
+            form main { Main }
+            score main "x" { staff lh }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = new TextChange(new TextSpan(0, 0), "\n");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditReusedLayout);
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
     }
 

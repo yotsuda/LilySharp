@@ -236,12 +236,19 @@ public sealed class IncrementalCompiler
     // F3/B-2: a cached layout is safe to reuse only if it carries no annotation whose
     // data-pos is still BAKED into the layout (i.e. not yet migrated onto the render-time
     // SourceIndex / note-locator resolution). Such a value would go stale on reuse since a
-    // content-unchanged edit shifts source offsets. ALL data-pos-emitting annotations are
-    // now migrated and re-resolved from the live score by SharedRenderer.ResolveDataPos, so
-    // the only remaining entry is PedalBracketLayouts — which is always empty today (pedals
-    // render as text marks, never a bracket layout), kept as a guard against a future pedal
-    // bracket emitter that bakes data-pos. Override-free + content-key + global-key match
-    // (checked in Compile) already covers geometry; this just guards baked data-pos.
-    private static bool ReuseSafe(ScoreLayout layout) =>
-        layout.PedalBracketLayouts.IsDefaultOrEmpty;
+    // content-unchanged edit shifts source offsets. Every data-pos-emitting annotation is
+    // migrated and re-resolved from the live score by SharedRenderer.ResolveDataPos, so
+    // there is nothing left to decline for — the guard is the migration itself.
+    //
+    // ⚠️ IT USED TO EXCLUDE ANY SCORE WITH A PEDAL BRACKET, under a comment asserting the
+    // array was "always empty today (pedals render as text marks, never a bracket layout)".
+    // That was false: Staff.PedalStyle defaults to Bracket, so every `@ped` in the corpus
+    // produced one. The cost was invisible because the only thing that measures it is
+    // LilySharp.Benchmarks' IncrementalSessionBenchmark, which asserts reuse fires and had
+    // been throwing on its multi-staff fixture (showcase/03-piano, a piano score with
+    // pedals) since before 2026-08-04 — a failing benchmark is not a failing test, and
+    // nothing in the suite ran it. MEASURED after the migration: that assertion passes.
+    // ★ The lesson is the comment, not the code: "always empty today" was a claim about the
+    // corpus that nobody had asked the corpus about.
+    private static bool ReuseSafe(ScoreLayout layout) => true;
 }

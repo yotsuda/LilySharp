@@ -58,19 +58,24 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第89セッション（＝**ユーザーがリリースブロッカーを 1 件出したので残債を中断した。正体は
-第88セッションが「測って直さずに置いた」▶ ⓪⑴ そのもので、しかも ⑴ の記述は片面だけだった
-——同じ silhouette を 2 度綴っている 2 か所目が、前セッションが塞いだ関数の 1 呼び出し先に居た**）。
+最終更新 第89セッション（＝**リリースブロッカー 1 件から入って残債に戻り、最後はプレビューまで来た。
+通底したのは 1 つ——「corpus への主張」が 3 回とも検証されていなかった。うち 1 つは
+プレビューの本命を 3 セッション以上止めていた**）。
 
-⚠️ **仕事は 1 つ**（**`git show 64c77639..` で引ける**——`64c77639` は第88セッションの最後＝この作業の親。
-**引継ぎに自分の commit のハッシュは書けない**）。**A〜E はこの順に手を動かした**:
+⚠️ **仕事は 7 つ・12 commit**（**`git show 64c77639..` で引ける**——`64c77639` は第88セッションの最後＝
+この作業の親。**引継ぎに自分の commit のハッシュは書けない**）。**この順に手を動かした**:
 ```
-A §0 の裏取り              §1 の「テスト 4005」だけ実測 4008。台帳は 3 数とも一致
-B 起票を再現して数えた      重なりは 1 件でなく 2 件。ついでに 3 組目は元から離れていた
-C 落ちる観測者を先に置いた  LyricBaseline_ClearsAScriptOnTheStaffBelowIt   テスト +1
-D 2 か所を直した            部屋に script を入れる／鎖の閉じ側にも部屋の list を読ませる
-E 自己監査                  stale な相互参照 1・住所 1・LP の型の取り違え 1
+A ブロッカー（ユーザー起票）  歌詞と下譜の fermata が重なる      snapshot 3・承認済
+B stretchability の偽所見     「Core に綴りが無い」が偽だった      コード変更ゼロ
+C provenance 13 → 0           baseline は本物の 0 になった          出力不変
+D 休符の島（台帳から）        点 4 つ・両方向 EXACT                 snapshot 2・承認済
+E 自分が入れた perf 退行      per-system の pass が全譜を走査していた   x1.08 → x0.98
+F プレビューの reuse 復活     pedal bracket が whole-layout reuse を拒否 9.0 → 5.5 ms
+G F の回帰ガード              benchmark の前提をテストに乗せた        テスト +2
 ```
+★★★ **B・D・F は同じ形**——**「今日は常に空」「全部の本が動く」式の*corpus への主張*が、
+corpus に訊かないまま書かれていた**（memory「corpusへの主張はcorpusに訊く」）。
+**うち 1 つ（D）は私が*このセッションで*書いた台帳の `why` で、1 commit 後に自分で撤回した。**
 
 ⚠️⚠️ ★★★ **① 起票は「1 件」だったが、実測すると同じ欠陥が 2 件あった。**
 **`ふ` のベースラインと fermata のインク上端の差**（device Y・負が重なり）:
@@ -131,10 +136,21 @@ test/lyrics-below-marcato               ⚠️ インクは 1 つも動かない
 ```
 ⇒ ★★ **⒝ は §7 が効いた 4 例目**。**⒞ は誰も検査しない散文**——**第88セッション ⑫⒝ と同じ過ち。**
 
-**未 push 24**（⚠️ **足し算しない**。`git rev-list --count origin/master..master` で数え直す。
-**⚠️ 私は push していない**）・テスト **4009 passed / 0 failed / 4 skipped**（**開始時 4008**）・
-台帳 **462 点**（**ss 非ゼロ 81・総和 3.617525637**／**count 点 106・うち非ゼロ 2**）＝**開始時と 1 桁も
-違わない**。**Core 0 warning。**
+**未 push 35**（⚠️ **足し算しない**。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ 私は push していない**）・テスト **4016 passed / 0 failed / 4 skipped**（**開始時 4008**＝新テスト 8 本）・
+台帳 **466 点**（**ss 非ゼロ 81・総和 3.617525637**／**count 点 106・うち非ゼロ 2**）。**Core 0 warning。**
+★★ **点は 4 増えたのに非ゼロも総和も開始時と 1 桁も違わない**——**新しい 4 点が全部 EXACT だから**。
+⚠️ **snapshot 再ベース 5 枚**（**A の 3 枚と D の 2 枚・どちらもユーザー承認のうえ**）。
+
+⚠️⚠️ ★★★ **次に触るときの注意を 3 つだけ**（詳細は ▶ と各コードの ⚠️ に）:
+```
+⑴ 増分を触るなら先に        dotnet run -c Release -- --filter '*IncrementalSession*'
+                            前提はテストに乗ったが、時間の測定は今も手動
+⑵ per-system の pass に      BuildAllStaffSkylines はシステムごとに走る。全譜を走査する物を
+   全譜走査を置かない        置くと、編集 1 回の再構築が O(score) になる（E で 2 回やった）
+⑶ 「今日は常に空」を          B・D・F の 3 件。既存コメントを根拠にするなら、そのコメント自身を
+   根拠にしない              一度走らせて数える
+```
 
 ## 以下は第88セッションの経緯
 
@@ -2218,6 +2234,65 @@ staff.staff.rest-over-notes-control   LP  9.595000  EXACT
 **"too many colliding rests"**——**該当本 0 冊**なので入れると未テスト分岐になる。
 ⚠️ **`RestShiftKey` に voice 軸を足した**。従来 `(measure, item)` で足りていたのは
 **梁の shift が primary voice 専用**だったからで、**休符と音符が別の声に居る衝突には原理的に足りない。**
+
+⚠️⚠️⚠️ ★★★ **perf を訊かれてから測った＝約束を破った**（memory「perfは訊かれる前に測る」）。
+**そして測ったら本当に遅くなっていた。** **`BuildAllStaffSkylines` は*システムごと*に走る**のに、
+**私が足した 2 つは*全譜*を走査していた**:
+```
+CalculateRestNoteCollisions(staff)   全小節を走査。システム×譜ごとに繰り返し
+StaffArticulationLayouts             score.Articulations 全件を毎システム filter
+```
+⇒ ★★★ **skyline は per-system キャッシュ**（`LayoutEngine.ComputeStaffSkylines`）**なので、
+編集で 1 システムだけ再構築する増分パスが O(system) → O(score) になっていた**
+——**プレビューが払う所**。⇒ **前者は `ConditionalWeakTable` で譜ごとに memo・
+後者はそのシステムの小節に絞る**（**engraver は範囲外を落とすので答えは同じ**）。
+実測（Release・worktree A/B・順序交互・min-of-9）:
+```
+              修正前          修正後
+ 50 小節      x1.08           x0.98
+100 小節      x1.02           x0.98
+200 小節      x1.03           x0.99
+```
+★ **「伸びていないから quadratic ではない」と読んではいけなかった**——**全体時間には parse も
+render も入る**ので、**増分パスの O(score) 化は全体比では薄まる**。**測る対象を間違えると
+安全に見える。**
+
+✅✅✅ ★★★ **その過程で出た*既存の*欠陥＝プレビューの本命が効いていなかった。塞いだ。**
+`LilySharp.Benchmarks` の `IncrementalSessionBenchmark` が**自己検査で落ちていた**:
+```
+Multi_WidthPreserving: expected whole-layout reuse to fire, but it did not.
+```
+⚠️ **私の変更ではない**——**64c77639 でも b18aa20f（第86セッション最後）でも落ちる**＝**3 セッション以上前から**。
+★★★ **正体は `ReuseSafe` の 1 行**——**pedal bracket を持つ本は whole-layout reuse を丸ごと拒否**していた。
+**その根拠のコメントが偽だった**:
+```
+「PedalBracketLayouts は always empty today（pedal は text mark で描かれ bracket layout にならない）」
+実際      Staff.PedalStyle の既定は Bracket。corpus の @ped は全部 bracket を作る
+          benchmark の multi 本 showcase/03-piano は @ped を持つピアノ譜
+```
+⇒ ★★★ **「今日は常に空」は corpus への主張なのに、誰も corpus に訊いていなかった。**
+✅ **直し方は他の注釈と同じ移行**——**`PedalBracketLayout` に `SourceIndex`**（`DetectPedalBrackets` が
+生きたスコアから再構築する list への index。**MusicMark が `BuildAllMarks` に対してやっているのと同じ形**）
+**⇒ `ReuseSafe` は `true` になった。**
+⚠️⚠️ ★★ **reuse を*発火させる*だけなら 1 行で、しかも間違い**——**bracket は絶対ソース位置を焼いていた**ので、
+**offset が全部ずれる編集のあとに stale な data-pos を吐く**。**効いている主張は byte 同一のほう。**
+✔ **観測者を足して外して落とした**（`ContentUnchangedEdit_OnAScoreWithPedalBrackets_…`）。
+★ **効き目**（`IncrementalSessionBenchmark`・warm session に 1 編集）:
+```
+multi-staff 幅不変（reuse）   5.498 ms / 1329 KB
+multi-staff 幅変化（full）    8.997 ms / 4486 KB   ← reuse が効かないと毎打鍵これ
+single-staff 幅不変           2.195 ms /  733 KB
+```
+⇒ **多譜の 1 打鍵が 9.0ms → 5.5ms・確保は 3.4 分の 1。**
+★★ **第88セッション ⑪ の「`reuse` だけが降りて `skip` は残るので速度は落ちていない」は
+*multi-staff では*検証されていなかった**——**あの assert が既にそう言っていた。**
+✅ **その沈黙は塞いだ**——**benchmark の*前提*をテスト側から押さえた**
+（`BenchmarkFixtures_WidthPreservingEdit_ReuseWholeLayout`・**benchmark と同じ 2 冊を Theory で**）。
+**reuse が発火することと byte 同一の両方**を訊く（**発火だけなら 1 行で通せてしまい、しかも間違い**）。
+✔ **外して落とした**（`git checkout <前> -- LilySharp.Core` で 03-piano だけ落ちる）。
+⇒ ★★★ **原則**: **benchmark が前提を assert しているなら、その前提はテストに置く。**
+**落ちる benchmark は落ちるテストではない**——**手で叩くまで誰も見ないので、3 セッション黙って壊れていた。**
+⚠️ **benchmark 自体は今も手動**（時間を測る部分は CI に置く価値がない）。**乗せたのは前提だけ。**
 ★★★ **開いた時点の残差は休符の寄与ちょうど全部だった**——**Lily# は「休符のある本」で
 *対照とまったく同じ数*を読んでいた**＝**休符が 1 桁も寄与していない**。
 ⚠️⚠️ ★★★ **その台帳の `why` を、私は 1 commit 後に自分で書き直した**——**最初「残差はシード（名目箱）」

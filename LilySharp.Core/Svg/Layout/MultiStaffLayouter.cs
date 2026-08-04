@@ -1995,7 +1995,13 @@ internal sealed class MultiStaffLayouter
                 // was pushed to. The shift is a function of the music alone
                 // (ElementCoordinator.CalculateRestNoteCollisions), so it is available this
                 // early and the same answer reaches the renderer — one spelling, not two.
-                var restShifts = _elementCoordinator.CalculateRestNoteCollisions(staff);
+                // ⚠️ MEMOISED PER STAFF, and that is not an optimisation detail. This method
+                // runs once per SYSTEM while the collision scan reads the WHOLE score, so
+                // computing it here would make every single-system rebuild cost O(score) —
+                // and a single-system rebuild is exactly what an edit triggers, since the
+                // skylines are cached per system (LayoutEngine.ComputeStaffSkylines). The
+                // preview's cost per keystroke is the thing that would have paid for it.
+                var restShifts = RestCollisionsOf(staff);
                 var sky = skylineBuilder.BuildStaffSkylines(
                     staff, measureLayouts, dynamics, articulations, tupletBrackets, slurs, ties, beams,
                     CurrentIndent, restShifts);
@@ -2182,6 +2188,24 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// This staff's rest/note collision shifts, computed once per staff rather than once per
+    /// system.
+    /// </summary>
+    /// <remarks>
+    /// The answer depends on the STAFF alone — which voices sound together and where — so it
+    /// is the same for every system, while the scan that produces it reads the whole score.
+    /// A weak table rather than a plain dictionary because a <see cref="Staff"/> is replaced
+    /// wholesale when the music is edited: the old entry must be collectable, not kept alive
+    /// by the cache that made the previous layout fast.
+    /// </remarks>
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Staff, ImmutableDictionary<RestShiftKey, double>> _restCollisions = new();
+
+    private ImmutableDictionary<RestShiftKey, double> RestCollisionsOf(Staff staff)
+        => _restCollisions.GetValue(
+            staff, s => _elementCoordinator.CalculateRestNoteCollisions(s));
+
+    /// <summary>
     /// This staff's own Scripts, laid out in the staff's own frame so the skyline can reserve
     /// the band they occupy outside the staff. The mirror of
     /// <see cref="StaffTupletBracketLayouts"/>, and the same engraver the drawn pass runs.
@@ -2228,8 +2252,16 @@ internal sealed class MultiStaffLayouter
     {
         if (score.Articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
+        // ⚠️ THIS SYSTEM'S MEASURES, not the score's. The engraver drops a mark whose measure
+        // is not in the layouts it was handed, so the answer is the same either way — but the
+        // WORK is not: this method runs once per system, so filtering by staff alone made a
+        // rebuild cost O(marks in the whole score) where an edit only invalidates one system.
+        var systemMeasures = new HashSet<int>();
+        foreach (var ml in measureLayouts)
+            systemMeasures.Add(ml.MeasureIndex);
         var staffArticulations = score.Articulations
             .Where(a => a.StaffIndex == staffIndex
+                        && systemMeasures.Contains(a.MeasureIndex)
                         && ArticulationEngraver.IsSidePositionedScript(a.Type))
             .ToImmutableArray();
         if (staffArticulations.IsEmpty)

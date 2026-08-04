@@ -348,6 +348,12 @@ internal static partial class SharedRenderer
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             TrillSpannerLayouts = ResolveArr(layout.TrillSpannerLayouts, score.TrillSpanners,
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            // Pedal brackets are not a score side-table either: they are PAIRED from the
+            // music marks, so the list is rebuilt the way MusicMarks' is below and the
+            // layout's SourceIndex points into that reconstruction.
+            PedalBracketLayouts = ResolveArr(layout.PedalBracketLayouts,
+                PedalEngraver.DetectPedalBrackets(score.MusicMarks),
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             // MusicMarks (incl. section labels + tempo) aren't a flat score side-table;
             // their SourceIndex points into the reconstructed BuildAllMarks() list. Rebuild
             // it the same way Calculate does so each layout re-derives its data-pos. Tempo
