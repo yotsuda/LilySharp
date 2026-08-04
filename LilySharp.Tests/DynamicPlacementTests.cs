@@ -168,4 +168,81 @@ public class DynamicPlacementTests
         Assert.True(above[1].YUp - above[0].YUp >= 1.5,
             $"stacked above-staff grobs must be separated (got {above[0].YUp} and {above[1].YUp})");
     }
+
+    // The below-staff dynamic's baseline on a staff whose SECOND voice holds the given
+    // item — printed rests in the book under test, spacer rests in its control. One
+    // token apart, so the difference is the rest's ink and nothing else (the shape
+    // audit/lp-geometry's RSTD/RSTC pair uses, with the second staff removed).
+    private static (double Baseline, double RestShift) BelowDynamicBaseline(string secondVoice)
+    {
+        var src =
+            "octave absolute\n" +
+            "part m { clef treble }\n" +
+            $"section S {{ m {{ voice {{ b4@f b b b }} {{ {secondVoice} }} | }} }}\n" +
+            "form main { S }\n" +
+            "score main \"o\" { staff m }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors,
+            string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        return (layout.DynamicLayouts.Single(d => !d.IsAbove).YUp,
+                layout.GetRestShift(measureIndex: 0, voiceIndex: 1, itemIndex: 0));
+    }
+
+    /// <summary>
+    /// A below-staff dynamic clears the rest ANOTHER VOICE pushed out of the staff — the
+    /// profile the outside-staff pass is seeded from has to hold that rest where
+    /// <c>Rest_collision</c> put it, not where it would have stood alone.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-950 <c>skyline_spacing</c> — the pass
+    /// starts from <c>inside_staff_skylines</c> and adds the outside-staff grobs by ascending
+    /// priority. A Rest is inside-staff ink and there is only ONE of it: LilyPond translates
+    /// the grob (lily/rest-collision.cc:211-290 <c>calc_positioning_done</c>) and the group's
+    /// skyline sees the result, so nothing downstream can read an unmoved position.
+    /// <para>
+    /// ⚠️ THE ROOM HAD THIS AND THE PROFILE DID NOT. <c>MultiStaffLayouter</c> began passing
+    /// <c>RestCollisionsOf</c> into the alignment's silhouette on 2026-08-04; the four call
+    /// sites that build their OWN profile from <c>SkylineBuilder.BuildStaffSkylines</c> — the
+    /// loose-line chain's closing staff, the figured-bass drop, this stacker's seed and a
+    /// chord row under a non-top staff — were left on the default, which is HANDOFF 7.7's two
+    /// spellings and the same walk the session before had already been bitten by one caller
+    /// further along. MEASURED here before the fix: the dynamic read -4.546000 whether the
+    /// second voice held printed rests or spacers, i.e. the moved rest contributed exactly
+    /// nothing and the `f` was engraved over it. After: -6.465450 against the control's
+    /// -4.546000, a drop of 1.919450 on a rest pushed 6 staff positions down.
+    /// </para>
+    /// <para>
+    /// ⚠️ THREE LEGS, because two equal numbers have three possible causes and only one of
+    /// them is the defect: the PREMISE says the rest really left the staff in this book, the
+    /// CONTROL says the profile reaches this placement at all, and the assertion is the
+    /// quantity. Without the control the fix could be "the dynamic never reads a profile",
+    /// which reads identically from the outside (HANDOFF 5.3, and the miss the session before
+    /// spent a book on).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void BelowDynamic_ClearsARestAnotherVoicePushedOutOfTheStaff()
+    {
+        var moved = BelowDynamicBaseline("r4 r r r");
+        var spacer = BelowDynamicBaseline("s4 s s s");
+        var lowNotes = BelowDynamicBaseline("c4 c c c");
+
+        // PREMISE: the rest really is pushed out of the staff in this book. Without this
+        // the two baselines could agree honestly and the assertion below would be empty.
+        Assert.True(moved.RestShift <= -5.0,
+            "premise: Rest_collision must push this rest out of the staff, "
+            + $"got {moved.RestShift:F6} staff positions");
+
+        // CONTROL: this dynamic is placed against the staff's PROFILE at all. Two equal
+        // numbers otherwise mean only that nothing reaches the placement.
+        Assert.True(lowNotes.Baseline < spacer.Baseline - 0.1,
+            "control: the dynamic must respond to ink in the profile: "
+            + $"low notes {lowNotes.Baseline:F6}, spacer control {spacer.Baseline:F6}");
+
+        Assert.True(moved.Baseline < spacer.Baseline - 0.1,
+            "the dynamic must hang below the rest Rest_collision pushed out of the staff: "
+            + $"printed rests {moved.Baseline:F6}, spacer control {spacer.Baseline:F6}");
+    }
 }

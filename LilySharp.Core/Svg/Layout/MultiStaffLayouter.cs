@@ -2197,11 +2197,21 @@ internal sealed class MultiStaffLayouter
     /// A weak table rather than a plain dictionary because a <see cref="Staff"/> is replaced
     /// wholesale when the music is edited: the old entry must be collectable, not kept alive
     /// by the cache that made the previous layout fast.
+    /// <para>
+    /// ⚠️ ONE OWNER, BECAUSE FIVE PLACES RESERVE THIS REST. The alignment's silhouette is
+    /// built here; the loose-line chain's closing staff, the figured-bass drop, the
+    /// outside-staff stacker's seed and a chord row under a non-top staff each build their
+    /// own profile from <c>SkylineBuilder.BuildStaffSkylines</c>, and every one of them has
+    /// to place the rest where <c>Rest_collision</c> put it or it reserves an empty box and
+    /// prints over the glyph. They read THIS memo (<c>LayoutEngine</c> passes the method
+    /// itself down) rather than each calling the coordinator: a second call would be a second
+    /// spelling of one answer, and it would also re-run a whole-score scan per system.
+    /// </para>
     /// </remarks>
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
         Staff, ImmutableDictionary<RestShiftKey, double>> _restCollisions = new();
 
-    private ImmutableDictionary<RestShiftKey, double> RestCollisionsOf(Staff staff)
+    internal ImmutableDictionary<RestShiftKey, double> RestCollisionsOf(Staff staff)
         => _restCollisions.GetValue(
             staff, s => _elementCoordinator.CalculateRestNoteCollisions(s));
 

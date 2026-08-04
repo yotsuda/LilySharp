@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -452,5 +454,72 @@ public class FiguredBassTests
         Assert.Equal(0.0, BassFigureAlignment.ColumnDepth(offsets, columns[1].Texts), 9);
         Assert.Equal(BassFigureAlignment.LineMinimumDistance,
             BassFigureAlignment.ColumnDepth(offsets, columns[0].Texts), 9);
+    }
+
+    // The topmost figure's baseline on a staff whose SECOND voice holds the given item —
+    // printed rests in the book under test, spacers in its control. One token apart, so
+    // the difference is the rest's ink and nothing else.
+    private static (double Baseline, double RestShift) FigureBaseline(string secondVoice)
+    {
+        var src =
+            "octave absolute\n" +
+            "part bs { clef treble }\n" +
+            $"section Main {{\n  bs {{ voice {{ b4@fig(6) b b b }} {{ {secondVoice} }} | }}\n}}\n" +
+            "form main { Main }\n" +
+            "score main \"o\" { staff bs }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors,
+            string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        return (layout.FiguredBassLayouts.Select(f => f.YUp).Min(),
+                layout.GetRestShift(measureIndex: 0, voiceIndex: 1, itemIndex: 0));
+    }
+
+    /// <summary>
+    /// The figures drop below the rest ANOTHER VOICE pushed out of the staff — the per-staff
+    /// DOWN profile the drop is computed against holds that rest where <c>Rest_collision</c>
+    /// put it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-950 <c>skyline_spacing</c> — a Rest is
+    /// inside-staff ink, and BassFigureAlignmentPositioning's outside-staff-priority 25 places
+    /// it against exactly those inside skylines. LilyPond translates the one Rest grob
+    /// (lily/rest-collision.cc:211-290 <c>calc_positioning_done</c>), so no consumer can read
+    /// an unmoved position.
+    /// <para>
+    /// ⚠️ THE ROOM HAD IT AND THIS PROFILE DID NOT — the same omission, at the second of the
+    /// four call sites that build their own profile from
+    /// <c>SkylineBuilder.BuildStaffSkylines</c>. MEASURED: the figure baseline read -3.672462
+    /// with the rests as spacers and -5.902462 with them printed only after the table reached
+    /// this call; before it, both books read -3.672462. The 2.230000 between them is the
+    /// number LilyPond itself gives a rest pushed DOWN out of the staff
+    /// (audit/lp-geometry <c>staff.staff.rest-under-notes</c> against its control), which is
+    /// what says the reservation now matches the ink rather than merely responding to it.
+    /// </para>
+    /// <para>
+    /// ⚠️ THREE LEGS: the PREMISE that the rest left the staff at all, a CONTROL that the drop
+    /// reads this staff's profile, and the quantity. Two equal numbers otherwise cannot tell
+    /// "nothing moved" from "nothing is measured" (HANDOFF 5.3).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void FiguredBass_DropsBelowARestAnotherVoicePushedOutOfTheStaff()
+    {
+        var moved = FigureBaseline("r4 r r r");
+        var spacer = FigureBaseline("s4 s s s");
+        var lowNotes = FigureBaseline("c4 c c c");
+
+        Assert.True(moved.RestShift <= -5.0,
+            "premise: Rest_collision must push this rest out of the staff, "
+            + $"got {moved.RestShift:F6} staff positions");
+
+        Assert.True(lowNotes.Baseline < spacer.Baseline - 0.1,
+            "control: the drop must respond to ink in this staff's profile: "
+            + $"low notes {lowNotes.Baseline:F6}, spacer control {spacer.Baseline:F6}");
+
+        Assert.True(moved.Baseline < spacer.Baseline - 0.1,
+            "the figures must drop below the rest pushed out of the staff: "
+            + $"printed rests {moved.Baseline:F6}, spacer control {spacer.Baseline:F6}");
     }
 }

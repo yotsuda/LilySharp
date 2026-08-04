@@ -112,4 +112,89 @@ public class LooseLineExtentScopeTests
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec);
         return new LilySharp.Core.Svg.Layout.LayoutEngine().Layout(score);
     }
+
+    // Two systems, an independent chord ROW leading the score, so system 2 OPENS with a loose
+    // line and the block hanging below system 1 is closed by system 2's first spaceable staff.
+    // That staff's FIRST voice holds the given item; `n` and its lyrics are there because
+    // BuildLooseChainEnds does not run on a score with no lyrics at all.
+    private static string LeadingRowScore(string firstVoice)
+    {
+        string bar = $"voice {{ {firstVoice} }} {{ b4 b b b }} |";
+        return
+            "octave absolute\n" +
+            "part m { clef treble }\npart n { clef bass }\n" +
+            "chords prog { c1 | g1 | c1 | g1 | }\n" +
+            $"section Main {{\n  m {{ {bar} {bar} break {bar} {bar} }}\n" +
+            "  n { b4 b b b | b4 b b b | b4 b b b | b4 b b b | }\n" +
+            "  lyrics w { la le li lo la le li lo la le li lo la le li lo }\n}\n" +
+            "form main { Main }\n" +
+            "score main \"leading-row-closing\" { chords prog staff m staff n with lyrics w }\n";
+    }
+
+    // How far the chord row that OPENS SYSTEM 2 stands above the staff that closes its chain.
+    // System 2's row is the chain-solved one; system 1's is placed by the alignment, so
+    // reading system 1 would pass whatever the chain did.
+    private static (double Clearance, double RestShift, int Systems) LeadingRowClearance(
+        string firstVoice)
+    {
+        var layout = Layout(LeadingRowScore(firstVoice));
+        var staves = layout.Systems[^1].StaffGroups.SelectMany(g => g.Staves).ToList();
+        return (staves.Single(s => s.StaffIndex == 0).Y - staves.Single(s => s.StaffIndex == 1).Y,
+                layout.GetRestShift(measureIndex: 0, voiceIndex: 0, itemIndex: 0),
+                layout.Systems.Length);
+    }
+
+    /// <summary>
+    /// The loose-line chain closes on the next system's first spaceable staff, and that
+    /// staff's up-skyline has to carry the rest another voice pushed UP out of it — or the
+    /// row that opens the system is solved into the rest.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:923-925 <c>loose_line_min_distances</c> — the
+    /// closing member of a loose block is pushed the same <c>min_offsets</c> difference as
+    /// every other, and those offsets are measured against each staff's own
+    /// <c>vertical-skylines</c> (lily/align-interface.cc:71-87 <c>get_skylines</c>). A Rest is
+    /// inside-staff ink and LilyPond translates the one grob (lily/rest-collision.cc:211-290
+    /// <c>calc_positioning_done</c>), so the skyline it hands the chain already holds the
+    /// moved rest.
+    /// <para>
+    /// ⚠️ THE FOURTH AND LAST of the call sites that build their own profile from
+    /// <c>SkylineBuilder.BuildStaffSkylines</c>, and the only one reached from the PAGE pass —
+    /// which is why the rest shift is the ONE side table it can be given: <c>Rest_collision</c>
+    /// is a function of the music alone, so the room's memo already holds the answer this
+    /// early (see <c>LayoutEngine.LeadingLinesOfSystem</c>'s remark for the six that cannot
+    /// follow). MEASURED: system 2's row stood 3.497100 above the closing staff with the rests
+    /// printed and 3.497100 with them spacers — the moved rest bought the row nothing, while
+    /// the ROOM had already opened 2.534000 for it, so the row was engraved into the gap the
+    /// rest occupies. After: 6.031100 against the control's 3.497100, the 2.534000 LilyPond
+    /// itself gives a rest pushed up out of a staff (audit/lp-geometry
+    /// <c>staff.staff.rest-over-notes</c> against its control).
+    /// </para>
+    /// <para>
+    /// ⚠️ SYSTEM 2, NOT SYSTEM 1. System 1's leading row is placed by the alignment inside its
+    /// own system and moved with the room from the first day the room had the table, so an
+    /// assertion on it is green either way. The chain only reaches the row that OPENS the
+    /// NEXT system.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ARowOpeningTheNextSystem_ClearsARestPushedOutOfTheStaffThatClosesItsChain()
+    {
+        var moved = LeadingRowClearance("r4 r r r");
+        var spacer = LeadingRowClearance("s4 s s s");
+        var highNotes = LeadingRowClearance("g''4 g'' g'' g''");
+
+        Assert.Equal(2, moved.Systems);   // the break took; there IS a next system to open
+        Assert.True(moved.RestShift >= 5.0,
+            "premise: Rest_collision must push this rest up out of the staff, "
+            + $"got {moved.RestShift:F6} staff positions");
+
+        Assert.True(highNotes.Clearance > spacer.Clearance + 0.1,
+            "control: the closing distance must respond to that staff's up-skyline: "
+            + $"high notes {highNotes.Clearance:F6}, spacer control {spacer.Clearance:F6}");
+
+        Assert.True(moved.Clearance > spacer.Clearance + 0.1,
+            "the row must clear the rest pushed up out of the staff that closes its chain: "
+            + $"printed rests {moved.Clearance:F6}, spacer control {spacer.Clearance:F6}");
+    }
 }

@@ -226,19 +226,21 @@ internal sealed class LayoutEngine
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
         // spacing extents before the page Y is fixed.
         var pagingSkylines = RunPreliminaryAnnotationPass(
-            score, systems.ToImmutableArray(), perSystemExtents, perSystemSkylines);
+            score, systems.ToImmutableArray(), perSystemExtents, perSystemSkylines,
+            multiStaffLayouter.RestCollisionsOf);
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
             lyricsRowStaves, pagingSkylines, perSystemHeights, perSystemBands);
 
         var looseChainEnd = BuildLooseChainEnds(
-            score, pages, systemsArray, perSystemExtents, lyricsRowStaves);
+            score, pages, systemsArray, perSystemExtents, lyricsRowStaves,
+            multiStaffLayouter.RestCollisionsOf);
         var trailingRowStaves = BuildTrailingRowStaves(systemsArray, lyricsRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
-            LayoutAllSpanners(score, systemsArray);
+            LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOf);
 
         // Resolve cross-staff layouts per voice
         var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
@@ -296,6 +298,8 @@ internal sealed class LayoutEngine
             BeamLayouts = allBeamLayouts.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
             StaffSkylines = placed.StaffSkylines,
+            // The room's own memo, not a second call: see AnnotationLayoutContext.RestCollisionsOf.
+            RestCollisionsOf = multiStaffLayouter.RestCollisionsOf,
             TupletForceStemUp = primaryStaff.IsMultiVoice,
             StaffVoices = primaryStaff.Voices,
             VoicesByStaff = anchors.VoicesByStaff,
@@ -545,7 +549,8 @@ internal sealed class LayoutEngine
     private List<(VerticalSkyline up, VerticalSkyline down)>? RunPreliminaryAnnotationPass(
         MultiStaffScore score, ImmutableArray<SystemLayout> prelimSystems,
         List<(double upExtent, double downExtent)> perSystemExtents,
-        List<(VerticalSkyline up, VerticalSkyline down)> perSystemSkylines)
+        List<(VerticalSkyline up, VerticalSkyline down)> perSystemSkylines,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
     {
         var prelimStaff = score.PrimaryContentStaff;
         var prelimScore = new Score(
@@ -637,6 +642,12 @@ internal sealed class LayoutEngine
             MeasuresByStaff = prelimMeasuresByStaff,
             StaffYByIndex = prelimStaffYByIndex,
             StaffByIndex = prelimStaffByIndex,
+            // ⚠️ THE SAME TABLE THE FINAL PASS GETS, for the reason the remark above this
+            // method gives: the annotations computed here are thrown away and only their
+            // EXTENTS survive, so a table the two passes disagree about is invisible in the
+            // drawing and comes out as spacing. A profile without the rest shift would leave
+            // a dynamic's protrusion short by however far Rest_collision moved the rest.
+            RestCollisionsOf = restCollisionsOf,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
         });
         EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
@@ -794,7 +805,8 @@ internal sealed class LayoutEngine
     /// </summary>
     private (List<BeamLayout> Beams, List<TieLayout> Ties, List<SlurLayout> Slurs, List<GlissandoLayout> Glissandos,
              ImmutableDictionary<RestShiftKey, double> RestShifts)
-        LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray)
+        LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
+            Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
     {
         var allBeamLayouts = new List<BeamLayout>();
         var allTieLayouts = new List<TieLayout>();
@@ -842,7 +854,14 @@ internal sealed class LayoutEngine
             // that takes a rest out of the staff at all. Merged into the same table by the
             // same larger-wins rule LilyPond's two passes end at: the beam callback and the
             // collision each translate the rest, and what survives is the outer position.
-            foreach (var kv in _elementCoordinator.CalculateRestNoteCollisions(staff))
+            // ⚠️ THROUGH THE ROOM'S MEMO, NOT A SECOND CALL. This used to call
+            // ElementCoordinator.CalculateRestNoteCollisions directly, while
+            // MultiStaffLayouter.BuildAllStaffSkylines asked the same question of the same
+            // Staff through RestCollisionsOf — so every layout ran that WHOLE-SCORE scan
+            // twice for every polyphonic staff, and an edit pays it on each keystroke. The
+            // answer is a function of the Staff alone (see CalculateRestNoteCollisions'
+            // remark), which is what makes the memo sound and made the duplicate invisible.
+            foreach (var kv in restCollisionsOf(staff))
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
                     || Math.Abs(kv.Value) > Math.Abs(existing))
                     restShiftsBuilder[kv.Key] = kv.Value;
@@ -2170,7 +2189,8 @@ internal sealed class LayoutEngine
         MultiStaffScore score, ImmutableArray<PageLayout> pages,
         ImmutableArray<SystemLayout> systemsArray,
         List<(double upExtent, double downExtent)> perSystemExtents,
-        IReadOnlySet<int> lyricsRowStaves)
+        IReadOnlySet<int> lyricsRowStaves,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
     {
         if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
             return null;
@@ -2254,7 +2274,7 @@ internal sealed class LayoutEngine
 
                     var (lines, closingSpec, closingMin) = LeadingLinesOfSystem(
                         score, systemsArray, staffByIndex, index + 1,
-                        leading[index + 1], firstSpaceableIndex[index + 1]);
+                        leading[index + 1], firstSpaceableIndex[index + 1], restCollisionsOf);
 
                     ends[index] = new LooseLineSpacer.ChainEnd(
                         room, systemPadding + nextUpExtent + nextFirst + halfStaff,
@@ -2310,15 +2330,37 @@ internal sealed class LayoutEngine
     /// which runs before <c>AnnotationLayoutContext.StaffSkylines</c> exists. So the closing
     /// staff here is measured WITHOUT its dynamics, scripts, tuplet brackets, slurs, ties or
     /// beams, and a mark on the first staff of the next system is not in the distance a
-    /// trailing row is closed by. MEASURED: nothing — no fixture in the corpus puts a script
-    /// on a system's first staff under a preceding row, so this is named, not quantified.
+    /// trailing row is closed by. NOT MEASURED — the sentence that stood here claimed the
+    /// corpus has no such book and had not asked it, which is the shape HANDOFF 1 named three
+    /// times in one session.
+    /// </para>
+    /// <para>
+    /// ★ THE REST SHIFT IS HERE SINCE 2026-08-04, and it is the one side table that costs
+    /// nothing to have: <c>Rest_collision</c>'s answer is a function of the MUSIC alone, so
+    /// the room's memo already holds it this early
+    /// (<c>MultiStaffLayouter.RestCollisionsOf</c>) and the closing staff is measured with
+    /// its rests where they were pushed to.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE OTHER SIX ARE NOT IMPOSSIBLE HERE, and a sentence claiming they were stood in
+    /// this remark for a few hours on 2026-08-04 until its own author read the signatures.
+    /// <c>Staff{Beam,Slur,Tie,TupletBracket,Articulation}Layouts</c> take
+    /// <c>(score, staff, staffIndex, measureLayouts)</c> and nothing else, and the dynamics
+    /// are a <c>Where</c> over <c>score.Dynamics</c> — every input this method already holds
+    /// (<paramref name="sysIdx"/>'s <c>Measures</c>). What stops it is not availability but
+    /// that computing them HERE would be a second run of what
+    /// <c>MultiStaffLayouter.BuildAllStaffSkylines</c> already did for this staff, which is
+    /// the same objection this whole migration is about. The fix is to reach the room's
+    /// result, not to recompute; that needs the per-staff list to exist before the page pass,
+    /// which it does not. UNMEASURED either way — no book has been built for it.
     /// </para>
     /// </remarks>
     private (ImmutableArray<LooseLineSpacer.LeadingLine> Lines,
              VerticalSpacingSpec? ClosingSpec, double ClosingMin) LeadingLinesOfSystem(
         MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
         IReadOnlyDictionary<int, Staff> staffByIndex, int sysIdx,
-        List<StaffLayout> leading, int firstSpaceableIndex)
+        List<StaffLayout> leading, int firstSpaceableIndex,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
     {
         if (leading.Count == 0
             || !staffByIndex.TryGetValue(firstSpaceableIndex, out var closingStaff))
@@ -2368,7 +2410,11 @@ internal sealed class LayoutEngine
             null, sp.Lyrics, sp.StaffStaff);
         double closingMin = walk.Distance(
             _skylineBuilder.BuildStaffSkylines(
-                closingStaff, measures, systemLeft: systemsArray[sysIdx].Indent).Up,
+                closingStaff, measures, systemLeft: systemsArray[sysIdx].Indent,
+                // A rest another voice pushed UP out of this staff reaches into the very gap
+                // the chain is closed by, and it is the ROOM's own memo that says where it
+                // went — see MultiStaffLayouter.RestCollisionsOf.
+                restShifts: restCollisionsOf(closingStaff)).Up,
             closingSpec.Padding);
 
         return (built.ToImmutable(), closingSpec, closingMin);
@@ -2564,6 +2610,49 @@ internal sealed class LayoutEngine
         /// </para>
         /// </remarks>
         public IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? StaffSkylines { get; init; }
+
+        /// <summary>
+        /// A staff's rest/note collision shifts — <c>MultiStaffLayouter.RestCollisionsOf</c>
+        /// itself, so this pass reserves each rest where the ROOM reserved it and where the
+        /// renderer draws it.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ SUPPLIED FOR THE PROFILES THIS PASS STILL BUILDS. Three call sites here cannot
+        /// read <see cref="StaffSkylines"/>, and for a real reason each: the figured-bass drop
+        /// and the outside-staff stacker's seed need the INSIDE-staff silhouette, before the
+        /// movers they are about to place are merged into it, and a chord row under a non-top
+        /// staff would otherwise clear the band that row itself reserved
+        /// (<c>MultiStaffLayouter.ReserveChordRowBand</c>). So they call
+        /// <c>SkylineBuilder.BuildStaffSkylines</c> — and until 2026-08-04 they called it with
+        /// this table at its default, i.e. with every rest at its unshifted position. A rest
+        /// another voice has pushed out of the staff is the one rest that reaches these
+        /// consumers at all, so the omission was the whole of it: MEASURED on a one-staff book
+        /// whose second voice holds printed rests, the below-staff dynamic read -4.546000 with
+        /// the rests printed and -4.546000 with them spacers — the moved rest contributed
+        /// nothing and the dynamic was engraved on top of it
+        /// (<c>DynamicPlacementTests.BelowDynamic_ClearsARestAnotherVoicePushedOutOfTheStaff</c>).
+        /// <para>
+        /// ⚠️ WHAT IS STILL NOT IN IT, named rather than left to be found: the BEAM rest shift
+        /// (<c>ElementCoordinator.CalculateRestShifts</c>, <c>Beam::rest_collision_callback</c>).
+        /// LilyPond has one Rest grob that both passes translate, so the silhouette sees the
+        /// outer position of the two; Lily# reserves only the collision half — here, in the
+        /// room, and in the loose-line chain alike. That is one gap in one shape, not four,
+        /// which is why this hands over the room's table rather than the renderer's merged one
+        /// (<c>ScoreLayout.RestShifts</c>): the merged table is available in this pass and not
+        /// in the room, and taking it here would put the reservation on two spellings again.
+        /// </para>
+        /// <para>
+        /// ⚠️ REQUIRED, NOT NULLABLE, and that is the whole guard. A nullable one read with
+        /// <c>?.</c> would let a third construction of this context omit it and put every
+        /// rest back at its unshifted position — silently, with the suite green, which is
+        /// exactly how the defect this closes survived. <see cref="StaffSkylines"/> is
+        /// nullable because it has a real absent case (the preliminary pass runs before the
+        /// systems are placed); this one has none, since <c>Rest_collision</c> needs only the
+        /// music. HANDOFF 7.7's "fallback / try で握りつぶす", caught by that list.
+        /// </para>
+        /// </remarks>
+        public required Func<Staff, ImmutableDictionary<RestShiftKey, double>> RestCollisionsOf { get; init; }
+
         public bool TupletForceStemUp { get; init; }
         public ImmutableArray<Voice> StaffVoices { get; init; }
         public Dictionary<int, ImmutableArray<Voice>>? VoicesByStaff { get; init; }
@@ -2822,7 +2911,10 @@ internal sealed class LayoutEngine
                         staff, systems[sysIdx].Measures,
                         articulationLayouts: staffScripts,
                         beams: beamLayouts ?? ImmutableArray<BeamLayout>.Empty,
-                        systemLeft: systems[sysIdx].Indent).Down;
+                        systemLeft: systems[sysIdx].Indent,
+                        // ...and a rest another voice pushed DOWN out of the staff is ink the
+                        // figures have to drop below — see AnnotationLayoutContext.RestCollisionsOf.
+                        restShifts: ctx.RestCollisionsOf(staff)).Down;
                     // ⚠️ REFLECTED ONCE, HERE AT THE EDGE, into the system Y-up frame the drop
                     // works in — and by the SAME expression AugmentSkylinesWithScripts uses for
                     // "this staff's middle in the system's frame", so the two cannot drift.
@@ -2952,7 +3044,11 @@ internal sealed class LayoutEngine
                                 : allBeams.Where(b => b.StaffIndex == staffIndex
                                         && b.SystemIndex == sysIdx)
                                     .ToImmutableArray(),
-                            systemLeft: systems[sysIdx].Indent)
+                            systemLeft: systems[sysIdx].Indent,
+                            // A rest another voice pushed out of the staff is inside-staff ink
+                            // at the place it was pushed to, and everything this pass stacks
+                            // clears it — see AnnotationLayoutContext.RestCollisionsOf.
+                            restShifts: ctx.RestCollisionsOf(profStaff))
                         : null;
                     profileCache[(sysIdx, staffIndex)] = built;
                 }
@@ -3107,7 +3203,11 @@ internal sealed class LayoutEngine
                     {
                         var up = _skylineBuilder.BuildStaffSkylines(
                             staff, systems[sysIdx].Measures,
-                            systemLeft: systems[sysIdx].Indent).Up;
+                            systemLeft: systems[sysIdx].Indent,
+                            // ...including a rest another voice pushed UP out of the staff,
+                            // which is exactly the ink a row above this staff has to clear —
+                            // see AnnotationLayoutContext.RestCollisionsOf.
+                            restShifts: ctx.RestCollisionsOf(staff)).Up;
                         // ⚠️ REFLECTED ONCE, HERE AT THE EDGE. BuildStaffSkylines works about
                         // the staff's REFERENCE POINT, which is LilyPond's frame;
                         // ChordNameEngraver works in "above the staff's TOP line" throughout,

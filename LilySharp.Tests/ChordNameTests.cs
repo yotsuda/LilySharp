@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -355,5 +357,84 @@ score main {{ staff m with chords prog }}
         Assert.Single(score.FiguredBasses);
         Assert.Equal("C", score.ChordNames[0].ChordText);
         Assert.Equal(6, score.FiguredBasses[0].Figures[0].Number);
+    }
+
+    // How far the chord row rides above ITS OWN staff — the lower one of two — when that
+    // staff's FIRST voice holds the given item. Measured against the staff rather than
+    // against the page because the room moves the staff itself for the same rest, and the
+    // question here is the CLEARANCE the row was given.
+    private static (double Clearance, double RestShift) LowerStaffChordClearance(string firstVoice)
+    {
+        var src =
+            "octave absolute\n" +
+            "part hi { clef treble }\npart lo { clef treble }\n" +
+            "chords prog { c1 | }\n" +
+            "section Main {\n  hi { b4 b b b | }\n" +
+            $"  lo {{ voice {{ {firstVoice} }} {{ b4 b b b }} | }}\n}}\n" +
+            "form main { Main }\n" +
+            "score main \"o\" { staff hi staff lo with chords prog }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors,
+            string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        double staffY = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves)
+            .Single(s => s.StaffIndex == 1).Y;
+        return (layout.ChordNameLayouts.Select(c => c.YUp).Min() - staffY,
+                layout.GetRestShift(measureIndex: 0, voiceIndex: 0, itemIndex: 0));
+    }
+
+    /// <summary>
+    /// A chord row over a NON-TOP staff clears the rest another voice pushed UP out of that
+    /// staff — the per-(system, staff) up-skyline the row is placed against holds that rest
+    /// where <c>Rest_collision</c> put it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-950 <c>skyline_spacing</c> — a Rest is
+    /// inside-staff ink and there is one of it; LilyPond translates the grob
+    /// (lily/rest-collision.cc:211-290 <c>calc_positioning_done</c>) and everything placed
+    /// against the group sees the result.
+    /// <para>
+    /// ⚠️ THE THIRD OF THE FOUR CALL SITES that build their own profile from
+    /// <c>SkylineBuilder.BuildStaffSkylines</c>. The PATH does have a fixture —
+    /// <c>test/figbass-chordname-lower-staff</c> reaches it through an inline
+    /// <c>@chord(...)</c> on the second staff, which is the only spelling in the corpus that
+    /// does (COUNTED: every <c>with chords</c> in Fixtures and samples is on its score's ONLY
+    /// staff). What no book has is the path AND a rest pushed out of that staff, which is why
+    /// the whole suite stayed green through this fix. MEASURED: clearance
+    /// 0.650000 with the rests as spacers, 3.184000 with them printed — but only once the
+    /// table reached this call; before it BOTH read 0.650000 and the row was engraved on the
+    /// rest while the room below had already made space for it. The 2.534000 between them is
+    /// LilyPond's own contribution for a rest pushed UP out of a staff (audit/lp-geometry
+    /// <c>staff.staff.rest-over-notes</c> against its control), and it is a DIFFERENT number
+    /// from the 2.230000 the downward case gives — which is why a port fitted to one side
+    /// does not close the other.
+    /// </para>
+    /// <para>
+    /// ⚠️ THREE LEGS, as in the two mirror books
+    /// (<c>DynamicPlacementTests.BelowDynamic_ClearsARestAnotherVoicePushedOutOfTheStaff</c>,
+    /// <c>FiguredBassTests.FiguredBass_DropsBelowARestAnotherVoicePushedOutOfTheStaff</c>):
+    /// a premise, a control that the placement reads this staff's profile at all, and the
+    /// quantity.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ChordRowOnALowerStaff_ClearsARestAnotherVoicePushedOutOfIt()
+    {
+        var moved = LowerStaffChordClearance("r4 r r r");
+        var spacer = LowerStaffChordClearance("s4 s s s");
+        var highNotes = LowerStaffChordClearance("g''4 g'' g'' g''");
+
+        Assert.True(moved.RestShift >= 5.0,
+            "premise: Rest_collision must push this rest up out of the staff, "
+            + $"got {moved.RestShift:F6} staff positions");
+
+        Assert.True(highNotes.Clearance > spacer.Clearance + 0.1,
+            "control: the row must respond to ink in its own staff's up-skyline: "
+            + $"high notes {highNotes.Clearance:F6}, spacer control {spacer.Clearance:F6}");
+
+        Assert.True(moved.Clearance > spacer.Clearance + 0.1,
+            "the row must clear the rest pushed up out of its own staff: "
+            + $"printed rests {moved.Clearance:F6}, spacer control {spacer.Clearance:F6}");
     }
 }
