@@ -67,10 +67,55 @@ public class LpProvenanceTests
     /// the thing to fix.
     /// </remarks>
     /// <remarks>
-    /// The 13 it starts at are a real backlog, not noise, and the list the test prints is
+    /// The 13 it started at are a real backlog, not noise, and the list the test prints is
     /// worth reading once: NoteheadHeight, NoteheadHalfHeight, RestHeight and RestWidth
     /// are all in it — the nominal boxes this guard exists because of. Two of them were
     /// still deciding spacing when it was written.
+    /// </remarks>
+    /// <remarks>
+    /// <para>
+    /// ⚠️⚠️ IT WENT 13 → 20 ON 2026-08-04, AND NOT BECAUSE ANYTHING WAS ADDED. The walk that
+    /// looks for a marker was reading a fourteen-line window and SKIPPING blank lines rather
+    /// than stopping at them, so a constant could inherit the marker of a group it is not in.
+    /// The comment beside that loop had described the correct rule the whole time; only the
+    /// code disagreed with it. HANDOFF recorded the symptom three sessions ago — deleting one
+    /// LILYSHARP-OWN line dropped FOUR constants to unsourced — and called the baseline "that
+    /// much too lenient" without saying by how much. It was seven.
+    /// </para>
+    /// <para>
+    /// ⚠️ THAT NUMBER WAS NEVER PAID AS DEBT. Seeing the twenty was what made them
+    /// answerable, and seven turned out not to be provenance questions at all:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>FOUR HAD NO READER. <c>StemUpAttachY</c>, <c>StemDownAttachY</c>,
+    /// <c>NoteheadHeight</c> and <c>MaxStiffness</c> were referenced by nothing but their own
+    /// declarations. Sourcing an unread constant documents a fiction; they were deleted,
+    /// which HANDOFF 5.2.1⑥ had already prescribed and which
+    /// <see cref="EveryEngravingDefault_StatesWhereItsNumberCameFrom"/> cannot ask for —
+    /// it checks that a number states an origin, never that anything computes with it.</item>
+    /// <item>ONE WAS THE INSTRUMENT AGAIN. <c>LyricTextFontSize</c> carries as thorough a
+    /// LILYPOND-REF as this file has, twenty-four lines up, and the walk had a fourteen-line
+    /// cap. See the note where that cap used to be.</item>
+    /// <item>TWO WERE ANSWERABLE ON SIGHT. <c>StaffMiddle</c> is a frame rather than a
+    /// quantity, and <c>NoteheadDoubleWholeWidth</c> is hand-tuned because the metrics
+    /// extractor omits a glyph LilyPond does have — both now say so.</item>
+    /// </list>
+    /// <para>
+    /// The thirteen left are real provenance work, and none is a five-minute job:
+    /// <c>FlagWidth</c>, <c>FlagBaseHeight</c>, <c>FlagHeightIncrement</c>,
+    /// <c>NoteheadHalfHeight</c>, <c>RestHeight</c>, <c>RestWidth</c>, <c>DotGap</c>,
+    /// <c>RepeatDotRadius</c>, <c>RepeatDotPosition1</c>, <c>RepeatDotPosition2</c> here, and
+    /// <c>PageWidth</c>, <c>StaffHeight</c>, <c>SystemSpacing</c> in LayoutOptions.
+    /// ⚠️ <c>DotGap</c> has no constant to cite: LilyPond's DotColumn padding is the callback
+    /// <c>dot-column-interface::pad-by-one-dot-width</c>, so that one is a measurement.
+    /// </para>
+    /// <para>
+    /// ★ Three WERE sourced in the same commit rather than counted: the StaffGrouper
+    /// <c>staff-staff-spacing</c> triple, whose section header had named the grob in prose
+    /// for a long time without giving the address. Writing the address out is also what
+    /// showed that the fourth value in that entry, <c>stretchability . 5</c>, is spelled
+    /// nowhere in Core at all.
+    /// </para>
     /// </remarks>
     private const int UnsourcedBaseline = 13;
 
@@ -100,11 +145,15 @@ public class LpProvenanceTests
             "LilySharp.slnx not found above " + AppContext.BaseDirectory);
     }
 
-    /// <summary>
-    /// How far back a marker may sit: far enough for a doc comment with a summary and a
-    /// remark, short enough that it cannot be borrowed from the constant above.
-    /// </summary>
-    private const int MarkerLookback = 14;
+    // ⚠️ THERE IS NO LOOKBACK CAP, and removing it was a correction rather than a
+    //   relaxation. A `MarkerLookback = 14` used to be described as doing two jobs — reach
+    //   far enough for a real doc comment, and stop a marker being borrowed from the
+    //   constant above — which is how it came to do neither. It did not stop borrowing,
+    //   because the walk skipped blank lines and so reached fourteen lines across anything
+    //   at all; and it did not reach far enough, because it counted LyricTextFontSize as
+    //   unsourced when that constant's LILYPOND-REF sits twenty-four lines up in one of the
+    //   best-documented blocks in this file. The blank line is the boundary. A block is as
+    //   long as its author needed.
 
     [Fact]
     public void EveryEngravingDefault_StatesWhereItsNumberCameFrom()
@@ -125,13 +174,17 @@ public class LpProvenanceTests
                     continue;
 
                 bool sourced = false;
-                for (int k = Math.Max(0, i - MarkerLookback); k < i && !sourced; k++)
+                for (int k = i - 1; k >= 0; k--)
                 {
                     // A blank line ends the block that belongs to this declaration, so a
                     // marker above it belongs to the previous constant, not this one.
                     if (lines[k].Trim().Length == 0)
-                        continue;
-                    sourced = lines[k].Contains("LILYPOND-REF") || lines[k].Contains("LILYSHARP-OWN");
+                        break;
+                    if (lines[k].Contains("LILYPOND-REF") || lines[k].Contains("LILYSHARP-OWN"))
+                    {
+                        sourced = true;
+                        break;
+                    }
                 }
 
                 if (!sourced)

@@ -561,6 +561,15 @@ internal static class EngravingDefaults
     public const double NoteheadHalfWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadHalfAdvance;
     public const double NoteheadBlackWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackAdvance;
     /// <summary>Double-whole notehead is hand-tuned (no glyph in extracted set).</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
+    /// LilyPond lacks the glyph — it has it (mf/feta-noteheads.mf:240,
+    /// <c>fet_beginchar ("brevis notehead", "sM1")</c>) — but because
+    /// Extract-EmmentalerMetrics.py does not emit it, so GlyphMetricsGenerated has
+    /// <c>RestDoubleWhole*</c> and no notehead counterpart. This number has therefore never
+    /// been checked against the font at all; the neighbours above it are advance widths read
+    /// out of Emmentaler. Closing it is extractor work, not measurement work.
+    /// </remarks>
     public const double NoteheadDoubleWholeWidth = 2.296;
 
     // === Stem attachment points ===
@@ -585,9 +594,12 @@ internal static class EngravingDefaults
     public static readonly double StemUpAttachX =
         LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackStemAttachment.X
         - StemThickness / 2;
-    public const double StemUpAttachY = 0.168;
     public const double StemDownAttachX = StemThickness / 2;
-    public const double StemDownAttachY = -0.168;
+    // ⚠️ StemUpAttachY = 0.168 and StemDownAttachY = -0.168 stood here with no explanation
+    //   and no reader. Deleted 2026-08-04 rather than given one: HANDOFF 5.2.1⑥ says an
+    //   argument a port stopped using is dropped where it is found, because leaving it is
+    //   misinformation for whoever reads next — and inventing provenance for a number
+    //   nothing computes with would have been worse than the silence it replaced.
 
     /// <summary>
     /// Horizontal shift of a TAB fret number from its note column (the notehead's
@@ -606,13 +618,24 @@ internal static class EngravingDefaults
     /// staff-space frame (top line = 0, bottom line = 4). A notehead's local Y is
     /// <c>StaffMiddle - staffPosition / 2</c> (staffPosition is half-spaces from the
     /// middle line, LilyPond convention). Use this instead of a bare <c>2.0</c>.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
+    /// because it never needs one — its staff positions ARE the vertical coordinate, while
+    /// the engravers here work in a local top-line-is-zero frame and have to say where the
+    /// middle line sits in it. The 2.0 is "half of a five-line staff's four spaces", which
+    /// is the frame's definition rather than a number anyone chose. HANDOFF's rule about
+    /// naming the frame applies: this constant exists so that the conversion is spelled once
+    /// instead of appearing as a bare 2.0 in fourteen call sites.
+    /// </remarks>
     public const double StaffMiddle = 2.0;
 
     // === Notehead collision ===
     /// <summary>Half-height of notehead for collision detection (in staff positions).</summary>
     public const double NoteheadHalfHeight = 0.5;
-    /// <summary>Height of notehead for skyline calculation (in staff spaces).</summary>
-    public const double NoteheadHeight = 1.0;
+    // ⚠️ NoteheadHeight = 1.0 stood here with nothing reading it. HANDOFF 5.2.1⑥ recorded
+    //   why in 2026-07: the vertical skyline moved to the LILC ink in cff877c8, and this
+    //   survived as an unused argument threaded through five signatures — which is exactly
+    //   how it kept being diagnosed as live. Deleted 2026-08-04.
 
     // === Rest dimensions ===
     /// <summary>Approximate height of rest glyph for skyline calculation (in staff spaces).</summary>
@@ -683,7 +706,16 @@ internal static class EngravingDefaults
     /// </summary>
     public const double BarLineToNextNoteSpace = 0.9;
 
-    // === Staff spacing (from scm/define-grobs.scm StaffGrouper) ===
+    // === Staff spacing ===
+    // LILYPOND-REF: scm/define-grobs.scm:3352-3355 StaffGrouper staff-staff-spacing —
+    //   (basic-distance . 9) (minimum-distance . 7) (padding . 1) (stretchability . 5).
+    //   The section header said this in prose for a long time; the ratchet wants the address,
+    //   and writing it down is what shows the fourth value has no constant here.
+    // ⚠️ THE FOURTH IS NOT SPELLED ANYWHERE IN Core. Writing the entry out is what showed
+    //   it: `stretchability . 5` has no constant here and no other occurrence (grepped for
+    //   the literal and for Stretchability = 5). Whether the staff springs are missing it or
+    //   getting it another way is UNMEASURED — do not add it as a default until someone
+    //   looks, or it becomes a second spelling of a number that already has an owner.
     /// <summary>Basic distance between staves in a group (center to center).</summary>
     public const double StaffStaffBasicDistance = 9.0;
     /// <summary>Minimum distance between staves in a group.</summary>
@@ -867,8 +899,9 @@ internal static class EngravingDefaults
     /// </remarks>
     public const double BaseShortestDuration = 0.1875; // 3/16
 
-    /// <summary>Maximum stiffness for zero-duration items.</summary>
-    public const double MaxStiffness = 10.0;
+    // ⚠️ MaxStiffness = 10.0 ("maximum stiffness for zero-duration items") stood here with
+    //   no reader and no LilyPond counterpart named. Deleted 2026-08-04 — see the note on
+    //   NoteheadHeight above for why an unread constant is dropped rather than sourced.
 
     /// <summary>
     /// Tab string-line spacing in staff spaces — 1.5, for every string count.
