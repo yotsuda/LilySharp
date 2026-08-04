@@ -235,7 +235,7 @@ internal sealed class LayoutEngine
 
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents, lyricsRowStaves,
-            multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners);
+            multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners, placed.StaffInside);
         var trailingRowStaves = BuildTrailingRowStaves(systemsArray, lyricsRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
@@ -299,6 +299,7 @@ internal sealed class LayoutEngine
             SystemSkylines = perSystemSkylines,
             StaffSkylines = placed.StaffSkylines,
             StaffSpanners = placed.StaffSpanners,
+            StaffInside = placed.StaffInside,
             // The room's own memo, not a second call: see AnnotationLayoutContext.RestCollisionsOf.
             RestCollisionsOf = multiStaffLayouter.RestCollisionsOf,
             TupletForceStemUp = primaryStaff.IsMultiVoice,
@@ -378,7 +379,12 @@ internal sealed class LayoutEngine
         /// from, indexed by global staff index. Carried for the consumers that must rebuild
         /// a profile of their own — see
         /// <see cref="MultiStaffLayouter.StaffInsideSpanners"/>.</summary>
-        List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners);
+        List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners,
+        /// <summary>Per system, each staff's INSIDE-staff skyline — the one LilyPond builds
+        /// once per VerticalAxisGroup and every consumer of a staff's silhouette reads. Every
+        /// site that used to rebuild its own subset takes this instead; see
+        /// <see cref="SkylineBuilder.BuildInsideStaffSkylines"/>.</summary>
+        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -417,6 +423,7 @@ internal sealed class LayoutEngine
         var perSystemLyricBands = new List<double>();
         var perSystemStaffSkylines = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         var perSystemStaffSpanners = new List<List<MultiStaffLayouter.StaffInsideSpanners>>();
+        var perSystemStaffInside = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -528,13 +535,15 @@ internal sealed class LayoutEngine
                     score, sysStaffGroups, sysStaffSkylines.Skylines, sysLooseLines)));
             perSystemStaffSkylines.Add(sysStaffSkylines.Skylines);
             perSystemStaffSpanners.Add(sysStaffSkylines.Spanners);
+            perSystemStaffInside.Add(sysStaffSkylines.Inside);
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
 
         return new SystemPlacements(
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
-            perSystemLyricBands, perSystemStaffSkylines, perSystemStaffSpanners);
+            perSystemLyricBands, perSystemStaffSkylines, perSystemStaffSpanners,
+            perSystemStaffInside);
     }
 
 
@@ -928,6 +937,30 @@ internal sealed class LayoutEngine
            && staffIndex >= 0 && staffIndex < bySystem[systemIndex].Count
             ? bySystem[systemIndex][staffIndex]
             : default;
+
+    /// <summary>
+    /// One (system, staff)'s INSIDE-STAFF SKYLINE out of the per-system lists the room
+    /// produced — LilyPond's one <c>inside_staff_skylines</c> per VerticalAxisGroup, which
+    /// every consumer of a staff's silhouette reads instead of building its own.
+    /// A COPY, because the consumers translate it into their own frame.
+    /// </summary>
+    /// <remarks>
+    /// The same two-passes-ask shape as <see cref="SpannersAt"/>, and the same two absent
+    /// cases: null is the preliminary pass (no room yet, and the caller falls back to
+    /// building its own); an out-of-range index is a bug in the indexing, not an absence.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
+    /// </remarks>
+    private static (VerticalSkyline Up, VerticalSkyline Down)? InsideAt(
+        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? bySystem,
+        int systemIndex, int staffIndex)
+    {
+        if (bySystem == null
+            || systemIndex < 0 || systemIndex >= bySystem.Count
+            || staffIndex < 0 || staffIndex >= bySystem[systemIndex].Count)
+            return null;
+        var (up, down) = bySystem[systemIndex][staffIndex];
+        return (SkylineBuilder.Copy(up), SkylineBuilder.Copy(down));
+    }
 
     // Route a system's PER-STAFF skylines through the session cache. They became a
     // per-system cost when the placement did (see the loop above); before that one list
@@ -1635,20 +1668,21 @@ internal sealed class LayoutEngine
             double staffMidUp = LayoutUtilities.StaffOffsetInSystemUp(sys, a.StaffIndex) - 2.0;
             double aY = a.YUp + staffMidUp;
             // The Script grob's one profile (the padded outline), as everywhere else that
-            // reads a script's silhouette — this used to be a fourth spelling of it.
-            var (scriptUp, scriptDown) = ArticulationEngraver.ScriptSkylines(a, aY);
+            // reads a script's silhouette — this used to be a fourth spelling of it. Merged
+            // without a placed copy: see MergeScriptProfile's remark for what the copies
+            // cost on a script-dense page.
             if (a.IsAbove)
             {
                 var up = new VerticalSkyline(VerticalDirection.Up);
                 up.Merge(augmented[sysIdx].up);
-                up.Merge(scriptUp);
+                ArticulationEngraver.MergeScriptProfile(up, a, aY);
                 augmented[sysIdx] = (up, augmented[sysIdx].down);
             }
             else
             {
                 var down = new VerticalSkyline(VerticalDirection.Down);
                 down.Merge(augmented[sysIdx].down);
-                down.Merge(scriptDown);
+                ArticulationEngraver.MergeScriptProfile(down, a, aY);
                 augmented[sysIdx] = (augmented[sysIdx].up, down);
             }
         }
@@ -2232,7 +2266,8 @@ internal sealed class LayoutEngine
         List<(double upExtent, double downExtent)> perSystemExtents,
         IReadOnlySet<int> lyricsRowStaves,
         Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
-        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners)
+        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners,
+        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? staffInside)
     {
         if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
             return null;
@@ -2317,7 +2352,7 @@ internal sealed class LayoutEngine
                     var (lines, closingSpec, closingMin) = LeadingLinesOfSystem(
                         score, systemsArray, staffByIndex, index + 1,
                         leading[index + 1], firstSpaceableIndex[index + 1], restCollisionsOf,
-                        staffSpanners);
+                        staffSpanners, staffInside);
 
                     ends[index] = new LooseLineSpacer.ChainEnd(
                         room, systemPadding + nextUpExtent + nextFirst + halfStaff,
@@ -2416,7 +2451,8 @@ internal sealed class LayoutEngine
         IReadOnlyDictionary<int, Staff> staffByIndex, int sysIdx,
         List<StaffLayout> leading, int firstSpaceableIndex,
         Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
-        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners)
+        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners,
+        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? staffInside)
     {
         if (leading.Count == 0
             || !staffByIndex.TryGetValue(firstSpaceableIndex, out var closingStaff))
@@ -2464,22 +2500,21 @@ internal sealed class LayoutEngine
         var closingSpec = StaffAffinity.GetSpacingSpec(
             previous!.StaffAffinity, NonStaffSpecsOf(previous, sp),
             null, sp.Lyrics, sp.StaffStaff);
-        // ...and the spanners, which are inside-staff ink in LilyPond and so belong to the
-        // silhouette the chain is closed against exactly as the notes do. Carried out of
-        // the ROOM (SpannersAt over the per-system lists the placement produced), not laid
-        // out again: see MultiStaffLayouter.StaffInsideSpanners.
-        var closingSpanners = SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex);
-        double closingMin = walk.Distance(
-            _skylineBuilder.BuildStaffSkylines(
+        // ...and the closing staff's own silhouette: THE room's inside-staff skyline, not a
+        // subset rebuilt here. Everything that is inside-staff ink in LilyPond — the notes
+        // (with their rest shifts), the scripts, the spanners and the beams — is in it
+        // because the room put it there once.
+        // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
+        var closingInside = InsideAt(staffInside, sysIdx, firstSpaceableIndex)
+            // The preliminary pass has no room to quote; build the one profile from the same
+            // ingredients it would have carried.
+            ?? _skylineBuilder.BuildInsideStaffSkylines(
                 closingStaff, measures, systemLeft: systemsArray[sysIdx].Indent,
-                tupletBrackets: closingSpanners.TupletBrackets,
-                slurs: closingSpanners.Slurs,
-                ties: closingSpanners.Ties,
-                // A rest another voice pushed UP out of this staff reaches into the very gap
-                // the chain is closed by, and it is the ROOM's own memo that says where it
-                // went — see MultiStaffLayouter.RestCollisionsOf.
-                restShifts: restCollisionsOf(closingStaff)).Up,
-            closingSpec.Padding);
+                tupletBrackets: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).TupletBrackets,
+                slurs: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).Slurs,
+                ties: SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex).Ties,
+                restShifts: restCollisionsOf(closingStaff));
+        double closingMin = walk.Distance(closingInside.Up, closingSpec.Padding);
 
         return (built.ToImmutable(), closingSpec, closingMin);
     }
@@ -2722,6 +2757,28 @@ internal sealed class LayoutEngine
         /// </remarks>
         public MultiStaffLayouter.StaffInsideSpanners SpannersOf(int systemIndex, int staffIndex)
             => SpannersAt(StaffSpanners, systemIndex, staffIndex);
+
+        /// <summary>Per system, each staff's INSIDE-staff skyline as the room built it —
+        /// LilyPond's one profile per VerticalAxisGroup. Null in the preliminary pass, the
+        /// same real absence <see cref="StaffSkylines"/> has.</summary>
+        public IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? StaffInside { get; init; }
+
+        /// <summary>
+        /// One (system, staff)'s inside-staff skyline — a COPY, ready to be raised into the
+        /// caller's frame — or null when this pass has none (the preliminary pass), in which
+        /// case the caller builds its own.
+        /// </summary>
+        /// <remarks>
+        /// ★ THIS IS WHAT THE THREE REBUILD SITES NOW READ. They used to call
+        /// <c>SkylineBuilder.BuildStaffSkylines</c> with their own subset of the side tables
+        /// — which is why the chord row and the loose chain were missing scripts and beams —
+        /// and each rebuild walked the whole staff again. The reasons they could not read
+        /// <see cref="StaffSkylines"/> all name the same object: the movers are not in it, and
+        /// neither is the chord row's own reserved band.
+        /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
+        /// </remarks>
+        public (VerticalSkyline Up, VerticalSkyline Down)? InsideOf(int systemIndex, int staffIndex)
+            => InsideAt(StaffInside, systemIndex, staffIndex);
 
         /// <summary>
         /// A staff's rest/note collision shifts — <c>MultiStaffLayouter.RestCollisionsOf</c>
@@ -3026,17 +3083,21 @@ internal sealed class LayoutEngine
                     // inside-staff ink the figures drop below. The room's own tables, not a
                     // second layout: see AnnotationLayoutContext.StaffSpanners.
                     var fbSpanners = ctx.SpannersOf(sysIdx, staffIndex);
-                    var down = _skylineBuilder.BuildStaffSkylines(
-                        staff, systems[sysIdx].Measures,
-                        articulationLayouts: staffScripts,
-                        tupletBrackets: fbSpanners.TupletBrackets,
-                        slurs: fbSpanners.Slurs,
-                        ties: fbSpanners.Ties,
-                        beams: beamLayouts ?? ImmutableArray<BeamLayout>.Empty,
-                        systemLeft: systems[sysIdx].Indent,
-                        // ...and a rest another voice pushed DOWN out of the staff is ink the
-                        // figures have to drop below — see AnnotationLayoutContext.RestCollisionsOf.
-                        restShifts: ctx.RestCollisionsOf(staff)).Down;
+                    // ★ THE room's inside-staff skyline, not a rebuild: this list is exactly
+                    // what the priority argument above describes, and the room already built
+                    // it once for this (system, staff).
+                    var down = (ctx.InsideOf(sysIdx, staffIndex)
+                        ?? _skylineBuilder.BuildInsideStaffSkylines(
+                            staff, systems[sysIdx].Measures,
+                            articulationLayouts: staffScripts,
+                            tupletBrackets: fbSpanners.TupletBrackets,
+                            slurs: fbSpanners.Slurs,
+                            ties: fbSpanners.Ties,
+                            beams: beamLayouts ?? ImmutableArray<BeamLayout>.Empty,
+                            systemLeft: systems[sysIdx].Indent,
+                            // ...and a rest another voice pushed DOWN out of the staff is ink
+                            // the figures drop below — see AnnotationLayoutContext.RestCollisionsOf.
+                            restShifts: ctx.RestCollisionsOf(staff))).Down;
                     // ⚠️ REFLECTED ONCE, HERE AT THE EDGE, into the system Y-up frame the drop
                     // works in — and by the SAME expression AugmentSkylinesWithScripts uses for
                     // "this staff's middle in the system's frame", so the two cannot drift.
@@ -3163,23 +3224,27 @@ internal sealed class LayoutEngine
                     // AnnotationLayoutContext.StaffSpanners for why they are carried here
                     // rather than laid out a second time.
                     var spanners = ctx.SpannersOf(sysIdx, staffIndex);
+                    // ★ THE room's inside-staff skyline — the same object every other
+                    // consumer of this staff's silhouette reads. The scripts are in it
+                    // because the room seeds them, which is what this seed could not reach
+                    // while it built a subset of its own.
                     built = sysIdx >= 0 && sysIdx < systems.Length
                             && staffByIndex.TryGetValue(staffIndex, out var profStaff)
-                        ? _skylineBuilder.BuildStaffSkylines(
-                            profStaff, systems[sysIdx].Measures,
-                            tupletBrackets: spanners.TupletBrackets,
-                            slurs: spanners.Slurs,
-                            ties: spanners.Ties,
-                            beams: allBeams.IsDefaultOrEmpty
-                                ? ImmutableArray<BeamLayout>.Empty
-                                : allBeams.Where(b => b.StaffIndex == staffIndex
-                                        && b.SystemIndex == sysIdx)
-                                    .ToImmutableArray(),
-                            systemLeft: systems[sysIdx].Indent,
-                            // A rest another voice pushed out of the staff is inside-staff ink
-                            // at the place it was pushed to, and everything this pass stacks
-                            // clears it — see AnnotationLayoutContext.RestCollisionsOf.
-                            restShifts: ctx.RestCollisionsOf(profStaff))
+                        ? ctx.InsideOf(sysIdx, staffIndex)
+                            ?? _skylineBuilder.BuildInsideStaffSkylines(
+                                profStaff, systems[sysIdx].Measures,
+                                tupletBrackets: spanners.TupletBrackets,
+                                slurs: spanners.Slurs,
+                                ties: spanners.Ties,
+                                beams: allBeams.IsDefaultOrEmpty
+                                    ? ImmutableArray<BeamLayout>.Empty
+                                    : allBeams.Where(b => b.StaffIndex == staffIndex
+                                            && b.SystemIndex == sysIdx)
+                                        .ToImmutableArray(),
+                                systemLeft: systems[sysIdx].Indent,
+                                // A rest another voice pushed out of the staff is inside-staff
+                                // ink where it was pushed to — see ctx.RestCollisionsOf.
+                                restShifts: ctx.RestCollisionsOf(profStaff))
                         : null;
                     profileCache[(sysIdx, staffIndex)] = built;
                 }
@@ -3341,16 +3406,20 @@ internal sealed class LayoutEngine
                         // side tables carry no such reservation, which is why they can be
                         // shared where the skyline cannot.
                         var rowSpanners = ctx.SpannersOf(sysIdx, staffIndex);
-                        var up = _skylineBuilder.BuildStaffSkylines(
-                            staff, systems[sysIdx].Measures,
-                            tupletBrackets: rowSpanners.TupletBrackets,
-                            slurs: rowSpanners.Slurs,
-                            ties: rowSpanners.Ties,
-                            systemLeft: systems[sysIdx].Indent,
-                            // ...including a rest another voice pushed UP out of the staff,
-                            // which is exactly the ink a row above this staff has to clear —
-                            // see AnnotationLayoutContext.RestCollisionsOf.
-                            restShifts: ctx.RestCollisionsOf(staff)).Up;
+                        // ★ THE room's inside-staff skyline. It carries no chord-row band —
+                        // that is merged into the room's FINISHED up-skyline, which is why
+                        // this consumer cannot read that one — and it carries the scripts and
+                        // beams this site used to be missing.
+                        var up = (ctx.InsideOf(sysIdx, staffIndex)
+                            ?? _skylineBuilder.BuildInsideStaffSkylines(
+                                staff, systems[sysIdx].Measures,
+                                tupletBrackets: rowSpanners.TupletBrackets,
+                                slurs: rowSpanners.Slurs,
+                                ties: rowSpanners.Ties,
+                                systemLeft: systems[sysIdx].Indent,
+                                // ...including a rest another voice pushed UP out of the staff,
+                                // which is exactly the ink a row above this staff has to clear.
+                                restShifts: ctx.RestCollisionsOf(staff))).Up;
                         // ⚠️ REFLECTED ONCE, HERE AT THE EDGE. BuildStaffSkylines works about
                         // the staff's REFERENCE POINT, which is LilyPond's frame;
                         // ChordNameEngraver works in "above the staff's TOP line" throughout,

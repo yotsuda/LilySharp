@@ -63,7 +63,8 @@ public class SystemLayoutCacheTests
             calls++;
             return new MultiStaffLayouter.StaffSkylineSet(
                 new List<(VerticalSkyline Up, VerticalSkyline Down)>(),
-                new List<MultiStaffLayouter.StaffInsideSpanners>());
+                new List<MultiStaffLayouter.StaffInsideSpanners>(),
+                new List<(VerticalSkyline Up, VerticalSkyline Down)>());
         };
 
         var first = cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);

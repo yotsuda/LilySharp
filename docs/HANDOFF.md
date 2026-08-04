@@ -154,20 +154,93 @@ DSM  残差          +0.418746        −0.031591
 **snapshot 4 枚（承認済み）＝全部同じ向き**（**強弱記号が譜へ約 0.4 近づく＝±0.6 箱の過剰予約が外れた分**）。
 **4 つ目の綴りの統一は出力不変**（snapshot 追加ゼロ）。
 
-⚠️ **⑥ perf は測った**（`IncrementalSessionBenchmark`・**確保で見る。ms は StdDev が平均の 57%＝使えない**）。
-**benchmark の本は `@staccato`/`@accent`/`@tenuto`/`@marcato` を持つ**ので**新経路を実際に通る**
-（第91セッションの「benchmark が枝を通らない」罠には当たらない）:
+⚠️⚠️⚠️ ★★★ **⑥ perf。最初の測定は嘘だった。ユーザーに訊かれて測り直したら退行が出て、半分返した。**
+⚠️ **1 度目**は `IncrementalSessionBenchmark` を回して「横ばい」と書いた。**その benchmark の
+multi の本（`showcase/03-piano`）は script が 0 個**——**新経路を 1 度も通っていない**
+（**第91セッションが記録した罠にそのまま嵌まった**）。★ **「benchmark が動かない」は
+「退行が無い」ではない。本が枝を通るかを先に数えること。**
+✅ **script を持つ本で測り直した**（**STRESS＝4 譜×16 小節×全音符に staccato＝512 script ＋
+強弱記号／CONTROL＝同じ本から `@staccato` を消しただけ**・**worktree A/B・順序交互 2 巡・min-of-30**）:
 ```
-                今日        第91セッションの記録
-multi reuse    1328.82 KB   1331.12 KB   ← −2.3 KB
-multi full     4486.59 KB   4485.96 KB
-single reuse    733.73 KB    733.36 KB
+                        確保              min ms
+【打鍵（幅不変＝レイアウト再利用）】
+BASE  STRESS       18661.56 KB        22.5
+HEAD  STRESS       18665.56 KB        20.1     ⇒ +4.0 KB（+0.02%）
+BASE/HEAD CONTROL  13131.39 KB 一致              ⇒ **バイト一致＝新コード不通過（陽性対照）**
+
+【全レイアウト（reflow・初回描画）】
+BASE  STRESS      139211.28 KB        83〜89
+HEAD  STRESS（素）  294981.87 KB       124〜131   ⇒ ★ 確保 2.12 倍
+HEAD  STRESS（memo後）223366.60 KB     106〜108   ⇒ 確保 +60%・ms +約20%
+BASE/HEAD CONTROL  51348.37 KB 一致              ⇒ **バイト一致**
 ```
-★ **横ばい**。**アウトライン走査は glyph ごとに memo 済み**（`MusicProfileCache`）で、
-**padding は 3 種の script でしか走らない**（他は `pad = 0` で生の skyline をそのまま返す）。
-⚠️ **⑦ 引用ラチェットに 1 度捕まった**（742→743）。`ly/engraver-init.ly` の行を**推測で書いた**
-のが正体（`:1080-1120`）。**実際に開いて `:359 \name Voice` と `:414 \consists Script_engraver` を
-読み**、**記号名を住所と同じ行に置いて 742 に戻した。§7 が効いた 8 例目。**
+✅ **半分は memo で返した**（**padded profile を `(glyph, size, design, pad)` でキャッシュし、
+譜／system の 2 か所は `Merge(resolved, dx, dy)` で*置いたコピーを作らず*流す**——
+**`VerticalSkyline.Merge` の remark 自身が「臨時記号のアウトライン化で +44% を払った」と
+記録している家**）。**出力不変。**
+⚠️ **残る +60% は本質的**: **script 1 つが箱 1 個ではなく building 10 個**（**padding 前 4・
+LP の dump も 6〜7＝冗長ではない**）を**1 レイアウトで 4 回** merge する
+（**512 script → 2048 回＝4 回/script**）。★★ **その 4 回は §2 A の島そのもの**
+（**消費者ごとに譜スカイラインを建て直す**）で、**箱が安かったから今まで見えていなかっただけ。**
+⇒ **閉じればこの費用も返る。**
+⚠️ **STRESS は病的な本**（全音符に script）。**コーパスの本では測定不能な差**
+（`grammar-2026-06-09` は script 11 個）。
+⚠️⚠️⚠️ ★★★ **⑨ §2 A の島を閉じた。perf の借りは*返せなかった*——測ったら増えた。**
+✅ **`SkylineBuilder` を LP の構造どおり 2 つに割った**:
+**`BuildInsideStaffSkylines`（priority を持たない ink だけ）→ `PlaceDynamicsOn`（75 の fermata 族 →
+250 の dynamics の順に mover を置く）**。**部屋が inside を 1 回作り、4 消費者が同じ物を読む**
+（figured bass／chord row／stacker seed／鎖の閉じ側。`AnnotationLayoutContext.InsideOf` と
+静的 `InsideAt` が door——`SpannersAt` と同じ 2 パス構造）。
+⚠️⚠️ ★★★ **途中で本物の欠陥が出た。最初に「部屋の profile」をそのまま渡したら
+snapshot 12 枚と *LP exact だった* `script.*` 台帳 7 点が動いた**（`script.quiet`／`high-head`／
+`stem-support`／`below`／`accidental`／`lower-staff`／`trill.fermata-priority`）。
+★ **正体は「部屋の profile には fermata 族＝priority 75 の *mover* が入っている」**こと——
+**それを seed に渡すと mover が自分自身のインクを避ける**。
+**LP の `inside_staff_skylines` は priority を持つ grob を含まない**（`axis-group-interface.cc:914-935`）。
+⇒ **`AddArticulationLayoutsToSkyline` を priority で分けた**（`moversInstead` フラグ・
+部屋は `PlaceDynamicsOn` の中で 75 → 250 の順に置く）**⇒ 20 件が 2 件に収束し、
+`script.*` 7 点は全部 exact のまま戻った。** ★★ **これがこの島の正しさの裏取り。**
+⚠️ **残った出力変化は snapshot 2 枚**（`test/ornaments`・`test/editorial-accidental`）で、
+**どちらもテンポマークと練習記号が 0.03〜0.06 外へ**＝**今まで消費者に見えていなかった
+script のインクを避けた分**。**これが ▶ ⓪ の表の「script 列」が埋まった実体。**
+⚠️⚠️⚠️ ★★★ **perf は返らなかった。増えた**（`stress` 512 script の全レイアウト・確保）:
+```
+BASE（4 回建て直す）   223400.55 KB     control 51344.43 KB
+HEAD（1 回作って共有） 247460.12 KB     control 51043.74 KB   ⇒ +11%
+```
+★★★ **借りは「建て直し」ではなかった。「太った profile × 消費者の数」だった。**
+**消費者は自分のフレームへ `Raise` するのでコピーが要り**（`InsideAt` が copy を返す）、
+**太った*正しい* profile のコピーは、細い*間違った* profile の建て直しと同じかそれ以上に高い**
+（各消費者は (system, staff) ごとに 1 回だけコピーする＝3 × 建物数。
+以前は 512 script × 10 building × 3 で同オーダー）。
+⇒ ★★ **返すには「フレーム変換を skyline の外へ出す」**（`Raise` をやめて読み手にオフセットを渡す）
+——**別の島。▶ ⑴' に置いた。**
+
+⚠️ **⑦ 引用ラチェットに 2 度捕まった**（742→743・742→746）。**1 度目は `ly/engraver-init.ly` の行を
+推測で書いた**のが正体（`:1080-1120`）。**実際に開いて `:359 \name Voice`・`:415 \consists
+Script_engraver` を読み**、**記号名を住所と同じ行に置いて 742 に戻した。§7 が効いた 8 例目。**
+
+⚠️⚠️⚠️ ★★★ **⑧ 自己監査（ユーザーの「字面移植できたか／変なハックは／REF は付けたか」）で 2 件。
+どちらも私が今日書いたもの**:
+```
+⒜ 発明 1 つ（直した）  padding に `* magnification` を掛けていた。LP は
+                     `p.pad (get_property (me, "skyline-horizontal-padding"))` と
+                     **宣言値をそのまま**渡す（`stencil-integral.cc:881-893`）⇒
+                     **ossia では LP が 0.10 をフルで払うところを 0.071 に縮めていた**
+                     ＝字面でもなく挙動も違う。**外した（出力不変）**
+⒝ 効いていない guard  `VoiceItemAt` の `Math.Clamp`。**throw に替えて全スイートを走らせたら
+                     一度も到達しない**（注釈は採取時の声部で刻まれるので構造上範囲内）。
+                     ⚠️ **throw にはしない**（毎打鍵プレビューでの例外は誤配置より悪い）が、
+                     **測定を書いて「当たったら不在ではなくバグ」と名指した**
+```
+★ **住所は 4 件とも実物で照合した**（`.scm`/`.ly` は引用ラチェットの検査対象外——
+**C++ だけが `CitationRangesHoldTheirNamedSymbol` で機械検査される**）:
+**`define-grobs.scm:3006` は宣言行そのもの／`script.scm:90,:392,:407` は 3 つの padding 宣言／
+`engraver-init.ly:415` が `\consists Script_engraver`（引用範囲 414-416 の内側）。**
+★ **数え方**（§7.5）: **Core の `+` は 218 行・うちコード 80 行・`LILYPOND-REF` 9 本・
+`LILYSHARP-OWN` 0 本**・**新規の数値リテラルは padding 表の `0.10`/`0.20` だけ**（両方 REF 付き）。
+⇒ **今回は `LILYSHARP-OWN` を 1 つも足さず、既存の 2 つ（±0.6 箱・ink 箱）を*消した***
+＝§7.6 ⒟。**消してよいと言った観測者は DSK/DSM。**
 
 ⚠️ **仕事は 3 つ・実装は 2 commit**（**`git show 8989e76b..` で引ける**——`8989e76b` は
 第90セッションの最後＝この作業の親。**引継ぎに自分の commit のハッシュは書けない**）。
@@ -182,18 +255,34 @@ D 4 つ目＝鎖を閉じる下譜        摂動で 1 本の**assertion**が落�
   （PAGE pass。remark の「無理」が古かった）
 ```
 
-**未 push 65**（**この handoff を含む commit まで**＝`--amend` で入れた。
+**未 push 68**（**この handoff を含む commit まで**＝`--amend` で入れた。
 ⚠️ **足し算しない**。`git rev-list --count origin/master..master` で数え直す。
 **⚠️ 私は push していない**）・テスト **4034 passed / 0 failed / 4 skipped**（**開始時 4028**＝
 新テスト 6 本＝**台帳 4 点 ＋ unit 2 本**）・台帳 **470 点**
 （**ss 非ゼロ 85・総和 3.775246413**／**count 点 106・うち非ゼロ 2**）。
 ⚠️ **総和が 0.158 増えたのは退行ではない**——**新しい 4 点が非ゼロで開いた分**
 （**+0.045 ×2・−0.036・−0.032**）。**開始時の 81 点・3.617525637 はそのまま。**
-**Core 0 warning。snapshot 再ベース 0 枚・承認事項なし。**
+**Core 0 warning。snapshot 再ベース 6 枚**（**プロファイル統一 4 枚
+＝01-expressions / dynamics / tab-beam-slope / figbass-below-script ＋
+§2 A 閉鎖 2 枚＝ornaments / editorial-accidental。どちらもユーザー承認済み**）。
 ⚠️ **開始時の §0 裏取りでは引継ぎが 1 桁も stale でなかった**（HEAD・未push・テスト・台帳 全一致）。
 
 ⚠️⚠️ ★★★ **次に触るときの注意を 4 つ**:
 ```
+⑴' perf の借り＝**フレーム変換**  **§2 A を閉じても返らなかった**（⑨・**+11%**）。
+                        ★ **正体は「太った profile × 消費者の数」**で、**消費者が自分の
+                        フレームへ `Raise` するからコピーが要る**。⇒ **返し方は 1 つだけ**:
+                        **`Raise` をやめて読み手にオフセットを渡す**（＝skyline を
+                        *不変*にして共有する）。**手が入るのは 3 か所の読み側**——
+                        `FiguredBassEngraver`（`figuredBassStaffDown`）／
+                        `ChordNameEngraver`（chord row の `up`）／
+                        `OutsideStaffStacker`（`Track()` の `p.Up.Raise(toSystem)`）。
+                        **測り方はもう在る**（`stress`＝4 譜×16 小節×全音符に staccato＋強弱、
+                        `control`＝`@staccato` を消しただけ／worktree A/B・min-of-30・
+                        **確保で見る。ms はこの機械では使えない**）。
+                        ⚠️ **箱に戻して返すのは禁じ手**（欠陥に戻る・第91セッション ⑴' と同じ形）。
+                        ⚠️ **打鍵経路（レイアウト再利用）は +0.02%＝無傷**なので、
+                        **急ぐのは reflow を繰り返す本だけ。**
 ⑴ 次の島＝**頭の半分**      **script のプロファイルは閉じた**（⑤''）。**残差は 2 冊とも −0.03 台で
                         一致していて、その正体は隣で開いている placement の項**＝
                         **`script.{staccato,marcato}-below.staff-to-ink-top` の +0.045000**。
@@ -207,9 +296,10 @@ D 4 つ目＝鎖を閉じる下譜        摂動で 1 本の**assertion**が落�
 ⑵ +0.045 の族           **頭の半分を名目 0.5 で読む**（LILC 0.545053）。**観測者は今
                         できた**（script.{staccato,marcato}-below の 2 点）。
                         `script-priority.ly` header の「もう観測者が無い」は**古い**
-⑶ dyn / script / beam の列  ▶ ⓪ の表の残り。**運ぶ表（`StaffInsideSpanners`）に無い**ので
-                        増やすならそこから。**ただし script は ⑴ が先**——
-                        **3 つの綴りが 1 つになる前に列を増やすと、綴りが 4 つになる**
+⑶ ▶ ⓪ の表は畳んだ      **消費者ごとの列という構造そのものが無くなった**（⑨）。
+                        **4 か所は inside を読むので、列は「inside に何が入るか」1 つ**。
+                        ⚠️ **残る近似は「部屋が mover を engraver 位置で予約する」**こと
+                        （§2 A）。**dyn は inside に入らない**のが正しい（mover）
 ⑷ 梁の休符シフト        部屋にも鎖にも 4 か所にも無い。入れるなら 5 か所同時（第90セッション ⑤）
 ```
 
@@ -9269,19 +9359,15 @@ LP は当該 spec で stretchability を**明示宣言**している）。**コ�
 LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量を計算する場所が 2 つ以上ある**なら
 それが次の欠陥の住所（§5.2.1②）。現在わかっている残り:
 
-- ★★★ **LP の `inside_staff_skylines` が 4 通りに綴られている**（2026-08-04・第90〜91セッション。
-  **休符・slur・tie・tuplet の 4 項は 4 か所とも 1 本にした**・§1 と ▶ に全文）。
-  `SkylineBuilder.BuildStaffSkylines` を自前で呼ぶ 4 か所（chain closing / figured bass /
-  stacker seed / chord row）が、**渡す側テーブルの部分集合をそれぞれ違えている**。
-  ★ **これは「綴りが 2 つ」の一般形**——**LP は 1 本作って priority 順に積み増すだけ**なので、
-  **消費者ごとに建て直す限り部分集合は必ずずれる。**
-  ✅ **slur/tie/tuplet の列は 4 行とも閉じた**（第91セッション・**snapshot 0 枚・承認不要**——
-  **「要承認」という予告のほうが外れていた**）。**部屋が表を運び、4 か所は `SpannersOf` で引く。**
-  ⚠️ **残るのは dyn / script / beam の列**——**運ぶ表（`StaffInsideSpanners`）に入っていない**。
-  **入れるならそこから。`:2370` の 3 つは未測定。**
-  ✅ **script の列は閉じた**（2026-08-05・第92セッション。**プロファイルの 4 綴りを 1 本化**——
-  経緯は §1 と `probes/dynamic-support.ly` の round 3 に、規則は
-  `ArticulationSpacing.SkylineHorizontalPadding` の REF に）。**dyn / beam の列は残っている。**
+- ✅✅ ★★★ **閉じた（2026-08-05・第92セッション）。`inside_staff_skylines` は 1 本になった。**
+  **`SkylineBuilder.BuildInsideStaffSkylines`（priority を持たない ink だけ）を部屋が 1 回作り、
+  4 消費者（chain closing / figured bass / stacker seed / chord row）が
+  `AnnotationLayoutContext.InsideOf` で読む。mover は `PlaceDynamicsOn` が 75 → 250 の順に置く。**
+  経緯・実測・残った snapshot 2 枚は §1 ⑨ に。
+  ⚠️ **perf の借りは返っていない**（+11%・理由は「太った profile × 消費者数」＝▶ ⑴'）。
+  ⚠️ **部屋の profile と inside は*別物*であり続ける**——**部屋は mover を engraver 位置で
+  予約する**（Lily# の outside-staff pass は部屋より後に走る）。**LP は 1 パスでそれを解く**ので、
+  **ここは今も近似**。**次にこの近似を消すなら「部屋が pass を走らせる」しかない。**
 - ★★★ **符尾の attachment X が「符頭ごと」でなく「黒玉固定」**（2026-08-03・第77セッション。
   **測って名指しただけ・未修正**・▶ の先頭）。`LayoutUtilities.StemAttachX` は
   `NoteheadBlackStemAttachment.X` を**符頭によらず**返す。LP は**符頭ごとの ink 右端 − thickness/2**

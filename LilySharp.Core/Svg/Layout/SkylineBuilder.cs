@@ -686,6 +686,40 @@ internal sealed class SkylineBuilder
         ImmutableArray<BeamLayout> beams = default,
         double systemLeft = double.NaN,
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
+        => PlaceDynamicsOn(
+            BuildInsideStaffSkylines(staff, measureLayouts, articulationLayouts,
+                tupletBrackets, slurs, ties, beams, systemLeft, restShifts),
+            staff, dynamics, measureLayouts, beams, copyFirst: false,
+            articulationLayouts: articulationLayouts);
+
+    /// <summary>
+    /// THE inside-staff skyline: every grob that declares no <c>outside-staff-priority</c> —
+    /// the staff symbol, the clef, the notes (with the shifts a rest collision gave them),
+    /// the scripts, tuplet brackets, slurs, ties and beams. Nothing that the outside-staff
+    /// pass places is in it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines — the
+    ///   elements whose priority is unset, collected ONCE; :952-972
+    ///   add_grobs_of_one_priority then places the rest against it in priority order.
+    /// <para>
+    /// ★ ONE PER (system, staff), and every consumer reads the same object. Lily# used to
+    /// rebuild this silhouette at five call sites, each passing its own subset of the side
+    /// tables, which is the shape HANDOFF §5.2.1② names: the subsets could not agree, and
+    /// they did not — the chain's closing staff and the chord row were missing scripts and
+    /// beams, the stacker's seed was missing scripts. It also cost what a rebuild costs:
+    /// measured on a 512-script page, one script's profile was merged FOUR times per layout.
+    /// </para>
+    /// </remarks>
+    public (VerticalSkyline Up, VerticalSkyline Down) BuildInsideStaffSkylines(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<ArticulationLayout> articulationLayouts = default,
+        ImmutableArray<TupletBracketLayout> tupletBrackets = default,
+        ImmutableArray<SlurLayout> slurs = default,
+        ImmutableArray<TieLayout> ties = default,
+        ImmutableArray<BeamLayout> beams = default,
+        double systemLeft = double.NaN,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -785,21 +819,56 @@ internal sealed class SkylineBuilder
         upSkyline.EndBatch();
         downSkyline.EndBatch();
 
-        // Dynamics LAST — they are OUTSIDE-staff grobs: LilyPond first builds the
-        // inside-staff skyline (everything above) and then places each outside-staff
-        // grob against it, so a below dynamic's final position needs the full inside
-        // profile (the beam face is what pushes it in the DSB regime). The seed runs the
-        // same two steps the draw runs — the pointwise side-position quiet position,
-        // then the outside-staff collision pass over the accumulated down profile —
-        // and merges the label's own outline so the inter-staff gap reserves it.
-        // LILYPOND-REF: lily/axis-group-interface.cc:914-950 skyline_spacing —
-        //   inside skylines first, then add_grobs_of_one_priority in priority order.
-        // audit/lp-geometry staff.staff.dynamic-{head-support,beam-avoid,stem-binding}.
-        AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleUp, size,
-            upSkyline, downSkyline, beams);
-
         return (upSkyline, downSkyline);
     }
+
+    /// <summary>
+    /// The outside-staff pass at priority 250: places each dynamic against the accumulated
+    /// inside-staff profile and merges its ink back in, exactly as LilyPond's
+    /// <c>add_grobs_of_one_priority</c> does.
+    /// </summary>
+    /// <remarks>
+    /// Dynamics LAST — they are OUTSIDE-staff grobs: LilyPond first builds the inside-staff
+    /// skyline and then places each outside-staff grob against it, so a below dynamic's final
+    /// position needs the full inside profile (the beam face is what pushes it in the DSB
+    /// regime). The seed runs the same two steps the draw runs — the pointwise side-position
+    /// quiet position, then the outside-staff collision pass over the accumulated down
+    /// profile — and merges the label's own outline so the inter-staff gap reserves it.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-950 skyline_spacing —
+    ///   inside skylines first, then add_grobs_of_one_priority in priority order.
+    /// audit/lp-geometry staff.staff.dynamic-{head-support,beam-avoid,stem-binding}.
+    /// <para>
+    /// ⚠️ <paramref name="copyFirst"/> is what lets the inside skyline be SHARED: this step
+    /// mutates, so a caller holding the one per-(system, staff) inside profile must not hand
+    /// it in directly. Copying a resolved skyline is a list copy; rebuilding it is hundreds
+    /// of seeds and a resolve.
+    /// </para>
+    /// </remarks>
+    public (VerticalSkyline Up, VerticalSkyline Down) PlaceDynamicsOn(
+        (VerticalSkyline Up, VerticalSkyline Down) inside,
+        Staff staff, ImmutableArray<DynamicItem> dynamics,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<BeamLayout> beams = default, bool copyFirst = true,
+        ImmutableArray<ArticulationLayout> articulationLayouts = default)
+    {
+        var upSkyline = copyFirst ? Copy(inside.Up) : inside.Up;
+        var downSkyline = copyFirst ? Copy(inside.Down) : inside.Down;
+        var size = StaffSize.Of(staff);
+        // Priority 75 FIRST, then 250 — LilyPond's ascending order. The fermata family is
+        // the only script that declares one, and the room reserves it where its engraver put
+        // it (Lily#'s outside-staff pass runs later than this; see
+        // AddArticulationLayoutsToSkyline's remark).
+        AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleUp: 0, size,
+            upSkyline, downSkyline, moversInstead: true);
+        AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleUp: 0,
+            size, upSkyline, downSkyline, beams);
+        return (upSkyline, downSkyline);
+    }
+
+    /// <summary>An independent copy of a RESOLVED skyline — the cheap half of sharing one
+    /// inside-staff profile between the consumers that mutate their own view of it.</summary>
+    internal static VerticalSkyline Copy(VerticalSkyline sky)
+        => VerticalSkyline.FromResolvedBuildings(sky.Direction, sky.Buildings);
 
     /// <summary>
     /// The (voice, measure, item) keys of notes whose FIXED per-note stem must be suppressed
@@ -1138,12 +1207,28 @@ internal sealed class SkylineBuilder
     private void AddArticulationLayoutsToSkyline(
         ImmutableArray<ArticulationLayout> articulationLayouts,
         double staffMiddleUp, StaffSize size,
-        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline,
+        bool moversInstead = false)
     {
         if (articulationLayouts.IsDefaultOrEmpty)
             return;
         foreach (var a in articulationLayouts)
         {
+            if (moversInstead != (a.OutsideStaffPriority is not null))
+                continue;
+            // ⚠️ A SCRIPT THAT DECLARES A PRIORITY IS A MOVER, NOT INSIDE-STAFF INK. The
+            // fermata family declares 75 (scm/script.scm), so LilyPond leaves it OUT of
+            // inside_staff_skylines and places it against them — a profile holding it would
+            // make the mover clear ITSELF. Everything else declares none and belongs here.
+            // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines takes
+            //   the elements whose priority is unset; :952-972 places the others.
+            // ⚠️ MEASURED, 2026-08-05: feeding a profile that held them to the outside-staff
+            // seed moved seven LP-EXACT ledger points (script.quiet / high-head /
+            // stem-support / below / accidental / lower-staff, trill.fermata-priority) and
+            // twelve snapshots — a mover avoiding its own ink, in person.
+            // ⚠️ The ROOM still reserves them, at their engraver position, through
+            // <see cref="PlaceDynamicsOn"/>'s movers pass — Lily# places them later than the
+            // room runs, which is the standing approximation this split makes visible.
             // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
             // translate it to this skyline's Y-up frame (its origin is the staff top).
             // Both the offset and the glyph belong to this staff; a.X is the column.
@@ -1156,8 +1241,8 @@ internal sealed class SkylineBuilder
             //   — the Script's own declaration; lily/axis-group-interface.cc:914-935
             //   inside_staff_skylines merges exactly that property, and the outside-staff
             //   movers then clear it.
-            var (up, down) = ArticulationEngraver.ScriptSkylines(a, y, size.Magnification);
-            (a.IsAbove ? upSkyline : downSkyline).Merge(a.IsAbove ? up : down);
+            ArticulationEngraver.MergeScriptProfile(
+                a.IsAbove ? upSkyline : downSkyline, a, y, size.Magnification);
         }
     }
 

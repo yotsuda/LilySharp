@@ -1992,7 +1992,8 @@ internal sealed class MultiStaffLayouter
     /// built from, both indexed by global staff index.</summary>
     internal readonly record struct StaffSkylineSet(
         List<(VerticalSkyline Up, VerticalSkyline Down)> Skylines,
-        List<StaffInsideSpanners> Spanners);
+        List<StaffInsideSpanners> Spanners,
+        List<(VerticalSkyline Up, VerticalSkyline Down)> Inside);
 
     /// <summary>
     /// Builds UP/DOWN skylines for every staff in the score.
@@ -2004,6 +2005,7 @@ internal sealed class MultiStaffLayouter
     {
         var result = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
         var spanners = new List<StaffInsideSpanners>();
+        var inside = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
 
         // Each staff's own dynamics (tagged by StaffIndex) hang below it and must
         // widen the gap to the staff below; filter so a staff reserves room only
@@ -2043,9 +2045,20 @@ internal sealed class MultiStaffLayouter
                 // skylines are cached per system (LayoutEngine.ComputeStaffSkylines). The
                 // preview's cost per keystroke is the thing that would have paid for it.
                 var restShifts = RestCollisionsOf(staff);
-                var sky = skylineBuilder.BuildStaffSkylines(
-                    staff, measureLayouts, dynamics, articulations, tupletBrackets, slurs, ties, beams,
+                // THE inside-staff silhouette, built ONCE and travelling with the set: every
+                // other consumer of this staff's inside profile (the stacker's seed, the
+                // figured-bass drop, the chord row, the loose chain's closing staff) reads
+                // this object instead of rebuilding its own subset of it.
+                // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
+                var insideSky = skylineBuilder.BuildInsideStaffSkylines(
+                    staff, measureLayouts, articulations, tupletBrackets, slurs, ties, beams,
                     CurrentIndent, restShifts);
+                inside.Add(insideSky);
+                // ...and the room's own view: the same profile with the priority-250 movers
+                // placed on a COPY, so the shared one stays the inside profile.
+                var sky = skylineBuilder.PlaceDynamicsOn(
+                    insideSky, staff, dynamics, measureLayouts, beams,
+                    articulationLayouts: articulations);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline
@@ -2117,7 +2130,7 @@ internal sealed class MultiStaffLayouter
             }
         }
 
-        return new StaffSkylineSet(result, spanners);
+        return new StaffSkylineSet(result, spanners, inside);
     }
 
     /// <summary>

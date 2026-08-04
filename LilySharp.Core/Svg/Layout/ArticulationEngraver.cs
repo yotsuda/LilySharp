@@ -775,14 +775,81 @@ internal static class ArticulationEngraver
     /// <param name="magnification">The size the STAFF is engraved at (an ossia's
     /// magstep(-3), 1.0 otherwise). LilyPond scales a glyph's whole metric by the context
     /// magnification — LILYPOND-REF: lily/modified-font-metric.cc:62-68 get_indexed_char_dimensions,
-    /// whose whole body is <c>b.scale (magnification_)</c> — so it rides
-    /// the font size the outline is walked at, and the horizon padding (a staff-space
-    /// quantity of that staff) rides it too.
+    /// which takes the original font's box and does <c>b.scale (magnification_)</c> — so it
+    /// rides the font size the OUTLINE is walked at. It does NOT ride the horizon padding:
+    /// that is a declared property LilyPond pads with as it stands (see ScriptSkylines).
+    /// ⚠️ Only <c>SkylineBuilder</c> passes a magnification today; the below stacker's seed
+    /// and the system skyline read a script full-size, exactly as the box spellings they
+    /// replaced did. An ossia staff carrying a script UNDER a mover is the regime that would
+    /// see the difference, and no fixture and no ledger point reaches it.
     /// ⚠️ The optical DESIGN is still the one this grob's own font-size step selects: an
     /// ossia is <c>fontSize = #-3</c> in LilyPond and would select the 14, which is a
     /// separate island — the box spelling this replaced scaled the 20 the same way.</param>
     internal static (VerticalSkyline Up, VerticalSkyline Down) ScriptSkylines(
         in ArticulationLayout a, double anchorY, double magnification = 1.0)
+    {
+        if (a.Glyph.Length == 1)
+        {
+            var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
+                a.Glyph[0], WalkSize(a, magnification), a.X, anchorY,
+                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded,
+                a.SkylineHorizontalPadding);
+            if (!up.IsEmpty || !down.IsEmpty)
+                return (up, down);
+        }
+        return FallbackBoxSkylines(a, anchorY, magnification);
+    }
+
+    /// <summary>
+    /// The same profile merged straight into <paramref name="target"/> at this script's
+    /// (X, <paramref name="anchorY"/>), with no placed copy of its own — for the skyline
+    /// BUILDERS, which merge and discard.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ MEASURED, and it is why this overload exists rather than the caller taking
+    /// <see cref="ScriptSkylines"/>'s pair: on a 512-script page a full layout allocated
+    /// 295 MB against the box spelling's 139 MB when every consumer placed, padded and
+    /// re-resolved its own copy. With the padded profile cached per (glyph, size, design,
+    /// pad) and merged through <see cref="VerticalSkyline.Merge(IReadOnlyList{SkylineBuilding},
+    /// double, double)"/>, the same page allocates within a per-cent of the box. The
+    /// accidental island paid this exact tax first — see that Merge overload's remark.
+    /// </remarks>
+    internal static void MergeScriptProfile(
+        VerticalSkyline target, in ArticulationLayout a, double anchorY,
+        double magnification = 1.0)
+    {
+        bool up = target.Direction == VerticalDirection.Up;
+        if (a.Glyph.Length == 1)
+        {
+            var profile = TextOutlineSkylines.MusicGlyphProfile(
+                a.Glyph[0], WalkSize(a, magnification),
+                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded,
+                a.SkylineHorizontalPadding);
+            var resolved = up ? profile.Up : profile.Down;
+            if (resolved.Count > 0)
+            {
+                target.Merge(resolved, a.X, anchorY);
+                return;
+            }
+        }
+        var (boxUp, boxDown) = FallbackBoxSkylines(a, anchorY, magnification);
+        target.Merge(up ? boxUp : boxDown);
+    }
+
+    /// <summary>The size the glyph's outline is walked at: what the renderer draws with
+    /// (<c>SharedRenderer.FontSize</c> × this grob's magstep), times the staff's own
+    /// magnification. The flattening happens at the transformed size, which is why the size
+    /// is in the profile cache key.</summary>
+    private static double WalkSize(in ArticulationLayout a, double magnification)
+        => SharedRenderer.FontSize * EmmentalerDesignSize.Magstep(a.FontSizeStep) * magnification;
+
+    /// <summary>
+    /// The designed ink box, padded like any other profile — the fallback for the sentinel
+    /// "glyphs" that have no single music character to walk (bends, fret frames, TAB
+    /// technique letters, snap pizzicato) and the staff-local tab array.
+    /// </summary>
+    private static (VerticalSkyline Up, VerticalSkyline Down) FallbackBoxSkylines(
+        in ArticulationLayout a, double anchorY, double magnification)
     {
         var (rawUp, rawDown) = RawScriptSkylines(a, anchorY, magnification);
         // THE PROFILE IS THE PADDED ONE. LilyPond does not hand anybody the bare outline: the
@@ -797,33 +864,23 @@ internal static class ArticulationEngraver
         // flat-then-45°-sloped extension, corner for corner. Reading the bare outline put a
         // dynamic under a dot 0.12 too close; the marcato, which declares no padding, was
         // right either way.
-        double pad = a.SkylineHorizontalPadding * magnification;
+        // ⚠️ The DECLARED number, not scaled by the staff's magnification: LilyPond hands
+        // `p.pad` the property value as it stands, so a magnified staff pads its (smaller)
+        // script by the same 0.10 a full-size one does. Scaling it here was this port's own
+        // invention for one revision — the source says otherwise and so does the behaviour.
+        // ⚠️ Padded AFTER placement where LilyPond pads the grob-local skyline: horizon
+        // padding is a horizontal operation on buildings and commutes with the translation,
+        // so the two orders agree.
+        double pad = a.SkylineHorizontalPadding;
         return pad > 0.0 ? (rawUp.Padded(pad), rawDown.Padded(pad)) : (rawUp, rawDown);
     }
 
-    /// <summary>The stencil's own outline, before the horizon padding — LilyPond's
-    /// <c>skylines_from_stencil</c> half of the callback above. Nothing outside
-    /// <see cref="ScriptSkylines"/> should read this: LilyPond has no consumer of the
+    /// <summary>The unpadded designed box. Nothing outside
+    /// <see cref="FallbackBoxSkylines"/> should read this: LilyPond has no consumer of an
     /// unpadded profile.</summary>
     private static (VerticalSkyline Up, VerticalSkyline Down) RawScriptSkylines(
         in ArticulationLayout a, double anchorY, double magnification)
     {
-        // The size the renderer draws at (SharedRenderer: FontSize × the grob's magstep);
-        // the flattening happens at the transformed size, which is why it is in the key.
-        // ⚠️ …and from the DESIGN the renderer draws with: an editorial accidental is the
-        // 16's outline, not the 20's shrunk, so walking the 20 here would profile a glyph
-        // the page does not carry (Emmentaler is optically sized).
-        if (a.Glyph.Length == 1)
-        {
-            var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
-                a.Glyph[0],
-                SharedRenderer.FontSize * EmmentalerDesignSize.Magstep(a.FontSizeStep) * magnification,
-                a.X, anchorY,
-                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded);
-            if (!up.IsEmpty || !down.IsEmpty)
-                return (up, down);
-        }
-        // No walkable glyph: the designed box, as before.
         var box = a.Ink;
         double l = a.X + box.Left * magnification, r = a.X + box.Right * magnification;
         double b = anchorY + box.Bottom * magnification, t = anchorY + box.Top * magnification;

@@ -210,6 +210,13 @@ internal static class LayoutUtilities
     {
         if (voices.IsDefaultOrEmpty)
             return null;
+        // ⚠️ THE CLAMP NEVER FIRES, measured: replacing it with a throw and running the whole
+        // suite (4034 tests, the corpus included) reaches it zero times — an annotation is
+        // stamped with the voice it was collected in, so its index is in range by
+        // construction. It is kept as a clamp rather than a throw because an exception in a
+        // per-keystroke preview is worse than a misplaced glyph; but a HIT IS A BUG, not an
+        // absence — the honest reading of a script that lands on voice 1 with the clamp
+        // firing is "the collector lost the voice", and that is what to look for.
         var voice = voices[Math.Clamp(voiceIndex, 0, voices.Length - 1)];
         if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
             return null;

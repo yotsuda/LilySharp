@@ -97,7 +97,12 @@ internal static class TextOutlineSkylines
     // pieces, the scripts. The DESIGN is in the key because Emmentaler is optically sized:
     // the 16's accidental is not the 20's scaled, so two grobs at different font-sizes walk
     // two different outlines (EmmentalerFaces).
-    private static readonly ConcurrentDictionary<(char Glyph, double Size, int Design),
+    // ⚠️ The HORIZON PADDING is in the key, and the padding happens INSIDE the cached
+    // factory: a grob that declares skyline-horizontal-padding (three scripts do) would
+    // otherwise pay pad + merge + resolve on every placement, and a script-dense page places
+    // one per note per pass. Padding commutes with the placement (both are monotone shifts),
+    // so padding the profile once per (glyph, size, design, pad) is the same skyline.
+    private static readonly ConcurrentDictionary<(char Glyph, double Size, int Design, double Pad),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> MusicProfileCache = new();
 
     /// <summary>
@@ -121,37 +126,53 @@ internal static class TextOutlineSkylines
     /// font cannot be located.
     /// </summary>
     public static (IReadOnlyList<SkylineBuilding> Up, IReadOnlyList<SkylineBuilding> Down)
-        MusicGlyphProfile(char glyph, double fontSize, int design = 0)
-        => ResolvedMusicGlyph(glyph, fontSize, design);
+        MusicGlyphProfile(char glyph, double fontSize, int design = 0, double horizonPadding = 0.0)
+        => ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding);
 
     /// <param name="design">
     /// The Emmentaler design to walk — 0 (or omitted) for the score's own. A grob that
     /// states a <c>font-size</c> reads ANOTHER design's outline, not this one scaled.
     /// </param>
     public static (VerticalSkyline Up, VerticalSkyline Down) PlaceMusicGlyph(
-        char glyph, double fontSize, double x, double y, int design = 0)
+        char glyph, double fontSize, double x, double y, int design = 0,
+        double horizonPadding = 0.0)
     {
-        var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design);
+        var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding);
         return (PlaceResolved(VerticalDirection.Up, up, x, y),
                 PlaceResolved(VerticalDirection.Down, down, x, y));
     }
 
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedMusicGlyph(
-        char glyph, double fontSize, int design)
+        char glyph, double fontSize, int design, double horizonPadding = 0.0)
     {
         if (design == 0)
             design = Rendering.EmmentalerFaces.DefaultDesign;
-        return MusicProfileCache.GetOrAdd((glyph, fontSize, design), static key =>
+        return MusicProfileCache.GetOrAdd((glyph, fontSize, design, horizonPadding), static key =>
         {
             var path = TextFontMetrics.MusicGlyphPath(key.Glyph, key.Design);
             if (path == null || path.IsEmpty)
                 return (Array.Empty<SkylineBuilding>(), Array.Empty<SkylineBuilding>());
             var (upQuads, downQuads) = FlattenPath(path, key.Size / 1000.0);
             return (
-                Resolve(VerticalDirection.Up, upQuads),
-                Resolve(VerticalDirection.Down, downQuads));
+                Pad(VerticalDirection.Up, Resolve(VerticalDirection.Up, upQuads), key.Pad),
+                Pad(VerticalDirection.Down, Resolve(VerticalDirection.Down, downQuads), key.Pad));
         });
     }
+
+    /// <summary>
+    /// The horizon padding a grob declares, applied to the RESOLVED profile — LilyPond's
+    /// <c>p.pad (skyline-horizontal-padding)</c> half of
+    /// <c>Grob::vertical_skylines_from_stencil</c>.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:881-893 Grob::vertical_skylines_from_stencil;
+    /// lily/skyline.cc:558-615 Skyline::padded — which
+    /// <see cref="VerticalSkyline.Padded"/> ports line for line.</remarks>
+    private static SkylineBuilding[] Pad(
+        VerticalDirection direction, SkylineBuilding[] resolved, double pad)
+        => pad <= 0.0 || resolved.Length == 0
+            ? resolved
+            : VerticalSkyline.FromResolvedBuildings(direction, resolved)
+                .Padded(pad).Buildings.ToArray();
 
     private static SkylineBuilding[] Resolve(VerticalDirection direction, double[] quads)
         => VerticalSkyline.FromGlyphOutline(direction, quads, StaffSize.FullSize, 0, 0)
