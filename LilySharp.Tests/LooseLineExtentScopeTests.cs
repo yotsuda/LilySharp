@@ -197,4 +197,49 @@ public class LooseLineExtentScopeTests
             "the row must clear the rest pushed up out of the staff that closes its chain: "
             + $"printed rests {moved.Clearance:F6}, spacer control {spacer.Clearance:F6}");
     }
+
+    /// <summary>
+    /// ...and the same closing staff's up-skyline has to carry its TUPLET BRACKET, which is
+    /// inside-staff ink in LilyPond exactly as the rest is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:4097 — TupletBracket lists outside-staff-interface
+    /// and sets no outside-staff-priority, so it is never pushed out and joins the staff's
+    /// own vertical-skylines like the clef.
+    /// Lily#'s priority 200 is its own number and does not license leaving it out of a
+    /// profile nothing places it in.
+    /// <para>
+    /// ★ THE SIBLING ABOVE SAID THE OTHER SIX SIDE TABLES COULD NOT FOLLOW THE REST SHIFT
+    /// HERE, "because the fix is to reach the room's result, and the per-staff list does not
+    /// exist before the page pass". Three of them can now: the room hands its slurs, ties and
+    /// tuplet brackets out with the skylines (<c>MultiStaffLayouter.StaffInsideSpanners</c>)
+    /// and <c>BuildLooseChainEnds</c> runs after the placement that produces them, so this
+    /// call site reaches them by lookup and still does not lay anything out twice.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE BRACKET AND NOT A BOW, and that is this book rather than the rule: the closing
+    /// staff's first voice carries stems UP, so its tuplet bracket sits above (the stem side)
+    /// while a slur would curve below and a tie stays inside the notes' own reach. MEASURED
+    /// on this book: the tie pair reads 9.947093 both ways. What reaches UP out of THIS staff
+    /// is the bracket, so the bracket is what can witness the up-skyline.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ARowOpeningTheNextSystem_ClearsATupletBracketOverTheStaffThatClosesItsChain()
+    {
+        var spacer = LeadingRowClearance("s4 s s s");
+        var highNotes = LeadingRowClearance("g''4 g'' g'' g''");
+        var with = LeadingRowClearance("tuplet 3/2 { g''4 g'' g'' } g''2");
+        var without = LeadingRowClearance("g''4 g'' g''2");
+
+        Assert.Equal(2, with.Systems);   // the break took; there IS a next system to open
+
+        Assert.True(highNotes.Clearance > spacer.Clearance + 0.1,
+            "control: the closing distance must respond to that staff's up-skyline: "
+            + $"high notes {highNotes.Clearance:F6}, spacer control {spacer.Clearance:F6}");
+
+        Assert.True(with.Clearance > without.Clearance + 0.1,
+            "the row must clear the tuplet bracket over the staff that closes its chain: "
+            + $"with {with.Clearance:F6}, without {without.Clearance:F6}");
+    }
 }

@@ -1595,7 +1595,8 @@ internal sealed class MultiStaffLayouter
         SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts,
         int systemIndex)
         => LayoutStaffGroups(
-            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex),
+            score,
+            BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex).Skylines,
             NothingDies);
 
     /// <summary>
@@ -1612,7 +1613,8 @@ internal sealed class MultiStaffLayouter
         SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts,
         int startMeasure, int endMeasure, bool isFirstSystem, int systemIndex)
         => LayoutStaffGroups(
-            score, BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex),
+            score,
+            BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex).Skylines,
             startMeasure, endMeasure, isFirstSystem);
 
     /// <summary>
@@ -1638,8 +1640,10 @@ internal sealed class MultiStaffLayouter
             staff => HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem),
             looseLines);
 
-    /// <summary>Builds the per-staff skylines one system is placed and sprung against.</summary>
-    internal List<(VerticalSkyline Up, VerticalSkyline Down)> BuildStaffSkylines(
+    /// <summary>Builds the per-staff skylines one system is placed and sprung against,
+    /// with the inside-staff spanners they were built from — see
+    /// <see cref="StaffInsideSpanners"/> for why the second half travels with them.</summary>
+    internal StaffSkylineSet BuildStaffSkylines(
         MultiStaffScore score, SkylineBuilder skylineBuilder,
         ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
         => BuildAllStaffSkylines(score, skylineBuilder, measureLayouts, systemIndex);
@@ -1956,14 +1960,48 @@ internal sealed class MultiStaffLayouter
     internal static double StaffRefpoint(StaffLayout staff) => staff.Y - staff.Height / 2.0;
 
     /// <summary>
+    /// The curved and bracketed spanners of ONE staff, in that staff's own frame — the
+    /// side tables <see cref="BuildAllStaffSkylines"/> laid out for the alignment.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond declares no <c>outside-staff-priority</c> for Slur, Tie, TupletBracket or
+    /// TupletNumber (scm/define-grobs.scm:3166, :3866, :4097, :4127 — each lists
+    /// <c>outside-staff-interface</c> and none sets the priority), so all of them are
+    /// INSIDE-staff ink: they are in <c>inside_staff_skylines</c> from the start
+    /// (lily/axis-group-interface.cc:914-935) and everything the collision pass then stacks
+    /// clears them (<c>add_grobs_of_one_priority</c>, :969-971).
+    /// <para>
+    /// ⚠️ CARRIED OUT OF THE ROOM RATHER THAN RECOMPUTED, and that is the whole reason this
+    /// type exists. A consumer that rebuilds its own profile needs these three, and asking
+    /// the engravers a second time would be a second spelling of one answer AND a second
+    /// walk of the staff — <see cref="StaffTupletBracketLayouts"/> runs
+    /// <c>BeamDetector</c> over every voice of the staff, i.e. over the whole score, while
+    /// the consumer that wants it runs once per SYSTEM. The room is memoised per system
+    /// (<c>LayoutEngine.ComputeStaffSkylines</c>) and the annotation pass is not, so the
+    /// recomputation would land on every keystroke. HANDOFF 1 (第89セッション E, 第90セッション ⑧').
+    /// </para>
+    /// </remarks>
+    internal readonly record struct StaffInsideSpanners(
+        ImmutableArray<SlurLayout> Slurs,
+        ImmutableArray<TieLayout> Ties,
+        ImmutableArray<TupletBracketLayout> TupletBrackets);
+
+    /// <summary>One system's per-staff skylines and the inside-staff spanners they were
+    /// built from, both indexed by global staff index.</summary>
+    internal readonly record struct StaffSkylineSet(
+        List<(VerticalSkyline Up, VerticalSkyline Down)> Skylines,
+        List<StaffInsideSpanners> Spanners);
+
+    /// <summary>
     /// Builds UP/DOWN skylines for every staff in the score.
     /// Returns a list indexed by global staff index.
     /// </summary>
-    private List<(VerticalSkyline Up, VerticalSkyline Down)> BuildAllStaffSkylines(
+    private StaffSkylineSet BuildAllStaffSkylines(
         MultiStaffScore score, SkylineBuilder skylineBuilder,
         ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
     {
         var result = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
+        var spanners = new List<StaffInsideSpanners>();
 
         // Each staff's own dynamics (tagged by StaffIndex) hang below it and must
         // widen the gap to the staff below; filter so a staff reserves room only
@@ -1987,6 +2025,7 @@ internal sealed class MultiStaffLayouter
                     score, staff, thisStaff, measureLayouts, beams);
                 var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
                 var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
+                spanners.Add(new StaffInsideSpanners(slurs, ties, tupletBrackets));
                 // ⚠️ CurrentIndent is where this system's clef is, and it is the same value
                 // LayoutEngine hands BuildSystemSkylines as its systemLeft. The two
                 // silhouettes have to agree about the clef or the page and the alignment
@@ -2076,7 +2115,7 @@ internal sealed class MultiStaffLayouter
             }
         }
 
-        return result;
+        return new StaffSkylineSet(result, spanners);
     }
 
     /// <summary>
@@ -2297,6 +2336,33 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// One staff seen as a score of its own — every voice it has, so the detectors that
+    /// walk a <see cref="Score"/> see the same music the drawn pass does.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ALL THE VOICES, and that is the whole of this helper. Until 2026-08-04 the slur and
+    /// tie paths built this from <c>PrimaryVoice</c> alone while
+    /// <see cref="StaffBeamLayouts"/> — the third member of the same family, whose remark
+    /// already says the score MUST expose all voices — branched on the voice count. So a
+    /// SECOND voice's slur was laid out nowhere and reserved nowhere: MEASURED on one book,
+    /// the alignment's minimum for a staff pair read 8.095000 with a drooping second-voice
+    /// slur and 8.095000 without it, against 9.512596 once the voice was visible — the same
+    /// 1.417596 the identical slur contributes from the primary voice.
+    /// <para>
+    /// ⚠️ NOT A SECOND SPELLING OF THE VOICE TEST: the three call sites used to disagree
+    /// about it, which is how one of them could be wrong while the suite stayed green.
+    /// </para>
+    /// </remarks>
+    private static Score StaffLocalScore(MultiStaffScore score, Staff staff)
+        => staff.Voices.Length > 1
+            ? new Score(
+                staff.Voices, score.TimeSignature, score.KeySignature,
+                LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer)
+            : new Score(
+                staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+                LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+
+    /// <summary>
     /// This staff's own slurs, laid out in the staff's own frame so the skyline can
     /// reserve their bows. The mirror of <see cref="StaffTupletBracketLayouts"/>.
     /// </summary>
@@ -2332,9 +2398,7 @@ internal sealed class MultiStaffLayouter
             Measures: measureLayouts,
             StaffGroups: ImmutableArray.Create(group),
             Indent: 0);
-        var staffScore = new Score(
-            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+        var staffScore = StaffLocalScore(score, staff);
         return _elementCoordinator.LayoutSlurs(
             staffScore, ImmutableArray.Create(system), staffIndex: 0, staff, score.GraceNotes);
     }
@@ -2361,9 +2425,7 @@ internal sealed class MultiStaffLayouter
             Measures: measureLayouts,
             StaffGroups: ImmutableArray.Create(group),
             Indent: 0);
-        var staffScore = new Score(
-            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+        var staffScore = StaffLocalScore(score, staff);
         return _elementCoordinator.LayoutTies(
             staffScore, ImmutableArray.Create(system), staffIndex: 0, staff);
     }

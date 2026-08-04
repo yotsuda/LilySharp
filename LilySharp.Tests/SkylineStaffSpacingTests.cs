@@ -422,7 +422,8 @@ public class SkylineStaffSpacingTests
         var skylines = new MultiStaffLayouter(DefaultOptions, new MeasureLayouter())
             .BuildStaffSkylines(
                 score, new SkylineBuilder(DefaultOptions.StaffHeight),
-                layout.Systems[0].Measures, systemIndex: 0);
+                layout.Systems[0].Measures, systemIndex: 0)
+            .Skylines;
 
         // Staff 0 is the chord row (`chords prog` comes first in the score block).
         // The em AND the series come from the engraving defaults rather than literals — see

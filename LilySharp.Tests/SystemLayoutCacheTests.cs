@@ -58,10 +58,12 @@ public class SystemLayoutCacheTests
             new MeasureContentKey(3), new MeasureContentKey(4)));
 
         int calls = 0;
-        Func<List<(VerticalSkyline Up, VerticalSkyline Down)>> factory = () =>
+        Func<MultiStaffLayouter.StaffSkylineSet> factory = () =>
         {
             calls++;
-            return new List<(VerticalSkyline Up, VerticalSkyline Down)>();
+            return new MultiStaffLayouter.StaffSkylineSet(
+                new List<(VerticalSkyline Up, VerticalSkyline Down)>(),
+                new List<MultiStaffLayouter.StaffInsideSpanners>());
         };
 
         var first = cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);
@@ -70,7 +72,7 @@ public class SystemLayoutCacheTests
         // Same system, same content -> the same list object, not a rebuild.
         var second = cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);
         Assert.Equal(1, calls);
-        Assert.Same(first, second);
+        Assert.Same(first.Skylines, second.Skylines);
 
         // A different system in the same score -> its own entry.
         cache.GetOrComputeStaffSkylines(2, 2, false, true, 1.0, 0.25, factory);

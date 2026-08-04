@@ -54,7 +54,7 @@ internal sealed class SystemLayoutCache
     private ImmutableArray<MeasureContentKey> _keys;
     private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new();
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new();
-    private readonly TypedCache<List<(VerticalSkyline Up, VerticalSkyline Down)>> _staffSkylines = new();
+    private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -106,16 +106,20 @@ internal sealed class SystemLayoutCache
     /// skyline is built in that staff's own frame and does not know where the system's
     /// other staves ended up. Adding it would only make the key stricter, but stating why
     /// it is absent keeps the next reader from "fixing" the asymmetry.
+    /// ⚠️ THE VALUE ALSO CARRIES THE INSIDE-STAFF SPANNERS the skylines were built from
+    /// (<c>MultiStaffLayouter.StaffInsideSpanners</c>), and the key needs nothing added for
+    /// them: they are the slurs, ties and tuplet brackets already named in the list above,
+    /// which is why they can ride here instead of being laid out a second time.
     /// ⚠️ THE CACHED LIST IS SHARED, so nothing downstream may mutate it or the skylines in
     /// it. Verified 2026-07-27: every consumer goes through
     /// <c>CalculateStaffGapWithSkylines</c> / <c>AlignmentMinimumWithSkylines</c>, which
     /// only read (<c>Distance</c>, <c>IsEmpty</c>, <c>Count</c>). The one mutation,
     /// <c>ReserveChordRowBand</c>, happens during construction, before the value is stored.
     /// </remarks>
-    public List<(VerticalSkyline Up, VerticalSkyline Down)> GetOrComputeStaffSkylines(
+    public MultiStaffLayouter.StaffSkylineSet GetOrComputeStaffSkylines(
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
-        Func<List<(VerticalSkyline Up, VerticalSkyline Down)>> compute)
+        Func<MultiStaffLayouter.StaffSkylineSet> compute)
         => _staffSkylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: 0, compute, out _);
 

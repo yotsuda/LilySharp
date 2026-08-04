@@ -142,8 +142,8 @@ internal sealed class LayoutEngine
             : null;
         var firstStaffGroupLayouts = systemMeasures.Count > 0
             ? multiStaffLayouter.LayoutStaffGroups(
-                score, firstStaffSkylines, 0, systemMeasures[0].Count, isFirstSystem: true,
-                firstLooseLines)
+                score, firstStaffSkylines.Skylines, 0, systemMeasures[0].Count,
+                isFirstSystem: true, firstLooseLines)
             : multiStaffLayouter.LayoutStaffGroups(
                 score, _skylineBuilder, firstSystemMeasureLayouts, systemIndex: 0);
         // The system's height is the extent of the groups AS PLACED — see
@@ -235,7 +235,7 @@ internal sealed class LayoutEngine
 
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents, lyricsRowStaves,
-            multiStaffLayouter.RestCollisionsOf);
+            multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners);
         var trailingRowStaves = BuildTrailingRowStaves(systemsArray, lyricsRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
@@ -298,6 +298,7 @@ internal sealed class LayoutEngine
             BeamLayouts = allBeamLayouts.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
             StaffSkylines = placed.StaffSkylines,
+            StaffSpanners = placed.StaffSpanners,
             // The room's own memo, not a second call: see AnnotationLayoutContext.RestCollisionsOf.
             RestCollisionsOf = multiStaffLayouter.RestCollisionsOf,
             TupletForceStemUp = primaryStaff.IsMultiVoice,
@@ -346,7 +347,7 @@ internal sealed class LayoutEngine
         public required double CommonShortestDuration { get; init; }
         public required ImmutableArray<MeasureLayout> FirstSystemMeasureLayouts { get; init; }
         public required ImmutableArray<StaffGroupLayout> FirstStaffGroupLayouts { get; init; }
-        public required List<(VerticalSkyline Up, VerticalSkyline Down)> FirstStaffSkylines { get; init; }
+        public required MultiStaffLayouter.StaffSkylineSet FirstStaffSkylines { get; init; }
         /// <summary>System 0's loose-line lookup, built by the caller alongside its placement
         /// so the springs below are floored against the SAME alignment that drew it.</summary>
         public MultiStaffLayouter.LooseLinesBetween? FirstLooseLines { get; init; }
@@ -372,7 +373,12 @@ internal sealed class LayoutEngine
         /// sprung against, indexed by global staff index. Carried out of the pass rather
         /// than rebuilt because a note-bound lyric line is DRAWN against the same
         /// silhouette — see <see cref="AnnotationLayoutContext.StaffSkylines"/>.</summary>
-        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines);
+        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines,
+        /// <summary>Per system, the inside-staff spanners each staff's skyline was built
+        /// from, indexed by global staff index. Carried for the consumers that must rebuild
+        /// a profile of their own — see
+        /// <see cref="MultiStaffLayouter.StaffInsideSpanners"/>.</summary>
+        List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -410,6 +416,7 @@ internal sealed class LayoutEngine
         var perSystemHeights = new List<double>();
         var perSystemLyricBands = new List<double>();
         var perSystemStaffSkylines = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
+        var perSystemStaffSpanners = new List<List<MultiStaffLayouter.StaffInsideSpanners>>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -452,7 +459,7 @@ internal sealed class LayoutEngine
             var sysStaffGroups = isFirstSystem
                 ? firstStaffGroupLayouts
                 : multiStaffLayouter.LayoutStaffGroups(
-                    score, sysStaffSkylines,
+                    score, sysStaffSkylines.Skylines,
                     firstMeasureIndex, firstMeasureIndex + measureCount, isFirstSystem,
                     sysLooseLines);
 
@@ -480,7 +487,7 @@ internal sealed class LayoutEngine
                 LayoutUtilities.CalculateDownExtent(downSky, sysHeight)));
             perSystemHeights.Add(sysHeight);
             perSystemLyricBands.Add(LyricReservationBelowSystem(
-                score, measureLayouts, sysStaffSkylines, sysStaffGroups,
+                score, measureLayouts, sysStaffSkylines.Skylines, sysStaffGroups,
                 firstMeasureIndex, firstMeasureIndex + measureCount));
 
             systems.Add(new SystemLayout(
@@ -518,15 +525,16 @@ internal sealed class LayoutEngine
                 // (LilyPond's own value: audit/lp-geometry page.compressed.staff-staff-inside).
                 // It is gone; the argument is not nullable.
                 StaffSprings: multiStaffLayouter.StaffSprings(
-                    score, sysStaffGroups, sysStaffSkylines, sysLooseLines)));
-            perSystemStaffSkylines.Add(sysStaffSkylines);
+                    score, sysStaffGroups, sysStaffSkylines.Skylines, sysLooseLines)));
+            perSystemStaffSkylines.Add(sysStaffSkylines.Skylines);
+            perSystemStaffSpanners.Add(sysStaffSkylines.Spanners);
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
 
         return new SystemPlacements(
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
-            perSystemLyricBands, perSystemStaffSkylines);
+            perSystemLyricBands, perSystemStaffSkylines, perSystemStaffSpanners);
     }
 
 
@@ -885,15 +893,35 @@ internal sealed class LayoutEngine
             : cache.GetOrComputeMeasures(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
                 indent, commonShortestDuration, compute);
 
+    /// <summary>
+    /// One (system, staff)'s inside-staff spanners out of the per-system lists the room
+    /// produced, or an empty set when there are none for that index.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ STATIC, BECAUSE TWO PASSES ASK. <c>AnnotationLayoutContext.SpannersOf</c> is the
+    /// annotation pass's door and <see cref="BuildLooseChainEnds"/> runs BEFORE that context
+    /// is built, so the page pass has to reach the same lists without it. Both go through
+    /// here rather than each spelling the bounds check — five call sites now depend on the
+    /// empty case meaning "no such ink", and that is one decision, not five.
+    /// </remarks>
+    private static MultiStaffLayouter.StaffInsideSpanners SpannersAt(
+        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? bySystem,
+        int systemIndex, int staffIndex)
+        => bySystem != null
+           && systemIndex >= 0 && systemIndex < bySystem.Count
+           && staffIndex >= 0 && staffIndex < bySystem[systemIndex].Count
+            ? bySystem[systemIndex][staffIndex]
+            : default;
+
     // Route a system's PER-STAFF skylines through the session cache. They became a
     // per-system cost when the placement did (see the loop above); before that one list
     // served the whole score, so there was nothing worth memoising. On a fifty-system
     // score a one-note edit rebuilt all fifty without this. Null cache => direct compute,
     // byte-identical to the non-incremental path.
-    private static List<(VerticalSkyline Up, VerticalSkyline Down)> ComputeStaffSkylines(
+    private static MultiStaffLayouter.StaffSkylineSet ComputeStaffSkylines(
         SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
         bool isLastSystem, double indent, double commonShortestDuration,
-        Func<List<(VerticalSkyline Up, VerticalSkyline Down)>> compute)
+        Func<MultiStaffLayouter.StaffSkylineSet> compute)
         => cache == null
             ? compute()
             : cache.GetOrComputeStaffSkylines(firstMeasureIndex, measureCount, isFirstSystem,
@@ -2190,7 +2218,8 @@ internal sealed class LayoutEngine
         ImmutableArray<SystemLayout> systemsArray,
         List<(double upExtent, double downExtent)> perSystemExtents,
         IReadOnlySet<int> lyricsRowStaves,
-        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
+        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners)
     {
         if (score.Lyrics.IsDefaultOrEmpty || systemsArray.IsDefaultOrEmpty || pages.IsDefaultOrEmpty)
             return null;
@@ -2274,7 +2303,8 @@ internal sealed class LayoutEngine
 
                     var (lines, closingSpec, closingMin) = LeadingLinesOfSystem(
                         score, systemsArray, staffByIndex, index + 1,
-                        leading[index + 1], firstSpaceableIndex[index + 1], restCollisionsOf);
+                        leading[index + 1], firstSpaceableIndex[index + 1], restCollisionsOf,
+                        staffSpanners);
 
                     ends[index] = new LooseLineSpacer.ChainEnd(
                         room, systemPadding + nextUpExtent + nextFirst + halfStaff,
@@ -2326,13 +2356,13 @@ internal sealed class LayoutEngine
     /// ⚠️ AND IT IS STILL A SECOND BUILD, WHICH IS WHAT THIS ONE HAS THAT
     /// <see cref="ComputeBetweenStavesEnd"/> NO LONGER DOES. That one used to rebuild too, and
     /// now reads the per-staff list <c>MultiStaffLayouter.BuildAllStaffSkylines</c> produced
-    /// (see the remark there). This call site cannot yet: it is reached from the PAGE pass,
-    /// which runs before <c>AnnotationLayoutContext.StaffSkylines</c> exists. So the closing
-    /// staff here is measured WITHOUT its dynamics, scripts, tuplet brackets, slurs, ties or
-    /// beams, and a mark on the first staff of the next system is not in the distance a
-    /// trailing row is closed by. NOT MEASURED — the sentence that stood here claimed the
-    /// corpus has no such book and had not asked it, which is the shape HANDOFF 1 named three
-    /// times in one session.
+    /// (see the remark there). This call site cannot read that list: it is reached from the
+    /// PAGE pass, which runs before <c>AnnotationLayoutContext.StaffSkylines</c> exists. So
+    /// the closing staff here is still measured WITHOUT its dynamics, scripts or beams, and a
+    /// mark on the first staff of the next system is not in the distance a trailing row is
+    /// closed by. NOT MEASURED — the sentence that stood here claimed the corpus has no such
+    /// book and had not asked it, which is the shape HANDOFF 1 named three times in one
+    /// session.
     /// </para>
     /// <para>
     /// ★ THE REST SHIFT IS HERE SINCE 2026-08-04, and it is the one side table that costs
@@ -2351,8 +2381,20 @@ internal sealed class LayoutEngine
     /// that computing them HERE would be a second run of what
     /// <c>MultiStaffLayouter.BuildAllStaffSkylines</c> already did for this staff, which is
     /// the same objection this whole migration is about. The fix is to reach the room's
-    /// result, not to recompute; that needs the per-staff list to exist before the page pass,
-    /// which it does not. UNMEASURED either way — no book has been built for it.
+    /// result, not to recompute.
+    /// ★ THREE OF THE SIX DO REACH IT SINCE 2026-08-04, and the sentence that used to end
+    /// this paragraph — "that needs the per-staff list to exist before the page pass, which
+    /// it does not" — was true only of the SKYLINES. The room now hands its slurs, ties and
+    /// tuplet brackets out beside them (<c>MultiStaffLayouter.StaffInsideSpanners</c>), and
+    /// <c>BuildLooseChainEnds</c> runs after the placement that produces them, so this call
+    /// site takes them by lookup (<c>SpannersAt</c>) and lays nothing out twice. MEASURED on
+    /// the book <c>LooseLineExtentScopeTests</c> builds: the row opening system 2 stood
+    /// 9.947093 above its closing staff with a tuplet bracket over that staff and 9.947093
+    /// without it, against 11.127093 once the bracket was in the profile — the same 1.180000
+    /// the figured-bass drop gained from the same grob.
+    /// ⚠️ THE REMAINING THREE ARE STILL OUT and still unmeasured: dynamics, scripts and
+    /// beams are not in the room's carried tables, so nothing here can reach them without
+    /// the recomputation this paragraph rules out.
     /// </para>
     /// </remarks>
     private (ImmutableArray<LooseLineSpacer.LeadingLine> Lines,
@@ -2360,7 +2402,8 @@ internal sealed class LayoutEngine
         MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
         IReadOnlyDictionary<int, Staff> staffByIndex, int sysIdx,
         List<StaffLayout> leading, int firstSpaceableIndex,
-        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
+        IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? staffSpanners)
     {
         if (leading.Count == 0
             || !staffByIndex.TryGetValue(firstSpaceableIndex, out var closingStaff))
@@ -2408,9 +2451,17 @@ internal sealed class LayoutEngine
         var closingSpec = StaffAffinity.GetSpacingSpec(
             previous!.StaffAffinity, NonStaffSpecsOf(previous, sp),
             null, sp.Lyrics, sp.StaffStaff);
+        // ...and the spanners, which are inside-staff ink in LilyPond and so belong to the
+        // silhouette the chain is closed against exactly as the notes do. Carried out of
+        // the ROOM (SpannersAt over the per-system lists the placement produced), not laid
+        // out again: see MultiStaffLayouter.StaffInsideSpanners.
+        var closingSpanners = SpannersAt(staffSpanners, sysIdx, firstSpaceableIndex);
         double closingMin = walk.Distance(
             _skylineBuilder.BuildStaffSkylines(
                 closingStaff, measures, systemLeft: systemsArray[sysIdx].Indent,
+                tupletBrackets: closingSpanners.TupletBrackets,
+                slurs: closingSpanners.Slurs,
+                ties: closingSpanners.Ties,
                 // A rest another voice pushed UP out of this staff reaches into the very gap
                 // the chain is closed by, and it is the ROOM's own memo that says where it
                 // went — see MultiStaffLayouter.RestCollisionsOf.
@@ -2610,6 +2661,54 @@ internal sealed class LayoutEngine
         /// </para>
         /// </remarks>
         public IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? StaffSkylines { get; init; }
+
+        /// <summary>
+        /// Per system, the inside-staff spanners each staff's skyline was built from,
+        /// indexed by global staff index — the slurs, ties and tuplet brackets
+        /// <c>MultiStaffLayouter.BuildAllStaffSkylines</c> laid out for the alignment.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ FOR THE PROFILES THIS PASS STILL BUILDS, and for the same reason
+        /// <see cref="RestCollisionsOf"/> is here: a consumer that cannot read
+        /// <see cref="StaffSkylines"/> — it needs the silhouette WITHOUT the movers it is
+        /// about to place — still has to reserve everything LilyPond calls inside-staff ink,
+        /// and none of Slur, Tie, TupletBracket or TupletNumber declares an
+        /// <c>outside-staff-priority</c> (scm/define-grobs.scm:3166, :3866, :4097, :4127 —
+        /// all four list <c>outside-staff-interface</c> and none sets the priority, which is
+        /// the trap: the interface is not the priority). Until 2026-08-04 the
+        /// outside-staff stacker's seed was built with these three at their defaults, so a
+        /// below-staff dynamic was engraved straight through a slur's bow, a tie's bow and a
+        /// lower voice's tuplet bracket. MEASURED on one book each, against the room as the
+        /// positive control (<c>OutsideStaffSeedTests</c>): the room widened by 1.417596 /
+        /// 0.420441 / 1.727738 while the dynamic did not move at all.
+        /// <para>
+        /// ⚠️ CARRIED, NOT RECOMPUTED. See <c>MultiStaffLayouter.StaffInsideSpanners</c>:
+        /// asking the engravers again here would be a second spelling of the room's answer
+        /// AND a whole-staff walk added to a pass that is not memoised per system, i.e. paid
+        /// on every keystroke.
+        /// </para>
+        /// <para>
+        /// Null in the PRELIMINARY pass, which runs before the systems are placed — the same
+        /// real absent case <see cref="StaffSkylines"/> has, and the reason both are nullable
+        /// where <see cref="RestCollisionsOf"/> is not.
+        /// </para>
+        /// </remarks>
+        public IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? StaffSpanners { get; init; }
+
+        /// <summary>
+        /// One (system, staff)'s inside-staff spanners, or an empty set when this pass has
+        /// none — the preliminary pass, or an index outside what was placed.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ ONE LOOKUP FOR ALL FOUR CONSUMERS. Each of them rebuilds a profile of its own
+        /// and so needs the same three tables; spelling the bounds check per call site is how
+        /// three of them could disagree about the empty case. An empty
+        /// <see cref="MultiStaffLayouter.StaffInsideSpanners"/> is exactly what
+        /// <c>SkylineBuilder.BuildStaffSkylines</c> already treats as "no such ink", so the
+        /// absent case needs no branch at the call sites.
+        /// </remarks>
+        public MultiStaffLayouter.StaffInsideSpanners SpannersOf(int systemIndex, int staffIndex)
+            => SpannersAt(StaffSpanners, systemIndex, staffIndex);
 
         /// <summary>
         /// A staff's rest/note collision shifts — <c>MultiStaffLayouter.RestCollisionsOf</c>
@@ -2907,9 +3006,19 @@ internal sealed class LayoutEngine
                         ? ImmutableArray<ArticulationLayout>.Empty
                         : articulationLayouts.Where(a => a.StaffIndex == staffIndex)
                                              .ToImmutableArray();
+                    // ...and the SPANNERS, for the very reason the priority argument above
+                    // gives: Slur, Tie and TupletBracket declare no outside-staff-priority at
+                    // all (scm/define-grobs.scm:3166, :3866, :4097), so they are not grobs the
+                    // figures are placed before — they are part of the inside-staff ink the
+                    // figures drop below. The room's own tables, not a second layout: see
+                    // AnnotationLayoutContext.StaffSpanners.
+                    var fbSpanners = ctx.SpannersOf(sysIdx, staffIndex);
                     var down = _skylineBuilder.BuildStaffSkylines(
                         staff, systems[sysIdx].Measures,
                         articulationLayouts: staffScripts,
+                        tupletBrackets: fbSpanners.TupletBrackets,
+                        slurs: fbSpanners.Slurs,
+                        ties: fbSpanners.Ties,
                         beams: beamLayouts ?? ImmutableArray<BeamLayout>.Empty,
                         systemLeft: systems[sysIdx].Indent,
                         // ...and a rest another voice pushed DOWN out of the staff is ink the
@@ -3035,10 +3144,19 @@ internal sealed class LayoutEngine
             {
                 if (!profileCache.TryGetValue((sysIdx, staffIndex), out var built))
                 {
+                    // The room's own slurs, ties and tuplet brackets for this (system, staff)
+                    // — inside-staff ink in LilyPond, so this seed has to hold them exactly
+                    // as the alignment's silhouette does. See
+                    // AnnotationLayoutContext.StaffSpanners for why they are carried here
+                    // rather than laid out a second time.
+                    var spanners = ctx.SpannersOf(sysIdx, staffIndex);
                     built = sysIdx >= 0 && sysIdx < systems.Length
                             && staffByIndex.TryGetValue(staffIndex, out var profStaff)
                         ? _skylineBuilder.BuildStaffSkylines(
                             profStaff, systems[sysIdx].Measures,
+                            tupletBrackets: spanners.TupletBrackets,
+                            slurs: spanners.Slurs,
+                            ties: spanners.Ties,
                             beams: allBeams.IsDefaultOrEmpty
                                 ? ImmutableArray<BeamLayout>.Empty
                                 : allBeams.Where(b => b.StaffIndex == staffIndex
@@ -3201,8 +3319,20 @@ internal sealed class LayoutEngine
                     var key = (sysIdx, staffIndex);
                     if (!skyCache.TryGetValue(key, out var sky))
                     {
+                        // A bow or a bracket arching ABOVE this staff is ink the row has to
+                        // clear exactly as it clears a high note — inside-staff ink, no
+                        // outside-staff-priority (scm/define-grobs.scm:3166, :3866, :4097).
+                        // ⚠️ THE SPANNERS AND NOT THE ROOM'S FINISHED UP-SKYLINE: that one has
+                        // ReserveChordRowBand merged into it (MultiStaffLayouter), so reading
+                        // it would make this row clear the band it reserved for ITSELF. The
+                        // side tables carry no such reservation, which is why they can be
+                        // shared where the skyline cannot.
+                        var rowSpanners = ctx.SpannersOf(sysIdx, staffIndex);
                         var up = _skylineBuilder.BuildStaffSkylines(
                             staff, systems[sysIdx].Measures,
+                            tupletBrackets: rowSpanners.TupletBrackets,
+                            slurs: rowSpanners.Slurs,
+                            ties: rowSpanners.Ties,
                             systemLeft: systems[sysIdx].Indent,
                             // ...including a rest another voice pushed UP out of the staff,
                             // which is exactly the ink a row above this staff has to clear —
