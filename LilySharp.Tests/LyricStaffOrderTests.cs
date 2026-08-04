@@ -380,4 +380,71 @@ public class LyricStaffOrderTests
         var baselines = lyricYs.Select(y => System.Math.Round(y, 6)).Distinct().ToList();
         Assert.Equal(4, baselines.Count);
     }
+
+    /// <summary>
+    /// A line under one staff clears the SCRIPT that the staff BELOW it hangs into the same
+    /// gap — the fermata of a lower part is drawn over the syllable of the upper part's line
+    /// otherwise. The reported book: an SATB chorale where every part ends on a fermata and
+    /// every staff carries the same verse.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:937-978 <c>skyline_spacing</c> — a staff's
+    /// <c>vertical-skylines</c> is <c>inside_staff_skylines</c> MERGED with every outside-staff
+    /// grob the collision pass placed (<c>add_grobs_of_one_priority</c>), so a Script is in the
+    /// silhouette <c>Align_interface</c> walks whether it declares an outside-staff-priority
+    /// (the fermata family's 75, scm/script.scm) or not. There is exactly one silhouette per
+    /// staff in LilyPond and the scripts are in it.
+    /// <para>
+    /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4): what is asserted is that the drawn ink does not
+    /// overlap, and — as the control — that the ROOM responds at all. Pinning either number
+    /// would have to be re-approved every time the fermata's own placement moves.
+    /// </para>
+    /// <para>
+    /// ⚠️ MEASURED IN THE DEVICE FRAME THE RENDERER ACTUALLY DREW, not from the layout
+    /// records: the defect this closes was two spellings of one quantity (HANDOFF 7.7), and a
+    /// test that reads one of the two spellings cannot see them disagree.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void LyricBaseline_ClearsAScriptOnTheStaffBelowIt()
+    {
+        // ⚠️ WHOLE NOTES AND A HIGH ONE, AND BOTH MATTER. A quarter's stem already holds the
+        // staves further apart than the mark ever reaches, so on a stemmed book the fermata
+        // does not bind and the numbers are identical with the defect and without it
+        // (measured on the first draft of this test: 19.902001 either way). The mark must also
+        // sit above a note that is itself out of the staff, or the staff lines are what binds.
+        // The reported book ends on whole notes under a shared verse.
+        const string head =
+            "part up { section A { e'1 } }\n";
+        const string tail =
+            "lyrics w { section A { la } }\n" +
+            "form main { A }\n" +
+            "score main {\n  grandStaff {\n    staff up with lyrics w\n    staff lo\n  }\n}\n";
+        var plain = LpFidelity.RenderedGeometry.Render(
+            head + "part lo { section A { c''1 } }\n" + tail);
+        var fermata = LpFidelity.RenderedGeometry.Render(
+            head + "part lo { section A { c''1@fermata } }\n" + tail);
+
+        // The control: the gap between the two staves must widen for the mark at all. If it
+        // stops responding the overlap assertion below can pass for the wrong reason.
+        double plainGap = plain.StaffGapAt(0);
+        double fermataGap = fermata.StaffGapAt(0);
+        Assert.True(fermataGap > plainGap + 0.1,
+            "control: the room between the staves must widen for the lower staff's fermata: "
+            + $"plain {plainGap:F6}, with the mark {fermataGap:F6}");
+
+        // ...and the syllable over that note must not be printed on the mark. Device Y is
+        // DOWN, so the glyph's ink TOP is its drawn origin minus the box's up-extent.
+        var marks = fermata.Glyphs
+            .Where(g => g.Glyph == EmmentalerGlyphs.FermataAbove).ToList();
+        Assert.Single(marks);
+        double markInkTop = marks[0].Y - GlyphMetrics.FermataAboveGlyph.Top;
+
+        var syllable = fermata.LyricSyllables
+            .OrderBy(t => System.Math.Abs(t.X - marks[0].X)).First();
+        Assert.True(markInkTop > syllable.Y,
+            $"the syllable \"{syllable.Text}\" (baseline {syllable.Y:F6}) is printed on the "
+            + $"lower staff's fermata (ink top {markInkTop:F6}): the mark is above the "
+            + "syllable's baseline, so the two overlap");
+    }
 }

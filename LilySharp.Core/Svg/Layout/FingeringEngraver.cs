@@ -214,8 +214,15 @@ internal static class FingeringEngraver
         // honouring the Fingering staff-padding. No staff offset: the renderer
         // resolves the staff middle at draw time.
         // LILYPOND-REF: lily/side-position-interface.cc; scm/define-grobs.scm Fingering.
-        const double StaffHalf = 2.0;          // outer staff line, staff-spaces above/below middle
-        const double NoteheadHalfHeight = 0.5; // notehead half-height (staff spaces)
+        // ⚠️ BOTH OF THESE HAVE ONE HOME, and both used to be spelled again right here — a
+        // literal 2.0 and a literal 0.5 beside a LILYPOND-REF, which is the shape HANDOFF
+        // 5.2.1② names. The staff half-span is EngravingDefaults.StaffMiddle (the same "half
+        // of a five-line staff" frame) and the nominal notehead half-height is
+        // EngravingDefaults.NoteheadHalfHeight, whose own remark records that it is 0.045
+        // short of the glyph. Reading them from there is output-identical and means a future
+        // correction reaches this call site too, instead of leaving it behind.
+        const double StaffHalf = EngravingDefaults.StaffMiddle;
+        const double NoteheadHalfHeight = EngravingDefaults.NoteheadHalfHeight;
         double noteUp = note.StaffPosition * 0.5;
         double yUp = isAbove
             ? System.Math.Max(StaffHalf + StaffPadding,

@@ -1977,12 +1977,12 @@ internal sealed class MultiStaffLayouter
                 var dynamics = score.Dynamics.IsDefaultOrEmpty
                     ? ImmutableArray<DynamicItem>.Empty
                     : score.Dynamics.Where(d => d.StaffIndex == thisStaff).ToImmutableArray();
-                // A tab staff's forced-above Scripts (fermata/flageolet) drop into
-                // the gap and hit the low noteheads of the staff above; reserve their
-                // staff-local extent so the inter-staff gap widens to clear them.
-                var tabArticulations = ArticulationEngraver.CalculateTabStaffLocal(
-                    staff, thisStaff, score.Articulations, measureLayouts);
                 var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts, systemIndex);
+                // The staff's own Scripts — a fermata reaching UP into the gap above it, a
+                // marcato hanging DOWN into the gap below. See StaffArticulationLayouts for
+                // why a Script belongs in this silhouette at all.
+                var articulations = StaffArticulationLayouts(
+                    score, staff, thisStaff, measureLayouts, beams);
                 var tupletBrackets = StaffTupletBracketLayouts(
                     score, staff, thisStaff, measureLayouts, beams);
                 var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
@@ -1992,7 +1992,7 @@ internal sealed class MultiStaffLayouter
                 // silhouettes have to agree about the clef or the page and the alignment
                 // are spacing different pictures.
                 var sky = skylineBuilder.BuildStaffSkylines(
-                    staff, measureLayouts, dynamics, tabArticulations, tupletBrackets, slurs, ties, beams,
+                    staff, measureLayouts, dynamics, articulations, tupletBrackets, slurs, ties, beams,
                     CurrentIndent);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
@@ -2174,6 +2174,79 @@ internal sealed class MultiStaffLayouter
             voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
             staffYAt: null,
             staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff });
+    }
+
+    /// <summary>
+    /// This staff's own Scripts, laid out in the staff's own frame so the skyline can reserve
+    /// the band they occupy outside the staff. The mirror of
+    /// <see cref="StaffTupletBracketLayouts"/>, and the same engraver the drawn pass runs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:937-978 <c>skyline_spacing</c> — a staff's
+    /// <c>vertical-skylines</c> is <c>inside_staff_skylines</c> merged with every outside-staff
+    /// grob the collision pass has placed (<c>add_grobs_of_one_priority</c>, :969-971), and it
+    /// is that merged pair <c>Align_interface</c> reads for staff-to-staff spacing
+    /// (lily/align-interface.cc:71-87 <c>get_skylines</c>). So a Script is in the silhouette
+    /// either way: the fermata family DECLARES an outside-staff-priority and joins by the
+    /// second route (scm/script.scm, all seven at 75), and every other script declares none and
+    /// is an inside-staff seed from the start.
+    /// <para>
+    /// ⚠️ UNTIL 2026-08-04 ONLY A TAB STAFF'S MARKS WERE HERE, through a tab-only copy of the
+    /// placement. So an ordinary fermata on a lower part was reserved nowhere and the staff
+    /// above kept its gap: on the reported book (an SATB chorale, every part ending on a
+    /// fermata, every staff carrying the verse) the alto's syllable and the tenor's fermata
+    /// were drawn in the same place, three times over. Nothing in the corpus saw it — the one
+    /// script-versus-lyric fixture is a SINGLE staff, where a different path clears it
+    /// (LayoutEngine.AugmentSkylinesWithScripts over the SYSTEM silhouette).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SAME ENGRAVER, NOT A SECOND SPELLING: two arguments make its answer staff-local
+    /// rather than system-relative, exactly as <see cref="StaffTupletBracketLayouts"/> does it.
+    /// <c>staffYAt</c> is null, so no staff offset is baked in and every <c>YUp</c> comes back
+    /// about this staff's middle line — the per-staff skyline's own origin — and the
+    /// single-entry dictionaries scope the voice and staff lookups to this staff. What that
+    /// buys is that a tab staff's marks now come from the engraver's OWN tab branch instead of
+    /// a copy of it, so the band reserved is the geometry that will be drawn.
+    /// </para>
+    /// <para>
+    /// The BEAMS matter and cannot be skipped: a beamed member's stem ends on the beam, and a
+    /// stem-coupled script sits past that tip — an unbeamed formula would reserve the band in
+    /// the wrong place. They are restamped with this staff's index because
+    /// <see cref="StaffBeamLayouts"/> builds them on a trivial one-staff system (index 0) and
+    /// the engraver keys its stem tips by staff — the same restamp
+    /// <see cref="StaffTupletBracketLayouts"/> makes, for the same reason.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<ArticulationLayout> StaffArticulationLayouts(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts)
+    {
+        if (score.Articulations.IsDefaultOrEmpty)
+            return ImmutableArray<ArticulationLayout>.Empty;
+        var staffArticulations = score.Articulations
+            .Where(a => a.StaffIndex == staffIndex
+                        && ArticulationEngraver.IsSidePositionedScript(a.Type))
+            .ToImmutableArray();
+        if (staffArticulations.IsEmpty)
+            return ImmutableArray<ArticulationLayout>.Empty;
+
+        var staffBeams = beamLayouts.IsDefaultOrEmpty
+            ? beamLayouts
+            : beamLayouts.Select(b => new BeamLayout(
+                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
+                b.MemberXPositions, staffIndex, b.SystemIndex,
+                b.MemberStaffIndices)).ToImmutableArray();
+
+        var staffScore = new Score(
+            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+        return ArticulationEngraver.Calculate(
+            staffScore, staffArticulations, measureLayouts,
+            measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                { [staffIndex] = staff.PrimaryVoice.Measures },
+            staffYAt: null,
+            staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+            beamLayouts: staffBeams);
     }
 
     /// <summary>

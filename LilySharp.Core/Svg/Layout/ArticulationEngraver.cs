@@ -188,6 +188,16 @@ internal static class ArticulationEngraver
 
         int[] order = OrderByScriptPriority(articulations);
 
+        // WHICH entry of the list a measure index names. The annotation pass hands the whole
+        // score's layouts, where the two coincide; the per-staff skyline pass hands ONE
+        // system's, where they do not — system 2's first entry is MeasureIndex 4. Indexing
+        // positionally read a neighbour's measure there (or fell off the end and dropped the
+        // script), which is the same positional/by-index trap MultiStaffLayouter.LyricRowInk
+        // names on its own overload.
+        var layoutAt = new Dictionary<int, MeasureLayout>(measureLayouts.Length);
+        foreach (var m in measureLayouts)
+            layoutAt[m.MeasureIndex] = m;
+
         var beamedTips = BuildBeamedStemTips(beamLayouts);
         var beamGroups = BuildBeamGroupMap(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);
@@ -200,10 +210,8 @@ internal static class ArticulationEngraver
         {
             var articulation = articulations[arti];
             // Find the measure layout
-            if (articulation.MeasureIndex >= measureLayouts.Length)
+            if (!layoutAt.TryGetValue(articulation.MeasureIndex, out var measureLayout))
                 continue;
-
-            var measureLayout = measureLayouts[articulation.MeasureIndex];
 
             // Bounds guard (single-staff layouts only; multi-staff layouts
             // resolve through timing-aligned columns).
@@ -548,78 +556,35 @@ internal static class ArticulationEngraver
     }
 
     /// <summary>
-    /// Staff-LOCAL layouts (staff-top line at Y=0, no inter-staff offset) for a
-    /// tab staff's above/below Script articulations, so the per-staff skyline that
-    /// drives inter-staff spacing can reserve room for them. Without this, a tab's
-    /// forced-above fermata/flageolet sits in the gap and collides with the low
-    /// noteheads of the notation staff ABOVE it: the real (offset) layout is built
-    /// only AFTER spacing, but the staff-local extent doesn't depend on spacing, so
-    /// it can be computed here first. Mirrors the tab branch of <see cref="Calculate"/>
-    /// (single source of truth for the placement geometry); only Ink and side matter
-    /// for the skyline, so the glyph string is left empty and beam/multi-voice stem
-    /// refinements (which don't occur in tab+articulation fixtures) are skipped.
+    /// Whether this mark is engraved as an above/below <c>Script</c> — the ones
+    /// <see cref="Calculate"/> side-positions OUT of the staff, and so the ones a staff's
+    /// own skyline has to reserve a band for.
     /// </summary>
-    internal static ImmutableArray<ArticulationLayout> CalculateTabStaffLocal(
-        Staff staff, int staffIndex,
-        ImmutableArray<ArticulationItem> articulations,
-        ImmutableArray<MeasureLayout> measureLayouts)
-    {
-        if (!staff.IsTab || !staff.Tuning.HasValue || articulations.IsDefaultOrEmpty)
-            return ImmutableArray<ArticulationLayout>.Empty;
-
-        var measures = staff.PrimaryVoice.Measures;
-        int strings = Tunings.GetStringCount(staff.Tuning.Value);
-        double space = EngravingDefaults.TabStringSpace(strings);
-        double fretHalf = TabConstants.FretDigitHeight / 2.0;
-        const double tabGap = 1.0;
-
-        var result = ImmutableArray.CreateBuilder<ArticulationLayout>();
-        foreach (var art in articulations)
-        {
-            if (art.StaffIndex != staffIndex)
-                continue;
-            // The bend family and breathing signs are placed by the early branches
-            // in Calculate (at the note's own height / staff top), not as above/below
-            // Scripts — so they don't reserve an inter-staff band.
-            if (art.Type is ArticulationType.Fall or ArticulationType.Doit
-                or ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop
-                or ArticulationType.Breath or ArticulationType.Caesura)
-                continue;
-
-            int layoutIdx = -1;
-            for (int i = 0; i < measureLayouts.Length; i++)
-                if (measureLayouts[i].MeasureIndex == art.MeasureIndex) { layoutIdx = i; break; }
-            if (layoutIdx < 0 || art.MeasureIndex >= measures.Length)
-                continue;
-            var measure = measures[art.MeasureIndex];
-            if (art.ItemIndex >= measure.Items.Length)
-                continue;
-            var item = measure.Items[art.ItemIndex];
-
-            int staffPosition = GetStaffPosition(item);
-            bool stemUp = GetStemUp(item, staffPosition);
-            bool tabForceAbove = IsForcedAbove(art);
-            bool above = art.DirectionForced ? art.IsAbove : (tabForceAbove || !stemUp);
-
-            double colX = measureLayouts[layoutIdx].X + LayoutUtilities.GetItemXOffset(
-                measures, art.MeasureIndex, art.ItemIndex, measureLayouts[layoutIdx])
-                + EngravingDefaults.TabHeadCenterOffset;
-            // Staff-local device (staff top = 0, Y down) → Y-up about the staff middle.
-            double yUp = StaffMiddle - (
-                above
-                    ? -fretHalf - tabGap
-                    : (strings - 1) * space + fretHalf + tabGap);
-
-            result.Add(new ArticulationLayout(
-                art.MeasureIndex, art.ItemIndex, colX, yUp, string.Empty, above,
-                art.SourcePosition, FontSizeStep: 0.0, GetSeedBBoxFor(art), StaffIndex: staffIndex,
-                // Carried so the record never lies about the grob, though this array
-                // only ever feeds the per-staff skyline that reserves the band — the
-                // outside-staff pass runs on Calculate's layouts.
-                OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(art.Type)));
-        }
-        return result.ToImmutable();
-    }
+    /// <remarks>
+    /// The bend family and the breathing signs are placed by the early branches of
+    /// <see cref="Calculate"/> — at the note's own height, and at the staff's line span — so
+    /// none of them is side-positioned OUT of the staff the way a Script is. Stated once, here,
+    /// because the per-staff skyline pass (<c>MultiStaffLayouter</c>) and the drawn pass must
+    /// agree about WHICH marks are Scripts; the previous spelling of this list lived in a
+    /// tab-only copy of the placement.
+    /// LILYPOND-REF: lily/breathing-sign.cc:259-277 <c>offset_callback</c> — a BreathingSign's
+    /// Y-offset is <c>inter * iv[d]</c> off the staff symbol's own <c>line_span</c>, not a
+    /// side-position walk over supports.
+    /// <para>
+    /// ⚠️ A BREATH'S OWN INK ABOVE THAT LINE IS THEREFORE STILL RESERVED NOWHERE, and LilyPond
+    /// does put it in the merged skyline — BreathingSign declares
+    /// <c>outside-staff-interface</c> (scm/define-grobs.scm:725-731). A caesura is in the same
+    /// branch here, and there the two engines group differently: LilyPond gives it a grob of
+    /// its own that stacks the way a Script does (scm/define-grobs.scm:734-738
+    /// <c>caesura-script-interface::before-line-breaking</c>). This list is the one the
+    /// tab-only helper carried before 2026-08-04 and is kept as it was; whether either mark
+    /// protrudes far enough to bind a gap is UNMEASURED, not argued.
+    /// </para>
+    /// </remarks>
+    internal static bool IsSidePositionedScript(ArticulationType type) =>
+        type is not (ArticulationType.Fall or ArticulationType.Doit
+            or ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop
+            or ArticulationType.Breath or ArticulationType.Caesura);
 
     // Padding between two stacked scripts (staff-spaces).
     // LILYPOND-REF: scm/script.scm padding ~0.2.

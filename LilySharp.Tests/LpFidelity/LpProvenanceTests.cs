@@ -101,7 +101,7 @@ public class LpProvenanceTests
     /// extractor omits a glyph LilyPond does have — both now say so.</item>
     /// </list>
     /// <para>
-    /// The thirteen left are real provenance work, and none is a five-minute job:
+    /// The thirteen left were real provenance work, and none was a five-minute job:
     /// <c>FlagWidth</c>, <c>FlagBaseHeight</c>, <c>FlagHeightIncrement</c>,
     /// <c>NoteheadHalfHeight</c>, <c>RestHeight</c>, <c>RestWidth</c>, <c>DotGap</c>,
     /// <c>RepeatDotRadius</c>, <c>RepeatDotPosition1</c>, <c>RepeatDotPosition2</c> here, and
@@ -110,14 +110,59 @@ public class LpProvenanceTests
     /// <c>dot-column-interface::pad-by-one-dot-width</c>, so that one is a measurement.
     /// </para>
     /// <para>
-    /// ★ Three WERE sourced in the same commit rather than counted: the StaffGrouper
-    /// <c>staff-staff-spacing</c> triple, whose section header had named the grob in prose
-    /// for a long time without giving the address. Writing the address out is also what
-    /// showed that the fourth value in that entry, <c>stretchability . 5</c>, is spelled
-    /// nowhere in Core at all.
+    /// ⚠️⚠️ 13 → 0 ON 2026-08-04. The backlog is paid and the baseline is a real zero, so the
+    /// next number that states no origin fails on the commit that introduces it. None of the
+    /// thirteen was silenced with a bare <c>LILYSHARP-OWN</c>: the marker only buys the right
+    /// to say WHY, and every why here survived being measured.
+    /// </para>
+    /// <list type="bullet">
+    /// <item>THREE WERE ANSWERED BY ASKING 2.26.0. <c>make-colon-bar-line</c> returns a
+    /// stencil of Y extent (-0.725 . 0.725) with a dot half-height of 0.225, i.e. dot centres
+    /// at ±0.5 staff spaces — which sources both repeat-dot positions AND shows
+    /// <c>RepeatDotRadius</c> is ours and 0.025 short of the glyph LilyPond draws.</item>
+    /// <item>SIX WERE NOMINAL BOXES WITH NO LILYPOND COUNTERPART. A Flag's, a Rest's and a
+    /// NoteHead's extent are all their stencils' there, so the three <c>Flag*</c> numbers, the
+    /// two <c>Rest*</c> and <c>NoteheadHalfHeight</c> are Lily#'s own — read by RESERVATION
+    /// while the drawing goes through GlyphMetrics, the two-spellings shape HANDOFF 7.7 names.
+    /// Each now carries the size of its own disagreement; the rest box is the worst, 1.812
+    /// short of a quarter rest and centred where a whole rest does not sit.</item>
+    /// <item><c>DotGap</c> WAS CALLED UNCITEABLE AND IS NOT. Both of its roles are one
+    /// LilyPond quantity — the dot's own width, 0.450000 — computed in
+    /// <c>ly:dots::print</c> and <c>dot-column-interface::pad-by-one-dot-width</c>. Ours is
+    /// 0.3. A callback is an address like any other; what it forbids is COPYING a literal,
+    /// not naming where the number comes from.</item>
+    /// <item><c>SystemSpacing</c> HAD A READER WHOSE ANSWER NEVER SURVIVES. Perturbing it to
+    /// 37 and to -50 leaves the whole suite green, while the spec that really decides the
+    /// distance fails 85 tests when moved — the positive control without which the silence
+    /// would mean nothing. It is a deletion candidate, recorded at the declaration.</item>
+    /// <item><c>PageWidth</c> and <c>StaffHeight</c> were the easy two: a4 out of
+    /// <c>paper-alist</c>, and a frame rather than a quantity (five lines one space apart come
+    /// to four), the same answer <c>StaffMiddle</c> got.</item>
+    /// </list>
+    /// <para>
+    /// ★ WHAT THE PAYING TURNED UP, which is the argument for the ratchet: a second spelling
+    /// of <c>NoteheadHalfHeight</c> as a bare literal in FingeringEngraver (now reading the
+    /// one home), and five separate reservations that do not match the ink they reserve. None
+    /// of that is visible to a test that only asks whether a number states an origin — but
+    /// writing the origin down is what forced somebody to look at each one.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE MARKER MUST BE IN THE BLOCK, and this bit twice while paying the six down: a
+    /// section header separated from its declarations by a BLANK LINE reaches none of them,
+    /// because the walk stops at blank lines — deliberately, and it is the same rule whose
+    /// absence made the count read 20. Group headers work only when they abut the group, the
+    /// way the <c>Rest*</c> four do.
+    /// </para>
+    /// <para>
+    /// ★ Three WERE sourced in an earlier commit rather than counted: the StaffGrouper
+    /// <c>staff-staff-spacing</c> triple, whose section header had named the grob in prose for
+    /// a long time without giving the address. ⚠️ That same commit claimed the fourth value,
+    /// <c>stretchability . 5</c>, was "spelled nowhere in Core at all". FALSE — a grep's false
+    /// negative written down as a finding. It has been in StaffSpacingParameters since
+    /// 2026-02-22, and perturbing it drops five observers, two of them ledger points.
     /// </para>
     /// </remarks>
-    private const int UnsourcedBaseline = 13;
+    private const int UnsourcedBaseline = 0;
 
     /// <summary>Files whose numbers are engraving policy rather than local arithmetic.</summary>
     private static readonly string[] DefaultsFiles =

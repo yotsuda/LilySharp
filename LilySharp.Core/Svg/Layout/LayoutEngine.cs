@@ -2290,10 +2290,20 @@ internal sealed class LayoutEngine
     /// <see cref="LooseLineSpacer.LeadingLine.MinInto"/>.
     /// </para>
     /// <para>
-    /// ⚠️ THE INDENT GOES WITH THE CLOSING STAFF'S SKYLINE, the same reason
-    /// <see cref="ComputeBetweenStavesEnd"/> passes it: that skyline is what the chain's last
-    /// spring is floored by, and one built without the clef would floor it somewhere the
+    /// ⚠️ THE INDENT GOES WITH THE CLOSING STAFF'S SKYLINE: that skyline is what the chain's
+    /// last spring is floored by, and one built without the clef would floor it somewhere the
     /// room does not agree with.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT IS STILL A SECOND BUILD, WHICH IS WHAT THIS ONE HAS THAT
+    /// <see cref="ComputeBetweenStavesEnd"/> NO LONGER DOES. That one used to rebuild too, and
+    /// now reads the per-staff list <c>MultiStaffLayouter.BuildAllStaffSkylines</c> produced
+    /// (see the remark there). This call site cannot yet: it is reached from the PAGE pass,
+    /// which runs before <c>AnnotationLayoutContext.StaffSkylines</c> exists. So the closing
+    /// staff here is measured WITHOUT its dynamics, scripts, tuplet brackets, slurs, ties or
+    /// beams, and a mark on the first staff of the next system is not in the distance a
+    /// trailing row is closed by. MEASURED: nothing — no fixture in the corpus puts a script
+    /// on a system's first staff under a preceding row, so this is named, not quantified.
     /// </para>
     /// </remarks>
     private (ImmutableArray<LooseLineSpacer.LeadingLine> Lines,
@@ -3166,6 +3176,21 @@ internal sealed class LayoutEngine
             return staffIndex >= 0 && staffIndex < perStaff.Count ? perStaff[staffIndex].Down : null;
         }
 
+        // ...and the OTHER end of the block, out of the same list. The block hangs between two
+        // staves, so it is closed by the LOWER one's UP profile, and that profile is the one
+        // the room was measured from — a fermata on the lower part reaches up INTO this gap.
+        // Rebuilding it here was the second half of the same defect the remark on
+        // AnnotationLayoutContext.StaffSkylines describes, one call site further along:
+        // ComputeBetweenStavesEnd built its own with every side table at its default, so the
+        // chain closed against a staff with no marks on it.
+        VerticalSkyline? StaffUpSkyline(int sysIdx, int staffIndex)
+        {
+            if (staffSkylines == null || sysIdx < 0 || sysIdx >= staffSkylines.Count)
+                return null;
+            var perStaff = staffSkylines[sysIdx];
+            return staffIndex >= 0 && staffIndex < perStaff.Count ? perStaff[staffIndex].Up : null;
+        }
+
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null;
         var nbAnchor = ctx.NoteBoundAnchorY;
         if (nbAnchor is { Count: > 0 } && staffByIndex != null
@@ -3202,7 +3227,7 @@ internal sealed class LayoutEngine
                 if (endCache.TryGetValue(key, out var cached))
                     return cached;
                 var computed = ComputeBetweenStavesEnd(
-                    sysIdx, anchorStaffIndex, systems, staffByIndex);
+                    sysIdx, anchorStaffIndex, systems, staffByIndex, StaffUpSkyline);
                 endCache[key] = computed;
                 return computed;
             };
@@ -3459,7 +3484,8 @@ internal sealed class LayoutEngine
     /// </remarks>
     private (double Room, VerticalSkyline NextStaffUp)? ComputeBetweenStavesEnd(
         int sysIdx, int anchorStaffIndex, ImmutableArray<SystemLayout> systems,
-        IReadOnlyDictionary<int, Staff> staffByIndex)
+        IReadOnlyDictionary<int, Staff> staffByIndex,
+        Func<int, int, VerticalSkyline?> staffUpSkyline)
     {
         if (sysIdx < 0 || sysIdx >= systems.Length) return null;
         var groups = systems[sysIdx].StaffGroups;
@@ -3506,7 +3532,7 @@ internal sealed class LayoutEngine
             if (down <= anchor) continue;
             if (nextDown is null || down < nextDown) { nextDown = down; nextIndex = staffIndex; }
         }
-        if (nextDown is not { } next || !staffByIndex.TryGetValue(nextIndex, out var nextStaff))
+        if (nextDown is not { } next || !staffByIndex.ContainsKey(nextIndex))
             return null;
 
         // ⚠️ THE ROOM IS UNKNOWN ONLY IF ONE OF THOSE BANDS IS INSIDE IT. The span this
@@ -3525,14 +3551,17 @@ internal sealed class LayoutEngine
             if (band > anchor && band < next)
                 return null;
 
-        // ⚠️ THE INDENT GOES WITH IT, and this is the call where it matters most: this
-        // up-skyline is what CLOSES the chain, and the room the chain is solved into was
-        // measured by MultiStaffLayouter against the same staff's skyline. If one carries
-        // the clef (SkylineBuilder.SeedClef) and the other does not, the block is handed a
-        // room its own closing step disagrees with.
-        var up = _skylineBuilder.BuildStaffSkylines(
-            nextStaff, systems[sysIdx].Measures, systemLeft: systems[sysIdx].Indent).Up;
-        return (next - anchor, up);
+        // ⚠️ THE ROOM'S OWN LIST, NOT A SECOND BUILD — the same rule the anchor's DOWN
+        // profile follows (see StaffDownSkyline's remark in LayoutLyrics). This up-skyline is
+        // what CLOSES the chain, and the room the chain is solved into was measured by
+        // MultiStaffLayouter against this staff's skyline with all its side tables: dynamics,
+        // SCRIPTS, tuplet brackets, slurs, ties, beams. Rebuilding it here took every one of
+        // them at its default, so the closing step saw a bare staff — a fermata on the lower
+        // part reaches up into exactly this gap, and the syllable was solved into space the
+        // mark was already occupying. The indent went with the rebuild for the clef's sake;
+        // reading the list carries the clef and everything else by construction.
+        var up = staffUpSkyline(sysIdx, nextIndex);
+        return up is null ? null : (next - anchor, up);
     }
 
     /// <summary>

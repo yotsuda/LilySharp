@@ -385,11 +385,29 @@ internal static class EngravingDefaults
     public const double PedalBracketFlare = 0.5;
 
     // === Flags ===
-    /// <summary>Width of a flag glyph (in staff spaces).</summary>
+    // ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
+    //   extent there IS its stencil's — lily/flag.cc:49-67 Flag::width returns
+    //   `sten->extent (X_AXIS)` off the glyph lily/flag.cc:69-83 Flag::glyph_name selected —
+    //   so there is no width, no base height and no per-level increment to cite. These three
+    //   are Lily#'s own, and the ONLY thing that reads them is the reservation
+    //   (SkylineBuilder's flag box); the DRAWN flag goes through GlyphMetrics, which is the
+    //   two-spellings shape HANDOFF 7.7 names.
+    // ⚠️ MEASURED against our own extracted Emmentaler metrics (design 20, staff spaces), so
+    //   the size of the disagreement is on the record rather than merely suspected:
+    //     eighth up    box 1.2 x 2.5   glyph 0.828200 x 3.115200  (+0.372 wide, -0.615 short)
+    //     eighth down  box 1.2 x 2.5   glyph 1.066800 x 2.905200  (+0.133 wide, -0.405 short)
+    //     16th up      box 1.2 x 3.0   glyph 0.828200 x 3.615200  (          , -0.615 short)
+    //     16th down    box 1.2 x 3.0   glyph 1.066800 x 3.115200  (          , -0.115 short)
+    //   The reservation is WIDER and SHORTER than the ink in every case, and it is not even
+    //   the same shape: the real glyph differs up against down, this box does not.
+    // ⚠️ CLOSING IT IS NOT A PROVENANCE FIX. Seeding GlyphMetrics.Flag* here moves the column
+    //   reach on every flagged note, so it changes spacing as well as reserved height — its
+    //   own island with its own snapshot approval. Recorded, not done.
+    /// <summary>Reserved width of a flag (staff spaces) — Lily#'s nominal box, see above.</summary>
     public const double FlagWidth = 1.2;
-    /// <summary>Base height of a flag (eighth note flag, in staff spaces).</summary>
+    /// <summary>Reserved height of an eighth-note flag (staff spaces) — nominal, see above.</summary>
     public const double FlagBaseHeight = 2.5;
-    /// <summary>Additional height per beam level (in staff spaces).</summary>
+    /// <summary>Reserved height added per further flag level — nominal, see above.</summary>
     public const double FlagHeightIncrement = 0.5;
 
     /// <summary>
@@ -630,7 +648,18 @@ internal static class EngravingDefaults
     public const double StaffMiddle = 2.0;
 
     // === Notehead collision ===
-    /// <summary>Half-height of notehead for collision detection (in staff positions).</summary>
+    // ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
+    //   a NoteHead's Y-extent is its stencil's, so what corresponds to this is the drawn
+    //   head's own half extent, which our extraction reads as 0.545000 for BOTH the black and
+    //   the half head (GlyphMetrics.NoteheadBlack / NoteheadHalf, design 20). This 0.5 is
+    //   therefore 0.045 short of the ink, and it is the ROUND number that gives it away: a
+    //   half-space is the staff's frame, not a font's measurement.
+    // ⚠️ IT IS A FALLBACK, WHICH IS WHY IT SURVIVES. Every caller reaches it only where there
+    //   is no stem to measure against — NoteColumnLayout's whole-note/breve branch, and the
+    //   two ArticulationEngraver support distances — so it decides a support height only for
+    //   the unstemmed cases. Replacing it with the glyph moves those, so it is an island with
+    //   snapshot approval, not a provenance fix. Recorded, not done.
+    /// <summary>Nominal half-height of a notehead for collision/support (staff spaces).</summary>
     public const double NoteheadHalfHeight = 0.5;
     // ⚠️ NoteheadHeight = 1.0 stood here with nothing reading it. HANDOFF 5.2.1⑥ recorded
     //   why in 2026-07: the vertical skyline moved to the LILC ink in cff877c8, and this
@@ -638,9 +667,25 @@ internal static class EngravingDefaults
     //   how it kept being diagnosed as live. Deleted 2026-08-04.
 
     // === Rest dimensions ===
-    /// <summary>Approximate height of rest glyph for skyline calculation (in staff spaces).</summary>
+    // ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
+    //   Rest's extent is its stencil's, and the stencil is the glyph the duration selects, so
+    //   the box differs per rest in both size AND placement. The pair below is a 1.0 x 1.0
+    //   square centred on the middle line, used for every duration alike
+    //   (SkylineBuilder's rest seed is the only reader).
+    // ⚠️ MEASURED against our own extracted Emmentaler metrics (design 20, staff spaces), so
+    //   the disagreement is on the record rather than merely suspected:
+    //     quarter  box 1.0 x 1.0   glyph 0.950000 x 2.812400   (-1.812 SHORT: the deepest one)
+    //     whole    box 1.0 x 1.0   glyph 1.500000 x 0.625000   (+0.500 narrow, +0.375 tall)
+    //     half     box 1.0 x 1.0   glyph 1.500000 x 0.625000   (+0.500 narrow, +0.375 tall)
+    //   ...and the CENTRING is wrong in kind, not only in size: a whole rest hangs BELOW its
+    //   line (RestWhole is (0 . -0.625)..(1.5 . 0)) and a half rest sits ON one
+    //   (RestHalf is (0 . 0)..(1.5 . 0.625)), while this box straddles the middle either way.
+    // ⚠️ CLOSING IT IS AN ISLAND, not a provenance fix: the seed feeds the per-staff skyline,
+    //   so a quarter rest reaching 1.8 further would widen inter-staff gaps wherever one
+    //   occurs — snapshot approval, and worth doing with a ledger point beside it. Recorded.
+    /// <summary>Nominal rest height for the skyline seed (staff spaces).</summary>
     public const double RestHeight = 1.0;
-    /// <summary>Approximate width of rest glyph for skyline calculation (in staff spaces).</summary>
+    /// <summary>Nominal rest width for the skyline seed (staff spaces).</summary>
     public const double RestWidth = 1.0;
 
     // === Paper column ===
@@ -662,15 +707,68 @@ internal static class EngravingDefaults
     public const double PaperColumnXAlignmentExtentWidth = 1.35;
 
     // === Dots ===
-    /// <summary>Gap between notehead and augmentation dot (in staff spaces).</summary>
+    // ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
+    //   dot-gap constant to cite because both gaps are the DOT'S OWN WIDTH, computed:
+    //     scm/output-lib.scm:686-690 ly:dots::print stacks a note's dots with
+    //       `padding = (interval-length (ly:stencil-extent dot-stencil X))` — the gap BETWEEN
+    //       consecutive dots;
+    //     scm/output-lib.scm:692-704 dot-column-interface::pad-by-one-dot-width returns the
+    //       max dot width as DotColumn's side-position padding (scm/define-grobs.scm:1263) —
+    //       the gap from the SUPPORT.
+    //   One quantity in two roles, which is exactly how Lily# uses this constant
+    //   (ElementCoordinator lays the dots out as `DotGap + d * (width + DotGap)`).
+    // ⚠️ MEASURED: that width is 0.450000 on 2.26.0 — asked of LilyPond directly
+    //   (`dots.dot` X extent (0 . 0.45)) and matching our own extraction
+    //   (GlyphMetrics.AugmentationDot). So the LilyPond padding term is 0.45 and this is 0.3,
+    //   0.15 short in both roles.
+    // ⚠️ NOT CHANGED HERE. The number feeds the drawn dot X, the column's horizontal skyline
+    //   (ItemSkylineFactory) and the spacing rules, so moving it changes ink AND spacing on
+    //   every dotted note in the corpus — an island with snapshot approval, and one that
+    //   wants a ledger point rather than a bare re-base. Recorded, not done.
+    /// <summary>Gap from the notehead to its first augmentation dot, and between dots
+    /// (staff spaces). Lily#'s own; see the measurement above.</summary>
     public const double DotGap = 0.3;
 
     // === Repeat dots ===
-    /// <summary>Radius of repeat barline dots (in staff spaces).</summary>
+    // LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — LilyPond does not
+    //   declare dot positions. It folds the staff about its centre, finds the first space
+    //   wide enough for a dot plus a staff line, and translates one dot to each side of the
+    //   centre by half that span (`(* dist (/ staff-space 2))`). The two constants below are
+    //   that procedure's answer for the ordinary five-line staff.
+    // ⚠️ MEASURED, NOT DERIVED (2026-08-04). Calling the procedure on 2.26.0 and reading the
+    //   stencil it returns gives a Y extent of (-0.725 . 0.725) with a dot half-height of
+    //   0.225 — i.e. dot centres at exactly -0.5 and +0.5 staff spaces from the staff
+    //   CENTRE. The top line is 2.0 above the centre, so in this file's top-line frame that
+    //   is 1.5 and 2.5. Walking the folded-staff `any` by hand gives the same answer, but
+    //   only measuring says the walk was read right.
+
+    /// <summary>
+    /// Radius of the drawn repeat-barline dot (staff spaces).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN: LILYPOND HAS NO RADIUS. It draws a GLYPH — scm/bar-line.scm:298-301
+    /// <c>ly:font-get-glyph</c> fetches <c>dots.dot</c>, the same one an augmentation dot uses
+    /// — so what corresponds to a radius is that glyph's own half extent — 0.225,
+    /// measured on 2.26.0 and independently in our own extraction
+    /// (<c>GlyphMetrics.AugmentationDot</c> = (0, -0.225)..(0.45, 0.225)). Lily# draws a
+    /// circle instead, and this 0.2 makes it 0.025 short in radius, 0.45 → 0.40 across.
+    /// ⚠️ MEASURED AND NOT FIXED: closing it would redraw every repeat barline and also widen
+    /// <see cref="RepeatDotsOffset"/>, which reserves horizontal room from this same number,
+    /// so it moves spacing as well as ink. It is a snapshot island of its own, not a
+    /// provenance fix.
+    /// </remarks>
     public const double RepeatDotRadius = 0.2;
-    /// <summary>Y position of upper repeat dot (in staff spaces from top).</summary>
+
+    /// <summary>Y of the upper repeat dot (staff spaces below the top line): the staff
+    /// centre, 2.0 below that line, minus the half-space the procedure translates by.</summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — measured at a dot
+    /// centre of -0.5 from the staff centre on 2.26.0; see the section remark above.</remarks>
     public const double RepeatDotPosition1 = 1.5;
-    /// <summary>Y position of lower repeat dot (in staff spaces from top).</summary>
+
+    /// <summary>Y of the lower repeat dot (staff spaces below the top line): the staff
+    /// centre plus the same half-space, so the pair straddles the middle line.</summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — measured at a dot
+    /// centre of +0.5 from the staff centre on 2.26.0; see the section remark above.</remarks>
     public const double RepeatDotPosition2 = 2.5;
 
     // === Spacing (Lilypond-compatible) ===
@@ -711,11 +809,18 @@ internal static class EngravingDefaults
     //   (basic-distance . 9) (minimum-distance . 7) (padding . 1) (stretchability . 5).
     //   The section header said this in prose for a long time; the ratchet wants the address,
     //   and writing it down is what shows the fourth value has no constant here.
-    // ⚠️ THE FOURTH IS NOT SPELLED ANYWHERE IN Core. Writing the entry out is what showed
-    //   it: `stretchability . 5` has no constant here and no other occurrence (grepped for
-    //   the literal and for Stretchability = 5). Whether the staff springs are missing it or
-    //   getting it another way is UNMEASURED — do not add it as a default until someone
-    //   looks, or it becomes a second spelling of a number that already has an owner.
+    // ⚠️ THE FOURTH IS DELIBERATELY NOT HERE, and this file is not where to look for it.
+    //   A stretchability is a member of a SPRING, not a distance, so it lives with the spec
+    //   that builds one: StaffSpacingParameters.StaffStaff spells `Stretchability = 5`, and
+    //   LayoutUtilities.CreateSpring turns it into the inverse stretch strength. The three
+    //   constants here are the ones a PLACEMENT reads without a spring in hand.
+    // ⚠️ AN EARLIER NOTE HERE SAID THE 5 WAS "not spelled anywhere in Core" AND TOLD THE
+    //   NEXT READER NOT TO ADD IT. That was a false negative from a grep, not a finding: the
+    //   line it missed has been in StaffSpacingParameters since 2026-02-22, months before the
+    //   note. MEASURED 2026-08-04 by perturbing it — 5 observers fall, two of them LP-fidelity
+    //   ledger points (page.stretched.staff-staff-inside,
+    //   system.stretched-distance.two-staff), so the value is consumed and pinned against
+    //   LilyPond. A silence is not a measurement (HANDOFF 5.0).
     /// <summary>Basic distance between staves in a group (center to center).</summary>
     public const double StaffStaffBasicDistance = 9.0;
     /// <summary>Minimum distance between staves in a group.</summary>
