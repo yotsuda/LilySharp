@@ -487,6 +487,31 @@ internal static partial class GlyphMetrics
         _ => RestQuarter
     };
 
+    /// <summary>
+    /// Gets the rest glyph's SKYLINE box — the flattened outline, which reaches a little
+    /// further than the LILC box <see cref="GetRestBBox"/> returns.
+    /// </summary>
+    /// <remarks>
+    /// The rest twin of <see cref="GetAccidentalSkylineBBox"/>, and the distinction is the one
+    /// audit/lp-geometry keeps meeting: LilyPond's <c>vertical-skylines</c> come from the
+    /// glyph's traced outline while its <c>extent</c> comes from the metric box, and for a
+    /// quarter rest those differ by exactly 0.030000 at the bottom (-1.280000 against
+    /// -1.250000). MEASURED as precisely that: seeding the LILC box left
+    /// <c>staff.staff.rest-under-notes</c> at -0.030000 with everything else closed.
+    /// </remarks>
+    public static BBox GetRestSkylineBBox(int noteValue) => noteValue switch
+    {
+        1 => RestWholeOutline,
+        2 => RestHalfOutline,
+        4 => RestQuarterOutline,
+        8 => Rest8thOutline,
+        16 => Rest16thOutline,
+        32 => Rest32ndOutline,
+        64 => Rest64thOutline,
+        128 => Rest128thOutline,
+        _ => RestQuarterOutline
+    };
+
     /// <summary>Gets the bounding box for an accidental by name.</summary>
     public static BBox GetAccidentalBBox(string? accidental)
         => GetAccidentalBBox(Design20, accidental);

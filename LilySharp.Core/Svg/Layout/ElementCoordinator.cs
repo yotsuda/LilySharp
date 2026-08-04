@@ -955,7 +955,11 @@ internal sealed class ElementCoordinator
                 if (insideStaff)
                     shift = Math.Ceiling(Math.Abs(shift) / 2.0) * 2.0 * Math.Sign(shift);
 
-                var key = new RestShiftKey(measureIndex, itemIdx);
+                // Voice 0: CalculateRestShifts is handed the staff's PRIMARY-voice score, so
+                // the rests it can see are that voice's. A beamed rest in voice two gets no
+                // beam shift, which is the granularity this pass has always had — named here
+                // rather than implied now that the key can tell voices apart.
+                var key = new RestShiftKey(measureIndex, 0, itemIdx);
                 if (!shifts.TryGetValue(key, out var existing)
                     || Math.Abs(shift) > Math.Abs(existing))
                     shifts[key] = shift;
@@ -963,6 +967,196 @@ internal sealed class ElementCoordinator
         }
 
         return shifts.ToImmutableDictionary();
+    }
+
+    /// <summary>
+    /// Pushes a rest clear of the NOTES OF ANOTHER VOICE sounding at the same moment — the
+    /// port of LilyPond's <c>Rest_collision</c>, which is what moves a rest out of the staff
+    /// in an ordinary two-voice texture.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/rest-collision.cc:211-290 <c>calc_positioning_done</c>, the
+    /// rests-and-notes branch. The shift is
+    /// <c>y = dir * max (0, -dir*restdim[-dir] + dir*notedim[dir] + minimum_dist)</c>,
+    /// discretised to half spaces (:275) and then to WHOLE spaces while the result is still
+    /// inside the staff widened by one (:277-284).
+    /// LILYPOND-REF: scm/define-grobs.scm:2981-2984 RestCollision <c>minimum-distance</c> 0.75.
+    /// <para>
+    /// ⚠️ IT IS THE COLLISION, NOT THE VOICE, and this was measured before it was written:
+    /// on 2.26.0 a staff's VerticalAxisGroup reaches -3.55 for one voice AND for a
+    /// <c>\voiceTwo</c> whose partner holds spacer rests, and only -4.25 once that partner
+    /// has NOTES. So a rest alone in a voice must not move, and this pass returns nothing
+    /// for it.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT PORTED, and named rather than left to be discovered: the REST-VERSUS-REST
+    /// branch (rest-collision.cc:142-210), which spreads two voices' rests around the middle
+    /// line. Nothing in the corpus has two printed rests sounding together, so it would be an
+    /// untested branch — HANDOFF 5.4's rule. LilyPond's "too many colliding rests" warning
+    /// (:287-288) is likewise absent.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE NOTE EXTENT IS THE HEAD ONLY when the other column points the opposite way
+    /// (:246-265). LilyPond takes the whole column — stem included — only for a column
+    /// pointing the SAME way at the SAME musical moment, and its comment says why it avoids
+    /// the stem otherwise: reading a beamed note's stem would force beam positioning early.
+    /// Here the same distinction falls out of the direction test alone, because this pass
+    /// only ever compares columns at one moment.
+    /// </para>
+    /// </remarks>
+    /// <remarks>
+    /// ⚠️ NO LAYOUT ARGUMENT, deliberately: the shift is decided by the MUSIC alone — which
+    /// voices sound together, at what positions, for how long — so it can be computed before
+    /// the staves are spaced. That is what lets the per-staff SKYLINE read the same answer
+    /// the renderer draws, instead of reserving a rest where it is not.
+    /// </remarks>
+    public ImmutableDictionary<RestShiftKey, double> CalculateRestNoteCollisions(Staff staff)
+    {
+        if (staff.Voices.Length < 2)
+            return ImmutableDictionary<RestShiftKey, double>.Empty;
+
+        var shifts = new Dictionary<RestShiftKey, double>();
+        int measureCount = staff.Voices.Min(v => v.Measures.Length);
+
+        for (int m = 0; m < measureCount; m++)
+        {
+            // What each voice sounds at each moment of this measure, so "at the same time"
+            // is answered by the music rather than by item index — the voices need not have
+            // the same number of items.
+            var byVoice = new List<(Fraction Time, MusicItem Item, int ItemIndex)>[staff.Voices.Length];
+            for (int v = 0; v < staff.Voices.Length; v++)
+            {
+                var list = new List<(Fraction, MusicItem, int)>();
+                var t = new Fraction(0, 1);
+                var items = staff.Voices[v].Measures[m].Items;
+                for (int i = 0; i < items.Length; i++)
+                {
+                    list.Add((t, items[i], i));
+                    t += GetItemDuration(items[i]);
+                }
+                byVoice[v] = list;
+            }
+
+            for (int v = 0; v < staff.Voices.Length; v++)
+            {
+                // The rest's direction is its voice's: LilyPond reads the Rest's own
+                // direction and falls back to the note column's (:224-226), and in an
+                // ordinary polyphonic texture both are the voice's forced stem direction.
+                bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, v, m) ?? (v % 2 == 0);
+                int dir = voiceUp ? 1 : -1;
+
+                foreach (var (time, item, itemIndex) in byVoice[v])
+                {
+                    if (item is not RestItem rest || rest.IsSpacer)
+                        continue;
+
+                    // The rest's own ink, in staff POSITIONS about the middle line, at the
+                    // place the renderer draws it (whole rests hang a space higher).
+                    int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                    var box = GlyphMetrics.GetRestBBox(restValue);
+                    double restOrigin = restValue == 1 ? 1.0 : 0.0;   // staff spaces, up
+                    double restLow = (restOrigin + box.Bottom) * 2.0;  // → positions
+                    double restHigh = (restOrigin + box.Top) * 2.0;
+
+                    // The other voices' heads at this moment.
+                    double noteLow = double.PositiveInfinity, noteHigh = double.NegativeInfinity;
+                    for (int o = 0; o < staff.Voices.Length; o++)
+                    {
+                        if (o == v) continue;
+                        bool otherUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, o, m) ?? (o % 2 == 0);
+                        foreach (var (otherTime, otherItem, _) in byVoice[o])
+                        {
+                            if (otherTime != time)
+                                continue;
+                            if (otherItem is not (NoteItem or ChordItem))
+                                continue;
+                            foreach (double p in StaffPositionsOf(otherItem))
+                            {
+                                // Head ink is ±0.545 ss = ±1.09 positions about its centre.
+                                double half = EngravingDefaults.NoteheadHalfHeight * 2.0;
+                                noteLow = Math.Min(noteLow, p - half);
+                                noteHigh = Math.Max(noteHigh, p + half);
+                            }
+                            // Same direction as the rest at the same moment: LilyPond unites
+                            // the whole COLUMN, so the stem counts too.
+                            if (otherUp == voiceUp)
+                            {
+                                double tip = StemTipPositionOf(otherItem, otherUp);
+                                noteLow = Math.Min(noteLow, tip);
+                                noteHigh = Math.Max(noteHigh, tip);
+                            }
+                        }
+                    }
+                    if (double.IsInfinity(noteLow))
+                        continue;   // nothing sounding against it — LilyPond moves nothing
+
+                    double minimumDist = RestCollisionMinimumDistance * 2.0;  // ss → positions
+                    double restNear = dir > 0 ? restLow : restHigh;
+                    double noteFar = dir > 0 ? noteHigh : noteLow;
+                    double y = dir * Math.Max(0.0, -dir * restNear + dir * noteFar + minimumDist);
+                    if (y == 0.0)
+                        continue;
+
+                    // Half spaces first (a position IS a half space, so this is a ceil to 1).
+                    double discrete = dir * Math.Ceiling(dir * y);
+
+                    // ...then whole spaces while the rest is still inside the staff, widened
+                    // by one position on each side.
+                    double restPos = restOrigin * 2.0;
+                    if (restPos + discrete >= -5.0 && restPos + discrete <= 5.0)
+                        discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;
+
+                    if (discrete == 0.0)
+                        continue;
+                    var key = new RestShiftKey(m, v, itemIndex);
+                    if (!shifts.TryGetValue(key, out var existing)
+                        || Math.Abs(discrete) > Math.Abs(existing))
+                        shifts[key] = discrete;
+                }
+            }
+        }
+
+        return shifts.ToImmutableDictionary();
+    }
+
+    /// <summary>RestCollision's <c>minimum-distance</c>, in staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2981-2984 RestCollision
+    /// <c>minimum-distance</c> = 0.75, read by rest-collision.cc:239-241.</remarks>
+    private const double RestCollisionMinimumDistance = 0.75;
+
+    /// <summary>Staff positions of every head in a note or chord.</summary>
+    private static IEnumerable<double> StaffPositionsOf(MusicItem item) => item switch
+    {
+        NoteItem n => new[] { (double) n.StaffPosition },
+        ChordItem c => c.Notes.Select(n => (double) n.StaffPosition),
+        _ => Enumerable.Empty<double>(),
+    };
+
+    /// <summary>
+    /// Staff position of a stem's far tip, for the one case LilyPond unites the whole note
+    /// column rather than just its head.
+    /// </summary>
+    /// <remarks>
+    /// The fixed <see cref="EngravingDefaults.DefaultStemLength"/> rather than the quanted
+    /// one, for the reason rest-collision.cc:254-259 gives for avoiding the stem entirely:
+    /// asking a beam for its position here would force beam layout early. A whole note has
+    /// no stem at all (lily/stem.cc <c>Stem::is_normal_stem</c>).
+    /// </remarks>
+    private static double StemTipPositionOf(MusicItem item, bool stemUp)
+    {
+        int noteValue = item switch
+        {
+            NoteItem n => GlyphMetrics.NoteValueOf(n.BaseDuration),
+            ChordItem c => GlyphMetrics.NoteValueOf(c.BaseDuration),
+            _ => 1,
+        };
+        if (noteValue < 2)
+            return stemUp ? double.NegativeInfinity : double.PositiveInfinity;
+        var positions = StaffPositionsOf(item).ToList();
+        if (positions.Count == 0)
+            return stemUp ? double.NegativeInfinity : double.PositiveInfinity;
+        double root = stemUp ? positions.Max() : positions.Min();
+        return root + (stemUp ? 1 : -1) * EngravingDefaults.DefaultStemLength * 2.0;
     }
 
     /// <summary>

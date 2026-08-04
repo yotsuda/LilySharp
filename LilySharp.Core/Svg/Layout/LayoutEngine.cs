@@ -838,6 +838,14 @@ internal sealed class LayoutEngine
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
                     || Math.Abs(kv.Value) > Math.Abs(existing))
                     restShiftsBuilder[kv.Key] = kv.Value;
+            // ...and clear of the OTHER VOICE'S notes (Rest_collision), which is the shift
+            // that takes a rest out of the staff at all. Merged into the same table by the
+            // same larger-wins rule LilyPond's two passes end at: the beam callback and the
+            // collision each translate the rest, and what survives is the outer position.
+            foreach (var kv in _elementCoordinator.CalculateRestNoteCollisions(staff))
+                if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
+                    || Math.Abs(kv.Value) > Math.Abs(existing))
+                    restShiftsBuilder[kv.Key] = kv.Value;
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
             allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams));
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));

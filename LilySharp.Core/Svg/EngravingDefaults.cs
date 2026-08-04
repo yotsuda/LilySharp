@@ -680,9 +680,22 @@ internal static class EngravingDefaults
     //   ...and the CENTRING is wrong in kind, not only in size: a whole rest hangs BELOW its
     //   line (RestWhole is (0 . -0.625)..(1.5 . 0)) and a half rest sits ON one
     //   (RestHalf is (0 . 0)..(1.5 . 0.625)), while this box straddles the middle either way.
-    // ⚠️ CLOSING IT IS AN ISLAND, not a provenance fix: the seed feeds the per-staff skyline,
-    //   so a quarter rest reaching 1.8 further would widen inter-staff gaps wherever one
-    //   occurs — snapshot approval, and worth doing with a ledger point beside it. Recorded.
+    // ⚠️ AND YET CORRECTING IT MOVES NOTHING, which is the part that has to be written down
+    //   because it is not what the sizes above suggest. MEASURED 2026-08-04: setting the pair
+    //   to the real quarter-rest 2.812400 x 0.950000 leaves the whole suite green — 4009
+    //   tests, 657 SVG snapshots, not one byte. The reason is geometric and complete: the box
+    //   is CENTRED on the middle line, so it reaches H/2 either way, while the staff symbol's
+    //   own ink already reaches 2.05 (SeedStaffSymbol). Nothing under H = 4.1 can ever show,
+    //   and no ordinary rest comes close — the deepest real glyph reaches 1.25 below the
+    //   middle and 1.5624 above. A rest is INSIDE its staff, so the staff swallows the error.
+    // ⚠️ THE POSITIVE CONTROL SAYS THE SUITE IS NOT BLIND: at H = 20 sixty-two tests fail. The
+    //   silence at the real values is the geometry, not a missing observer (HANDOFF 5.0).
+    // ⚠️ SO THE ISLAND IS NOT "EVERY BOOK WITH A REST" — an earlier draft of this remark said
+    //   it was, and that sentence was written without measuring. What the error can reach is
+    //   only a rest that LEAVES its staff (a staff-position override, a multi-voice shift),
+    //   and there the SECOND half of the defect governs anyway: this seed is centred on the
+    //   middle line unconditionally and does not read the rest's position at all, so in
+    //   exactly the case where the size would matter, the placement is wrong too.
     /// <summary>Nominal rest height for the skyline seed (staff spaces).</summary>
     public const double RestHeight = 1.0;
     /// <summary>Nominal rest width for the skyline seed (staff spaces).</summary>

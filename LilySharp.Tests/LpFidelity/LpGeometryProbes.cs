@@ -3008,6 +3008,157 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A REST pushed out of its staff by a second voice, reaching DOWN into the staff gap —
+    /// the first book in the corpus where a rest's own ink can bind anything.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="RSTC"/> is its control and the pair is the measurement: they differ by one
+    /// token (printed rests against spacer rests), so their DIFFERENCE is the rest's whole
+    /// contribution and nothing else. LilyPond reads 11.825000 against the control's
+    /// 9.595000, i.e. 2.230000 of room for the rest.
+    /// <para>
+    /// ⚠️ WHY IT TAKES THIS MUCH SHAPING, which is also why nothing measured it before. A
+    /// rest at its ordinary position is INSIDE the staff — the deepest real glyph reaches
+    /// 1.25 below the middle line where the staff symbol already reaches 2.05 — so it cannot
+    /// bind on either engine. A second voice pushes it down (measured on 2.26.0: the
+    /// VerticalAxisGroup's down extent goes -3.55 → -4.25), and the DURATION decides how far:
+    /// with whole rests the same book stays at -3.55, because a whole rest hangs from a line
+    /// and is 0.625 deep. Then the lower staff has to reach UP at the same x or the sum loses
+    /// to StaffGrouper's basic-distance of 9, which is book Q's <c>b</c> in the bass staff.
+    /// The control reading 9.595000 is Q's own number, which is the cross-check that this
+    /// book is the construction it claims to be.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT LILY# DOES INSTEAD: <c>SkylineBuilder</c>'s rest seed is a 1.0 × 1.0 box
+    /// centred on the middle line for every duration and every position alike — it never
+    /// reads where the rest went. So both halves of the defect are in this pair's residual:
+    /// the box is the wrong SIZE, and it is in the wrong PLACE.
+    /// </para>
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff &lt;&lt; { \voiceOne b'4 b' b' b' }
+    /// \\ { \voiceTwo r4 r r r } &gt;&gt; \new Staff { \clef bass b'4 b' b' b' } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string RSTD = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { voice { b4 b b b } { r4 r r r } | }
+          lh { b4 b b b | }
+        }
+
+        form main { ~Main }
+
+        score main "RSTD" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="RSTD"/>'s control: the same two voices with SPACER rests, so the columns,
+    /// the forced stem directions and the lower staff are identical and the only difference
+    /// is that the rests print no ink.
+    /// </summary>
+    /// <remarks>
+    /// A control that removed the second voice instead would change voice one's stem
+    /// direction and move the upper staff's own profile, which is the trap this shape avoids:
+    /// the difference has to be the REST and not the texture.
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff &lt;&lt; { \voiceOne b'4 b' b' b' }
+    /// \\ { \voiceTwo s4 s s s } &gt;&gt; \new Staff { \clef bass b'4 b' b' b' } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string RSTC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { voice { b4 b b b } { s4 s s s } | }
+          lh { b4 b b b | }
+        }
+
+        form main { ~Main }
+
+        score main "RSTC" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="RSTD"/> with the rest going the OTHER WAY — a rest pushed UP out of the
+    /// lower staff, against the upper staff's bottom line.
+    /// </summary>
+    /// <remarks>
+    /// Not redundant with <see cref="RSTD"/>, for book Q's reason applied to the rest: the
+    /// shift is signed by <c>dir</c> (rest-collision.cc:270-272), so a sign error or a
+    /// rounding that only fires downward lives exactly here and nowhere else. The rest is in
+    /// voice ONE now, its partner voice holds the notes, and the upper staff carries book P's
+    /// <c>d</c>. LilyPond reads 12.129000 against <see cref="RSTUC"/>'s 9.595000 — a
+    /// contribution of 2.534000, which is NOT the 2.230000 the downward book gets, and that
+    /// difference is the whole argument for measuring both.
+    /// LilyPond twin: <c>\new PianoStaff &lt;&lt; \new Staff { \clef treble d4 d d d }
+    /// \new Staff { \clef bass &lt;&lt; { \voiceOne r4 r r r } \\ { \voiceTwo d4 d d d } &gt;&gt; } &gt;&gt;</c>.
+    /// </remarks>
+    private static readonly string RSTU = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { d,4 d, d, d, | }
+          lh { voice { r4 r r r } { d,4 d, d, d, } | }
+        }
+
+        form main { ~Main }
+
+        score main "RSTU" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary><see cref="RSTU"/>'s control, on the same one-token rule as
+    /// <see cref="RSTC"/>: voice one holds spacer rests.</summary>
+    private static readonly string RSTUC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part rh { clef treble }
+        part lh { clef bass }
+
+        section Main {
+          rh { d,4 d, d, d, | }
+          lh { voice { s4 s s s } { d,4 d, d, d, } | }
+        }
+
+        form main { ~Main }
+
+        score main "RSTUC" {
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    /// <summary>
     /// A TUPLET BRACKET over STEMLESS whole notes, reaching UP into the staff gap from the
     /// lower staff — the mirror of book TU. Measures the staff-to-staff distance again,
     /// shaped to reach the one site the corpus has never touched.
@@ -8539,6 +8690,20 @@ internal static class LpGeometryProbes
         // symbol -- see the remarks on P and Q for why one of them is not enough.
         new("staff.staff.upper-note-to-lower-lines", P, g => g.StaffGap()),
         new("staff.staff.lower-note-to-upper-lines", Q, g => g.StaffGap()),
+
+        // ...and the same gap bound by a REST, which no book in the corpus had ever reached.
+        // The pair is the measurement: RSTC is RSTD with spacer rests in place of printed
+        // ones, so the DIFFERENCE is the rest's own contribution and nothing else. The
+        // control also has to read Q's 9.595000, which is what says the book is the
+        // construction it claims to be rather than some other geometry that happens to bind.
+        // See probes/rest-staff-gap.ly.
+        new("staff.staff.rest-under-notes", RSTD, g => g.StaffGap()),
+        new("staff.staff.rest-under-notes-control", RSTC, g => g.StaffGap()),
+        // ...and the same rest going UP, which is a different number on LilyPond's side
+        // (2.534000 of contribution against 2.230000) and a different edge of the staff
+        // symbol on ours. See probes RSTU and RSTUC.
+        new("staff.staff.rest-over-notes", RSTU, g => g.StaffGap()),
+        new("staff.staff.rest-over-notes-control", RSTUC, g => g.StaffGap()),
 
         // The same gap again, shaped so a DYNAMIC under a stemless whole note is what binds
         // it — the first ledger point that reaches DynamicEngraver. See probe DY.

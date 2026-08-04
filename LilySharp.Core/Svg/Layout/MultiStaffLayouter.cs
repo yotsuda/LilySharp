@@ -1991,9 +1991,14 @@ internal sealed class MultiStaffLayouter
                 // LayoutEngine hands BuildSystemSkylines as its systemLeft. The two
                 // silhouettes have to agree about the clef or the page and the alignment
                 // are spacing different pictures.
+                // A rest another voice pushed out of the staff has to be RESERVED where it
+                // was pushed to. The shift is a function of the music alone
+                // (ElementCoordinator.CalculateRestNoteCollisions), so it is available this
+                // early and the same answer reaches the renderer — one spelling, not two.
+                var restShifts = _elementCoordinator.CalculateRestNoteCollisions(staff);
                 var sky = skylineBuilder.BuildStaffSkylines(
                     staff, measureLayouts, dynamics, articulations, tupletBrackets, slurs, ties, beams,
-                    CurrentIndent);
+                    CurrentIndent, restShifts);
 
                 // A staff carrying associated chord names (`staff X with chords ...`)
                 // shows a chord-symbol row just above it. The row shares one baseline

@@ -107,7 +107,8 @@ internal static partial class SharedRenderer
                         // in staff positions (up-positive); staffY is Y-up, so add
                         // half a staff-space per position to move the whole rest
                         // (glyph + dots) together. LILYPOND-REF: lily/beam.cc:1331.
-                        double restShiftY = layout.GetRestShift(ml.MeasureIndex, itemIdx) * 0.5;
+                        double restShiftY =
+                            layout.GetRestShift(ml.MeasureIndex, voiceNumber - 1, itemIdx) * 0.5;
                         DrawRest(rest, itemX, staffY + restShiftY, gc);
                     }
                     break;

@@ -463,7 +463,8 @@ internal sealed class SkylineBuilder
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
         double staffMiddleUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
-        IReadOnlySet<(int Voice, int Measure, int Item)>? suppressStems = null)
+        IReadOnlySet<(int Voice, int Measure, int Item)>? suppressStems = null,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         if (staff.IsTextRow)
             return;
@@ -522,8 +523,20 @@ internal sealed class SkylineBuilder
                     bool reserveStem = suppressStems is null
                         || !suppressStems.Contains((vi, measureIndex, itemIndex));
 
+                    // ...and a rest that another voice pushed out of the staff is reserved
+                    // WHERE IT WAS PUSHED TO. Without this the seed reads the rest's default
+                    // position while the renderer draws it elsewhere — the same two-spellings
+                    // shape that made the whole rest seed unable to bind anything
+                    // (audit/lp-geometry staff.staff.rest-under-notes).
+                    double restShiftUp = restShifts is null
+                        ? 0.0
+                        : restShifts.TryGetValue(
+                            new RestShiftKey(measureIndex, vi, itemIndex), out var rs)
+                            ? rs * 0.5
+                            : 0.0;
+
                     AddMusicItemToSkylines(item, itemX, staffMiddleUp, StaffSize.Of(staff),
-                        upSkyline, downSkyline, forcedStemUp, reserveStem);
+                        upSkyline, downSkyline, forcedStemUp, reserveStem, restShiftUp);
                 }
             }
         }
@@ -671,7 +684,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<SlurLayout> slurs = default,
         ImmutableArray<TieLayout> ties = default,
         ImmutableArray<BeamLayout> beams = default,
-        double systemLeft = double.NaN)
+        double systemLeft = double.NaN,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -732,7 +746,7 @@ internal sealed class SkylineBuilder
         SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
-            upSkyline, downSkyline, suppressStems);
+            upSkyline, downSkyline, suppressStems, restShifts);
 
         // A tab staff's above/below Scripts (fermata, flageolet, accent, …) are
         // engraved only after spacing, so they were absent from this skyline and a
@@ -1321,7 +1335,8 @@ internal sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
         bool? forcedStemUp = null,
-        bool reserveStem = true)
+        bool reserveStem = true,
+        double restShiftUp = 0.0)
     {
         switch (item)
         {
@@ -1366,17 +1381,40 @@ internal sealed class SkylineBuilder
                         upSkyline, downSkyline);
                 }
                 break;
-            case RestItem:
-                // LILYPOND-REF: lily/rest.cc:61-77 - Rest vertical extent
-                // Rests are centered on the staff middle line
-                double restHeight = size.Span(EngravingDefaults.RestHeight);
-                double restWidth = size.Span(EngravingDefaults.RestWidth);
-                // Rests are centered on the staff middle line and span ±restHeight/2;
-                // translate to this skyline's Y-up frame (add the middle's own Y-up).
-                double restTop = restHeight / 2 + staffMiddleUp;     // Y-up top edge
-                double restBottom = -restHeight / 2 + staffMiddleUp; // Y-up bottom edge
-                var restUp = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
-                var restDown = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
+            case RestItem restItem:
+                // The GLYPH THE RENDERER DRAWS, at the ORIGIN IT DRAWS IT AT — not a nominal
+                // box. LilyPond has no rest-size constant: a Rest's extent is its stencil's,
+                // so the reservation and the ink are one quantity there and must be one here.
+                // LILYPOND-REF: lily/rest.cc:33-45 y_offset_callback — the Y is
+                //   `staff_position_internal` times half a staff space, and :47-145
+                //   staff_position_internal is where the whole rest's own line comes from;
+                //   lily/rest.cc:229-257 brew_internal_stencil takes the stencil from
+                //   `find_by_name` on the glyph the duration-log selects, so the extent IS
+                //   the glyph's.
+                // ⚠️ THE ORIGIN RULE IS SHARED WITH THE DRAWING, deliberately spelled the same
+                // way SharedRenderer.DrawRest spells it: a whole rest hangs from the fourth
+                // line (one space below the top line) and everything else sits about the
+                // middle. Until 2026-08-04 this seeded a 1.0 x 1.0 square centred on the
+                // middle line for every duration alike, which is the two-spellings shape
+                // HANDOFF 7.7 names — and a square the staff symbol's own 2.05 swallowed
+                // whole, so the seed could not bind anything at all (audit/lp-geometry
+                // staff.staff.rest-under-notes).
+                int restValue = GlyphMetrics.NoteValueOf(restItem.BaseDuration);
+                // The SKYLINE box, not the LILC one: LilyPond's vertical-skylines are the
+                // traced outline and its extent is the metric box, and for a quarter rest
+                // they differ by 0.030000 at the bottom. See GetRestSkylineBBox.
+                var restBox = size.Ink(GlyphMetrics.GetRestSkylineBBox(restValue));
+                // Y-up of the glyph's own origin, in this skyline's frame: the middle line is
+                // this frame's zero, and a whole rest's origin is one space above it.
+                double restOriginUp = staffMiddleUp
+                    + (restValue == 1 ? size.Span(1.0) : 0.0)
+                    + size.Span(restShiftUp);
+                double restTop = restOriginUp + restBox.Top;
+                double restBottom = restOriginUp + restBox.Bottom;
+                var restUp = VerticalSkyline.FromBox(
+                    x + restBox.Left, x + restBox.Right, restBottom, restTop, VerticalDirection.Up);
+                var restDown = VerticalSkyline.FromBox(
+                    x + restBox.Left, x + restBox.Right, restBottom, restTop, VerticalDirection.Down);
                 upSkyline.Merge(restUp);
                 downSkyline.Merge(restDown);
                 break;

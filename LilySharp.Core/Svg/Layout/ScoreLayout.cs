@@ -189,9 +189,16 @@ internal sealed record PageLayout(
 public readonly record struct VoiceItemKey(int MeasureIndex, int VoiceId, int ItemIndex);
 
 /// <summary>
-/// Key for rest shift due to beam collision.
+/// Key for a rest's vertical shift — beam collision, or collision with another voice.
 /// </summary>
-public readonly record struct RestShiftKey(int MeasureIndex, int ItemIndex);
+/// <remarks>
+/// ⚠️ THE VOICE AXIS IS LOAD-BEARING SINCE 2026-08-04 and was not there before. The beam
+/// shift only ever fired on a staff's primary voice, so <c>(measure, item)</c> could stand
+/// in for it; the rest/note collision is the opposite case by construction — the rest is in
+/// one voice and the notes it avoids are in another — and item indices are per voice, so
+/// two voices' rests at the same slot would have shared a single entry.
+/// </remarks>
+public readonly record struct RestShiftKey(int MeasureIndex, int VoiceIndex, int ItemIndex);
 
 /// <summary>
 /// Complete layout information for a score.
@@ -290,12 +297,12 @@ internal sealed record ScoreLayout(
     }
 
     /// <summary>
-    /// Gets the Y shift for a rest due to beam collision.
-    /// Returns 0 if no shift is needed. Value is in staff positions.
+    /// Gets the Y shift for a rest — from its beam, or from another voice's notes.
+    /// Returns 0 if no shift is needed. Value is in staff positions (half spaces).
     /// </summary>
-    public double GetRestShift(int measureIndex, int itemIndex)
+    public double GetRestShift(int measureIndex, int voiceIndex, int itemIndex)
     {
-        var key = new RestShiftKey(measureIndex, itemIndex);
+        var key = new RestShiftKey(measureIndex, voiceIndex, itemIndex);
         return RestShifts.TryGetValue(key, out var shift) ? shift : 0;
     }
 
