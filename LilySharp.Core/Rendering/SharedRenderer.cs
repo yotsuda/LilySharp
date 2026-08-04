@@ -310,7 +310,7 @@ internal static partial class SharedRenderer
 
         // Instrument names within the indent area (drawn before staves so glyphs
         // overlap correctly when names are wider than the indent).
-        DrawInstrumentNames(score, system, gc);
+        DrawInstrumentNames(score, system, systemStartX, gc);
 
         // Staff lines end exactly at the final barline (the last measure's right
         // edge), so the staff never overshoots a ragged system nor falls short of a

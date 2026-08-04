@@ -378,15 +378,18 @@ internal sealed class LyricEngraver
 
         var layouts = new List<LyricLayout>();
 
-        // Note-bound lyrics attached to a staff in a NON-LAST staff group sit directly
-        // below that GROUP (the anchor Y is the group's bottom staff), in the inter-group
-        // gap — so `staff melody with lyrics …` / `staff back` puts the words between the
-        // two staves. `noteBoundAnchorY` holds those staves (present ⇒ this placement).
-        // A staff in the LAST group is absent, so its lyrics keep the legacy "below the
-        // whole system" placement AND its skyline drop — this deliberately includes a
-        // grand staff's top staff (the last group), so an SATB chorale's lyrics still sit
-        // below the whole grand staff. LILYPOND-REF: a Lyrics context lives at a fixed
-        // position under its associated Staff in the vertical hierarchy.
+        // Note-bound lyrics sit directly below the staff they are attached to, in the gap
+        // to the next staff. `noteBoundAnchorY` holds every spaceable staff that HAS a next
+        // one (present ⇒ this placement); the LAST spaceable staff is absent, because
+        // nothing stands below it, so its lyrics take the below-the-whole-system placement
+        // AND its skyline drop.
+        // LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — a Lyrics context is
+        // one of the non-spaceable lines laid out "between this line and the last one", so
+        // its own Staff is what it hangs from.
+        // ⚠️ IT USED TO BE PER-GROUP — a lyric anchored on its GROUP's bottom staff, and a
+        // staff in the last group was left out — which on a grand staff (one group) put
+        // every staff's lyrics on ONE baseline, drawn over each other. See
+        // LayoutEngine.BuildStaffAnchorTables, where the table is built.
         bool IsUpperNoteBound(LyricItem l) =>
             !l.IsLyricsRow && noteBoundAnchorY != null && noteBoundAnchorY.ContainsKey(l.StaffIndex);
 

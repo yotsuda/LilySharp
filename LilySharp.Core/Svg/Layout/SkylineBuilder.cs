@@ -91,7 +91,37 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
         // Both top and bottom staves contribute to the system's vertical extent.
         double lastStaffMiddleUp = MiddleUp(lastLayout, _staffHeight / 2 - systemHeight);
-        bool twoEnds = lastStaff is not null && lastStaff != firstStaff && systemHeight > 0;
+        // ⚠️ THE SAME ELEMENT, NOT AN EQUAL ONE. This asks whether the bottom edge is a
+        // different staff from the top one — the positional question OuterStaff's own remark
+        // says this pairing is read with — and `Staff` is a RECORD, so `!=` answered a
+        // different one: are their FIELDS equal. A score that puts one part on two staves
+        // (`staff melody` written twice) builds two Staff records whose fields are all equal —
+        // same clef, same instrument name, and literally the same Voices array instance,
+        // because MeasureCollector keys its voice table by part name and the second collection
+        // overwrites the first — so value equality called the two ends one staff and the
+        // bottom edge seeded NOTHING: neither its ink nor its staff symbol.
+        // MEASURED on `staff melody` twice against the same music written as two parts: the
+        // system's down extent read 0.000000 where the two-part twin reads 1.545000, the
+        // inter-system distance fell to the pair's basic-distance 12.000000 from 20.145000,
+        // and the second system was drawn through the first system's lower staff.
+        // ⚠️ It is not "a duplicate part anywhere": `bass melody melody` was always right and
+        // `melody bass melody` was always wrong, because only the two ENDS are compared.
+        // ⚠️ AND IT IS ASKED BY COUNTING, not by reference identity. `OuterStaff` takes
+        // StaffGroups[0].Staves[0] and StaffGroups[^1].Staves[^1], so the two ends are the
+        // same element exactly when the score has one staff — that is a fact about THIS
+        // walk. `!ReferenceEquals` also gives the right answer today, but only because
+        // RenderSpec.ToStaffGroups happens to call Staff.Create afresh per entry; resting on
+        // that is resting on an invariant of another file, which is the shape HANDOFF 5.2
+        // names (the same reason StackStaves asks for GapSpan instead of deciding it).
+        // ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
+        // build_system_skyline merges EVERY element raised by its own translation
+        // (page-layout-problem.cc:1093-1108), so an inner staff's ink is in its silhouette
+        // too. Lily# takes the outer two because the interior is covered by the staves'
+        // own alignment; that holds while the inner staves are no wider than the outer ones.
+        int staffCount = 0;
+        foreach (var g in score.StaffGroups)
+            staffCount += g.StaffCount;
+        bool twoEnds = lastStaff is not null && staffCount > 1 && systemHeight > 0;
         if (twoEnds)
             AddEdgeStaffInk(lastStaff, measureLayouts, lastStaffMiddleUp, lastStaffBeams,
                 systemLeft, upSkyline, downSkyline);

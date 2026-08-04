@@ -31,7 +31,7 @@
   <line x1="91.16" y1="11.34" x2="91.16" y2="14.69" stroke="#000000" stroke-width="0.130"/>
   <rect x="53.77" y="9.69" width="0.19" height="4.00" data-pos="0"/>
   <rect x="102.24" y="9.69" width="0.19" height="4.00" data-pos="0"/>
-  <text x="-0.30" y="28.19" font-size="0.86" font-family="Emmentaler-Brace" text-anchor="end"></text>
+  <text x="-0.30" y="28.19" font-size="4.00" font-family="Emmentaler-Brace" text-anchor="end"></text>
   <line x1="0.00" y1="21.69" x2="0.00" y2="34.69" stroke="#000000" stroke-width="0.160"/>
   <rect x="52.25" y="25.69" width="0.19" height="5.00"/>
   <rect x="102.24" y="25.69" width="0.19" height="5.00"/>

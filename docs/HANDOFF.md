@@ -58,6 +58,146 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第88セッション（＝**引継ぎ §1 が 1 セッションぶん stale だった。塞いだのは「部屋と描画が
+同じ量を 2 つ綴っていて、片方だけが側テーブルを見ていた」欠陥で、コーパスには観測者が 0 人。
+そして直した先に、両方が*同じ*盲点を共有する 2 つ目が測れた**）。
+
+⚠️ **仕事は 1 つ**（**`git show 794fcc6f..` で引ける**——`794fcc6f` は第87セッションの最後＝この作業の親。
+**引継ぎに自分の commit のハッシュは書けない**）。**A〜D はこの順に手を動かした**:
+```
+A §0 の裏取り            引継ぎ §1 が第86セッションのまま＝第87セッションの 4 commit が未記録
+B 落とす計器を先に置いた  LyricBaseline_RespondsToADynamicUnderItsOwnStaff   テスト +1
+C 部屋の側の list を読ませた  StaffDownSkyline が第2の silhouette を建てるのをやめた  出力不変
+D 2 つ目を測って、直さずに記録  ordinary script は部屋の側も見ていない
+```
+
+⚠️⚠️ ★★★ **① §0 が当たった。しかも今度は「数が古い」ではなく「1 セッションが丸ごと無い」。**
+```
+引継ぎ §1     HEAD=23e94433 の子・未push 10・テスト 3978
+実測          HEAD=794fcc6f・未push 14・テスト 3989・台帳は 462/81/3.617525637 で一致
+```
+**`b18aa20f`（第86セッションの引継ぎ commit）の後に 4 commit ある**＝**第87セッションが仕事をして
+§1 を書き換えずに終わった**。⇒ ★★ **台帳が 1 桁も動いていないことを「幾何を触っていない」と
+読んではいけない**——第87セッションは **snapshot を 18 枚動かしている**。**台帳が原理的に見ていない
+領域（brace・歌詞）だっただけ。**「台帳不動」は「出力不変」ではない。
+⚠️ **第87セッションの経緯は commit message から復元して下に置いた**（**私は見ていない**）。
+
+★★★ **② 欠陥はコード自身のコメントが否定していた。**
+```
+LayoutEngine.cs:3119   // Same silhouette the room was measured from …
+LayoutEngine.cs:3121   _skylineBuilder.BuildStaffSkylines(staff, …, systemLeft:)   ← 側テーブル全部 default
+MultiStaffLayouter:1994 skylineBuilder.BuildStaffSkylines(staff, …, dynamics, tabArticulations,
+                        tupletBrackets, slurs, ties, beams, CurrentIndent)          ← 部屋はこちら
+```
+⇒ **上譜に `@f` を置くと、部屋は広がり、音節は動かない**＝**譜間の隙間は正しいまま、`f` の上に
+音節が刷られる**。**§7.7「予約と描画」の、grob でも backend でもなく*同じ関数の省略可能引数*の層。**
+
+⚠️⚠️ ★★★ **③ 観測者は 0 人だった。数えた。**
+既存 3993 本は**全部通っていた**（＝この欠陥を見ている本は 1 冊も無い）。
+**`with lyrics` の本は 207 冊中 14 冊で、そのうち強弱記号を持つ本は 0 冊。**
+★ **唯一の「script と歌詞」の本 `test/lyrics-below-marcato` は 1 譜**——**1 譜の歌詞は
+`isUpperFamily` ではない**ので**system silhouette 側（`AugmentSkylinesWithScripts`）を通る**。
+⇒ ★★ **上譜の枝だけが空だった。** **家族が 2 つあるとき、片方の本ばかり書くと、もう片方は
+「テストが緑」のまま無人になる。**
+
+★ **④ 直し方は「引数を足す」ではなく「部屋が作った list を読ませる」**（`SystemPlacements.StaffSkylines`
+→ `AnnotationLayoutContext.StaffSkylines`）。**引数はまた忘れられるが、index は忘れられない。**
+**住所も実読して名前を付けた**（`align-interface.cc:71-87 get_skylines` が**grob 自身の
+`vertical-skylines` を読む**＝**LP には薄い方の silhouette が無い**という、この修正の根拠そのもの）。
+⚠️ **引用ラチェットが 2 本捕まえた**（742→744。**`align-interface.cc:201-285` は何も名指していない**）。
+**その行を読んで `internal_get_minimum_translations` と `get_skylines` を書いて 742 に戻した**
+——**§7 が効いた 3 例目。**
+
+⚠️⚠️ ★★★ **⑤ 直した先に 2 つ目が居た。今度は*部屋の側*が盲で、修正はそこに届かない。**
+**同じ音楽・同じ記号で、譜の数だけを変えて測った**:
+```
+                     部屋（譜間）             描かれた歌詞のベースライン
+1 譜  @marcato       ——                       7.864960 → 9.119960   避けている
+2 譜  上譜 @marcato  10.402001 → 10.402001    7.864960 → 7.864960   重なる
+```
+**`BuildAllStaffSkylines` が渡す articulation は `CalculateTabStaffLocal`（タブ譜の強制上向き）だけ**
+なので、**通常の下向き script は部屋にも入っていない**。
+⇒ ★★★ **「一つの silhouette」にした結果、2 つの盲点が 1 つの盲点になった。**
+**これは前進だが「塞いだ」ではない**——**塞ぐには script を譜ごとの skyline に入れる**ことになり、
+**script のある全部の本で譜間が広がる**＝**独立した島・snapshot 承認つき**。
+⚠️ **直していない。測って書いただけ**（テストの remarks に表ごと置いた）。
+
+⚠️⚠️⚠️ ★★★ **⑥ 続けて brace の島に着手して、着手した項が実測で消えた**（**コード変更ゼロ**）。
+**第87セッションが「LP は中央に置いてから −0.2、Lily# は右端揃え」と書いた ⑵ は、
+自己相殺する対の片方だけを読んだもの**——`X-offset` は `x-aligned-side` で、
+**`aligned_side` は grob 自身の extent で位置を決める**ので、**stencil の中で寄せてずらしても
+インクは (支持体 − padding) に着く**。**Lily# は既に `indent − 0.3`。** ⇒ **▶ で退役させた。**
+⇒ ★★★ **memory「旗はoffsetとextentが相殺」の 2 例目。** **「LP のここに数がある」だけでは
+欠陥の証拠にならない**——**その数が出口まで生き残るかを見ること。**
+⚠️ **未説明を 1 つ残した**（**推測を書かずに**）: **LP の brace 右端 8.175827 対 `indent − 0.3` = 8.203937・
+残差 0.028110**。**−0.2 ではない。**
+
+⚠️⚠️ ★★ **⑦ probe に書いてあった数が再現しなかった**（`brace-name-clear.ly`）。**同じファイルを
+そのまま `C:\bin\lilypond-2.26.0` に通した結果**:
+```
+SystemStartBrace  6.8024267716535425 .. 8.175826771653544   ← コメントと 15 桁一致
+InstrumentName   -1.4188204724409452 .. 5.887847244094488   ← コメントは −1.948..6.417
+clearance         0.914580                                   ← コメントは 0.385
+```
+**幅まで違う**（旧 8.365 / 実測 7.307）ので**同じ本の数ではない**＝**probe の前の版から持ち越したもの**と見た。
+**実測に差し替え、経緯も probe に書いた。**
+⚠️⚠️ ★★★ **そして比較の前提が壊れていた**（memory「比べる前に前提確認」）——
+**LP の既定 indent は 8.503937 ss（`15\mm`）・Lily# は 12.0 ss。**
+**probe の数と Lily# の数は、双子で indent を揃えるまで並べてはいけない。**
+**⑶（楽器名が brace を避けない）は本物のまま**だが、**着手は双子から。**
+
+✅✅ ★★★ **⑧ ⑶ を丸ごと移植して閉じた**（**ユーザー承認のうえ・snapshot 33 枚**）。**規則は ▶ に書いた。**
+**LP の各項は実測で採った**——**`x-aligned-side` を after-line-breaking から呼んだ値では 4 冊とも合わず**、
+**採ったのは実測の X-offset そのもの**。⇒ ★★ **grob の callback を後から呼んだ値は、その時使われた値ではない。**
+⚠️⚠️ ★★ **最初の実装は delimiter を 1 つ取り落としていた**——**system start bar は `GrandStaffLayout` に
+居ない**（`DrawStaffConnectors` が `systemStartX` から別経路で引く）。**測って気づいた**（素の複数譜で
+名前の右端が 8.24＝indent 基準のまま。正しくは 8.16＝bar 基準）。⇒ **述語を `SystemStartBarStaves` に
+1 本化した**——**「描くか」と「避ける相手が居るか」は同じ問い。**
+⚠️ **CLI の bin が古くて 1 度騙されかけた**（`dotnet build` は Core だけ。**`lysc` は CLI を建て直すまで
+前の答えを返す**——memory の「dotnet incremental腐る」の別の面）。
+
+⚠️ **⑨ 引用ラチェットにこのセッションで 2 度捕まった**（742→744 を 2 回）。**2 度目の原因は新しい**:
+**`LooksLikeLilyPondSymbol` は 1 節の語を主張できない**ので、**`InstrumentName` / `SystemStartBrace` /
+`SystemStartBracket` を書いても「何も名指していない」**。⇒ **ハイフンや `::` を持つ実在の名前
+（`collapse-height` / `self-alignment-X` / `system-start-text::calc-x-offset` / `staff_bracket`）に
+差し替えて 742 に戻した。** ★ **grob 名しか思いつかない住所は、その行の*属性名*を読むと通る。**
+
+**未 push 14＋この作業**（⚠️ **足し算しない**。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ 私は push していない**）・テスト **4005 passed / 0 failed / 4 skipped**（**開始時 3989**＝新テスト 16 本）・
+台帳 **462 点**（**ss 非ゼロ 81・総和 3.617525637**／**count 点 106・うち非ゼロ 2**）＝**開始時と 1 桁も
+違わない**。**Core 0 warning。**
+⚠️ **snapshot 再ベース 33 枚**（**楽器名を描く本の全部・ユーザー承認済**）。**台帳が不動なのは
+「幾何を触っていない」からではない**——**台帳に楽器名の点が 1 つも無い**だけ（§1 の ① と同じ罠）。
+
+## 以下は第87セッションの経緯（⚠️ **commit message からの復元。このセッションは §1 を書いていない**）
+
+⚠️ **私（第88セッション）はこの作業を見ていない。**下は `git log b18aa20f..794fcc6f` の要約で、
+**裏取りしたのは「4 commit ある」ことと「台帳が動いていない」ことだけ**。
+```
+823c1b2d 系skylineの下端は「別のELEMENT」であって「不等」ではない
+         BuildSystemSkylines が `!=` で record の**値比較**をしていた。1 part を 2 譜に置く本は
+         フィールドが全部等しい Staff が 2 つできる（Voices 配列すら同一インスタンス）ので
+         下端が種を蒔かず、**2 つ目の系が 1 つ目の下譜を貫いて描かれていた**
+         ★ 977 冊中 2 冊しか該当が無く、どちらも fixture ではない＝**観測者ゼロ**
+54f4faf0 brace: 段を選べ、グリフを拡大縮小するな
+         \left-brace は**フォントの実 Y extent を二分探索して最も近い段を無倍率で返す**
+         (define-markup-commands.scm:5072-5099)。旧実装は 2 つの発明した端点で冪則を当て、
+         フォントサイズを合わせて 0.76 を掛けていた。em を 1 空間と読んでいた（Emmentaler は 4）
+         ので目標が 4 倍・梯子の天井に張り付き、0.76 が引き戻していた。**snapshot 17 枚**
+2b26b453 歌詞は自分の譜に付く。グループに付くのではない
+         SATB で 4 声全部の歌詞が同一 y=44.22 に重なって描かれていた。6 か所が同時に動く
+794fcc6f 自己監査：2 つ目の literal・他ファイル由来の不変条件・札 2 枚
+```
+★★ **第87セッションが「測ったが直していない」と名指したものが 3 つある**（**下の ▶ に入れた**）:
+**⑴ brace の X**（LP は stencil を X で中央に置いてから −0.2 平行移動・`system-start-delimiter.cc:157-158`。
+Lily# は `BraceX` で右端揃え。**移植したのは Y のモデルだけ**）・
+**⑵ 楽器名が brace を避けない**（LP は delimiter に対する side-position で **0.385** 空ける・
+`output-lib.scm:2108-2142 system-start-text::calc-x-offset`。Lily# は `Indent/2` に中央揃えで
+**delimiter を見ていない**ので "Soprano" 級の名前は brace に食い込む）・
+**⑶ ⑸ の script**（＝私の ⑤ と同じ穴の別の面）。
+
+## 以下は第86セッションの経緯
+
 最終更新 第86セッション（＝**引継ぎが「ラチェットは原理的に捕まえられない」と名指した穴を塞いだら、
 最初の 25 件のうち 20 件は*計器*の欠陥だった。そのうち 1 つは 44 ファイルを「読めなかった」ではなく
 「検査対象外」と報告していて、その静かな嘘の中に本物の欠陥が 1 つ隠れていた**）。
@@ -1481,6 +1621,116 @@ extent＝ink の止まるところ**だから。⚠️ **中心線で比べる�
 **pass も走査も確保も増えていない。**
 
 ## ▶ 次の一手
+
+★★★ **⓪ 第87・第88セッションが開けたまま置いた 3 つ**（**どれも測定済み・どれも未修正**）:
+```
+⑴ 通常 script が譜ごとの skyline に入っていない   第88セッション ⑤。1譜=避ける/2譜=重なる（表あり）
+   直すと                                          script のある全部の本で譜間が広がる＝要承認
+   ⚠️ 部屋と描画は今や同じ list を読むので、直すのは 1 か所（BuildAllStaffSkylines）で足りる
+⑵ brace の X   ❌ **退役。実測で消えた**（第88セッション後半）——**−0.2 は相殺する片割れ**
+⑶ 楽器名が brace を避けない   ✅ **閉じた（第88セッション・snapshot 33 枚・ユーザー承認のうえ）**
+```
+✅✅ **⑶ は移植して閉じた。** `SharedRenderer.InstrumentNameRightEdge` が上式そのもので、
+**`InstrumentNamePlacementTests` が LP の 3 冊 7 点を 9 桁で押さえている**（**幅は LP のものを入力する**
+ので、これは**規則の検査であって我々のフォントの検査ではない**）。**動いた 3 つ**:
+```
+⒜ total_left  BraceLadder.Widths を足した。★ **system start bar は GrandStaffLayout に居ない**
+              ——DrawStaffConnectors が systemStartX から全譜に渡して引いている別経路で、
+              最初の実装はそれを取り落とし、素の複数譜で名前が indent に対して置かれていた
+              （測って気づいた: 8.24 対 正しい 8.16）。**述語を SystemStartBarStaves に 1 本化**
+⒝ 配置        Indent/2 の中央揃え → nameRight の右端揃え。w は TextFontMetrics.Serif
+⒞ indent      名前からの推定をやめて LP の paper 定数 8.535826771653543 に
+              （**LP 自身の `ly:output-def-lookup` の値。mm 換算を再現しない**——
+              25.4/72.27 経由の導出は 3e-5 ずれる）
+```
+⚠️ **⒞ で見え方が変わる**: `test/instrument-names` は indent 15.00 → 8.54 で**系ぜんたいが 6.46 左へ**、
+**indent より広い名前は余白へ出る**（LP と同じ）。**コーパスでは切れていない**——確認済み
+（"Violin II" のインク左端は絶対 5.80・"Soprano" は 3.67）。
+⚠️ **残した非 LP が 1 つ**: **名前の無い本は今も indent 0**。**LP は名前が無くても 15\mm 入れる。**
+**変えるとコーパス全冊が動く**ので島の外に置いた（コード内にそう書いた）。**未測定。**
+★★★ **⑶ の LP 規則は実測で閉じた**（第88セッション・`probes/instrument-name-x.ly`・**3 冊 7 点が 7 桁一致**）:
+```
+total_left = 最左 delimiter の左端。delimiter が無ければ indent
+             （LP は +inf.0 で種を蒔き、空区間の interval-length が 0 を返して補正項が消える）
+R          = total_left − 0.3            0.3 は InstrumentName の padding
+nameRight  = R − max(0, indent − w) / 2  w = 名前の実幅
+```
+⚠️⚠️ **`x-aligned-side` を after-line-breaking から呼んだ値は汚染されていた**（`−(w+0.3)` を返すが、
+その値では 4 冊とも合わない）。**採ったのは実測の X-offset そのもの**で、そこから閉じた形を出した。
+⇒ ★★ **grob の callback を後から呼んで「その時使われた値」だと思わないこと。**
+★ **`w ≥ indent` で `max` が 0 に落ち、右端が `R` に張り付いて左へ溢れる**（Contrabassoon は
+system 原点の 6.54 左＝**LP は名前を余白へ出す**）。**Lily# の「indent を名前で伸ばす」は発明。**
+
+⚠️⚠️ ★★★ **Lily# 側の欠陥は「避けない」より深い＝幅が 2 つの綴りで持たれている**（§7.7）:
+`CalculateIndentFromInstrumentNames` は **Latin 一律 0.5em/字の推定**で indent を決め、
+**描画は実メトリクス**。**両方向に外す**（`WWWWWWW` 推定 10.5 対 実 20.55／`iiiiiii` 10.5 対 6.69）。
+**gap＝名前右端から brace 右端まで**（**brace のインクは 1.3734 幅なので gap<1.373 で重なる**）:
+```
+I 3.335 ok / Alto 1.048 / Bass 0.638 / Piano 0.205 / Tenor 0.154 / 津田さん 0.441
+Soprano −0.019 / Contrabassoon −0.128 / WWWWWWW −4.577      ← 負は右端すら越える
+```
+**「Soprano 級が食い込む」は正しく、かつ過小**——**ふつうの名前がほぼ全部重なる。**
+✅ **移植の欠けていた入力は埋めた**（`BraceLadder.Widths`・**576 段・probe は元から X を出していた**）。
+★★ **幅は「どの段を選んだか」の唯一の独立検証**——**LP が描いたのは 1.3734＝段 346 で、
+`brace-name-clear.ly` の注記が名指していた 345 ではなかった**（**2 段は高さで 0.1368 しか違わず、
+高さだけの ladder には原理的に区別できない**）。
+⚠️ **残っているのは配線 3 つ**（**どれも snapshot 33 枚を動かす＝要承認**）:
+```
+⒜ total_left  brace は BraceX − Widths[idx] で出せる。bracket / bar / line-bracket の
+              描画幅は SharedRenderer 側にあり、まだ layout へ出ていない
+⒝ 配置        nameX を Indent/2 中央揃え → 上式の nameRight に（TextAnchor.End）
+              w は TextFontMetrics.Serif(name, 3.0)＝**描画と同じ綴り**にすること
+⒞ indent      LP は paper の定数。名前から作るのをやめると長い名前は余白へ出る（LP と同じ）
+              ⚠️ これは見え方の変更。⒜⒝ と別に承認を取ること
+```
+✅✅ ★★★ **その未説明の 0.06 は割れた**（第88セッション最後・**測定のみ・出力不変**）。
+**brace は indent でも譜でもなく `SystemStartBar` の左端に対して置かれている**:
+```
+StaffSymbol       8.585826771653544 ..              = indent + 0.05
+SystemStartBar    8.475826771653542 .. 8.635826771653543
+SystemStartBrace  6.8024267716535425 .. 8.175826771653544
+
+8.475826771653542 − 0.3 = 8.175826771653542        ← brace の右端そのもの（15 桁）
+```
+⇒ ★★★ **delimiter は連鎖する**——**bar が譜に付き、brace が bar を自分の padding 0.3 で避ける。**
+**indent の算術で 0.36 が出なかったのは当然で、0.06 は「bar が居る場所」**だった。
+⚠️ **LP は多譜の系に必ず Score レベルの SystemStartBar を足す**ので、**GrandStaff の本にも
+delimiter は 2 つある**（この probe の book 1 がそれ）。
+⚠️⚠️ **未移植・要承認**: Lily# は brace を indent に固定しているので **LP より約 0.08 右**。
+**直すと brace の本 17 冊が動き、さらに楽器名も全部動く**（**名前は最左 delimiter に対して置くので、
+brace が動けば名前も動く**）。**1 行だが、承認は別に取ること。**
+⚠️⚠️ ★★★ **⑵ は「欠陥」ではなかった。`staff_brace` の `align_to(CENTER)`＋`translate(−0.2)` は
+`X-offset = x-aligned-side` と相殺する**——`aligned_side` は**grob 自身の extent で位置を決める**
+（`side-position-interface.cc:189 aligned_side`＝“taking into account my own dimensions and padding”）
+ので、**stencil の中で中央に寄せて −0.2 ずらしても extent が一緒に動き、インクは (支持体 − padding) に着く**。
+**Lily# は既に `indent − 0.3` に右端を置いている。** ⇒ ★★★ **旗の offset/extent 対の再演**
+（memory「旗はoffsetとextentが相殺」）＝**自己相殺する対の片方だけを読んで欠陥と呼んだ**もの。
+⚠️ **ただし 1 つだけ未説明で残した**: **LP の brace 右端 8.175827 対 `indent − 0.3` = 8.203937＝
+残差 0.028110**。**これは −0.2 ではない。正体は未測定**（推測を書かない）。
+⚠️⚠️ ★★ **⑶ に着手する前に前提を直すこと**（memory「比べる前に前提確認」）:
+**LP の既定 indent は `15\mm` = 8.503937 ss・Lily# は 12.0 ss** なので、**probe の数と Lily# の数は
+そのままでは比較できない**。**双子（`lysc ly`）で indent を揃えてから台帳の点を開く。**
+⚠️ **probe のコメントに書いてあった「name −1.948..6.417・0.385 clear」は再現しなかった**
+（**brace は 15 桁一致・名前は幅ごと違う**）。**実測に差し替えて経緯も書いた。**
+⚠️⚠️ ★★ **⑴ は「部屋も描画も盲」なので、台帳も snapshot も緑のまま**。**着手するなら
+第88セッションと同じ手順**（**先に落ちる観測者を置く → 直す → 外して落ちることを確かめる**）。
+
+✅✅ **⑷ 双子の門は閉じた**（第88セッション最後・**描画出力は不変**）。**`lysc ly` が
+`instrumentName` と `indent` を書くようになった**ので、**この島に台帳の点が置けるようになった。**
+```
+名前   RenderSpecParser に訊く（4 段の precedence を exporter で書き直さない）
+       ★ tab は「その本の唯一の譜」のときだけ落とす＝ページの 2 分岐を写した
+indent 名前があれば 15\mm・無ければ 0\mm
+```
+⚠️⚠️ ★★★ **`\layout` の裸の数はミリメートル。** **最初 `indent = #8.535826771653543` と書いたら
+実効 indent が 4.857400 になり**（＝ 8.535827 mm ÷ 1.757355 mm/ss）、**名前が全部そこへ動いた**。
+**LP は黙って通す。** ⇒ ★★★ **round-trip も「LP が読めた」しか言わない**（memory の同名の原則の
+*出力側*の版）。**`15\mm` と書けば換算そのものが消える。**
+★★ **確かめ方が決定的だった**: **生成した双子が手書き probe `brace-name-clear.ly` と 15 桁で一致**
+（Soprano −1.4188204724409452..5.887847244094488・brace 6.8024267716535425..8.175826771653544）。
+**裸の数のときは 1 桁も合わなかった。**
+⚠️ **プリセットの `DisplayName` は小文字**（`instrument violin` → `"violin"`）。**ページもそう描く**ので
+双子もそう書く。**大文字にするのは ensemble default（part 名）だけ**——**この不揃いは直していない。**
 
 ✅ **arpeggio の島も bracket の島も閉じた**（波線 6 点・bracket 7 点、全部 EXACT）。
 **残っているのは次の 3 つだけ**:

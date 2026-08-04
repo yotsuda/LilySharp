@@ -77,23 +77,31 @@ internal static class StanzaNumberEngraver
         // only one system leaves the single-verse systems (a lone reprise line) clean.
         // A `~`-hidden verse still COUNTS toward a system's verse tally (so the visible
         // verse beside it keeps its number) but prints no number itself.
-        var versesInSystem = new Dictionary<int, HashSet<int>>();
+        // ⚠️ PER (SYSTEM, STAFF), NOT PER SYSTEM. A stanza number labels ONE line of one
+        // staff's lyrics, and since a lyric hangs off its own staff an SATB score has four
+        // lines on one system all numbered verse 1. Tallying per system alone made four
+        // one-verse staves look like one staff with as many verses as the system carried,
+        // and printed a single number for all of them at whichever line won the leftmost-X
+        // race. Unreachable while at most one staff per system carried note-bound lyrics.
+        var versesInSystem = new Dictionary<(int Sys, int Staff), HashSet<int>>();
         foreach (var l in lyrics)
             if (measureToSystem.TryGetValue(l.Item.MeasureIndex, out int sys))
-                (versesInSystem.TryGetValue(sys, out var set) ? set : versesInSystem[sys] = new())
+                (versesInSystem.TryGetValue((sys, l.Item.StaffIndex), out var set)
+                        ? set
+                        : versesInSystem[(sys, l.Item.StaffIndex)] = new())
                     .Add(l.Item.VerseNumber);
 
         // The stanza number is one label per (system, verse) at the left edge, so a
         // `~2` on ONE section's verse must suppress that whole baseline — otherwise
         // another (unhidden) section sharing the verse on the same system (a plain
         // reprise line) would keep re-printing the number the author asked to hide.
-        var hiddenPairs = new HashSet<(int sys, int verse)>();
+        var hiddenPairs = new HashSet<(int sys, int staff, int verse)>();
         foreach (var l in lyrics)
             if (l.Item.HideStanza && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int hs))
-                hiddenPairs.Add((hs, l.Item.VerseNumber));
+                hiddenPairs.Add((hs, l.Item.StaffIndex, l.Item.VerseNumber));
 
-        // Collect (system, verse) → first lyric in that system+verse (its Y is the verse baseline).
-        var firstLyricBySystem = new Dictionary<(int sys, int verse), LyricLayout>();
+        // Collect (system, staff, verse) → first lyric on that baseline (its Y is the baseline).
+        var firstLyricBySystem = new Dictionary<(int sys, int staff, int verse), LyricLayout>();
         foreach (var l in lyrics)
         {
             if (l.Item.HideStanza)
@@ -102,9 +110,10 @@ internal static class StanzaNumberEngraver
                 continue;
             // Only a system that stacks 2+ verses gets numbers (unless forced).
             if (!emitForFirstVerse
-                && (!versesInSystem.TryGetValue(sysIdx, out var vs) || vs.Count <= 1))
+                && (!versesInSystem.TryGetValue((sysIdx, l.Item.StaffIndex), out var vs)
+                    || vs.Count <= 1))
                 continue;
-            var key = (sysIdx, l.Item.VerseNumber);
+            var key = (sysIdx, l.Item.StaffIndex, l.Item.VerseNumber);
             if (hiddenPairs.Contains(key))
                 continue; // a ~-hidden verse suppresses this baseline's number outright
             // Keep the lyric whose X is leftmost in the system (the verse's start).
@@ -113,7 +122,7 @@ internal static class StanzaNumberEngraver
         }
 
         var builder = ImmutableArray.CreateBuilder<StanzaNumberLayout>();
-        foreach (var ((sysIdx, verseNumber), lyric) in firstLyricBySystem)
+        foreach (var ((sysIdx, _, verseNumber), lyric) in firstLyricBySystem)
         {
             if (sysIdx >= systems.Length) continue;
             var system = systems[sysIdx];

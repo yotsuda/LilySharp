@@ -4,8 +4,15 @@
 // once, per-voice stem directions, and a cadential fermata. Authored in
 // absolute octave (each voice sits in its own register) — which only works on
 // a multi-part score once the file-level octave mode reaches every staff. The
-// lyrics align to the soprano and sit below the whole grand staff. Verified
-// against LilyPond.
+// lyrics align to the soprano and sit under THAT staff, i.e. between the two —
+// a lyric hangs off the staff it is attached to, inside a grand staff as much
+// as anywhere else.
+// ⚠️ THEY USED TO BE DRAWN BELOW THE WHOLE GRAND STAFF, and this comment used to
+// say "Verified against LilyPond" about it. That claim had nothing behind it:
+// `lysc ly` drops lyrics entirely, so this book's twin carries none and LilyPond
+// was never asked. The rule that put them there was per-GROUP, and since a grand
+// staff is one group it also collapsed an SATB score's four lines onto one
+// baseline. See LyricStaffOrderTests.GrandStaffLyrics_SitUnderTheirOwnStaff.
 octave absolute
 title "Chorale"
 composer "Lily#"

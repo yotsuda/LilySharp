@@ -67,6 +67,42 @@ public sealed class LilyPondExporter
     private bool _octaveAbsolute; // false = relative (Lily#'s default)
 
     /// <summary>
+    /// The printed label each part's staff carries, by part name — the twin's
+    /// <c>instrumentName</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ASKED OF THE PAGE'S OWN READER, not re-derived. Which label a staff shows is a
+    /// four-step precedence — a per-score <c>staff X "…"</c> override, then the part's inline
+    /// display name, then the <c>instrument</c> preset's, then (only once two or more plain
+    /// staves exist) the capitalised part name, with <c>staff ~X</c> suppressing it — and
+    /// re-implementing that here would be a second spelling of a rule the twin exists to
+    /// compare against. <see cref="Svg.Collector.RenderSpecParser"/> answers it.
+    /// <para>
+    /// ⚠️ WITHOUT THIS THE TWIN CARRIED NO NAME AT ALL, so nothing about instrument names
+    /// could be measured against LilyPond — the same shape as `lysc ly` dropping lyrics,
+    /// which is what left showcase/08-chorale's "verified against LilyPond" comment resting
+    /// on a twin that had none.
+    /// </para>
+    /// <para>
+    /// ⚠️ KEYED BY PART, so a score putting ONE part on two staves under two different labels
+    /// keeps only the last. Two such files exist in the tree and neither is a fixture (see
+    /// DuplicatePartStaffTests); a positional match would be worse, because the exporter's
+    /// walk over render syntax and the spec's item list are not the same list.
+    /// </para>
+    /// </remarks>
+    private readonly Dictionary<string, string> _instrumentNames = new(StringComparer.Ordinal);
+
+    /// <summary>Whether the page indents this score's first system, and by how much.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — <c>indent = 15\mm</c>, which LilyPond reads
+    /// as 8.535826771653543 staff spaces. Written explicitly because Lily# does NOT use the
+    /// paper default when a score carries no instrument name: it uses 0, and LilyPond would
+    /// indent anyway, so an unwritten indent makes every nameless twin a different page
+    /// (see LayoutEngine.CalculateIndentFromInstrumentNames, which records that divergence).
+    /// </remarks>
+    private const double LilyPondDefaultIndent = 8.535826771653543;
+
+    /// <summary>
     /// The octave the part being emitted anchors its relative pitches to — Lily#'s
     /// "default octave", 4 for treble.
     /// </summary>
@@ -194,6 +230,7 @@ public sealed class LilyPondExporter
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().ToList();
         var form = PrimaryForm(root);
         var render = root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
+        CollectInstrumentNames(tree);
 
         // One music variable per part. A part-major score keeps its sections inside
         // the part block; the form orders them.
@@ -1988,7 +2025,24 @@ public sealed class LilyPondExporter
             foreach (var s in rows) _sb.Append(s);
             _sb.Append("  >>\n");
         }
-        _sb.Append("  \\layout {}\n}\n");
+        // ⚠️ THE INDENT IS WRITTEN, ALWAYS, and 0 is the interesting case. Lily# indents the
+        // first system only when the score carries an instrument name, and then by exactly
+        // LilyPond's paper default; LilyPond indents by that default whether or not anything
+        // is written in it. So a NAMELESS twin left to the default is a different page from
+        // its .lys by 8.535827 staff spaces on every horizontal measurement — which is the
+        // kind of divergence that gets read as a spacing defect. See
+        // LayoutEngine.CalculateIndentFromInstrumentNames, which records the same gap from
+        // the other side.
+        // ⚠️ `\mm`, NOT A BARE NUMBER. A bare number in \layout is read in MILLIMETRES, so
+        // writing the staff-space figure silently produced a DIFFERENT page: measured on the
+        // four-name twin, `indent = #8.535826771653543` engraved an effective indent of
+        // 4.857400 (= 8.535827 mm ÷ 1.757355 mm per staff space) and the names moved with it,
+        // while LilyPond compiled it without a murmur. Writing LilyPond's own spelling of its
+        // own default removes the conversion instead of getting it right.
+        // LILYPOND-REF: ly/paper-defaults-init.ly — indent = 15\mm.
+        _sb.Append("  \\layout { indent = ")
+           .Append(_instrumentNames.Count > 0 ? "15\\mm" : "0\\mm")
+           .Append(" }\n}\n");
     }
 
     /// <summary>
@@ -2127,6 +2181,54 @@ public sealed class LilyPondExporter
         return false;
     }
 
+    /// <summary>Fills <see cref="_instrumentNames"/> from the page's own reading of the
+    /// render block.</summary>
+    /// <remarks>
+    /// ⚠️ A LONE TAB STAFF IS SKIPPED, because the page skips it: DrawInstrumentNames drops
+    /// the label for a tab staff in its no-staff-groups branch (a single-staff score) and
+    /// keeps it in the per-group branch. Mirroring that here is what keeps the twin the same
+    /// picture; emitting it unconditionally would invent a divergence in the tab books, which
+    /// are the ones least able to afford one.
+    /// </remarks>
+    private void CollectInstrumentNames(SyntaxTree tree)
+    {
+        _instrumentNames.Clear();
+        var spec = RenderSpecParser.FindFirst(tree);
+        if (spec is null) return;
+
+        int staffItems = spec.Items.Count(
+            i => i is SingleStaffSpec or GrandStaffRenderSpec or TabStaffSpec);
+
+        void Take(StaffSpec st)
+        {
+            if (!string.IsNullOrEmpty(st.InstrumentName))
+                _instrumentNames[st.VoiceName] = st.InstrumentName!;
+        }
+
+        foreach (var item in spec.Items)
+            switch (item)
+            {
+                case SingleStaffSpec s: Take(s.Staff); break;
+                case GrandStaffRenderSpec g:
+                    foreach (var st in g.GrandStaff.Staves) Take(st);
+                    break;
+                case OssiaStaffSpec o: Take(o.Staff); break;
+                case TabStaffSpec t when staffItems > 1: Take(t.Staff); break;
+            }
+    }
+
+    /// <summary>The <c>\with { instrumentName = … }</c> clause a staff carries, or null.</summary>
+    private string? InstrumentNameClause(string? partName) =>
+        partName != null && _instrumentNames.TryGetValue(partName, out var n)
+            ? "instrumentName = " + QuoteLilyPondString(n)
+            : null;
+
+    /// <summary>A Lily# label as a LilyPond string literal.</summary>
+    /// <remarks>Only the two characters LilyPond's lexer treats specially inside <c>"…"</c>
+    /// need escaping. Non-ASCII goes through as UTF-8, which is what LilyPond reads.</remarks>
+    private static string QuoteLilyPondString(string s)
+        => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+
     private string EmitStaff(string? partName, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars, bool tab, string indent,
         bool tabNumbersOnly = false)
@@ -2142,8 +2244,11 @@ public sealed class LilyPondExporter
         {
             string tuning = TabTuning(part);
             sb.Append(indent).Append("\\new TabStaff");
-            if (tuning.Length > 0)
-                sb.Append(" \\with { stringTunings = #").Append(tuning).Append(" }");
+            var tabWith = new List<string>(2);
+            if (tuning.Length > 0) tabWith.Add("stringTunings = #" + tuning);
+            if (InstrumentNameClause(partName) is { } tabName) tabWith.Add(tabName);
+            if (tabWith.Count > 0)
+                sb.Append(" \\with { ").Append(string.Join(" ", tabWith)).Append(" }");
             sb.Append(" { ");
             // ⚠️ The two engines' DEFAULTS are opposite ends of the same switch. A bare
             // LilyPond TabStaff prints fret digits ALONE — it omits Stem, Beam, Flag, Dots,
@@ -2173,11 +2278,17 @@ public sealed class LilyPondExporter
             // (LILYPOND-REF: ly/engraver-init.ly DrumStaff, ly/drumpitch-init.ly drums-style).
             // No \clef is written: the context's own is that clef, and a second one would be
             // this exporter inventing a convention.
-            sb.Append(indent).Append("\\new DrumStaff { \\").Append(varName).Append(" }\n");
+            sb.Append(indent).Append("\\new DrumStaff");
+            if (InstrumentNameClause(partName) is { } drumName)
+                sb.Append(" \\with { ").Append(drumName).Append(" }");
+            sb.Append(" { \\").Append(varName).Append(" }\n");
         }
         else
         {
-            sb.Append(indent).Append("\\new Staff { ");
+            sb.Append(indent).Append("\\new Staff");
+            if (InstrumentNameClause(partName) is { } staffName)
+                sb.Append(" \\with { ").Append(staffName).Append(" }");
+            sb.Append(" { ");
             if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
             sb.Append('\\').Append(varName).Append(" }\n");
         }

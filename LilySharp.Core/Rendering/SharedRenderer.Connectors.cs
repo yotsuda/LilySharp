@@ -43,20 +43,56 @@ internal static partial class SharedRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/instrument-name-engraver.cc — InstrumentName grob
-    /// LILYPOND-REF: scm/define-grobs.scm:1851 InstrumentName
-    ///   font: serif, padding 0.3, self-alignment-X = CENTER, self-alignment-Y = CENTER
-    /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
-    ///   nameX = MarginLeft + indent / 2 (MarginLeft applied by the page-level
-    ///   translate group, so this method uses indent / 2 directly).
+    /// LILYPOND-REF: scm/define-grobs.scm:1851-1858 self-alignment-X system-start-text::print
+    ///   — the InstrumentName entry: serif, <c>(padding . 0.3)</c>, self-alignment-X CENTER,
+    ///   and <c>X-offset</c> the callback below.
+    /// LILYPOND-REF: scm/output-lib.scm:2108-2142 system-start-text::calc-x-offset — the
+    ///   placement ported in <see cref="InstrumentNameRightEdge"/>.
+    /// <para>
+    /// ⚠️ UNTIL 2026-08-04 THIS CENTRED EVERY NAME AT <c>Indent / 2</c> and never looked at
+    /// the delimiter, while the indent was sized from a flat half-em-per-character ESTIMATE of
+    /// the name's width and the name was DRAWN from real metrics — two spellings of one
+    /// quantity, erring both ways (WWWWWWW estimated 10.5 against 20.55 real, iiiiiii 10.5
+    /// against 6.69). With the brace ink 1.3734 wide, ordinary names overlapped it: measured
+    /// gaps from the name's right edge to the brace's right edge were Alto 1.048, Bass 0.638,
+    /// Piano 0.205, Tenor 0.154, Soprano -0.019, Contrabassoon -0.128 — the last two past the
+    /// brace's right edge entirely.
+    /// </para>
     /// </remarks>
-    private static void DrawInstrumentNames(MultiStaffScore score, SystemLayout system, IDrawingContext gc)
+    private static void DrawInstrumentNames(
+        MultiStaffScore score, SystemLayout system, double systemStartX, IDrawingContext gc)
     {
         if (system.Indent <= 0) return;
 
         const double NameFontScale = 0.75;
         double actualFontSize = FontSize * NameFontScale;
-        double nameX = system.Indent / 2.0;
         double systemYUp = LayoutUtilities.SystemTopYUp(system);
+
+        // The leftmost delimiter's ink, which is what every name on this system is placed
+        // against. Taken from the SAME numbers DrawSystemStartDelimiters draws from, so a
+        // name cannot be placed against a delimiter that is not where it is drawn.
+        double? totalLeft = null;
+        void Take(double left) { if (totalLeft is null || left < totalLeft) totalLeft = left; }
+
+        // ⚠️ THE SYSTEM-START BAR IS A DELIMITER TOO, and it does not live in any group's
+        // GrandStaffLayout: DrawStaffConnectors draws it across the whole system from
+        // systemStartX whenever two or more staves are connected. Reading only the groups
+        // missed it, and on a plain multi-staff score the name was then placed against the
+        // indent instead of against the bar.
+        if (SystemStartBarStaves(score, system).Count >= 2)
+            Take(systemStartX - SystemStartBarThickness / 2.0);
+
+        if (!system.StaffGroups.IsDefaultOrEmpty)
+            foreach (var g in system.StaffGroups)
+                if (g.GrandStaffLayout is { } d
+                    && SystemStartDelimiterInkLeft(d, d.BraceTop - d.BraceBottom) is { } left)
+                    Take(left);
+
+        // ⚠️ THE WIDTH COMES FROM THE METRICS THE TEXT IS DRAWN WITH, which is the whole
+        // point of the change: the pair this replaced sized the indent from an estimate and
+        // drew from these.
+        double NameX(string name) => InstrumentNameRightEdge(
+            TextFontMetrics.Serif(name, actualFontSize), system.Indent, totalLeft);
 
         // Single-staff scores carry no StaffGroup layouts — the one staff sits
         // at the system Y with the standard staff height.
@@ -66,9 +102,10 @@ internal static partial class SharedRenderer
             {
                 if (string.IsNullOrEmpty(st.InstrumentName) || st.IsTab)
                     continue;
-                gc.DrawText(st.InstrumentName, nameX, systemYUp - StaffHeight / 2.0,
+                gc.DrawText(st.InstrumentName, NameX(st.InstrumentName),
+                    systemYUp - StaffHeight / 2.0,
                     actualFontSize, "serif", FontStyle.Regular,
-                    TextAnchor.Middle, fill: null,
+                    TextAnchor.End, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
                 break;
             }
@@ -99,9 +136,10 @@ internal static partial class SharedRenderer
                 if (namedCount == 1 && onlyNamed is { })
                 {
                     double centerY = systemYUp + (gs.BraceTop + gs.BraceBottom) / 2.0;
-                    gc.DrawText(onlyNamed.InstrumentName!, nameX, centerY,
+                    gc.DrawText(onlyNamed.InstrumentName!, NameX(onlyNamed.InstrumentName!),
+                        centerY,
                         actualFontSize, "serif", FontStyle.Regular,
-                        TextAnchor.Middle, fill: null,
+                        TextAnchor.End, fill: null,
                         verticalAnchor: VerticalAnchor.Middle);
                     continue;
                 }
@@ -114,9 +152,10 @@ internal static partial class SharedRenderer
                     continue;
                 double staffY = systemYUp + staffLayout.Y;
                 double centerY = staffY - staffLayout.Height / 2.0;
-                gc.DrawText(staffLayout.InstrumentName, nameX, centerY,
+                gc.DrawText(staffLayout.InstrumentName, NameX(staffLayout.InstrumentName),
+                    centerY,
                     actualFontSize, "serif", FontStyle.Regular,
-                    TextAnchor.Middle, fill: null,
+                    TextAnchor.End, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
             }
         }
@@ -145,19 +184,7 @@ internal static partial class SharedRenderer
             return;
         double systemYUp = LayoutUtilities.SystemTopYUp(system);
 
-        // SystemStartBar across ALL visible staves of the system — EXCLUDING
-        // independent text rows (chords / lyrics), which LilyPond's ChordNames /
-        // Lyrics contexts do not connect (StaffLayout carries no kind, so resolve
-        // back via EnumerateStaves).
-        var textRowIndices = new HashSet<int>(
-            score.EnumerateStaves().Where(t => t.Staff.IsTextRow)
-                .Select(t => t.GlobalStaffIndex));
-        var allStaves = system.StaffGroups
-            .SelectMany(g => g.Staves)
-            .Where(s => !s.IsHidden && !s.IsOssia && !textRowIndices.Contains(s.StaffIndex))
-            // staff.Y is Y-up, so top-to-bottom order is DESCENDING.
-            .OrderByDescending(s => s.Y)
-            .ToList();
+        var allStaves = SystemStartBarStaves(score, system);
         if (allStaves.Count >= 2)
         {
             double top = systemYUp + allStaves[0].Y;
@@ -218,6 +245,134 @@ internal static partial class SharedRenderer
         }
     }
 
+    /// <summary>LILYPOND-REF: scm/define-grobs.scm:1853-1858 self-alignment-X — the
+    /// InstrumentName entry, whose <c>(padding . 0.3)</c> is :1854.</summary>
+    private const double InstrumentNamePadding = 0.3;
+
+    /// <summary>
+    /// Where an instrument name's RIGHT edge goes: LilyPond's
+    /// <c>system-start-text::calc-x-offset</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:2108-2142 system-start-text::calc-x-offset.
+    /// <code>
+    /// R         = total-left - padding          total-left = leftmost delimiter's left edge
+    /// nameRight = R - max (0, indent - w) / 2   w = the name's own drawn width
+    /// </code>
+    /// So while the name is NARROWER than the indent it is centred in an indent-wide box whose
+    /// right edge clears the delimiter, and once it is wider the <c>max</c> goes to zero, its
+    /// right edge pins to <c>R</c> and it overflows LEFT into the margin. LilyPond really does
+    /// that: measured, "Contrabassoon" sits 6.54 staff spaces left of the system origin.
+    /// <para>
+    /// ⚠️ FITTED TO MEASURED OFFSETS, NOT READ OFF THE CALLBACK, and the difference matters.
+    /// <c>calc-x-offset</c> is written as <c>x-aligned-side + right-padding - (indent -
+    /// total-left)</c>, but calling <c>ly:side-position-interface::x-aligned-side</c> from
+    /// <c>after-line-breaking</c> returns <c>-(w + 0.3)</c>, and no combination of that with
+    /// the other two terms reproduces ANY of the four measured offsets. A grob callback
+    /// invoked after the fact is not the value that was used. The form above is fitted to the
+    /// X-offsets LilyPond actually produced and reproduces all seven names of all three books
+    /// in audit/lp-geometry/probes/instrument-name-x.ly to seven digits.
+    /// </para>
+    /// <para>
+    /// ⚠️ <paramref name="width"/> IS ASKED OF THE SAME METRICS THE TEXT IS DRAWN WITH. The
+    /// defect this replaced kept the name's width in two spellings — an estimate that sized
+    /// the indent and real metrics that drew the glyphs — so anything that re-derives it here
+    /// puts the pair straight back.
+    /// </para>
+    /// </remarks>
+    internal static double InstrumentNameRightEdge(
+        double width, double indent, double? delimiterInkLeft)
+    {
+        double r = (delimiterInkLeft ?? indent) - InstrumentNamePadding;
+        return r - Math.Max(0, indent - width) / 2.0;
+    }
+
+    /// <summary>
+    /// The staves the system-start BAR joins — all visible ones EXCLUDING independent text
+    /// rows (chords / lyrics), which LilyPond's ChordNames / Lyrics contexts do not connect.
+    /// Top-to-bottom (staff.Y is Y-up, so descending).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE SPELLING BECAUSE TWO THINGS ASK. It decides whether the bar is DRAWN
+    /// (<see cref="DrawStaffConnectors"/>) and whether an instrument name has a delimiter to
+    /// be placed against (<see cref="DrawInstrumentNames"/>); a name placed against a bar
+    /// that is not drawn, or clearing nothing while one is, is the shape HANDOFF 7.7 keeps
+    /// naming. StaffLayout carries no kind, so a text row is resolved back through
+    /// <c>EnumerateStaves</c>.
+    /// </remarks>
+    private static List<StaffLayout> SystemStartBarStaves(
+        MultiStaffScore score, SystemLayout system)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return [];
+        var textRowIndices = new HashSet<int>(
+            score.EnumerateStaves().Where(t => t.Staff.IsTextRow)
+                .Select(t => t.GlobalStaffIndex));
+        return system.StaffGroups
+            .SelectMany(g => g.Staves)
+            .Where(s => !s.IsHidden && !s.IsOssia && !textRowIndices.Contains(s.StaffIndex))
+            .OrderByDescending(s => s.Y)
+            .ToList();
+    }
+
+    /// <summary>Below this span a system-start delimiter is not drawn at all.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3671 collapse-height — the SystemStartBrace
+    /// entry's, declared the same at scm/define-grobs.scm:3687 collapse-height on
+    /// SystemStartBracket.</remarks>
+    private const double SystemStartCollapseHeight = 5.0;
+
+    /// <summary>LILYPOND-REF: lily/system-start-delimiter.cc:36-67 staff_bracket — it reads
+    /// the SystemStartBracket <c>thickness</c> declared at scm/define-grobs.scm:3692 (0.45)
+    /// and multiplies it by the line thickness, which is where 0.25 comes from.</summary>
+    private const double SystemStartBracketThickness = 0.25;
+
+    /// <summary>LILYPOND-REF: lily/system-start-delimiter.cc <c>simple_bar</c> — a single
+    /// vertical line of <c>line-thickness x thickness</c>.</summary>
+    private static double SystemStartBarThickness => EngravingDefaults.StaffLineThickness * 1.6;
+
+    /// <summary>
+    /// The LEFT edge of the ink a system-start delimiter draws, or null when it draws none.
+    /// </summary>
+    /// <remarks>
+    /// This is what the instrument name is placed against — LILYPOND-REF:
+    /// scm/output-lib.scm:2108-2142 system-start-text::calc-x-offset walks the system's
+    /// elements for everything carrying <c>system-start-delimiter-interface</c> and takes the
+    /// MINIMUM of their left edges.
+    /// <para>
+    /// ⚠️ THE FOUR STYLES ARE ANCHORED DIFFERENTLY ON <c>BraceX</c>, which is why this cannot
+    /// be "BraceX minus a constant": the brace is drawn right-anchored so its ink runs LEFT of
+    /// BraceX by its glyph's width, while the bracket, line-bracket and bar are drawn as a
+    /// stroke ON BraceX whose serifs and hooks run RIGHT. Each arm reads the same constant its
+    /// own <c>Draw…</c> method does, so a change to either moves both.
+    /// </para>
+    /// <para>
+    /// ⚠️ NULL IS LILYPOND'S EMPTY EXTENT, not an error. A collapsed delimiter contributes
+    /// nothing to the minimum, and with no delimiter at all <c>calc-x-offset</c>'s
+    /// <c>total-left</c> stays at the <c>+inf.0</c> it was seeded with, whose interval with
+    /// the indent is EMPTY and so has length 0 — the correction term vanishes and the answer
+    /// is the same as if the left edge were the indent. MEASURED, book 3 of
+    /// audit/lp-geometry/probes/instrument-name-x.ly.
+    /// </para>
+    /// </remarks>
+    private static double? SystemStartDelimiterInkLeft(GrandStaffLayout delim, double height)
+    {
+        bool shown = height >= SystemStartCollapseHeight;
+        return delim.DelimiterType switch
+        {
+            SystemStartDelimiterType.Bracket when shown
+                => delim.BraceX - SystemStartBracketThickness / 2.0,
+            SystemStartDelimiterType.LineBracket when shown
+                => delim.BraceX - EngravingDefaults.StaffLineThickness / 2.0,
+            // No collapse-height on SystemStartBar: LilyPond declares none, so a lone pair of
+            // staves still shows its bar however short they are.
+            SystemStartDelimiterType.BarLine
+                => delim.BraceX - SystemStartBarThickness / 2.0,
+            SystemStartDelimiterType.Brace when shown
+                => delim.BraceX - BraceLadder.Widths[BraceLadder.NearestIndex(height)],
+            _ => null,
+        };
+    }
+
     private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;
@@ -228,22 +383,22 @@ internal static partial class SharedRenderer
             double top = systemYUp + delim.BraceTop;
             double bottom = systemYUp + delim.BraceBottom;
             double height = top - bottom;
+            bool shown = height >= SystemStartCollapseHeight;
             switch (delim.DelimiterType)
             {
                 case SystemStartDelimiterType.Bracket:
-                    if (height >= 5)
+                    if (shown)
                         DrawSystemStartBracket(delim.BraceX, top, bottom, gc);
                     break;
                 case SystemStartDelimiterType.LineBracket:
-                    if (height >= 5)
+                    if (shown)
                         DrawSystemStartLineBracket(delim.BraceX, top, bottom, gc);
                     break;
                 case SystemStartDelimiterType.BarLine:
                     DrawSystemStartBarLine(delim.BraceX, top, bottom, gc);
                     break;
                 case SystemStartDelimiterType.Brace:
-                    // LILYPOND-REF: scm/define-grobs.scm SystemStartBrace collapse-height = 5
-                    if (height >= 5)
+                    if (shown)
                         DrawSystemStartBrace(delim.BraceX, top, bottom, gc);
                     break;
             }
@@ -255,7 +410,7 @@ internal static partial class SharedRenderer
     // glyphs, with overlap = 0.1 x thickness where the tips join the line.
     private static void DrawSystemStartBracket(double x, double top, double bottom, IDrawingContext gc)
     {
-        double thickness = 0.25; // LP staff_bracket thickness default (in staff-space)
+        double thickness = SystemStartBracketThickness;
         double serifH = 0.4, serifW = 0.6;
         gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
         // Top serif (right-pointing triangle filled); serif tip drops toward the
@@ -286,8 +441,7 @@ internal static partial class SharedRenderer
     // a single vertical line of width = line-thickness x thickness.
     private static void DrawSystemStartBarLine(double x, double top, double bottom, IDrawingContext gc)
     {
-        double thickness = EngravingDefaults.StaffLineThickness * 1.6;
-        gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
+        gc.DrawLine(x, top, x, bottom, Color.Black, SystemStartBarThickness);
     }
 
     // ---------- Mid-measure clef change ----------
@@ -476,29 +630,58 @@ internal static partial class SharedRenderer
             DrawTimeSignature(timeChange.NewTime, x, staffY, gc);
     }
 
-    // Draws the curly brace used for grand staff (piano) groups as a single
-    // Emmentaler-Brace glyph (576 sizes at U+E000+index, larger index → taller
-    // brace). LILYPOND-REF: scm/define-markup-commands.scm (left-brace).
+    /// <summary>
+    /// The curly brace of a grand staff, as the one Emmentaler-Brace glyph whose OWN height
+    /// is nearest the span — drawn at the font's natural size, never fitted to the span.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc:150-160 <c>staff_brace</c> and
+    /// scm/define-markup-commands.scm:5072-5099 <c>get-y-from-brace</c>, the comparator the
+    /// <c>left-brace</c> command searches the ladder on. The two conversions
+    /// there cancel (<c>y * output_scale / point_constant</c> then
+    /// <c>(ly:pt size) / scale</c>), so the size asked for is the span in staff spaces;
+    /// <c>left-brace</c> binary searches the ladder for the nearest glyph and returns it
+    /// UNSCALED. The ladder's granularity IS the error LilyPond accepts — 0.0464 staff
+    /// spaces at the bottom of the ladder, 0.2800 at the top.
+    /// <para>
+    /// ⚠️ NOTHING IS FITTED TO <paramref name="top"/>/<paramref name="bottom"/> BUT THE
+    /// CENTRE, and that is the whole shape of this grob. What stood here before fitted a
+    /// font size to the span and then multiplied by a correction factor, over a glyph index
+    /// guessed by a power law from two invented endpoints (263 and 11493) — none of which
+    /// LilyPond has. It also read the em as one staff space where Emmentaler's is FOUR, so
+    /// the target was 4x too large, the search clamped to the largest brace on any ordinary
+    /// grand staff, and the factor pulled it back part of the way. MEASURED on a four-staff
+    /// group spanning 31.0: it drew glyph 575 (76.9748 tall) at font size 2.05, i.e.
+    /// 76.9748 x 2.05/4 = 39.45 staff spaces, and the overhang crossed the instrument names.
+    /// The ladder's nearest to 31.0 is glyph 345 at 30.9588.
+    /// </para>
+    /// <para>
+    /// THE EM IS FOUR STAFF SPACES — <c>unitsPerEm / 4</c> is one staff space, the
+    /// convention <c>audit/scripts/Extract-EmmentalerMetrics.py</c> asserts per font — so the
+    /// glyph draws at its natural size at <see cref="SharedRenderer.FontSize"/>, the same
+    /// constant every other music glyph is drawn at. ⚠️ ASK FOR THAT CONSTANT, do not write
+    /// 4.0 again: its own remark says it is internal "instead of a second literal", and this
+    /// method carried one for a day.
+    /// ⚠️ THIS ONE IS ASSUMED, NOT MEASURED HERE. Nothing in the test suite rasterises a
+    /// glyph, so no test can catch the em being wrong — which is exactly how the previous
+    /// spelling survived. What IS checked (<c>BraceLadderTests</c>) is the selection and the
+    /// emitted size; the em itself was confirmed against LilyPond by hand, on the probe
+    /// <c>audit/lp-geometry/probes/brace-name-clear.ly</c>: LilyPond draws a four-staff
+    /// group's brace 1.3734 wide, and the glyph this selection picks for that span is
+    /// 1.37 wide in the same dump. It goes on being an assumption until a point measures it.
+    /// </para>
+    /// </remarks>
     private static void DrawSystemStartBrace(double x, double top, double bottom, IDrawingContext gc)
     {
         double height = top - bottom;
         double yMid = (top + bottom) / 2;
 
-        const int braceGlyphStart = 0xE000;
-        const int braceGlyphCount = 576;
-        const double minGlyphHeight = 263.0;
-        const double maxGlyphHeight = 11493.0;
-        const double unitsPerEm = 1000.0;
-        const double scaleFactor = 0.76;
-
-        double targetUnits = height * unitsPerEm;
-        double ratio = Math.Clamp((targetUnits - minGlyphHeight) / (maxGlyphHeight - minGlyphHeight), 0, 1);
-        int glyphIndex = Math.Clamp((int)(Math.Pow(ratio, 0.8) * (braceGlyphCount - 1)), 0, braceGlyphCount - 1);
-        double glyphHeightUnits = minGlyphHeight + ((double)glyphIndex / (braceGlyphCount - 1)) * (maxGlyphHeight - minGlyphHeight);
-        double fontSize = (height / (glyphHeightUnits / unitsPerEm)) * scaleFactor;
-
-        char braceChar = (char)(braceGlyphStart + glyphIndex);
-        gc.DrawText(braceChar.ToString(), x, yMid, fontSize, "Emmentaler-Brace",
+        int glyphIndex = BraceLadder.NearestIndex(height);
+        char braceChar = (char)(BraceGlyphStart + glyphIndex);
+        gc.DrawText(braceChar.ToString(), x, yMid, FontSize, "Emmentaler-Brace",
             FontStyle.Regular, TextAnchor.End, Color.Black);
     }
+
+    /// <summary>The brace ladder's encoding: <c>braceN</c> lives at U+E000+N.</summary>
+    private const int BraceGlyphStart = 0xE000;
 }

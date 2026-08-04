@@ -208,11 +208,66 @@ public class LilyPondExporterTests
         Assert.Contains("\\tuplet 3/2 {", ly);
     }
 
+    /// <summary>
+    /// The label the page prints reaches the twin, and so does the indent it printed it in.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WITHOUT THIS THE TWIN CARRIED NEITHER, so nothing about instrument names could be
+    /// measured against LilyPond at all — the same shape as `lysc ly` dropping lyrics. The
+    /// name is asked of <c>RenderSpecParser</c> rather than re-derived, because which label a
+    /// staff shows is a four-step precedence and a second spelling of it is exactly what a
+    /// twin exists to rule out.
+    /// <para>
+    /// ⚠️ <c>15\mm</c>, NOT A BARE NUMBER, and this is the assertion that would have caught
+    /// the first attempt. A bare number in <c>\layout</c> is read in MILLIMETRES, so writing
+    /// the staff-space figure (8.535826771653543) engraved an effective indent of 4.857400
+    /// and moved every name with it — while LilyPond compiled it in silence. MEASURED: with
+    /// <c>15\mm</c> the generated twin of a four-name grand staff reproduces the hand-written
+    /// probe brace-name-clear.ly to fifteen digits (Soprano
+    /// -1.4188204724409452..5.887847244094488, brace 6.8024267716535425..8.175826771653544);
+    /// with the bare number it reproduced nothing.
+    /// </para>
+    /// <para>
+    /// ⚠️ A NAMELESS SCORE WRITES <c>0\mm</c> ON PURPOSE. Lily# does not indent a score with
+    /// no names and LilyPond indents by 15\mm regardless, so an unwritten indent makes every
+    /// nameless twin a different page.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void InstrumentName_ReachesTheTwin_WithTheIndentItIsPrintedIn()
+    {
+        var named = Export("""
+            part vln { instrument violin section S { c d e } }
+            part vla { instrument viola  section S { c d e } }
+            form main { ~S }
+            score main { staff vln staff vla }
+            """);
+        // ⚠️ LOWER CASE, because that is what the PAGE prints: a preset's DisplayName is the
+        // preset's own spelling, and only the ensemble default (the capitalised part name)
+        // ever capitalises. Asserting "Violin" here would be the twin inventing a label the
+        // .lys never shows — which is the whole failure mode a twin is built to avoid.
+        Assert.Contains("instrumentName = \"violin\"", named);
+        Assert.Contains("instrumentName = \"viola\"", named);
+        Assert.Contains("\\layout { indent = 15\\mm }", named);
+
+        // ⚠️ AND THE SUPPRESSION REACHES IT TOO, or `staff ~x` would be a twin-only label.
+        var bare = Export("""
+            part vln { section S { c d e } }
+            form main { ~S }
+            score main { staff ~vln }
+            """);
+        Assert.DoesNotContain("instrumentName", bare);
+        Assert.Contains("\\layout { indent = 0\\mm }", bare);
+    }
+
     [Fact]
     public void Score_EmitsStaffAndTabWithBassTuning()
     {
         var ly = Export(Score("c,4", render: "staff bassline\n  tab bassline"));
-        Assert.Contains("\\new Staff { \\clef bass", ly);
+        // ⚠️ NOT ANCHORED ON `\new Staff {`: a staff header may now carry a
+        // `\with { instrumentName = … }` between the context and its music, which is
+        // InstrumentName_ReachesTheTwin's business, not this test's.
+        Assert.Contains("{ \\clef bass", ly);
         Assert.Contains("\\new TabStaff", ly);
         Assert.Contains("stringTunings = #bass-four-string-tuning", ly);
     }
@@ -269,9 +324,9 @@ public class LilyPondExporterTests
         // bass = bass clef, octave 3; flute = treble clef, octave 5 (NOT the treble
         // default of 4 — the preset's own octave, which is why the bundle is read whole).
         Assert.Contains("bs = \\relative c {", ly);
-        Assert.Contains("\\new Staff { \\clef bass \\bs }", ly);
+        Assert.Contains("{ \\clef bass \\bs }", ly);
         Assert.Contains("fl = \\relative c'' {", ly);
-        Assert.Contains("\\new Staff { \\clef treble \\fl }", ly);
+        Assert.Contains("{ \\clef treble \\fl }", ly);
     }
 
     /// <summary>A hyphenated preset (<c>electric-bass</c>) is read whole.</summary>
@@ -288,7 +343,7 @@ public class LilyPondExporterTests
             form main { ~S }
             score main { staff bs }
             """);
-        Assert.Contains("\\new Staff { \\clef bass \\bs }", ly);
+        Assert.Contains("{ \\clef bass \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
     }
 
@@ -312,7 +367,7 @@ public class LilyPondExporterTests
             form main { ~S }
             score main { staff bs }
             """);
-        Assert.Contains("\\new Staff { \\clef treble \\bs }", ly);
+        Assert.Contains("{ \\clef treble \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
     }
 
@@ -429,7 +484,9 @@ public class LilyPondExporterTests
         //    and no preset implies one — LilyPond's own default is treble, and so is Lily#'s)
         bool declaresClef = properties.Contains("clef") || properties.Contains("instrument");
         if (declaresClef)
-            Assert.Contains($"\\new Staff {{ \\clef {InstrumentDefaults.ClefWord(tab.Staff.Clef)} ", ly);
+            // Not anchored on `\new Staff {` — see Score_EmitsStaffAndTabWithBassTuning: the
+        // header may carry a `\with { instrumentName = … }` now, which is another test's job.
+        Assert.Contains($"{{ \\clef {InstrumentDefaults.ClefWord(tab.Staff.Clef)} ", ly);
         else
             Assert.DoesNotContain("\\clef", ly);
     }

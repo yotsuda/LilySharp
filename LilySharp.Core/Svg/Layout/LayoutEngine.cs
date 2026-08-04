@@ -295,6 +295,7 @@ internal sealed class LayoutEngine
             BeamGroups = _elementCoordinator.DetectBeamGroups(primaryScore),
             BeamLayouts = allBeamLayouts.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
+            StaffSkylines = placed.StaffSkylines,
             TupletForceStemUp = primaryStaff.IsMultiVoice,
             StaffVoices = primaryStaff.Voices,
             VoicesByStaff = anchors.VoicesByStaff,
@@ -362,7 +363,12 @@ internal sealed class LayoutEngine
         /// spaceable staff's bottom line — the note-bound verses AND the independent rows
         /// standing under them; see <see cref="LyricReservationBelowSystem"/>. Produced here
         /// because only this pass has the system's own staff skylines.</summary>
-        List<double> LyricBands);
+        List<double> LyricBands,
+        /// <summary>Per system, the per-staff UP/DOWN skylines that system was placed and
+        /// sprung against, indexed by global staff index. Carried out of the pass rather
+        /// than rebuilt because a note-bound lyric line is DRAWN against the same
+        /// silhouette — see <see cref="AnnotationLayoutContext.StaffSkylines"/>.</summary>
+        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -399,6 +405,7 @@ internal sealed class LayoutEngine
         // hara-kiri'd system's gap is not over-reserved at the full height.
         var perSystemHeights = new List<double>();
         var perSystemLyricBands = new List<double>();
+        var perSystemStaffSkylines = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -508,13 +515,14 @@ internal sealed class LayoutEngine
                 // It is gone; the argument is not nullable.
                 StaffSprings: multiStaffLayouter.StaffSprings(
                     score, sysStaffGroups, sysStaffSkylines, sysLooseLines)));
+            perSystemStaffSkylines.Add(sysStaffSkylines);
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
 
         return new SystemPlacements(
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
-            perSystemLyricBands);
+            perSystemLyricBands, perSystemStaffSkylines);
     }
 
 
@@ -674,46 +682,46 @@ internal sealed class LayoutEngine
                 foreach (var st in sg.Staves)
                     staffYByIndex[st.StaffIndex] = -st.Y;
 
-        // Anchor Y for note-bound lyrics attached to a staff in a NON-LAST staff group:
-        // the group's BOTTOM staff Y (Y-up ⇒ min, reflected to device-down like
-        // staffYByIndex above), so `staff X with lyrics …` followed
-        // by another staff sits in the inter-group gap below its group. Staves in the LAST
-        // group are omitted ⇒ their lyrics keep the legacy below-the-whole-system
-        // placement — which deliberately includes a grand staff's staves (one group), so
-        // an SATB chorale's lyrics still sit below the whole grand staff.
-        // ⚠️ "LAST" MEANS THE LAST SPACEABLE GROUP, not the last group in the array, and the
-        // difference is a whole run of the alignment. Spaceable is the staff's own
-        // `staff-affinity` and nothing else (see lastSpaceableStaffY below), so an ossia —
-        // which declares none — counts here as the staff it is.
-        // A text ROW is a group of its own in
-        // Lily#'s model, so counting it would make `staff X with lyrics a` + `lyrics b` put
-        // X's syllables in the INTER-GROUP gap while the row is solved below the system —
-        // two chains, one room, and the two blocks drawn on top of each other (MEASURED:
-        // they land on the same baseline). LilyPond has no such split: everything
-        // non-spaceable under the last spaceable staff is ONE run
-        // (page-layout-problem.cc:919-925), and a Lyrics context is non-spaceable, so it
-        // cannot end one. Same predicate as lastSpaceableStaffY below.
+        // Anchor Y for note-bound lyrics: THE STAFF THEY ARE ATTACHED TO, device-down from
+        // the system origin to that staff's top line (Y-up reflected, like staffYByIndex
+        // above). Every spaceable staff is here except the LAST one, whose lyrics have
+        // nothing below them to sit above and so keep the below-the-whole-system placement
+        // that `lastSpaceableStaffY` anchors (they are the `-1` family in LyricEngraver).
+        // LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — "lay out any
+        // non-spaceable lines between this line and the last one": the run a Lyrics context
+        // belongs to runs between the spaceable line above it and the next spaceable line,
+        // and nothing in that walk knows about groups.
+        // ⚠️ IT USED TO BE PER-GROUP, and that was this port's own invention rather than
+        // LilyPond's: a lyric attached to any staff of a group anchored on the group's
+        // BOTTOM staff, and a group that was the last one was left out entirely. On a
+        // one-group score — which is what a grand staff is — that put EVERY staff's lyrics
+        // in the same place, so an SATB chorale with a line per voice drew all four on one
+        // baseline, on top of each other (MEASURED on scratch/…/がくふ.lys: four rows, one
+        // Y). The old shape is kept nowhere; a lyric hangs off its own staff, which is the
+        // only rule LilyPond has.
+        // ⚠️ SPACEABLE, AND BY DEPTH, NOT BY ORDER, because that is how the staff the `-1`
+        // family hangs from is chosen (lastSpaceableStaffY below) and the two have to name
+        // the same staff or one block is anchored twice. Spaceable is the staff's own
+        // `staff-affinity` and nothing else, so an ossia — declaring none — counts as the
+        // staff it is, and a text ROW (a chord or lyrics track) does not count at all: a row
+        // carries no staff spring and LilyPond never makes one a `last_spaceable_line`.
         var noteBoundAnchorY = new Dictionary<int, double>();
         if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
         {
-            var groups = systemsArray[0].StaffGroups;
-            int lastSpaceableGroup = -1;
-            for (int gi = 0; gi < groups.Length; gi++)
+            var spaceable = new List<StaffLayout>();
+            foreach (var group in systemsArray[0].StaffGroups)
             {
-                if (groups[gi].Staves.IsDefaultOrEmpty) continue;
-                foreach (var st in groups[gi].Staves)
+                if (group.Staves.IsDefaultOrEmpty) continue;
+                foreach (var st in group.Staves)
                     if (!st.IsHidden && StaffAffinity.IsSpaceable(st.StaffAffinity))
-                    {
-                        lastSpaceableGroup = gi;
-                        break;
-                    }
+                        spaceable.Add(st);
             }
-            for (int gi = 0; gi < lastSpaceableGroup; gi++)
+            if (spaceable.Count > 1)
             {
-                if (groups[gi].Staves.IsDefaultOrEmpty) continue;
-                double bottomY = -groups[gi].Staves.Min(s => s.Y);
-                foreach (var st in groups[gi].Staves)
-                    noteBoundAnchorY[st.StaffIndex] = bottomY;
+                double deepest = spaceable.Max(s => -s.Y);
+                foreach (var st in spaceable)
+                    if (-st.Y < deepest)
+                        noteBoundAnchorY[st.StaffIndex] = -st.Y;
             }
         }
 
@@ -2514,6 +2522,30 @@ internal sealed class LayoutEngine
         public ImmutableArray<BeamGroup>? BeamGroups { get; init; }
         public ImmutableArray<BeamLayout>? BeamLayouts { get; init; }
         public IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? SystemSkylines { get; init; }
+
+        /// <summary>
+        /// Per system, the per-staff UP/DOWN skylines THAT system was placed against,
+        /// indexed by global staff index — the same lists
+        /// <c>MultiStaffLayouter.BuildAllStaffSkylines</c> produced for the alignment.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ SUPPLIED SO THERE IS ONE SILHOUETTE AND NOT TWO. A note-bound lyric line is
+        /// placed against its anchor staff's down-skyline, and until 2026-08-04 that skyline
+        /// was REBUILT here from <c>SkylineBuilder.BuildStaffSkylines</c> with every side
+        /// table left at its default — no dynamics, articulations, tuplet brackets, slurs,
+        /// ties or beams — under a comment claiming it was "the same silhouette the room was
+        /// measured from". It was not: the room passes all of them. So a dynamic under the
+        /// staff widened the gap to the staff below and the syllable stayed where it was,
+        /// and the syllable was drawn over the dynamic while the gap between the staves
+        /// stayed correct (LyricStaffOrderTests
+        /// <c>LyricBaseline_RespondsToADynamicUnderItsOwnStaff</c>).
+        /// <para>
+        /// Null in the PRELIMINARY pass, which runs before the systems are placed. That pass
+        /// never asks: the lookup is only wired up when <see cref="NoteBoundAnchorY"/> is
+        /// non-empty, and the preliminary context supplies none.
+        /// </para>
+        /// </remarks>
+        public IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? StaffSkylines { get; init; }
         public bool TupletForceStemUp { get; init; }
         public ImmutableArray<Voice> StaffVoices { get; init; }
         public Dictionary<int, ImmutableArray<Voice>>? VoicesByStaff { get; init; }
@@ -3105,24 +3137,33 @@ internal sealed class LayoutEngine
         // Per-(system, staff) DOWN-skyline for a note-bound lyric line that sits under an
         // UPPER staff, so it clears THAT staff's own notes and real (font-metric) glyph
         // height instead of the whole system's lowest staff. Mirrors lowerStaffUpSkyline
-        // (chord names on a non-top staff); built lazily and only when such a line
-        // exists, so single-/bottom-staff lyrics do no extra work and stay byte-identical.
-        var downCache = new Dictionary<(int, int), VerticalSkyline?>();
+        // (chord names on a non-top staff).
+        //
+        // ⚠️ THE ROOM'S OWN LIST, NOT A SECOND BUILD. This is literally the skyline
+        // MultiStaffLayouter.BuildAllStaffSkylines handed the alignment for this system —
+        // dynamics, tab articulations, tuplet brackets, slurs, ties, beams, the chord-row
+        // band, a text row's ink and a figured-bass row all merged in. Rebuilding it here
+        // was the defect: the rebuild took SkylineBuilder.BuildStaffSkylines' side-table
+        // parameters at their defaults, so the ROOM knew about an `f` under the staff and
+        // the DRAWN baseline did not, and the syllable was engraved over it while the gap
+        // between the staves stayed correct (HANDOFF 7.7's two spellings, and the reason
+        // this reads a list instead of calling the builder: an argument can be forgotten
+        // again, an index cannot).
+        // LILYPOND-REF: lily/align-interface.cc:163-285 internal_get_minimum_translations —
+        // the walk measures each element against `down_skyline`, what has accumulated above
+        // it, and asks each element for its silhouette exactly once, through
+        // lily/align-interface.cc:71-87 get_skylines, which reads that grob's OWN
+        // `vertical-skylines` property. For a staff that property is its VerticalAxisGroup's,
+        // which every outside-staff grob of the staff is already in
+        // (lily/axis-group-interface.cc:220-238 generic_group_extent). There is no second,
+        // thinner silhouette in LilyPond for a placement to read.
+        var staffSkylines = ctx.StaffSkylines;
         VerticalSkyline? StaffDownSkyline(int sysIdx, int staffIndex)
         {
-            if (sysIdx < 0 || sysIdx >= systems.Length || staffByIndex == null
-                || !staffByIndex.TryGetValue(staffIndex, out var staff))
+            if (staffSkylines == null || sysIdx < 0 || sysIdx >= staffSkylines.Count)
                 return null;
-            var key = (sysIdx, staffIndex);
-            if (!downCache.TryGetValue(key, out var sky))
-            {
-                // Same silhouette the room was measured from — including the clef,
-                // which is why the indent goes with it (SkylineBuilder.SeedClef).
-                sky = _skylineBuilder.BuildStaffSkylines(
-                    staff, systems[sysIdx].Measures, systemLeft: systems[sysIdx].Indent).Down;
-                downCache[key] = sky;
-            }
-            return sky;
+            var perStaff = staffSkylines[sysIdx];
+            return staffIndex >= 0 && staffIndex < perStaff.Count ? perStaff[staffIndex].Down : null;
         }
 
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null;
@@ -3256,8 +3297,15 @@ internal sealed class LayoutEngine
             || anchorStaff.StaffIndex >= staffSkylines.Count)
             return 0;
 
-        int total = score.StaffGroups.Sum(g => g.StaffCount);
-        int lastGroupFirst = total - score.StaffGroups[^1].StaffCount;
+        // ⚠️ THE ANCHOR STAFF'S OWN LINES, and this is the THIRD spelling of the split — the
+        // other two are BuildStaffAnchorTables' anchor table and BuildLooseLinesBetween's
+        // range, and all three have to name the same staff. It used to be the last MODEL
+        // group's whole staff range (`total - StaffGroups[^1].StaffCount`), which did not
+        // agree with either: on a grand staff it reserved for all four staves' lyrics here
+        // while the chain drew them elsewhere, and with a trailing lyrics-row group it
+        // reserved for the ROW group's range rather than the staff's. Now that a lyric hangs
+        // off its own staff, what hangs below the SYSTEM is exactly what is attached to the
+        // last spaceable staff — the one this reservation is anchored on.
         var engraver = BuildBlockEngraver(score);
 
         // THE RUN, in alignment order: the note-bound verses hanging under the anchor staff,
@@ -3269,7 +3317,8 @@ internal sealed class LayoutEngine
         // never solved; it is an element of the chain now, so what it reserves is its
         // ALIGNMENT MINIMUM like every other line (:593-599).
         var lines = engraver.NoteBoundBlockSkylines(
-            score.Lyrics, measureLayouts, startMeasure, endMeasure, lastGroupFirst, total);
+            score.Lyrics, measureLayouts, startMeasure, endMeasure,
+            anchorStaff.StaffIndex, anchorStaff.StaffIndex + 1);
         if (!alignment.UnmodelledRow)
             foreach (int rowStaff in alignment.Trailing)
                 lines.AddRange(engraver.RowBlockSkylines(
@@ -3318,24 +3367,18 @@ internal sealed class LayoutEngine
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
         int startMeasure, int endMeasure)
     {
-        if (score.Lyrics.IsDefaultOrEmpty || score.StaffGroups.Length < 2)
+        // ⚠️ STAVES, NOT GROUPS — and the bail-out used to be `StaffGroups.Length < 2`,
+        // which is the same defect stated at the door: a grand staff is ONE group, so a
+        // score whose every staff carried a lyric line returned null here and no pair had
+        // anything between it. What stands between two staves is what hangs off the UPPER
+        // one, whether or not a group boundary happens to fall there.
+        if (score.Lyrics.IsDefaultOrEmpty || score.StaffGroups.Sum(g => g.StaffCount) < 2)
             return null;
         bool anyNoteBound = false;
         foreach (var l in score.Lyrics)
             if (!l.IsLyricsRow) { anyNoteBound = true; break; }
         if (!anyNoteBound)
             return null;
-
-        // staff index -> (its group, that group's staff range)
-        var groupOf = new Dictionary<int, (int Group, int First, int End)>();
-        int at = 0;
-        for (int g = 0; g < score.StaffGroups.Length; g++)
-        {
-            int count = score.StaffGroups[g].StaffCount;
-            for (int k = 0; k < count; k++)
-                groupOf[at + k] = (g, at, at + count);
-            at += count;
-        }
 
         var engraver = BuildBlockEngraver(score);
 
@@ -3346,17 +3389,16 @@ internal sealed class LayoutEngine
             if (cache.TryGetValue(key, out var hit))
                 return hit;
 
+            // The block is the upper staff's OWN note-bound lines — the half-open range
+            // [upper, upper+1) — which is the same selection BuildStaffAnchorTables gives
+            // that staff an anchor for. The two must agree or the block is drawn at one
+            // staff's baseline and the room measured from another's.
             IReadOnlyList<(VerticalSkyline, VerticalSkyline)>? lines = null;
-            if (groupOf.TryGetValue(upperStaffIndex, out var upper)
-                && groupOf.TryGetValue(lowerStaffIndex, out var lower)
-                && upper.Group != lower.Group)
-            {
-                var built = engraver.NoteBoundBlockSkylines(
-                    score.Lyrics, measureLayouts, startMeasure, endMeasure,
-                    upper.First, upper.End);
-                if (built.Count > 0)
-                    lines = built;
-            }
+            var built = engraver.NoteBoundBlockSkylines(
+                score.Lyrics, measureLayouts, startMeasure, endMeasure,
+                upperStaffIndex, upperStaffIndex + 1);
+            if (built.Count > 0)
+                lines = built;
             cache[key] = lines;
             return lines;
         };
@@ -3429,13 +3471,18 @@ internal sealed class LayoutEngine
         // ⚠️ AN OSSIA IS NO LONGER ONE OF THEM (2026-07-28). It is spaceable
         // (page-layout-problem.cc:1173-1177 is_spaceable), so it CLOSES this span like any staff instead of
         // making the room unknown by standing in it.
+        // ⚠️ THE ANCHOR IS THE STAFF ASKED FOR, not the bottom of the group holding it. It
+        // used to be the group's deepest spaceable staff, which is the same per-group model
+        // BuildStaffAnchorTables carried: on a grand staff every staff's block was measured
+        // from the group's LAST staff, so the room returned belonged to a different pair
+        // than the block was drawn in. The block hangs off its own staff, so the span starts
+        // at its own staff.
         double? anchorDown = null;
         var below = new List<(double Down, int StaffIndex)>();
         var looseBands = new List<double>();
         foreach (var group in groups)
         {
             if (group.Staves.IsDefaultOrEmpty) continue;
-            bool holdsAnchor = group.Staves.Any(s => s.StaffIndex == anchorStaffIndex);
             foreach (var st in group.Staves)
             {
                 if (st.IsHidden) continue;
@@ -3445,10 +3492,8 @@ internal sealed class LayoutEngine
                     looseBands.Add(down);
                     continue;
                 }
-                if (holdsAnchor)
-                {
-                    if (anchorDown is null || down > anchorDown) anchorDown = down;
-                }
+                if (st.StaffIndex == anchorStaffIndex)
+                    anchorDown = down;
                 below.Add((down, st.StaffIndex));
             }
         }
@@ -3694,53 +3739,43 @@ internal sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Calculates the indent needed to accommodate instrument names.
-    /// Returns the indent in staff spaces, or 0 if no names are present.
+    /// The indent a score with instrument names gets: LilyPond's paper default, or 0 when
+    /// the score carries no name at all.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/pango-font.cc — LilyPond uses exact Pango font metrics.
-    /// We approximate with average character width ≈ 0.5 × font-size for serif fonts.
-    /// LILYPOND-REF: scm/define-grobs.scm:1851-1868 InstrumentName padding = 0.3
-    /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — <c>indent = 15\mm</c>. The value is
+    /// LilyPond's own reading of it in staff spaces, taken from
+    /// <c>(ly:output-def-lookup layout 'indent)</c> in
+    /// audit/lp-geometry/probes/instrument-name-x.ly rather than converted here, because the
+    /// millimetre-to-staff-space conversion is LilyPond's and reproducing it is one more thing
+    /// to get subtly wrong (a derivation through 25.4/72.27 lands 3e-5 away).
+    /// <para>
+    /// ⚠️ IT IS NOT SIZED FROM THE NAMES, and until 2026-08-04 it was:
+    /// <c>max (8.5, estimatedWidth + 1.5)</c> where <c>estimatedWidth</c> was a flat half em
+    /// per Latin character and a full em per CJK one. That made the name's width a quantity
+    /// with TWO spellings — this estimate, and the real metrics the text was drawn with —
+    /// and the estimate erred both ways (WWWWWWW estimated 10.5 against 20.55 real; iiiiiii
+    /// 10.5 against 6.69), so ordinary names were drawn over the brace. LilyPond's indent is
+    /// a paper constant and a name too wide for it simply overflows to the LEFT
+    /// (SharedRenderer.InstrumentNameRightEdge), which is the behaviour this restores.
+    /// </para>
+    /// <para>
+    /// ⚠️ A SCORE WITH NO NAMES STILL GETS 0, WHICH IS NOT LILYPOND. LilyPond indents the
+    /// first system by 15\mm whether or not anything is written in it. Keeping 0 is Lily#'s
+    /// own choice and is left alone here on purpose: changing it moves every book in the
+    /// corpus rather than the ones this island is about. Not measured against LilyPond.
+    /// </para>
     /// </remarks>
     private static double CalculateIndentFromInstrumentNames(MultiStaffScore score)
     {
-        // LILYPOND-REF: ly/paper-defaults-init.ly — indent = 15\mm
-        // 15mm / (20pt/4 × 0.3528mm/pt) = 15 / 1.764 ≈ 8.5 staff spaces
-        const double DefaultIndent = 8.5;
-
-        double maxNameWidth = 0;
-
-        // Font size: SvgRenderer.FontSize (4.0) × instrument name scale (0.75) = 3.0
-        // Average serif char ≈ 0.5 em; CJK glyphs are full-width (≈ 1.0 em) —
-        // the flat Latin estimate ran 「津田さん」 into the clef.
-        const double nameFontSize = 3.0;
+        const double DefaultIndent = 8.535826771653543;
 
         foreach (var group in score.StaffGroups)
-        {
             foreach (var staff in group.Staves)
-            {
                 if (!string.IsNullOrEmpty(staff.InstrumentName))
-                {
-                    const int cjkBlockStart = 0x2E80;  // CJK Radicals Supplement — first full-width block
-                    const double cjkEmWidth = 1.0;     // CJK glyph ≈ full em
-                    const double latinEmWidth = 0.5;   // average serif Latin char ≈ half em
-                    double nameWidth = 0;
-                    foreach (char ch in staff.InstrumentName)
-                        nameWidth += (ch >= cjkBlockStart ? cjkEmWidth : latinEmWidth) * nameFontSize;
-                    if (nameWidth > maxNameWidth)
-                        maxNameWidth = nameWidth;
-                }
-            }
-        }
+                    return DefaultIndent;
 
-        if (maxNameWidth <= 0)
-            return 0;
-
-        // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
-        // Indent = max(LP default 15mm, name width + delimiter + padding)
-        double calculatedIndent = maxNameWidth + 1.5; // 1.0 delimiter + 0.3 name padding + 0.2 extra
-        return Math.Max(DefaultIndent, calculatedIndent);
+        return 0;
     }
 
     internal static string ClefToString(ClefType clef) => clef switch

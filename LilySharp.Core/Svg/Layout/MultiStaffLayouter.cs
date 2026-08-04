@@ -529,7 +529,14 @@ internal sealed class MultiStaffLayouter
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
         Func<Staff, bool> isDead,
-        out double currentY, out bool anyVisible)
+        out double currentY, out bool anyVisible,
+        // ⚠️ A PAIR INSIDE ONE GROUP CAN HAVE LINES BETWEEN IT, since a note-bound lyric
+        // hangs off its OWN staff rather than off its group. While it hung off the group
+        // this argument could not exist — nothing was ever between two staves of one group —
+        // and StackStaves called StaffGap without it. Leaving it out now places the staves
+        // at a gap the block does not fit in, and the syllables are drawn over the staff
+        // below (MEASURED on がくふ: four rows placed, none given room).
+        LooseLinesBetween? looseLines = null)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
         currentY = y;
@@ -585,7 +592,8 @@ internal sealed class MultiStaffLayouter
                 // HANDOFF 5.2 names. Ask for the quantity; do not decide it here.
                 double span = GapSpan(score, lastVisibleStaff!, staff);
                 double gap = StaffGap(
-                    staffSpec, span, staffSkylines, lastVisibleIndex, globalIndex);
+                    staffSpec, span, staffSkylines, lastVisibleIndex, globalIndex,
+                    looseLines?.Invoke(lastVisibleIndex, globalIndex));
                 currentY -= lastVisibleHeight + gap;
             }
 
@@ -648,11 +656,12 @@ internal sealed class MultiStaffLayouter
     private StaffGroupLayout LayoutGrandStaffGroupWithSkylines(
         MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
-        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead,
+        LooseLinesBetween? looseLines = null)
     {
         var staffLayouts = StackStaves(
             score, group, y, staffSpec, startIndex, staffSkylines, isDead,
-            out double currentY, out bool anyVisible);
+            out double currentY, out bool anyVisible, looseLines);
 
         if (!anyVisible)
         {
@@ -682,11 +691,12 @@ internal sealed class MultiStaffLayouter
     private StaffGroupLayout LayoutSingleStaffGroupWithSkylines(
         MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
-        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead,
+        LooseLinesBetween? looseLines = null)
     {
         var staffLayouts = StackStaves(
             score, group, y, staffSpec, startIndex, staffSkylines, isDead,
-            out double currentY, out bool anyVisible);
+            out double currentY, out bool anyVisible, looseLines);
 
         if (!anyVisible)
             return StaffGroupLayout.CreateSingle(staffLayouts[0], y, 0);
@@ -705,11 +715,12 @@ internal sealed class MultiStaffLayouter
     private StaffGroupLayout LayoutBracketGroupWithSkylines(
         MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
-        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead)
+        List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines, Func<Staff, bool> isDead,
+        LooseLinesBetween? looseLines = null)
     {
         var staffLayouts = StackStaves(
             score, group, y, staffSpec, startIndex, staffSkylines, isDead,
-            out double currentY, out bool anyVisible);
+            out double currentY, out bool anyVisible, looseLines);
 
         if (!anyVisible)
         {
@@ -1693,12 +1704,15 @@ internal sealed class MultiStaffLayouter
 
             var layout = group.IsGrandStaff
                 ? LayoutGrandStaffGroupWithSkylines(
-                    score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
+                    score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
+                    looseLines)
                 : group.HasDelimiter
                     ? LayoutBracketGroupWithSkylines(
-                        score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead)
+                        score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
+                        looseLines)
                     : LayoutSingleStaffGroupWithSkylines(
-                        score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead);
+                        score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
+                        looseLines);
             builder.Add(layout);
 
             // A group with no survivor takes no room and no gap: it is not in the alignment.

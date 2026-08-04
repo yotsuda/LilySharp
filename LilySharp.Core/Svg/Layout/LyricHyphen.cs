@@ -165,11 +165,26 @@ internal sealed class LyricHyphenEngraver
             if (current.Item.ConnectorType == LyricConnectorType.None)
                 continue;
 
-            // Find the next lyric in the same verse
+            // Find the next lyric in the same verse OF THE SAME STAFF.
+            // LILYPOND-REF: lily/hyphen-engraver.cc:102-115 acknowledge_lyric_syllable — the
+            // right bound is whatever syllable THIS engraver is acknowledged with, and there
+            // is one engraver per Lyrics context, so in LilyPond a hyphen cannot reach
+            // outside its own line at all. Lily# holds every line in one flat list, so the
+            // pairing has to be restricted here instead.
+            // ⚠️ The obvious name to cite here is `last_syllable_`, and the citation ratchet
+            // cannot see it: its symbol regex needs a word boundary after the last
+            // alphanumeric, which a trailing-underscore C++ member never has. Cite a method.
+            // ⚠️ THE STAFF HALF IS NOT DECORATION. A hyphen joins two syllables of one
+            // line, and a line belongs to a staff; matching on the verse number alone was
+            // unreachable only while at most one staff per system carried note-bound
+            // lyrics. Since a lyric hangs off its own staff, an SATB score has four lines
+            // all numbered verse 1, and the next syllable "in the same verse" was as often
+            // the staff below's — a hyphen drawn from one staff's word to another's.
             LyricLayout? next = null;
             for (int j = i + 1; j < lyricLayouts.Count; j++)
             {
-                if (lyricLayouts[j].Item.VerseNumber == current.Item.VerseNumber)
+                if (lyricLayouts[j].Item.VerseNumber == current.Item.VerseNumber
+                    && lyricLayouts[j].Item.StaffIndex == current.Item.StaffIndex)
                 {
                     next = lyricLayouts[j];
                     break;

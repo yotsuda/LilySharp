@@ -242,11 +242,26 @@ public class LyricStaffOrderTests
         return System.Math.Abs(layout.Systems[0].Y - layout.Systems[1].Y);
     }
 
+    /// <summary>
+    /// A lyric hangs off the staff it is attached to, INSIDE a grand staff as much as
+    /// anywhere else: words on the top staff of a grand staff sit between the two staves.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS TEST ASSERTED THE OPPOSITE until 2026-08-04, under the name
+    /// <c>GrandStaffLyrics_StayBelowTheWholeGrandStaff</c> and the reason "per chorale
+    /// convention". The convention is real, but the rule that implemented it was per-GROUP
+    /// and a grand staff is ONE group, so it also said that every staff of an SATB grand
+    /// staff shares one baseline — and four voices with a line each were drawn on top of
+    /// each other. The fixture it was written for (showcase/08-chorale) had no LilyPond
+    /// evidence behind it either: `lysc ly` drops lyrics entirely, so the twin that
+    /// "verified" it carries none.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — the run a
+    /// non-spaceable line belongs to is bounded by the spaceable lines around it, which on
+    /// a grand staff means the staff below ends the top staff's run.
+    /// </remarks>
     [Fact]
-    public void GrandStaffLyrics_StayBelowTheWholeGrandStaff()
+    public void GrandStaffLyrics_SitUnderTheirOwnStaff()
     {
-        // On a grand staff (one group), lyrics on the top staff sit below the WHOLE
-        // group (below the bottom staff), per chorale convention — not between them.
         var (lyricYs, staffY) = LayoutOf(
             "part up { clef treble }\n" +
             "part lo { clef bass }\n" +
@@ -255,6 +270,114 @@ public class LyricStaffOrderTests
             "score main {\n  grandStaff {\n    staff up with lyrics w\n    staff lo\n  }\n}\n");
 
         double lyricY = lyricYs[0];
-        Assert.True(lyricY > staffY[1], $"grand-staff lyrics ({lyricY:F2}) should be below the bottom staff ({staffY[1]:F2})");
+        Assert.True(lyricY > staffY[0],
+            $"the words ({lyricY:F2}) should be below the staff they are attached to ({staffY[0]:F2})");
+        Assert.True(lyricY < staffY[1],
+            $"the words ({lyricY:F2}) should be ABOVE the lower staff ({staffY[1]:F2}), not below the whole group");
+    }
+
+    /// <summary>
+    /// A note-bound line clears the DYNAMIC hanging under its own staff, not just that
+    /// staff's notes: the silhouette the line is placed against is the one the room was
+    /// measured from, side tables and all.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:71-87 get_skylines — the alignment asks each
+    /// element for its silhouette by reading that grob's own <c>vertical-skylines</c>
+    /// property, and for a staff that is its VerticalAxisGroup's, which every outside-staff
+    /// grob of the staff is in (lily/axis-group-interface.cc:220-238 generic_group_extent).
+    /// There is no second, thinner silhouette for the placement to read.
+    /// <para>
+    /// ⚠️ TWO ASSERTIONS BECAUSE THERE WERE TWO SPELLINGS. The ROOM has always read the
+    /// full tables (<c>MultiStaffLayouter.BuildAllStaffSkylines</c> passes dynamics,
+    /// articulations, tuplet brackets, slurs, ties and beams); the DRAWN baseline read
+    /// <c>SkylineBuilder.BuildStaffSkylines</c> with all of them left at their defaults,
+    /// under a comment claiming it was "the same silhouette the room was measured from".
+    /// So the staff below moved to make room for the <c>f</c> and the syllable did not
+    /// move with it — a syllable drawn over a dynamic, with the gap between the staves
+    /// still correct. A test that reads only the room, or only the line, sees nothing.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4): what is asserted is that both quantities
+    /// RESPOND to the dynamic. Pinning either number would have to be re-approved every
+    /// time the dynamic's own placement moves, and would not say the two agree.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND WHAT IS STILL BLIND, MEASURED 2026-08-04 AND NOT FIXED HERE: an ordinary
+    /// below-staff SCRIPT is in neither spelling. <c>BuildAllStaffSkylines</c> passes only
+    /// <c>CalculateTabStaffLocal</c> — a tab staff's forced-above marks — so an ordinary
+    /// marcato is not in the room either, and making the drawn side read the room (which is
+    /// what this test's fix did) puts the two on ONE blind spot instead of giving each its
+    /// own. The same mark on the same note, this book with the second staff removed:
+    /// <code>
+    ///                      room (staff gap)          drawn lyric baseline
+    /// one staff            n/a                       7.864960 → 9.119960   cleared
+    /// two staves, upper    10.402001 → 10.402001     7.864960 → 7.864960   overprinted
+    /// </code>
+    /// The one-staff case is cleared by a DIFFERENT path — <c>AugmentSkylinesWithScripts</c>
+    /// over the SYSTEM silhouette — which is also why the corpus never caught this: its only
+    /// script-versus-lyric book, <c>test/lyrics-below-marcato</c>, has one staff. Closing it
+    /// means putting the scripts into the per-staff skyline, which widens inter-staff gaps
+    /// wherever they occur and so is its own island with its own snapshot approval.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void LyricBaseline_RespondsToADynamicUnderItsOwnStaff()
+    {
+        const string tail =
+            "part back { section A { e4 f g a } }\n" +
+            "lyrics w { section A { la le li lo } }\n" +
+            "form main { A }\n" +
+            "score main {\n  staff melody with lyrics w\n  staff back\n}\n";
+        var (plainLyrics, plainStaff) = LayoutOf(
+            "part melody { section A { c4 d e f } }\n" + tail);
+        var (dynLyrics, dynStaff) = LayoutOf(
+            "part melody { section A { c4@f d e f } }\n" + tail);
+
+        // The room does respond, and has all along — this is the control. If it ever stops
+        // responding, the two assertions below agree for the wrong reason.
+        double plainInside = plainStaff[1] - plainStaff[0];
+        double dynInside = dynStaff[1] - dynStaff[0];
+        Assert.True(dynInside > plainInside + 0.1,
+            "control: the room between the staves must widen for the dynamic: "
+            + $"plain {plainInside:F6}, with f {dynInside:F6}");
+
+        // ...and the syllable has to travel with it, or it is drawn where the `f` is.
+        // MEASURED: room 10.402001 → 13.569303 and line 7.864960 → 11.032262, the same
+        // 3.167302 on both. Before the fix the room moved by it and the line by nothing.
+        Assert.True(dynLyrics[0] > plainLyrics[0] + 0.1,
+            "the line must clear the dynamic under its own staff: "
+            + $"plain {plainLyrics[0]:F6}, with f {dynLyrics[0]:F6}");
+    }
+
+    /// <summary>
+    /// Every staff of a grand staff carrying its own line gets its OWN baseline — the SATB
+    /// case, and the one the per-group rule collapsed to a single Y.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ASSERTION IS ON DISTINCTNESS, not on values: four rows drawn at one Y is the
+    /// defect, and it is invisible to any test that looks at one row. MEASURED before the
+    /// fix on the reported book: four rows, all at y=44.22.
+    /// </remarks>
+    [Fact]
+    public void EachGrandStaffVoiceWithLyrics_GetsItsOwnBaseline()
+    {
+        // ⚠️ NOT `s`/`a`/`b` FOR THE PART NAMES — they are reserved (a spacer rest and two
+        // pitches), and the harness does not throw on a source that fails to parse: the
+        // first draft of this test named them that, engraved nothing, and reported one
+        // baseline, which is indistinguishable from the defect it is meant to catch.
+        var (lyricYs, _) = LayoutOf(
+            "part sop { clef treble }\npart alt { clef treble }\n" +
+            "part ten { clef treble }\npart bas { clef bass }\n" +
+            "section A {\n  sop { c'4 d' e' f' }\n  alt { c'4 d' e' f' }\n" +
+            "  ten { c'4 d' e' f' }\n  bas { c4 d e f }\n" +
+            "  lyrics w1 { la le li lo }\n  lyrics w2 { la le li lo }\n" +
+            "  lyrics w3 { la le li lo }\n  lyrics w4 { la le li lo }\n}\n" +
+            "form main { A }\n" +
+            "score main {\n  grandStaff {\n    staff sop with lyrics w1\n    staff alt with lyrics w2\n" +
+            "    staff ten with lyrics w3\n    staff bas with lyrics w4\n  }\n}\n");
+
+        var baselines = lyricYs.Select(y => System.Math.Round(y, 6)).Distinct().ToList();
+        Assert.Equal(4, baselines.Count);
     }
 }
