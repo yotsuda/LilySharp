@@ -291,6 +291,14 @@ note/annotation 幾何を Y-up 化（`YUp` 命名）したが、この staff/sys
 - **[low・stale] OutsideStaffStacker:50-52** — 0.46 を `define-grobs.scm` 由来と注記するが同ファイルに大域0.46
   なし（値は LP 既定として正、場所が stale）。他 padding（DynLineSpanner0.6/Hairpin0.6666/DynText-0.6）は
   define-grobs 実在確認 → faithful。
+- **[計測上の罠・座標モデルの帰結] `ChordNameLayout.YUp` は system 基準**（上表 :273 の反射の出口）。
+  **和音行を持ち上げるインクは、その行を載せた譜の*上の部屋*も同じだけ広げる**ので、
+  **行は動いているのに `YUp` は動かない**。2026-08-04 に実際に踏んだ: 下譜の和音行が
+  slur / tuplet bracket を避けるようになったかを `YUp` で測って、**全部の本が −6.950000 と出た**
+  （`seed` が何を持っていても同じ数）。**正しい観測量は「自分の譜からの高さ」**＝
+  `YUp − StaffLayout.Y`（対照: 低い音 0.650000 / 高い音 8.645000）。
+  ⇒ ★★ **譜ごと動く量を system 基準で読むと、永遠に不動に見える。**
+  **`FiguredBassLayout.YUp` は最初から譜中央線基準**なので、同じ島でもこちらには罠が無い。
 - MeasureLayouter（X のみ・ss）／HaraKiri（座標なし）／CrossStaffEngraver（index 再マップのみ）は faithful。
 - 非線形の単位誤りなし。跨フレーム演算は線形の単一フォールド反射のみで一貫。
 ### 3.E Collision / Stem / Accidental / Articulation

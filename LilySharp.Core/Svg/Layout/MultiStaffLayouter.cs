@@ -1964,12 +1964,14 @@ internal sealed class MultiStaffLayouter
     /// side tables <see cref="BuildAllStaffSkylines"/> laid out for the alignment.
     /// </summary>
     /// <remarks>
-    /// LilyPond declares no <c>outside-staff-priority</c> for Slur, Tie, TupletBracket or
-    /// TupletNumber (scm/define-grobs.scm:3166, :3866, :4097, :4127 — each lists
-    /// <c>outside-staff-interface</c> and none sets the priority), so all of them are
-    /// INSIDE-staff ink: they are in <c>inside_staff_skylines</c> from the start
-    /// (lily/axis-group-interface.cc:914-935) and everything the collision pass then stacks
-    /// clears them (<c>add_grobs_of_one_priority</c>, :969-971).
+    /// None of Slur, Tie or TupletBracket declares an <c>outside-staff-priority</c>, so all
+    /// three are INSIDE-staff ink. ⚠️ THE ADDRESS FOR THAT IS NOT REPEATED HERE: each grob's
+    /// citation lives where its ink is seeded — <c>SkylineBuilder.AddSlursToSkyline</c>,
+    /// <c>AddTiesToSkyline</c> and <c>AddTupletBracketsToSkyline</c> — and a claim with two
+    /// addresses has one that rots (HANDOFF 7.6).
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-935 skyline_spacing seeds
+    /// inside_staff_skylines from the group's own elements before any priority is applied,
+    /// which is why an ink that declares no priority is in the profile from the start.
     /// <para>
     /// ⚠️ CARRIED OUT OF THE ROOM RATHER THAN RECOMPUTED, and that is the whole reason this
     /// type exists. A consumer that rebuilds its own profile needs these three, and asking
@@ -2353,6 +2355,63 @@ internal sealed class MultiStaffLayouter
     /// about it, which is how one of them could be wrong while the suite stayed green.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// One staff's staff-local <see cref="Score"/> and the slur and tie ITEMS detected from
+    /// it — computed once per staff rather than once per staff PER SYSTEM.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE DETECTION IS A WHOLE-SCORE WALK AND THE CALLER RUNS PER SYSTEM, which is the
+    /// same shape <see cref="RestCollisionsOf"/> exists for.
+    /// <c>SlurDetector.DetectSlurs</c> and <c>TieDetector.DetectTies</c> walk every item of
+    /// every voice (<c>VoiceScan.WalkVoiceItems</c>), while
+    /// <see cref="BuildAllStaffSkylines"/> asks once per (system, staff) — so a score of S
+    /// systems paid that walk S times for an answer that cannot differ. The SCORING below it
+    /// is per-system work and stays where it is; only the detection is hoisted.
+    /// <para>
+    /// ⚠️ SOUND FOR THE SAME REASON, TOO: both detectors read the score's VOICES and nothing
+    /// else about it — <c>WalkVoiceItems</c> and, for the slur's default direction,
+    /// <c>score.Voices.Length</c>. Every one of those is a function of this <see cref="Staff"/>,
+    /// so the answer is the same for every system and for any surrounding score. A weak table
+    /// because a <c>Staff</c> is replaced wholesale when the music is edited.
+    /// </para>
+    /// <para>
+    /// ⚠️⚠️ THIS MEMO DOES NOT PAY BACK THE COST OF <see cref="StaffLocalScore"/>, and it was
+    /// written believing it would. COUNTED on a four-staff, four-system score whose every
+    /// voice carries slurs, ties and tuplets: the detection ran 16 times per render before
+    /// (4 staves × 4 systems) and 4 after — and the allocation moved 125310 KB → 125232 KB,
+    /// i.e. 0.06%. The detection walk was never the expense. What costs is the per-system
+    /// SCORING of the second voice's bows, which is irreducible: <c>LayoutSlurs</c> already
+    /// scores only the slurs of the system it was handed, so each bow is scored exactly once
+    /// across the score, and a bow that is not laid out cannot be reserved. The 8.1% that
+    /// change costs on such a score buys the room its second voice; the only way to not pay
+    /// it is to go back to reserving nothing (HANDOFF 1).
+    /// ⇒ ★ KEPT ANYWAY, because 12 redundant whole-score walks per render is work nobody
+    /// needs whatever it measures — the same judgement <see cref="RestCollisionsOf"/> was
+    /// made on, and that one was worth 2× a whole-score scan.
+    /// </para>
+    /// </remarks>
+    private sealed class StaffSpannerItems
+    {
+        public required Score LocalScore { get; init; }
+        public required ImmutableArray<SlurItem> Slurs { get; init; }
+        public required ImmutableArray<TieItem> Ties { get; init; }
+    }
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Staff, StaffSpannerItems> _staffSpannerItems = new();
+
+    private StaffSpannerItems StaffSpannerItemsOf(MultiStaffScore score, Staff staff)
+        => _staffSpannerItems.GetValue(staff, s =>
+        {
+            var local = StaffLocalScore(score, s);
+            return new StaffSpannerItems
+            {
+                LocalScore = local,
+                Slurs = _elementCoordinator.DetectSlurs(local),
+                Ties = _elementCoordinator.DetectTies(local),
+            };
+        });
+
     private static Score StaffLocalScore(MultiStaffScore score, Staff staff)
         => staff.Voices.Length > 1
             ? new Score(
@@ -2398,9 +2457,10 @@ internal sealed class MultiStaffLayouter
             Measures: measureLayouts,
             StaffGroups: ImmutableArray.Create(group),
             Indent: 0);
-        var staffScore = StaffLocalScore(score, staff);
+        var items = StaffSpannerItemsOf(score, staff);
         return _elementCoordinator.LayoutSlurs(
-            staffScore, ImmutableArray.Create(system), staffIndex: 0, staff, score.GraceNotes);
+            items.Slurs, items.LocalScore, ImmutableArray.Create(system),
+            staffIndex: 0, staff, score.GraceNotes);
     }
 
     /// <summary>
@@ -2425,9 +2485,10 @@ internal sealed class MultiStaffLayouter
             Measures: measureLayouts,
             StaffGroups: ImmutableArray.Create(group),
             Indent: 0);
-        var staffScore = StaffLocalScore(score, staff);
+        var items = StaffSpannerItemsOf(score, staff);
         return _elementCoordinator.LayoutTies(
-            staffScore, ImmutableArray.Create(system), staffIndex: 0, staff);
+            items.Ties, items.LocalScore, ImmutableArray.Create(system),
+            staffIndex: 0, staff);
     }
 
     /// <summary>

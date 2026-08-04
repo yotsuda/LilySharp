@@ -1378,9 +1378,37 @@ internal sealed class ElementCoordinator
     /// Each piece's bound on the broken side is reattached to the system edge.
     /// </remarks>
     public ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null)
-    {
-        var ties = _tieDetector.DetectTies(score);
+        => LayoutTies(_tieDetector.DetectTies(score), score, systems, staffIndex, staff);
 
+    /// <summary>The detectors themselves, for a caller that must run them ONCE and lay out
+    /// per system — see the remark on the pre-detected overloads below. They live here
+    /// because this is where they live; a second <c>new SlurDetector()</c> elsewhere would
+    /// be a second home for one thing (HANDOFF 5.2.1).</summary>
+    internal ImmutableArray<SlurItem> DetectSlurs(Score score) => _slurDetector.DetectSlurs(score);
+
+    /// <inheritdoc cref="DetectSlurs"/>
+    internal ImmutableArray<TieItem> DetectTies(Score score) => _tieDetector.DetectTies(score);
+
+    /// <summary>
+    /// The same, on ties the caller has ALREADY detected.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ AN EXPLICIT PARAMETER RATHER THAN AN OPTIONAL ONE, deliberately: HANDOFF 7.7's
+    /// "same function, optional argument" layer is what let a whole island of profiles be
+    /// built with their side tables at default, and a defaulted <c>ties</c> here would be the
+    /// same trap one level down. A caller either detects, or hands in what it detected.
+    /// <para>
+    /// The detection is a walk of the WHOLE score
+    /// (<see cref="Collector.TieDetector.DetectTies"/> over <c>VoiceScan.WalkVoiceItems</c>)
+    /// while the layout it feeds is per SYSTEM, so a caller that runs once per system pays
+    /// that walk once per system for an answer that cannot change — see
+    /// <c>MultiStaffLayouter.StaffSpannerItemsOf</c>, which is the memo that fixes it.
+    /// </para>
+    /// </remarks>
+    internal ImmutableArray<TieLayout> LayoutTies(
+        ImmutableArray<TieItem> ties, Score score, ImmutableArray<SystemLayout> systems,
+        int staffIndex = -1, Model.Staff? staff = null)
+    {
         if (ties.Length == 0)
             return ImmutableArray<TieLayout>.Empty;
 
@@ -1909,9 +1937,18 @@ internal sealed class ElementCoordinator
     }
 
     public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default)
-    {
-        var slurs = _slurDetector.DetectSlurs(score);
+        => LayoutSlurs(_slurDetector.DetectSlurs(score), score, systems, staffIndex, staff,
+            graceNotes, beamLayouts);
 
+    /// <summary>The same, on slurs the caller has ALREADY detected — the slur twin of
+    /// <see cref="LayoutTies(ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>,
+    /// and for the same reason.</summary>
+    internal ImmutableArray<SlurLayout> LayoutSlurs(
+        ImmutableArray<SlurItem> slurs, Score score, ImmutableArray<SystemLayout> systems,
+        int staffIndex = -1, Model.Staff? staff = null,
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        ImmutableArray<BeamLayout> beamLayouts = default)
+    {
         if (slurs.Length == 0)
             return ImmutableArray<SlurLayout>.Empty;
 

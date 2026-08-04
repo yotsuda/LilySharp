@@ -29,13 +29,14 @@ namespace LilySharp.Tests;
 /// LilyPond calls inside-staff ink, exactly as the alignment's silhouette does.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/axis-group-interface.cc:860 <c>skyline_spacing</c> — it seeds
-/// <c>inside_staff_skylines</c> from the elements at :914-935, merges them into one pair at
-/// :937, and only then adds the outside-staff grobs by ascending priority
-/// (<c>add_grobs_of_one_priority</c>, :969-971). Slur, Tie, TupletBracket and TupletNumber
-/// carry <c>outside-staff-interface</c> but declare no
-/// <c>outside-staff-priority</c> at all (scm/define-grobs.scm), so LilyPond never places
-/// them: they are in that seed from the start and every mover clears them.
+/// LILYPOND-REF: lily/axis-group-interface.cc:860-935 skyline_spacing seeds inside_staff_skylines
+/// LILYPOND-REF: lily/axis-group-interface.cc:969-971 add_grobs_of_one_priority adds the
+/// outside-staff grobs afterwards, in ascending priority order.
+/// So a grob that declares no priority is in that seed from the start and every mover clears
+/// it. Slur, Tie and TupletBracket are exactly that: each lists
+/// <c>outside-staff-interface</c> and none sets an <c>outside-staff-priority</c> — the
+/// addresses are at their seeding sites in <c>SkylineBuilder</c>, not repeated here, because
+/// a claim with two addresses has one that rots (HANDOFF 7.6).
 /// <para>
 /// ⚠️ THE ROOM IS THE POSITIVE CONTROL, and these books need one. Two equal numbers have
 /// three possible causes and only one is the defect (HANDOFF 5.3): the grob's ink might not

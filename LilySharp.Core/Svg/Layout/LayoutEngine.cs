@@ -903,6 +903,22 @@ internal sealed class LayoutEngine
     /// is built, so the page pass has to reach the same lists without it. Both go through
     /// here rather than each spelling the bounds check — five call sites now depend on the
     /// empty case meaning "no such ink", and that is one decision, not five.
+    /// <para>
+    /// ⚠️ TWO ABSENT CASES, AND ONLY ONE OF THEM IS REAL. A null <paramref name="bySystem"/>
+    /// is the PRELIMINARY pass, which runs before the systems are placed and legitimately has
+    /// no room to quote — the same real absence that makes
+    /// <c>AnnotationLayoutContext.StaffSkylines</c> nullable. An OUT-OF-RANGE index is not:
+    /// the room appends one entry per staff per system, so an index the callers can form is
+    /// one this list has. MEASURED 2026-08-04, with the range branch replaced by a throw: the
+    /// whole suite (4028 tests, every fixture book) passes without reaching it once.
+    /// ⇒ ★ THE RANGE GUARD IS NOT LOAD-BEARING, and it is written down here because that is
+    /// the difference between a guard and HANDOFF 7.7's "fallback で握りつぶす": if this ever
+    /// returns empty for a range reason, that is a BUG in the indexing and not an absence —
+    /// it would silently reserve nothing and leave the suite green, which is exactly how the
+    /// defect this whole island closes survived. It is kept rather than thrown because the
+    /// consequence of a throw in a per-keystroke preview is worse than an overlap; the
+    /// measurement above is what stands in for the compiler.
+    /// </para>
     /// </remarks>
     private static MultiStaffLayouter.StaffInsideSpanners SpannersAt(
         IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? bySystem,
@@ -2672,10 +2688,10 @@ internal sealed class LayoutEngine
         /// <see cref="RestCollisionsOf"/> is here: a consumer that cannot read
         /// <see cref="StaffSkylines"/> — it needs the silhouette WITHOUT the movers it is
         /// about to place — still has to reserve everything LilyPond calls inside-staff ink,
-        /// and none of Slur, Tie, TupletBracket or TupletNumber declares an
-        /// <c>outside-staff-priority</c> (scm/define-grobs.scm:3166, :3866, :4097, :4127 —
-        /// all four list <c>outside-staff-interface</c> and none sets the priority, which is
-        /// the trap: the interface is not the priority). Until 2026-08-04 the
+        /// and none of Slur, Tie or TupletBracket declares an <c>outside-staff-priority</c>
+        /// — ⚠️ the trap being that all three DO list <c>outside-staff-interface</c>, which
+        /// is not the same thing. (Addresses at each grob's seeding site in
+        /// <c>SkylineBuilder</c>, not repeated here.) Until 2026-08-04 the
         /// outside-staff stacker's seed was built with these three at their defaults, so a
         /// below-staff dynamic was engraved straight through a slur's bow, a tie's bow and a
         /// lower voice's tuplet bracket. MEASURED on one book each, against the room as the
@@ -3008,10 +3024,10 @@ internal sealed class LayoutEngine
                                              .ToImmutableArray();
                     // ...and the SPANNERS, for the very reason the priority argument above
                     // gives: Slur, Tie and TupletBracket declare no outside-staff-priority at
-                    // all (scm/define-grobs.scm:3166, :3866, :4097), so they are not grobs the
-                    // figures are placed before — they are part of the inside-staff ink the
-                    // figures drop below. The room's own tables, not a second layout: see
-                    // AnnotationLayoutContext.StaffSpanners.
+                    // all (addresses at their seeding sites in SkylineBuilder), so they are
+                    // not grobs the figures are placed before — they are part of the
+                    // inside-staff ink the figures drop below. The room's own tables, not a
+                    // second layout: see AnnotationLayoutContext.StaffSpanners.
                     var fbSpanners = ctx.SpannersOf(sysIdx, staffIndex);
                     var down = _skylineBuilder.BuildStaffSkylines(
                         staff, systems[sysIdx].Measures,
@@ -3321,7 +3337,7 @@ internal sealed class LayoutEngine
                     {
                         // A bow or a bracket arching ABOVE this staff is ink the row has to
                         // clear exactly as it clears a high note — inside-staff ink, no
-                        // outside-staff-priority (scm/define-grobs.scm:3166, :3866, :4097).
+                        // outside-staff-priority (addresses in SkylineBuilder's seeding sites).
                         // ⚠️ THE SPANNERS AND NOT THE ROOM'S FINISHED UP-SKYLINE: that one has
                         // ReserveChordRowBand merged into it (MultiStaffLayouter), so reading
                         // it would make this row clear the band it reserved for ITSELF. The
