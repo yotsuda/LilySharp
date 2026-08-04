@@ -21,8 +21,8 @@ namespace LilySharp.Core.Svg.Model;
 /// than the voice it belongs to (cross-staff notation).
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/beam.cc:1451-1459 - Beam::is_cross_staff
-/// LILYPOND-REF: lily/stem.cc:1168-1179 - Stem::is_cross_staff
+/// LILYPOND-REF: lily/beam.cc:1496-1507 - Beam::is_cross_staff
+/// LILYPOND-REF: lily/stem.cc:1279-1283 - Stem::is_cross_staff
 ///
 /// In LilyPond, cross-staff is achieved with \change Staff = "name".
 /// In LilySharp, the @cross annotation on a note marks it for rendering

@@ -424,7 +424,7 @@ public class HaraKiriTests
     /// re-derived from the spacing specs by a second walk that hara-kiri gets its own copy of.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:112-136 generic_group_extent().
+    /// LILYPOND-REF: lily/axis-group-interface.cc:220-238 generic_group_extent().
     /// <para>
     /// ⚠️ THIS ASSERTS THE RULE, NOT TODAY'S NUMBER (HANDOFF 5.4). The perturbation is the
     /// inter-group SPEC: drive <c>default-staff-staff-spacing</c>'s basic-distance and the

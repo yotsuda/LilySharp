@@ -302,7 +302,11 @@ public sealed partial class MeasureCollector
     /// Returns 0 (none), 1 (right/accel), or -1 (left/rit).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam.cc:773 grow-direction property read (calc_stem_y);
+    /// LILYPOND-REF: lily/beam.cc:773 get_property (me, "grow-direction") — that read is
+    ///   Beam::print's, and it feathers the beam's own outline, not the stems.
+    /// LILYPOND-REF: lily/beam.cc:1112-1157 Beam::calc_stem_y — where the feather direction
+    ///   acts on stem length; the read that reaches it is the second one, at :1201 in
+    ///   set_stem_lengths, handed over at :1221.
     ///   Beam grow-direction property @ define-grobs.scm; feather doc @ beam.cc:1597
     /// Syntax: @feather.right (accelerando) or @feather.left (ritardando)
     /// </remarks>

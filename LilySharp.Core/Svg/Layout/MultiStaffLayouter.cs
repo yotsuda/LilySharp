@@ -1535,7 +1535,7 @@ internal sealed class MultiStaffLayouter
     /// The height of a system: the Y-extent of the staff groups AS PLACED.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:112-136 generic_group_extent() — a
+    /// LILYPOND-REF: lily/axis-group-interface.cc:220-238 generic_group_extent() — a
     /// system's height is the union of the extents of the elements the alignment placed,
     /// never a second sum over the spacing specs.
     /// <para>

@@ -488,7 +488,10 @@ public class PageBreakerTests
     [Fact]
     public void RaggedLastBottom_FixedForceSolution_NoPenaltyForUnderfull()
     {
-        // LILYPOND-REF: lily/page-layout-problem.cc:808-823 fixed_force_solution
+        // LILYPOND-REF: lily/page-layout-problem.cc:1056-1061 fixed_force_solution — it only
+        //   hands the force on.
+        // LILYPOND-REF: lily/page-layout-problem.cc:779-804 solve_rod_spring_problem — the
+        //   ragged-with-finite-force branch, whose intent is written out at :772-778.
         // For ragged pages, underfull pages should have no spacing penalty.
         // Systems are placed at natural positions; remaining space at bottom.
         var systems = new[]
