@@ -426,12 +426,20 @@ internal static class ItemSkylineFactory
         if (note.Accidental == null)
             return;
 
-        var placement = new AccidentalPlacement();
-        if (placement.CalculateSinglePosition(note) is not { } layout)
+        // A note that shares its column with another voice was packed into that column's
+        // single accidental column (StaffAccidentalColumns) — in this very frame, since
+        // noteheadLeftX is the column. Otherwise it is the only ape and solves alone.
+        double? offset = note.AccidentalX;
+        if (offset is null)
+        {
+            var placement = new AccidentalPlacement();
+            offset = placement.CalculateSinglePosition(note)?.XOffset;
+        }
+        if (offset is not { } layoutX)
             return;
 
-        var accBBox = GlyphMetrics.GetAccidentalBBox(layout.Accidental);
-        double accX = noteheadLeftX + layout.XOffset;
+        var accBBox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
+        double accX = noteheadLeftX + layoutX;
         double noteY = staffY - note.StaffPosition / 2.0;
 
         parts.Add(Accidental(noteY - accBBox.Top, noteY - accBBox.Bottom,
@@ -443,16 +451,37 @@ internal static class ItemSkylineFactory
                                        double noteheadLeftX, double staffY,
                                        double[] headOffsets, int noteValue)
     {
-        var placement = new AccidentalPlacement();
-        foreach (var layout in placement.CalculatePositions(chord.Notes, headOffsets))
+        foreach (var (accidental, position, offset) in ChordAccidentalXs(chord, headOffsets))
         {
-            var accBBox = GlyphMetrics.GetAccidentalBBox(layout.Accidental);
-            // XOffset is negative (left of notehead), relative to notehead left edge
-            double accX = noteheadLeftX + layout.XOffset;
-            double noteY = staffY - layout.StaffPosition / 2.0;
+            var accBBox = GlyphMetrics.GetAccidentalBBox(accidental);
+            // The offset is negative (left of notehead), relative to notehead left edge
+            double accX = noteheadLeftX + offset;
+            double noteY = staffY - position / 2.0;
             parts.Add(Accidental(noteY - accBBox.Top, noteY - accBBox.Bottom,
                                  accX, accX + accBBox.Width));
         }
+    }
+
+    /// <summary>
+    /// Each of a chord's accidentals as (glyph, staff position, ink-left X from the column):
+    /// the packing the whole staff column got when another voice stands on it
+    /// (<see cref="Collector.StaffAccidentalColumns"/>), else this chord's own
+    /// <c>position_apes</c> solve, which is the same thing when it stands alone.
+    /// </summary>
+    private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
+        ChordItem chord, double[] headOffsets)
+    {
+        if (chord.Notes.Any(n => n.AccidentalX.HasValue))
+        {
+            foreach (var n in chord.Notes)
+                if (n.Accidental is { } acc && n.AccidentalX is { } x)
+                    yield return (acc, n.StaffPosition, x);
+            yield break;
+        }
+
+        var placement = new AccidentalPlacement();
+        foreach (var layout in placement.CalculatePositions(chord.Notes, headOffsets))
+            yield return (layout.Accidental, layout.StaffPosition, layout.XOffset);
     }
 
     /// <summary>An accidental's part: conditional, and 0.2 of extra width on the left.</summary>

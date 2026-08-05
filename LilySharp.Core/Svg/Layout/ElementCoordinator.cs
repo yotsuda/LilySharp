@@ -734,11 +734,16 @@ internal sealed class ElementCoordinator
             switch (measure.Items[i])
             {
                 case NoteItem note when note.Accidental != null:
-                    if (BeamAccidentalColumn.CalculateSinglePosition(
-                            note, CueAccidentalFont(note.IsCue),
-                            CueAccidentalFont(note.IsCue)) is { } single)
+                    // A note sharing its column with another voice was packed into that
+                    // column's one accidental column, in this same (column) frame.
+                    AccidentalLayout? single = note.AccidentalX is { } packedX
+                        ? new AccidentalLayout(
+                            note.StaffPosition, note.Accidental, packedX, note.IsCourtesy)
+                        : BeamAccidentalColumn.CalculateSinglePosition(
+                            note, CueAccidentalFont(note.IsCue), CueAccidentalFont(note.IsCue));
+                    if (single is { } singleLayout)
                         AddAccidentalCollision(
-                            collisions, single, itemX, note.IsCue ? CueAccidentalScale : 1.0,
+                            collisions, singleLayout, itemX, note.IsCue ? CueAccidentalScale : 1.0,
                             beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                     break;
 
@@ -746,15 +751,35 @@ internal sealed class ElementCoordinator
                     // The stagger the renderer uses: reversed heads move their accidentals,
                     // so the column must be solved, not assumed.
                     // LILYPOND-REF: lily/accidental-placement.cc position_apes.
-                    var offsets = ChordHeadPositioning.CalculateOffsets(
-                        chord.Notes, chord.StemUp,
-                        LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration));
-                    foreach (var al in BeamAccidentalColumn.CalculatePositions(chord.Notes, offsets))
+                    foreach (var al in ChordAccidentalLayouts(chord))
                         AddAccidentalCollision(collisions, al, itemX, 1.0,
                                                beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// A chord's accidentals, as the placement resolved them: the whole staff column's packing
+    /// when another voice stands on the column (<see cref="Collector.StaffAccidentalColumns"/>
+    /// baked it onto the members), else this chord's own <c>position_apes</c> solve — the same
+    /// answer when the chord stands alone. Both are measured from the column.
+    /// </summary>
+    private static IEnumerable<AccidentalLayout> ChordAccidentalLayouts(ChordItem chord)
+    {
+        if (chord.Notes.Any(n => n.AccidentalX.HasValue))
+        {
+            foreach (var n in chord.Notes)
+                if (n.Accidental is { } acc && n.AccidentalX is { } x)
+                    yield return new AccidentalLayout(n.StaffPosition, acc, x, n.IsCourtesy);
+            yield break;
+        }
+
+        var offsets = ChordHeadPositioning.CalculateOffsets(
+            chord.Notes, chord.StemUp,
+            LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration));
+        foreach (var al in BeamAccidentalColumn.CalculatePositions(chord.Notes, offsets))
+            yield return al;
     }
 
     /// <summary>LilyPond's CueVoice fontSize = -4 shrinks the accidental grob with the head, so
@@ -1342,9 +1367,17 @@ internal sealed class ElementCoordinator
         if (!isLeftBound)
         {
             var placement = new AccidentalPlacement();
-            var laid = item is ChordItem ch
-                ? placement.CalculatePositions(ch.Notes, offsets.ToArray())
-                : placement.CalculateSinglePosition((NoteItem)item) is { } one ? [one] : [];
+            IEnumerable<AccidentalLayout> laid = item switch
+            {
+                ChordItem ch when ch.Notes.Any(n => n.AccidentalX.HasValue)
+                    => ChordAccidentalLayouts(ch),
+                ChordItem ch => placement.CalculatePositions(ch.Notes, offsets.ToArray()),
+                // Packed with the rest of its staff column, in the column's frame — which is
+                // the frame columnX names below (Collector.StaffAccidentalColumns).
+                NoteItem pn when pn is { Accidental: { } acc, AccidentalX: { } px }
+                    => [new AccidentalLayout(pn.StaffPosition, acc, px, pn.IsCourtesy)],
+                _ => placement.CalculateSinglePosition((NoteItem)item) is { } one ? [one] : [],
+            };
             foreach (var layout in laid)
             {
                 var accBBox = GlyphMetrics.GetAccidentalBBox(layout.Accidental);

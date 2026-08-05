@@ -1841,8 +1841,21 @@ public sealed partial class MeasureCollector
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord
         // names / percent repeats, which the old construction here silently dropped.
         return ScoreAssembler.BuildScore(
-            ResolveVoiceStemDirections(voices.ToImmutableArray()), CaptureScoreContent());
+            ResolveStaffColumns(voices.ToImmutableArray()), CaptureScoreContent());
     }
+
+    /// <summary>
+    /// The two cross-voice facts a staff resolves before spacing sees it: the forced stem
+    /// directions, and — because they depend on those and on the collision they produce —
+    /// the packing of each column's accidentals into ONE accidental column.
+    /// </summary>
+    /// <remarks>
+    /// Order matters: <see cref="StaffAccidentalColumns"/> asks
+    /// <see cref="Layout.NoteCollision"/> which head sits where, and that answer is read off
+    /// the stem directions this bakes first.
+    /// </remarks>
+    private static ImmutableArray<Voice> ResolveStaffColumns(ImmutableArray<Voice> voices)
+        => StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(voices));
 
     /// <summary>
     /// Builds the measure tracks for voices 1..N-1 of a <c>&lt;&lt; \\ &gt;&gt;</c> mixed stream
@@ -1934,7 +1947,7 @@ public sealed partial class MeasureCollector
             TieTargetScanner.Scan(v, _tieTargetWarnings);
             SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
         }
-        return ResolveVoiceStemDirections(voices.ToImmutable());
+        return ResolveStaffColumns(voices.ToImmutable());
     }
 
     /// <summary>An empty placeholder measure (no items) that mirrors the

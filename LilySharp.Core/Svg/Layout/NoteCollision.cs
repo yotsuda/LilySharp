@@ -88,9 +88,10 @@ internal sealed record NoteCollisionInfo
     /// for notes on staff lines.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:411-448
-    /// In collision contexts, down-stem dots shift below the line to avoid
-    /// colliding with up-stem voice notes/dots.
+    /// ⚠️ A DIVERGENCE from LilyPond's rule, not a port of it — see the long note at the
+    /// assignment in <see cref="NoteCollision.AnalyzeCollision"/>, which also records that the
+    /// <c>:411-448</c> this family used to cite is the wrong range.
+    /// LILYPOND-REF: lily/note-collision.cc:375-398 — the rule it approximates.
     /// </remarks>
     public bool DownDotForceDown { get; }
 
@@ -125,11 +126,21 @@ internal sealed record NoteCollisionInfo
 ///   full_collide = 0.5, distant_half = 0.4
 /// IMPLEMENTED — meshing multipliers:
 ///   meshing_dotted = 0.1, meshing_general = 0.17
-/// IMPLEMENTED — head wipe (note-collision.cc:254-312: merge hides the overlapping notehead)
-/// IMPLEMENTED — width-based shift normalization (note-collision.cc:505-605 automatic_shift)
-/// IMPLEMENTED — half+eighth merge formula (note-collision.cc:91-176 check_meshing_chords)
+/// IMPLEMENTED — head wipe (note-collision.cc:254-318: merge hides the overlapping notehead)
+/// IMPLEMENTED — width-based shift normalization (note-collision.cc:427-437 and :447 in
+///   calc_positioning_done — NOT automatic_shift, which this line used to name)
+/// NOT YET IMPLEMENTED — the half+eighth merge shift (note-collision.cc:305-307: a merge whose
+///   DOWN head is a half and UP head an eighth or shorter keeps a nonzero
+///   <c>(1 - extent_up[RIGHT]/extent_down[RIGHT]) * 0.5</c>). ComputeMergeInfo returns 0 for
+///   every merge. ⚠️ THIS LINE SAID "IMPLEMENTED", and cited :91-176, which is the collision
+///   detection and holds no such formula — two errors in one claim. Unreachable at default
+///   parameters (it needs merge-differently-headed), which is why nothing caught it.
 /// NOT YET IMPLEMENTED — FA-shaped notehead handling (note-collision.cc:237-252 fa_styles)
-/// IMPLEMENTED — dot direction adjustment (note-collision.cc:263-337 dot_wipe_head)
+/// DIVERGENCE — dot direction. LilyPond's rule is :375-398 (fires on a POSITIVE shift, sets
+///   UP / CENTER / the up chord's direction); Lily# forces DOWN off the staff line alone. The
+///   neighbouring :350-373 (dots on the left take Side_position support against the heads on
+///   the right) is unported. ⚠️ This line said "IMPLEMENTED … :263-337 dot_wipe_head";
+///   dot_wipe_head is a local variable in the MERGE branch, not this mechanism.
 /// IMPLEMENTED — force-hshift manual override (note-collision.cc:608-624 forced_shift)
 /// IMPLEMENTED — within-chord seconds displacement (stem.cc:606-760) in ChordHeadPositioning
 /// IMPLEMENTED — multi-voice cascading for 3+ voices (note-collision.cc:505-605 automatic_shift)
@@ -254,12 +265,13 @@ internal sealed class NoteCollision
 
         int threshold = _params.CollisionThreshold;
 
-        // Too far apart to collide
+        // LILYPOND-REF: note-collision.cc:64-66 — too far apart to collide.
         // ups[0] is lowest up-stem note, downs.Last() is highest down-stem note
         if (ups[0] > downs.Last() + threshold)
             return NoteCollisionInfo.NoCollision;
 
-        // Check for touch condition (extreme noteheads just meet)
+        // LILYPOND-REF: note-collision.cc:68-75 — the extreme noteheads just meet, so the
+        // two stems can share one vertical line.
         bool touch = CheckTouch(ups, downs, threshold);
 
         // Check for merge possibility
@@ -268,79 +280,167 @@ internal sealed class NoteCollision
         // Detect collision types
         var (closeHalf, distantHalf, fullCollide) = DetectCollisionTypes(ups, downs, threshold, ref mergePossible);
 
-        // Full collide includes combined cases (Lilypond line 174-176)
+        // LILYPOND-REF: note-collision.cc:191-193
         fullCollide = fullCollide || (closeHalf && distantHalf) ||
                      (distantHalf && (upNoteValue <= 0 || downNoteValue <= 0));
 
-        // Determine shift direction (Lilypond line 178-208)
-        // Default: up-stem shifts right
-        bool shiftUpRight = true;
-
-        if ((fullCollide || ((closeHalf || distantHalf) && _params.PreferDottedRight))
-            && upDots < downDots)
-        {
-            // Dotted down-stem: down-stem shifts right instead
-            shiftUpRight = false;
-        }
-
-        // Calculate offsets
-        if (mergePossible && fullCollide && !closeHalf && !distantHalf)
-            return ComputeMergeInfo(upNoteValue, downNoteValue);
-
-        // LILYPOND-REF: lily/note-collision.cc:411-448
-        // Detect whether down-stem dots should shift down instead of up.
-        // When two voices collide, down-stem dots on staff lines must shift
-        // below the line to avoid colliding with up-stem notes/dots.
+        // Whether the down-stem voice's dots take a forced direction instead of the default.
+        //
+        // ⚠️⚠️ DIVERGENCE, NOT A PORT, AND THE CITATION USED TO SAY OTHERWISE. This carried
+        // "LILYPOND-REF: lily/note-collision.cc:411-448" — a range that exists (which is why
+        // audit/citation_drift.csv passes it) but holds get_clash_groups, the extent trigger
+        // and the `wid` lookup inside calc_positioning_done. Nothing about dots.
+        // LilyPond's dot direction rule is :375-398, and reading it shows a DIFFERENT rule:
+        //   - it fires only when `shift_amount > 1e-6`, i.e. when the UP group moved right;
+        //   - the direction it sets is UP by default, CENTER when both heads' dots share one
+        //     DotColumn, and otherwise whatever the UP chord's dot already reads;
+        //   - it sets that on every head of the down stem.
+        // Lily# instead forces DOWN whenever any down-stem note sits on a staff line, with no
+        // reading of the shift's sign at all. Both the trigger and the outcome differ.
+        // ⚠️ The sign now matters more than it did: since the touch branch was restored above,
+        // a second and a unison produce a NEGATIVE shift, which is precisely where LilyPond's
+        // rule does not fire. Ticketed in HANDOFF §2 A; not changed here, because it moves
+        // test/dot-force-down and wants its own measurement against LilyPond first.
+        // LILYPOND-REF: lily/note-collision.cc:375-398 — the rule this approximates.
+        // LILYPOND-REF: lily/note-collision.cc:350-373 — the neighbouring half (dots on the
+        //   left take Side_position support against the heads on the right), also unported.
         bool downDotForceDown = false;
         if (downDots > 0)
         {
             downDotForceDown = downs.Any(pos => pos % 2 == 0);
         }
 
-        if (touch && !fullCollide && !closeHalf && !distantHalf)
+        // ⚠️ THE ORDER BELOW IS LILYPOND'S AND IT IS THE WHOLE POINT. `touch` is decided
+        // above and consumed at :212 and :323 — BEFORE close_half_collide (:325) and
+        // full_collide (:327) — so a SECOND and a UNISON both take the touch branch, and the
+        // one that moves right is the DOWN-stem voice. Lily# used to gate the touch branch on
+        // "no full/close/distant collide", which made it unreachable for exactly those two
+        // shapes (a second is always touch AND close_half; anything further apart returns at
+        // :64-66) and sent them to the 0.52 close_half branch with the UP voice moving right.
+        // MEASURED (audit/lp-geometry/probes/cross-voice-accidental.ly, LilyPond 2.26.0):
+        //   XVE  << a' \\ g' >>            up head 8.489735 · DOWN head 9.793935  (+1.304200)
+        //   XVF  << g'2 \\ g'4 >>          up head 8.489735 · DOWN head 9.867135  (+1.377400)
+        //   XVG  << g'2 \\ g'4. >>         identical to XVF — :202-211 fires but its
+        //                                  `if (!touch) stem_to_stem = true` does NOT
+        //   XVH  << <e' g'>2 \\ g'4. >>    up heads 8.489735 · DOWN head 10.280355 (+1.790620)
+        //                                  = 2 × 0.65 × 1.3774, the stem_to_stem branch, which
+        //                                  is reachable only because these do NOT touch
+        // Each of the four is the branch that produces it, so the order is pinned by
+        // measurement and not by a reading of the C++.
+
+        // LILYPOND-REF: note-collision.cc:200-201 — the sign carries the direction: a
+        // POSITIVE shift moves the up-stem group right, a negative one the down-stem group.
+        double shiftAmount = 1;
+        bool stemToStem = false;
+
+        if ((fullCollide || ((closeHalf || distantHalf) && _params.PreferDottedRight))
+            && upDots < downDots)
         {
-            // LILYPOND-REF: lily/note-collision.cc:212-227 — for a pure touch LP shifts the
-            // DOWN-stem right (shift_amount = -1). The one exception (touch = false, up-stem
-            // right) is an up-stem note OFF a staff line carrying MORE dots than the down-stem
-            // under prefer-dotted-right. Symmetric offsets; calc_positioning_done pins the
-            // leftmost group, so the 2-voice separation is 2*inner. (:323-324 multiplier 0.5.)
+            // LILYPOND-REF: note-collision.cc:202-211 — right-hand heads hide dots, so the
+            // MORE dotted (here down-stem) group goes right. The stems only need the extra
+            // stem_to_stem clearance when they are not already sharing one line.
+            shiftAmount = -1;
+            if (!touch)
+                stemToStem = true;
+        }
+        else if (touch)
+        {
+            // LILYPOND-REF: note-collision.cc:212-227 — the down-stem group goes right so the
+            // stems line up, UNLESS the up-stem group is the more dotted one and its dot is
+            // not already raised off a staff line, in which case the touch is abandoned and
+            // the ordinary collide multipliers below decide.
             bool upOnLine = ups[0] % 2 == 0;
-            bool touchUpRight = !upOnLine && _params.PreferDottedRight && upDots > downDots;
-            double inner = _params.TouchShift;
-            double upOffset = touchUpRight ? inner : -inner;
-            double downOffset = touchUpRight ? -inner : inner;
-            return new NoteCollisionInfo(CollisionType.Touch, upOffset, downOffset,
-                downDotForceDown: downDotForceDown);
+            if ((fullCollide || (!upOnLine && _params.PreferDottedRight)) && upDots > downDots)
+                touch = false;
+            else
+                shiftAmount = -1;
         }
 
-        if (fullCollide || closeHalf || distantHalf)
-            return ComputeShiftInfo(
-                upNoteValue, downNoteValue,
-                fullCollide, closeHalf, distantHalf, shiftUpRight, downDotForceDown);
-
-        // LILYPOND-REF: lily/note-collision.cc:332-337 — the "we're meshing" fallback.
-        // Reached only for a voice CROSSING: the up-stem note sits more than a
-        // threshold BELOW the down-stem note, so none of merge/touch/full/close/
-        // distant fired, yet the notes are not too far apart — the up-stem's stem
-        // would pierce the down-stem head. LP applies a small meshing shift
-        // (0.1 with dots, else 0.17). The consumer (CalculateVoiceOffsets) pins
-        // the UP-stem voice for CollisionType.Meshing and shifts the DOWN-stem
-        // voice LEFT, giving geometry identical to LP's (which shifts the upper
-        // voice right) while leaving a beamed upper voice at its column X so its
-        // beam — drawn at column X, not per-note — stays intact.
+        // LILYPOND-REF: note-collision.cc:254-318 — a merge replaces the shift entirely and
+        // wipes one of the two heads.
         //
-        // Extent scaling (note-collision.cc:343-348): for a positive (up-shifts-
-        // right) shift the factor is (extent_down[RIGHT] - extent_up[LEFT]) /
-        // extent_down.length(). Every Lily# notehead has its left extent at 0, so
-        // this factor is exactly 1.0 here; the base width is applied by the
-        // consumer (× notehead width).
-        bool meshHasDots = upDots > 0 || downDots > 0;
-        double meshShift = meshHasDots
-            ? _params.MeshingDottedShift
-            : _params.MeshingGeneralShift;
-        double meshUpOffset = shiftUpRight ? meshShift : -meshShift;
-        double meshDownOffset = shiftUpRight ? -meshShift : meshShift;
-        return new NoteCollisionInfo(CollisionType.Meshing, meshUpOffset, meshDownOffset,
+        // This used to read `mergePossible && fullCollide && !closeHalf && !distantHalf`. The
+        // extra conjuncts are not LilyPond's, and they are also redundant, which is why
+        // dropping them changed nothing. Proof, since "probably unreachable" is not a reason
+        // to remove a guard:
+        //   mergePossible requires ups[0] >= downs[0] and ups.back() >= downs.back();
+        //   reaching here requires ups[0] <= downs.back() + threshold (else :64-66 returned).
+        //   • ups[0] < downs[0] — mergePossible is false by definition.
+        //   • downs[0] <= ups[0] < downs.back() — DetectCollisionTypes' interleave test
+        //     (`up > downs[0] && up < downs.back()`) clears mergePossible.
+        //   • ups[0] == downs.back() (or == downs[0]) — an EQUAL pair, so fullCollide.
+        //   • ups[0] == downs.back() + 1 — |diff| == threshold, so closeHalf, which clears
+        //     mergePossible in the same step.
+        // So mergePossible surviving implies fullCollide and no half-collide: the conjuncts
+        // could never have excluded anything.
+        if (mergePossible)
+            return ComputeMergeInfo(upNoteValue, downNoteValue);
+
+        // LILYPOND-REF: note-collision.cc:319-337 — "these numbers are magic", in this order.
+        CollisionType type;
+        if (stemToStem)
+        {
+            shiftAmount *= _params.StemToStemShift;
+            type = CollisionType.Full;
+        }
+        else if (touch)
+        {
+            shiftAmount *= _params.TouchShift;
+            type = CollisionType.Touch;
+        }
+        else if (closeHalf)
+        {
+            shiftAmount *= _params.CloseHalfShift;
+            type = CollisionType.CloseHalf;
+        }
+        else if (fullCollide)
+        {
+            shiftAmount *= _params.FullCollideShift;
+            type = CollisionType.Full;
+        }
+        else if (distantHalf)
+        {
+            shiftAmount *= _params.DistantHalfShift;
+            type = CollisionType.CloseHalf;
+        }
+        else
+        {
+            // The "we're meshing" fallback, reached only for a voice CROSSING: the up-stem
+            // note sits more than a threshold BELOW the down-stem note, so none of
+            // merge/touch/full/close/distant fired, yet the notes are not too far apart —
+            // the up-stem's stem would pierce the down-stem head.
+            shiftAmount *= upDots > 0 || downDots > 0
+                ? _params.MeshingDottedShift
+                : _params.MeshingGeneralShift;
+            type = CollisionType.Meshing;
+        }
+
+        // LILYPOND-REF: note-collision.cc:339-348 — the displacement to clear a collision
+        // depends on the widths of the heads on the interfering sides, and calc_positioning_done
+        // then multiplies by the DOWN-stem head's width:
+        //   down-stem right (negative): (extent_up[RIGHT]   - extent_down[LEFT]) / extent_down.length()
+        //   up-stem right   (positive): (extent_down[RIGHT] - extent_up[LEFT])   / extent_down.length()
+        // Every Lily# head anchors at its own left edge, so extent_up = [0, upW] and
+        // extent_down = [0, downW]: the factor is upW/downW going left and exactly 1.0 going
+        // right. XVF is that first case — 2 × 0.5 × (1.3774/1.3042) × 1.3042 = 1.377400.
+        // Written as LilyPond writes it, with the LEFT edges kept in the expression even
+        // though every Lily# head anchors at 0: collapsing the up-shift arm to a bare 1.0
+        // hides which extents the formula reads, and the next head style to arrive with a
+        // non-zero left bearing would then be wrong silently.
+        double upLeft = 0.0, downLeft = 0.0;
+        double upRight = HeadWidth(upNoteValue);
+        double downRight = HeadWidth(downNoteValue);
+        double downLength = downRight - downLeft;
+        if (downLength > 1e-6)
+            shiftAmount *= shiftAmount < 0
+                ? (upRight - downLeft) / downLength      // down-stem shifts right
+                : (downRight - upLeft) / downLength;     // up-stem shifts right
+
+        // LILYPOND-REF: note-collision.cc:539-579 automatic_shift — offsets[d] = d * offset,
+        // i.e. the up group takes the amount and the down group its negation;
+        // calc_positioning_done (:440-468) then pins the leftmost group with
+        // `amount - left_most`, so the two groups end up 2 × |shiftAmount| apart.
+        return new NoteCollisionInfo(type, shiftAmount, -shiftAmount,
             downDotForceDown: downDotForceDown);
     }
 
@@ -375,87 +475,31 @@ internal sealed class NoteCollision
     }
 
     /// <summary>
-    /// Full / close-half / distant-half collision: selects the shift amount and
-    /// type (meshing when heads can interlock, else the standard half/full shift),
-    /// then applies the symmetric +inner-up / -inner-down offsets.
+    /// The notehead's X EXTENT in staff spaces for a note value — the quantity LilyPond
+    /// measures a collision with.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:180-230 check_meshing_chords();
-    ///   :297-312, :326 close_half_collide; automatic_shift + calc_positioning_done —
-    ///   symmetric shift pinned by the consumer, so the 2-voice separation is 2*inner.
+    /// LILYPOND-REF: lily/note-collision.cc:55-56 —
+    /// <c>extent_up = sh_up-&gt;extent (sh_up, X_AXIS)</c>, a grob EXTENT; :339-348 scales the
+    /// shift by those two, and :435 takes the down head's <c>extent(…).length()</c> as the
+    /// unit the offsets are multiplied by.
+    /// <para>
+    /// ⚠️ AN EXTENT IS THE INK, NOT THE ADVANCE. This read
+    /// <see cref="EngravingDefaults.NoteheadBlackWidth"/> and its neighbours, which that file
+    /// says in as many words are "Emmentaler ADVANCE widths" — the same mix-up session 95
+    /// pulled out of seven other sites, and the reason a plain second came out 1.304000 apart
+    /// against LilyPond's 1.304200. It ALSO had no arm for the HALF head, so an open head
+    /// (1.377400) was measured with the black one's number and the unison of book XVF came
+    /// out 0.073400 short. Both are visible in the same measurement.
+    /// </para>
+    /// ⚠️ The breve keeps <see cref="EngravingDefaults.NoteheadDoubleWholeWidth"/>: it is the
+    /// one width on that list with no font behind it (the extractor emits no brevis notehead),
+    /// so there is no ink box to prefer — see the remark on that constant.
     /// </remarks>
-    private NoteCollisionInfo ComputeShiftInfo(
-        int upNoteValue, int downNoteValue,
-        bool fullCollide, bool closeHalf, bool distantHalf,
-        bool shiftUpRight, bool downDotForceDown)
-    {
-        // Select shift amount based on collision type (Lilypond line 297-302)
-        double shiftAmount;
-        CollisionType type;
-
-        if (fullCollide)
-        {
-            shiftAmount = _params.FullCollideShift;
-            type = CollisionType.Full;
-        }
-        else if (closeHalf || distantHalf)
-        {
-            // A half-collide is always the half shift — LilyPond's meshing shift (0.17) is NOT an
-            // option here: it is only the fallback when NONE of touch / full / close / distant
-            // fired (a voice crossing), handled separately below. Applying it in the close-half
-            // branch (formerly gated on "different head groups") shrank the offset so a half note
-            // and an eighth a second apart in two voices overlapped instead of sitting side by side.
-            // LILYPOND-REF: lily/note-collision.cc:325-330 — close_half → 0.52, distant_half → 0.4,
-            // both unconditional; meshing (0.17) is the else-branch that these preclude.
-            shiftAmount = closeHalf ? _params.CloseHalfShift : _params.DistantHalfShift;
-            type = CollisionType.CloseHalf;
-        }
-        else
-        {
-            shiftAmount = _params.DistantHalfShift;
-            type = CollisionType.CloseHalf;
-        }
-
-        // LILYPOND-REF: lily/note-collision.cc:321-322 — when a dotted down-stem is forced
-        // to the right (here shiftUpRight==false ⟺ LP's stem_to_stem: Branch A fired and it
-        // is not a touch), the 0.65 stem-to-stem clearance replaces the per-collision value.
-        if (!shiftUpRight)
-            shiftAmount = _params.StemToStemShift;
-
-        // LILYPOND-REF: lily/note-collision.cc:339-348 — LP scales the shift by the signed
-        // head-extent ratio, because the displacement to clear a collision depends on the
-        // widths of the heads on the interfering sides:
-        //   up-stem shifts right:   (extent_down[RIGHT] - extent_up[LEFT]) / extent_down.length()
-        //   down-stem shifts right: (extent_up[RIGHT]   - extent_down[LEFT]) / extent_down.length()
-        // Our heads anchor at their own left edge, so extent_up = [0, upW], extent_down =
-        // [0, downW]. The ratio is therefore 1.0 when the up-head shifts right and upW/downW
-        // when the down-head shifts right. Together with the down-note-width scaling in
-        // CalculateVoiceOffsets this reproduces LP's "displacement = shift × cleared-head width".
-        double upW = HeadWidth(upNoteValue);
-        double downW = HeadWidth(downNoteValue);
-        double extentFactor = shiftUpRight ? 1.0 : (downW > 1e-6 ? upW / downW : 1.0);
-        shiftAmount *= extentFactor;
-
-        // Symmetric shift (+inner up / -inner down); the consumer pins the
-        // leftmost group, so the 2-voice separation is 2*inner.
-        double upOffset = shiftUpRight ? shiftAmount : -shiftAmount;
-        double downOffset = shiftUpRight ? -shiftAmount : shiftAmount;
-
-        return new NoteCollisionInfo(type, upOffset, downOffset,
-            downDotForceDown: downDotForceDown);
-    }
-
-    /// <summary>
-    /// Notehead X-width in staff-spaces for a note value (whole/breve are wider
-    /// than half/quarter). Mirrors LilyPond's per-duration notehead extents.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/note-collision.cc:339-340 — the shift is scaled by
-    /// the down-stem note's width; the extent ratio above supplies the up/down difference.</remarks>
     private static double HeadWidth(int noteValue) => noteValue switch
     {
         <= 0 => EngravingDefaults.NoteheadDoubleWholeWidth, // breve or longer
-        1 => EngravingDefaults.NoteheadWholeWidth,          // whole note
-        _ => EngravingDefaults.NoteheadBlackWidth           // half, quarter, ...
+        _ => GlyphMetrics.GetNoteheadBBox(noteValue).Width, // whole / half / black ink
     };
 
     private bool CheckTouch(List<int> ups, List<int> downs, int threshold)

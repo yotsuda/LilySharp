@@ -55,7 +55,11 @@ public class DotConfigurationTests
     // With dir = -1 (a multi-voice DOWN voice) an on-line dot is forced into
     // the space BELOW the line instead of the default above: badness prefers
     // the hinted direction (down 2·1²+1=3 vs up 2·1²+2=4).
-    // LILYPOND-REF: lily/note-collision.cc:411-448 forces Dots.direction=DOWN.
+    // ⚠️ WHO sets Dots.direction = DOWN is Lily#'s own rule, not LilyPond's (:375-398 sets UP
+    // / CENTER / the up chord's, and only on a positive shift) — see
+    // NoteCollision.AnalyzeCollision. What this Theory pins is the CONSUMER: given the hint,
+    // Dot_configuration's badness resolves it this way, and that part IS LilyPond's.
+    // LILYPOND-REF: lily/dot-configuration.cc — the badness this measures.
     [InlineData(new[] { 0 }, new[] { -1 }, new[] { -1 })]
     [InlineData(new[] { -2 }, new[] { -1 }, new[] { -3 })]
     // A dot already in a SPACE is unaffected by the direction hint.

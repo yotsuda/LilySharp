@@ -287,8 +287,11 @@ internal sealed record ScoreLayout(
     /// Checks if dots should be forced downward for this voice item.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:411-448
     /// In multi-voice collision, down-stem dots on staff lines shift below the line.
+    /// ⚠️ That is Lily#'s rule and NOT LilyPond's — see NoteCollision.AnalyzeCollision, which
+    /// records both the divergence and the fact that this family used to cite <c>:411-448</c>,
+    /// a range holding no dot code at all.
+    /// LILYPOND-REF: lily/note-collision.cc:375-398 — the rule it approximates.
     /// </remarks>
     public bool IsDotForcedDown(int measureIndex, int voiceId, int itemIndex)
     {

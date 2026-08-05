@@ -124,6 +124,48 @@
       "residual": 0.0,
       "why": "CLOSED (island 2) -- the IDENTICAL 0.964561 its mirror now reads. Vertical reflection of chord.accidental.flat-column-gap-below (des''/fes'' above the middle line, stems down); direction-independence held through the port. Full account on chord.accidental.flat-column-gap-below."
     },
+    "crossvoice.accidental.shifted-voice-to-head": {
+      "probe": "cross-voice-accidental.ly",
+      "score": "XCA",
+      "lilypond": 1.150000,
+      "residual": 0.0,
+      "why": "EXACT from the first run. The accidental belongs to the voice the collision DISPLACES, and it still sits 1.150000 left of the OTHER voice's head -- the leftmost one, the one that stayed on the column. LilyPond has one AccidentalPlacement per staff moment (accidental-placement.cc:479-518) whose reference skyline is built from every voice's heads (:375-385) and which translates the accidentals relative to itself, not to the shifted note column, so they do not ride the shift. Lily# solved position_apes once per ITEM and then carried the answer along with the head, drawing this flat ON TOP of the other voice's notehead (the reported release blocker, scratch/ベースタブLy/collision.lys). Closed by StaffAccidentalColumns (42e6c35d), which hands the union of the column's notes to the AccidentalPlacement that already existed. Mirror cross-check: crossvoice.accidental.pinned-voice-to-head reads the identical 1.150000."
+    },
+    "crossvoice.accidental.pinned-voice-to-head": {
+      "probe": "cross-voice-accidental.ly",
+      "score": "XCB",
+      "lilypond": 1.150000,
+      "residual": 0.0,
+      "why": "EXACT. The IDENTICAL 1.150000 its mirror reads, which is the cross-check this pair exists for: the same music with the accidental moved to the PINNED voice. LilyPond puts the same flat at the same x whichever voice carries it (probes XVA/XVB, 9.059735 both times), so agreement here is the statement that the accidental is packed against the column and not against its own note. This side was already right before 42e6c35d -- it is the control, and it must not move. Full account on crossvoice.accidental.shifted-voice-to-head."
+    },
+    "crossvoice.accidental.column-gap": {
+      "probe": "cross-voice-accidental.ly",
+      "score": "XCC",
+      "lilypond": 1.066615,
+      "residual": 0.0,
+      "why": "EXACT. Both voices carry a flat a second apart, so the two accidentals stack into two columns 1.066615 apart instead of overprinting. This is the SAME quantity chord.accidental.flat-column-gap-below records for a chord, reached through two voices: probes XVC and XVD (the cross-voice column and the same two pitches as one chord) agree to fourteen digits, which is why the port reuses AccidentalPlacement rather than writing a second packer. The value differs from CFB's 0.964561 only because the pitches differ (a second here, a third there), not because the algorithm does."
+    },
+    "crossvoice.collision.second": {
+      "probe": "cross-voice-accidental.ly",
+      "score": "XCE",
+      "lilypond": 1.304200,
+      "residual": 0.0,
+      "why": "EXACT. Two voices a SECOND apart: the heads end up one black head's ink (1.304200) apart, and it is the DOWN-stem voice that moves. check_meshing_chords decides `touch` at note-collision.cc:68-75 and consumes it at :212 and :323, BEFORE close_half_collide (:325), so a second takes the touch branch (shift_amount = -1, then x0.5). Lily# gated its touch branch on `!fullCollide && !closeHalf && !distantHalf` -- exactly the shapes that reach it, since anything further apart returns at :64-66 -- so the branch was unreachable and a second went to close_half's 0.52 with the UP voice moving right, reading 1.356 (0.052 wide, and on the wrong voice). Closed by 998298fc. The 0.000200 half of the error was a THIRD advance/ink site: HeadWidth read EngravingDefaults.Notehead*Width, which are advances, where LilyPond measures a collision with a grob extent."
+    },
+    "crossvoice.collision.unison-half-over-quarter": {
+      "probe": "cross-voice-accidental.ly",
+      "score": "XCF",
+      "lilypond": 1.377400,
+      "residual": 0.0,
+      "why": "EXACT. A UNISON also touches, so it takes the same branch -- and the displacement is 1.377400, the UP head's ink, not the down one's. On a down-shift the down width cancels: note-collision.cc:343-345 divides the shift by extent_down.length() and :435/:447 multiply it back. This point is what falsified the old test claiming 'a whole-note lower voice shifts further'; that only held while the UP group was the one moving. It also holds the missing HALF-head arm in HeadWidth, which measured an open head (1.377400) with the black one's number and read 1.304000 here."
+    },
+    "crossvoice.collision.stem-to-stem": {
+      "probe": "cross-voice-accidental.ly",
+      "score": "XCH",
+      "lilypond": 1.790620,
+      "residual": 0.0,
+      "why": "EXACT, and the only book on this island that reaches the 0.65 stem_to_stem multiplier: <e' g'>2 over a dotted quarter g'. The up group's LOWEST head is a third below the down head, so the extremes do NOT touch, and note-collision.cc:207-210's `if (!touch) stem_to_stem = true` fires. 1.790620 = 2 x 0.65 x 1.3774. The point exists because a test asserted 0.65 for a UNISON of half over dotted quarter, where :202-211 fires but its !touch guard does not -- probe XVG measures that shape at 1.377400, the 0.5 branch. Reading :207-210 without its guard is the mistake this book is here to catch."
+    },
     "barline.next.key-change-glyph": {
       "probe": "barline-spacing.ly",
       "score": "K",

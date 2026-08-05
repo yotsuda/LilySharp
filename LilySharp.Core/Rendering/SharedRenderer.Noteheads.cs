@@ -50,7 +50,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0);
         // NoteHead uses the default layer 1.
         var ledgerPlan = new List<LedgerRequest>();
-        foreach (var (item, ledgerMl, _, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
+        foreach (var (item, ledgerMl, _, itemX, _) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
         {
             // Percent-covered measures draw no notes — and no ledgers either.
             if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
@@ -59,13 +59,14 @@ internal static partial class SharedRenderer
         }
         DrawPlannedLedgers(ledgerPlan, gc);
 
-        foreach (var (item, ml, itemIdx, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
+        foreach (var (item, ml, itemIdx, itemX, voiceX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
         {
             // Head-wipe when this voice's notehead merges with another's.
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
             // Multi-voice collision: this down voice's on-line augmentation dot is
             // forced below the line (instead of the default up) to clear the up
-            // voice's dot. LILYPOND-REF: lily/note-collision.cc:411-448.
+            // voice's dot. ⚠️ Lily#'s rule, not LilyPond's — NoteCollision.AnalyzeCollision
+            // has the account. LILYPOND-REF: lily/note-collision.cc:375-398.
             bool dotForceDown = layout.IsDotForcedDown(ml.MeasureIndex, voiceNumber, itemIdx);
 
             // \voiceOne/\voiceTwo hold only where the voice { } span does, so this
@@ -92,7 +93,7 @@ internal static partial class SharedRenderer
                 case NoteItem note:
                     DrawNote(note, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown);
+                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown, voiceX);
                     break;
                 case RestItem rest:
                     // A spacer rest ('s') reserves its column width but is never
@@ -115,7 +116,7 @@ internal static partial class SharedRenderer
                 case ChordItem chord:
                     DrawChord(chord, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown);
+                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown, voiceX);
                     break;
                 case ClefChangeItem clefChange:
                     // A leading clef change that opens a system is already drawn as the
@@ -143,7 +144,8 @@ internal static partial class SharedRenderer
     /// the ledger pre-pass and the note drawing pass so both see identical
     /// positions.
     /// </summary>
-    private static IEnumerable<(MusicItem Item, MeasureLayout Ml, int ItemIdx, double ItemX)>
+    private static IEnumerable<(MusicItem Item, MeasureLayout Ml, int ItemIdx, double ItemX,
+                                double VoiceX)>
         EnumerateStaffItems(Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout,
             int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue)
     {
@@ -272,9 +274,15 @@ internal static partial class SharedRenderer
                     itemX += SpacingRules.MidMeasureChangeOffsetWithin(columnItems, item);
                 }
 
-                // Horizontal collision offset for multi-voice columns.
-                itemX += layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
-                yield return (item, ml, itemIdx, itemX);
+                // Horizontal collision offset for multi-voice columns. Yielded alongside the
+                // shifted X because not everything drawn at this item rides it: the
+                // ACCIDENTALS belong to the staff column, not to the shifted note column
+                // (LILYPOND-REF: lily/accidental-placement.cc — the AccidentalPlacement grob
+                // is not inside the note column note-collision.cc translates; MEASURED in
+                // Collector.StaffAccidentalColumns's remark).
+                double voiceX = layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
+                itemX += voiceX;
+                yield return (item, ml, itemIdx, itemX, voiceX);
             }
         }
     }
@@ -434,9 +442,16 @@ internal static partial class SharedRenderer
     /// end so the join clears the head's slanted corner.</summary>
     private const double StemHeadInset = 0.15;
 
+    /// <summary>
+    /// Draws one note at <paramref name="x"/>, which already carries
+    /// <paramref name="voiceX"/> — the multi-voice collision shift. Everything the note
+    /// column owns rides that shift; its ACCIDENTAL does not, and subtracts it back off to
+    /// reach the staff column it was packed against
+    /// (<see cref="Svg.Collector.StaffAccidentalColumns"/>).
+    /// </summary>
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight, bool dotForceDown = false)
+        IDrawingContext gc, double pageHeight, bool dotForceDown = false, double voiceX = 0)
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = staffMiddleY + note.StaffPosition / 2.0;
@@ -462,9 +477,16 @@ internal static partial class SharedRenderer
             // for 12.599pt, and 12.599pt lands on the THIRTEEN design, whose glyphs are drawn
             // differently and not merely smaller (Emmentaler is optically sized).
             var cueFont = note.IsCue ? EngravingDefaults.CueFont : null;
-            if (AccidentalColumn.CalculateSinglePosition(note, cueFont, cueFont) is { } al)
+            // The packed X is measured from the STAFF COLUMN, so undo the collision shift
+            // this note's head took; without a packing there is no other voice on the
+            // column and the two frames coincide.
+            double? accInkLeft = note.AccidentalX is { } packedX
+                ? x - voiceX + packedX
+                : AccidentalColumn.CalculateSinglePosition(note, cueFont, cueFont)
+                    is { } al ? x + al.XOffset : null;
+            if (accInkLeft is { } inkLeft)
                 using (note.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
-                    DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy, x + al.XOffset, noteY,
+                    DrawAccidentalAtInkLeft(note.Accidental, note.IsCourtesy, inkLeft, noteY,
                         note.SourcePosition, gc, accScale);
         }
 
@@ -583,9 +605,12 @@ internal static partial class SharedRenderer
         }
     }
 
+    /// <summary>Draws one chord; <paramref name="voiceX"/> is the collision shift already in
+    /// <paramref name="x"/>, which the accidentals subtract back off — see
+    /// <see cref="DrawNote"/>.</summary>
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight, bool dotForceDown = false)
+        IDrawingContext gc, double pageHeight, bool dotForceDown = false, double voiceX = 0)
     {
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
         char head = EmmentalerGlyphs.GetNotehead(chord.Notehead, noteValue);
@@ -612,8 +637,19 @@ internal static partial class SharedRenderer
         // staff's, not the font's; see AccidentalPlacementParameters). The FONT is the design
         // that font-size selects, the same one the single-note path takes.
         var cueChordFont = chord.IsCue ? EngravingDefaults.CueFont : null;
-        var accLayouts = AccidentalColumn.CalculatePositions(
-            chord.Notes, headOffsets, cueChordFont, cueChordFont);
+        // A chord sharing its column with another voice was packed against that voice's
+        // accidentals too, and in the STAFF COLUMN's frame — so those X's undo the collision
+        // shift, exactly as the single-note branch does.
+        bool packedColumn = chord.Notes.Any(n => n.AccidentalX.HasValue);
+        double accOriginX = packedColumn ? x - voiceX : x;
+        var accLayouts = packedColumn
+            ? chord.Notes
+                .Where(n => n.Accidental is not null && n.AccidentalX is not null)
+                .Select(n => new AccidentalLayout(
+                    n.StaffPosition, n.Accidental!, n.AccidentalX!.Value, n.IsCourtesy))
+                .ToImmutableArray()
+            : AccidentalColumn.CalculatePositions(
+                chord.Notes, headOffsets, cueChordFont, cueChordFont);
         foreach (var al in accLayouts)
         {
             double ay = staffMiddleY + al.StaffPosition / 2.0;
@@ -624,7 +660,7 @@ internal static partial class SharedRenderer
                 if (n.StaffPosition == al.StaffPosition && n.SourcePosition >= 0) { accSource = n.SourcePosition; break; }
             using (chord.IsCue ? gc.MusicFace(EngravingDefaults.CueDesignSize) : NullScope.Instance)
                 DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
-                    x + al.XOffset, ay, accSource, gc, headScale);
+                    accOriginX + al.XOffset, ay, accSource, gc, headScale);
         }
 
         // topY/bottomY are the visually top/bottom heads. In the Y-up frame the top

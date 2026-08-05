@@ -937,19 +937,25 @@ internal static class SpacingRules
             if (minHeadOffset < 0)
                 extent = Math.Max(extent, -minHeadOffset);
 
-            // For chords, use AccidentalPlacement to calculate staggered positions
-            var placement = new AccidentalPlacement();
-            var layouts = placement.CalculatePositions(chord.Notes, headOffsets);
-
-            if (layouts.Length > 0)
+            // For chords, use AccidentalPlacement to calculate staggered positions —
+            // unless the staff column packed them together with another voice's, in which
+            // case that answer is already in THIS frame (the column's) and is the one drawn.
+            double leftmost = 0;
+            if (chord.Notes.Any(n => n.AccidentalX.HasValue))
             {
-                // Find the leftmost accidental position (most negative XOffset)
-                // XOffset is negative, representing distance to the left of notehead
-                double leftmostOffset = layouts.Min(l => l.XOffset);
-
-                // The leftmost extent is the absolute value of the offset
-                extent = Math.Max(extent, Math.Abs(leftmostOffset));
+                leftmost = chord.Notes.Min(n => n.AccidentalX ?? 0);
             }
+            else
+            {
+                var placement = new AccidentalPlacement();
+                var layouts = placement.CalculatePositions(chord.Notes, headOffsets);
+                if (layouts.Length > 0)
+                    // XOffset is negative, representing distance to the left of notehead
+                    leftmost = layouts.Min(l => l.XOffset);
+            }
+            // The leftmost extent is the absolute value of the offset
+            if (leftmost < 0)
+                extent = Math.Max(extent, -leftmost);
         }
         else if (item is NoteItem note && note.Accidental != null)
         {
@@ -957,10 +963,17 @@ internal static class SpacingRules
             // (position_apes clears the note by right-padding + padding = 0.35, and a courtesy
             // adds its parenthesis ink), NOT a bare glyph width — otherwise the accidental,
             // and especially a courtesy's left parenthesis, spills left over the bar line.
-            var placement = new AccidentalPlacement();
-            var layout = placement.CalculateSinglePosition(note);
-            if (layout.HasValue)
-                extent = Math.Max(extent, Math.Abs(layout.Value.XOffset));
+            // A note sharing its column with another voice was packed against that voice's
+            // accidentals too (StaffAccidentalColumns), and the packing is measured from
+            // this same reference point.
+            double? x = note.AccidentalX;
+            if (x is null)
+            {
+                var placement = new AccidentalPlacement();
+                x = placement.CalculateSinglePosition(note)?.XOffset;
+            }
+            if (x is { } offset && offset < 0)
+                extent = Math.Max(extent, -offset);
         }
 
         return extent;

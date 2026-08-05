@@ -130,6 +130,30 @@ internal static class LpGeometryProbes
     // LilyPond twin: c'4 d' e' f' | <des'' fes''>4 a' b' c''  (Db5/Fb5, stems down) — mirror of CFB
     private static readonly string CFA = Score("c4 d e f | <des' fes'>4 a b c' |", "CFA");
 
+    // --- two voices on ONE column: the accidental packing and the collision it stands on ---
+    // Twins of probes/cross-voice-accidental.ly XCA..XCH. The rest of each second measure is
+    // rests, so the heads standing after the bar line are exactly the collided column's.
+    //
+    // XCA and XCB are a MIRROR PAIR: the same music with the accidental moved from the
+    // displaced voice to the pinned one. They must read the SAME accidental-to-head gap,
+    // because LilyPond packs a staff column's accidentals against every voice's heads and does
+    // not let them ride the note-collision shift. A difference between the two is the defect
+    // itself and not a rounding — the same shape as CSB/CSA and CFB/CFA above.
+
+    // LilyPond twin: c'4 d' e' f' | << { aes'4 r r r } \\ { g'4 r r r } >>
+    private static readonly string XCA = Score("c4 d e f | voice { aes r r r } { g r r r } |", "XCA");
+    // LilyPond twin: c'4 d' e' f' | << { a'4 r r r } \\ { ges'4 r r r } >>  — mirror of XCA
+    private static readonly string XCB = Score("c4 d e f | voice { a r r r } { ges r r r } |", "XCB");
+    // LilyPond twin: c'4 d' e' f' | << { aes'4 r r r } \\ { ges'4 r r r } >> — both voices
+    private static readonly string XCC = Score("c4 d e f | voice { aes r r r } { ges r r r } |", "XCC");
+    // LilyPond twin: c'4 d' e' f' | << { a'4 r r r } \\ { g'4 r r r } >>    — the bare second
+    private static readonly string XCE = Score("c4 d e f | voice { a r r r } { g r r r } |", "XCE");
+    // LilyPond twin: c'4 d' e' f' | << { g'2 r2 } \\ { g'4 r4 r2 } >>       — a unison
+    private static readonly string XCF = Score("c4 d e f | voice { g2 r2 } { g4 r4 r2 } |", "XCF");
+    // LilyPond twin: c'4 d' e' f' | << { <e' g'>2 r2 } \\ { g'4. r8 r2 } >> — the NON-touching
+    // one, and the only book on this list that reaches stem_to_stem (0.65).
+    private static readonly string XCH = Score("c4 d e f | voice { <e g>2 r2 } { g4. r8 r2 } |", "XCH");
+
     // LilyPond twin: c'4 d' e' f' \key a \major c'4 d' e' f'
     private static readonly string K = Score("c4 d e f | key a major c4 d e f |", "K");
 
@@ -7789,6 +7813,22 @@ internal static class LpGeometryProbes
         new("chord.accidental.sharp-column-gap-above", CSA, g => g.ChordAccidentalColumnGap(MidLineBarline)),
         new("chord.accidental.flat-column-gap-below", CFB, g => g.ChordAccidentalColumnGap(MidLineBarline)),
         new("chord.accidental.flat-column-gap-above", CFA, g => g.ChordAccidentalColumnGap(MidLineBarline)),
+
+        // The same stacking reached through TWO VOICES rather than one chord, plus the
+        // collision the packing stands on. LilyPond has one AccidentalPlacement per staff
+        // moment, so a cross-voice column is packed exactly as a chord is (probes XVC/XVD
+        // agree to fourteen digits) — and the accidentals do not ride the note-collision
+        // shift, which is what the XCA/XCB mirror pair reads.
+        // ⚠️ ChordAccidentalColumnGap is reading a CROSS-VOICE column here; its name says
+        // "chord" because that was the only caller when it was written. The computation is
+        // "the two accidentals after this bar line", which is the same question either way.
+        // Worth renaming to AccidentalColumnGap when someone is in the file with a rename tool.
+        new("crossvoice.accidental.shifted-voice-to-head", XCA, g => g.AccidentalToColumnLeftmostHead(MidLineBarline)),
+        new("crossvoice.accidental.pinned-voice-to-head", XCB, g => g.AccidentalToColumnLeftmostHead(MidLineBarline)),
+        new("crossvoice.accidental.column-gap", XCC, g => g.ChordAccidentalColumnGap(MidLineBarline)),
+        new("crossvoice.collision.second", XCE, g => g.CollidedColumnHeadSpan(MidLineBarline)),
+        new("crossvoice.collision.unison-half-over-quarter", XCF, g => g.CollidedColumnHeadSpan(MidLineBarline)),
+        new("crossvoice.collision.stem-to-stem", XCH, g => g.CollidedColumnHeadSpan(MidLineBarline)),
 
         // The first glyph after the bar line is the key/time signature; the note is found by
         // IDENTITY, not by counting past it — Lily# draws one glyph per key accidental while

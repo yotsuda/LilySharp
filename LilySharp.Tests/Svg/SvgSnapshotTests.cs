@@ -183,6 +183,11 @@ public class SvgSnapshotTests
         // Crossing voices: the lower (stem-down) voice sits above the upper voice,
         // so its heads shift LEFT to clear the upper voice's stems (meshing shift).
         yield return new object[] { "test/multivoice-crossing-collision" };
+        // Two voices on ONE column pack their accidentals into ONE accidental column,
+        // and those accidentals do not ride the collision shift — the ONLY corpus book
+        // that puts an accidental on a shared column at all (measured: every other
+        // polyphonic fixture is byte-identical with and without the packing).
+        yield return new object[] { "test/cross-voice-accidental" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };

@@ -61,11 +61,39 @@ public class NoteCollisionTests
         var ups = new[] { 4 };
         var downs = new[] { 4 };
 
-        // Same position but different dots - cannot merge by default
+        // Same position but different dots — cannot merge by default, and the touch is
+        // ABANDONED: note-collision.cc:219-224 is `(full_collide || (!on_line && prefer))
+        // && up.dots > down.dots`, and a unison IS a full collide, so the first disjunct
+        // fires whatever line the note is on. The up group then moves right by 0.5.
         var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 0);
 
         Assert.Equal(CollisionType.Full, result.Type);
+        Assert.Equal(0.5, result.UpStemXOffset, 6);
         Assert.False(result.ShouldMerge);
+    }
+
+    [Fact]
+    public void Second_MoreDotsUpButOnAStaffLine_KeepsTheTouch()
+    {
+        // The `!is_on_staff_line` disjunct at :220 only decides anything where full_collide is
+        // FALSE — i.e. at a second, not a unison. An up-stem note ON a line already has its
+        // dot raised clear, so the touch stands and the DOWN group moves right…
+        var collision = new NoteCollision();
+        var onLine = collision.AnalyzeCollision(new[] { 4 }, new[] { 3 },
+            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 0);
+
+        Assert.Equal(CollisionType.Touch, onLine.Type);
+        Assert.Equal(-0.5, onLine.UpStemXOffset, 6);
+
+        // …while the same second one step higher, with the dotted up-stem note in a SPACE,
+        // abandons the touch and falls through to close_half's 0.52 with the UP group moving
+        // right. (CloseHalf_SecondInterval_DottedNote_StillUsesCloseHalfShift is the same
+        // branch with a half head; this pair is what isolates the line test itself.)
+        var inSpace = collision.AnalyzeCollision(new[] { 5 }, new[] { 4 },
+            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 0);
+
+        Assert.Equal(CollisionType.CloseHalf, inSpace.Type);
+        Assert.Equal(0.52, inSpace.UpStemXOffset, 6);
     }
 
     [Fact]
@@ -75,10 +103,12 @@ public class NoteCollisionTests
         var ups = new[] { 4 };
         var downs = new[] { 4 };
 
-        // Same position but different note values (half vs quarter) - cannot merge
+        // Same position but different note values (half vs quarter) - cannot merge.
+        // A unison TOUCHES (note-collision.cc:72-75 ups[0] >= dps.back()), and :212-227 is
+        // reached before the full_collide multiplier — measured in book XVF.
         var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.Equal(CollisionType.Touch, result.Type);
         Assert.False(result.ShouldMerge);
     }
 
@@ -91,9 +121,10 @@ public class NoteCollisionTests
 
         var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        // Adjacent positions should cause collision
-        Assert.True(result.Type == CollisionType.CloseHalf || result.Type == CollisionType.Full,
-            $"Expected CloseHalf or Full, got {result.Type}");
+        // A second sets close_half_collide AND touch, and touch is consumed first
+        // (note-collision.cc:323 before :325) — book XVE. It is NOT reachable as CloseHalf:
+        // anything further apart than a second returns at :64-66.
+        Assert.Equal(CollisionType.Touch, result.Type);
     }
 
     [Fact]
@@ -139,70 +170,71 @@ public class NoteCollisionTests
     }
 
     [Fact]
-    public void StemToStem_DottedDownStem_ForcedRight_Uses065()
+    public void StemToStem_DottedDownStem_AtAUnison_IsStillTheTouch()
     {
-        // LILYPOND-REF: lily/note-collision.cc:207-210,321-322 — a full collision whose
-        // DOWN-stem note carries MORE dots (up.dots < down.dots) pushes the down-stem to
-        // the right and clears the stems with the 0.65 stem_to_stem multiplier, NOT the
-        // 0.5 full-collide value. Reachable at default params (half vs dotted-quarter at
-        // the same pitch in two voices).
+        // LILYPOND-REF: lily/note-collision.cc:202-211 — a collision whose DOWN-stem note
+        // carries MORE dots (up.dots < down.dots) pushes the down-stem to the right, but the
+        // 0.65 stem_to_stem clearance is set only `if (!touch)`, and a unison touches.
+        // ⚠️ THIS TEST USED TO ASSERT 0.65 HERE, on the strength of reading :207-210 without
+        // its guard. Book XVG measures the shape it names — half over dotted quarter at one
+        // pitch — and LilyPond puts the heads 1.377400 apart, which is the 0.5 branch.
+        // The real 0.65 is NonTouchingDottedDownStem_IsTheStemToStem065 (book XVH).
         var collision = new NoteCollision();
         var result = collision.AnalyzeCollision(new[] { 4 }, new[] { 4 },
             upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 1);
 
-        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.Equal(CollisionType.Touch, result.Type);
         Assert.False(result.ShouldMerge);
-        // Down-stem (dotted) shifts RIGHT by the stem_to_stem 0.65; up-stem left.
-        Assert.Equal(0.65, result.DownStemXOffset, 2);
-        Assert.Equal(-0.65, result.UpStemXOffset, 2);
+        // Down-stem (dotted) still goes RIGHT — the sign, which is what :207 sets.
+        Assert.True(result.DownStemXOffset > 0);
+        Assert.True(result.UpStemXOffset < 0);
     }
 
     [Fact]
     public void FullCollision_ShiftAmount_MatchesLilyPond()
     {
-        // LILYPOND-REF: lily/note-collision.cc:327 full_collide = 0.5, applied
-        // symmetrically (automatic_shift d*offset): up +0.5 / down -0.5. The
-        // consumer (CalculateVoiceOffsets) pins the leftmost group, so the
-        // 2-voice head separation is 2*0.5 = 1.0 notehead widths (side by side).
+        // LILYPOND-REF: lily/note-collision.cc:212-227 + :323-324 — a unison touches, so the
+        // shift is -1 × 0.5, scaled by extent_up[RIGHT] / extent_down.length() (:343-345)
+        // because it is the DOWN group that moves. Book XVF: heads 1.377400 apart = the UP
+        // (half) head's ink, and CalculateVoiceOffsets pins the up group at the column.
         var collision = new NoteCollision();
         var ups = new[] { 4 };
         var downs = new[] { 4 };
 
         var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        Assert.Equal(CollisionType.Full, result.Type);
-        Assert.Equal(0.5, result.UpStemXOffset);
-        Assert.Equal(-0.5, result.DownStemXOffset);
+        double expected = 0.5 * GlyphMetrics.NoteheadHalf.Width / GlyphMetrics.NoteheadBlack.Width;
+        Assert.Equal(CollisionType.Touch, result.Type);
+        Assert.Equal(-expected, result.UpStemXOffset, 6);
+        Assert.Equal(expected, result.DownStemXOffset, 6);
     }
 
     [Fact]
-    public void TouchCollision_ShiftAmount_MatchesLilyPond()
+    public void TouchCollision_WholeNotes_CannotMerge_AndStillTouch()
     {
-        // LILYPOND-REF: lily/note-collision.cc:317
-        // stem_to_stem = 0.65 notehead widths
+        // Whole notes at the same position cannot merge (note-collision.cc:102-104), so the
+        // touch branch decides: -1 × 0.5, extent ratio 1.0 (both heads are the same glyph).
         var collision = new NoteCollision();
-        // ups[0] == downs.Last() triggers touch: lowest up == highest down
         var ups = new[] { 4 };
         var downs = new[] { 4 };
 
-        // Same note value, same dots → merge, not touch
-        // Use whole notes (noteValue=0) to prevent merge (whole notes can't merge)
         var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 0, downNoteValue: 0, upDots: 0, downDots: 0);
 
-        // Whole notes at same position → full collision (can't merge whole notes)
-        Assert.Equal(CollisionType.Full, result.Type);
-        Assert.Equal(0.5, result.UpStemXOffset);
+        Assert.Equal(CollisionType.Touch, result.Type);
+        Assert.Equal(-0.5, result.UpStemXOffset, 6);
+        Assert.Equal(0.5, result.DownStemXOffset, 6);
     }
 
     // --- LILYPOND-REF meshing multiplier tests (I-1) ---
 
     [Fact]
-    public void CloseHalf_SecondInterval_UsesCloseHalfShift()
+    public void CloseHalf_SecondInterval_IsReachedAsATouch()
     {
-        // A half (open) a second ABOVE a quarter (filled) in two voices is a close_half collide,
-        // which is ALWAYS the 0.52 shift — the meshing shift (0.17) is the fallback for a voice
-        // crossing where no close/distant/full/touch fired, never for an adjacent second.
-        // LILYPOND-REF: lily/note-collision.cc:325 close_half_collide → 0.52.
+        // A half (open) a second ABOVE a quarter (filled) in two voices sets
+        // close_half_collide — but ALSO touch, and :323 is consumed before :325, so 0.52 is
+        // not what comes out. Books XVE/XVF measure both of the shapes this covers.
+        // ⚠️ The comment this replaces asserted "close_half is ALWAYS the 0.52 shift"; that is
+        // true of the multiplier chain read alone and false of the function.
         var collision = new NoteCollision();
         var ups = new[] { 5 };    // One position above
         var downs = new[] { 4 };  // Adjacent position
@@ -210,7 +242,9 @@ public class NoteCollisionTests
         var result = collision.AnalyzeCollision(ups, downs,
             upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        Assert.Equal(0.52, result.UpStemXOffset, 2);
+        double expected = 0.5 * GlyphMetrics.NoteheadHalf.Width / GlyphMetrics.NoteheadBlack.Width;
+        Assert.Equal(CollisionType.Touch, result.Type);
+        Assert.Equal(-expected, result.UpStemXOffset, 6);
     }
 
     [Fact]
@@ -228,57 +262,53 @@ public class NoteCollisionTests
         Assert.Equal(0.52, result.UpStemXOffset, 2);
     }
 
-    [Fact]
-    public void Meshing_WholeNotes_CannotMesh_UsesHalfShift()
-    {
-        // LILYPOND-REF: lily/note-collision.cc:180-230
-        // Whole notes (round noteheads) cannot mesh
-        var collision = new NoteCollision();
-        var ups = new[] { 5 };
-        var downs = new[] { 4 };
+    // The three below all say the same thing — a SECOND is never the 0.17 meshing shift —
+    // and after the branch-order fix they say it about the touch branch, which is what a
+    // second actually reaches. Each keeps its own head pairing, because the extent ratio
+    // (:343-345) differs per pairing and that is the part a magnitude assertion can hide.
 
-        var result = collision.AnalyzeCollision(ups, downs,
+    [Fact]
+    public void Meshing_WholeNotes_CannotMesh_TakesTheTouchBranch()
+    {
+        // A whole head over a black one, a second apart.
+        var collision = new NoteCollision();
+
+        var result = collision.AnalyzeCollision(new[] { 5 }, new[] { 4 },
             upNoteValue: 1, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        // Should use standard half collision shift, not meshing
-        Assert.True(result.UpStemXOffset > 0.17,
-            $"Whole note collision ({result.UpStemXOffset:F2}) should be larger than meshing (0.17)");
+        double expected = 0.5 * GlyphMetrics.NoteheadWhole.Width / GlyphMetrics.NoteheadBlack.Width;
+        Assert.Equal(CollisionType.Touch, result.Type);
+        Assert.Equal(-expected, result.UpStemXOffset, 6);
+        Assert.True(Math.Abs(result.UpStemXOffset) > NoteCollisionParameters.Default.MeshingGeneralShift,
+            "a second must never come out at the meshing shift");
     }
 
     [Fact]
-    public void Meshing_ChordWithSeconds_CannotMesh_UsesHalfShift()
+    public void Meshing_ChordWithSeconds_CannotMesh_TakesTheTouchBranch()
     {
-        // LILYPOND-REF: lily/note-collision.cc:180-230
-        // Chords with multiple notes can't mesh cleanly at seconds
+        // A two-note up chord whose LOWEST head is a second above the down head. The second
+        // up head is far enough above (:74 ups[1] >= dps.back() + threshold + 1) that the
+        // extremes still count as touching.
         var collision = new NoteCollision();
-        var ups = new[] { 5, 7 };    // Chord: two notes
-        var downs = new[] { 4 };     // Single note adjacent to lowest of chord
 
-        var result = collision.AnalyzeCollision(ups, downs,
+        var result = collision.AnalyzeCollision(new[] { 5, 7 }, new[] { 4 },
             upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        // Should use standard half collision shift
-        Assert.True(result.UpStemXOffset > 0.17,
-            $"Chord collision ({result.UpStemXOffset:F2}) should be larger than meshing (0.17)");
+        Assert.Equal(CollisionType.Touch, result.Type);
+        Assert.Equal(-0.5, result.UpStemXOffset, 6);
     }
 
     [Fact]
     public void Meshing_HalfNotes_CannotMesh_SameHeadGroup()
     {
-        // LILYPOND-REF: lily/note-collision.cc:180-230
-        // Two half notes have the same head group (open) — cannot mesh.
-        // LilyPond requires head_group_up != head_group_down for meshing.
+        // Two half notes: same glyph both sides, so the extent ratio is exactly 1.
         var collision = new NoteCollision();
-        var ups = new[] { 5 };
-        var downs = new[] { 4 };
 
-        var result = collision.AnalyzeCollision(ups, downs,
+        var result = collision.AnalyzeCollision(new[] { 5 }, new[] { 4 },
             upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
 
-        // Same head groups can't mesh: close_half_collide raw 0.52 (not meshing
-        // 0.17). Applied symmetrically + pinned, the heads end up ~2*0.52 = 1.04w
-        // apart (side by side). The old 1.0 here was the pre-doubled value.
-        Assert.Equal(0.52, result.UpStemXOffset, 2);
+        Assert.Equal(CollisionType.Touch, result.Type);
+        Assert.Equal(-0.5, result.UpStemXOffset, 6);
     }
 
     [Fact]
@@ -396,7 +426,7 @@ public class NoteCollisionTests
 
         var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.Equal(CollisionType.Touch, result.Type);
         Assert.False(result.UpHeadTransparent, "Shifted notes should not have heads wiped");
         Assert.False(result.DownHeadTransparent, "Shifted notes should not have heads wiped");
     }
@@ -436,9 +466,14 @@ public class NoteCollisionTests
     [Fact]
     public void DotDirection_DownVoice_OnLine_ForcedDown()
     {
-        // LILYPOND-REF: lily/note-collision.cc:411-448
-        // In collision context, down-stem voice's dots on lines should shift DOWN
-        // to avoid colliding with up-stem voice
+        // ⚠️ THIS PINS A DIVERGENCE, NOT A PORT. LilyPond's dot-direction rule is :375-398:
+        // it fires only when the shift is POSITIVE (the up group moved right) and the
+        // direction it sets is UP / CENTER / the up chord's — never "DOWN because the note is
+        // on a line". Lily# forces DOWN off the staff line alone. Kept green so the current
+        // behaviour is described rather than unwatched; ticketed in HANDOFF §2 A.
+        // ⚠️ The seconds/unisons this test uses now produce a NEGATIVE shift (the touch branch
+        // above), which is exactly where LilyPond's rule does NOT fire.
+        // LILYPOND-REF: lily/note-collision.cc:375-398 — the rule this approximates.
         var collision = new NoteCollision();
         var ups = new[] { 5 };   // Up-stem note above
         var downs = new[] { 4 }; // Down-stem note on a line (even position)
@@ -453,8 +488,8 @@ public class NoteCollisionTests
     [Fact]
     public void DotDirection_NoCollision_NotForced()
     {
-        // LILYPOND-REF: lily/note-collision.cc:411-448
-        // No collision → no dot direction override
+        // No collision → no dot direction override (see the divergence note above).
+        // LILYPOND-REF: lily/note-collision.cc:375-398
         var collision = new NoteCollision();
         var ups = new[] { 8 };
         var downs = new[] { 0 };
@@ -572,34 +607,105 @@ public class NoteCollisionTests
     // --- LILYPOND-REF width-based shift normalization tests ---
 
     [Fact]
-    public void WidthNormalization_WholeNoteWidth_ProducesLargerShifts()
+    public void DownShift_IsScaledByTheUpHeadsWidth_NotTheDownOne()
     {
-        // LILYPOND-REF: lily/note-collision.cc:339-340 — the shift is scaled by the
-        // DOWN-stem note's width, so a whole-note lower voice shifts further than a
-        // quarter-note one against the same (half-note) upper voice.
+        // LILYPOND-REF: lily/note-collision.cc:343-345 — when it is the DOWN group that
+        // moves, the shift is multiplied by extent_up[RIGHT] / extent_down.length() and then
+        // (:435, :447) by extent_down.length() again, so the DOWN width cancels and the
+        // displacement is the UP head's ink. Book XVF measures exactly that: a half over a
+        // quarter at one pitch comes out 1.377400 = the HALF head, not 1.304200.
+        // ⚠️ This test used to claim the opposite ("a whole-note lower voice shifts further"),
+        // which only held because the up group was the one moving.
         var collision = new NoteCollision();
         var upHalf = MakeNoteWithDuration(4, Fraction.Half);
 
-        var colWhole = new VoiceColumn(ImmutableArray.Create(
-            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
-            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Whole), 0, forcedStemUp: false)
-        ), measureIndex: 0);
-        var colQuarter = new VoiceColumn(ImmutableArray.Create(
-            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
-            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Quarter), 0, forcedStemUp: false)
-        ), measureIndex: 0);
+        double downWhole = Displace(upHalf, MakeNoteWithDuration(4, Fraction.Whole)).Down;
+        double downQuarter = Displace(upHalf, MakeNoteWithDuration(4, Fraction.Quarter)).Down;
 
-        double upWhole = collision.CalculateVoiceOffsets(colWhole).First(o => o.VoiceId == 1).XOffset;
-        double upQuarter = collision.CalculateVoiceOffsets(colQuarter).First(o => o.VoiceId == 1).XOffset;
-
-        Assert.True(Math.Abs(upQuarter) > 0.001,
-            $"Quarter-down shift ({upQuarter:F3}) should be non-zero");
-        Assert.True(Math.Abs(upWhole) > Math.Abs(upQuarter),
-            $"Whole-down shift ({upWhole:F3}) should exceed quarter-down ({upQuarter:F3})");
+        Assert.Equal(GlyphMetrics.NoteheadHalf.Width, downQuarter, 6);
+        Assert.Equal(downQuarter, downWhole, 6);
     }
 
     private static NoteItem MakeNoteWithDuration(int staffPosition, Fraction duration) =>
         new(staffPosition, duration, 0, null, false, 0);
+
+    // --- LILYPOND-REF branch ORDER of check_meshing_chords, measured end to end ---
+    // audit/lp-geometry/probes/cross-voice-accidental.ly, books XVE..XVH. Each number is
+    // LilyPond 2.26.0's own head-to-head displacement with the up-stem group pinned at the
+    // column, which is what CalculateVoiceOffsets returns. `touch` is decided before
+    // close_half_collide and full_collide, so a SECOND and a UNISON both take it and the
+    // DOWN-stem group is the one that moves right.
+
+    private static NoteItem Dotted(int staffPosition, Fraction baseDuration, int dots) =>
+        new(staffPosition, baseDuration, dots, null, false, 0);
+
+    private static (double Up, double Down) Displace(MusicItem up, MusicItem down)
+    {
+        var offsets = new NoteCollision().CalculateVoiceOffsets(new VoiceColumn(
+            ImmutableArray.Create(
+                new VoiceEntry(1, up, 0, forcedStemUp: true),
+                new VoiceEntry(2, down, 0, forcedStemUp: false)),
+            measureIndex: 0));
+        return (offsets.First(o => o.VoiceId == 1).XOffset,
+                offsets.First(o => o.VoiceId == 2).XOffset);
+    }
+
+    [Fact]
+    public void Second_TakesTheTouchBranch_AndMovesTheDownVoiceRight()
+    {
+        // XVE  << a'4 \\ g'4 >>  — up head 8.489735, DOWN head 9.793935.
+        var (up, down) = Displace(
+            MakeNoteWithDuration(-1, Fraction.Quarter),
+            MakeNoteWithDuration(-2, Fraction.Quarter));
+
+        Assert.Equal(0.0, up, 6);
+        Assert.Equal(1.304200, down, 6);
+    }
+
+    [Fact]
+    public void Unison_TakesTheTouchBranch_ScaledByTheUpHeadsWidth()
+    {
+        // XVF  << g'2 \\ g'4 >>  — up head 8.489735, DOWN head 9.867135. The half head is
+        // wider (1.3774), and a down-shift is scaled by extent_up[RIGHT]/extent_down.length(),
+        // so the displacement is the UP head's width, not the down one's.
+        var (up, down) = Displace(
+            MakeNoteWithDuration(-2, Fraction.Half),
+            MakeNoteWithDuration(-2, Fraction.Quarter));
+
+        Assert.Equal(0.0, up, 6);
+        Assert.Equal(1.377400, down, 6);
+    }
+
+    [Fact]
+    public void Unison_DottedDownStem_StillTouches_SoNotTheStemToStem065()
+    {
+        // XVG  << g'2 \\ g'4. >>  — IDENTICAL to XVF. note-collision.cc:202-211 fires
+        // (up.dots < down.dots) and sets shift_amount = -1, but its
+        // `if (!touch) stem_to_stem = true` does not, so :323 still multiplies by 0.5.
+        // Reading that branch as "always 0.65" is what this test now falsifies.
+        var (up, down) = Displace(
+            MakeNoteWithDuration(-2, Fraction.Half),
+            Dotted(-2, Fraction.Quarter, 1));
+
+        Assert.Equal(0.0, up, 6);
+        Assert.Equal(1.377400, down, 6);
+    }
+
+    [Fact]
+    public void NonTouchingDottedDownStem_IsTheStemToStem065()
+    {
+        // XVH  << <f' a'>2 \\ a'4. >>  — up heads 8.489735, DOWN head 10.280355. The up
+        // group's LOWEST head is a third below the down head, so the extremes do NOT touch
+        // and :207-210 reaches stem_to_stem: 2 × 0.65 × 1.3774 = 1.790620.
+        var chord = new ChordItem(
+            ImmutableArray.Create(new ChordNoteInfo(-5, null, false), new ChordNoteInfo(-2, null, false)),
+            Fraction.Half, 0, 0);
+
+        var (up, down) = Displace(chord, Dotted(-2, Fraction.Quarter, 1));
+
+        Assert.Equal(0.0, up, 6);
+        Assert.Equal(1.790620, down, 6);
+    }
 
     // --- LILYPOND-REF force-hshift manual override tests ---
 
@@ -660,7 +766,7 @@ public class NoteCollisionTests
         var result = collision.AnalyzeCollision(ups, downs,
             upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
 
-        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.Equal(CollisionType.Touch, result.Type);
         Assert.False(result.ShouldMerge);
     }
 
@@ -732,30 +838,22 @@ public class NoteCollisionTests
     }
 
     [Fact]
-    public void WidthNormalization_WholeVsQuarterCollision_ScalesCorrectly()
+    public void UpShift_IsScaledByTheDownHeadsWidth()
     {
-        // LILYPOND-REF: lily/note-collision.cc:339-340 — the shift scales by the
-        // DOWN-stem note's width, so the whole-down / quarter-down shift ratio equals
-        // the whole/black notehead width ratio (up-note held constant, up shifts right
-        // so the extent ratio is 1.0 in both).
-        var collision = new NoteCollision();
-        var upHalf = MakeNoteWithDuration(4, Fraction.Half);
+        // The mirror of the above, and where the down-stem width DOES set the scale
+        // (:435 wid, extent ratio 1.0 at :346-348). Reached by abandoning the touch: an
+        // up-stem note in a SPACE carrying more dots than the down-stem one (:219-224).
+        // ⚠️ Both widths are grob EXTENTS — the ink — not the advances
+        // EngravingDefaults.Notehead*Width carries; see NoteCollision.HeadWidth.
+        var upDotted = Dotted(5, Fraction.Quarter, 1);
 
-        var colWhole = new VoiceColumn(ImmutableArray.Create(
-            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
-            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Whole), 0, forcedStemUp: false)
-        ), measureIndex: 0);
-        var colQuarter = new VoiceColumn(ImmutableArray.Create(
-            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
-            new VoiceEntry(2, MakeNoteWithDuration(4, Fraction.Quarter), 0, forcedStemUp: false)
-        ), measureIndex: 0);
+        double upWhole = Displace(upDotted, MakeNoteWithDuration(5, Fraction.Whole)).Up;
+        double upQuarter = Displace(upDotted, MakeNoteWithDuration(5, Fraction.Quarter)).Up;
 
-        double wholeShift = collision.CalculateVoiceOffsets(colWhole).First(o => o.VoiceId == 1).XOffset;
-        double quarterShift = collision.CalculateVoiceOffsets(colQuarter).First(o => o.VoiceId == 1).XOffset;
-
-        double ratio = wholeShift / quarterShift;
-        double expectedRatio = EngravingDefaults.NoteheadWholeWidth / EngravingDefaults.NoteheadBlackWidth;
-        Assert.Equal(expectedRatio, ratio, 2);
+        Assert.Equal(GlyphMetrics.NoteheadWhole.Width, upWhole, 6);
+        Assert.Equal(GlyphMetrics.NoteheadBlack.Width, upQuarter, 6);
+        Assert.Equal(GlyphMetrics.NoteheadWhole.Width / GlyphMetrics.NoteheadBlack.Width,
+                     upWhole / upQuarter, 6);
     }
 
     // --- Suspended head filtering ---

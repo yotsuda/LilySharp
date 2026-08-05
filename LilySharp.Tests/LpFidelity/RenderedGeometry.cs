@@ -2816,6 +2816,64 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The WIDEST head-to-head span of the note column that opens the measure after bar line
+    /// <paramref name="barIndex"/> — the displacement <c>note-collision.cc</c> gives the two
+    /// voices standing on it.
+    /// </summary>
+    /// <remarks>
+    /// The widest span, not "the first two heads": a chord on one of the two voices puts more
+    /// than two heads on the column (probe XCH has three), and what the collision decides is
+    /// how far the two GROUPS are apart. With the rest of the measure written as rests, the
+    /// heads after the bar line are exactly that column's.
+    /// <para>
+    /// LILYPOND-REF: lily/note-collision.cc:440-468 calc_positioning_done — each clash group
+    /// is translated by <c>amount - left_most</c>, so one group stays on the column and the
+    /// span between them is the whole displacement.
+    /// </para>
+    /// </remarks>
+    public double CollidedColumnHeadSpan(int barIndex)
+    {
+        double bar = BarlineRight(barIndex);
+        var heads = Noteheads.Where(h => h.X > bar + 1e-9).OrderBy(h => h.X).ToList();
+        if (heads.Count < 2)
+            throw new InvalidOperationException(
+                $"expected at least two note heads after bar line {barIndex} (two voices on "
+                + $"one column) but found {heads.Count}.\nDrawn geometry:\n" + Describe());
+        return heads[^1].X - heads[0].X;
+    }
+
+    /// <summary>
+    /// The NEAREST accidental of the column opening the measure after bar line
+    /// <paramref name="barIndex"/> → that column's LEFTMOST note head, anchor to anchor.
+    /// </summary>
+    /// <remarks>
+    /// The leftmost head is the point of the reading. LilyPond packs a staff column's
+    /// accidentals against ALL of its heads and does not let them ride the note-collision
+    /// shift, so the gap is to the head that stayed on the column — never to the accidental's
+    /// own note, which may be the displaced one. Probes XCA and XCB are the same music with
+    /// the accidental moved from one voice to the other and MUST read the same number; that
+    /// they do is what says the accidental is not riding the shift.
+    /// <para>
+    /// LILYPOND-REF: lily/accidental-placement.cc:375-385 build_heads_skyline (every voice's
+    /// heads) and :391-438 position_apes (the accidentals translate relative to the placement
+    /// grob, which is not inside the shifted note column).
+    /// </para>
+    /// </remarks>
+    public double AccidentalToColumnLeftmostHead(int barIndex)
+    {
+        double bar = BarlineRight(barIndex);
+        var accs = Accidentals.Where(a => a.X > bar + 1e-9).OrderBy(a => a.X).ToList();
+        if (accs.Count == 0)
+            throw new InvalidOperationException(
+                $"no accidental stands after bar line {barIndex}.\nDrawn geometry:\n" + Describe());
+        var heads = Noteheads.Where(h => h.X > bar + 1e-9).OrderBy(h => h.X).ToList();
+        if (heads.Count == 0)
+            throw new InvalidOperationException(
+                $"no note head stands after bar line {barIndex}.\nDrawn geometry:\n" + Describe());
+        return heads[0].X - accs[^1].X;
+    }
+
+    /// <summary>
     /// Bar line <paramref name="barIndex"/>'s ink right edge → the first NOTEHEAD after it.
     /// Use when a key or time signature stands between the bar line and the note.
     /// </summary>

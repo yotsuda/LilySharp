@@ -145,6 +145,21 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
     /// <remarks>LILYPOND-REF: lily/accidental.cc:147-148 parenthesized property</remarks>
     public bool IsCourtesy { get; }
+
+    /// <summary>
+    /// This note's accidental ink-left X, in staff spaces from the NOTE COLUMN's reference
+    /// point, once the whole staff column's accidentals have been packed together — or null
+    /// where nothing but this item stands on the column and the per-item solve is the same
+    /// answer. See <see cref="Collector.StaffAccidentalColumns"/>.
+    /// </summary>
+    /// <remarks>
+    /// The frame is the COLUMN, not this item: LilyPond's accidentals do NOT ride the
+    /// note-collision shift (MEASURED — audit/lp-geometry/probes/cross-voice-accidental.ly,
+    /// book XVA: the shifted voice's own flat still sits 0.35 left of the OTHER voice's head).
+    /// Every reservation site already measures from the column, so they read this bare; the
+    /// renderer draws at the shifted X and must subtract that shift back off.
+    /// </remarks>
+    public double? AccidentalX { get; init; }
     /// <summary>Whether this note is a cue note (drawn at reduced size).</summary>
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue { get; }
@@ -389,7 +404,12 @@ public readonly record struct ChordNoteInfo(
     // Source offset of THIS member's pitch token (so the interactive preview can
     // highlight/select one chord note at a time and jump the caret to its exact
     // pitch, not the chord's '<'). -1 = fall back to the chord's SourcePosition.
-    int SourcePosition = -1
+    int SourcePosition = -1,
+    // This member's accidental ink-left X in staff spaces from the NOTE COLUMN's
+    // reference point, once the whole staff column's accidentals have been packed
+    // together — null where this chord stands alone on its column and the per-item
+    // solve is the same answer. Same frame and same reason as NoteItem.AccidentalX.
+    double? AccidentalX = null
 );
 
 /// <summary>

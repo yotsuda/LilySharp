@@ -1,0 +1,33 @@
+// A staff column that TWO VOICES stand on packs its accidentals into ONE accidental
+// column, and those accidentals do NOT ride the note-collision shift the heads take.
+// LILYPOND-REF: lily/accidental-placement.cc:479-518 calc_positioning_done — one
+// AccidentalPlacement grob per staff moment, over every voice's heads.
+// MEASURED: audit/lp-geometry/probes/cross-voice-accidental.ly, books XVA/XVB/XVC.
+//
+// Bar 1  only the DISPLACED voice carries the accidental (XVA). Its flat still sits
+//        left of the OTHER voice's head — it used to be drawn on top of it.
+// Bar 2  only the PINNED voice carries it (XVB): the case that was already right, so
+//        the bar is a control that must not move.
+// Bar 3  BOTH carry one (XVC): the two flats stack, they do not overprint.
+// Bar 4  the same two pitches as a CHORD in one voice (XVD): LilyPond packs the
+//        cross-voice column exactly as it packs this one, to fourteen digits.
+//
+// FALSIFICATION VALUES — what bar 1 draws under the PER-ITEM solve this replaced
+// (measured on the pre-fix build, not predicted): flat x=9.36 between the two heads
+// at x=9.16 (voice 2, the pinned one) and x=10.51 (voice 1) — the flat's 0.80 of ink
+// running to 10.16, a full staff space INSIDE the voice-2 notehead. This snapshot has
+// it at 8.01, ending at 8.81, clear of the leftmost head at 9.12. Bar 4 is the control
+// and its INTERNAL geometry is identical either way (head−flat 1.12 both times); only
+// its absolute X moves, because bars 1–3 now reserve the wider accidental column they
+// draw.
+octave absolute
+title "Cross-voice accidental column"
+part mel { clef treble }
+section S {
+  mel {
+    voice { aes'4 r | a'4 r | aes'4 r | <ges' aes'>4 r | }
+    { g'4 r | ges'4 r | ges'4 r | }
+  }
+}
+form main { S }
+score main "cross-voice-accidental" { staff mel }

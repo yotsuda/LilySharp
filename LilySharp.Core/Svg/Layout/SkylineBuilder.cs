@@ -1442,9 +1442,17 @@ internal sealed class SkylineBuilder
                 AddNoteToSkylines(note, x, staffMiddleUp, size,
                     upSkyline, downSkyline, forcedStemUp, reserveStem);
                 if (note.Accidental != null)
-                    AddAccidentalToSkylines(note.Accidental, x,
-                        size.Span(note.StaffPosition * 0.5) + staffMiddleUp, size,
-                        upSkyline, downSkyline);
+                {
+                    double accY = size.Span(note.StaffPosition * 0.5) + staffMiddleUp;
+                    // Packed with the rest of the staff column when another voice stands on
+                    // it, and `x` IS that column (Collector.StaffAccidentalColumns).
+                    if (note.AccidentalX is { } packedX)
+                        MergeAccidentalInk(note.Accidental, x + size.Span(packedX), accY, size,
+                            upSkyline, downSkyline);
+                    else
+                        AddAccidentalToSkylines(note.Accidental, x, accY, size,
+                            upSkyline, downSkyline);
+                }
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
@@ -1465,17 +1473,15 @@ internal sealed class SkylineBuilder
                 // carries each glyph at its true X — the same call the
                 // renderer draws with.
                 // LILYPOND-REF: lily/accidental-placement.cc position_apes.
-                foreach (var al in AccidentalStagger.CalculatePositions(
-                    chord.Notes,
-                    ChordHeadPositioning.CalculateOffsets(chord.Notes, chordStemUp, chordNoteValue, 1.0)))
+                foreach (var (acc, accPos, accOffset) in ChordAccidentalXs(chord, chordStemUp, chordNoteValue))
                 {
                     // Head Y in the skyline's Y-up frame: staff-position → staff-spaces
                     // above the middle (pos*0.5), then to the skyline origin (staff top).
-                    double accHeadY = size.Span(al.StaffPosition * 0.5) + staffMiddleUp;
+                    double accHeadY = size.Span(accPos * 0.5) + staffMiddleUp;
                     // The stagger's offset is a distance in staff-spaces from the column, so
                     // it belongs to this staff too; `x` alone is the column.
-                    double accX = x + size.Span(al.XOffset);
-                    MergeAccidentalInk(al.Accidental, accX, accHeadY, size,
+                    double accX = x + size.Span(accOffset);
+                    MergeAccidentalInk(acc, accX, accHeadY, size,
                         upSkyline, downSkyline);
                 }
                 break;
@@ -1541,6 +1547,28 @@ internal sealed class SkylineBuilder
     /// <summary>Placement machinery shared with the renderer, for chord
     /// accidental columns (see the ChordItem case).</summary>
     private static readonly AccidentalPlacement AccidentalStagger = new();
+
+    /// <summary>
+    /// Each of a chord's accidentals as (glyph, staff position, ink-left X from the column):
+    /// the packing the whole staff column got when another voice stands on it
+    /// (<see cref="Collector.StaffAccidentalColumns"/>), else this chord's own solve.
+    /// </summary>
+    private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
+        ChordItem chord, bool stemUp, int noteValue)
+    {
+        if (chord.Notes.Any(n => n.AccidentalX.HasValue))
+        {
+            foreach (var n in chord.Notes)
+                if (n.Accidental is { } acc && n.AccidentalX is { } x)
+                    yield return (acc, n.StaffPosition, x);
+            yield break;
+        }
+
+        foreach (var al in AccidentalStagger.CalculatePositions(
+            chord.Notes,
+            ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue, 1.0)))
+            yield return (al.Accidental, al.StaffPosition, al.XOffset);
+    }
 
     /// <summary>
     /// Merges one accidental's OWN PROFILE — the drawn glyph's outline, walked — into the
