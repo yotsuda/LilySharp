@@ -1,0 +1,75 @@
+// lilypond-src/input/regression/beam-auto.ly の Lily# 訳。
+// CLAIM: 一般的な拍子に対する autobeam の preset（拍構造と beamExceptions）が正しい。
+// 14 拍子 × 8分/16分/32分 の網羅。綴り: LP \relative c'' の c = Lily# absolute c'。
+octave absolute
+time 1/2
+
+part m { clef treble }
+
+section Main {
+  m {
+    c'8 c' c' c' |
+    c'16 c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 1/4
+    c'8 c' |
+    c'16 c' c' c' |
+    c'32 c' c' c' c' c' c' c' |
+    time 1/8
+    c'8 |
+    c'16 c' |
+    c'32 c' c' c' |
+    time 2/2
+    c'8 c' c' c' c' c' c' c' |
+    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 2/4
+    c'8 c' c' c' |
+    c'16 c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 2/8
+    c'8 c' |
+    c'16 c' c' c' |
+    c'32 c' c' c' c' c' c' c' |
+    time 3/2
+    c'8 c' c' c' c' c' c' c' c' c' c' c' |
+    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 3/4
+    c'8 c' c' c' c' c' |
+    c'16 c' c' c' c' c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 3/8
+    c'8 c' c' |
+    c'16 c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' |
+    time 4/4
+    c'8 c' c' c' c' c' c' c' |
+    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 4/8
+    c'8 c' c' c' |
+    c'16 c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 4/16
+    c'8 c' |
+    c'16 c' c' c' |
+    c'32 c' c' c' c' c' c' c' |
+    time 6/8
+    c'8 c' c' c' c' c' |
+    c'16 c' c' c' c' c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 9/8
+    c'8 c' c' c' c' c' c' c' c' |
+    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    time 12/8
+    c'8 c' c' c' c' c' c' c' c' c' c' c' |
+    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

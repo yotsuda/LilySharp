@@ -58,6 +58,64 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第8便（＝**lp-regression キュー続行**。処理 9 本・exact 1 本（大物）・
+skip 8 本。修正なし——このバッチは検証が主役）。
+
+⚠️ **仕事は 1 commit**（`a21d39cd` beam-auto exact 記録）＋ handoff。
+
+★★ **① beam-auto.ly = exact（14 拍子の preset 一括検証）**: 1/2〜12/8 の 14 拍子 ×
+8分/16分/32分。**beam 段数の指紋 202==202**（両 SVG の polygon 数）＋ページ目視で全一致。
+見た目が変でも正しい行に注意: **4/16 は 8 分も 16 分も unbeam・32 分は 2 個組**（LP 自身の
+挙動）。`BeamingPattern` の presets（beamExceptions 込み）が丸ごと裏付けられた。
+⚠️ 指紋比較の道具: `[regex]::Matches($svg,'<polygon').Count`——両エンジンとも beam は
+polygon なので同じ物差しで数えられる（README 級の小技）。
+
+⚠️ **② skip 8 本**: \change Staff 系 4 本（beam-collision-cross-staff/2・beam-cross-staff・
+同-rest。**Lily# に譜替えが無い**）・beam-collision-flag/-grace（**LP の beam-collision
+エンジン（covered grobs）未移植**——将来の大物候補として名指し）・beam-forced-direction
+（`_[`/`^[` 記号無し・@stemUp が Lily# の綴り）。
+**frontier = beam-multiplicity-over-rests.ly**。visited 26（うち plain 24）/ plain 322
+（fixed 3・exact 4・skip 19。skip の 2 本は scheme 側の absolute-dimensions）。
+
+未 push **62**（この handoff 込み。数え直すこと）・テスト **4096 passed / 0 failed / 4 skipped**
+（不変・今便は Core 変更なし）・**Core 0 warning。**
+
+⚠️⚠️ ★★★ **次セッションの入口**: audit/lp-regression/README.md の手順どおり frontier から。
+`Set-RegStatus` ヘルパーは揮発（README に定義あり・毎セッション貼り直す）。
+これまでの 4 修正はすべて「観測者ゼロ」型——**corpus に無い綴りが出るたび fixture を残す**
+のがこのワークストリームの複利。
+
+## 以下は第99セッション第7便の経緯
+
+最終更新 第99セッション第7便（＝**lp-regression キュー続行**。処理 8 本・修正 1 件・exact 3 本）。
+
+⚠️ **仕事は 1 commit**（`347b7d1b` pickup autobeam）＋ handoff。
+
+★★★ **① 第 3 号の修正＝pickup の拍構造は小節の尻尾**（auto-beam-partial.ly・6/8 の
+partial 2）: `BeamDetector` が **pickup 小節の開始位置を 0 に種えていて**、LP の
+[旗]+[3連桁]（位置 2/8 起点）に対し**鏡像の [3連桁]+[旗]** を組んでいた。
+LP の `\partial dur` は PartialSet → Timing.measurePosition = **−dur**
+（ly/music-functions-init.ly:1697-1705）＝ mod period で period−dur。
+⇒ `MeasureStartPosition`（`IsPickup` → period − 内容長）を**自動・手動・小節跨ぎの 3 経路**
+すべての種に。fixture `test/autobeam-pickup`（陽性対照: Core stash で落ちる）。
+**既存 snapshot は 1 枚も動かず**＝corpus に pickup 内の連桁列が無かった（観測者ゼロ 4 例目）。
+
+★★ **② exact 3 本**: auto-beam-partial-grace（grace 旗＋d8d8 対＋4+4）・auto-beam-bar
+（pickup[3]＋[8 8][8 16 16][16×4]。`partial 8*3` は乗数文法が無く同長の `partial 4.`、
+小節中間 `\section` は落とし・status に記録）・autobeam-tuplet-recheck（拍組み一致。
+**LP は tuplet 括弧を印字・Lily# は素の数字**——既知の tuplet-bracket 未移植家系に帰属、
+status に記録）。⚠️ **partial は section directive**（LYS1024・part セル内に書けない）——
+翻訳時の定番罠として README 級。
+
+⚠️ **③ skip 4 本**: augmentum（Vaticana）・auto-beam-breathe（breathe 無し）・
+autobeam-nobeam（noBeam 無し）・auto-beam-ossia（部分幅 staff symbol の概念無し）。
+**frontier = beam-auto.ly**（beam-* 群へ）。処理済み 17 / plain 322（fixed 3・exact 3・skip 11）。
+
+未 push **60**（この handoff 込み。数え直すこと）・テスト **4096 passed / 0 failed / 4 skipped**
+（第6便 4095・+1 snapshot）・**Core 0 warning。**
+
+## 以下は第99セッション第6便の経緯
+
 最終更新 第99セッション第6便（＝**lp-regression キュー続行**。処理 6 本・修正 1 件）。
 
 ⚠️ **仕事は 1 commit**（`7fdba914` snappizzicato）＋ handoff。

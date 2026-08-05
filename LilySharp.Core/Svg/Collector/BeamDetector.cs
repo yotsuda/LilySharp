@@ -245,7 +245,11 @@ internal sealed class BeamDetector
             int lastItem = (mi == endMeasure) ? endItem : measure.Items.Length - 1;
 
             // Recompute running position from the start of the measure for accuracy.
-            Fraction positionInMeasure = Fraction.Zero;
+            // A pickup measure starts mid-bar (see MeasureStartPosition) — seeding it at
+            // zero here would also skew every following measure's moment, since the
+            // cross-measure moments below add whole periods per measure.
+            Fraction positionInMeasure = MeasureStartPosition(
+                measure, BeamingPattern.Options.For(timeSignature));
             for (int j = 0; j < firstItem; j++)
                 positionInMeasure += GetDuration(measure.Items[j]);
 
@@ -353,6 +357,30 @@ internal sealed class BeamDetector
     /// and the two tuplet guards that were papering over the difference all went together.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// The beat position a measure's FIRST item stands on. Zero for an ordinary
+    /// measure; a PICKUP starts mid-bar, at the meter's period minus the pickup's
+    /// own length — so the beat structure its stems are checked against is the
+    /// bar's TAIL, not its head (a 4/8 pickup in 6/8 beams 1+3, not 3+1 —
+    /// LP regression auto-beam-partial.ly, the book that found this seeded at zero).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly:1697-1705 — <c>\partial dur</c> is a
+    ///   PartialSet on Timing; lily/timing-translator.cc handles it by setting
+    ///   <c>measurePosition</c> to <c>−dur</c>, and the auto-beam engraver's boundary
+    ///   checks read that position — <c>−dur ≡ period − dur</c> under the modular
+    ///   arithmetic AutoBeamCheck applies (EuclideanRemainder over the period).
+    /// </remarks>
+    private Fraction MeasureStartPosition(Measure measure, BeamingPattern.Options options)
+    {
+        if (!measure.IsPickup)
+            return Fraction.Zero;
+        var content = Fraction.Zero;
+        foreach (var item in measure.Items)
+            content += GetDuration(item);
+        return content < options.Period ? options.Period - content : Fraction.Zero;
+    }
+
     private void DetectBeamGroupsInMeasure(
         Measure measure,
         int measureIndex,
@@ -378,7 +406,7 @@ internal sealed class BeamDetector
         // never sets it: nothing beamable is that long, so the SECOND stem is what makes the
         // lookup real, and recheck_beam is what goes back for the boundary the first one passed.
         var shortest = Fraction.Quarter;
-        Fraction position = Fraction.Zero;
+        Fraction position = MeasureStartPosition(measure, beamOptions);
 
         // LILYPOND-REF: lily/auto-beam-engraver.cc:252-279 end_beam — a beam of fewer than two
         // stems is junked, not typeset. This is the ONLY place that decides a lone note is a
@@ -884,9 +912,11 @@ internal sealed class BeamDetector
                 int start = beamStart.Value;
                 int end = i;
 
-                // Collect beamable items in this range
+                // Collect beamable items in this range. A pickup measure's positions
+                // start mid-bar (MeasureStartPosition) — the manual group's boundaries
+                // are the writer's, but its BEAMLET subdivision still reads the beat grid.
                 var group = new List<(MusicItem item, int index, Fraction startPos)>();
-                Fraction pos = Fraction.Zero;
+                Fraction pos = MeasureStartPosition(measure, beamOptions);
                 // Calculate starting position
                 for (int j = 0; j < start; j++)
                     pos = pos + GetDuration(measure.Items[j]);

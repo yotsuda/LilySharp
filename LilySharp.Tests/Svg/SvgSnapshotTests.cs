@@ -649,6 +649,9 @@ public class SvgSnapshotTests
         // @snappizz is the font's scripts.snappizzicato at LilyPond's own box and
         // position (LP regression articulation-snappizzicato.ly) — not primitives.
         yield return new object[] { "test/snappizzicato" };
+        // A pickup starts mid-bar: its autobeam beat structure is the bar's TAIL
+        // (LP regression auto-beam-partial.ly — 4/8 pickup in 6/8 beams 1+3, not 3+1).
+        yield return new object[] { "test/autobeam-pickup" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

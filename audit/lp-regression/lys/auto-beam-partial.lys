@@ -1,0 +1,16 @@
+// lilypond-src/input/regression/auto-beam-partial.ly の Lily# 訳。
+// CLAIM: partial（弱起）小節でも autobeam が正しく働く。
+// 綴り: LP \relative { a'8 } = Lily# absolute a。6/8 の partial 2（=4/8 のピックアップ）。
+octave absolute
+time 6/8
+
+part m { clef treble }
+
+section Main {
+  partial 2
+  m { a8 a a a | }
+}
+
+form main { ~Main }
+
+score main { staff m }

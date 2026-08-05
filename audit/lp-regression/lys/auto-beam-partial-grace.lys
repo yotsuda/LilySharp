@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/auto-beam-partial-grace.ly の Lily# 訳。
+// CLAIM: partial 小節の頭の grace が autobeam を壊さない
+// （d8 d が組み、次の小節の 8 分 8 連が拍どおり組む）。
+// 綴り: LP \relative c' { e16 d8 c8 } = Lily# absolute e16 d8 c8。
+octave absolute
+
+part m { clef treble }
+
+section Main {
+  partial 4
+  m {
+    grace { e16 } d8 d |
+    c8 c c c c c c c |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

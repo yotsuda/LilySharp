@@ -425,11 +425,14 @@
     },
     "augmentum.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "VaticanaScore/VaticanaVoice (Gregorian) not in Lily#"
     },
     "auto-beam-bar.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "automatic beams do not cross bar lines",
+      "notes": "pickup [3], then [8 8][8 16 16][16x4] — matches LP. partial 8*3 spelled as partial 4. (no multiplier grammar); mid-measure \\section bar dropped (no mid-measure barline in Lily#); pitches made explicit (c)"
     },
     "auto-beam-beaming-override.ly": {
       "category": "scheme",
@@ -437,7 +440,9 @@
     },
     "auto-beam-breathe.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "autobeam ends at breathing sign",
+      "notes": "no breathe mark in Lily# grammar (HANDOFF 98-5c: SplitAttachments has no seat either)"
     },
     "auto-beam-exceptions.ly": {
       "category": "override",
@@ -449,15 +454,21 @@
     },
     "auto-beam-ossia.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "beamable note does not extend a staff symbol",
+      "notes": "partial-width staff symbol (issue 5499 regime) has no Lily# counterpart — staves span the system"
     },
     "auto-beam-partial-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "grace at partial start does not break autobeaming",
+      "notes": "grace flagged, d8 d8 pair, 4+4 in the full bar — matches LP visually (same-paper crop)"
     },
     "auto-beam-partial.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "autobeam works properly in partial measures",
+      "notes": "BeamDetector seeded pickup at position 0 -> mirrored grouping ([3]+[flag] vs LP [flag]+[3]). MeasureStartPosition = period - pickup length (\\partial = PartialSet, measurePosition -dur). fixture test/autobeam-pickup"
     },
     "auto-beam-recheck.ly": {
       "category": "scheme",
@@ -505,7 +516,9 @@
     },
     "autobeam-nobeam.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "noBeam terminates an autobeam",
+      "notes": "no noBeam in Lily# grammar (only manual [ ] groups)"
     },
     "autobeam-show-defaults.ly": {
       "category": "markup",
@@ -513,7 +526,9 @@
     },
     "autobeam-tuplet-recheck.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "autobeam rechecking works with tuplets: first beat beams together",
+      "notes": "grouping [16 16 t8 t16][t8 t16 16 16] matches LP. Residual: LP prints tuplet BRACKETS here, Lily# bare numbers — known un-ported tuplet-bracket family (HANDOFF lp_calc: tuplet on-line/bracket)"
     },
     "autochange-after-rest.ly": {
       "category": "scheme",
@@ -1009,7 +1024,9 @@
     },
     "beam-auto.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "autobeam presets for common time signatures",
+      "notes": "14 meters x 8th/16th/32nd: beam-segment fingerprint 202==202 vs LP and page-by-page visual match (incl the odd-but-correct 4/16 row: unbeamed 8ths+16ths, 32nds in pairs). Validates BeamingPattern presets wholesale"
     },
     "beam-beamlet-break.ly": {
       "category": "scheme",
@@ -1061,11 +1078,13 @@
     },
     "beam-collision-cross-staff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "needs \\change Staff (no staff switching in Lily#)"
     },
     "beam-collision-cross-staff2.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "needs \\change Staff"
     },
     "beam-collision-feasible-region.ly": {
       "category": "scheme",
@@ -1073,11 +1092,15 @@
     },
     "beam-collision-flag.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "beams avoid flags",
+      "notes": "LP beam-collision engine (covered grobs) not ported; book also needs \\voiceThree props"
     },
     "beam-collision-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "beam/grace collision handling",
+      "notes": "LP beam-collision engine not ported"
     },
     "beam-collision-large-object.ly": {
       "category": "plain",
@@ -1121,7 +1144,8 @@
     },
     "beam-cross-staff-rest.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "needs \\change Staff"
     },
     "beam-cross-staff-script.ly": {
       "category": "markup",
@@ -1133,7 +1157,8 @@
     },
     "beam-cross-staff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "needs \\change Staff + PianoStaff knee beams"
     },
     "beam-damp.ly": {
       "category": "scheme",
@@ -1165,7 +1190,9 @@
     },
     "beam-forced-direction.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "manual beam direction forced with _ and ^",
+      "notes": "no _[/^[ sigils in Lily# (stem forcing @stemUp/@stemDown is the Lily# spelling; covered by own fixtures)"
     },
     "beam-french.ly": {
       "category": "scheme",

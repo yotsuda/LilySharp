@@ -1,0 +1,25 @@
+// lilypond-src/input/regression/auto-beam-bar.ly の Lily# 訳。
+// CLAIM: autobeam は小節線をまたがない（partial 8*3 のピックアップ 3 連 8 分も、
+// 小節内の 8 分 3 連＋16 分 6 連も、それぞれ小節線で切れる）。
+// 差分 2 点（status.json 記載）:
+//   - LP `\partial 8*3` の乗数は Lily# に無い → 同長の `partial 4.`（3/8）で表す。
+//   - 原本 3 小節目の小節中間 `\section`（複縦線で切れる主張）は Lily# に
+//     小節中間の縦線が無いので落とした。主張の残り（barline で切れる）は 1-2 小節が持つ。
+//   - 素の `8` は前音高の反復（先頭は LP 既定）→ 明示の c で書く（連桁の主張は音高に依らない。
+//     LP 対照も同じ c 綴りの双子で取る）。
+octave absolute
+time 3/4
+
+part m { clef treble }
+
+section Main {
+  partial 4.
+  m {
+    c8 c c |
+    c8 c c c16 c c c c c |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

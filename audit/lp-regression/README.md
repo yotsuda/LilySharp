@@ -41,6 +41,22 @@ plain でも文法ギャップ（例: 強制臨時記号 `f'!` — Lily# では 
 } } }
 ```
 
+status 更新ヘルパー（揮発・毎セッション貼り直す）:
+```powershell
+function global:Set-RegStatus([string]$name, [string]$state, [string]$claim, [string]$notes) {
+  $p = 'C:\MyProj\LilySharp\audit\lp-regression\status.json'
+  $j = Get-Content $p -Raw | ConvertFrom-Json
+  $e = $j.files.$name; if ($null -eq $e) { throw "no entry $name" }
+  $e | Add-Member -Force NoteProperty state $state
+  if ($claim) { $e | Add-Member -Force NoteProperty claim $claim }
+  if ($notes) { $e | Add-Member -Force NoteProperty notes $notes }
+  $j | ConvertTo-Json -Depth 4 | Set-Content $p -Encoding utf8
+}
+```
+
+比較の小技: beam の組み方は両エンジンとも SVG の `<polygon>` なので、
+`[regex]::Matches($svg,'<polygon').Count` の一致が「同じ組み方・同じ細分」の強い指紋になる。
+
 数の数え方（引き継ぎ用）:
 ```powershell
 $s = (Get-Content audit\lp-regression\status.json -Raw | ConvertFrom-Json).files.PSObject.Properties

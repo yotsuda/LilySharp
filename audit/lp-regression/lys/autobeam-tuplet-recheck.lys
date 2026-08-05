@@ -1,0 +1,21 @@
+// lilypond-src/input/regression/autobeam-tuplet-recheck.ly の Lily# 訳。
+// CLAIM: autobeam の再判定は tuplet と正しく噛み合う——最初の拍
+// （c16 c + 3/2{c8 c16} + 3/2{c8 c16} = 1/4）が丸ごと 1 本の連桁に組まれる。
+// 綴り: LP \relative { c'16 } = Lily# absolute c。
+octave absolute
+time 2/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    c16 c
+    tuplet 3/2 { c8 c16 }
+    tuplet 3/2 { c8 c16 }
+    c16 c |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

@@ -1,0 +1,20 @@
+// lilypond-src/input/regression/auto-beam-partial.ly の移植（LP回帰コーパス第 3 号・
+// 第99 第7便）. CLAIM: 弱起（partial）小節でも autobeam の拍構造が正しい。
+// 6/8 の partial 2（4/8 ピックアップ）は小節位置 2/8 から始まる——LP の \partial は
+// Timing.measurePosition を −dur に置く（ly/music-functions-init.ly:1697-1705 PartialSet、
+// −dur ≡ period−dur mod period）ので、拍構造は小節の「尻尾」＝ [旗1つ]+[3連桁]。
+// Lily# は BeamDetector が pickup の開始位置を 0 に種えていて、鏡像の [3連桁]+[旗] を
+// 組んでいた（MeasureStartPosition が修正）。LP 対照（同一 paper）と目視一致を確認済み。
+octave absolute
+time 6/8
+
+part m { clef treble }
+
+section Main {
+  partial 2
+  m { a8 a a a | }
+}
+
+form main { ~Main }
+
+score main { staff m }
