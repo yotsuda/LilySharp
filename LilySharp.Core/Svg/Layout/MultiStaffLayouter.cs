@@ -1400,6 +1400,18 @@ internal sealed class MultiStaffLayouter
         List<Fraction> allTimings,
         List<Measure> allMeasures)
     {
+        // Cross-voice column pairs of each staff, with each item's ink at the X the
+        // renderer will draw it (note-collision shifts included) — the floors the
+        // per-voice rod loop in CreateInterColumnSpring cannot raise, because no
+        // single voice occupies both columns of the pair. One separation frame per
+        // STAFF, as LilyPond's Separation_item has; never across staves. A tab
+        // staff's columns are digit rows, priced by ApplyTabChordSpacing below.
+        foreach (var vGroup in score.StaffGroups)
+            foreach (var vStaff in vGroup.Staves)
+                if (!vStaff.IsTab && vStaff.Voices.Length >= 2)
+                    springs = SpacingRules.ApplyCrossVoiceColumnSpacing(
+                        springs, allTimings, vStaff.Voices, measureIndex);
+
         // Reserve room for lyric syllables so they don't collide. Only acts
         // on single-voice measures (timing columns == note items); a no-lyric
         // score leaves the chain untouched. Applied before the layout's

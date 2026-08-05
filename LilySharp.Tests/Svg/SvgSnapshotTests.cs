@@ -636,6 +636,10 @@ public class SvgSnapshotTests
         // reservation list): six bars of bass-tab eighths break 3+3 instead of
         // packing one system that overruns the page edge.
         yield return new object[] { "test/tab-line-break" };
+        // Voice three's literal automatic_shift offset (+0.652, not a +1-head
+        // cascade) and the cross-voice column floor: the shifted cis2.'s dot must
+        // push the next eighth column instead of printing through its head.
+        yield return new object[] { "test/dot-cross-voice-spacing" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

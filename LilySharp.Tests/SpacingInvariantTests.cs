@@ -604,4 +604,86 @@ public class SpacingInvariantTests
         Assert.Equal(reserved.Sum(s => s.MinDistance) + barlines, gate.MinWidth, precision: 9);
         Assert.Equal(reserved.Sum(s => s.IdealDistance) + barlines, gate.IdealWidth, precision: 9);
     }
+
+    /// <summary>The three-voice book of test/dot-cross-voice-spacing — a dotted half in
+    /// voice three under eighths in voice two, the two mechanisms of that fixture.</summary>
+    private const string DottedThirdVoice = """
+        part melody {
+          section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 }  { cis2. r4 } }
+        }
+        form main { A }
+        score main "x" { staff melody }
+        """;
+
+    /// <summary>
+    /// automatic_shift, not a cascade: voice three's clash group takes the
+    /// <c>else if (Stem::is_valid_stem) offset += 0.5</c> clause — half the DOWN group's
+    /// first head — because its heads neither overlap nor cross voice one's.
+    /// MEASURED on LilyPond 2.26.0 (the fixture's twin): cis' sits 0.652 right of the
+    /// column, and 0.652 = 0.5 × the eighth's 1.3042 head. The old hand-rolled "+1 head
+    /// width per later same-direction voice" put it at 1.3042 — exactly double — under a
+    /// LILYPOND-REF that named automatic_shift without porting its clauses.
+    /// LILYPOND-REF: lily/note-collision.cc:536-576 (the group loop), :427-437 (× the
+    ///   down group's first support head).
+    /// </summary>
+    [Fact]
+    public void ThirdVoiceShift_IsAutomaticShiftsHalfHead_NotACascade()
+    {
+        var (_, _, _, score) = Collect(DottedThirdVoice);
+        var voices = score.StaffGroups[0].Staves[0].Voices;
+        Assert.Equal(3, voices.Length);
+
+        var offsets = ElementCoordinator.ComputeVoiceOffsets(voices).VoiceOffsets;
+
+        // cis2. is voice 3, item 0 of measure 0. The down group's first head is the
+        // e8 — a BLACK head — so the shift is half ITS ink width.
+        double cisShift = offsets[new VoiceItemKey(0, 3, 0)];
+        Assert.Equal(0.5 * GlyphMetrics.GetNoteheadBBox(8).Width, cisShift, precision: 9);
+
+        // Voices one and two stay on the column (the pin only chases negative amounts).
+        Assert.False(offsets.ContainsKey(new VoiceItemKey(0, 1, 0)));
+        Assert.False(offsets.ContainsKey(new VoiceItemKey(0, 2, 0)));
+    }
+
+    /// <summary>
+    /// The cross-voice column floor: the shifted cis2.'s DOT reaches into the next
+    /// eighth column, which belongs to voice two alone — no single voice occupies both
+    /// columns, so the per-voice rod loop cannot see the pair and the dot used to print
+    /// straight through the d's head (same Y row, overlapping X). The floor is the
+    /// staff-frame skyline distance with the collision shifts applied
+    /// (SpacingRules.ApplyCrossVoiceColumnSpacing), and merge_springs' headroom rides
+    /// on top of the raised minimum.
+    /// LILYPOND-REF: lily/separation-item.cc:120-190 (boxes carry the shifts);
+    ///   lily/note-spacing.cc:78-83 (the spring minimum); lily/spring.cc:122 (min + 0.3).
+    /// MEASURED (2.26.0 twin): the first eighth gap is 3.33 against the measure's plain
+    /// 2.50, and removing the dot (cis2) collapses it to 2.51 — the push is the dot's.
+    /// </summary>
+    [Fact]
+    public void CrossVoiceDotReach_FloorsTheNextColumnsSpring()
+    {
+        var (timings, allMeasures, primary, score) = Collect(DottedThirdVoice);
+
+        var bare = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
+        var reserved = MultiStaffLayouter.ApplySharedColumnReservations(
+            score, 0, bare, primary, timings, allMeasures);
+
+        // Spring 1 is the t=0 → t=1/8 pair the dot crosses. The floor must BITE — this
+        // is not two equal numbers agreeing — and the ideal must carry the headroom
+        // above the raised minimum, so the drawn gap clears the dot by LilyPond's 0.3.
+        Assert.True(reserved[1].MinDistance > bare[1].MinDistance,
+            $"the dot's cross-voice reach must floor the spring: "
+            + $"bare={bare[1].MinDistance:F3}, reserved={reserved[1].MinDistance:F3}");
+        // Both of LilyPond's constraints, in their order: the ideal is the SKYLINE
+        // distance + 0.3 (merge_springs' headroom) and the final minimum is the ROD,
+        // the same distance + 0.1 — so a bound pair always shows ideal − min = 0.2.
+        Assert.True(reserved[1].IdealDistance > bare[1].IdealDistance,
+            $"the headroom must ride the raised minimum into the ideal: "
+            + $"bare={bare[1].IdealDistance:F3}, reserved={reserved[1].IdealDistance:F3}");
+        Assert.Equal(SpacingRules.SpringHeadroom - SpacingRules.SeparationRodPadding,
+            reserved[1].IdealDistance - reserved[1].MinDistance, precision: 9);
+
+        // Control: the same measure's later eighth-to-eighth pairs carry no cross-voice
+        // reach, so the floor leaves them exactly as the per-voice loop priced them.
+        Assert.Equal(bare[2].MinDistance, reserved[2].MinDistance, precision: 9);
+    }
 }

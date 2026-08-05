@@ -1,0 +1,25 @@
+// A dotted half in VOICE THREE against eighths in voice two (起票 2026-08-05,
+// scratch/ベースタブLy/Untitled-4.lys, reproduced verbatim). Two LilyPond mechanisms meet
+// on the first eighth gap, and both were mis-ported:
+//   ① the third voice's collision shift is automatic_shift's `Stem::is_valid_stem ?
+//     … : offset += 0.5` clause × the down head — MEASURED on 2.26.0: cis' sits
+//     +0.652 right of the column. Lily#'s old hand-rolled cascade put it at +1.3042
+//     (a flat +1 head width for every later same-direction voice), twice LilyPond's.
+//   ② the shifted cis2. reaches its DOT into the next eighth column, which belongs to
+//     voice two alone; the spring's minimum is the columns' skyline distance over the
+//     staff's separation boxes (note-spacing.cc:78-83), which carry the shifts. The
+//     old per-voice-only rod loop never formed the cis→d pair, so the dot printed
+//     straight THROUGH the d's head (same X band, same Y row —
+//     SpacingRules.ApplyCrossVoiceColumnSpacing holds the derivation).
+// MEASURED (2.26.0 twin): first eighth gap 3.33 vs the measure's plain 2.50 — and
+// with the dot removed (cis2 for cis2.) it collapses back to 2.51 even though the
+// shifted head stays, so the push is the dot's skyline, not the head's.
+part melody {
+  section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 }  { cis2. r4 } }
+}
+
+form main { A }
+
+score main {
+  staff melody
+}

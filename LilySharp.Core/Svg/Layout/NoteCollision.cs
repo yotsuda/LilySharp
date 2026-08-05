@@ -143,7 +143,11 @@ internal sealed record NoteCollisionInfo
 ///   dot_wipe_head is a local variable in the MERGE branch, not this mechanism.
 /// IMPLEMENTED — force-hshift manual override (note-collision.cc:608-624 forced_shift)
 /// IMPLEMENTED — within-chord seconds displacement (stem.cc:606-760) in ChordHeadPositioning
-/// IMPLEMENTED — multi-voice cascading for 3+ voices (note-collision.cc:505-605 automatic_shift)
+/// IMPLEMENTED — automatic_shift's group loop (note-collision.cc:503-599), ported clause
+///   for clause in CalculateVoiceOffsets. ⚠️ It used to be a flat "+1 head width per later
+///   same-direction voice" cascade wearing this same citation; the third voice of a
+///   `voice { } { } { }` came out at double LilyPond's measured shift (+1.3042 vs +0.652,
+///   scratch/ベースタブLy/Untitled-4.lys) until it was replaced with the literal clauses.
 /// </remarks>
 internal sealed record NoteCollisionParameters
 {
@@ -603,99 +607,189 @@ internal sealed class NoteCollision
     }
 
     /// <summary>
-    /// Calculates collision info for a voice column with multiple voices.
+    /// Calculates collision info for a voice column with multiple voices — the literal
+    /// port of LilyPond's <c>automatic_shift</c>: within each stem direction the clash
+    /// groups accumulate offsets clause for clause (match / clear-heads / cross / bare
+    /// stem, then the opposite-direction clamps), the whole set is multiplied by the
+    /// width of the down-stem group's first head, and the leftmost NEGATIVE amount is
+    /// pinned to the column slot.
     /// Returns (VoiceId, ItemIndex, XOffset, HeadTransparent, DotForceDown) for each entry.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:254-318 — head wipe
-    /// LILYPOND-REF: lily/note-collision.cc:539-581 — multi-voice cascading
-    /// For 3+ voices, each additional voice in the same stem direction gets a
-    /// cumulative shift of 1 notehead width beyond the base collision offset.
+    /// LILYPOND-REF: lily/note-collision.cc:503-599 automatic_shift — the group loop
+    ///   ported clause for clause below (each clause carries its line);
+    /// LILYPOND-REF: lily/note-collision.cc:403-471 calc_positioning_done — the
+    ///   <c>× wid</c> (whose loop over {UP, DOWN} OVERWRITES, so wid is the DOWN
+    ///   group's first support head whenever a down group exists) and the
+    ///   <c>amount - left_most</c> translation, where <c>left_most</c> starts at 0 and
+    ///   only ever moves BELOW it;
+    /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set —
+    ///   <c>horizontal-shift = (quotient n 2)</c>, so voices 1,2 read 0 and voices
+    ///   3,4 read 1: both the shift_less sort of get_clash_groups (:475-497) and the
+    ///   "explicit shift matches previous" clause consume that number, and under
+    ///   <c>voice { } { }</c> every voice is voicified so the shift is always explicit.
+    /// <para>
+    /// ⚠️ THE BODY THIS REPLACED WAS AN INVENTION, not a port, and its citation said
+    /// otherwise: every later same-direction voice took a flat +1 head width
+    /// ("cascade outward"), which put the third voice of
+    /// scratch/ベースタブLy/Untitled-4.lys at +1.3042 where LilyPond MEASURES +0.652 —
+    /// the <c>else if (Stem::is_valid_stem) offset += 0.5</c> clause times the down
+    /// head's 1.3042. It also returned all zeros whenever one direction was EMPTY;
+    /// LilyPond runs the loop regardless, so two same-direction voices spread even
+    /// with no opposite voice on the moment.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT PORTED: the Side_position_interface dot supports (:377-399 dots-on-the-
+    /// left clearing right-hand heads, :578-586 an up group's dot column clearing
+    /// later up stems) — Lily# has no dot side-positioning; a dot rides its head.
+    /// </para>
+    /// <para>
+    /// ⚠️ KEPT DIVERGENCE: a voice CROSSING (CollisionType.Meshing) pins the
+    /// RIGHTMOST group where LilyPond pins the leftmost — the separation is LP's, but
+    /// the (frequently beamed) upper voice keeps its column X so its beam, drawn at
+    /// column X and not per note, is not skewed.
+    /// </para>
     /// </remarks>
     public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)> CalculateVoiceOffsets(
         VoiceColumn column)
     {
         var offsets = new List<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)>();
 
-        // Group entries by stem direction
+        // get_clash_groups: one group per stem direction, sorted by horizontal-shift
+        // (shift_less); VoiceId order IS that order under (id-1)/2, ties stable.
         var upEntries = column.Entries.Where(e => GetStemDirection(e) == true).ToList();
         var downEntries = column.Entries.Where(e => GetStemDirection(e) == false).ToList();
-
-        if (upEntries.Count == 0 || downEntries.Count == 0)
-        {
-            // No collision possible - all voices get 0 offset
-            foreach (var entry in column.Entries)
-            {
-                offsets.Add((entry.VoiceId, entry.ItemIndex, 0, false, false));
-            }
-            return offsets.ToImmutableArray();
-        }
-
-        // Sort each group by VoiceId for consistent cascading order
         upEntries.Sort((a, b) => a.VoiceId.CompareTo(b.VoiceId));
         downEntries.Sort((a, b) => a.VoiceId.CompareTo(b.VoiceId));
 
-        // Get staff positions for each group (using first entry = primary voice)
-        var upPositions = GetStaffPositions(new List<VoiceEntry> { upEntries[0] });
-        var downPositions = GetStaffPositions(new List<VoiceEntry> { downEntries[0] });
+        if (upEntries.Count == 0 && downEntries.Count == 0)
+        {
+            foreach (var entry in column.Entries)
+                offsets.Add((entry.VoiceId, entry.ItemIndex, 0, false, false));
+            return offsets.ToImmutableArray();
+        }
 
-        // Get note values and dots (use first entry as representative)
-        var (upNoteValue, upDots) = GetNoteInfo(upEntries[0]);
-        var (downNoteValue, downDots) = GetNoteInfo(downEntries[0]);
+        // head_positions_interval, widened one position each way
+        // (:517-520 — s[LEFT]--; s[RIGHT]++).
+        var groups = new[] { upEntries, downEntries }; // g: 0 = UP (d=+1), 1 = DOWN (d=-1)
+        var ext = new (int Lo, int Hi)[2][];
+        var unionExt = new (int Lo, int Hi)[2];
+        var validStem = new bool[2][];
+        for (int g = 0; g < 2; g++)
+        {
+            var list = groups[g];
+            ext[g] = new (int, int)[list.Count];
+            validStem[g] = new bool[list.Count];
+            int lo = int.MaxValue, hi = int.MinValue;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var ps = GetStaffPositions(new List<VoiceEntry> { list[i] });
+                ext[g][i] = ps.Count > 0 ? (ps.Min() - 1, ps.Max() + 1) : (0, 0);
+                lo = Math.Min(lo, ext[g][i].Lo);
+                hi = Math.Max(hi, ext[g][i].Hi);
+                // LILYPOND-REF: lily/stem.cc Stem::is_valid_stem — a stemless head
+                // (whole, breve) contributes the 0.5 arm, a stemmed one the 1.0.
+                validStem[g][i] = NoteColumnLayout.Of(list[i].Item) is { HasStem: true };
+            }
+            unionExt[g] = (lo, hi);
+        }
 
-        // Analyze collision between primary up and down voices
-        var collision = AnalyzeCollision(upPositions, downPositions, upNoteValue, downNoteValue, upDots, downDots);
+        // inner_offset = check_meshing_chords over the FIRST group of each direction
+        // (:522-525), 0.0 when either direction is empty. Dimensionless, in down-stem
+        // head widths — the extent ratio is applied inside AnalyzeCollision, the width
+        // below. A merge returns 0 with its head wipes.
+        var collision = upEntries.Count > 0 && downEntries.Count > 0
+            ? AnalyzeCollision(
+                GetStaffPositions(new List<VoiceEntry> { upEntries[0] }),
+                GetStaffPositions(new List<VoiceEntry> { downEntries[0] }),
+                GetNoteInfo(upEntries[0]).noteValue,
+                GetNoteInfo(downEntries[0]).noteValue,
+                GetNoteInfo(upEntries[0]).dots,
+                GetNoteInfo(downEntries[0]).dots)
+            : NoteCollisionInfo.NoCollision;
+        // :200-201 — the sign carries the direction; UpStemXOffset IS +shift_amount.
+        double inner = collision.UpStemXOffset;
 
-        // LILYPOND-REF: lily/note-collision.cc:539-581
-        // Apply cascading offsets for 3+ voices.
-        // Voice priority order within each direction:
-        //   Up-stem:  Voice 1 (base), Voice 3 (+1 notehead), Voice 5 (+2 noteheads), ...
-        //   Down-stem: Voice 2 (base), Voice 4 (-1 notehead), Voice 6 (-2 noteheads), ...
-        // LILYPOND-REF: lily/note-collision.cc calc_positioning_done — each clash
-        // group is translated by (amount - left_most), pinning the leftmost group
-        // to the column's spacing slot. Up groups shift +, down groups shift -,
-        // with the cascade extending outward; subtract the minimum so the leftmost
-        // group lands at 0. For two voices this makes the separation 2*inner.
+        // The per-direction group loop, :536-576.
+        var off = new double[2][];
+        for (int g = 0; g < 2; g++)
+        {
+            int d = g == 0 ? 1 : -1;
+            int o = 1 - g;
+            var list = groups[g];
+            off[g] = new double[list.Count];
+            double offset = inner;
+            int prevShift = 0;
+            for (int i = 0; i < list.Count; i++)
+            {
+                int hs = (list[i].VoiceId - 1) / 2; // horizontal-shift
+                if (i == 0)
+                {
+                    offset = inner;
+                }
+                else
+                {
+                    if (hs == prevShift)
+                    {
+                        // :557 — match the previous notecolumn offset.
+                    }
+                    else if (ext[g][i].Hi > ext[g][i - 1].Lo && ext[g][i].Lo < ext[g][i - 1].Hi)
+                    {
+                        // :559-561 — fully clear the previous-notecolumn heads.
+                        offset += 1.0;
+                    }
+                    else if (d > 0 ? ext[g][i].Lo >= ext[g][i - 1].Hi
+                                   : ext[g][i].Hi <= ext[g][i - 1].Lo)
+                    {
+                        // :562-565 — we cross the previous notecolumn
+                        // (d * extents[d][i][-d] >= d * extents[d][i-1][d]).
+                        offset += validStem[g][i - 1] ? 1.0 : 0.5;
+                    }
+                    else if (validStem[g][i])
+                    {
+                        // :566-567.
+                        offset += 0.5;
+                    }
+
+                    // :569-575 — check if we cross the opposite-stemmed voices. An
+                    // empty opposite union can satisfy neither condition (LP's empty
+                    // Slice compares the same way), hence the single guard.
+                    if (groups[o].Count > 0)
+                    {
+                        if (d > 0 ? ext[g][i].Lo < unionExt[o].Hi
+                                  : ext[g][i].Hi > unionExt[o].Lo)
+                            offset = Math.Max(offset, 0.5);
+                        if (ext[g][i].Hi > ext[o][0].Lo && ext[g][i].Lo < ext[o][0].Hi)
+                            offset = Math.Max(offset, 1.0);
+                    }
+                }
+                off[g][i] = d * offset;
+                prevShift = hs;
+            }
+        }
+
+        // :427-437 — wid: the loop over {UP, DOWN} overwrites, so the DOWN group's
+        // first support head wins whenever a down group exists.
+        double wid = HeadWidth(GetNoteInfo(
+            downEntries.Count > 0 ? downEntries[0] : upEntries[0]).noteValue);
+
         var raw = new List<(int VoiceId, int ItemIndex, double Offset, bool Hide, bool Dot)>();
         for (int i = 0; i < upEntries.Count; i++)
-        {
-            var entry = upEntries[i];
-            raw.Add((entry.VoiceId, entry.ItemIndex,
-                collision.UpStemXOffset + i,   // up shifts right; cascade outward
+            raw.Add((upEntries[i].VoiceId, upEntries[i].ItemIndex, off[0][i],
                 i == 0 && collision.UpHeadTransparent, false));
-        }
         for (int i = 0; i < downEntries.Count; i++)
-        {
-            var entry = downEntries[i];
-            raw.Add((entry.VoiceId, entry.ItemIndex,
-                collision.DownStemXOffset - i, // down shifts left; cascade outward
+            raw.Add((downEntries[i].VoiceId, downEntries[i].ItemIndex, off[1][i],
                 i == 0 && collision.DownHeadTransparent,
                 i == 0 && collision.DownDotForceDown));
-        }
 
-        // LILYPOND-REF: lily/note-collision.cc calc_positioning_done — each clash
-        // group translates by (amount - left_most), pinning the LEFTMOST group to
-        // the column slot; the up-stem voice ends up shifted right.
-        //
-        // A voice CROSSING (CollisionType.Meshing) is the exception: pin the
-        // rightmost group (the up-stem voice) instead and let the DOWN-stem voice
-        // move LEFT. The separation is identical to LP's, but the — frequently
-        // beamed — upper voice keeps its column-X position, so its beam (drawn at
-        // column X, not per-note) is not skewed. This matches LP's appearance
-        // (upper stem clears to the right of the lower head) without propagating a
-        // shift through Lily#'s beam/spacing.
-        double pin = raw.Count == 0
-            ? 0.0
-            : collision.Type == CollisionType.Meshing
-                ? raw.Max(r => r.Offset)
-                : raw.Min(r => r.Offset);
-        // LILYPOND-REF: lily/note-collision.cc:339-340 — the offsets are multiplied by the
-        // width of the DOWN-stem note (not the column's widest head); the per-collision
-        // extent ratio (ComputeShiftInfo) already carries the up/down width difference.
-        double downWidth = HeadWidth(downNoteValue);
+        // :440-468 — translate by amount − left_most, where left_most starts 0.0 and
+        // only amounts BELOW it move it: an all-positive set keeps the slot in place.
+        // KEPT DIVERGENCE (see remarks): a voice crossing pins the rightmost group.
+        double pin = collision.Type == CollisionType.Meshing
+            ? raw.Max(r => r.Offset)
+            : Math.Min(0.0, raw.Min(r => r.Offset));
         foreach (var r in raw)
-            offsets.Add((r.VoiceId, r.ItemIndex,
-                (r.Offset - pin) * downWidth, r.Hide, r.Dot));
+            offsets.Add((r.VoiceId, r.ItemIndex, (r.Offset - pin) * wid, r.Hide, r.Dot));
 
         return offsets.ToImmutableArray();
     }

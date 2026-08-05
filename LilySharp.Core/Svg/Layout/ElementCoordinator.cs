@@ -39,8 +39,6 @@ internal sealed class ElementCoordinator
     // reference-only TieEngraver twin was deleted.
     private readonly SlurDetector _slurDetector = new();
     private readonly GlissandoDetector _glissandoDetector = new();
-    private readonly VoiceCollector _voiceCollector = new();
-    private readonly NoteCollision _noteCollision = new();
 
     // force-hshift is DISABLED for the initial release. From source the written value is
     // normalized away by horizontal justification and applies to the whole note column
@@ -67,13 +65,31 @@ internal sealed class ElementCoordinator
             ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
             ImmutableHashSet<VoiceItemKey> DotForceDownEntries) CalculateVoiceOffsets(
         Score score, GrobPropertyResolver? resolver = null)
+        => ComputeVoiceOffsets(score.Voices, resolver);
+
+    /// <summary>
+    /// The static core of <see cref="CalculateVoiceOffsets"/>, reachable from the SPACING
+    /// side without a <see cref="Score"/> or a coordinator instance:
+    /// <see cref="SpacingRules.ApplyCrossVoiceColumnSpacing"/> must price a column's ink at
+    /// the X the renderer will draw it — collision shift included — and the only
+    /// non-drifting way to know that shift is to ask the SAME computation the renderer's
+    /// offsets come from. LILYPOND-REF: lily/note-collision.cc calc_positioning_done runs
+    /// before spacing reads the columns' extents, so LilyPond's separation boxes carry the
+    /// shifts by construction; Lily# applies them at render time, so the spacing side has
+    /// to ask.
+    /// </summary>
+    internal static (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
+            ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
+            ImmutableHashSet<VoiceItemKey> DotForceDownEntries) ComputeVoiceOffsets(
+        ImmutableArray<Voice> voices, GrobPropertyResolver? resolver = null)
     {
-        if (score.Voices.Length <= 1)
+        if (voices.Length <= 1)
             return (ImmutableDictionary<VoiceItemKey, double>.Empty,
                     ImmutableHashSet<VoiceItemKey>.Empty,
                     ImmutableHashSet<VoiceItemKey>.Empty);
 
-        var voiceColumns = _voiceCollector.Collect(score);
+        var voiceColumns = new VoiceCollector().Collect(voices);
+        var noteCollision = new NoteCollision();
 
         if (voiceColumns.Length == 0)
             return (ImmutableDictionary<VoiceItemKey, double>.Empty,
@@ -107,7 +123,7 @@ internal sealed class ElementCoordinator
                 forceHshift = resolver.GetDouble("NoteColumn", "force-hshift");
             }
 
-            var offsets = _noteCollision.CalculateVoiceOffsets(column);
+            var offsets = noteCollision.CalculateVoiceOffsets(column);
 
             foreach (var (voiceId, itemIndex, xOffset, headTransparent, dotForceDown) in offsets)
             {

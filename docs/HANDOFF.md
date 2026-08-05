@@ -58,6 +58,81 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション後半（＝**第2の起票「cis2. の付点と d の符頭が重なる」
+（`scratch\ベースタブLy\Untitled-4.lys`・3声部）を閉じた。ユーザー指示は「発明せず LP を字面移植」
+——欠陥は 2 つとも移植の穴だった**）。
+
+⚠️ **仕事は 1 commit**（`3bb0b53e`）＋ handoff。前半（タブ改行・`2416758f`）は §1 旧版＝
+下の「第99セッション前半の経緯」。
+
+★★★ **① 規則 1／automatic_shift は節ごとに移植するもの**: 旧 `CalculateVoiceOffsets` は
+「3声部目以降は同方向 1 声ごとに +1 符頭幅」という**発明のカスケード**（citation は
+automatic_shift を名指ししつつ中身は別物）。**LP の実体は節の積み上げ**
+（note-collision.cc:536-576: hs一致=前と同じ／頭が重なる=+1.0／前列を横切る=stem有り?1.0:0.5／
+**素の valid stem=+0.5**／反対方向クランプ max 0.5・1.0）×**down 群先頭の頭幅**（:427-437 の
+ループは上書きで DOWN が勝つ）、pin は **min(0, …)**（:440-468・左端が負のときだけ動く）。
+`hs = quotient(voice番号-1, 2)`（music-functions.scm:666-674）。
+**実測**: 起票本の cis' は LP +0.652＝0.5×1.3042。旧 Lily# は +1.3042（2 倍）→ 移植後 0.652 一致。
+**片方向だけの列でも走る**（v2 が休符でも v3 は +0.652——LP 実測 17.7729−17.1208）。
+⚠️ 保持した逸脱: Meshing（声部交差）の pin は右端のまま（beam が列 X 描画のため・doc に明記）。
+dot の Side_position 支持 2 か所は未移植（Lily# に dot side-positioning が無い・doc に明記）。
+
+★★★ **① 規則 2／列の床は「譜のフレーム・shift 込み」**: spring の最小は隣接列の skyline 距離
+（note-spacing.cc:78-83）で、**LP の separation box は列フレームの extent＝collision shift 込み**
+（separation-item.cc:120-190。LP は衝突解決が spacing より先、Lily# は描画時 offset なので
+**spacing 側が同じ計算に訊く**＝`ElementCoordinator.ComputeVoiceOffsets` を static 抽出）。
+既存の rod ループは**同一声部が両列を占む対だけ**を張る（クロス譜の誤衝突対策で狭めた枠）ので、
+**voice 3 の cis2.（+0.65 shift）の付点 → voice 2 だけの次列**という対は誰も張らず、付点が
+d の符頭を刺し貫いた。⇒ `SpacingRules.ApplyCrossVoiceColumnSpacing`（共有 reservation リスト内・
+第99前半 ⑴ の枠がそのまま効いてゲートにも届く）: 同一譜内クロス声部対＋shift付き同一声部対を
+skyline+rod で床。⚠️ **spacer（`s`）は箱を持たない**（LP は grob を彫らない）——初版が
+phantom 符頭で beam-over-stem を +1.35 押して発覚、`IsMusicalColumn` でゲート。
+
+★★ **② 決め手の実測**（2.26.0 双子）: 起票本の最初の 8 分ギャップ **LP 3.33 vs 素の 2.50**。
+**付点を除く（cis2）と 2.51 に戻る**＝押すのは shifted 頭でなく**付点の skyline**。
+束縛時の構造は **ideal=sky+0.3（merge_springs headroom）・最終 min=rod=sky+0.1**＝差 0.2
+（テストはこの構造を pin）。修正後 Lily# 3.20（残差 0.13≈ItemSkylineFactory の中心基準の癖・既知）。
+
+★★ **③ snapshot 5 枚 re-base＋新規 1 枚**（全部 LP 方向を数値で確認してから）:
+```
+multi-voice              v3 +1.38 → +0.69 ＝ LP 0.5×head ぴったり（automatic_shift 単独の帰結）
+dot-force-down           b4. の付点床: 3.70 → 3.86（LP 3.90）
+multivoice-beams         shifted b'16 → 次列: +0.61 LP 方向（LP 3.81 に対し 3.11）
+multivoice-tuplet-beams  同型 2 か所。**旧は b' の 1.20 直後に a'＝符頭ほぼ密着（起票と同じ病気）**
+cue-region-measure       shifted g4 → 次列の休符 +0.1
+新規 dot-cross-voice-spacing ＝ 起票本逐語（header に LP 実測と両機構）
+```
+★ 陽性対照 2 面: 床パスを外すと unit+snapshot 6 本、`+=0.5` 節を壊すと shift テストが落ちる。
+
+⚠️⚠️ **④ 残: 名指しの leftover「per-voice wish の ideal」**: LP の left_head_end は
+**同一声部の wish** が shifted 頭を列フレームで読む（multivoice-beams 実測 3.81＝base 1.33＋
+shifted b' 2.48）。Lily# の `ApplyLeftHeadWidth` は cross-voice max・shift 無視の近似
+（CrossesVoiceBoundary の doc 自身が「LP は声部ごとに wish を建て merge_springs が合成」と既述・
+観測者ゼロ）。残差: multivoice-beams 3.11 vs 3.81・tuplet 同型。**直すなら max 枠に shift を
+足すのでなく per-voice wish 化**（u4 の B 本が反証: 境界越えの声部は wish を持たない＝
+2.51 が証拠）。
+
+未 push **49**（この handoff 込み。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ 私は push していない**）・テスト **4089 passed / 0 failed / 4 skipped**（前半終了時 4086・
+**+2 unit・+1 snapshot**）・台帳 **479 点（ss 非ゼロ 83・総和 3.612832552・count 106 うち非ゼロ 2
+——全部不変**）・**Core 0 warning。**
+
+⚠️⚠️ ★★★ **次に触るときの注意**:
+```
+⑴ ~~タブ譜が改行されない~~ **✅ 閉じた（前半・`2416758f`）**
+⑴' ~~cis2. の付点が d を刺す~~ **✅ 閉じた（`3bb0b53e`・陽性対照 2 面つき）**
+⑵ **per-voice wish の ideal**（④・新規・名指し済み）  ApplyLeftHeadWidth の cross-voice max
+                        近似が shifted 頭を ideal に入れない。残差実測あり（3.11 vs 3.81）
+⑵' **ItemSkylineFactory の中心基準**（既存・今回名指し）  referenceX=符頭中心なので混幅対で
+                        ±(C_prev−C_next)≈0.1 の系統差。u4 の残差 0.13 の主因
+⑶ 第98 ⑵/⑵'/⑶・第97 ⑶（cue packing・cue休符原寸・GetColumnNoteheadWidth）不変
+⑷ **§2 の残債返却は中断したまま**（不変）
+⑸ 双子の落下の残り（第98 ⑸）・percent-repeat タブの % 小節幅（前半 ⑹）不変
+⑹ **未移植を doc に名指し済み**: automatic_shift の dot 支持 2 か所・Meshing pin 逸脱（保持）
+```
+
+## 以下は第99セッション前半の経緯
+
 最終更新 第99セッション（＝**ユーザーがリリースブロッカー「タブ譜が改行されない」
 （`scratch\ベースタブLy\longtab.lys`）を持ち込んだので、§2 の残債返却は中断のまま**。起票の言い方は
 「改行されない」だが、**実欠陥は「改行ゲートがタブ小節を実幅より細く見積もる」**——6 小節が

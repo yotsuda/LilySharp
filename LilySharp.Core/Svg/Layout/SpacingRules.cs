@@ -4021,6 +4021,118 @@ internal static class SpacingRules
     }
 
     /// <summary>
+    /// Prices the CROSS-VOICE column pairs of one staff — the pairs the per-voice rod
+    /// loop in <see cref="MeasureLayouter"/> cannot see — with each item's ink taken at
+    /// the X the renderer will draw it, its note-collision voice shift included. The
+    /// case that found it: a dotted half in voice three (shifted right past the
+    /// down-voice head) reaches its DOT into the next eighth column, which belongs to
+    /// voice two alone; no single voice occupies both columns, so no floor was raised
+    /// and the dot printed straight through the next head
+    /// (scratch/ベースタブLy/Untitled-4.lys, 起票 2026-08-05).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:120-190 Separation_item::boxes — a staff's
+    ///   separation item boxes every grob of its paper column across ALL the staff's
+    ///   voices, as extents in the COLUMN's frame, i.e. with calc_positioning_done's
+    ///   shifts already applied. LilyPond resolves collisions BEFORE spacing reads the
+    ///   boxes; Lily# applies shifts at render time, so this pass asks the same
+    ///   computation the renderer's offsets come from
+    ///   (<see cref="ElementCoordinator.ComputeVoiceOffsets"/>).
+    /// LILYPOND-REF: lily/note-spacing.cc:78-83 — the spring minimum is the skyline
+    ///   distance over those boxes; lily/spring.cc:122 merge_springs then floors the
+    ///   ideal at min + 0.3, which is why the headroom is re-applied after the raise.
+    /// <para>
+    /// MEASURED (2.26.0, the book above): with the dot, LilyPond's first eighth gap is
+    /// 3.33 against the measure's plain 2.50; remove the dot (<c>cis2</c> for
+    /// <c>cis2.</c>) and it collapses to 2.51 even though the shifted head stays. So the
+    /// push is the DOT's skyline, not the head's, and a dot-blind gate cannot price it.
+    /// (The absolute gap will differ from LilyPond's while the voice-three cascade shift
+    /// differs — Lily# draws this cis at +1.30, LilyPond at +0.65 — a separate,
+    /// pre-existing note-collision question; this pass prices the geometry Lily#
+    /// actually draws.)
+    /// </para>
+    /// <para>
+    /// ⚠️ Same-voice pairs with no shift are SKIPPED: the per-voice loop has already
+    /// priced them through these same two functions, and a same-voice pair is
+    /// shift-invariant anyway (both ends carry the voice's own dx, which cancels in the
+    /// distance). Cross-STAFF pairs are never formed — that is the false collision the
+    /// per-voice loop was narrowed to avoid (a triplet in one staff clashing with
+    /// straight eighths in another, see its comment); the SAME-staff frame is LilyPond's
+    /// own, one separation item per staff.
+    /// </para>
+    /// </remarks>
+    internal static ImmutableArray<Spring> ApplyCrossVoiceColumnSpacing(
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> timings,
+        ImmutableArray<Model.Voice> staffVoices,
+        int measureIndex)
+    {
+        if (staffVoices.Length < 2 || springs.Length != timings.Count + 1)
+            return springs;
+
+        var offsets = ElementCoordinator.ComputeVoiceOffsets(staffVoices).VoiceOffsets;
+
+        // The items STARTING at each timing column, each with the shift it is drawn at.
+        // VoiceId is 1-based, matching VoiceCollector / the renderer's VoiceItemKey.
+        var columns = new List<(MusicItem Item, double Shift, int Voice)>?[timings.Count];
+        for (int v = 0; v < staffVoices.Length; v++)
+        {
+            if (measureIndex >= staffVoices[v].Measures.Length)
+                continue;
+            var items = staffVoices[v].Measures[measureIndex].Items;
+            var onset = Fraction.Zero;
+            for (int oi = 0; oi < items.Length; oi++)
+            {
+                var item = items[oi];
+                // Only what LilyPond boxes: a note, a chord, a DRAWN rest. A spacer
+                // (`s`) engraves no grob at all, so it has no separation box — pairing
+                // it here floored a real note against a phantom head at the middle
+                // line. Same gate as IsMusicalColumn.
+                if (IsMusicalColumn(item))
+                    for (int t = 0; t < timings.Count; t++)
+                        if (timings[t] == onset)
+                        {
+                            (columns[t] ??= new()).Add((item,
+                                offsets.GetValueOrDefault(
+                                    new VoiceItemKey(measureIndex, v + 1, oi)),
+                                v));
+                            break;
+                        }
+                onset += item.Duration;
+            }
+        }
+
+        var result = springs.ToBuilder();
+        bool widened = false;
+        for (int t = 1; t < timings.Count; t++)
+        {
+            if (columns[t - 1] is not { } left || columns[t] is not { } right)
+                continue;
+            double maxSky = 0, maxRod = 0;
+            foreach (var l in left)
+                foreach (var r in right)
+                {
+                    if (l.Voice == r.Voice && l.Shift == 0 && r.Shift == 0)
+                        continue;
+                    maxSky = Math.Max(maxSky, CalculateSkylineDistance(
+                        l.Item, r.Item, staffY: 0, null, l.Shift, r.Shift));
+                    maxRod = Math.Max(maxRod, SeparationRodDistance(
+                        l.Item, r.Item, staffY: 0, null, l.Shift, r.Shift));
+                }
+            if (maxSky <= result[t].MinDistance && maxRod <= result[t].MinDistance)
+                continue;
+            // The same three steps the per-voice loop takes, in the same order: raise
+            // the spring minimum, re-floor the ideal at min + 0.3 (merge_springs'
+            // headroom), then the rod, which binds only under compression.
+            var s = result[t].EnsureMinDistance(maxSky);
+            s = ApplyMergeSpringsHeadroom(s);
+            result[t] = s.EnsureMinDistance(maxRod);
+            widened = true;
+        }
+        return widened ? result.ToImmutable() : springs;
+    }
+
+    /// <summary>
     /// Reserves the sideways reach of a wide, always-outside script (a fermata or
     /// ornament) in the shared note columns, so a fermata over one note does not
     /// crowd the next note's accidental or head. The reservation is a SKYLINE
@@ -4262,9 +4374,15 @@ internal static class SpacingRules
         };
     }
 
+    /// <param name="prevShift">X the LEFT item is drawn at, relative to its column — a
+    /// note-collision voice shift. LilyPond's separation boxes are extents in the PAPER
+    /// COLUMN's frame, so a shifted voice's ink (and its dots) reaches further right; the
+    /// default 0 keeps every existing caller on the unshifted frame.</param>
+    /// <param name="nextShift">Same for the RIGHT item.</param>
     public static double CalculateSkylineDistance(MusicItem? prevItem, MusicItem? nextItem,
                                                    double staffY,
-                                                   NoteSpacingParameters? noteParams = null)
+                                                   NoteSpacingParameters? noteParams = null,
+                                                   double prevShift = 0, double nextShift = 0)
     {
         // LILYPOND-REF: scm/define-grobs.scm — skyline-horizontal-padding (LP default 0.1).
         // LilySharp historically used GlyphMetrics.MinItemGap (0.4) as the static
@@ -4313,7 +4431,8 @@ internal static class SpacingRules
         // a non-overlapping pair gives -infinity and max(0, -inf) is 0, which is LilyPond's
         // own answer through its own max.
         return Math.Max(0.0, RawSkylineDistance(
-            prevItem, nextItem, staffY, MusicalColumnSkylineVerticalPadding));
+            prevItem, nextItem, staffY, MusicalColumnSkylineVerticalPadding,
+            prevShift, nextShift));
     }
 
     /// <summary>
@@ -4327,9 +4446,10 @@ internal static class SpacingRules
     /// <c>Skyline::distance</c>).
     /// </remarks>
     private static double RawSkylineDistance(MusicItem prevItem, MusicItem nextItem,
-                                             double staffY, double verticalPadding)
-        => ItemSkylineFactory.CreateRightSkyline(prevItem, 0, staffY)
-            .Distance(ItemSkylineFactory.CreateLeftSkyline(nextItem, 0, staffY), verticalPadding);
+                                             double staffY, double verticalPadding,
+                                             double prevShift = 0, double nextShift = 0)
+        => ItemSkylineFactory.CreateRightSkyline(prevItem, prevShift, staffY)
+            .Distance(ItemSkylineFactory.CreateLeftSkyline(nextItem, nextShift, staffY), verticalPadding);
 
     /// <summary>
     /// The ROD between two musical columns: the skyline minimum plus the spacing spanner's
@@ -4360,7 +4480,8 @@ internal static class SpacingRules
     /// </remarks>
     public static double SeparationRodDistance(MusicItem? prevItem, MusicItem? nextItem,
                                                double staffY,
-                                               NoteSpacingParameters? noteParams = null)
+                                               NoteSpacingParameters? noteParams = null,
+                                               double prevShift = 0, double nextShift = 0)
     {
         // A boundary (bar line) pair is priced by its space-alist, not by a column rod —
         // that is CalculateSkylineDistance's own branch, and it has no separate rod.
@@ -4368,7 +4489,8 @@ internal static class SpacingRules
             return CalculateSkylineDistance(prevItem, nextItem, staffY, noteParams);
 
         return Math.Max(0.0,
-            SeparationRodPadding + RawSkylineDistance(prevItem, nextItem, staffY, 0.0));
+            SeparationRodPadding + RawSkylineDistance(prevItem, nextItem, staffY, 0.0,
+                                                      prevShift, nextShift));
     }
 
     /// <summary>
