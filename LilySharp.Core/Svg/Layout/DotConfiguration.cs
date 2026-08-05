@@ -149,7 +149,7 @@ internal sealed class DotConfiguration
     /// :375-398 LilyPond fires only when the UP group moved right, and the direction it then
     /// sets is UP (or CENTER, or the up chord's own). The <c>:411-448</c> this line used to
     /// cite holds no dot code — see NoteCollision.AnalyzeCollision for the full account.
-    /// LILYPOND-REF: lily/note-collision.cc:375-398 — the rule this approximates.
+    /// LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule this approximates.
     /// </remarks>
     public static int[] Resolve(IReadOnlyList<int> notePositions, IReadOnlyList<int>? directions = null)
     {

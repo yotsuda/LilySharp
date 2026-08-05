@@ -112,7 +112,7 @@ internal static class LpGeometryProbes
     // --- CHORD accidental stacking (Accidental_placement::calc_positioning_done) ---
     // Score X measures a SINGLE accidental; these four carry a two-note cluster (a written
     // third) whose accidental glyphs OVERLAP vertically and are forced into TWO columns, so
-    // the measured quantity is the ACC-to-ACC column gap (ChordAccidentalColumnGap). A third
+    // the measured quantity is the ACC-to-ACC column gap (AccidentalColumnGap). A third
     // does not reverse a head across the stem, so the heads share one column and the heads
     // skyline is clean; the trailing a/b/c'' never repeat the chord's altered letters, so no
     // cancellation natural is engraved as a third accidental. The pairs are vertical MIRRORS
@@ -7804,28 +7804,29 @@ internal static class LpGeometryProbes
         new("accidental.single-natural-to-notehead", NAT, g => g.NaturalToNoteheadAnchor()),
         new("accidental.single-flat-to-notehead", FLAT, g => g.FlatToNoteheadAnchor()),
 
-        // The first points to reach Accidental_placement's CHORD stacking (two accidentals
-        // forced into two columns). Each alteration is a mirror pair (below/above the middle
-        // line): the column gap is direction-independent, so the two must agree and a
-        // difference is a defect on its own. See probes CSB/CSA, CFB/CFA and
-        // ChordAccidentalColumnGap.
-        new("chord.accidental.sharp-column-gap-below", CSB, g => g.ChordAccidentalColumnGap(MidLineBarline)),
-        new("chord.accidental.sharp-column-gap-above", CSA, g => g.ChordAccidentalColumnGap(MidLineBarline)),
-        new("chord.accidental.flat-column-gap-below", CFB, g => g.ChordAccidentalColumnGap(MidLineBarline)),
-        new("chord.accidental.flat-column-gap-above", CFA, g => g.ChordAccidentalColumnGap(MidLineBarline)),
+        // The first points to reach Accidental_placement's stacking (two accidentals forced
+        // into two columns), here through a CHORD; crossvoice.accidental.column-gap below
+        // reaches the same packer through two voices. Each alteration is a mirror pair
+        // (below/above the middle line): the column gap is direction-independent, so the two
+        // must agree and a difference is a defect on its own. See probes CSB/CSA, CFB/CFA and
+        // AccidentalColumnGap.
+        new("chord.accidental.sharp-column-gap-below", CSB, g => g.AccidentalColumnGap(MidLineBarline)),
+        new("chord.accidental.sharp-column-gap-above", CSA, g => g.AccidentalColumnGap(MidLineBarline)),
+        new("chord.accidental.flat-column-gap-below", CFB, g => g.AccidentalColumnGap(MidLineBarline)),
+        new("chord.accidental.flat-column-gap-above", CFA, g => g.AccidentalColumnGap(MidLineBarline)),
 
         // The same stacking reached through TWO VOICES rather than one chord, plus the
         // collision the packing stands on. LilyPond has one AccidentalPlacement per staff
         // moment, so a cross-voice column is packed exactly as a chord is (probes XVC/XVD
         // agree to fourteen digits) — and the accidentals do not ride the note-collision
         // shift, which is what the XCA/XCB mirror pair reads.
-        // ⚠️ ChordAccidentalColumnGap is reading a CROSS-VOICE column here; its name says
-        // "chord" because that was the only caller when it was written. The computation is
-        // "the two accidentals after this bar line", which is the same question either way.
-        // Worth renaming to AccidentalColumnGap when someone is in the file with a rename tool.
+        // ⚠️ AccidentalColumnGap serves BOTH shapes, and its name says so since the 2026-08-05
+        // rename — it used to be ChordAccidentalColumnGap, from the days when a chord was its
+        // only caller. What it computes is "the two accidentals after this bar line", which is
+        // the same question whether they came from one chord or two voices.
         new("crossvoice.accidental.shifted-voice-to-head", XCA, g => g.AccidentalToColumnLeftmostHead(MidLineBarline)),
         new("crossvoice.accidental.pinned-voice-to-head", XCB, g => g.AccidentalToColumnLeftmostHead(MidLineBarline)),
-        new("crossvoice.accidental.column-gap", XCC, g => g.ChordAccidentalColumnGap(MidLineBarline)),
+        new("crossvoice.accidental.column-gap", XCC, g => g.AccidentalColumnGap(MidLineBarline)),
         new("crossvoice.collision.second", XCE, g => g.CollidedColumnHeadSpan(MidLineBarline)),
         new("crossvoice.collision.unison-half-over-quarter", XCF, g => g.CollidedColumnHeadSpan(MidLineBarline)),
         new("crossvoice.collision.stem-to-stem", XCH, g => g.CollidedColumnHeadSpan(MidLineBarline)),

@@ -941,7 +941,7 @@ internal static class SpacingRules
             // unless the staff column packed them together with another voice's, in which
             // case that answer is already in THIS frame (the column's) and is the one drawn.
             double leftmost = 0;
-            if (chord.Notes.Any(n => n.AccidentalX.HasValue))
+            if (chord.HasPackedAccidentals)
             {
                 leftmost = chord.Notes.Min(n => n.AccidentalX ?? 0);
             }

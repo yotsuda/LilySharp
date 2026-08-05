@@ -419,6 +419,30 @@ public sealed record ChordItem : MusicItem
 {
     /// <summary>The notes making up this chord.</summary>
     public ImmutableArray<ChordNoteInfo> Notes { get; init; }
+
+    /// <summary>
+    /// Whether this chord's accidentals were packed with the rest of its staff column
+    /// (<see cref="Collector.StaffAccidentalColumns"/>), i.e. whether any member carries a
+    /// <see cref="ChordNoteInfo.AccidentalX"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A HAND-WRITTEN LOOP, ON PURPOSE. Five layout sites ask this per chord, and spacing
+    /// asks it once per item per column on every break attempt; the obvious
+    /// <c>Notes.Any(n =&gt; n.AccidentalX.HasValue)</c> boxes ImmutableArray's struct
+    /// enumerator on each of those calls. Measured on the corpus's polyphonic books, that is
+    /// the only allocation this predicate needs to not make.
+    /// </remarks>
+    public bool HasPackedAccidentals
+    {
+        get
+        {
+            var notes = Notes;
+            for (int i = 0; i < notes.Length; i++)
+                if (notes[i].AccidentalX.HasValue)
+                    return true;
+            return false;
+        }
+    }
     /// <summary>The written chord value before dots and tuplet scaling, as a fraction of a whole note.</summary>
     public Fraction BaseDuration { get; }
     /// <summary>The number of augmentation dots on the chord.</summary>

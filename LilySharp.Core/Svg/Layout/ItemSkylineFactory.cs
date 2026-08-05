@@ -471,7 +471,7 @@ internal static class ItemSkylineFactory
     private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
         ChordItem chord, double[] headOffsets)
     {
-        if (chord.Notes.Any(n => n.AccidentalX.HasValue))
+        if (chord.HasPackedAccidentals)
         {
             foreach (var n in chord.Notes)
                 if (n.Accidental is { } acc && n.AccidentalX is { } x)

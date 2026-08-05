@@ -113,6 +113,12 @@ public class SvgSnapshotTests
         // on the harness or a second fixture; naming which one this book is
         // buying is the point.
         yield return new object[] { "test/cue-notes" };
+        // A whole-measure cue region, alone and as either block of a voice span.
+        // The per-voice flatten walks used to walk a span's cue body TWICE (region
+        // + flattened full-size copy): an extra bar in one orientation, a silent
+        // full-size overlay of the next measure in the other. The fixture header
+        // carries the refutation values (6 bars / doubled cue head).
+        yield return new object[] { "test/cue-region-measure" };
         // Arpeggio clears a chord-second's LEFT-reversed head (stem-down), not
         // just the un-displaced column.
         yield return new object[] { "test/arpeggio-second" };

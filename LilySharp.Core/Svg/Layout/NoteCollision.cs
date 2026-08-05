@@ -91,7 +91,7 @@ internal sealed record NoteCollisionInfo
     /// ⚠️ A DIVERGENCE from LilyPond's rule, not a port of it — see the long note at the
     /// assignment in <see cref="NoteCollision.AnalyzeCollision"/>, which also records that the
     /// <c>:411-448</c> this family used to cite is the wrong range.
-    /// LILYPOND-REF: lily/note-collision.cc:375-398 — the rule it approximates.
+    /// LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule it approximates.
     /// </remarks>
     public bool DownDotForceDown { get; }
 
@@ -301,9 +301,10 @@ internal sealed class NoteCollision
         // a second and a unison produce a NEGATIVE shift, which is precisely where LilyPond's
         // rule does not fire. Ticketed in HANDOFF §2 A; not changed here, because it moves
         // test/dot-force-down and wants its own measurement against LilyPond first.
-        // LILYPOND-REF: lily/note-collision.cc:375-398 — the rule this approximates.
-        // LILYPOND-REF: lily/note-collision.cc:350-373 — the neighbouring half (dots on the
-        //   left take Side_position support against the heads on the right), also unported.
+        // LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule this approximates.
+        // LILYPOND-REF: lily/note-collision.cc:350-373 check_meshing_chords — the neighbouring
+        //   half (dots on the left take Side_position support against the heads on the
+        //   right), also unported.
         bool downDotForceDown = false;
         if (downDots > 0)
         {

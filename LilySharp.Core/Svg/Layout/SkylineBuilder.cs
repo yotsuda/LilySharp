@@ -1556,7 +1556,7 @@ internal sealed class SkylineBuilder
     private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
         ChordItem chord, bool stemUp, int noteValue)
     {
-        if (chord.Notes.Any(n => n.AccidentalX.HasValue))
+        if (chord.HasPackedAccidentals)
         {
             foreach (var n in chord.Notes)
                 if (n.Accidental is { } acc && n.AccidentalX is { } x)

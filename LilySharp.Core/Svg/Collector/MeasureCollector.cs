@@ -1972,8 +1972,7 @@ public sealed partial class MeasureCollector
         var musicNodes = new List<SyntaxNode>();
         foreach (var node in voiceNode.DescendantNodes())
         {
-            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node)
-                || IsInsideGrace(node) || IsInsideInlineVolta(node) || node.IsInside<ArpeggioSyntax>())
+            if (IsInsideProcessedContainerExceptParallel(node))
                 continue;
             GatherMusicNode(node, musicNodes);
         }
@@ -2002,8 +2001,7 @@ public sealed partial class MeasureCollector
             // Skip nodes inside a container expression (they travel as one
             // wrapper) — EXCEPT parallel: the per-voice path flattens << \\ >>
             // (see GatherMusicNode), so its descendants must reach the walk.
-            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-                || IsInsideInlineVolta(node) || IsInsideOnce(node) || node.IsInside<ArpeggioSyntax>())
+            if (IsInsideProcessedContainerExceptParallel(node))
                 continue;
 
             GatherMusicNode(node, musicNodes);
@@ -3057,8 +3055,21 @@ public sealed partial class MeasureCollector
     /// skipped by the outer walks so the wrapper is processed once, not flattened.
     /// </summary>
     private static bool IsInsideProcessedContainer(SyntaxNode node) =>
+        IsInsideProcessedContainerExceptParallel(node) || IsInsideParallel(node);
+
+    /// <summary>
+    /// <see cref="IsInsideProcessedContainer"/> minus the parallel test — the skip set for
+    /// the per-voice flatten walks (<see cref="GatherVoiceMusicNodes"/> /
+    /// <see cref="CollectMeasuresFromNode"/>), which deliberately let a <c>&lt;&lt; \\ &gt;&gt;</c>
+    /// span's descendants through while every OTHER container still travels as one wrapper.
+    /// Those two walks used to hand-roll this list, and both copies were missing the cue
+    /// test: a whole-measure <c>cue { … }</c> in a sub-voice was walked twice — once as the
+    /// region (cue-sized) and once flattened (full size) — so the duplicate rolled the
+    /// measure and the piece gained a bar the exporter does not have.
+    /// </summary>
+    private static bool IsInsideProcessedContainerExceptParallel(SyntaxNode node) =>
         IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-        || IsInsideInlineVolta(node) || IsInsideParallel(node) || IsInsideOnce(node)
+        || IsInsideInlineVolta(node) || IsInsideOnce(node)
         || node.IsInside<ArpeggioSyntax>()
         // A cue REGION owns its body's walk (ProcessCueRegion), and the region is the only
         // thing that knows the notes are cue-sized. Letting the outer walk flatten it drops

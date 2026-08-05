@@ -1,0 +1,44 @@
+// Whole-measure cue regions: a cue { } that OWNS its measure — alone, and as either
+// block of a voice { } { } span. Before 2026-08-05 the two per-voice flatten walks
+// (GatherVoiceMusicNodes / CollectMeasuresFromNode) hand-rolled their container skip
+// list and both copies were missing the cue test, so a span's cue body was walked
+// twice — once as the region (cue-sized) and once flattened (full size):
+//   * cue in the FIRST block:  the duplicate 4/4 rolled an extra bar — this book
+//     laid out as 6 bars (`lysc layout`), while `lysc ly` exports 5. No warning.
+//   * cue in a SECOND block:   the bar count held, but the duplicate silently
+//     OVERLAID the sub-voice's empty placeholder in the NEXT measure (a full-size
+//     aes + rests drawn on top of the closing c d e f).
+// Refutation values (old spelling): 6 bars; bar 3's cue head drawn twice (once at
+// cue size, once full). Fixed: 5 bars, every cue head drawn once, cue-sized.
+// Guarded more directly by CueRegionTests.WholeMeasureCue* (bar counts + walked-once).
+//
+// ⚠️ KNOWN GAP this snapshot currently pins: rests INSIDE a cue draw full size.
+// LilyPond scales them with the region (MEASURED 2026-08-05: the `lysc ly` twin of the
+// solo bar renders flat+head+3 rests all at scale 0.0025 vs 0.0040 full — magstep(-4)).
+// RestItem has no IsCue. When that gap is closed this snapshot moves — by design.
+// LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4 (a CONTEXT property:
+// it scales everything the region prints, rests included).
+
+title "Cue Region Measure"
+time 4/4
+key c major
+
+part melody
+
+phrase test {
+  c4 d e f |
+  cue { aes4 r r r } |
+  voice { cue { aes4 r r r } } { g4 r r r } |
+  voice { g4 r r r } { cue { aes4 r r r } } |
+  c4 d e f |
+}
+
+section Main {
+  melody { test }
+}
+
+form main { Main }
+
+score main "cue-region-measure" {
+  staff treble melody
+}

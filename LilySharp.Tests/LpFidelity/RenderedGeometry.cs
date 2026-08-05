@@ -2791,27 +2791,35 @@ internal sealed class RenderedGeometry
         AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalFlat);
 
     /// <summary>
-    /// The X gap between the two accidental COLUMNS of the chord that opens the measure after
-    /// bar line <paramref name="barIndex"/>: the nearer (rightmost) accidental's anchor minus
-    /// the farther (leftmost) one's. This is the quantity Accidental_placement decides —
+    /// The X gap between the two accidental COLUMNS of the NOTE COLUMN that opens the measure
+    /// after bar line <paramref name="barIndex"/>: the nearer (rightmost) accidental's anchor
+    /// minus the farther (leftmost) one's. This is the quantity Accidental_placement decides —
     /// how far apart it stacks two accidentals whose glyphs overlap vertically.
     /// </summary>
     /// <remarks>
+    /// The column, not the chord: LilyPond packs one AccidentalPlacement per staff MOMENT, so
+    /// two accidentals reach this reading either from one chord (probes CSB/CSA/CFB/CFA) or
+    /// from two voices standing on one column (probe XCC), and it is the same question both
+    /// times — which is why the two agree to fourteen digits.
+    /// LILYPOND-REF: lily/accidental-placement.cc:479-518 calc_positioning_done.
+    /// <para>
     /// The probes carry exactly two accidentals of the SAME glyph, so whatever left-bearing
     /// that glyph's draw anchor holds cancels in the difference and the number is a pure
     /// column-to-column distance — the same reason the LilyPond side reads it anchor-to-anchor
-    /// off two ACC dumps. Selecting by X (not by chord membership) is safe here because the
-    /// probe's trailing notes carry no accidental, so the only two after the bar line are the
-    /// chord's.
+    /// off two ACC dumps. Selecting by X (not by membership of a chord or a voice) is safe
+    /// here because the probes' remaining notes carry no accidental, so the only two after the
+    /// bar line are that column's.
+    /// </para>
     /// </remarks>
-    public double ChordAccidentalColumnGap(int barIndex)
+    public double AccidentalColumnGap(int barIndex)
     {
         double bar = BarlineRight(barIndex);
         var accs = Accidentals.Where(a => a.X > bar + 1e-9).OrderBy(a => a.X).ToList();
         if (accs.Count < 2)
             throw new InvalidOperationException(
-                $"expected two accidentals after bar line {barIndex} (a chord stacking into "
-                + $"two columns) but found {accs.Count}.\nDrawn geometry:\n" + Describe());
+                $"expected two accidentals after bar line {barIndex} (one note column stacking "
+                + $"into two accidental columns) but found {accs.Count}.\nDrawn geometry:\n"
+                + Describe());
         return accs[1].X - accs[0].X;
     }
 

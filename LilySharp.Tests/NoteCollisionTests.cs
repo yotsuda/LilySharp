@@ -473,7 +473,7 @@ public class NoteCollisionTests
         // behaviour is described rather than unwatched; ticketed in HANDOFF §2 A.
         // ⚠️ The seconds/unisons this test uses now produce a NEGATIVE shift (the touch branch
         // above), which is exactly where LilyPond's rule does NOT fire.
-        // LILYPOND-REF: lily/note-collision.cc:375-398 — the rule this approximates.
+        // LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule this approximates.
         var collision = new NoteCollision();
         var ups = new[] { 5 };   // Up-stem note above
         var downs = new[] { 4 }; // Down-stem note on a line (even position)
@@ -489,7 +489,7 @@ public class NoteCollisionTests
     public void DotDirection_NoCollision_NotForced()
     {
         // No collision → no dot direction override (see the divergence note above).
-        // LILYPOND-REF: lily/note-collision.cc:375-398
+        // LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords
         var collision = new NoteCollision();
         var ups = new[] { 8 };
         var downs = new[] { 0 };

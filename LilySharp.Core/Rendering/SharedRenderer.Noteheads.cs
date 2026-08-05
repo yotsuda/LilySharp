@@ -66,7 +66,7 @@ internal static partial class SharedRenderer
             // Multi-voice collision: this down voice's on-line augmentation dot is
             // forced below the line (instead of the default up) to clear the up
             // voice's dot. ⚠️ Lily#'s rule, not LilyPond's — NoteCollision.AnalyzeCollision
-            // has the account. LILYPOND-REF: lily/note-collision.cc:375-398.
+            // has the account. LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords.
             bool dotForceDown = layout.IsDotForcedDown(ml.MeasureIndex, voiceNumber, itemIdx);
 
             // \voiceOne/\voiceTwo hold only where the voice { } span does, so this
@@ -640,7 +640,7 @@ internal static partial class SharedRenderer
         // A chord sharing its column with another voice was packed against that voice's
         // accidentals too, and in the STAFF COLUMN's frame — so those X's undo the collision
         // shift, exactly as the single-note branch does.
-        bool packedColumn = chord.Notes.Any(n => n.AccidentalX.HasValue);
+        bool packedColumn = chord.HasPackedAccidentals;
         double accOriginX = packedColumn ? x - voiceX : x;
         var accLayouts = packedColumn
             ? chord.Notes

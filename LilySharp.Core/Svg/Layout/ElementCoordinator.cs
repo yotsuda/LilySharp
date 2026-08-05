@@ -767,7 +767,7 @@ internal sealed class ElementCoordinator
     /// </summary>
     private static IEnumerable<AccidentalLayout> ChordAccidentalLayouts(ChordItem chord)
     {
-        if (chord.Notes.Any(n => n.AccidentalX.HasValue))
+        if (chord.HasPackedAccidentals)
         {
             foreach (var n in chord.Notes)
                 if (n.Accidental is { } acc && n.AccidentalX is { } x)
@@ -1369,7 +1369,7 @@ internal sealed class ElementCoordinator
             var placement = new AccidentalPlacement();
             IEnumerable<AccidentalLayout> laid = item switch
             {
-                ChordItem ch when ch.Notes.Any(n => n.AccidentalX.HasValue)
+                ChordItem ch when ch.HasPackedAccidentals
                     => ChordAccidentalLayouts(ch),
                 ChordItem ch => placement.CalculatePositions(ch.Notes, offsets.ToArray()),
                 // Packed with the rest of its staff column, in the column's frame — which is

@@ -291,7 +291,7 @@ internal sealed record ScoreLayout(
     /// ⚠️ That is Lily#'s rule and NOT LilyPond's — see NoteCollision.AnalyzeCollision, which
     /// records both the divergence and the fact that this family used to cite <c>:411-448</c>,
     /// a range holding no dot code at all.
-    /// LILYPOND-REF: lily/note-collision.cc:375-398 — the rule it approximates.
+    /// LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule it approximates.
     /// </remarks>
     public bool IsDotForcedDown(int measureIndex, int voiceId, int itemIndex)
     {

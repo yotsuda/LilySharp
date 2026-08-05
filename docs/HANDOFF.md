@@ -58,11 +58,84 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第98セッション（＝**引継ぎ ⑴'「`cue { }` が小節を占めると exporter と描画で小節数が
+割れる」を閉じた。ただし起票の solo 側の症状（「2 小節目に何も描かれない」）は**起票が名指した
+`477b9fba` でも再現しない**——solo は描かれる（477b9fba と HEAD がバイト一致）。**本当に割れていた
+のは voice 形だけ**で、欠落した綴りは **2 か所**だった）。
+
+⚠️ **仕事は 1 commit**（`58415901`）＋ handoff。
+
+★★★ **① 規則**: **`cue { }` region は per-voice の flatten walk でも 1 個の wrapper として運ぶ**。
+正典 `IsInsideProcessedContainer` は cue を知っていた（コメントが今回の症状を予言している）が、
+**手組みの skip リストが 2 か所**（`GatherVoiceMusicNodes`＝voice 0 の inline 流し込み・
+`CollectMeasuresFromNode`＝extra track 再構成）**とも cue を欠いて**いて、span の cue 本体が
+**region（縮尺つき）と flatten（原寸）の 2 回**歩かれていた。
+```
+第1ブロックの cue   voice { cue { aes r r r } } { g r r r }
+                    → 重複 4/4 が小節を 1 つ余分に回す（layout 3 小節・`lysc ly` は 2 小節）
+                    → cue が 2 回描かれる（同じ data-pos が font-size 2.52 と 4.00）
+第2ブロックの cue   voice { g r r r } { cue { aes r r r } }
+                    → 小節数は割れない。重複が**次の小節の空 placeholder を静かに上書き**
+                      （原寸 aes＋休符が次小節の音楽の上に重なる）
+```
+⇒ **修正は枠**: 手組み 2 リストを廃し、`IsInsideProcessedContainerExceptParallel`
+（正典から parallel だけ除いた述語）を両 walk が消費。正典は「except-parallel ∪ parallel」に
+再構成＝**次に container が増えたら 3 walk 全部に届くか、全部に届かない**。
+★★ **教訓は「skip リストも walk の呼び出しと同じで、全部数える」**——正典の doc 自身が
+「per-walk の whitelist は drift する」と書いていて、その通りに drift していた。
+
+★★ **② 陽性対照**: `CueRegionTests.WholeMeasureCue*` 2 本は修正を stash すると
+**Expected 2 / Actual 3・Assert.Empty 失敗**で落ちる。fixture `test/cue-region-measure`
+（solo／第1ブロック／第2ブロックの 3 regime）は header に反証値
+（**旧綴り 6 小節／新 5 小節**・LP は `lysc ly` 双子を 5 小節＝小節線 rect 5 本で描く）。
+
+★★★ **③ コーパスに観測者ゼロを陽性に確認**: `LILYSHARP_UPDATE_SNAPSHOTS=1` で**全 snapshot を
+再生成しても既存 204 枚が 1 枚も動かない**（新規 1 枚だけ増える）——だからこの欠陥は
+一度もテストを落とさなかった。
+
+⚠️ **④ 起票の solo 側は起票時点から不正確**（「起票は着手前に再現」の配当）。solo の実欠陥は
+**cue 内の休符が原寸のまま**なこと——**LP は休符も縮める**（実測: 双子の solo 小節は
+flat＋head＋休符 3 つ全部 scale 0.0025、原寸 0.0040＝magstep(−4)）。**`RestItem` に `IsCue` が
+無い**。**測って名指しただけ・未修正**（fixture header にも既知ギャップとして記載——閉じたら
+この snapshot が動くのは設計どおり）。
+
+⚠️ **⑤ stale binary の静かな嘘をまた踏みかけた**: 修正入りのはずの `lysc layout` が 6 小節を印字
+（テスト実行が残した古い Cli binary）。**--no-incremental 再ビルド直後に測り直して 5**。
+⇒ **layout/svg の A/B は必ず「--no-incremental ビルド → 直後に測定 → `git log -1` 印字」**。
+
+**未 push 41**（**この handoff を含む commit まで**＝`--amend` で入れた。⚠️ **足し算しない**。
+`git rev-list --count origin/master..master` で数え直す。**⚠️ 私は push していない**）・
+テスト **4083 passed / 0 failed / 4 skipped**（開始時 4080・**+2 単体・+1 snapshot**）・
+台帳 **479 点**（**ss 非ゼロ 83・総和 3.612832552・count 点 106 うち非ゼロ 2——全部不変**＝
+台帳は触っていない）・**Core 0 warning。snapshot 新規 1 枚・再ベース 0 枚。**
+⚠️ **開始時の §0 裏取りでは引継ぎが stale でなかった**（HEAD `a2398908`＝handoff 後の
+リネーム散文 commit・未push 39・テスト 4080・台帳 479/83/3.612832552/106/2 全一致）。
+
+⚠️⚠️ ★★★ **次に触るときの注意**:
+```
+⑴ ~~cue の小節数割れ~~ **✅ 閉じた（第98セッション・`58415901`）。陽性対照つき。**
+⑵ **cue 混在列の packing が解禁された**  ⑴ が閉じたので「cue と原寸が 1 つの列に立つ」綴りが
+                        書けるようになった（voice { cue { aes4 } } { ges4 } で cue のフラットと
+                        原寸のフラットが同じ譜のモーメントに立つ）。`AccidentalPlacement` は
+                        font を 1 つしか読まず、混在列は item ごとの経路に落ちる
+                        （`StaffAccidentalColumns` が明記）。**閉じるなら LP の混在列を先に測る**
+⑵' **cue 内の休符が原寸**（④・新規）  `RestItem` に `IsCue` が無い。LP は fontSize を region
+                        全体に当てる（休符 scale 0.0025 実測）。グリフ選択・符尾・spacing への
+                        波及があるので focused session で。§2 A の「符尾の長さ 3 綴り・cue は
+                        どれにも属さない」と同じ家
+⑶ **`ElementCoordinator.GetColumnNoteheadWidth` はまだ advance**（第97セッション ⑶・不変。
+                        `ForceHshiftEnabled = false` なので今は読者ゼロ）
+⑷ **§2 の残債返却は中断したまま**（第97セッション ⑷・不変）  位置は第96セッション §1 の ⑵〜⑺
+```
+
+## 以下は第97セッションの経緯
+
 最終更新 第97セッション（＝**ユーザーがリリースブロッカーを持ち込んだので §2 の残債返却を中断した。
 起票は「aes16 のフラットが ges の符頭に被る」。**起票が名指した列は違った**——aes16 は行末で
 臨時記号を持たない。被っていたのは**1 列目**で、しかも**欠陥は 2 つ**だった**）。
 
-⚠️ **仕事は 2 commit**（`42e6c35d`・`998298fc`）。**⑵ は ⑴ を測っている途中で出てきたもので、
+⚠️ **仕事は 5 commit**（`42e6c35d` 臨時記号列・`998298fc` 判定順・`f642fe7e` 台帳 6 点・
+`13a2c483` 引用監査・`7404933b` perf）＋ handoff。**⑵ は ⑴ を測っている途中で出てきたもので、
 ユーザー承認のうえ同じセッションで入れた**。
 
 ★★★ **① 規則**: **1 つの譜のモーメントの臨時記号は声部をまたいで 1 本の列**で、
@@ -145,10 +218,14 @@ crossvoice.collision.stem-to-stem             XCH  1.790620
 ＝**この量は line width を読まない**。
 ★ **落ちることを確かめた**（緑を信用しない）: XCE の記録値を修正前の 1.356000 にすると
 **`MOVED AWAY FROM LilyPond (regression)` で落ち、Lily# 自身の 1.304200000 を印字**する。
-⚠️ **`ChordAccidentalColumnGap` は今や cross-voice 列も読む**（名前の "chord" は当時の唯一の
-呼び手）。**リネームせず probe 一覧に注記した**（リネームはユーザーが MSVS で）。
+★ **`ChordAccidentalColumnGap` → `AccidentalColumnGap`**（**ユーザーが MSVS でリネーム済み**）。
+和音の列も cross-voice の列も**同じ packer の同じ問い**なので、名前から "chord" が落ちた。
+⚠️ **リネーム器は散文を直さない**——`RenderedGeometry` の doc（「the chord that opens the
+measure」）・例外メッセージ（「a chord stacking into two columns」）・probe 一覧の注記が
+**旧い枠のまま残っていたので同時に直した**。**旧名で再 grep すること**（`HANDOFF-ARCHIVE.md`
+の `aa09f78e` の行は当時の記録なので**逐語のまま残す**）。
 
-**未 push 33**（**この handoff を含む commit まで**。⚠️ **足し算しない**。
+**未 push 38**（**この handoff を含む commit まで**。⚠️ **足し算しない**。
 `git rev-list --count origin/master..master` で数え直す。**⚠️ 私は push していない**）・
 テスト **4080 passed / 0 failed / 4 skipped**（開始時 4064・**+4 臨時記号列・+1 snapshot・
 +5 判定順・+6 台帳点**）・
@@ -163,6 +240,31 @@ crossvoice.collision.stem-to-stem             XCH  1.790620
 陽性対照）。**直した量そのもの**は `test/collision` の 1 列目を LP に通した **8.585 / 9.9624
 （1.377400）** に対し Lily# が **9.94 → 9.96**。⚠️ **SVG は F2 なので 2 桁までの主張**——
 **六桁は台帳と単体テスト側**。
+
+★★ **⑨ perf を測った**（ユーザーの問い「プレビュー更新速度は落ちていないか」）。**落ちていない。**
+⚠️ **全体パイプラインの反復では解像できなかった**——**同一バイナリで min が 6.8〜14.4ms
+（±40%）に振れる**機械なので、10% 差は読めない。⇒ **仕事が増えた層＝collect だけを切り出した**
+（`MeasureCollector.Collect` を n=2000、min を 3 サンプル）:
+```
+                    BEFORE(477b9fba)   AFTER(13a2c483)    差
+08-chorale  単声        303us              297us         −2%（ノイズ）
+collision   多声        122us              122us          0%
+multi-voice 多声         80us               70us        −13%（ノイズ）
+grammar-tour 多声       861us              950us        +10%  ← 唯一読める差
+```
+★ **grammar-tour の collect が +10%**＝多声の譜で `VoiceCollector.Collect` と `NoteCollision`
+の**2 周目**が回り、列ごとに `CalculatePositions` が 1 回増えるぶん。⚠️ **collect は全描画の約 3%**
+（950us 対 34ms）なので**端から端では +0.3%**——だから全体測定では見えない。
+⚠️ **単声は `voices.Length <= 1` で即 return** なので**ゼロ**。**ユーザーの 300 曲中 299 曲**と
+**増分ベンチの fixture 2 つとも単声**（多声は whole-layout reuse を殺すので、そもそも
+プレビューの速い経路に載らない）。
+★ ついでに **5 site の `Notes.Any(lambda)` を `ChordItem.HasPackedAccidentals` の手書きループへ**
+（ImmutableArray の struct enumerator が boxing する）。⚠️ **効果はノイズ床の下で測れなかった**——
+**確実に仕事が減るから入れた**のであって、測って得だと言えたからではない。**出力不変。**
+⚠️⚠️ **測定中に 2 回、静かな嘘を踏みかけた**: ⑴ `git checkout` が**ローカル変更で abort**したのに
+ビルドもテストも通り、**master を BEFORE として印字**していた ⑵ `git stash push … | Select-Object
+-First 1` が**パイプ早期終了で stash 自体を殺していた**。**両方とも出力は正常に見える。**
+⇒ ★★★ **A/B のたびに `git log --oneline -1` を印字して、どのコミットを測ったか出力に残す。**
 
 ⚠️⚠️ ★★★ **次に触るときの注意**:
 ```
@@ -10065,6 +10167,20 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⚠️ **部屋の profile と inside は*別物*であり続ける**——**部屋は mover を engraver 位置で
   予約する**（Lily# の outside-staff pass は部屋より後に走る）。**LP は 1 パスでそれを解く**ので、
   **ここは今も近似**。**次にこの近似を消すなら「部屋が pass を走らせる」しかない。**
+- ★ **多声の譜が `VoiceCollector.Collect` と `NoteCollision` を 2 周する**（2026-08-05・
+  第97セッション。**測って名指しただけ・未修正**・**着手はコスト対効果の判断が要る**）。
+  `StaffAccidentalColumns`（collect 時）と `ElementCoordinator.CalculateVoiceOffsets`
+  （layout 時）が**同じ 2 つを同じ入力に対して別々に回す**。⇒ §2 A の主題（同じ量を計算する
+  場所が 2 つ）の**perf 版**。
+  ★ **実測**（`MeasureCollector.Collect` n=2000・min×3・§1 ⑨）: **grammar-tour の collect が
+  861us → 950us＝+10%**。⚠️ **collect は全描画の約 3%** なので**端から端では +0.3%**、
+  **単声はゼロ**（`voices.Length <= 1` で即 return）。
+  ⚠️⚠️ **効きどころはここだが、素直には畳めない**——**ステージが違う**（collect は Voice の
+  モデル、Coordinator は `MultiStaffScore` の staff.Voices から組んだ `Score`）。畳むなら
+  ⑴ collect が出した offset をモデルに載せて Coordinator が読む（＝**幾何をモデルに載せる**
+  ことになるので §1 の `AccidentalX` と同じ議論が要る）か、⑵ 両者が読む
+  **staff 単位の解決済みキャッシュ**を 1 つ作る、のどちらか。
+  ⚠️ **+0.3% に対して払う額として妥当かは、着手前に決めること。**
 - ★★★ **付点の向きは LP の規則ではない**（2026-08-05・第97セッションの自己監査で出た。
   **測って名指しただけ・未修正**）。**9 か所が `note-collision.cc:411-448` を引いていたが、
   そこは `get_clash_groups` と extent trigger と `wid`＝付点のコードは 1 行も無い**。
@@ -10083,29 +10199,20 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⚠️ **`audit/citation_drift.csv` はこれを "OK" と言っていた**（**範囲が実在するかしか見ない**）。
   しかも **2026-04-25 生成で `Svg/Renderer/SvgRenderer.cs`＝存在しないファイルを監査している**。
   ⇒ **この検査は債務を返す前に監査対象**（§5）。
-- ★★★ **`cue { }` が小節まるごとの region になると、exporter と描画が別の小節数を言う**
-  （2026-08-05・第97セッション。**測って名指しただけ・未修正**）。**警告は出ない**
-  （`lysc check` は "No errors found"）。
-  ```
-  melody { c4 d e f | cue { aes r r r } | }
-      → 小節線 2 本（正しい）が、2 小節目に**何も描かれない**
-  melody { c4 d e f | voice { cue { aes r r r } } { g r r r } | }
-      → 小節線 **3 本**。cue の枝が**自分だけの小節**になり、しかも**原寸で描かれる**
-        （font-size 4.00＝cue の縮尺が当たっていない）
-      → `lysc ly` は **`c4 d e f | << { \new CueVoice { aes r r r } } \\ { g r r r } >> |`**
-        ＝**2 小節を正しく出す**
-  ```
-  ⇒ ★★★ **モデルは正しく、描画側が別の答えを持っている**——§2 A の主題そのもので、
-  **exporter と renderer が「この音楽は何小節か」で割れている**。
-  ⚠️ **`cue` が小節の*中*で他の音符と並ぶ形は動く**（`test/cue-accidentals`）。壊れているのは
-  **region が小節を占めたとき**。⇒ **踏む対は既にある**（上の 2 行）。
-  ⚠️ **第97セッションの前から同じ**（`477b9fba` で描かせて確認。solo 側はバイト不変）。
-  ★ **ただし voice 版の見え方は第97セッションで変わった**——**モデルには 2 声部が居る**ので
-  `NoteCollision` は発火し、**相方が別の小節に描かれている片割れだけが 1.3042 右へ動く**
-  （旧: g が 22.89、新: 24.19）。**欠陥は同じで、症状が目立つ側に移った**。
-  ⚠️ **これを閉じるまで ▶ ⑵（cue 混在列の packing）は閉じられない**——
-  **cue と原寸が 1 つの列に立つ綴りが、今の言語では書けない**からで、
-  先に書けるようにしないと**踏む対の無い発明**になる。
+- ✅✅ ★★★ **閉じた（2026-08-05・第98セッション・`58415901`）。cue region は per-voice walk でも
+  1 個の wrapper になった。** 正典 `IsInsideProcessedContainer` は cue を知っていたが、
+  **手組みの skip リストが 2 か所**（`GatherVoiceMusicNodes`・`CollectMeasuresFromNode`）
+  **とも cue を欠き**、span の cue 本体が region（縮尺）と flatten（原寸）の **2 回**歩かれていた
+  ——第1ブロックなら小節が 1 つ増え（layout 3 対 `lysc ly` 2）、第2ブロックなら**次小節の
+  空 placeholder を静かに上書き**。手組みを廃して `IsInsideProcessedContainerExceptParallel` に
+  統一。実測・陽性対照・fixture は §1（第98セッション）。
+  ⚠️ **起票の solo 側（「2 小節目に何も描かれない」）は起票時点から不正確**——`477b9fba` でも
+  描かれる（HEAD とバイト一致で確認）。solo の実欠陥は**cue 内の休符が原寸**（LP は 0.0025 に
+  縮める・実測）＝**別の claim として §1 ⑵' に起票**（`RestItem` に `IsCue` が無い・未修正）。
+  ★★ **この項の教訓は「skip リストも walk の呼び出しと同じで、全部数える」**——正典の doc 自身が
+  「per-walk の whitelist は drift する」と書いていて、その通りに drift していた。
+  ⇒ **▶ ⑵（cue 混在列の packing）はこれで解禁**——cue と原寸が 1 つの列に立つ綴りが
+  書けるようになった（踏む対が作れる）。
 - ★★★ **符尾の attachment X が「符頭ごと」でなく「黒玉固定」**（2026-08-03・第77セッション。
   **測って名指しただけ・未修正**・▶ の先頭）。`LayoutUtilities.StemAttachX` は
   `NoteheadBlackStemAttachment.X` を**符頭によらず**返す。LP は**符頭ごとの ink 右端 − thickness/2**

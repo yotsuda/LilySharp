@@ -113,6 +113,52 @@ public class CueRegionTests
         Assert.Contains("\\cueClefUnset", ly);
     }
 
+    /// <summary>
+    /// A cue REGION that fills a whole measure of a <c>voice { } { }</c> span is walked
+    /// ONCE. The per-voice flatten walks hand-rolled their container skip list and both
+    /// copies were missing the cue test, so the region's body was collected twice — once
+    /// through <c>ProcessCueRegion</c> (cue-sized) and once flattened (full size). The
+    /// duplicate 4/4 rolled the measure: the piece gained a bar the exporter does not
+    /// have (`lysc ly` and `lysc layout` disagreed on the bar count, with no warning).
+    /// </summary>
+    [Fact]
+    public void WholeMeasureCueInTheFirstVoiceBlockIsWalkedOnce()
+    {
+        var score = Collect("{ c'4 d' e' f' | voice { cue { aes'4 r r r } } { g'4 r r r } | }");
+
+        // Was 3 with the drifted skip list: the flattened duplicate rolled a third bar.
+        Assert.Equal(2, score.Voices[0].Measures.Length);
+
+        var bar2 = score.Voices[0].Measures[1];
+        var notes = bar2.Items.OfType<NoteItem>().ToList();
+        var note = Assert.Single(notes);   // was 2: cue-sized aes + its full-size twin
+        Assert.True(note.IsCue);
+        Assert.Equal(3, bar2.Items.OfType<RestItem>().Count());
+    }
+
+    /// <summary>
+    /// Same defect, other orientation: the cue in a NON-first voice block goes through
+    /// <c>CollectMeasuresFromNode</c> (the second drifted copy of the skip list). There the
+    /// duplicate bar did not change the piece's bar count — it silently OVERLAID the
+    /// sub-voice's empty placeholder in the NEXT measure, drawing a full-size copy of the
+    /// cue on top of whatever the primary voice has there.
+    /// </summary>
+    [Fact]
+    public void WholeMeasureCueInASecondVoiceBlockDoesNotLeakIntoTheNextMeasure()
+    {
+        var score = Collect("{ voice { g'4 r r r } { cue { aes'4 r r r } } | c'4 d' e' f' | }");
+
+        Assert.Equal(2, score.Voices.Length);
+        Assert.Equal(2, score.Voices[0].Measures.Length);
+
+        var cueBar = score.Voices[1].Measures[0];
+        var note = Assert.Single(cueBar.Items.OfType<NoteItem>().ToList());
+        Assert.True(note.IsCue);
+
+        // Was a full-size aes + 3 rests: the flattened duplicate spilled past the span.
+        Assert.Empty(score.Voices[1].Measures[1].Items);
+    }
+
     [Fact]
     public void NestedCueIsRejected()
     {
