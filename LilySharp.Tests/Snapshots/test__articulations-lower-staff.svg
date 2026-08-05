@@ -61,7 +61,7 @@
   <text class="music" x="23.90" y="22.62" font-size="4.00" data-pos="618"></text>
   <text class="music" x="26.91" y="21.62" font-size="4.00" data-pos="627"></text>
   <text class="music" x="30.97" y="21.37" font-size="4.00" data-pos="640"></text>
-  <text class="music" x="34.63" y="20.92" font-size="4.00" data-pos="648"></text>
+  <text class="music" x="34.63" y="20.87" font-size="4.00" data-pos="648"></text>
   <rect x="8.84" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="546"/>
   <text x="11.94" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="546">Main</text>
   </g>

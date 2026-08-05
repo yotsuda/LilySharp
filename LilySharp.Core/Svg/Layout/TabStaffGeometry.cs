@@ -174,6 +174,48 @@ internal static class TabConstants
         => (FretDigitHeight / 2 + stringSpace) / 2;
 
     /// <summary>
+    /// How far an UNBEAMED tab stem runs from its near end to its tip.
+    /// </summary>
+    /// <remarks>
+    /// <c>\tabFullNotation</c> reverts the TabStaff's stem overrides, so a tab stem is bought
+    /// with the ORDINARY stem lengths — and on a tab the staff space IS the string gap, so
+    /// whatever that length is, it scales with it.
+    /// LILYPOND-REF: ly/property-init.ly:828-832 — the reverts of Stem.length, no-stem-extend,
+    ///   details and stencil that <c>\tabFullNotation</c> performs.
+    /// LILYPOND-REF: ly/engraver-init.ly:1250-1258 no-stem-extend — what those reverts undo:
+    ///   TabStaff sets <c>details</c> to <c>lengths 0 0 0 0 0 0</c> and the stencil to
+    ///   <c>##f</c>, precisely so that no stem is drawn at all.
+    /// LILYPOND-REF: scm/define-grobs.scm Stem details lengths.
+    /// <para>
+    /// ⚠️ 3.0 IS NOT THE CITED NUMBER, AND THE CITED LINE IS NOT A LENGTH. What
+    /// <c>details.lengths</c> holds is <c>(3.5 3.5 3.5 4.25 5.0 …)</c>, and LilyPond does not
+    /// use it directly: <c>length</c> is the callback <c>ly:stem::calc-length</c>, which picks
+    /// the entry by duration-log and then applies the shortening, the middle-line pull and the
+    /// minimum — the machinery <see cref="StemCalculator"/> already ports for NOTATION stems.
+    /// So this is case ⒝ of HANDOFF §7.6: derived from LilyPond, not copied from it. What it
+    /// would take to make it literal is to run a tab column through
+    /// <see cref="StemCalculator"/> in the string-gap frame instead of writing one flat
+    /// number here. ⚠️ DO NOT SWAP THE NUMBER ON ITS OWN: 3.0 → 3.5 moves every tab stem and
+    /// every script now clearing one, and NO ledger point observes a tab stem (a tab book is
+    /// not comparable to LilyPond until its strings are pinned). Open the book first.
+    /// ⚠️ The wording this replaced said "the default 3 staff spaces measured FROM THE NOTE
+    /// HEAD" beside a citation that reads 3.5, which is the shape §5.2 warns about — a
+    /// LILYPOND-REF whose neighbouring formula is a different number.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT LIVES HERE BECAUSE TWO LAYERS NEED IT, and for three sessions only one had it.
+    /// The renderer drew the stem; <see cref="ArticulationEngraver"/> has to place scripts
+    /// clear of it, and its non-beamed branch simply had no stem term — while the BEAMED
+    /// branch beside it had always cleared the beam's outer edge. MEASURED on
+    /// test/tab-articulations-multistaff before the fix: the stems ran up to 17.960000 (2.85
+    /// past the top string line) and both the flageolet and the fermata were pinned at
+    /// 19.810000 — one number for two glyphs of different heights, which is the signature of
+    /// a clamp rather than a placement, and the fermata's right arm crossed the stem.
+    /// </para>
+    /// </remarks>
+    public static double UnbeamedStemLength(double stringSpace) => 3.0 * stringSpace;
+
+    /// <summary>
     /// A tab beam's <c>length-fraction</c>: 0.62, the one number LilyPond states rather than
     /// derives when it re-tunes beams for the wider tab staff.
     /// </summary>
@@ -400,6 +442,34 @@ internal readonly struct TabStaffGeometry
             default:
                 return 1;
         }
+    }
+
+    /// <summary>
+    /// Device-Y of an UNBEAMED tab stem's TIP, measured from the digit line the stem leaves
+    /// (<paramref name="headY"/>, which the caller already has from
+    /// <see cref="StemHeadString"/>) — or null when the item carries no stem at all, a whole
+    /// note or a breve, which is the same gate the renderer takes before drawing one.
+    /// </summary>
+    /// <remarks>
+    /// Composed from the parts that already exist rather than re-derived:
+    /// <see cref="TabConstants.StemClearance"/> is the gap the stem starts after and
+    /// <see cref="TabConstants.UnbeamedStemLength"/> is how far it runs — that last one moved
+    /// out of the renderer so this could read it rather than spell it a second time.
+    /// <para>
+    /// ⚠️ <paramref name="headY"/> IS A PARAMETER RATHER THAN A LOOKUP ON PURPOSE. Resolving
+    /// the head string again would run <c>Tunings.CalculateChordFrets</c> a second time for
+    /// every chord that carries a script — the caller has just done it — and it would also
+    /// let the two answers drift. Passing it keeps one resolution per script and makes the
+    /// clearance provably the same line the caller measured its digit from.
+    /// </para>
+    /// </remarks>
+    public double? UnbeamedStemTipY(MusicItem item, bool stemUp, double headY)
+    {
+        if (NoteColumnLayout.Of(item) is not { HasStem: true })
+            return null;
+        double reach = TabConstants.StemClearance(StringSpace)
+                     + TabConstants.UnbeamedStemLength(StringSpace);
+        return stemUp ? headY - reach : headY + reach;
     }
 
     /// <summary>The mean tab-head string of a note/chord (a chord averages its notes),

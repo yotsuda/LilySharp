@@ -76,12 +76,12 @@
   <text x="44.53" y="25.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="264">f</text>
   <text x="48.86" y="25.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="273">f</text>
   <text x="57.89" y="25.29" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="289">p</text>
-  <text x="61.81" y="26.25" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="376">p</text>
-  <text x="64.81" y="26.61" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="387">f</text>
-  <text x="67.82" y="25.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="398">mf</text>
-  <text class="music" x="61.81" y="24.47" font-size="4.00" data-pos="367"></text>
-  <text class="music" x="64.81" y="24.19" font-size="4.00" data-pos="380"></text>
-  <text class="music" x="67.82" y="23.35" font-size="4.00" data-pos="391"></text>
+  <text x="61.81" y="26.29" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="376">p</text>
+  <text x="64.81" y="26.66" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="387">f</text>
+  <text x="67.82" y="25.13" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="398">mf</text>
+  <text class="music" x="61.81" y="24.51" font-size="4.00" data-pos="367"></text>
+  <text class="music" x="64.81" y="24.23" font-size="4.00" data-pos="380"></text>
+  <text class="music" x="67.82" y="23.39" font-size="4.00" data-pos="391"></text>
   <text class="music" x="70.82" y="17.98" font-size="4.00" data-pos="403"></text>
   <line x1="38.37" y1="24.40" x2="43.38" y2="23.74" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
   <line x1="38.37" y1="24.40" x2="43.38" y2="25.07" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>

@@ -49,7 +49,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// │ <see cref="OutwardTipDeviceY"/>        │ quanted beam face at the stem's X,    │ glyph ink, bbox.Top used  │
 /// │ (tuplet bracket encompass)             │ else the drawn stem end               │ for BOTH sides            │
 /// │                                        │ (<see cref="StemCalculator.CalculateStemEndY"/>) │                │
-/// │ <see cref="StemSupportDistanceDeviceY"/>│ the same two                         │ NOMINAL half head 0.5     │
+/// │ <see cref="StemSupportDistanceDeviceY"/>│ the same two                         │ glyph ink, bbox.Top used  │
 /// │ (articulation side-support)            │                                       │ (whole/breve only)        │
 /// │ <see cref="RendererStemLength"/>       │ length rule only (no middle-line      │ (seeded separately by the │
 /// │ (skyline stem seed, per chord HEAD)    │ extension, no minimum floor — both    │ skyline, glyph ink)       │
@@ -208,7 +208,7 @@ public readonly record struct NoteColumnLayout
     /// <summary>
     /// The stem's contribution to a side-position SUPPORT (articulations): the DISTANCE from
     /// the tip-side head's centre to the real stem tip — the beam-quanted face for a beamed
-    /// column, the drawn stem end for an unbeamed one, and the nominal half head for a column
+    /// column, the drawn stem end for an unbeamed one, and the HEAD'S OWN INK for a column
     /// with no stem at all. Only meaningful when the stem points toward the script's side
     /// (the caller's branch); a stem pointing away is skipped by the support entirely.
     /// </summary>
@@ -218,12 +218,19 @@ public readonly record struct NoteColumnLayout
     /// LILYPOND-REF: lily/stem.cc:415-523 internal_calc_stem_end_position via
     ///   <see cref="StemCalculator"/>.
     /// <para>
-    /// Two verbatim-preserved quirks of this model (vs <see cref="OutwardTipDeviceY"/>):
-    /// ⑴ the no-stem fallback is the NOMINAL <see cref="EngravingDefaults.NoteheadHalfHeight"/>
-    /// 0.5, not the glyph ink (LilyPond's support would carry the head's extent); ⑵ the stem
-    /// gate is spelled over <see cref="BaseDuration"/> (denominator when the numerator is 1,
-    /// else no stem) rather than <see cref="HasStem"/> — the two agree for every base duration
-    /// the model holds (1/N notes and the 2/1 breve). Either change is an output-moving port.
+    /// ⚠️ THE NO-STEM FALLBACK WAS THE NOMINAL HALF SPACE 0.5 UNTIL 2026-08-05, and it is now
+    /// the head's own extent — the same read <see cref="OutwardTipDeviceY"/> takes one method
+    /// up, out of the house that carries the citation (<see cref="GlyphMetrics"/>'s skyline
+    /// block: a NoteHead declares no <c>vertical-skylines</c>, so its support skyline IS its
+    /// LILC extent). The ledger pair that permitted the move is
+    /// <c>script.{staccato,marcato}-below.staff-to-ink-top</c>, both +0.045000 against
+    /// LilyPond's single −4.745000 = the whole head's ink bottom less the script padding.
+    /// </para>
+    /// <para>
+    /// One verbatim-preserved quirk of this model remains (vs <see cref="OutwardTipDeviceY"/>):
+    /// the stem gate is spelled over <see cref="BaseDuration"/> (denominator when the numerator
+    /// is 1, else no stem) rather than <see cref="HasStem"/> — the two agree for every base
+    /// duration the model holds (1/N notes and the 2/1 breve). Changing it is output-moving.
     /// </para>
     /// </remarks>
     public double StemSupportDistanceDeviceY()
@@ -242,7 +249,9 @@ public readonly record struct NoteColumnLayout
 
         int denominator = BaseDuration.Numerator == 1 ? BaseDuration.Denominator : 0;
         if (denominator < 2)
-            return EngravingDefaults.NoteheadHalfHeight;  // whole note / breve: no stem to clear
+            // Whole note / breve: there is no stem, so the support IS the head and its
+            // reach is the head's own ink — the identical read the branch above takes.
+            return GlyphMetrics.GetNoteheadBBox(NoteValue).Top;
 
         int durLog = StemCalculator.GetDurationLog(denominator);
         double tipY = StemCalculator.CalculateStemEndY(

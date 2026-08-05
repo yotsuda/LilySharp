@@ -48,9 +48,9 @@
   <line x1="34.19" y1="12.00" x2="34.19" y2="15.76" stroke="#000000" stroke-width="0.130"/>
   <line x1="36.45" y1="13.50" x2="36.45" y2="16.33" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="9.24" y="12.85" font-size="4.00" data-pos="361"></text>
-  <text class="music" x="17.50" y="9.23" font-size="4.00" data-pos="395"></text>
+  <text class="music" x="17.50" y="9.19" font-size="4.00" data-pos="395"></text>
   <text class="music" x="24.51" y="11.85" font-size="4.00" data-pos="430"></text>
-  <text class="music" x="32.52" y="10.15" font-size="4.00" data-pos="461"></text>
+  <text class="music" x="32.52" y="10.11" font-size="4.00" data-pos="461"></text>
   <text x="11.40" y="17.29" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="341">3</text>
   <text x="19.17" y="16.29" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="379">3</text>
   <text x="26.68" y="17.10" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="411">3</text>

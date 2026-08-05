@@ -38,7 +38,7 @@
   <text class="music" x="17.89" y="16.73" font-size="4.00" data-pos="325"></text>
   <text class="music" x="20.15" y="9.92" font-size="4.00" data-pos="335"></text>
   <text class="music" x="22.65" y="16.64" font-size="4.00" data-pos="347"></text>
-  <text class="music" x="25.15" y="17.33" font-size="4.00" data-pos="361"></text>
+  <text class="music" x="25.15" y="17.37" font-size="4.00" data-pos="361"></text>
   <rect x="8.84" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="310"/>
   <text x="9.87" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="310">A</text>
   </g>

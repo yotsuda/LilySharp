@@ -85,13 +85,21 @@ public class NoteColumnLayoutTests
     }
 
     [Fact]
-    public void StemSupportDistance_WholeNote_IsTheNominalHalfHead()
+    public void StemSupportDistance_WholeNote_IsTheHeadsOwnInk()
     {
-        // The articulation model's no-stem fallback is the NOMINAL 0.5, not the glyph ink
-        // — a named, verbatim-preserved deviation (see the house's model table). Changing
-        // it to ink is an output-moving port that needs its ledger point first.
+        // With no stem the support IS the head, and a NoteHead declares no vertical-skylines
+        // — so what side-position measures against is the head's LILC extent, the identical
+        // read the encompass model above takes. Asked of GlyphMetrics rather than written
+        // down, so a font re-extraction moves the rule and not just one of its two houses.
+        // MEASURED, the ledger pair that permitted the move: script.staccato-below and
+        // script.marcato-below both read -4.700000 against LilyPond's single -4.745000,
+        // which is this head's ink bottom less the script's own padding 0.200000.
         var col = NoteColumnLayout.Of(Note(0, Fraction.Whole))!.Value;
-        Assert.Equal(0.5, col.StemSupportDistanceDeviceY(), 12);
+        double headInk = GlyphMetrics.GetNoteheadBBox(1).Top;
+        Assert.Equal(headInk, col.StemSupportDistanceDeviceY(), 12);
+        // ⚠️ POSITIVE CONTROL: this asserts nothing unless the two quantities differ. The
+        // nominal half space is what stood here until 2026-08-05, so a revert must fail.
+        Assert.NotEqual(EngravingDefaults.NoteheadHalfHeight, headInk, 12);
     }
 
     [Fact]

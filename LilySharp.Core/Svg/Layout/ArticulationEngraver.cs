@@ -467,9 +467,31 @@ internal static class ArticulationEngraver
                     // line, so a low-string note's mark doesn't park at a phantom top
                     // digit a staff away).
                     double noteTop = geom.StringY(geom.StemHeadString(item, stemUp: true));
-                    tabY = insideEligible
-                        ? noteTop - fretHalf - tabGap
-                        : Math.Min(noteTop - fretHalf, topLine) - tabGap;
+                    double clear = insideEligible
+                        ? noteTop - fretHalf
+                        : Math.Min(noteTop - fretHalf, topLine);
+                    // ⚠️ AND THE STEM, WHEN IT POINTS THIS WAY. An unbeamed up-stem
+                    // protrudes past the digits exactly as a beam does, and the BEAMED
+                    // branch above has always cleared the beam's outer edge — this one
+                    // had no stem term at all, so a forced-above script was seated on the
+                    // staff edge and the stem was drawn straight through it.
+                    // The CONDITION is LilyPond's, though the clamp around it is not:
+                    // LILYPOND-REF: lily/side-position-interface.cc:279-284 get_grob_direction
+                    //   — a support whose direction opposes the script's is skipped, so a
+                    //   stem is in the support exactly when it travels the script's way.
+                    // ⚠️ The rest of this branch is NOT aligned_side: it clamps to the staff
+                    //   and carries no glyph near-extent, which is why the two scripts below
+                    //   still land on ONE number. Named in HANDOFF §1 ▶ ⑵, not fixed here.
+                    // ⚠️ `!insideEligible` IS FOLDED OUT OF THE GUARD, and the proof is one
+                    //   line so the next reader does not have to redo it: insideEligible is
+                    //   `!forcedAbove && (tabAbove != tabStemUp)`, so inside THIS branch
+                    //   (tabAbove) a true tabStemUp makes the second conjunct false. Writing
+                    //   both would be a condition that cannot fire — but if insideEligible's
+                    //   definition changes, this fold is the thing that breaks.
+                    if (tabStemUp
+                        && geom.UnbeamedStemTipY(item, stemUp: true, noteTop) is { } tipUp)
+                        clear = Math.Min(clear, tipUp);
+                    tabY = clear - tabGap;
                 }
                 else
                 {
@@ -477,9 +499,14 @@ internal static class ArticulationEngraver
                     // stem-coupled mark (when it isn't the bottom string), else clamped
                     // to the bottom line so a forced mark clears the whole staff.
                     double noteBottom = geom.StringY(geom.StemHeadString(item, stemUp: false));
-                    tabY = insideEligible
-                        ? noteBottom + fretHalf + tabGap
-                        : Math.Max(noteBottom + fretHalf, bottomLine) + tabGap;
+                    double clear = insideEligible
+                        ? noteBottom + fretHalf
+                        : Math.Max(noteBottom + fretHalf, bottomLine);
+                    // The same stem term on the other side (see the above branch).
+                    if (!tabStemUp
+                        && geom.UnbeamedStemTipY(item, stemUp: false, noteBottom) is { } tipDown)
+                        clear = Math.Max(clear, tipDown);
+                    tabY = clear + tabGap;
                 }
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
@@ -1157,8 +1184,8 @@ internal static class ArticulationEngraver
         const double StaffHalf = 2.0;
         double glyphNearExtent = GetNearExtent(articulation.Type, isAbove);
         double supportExtent = isAbove
-            ? (stemUp ? StemSupportExtent(item, column) : NoteheadHalfHeight)
-            : (!stemUp ? StemSupportExtent(item, column) : NoteheadHalfHeight);
+            ? (stemUp ? StemSupportExtent(item, column) : HeadSupportExtent(column))
+            : (!stemUp ? StemSupportExtent(item, column) : HeadSupportExtent(column));
 
         // dist = skyline distance; total_off = dist + padding. In Y-up an above
         // script sits ABOVE the note (+) and a below script BELOW (−).
@@ -1231,9 +1258,48 @@ internal static class ArticulationEngraver
     {
         if (item == null)
             return DefaultStemLength;   // legacy callers without an item: old behaviour
-        // A rest (no column) has no stem to clear — the nominal half head, as before.
-        return column?.StemSupportDistanceDeviceY() ?? NoteheadHalfHeight;
+        // A rest (no column) has no stem to clear — see HeadSupportExtent for what
+        // LilyPond puts there instead, and why the nominal half still stands.
+        return column?.StemSupportDistanceDeviceY() ?? HeadSupportExtent(column);
     }
+
+    /// <summary>
+    /// The SUPPORT's own reach on the script's side when the stem is not in it: the head's
+    /// own extent, asked per head, rather than a nominal half space.
+    /// </summary>
+    /// <remarks>
+    /// A NoteHead declares no <c>vertical-skylines</c> anywhere in its block, so the skyline
+    /// each support contributes — <c>side-position-interface.cc</c> reads that property off
+    /// every one of them and merges — falls back to the head's extent, and the head's extent
+    /// is its STENCIL's (the block does declare <c>Y-extent</c> from the stencil), which for a
+    /// glyph is the designed LILC box. The citation lives in <see cref="GlyphMetrics"/>'s
+    /// skyline block, beside <see cref="GlyphMetrics.GetNoteheadBBox(int)"/>, where the same
+    /// question was settled by LilyPond's own dump: the notehead reads 0.545 for extent AND
+    /// skyline while its outline stops at 0.544, so this is the metric box and not the
+    /// traced one. It is the same read <see cref="NoteColumnLayout.OutwardTipDeviceY"/>
+    /// already takes. <c>bbox.Top</c> serves
+    /// BOTH sides: MEASURED over the whole extraction, all 24 head entries (8 designs x whole,
+    /// half, black) have <c>Bottom == -Top</c> exactly.
+    /// <para>
+    /// ⚠️ ASKING PER HEAD BUYS NOTHING TODAY, AND SAYING SO IS THE POINT. In the same
+    /// measurement the three shapes share one extent inside each design (0.545000 at design
+    /// 20), so what actually varies is the DESIGN, not the shape — and this read takes design
+    /// 20 for a cue or grace head as the sibling read does, which is that house's recorded
+    /// debt rather than a new one. The lookup is per head because LilyPond's is; a book where
+    /// the shapes diverge would then be right for free instead of silently wrong.
+    /// </para>
+    /// <para>
+    /// ⚠️ A REST KEEPS THE NOMINAL HALF, AND IT IS NOT THE SAME QUANTITY. LilyPond's
+    /// <c>Script_engraver</c> takes a Rest as a support too, and a Rest DOES declare
+    /// from-stencil skylines, so the extent there is the rest glyph's OUTLINE — a different
+    /// box per duration, which Lily# does not read for this purpose. No ledger point observes
+    /// a script on a rest today, so the nominal
+    /// <see cref="EngravingDefaults.NoteheadHalfHeight"/> stays: replacing it with a head's
+    /// ink would be a number with no support behind it, which is worse than a named nominal.
+    /// </para>
+    /// </remarks>
+    private static double HeadSupportExtent(NoteColumnLayout? column)
+        => column is { } c ? GlyphMetrics.GetNoteheadBBox(c.NoteValue).Top : NoteheadHalfHeight;
 
     private static double QuantizedYPosition(double noteUp, bool isAbove, bool stemUp,
         ArticulationType type, MusicItem? item = null, NoteColumnLayout? column = null)
@@ -1261,18 +1327,18 @@ internal static class ArticulationEngraver
             // Stem is included only when stem direction matches placement direction
             supportExtent = stemUp
                 ? StemSupportExtent(item, column)
-                : NoteheadHalfHeight;
+                : HeadSupportExtent(column);
             // ↑ if stemUp AND isAbove: stem IS in support (forced above case), real stem tip
-            // ↑ if !stemUp AND isAbove: stem skipped, just notehead top = 0.5
+            // ↑ if !stemUp AND isAbove: stem skipped, just the notehead's own ink top
         }
         else
         {
             // For below: support's DOWN extent
             supportExtent = !stemUp
                 ? StemSupportExtent(item, column)
-                : NoteheadHalfHeight;
+                : HeadSupportExtent(column);
             // ↑ if !stemUp AND !isAbove: stem IS in support (forced below case), real stem tip
-            // ↑ if stemUp AND !isAbove: stem skipped, just notehead bottom = 0.5
+            // ↑ if stemUp AND !isAbove: stem skipped, just the notehead's own ink bottom
         }
 
         // LILYPOND-REF: side-position-interface.cc:229-264 my_dim skyline (-dir direction)

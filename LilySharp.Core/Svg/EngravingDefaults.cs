@@ -654,11 +654,23 @@ internal static class EngravingDefaults
     //   the half head (GlyphMetrics.NoteheadBlack / NoteheadHalf, design 20). This 0.5 is
     //   therefore 0.045 short of the ink, and it is the ROUND number that gives it away: a
     //   half-space is the staff's frame, not a font's measurement.
-    // ⚠️ IT IS A FALLBACK, WHICH IS WHY IT SURVIVES. Every caller reaches it only where there
-    //   is no stem to measure against — NoteColumnLayout's whole-note/breve branch, and the
-    //   two ArticulationEngraver support distances — so it decides a support height only for
-    //   the unstemmed cases. Replacing it with the glyph moves those, so it is an island with
-    //   snapshot approval, not a provenance fix. Recorded, not done.
+    // ⚠️ THE ARTICULATION SUPPORT NO LONGER READS IT (2026-08-05). That was the island this
+    //   note called "recorded, not done": NoteColumnLayout's whole-note/breve branch and the
+    //   ArticulationEngraver stem-away branches now take the head's own extent, permitted by
+    //   the ledger pair script.{staccato,marcato}-below.staff-to-ink-top (+0.045000 each
+    //   against LilyPond's single -4.745000, which decomposes as the whole head's ink bottom
+    //   less the script's padding 0.2). The 0.045 in the paragraph above is that residual.
+    // ⚠️ THREE READERS ARE LEFT, AND THEY ARE THREE DIFFERENT CLAIMS — do not "finish the
+    //   job" by pointing them at a head box without opening a point for each:
+    //   * ArticulationEngraver.HeadSupportExtent's REST branch — LilyPond's support there is
+    //     the Rest's from-stencil outline, a different glyph and a different box per duration.
+    //   * FingeringEngraver — the same side-position claim as the scripts, but over a model
+    //     that has no glyph near-extent and no padding of its own, so correcting this one term
+    //     would be fitting inside a formula that is not yet LilyPond's. No point observes it.
+    //   * ElementCoordinator's rest-shift collision, which doubles it into staff positions.
+    //     ⚠️ Its comment says "head ink is +-0.545" and then computes +-0.5; the two halves of
+    //     that line disagree today. Naming it here rather than fixing it blind: the rest-shift
+    //     island has its own books.
     /// <summary>Nominal half-height of a notehead for collision/support (staff spaces).</summary>
     public const double NoteheadHalfHeight = 0.5;
     // ⚠️ NoteheadHeight = 1.0 stood here with nothing reading it. HANDOFF 5.2.1⑥ recorded
