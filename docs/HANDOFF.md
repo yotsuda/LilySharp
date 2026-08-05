@@ -63,7 +63,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 `477b9fba` でも再現しない**——solo は描かれる（477b9fba と HEAD がバイト一致）。**本当に割れていた
 のは voice 形だけ**で、欠落した綴りは **2 か所**だった）。
 
-⚠️ **仕事は 1 commit**（`58415901`）＋ handoff。
+⚠️ **仕事は 3 commit**（`58415901` cue 小節数・`363ccb8e` 双子の post-event ⒝ 5 種・
+`6ff6adac` skip 述語を 1 回 walk に）＋ handoff 3 commit。
 
 ★★★ **① 規則**: **`cue { }` region は per-voice の flatten walk でも 1 個の wrapper として運ぶ**。
 正典 `IsInsideProcessedContainer` は cue を知っていた（コメントが今回の症状を予言している）が、
@@ -103,9 +104,44 @@ flat＋head＋休符 3 つ全部 scale 0.0025、原寸 0.0040＝magstep(−4)）
 （テスト実行が残した古い Cli binary）。**--no-incremental 再ビルド直後に測り直して 5**。
 ⇒ **layout/svg の A/B は必ず「--no-incremental ビルド → 直後に測定 → `git log -1` 印字」**。
 
-**未 push 41**（**この handoff を含む commit まで**＝`--amend` で入れた。⚠️ **足し算しない**。
-`git rev-list --count origin/master..master` で数え直す。**⚠️ 私は push していない**）・
-テスト **4083 passed / 0 failed / 4 skipped**（開始時 4080・**+2 単体・+1 snapshot**）・
+★★ **⑥ 双子の post-event ⒝ 5 種を閉じた**（`363ccb8e`・第96セッション ⑩ の続き）。
+@glissando @startTrillSpan @stopTrillSpan @laissezVibrer @repeatTie を**早い name switch**へ
+（\arpeggio と同型・**尾に載せない**——尾は向きを前置して fixture が言っていない側を主張する）。
+★ **1 種ずつ LP 2.26.0 で実測してから足した**（book ごとに after-line-breaking dump）:
+**素の綴りはどれも自分の grob をちょうど 1 個 engrave**（start/stop 対で TrillSpanner 1 本）。
+★★ **コーパス掃引（209 fixture）の落下警告は 114 → 91 行**＝**−23 が census の 5 種の合計と一致**
+（glissando 8＋startTrillSpan 5＋stopTrillSpan 5＋laissezVibrer 3＋repeatTie 2）。
+該当 3 fixture（trill-spanner・lv-meterchange・multivoice-spanners）の双子は **LP でクリーンに compile**。
+⚠️ **REF 住所を自分で 2 件外して監査で直した**（⑨ の再演）: glissando は `property-init.ly:378`、
+laissezVibrer/repeatTie は `declarations-init.ly:103-104`（**property-init ではない**）。
+★ 陽性対照: `DirectionlessPostEvents_ReachTheTwinBare` は mapping を stash すると
+Assert.Contains で落ちる。**snapshot は 1 枚も動かない**（exporter のみ）。
+
+★★ **⑦ perf を測った**（ユーザーの問い「プレビュー速度を劣化させていないか」・`6ff6adac`）。
+**⑴ の統一述語は `IsInside<T>` の連鎖**で、**呼ぶたびに祖先チェーンを最初から歩く**——
+主 walk は node ごとに最大 8 walk・flatten walk は 7 walk（セッション前の手組みは 5-6）。
+**両述語を 1 回の walk に**し、型の帰属は `IsProcessedContainer` 1 か所に置いた
+（＝drift も walk の増殖も再発しない）。
+⚠️⚠️ ★★★ **ハーネスの嘘を 2 つ踏んだ**（`MeasureCollector.Collect`・Release・n=1500・min）:
+```
+⒜ side ごとに別プロセス   最初の fixture が tiered-JIT tier-0 のまま測られ、プロセス間で
+                          min が ±30% 漂う。**この形は chained 綴りを grammar-tour +26% と
+                          読んだが、同居ハーネスでは再現しない**（＝嘘だった）
+⒝ 同居＋固定回転          回転の**3 番手だけ**が 2 fixture で系統的に遅い。順序を入れ替えると
+                          +60µs が**バイナリでなく位置に付いて**移動した（GC の落ち場所）
+⇒ **A/B は 1 プロセスに AssemblyLoadContext で同居させ、反復単位で交互**。さらに**順序を
+   入れ替えてもう 1 回**——差が side に付くか位置に付くかを見る
+```
+★ **両順序が一致した結論**: 1 回 walk 綴りは**全 fixture でセッション前以下**
+（08-chorale/collision/multi-voice 同等・grammar-tour −5〜−10%・cue-region-measure −16〜−19%
+＝重複 cue walk の消滅は実仕事だった）。**単声本は flatten walk に入りもしない**
+（parallel span が無ければ呼ばれない）。
+
+**未 push 45**（**この handoff を含む commit まで**。⚠️ **足し算しない**。
+`git rev-list --count origin/master..master` で数え直す。**⚠️ 私は push していない**。
+⚠️ **⑥ の handoff を最初 `--amend` で仕事 commit に混ぜて、§1 が引用する hash を自分で消した**
+——**handoff が commit hash を引用するなら、handoff は*別 commit*にする**）・
+テスト **4084 passed / 0 failed / 4 skipped**（開始時 4080・**+2 単体・+1 snapshot・+1 exporter**）・
 台帳 **479 点**（**ss 非ゼロ 83・総和 3.612832552・count 点 106 うち非ゼロ 2——全部不変**＝
 台帳は触っていない）・**Core 0 warning。snapshot 新規 1 枚・再ベース 0 枚。**
 ⚠️ **開始時の §0 裏取りでは引継ぎが stale でなかった**（HEAD `a2398908`＝handoff 後の
@@ -125,7 +161,11 @@ flat＋head＋休符 3 つ全部 scale 0.0025、原寸 0.0040＝magstep(−4)）
                         どれにも属さない」と同じ家
 ⑶ **`ElementCoordinator.GetColumnNoteheadWidth` はまだ advance**（第97セッション ⑶・不変。
                         `ForceHshiftEnabled = false` なので今は読者ゼロ）
-⑷ **§2 の残債返却は中断したまま**（第97セッション ⑷・不変）  位置は第96セッション §1 の ⑵〜⑺
+⑷ **§2 の残債返却は中断したまま**（第97セッション ⑷・不変）  位置は第96セッション §1 の ⑵〜⑺。
+                        **ただし ⑶'（post-event ⒝ 5 種）は第98セッション ⑥ で閉じた**
+⑸ **双子の落下の残り**（⑥ の続き・掃引の現在値）  ⒞ @breathe/@caesura は**構造変更**
+                        （音符の後ろに立つ単独の音楽・SplitAttachments に置き場が無い）。
+                        設計判断系は @chord 20・@ped 18・@fig 13 が上位。**名前の見た順で拾わない**
 ```
 
 ## 以下は第97セッションの経緯

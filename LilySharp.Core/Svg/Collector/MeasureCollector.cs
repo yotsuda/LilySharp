@@ -3054,8 +3054,18 @@ public sealed partial class MeasureCollector
     /// walk (tuplet/repeat/grace/inline-volta/parallel/once). Such nodes must be
     /// skipped by the outer walks so the wrapper is processed once, not flattened.
     /// </summary>
-    private static bool IsInsideProcessedContainer(SyntaxNode node) =>
-        IsInsideProcessedContainerExceptParallel(node) || IsInsideParallel(node);
+    private static bool IsInsideProcessedContainer(SyntaxNode node)
+    {
+        // ONE parent-chain walk for the whole family. Chaining the per-type IsInsideXxx
+        // helpers re-walks the ancestor chain once per type (IsInside<T> starts over from
+        // Parent each call), and these predicates run for every descendant the gather
+        // loops visit — measured on grammar-tour's collect, the chained spelling read
+        // ~+26% against one walk. The membership itself lives in IsProcessedContainer.
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (IsProcessedContainer(p, includeParallel: true))
+                return true;
+        return false;
+    }
 
     /// <summary>
     /// <see cref="IsInsideProcessedContainer"/> minus the parallel test — the skip set for
@@ -3067,15 +3077,27 @@ public sealed partial class MeasureCollector
     /// region (cue-sized) and once flattened (full size) — so the duplicate rolled the
     /// measure and the piece gained a bar the exporter does not have.
     /// </summary>
-    private static bool IsInsideProcessedContainerExceptParallel(SyntaxNode node) =>
-        IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-        || IsInsideInlineVolta(node) || IsInsideOnce(node)
-        || node.IsInside<ArpeggioSyntax>()
-        // A cue REGION owns its body's walk (ProcessCueRegion), and the region is the only
-        // thing that knows the notes are cue-sized. Letting the outer walk flatten it drops
-        // the region silently: the notes still render, at FULL size, and the only symptom is
-        // a font-size in the SVG.
-        || node.IsInside<CueExpressionSyntax>();
+    private static bool IsInsideProcessedContainerExceptParallel(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (IsProcessedContainer(p, includeParallel: false))
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// The ONE membership list behind both walks above — a container expression that owns
+    /// its own walk, so its descendants must not be flattened by an outer walk.
+    /// </summary>
+    private static bool IsProcessedContainer(SyntaxNode p, bool includeParallel) =>
+        p is TupletExpressionSyntax or RepeatExpressionSyntax or GraceExpressionSyntax
+            or InlineVoltaSyntax or OnceModifierSyntax or ArpeggioSyntax
+            // A cue REGION owns its body's walk (ProcessCueRegion), and the region is the
+            // only thing that knows the notes are cue-sized. Letting the outer walk flatten
+            // it drops the region silently: the notes still render, at FULL size, and the
+            // only symptom is a font-size in the SVG.
+            or CueExpressionSyntax
+        || (includeParallel && p is ParallelExpressionSyntax);
 
     /// <summary>
     /// Collects dynamic markings from note/chord modifiers.

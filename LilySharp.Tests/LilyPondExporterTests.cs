@@ -218,6 +218,36 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("not mapped, dropped", Export(Score("c,1@upbow")));
     }
 
+    /// <summary>
+    /// The five directionless post-events among the dropped articulations reach the twin
+    /// BARE — through the early name switch, not the <c>dir + glyph</c> tail.
+    /// </summary>
+    /// <remarks>
+    /// The remark on <see cref="TrueScripts_ReachTheTwinAsDirectionCarryingPostEvents"/>
+    /// names these five as the other half of the wrongly-grouped ten. MEASURED on 2.26.0
+    /// before adding (a scratch probe, one book per species, after-line-breaking dump):
+    /// each bare spelling engraves exactly ONE grob of its kind — <c>\glissando</c> a
+    /// Glissando, <c>\startTrillSpan</c>…<c>\stopTrillSpan</c> ONE TrillSpanner,
+    /// <c>\laissezVibrer</c> a LaissezVibrerTie, <c>\repeatTie</c> a RepeatTie. The tail
+    /// would prepend a direction sign, asserting a side the fixture never stated — the
+    /// \arpeggio mistake bought once already.
+    /// </remarks>
+    [Fact]
+    public void DirectionlessPostEvents_ReachTheTwinBare()
+    {
+        Assert.Contains("c,1\\glissando", Export(Score("c,1@glissando")));
+        Assert.Contains("c,1\\startTrillSpan", Export(Score("c,1@startTrillSpan")));
+        Assert.Contains("c,1\\stopTrillSpan", Export(Score("c,1@stopTrillSpan")));
+        Assert.Contains("c,1\\laissezVibrer", Export(Score("c,1@laissezVibrer")));
+        Assert.Contains("c,1\\repeatTie", Export(Score("c,1@repeatTie")));
+
+        // Bare, not the tail's neutral "-" — `-\arpeggio` is not `\arpeggio`, and the same
+        // holds here.
+        Assert.DoesNotContain("-\\glissando", Export(Score("c,1@glissando")));
+
+        Assert.DoesNotContain("not mapped, dropped", Export(Score("c,1@glissando")));
+    }
+
     [Fact]
     public void Fingering_CarriesEveryNumberTheEngraverAccepts()
     {

@@ -1944,6 +1944,25 @@ public sealed class LilyPondExporter
             //   spelling is `<c e g>1\arpeggio`. ly/property-init.ly:67 is where the command
             //   itself is `#(make-music 'ArpeggioEvent)`.
             case "arpeggio": return "\\arpeggio";
+            // Added 2026-08-05 (session 98). These five are POST-EVENTS THAT TAKE NO
+            // DIRECTION, so like \arpeggio they answer here and never reach the
+            // `dir + glyph` tail below — the tail would prepend `-`/`^`/`_`, asserting a
+            // side the fixture never stated (the \arpeggio remark above is the same
+            // mistake bought once already). MEASURED before adding, on 2.26.0 (scratch
+            // probe, after-line-breaking dump per book): each bare spelling engraves
+            // exactly ONE grob of its kind — \glissando a Glissando,
+            // \startTrillSpan…\stopTrillSpan ONE TrillSpanner, \laissezVibrer a
+            // LaissezVibrerTie, \repeatTie a RepeatTie.
+            // LILYPOND-REF: ly/property-init.ly:378 glissando = #(make-music 'GlissandoEvent)
+            // LILYPOND-REF: ly/spanners-init.ly:48-49 startTrillSpan / stopTrillSpan
+            //   = #(make-span-event 'TrillSpanEvent START/STOP)
+            // LILYPOND-REF: ly/declarations-init.ly:103-104 laissezVibrer / repeatTie
+            //   = #(make-music 'LaissezVibrerEvent / 'RepeatTieEvent)
+            case "glissando": return "\\glissando";
+            case "starttrillspan": return "\\startTrillSpan";
+            case "stoptrillspan": return "\\stopTrillSpan";
+            case "laissezvibrer": return "\\laissezVibrer";
+            case "repeattie": return "\\repeatTie";
         }
 
         // Common LilyPond articulations. `@name.up/.down` → -^ / _^ direction.
