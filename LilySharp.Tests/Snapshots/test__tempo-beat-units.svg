@@ -15,7 +15,7 @@
   <line x1="0.00" y1="26.90" x2="64.74" y2="26.90" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="25.90" font-size="4.00" data-pos="280"></text>
   <text class="music" x="4.88" y="24.90" font-size="4.00"></text>
-  <line x1="8.10" y1="27.90" x2="11.04" y2="27.90" stroke="#000000" stroke-width="0.200"/>
+  <line x1="8.09" y1="27.90" x2="11.04" y2="27.90" stroke="#000000" stroke-width="0.200"/>
   <line x1="16.09" y1="27.90" x2="18.16" y2="27.90" stroke="#000000" stroke-width="0.200"/>
   <line x1="27.37" y1="27.90" x2="29.33" y2="27.90" stroke="#000000" stroke-width="0.200"/>
   <line x1="43.08" y1="27.90" x2="45.03" y2="27.90" stroke="#000000" stroke-width="0.200"/>

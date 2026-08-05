@@ -1653,9 +1653,6 @@ internal sealed class SkylineBuilder
         // Each X extent below is written as `x ± <a length>`, so the split is visible in the
         // arithmetic itself.
         double noteUp = size.Span(staffPosition * 0.5);   // staff-spaces above middle, up+
-        // The DRAWN head's advance, per note value — a whole head is wider than a black
-        // one, and the renderer draws (and dots after) exactly this span from x.
-        double noteheadWidth = size.Span(GlyphMetrics.GetNoteheadAdvance(noteValue));
 
         // The head's VERTICAL extent is the glyph's own ink, from the font's LILC table
         // (GlyphMetricsGenerated), not a nominal staff space. LilyPond builds a grob's
@@ -1686,8 +1683,16 @@ internal sealed class SkylineBuilder
         // neighbour profile, which is why nothing pointwise had caught it; the below
         // outside-staff pass (dynamics vs the real stem/beam X) reads the difference.
         // Same drawn frame the beams, clef and accidentals already seed in.
-        double noteLeft = x;
-        double noteRight = x + noteheadWidth;
+        // ⚠️ BOTH AXES COME FROM headBox. X read the ADVANCE until 2026-08-05 (session 95)
+        // while Y read the ink, in this one expression — the same split the dynamics'
+        // support box carried, and the paragraph above already states the rule the X side
+        // was breaking: a NoteHead's skyline is its EXTENT, and the extent is the stencil's.
+        // MEASURED (audit/lp-geometry/probes/dynamic-support.ly with NoteHead added to the
+        // dump): LilyPond reads x=(8.7034 . 10.6654) for the whole head, width 1.9620 —
+        // the ink — against the 1.960 advance, and 1.3042 against 1.304 on the black one.
+        double noteLeft = x + headBox.Left;
+        double noteRight = x + headBox.Right;
+        double noteheadWidth = headBox.Right - headBox.Left;
         double headTopUp = noteUp + headBox.Top;
         double headBottomUp = noteUp + headBox.Bottom;
 
@@ -1696,8 +1701,10 @@ internal sealed class SkylineBuilder
         upSkyline.Merge(noteheadUp);
         downSkyline.Merge(noteheadDown);
 
-        // LILYPOND-REF: lily/ledger-line-spanner.cc:204-233 — ledger extent is
-        // the head extent widened by length-fraction (0.25) of the head width.
+        // LILYPOND-REF: lily/ledger-line-spanner.cc:228-230 — `Interval head_extent =
+        //   h->extent (common_x, X_AXIS); ledger_extent.widen (length_fraction *
+        //   head_extent.length ())`. BOTH the base interval and the basis of the fraction
+        //   are the head's grob EXTENT, so both are the ink here too.
         // (noteheadWidth is already this staff's, so the fraction of it needs no second scale.)
         double ledgerExtension = EngravingDefaults.LedgerLengthFraction * noteheadWidth;
         double ledgerThickness = size.Span(EngravingDefaults.LegerLineThickness);

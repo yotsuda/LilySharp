@@ -35,10 +35,10 @@
   <line x1="8.54" y1="26.90" x2="36.33" y2="26.90" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="23.90" font-size="4.00"></text>
   <text class="music" x="13.54" y="24.90" font-size="4.00"></text>
-  <line x1="16.90" y1="21.90" x2="18.96" y2="21.90" stroke="#000000" stroke-width="0.200"/>
-  <line x1="21.17" y1="21.90" x2="23.23" y2="21.90" stroke="#000000" stroke-width="0.200"/>
-  <line x1="26.51" y1="21.90" x2="28.57" y2="21.90" stroke="#000000" stroke-width="0.200"/>
-  <line x1="30.79" y1="21.90" x2="32.85" y2="21.90" stroke="#000000" stroke-width="0.200"/>
+  <line x1="16.89" y1="21.90" x2="18.96" y2="21.90" stroke="#000000" stroke-width="0.200"/>
+  <line x1="21.17" y1="21.90" x2="23.24" y2="21.90" stroke="#000000" stroke-width="0.200"/>
+  <line x1="26.51" y1="21.90" x2="28.58" y2="21.90" stroke="#000000" stroke-width="0.200"/>
+  <line x1="30.78" y1="21.90" x2="32.85" y2="21.90" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.24" y="21.90" font-size="4.00" data-pos="618"></text>
   <line x1="17.30" y1="21.90" x2="17.30" y2="25.40" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.51" y="21.90" font-size="4.00" data-pos="625"></text>

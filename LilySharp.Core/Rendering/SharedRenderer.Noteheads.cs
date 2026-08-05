@@ -371,7 +371,13 @@ internal static partial class SharedRenderer
             case NoteItem note:
             {
                 int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
-                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? EngravingDefaults.CueScale : 1.0);
+                // The head's INK width, not its advance: LilyPond's ledger takes the head's
+                // grob EXTENT as both the base interval and the basis of length-fraction.
+                // LILYPOND-REF: lily/ledger-line-spanner.cc:228-230 Ledger_line_spanner::print — head_extent = h->extent (common_x, X_AXIS), widened by length_fraction * head_extent.length ()
+                // This is the DRAW half of the pair SkylineBuilder seeds; the two must stay
+                // one spelling.
+                // (Every notehead's ink Left is 0.000000, so HeadLeft = x still holds.)
+                double headWidth = GlyphMetrics.GetNoteheadBBox(noteValue).Width * (note.IsCue ? EngravingDefaults.CueScale : 1.0);
                 CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
                     staffMiddleY, note.Accidental != null);
                 break;
@@ -380,7 +386,8 @@ internal static partial class SharedRenderer
             {
                 int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
                 double chordScale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
-                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * chordScale;
+                // The ink width — see the note branch above.
+                double headWidth = GlyphMetrics.GetNoteheadBBox(noteValue).Width * chordScale;
                 // Seconds shift reversed heads sideways — the ledger run
                 // follows the extreme head's real X.
                 double[] offsets = ChordHeadPositioning.CalculateOffsets(
@@ -480,9 +487,12 @@ internal static partial class SharedRenderer
                 {
                     // Interactive preview gets a tight click target the size of the
                     // head ink (× the cue scale), centred on noteY — see DrawNotehead.
+                    // Both axes from the ink box, as the remark above says: the width
+                    // read the ADVANCE until 2026-08-05 (session 95) while the height
+                    // beside it read the ink.
                     double headInk = note.IsCue ? EngravingDefaults.CueScale : 1.0;
                     gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
-                        GlyphMetrics.GetNoteheadAdvance(noteValue) * headInk,
+                        GlyphMetrics.GetNoteheadBBox(noteValue).Width * headInk,
                         GlyphMetrics.GetNoteheadBBox(noteValue).Height * headInk);
                 }
             }
@@ -551,8 +561,13 @@ internal static partial class SharedRenderer
         //   (padding . dot-column-interface::pad-by-one-dot-width)
         // LILYPOND-REF: scm/output-lib.scm ly:dots::print — stack with
         //   padding = one dot width (advance per dot = 2 dot widths)
+        // ⚠️ "The head's right edge" is its INK right, and this line computed the ADVANCE
+        // until 2026-08-05 (session 95). LilyPond builds the dot column's base X from the
+        // head's grob EXTENT, which is the ink (1.962 / 1.3774 / 1.3042 against advances of
+        // 1.960 / 1.376 / 1.304 — dumped in audit/lp-geometry/probes/dynamic-support.ly).
+        // LILYPOND-REF: lily/dot-column.cc:82-84 Dot_column::calc_positioning_done — base_x.unite (Stem::first_head (parent_stems[i])->extent (commonx, X_AXIS))
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
-        double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? EngravingDefaults.CueScale : 1.0) + dotWidth;
+        double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * (note.IsCue ? EngravingDefaults.CueScale : 1.0) + dotWidth;
         if (note.Dots > 0)
         {
             // Same Dot_configuration machinery as chords (for a single dot
@@ -651,8 +666,9 @@ internal static partial class SharedRenderer
         // The dot column clears heads reversed to the RIGHT of the stem.
         if (chord.Dots > 0 && chord.Notes.Length > 0)
         {
+            // The head's INK right — see the single-note branch for the LilyPond citation.
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
-            double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) * headScale
+            double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale
                 + Math.Max(0, headOffsets.Max()) + dotWidth;
             var resolved = DotConfiguration.Resolve(
                 chord.Notes.Select(n => n.StaffPosition).ToArray(),

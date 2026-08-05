@@ -2908,6 +2908,112 @@ internal sealed class RenderedGeometry
         return groups[systemIndex].Select(h => h.X).OrderBy(x => x).ToList();
     }
 
+    /// <summary>
+    /// The drawn LEDGER LINES' X span — the quantity LilyPond builds as the head's grob
+    /// extent widened by <c>length-fraction</c> (0.25) of that extent's own length.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:228-230 Ledger_line_spanner::print — head_extent = h->extent (common_x, X_AXIS), then ledger_extent.widen (length_fraction * head_extent.length ())
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/notehead-ink-frame.ly, book LDG): LilyPond's
+    /// LedgerLineSpanner stencil runs <c>(8.0945 . 11.0375)</c> against a NoteHead
+    /// <c>(8.585 . 10.547)</c> — span 2.943000 = 1.962 × 1.5, i.e. BOTH terms are the
+    /// head's INK (the advance would give 2.940000).
+    /// </para>
+    /// ⚠️ THE SPAN, NOT AN EDGE, because the two ends carry the same term with opposite
+    /// signs: an error in the ink width shows up twice here and once in either edge alone.
+    /// ⚠️ Every ledger line of the book must share one span — this reads a SINGLE note's
+    /// ledgers, and a second column's would silently widen the answer, so it is asserted
+    /// rather than assumed (LilyPond's own spanner is per-system and had to be read from
+    /// its stencil for the same reason).
+    /// </remarks>
+    public double LedgerLineSpan(int page = 0)
+    {
+        var ledgers = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - EngravingDefaults.LegerLineThickness) < 1e-9)
+            .ToList();
+        if (ledgers.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no ledger line is drawn — the probe is not measuring what it "
+                + "claims.\nDrawn geometry:\n" + Describe());
+        }
+        double left = ledgers.Min(l => Math.Min(l.X1, l.X2));
+        double right = ledgers.Max(l => Math.Max(l.X1, l.X2));
+        foreach (var l in ledgers)
+        {
+            if (Math.Abs(Math.Min(l.X1, l.X2) - left) > 1e-9
+                || Math.Abs(Math.Max(l.X1, l.X2) - right) > 1e-9)
+            {
+                throw new InvalidOperationException(
+                    $"page {page}: the {ledgers.Count} ledger lines do not share one X span, "
+                    + "so this book has more than one ledgered column and the reading would "
+                    + "be their union.\nDrawn geometry:\n" + Describe());
+            }
+        }
+        return right - left;
+    }
+
+    /// <summary>
+    /// The first notehead's anchor → the first AUGMENTATION DOT's ink left. LilyPond builds
+    /// the dot column's base from the head's grob EXTENT and pads by one dot width.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dot-column.cc:82-84 Dot_column::calc_positioning_done — base_x.unite (Stem::first_head (parent_stems[i])->extent (commonx, X_AXIS))
+    /// <para>
+    /// MEASURED (probes/notehead-ink-frame.ly, book DOT): NoteHead <c>(8.489735 .
+    /// 10.451735)</c> and Dots <c>(10.901735 . 11.351735)</c>, so the dot's ink left sits
+    /// 2.412000 right of the head's anchor = the head's INK 1.962 plus one dot INK 0.45
+    /// (not the 1.960 advance, and not the 0.448 dot advance — both forks were named in
+    /// the probe header before running and neither fired).
+    /// </para>
+    /// The dot glyph's own box starts at 0.000000, so its draw origin IS its ink left and
+    /// this stays an anchor-to-anchor reading.
+    /// </remarks>
+    public double NoteheadAnchorToDotInkLeft(int page = 0)
+    {
+        var dots = _pages[page].Glyphs
+            .Where(g => g.Glyph == EmmentalerGlyphs.AugmentationDot)
+            .OrderBy(g => g.X)
+            .ToList();
+        if (dots.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no augmentation dot is drawn — the probe is not measuring "
+                + "what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        return dots[0].X - NoteheadAnchor(0);
+    }
+
+    /// <summary>
+    /// The first notehead's anchor → the sole FINGERING's ink centre. A Fingering is
+    /// <c>self-alignment-X = CENTER</c> on its head, and what that centres on is the
+    /// PARENT's stencil extent — the head's ink.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:147 aligned_on_parent — he = him->extent (him, a), the parent's own stencil extent
+    /// <para>
+    /// MEASURED (probes/notehead-ink-frame.ly, book FNG): Fingering <c>(9.139209 .
+    /// 9.992791)</c> centres on 9.566000 against a NoteHead anchored at 8.585000 — a
+    /// difference of 0.981000, which is 1.962/2. The falsifier was 0.980000 (the advance's
+    /// half) and it did not fire.
+    /// </para>
+    /// Lily# draws a fingering with <c>TextAnchor.Middle</c>, so the drawn X IS the centre.
+    /// </remarks>
+    public double NoteheadAnchorToFingeringCentre(int page = 0)
+    {
+        var f = _pages[page].Texts.Where(t => t.Anchor == TextAnchor.Middle).ToList();
+        if (f.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE centred text (the fingering), found "
+                + $"{f.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return f[0].X - NoteheadAnchor(0);
+    }
+
     /// <summary>The <paramref name="index"/>-th notehead's anchor, 0-based, left to right.</summary>
     public double NoteheadAnchor(int index)
     {

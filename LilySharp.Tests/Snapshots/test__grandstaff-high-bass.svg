@@ -17,8 +17,8 @@
   <line x1="8.54" y1="17.12" x2="38.96" y2="17.12" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="16.12" font-size="4.00"></text>
   <text class="music" x="13.54" y="15.12" font-size="4.00" data-pos="455"></text>
-  <line x1="31.32" y1="12.12" x2="34.26" y2="12.12" stroke="#000000" stroke-width="0.200"/>
-  <line x1="31.32" y1="11.12" x2="34.26" y2="11.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="31.32" y1="12.12" x2="34.27" y2="12.12" stroke="#000000" stroke-width="0.200"/>
+  <line x1="31.32" y1="11.12" x2="34.27" y2="11.12" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.24" y="14.62" font-size="4.00" data-pos="546"></text>
   <text class="music" x="31.81" y="11.12" font-size="4.00" data-pos="552"></text>
   <rect x="29.72" y="13.12" width="0.19" height="4.00" data-pos="550"/>

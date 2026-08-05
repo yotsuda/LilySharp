@@ -222,6 +222,71 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// Every grob that <c>self-alignment-X = CENTER</c>s on a note column stands on ONE
+    /// centre — the head's own INK centre — so a script and the dynamic beneath it are drawn
+    /// at the same X to twelve digits.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/dynamic-support.ly, book DSK, with NoteHead added
+    /// to the dump). LilyPond puts all three on one number:
+    /// <code>
+    ///   NoteHead     x=(8.7034 . 10.6654)                            ink centre 9.6844
+    ///   Script       x=(9.4844 . 9.8844)                             ink centre 9.6844
+    ///   DynamicText  x=(9.052748818897637 . 10.316051181102361)      ink centre 9.6844
+    /// </code>
+    /// The head's extent is its INK (width 1.9620) and not its advance (1.960) — six digits,
+    /// and confirmed on DSQ's black head too (1.3042 against 1.304).
+    /// <para>
+    /// ⚠️ THIS EXISTS BECAUSE NO LEDGER POINT CAN SEE IT. Every point on this island is a
+    /// vertical reading, and a horizontal disagreement between two grobs only surfaces there
+    /// after being multiplied by whatever slope the label's outline happens to have under
+    /// that particular obstacle — which is why the same 0.001 showed up as +0.000903 under a
+    /// staccato and +0.001396 under a marcato and was read for two sessions as "the two
+    /// scripts' profiles". Asserted directly, in the axis it lives in.
+    /// </para>
+    /// ⚠️ THE POSITIVE CONTROL IS THE SECOND ASSERT: the shared centre must ALSO not be the
+    /// advance's. Without it this test passes on the defect it was written for — both grobs
+    /// reading <c>advance/2</c> agree with each other perfectly.
+    /// </remarks>
+    [Fact]
+    public void AScriptAndTheDynamicBeneathItStandOnTheHeadsInkCentre()
+    {
+        // DSK: a whole note carrying both a below staccato and a \f — the book where the ink
+        // and the advance differ by the most (1.962 against 1.960).
+        var geometry = RenderedGeometry.Render("""
+            octave absolute
+            time 4/4
+            key c major
+
+            part upper { clef treble }
+
+            section Main {
+              upper { a,1@staccato.down@f | }
+            }
+
+            form main { ~Main }
+
+            score main "DSK-anchor" {
+              staff upper
+            }
+            """);
+
+        var dot = Assert.Single(geometry.Glyphs.Where(
+            g => g.Glyph == EmmentalerGlyphs.ArticStaccatoAbove));
+        var label = Assert.Single(geometry.Texts.Where(t => t.Text == "f"));
+
+        // One head, one centre — the invariant LilyPond's dump shows as an identity.
+        Assert.Equal(dot.X, label.X, 12);
+
+        // …and that shared centre is the head's INK centre, not half its advance. The two
+        // candidates are 0.981 and 0.980; a test that only compared the two grobs to each
+        // other would accept either.
+        double column = geometry.NoteheadAnchor(0);
+        Assert.Equal(column + GlyphMetrics.NoteheadWhole.CenterX, label.X, 12);
+        Assert.NotEqual(column + GlyphMetrics.NoteheadWholeAdvance / 2.0, label.X, 6);
+    }
+
+    /// <summary>
     /// An independent lyrics ROW is spaced like the Lyrics context it is — the SAME distance
     /// from its staff as the note-bound spelling of the same line.
     /// </summary>

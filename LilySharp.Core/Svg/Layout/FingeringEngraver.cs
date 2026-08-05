@@ -147,10 +147,11 @@ internal static class FingeringEngraver
         if (measureLayout.Columns.IsDefaultOrEmpty
             && itemIndex >= measureLayout.Items.Length)
             return;
+        // The head's INK centre — see BuildLayout for the rule and the measurement.
         double centerX = measureLayout.X + LayoutUtilities.GetItemXOffset(
             measures, measureIndex, itemIndex, measureLayout)
-            + GlyphMetrics.GetNoteheadAdvance(
-                chord.BaseDuration.Numerator == 1 ? (int)chord.BaseDuration.Denominator : 1) / 2.0;
+            + GlyphMetrics.GetNoteheadBBox(
+                chord.BaseDuration.Numerator == 1 ? (int)chord.BaseDuration.Denominator : 1).CenterX;
 
         bool isAbove = !chord.StemUp;
 
@@ -186,11 +187,21 @@ internal static class FingeringEngraver
             return null;
 
         // Centered on the notehead glyph (self-alignment-X = CENTER), via the
-        // Items/Columns-aware resolver.
+        // Items/Columns-aware resolver. The centre is the head's own INK centre: what
+        // aligned_on_parent centres on is the PARENT's stencil extent, and a NoteHead's
+        // extent is its ink — 1.9620 on the whole head, 1.3042 on the black one, dumped
+        // out of LilyPond in audit/lp-geometry/probes/dynamic-support.ly's books, against
+        // advances of 1.960 and 1.304.
+        // LILYPOND-REF: lily/self-alignment-interface.cc:147 aligned_on_parent — he = him->extent (him, a), the parent's own stencil extent
+        // ⚠️ THIS READ THE ADVANCE UNTIL 2026-08-05 (session 95). It is the same defect
+        // DynamicEngraver.AnchorCentreOffset carried, found there because that island had
+        // points; NOTHING in the ledger observes a fingering, so this site is corrected on
+        // the rule and the font table rather than on a residual. If a fingering point is
+        // ever raised, it is 0.001 on a whole head that it should find already paid.
         double centerX = measureLayout.X + LayoutUtilities.GetItemXOffset(
             measures, measureIndex, itemIndex, measureLayout)
-            + GlyphMetrics.GetNoteheadAdvance(
-                note.BaseDuration.Numerator == 1 ? (int)note.BaseDuration.Denominator : 1) / 2.0;
+            + GlyphMetrics.GetNoteheadBBox(
+                note.BaseDuration.Numerator == 1 ? (int)note.BaseDuration.Denominator : 1).CenterX;
 
         // Direction: a melodic (single-voice) fingering defaults ABOVE the staff,
         // NOT opposite the stem. LilyPond's New_fingering_engraver buckets each

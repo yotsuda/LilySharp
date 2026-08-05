@@ -2717,6 +2717,57 @@ internal static class LpGeometryProbes
     private static readonly string DSM = DynamicSupportScore("DSM", "a,1@marcato.down@f");
 
     /// <summary>
+    /// The three books that observe the NOTEHEAD INK FRAME — the rule session 95 ported to
+    /// seven sites and could only observe at two of them.
+    /// </summary>
+    /// <remarks>
+    /// A NoteHead's grob EXTENT is its ink (1.9620 whole / 1.3774 half / 1.3042 black), not
+    /// its advance (1.960 / 1.376 / 1.304). The ledger line's X, the augmentation dot's X
+    /// and the fingering's X are all built off that extent in LilyPond, and NONE of them had
+    /// a ledger point when they were corrected — these are the observers, raised after the
+    /// fact and able to say no.
+    /// <para>
+    /// WHOLE heads throughout, deliberately: 1.962 against 1.960 is the widest separation
+    /// the three note values offer. The black head's 0.0001 is exactly what let the WRONG
+    /// rule survive a measurement once already — <c>AnchorCentreOffset</c>'s retracted note
+    /// said "MEASURED … notehead = half its advance" and had been taken on a black head.
+    /// </para>
+    /// LilyPond twins live in audit/lp-geometry/probes/notehead-ink-frame.ly and their music
+    /// is GENERATED from these strings by <c>lysc ly</c> (the octave trap).
+    /// ⚠️ FNG's twin needed ONE hand-edit and the probe header records why: <c>lysc ly</c>
+    /// drops <c>@finger</c> with a warning, so the generated twin was <c>c'1</c> carrying no
+    /// Fingering grob — a twin that compiles and is different music.
+    /// </remarks>
+    private static string InkFrameScore(string name, string time, string music) => $$"""
+        octave absolute
+        time {{time}}
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>ONE whole note two ledger lines above the staff, and nothing else that
+    /// draws a ledger — so the reading is this note's ledger pair alone.</summary>
+    private static readonly string LDG = InkFrameScore("LDG", "4/4", "c''1 |");
+
+    /// <summary>A dotted WHOLE note (6/4 so it fits), sitting on a space so no dot shift
+    /// fires and the reading is the dot column's base alone.</summary>
+    private static readonly string DOT = InkFrameScore("DOT", "6/4", "c'1. |");
+
+    /// <summary>A whole note carrying a fingering: self-alignment-X = CENTER on the head.</summary>
+    private static readonly string FNG = InkFrameScore("FNG", "4/4", "c'1@finger(2) |");
+
+    /// <summary>
     /// The system-clef-floor recipe applied to the STAFF-STAFF spring: ideal and minimum
     /// taken away (padding stays 1), so the gap IS the two staves' skyline distance + 1.
     /// Both the grouped and the ungrouped spelling are zeroed so the reading cannot
@@ -8448,6 +8499,15 @@ internal static class LpGeometryProbes
         // script padding 0.2), so the placement pair is an IDENTITY on the LP side.
         new("staff.staff.dynamic-staccato-avoid", DSK, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.dynamic-marcato-avoid", DSM, g => g.StaffGap(), ZeroStaffStaffPaper),
+        // --- the NOTEHEAD INK FRAME (session 96: the observers for session 95's port) ---
+        // A NoteHead's grob extent is its INK, and the ledger line, the augmentation dot and
+        // the fingering are all built off that extent. Session 95 corrected all three with
+        // NO ledger point watching; these three are that debt paid. Each one's pre-port
+        // value is named in its `why` as the positive control.
+        new("ledger.whole.above-span", LDG, g => g.LedgerLineSpan()),
+        new("dots.whole.column-to-dot-ink-left", DOT, g => g.NoteheadAnchorToDotInkLeft()),
+        new("fingering.whole.column-to-ink-centre", FNG, g => g.NoteheadAnchorToFingeringCentre()),
+
         new("script.staccato-below.staff-to-ink-top", DSK,
             g => g.ScriptInkEdgeAboveStaff(
                 EmmentalerGlyphs.ArticStaccatoAbove, GlyphMetrics.ArticStaccato,

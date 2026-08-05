@@ -84,11 +84,18 @@ public class FingeringTests
 
         // The fingering centers on the NOTEHEAD GLYPH (self-alignment-X =
         // CENTER on the note column), not on the spacing-allocated width.
+        // ⚠️ "The glyph" is its INK box, not its advance. This assert said
+        // NoteheadBlackAdvance / 2.0 until 2026-08-05 (session 95) — agreeing with the
+        // engraver, which said the same thing, so the pair asserted each other rather
+        // than the rule. LilyPond centres on the PARENT's stencil extent
+        // (lily/self-alignment-interface.cc:147) and a NoteHead's extent is its ink:
+        // dumped from audit/lp-geometry/probes/dynamic-support.ly, LP reads the black
+        // head as 1.3042 wide where the advance is 1.304.
         var measure = layout.AllSystems[0].Measures[0];
         var item = measure.Items[fingering.ItemIndex];
         double noteCenterX = measure.X + item.X
-            + LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackAdvance / 2.0;
-        Assert.Equal(noteCenterX, fingering.X, precision: 4);
+            + LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlack.CenterX;
+        Assert.Equal(noteCenterX, fingering.X, precision: 9);
     }
 
     [Fact]

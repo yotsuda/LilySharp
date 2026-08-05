@@ -140,8 +140,8 @@
   <line x1="78.93" y1="55.26" x2="80.88" y2="55.26" stroke="#000000" stroke-width="0.200"/>
   <line x1="78.93" y1="54.26" x2="80.88" y2="54.26" stroke="#000000" stroke-width="0.200"/>
   <line x1="78.93" y1="53.26" x2="80.88" y2="53.26" stroke="#000000" stroke-width="0.200"/>
-  <line x1="90.34" y1="55.26" x2="92.29" y2="55.26" stroke="#000000" stroke-width="0.200"/>
-  <line x1="90.34" y1="54.26" x2="92.29" y2="54.26" stroke="#000000" stroke-width="0.200"/>
+  <line x1="90.33" y1="55.26" x2="92.29" y2="55.26" stroke="#000000" stroke-width="0.200"/>
+  <line x1="90.33" y1="54.26" x2="92.29" y2="54.26" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="5.80" y="55.26" font-size="4.00" data-pos="749"></text>
   <line x1="5.87" y1="55.41" x2="5.87" y2="58.76" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="17.65" y="54.26" font-size="4.00" data-pos="752"></text>

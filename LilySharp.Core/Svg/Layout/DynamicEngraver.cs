@@ -169,7 +169,7 @@ internal static class DynamicEngraver
             // The COLUMN's X (the drawn head starts here), and the label's own anchor:
             // LilyPond X-aligns the DynamicText's extent CENTRE on its X-parent — the
             // dynamic's own voice's note column — so the label centres on that item's
-            // head, half an advance right of the column X.
+            // head, at the head's own INK centre right of the column X.
             // LILYPOND-REF: define-grobs.scm:1444 self-alignment-X = CENTER;
             //   lily/self-alignment-interface.cc aligned_on_parent (the parent extent's
             //   centre; measured for the anchor classes in
@@ -443,16 +443,25 @@ internal static class DynamicEngraver
                 if (NoteColumnLayout.Of(item, forcedStemUp,
                         beamInfo?.Beam, beamInfo?.MemberX ?? 0.0) is { } col)
                 {
-                    // The head's extent box, at the drawn head's X (the glyph starts at
-                    // the column X and runs one advance right).
-                    double advance = GlyphMetrics.GetNoteheadAdvance(col.NoteValue);
+                    // The head's extent box, at the drawn head's X. BOTH axes come from
+                    // the INK box: a NoteHead's default skyline is its own extent, and
+                    // that extent is the stencil's, not the advance the pen moves by.
+                    // LILYPOND-REF: lily/grob.cc:81-85 Grob::vertical_skylines_from_extents.
+                    // ⚠️ MEASURED, and it is why this line no longer reads the advance:
+                    // dumped out of dynamic-support.ly's own books, LilyPond's NoteHead
+                    // X-extent is 1.9620 on the whole head and 1.3042 on the black one —
+                    // the ink, where the advances are 1.960 and 1.304. This box took its Y
+                    // from the ink and its X from the advance, which is one head framed two
+                    // ways inside one function.
                     var ink = GlyphMetrics.GetNoteheadBBox(col.NoteValue);
                     double headTop = col.TopHeadPosition * 0.5 + ink.Top;
                     double headBottom = col.BottomHeadPosition * 0.5 + ink.Bottom;
                     up.Merge(VerticalSkyline.FromBox(
-                        xColumn, xColumn + advance, headBottom, headTop, VerticalDirection.Up));
+                        xColumn + ink.Left, xColumn + ink.Right,
+                        headBottom, headTop, VerticalDirection.Up));
                     down.Merge(VerticalSkyline.FromBox(
-                        xColumn, xColumn + advance, headBottom, headTop, VerticalDirection.Down));
+                        xColumn + ink.Left, xColumn + ink.Right,
+                        headBottom, headTop, VerticalDirection.Down));
 
                     // The REAL stem — drawn length (shortening, middle-line pull,
                     // beam-quanted face) at its own thin X: the renderer's attach (down
@@ -555,26 +564,42 @@ internal static class DynamicEngraver
         => LayoutUtilities.VoiceItemAt(voices, voiceIndex, measureIndex, itemIndex);
 
     /// <summary>
-    /// The anchor column's extent CENTRE, right of the column X: half the head's
-    /// advance for a note/chord, the rest glyph's own ink centre for a rest, 0 otherwise.
+    /// The anchor column's extent CENTRE, right of the column X: the drawn glyph's own
+    /// INK centre — the notehead's for a note/chord, the rest glyph's for a rest, 0
+    /// otherwise.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/self-alignment-interface.cc:117-175 aligned_on_parent —
     ///   <c>he = him->extent (him, a)</c> (:147, the PARENT's own stencil extent) and the
     ///   two <c>linear_combination</c> terms (:166 self, :171 parent) land the grob's
     ///   extent centre on the parent extent's centre for CENTER/CENTER. The parent's
-    ///   extent is its drawn glyph's — so the rest's centre is the rest GLYPH's ink
-    ///   centre, per glyph, not a class constant. MEASURED for the anchor classes in the
-    ///   self-alignment probes (notehead = half its advance; the whole/half rest's
-    ///   0.750 = its ink (0 . 1.5) / 2, which <see cref="GlyphMetrics.GetRestBBox"/>
-    ///   reproduces from the font).
+    ///   extent is its drawn glyph's — so every branch here is an INK centre, per glyph,
+    ///   not a class constant and not the advance the pen moves by.
+    /// <para>
+    /// ⚠️ THE NOTE BRANCH READ THE ADVANCE UNTIL 2026-08-05 (session 95), contradicting
+    /// the paragraph above it and the rest branch beside it. MEASURED out of the island's
+    /// own books (audit/lp-geometry/probes/dynamic-support.ly, NoteHead added to the dump):
+    /// LilyPond's NoteHead X-extent is <c>(8.7034 . 10.6654)</c> on the whole head and
+    /// <c>(8.7034 . 10.0076)</c> on the black one — widths 1.9620 and 1.3042, the INK,
+    /// where the advances are 1.960 and 1.304 — and in both books the DynamicText's own
+    /// ink centre sits on that extent's centre to six digits. The old reading put the
+    /// label 0.001 LEFT on a whole head, which is what
+    /// <c>staff.staff.dynamic-{staccato,marcato}-avoid</c> were still carrying: the script
+    /// beside it was already centred on the ink
+    /// (<c>ArticulationEngraver.NoteheadHalfWidth</c>), so one head was framed two ways
+    /// and the two grobs were displaced against each other by exactly that 0.001.
+    /// </para>
+    /// ⚠️ The retracted note said "MEASURED … notehead = half its advance". It was taken
+    /// on a BLACK head, where the two candidates differ by 0.0001 — under the resolution
+    /// of the reading that recorded it. A measurement can only pin a rule as finely as the
+    /// regime it was taken in separates the candidates.
     /// </remarks>
     internal static double AnchorCentreOffset(MusicItem? item) => item switch
     {
-        NoteItem n => GlyphMetrics.GetNoteheadAdvance(
-            LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration)) / 2.0,
-        ChordItem c when c.Notes.Length > 0 => GlyphMetrics.GetNoteheadAdvance(
-            LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration)) / 2.0,
+        NoteItem n => GlyphMetrics.GetNoteheadBBox(
+            LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration)).CenterX,
+        ChordItem c when c.Notes.Length > 0 => GlyphMetrics.GetNoteheadBBox(
+            LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration)).CenterX,
         RestItem r => RestInkCentre(r),
         _ => 0.0,
     };

@@ -135,9 +135,14 @@ internal static class TrillSpannerEngraver
             double startX = startMeasure.X + startItem.X;
             // The left bound attaches at the CENTRE of the bound note column's X extent
             // (attach-dir CENTER) — the trill's OWN voice's column, since the engraver
-            // lives in that Voice context — which Lily# reads as the column X plus half the
-            // drawn head's advance, the same aligned_on_parent quantity the dynamics' anchor
+            // lives in that Voice context — which Lily# reads as the column X plus the drawn
+            // head's INK centre, the same aligned_on_parent quantity the dynamics' anchor
             // spends, so the two consumers cannot disagree about where a column's centre is.
+            // ⚠️ It said "half the drawn head's advance" until 2026-08-05 (session 95), and
+            // that is what it computed. trill.x.wave-zone.staff-to-line moved
+            // -0.000179688 -> -0.000060062 when the shared house was corrected to the ink —
+            // a point in THIS island paid for a defect measured in the dynamics' one, which
+            // is what sharing the house is for.
             // ⚠️ Named approximation: LilyPond takes the whole NoteColumn's extent, so an
             // accidental or a down stem widens it and shifts this centre.
             double glyphOrigin = startX + DynamicEngraver.AnchorCentreOffset(
