@@ -23,8 +23,8 @@
 %%     s 0.819439 / z 1.126729, against hmtx advances 1.280 / 1.456 / 1.748 / 1.292 /
 %%     0.872 / 0.824 / 1.140 — per-glyph deltas BOTH signs, <= 0.0167 ss, not a common
 %%     scale (f -1.3%, p +0.8%): Pango's shaping quantisation of the advance run, the
-%%     X-side sibling of the Y 2e-5 family. There is NO closed-form recovery; Lily#
-%%     computes with the font's numbers and the delta stays a named residual family.
+%%     X-side sibling of the Y 2e-5 family. ~~There is NO closed-form recovery~~
+%%     ⇒ WITHDRAWN 2026-08-05 (session 94), see CLOSED FORM below.
 %%   * pairs: pp/ppp/fp/pf/sf/sfz compose with NO kern, additive to 1e-7 (pp = 2p
 %%     exact). Kerned feeds, measured vs GPOS: f->f -0.136573 vs -0.152 / m->f
 %%     -0.102430 vs -0.116 / m->p +0.239003 vs +0.232 / r->f +0.102430 vs +0.116 /
@@ -36,6 +36,30 @@
 %%   ⇒ BAKE the font's advances + GPOS kerns (that IS the computation LilyPond runs,
 %%     through Pango); do NOT bake the measured widths (that would paste evaluation
 %%     results, HANDOFF 5.2), and do NOT fit the quantisation delta.
+%%
+%% CLOSED FORM (2026-08-05, session 94) — the delta is not a residual family, it is a
+%% GRID, and the grid was already in the tree. Pango hints each glyph's advance to ONE
+%% device pixel = 0.034143307086614 ss (Rendering.TextFontMetrics.PangoPixelStaffSpaces,
+%% derived from INCH_TO_BP / PANGO_RESOLUTION / output_scale; the text side measured the
+%% same grid per string in text-advance.ly, ledger text.width.*). The rule is:
+%%
+%%     pen advance of glyph i = round((hmtx advance + GPOS kern to glyph i+1) / px) * px
+%%
+%%   ⚠️ THE KERN IS INSIDE THE ROUND. Snapping the advance and adding the raw kern
+%%   afterwards reproduces every UNKERNED label here and misses every kerned one by
+%%   0.015426772 ss per pair (f->f). That is exactly the shape of this header's own
+%%   "measured vs GPOS" list above: f->f -0.136573 vs -0.152 is not a mangled kern, it is
+%%   round(1.280-0.152) - round(1.280) read as if it were one.
+%%
+%% RE-RUN 2026-08-05 (all twenty labels, LilyPond 2.26.0): the rule reproduces every
+%% width to the last printed digit -- f 1.263302362205, ff 2.390031496063,
+%% fff 3.516760629921, pp 2.936324409449, ppp 4.404486614173, mp 3.448474015748,
+%% mf 2.902181102362, fp/pf 2.731464566929, sf 2.082741732283, sff/sfz 3.209470866142,
+%% rfz 3.380187401575, spz 3.755763779528, and the seven singles above. Ported in
+%% Svg/Layout/DynamicOutline.cs; the observers are LilySharp.Tests/DynamicLabelWidthTests
+%% (these twenty numbers) and ledger staff.staff.dynamic-{head-support,stem-binding,
+%% staccato-avoid,marcato-avoid} + dynamic.page.deep.last-staff-to-foot, all five of which
+%% fell into the e-5 face-sliver family the day it landed.
 
 #(define labels '("f" "p" "m" "n" "r" "s" "z"
                   "ff" "fff" "pp" "ppp" "mp" "mf" "fp"

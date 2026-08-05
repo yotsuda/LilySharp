@@ -66,9 +66,9 @@
   <rect x="74.21" y="12.35" width="0.19" height="4.00" data-pos="496"/>
   <rect x="74.70" y="12.35" width="0.60" height="4.00" data-pos="496"/>
   <text x="9.24" y="20.39" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
-  <text x="12.24" y="20.78" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
+  <text x="12.24" y="20.77" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
   <text x="15.24" y="19.14" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>
-  <text x="18.24" y="19.41" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="276">rfz</text>
+  <text x="18.24" y="19.40" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="276">rfz</text>
   <text x="44.67" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="390">fz</text>
   <text class="music" x="22.57" y="16.64" font-size="4.00" data-pos="289"></text>
   <text class="music" x="25.58" y="16.64" font-size="4.00" data-pos="305"></text>

@@ -867,6 +867,17 @@ internal sealed class SkylineBuilder
 
     /// <summary>An independent copy of a RESOLVED skyline — the cheap half of sharing one
     /// inside-staff profile between the consumers that mutate their own view of it.</summary>
+    /// <remarks>
+    /// ⚠️ "CHEAP" IS MEASURED, NOT ASSUMED (2026-08-05, session 93), because a handoff item
+    /// had it named as the island's whole perf debt and the fix as "stop copying". COUNTED
+    /// over one steady-state layout: a 256-script four-staff book makes 32 copies totalling
+    /// 7 632 buildings = 238.50 KB against 80 972 KB of layout allocation — 0.29%. The
+    /// script-free control is 62.50 KB of 11 907 KB and a tab book 76.12 KB of 17 545 KB.
+    /// ⇒ REMOVING EVERY COPY CANNOT RETURN AN 11% DEBT. Whatever that number is, it is the
+    /// profile's CONTENTS (a script is ~10 buildings of padded outline where it used to be
+    /// one flat box, which is fidelity and not waste), not the sharing. Do not rewrite
+    /// VerticalSkyline into an offset view on the strength of the old diagnosis.
+    /// </remarks>
     internal static VerticalSkyline Copy(VerticalSkyline sky)
         => VerticalSkyline.FromResolvedBuildings(sky.Direction, sky.Buildings);
 

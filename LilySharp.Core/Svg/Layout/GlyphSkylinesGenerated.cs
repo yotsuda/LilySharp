@@ -50,9 +50,10 @@
 // (audit/lp-geometry/probes/dynamic-support.ly DSQ vs DMF). Letters compose at pen
 // positions = hmtx advance (DynamicLetter*Advance, Extract-EmmentalerMetrics.py) +
 // DynamicLetterKern below; the composition X model and every kern pair are measured
-// in audit/lp-geometry/probes/dynamic-text-x.ly, whose header also names the
-// per-glyph Pango shaping quantisation (<= 0.0167 ss, both signs) that stays a
-// residual family rather than being fitted.
+// in audit/lp-geometry/probes/dynamic-text-x.ly, whose header also gives the
+// closed form: the runtime snaps each KERNED advance to one Pango device pixel
+// (DynamicOutline / TextFontMetrics.QuantiseToPangoPixel), reproducing all
+// twenty of that probe's measured label widths exactly.
 //
 // Each array is a flat list of skyline BUILDINGS, four doubles apiece:
 //   start (horizon low), startValue (sky*other at horizon low),
@@ -4978,7 +4979,8 @@ internal static partial class GlyphMetrics
     /// kern). Pango applies exactly these when it shapes a dynamic string, so a label's
     /// pen positions are advances plus these — measured against LilyPond in
     /// audit/lp-geometry/probes/dynamic-text-x.ly (every pair the font's sign and
-    /// magnitude; the per-glyph shaping quantisation stays a named residual family).</summary>
+    /// magnitude). ⚠️ A kern is an adjustment to the FIRST glyph's advance, so it goes
+    /// INSIDE the per-glyph device-pixel snap, never after it (DynamicOutline).</summary>
     public static double DynamicLetterKern(char first, char second) => (first, second) switch
     {
         ('f', 'f') => -0.152000,

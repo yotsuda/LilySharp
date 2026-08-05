@@ -156,11 +156,21 @@ public static class TextFontMetrics
     /// → 106 here but 90 rather than 94 for "AA" either way) — the ladder rungs "n"/"nn"/
     /// "nnnn" reading 39/78/156 are what pin it to the glyph.
     /// <para>
-    /// ⚠️ WHAT THIS STILL DOES NOT DO is kerning: Pango shapes pairs through HarfBuzz, and
-    /// asking Skia per code point cannot see a pair at all. The residuals ledger
-    /// <c>text.width.{aa,av,8va}</c> keep after this are exactly that, and they are whole
-    /// pixels by construction (−4, +5, +1) — a leftover that is NOT a whole pixel would
-    /// mean this snap is in the wrong place.
+    /// ⚠️ KERNING IS IN, and it is INSIDE this snap: <see cref="Run"/> takes each glyph's
+    /// advance from the SHAPED run (HarfBuzz, the shaper Pango itself calls), pair
+    /// adjustments already applied, and snaps THAT. Not the other order — a pair value is an
+    /// adjustment to the glyph's own advance, so snapping first and adding the kern
+    /// afterwards misses by a fraction of a pixel per pair; the dynamic labels were spelled
+    /// that way until 2026-08-05 and their ledger points are what caught it
+    /// (Svg/Layout/DynamicOutline.cs).
+    /// ⚠️ This remark said "what this still does not do is kerning" until 2026-08-05 —
+    /// EIGHTEEN sessions after the kerning port landed here on 2026-08-02, and it named
+    /// three residuals (−4, +5, +1) of which two have been EXACT ever since. It was read as
+    /// current and copied into a handoff. The live numbers are the ledger's:
+    /// <c>text.width.{a1,v1,av,8va}</c> are 0, and <c>text.width.{aa,va}</c> keep −4 and −1
+    /// pixels which are NOT a defect and NOT this snap — they are the bundled face's kern
+    /// table differing from the C059 LilyPond resolves, measured and DECIDED (HANDOFF §3).
+    /// Do not chase them, and do not re-derive them.
     /// </para>
     /// </remarks>
     public static double Advance(string text, double fontSize, bool sans = false,

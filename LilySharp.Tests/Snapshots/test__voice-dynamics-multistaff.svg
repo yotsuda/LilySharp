@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="358.9" viewBox="0 0 119.50 35.89" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="359.0" viewBox="0 0 119.50 35.90" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="35.89" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="35.90" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="460">Inter-staff dynamic spacing</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="6.45" y="16.46" font-size="3.00" text-anchor="end" dominant-baseline="central">Top</text>
@@ -52,7 +52,7 @@
   <text class="music" x="9.34" y="26.87" font-size="4.00"></text>
   <text class="music" x="13.58" y="26.87" font-size="4.00" data-pos="490"></text>
   <text class="music" x="17.28" y="26.87" font-size="4.00" data-pos="638"></text>
-  <line x1="17.34" y1="27.02" x2="17.34" y2="30.20" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.34" y1="27.02" x2="17.34" y2="30.21" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="20.27" y="27.37" font-size="4.00" data-pos="642"></text>
   <line x1="21.51" y1="27.22" x2="21.51" y2="23.87" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.27" y="27.87" font-size="4.00" data-pos="644"></text>
@@ -67,7 +67,7 @@
   <rect x="39.05" y="24.87" width="0.19" height="4.00" data-pos="656"/>
   <rect x="39.54" y="24.87" width="0.60" height="4.00" data-pos="656"/>
   <text x="31.18" y="21.00" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="607">f</text>
-  <text x="31.18" y="23.23" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="618">p</text>
+  <text x="31.18" y="23.24" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="618">p</text>
   <rect x="8.84" y="9.60" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="561"/>
   <text x="11.94" y="11.80" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="561">Main</text>
   </g>

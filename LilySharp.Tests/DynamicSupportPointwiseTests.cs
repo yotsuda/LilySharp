@@ -50,21 +50,11 @@ public class DynamicSupportPointwiseTests
         return down;
     }
 
-    [Fact]
-    public void LabelComposition_IsAdvancePlusKern_NotMeasuredWidths()
-    {
-        // pp composes with no kern: exactly two p advances (dynamic-text-x.ly measured
-        // pp = 2p additive to 1e-7). ff kerns: two f advances plus the f->f GPOS pair.
-        double p = GlyphMetrics.DynamicLetterAdvance('p')!.Value;
-        double f = GlyphMetrics.DynamicLetterAdvance('f')!.Value;
-        Assert.Equal(2 * p, DynamicOutline.AdvanceWidth("pp")!.Value, 9);
-        Assert.Equal(2 * f + GlyphMetrics.DynamicLetterKern('f', 'f'),
-            DynamicOutline.AdvanceWidth("ff")!.Value, 9);
-
-        // A label not spelled from the seven fetaText letters has no feta outline —
-        // the caller falls back to its serif box (free @text, cresc./dim. words).
-        Assert.Null(DynamicOutline.AdvanceWidth("dolce"));
-    }
+    // LabelComposition_IsAdvancePlusKern_NotMeasuredWidths lived here until 2026-08-05.
+    // Its claim (a label's width is the RAW advances plus the raw kerns) was falsified by
+    // the probe that had always backed it: LilyPond snaps each glyph's KERNED advance to a
+    // device pixel. The composition's observers are now DynamicLabelWidthTests, against all
+    // twenty labels of dynamic-text-x.ly rather than the two spelled out here.
 
     [Fact]
     public void LabelOutline_ExtremesAreTheLettersOwnInk()

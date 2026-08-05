@@ -142,9 +142,11 @@ CLEFS = [
 # while a \fff binds on it (audit/lp-geometry/probes/dynamic-support.ly, DSQ vs DMF).
 # A text stencil's letters sit at pen positions = hmtx advances + GPOS kerns
 # (audit/lp-geometry/probes/dynamic-text-x.ly measured every kern pair at the font's
-# own sign and magnitude; the per-glyph Pango quantisation of the advance run stays a
-# named residual family, NOT fitted), so each letter is baked in its own glyph frame
-# and the runtime composes them at those pen positions. The letters are addressed by
+# own sign and magnitude), each KERNED advance then snapped to one Pango device pixel
+# by the runtime (DynamicOutline / TextFontMetrics.QuantiseToPangoPixel — that snap is
+# LilyPond's own grid, not a fit, and it reproduces all twenty measured labels), so each
+# letter is baked in its own glyph frame and the runtime composes them at those pen
+# positions. The letters are addressed by
 # their bare ASCII cmap names, no "dynamics." prefix (same fact recorded in
 # Extract-EmmentalerMetrics.py's DynamicLetter* block).
 DYNAMICS = [(c, c) for c in "fmnprsz"]
@@ -488,9 +490,10 @@ def main():
     L.append("// (audit/lp-geometry/probes/dynamic-support.ly DSQ vs DMF). Letters compose at pen")
     L.append("// positions = hmtx advance (DynamicLetter*Advance, Extract-EmmentalerMetrics.py) +")
     L.append("// DynamicLetterKern below; the composition X model and every kern pair are measured")
-    L.append("// in audit/lp-geometry/probes/dynamic-text-x.ly, whose header also names the")
-    L.append("// per-glyph Pango shaping quantisation (<= 0.0167 ss, both signs) that stays a")
-    L.append("// residual family rather than being fitted.")
+    L.append("// in audit/lp-geometry/probes/dynamic-text-x.ly, whose header also gives the")
+    L.append("// closed form: the runtime snaps each KERNED advance to one Pango device pixel")
+    L.append("// (DynamicOutline / TextFontMetrics.QuantiseToPangoPixel), reproducing all")
+    L.append("// twenty of that probe's measured label widths exactly.")
     L.append("//")
     L.append("// Each array is a flat list of skyline BUILDINGS, four doubles apiece:")
     L.append("//   start (horizon low), startValue (sky*other at horizon low),")
@@ -682,7 +685,8 @@ def main():
     L.append("    /// kern). Pango applies exactly these when it shapes a dynamic string, so a label's")
     L.append("    /// pen positions are advances plus these — measured against LilyPond in")
     L.append("    /// audit/lp-geometry/probes/dynamic-text-x.ly (every pair the font's sign and")
-    L.append("    /// magnitude; the per-glyph shaping quantisation stays a named residual family).</summary>")
+    L.append("    /// magnitude). ⚠️ A kern is an adjustment to the FIRST glyph's advance, so it goes")
+    L.append("    /// INSIDE the per-glyph device-pixel snap, never after it (DynamicOutline).</summary>")
     L.append("    public static double DynamicLetterKern(char first, char second) => (first, second) switch")
     L.append("    {")
     for (g1, g2), v in sorted(kerns.items()):
