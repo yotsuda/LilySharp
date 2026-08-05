@@ -652,6 +652,9 @@ public class SvgSnapshotTests
         // A pickup starts mid-bar: its autobeam beat structure is the bar's TAIL
         // (LP regression auto-beam-partial.ly — 4/8 pickup in 6/8 beams 1+3, not 3+1).
         yield return new object[] { "test/autobeam-pickup" };
+        // A four-beam (64th) stack spaces its lines at (3·ss+line−thick)/3 = 0.8733,
+        // not the 3-and-under 0.81 (LP regression beam-quanting-horizontal.ly).
+        yield return new object[] { "test/beam-64th-stack" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

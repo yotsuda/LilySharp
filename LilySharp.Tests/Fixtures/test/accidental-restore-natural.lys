@@ -3,7 +3,7 @@
 // （restore-first, ♮♯ / ♮♭）。
 // Lily# は GetDisplayAccidental にこの規則が無く、♯ / ♭ を裸で印字していた —
 // corpus に 𝄪→♯ の並びを書く本が一つも無かったので、どの snapshot も落ちなかった。
-// LILYPOND-REF: scm/music-functions.scm:1745-1752 — need-restore =
+// LILYPOND-REF: scm/music-functions.scm:1746-1752 — need-restore =
 //   this≠0 ∧ |this|<|prev| ∧ prev·this>0; accidental.cc:131-142 — 前置 natural、pad 0.1。
 // MEASURED（2.26.0・indent 0・ragged-right の after-line-breaking dump）: head 列
 // 9.275 / 13.3958 / 17.218 / 21.1588、臨時記号 7.885 / 11.9458(♯) / 15.42 / 20.0088。

@@ -1,0 +1,31 @@
+// lilypond-src/input/regression/beam-quanting-32nd.ly の Lily# 訳。
+// CLAIM: 符尾長は quant より優先——32 分 beam の forbidden quant 回避は譜外のみ
+// （譜内では符尾が伸びすぎるため許容）。10 対の 16分/32分 ペア＋終行の 32 分 6 対。
+// 綴り: LP \relative c'' を絶対に展開して 1 アポストロフィ下げ
+// （a''→a' …）。小節割り: 3/8 = 16分行(1/4)+32分行(1/8)。
+octave absolute
+time 3/8
+
+part m { clef treble }
+
+section Main {
+  m {
+    a'16[ b'] g'[ b']
+    a'32[ b'] g'[ b'] |
+    g'16[ a'] f'[ a']
+    g'32[ a'] f'[ a'] |
+    f'16[ g'] e'[ g']
+    f'32[ g'] e'[ g'] |
+    e'16[ f'] d'[ f']
+    e'32[ f'] d'[ f'] |
+    d'16[ e'] c'[ e']
+    d'32[ e'] c'[ e'] |
+    c'16[ d'] b[ d']
+    c'32[ d'] b[ d'] |
+    a'32[ a'] g'[ g'] f'[ f'] e'[ e'] d'[ d'] c'[ c'] |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

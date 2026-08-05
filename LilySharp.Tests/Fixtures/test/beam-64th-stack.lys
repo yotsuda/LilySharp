@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/beam-quanting-horizontal.ly の 64 分部分の移植
+// （LP回帰コーパス第 4 号・第99 第9便）. CLAIM: 4 段 stack（64 分）の beam 段間隔は
+// (3·ss + line − thickness)/3 = 0.8733…——3 段までの 0.81 より広く、内側の線も
+// staff line を正しくまたぐ。
+// Lily# は描画側だけ一律 0.81 定数で積んでいた（quanter は count-aware の
+// BeamTranslationOf を既に消費）——4 段の内側 2 線が LP から 0.063〜0.19 ずれていた。
+// LILYPOND-REF: lily/beam.cc:129-145 get_beam_translation の beam_count<4 分岐。
+// MEASURED: 修正後、全 20 beam グループの quant offset 集合が LP と一致
+// （残差は SVG 出力桁 0.004 未満のみ）。
+octave absolute
+
+part m { clef treble }
+
+section Main {
+  m {
+    c64[ c] a'[ a'] f[ f] e'[ e'] |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

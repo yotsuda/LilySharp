@@ -366,10 +366,16 @@ internal sealed class BeamDetector
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: ly/music-functions-init.ly:1697-1705 — <c>\partial dur</c> is a
-    ///   PartialSet on Timing; lily/timing-translator.cc handles it by setting
-    ///   <c>measurePosition</c> to <c>−dur</c>, and the auto-beam engraver's boundary
-    ///   checks read that position — <c>−dur ≡ period − dur</c> under the modular
-    ///   arithmetic AutoBeamCheck applies (EuclideanRemainder over the period).
+    ///   PartialSet on Timing;
+    /// LILYPOND-REF: lily/timing-translator.cc:149-160 — the handler sets
+    ///   <c>measurePosition = measureLength − dur</c> (the mid-piece branch spells it
+    ///   <c>mp = mlen - Rational (*dur)</c> at :158; the at-start case in
+    ///   listen_partial carries the same quantity), and the auto-beam engraver's
+    ///   boundary checks read that position.
+    /// ⚠️ Lily# derives the pickup's length from the measure's CONTENT sum where
+    /// LilyPond reads the DECLARED <c>\partial</c> duration. MeasureBuilder.SetPartial
+    /// sizes the pickup to the declaration, so the two coincide for a filled pickup;
+    /// an underfilled one would seed from its real content instead.
     /// </remarks>
     private Fraction MeasureStartPosition(Measure measure, BeamingPattern.Options options)
     {
@@ -656,10 +662,12 @@ internal sealed class BeamDetector
         }
 
         // threshold = auto-knee-gap + height_of_beams (staff spaces → ×2 positions).
-        // LILYPOND-REF: beam.cc:1033-1040
+        // LILYPOND-REF: beam.cc:1033-1040 — height_of_beams reads get_beam_translation,
+        // which narrows to (3·ss + line − thickness)/3 from FOUR beams up (:129-145).
         int beamCount = members.Max(m => m.BeamCount);
         double heightOfBeams = EngravingDefaults.BeamThickness / 2.0
-            + (beamCount - 1) * EngravingDefaults.BeamTranslation;
+            + (beamCount - 1) * EngravingDefaults.BeamTranslationOf(
+                EngravingDefaults.BeamThickness, 1.0, beamCount);
         double thresholdPositions = (AutoKneeGap + heightOfBeams) * 2.0;
 
         return maxGapLen > thresholdPositions ? gapCenter : null;

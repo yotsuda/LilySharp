@@ -1272,11 +1272,15 @@
     },
     "beam-quanting-32nd.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "stem lengths take precedence over 32nd-beam forbidden quants inside the staff",
+      "notes": "all 30 beam groups (78 segments) quant-offset-identical to LP (per-group offset sets; sequence diffs were emission order only)"
     },
     "beam-quanting-horizontal.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "horizontal beam quants cover staff lines; 32nd free stem lengths 2..1.5",
+      "notes": "renderer stacked ALL beams at flat 0.81; LP get_beam_translation narrows to (3ss+line-thick)/3=0.8733 from 4 beams up (beam.cc:129-145). Quanter already count-aware; draw sites + knee threshold now use BeamTranslationOf. After: 20/20 groups match (residual < SVG print precision 0.004). fixture test/beam-64th-stack"
     },
     "beam-quanting-overhang.ly": {
       "category": "scheme",

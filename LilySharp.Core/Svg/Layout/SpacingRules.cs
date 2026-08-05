@@ -4061,16 +4061,30 @@ internal static class SpacingRules
     /// own, one separation item per staff.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// One collision-offsets computation per STAFF object, not per measure:
+    /// <see cref="ElementCoordinator.ComputeVoiceOffsets"/> walks every measure of
+    /// every voice, and this decoration runs once per measure in BOTH the break gate
+    /// and the system layout — calling it inline made the pass O(measures²) per staff
+    /// (MEASURED: +26% end-to-end on a 120-bar two-voice book, 1991→2514 ms). The
+    /// offsets derive purely from the staff's immutable Voices, so one computation per
+    /// Staff instance is exact; a model rebuild makes new Staff objects and refills.
+    /// </summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Model.Staff, ImmutableDictionary<VoiceItemKey, double>> s_staffVoiceOffsets = new();
+
     internal static ImmutableArray<Spring> ApplyCrossVoiceColumnSpacing(
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
-        ImmutableArray<Model.Voice> staffVoices,
+        Model.Staff staff,
         int measureIndex)
     {
+        var staffVoices = staff.Voices;
         if (staffVoices.Length < 2 || springs.Length != timings.Count + 1)
             return springs;
 
-        var offsets = ElementCoordinator.ComputeVoiceOffsets(staffVoices).VoiceOffsets;
+        var offsets = s_staffVoiceOffsets.GetValue(staff,
+            s => ElementCoordinator.ComputeVoiceOffsets(s.Voices).VoiceOffsets);
 
         // The items STARTING at each timing column, each with the shift it is drawn at.
         // VoiceId is 1-based, matching VoiceCollector / the renderer's VoiceItemKey.
@@ -4104,20 +4118,34 @@ internal static class SpacingRules
 
         var result = springs.ToBuilder();
         bool widened = false;
+        // Each entry's facing skyline is built ONCE per pair side it joins — an entry
+        // faces at most one pair as the LEFT item and one as the RIGHT, and skyline
+        // construction is the expensive part of a pair (MEASURED: building them
+        // per-pair was most of this pass's ~100 ms on a 120-bar two-voice book).
+        // SkylineFloorPair keeps both clamps in the one home the item-pair helpers use.
+        var rightSkyOf = new Dictionary<(int Col, int Entry), HorizontalSkyline>();
+        var leftSkyOf = new Dictionary<(int Col, int Entry), HorizontalSkyline>();
         for (int t = 1; t < timings.Count; t++)
         {
             if (columns[t - 1] is not { } left || columns[t] is not { } right)
                 continue;
             double maxSky = 0, maxRod = 0;
-            foreach (var l in left)
-                foreach (var r in right)
+            for (int li = 0; li < left.Count; li++)
+                for (int ri = 0; ri < right.Count; ri++)
                 {
+                    var l = left[li];
+                    var r = right[ri];
                     if (l.Voice == r.Voice && l.Shift == 0 && r.Shift == 0)
                         continue;
-                    maxSky = Math.Max(maxSky, CalculateSkylineDistance(
-                        l.Item, r.Item, staffY: 0, null, l.Shift, r.Shift));
-                    maxRod = Math.Max(maxRod, SeparationRodDistance(
-                        l.Item, r.Item, staffY: 0, null, l.Shift, r.Shift));
+                    if (!rightSkyOf.TryGetValue((t - 1, li), out var rs))
+                        rightSkyOf[(t - 1, li)] = rs =
+                            ItemSkylineFactory.CreateRightSkyline(l.Item, l.Shift, 0);
+                    if (!leftSkyOf.TryGetValue((t, ri), out var ls))
+                        leftSkyOf[(t, ri)] = ls =
+                            ItemSkylineFactory.CreateLeftSkyline(r.Item, r.Shift, 0);
+                    var (sky, rod) = SkylineFloorPair(rs, ls);
+                    maxSky = Math.Max(maxSky, sky);
+                    maxRod = Math.Max(maxRod, rod);
                 }
             if (maxSky <= result[t].MinDistance && maxRod <= result[t].MinDistance)
                 continue;
@@ -4430,26 +4458,31 @@ internal static class SpacingRules
         // could exceed the skyline answer it was standing in for. Nor is one needed —
         // a non-overlapping pair gives -infinity and max(0, -inf) is 0, which is LilyPond's
         // own answer through its own max.
-        return Math.Max(0.0, RawSkylineDistance(
-            prevItem, nextItem, staffY, MusicalColumnSkylineVerticalPadding,
-            prevShift, nextShift));
+        return SkylineFloorPair(
+            ItemSkylineFactory.CreateRightSkyline(prevItem, prevShift, staffY),
+            ItemSkylineFactory.CreateLeftSkyline(nextItem, nextShift, staffY)).SkyMin;
     }
 
     /// <summary>
-    /// The bare skyline distance between two items' columns, before either of the two
-    /// clamps LilyPond applies to it — the spring's <c>max (0.0, …)</c> and the rod's.
+    /// LilyPond's TWO constraints over one column pair, computed from skylines the
+    /// caller already holds — the ONE home for both clamp shapes.
+    /// <c>SkyMin</c> is the SPRING's minimum (distance with the right column's
+    /// skyline-vertical-padding, clamped at 0); <c>Rod</c> is the column rod (the
+    /// spanner's 0.1 padding plus the padding-free distance, clamped after adding).
+    /// <see cref="CalculateSkylineDistance"/> and <see cref="SeparationRodDistance"/>
+    /// are these same clamps asked of a bare item pair; a caller that prices MANY
+    /// pairs (ApplyCrossVoiceColumnSpacing) builds each item's skylines once and asks
+    /// this directly — same numbers, half the skyline construction.
     /// </summary>
     /// <remarks>
-    /// Separate because the two callers pass DIFFERENT vertical padding: the spring takes
-    /// the right column's <c>skyline-vertical-padding</c> (note-spacing.cc:79-81) and the
-    /// rod takes none at all (separation-item.cc:56 calls the one-argument
-    /// <c>Skyline::distance</c>).
+    /// LILYPOND-REF: lily/note-spacing.cc:78-83 (the spring minimum);
+    /// LILYPOND-REF: lily/separation-item.cc:47-68 set_distance + lily/spacing-spanner.cc:315-316
+    ///   (the rod: <c>dist = padding + …distance (right)</c>, clamped at 0 after).
     /// </remarks>
-    private static double RawSkylineDistance(MusicItem prevItem, MusicItem nextItem,
-                                             double staffY, double verticalPadding,
-                                             double prevShift = 0, double nextShift = 0)
-        => ItemSkylineFactory.CreateRightSkyline(prevItem, prevShift, staffY)
-            .Distance(ItemSkylineFactory.CreateLeftSkyline(nextItem, nextShift, staffY), verticalPadding);
+    internal static (double SkyMin, double Rod) SkylineFloorPair(
+        HorizontalSkyline prevRight, HorizontalSkyline nextLeft)
+        => (Math.Max(0.0, prevRight.Distance(nextLeft, MusicalColumnSkylineVerticalPadding)),
+            Math.Max(0.0, SeparationRodPadding + prevRight.Distance(nextLeft, 0.0)));
 
     /// <summary>
     /// The ROD between two musical columns: the skyline minimum plus the spacing spanner's
@@ -4488,9 +4521,9 @@ internal static class SpacingRules
         if (prevItem == null || nextItem == null)
             return CalculateSkylineDistance(prevItem, nextItem, staffY, noteParams);
 
-        return Math.Max(0.0,
-            SeparationRodPadding + RawSkylineDistance(prevItem, nextItem, staffY, 0.0,
-                                                      prevShift, nextShift));
+        return SkylineFloorPair(
+            ItemSkylineFactory.CreateRightSkyline(prevItem, prevShift, staffY),
+            ItemSkylineFactory.CreateLeftSkyline(nextItem, nextShift, staffY)).Rod;
     }
 
     /// <summary>

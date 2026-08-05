@@ -1,7 +1,7 @@
 // An UNBEAMED eighth chord must carry its flag (起票 2026-08-05,
 // scratch/ベースタブLy/blogger2.lys, reproduced verbatim). The flag is the STEM's
 // grob, indifferent to how many heads hang on it — LilyPond makes one Flag per
-// Stem (lily/stem-engraver.cc:120-140) and kills it only for a beamed stem — but
+// Stem (lily/stem-engraver.cc:152-160) and kills it only for a beamed stem — but
 // DrawChord had NO flag branch at all: the voice-two <bes' ges c>8 drew a bare
 // down-stem while the voice-one f'8 beside it took the single-note recipe and got
 // its flag. Nothing in the corpus wrote an unbeamed flagged chord, so no snapshot

@@ -143,7 +143,7 @@ internal sealed record NoteCollisionInfo
 ///   dot_wipe_head is a local variable in the MERGE branch, not this mechanism.
 /// IMPLEMENTED — force-hshift manual override (note-collision.cc:608-624 forced_shift)
 /// IMPLEMENTED — within-chord seconds displacement (stem.cc:606-760) in ChordHeadPositioning
-/// IMPLEMENTED — automatic_shift's group loop (note-collision.cc:503-599), ported clause
+/// IMPLEMENTED — automatic_shift's group loop (note-collision.cc:504-599), ported clause
 ///   for clause in CalculateVoiceOffsets. ⚠️ It used to be a flat "+1 head width per later
 ///   same-direction voice" cascade wearing this same citation; the third voice of a
 ///   `voice { } { } { }` came out at double LilyPond's measured shift (+1.3042 vs +0.652,
@@ -616,7 +616,7 @@ internal sealed class NoteCollision
     /// Returns (VoiceId, ItemIndex, XOffset, HeadTransparent, DotForceDown) for each entry.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:503-599 automatic_shift — the group loop
+    /// LILYPOND-REF: lily/note-collision.cc:504-599 automatic_shift — the group loop
     ///   ported clause for clause below (each clause carries its line);
     /// LILYPOND-REF: lily/note-collision.cc:403-471 calc_positioning_done — the
     ///   <c>× wid</c> (whose loop over {UP, DOWN} OVERWRITES, so wid is the DOWN
@@ -695,7 +695,7 @@ internal sealed class NoteCollision
         }
 
         // inner_offset = check_meshing_chords over the FIRST group of each direction
-        // (:522-525), 0.0 when either direction is empty. Dimensionless, in down-stem
+        // (:526-529), 0.0 when either direction is empty. Dimensionless, in down-stem
         // head widths — the extent ratio is applied inside AnalyzeCollision, the width
         // below. A merge returns 0 with its head wipes.
         var collision = upEntries.Count > 0 && downEntries.Count > 0
@@ -710,7 +710,7 @@ internal sealed class NoteCollision
         // :200-201 — the sign carries the direction; UpStemXOffset IS +shift_amount.
         double inner = collision.UpStemXOffset;
 
-        // The per-direction group loop, :536-576.
+        // The per-direction group loop, :539-581.
         var off = new double[2][];
         for (int g = 0; g < 2; g++)
         {
@@ -731,27 +731,27 @@ internal sealed class NoteCollision
                 {
                     if (hs == prevShift)
                     {
-                        // :557 — match the previous notecolumn offset.
+                        // :559-560 — match the previous notecolumn offset.
                     }
                     else if (ext[g][i].Hi > ext[g][i - 1].Lo && ext[g][i].Lo < ext[g][i - 1].Hi)
                     {
-                        // :559-561 — fully clear the previous-notecolumn heads.
+                        // :561-563 — fully clear the previous-notecolumn heads.
                         offset += 1.0;
                     }
                     else if (d > 0 ? ext[g][i].Lo >= ext[g][i - 1].Hi
                                    : ext[g][i].Hi <= ext[g][i - 1].Lo)
                     {
-                        // :562-565 — we cross the previous notecolumn
+                        // :564-567 — we cross the previous notecolumn
                         // (d * extents[d][i][-d] >= d * extents[d][i-1][d]).
                         offset += validStem[g][i - 1] ? 1.0 : 0.5;
                     }
                     else if (validStem[g][i])
                     {
-                        // :566-567.
+                        // :568-569.
                         offset += 0.5;
                     }
 
-                    // :569-575 — check if we cross the opposite-stemmed voices. An
+                    // :571-577 — check if we cross the opposite-stemmed voices. An
                     // empty opposite union can satisfy neither condition (LP's empty
                     // Slice compares the same way), hence the single guard.
                     if (groups[o].Count > 0)

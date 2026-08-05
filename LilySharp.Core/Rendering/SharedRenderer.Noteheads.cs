@@ -751,7 +751,7 @@ internal static partial class SharedRenderer
             // chord takes exactly the single-note recipe (DrawNote). This branch was
             // MISSING outright: an unbeamed <…>8 drew a bare stem with no flag
             // (scratch/ベースタブLy/blogger2.lys, 起票 2026-08-05).
-            // LILYPOND-REF: lily/stem-engraver.cc:120-140 — the Flag grob is created
+            // LILYPOND-REF: lily/stem-engraver.cc:152-160 — the Flag grob is created
             //   per Stem (and :165-172 kills it only for a BEAMED stem);
             // LILYPOND-REF: lily/flag.cc:118-165 Flag::print — the glyph is chosen by
             //   duration-log and stem direction alone.

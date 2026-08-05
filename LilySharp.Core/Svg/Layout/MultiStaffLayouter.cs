@@ -1410,7 +1410,7 @@ internal sealed class MultiStaffLayouter
             foreach (var vStaff in vGroup.Staves)
                 if (!vStaff.IsTab && vStaff.Voices.Length >= 2)
                     springs = SpacingRules.ApplyCrossVoiceColumnSpacing(
-                        springs, allTimings, vStaff.Voices, measureIndex);
+                        springs, allTimings, vStaff, measureIndex);
 
         // Reserve room for lyric syllables so they don't collide. Only acts
         // on single-voice measures (timing columns == note items); a no-lyric

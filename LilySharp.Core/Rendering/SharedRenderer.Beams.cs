@@ -183,12 +183,23 @@ internal static partial class SharedRenderer
                     grp.Members[i].BeamCountLeft, grp.Members[i].BeamCountRight,
                     MemberUp(i) ? 1 : -1, StemAttachX(i));
             var beamRanks = BeamSubdivision.CalcBeaming(beamingInput);
+            // The stack spacing is COUNT-AWARE: from four beams up LilyPond narrows the
+            // translation to (3·ss + line − thickness)/3 = 0.8733… against the usual
+            // 0.81, so a 64th group's four lines still cover the staff lines. Drawing
+            // the flat 0.81 here while the quanter scored with the count-aware value
+            // put every inner line of a 4-stack 0.063–0.19 off LilyPond's (LP
+            // regression beam-quanting-horizontal.ly, groups 16-19).
+            // LILYPOND-REF: lily/beam.cc:129-145 get_beam_translation (beam_count < 4 ?);
+            //   :783 print draws every rank at that translation.
+            double beamTranslation = EngravingDefaults.BeamTranslationOf(
+                EngravingDefaults.BeamThickness, 1.0,
+                grp.Members.Max(m => m.BeamCount));
             foreach (var seg in BeamSubdivision.CalcBeamSegments(
                          beamingInput, beamRanks,
                          EngravingDefaults.BeamletLength,
                          EngravingDefaults.BeamletMaxLengthProportion, halfStem))
             {
-                double yOff = EngravingDefaults.BeamTranslation * seg.Rank;
+                double yOff = beamTranslation * seg.Rank;
                 DrawBeamSegment(seg.XLeft, PrimaryBeamYAt(seg.XLeft) + yOff,
                     seg.XRight, PrimaryBeamYAt(seg.XRight) + yOff, bgc);
             }
@@ -250,7 +261,7 @@ internal static partial class SharedRenderer
                 //   stem_y = beam_line + beam_translation × beam_multiplicity[stem_dir]
                 //   (lily/stem.cc:1269 unites the stem's left+right ranks, indexed by dir).
                 int stemRank = beamRanks[i].Multiplicity(up ? 1 : -1);
-                double beamY = primaryBeamY + EngravingDefaults.BeamTranslation * stemRank;
+                double beamY = primaryBeamY + beamTranslation * stemRank;
                 bgc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);
             }

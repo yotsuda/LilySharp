@@ -1,0 +1,23 @@
+// lilypond-src/input/regression/beam-quanting-horizontal.ly の Lily# 訳。
+// CLAIM: 水平 beam の quant は staff line を必ずまたぐ（sit/straddle/hang）。
+// 32 分 beam の自由符尾長は 2〜1.5。8分/16分/32分/64分 × 高低の対。
+// 綴り: LP \relative を絶対展開して 1 アポストロフィ下げ。末尾の小節は
+// 意図的に不足（LP 原本も 7/8 で終わる・LYS2006 警告は仕様）。
+octave absolute
+
+part m { clef treble }
+
+section Main {
+  m {
+    c8[ c] a'[ a'] a[ a] c'[ c'] |
+    d8[ d] g'[ g'] g[ g] d'[ d'] |
+    break
+    c16[ c] a'[ a'] a[ a] c'[ c']
+    c32[ c] a'[ a'] f[ f] e'[ e']
+    c64[ c] a'[ a'] f[ f] e'[ e'] |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

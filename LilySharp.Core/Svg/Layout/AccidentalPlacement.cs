@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -273,7 +273,7 @@ internal sealed class AccidentalPlacement
         {
             // The fattening keys on the grob's GLYPH-NAME, which stays the MAIN glyph
             // under restore-first — so ♮♭ takes it too, over the COMPOSED extent
-            // (lily/accidental.cc:64-67: the guard reads glyph_name, the box reads
+            // (lily/accidental.cc:65-67: the guard reads glyph_name, the box reads
             // my_stencil's extents, and the stencil already carries the natural).
             // "a bit more padding for the right of the stem" — one box on the RIGHT
             // skyline at x = stencil-right * 0.375 over the stencil's Y-extent,

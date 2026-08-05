@@ -58,6 +58,73 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第10便（＝**ユーザーの perf 指摘に実測で回答**。第2便の
+クロス声部床パスに **O(M²) 回帰を実測（+26.3%／120小節2声で+523ms）→ 2 段修正で
++1.5〜2.2% 残差まで低減**。引用監査 11 件修正も同便）。
+
+⚠️ **仕事は 2 commit**（`dd95a189` 引用監査・`ee8185d5` perf）＋ handoff。
+
+★★★ **① perf 回帰の実測と修正**（worktree `238a72bb` + Release 双方・交互実行・min-of-N・
+順序反転——第98 ⑦ の手順）:
+```
+規模                     修正前          memo後        skyline再利用後(両順序)
+120小節×2声(合成)        +26.3%(+523ms)  +3.1〜6.4%    +1.5%/+2.2%(n=16)
+08-chorale(実多声・短)    −0.6%           +0.5%         —
+beam-auto(46小節・単声)   +0.2%           —             —
+```
+- **修正1**: `ComputeVoiceOffsets` を小節ごと→ **Staff 単位で memo 化**
+  （`ConditionalWeakTable<Staff,…>`・offsets は不変 Voices の純関数。gate+layout×全小節の
+  O(M²) が消えた）。
+- **修正2**: 対ごとに二重構築していた skyline を **エントリ側ごとに 1 回**にし、
+  spring 床と rod の clamp 対を `SkylineFloorPair` に一本化（CalculateSkylineDistance /
+  SeparationRodDistance も同じ家を消費・`RawSkylineDistance` は削除）。
+- **残差 +1.5〜2.2%（多声ストレス本のみ・単声 0%）は新機構の実仕事**
+  （クロス声部床を gate と layout が各 1 回価格する分）。さらに削るなら
+  「装飾済み springs を小節単位で gate/layout 共有」だが、CreateTimingSprings 自体が
+  2 回走る既存構造ごとの話なので別着手（未起票の将来候補）。
+
+★★ **② 引用監査**（ユーザー問「字面移植できた？REF 付けた？」への裏取りで発見）:
+**行番号ドリフト 9 件**（automatic_shift の節番号+2×6・inner_offset・restore 規則・
+flat guard）＋ **関数位置誤り 1 件**（Flag 生成は stem-engraver.cc **:152-160**、
+:120-140 ではない）＋ **stale な挙動主張 1 件**（`\partial` は「−dur を置く」でなく
+timing-translator.cc:158 の **`mp = mlen − dur`**——式は同値・挙動影響なし）。
+⇒ 全修正。**教訓: bounds 検証（Verify-LilyPondRefs）は ±2 行のドリフトを通す。
+新規 REF はコミット前に行を実照合**（regression 便の手順に組み込む）。
+
+**frontier = beam-multiplicity-over-rests.ly**（第9便から不変）。
+未 push **67**（この handoff 込み。数え直すこと）・テスト **4097 passed / 0 failed / 4
+skipped**・**Core 0 warning。**
+
+## 以下は第99セッション第9便の経緯
+
+最終更新 第99セッション第9便（＝**lp-regression キュー続行**。処理 2 本＝exact 1・**fixed 1**）。
+
+⚠️ **仕事は 1 commit**（`c06181ea` 4 段 beam の段間隔）＋ handoff。
+
+★★★ **① 第 4 号の修正＝4 段 stack の beam 段間隔**（beam-quanting-horizontal.ly）:
+LP `get_beam_translation` は **beam_count≥4 で (3·ss+line−thick)/3 = 0.8733…**
+（<4 は 0.81・beam.cc:129-145）。Lily# は**式の家 `BeamTranslationOf` に分岐が既にあり
+quanter は消費していたのに、描画 2 か所（SharedRenderer.Beams の段積みと符尾終端）と
+BeamDetector の knee 閾値が一律 0.81 定数**——64 分（4 段）の内側 2 線が LP から
+0.063〜0.19 ずれていた。⇒ 3 か所を count-aware に。修正後 **20/20 グループ一致**
+（残差は SVG 出力桁 <0.004）。fixture `test/beam-64th-stack`（陽性対照済・
+既存 snapshot 移動ゼロ＝観測者ゼロ 5 例目）。
+
+★★ **② beam-quanting-32nd = exact**: 30 グループ（78 段）の quant offset 集合が LP と全一致。
+⚠️ **比較器の罠を 1 つ踏んで直した**: 段の出力順はエンジン間で不安定なので、
+**(system, x) でグループ化して offset を集合比較**する（46/78 の"偽乖離"が消えた）。
+polygon 指紋と併せて README に追記すべき手順（未追記・次セッションで）。
+
+**frontier = beam-multiplicity-over-rests.ly**（rests-in-beams・beamlet 系 4 本が次の塊:
+multiplicity-over-rests / rest-extreme / beamlet-test / beaming.ly——manual beam 内の休符と
+64 分・s*N 乗数の翻訳可否から）。visited 28（うち plain 26）/ plain 322
+（fixed 4・exact 6・skip 19）。
+
+未 push **64**（この handoff 込み。数え直すこと）・テスト **4097 passed / 0 failed / 4 skipped**
+（第8便 4096・+1 snapshot）・**Core 0 warning。**
+
+## 以下は第99セッション第8便の経緯
+
 最終更新 第99セッション第8便（＝**lp-regression キュー続行**。処理 9 本・exact 1 本（大物）・
 skip 8 本。修正なし——このバッチは検証が主役）。
 

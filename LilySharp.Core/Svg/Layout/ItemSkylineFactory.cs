@@ -303,7 +303,7 @@ internal static class ItemSkylineFactory
         // hung from the stem-tip-side head — the same head the renderer reckons the
         // stem from. This used to be NoteItem-only, in step with the renderer's
         // missing chord-flag branch: the two were consistent about the same absence.
-        // LILYPOND-REF: lily/stem-engraver.cc:120-140 (Flag per Stem).
+        // LILYPOND-REF: lily/stem-engraver.cc:152-160 (Flag per Stem).
         bool stemUp; int tipPos; bool beamed;
         switch (item)
         {

@@ -623,7 +623,7 @@ public class SpacingInvariantTests
     /// column, and 0.652 = 0.5 × the eighth's 1.3042 head. The old hand-rolled "+1 head
     /// width per later same-direction voice" put it at 1.3042 — exactly double — under a
     /// LILYPOND-REF that named automatic_shift without porting its clauses.
-    /// LILYPOND-REF: lily/note-collision.cc:536-576 (the group loop), :427-437 (× the
+    /// LILYPOND-REF: lily/note-collision.cc:539-581 (the group loop), :427-437 (× the
     ///   down group's first support head).
     /// </summary>
     [Fact]
