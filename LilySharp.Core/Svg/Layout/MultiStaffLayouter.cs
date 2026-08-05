@@ -1130,85 +1130,13 @@ internal sealed class MultiStaffLayouter
                 springs = ImmutableArray.Create(new Spring(slot, slot, 0));
             }
 
-            // Reserve room for lyric syllables so they don't collide. Only acts
-            // on single-voice measures (timing columns == note items); a no-lyric
-            // score leaves the chain untouched. Applied before the FirstNoteSpring
-            // tweak below, which Math.Max-preserves the widened minimum.
-            if (!score.Lyrics.IsDefaultOrEmpty)
-            {
-                // On a lead sheet the chords change at most every quarter note, so
-                // the chord (primary) row has far fewer columns than the syllable
-                // grid; reserving lyric width against IT under-counts and the
-                // syllables crowd. Reserve against the DENSEST row at this bar (the
-                // lyrics), whose item count matches the timing columns the springs
-                // were built from. Staff-backed scores keep the primary measure.
-                springs = score.IsLeadSheet
-                    // The union timing columns don't match the syllable count on a lead sheet
-                    // (chords and lyrics subdivide the bar differently), so reserve by column.
-                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(
-                        springs, allTimings, i, score.Lyrics,
-                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings))
-                    : LyricSpacing.ApplyLyricSpacing(
-                        springs, primaryMeasure, allTimings, i, score.Lyrics,
-                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings));
-            }
-            if (score.IsLeadSheet)
-            {
-                // A staff-less row keeps its empty command columns (LilyPond never
-                // prunes them without note-column neighbours), so every inter-column
-                // gap carries the breakable dt==0 spring's 0.5 on top of its
-                // duration space — see ApplyRowCommandColumnSprings.
-                springs = SpacingRules.ApplyRowCommandColumnSprings(springs);
-                // Chord symbols reserve their widths on the row columns, and a
-                // grid bar never collapses below a readable cell (else a long
-                // chords-only chart packs onto one line and never wraps).
-                springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, i, score.ChordNames);
-                springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
-            }
-            else if (!score.ChordNames.IsDefaultOrEmpty)
-            {
-                // Staff-attached chord symbols price their widths into the
-                // columns on EVERY measure, exactly as LilyPond's ChordName
-                // item extent (expanded (-0.5 . 0.5)) joins its paper column
-                // — most visible over all-rest (R1) bars, which have no other
-                // width source and otherwise collapse, overprinting the
-                // symbols. LILYPOND-REF: scm/define-grobs.scm ChordName
-                // extra-spacing-width.
-                springs = SpacingRules.ApplyChordRowSpacing(
-                    springs, allTimings, i, score.ChordNames, includeAttached: true);
-            }
-
-            // Tab fret digits (a Lily# enlargement of LilyPond's tiny numbers) are
-            // wider than note heads and zigzag on chords; reserve their width in the
-            // SHARED columns so adjacent digits don't overprint.
-            foreach (var tGroup in score.StaffGroups)
-                foreach (var tStaff in tGroup.Staves)
-                    if (tStaff.IsTab && tStaff.Tuning is { } tabTuning
-                        && i < tStaff.PrimaryVoice.Measures.Length)
-                        springs = SpacingRules.ApplyTabChordSpacing(
-                            springs, allTimings, tStaff.PrimaryVoice.Measures[i],
-                            Tunings.GetTuning(tabTuning),
-                            Tunings.SoundingShift(tStaff.TabSourceClef, tStaff.Transposition));
-
-            // Reserve a wide script's (fermata / ornament) sideways reach in the
-            // SHARED columns, per staff (a script is keyed by its own staff index),
-            // so a fermata over one note doesn't crowd the next note's accidental.
-            // Y-gated by the skyline: a fermata high above the staff leaves a low
-            // following note untouched. Staff enumeration matches the global index
-            // scripts are tagged with (see BuildAllStaffSkylines).
-            if (!score.Articulations.IsDefaultOrEmpty)
-            {
-                int artStaffIndex = 0;
-                foreach (var aGroup in score.StaffGroups)
-                    foreach (var aStaff in aGroup.Staves)
-                    {
-                        if (i < aStaff.PrimaryVoice.Measures.Length)
-                            springs = SpacingRules.ApplyArticulationSpacing(
-                                springs, allTimings, aStaff.PrimaryVoice.Measures[i],
-                                score.Articulations, i, artStaffIndex);
-                        artStaffIndex++;
-                    }
-            }
+            // Lyric, chord, tab-digit and wide-script widths land on the SHARED
+            // columns through the one reservation list the break gate reads too
+            // (ApplySharedColumnReservations) — a bar must be priced for breaking
+            // exactly as it will be laid out. Applied before the FirstNoteSpring
+            // tweak below, which Math.Max-preserves any widened minimum.
+            springs = ApplySharedColumnReservations(
+                score, i, springs, primaryMeasure, allTimings, allMeasures);
 
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
@@ -1448,6 +1376,110 @@ internal sealed class MultiStaffLayouter
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The reservations the SHARED note columns carry on top of their duration
+    /// springs — lyric syllables, chord symbols (lead-sheet grid or staff-attached),
+    /// tab fret digits and wide scripts — applied by the ONE list both consumers
+    /// read: the system layout (the loop above) and the line-break gate
+    /// (SystemBreaker.ComputeMultiStaffSpringData). A bar the gate prices narrower
+    /// than the layout sets is a bar the layout cannot fit: the gate carried a
+    /// hand-mirrored copy of this list and drifted twice — ApplyTabChordSpacing was
+    /// missing (an all-tab book packed onto one system and ran past the page edge,
+    /// scratch/ベースタブLy/longtab.lys) and ApplyRowCommandColumnSprings was missing
+    /// (a lead-sheet row priced without its command columns' 0.5s). Same failure
+    /// shape as the container-skip predicates (docs/HANDOFF.md §1 第98): a
+    /// per-caller copy of a whitelist is where drift grows, so there is no copy.
+    /// </summary>
+    internal static ImmutableArray<Spring> ApplySharedColumnReservations(
+        MultiStaffScore score,
+        int measureIndex,
+        ImmutableArray<Spring> springs,
+        Measure primaryMeasure,
+        List<Fraction> allTimings,
+        List<Measure> allMeasures)
+    {
+        // Reserve room for lyric syllables so they don't collide. Only acts
+        // on single-voice measures (timing columns == note items); a no-lyric
+        // score leaves the chain untouched. Applied before the layout's
+        // FirstNoteSpring tweak, which Math.Max-preserves the widened minimum.
+        if (!score.Lyrics.IsDefaultOrEmpty)
+        {
+            // On a lead sheet the chords change at most every quarter note, so
+            // the chord (primary) row has far fewer columns than the syllable
+            // grid; reserving lyric width against IT under-counts and the
+            // syllables crowd. Reserve against the DENSEST row at this bar (the
+            // lyrics), whose item count matches the timing columns the springs
+            // were built from. Staff-backed scores keep the primary measure.
+            springs = score.IsLeadSheet
+                // The union timing columns don't match the syllable count on a lead sheet
+                // (chords and lyrics subdivide the bar differently), so reserve by column.
+                ? LyricSpacing.ApplyLeadSheetLyricSpacing(
+                    springs, allTimings, measureIndex, score.Lyrics,
+                    SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings))
+                : LyricSpacing.ApplyLyricSpacing(
+                    springs, primaryMeasure, allTimings, measureIndex, score.Lyrics,
+                    SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings));
+        }
+        if (score.IsLeadSheet)
+        {
+            // A staff-less row keeps its empty command columns (LilyPond never
+            // prunes them without note-column neighbours), so every inter-column
+            // gap carries the breakable dt==0 spring's 0.5 on top of its
+            // duration space — see ApplyRowCommandColumnSprings.
+            springs = SpacingRules.ApplyRowCommandColumnSprings(springs);
+            // Chord symbols reserve their widths on the row columns, and a
+            // grid bar never collapses below a readable cell (else a long
+            // chords-only chart packs onto one line and never wraps).
+            springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, measureIndex, score.ChordNames);
+            springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
+        }
+        else if (!score.ChordNames.IsDefaultOrEmpty)
+        {
+            // Staff-attached chord symbols price their widths into the
+            // columns on EVERY measure, exactly as LilyPond's ChordName
+            // item extent (expanded (-0.5 . 0.5)) joins its paper column
+            // — most visible over all-rest (R1) bars, which have no other
+            // width source and otherwise collapse, overprinting the
+            // symbols. LILYPOND-REF: scm/define-grobs.scm ChordName
+            // extra-spacing-width.
+            springs = SpacingRules.ApplyChordRowSpacing(
+                springs, allTimings, measureIndex, score.ChordNames, includeAttached: true);
+        }
+
+        // Tab fret digits (a Lily# enlargement of LilyPond's tiny numbers) are
+        // wider than note heads and zigzag on chords; reserve their width in the
+        // SHARED columns so adjacent digits don't overprint.
+        foreach (var tGroup in score.StaffGroups)
+            foreach (var tStaff in tGroup.Staves)
+                if (tStaff.IsTab && tStaff.Tuning is { } tabTuning
+                    && measureIndex < tStaff.PrimaryVoice.Measures.Length)
+                    springs = SpacingRules.ApplyTabChordSpacing(
+                        springs, allTimings, tStaff.PrimaryVoice.Measures[measureIndex],
+                        Tunings.GetTuning(tabTuning),
+                        Tunings.SoundingShift(tStaff.TabSourceClef, tStaff.Transposition));
+
+        // Reserve a wide script's (fermata / ornament) sideways reach in the
+        // SHARED columns, per staff (a script is keyed by its own staff index),
+        // so a fermata over one note doesn't crowd the next note's accidental.
+        // Y-gated by the skyline: a fermata high above the staff leaves a low
+        // following note untouched. Staff enumeration matches the global index
+        // scripts are tagged with (see BuildAllStaffSkylines).
+        if (!score.Articulations.IsDefaultOrEmpty)
+        {
+            int artStaffIndex = 0;
+            foreach (var aGroup in score.StaffGroups)
+                foreach (var aStaff in aGroup.Staves)
+                {
+                    if (measureIndex < aStaff.PrimaryVoice.Measures.Length)
+                        springs = SpacingRules.ApplyArticulationSpacing(
+                            springs, allTimings, aStaff.PrimaryVoice.Measures[measureIndex],
+                            score.Articulations, measureIndex, artStaffIndex);
+                    artStaffIndex++;
+                }
+        }
+        return springs;
     }
 
     /// <summary>

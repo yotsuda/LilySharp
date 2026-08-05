@@ -58,6 +58,75 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション（＝**ユーザーがリリースブロッカー「タブ譜が改行されない」
+（`scratch\ベースタブLy\longtab.lys`）を持ち込んだので、§2 の残債返却は中断のまま**。起票の言い方は
+「改行されない」だが、**実欠陥は「改行ゲートがタブ小節を実幅より細く見積もる」**——6 小節が
+1 システムに詰まり、**描画は x=125.03 まで走るのに宣言幅は 119.50** で 6 小節目が右端で切れていた。
+改行機構自体は生きていた（16 小節は 4 システムに割れる））。
+
+⚠️ **仕事は 1 commit**（`2416758f` 共有 reservation リスト）＋ handoff。
+
+★★★ **① 規則**: **改行ゲート（`SystemBreaker.ComputeMultiStaffSpringData`）はレイアウト
+（`MultiStaffLayouter`）の spring 装飾列を手鏡していて、2 項目 drift していた**——
+`ApplyTabChordSpacing`（タブ数字床）と `ApplyRowCommandColumnSprings`（lead-sheet の command 列）。
+タブの床は 8 分連打で**縛る**（右半 extent＋左半 extent＋gap＝0.947×2＋0.6≒列間 2.494、
+数字 advance は 0.574×3.3＝1.894。8 分の duration space より広い。実測: 五線 1.65/列 vs
+タブ 2.48/列）ので、ゲートはタブ小節を約 2/3 幅と見て詰め込む。
+⇒ **修正は枠**: 装飾列（lyric・chord・タブ数字・wide script）を
+`MultiStaffLayouter.ApplySharedColumnReservations` に一本化し、レイアウトとゲートの**両方が同じ
+1 個を消費**（第98 ①「skip リストも walk の呼び出しと同じで、全部数える」の spring 版——
+per-caller の写しが drift の温床）。空プレースホルダ床は対象外（KnuthPlassBreaker が別に持つ・
+従来どおり）。
+
+★★ **② 陽性対照**: ゲート側の共有呼び出しを外すと
+`SpacingInvariantTests.BreakGate_PricesTabFretDigitFloors`（新規）と snapshot
+`test/tab-line-break`（新規・起票の 6 小節を逐語）＋ `test/tab-percent-repeat` に加えて
+**lyric 系 3 本**（lyric-break-pricing・lyrics-volta・rows-song-sheet＝lyric/chord 装飾の既存観測者）
+が落ちる。修正入りでは全緑。
+
+★ **③ LP は反証でない**: 双子（`lysc ly`・2.26.0）は同じ 6 小節を**1 行**に置く（全グリフが
+1 つの Y 行・幅 119.5016）。LP のタブ数字は小さく、Lily# の数字は批准済み ~2 倍
+（`TabConstants.FretFontSize`・§3）なので、**LP より早く割れるのはその逸脱の文書化済みコスト**。
+fixture header に反証値を記載済み。
+
+⚠️ **④ snapshot は 2 枚だけ動いた**: `tab-percent-repeat` re-base（旧 1 システムは数字間隔が
+min まで圧縮されて窮屈、新 2 システムは自然幅——ゲートが本当の ideal を知った帰結）＋新規
+`tab-line-break`。**lead-sheet 系は 1 枚も動かない**（RowCommand の統一は既存 fixture の break を
+変えない）。
+
+⚠️ **⑤ perf は構造論のみで µs 計測はしていない**: 装飾列は同じ呼び出しの移動で、非タブ譜への
+追加仕事は per-measure の staves ループ（既存 articulation ループと同形）だけ。タブ譜では
+ゲートが `ApplyTabChordSpacing` を 2 回目に呼ぶ（lyric 装飾が元々ゲート＋レイアウトの 2 回で
+あるのと同じ設計）。訊かれたら第98 ⑦ の同居ハーネス（ALC＋順序反転）で測る。
+
+未 push **47**（この handoff を含む commit まで。⚠️ **足し算しない**。
+`git rev-list --count origin/master..master` で数え直す。**⚠️ 私は push していない**）・
+テスト **4086 passed / 0 failed / 4 skipped**（開始時 4084・**+1 unit・+1 snapshot**）・
+台帳 **479 点（ss 非ゼロ 83・総和 3.612832552・count 点 106 うち非ゼロ 2——全部不変**＝
+台帳は触っていない）・**Core 0 warning。snapshot 新規 1 枚・re-base 1 枚。**
+⚠️ **開始時の §0 裏取りでは引継ぎは stale でなかった**（HEAD `238a72bb`・未push 45・テスト 4084・
+台帳 479/83/3.612832552/106/2 全一致）。
+
+⚠️⚠️ ★★★ **次に触るときの注意**:
+```
+⑴ ~~タブ譜が改行されない~~ **✅ 閉じた（第99セッション・`2416758f`）。陽性対照つき。**
+                        ゲートに装飾を足すときは ApplySharedColumnReservations の中へ——
+                        per-caller の写しを作らない
+⑵ **cue 混在列の packing**（第98 ⑵・不変）
+⑵' **cue 内の休符が原寸**（第98 ⑵'・不変）  `RestItem` に `IsCue` が無い
+⑶ **`ElementCoordinator.GetColumnNoteheadWidth` はまだ advance**（不変・読者ゼロ）
+⑷ **§2 の残債返却は中断したまま**（不変）  位置は第96セッション §1 の ⑵〜⑺
+                        （⑶' post-event ⒝ 5 種は第98 ⑥ で閉）
+⑸ **双子の落下の残り**（第98 ⑸・不変）  ⒞ @breathe/@caesura は構造変更。
+                        設計判断系は @chord 20・@ped 18・@fig 13 が上位
+⑹ **percent-repeat のタブ本は % 小節が第 1 小節とほぼ同幅で立つ**（今回観測・未着手）
+                        gate も layout も % 小節を中身の（描かれない）音符＋数字床で価格する。
+                        今回の統一が導入したものではなく従来のレイアウト挙動。詰めるなら
+                        **LP が % 小節をどう幅付けするかを先に測る**
+```
+
+## 以下は第98セッションの経緯
+
 最終更新 第98セッション（＝**引継ぎ ⑴'「`cue { }` が小節を占めると exporter と描画で小節数が
 割れる」を閉じた。ただし起票の solo 側の症状（「2 小節目に何も描かれない」）は**起票が名指した
 `477b9fba` でも再現しない**——solo は描かれる（477b9fba と HEAD がバイト一致）。**本当に割れていた

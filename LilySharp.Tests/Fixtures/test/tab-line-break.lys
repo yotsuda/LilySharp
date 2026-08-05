@@ -1,0 +1,25 @@
+// The BREAK GATE must price a tab bar's fret-digit spacing floors exactly as the
+// layout applies them (MultiStaffLayouter.ApplySharedColumnReservations — one list,
+// two consumers). Before the list was shared, the gate priced these six bars of
+// straight eighths WITHOUT the floors (SpacingRules.ApplyTabChordSpacing), packed
+// all six onto ONE system, and the drawn digits ran to x=125.03 on a 119.50 page —
+// the sixth bar clipped at the right edge (起票 2026-08-05,
+// scratch/ベースタブLy/longtab.lys, reproduced verbatim here). Two systems of three
+// bars is the claim; every element inside the page is the point.
+// ⚠️ LilyPond sets the SAME six bars on one line (lysc-ly twin on 2.26.0: one
+// system, every glyph on one Y row, width 119.5016) — and that is NOT
+// counter-evidence: LP's tab digits are tiny where Lily#'s are a ratified ~2x
+// enlargement (TabConstants.FretFontSize), so the digit floors that force the
+// earlier break are that deviation's documented cost, not an un-ported quantity.
+part melody {
+  instrument bass
+  section A {
+    a8 a a a a a a a | a a a a a a a a | a a a a a a a a | a a a a a a a a | a a a a a a a a | a a a a a a a a |
+  }
+}
+
+form main { A }
+
+score main {
+  tab melody
+}

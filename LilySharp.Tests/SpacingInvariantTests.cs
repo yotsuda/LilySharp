@@ -559,4 +559,49 @@ public class SpacingInvariantTests
         Assert.True(densePriced > restPriced * 2,
             $"rest-against-8ths measure ({densePriced:F2}) must price like its dense staff, not its resting one ({restPriced:F2})");
     }
+
+    /// <summary>
+    /// The break gate prices a tab bar WITH its fret-digit spacing floors. The floors
+    /// (SpacingRules.ApplyTabChordSpacing) protect a Lily# enlargement of LilyPond's tiny
+    /// digits (TabConstants.FretFontSize), and on straight eighths they BIND — a digit's
+    /// advance plus the inter-column gap exceeds an eighth's duration space — so a gate
+    /// that omits them under-books exactly the bars tab books are made of. That was a
+    /// real drift: the gate carried a hand-mirrored copy of the layout's reservation
+    /// list, the tab entry was missing from the copy, and six bars of bass-tab eighths
+    /// packed onto one system whose digits ran to x=125.03 on a 119.50 page
+    /// (test/tab-line-break holds the drawn geometry). Both consumers now read ONE list
+    /// — MultiStaffLayouter.ApplySharedColumnReservations — and the gate is asserted
+    /// through its own output, so a re-introduced per-caller copy cannot pass this by
+    /// coincidence.
+    /// </summary>
+    [Fact]
+    public void BreakGate_PricesTabFretDigitFloors()
+    {
+        var (timings, allMeasures, primary, score) = Collect("""
+            part melody {
+              instrument bass
+              section A { a8 a a a a a a a | a8 a a a a a a a | }
+            }
+            form main { A }
+            score main "x" { tab melody }
+            """);
+
+        var next = score.PrimaryContentStaff.PrimaryVoice.Measures[1];
+        var bare = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures, next);
+        var reserved = MultiStaffLayouter.ApplySharedColumnReservations(
+            score, 0, bare, primary, timings, allMeasures);
+
+        // The floors actually bite here, so the equality below is not two equal sums
+        // agreeing about nothing.
+        Assert.True(reserved.Sum(s => s.MinDistance) > bare.Sum(s => s.MinDistance),
+            $"digit floors must widen straight-eighth columns: "
+            + $"bare={bare.Sum(s => s.MinDistance):F3}, reserved={reserved.Sum(s => s.MinDistance):F3}");
+
+        // And the gate books the RESERVED bar (plus its bar lines), not the bare one.
+        var gate = SystemBreaker.ComputeMultiStaffSpringData(score, 0.125)[0];
+        double barlines = SpacingRules.GetBarlineWidth(primary.StartBarline)
+                        + SpacingRules.GetBarlineWidth(primary.EndBarline);
+        Assert.Equal(reserved.Sum(s => s.MinDistance) + barlines, gate.MinWidth, precision: 9);
+        Assert.Equal(reserved.Sum(s => s.IdealDistance) + barlines, gate.IdealWidth, precision: 9);
+    }
 }

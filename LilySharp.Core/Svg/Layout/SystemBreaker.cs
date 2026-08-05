@@ -170,56 +170,14 @@ internal sealed class SystemBreaker
                 primaryMeasure, allTimings, baseShortestDuration, allMeasures,
                 i + 1 < measures.Length ? measures[i + 1] : null);
 
-            // Price lyric syllables into the break gate exactly as the system
-            // layout does (MultiStaffLayouter), so a syllable that widens a measure
-            // can push it to the next line instead of overflowing. Without this the
-            // breaker under-counts lyric-heavy bars and packs lines too tightly.
-            // LILYPOND-REF: lily/lyric-extender.cc / spacing — syllable widths join
-            // the column springs the spacing-spanner solves.
-            if (!score.Lyrics.IsDefaultOrEmpty)
-            {
-                springs = score.IsLeadSheet
-                    // Mirror MultiStaffLayouter: on a lead sheet reserve lyric width by timing
-                    // column (union columns ≠ syllable count), else by note item — and from
-                    // the same alignment centres, since a syllable's ink is centred on those.
-                    ? LyricSpacing.ApplyLeadSheetLyricSpacing(
-                        springs, allTimings, i, score.Lyrics,
-                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings))
-                    : LyricSpacing.ApplyLyricSpacing(
-                        springs, primaryMeasure, allTimings, i, score.Lyrics,
-                        SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings));
-            }
-            if (score.IsLeadSheet)
-            {
-                // Mirror the system layout (MultiStaffLayouter): the break gate
-                // must price chord widths + the grid-cell floor identically.
-                springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, i, score.ChordNames);
-                springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
-            }
-            else if (!score.ChordNames.IsDefaultOrEmpty)
-            {
-                // Mirror the system layout: attached chord symbols price
-                // their widths on every measure (LP ChordName extent).
-                springs = SpacingRules.ApplyChordRowSpacing(
-                    springs, allTimings, i, score.ChordNames, includeAttached: true);
-            }
-
-            // Mirror the system layout: a wide script (fermata / ornament) reserves
-            // its sideways reach per staff, so a bar it widens is priced the same in
-            // the break gate and cannot overflow when actually laid out.
-            if (!score.Articulations.IsDefaultOrEmpty)
-            {
-                int artStaffIndex = 0;
-                foreach (var aGroup in score.StaffGroups)
-                    foreach (var aStaff in aGroup.Staves)
-                    {
-                        if (i < aStaff.PrimaryVoice.Measures.Length)
-                            springs = SpacingRules.ApplyArticulationSpacing(
-                                springs, allTimings, aStaff.PrimaryVoice.Measures[i],
-                                score.Articulations, i, artStaffIndex);
-                        artStaffIndex++;
-                    }
-            }
+            // The shared-column reservations (lyrics, chords, tab digits, wide
+            // scripts) — the SAME list the system layout applies, from the one home
+            // (MultiStaffLayouter.ApplySharedColumnReservations). The gate used to
+            // carry a hand-mirrored copy of that list and it drifted: tab fret
+            // digits were never priced here, so an all-tab book packed onto one
+            // system and ran past the page edge.
+            springs = MultiStaffLayouter.ApplySharedColumnReservations(
+                score, i, springs, primaryMeasure, allTimings, allMeasures);
 
             double ideal = 0, min = 0, invStretch = 0, invCompress = 0;
             foreach (var s in springs)

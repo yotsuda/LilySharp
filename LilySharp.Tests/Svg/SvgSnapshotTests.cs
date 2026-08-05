@@ -632,6 +632,10 @@ public class SvgSnapshotTests
         // Adjacent zigzagging tab chords must reserve their digit width in the
         // shared columns so the columns don't overprint.
         yield return new object[] { "test/tab-chord-spacing" };
+        // The break gate prices tab digit floors like the layout (one shared
+        // reservation list): six bars of bass-tab eighths break 3+3 instead of
+        // packing one system that overruns the page edge.
+        yield return new object[] { "test/tab-line-break" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking
