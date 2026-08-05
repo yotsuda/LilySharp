@@ -139,6 +139,93 @@ public class LilyPondExporterTests
         Assert.Contains("e,8\\3", ly);
     }
 
+    /// <summary>
+    /// A fingering reaches the twin as LilyPond's <c>-N</c> post-event, ATTACHED to its note.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS A REGRESSION TEST FOR A TWIN THAT COMPILED AND WAS DIFFERENT MUSIC. Until
+    /// 2026-08-05 (session 96) <c>@finger</c> fell through to EmitMark's "out of scope"
+    /// branch, so <c>c'1@finger(2)</c> exported as a bare <c>c'1</c> and the LilyPond twin
+    /// carried NO Fingering grob at all. It was found while building
+    /// audit/lp-geometry/probes/notehead-ink-frame.ly, whose FNG book had to have its
+    /// <c>-2</c> inserted by hand — and it was found only because the exporter WARNS when it
+    /// drops something, which is the whole argument for the warning.
+    /// <para>
+    /// The measured scale of the family, taken the same day over all 207 fixtures: 33
+    /// distinct constructs are dropped across 144 warnings, from three sites (EmitMark,
+    /// MapArticulation and Skip). This test covers the one whose absence had already reached
+    /// the fidelity corpus; the rest are named in HANDOFF §1.
+    /// </para>
+    /// ⚠️ The ATTACHMENT is the assertion, not the presence of "-2" anywhere in the file: a
+    /// post-event written before its note is what LilyPond drops with a warning, so
+    /// <c>c'1-2</c> and <c>-2 c'1</c> are the pass and the fail of the same fix.
+    /// </remarks>
+    [Fact]
+    public void Fingering_BecomesAnAttachedPostEvent()
+    {
+        var ly = Export(Score("c,1@finger(2)"));
+        Assert.Contains("c,1-2", ly);
+
+        // The negative half: nothing was dropped on the way, so the twin is the same music.
+        Assert.DoesNotContain("dropped (out of scope)", ly);
+    }
+
+    /// <summary>
+    /// The exporter carries every fingering Lily# will ENGRAVE, not a convenient subset.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The first version of the mapping accepted 1-5 only. Nothing was behind that:
+    /// MeasureCollector.ParseFingerMark takes any <c>finger &gt;= 0</c>, so <c>@finger(6)</c>
+    /// draws in Lily# and would have vanished from the twin — the same "compiles and is
+    /// different music" defect the mapping was added to close, over a smaller range.
+    /// MEASURED on 2.26.0 before widening (a scratch probe dumping the Fingering grob's
+    /// <c>text</c>): LilyPond engraves <c>-0</c>, <c>-5</c>, <c>-6</c> and <c>-12</c> as
+    /// fingerings reading 0, 5, 6 and 12, so its grammar's UNSIGNED takes them all.
+    /// </remarks>
+    /// <summary>
+    /// The four TRUE SCRIPTS among the dropped articulations reach the twin as
+    /// direction-carrying post-events.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on 2.26.0 before adding them (a scratch probe dumping Script grobs):
+    /// <c>-\upbow</c>, <c>-\downbow</c>, <c>-\flageolet</c>, <c>-\portato</c> and the forced
+    /// <c>^</c>/<c>_</c> forms each engrave exactly ONE Script.
+    /// <para>
+    /// ⚠️ FOUR, NOT TEN. The handoff had grouped ten dropped constructs as "post-events
+    /// LilyPond spells natively", and that grouping was wrong: only these four are SCRIPTS
+    /// that take a direction and so fit this switch's <c>dir + glyph</c> tail. @glissando,
+    /// @startTrillSpan, @stopTrillSpan, @laissezVibrer and @repeatTie are post-events with
+    /// NO direction and must answer in the early name switch the way <c>\arpeggio</c> does —
+    /// whose own comment records that confusing the two "made the twins agree falsely".
+    /// @breathe and @caesura are not post-events at all; they are standalone music that
+    /// follows the note, which is a placement this exporter has no slot for yet.
+    /// </para>
+    /// ⚠️ The NEUTRAL "-" is deliberate for an unforced fixture: portato's default side is
+    /// DOWN in LilyPond where the other three are UP, so writing "^" would make the twin
+    /// assert a side the fixture never stated.
+    /// </remarks>
+    [Fact]
+    public void TrueScripts_ReachTheTwinAsDirectionCarryingPostEvents()
+    {
+        Assert.Contains("c,1-\\upbow", Export(Score("c,1@upbow")));
+        Assert.Contains("c,1-\\downbow", Export(Score("c,1@downbow")));
+        Assert.Contains("c,1-\\flageolet", Export(Score("c,1@flageolet")));
+        Assert.Contains("c,1-\\portato", Export(Score("c,1@portato")));
+
+        // A forced side still rides the same tail.
+        Assert.Contains("c,1^\\upbow", Export(Score("c,1@upbow.up")));
+
+        Assert.DoesNotContain("not mapped, dropped", Export(Score("c,1@upbow")));
+    }
+
+    [Fact]
+    public void Fingering_CarriesEveryNumberTheEngraverAccepts()
+    {
+        Assert.Contains("c,1-0", Export(Score("c,1@finger(0)")));
+        Assert.Contains("c,1-6", Export(Score("c,1@finger(6)")));
+        Assert.Contains("c,1-12", Export(Score("c,1@finger(12)")));
+    }
+
     [Fact]
     public void InlineRepeat_BecomesRepeatVolta()
     {

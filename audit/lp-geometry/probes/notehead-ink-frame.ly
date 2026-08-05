@@ -21,12 +21,15 @@
 %% THE MUSIC IS GENERATED, NOT WRITTEN (HANDOFF: the octave trap). Each book's notes come
 %% from `lysc ly` on the .lys twin recorded beside it in LpGeometryProbes.cs, so the
 %% `\fixed c'` bridge is the exporter's and not a hand count.
-%% ⚠️ ONE MARK IS HAND-INSERTED AND MUST STAY THAT WAY UNTIL THE EXPORTER CARRIES IT:
-%% `lysc ly` DROPS `@finger` ("warning: @finger.2 dropped (out of scope)"), so the
-%% generated FNG twin was `c'1` with no Fingering grob at all — a twin that compiles and
-%% is DIFFERENT MUSIC, which is the failure mode the handoff records as "a dropped mark
-%% makes a FALSE match". The `-2` below was added by hand to the generated line; the pitch
-%% and octave are still the exporter's. Fixing the exporter closes this note.
+%% ⚠️ FNG's `-2` WAS HAND-INSERTED FOR ONE COMMIT, AND NO LONGER IS. `lysc ly` DROPPED
+%% `@finger` ("warning: @finger.2 dropped (out of scope)"), so the generated FNG twin was
+%% `c'1` with no Fingering grob at all — a twin that compiles and is DIFFERENT MUSIC, the
+%% failure mode the handoff records as "a dropped mark makes a FALSE match". THE EXPORTER
+%% NOW CARRIES IT (2026-08-05, session 96): `lysc ly` emits `c'1-2` for this book, byte for
+%% byte what the hand edit had produced, so this file is fully generated again. The episode
+%% is kept here because it is the reason the mark's absence was ever noticed: the exporter
+%% WARNS when it drops something. Over all 207 fixtures that warning names 33 distinct
+%% dropped constructs in 144 lines — see HANDOFF §1; this was one of them.
 %%
 %% THE BOOKS (one claim each):
 %%   LDG — ONE whole note two ledger lines above the staff, and NOTHING else that draws a

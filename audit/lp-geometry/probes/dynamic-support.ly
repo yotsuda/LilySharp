@@ -297,7 +297,22 @@
                                             (eq? nm 'Stem) (eq? nm 'Beam)
                                             ;; round 3: the Script whose profile the
                                             ;; dynamic clears (no rows in books 1-5).
-                                            (eq? nm 'Script))
+                                            (eq? nm 'Script)
+                                            ;; ⚠️ ADDED 2026-08-05 (session 95/96), AND ITS
+                                            ;; ABSENCE COST TWO SESSIONS. This dump printed
+                                            ;; the DynamicText, the Script, the Stem and the
+                                            ;; Beam — everything EXCEPT the thing all of them
+                                            ;; are positioned against. The head's X-extent is
+                                            ;; what says a NoteHead's grob extent is its INK
+                                            ;; (1.9620 whole / 1.3042 black) and not its
+                                            ;; advance (1.960 / 1.304), and with the row
+                                            ;; missing the residual it caused was read as
+                                            ;; "the two scripts' profiles" for two sessions.
+                                            ;; The ledger whys for
+                                            ;; staff.staff.dynamic-{staccato,marcato}-avoid
+                                            ;; quote these rows; they now come out of THIS
+                                            ;; probe instead of a scratch copy of it.
+                                            (eq? nm 'NoteHead))
                                         (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
                                                 n i nm
                                                 (ly:grob-relative-coordinate g sg Y)

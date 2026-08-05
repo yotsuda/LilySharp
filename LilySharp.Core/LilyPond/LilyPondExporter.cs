@@ -1525,6 +1525,11 @@ public sealed class LilyPondExporter
                 case MusicMarkSyntax mk when NonArpeggiato(mk) is { } na:
                     suffix.Append(na);
                     break;
+                // …and the second one. `-2` is a post-event exactly like \nonArpeggiato, for
+                // the same reason and with the same consequence if it were written first.
+                case MusicMarkSyntax mk when Fingering(mk) is { } fg:
+                    suffix.Append(fg);
+                    break;
                 case MusicMarkSyntax mk:
                     string m = EmitMark(mk);
                     if (m.Length > 0) prefix.Append(m).Append(' ');
@@ -1584,6 +1589,8 @@ public sealed class LilyPondExporter
         }
         if (NonArpeggiato(mk) is { } na)
             return na;
+        if (Fingering(mk) is { } fg)
+            return fg;
         _warnings.Add($"@{name} dropped (out of scope)");
         return "";
     }
@@ -1619,6 +1626,56 @@ public sealed class LilyPondExporter
         => mk.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase)
             ? "\\nonArpeggiato"
             : null;
+
+    /// <summary>
+    /// <c>@finger(2)</c> as LilyPond's fingering post-event <c>-2</c>, or null for any other
+    /// mark. <c>MarkName</c> joins the tokens with '.', so the digit follows "finger.".
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/parser.yy:3461-3467 fingering — an UNSIGNED after a direction sign becomes a FingeringEvent carrying `digit`
+    /// <para>
+    /// ⚠️ THE GRAMMAR, NOT THE ENGRAVER, and the first version of this citation got it
+    /// wrong: it named <c>fingering-engraver.cc</c>, which is what CONSUMES a FingeringEvent.
+    /// What this line asserts is how LilyPond SPELLS one, so the address has to be where the
+    /// spelling is defined. An exporter's citations point at LilyPond's syntax; an
+    /// engraver's point at its arithmetic.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHY THIS EXISTS AT ALL, AND IT IS THE FAILURE MODE THE CLASS REMARK NAMES: until
+    /// 2026-08-05 (session 96) this fell through to <c>EmitMark</c>'s "out of scope" branch,
+    /// so a fixture carrying a fingering exported as a bare note and the twin had NO
+    /// Fingering grob — a twin that COMPILES and is DIFFERENT MUSIC. It was caught while
+    /// building audit/lp-geometry/probes/notehead-ink-frame.ly, whose FNG book needed the
+    /// `-2` inserted by hand; the warning is what caught it, which is why every drop here
+    /// raises one.
+    /// </para>
+    /// ⚠️ A POST-EVENT, so it belongs in the SUFFIX beside <c>\nonArpeggiato</c> — see the
+    /// remark in <see cref="SplitAttachments"/> for what putting one in the prefix costs.
+    /// ⚠️ The DIRECTION is deliberately left to LilyPond (`-2`, not `^2`/`_2`): Lily#'s own
+    /// engraver takes the default orientation too (fingeringOrientations '(up down), so a
+    /// lone fingering goes up regardless of stem), and forcing a side here would make the
+    /// twin state something the fixture did not.
+    /// </remarks>
+    private static string? Fingering(MusicMarkSyntax mk)
+    {
+        const string prefix = "finger.";
+        string name = mk.MarkName;
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return null;
+        string digits = name.Substring(prefix.Length).Trim('"');
+        // The SAME set MeasureCollector.ParseFingerMark reads, so anything Lily# engraves
+        // reaches the twin: any non-negative integer.
+        // ⚠️ THIS GATE SAID 1-5 FOR ONE COMMIT, and that was a narrowing with nothing behind
+        // it — it would have dropped @finger(6) from the twin while Lily# drew it, which is
+        // the very defect this method exists to close, just over a smaller range. MEASURED
+        // rather than argued (scratch probe on 2.26.0, dumping the Fingering grob's `text`):
+        // LilyPond engraves `-0`, `-5`, `-6` AND `-12` as fingerings reading 0/5/6/12, so
+        // its grammar's UNSIGNED really does take them all and there is nothing to protect
+        // against here.
+        return int.TryParse(digits, out int finger) && finger >= 0
+            ? "-" + finger.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : null;
+    }
 
     private string EmitAttachment(SyntaxNode a) => a switch
     {
@@ -1902,6 +1959,19 @@ public sealed class LilyPondExporter
             ArticulationType.Mordent => "\\mordent",
             ArticulationType.Turn => "\\turn",
             ArticulationType.Prall => "\\prall",
+            // Added 2026-08-05 (session 96). These four are TRUE SCRIPTS — they take a
+            // direction, so they belong in this tail and not in the early switch that
+            // \arpeggio needed. MEASURED before adding, on 2.26.0: `-\upbow`, `-\downbow`,
+            // `-\flageolet`, `-\portato` and the forced `^`/`_` forms each engrave exactly
+            // ONE Script grob, and portato's own default side is DOWN where the other three
+            // are UP — which is why the neutral `-` is the right thing to write for an
+            // unforced fixture: it lets LilyPond apply its own default instead of the twin
+            // asserting a side the fixture never stated.
+            // LILYPOND-REF: ly/script-init.ly:28,33,46,79 downbow/flageolet/portato/upbow — each is `name = #(make-articulation 'name)`, i.e. a post-event a direction sign may precede
+            ArticulationType.UpBow => "\\upbow",
+            ArticulationType.DownBow => "\\downbow",
+            ArticulationType.Flageolet => "\\flageolet",
+            ArticulationType.Portato => "\\portato",
             _ => "",
         };
         if (glyph.Length == 0)

@@ -1661,9 +1661,15 @@ internal sealed class SkylineBuilder
         // the ink below the last system's refpoint is 3.545000 (= 3.0 + 0.545) and Lily#
         // read 3.500000. That 0.045 propagated into last-bottom-spacing's floor and from
         // there into the page's whole force.
-        // LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents —
-        //   the extents are the stencil's, and lily/open-type-font.cc:288,389-407 takes
-        //   those from LILC. ec7a2254 moved the X axis onto the same table.
+        // LILYPOND-REF: lily/grob.cc:81-85 Grob::simple_vertical_skylines_from_extents_proc — the `vertical-skylines` default, set for a grob that declares none
+        //   The extents are the stencil's, and those come from the font's LILC table.
+        // LILYPOND-REF: lily/open-type-font.cc:288-289,389-393 lily_character_table_ — load_scheme_table ("LILC", face_), then the per-glyph `bbox` alist read out of it
+        //   ec7a2254 moved the X axis onto the same table.
+        // ⚠️ THE ADDRESS SAID :85-89 UNTIL 2026-08-05 (session 96), AND THAT IS THE
+        //   HORIZONTAL BRANCH — `horizontal-skylines`, three lines further down. The name
+        //   beside it was right and the range pointed at the neighbour, which is the exact
+        //   failure HANDOFF §7 records from 2026-07-28 ("範囲だけ書いて別の分岐を指した").
+        //   Found by re-reading the source to name a symbol for a NEW citation next door.
         // ⚠️ THE EXTENT, DELIBERATELY, and it is not the same choice the Clef and the
         // Accidental make a few lines away: NoteHead declares NO vertical-skylines, so it
         // falls to the default above, while Clef and Accidental ask for skylines from their

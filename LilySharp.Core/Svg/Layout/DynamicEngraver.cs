@@ -446,7 +446,7 @@ internal static class DynamicEngraver
                     // The head's extent box, at the drawn head's X. BOTH axes come from
                     // the INK box: a NoteHead's default skyline is its own extent, and
                     // that extent is the stencil's, not the advance the pen moves by.
-                    // LILYPOND-REF: lily/grob.cc:81-85 Grob::vertical_skylines_from_extents.
+                    // LILYPOND-REF: lily/grob.cc:81-85 Grob::simple_vertical_skylines_from_extents_proc — the `vertical-skylines` default a grob that declares none gets
                     // ⚠️ MEASURED, and it is why this line no longer reads the advance:
                     // dumped out of dynamic-support.ly's own books, LilyPond's NoteHead
                     // X-extent is 1.9620 on the whole head and 1.3042 on the black one —

@@ -152,16 +152,90 @@ fingering.whole.column-to-ink-centre  0.981000  FNG  （＝1.962/2）
 ```
 ⒜ `lysc ly` が `@finger` を落とす（"warning: @finger.2 dropped (out of scope)"）
    ⇒ 生成された FNG 双子は `c'1` で **Fingering grob が無い**＝**compile が通る別の音楽**。
-   **警告を読んで捕まえた。** `-2` は生成行に手で挿した（音高と octave は生成器のまま）。
-   ⚠️ **これは exporter の欠落**——直せばこの注記は消える（起票候補）
+   **警告を読んで捕まえた。** ★ **同セッションで直した**（⑧）ので probe は再び全生成。
 ⒝ **spanner は X-extent を持たない**。`LedgerLineSpanner` に `ly:grob-extent` を訊くと
    **(+inf.0 . -inf.0)＝空**が 3 冊とも返る。「レッジャが無い」ではない（LDG は 2 本引く）。
    **描かれた span は stencil の中**（`Ledger_line_spanner::print`）。
 ```
 
-**未 push 21**（**この handoff を含む commit まで**＝`--amend` で入れた。⚠️ **足し算しない**。
+★★★ **⑧ 双子生成器の欠落を数えた（`74e9afc3`）。33 種・144 行・落とし口は 3 つ。**
+⚠️⚠️ **私は引継ぎに「落とし口は 1 か所だけ」と書いた。3 か所だった**——
+**同じセッションで「walk の呼び出しを全部数える」を書いておきながら踏んだ**。
+**推論せず 207 fixture 全部に `lysc ly` を掛けて警告を数えた結果**:
+```
+EmitMark        @finger 17 · @chord 16 · @fig 13 · @ped 9 · @text 4 · @feather 2 · @ottava 1
+MapArticulation @ped 9 · @glissando 8 · @portato 6 · @stopTrillSpan 5 · @flageolet 5 ·
+                @editorial 5 · @startTrillSpan 5 · @courtesy 4 · @rit 3 · @accel 3 ·
+                @laissezVibrer 3 · @loco 3 · @doit 2 · @ottava 2 · @repeatTie 2 ·
+                @upbow 1 · @invertedturn 1 · @downbow 1 · @caesura 1 · @breath 1 ·
+                @pralltriller 1
+Skip            CustomText · OverrideDeclaration · RevertDeclaration
+行              chord row 4 · lyrics row 3 · custom key 1
+```
+⚠️⚠️ ★★★ **これが効く理由は数でなく種類**——**双子生成器はコーパス全体の測定器**で、
+**落ちたマークは「双子が無い」ではなく「compile が通る別の音楽」を作る**。
+**その上に立てた台帳点は、違うページを測りながら EXACT と読む。**
+★ **`@finger` だけ直した**（**コーパスに到達済みだと実証された唯一の 1 件**）。
+post-event なので `\nonArpeggiato` と同じ **suffix** へ（prefix に書くと LP が落とす）。
+**向きは LP に任せる**（`-2`。`^2` にすると fixture が言っていない側を双子が主張する）。
+**素の 1-5 だけ**を写し、それ以外は警告に落としたまま（**推測した双子より鳴る双子**）。
+★★ **⑩ 「post-event 10 種＝1 行ずつ」という私の括りは間違いだった**（`MapArticulation` の
+実際の形に当ててみて割れた）。**3 つの仕事**で、**1 つ目だけ済ませた**:
+```
+⒜ 真の script（済・4 種）  @upbow @downbow @flageolet @portato
+                           **向きを取る**ので既存の `dir + glyph` の尾に載る＝1 行ずつ。
+                           `ArticulationType` は 4 つとも既にあり `_ => ""` に落ちていただけ。
+                           ★ 追加前に実測（Script grob を dump）——`-\upbow` ほか 6 形すべて
+                           Script が 1 個。**portato だけ既定が下**なので、**無指定なら中立 `-`**
+                           （`^` にすると fixture が言っていない側を双子が主張する）
+⒝ 向きを取らない post-event（未・5 種）  @glissando @startTrillSpan @stopTrillSpan
+                           @laissezVibrer @repeatTie
+                           ⚠️ **早い方の name switch で答えさせる**（`\arpeggio` と同じ）。
+                           **尾に載せてはいけない**——`\arpeggio` の注記が
+                           「**双子を偽って一致させた**」と書いているのがこの取り違え
+⒞ そもそも post-event でない（未・2 種）  @breathe @caesura
+                           **音符の*後ろ*に立つ単独の音楽**（`c4 \breathe d4`）。
+                           `SplitAttachments` は prefix と suffix しか持たないので
+                           **構造変更**であって mapping ではない
+```
+**コーパスの落下数 144 → 114 行**（−30＝@finger 17 + portato 6 + flageolet 5 + upbow 1 + downbow 1）。
+⚠️ **残りは `@ped`(18)・`@chord`(16)・`@fig`(13) が上位**——**⒝⒞ より数は多いが、
+どれも設計判断が要る**（`@ped`/`@ottava` は on/off spanner、`@chord`/`@fig` は行）。
+**名前の見た順で拾わないこと。**
+
+★★★ **⑨ 引用監査（`b11701d0`）。「REF が付いているか」でなく「住所が正しいか」を
+LP 実ソースで 1 本ずつ読み直した。欠陥 4 件——3 件は私の、1 件は既存。**
+```
+⒜ 記号名が実在しない（私）   grob.cc:81-85 の名を `vertical_skylines_from_extents` と書いた。
+                             実名は `simple_vertical_skylines_from_extents_proc`
+⒝ 範囲が隣の分岐（既存）     SkylineBuilder が同じ事実を `:85-89` と引用——**そこは
+                             horizontal-skylines の分岐**。§7 が 2026-07-28 に記録した罠そのもの。
+                             ★ **隣に新しい引用を足すため名前を読みに行って初めて見つかった**
+⒞ 消費側を指していた（私）   exporter の `Fingering` が `fingering-engraver.cc` を引用。
+                             **主張は「LP がどう*綴る*か」**なので住所は文法側
+                             （`parser.yy:3461-3467 fingering`）。⇒ ★★ **exporter の引用は
+                             LP の*構文*を、engraver の引用は LP の*算術*を指す**
+⒟ 根拠の無い門（私・実害）   運指の写しを 1-5 に絞っていた。`ParseFingerMark` は
+                             **`finger >= 0` を全部受ける**ので **`@finger(6)` は Lily# で描かれ
+                             双子から消える**＝**直したはずの欠陥を狭い範囲で再導入**。
+                             ★ **議論せず測った**（2.26.0 に `-0/-5/-6/-12` を食わせ Fingering の
+                             `text` を dump）——**4 つとも engrave された**ので門を撤去
+```
+⚠️ **⒟ が示すこと**: **「安全側に倒す」は、倒す先が片側だけなら安全でない**。
+**Lily# が描くものは双子も描く**——それが双子の定義。
+
+★ **⑪ `dynamic-support.ly` が NoteHead を dump するようにした**（`3903b427`）。
+**この probe は DynamicText / Script / Stem / Beam を出していて、それら全部が基準にしている
+grob だけ出していなかった**——**①の欠陥が 2 セッション「script の profile」と読まれた理由**。
+第95/96 セッションは**このファイルの scratch コピー**で測って台帳に数字を引用したので、
+**引用元が本体に無い**状態だった。**本体から同じ数字が出ることを再実行で確認**
+（`x=(8.7034 . 10.6654)`・幅 1.9620）。**dump だけの変更で台帳値は動かない。**
+⇒ ★★ **「測るために足した行」は、測り終わったら probe 本体に入れる**——
+scratch のままだと**引用が指す先が存在しない**。
+
+**未 push 29**（**この handoff を含む commit まで**＝`--amend` で入れた。⚠️ **足し算しない**。
 `git rev-list --count origin/master..master` で数え直す。**⚠️ 私は push していない**）・
-テスト **4061 passed / 0 failed / 4 skipped**（開始時 4057・**+1 観測者・+3 台帳点**）・
+テスト **4064 passed / 0 failed / 4 skipped**（開始時 4057・**+4 観測者・+3 台帳点**）・
 台帳 **473 点**（**ss 非ゼロ 83（不変）・総和 3.615235158 → 3.612832552（不変）**
 ＝**新 3 点が exact なので債務は 1 つも増えていない**／**count 点 106・うち非ゼロ 2**）。
 **Core 0 warning。snapshot 再ベース 32 枚**
@@ -185,11 +259,13 @@ fingering.whole.column-to-ink-centre  0.981000  FNG  （＝1.962/2）
                         閉じるならタブの桁が column を持つとき（注記に条件が書いてある）
 ⑶ ~~観測者を作る~~ **✅ 閉じた（第96セッション・⑥）。3 点とも EXACT・陽性対照つき。**
                         ⚠️ **残る無観測は `ElementCoordinator:1578` だけ**（⑵ と同じ・LP 対応物なし）
-⑶' **`lysc ly` が `@finger` を落とす**（⑦⒜）。**双子が「compile は通る別の音楽」になる**
-                        欠落なので、**exporter 側の起票候補**。直すと
-                        `fingering.whole.column-to-ink-centre` の header 注記が 1 つ消える。
-                        ⚠️ **他にも落ちるマークが無いか**は `MapArticulation` の警告経路を
-                        1 度数えれば分かる（`@arpeggio` は既知の前例）
+⑶' ~~`@finger`~~ ~~真の script 4 種~~ **✅ 直した（⑧⑩）。144 → 114 行。**
+                        **次は ⒝ の 5 種**（@glissando @startTrillSpan @stopTrillSpan
+                        @laissezVibrer @repeatTie）。**⒜ と同型に見えるが尾に載せてはいけない**
+                        ——**早い name switch で答えさせる**（⑩ の表）。**1 種ずつ LP で
+                        「その綴りで grob が出るか」を測ってから足すこと**（⒜ でそうした）。
+                        ⚠️ **その次は ⒞（@breathe/@caesura）で、これは構造変更**
+                        ⚠️ **数の多い `@ped`(18)/`@chord`(16)/`@fig`(13) は設計判断が要る別件**
 ⑷ タブ script は**まだクランプ**  符尾は避けるようになった（第93セッション）が、2 つの script は
                         依然*同じ数*に落ちる——**この分岐に glyph の near-extent が無い**から。
                         ⇒ §7.7 の「own device への patch が 2 回続いたら device 自体を問え」に該当。
