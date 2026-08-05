@@ -199,6 +199,10 @@ GLYPHS: list[tuple[str, str, str]] = [
     # CORRECTED. This drew scripts.snappizzicato -- a different articulation entirely --
     # while its comment said thumb. scripts.thumb is its own glyph in the font.
     ("ArticThumb", "scripts.thumb", "cello thumb position"),
+    # ...and the glyph that correction displaced, now wanted for ITSELF: the renderer
+    # drew @snappizz with hand-drawn circle+line primitives (~0.5 ss taller than the
+    # font's glyph) while the engraver reserved the fallback half-space box.
+    ("ScriptSnappizzicato", "scripts.snappizzicato", "Bartók pizzicato — ring with rising stem"),
 
     ("#", "Ornaments", ""),
     ("OrnReverseTurn", "scripts.reverseturn", ""),

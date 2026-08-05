@@ -1,0 +1,18 @@
+// lilypond-src/input/regression/articulation-snappizzicato.ly の移植（LP回帰コーパス
+// 第 2 号・第99 第6便）. CLAIM: @snappizz が音符に snappizzicato 記号を付ける。
+// Lily# は円+線のプリミティブ（ink 高 ~1.85）で発明し、engraver は fallback の半スペース箱を
+// 予約していた——描画・予約・LP の三者が別々の答えだった。フォントの
+// scripts.snappizzicato（EmmentalerGlyphs.ScriptSnappizzicato）に交換。
+// MEASURED（2.26.0 dump）: Script origin=中線上 2.782・ink 下端=top線上 0.249・
+// Y-extent (−0.5334 . 0.8000)。Lily# は交換後 2.78 / 0.25 / 同一 BBox。
+octave absolute
+
+part m { clef treble }
+
+section Main {
+  m { c'4@snappizz }
+}
+
+form main { ~Main }
+
+score main { staff m }

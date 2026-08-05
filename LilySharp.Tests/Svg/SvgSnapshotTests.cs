@@ -643,6 +643,12 @@ public class SvgSnapshotTests
         // An unbeamed eighth CHORD carries its flag (one Flag per Stem, LP
         // stem-engraver) — DrawChord had no flag branch and no fixture saw it.
         yield return new object[] { "test/chord-flag" };
+        // Restore-first accidentals: 𝄪→♯ prints ♮♯, 𝄫→♭ prints ♮♭ (LP regression
+        // accidental-single-double.ly). Columns LP-exact to two decimals.
+        yield return new object[] { "test/accidental-restore-natural" };
+        // @snappizz is the font's scripts.snappizzicato at LilyPond's own box and
+        // position (LP regression articulation-snappizzicato.ly) — not primitives.
+        yield return new object[] { "test/snappizzicato" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

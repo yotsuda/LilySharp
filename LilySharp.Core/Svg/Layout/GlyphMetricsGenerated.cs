@@ -236,6 +236,15 @@ internal static partial class GlyphMetrics
     /// <summary>Mordent (lower mordent) ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnMordentGlyphAdvance = 0.832000;
 
+    /// <summary>Bartók (snap) pizzicato — ring with rising stem — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.snappizzicato (scripts.snappizzicato = U+E082 in this build)</remarks>
+    public static readonly BBox ScriptSnappizzicato = new(-0.533400, -0.533400, 0.533400, 0.800000);
+    /// <summary>Bartók (snap) pizzicato — ring with rising stem — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.864000);
+    /// <summary>Bartók (snap) pizzicato — ring with rising stem — advance width (next-glyph horizontal feed).</summary>
+    public const double ScriptSnappizzicatoAdvance = 0.532000;
+
     /// <summary>Prall-prall / prall-triller ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.prallprall (scripts.prallprall = U+E075 in this build)</remarks>
     public static readonly BBox OrnPrallPrallGlyph = new(-1.250000, -0.500000, 1.250000, 0.500000);
@@ -1003,6 +1012,12 @@ internal static partial class GlyphMetrics
         public BBox OrnMordentGlyphOutline { get; init; }
         /// <summary>Mordent (lower mordent) ornament — advance width (next-glyph horizontal feed).</summary>
         public double OrnMordentGlyphAdvance { get; init; }
+        /// <summary>Bartók (snap) pizzicato — ring with rising stem — BBox (LILC bbox).</summary>
+        public BBox ScriptSnappizzicato { get; init; }
+        /// <summary>Bartók (snap) pizzicato — ring with rising stem — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox ScriptSnappizzicatoOutline { get; init; }
+        /// <summary>Bartók (snap) pizzicato — ring with rising stem — advance width (next-glyph horizontal feed).</summary>
+        public double ScriptSnappizzicatoAdvance { get; init; }
         /// <summary>Prall-prall / prall-triller ornament — BBox (LILC bbox).</summary>
         public BBox OrnPrallPrallGlyph { get; init; }
         /// <summary>Prall-prall / prall-triller ornament — the box its SKYLINE is built from (glyph outline).</summary>
@@ -1502,6 +1517,11 @@ internal static partial class GlyphMetrics
             OrnMordentGlyphOutline = new(OrnMordentGlyphOutline.Left * magnification, OrnMordentGlyphOutline.Bottom * magnification,
                 OrnMordentGlyphOutline.Right * magnification, OrnMordentGlyphOutline.Top * magnification),
             OrnMordentGlyphAdvance = OrnMordentGlyphAdvance * magnification,
+            ScriptSnappizzicato = new(ScriptSnappizzicato.Left * magnification, ScriptSnappizzicato.Bottom * magnification,
+                ScriptSnappizzicato.Right * magnification, ScriptSnappizzicato.Top * magnification),
+            ScriptSnappizzicatoOutline = new(ScriptSnappizzicatoOutline.Left * magnification, ScriptSnappizzicatoOutline.Bottom * magnification,
+                ScriptSnappizzicatoOutline.Right * magnification, ScriptSnappizzicatoOutline.Top * magnification),
+            ScriptSnappizzicatoAdvance = ScriptSnappizzicatoAdvance * magnification,
             OrnPrallPrallGlyph = new(OrnPrallPrallGlyph.Left * magnification, OrnPrallPrallGlyph.Bottom * magnification,
                 OrnPrallPrallGlyph.Right * magnification, OrnPrallPrallGlyph.Top * magnification),
             OrnPrallPrallGlyphOutline = new(OrnPrallPrallGlyphOutline.Left * magnification, OrnPrallPrallGlyphOutline.Bottom * magnification,
@@ -1876,6 +1896,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = new(-0.833509, -0.666664, 0.833509, 0.666664),
         OrnMordentGlyphOutline = new(-1.020000, -0.668000, 1.020000, 0.668000),
         OrnMordentGlyphAdvance = 0.832000,
+        ScriptSnappizzicato = new(-0.533331, -0.533331, 0.533331, 0.799997),
+        ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.900000),
+        ScriptSnappizzicatoAdvance = 0.532000,
         OrnPrallPrallGlyph = new(-1.249906, -0.500176, 1.249906, 0.500176),
         OrnPrallPrallGlyphOutline = new(-1.436000, -0.500000, 1.436000, 0.500000),
         OrnPrallPrallGlyphAdvance = 1.248000,
@@ -2135,6 +2158,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = new(-0.833331, -0.666665, 0.833331, 0.666665),
         OrnMordentGlyphOutline = new(-1.016000, -0.668000, 1.016000, 0.668000),
         OrnMordentGlyphAdvance = 0.832000,
+        ScriptSnappizzicato = new(-0.533332, -0.533332, 0.533332, 0.799997),
+        ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.892000),
+        ScriptSnappizzicatoAdvance = 0.532000,
         OrnPrallPrallGlyph = new(-1.250155, -0.499998, 1.250155, 0.499998),
         OrnPrallPrallGlyphOutline = new(-1.436000, -0.500000, 1.436000, 0.500000),
         OrnPrallPrallGlyphAdvance = 1.248000,
@@ -2394,6 +2420,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = new(-0.833380, -0.666761, 0.833380, 0.666761),
         OrnMordentGlyphOutline = new(-1.012000, -0.668000, 1.012000, 0.668000),
         OrnMordentGlyphAdvance = 0.832000,
+        ScriptSnappizzicato = new(-0.533239, -0.533239, 0.533239, 0.800000),
+        ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.884000),
+        ScriptSnappizzicatoAdvance = 0.532000,
         OrnPrallPrallGlyph = new(-1.250071, -0.500141, 1.250071, 0.500141),
         OrnPrallPrallGlyphOutline = new(-1.432000, -0.500000, 1.432000, 0.500000),
         OrnPrallPrallGlyphAdvance = 1.248000,
@@ -2653,6 +2682,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = new(-0.833270, -0.666667, 0.833270, 0.666667),
         OrnMordentGlyphOutline = new(-1.012000, -0.668000, 1.012000, 0.668000),
         OrnMordentGlyphAdvance = 0.832000,
+        ScriptSnappizzicato = new(-0.533333, -0.533333, 0.533333, 0.800000),
+        ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.876000),
+        ScriptSnappizzicatoAdvance = 0.532000,
         OrnPrallPrallGlyph = new(-1.249905, -0.500063, 1.249905, 0.500063),
         OrnPrallPrallGlyphOutline = new(-1.428000, -0.500000, 1.428000, 0.500000),
         OrnPrallPrallGlyphAdvance = 1.248000,
@@ -2912,6 +2944,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = new(-0.833221, -0.666667, 0.833221, 0.666667),
         OrnMordentGlyphOutline = new(-1.008000, -0.668000, 1.008000, 0.668000),
         OrnMordentGlyphAdvance = 0.832000,
+        ScriptSnappizzicato = new(-0.533333, -0.533333, 0.533333, 0.800000),
+        ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.872000),
+        ScriptSnappizzicatoAdvance = 0.532000,
         OrnPrallPrallGlyph = new(-1.250056, -0.500112, 1.250056, 0.500112),
         OrnPrallPrallGlyphOutline = new(-1.424000, -0.500000, 1.424000, 0.500000),
         OrnPrallPrallGlyphAdvance = 1.248000,
@@ -3173,6 +3208,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = OrnMordentGlyph,
         OrnMordentGlyphOutline = OrnMordentGlyphOutline,
         OrnMordentGlyphAdvance = OrnMordentGlyphAdvance,
+        ScriptSnappizzicato = ScriptSnappizzicato,
+        ScriptSnappizzicatoOutline = ScriptSnappizzicatoOutline,
+        ScriptSnappizzicatoAdvance = ScriptSnappizzicatoAdvance,
         OrnPrallPrallGlyph = OrnPrallPrallGlyph,
         OrnPrallPrallGlyphOutline = OrnPrallPrallGlyphOutline,
         OrnPrallPrallGlyphAdvance = OrnPrallPrallGlyphAdvance,
@@ -3432,6 +3470,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = new(-0.833318, -0.666726, 0.833318, 0.666726),
         OrnMordentGlyphOutline = new(-1.004000, -0.668000, 1.004000, 0.668000),
         OrnMordentGlyphAdvance = 0.832000,
+        ScriptSnappizzicato = new(-0.533274, -0.533274, 0.533274, 0.800000),
+        ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.860000),
+        ScriptSnappizzicatoAdvance = 0.532000,
         OrnPrallPrallGlyph = new(-1.250067, -0.499955, 1.250067, 0.499955),
         OrnPrallPrallGlyphOutline = new(-1.420000, -0.500000, 1.420000, 0.500000),
         OrnPrallPrallGlyphAdvance = 1.248000,
@@ -3691,6 +3732,9 @@ internal static partial class GlyphMetrics
         OrnMordentGlyph = new(-0.833333, -0.666667, 0.833333, 0.666667),
         OrnMordentGlyphOutline = new(-1.000000, -0.668000, 1.000000, 0.668000),
         OrnMordentGlyphAdvance = 0.832000,
+        ScriptSnappizzicato = new(-0.533333, -0.533333, 0.533333, 0.800000),
+        ScriptSnappizzicatoOutline = new(-0.532000, -0.532000, 0.532000, 0.856000),
+        ScriptSnappizzicatoAdvance = 0.532000,
         OrnPrallPrallGlyph = new(-1.250000, -0.500000, 1.250000, 0.500000),
         OrnPrallPrallGlyphOutline = new(-1.420000, -0.500000, 1.420000, 0.500000),
         OrnPrallPrallGlyphAdvance = 1.248000,

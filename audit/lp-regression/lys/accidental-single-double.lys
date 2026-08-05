@@ -1,0 +1,17 @@
+// lilypond-src/input/regression/accidental-single-double.ly の Lily# 訳。
+// CLAIM: 重♯の後の♯、重♭の後の♭には、ナチュラルが自動で前置される。
+// ⚠️ 原本の \context NoteNames 行（音名の印字行）は Lily# に対応物が無いので落とした
+// — 主張は Staff 行の臨時記号にあり、NoteNames は下の別コンテキスト。
+// 綴り: LP \relative { gisis'4 gis geses ges } は全部 G4 ＝ Lily# absolute の g。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m { gisis4 gis geses ges | }
+}
+
+form main { ~Main }
+
+score main { staff m }

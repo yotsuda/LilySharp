@@ -145,7 +145,11 @@ public sealed record ArticulationItem
         ArticulationType.Pluck => $"tabtech:{PluckLetter}",
         ArticulationType.Scoop => "",
         ArticulationType.Plop => "",
-        ArticulationType.SnapPizz => "snappizz",
+        // The font's own scripts.snappizzicato — this was the "snappizz" sentinel with
+        // hand-drawn circle+line primitives ~0.5 ss taller than the glyph, while the
+        // engraver reserved the fallback half-space box: draw and reserve disagreed with
+        // each other AND with LilyPond. LILYPOND-REF: scm/script.scm snappizzicato entry.
+        ArticulationType.SnapPizz => EmmentalerGlyphs.ScriptSnappizzicato.ToString(),
         ArticulationType.FretFrame => $"frame:{FrameSpec}",
         ArticulationType.Doit => "",
         ArticulationType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),

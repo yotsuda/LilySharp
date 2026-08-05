@@ -1594,6 +1594,22 @@ internal sealed class SkylineBuilder
         string accidental, double inkLeft, double headY, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
+        // A restore-first composite (♮♯ / ♮♭) is two glyphs — merge each at its place in
+        // the composed stencil, the same offsets the box and the renderer use
+        // (GlyphMetrics.RestoreMainOf / RestoreMainOffset).
+        if (GlyphMetrics.RestoreMainOf(accidental) is { } restoreMain)
+        {
+            var natBox = GlyphMetrics.GetAccidentalSkylineBBox("natural");
+            double mainOrigin = GlyphMetrics.RestoreMainOffset(GlyphMetrics.Design20, restoreMain);
+            var mainBox = GlyphMetrics.GetAccidentalSkylineBBox(restoreMain);
+            MergeAccidentalInk("natural", inkLeft, headY, size, upSkyline, downSkyline);
+            // The main glyph's ink left in the composite, converted through the same
+            // origin frame: composite origin = inkLeft − natural.Left.
+            MergeAccidentalInk(restoreMain,
+                inkLeft + size.Span(mainOrigin + mainBox.Left - natBox.Left),
+                headY, size, upSkyline, downSkyline);
+            return;
+        }
         // headY is Y-up; the outline's own Y is measured from the same origin line the
         // renderer draws the glyph on (SharedRenderer.DrawAccidentalAtInkLeft's noteheadY).
         var bbox = size.Ink(GlyphMetrics.GetAccidentalSkylineBBox(accidental));

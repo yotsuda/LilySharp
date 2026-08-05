@@ -58,6 +58,83 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第6便（＝**lp-regression キュー続行**。処理 6 本・修正 1 件）。
+
+⚠️ **仕事は 1 commit**（`7fdba914` snappizzicato）＋ handoff。
+
+★★★ **① 第 2 号の修正＝snappizzicato はフォントグリフ**（articulation-snappizzicato.ly・
+キュー 9 本目）: Lily# は @snappizz を**円＋線のプリミティブ（ink 高 ~1.85）で発明**し、
+engraver は **fallback の半スペース箱**を予約——描画・予約・LP の**三者バラバラ**だった。
+⇒ 抽出器 2 本（Extract-EmmentalerGlyphs.py / -Metrics.py）に `scripts.snappizzicato` を追加して
+再生成（`py -3` で回る・生成差分は追加のみ）、ArticulationItem の sentinel を
+`EmmentalerGlyphs.ScriptSnappizzicato` に、Overlays のプリミティブ枝を削除、
+engraver の箱を `GlyphMetrics.ScriptSnappizzicato` に。
+★★ **実測一致**: 抽出 BBox Y-extent (−0.5334 . 0.8000) ＝ LP dump の ext そのもの。
+origin=中線上 2.78（LP 2.782）・ink 下端=top 線上 0.25（LP 0.249）・X 9.24（LP 9.2371）。
+fixture `test/snappizzicato`（陽性対照: Core stash で落ちる）。
+★ **新グリフ追加の手順が開通した**のが副産物（今後のキューで頻用するはず）:
+GLYPHS/GlyphSpec に 1 行ずつ→ `py -3 audit\scripts\Extract-Emmentaler{Glyphs,Metrics}.py` →
+生成差分が追加のみか確認。
+
+⚠️ **② skip 5 本**（理由は status.json）: addlyrics-to-staff-context（`__` 延長線が文法に無い）・
+allow-break（allowBreak 無し）・ambitus 3 本（Ambitus engraver 無し）。
+**frontier = augmentum.ly**（次: auto-beam-* 群）。処理済み 9 / plain 322。
+
+未 push **58**（この handoff 込み。数え直すこと）・テスト **4095 passed / 0 failed / 4 skipped**
+（第5便 4094・+1 snapshot）・**Core 0 warning。**
+
+## 以下は第99セッション第5便の経緯
+
+最終更新 第99セッション第5便（＝**新ワークストリーム開始・ユーザー指示**:
+「handoff の残債は数字が小さく ROI が無い。`C:\MyProj\lilypond-src\input\regression` の
+.ly を .lys に書き直して Lily# のテストケースにし、**LP と同じレイアウトにならない本を
+端から順に全部、LP の字面移植で直す**」。⚠️ **Scheme スクリプトを含む .ly は利用不可**
+（ユーザー明示））。
+
+⚠️ **仕事は 1 commit**（`1045cd9f` 台帳インフラ＋第 1 号の修正）＋ handoff。
+
+★★★ **① インフラ**: `audit/lp-regression/`——README.md（作業手順・選別規則・数え方）、
+status.json（**全 2097 本**の機械選別済み台帳）、lys/（翻訳の置き場）。選別:
+**scheme 1631（利用不可）／markup 55／override 89（原則対象外・個別判断可）／plain 322
+＝作業キュー**。frontier はアルファベット順で最初の未処理 plain。処理手順・octave
+綴りの罠（Lily# c' = LP c''）・比較は SVG 座標（両者 ss 単位）等、全部 README に。
+セッション内ヘルパー `Set-RegStatus`（README 参照、揮発なので毎セッション定義し直す）。
+
+★★★ **② 第 1 号の修正＝restore-first 臨時記号**（accidental-single-double.ly・
+キュー 2 本目で発見）: **𝄪→♯ は ♮♯、𝄫→♭ は ♮♭ を印字する規則が Lily# に丸ごと無かった**
+（corpus に 𝄪→♯ の並びが無く観測者ゼロ）。字面移植:
+- 判定 `GetDisplayAccidental`: need-restore = this≠0 ∧ |this|<|prev| ∧ prev·this>0
+  （scm/music-functions.scm:1745-1752。default style は extraNatural=#t :1905-1911）
+- **合成は「名前」で運ぶ**（"naturalSharp"/"naturalFlat"・`GlyphMetrics.RestoreMainOf`）:
+  box/skyline/描画の全消費者が既存のパイプで合成 stencil を読む＝draw/reserve が構造的に
+  割れない。合成の家: GetAccidentalBBox / GetAccidentalSkylineBBox / GlyphSkylinePair
+  （AccidentalPlacement・paren 合成と同型）/ MergeAccidentalInk / DrawAccidentalAtInkLeft。
+  pad 0.1 = accidental.cc:131-142 add_at_edge。**flat の 0.375 肥やしは glyph-name 判定
+  なので ♮♭ も取る**（accidental.cc:64-67・合成後 extent に効く）。
+★★ **③ 検証**: 同一 paper（indent 0・ragged-right）の after-line-breaking dump で
+**4 列とも LP と小数 2 桁一致**（9.275/13.3958/17.218/21.1588）。⚠️ 最初の比較は
+LP 側 paper 既定のままで偽の差分を読んだ——**比較は paper を揃えてから**（README 記載）。
+fixture `test/accidental-restore-natural`（陽性対照: Core stash で落ちる）。
+
+⚠️ **④ 処理済み 3 本**: absolute-dimensions ×2 = skip(scheme)、accidental-accent =
+skip(強制臨時記号 `f'!` が Lily# に無い・LYS4009)、accidental-single-double = **fixed**。
+**frontier = addlyrics-to-staff-context.ly**（plain キュー次番）。
+
+未 push **56**（この handoff 込み。数え直すこと）・テスト **4094 passed / 0 failed / 4
+skipped**（第4便 4093・+1 snapshot）・lp-geometry 台帳 **481 点不変**・**Core 0 warning。**
+
+⚠️⚠️ ★★★ **次に触るときの注意**:
+```
+⑴ **本命 = lp-regression キューの継続**（plain 322 本中 3 本処理済み）。手順は
+   audit/lp-regression/README.md。1 本ごとに: texidoc の主張→翻訳→paper を揃えて
+   SVG 座標比較→乖離は字面移植→fixture/観測者→status.json 更新
+⑵ per-voice wish の ideal（第2便・残差 3.11 vs 3.81）・中心基準 ±0.1・第98 残り・
+   §2 残債返却——**ユーザー判断で ROI 低のため後回し**（返済再開は指示待ちでよい）
+⑶ 今回観測: override 89 本は Lily# の override 文法で書ける本があり個別判断で拾える
+```
+
+## 以下は第99セッション第4便の経緯
+
 最終更新 第99セッション第4便（＝**第3便が名指しした残 2 件をユーザー指示で即日返済**:
 ①「和音旗の束縛観測者が無い」→ **台帳 2 点で閉じた**、②「双子が partial を落とす」→
 **exporter の名前キー header 台帳で閉じた**）。

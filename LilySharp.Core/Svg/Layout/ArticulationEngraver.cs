@@ -762,6 +762,11 @@ internal static class ArticulationEngraver
             ArticulationType.Flageolet => GlyphMetrics.ArticFlageoletGlyph,
             // Chord diagram: anchored at the grid bottom, ink rises 2.7.
             ArticulationType.FretFrame => new GlyphMetrics.BBox(-1.7, 0, 2.9, 2.7),
+            // The font's box, Y-extent (−0.5334 . 0.8000) = LilyPond's own grob extent
+            // (after-line-breaking dump, articulation-snappizzicato book). It used to
+            // fall to the half-space fallback below while the renderer drew primitives
+            // reaching 1.85 ss — three different answers for one glyph.
+            ArticulationType.SnapPizz => GlyphMetrics.ScriptSnappizzicato,
             _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for the ornament family
         };
     }

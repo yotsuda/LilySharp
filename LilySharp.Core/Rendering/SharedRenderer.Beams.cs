@@ -364,11 +364,32 @@ internal static partial class SharedRenderer
         string accidentalKind, bool isCourtesy, double inkLeftX, double noteheadY,
         int sourcePosition, IDrawingContext gc, double scale = 1.0)
     {
-        char glyph = EmmentalerGlyphs.AccidentalGlyph(accidentalKind);
         var accBBox = GlyphMetrics.GetAccidentalBBox(accidentalKind);
         // Cue columns pass scale < 1: the glyph AND its bbox-derived offsets shrink
         // together, matching the (already scaled) X from AccidentalPlacement.
         double fs = FontSize * scale;
+
+        // The accidental's own glyph(s), anchored so the stencil ORIGIN lands at
+        // originX. A restore-first composite (♮♯ / ♮♭) is natural + 0.1 + main, drawn
+        // exactly as its box and skylines are composed (GlyphMetrics.RestoreMainOf) —
+        // one recipe for plain and composite keeps draw and reserve one fact.
+        // LILYPOND-REF: lily/accidental.cc:131-142 print — add_at_edge (LEFT, natural, 0.1).
+        void DrawBody(double originX)
+        {
+            if (GlyphMetrics.RestoreMainOf(accidentalKind) is { } main)
+            {
+                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalGlyph("natural"),
+                    originX, noteheadY, fs);
+                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalGlyph(main),
+                    originX + GlyphMetrics.RestoreMainOffset(GlyphMetrics.Design20, main) * scale,
+                    noteheadY, fs);
+            }
+            else
+            {
+                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalGlyph(accidentalKind),
+                    originX, noteheadY, fs);
+            }
+        }
 
         if (isCourtesy)
         {
@@ -381,7 +402,7 @@ internal static partial class SharedRenderer
             {
                 gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalLeftParen,
                     accInkLeft - leftParen.Right * scale, noteheadY, fs);
-                gc.DrawAttachedGlyph(glyph, accInkLeft - accBBox.Left * scale, noteheadY, fs);
+                DrawBody(accInkLeft - accBBox.Left * scale);
                 gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalRightParen,
                     accInkLeft + accBBox.Width * scale - rightParen.Left * scale, noteheadY, fs);
             }
@@ -389,7 +410,7 @@ internal static partial class SharedRenderer
         else
         {
             using (gc.Source(sourcePosition))
-                gc.DrawAttachedGlyph(glyph, inkLeftX - accBBox.Left * scale, noteheadY, fs);
+                DrawBody(inkLeftX - accBBox.Left * scale);
         }
     }
 

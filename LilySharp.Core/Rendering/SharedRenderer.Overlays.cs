@@ -141,19 +141,9 @@ internal static partial class SharedRenderer
                     DrawFretFrame(a.X, y, a.Glyph[6..], gc);
                 continue;
             }
-            // Bartók (snap) pizzicato: a circle with a stem rising from its
-            // centre. LILYPOND-REF: scripts.snappizzicato.
-            if (a.Glyph == "snappizz")
-            {
-                using (gc.Source(a.SourcePosition))
-                {
-                    // Ring = black disc + white core (no stroked-circle API).
-                    gc.DrawCircle(a.X, y, 0.45, Color.Black);
-                    gc.DrawCircle(a.X, y, 0.33, Color.White);
-                    gc.DrawLine(a.X, y + 0.45, a.X, y + 1.4, Color.Black, 0.14);
-                }
-                continue;
-            }
+            // Bartók (snap) pizzicato takes the ordinary glyph path below: it is the
+            // font's scripts.snappizzicato (EmmentalerGlyphs.ScriptSnappizzicato), not
+            // primitives — see ArticulationItem's SnapPizz mapping.
             // …and from the design that font-size selects: an editorial accidental is the
             // 16 design's own outline (the same one ArticulationEngraver.ScriptSkylines
             // profiled), not the 20's drawn small. IDrawingContext.MusicFace.

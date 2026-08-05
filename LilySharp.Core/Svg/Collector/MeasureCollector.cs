@@ -2592,12 +2592,28 @@ public sealed partial class MeasureCollector
         if (actual == inEffect)
             return null;
 
+        // RESTORE-FIRST: stepping DOWN within the same sign (𝄪→♯, 𝄫→♭) prepends a
+        // natural to the printed accidental. The default accidental style reads
+        // extraNatural = #t, which is what gates the restore onto the grob — Lily#
+        // ports only that default style, so the gate is constant here.
+        // LILYPOND-REF: scm/music-functions.scm:1745-1752 check-pitch-against-signature —
+        //   need-restore = this-alt ≠ 0 ∧ |this-alt| < |prev-alt| ∧ prev-alt·this-alt > 0;
+        // LILYPOND-REF: scm/music-functions.scm:1905-1911 accidental-styles `default`
+        //   (extraNatural #t); lily/accidental-engraver.cc:272-275 — restore-first is set
+        //   only when extraNatural holds.
+        // The composite travels as a NAME ("naturalSharp"/"naturalFlat") so every box,
+        // skyline and draw consumer reads the composed stencil through the same pipes a
+        // plain glyph takes — see GlyphMetrics.RestoreMainOf.
+        bool restore = actual != 0
+            && Math.Abs(actual) < Math.Abs(inEffect)
+            && inEffect * actual > 0;
+
         return actual switch
         {
             2 => "doubleSharp",
-            1 => "sharp",
+            1 => restore ? "naturalSharp" : "sharp",
             0 => "natural",
-            -1 => "flat",
+            -1 => restore ? "naturalFlat" : "flat",
             -2 => "doubleFlat",
             _ => null
         };

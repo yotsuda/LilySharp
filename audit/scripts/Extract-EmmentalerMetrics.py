@@ -132,6 +132,7 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("OrnReverseTurnGlyph", "scripts.reverseturn", "Inverted (reverse) turn ornament", "mf/feta-scripts.mf — scripts.reverseturn"),
     GlyphSpec("OrnPrallGlyph", "scripts.prall", "Prall (upper mordent) ornament", "mf/feta-scripts.mf — scripts.prall"),
     GlyphSpec("OrnMordentGlyph", "scripts.mordent", "Mordent (lower mordent) ornament", "mf/feta-scripts.mf — scripts.mordent"),
+    GlyphSpec("ScriptSnappizzicato", "scripts.snappizzicato", "Bartók (snap) pizzicato — ring with rising stem", "mf/feta-scripts.mf — scripts.snappizzicato"),
     GlyphSpec("OrnPrallPrallGlyph", "scripts.prallprall", "Prall-prall / prall-triller ornament", "mf/feta-scripts.mf — scripts.prallprall"),
     GlyphSpec("MarkSegno", "scripts.segno", "Segno mark", "mf/feta-scripts.mf — scripts.segno"),
     GlyphSpec("MarkCoda", "scripts.coda", "Coda mark", "mf/feta-scripts.mf — scripts.coda"),

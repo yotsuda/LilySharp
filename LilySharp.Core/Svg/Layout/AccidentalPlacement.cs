@@ -225,15 +225,39 @@ internal sealed class AccidentalPlacement
     internal static (HorizontalSkyline Left, HorizontalSkyline Right) GlyphSkylinePair(
         string accidental, bool isCourtesy, GlyphMetrics.DesignMetrics font)
     {
-        // The baked outlines are in the DESIGN's own staff spaces, like the design's metric
-        // table; the magnification is applied at the end, exactly once, as it is to the boxes
-        // (lily/modified-font-metric.cc:62-68).
-        var (bakedLeft, bakedRight) = GlyphMetrics.AccidentalSkylinePair(accidental, font.Rounded);
-        var left = bakedLeft.Clone();
-        var right = bakedRight.Clone();
         // The design's UNMAGNIFIED table: this whole composition happens in the design's own
         // staff spaces, so the boxes it butts the parens against must be in them too.
         var design = GlyphMetrics.ForDesign(font.Rounded);
+        // The baked outlines are in the DESIGN's own staff spaces, like the design's metric
+        // table; the magnification is applied at the end, exactly once, as it is to the boxes
+        // (lily/modified-font-metric.cc:62-68).
+        HorizontalSkyline left, right;
+        if (GlyphMetrics.RestoreMainOf(accidental) is { } restoreMain)
+        {
+            // A RESTORE-FIRST composite (♮♯ / ♮♭): the printed stencil is
+            // natural + 0.1 + main (lily/accidental.cc:131-142), and LilyPond's skyline
+            // is built over that COMPOSED stencil (:54-58 skylines_from_stencil of the
+            // grob's own stencil) — so its baked outlines are composed here the same way
+            // the paren glyphs are composed below, in the same frame GetAccidentalBBox
+            // uses (origin at the natural's).
+            var (natLeft, natRight) = GlyphMetrics.AccidentalSkylinePair("natural", font.Rounded);
+            left = natLeft.Clone();
+            right = natRight.Clone();
+            double dx = GlyphMetrics.RestoreMainOffset(design, restoreMain);
+            var (mainLeft, mainRight) = GlyphMetrics.AccidentalSkylinePair(restoreMain, font.Rounded);
+            var ml = mainLeft.Clone();
+            ml.Raise(dx);
+            left.Merge(ml);
+            var mr = mainRight.Clone();
+            mr.Raise(dx);
+            right.Merge(mr);
+        }
+        else
+        {
+            var (bakedLeft, bakedRight) = GlyphMetrics.AccidentalSkylinePair(accidental, font.Rounded);
+            left = bakedLeft.Clone();
+            right = bakedRight.Clone();
+        }
         var bbox = GlyphMetrics.GetAccidentalBBox(design, accidental);
         if (isCourtesy)
         {
@@ -245,8 +269,12 @@ internal sealed class AccidentalPlacement
             MergeParen(left, right, leftParen: false,
                 bbox.Right - design.AccidentalRightParen.Left, font.Rounded);
         }
-        else if (accidental is "flat" or "doubleFlat")
+        else if (accidental is "flat" or "doubleFlat" or "naturalFlat")
         {
+            // The fattening keys on the grob's GLYPH-NAME, which stays the MAIN glyph
+            // under restore-first — so ♮♭ takes it too, over the COMPOSED extent
+            // (lily/accidental.cc:64-67: the guard reads glyph_name, the box reads
+            // my_stencil's extents, and the stencil already carries the natural).
             // "a bit more padding for the right of the stem" — one box on the RIGHT
             // skyline at x = stencil-right * 0.375 over the stencil's Y-extent,
             // NOT applied to a parenthesized accidental.
@@ -530,9 +558,11 @@ internal sealed class AccidentalPlacement
     private static int GetAlterationPriority(string accidental) => accidental switch
     {
         "natural" => 0,
-        "sharp" => 1,
+        // A restore-first composite sorts as its MAIN glyph: the grob's alteration is
+        // the pitch's (±1/2), the prepended natural is only stencil.
+        "sharp" or "naturalSharp" => 1,
         "doubleSharp" => 2,
-        "flat" => 3,
+        "flat" or "naturalFlat" => 3,
         "doubleFlat" => 4,
         _ => 2
     };

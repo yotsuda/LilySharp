@@ -1,0 +1,14 @@
+// lilypond-src/input/regression/articulation-snappizzicato.ly の Lily# 訳。
+// CLAIM: snappizzicato articulation が音符に snappizzicato 記号を付ける。
+// 綴り: LP \relative { c''4\snappizzicato } → Lily# absolute c'4@snappizz。
+octave absolute
+
+part m { clef treble }
+
+section Main {
+  m { c'4@snappizz }
+}
+
+form main { ~Main }
+
+score main { staff m }

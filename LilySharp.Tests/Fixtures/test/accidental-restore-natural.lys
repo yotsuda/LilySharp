@@ -1,0 +1,23 @@
+// lilypond-src/input/regression/accidental-single-double.ly (LP 回帰スイート第 1 号の
+// 移植・第99 第5便). CLAIM: 重♯の後の♯、重♭の後の♭には、ナチュラルが自動で前置される
+// （restore-first, ♮♯ / ♮♭）。
+// Lily# は GetDisplayAccidental にこの規則が無く、♯ / ♭ を裸で印字していた —
+// corpus に 𝄪→♯ の並びを書く本が一つも無かったので、どの snapshot も落ちなかった。
+// LILYPOND-REF: scm/music-functions.scm:1745-1752 — need-restore =
+//   this≠0 ∧ |this|<|prev| ∧ prev·this>0; accidental.cc:131-142 — 前置 natural、pad 0.1。
+// MEASURED（2.26.0・indent 0・ragged-right の after-line-breaking dump）: head 列
+// 9.275 / 13.3958 / 17.218 / 21.1588、臨時記号 7.885 / 11.9458(♯) / 15.42 / 20.0088。
+// Lily# は修正後 9.28 / 13.40 / 17.22 / 21.16 — 4 列とも小数 2 桁まで一致。
+// ⚠️ 原本の \context NoteNames 行は Lily# に対応物が無いので落とした（主張は Staff 行）。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m { gisis4 gis geses ges | }
+}
+
+form main { ~Main }
+
+score main { staff m }

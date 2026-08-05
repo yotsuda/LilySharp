@@ -257,6 +257,8 @@ internal static partial class EmmentalerGlyphs
     public const char PedalToeDown = '\uE062';
     /// <summary>scripts.thumb (cello thumb position)</summary>
     public const char ArticThumb = '\uE047';
+    /// <summary>scripts.snappizzicato (Bartók pizzicato — ring with rising stem)</summary>
+    public const char ScriptSnappizzicato = '\uE082';
 
     // === Ornaments ===
     /// <summary>scripts.reverseturn</summary>

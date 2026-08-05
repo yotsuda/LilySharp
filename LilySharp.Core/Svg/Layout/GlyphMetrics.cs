@@ -512,6 +512,45 @@ internal static partial class GlyphMetrics
         _ => RestQuarterOutline
     };
 
+    /// <summary>
+    /// The gap between the prepended natural and the main glyph of a RESTORE-FIRST
+    /// accidental — the ♮♯ / ♮♭ a step down within the same sign (𝄪→♯, 𝄫→♭) prints.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental.cc:131-142 Accidental_interface::print —
+    ///   <c>st.add_at_edge (X_AXIS, LEFT, natural, 0.1)</c>.
+    /// </remarks>
+    public const double RestoreFirstPad = 0.1;
+
+    /// <summary>
+    /// The MAIN glyph name of a restore-first composite accidental
+    /// ("naturalSharp" / "naturalFlat"), or null for a plain one. The composite is
+    /// carried as a NAME so every consumer of an accidental's box — placement,
+    /// skylines, spacing, the renderer — reads the composed stencil through the same
+    /// pipes a plain glyph takes, and draw and reserve cannot split.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc:272-275 — LilyPond carries the same
+    /// fact as the Accidental grob's <c>restore-first</c> property; the stencil is
+    /// composed at print (accidental.cc:131-142) with the natural at the LEFT edge, so
+    /// the composite's extent runs from the natural's ink to the main glyph's.
+    /// </remarks>
+    public static string? RestoreMainOf(string? accidental) => accidental switch
+    {
+        "naturalSharp" => "sharp",
+        "naturalFlat" => "flat",
+        _ => null
+    };
+
+    /// <summary>
+    /// X of the composite's MAIN glyph origin, measured from the composite's own
+    /// origin (= the natural's origin): the main glyph's ink LEFT lands
+    /// <see cref="RestoreFirstPad"/> right of the natural's ink RIGHT.
+    /// </summary>
+    public static double RestoreMainOffset(DesignMetrics font, string mainName)
+        => font.AccidentalNatural.Right + RestoreFirstPad
+           - GetAccidentalBBox(font, mainName).Left;
+
     /// <summary>Gets the bounding box for an accidental by name.</summary>
     public static BBox GetAccidentalBBox(string? accidental)
         => GetAccidentalBBox(Design20, accidental);
@@ -519,15 +558,29 @@ internal static partial class GlyphMetrics
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
     public static BBox GetAccidentalBBox(DesignMetrics font, string? accidental)
-        => accidental switch
     {
-        "sharp" => font.AccidentalSharp,
-        "flat" => font.AccidentalFlat,
-        "natural" => font.AccidentalNatural,
-        "doubleSharp" => font.AccidentalDoubleSharp,
-        "doubleFlat" => font.AccidentalDoubleFlat,
-        _ => default
-    };
+        if (RestoreMainOf(accidental) is { } main)
+        {
+            // The composed restore-first stencil: natural, pad, main glyph.
+            var nat = font.AccidentalNatural;
+            var mainBox = GetAccidentalBBox(font, main);
+            double mainOrigin = RestoreMainOffset(font, main);
+            return new BBox(
+                nat.Left,
+                Math.Min(nat.Bottom, mainBox.Bottom),
+                mainOrigin + mainBox.Right,
+                Math.Max(nat.Top, mainBox.Top));
+        }
+        return accidental switch
+        {
+            "sharp" => font.AccidentalSharp,
+            "flat" => font.AccidentalFlat,
+            "natural" => font.AccidentalNatural,
+            "doubleSharp" => font.AccidentalDoubleSharp,
+            "doubleFlat" => font.AccidentalDoubleFlat,
+            _ => default
+        };
+    }
 
     /// <summary>
     /// Gets the notehead bounding box for a given note value.
@@ -578,15 +631,32 @@ internal static partial class GlyphMetrics
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:35 Accidental grob::unpure-vertical-skylines-from-stencil.
     /// </remarks>
-    public static BBox GetAccidentalSkylineBBox(string? accidental) => accidental switch
+    public static BBox GetAccidentalSkylineBBox(string? accidental)
     {
-        "sharp" => AccidentalSharpOutline,
-        "flat" => AccidentalFlatOutline,
-        "natural" => AccidentalNaturalOutline,
-        "doubleSharp" => AccidentalDoubleSharpOutline,
-        "doubleFlat" => AccidentalDoubleFlatOutline,
-        _ => default
-    };
+        if (RestoreMainOf(accidental) is { } main)
+        {
+            // The composite's outline: the natural's, united with the main glyph's
+            // translated to its place in the composed stencil (same frame as
+            // GetAccidentalBBox — origin at the natural's).
+            var nat = AccidentalNaturalOutline;
+            var mainBox = GetAccidentalSkylineBBox(main);
+            double mainOrigin = RestoreMainOffset(Design20, main);
+            return new BBox(
+                nat.Left,
+                Math.Min(nat.Bottom, mainBox.Bottom),
+                mainOrigin + mainBox.Right,
+                Math.Max(nat.Top, mainBox.Top));
+        }
+        return accidental switch
+        {
+            "sharp" => AccidentalSharpOutline,
+            "flat" => AccidentalFlatOutline,
+            "natural" => AccidentalNaturalOutline,
+            "doubleSharp" => AccidentalDoubleSharpOutline,
+            "doubleFlat" => AccidentalDoubleFlatOutline,
+            _ => default
+        };
+    }
 
     /// <summary>
     /// The note-value bucket (1=whole, 2=half, else black) a written base duration
