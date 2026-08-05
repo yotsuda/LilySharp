@@ -1,0 +1,26 @@
+// An UNBEAMED eighth chord must carry its flag (起票 2026-08-05,
+// scratch/ベースタブLy/blogger2.lys, reproduced verbatim). The flag is the STEM's
+// grob, indifferent to how many heads hang on it — LilyPond makes one Flag per
+// Stem (lily/stem-engraver.cc:120-140) and kills it only for a beamed stem — but
+// DrawChord had NO flag branch at all: the voice-two <bes' ges c>8 drew a bare
+// down-stem while the voice-one f'8 beside it took the single-note recipe and got
+// its flag. Nothing in the corpus wrote an unbeamed flagged chord, so no snapshot
+// ever saw the absence; this book holds one flag of each direction (f'8 up, the
+// chord down) plus the partial-measure and 3-flat accidental column around them.
+// ⚠️ The skyline side (ItemSkylineFactory.AddFlag, now chord-aware to keep draw
+// and reserve one fact) has NO binding observer in this book — the down flag ends
+// below everything that follows. A book where a chord's flag pushes its neighbour
+// still needs writing.
+key g major
+
+section A { partial 8 }
+
+part melody {
+  section A { voice { f'8 } { <bes' ges c>8 } }
+}
+
+form main { A }
+
+score main {
+  staff melody
+}

@@ -640,6 +640,9 @@ public class SvgSnapshotTests
         // cascade) and the cross-voice column floor: the shifted cis2.'s dot must
         // push the next eighth column instead of printing through its head.
         yield return new object[] { "test/dot-cross-voice-spacing" };
+        // An unbeamed eighth CHORD carries its flag (one Flag per Stem, LP
+        // stem-engraver) — DrawChord had no flag branch and no fixture saw it.
+        yield return new object[] { "test/chord-flag" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

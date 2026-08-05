@@ -5041,6 +5041,63 @@ internal static class LpGeometryProbes
         score main "FSFH8" { staff m }
         """;
 
+    /// <summary>
+    /// <see cref="FSF8"/> with a CHORD on the flagged stem — the binding observer of the
+    /// chord-flag skyline box.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe flagged-stem-reach.ly, score FSCF8:
+    /// <c>&lt;c'' e''&gt;8 dis'4</c>): 3.181800 — the single-note book's own number,
+    /// PREDICTED before measuring and answered to the digit: the flag is the STEM's grob
+    /// (lily/stem-engraver.cc:120-140, one Flag per Stem, heads not consulted) and the stem
+    /// hangs off the same c'' tip head, so the chord flags exactly as the note does; the
+    /// added e'' reaches right only at its own Y band, which the LOW accidental never faces.
+    /// <para>
+    /// The point exists because DrawChord drew NO chord flag at all until <c>2b0078b2</c>
+    /// (第99・third ticket) and ItemSkylineFactory boxed none — and the whole corpus lacked
+    /// an unbeamed flagged chord, so no snapshot could see either absence. The one-apostrophe
+    /// spelling rule is FSF8's.
+    /// </para>
+    /// <para>
+    /// ⚠️ The chord's two heads share one X, so the anchor walk counts them both:
+    /// <c>NoteheadAnchorStep(0)</c> is the intra-chord 0 and the COLUMN step is
+    /// <c>NoteheadAnchorStep(1)</c>.
+    /// </para>
+    /// </remarks>
+    private static readonly string FSCF8 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { <c' e'>8 dis4 r4 r8 | }
+        }
+
+        form main { ~Main }
+
+        score main "FSCF8" { staff m }
+        """;
+
+    /// <summary>The chord pair's control — the accidental an octave UP, facing the head band
+    /// (LilyPond: 3.354200, again the single-note control's own number).</summary>
+    private static readonly string FSCFH8 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { <c' e'>8 dis'4 r4 r8 | }
+        }
+
+        form main { ~Main }
+
+        score main "FSCFH8" { staff m }
+        """;
+
     /// <summary>An UP stem's flag, which stands beside the head and sets the column's reach on
     /// its own (2.167400) — no draw-versus-reserve split there, so this one says whether the
     /// ordinary flagged case was already right.</summary>
@@ -9209,6 +9266,11 @@ internal static class LpGeometryProbes
         new("flag.down.reach.low-neighbour", FSF8, g => g.NoteheadAnchorStep(0)),
         new("flag.down.reach.high-neighbour-control", FSFH8, g => g.NoteheadAnchorStep(0)),
         new("flag.up.reach", FSFU8, g => g.NoteheadAnchorStep(0)),
+        // …and the same pair with a CHORD on the flagged stem — the binding observer the
+        // chord-flag fix (2b0078b2) shipped without. Step(1), not Step(0): the chord's two
+        // heads share an X and the anchor walk counts both (see FSCF8's remarks).
+        new("flag.down.reach.chord.low-neighbour", FSCF8, g => g.NoteheadAnchorStep(1)),
+        new("flag.down.reach.chord.high-neighbour-control", FSCFH8, g => g.NoteheadAnchorStep(1)),
 
         // …and where the flag is DRAWN, which those three cannot see: they read the column's
         // skyline, i.e. what the flag RESERVES. ItemSkylineFactory carries a written claim that

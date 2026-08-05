@@ -257,6 +257,29 @@ public class LilyPondExporterTests
     }
 
     [Fact]
+    public void SplitSectionHeader_PartialReachesTheTwin()
+    {
+        // The SPLIT spelling: the pickup lives on its own declaration of the section
+        // name, beside the part's music-carrying declaration of the same name
+        // (scratch/ベースタブLy/blogger2.lys). The collector registers headers by NAME
+        // (MeasureCollector.cs:2411-2423) so the piece renders with the pickup; the
+        // exporter read the header off the one CHOSEN declaration and silently dropped
+        // it — a twin that is a different piece (its first bar a bar-check failure away).
+        var ly = Export("""
+            key g major
+            section A { partial 8 }
+            part melody {
+              section A { voice { f'8 } { <bes' ges c>8 } }
+            }
+            form main { A }
+            score main { staff melody }
+            """);
+        Assert.Contains("\\partial 8", ly);
+        // Once — the header-only declaration must not ALSO stream it as loose music.
+        Assert.Equal(ly.IndexOf("\\partial 8"), ly.LastIndexOf("\\partial 8"));
+    }
+
+    [Fact]
     public void InlineRepeat_BecomesRepeatVolta()
     {
         var ly = Export(Score("|: c,4 d,4 :|"));

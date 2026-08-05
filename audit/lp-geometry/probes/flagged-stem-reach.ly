@@ -97,6 +97,19 @@ sweep =
 \score { \sweep "FSFP8" { \time 4/4 c''8 d'4 r4 r8 } }        % flagged, low, no accidental
 \score { \sweep "FSFU8" { \time 4/4 d'8 fis''4 r4 r8 } }      % flagged UP stem, neighbour high
 
+% D'. THE SAME PAIR WITH A CHORD ON THE STEM (2026-08-05, 第99). A chord's flag is the
+%     STEM's grob like a note's (stem-engraver.cc:120-140 — one Flag per Stem, heads not
+%     consulted), and the stem hangs off the tip-side head — here the same c'' the single
+%     books flag — so the PREDICTION, WRITTEN BEFORE MEASURING, is that both gaps equal
+%     their single-note twins exactly: 3.181800 and 3.354200. The added e'' reaches right
+%     only at its own Y band, which faces neither the low accidental (FSCF8) nor changes
+%     the head-band reach the control binds on (FSCFH8: dis''-flat faces e'''s head band
+%     with the same head width). Lily#'s DrawChord drew NO chord flag at all until 第99
+%     (`2b0078b2`) and its skyline had no chord-flag box — these two are that box's
+%     binding observers.
+\score { \sweep "FSCF8"  { \time 4/4 <c'' e''>8 dis'4 r4 r8 } }   % chord flagged, neighbour LOW
+\score { \sweep "FSCFH8" { \time 4/4 <c'' e''>8 dis''4 r4 r8 } }  % chord flagged, control HIGH
+
 % ---------------------------------------------------------------------------------------
 % E. WHERE THE FLAG IS DRAWN, which none of the books above can see.
 %    A / B / D all read the COLUMN's skyline, i.e. what the flag RESERVES. Lily#'s

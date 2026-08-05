@@ -216,12 +216,12 @@ internal static class ItemSkylineFactory
                 noteY - noteheadBBox.Top, noteY - noteheadBBox.Bottom,
                 noteheadLeftX, noteheadLeftX + noteheadWidth));
 
-            AddFlag(parts, item, noteheadLeftX, staffY, noteValue);
             if (item is NoteItem note)
                 AddAccidental(parts, note, noteheadLeftX, staffY);
         }
 
         AddStem(parts, item, noteheadLeftX, staffY);
+        AddFlag(parts, item, noteheadLeftX, staffY, noteValue);
         AddDots(parts, item, maxNoteheadRightX, staffY);
 
         return parts;
@@ -298,18 +298,40 @@ internal static class ItemSkylineFactory
     private static void AddFlag(List<ColumnPart> parts, MusicItem item,
                                 double noteheadLeftX, double staffY, int noteValue)
     {
-        if (item is not NoteItem note || noteValue < 8 || note.IsBeamed)
+        // A flag is the STEM's, indifferent to how many heads hang on it (LilyPond
+        // makes one Flag per Stem), so a chord's flag boxes exactly like a note's,
+        // hung from the stem-tip-side head — the same head the renderer reckons the
+        // stem from. This used to be NoteItem-only, in step with the renderer's
+        // missing chord-flag branch: the two were consistent about the same absence.
+        // LILYPOND-REF: lily/stem-engraver.cc:120-140 (Flag per Stem).
+        bool stemUp; int tipPos; bool beamed;
+        switch (item)
+        {
+            case NoteItem n:
+                stemUp = n.StemUp; tipPos = n.StaffPosition; beamed = n.IsBeamed;
+                break;
+            case ChordItem c when c.Notes.Length > 0:
+                stemUp = c.StemUp; beamed = c.IsBeamed;
+                tipPos = c.Notes[0].StaffPosition;
+                foreach (var cn in c.Notes)
+                    tipPos = stemUp ? Math.Max(tipPos, cn.StaffPosition)
+                                    : Math.Min(tipPos, cn.StaffPosition);
+                break;
+            default:
+                return;
+        }
+        if (noteValue < 8 || beamed)
             return;
 
-        var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, note.StemUp);
+        var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, stemUp);
         if (flagBBox == default)
             return;
 
-        double noteY = staffY - note.StaffPosition / 2.0;
+        double noteY = staffY - tipPos / 2.0;
 
         // Flag is attached to the stem end
         double stemHeight = EngravingDefaults.IdealStemLength;
-        double stemEndY = note.StemUp ? noteY - stemHeight : noteY + stemHeight;
+        double stemEndY = stemUp ? noteY - stemHeight : noteY + stemHeight;
 
         // Flag position: a flag hangs on the STEM, so its ink is reserved in the
         // STEM's frame and not the head's — LayoutUtilities.StemX is the one
@@ -357,10 +379,10 @@ internal static class ItemSkylineFactory
         //   on top of the same common +0.100 the down pair carries.
         // MEASURED: routing both directions through the one house took it to
         //   +0.100000, so all three flag points now read ONE number.
-        double stemX = LayoutUtilities.StemX(noteheadLeftX, note.StemUp, noteValue);
+        double stemX = LayoutUtilities.StemX(noteheadLeftX, stemUp, noteValue);
 
         double flagYBottom, flagYTop;
-        if (note.StemUp)
+        if (stemUp)
         {
             // Flag extends downward from stem end
             flagYBottom = stemEndY;

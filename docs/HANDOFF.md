@@ -58,6 +58,93 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第4便（＝**第3便が名指しした残 2 件をユーザー指示で即日返済**:
+①「和音旗の束縛観測者が無い」→ **台帳 2 点で閉じた**、②「双子が partial を落とす」→
+**exporter の名前キー header 台帳で閉じた**）。
+
+⚠️ **仕事は 2 commit**（`7e109e8c` exporter partial・`8381d1f4` 台帳 2 点）＋ handoff。
+
+★★★ **①=② exporter**: 落ちる形は**分割宣言**——`section A { partial 8 }`（header だけの宣言）と
+`part melody { section A { … } }`（同名・音楽持ち）。collector は **section 名で** header を登録し
+（MeasureCollector.cs:2411-2423・inline music 無しの宣言が登録・directive 毎 first-wins）どの宣言が
+選ばれても適用するが、exporter の `SectionHeaderMusic` は**選ばれた 1 ノードの直下しか**読まなかった
+→ `BuildSectionHeaderRegistry`（collector の写し）を足し、**form 経路の `AppendSection` だけ**台帳
+消費に載せ替え。⚠️ no-form fallback 経路は従来のまま（そこでは全宣言が順に演奏され、header-only
+宣言が自分の directive を loose music として流す——台帳だと宣言数だけ重複する）。
+陽性対照: Core stash で `SplitSectionHeader_PartialReachesTheTwin` が落ちる。二重 emit 防止の
+assert（`\partial 8` がちょうど 1 回）込み。
+
+★★★ **②=① 台帳 2 点**（`flag.down.reach.chord.low-neighbour` / `.high-neighbour-control`・
+probe flagged-stem-reach.ly に FSCF8/FSCFH8 追加）:
+★★ **予測を書いてから測った**——「和音の旗は同じ c'' tip 頭から吊られるので単音の本と同値
+（3.181800 / 3.354200）のはず」→ **LP が桁まで同値を返した**。Lily# も residual 0 で開いた
+（第3便の修正が正しかった証拠が束縛系で取れた）。
+★ 陽性対照が教科書形: Core を `2b0078b2~1` に戻すと **low-neighbour だけ residual −1.0018 で
+落ち、control は緑**＝読んでいるのは旗の到達そのもの。
+⚠️ 和音本の anchor 歩きは**同 X の 2 頭を両方数える**ので列 step は `NoteheadAnchorStep(1)`
+（本の remarks に明記）。
+
+未 push **54**（この handoff 込み。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ 私は push していない**）・テスト **4093 passed / 0 failed / 4 skipped**（第3便 4090・
+**+1 exporter・+2 台帳**）・**台帳 481 点（+2）・ss 非ゼロ 83・総和 3.612832552・count 106
+うち非ゼロ 2**・**Core 0 warning。snapshot 移動なし。**
+
+⚠️⚠️ ★★★ **次に触るときの注意（第99 累積・第4便で 2 件返済後）**:
+```
+⑴〜⑴'' 3 起票＋残 2 件 **✅ 全部閉じた**
+⑵ **per-voice wish の ideal**（第2便 ④・不変）  残差実測 3.11 vs LP 3.81
+⑵' **ItemSkylineFactory の中心基準**（第2便・不変）
+⑶ 第98 ⑵/⑵'/⑶ 不変
+⑷ **§2 の残債返却は中断したまま**（不変・次セッションの本命はこれか ⑵）
+⑸ 双子の落下の残り・percent-repeat タブの % 小節幅 不変
+⑹ 今回観測: no-form 経路の header は宣言ノード読みのまま（form 必須の現 corpus では観測者ゼロ・
+   AppendSection の remarks に理由明記）
+```
+
+## 以下は第99セッション第3便の経緯
+
+最終更新 第99セッション第3便（＝**第3の起票「和音に 8 分音符の旗が付かない」
+（`scratch\ベースタブLy\blogger2.lys`）を閉じた**）。
+
+⚠️ **仕事は 1 commit**（`2b0078b2`）＋ handoff。
+
+★★★ **① 規則**: **旗は符尾の grob で、頭数を見ない**（stem-engraver.cc:120-140 が Stem ごとに
+Flag を 1 個作り、:165-172 が beamed の分だけ殺す）。`DrawChord` には**旗の分岐がそもそも無かった**
+（`DrawNote` にはある）——非連桁の `<…>8` は裸の符尾だけ描いた。⇒ DrawChord に単音と同じ式
+（`GetFlag(noteValue, stemUp)` を `FlagDrawX(stemX)`, `stemEndY` に）を追加。
+**skyline 側も対で**: `ItemSkylineFactory.AddFlag` が NoteItem 専用だった（描画と予約が
+「同じ欠落で整合」していた形）→ 和音対応（tip 側の頭から吊る）し、呼び出しを両枝共通部へ。
+
+★★ **② 観測者ゼロの確認が 2 面**: 修正後も**既存 snapshot は 1 枚も動かない**＝corpus に
+非連桁の旗つき和音が 1 つも無かった（描画欠落が一度もテストを落とさなかった理由そのもの）。
+新 fixture `test/chord-flag`（起票逐語・上向き旗の単音と下向き旗の和音を両方保持）。
+⚠️ **AddFlag の和音箱には束縛の観測者がまだ無い**（この本では旗が何も押さない）——fixture header
+に「旗が隣を押す本は未執筆」と名指し済み。陽性対照: Core を stash すると snapshot が落ちる。
+
+★ **③ LP 対照**: 双子（-dcrop）で両方向の旗を目視一致。⚠️ **双子生成が `partial 8` を
+落とす**のを観測（.ly に \partial が出ない。この本は 1 小節なので出力は同形）——未着手・未起票の
+twin 忠実度ギャップとしてここに記録。
+
+未 push **51**（この handoff 込み。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ 私は push していない**）・テスト **4090 passed / 0 failed / 4 skipped**（第2便終了時 4089・
+**+1 snapshot**）・台帳 **479 点（ss 非ゼロ 83・総和 3.612832552・count 106 うち非ゼロ 2——不変**）・
+**Core 0 warning。**
+
+⚠️⚠️ ★★★ **次に触るときの注意（第99 セッション累積）**:
+```
+⑴ ~~タブ譜が改行されない~~ ⑴' ~~付点がdを刺す~~ ⑴'' ~~和音に旗が無い~~ **✅ 3 起票とも閉じた**
+⑵ **per-voice wish の ideal**（第2便 ④）  ApplyLeftHeadWidth の cross-voice max 近似。
+                        残差実測 3.11 vs LP 3.81
+⑵' **ItemSkylineFactory の中心基準**（第2便）  混幅対で ±0.1 の系統差
+⑵'' **和音旗の束縛観測者が無い**（今回）  旗が隣の列を押す本を書いて LP と対にする
+⑵''' **双子が partial を落とす**（今回観測・未着手）
+⑶ 第98 ⑵/⑵'/⑶（cue packing・cue休符原寸・GetColumnNoteheadWidth）不変
+⑷ **§2 の残債返却は中断したまま**（不変）
+⑸ 双子の落下の残り・percent-repeat タブの % 小節幅 不変
+```
+
+## 以下は第99セッション第2便の経緯
+
 最終更新 第99セッション後半（＝**第2の起票「cis2. の付点と d の符頭が重なる」
 （`scratch\ベースタブLy\Untitled-4.lys`・3声部）を閉じた。ユーザー指示は「発明せず LP を字面移植」
 ——欠陥は 2 つとも移植の穴だった**）。

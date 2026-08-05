@@ -190,6 +190,20 @@ public sealed class LilyPondExporter
     /// MusicXmlExporter and MidiExporter keep for the same reason.</summary>
     private HashSet<string> _activePhrases = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Section-header directives keyed by section NAME — the exporter's mirror of the
+    /// collector's <c>_sectionHeaderKeys/Times/Tempos/Partials</c> registries
+    /// (MeasureCollector.cs:2411-2423): any declaration of the name WITHOUT inline music
+    /// registers its direct-child directives, first declaration wins per directive, and
+    /// they apply to every play of that name. Keyed by name because a section reaches the
+    /// form in SPLIT declarations too — <c>section A { partial 8 }</c> beside
+    /// <c>part melody { section A { … } }</c> — and the played declaration is not the one
+    /// holding the header. Reading the header off the chosen declaration alone
+    /// (SectionHeaderMusic) lost that pickup: the twin of
+    /// scratch/ベースタブLy/blogger2.lys carried no <c>\partial</c> at all (第99 handoff ③).
+    /// </summary>
+    private Dictionary<string, List<SyntaxNode>> _sectionHeaders = new(StringComparer.Ordinal);
+
     /// <summary>Sections standing in for the single-part shorthand, so
     /// <see cref="ContainerMusic"/> knows to take only their LOOSE music and leave any other
     /// part's cell alone. Identity, not name: the same section can be a container here and a
@@ -670,6 +684,11 @@ public sealed class LilyPondExporter
         // A part a score names but never declares (`ossia melody` with no `part melody`)
         // has no block of its own to hold sections — only the second and third spellings
         // can reach it.
+        // The name-keyed header registry, rebuilt per part from the SAME document-order
+        // walk the collector registers from (every declaration of a name contributes;
+        // the played declaration may be a different node — see the field's remarks).
+        _sectionHeaders = BuildSectionHeaderRegistry(allSections);
+
         var partSections = part?.DescendantNodes<SectionDeclarationSyntax>().ToList()
             ?? new List<SectionDeclarationSyntax>();
         // Keyed by the SECTION as well as its container, because the section's own header
@@ -753,6 +772,48 @@ public sealed class LilyPondExporter
         if (FirstDirect<TempoDeclarationSyntax>(section) is { } tempo) yield return tempo;
         if (FirstDirect<KeySignatureSyntax>(section) is { } key) yield return key;
         if (FirstDirect<PartialDeclarationSyntax>(section) is { } partial) yield return partial;
+    }
+
+    /// <summary>
+    /// Builds the name-keyed header registry (see <see cref="_sectionHeaders"/>): the same
+    /// registration the collector performs — a declaration with inline music walks its own
+    /// directives as music and registers NOTHING; any other declaration of the name
+    /// contributes its first direct child of each directive type, first declaration wins per
+    /// directive; the list keeps the collector's application order (time, tempo, key,
+    /// partial). LILYPOND-side consumer: <see cref="AppendSection"/>, once per PLAY of the
+    /// name, exactly when the collector applies its registries
+    /// (MeasureCollector.Form.cs:264-301).
+    /// </summary>
+    private static Dictionary<string, List<SyntaxNode>> BuildSectionHeaderRegistry(
+        List<SectionDeclarationSyntax> allSections)
+    {
+        var time = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+        var tempo = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+        var key = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+        var partial = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+        foreach (var s in allSections)
+        {
+            if (SectionHasInlineMusic(s))
+                continue;
+            var nm = s.SectionName;
+            if (FirstDirect<TimeSignatureSyntax>(s) is { } ht && !time.ContainsKey(nm)) time[nm] = ht;
+            if (FirstDirect<TempoDeclarationSyntax>(s) is { } hp && !tempo.ContainsKey(nm)) tempo[nm] = hp;
+            if (FirstDirect<KeySignatureSyntax>(s) is { } hk && !key.ContainsKey(nm)) key[nm] = hk;
+            if (FirstDirect<PartialDeclarationSyntax>(s) is { } hg && !partial.ContainsKey(nm)) partial[nm] = hg;
+        }
+
+        var result = new Dictionary<string, List<SyntaxNode>>(StringComparer.Ordinal);
+        void Put(Dictionary<string, SyntaxNode> source)
+        {
+            foreach (var kv in source)
+            {
+                if (!result.TryGetValue(kv.Key, out var list))
+                    result[kv.Key] = list = new List<SyntaxNode>();
+                list.Add(kv.Value);
+            }
+        }
+        Put(time); Put(tempo); Put(key); Put(partial);
+        return result;
     }
 
     /// <summary>The first direct-child directive of type <typeparamref name="T"/>.</summary>
@@ -879,6 +940,16 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>Append one referenced section's header directives and music.</summary>
+    /// <remarks>
+    /// The headers come from the NAME-keyed registry, not from the chosen declaration —
+    /// a split spelling (<c>section A { partial 8 }</c> beside the part's own
+    /// <c>section A { … }</c>) keeps its header on the declaration that is never chosen.
+    /// A declaration with inline music never registered, so its directives still arrive
+    /// once, as its own loose music (<see cref="ContainerMusic"/>). The no-form fallback
+    /// path keeps reading <see cref="SectionHeaderMusic"/> off each declaration in turn:
+    /// there every declaration is played, header-only ones included, so the registry
+    /// would hand the same directive to each of them.
+    /// </remarks>
     private void AppendSection(
         string name,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
@@ -886,7 +957,8 @@ public sealed class LilyPondExporter
     {
         if (!byName.TryGetValue(name, out var entry))
             return;
-        result.AddRange(SectionHeaderMusic(entry.Section));
+        if (_sectionHeaders.TryGetValue(name, out var headers))
+            result.AddRange(headers);
         result.AddRange(ContainerMusic(entry.Container));
     }
 

@@ -745,6 +745,23 @@ internal static partial class SharedRenderer
                 chord.IsCue ? EngravingDefaults.CueStemDetails : null);
             gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
+
+            // The flag is the STEM's grob, indifferent to how many heads hang on it —
+            // LilyPond makes one Flag per stem and the flag reads only its stem, so a
+            // chord takes exactly the single-note recipe (DrawNote). This branch was
+            // MISSING outright: an unbeamed <…>8 drew a bare stem with no flag
+            // (scratch/ベースタブLy/blogger2.lys, 起票 2026-08-05).
+            // LILYPOND-REF: lily/stem-engraver.cc:120-140 — the Flag grob is created
+            //   per Stem (and :165-172 kills it only for a BEAMED stem);
+            // LILYPOND-REF: lily/flag.cc:118-165 Flag::print — the glyph is chosen by
+            //   duration-log and stem direction alone.
+            if (noteValue >= 8)
+            {
+                var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
+                if (flag.HasValue)
+                    gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                        noteFontSize, stemColor);
+            }
         }
     }
 
