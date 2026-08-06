@@ -106,6 +106,58 @@ public sealed class ChordNamesTests
         Assert.False(ChordQualityRegistry.TryResolve("nonsense", out _));
     }
 
+    // ---- LP chord-entry realization (corpus: chord-name-entry.ly) ----------
+
+    /// <summary>
+    /// Pins every quality token the registry shares with LP's chord-entry test
+    /// (input/regression/chord-name-entry.ly) to the note chord LilyPond 2.26.0
+    /// actually realizes (dumped via \displayLilyMusic; LP c' is spelled c here —
+    /// the usual one-apostrophe shift). Letters come from the diatonic step,
+    /// accidentals from the semitone, octave marks from OctaveUp.
+    /// </summary>
+    [Theory]
+    [InlineData("", "c e g")]
+    [InlineData("7", "c e g bes")]
+    [InlineData("m", "c ees g")]
+    [InlineData("m7", "c ees g bes")]
+    [InlineData("aug", "c e gis")]
+    [InlineData("maj7", "c e g b")]
+    [InlineData("dim", "c ees ges")]
+    [InlineData("dim7", "c ees ges beses")]
+    [InlineData("sus4", "c f g")]
+    [InlineData("sus2", "c d g")]
+    [InlineData("6", "c e g a")]
+    [InlineData("m6", "c ees g a")]
+    [InlineData("7sus4", "c f g bes")]
+    [InlineData("9", "c e g bes d'")]
+    public void LpEntryRealization_MatchesLilyPond(string token, string expected)
+    {
+        Assert.True(ChordQualityRegistry.TryResolve(token, out var q));
+        var spelled = new ChordStructure(0, 0, q).Tones.Select(t =>
+            "cdefgab"[t.Step] + (t.Alter switch
+            {
+                2 => "isis", 1 => "is", 0 => "", -1 => "es", -2 => "eses", _ => "?",
+            }) + new string('\'', t.OctaveUp));
+        Assert.Equal(expected, string.Join(" ", spelled));
+    }
+
+    // The remaining entries of chord-name-entry.ly use entry FORMS outside the
+    // quality vocabulary: step alterations (3-, 3+, 5+.3-), extensions 11/13/m13,
+    // ^ removals and slash-bass realization. They stay unresolved tokens; the
+    // corpus twin hand-expands their LP realization (audit/lp-regression).
+    [Theory]
+    [InlineData("3-")]
+    [InlineData("3+")]
+    [InlineData("5+.3-")]
+    [InlineData("11")]
+    [InlineData("13")]
+    [InlineData("m13")]
+    [InlineData("7^5")]
+    public void LpEntryForms_OutsideTheVocabulary_DoNotResolve(string token)
+    {
+        Assert.False(ChordQualityRegistry.TryResolve(token, out _));
+    }
+
     // ---- Parsing + collection + timing alignment ---------------------------
 
     private const string LeadSheet =
@@ -136,6 +188,80 @@ public sealed class ChordNamesTests
         Assert.All(chords, c => Assert.True(c.UseTiming));
         // The structure (interval set) is carried for future notes / fret diagrams.
         Assert.Equal(new[] { 0, 4, 7, 10 }, chords[3].Structure!.Intervals); // G7
+    }
+
+    // ---- Slash bass: inversion (/e) vs added (/+e) — corpus: chord-names-bass.ly
+
+    [Fact]
+    public void SlashAndAddedBass_ParseAsOneEntryEach()
+    {
+        // Pre-fix the '/+' plus token fell to stray-token recovery and the bass
+        // pitch opened a NEW entry (f:maj7/+e → "Fmaj7" plus a phantom "E"
+        // chord), with no diagnostic.
+        var src = "section Main {\n  m { time 4/4 c2 d2 | }\n" +
+                  "  chords { f2:maj7/e f2:maj7/+e | }\n}\n" +
+                  "form main { Main }\nscore \"x\" { staff m }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+
+        var score = new MeasureCollector().Collect(tree);
+        var chords = score.ChordNames.OrderBy(c => c.Timing.ToDouble()).ToList();
+        Assert.Equal(2, chords.Count);
+        // LP prints the SAME name for both forms — only the (future) realization
+        // differs, recorded by BassIsAdded.
+        Assert.Equal(new[] { "Fmaj7/E", "Fmaj7/E" }, chords.Select(c => c.ChordText));
+        Assert.False(chords[0].Structure!.BassIsAdded);
+        Assert.True(chords[1].Structure!.BassIsAdded);
+    }
+
+    [Fact]
+    public void TryParseChordEntry_AcceptsAddedBass()
+    {
+        Assert.True(ChordStructure.TryParseChordEntry("f:maj7/+e", out var added));
+        Assert.True(added.BassIsAdded);
+        Assert.Equal("Fmaj7/E", added.DisplayName);
+        Assert.True(ChordStructure.TryParseChordEntry("f:maj7/e", out var inv));
+        Assert.False(inv.BassIsAdded);
+        Assert.Equal("Fmaj7/E", inv.DisplayName);
+        // '+' with no pitch after it is not an entry.
+        Assert.False(ChordStructure.TryParseChordEntry("f:maj7/+", out _));
+    }
+
+    [Fact]
+    public void AnonymousChords_OnMultiStaff_AttachToTheTopStaff()
+    {
+        // corpus: chord-names-in-grand-staff.ly — the name prints above the TOP
+        // staff. Pre-fix the collector passed _currentStaffIndex, which after the
+        // per-staff loop held the LAST staff, hanging the name between the staves.
+        var src = "part rh { clef treble }\npart lh { clef bass }\n" +
+                  "section Main {\n  rh { a4 a a a | }\n  lh { a,,4 a,, a,, a,, | }\n" +
+                  "  chords { f1 | }\n}\n" +
+                  "form main { Main }\n" +
+                  "score \"x\" { grandStaff { staff rh staff lh } }\n";
+        var tree = SyntaxTree.Parse(src);
+        var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var f = Assert.Single(score.ChordNames);
+        Assert.Equal("F", f.ChordText);
+        Assert.Equal(0, f.StaffIndex);
+    }
+
+    [Fact]
+    public void ChordRow_RestsPrintNC_SkipsDoNot()
+    {
+        // corpus: chord-names-rests.ly — r and R print the no-chord symbol
+        // ("N.C."), s prints nothing; all three advance the row. Pre-fix, rests
+        // in a chords{} block were silently dropped by stray-token recovery.
+        var src = "section Main {\n  m { time 4/4 r1 | s1 | R1 | }\n" +
+                  "  chords { r1 | s1 | R1 | }\n}\n" +
+                  "form main { Main }\nscore \"x\" { staff m }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var score = new MeasureCollector().Collect(tree);
+        var items = score.ChordNames.OrderBy(c => c.MeasureIndex).ToList();
+        Assert.Equal(2, items.Count);
+        Assert.All(items, c => Assert.Equal("N.C.", c.ChordText));
+        Assert.Equal(new[] { 0, 2 }, items.Select(c => c.MeasureIndex));
     }
 
     // ---- Note-expansion (editor completion) --------------------------------

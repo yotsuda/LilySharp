@@ -167,8 +167,8 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
 
 /// <summary>
 /// A single chord entry: root[duration][:quality][/bass] (e.g. c1, a:m, g2:7,
-/// d:m7/f). The quality token is the raw text after the colon (resolved against
-/// <c>ChordQualityRegistry</c> by the collector).
+/// d:m7/f, f:maj7/+e). The quality token is the raw text after the colon
+/// (resolved against <c>ChordQualityRegistry</c> by the collector).
 /// </summary>
 public sealed class ChordEntrySyntax : SyntaxNode
 {
@@ -177,8 +177,8 @@ public sealed class ChordEntrySyntax : SyntaxNode
     {
     }
 
-    // Slots: 0 root, 1 duration?, 2 colon?, [quality tokens…], slash?, bass?
-    // (slash/bass are always the final two slots, null when absent).
+    // Slots: 0 root, 1 duration?, 2 colon?, [quality tokens…], slash?, plus?,
+    // bass? (slash/plus/bass are always the final three slots, null when absent).
     /// <summary>The chord root pitch.</summary>
     public PitchSyntax Root => (PitchSyntax)GetChild(0)!;
     /// <summary>The chord's duration, or null when unspecified.</summary>
@@ -191,13 +191,19 @@ public sealed class ChordEntrySyntax : SyntaxNode
         get
         {
             var sb = new System.Text.StringBuilder();
-            for (int i = 3; i < SlotCount - 2; i++)
+            for (int i = 3; i < SlotCount - 3; i++)
                 if (GetChild(i) is SyntaxTokenNode t)
                     sb.Append(t.Text);
             return sb.Length > 0 ? sb.ToString() : null;
         }
     }
 
-    /// <summary>The slash-bass pitch (<c>c/g</c>), or null.</summary>
+    /// <summary>The slash-bass pitch (<c>c/g</c> or <c>c/+g</c>), or null.</summary>
     public PitchSyntax? Bass => GetChild(SlotCount - 1) as PitchSyntax;
+
+    /// <summary>True for the ADDED-bass form <c>/+bass</c> (LP: the bass is added
+    /// below the full chord; the plain <c>/bass</c> is an inversion). The printed
+    /// name is identical either way — the flag records entry intent (and feeds a
+    /// future realization).</summary>
+    public bool BassIsAdded => GetChild(SlotCount - 2) != null;
 }

@@ -1414,7 +1414,11 @@ public sealed partial class MeasureCollector
         }
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
-        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionState.StartMeasure, _currentStaffIndex);
+        // Anonymous chords{} on a multi-staff score go above the TOP staff (index
+        // 0), not whatever staff the collect loop ended on — _currentStaffIndex
+        // still holds the LAST staff here, which hung the names between the
+        // staves of a grand staff (corpus: chord-names-in-grand-staff.ly).
+        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionState.StartMeasure, staffIndex: 0);
         foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff, attachedMode);

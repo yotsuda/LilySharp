@@ -1790,7 +1790,9 @@
     },
     "chord-name-entry.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "\\chordmode entry (pitch+suffix) が Voice 内で音塊を生成し、suffix ラベルが各和音の下に印字される",
+      "notes": "実現音 28/28 一致(符頭段位置+臨時記号 b19/#4/bb1・両者 common-time C)。twin は手展開(\\chordmode-in-voice は Lily# に無い・和音入力は独自レイヤ)——LP 実現音は \\displayLilyMusic dump(scratch\\lpreg\\chord-name-entry-dump.ly)。suffix 網羅照合: 14/28 が registry token と一致(単体 LpEntryRealization_MatchesLilyPond が LP dump を釘付け)、残 14 は語彙外(3-/3+/5+.3-/11/13/m13/^除去/slash-bass 実現、単体 LpEntryForms_OutsideTheVocabulary_DoNotResolve)。:13 は 11 省略・:m13 は 11 保持を確認。ラベルは両者とも「下・ascent 依存 Y・水平重なりは skyline 積み」(LP: :7 が (nothing) に押され 8.57ss、Lily#: ^3 が :7\\^{~}5 に押され 9.65ss=段割り差の玉突き)。枠差 3: @text italic vs upright(beaming 既知)・アンカー=符頭中心 vs LP 列左端・段割り [13][15] vs [11][11][6](A4 justify 既知)"
     },
     "chord-name-exceptions.ly": {
       "category": "scheme",
@@ -1810,19 +1812,27 @@
     },
     "chord-names-bass.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "inversion (/bass) は和音メンバーを最下段へ落とし、added bass (/+bass) は全和音の下に追加。上=computed names・下=entered ラベル",
+      "notes": "第10号: f:maj7/+e の /+ が黙って壊れていた(パーサが + を stray skip→後続 pitch が新 entry に化ける・診断ゼロ=第8号と同族)。修正=ChordEntry に plus slot(LILYPOND-REF parser.yy:324 CHORD_BASS・:3877-3882 chord_separator)+ChordStructure.BassIsAdded。観測者 SlashAndAddedBass_ParseAsOneEntryEach(陽性対照: + 受理を外すと FAIL 確認済)。実測: 音塊 6/6 で段位置+符頭種(q/h)完全一致(dump=scratch\\lpreg\\chord-names-bass-dump.ly)。computed name は両形式同一・両者列左端揃え・一定高(LP yrel -3.22 vs -2.93=padding 差)。LP は maj7 を上付き三角 polygon で描く(Lily# は plain \"Fmaj7\"=既知 Phase-1 枠差)。ラベル Y は per-note+skyline 同族・乖離は列間隔差の玉突き(LP 6.6ss vs Lily# 10.9ss)のみ"
     },
     "chord-names-in-grand-staff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "GrandStaff 内の chords が使え、chord name は最上段の上に印字される(段間ではない)",
+      "notes": "第11号: multi-staff の CollectBlocks が per-staff ループ後の _currentStaffIndex(=最後の staff)を渡し、anonymous chords の F が段間(下段の直上 y18.04)に落ちていた。修正=staffIndex 0(最上段)固定。実測: F baseline は top line の上 LP 1.5ss vs Lily# 1.6ss(Δ0.1)・両者とも先頭音列に左揃え・staff も名前の分だけ下がる(top line LP 10.09 vs 10.19)。観測者 AnonymousChords_OnMultiStaff_AttachToTheTopStaff(陽性対照: _currentStaffIndex に戻すと FAIL 確認済——ただし確認後の checkout で修正を一度消し再適用した)。LP の位置決めは文脈順(chords が << 先頭)由来・Lily# は anonymous=top 固定という枠差は notes に留意"
     },
     "chord-names-languages.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "chord name の言語切替(german/semi-german/italian/french/english)が名前綴りを変える",
+      "notes": "false plain: 本体はきれいだが \\include chord-names-languages.ily が \\layout override・\\consists・\\set instrumentName 満載。Lily# に \\germanChords 族の言語切替も instrumentName も無い(chord name は英語綴り固定)。include のある本は開いてから信じる(既知の型)"
     },
     "chord-names-languages2.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "languages と同一だが入力言語 deutsch。結果は同一のはず",
+      "notes": "同じ .ily include の false plain + \\language \"deutsch\"(Lily# に入力言語切替なし)。languages 本と同時 skip"
     },
     "chord-names-lower-case-minor.ly": {
       "category": "scheme",
@@ -1830,15 +1840,21 @@
     },
     "chord-names-rests.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "chords 行では r も R も noChordSymbol(\"N.C.\")を印字し、s は何も印字しない",
+      "notes": "第12号: chords{} 内の r/s/R がパーサの stray-token recovery で黙って全滅していた(診断ゼロ・第8/10号と同族)。修正=ParseChordBodyItem が rest を受理+CollectAlignedItems で r/R→\"N.C.\" item・s→timing 前進のみ(LILYPOND-REF scheme-engravers.scm:1520-1527 Current_chord_text_engraver=general-rest-event・engraver-init.ly:952 noChordSymbol=\"N.C.\")。実測: 両者とも N.C. 2 個(小節1,3)・小節2 空・小節頭揃え(LP y9.11 vs 9.04)。観測者 ChordRow_RestsPrintNC_SkipsDoNot(陽性対照 FAIL 確認済——1回目は CRLF で置換空振り=偽陰性を踏んだ)。LP 原本は小節線なし・twin は | 区切り(同 3 小節)"
     },
     "chord-names-spanbar.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Span_bar_stub_engraver が ChordNames でも働き、chord name が span bar と重ならない",
+      "notes": "書けない文法 3 つ: q(和音リピート=chord-repetition 族で未実装)・\\improvisationOn(斜線符頭なし)・StaffGroup の span bar + 段間 ChordNames(スタブ機構ごと未移植)。chord-repetition 族 6 本が直後に控えており、q の port はそちらでまとめて判断"
     },
     "chord-repetition-accidentals.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "pending",
+      "claim": "q は強制(!)・注意(?)臨時記号を複製しない",
+      "notes": "skip を撤回(ユーザー指摘 2026-08-06): f? は @courtesy(括弧付き・accidental.cc:147-148)で 1:1 に書ける。f! (裸の強制)のみ Lily# に対応物なし——@editorial は AccidentalSuggestion(上の小型)で別物。処理方針: f! 小節を両側から落とし f? 小節を @courtesy で対にする(breathing-sign-accidentals と同じ枠揃え)。q port と同セッションで処理。Lily# では @courtesy は mark なので q が複製しないのは構造上自然(LP は music property なので明示クリア music-functions.scm:936-939 が要る——機構差・法則同一)"
     },
     "chord-repetition-relative.ly": {
       "category": "plain",
@@ -1854,7 +1870,9 @@
     },
     "chord-repetition-tweak.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\tweak は q にも(書き出した場合と同様に)効く。\\chordRepeats dynamic-event で複製種を拡張できる",
+      "notes": "Lily# に \\tweak(音単位の grob 調整)も \\chordRepeats(複製 event-type の opt-in)も無い。override は範囲文法(reference_lilysharp_grob_override_scope)で別物。q port の対象外と明記"
     },
     "chord-repetition.ly": {
       "category": "plain",

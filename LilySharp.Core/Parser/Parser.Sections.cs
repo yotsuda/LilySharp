@@ -241,6 +241,12 @@ internal sealed partial class Parser
             return ParseBarline();
         if (SyntaxFacts.IsPitchKind(Current.Kind))
             return ParseChordEntry();
+        // r / s / R in a chord row: rests print the no-chord symbol, spacers
+        // print nothing; all advance the row's timing (collector side).
+        // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
+        //   — general-rest-event sets currentChordText to noChordSymbol.
+        if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full)
+            return ParseRest();
         return null;
     }
 
@@ -248,13 +254,14 @@ internal sealed partial class Parser
         or SyntaxKind.IntegerLiteral
         or SyntaxKind.Dot or SyntaxKind.Minus;
 
-    // root[duration][:quality][/bass] — reuses the pitch and duration grammar.
+    // root[duration][:quality][/bass | /+bass] — reuses the pitch and duration
+    // grammar.
     private ChordEntryGreen ParseChordEntry()
     {
         var root = ParsePitch();
         var duration = ParseOptionalDuration();
 
-        SyntaxToken? colon = null, slash = null;
+        SyntaxToken? colon = null, slash = null, plus = null;
         GreenNode? bass = null;
         var qualityTokens = new List<GreenNode?>();
 
@@ -277,15 +284,22 @@ internal sealed partial class Parser
             }
         }
 
-        // '/bass' — a slash bass pitch (c/g).
+        // '/bass' (inversion) or '/+bass' (added bass) — without the '+' branch the
+        // '+' fell to the caller's stray-token recovery and the following pitch
+        // opened a NEW entry, silently mangling the row (no diagnostic).
+        // LILYPOND-REF: lily/parser.yy:324 CHORD_BASS — the "/+" token;
+        // LILYPOND-REF: lily/parser.yy:3877-3882 chord_separator — CHORD_SLASH
+        // steno_tonic_pitch | CHORD_BASS steno_tonic_pitch.
         if (Check(SyntaxKind.Slash))
         {
             slash = Advance();
+            if (Check(SyntaxKind.Plus))
+                plus = Advance();
             if (SyntaxFacts.IsPitchKind(Current.Kind))
                 bass = ParsePitch();
         }
 
-        return new ChordEntryGreen(root, duration, colon, [.. qualityTokens], slash, bass);
+        return new ChordEntryGreen(root, duration, colon, [.. qualityTokens], slash, plus, bass);
     }
 
     /// <summary>Any barline token that ends a lyric measure (excludes the dashed

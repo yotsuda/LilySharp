@@ -250,7 +250,16 @@ public sealed record ChordStructure(
     // (e.g. "M7", "7#9"): the interval set is unknown (Tones stays empty, so no
     // note expansion), but the root still yields a Roman degree — so `c:M7`
     // shows "CM7" / "IM7" instead of falling back to the literal name.
-    string? RawSuffix = null)
+    string? RawSuffix = null,
+    // True for the /+bass ADDED-bass entry form. LP realizes /bass as an
+    // inversion (a chord member dropped to the bottom) and /+bass as an extra
+    // note below, but PRINTS the same name for both — so DisplayName ignores
+    // this; it records entry intent for a future realization.
+    // LILYPOND-REF: scm/chord-entry.scm:91-115 process-inversion — a non-member
+    // slash pitch degrades to a plain bass.
+    // LILYPOND-REF: scm/chord-entry.scm:46-50 interpret-bass — the /+FOO part
+    // always sets a plain bass (never an inversion).
+    bool BassIsAdded = false)
 {
     // Diatonic-step semitones come from RelativeOctave.StepSemitoneOf (single source).
 
@@ -426,9 +435,10 @@ public sealed record ChordStructure(
     /// Parses a <c>chords { }</c> chord entry — the ONE chord format Lily# accepts:
     /// a Lily# (Dutch) root pitch (<c>c</c>, <c>cis</c>, <c>bes</c>), an optional
     /// <c>:</c> then a quality token (empty = major), and an optional <c>/</c> slash
-    /// bass. So "c", "c:m7", "cis:m7", "bes:7", and "g:7/b" parse; a chord symbol
-    /// ("Cm7", "C#m7") and an unknown quality ("c:7#9") do not. Shared by the
-    /// <c>chords { }</c> block and @chord annotations, so the two stay in one format.
+    /// bass or <c>/+</c> added bass. So "c", "c:m7", "cis:m7", "bes:7", "g:7/b" and
+    /// "f:maj7/+e" parse; a chord symbol ("Cm7", "C#m7") and an unknown quality
+    /// ("c:7#9") do not. Shared by the <c>chords { }</c> block and @chord
+    /// annotations, so the two stay in one format.
     /// </summary>
     public static bool TryParseChordEntry(string s, out ChordStructure result)
     {
@@ -439,6 +449,12 @@ public sealed record ChordStructure(
         int slash = s.IndexOf('/');
         string main = slash >= 0 ? s.Substring(0, slash) : s;
         string? bass = slash >= 0 ? s.Substring(slash + 1) : null;
+        bool bassAdded = false;
+        if (bass != null && bass.StartsWith('+'))
+        {
+            bassAdded = true;
+            bass = bass.Substring(1);
+        }
 
         int colon = main.IndexOf(':');
         string pitchStr = colon >= 0 ? main.Substring(0, colon) : main;
@@ -458,7 +474,8 @@ public sealed record ChordStructure(
             bassAlter = ba;
         }
 
-        result = new ChordStructure(step, alter, quality, bassStep, bassAlter);
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter,
+            BassIsAdded: bassAdded);
         return true;
     }
 

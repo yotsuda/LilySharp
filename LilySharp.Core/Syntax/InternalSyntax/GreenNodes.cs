@@ -1173,18 +1173,20 @@ internal sealed class ChordPartBlockGreen : GreenSyntaxNode
 
 /// <summary>
 /// A single chord entry inside a chordnames block: root[duration][:quality][/bass]
-/// (e.g. c1, a:m, g2:7, d:m7/f, b:m7.5-). Reuses PitchGreen for the root/bass and
-/// DurationGreen for the duration. The quality is a RUN of adjacent tokens (so
-/// m7.5- / 7sus4 are captured whole, not just their first token).
+/// (e.g. c1, a:m, g2:7, d:m7/f, b:m7.5-), where the bass may be the ADDED form
+/// /+bass (f:maj7/+e). Reuses PitchGreen for the root/bass and DurationGreen for
+/// the duration. The quality is a RUN of adjacent tokens (so m7.5- / 7sus4 are
+/// captured whole, not just their first token).
 /// </summary>
 internal sealed class ChordEntryGreen : GreenSyntaxNode
 {
     // Slots: 0 root, 1 duration?, 2 colon?, then the quality tokens (0+), then
-    // slash?, bass? as the final two slots. Children stay in SOURCE order so node
-    // positions / data-pos remain correct.
+    // slash?, plus?, bass? as the final three slots (plus = the /+ added-bass
+    // marker). Children stay in SOURCE order so node positions / data-pos
+    // remain correct.
     public ChordEntryGreen(GreenNode root, GreenNode? duration, SyntaxToken? colon,
-        GreenNode?[] qualityTokens, SyntaxToken? slash, GreenNode? bass)
-        : base(SyntaxKind.ChordEntry, [root, duration, colon, .. qualityTokens, slash, bass])
+        GreenNode?[] qualityTokens, SyntaxToken? slash, SyntaxToken? plus, GreenNode? bass)
+        : base(SyntaxKind.ChordEntry, [root, duration, colon, .. qualityTokens, slash, plus, bass])
     {
     }
 }

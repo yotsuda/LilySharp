@@ -202,6 +202,24 @@ internal sealed class ChordNameCollector
                 timing = Fraction.Zero;
                 continue;
             }
+            // r / R print the no-chord symbol at their moment; s (a skip) prints
+            // nothing. All three advance the row's timing like an entry.
+            // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
+            //   — general-rest-event (r and R, not s) → currentChordText = noChordSymbol;
+            // LILYPOND-REF: ly/engraver-init.ly:952 noChordSymbol = "N.C.", below ignatzek-chord-names.
+            if (item is RestSyntax rest)
+            {
+                if (rest.RestToken.Text != "s")
+                    _items.Add(new ChordNameItem(
+                        "N.C.", startMeasure + localMeasure, itemIndex: -1,
+                        rest.RestToken.Position, staffIndex,
+                        useTiming: true, timing: timing));
+                var restDur = rest.Duration?.ToFraction() ?? defaultDuration;
+                if (rest.Duration != null)
+                    defaultDuration = restDur;
+                timing += restDur * new Fraction(rest.MeasureCount, 1);
+                continue;
+            }
             if (item is not ChordEntrySyntax entry)
                 continue;
 
@@ -284,7 +302,7 @@ internal sealed class ChordNameCollector
                 bars++;
                 pendingEntries = false;
             }
-            else if (item is ChordEntrySyntax)
+            else if (item is ChordEntrySyntax or RestSyntax)
             {
                 atRunStart = false;
                 pendingEntries = true;
@@ -496,7 +514,8 @@ internal sealed class ChordNameCollector
         if (rootStep >= 0 && LilySharp.Core.Music.ChordQualityRegistry.TryResolve(entry.QualityText, out var quality))
         {
             var structure = new LilySharp.Core.Music.ChordStructure(
-                rootStep, rootAlter, quality, bassStep, bassAlter);
+                rootStep, rootAlter, quality, bassStep, bassAlter,
+                BassIsAdded: entry.BassIsAdded);
             return (structure.DisplayName, structure);
         }
 
@@ -508,7 +527,8 @@ internal sealed class ChordNameCollector
         {
             var raw = new LilySharp.Core.Music.ChordStructure(
                 rootStep, rootAlter, LilySharp.Core.Music.ChordQuality.Major,
-                bassStep, bassAlter, RawSuffix: entry.QualityText);
+                bassStep, bassAlter, RawSuffix: entry.QualityText,
+                BassIsAdded: entry.BassIsAdded);
             return (raw.DisplayName, raw);
         }
 

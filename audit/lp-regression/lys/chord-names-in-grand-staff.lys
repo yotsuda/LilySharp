@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/chord-names-in-grand-staff.ly の Lily# 訳。
+// CLAIM: GrandStaff でも chord names が使え、名前は「最上段の上」に印字される
+// (段の間や下段の上ではない)。
+// 綴り: LP \relative 無参照=先頭音は絶対 → LP a'/a, = Lily# a/a,,。
+octave absolute
+time 4/4
+
+part rh { clef treble }
+part lh { clef bass }
+
+section Main {
+  rh { a4 a a a | }
+  lh { a,,4 a,, a,, a,, | }
+  chords { f1 | }
+}
+
+form main { ~Main }
+
+score main { grandStaff { staff rh staff lh } }

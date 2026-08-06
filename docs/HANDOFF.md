@@ -58,6 +58,100 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第100セッション第1便（＝**lp-regression キューの chord 族 7 本処理**
+（exact 1・fixed 3・skip 3）。handoff が予告した「suffix 網羅照合の本格物」を消化）。
+
+⚠️ **コード commit 3**（`18cd513e` 和音 entry+/+bass・`dae18cc5` grandstaff 帰属・
+`ef7ff70d` chords 行の r/s/R）＋ handoff。**push 禁止継続**。
+
+★★★ **① 処理 7 本の内訳**:
+- **chord-name-entry.ly = exact**（10 本目）——\chordmode 27 suffix の実現音を
+  `\displayLilyMusic` で dump（`scratch\lpreg\chord-name-entry-dump.ly`・harness 専用の
+  手筋として今後も使える）→ 音塊を手展開した twin で **28/28 小節の符頭段位置+
+  臨時記号(♭19/♯4/𝄫1)完全一致**。suffix 網羅照合: **14/28 が registry と一致**
+  （単体 `LpEntryRealization_MatchesLilyPond` が dump を釘付け）、残 14 は語彙外
+  （3-/3+/5+.3-/11/13/m13/^除去/slash-bass 実現・`LpEntryForms_OutsideTheVocabulary_DoNotResolve`）。
+  :13 は 11 省略・:m13 は 11 保持。
+- **chord-names-bass.ly = fixed 第10号**——`f:maj7/+e` の **/+ が黙って壊れる**
+  （+ が stray skip→後続 pitch が新 entry・診断ゼロ＝第8号と同族の silent-swallow）。
+  修正＝ChordEntry に plus slot（LILYPOND-REF parser.yy:324 CHORD_BASS・:3877-3882
+  chord_separator）+ `ChordStructure.BassIsAdded`（表示は LP も両形式同一「F△/E」）。
+  実現音 6/6 一致。観測者 `SlashAndAddedBass_ParseAsOneEntryEach`。
+- **chord-names-in-grand-staff.ly = fixed 第11号**——multi-staff の anonymous chords{} が
+  **ループ後の `_currentStaffIndex`（=最後の staff）に帰属**し F が段間に落ちていた。
+  修正＝`CollectBlocks(..., staffIndex: 0)`（最上段固定）。F は top line 上 LP 1.5ss vs
+  1.6ss。観測者 `AnonymousChords_OnMultiStaff_AttachToTheTopStaff`。
+- **chord-names-rests.ly = fixed 第12号**——chords{} 内の **r/s/R が stray recovery で
+  全滅**（同族 3 例目）。修正＝rest 受理+ r/R→**"N.C."**・s→timing のみ
+  （LILYPOND-REF scheme-engravers.scm:1520-1527 Current_chord_text_engraver・
+  engraver-init.ly:952 noChordSymbol）。観測者 `ChordRow_RestsPrintNC_SkipsDoNot`。
+  ⚠️ noChordSymbol は Lily# では**定数 "N.C."**（LP はプロパティで差替可＝正直な札）。
+- **skip 3**: languages/languages2（**false plain**——include が override 満載＋言語切替
+  文法なし）・spanbar（q・\improvisationOn・span-bar stub の 3 重欠落）。
+
+★★ **② 比較器の新しい道具**（scratch\lpreg\ に置いた・再利用可）:
+- **LP SVG の `<a href="textedit://…:line:col">` が grob→ソース位置の台帳**。幾何
+  クラスタリング不要で小節/和音単位のグループ化が正確に出る（`lp-extract2.ps1` の型）。
+- Lily# 側は `data-pos` → .lys 行 map で同じことができる（`ls-extract.ps1`）。
+- ⚠️ 誤認 2 つ踏んだ: LP の**拍子 C はグリフ**（natural と誤分類しかけた——両者とも
+  4/4 を C 記号で印字）・LP の **maj7 は上付き三角 `<polygon>`**（tspan に出ない）。
+
+★★ **③′ perf 実測（ユーザー問「プレビュー速度は？」・基準 548a0499 worktree vs
+作業ツリー・Release・交互 min-of-6・両順序）**: 重い側＝**perf-chords**（120 小節×4
+chord entry=480 個・slash 入り・`scratch\perf\` に退避）で **−0.8/+2.6%＝符号が順序に
+付く=床以下**。plain 対照 −0.3/+0.6%。新文法の絶対コスト（/+ と r 入り 480 個）も
+1442ms vs 1452ms で増なし。**同一入力の SVG は両ツリーでバイト一致**（比較の前提と
+出力不変を同時に確認）。構造的にも新コストは全て entry 単位 O(1)（Plus の Check 1 回+
+null slot 1 個+rest の kind 分岐）で、**per-system 再実行経路（第16便の罠）には
+乗っていない**（chord 収集は collect 1 回・engraver 不変更）。ランナー=
+`scratch\perf\run-chords-bench.ps1`。
+
+★ **③ 事故 2 件（教訓）**: ⑴ 陽性対照の後 `git checkout --` で**未コミットの修正ごと**
+戻した（即再適用で復旧。対照は文字列置換→復元で行い、checkout は使わない）。
+⑵ pwsh の複数行 `.Replace` が **CRLF 不一致で空振り**→陽性対照が偽陰性
+（1 行 anchor+`-notmatch` 検査で置換成立を確認してから走らせる）。
+
+★★★ **frontier = chord-repetition 族＝ `q` の port（下見済・第1便続きで実施）**。
+族 6 本中 **skip は tweak の 1 本のみ**（\tweak/\chordRepeats なし）。**観測者は 5 本**
+（本体/relative/script-stack/times＋accidentals）。⚠️ accidentals は一度 skip して
+**ユーザー指摘で撤回**: `f?` は **@courtesy で 1:1** に書ける（括弧付き・
+accidental.cc:147-148）。`f!`（裸の強制）のみ対応物なし——**@editorial は
+AccidentalSuggestion（上の小型）で f! とは別物**。f! 小節を両側から落とし f? 小節を
+@courtesy で対にする（breathing-sign-accidentals と同じ枠揃え）。Lily# の @courtesy は
+mark なので q が複製しないのは構造上自然（LP は music property なので明示クリア
+music-functions.scm:936-939 が要る——機構差・法則同一）。
+**教訓: skip の「文法が無い」は Lily# 側の語彙(@註釈群)を検索してから言う。**
+- **LP 実体（読解済）**: q =「duration だけ持つ空 event-chord」。
+  **scm/music-functions.scm:923-948 expand-repeat-chords!** が walk で直前和音を追跡し、
+  **:855-921 copy-repeat-chord** が **note イベントのみ** deep-copy（既定 event-types =
+  rhythmic-event のみ→アーティキュレーション/指番号/テキスト非複製・duration は q の
+  もの・**cautionary/force-accidental はクリア**・q 自身への post-events は残る）。
+  直前和音が無い q は warning「Bad chord repetition」。
+- **relative の意味論**: LP は \relative 解決**後**に展開→ q は原和音の絶対音の複製・
+  次音のフレームは原和音を書いたのと同じ。Lily# は相対解決が collector 側なので
+  「**直前和音の解決済み絶対音を複製**」が対応形（フレーム伝播も同和音なので自然に一致）。
+- **Lily# 挿入点（walk 全数済）**: パーサは `ParseMusicItem` の dispatch に
+  **Identifier かつ text=="q"** で `ParseChordRepetition()`（ParseNote の音高なし版・
+  lexer 予約語化は不要=part 名 q を壊さない）。**ChordSyntax 消費は 19 ファイル 53 箇所**
+  ——本丸は MeasureCollector(+MusicWalk/Annotations)・MidiExporter・MusicXmlExporter・
+  Duration/Measure 系 validator・PhraseExtractor/ChordHarmonizer。**LilyPondExporter は
+  `q` をそのまま透過**（LP が理解する）。展開は LP と同じ「1 本の walk で q→原和音 map を
+  作る共有 resolver」を作り、各 walker はそれを引く（19 箇所に last-chord 追跡を
+  ばら撒かない）。⚠️ 構造 replay（~Main 複数回）は walk が毎回リセットで LP と同義。
+その後 chord-scripts・chord-tremolo-* が続く。
+
+plain 322 / 処理済 **55**（fixed 12・exact 10・skip 31・open 2＝automatic-polyphony-tabstaff・
+breathing-sign-accidentals。**breathing-sign の port 計画は前便 §1 参照——まだ生きている**。
+⚠️ chord-repetition-accidentals は skip→**pending に戻した**——@courtesy で半分書ける・
+frontier ブロック参照）。
+
+未 push **42**（この handoff で 43。数え直すこと。**⚠️ push しない**）・テスト
+**4131 passed / 0 failed / 4 skipped**（セッション終端で全スイート再確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 動き 0 枚。**
+
+## 以下は第99セッション第16便の経緯
+
 最終更新 第99セッション第16便（＝**beamlet-test.ly の open を返済＝fixed 第 9 号**。
 **BeamingPattern の tuplet span 移植**——第15便が自己申告していた債務そのもの）。
 

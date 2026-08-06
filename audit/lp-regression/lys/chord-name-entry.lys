@@ -1,0 +1,51 @@
+// lilypond-src/input/regression/chord-name-entry.ly の Lily# 訳。
+// CLAIM: chordname entry (\chordmode の pitch+suffix) が和音(音塊)を生成し、
+// suffix が各和音の下に印字される。
+// ⚠️ 枠の差: Lily# に \chordmode-in-voice(suffix→音塊の実現)は無い——和音入力は
+// Lily# 独自レイヤ(度数和音・@chord)。ここでは LP の実現音
+// (\displayLilyMusic で dump・scratch\lpreg\chord-name-entry-dump.ly)を
+// 音塊として手展開し、エングレービング(積み・臨時記号綴り・ラベル配置)を比較する。
+// entry 文法そのものの観測者は ChordQualityRegistry の単体照合(suffix 14/28 対応)。
+// 綴り: LP 絶対 c' = Lily# c。_"…" → @text("…").down(Lily# @text は italic・
+// LP の _"…" は upright——beaming.lys と同じ既知の枠差)。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    <c e g>1@text("(nothing)").down |
+    <c e g bes>1@text(":7").down |
+    <c ees g>1@text(":m").down |
+    <c ees g bes>1@text(":m7").down |
+    <c e gis>1@text(":aug").down |
+    <c e g b>1@text(":maj7").down |
+    <c ees ges>1@text(":dim").down |
+    <c ees ges beses>1@text(":dim7").down |
+    <c f g>1@text(":sus4").down |
+    <c d g>1@text(":sus2").down |
+    <c e g a>1@text(":6").down |
+    <c ees g a>1@text(":m6").down |
+    <c f g bes>1@text(":7sus4").down |
+    <c ees>1@text(":3-").down |
+    <c eis>1@text(":3+").down |
+    <c ees gis>1@text(":5+.3-").down |
+    <c e g bes>1@text(":7").down |
+    <c e g bes d'>1@text(":9").down |
+    <c e g bes d' f'>1@text(":11").down |
+    <c e g bes d' a'>1@text(":13").down |
+    <c ees g bes d' f' a'>1@text(":m13").down |
+    <c e bes>1@text(":7\^{~}5").down |
+    <c g>1@text("\^{~}3").down |
+    <g, c e>1@text("/g").down |
+    <gis, c e g>1@text("/gis").down |
+    <a, c e g>1@text("/a").down |
+    <f, c e g>1@text("/+f").down |
+    <g, c e g>1@text("/+g").down |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }
