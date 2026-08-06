@@ -94,6 +94,18 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   a16. は両方 LEFT で不動）。既存 2 本は `TupletDescription` に書き換え。
 - **perf**（訊かれる前に測った・worktree HEAD vs 作業ツリー・Release・交互 min-of-6・両順序・
   perf-plain）: **+3.2% / −6.4%＝符号が位置に付く**（床以下・系統無し）。
+  ⚠️⚠️ ★★★ **だが plain は tuplet を 1 個も含まず、重い側を測っていなかった**（ユーザー問
+  「perf を劣化させる実装はないか」への追試で発覚・同日）。**新ベンチ perf-triplets**
+  （120 小節×4 連桁triplet＝span 480・`scratch\perf\` に退避済み）で **+45.3/+17.3%＝両順序で
+  正**＝実勾配。犯人 2 匹とも**「システムごとに全 voice の DetectBeamGroups」**
+  （`BuildAllStaffSkylines`→`StaffTupletBracketLayouts`・既存の per-system 構造）に
+  乗った新コスト: ⑴ `InnermostSpan` が member×**voice 全 span** 線形走査、
+  ⑵ parent 連結が **O(全 span²)**。**修正＝span 表を小節別 index に**（`fc108c2a`・
+  出力はバイト一致のまま）→ **+7.9/−10.2%＝符号反転・床以下**。plain 再測 +5.3%（帯内）。
+  切り分けの根拠: beam 無し tuplet ベンチ（perf-triplets-q）は修正前でも +1.6%＝
+  BuildTupletSpans 自体は白、SVG ハッシュ一致＝下流も白、残りが上記 2 匹。
+  ★★ **教訓: 「per-系の新コスト」は per-system 再実行の掛け算で測る**——plain だけの
+  A/B は tuplet 経路の O(n²) を素通しした。ベンチは**新機能が重くする側の形**で作る。
 - **snapshot/台帳/ledger 全緑**（tuplet 系 15 本は ① の範囲外死で一時全滅→skip 修正で復帰）。
 
 ★ **③ 引用ラチェットの教訓**: `CitationsThatNameNothing_DoNotGrow` は
@@ -170,10 +182,12 @@ nested tuplet の corpus 本が来たら踏まれる——beam-subdivide 系は 
 chord display mode の memory（project_lilysharp_degree_chord_notation 他）を先に）。
 plain 322 / 処理済 **47**（fixed 9・exact 9・skip 27・open 2＝実測）。
 
-未 push **25**（この handoff で 26。`git rev-list --count origin/master..master` で数え直す。
-**⚠️ push しない**）・テスト **4106 passed / 0 failed / 4 skipped**（+3 単体・第16便後半は
-コード変更なしで不変）・台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106
-うち非ゼロ 2＝全部不変**・**Core 0 warning。snapshot 動き 0 枚。**
+未 push **34**（この handoff で 35。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ push しない**）・テスト **4106 passed / 0 failed / 4 skipped**・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning。snapshot 動き 0 枚。**
+（第16便のコード commit は計 3: `7e4a08c0` port・`e77ac1a2` 監査の LILYSHARP-OWN 3 印・
+`fc108c2a` span 小節別 index（perf）。いずれも出力不変——perf 修正は SVG バイト一致で確認。）
 
 ## 以下は第99セッション第15便の経緯
 

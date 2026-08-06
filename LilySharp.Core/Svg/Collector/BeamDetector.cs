@@ -153,7 +153,7 @@ internal sealed class BeamDetector
         TimeSignature timeSignature,
         List<BeamGroup> beamGroups,
         HashSet<(int, int)> consumed,
-        IReadOnlyList<TupletSpan>? tupletSpans = null,
+        IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
@@ -218,7 +218,7 @@ internal sealed class BeamDetector
         int endMeasure, int endItem,
         List<BeamGroup> beamGroups,
         HashSet<(int, int)> consumed,
-        IReadOnlyList<TupletSpan>? tupletSpans = null,
+        IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
@@ -412,7 +412,7 @@ internal sealed class BeamDetector
         TimeSignature timeSig,
         List<BeamGroup> beamGroups,
         HashSet<(int, int)>? consumed = null,
-        IReadOnlyList<TupletSpan>? tupletSpans = null,
+        IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
@@ -525,7 +525,7 @@ internal sealed class BeamDetector
 
     private BeamGroup CreateBeamGroup(List<(MusicItem item, int index, Fraction startPos)> group, int measureIndex,
         BeamingPattern.Options beamOptions,
-        IReadOnlyList<TupletSpan>? tupletSpans = null,
+        IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null)
     {
         var members = new List<BeamMember>();
@@ -653,7 +653,7 @@ internal sealed class BeamDetector
     private (int Left, int Right)[] BeamletCounts(
         IReadOnlyList<(MusicItem Item, Fraction Moment, int Measure, int Index)> members,
         BeamingPattern.Options options,
-        IReadOnlyList<TupletSpan>? tupletSpans)
+        IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans)
     {
         int firstMeasure = members.Count > 0 ? members[0].Measure : 0;
         Dictionary<TupletSpan, BeamingPattern.TupletDescription>? described = null;
@@ -674,11 +674,12 @@ internal sealed class BeamDetector
 
         TupletSpan? InnermostSpan(int measure, int index)
         {
-            if (tupletSpans is null)
+            // The measure index is the reason this is cheap — see BuildTupletSpans' remarks.
+            if (tupletSpans is null || !tupletSpans.TryGetValue(measure, out var measureSpans))
                 return null;
             TupletSpan? best = null;
-            foreach (var s in tupletSpans)
-                if (s.MeasureIndex == measure && s.StartIndex <= index && index <= s.EndIndex
+            foreach (var s in measureSpans)
+                if (s.StartIndex <= index && index <= s.EndIndex
                     && (best is null || s.NestingDepth > best.NestingDepth))
                     best = s;
             return best;
@@ -727,7 +728,8 @@ internal sealed class BeamDetector
 
     /// <summary>
     /// Resolves every tuplet bracket of a voice to its time span, parents linked by
-    /// containment. Null when the voice has no tuplets, so the common path stays free.
+    /// containment, INDEXED BY MEASURE. Null when the voice has no tuplets, so the common
+    /// path stays free.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -761,14 +763,33 @@ internal sealed class BeamDetector
     /// contains the child's — <c>Tuplet_description::parent_</c>. Brackets never span a bar
     /// line in this model, so containment within the measure is the whole test.
     /// </para>
+    /// <para>
+    /// ⚠️ THE PER-MEASURE INDEX IS LOAD-BEARING, not a convenience: BeamletCounts asks for
+    /// each member's innermost span, and the skyline pass re-runs beam detection over the
+    /// whole voice once PER SYSTEM (MultiStaffLayouter.BuildAllStaffSkylines →
+    /// StaffTupletBracketLayouts). As one flat list this walk was members × every span of
+    /// the VOICE, and 120 bars of beamed triplets paid +17〜45% end-to-end for it —
+    /// measured, both orders, before this index existed.
+    /// </para>
     /// </remarks>
-    private List<TupletSpan>? BuildTupletSpans(
+    private Dictionary<int, List<TupletSpan>>? BuildTupletSpans(
         Voice voice, TimeSignature timeSignature, ImmutableArray<TupletBracketItem> brackets)
     {
         if (brackets.IsDefaultOrEmpty)
             return null;
 
-        var spans = new List<TupletSpan>(brackets.Length);
+        // Brackets grouped by measure up front: every later step is per-measure, and the
+        // whole builder re-runs once per system (see the remarks) — a flat scan per measure
+        // was measurable at corpus scale.
+        var bracketsByMeasure = new Dictionary<int, List<TupletBracketItem>>();
+        foreach (var b in brackets)
+        {
+            if (!bracketsByMeasure.TryGetValue(b.MeasureIndex, out var list))
+                bracketsByMeasure[b.MeasureIndex] = list = new List<TupletBracketItem>();
+            list.Add(b);
+        }
+
+        var byMeasure = new Dictionary<int, List<TupletSpan>>();
         var effectiveTimeSig = timeSignature;
         for (int mi = 0; mi < voice.Measures.Length; mi++)
         {
@@ -777,14 +798,7 @@ internal sealed class BeamDetector
                 if (item is TimeSignatureChangeItem tsc)
                     effectiveTimeSig = tsc.NewTime;
 
-            bool anyBracketHere = false;
-            foreach (var b in brackets)
-                if (b.MeasureIndex == mi)
-                {
-                    anyBracketHere = true;
-                    break;
-                }
-            if (!anyBracketHere)
+            if (!bracketsByMeasure.TryGetValue(mi, out var measureBrackets))
                 continue;
 
             // positions[k] = moment of measure.Items[k]; one extra entry so a bracket
@@ -799,10 +813,9 @@ internal sealed class BeamDetector
             }
             positions[measure.Items.Length] = position;
 
-            foreach (var b in brackets)
+            var spans = new List<TupletSpan>(measureBrackets.Count);
+            foreach (var b in measureBrackets)
             {
-                if (b.MeasureIndex != mi)
-                    continue;
                 // LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
                 // items is another stream's — the stem-direction probe (MeasureCollector
                 // .ResolveBeamStemDirections) hands over the whole collector's bracket
@@ -820,20 +833,26 @@ internal sealed class BeamDetector
                     positions[b.StartNoteIndex], positions[b.EndNoteIndex + 1],
                     lpNumerator: b.Denominator, lpDenominator: b.Numerator));
             }
+            if (spans.Count == 0)
+                continue;
+
+            // Parent linking stays within the measure — brackets never span a bar line, so
+            // a parent can only live in its child's own measure.
+            foreach (var s in spans)
+            {
+                TupletSpan? parent = null;
+                foreach (var t in spans)
+                    if (t.NestingDepth < s.NestingDepth
+                        && t.StartIndex <= s.StartIndex && s.EndIndex <= t.EndIndex
+                        && (parent is null || t.NestingDepth > parent.NestingDepth))
+                        parent = t;
+                s.Parent = parent;
+            }
+
+            byMeasure[mi] = spans;
         }
 
-        foreach (var s in spans)
-        {
-            TupletSpan? parent = null;
-            foreach (var t in spans)
-                if (t.MeasureIndex == s.MeasureIndex && t.NestingDepth < s.NestingDepth
-                    && t.StartIndex <= s.StartIndex && s.EndIndex <= t.EndIndex
-                    && (parent is null || t.NestingDepth > parent.NestingDepth))
-                    parent = t;
-            s.Parent = parent;
-        }
-
-        return spans;
+        return byMeasure.Count == 0 ? null : byMeasure;
     }
 
     /// <summary>auto-knee-gap, in staff spaces.</summary>
@@ -1118,7 +1137,7 @@ internal sealed class BeamDetector
         int measureIndex,
         BeamingPattern.Options beamOptions,
         List<BeamGroup> beamGroups,
-        IReadOnlyList<TupletSpan>? tupletSpans = null,
+        IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
