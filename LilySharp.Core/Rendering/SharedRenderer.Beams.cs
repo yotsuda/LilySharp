@@ -220,14 +220,52 @@ internal static partial class SharedRenderer
             double beamTranslation = EngravingDefaults.BeamTranslationOf(
                 EngravingDefaults.BeamThickness, 1.0,
                 grp.Members.Max(m => m.BeamCount));
-            foreach (var seg in BeamSubdivision.CalcBeamSegments(
-                         beamingInput, beamRanks,
-                         EngravingDefaults.BeamletLength,
-                         EngravingDefaults.BeamletMaxLengthProportion, halfStem))
+            // Tremolo-pair gap: the gap-count beams NEAREST THE NOTEHEADS stop
+            // short of the stems so the repeat symbol cannot be read as an
+            // ordinary beam (half-note pairs carry GapCount 0 and reach).
+            // LILYPOND-REF: lily/beam.cc:470-526 calc_beam_segments — gapped iff
+            //   stem_dir * rank < stem_dir * ranks[-stem_dir] + gap_count;
+            // the gapped ends then shrink by the gap length (get_gaps; Beam.gap
+            // = 0.8, scm/define-grobs.scm Beam).
+            int tremoloGapCount = 0;
+            foreach (var m in grp.Members)
+                tremoloGapCount = Math.Max(tremoloGapCount, m.Item switch
+                {
+                    NoteItem tgn => tgn.TremoloGapCount,
+                    ChordItem tgc => tgc.TremoloGapCount,
+                    _ => 0,
+                });
+            var segments = BeamSubdivision.CalcBeamSegments(
+                beamingInput, beamRanks,
+                EngravingDefaults.BeamletLength,
+                EngravingDefaults.BeamletMaxLengthProportion, halfStem);
+            int noteheadSideRank = 0;
+            if (tremoloGapCount > 0 && segments.Count > 0)
+                noteheadSideRank = grp.StemUp
+                    ? segments.Min(s => s.Rank)
+                    : segments.Max(s => s.Rank);
+            foreach (var seg in segments)
             {
+                double xl = seg.XLeft, xr = seg.XRight;
+                if (tremoloGapCount > 0)
+                {
+                    int d = grp.StemUp ? 1 : -1;
+                    if (d * seg.Rank < d * noteheadSideRank + tremoloGapCount)
+                    {
+                        xl += EngravingDefaults.TremoloBeamGap;
+                        xr -= EngravingDefaults.TremoloBeamGap;
+                        // LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
+                        // no clamp); this skip only fires when the pair is
+                        // narrower than 2×gap (+0.1), which no printable pair
+                        // reaches (16th-display pairs already span ~2.4ss).
+                        // Nothing observes it; delete if LP grows a clamp.
+                        if (xr - xl < 0.1)
+                            continue;
+                    }
+                }
                 double yOff = beamTranslation * seg.Rank;
-                DrawBeamSegment(seg.XLeft, PrimaryBeamYAt(seg.XLeft) + yOff,
-                    seg.XRight, PrimaryBeamYAt(seg.XRight) + yOff, bgc);
+                DrawBeamSegment(xl, PrimaryBeamYAt(xl) + yOff,
+                    xr, PrimaryBeamYAt(xr) + yOff, bgc);
             }
 
             // Stems for beam members (replace any individual stems). For knees

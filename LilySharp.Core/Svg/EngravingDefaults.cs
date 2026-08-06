@@ -112,6 +112,12 @@ internal static class EngravingDefaults
     // LILYPOND-REF: lily/beam.cc Beam::get_beam_translation — for <4 beams,
     // (2·ss + line − beam-thickness)/2 (ss = staff-space = 1.0 here).
     public const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0;
+    /// <summary>How far a GAPPED tremolo-pair beam stops short of each stem —
+    /// the visual break that keeps the repeat symbol from reading as an
+    /// ordinary beam.</summary>
+    // LILYPOND-REF: scm/define-grobs.scm Beam (gap . 0.8).
+    // LILYPOND-REF: lily/beam.cc:403-427 get_gaps — reads the gap length.
+    public const double TremoloBeamGap = 0.8;
     /// <summary>A GRACE beam's declared thickness — LilyPond states it, it is not derived.</summary>
     /// <remarks>
     /// LILYPOND-REF: scm/music-functions.scm:635-648 <c>general-grace-settings</c> —

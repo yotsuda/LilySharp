@@ -1,0 +1,17 @@
+// lilypond-src/input/regression/chord-tremolo-whole.ly の Lily# 訳。
+// CLAIM: 全音符の 2音 tremolo が全音符と衝突しない（梁が符頭を避ける）。
+// 綴り: LP \relative c''' の g = G5・a = A5 → Lily# 既定枠(C4)では最寄りの g が
+// G3(下4度)なので g'' a（g' と書くと G4=1 オクターブ低い——1 回踏んだ）。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    repeat tremolo 32 { g''64 a }
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

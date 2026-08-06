@@ -1,0 +1,31 @@
+// lilypond-src/input/regression/chord-tremolo-articulations.ly の Lily# 訳。
+// CLAIM: tremolo body のアーティキュレーション/強弱は時間計算を乱さない——
+// 実音 2 つだけが数えられ、各小節はちょうど満たされる。
+// 綴り: LP \relative c' の d e = D4 E4 → Lily# 裸 d e。^"Markup" =
+// @text("Markup").up。\f=@f・\sfz=@sfz・\trill=@trill・-.=@staccato・->=@accent。
+// ⚠️ 枠合わせ: LP 原本 2 小節目後半の hairpin (d32\> e\!) は Lily# に終端 \! の
+// 綴りが無く、両側とも素の d32 e に落とした(scratch\lpreg\
+// chord-tremolo-articulations.ly)。\barNumberCheck は検査コマンドで ink 無し・落とした。
+// Lily# の body 数えは Body.Items 直(mark は音符ノードの中)なので、LP が踏んだ
+// 「イベント 3 つ」型の数え間違いは構造的に起きない——観測は小節の充足で行う。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    repeat tremolo 4 { d16@f e@staccato }
+    repeat tremolo 4 { d16@accent e } |
+    repeat tremolo 4 { d16 e@f }
+    repeat tremolo 8 { d32 e } |
+    repeat tremolo 2 { d8@trill e }
+    repeat tremolo 2 { d8@sfz e } |
+    time 2/4
+    repeat tremolo 8 { d32@text("Markup").up e } |
+    c4 c4
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

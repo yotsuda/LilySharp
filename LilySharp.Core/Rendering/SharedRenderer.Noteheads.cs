@@ -575,6 +575,23 @@ internal static partial class SharedRenderer
             if (note.HasTremolo)
                 DrawTremolo(stemX, noteY, stemEndY, stemUp, note.TremoloBeams, hasFlag, gc);
         }
+        else if (noteValue < 2 && !isBeamed && note.HasTremolo)
+        {
+            // Whole-note tremolo: there is no stem to hang the slashes on, so
+            // they anchor 1.5ss beyond the head in the (would-be) stem
+            // direction and centre on the head.
+            // LILYPOND-REF: lily/stem-tremolo.cc:349-366 y_offset — end_y =
+            //   note_head + dir * 1.5 when duration_log <= 0 (invisible stem);
+            //   :243-248 untranslated_stencil aligns the stack on the flag
+            //   closest to the head, further flags 0.81 apart (:115-125
+            //   get_beam_translation, beamless).
+            // LILYPOND-REF: scm/define-grobs.scm StemTremolo
+            //   (parent-alignment-X . CENTER) — centred on the head column.
+            double headCenterX = x
+                + GlyphMetrics.GetNoteheadBBox(noteValue).Width / 2
+                  * (note.IsCue ? EngravingDefaults.CueScale : 1.0);
+            DrawStemlessTremolo(headCenterX, noteY, stemUp, note.TremoloBeams, gc);
+        }
 
         // Augmentation dots: the dot column sits one dot-width right of the
         // head's right edge (per-duration head width — whole/half heads are

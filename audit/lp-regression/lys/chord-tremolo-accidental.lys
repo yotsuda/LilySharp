@@ -1,0 +1,27 @@
+// lilypond-src/input/regression/chord-tremolo-accidental.ly の Lily# 訳。
+// CLAIM: 2音 tremolo は臨時記号の存在に適応する（<dis>/<dis fis> の♯が
+// ペアの間隔・梁に食い込まず、間隔が広がる）。
+// 綴り: LP 絶対 c'' = Lily# c'（1 アポストロフィ下）。和音 body は今便で
+// pair 機構に配線（従来は書かれた 32 分のまま黙って描かれていた）。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    repeat tremolo 16 { c'32 d' }
+    repeat tremolo 16 { c'32 <dis'> }
+    repeat tremolo 16 { c'32 <dis' fis'> }
+    repeat tremolo 8 { c'32 d' }
+    repeat tremolo 8 { c'32 <dis'> }
+    repeat tremolo 8 { c'32 <dis' fis'> }
+    repeat tremolo 4 { c'32 d' }
+    repeat tremolo 4 { c'32 <dis'> }
+    repeat tremolo 16 { b'32 <cis''> }
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

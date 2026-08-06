@@ -912,6 +912,46 @@ internal static partial class SharedRenderer
     /// Slope — calc_slope's non-beam branch (stem-tremolo.cc:75-78): a DOWN-stem flag gets
     /// the steeper 0.40 (avoids flag/stem collision), else 0.25.
     /// </remarks>
+    /// <summary>Tremolo slashes for a STEMLESS note (a whole/breve): the flag
+    /// nearest the head sits 1.5ss beyond the outermost head in the would-be
+    /// stem direction, the rest stack outward 0.81 apart, all centred on the
+    /// head and rising to the right at the beamless slope.
+    /// LILYPOND-REF: lily/stem-tremolo.cc:349-366 y_offset (whole_note branch),
+    /// :45-79 calc_slope (0.25 below three flags), :81-94 calc_width (1.5 with
+    /// no beam and no flag), :127-169 raw_stencil.</summary>
+    private static void DrawStemlessTremolo(
+        double headCenterX, double headY, bool up, int beamCount, IDrawingContext gc)
+    {
+        if (beamCount <= 0) return;
+        const double width = 1.5;
+        const double slope = 0.25;
+        // LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+        // folded to 1.0 — grace/cue tremolos (where it shrinks) have no Lily#
+        // spelling yet, and nothing observes the folded factor.
+        const double translation = 0.81;
+        // ⚠️ LP re-decides the direction when the whole note stands in a
+        // multi-voice collision (stem-tremolo.cc:288-309 calc_direction) —
+        // NOT ported; this takes the note's own stem direction. No book and
+        // no observer reaches that branch yet.
+        double dir = up ? 1 : -1;
+        for (int i = 0; i < beamCount; i++)
+        {
+            // Y-up page frame: +1.5 above the head for an up "stem".
+            double y = headY + dir * (1.5 + translation * i);
+            double dy = (width / 2) * slope;
+            gc.DrawLine(headCenterX - width / 2, y - dy, headCenterX + width / 2, y + dy,
+                Color.Black, EngravingDefaults.BeamThickness);
+        }
+    }
+
+    // ⚠️ LILYSHARP-OWN (ticketed 2026-08-06, session 100): this STEMMED slash
+    // model is NOT LilyPond's. It steps thickness+0.8 = 1.28 between slashes
+    // where LP steps beam_translation 0.81 (stem-tremolo.cc:115-125 — the same
+    // 0.81 DrawStemlessTremolo below uses = a second spelling of one quantity),
+    // and it centres the stack on the stem MIDPOINT where LP anchors at the
+    // stem end minus flag/beam corrections (stem-tremolo.cc:314-368 y_offset).
+    // Pinned only by Lily#'s own snapshot (grammar-2026-06-09); no LP-measured
+    // observer. Fixing it means re-basing that snapshot — measure first.
     private static void DrawTremolo(
         double stemX, double stemAttachY, double stemEndY,
         bool stemUp, int beamCount, bool hasFlag, IDrawingContext gc)

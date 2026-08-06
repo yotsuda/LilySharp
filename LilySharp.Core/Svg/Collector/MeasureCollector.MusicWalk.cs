@@ -443,6 +443,7 @@ public sealed partial class MeasureCollector
                         {
                             TimeScale = noteItem.TimeScale * new Fraction(1, 2),
                             TremoloPairBeams = tpn.Beams,
+                            TremoloGapCount = tpn.GapCount,
                             HasBeamStart = _tremoloPairFirst,
                             HasBeamEnd = !_tremoloPairFirst,
                         };
@@ -536,6 +537,22 @@ public sealed partial class MeasureCollector
                         && am.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
                     bool isCue = _cueDepth > 0;
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                    if (_tremoloPairShape is { } tpc)
+                    {
+                        // Two-note tremolo with a chord body (`repeat tremolo N
+                        // { c32 <dis fis> }`): same halving/beam-joining as the
+                        // note case — the chord case used to skip this, so a
+                        // chord in a pair silently rendered at its written value.
+                        chordItem = chordItem with
+                        {
+                            TimeScale = chordItem.TimeScale * new Fraction(1, 2),
+                            TremoloPairBeams = tpc.Beams,
+                            TremoloGapCount = tpc.GapCount,
+                            HasBeamStart = _tremoloPairFirst,
+                            HasBeamEnd = !_tremoloPairFirst,
+                        };
+                        _tremoloPairFirst = false;
+                    }
                     if (arpBracket)
                         chordItem = chordItem with { HasArpeggioBracket = true };
                     if (ExtractNoteheadStyle(chord) is var chStyle && chStyle != NoteheadStyle.Default)

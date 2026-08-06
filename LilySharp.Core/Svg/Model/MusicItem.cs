@@ -104,6 +104,14 @@ public sealed record NoteItem : MusicItem
     /// each (TimeScale ½). 0 = not part of a pair.
     /// LILYPOND-REF: lily/chord-tremolo-engraver.cc.</summary>
     public int TremoloPairBeams { get; init; }
+    /// <summary>How many of the pair's beams are GAPPED — drawn short of the
+    /// stems so the repeat symbol can't be read as an ordinary beam. 0 for a
+    /// half-note pair (halves can't appear in a regular beam, so their tremolo
+    /// beams reach the stems).
+    /// LILYPOND-REF: lily/chord-tremolo-engraver.cc:117-140 acknowledge_stem —
+    /// gap-count = min(flags, intlog2(repeat_count) + 1), set unless
+    /// duration_log == 1.</summary>
+    public int TremoloGapCount { get; init; }
     /// <summary>Notehead style (x / diamond / triangle / slash / xcircle).</summary>
     public NoteheadStyle Notehead { get; init; }
     /// <summary>Whether this note starts a tie to the next note.</summary>
@@ -462,14 +470,17 @@ public sealed record ChordItem : MusicItem
     public int Dots { get; }
     /// <summary>Two-note tremolo between-beams count (see NoteItem).</summary>
     public int TremoloPairBeams { get; init; }
+    /// <summary>Gapped tremolo-pair beam count (see <see cref="NoteItem.TremoloGapCount"/>).</summary>
+    public int TremoloGapCount { get; init; }
     /// <summary>Notehead style applied to ALL heads of this chord.</summary>
     public NoteheadStyle Notehead { get; init; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
-    /// <summary>Whether this chord starts a manual beam group.</summary>
-    public bool HasBeamStart { get; }
+    /// <summary>Whether this chord starts a manual beam group (init so the
+    /// tremolo-pair path can join the pair, like NoteItem's).</summary>
+    public bool HasBeamStart { get; init; }
     /// <summary>Whether this chord ends a manual beam group.</summary>
-    public bool HasBeamEnd { get; }
+    public bool HasBeamEnd { get; init; }
     /// <summary>Identity of the beam this chord's stem belongs to; see
     /// <see cref="NoteItem.BeamId"/>.</summary>
     public int? BeamId { get; init; }

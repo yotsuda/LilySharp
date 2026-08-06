@@ -58,11 +58,113 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第100セッション第3便（＝第2便の q port に続けて **chord-scripts.ly = fixed 第13号**。
-和音メンバ script の silent drop を塞いだ）。
+最終更新 第100セッション第7便（＝**chord-tremolo 族を完食**: articulations = exact・
+other-commands/scaled-durations = skip（コード変更なし）。便の並び: 第2便 q port →
+第3便 chord-scripts 第13号 → 第4便 下見 3 open → 第5便 gap+accidental 第14号 →
+第6便 stemless 斜線 第15号 → 第7便 残り 3 本）。
 
-⚠️ **コード commit 3**（`7fdcb4b7` q port＝Core+単体観測者 9 本・`343a17fa` corpus twin 5 本
-+status・`0a9bb485` メンバ script+chord-scripts）＋ handoff。**push 禁止継続**。
+★★ **⓪⁗（第7便）**: articulations 本 = **exact**（半音符 14=14・beam 14=14・小節警告ゼロ・
+装飾 Y は原点差 0.96 定数込みで staccato/accent/f/f/sfz 完全一致・**trill のみ Δ0.45**＝
+chord-scripts の marcato と同じ script-Y 配置族）。Lily# の body 数えは `Body.Items` 直
+（mark は音符ノードの中）なので **LP が守っている「イベントを数えてしまう」入口が
+構造的に無い**——other-commands 本（\change Staff が body item に挟まる形）は
+このため主張ごと翻訳不能＝skip。scaled-durations は \scaleDurations の文法なし＝skip。
+⚠️ 枠合わせ: articulations の hairpin 対（d32\> e\!）は**終端 \! の綴りが Lily# に無く**
+両側とも素に落とした（hairpin 終端はいつか文法の宿題）。
+
+★★ **⓪⁶（第9便＝ユーザー問「perf 劣化は？」への実測）**: 前回のプロセス外 A/B が
+床±30% で読めなかったので、**両ツリーの test プロジェクトに一時ベンチを挿して
+in-process で測り直した**（Parse+Generate min-of-15・SemanticValidation min-of-8・
+2 周交互・ベンチファイルは測定後に両ツリーから削除＝commit していない）:
+- **chordblocks（960 written 和音＝snapshot 記録が乗る重い側）**: base 477/483ms vs
+  cur **421/357ms**＝**劣化なし**（見かけの −20% は原因を説明できないので速化は
+  主張しない——JIT/コード配置の揺れ帯とみなす）。
+- **plain render**: 1065/1076 vs 1046/1080＝parity。**validate**（ChordRepetitionValidator
+  の全木 walk 1 本追加が乗る側）: 141-226 vs 140-226＝**系統差なし**（±60ms の徘徊帯内）。
+- 構造の再確認: 新コストは全て collect 時 O(メンバ)/和音か draw 時 O(メンバ)/梁で、
+  **per-system 再実行経路（quanter・BuildAllStaffSkylines）には 1 つも乗っていない**。
+  resolver は q が現れた木でしか作られない（q 無し=ゼロ・q 綴りはトークン減で
+  むしろ速い）。⚠️ in-process ベンチの型: **pwsh LoadFrom はフォントガードで死ぬ**が、
+  **test プロジェクトへの一時 [Fact] 挿入なら動く**（TempPerfBench の型・両ツリー可）。
+
+★★ **⓪⁵（第8便＝ユーザー問「字面移植できた？変なハックは？REF は？」への自己監査）**:
+diff + 756 行に REF 21 本・OWN 0 本——**OWN 0 が匂い**で、読み直して 3 件に札を付けた:
+- gap 後の退化ガード `xr−xl<0.1`（LP に対応枝なし・印字可能なペアでは発火しない）と
+  stemless 斜線の **length-fraction=1.0 畳み込み**に LILYSHARP-OWN を付けた。
+  stemless の向きは **LP の note-collision flip（stem-tremolo.cc:288-309）未移植**と明記
+  （多声の全音符 tremolo・本もオブザーバも無い）。
+- ★★★ **監査が既存の不一致を掘り出した（起票・未修正）**: stem 付き `DrawTremolo`
+  （SharedRenderer.Marks）は**斜線間隔 thickness+0.8=1.28＝LP の beam_translation 0.81 の
+  約 1.6 倍**・**anchor が stem 中点**（LP は y_offset :314-368＝stem 端−補正）。
+  第6便の stemless 枝（正しい 0.81）と**同じ量の 2 つ目の綴り**になっている。
+  Lily# 自身の snapshot（grammar-2026-06-09）にしか釘付けされていない＝**LP 実測の
+  観測者ゼロ**。直すなら snapshot 再ベース（要承認）とセット——コードに ⚠️ 札済み。
+
+⚠️ **コード commit 5**（`7fdcb4b7` q port・`0a9bb485` メンバ script・`9b21fd21` 起票・
+`77fe1ff8` gap+和音ペア・最新 = stemless 斜線）＋ handoff。**push 禁止継続**。
+
+★★★ **⓪‴（第6便）stemless 斜線の中身**: 全音符に縮約された単音 tremolo
+（`repeat tremolo 32 { d32 }`）の斜線が**符尾描画経路ごと消えていた**→
+`DrawStemlessTremolo`（SharedRenderer.Marks）＝ stem-tremolo.cc:349-366 y_offset の
+whole_note 枝の鏡（**外側符頭 + dir×1.5ss** anchor・0.81 間隔・幅 1.5・slope 0.25・
+符頭中心 X＝StemTremolo parent-alignment-X CENTER）。**照合: 斜線 3 本の中心 Y
+12.69/11.88/11.07 が LP と完全一致**・傾き/幅/X も一致（LP ink 幅 1.42＝幾何 1.5−
+stroke 0.08 の既知系統差）。観測者 = `ChordTremoloPairTests` 5 本目。snapshot 0 枚。
+
+★★★ **⓪″（第5便）gap 前半の中身**:
+- **collector**: `_tremoloPairShape` に GapCount を追加＝
+  `Value==2 ? 0 : min(beams, (int)log2(count)+1)`（LILYPOND-REF
+  chord-tremolo-engraver.cc:117-140 acknowledge_stem・duration_log==1 の免除が
+  「半音符だけ届く」の正体）。**和音 body も pair 変換を通す**ようにした
+  （Note case 限定だった第2便④の起票を返済——和音側は書かれた 32 分のまま
+  黙って描かれていた＝silent swallow 5 例目・fixed 第14号）。
+- **renderer**（SharedRenderer.Beams）: gapped rank を LP の式
+  `stem_dir*rank < stem_dir*ranks[-dir]+gap_count`（beam.cc:470-526 の鏡）で選び、
+  両端を `TremoloBeamGap=0.8`（define-grobs Beam gap・EngravingDefaults に REF 付き）
+  だけ短縮。**検証: 4分ペアの ink-to-ink gap 0.74=0.74 完全一致**（LP は stroked
+  polygon なので幾何 0.78−stroke0.04＝既知の系統差込みで一致）。2分/付点2分は
+  非 gap 維持＝LP と一致。
+- **accidental 本 = fixed 第14号**: 全指紋一致（全音符 9・♯8・2分 7・黒 4・♮1・beam 27、
+  Y 完全一致——同小節 dis 後の d にナチュラルが出る挙動まで同一）。
+  観測者 = `ChordTremoloPairTests` 4 本。
+- ⚠️ **残（open 第4〜6号の残り半分）**: ⑴ 全音符表示ペアの「見えない stem」
+  （LP は Stem グロブに ink 無し・Lily# は描く・梁の X/Y 配置も従って別）
+  ⑵ stemless 単音斜線（single 本・斜線ゼロのまま）⑶ partial gap
+  （gap_count<beams になる本は corpus に無い——rank 選別式は移植済みだが**未観測**）。
+- ⚠️ 引用ラチェットの新しい罠を 2 つ: **複数住所を 1 行に書くと 2 つ目の前で名前が
+  切れる**（`beam.cc:470,526 —` は 470 が無名扱い）・**名指した記号は引用先ファイルに
+  実在する必要**（`EveryNamedSymbolOccursInItsCitedFile`——define-grobs の行に
+  get_gaps を書いて落ちた→REF を 2 行に分ける）。
+
+★★★ **⓪′（第4便）frontier の本命 = tremolo 梁の gap 機構の port**（下見済・twin/LP対照/
+実測は scratch\lpreg\chord-tremolo*.{ly,svg} と status notes に全部ある）:
+- **LP 実体（読解済・全部字面で書ける）**: `Chord_tremolo_engraver::acknowledge_stem`
+  （chord-tremolo-engraver.cc:117-140）が flags=log2(tremolo_type)−2・
+  **gap_count=min(flags, log2(repeat_count)+1)** を計算し、**`Stem::duration_log != 1`
+  （＝半音符でない）のときだけ Beam に gap-count を設定**——これが texidoc の
+  「半音符だけ符尾に届く」の正体。gap の長さは **Beam.gap=0.8**（define-grobs.scm:528）、
+  短縮の実装は beam.cc:403-427 get_gaps ＋ :470/:526/:632（gapped segment の両端を
+  gap ぶん引っ込める）。
+- **実測（chord-tremolo.ly の対）**: 一致＝表示音価（両音とも総和で表示・全/付点2分/2分/
+  4分）・beam 総数 23=23・付点 6・符頭 Y 完全一致・**半音符ペアは梁 Y 3 桁一致**
+  （10.04/10.85/11.66・両者とも符尾に接触）。乖離＝⑴ 4分表示ペア: LP は梁が浮く
+  （stem 18.26/20.37 に対し梁 19.04..19.59＝隙間 0.78ss≈gap0.8）、Lily# は届く。
+  ⑵ **全音符表示ペア: LP は Stem グロブはあるが duration_log 0 で ink 無し**＋梁が
+  符頭間に浮く。Lily# は符尾を描いて梁を付ける。⑶ single 本: LP は無 stem の全音符の
+  横に斜線 3 本、Lily# は**斜線ゼロ**（斜線が stem 描画経路に乗っているため）＝
+  stem-tremolo.cc の stemless 経路が未移植。
+- **Lily# の挿入点**: pair 機構は `_tremoloPairShape`（display 上書き=ItemFactory:58・
+  TimeScale/PairBeams=MusicWalk note case）と BeamDetector:937-954。port は
+  ⑴ TremoloPairBeams の梁に GapCount を運び renderer で segment 短縮
+  ⑵ 表示が全音符のとき stem ink を抑止（幾何は残す＝LP と同じ「見えない stem」）
+  ⑶ 単音 tremolo の斜線を stemless でも描く。爆風=既存 tremolo fixture
+  （grammar-2026-06-09 の 1 本）+snapshot 要確認。
+- ⚠️ 族の残り: accidental 本は**和音ペア**（第2便④で起票の「chord が _tremoloPairShape を
+  読まない」を先に塞ぐ）・articulations 本は body 内の強弱/script 付き pair・
+  other-commands 本は \change Staff（文法なし→skip 公算）・scaled-durations 本は
+  \scaleDurations（文法なし→skip 公算）。
+- ⚠️ 相対の罠を今便も 1 回踏んだ: **c 基準の最寄り g は G3（下4度）**——G5 は g''。
+  手書き twin は「4度と5度どちらが近いか」を毎回数えること。
 
 ★★★ **⓪（第3便）chord-scripts.ly = fixed 第13号**:
 - **欠陥**: `<c@staccato e@accent>` のメンバ script は **parse 済みなのに収集されず黙って
@@ -153,21 +255,25 @@ C:\MyProj\LilySharp-base に作成済）で 2 回測って **plain 対照自体�
   別 voice の和音」を指す逆行参照）は**診断なしで spacer に縮退**する——validator は
   OriginalOf==null しか見ない。踏む本が来たら observer を先に。
 
-**frontier = chord-tremolo 族 7 本**（chord-tremolo-accidental から・status.json の
-アルファベット順を数え直すこと）。⚠️ 下見メモ: Lily# の tremolo pair
-（`repeat tremolo N { a b }`）は **Note case しか `_tremoloPairShape` を読まない**
-（和音 body は第2便④で起票済）——族の何本かはここを踏む。
+**frontier（次セッションの本命・2 択）**: ⑴ **全音符ペアの「見えない stem」**（open 第4・6号の
+最後の残——LP は全音符ペアに Stem グロブ（ink 無し）を作り、**梁がその位置から量子化される**
+（実測: LP 梁 y 11.88-13.5＝符頭近く／Lily# 10.04-11.66＝通常 stem 丈）。stem ink 抑止だけで
+なく梁 Y の量子入力まで踏む）⑵ **script-Y 配置族**（chord-scripts の forced marcato Δ0.70・
+articulations の trill Δ0.45 が同根＝五線内に置ける script を Lily# が外へ押し出す・
+fermata 族 regime）。どちらも独立に着手可。その先はキューの次の plain
+（status.json のアルファベット順を数え直す——chord-tremolo 族は完食）。
 **breathing-sign の port 計画は第99セッション第16便 §1 参照——まだ生きている**。
 
-plain 322 / 処理済 **61**（fixed 13・exact 15・skip 31・open 2＝automatic-polyphony-tabstaff・
-breathing-sign-accidentals。数えたら state 別内訳も一緒に書く——第2便で 55+6=61 と思い込み
-かけたが **tweak は前便までに skip 記録済**で 55 に入っていた）。
+plain 322 / 処理済 **68**（fixed 15・exact 16・skip 33・**open 4**＝automatic-polyphony-tabstaff・
+breathing-sign-accidentals・chord-tremolo・chord-tremolo-whole。数えたら state 別内訳も
+一緒に書くこと）。
 
-未 push **47**（この handoff で 48。数え直すこと。**⚠️ push しない**）・テスト
-**4143 passed / 0 failed / 4 skipped**（第3便終端で全スイート再確認済・引用ラチェットを
-3 回踏んだ——「行範囲つき引用は同じ行のアドレスの後ろに *_ か 3 部ハイフンの記号*」）・
+未 push **58**（この handoff で 59。数え直すこと。**⚠️ push しない**）・テスト
+**4148 passed / 0 failed / 4 skipped**（第8便＝自己監査の札付け後に全スイート再確認済・
+第9便は一時ベンチのみ＝両ツリーから削除済で commit していない）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning・snapshot 動き 0 枚。**
+**Core 0 warning・snapshot 動き 0 枚**・base worktree = C:\MyProj\LilySharp-base（cc19cccc・
+ベンチ用に残置）。
 
 ## 以下は第100セッション第1便の経緯
 
@@ -13357,6 +13463,13 @@ dotnet run --project LilySharp.Cli -- png --crop --scale 4.0 "NAME.lys" "out.png
       「名前なし」に数えられる**——住所が行末に来る折り返し方をしないこと。
       ⚠️ **末尾がアンダースコアの綴りは名前に数えない**（`magnification_` は
       `[_-][A-Za-z0-9]+` に一致しない）。**関数名を書くこと。**
+      ⚠️ ★ **住所を 1 行に 2 つ書かない**（2026-08-06・第100セッション）。
+      `beam.cc:470,526 記号名` は **1 つ目（:470）の名前が 2 つ目の住所の手前で
+      切られて無名**に数えられる——範囲 `:470-526` で 1 住所にするか行を分ける。
+      ⚠️ ★ **名指した記号は引用先ファイルに実在する必要がある**
+      （`EveryNamedSymbolOccursInItsCitedFile`）。「define-grobs の行に、それを読む
+      beam.cc の関数名を書く」は落ちる——**ファイルごとに REF を分け、各行が
+      自分のファイルの記号を名指す**。
 7.5 [ ] ★ **移植した差分を §5.2 片手に読み直したか**。
       ★ **まず数える**（30 秒・機械的・2026-07-27 に追加）:
       `git -c color.ui=false diff <base> HEAD -- LilySharp.Core` の **`+` 行**に対して

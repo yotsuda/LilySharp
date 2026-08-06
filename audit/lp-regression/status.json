@@ -1910,19 +1910,27 @@
     },
     "chord-tremolo-accidental.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "2音tremoloは臨時記号の存在に適応する(♯がペア間隔を広げ梁に食い込まない)",
+      "notes": "fixed第14号: 和音bodyのペア(c32 <dis fis>)がpair機構(_tremoloPairShape)をNote caseしか通らず、和音側は書かれた32分のまま黙って描かれていた→chord caseに同じ変換(表示=総和・TimeScale1/2・PairBeams/GapCount/BeamStart-End)を配線。照合: 全指紋一致=全音符9・♯8・2分7・黒4・♮1(同小節dis後のdに出る挙動まで同一)・beam27、全部Y完全一致。観測者=ChordTremoloPairTests 4本"
     },
     "chord-tremolo-articulations.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "tremolo bodyのアーティキュレーション/強弱は時間計算を乱さない(実音2つだけが数えられ各小節が満ちる)",
+      "notes": "半音符14=14・beam 14=14・Lily#側小節警告ゼロ=claim成立。装飾のY(原点差0.96定数込み): staccato/accent/f/f/sfz完全一致・trillのみΔ0.45(script-Y配置族=chord-scriptsのmarcato残差と同根)。Lily#のbody数えはBody.Items直(markは音符ノード内)なのでLPの「イベント3つ」型の入口が構造的に無い。⚠️枠合わせ: hairpin対(d32\\> e\\!)は終端\\!の綴りが無く両側とも素に落とした・\\barNumberCheckはink無しで落とした"
     },
     "chord-tremolo-other-commands.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "tremoloの総時間は実音のみ数える(\\change Staffは数えない)",
+      "notes": "主張が翻訳不能: LPの\\change Staffは「body itemとして挟まる独立コマンド」で、Lily#の対応物@crossは音符付き注釈=コマンドがitemとして数えられる入口が構造的に存在しない(bodyはBody.Items直)。PianoStaff+cross-staff tremoloの描画自体も@cross+grandStaffで別formになる"
     },
     "chord-tremolo-scaled-durations.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "scaled durationがtremolo beamingを乱さない(各3本beam)",
+      "notes": "\\scaleDurationsの文法がLily#に無い(parser hit 0)"
     },
     "chord-tremolo-short.ly": {
       "category": "scheme",
@@ -1930,7 +1938,9 @@
     },
     "chord-tremolo-single.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "単音のchord tremoloは1音に縮約され、(全音符なら符尾なしで)斜線が付く",
+      "notes": "fixed第15号: 全音符縮約時に斜線が符尾描画経路ごと消えていた→stemless枝を移植(stem-tremolo.cc:349-366 y_offset whole_note枝=外側符頭+dir*1.5ss・0.81間隔・幅1.5・slope0.25・符頭中心X)。照合: 斜線3本の中心Y 12.69/11.88/11.07が完全一致・傾き0.375/1.5一致・符頭中心X一致(LP ink幅1.42=幾何1.5-stroke0.08の既知系統差)。観測者=ChordTremoloPairTests.WholeNoteTremolo_DrawsStemlessSlashes"
     },
     "chord-tremolo-stem-direction.ly": {
       "category": "scheme",
@@ -1938,11 +1948,15 @@
     },
     "chord-tremolo-whole.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "全音符tremoloの梁が全音符(符頭)と衝突しない",
+      "notes": "open第6号(第4号と同根)。LP: 符尾なし・梁4本(64分)が符頭間に浮く(x19.52..21.54・y9.26..11.88・間隔0.875)。Lily#: 符尾2本を描き梁が符頭端から符尾まで(x8.59..12.99)。梁数4=4は一致。⚠️綴りの罠を再演: relative c基準でgはG3が最寄り(下4度)→G5はg'(g'と書き直すまで1オクターブ低かった)"
     },
     "chord-tremolo.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "tremolo梁は符尾に届かず隙間を残す(通常の梁と区別)。半音符ペアだけは(通常梁に現れ得ないので)符尾まで届く",
+      "notes": "open第4号・残るは全音符表示ペアの「見えないstem」のみ(gap短縮は第5便で移植済=4分ペアink-to-ink 0.74一致・stemless単音斜線は第6便fixed第15号)。残: LPは全音符ペアにStemグロブ(ink無し)を作り梁がその位置から量子化される——Lily#はstemを描き梁Yも別(実測: LP梁y11.88-13.5=符頭近く/Lily#10.04-11.66=通常stem丈)。partial gap(gap_count<beams)はcorpusに本が無く式のみ移植・未観測"
     },
     "chord-voicings.ly": {
       "category": "markup",

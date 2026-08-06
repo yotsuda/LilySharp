@@ -396,6 +396,14 @@ public sealed partial class MeasureCollector
             dots = combined.Dots;
         }
 
+        // Two-note tremolo: this chord prints at the pair's total duration
+        // (same override as CreateNoteItem).
+        if (_tremoloPairShape is { } pairDisp)
+        {
+            noteValue = pairDisp.Value;
+            dots = pairDisp.Dots;
+        }
+
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
         {
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.

@@ -910,9 +910,11 @@ public sealed partial class MeasureCollector
     // Active `repeat tremolo N { … }` transform: the body note prints ONCE at
     // the combined duration with the subdivision's stem slashes.
     private int _tremoloRepeatCount = 1;
-    // Active two-note tremolo: (display value, display dots, between-beams);
-    // both notes print at the pair's TOTAL duration and sound half (TimeScale ½).
-    private (int Value, int Dots, int Beams)? _tremoloPairShape;
+    // Active two-note tremolo: (display value, display dots, between-beams,
+    // gapped-beam count); both notes print at the pair's TOTAL duration and
+    // sound half (TimeScale ½). GapCount = how many beams stop short of the
+    // stems (0 for a half-note pair — LP's duration_log == 1 exemption).
+    private (int Value, int Dots, int Beams, int GapCount)? _tremoloPairShape;
     private bool _tremoloPairFirst;
     private Dictionary<string, DrumInfo>? _drumOverrides; // drummap { } per-score
     // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
@@ -3530,8 +3532,14 @@ public sealed partial class MeasureCollector
 
     /// <summary>Shape of a two-note tremolo, or null when not printable:
     /// display duration = count × (both notes), equal written values required;
-    /// beams = the subdivision's flag count (16th → 2).</summary>
-    private static (int Value, int Dots, int Beams)? TremoloPairShape(int count, List<SyntaxNode> body)
+    /// beams = the subdivision's flag count (16th → 2). GapCount = how many of
+    /// those beams are drawn short of the stems — the repeat-symbol gap —
+    /// except for a half-note display, whose beams reach the stems (a half
+    /// cannot appear in a regular beam, so there is nothing to disambiguate).
+    /// LILYPOND-REF: lily/chord-tremolo-engraver.cc:117-140 acknowledge_stem —
+    /// gap_count = min(flags, intlog2(repeat_count) + 1), set on the Beam
+    /// unless Stem::duration_log == 1.</summary>
+    private static (int Value, int Dots, int Beams, int GapCount)? TremoloPairShape(int count, List<SyntaxNode> body)
     {
         int v1 = NoteOrChordDurationValue(body[0]), v2 = NoteOrChordDurationValue(body[1]);
         if (v2 == 0)
@@ -3543,7 +3551,9 @@ public sealed partial class MeasureCollector
         if (total == null)
             return null;
         int beams = (int)Math.Log2(v1) - 2;
-        return (total.Value.Value, total.Value.Dots, beams);
+        int gapCount = total.Value.Value == 2 ? 0
+            : Math.Min(beams, (int)Math.Log2(count) + 1);
+        return (total.Value.Value, total.Value.Dots, beams, gapCount);
     }
 
     /// <summary>Reduces count/value to (noteValue, dots) — 8×1/32 = (4, 0),

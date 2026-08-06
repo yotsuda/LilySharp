@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/chord-tremolo-single.ly の Lily# 訳。
+// CLAIM: 単音の chord tremolo（repeat tremolo N { note }）は 1 個の音符に
+// 縮約され、符尾に斜線（tremolo slash）が付く。
+// 綴り: LP は \relative c' 明示＝Lily# の既定 treble 枠と同一→綴りそのまま。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    repeat tremolo 32 { d32 }
+
+    c4 c4 c4 c4 c4
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }
