@@ -81,9 +81,32 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
-            var next = i + 1 < musicNodes.Count ? musicNodes[i + 1] : null;
-            ProcessMusicNode(node, builder, PeekMarkers(next));
+            ProcessMusicNode(node, builder, PeekMarkers(PeekPastAttachedMarks(musicNodes, i)));
         }
+    }
+
+    /// <summary>
+    /// The lookahead node for position <paramref name="i"/>: the next list entry
+    /// that is not a NOTE-ATTACHED mark. The flattened walk lists a note's own
+    /// <c>@name(...)</c> mark (a MusicMarkSyntax child in its articulations)
+    /// right after the note — it must stay in the list, because for a rehearsal
+    /// mark the statement arm is the live collection path — but the naive
+    /// <c>[i + 1]</c> lookahead read that mark instead of the tie/slur/beam
+    /// marker written after the note: <c>c'8@text("x")[</c> silently lost its
+    /// manual beam to the autobeamer (LP regression beaming.ly, the beam over
+    /// the bar line), and a tie after such a mark died the same way.
+    /// </summary>
+    private static SyntaxNode? PeekPastAttachedMarks(List<SyntaxNode> nodes, int i)
+    {
+        for (int j = i + 1; j < nodes.Count; j++)
+        {
+            if (nodes[j] is MusicMarkSyntax mark
+                && (mark.IsInside<NoteSyntax>() || mark.IsInside<ChordSyntax>()
+                    || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()))
+                continue;
+            return nodes[j];
+        }
+        return null;
     }
 
     /// <summary>

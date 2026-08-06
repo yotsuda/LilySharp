@@ -663,6 +663,11 @@ public class SvgSnapshotTests
         // the beam, and the PURE estimate already raised its spacing box so the next
         // chord's flat clears it (LP regression beam-rest-extreme.ly: +3, +3, +3, 0).
         yield return new object[] { "test/beam-rest-extreme" };
+        // A spacer under a sustained note makes NO column of its own (LilyPond prunes
+        // the empty column as loose) and never drags shortest-playing below the real
+        // note — c4 against s8[ s8] spaces as one plain quarter spring (LP regression
+        // beam-skip.ly, whose actual claim — no crash on beams over skips — rides along).
+        yield return new object[] { "test/beam-skip" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

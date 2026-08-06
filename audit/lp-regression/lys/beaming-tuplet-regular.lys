@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/beaming-tuplet-regular.ly の Lily# 訳。
+// CLAIM: 完結した tuplet 内の連桁は連続する(途中で切れない)。
+// 綴り: LP 絶対 b(B3)= Lily# b,。LP の `b8. b`(付点込み継承)は b,8. b,8. に明示。
+// 3/2 と 3/1 の両方。全体で 4/4 きっかり 1 小節。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    tuplet 3/2 { b,16 b,16 b,16 } b,8 b,8 tuplet 3/2 { b,16 b,16 b,16 }
+    tuplet 3/1 { b,16 b,16 b,16 } b,8. b,8. tuplet 3/1 { b,16 b,16 b,16 }
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

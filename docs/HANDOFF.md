@@ -58,6 +58,127 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第15便（＝**lp-regression キュー続行**。**beamlet-test.ly = open**
+——既知債務（BeamingPattern の tuplet span 未移植）に**観測者がついた**）。
+
+⚠️ **仕事は 1 commit**（訳+台帳のみ・コード変更なし）＋ handoff。**push 禁止継続**。
+（追記・同日引用監査: ユーザー問「字面移植できた？REF は？」への裏取りで **引用誤り 1 件**
+を発見・修正（`d800e51b`）——「spacing-basic.cc:113-119 = delta_t fallback」は誤読で、
+LP の実物は **programming_error + 全音符**（そこに到達しない——空列は prune 済み）。
+delta_t fallback は Lily# 自前と明記した。新規 REF の行実照合: stem.cc:1093-1105・
+separation-item.cc:163・loose-columns:82-90・beam.cc/rest.cc/define-grobs 各所 ✓。）
+
+（追記 2・同日 perf 実測（ユーザー問「プレビュー速度は？」）: 基準 `655f2a4f` worktree +
+Release 双方・交互 min-of-6・両順序（第98⑦手順）。合成 3 本＝plain120/rests120（手動連桁+
+休符）/voices120（2 声+spacer）。**初回読み: plain が両順序で正（+7.5/+2.7%）＝系統疑い**
+→ 犯人特定: 第13便の CollectAllTimingsForMeasure が **spacer 皆無の小節でも** anchor
+HashSet+span List を組んでいた（毎小節×layout と SystemBreaker の両方から呼ばれる）。
+**lazy 化**（spacer を見た小節だけ第 2 パス `PruneSpacerOnlyOnsets`）＝`b63f483d`。除去後:
+plain −2.4/−2.1%・voices −2.5/−1.0%・rests +5.7/−1.8%（符号反転＝床以下。今日も床は
+±30-45% 動く）。**系統的シグナル無しまで確認**。ベンチ 3 本は **`scratch\perf\perf-*.lys`
+に退避済み**（scratch/ は gitignore・ディスク残存。セッション scratchpad は消えるので
+そちらには置かない——第11便のベンチはそれで失った）＋ worktree レシピで再現可。残る新規コスト（論拠つき小）: rests の RestStems bake（休符数
+比例・Measure 再構築 2 件/小節）と rest 毎の実 bbox 参照——全て休符数定数。）
+
+★★★ **① beamlet-test.ly = open（次セッションの本命）**: 14 beamlet 箇所中 13 は exact
+（指紋 28==28・全 stub の段/所属/向き一致・桁 Y quant 一致・最終 ragged 行の列間隔
+≤0.15）。**唯一の乖離が texidoc の主張そのもの**: t8 = `tuplet 5/4 {a8 a32 a8 a16. a8 a8}`
+の a32（内側 stem・両隣同 count・拍テスト両義）の 16th+32nd beamlet が
+**Lily# 左向き・LP 右向き**（Δ1.09。LP は stub が stem2 から右へ、Lily# は stem2 で終わる）。
+- 根本原因 = **BeamingPattern.cs SetRhythmicImportance の註（:400-408）が自己申告済みの
+  債務**:「tuplet 内 stem を actual 比で読む（LP は current_factor で割って WRITTEN 比）。
+  観測者ゼロ、測られるまで閉じられない」——**この corpus 本がその観測者**。
+- 手計算で機構検証済み: LP は tuplet span（beat_base=(stop−start)/den・factor 4/5）で
+  a32 が span moment 上→importance 1 < 次 a8 の 3 → 右。root span のみだと 1 vs 1 同値
+  → 左 = 観測どおり。
+- **移植計画**（次セッション着手）: LILYPOND-REF beaming-pattern.cc:203-289
+  Span_position/Tuplet_description（parent_ で nesting）・:292-404 set_rhythmic_importance
+  （span スタック+current_factor）・:129-131 span 境界 stem は CENTER・:192-199 境界の
+  beamlet clamp。**BeamDetector は既に _tupletBrackets を受けている**——span 記述
+  （start/stop/num/den/parent）を BeamingPattern.Element に配線するのが最初の一歩。
+
+**frontier = beamlet-test の port**（キュー次番は bass-figure 系？＝status.json の
+pending 先頭を見る。open の返済が先）。plain 322 / 処理済 **37**
+（fixed 8・exact 7・skip 20・open 2）。
+
+未 push **17**（この handoff で 18。数え直すこと。**⚠️ push しない**）・テスト
+**4103 passed / 0 failed / 4 skipped**（第14便から不変・今便コード変更なし）・
+**Core 0 warning。**
+
+## 以下は第99セッション第14便の経緯
+
+最終更新 第99セッション第14便（＝**lp-regression キュー続行**。処理 2 本＝
+**exact 1**（beaming-tuplet-regular）・**fixed 1＝第 8 号**（beaming.ly——@付き音符の
+手動連桁/タイが黙って落ちる collector バグ））。
+
+⚠️ **仕事は 1 commit**（`cfd3c22d`）＋ handoff。**push 禁止（ユーザー指示・当面）継続**。
+
+★★ **① beaming-tuplet-regular.ly = exact**: 指紋 8==8・組み方 [tuplet+8分][8分+tuplet]・
+桁 Y 完全一致・幅/群間 gap は stroke-vs-fill の ink 換算（±0.04）後 ≤0.01。`tuplet 3/1`
+は文法が通る。**乖離 1 件は既知家系に帰属**: 完全連桁 tuplet は両者とも数字のみ印字だが、
+**LP は数字を tuplet 自身の音列 span の中心**（4 群とも ±0.05 で実測）、**Lily# は連桁全体の
+中心**（Y も ~1.5 vs ~2.15ss）。tuplet-bracket/number 未移植家系（第7便と同じ台帳）。
+
+★★★ **② 第 8 号の修正＝音符付き @mark は先読みの目の前に立たない**（beaming.ly）:
+訳は跨ぎ連桁・tuplet 内 `]`・`s4*3`→`s4 s4 s4`・`^"…"`→`@text(…).up` で全文書けた。
+指紋が 37 vs 38 で割れ、最小再現で **`c'8@text("x")[` の手動 `[ ]` が黙って autobeam に
+化ける**バグを発見: 平坦化リストに音符の子の MusicMarkSyntax が音符と `[` の間に並び、
+**1 ノード先読み（PeekMarkers）が mark を読んで HasBeamStart が立たない**（タイ・スラーも
+同根で死ぬ。パーサは無罪＝構文木は正しい）。修正 = **PeekPastAttachedMarks**（音符付き
+mark だけ飛ばす先読み）を両平坦 walk（MusicWalk / structure walk）に。
+⚠️ **一手目の「収集時に弾く」は誤り**で即戻した: 音符付き `@mark("A")`（rehearsal）は
+statement 経路の「重複」**こそが実の収集経路**（dedupe は非マッチ）——showcase/01 の
+A/B が消えて発覚。教訓: 「重複だから無害」は消す前に**全 mark 種で**確かめる。
+★★ 検証: 修正後 beaming.lys **37==37**・全群の段構成/beamlet 向き/桁 Y quant 一致・
+跨ぎ連桁はどちらも改行を跨がない（claim 成立）。LP 3 system vs Lily# 2 は紙幅差
+（README 既知）。単体観測者 PostEventOrderTests.CompoundMarkThenBeamOrTie_MarkerSurvives
+（陽性対照: collector 2 ファイル stash で FAIL）。snapshot 移動ゼロ。
+
+**frontier = beamlet-test.ly**。plain 322 / 処理済 **36**
+（fixed 8・exact 7・skip 20・open 1）。
+
+未 push **15**（この handoff で 16。数え直すこと。**⚠️ push しない**）・テスト
+**4103 passed / 0 failed / 4 skipped**（第13便 4102・+1 単体）・**Core 0 warning。**
+
+## 以下は第99セッション第13便の経緯
+
+最終更新 第99セッション第13便（＝**lp-regression キュー続行**。**第 7 号の修正＝
+spacer 列は鳴っている音の下で溶ける**（beam-skip.ly））。
+
+⚠️ **仕事は 1 commit**（`31cfb156`）＋ handoff。**push 禁止（ユーザー指示・当面）継続**。
+
+★★★ **① 第 7 号の修正＝skip の列は鳴っている音の下で溶け、実音に勝てない**
+（beam-skip.ly・texidoc は「skip 上の連桁で segfault しない」）: crash 自体は最初から
+起きない（spacer 上の手動 `[ ]` は member ゼロ＝ink ゼロ）が、比較で spacing の実乖離を
+発見: **c4 が s8 を跨ぐと Lily# は 1/8 に列を立てて 8分ばね×2（4.90）、LP は空列を
+loose として鎖から外し 4分ばね 1 本（3.704）**。二面修正（`31cfb156`）:
+- **MultiStaffLayouter.CollectAllTimingsForMeasure に post-filter**: 記譜譜表の spacer
+  **だけ**が立てた onset で、musical item が**厳密に跨いで**鳴っているものだけ落とす
+  （LILYPOND-REF spacing-determine-loose-columns.cc:82-90）。text-row の slot 列・
+  timing 付き chord 記号・「跨がれていない」skip 帯（単声 `c8 s8 c8` は LP も 8分×2
+  ＝4.904）は全部残る＝リードシートの列は無傷。
+- **SpacingRules.ComputeShortestPlayingAt**: spacer は**実音が同時に鳴っている間は
+  playing に数えない**（LP の spacing engraver は skip の grob を聞かない）。ただし
+  spacer しか鳴っていない moment では従来どおり spacer の長さが答え（LP の fallback
+  = delta_t と slot 格子上で同値・実測済みリードシート recipe の校正を保存）。
+★★ 検証: 多声訳の列間隔 **3.70/2.50 = LP 3.704/2.504（±0.01）**。LP は
+`<<{}{}>>`（単一 Voice 同時）と `<<{}\\{}>>`（2声）で**出力がバイト同値**なことを確認
+してから voice span で翻訳（Lily# に同一 voice 内同時進行は無い）。snapshot 移動は
+beam-over-stem のみで **LP 向き**（bar1 の col0→1/16 が 2.50→1.90・LP 1.60。残る
+1.90 vs 1.20/1.60 の sub-beat 床は**変更前から**の regime——bar2 の同種 gap は前後とも
+1.90）。fixture `test/beam-skip`（陽性対照: Core 2 ファイル stash で beam-skip と
+beam-over-stem が FAIL）。lead-sheet snapshot は**動かさない**判断（chord-symbol-width
+probe の実測 recipe に載っており、初版の全面除外は G7 が +0.57 動いた→条件付き除外に
+絞って復帰）。
+
+**frontier = beaming-tuplet-regular.ly**。plain 322 / 処理済 **34**
+（fixed 7・exact 6・skip 20・open 1）。
+
+未 push **13**（この handoff で 14。数え直すこと。**⚠️ push しない**）・テスト
+**4102 passed / 0 failed / 4 skipped**（第12便 4101・+1 snapshot）・**Core 0 warning。**
+
+## 以下は第99セッション第12便の経緯
+
 最終更新 第99セッション第12便（＝**lp-regression キュー続行**。**第 6 号の修正＝
 beamed rest の rest_collision 実定数化＋pure 見積りの spacing 接続**（beam-rest-extreme.ly））。
 

@@ -1,0 +1,25 @@
+// lilypond-src/input/regression/beaming.ly の Lily# 訳。
+// CLAIM: 連桁は自動生成され、小節線を跨げる(跨ぐ場合その位置での改行は禁止)。
+// 綴り: LP \relative(先頭 c''=絶対)→ Lily# 絶対 c'。s4*3 は乗数文法が無いので s4 s4 s4。
+// ^"over bar line" は @text("...").up(Lily# の@text は italic・LP の ^"…" は upright
+// ——書体差は既知の表現差として status に記録)。
+// 全 5 小節ちょうど(m4 の 8分 2 個+m5 頭の 1 個が跨ぎ連桁)。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    c'8[ tuplet 3/2 { c'16 d'16 e'16] } s4 s4 s4 |
+    c'8.[ c'16] c'8.[ c'16 c'8. c'16] c'16[ c'8.] |
+    c'8.[ c'16 c'16 c'8.] c'8.[ c'32 c'32] c'8[ c'8] |
+    c'16[ c'16] c'32[ c'32] c'64[ c'64] c'32 c'2
+    c'8@text("over bar line").up[ c'8 | c'8] c'8
+    c'16[ c'8 c'16] c'32[ c'16 c'16 c'16 c'32] c'32[ c'16 c'8 c'32]
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

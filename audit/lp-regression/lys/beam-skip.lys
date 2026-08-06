@@ -1,0 +1,23 @@
+// lilypond-src/input/regression/beam-skip.ly の Lily# 訳。
+// CLAIM: skip(spacer)上の連桁で segfault しない(crash 回帰)。
+// 綴り: LP は単一 Voice 内の同時進行 << {c'4 c'8 c'} {s8[ s] s[ s]} >> で、skip 側の
+//       手動 beam イベントが同じ Voice の実音 c'8 c' を捕まえて連桁になる。Lily# に
+//       同一 voice 内の同時ストリームは無いので voice span(別 voice)で並走させる:
+//       voice 2 = 全 skip の手動連桁(ink ゼロ・crash しないことが本題)、
+//       voice 1 の c8 c8 は autobeam が対にする——印字は LP と同じ 3 音+8分連桁 1 本。
+// LP 既定 time 4/4・音楽は 2/4 で不完全小節のまま(LYS2001 警告は許容)。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    voice { c4 c8 c8 }
+          { s8[ s8] s8[ s8] }
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

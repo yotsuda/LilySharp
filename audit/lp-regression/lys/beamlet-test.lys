@@ -1,0 +1,29 @@
+// lilypond-src/input/regression/beamlet-test.ly の Lily# 訳。
+// CLAIM: beamlet は完結した拍から離れ、不完全/裏拍側を向く。tuplet 内でも同様。
+// 綴り: LP \relative(先頭 c''=絶対)→ Lily# c'。a は LP a' = Lily# a。
+// 4/4 で 5.5 小節(最終小節は 1/2 で不完全のまま=LP と同じ)。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    tuplet 3/2 { c'8. c'16 c'8 }
+    tuplet 3/2 { c'8 c'16 c'8. }
+    tuplet 5/4 { c'8[ c'8. c'16 c'8 c'8] } |
+    tuplet 5/4 { c'8[ c'8 c'16 c'8. c'8] }
+    tuplet 5/4 { c'8 c'16 c'8. c'8 c'8 } |
+    tuplet 5/4 { c'8 c'8 c'8. c'16 c'8 }
+    c'8.[ c'16 c'8 c'8] |
+    c'8[ c'16 c'8. c'8]
+    c'8[ c'8. c'16 c'8] |
+    c'8.[ c'16 c'8. c'16]
+    tuplet 5/4 { c'8[ c'16 c'8 c'16 c'8 c'8] } |
+    tuplet 5/4 { a8 a32 a8 a16. a8 a8 }
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

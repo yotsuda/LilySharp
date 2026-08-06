@@ -1497,9 +1497,29 @@ internal sealed class MultiStaffLayouter
     /// <summary>
     /// Collects all unique timings from all voices for a specific measure.
     /// </summary>
+    /// <remarks>
+    /// A notation staff's spacer (<c>s</c>) makes NO column of its own while another
+    /// voice's note sounds through it: LilyPond's skip engraves no grobs, so its paper
+    /// column is empty, gets left/right neighbours from the sustained note's spacing
+    /// wishes, and is pruned from the spring chain as a loose column — <c>c'4</c>
+    /// against <c>s8[ s]</c> spaces as one plain quarter spring (LP regression
+    /// beam-skip.ly). A spacer onset nothing sounds through KEEPS its column: with no
+    /// note columns beside it there is nothing to attach the loose column to, and its
+    /// duration space survives (<c>c'8 s8 c'8</c> reads two eighth springs in LP, and
+    /// the whole lead-sheet spacing model rides on those surviving columns — the
+    /// ApplyRowCommandColumnSprings remarks tell the same story from the other side).
+    /// Text-row slot spacers and timing-placed chord symbols therefore always stay.
+    /// LILYPOND-REF: lily/spacing-determine-loose-columns.cc:82-90 is_loose_column.
+    /// </remarks>
     internal static List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
     {
         var timings = new HashSet<Fraction>();
+        // Whether any NOTATION-staff spacer contributed an onset. Almost no measure has
+        // one, and the prune below can only ever remove such onsets — so the anchor/span
+        // bookkeeping it needs is built in a second pass, only when this trips. This
+        // function runs per measure from BOTH the layout and the line breaker, so the
+        // common path must stay what it always was: timings.Add and nothing else.
+        bool sawNotationSpacer = false;
 
         foreach (var staffGroup in score.StaffGroups)
         {
@@ -1515,6 +1535,8 @@ internal sealed class MultiStaffLayouter
                         foreach (var item in measure.Items)
                         {
                             timings.Add(currentTiming);
+                            if (!staff.IsTextRow && item is RestItem { IsSpacer: true })
+                                sawNotationSpacer = true;
                             currentTiming += item.Duration;
                         }
                     }
@@ -1531,9 +1553,64 @@ internal sealed class MultiStaffLayouter
                 if (cn.MeasureIndex == measureIndex && cn.UseTiming)
                     timings.Add(cn.Timing);
 
-        var sortedTimings = timings.ToList();
+        var sortedTimings = sawNotationSpacer
+            ? PruneSpacerOnlyOnsets(score, measureIndex, timings)
+            : timings.ToList();
         sortedTimings.Sort();
         return sortedTimings;
+    }
+
+    /// <summary>
+    /// The loose-column prune (see <see cref="CollectAllTimingsForMeasure"/>): drops
+    /// onsets owed ONLY to notation-staff spacers when a musical item sounds strictly
+    /// through them (started before, ends after). Everything the filter could empty is
+    /// anchored, so the empty-result guard never fires for real music; it protects a
+    /// degenerate all-spacer measure from losing its one column. Runs only when the
+    /// measure actually contains a notation-staff spacer.
+    /// </summary>
+    private static List<Fraction> PruneSpacerOnlyOnsets(
+        MultiStaffScore score, int measureIndex, HashSet<Fraction> timings)
+    {
+        // Onsets owed to something OTHER than a notation-staff spacer: a musical item
+        // anywhere, or any text-row item (a lead sheet's slot columns are its spacers).
+        var anchoredOnsets = new HashSet<Fraction>();
+        // Spans of notation-staff MUSICAL items — the "another voice sounds through it"
+        // test for pruning a spacer-only onset.
+        var soundingSpans = new List<(Fraction Start, Fraction End)>();
+
+        foreach (var staffGroup in score.StaffGroups)
+        {
+            foreach (var staff in staffGroup.Staves)
+            {
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex < voice.Measures.Length)
+                    {
+                        var currentTiming = Fraction.Zero;
+                        foreach (var item in voice.Measures[measureIndex].Items)
+                        {
+                            bool musical = SpacingRules.IsMusicalColumn(item);
+                            if (musical || staff.IsTextRow)
+                                anchoredOnsets.Add(currentTiming);
+                            if (musical && !staff.IsTextRow && item.Duration > Fraction.Zero)
+                                soundingSpans.Add((currentTiming, currentTiming + item.Duration));
+                            currentTiming += item.Duration;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!score.ChordNames.IsDefaultOrEmpty)
+            foreach (var cn in score.ChordNames)
+                if (cn.MeasureIndex == measureIndex && cn.UseTiming)
+                    anchoredOnsets.Add(cn.Timing);
+
+        var pruned = timings
+            .Where(t => anchoredOnsets.Contains(t)
+                        || !soundingSpans.Any(s => s.Start < t && t < s.End))
+            .ToList();
+        return pruned.Count == 0 ? timings.ToList() : pruned;
     }
 
     /// <summary>

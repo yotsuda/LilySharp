@@ -80,6 +80,24 @@ public class PostEventOrderTests
     }
 
     [Fact]
+    public void CompoundMarkThenBeamOrTie_MarkerSurvives()
+    {
+        // A @name(...) mark rides its note as a MusicMarkSyntax CHILD, and the
+        // flattened walk used to list that child between the note and the beam/
+        // tie marker written after it — the one-node lookahead read the mark,
+        // the flag never got set, and the manual beam silently fell to the
+        // autobeamer (found via LP regression beaming.ly, the beam over the bar
+        // line: c'8^"over bar line"[ c c]). @cresc/@accent never hit this: only
+        // MusicMarkSyntax is a collectable flat node.
+        var score = new MeasureCollector().Collect(
+            Parse("c8@text(\"x\")[ d8] e4 g2@text(\"y\")~ | g1 |"));
+        var first = Assert.IsType<NoteItem>(score.Voice.Measures[0].Items[0]);
+        Assert.True(first.HasBeamStart, "beam start must survive a @text(...) mark");
+        var tied = Assert.IsType<NoteItem>(score.Voice.Measures[0].Items[3]);
+        Assert.True(tied.HasTieStart, "tie must survive a @text(...) mark");
+    }
+
+    [Fact]
     public void InlineVoltaBracket_NotMistakenForBeamMarker()
     {
         // '[1.' after a note is an inline volta ending, not a beam bracket —

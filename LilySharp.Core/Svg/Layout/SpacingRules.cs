@@ -3180,7 +3180,13 @@ internal static class SpacingRules
         NoteSpacingParameters? noteParams = null,
         Fraction? measureLength = null)
     {
-        // LILYPOND-REF: lily/spacing-basic.cc:113-119 — fall back to delta_t when no playing duration is known.
+        // ⚠️ The delta_t fallback is LILY#'S OWN. LilyPond never asks this question —
+        // a column with no playing grobs is pruned before note_spacing runs — and its
+        // own guard for the impossible case (lily/spacing-basic.cc:113-120) is a
+        // programming_error plus a WHOLE note, not delta_t. This line used to cite
+        // those very lines as if they prescribed delta_t; they do not. Lily# keeps
+        // skip-only columns alive (lead-sheet slot grids), and for those delta_t
+        // equals the slot's own duration, which is what the measured recipe wants.
         if (shortestPlayingDuration <= Fraction.Zero)
             shortestPlayingDuration = segmentDuration;
         if (shortestPlayingDuration <= Fraction.Zero)
@@ -3415,8 +3421,24 @@ internal static class SpacingRules
     /// </remarks>
     public static Fraction ComputeShortestPlayingAt(Fraction timing, IEnumerable<Measure> allMeasures)
     {
+        // A spacer (`s`) never outranks a REAL playing note: LilyPond's spacing engraver
+        // reads playing durations off the rhythmic grobs it acknowledges, and a skip
+        // engraves none — so an `s8` under a sustained c'4 must not drag shortest-playing
+        // down to an eighth (LP regression beam-skip.ly: the quarter keeps its plain
+        // quarter spring). But when ONLY spacers play — a skip-only stretch, or a
+        // lead-sheet row whose every item is a slot spacer — the spacers' durations stay
+        // the answer. ⚠️ THAT KEEP IS LILY#'S OWN, not LilyPond's: LP never faces the
+        // case (a column with no playing grobs is pruned before note_spacing runs, and
+        // if one slipped through, spacing-basic.cc:113-120 would programming_error and
+        // charge a WHOLE note — not delta_t). Lily#'s surviving skip-only columns ride
+        // the delta_t fallback in CreateTimingSpringMultiVoice, and on the slot grids
+        // the rows build, a slot's duration and its delta_t are the same number — the
+        // measured lead-sheet recipe (ApplyRowCommandColumnSprings) is calibrated on
+        // top of exactly that, which is why the spacer durations must keep flowing here.
         Fraction shortest = Fraction.Zero;
+        Fraction shortestSpacer = Fraction.Zero;
         bool found = false;
+        bool foundSpacer = false;
 
         foreach (var m in allMeasures)
         {
@@ -3427,7 +3449,15 @@ internal static class SpacingRules
                 // The note "plays" at `timing` iff t <= timing < end.
                 if (t <= timing && timing < end && item.Duration > Fraction.Zero)
                 {
-                    if (!found || item.Duration < shortest)
+                    if (item is RestItem { IsSpacer: true })
+                    {
+                        if (!foundSpacer || item.Duration < shortestSpacer)
+                        {
+                            shortestSpacer = item.Duration;
+                            foundSpacer = true;
+                        }
+                    }
+                    else if (!found || item.Duration < shortest)
                     {
                         shortest = item.Duration;
                         found = true;
@@ -3437,7 +3467,7 @@ internal static class SpacingRules
             }
         }
 
-        return shortest;
+        return found ? shortest : shortestSpacer;
     }
 
 

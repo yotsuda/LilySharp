@@ -2739,8 +2739,9 @@ public sealed partial class MeasureCollector
                     continue;
                 }
 
-                var next = i + 1 < nodeList.Count ? nodeList[i + 1] : null;
-                ProcessMusicNode(node, builder, PeekMarkers(next));
+                // Same skip as ProcessMusicNodeSequence: a note-attached mark in
+                // the flat list must not shadow the tie/slur/beam marker behind it.
+                ProcessMusicNode(node, builder, PeekMarkers(PeekPastAttachedMarks(nodeList, i)));
             }
         }
 

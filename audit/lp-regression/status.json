@@ -1326,7 +1326,9 @@
     },
     "beam-skip.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "beams over skips do not cause a segfault",
+      "notes": "fixed 2026-08-06 s99-13. Crash claim itself passes trivially (no crash, beam over pure skips draws nothing - manual [ ] on spacers yields no beam members). Translation: Lily# has no same-Voice simultaneous << {} {} >>, so voice span (2 voices) - LP renders BOTH spellings identically (verified: head xs and staff width byte-equal), notes get their 8th beam from autobeam instead of the skip streams manual events. Real divergence found and fixed: a notation-staff spacer-only onset spanned by a sounding note kept its own sprung column (c4->c8 read 4.90 = two 8th springs; LP prunes the empty column as loose -> 3.704 = one quarter spring), and ComputeShortestPlayingAt counted spacers as playing (s8 under c4 dragged shortest to 1/8). Two-part fix: (1) CollectAllTimingsForMeasure post-filter drops onsets owed ONLY to notation-staff spacers with a musical item sounding strictly through them (text-row slot spacers, chord timings, unspanned skip stretches all survive - single-voice c8 s8 c8 keeps 4.90 = LP 4.904, lead-sheet recipe untouched); (2) shortest-playing: spacers yield to any real playing note, but remain the answer for spacer-only moments (LP fallback = delta_t, identical on slot grids). After fix: multi-voice gaps 3.70/2.50 vs LP 3.704/2.504. Snapshot moves: beam-over-stem only - bar1 col0->1/16 gap 2.50->1.90 (LP 1.60, toward LP); remaining 1.90-vs-1.20/1.60 sub-beat floors pre-date this change (bar2 1/16->1/8 was 1.90 before and after). fixture test/beam-skip (positive control: stashing the two Core files fails it and beam-over-stem). Residual noted: single-voice trailing-skip gap 4.96 vs LP 4.904 (delta 0.056, pre-existing)."
     },
     "beam-slope-stemlet.ly": {
       "category": "scheme",
@@ -1422,11 +1424,15 @@
     },
     "beaming-tuplet-regular.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "beams in a completed tuplet are continuous",
+      "notes": "exact 2026-08-06 s99-13. Polygon fingerprint 8==8; grouping identical: each half-bar beams [tuplet+8th][8th+tuplet] (16th line covers only the tuplet part, primary extends to the neighbour). Beam Y exact both engines (primary center ON middle line, 16th line -0.81); group widths and inter-group gaps match within 0.01 after the stroke-vs-fill ink correction (+-0.04). tuplet 3/1 parses in Lily#. DIVERGENCE RECORDED (known family, not this claim): tuplet NUMBER placement - both print bare italic 3 (size 1.75) since fully-beamed tuplets suppress the bracket, but LP centers the number on the TUPLET S OWN column span (all 4 groups verified +-0.05) while Lily# centers on the WHOLE beam; Y also differs (~1.5 vs ~2.15 ss above middle). Same tuplet-bracket/number unported family as autobeam-tuplet-recheck (s99-7)."
     },
     "beaming.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "automatic beaming; beams may cross bar lines (line breaks forbidden there)",
+      "notes": "fixed 2026-08-06 s99-14. Full translation incl. cross-bar manual beam, ] inside tuplet braces (parses), s4*3 as s4 s4 s4, ^\"over bar line\" as @text(...).up. Polygon fingerprint 37==37 with per-group composition identical (m1 tuplet 16th-line spans only the 3 tuplet stems; dotted-pair beamlets point the right way; c64 pair uses the 0.8733 4-beam translation; final c32[c16 c8 c32] = 5 polys same shape); beam-Y quants match (-2.81/-2.0/-1.19 etc.). Line breaking: LP 3 systems (narrow default paper) vs Lily# 2 (A4 102ss, no paper grammar) - README-known; NEITHER breaks inside the cross-bar beam (claim holds). REAL BUG found and fixed via this file: a note-attached @name(...) mark (MusicMarkSyntax child) surfaces in the flattened collector list between its host note and the tie/slur/beam marker written after it, so the one-node lookahead (PeekMarkers) read the mark - c8@text(\"x\")[ silently lost its manual beam to the autobeamer, and a tie after such a mark died too. Fix = PeekPastAttachedMarks in both flat walks (MusicWalk + structure walk). First attempt (filter attached marks out of the list) DELETED rehearsal marks - the statement-path \"duplicate\" is the LIVE collection path for @mark(\"A\"); reverted to the peek-side skip, showcase/01-expressions byte-identical. Unit observer PostEventOrderTests.CompoundMarkThenBeamOrTie_MarkerSurvives (positive control: fails with the two collector files stashed). Representation notes: LP ^\"text\" = upright serif 2.2 above the note; Lily# @text = italic (own annotation model). Tuplet numbers again the known bracket/number family (see beaming-tuplet-regular)."
     },
     "beamlet-point-toward-beat.ly": {
       "category": "scheme",
@@ -1434,7 +1440,9 @@
     },
     "beamlet-test.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "beamlets point away from complete beat units, toward off-beat/broken units, also in tuplets",
+      "notes": "open 2026-08-06 s99-15. 13 of 14 beamlet sites EXACT: polygon fingerprint 28==28, 2 systems both engines, every stub at the same ordinal/level/side, beam-Y quants identical (stroke +-0.04), final ragged line column spacing <=0.15, t8 head gaps <=0.05. System-1 width differences are line-justification only (different line widths). ONE real divergence = the file s own claim inside a tuplet: t8 = tuplet 5/4 {a8 a32 a8 a16. a8 a8}, the a32 (interior stem, neighbours equal count, ambiguous beat test) points its 16th+32nd beamlets LEFT in Lily#, RIGHT in LP (LP stub 94.62 starts AT stem2 94.58 extending right; Lily# stub 83.97..85.13 ENDS at stem2 85.01; delta 1.09). Root cause is the ALREADY-NAMED debt in BeamingPattern.cs SetRhythmicImportance remarks (:400-408): the port reads tuplet stems in ACTUAL proportions - LilyPond divides by current_factor and runs a Span_position stack per tuplet (beaming-pattern.cc:203-289 Span_position/Tuplet_description incl. nesting via parent_, :292-404 set_rhythmic_importance, plus :129-131 boundary-CENTER and :192-199 boundary beamlet clamp that Lily# also lacks). Hand-check confirms: with the tuplet span, a32 sits ON a span moment -> importance_for_length((1/10)/(4/5)=1/8)-beat_level(0)=1, next a8 at relative (1/32 written) -> 3, 1<3 -> RIGHT; with root span only both get 1 -> tie -> LEFT = observed. The debt note said \"NO POINT OBSERVES IT - it would have to be measured before it could be closed\": this file IS the observer now. Port plan: BeamDetector already receives _tupletBrackets - thread span descriptions (start/stop/num/den/parent) onto BeamingPattern.Element, port Span_position stack + current_factor into SetRhythmicImportance, add at_span_start/stop CENTER + boundary clamp to Beamify. Translation gotchas recorded: none new (tuplet 5/4, a16. dotted, all parse)."
     },
     "beams.ly": {
       "category": "scheme",
