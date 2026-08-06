@@ -58,6 +58,69 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第102セッション（＝**chord-X-align-on-main-noteheads.ly を fixed 第18号で完食**。
+frontier の pending 先頭は chords-funky-ignatzek.ly。open は
+automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本のまま）。
+
+★★★ **① fixed 第18号 = unison 和音のタイ対（commit `ec81e4c6`）**:
+- **本の主張**: unison/2度和音の articulation・強弱・スラー・タイを「符尾の正しい側」の
+  符頭（main）に中央揃え。**marcato 8 例・p/f 4 例は修正前から完全一致**（アンカーが
+  符尾の向きで正しく反転する所まで）。hairpin 対は `\!` 終端の綴りが無く**両側落とし**
+  （articulations 本と同じ枠合わせ・HairpinEngraver:348-430 は「次の強弱/次マークで終端」）。
+- **欠陥 ⑴ 放出の値等価衝突**: TieItem は record。unison 対の 2 本は**全プロパティ同値**
+  （SourcePosition も和音共有）で、`ordered.IndexOf(tie)` が両方に slot 0 を返し
+  **DOWN の弓を 2 重描き**。列ソルバ TieFormattingProblem は正しく [-1,+1] に割っていた——
+  潰れたのは ElementCoordinator.LayoutTies の**放出**。修正 = ReferenceEquals の FindIndex。
+  ★ **教訓: record の音楽モデルで「同じ音」は等値**——IndexOf/Contains/Dictionary は
+  unison・同音で黙って衝突する（stem support の `positions.IndexOf(supportPos)` も同族だが
+  そこは member1=main の並びで無害と確認済）。
+- **欠陥 ⑵ 境界箱の順序**: LP の外形は head_boxes の**先頭/末尾**を DOWN/UP の recession
+  箱に使う（**boundary は Y 極値でなく順序**・tie-formatting-problem.cc:50-54, :243-258）。
+  LP は unison の第 2 メンバを常に右に置くので実質「UP=右頭の中心」。Lily# は member1=main
+  の並びなので bar2（下向き符尾＝main が右）で頁 X 順と逆転→上タイが offside 中心に付き
+  −1.15。修正 = tied heads の sort に**同位置時の X tiebreak**。
+- **照合**: 修正後タイ 4 本とも X/Y 完全一致（SVG 2 桁丸め内。bar2 下 28.72→30.55/y10.92・
+  上 29.11→31.71/y8.69、bar4 下 55.30→57.91/y14.69・上 56.47→58.29/y12.47＝LP 実測と同値）。
+  下タイ左端 = stem pull-back(+0.35)・上タイ = 境界頭中心+x-gap(0.2) まで手計算で LP を再現
+  してから直した。**単音タイは probe で元から X/Y 完全一致**（start=頭左+0.852・end=次頭左
+  +0.452 まで）。
+- **観測者**: ChordTieTests +3（方向分裂・stem-down/up の up−down 差分 0.387/1.161 釘付け）。
+  snapshot 動き 0 枚・既存 fixture に unison タイ対なし＝爆風ゼロ。
+- ⚠️ **相対の罠の新形（和音）**: 和音の出口＝**根音の素の文字の bare 解決（anchor）**・
+  root の `'` は**ローカル**・メンバは anchor に**積む**（CreateChordItem:246-286）。
+  **`<f' f>` は F5+F4 の非 unison**。F5 unison は **`<f f>'`**（`>` 後の全体マークだけが
+  anchor を動かす）。status.json の下書き walk はここが誤っていた（「要検算」は正解）。
+  検算は **`lysc check --pitches`** が速い（今回 34 音全部これで先に確認した）。
+
+★ **起票（未修正・別 regime）**: **slur 端点 X**——Lily# は main 符頭中心から**両端 0.30
+内側**、LP は**両端 +0.07**（スラー全体が右へ 0.07・長さ=頭中心間隔）。**単音の対
+scratch\lpreg\probe-slur-tie-x.{ly,lys} でも同値**＝unison 固有でなく一般 regime
+（Y 端点は両者完全一致 −1.04ss）。slur.cc の attachment 読みの port が要る。
+
+★ 前セッションの「Core 0 warning」は**開始時点で嘘**だった（CS0219 `StaffHalf`——第101便の
+marcato ガード撤去で読者を失った複製 const。QuantizedYPosition 側だけ残骸）。除去済み（同 commit）。
+
+⚠️ 引用ラチェットの新しい罠を 2 つ: **シンボルは `_` 入りか 3 部ハイフン・8 字以上**
+（`boundary` 単語は無名扱い）・**名指した記号は引用*範囲内*の定義の中に実在する必要**
+（`CitationRangesHoldTheirNamedSymbol`——:50-54 に head_boxes と書いて落ちた→範囲を
+本体 :243-258 に寄せ、:50-54 は裸の継続住所で添える）。
+
+**frontier（次の本命）**: ⑴ pending 先頭 = **chords-funky-ignatzek.ly**（chords 族＝
+stray-token recovery の silent-swallow 鉱脈）⑵ open 2 本（automatic-polyphony-tabstaff・
+breathing-sign-accidentals——**breathing-sign の port 計画は第99セッション第16便 §1 参照・
+まだ生きている**）⑶ 起票の slur 端点 X regime。
+
+plain 322 / 処理済 **69**（fixed **18**・exact 16・skip 33・open 2。
+数えたら state 別内訳も一緒に書くこと）。
+
+未 push **68**（この handoff で 69。数え直すこと。**⚠️ push しない**）・テスト
+**4154 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning（CS0219 除去後に再確認）・snapshot 動き 0 枚**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第101セッション第1〜4便の経緯
+
 最終更新 第101セッション第2便（＝第1便で**見えない stem = fixed 第16号**・第2便で
 **script-Y 配置族を解消**（marcato Δ0.70・trill Δ0.45）。frontier 2 本とも完食。open は
 automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本だけ）。

@@ -95,4 +95,51 @@ public class ChordTieTests
         var (_, layout) = BuildLayout("c4~ c4 |");
         Assert.Single(layout.TieLayouts);
     }
+
+    [Fact]
+    public void UnisonChordTie_SplitsDirections()
+    {
+        // <f f>'~ <f f>: a UNISON pair is two ties in one column, and the column's
+        // standard distribution sends the front DOWN and the back UP — LilyPond draws
+        // one bow below the pair and one above it (chord-X-align-on-main-noteheads.ly).
+        // The two TieItems are value-EQUAL records, which is exactly what used to
+        // collapse them onto one solved slot and draw the same bow twice.
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:1025-1084 set_ties_config_standard_directions
+        var (_, layout) = BuildLayout("<f f>'4~ <f f> |");
+        Assert.Equal(2, layout.TieLayouts.Length);
+        Assert.Equal(1, layout.TieLayouts.Count(t => t.CurveUp));
+        Assert.Equal(1, layout.TieLayouts.Count(t => !t.CurveUp));
+    }
+
+    [Fact]
+    public void UnisonChordTie_StemDown_AttachmentsMatchLilyPond()
+    {
+        // F5 unison pair, stems down. LilyPond (2.26.0, chord-X-align-on-main-noteheads
+        // pair): the DOWN bow starts at the start chord's STEM + 0.35 pull-back and ends
+        // at the recession centre of the end chord's LEFT head; the UP bow clears the
+        // stems and recedes to the RIGHT heads' centres. The bows' page X therefore
+        // differ by fixed amounts that carry the whole boundary-head choice:
+        //   up.start − down.start = 37.642 − 37.255 = 0.387
+        //   up.end   − down.end   = 40.244 − 39.083 = 1.161
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:243-258 set_column_chord_outline
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:583-609 generate_configuration
+        var (_, layout) = BuildLayout("<f f>'4~ <f f> |");
+        var down = Assert.Single(layout.TieLayouts, t => !t.CurveUp);
+        var up = Assert.Single(layout.TieLayouts, t => t.CurveUp);
+        Assert.Equal(0.387, up.StartX - down.StartX, 2);
+        Assert.Equal(1.161, up.EndX - down.EndX, 2);
+    }
+
+    [Fact]
+    public void UnisonChordTie_StemUp_AttachmentsMatchLilyPond()
+    {
+        // E4 unison pair, stems up — the mirror of the stem-down case. LilyPond:
+        //   up.start − down.start = 65.001 − 63.840 = 1.161
+        //   up.end   − down.end   = 66.829 − 66.442 = 0.387
+        var (_, layout) = BuildLayout("<e e>4~ <e e> |");
+        var down = Assert.Single(layout.TieLayouts, t => !t.CurveUp);
+        var up = Assert.Single(layout.TieLayouts, t => t.CurveUp);
+        Assert.Equal(1.161, up.StartX - down.StartX, 2);
+        Assert.Equal(0.387, up.EndX - down.EndX, 2);
+    }
 }

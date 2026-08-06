@@ -1335,8 +1335,6 @@ internal static class ArticulationEngraver
     private static double QuantizedYPosition(double noteUp, bool isAbove, bool stemUp,
         ArticulationType type, MusicItem? item = null, NoteColumnLayout? column = null)
     {
-        // StaffHalf = the outer staff line, staff-spaces above/below the middle (Y-up).
-        const double StaffHalf = 2.0;
         // ── Stage 4-5 (aligned_side): Calculate total_off ──
         //
         // LILYPOND-REF: side-position-interface.cc:266-328 build support skylines

@@ -1,0 +1,24 @@
+// lilypond-src/input/regression/chord-X-align-on-main-noteheads.ly の Lily# 訳。
+// CLAIM: unison/2度を含む和音では articulation・強弱・スラー・タイを
+// 「符尾の正しい側」の符頭(main notehead)に中央揃えする。
+// 枠合わせ: LP 原本の hairpin 対(\< \> \!)は Lily# に \! 終端の綴りが無く
+// 両側とも落とした(chord-tremolo-articulations と同じ)。-^ = @marcato。
+// 綴り: LP 絶対 e''=Lily# e'。⚠️ 和音の出口=根音の素の文字の bare 解決(anchor)で、
+// root の ' はローカル・メンバは anchor に積む(CreateChordItem)——<f' f> は
+// F5+F4 の非 unison になる。F5 unison は <f f>'(全体マーク=anchor ごと上げる)。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    e'4@marcato <e e>@marcato@p <c e e>@marcato@f <a d e>@marcato |
+    <f f>'( <e e>) <f f>~<f f> |
+    f,4@marcato <f f>@marcato@p <f f a>@marcato@f <f g c>@marcato |
+    <e e>( <f f>) <e e>~<e e>
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

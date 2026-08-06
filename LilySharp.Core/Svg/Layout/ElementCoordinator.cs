@@ -1348,7 +1348,18 @@ internal sealed class ElementCoordinator
         }
         if (tied.Count == 0)
             return null;
-        tied.Sort((a, b) => a.Position.CompareTo(b.Position));
+        // Equal positions (a UNISON pair) fall back to X: LilyPond's bounds order is the
+        // ties' order, and its unison pair always has the RIGHT head second (the second
+        // member is the one displaced, and it goes to the right for either stem direction),
+        // so boundary(head_boxes, UP) reads the RIGHT head's centre. Lily#'s member order
+        // has the MAIN head first — for a down-stem chord that is the RIGHT one — so without
+        // the tiebreak the recession boxes swap heads and the up tie of <f f>~<f f> attaches
+        // a head-shift too far left (measured on chord-X-align-on-main-noteheads).
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:243-258 set_column_chord_outline —
+        //   boundary picks the head_boxes vector's ENDS by order, not extremes by Y (:50-54)
+        tied.Sort((a, b) => a.Position != b.Position
+            ? a.Position.CompareTo(b.Position)
+            : a.XLeft.CompareTo(b.XLeft));
 
         // The stem. StemSpacingInfo is null exactly when LilyPond's Stem::is_normal_stem is
         // false (a whole note), which is the branch that boxes a half-plane instead of a shaft.
@@ -1585,9 +1596,14 @@ internal sealed class ElementCoordinator
 
             // Emitted tie-major, which is the order the drawn ties -- and every ledger reading
             // that indexes them -- have always come out in.
+            // ⚠️ The slot lookup must be BY REFERENCE: TieItem is a record, and a UNISON
+            // chord's two ties are value-EQUAL (same position, same synthesized bounds), so
+            // List.IndexOf hands both of them slot 0 and the column's upper tie is drawn as a
+            // second copy of the lower one — the solver's up/down split (LP's
+            // set_ties_config_standard_directions seeding) never reaches the page.
             foreach (var tie in column)
             {
-                int i = ordered.IndexOf(tie);
+                int i = ordered.FindIndex(t => ReferenceEquals(t, tie));
                 for (int s = 0; s < segments.Length; s++)
                     tieLayouts.Add(solved[i, s]);
             }

@@ -1964,9 +1964,9 @@
     },
     "chord-X-align-on-main-noteheads.ly": {
       "category": "plain",
-      "state": "pending",
       "claim": "unison/2度を含む和音では articulation・強弱・スラー等を「符尾の正しい側」の符頭に中央揃えする",
-      "notes": "第101セッション下見(probe-unison.lys): Lily#はunison和音<e e>を受理し逆側符頭も描き、marcatoは4例(下向き符尾×3・上向き1・逆側が左/右両方)ともmain符頭中心=正しい側に乗った——articulation Xは生きている疑い濃厚。本照合の残り: 強弱(\\p/\\f)のX・スラー/タイ端点X・hairpin対(\\<..\\!)。⚠️hairpin: Lily#は@cresc/@decrescはあるが\\!終端の綴みが無い(articulations本と同じ罠)——対から落とすか@crescのスパン意味論を先に確認。twin綴りの下書き: e'4 <e e> <c e e> <a d e> / <f' f>( <e e>) <f f>~<f f> / f,4 <f f> <f f a> <f g c> / <e e>( <f f>) <e e>~<e e>(相対walk済・要検算)"
+      "state": "fixed",
+      "notes": "第102セッション fixed第18号=unisonタイ対2件: ⑴TieItem(record)値等価でordered.IndexOfが両taiにslot0を返しDOWN弓を2重描き(emit=参照一致に修正) ⑵tied heads同位置のsort順が頁X順と逆でrecession境界箱(boundary=先頭/末尾)が入替り(X tiebreak追加)。修正後タイ4本X/Y完全一致(bar2 down 28.72→30.55/up 29.11→31.71・bar4 down 55.30→57.91/up 56.47→58.29=全部LP値,2桁丸め内)。marcato8例/p・f4例=main符頭中心に完全一致(アンカーが符尾側で正しく反転)。hairpin対は両側落とし(\\!終端の綴り無し=articulations本と同じ)。残差=slur端点X: Lily#=main中心±0.30内側 vs LP=+0.07(単音probe-slur-tie-xでも同値=unison固有でない一般regime・起票)。観測者=ChordTieTests+3(方向分裂+LP差分0.387/1.161)"
     },
     "chordnames-nochord.ly": {
       "category": "scheme",
