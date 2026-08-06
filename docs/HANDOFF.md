@@ -84,6 +84,20 @@ automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本だけ）�
   tools\Approve-Snapshots.ps1 -Name で選択承認（この道具の型は使える）。
 - 観測者 = ArticulationPlacementTests の 2 本（ForcedUpMarcato_QuantizesIntoTheStaff・
   Trill_SitsOnTheStaffPaddingRefpointFloor＝LP 数値を釘付け）。
+- **perf 実測（第4便＝ユーザー問「プレビュー速度は？」・TempPerfBench の型・base=1d6b6894
+  worktree・Release in-process min-of-15×3 周交互・ベンチは測定後に両ツリーから削除）**:
+  perf-plain **385.3 vs 385.9ms**（min-of-mins・±0.2%＝parity）・perf-chords 48.0 vs 43.7ms
+  （43〜97ms の徘徊帯内・両向きに暴れる＝系統差なし）。**SVG SHA256 は全 6 走で両ツリー
+  完全一致**＝tremolo/script を含まない曲への出力漏れゼロ。構造: 常時パスへの追加は
+  spring 1 本あたり pattern-match 2 回（TremoloPairRod）と梁 1 本あたり bool[] 1 面のみ・
+  per-system 再実行経路（quanter 再走・BuildAllStaffSkylines）への追加ゼロ・no-stem 梁は
+  むしろ stem-length scorer を丸ごと跳ぶ。
+- **自己監査（第3便・`ed8831e3`）が札を 3 枚追加**: ⑴ no-stem 梁の Fl は LP だと 0/0=NaN
+  ——Lily# は既存 eps ガードで有限課金（敗者同じ・NaN 経路は意図的に不再現）＝OWN 札
+  ⑵ AccidentalGroupLength は courtesy 括弧を数えない+未 pack 単独は素幅＝OWN 札（観測者なし）
+  ⑶ script の①床 2.25 は **flat**——include_staff 読みなら 2.05+script 自身の padding で、
+  fermata（0.40）は 2.45 になるはず。**床が bind する fermata の観測者ゼロ**なので flat 温存
+  ＝仮説と明記（⚠️札）。REF は commit 1 に 21 本・commit 2 に 4 本（引用ラチェット green）。
 - ⚠️ 残: chord-scripts の**下側 stack 増分 LP1.25 vs 1.30（Δ0.05）**は未解決（起票のみ）。
   mordent/turn/prall 等は今も fallback 箱（Bottom −0.5）——本が来たら実箱化+実測。
 
@@ -135,8 +149,10 @@ LP 4.86＝spacing/springs）⑵ accidental 本 m3 の梁幅——LP は 3 度違
 - q は grace body 内・chords{} 行内で未対応。resolver の逆行参照は診断なしで spacer 縮退。
 - articulations 本の hairpin 終端 `\!` の綴りが無い（文法の宿題）。
 
-**frontier（次の本命）**: 前便の 2 択は両方完食。次は ⑴ キューの次の plain
-（status.json のアルファベット順・pending の plain を頭から）⑵ open 2 本
+**frontier（次の本命）**: 前便の 2 択は両方完食。次は ⑴ **chord-X-align-on-main-noteheads.ly**
+（キュー先頭の pending plain・**下見済＝status.json の notes に twin 下書きと残り作業**。
+probe-unison.lys で unison 和音+逆側符頭+marcato の main 符頭中央揃えは 4 例とも既に正しいと
+確認済——本照合は強弱/スラー/タイ端点の X と hairpin 対の枠合わせ）⑵ open 2 本
 （automatic-polyphony-tabstaff・breathing-sign-accidentals——
 **breathing-sign の port 計画は第99セッション第16便 §1 参照・まだ生きている**）。
 

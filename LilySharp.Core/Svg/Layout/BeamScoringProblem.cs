@@ -363,8 +363,12 @@ internal sealed class BeamScoringProblem
         // With NO normal stems the edge dirs stay CENTER (0) — LilyPond only fills
         // edge_dirs_ when normal_stem_count_ is nonzero (beam-quanting.cc:327-330),
         // and the forbidden-quant gap then degenerates to a point: only a candidate
-        // whose y sits EXACTLY on a staff line is charged (LP divides 0/0 into NaN
-        // demerits there; a finite charge keeps the same losers without the NaN).
+        // whose y sits EXACTLY on a staff line is charged.
+        // LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
+        // both zero — probe-whole-quants3 prints "Fl nan"), and NaN demerits poison
+        // its heap ordering; Lily#'s existing max(gapLength, eps) guard makes the
+        // same charge FINITE (0.39×extra). Same losers on every measured case, but
+        // the NaN pathway itself is deliberately not reproduced.
         _edgeBeamCounts = new[] { _memberBeamCounts[0], _memberBeamCounts[^1] };
         _edgeDirs = _normalStemCount == 0
             ? new[] { 0, 0 }

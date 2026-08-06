@@ -1211,6 +1211,12 @@ internal static class ArticulationEngraver
         //    outer line's ink by the script's own padding: ink edge ≥ 2.05 + 0.20
         //    = 2.25 — numerically the old StaffHalf + 0.25 clamp, kept as is.
         //    LP's accent over c'' sits exactly there (origin 2.67 = 2.25 + 0.42).
+        //    ⚠️ LILYSHARP-OWN: the 2.25 is FLAT, but under the include_staff reading
+        //    it should be 2.05 + PaddingFor(type) — identical only for the
+        //    padding-0.20 scripts. A fermata (script.scm padding 0.40) would want
+        //    2.45; no ledger point or book observes a fermata where this floor
+        //    BINDS (the script.* ledger points all pass either way), so the flat
+        //    constant stays until a measurement decides it.
         // LILYPOND-REF: lily/side-position-interface.cc:217-223 include_staff —
         //   staff-padding present && !quantize_position puts staff_symbol in common.
         // ② the staff-padding floor proper, on the REFPOINT (total_off): refpoint ≥
