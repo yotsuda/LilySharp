@@ -569,6 +569,10 @@ internal static partial class SharedRenderer
         double delta = maxWidth / 2 + 0.1;
 
         // Walk the maximal runs of string-adjacent notes; each run zigzags on its own.
+        // The column buffers live OUTSIDE the loop (stackalloc in a loop grows the
+        // frame per iteration, CA2014); each run rewrites its own prefix.
+        Span<int> evenFrets = stackalloc int[MaxRunColumn];
+        Span<int> oddFrets = stackalloc int[MaxRunColumn];
         int i = 0;
         while (i < n)
         {
@@ -585,13 +589,21 @@ internal static partial class SharedRenderer
             }
 
             // The run's two columns, by zigzag parity from the run's top note.
-            var evenFrets = new List<int>();
-            var oddFrets = new List<int>();
-            for (int k = start; k <= end; k++)
-                ((k - start) % 2 == 0 ? evenFrets : oddFrets).Add(notes[k].fret);
+            // ⚠️ ALLOCATION-FREE ON PURPOSE: this runs inside the spacing loop's
+            // chord-extent measurements, not once per drawn chord — the first cut
+            // (two Lists + two Sorts per run) put +16% on a tab-chord page's render.
+            int evenCount = 0, oddCount = 0;
+            for (int k = start; k <= end && evenCount < MaxRunColumn; k++)
+            {
+                if ((k - start) % 2 == 0) evenFrets[evenCount++] = notes[k].fret;
+                else oddFrets[oddCount++] = notes[k].fret;
+            }
+            SortDescending(evenFrets[..evenCount]);
+            SortDescending(oddFrets[..oddCount]);
 
             // The column with the larger frets goes right; a tie keeps the top note left.
-            bool evenRight = CompareFretColumns(evenFrets, oddFrets) > 0;
+            bool evenRight = CompareFretColumns(
+                evenFrets[..evenCount], oddFrets[..oddCount]) > 0;
             for (int k = start; k <= end; k++)
             {
                 bool right = ((k - start) % 2 == 0) == evenRight;
@@ -602,18 +614,38 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
+    /// One zigzag column's capacity: a run spans at most one note per string, so on any
+    /// real tuning (up to 8 strings) a column holds at most 4 — 8 is double that. The
+    /// gather above stops filling past it (an impossible run keeps its first 16 notes'
+    /// phase), rather than growing the stack by the input.
+    /// </summary>
+    private const int MaxRunColumn = 8;
+
+    /// <summary>Insertion sort, descending — the columns hold at most a few frets.</summary>
+    private static void SortDescending(Span<int> s)
+    {
+        for (int i = 1; i < s.Length; i++)
+        {
+            int v = s[i];
+            int j = i - 1;
+            while (j >= 0 && s[j] < v)
+            {
+                s[j + 1] = s[j];
+                j--;
+            }
+            s[j + 1] = v;
+        }
+    }
+
+    /// <summary>
     /// Orders a zigzag's two columns: compares their frets largest-first, walking down
     /// the shared length. Equal all the way — including one column simply being the
     /// longer of two otherwise-equal stacks — is a tie (0): the caller keeps the
     /// default phase, which is what holds an all-equal stack (0/0/0) at left-right-left.
     /// </summary>
-    private static int CompareFretColumns(List<int> a, List<int> b)
+    private static int CompareFretColumns(ReadOnlySpan<int> a, ReadOnlySpan<int> b)
     {
-        a.Sort();
-        a.Reverse();
-        b.Sort();
-        b.Reverse();
-        for (int i = 0; i < Math.Min(a.Count, b.Count); i++)
+        for (int i = 0; i < Math.Min(a.Length, b.Length); i++)
             if (a[i] != b[i])
                 return a[i].CompareTo(b[i]);
         return 0;

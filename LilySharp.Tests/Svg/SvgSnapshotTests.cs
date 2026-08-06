@@ -659,6 +659,10 @@ public class SvgSnapshotTests
         // least-beamed neighbour, the surviving beams run over it and the extras
         // become beamlets (LP regression beam-multiplicity-over-rests.ly).
         yield return new object[] { "test/beamlets-over-rests" };
+        // A beamed rest between extreme chords rides the REAL collision shift up to
+        // the beam, and the PURE estimate already raised its spacing box so the next
+        // chord's flat clears it (LP regression beam-rest-extreme.ly: +3, +3, +3, 0).
+        yield return new object[] { "test/beam-rest-extreme" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

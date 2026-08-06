@@ -200,13 +200,34 @@ internal static class ItemSkylineFactory
             AddAccidentals(parts, chord, noteheadLeftX, staffY, headOffsets, noteValue);
             AddArpeggio(parts, chord, noteheadLeftX, staffY, headOffsets);
         }
+        else if (item is RestItem { PureBeamShift: not 0.0 } beamedRest)
+        {
+            // A rest under a beam enters at its PURE-estimated position with its REAL
+            // glyph box — LilyPond's separation box takes the element's pure Y-extent,
+            // and a beamed rest's pure Y chains the beam-push estimate. This is what
+            // lets an accidental behind the rest see it where the beam will put it
+            // (LP regression beam-rest-extreme.ly: the flat clears the raised rest by
+            // the rod, or tucks in when the rest sits out of its band).
+            // LILYPOND-REF: lily/separation-item.cc:163 boxes — pure_y_extent;
+            // LILYPOND-REF: lily/beam.cc:1421-1494 pure_rest_collision_callback.
+            var restBox = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(item));
+            double restY = staffY
+                - (GlyphMetrics.NoteValueOf(item) == 1 ? 1.0 : 0.0)
+                - beamedRest.PureBeamShift / 2.0;
+            parts.Add(ColumnPart.Ink(
+                restY - restBox.Top, restY - restBox.Bottom,
+                noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
+        }
         else
         {
             // A rest, and anything else without a staff position, sits on the middle line.
-            // ⚠️ A REST TAKES A NOTEHEAD-SHAPED BOX HERE while SpacingRules
-            //   .CalculateNoteheadRightExtent gives it the REST glyph's own extent
-            //   (lily/rest.cc Rest::width). Two spellings of one quantity, named rather
-            //   than fixed: it is pre-existing and changing it is not this port.
+            // ⚠️ An UNBEAMED REST STILL TAKES A NOTEHEAD-SHAPED BOX HERE while
+            //   SpacingRules.CalculateNoteheadRightExtent gives it the REST glyph's own
+            //   extent (lily/rest.cc Rest::width). Two spellings of one quantity, named
+            //   rather than fixed: pre-existing, and changing it is not this port. The
+            //   beamed branch above DOES use the real box — its position is the whole
+            //   point there, and the notehead approximation has no defensible reading
+            //   once the rest leaves the middle line.
             double noteY = item switch
             {
                 NoteItem n => staffY - n.StaffPosition / 2.0,

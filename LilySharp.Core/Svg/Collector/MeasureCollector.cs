@@ -1749,6 +1749,62 @@ public sealed partial class MeasureCollector
                     sectionLabelPosition: measure.SectionLabelPosition,
                     isPickup: measure.IsPickup);
             }
+
+            // Bake the PURE beam-push estimate into every rest this manual beam runs
+            // over, so horizontal spacing sees the rest roughly where the beam will
+            // put it — spacing runs before any beam is quanted; the print later uses
+            // the real collision shift (ElementCoordinator.CalculateRestShifts).
+            // LILYPOND-REF: lily/beam.cc:1421-1494 Beam::pure_rest_collision_callback.
+            int beamDir = group.StemUp ? 1 : -1;
+            foreach (var restStem in group.RestStems)
+            {
+                int mi = restStem.MeasureIndex >= 0 ? restStem.MeasureIndex : group.MeasureIndex;
+                if (mi < 0 || mi >= measures.Count)
+                    continue;
+                var measure = measures[mi];
+                if (restStem.ItemIndex < 0 || restStem.ItemIndex >= measure.Items.Length
+                    || measure.Items[restStem.ItemIndex] is not RestItem restItem)
+                    continue;
+
+                // beam.cc:1443-1469 left/right are the nearest stems WITH HEADS — other
+                // rests are not in my_stems, so these are the flanking visible members.
+                var left = group.Members[restStem.BeforeMember - 1];
+                var right = group.Members[restStem.BeforeMember];
+
+                // beam.cc:1471-1478 the closest beam is estimated four staff positions
+                // past the neighbouring heads' beam-side average, and never crosses the
+                // staff centre by more than two positions.
+                double beamPos = ((beamDir > 0 ? left.HeadPositionMax : left.HeadPositionMin)
+                        + (beamDir > 0 ? right.HeadPositionMax : right.HeadPositionMin)) / 2.0
+                    + 4.0 * beamDir;
+                beamPos = Math.Max(-2.0, beamPos * beamDir) * beamDir;
+
+                // beam.cc:1480-1491 offset = beam_pos·ss/2 − minimum_distance·dir −
+                // extent[dir], floored to whole staff spaces, only ever away from the
+                // beam (a semibreve's default origin hangs one space up, rest.cc:101-121).
+                var restBox = Layout.GlyphMetrics.GetRestBBox(restStem.NoteValue);
+                double restExtentAtDir = beamDir > 0 ? restBox.Top : restBox.Bottom;
+                double offsetSs = beamPos / 2.0
+                    - EngravingDefaults.RestMinimumDistance * beamDir - restExtentAtDir;
+                double previousSs = restStem.NoteValue == 1 ? 1.0 : 0.0;
+                double shiftSs =
+                    Math.Floor(Math.Min(0.0, (offsetSs - previousSs) * beamDir)) * beamDir;
+                if (shiftSs == 0.0)
+                    continue;
+
+                measures[mi] = new Measure(
+                    measure.Items.SetItem(restStem.ItemIndex,
+                        restItem with { PureBeamShift = shiftSs * 2.0 }),
+                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
+                    measure.SourceStart, measure.SourceEnd,
+                    hasBreakAfter: measure.HasBreakAfter,
+                    lineBreakPermission: measure.LineBreakPermission,
+                    breakPenalty: measure.BreakPenalty,
+                    pageBreakPermission: measure.PageBreakPermission,
+                    pageTurnPermission: measure.PageTurnPermission,
+                    sectionLabelPosition: measure.SectionLabelPosition,
+                    isPickup: measure.IsPickup);
+            }
         }
     }
 

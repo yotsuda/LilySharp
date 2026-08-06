@@ -58,6 +58,54 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第12便（＝**lp-regression キュー続行**。**第 6 号の修正＝
+beamed rest の rest_collision 実定数化＋pure 見積りの spacing 接続**（beam-rest-extreme.ly））。
+
+⚠️ **仕事は 1 commit**（`fe5b317b`）＋ handoff。**push 禁止（ユーザー指示・当面）継続**。
+
+★★★ **① 第 6 号の修正＝連桁内休符は桁まで登り、spacing はそれを先読みする**
+（beam-rest-extreme.ly・極端和音の連桁内 16 分休符）: Lily# は rest_collision_callback の
+「形」は持っていたが **4 定数が LILYSHARP-OWN の自前近似**（対称 ±2pos 箱・minDist 1pos
+——EngravingDefaults 自身が「LP と突き合わせていない」と申告済みだった）で、休符が
++2.0ss で頭打ちだった。移植は 2 面:
+- **印字側**（ElementCoordinator.CalculateRestShifts・beam.cc:1331-1415）: 休符 glyph の
+  **実 bbox**（GetRestBBox・16 分 = −2.05..0.82ss）・**Rest.minimum-distance 0.25ss**
+  （define-grobs。RestCollision の 0.75 とは別物）・**休符自身の clamped count**
+  （BeamGroup.RestStems——第11便の invisible stem がそのまま接続点になった）・count-aware
+  translation・RestStemX。旧 3 定数は削除、RestCenterPosition のみ消費者（covered-grob
+  予約）つきで残存（LILYSHARP-OWN 継続・註更新済み）。
+- **spacing 側＝pure_rest_collision_callback（beam.cc:1421-1494）の初移植**: 隣接可視
+  stem の頭平均 +4pos・中心跨ぎ ±2pos クランプ・whole-space 床。spacing は桁確定前に
+  走るので、**MeasureCollector.ResolveBeamStemDirections が RestItem.PureBeamShift に
+  焼き**、ItemSkylineFactory の beamed-rest 枝が**実 bbox を pure 位置で** separation box
+  に入れる（LP の pure_y_extent と同じ割り方——印字は実測・spacing は見積り。これが
+  texidoc の主張そのもの）。
+★★ 検証: **休符 Y-offset 4/4 完全一致**（LP after-line-breaking dump = +3/+3/+3/0 ss。
+beat2 の桁は昇り (−0.81→0) で、3 つの高群の休符が同じ棚 +3 に載る）。polygon 指紋 8==8。
+列間隔 12 対中 8 対 ±0.01。fixture `test/beam-rest-extreme`（陽性対照: Core stash で
+FAIL 確認済み）。8分連桁の既存 fixture `test/beamed-rest`（LP 参照値 6 点）は**無変更で
+通過**＝実定数化が既存一致を保った。**beamlets-over-rests の snapshot 移動は LP 向き**
+（休符 Y が −1/−2/−1/−1/−3/−2/−2/−3 = LP dump 全一致になったための再ベース。
+旧 heuristic は 8 個全部 −3 だった）。
+
+★ **② 残差（名指し・未返済）**: rod 駆動の列間隔が LP より 0.16〜0.54 狭い
+（rest→flat 列 4.06 vs 4.31 等）。ただし**休符が絡まない対（C3→C4 和音同士）にも −0.16 が
+出る**＝極端音域の accidental/rod・optical 系の**既存 regime** で、この修正が開けた穴では
+ない（数値は全部 status.json の notes）。
+
+⚠️ 比較器の罠（また 1 つ・README 行き候補）: LP SVG の glyph path 指紋——**rests.16 は
+`M139 54…`・flat は `M27 41…`**。初読で取り違えて「休符 +10.5ss」を読んだ。**位置を読む
+前にミニレンダ（`bes''4 b''!4 r16`）で指紋を取ってから**。
+
+**frontier = beam-skip.ly**。plain 322 / 処理済 **33**（fixed 6・exact 6・skip 20・open 1。
+⚠️ 第11便の「skip 22」は誤記——状態別は
+`$p | Group-Object { $_.Value.state }` で数え直した）。
+
+未 push **11**（この handoff で 12。数え直すこと。**⚠️ push しない**）・テスト
+**4101 passed / 0 failed / 4 skipped**（第11便 4100・+1 snapshot）・**Core 0 warning。**
+
+## 以下は第99セッション第11便の経緯
+
 最終更新 第99セッション第11便（＝**lp-regression キュー続行**。**第 5 号の修正＝
 連桁内休符の invisible stem**・frontier 歩きの**見落とし 5 本回収**（skip 3・exact 1・open 1））。
 
@@ -110,6 +158,21 @@ fixture `test/beamlets-over-rests`（陽性対照: Core stash で単独 FAIL 確
   （`Staff.CreateTab` が単一 Voice）。修正は CreateTab 全声部+声部別弦割当+声部別 tab 符尾。
   ⚠️ 綴りの罠: **treble_8 部は LP と同綴りが正解**（Lily# の記譜=実音+1oct 移調が
   いつものオクターブ差を相殺）。status.json の notes に全部記録済み。
+
+★★ **④ perf 実測（ユーザー問「劣化は無いか」への回答・`40b10071`）**: 基準
+`a499bde6` の worktree + Release 双方・交互 min-of-N（第98⑦の手順）。合成 3 本
+（120小節16分連桁 plain／120小節手動連桁+休符／60小節ギター和音 tab）。
+- **初回（静音時）: plain −3.0%・rests +2.7%・tab +16.3%**。tab の +16% は
+  zigzag 初版の **List×2+Sort×2 が和音 extent 測定（spacing ループ内・描画の数十倍の
+  頻度）ごとに走った**実費 ⇒ **stackalloc+挿入ソートで除去**（`40b10071`）。除去後の
+  静音走で **tab −3.8%・rests −0.5%**。
+- ⚠️ ただし今日の環境はセッション間で同一バイナリの床が ±15〜20% 動いた
+  （plain が −3%↔+9.5% を往復・ペア差は ±80% 散乱）。**±10% 未満は今日の測定床以下**
+  ——「+16% の唯一の床超え読みは特定・除去済み、以後は全入力で系統的シグナル無し」
+  までが言えること。静音時の再証明はベンチ 3 本（scratchpad の perf-*.lys）+ worktree
+  レシピで再現可。
+- 残る新規コスト（論拠つき小）: Beamify の clamped 配列 O(n)・CreateBeamGroup の
+  restStems List+ClipEdge 再構築 2 件/群・walk interleave O(n)——全て群サイズ定数。
 
 ★★ **③ 内側 overhang（①で名指しした残差）＝同セッションで返済**（`c52c3cbe`）:
 **segment/beamlet が stem で止まる端は内側でも半 stem 幅 0.065 張り出す**

@@ -1,0 +1,30 @@
+// A beamed rest between EXTREME chords is pushed clear of the beam by the real
+// collision shift, and the horizontal spacing already saw it coming: the pure
+// estimate (four positions past the neighbouring heads, clamped two past the
+// centre) raises the rest's spacing box, so the next chord's accidental clears
+// it instead of overprinting (LP regression beam-rest-extreme.ly).
+// LILYPOND-REF: lily/beam.cc:1331-1415 Beam::rest_collision_callback (print),
+// :1421-1494 pure_rest_collision_callback (spacing).
+// Reference LilyPond 2.26.0 rest Y-offsets (staff-spaces, up-positive), from an
+// after-line-breaking dump of the .ly twin: +3, +3, +3, 0 — the middle groups'
+// beams sit at the SAME height as the outer high group's (the quanter pulls
+// them all near the centre), so three rests land on one shelf and the low
+// fourth group never touches its rest.
+// NB: Lily# `octave absolute` is one octave above LilyPond, so Lily# c = LP c'.
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    <f' b' c'' f''>16[ r16 <f' bes' c'' f''>16 <f' b' c'' f''>16]
+    <f' b' c'' f''>16[ r16 <f''' bes''' c'''' f''''>16 <f''' b''' c'''' f''''>16]
+    <f''' b''' c'''' f''''>16[ r16 <f' bes' c'' f''>16 <f' b' c'' f''>16]
+    <f b c' f'>16[ r16 <f bes c' f'>16 <f b c' f'>16]
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

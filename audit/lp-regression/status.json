@@ -1304,7 +1304,9 @@
     },
     "beam-rest-extreme.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "beamed rest gets a pure height approximation so spacing is correct",
+      "notes": "fixed 2026-08-06 s99-12. Two-part port: (1) print side - CalculateRestShifts had the rest_collision_callback shape but LILYSHARP-OWN constants (symmetric +-2pos box, minDist 1pos); replaced with LP reals: rest glyph bbox (Rest16th -2.05..0.82ss), Rest.minimum-distance 0.25ss, rest-own clamped count via BeamGroup.RestStems, count-aware translation, RestStemX. Rest Yoff now +3/+3/+3/0 ss = LP dump exactly (beat2 beam ascends -0.81->0, all three raised rests land one shelf). (2) spacing side - pure_rest_collision_callback (beam.cc:1421-1494) baked as RestItem.PureBeamShift in ResolveBeamStemDirections; ItemSkylineFactory beamed-rest branch enters the REAL rest box at the pure position (est +3/+4/+4/0), so the following flat clears the raised rest (rod) or tucks under it (beat2, no band overlap). polygon fingerprint 8==8. Column gaps: 8/12 within 0.01 of LP; residual: rod-driven gaps near accidental columns 0.16-0.54 short (rest->flat col 4.06 vs LP 4.31; ALSO chord->chord C3->C4 3.04 vs 3.20 with no rest involved => pre-existing extreme-pitch rod/optical regime, not opened here). fixture test/beam-rest-extreme (positive control: Core stash fails it); beamlets-over-rests snapshot rebased to LP-exact rest Ys (-1/-2/-1/-1/-3/-2/-2/-3 = LP dump of the .ly twin). Comparer trap: LP SVG glyph paths - rests.16 is \"M139 54...\" and flat is \"M27 41...\", fingerprint them with a mini render before reading positions (first read swapped them and saw +10.5)."
     },
     "beam-rest.ly": {
       "category": "scheme",

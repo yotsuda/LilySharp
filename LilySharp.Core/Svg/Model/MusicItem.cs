@@ -367,6 +367,19 @@ public sealed record RestItem : MusicItem
     /// </summary>
     public bool IsMultiMeasure { get; init; }
 
+    /// <summary>
+    /// The PURE estimate of how far a beam will push this rest, in staff positions from
+    /// its default origin (up-positive), 0 when the rest is under no beam. Baked by
+    /// <c>MeasureCollector.ResolveBeamStemDirections</c> for every rest a manual beam
+    /// runs over, so the horizontal spacing sees the rest roughly where the beam will
+    /// put it — BEFORE any beam is quanted, exactly LilyPond's split: spacing reads the
+    /// estimate, the print reads the real collision shift.
+    /// LILYPOND-REF: lily/beam.cc:1421-1494 Beam::pure_rest_collision_callback —
+    /// the closest beam is guessed four staff positions past the neighbouring heads'
+    /// average, never crossing the staff centre by more than two.
+    /// </summary>
+    public double PureBeamShift { get; init; }
+
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;

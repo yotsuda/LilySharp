@@ -1,0 +1,25 @@
+// lilypond-src/input/regression/beam-rest-extreme.ly の Lily# 訳。
+// CLAIM: 連桁内の休符は pure height 近似で spacing が概ね正しくなる
+//        （極端な高低の和音に挟まれた休符が連桁に押されて動く）。
+// 綴り: LP \relative（引数なし＝基準 f・先頭の綴りは絶対と同義）→ 絶対展開 →
+//       Lily# 絶対（LP c'' = Lily# c'）。
+// LP 絶対展開: 行1 <f'' b'' c''' f'''>系 / 行2 の 2 個目から <f'''' …>（超高）/
+//              行3 の 2 個目から <f'' …> へ復帰 / 行4 <f' b' c'' f''>。
+// 4 グループ×各 1/4 拍 = 4/4 の 1 小節。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    <f' b' c'' f''>16[ r16 <f' bes' c'' f''>16 <f' b' c'' f''>16]
+    <f' b' c'' f''>16[ r16 <f''' bes''' c'''' f''''>16 <f''' b''' c'''' f''''>16]
+    <f''' b''' c'''' f''''>16[ r16 <f' bes' c'' f''>16 <f' b' c'' f''>16]
+    <f b c' f'>16[ r16 <f bes c' f'>16 <f b c' f'>16]
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

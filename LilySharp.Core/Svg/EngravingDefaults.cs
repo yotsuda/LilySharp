@@ -359,25 +359,28 @@ internal static class EngravingDefaults
         Layout.StemDetails.Default with { LengthFraction = CueScale };
 
     // Rest collision avoidance.
-    // ⚠️ THESE FOUR REPORTED AS SOURCED UNTIL 2026-08-03 AND NEVER WERE. The provenance
-    // ratchet looks back a fixed number of lines for a marker and does not stop at the
-    // previous declaration, so they were reading the LILYSHARP-OWN line that belonged to
-    // CueScale above them; when that line went with the cue port, four constants appeared
-    // at once. The count was propped up, not met — and a marker that can be inherited by
-    // whatever follows is worth knowing about wherever else this file is dense.
-    // LILYSHARP-OWN: Lily#'s own rest-shift heuristic. LilyPond's counterpart is the
-    // Rest_collision grob (lily/rest-collision.cc, RestCollision.minimum-distance), and these
-    // four numbers have NOT been matched to it — that match is the work, and stating the debt
-    // is what the ratchet asks for in the meantime. The wiring these feed is recorded in
-    // HANDOFF (the rest-shift island).
+    // ⚠️ FOUR CONSTANTS HERE REPORTED AS SOURCED UNTIL 2026-08-03 AND NEVER WERE (the
+    // provenance ratchet looks back a fixed number of lines for a marker and read
+    // CueScale's LILYSHARP-OWN line as theirs). Three of them — a symmetric ±2-position
+    // rest box, a 1-position beam clearance, a 0.1 apply-threshold — died on 2026-08-06
+    // when the rest-under-beam shift got LilyPond's real inputs (the rest glyph's own
+    // extent, Rest.minimum-distance below; LP regression beam-rest-extreme.ly read
+    // +2.0 ss where LP prints +3.0 under every raised beam).
+    // LILYSHARP-OWN: the one survivor. The middle line IS a non-semibreve rest's default
+    // origin (lily/rest.cc staff_position_internal), but the beam covered-grob booking
+    // that reads this applies it to EVERY rest including semibreves, which LP hangs one
+    // line higher.
     /// <summary>Default staff position for rest center (middle line).</summary>
     public const double RestCenterPosition = 0.0;
-    /// <summary>Extent of rest collision box in staff positions.</summary>
-    public const double RestExtent = 2.0;
-    /// <summary>Minimum distance between rest and beam in staff positions.</summary>
-    public const double RestBeamMinDistance = 1.0;
-    /// <summary>Threshold for applying rest shift (in staff positions).</summary>
-    public const double RestShiftThreshold = 0.1;
+
+    /// <summary>Clearance a beamed rest keeps from the beam face, in staff spaces.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm Rest (minimum-distance . 0.25) — consumed by
+    /// lily/beam.cc:1393-1396 rest_collision_callback as <c>ss * (stemlet-length +
+    /// Rest.minimum-distance)</c>, with stemlet-length 0 by default. Distinct from
+    /// RestCollision.minimum-distance (0.75), the BETWEEN-VOICES clearance.
+    /// </remarks>
+    public const double RestMinimumDistance = 0.25;
 
     /// <summary>Horizontal flare (staff spaces) of a piano-pedal bracket's edge at a
     /// pedal change; two abutting flares form the "/\" notch.
