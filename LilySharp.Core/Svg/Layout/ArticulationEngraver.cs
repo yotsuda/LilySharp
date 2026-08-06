@@ -767,6 +767,13 @@ internal static class ArticulationEngraver
             // fall to the half-space fallback below while the renderer drew primitives
             // reaching 1.85 ss — three different answers for one glyph.
             ArticulationType.SnapPizz => GlyphMetrics.ScriptSnappizzicato,
+            // The trill's REAL font box: its origin is the ink BOTTOM (Bottom 0.000),
+            // not the centre the ornament fallback assumes. The near extent this feeds
+            // is what seats the trill: with the fallback's −0.5 the ①-clamp parked it
+            // at 2.75; the real box lands 2.25 → the ②-refpoint floor lifts it to
+            // 2.30, LilyPond's page exactly (probe-script-y: LP origin 2.30 = Δ0.45
+            // of the articulations book closed).
+            ArticulationType.Trill => GlyphMetrics.OrnTrillGlyph,
             _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for the ornament family
         };
     }
@@ -1197,25 +1204,38 @@ internal static class ArticulationEngraver
         double totalOff = supportExtent + glyphNearExtent + PaddingFor(articulation.Type);
         double targetUp = isAbove ? noteUp + totalOff : noteUp - totalOff;
 
+        // TWO staff clearances stack on a non-quantized script, and they are
+        // different quantities (probe-script-y measured both):
+        // ① include_staff: with staff-padding set (and no quantize), the STAFF INK
+        //    itself joins the support skyline, so the glyph's near edge clears the
+        //    outer line's ink by the script's own padding: ink edge ≥ 2.05 + 0.20
+        //    = 2.25 — numerically the old StaffHalf + 0.25 clamp, kept as is.
+        //    LP's accent over c'' sits exactly there (origin 2.67 = 2.25 + 0.42).
+        // LILYPOND-REF: lily/side-position-interface.cc:217-223 include_staff —
+        //   staff-padding present && !quantize_position puts staff_symbol in common.
+        // ② the staff-padding floor proper, on the REFPOINT (total_off): refpoint ≥
+        //    staff ink edge + staff-padding = 2.05 + 0.25 = 2.30. It only bites a
+        //    glyph whose ink barely dips below its origin (the trill: LP origin
+        //    exactly 2.30).
+        // LILYPOND-REF: lily/side-position-interface.cc:433-453 staff_padding —
+        //   diff = dir * staff_extent[dir] + staff_padding - dir * total_off …;
+        //   total_off += dir * max (diff, 0).
+        double inkFloor = StaffHalf + StaffPadding; // ① = 2.05 ink + 0.20 padding
+        double refpointFloor = StaffHalf + EngravingDefaults.StaffLineThickness / 2
+            + StaffPadding;                         // ② = 2.05 ink + 0.25
         if (isAbove)
         {
-            // LILYPOND-REF: side-position-interface.cc:426-445 staff-padding clamp
-            // Ensure the glyph's staff-facing (bottom) edge clears the top staff line
-            // by staff-padding — in Y-up the bottom edge is the smaller value.
             double glyphEdgeUp = targetUp - glyphNearExtent;
-            double staffEdgeUp = StaffHalf + StaffPadding;
-            if (glyphEdgeUp < staffEdgeUp)
-                targetUp = staffEdgeUp + glyphNearExtent;
-            return targetUp;
+            if (glyphEdgeUp < inkFloor)
+                targetUp = inkFloor + glyphNearExtent;
+            return Math.Max(targetUp, refpointFloor);
         }
         else
         {
-            // Ensure the glyph's staff-facing (top) edge clears the bottom staff line.
             double glyphEdgeUp = targetUp + glyphNearExtent;
-            double staffEdgeUp = -StaffHalf - StaffPadding;
-            if (glyphEdgeUp > staffEdgeUp)
-                targetUp = staffEdgeUp - glyphNearExtent;
-            return targetUp;
+            if (glyphEdgeUp > -inkFloor)
+                targetUp = -inkFloor - glyphNearExtent;
+            return Math.Min(targetUp, -refpointFloor);
         }
     }
 
@@ -1407,27 +1427,15 @@ internal static class ArticulationEngraver
             }
         }
 
-        // LilyPond positions a script against the glyph's real ink SKYLINE, not a box:
-        // side-position-interface.cc:259 (my_dim = the glyph's vertical-skyline) and :354
-        // (dist = dim.distance(my_dim)). A marcato is a chevron whose ink sits HIGH over
-        // the notehead centre, so LP's skyline distance seats the ~1.1-ss-tall glyph clear
-        // of the staff — its near edge ends up a script-padding outside the outer line.
-        // Lily# approximates a script by its BOX (near extent 0 for marcato), which
-        // under-clears the tall glyph and leaves its body straddling a staff line. A glyph
-        // taller than a 1.0-ss space cannot sit between two lines anyway, so reproduce LP's
-        // result directly: seat an in-staff script taller than a space with its near edge a
-        // padding outside the outer staff line. Thinner quantized scripts (staccato dot
-        // 0.4 ss, tenuto dash 0.16 ss) fit within a space, so the >1.0 guard — and every
-        // fixture relying on their placement — is untouched.
-        if (GetGlyphBBox(type, isAbove).Height > 1.0)
-        {
-            double gap = PaddingFor(type);      // the script's own padding, as in LP
-            if (isAbove && targetUp < StaffHalf && targetUp >= -StaffHalf)
-                targetUp = StaffHalf + gap;      // glyph bottom clears the top line by a gap
-            else if (!isAbove && targetUp <= StaffHalf && targetUp > -StaffHalf)
-                targetUp = -StaffHalf - gap;     // glyph top clears the bottom line by a gap
-        }
-
+        // ⚠️ A tall quantized script STAYS at its quantized in-staff position — an
+        // earlier guard here re-seated any quantized glyph taller than 1.0 ss outside
+        // the staff, claiming to "reproduce LP's result directly". MEASURED FALSE
+        // (scratch/lpreg/probe-script-y.{ly,svg}): LilyPond's own page puts a forced-up
+        // marcato over c'' (and over c', via its stem tip) at staff POSITION 3 — origin
+        // 1.5 ss above the middle, INSIDE the staff, the chevron straddling the top
+        // line — 0.70 below where the guard seated it. With the guard gone all four
+        // probe marcatos (c''/g'/e'/c') land on LilyPond's positions exactly:
+        // 3 / 5.4 (past the +5 span gate, unquantized) / 5 (rounded 4 = a line, +1) / 3.
         return targetUp;
     }
 }

@@ -1890,7 +1890,7 @@
       "category": "plain",
       "state": "fixed",
       "claim": "script は和音の個々のメンバにも付き、手動方向指定(^/_ = .up/.down)に従う",
-      "notes": "fixed第13号: メンバscriptはparse済みなのに収集されず黙って落ちていた(消費はfinger/string/courtesyのみ)→CollectArticulationsのChordSyntax armでメンバのarticulationを束ねた(script-engraver.ccの「scriptはイベントから」の鏡)。照合(同一原点・五線Y11.14-15.14両者一致): script 12個中10個Y完全一致——4連staccato縦積み(6.89/7.49/8.09/8.69=0.6ss間隔)・accent 10.47・下側marcato 16.34x3。残差2: (1)単独<c-^^>のmarcato.up=LP11.64(符頭上1.0ss・五線内)vs Lily#10.94(1.7ss)——素の音符でも同じΔ0.7=メンバ固有でなく一般のscript Y配置(五線外への押し出し・fermata族regime) (2)下側積み増分LP1.25 vs Lily#1.30。観測者=ChordMemberScriptTests 3本"
+      "notes": "fixed第13号: メンバscriptはparse済みなのに収集されず黙って落ちていた(消費はfinger/string/courtesyのみ)→CollectArticulationsのChordSyntax armでメンバのarticulationを束ねた(script-engraver.ccの「scriptはイベントから」の鏡)。照合(同一原点・五線Y11.14-15.14両者一致): script 12個中10個Y完全一致——4連staccato縦積み(6.89/7.49/8.09/8.69=0.6ss間隔)・accent 10.47・下側marcato 16.34x3。残差(1)のmarcato.up Δ0.70は第101セッションで解消: 原因はquantize-position script(marcato)を「背の高いglyphは五線外へ」で再配置していたLILYSHARP独自ガード——LPの実頁はposition 3(五線内・chevronが上線をまたぐ)に置く(probe-script-y 4例完全一致・観測者=ArticulationPlacementTests.ForcedUpMarcato_QuantizesIntoTheStaff)。残差(2)下側積み増分LP1.25 vs Lily#1.30は未解決。観測者=ChordMemberScriptTests 3本"
     },
     "chord-slash-separator.ly": {
       "category": "override",
@@ -1918,7 +1918,7 @@
       "category": "plain",
       "state": "exact",
       "claim": "tremolo bodyのアーティキュレーション/強弱は時間計算を乱さない(実音2つだけが数えられ各小節が満ちる)",
-      "notes": "半音符14=14・beam 14=14・Lily#側小節警告ゼロ=claim成立。装飾のY(原点差0.96定数込み): staccato/accent/f/f/sfz完全一致・trillのみΔ0.45(script-Y配置族=chord-scriptsのmarcato残差と同根)。Lily#のbody数えはBody.Items直(markは音符ノード内)なのでLPの「イベント3つ」型の入口が構造的に無い。⚠️枠合わせ: hairpin対(d32\\> e\\!)は終端\\!の綴りが無く両側とも素に落とした・\\barNumberCheckはink無しで落とした"
+      "notes": "半音符14=14・beam 14=14・Lily#側小節警告ゼロ=claim成立。装飾のY(原点差0.96定数込み): staccato/accent/f/f/sfz完全一致。trillのΔ0.45は第101セッションで解消: trillがornament fallback箱(Bottom−0.5)に落ちていた——実フォント箱はBottom 0(origin=ink下端)で、staff-padding床(refpoint≥2.05+0.25=2.30)にちょうど乗る(probe-script-y一致・観測者=ArticulationPlacementTests.Trill_SitsOnTheStaffPaddingRefpointFloor)。Lily#のbody数えはBody.Items直(markは音符ノード内)なのでLPの「イベント3つ」型の入口が構造的に無い。⚠️枠合わせ: hairpin対(d32\\> e\\!)は終端\\!の綴りが無く両側とも素に落とした・\\barNumberCheckはink無しで落とした"
     },
     "chord-tremolo-other-commands.ly": {
       "category": "plain",

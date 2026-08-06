@@ -84,4 +84,72 @@ public class ArticulationPlacementTests
         Assert.True(plain == up || plain == down); // plain matches one forced side; the other is a real flip
         Assert.NotEqual(up, down);
     }
+
+    /// <summary>All music-glyph (x, y, char) triples in a rendered SVG.</summary>
+    private static List<(double X, double Y, char Glyph)> MusicGlyphs(string svg) =>
+        System.Text.RegularExpressions.Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(&#x([0-9A-Fa-f]+);|.)</text>")
+            .Select(m => (
+                X: double.Parse(m.Groups[1].Value),
+                Y: double.Parse(m.Groups[2].Value),
+                Glyph: m.Groups[4].Success
+                    ? (char)Convert.ToInt32(m.Groups[4].Value, 16)
+                    : m.Groups[3].Value[0]))
+            .ToList();
+
+    /// <summary>The middle staff line's device Y: the 3rd of the five long horizontals.</summary>
+    private static double MiddleLineY(string svg)
+    {
+        var lineYs = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"")
+            .Where(m => m.Groups[2].Value == m.Groups[4].Value
+                && double.Parse(m.Groups[3].Value) - double.Parse(m.Groups[1].Value) > 5)
+            .Select(m => double.Parse(m.Groups[2].Value))
+            .Distinct().OrderBy(v => v).ToList();
+        Assert.Equal(5, lineYs.Count);
+        return lineYs[2];
+    }
+
+    [Fact]
+    public void ForcedUpMarcato_QuantizesIntoTheStaff()
+    {
+        // The chord-scripts / articulations residual (Δ0.70): a quantize-position
+        // script (marcato) snaps its REFPOINT to a staff position and takes NO
+        // staff-padding — LilyPond seats a forced-up marcato over c'' at staff
+        // POSITION 3, inside the staff, the chevron straddling the top line. Over
+        // g'/e'/c' (up stems) the support is the stem tip: 5.4 (past the +5 span
+        // gate, unquantized), 5 (rounded 4 = a line, pushed one further), 3.
+        // MEASURED against scratch/lpreg/probe-script-y.{ly,svg} — all four exact.
+        // LILYPOND-REF: scm/script.scm marcato (quantize-position . #t);
+        //   lily/side-position-interface.cc:409-432 quantize_position.
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 c'4@marcato.up g4@marcato.up e4@marcato.up c4@marcato.up"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        double middle = MiddleLineY(svg);
+        var marcatos = MusicGlyphs(svg)
+            .Where(g => g.Glyph == '').OrderBy(g => g.X).ToList();
+        Assert.Equal(4, marcatos.Count);
+        // Device Y-down: origin = middle − (staff-spaces above the middle line).
+        Assert.Equal(middle - 1.5, marcatos[0].Y, 2); // c'': position 3, INSIDE
+        Assert.Equal(middle - 2.7, marcatos[1].Y, 2); // g': raw 5.4, unquantized
+        Assert.Equal(middle - 2.5, marcatos[2].Y, 2); // e': rounded 4 → line → 5
+        Assert.Equal(middle - 1.5, marcatos[3].Y, 2); // c': position 3, INSIDE
+    }
+
+    [Fact]
+    public void Trill_SitsOnTheStaffPaddingRefpointFloor()
+    {
+        // The articulations-book residual (Δ0.45): the trill glyph's origin IS its
+        // ink bottom (font box Bottom 0.000), and the staff-padding floor binds the
+        // REFPOINT — LilyPond seats a trill over c'' at exactly staff ink edge +
+        // staff-padding = 2.05 + 0.25 = 2.30 above the middle line. The old
+        // ornament-fallback box (Bottom −0.5) parked it at 2.75.
+        // LILYPOND-REF: lily/side-position-interface.cc:433-453 staff_padding.
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 c'4@trill"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        double middle = MiddleLineY(svg);
+        var trill = Assert.Single(MusicGlyphs(svg).Where(g => g.Glyph == ''));
+        Assert.Equal(middle - 2.30, trill.Y, 2);
+    }
 }

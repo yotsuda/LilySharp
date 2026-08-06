@@ -58,9 +58,34 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第101セッション第1便（＝**全音符ペアの「見えない stem」port 完了 = fixed 第16号**。
-chord-tremolo・chord-tremolo-whole の open 2 本を閉じ、open は automatic-polyphony-tabstaff と
-breathing-sign-accidentals の 2 本だけになった）。
+最終更新 第101セッション第2便（＝第1便で**見えない stem = fixed 第16号**・第2便で
+**script-Y 配置族を解消**（marcato Δ0.70・trill Δ0.45）。frontier 2 本とも完食。open は
+automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本だけ）。
+
+★★★ **①（第2便）script-Y 族の中身（commit `7863afb0`・snapshot 5 枚再ベース込み）**:
+- **probe**: scratch\lpreg\probe-script-y.{ly,lys,svg}——9 script（marcato↑×4・↓×2・accent・
+  staccato・trill）を両測。乖離は **marcato↑（五線内に置ける 2 例）と trill だけ**だった。
+- **marcato Δ0.70 = LILYSHARP 独自の偽ガード**（ArticulationEngraver.QuantizedYPosition 末尾に
+  あった「高さ>1.0ss の quantized glyph は五線外へ」）。コメントは「LP の結果を直接再現」と
+  主張していたが**実測は逆**——LP は quantize-position script（marcato・script.scm:238-246）の
+  refpoint を staff position に丸め（線上なら+1）**五線内 position 3** に置き、chevron が
+  上線をまたぐ。ガード撤去だけで 4 例（c''/g'5.4 未丸め/e'5/c'3）全部一致。
+- **trill Δ0.45 = ornament fallback 箱**（GetGlyphBBox の `_ =>` Bottom −0.5）に trill が
+  落ちていた。実フォント箱 `OrnTrillGlyph` は **Bottom 0.000（origin=ink 下端）**。実箱に
+  切替えると staff-padding 床にちょうど乗り LP と一致。
+- **staff-padding の 2 段重ね**（side-position-interface.cc の読解・両方 port 済）:
+  ⑴ include_staff（:217-223）＝quantize でない+staff-padding ありの script は**五線 ink 自体が
+  support に入る**→ink 端 2.05+script 自身の padding。旧 edge clamp 2.25 と数値同一なので温存。
+  ⑵ staff-padding 床本体（:433-453）＝**refpoint ≥ 2.05+0.25=2.30**。trill はこれにちょうど
+  乗る（LP origin 2.30 ぴったり）。⑴だけに書き換えると accent が 2.30 に沈む——**両方要る**
+  （v1 で踏んだ）。
+- **snapshot 5 枚が動いて全部監査済**: articulations（marcato±0.70×3）・lower-staff（trill+0.45）・
+  ornaments（trill skyline 縮み→頁 0.45 詰め）・figbass/scripts-dynamics（⑵床の±0.01〜0.05）。
+  tools\Approve-Snapshots.ps1 -Name で選択承認（この道具の型は使える）。
+- 観測者 = ArticulationPlacementTests の 2 本（ForcedUpMarcato_QuantizesIntoTheStaff・
+  Trill_SitsOnTheStaffPaddingRefpointFloor＝LP 数値を釘付け）。
+- ⚠️ 残: chord-scripts の**下側 stack 増分 LP1.25 vs 1.30（Δ0.05）**は未解決（起票のみ）。
+  mordent/turn/prall 等は今も fallback 箱（Bottom −0.5）——本が来たら実箱化+実測。
 
 ★★★ **⓪ port の中身（全部字面・commit `72e75ee0`）**:
 - **quanter**（BeamScoringProblem）: `_isNormal[i]`＝表示 noteValue≥2（is_normal_stem の鏡）。
@@ -110,19 +135,19 @@ LP 4.86＝spacing/springs）⑵ accidental 本 m3 の梁幅——LP は 3 度違
 - q は grace body 内・chords{} 行内で未対応。resolver の逆行参照は診断なしで spacer 縮退。
 - articulations 本の hairpin 終端 `\!` の綴りが無い（文法の宿題）。
 
-**frontier（次の本命）**: ⑴ **script-Y 配置族**（chord-scripts の forced marcato Δ0.70・
-articulations の trill Δ0.45 が同根＝五線内に置ける script を Lily# が外へ押し出す・
-fermata 族 regime）⑵ キューの次の plain（status.json のアルファベット順を数え直す——
-chord-tremolo 族は完全に閉じた）。
-**breathing-sign の port 計画は第99セッション第16便 §1 参照——まだ生きている**。
+**frontier（次の本命）**: 前便の 2 択は両方完食。次は ⑴ キューの次の plain
+（status.json のアルファベット順・pending の plain を頭から）⑵ open 2 本
+（automatic-polyphony-tabstaff・breathing-sign-accidentals——
+**breathing-sign の port 計画は第99セッション第16便 §1 参照・まだ生きている**）。
 
 plain 322 / 処理済 **68**（fixed **17**・exact 16・skip 33・**open 2**＝
 automatic-polyphony-tabstaff・breathing-sign-accidentals。数えたら state 別内訳も一緒に書くこと）。
 
-未 push **60**（この handoff で 61。数え直すこと。**⚠️ push しない**）・テスト
-**4149 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+未 push **62**（この handoff で 63。数え直すこと。**⚠️ push しない**）・テスト
+**4151 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning・snapshot 動き 0 枚**・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+**Core 0 warning・snapshot 動き 5 枚＝全部第2便の LP 実測修正で監査の上承認済**（第1便は 0 枚）・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第100セッション第2〜9便の経緯
 
