@@ -1,0 +1,31 @@
+// A manual beam over a rest carries the rest as an INVISIBLE stem, and the
+// beamlets show the beat structure (LP regression beam-multiplicity-over-rests.ly):
+// the rest's beam count is clamped to its least-beamed neighbour
+// (lily/beaming-pattern.cc:471-494 unbeam_invisible_stems), so exactly the beams
+// both sides carry survive OVER the rest and the extras break into beamlets on
+// the visible stems. Before the port, c32[ r16 c32 c8] ran all three beams
+// through the rest; LilyPond runs two and points the third's beamlets at the
+// stems (verified against LP 2.26.0, rank Ys exact, X extents within 0.1 ss).
+// The tied c64~ c16.. group exercises a beam-count DROP at a visible stem next
+// to the rest-clamped run; the last two groups put the rest first/second so the
+// beamlet points both ways.
+// NB: Lily# `octave absolute` is one octave above LilyPond, so Lily# c = LP c'.
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    c8[ r16 c32 c32]
+    c32[ r16 c32 c8]
+    c32[ r16 c64 c64~ c16.. c64]
+    c32[ c32 r16 c8] |
+    c16[ r32 c32 r16 c16]
+    c16[ r16 c32 r32 c16]
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

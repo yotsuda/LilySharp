@@ -2273,7 +2273,7 @@ internal sealed class MultiStaffLayouter
             : beamLayouts.Select(b1 => new BeamLayout(
                 b1.Group, b1.LeftY, b1.RightY, b1.LeftX, b1.RightX,
                 b1.MemberXPositions, staffIndex, b1.SystemIndex,
-                b1.MemberStaffIndices)).ToImmutableArray();
+                b1.MemberStaffIndices, b1.RestXPositions)).ToImmutableArray();
         return TupletBracketEngraver.Calculate(
             staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
             beamGroups.ToImmutable(), beamLayouts: staffBeams,
@@ -2380,7 +2380,7 @@ internal sealed class MultiStaffLayouter
             : beamLayouts.Select(b => new BeamLayout(
                 b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
                 b.MemberXPositions, staffIndex, b.SystemIndex,
-                b.MemberStaffIndices)).ToImmutableArray();
+                b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
 
         var staffScore = new Score(
             staff.PrimaryVoice, score.TimeSignature, score.KeySignature,

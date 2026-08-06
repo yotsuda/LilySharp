@@ -1,0 +1,18 @@
+// lilypond-src/input/regression/automatic-polyphony-drumstaff.ly の Lily# 訳。
+// CLAIM: DrumStaff で声部を明示初期化せず自動ポリフォニーが使える(単声→2声→単声)。
+// 綴り: LP `<< { } \\ { } >>` = Lily# の voice span。`\repeat unfold 16 hh16` は展開。
+// LP は clef を書かない(DrumStaff 自身の percussion)——Lily# は part 属性で明示。
+part kit { clef percussion }
+
+section Main {
+  kit {
+    bd4 sn4 bd4 sn4 |
+    voice { hh16 hh hh hh hh hh hh hh hh hh hh hh hh hh hh hh }
+          { bd4 sn4 bd4 sn4 } |
+    bd4 sn4 bd4 sn4 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff kit }

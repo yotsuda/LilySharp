@@ -58,6 +58,80 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第11便（＝**lp-regression キュー続行**。**第 5 号の修正＝
+連桁内休符の invisible stem**・frontier 歩きの**見落とし 5 本回収**（skip 3・exact 1・open 1））。
+
+⚠️ **仕事は 4 commit**（`ab0737bb` invisible stem・`3beb2c2f` 台帳+見落とし・
+`0a93b7bc` tab 数字 3.0+じぐざぐ位相・`c52c3cbe` 内側 overhang）＋ handoff。
+⚠️ **push 禁止（ユーザー指示・当面）**。コミットは可。
+
+★★★ **⓪ tab フレット数字のユーザー調整**（同日追加指示・LILYSHARP-OWN）:
+- **サイズ 3.3 → 3.0**（「3.3 は少し大きすぎ」——履歴 2.6→2.9→3.3→3.0 は
+  TabConstants.FretFontSize の remark が台帳。全消費者が面計量で追従＝1 行変更）。
+- **じぐざぐ位相の規則化**（AssignTabChordOffsets 書き換え）: 隣接弦 run ごとに
+  **「大きいフレットを含む列が右」**（降順の要素比較・共通長まで・同値なら従来位相＝
+  先頭左）。2 音の「小さい方が左」も同式に統合、**開放 0 の特則は無し**（ユーザー明言
+  「開放弦の左右は低優先度」——0 4 5 → 4 だけ左・0 5 4 → 0 と 4 が左、の 2 例が仕様。
+  ユニットテスト 2 本追加）。tab 系 **snapshot 25 本を意図的に一括再ベース**（全部 tab 族・
+  目視確認済み）。テスト **4100 passed / 0 failed / 4 skipped**。
+- 将来: 多声 tab（②の open）を直す日は、声部間衝突もこの列比較の下で設計する。
+
+★★★ **① 第 5 号の修正＝休符は連桁に invisible stem で参加する**
+（beam-multiplicity-over-rests.ly）: LP は beamed rest にも Stem grob を作り（Rest が
+rhythmic-head を名乗る）、`Stem::is_invisible` が beaming pattern に入る
+（template-engraver-for-beams.cc:69-78）。**`unbeam_invisible_stems`
+（beaming-pattern.cc:471-494）が休符の桁数を両隣との min にクランプ**し、両側が
+持つ桁だけが休符を跨ぎ、余りは可視 stem の beamlet になる。Lily# は休符を
+パターンから丸ごと落としていた（BeamingPattern.cs 自身が「beamed rests の日に戻る」
+と予告していた註のとおり）。移植:
+- `BeamingPattern.Element.Invisible` + クランプ（以後の全読みが clamped 値）
+- `BeamDetector`: **手動群のみ**内側休符を注入（自動連桁は従来どおり休符で終端）。
+  `BeamRestStem`(ItemIndex/BeforeMember/counts/NoteValue) を `BeamGroup.RestStems` に
+- **segment walk 両面**（SharedRenderer.Beams と BeamScoringProblem——描く ink と
+  採点する ink は同じ walk）に休符を interleave。quanter の stem 採点側は可視のみ
+  （LP も `is_normal_` で gate・beam-quanting.cc:299）
+- **rest stem X = 休符グリフ ink 中心**（stem.cc:1093-1105 offset_callback の rests 枝・
+  `LayoutUtilities.RestStemX`）——左端で cap すると beamlet が LP より短く切れる
+★★ 検証: **桁段 Y は LP と完全一致・X 端 ≤0.1 ss**（比較器の罠 2 つを踏んで直した:
+⑴ LP polygon の points は `x y x y` 空白区切り——`x,y` と誤読すると Y が X 極値に混入、
+⑵ **Lily# は A4 紙幅 102ss で圧縮 justify する**ので幅広の本は**小節別レンダで比較**）。
+fixture `test/beamlets-over-rests`（陽性対照: Core stash で単独 FAIL 確認済み）。
+**既存 snapshot 移動ゼロ＝観測者ゼロ 6 例目**（corpus に桁数の食い違う連桁内休符が無かった）。
+
+★★ **② frontier の嘘と見落とし回収**: 引継ぎの「frontier = beam-multiplicity-over-rests」
+は **corpus に訊いたら嘘**だった——真の frontier は autochange-keep-with-tag.ly
+（過去便の手動歩きが auto* → beam* へ飛んで **5 本素通り**）。回収:
+- skip 3: autochange×2（`\autoChange` 無し）・beam-collision-large-object
+  （covered-grobs エンジン未移植＝第8便と同根・voiceFour の slot 指定も無い）
+- **exact 1: automatic-polyphony-drumstaff**（voice span 中置で `<<{}\\{}>>` を訳せる。
+  列間隔 LP と ±0.01・桁の譜面相対 Y 完全一致・符尾向き/再合流一致）
+- **open 1: automatic-polyphony-tabstaff**——**tab が第 2 声部を丸ごと落とす**
+  （7 音中 6 桁）。RenderSpec.cs:287-291 が tab/ossia を **primary voice のみ**で組む
+  （`Staff.CreateTab` が単一 Voice）。修正は CreateTab 全声部+声部別弦割当+声部別 tab 符尾。
+  ⚠️ 綴りの罠: **treble_8 部は LP と同綴りが正解**（Lily# の記譜=実音+1oct 移調が
+  いつものオクターブ差を相殺）。status.json の notes に全部記録済み。
+
+★★ **③ 内側 overhang（①で名指しした残差）＝同セッションで返済**（`c52c3cbe`）:
+**segment/beamlet が stem で止まる端は内側でも半 stem 幅 0.065 張り出す**
+（beam.cc:627-631 の `+= event_dir * seg.width_/2` は無条件——beamlet の先端だけ張り出し
+無し）。CalcBeamSegments の `i==0`/`n-1` 条件を外しただけ。修正後、bmor 小節別比較の
+**全 X 端が一様 +0.04/0.05（=LP の stroke 内側規約）に収束＝幾何残差 ≤0.01**。
+snapshot 移動 6 本のみ（beamlet 系・目視済・再ベース）。
+⚠️ **測定器も 1 つ直した**: RenderedGeometry.BeamletsAtStem の probe 1e-6 は「segment 端
+= stem の X」を前提にしており、overhang が跨いで**反対側の桁を余分に数えた**
+（台帳 beam.beamlet.* 4 点が偽 FAIL）。probe を 0.1（overhang 0.065 超・最短 stub 0.2 未満）
+に——**検査を疑ってから台帳を払う**の実例（feedback_audit_the_checker）。
+
+**frontier = beam-rest-extreme.ly**（beamed rest 家系の続き。第9便が名指しした
+rests-in-beams 塊: rest-extreme / beamlet-test / beaming.ly）。
+plain 322 / 処理済 **32**（fixed 5・exact 6・skip 22・open 1）。
+
+未 push **6**（この handoff で 7。数え直すこと。**⚠️ push しない**）・テスト
+**4100 passed / 0 failed / 4 skipped**（第10便 4097・+1 snapshot・+2 zigzag 単体）・
+**Core 0 warning。**
+
+## 以下は第99セッション第10便の経緯
+
 最終更新 第99セッション第10便（＝**ユーザーの perf 指摘に実測で回答**。第2便の
 クロス声部床パスに **O(M²) 回帰を実測（+26.3%／120小節2声で+523ms）→ 2 段修正で
 +1.5〜2.2% 残差まで低減**。引用監査 11 件修正も同便）。

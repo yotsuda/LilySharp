@@ -57,6 +57,24 @@ function global:Set-RegStatus([string]$name, [string]$state, [string]$claim, [st
 比較の小技: beam の組み方は両エンジンとも SVG の `<polygon>` なので、
 `[regex]::Matches($svg,'<polygon').Count` の一致が「同じ組み方・同じ細分」の強い指紋になる。
 
+比較器の罠（踏んだ順・全部実話）:
+- **LP polygon の points は `x y x y` の空白区切り**（`x,y` ペアではない）。`,` で split
+  すると Y 値が X の極値に混入して幅が全部嘘になる。座標は必ずペアで歩く。
+  ついでに LP は stroke-width 0.08 の stroked polygon（ink = 幾何 ±0.04）、Lily# は
+  塗り polygon（ink = 幾何そのまま）——0.04〜0.08 の系統差はこれ。
+- **段の出力順はエンジン間で不安定**。quant offset の列比較は (system, x) でグループ化
+  して**集合**比較（beam-quanting-32nd で 46/78 の偽乖離が消えた）。
+- **Lily# は A4 紙幅（line-width ≈102ss・PaperSettings 既定）に収まらない行を圧縮 justify
+  する**。paper 指定の文法は無いので、幅広の本は**小節ごとに切った .lys / .ly の対**で
+  比較する（自然幅どうしになる）。LP 側は paper-width/line-width を広げれば 1 段に
+  伸ばせる（line-width だけだと紙幅でクランプされる）。
+- **spacing は score 全体の common shortest に依存**（LP spacing-spanner は score 単位）。
+  小節を切り出すと最短音価が変わって列間隔ごと変わる——切り出しの対には
+  最短音価が同じ小節を選ぶ（bar2 だけ切ると 1/64 が消えて 12.4ss vs 17.2ss を読む）。
+- **treble_8 の部は LP と同じ綴りが正解**。Lily# の treble_8 部は「記譜=実音+1oct」の
+  移調を持ち、いつもの「Lily# c = LP c'」のオクターブ差をちょうど相殺する
+  （automatic-polyphony-tabstaff で発見。譜面位置・実音・タブのフレットが全部揃う）。
+
 数の数え方（引き継ぎ用）:
 ```powershell
 $s = (Get-Content audit\lp-regression\status.json -Raw | ConvertFrom-Json).files.PSObject.Properties

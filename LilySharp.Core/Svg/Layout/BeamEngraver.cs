@@ -65,15 +65,26 @@ internal sealed class BeamEngraver
             .Select(m => itemXPositions[m.ItemIndex])
             .ToImmutableArray();
 
+        // …and for each invisible rest stem the beam runs over: the rest glyph's ink
+        // CENTRE (LayoutUtilities.RestStemX), which is where LilyPond stands the stem it
+        // gives a beamed rest.
+        var restXPositions = group.RestStems.IsDefaultOrEmpty
+            ? ImmutableArray<double>.Empty
+            : group.RestStems
+                .Select(r => LayoutUtilities.RestStemX(itemXPositions[r.ItemIndex], r.NoteValue))
+                .ToImmutableArray();
+
         double leftX = memberXPositions[0];
         double rightX = memberXPositions[^1];
 
         // Use BeamScoringProblem to find optimal beam positions
         var problem = new BeamScoringProblem(
-            group, itemXPositions, _parameters, collisions);
+            group, itemXPositions, _parameters, collisions,
+            restXPositions: restXPositions);
         var (leftY, rightY) = problem.Solve();
 
         return new BeamLayout(
-            group, leftY, rightY, leftX, rightX, memberXPositions, staffIndex, systemIndex);
+            group, leftY, rightY, leftX, rightX, memberXPositions, staffIndex, systemIndex,
+            restXPositions: restXPositions);
     }
 }

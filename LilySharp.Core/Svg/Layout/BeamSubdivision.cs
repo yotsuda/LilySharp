@@ -202,7 +202,14 @@ internal static class BeamSubdivision
     /// rank and merges neighbours that share the rank into one span; a rank with no
     /// same-rank neighbour on a side becomes a beamlet stub. The horizontal extents
     /// use the same beamlet-default-length (1.1) and 0.75 max-proportion cap
-    /// (beam.cc:604-624) and flush terminal ends by half a stem width.
+    /// (beam.cc:604-624), and EVERY segment end that stops at its stem overhangs it by
+    /// half the stem width — interior ends included, not just the beam's terminals:
+    /// LILYPOND-REF: lily/beam.cc:627-631 — the "closest to its stem" edge gets
+    /// <c>horizontal_[event_dir] += event_dir * seg.width_ / 2</c> unconditionally, so a
+    /// run that ends mid-beam (a rank drop) and a beamlet's stem-side edge both cover
+    /// their stem flush. (Only the far END of a beamlet — the tip — carries no overhang.)
+    /// Measured before the port: every interior end sat exactly 0.065 short of LilyPond's
+    /// ink (LP regression beam-multiplicity-over-rests.ly, per-bar comparison).
     /// </summary>
     public static List<Segment> CalcBeamSegments(
         IReadOnlyList<StemBeaming> stems, StemRanks[] ranks,
@@ -239,14 +246,17 @@ internal static class BeamSubdivision
 
                 if (e > i)
                 {
-                    // A real span from stem i to stem e: flush the outer terminal ends.
-                    if (i == 0) xL -= halfStemWidth;
-                    if (e == n - 1) xR += halfStemWidth;
+                    // A real span from stem i to stem e: both ends stop at a stem, and
+                    // both overhang it by half its width (beam.cc:627-631) — an interior
+                    // rank drop covers its stem flush exactly like a terminal end.
+                    xL -= halfStemWidth;
+                    xR += halfStemWidth;
                 }
                 else
                 {
                     // A lone rank at stem i — a beamlet stub. It points toward the
-                    // side that carries it (right if it has a right beam, else left).
+                    // side that carries it (right if it has a right beam, else left);
+                    // the stem-side edge overhangs its stem, the tip does not.
                     bool right = Contains(ranks[i].Right, rank);
                     double len = beamletLength;
                     int nb = right ? i + 1 : i - 1;
@@ -254,13 +264,13 @@ internal static class BeamSubdivision
                         len = Math.Min(len, Math.Abs(stems[nb].X - stems[i].X) * maxProportion);
                     if (right)
                     {
-                        xL = (i == 0) ? stems[i].X - halfStemWidth : stems[i].X;
+                        xL = stems[i].X - halfStemWidth;
                         xR = stems[i].X + len;
                     }
                     else
                     {
                         xL = stems[i].X - len;
-                        xR = (i == n - 1) ? stems[i].X + halfStemWidth : stems[i].X;
+                        xR = stems[i].X + halfStemWidth;
                     }
                 }
 

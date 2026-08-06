@@ -382,32 +382,34 @@ internal sealed class ElementCoordinator
         Dictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
         int staffIndex, int systemIndex)
     {
-        // Resolve each member's X position via its OWN measure layout.
+        // Resolves an item's X via its OWN measure layout; null when the measure or the
+        // item fell outside this system's map.
+        double? ResolveX(int measureIdx, int itemIdx)
+        {
+            if (!measureMap.TryGetValue(measureIdx, out var info))
+                return null;
+            var (_, measureLayout) = info;
+            if (itemIdx >= measureLayout.Items.Length)
+                return null;
+
+            var measure = score.Voices[group.VoiceIndex].Measures[measureIdx];
+            if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
+            {
+                Fraction t = Fraction.Zero;
+                for (int k = 0; k < itemIdx; k++)
+                    t += GetItemDuration(measure.Items[k]);
+                return measureLayout.X + measureLayout.GetXForTiming(t);
+            }
+            return measureLayout.X + measureLayout.Items[itemIdx].X;
+        }
+
         var memberXs = new List<double>(group.Members.Length);
         var renumbered = new List<BeamMember>(group.Members.Length);
         for (int i = 0; i < group.Members.Length; i++)
         {
             var m = group.Members[i];
-            int memberMeasure = m.ResolveMeasureIndex(group.MeasureIndex);
-            if (!measureMap.TryGetValue(memberMeasure, out var info))
+            if (ResolveX(m.ResolveMeasureIndex(group.MeasureIndex), m.ItemIndex) is not { } x)
                 return null;
-            var (_, measureLayout) = info;
-            if (m.ItemIndex >= measureLayout.Items.Length)
-                return null;
-
-            double x;
-            var measure = score.Voices[group.VoiceIndex].Measures[memberMeasure];
-            if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
-            {
-                Fraction t = Fraction.Zero;
-                for (int k = 0; k < m.ItemIndex; k++)
-                    t += GetItemDuration(measure.Items[k]);
-                x = measureLayout.X + measureLayout.GetXForTiming(t);
-            }
-            else
-            {
-                x = measureLayout.X + measureLayout.Items[m.ItemIndex].X;
-            }
 
             memberXs.Add(x);
 
@@ -423,18 +425,32 @@ internal sealed class ElementCoordinator
                 headPositionMax: m.HeadPositionMax));
         }
 
+        // The rests the beam runs over resolve the same way, and their dense indices are
+        // appended AFTER the members' so one flat x list serves the scorer for both.
+        var restXs = new List<double>(group.RestStems.Length);
+        var renumberedRests = new List<BeamRestStem>(group.RestStems.Length);
+        foreach (var r in group.RestStems)
+        {
+            int restMeasure = r.MeasureIndex >= 0 ? r.MeasureIndex : group.MeasureIndex;
+            if (ResolveX(restMeasure, r.ItemIndex) is not { } rx)
+                return null;
+            restXs.Add(rx);
+            renumberedRests.Add(r with { ItemIndex = memberXs.Count + renumberedRests.Count });
+        }
+
         var renumberedGroup = new BeamGroup(
             renumbered.ToImmutableArray(),
             group.MeasureIndex,
             startIndex: 0,
             group.StemUp,
             group.GrowDirection,
-            group.VoiceIndex);
+            group.VoiceIndex,
+            restStems: renumberedRests.ToImmutableArray());
 
         // Cross-measure collision detection is deferred — pass empty list for now.
         var beamLayout = _beamEngraver.CalculateBeamLayout(
             renumberedGroup,
-            memberXs,
+            memberXs.Concat(restXs).ToList(),
             staffIndex: staffIndex,
             systemIndex: systemIndex,
             collisions: null);
@@ -454,7 +470,10 @@ internal sealed class ElementCoordinator
             beamLayout.MemberXPositions,
             beamLayout.StaffIndex,
             beamLayout.SystemIndex,
-            beamLayout.MemberStaffIndices);
+            beamLayout.MemberStaffIndices,
+            // CalculateBeamLayout already resolved these to the invisible stems' x (the
+            // rest glyphs' ink centres) from the raw column xs appended above.
+            restXPositions: beamLayout.RestXPositions);
     }
 
     private static Fraction GetItemDuration(MusicItem item) => item switch

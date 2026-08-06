@@ -32,16 +32,18 @@ internal static class TabConstants
     /// <summary>Font size of a tab fret number, in staff spaces.</summary>
     /// <remarks>
     /// LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
-    /// enough to be hard to read. A single digit here is 0.625 × 2.9 = 1.8125 wide and
-    /// 0.6875 × 2.9 = 1.99375 tall, against the 0.990155 LilyPond's TabNoteHead measures
-    /// (audit/lp-geometry/probes/line-start-mindist.ly, score TKC) — about 2.0×. The
-    /// collisions that follow from bigger digits are solved rather than avoided: chords
-    /// stagger their digits into two columns (the zigzag), and the columns reserve that
-    /// real extent (SpacingRules.ApplyTabChordSpacing).
+    /// enough to be hard to read (a digit's ink here is roughly double the 0.990155
+    /// LilyPond's TabNoteHead measures — audit/lp-geometry/probes/line-start-mindist.ly,
+    /// score TKC). The collisions that follow from bigger digits are solved rather than
+    /// avoided: chords stagger their digits into two columns (the zigzag), and the columns
+    /// reserve that real extent (SpacingRules.ApplyTabChordSpacing).
     /// <para>
-    /// Raised 2.6 → 2.9 on request, together with dropping the opaque background the digits
-    /// used to sit on: with the string line now running THROUGH the digit rather than being
-    /// painted out behind it, the digit has to carry the contrast on its own.
+    /// TUNED BY EYE, on request, and the history is the spec: 2.6 → 2.9 (with the opaque
+    /// background dropped — the string line breaks around the digit, so the digit carries
+    /// the contrast on its own) → 3.3 → 3.0 (2026-08-06, "3.3 は少し大きすぎる" on a bass
+    /// tab). Every consumer — width reservation, string-line gap, skyline, stem clearance,
+    /// articulation clearing — derives from this one constant through the face metrics
+    /// below, so tuning it is a one-line change.
     /// </para>
     /// <para>
     /// ⚠️ This is a RATIFIED deviation (docs/HANDOFF.md §3), not an un-ported LilyPond
@@ -49,7 +51,7 @@ internal static class TabConstants
     /// question and does follow LilyPond — see <c>EngravingDefaults.TabStringSpace</c>.
     /// </para>
     /// </remarks>
-    public const double FretFontSize = 3.3;
+    public const double FretFontSize = 3.0;
 
     /// <summary>Grace fret digits relative to the main fret size (just slightly smaller).</summary>
     public const double GraceFretScale = 0.8;

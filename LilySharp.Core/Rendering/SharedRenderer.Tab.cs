@@ -544,43 +544,78 @@ internal static partial class SharedRenderer
     /// <summary>
     /// Horizontal offset for each chord note (notes ordered top string → bottom) so
     /// digits on ADJACENT strings (which would overlap vertically at the larger font)
-    /// are pulled apart into a left and a right column. Two overlapping notes: the
-    /// smaller fret goes left. Three or more: zigzag the columns down each run of
+    /// are pulled apart into a left and a right column — a zigzag down each run of
     /// adjacent strings; a note with no adjacent neighbour stays centred.
     /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
+    /// column holding the LARGER frets on the RIGHT — the digits kept left are the small
+    /// ones. Concretely the two columns' frets are compared largest-first
+    /// (<see cref="CompareFretColumns"/>); ties keep the top note left. A two-note pair is
+    /// the same rule at run length 2 (the smaller fret lands left), and an open string's
+    /// 0 needs no rule of its own — it is just the smallest digit, and where it lands
+    /// follows from what it is stacked against: 0/4/5 top-down puts 4 alone on the left
+    /// (its column loses to the {5,0} column's 5), 0/5/4 puts {0,4} left ({5} wins).
+    /// </remarks>
     internal static double[] AssignTabChordOffsets(IReadOnlyList<(int str, int fret)> notes)
     {
         int n = notes.Count;
         var off = new double[n];
         if (n < 2) return off;
 
-        // Mark notes that have an adjacent (string ±1) neighbour in the chord.
-        var adjacent = new bool[n];
-        for (int i = 1; i < n; i++)
-            if (notes[i].str == notes[i - 1].str + 1)
-                adjacent[i] = adjacent[i - 1] = true;
-
         // Column separation: half the widest digit + a small gap, so even two-digit
         // frets in the two columns clear each other.
         double maxWidth = notes.Max(p => TabFretWidth(p.fret));
         double delta = maxWidth / 2 + 0.1;
 
-        if (n == 2 && adjacent[0])
+        // Walk the maximal runs of string-adjacent notes; each run zigzags on its own.
+        int i = 0;
+        while (i < n)
         {
-            bool topSmaller = notes[0].fret <= notes[1].fret;
-            off[0] = topSmaller ? -delta : delta;
-            off[1] = topSmaller ? delta : -delta;
-            return off;
-        }
+            int start = i;
+            while (i + 1 < n && notes[i + 1].str == notes[i].str + 1)
+                i++;
+            int end = i;
+            i++;
 
-        // Three or more: zigzag (left, right, left, …) within each adjacent run.
-        int col = 0;
-        for (int i = 0; i < n; i++)
-        {
-            if (!adjacent[i]) { off[i] = 0; continue; }
-            col = (i > 0 && adjacent[i - 1] && notes[i].str == notes[i - 1].str + 1) ? 1 - col : 0;
-            off[i] = col == 0 ? -delta : delta;
+            if (end == start)
+            {
+                off[start] = 0; // no adjacent neighbour: the digit stays centred.
+                continue;
+            }
+
+            // The run's two columns, by zigzag parity from the run's top note.
+            var evenFrets = new List<int>();
+            var oddFrets = new List<int>();
+            for (int k = start; k <= end; k++)
+                ((k - start) % 2 == 0 ? evenFrets : oddFrets).Add(notes[k].fret);
+
+            // The column with the larger frets goes right; a tie keeps the top note left.
+            bool evenRight = CompareFretColumns(evenFrets, oddFrets) > 0;
+            for (int k = start; k <= end; k++)
+            {
+                bool right = ((k - start) % 2 == 0) == evenRight;
+                off[k] = right ? delta : -delta;
+            }
         }
         return off;
+    }
+
+    /// <summary>
+    /// Orders a zigzag's two columns: compares their frets largest-first, walking down
+    /// the shared length. Equal all the way — including one column simply being the
+    /// longer of two otherwise-equal stacks — is a tie (0): the caller keeps the
+    /// default phase, which is what holds an all-equal stack (0/0/0) at left-right-left.
+    /// </summary>
+    private static int CompareFretColumns(List<int> a, List<int> b)
+    {
+        a.Sort();
+        a.Reverse();
+        b.Sort();
+        b.Reverse();
+        for (int i = 0; i < Math.Min(a.Count, b.Count); i++)
+            if (a[i] != b[i])
+                return a[i].CompareTo(b[i]);
+        return 0;
     }
 }

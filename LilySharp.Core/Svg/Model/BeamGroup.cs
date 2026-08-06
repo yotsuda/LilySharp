@@ -27,6 +27,20 @@ public sealed record BeamGroup
     /// <summary>The notes in this beam group (NoteItem or ChordItem).</summary>
     public ImmutableArray<BeamMember> Members { get; }
 
+    /// <summary>
+    /// The INVISIBLE stems of this beam — one per rest a manual beam runs over, in left-to-
+    /// right order. They carry no head, draw no stem and never reach the quanter's stem
+    /// scoring (LilyPond gates that on <c>Stem::is_normal_stem</c>,
+    /// lily/beam-quanting.cc:299), but they stand in the beam-segment walk: the beams that
+    /// survive over the rest are the ones its clamped count lets through, and the leftovers
+    /// become beamlets on the visible neighbours.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beaming-pattern.cc:33-35 — "Sometimes (for example, if the stem
+    /// belongs to a rest and stemlets aren't used) the stem will be invisible."
+    /// </remarks>
+    public ImmutableArray<BeamRestStem> RestStems { get; }
+
     /// <summary>The measure index containing this beam group.</summary>
     public int MeasureIndex { get; }
 
@@ -62,7 +76,8 @@ public sealed record BeamGroup
         int startIndex,
         bool stemUp,
         int growDirection = 0,
-        int voiceIndex = 0)
+        int voiceIndex = 0,
+        ImmutableArray<BeamRestStem> restStems = default)
     {
         Members = members;
         MeasureIndex = measureIndex;
@@ -70,6 +85,7 @@ public sealed record BeamGroup
         StemUp = stemUp;
         GrowDirection = Math.Clamp(growDirection, -1, 1);
         VoiceIndex = voiceIndex;
+        RestStems = restStems.IsDefault ? ImmutableArray<BeamRestStem>.Empty : restStems;
     }
 
     /// <summary>
@@ -117,6 +133,36 @@ public sealed record BeamGroup
         }
     }
 }
+
+/// <summary>
+/// One invisible stem of a beam group — the stem LilyPond puts over a beamed REST.
+/// </summary>
+/// <param name="ItemIndex">The rest's index in its measure's items.</param>
+/// <param name="BeforeMember">The visible member this rest stands immediately LEFT of —
+/// the index in <see cref="BeamGroup.Members"/> the segment walk inserts it before.
+/// Interior by construction: a manual bracket opens and closes on a note, so
+/// <c>1 &lt;= BeforeMember &lt;= Members.Length - 1</c>.</param>
+/// <param name="CountLeft">Beams reaching this stem from the left, after the pattern's
+/// invisible-stem clamp (lily/beaming-pattern.cc:471-494 unbeam_invisible_stems).
+/// ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
+/// additionally mins an interior invisible stem's count on each side with its OTHER
+/// side's. With Lily#'s option space that line cannot fire: the beamify chip needs a
+/// stem whose count EXCEEDS a neighbour's or EQUALS it under a fill-assigned direction,
+/// and an invisible stem's clamped count is ≤ both neighbours' with either equality
+/// case contradicting the very branch that assigned the direction (worked through
+/// 2026-08-06) — so CountLeft == CountRight here always. LilyPond's min exists for the
+/// options Lily# cannot set (subdivideBeams, strictBeatBeaming); it comes back with
+/// them.</param>
+/// <param name="CountRight">Beams leaving it to the right, likewise clamped.</param>
+/// <param name="NoteValue">The rest's written denominator (16 for r16) — the glyph whose ink
+/// CENTER the invisible stem stands on: LilyPond's stem-over-rest X is the rest's own extent
+/// centre (lily/stem.cc:1093-1105 Stem::offset_callback, the "rests" branch), and a beamlet
+/// next to the rest is length-capped against that x.</param>
+/// <param name="MeasureIndex">The rest's measure; <c>-1</c> = the group's own
+/// (<see cref="BeamGroup.MeasureIndex"/>), like <see cref="BeamMember.MeasureIndex"/>.</param>
+public sealed record BeamRestStem(
+    int ItemIndex, int BeforeMember, int CountLeft, int CountRight,
+    int NoteValue = 4, int MeasureIndex = -1);
 
 /// <summary>
 /// Represents a single member of a beam group.
@@ -265,6 +311,14 @@ public sealed record BeamLayout
     /// <summary>X positions for each member (in staff spaces).</summary>
     public ImmutableArray<double> MemberXPositions { get; }
 
+    /// <summary>
+    /// X positions for each of <see cref="BeamGroup.RestStems"/> (in staff spaces), parallel
+    /// to that array — the rest's COLUMN x, with no notehead attachment offset: an invisible
+    /// stem has no head to attach beside (LilyPond's <c>Stem::offset_callback</c> moves a
+    /// stem only relative to its heads). Empty when the group runs over no rests.
+    /// </summary>
+    public ImmutableArray<double> RestXPositions { get; }
+
     /// <summary>The staff this beam is on.</summary>
     /// <remarks>
     /// ⚠️ TWO PRODUCERS SPELL THIS DIFFERENTLY, and that is documented rather than fixed:
@@ -321,7 +375,8 @@ public sealed record BeamLayout
         ImmutableArray<double> memberXPositions,
         int staffIndex,
         int systemIndex,
-        ImmutableArray<int> memberStaffIndices = default)
+        ImmutableArray<int> memberStaffIndices = default,
+        ImmutableArray<double> restXPositions = default)
     {
         Group = group;
         LeftY = leftY;
@@ -332,6 +387,7 @@ public sealed record BeamLayout
         StaffIndex = staffIndex;
         SystemIndex = systemIndex;
         MemberStaffIndices = memberStaffIndices.IsDefault ? ImmutableArray<int>.Empty : memberStaffIndices;
+        RestXPositions = restXPositions.IsDefault ? ImmutableArray<double>.Empty : restXPositions;
     }
 
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>

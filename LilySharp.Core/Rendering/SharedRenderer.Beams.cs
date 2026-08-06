@@ -177,11 +177,37 @@ internal static partial class SharedRenderer
             // corners and beamlets, and (via each stem's extreme rank) lets every stem
             // reach the outermost beam on its own side.
             // LILYPOND-REF: lily/beam.cc:294 calc_beaming, :457 calc_beam_segments, :783 print.
-            var beamingInput = new BeamSubdivision.StemBeaming[grp.Members.Length];
-            for (int i = 0; i < grp.Members.Length; i++)
-                beamingInput[i] = new BeamSubdivision.StemBeaming(
-                    grp.Members[i].BeamCountLeft, grp.Members[i].BeamCountRight,
-                    MemberUp(i) ? 1 : -1, StemAttachX(i));
+            //
+            // The walk INTERLEAVES the group's invisible rest stems between the members:
+            // a rest brings only its clamped counts and its column x — no head, no drawn
+            // stem — and the segment runs that survive over it are exactly the ranks it
+            // lets through; the leftovers end as beamlets on the visible neighbours.
+            // LilyPond's "stems" holds its invisible ones the same way.
+            var restStems = grp.RestStems;
+            if (restStems.Length != beam.RestXPositions.Length)
+                restStems = ImmutableArray<BeamRestStem>.Empty; // a producer without rest x
+            var beamingInput = new BeamSubdivision.StemBeaming[grp.Members.Length + restStems.Length];
+            var memberWalkIndex = new int[grp.Members.Length];
+            {
+                int w = 0, r = 0;
+                for (int i = 0; i <= grp.Members.Length; i++)
+                {
+                    while (r < restStems.Length && restStems[r].BeforeMember == i)
+                    {
+                        beamingInput[w++] = new BeamSubdivision.StemBeaming(
+                            restStems[r].CountLeft, restStems[r].CountRight,
+                            grp.StemUp ? 1 : -1, beam.RestXPositions[r]);
+                        r++;
+                    }
+                    if (i < grp.Members.Length)
+                    {
+                        memberWalkIndex[i] = w;
+                        beamingInput[w++] = new BeamSubdivision.StemBeaming(
+                            grp.Members[i].BeamCountLeft, grp.Members[i].BeamCountRight,
+                            MemberUp(i) ? 1 : -1, StemAttachX(i));
+                    }
+                }
+            }
             var beamRanks = BeamSubdivision.CalcBeaming(beamingInput);
             // The stack spacing is COUNT-AWARE: from four beams up LilyPond narrows the
             // translation to (3·ss + line − thickness)/3 = 0.8733… against the usual
@@ -260,7 +286,7 @@ internal static partial class SharedRenderer
                 // LILYPOND-REF: lily/beam.cc:1113-1157 Beam::calc_stem_y —
                 //   stem_y = beam_line + beam_translation × beam_multiplicity[stem_dir]
                 //   (lily/stem.cc:1269 unites the stem's left+right ranks, indexed by dir).
-                int stemRank = beamRanks[i].Multiplicity(up ? 1 : -1);
+                int stemRank = beamRanks[memberWalkIndex[i]].Multiplicity(up ? 1 : -1);
                 double beamY = primaryBeamY + beamTranslation * stemRank;
                 bgc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);

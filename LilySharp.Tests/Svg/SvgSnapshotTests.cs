@@ -655,6 +655,10 @@ public class SvgSnapshotTests
         // A four-beam (64th) stack spaces its lines at (3·ss+line−thick)/3 = 0.8733,
         // not the 3-and-under 0.81 (LP regression beam-quanting-horizontal.ly).
         yield return new object[] { "test/beam-64th-stack" };
+        // A rest inside a manual beam is an INVISIBLE stem: its count clamps to the
+        // least-beamed neighbour, the surviving beams run over it and the extras
+        // become beamlets (LP regression beam-multiplicity-over-rests.ly).
+        yield return new object[] { "test/beamlets-over-rests" };
         yield return new object[] { "test/drum-groove" };
         // Three pages. The only fixture that pins the VERTICAL across page boundaries:
         // page breaking, the stretched gaps on a filled page, and the last page taking

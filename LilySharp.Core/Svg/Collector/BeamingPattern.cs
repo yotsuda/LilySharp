@@ -60,9 +60,14 @@ internal static class BeamingPattern
     /// <param name="AtSpanStart">This stem begins a tuplet span inside the beam
     /// (<c>Beaming_pattern::at_span_start</c>, :524-531).</param>
     /// <param name="AtSpanStop">This stem ends one (<c>at_span_stop</c>, :532-540).</param>
+    /// <param name="Invisible">A stem with nothing to hang beams from — a beamed REST.
+    /// LilyPond gives every beamed rest a headless Stem (Rest carries the rhythmic-head
+    /// interface the stem engraver acknowledges), and a headless stem answers
+    /// <c>Stem::is_invisible</c>, which is the flag the beam engraver forwards into the
+    /// pattern (lily/template-engraver-for-beams.cc:69-78 add_stem).</param>
     internal readonly record struct Element(
         Fraction StartMoment, Fraction Duration, int BeamCount,
-        bool AtSpanStart = false, bool AtSpanStop = false);
+        bool AtSpanStart = false, bool AtSpanStop = false, bool Invisible = false);
 
     /// <summary>
     /// The beat grid the rule reads — LilyPond's <c>Beaming_options</c>, restricted to the
@@ -234,11 +239,7 @@ internal static class BeamingPattern
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/beaming-pattern.cc:106-201 <c>Beaming_pattern::beamify</c>.
-    /// ⚠️ <c>unbeam_invisible_stems</c> (:471-494) is not ported: it exists for the rests
-    /// LilyPond keeps inside a beam (stemlets), and a Lily# beam group holds only beamable
-    /// notes and chords — a rest ENDS the group (BeamDetector.IsBeamable). It comes back with
-    /// beamed rests.
-    /// ⚠️ <c>subdivide_beams</c> (:186-188) is not ported either: it is gated on
+    /// ⚠️ <c>subdivide_beams</c> (:186-188) is not ported: it is gated on
     /// <c>subdivideBeams</c>, which Lily# has no syntax to set.
     /// </remarks>
     public static (int Left, int Right)[] Beamify(IReadOnlyList<Element> infos, Options options)
@@ -252,6 +253,26 @@ internal static class BeamingPattern
         // of one stem is left alone.
         if (n <= 1)
             return counts;
+
+        // LILYPOND-REF: lily/beaming-pattern.cc:471-494 unbeam_invisible_stems — "invisible
+        // stems should be treated as though they have the same number of beams as their
+        // least-beamed neighbour": a beamed rest's own count is clamped to min(previous) in
+        // one pass and min(next) in a second, and the CLAMPED count is what every later pass
+        // reads (count() reads beam_count_, which those loops overwrite). That clamp is how
+        // the beams that survive OVER a rest are exactly the ones both sides carry, and how
+        // the extra ones become beamlets on the visible neighbours.
+        var beamCount = new int[n];
+        for (int i = 0; i < n; i++)
+            beamCount[i] = infos[i].BeamCount;
+        for (int i = 1; i < n; i++)
+            if (infos[i].Invisible)
+                beamCount[i] = Math.Min(beamCount[i], beamCount[i - 1]);
+        for (int i = 0; i < n - 1; i++)
+            if (infos[i].Invisible)
+                beamCount[i] = Math.Min(beamCount[i], beamCount[i + 1]);
+        for (int i = 0; i < n; i++)
+            if (infos[i].Invisible)
+                counts[i] = (beamCount[i], beamCount[i]);
 
         var importance = SetRhythmicImportance(infos, options);
 
@@ -268,11 +289,11 @@ internal static class BeamingPattern
         // iterated: they are span boundaries by definition.
         for (int i = 1; i < n - 1; i++)
         {
-            int leftCount = infos[i - 1].BeamCount;
-            int rightCount = infos[i + 1].BeamCount;
+            int leftCount = beamCount[i - 1];
+            int rightCount = beamCount[i + 1];
 
             if (infos[i].AtSpanStart || infos[i].AtSpanStop
-                || infos[i].BeamCount <= Math.Min(leftCount, rightCount))
+                || beamCount[i] <= Math.Min(leftCount, rightCount))
                 continue;
 
             // LILYPOND-REF: lily/beaming-pattern.cc:135-144 remaining_beats — advance the beat
@@ -310,12 +331,14 @@ internal static class BeamingPattern
 
         // LILYPOND-REF: lily/beaming-pattern.cc:161-167 flag_directions — a CENTER standing
         // between a LEFT and a RIGHT takes its neighbour's direction.
-        // ⚠️ WITH LILYPOND'S DEFAULT OPTIONS THIS PASS CANNOT CHANGE A COUNT, and it is
-        // written out anyway because that is a property of the options rather than of the
-        // rule. A CENTER stem has count <= min(neighbours), so the chip below only fires for
-        // it when its count EQUALS the opposite neighbour's — and working that back through
-        // the branch that made the adjacent stem LEFT (or RIGHT) contradicts itself unless
-        // strictBeatBeaming is on. Turn that option on and the pass starts to bite.
+        // ⚠️ WITH LILYPOND'S DEFAULT OPTIONS AND NO INVISIBLE STEMS THIS PASS CANNOT CHANGE
+        // A COUNT, and it is written out anyway because that is a property of the options
+        // rather than of the rule. A CENTER stem has count <= min(neighbours), so the chip
+        // below only fires for it when its count EQUALS the opposite neighbour's — and
+        // working that back through the branch that made the adjacent stem LEFT (or RIGHT)
+        // contradicts itself unless strictBeatBeaming is on. An INVISIBLE stem, though, is
+        // routinely clamped to exactly a neighbour's count, so for it the fill-then-chip can
+        // fire — in LilyPond just as here.
         for (int i = 1; i < n - 1; i++)
         {
             if (flagDirections[i] == Center && flagDirections[i - 1] == Left)
@@ -334,9 +357,9 @@ internal static class BeamingPattern
 
             int oppositeDir = -flagDirections[i];
             int neighbour = i + oppositeDir;
-            if (infos[i].BeamCount >= infos[neighbour].BeamCount)
+            if (beamCount[i] >= beamCount[neighbour])
             {
-                int chip = Math.Max(infos[i].BeamCount - infos[neighbour].BeamCount, 1);
+                int chip = Math.Max(beamCount[i] - beamCount[neighbour], 1);
                 if (oppositeDir == Left)
                     counts[i].Left -= chip;
                 else

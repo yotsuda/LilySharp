@@ -1,0 +1,24 @@
+// lilypond-src/input/regression/beam-multiplicity-over-rests.ly の Lily# 訳。
+// CLAIM: 連桁が休符を跨ぐとき、beamlet は拍構造を示すのに必要なだけ付く。
+// 綴り: LP \relative（基準 f・先頭 c' = 中央ハ）→ Lily# 絶対 c。
+// LP の `c64 ~ 16..`（ピッチ省略の双付点）は c64~ c16.. に明示。
+// 6 グループ×各 1/4 拍。4/4 で 1.5 小節（末尾は不完全小節のまま＝LP と同じ）。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    c8[ r16 c32 c32]
+    c32[ r16 c32 c8]
+    c32[ r16 c64 c64~ c16.. c64]
+    c32[ c32 r16 c8] |
+    c16[ r32 c32 r16 c16]
+    c16[ r16 c32 r32 c16]
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

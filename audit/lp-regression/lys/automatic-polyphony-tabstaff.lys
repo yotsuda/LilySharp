@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/automatic-polyphony-tabstaff.ly の Lily# 訳。
+// CLAIM: TabStaff で声部を明示初期化せず自動ポリフォニーが使える(記譜+tab の対で
+// 単声→2声→単声)。綴り: LP `<< { } \\ { } >>` = Lily# voice span。
+// ⚠️ 綴りの罠(treble_8 の部): 通常は Lily# c = LP c'(1 オクターブ差)だが、
+// Lily# の treble_8 部は「記譜=実音+1oct」の移調を持ち、LP の treble_8 は視覚だけ。
+// LP の音(実音=字面)と同じ実音・同じ譜面位置・同じフレットになるのは
+// **LP と同じ綴り**(c'・g,)——移調がオクターブ差を相殺する。
+octave absolute
+
+part gt { clef treble_8 tuning guitar }
+
+section Main {
+  gt {
+    c'1 |
+    voice { c'4 d' e' f' } { g,1 } |
+    c'1 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff gt tab gt }

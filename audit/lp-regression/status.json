@@ -548,11 +548,15 @@
     },
     "autochange-keep-with-tag.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\keepWithTag works with \\autoChange",
+      "notes": "no \\autoChange, \\tag or \\keepWithTag in Lily# grammar"
     },
     "autochange-relative.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\autoChange needs final-octave pitches; \\relative must be applied inside it",
+      "notes": "no \\autoChange in Lily# grammar"
     },
     "autochange-turning-pitch.ly": {
       "category": "scheme",
@@ -568,11 +572,15 @@
     },
     "automatic-polyphony-drumstaff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "DrumStaff automatic polyphony without explicit voice init (1 voice -> 2 -> 1)",
+      "notes": "voice span mid-stream translates << { } \\\\ { } >>; column gaps match LP to 0.01 ss, beam-above-staff distance exact (2.19/1.38 ss), stem directions and rejoin match; beam fingerprint 8==8"
     },
     "automatic-polyphony-tabstaff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "TabStaff automatic polyphony without explicit voice init (notation+tab pair)",
+      "notes": "notation staff OK (7 heads, voice-1 stems up, voice-2 stemless whole); TAB DROPS VOICE 2 ENTIRELY (6 of 7 digits) - RenderSpec.cs:287-291 builds the tab staff from the primary voice only (Staff.CreateTab takes ONE Voice). fix = CreateTab(all voices) + per-voice string allocation + per-voice tab stems. NB translation trap: for a treble_8 part LP-identical spelling (c apostrophe, g comma) is correct - Lily# treble_8 transposition cancels the usual 1-octave offset; also LP default TabStaff is digits-only = Lily# `tab gt as numbers`"
     },
     "backend-exercise.ly": {
       "category": "scheme",
@@ -1104,7 +1112,9 @@
     },
     "beam-collision-large-object.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "behave sensibly in the presence of large beam collisions",
+      "notes": "LP beam-collision engine (covered grobs) not ported - same root as beam-collision-flag/-grace (batch 8); also needs a 3rd voice slot (\\voiceFour), Lily# voice spans have no slot numbering"
     },
     "beam-collision-off.ly": {
       "category": "scheme",
@@ -1252,7 +1262,9 @@
     },
     "beam-multiplicity-over-rests.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "beamlets over beamed rests follow the beat structure",
+      "notes": "invisible rest stems ported: unbeam_invisible_stems clamp (beaming-pattern.cc:471-494) + rests interleaved into the segment walk + rest stem X = rest ink center (stem.cc:1093-1105). 23/23 polygons, rank Ys exact vs LP 2.26.0 (compared per bar: Lily# A4 line width compresses the full 1.5-bar book; per-bar renders are natural-width on both sides). fixture test/beamlets-over-rests (positive control: fails on stashed Core). follow-up landed same session: interior segment/beamlet stem-side ends now overhang half a stem width (beam.cc:627-631) - after it every X edge sits at LP ink + the uniform 0.04/0.05 stroke-inset convention, i.e. geometry residual <= 0.01"
     },
     "beam-outside-beamlets.ly": {
       "category": "scheme",

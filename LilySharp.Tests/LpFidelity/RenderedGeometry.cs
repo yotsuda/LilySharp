@@ -1585,12 +1585,17 @@ internal sealed class RenderedGeometry
     /// How far either side of a stem <see cref="BeamletsAtStem"/> looks for beam lines.
     /// </summary>
     /// <remarks>
-    /// Small enough that nothing but a line touching the stem can be caught (the shortest
-    /// beamlet in the corpus is a fifth of a staff space) and large enough to be immune to
-    /// the arithmetic: a segment's end is the stem's own x, computed by the same expression
-    /// on both sides (LayoutUtilities.StemAttachX), so the only requirement is to be off it.
+    /// Past the OVERHANG, short of the shortest STUB. Every segment end that stops at a
+    /// stem overhangs it by half the stem thickness (0.065 — lily/beam.cc:627-631, interior
+    /// ends included since the overhang port), so a probe closer than that to the stem
+    /// catches the covering tail of a segment that ENDS there and inflates the count on the
+    /// wrong side — 1e-6 did exactly that the day the interior overhang landed, reading
+    /// e.g. peak-8-16-8's left as 2. LilyPond's own ledger numbers are its
+    /// <c>Stem.beaming</c> DATA, not probed ink, so the probe must ask the same question:
+    /// what runs BETWEEN the stems. 0.1 clears the 0.065 overhang and stays under the
+    /// shortest beamlet in the corpus (a fifth of a staff space).
     /// </remarks>
-    private const double BeamletProbeOffset = 1e-6;
+    private const double BeamletProbeOffset = 0.1;
 
     /// <summary>
     /// The beam groups drawn on <paramref name="page"/>, left to right: each group's PRIMARY

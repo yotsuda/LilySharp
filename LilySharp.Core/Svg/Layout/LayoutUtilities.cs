@@ -115,6 +115,22 @@ internal static class LayoutUtilities
         columnX + StemAttachX(up, noteValue, font);
 
     /// <summary>
+    /// The x a beamed rest's INVISIBLE stem stands at: the centre of the rest glyph's own
+    /// ink. A beamlet beside the rest is length-capped against this x
+    /// (BeamSubdivision.CalcBeamSegments' max-proportion cap), which is how the cap
+    /// resolved against the rest's LEFT edge cut a beamlet LilyPond leaves at full length.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:1093-1105 Stem::offset_callback — the "rests" branch
+    /// returns <c>robust_relative_extent (rest, rest, X_AXIS).center ()</c>.
+    /// </remarks>
+    public static double RestStemX(double restX, int noteValue)
+    {
+        var box = GlyphMetrics.GetRestBBox(noteValue);
+        return restX + (box.Left + box.Right) / 2.0;
+    }
+
+    /// <summary>
     /// Where a FLAG's glyph origin sits, given the x its stem stands at.
     /// </summary>
     /// <remarks>

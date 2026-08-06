@@ -208,7 +208,8 @@ internal sealed class BeamScoringProblem
         GlyphMetrics.DesignMetrics? headFont = null,
         double lineThickness = EngravingDefaults.StaffLineThickness,
         int staffLineCount = 5,
-        double? beamLengthFraction = null)
+        double? beamLengthFraction = null,
+        IReadOnlyList<double>? restXPositions = null)
     {
         _group = group;
         _parameters = parameters ?? BeamQuantParameters.Default;
@@ -354,15 +355,37 @@ internal sealed class BeamScoringProblem
         // quanter's: _stemXPositions is already measured from the beam's drawn LEFT EDGE.
         // LILYPOND-REF: lily/beam-quanting.cc:362-365 segments_ — get_beam_segments, sorted,
         //   then shifted by (x_span_ − x_pos[LEFT]) into that same left-edge frame.
-        var beaming = new BeamSubdivision.StemBeaming[group.Members.Length];
-        for (int i = 0; i < group.Members.Length; i++)
-            beaming[i] = new BeamSubdivision.StemBeaming(
-                group.Members[i].BeamCountLeft, group.Members[i].BeamCountRight,
-                // The direction SharedRenderer.DrawBeams feeds the same call with. LilyPond
-                // asks every stem for its own (lily/beam.cc:524 get_grob_direction), which is
-                // the same answer off a knee; taking the renderer's spelling is what keeps
-                // the segments scored identical to the segments drawn.
-                _isKnee ? _memberBeamDirs[i] : _beamDir, _stemXPositions[i]);
+        // The walk interleaves the group's invisible rest stems between the members, as the
+        // renderer's does — their clamped counts are what break a higher beam into beamlets
+        // over the rest, and the segments scored must be the segments drawn. A rest never
+        // reaches the stem scoring itself: LilyPond gates that on Stem::is_normal_stem
+        // (lily/beam-quanting.cc:299, :1122), and the member arrays above hold only the
+        // normal stems here too.
+        var quantRests = group.RestStems;
+        if (restXPositions == null || restXPositions.Count != quantRests.Length)
+            quantRests = ImmutableArray<BeamRestStem>.Empty; // a caller without rest x
+        var beaming = new BeamSubdivision.StemBeaming[group.Members.Length + quantRests.Length];
+        {
+            int w = 0, r = 0;
+            for (int i = 0; i <= group.Members.Length; i++)
+            {
+                while (r < quantRests.Length && quantRests[r].BeforeMember == i)
+                {
+                    beaming[w++] = new BeamSubdivision.StemBeaming(
+                        quantRests[r].CountLeft, quantRests[r].CountRight, _beamDir,
+                        (restXPositions![r] - _leftX) + halfBeamOverhang);
+                    r++;
+                }
+                if (i < group.Members.Length)
+                    beaming[w++] = new BeamSubdivision.StemBeaming(
+                        group.Members[i].BeamCountLeft, group.Members[i].BeamCountRight,
+                        // The direction SharedRenderer.DrawBeams feeds the same call with. LilyPond
+                        // asks every stem for its own (lily/beam.cc:524 get_grob_direction), which is
+                        // the same answer off a knee; taking the renderer's spelling is what keeps
+                        // the segments scored identical to the segments drawn.
+                        _isKnee ? _memberBeamDirs[i] : _beamDir, _stemXPositions[i]);
+            }
+        }
         _segments = BeamSubdivision.CalcBeamSegments(
             beaming, BeamSubdivision.CalcBeaming(beaming),
             EngravingDefaults.BeamletLength, EngravingDefaults.BeamletMaxLengthProportion,
