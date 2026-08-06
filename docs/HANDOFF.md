@@ -58,6 +58,74 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第101セッション第1便（＝**全音符ペアの「見えない stem」port 完了 = fixed 第16号**。
+chord-tremolo・chord-tremolo-whole の open 2 本を閉じ、open は automatic-polyphony-tabstaff と
+breathing-sign-accidentals の 2 本だけになった）。
+
+★★★ **⓪ port の中身（全部字面・commit `72e75ee0`）**:
+- **quanter**（BeamScoringProblem）: `_isNormal[i]`＝表示 noteValue≥2（is_normal_stem の鏡）。
+  normal 0 のとき ⑴ seed=`NoVisibleStemPositions`（極値頭×0.5+dir×bt×梁数＝
+  no_visible_stem_positions）⑵ damping/shift/quant_range/stem-length scorer 全部素通し
+  ⑶ **edge_dirs=CENTER**（beam-quanting.cc:327-330——Fl の gap が点に退化し「y が整数の
+  quant だけ課金」になる。LP は 0/0=NaN・Lily# は有限 0.39×extra＝同じ敗者）
+  ⑷ **collision 全破棄**（beam-collision-engraver:128-135 vertical_span が normal-stems
+  起点＝空なら何も入らない。見落とすと accidental 本で♯が collision になり梁が
+  2 translation 沈む——踏んだ）。
+- **stem X＝符頭中心**（internal_calc_stem_offset_from_head の center_invisible 枝＝
+  LayoutUtilities.InvisibleStemX）・**stem ink 抑止**（renderer member loop で skip＝
+  Stem::print→is_valid_stem false）。
+- **梁 X**: gapped 端は「符頭内側エッジ±gap/2」にクランプ（beam.cc:637-654）。
+  **右 gap は臨時記号で伸びる**: 表示全音符+右メンバに臨時→gapRight=0.8+臨時 union 幅+1.0
+  （get_gaps:402-427・get_accidentals=最後の stem の頭）。
+- **spacing rod 6.0**（Beam minimum-length・tremolo_springs_and_rods:429-449）: 全音符表示
+  ペア+右臨時のとき列間最低 6.0。**両 spring 系統に同じ家**（SpacingRules.TremoloPairRod→
+  CreateSpring と MeasureLayouter の maxRod）——片方だけだと効かない（踏んだ）。
+- **照合**: whole 本＝梁 Y 9.26/10.13/11.01/11.88 完全一致・X 則一致・stem 0=0。
+  chord-tremolo 本＝全音符表示 3 小節（3梁/2梁/1梁・up 向き含む）全部 Y 完全一致
+  （11.88/12.69/13.5・11.88/12.69・12.88）。accidental 本＝4 小節 Y 完全一致・符頭間
+  6.00=6.00・m2/m9 梁幅 1.78=1.78。観測者=ChordTremoloPairTests（+1 本＝計 7 本）。
+
+★★★ **⓪′ 同点の罠（新原則）**: no-stem 梁は上記の点 gap 化で **±0.19 の 2 config が完全同点**
+になり、LP の勝者は C++ priority_queue の同点処理＝**列挙の早い側（低 y）**。down/up 両向き
+4 例の実測で全部 hang 側（trunc(unquanted)−0.19）→ LILYSHARP-OWN の**無限小低 y 優先**
+（start score に +Σy×1e-9）で再現。札はコードに有り。LP 側は straddle 系 config が Fl=NaN
+（0/0）になることも観測。飛び道具＝`\layout { debug-beam-scoring = ##t }`+`inspect-quants`
+（score card が SVG の tspan に出る・**空 card=demerit 0 の証明**・inspect は最近傍 config に
+snap。scratch\lpreg\probe-whole-quants*.ly の型）。
+
+⚠️ **相対の罠をまた踏んだ（3 回目）**: 手書き twin——Lily# の裸 music は相対（anchor c=LP c'）。
+**LP `\relative c''' {g64 a}` の g は c から下4度の G→`g''64 a` が要る**（`g'` と書いて 1 オクターブ
+低いまま量子化を追いかけ、head=−2 のデバッグ出力でやっと気づいた）。LP が `\relative c'` の本は
+**本文と同綴りで写せる**（chord-tremolo の型）。
+
+⚠️ **残（別 regime・起票のみ）**: ⑴ 素の（臨時なし）全音符ペアの符頭間隔 Δ0.59（whole 本 4.27 vs
+LP 4.86＝spacing/springs）⑵ accidental 本 m3 の梁幅——LP は 3 度違いの♯を**2 列に stagger**
+（union 2.38）/Lily# は 1 列（1.1）＝臨時 stack regime（既 open）⑶ partial gap
+（gap_count<beams）は corpus に本が無く未観測。
+
+★（第100セッションから引き継ぐ起票・未修正）:
+- **stem 付き `DrawTremolo`（SharedRenderer.Marks）の斜線間隔 1.28≈LP 0.81×1.6・anchor=stem
+  中点**（LP は y_offset :314-368）——snapshot 再ベース（要承認）とセット。コードに ⚠️ 札済み。
+- **和音レベル @finger は読者ゼロで黙って落ちる**（`_fingeringByPosition` 死に状態）。
+- q は grace body 内・chords{} 行内で未対応。resolver の逆行参照は診断なしで spacer 縮退。
+- articulations 本の hairpin 終端 `\!` の綴りが無い（文法の宿題）。
+
+**frontier（次の本命）**: ⑴ **script-Y 配置族**（chord-scripts の forced marcato Δ0.70・
+articulations の trill Δ0.45 が同根＝五線内に置ける script を Lily# が外へ押し出す・
+fermata 族 regime）⑵ キューの次の plain（status.json のアルファベット順を数え直す——
+chord-tremolo 族は完全に閉じた）。
+**breathing-sign の port 計画は第99セッション第16便 §1 参照——まだ生きている**。
+
+plain 322 / 処理済 **68**（fixed **17**・exact 16・skip 33・**open 2**＝
+automatic-polyphony-tabstaff・breathing-sign-accidentals。数えたら state 別内訳も一緒に書くこと）。
+
+未 push **60**（この handoff で 61。数え直すこと。**⚠️ push しない**）・テスト
+**4149 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 動き 0 枚**・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第100セッション第2〜9便の経緯
+
 最終更新 第100セッション第7便（＝**chord-tremolo 族を完食**: articulations = exact・
 other-commands/scaled-durations = skip（コード変更なし）。便の並び: 第2便 q port →
 第3便 chord-scripts 第13号 → 第4便 下見 3 open → 第5便 gap+accidental 第14号 →

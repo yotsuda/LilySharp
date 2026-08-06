@@ -105,6 +105,11 @@ internal sealed class BeamScoringProblem
     // because it only bites when the floor binds (HANDOFF 5.0).
     private readonly StemDetails _stemDetails;
 
+    // Per-member: is this a NORMAL stem (drawn ink, feeds stem scoring)? False for a
+    // whole-note display pair's invisible stems. LILYPOND-REF: beam-quanting.cc:299 is_normal_.
+    private readonly bool[] _isNormal;
+    private readonly int _normalStemCount;
+
     // Direction
     private readonly int _beamDir; // +1 for stem up, -1 for stem down
 
@@ -213,7 +218,7 @@ internal sealed class BeamScoringProblem
     {
         _group = group;
         _parameters = parameters ?? BeamQuantParameters.Default;
-        _collisions = collisions ?? Array.Empty<BeamCollision>();
+        var suppliedCollisions = collisions ?? Array.Empty<BeamCollision>();
 
         // Compute basic values. LILYPOND-REF: lily/beam-quanting.cc:419 x_span_ =
         // beams[i]->spanner_length() — the quanter's x-span is the beam's whole drawn
@@ -259,9 +264,14 @@ internal sealed class BeamScoringProblem
         // Per MEMBER head shape: a two-note tremolo pair beams HALF notes
         // (BeamDetector.IsBeamable), whose attachment is 0.073200 further out than a black
         // head's — so this cannot be lifted out of the loop as one offset for the group.
+        // A WHOLE-note display pair's stem is invisible and stands at the head's CENTRE,
+        // not at an attachment edge (LayoutUtilities.InvisibleStemX).
         double StemXOf(BeamMember m) =>
-            LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp,
-                GlyphMetrics.NoteValueOf(m.Item), headFont);
+            GlyphMetrics.NoteValueOf(m.Item) <= 1
+                ? LayoutUtilities.InvisibleStemX(itemXPositions[m.ItemIndex],
+                    GlyphMetrics.NoteValueOf(m.Item))
+                : LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp,
+                    GlyphMetrics.NoteValueOf(m.Item), headFont);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 
@@ -291,6 +301,34 @@ internal sealed class BeamScoringProblem
             _memberBeamCounts[i] = Math.Max(1, member.BeamCount);
             _maxBeamCount = Math.Max(_maxBeamCount, member.BeamCount);
         }
+
+        // Which members are NORMAL stems — heads with duration-log ≥ 1 (half or shorter).
+        // A whole-note (or breve) display pair — the only way a whole head ever beams
+        // (BeamDetector.IsBeamable) — has an INVISIBLE stem: it feeds neither the
+        // least-squares seed, the damping, the region shift, the edge quant range nor
+        // the stem-length scoring. The pair machinery makes this all-or-nothing (both
+        // notes carry the pair's one display value).
+        // LILYPOND-REF: lily/stem.cc:370-377 is_normal_stem — head_count () &&
+        //   duration-log >= 1; lily/beam-quanting.cc:299 is_normal_.push_back.
+        _isNormal = new bool[group.Members.Length];
+        _normalStemCount = 0;
+        for (int i = 0; i < group.Members.Length; i++)
+        {
+            _isNormal[i] = GlyphMetrics.NoteValueOf(group.Members[i].Item) >= 2;
+            if (_isNormal[i])
+                _normalStemCount++;
+        }
+
+        // A beam with no normal stems sees NO covered grobs at all: LilyPond's
+        // collision engraver spans the beam vertically from its NORMAL stems, and an
+        // empty span admits nothing — the accidental of a whole-note pair's right
+        // chord never becomes a quanting collision (the beam instead SHORTENS past
+        // it, via the accidental branch of the gap — see the renderer's clamp).
+        // LILYPOND-REF: lily/beam-collision-engraver.cc:128-135 vertical_span —
+        //   finalize builds it from the "normal-stems" set alone.
+        _collisions = _normalStemCount == 0
+            ? Array.Empty<BeamCollision>()
+            : suppliedCollisions;
 
         _isTab = stemPositions != null;
         _beamDir = group.StemUp ? 1 : -1;
@@ -322,10 +360,17 @@ internal sealed class BeamScoringProblem
         // LILYPOND-REF: beam-quanting.cc edge_beam_counts_ / edge_dirs_ —
         // forbidden-quant checks run per beam END with that end's own beam
         // count and stem direction (they differ for e.g. c16 d8 and knees).
+        // With NO normal stems the edge dirs stay CENTER (0) — LilyPond only fills
+        // edge_dirs_ when normal_stem_count_ is nonzero (beam-quanting.cc:327-330),
+        // and the forbidden-quant gap then degenerates to a point: only a candidate
+        // whose y sits EXACTLY on a staff line is charged (LP divides 0/0 into NaN
+        // demerits there; a finite charge keeps the same losers without the NaN).
         _edgeBeamCounts = new[] { _memberBeamCounts[0], _memberBeamCounts[^1] };
-        _edgeDirs = _isKnee
-            ? new[] { _memberBeamDirs[0], _memberBeamDirs[^1] }
-            : new[] { _beamDir, _beamDir };
+        _edgeDirs = _normalStemCount == 0
+            ? new[] { 0, 0 }
+            : _isKnee
+                ? new[] { _memberBeamDirs[0], _memberBeamDirs[^1] }
+                : new[] { _beamDir, _beamDir };
 
         // LILYPOND-REF: lily/beam-quanting.cc:232-234
         // Calculations are in staff-space units
@@ -625,6 +670,14 @@ internal sealed class BeamScoringProblem
         if (_headMin.Length < 1)
             return (0, 0);
 
+        // A beam with NO normal stems — a whole-note tremolo pair — has no stem
+        // lengths to fit: it seeds flat, one beam-stack past the extreme head on the
+        // beam's own side, and the quanter's scorers (minus the stem ones) place it.
+        // LILYPOND-REF: lily/beam-quanting.cc:539-543 least_squares_positions.
+        // LILYPOND-REF: lily/beam-quanting.cc:485-510 no_visible_stem_positions.
+        if (_normalStemCount == 0)
+            return NoVisibleStemPositions();
+
         double minStemLen = _minStemLength; // staff-spaces
 
         // Least-squares: find best fit line through ideal positions
@@ -724,6 +777,36 @@ internal sealed class BeamScoringProblem
         EnsureMinimumStemLength(ref leftY, ref rightY, minStemLen);
 
         return (leftY, rightY);
+    }
+
+    /// <summary>
+    /// The flat seed for a beam whose every stem is invisible (a whole-note tremolo
+    /// pair): the extreme head position in the beam's direction, pushed one beam
+    /// translation per beam line (multiplicity + 1 = the beam count) further that way.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:485-510 no_visible_stem_positions —
+    ///   <c>head_positions.linear_combination (dir)</c> is the united head interval's
+    ///   extreme in the beam's direction (×0.5 half-spaces → spaces), and
+    ///   <c>multiplicity.length () + 1</c> is the stems' beam count (their beaming
+    ///   ranks run 0..count−1). The measured whole book: heads 5/6, dir down, 4 beams
+    ///   → 2.5 − 0.8733×4 = −0.9933, which the quanter then lands on hang-from-middle
+    ///   (−0.19), matching LilyPond's printed page exactly.
+    /// </remarks>
+    private (double leftY, double rightY) NoVisibleStemPositions()
+    {
+        int minPos = int.MaxValue, maxPos = int.MinValue;
+        int multiplicity = 0;
+        for (int i = 0; i < _headMin.Length; i++)
+        {
+            minPos = Math.Min(minPos, _headMin[i]);
+            maxPos = Math.Max(maxPos, _headMax[i]);
+            multiplicity = Math.Max(multiplicity, _memberBeamCounts[i]);
+        }
+
+        double y = (_beamDir > 0 ? maxPos : minPos) * 0.5
+            + _beamDir * _beamTranslation * multiplicity;
+        return (y, y);
     }
 
     /// <summary>
@@ -828,7 +911,9 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ApplySlopeDamping()
     {
-        if (_headMin.Length <= 1)
+        // LILYPOND-REF: lily/beam-quanting.cc:747-748 slope_damping — fewer than two
+        // NORMAL stems (a whole-note pair has zero) means no slope to damp.
+        if (_headMin.Length <= 1 || _normalStemCount <= 1)
             return;
 
         double damping = _parameters.Damping;
@@ -1002,7 +1087,9 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private void ShiftRegionToValid()
     {
-        if (_headMin.Length == 0)
+        // LILYPOND-REF: lily/beam-quanting.cc:780-781 shift_region_to_valid — no
+        // normal stems, nothing to keep reachable.
+        if (_headMin.Length == 0 || _normalStemCount == 0)
             return;
 
         double beamDy = _unquantedRightY - _unquantedLeftY;
@@ -1099,7 +1186,12 @@ internal sealed class BeamScoringProblem
         // bound was "merely looser, never tighter" — it is now LilyPond's.
         double[] quantMin = { double.NegativeInfinity, double.NegativeInfinity };
         double[] quantMax = { double.PositiveInfinity, double.PositiveInfinity };
-        for (int e = 0; e < 2; e++)
+        // LILYPOND-REF: lily/beam-quanting.cc:346-347 edge_stems — the range comes off
+        // each edge's NORMAL stem (first_normal_stem/last_normal_stem); a beam of invisible stems
+        // has none and keeps the full range, which is what lets a whole-note pair's
+        // beam stack sit BETWEEN its heads. (The pair machinery makes invisibility
+        // all-or-nothing, so per-edge first/last-normal never diverges from this.)
+        for (int e = 0; e < 2 && _normalStemCount > 0; e++)
         {
             double headSS = BeamSideHead(e == 0 ? 0 : _headMin.Length - 1) / 2.0;
             double widen = 0.5
@@ -1159,9 +1251,20 @@ internal sealed class BeamScoringProblem
                 // LILYPOND-REF: lily/beam-quanting.cc:162-163
                 // Initial demerit based on distance from ideal (closer = better)
                 double startScore = Math.Abs(unshiftedQuants[j]) + Math.Abs(unshiftedQuants[i]);
+                // LILYSHARP-OWN: with no normal stems every flat off-line candidate
+                // scores exactly zero beyond the start score, so ±0.19 around the
+                // truncated seed tie to the last bit. LilyPond's winner there is
+                // whatever its C++ heap pops first over equal keys — MEASURED twice
+                // (chord-tremolo-whole's down beam and chord-tremolo m.1's up beam,
+                // both print hang −0.19, the EARLIER-generated = lower-y config).
+                // An infinitesimal lower-y preference reproduces that pick without
+                // touching any distinguishable score.
+                double tieBreak = _normalStemCount == 0
+                    ? (leftYSS + rightYSS) * 1e-9
+                    : 0.0;
                 var config = new BeamConfiguration(leftY, rightY)
                 {
-                    Demerits = startScore / 1000.0,
+                    Demerits = startScore / 1000.0 + tieBreak,
                     NextScorerTodo = (int)BeamScorer.SlopeIdeal
                 };
 
@@ -1447,6 +1550,11 @@ internal sealed class BeamScoringProblem
 
         for (int i = 0; i < _stemXPositions.Length; i++)
         {
+            // LILYPOND-REF: lily/beam-quanting.cc:1122-1123 score_stem_lengths — an
+            // invisible stem (whole-note pair) has no length to score.
+            if (!_isNormal[i])
+                continue;
+
             double x = _stemXPositions[i];
             // LILYPOND-REF: lily/beam-quanting.cc:1127-1129 — all staff-spaces.
             double beamY = _xSpan > 0.001

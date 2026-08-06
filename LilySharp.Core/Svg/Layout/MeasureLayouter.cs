@@ -419,6 +419,11 @@ internal sealed class MeasureLayouter
             //   lily/separation-item.cc:47-68 Separation_item::set_distance.
             maxRod = Math.Max(maxRod,
                 SpacingRules.SeparationRodDistance(prev, next, staffY: 0));
+            // A whole-display tremolo pair with accidentals on its right half spans
+            // the Beam's minimum-length as a rod (6.0) — the spacing side of the
+            // gapped floating beam. Same house as the measure-estimate system's.
+            // LILYPOND-REF: lily/beam.cc:429-449 tremolo_springs_and_rods.
+            maxRod = Math.Max(maxRod, SpacingRules.TremoloPairRod(prev, next));
         }
         // LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance — raising the
         // minimum leaves BOTH strengths where the duration spring put them, so the

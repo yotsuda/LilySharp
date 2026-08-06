@@ -1032,6 +1032,18 @@ internal static class SpacingRules
             minDistance = Math.Max(minDistance, idealDistance);
         }
 
+        // A whole-display tremolo pair whose RIGHT half carries accidentals gets the
+        // Beam's minimum-length as a spacing rod between its two columns, so the
+        // gapped beam keeps printable width past the accidentals. MEASURED: the
+        // accidental book's three such pairs space head-origin to head-origin at
+        // exactly 6.00 (m2 27.93→33.93, m3 39.88→45.88, b''–cis''' 84.82→90.82);
+        // the accidental-free pair keeps its natural 4.86.
+        // LILYPOND-REF: lily/beam.cc:429-449 tremolo_springs_and_rods — gated on
+        //   the accidentals and on duration_log <= 0, it calls set_spacing_rods;
+        //   the distance is the Beam grob's minimum-length 6.0
+        //   (scm/define-grobs.scm Beam) via lily/spanner.cc:429-473 set_spacing_rods.
+        minDistance = Math.Max(minDistance, TremoloPairRod(prevItem, nextItem));
+
         // LILYPOND-REF: lily/spacing-basic.cc note_spacing()
         //   ret.set_inverse_stretch_strength(fraction * std::max(0.1, (len - min)));
         // where min = increment_ (NOT skyline min_distance).
@@ -1042,6 +1054,43 @@ internal static class SpacingRules
 
         return new Spring(idealDistance, minDistance, inverseStretchStrength);
     }
+
+    /// <summary>The Beam grob's minimum-length (scm/define-grobs.scm Beam), the rod a
+    /// whole-display tremolo pair with accidentals spans between its two columns.</summary>
+    private const double TremoloPairAccidentalRod = 6.0;
+
+    /// <summary>
+    /// The tremolo pair's spacing rod between <paramref name="prev"/> and
+    /// <paramref name="next"/>: the Beam's minimum-length (6.0) when they are the two
+    /// halves of a whole-DISPLAY pair whose right half carries accidentals, else 0.
+    /// One house for BOTH spring systems (this file's estimate and the
+    /// timing-column layout), so the pair cannot drift.
+    /// </summary>
+    internal static double TremoloPairRod(MusicItem? prev, MusicItem? next) =>
+        IsWholeTremoloPairStart(prev) && IsTremoloPairEndWithAccidentals(next)
+            ? TremoloPairAccidentalRod
+            : 0.0;
+
+    /// <summary>The LEFT half of a whole-DISPLAY two-note tremolo pair (the only beam
+    /// whose stems are invisible).</summary>
+    private static bool IsWholeTremoloPairStart(MusicItem? item) => item switch
+    {
+        NoteItem { TremoloPairBeams: > 0, HasBeamStart: true } n =>
+            GlyphMetrics.NoteValueOf(n.BaseDuration) <= 1,
+        ChordItem { TremoloPairBeams: > 0, HasBeamStart: true } c =>
+            GlyphMetrics.NoteValueOf(c.BaseDuration) <= 1,
+        _ => false,
+    };
+
+    /// <summary>The RIGHT half of a two-note tremolo pair, carrying at least one
+    /// accidental (LilyPond's get_accidentals reads the LAST stem's heads).</summary>
+    private static bool IsTremoloPairEndWithAccidentals(MusicItem? item) => item switch
+    {
+        NoteItem { TremoloPairBeams: > 0, HasBeamEnd: true } n => n.Accidental != null,
+        ChordItem { TremoloPairBeams: > 0, HasBeamEnd: true } c =>
+            c.Notes.Any(x => x.Accidental != null),
+        _ => false,
+    };
 
     /// <summary>
     /// Calculates stem direction optical correction for spacing ([Wanske] p.138:

@@ -1912,7 +1912,7 @@
       "category": "plain",
       "state": "fixed",
       "claim": "2音tremoloは臨時記号の存在に適応する(♯がペア間隔を広げ梁に食い込まない)",
-      "notes": "fixed第14号: 和音bodyのペア(c32 <dis fis>)がpair機構(_tremoloPairShape)をNote caseしか通らず、和音側は書かれた32分のまま黙って描かれていた→chord caseに同じ変換(表示=総和・TimeScale1/2・PairBeams/GapCount/BeamStart-End)を配線。照合: 全指紋一致=全音符9・♯8・2分7・黒4・♮1(同小節dis後のdに出る挙動まで同一)・beam27、全部Y完全一致。観測者=ChordTremoloPairTests 4本"
+      "notes": "fixed第14号: 和音bodyのペア(c32 <dis fis>)がpair機構(_tremoloPairShape)をNote caseしか通らず、和音側は書かれた32分のまま黙って描かれていた→chord caseに同じ変換(表示=総和・TimeScale1/2・PairBeams/GapCount/BeamStart-End)を配線。照合: 全指紋一致=全音符9・♯8・2分7・黒4・♮1(同小節dis後のdに出る挙動まで同一)・beam27、全部Y完全一致。観測者=ChordTremoloPairTests 4本。第16号追補: claimの本丸(♯が間隔を広げ梁が食い込まない)も一致=rod 6.0(Beam minimum-length・tremolo_springs_and_rods)で符頭間6.00=6.00・右gap=0.8+臨時幅+1.0(get_gaps)で梁右端m2 22.37/LP32.08(相対一致)・m9幅1.78=1.78。全音符表示4小節の梁Y完全一致(11.76/12.57/13.38×3・9.76/10.57/11.38)。残: m3(<dis fis>)の梁幅=LPは3度違いの♯を2列にstagger(union2.38)/Lily#は1列(1.1)=臨時stack regime(既open)"
     },
     "chord-tremolo-articulations.ly": {
       "category": "plain",
@@ -1948,15 +1948,15 @@
     },
     "chord-tremolo-whole.ly": {
       "category": "plain",
-      "state": "open",
+      "state": "fixed",
       "claim": "全音符tremoloの梁が全音符(符頭)と衝突しない",
-      "notes": "open第6号(第4号と同根)。LP: 符尾なし・梁4本(64分)が符頭間に浮く(x19.52..21.54・y9.26..11.88・間隔0.875)。Lily#: 符尾2本を描き梁が符頭端から符尾まで(x8.59..12.99)。梁数4=4は一致。⚠️綴りの罠を再演: relative c基準でgはG3が最寄り(下4度)→G5はg'(g'と書き直すまで1オクターブ低かった)"
+      "notes": "fixed第16号: 見えないstemを移植=全音符表示ペアはstem ink無し(Stem::print→is_valid_stem)・stem X=符頭中心(internal_calc_stem_offset_from_head center_invisible枝)・梁は符頭からseed(no_visible_stem_positions=極値頭×0.5+dir×bt×梁数)して既存quanterで量子化・gapped端は符頭内側±gap/2にクランプ(beam.cc:637-654)。照合: 梁Y中心9.26/10.13/11.01/11.88=LP完全一致(3桁)・X則=符頭端±0.4一致・stem ink 0=0。残: 素の(臨時なし)ペアの符頭間隔Δ0.59=spacing regime。⚠️同点の罠: no-stem梁はLPがedge_dirs_=CENTERのままFlを走らせgapが点に退化→±0.19が完全同点になり、勝者はC++ heapの同点処理=列挙の早い側(低y)。4例実測(down/up両向き)で全部hang側→LILYSHARP-OWNの無限小低y優先で再現。⚠️綴りの罠を再演: relative c基準でgはG3が最寄り(下4度)→G5はg''(書き直すまで1オクターブ低かった)"
     },
     "chord-tremolo.ly": {
       "category": "plain",
-      "state": "open",
+      "state": "fixed",
       "claim": "tremolo梁は符尾に届かず隙間を残す(通常の梁と区別)。半音符ペアだけは(通常梁に現れ得ないので)符尾まで届く",
-      "notes": "open第4号・残るは全音符表示ペアの「見えないstem」のみ(gap短縮は第5便で移植済=4分ペアink-to-ink 0.74一致・stemless単音斜線は第6便fixed第15号)。残: LPは全音符ペアにStemグロブ(ink無し)を作り梁がその位置から量子化される——Lily#はstemを描き梁Yも別(実測: LP梁y11.88-13.5=符頭近く/Lily#10.04-11.66=通常stem丈)。partial gap(gap_count<beams)はcorpusに本が無く式のみ移植・未観測"
+      "notes": "fixed第16号で完結(gap短縮=第5便・stemless単音斜線=第6便fixed第15号・見えないstem=第16号)。全音符表示3小節(32分=3梁・16分=2梁・8分=1梁)の梁Yが全部LP完全一致: 11.88/12.69/13.5・11.88/12.69・12.88——up向きの同点(unquanted+0.43→−0.19・1梁は−1.19)も同じ低y側で一致=同点則の4例中3例がこの本。残: 梁X絶対値はline-breaking/列間隔の差(LPは2システム/Lily#は1)=spacing regime。partial gap(gap_count<beams)はcorpusに本が無く式のみ移植・未観測"
     },
     "chord-voicings.ly": {
       "category": "markup",

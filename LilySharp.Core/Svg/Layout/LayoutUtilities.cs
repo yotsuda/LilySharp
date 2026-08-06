@@ -115,6 +115,21 @@ internal static class LayoutUtilities
         columnX + StemAttachX(up, noteValue, font);
 
     /// <summary>
+    /// The x an INVISIBLE stem stands at: the centre of its head's ink. A whole-note
+    /// (or breve) display tremolo pair carries such stems — no ink of their own, but
+    /// they are the beam's X frame, so the floating beam sits symmetrically between
+    /// the heads.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:1051-1066 internal_calc_stem_offset_from_head —
+    ///   <c>center_invisible &amp;&amp; is_invisible</c> answers attach 0.0, i.e. the
+    ///   head-width interval's centre ("we center an invisible stem on the support
+    ///   head because some things depend on that").
+    /// </remarks>
+    public static double InvisibleStemX(double columnX, int noteValue) =>
+        columnX + GlyphMetrics.GetNoteheadBBox(noteValue).CenterX;
+
+    /// <summary>
     /// The x a beamed rest's INVISIBLE stem stands at: the centre of the rest glyph's own
     /// ink. A beamlet beside the rest is length-capped against this x
     /// (BeamSubdivision.CalcBeamSegments' max-proportion cap), which is how the cap

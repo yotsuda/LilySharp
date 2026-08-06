@@ -104,6 +104,69 @@ public class ChordTremoloPairTests
     }
 
     [Fact]
+    public void WholeNotePair_HasInvisibleStemsAndFloatingBeams()
+    {
+        // Regression chord-tremolo-whole: `repeat tremolo 32 { g''64 a }` displays
+        // two WHOLE notes joined by four beams. The stems are Stem grobs with NO ink
+        // (duration-log 0 < 1), the beams float BETWEEN the heads — each gapped end
+        // clamped to the head's inner edge ± gap/2 — and the stack is seeded from
+        // the heads (no_visible_stem_positions), landing on hang-below-middle-line:
+        // beam centres 9.26/10.13/11.01/11.88, LilyPond's page to three decimals.
+        // LILYPOND-REF: lily/stem.cc:1006-1018 Stem::print (is_valid_stem);
+        //   lily/beam-quanting.cc:485-510 no_visible_stem_positions;
+        //   lily/beam.cc:637-654 calc_beam_segments (the Stem::is_invisible clamp).
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 repeat tremolo 32 { g''64 a }"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+
+        // No stem ink: no vertical line at stem thickness anywhere.
+        var stems = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"[^>]*stroke-width=\"0.130\"")
+            .Where(m => m.Groups[1].Value == m.Groups[3].Value)
+            .ToList();
+        Assert.Empty(stems);
+
+        // Four flat beams, stacked at the 4-beam translation (3·ss + line − thick)/3.
+        var beams = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<polygon points=\"([-\\d.]+),([-\\d.]+) ([-\\d.]+),([-\\d.]+) [^\"]+\"")
+            .Select(m => (XLeft: double.Parse(m.Groups[1].Value),
+                          YLeft: double.Parse(m.Groups[2].Value),
+                          XRight: double.Parse(m.Groups[3].Value),
+                          YRight: double.Parse(m.Groups[4].Value)))
+            .ToList();
+        Assert.Equal(4, beams.Count);
+        Assert.All(beams, b => Assert.Equal(b.YLeft, b.YRight, 3));
+        // SVG coordinates round to 2 decimals, so each step reads 0.87–0.88.
+        var ys = beams.Select(b => b.YLeft).OrderBy(v => v).ToList();
+        Assert.All(new[] { ys[1] - ys[0], ys[2] - ys[1], ys[3] - ys[2] },
+            step => Assert.InRange(step, 0.86, 0.89));
+
+        // The stack hangs from the MIDDLE staff line: the bottom beam's top edge
+        // flush with the line's top edge (the "hang" quant, centre 0.19 below).
+        // Staff lines are the LONG horizontal lines; the a''s ledger line is short.
+        var staffLineYs = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"")
+            .Where(m => m.Groups[2].Value == m.Groups[4].Value
+                && double.Parse(m.Groups[3].Value) - double.Parse(m.Groups[1].Value) > 5)
+            .Select(m => double.Parse(m.Groups[2].Value))
+            .Distinct().OrderBy(v => v).ToList();
+        Assert.Equal(5, staffLineYs.Count);
+        double middleLineY = staffLineYs[2];
+        // ys are the beams' TOP edges (the polygon's first two points); the staff
+        // line's own half-thickness is 0.05.
+        Assert.Equal(middleLineY - 0.05, ys.Max(), 2);
+
+        // The gapped beams clear both heads by half a gap (0.4) from the inner edges.
+        var headXs = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*data-pos")
+            .Select(m => double.Parse(m.Groups[1].Value)).OrderBy(v => v).ToList();
+        Assert.Equal(2, headXs.Count);
+        double headWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(1).Right;
+        Assert.Equal(headXs[0] + headWidth + 0.4, beams.Min(b => b.XLeft), 2);
+        Assert.Equal(headXs[1] - 0.4, beams.Max(b => b.XRight), 2);
+    }
+
+    [Fact]
     public void Pair_WithAChordBody_JoinsThePairMachinery()
     {
         // Regression chord-tremolo-accidental: `c''32 <dis'' fis''>` — the chord

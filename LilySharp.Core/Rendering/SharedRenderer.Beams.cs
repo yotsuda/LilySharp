@@ -132,9 +132,18 @@ internal static partial class SharedRenderer
             // spell this offset the same way. See LayoutUtilities.StemAttachX.
             // Per MEMBER head shape: a two-note tremolo pair beams HALF notes
             // (BeamDetector.IsBeamable), and a half head's attachment is 0.073200 further out.
+            // A WHOLE-note display pair's stem is INVISIBLE (duration-log < 1): it draws
+            // no ink but still carries the beam's X frame, standing at the head's CENTRE.
+            // LILYPOND-REF: lily/stem.cc:370-377 is_normal_stem (duration-log >= 1).
+            // LILYPOND-REF: lily/stem.cc:1063-1064 internal_calc_stem_offset_from_head —
+            //   an invisible stem centres on its support head.
+            bool InvisibleStem(int i) => GlyphMetrics.NoteValueOf(grp.Members[i].Item) <= 1;
             double StemAttachX(int i) =>
-                LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i),
-                    GlyphMetrics.NoteValueOf(grp.Members[i].Item));
+                InvisibleStem(i)
+                    ? LayoutUtilities.InvisibleStemX(beam.MemberXPositions[i],
+                        GlyphMetrics.NoteValueOf(grp.Members[i].Item))
+                    : LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i),
+                        GlyphMetrics.NoteValueOf(grp.Members[i].Item));
 
             double leftBeamY = staffMiddleY + beam.LeftY / 2.0;
             double rightBeamY = staffMiddleY + beam.RightY / 2.0;
@@ -252,8 +261,45 @@ internal static partial class SharedRenderer
                     int d = grp.StemUp ? 1 : -1;
                     if (d * seg.Rank < d * noteheadSideRank + tremoloGapCount)
                     {
-                        xl += EngravingDefaults.TremoloBeamGap;
-                        xr -= EngravingDefaults.TremoloBeamGap;
+                        // A whole-display pair's RIGHT gap also clears the LAST
+                        // chord's accidentals: LilyPond widens it by their united
+                        // extent plus the accidental-padding (1.0). This — not a
+                        // quanting collision — is what keeps the beam off the
+                        // sharp: a stemless beam admits no covered grobs at all.
+                        // LILYPOND-REF: lily/beam.cc:402-427 get_gaps —
+                        //   the duration_log <= 0 branch reads accidental-padding
+                        //   (default 1.0) and grows gap_lengths[RIGHT];
+                        // LILYPOND-REF: lily/beam.cc:381-400 get_accidentals —
+                        //   the LAST stem's note heads' accidental grobs.
+                        double gapLeft = EngravingDefaults.TremoloBeamGap;
+                        double gapRight = EngravingDefaults.TremoloBeamGap;
+                        if (InvisibleStem(0))
+                        {
+                            double accsLen = AccidentalGroupLength(grp.Members[^1].Item);
+                            if (accsLen > 0)
+                                gapRight += accsLen + 1.0;
+                        }
+                        xl += gapLeft;
+                        xr -= gapRight;
+                        // A whole-note pair's gapped ends must also clear the HEADS:
+                        // its invisible stem stands at the head's centre, so the plain
+                        // gap would leave the beam over the head's ink. Each end
+                        // retreats to at least half a gap past the head's inner edge —
+                        // this is what puts the whole book's beams at x 19.48..21.58
+                        // (head edges 19.08/21.98 ± 0.4) on LilyPond's page.
+                        // LILYPOND-REF: lily/beam.cc:637-654 calc_beam_segments —
+                        //   the Stem::is_invisible branch clamps horizontal_[d] to
+                        //   -gap/2 + d * head extent[-d].
+                        if (InvisibleStem(0))
+                            xl = Math.Max(xl, beam.MemberXPositions[0]
+                                + GlyphMetrics.GetNoteheadBBox(
+                                    GlyphMetrics.NoteValueOf(grp.Members[0].Item)).Right
+                                + gapLeft / 2);
+                        if (InvisibleStem(grp.Members.Length - 1))
+                            xr = Math.Min(xr, beam.MemberXPositions[^1]
+                                + GlyphMetrics.GetNoteheadBBox(
+                                    GlyphMetrics.NoteValueOf(grp.Members[^1].Item)).Left
+                                - gapRight / 2);
                         // LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
                         // no clamp); this skip only fires when the pair is
                         // narrower than 2×gap (+0.1), which no printable pair
@@ -279,6 +325,13 @@ internal static partial class SharedRenderer
                 var member = grp.Members[i];
                 // A member hidden below the tab's lowest string draws no stem.
                 if (member.Item is NoteItem { TabBelowRange: true })
+                    continue;
+                // A whole-note display pair's stem has NO ink — the beam floats
+                // between the heads and only the invisible stem's X survives (used
+                // above as the beam frame).
+                // LILYPOND-REF: lily/stem.cc:1006-1018 Stem::print → is_valid_stem
+                //   returns false for an invisible stem, printing nothing.
+                if (InvisibleStem(i))
                     continue;
                 bool up = MemberUp(i);
                 double stemX = StemAttachX(i);
@@ -403,6 +456,44 @@ internal static partial class SharedRenderer
         // `0.6875 * TabFretFontSize / 2 + 0.3`, which is the same quantity in different words.)
         double clearance = TabConstants.StemClearance(stringSpace);
         return digitY + (stemUp ? -clearance : clearance);
+    }
+
+    /// <summary>
+    /// The united X extent LENGTH of one item's drawn accidentals (0 when it has
+    /// none) — the amount a whole-display tremolo pair's right beam gap grows by.
+    /// Offsets are the packed staff-column ones the drawn accidentals ride
+    /// (<see cref="Svg.Collector.StaffAccidentalColumns"/>); the union's length is
+    /// frame-invariant, so no column x is needed.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:412-419 get_gaps — <c>accs_ext.length ()</c> of
+    ///   <c>relative_group_extent</c> over the accidental grobs.
+    /// (Courtesy parens are not counted — no whole-display pair in the corpus
+    /// carries one; add the paren widths when a book does.)
+    /// </remarks>
+    private static double AccidentalGroupLength(MusicItem item)
+    {
+        double min = double.PositiveInfinity, max = double.NegativeInfinity;
+        void Add(double? packedX, string kind)
+        {
+            double left = packedX ?? 0.0;
+            min = Math.Min(min, left);
+            max = Math.Max(max, left + GlyphMetrics.GetAccidentalBBox(kind).Width);
+        }
+
+        switch (item)
+        {
+            case NoteItem { Accidental: { } kind } n:
+                Add(n.AccidentalX, kind);
+                break;
+            case ChordItem c:
+                foreach (var n in c.Notes)
+                    if (n.Accidental is { } kind)
+                        Add(n.AccidentalX, kind);
+                break;
+        }
+
+        return max > min ? max - min : 0.0;
     }
 
     private static void DrawBeamSegment(double x1, double y1, double x2, double y2, IDrawingContext gc)
