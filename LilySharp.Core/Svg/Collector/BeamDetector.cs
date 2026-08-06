@@ -702,6 +702,9 @@ internal sealed class BeamDetector
     /// <see cref="BeamletCounts"/> builds each group's
     /// <see cref="BeamingPattern.TupletDescription"/>s. Start and Stop are in the bracket's
     /// OWN measure's moments (a pickup's first item starts mid-bar, as everywhere else).
+    /// LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
+    /// Tuplet_description objects arrive ready-made from the tuplet engraver's event stream,
+    /// where Lily# reconstructs the same data from the brackets after the fact.
     /// </summary>
     private sealed class TupletSpan(
         int measureIndex, int startIndex, int endIndex, int nestingDepth,
@@ -728,10 +731,23 @@ internal sealed class BeamDetector
     /// </summary>
     /// <remarks>
     /// <para>
+    /// LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
+    /// Tuplet_description directly from the tuplet engraver
+    /// (lily/template-engraver-for-beams.cc add_stem); Lily# derives the same five fields
+    /// from the recorded brackets, and the derivation rules below — the measure walk for the
+    /// moments, deepest-shallower-containing for the parent — are this port's, argued
+    /// equivalent rather than transcribed.
+    /// </para>
+    /// <para>
     /// The moments come from the same walk the beam builders use — running positions from
     /// <see cref="MeasureStartPosition"/> over <see cref="GetDuration"/>, under the meter in
     /// effect at that measure (tracked exactly as <see cref="DetectBeamGroupsInMeasure"/>'s
     /// caller tracks it) — so a span's Start IS its first note's stem moment.
+    /// ⚠️ One corner can disagree: <see cref="BuildCrossMeasureBeamGroup"/> seeds ITS
+    /// pickup positions from the score's INITIAL meter, this walk from the effective one, so
+    /// a pickup measure after a mid-piece <c>\time</c> could shift a span against a
+    /// cross-measure beam's stems. That inconsistency is the cross-measure builder's own,
+    /// pre-existing approximation; fixing it belongs there.
     /// </para>
     /// <para>
     /// ⚠️ THE BRACKET'S RATIO IS HANDED OVER REVERSED: LilyPond's Tuplet_description stores
@@ -787,12 +803,15 @@ internal sealed class BeamDetector
             {
                 if (b.MeasureIndex != mi)
                     continue;
-                // A bracket whose indices do not address this voice's items is another
-                // stream's: the stem-direction probe (MeasureCollector
+                // LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
+                // items is another stream's — the stem-direction probe (MeasureCollector
                 // .ResolveBeamStemDirections) hands over the whole collector's bracket
-                // list, and the index-set representation this replaced was naturally
-                // tolerant of foreign keys — out-of-range ones just never matched. Keep
-                // that tolerance rather than crash on them.
+                // list, a situation LilyPond never sees. The index-set representation this
+                // replaced was naturally tolerant of foreign keys — out-of-range ones just
+                // never matched — so keep that tolerance rather than crash on them.
+                // (An IN-range foreign bracket can still collide by index; that hole is
+                // inherited from the sets, unobserved, and closes only when the probe
+                // filters by staff/voice.)
                 if (b.StartNoteIndex < 0 || b.EndNoteIndex < b.StartNoteIndex
                     || b.EndNoteIndex >= measure.Items.Length)
                     continue;

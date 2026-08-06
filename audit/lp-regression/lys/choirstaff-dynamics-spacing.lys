@@ -1,0 +1,21 @@
+// lilypond-src/input/regression/choirstaff-dynamics-spacing.ly の Lily# 訳。
+// CLAIM: (ChoirStaff で) dynamics は列をまたいでよい＝幅広の ppppp が列間隔を
+// 押し広げず、音価どおりの等間隔のまま隣の列の水平域に食い込める。
+// 綴り: LP 絶対 c = Lily# c,。LP の音価だけ繰り返し(c4 4 4 4)は展開。
+// ⚠️ 枠の差: Lily# に ChoirStaff の区別が無い(2 staff の素の score)。LP でこの本が
+// ChoirStaff を名指すのは文脈固有の regression 由来だが、観測する量(ppppp が列を
+// 押すか)は Lily# では文脈非依存。
+octave absolute
+time 4/4
+
+part top { clef treble }
+part bot { clef treble }
+
+section Main {
+  top { c,4@p c,4@p c,4@p c,4@ppppp | }
+  bot { c,4 c,4 c,4 c,4 | }
+}
+
+form main { ~Main }
+
+score main { staff top staff bot }

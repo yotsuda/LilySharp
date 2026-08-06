@@ -1,0 +1,27 @@
+// lilypond-src/input/regression/breathing-sign-accidentals.ly の Lily# 訳。
+// CLAIM: breathing sign（rcomma・譜の上端）は次の和音の臨時記号と衝突しない。
+// 綴り: LP \relative c''(f2=f'')→ Lily# f'。和音は昇順の絶対表記。
+// ⚠️ 文法ギャップ: 原本 2・6 小節目の強制臨時記号 e!/g!（強制ナチュラル）は Lily# で
+// 書けない（`!` は点線小節線・LYS4009）。ナチュラル対 breath の衝突は本書では観測不能。
+// 枠を揃えるため LP 側 twin も `!` を落として比較する（scratch/lpreg の -noforce 対）。
+// exporter twin（lysc ly）は @breath を落とす（第98便⑸ SplitAttachments に置き場が無い）
+// ので、この本の LP 対は手書き。
+octave absolute
+time 4/4
+
+part m { clef treble }
+
+section Main {
+  m {
+    f'2@breath <g' bis'>2 |
+    g'2@breath <e' g'>2 |
+    f'2@breath <g' bes'>2 |
+    g'2@breath <ees' g'>2 |
+    f'2@breath <g' bis'>2 |
+    g'2@breath <e' g'>2 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff m }

@@ -104,16 +104,76 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 挿入**は、単体の観測者がまだ無い（t8 は挿入+factor しか踏まない。sibling tuplet 連結や
 nested tuplet の corpus 本が来たら踏まれる——beam-subdivide 系は scheme で不可）。
 
-**frontier = bookpart-variable.ly**（pending 先頭。bass-figure 系という第15便の推測は外れ）。
-**open の残り 1 = automatic-polyphony-tabstaff.ly**（tab staff が primary voice しか読まない
-設計事項）。plain 322 / 処理済 **37**（fixed 9・exact 7・skip 20・open 1＝
-**beamlet-test は open→fixed の移動なので総数は動かない**。実測:
-`state -notin 'pending'` で 37）。
+（追記・同日第16便続き＝**キュー 3 本処理**（`6f7bceac`・コード変更なし）:
+- **bookpart-variable.ly = skip**——\book/\bookpart の対応物が Lily# に無く、主張
+  （bookpart 変数挿入で segfault しない）ごと翻訳不能。
+- **break.ly = exact**——両者 3 段 **[4][1][1]**。⚠️ **noBreak 側は空振り**: LP 原本は
+  line-width 4cm で自然改行を noBreak が抑止するが、Lily# に paper 文法が無く A4 では
+  全音 6 小節に自然改行が無い。観測したのは break の強制と段割りのみ（notes に明記）。
+- **breathing-sign-accidentals.ly = open（第 3 号）**——**主張自体（衝突しない）は両者で成立**
+  （comma→臨時記号 anchor 間隔は全小節正）。**割れたのは gap 構造**: 符頭→comma が
+  **Lily# 1.92 vs LP 3.77 ss**（小節幅比 1.21 では説明不能）。**モデル疑い**: LP は
+  BreathingSign を **spacing に参加する自前の列**として置き、Lily# は
+  `ArticulationEngraver:135-138` が**音符右端からの固定オフセット**。⚠️ 注意 2 つ:
+  ⑴ 数字は anchor 差で ink 差ではない（エンジン間で bearing が違う）、⑵ 原本 2・6 小節の
+  強制ナチュラル e!/g! は LYS4009 で書けず**両側から落として枠を揃えた**
+  （`scratch\lpreg\breathing-sign-accidentals-noforce.ly`。exporter twin は @breath を落とす
+  ——第98便⑸——ので使えない）。）
 
-未 push **23**（この handoff で 24。`git rev-list --count origin/master..master` で数え直す。
-**⚠️ push しない**）・テスト **4106 passed / 0 failed / 4 skipped**（+3 単体）・
-台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning。snapshot 動き 0 枚。**
+★★★ **frontier = breathing-sign-tight-spacing.ly＝同じ breathing-sign 族が連続**。
+**次セッションの本命は breathing-sign の placement model の port**。**下見は済んだ**
+（同日第16便続き・コード変更なし）:
+- **正体: LP の BreathingSign は break-aligned item**——`break-align-symbol . breathing-sign`・
+  `non-musical #t`・**自前の space-alist**（first-note は **fixed-space 1.0**・staff-bar
+  minimum-space 1.5・clef 2.0 ほか）・stencil は text（rcomma）・Y は
+  `offset_callback`＝譜線上端（**scm/define-grobs.scm:697-727・lily/breathing-sign.cc:259-277**）。
+  X を決めるのは stencil 側ではなく**列**: 行中の non-musical 列は loose column として
+  隣接列から内挿される族（spacing-determine-loose-columns の家系・第15便 REF）。
+- **Lily# の受け皿は既にある**: mid-measure clef/key/time が同じ形を通っている——
+  `SpacingRules.MidMeasureChangeGaps`/`IsMidMeasureChangeColumn`/`BreakAlignSpacing`
+  （space-alist 移植・midmeasure.clef.* の台帳点が見張り）。**port = Breath を
+  ArticulationItem（音符右端から固定オフセット・`ArticulationEngraver:135-138`）から
+  この列機構の occupant に移し、breathing-sign の space-alist 行を足す**。
+  collector 側は @breath 注釈を音符の後ろの列 item に割り出す構造変更
+  （staff-less command columns の既存知識が効くはず）。
+- **爆風は fixture 1 本だけ**（`test/breath-marks.lys`。snapshot 再ベースはそれに伴う分）。
+  corpus 側は open 第 3 号（breathing-sign-accidentals）の実測が対照値:
+  **符頭→comma anchor 3.77ss（LP）に寄るはず**（現状 1.92）。
+- ⚠️ frontier の tight-spacing 本自体は `\paper { line-width = 10 }` が枠——Lily# に
+  paper 文法が無いので**本としては skip の公算**（主張「窮屈でも符頭と衝突しない」は
+  枠ごと作れない）。**ただし守っている法則はこの port そのもの**なので、skip にしても
+  port の観測者は accidentals 本＋単体で立てること。
+**open は 2**（automatic-polyphony-tabstaff＝tab 設計事項・breathing-sign-accidentals）。
+
+（追記 2・同日第16便続き＝**さらに 4 本処理**（`61ab1021`・コード変更なし）:
+- **breathing-sign-tight-spacing = skip**——枠が `\paper { line-width = 10 }` そのもの
+  （Lily# に paper 文法なし・窮屈状況が作れない）。守っている法則は port の対象なので
+  観測者は accidentals 本＋単体で立てる。
+- **caesura-articulation-multiple = skip**——@coda が無い（文法）＋ script が caesura の
+  **列**に積まれるモデル（Lily# の注釈は音符に付く）＝ port と同じ家系。
+- **caesura-style-default = skip**——**false plain**。\include caesura-style.ily が
+  \markup/\override/\cadenzaOn 満載。**categorizer は include の中身を見ていない**
+  （同型が今後も出る——include のある本は開いてから信じること）。
+- **choirstaff-dynamics-spacing = exact**——符頭列の間隔が両者とも**一様 3.00ss**
+  （ppppp は列を押さない＝主張成立）・両 staff 整列・**dynamics の Y が 2 桁一致**
+  （p 20.50・ppppp 22.71）。枠差 3 つを notes に記録（ChoirStaff 無し・part 名 a/b は
+  音名で予約語 LYS0002→top/bot・LP の音価だけ繰返しは展開）。）
+
+（追記 3・同日第16便続き＝**chord-grid 族 3 本 = skip**（`171a1f47`）。LP ChordGrid は
+ジャズ・グリル（小節=マス目・対角線/中線分割）で、**Lily# の "chord grid sheet"
+（`ChordNameEngraver.IsChordGridSheet`）は歌詞なしコードローの別物**——名前が同じだけ。
+開いて確かめてから skip した。）
+
+**frontier = chord-name-entry.ly**（\chordmode の **27 suffix** を Voice 内で音塊に実現する
+パーサ試験＋`_"…"` の TextScript ラベル。**Lily# の和音入力文法との suffix 網羅照合が要る
+本格物**——chord-names 族が後ろに続くので、まとめて 1 セッションで。度数和音・
+chord display mode の memory（project_lilysharp_degree_chord_notation 他）を先に）。
+plain 322 / 処理済 **47**（fixed 9・exact 9・skip 27・open 2＝実測）。
+
+未 push **25**（この handoff で 26。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ push しない**）・テスト **4106 passed / 0 failed / 4 skipped**（+3 単体・第16便後半は
+コード変更なしで不変）・台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106
+うち非ゼロ 2＝全部不変**・**Core 0 warning。snapshot 動き 0 枚。**
 
 ## 以下は第99セッション第15便の経緯
 
