@@ -1,0 +1,18 @@
+// lilypond-src/input/regression/clef-unchanged.ly の Lily# 訳。
+// CLAIM: 変わっていない clef の \clef コマンドは何も印字しない——
+// 行頭の clef だけが出る(spacing も食わない)。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    c1 |
+    clef treble c1 |
+    clef treble c1
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

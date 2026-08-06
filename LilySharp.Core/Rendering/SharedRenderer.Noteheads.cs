@@ -217,7 +217,11 @@ internal static partial class SharedRenderer
                 // non-musical columns precede the musical column of the same
                 // moment, and the accidentals sit between them and the heads.
                 bool isChange = item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
-                if (useColumnTiming && item is ClefChangeItem
+                // The item-slot path takes this branch only for the trailing clef
+                // column, whose slot X is the (zero-width) measure origin — the clef
+                // belongs in the previous measure's closing gap like any other
+                // before-the-bar clef (Measure.IsTrailingClefColumn).
+                if ((useColumnTiming || measure.IsTrailingClefColumn) && item is ClefChangeItem
                     && currentTiming == Fraction.Zero
                     && ml.MeasureIndex > 0
                     && ml.MeasureIndex != system.Measures[0].MeasureIndex

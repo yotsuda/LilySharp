@@ -40,6 +40,11 @@ internal static class SpacingRules
     public static double CalculateMeasureIdealWidth(Measure measure,
                                                     double? baseShortestDuration = null)
     {
+        // The trailing clef column takes no width of its own — its clef lives in the
+        // PREVIOUS measure's closing gap (see Measure.IsTrailingClefColumn).
+        if (measure.IsTrailingClefColumn)
+            return 0;
+
         double width = 0;
 
         // Barline widths

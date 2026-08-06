@@ -147,9 +147,12 @@ public class EmptyMeasureValidatorTests
         // span. When the phrase it precedes opens with a leading `|` (an anchor, not a
         // separator), that `|` must merely confirm the section-start boundary and carry
         // the clef into the FIRST real measure — not close a spurious clef-only empty bar.
-        // Regression: `clef treble x | …` used to draw an empty measure before the music.
+        // Regression: `clef bass x | …` used to draw an empty measure before the music.
+        // (bass, not treble: an UNCHANGED clef now engraves nothing at all —
+        // lily/clef-engraver.cc inspect_clef_properties, clef-unchanged.ly — so the
+        // directive must differ from the default to leave an item to assert on.)
         var src = "phrase x { | c d e f | c' b a g | } "
-                + "part melody2 { section A { clef treble x | x | x | } } "
+                + "part melody2 { section A { clef bass x | x | x | } } "
                 + "form main { A } score main { staff melody2 }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "melody2");

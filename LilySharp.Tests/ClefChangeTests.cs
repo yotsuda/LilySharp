@@ -262,4 +262,88 @@ score main ""test"" { staff melody }
         Assert.Equal("Treble", systemClefs[0]);  // System 1 starts with treble
         Assert.Equal("Bass", systemClefs[1]);     // System 2 starts with bass (after clef change)
     }
+
+    [Fact]
+    public void TrailingClefChange_SharesTheClosingBarMoment()
+    {
+        // clef-change-at-end.ly: a clef change at the very END of the music is
+        // printed — and LilyPond engraves it on the SAME break-align column as the
+        // piece's closing bar (the unbroken order is `… clef, staff-bar …`), so
+        // there is ONE bar moment: the small change clef hangs back into the last
+        // measure's closing gap, and no extra measure bar appears beside the final
+        // barline. MEASURED on the paper-aligned pair
+        // scratch/lpreg/clef-change-at-end.{ly,svg} (LilyPond 2.26.0, \bar "|."):
+        //   note left → change-clef left: 20.334 − 17.121 = 3.213
+        //   clef left → thin bar left:    23.181 − 20.334 = 2.847
+        //     (= change-clef width + Clef.space-alist staff-bar extra-space 0.7)
+        //   thin left → thick left:       23.671 − 23.181 = 0.490 (0.19 + kern 0.3)
+        // The note→clef / clef→bar split differs by 0.003: Lily#'s F_change ink
+        // width is 2.150 (font bbox) where LilyPond's stencil extent is 2.147 —
+        // the known glyph-extent systematic. The bar itself sits LP-exact
+        // (note→thin 6.060 both), so only the split moves.
+        // Before the fix the clef drew ON the final barline and the trailing
+        // placeholder minted a second thin bar beside it.
+        // LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders
+        string svg = SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 g'1 clef bass"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+
+        var glyphs = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(&#x([0-9A-Fa-f]+);|.)</text>")
+            .Select(m => (
+                X: double.Parse(m.Groups[1].Value),
+                Glyph: m.Groups[4].Success
+                    ? (char)Convert.ToInt32(m.Groups[4].Value, 16)
+                    : m.Groups[3].Value[0]))
+            .ToList();
+        double note = Assert.Single(glyphs.Where(g => g.Glyph == EmmentalerGlyphs.NoteheadWhole)).X;
+        double clef = Assert.Single(glyphs.Where(g => g.Glyph == EmmentalerGlyphs.FClefChange)).X;
+
+        // Exactly the final barline's two pieces — no extra measure bar.
+        var bars = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<rect x=\"([-\\d.]+)\" y=\"[-\\d.]+\" width=\"(0\\.19|0\\.60)\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value), W: m.Groups[2].Value))
+            .OrderBy(b => b.X).ToList();
+        Assert.Equal(2, bars.Count);
+        Assert.Equal("0.19", bars[0].W);
+        Assert.Equal("0.60", bars[1].W);
+
+        Assert.Equal(3.210, clef - note, 2);            // LP 3.213 (ink systematic 0.003)
+        Assert.Equal(2.850, bars[0].X - clef, 2);       // LP 2.847 (same 0.003, other side)
+        Assert.Equal(6.060, bars[0].X - note, 2);       // LP 6.060 — the bar is LP-exact
+        Assert.Equal(0.490, bars[1].X - bars[0].X, 2);
+    }
+
+    [Fact]
+    public void UnchangedClef_PrintsNothingAndTakesNoSpace()
+    {
+        // clef-unchanged.ly: a `clef` command whose resolved clef equals the one
+        // already in force engraves NOTHING — only the system-start clef appears,
+        // and the redundant command takes no space either. MEASURED on the
+        // paper-aligned pair scratch/lpreg/clef-unchanged.{ly,svg} (LP 2.26.0):
+        // whole-note heads sit 8.150 apart in both bars, with or without the
+        // redundant `\clef "treble"` between them.
+        // LILYPOND-REF: lily/clef-engraver.cc:139-166 inspect_clef_properties
+        string svg = SvgGenerator.Generate(
+            SyntaxTree.Parse("c1 | clef treble c1 | clef treble c1"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+
+        var glyphs = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\"[^>]*>(&#x([0-9A-Fa-f]+);|.)</text>")
+            .Select(m => (
+                X: double.Parse(m.Groups[1].Value),
+                Glyph: m.Groups[3].Success
+                    ? (char)Convert.ToInt32(m.Groups[3].Value, 16)
+                    : m.Groups[2].Value[0]))
+            .ToList();
+
+        Assert.Single(glyphs.Where(g => g.Glyph == EmmentalerGlyphs.GClef));
+        Assert.Empty(glyphs.Where(g => g.Glyph == EmmentalerGlyphs.GClefChange));
+
+        var heads = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.NoteheadWhole)
+            .Select(g => g.X).OrderBy(x => x).ToList();
+        Assert.Equal(3, heads.Count);
+        Assert.Equal(8.150, heads[1] - heads[0], 2);
+        Assert.Equal(8.150, heads[2] - heads[1], 2);
+    }
 }

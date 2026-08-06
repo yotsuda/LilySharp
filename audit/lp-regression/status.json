@@ -1974,7 +1974,9 @@
     },
     "chords-funky-ignatzek.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "珍しい構成音のjazz和音でもIgnatzek命名エンジンが名前を導出する(生の音塊→ChordNames)",
+      "notes": "第102セッション下見+実測。枠=Lily#のbare @chord(pitch-set自動命名・lys/に双子あり)。LP実測15名: Csus4sus2/Csus4sus2add3/Csus2add3/C♭6sus2add♭3/C11sus4sus2add3/C7sus4sus2add3add8add9add10/C+/C°/Cø/C°7/C7add8add9add10(=書かれた8,9,10重複をaddで数える・C9ではない)/C7add6/C6add9/C△add♯11/Calt。Lily#=5/15のみ命名(Caug/Cdim/Cm7♭5/Cdim7/C9=独自suffix)・10/15はLYS1020警告(loud・silentではない)。修正=scm/chord-ignatzek-names.scm(301行)の生成アルゴリズム(3度stack探索+sus/add/alteration組立)のport+記号タイポグラフィ(°+△ø・上付き)——1セッション超。⚠️設計論点: Lily#の平文命名(ChordStructure.DisplayName)は「意図したPhase-1簡略化」と明記された設計判断で、chords{}シンボル表示と共有——auto @chordだけLP綴りにするか要ユーザー判断"
     },
     "chromatic-scales.ly": {
       "category": "scheme",
@@ -1982,7 +1984,9 @@
     },
     "clef-change-at-end.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "音楽の末尾に置かれたclef変更も印字される",
+      "notes": "第102セッション fixed第19号。Lily#はtrailing clefが空m2に落ち、m1閉じ細線+m2の終止線で線2重・clefは終止線の上に重なっていた(sprigは元からLP一致=note→bar 6.06)。修正: ⑴FinalizeMeasures=clefのみの末尾小節から終止線をprevへ移しIsTrailingClefColumn化(バー0本・幅0) ⑵MultiStaffLayouter/CalculateMeasureIdealWidth=幅0 ⑶renderer=slot経路でもBoundaryClefXでclefが閉じgapへ後退。修正後clef/細線/太線/譜端すべてLP一致(11.80/14.65/15.14/15.74)。残差Δ0.007=F_change ink幅(Lily#箱2.140 vs LPステンシル2.147)の既知グリフ系統差。対はLP側に\\bar\"|.\"(memory通り)。観測者=ClefChangeTests.TrailingClefChange_SharesTheClosingBarMoment(LP数値釘付け)。key/time末尾はbreak-align順がbar後なので対象外と明記"
     },
     "clef-force.ly": {
       "category": "scheme",
@@ -1994,7 +1998,9 @@
     },
     "clef-transposition-optional.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "clef移調記号は括弧/角括弧で囲える(\\clef \"G^(8)\"・\"bass_[15]\")",
+      "notes": "第102セッション skip=文法ギャップ。Lily#のclef名はParseClefType(ItemFactory:593)の10種のみ(treble_8/treble^8/bass_8はあるが括弧形・15・G/C/F字母形なし)。⚠️未知clef名は診断なしでTrebleにフォールバック(_=>Treble)——silent-swallow族の匂い(起票価値あり・別件)"
     },
     "clef-transposition-placement.ly": {
       "category": "scheme",
@@ -2010,7 +2016,9 @@
     },
     "clef-unchanged.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "変わっていないclefの\\clefコマンドは何も印字しない(行頭clefだけが出る・issue 6615)",
+      "notes": "第102セッション fixed第20号。Lily#は冗長clefをG_change×2で印字し空間も食っていた。修正⑴collector=解決clef同一ならitem/octave resetごとskip(clef-engraver.cc:139-166 inspect_clef_propertiesのport)。修正後clefグリフ=行頭1個・符頭間隔8.150/8.150=LP完全一致。⑵巻き添えで出た既存欠陥も修正: bare musicのトップレベルclefがCollectDefinitionsでfile default扱いされ(g1 clef bassの行頭グリフがbassになる+走者skipと合わさりchange消滅)→topLevelMusicSeenガード追加。⚠️key/time/tempoは同じ綻びが残る(起票・本が来たら)。観測者=ClefChangeTests.UnchangedClef_PrintsNothingAndTakesNoSpace。trailing観測者の初回ピン3.220はこのbass既定バグ込みの値だった→真値3.210(F_change ink 2.150 vs LP 2.147=系統差0.003)に修正済"
     },
     "clef-warn.ly": {
       "category": "scheme",
@@ -2034,7 +2042,9 @@
     },
     "cluster-single-note.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "単一和音のclusterでクラッシュしない(\\makeClusters)",
+      "notes": "第102セッション skip=\\makeClusters(cluster記譜)の文法なし"
     },
     "cluster-style.ly": {
       "category": "scheme",

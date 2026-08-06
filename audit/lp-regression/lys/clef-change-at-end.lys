@@ -1,0 +1,16 @@
+// lilypond-src/input/regression/clef-change-at-end.ly の Lily# 訳。
+// CLAIM: 音楽の末尾に置かれた clef 変更も印字される。
+// 綴り: LP g'1 = Lily# g'(相対 anchor C4 の最寄り g は G3・' で G4)。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    g'1 clef bass
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

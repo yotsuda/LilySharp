@@ -727,9 +727,16 @@ public sealed partial class MeasureCollector
 
             case ClefDeclarationSyntax clefDecl:
                 {
-                    // Mid-measure clef change
-                    // LILYPOND-REF: lily/clef-engraver.cc — inspect_clef_properties()
+                    // Mid-measure clef change. An UNCHANGED clef engraves nothing and
+                    // changes nothing: LilyPond creates a Clef grob only when the
+                    // resolved glyph/position/transposition differ from the previous
+                    // ones, so a redundant `clef treble` neither prints nor takes
+                    // space (clef-unchanged.ly) — and it must not reset the relative
+                    // frame to the clef's default octave either.
+                    // LILYPOND-REF: lily/clef-engraver.cc:139-166 inspect_clef_properties
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
+                    if (ParseClefType(newClef) == ParseClefType(_meta.Clef))
+                        break;
                     _meta.Clef = newClef;
                     _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
                     var clefChange = new ClefChangeItem(ParseClefType(newClef), clefDecl.Position);

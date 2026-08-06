@@ -1111,6 +1111,21 @@ internal sealed class MultiStaffLayouter
                 continue;
             }
 
+            // The trailing clef column (Measure.IsTrailingClefColumn) shares the
+            // PREVIOUS measure's closing bar moment: no springs, no bar, no width.
+            // Its clef draws hanging back into that measure's closing gap, which
+            // CreateTimingSprings reserved via BoundaryClefAllowance.
+            if (primaryMeasure.IsTrailingClefColumn)
+            {
+                measureSprings.Add(ImmutableArray<Spring>.Empty);
+                measureTimings.Add(allTimings);
+                measureAllMeasures.Add(allMeasures);
+                measureBarlineWidths.Add(0);
+                measureColumnOverhangs.Add(
+                    (System.Array.Empty<double>(), System.Array.Empty<double>()));
+                continue;
+            }
+
             // The next measure is passed so a clef change opening it can be charged to
             // THIS measure's closing spring — LilyPond draws it before the shared bar
             // line. SystemBreaker mirrors this; the two must agree (SpacingInvariantTests).

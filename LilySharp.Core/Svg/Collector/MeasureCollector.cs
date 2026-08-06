@@ -668,6 +668,33 @@ internal sealed class MeasureBuilder
             }
         }
 
+        // A trailing measure holding ONLY clef changes (a clef written after the last
+        // note — clef-change-at-end.ly) owns no bar moment of its own: LilyPond engraves
+        // that clef on the SAME break-align column as the closing bar (the unbroken order
+        // is `… clef, staff-bar …`), so the piece's end barline moves onto the PREVIOUS
+        // measure and this column keeps only the clef, zero width, no bar. The clef then
+        // hangs back into the closing gap that measure's spring already reserves
+        // (SpacingRules.BoundaryClefAllowance). Key/time changes are NOT treated this
+        // way: break-align puts those AFTER the bar.
+        // LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders
+        if (_measures.Count >= 2)
+        {
+            var tail = _measures[^1];
+            if (tail.Items.Length > 0 && tail.Items.All(i => i is ClefChangeItem))
+            {
+                _measures[^2] = _measures[^2] with
+                {
+                    EndBarline = tail.EndBarline,
+                    SourceEnd = tail.SourceEnd,
+                };
+                _measures[^1] = tail with
+                {
+                    EndBarline = BarlineType.None,
+                    IsTrailingClefColumn = true,
+                };
+            }
+        }
+
         return _measures;
     }
 }
@@ -2361,8 +2388,21 @@ public sealed partial class MeasureCollector
         _root = root;
         _drumOverrides = DrumOverrides.Build(root);
 
+        // Whether BARE top-level music (notes outside any part/section/phrase) has
+        // already streamed past — a `clef` AFTER it is a mid-music change of the bare
+        // stream, not the file default. Without this, `g'1 clef bass` declared BASS as
+        // the file default (wrong system-start glyph) and the music walk then swallowed
+        // the change as "unchanged". Key/time/tempo share the same wrinkle and keep it
+        // for now — no regression book pins them yet.
+        bool topLevelMusicSeen = false;
+
         foreach (var node in root.DescendantNodes())
         {
+            if (!topLevelMusicSeen
+                && node is NoteSyntax or ChordSyntax or RestSyntax
+                && !IsInsideMusicContent(node))
+                topLevelMusicSeen = true;
+
             switch (node)
             {
                 case MetadataDeclarationSyntax metadata:
@@ -2425,7 +2465,9 @@ public sealed partial class MeasureCollector
                     // clef of its own started in the CHANGED clef (wrong system-start glyph
                     // and wrong default octave, since Phase 1.5 derives both from _meta.Clef).
                     // The neighbouring key / octave / partial cases already guard this way.
-                    if (!IsInsideMusicContent(clef))
+                    // A clef AFTER bare top-level music is that stream's mid-music change,
+                    // not the file default (see topLevelMusicSeen above).
+                    if (!IsInsideMusicContent(clef) && !topLevelMusicSeen)
                     {
                         _meta.Clef = clef.ClefName.Text.ToLowerInvariant();
                         _meta.ClefPosition = clef.ClefName.Span.Start;

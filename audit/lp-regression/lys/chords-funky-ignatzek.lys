@@ -1,0 +1,33 @@
+// lilypond-src/input/regression/chords-funky-ignatzek.ly の Lily# 訳。
+// CLAIM: 珍しい構成音の組合せ(jazz和音)でも命名エンジンが名前を出す(Ignatzek)。
+// 枠合わせ: LP は ChordNames コンテキスト + \transpose c c' の Staff の 2 段。
+// Lily# の対応物は staff 上の書き下ろし和音 + bare @chord(自動命名=同じ
+// pitch-set→名前の主張)。LP の \transpose c c' は「Lily# c = LP c'」の
+// 綴り換算でちょうど消えるので本文同綴り。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    <c d f g>1@chord |
+    <c d e f g>1@chord |
+    <c d e g>1@chord |
+    <c d es g as>1@chord |
+    <c d e f g bes d' f'>1@chord |
+    <c d e f g bes c' d' e'>1@chord |
+    <c e gis>1@chord |
+    <c es ges>1@chord |
+    <c es ges bes>1@chord |
+    <c es ges beses>1@chord |
+    <c e g bes c' d' e'>1@chord |
+    <c e g a bes>1@chord |
+    <c e g a d'>1@chord |
+    <c e g b fis'>1@chord |
+    <c e g bes des' ees' fis' aes'>1@chord
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

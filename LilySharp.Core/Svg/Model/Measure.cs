@@ -172,6 +172,18 @@ public sealed record Measure
     /// </summary>
     public bool IsEmptyPlaceholder { get; init; }
 
+    /// <summary>
+    /// True for the zero-width column a clef change written AFTER the last note leaves
+    /// behind (clef-change-at-end.ly). LilyPond engraves that clef on the SAME
+    /// break-align column as the piece's closing bar (the unbroken order is
+    /// <c>… clef, staff-bar …</c>), so there is ONE bar moment: the collector moves the
+    /// end barline onto the PREVIOUS measure and this one keeps only the clef, takes no
+    /// width, and draws no bar — the clef hangs back into the closing gap the previous
+    /// measure's spring reserved (SpacingRules.BoundaryClefAllowance).
+    /// LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders
+    /// </summary>
+    public bool IsTrailingClefColumn { get; init; }
+
     /// <summary>Creates a measure from its items, barlines, and break/pickup metadata.</summary>
     public Measure(
         ImmutableArray<MusicItem> items,

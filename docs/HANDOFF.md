@@ -58,9 +58,11 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第102セッション（＝**chord-X-align-on-main-noteheads.ly を fixed 第18号で完食**。
-frontier の pending 先頭は chords-funky-ignatzek.ly。open は
-automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本のまま）。
+最終更新 第102セッション第2便（＝第1便 chord-X-align **fixed 第18号**・第2便で
+キュー5本: chords-funky-ignatzek=**open**(Ignatzek命名エンジン未port)・
+clef-change-at-end=**fixed 第19号**・clef-transposition-optional=skip・
+clef-unchanged=**fixed 第20号**・cluster-single-note=skip。
+frontier の pending 先頭は coda-mark-begin-score-default.ly）。
 
 ★★★ **① fixed 第18号 = unison 和音のタイ対（commit `ec81e4c6`）**:
 - **本の主張**: unison/2度和音の articulation・強弱・スラー・タイを「符尾の正しい側」の
@@ -92,10 +94,49 @@ automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本のまま�
   anchor を動かす）。status.json の下書き walk はここが誤っていた（「要検算」は正解）。
   検算は **`lysc check --pitches`** が速い（今回 34 音全部これで先に確認した）。
 
-★ **起票（未修正・別 regime）**: **slur 端点 X**——Lily# は main 符頭中心から**両端 0.30
+★★★ **②（第2便）fixed 第19号 = 末尾の clef 変更（clef-change-at-end.ly・`87ae7036`）**:
+- **欠陥**: trailing clef が空の placeholder 小節に落ち、m1 閉じ細線+placeholder の終止線で
+  **bar が 2 重**・clef は終止線の X にゼロ幅で重なっていた。**spring は元から LP 一致**
+  （note→bar 6.06=6.06——LP は clef を bar と同じ command 列に乗せ spacing を動かさない）。
+- **修正**: ⑴ FinalizeMeasures＝clef のみの末尾小節から終止線を prev へ移し
+  `IsTrailingClefColumn` 化（bar 0 本）⑵ MultiStaffLayouter/CalculateMeasureIdealWidth＝幅 0
+  ⑶ renderer＝slot 経路でも BoundaryClefX で clef が閉じ gap へ後退。
+  **clef/細線/太線/譜端すべて LP 一致**（11.80/14.65/15.14/15.74）。
+- ⚠️ **一度 fold 案（末尾小節を前小節に畳む）を実装して撤回した**——2 spring の和が 10.70 に
+  膨らむ。**LP の真のモデルは「clef は bar の列に同居し spacing に透明」**＝m2 温存+描画修正が正。
+- ⚠️ 対の規約を再確認: **LP twin には `\bar "|."` を書く**（Lily# は常時 |.＝意図した設計・
+  memory reference_lilypond_no_automatic_final_barline）。
+- 残差 Δ0.003＝F_change ink 幅（Lily# 箱 2.150 vs LP ステンシル 2.147）の既知グリフ系統差。
+- 観測者 = ClefChangeTests.TrailingClefChange_SharesTheClosingBarMoment（LP 数値釘付け）。
+  key/time の末尾は break-align 順が bar の**後ろ**なので対象外（本が来たら別途）。
+
+★★★ **③（第2便）fixed 第20号 = 変わらない clef は無印字（clef-unchanged.ly・`d7ec33da`）**:
+- Lily# は冗長 `clef treble` を G_change×2 で印字し空間も食っていた→
+  **解決 clef が同一なら item も octave reset も skip**（clef-engraver.cc:139-166
+  inspect_clef_properties の port）。符頭間隔 8.150/8.150＝LP 完全一致。
+- ★★ **巻き添えで既存欠陥が出た**: bare music のトップレベル clef を CollectDefinitions が
+  **file default 扱い**（`g'1 clef bass` の行頭グリフが bass になる+走査 skip と合わさり
+  change が消滅）→ `topLevelMusicSeen` ガードで「先行する裸音楽があれば楽中 change」に。
+  ⚠️ **key/time/tempo は同じ綻びが残る**（コメントに明記・本が来たら）。
+  ⚠️ **観測者の初回ピン 3.220 はこの bass 既定バグ込みの値だった**（真値 3.210）——
+  ピンを打った直後に別の修正で動く数は、その数自身が欠陥を教えている。
+
+★★ **④（第2便）chords-funky-ignatzek = open（Ignatzek 命名エンジン）**: 枠= bare `@chord`
+（pitch-set 自動命名・twin は lys/ に有り）。LP 実測 15 名（Csus4sus2 / C♭6sus2add♭3 /
+C7sus4sus2add3add8add9add10 / C+ / C° / Cø / C°7 / **C7add8add9add10（書かれた重複を add で
+数える＝C9 ではない）** / C6add9 / C△add♯11 / Calt 等）。Lily# は 5/15 のみ（Caug/Cdim/Cm7♭5/
+Cdim7/C9＝独自 suffix）・10/15 は LYS1020 警告（loud）。修正には
+**scm/chord-ignatzek-names.scm（301 行）の生成アルゴリズム+記号タイポグラフィの port** が要る
+＝1 セッション超。⚠️ **設計論点あり**: Lily# の平文命名（ChordStructure.DisplayName）は
+「意図した Phase-1 簡略化」と明記された設計判断で chords{} シンボル表示と共有——
+auto @chord だけ LP 綴りにするかは**要ユーザー判断**。
+
+★ **起票（未修正・別 regime）**: ⑴ **slur 端点 X**——Lily# は main 符頭中心から**両端 0.30
 内側**、LP は**両端 +0.07**（スラー全体が右へ 0.07・長さ=頭中心間隔）。**単音の対
 scratch\lpreg\probe-slur-tie-x.{ly,lys} でも同値**＝unison 固有でなく一般 regime
 （Y 端点は両者完全一致 −1.04ss）。slur.cc の attachment 読みの port が要る。
+⑵ **未知 clef 名は診断なしで Treble にフォールバック**（ParseClefType の `_ =>`＝
+silent-swallow 族の匂い）。⑶ key/time/tempo の bare-music file-default 綻び（③参照）。
 
 ★ 前セッションの「Core 0 warning」は**開始時点で嘘**だった（CS0219 `StaffHalf`——第101便の
 marcato ガード撤去で読者を失った複製 const。QuantizedYPosition 側だけ残骸）。除去済み（同 commit）。
@@ -105,18 +146,18 @@ marcato ガード撤去で読者を失った複製 const。QuantizedYPosition �
 （`CitationRangesHoldTheirNamedSymbol`——:50-54 に head_boxes と書いて落ちた→範囲を
 本体 :243-258 に寄せ、:50-54 は裸の継続住所で添える）。
 
-**frontier（次の本命）**: ⑴ pending 先頭 = **chords-funky-ignatzek.ly**（chords 族＝
-stray-token recovery の silent-swallow 鉱脈）⑵ open 2 本（automatic-polyphony-tabstaff・
-breathing-sign-accidentals——**breathing-sign の port 計画は第99セッション第16便 §1 参照・
-まだ生きている**）⑶ 起票の slur 端点 X regime。
+**frontier（次の本命）**: ⑴ pending 先頭 = **coda-mark-begin-score-default.ly**
+⑵ open 3 本（automatic-polyphony-tabstaff・breathing-sign-accidentals——
+**breathing-sign の port 計画は第99セッション第16便 §1 参照・まだ生きている**——
+chords-funky-ignatzek＝Ignatzek 命名 port・要ユーザー判断つき）⑶ 起票の slur 端点 X regime。
 
-plain 322 / 処理済 **69**（fixed **18**・exact 16・skip 33・open 2。
+plain 322 / 処理済 **74**（fixed **20**・exact 16・skip 35・open 3。
 数えたら state 別内訳も一緒に書くこと）。
 
-未 push **68**（この handoff で 69。数え直すこと。**⚠️ push しない**）・テスト
-**4154 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
+未 push **71**（この handoff で 72。数え直すこと。**⚠️ push しない**）・テスト
+**4156 passed / 0 failed / 4 skipped**（観測者 +5 込み・全スイート確認済）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning（CS0219 除去後に再確認）・snapshot 動き 0 枚**・
+**Core 0 warning・snapshot 動き 0 枚**・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第101セッション第1〜4便の経緯
