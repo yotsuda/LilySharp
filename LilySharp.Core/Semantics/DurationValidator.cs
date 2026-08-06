@@ -51,6 +51,7 @@ internal sealed class DurationValidator : ISemanticValidator
             DrumNoteSyntax drum => drum.Duration,
             RestSyntax rest => rest.Duration,
             ChordSyntax chord => chord.Duration,
+            ChordRepetitionSyntax rep => rep.Duration,
             _ => null
         };
 

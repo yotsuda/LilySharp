@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/chord-repetition-relative.ly の Lily# 訳。
+// CLAIM: 相対モードでも q は原和音と同じオクターブを複製する——絶対書きの前半と
+// 相対書きの後半が同一の 8 和音(C6 D5 G5)になる。
+// 綴り: LP 絶対 <c''' d'' g''> = C6 D5 G5。Lily# はメンバが anchor 積み・root の
+// マークはローカル(anchor は C4 のまま)なので <c'' d' g'>。後半も frame が C4 に
+// 留まるため同じ綴り——LP のメンバ・チェーン相対とは綴りが違うが音楽は同一。
+// ⚠️ 枠の差: Lily# に \relative{} ラッパは無く両半とも既定相対モードで書く。
+// ^"…" = @text("…").up(italic/upright の既知の枠差)。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    <c'' d' g'>4@text("absolute").up q q q |
+    <c'' d' g'>4@text("relative").up q q q |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

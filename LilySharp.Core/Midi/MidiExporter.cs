@@ -297,6 +297,10 @@ public sealed class MidiExporter
                 ProcessChord(chord, track);
                 break;
 
+            case ChordRepetitionSyntax rep:
+                ProcessChordRepetition(rep, track);
+                break;
+
             case ArpeggioSyntax arpeggio:
                 ProcessArpeggio(arpeggio, track, conductorTrack);
                 break;
@@ -1223,6 +1227,11 @@ public sealed class MidiExporter
         _currentTick += durationTicks;
     }
 
+    /// <summary>The sounding notes of every chord this walk has emitted, keyed by
+    /// node — what a following <c>q</c> copies (resolved ABSOLUTE pitches; LP
+    /// expands repetitions after \relative, so a q never re-reads the frame).</summary>
+    private readonly Dictionary<ChordSyntax, List<(int MidiPitch, int QuarterBend, bool IsDrum)>> _resolvedChordNotes = new();
+
     private void ProcessChord(ChordSyntax chord, MidiTrack track, int extraOctave = 0)
     {
         // A chord breaks any pending tie chain. Chords are not currently tie
@@ -1231,6 +1240,7 @@ public sealed class MidiExporter
         // the chord.
         _tiePending = false;
         _lastNoteIndex = -1;
+        var resolved = new List<(int MidiPitch, int QuarterBend, bool IsDrum)>();
 
         int startTick = _currentTick;
         var pitches = chord.Pitches.ToList();
@@ -1302,6 +1312,7 @@ public sealed class MidiExporter
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                 QuarterBend: pitch.QuarterOffset,
                 SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+            resolved.Add((midiPitch, pitch.QuarterOffset, false));
         }
 
         // Omitted root (<1 3 5> / <3 5>): anchor the degrees on the key's tonic
@@ -1325,6 +1336,7 @@ public sealed class MidiExporter
             int midiPitch = WrittenToMidi(step, alter, octave);
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
                 SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+            resolved.Add((midiPitch, 0, false));
         }
 
         // Drum chord members: GM percussion alongside any pitched members.
@@ -1333,11 +1345,45 @@ public sealed class MidiExporter
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
             track.Notes.Add(new MidiNote(9, dinfo.GmKey, _velocity, startTick, durationTicks, chord.Position,
                 SourceOrdinal: chordOrdinal, Timbre: 9));
+            resolved.Add((dinfo.GmKey, 0, true));
         }
+        _resolvedChordNotes[chord] = resolved;
 
         // Next note is relative to the chord's first pitch.
         _currentNoteName = firstNoteName;
         _currentOctave = firstOctave;
+
+        _currentTick = startTick + durationTicks;
+    }
+
+    /// <summary>A <c>q</c> chord repetition: the ORIGINAL chord's resolved notes
+    /// at the repetition's own duration. The octave frame is NOT touched — LP
+    /// expands q after \relative resolution, so a q is transparent to the frame.
+    /// A bad repetition (no chord before it) still advances time silently; the
+    /// validator reports it.</summary>
+    /// <remarks>LILYPOND-REF: scm/music-functions.scm:854-946 copy-repeat-chord + expand-repeat-chords!</remarks>
+    private void ProcessChordRepetition(ChordRepetitionSyntax rep, MidiTrack track)
+    {
+        // Same tie-chain break as a written chord.
+        _tiePending = false;
+        _lastNoteIndex = -1;
+
+        int startTick = _currentTick;
+        var duration = rep.Duration is { } rd ? GetDuration(rd) : _defaultDuration;
+        int durationTicks = FractionToTicks(duration);
+        durationTicks -= ConsumeGraceSteal(durationTicks);
+
+        if (ChordRepetitions.OriginalOf(rep) is { } original
+            && _resolvedChordNotes.TryGetValue(original, out var notes))
+        {
+            int ordinal = NextOrdinal(rep.Position);
+            foreach (var n in notes)
+                track.Notes.Add(n.IsDrum
+                    ? new MidiNote(9, n.MidiPitch, _velocity, startTick, durationTicks, rep.Position,
+                        SourceOrdinal: ordinal, Timbre: 9)
+                    : new MidiNote(track.Channel, n.MidiPitch, _velocity, startTick, durationTicks, rep.Position,
+                        QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
+        }
 
         _currentTick = startTick + durationTicks;
     }

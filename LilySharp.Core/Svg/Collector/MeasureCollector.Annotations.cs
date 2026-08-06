@@ -83,6 +83,9 @@ public sealed partial class MeasureCollector
                 {
                     ChordSyntax autoChord when TryNameChord(autoChord, out var s) => s,
                     ArpeggioSyntax arp when TryNameArpeggio(arp, out var s) => s,
+                    // A `q` names what it repeats — derive from the original chord.
+                    ChordRepetitionSyntax rep when ChordRepetitions.OriginalOf(rep) is { } orig
+                        && TryNameChord(orig, out var s) => s,
                     _ => null,
                 };
                 if (derived != null)
@@ -341,7 +344,15 @@ public sealed partial class MeasureCollector
         var articulations = node switch
         {
             NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
+            // A chord's scripts come from the whole-chord post-events AND from
+            // each member (<c@staccato e@accent>): LP's Script_engraver hears
+            // every member note event's articulations, so member scripts join
+            // the chord's script column like the chord-level ones.
+            // LILYPOND-REF: lily/script-engraver.cc Script_engraver — scripts
+            // are made from events, and chord members each carry their own.
+            ChordSyntax chord => chord.Articulations.Concat(
+                chord.Pitches.SelectMany(p => p.Articulations)),
+            ChordRepetitionSyntax rep => rep.Articulations,
             RestSyntax rest => rest.Articulations,
             _ => Enumerable.Empty<SyntaxNode>()
         };

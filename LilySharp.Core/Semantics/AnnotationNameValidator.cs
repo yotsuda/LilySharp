@@ -125,6 +125,13 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this chord — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(c:maj7).");
+                else if (name == "chord" && mark.Parent is ChordRepetitionSyntax rep
+                         && Music.ChordRepetitions.OriginalOf(rep) is { } orig && !CanNameChord(orig))
+                    _diagnostics.Warning(
+                        rep.Span,
+                        DiagnosticCodes.ChordNotRecognized,
+                        "@chord can't name this chord repetition — the repeated chord's notes "
+                        + "match no known chord quality; use the explicit form, e.g. @chord(c:maj7).");
                 else if (name == "chord" && mark.Parent is ArpeggioSyntax arp && !CanNameArpeggio(arp))
                     _diagnostics.Warning(
                         arp.Span,

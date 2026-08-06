@@ -62,6 +62,13 @@ internal static class MeasureDurations
                 if (chord.Duration != null) defaultDuration = chordDuration;
                 return chordDuration;
 
+            case ChordRepetitionSyntax rep:
+                // `q` occupies its own written duration (the copied notes take
+                // the repetition's duration — LP copy-repeat-chord :890-891).
+                var repDuration = DurationCalculator.GetDuration(rep, defaultDuration);
+                if (rep.Duration != null) defaultDuration = repDuration;
+                return repDuration;
+
             case TupletExpressionSyntax tuplet:
                 // actual = written * BaseDivision / TupletRatio
                 // (\tuplet 3/2 { c8 c c } -> 3 * 1/8 * 2/3 = 1/4).

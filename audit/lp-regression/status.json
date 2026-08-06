@@ -1852,35 +1852,45 @@
     },
     "chord-repetition-accidentals.ly": {
       "category": "plain",
-      "state": "pending",
-      "claim": "q は強制(!)・注意(?)臨時記号を複製しない",
-      "notes": "skip を撤回(ユーザー指摘 2026-08-06): f? は @courtesy(括弧付き・accidental.cc:147-148)で 1:1 に書ける。f! (裸の強制)のみ Lily# に対応物なし——@editorial は AccidentalSuggestion(上の小型)で別物。処理方針: f! 小節を両側から落とし f? 小節を @courtesy で対にする(breathing-sign-accidentals と同じ枠揃え)。q port と同セッションで処理。Lily# では @courtesy は mark なので q が複製しないのは構造上自然(LP は music property なので明示クリア music-functions.scm:936-939 が要る——機構差・法則同一)"
+      "state": "exact",
+      "claim": "q は注意喚起臨時記号を複製しない(原和音の括弧付き臨時記号がqに出ない)",
+      "notes": "16符頭Y完全一致(9.69/10.69/12.19/13.19)・括弧付きナチュラルは第1和音の2つのfのみ(Y9.69/13.19両者一致)・q側ゼロ両者。⚠️枠揃え: f!小節はLYS4009で書けず両側から落とした(noforce対)・f?=@courtesy(和音メンバ@courtesyは今便で配線)"
     },
     "chord-repetition-relative.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "相対モードでも q は原和音と同じオクターブ(絶対書き前半=相対書き後半=C6 D5 G5)",
+      "notes": "24符頭・8和音全て同一Y triple(gap 1.5/1.5)両者。Lily#は両半とも既定相対で綴る(メンバはanchor積みなので d g にマークが要る)"
     },
     "chord-repetition-script-stack.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "q の post-events は書き下ろし和音と同じ積み順(script内側・text外側)",
+      "notes": "staccato Y15.64完全一致(和音/q両方)・text\"q\"はその外側(LP17.31/Lily#17.50=@text基線差0.19)。⚠️縮め: 原本の和音レベル指番号-1-2-3はLily#で描画されず黙って落ちる(_fingeringByPositionは読者ゼロ=silent swallow起票)→両側を-.に揃えた"
     },
     "chord-repetition-times.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "q の展開は後段で行われ tuplet が正しく効く",
+      "notes": "符頭21黒+3半=両者・8和音全同一Y・tuplet数字2個・タイ3本(全メンバ)両者。Lily#はtuplet内qがTimeScale 2/3を受ける(単体観測者あり)"
     },
     "chord-repetition-tweak.ly": {
       "category": "plain",
       "state": "skip",
-      "claim": "\\tweak は q にも(書き出した場合と同様に)効く。\\chordRepeats dynamic-event で複製種を拡張できる",
-      "notes": "Lily# に \\tweak(音単位の grob 調整)も \\chordRepeats(複製 event-type の opt-in)も無い。override は範囲文法(reference_lilysharp_grob_override_scope)で別物。q port の対象外と明記"
+      "claim": "tweak が q にも効く",
+      "notes": "\\tweak/\\chordRepeats の文法が Lily# に無い(override系も対象外)"
     },
     "chord-repetition.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "q は直前和音を複製し note イベントのみ写す(指番号・script・テキスト・強弱は非複製)",
+      "notes": "18符頭Y完全一致(13.18/14.18/15.18)・付点Y一致(12.68..)・staccatissimo Y15.97両者一致・beam polygon 3=3・qに指番号/強弱/textなし両者。枠差: 指番号の置き方(LP=和音上に積む/Lily#=符頭横・fingering model差)・phrasing slurは素slurで代用・@text italic"
     },
     "chord-scripts.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "script は和音の個々のメンバにも付き、手動方向指定(^/_ = .up/.down)に従う",
+      "notes": "fixed第13号: メンバscriptはparse済みなのに収集されず黙って落ちていた(消費はfinger/string/courtesyのみ)→CollectArticulationsのChordSyntax armでメンバのarticulationを束ねた(script-engraver.ccの「scriptはイベントから」の鏡)。照合(同一原点・五線Y11.14-15.14両者一致): script 12個中10個Y完全一致——4連staccato縦積み(6.89/7.49/8.09/8.69=0.6ss間隔)・accent 10.47・下側marcato 16.34x3。残差2: (1)単独<c-^^>のmarcato.up=LP11.64(符頭上1.0ss・五線内)vs Lily#10.94(1.7ss)——素の音符でも同じΔ0.7=メンバ固有でなく一般のscript Y配置(五線外への押し出し・fermata族regime) (2)下側積み増分LP1.25 vs Lily#1.30。観測者=ChordMemberScriptTests 3本"
     },
     "chord-slash-separator.ly": {
       "category": "override",

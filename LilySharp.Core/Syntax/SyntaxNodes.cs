@@ -681,6 +681,43 @@ public sealed class ChordSyntax : SyntaxNode
 }
 
 /// <summary>
+/// A chord repetition (<c>q</c>): stands for the previous chord's notes with
+/// its own duration and post-events. The tree holds no pitches — the shared
+/// resolver (<see cref="Music.ChordRepetitions"/>) maps each <c>q</c> to its
+/// originating <see cref="ChordSyntax"/> at walk time.
+/// LILYPOND-REF: scm/music-functions.scm:923-946 expand-repeat-chords!
+/// </summary>
+public sealed class ChordRepetitionSyntax : SyntaxNode
+{
+    internal ChordRepetitionSyntax(ChordRepetitionGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>q</c> identifier token.</summary>
+    public SyntaxTokenNode QToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The repetition's duration, or null when unspecified (inherited from the previous note).</summary>
+    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+    /// <summary>The tremolo suffix (:8, :16, :32), or null.</summary>
+    public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
+
+    /// <summary>The articulations and dynamics attached to this repetition itself
+    /// (the original chord's post-events are NOT copied — LP copies note events only).</summary>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 3; i < Green.SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+}
+
+/// <summary>
 /// A barline: |, ||, |., etc.
 /// </summary>
 public sealed class BarlineSyntax : SyntaxNode

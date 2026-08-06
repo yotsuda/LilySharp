@@ -535,6 +535,7 @@ public sealed partial class MeasureCollector
                 case NoteSyntax:
                 case RestSyntax:
                 case ChordSyntax:
+                case ChordRepetitionSyntax:
                 case ChordEntrySyntax:
                     pendingMusic = true;
                     break;

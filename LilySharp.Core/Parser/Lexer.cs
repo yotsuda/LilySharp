@@ -428,8 +428,9 @@ internal sealed class Lexer
     /// <summary>
     /// "hh8" scans as one word, but a drum name takes its duration like a
     /// pitch does — split the glued digits back off so the parser sees
-    /// name + duration tokens. Identifiers whose letter prefix is not a
-    /// drum name (v2, tomX3) are untouched.
+    /// name + duration tokens. The chord repetition <c>q</c> takes a glued
+    /// duration the same way (<c>q4</c> = q + 4). Identifiers whose letter
+    /// prefix is neither (v2, tomX3) are untouched.
     /// </summary>
     private string TrimDrumDuration(int start, string text)
     {
@@ -437,7 +438,7 @@ internal sealed class Lexer
         while (i > 0 && char.IsDigit(text[i - 1])) i--;
         if (i == 0 || i == text.Length) return text;
         string prefix = text[..i];
-        if (!Syntax.DrumNameRegistry.Contains(prefix)) return text;
+        if (prefix != "q" && !Syntax.DrumNameRegistry.Contains(prefix)) return text;
         _position = start + i;
         return prefix;
     }

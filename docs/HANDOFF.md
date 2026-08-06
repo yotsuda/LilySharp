@@ -58,6 +58,119 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第100セッション第3便（＝第2便の q port に続けて **chord-scripts.ly = fixed 第13号**。
+和音メンバ script の silent drop を塞いだ）。
+
+⚠️ **コード commit 3**（`7fdcb4b7` q port＝Core+単体観測者 9 本・`343a17fa` corpus twin 5 本
++status・`0a9bb485` メンバ script+chord-scripts）＋ handoff。**push 禁止継続**。
+
+★★★ **⓪（第3便）chord-scripts.ly = fixed 第13号**:
+- **欠陥**: `<c@staccato e@accent>` のメンバ script は **parse 済みなのに収集されず黙って
+  落ちていた**（per-pitch の消費は finger/string/courtesy のみ・validator も staccato を
+  known と言って黙る＝chords 族 silent-swallow の 4 例目）。
+- **修正 1 行の形**: `CollectArticulations` の ChordSyntax arm が
+  `chord.Articulations.Concat(chord.Pitches.SelectMany(p => p.Articulations))` を読む
+  （LILYPOND-REF script-engraver.cc＝script はイベントから作られ、メンバの note event も
+  各自 articulations を運ぶ）。**.up/.down の方向強制は既存機構がそのまま効く**。
+  q が複製しないのは snapshot 構造上自然（観測者あり）。
+- **照合**（同一原点を五線 Y 11.14-15.14 の両者一致で確認済）: script 12 個中 **10 個 Y 完全一致**
+  ——4 連 staccato 縦積み（0.6ss 間隔）・accent・下側 marcato×3。爆風ゼロ（fixture に
+  メンバ script なし・snapshot 0 枚）。観測者 = `ChordMemberScriptTests` 3 本。
+- ⚠️ **残差 2（起票・別 regime）**: ⑴ **forced-up marcato が単独 c'' で LP=符頭上 1.0ss
+  （五線内に置ける）vs Lily#=1.7ss（五線外へ押し出し）＝Δ0.70**。素の音符でも同じ Δ
+  ＝メンバ固有でなく **一般の script Y 配置**（fermata 族 regime・
+  reference_lilypond_script_outside_staff_and_stem_flattening の家系）。
+  ⑵ 下側 stack 増分 LP 1.25 vs Lily# 1.30（Δ0.05）。
+- ⚠️ **座標系の検証手順を 1 つ学んだ**: 対の SVG は両者とも 1 unit=1ss・Y 下向き・
+  **paper 揃えの対なら頁原点まで一致**（五線 Y の絶対値一致で確認できる）。**絶対 Y を
+  比較してよいのは同じ対の中だけ**——別ドキュメント（probe 等）とは五線/符頭アンカーの
+  差分で比べる。⚠️ probe を手で書くと相対の罠を踏む（`c''4 c''4` は C5 C7——また踏んだ。
+  2 音目は裸で書く）。
+
+（以下は第2便＝q port の記録）
+
+★★★ **① port の中身**（前便 §1 の計画どおり・全部字面）:
+- **lexer**: `q4` は識別子の貪欲結合で 1 トークンだった（計画の「dispatch だけ」では
+  届かない）——`TrimDrumDuration` を q にも効かせて分割（hh8 と同じ機構・予約語化なし
+  ＝part 名 q は生きる）。
+- **パーサ**: `ParseMusicItem` の Identifier text=="q" → `ParseChordRepetition()`
+  （ParseNote の音高なし版）＝ `ChordRepetitionSyntax`（QToken/Duration/Tremolo/
+  Articulations）。SyntaxKind/Green/red factory/red class の 6 点セット。
+- **共有 resolver = `Music/ChordRepetitions.OriginalOf(q)`**: ConditionalWeakTable で
+  木ごとに 1 回、文書順 walk で last-chord を縫った q→原和音 map。**scope 境界＝
+  part/section/phrase 宣言と part cell**（body ごとにリセット＝構造 replay で写像不変）。
+  ⚠️ 最初「compilation unit の直接子ごとにリセット」と書いて bare music の q が全滅
+  （裸 music は音符が root の直接子）——**境界は「宣言」で切る**。
+- **last-chord は `<>` 和音のみ**（単音・休符・rest は透明）——LP 裏取り: 単音は
+  rhythmic-event で event-chord に包まれない（lily/parser.yy:4754-4794 add_post_events
+  の分岐順）＋ expand-repeat-chords! は event-chord だけを見る。
+- ★★ **q は相対フレームに透明で、解決済み絶対音を複製**——展開の住所を LP で裏取り:
+  toplevel-music-functions（ly/music-functions-init.ly:2143）＝ **\relative 解決の後**。
+  だから `<c e g>4 g8 d8 q a8` の a は d に相対（観測者あり）。collector は
+  `CreateChordItem` が全和音の解決済みメンバ（絶対 step/alter/octave・drum head）を
+  `_resolvedChordMembers` に snapshot し、q は**表示臨時記号を stateful 経路で再導出**
+  （小節ローカルに正しい・courtesy/force は snapshot に無いので構造上落ちる＝LP の
+  クリアと同義）。`_octave` は触らない。MIDI/MusicXML も同型の自前 snapshot。
+- **LilyPondExporter は q を透過**（両エンジンとも相対後展開なのでフレーム前進なし・
+  round-trip で確認）。**bad repetition = LYS4015**（新 validator）+ **spacer**（時間は
+  数える＝LP の空和音と同義）。
+- **和音メンバ @courtesy を新配線**（`<f@courtesy …>`＝LP の f?・accidental.cc:145-146）
+  ——accidentals 本の対に必要だった。従来は Note 専用（CreateChordItem は素通し）。
+
+★★ **② corpus 5 本＝全部 exact**（照合は scratch\lpreg\compare-chord-repetition.ps1・
+LP 対照は同 dir の *.ly＝verbatim+paper）:
+- **本体**: 18 符頭 Y 完全一致・staccatissimo Y15.97 一致・beam polygon 3=3・q に
+  指番号/強弱/text 無し（両者）。枠差=指番号の置き方（LP は和音上に積む/Lily# は符頭横）。
+- **relative**: 8 和音全て同一 Y triple（C6 D5 G5・gap 1.5/1.5）両者。
+- **script-stack**: staccato Y15.64 完全一致（和音/q 両方）・text はその外側。
+  ⚠️ **縮め**: 原本の和音レベル指番号 -1-2-3 は書けない（下の起票）→両側 -. に揃えた。
+- **times**: 符頭 21 黒+3 半・タイ 3 本・tuplet 数字 2 両者。tuplet 内 q は TimeScale 2/3。
+- **accidentals**: 16 符頭 Y 完全一致・括弧付き♮は第 1 和音の 2 つの f のみ（Y9.69/13.19
+  両者一致）・q 側ゼロ。**f! 小節は LYS4009 で書けず両側から落とした**（noforce 対・
+  前便計画どおり）。
+- 単体は `ChordRepetitionTests` 9 本（複製/duration carry/指番号非複製/フレーム透明/
+  臨時記号再導出/courtesy 非複製/tuplet scale/bad repetition/exporter 透過）。
+
+★ **③ perf（重い側=960 written 和音のベンチを作って測ったが、今日は床が高すぎて
+A/B が読めない）**: scratch\perf\run-chordrep-bench.ps1（base worktree=cc19cccc・
+C:\MyProj\LilySharp-base に作成済）で 2 回測って **plain 対照自体が −38〜+32% で暴れ、
+符号が順序に付く**＝分解能不足。言える事実: ⑴ **同一入力の SVG は両ツリーでバイト一致**
+⑵ **q 綴りの絶対コストは負**（1和音+7q は書き下ろしより 2 回とも 5〜10% 速い＝トークン減）
+⑶ 新コストは collect 時 O(メンバ)/和音（snapshot の list+dict 1 回）で **per-system
+再実行経路には乗らない**（第99-16便の罠を確認済）。静かな環境での A/B は残債。
+⚠️ in-process 測定（pwsh に Core を LoadFrom）は**フォント解決ガードで死ぬ**
+（TextFontMetrics が bundled faces 以外を拒む）——この道は無い。
+
+★ **④ 起票（未修正・今回見つけた silent swallow）**:
+- **和音レベル @finger は描画されずに黙って落ちる**——`_fingeringByPosition` は
+  **書き込みと Clear だけで読者ゼロの死に状態**（単音は ExtractFingering 経由で生きる・
+  和音は per-pitch のみ生きる）。AnnotationNameValidator も finger.N を known と言って
+  黙る＝chords 族の鉱脈と同型。script-stack 本の縮めの原因。
+- **tremolo pair（`repeat tremolo N { <a> <b> }`）は和音が `_tremoloPairShape` を
+  読まない**（Note case のみ・旧仕様から・q も同じ）。
+- q は grace body 内・chords{} 行内では未対応（LP は両方通る・本が来たら）。
+- ⚠️ **resolver が原和音を返しても snapshot が無い順序**（例: voice0 の q が「後で歩く
+  別 voice の和音」を指す逆行参照）は**診断なしで spacer に縮退**する——validator は
+  OriginalOf==null しか見ない。踏む本が来たら observer を先に。
+
+**frontier = chord-tremolo 族 7 本**（chord-tremolo-accidental から・status.json の
+アルファベット順を数え直すこと）。⚠️ 下見メモ: Lily# の tremolo pair
+（`repeat tremolo N { a b }`）は **Note case しか `_tremoloPairShape` を読まない**
+（和音 body は第2便④で起票済）——族の何本かはここを踏む。
+**breathing-sign の port 計画は第99セッション第16便 §1 参照——まだ生きている**。
+
+plain 322 / 処理済 **61**（fixed 13・exact 15・skip 31・open 2＝automatic-polyphony-tabstaff・
+breathing-sign-accidentals。数えたら state 別内訳も一緒に書く——第2便で 55+6=61 と思い込み
+かけたが **tweak は前便までに skip 記録済**で 55 に入っていた）。
+
+未 push **47**（この handoff で 48。数え直すこと。**⚠️ push しない**）・テスト
+**4143 passed / 0 failed / 4 skipped**（第3便終端で全スイート再確認済・引用ラチェットを
+3 回踏んだ——「行範囲つき引用は同じ行のアドレスの後ろに *_ か 3 部ハイフンの記号*」）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 動き 0 枚。**
+
+## 以下は第100セッション第1便の経緯
+
 最終更新 第100セッション第1便（＝**lp-regression キューの chord 族 7 本処理**
 （exact 1・fixed 3・skip 3）。handoff が予告した「suffix 網羅照合の本格物」を消化）。
 

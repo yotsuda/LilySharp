@@ -207,9 +207,25 @@ public sealed partial class MeasureCollector
             : 0;
     }
 
+    /// <summary>One resolved chord member as a <c>q</c> repetition copies it: the
+    /// ABSOLUTE spelling (post-transpose Display* triple for pitched members, null
+    /// for drums), never the display accidental — a copy re-derives its accidental
+    /// through the normal stateful path, so the repeated chord shows exactly what
+    /// its own measure requires (and the original's cautionary/forced marks are
+    /// naturally absent — LP clears them, copy-repeat-chord :892-895).</summary>
+    private readonly record struct ResolvedChordMember(
+        int StaffPosition, int? Step, int? Alter, int? Octave, NoteheadStyle Notehead, int Midi);
+
+    /// <summary>The resolved members of every chord this walk has built, keyed by
+    /// node — what a following <c>q</c> copies. Refilled on every re-walk (form
+    /// replays re-enter with a reset frame and resolve to the same values), so the
+    /// entry a <c>q</c> reads is always the one its own walk just wrote.</summary>
+    private readonly Dictionary<ChordSyntax, ImmutableArray<ResolvedChordMember>> _resolvedChordMembers = new();
+
     private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0)
     {
         var notes = new List<ChordNoteInfo>();
+        var members = new List<ResolvedChordMember>();
 
         // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
         // chord uniformly. Applying it to the root's resolved octave (and, for an
@@ -276,6 +292,17 @@ public sealed partial class MeasureCollector
             if (pitch.QuarterOffset != 0)
                 accidental = QuarterToneAccidental(pitch, accidental);
 
+            // Per-pitch @courtesy (<f@courtesy a …> = LP's f?): the member's
+            // accidental prints in parentheses, forcing the key-matching one
+            // when nothing would print — the same rule CreateNoteItem applies.
+            // LILYPOND-REF: lily/accidental.cc:145-146 Accidental_interface
+            // print — the "parenthesized" property wraps the stencil.
+            bool memberCourtesy = pitch.Articulations.Any(a =>
+                a is ArticulationSyntax { Type: ArticulationType.None } ca
+                && ca.NameToken.Text.Equals("courtesy", StringComparison.OrdinalIgnoreCase));
+            if (memberCourtesy && accidental == null)
+                accidental = KeySignatureAccidentalName(rp.DisplayStep);
+
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
 
             // LILYPOND-REF: lily/fingering-engraver.cc — per-pitch finger via <c@finger.N>.
@@ -283,11 +310,13 @@ public sealed partial class MeasureCollector
 
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental, needsLedger,
-                IsCourtesy: false,
+                IsCourtesy: memberCourtesy,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
                 SourcePosition: pitch.Position));
+            members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
+                rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
         // Omitted root (<1 3 5> / <3 5>): the degrees are relative to the KEY'S
@@ -324,6 +353,8 @@ public sealed partial class MeasureCollector
                 IsCourtesy: false,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
                 SourcePosition: degree.Position));
+            members.Add(new ResolvedChordMember(rp.StaffPosition, rp.DisplayStep, rp.DisplayAlteration,
+                rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
         // Drum chord members (<bd hh>): placement/head/GM key from the
@@ -337,7 +368,10 @@ public sealed partial class MeasureCollector
                 Notehead: dinfo.Notehead,
                 Midi: dinfo.GmKey,
                 SourcePosition: drum.Position));
+            members.Add(new ResolvedChordMember(dinfo.StaffPosition, null, null, null,
+                dinfo.Notehead, dinfo.GmKey));
         }
+        _resolvedChordMembers[chord] = members.ToImmutableArray();
 
         // The next chord/note is relative to the chord's ANCHOR — the root's bare
         // letter plus any whole-chord '>' marks; the members' own marks stay local.
@@ -366,6 +400,66 @@ public sealed partial class MeasureCollector
         {
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
             ForcedStemUp = GetStemDirectionOverride(chord),
+        };
+    }
+
+    /// <summary>
+    /// A <c>q</c> chord repetition → ChordItem: the ORIGINAL chord's resolved
+    /// members (from <see cref="_resolvedChordMembers"/>) with the repetition's
+    /// own duration and post-events. Display accidentals are re-derived through
+    /// the stateful path, so cautionary/forced marks on the original are absent
+    /// (LP clears them — copy-repeat-chord :892-895) and the copy shows what its
+    /// own measure requires. Per-pitch fingerings/string numbers are NOT copied
+    /// (LP copies note events only). The relative frame is NOT touched: LP
+    /// expands q AFTER \relative has resolved (toplevel-music-functions), so a
+    /// q is transparent to the frame. When no chord precedes the repetition
+    /// (LP: "Bad chord repetition") the result is a SPACER rest of the written
+    /// duration — the time still counts, nothing is drawn, and the validator
+    /// reports it (LP keeps the empty chord the same way).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/music-functions.scm:854-920 copy-repeat-chord.</remarks>
+    private MusicItem CreateChordRepetitionItem(ChordRepetitionSyntax rep, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null)
+    {
+        // The duration carry applies whether or not the q resolves — a bad
+        // repetition still occupies its written time (LP keeps the empty chord).
+        int noteValue = forcedDuration?.Value ?? rep.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        if (forcedDuration == null && rep.Duration != null)
+            _defaultDuration = Fraction.FromNoteValue(noteValue);
+        int dots = forcedDuration?.Dots ?? rep.Duration?.DotCount ?? 0;
+        int tremoloBeams = ParseTremoloBeams(rep.Tremolo);
+
+        // Inside `repeat tremolo N { … }` (see CreateNoteItem).
+        if (_tremoloRepeatCount > 1
+            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        {
+            tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
+            noteValue = combined.Value;
+            dots = combined.Dots;
+        }
+
+        if (Music.ChordRepetitions.OriginalOf(rep) is not { } original
+            || !_resolvedChordMembers.TryGetValue(original, out var members))
+            return new RestItem(Fraction.FromNoteValue(noteValue), dots, rep.Position) { IsSpacer = true };
+
+        var notes = new List<ChordNoteInfo>(members.Length);
+        foreach (var m in members)
+        {
+            string? accidental = m.Step is { } step
+                ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
+                : null;
+            notes.Add(new ChordNoteInfo(
+                m.StaffPosition, accidental,
+                m.StaffPosition is <= -6 or >= 6,
+                IsCourtesy: false,
+                Notehead: m.Notehead,
+                Midi: m.Midi,
+                SourcePosition: rep.Position));
+        }
+
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, rep.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
+        {
+            // The repetition's OWN post-events only — the original's are not copied.
+            ForcedStemUp = GetStemDirectionOverride(rep),
         };
     }
 

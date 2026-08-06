@@ -830,6 +830,10 @@ public sealed class MusicXmlExporter
                 ProcessChord(chord);
                 break;
 
+            case ChordRepetitionSyntax rep:
+                ProcessChordRepetition(rep);
+                break;
+
             case ArpeggioSyntax arpeggio:
                 ProcessArpeggio(arpeggio);
                 break;
@@ -1655,6 +1659,11 @@ public sealed class MusicXmlExporter
         _ => null,
     };
 
+    /// <summary>The written notes of every chord this walk has emitted, keyed by
+    /// node — what a following <c>q</c> copies (post-transpose spelling; LP
+    /// expands repetitions after \relative, so a q never re-reads the frame).</summary>
+    private readonly Dictionary<ChordSyntax, List<(string Step, int Alter, int Octave)>> _resolvedChordXmlNotes = new();
+
     private void ProcessChord(ChordSyntax chord, int extraOctave = 0)
     {
         if (_currentMeasure == null) return;
@@ -1662,6 +1671,7 @@ public sealed class MusicXmlExporter
 
         var pitches = chord.Pitches.ToList();
         if (pitches.Count == 0 && !chord.Degrees.Any()) return;
+        var resolved = new List<(string Step, int Alter, int Octave)>();
 
         var duration = GetDuration(chord.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -1722,6 +1732,7 @@ public sealed class MusicXmlExporter
                 targetOctave = firstOctave + (stepIdx >= firstStep ? 0 : 1) + pitch.OctaveOffset;
             }
             (step, alter, targetOctave) = ApplyTranspose(pitch, step, alter, targetOctave);
+            resolved.Add((step, alter, targetOctave));
 
             var xmlNote = new MusicXmlNote
             {
@@ -1784,6 +1795,7 @@ public sealed class MusicXmlExporter
                 firstStep, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keyFifths);
             (dstep, dalter, doctave) = ApplyWrittenTransforms(dstep, dalter, doctave);
+            resolved.Add(("CDEFGAB"[dstep].ToString(), dalter, doctave));
             var xmlNote = new MusicXmlNote
             {
                 Step = "CDEFGAB"[dstep].ToString(),
@@ -1813,6 +1825,8 @@ public sealed class MusicXmlExporter
                 new System.Xml.Linq.XAttribute("type", "top"),
                 new System.Xml.Linq.XAttribute("number", 1)));
         }
+        _resolvedChordXmlNotes[chord] = resolved;
+
         // Ties apply to EVERY member of the chord: <c e g>~ <c e g> ties all
         // voices, so tagging only the first note (the old behavior) dropped the
         // rest. Pair the stop from a preceding tie across all members too.
@@ -1832,6 +1846,76 @@ public sealed class MusicXmlExporter
         // the chord's first pitch).
         _currentStep = firstStep;
         _currentOctave = firstOctave;
+        MaybeClosePickup(duration);
+    }
+
+    /// <summary>A <c>q</c> chord repetition: the ORIGINAL chord's written notes at
+    /// the repetition's own duration, with the repetition's own post-events. The
+    /// octave frame is NOT touched — LP expands q after \relative resolution. A
+    /// bad repetition (no chord before it) emits a rest of the written duration
+    /// so the measure stays honest; the validator reports it.</summary>
+    /// <remarks>LILYPOND-REF: scm/music-functions.scm:854-946 copy-repeat-chord + expand-repeat-chords!</remarks>
+    private void ProcessChordRepetition(ChordRepetitionSyntax rep)
+    {
+        if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
+
+        var duration = GetDuration(rep.Duration);
+        int durationTicks = FractionToTicks(duration);
+        var (type, dots) = GetNoteType(duration);
+
+        if (ChordRepetitions.OriginalOf(rep) is not { } original
+            || !_resolvedChordXmlNotes.TryGetValue(original, out var members)
+            || members.Count == 0)
+        {
+            _lastPitchedNote = null;
+            _lastEmittedNotes.Clear();
+            _currentMeasure.Notes.Add(new MusicXmlNote
+            {
+                IsRest = true,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots
+            });
+            MaybeClosePickup(duration);
+            return;
+        }
+
+        EmitPendingDynamic();
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
+        bool isFirst = true;
+        foreach (var m in members)
+        {
+            var xmlNote = new MusicXmlNote
+            {
+                Step = m.Step,
+                Alter = m.Alter,
+                Octave = m.Octave,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots,
+                IsChord = !isFirst,
+                ActualNotes = tupletActual,
+                NormalNotes = tupletNormal
+            };
+            if (isFirst)
+            {
+                // The repetition's OWN post-events only — LP copies note events,
+                // not the original's articulations.
+                ProcessArticulations(rep.Articulations, xmlNote);
+                isFirst = false;
+            }
+            _currentMeasure.Notes.Add(xmlNote);
+            _chordMembers.Add(xmlNote);
+        }
+
+        if (_tieToNextNote) { foreach (var m in _chordMembers) m.TieStop = true; _tieToNextNote = false; }
+        if (rep.Articulations.OfType<TieSyntax>().Any())
+        { foreach (var m in _chordMembers) m.TieStart = true; _tieToNextNote = true; }
+
+        _lastEmittedNotes.Clear();
+        _lastEmittedNotes.AddRange(_chordMembers);
+        _chordMembers.Clear();
         MaybeClosePickup(duration);
     }
 

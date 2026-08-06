@@ -402,6 +402,10 @@ public static class DiagnosticCodes
     /// nothing the outer one has not already said. Forbidden while the shape is young —
     /// opening it later is cheap, un-opening it is not.</summary>
     public const string NestedCueBlock = "LYS4013";
+    /// <summary>Warning: a <c>q</c> chord repetition with no chord before it in its
+    /// body — there is nothing to repeat, so it occupies its time silently.
+    /// LILYPOND-REF: scm/music-functions.scm:941 expand-repeat-chords! — warning "Bad chord repetition".</summary>
+    public const string BadChordRepetition = "LYS4015";
     /// <summary>Error: a <c>voice { … } voice { … }</c> span inside a <c>cue { … }</c>.
     /// LilyPond can spell it, but the meaning doubles up — a cue is already a voice of its
     /// own — and nothing in Lily# decides which of the two the polyphony forcing belongs to.

@@ -431,6 +431,10 @@ public enum SyntaxKind : ushort
     Rest,
     /// <summary>A chord node.</summary>
     Chord,
+    /// <summary>A chord-repetition node (<c>q</c>): repeats the previous chord's
+    /// notes with its own duration and post-events.
+    /// LILYPOND-REF: scm/music-functions.scm expand-repeat-chords!</summary>
+    ChordRepetition,
     /// <summary>An arpeggio node (<c>&lt;&lt; c e g &gt;&gt;</c>): sequential notes with
     /// chord-style octave anchoring to the first note.</summary>
     Arpeggio,

@@ -3116,7 +3116,8 @@ public sealed partial class MeasureCollector
     /// apart (which silently dropped overrides, drum notes, clefs, etc.).
     /// </summary>
     private static bool IsCollectableMusicNode(SyntaxNode node) =>
-        node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or ArpeggioSyntax
+        node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
+            or ChordRepetitionSyntax or ArpeggioSyntax
             or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or CueExpressionSyntax
             or TupletExpressionSyntax or RepeatExpressionSyntax
@@ -3297,6 +3298,7 @@ public sealed partial class MeasureCollector
     {
         NoteSyntax note => note.Articulations,
         ChordSyntax chord => chord.Articulations,
+        ChordRepetitionSyntax rep => rep.Articulations,
         DrumNoteSyntax drum => drum.Articulations,
         ArpeggioSyntax arpeggio => arpeggio.Articulations,
         _ => Enumerable.Empty<SyntaxNode>()
@@ -3471,7 +3473,7 @@ public sealed partial class MeasureCollector
             }
         }
         else if (type == "tremolo" && bodyNodes.Count == 2
-            && bodyNodes.All(b => b is NoteSyntax or ChordSyntax)
+            && bodyNodes.All(b => b is NoteSyntax or ChordSyntax or ChordRepetitionSyntax)
             && TremoloPairShape(count, bodyNodes) is { } pairShape)
         {
             // Two-note (chord) tremolo: both notes are WRITTEN with the
@@ -3484,7 +3486,7 @@ public sealed partial class MeasureCollector
             _tremoloPairShape = null;
         }
         else if (type == "tremolo" && bodyNodes.Count == 1
-            && bodyNodes[0] is NoteSyntax or ChordSyntax
+            && bodyNodes[0] is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
             && TremoloTotalIsPrintable(count, bodyNodes[0]))
         {
             // LILYPOND-REF: lily/chord-tremolo-engraver.cc +
@@ -3512,6 +3514,7 @@ public sealed partial class MeasureCollector
     {
         NoteSyntax ns => ns.Duration?.Value ?? 0,
         ChordSyntax cs => cs.Duration?.Value ?? 0,
+        ChordRepetitionSyntax rep => rep.Duration?.Value ?? 0,
         _ => 0
     };
 

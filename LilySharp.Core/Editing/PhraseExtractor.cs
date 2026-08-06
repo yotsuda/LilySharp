@@ -86,7 +86,7 @@ public static class PhraseExtractor
         }
 
         var timed = container.DescendantNodes()
-            .Where(n => n is NoteSyntax or ChordSyntax or RestSyntax or ArpeggioSyntax)
+            .Where(n => n is NoteSyntax or ChordSyntax or ChordRepetitionSyntax or RestSyntax or ArpeggioSyntax)
             .Where(n => n.Span.Start >= chunkStart && n.Span.Start < chunkEnd)
             .OrderBy(n => n.Span.Start)
             .ToList();
@@ -100,7 +100,7 @@ public static class PhraseExtractor
         if (FirstDurationless(timed[0]) is { } insertAt)
         {
             var runningAt = container.DescendantNodes()
-                .Where(n => n is NoteSyntax or ChordSyntax or RestSyntax)
+                .Where(n => n is NoteSyntax or ChordSyntax or ChordRepetitionSyntax or RestSyntax)
                 .Where(n => n.Span.Start < chunkStart && n.Span.Start >= bodyStart)
                 .Select(DurationText(text))
                 .LastOrDefault(t => t != null);
@@ -227,6 +227,7 @@ public static class PhraseExtractor
         NoteSyntax n => n.Duration is null ? InkEnd(n.Pitch) : null,
         RestSyntax r => r.Duration is null ? ((SyntaxTokenNode)r.GetChild(0)!).Span.End : null,
         ChordSyntax c => c.Duration is null ? ChordDurationSlot(c) : null,
+        ChordRepetitionSyntax q => q.Duration is null ? q.QToken.Span.End : null,
         ArpeggioSyntax => null, // a group inherits deliberately; the guard decides
         _ => null,
     };
@@ -266,6 +267,7 @@ public static class PhraseExtractor
             NoteSyntax n => n.Duration,
             RestSyntax r => r.Duration,
             ChordSyntax c => c.Duration,
+            ChordRepetitionSyntax q => q.Duration,
             _ => null,
         };
         return d is null ? null : text.Substring(d.Span.Start, d.Span.Length).TrimEnd();

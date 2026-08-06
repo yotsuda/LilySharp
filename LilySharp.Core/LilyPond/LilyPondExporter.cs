@@ -1214,6 +1214,7 @@ public sealed class LilyPondExporter
         DrumNoteSyntax dn => EmitDrumNote(dn),
         RestSyntax r => EmitRest(r),
         ChordSyntax c => EmitChord(c),
+        ChordRepetitionSyntax q => EmitChordRepetition(q),
         BarlineSyntax b => EmitBarline(b),
         BreakSyntax br => br.IsNoBreak ? "\\noBreak" : "\\break",
         TieSyntax => "~",
@@ -1317,6 +1318,21 @@ public sealed class LilyPondExporter
         var (prefix, suffix) = SplitAttachments(d.Articulations);
         string trem = d.Tremolo is { } t ? t.Text : "";
         return prefix + d.DrumName + EmitEventDuration(d.Duration) + trem + suffix;
+    }
+
+    /// <summary>
+    /// A chord repetition passes through verbatim — LilyPond understands <c>q</c>,
+    /// and BOTH engines expand it after relative resolution (LP:
+    /// toplevel-music-functions; Lily#: the collector's shared resolver), so the
+    /// octave frames are untouched: a <c>q</c> has no pitches when \relative runs.
+    /// The duration takes the normal carry (both parsers read it as the running
+    /// default), and the repetition's own post-events ride along.
+    /// </summary>
+    private string EmitChordRepetition(ChordRepetitionSyntax q)
+    {
+        var (prefix, suffix) = SplitAttachments(q.Articulations);
+        string trem = q.Tremolo is { } t ? t.Text : "";
+        return prefix + "q" + EmitEventDuration(q.Duration) + trem + suffix;
     }
 
     /// <summary>
@@ -2664,6 +2680,7 @@ public sealed class LilyPondExporter
         foreach (var child in EnumerateChildren(section))
         {
             if (child is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
+                or ChordRepetitionSyntax
                 or ArpeggioSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax
                 or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax
                 or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax

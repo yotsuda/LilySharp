@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/chord-repetition-times.ly の Lily# 訳。
+// CLAIM: q の展開は処理順の後段で行われ、\tuplet (\times) はその上で正しく効く
+// ——tuplet 内の q も原和音の音で、tuplet の縮尺を受ける。
+// 綴り: LP \relative の <c' e g> = C4 E4 G4 → Lily# 裸 <c e g>。2 つ目の和音も
+// frame C4 のまま同じ綴り。~ は和音全メンバのタイ。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    <c e g>4 r <c e g>2 ~ |
+    tuplet 3/2 { <c e g>4 q q } tuplet 3/2 { q q q } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

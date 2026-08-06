@@ -192,6 +192,21 @@ internal sealed class ChordGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A chord repetition: <c>q</c> + optional duration + optional tremolo +
+/// articulations — the same trailing shape as NoteGreen, with the <c>q</c>
+/// identifier token in place of a pitch. The previous chord's notes are filled
+/// in by the shared resolver at walk time, never in the tree.
+/// LILYPOND-REF: scm/music-functions.scm:923-946 expand-repeat-chords!
+/// </summary>
+internal sealed class ChordRepetitionGreen : GreenSyntaxNode
+{
+    public ChordRepetitionGreen(SyntaxToken qToken, DurationGreen? duration, SyntaxToken? tremolo, GreenNode?[] articulations)
+        : base(SyntaxKind.ChordRepetition, [qToken, duration, tremolo, .. articulations])
+    {
+    }
+}
+
+/// <summary>
 /// An arpeggio: <c>&lt;&lt; note note ... &gt;&gt;</c> — the inner notes play in SEQUENCE
 /// (each with its own duration), but their octaves anchor to the FIRST note like a chord.
 /// An optional duration after <c>&gt;&gt;</c> is the group's target total (auto-tuplet).

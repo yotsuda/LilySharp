@@ -1,0 +1,24 @@
+// lilypond-src/input/regression/chord-scripts.ly の Lily# 訳。
+// CLAIM: script は和音の個々のメンバにも付けられ、手動方向指定(^/_)に従う。
+// 綴り: LP \relative の <c''-.> = C5。Lily# はメンバが anchor 積み・root マークは
+// ローカルで frame は C4 のまま——毎和音 root に ' が要り、メンバも e' g' b'。
+// 方向: LP の ^X/_X = @X.up/@X.down。-. = @staccato・-> = @accent・^ = @marcato。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    <c'@staccato>4
+    <c'@accent>4
+    <c'@staccato e'@staccato g'@staccato b'@staccato>4
+    <c'@marcato.up>4 |
+    <c'@marcato.down>4
+    <c'@marcato.down e'@marcato.up>4
+    <c'@marcato.down e'@marcato.down>4
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

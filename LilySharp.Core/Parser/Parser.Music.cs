@@ -140,6 +140,12 @@ internal sealed partial class Parser
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
 
+            // `q` repeats the previous chord (LILYPOND-REF: lily/parser.yy
+            // CHORD_REPETITION). Claimed here in the music-item dispatch, not in
+            // the lexer, so `q` stays an ordinary identifier everywhere else
+            // (part names, section names).
+            SyntaxKind.Identifier when Current.Text == "q" => ParseChordRepetition(),
+
             // Drum-kit vocabulary (bd, sn, hh, …) claims otherwise-invalid bare
             // identifiers; anything else keeps the deprecated-variable warning.
             SyntaxKind.Identifier => DrumNameRegistry.Contains(Current.Text)
@@ -235,6 +241,18 @@ internal sealed partial class Parser
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
         return new NoteGreen(pitch, duration, tremolo, articulations);
+    }
+
+    // q4@f — ParseNote without the pitch; the previous chord's notes are filled
+    // in by the shared resolver at walk time.
+    // LILYPOND-REF: lily/parser.yy CHORD_REPETITION.
+    private ChordRepetitionGreen ParseChordRepetition()
+    {
+        var qToken = Advance();
+        var duration = ParseOptionalDuration();
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
+        var articulations = ParsePostEvents();
+        return new ChordRepetitionGreen(qToken, duration, tremolo, articulations);
     }
 
     // bd4, sn8@f, hh — same trailing structure as ParseNote.

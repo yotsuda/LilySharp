@@ -1,0 +1,21 @@
+// lilypond-src/input/regression/chord-repetition.ly の Lily# 訳。
+// CLAIM: q は直前和音の note イベントのみ複製する——per-pitch 指番号・スラー・
+// 強弱・テキストは複製されず、q 自身の post-events だけが付く。
+// 綴り: LP \relative{} の先頭 c' = C4 → Lily# 相対(treble 枠 anchor C4)の裸 c。
+// <c e g> は両者とも C4 E4 G4。
+// ⚠️ 枠の差: \( \)(phrasing slur)は Lily# に無く素の slur で書く(2 対は交差しない
+// ので描画は同型)。-! = @staccatissimo。^"text" = @text("text").up(Lily# @text は
+// italic・LP の ^"…" は upright——既知の枠差)。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    <c@finger(1) e@finger(3) g@finger(5)>8@p( q) q4@staccatissimo q8.@text("text").up( q16 q4@staccatissimo) |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

@@ -60,6 +60,13 @@ internal static class PhraseAnchor
                 return c.Root is { } root ? StepOf(root)
                     : c.Degrees.Any() ? Tonic : null;
 
+            // A `q` anchors like the chord it repeats (an unresolvable one —
+            // no chord before it — anchors nothing and the scan continues).
+            case ChordRepetitionSyntax q:
+                return ChordRepetitions.OriginalOf(q) is { } orig
+                    ? (orig.Root is { } qr ? StepOf(qr) : orig.Degrees.Any() ? Tonic : null)
+                    : null;
+
             // An arpeggio anchors on its first PITCHED member (leading rests
             // just advance time) — the same rule its own processing applies.
             case ArpeggioSyntax a:

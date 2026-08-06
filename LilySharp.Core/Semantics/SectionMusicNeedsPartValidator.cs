@@ -68,7 +68,8 @@ internal sealed class SectionMusicNeedsPartValidator : ISemanticValidator
     /// <summary>A direct section child that is MUSIC (would form measures) rather than a part
     /// cell, a track (lyrics/chords) block, or a directive (key/time/clef/…).</summary>
     private static bool IsBareMusic(SyntaxNode n) => n is
-        NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or ArpeggioSyntax
+        NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or ChordRepetitionSyntax
+        or ArpeggioSyntax
         or TupletExpressionSyntax or GraceExpressionSyntax or RepeatExpressionSyntax
         or VariableReferenceSyntax or BarlineSyntax;
 }

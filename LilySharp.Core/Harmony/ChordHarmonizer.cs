@@ -207,6 +207,11 @@ public static partial class ChordHarmonizer
             pcByPos[n.Position] = new List<int> { PitchClass(n.Pitch) };
         foreach (var c in root.DescendantNodes<ChordSyntax>())
             pcByPos[c.Position] = c.DescendantNodes<PitchSyntax>().Select(PitchClass).ToList();
+        // A `q` repeats the previous chord — its item carries the q's own source
+        // position, so join it to the ORIGINAL chord's pitch classes.
+        foreach (var q in root.DescendantNodes<ChordRepetitionSyntax>())
+            if (Music.ChordRepetitions.OriginalOf(q) is { } orig)
+                pcByPos[q.Position] = orig.DescendantNodes<PitchSyntax>().Select(PitchClass).ToList();
         return pcByPos;
     }
 

@@ -102,7 +102,8 @@ public sealed partial class MeasureCollector
         {
             if (nodes[j] is MusicMarkSyntax mark
                 && (mark.IsInside<NoteSyntax>() || mark.IsInside<ChordSyntax>()
-                    || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()))
+                    || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()
+                    || mark.IsInside<ChordRepetitionSyntax>()))
                 continue;
             return nodes[j];
         }
@@ -562,6 +563,57 @@ public sealed partial class MeasureCollector
                 }
                 break;
 
+            // `q` — the previous chord again, with its own duration/post-events.
+            // Mirrors the ChordSyntax case; the octave frame is NOT touched (LP
+            // expands q after \relative, so a q is transparent to the frame).
+            case ChordRepetitionSyntax rep:
+                {
+                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int itemIndex = builder.CurrentItemCount;
+                    Fraction repAnchorTiming = builder.CurrentDuration;
+                    if (_pendingGrace != null)
+                    {
+                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        _pendingGrace = null;
+                    }
+                    bool hasArpeggio = HasArpeggioArticulation(rep);
+                    bool arpBracket = rep.Articulations.Any(art =>
+                        art is MusicMarkSyntax { } am
+                        && am.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
+                    bool isCue = _cueDepth > 0;
+                    var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                    if (repItem is not ChordItem chordCopy)
+                    {
+                        // Bad chord repetition: a spacer keeps the time; the
+                        // validator reports it (nothing is silent).
+                        builder.AddItem(repItem);
+                        break;
+                    }
+                    if (arpBracket)
+                        chordCopy = chordCopy with { HasArpeggioBracket = true };
+                    if (ExtractNoteheadStyle(rep) is var repStyle && repStyle != NoteheadStyle.Default)
+                        chordCopy = chordCopy with { Notehead = repStyle };
+                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    {
+                        chordCopy = chordCopy with { LeadingGrace = _pendingLeadingGrace };
+                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                    }
+                    builder.AddItem(chordCopy);
+                    CollectDynamics(rep, measureIndex, itemIndex);
+                    CollectArticulations(rep, measureIndex, itemIndex, chordCopy.StemUp, anchorTiming: repAnchorTiming);
+                    CollectFiguredBass(rep, measureIndex, itemIndex);
+                    CollectChordNames(rep, measureIndex, itemIndex);
+                    CollectCrossStaff(rep, measureIndex, itemIndex);
+                    if ((hasArpeggio || arpBracket) && chordCopy.Notes.Length > 0)
+                    {
+                        int minPos = chordCopy.Notes.Min(n => n.StaffPosition);
+                        int maxPos = chordCopy.Notes.Max(n => n.StaffPosition);
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, rep.Position, _currentStaffIndex,
+                            Bracket: arpBracket));
+                    }
+                }
+                break;
+
             case ArpeggioSyntax arpeggio:
                 ProcessArpeggio(arpeggio, builder);
                 break;
@@ -978,6 +1030,28 @@ public sealed partial class MeasureCollector
                 CollectChordNames(chord, annMeasureIndex, annItemIndex);
                 CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
                 return chordItem.Duration;
+            }
+            case ChordRepetitionSyntax rep:
+            {
+                // `q` inside a tuplet — LP expands repetitions late, so \times/
+                // \tuplet still applies to them (regression chord-repetition-times).
+                var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter,
+                    hasArpeggio: false, isCue: false, hasTieAfter: hasTieAfter,
+                    hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                if (repItem is ChordItem chordCopy)
+                {
+                    builder.AddItemWithoutDuration(chordCopy with { TimeScale = scale });
+                    CollectDynamics(rep, annMeasureIndex, annItemIndex);
+                    CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
+                    CollectFiguredBass(rep, annMeasureIndex, annItemIndex);
+                    CollectChordNames(rep, annMeasureIndex, annItemIndex);
+                    CollectCrossStaff(rep, annMeasureIndex, annItemIndex);
+                    return chordCopy.Duration;
+                }
+                // Bad chord repetition: the spacer keeps the tuplet's time.
+                var spacer = (RestItem)repItem;
+                builder.AddItemWithoutDuration(spacer with { TimeScale = scale });
+                return spacer.Duration;
             }
         }
         return Fraction.Zero;

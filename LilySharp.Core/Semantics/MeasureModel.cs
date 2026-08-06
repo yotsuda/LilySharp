@@ -138,7 +138,8 @@ internal static class MeasureModel
     {
         // A variable bound to a single music node has no relevant DESCENDANTS —
         // the node itself is the content.
-        if (scope is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax
+        if (scope is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
+            or ChordRepetitionSyntax or BarlineSyntax
             or TupletExpressionSyntax or GraceExpressionSyntax)
         {
             output.Add(scope);
@@ -170,6 +171,7 @@ internal static class MeasureModel
                 case DrumNoteSyntax:
                 case RestSyntax:
                 case ChordSyntax:
+                case ChordRepetitionSyntax:
                 case BarlineSyntax:
                 case TupletExpressionSyntax:
                 case GraceExpressionSyntax:
