@@ -181,6 +181,18 @@ public sealed record Measure
     /// width, and draws no bar — the clef hangs back into the closing gap the previous
     /// measure's spring reserved (SpacingRules.BoundaryClefAllowance).
     /// LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
+    /// has no trailing measure here at all — the clef and the bar are two grobs of one
+    /// break-align column, and nothing else exists to suppress.
+    ///   departs from: nothing line-for-line — the measure-based model has no column to
+    ///     put the pair on, so the pair is spelled as "previous measure's bar + this
+    ///     flagged remnant" instead.
+    ///   goes away when: break-align columns become first-class and a measure stops being
+    ///     the unit non-musical grobs hang on.
+    ///   observed by: ClefChangeTests.TrailingClefChange_SharesTheClosingBarMoment (the
+    ///     LP-measured page: one bar moment, clef 2.85 before it).
+    /// </para>
     /// </summary>
     public bool IsTrailingClefColumn { get; init; }
 

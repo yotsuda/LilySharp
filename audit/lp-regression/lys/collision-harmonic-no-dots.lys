@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/collision-harmonic-no-dots.ly の Lily# 訳。
+// CLAIM: 付点付き harmonic 符頭(付点は隠される)が絡む声部衝突の解決が
+// 成功する(クラッシュしない・LP は dot-count を live grob からしか読まない)。
+// 綴り: LP 無引数 \relative の fis' = F#4(実測)。Lily# 裸 fis = F#4。
+// LP の \harmonic(ダイヤ符頭+付点抑制) = Lily# @notehead(diamond)
+// (@harmonic は○=flageolet の別名という明記された設計・ArticulationRegistry:45-48。
+//  ⚠️ 綴りは括弧形: dot は .up/.down 専用・validator の一覧が dot 表記なのは
+//  MarkName の内部表現)。付点抑制は Lily# に無い(枠差として記録)。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    voice { fis2.@notehead(diamond) } { e2. }
+    r4
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

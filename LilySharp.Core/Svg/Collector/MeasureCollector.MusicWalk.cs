@@ -732,7 +732,10 @@ public sealed partial class MeasureCollector
                     // resolved glyph/position/transposition differ from the previous
                     // ones, so a redundant `clef treble` neither prints nor takes
                     // space (clef-unchanged.ly) — and it must not reset the relative
-                    // frame to the clef's default octave either.
+                    // frame to the clef's default octave either. ClefType bundles
+                    // glyph+position+transposition, so one enum compare is that test;
+                    // LilyPond's forceClef escape hatch has no Lily# spelling and is
+                    // dropped with it.
                     // LILYPOND-REF: lily/clef-engraver.cc:139-166 inspect_clef_properties
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
                     if (ParseClefType(newClef) == ParseClefType(_meta.Clef))

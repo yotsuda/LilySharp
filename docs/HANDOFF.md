@@ -58,11 +58,13 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第102セッション第2便（＝第1便 chord-X-align **fixed 第18号**・第2便で
+最終更新 第102セッション第4便（第3便の宿題「LP 1.3000 の分解」を dump で完遂＝⑤⑵参照）（＝第1便 chord-X-align **fixed 第18号**・第2便で
 キュー5本: chords-funky-ignatzek=**open**(Ignatzek命名エンジン未port)・
 clef-change-at-end=**fixed 第19号**・clef-transposition-optional=skip・
-clef-unchanged=**fixed 第20号**・cluster-single-note=skip。
-frontier の pending 先頭は coda-mark-begin-score-default.ly）。
+clef-unchanged=**fixed 第20号**・cluster-single-note=skip・第3便で
+coda-mark 2冊=skip(意味論違い)・**collision-harmonic-no-dots=open(下見済・
+衝突シフト Δ0.073 が §2A の advance/ink 4例目に観測者を付けた)**。
+frontier の pending 先頭は **collision-seconds.ly**＝collision 族が続く）。
 
 ★★★ **① fixed 第18号 = unison 和音のタイ対（commit `ec81e4c6`）**:
 - **本の主張**: unison/2度和音の articulation・強弱・スラー・タイを「符尾の正しい側」の
@@ -131,6 +133,43 @@ Cdim7/C9＝独自 suffix）・10/15 は LYS1020 警告（loud）。修正には
 「意図した Phase-1 簡略化」と明記された設計判断で chords{} シンボル表示と共有——
 auto @chord だけ LP 綴りにするかは**要ユーザー判断**。
 
+★★ **⑤（第3便）coda-mark 2冊 = skip・collision-harmonic-no-dots = open（`43628af9`）**:
+- **coda**: Lily# の `coda`（MusicMarkType.Coda）は form navigation の**着地点 1 種**で、
+  LP の採番付き `\codaMark`（カウンタ・𝄌𝄌自動増加・冒頭 `\default` 抑制）の対応物なし＝
+  意味論違いで skip（採番 codaMark を足すなら nav 文法の設計判断）。
+- **collision-harmonic**: 両者クラッシュせず＝主張の核は両立。ダイヤ頭/♯/fis X は LP 完全一致。
+  **綴りの学び**: LP `\harmonic` = Lily# **`@notehead(diamond)`**——`@harmonic` は○
+  （flageolet 別名）の明記設計、**@注釈の複合引数は括弧形**（dot は .up/.down 専用・
+  `@notehead.diamond` はパース不能。validator 一覧の dot 表記は MarkName の内部表現）。
+  乖離 3 件: ⑴ harmonic の付点抑制なし（LP `\harmonic` は付点を隠す・枠差）
+  ⑵ ★★★ **衝突シフト 1.377 vs LP 1.300——第4便の dump で機構確定: advance/ink では
+  なく style-blind**。LP 実測（scratch\lpreg\dump-nc.ily＝NoteColumn の system 相対 X・
+  positioning は translate なので property でなく座標を読む）: up 列 shift 0.000・
+  down 列 **+1.3000＝ダイヤ頭の ink 幅そのもの**（fis 頭 extent 0..1.2999・e 頭 0..1.3774）。
+  正規化式 `(upRight−downLeft)/wid × wid` の網の中で **Lily# は upRight を
+  `HeadWidth(noteValue)`＝style 盲の 1.3774 で読む**（NoteCollision.cs:435-442 の
+  警告コメント「次の head style が来たら黙って間違う」が的中）。**修正 3 点**:
+  ⓐ Extract-EmmentalerMetrics.py に diamond/cross 等 style 別 notehead 箱を追加+再生成
+  ⓑ GetNoteheadBBox の style-aware 化 ⓒ NoteCollision の 2 呼び出し元（collect 時
+  StaffAccidentalColumns / layout 時 CalculateVoiceOffsets）へ style 配線。
+  ⑶ voice span+継続 r4 で LYS2001 誤警告（2 声目の小節が 3/4 扱い）。
+- ⚠️ LP 無引数 `\relative` の `fis'` は **F#4**（実測）＝Lily# 裸 `fis`。
+
+★★ **⑥（第5便＝ユーザー問「perf 劣化は？」への実測・TempPerfBench の型・base=d45f6260
+worktree・交互 5 周・ベンチは測定後に両ツリーから削除）**:
+- **構造**: 今セッションの常時パス追加は **collect 相の 1 点だけ**＝CollectDefinitions の
+  全ノード走査（既存）に足した型テスト+音符ごとの祖先 walk（topLevelMusicSeen・構造化
+  ファイルではフラグが立たず全音符が払う）。理論コスト ≈ 数十 ns/音符＝2000 音符で
+  ~40µs。**per-system 再実行経路（quanter・BuildAllStaffSkylines）への追加ゼロ**。
+  trailing-clef 一式は bool 読み 1 個/小節・タイ放出は同計算量（FindIndex 参照一致）・
+  冗長 clef skip は**仕事を減らす側**。
+- **実測**（in-process min-of-20 collect 2000 音符 / min-of-15 grammar-tour SVG）:
+  collect **CUR 21-39ms vs BASE 16-44ms**・SVG **CUR 84-96 vs BASE 69-92**——順序を
+  入れ替えると向きが反転する徘徊帯（±60%）で**系統差なし**。理論 Δ(~0.04ms) は
+  ノイズ床の 3 桁下。snapshot 全緑＝fixture 出力バイト不変。
+- ⚠️ このマシンは冬眠明け+AV で帯が広い。µs 級を疑うときは per-note マイクロベンチを
+  別に組むこと（帯 2.5× では end-to-end に出ない）。
+
 ★ **起票（未修正・別 regime）**: ⑴ **slur 端点 X**——Lily# は main 符頭中心から**両端 0.30
 内側**、LP は**両端 +0.07**（スラー全体が右へ 0.07・長さ=頭中心間隔）。**単音の対
 scratch\lpreg\probe-slur-tie-x.{ly,lys} でも同値**＝unison 固有でなく一般 regime
@@ -146,16 +185,21 @@ marcato ガード撤去で読者を失った複製 const。QuantizedYPosition �
 （`CitationRangesHoldTheirNamedSymbol`——:50-54 に head_boxes と書いて落ちた→範囲を
 本体 :243-258 に寄せ、:50-54 は裸の継続住所で添える）。
 
-**frontier（次の本命）**: ⑴ pending 先頭 = **coda-mark-begin-score-default.ly**
-⑵ open 3 本（automatic-polyphony-tabstaff・breathing-sign-accidentals——
-**breathing-sign の port 計画は第99セッション第16便 §1 参照・まだ生きている**——
-chords-funky-ignatzek＝Ignatzek 命名 port・要ユーザー判断つき）⑶ 起票の slur 端点 X regime。
+**frontier（次の本命）**: ⑴ pending 先頭 = **collision-seconds.ly**（2 声の和音メッシュ
+10 対・**通常頭のみ＝⑤⑵の style-blind 修正と独立に処理可能**。clash group＝和音の
+meshing は NoteCollision の網が既にある——twin を書いて頭 X の指紋合わせから）
+⑵ ⑤⑵の style-blind 修正（ⓐⓑⓒ・手順は⑤に）⑶ open 4 本
+（automatic-polyphony-tabstaff・breathing-sign-accidentals——**breathing-sign の port
+計画は第99セッション第16便 §1 参照・まだ生きている**——chords-funky-ignatzek＝
+Ignatzek 命名 port・要ユーザー判断つき——collision-harmonic-no-dots＝⑤）
+⑶ 起票の slur 端点 X regime。
 
-plain 322 / 処理済 **74**（fixed **20**・exact 16・skip 35・open 3。
+plain 322 / 処理済 **77**（fixed **20**・exact 16・skip 37・open 4。
 数えたら state 別内訳も一緒に書くこと）。
 
-未 push **71**（この handoff で 72。数え直すこと。**⚠️ push しない**）・テスト
-**4156 passed / 0 failed / 4 skipped**（観測者 +5 込み・全スイート確認済）・
+未 push **73**（この handoff で 74。数え直すこと。**⚠️ push しない**）・テスト
+**4156 passed / 0 failed / 4 skipped**（観測者 +5 込み・全スイート確認済・第3便は
+コード変更なし＝下見のみ）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
 **Core 0 warning・snapshot 動き 0 枚**・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。

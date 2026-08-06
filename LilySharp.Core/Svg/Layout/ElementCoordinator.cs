@@ -1355,6 +1355,9 @@ internal sealed class ElementCoordinator
         // has the MAIN head first — for a down-stem chord that is the RIGHT one — so without
         // the tiebreak the recession boxes swap heads and the up tie of <f f>~<f f> attaches
         // a head-shift too far left (measured on chord-X-align-on-main-noteheads).
+        // A literal port would keep the MEMBER order and instead mirror LilyPond's unison
+        // head placement (second member displaced rightward); sorting by page X reproduces
+        // the same order without touching how ChordHeadPositioning assigns the offside head.
         // LILYPOND-REF: lily/tie-formatting-problem.cc:243-258 set_column_chord_outline —
         //   boundary picks the head_boxes vector's ENDS by order, not extremes by Y (:50-54)
         tied.Sort((a, b) => a.Position != b.Position

@@ -2056,11 +2056,15 @@
     },
     "coda-mark-begin-score-default.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\codaMark \\defaultは楽譜冒頭ではmarkを作らない(2個目=𝄌𝄌の自動採番)",
+      "notes": "第102セッション skip=意味論違い。Lily#のcoda(MusicMarkType.Coda)はform navigationの着地点1種で、LPの採番付き\\codaMark(rehearsal-mark族カウンタ・𝄌𝄌自動増加・冒頭\\default抑制)の対応物なし。採番codaMarkを足すならnav文法の設計判断が要る(probe-coda.lys=線形musicにcoda3連を書くと1個しか描かれない=別機能の証拠)"
     },
     "coda-mark-begin-score-specific.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\codaMark 1は楽譜冒頭でも可視markを作る",
+      "notes": "第102セッション skip=意味論違い。Lily#のcoda(MusicMarkType.Coda)はform navigationの着地点1種で、LPの採番付き\\codaMark(rehearsal-mark族カウンタ・𝄌𝄌自動増加・冒頭\\default抑制)の対応物なし。採番codaMarkを足すならnav文法の設計判断が要る(probe-coda.lys=線形musicにcoda3連を書くと1個しか描かれない=別機能の証拠)"
     },
     "coda-mark-break.ly": {
       "category": "scheme",
@@ -2092,7 +2096,9 @@
     },
     "collision-harmonic-no-dots.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "付点付きharmonic符頭(付点は隠される)の声部衝突解決がクラッシュしない",
+      "notes": "第102セッション下見+実測(twin=lys/にあり・両者クラッシュせず=主張の核は両立)。綴りの学び: LP \\harmonic(ダイヤ+付点抑制)=Lily# @notehead(diamond)——@harmonicは○(flageolet別名)の明記設計・**@注釈の複合は括弧形@notehead(diamond)**(dotは.up/.down専用・@notehead.diamondはパース不能でvalidator一覧のdot表記はMarkName内部表現)。乖離3件: ⑴harmonic付点が消えない(LPは\\harmonicで付点抑制=Lily#に対応物なし・枠差) ⑵**衝突シフト1.377 vs LP 1.300(Δ0.073=1.3774-1.3042=半vs黒符頭幅の差そのもの)**——advance/ink族・§2Aの「4例目GetColumnNoteheadWidth読者ゼロ」に観測者が付いた可能性・note-collision.cc:427-438のwid=support head extentの読み比べが要る(dot-force-down/meshing regimeと同族) ⑶voice span+継続r4でLYS2001誤警告(2声目の小節3/4扱い)。ダイヤ頭/シャープ/fis X=LP完全一致(9.34)・rest Δ0.10はシフト差の下流 【第4便で機構確定】LP dump実測(dump-nc.ily=NoteColumnのsystem相対X): up列shift 0.000・down列shift +1.3000=ダイヤ頭ink幅そのもの(fis頭extent 0..1.2999・e頭 0..1.3774)。正規化式(upRight-downLeft)/wid×widの網の中でLily#はupRight=HeadWidth(noteValue)=style盲の1.3774を読む=Δ0.073の正体は**advance/inkでなくstyle-blind**(NoteCollision.cs:435-442の警告コメント「次のstyleが来たら黙って間違う」が的中)。修正=⑴Extract-EmmentalerMetrics.pyにdiamond/cross等のstyle別notehead箱を追加+再生成 ⑵GetNoteheadBBoxのstyle-aware化 ⑶NoteCollisionの2呼び出し元(collect時StaffAccidentalColumns/layout時CalculateVoiceOffsets)へstyle配線。collision-seconds.lyは通常頭のみ=この修正と独立に処理可能"
     },
     "collision-head-chords.ly": {
       "category": "scheme",
