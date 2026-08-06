@@ -58,6 +58,65 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第99セッション第16便（＝**beamlet-test.ly の open を返済＝fixed 第 9 号**。
+**BeamingPattern の tuplet span 移植**——第15便が自己申告していた債務そのもの）。
+
+⚠️ **仕事は 1 commit**（`7e4a08c0`・Core 3 file + テスト + status）＋ handoff。**push 禁止継続**。
+
+★★★ **① 移植の中身**（第15便の計画どおり・全部字面）:
+- **`BeamingPattern.TupletDescription`**＝LP `Tuplet_description` の鏡（Start/Stop/Num/Den/
+  Parent・**参照同一性が要るので class**——LP はポインタ比較）。⚠️⚠️ **num/den は
+  \tuplet 表記の逆**: `\tuplet 3/2` → numerator 2・denominator 3
+  （ly/music-functions-init.ly:2488-2494 `'numerator (cdr ratio)` で裏取り）。
+  **factor num/den が written→actual**。Lily# bracket（表示 3 が Numerator）とは**逆順に配線**。
+- **`SetRhythmicImportance` = span スタック**（beaming-pattern.cc:292-404）: LinkedList の
+  front が最深 open span・expiry で factor を巻き戻し・**span は「開始より真に過ぎた」stem で
+  初めて開く**（＝span 開始上の stem は親 context で格付け）。`SpanPosition`（:203-289）は
+  beat_base=(stop−start)/den・beat_length=den の奇数部（六連符→3）。
+- **at_span_start/stop は moment 計算に置換**（:524-540 max/min クランプの字面）。
+  index の HashSet 2 つ（tupletStarts/Stops）は**廃止**。
+- **配線**: `BeamDetector.BuildTupletSpans`（voice 単位・小節 walk で bracket→moment 解決・
+  親は同小節の containment）→ `BeamletCounts` が member ごとに最深 span を
+  `TupletDescription` 化（**group ごとに 1 個・identity 維持**）。
+- ⚠️ **踏んだ穴**: probe 経路（`MeasureCollector.ResolveBeamStemDirections:1713`）は
+  **コレクタ全体の bracket を渡す**——他 staff の index で `BuildTupletSpans` が範囲外死。
+  旧 HashSet は他人の key が混ざっても当たらないだけだった。**範囲外 bracket は skip**
+  （寛容さを継承）。⚠️ **in-range の他 voice bracket が index 衝突で紛れる穴は旧仕様から
+  継承・未観測のまま**（直すなら probe に staff/voice filter——観測者を先に）。
+
+★★ **② 実測（すべて LP 2.26.0 の実レンダと突き合わせ）**:
+- **t8 の a32 stub が右へ返った**: stub左端−桁左端 = **3.98ss vs LP 4.04**（基準 655f…ではなく
+  HEAD stash の陽性対照で **2.95**＝起票の Δ1.09 がちょうど閉じた）。指紋 28==28 不変・
+  桁 Y quant 3 桁一致不変・**他 13 箇所の stub 向きは 1 つも動かない**（t1-t7 手計算トレース
+  でも同結論——t2 は measure position 1/4 起点なので旧コードでも RIGHT だった。
+  **「グループの moment は小節内位置」を忘れて 0 起点で手計算すると偽の乖離が出る**）。
+- **単体の対**: `BeamletTupletSpanTests` に t8 の 3 本（span 有→(1,3)・無→(3,1)＝陽性対照・
+  a16. は両方 LEFT で不動）。既存 2 本は `TupletDescription` に書き換え。
+- **perf**（訊かれる前に測った・worktree HEAD vs 作業ツリー・Release・交互 min-of-6・両順序・
+  perf-plain）: **+3.2% / −6.4%＝符号が位置に付く**（床以下・系統無し）。
+- **snapshot/台帳/ledger 全緑**（tuplet 系 15 本は ① の範囲外死で一時全滅→skip 修正で復帰）。
+
+★ **③ 引用ラチェットの教訓**: `CitationsThatNameNothing_DoNotGrow` は
+**「LILYPOND-REF と同じ行の・アドレスより後ろ」**しか読まない。複数行 doc の 2 行目に
+シンボルを書いても無名扱い（742→745 で落ちて 6 件命名し直した）。
+
+⚠️ **観測者の穴（正直な札）**: span の **expiry で factor を巻き戻す枝**と**nested の親チェーン
+挿入**は、単体の観測者がまだ無い（t8 は挿入+factor しか踏まない。sibling tuplet 連結や
+nested tuplet の corpus 本が来たら踏まれる——beam-subdivide 系は scheme で不可）。
+
+**frontier = bookpart-variable.ly**（pending 先頭。bass-figure 系という第15便の推測は外れ）。
+**open の残り 1 = automatic-polyphony-tabstaff.ly**（tab staff が primary voice しか読まない
+設計事項）。plain 322 / 処理済 **37**（fixed 9・exact 7・skip 20・open 1＝
+**beamlet-test は open→fixed の移動なので総数は動かない**。実測:
+`state -notin 'pending'` で 37）。
+
+未 push **23**（この handoff で 24。`git rev-list --count origin/master..master` で数え直す。
+**⚠️ push しない**）・テスト **4106 passed / 0 failed / 4 skipped**（+3 単体）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning。snapshot 動き 0 枚。**
+
+## 以下は第99セッション第15便の経緯
+
 最終更新 第99セッション第15便（＝**lp-regression キュー続行**。**beamlet-test.ly = open**
 ——既知債務（BeamingPattern の tuplet span 未移植）に**観測者がついた**）。
 

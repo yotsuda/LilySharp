@@ -96,34 +96,27 @@ internal sealed class BeamDetector
         var beamGroups = new List<BeamGroup>();
         var consumed = new HashSet<(int measureIndex, int itemIndex)>();
 
-        // The two ENDS of each tuplet span, which a beam that runs through one must not hang
-        // a beamlet out of: LilyPond keeps such a stem's flag CENTER and then clamps its
-        // outward count to the neighbour's.
-        // LILYPOND-REF: lily/beaming-pattern.cc:524-540 at_span_start / at_span_stop.
+        // Every tuplet bracket resolved to its TIME SPAN — what LilyPond's beam engraver
+        // hands the pattern as Tuplet_description. A beam that runs through one keeps the
+        // boundary stems' flags CENTER and clamps their outward beamlets to the neighbour's
+        // (lily/beaming-pattern.cc:524-540 at_span_start / at_span_stop), and ranks the
+        // stems INSIDE one in WRITTEN proportions through the span stack
+        // (BeamingPattern.SetRhythmicImportance).
         //
-        // ⚠️ THESE ARE THE ONLY THING A TUPLET DOES TO A BEAM. Two further sets used to live
-        // here — one that ended a beam at every tuplet edge, one that suppressed the beat cut
-        // inside a tuplet — and both were LILYSHARP-OWN inventions, falsified by measurement
+        // ⚠️ A TUPLET STILL NEVER BOUNDS A BEAM. Two sets used to live here — one that ended
+        // a beam at every tuplet edge, one that suppressed the beat cut inside a tuplet —
+        // and both were LILYSHARP-OWN inventions, falsified by measurement
         // (ledger beam.grouping.sixteenth-triplets.groups: LilyPond beams sixteenth triplets
         // in four groups of six, straight across the edge between two tuplets, where Lily#
         // drew eight of three; beam.grouping.offbeat-triplet.first-group: LilyPond runs one
         // beam of five through both edges of an off-beat triplet). What ends a beam between a
         // triplet and the plain eighths after it is the exception LOOKUP changing with the
         // run's shortest duration, which the one-pass check below now performs.
-        var tupletStarts = new HashSet<(int measureIndex, int itemIndex)>();
-        var tupletStops = new HashSet<(int measureIndex, int itemIndex)>();
-        if (!tupletBrackets.IsDefaultOrEmpty)
-        {
-            foreach (var bracket in tupletBrackets)
-            {
-                tupletStarts.Add((bracket.MeasureIndex, bracket.StartNoteIndex));
-                tupletStops.Add((bracket.MeasureIndex, bracket.EndNoteIndex));
-            }
-        }
+        var tupletSpans = BuildTupletSpans(voice, timeSignature, tupletBrackets);
 
         // Pass 1: cross-measure manual beams.
         DetectCrossMeasureManualBeams(voice, timeSignature, beamGroups, consumed,
-            tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
+            tupletSpans, voiceIndex, forceStemUpAt);
 
         // Pass 2: single-measure detection (skipping consumed items). The beam
         // grouping depends on the meter, which a mid-piece \time changes — track
@@ -139,7 +132,7 @@ internal sealed class BeamDetector
             foreach (var item in measure.Items)
                 if (item is TimeSignatureChangeItem tsc)
                     effectiveTimeSig = tsc.NewTime;
-            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
+            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletSpans, voiceIndex, forceStemUpAt);
         }
 
         return beamGroups.ToImmutableArray();
@@ -160,8 +153,7 @@ internal sealed class BeamDetector
         TimeSignature timeSignature,
         List<BeamGroup> beamGroups,
         HashSet<(int, int)> consumed,
-        HashSet<(int, int)>? tupletStarts = null,
-        HashSet<(int, int)>? tupletStops = null,
+        IReadOnlyList<TupletSpan>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
@@ -205,7 +197,7 @@ internal sealed class BeamDetector
                     continue; // within-measure: per-measure pass handles it.
 
                 BuildCrossMeasureBeamGroup(voice, timeSignature, startM, startI, mi, ii, beamGroups,
-                    consumed, tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
+                    consumed, tupletSpans, voiceIndex, forceStemUpAt);
             }
         }
     }
@@ -226,8 +218,7 @@ internal sealed class BeamDetector
         int endMeasure, int endItem,
         List<BeamGroup> beamGroups,
         HashSet<(int, int)> consumed,
-        HashSet<(int, int)>? tupletStarts = null,
-        HashSet<(int, int)>? tupletStops = null,
+        IReadOnlyList<TupletSpan>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
@@ -292,7 +283,7 @@ internal sealed class BeamDetector
             var (item, itemIdx, pos, mi) = allEntries[i];
             moments[i] = (item, pos + new Fraction(mi - startMeasure) * options.Period, mi, itemIdx);
         }
-        var beamlets = BeamletCounts(moments, options, tupletStarts, tupletStops);
+        var beamlets = BeamletCounts(moments, options, tupletSpans);
 
         var members = new List<BeamMember>(allEntries.Count);
         var restStems = new List<BeamRestStem>();
@@ -421,8 +412,7 @@ internal sealed class BeamDetector
         TimeSignature timeSig,
         List<BeamGroup> beamGroups,
         HashSet<(int, int)>? consumed = null,
-        HashSet<(int, int)>? tupletStarts = null,
-        HashSet<(int, int)>? tupletStops = null,
+        IReadOnlyList<TupletSpan>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
@@ -432,7 +422,7 @@ internal sealed class BeamDetector
 
         // Phase 0: Detect manual beam groups (c8[ d e f])
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamOptions, beamGroups,
-            tupletStarts, tupletStops, voiceIndex, forceStemUpAt);
+            tupletSpans, voiceIndex, forceStemUpAt);
 
         var stems = new List<(MusicItem item, int index, Fraction startPos)>();
         // LILYPOND-REF: lily/auto-beam-engraver.cc:241 junk_beam / :278 end_beam — shortest_dur_
@@ -449,7 +439,7 @@ internal sealed class BeamDetector
         {
             if (stems.Count >= 2)
                 beamGroups.Add(CreateBeamGroup(stems, measureIndex, beamOptions,
-                    tupletStarts, tupletStops, voiceIndex, forceStemUpAt));
+                    tupletSpans, voiceIndex, forceStemUpAt));
             stems.Clear();
             shortest = Fraction.Quarter;
         }
@@ -475,7 +465,7 @@ internal sealed class BeamDetector
                 var tail = stems.GetRange(i + 1, stems.Count - (i + 1));
                 if (head.Count >= 2)
                     beamGroups.Add(CreateBeamGroup(head, measureIndex, beamOptions,
-                        tupletStarts, tupletStops, voiceIndex, forceStemUpAt));
+                        tupletSpans, voiceIndex, forceStemUpAt));
                 stems.Clear();
                 stems.AddRange(tail);
                 i = 0;
@@ -535,7 +525,7 @@ internal sealed class BeamDetector
 
     private BeamGroup CreateBeamGroup(List<(MusicItem item, int index, Fraction startPos)> group, int measureIndex,
         BeamingPattern.Options beamOptions,
-        HashSet<(int, int)>? tupletStarts = null, HashSet<(int, int)>? tupletStops = null,
+        IReadOnlyList<TupletSpan>? tupletSpans = null,
         int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null)
     {
         var members = new List<BeamMember>();
@@ -544,7 +534,7 @@ internal sealed class BeamDetector
         var moments = new (MusicItem Item, Fraction Moment, int Measure, int Index)[group.Count];
         for (int i = 0; i < group.Count; i++)
             moments[i] = (group[i].item, group[i].startPos, measureIndex, group[i].index);
-        var beamlets = BeamletCounts(moments, beamOptions, tupletStarts, tupletStops);
+        var beamlets = BeamletCounts(moments, beamOptions, tupletSpans);
 
         for (int i = 0; i < group.Count; i++)
         {
@@ -651,28 +641,180 @@ internal sealed class BeamDetector
     /// <remarks>
     /// The one door to <see cref="BeamingPattern"/> — both the per-measure and the
     /// cross-measure builder come through here, so the two cannot answer differently.
-    /// A member is at a tuplet span's boundary when it is that tuplet's first or last note;
-    /// the group's own first and last members are excluded because LilyPond clips the test to
-    /// the beam (<c>max(tuplet_start, start_moment (0))</c>), and because the passes that
-    /// read it never touch an outer stem anyway.
-    /// LILYPOND-REF: lily/beaming-pattern.cc:524-540 at_span_start / at_span_stop.
+    /// Each member carries its INNERMOST tuplet span as a
+    /// <see cref="BeamingPattern.TupletDescription"/>; the pattern itself derives the span
+    /// boundaries and the written-proportion ranking from it. The spans' moments are
+    /// measure-relative, and the beam's run from the measure holding its first stem with a
+    /// whole period added per bar crossed — the same shift
+    /// <see cref="BuildCrossMeasureBeamGroup"/> gives the stems — so a span's Start meets
+    /// its first note's stem moment exactly. One description per span per GROUP, parents
+    /// included, because the pattern's span stack compares them by identity.
     /// </remarks>
     private (int Left, int Right)[] BeamletCounts(
         IReadOnlyList<(MusicItem Item, Fraction Moment, int Measure, int Index)> members,
         BeamingPattern.Options options,
-        HashSet<(int, int)>? tupletStarts, HashSet<(int, int)>? tupletStops)
+        IReadOnlyList<TupletSpan>? tupletSpans)
     {
+        int firstMeasure = members.Count > 0 ? members[0].Measure : 0;
+        Dictionary<TupletSpan, BeamingPattern.TupletDescription>? described = null;
+
+        BeamingPattern.TupletDescription Describe(TupletSpan span)
+        {
+            described ??= new Dictionary<TupletSpan, BeamingPattern.TupletDescription>();
+            if (!described.TryGetValue(span, out var d))
+            {
+                Fraction shift = new Fraction(span.MeasureIndex - firstMeasure) * options.Period;
+                d = new BeamingPattern.TupletDescription(
+                    span.Start + shift, span.Stop + shift, span.LpNumerator, span.LpDenominator,
+                    span.Parent is null ? null : Describe(span.Parent));
+                described[span] = d;
+            }
+            return d;
+        }
+
+        TupletSpan? InnermostSpan(int measure, int index)
+        {
+            if (tupletSpans is null)
+                return null;
+            TupletSpan? best = null;
+            foreach (var s in tupletSpans)
+                if (s.MeasureIndex == measure && s.StartIndex <= index && index <= s.EndIndex
+                    && (best is null || s.NestingDepth > best.NestingDepth))
+                    best = s;
+            return best;
+        }
+
         var infos = new BeamingPattern.Element[members.Count];
         for (int i = 0; i < members.Count; i++)
         {
             var m = members[i];
+            var span = InnermostSpan(m.Measure, m.Index);
             infos[i] = new BeamingPattern.Element(
                 m.Moment, GetDuration(m.Item), GetBeamCount(m.Item),
-                AtSpanStart: i > 0 && tupletStarts?.Contains((m.Measure, m.Index)) == true,
-                AtSpanStop: i < members.Count - 1 && tupletStops?.Contains((m.Measure, m.Index)) == true,
+                Tuplet: span is null ? null : Describe(span),
                 Invisible: m.Item is RestItem);
         }
         return BeamingPattern.Beamify(infos, options);
+    }
+
+    /// <summary>
+    /// A tuplet bracket resolved to its time span — the voice-level input from which
+    /// <see cref="BeamletCounts"/> builds each group's
+    /// <see cref="BeamingPattern.TupletDescription"/>s. Start and Stop are in the bracket's
+    /// OWN measure's moments (a pickup's first item starts mid-bar, as everywhere else).
+    /// </summary>
+    private sealed class TupletSpan(
+        int measureIndex, int startIndex, int endIndex, int nestingDepth,
+        Fraction start, Fraction stop, int lpNumerator, int lpDenominator)
+    {
+        public int MeasureIndex { get; } = measureIndex;
+        public int StartIndex { get; } = startIndex;
+        public int EndIndex { get; } = endIndex;
+        public int NestingDepth { get; } = nestingDepth;
+        public Fraction Start { get; } = start;
+        public Fraction Stop { get; } = stop;
+        /// <summary>LilyPond's <c>numerator_</c> — see
+        /// <see cref="BeamingPattern.TupletDescription"/> for the reversal warning.</summary>
+        public int LpNumerator { get; } = lpNumerator;
+        public int LpDenominator { get; } = lpDenominator;
+        /// <summary>The enclosing span; linked after construction because siblings may
+        /// precede their parent in the bracket list.</summary>
+        public TupletSpan? Parent { get; set; }
+    }
+
+    /// <summary>
+    /// Resolves every tuplet bracket of a voice to its time span, parents linked by
+    /// containment. Null when the voice has no tuplets, so the common path stays free.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The moments come from the same walk the beam builders use — running positions from
+    /// <see cref="MeasureStartPosition"/> over <see cref="GetDuration"/>, under the meter in
+    /// effect at that measure (tracked exactly as <see cref="DetectBeamGroupsInMeasure"/>'s
+    /// caller tracks it) — so a span's Start IS its first note's stem moment.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE BRACKET'S RATIO IS HANDED OVER REVERSED: LilyPond's Tuplet_description stores
+    /// <c>\tuplet 3/2</c> as numerator 2, denominator 3 (ly/music-functions-init.ly:2488-2494
+    /// — <c>'numerator (cdr ratio)</c>), while <see cref="TupletBracketItem"/> keeps the
+    /// printed 3 in Numerator. So LpNumerator takes the bracket's Denominator and
+    /// LpDenominator its Numerator.
+    /// </para>
+    /// <para>
+    /// A parent is the DEEPEST shallower bracket of the same measure whose index range
+    /// contains the child's — <c>Tuplet_description::parent_</c>. Brackets never span a bar
+    /// line in this model, so containment within the measure is the whole test.
+    /// </para>
+    /// </remarks>
+    private List<TupletSpan>? BuildTupletSpans(
+        Voice voice, TimeSignature timeSignature, ImmutableArray<TupletBracketItem> brackets)
+    {
+        if (brackets.IsDefaultOrEmpty)
+            return null;
+
+        var spans = new List<TupletSpan>(brackets.Length);
+        var effectiveTimeSig = timeSignature;
+        for (int mi = 0; mi < voice.Measures.Length; mi++)
+        {
+            var measure = voice.Measures[mi];
+            foreach (var item in measure.Items)
+                if (item is TimeSignatureChangeItem tsc)
+                    effectiveTimeSig = tsc.NewTime;
+
+            bool anyBracketHere = false;
+            foreach (var b in brackets)
+                if (b.MeasureIndex == mi)
+                {
+                    anyBracketHere = true;
+                    break;
+                }
+            if (!anyBracketHere)
+                continue;
+
+            // positions[k] = moment of measure.Items[k]; one extra entry so a bracket
+            // closing on the measure's last item still has its stop.
+            var options = BeamingPattern.Options.For(effectiveTimeSig);
+            var positions = new Fraction[measure.Items.Length + 1];
+            Fraction position = MeasureStartPosition(measure, options);
+            for (int k = 0; k < measure.Items.Length; k++)
+            {
+                positions[k] = position;
+                position += GetDuration(measure.Items[k]);
+            }
+            positions[measure.Items.Length] = position;
+
+            foreach (var b in brackets)
+            {
+                if (b.MeasureIndex != mi)
+                    continue;
+                // A bracket whose indices do not address this voice's items is another
+                // stream's: the stem-direction probe (MeasureCollector
+                // .ResolveBeamStemDirections) hands over the whole collector's bracket
+                // list, and the index-set representation this replaced was naturally
+                // tolerant of foreign keys — out-of-range ones just never matched. Keep
+                // that tolerance rather than crash on them.
+                if (b.StartNoteIndex < 0 || b.EndNoteIndex < b.StartNoteIndex
+                    || b.EndNoteIndex >= measure.Items.Length)
+                    continue;
+                spans.Add(new TupletSpan(
+                    mi, b.StartNoteIndex, b.EndNoteIndex, b.NestingDepth,
+                    positions[b.StartNoteIndex], positions[b.EndNoteIndex + 1],
+                    lpNumerator: b.Denominator, lpDenominator: b.Numerator));
+            }
+        }
+
+        foreach (var s in spans)
+        {
+            TupletSpan? parent = null;
+            foreach (var t in spans)
+                if (t.MeasureIndex == s.MeasureIndex && t.NestingDepth < s.NestingDepth
+                    && t.StartIndex <= s.StartIndex && s.EndIndex <= t.EndIndex
+                    && (parent is null || t.NestingDepth > parent.NestingDepth))
+                    parent = t;
+            s.Parent = parent;
+        }
+
+        return spans;
     }
 
     /// <summary>auto-knee-gap, in staff spaces.</summary>
@@ -957,8 +1099,7 @@ internal sealed class BeamDetector
         int measureIndex,
         BeamingPattern.Options beamOptions,
         List<BeamGroup> beamGroups,
-        HashSet<(int, int)>? tupletStarts = null,
-        HashSet<(int, int)>? tupletStops = null,
+        IReadOnlyList<TupletSpan>? tupletSpans = null,
         int voiceIndex = 0,
         Func<int, bool?>? forceStemUpAt = null)
     {
@@ -1024,7 +1165,7 @@ internal sealed class BeamDetector
                 if (visibleCount >= 2)
                 {
                     beamGroups.Add(CreateBeamGroup(group, measureIndex, beamOptions,
-                        tupletStarts, tupletStops, voiceIndex, forceStemUpAt));
+                        tupletSpans, voiceIndex, forceStemUpAt));
                     ranges.Add((start, end));
                 }
 

@@ -838,15 +838,15 @@ internal sealed class LayoutEngine
         var restShiftsBuilder = ImmutableDictionary.CreateBuilder<RestShiftKey, double>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
-            // Beam detection breaks at tuplet boundaries by note index, so scope
-            // the tuplets to THIS staff — a tuplet on another staff must not split
-            // this staff's beams at a colliding index.
+            // Beam detection reads tuplet brackets by (measure, note index), so scope
+            // the tuplets to THIS staff — a tuplet on another staff must not attach
+            // itself to this staff's beams at a colliding index.
             var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
             var staffScore = new Score(
                 staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                 ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                // Beam detection must see tuplet spans: auto beams break at
-                // tuplet boundaries (BeamDetector).
+                // Beam detection must see tuplet spans: they clamp beamlets at span
+                // boundaries and rank stems in written proportions (BeamDetector).
                 tupletBrackets: staffTuplets);
             // Beam AND slur/tie/glissando detection run PER VOICE, so a polyphonic
             // staff must expose all its voices (not just the primary) — else voice 2's

@@ -57,9 +57,10 @@ internal static class BeamingPattern
     /// holding the group's first stem.</param>
     /// <param name="Duration">The stem's own length, dots included.</param>
     /// <param name="BeamCount">Beams the note carries: <c>duration_log - 2</c>.</param>
-    /// <param name="AtSpanStart">This stem begins a tuplet span inside the beam
-    /// (<c>Beaming_pattern::at_span_start</c>, :524-531).</param>
-    /// <param name="AtSpanStop">This stem ends one (<c>at_span_stop</c>, :532-540).</param>
+    /// <param name="Tuplet">The INNERMOST tuplet span the stem belongs to, or null outside
+    /// any tuplet — <c>Beam_rhythmic_element</c>'s <c>tuplet_</c>. The span boundary tests
+    /// (<see cref="AtSpanStart"/> / <see cref="AtSpanStop"/>) and the span stack in
+    /// <see cref="SetRhythmicImportance"/> both read it.</param>
     /// <param name="Invisible">A stem with nothing to hang beams from — a beamed REST.
     /// LilyPond gives every beamed rest a headless Stem (Rest carries the rhythmic-head
     /// interface the stem engraver acknowledges), and a headless stem answers
@@ -67,7 +68,50 @@ internal static class BeamingPattern
     /// pattern (lily/template-engraver-for-beams.cc:69-78 add_stem).</param>
     internal readonly record struct Element(
         Fraction StartMoment, Fraction Duration, int BeamCount,
-        bool AtSpanStart = false, bool AtSpanStop = false, bool Invisible = false);
+        TupletDescription? Tuplet = null, bool Invisible = false);
+
+    /// <summary>
+    /// A tuplet span as the pattern reads it — LilyPond's <c>Tuplet_description</c>,
+    /// restricted to the five fields the pattern consumes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: lily/include/tuplet-description.hh:38-44 start_moment_ / stop_moment_ /
+    /// <c>parent_</c> for nesting / <c>numerator_</c> and <c>denominator_</c>.
+    /// Start and Stop are in the same moment convention as the stems' (see the type's
+    /// remarks); LilyPond's are absolute Moments read through <c>tuplet_start ()</c> /
+    /// <c>tuplet_stop ()</c> (lily/tuplet-description.cc:51-64), and every use here compares
+    /// them against stem moments, so the constant offset cancels the same way.
+    /// </para>
+    /// <para>
+    /// ⚠️ NUMERATOR AND DENOMINATOR ARE LILYPOND'S EVENT FIELDS, WHICH ARE THE WRITTEN RATIO
+    /// REVERSED: <c>\tuplet 3/2</c> stores numerator 2, denominator 3
+    /// (ly/music-functions-init.ly:2488-2494 — <c>'numerator (cdr ratio)</c>), so
+    /// Numerator/Denominator is the factor that scales WRITTEN time into ACTUAL time (2/3
+    /// for a triplet) and Denominator is the printed digit. A Lily# TupletBracketItem holds
+    /// the printed ratio, so the wiring in BeamDetector swaps its two fields.
+    /// </para>
+    /// <para>
+    /// A CLASS rather than a record: the span stack compares descriptions by OBJECT IDENTITY
+    /// exactly as LilyPond compares <c>Tuplet_description</c> pointers
+    /// (beaming-pattern.cc:309-346), and a record's value equality could conflate two
+    /// distinct spans.
+    /// </para>
+    /// </remarks>
+    internal sealed class TupletDescription(
+        Fraction start, Fraction stop, int numerator, int denominator, TupletDescription? parent)
+    {
+        /// <summary><c>tuplet_start ()</c>.</summary>
+        public Fraction Start { get; } = start;
+        /// <summary><c>tuplet_stop ()</c>.</summary>
+        public Fraction Stop { get; } = stop;
+        /// <summary><c>numerator_</c> — the written ratio's SECOND number (2 in 3/2).</summary>
+        public int Numerator { get; } = numerator;
+        /// <summary><c>denominator_</c> — the printed digit (3 in 3/2).</summary>
+        public int Denominator { get; } = denominator;
+        /// <summary><c>parent_</c> — the enclosing tuplet, for nested spans.</summary>
+        public TupletDescription? Parent { get; } = parent;
+    }
 
     /// <summary>
     /// The beat grid the rule reads — LilyPond's <c>Beaming_options</c>, restricted to the
@@ -292,7 +336,7 @@ internal static class BeamingPattern
             int leftCount = beamCount[i - 1];
             int rightCount = beamCount[i + 1];
 
-            if (infos[i].AtSpanStart || infos[i].AtSpanStop
+            if (AtSpanStart(infos, i) || AtSpanStop(infos, i)
                 || beamCount[i] <= Math.Min(leftCount, rightCount))
                 continue;
 
@@ -371,9 +415,9 @@ internal static class BeamingPattern
         // beamlet must not stick out of the tuplet its stem belongs to.
         for (int i = 1; i < n - 1; i++)
         {
-            if (infos[i].AtSpanStart)
+            if (AtSpanStart(infos, i))
                 counts[i].Left = Math.Min(counts[i].Left, counts[i - 1].Right);
-            else if (infos[i].AtSpanStop)
+            else if (AtSpanStop(infos, i))
                 counts[i].Right = Math.Min(counts[i].Right, counts[i + 1].Left);
         }
 
@@ -382,6 +426,33 @@ internal static class BeamingPattern
 
     /// <summary>End of a stem's own note — <c>Beaming_pattern::end_moment</c> (:518-522).</summary>
     private static Fraction EndMoment(Element info) => info.StartMoment + info.Duration;
+
+    /// <summary>
+    /// This stem stands on the first moment of its tuplet span — or of the whole beam, when
+    /// the tuplet opened before it (or there is none).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beaming-pattern.cc:524-531 <c>at_span_start</c> — the tuplet's
+    /// start clamped to the beam's (<c>max (tuplet_start, start_moment (0))</c>): a beam
+    /// picking up MID-tuplet treats its own first stem as the boundary. Without a tuplet the
+    /// test is against the first stem's moment, which no later stem can equal.
+    /// </remarks>
+    private static bool AtSpanStart(IReadOnlyList<Element> infos, int i)
+    {
+        Fraction first = infos[0].StartMoment;
+        return infos[i].StartMoment
+            == (infos[i].Tuplet is { } t && t.Start > first ? t.Start : first);
+    }
+
+    /// <summary>This stem's note ends its tuplet span — <c>at_span_stop</c> (:532-540), the
+    /// mirror of <see cref="AtSpanStart"/> with the tuplet's stop clamped to the last stem's
+    /// end.</summary>
+    private static bool AtSpanStop(IReadOnlyList<Element> infos, int i)
+    {
+        Fraction last = EndMoment(infos[infos.Count - 1]);
+        return EndMoment(infos[i])
+            == (infos[i].Tuplet is { } t && t.Stop < last ? t.Stop : last);
+    }
 
     /// <summary>
     /// How significant the moment each stem falls on is; smaller is more significant.
@@ -394,63 +465,111 @@ internal static class BeamingPattern
     /// within its beat, so a stem on a half-beat outranks one on a quarter-beat.
     /// </para>
     /// <para>
-    /// ⚠️ THE TUPLET SPAN CONTEXTS ARE NOT PORTED (:296-347, the <c>Span_position</c> list and
-    /// <c>current_factor</c>), and Lily# has no tuplet span in its beam model to port them
-    /// onto. The moments themselves agree with LilyPond's: a Lily# item carries its ACTUAL
-    /// duration, scaled by the tuplet's base/ratio (MeasureCollector.ProcessTuplet —
-    /// <c>tuplet 3/2 { c8 c c } c2.</c> fills one 4/4 bar), exactly as LilyPond's do. What is
-    /// missing is the DIVISION by <c>current_factor</c>, with which LilyPond reads a stem
-    /// inside a tuplet in WRITTEN proportions again; this port reads it in actual ones.
-    /// So the divergence is confined to a beam INSIDE a tuplet whose interior stem exceeds
-    /// both neighbours AND whose neighbours' counts are equal AND which is ambiguous on the
-    /// beat test: only then does the answer come from here at all. NO POINT OBSERVES IT —
-    /// the six ledger books are all in plain 4/4 — so it would have to be measured before it
-    /// could be closed. It disappears when the beam model carries tuplet spans.
+    /// The span stack (:294-347): every stem is ranked inside the DEEPEST tuplet span that
+    /// has already opened — the front of the list. Spans expire when the stem reaches their
+    /// stop (:308-318) and open only once a stem stands STRICTLY past their start (:328), so
+    /// the stem ON a span's first moment is ranked by the PARENT context, as if it were the
+    /// whole child tuplet (:335-343, :353-357). <c>current_factor</c> follows the openings
+    /// and expiries (:299-302, :314-316, :332-333) and divides every moment back into
+    /// WRITTEN proportions — a triplet's middle eighth reads as an eighth again, not as a
+    /// twelfth. The observer for this whole block is LP regression beamlet-test.ly's last
+    /// bar, <c>tuplet 5/4 {a8 a32 a8 a16. a8 a8}</c>: the a32 stands on a span moment
+    /// (importance 1, against the next stem's 3), so its two beamlets point RIGHT; with the
+    /// root span alone the tie-break reads 1 against 1 and pointed them LEFT.
     /// </para>
     /// <para>
-    /// ⚠️ Two more branches are left out because their options are unsettable in Lily#:
+    /// ⚠️ Two branches are left out because their options are unsettable in Lily#:
     /// <c>beamMaximumSubdivision</c> (:374-378, infinity by default, so the <c>isfinite</c>
-    /// test is false) and <c>respectIncompleteBeams</c> (:395-400, false by default).
+    /// test is false) and <c>respectIncompleteBeams</c> (:395-400, false by default —
+    /// which is also why <see cref="SpanPosition"/> does not store <c>end_moment_</c>,
+    /// whose only reader that branch is).
     /// </para>
     /// </remarks>
     private static int[] SetRhythmicImportance(IReadOnlyList<Element> infos, Options options)
     {
         var importance = new int[infos.Count];
 
-        // LILYPOND-REF: lily/beaming-pattern.cc:296-298 span_contexts — the ROOT Span_position,
-        // whose beat base is the whole PERIOD (not the beat) and whose beat length is 1.
-        // Without tuplets it is the only span there ever is.
-        Fraction current = Fraction.Zero, next = Fraction.Zero;
-        int momentNum = -1;
+        // LILYPOND-REF: lily/beaming-pattern.cc:294-298 span_contexts — never empty: the
+        // ROOT span, whose beat base is the whole PERIOD (not the beat), whose beat length
+        // is 1, and whose start is the measure's own origin — moment zero in this port's
+        // convention (see the type's remarks). The front of the list is the deepest open span.
+        var spans = new LinkedList<SpanPosition>();
+        spans.AddFirst(new SpanPosition(options.Period, 1, Fraction.Zero));
+        // LILYPOND-REF: lily/beaming-pattern.cc:299-302 current_factor — the stems' own
+        // duration factors are not sufficient, so the factor is maintained by hand from the
+        // spans opening and expiring.
+        Fraction currentFactor = Fraction.Whole;
 
         for (int i = 0; i < infos.Count; i++)
         {
             Fraction stemPos = infos[i].StartMoment;
 
-            // LILYPOND-REF: lily/beaming-pattern.cc:258-267 Span_position::update.
-            while (next <= stemPos)
+            // LILYPOND-REF: lily/beaming-pattern.cc:308-318 tuplet_stop / pop_front — delete
+            // expired tuplet spans, undoing their factors. The root's Tuplet is null, so the
+            // walk always stops.
+            while (spans.First!.Value.Tuplet is { } curTuplet)
             {
-                current = next;
-                next += options.Period;
-                momentNum++;
+                if (curTuplet.Stop > stemPos)
+                    break;
+                currentFactor = currentFactor / new Fraction(curTuplet.Numerator)
+                    * new Fraction(curTuplet.Denominator);
+                spans.RemoveFirst();
             }
 
-            if (stemPos == current)
+            // LILYPOND-REF: lily/beaming-pattern.cc:320-347 tuplet_start / emplace_after —
+            // open the stem's not-yet-open
+            // spans, the deepest ending up in front. The parent-chain walk from the stem's
+            // innermost tuplet must reach the front's tuplet: a span still in front contains
+            // this stem's moment, so it is on the stem's chain. For i > 0 the walk may stop
+            // at the first span not yet strictly begun, because such a stem is guaranteed to
+            // be that span's first note (:335-343); the first stem of the BEAM is not — the
+            // beam may pick up mid-tuplet — so its whole chain is examined.
+            {
+                LinkedListNode<SpanPosition>? insertAfter = null;
+                TupletDescription? currentParent = spans.First!.Value.Tuplet;
+                TupletDescription? tupletIt = infos[i].Tuplet;
+                while (!ReferenceEquals(tupletIt, currentParent))
+                {
+                    if (tupletIt!.Start < stemPos)
+                    {
+                        var opened = new SpanPosition(tupletIt);
+                        insertAfter = insertAfter is null
+                            ? spans.AddFirst(opened)
+                            : spans.AddAfter(insertAfter, opened);
+                        currentFactor = currentFactor * new Fraction(tupletIt.Numerator)
+                            / new Fraction(tupletIt.Denominator);
+                    }
+                    else if (i > 0)
+                        break;
+
+                    tupletIt = tupletIt.Parent;
+                }
+            }
+
+            // LILYPOND-REF: lily/beaming-pattern.cc:349-351 span_contexts.front — the span
+            // whose moments rank this stem, walked up to it.
+            SpanPosition curPosition = spans.First!.Value;
+            curPosition.Update(stemPos);
+
+            if (stemPos == curPosition.CurrentMoment)
             {
                 // LILYPOND-REF: lily/beaming-pattern.cc:358-363 rhythmic_importance_for_length
-                // — a stem ON the period's own moment is ranked by the period's length,
+                // — a stem ON the span's own moment is ranked by the moment's WRITTEN length,
                 // lifted by the span's beat_level.
-                importance[i] = RhythmicImportanceForLength(next - current) - BeatLevel(momentNum);
+                importance[i] = RhythmicImportanceForLength(
+                        (curPosition.NextMoment - curPosition.CurrentMoment) / currentFactor)
+                    - curPosition.BeatLevel();
             }
             else
             {
-                // LILYPOND-REF: lily/beaming-pattern.cc:366-390 moment_relative_to_beat.
-                Fraction relative = stemPos - current;
+                // LILYPOND-REF: lily/beaming-pattern.cc:366-390 moment_relative_to_beat,
+                // read in written time.
+                Fraction relative = (stemPos - curPosition.CurrentMoment) / currentFactor;
                 importance[i] = RhythmicImportanceForPosition(relative);
-                // …and never finer than what is LEFT of the period, which is what keeps a
-                // sextuplet of six equal notes from subdividing after the second.
-                importance[i] = Math.Max(
-                    importance[i], RhythmicImportanceForLength(next - stemPos));
+                // …and never finer than what is LEFT of the span's moment, which is what
+                // keeps a sextuplet of six equal notes from subdividing after the second.
+                importance[i] = Math.Max(importance[i], RhythmicImportanceForLength(
+                    (curPosition.NextMoment - stemPos) / currentFactor));
             }
         }
 
@@ -458,12 +577,79 @@ internal static class BeamingPattern
     }
 
     /// <summary>
-    /// LILYPOND-REF: lily/beaming-pattern.cc:279-289 Span_position::beat_level.
-    /// The root span's beat length is 1, so the modulo is always zero and only the first
-    /// moment is exempt; every other is ranked by the lowest set bit of its index.
+    /// The walking beat position of one span layer — LilyPond's <c>Span_position</c>, one
+    /// per open tuplet span plus the root.
     /// </summary>
-    private static int BeatLevel(int momentNum)
-        => momentNum == 0 ? 0 : IntLog2(momentNum & -momentNum) + 1;
+    /// <remarks>
+    /// LILYPOND-REF: lily/beaming-pattern.cc:203-289 Span_position. A tuplet's beat base is
+    /// its actual length over its denominator — the actual length of one WRITTEN unit — and
+    /// its beat length is the odd part of the denominator (3 for a sextuplet), so
+    /// <see cref="BeatLevel"/> can rank the tuplet's own internal power-of-two structure.
+    /// <c>end_moment_</c> is not stored: its only reader is the unported
+    /// <c>respectIncompleteBeams</c> branch (see <see cref="SetRhythmicImportance"/>).
+    /// </remarks>
+    private sealed class SpanPosition
+    {
+        private readonly Fraction _beatBase;
+        private readonly int _beatLength; // stays constant
+        private Fraction _current, _next;
+        private int _momentNum = -1;
+
+        /// <summary>The span's tuplet; null for the root.</summary>
+        public TupletDescription? Tuplet { get; }
+
+        /// <summary>LILYPOND-REF: lily/beaming-pattern.cc:231-245 Span_position — the tuplet
+        /// constructor. current_moment_ starts at next_moment_'s value to be safe against a
+        /// negative tuplet start.</summary>
+        public SpanPosition(TupletDescription tuplet)
+        {
+            _beatBase = (tuplet.Stop - tuplet.Start) / new Fraction(tuplet.Denominator);
+            _beatLength = tuplet.Denominator / (tuplet.Denominator & -tuplet.Denominator);
+            _current = tuplet.Start;
+            _next = tuplet.Start;
+            Tuplet = tuplet;
+        }
+
+        /// <summary>LILYPOND-REF: lily/beaming-pattern.cc:246-255 Span_position — the root
+        /// constructor, instantiated only once.</summary>
+        public SpanPosition(Fraction beatBase, int beatLength, Fraction start)
+        {
+            _beatBase = beatBase;
+            _beatLength = beatLength;
+            _current = start;
+            _next = start;
+        }
+
+        /// <summary>LILYPOND-REF: lily/beaming-pattern.cc:257-267 Span_position::update —
+        /// must be called before each stem to align the moments.</summary>
+        public void Update(Fraction pos)
+        {
+            while (_next <= pos)
+            {
+                _current = _next;
+                _next += _beatBase;
+                _momentNum++;
+            }
+        }
+
+        public Fraction CurrentMoment => _current;
+        public Fraction NextMoment => _next;
+
+        /// <summary>
+        /// LILYPOND-REF: lily/beaming-pattern.cc:279-289 Span_position::beat_level —
+        /// incomplete 'beats' and the span's own first moment rank as level zero; a complete
+        /// beat is lifted by the lowest set bit of its index. The root's beat length is 1,
+        /// so for it the modulo is always zero and only the first moment is exempt.
+        /// </summary>
+        public int BeatLevel()
+        {
+            if (_momentNum == 0 || _momentNum % _beatLength != 0)
+                return 0;
+
+            int beatNum = _momentNum / _beatLength;
+            return IntLog2(beatNum & -beatNum) + 1;
+        }
+    }
 
     /// <summary>LILYPOND-REF: lily/beaming-pattern.cc:81-85 <c>rhythmic_importance_for_position</c>.</summary>
     private static int RhythmicImportanceForPosition(Fraction r)

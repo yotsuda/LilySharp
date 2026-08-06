@@ -22,32 +22,37 @@ using Xunit;
 namespace LilySharp.Tests.LpFidelity;
 
 /// <summary>
-/// A beamlet must not hang out of the tuplet its stem belongs to.
+/// A beamlet must not hang out of the tuplet its stem belongs to, and a stem inside a
+/// tuplet is ranked in WRITTEN proportions.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The <c>beam.beamlet.*</c> ledger points hold the six shapes of the flag-direction rule
 /// against real LilyPond, and every one of their books is plain 4/4 with no tuplet in it.
-/// This is the one branch of <see cref="BeamingPattern"/> they cannot reach: a stem standing
-/// at the START or the STOP of a tuplet span keeps its flag CENTER — so the chip never fires
-/// for it — and is then clamped to its neighbour's count on the outward side
-/// (lily/beaming-pattern.cc:190-200 at_span_start / at_span_stop).
-/// </para>
-/// <para>
-/// ⚠️ It is asserted here rather than through a rendered book because no fixture reaches it:
-/// Lily# ends an automatic beam at every tuplet boundary, so only a MANUAL bracket written
-/// across one gets there. Without this the branch would have no observer at all — a rule with
-/// nothing watching it is a rule that quietly stops being true.
+/// Two branches of <see cref="BeamingPattern"/> they cannot reach are watched here: a stem
+/// standing at the START or the STOP of a tuplet span keeps its flag CENTER — so the chip
+/// never fires for it — and is then clamped to its neighbour's count on the outward side
+/// (lily/beaming-pattern.cc:190-200 at_span_start / at_span_stop); and a stem INSIDE a
+/// tuplet is ranked by the span stack in written proportions
+/// (lily/beaming-pattern.cc:291-404), whose rendered observer is the LP regression book
+/// beamlet-test.ly (audit/lp-regression).
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
 public class BeamletTupletSpanTests
 {
-    /// <summary>Counts 2 3 1 1: sixteenth, thirty-second, eighth, eighth, filling 7/32.</summary>
+    /// <summary>Counts 2 3 1 1: sixteenth, thirty-second, eighth, eighth, filling 7/32.
+    /// The tuplet variant hangs a span over just the thirty-second — its num/den are never
+    /// read, because the span opens only for stems strictly PAST its start and none is —
+    /// so only the boundary tests see it.</summary>
     private static BeamingPattern.Element[] Pattern(bool secondStemStartsATuplet) =>
     [
         new(new Fraction(0), new Fraction(1, 16), 2),
-        new(new Fraction(1, 16), new Fraction(1, 32), 3, AtSpanStart: secondStemStartsATuplet),
+        new(new Fraction(1, 16), new Fraction(1, 32), 3,
+            Tuplet: secondStemStartsATuplet
+                ? new BeamingPattern.TupletDescription(
+                    new Fraction(1, 16), new Fraction(3, 32), 2, 3, null)
+                : null),
         new(new Fraction(3, 32), new Fraction(1, 8), 1),
         new(new Fraction(7, 32), new Fraction(1, 8), 1),
     ];
@@ -80,5 +85,65 @@ public class BeamletTupletSpanTests
 
         Assert.Equal(3, counts[1].Left);
         Assert.Equal(1, counts[1].Right);
+    }
+
+    /// <summary>The last bar of LP regression beamlet-test.ly:
+    /// <c>\tuplet 5/4 { a8 a32 a8 a16. a8 a8 }</c> — moments are actual (factor 4/5),
+    /// counts 1 3 1 2 1 1, and the whole sextet is one span from 0 to 1/2.</summary>
+    private static BeamingPattern.Element[] BeamletTestT8(bool insideTheTuplet)
+    {
+        var t = insideTheTuplet
+            ? new BeamingPattern.TupletDescription(
+                Fraction.Zero, new Fraction(1, 2), 4, 5, null)
+            : null;
+        return
+        [
+            new(new Fraction(0), new Fraction(1, 10), 1, t),
+            new(new Fraction(1, 10), new Fraction(1, 40), 3, t),
+            new(new Fraction(1, 8), new Fraction(1, 10), 1, t),
+            new(new Fraction(9, 40), new Fraction(3, 40), 2, t),
+            new(new Fraction(3, 10), new Fraction(1, 10), 1, t),
+            new(new Fraction(2, 5), new Fraction(1, 10), 1, t),
+        ];
+    }
+
+    [Fact]
+    public void TheThirtySecondOfBeamletTestsLastTuplet_PointsItsBeamletsRight()
+    {
+        // The a32 stands ON a span moment: read through the span's grid and the 4/5 factor,
+        // its written length ranks it 1 against the following eighth's 3, so its two spare
+        // beamlets point RIGHT — LilyPond's rendering of the book's own claim
+        // (lily/beaming-pattern.cc:291-404, the span stack; texidoc: "beamlets should point
+        // away from complete beat units … in tuplets as well").
+        var counts = BeamingPattern.Beamify(BeamletTestT8(insideTheTuplet: true), CommonTime);
+
+        Assert.Equal(1, counts[1].Left);
+        Assert.Equal(3, counts[1].Right);
+    }
+
+    [Fact]
+    public void WithoutTheTupletSpan_TheSameThirtySecondPointedLeft()
+    {
+        // The PERTURBATION, and the shape of the defect this port closed: with the root span
+        // alone the tie-break read 1 against 1 — the actual moments 1/10 and 1/8 rank equal
+        // under the whole-measure grid — and the beamlets pointed LEFT.
+        var counts = BeamingPattern.Beamify(BeamletTestT8(insideTheTuplet: false), CommonTime);
+
+        Assert.Equal(3, counts[1].Left);
+        Assert.Equal(1, counts[1].Right);
+    }
+
+    [Fact]
+    public void TheDottedSixteenth_PointsLeftWithAndWithoutTheSpan()
+    {
+        // The book's OTHER interior peak (a16. at 9/40) does not move: both grids rank it 3
+        // against the following on-moment eighth's 1, so the sixteenth beamlet points LEFT
+        // either way — which is what confined the book's divergence to the a32 alone.
+        foreach (bool inside in new[] { true, false })
+        {
+            var counts = BeamingPattern.Beamify(BeamletTestT8(inside), CommonTime);
+            Assert.Equal(2, counts[3].Left);
+            Assert.Equal(1, counts[3].Right);
+        }
     }
 }
