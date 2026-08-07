@@ -1,0 +1,9 @@
+// lilypond-src/input/regression/dot-rest-beam-trigger.ly の Lily# 訳。
+// CLAIM: beam に繋がれた付点休符が早すぎる beam 計算を起こさない——beam は
+// 傾き、programming_error 警告が出ない(LP 内部回帰)。比較できるのは
+// レイアウト: rest を跨ぐ手動 beam の傾きと、voiceTwo の付点休符 2 つ。
+// 綴り: LP 無引数 \relative の c''=C5=Lily# c'。時価 sticky(2 個目の r は 8. を継ぐ)。
+// 手動 beam の [ ] は Lily# にもある(rest を跨げるのは手動のみ)。
+time 12/16
+
+voice { c'16[ b a r b g] } { r8. r } |

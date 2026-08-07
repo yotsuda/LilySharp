@@ -35,10 +35,15 @@ public sealed partial class MeasureCollector
         int staffPosition = rp.StaffPosition;
 
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        // An undurated note takes the whole default — dots included (`c8. c` is two
+        // dotted eighths). LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration.
+        int dots = note.Duration?.DotCount ?? _defaultDots;
         if (note.Duration != null)
+        {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
+            _defaultDots = dots;
+        }
 
-        int dots = note.Duration?.DotCount ?? 0;
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
 
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
@@ -146,9 +151,12 @@ public sealed partial class MeasureCollector
     {
         var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
         int noteValue = drum.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        int dots = drum.Duration?.DotCount ?? _defaultDots;
         if (drum.Duration != null)
+        {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
-        int dots = drum.Duration?.DotCount ?? 0;
+            _defaultDots = dots;
+        }
         int tremoloBeams = ParseTremoloBeams(drum.Tremolo);
         bool needsLedger = info.StaffPosition <= -6 || info.StaffPosition >= 6;
 
@@ -172,10 +180,12 @@ public sealed partial class MeasureCollector
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
         int noteValue = forcedDuration?.Value ?? rest.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        int dots = forcedDuration?.Dots ?? rest.Duration?.DotCount ?? _defaultDots;
         if (forcedDuration == null && rest.Duration != null)
+        {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
-
-        int dots = forcedDuration?.Dots ?? rest.Duration?.DotCount ?? 0;
+            _defaultDots = dots;
+        }
 
         // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position)
@@ -381,10 +391,13 @@ public sealed partial class MeasureCollector
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
         int noteValue = forcedDuration?.Value ?? chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        int dots = forcedDuration?.Dots ?? chord.Duration?.DotCount ?? _defaultDots;
         if (forcedDuration == null && chord.Duration != null)
+        {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
+            _defaultDots = dots;
+        }
 
-        int dots = forcedDuration?.Dots ?? chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
 
         // Inside `repeat tremolo N { … }` (see CreateNoteItem).
@@ -431,9 +444,12 @@ public sealed partial class MeasureCollector
         // The duration carry applies whether or not the q resolves — a bad
         // repetition still occupies its written time (LP keeps the empty chord).
         int noteValue = forcedDuration?.Value ?? rep.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        int dots = forcedDuration?.Dots ?? rep.Duration?.DotCount ?? _defaultDots;
         if (forcedDuration == null && rep.Duration != null)
+        {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
-        int dots = forcedDuration?.Dots ?? rep.Duration?.DotCount ?? 0;
+            _defaultDots = dots;
+        }
         int tremoloBeams = ParseTremoloBeams(rep.Tremolo);
 
         // Inside `repeat tremolo N { … }` (see CreateNoteItem).

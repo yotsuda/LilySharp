@@ -1,0 +1,12 @@
+// lilypond-src/input/regression/dot-column-vertical-positioning.ly の Lily# 訳。
+// CLAIM: dot column は line breaking の前に縦 spacing を起動しない(LP 内部の
+// programming_error 回帰)。Lily# に同じ評価順序の装置は無いので、比較できるのは
+// 出力のレイアウトだけ——付点付き beamed 16 分対(voiceOne)と r8. a'16(voiceThree)
+// の共存が正しく組まれること。
+// 綴り: LP は \voiceOne と \voiceThree(両方 up・horizontal-shift 1)。Lily# の
+// voice{} は分岐順=声番号なので、第2分岐(voiceTwo)を全 spacer にして第3分岐を
+// voiceThree に立てる(collisions 便の誤り回復と同型)。beam の [ ] は Lily# では
+// 自動(8.+16 は 1 拍で自動連桁)。
+time 4/4
+
+voice { f'8. e16 } { s8. s16 } { r8. a'16 } |

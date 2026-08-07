@@ -1,21 +1,25 @@
-// Multi-voice augmentation-dot force-down. When two voices collide and the
-// DOWN voice has a dotted note sitting ON a staff line, its dot is forced into
-// the space BELOW the line (instead of the default space above) to clear the up
-// voice. Here the down voice's dotted b (B4, the treble middle line) collides
-// with the up voice's un-dotted c' a second above, so the down dot is pushed
-// below the line.
-// WARNING: forcing DOWN off the staff line is Lily#'s OWN rule. LilyPond's dot-direction
-// rule (note-collision.cc:375-398) fires only when the shift is positive and sets UP /
-// CENTER / the up chord's direction. This book therefore watches Lily#'s behaviour, not
-// LilyPond's; see HANDOFF 2 A. The :411-448 this line used to cite holds no dot code at all.
+// Multi-voice augmentation-dot direction. LilyPond's \voiceOne/\voiceTwo set
+// Dots.direction on the WHOLE voice (UP for odd voices, DOWN for even), so the
+// down voice's dotted b (B4, the treble middle line) takes its dot in the space
+// BELOW the line. A collision whose shift moves the UP group right overrides the
+// down voice's dots back to UP; here the second b/c' is a touch, the DOWN group
+// moves right (negative shift), and the voice-props direction stands.
+// LILYPOND-REF: scm/music-functions.scm:616-631 direction-polyphonic-grobs — Dots
+// LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — set_property direction
+// MEASURED (scratch/lpreg/dot-force-down-twin.ly, LilyPond 2.26.0): the dot prints
+// half a space BELOW the middle line, and the b head +1.30 right of the c' head.
+// An earlier header here declared "forced down off the staff line" a Lily#-own
+// rule; the OUTCOME was right for this book, the mechanism was not. The part was
+// also renamed p → m: p became a reserved word (dynamics) and the exporter
+// refused the book with LYS0002 while the snapshot path kept rendering it.
 octave absolute
 time 2/4
-part p { clef treble }
+part m { clef treble }
 section Main {
-  p {
+  m {
     voice { c'4 c'4 }
     { b4. b8 }
   }
 }
 form main { Main }
-score main "dot-force-down" { staff p }
+score main "dot-force-down" { staff m }

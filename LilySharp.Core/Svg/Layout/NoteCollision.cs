@@ -86,20 +86,45 @@ internal sealed record NoteCollisionInfo
     public bool DownHeadTransparent { get; }
 
     /// <summary>
-    /// Whether the down-stem voice's dots should shift downward instead of upward
-    /// for notes on staff lines.
+    /// Whether the down-stem voice's dots take direction UP: fires only when the up
+    /// group moved right (a POSITIVE shift) and the down head is dotted.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A DIVERGENCE from LilyPond's rule, not a port of it — see the long note at the
-    /// assignment in <see cref="NoteCollision.AnalyzeCollision"/>, which also records that the
-    /// <c>:411-448</c> this family used to cite is the wrong range.
-    /// LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule it approximates.
+    /// LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — "In meshed
+    ///   chords with dots on the left, adjust dot direction"; the direction set is UP.
+    /// The CENTER arm (both voices' dots sharing one DotColumn) has no Lily# counterpart —
+    /// dots resolve per item, there is no cross-voice column — and the conform arm reads
+    /// the up dots' direction property, which the voice props set to UP for an up voice
+    /// (direction-polyphonic-grobs), so it lands where the plain arm does.
     /// </remarks>
-    public bool DownDotForceDown { get; }
+    public bool DownDotDirectionUp { get; }
+
+    /// <summary>
+    /// Whether the down-stem voice's dot column must clear EVERY head on the up stem
+    /// (suspended right-side heads included).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — "If any
+    ///   dotted notes ended up on the left, tell the Dot_Columnn to avoid the note
+    ///   heads on the right"; the down branch runs whenever the down head is dotted
+    ///   (its guard is the else of the up branch, not a shift test).
+    /// </remarks>
+    public bool DownDotsAvoidUpHeads { get; }
+
+    /// <summary>
+    /// Whether the up-stem voice's dot column must clear the down group's first head —
+    /// the up group moved LEFT (negative shift) and its head is dotted.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:352-358 check_meshing_chords — the
+    ///   <c>shift_amount &lt; -1e-6</c> branch supports against <c>fh_down</c> alone.
+    /// </remarks>
+    public bool UpDotsAvoidDownHeads { get; }
 
     public NoteCollisionInfo(CollisionType type, double upStemXOffset, double downStemXOffset,
         bool shouldMerge = false, bool upHeadTransparent = false, bool downHeadTransparent = false,
-        bool downDotForceDown = false)
+        bool downDotDirectionUp = false, bool downDotsAvoidUpHeads = false,
+        bool upDotsAvoidDownHeads = false)
     {
         Type = type;
         UpStemXOffset = upStemXOffset;
@@ -107,11 +132,21 @@ internal sealed record NoteCollisionInfo
         ShouldMerge = shouldMerge;
         UpHeadTransparent = upHeadTransparent;
         DownHeadTransparent = downHeadTransparent;
-        DownDotForceDown = downDotForceDown;
+        DownDotDirectionUp = downDotDirectionUp;
+        DownDotsAvoidUpHeads = downDotsAvoidUpHeads;
+        UpDotsAvoidDownHeads = upDotsAvoidDownHeads;
     }
 
     public static NoteCollisionInfo NoCollision { get; } = new(CollisionType.None, 0, 0);
 }
+
+/// <summary>
+/// The dot-column adjustments a two-voice collision imposes on ONE voice item: a
+/// preferred direction for its dots (note-collision.cc:374-397) and/or a minimum X for
+/// its dot column (:352-372), in the staff column's frame — the frame the collision
+/// XOffsets live in. <c>default</c> means "no adjustment".
+/// </summary>
+internal readonly record struct DotAdjustment(bool DirectionUp, double? ColumnMinX);
 
 /// <summary>
 /// Parameters for note collision handling.
@@ -148,11 +183,17 @@ internal sealed record NoteCollisionInfo
 ///   detection and holds no such formula — two errors in one claim. Unreachable at default
 ///   parameters (it needs merge-differently-headed), which is why nothing caught it.
 /// NOT YET IMPLEMENTED — FA-shaped notehead handling (note-collision.cc:237-252 fa_styles)
-/// DIVERGENCE — dot direction. LilyPond's rule is :375-398 (fires on a POSITIVE shift, sets
-///   UP / CENTER / the up chord's direction); Lily# forces DOWN off the staff line alone. The
-///   neighbouring :350-373 (dots on the left take Side_position support against the heads on
-///   the right) is unported. ⚠️ This line said "IMPLEMENTED … :263-337 dot_wipe_head";
-///   dot_wipe_head is a local variable in the MERGE branch, not this mechanism.
+/// IMPLEMENTED — dot direction (:374-397: fires on a POSITIVE shift, sets UP; the CENTER
+///   arm needs a cross-voice DotColumn Lily# does not have) and the dot side supports
+///   (:352-372: dotted heads' dot column clears the opposite group's heads; the push is
+///   computed in CalculateVoiceOffsets and applied by the renderer with one-dot-width
+///   padding, scm/define-grobs.scm DotColumn pad-by-one-dot-width). Measured against
+///   dot-column-note-collision.ly. ⚠️ Both replaced a DIVERGENCE that forced DOWN off
+///   the staff line alone; an earlier form of this line cited ":263-337 dot_wipe_head",
+///   which is a local variable in the MERGE branch, not this mechanism.
+///   ⚠️ The SPACING side does not know the push yet: a pushed dot column widens the
+///   drawn ink but not the reserved column (no corpus book binds there — the pushed
+///   dots of dot-column-note-collision.ly sit in slack; wire it when a book pins it).
 /// IMPLEMENTED — force-hshift manual override (note-collision.cc:608-624 forced_shift)
 /// IMPLEMENTED — within-chord seconds displacement (stem.cc:606-760) in ChordHeadPositioning
 /// IMPLEMENTED — automatic_shift's group loop (note-collision.cc:504-599), ported clause
@@ -330,32 +371,9 @@ internal sealed class NoteCollision
         fullCollide = fullCollide || (closeHalf && distantHalf) ||
                      (distantHalf && (upNoteValue <= 0 || downNoteValue <= 0));
 
-        // Whether the down-stem voice's dots take a forced direction instead of the default.
-        //
-        // ⚠️⚠️ DIVERGENCE, NOT A PORT, AND THE CITATION USED TO SAY OTHERWISE. This carried
-        // "LILYPOND-REF: lily/note-collision.cc:411-448" — a range that exists (which is why
-        // audit/citation_drift.csv passes it) but holds get_clash_groups, the extent trigger
-        // and the `wid` lookup inside calc_positioning_done. Nothing about dots.
-        // LilyPond's dot direction rule is :375-398, and reading it shows a DIFFERENT rule:
-        //   - it fires only when `shift_amount > 1e-6`, i.e. when the UP group moved right;
-        //   - the direction it sets is UP by default, CENTER when both heads' dots share one
-        //     DotColumn, and otherwise whatever the UP chord's dot already reads;
-        //   - it sets that on every head of the down stem.
-        // Lily# instead forces DOWN whenever any down-stem note sits on a staff line, with no
-        // reading of the shift's sign at all. Both the trigger and the outcome differ.
-        // ⚠️ The sign now matters more than it did: since the touch branch was restored above,
-        // a second and a unison produce a NEGATIVE shift, which is precisely where LilyPond's
-        // rule does not fire. Ticketed in HANDOFF §2 A; not changed here, because it moves
-        // test/dot-force-down and wants its own measurement against LilyPond first.
-        // LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule this approximates.
-        // LILYPOND-REF: lily/note-collision.cc:350-373 check_meshing_chords — the neighbouring
-        //   half (dots on the left take Side_position support against the heads on the
-        //   right), also unported.
-        bool downDotForceDown = false;
-        if (downDots > 0)
-        {
-            downDotForceDown = downs.Any(pos => pos % 2 == 0);
-        }
+        // The dot rules (direction and side supports) read the SIGN of the finished
+        // shift, so they are computed at the bottom of this method, after the width
+        // normalization — the same order check_meshing_chords runs them in.
 
         // ⚠️ THE ORDER BELOW IS LILYPOND'S AND IT IS THE WHOLE POINT. `touch` is decided
         // above and consumed at :212 and :323 — BEFORE close_half_collide (:325) and
@@ -420,6 +438,11 @@ internal sealed class NoteCollision
         //     mergePossible in the same step.
         // So mergePossible surviving implies fullCollide and no half-collide: the conjuncts
         // could never have excluded anything.
+        // ⚠️ The dot support/direction blocks (:352-397) also run on LilyPond's merge
+        // path (check_meshing_chords falls through); the early return skips them, so a
+        // MERGED pair's dots take no support. A default-switch merge requires EQUAL dot
+        // counts and prints the heads coincident, so their dot columns coincide too —
+        // no observer distinguishes the two until a merge-differently-* producer lands.
         if (mergePossible)
             return ComputeMergeInfo(upNoteValue, downNoteValue, upDots, downDots);
 
@@ -483,12 +506,28 @@ internal sealed class NoteCollision
                 ? (upRight - downLeft) / downLength      // down-stem shifts right
                 : (downRight - upLeft) / downLength;     // up-stem shifts right
 
+        // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — "If any
+        // dotted notes ended up on the left, tell the Dot_Columnn to avoid the note
+        // heads on the right": a left-shifted dotted UP head supports against the down
+        // group's first head; otherwise a dotted DOWN head supports against EVERY head
+        // on the up stem (the down arm is the ELSE of the up arm — no shift test).
+        bool upDotsAvoidDown = shiftAmount < -1e-6 && upDots > 0;
+        bool downDotsAvoidUp = !upDotsAvoidDown && downDots > 0;
+
+        // LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — "In
+        // meshed chords with dots on the left, adjust dot direction": when the up
+        // group moved right and the down head is dotted, the down stem's dots take
+        // direction UP (see DownDotDirectionUp for the CENTER/conform arms).
+        bool downDotDirUp = shiftAmount > 1e-6 && downDots > 0;
+
         // LILYPOND-REF: note-collision.cc:539-579 automatic_shift — offsets[d] = d * offset,
         // i.e. the up group takes the amount and the down group its negation;
         // calc_positioning_done (:440-468) then pins the leftmost group with
         // `amount - left_most`, so the two groups end up 2 × |shiftAmount| apart.
         return new NoteCollisionInfo(type, shiftAmount, -shiftAmount,
-            downDotForceDown: downDotForceDown);
+            downDotDirectionUp: downDotDirUp,
+            downDotsAvoidUpHeads: downDotsAvoidUp,
+            upDotsAvoidDownHeads: upDotsAvoidDown);
     }
 
     /// <summary>
@@ -673,7 +712,8 @@ internal sealed class NoteCollision
     /// stem, then the opposite-direction clamps), the whole set is multiplied by the
     /// width of the down-stem group's first head, and the leftmost NEGATIVE amount is
     /// pinned to the column slot.
-    /// Returns (VoiceId, ItemIndex, XOffset, HeadTransparent, DotForceDown) for each entry.
+    /// Returns (VoiceId, ItemIndex, XOffset, HeadTransparent, Dot) for each entry, where
+    /// Dot carries the item's dot-column adjustments (direction / minimum X).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-collision.cc:504-599 automatic_shift — the group loop
@@ -699,9 +739,11 @@ internal sealed class NoteCollision
     /// with no opposite voice on the moment.
     /// </para>
     /// <para>
-    /// ⚠️ NOT PORTED: the Side_position_interface dot supports (:377-399 dots-on-the-
-    /// left clearing right-hand heads, :578-586 an up group's dot column clearing
-    /// later up stems) — Lily# has no dot side-positioning; a dot rides its head.
+    /// The Side_position_interface dot supports of :352-372 (dots-on-the-left clearing
+    /// right-hand heads) are resolved here into <see cref="DotAdjustment.ColumnMinX"/> —
+    /// see <see cref="DotColumnSupportMinX"/>. ⚠️ STILL NOT PORTED: :578-586 (an up
+    /// group's dot column clearing LATER up stems — needs three-plus voices with a
+    /// dotted first up voice; no corpus book reaches it).
     /// </para>
     /// <para>
     /// ⚠️ KEPT DIVERGENCE: a voice CROSSING (CollisionType.Meshing) pins the
@@ -710,10 +752,10 @@ internal sealed class NoteCollision
     /// column X and not per note, is not skewed.
     /// </para>
     /// </remarks>
-    public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)> CalculateVoiceOffsets(
+    public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, DotAdjustment Dot)> CalculateVoiceOffsets(
         VoiceColumn column)
     {
-        var offsets = new List<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)>();
+        var offsets = new List<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, DotAdjustment Dot)>();
 
         // get_clash_groups: one group per stem direction, sorted by horizontal-shift
         // (shift_less); VoiceId order IS that order under (id-1)/2, ties stable.
@@ -725,7 +767,7 @@ internal sealed class NoteCollision
         if (upEntries.Count == 0 && downEntries.Count == 0)
         {
             foreach (var entry in column.Entries)
-                offsets.Add((entry.VoiceId, entry.ItemIndex, 0, false, false));
+                offsets.Add((entry.VoiceId, entry.ItemIndex, 0, false, default));
             return offsets.ToImmutableArray();
         }
 
@@ -836,14 +878,14 @@ internal sealed class NoteCollision
         double wid = HeadWidth(GetNoteInfo(
             downEntries.Count > 0 ? downEntries[0] : upEntries[0]).noteValue);
 
-        var raw = new List<(int VoiceId, int ItemIndex, double Offset, bool Hide, bool Dot)>();
+        var raw = new List<(int VoiceId, int ItemIndex, double Offset, bool Hide, DotAdjustment Dot)>();
         for (int i = 0; i < upEntries.Count; i++)
             raw.Add((upEntries[i].VoiceId, upEntries[i].ItemIndex, off[0][i],
-                i == 0 && collision.UpHeadTransparent, false));
+                i == 0 && collision.UpHeadTransparent, default));
         for (int i = 0; i < downEntries.Count; i++)
             raw.Add((downEntries[i].VoiceId, downEntries[i].ItemIndex, off[1][i],
                 i == 0 && collision.DownHeadTransparent,
-                i == 0 && collision.DownDotForceDown));
+                i == 0 ? new DotAdjustment(collision.DownDotDirectionUp, null) : default));
 
         // :440-468 — translate by amount − left_most, where left_most starts 0.0 and
         // only amounts BELOW it move it: an all-positive set keeps the slot in place.
@@ -854,7 +896,226 @@ internal sealed class NoteCollision
         foreach (var r in raw)
             offsets.Add((r.VoiceId, r.ItemIndex, (r.Offset - pin) * wid, r.Hide, r.Dot));
 
+        // The dot side supports (:352-372), resolved to a MINIMUM X for the dotted
+        // item's dot column — the renderer draws one item at a time and cannot see the
+        // opposite voice's heads, so the geometry is settled here, where both groups'
+        // final offsets are in hand. The frame is the staff column's (same as XOffset).
+        if (upEntries.Count > 0 && downEntries.Count > 0)
+        {
+            double FinalX(int voiceId, int itemIndex) =>
+                offsets.First(o => o.VoiceId == voiceId && o.ItemIndex == itemIndex).XOffset;
+
+            if (collision.DownDotsAvoidUpHeads)
+            {
+                // The down voice's dots carry direction DOWN from its voice props
+                // unless the collision overrode them to UP — the renderer resolves
+                // with the same two layers.
+                double? minX = DotColumnSupportMinX(
+                    dotted: downEntries[0],
+                    dottedDir: collision.DownDotDirectionUp ? 1 : -1,
+                    support: upEntries[0],
+                    supportX: FinalX(upEntries[0].VoiceId, upEntries[0].ItemIndex),
+                    allSupportHeads: true, supportStemUp: true);
+                if (minX is { } m)
+                    Amend(downEntries[0], m);
+            }
+            else if (collision.UpDotsAvoidDownHeads)
+            {
+                // An up voice's dots carry direction UP from its voice props.
+                double? minX = DotColumnSupportMinX(
+                    dotted: upEntries[0], dottedDir: 1,
+                    support: downEntries[0],
+                    supportX: FinalX(downEntries[0].VoiceId, downEntries[0].ItemIndex),
+                    allSupportHeads: false, supportStemUp: false);
+                if (minX is { } m)
+                    Amend(upEntries[0], m);
+            }
+
+            void Amend(VoiceEntry entry, double columnMinX)
+            {
+                for (int i = 0; i < offsets.Count; i++)
+                    if (offsets[i].VoiceId == entry.VoiceId && offsets[i].ItemIndex == entry.ItemIndex)
+                    {
+                        var o = offsets[i];
+                        offsets[i] = (o.VoiceId, o.ItemIndex, o.XOffset, o.HeadTransparent,
+                            o.Dot with { ColumnMinX = columnMinX });
+                        break;
+                    }
+            }
+        }
+
+        // ONE dot column per staff moment: Dot_column_engraver lives in the STAFF
+        // context, so every voice's dots at the moment share a single column X — the
+        // right-facing skyline over every DOTTED head's box (X extent × position ±1.1),
+        // floored by base_x (the union of the dotted first heads' extents, and the first
+        // head is never the reversed one, so it sits at the column X), sampled at each
+        // dot's resolved row; the max sample is the column X, padding one dot width.
+        // The per-item draw keeps its own floor and takes the Max, so distributing the
+        // common X to every dotted entry is enough. Undotted heads join the skyline only
+        // through the collision supports settled above (:352-372).
+        // LILYPOND-REF: ly/engraver-init.ly:73 Staff context — \consists Dot_column_engraver
+        // LILYPOND-REF: lily/dot-column.cc:56-141,192-232 calc_positioning_done — add_head
+        //   makes every dotted head a side support; base_x unites the first heads.
+        // LILYPOND-REF: lily/dot-formatting-problem.cc — set_minimum_height (base_x[RIGHT])
+        // LILYPOND-REF: lily/dot-configuration.cc:129-137 x_offset — a max of point samples
+        // ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
+        //   rests never reach this column (VoiceCollector keeps them off the timeline).
+        if (column.Entries.Length > 1)
+        {
+            var dotted = column.Entries.Where(e => GetNoteInfo(e).dots > 0).ToList();
+            if (dotted.Count > 0)
+            {
+                double EntryX(VoiceEntry e) => offsets
+                    .First(o => o.VoiceId == e.VoiceId && o.ItemIndex == e.ItemIndex).XOffset;
+
+                const double headBandHalfPositions = 1.1;
+                double baseXRight = double.NegativeInfinity;
+                var boxes = new List<(int Pos, double Right)>();
+                var rows = new List<int>();
+                foreach (var e in dotted)
+                {
+                    var positions = GetStaffPositions(new List<VoiceEntry> { e });
+                    if (positions.Count == 0)
+                        continue;
+                    var (noteValue, _) = GetNoteInfo(e);
+                    double inkRight = GlyphMetrics.GetNoteheadBBox(noteValue).Right;
+                    double ex = EntryX(e);
+                    bool stemUp = GetStemDirection(e) ?? true;
+                    double[] within = positions.Count >= 2
+                        ? ChordHeadPositioning.CalculateOffsets(
+                            positions.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+                            stemUp, noteValue)
+                        : new double[positions.Count];
+
+                    baseXRight = Math.Max(baseXRight, ex + inkRight);
+                    for (int h = 0; h < positions.Count; h++)
+                        boxes.Add((positions[h], ex + within[h] + inkRight));
+
+                    // The rows the renderer will draw at — same inputs, same resolver:
+                    // the two-layer preferred direction (voice props; a positive-shift
+                    // collision overrides the down voice's dots to UP).
+                    bool isDownFirst = upEntries.Count > 0 && downEntries.Count > 0
+                        && e.VoiceId == downEntries[0].VoiceId
+                        && e.ItemIndex == downEntries[0].ItemIndex;
+                    int dir = isDownFirst && collision.DownDotDirectionUp ? 1
+                        : VoiceDefaults.GetDefaultStemUp(e.VoiceId) switch
+                          { true => 1, false => -1, null => 0 };
+                    rows.AddRange(DotConfiguration.Resolve(
+                        positions,
+                        dir != 0 ? Enumerable.Repeat(dir, positions.Count).ToArray() : null));
+                }
+
+                if (rows.Count > 0)
+                {
+                    double columnX = double.NegativeInfinity;
+                    foreach (int r in rows)
+                    {
+                        double sample = baseXRight;
+                        foreach (var b in boxes)
+                            if (Math.Abs(r - b.Pos) <= headBandHalfPositions)
+                                sample = Math.Max(sample, b.Right);
+                        columnX = Math.Max(columnX, sample);
+                    }
+
+                    double minX = columnX + GlyphMetrics.AugmentationDot.Width;
+                    for (int i = 0; i < offsets.Count; i++)
+                    {
+                        var o = offsets[i];
+                        if (!dotted.Any(e => e.VoiceId == o.VoiceId && e.ItemIndex == o.ItemIndex))
+                            continue;
+                        offsets[i] = (o.VoiceId, o.ItemIndex, o.XOffset, o.HeadTransparent,
+                            o.Dot with
+                            {
+                                ColumnMinX = Math.Max(o.Dot.ColumnMinX ?? double.NegativeInfinity, minX),
+                            });
+                    }
+                }
+            }
+        }
+
         return offsets.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The minimum X (staff-column frame) that puts a dotted item's dot column clear of
+    /// the opposite group's heads, plus one dot width of padding — or null when no
+    /// support head's box covers any resolved dot's position (an unconstrained column
+    /// stays where it is).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support
+    ///   hands the heads to the DotColumn as side-support-elements;
+    /// LILYPOND-REF: lily/dot-column.cc:79-141 calc_positioning_done — each Note_head
+    ///   support becomes a box (its X extent × positions head±1.1); the column's X is
+    ///   the head skyline sampled AT each dot's resolved position
+    ///   (lily/dot-configuration.cc x_offset — a max over point samples), plus the
+    ///   padding, applied ONCE to the whole column (:229-232);
+    /// LILYPOND-REF: scm/define-grobs.scm DotColumn — (padding . dot-column-interface::pad-by-one-dot-width)
+    /// ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
+    ///   — an up-voice flag also constrains the column; needs a flagged unbeamed
+    ///   support voice, no corpus book reaches it) and Rest/Stem-interface supports
+    ///   (note-collision adds only heads).
+    /// The dot positions resolved here mirror the renderer's own
+    /// <see cref="DotConfiguration.Resolve"/> call — same positions, same effective
+    /// direction (voice props overridden by the collision) — so the point samples land
+    /// where the dots will be drawn.
+    /// </remarks>
+    private static double? DotColumnSupportMinX(
+        VoiceEntry dotted, int dottedDir,
+        VoiceEntry support, double supportX, bool allSupportHeads, bool supportStemUp)
+    {
+        var dotPositions = GetStaffPositions(new List<VoiceEntry> { dotted });
+        if (dotPositions.Count == 0)
+            return null;
+        var dirs = Enumerable.Repeat(dottedDir, dotPositions.Count).ToArray();
+        var resolved = DotConfiguration.Resolve(dotPositions, dirs);
+
+        var (supportValue, _) = GetNoteInfo(support);
+        var headBox = GlyphMetrics.GetNoteheadBBox(supportValue);
+        // The head box spans positions head ± 1.1 and the skyline is sampled at the
+        // dot's own (integer) position — the dot's extent plays no part.
+        // LILYPOND-REF: lily/dot-column.cc:117-118 calc_positioning_done — Interval (-1.1, 1.1)
+        const double headBandHalfPositions = 1.1;
+        double pad = GlyphMetrics.AugmentationDot.Width;
+
+        var supportPositions = GetStaffPositions(new List<VoiceEntry> { support });
+        if (supportPositions.Count == 0)
+            return null;
+        double[] headOffsets;
+        if (!allSupportHeads)
+        {
+            // fh_down alone: the down stem's FIRST head is its highest, and the first
+            // (support) head is never the reversed one, so it sits at the column X.
+            // LILYPOND-REF: lily/stem.cc:283-289 first_head — extremal_heads[-dir].
+            supportPositions = new List<int> { supportPositions.Max() };
+            headOffsets = new double[1];
+        }
+        else if (supportPositions.Count >= 2)
+        {
+            // Every head on the stem, each at its drawn X — reversed (suspended)
+            // seconds included; the loop in :361-370 walks the stem's note-heads set.
+            var notes = supportPositions
+                .Select(p => new ChordNoteInfo(p, null, false))
+                .ToImmutableArray();
+            headOffsets = ChordHeadPositioning.CalculateOffsets(notes, supportStemUp, supportValue);
+        }
+        else
+        {
+            headOffsets = new double[1];
+        }
+
+        double? minX = null;
+        foreach (int dotPos in resolved)
+            for (int h = 0; h < supportPositions.Count; h++)
+            {
+                if (Math.Abs(dotPos - supportPositions[h]) <= headBandHalfPositions)
+                {
+                    double candidate = supportX + headOffsets[h] + headBox.Right + pad;
+                    if (minX is not { } cur || candidate > cur)
+                        minX = candidate;
+                }
+            }
+        return minX;
     }
 
     private static bool? GetStemDirection(VoiceEntry entry)

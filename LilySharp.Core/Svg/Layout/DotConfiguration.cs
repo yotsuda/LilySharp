@@ -142,14 +142,12 @@ internal sealed class DotConfiguration
     /// trigger a second remove_collision so they end up in a space.
     ///
     /// <paramref name="directions"/> supplies each dot's preferred displacement
-    /// (LP Dots.direction): 0 = none (default, on-line dots move UP), -1 = force
-    /// DOWN. In multi-voice music the down voice's on-line dots are forced below
-    /// the line so they don't collide with the up voice's dots.
-    /// ⚠️ Forcing DOWN for an on-line down-stem note is Lily#'s rule, not LilyPond's: at
-    /// :375-398 LilyPond fires only when the UP group moved right, and the direction it then
-    /// sets is UP (or CENTER, or the up chord's own). The <c>:411-448</c> this line used to
-    /// cite holds no dot code — see NoteCollision.AnalyzeCollision for the full account.
-    /// LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule this approximates.
+    /// (LP Dots.direction): 0 = none (the badness already prefers UP), +1/-1 = an
+    /// explicit preference (moving against it costs +2). In multi-voice music a
+    /// collision sets +1 on the down voice's dots when the up group moved right.
+    /// LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — the
+    ///   direction rule (an earlier form here forced DOWN off the staff line alone,
+    ///   citing <c>:411-448</c>, a range holding no dot code).
     /// </remarks>
     public static int[] Resolve(IReadOnlyList<int> notePositions, IReadOnlyList<int>? directions = null)
     {

@@ -130,7 +130,16 @@ internal sealed class VoiceCollector
                             timeline[key] = entries;
                         }
 
-                        entries.Add(new VoiceEntry(voiceId, item, itemIndex, defaultStemUp));
+                        // Writer's @stemUp/@stemDown outranks the voice default
+                        // (must match ResolveVoiceStemDirections, which skips
+                        // these when baking).
+                        bool? writerAsk = item switch
+                        {
+                            NoteItem n => n.ForcedStemUp,
+                            ChordItem c => c.ForcedStemUp,
+                            _ => null,
+                        };
+                        entries.Add(new VoiceEntry(voiceId, item, itemIndex, writerAsk ?? defaultStemUp));
                     }
 
                     // Advance time position

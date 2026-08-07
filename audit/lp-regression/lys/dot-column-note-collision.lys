@@ -1,0 +1,13 @@
+// lilypond-src/input/regression/dot-column-note-collision.ly の Lily# 訳。
+// CLAIM: 付点(dot column)と符頭は衝突しない。
+// 枠: 原本 2 対目の \small(font-size 変更)は Lily# に表面が無いので、両側とも
+// normal の同和音対に置換(timing 温存・小型変種のみ未検証)。比較する LP 側も
+// この置換を入れた copy(scratch/lpreg/dot-column-note-collision.ly)。
+// 綴り: LP は絶対音(f'=F4)。m3 の << A \\ B >> は voice 分岐 1=up(A)・
+// 2=down(B)。分岐の長さが違う(4 vs 4.)ので、多声 1 スパンに融合して
+// s(spacer) でタイミングを保存する(collisions 便の誤り回復と同型)。
+time 4/4
+
+<f g>4. s8 <f g>4. s8 |
+<g a>4. s8 <a b>4. s8 |
+voice { <f g>4 s8 s8 <f g>4 s8 s8 } { <b c>4. s8 b4. s8 } |

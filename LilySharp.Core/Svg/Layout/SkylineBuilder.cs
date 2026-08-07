@@ -1461,7 +1461,9 @@ internal sealed class SkylineBuilder
                 // per-note threshold. Mirrors the note case (note.StemUp) and
                 // the renderer (chord.StemUp). A multi-voice staff forces it.
                 // LILYPOND-REF: lily/stem.cc — one Stem per NoteColumn.
-                bool chordStemUp = forcedStemUp ?? chord.StemUp;
+                // Writer's @stemUp/@stemDown outranks the voice default, as the
+                // renderer draws it (SharedRenderer.DrawNote).
+                bool chordStemUp = chord.ForcedStemUp ?? forcedStemUp ?? chord.StemUp;
                 foreach (var chordNote in chord.Notes)
                 {
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleUp, size,
@@ -1651,7 +1653,9 @@ internal sealed class SkylineBuilder
         bool reserveStem = true)
     {
         int noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
-        bool stemUp = forcedStemUp ?? note.StemUp;
+        // Writer's @stemUp/@stemDown outranks the voice default, as the
+        // renderer draws it (SharedRenderer.DrawNote).
+        bool stemUp = note.ForcedStemUp ?? forcedStemUp ?? note.StemUp;
 
         AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleUp, size,
             stemUp, noteValue, upSkyline, downSkyline, reserveStem);

@@ -58,10 +58,100 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第104セッション（＝第1便 complex-once.ly **fixed 第22号**・`16665c00`・
+最終更新 第105セッション第1便（＝dots.ly **fixed 第24号**・`1a985363`+`3c989549`＝
+2 修理。frontier の pending 先頭は **dynamics-alignment-autobreak.ly**——族 5 冊が
+まとまって DynamicLineSpanner 自動分割 regime。第104 の下見どおり**族として評価してから
+1 冊ずつ**。Lily# hairpin は `\!` の綴りが無い既知の文法宿題+向き .up/.down はある）。
+
+★★★ **① fixed 第24号 = 付点法則の統合本（dots.ly）・修理 2 件**:
+- **修理⑴ voice 既定 vs per-note @stemDown/@stemUp＝書き手勝ち**（`1a985363`）。
+  dots.ly の \stemDown chord5 が <<>> と同小節（<<>> は小節中の半拍から開始）に落ち、
+  Lily# の**小節粒度 voice span** が voice1 の UP を焼いて符尾が反転した。LP は
+  **\\ のサブリストだけ voicify**（music-functions.scm:1042-1057 voicify-sublist）＝
+  外の音楽は voice props を受けず、分岐内の明示 \stemDown も後勝ち——どちらでも
+  書き手が生き残る。**4 site**: ResolveVoiceStemDirections（焼込 skip）・
+  SharedRenderer.DrawNote/DrawChord・SkylineBuilder・VoiceCollector（timeline 経由で
+  NoteCollision の stem 分類と StaffAccidentalColumns に効く）。
+  観測者 StemDirectionAnnotationTests +1（note/chord/無印の3点）。
+- **修理⑵ dot 列は Staff 単一列**（`3c989549`）。**Dot_column_engraver ∈ Staff**
+  （engraver-init.ly:73）＝1 staff moment の全声部 dots が 1 列。Lily# は per-voice 列で
+  m5 の下声 dots が 1.24ss 手前に居た。NoteCollision.CalculateVoiceOffsets 末尾に
+  staff-wide pass: base_x（dotted first head extent の合併右端）を floor に、
+  **dotted 頭箱（X extent×position±1.1）の右向き skyline を各 dot の解決行で点サンプル**
+  →max+pad 1 dot 幅＝共通 X を全 dotted entry の ColumnMinX へ（renderer は既存の
+  Max 消費のまま）。LILYPOND-REF: dot-column.cc calc_positioning_done /
+  dot-formatting-problem.cc set_minimum_height / dot-configuration.cc x_offset。
+  観測者 NoteCollisionTests +1（DotColumns_ShareOneStaffColumn）+既存 1 本の前提更新
+  （up 声部も共通列＝旧 per-voice 模型を釘付けていた Assert.Null を等値に）。
+- **照合**: m1/chords1-5 の dot Y 全一致（chord1 の 4dot 列 −5.5..−2.5・全て space）・
+  **m5 の 4 dots が単一列＝小節相対 4.93 で LP 完全一致**・chord5 符尾 −5.85..3.33＝
+  LP −5.81..3.33。**snapshot 動き 0 枚・台帳不変**。
+- **twin 書法**: LP 無引数 \relative＝基準 F3・相対和音は毎音 walk して
+  `lysc check --pitches` で 26 音検算（全体マーク `<b c d e>''` が anchor ごと動かす）・
+  <<>> が小節中に始まる→**m4+m5 を 1 スパンに融合し chord5 を v1 へ+s4.**（fusion が
+  成立するのは修理⑴があるから。修理前の別案「voice スパンを小節中から開始」は
+  **branch2 が小節頭に snap して時価が壊れる**罠も実測済）。
+- ⚠️ 起票（全部既知 regime へ合流・新規 regime なし）: ⑴ m5 の 2声 r4. が両方無変位で
+  重なる（**rest-in-voice regime**＝第104⑤の起票と同一。LP は ±2.0 へ割り rest dot が
+  追随——**rest dot の「rest 中心+0.5 上」は両者一致**＝dot 側の法則は既に正しく、
+  rest 変位だけが欠けている）⑵ chord5→f の step 3.60 vs 3.23（**voice 境界
+  left_head_end regime**）⑶ chord1→2 以降の列間 X drift 0.05 ⑷ NOT PORTED のまま:
+  dot column の stem/flag 箱・rest support（rests は VoiceColumn に来ない）・
+  note-collision.cc:578-586（3声形）。
+- perf: 追加は**多声 dotted moment の列ごと O(頭数)**（collect/layout の既存呼び出し
+  回数不変・per-system 再実行経路への追加ゼロ）＝§7.9 の構造で言える側。
+
+plain 322 / 処理済 **95**（fixed **24**・exact **17**・skip **46**・open **8**・
+pending 227。数えたら state 別内訳も一緒に書くこと）。
+
+未 push **19**（第104 までの 16+第105 の 2+この handoff。数え直すこと。
+**⚠️ push しない**）・
+テスト **4173 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 動き 0 枚**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第104セッション第1〜7便の経緯
+
+最終更新 第104セッション第5便（＝第1便 complex-once.ly **fixed 第22号**・`16665c00`・
 第2便 context 3冊+cross-staff-beams=skip・cue-clef-manually=**open（cue clef の
-主張はほぼ成立・根は R1-in-voice regime）**・`89b63607`）。
-frontier の pending 先頭は **dot-column-note-collision.ly**（下見済・frontier 欄参照）。
+主張はほぼ成立・根は R1-in-voice regime）**・`89b63607`・
+第3便 dot-column-note-collision.ly **fixed 第23号**＝§2A の付点 2 債務を 3 層で返済・
+`ec920e5c`・第4便 dot-column-vertical-positioning.ly=**open（rest-over-beam regime）**・
+第5便 dot-rest-horizontal-spacing=**exact**・dot-rest-beam-trigger=**open（beam 傾きは
+exact・修理=sticky 時価の dots 欠落・残差=rest-in-voice 変位）**・
+第6便 duration-line 2冊=skip（\consists Duration_line_engraver=false plain ゲート・
+\- の対応物なし）・第7便=ユーザー三問の自己監査 `713182c8`＝**4 件修正・出力不変**:
+dot 列押し出しの誤引用（実体は side-position でなく **dot-column.cc 自前の
+Dot_formatting_problem・頭箱は position±1.1 の固定帯・x_offset は dot 位置の点サンプル**）・
+判定式を LP の形へ（整数格子上で挙動同一）・flag 箱未移植の開示・
+**sticky dots の read 取りこぼし 1 site**（`>>N` 無し等分割群の総時価が dots を
+落としていた——Fraction のまま読む site は Denominator-grep に出ない））。
+frontier の pending 先頭は **dots.ly**（付点法則の統合本・下見は memory に）。
+その次は **dynamics-alignment 族 5 冊**（DynamicLineSpanner の自動分割 regime が
+まとまって始まる——`^\<`/`_\>` の per-dynamic 向きと `\!` 終端。Lily# の hairpin は
+`\!` の綴みが無い（既知の文法宿題）+ 向き `.up/.down` はある——族としてまとめて
+評価してから 1 冊ずつ）。
+
+★★ **⑤（第5便）dot-rest 族 2 冊＋sticky 時価の dots 欠落の修理**:
+- dot-rest-horizontal-spacing = **exact**（r16. の dot 位置 rel (10.23,−0.5) 完全一致・
+  残差は既知 regime の微小 +0.05/−0.21 のみ）。
+- dot-rest-beam-trigger = **open**: beam の傾きは exact（2 本の左端中心 −3.5/−2.69・
+  slope 0.5/span 一致）。**この本が修理を出した——sticky 時価が dots を継がない**
+  （`r8. r` の 2 個目が無点 8 分に化けて描かれ、拍も 1/16 詰まる）。
+  **collector の `_defaultDuration` だけが `FromNoteValue` で dots を捨てていた**——
+  semantics（MeasureDurations）と MIDI/MusicXML の walk は `ToFraction()` で dots 込み
+  ＝**描画側だけの嘘**（walk 全数の教訓がまた出た）。`_defaultDots` を並走させ
+  write/read 全 site（note/drum/rest/chord/q・`>>N`・reset/save 6 か所）へ。
+  LILYPOND-REF: parser.yy:3505-3514 default_duration_（log AND dots）。
+  観測者 MeasureCollectorResetTests +2。**fixture に踏む綴りゼロ＝snapshot 不動**（grep で
+  事前確認してから着手した）。
+- **残差（起票・rest-in-voice regime）**: 同モーメントの 2 声の休符が両方無変位で重なる
+  （voiceOne の beamed r16 と voiceTwo の r8. が同座標。LP は −1.0 / +2.0 へ割る）。
+  根は **voice-props の Rest.direction**（direction-polyphonic-grobs に Rest も居る＝
+  ③の Dots と同じ層・rest.cc:48-140 voiced-position ±4）+rest-near-beam 調整。
+  Lily# の変位は「他声部の**音符**/beam から」の GetRestShift のみ——**音符が居る moment は
+  変位した・rest 同士の moment で消えた**＝境目まで実測済。cue-clef-manually の R1 と同根。
 
 ★★★ **① fixed 第22号 = \once×複合プロパティ操作（complex-once.ly）**:
 - **本の主張**: \once が \hideNotes（override の束）全体に一度だけ効く。
@@ -113,23 +203,47 @@ frontier の pending 先頭は **dot-column-note-collision.ly**（下見済・fr
   入れ子構文なし）・cross-staff-beams（\change Staff・\autoChange の表面なし+
   cross-staff beam 未到達＝§2B）。
 
-**frontier（次の本命）**: ⑴ pending 先頭 = **dot-column-note-collision.ly**（下見済:
-付点和音 vs 符頭の衝突本。**`\small` 1 対だけ書けない→両側落とし（\small を外した
-normal 対に置換・timing 温存）の枠で書ける**。s8 spacer・voice{} 2 moment・声部交差
-（up 声が下側）つき＝DotConfiguration の e2e。小節は `|` 明示・和音 anchor は
-lysc check --pitches で検算）⑵ dot-column-vertical-positioning は voiceThree の本＝
-voice{} で書けるか開いてから ⑶ ②の根 = R1-in-voice MMR regime ⑷ 前セッションから:
-⑤⑵ style-blind 修正（手順は第102セッション⑤）・open 6 本・列間 spacing regime・
+★★★ **③（第3便）fixed 第23号 = 付点列と符頭の衝突（dot-column-note-collision.ly）**:
+- **乖離 2 件とも §2A で名指し済みの未移植だった**: ⑴ `:352-372` side support 欠落＝
+  交差 moment で v2 の付点列が v1 の g 頭に重なる（自頭+2.99 のまま vs LP=相手頭
+  ink右+dot幅）⑵ 付点向きの独自規則（線上→DOWN）＝b4. の付点が下（LP は上）。
+- **移植は 3 層**（詳細は §2A の閉じた欄と status.json notes）: :352-372 の side support
+  （`DotAdjustment.ColumnMinX`）・:374-397 の正シフト→UP・★★★ **voice-props 層＝
+  `make-voice-props-set` は Dots/DotColumn にも direction を配る**（fixture の LP 実測で
+  発覚。⑶ 抜きだと dot-force-down が LP から遠のく——**旧規則は負シフト側で結果だけ
+  正しかった**）。
+- **照合**: 交差 moment の dots{−0.5,+0.5}・v1 根頭から +2.99（LP 2.99）・単独 b4. の
+  dot −0.5・自頭から 1.76（LP 1.754）・声部分離 0.26＝2×0.1×1.3042・単声 dot config
+  不変。**snapshot は dot-force-down 1 枚が data-pos のみ動く**（strip 後バイト一致で
+  証明・ヘッダ書換+part p→m 予約語修理のため）。
+- **観測者**: NoteCollisionTests 書換 4+新 2（e2e が 2.99 をピン）。
+- ⚠️ 起票: 半小節単位の列間 +1.9〜2.1（**s8 spacer 列の存廃 regime**・LP step 4.90 vs
+  6.80）・pushed dot の予約未配線・:578-586（3声形）・fixture の `\small` は両側落とし。
+
+★ **④（第4便）dot-column-vertical-positioning.ly = open（rest-over-beam regime）**:
+- 主張自体は LP 内部の programming_error 回帰＝Lily# に対応装置なし・比較はレイアウト。
+- **twin 書法: voiceOne+voiceThree は「第2分岐=全 spacer」で写せた**（voice{} は分岐順=
+  声番号。`voice { f'8. e16 } { s8. s16 } { r8. a'16 }`）。
+- 構造は一致（beamed 付点対・beam 上へ押し上がる voiceThree の r8.——機構は GetRestShift
+  ＝beam.cc:1331 の port が既にある）。乖離は sub-ss 3 件: 休符 Y Δ0.5（LP rel −7.0 vs
+  −7.5＝押し上げの量子化）・**休符の付点の位置規則が別**（LP は休符の右下 (10.34,−6.5)・
+  Lily# は上 (10.04,−8.0)——rest dot の LP 字面読みが要る）・第2列 X +0.15。
+  数字は status.json notes。
+
+**frontier（次の本命）**: ⑴ pending 先頭 = **dot-rest-beam-trigger.ly**（dot-rest 族が
+続く＝④の rest-dot regime と同族の可能性・開いてから）⑵ ②の根 = R1-in-voice MMR
+regime ⑶ ④の rest-over-beam 量子化+rest-dot 規則 ⑷ 前セッションから: ⑤⑵ style-blind
+修正（手順は第102セッション⑤）・open 7 本・列間 spacing regime（s8 spacer 列も合流）・
 声部横断の臨時状態（第103②⑴）・slur 端点 X（第102起票⑴）。
 
-plain 322 / 処理済 **88**（fixed **22**・exact 16・skip **44**・open **6**・pending 234。
+plain 322 / 処理済 **94**（fixed **23**・exact **17**・skip **46**・open **8**・pending 228。
 数えたら state 別内訳も一緒に書くこと）。
 
-未 push **10**（第103セッションの 7 本+第1便 `16665c00`+第2便 `89b63607`+この handoff。
-数え直すこと。**⚠️ push しない**）・
-テスト **4166 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
+未 push **16**（第103セッションの 7 本+第104の 8 本+この handoff。数え直すこと。
+**⚠️ push しない**）・
+テスト **4171 passed / 0 failed / 4 skipped**（観測者 +2+6+2+1 込み・全スイート確認済）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning・snapshot 動き 0 枚**・
+**Core 0 warning・snapshot は dot-force-down 1 枚 data-pos のみ**（証明は commit message）・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第103セッション第1〜4便の経緯
@@ -11802,24 +11916,21 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ことになるので §1 の `AccidentalX` と同じ議論が要る）か、⑵ 両者が読む
   **staff 単位の解決済みキャッシュ**を 1 つ作る、のどちらか。
   ⚠️ **+0.3% に対して払う額として妥当かは、着手前に決めること。**
-- ★★★ **付点の向きは LP の規則ではない**（2026-08-05・第97セッションの自己監査で出た。
-  **測って名指しただけ・未修正**）。**9 か所が `note-collision.cc:411-448` を引いていたが、
-  そこは `get_clash_groups` と extent trigger と `wid`＝付点のコードは 1 行も無い**。
-  **本物は `:375-398`** で、読むと**規則自体が別物**:
-  ```
-  LP :375-398   `shift_amount > 1e-6`（＝上声部が右へ動いたとき）かつ下の符頭が付点のときだけ発火。
-                向きは既定 UP／両者の付点が同じ DotColumn なら CENTER／さもなくば上の和音の
-                付点に合わせる。下の符尾の全符頭に設定する
-  Lily#         下声部の符頭が線上にあれば DOWN。シフトの符号を読まない
-  LP :350-373   「左に来た付点は右の符頭に Side_position support を張る」——**未移植**
-  ```
-  ⚠️⚠️ **第97セッションで前提が変わった**——touch 分岐が戻ったので**2度も同度もシフトが負**に
-  なり、**そこはまさに LP の規則が発火しない側**。⇒ **`test/dot-force-down` は今、
-  LP でない振る舞いを見張っている本**（fixture header にそう書いた）。
-  ⚠️ **住所は 9 か所とも直した**が、**振る舞いは触っていない**——測ってから。
-  ⚠️ **`audit/citation_drift.csv` はこれを "OK" と言っていた**（**範囲が実在するかしか見ない**）。
-  しかも **2026-04-25 生成で `Svg/Renderer/SvgRenderer.cs`＝存在しないファイルを監査している**。
-  ⇒ **この検査は債務を返す前に監査対象**（§5）。
+- ✅✅ ★★★ **閉じた（2026-08-07・第104セッション）。付点の向きと side support は LP の 3 層になった。**
+  dot-column-note-collision.ly（fixed 第23号）が名指し済みの両欠落に踏む対を出した。移植は
+  ⑴ `:352-372` side support（`DotAdjustment.ColumnMinX`＝縦重なりの support 頭 ink右+dot幅へ
+  dot 列を押す）⑵ `:374-397` 正シフト→down 声部の dots direction=UP ⑶ ★★★ **voice-props 層**
+  ——`make-voice-props-set`（music-functions.scm:616-631）は **Dots/DotColumn にも direction を
+  配る**。\voiceTwo の付点は**衝突と無関係に既定 DOWN**・:374 は正シフト時の**上書き**。
+  ⇒ ★★ **教訓: 「規則が別物」と測って書いた読みも半分だった**——⑶ 抜きの port は
+  fixture `test/dot-force-down` を LP から遠ざけた（旧 Lily# 規則「線上→DOWN」は
+  **負シフト側で結果だけ正しかった**。3 層で snapshot はバイト復帰＝data-pos のみ）。
+  **grob の direction を疑うときは direction-polyphonic-grobs の配布先一覧を先に引く。**
+  ⚠️ 残: `:578-586`（up 群の dot column が後続 up stem を避ける——3声+付点第1up声の形が要る・
+  コーパス未踏）と **pushed dot の予約側**（spacing は押しを知らない・束縛する本が出たら配線）。
+  ⚠️ **`audit/citation_drift.csv` は旧偽引用（:411-448）を "OK" と言っていた**（**範囲が実在する
+  かしか見ない**）。しかも **2026-04-25 生成で `Svg/Renderer/SvgRenderer.cs`＝存在しないファイルを
+  監査している**。⇒ **この検査は債務を返す前に監査対象**（§5）。
 - ✅✅ ★★★ **閉じた（2026-08-05・第98セッション・`58415901`）。cue region は per-voice walk でも
   1 個の wrapper になった。** 正典 `IsInsideProcessedContainer` は cue を知っていたが、
   **手組みの skip リストが 2 か所**（`GatherVoiceMusicNodes`・`CollectMeasuresFromNode`）

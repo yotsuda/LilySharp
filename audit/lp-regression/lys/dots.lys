@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/dots.ly の Lily# 訳。
+// CLAIM: 付点の優先則(重要度順): ⑴線上に置かない ⑵符頭の近く ⑶声部の向き ⑷上へ。
+// 休符にも付点・和音の dots は 1 列・rest のシフトに dots が追随。
+// 綴りメモ:
+// - LP は無引数 \relative(基準 F3)・和音はメンバー連鎖(出口=第1メンバー)。
+//   Lily# は anchor+stack なので毎音 walk して絶対音を合わせた(check --pitches で検算)。
+// - LP \stemDown はスパン(以降ずっと)。Lily# は per-note @stemDown。
+//   <<>> 内は LP でも新 voice(voiceOne/Two)なので @stemDown を付けない。
+// - <<>> は m4 後半に始まり m5 末まで(小節線を跨ぐ=voice スパンは小節粒度なので
+//   小節中からは開けない)。m4+m5 を 1 スパンに融合し、chord5(@stemDown)を v1 側へ・
+//   v2 は s4. でタイミング保存(collisions 便の書法)。per-note @stemDown は
+//   voice 既定に勝つ(LP: \\ の外の音楽は voicify されない)。
+time 6/8
+
+d'4. g,, |
+<b c d e>''4.@stemDown <f g a b>4.@stemDown |
+<f a c>4.@stemDown <e a c>4.@stemDown |
+voice {
+  <b f c' g'>4.@stemDown f4. | <b c>4. r4. |
+} {
+  s4. b,4. | <a b>4. r4. |
+}

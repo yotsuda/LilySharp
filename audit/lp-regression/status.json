@@ -2504,7 +2504,9 @@
     },
     "dot-column-note-collision.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "付点(dot column)と符頭は衝突しない",
+      "notes": "fixed 第23号。乖離2件とも§2A名指し済の未移植が根: ⑴ note-collision.cc:352-372(左に来た付点は右の符頭にside-position support)未移植=m3第1moment で v2 付点列が v1 の g 頭に重なる(自頭+2.99のまま vs LP=相手頭ink右+dot幅) ⑵ 付点向きが独自規則(線上→DOWN)=第2moment の b4. 付点が下(+0.5) vs LP 上(−0.5)。port 3層: :352-372(DotAdjustment.ColumnMinX・縦重なりのある support 頭 ink右+dot幅 pad へ押す=side-position の写し)+:374-397(正シフト→down 声部の dots direction=UP)+**voice-props 層(scm/music-functions.scm:616-631 make-voice-props-set は Dots/DotColumn にも direction を配る**——fixture dot-force-down の LP 実測で発覚。\\voiceTwo の付点は衝突と無関係に既定 DOWN・:374 は正シフト時の上書き。旧 Lily# 規則は負シフト側で結果だけ正しかった)。照合: m3 第1moment dots{−0.5,+0.5}・v1根頭から+2.99(LP 34.877−31.884=2.99)・第2moment dot −0.5・自頭から1.76(LP 1.754)・声部分離 0.26=2×0.1×1.3042(LP同)・2度の頭割り/stem tip/単声 dot config {0.5,1.5}{−0.5,0.5} すべて LP 一致。残差(別regime起票): 半小節単位で列間 +1.9〜2.1(s8 spacer 列の存廃 regime・LP step 4.90 vs 6.80)+pushed dot の予約未配線(spacing 側は押しを知らない・コメント明記)。枠: \\small 対は両側 normal 置換(小型変種のみ未検証)。fixture dot-force-down はヘッダ書換+part p→m(予約語)・snapshot は data-pos のみ(strip 後バイト一致で証明)。観測者: NoteCollisionTests 書換4+新2(VoiceOffsets_DotColumnMinX_ClearsTheUpVoiceHeads=e2e 2.99 ピン)"
     },
     "dot-column-rest-collision.ly": {
       "category": "scheme",
@@ -2512,7 +2514,9 @@
     },
     "dot-column-vertical-positioning.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "dot column が line breaking 前に縦 spacing を起動しない(LP 内部の programming_error 回帰)",
+      "notes": "open。主張自体は LP 内部の評価順序(programming_error 有無)で Lily# に対応装置なし——比較はレイアウトのみ。twin は voiceOne+voiceThree を「第2分岐=全 spacer」で写す(voice{} は分岐順=声番号)。構造一致: F5/E5 の beamed 付点対・A4 16分・voiceThree の r8. が beam の上へ押し上がる機構は両者にある(Lily# GetRestShift=beam.cc:1331 port)。乖離(rest-over-beam regime・sub-ss): ⑴ 休符 Y=LP rel −7.0 vs Lily# −7.5(押し上げ量の量子化 Δ0.5)⑵ 休符の付点=LP (x10.34, rel −6.5)=休符の右下 vs Lily# (10.04, −8.0)=上(rest dot の位置規則が別・要 LP 字面 rest-dot 読み)⑶ 第2列(E5/A4)X が +0.15。f7 LP 側 copy に \\bar |. 入れ忘れ(内部比較には影響なし・再測時に足す)。beam 付点対の dot(F5 の −2.5)は LP 一致"
     },
     "dot-dot-count-override.ly": {
       "category": "override",
@@ -2524,11 +2528,15 @@
     },
     "dot-rest-beam-trigger.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "beam に繋がれた付点休符が早すぎる beam 計算を起こさない(beam は傾く・programming_error なし)",
+      "notes": "open(主張の核=beam の傾きは exact・残差は rest-in-voice regime)。一致: beam 2 本の左端中心 rel −3.5/−2.69・slope 0.5/span が LP と一致・列 step 2.50/2.51/2.40/2.25 一致(第1 step のみ +0.06)・voiceTwo 第1 r8. の下方変位 +2.0 と dot 位置(dx1.45)は LP 一致。**この本が出した修理: sticky 時価が dots を継がなかった**(`r8. r` の 2 個目が無点 8 分に化ける。collector の _defaultDuration だけが FromNoteValue で dots を捨てていた——semantics/MIDI/MusicXML の walk は ToFraction で dots 込み=描画側だけの嘘。_defaultDots を並走させ全 write/read site へ。LILYPOND-REF parser.yy:3505-3514 default_duration_)。残差(起票): **同モーメントの 2 声の休符が両方無変位で重なる**(15.92, 0.0 に voiceOne の beamed r16 と voiceTwo の r8. が同座標。LP は r16 を −1.0 へ・r8. を +2.0 へ)——根は voice-props の Rest.direction(direction-polyphonic-grobs に Rest も居る・cue-clef-manually の R1 と同根)+rest-near-beam 調整。Lily# の変位は「他声部の音符/beam から」の GetRestShift のみで voice-props 既定 ±4(rest.cc:48-140 voiced-position)が無い。第1 moment は音符が居るから変位した=境目まで実測済"
     },
     "dot-rest-horizontal-spacing.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "付点休符の dot が水平 spacing に正しく算入される",
+      "notes": "exact。r16. の dot 位置が LP と完全一致(rel 10.23, −0.5 両者)・cis の頭/♯も dot と衝突なし。残差は既知 regime 内の微小: ♯/頭/旗 X +0.05〜0.06(臨時 gap)・終止線 gap −0.21(小節境界 gap regime=第103①起票と同族)。時価 sticky で cis も 16. を継ぐ(twin コメント参照)"
     },
     "dot-up-voice-collision.ly": {
       "category": "scheme",
@@ -2536,7 +2544,9 @@
     },
     "dots.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "付点の優先則(線上回避>符頭近接>声部の向き>上)・和音のdotは1列・休符にもdot・dotはrest回避シフトに追随",
+      "notes": "fixed24=2修理: (1)voice既定がper-note @stemDown/@stemUpを上書き(焼込/renderer/skyline/VoiceCollectorの4site→書き手優先。LP=\\\\のサブリストのみvoicify=music-functions.scm:1042-1057。dots.lyのstemDown chord5が<<>>と同小節でUPに化けた) (2)dot列がper-voice(LP=Dot_column_engraver∈Staff=engraver-init.ly:73=1moment1列。NoteCollisionにbase_x+頭箱±1.1帯skyline点サンプルの共通X→全dotted entryのColumnMinXへ)。照合: m1/chords1-5のdot Y全一致(4dot列-5.5..-2.5等)・m5の4dot単一列=小節相対4.93完全一致・chord5符尾-5.85..3.33=LP。残差(起票済regime): rests無変位で重なる(rest-in-voice。LPは±2.0・rest dotの相対+0.5上は両者一致)・chord5→f step 3.60vs3.23(voice境界left_head_end)・X drift 0.05(chord1→2以降の列間)。twin書法: 相対和音は毎音walk(全体マーク<...>ダブルアポストロフィ)・m4+m5融合+s4.でchord5をv1へ"
     },
     "drum-scripts.ly": {
       "category": "scheme",
@@ -2552,7 +2562,9 @@
     },
     "duration-line-and-partCombine.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Duration_line_engraver が \\partCombine と共存し、和音結合時は両符頭に DurationLine が付く",
+      "notes": "false plain: \\layout \\context \\consists Duration_line_engraver=engraver 差し替え本(categorizer は \\consists を見ない=completion 族ゲート該当)。DurationLine(\\-) の対応物も \\partCombine の文法表面も無し"
     },
     "duration-line-at-line-break.ly": {
       "category": "scheme",
@@ -2588,7 +2600,9 @@
     },
     "duration-line-tie.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "DurationLine はタイした NoteHead を通過するが、先行する Tie は考慮しない",
+      "notes": "false plain: 同じく \\consists Duration_line_engraver 差し替え本。DurationLine(\\-) の対応物なし"
     },
     "duration-multiplier-scheme.ly": {
       "category": "scheme",

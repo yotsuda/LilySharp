@@ -875,8 +875,16 @@ public sealed partial class MeasureCollector
     // Grace-note infos of the just-collected leading grace group, stamped onto the
     // main note/chord so the spacing can reserve space in front of its column.
     private ImmutableArray<GraceNoteInfo> _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
-    // Default duration
+    // Default (sticky) duration: an undurated note/rest/chord takes the WHOLE
+    // previous duration — dots included — so the pair travels together.
+    // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration —
+    //   default_duration_ is a full Duration (log AND dots). Until 2026-08-07 only
+    //   the value stuck and the dots silently reset to 0 (`r8. r` lost its dot,
+    //   dot-rest-beam-trigger.ly), while the SEMANTIC walk (MeasureDurations) and
+    //   the MIDI/MusicXML exporters carried ToFraction() with dots — the drawing
+    //   walk was the one liar.
     private Fraction _defaultDuration = Fraction.Quarter;
+    private int _defaultDots;
 
     // This voice's score-level key, captured at collection start. A section
     // boundary reverts the running key to it (like octave/duration) so a section
@@ -1258,6 +1266,7 @@ public sealed partial class MeasureCollector
             _currentStaffIndex = collectStaffIndex++;
             _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
+            _defaultDots = 0;
 
             // Part-body grob defaults (`part <voice> { override … }`) scope to this staff.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
@@ -1655,8 +1664,13 @@ public sealed partial class MeasureCollector
     /// moved a bar's last-column → bar-line distance the WRONG WAY (+0.036 where
     /// LilyPond has −0.100 relative to the same bar set monophonically).
     ///
-    /// Applied last, and unconditionally, to match the renderer's precedence: the
-    /// voice default wins over a beam-resolved or explicitly annotated direction.
+    /// Applied last, over the beam-resolved directions, to match the renderer's
+    /// precedence — but NOT over a direction the writer asked for
+    /// (<see cref="NoteItem.ForcedStemUp"/>). In LilyPond only the <c>\\</c> sub-lists
+    /// are voicified, so music before the construct in the same measure — which this
+    /// measure-granular span cannot tell apart — never receives the voice props at all,
+    /// and an explicit <c>\stemDown</c> inside a block is a later property set that
+    /// beats <c>\voiceOne</c>'s. Either way the writer's ask survives.
     /// Voices 5+ get <c>null</c> from GetDefaultStemUp and keep their own.
     ///
     /// Only INSIDE the span, though — see <see cref="VoiceDefaults.IsPolyphonicAt"/>.
@@ -1690,9 +1704,9 @@ public sealed partial class MeasureCollector
                 {
                     MusicItem? updated = items[ii] switch
                     {
-                        NoteItem n when n.StemUpOverride != forced
+                        NoteItem n when n.ForcedStemUp is null && n.StemUpOverride != forced
                             => n with { StemUpOverride = forced },
-                        ChordItem c when c.StemUpOverride != forced
+                        ChordItem c when c.ForcedStemUp is null && c.StemUpOverride != forced
                             => c with { StemUpOverride = forced },
                         _ => null,
                     };
@@ -1980,8 +1994,10 @@ public sealed partial class MeasureCollector
                 // two octaves from where the MIDI put it.
                 var savedOctave = _octave.Snapshot();
                 var savedDuration = _defaultDuration;
+                var savedDots = _defaultDots;
                 _octave.Restore(spanFrame);
                 _defaultDuration = Fraction.Quarter;
+                _defaultDots = 0;
 
                 // Per-note metadata in this sub-voice is keyed by its local 0-based
                 // measure index; shift it to the span's real start so dynamics etc.
@@ -2004,6 +2020,7 @@ public sealed partial class MeasureCollector
 
                 _octave.Restore(savedOctave);
                 _defaultDuration = savedDuration;
+                _defaultDots = savedDots;
 
                 for (int k = 0; k < sub.Count && start + k < totalMeasures; k++)
                     trackMeasures[start + k] = sub[k];
@@ -2142,6 +2159,7 @@ public sealed partial class MeasureCollector
         _root = null;
         _octave.ResetAll();
         _defaultDuration = Fraction.Quarter;
+        _defaultDots = 0;
         _meta.Reset();
     }
 

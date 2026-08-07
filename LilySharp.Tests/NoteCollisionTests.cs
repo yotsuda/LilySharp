@@ -582,74 +582,167 @@ public class NoteCollisionTests
         new(staffPositions.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
             baseDuration, 0, 0);
 
-    // --- LILYPOND-REF dot direction adjustment tests (I-4) ---
+    // --- LILYPOND-REF dot direction / dot side-support tests (I-4) ---
+    // LILYPOND-REF: lily/note-collision.cc:352-397 check_meshing_chords — the dot
+    // rules read the SIGN of the finished shift. Measured against
+    // dot-column-note-collision.ly (audit/lp-regression/lys twin).
 
     [Fact]
-    public void DotDirection_DownVoice_OnLine_ForcedDown()
+    public void DotDirection_NegativeShift_NoUpForce_ButDownDotsTakeSupport()
     {
-        // ⚠️ THIS PINS A DIVERGENCE, NOT A PORT. LilyPond's dot-direction rule is :375-398:
-        // it fires only when the shift is POSITIVE (the up group moved right) and the
-        // direction it sets is UP / CENTER / the up chord's — never "DOWN because the note is
-        // on a line". Lily# forces DOWN off the staff line alone. Kept green so the current
-        // behaviour is described rather than unwatched; ticketed in HANDOFF §2 A.
-        // ⚠️ The seconds/unisons this test uses now produce a NEGATIVE shift (the touch branch
-        // above), which is exactly where LilyPond's rule does NOT fire.
-        // LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule this approximates.
+        // A second is a touch → the DOWN group moves right (negative shift), which is
+        // exactly where the :374 direction rule does NOT fire; the :359 support arm
+        // (its guard is the else of the up arm, not a shift test) still runs.
         var collision = new NoteCollision();
-        var ups = new[] { 5 };   // Up-stem note above
-        var downs = new[] { 4 }; // Down-stem note on a line (even position)
-
-        var result = collision.AnalyzeCollision(ups, downs,
+        var result = collision.AnalyzeCollision(new[] { 5 }, new[] { 4 },
             upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 1);
 
-        Assert.True(result.DownDotForceDown,
-            "Down-stem voice dots on lines should be forced down in collision");
+        Assert.False(result.DownDotDirectionUp,
+            "a negative shift must not set the down dots' direction");
+        Assert.True(result.DownDotsAvoidUpHeads);
+        Assert.False(result.UpDotsAvoidDownHeads);
     }
 
     [Fact]
-    public void DotDirection_NoCollision_NotForced()
+    public void DotDirection_PositiveShift_SetsDownDotsUp()
     {
-        // No collision → no dot direction override (see the divergence note above).
-        // LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords
+        // A voice crossing (up group BELOW the down group) is the meshing fallback:
+        // the up group moves right (positive shift) and the down head is dotted —
+        // dot-column-note-collision.ly m3: LilyPond prints b'4.'s dot in the space
+        // ABOVE its line (direction UP), not below.
         var collision = new NoteCollision();
-        var ups = new[] { 8 };
-        var downs = new[] { 0 };
-
-        var result = collision.AnalyzeCollision(ups, downs,
-            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 1);
-
-        Assert.False(result.DownDotForceDown);
-    }
-
-    [Fact]
-    public void DotDirection_DownVoice_InSpace_NotForced()
-    {
-        // Down-stem note in a space (odd position) → dot doesn't need adjustment
-        var collision = new NoteCollision();
-        var ups = new[] { 6 };
-        var downs = new[] { 5 }; // Odd position = in a space
-
-        var result = collision.AnalyzeCollision(ups, downs,
+        var result = collision.AnalyzeCollision(new[] { -3, -2 }, new[] { 0, 1 },
             upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 1);
 
-        Assert.False(result.DownDotForceDown,
-            "Down-stem note in space doesn't need dot direction adjustment");
+        Assert.Equal(CollisionType.Meshing, result.Type);
+        Assert.True(result.UpStemXOffset > 0);
+        Assert.True(result.DownDotDirectionUp);
+        Assert.True(result.DownDotsAvoidUpHeads);
     }
 
     [Fact]
-    public void DotDirection_Merge_NotForced()
+    public void DotDirection_NegativeShift_UpDots_SupportAgainstDownHead()
     {
-        // Merged notes don't need dot direction override (one head is wiped)
+        // A second whose dotted up head sits ON a line keeps the touch branch (the
+        // up-dots escape needs !upOnLine), so the DOWN group moves right — the up
+        // group "ended up on the left" and its dots take support against the down
+        // group's first head (:352-358); the down arm is the ELSE and must not run.
         var collision = new NoteCollision();
-        var ups = new[] { 4 };
-        var downs = new[] { 4 };
+        var result = collision.AnalyzeCollision(new[] { 4 }, new[] { 3 },
+            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 0);
 
-        var result = collision.AnalyzeCollision(ups, downs,
+        Assert.True(result.UpStemXOffset < -1e-6, "the touch branch moves the down group right");
+        Assert.True(result.UpDotsAvoidDownHeads);
+        Assert.False(result.DownDotsAvoidUpHeads);
+        Assert.False(result.DownDotDirectionUp);
+    }
+
+    [Fact]
+    public void DotDirection_NoCollision_NoAdjustments()
+    {
+        // Too far apart → NoCollision carries no dot adjustments at all.
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(new[] { 8 }, new[] { 0 },
             upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 1);
 
-        Assert.False(result.DownDotForceDown,
-            "Merged notes don't need dot direction adjustment");
+        Assert.False(result.DownDotDirectionUp);
+        Assert.False(result.DownDotsAvoidUpHeads);
+        Assert.False(result.UpDotsAvoidDownHeads);
     }
+
+    [Fact]
+    public void DotDirection_Merge_NoAdjustments()
+    {
+        // The merge early-return skips the dot blocks (see the note at the return):
+        // a default-switch merge has EQUAL dots and coincident heads, so its dot
+        // columns coincide too.
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(new[] { 4 }, new[] { 4 },
+            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 1);
+
+        Assert.False(result.DownDotDirectionUp);
+        Assert.False(result.DownDotsAvoidUpHeads);
+        Assert.False(result.UpDotsAvoidDownHeads);
+    }
+
+    [Fact]
+    public void VoiceOffsets_DotColumnMinX_ClearsTheUpVoiceHeads()
+    {
+        // dot-column-note-collision.ly m3 moment 1, end to end:
+        // << <f' g'>4 \\ <b' c''>4. >> — the up voice crosses BELOW the dotted down
+        // voice. LilyPond pushes the down chord's whole dot column right of the up
+        // voice's suspended g' head: measured dot X − down-head X = 4.50
+        // (= up shift 1.50 + reversed-head offset + head ink right + one dot width).
+        var collision = new NoteCollision();
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeDottedChord(Fraction.Quarter, 1, -3, -2), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeDottedChord(Fraction.Quarter, 1, 0, 1), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+
+        var offsets = collision.CalculateVoiceOffsets(column);
+        var up = offsets.First(o => o.VoiceId == 1);
+        var down = offsets.First(o => o.VoiceId == 2);
+
+        Assert.True(down.Dot.DirectionUp);
+        Assert.NotNull(down.Dot.ColumnMinX);
+        // The dot column starts one dot width right of the up voice's rightmost head
+        // ink: upX + reversed-head offset + head ink right + dot width. Verified
+        // against LilyPond: dots land 4.49/4.50 right of the down chord's head.
+        var headBox = GlyphMetrics.GetNoteheadBBox(4);
+        var upNotes = new[] { -3, -2 }
+            .Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray();
+        double flip = ChordHeadPositioning.CalculateOffsets(upNotes, true, 4).Max();
+        double expected = up.XOffset + flip + headBox.Right + GlyphMetrics.AugmentationDot.Width;
+        Assert.Equal(expected, down.Dot.ColumnMinX!.Value, 6);
+        // Pinned against the render: dots land 2.99 right of the up voice's root head
+        // (LilyPond 34.877 − 31.884 = 2.99), i.e. 4.49 right of the down chord's
+        // REVERSED b' head, which sits a flip offset left of its column.
+        Assert.Equal(2.99, down.Dot.ColumnMinX!.Value - up.XOffset, 1);
+        // ONE dot column per staff moment — Dot_column_engraver lives in the Staff
+        // context, so the up voice's dots share the down voice's column X.
+        // LILYPOND-REF: ly/engraver-init.ly:73 Staff context — \consists Dot_column_engraver
+        Assert.NotNull(up.Dot.ColumnMinX);
+        Assert.Equal(down.Dot.ColumnMinX!.Value, up.Dot.ColumnMinX!.Value, 6);
+    }
+
+    [Fact]
+    public void VoiceOffsets_DotColumns_ShareOneStaffColumn_WithoutAnyCollision()
+    {
+        // dots.ly m5: << <b c'>4. \\ <a, b,>4. >> — the voices are far apart (no
+        // collision, no offsets), yet LilyPond prints ALL FOUR dots in ONE column:
+        // the down voice's dots move right to clear the up chord's suspended c'
+        // head, because the Dot_column_engraver lives in the STAFF context and
+        // collects the whole moment. Measured (dots.ly): every dot 4.93 right of
+        // the preceding bar line, in both voices.
+        // LILYPOND-REF: ly/engraver-init.ly:73 Staff context — \consists Dot_column_engraver
+        var collision = new NoteCollision();
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeDottedChord(Fraction.Quarter, 1, 0, 1), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeDottedChord(Fraction.Quarter, 1, -8, -7), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+
+        var offsets = collision.CalculateVoiceOffsets(column);
+        var up = offsets.First(o => o.VoiceId == 1);
+        var down = offsets.First(o => o.VoiceId == 2);
+
+        // Far apart: nobody shifts.
+        Assert.Equal(0.0, up.XOffset, 6);
+        Assert.Equal(0.0, down.XOffset, 6);
+
+        // The shared column X clears the up chord's reversed second (flip offset +
+        // head ink right + one dot width) — for BOTH voices' dots.
+        var headBox = GlyphMetrics.GetNoteheadBBox(4);
+        double flip = ChordHeadPositioning.CalculateOffsets(
+            new[] { 0, 1 }.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+            true, 4).Max();
+        double expected = flip + headBox.Right + GlyphMetrics.AugmentationDot.Width;
+        Assert.Equal(expected, up.Dot.ColumnMinX!.Value, 6);
+        Assert.Equal(expected, down.Dot.ColumnMinX!.Value, 6);
+    }
+
+    private static ChordItem MakeDottedChord(Fraction baseDuration, int dots, params int[] staffPositions) =>
+        new(staffPositions.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+            baseDuration, dots, 0);
 
     // --- LILYPOND-REF multi-voice cascading tests (I-5) ---
 

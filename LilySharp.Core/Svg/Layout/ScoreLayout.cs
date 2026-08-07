@@ -239,7 +239,7 @@ internal sealed record ScoreLayout(
     ImmutableArray<StanzaNumberLayout> StanzaNumberLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
-    ImmutableHashSet<VoiceItemKey> DotForceDownEntries,
+    ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )
 {
@@ -284,19 +284,18 @@ internal sealed record ScoreLayout(
     }
 
     /// <summary>
-    /// Checks if dots should be forced downward for this voice item.
+    /// The dot-column adjustments a two-voice collision imposes on this voice item
+    /// (preferred dot direction and/or a minimum dot-column X); <c>default</c> when none.
     /// </summary>
     /// <remarks>
-    /// In multi-voice collision, down-stem dots on staff lines shift below the line.
-    /// ⚠️ That is Lily#'s rule and NOT LilyPond's — see NoteCollision.AnalyzeCollision, which
-    /// records both the divergence and the fact that this family used to cite <c>:411-448</c>,
-    /// a range holding no dot code at all.
-    /// LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords — the rule it approximates.
+    /// LILYPOND-REF: lily/note-collision.cc:352-397 check_meshing_chords — the dot
+    /// side supports and the dot direction rule, computed in
+    /// NoteCollision.CalculateVoiceOffsets.
     /// </remarks>
-    public bool IsDotForcedDown(int measureIndex, int voiceId, int itemIndex)
+    public DotAdjustment GetDotAdjustment(int measureIndex, int voiceId, int itemIndex)
     {
         var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
-        return DotForceDownEntries.Contains(key);
+        return DotAdjustments.TryGetValue(key, out var dot) ? dot : default;
     }
 
     /// <summary>

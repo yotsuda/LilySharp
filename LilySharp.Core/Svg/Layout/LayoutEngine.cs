@@ -321,7 +321,7 @@ internal sealed class LayoutEngine
         (systemsArray, annotations) = ApplySolvedRowPositions(
             score, systemsArray, annotations, annotationContext.SolvedRowBaselines);
 
-        var (voiceOffsets, headWipes, dotForceDown, partCombineLayouts) =
+        var (voiceOffsets, headWipes, dotAdjustments, partCombineLayouts) =
             CalculateVoiceCollisions(score, systemsArray);
 
         var result = BuildScoreLayout(pages, systemsArray,
@@ -330,7 +330,7 @@ internal sealed class LayoutEngine
             annotations,
             voiceOffsets,
             headWipes,
-            dotForceDown,
+            dotAdjustments,
             restShifts,
             partCombineLayouts);
         return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
@@ -3978,13 +3978,13 @@ internal sealed class LayoutEngine
     /// </summary>
     private (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
              ImmutableHashSet<VoiceItemKey> HeadWipes,
-             ImmutableHashSet<VoiceItemKey> DotForceDown,
+             ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments,
              ImmutableArray<PartCombineLayout> PartCombine)
         CalculateVoiceCollisions(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray)
     {
         var voiceOffsetsBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
-        var dotForceDownBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
+        var dotAdjustBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, DotAdjustment>();
         var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
@@ -3993,10 +3993,10 @@ internal sealed class LayoutEngine
 
             var staffScore = new Score(
                 staff.Voices, score.TimeSignature, score.KeySignature, ClefToString(staff.Clef));
-            var (vo, hw, df) = _elementCoordinator.CalculateVoiceOffsets(staffScore);
+            var (vo, hw, da) = _elementCoordinator.CalculateVoiceOffsets(staffScore);
             foreach (var kv in vo) voiceOffsetsBuilder[kv.Key] = kv.Value;
             foreach (var k in hw) headWipeBuilder.Add(k);
-            foreach (var k in df) dotForceDownBuilder.Add(k);
+            foreach (var kv in da) dotAdjustBuilder[kv.Key] = kv.Value;
 
             // Part combination is opt-in (\partcombine); plain << \\ >> voices
             // carry no a2/Solo text. Gated off by default to match LilyPond.
@@ -4009,7 +4009,7 @@ internal sealed class LayoutEngine
             }
         }
         return (voiceOffsetsBuilder.ToImmutable(), headWipeBuilder.ToImmutable(),
-                dotForceDownBuilder.ToImmutable(), partCombineLayouts);
+                dotAdjustBuilder.ToImmutable(), partCombineLayouts);
     }
 
     /// <summary>
@@ -4064,7 +4064,7 @@ internal sealed class LayoutEngine
         AnnotationLayouts a,
         ImmutableDictionary<VoiceItemKey, double> voiceOffsets,
         ImmutableHashSet<VoiceItemKey> headWipeEntries,
-        ImmutableHashSet<VoiceItemKey> dotForceDownEntries,
+        ImmutableDictionary<VoiceItemKey, DotAdjustment> dotAdjustments,
         ImmutableDictionary<RestShiftKey, double> restShifts,
         ImmutableArray<PartCombineLayout> partCombineLayouts = default)
     {
@@ -4084,7 +4084,7 @@ internal sealed class LayoutEngine
             a.LedgerLineSpans,
             a.BarNumbers,
             a.StanzaNumbers,
-            voiceOffsets, headWipeEntries, dotForceDownEntries, restShifts);
+            voiceOffsets, headWipeEntries, dotAdjustments, restShifts);
     }
 
     /// <summary>

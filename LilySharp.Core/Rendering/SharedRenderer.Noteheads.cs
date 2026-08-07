@@ -63,11 +63,11 @@ internal static partial class SharedRenderer
         {
             // Head-wipe when this voice's notehead merges with another's.
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
-            // Multi-voice collision: this down voice's on-line augmentation dot is
-            // forced below the line (instead of the default up) to clear the up
-            // voice's dot. ⚠️ Lily#'s rule, not LilyPond's — NoteCollision.AnalyzeCollision
-            // has the account. LILYPOND-REF: lily/note-collision.cc:375-398 check_meshing_chords.
-            bool dotForceDown = layout.IsDotForcedDown(ml.MeasureIndex, voiceNumber, itemIdx);
+            // Multi-voice collision: the dot-column adjustments the collision imposed
+            // on this item — a preferred direction for its dots and/or a minimum X
+            // that clears the opposite voice's heads.
+            // LILYPOND-REF: lily/note-collision.cc:352-397 check_meshing_chords.
+            var dotAdjust = layout.GetDotAdjustment(ml.MeasureIndex, voiceNumber, itemIdx);
 
             // \voiceOne/\voiceTwo hold only where the voice { } span does, so this
             // is asked per measure — not once per part.
@@ -93,7 +93,7 @@ internal static partial class SharedRenderer
                 case NoteItem note:
                     DrawNote(note, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown, voiceX);
+                        forcedStemUp, headWiped, gc, pageHeight, dotAdjust, voiceX);
                     break;
                 case RestItem rest:
                     // A spacer rest ('s') reserves its column width but is never
@@ -116,7 +116,7 @@ internal static partial class SharedRenderer
                 case ChordItem chord:
                     DrawChord(chord, itemX, staffMiddleY, resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
-                        forcedStemUp, headWiped, gc, pageHeight, dotForceDown, voiceX);
+                        forcedStemUp, headWiped, gc, pageHeight, dotAdjust, voiceX);
                     break;
                 case ClefChangeItem clefChange:
                     // A leading clef change that opens a system is already drawn as the
@@ -455,7 +455,7 @@ internal static partial class SharedRenderer
     /// </summary>
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight, bool dotForceDown = false, double voiceX = 0)
+        IDrawingContext gc, double pageHeight, DotAdjustment dotAdjust = default, double voiceX = 0)
     {
         int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = staffMiddleY + note.StaffPosition / 2.0;
@@ -464,8 +464,12 @@ internal static partial class SharedRenderer
         double noteFontSize = note.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize;
 
         // Voice stem direction override (voice 1 up / voice 2 down); falls back
-        // to the note's own position-based default in single-voice staves.
-        bool stemUp = forcedStemUp ?? note.StemUp;
+        // to the note's own position-based default in single-voice staves. A
+        // per-note @stemUp/@stemDown outranks the voice default — in LilyPond
+        // only the \\ sub-lists are voicified and an explicit \stemDown is a
+        // later property set, so the writer's ask survives either way (must
+        // match ResolveVoiceStemDirections, which skips these when baking).
+        bool stemUp = note.ForcedStemUp ?? forcedStemUp ?? note.StemUp;
 
         // Accidental (left of notehead). Placed through the SAME single-ape skyline path the
         // spacing reservation uses (AccidentalPlacement.CalculateSinglePosition), so draw =
@@ -626,14 +630,26 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: lily/dot-column.cc:82-84 Dot_column::calc_positioning_done — base_x.unite (Stem::first_head (parent_stems[i])->extent (commonx, X_AXIS))
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
         double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * (note.IsCue ? EngravingDefaults.CueScale : 1.0) + dotWidth;
+        // A collision's dot side supports push the whole dot column right of the
+        // opposite voice's heads; the minimum X is in the staff column's frame
+        // (x − voiceX), settled in NoteCollision.CalculateVoiceOffsets.
+        // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
+        if (dotAdjust.ColumnMinX is { } dotMinX)
+            dotStartX = Math.Max(dotStartX, x - voiceX + dotMinX);
         if (note.Dots > 0)
         {
-            // Same Dot_configuration machinery as chords (for a single dot
-            // this reduces to "line notes move to the space above", unless the
-            // multi-voice collision forces this down voice's dot below).
+            // Same Dot_configuration machinery as chords. The dots' preferred
+            // direction has two layers, exactly LilyPond's: \voiceOne/\voiceTwo set
+            // Dots.direction on the WHOLE voice (UP for odd voices, DOWN for even —
+            // so a lone down-voice dotted line-note dips below its line), and a
+            // positive-shift collision overrides the down voice's dots to UP.
+            // LILYPOND-REF: scm/music-functions.scm:616-631 direction-polyphonic-grobs — Dots
+            // LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — set_property direction
+            int dotDir = dotAdjust.DirectionUp ? 1
+                : forcedStemUp switch { true => 1, false => -1, null => 0 };
             int dotPos = DotConfiguration.Resolve(
                 new[] { note.StaffPosition },
-                dotForceDown ? new[] { -1 } : null)[0];
+                dotDir != 0 ? new[] { dotDir } : null)[0];
             double dotY = staffMiddleY + dotPos / 2.0;
             for (int d = 0; d < note.Dots; d++)
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
@@ -646,14 +662,15 @@ internal static partial class SharedRenderer
     /// <see cref="DrawNote"/>.</summary>
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, double pageHeight, bool dotForceDown = false, double voiceX = 0)
+        IDrawingContext gc, double pageHeight, DotAdjustment dotAdjust = default, double voiceX = 0)
     {
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
         char head = EmmentalerGlyphs.GetNotehead(chord.Notehead, noteValue);
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
-        bool stemUp = forcedStemUp ?? chord.StemUp;
+        // Writer's @stemUp/@stemDown outranks the voice default — see DrawNote.
+        bool stemUp = chord.ForcedStemUp ?? forcedStemUp ?? chord.StemUp;
 
         // Cue chords take the same font-size −4 recipe as cue notes (EngravingDefaults.Cue*).
         double headScale = chord.IsCue ? EngravingDefaults.CueScale : 1.0;
@@ -742,9 +759,20 @@ internal static partial class SharedRenderer
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
             double dotStartX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale
                 + Math.Max(0, headOffsets.Max()) + dotWidth;
+            // Collision dot side supports — same push as the single-note branch.
+            // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
+            if (dotAdjust.ColumnMinX is { } dotMinX)
+                dotStartX = Math.Max(dotStartX, x - voiceX + dotMinX);
+            // Two-layer preferred direction, as in the single-note branch: the voice
+            // props set Dots.direction voice-wide, a positive-shift collision
+            // overrides the down voice's dots to UP.
+            // LILYPOND-REF: scm/music-functions.scm:616-631 direction-polyphonic-grobs — Dots
+            // LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — set_property direction
+            int dotDir = dotAdjust.DirectionUp ? 1
+                : forcedStemUp switch { true => 1, false => -1, null => 0 };
             var resolved = DotConfiguration.Resolve(
                 chord.Notes.Select(n => n.StaffPosition).ToArray(),
-                dotForceDown ? Enumerable.Repeat(-1, chord.Notes.Length).ToArray() : null);
+                dotDir != 0 ? Enumerable.Repeat(dotDir, chord.Notes.Length).ToArray() : null);
             foreach (int p in resolved)
             {
                 double dotY = staffMiddleY + p / 2.0;

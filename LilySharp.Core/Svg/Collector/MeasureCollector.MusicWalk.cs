@@ -144,6 +144,7 @@ public sealed partial class MeasureCollector
         _octave.ResetToInitial();
         _octave.CurrentOctave += octaveOffset;
         _defaultDuration = Fraction.Quarter;
+        _defaultDots = 0;
     }
 
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m)
@@ -179,8 +180,13 @@ public sealed partial class MeasureCollector
             return;
 
         // The group occupies its total — the trailing `>>N`, or (absent one) the inherited
-        // running duration (it acts like a single note). Members split that total equally.
-        Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
+        // running duration (it acts like a single note), dots included: a group after
+        // `c4.` spans a dotted quarter. This read missed the dots when _defaultDots
+        // landed (2026-08-07) — the self-audit found it, not a book; no corpus twin
+        // exercises a group after a dotted duration yet.
+        // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration — default_duration_
+        Fraction total = arpeggio.TotalDuration?.ToFraction()
+            ?? _defaultDuration.Dotted(_defaultDots);
         var sub = ArpeggioSubdivision.Compute(members.Count, total);
         Fraction scale = sub.TimeScale;
         var forced = (sub.MemberValue, sub.MemberDots);
@@ -274,9 +280,13 @@ public sealed partial class MeasureCollector
         // which is why the bracket indices were captured above).
         builder.AddDuration(total, arpeggio.Position + 1);
 
-        // Acts like one note: a trailing `>>N` carries N as the running duration.
+        // Acts like one note: a trailing `>>N` carries N as the running duration
+        // (dots included, like any written duration).
         if (arpeggio.TotalDuration is { } td)
+        {
             _defaultDuration = Fraction.FromNoteValue(td.Value);
+            _defaultDots = td.DotCount;
+        }
     }
 
     /// <summary>Emit one arpeggio pitch / chord / rest member at the group's forced

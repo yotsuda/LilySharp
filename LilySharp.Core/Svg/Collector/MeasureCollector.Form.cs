@@ -137,6 +137,7 @@ public sealed partial class MeasureCollector
         // quarter-note melody as whole notes.
         _octave.ResetForSection();
         _defaultDuration = Fraction.Quarter;
+        _defaultDots = 0;
 
         // A section is self-contained: re-arm the confirmable boundary so a section that
         // OPENS with a bare `|` anchors its OWN start (no empty measure, no leak into the

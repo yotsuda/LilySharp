@@ -11,22 +11,22 @@
   <line x1="0.00" y1="14.35" x2="17.72" y2="14.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.35" x2="17.72" y2="15.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="16.35" x2="17.72" y2="16.35" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="15.35" font-size="4.00"></text>
-  <text class="music" x="4.88" y="14.35" font-size="4.00" data-pos="790"></text>
-  <text class="music" x="4.88" y="16.35" font-size="4.00" data-pos="790"></text>
-  <text class="music" x="8.49" y="13.85" font-size="4.00" data-pos="847"></text>
+  <text class="music" x="0.80" y="15.35" font-size="4.00" data-pos="1164"></text>
+  <text class="music" x="4.88" y="14.35" font-size="4.00" data-pos="1146"></text>
+  <text class="music" x="4.88" y="16.35" font-size="4.00" data-pos="1146"></text>
+  <text class="music" x="8.49" y="13.85" font-size="4.00" data-pos="1211"></text>
   <line x1="9.73" y1="13.70" x2="9.73" y2="10.68" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="12.35" y="13.85" font-size="4.00" data-pos="851"></text>
+  <text class="music" x="12.35" y="13.85" font-size="4.00" data-pos="1215"></text>
   <line x1="13.59" y1="13.70" x2="13.59" y2="10.68" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="9.79" y="14.35" font-size="4.00" data-pos="863"></text>
+  <text class="music" x="9.79" y="14.35" font-size="4.00" data-pos="1227"></text>
   <line x1="9.86" y1="14.50" x2="9.86" y2="17.68" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="11.55" y="14.85" font-size="4.00"></text>
-  <text class="music" x="14.25" y="14.35" font-size="4.00" data-pos="867"></text>
+  <text class="music" x="14.25" y="14.35" font-size="4.00" data-pos="1231"></text>
   <line x1="14.32" y1="14.50" x2="14.32" y2="17.73" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="14.38" y="17.73" font-size="4.00"></text>
-  <rect x="16.63" y="12.35" width="0.19" height="4.00" data-pos="852"/>
-  <rect x="17.12" y="12.35" width="0.60" height="4.00" data-pos="852"/>
-  <rect x="0.30" y="7.49" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="820"/>
-  <text x="3.40" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="820">Main</text>
+  <rect x="16.63" y="12.35" width="0.19" height="4.00" data-pos="1216"/>
+  <rect x="17.12" y="12.35" width="0.60" height="4.00" data-pos="1216"/>
+  <rect x="0.30" y="7.49" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1178"/>
+  <text x="3.40" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1178">Main</text>
   </g>
 </svg>

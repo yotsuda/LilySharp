@@ -63,7 +63,7 @@ internal sealed class ElementCoordinator
     /// </remarks>
     public (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
             ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
-            ImmutableHashSet<VoiceItemKey> DotForceDownEntries) CalculateVoiceOffsets(
+            ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments) CalculateVoiceOffsets(
         Score score, GrobPropertyResolver? resolver = null)
         => ComputeVoiceOffsets(score.Voices, resolver);
 
@@ -80,13 +80,13 @@ internal sealed class ElementCoordinator
     /// </summary>
     internal static (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
             ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
-            ImmutableHashSet<VoiceItemKey> DotForceDownEntries) ComputeVoiceOffsets(
+            ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments) ComputeVoiceOffsets(
         ImmutableArray<Voice> voices, GrobPropertyResolver? resolver = null)
     {
         if (voices.Length <= 1)
             return (ImmutableDictionary<VoiceItemKey, double>.Empty,
                     ImmutableHashSet<VoiceItemKey>.Empty,
-                    ImmutableHashSet<VoiceItemKey>.Empty);
+                    ImmutableDictionary<VoiceItemKey, DotAdjustment>.Empty);
 
         var voiceColumns = new VoiceCollector().Collect(voices);
         var noteCollision = new NoteCollision();
@@ -94,11 +94,11 @@ internal sealed class ElementCoordinator
         if (voiceColumns.Length == 0)
             return (ImmutableDictionary<VoiceItemKey, double>.Empty,
                     ImmutableHashSet<VoiceItemKey>.Empty,
-                    ImmutableHashSet<VoiceItemKey>.Empty);
+                    ImmutableDictionary<VoiceItemKey, DotAdjustment>.Empty);
 
         var offsetBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
-        var dotForceDownBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
+        var dotAdjustBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, DotAdjustment>();
 
         foreach (var column in voiceColumns)
         {
@@ -125,7 +125,7 @@ internal sealed class ElementCoordinator
 
             var offsets = noteCollision.CalculateVoiceOffsets(column);
 
-            foreach (var (voiceId, itemIndex, xOffset, headTransparent, dotForceDown) in offsets)
+            foreach (var (voiceId, itemIndex, xOffset, headTransparent, dot) in offsets)
             {
                 var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
 
@@ -145,14 +145,14 @@ internal sealed class ElementCoordinator
                     headWipeBuilder.Add(key);
                 }
 
-                if (dotForceDown)
+                if (dot != default)
                 {
-                    dotForceDownBuilder.Add(key);
+                    dotAdjustBuilder[key] = dot;
                 }
             }
         }
 
-        return (offsetBuilder.ToImmutable(), headWipeBuilder.ToImmutable(), dotForceDownBuilder.ToImmutable());
+        return (offsetBuilder.ToImmutable(), headWipeBuilder.ToImmutable(), dotAdjustBuilder.ToImmutable());
     }
 
     /// <summary>
