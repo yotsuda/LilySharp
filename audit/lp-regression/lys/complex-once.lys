@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/complex-once.ly の Lily# 訳。
+// CLAIM: \once が複合プロパティ操作(\hideNotes=複数 override の束)に一度だけ効く
+// ——m1 の e f は隠れ、m2 は b だけ隠れて直後の c は戻る。
+// 枠: LP \hideNotes は Dots/NoteHead(+no-ledgers)/Stem/Accidental/Rest/TabNoteHead
+// の transparent 束(ly/property-init.ly)。この本で ink を持つのは NoteHead と
+// Stem だけ(全部4分・付点/臨時/休符/加線なし)なので、その 2 本の override で写す。
+// once も 2 本並べる(Lily# に複合操作の束は無い=枠差)。
+time 4/4
+
+c4 d
+override NoteHead.transparent = true
+override Stem.transparent = true
+e4 f |
+revert NoteHead.transparent
+revert Stem.transparent
+g a
+once override NoteHead.transparent = true
+once override Stem.transparent = true
+b c |

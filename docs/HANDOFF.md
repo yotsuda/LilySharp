@@ -58,6 +58,82 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第104セッション（＝第1便 complex-once.ly **fixed 第22号**・`16665c00`・
+第2便 context 3冊+cross-staff-beams=skip・cue-clef-manually=**open（cue clef の
+主張はほぼ成立・根は R1-in-voice regime）**・`89b63607`）。
+frontier の pending 先頭は **dot-column-note-collision.ly**（下見済・frontier 欄参照）。
+
+★★★ **① fixed 第22号 = \once×複合プロパティ操作（complex-once.ly）**:
+- **本の主張**: \once が \hideNotes（override の束）全体に一度だけ効く。
+- **乖離の根**: \hideNotes は transparent の束（ly/property-init.ly: Dots/NoteHead
+  (+no-ledgers)/Stem/Accidental/Rest/TabNoteHead）だが、Lily# は NoteHead.transparent
+  だけ読者が居て **Stem.transparent は読者ゼロ**＝隠し 3 音の符尾が描き残った
+  （符尾線 8 本 vs LP 5 本）。それ以外（隠し集合・once×2 の 1 音限定・revert 復帰・
+  全列 X・加線）は修正前から LP 一致だった。
+- **修正**: SharedRenderer.Noteheads の単音/和音の符尾+flag を Stem.transparent で
+  gate（**ink のみ消し extent 保持**＝grob.cc:164-176 get_print_stencil の transparent。
+  flag は define-grobs.scm:1631 inherit-parent-property＝Stem から継承・hasFlag は
+  透明でも立てたまま＝tremolo の座は不動。StemTremolo は継承宣言なし＝ink を残す）。
+- **照合**: 符頭5・符尾5・clef・拍子・小節線・譜長の X が LP と 2 桁一致（LP頁x−
+  譜線開始 8.5358＝Lily# x）・符尾 tip Y exact。LP 実測プローブ scratch\lpreg\
+  probe-hide-ink.ly: **\hideNotes は flag も beam も消す**・no-ledgers も効く。
+- **観測者**: GrobOverrideTests +2（StemTransparent_HidesStemAndFlag_KeepsSpacing＝
+  spacing 不変と flag 継承・OnceOverrides_StackOnTheSameNote＝once×2 が同一音に積める）。
+  **snapshot 動き 0 枚**（既存 fixture に Stem.transparent なし）。
+- ⚠️ **起票（別 regime）**: ⑴ **梁経路（SharedRenderer.Beams）は resolver 非接続**＝
+  beamed stem/beam の transparent 未対応（LP は beam も Stem から継承・
+  define-grobs.scm:539-540）。踏む対なし。⑵ hideNotes の他メンバ（Dots/Accidental/
+  Rest の transparent・NoteHead.no-ledgers）も読者なし（この本は踏まない）。
+  ⑶ 既存全域 regime: 符尾の**符頭側付け根 Y** Δ0.036（LP 0.1862 vs Lily# 0.15）——
+  可視符尾に元からあり今回の主張と独立（cue 便でも同じ Δ0.05 を観測）。
+- perf: 計算を足していない側——pass 追加なし・per-system 再実行経路への追加ゼロ。
+  非梁符尾 1 本あたり GetBool 1 回（既存 per-stem ResolveColor と同じ家の辞書読み）。
+
+★★ **②（第2便）cue-clef-manually.ly = open（主張の核は成立・根は R1-in-voice）**:
+- **一致**: 入りの bass cue clef X **exact**（LP 19.396 vs 19.40・**小節線の前**・
+  rel y −1.0）・cue 頭 rel y −3.0・cue 符尾 tip rel −4.575 exact・m1/m3 頭 X 完全一致
+  （m3 は +2.77 平行移動の内側で間隔 3.00 一致）・戻り treble cue clef 両者印字。
+- **乖離の根 = voice 分岐の R1 が MMR 化されない**（アーキ課題・起票）: Lily# は通常
+  休符（第4線ぶら下がり rel −1.0・第1列）、LP は**中央寄せ（rel x 25.906）+
+  \voiceTwo で最下線ぶら下がり（rel +2.0）**。LP 機構: MultiMeasureRest ∈
+  direction-polyphonic-grobs（music-functions.scm:616-631 make-voice-props-set）・
+  Y は rest.cc:48-140 staff_position_internal（pos=dir×voiced-position(4)・semibreve
+  は dir<0 で更に −2 → upper_bound で次の線＝−6→最下線）。Lily# の
+  MultiMeasureRestEngraver は「**全譜が休む小節**」単位＝多声小節の voice 分岐に
+  届かない（collector/engraver/renderer の配線が要る）。
+- 二次被害: cue 第1 step 3.20 vs LP 2.513（**第2 step 以降は 2.51/2.52 で一致＝
+  cue spacing law 自体は効いている**・R1 の実寸箱が第1 cue 列に同居する疑い）・
+  cueClefUnset の戻り gap 1.80 vs 0.30・m2 幅 +2.62。
+- **twin 書法**: cue bass {} は**相対 anchor を octave 3 に引く**（clef 依存 anchor）——
+  LP の C4 継続に合わせるには cue 先頭だけ c'。lysc check --pitches が C3 を即座に出した
+  （検算習慣がそのまま効いた）。
+- **skip 4 冊**: context-defaultchild-def / context-denies-defaultchild-def（予告どおり
+  false plain＝\layout \context 定義本）・context-nested-staffgroup（**文法ギャップ:
+  staffGroup{} は staff のみ受理**＝Parser.Form.cs ParseGrandStaffRender・グループ
+  入れ子構文なし）・cross-staff-beams（\change Staff・\autoChange の表面なし+
+  cross-staff beam 未到達＝§2B）。
+
+**frontier（次の本命）**: ⑴ pending 先頭 = **dot-column-note-collision.ly**（下見済:
+付点和音 vs 符頭の衝突本。**`\small` 1 対だけ書けない→両側落とし（\small を外した
+normal 対に置換・timing 温存）の枠で書ける**。s8 spacer・voice{} 2 moment・声部交差
+（up 声が下側）つき＝DotConfiguration の e2e。小節は `|` 明示・和音 anchor は
+lysc check --pitches で検算）⑵ dot-column-vertical-positioning は voiceThree の本＝
+voice{} で書けるか開いてから ⑶ ②の根 = R1-in-voice MMR regime ⑷ 前セッションから:
+⑤⑵ style-blind 修正（手順は第102セッション⑤）・open 6 本・列間 spacing regime・
+声部横断の臨時状態（第103②⑴）・slur 端点 X（第102起票⑴）。
+
+plain 322 / 処理済 **88**（fixed **22**・exact 16・skip **44**・open **6**・pending 234。
+数えたら state 別内訳も一緒に書くこと）。
+
+未 push **10**（第103セッションの 7 本+第1便 `16665c00`+第2便 `89b63607`+この handoff。
+数え直すこと。**⚠️ push しない**）・
+テスト **4166 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 動き 0 枚**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第103セッション第1〜4便の経緯
+
 最終更新 第103セッション第4便（＝第1便 collision-seconds.ly **fixed 第21号**・`c21a3f0b`・
 第2便 collisions.ly＝**open（衝突の主張自体は exact＝fixed 21 の検証になった・残差は
 臨時 regime 2 件+spacing）**・第3便＝ユーザー問「実装評価・書き直し候補・文法変更」への

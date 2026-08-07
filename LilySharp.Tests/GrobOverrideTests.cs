@@ -598,6 +598,59 @@ public class GrobOverrideTests
     }
 
     [Fact]
+    public void Pipeline_Override_StemTransparent_HidesStemAndFlag_KeepsSpacing()
+    {
+        // \hideNotes is Stem.transparent (ly/property-init.ly): the stem prints no
+        // ink but keeps its extent, so nothing else moves.
+        // LILYPOND-REF: lily/grob.cc:164-176 get_print_stencil — transparent
+        //   replaces the stencil with an empty box of the same extent.
+        var hidden = RenderToSvg("override Stem.transparent = true c4 d e f");
+        var normal = RenderToSvg("c4 d e f");
+        Assert.Equal(0, CountOccurrences(hidden, "stroke-width=\"0.130\""));   // no stem lines
+        Assert.Equal(4, CountOccurrences(normal, "stroke-width=\"0.130\""));
+        // Ink only: every notehead X survives unchanged (transparent keeps extents).
+        Assert.Equal(NoteheadXs(normal), NoteheadXs(hidden));
+
+        // The flag inherits the stem's transparency (an unbeamed lone eighth — a
+        // beamed run would take the DrawBeams path, which this port does not cover).
+        // LILYPOND-REF: scm/define-grobs.scm:1631-1632 Flag transparent = grob::inherit-parent-property
+        var flagHidden = RenderToSvg("override Stem.transparent = true c8 r8 r4 r2");
+        var flagNormal = RenderToSvg("c8 r8 r4 r2");
+        Assert.Equal(CountOccurrences(flagNormal, "class=\"music\"") - 1,
+            CountOccurrences(flagHidden, "class=\"music\""));
+    }
+
+    [Fact]
+    public void Pipeline_OnceOverrides_StackOnTheSameNote()
+    {
+        // complex-once.ly's shape: TWO once overrides written back to back both land on
+        // the SAME next note (LP applies \once \hideNotes to every property operation
+        // in the bundle at one timestep) — b loses head AND stem, c gets both back.
+        // Twin: audit/lp-regression/lys/complex-once.lys (X match vs LP to 2 dp).
+        var svg = RenderToSvg(
+            "c4 d\n" +
+            "override NoteHead.transparent = true\noverride Stem.transparent = true\n" +
+            "e4 f |\n" +
+            "revert NoteHead.transparent\nrevert Stem.transparent\n" +
+            "g a\n" +
+            "once override NoteHead.transparent = true\nonce override Stem.transparent = true\n" +
+            "b c |");
+        // 8 notes: e f (windowed) and b (once) are hidden → 5 heads, 5 stems.
+        Assert.Equal(5, CountOccurrences(svg, "stroke-width=\"0.130\""));
+        var heads = NoteheadXs(svg);
+        Assert.Equal(5, heads.Count);
+    }
+
+    /// <summary>Xs of the FILLED notehead glyphs (the code point quarters and
+    /// eighths draw — EmmentalerGlyphs.GetNotehead(4)); flags/clefs don't match.</summary>
+    private static List<string> NoteheadXs(string svg) =>
+        System.Text.RegularExpressions.Regex.Matches(svg,
+                "<text class=\"music\"[^>]* x=\"([0-9.\\-]+)\"[^>]*>("
+                + LilySharp.Core.Svg.EmmentalerGlyphs.GetNotehead(noteValue: 4) + ")</text>")
+            .Select(m => m.Groups[1].Value)
+            .ToList();
+
+    [Fact]
     public void Pipeline_GrobPropertyResolver_InScoreLayout()
     {
         var tree = SyntaxTree.Parse("override Stem.color = red c4 d e f");

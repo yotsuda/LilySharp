@@ -533,6 +533,12 @@ internal static partial class SharedRenderer
         if (noteValue >= 2 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
+            // A transparent stem prints NO ink but keeps its extent — spacing,
+            // attachment and everything hung on the stem stay where they were
+            // (\hideNotes is Stem.transparent, ly/property-init.ly).
+            // LILYPOND-REF: lily/grob.cc:164-176 get_print_stencil — transparent
+            //   replaces the stencil with an empty box of the same extent.
+            bool stemTransparent = resolver.GetBool("Stem", "transparent") == true;
             // Cue heads are drawn at 0.66×, so the up-stem attaches at the
             // SCALED head's right edge (head width × scale − thick/2), or the
             // stem floats off the small head. Down-stems attach at the head's
@@ -558,9 +564,10 @@ internal static partial class SharedRenderer
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
                 deviceNoteY, stemUp, deviceStaffTop, durLog, note.StaffPosition,
                 note.IsCue ? EngravingDefaults.CueStemDetails : null);
-            gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
-                stemX, stemEndY,
-                stemColor ?? Color.Black, EngravingDefaults.StemThickness);
+            if (!stemTransparent)
+                gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
+                    stemX, stemEndY,
+                    stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
             bool hasFlag = false;
             if (noteValue >= 8)
@@ -568,15 +575,23 @@ internal static partial class SharedRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
-                    // The flag hangs on the stem's RIGHT EDGE — LayoutUtilities.FlagDrawX is the
-                    // one house for that term, and it is measured (ledger flag.x.*).
-                    gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
-                        noteFontSize, stemColor);
+                    // The flag INHERITS its transparency from the stem it hangs on
+                    // (measured: \hideNotes c'8 prints neither stem nor flag), but its
+                    // grob — and so hasFlag, which places the tremolo — survives.
+                    // LILYPOND-REF: scm/define-grobs.scm:1631-1632 Flag transparent = grob::inherit-parent-property
+                    if (!stemTransparent)
+                        // The flag hangs on the stem's RIGHT EDGE — LayoutUtilities.FlagDrawX is the
+                        // one house for that term, and it is measured (ledger flag.x.*).
+                        gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                            noteFontSize, stemColor);
                     hasFlag = true;
                 }
             }
 
             if (note.HasTremolo)
+                // StemTremolo declares NO transparent inheritance (unlike Flag/Beam,
+                // scm/define-grobs.scm StemTremolo), so its slashes keep their ink
+                // even on a transparent stem.
                 DrawTremolo(stemX, noteY, stemEndY, stemUp, note.TremoloBeams, hasFlag, gc);
         }
         else if (noteValue < 2 && !isBeamed && note.HasTremolo)
@@ -745,6 +760,10 @@ internal static partial class SharedRenderer
         if (noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
+            // Ink-only, extent kept — see the single-note branch (DrawNote).
+            // LILYPOND-REF: lily/grob.cc:164-176 get_print_stencil — transparent
+            //   replaces the stencil with an empty box of the same extent.
+            bool stemTransparent = resolver.GetBool("Stem", "transparent") == true;
             // Up-stems attach at the (cue-scaled) head's right edge; see DrawNote.
             double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, headScale);
             // Stem attaches at the far notehead; its length is reckoned from the
@@ -764,8 +783,9 @@ internal static partial class SharedRenderer
             double stemEndY = pageHeight - StemCalculator.CalculateStemEndY(
                 deviceTipY, stemUp, deviceStaffTop, durLog, stemTipPos,
                 chord.IsCue ? EngravingDefaults.CueStemDetails : null);
-            gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
-                stemColor ?? Color.Black, EngravingDefaults.StemThickness);
+            if (!stemTransparent)
+                gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
+                    stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
             // The flag is the STEM's grob, indifferent to how many heads hang on it —
             // LilyPond makes one Flag per stem and the flag reads only its stem, so a
@@ -779,7 +799,9 @@ internal static partial class SharedRenderer
             if (noteValue >= 8)
             {
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
-                if (flag.HasValue)
+                // The flag inherits the stem's transparency — see DrawNote.
+                // LILYPOND-REF: scm/define-grobs.scm:1631-1632 Flag transparent = grob::inherit-parent-property
+                if (flag.HasValue && !stemTransparent)
                     gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
                         noteFontSize, stemColor);
             }

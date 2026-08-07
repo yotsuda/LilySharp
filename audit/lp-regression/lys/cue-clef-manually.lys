@@ -1,0 +1,13 @@
+// lilypond-src/input/regression/cue-clef-manually.ly の Lily# 訳。
+// CLAIM: cue clef は手動で印字できる(引用機構を使わない手書き cue)。m2 で
+// bass の cue clef(小型)が立ち、cue 音 4 つのあとで treble に戻る。
+// 綴り: LP の \new CueVoice + \cueClef "bass" + \cueClefUnset は Lily# の
+// cue bass { … }(clef 付き cue region)が 1:1 対応。LP は CueVoice=\voiceOne・
+// 主声部=\voiceTwo(R1)なので、Lily# の voice 分岐は cue が第1分岐(上)。
+time 4/4
+
+c4 c c c |
+// ⚠️ cue の bass clef は相対 anchor を octave 3 に引くので(clef 依存 anchor)、
+// LP の「C4 継続」に合わせるには先頭だけ c' が要る(検算: lysc check --pitches)。
+voice { cue bass { c'4 c c c } } { R1 } |
+c4 c c c |
