@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/lyric-extender-right-margin.ly の Lily# 訳。
+// CLAIM: extender は右余白へはみ出ない (f~f が break を跨ぐ melisma・長い音節)。
+// 綴り: LP relative c' = C4 = Lily# c。明示 break → LP twin ragged-right 無し。
+// 照合: 第1系 segment 終端 LS 101.93 ≤ 行幅 102.43 (LP 102.16 ≤ 102.38) = 主張成立。
+// 修理 (第37号): 跨ぎ extender の第2 segment が第1系の Y に描かれていた →
+// 次音節の系の基線で解決 (LyricHyphenLayout.NextLyricIndex/SecondSegmentY)。
+// hyphen の跨ぎ側 dash も同じ病気を同時に修理。
+// twin scratch\lpreg\lyextrm.{ly,lys}。
+octave absolute
+time 4/4
+
+part v { }
+
+lyrics w { section Main { c d e effffffffffff __ | e d c | } }
+
+section Main {
+  v { c4 d e f~ | break f4 e d c | }
+}
+
+form main { ~Main }
+
+score main { staff ~v with lyrics w }

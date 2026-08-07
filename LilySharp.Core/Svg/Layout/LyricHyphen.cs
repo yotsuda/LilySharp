@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -109,7 +110,16 @@ internal sealed record LyricHyphenLayout(
     double FirstSegmentEndX = 0,
 
     // For system-crossing extenders: start of second segment.
-    double SecondSegmentStartX = 0
+    double SecondSegmentStartX = 0,
+
+    // For system-crossing connectors: index of the NEXT syllable, whose system
+    // the second segment/dash is resolved against at draw time (-1 = none).
+    // A broken spanner's pieces each live on their OWN system, like LilyPond's.
+    int NextLyricIndex = -1,
+
+    // For system-crossing extenders: the second segment's Y, relative to the
+    // NEXT syllable's system (same frame as ExtenderY is to the first's).
+    double SecondSegmentY = 0
 );
 
 /// <summary>
@@ -134,9 +144,13 @@ internal sealed class LyricHyphenEngraver
     /// <summary>
     /// Calculate hyphen and extender layouts for all lyrics.
     /// </summary>
+    /// <param name="measuresByStaff">The staves' measures, for resolving a final
+    /// extender's melisma end (null keeps the legacy next-syllable-only behaviour,
+    /// used by tests that have no score).</param>
     public ImmutableArray<LyricHyphenLayout> CalculateLayouts(
         IReadOnlyList<LyricLayout> lyricLayouts,
-        IReadOnlyList<SystemLayout> systems)
+        IReadOnlyList<SystemLayout> systems,
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff = null)
     {
         if (lyricLayouts.Count == 0)
             return ImmutableArray<LyricHyphenLayout>.Empty;
@@ -181,18 +195,47 @@ internal sealed class LyricHyphenEngraver
             // all numbered verse 1, and the next syllable "in the same verse" was as often
             // the staff below's — a hyphen drawn from one staff's word to another's.
             LyricLayout? next = null;
+            int nextIndex = -1;
             for (int j = i + 1; j < lyricLayouts.Count; j++)
             {
                 if (lyricLayouts[j].Item.VerseNumber == current.Item.VerseNumber
                     && lyricLayouts[j].Item.StaffIndex == current.Item.StaffIndex)
                 {
                     next = lyricLayouts[j];
+                    nextIndex = j;
                     break;
                 }
             }
 
             if (next == null)
+            {
+                // A FINAL extender — no later syllable in this verse — still
+                // draws: LilyPond "completizes" it with the melisma's LAST note
+                // head as the right bound, so the line runs to that head's ink
+                // right and never on to the next note column (the whole point of
+                // lyric-extender-completion.ly: more notes than lyrics).
+                // LILYPOND-REF: lily/extender-engraver.cc:109-123 listen_completize_extender —
+                //   "prevents the right bound being extended to the next
+                //   note-column if no lyric follows the extender";
+                // LILYPOND-REF: lily/extender-engraver.cc:241-257 completize_extender —
+                //   RIGHT bound = heads.back();
+                // LILYPOND-REF: lily/lyric-extender.cc:80-84 print — right_point
+                //   is raised to the last head's extent RIGHT, exactly.
+                if (current.Item.ConnectorType == LyricConnectorType.Extender
+                    && MelismaEndInkRight(current, measuresByStaff, systems) is { } melismaEnd)
+                {
+                    double sx = current.X + current.Width / 2 + _params.ExtenderPadding;
+                    if (melismaEnd - sx >= _params.MinExtenderLength)
+                        layouts.Add(new LyricHyphenLayout(
+                            i,
+                            LyricConnectorType.Extender,
+                            ImmutableArray<HyphenDash>.Empty,
+                            ExtenderStartX: sx,
+                            ExtenderEndX: melismaEnd,
+                            ExtenderY: -current.YUp + _params.ExtenderYOffset));
+                }
                 continue;
+            }
 
             // Check if crossing system break
             bool crossesSystem = false;
@@ -212,8 +255,8 @@ internal sealed class LyricHyphenEngraver
 
             var layout = current.Item.ConnectorType switch
             {
-                LyricConnectorType.Hyphen => CalculateHyphenLayout(i, current, next, crossesSystem, systemEndX, nextSystemStartX),
-                LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, crossesSystem, systemEndX, nextSystemStartX),
+                LyricConnectorType.Hyphen => CalculateHyphenLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX),
+                LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX),
                 _ => null
             };
 
@@ -223,6 +266,99 @@ internal sealed class LyricHyphenEngraver
 
         return layouts.ToImmutableArray();
     }
+
+    /// <summary>
+    /// Ink RIGHT edge (absolute X) of the last note the final extender covers: the
+    /// slur/tie melisma chain from the syllable's own note. A note extends the chain
+    /// while it opens a slur or a tie; the first note that opens neither ends it, and
+    /// a rest never joins (LilyPond completizes a pending extender on a headless
+    /// timestep unless extendersOverRests). Null when the syllable's note cannot be
+    /// resolved (no score measures / timing not found).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/extender-engraver.cc:200-226 stop_translation_timestep —
+    ///   one head per timestep joins the extender while the lyrics still run, and a
+    ///   headless timestep completizes it (extendersOverRests default #f);
+    /// LILYPOND-REF: lily/lyric-extender.cc:75-84 print — the right point is capped
+    ///   by the system bound and raised to the last head's extent RIGHT.
+    /// The chain stands in for LilyPond's "while the \lyricsto iterator has not run
+    /// out", which for exhausted lyrics is exactly the melisma's span.
+    /// </remarks>
+    private static double? MelismaEndInkRight(
+        LyricLayout current,
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+        IReadOnlyList<SystemLayout> systems)
+    {
+        if (measuresByStaff == null
+            || !measuresByStaff.TryGetValue(current.Item.StaffIndex, out var measures))
+            return null;
+
+        MusicItem? end = null;
+        int endMeasure = -1;
+        Fraction endTiming = Fraction.Zero;
+        bool started = false, chainOpen = false;
+
+        for (int mi = current.Item.MeasureIndex; mi < measures.Length; mi++)
+        {
+            var onset = Fraction.Zero;
+            foreach (var item in measures[mi].Items)
+            {
+                bool isNote = item is NoteItem or ChordItem;
+                if (!started)
+                {
+                    if (mi == current.Item.MeasureIndex && onset == current.Item.Timing && isNote)
+                    {
+                        started = true;
+                        (end, endMeasure, endTiming) = (item, mi, onset);
+                        chainOpen = MelismaContinues(item);
+                    }
+                }
+                else if (item.Duration > Fraction.Zero)
+                {
+                    // The next rhythmic moment: a note joins while the chain is
+                    // open; anything else (a rest, or a closed chain) completizes.
+                    if (!chainOpen || !isNote)
+                        goto done;
+                    (end, endMeasure, endTiming) = (item, mi, onset);
+                    chainOpen = MelismaContinues(item);
+                }
+                onset += item.Duration;
+            }
+        }
+        done:
+
+        if (end == null)
+            return null;
+
+        MeasureLayout? ml = null;
+        foreach (var system in systems)
+            foreach (var m in system.Measures)
+                if (m.MeasureIndex == endMeasure)
+                    ml = m;
+        if (ml == null)
+            return null;
+        double inkRight = ml.X + ml.GetXForTiming(endTiming)
+            + GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(end)).Right;
+
+        // Cap at the system the syllable lives on (LP caps right_point at the
+        // system's right bound; a melisma running past the break keeps the line
+        // inside its own system).
+        foreach (var system in systems)
+            foreach (var m in system.Measures)
+                if (m.MeasureIndex == current.Item.MeasureIndex)
+                    return Math.Min(inkRight,
+                        system.Measures[^1].X + system.Measures[^1].Width);
+        return inkRight;
+    }
+
+    /// <summary>True when the melisma keeps running past this note — it opens a
+    /// slur or a tie onto the next one.</summary>
+    private static bool MelismaContinues(MusicItem item) => item switch
+    {
+        NoteItem n => n.HasSlurStart || n.HasTieStart,
+        ChordItem c => c.HasSlurStart || c.HasTieStart,
+        _ => false,
+    };
 
     /// <summary>
     /// Calculate hyphen layout with support for multiple dashes.
@@ -236,6 +372,7 @@ internal sealed class LyricHyphenEngraver
         int index,
         LyricLayout current,
         LyricLayout next,
+        int nextIndex,
         bool crossesSystem,
         double systemEndX,
         double nextSystemStartX)
@@ -250,7 +387,10 @@ internal sealed class LyricHyphenEngraver
 
         if (crossesSystem)
         {
-            // Hyphen at end of current system, hyphen at start of next system
+            // Hyphen at end of current system, hyphen at start of next system.
+            // Each dash's Y is relative to its OWN system (the second uses the
+            // next syllable's baseline); the draw resolves the second dash
+            // against the next syllable's system via NextLyricIndex.
             var dashes = ImmutableArray.Create(
                 new HyphenDash(startX, systemEndX - 0.5, currentBaselineY + _params.HyphenYOffset),
                 new HyphenDash(nextSystemStartX + 0.5, endX, nextBaselineY + _params.HyphenYOffset)
@@ -260,7 +400,8 @@ internal sealed class LyricHyphenEngraver
                 index,
                 LyricConnectorType.Hyphen,
                 dashes,
-                CrossesSystemBreak: true
+                CrossesSystemBreak: true,
+                NextLyricIndex: nextIndex
             );
         }
 
@@ -330,6 +471,7 @@ internal sealed class LyricHyphenEngraver
         int index,
         LyricLayout current,
         LyricLayout next,
+        int nextIndex,
         bool crossesSystem,
         double systemEndX,
         double nextSystemStartX)
@@ -342,6 +484,12 @@ internal sealed class LyricHyphenEngraver
 
         if (crossesSystem)
         {
+            // A broken extender's pieces each sit on their OWN system's lyric
+            // row: the stub before the next syllable takes THAT system's
+            // baseline, not the first's (it used to draw both segments at the
+            // first system's Y — the second landed over the first system).
+            // LILYPOND-REF: lily/lyric-extender.cc:98-107 print — each broken
+            //   piece runs to its own bound within its own system.
             return new LyricHyphenLayout(
                 index,
                 LyricConnectorType.Extender,
@@ -351,7 +499,9 @@ internal sealed class LyricHyphenEngraver
                 ExtenderY: y,
                 CrossesSystemBreak: true,
                 FirstSegmentEndX: systemEndX - 0.5,
-                SecondSegmentStartX: nextSystemStartX + 0.5
+                SecondSegmentStartX: nextSystemStartX + 0.5,
+                NextLyricIndex: nextIndex,
+                SecondSegmentY: -next.YUp + _params.ExtenderYOffset
             );
         }
 

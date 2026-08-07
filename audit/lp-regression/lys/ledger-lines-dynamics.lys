@@ -1,0 +1,14 @@
+// ledger-lines-dynamics.ly twin — dynamics が加線を避けること。
+// 綴り: LP \relative の f' = F4 = Lily# f・c = C4 = Lily# c。\pp = @pp。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { f16@pp[ c d e] r2. | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

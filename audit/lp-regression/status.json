@@ -3832,7 +3832,9 @@
     },
     "layout-from.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Music inside output definitions (\\layout / \\midi) is harvested into context modifications",
+      "notes": "skip理由=器材が主張そのもの: \\layout/\\midi出力定義ブロックも、その中の音楽収穫→context mod機構も、\\accidentalStyle(dodecaphonic)もLily#に無い"
     },
     "layout-in-paper.ly": {
       "category": "markup",
@@ -3856,7 +3858,9 @@
     },
     "ledger-lines-dynamics.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "Dynamics and other outside staff objects avoid ledger lines",
+      "notes": "exact: pp基線Y LP 16.311 vs LS 16.31=桁一致(加線を持つC4を含むbeam群の下・主張そのもの)・X中心9.24一致(main head中心)・全列X一致(8.58/10.84/13.34/15.85/rest 18.35)。コード変更0。pointwise支持(ColumnSupportSkylines)が加線込みで既に正しい。twin=audit lys+scratch\\lpreg\\ledgdyn.{ly,lys}"
     },
     "ledger-lines-no-staff-lines.ly": {
       "category": "scheme",
@@ -3888,7 +3892,9 @@
     },
     "ligature-bracket.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "The ligature bracket right-end is not affected by other voices",
+      "notes": "skip理由=器材が主張そのもの: ligature bracket(\\[ \\]・LigatureBracket grob)がLily#に無い(grepの当たりはfontのligatureのみ)"
     },
     "lily-in-scheme.ly": {
       "category": "scheme",
@@ -3936,7 +3942,9 @@
     },
     "lyric-combine-derived-voice.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "For Voice-derived contexts like CueVoice, \\lyricsto lyrics still start with the first note",
+      "notes": "skip理由=器材が主張そのもの: \\lyricstoのnamed voice束縛もCueVoice contextもLily#に無い(歌詞は別トラック+with lyricsでpart単位束縛)"
     },
     "lyric-combine-empty-warning.ly": {
       "category": "scheme",
@@ -3944,11 +3952,15 @@
     },
     "lyric-combine-in-sequential.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\lyricsto works as the first element of sequential music",
+      "notes": "skip理由=器材が主張そのもの: \\lyricsto/\\lyricmodeの文法配置機構がLily#に無い(歌詞は独立トラック)"
     },
     "lyric-combine-in-simultaneous.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\lyricsto works as an element of simultaneous music",
+      "notes": "skip理由=器材が主張そのもの: \\lyricsto/\\lyricmodeの文法配置機構がLily#に無い(歌詞は独立トラック)。lyric-combine-in-sequentialと同族"
     },
     "lyric-combine-new.ly": {
       "category": "scheme",
@@ -3988,7 +4000,9 @@
     },
     "lyric-extender-completion.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "A LyricExtender should end at the right place even if there are more notes in the voice than lyrics",
+      "notes": "修理=第36号: 末尾extender(後続音節なし)が丸ごとdropだった(LyricHyphenEngraverがnext==nullでcontinue・fixtureゼロの死角)→LPのcompletize字面: 右bound=melismaの最終head(extender-engraver.cc:241-257 completize_extender=heads.back()・:109-123 CompletizeExtenderEvent)・右端=その頭のink右(lyric-extender.cc:80-84)。melisma連鎖=slur/tie開放が続く限り(音符のみ・restで打ち切り=extendersOverRests既定#f)・系右端でcap。LP照合: 終端X 18.70 vs 18.70=桁一致(cの全音符ink右・dへは伸びない)。残差: 始端 LS 11.40 vs LP 11.67(音節幅推定+padding 0.2 vs LPのink右+h=0.08)・Y 17.34 vs 17.24(歌詞基線regime)。観測者: LyricExtenderCompletionTests。snapshot 0枚(死角経路=既存fixture非接触)。twin=audit lys+scratch\\lpreg\\lyext.{ly,lys}"
     },
     "lyric-extender-includegraces.ly": {
       "category": "scheme",
@@ -4004,7 +4018,9 @@
     },
     "lyric-extender-right-margin.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Extenders will not protrude into the right margin",
+      "notes": "主張=成立(両側): 第1系segment終端 LS 101.93≤行幅102.43(LP 102.16≤102.38)=はみ出しなし。修理=第37号: 跨ぎextenderの第2segmentが第1系のYに描かれていた(renderer が両segmentを最初の音節の系topで反転)→次音節の系の基線で解決(LyricHyphenLayout.NextLyricIndex/SecondSegmentY・hyphenの跨ぎ側dashも同修理)。LP照合: 第2segment Y 29.26 vs 29.19(Δ0.07=歌詞基線regime)。残差(開示): 第1segment始端 82.64 vs 89.28(長音節の幅推定=テキスト幅regime)・行末inset 0.5 vs LPのpadding 0.22(既存定数・開示済)・第2segment始端 3.87 vs 5.88(系頭stubの左bound=系開始+0.5近似)。観測者: LyricExtenderCompletionTests.BrokenExtender_SecondSegment_SitsOnTheNextSystemsLyricRow。snapshot 0枚(跨ぎ経路=fixture非接触)。twin=audit lys+scratch\\lpreg\\lyextrm.{ly,lys}"
     },
     "lyric-extender.ly": {
       "category": "scheme",
@@ -4016,7 +4032,9 @@
     },
     "lyric-hyphen-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "pending",
+      "claim": "No hyphen should be printed under a grace note at the start of a line if the grace main note starts a new syllable",
+      "notes": "下見済(第111第7便・修理は次セッション)。twin scratch\\lpreg\\lyhygrace.{ly,lys}レンダ済。LS実測の乖離3系統: (1)行頭stub: LPは既定で行頭側pieceを刷らない(lyric-hyphen.cc:45-49 kill-zero-spanned-time=区間が実時間ゼロならSCM_EOL・grace付き行頭が本の主張)がLSは全brokenで3.87..4.73のstubを刷る(claimの反例=graceの下にも出る) (2)行末: LPは行末までdash周期充填(69..99に4個・:107,120の「行末では消えない」例外)だがLSはstart..systemEnd-0.5の一本線(42ssのsolid=extender見た目) (3)dash分布: LP dash-period10.0/length0.66/height0.42/thickness1.3*lt/padding0.07/min-length0.3(define-grobs.scm:2149-2161)+n=ceil(l/period-0.5)・中央配置(space_left/2)——LSはMaxDashLength3.0で0.8幅を2.68間隔(15個 vs LP5個)+ゼロ長dashのゴミ(x0..0がsystem毎)。修理の形: CalculateHyphenLayoutをlyric-hyphen.cc:35-158 printの字面へ書き直し(スパン=左音節ink右..右音節ink左・行頭piece抑止・行末piece周期充填)+LyricHyphenParametersをdefine-grobs宣言値へ。snapshot影響: hyphen使用fixture(cjk-lyric等14冊弱)が動く見込み=census前提。LPレンダ済svg=scratch\\lpreg\\lyhygrace.svg"
     },
     "lyric-hyphen-retain.ly": {
       "category": "scheme",

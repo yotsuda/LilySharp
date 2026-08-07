@@ -58,11 +58,60 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第111セッション第4便（＝第1便 fixed **第32号 = hara-kiri-percent-repeat.ly**・
+最終更新 第111セッション第5便（＝第1便 fixed **第32号 = hara-kiri-percent-repeat.ly**・
 `b8a4f128`・第2便 skip 2 + fixed **第33号 = input-order-alignment.ly**・`fd93d1c5`・
-第3便 **key-signature-space.ly = open**・`2014c9d8`・第4便 skip 2（kievan 両冊＝KievanStaff
-無し）+ fixed **第34号 = laissez-vibrer-chords.ly** + **第35号 = laissez-vibrer-arpeggio.ly**・
-この handoff と同 commit）。
+第3便 **key-signature-space.ly = open**・`2014c9d8`・第4便 skip 2 + fixed **第34/35号 =
+laissez-vibrer 族**・`4eb24f51`・第5便 skip 5 + exact 1 + fixed **第36号 =
+lyric-extender-completion.ly**・`61180c6f`・第6便 fixed **第37号 =
+lyric-extender-right-margin.ly**・`201951cd`・第7便 **lyric-hyphen-grace.ly 下見のみ**
+（state=pending のまま・この handoff と同 commit）。
+
+★★★ **第7便 = lyric-hyphen-grace.ly 下見（修理は次セッションの本命・LyricHyphen print
+regime 丸ごと）**: twin レンダ済（scratch\lpreg\lyhygrace.{ly,lys}・LP svg も残置）。
+**乖離 3 系統を実測**（詳細数値は status.json notes）:
+- ⑴ **行頭 stub**: LP は既定で行頭側 piece を刷らない（lyric-hyphen.cc:45-49
+  kill-zero-spanned-time——grace 付き行頭が本の主張）が、**LS は全 broken hyphen で行頭に
+  stub を刷る**（grace の下にも出る＝claim の反例）。
+- ⑵ **行末**: LP は行末まで dash を周期充填（:107,120「行末では消えない」例外）。
+  **LS は start..行末の一本 solid 線**（42ss＝extender の見た目）。
+- ⑶ **dash 分布**: LP は dash-period **10.0**・length 0.66・height 0.42・thickness 1.3·lt・
+  padding 0.07・min-length 0.3（define-grobs.scm:2149-2161）・n=ceil(l/period−0.5)・中央配置。
+  LS は MaxDashLength 3.0 で 0.8 幅を 2.68 間隔（15 個 vs LP 5 個）+ ゼロ長 dash のゴミ。
+- **修理の形**: CalculateHyphenLayout を lyric-hyphen.cc:35-158 print の字面へ書き直し
+  （スパン＝左音節 ink 右..右音節 ink 左・行頭 piece 抑止・行末 piece 周期充填）+
+  LyricHyphenParameters を宣言値へ。**snapshot は hyphen 使用 fixture（cjk-lyric 等）が
+  動く見込み＝census 前提**。
+
+★★ **第6便 fixed 第37号 = lyric-extender-right-margin.ly**（extender は右余白へはみ出ない・
+tied f~f が break を跨ぐ）:
+- **主張は両側成立**（第1系 segment 終端 LS 101.93 ≤ 行幅 102.43・LP 102.16 ≤ 102.38）。
+- **修理 = 比較が出した跨ぎ Y バグ**: 跨ぎ extender の**第2 segment が第1系の Y に描かれて
+  いた**（renderer が両 segment を最初の音節の系 top で反転——第2系の "e" の前の stub が
+  第1系の歌詞行の上に落ちる）→ 次音節の系の基線で解決（LyricHyphenLayout.NextLyricIndex/
+  SecondSegmentY 新設・**hyphen の跨ぎ側 dash も同じ病気を同修理**）。LP 照合: 第2 segment
+  Y 29.26 vs 29.19（Δ0.07 = 歌詞基線 regime）。
+- 残差（開示）: 第1 segment 始端 82.64 vs 89.28（長音節の幅推定＝テキスト幅 regime）・
+  行末 inset 0.5 vs LP padding 0.22（既存定数）・系頭 stub の左 bound（系開始+0.5 近似）。
+- **観測者 +1**（BrokenExtender_SecondSegment_SitsOnTheNextSystemsLyricRow）・
+  **snapshot 0 枚**（跨ぎ経路も fixture 非接触だった死角）。
+
+★★★ **第5便 = 7 冊（skip 5・exact 1・fixed 第36号）**:
+- **skip 5**: layout-from（\layout/\midi 内の音楽収穫機構なし）・ligature-bracket（\[ \] なし）・
+  lyric-combine 3 冊（\lyricsto の named-voice/CueVoice 束縛・文法配置機構——Lily# の歌詞は
+  独立トラック + with lyrics）。
+- **exact: ledger-lines-dynamics.ly**（dynamics は加線を避ける）: **pp 基線 Y が LP 16.311 vs
+  LS 16.31 = 桁一致**・X 中心 9.24 一致・全列 X 一致。pointwise 支持が加線込みで既に正しい。
+  コード変更 0。
+- **fixed 第36号 = lyric-extender-completion.ly**（音符が歌詞より多くても extender は正しい
+  所で終わる）: **末尾 extender（後続音節なし）が丸ごと drop**だった（LyricHyphenEngraver が
+  next==null で continue——`__` を使う fixture が 1 本も無い死角）。LP の completize を字面
+  移植: 右 bound = melisma の最終 head（extender-engraver.cc:241-257 completize_extender =
+  heads.back()）・右端 = その頭の ink 右（lyric-extender.cc:80-84）。melisma 連鎖 =
+  slur/tie 開放が続く限り（rest で打ち切り = extendersOverRests 既定 #f）・系右端で cap。
+  **LP 照合: 終端 X 18.70 vs 18.70 = 桁一致**（c 全音符の ink 右・d へは伸びない）。
+  残差（開示）: 始端 11.40 vs 11.67（音節幅推定+padding 0.2 vs LP の ink右+h）・Y 17.34 vs
+  17.24（歌詞基線 regime）。**観測者 +1**（LyricExtenderCompletionTests）・**snapshot 0 枚**
+  （死角経路＝既存 fixture 非接触）。
 
 ★★★ **第4便 fixed 第34/35号 = laissez-vibrer 族 2 冊**:
 - **欠陥⑴（第34号）**: 和音の l.v. が丸ごと**無警告 silent drop**（TieVariantEngraver が
@@ -150,13 +199,14 @@ Horizontal_bracket_engraver も \tweak も無い false plain・include-identifie
 ⚠️ **前回引継ぎの state 内訳は 2 点ズレていた**（exact 25→実 24・skip 66→実 65。
 処理済 131 自体は一致）。数えたら §0 の数え方で state 別も一緒に検算すること。
 
-plain 322 / 処理済 **140**（fixed **35**・exact **24**・skip **69**・open **12**・
-pending 182。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **148**（fixed **37**・exact **25**・skip **74**・open **12**・
+pending 174。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること。今の先頭は
-layout-from.ly——固定で書くと腐る）。第107 起票の §2A workstream は棚のまま。
+lyric-hyphen-grace.ly＝**第7便で下見済・LyricHyphen print regime の書き直しから始める**——
+固定で書くと腐る）。第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4188 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
+テスト **4190 passed / 0 failed / 4 skipped**（観測者 +5 込み・全スイート確認済）・
 lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
 snapshot 第111 は 3 枚（第1便 tab-percent-repeat + 第2便 text-annotation + 第4便
 lv-meterchange・census 各便）**・base worktree = C:\MyProj\LilySharp-base

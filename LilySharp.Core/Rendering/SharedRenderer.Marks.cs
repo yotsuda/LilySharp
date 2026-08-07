@@ -857,12 +857,28 @@ internal static partial class SharedRenderer
         const double thickness = 0.16;
         foreach (var h in layout.LyricHyphenLayouts)
         {
+            // A system-crossing connector's SECOND piece lives on the NEXT
+            // syllable's system: its stored Y is relative to that system, so it
+            // is resolved against that system's top — both pieces used to be
+            // flipped against the FIRST system's top, which drew the stub before
+            // the next syllable over the previous system's lyric row.
+            // LILYPOND-REF: lily/lyric-extender.cc:98-107 print — each broken
+            //   piece of the spanner sits within its own system.
+            double? NextSystemTop() =>
+                h.NextLyricIndex >= 0
+                && sysTopYUp.TryGetValue(
+                    layout.LyricLayouts[h.NextLyricIndex].Item.MeasureIndex, out var nextTop)
+                    ? nextTop : null;
+
             if (h.Type == LyricConnectorType.Hyphen)
             {
-                foreach (var dash in h.Dashes)
+                for (int di = 0; di < h.Dashes.Length; di++)
                 {
+                    var dash = h.Dashes[di];
                     var src = layout.LyricLayouts[h.LyricIndex];
                     if (!sysTopYUp.TryGetValue(src.Item.MeasureIndex, out var syUp)) continue; // other page
+                    if (h.CrossesSystemBreak && di == 1 && NextSystemTop() is { } nt)
+                        syUp = nt;
                     double dashY = syUp - dash.Y;
                     gc.DrawLine(dash.X1, dashY, dash.X2, dashY,
                         Color.Black, thickness);
@@ -877,8 +893,10 @@ internal static partial class SharedRenderer
                 {
                     gc.DrawLine(h.ExtenderStartX, extY,
                         h.FirstSegmentEndX, extY, Color.Black, 0.1);
-                    gc.DrawLine(h.SecondSegmentStartX, extY,
-                        h.ExtenderEndX, extY, Color.Black, 0.1);
+                    double ext2Y = NextSystemTop() is { } nextTop
+                        ? nextTop - h.SecondSegmentY : extY;
+                    gc.DrawLine(h.SecondSegmentStartX, ext2Y,
+                        h.ExtenderEndX, ext2Y, Color.Black, 0.1);
                 }
                 else
                 {

@@ -3329,7 +3329,8 @@ internal sealed class LayoutEngine
             Articulations: stackedArticulations,
             GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
-            LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
+            LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(
+                lyricLayouts, systems, measuresByStaff),
             MusicMarks: stackedMarks,
             CustomTexts: stackedCustomTexts,
             VoltaBrackets: stackedVoltas,
