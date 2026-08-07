@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/glissando-consecutive.ly の Lily# 訳。
+// CLAIM: 連続する glissandi が刷られる (前の終点が次の起点)。
+// 綴り: \relative 展開 (LP c'=C4 d=D4 e=E4 → Lily# c d e)。
+// 照合 (exact・コード変更 0): 2 本とも LP 桁一致
+// (11.045,2.96→16.237,2.54 / 19.195,2.46→24.387,2.04・middle 相対 Y-down)。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    c1@glissando | d1@glissando | e1 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

@@ -369,8 +369,13 @@ internal static partial class SharedRenderer
                         ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) - StaffHeight / 2
                         : staffMiddleY;
                     headY = memberStaffMiddleY + GetMemberStaffPosition(member, up) / 2.0
-                        - StemAttachYOffset(MemberStyle(i), up,
-                            noteValue: 8); // beamed heads are always filled (8th or shorter)
+                        // noteValue 8 = "a beamed head is filled" — true for ordinary
+                        // beams, NOT for a two-note tremolo pair, which beams HALF
+                        // heads (the same fact the X side already honours per member).
+                        // A half head's begin is 0 (open heads butt the centre), so a
+                        // tremolo pair's stem begins 0.15 recessed here; pre-existing,
+                        // named by the session-109 audit, unmeasured by any book.
+                        - StemAttachYOffset(MemberStyle(i), up, noteValue: 8);
                 }
                 // The stem ends at the OUTERMOST beam rank on its own side — the extreme
                 // of this stem's ranks in its direction (up ⇒ max rank, down ⇒ min), so

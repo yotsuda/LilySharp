@@ -1,0 +1,30 @@
+// lilypond-src/input/regression/glissando-accidental.ly の Lily# 訳。
+// CLAIM: gliss 線は目標の臨時記号の手前で止まる。和音 gliss は同 X 終端・
+// 同傾き (交差しない)。
+// 綴り: 原本 \relative を絶対に展開 (LP c'=C4 相対簿記→絶対。Lily# c=C4=LP c')。
+// LP: a'(A4) cis''(C#5) as'(Ab4) / <f a>(F3A3) <f'' a''>(F5A5) / <fis a>
+// <fis'' a''> / <fis ais> <fis'' ais''> / <f ais> <f'' ais''>。全部 whole note。
+// 照合 (fixed 第30号): 音符 gliss 2 本 (11.037,+0.4→14.945,−0.4 /
+// 19.337→23.287=flat 手前) と和音第1対 (35.478→41.004) が LP 桁一致。
+// 全和音対が同 X span・平行。列相対 anchor (頭右縁+線方向0.5・臨時記号左縁
+// −線方向0.5) は最終対まで桁一致。観測者: GlissandoBoundTests。
+// 主張外の残差: 絶対 X の累積 drift ≤1.4 (note-spacing regime・列幅差 0.15/小節)・
+// flat の ink-left 0.012 (accidental-placement regime)。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    a1@glissando | cis'1@glissando | as1 |
+    <f, a,>1@glissando | <f' a'>1@glissando |
+    <fis, a,>1@glissando | <fis' a'>1@glissando |
+    <fis, ais,>1@glissando | <fis' ais'>1@glissando |
+    <f, ais,>1@glissando | <f' ais'>1 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

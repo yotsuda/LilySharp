@@ -1067,7 +1067,10 @@ public sealed partial class MeasureCollector
         {
             case NoteSyntax note:
             {
-                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                // hasGlissando read here too — the main walk's arm reads it and this
+                // arm didn't, which is the same one-arm-of-two hole the rest dynamics
+                // above already had (a tuplet note's @glissando dropped silently).
+                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, HasGlissandoArticulation(note));
                 builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
                 CollectDynamics(note, annMeasureIndex, annItemIndex);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,

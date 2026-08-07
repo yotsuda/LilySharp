@@ -48,4 +48,11 @@ public readonly record struct GlissandoItem(
     int SourcePosition,
     // Index of the voice this glissando belongs to (0 = the primary/only
     // voice); the layout resolves its endpoints against THIS voice's measures.
-    int VoiceIndex = 0);
+    int VoiceIndex = 0,
+    // Which chord MEMBER this line hangs on at each end (−1 = the item is a
+    // single note). A chord glissando is one line PER note head, paired in
+    // written order — the member picks whose head ink the X anchor reads.
+    // LILYPOND-REF: scm/scheme-engravers.scm:2519-2579 Glissando_engraver — one
+    //   Glissando per note head, bounds set to the HEAD grobs in array order.
+    int StartMemberIndex = -1,
+    int EndMemberIndex = -1);

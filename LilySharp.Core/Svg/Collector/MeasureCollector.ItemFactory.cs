@@ -421,6 +421,11 @@ public sealed partial class MeasureCollector
         {
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
             ForcedStemUp = GetStemDirectionOverride(chord),
+            // Read in the FACTORY so every chord-creating walk arm gets it — a walk-arm
+            // read is exactly how a chord's @glissando was silently swallowed until
+            // 2026-08-07 (regression glissando-accidental.ly: the event parsed, no
+            // reader existed, eight of the book's ten lines vanished without a word).
+            HasGlissando = HasGlissandoArticulation(chord),
         };
     }
 
@@ -484,6 +489,7 @@ public sealed partial class MeasureCollector
         {
             // The repetition's OWN post-events only — the original's are not copied.
             ForcedStemUp = GetStemDirectionOverride(rep),
+            HasGlissando = HasGlissandoArticulation(rep),
         };
     }
 

@@ -474,6 +474,11 @@ public sealed record ChordItem : MusicItem
     public int TremoloGapCount { get; init; }
     /// <summary>Notehead style applied to ALL heads of this chord.</summary>
     public NoteheadStyle Notehead { get; init; }
+    /// <summary>Whether this chord starts glissandi to the next note/chord — one line
+    /// per member head, paired in written order (see <see cref="GlissandoItem"/>).</summary>
+    /// <remarks>LILYPOND-REF: scm/scheme-engravers.scm:2519-2579 Glissando_engraver —
+    ///   the start column contributes every note head as a left bound.</remarks>
+    public bool HasGlissando { get; init; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
     /// <summary>Whether this chord starts a manual beam group (init so the

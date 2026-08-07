@@ -58,10 +58,102 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第109セッション第1便（＝flag-stem-begin-position.ly **修理→fixed 第29号**・
-`9b2173cc`）。frontier は **pending の次の本**（§0 どおり status.json から取ること——
-固定で書くと腐る。第1便終了時点の先頭は follow-voice-consecutive.ly）。第107 起票の
-§2A「skyline 参加者列挙の手動→録画層」workstream は棚のまま。
+最終更新 第109セッション第6便（＝第1便 fixed 第29号・`9b2173cc`・第2便 skip 2+下見・
+第3便 fixed 第30号・`4e4ac148`・第4便 gliss 族 2 冊 exact・第5便 自己監査＝開示 4 札・
+第6便 perf A/B＝drift 内・下記⑥）。
+frontier は **glissando-cross-staff.ly の評価**（下記④——cross-staff の Y フレームが山。
+その先は §0 どおり status.json）。第107 起票の §2A workstream は棚のまま。
+
+★★ **⑥（第6便）perf A/B（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
+- **機材**: scratch\lpreg\perf-ab6.ps1・base=a9c7b576 worktree（撤去済）・Release・
+  交互×両順・中央値 of 5・1000 小節 4 冊（plain1k=対照+switch 化の全曲オーバーヘッド・
+  styled1k=styled 経路・glissnote1k=等仕事 gliss・glisschord1k=新機能 fan+臨時記号）。
+- **結果**: gliss 2 冊は**順序で符号反転**（−9.1/+9.0・+18.9/−5.6）＝純 drift。
+  plain +2.1/+4.9・styled +3.1/+5.1＝4 バッチ全部正だが、**同一バイナリのバッチ間
+  振れが 4.5%（plain base 9258↔9677）〜12%（styled base 10052↔11303）**で delta は
+  機械の再現性床の下＝断定不可。**plain1k の SVG hash は base/curr 一致**（仕事同一の計測）。
+- **呼び出し構造**: pass 数・walk 数不変・O(n²) 無し・hot path の alloc 追加ゼロ
+  （gliss anchor の CalculateOffsets/CalculatePositions は **gliss 1 本ごと**・
+  detector の fan alloc は gliss 持ち item のみ）。switch 化は定数読み→enum switch＝
+  ns 級で 2〜5% は物理的に説明不能＝drift 読みと整合。
+- **劣化が出たらここ**（弱い正傾向が実在した場合の候補・順に）: ⑴ **NoteColumnLayout
+  （readonly record struct）に Notehead 1 フィールド増**＝値コピーが太った唯一の
+  hot 構造（詰めるか、コピー経路を ref に）⑵ StemAttachX のタプル返し合成。
+  測って床の下だったので今は発明しない（第106 の規約どおり）。
+- プレビュー増分経路（IncrementalCompiler）は今便の変更に非接触。
+
+★★ **⑤（第5便）自己監査（ユーザー三問）＝挙動変更 0・開示 4 札**（REF ラチェットは
+全スイート内で通過済＝引用は全部検証済）:
+- **①broken gliss の Y「凍結」が LILYSHARP-OWN 無開示だった**→札（LP は
+  line-spanner.cc:247-406 の連続 slope「Solomon 折衷」。読者ゼロ＝break を跨ぐ gliss の
+  本は未着。chord-linebreak は gliss の間で折れるので exact のまま正）。
+- **②gliss の Y anchor は LP では「頭 ink の中心」**（:416-421 `ii.center()`）——既定頭は
+  ink が対称（±0.545）だから譜面位置と一致して見えるだけ。s2triangle は −0.7828..0.6566
+  ＝LP の anchor は位置の 0.0631 下。shape 頭の gliss 本が来たら踏む＝札+起票。
+- **③第29号が入れた非対称: styled 頭の stem X は headScale を掛け Y は掛けない**
+  （LP は attachment ごと font でスケール）。読者は cue×styled 頭のみ・未測＝札
+  （default-head regime の起票に同乗）。
+- **④Beams の「beamed heads are always filled」札は嘘**（tremolo 対は half 頭を梁で
+  結ぶ＝X 側は per-member で正しく読むのに Y は noteValue:8 固定→half の begin 0 が
+  0.15 recess で描かれる既存欠陥に名前を付けた。未測）。
+
+★★ **④（第4便）gliss 族 2 冊 = exact（コード変更 0・第30号の器材がそのまま担う）**:
+- **glissando-chord-linebreak.ly = exact**: 和音間 gliss ×2 段（明示 break）・両段とも
+  **LP 桁一致**（段1 57.317,−0.511→78.477,−0.989・段2 55.475→77.106）・両側警告無し。
+  和音→単音は min 対＝c member の 1 本（LP は余った grob を suicide＝detector の
+  min(start,end) と同型）。break 跨ぎ簿記も既存のまま正。**明示 break の本は
+  Lily# が全行 justify＝LP twin は ragged-right 無し**（README 規約の逆・第105 の学び再確認）。
+- **glissando-consecutive.ly = exact**: 連続 gliss 2 本とも桁一致
+  （11.045,2.96→16.237,2.54／19.195,2.46→24.387,2.04）。
+- **次の族本 = glissando-cross-staff.ly（未評価・pending のまま）**: `\change Staff` の
+  PianoStaff 跨ぎ gliss。⚠️ 山は **cross-staff の Y フレーム**——LP は
+  line-spanner.cc:230-431（broken 時の「staff 対の中央を揃える Solomon 折衷」・
+  cross-staff は VerticalAxisGroup 相対）で、Lily# の GlissandoLayout は
+  **単一 StaffIndex の staff middle 相対**＝両端が別 staff の frame を持てない。
+  第2便の学びどおり \change Staff 自体は @cross（CrossStaffEngraver）で部分表面
+  あり——twin が書けるかから見る。書けても Y フレームはアーキ課題の可能性（その時は
+  open で数字を記録）。
+
+★★★ **③（第3便）fixed 第30号 = glissando-accidental.ly**:
+- **主張**: gliss 線は目標の臨時記号の手前で止まる・和音 gliss は同 X 終端・同傾き。
+- **修理 3 層**: ⑴ **和音起点 @glissando の silent drop**（detector が NoteItem 限定）→
+  member 対 fan（ChordItem.HasGlissando は **factory 読み**＝全 walk 腕を一度に閉鎖。
+  tuplet emitter の音符腕の同穴も閉鎖）⑵ **X anchor = 列 X±0.5 固定 → 頭 ink 縁**
+  （左=起点頭の右縁 attach-dir RIGHT・右=目標頭の左縁 attach-dir LEFT）+
+  **end-on-accidental**（目標列が臨時記号を刷るときは AccidentalPlacement extent の
+  左縁＝「臨時記号の手前で止まる」の全部。line-spanner.cc:177-202）⑶ **padding 二重
+  （X 0.5+線方向 0.5）→ 線方向 0.5 一度だけ**（print は bound-details の padding しか
+  読まない・grob の gap 0.5 は読者無し。:599 `-d*gaps*dz.direction()`・短すぎる線は
+  不描画 :591-594）。
+- **照合（twin・\relative を絶対展開）**: 音符 gliss 2 本（11.037,+0.4→14.945,−0.4＝
+  sharp 手前・19.337→23.287＝flat 手前）+ 和音第 1 対（35.478→41.004）が **LP 桁一致**。
+  全 7 和音対が同 X span・平行。**列相対 anchor（頭右縁+線方向 0.5・臨時記号左縁−
+  線方向 0.5）は最終対まで桁一致**。
+- **観測者 +1**: GlissandoBoundTests。**snapshot 3 枚**（showcase/02-ornaments・
+  multivoice-spanners・ossia-beams＝全差分が 0.100 幅 gliss 線の端点のみ・census 済）。
+- 残差（主張外）: 絶対 X の累積 drift ≤1.4（note-spacing regime・列幅差 0.15/小節）・
+  flat の ink-left 0.012（accidental-placement regime）。起票: **start-at-dot 未綴り**
+  （define-grobs.scm:1701・dotted 起点の本が来たら。GlissandoEngraver.HeadInkEdge の
+  remarks に札）・note→chord の単線は最近傍→**先頭 member**（LP の head 配列順）へ変更。
+
+★★ **②（第2便）skip 2 + glissando-accidental.ly 下見（state=pending のまま notes に実測）**:
+- **skip: follow-voice-consecutive.ly** — VoiceFollower（\showStaffSwitch）対応物ゼロ＝
+  器材が主張そのもの。⚠️ \change Staff 自体は **@cross（CrossStaffEngraver・grand staff
+  内）で部分表面あり**（cross-staff-beams 便の「表面なし」は beam 文脈の話——次に
+  \change Staff の本が来たら @cross で書けるか先に見る）。
+- **skip: fret-board-alignment.ly** — false plain（include ゲート再演）:
+  predefined-guitar-fretboards.ly が Scheme 満載（\addChordShape #…481 行）+
+  FretBoards コンテキスト自体が無い（@frame.xxx は per-note 注釈のみ）。
+- **下見: glissando-accidental.ly**（主張: gliss 線は目標の臨時記号手前で止まる・
+  和音 gliss は同 X 終端・同傾き）: twin scratch\lpreg\gliss-acc.lys（**\relative を
+  絶対展開**して簿記回避・11 小節 whole）。**Lily# 実測 = 斜め線 2 本のみ＝和音起点の
+  @glissando が無警告 silent drop**（GlissandoDetector.cs:41 が `item is not NoteItem`
+  で和音を素通り・8 本消える。chords 族と同じ読者ゼロ鉱脈）。既知開示: 和音終点は
+  最近傍 1 本（fan 未対応・:50-58）。臨時記号回避は LP twin 未レンダ＝未測。
+  **修理の形（次便）**: ⑴ 和音起点+member 対 fan ⑵ 同 X 終端・同傾き規則
+  （LP line-spanner/glissando）⑶ 終端の臨時記号クリアランス——LP 側は
+  scm/define-grobs.scm Glissando の bound-details と
+  lily/line-spanner.cc:計算を読んでから字面で。
 
 ★★★ **①（第1便）fixed 第29号 = flag-stem-begin-position.ly**:
 - **主張**: merge された符頭に符尾が正しい始点で届く（\aikenHeads の 8分 flag 対・
@@ -104,13 +196,13 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 - **twin の学び**: @notehead は**括弧形 @notehead(triangle)**（ドット形は LYS1008 で
   無視警告）・単音 tremolo は `f4:32` が直接書ける（repeat tremolo 不要）。
 
-plain 322 / 処理済 **116**（fixed **29**・exact **17**・skip **59**・open **11**・
-pending 206。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **121**（fixed **30**・exact **19**・skip **61**・open **11**・
+pending 201。数えたら state 別内訳も一緒に書くこと）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4183 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+テスト **4184 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning・snapshot 第109 は 1 枚（census 承認済・上記）**・
+**Core 0 warning・snapshot 第109 は 4 枚（第1便 1 + 第3便 3・census 承認済・各便参照）**・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第108セッション第1〜4便の経緯

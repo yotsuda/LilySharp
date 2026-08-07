@@ -3020,7 +3020,9 @@
     },
     "follow-voice-consecutive.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "連続する譜替えでも voice follower(譜またぎ線)が混乱しない",
+      "notes": "VoiceFollower(\\showStaffSwitch/\\hideStaffSwitch)はLily#に対応物ゼロ=主張の器材そのもの(grep follower/staff-switch 0件)。\\change Staff自体は@cross(CrossStaffEngraver・grand staff内)で部分表面あり。器材追加は要ユーザー判断"
     },
     "font-bogus-ligature.ly": {
       "category": "scheme",
@@ -3108,7 +3110,9 @@
     },
     "fret-board-alignment.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "FretBoards は fret0×弦1 交点で Y 揃え",
+      "notes": "false plain(include ゲート): \\include predefined-guitar-fretboards.ly が Scheme 満載(\\addChordShape #... 481行)。FretBoards コンテキスト(chordmode駆動の自動fret図トラック)自体も Lily# に無い(@frame.xxx は per-note 注釈のみ)"
     },
     "fret-boards.ly": {
       "category": "scheme",
@@ -3192,7 +3196,9 @@
     },
     "glissando-accidental.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "gliss線は目標の臨時記号の手前で止まる。和音glissは同X終端・同傾き(交差しない)",
+      "notes": "修理3層: ⑴和音起点@glissandoのsilent drop(detector NoteItem限定)→member対fan(ChordItem.HasGlissando=factory読み・tuplet emitter音符腕の同穴も閉鎖) ⑵X anchor=列X±0.5固定→頭ink縁(左=右縁・右=左縁)+end-on-accidental(臨時記号ink左縁=AccidentalPlacement extent) ⑶padding二重(X0.5+線方向0.5)→線方向0.5一度だけ(line-spanner.cc:599)・短すぎ線は不描画(:591-594)。照合: 音符gliss2本+和音第1対がLP桁一致・全対same-span平行・列相対anchorは最終対まで一致。残差(主張外): 絶対X累積drift≤1.4(note-spacing regime)・flat ink-left 0.012(accidental-placement regime)。起票: start-at-dot未綴り(dotted起点の本が来たら)。snapshot 3枚(全差分gliss線端点のみ・census済)。観測者GlissandoBoundTests+1"
     },
     "glissando-broken-multiple.ly": {
       "category": "scheme",
@@ -3208,7 +3214,9 @@
     },
     "glissando-chord-linebreak.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "和音間のglissandoが改行を妨げない(2段・警告無し・glissは刷られる)",
+      "notes": "コード変更0=fixed第30号の器材がそのまま担う。両段glissがLP桁一致(段1 57.317,-0.511→78.477,-0.989/段2 55.475→77.106)。和音→単音=min対(c member 1本・LPは余りgrobをsuicide)。両側警告無し。明示break本=LP twinはragged-right無し規約"
     },
     "glissando-chord.ly": {
       "category": "scheme",
@@ -3216,7 +3224,9 @@
     },
     "glissando-consecutive.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "連続するglissandiが刷られる(前の終点が次の起点)",
+      "notes": "コード変更0。2本ともLP桁一致(11.045,2.96→16.237,2.54/19.195,2.46→24.387,2.04)"
     },
     "glissando-cross-staff-broken-remove-empty.ly": {
       "category": "scheme",

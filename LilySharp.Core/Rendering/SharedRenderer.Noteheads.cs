@@ -443,6 +443,13 @@ internal static partial class SharedRenderer
     /// wants its own point (ticketed 2026-08-07, session 108: default-head
     /// stem-begin regime).
     /// </para>
+    /// <para>
+    /// ⚠️ UNSCALED, unlike the X side (session 109 audit): the styled Y is the 20
+    /// design's coordinate while <see cref="LayoutUtilities.StemAttachX(bool, int, NoteheadStyle, double)"/>
+    /// takes the cue's headScale — LilyPond scales the whole attachment with the
+    /// grob's font. A CUE styled head is the only reader of the difference and no
+    /// book measures one; ticketed with the default-head regime above.
+    /// </para>
     /// </remarks>
     private static double StemAttachYOffset(NoteheadStyle style, bool stemUp, int noteValue) => style switch
     {

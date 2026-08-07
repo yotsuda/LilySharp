@@ -79,7 +79,7 @@
   <rect x="34.14" y="15.46" width="0.60" height="4.00" data-pos="650"/>
   <path d="M 26.26,15.75 C 26.58,16.03 27.11,16.03 27.42,15.75 C 27.11,16.15 26.58,16.15 26.26,15.75 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 15.67,16.00 C 16.31,16.88 17.35,17.33 17.94,17.00 C 17.30,17.44 16.26,16.99 15.67,16.00 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="9.54" y1="15.75" x2="10.76" y2="15.17" stroke="#000000" stroke-width="0.100" data-pos="660"/>
+  <line x1="10.33" y1="15.72" x2="11.27" y2="15.20" stroke="#000000" stroke-width="0.100" data-pos="660"/>
   <rect x="0.30" y="10.60" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="581"/>
   <text x="1.23" y="12.80" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="581">S</text>
   </g>
