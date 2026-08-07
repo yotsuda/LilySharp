@@ -58,6 +58,117 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第103セッション第4便（＝第1便 collision-seconds.ly **fixed 第21号**・`c21a3f0b`・
+第2便 collisions.ly＝**open（衝突の主張自体は exact＝fixed 21 の検証になった・残差は
+臨時 regime 2 件+spacing）**・第3便＝ユーザー問「実装評価・書き直し候補・文法変更」への
+答えを **§2C（書き直し4点）/§2D（文法3点・要ユーザー判断）に台帳化**＋
+**bare music の key/time/tempo file-default 綻び**を修正（第102便③の起票・§2D⑵が消すはず
+のバグクラスの現行修理）＋completion-heads 3冊 skip・第4便＝自己監査で名指した
+fallback 既定引数を**自己導出に締め直し**（`63d49460`・①の修正欄参照）。
+frontier の pending 先頭は **complex-once.ly**（下見済・frontier 欄参照））。
+
+★★ **③（第3便）bare stream の key/time/tempo が file 既定を書き換えつつ変更も印字**:
+- **症状**（再現してから直した）: `g'1 key g major g'1` は**開始調号が G**（♯付き）になり、
+  変更点にも ♯ を印字＝二重。`g'1 time 3/4` は冒頭が 3/4（m1 が overfull）+ 変更点に
+  もう一度 3/4。`g'1 tempo N` も score 既定と楽中マークの二重。
+- **修正**: fixed 第20号の `topLevelMusicSeen` ガードを CollectDefinitions の
+  tempo/time/key の 3 case に延長（clef と同型・walk の楽中経路が唯一の書き手になる）。
+  **観測者 = BareTopLevelChangeTests 3 本**（開始は素の C major／C 拍子・変更は 1 回だけ）。
+- ⚠️ これは§2D⑵（file 既定と楽中変更の構文的区別）が文法ごと消すはずのバグクラスの
+  **現行意味論での修理**。文法案は要ユーザー判断のまま。
+
+★★★ **① fixed 第21号 = 2声和音メッシュの衝突分類（collision-seconds.ly）**:
+- **本の主張**: 2度は衝突アルゴリズムを混乱させない——各小節の第1対は merge/mesh/近接、
+  第2対は「どの音がどの声部か」が分かる間隔を取る。
+- **乖離の根は 2 つ**: ⑴ **分類・merge 判定が全符頭で走っていた**。LP は
+  check_meshing_chords の too-far/touch（:59-75）だけ全符頭で判定し、そのあと
+  **note_head_positions(filter=true)＝flip 側（suspended）符頭を除外した集合に読み替えて**
+  （:77-87・stem.cc:303-345——filter は「列内 X=0 の頭だけ通す」）merge 判定と
+  close/distant/full の分類を行う。Lily# は全符頭のままだったので flip 頭が phantom 2度を
+  作り、**10 モーメント中 6 が誤分類**（merge すべき 3 つが close_half 1.43 に、
+  mesh 0.468 と distant 1.102 が full 1.38 に）。⑵ **同型 merge が down item を丸ごと wipe**。
+  LP :276-289 は equal ball type + equal dots では wipe_ball を立てない＝**両声部の符頭を
+  同座標に重ね描き**（LP 自身の SVG で merge unison は同座標の head path 2 本）。Lily# は
+  down 和音を消していて m1p2 で **59 頭 vs LP 61 頭の silent drop**。旧テスト 2 本が
+  この誤りを「:381-407」（wipe コードの無い範囲）を引いてピンしていた——
+  **stale 引用は誤仕様の匂い**の 5 例目。
+- **修正**（NoteCollision.cs 内で完結・呼び元は collect/layout とも CalculateVoiceOffsets 経由）:
+  **AnalyzeCollision が normal-side 集合を自分で導出する**（第4便で引数渡し→自己導出に
+  締め直した。check_meshing_chords 自身が :86-87 で filtered を導出するのと同型＝
+  「省略時 fallback で旧バグに戻る」穴が存在しなくなった）。**導出は
+  ChordHeadPositioning.CalculateOffsets の offset==0**（描画と同じ家＝第2の綴りを
+  作らない・§2A。flip は position 集合+向き+頭 glyph だけで決まるので導出可能）。
+  sameHeadStyle（:94-97 の port・position から導出不能なので引数のまま）。
+  ComputeMergeInfo は LP の wipe 規則へ（wipe は merge-differently-* 経由でのみ発火。
+  dot_wipe_head は未 port＝チャネルなし・equal-dots merge は付点が同座標 2 重描きになる・
+  コメントに明記・観測者なしと明記）。
+- **照合**: 10 モーメント全部 LP 指紋一致（SVG 2桁内）: merge 重ね 0 / mesh 2×0.17×1.3774=
+  0.468 / distant 2×0.4×1.3774=1.102 / full 1.377 / close_half 1.432。半符頭 ink 幅
+  **1.3774**・列内 flip オフセット **1.3124**（=1.3774−0.13×0.5）。列間隔=2×|s|×wid の機構は
+  collision-harmonic の down +1.3000（=2×0.65×0.9437×1.3774）とも整合＝⑤⑵の実測と同じ網。
+- **観測者**: NoteCollisionTests +5（SuspendedHeads_* 4本＝m1p1 merge・m1p2 distant・
+  m4p1 mesh・m5p2 close_half を LP 数値で釘付け・VoiceOffsets_ChordEntries_
+  DeriveTheNormalSideThemselves＝ChordItem e2e）。**snapshot 動き 0 枚**（既存 fixture に
+  該当形なし＝爆風ゼロ）。
+- ⚠️ **起票（別 regime）**: 残差は**列間 spacing のみ**——小節内 gap LS +0.198（5例中4・
+  m2p1→m2p2 だけ一致）・小節境界 gap LS −0.55〜−1.16。note-spacing wish
+  （memory 左頭/voice境界: voice 境界では left_head_end の行が走らない）+ barline spacing の
+  regime で、衝突の主張とは独立。数字は status.json の notes に。
+- ⚠️ GetNoteheadStyle は chord レベル style を比較（LP は first_head の style）——drum 和音の
+  per-note style が 2 声衝突に来たら誤る（producer 未存在・コメントに明記）。
+- **perf**: 常時パス追加なし。衝突列（両向き voice が同モーメントに立つ列）1 本あたり
+  ChordHeadPositioning.CalculateOffsets が最大 2 回増えるだけ（既存レンダ経路と同じ純関数・
+  頭数≤和音サイズ・per-system 再実行経路への追加ゼロ）＝§7.9 の「構造で言える」側。
+- 手順メモ: LP twin の頁原点は X も**譜線開始 x（今回 8.536）を引けば**Lily# と重なる
+  （Y は素で一致）。lysc の相対検算は `<a b>'` 型（全体マークで anchor ごと上げる）が速い。
+
+★★ **②（第2便）collisions.ly = open（衝突は exact・残差は臨時 regime）**:
+- **総合本**（2声/2声+和音/3声/5声和音 hairyChord・第4分岐空/minims 半/semibreves 全/
+  sequence voiceOne-Four）。**101 符頭（黒62/半23/全16）が両者同数・改行同一・全モーメントの
+  内部形状 LP 一致**: unison merge 重ね・touch 1.304・distant 1.043（=2×0.4×黒1.3042）・
+  同方向 clear-heads 1.0 arm（半1.377/全1.962）・stemless 0.5 arm（0.981）・4声の中間
+  声部 shift（±0.689/±0.981）——**①の網がそのまま効いた＝fixed 21 の e2e 検証**。
+- **open の残差 3 系統**: ⑴ ★ **声部横断の復元♮が欠落**——v2 の es（E♭4・beat21）の後、
+  v3 の E4（beat22）に LP は ♮（x=91.662−8.536）・Lily# 無印字。`_measureAccidentals` は
+  1 辞書だが **walk が voice0 全時系列→extra voices の順**で staff 時間順の状態共有が
+  構造的に不成立（臨時エンジンのアーキ課題・quick fix ではない）⑵ hairy の ♯3 枚の列順
+  （LP=ais,fis,cis／Lily#=fis,ais,cis・cis Δ0.24）＝臨時 stack 既知 regime
+  ⑶ 列間 spacing 配分（±0.2〜2.0・両系とも同幅 justify）＝①起票と同 regime。
+- **twin 書法の学び**（status.json notes にも）: ⑴ **隣接 voice スパンは 1 スパンに畳む
+  誤り回復**（Parser.Directives.cs RepeatedVoiceKeyword）——境界が小節中に落ちる連続束は
+  **多声 1 スパンに融合して s(spacer) でタイミング保存**（v3=拍15 から・v4=全 s・v5=拍23 のみ。
+  spacer は頭が無いので衝突・印字に不参加）⑵ **LP の時価 sticky はソース順で声部を跨ぐ**
+  （minims の c'' は直前の e''2 を継いで半＝名前の通り。semibreves 同）⑶ 小節は `|` 明示
+  （書かないと束全体が 1 小節扱い）⑷ 融合すると相対連鎖が変わる——`lysc check --pitches` で
+  101 音検算してから比較した。コード変更ゼロ＝下見と検証のみの便。
+
+**frontier（次の本命）**: ⑴ pending 先頭 = **complex-once.ly**（`\once \hideNotes`＝
+複合プロパティ操作への once 適用。Lily# は override+once 文法があり
+（OnceModifierSyntax・GrobOverrideTests に NoteHead transparent の観測者あり）**書ける
+可能性が高い**——hideNotes 相当を override 複数本で写す枠から。第3便で下見済）。
+⚠️ **completion-heads 3 冊は第3便で skip**（engraver 差し替え本＝`\consists
+Completion_heads_engraver`。**categorizer は `\consists`/`\remove` を見ない＝false plain の
+新ゲート**・completion 族 11 冊全部該当）。その次の context-*-def 族も `\layout \context`
+定義本（`\defaultchild`/`\name`/`\alias`）＝false plain 濃厚、開いてから信じること。
+⑵ ⑤⑵ style-blind 修正（ⓐⓑⓒ・手順は第102セッション⑤に）⑶ open 5 本
+（automatic-polyphony-tabstaff・breathing-sign-accidentals——port 計画は第99セッション
+第16便 §1——chords-funky-ignatzek＝要ユーザー判断・collision-harmonic-no-dots・
+collisions＝②）⑷ 起票: 列間 spacing regime（①②で同型を実測）・声部横断の臨時状態（②⑴）・
+slur 端点 X regime（第102セッション起票⑴）。
+
+plain 322 / 処理済 **82**（fixed **21**・exact 16・skip **40**・open 5・pending 240。
+数えたら state 別内訳も一緒に書くこと）。
+
+未 push **7**（第1便 `c21a3f0b`+`67429d97`・第2便 `ac00e0e8`・第3便 `a61cd143`+`8e46a7e2`・
+第4便 `63d49460`＋この handoff。数え直すこと。**⚠️ push しない**——開始時点で
+origin/master==HEAD＝前セッションの 73 本はユーザーが push 済みだった）・
+テスト **4164 passed / 0 failed / 4 skipped**（観測者 +5+3 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 動き 0 枚**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第102セッション第1〜5便の経緯
+
 最終更新 第102セッション第4便（第3便の宿題「LP 1.3000 の分解」を dump で完遂＝⑤⑵参照）（＝第1便 chord-X-align **fixed 第18号**・第2便で
 キュー5本: chords-funky-ignatzek=**open**(Ignatzek命名エンジン未port)・
 clef-change-at-end=**fixed 第19号**・clef-transposition-optional=skip・
@@ -12114,6 +12225,67 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   （`LILYSHARP-OWN` と明示済・1 文字の "C" 1.877882 を上書きするので**実際に効く**）
 - ⚠️ **`KnuthPlassBreaker` は `LpProvenanceTests` の監視範囲外**＝§5.2.1① の網の穴。
   `OverfullPenalty` の誤った `LILYPOND-REF` が何年も生き延びたのはそのため
+
+### C. 構造の書き直し候補（第103セッションのレビューで名指し・4 点）
+
+> ユーザー問「書き直したくなるコードはあるか」への答えを台帳化したもの。**優先順**。
+> ⑵⑷は §2A に既存項があるので**参照だけ**（二重台帳を作らない）。
+
+- ★★★ **⑴ 多声 walk の moment 順への再設計**（最大の構造負債・**未着手**）。
+  現行は `MeasureCollector`: **voice 0 だけ本流にインライン・他声部は `_parallelSpans` から
+  後で再構築**（`BuildExtraVoiceTracks`）。この「voice 0 の全時系列が先」という順序が
+  **staff 時間順の状態共有を原理的に不可能**にしている。出た欠陥クラス:
+  ⑴ **声部横断の復元♮の欠落**（collisions.ly・第103セッション②——`_measureAccidentals` は
+  1 辞書なのに走査順が時間順でないので、v2 の es の後の v3 の E4 に ♮ が付かない）
+  ⑵ cue region の二重 walk（第98セッション・skip リスト drift）⑶ collect 相の per-walk
+  whitelist 一般の drift（正典 doc 自身が予言）。**直し方は LP と同じ「moment 順に全声部を
+  1 回で歩く」**（Engraver 順序の鏡）。大手術なので**踏む本が溜まってから**——ただし
+  臨時記号系の corpus 本（accidental 族は scheme が多いが plain も残る）が来るたびに
+  ここに戻る。⚠️ 部分修理（臨時状態だけ staff 時間順の別 pass にする等）は
+  **3 つ目の walk を増やす**ことになるので、§2A の主題（同じ量の N 個目の綴り）と
+  引き換えにしないこと。
+- ★★ **⑵ 残っている「同じ量の 2 つ目の綴り」**——§2A の既存 3 項を指す（詳細はそちら）:
+  符尾 attachment X の黒玉固定（▶ 先頭・対 `stem.up.right-edge.{half,black}-head` 開設済み）・
+  符尾長の 3 綴り（cue がどれにも属さない）・タイ列の greedy（`Ties_configuration` 丸ごと
+  採点への置換）。
+- ★★ **⑶ record モデルの同値性（identity の欠如）**（**未着手・設計判断が要る**）。
+  音楽モデルが C# record なので **unison・同音の 2 項が「等しい」**——`IndexOf`／`Contains`／
+  `Dictionary` キーが黙って衝突する。実例 = fixed 第18号（`TieItem` の unison 対が
+  `ordered.IndexOf` で両方 slot 0 → DOWN 弓の 2 重描き・`ReferenceEquals` の `FindIndex` で
+  回避）。stem support の `positions.IndexOf(supportPos)` も同族（今は並び順で無害と確認済）。
+  **恒久解はモデル項目に識別子を持たせる**（record をやめるのではなく Id を値の一部にする等・
+  等値性の意味論が変わるので**要ユーザー判断**）。それまでの規律: **モデル項目のコレクション
+  検索は参照一致で書く**（値一致で書いた時点で unison バグの候補）。
+- ★ **⑷ collect 相と layout 相の二重解決**——§2A の既存項
+  「多声の譜が `VoiceCollector.Collect` と `NoteCollision` を 2 周する」を指す（詳細・実測
+  +0.3%・畳み方 2 案はそちら）。⚠️ **着手前にコスト判断**（§2A に明記済み）。
+
+### D. 文法の変更候補（効率の観点・**3 点とも要ユーザー判断＝勝手に実装しない**）
+
+> ユーザー問「効率的な処理のために文法を変えるべき所はあるか」への答えの台帳化。
+> 文法変更は言語設計＝ユーザーの決定事項。ここには**提案と根拠**だけを置く。
+
+- ★★★ **⑴ オクターブアンカー（絶対指定）構文**（LP の `\fixed` 相当）。現行は相対のみで、
+  **1 音の編集が同一 voice の後続全音のピッチ解決に波及**する＝増分処理（F3 増分・
+  `project_lilysharp_incremental_architecture`）の依存チェーンが最悪で曲全体に伸びる。
+  小節／フレーズ境界に置けるアンカー（または `\fixed` 型の囲い）があれば再解決の波及が
+  区間で止まり、手書き・AI 記譜のオクターブ事故も減る（第103セッションだけで融合スパンの
+  `g'4`→`g4` を 1 回踏んだ。twin 作業の頻出事故クラス＝memory
+  reference_lilysharp_relative_octave_authoring）。**効率と正確性の両方に効く最有力案**。
+  ⚠️ 綴りは sigil 規則（§3D・LP が記号で綴るものだけ記号）に従うこと。
+- ★★ **⑵ file 既定と楽中変更の構文的区別**。現行は「bare music の中で最初の音より前か後か」で
+  clef/key/time/tempo の意味（file 既定 vs 楽中変更）が変わる＝**順序依存の意味論**で、
+  判定に `topLevelMusicSeen`＋音符ごとの祖先 walk が要る。clef は fixed 第20号・
+  key/time/tempo は**第103セッション第3便で同じガードに揃えた**（それまでは「既定を
+  書き換え＋変更も印字」の二重欠陥だった＝BareTopLevelChangeTests が観測者）。
+  文法で「既定は part{}／ヘッダにだけ書ける・bare music 中は常に変更」と決めれば、
+  **この walk 自体と欠陥クラスごと消える**（1 パス化）。
+- ★ **⑶ voice スパンの遅入り**。隣接 voice スパンを 1 スパンに畳む誤り回復
+  （`RepeatedVoiceKeyword`）は良い罠塞ぎだが、その結果**小節中で声部数が変わる音楽は
+  spacer パディングでしか書けない**（collisions.ly の twin で実測: 前半 4 束を 5 声
+  1 スパンに融合し v4=全 s・v5=15 拍 s+1 音）。増分の単位が小節である以上、スパン境界を
+  小節グリッドから独立させる構文か spacer 糖衣（`s*15` 等）は検討余地。**表現力寄り**の話
+  なので優先度は ⑴⑵ の後。
 
 ---
 

@@ -383,10 +383,15 @@ public class NoteCollisionTests
     // --- LILYPOND-REF head wipe conformance tests (I-2) ---
 
     [Fact]
-    public void HeadWipe_Merge_DownHeadTransparent()
+    public void HeadWipe_EqualHeadedMerge_WipesNothing()
     {
-        // LILYPOND-REF: lily/note-collision.cc:381-407
-        // When notes merge (same pitch, same note value), down-stem notehead is wiped
+        // LILYPOND-REF: lily/note-collision.cc:276-289 — equal ball types with equal
+        // visible dot counts never assign wipe_ball: BOTH heads stay live and print
+        // coincident (collision-seconds.ly, measured 2026-08-07: each merged unison is
+        // two half-head paths at one coordinate in LilyPond's own SVG).
+        // ⚠️ This test USED to pin the opposite ("down-stem notehead is wiped"), citing
+        // :381-407 — a range inside calc_positioning_done with no wipe code. The wipe
+        // it pinned dropped a whole down-stem chord in collision-seconds.ly m1p2.
         var collision = new NoteCollision();
         var ups = new[] { 4 };
         var downs = new[] { 4 };
@@ -395,8 +400,8 @@ public class NoteCollisionTests
 
         Assert.Equal(CollisionType.Merge, result.Type);
         Assert.True(result.ShouldMerge);
-        Assert.True(result.DownHeadTransparent, "Down-stem head should be transparent on merge");
-        Assert.False(result.UpHeadTransparent, "Up-stem head should remain visible on merge");
+        Assert.False(result.DownHeadTransparent, "equal-headed merge leaves both heads live");
+        Assert.False(result.UpHeadTransparent, "equal-headed merge leaves both heads live");
     }
 
     [Fact]
@@ -446,10 +451,12 @@ public class NoteCollisionTests
     }
 
     [Fact]
-    public void HeadWipe_MergeChord_DownHeadTransparent()
+    public void HeadWipe_EqualHeadedChordMerge_WipesNothing()
     {
-        // LILYPOND-REF: lily/note-collision.cc:381-407
-        // Chord merge: all overlapping down-stem heads should be wiped
+        // LILYPOND-REF: lily/note-collision.cc:276-289 — same as the single-note case:
+        // an identical-chord merge keeps every head live (the coinciding pairs overlap).
+        // ⚠️ Used to pin "all overlapping down-stem heads wiped" against :381-407, which
+        // holds no wipe code.
         var collision = new NoteCollision();
         var ups = new[] { 4, 6 };
         var downs = new[] { 4, 6 };
@@ -458,8 +465,122 @@ public class NoteCollisionTests
 
         Assert.Equal(CollisionType.Merge, result.Type);
         Assert.True(result.ShouldMerge);
-        Assert.True(result.DownHeadTransparent);
+        Assert.False(result.DownHeadTransparent);
+        Assert.False(result.UpHeadTransparent);
     }
+
+    // --- collision-seconds.ly conformance: classification reads NORMAL-side heads only ---
+    // LILYPOND-REF: lily/note-collision.cc:77-87 — check_meshing_chords re-reads the head
+    // positions with filter=true before deciding merge and collision class; the heads a
+    // within-chord second reverses to the far side of the stem drop out. AnalyzeCollision
+    // derives those sets itself (from the positions, direction and head glyph), so each
+    // case below exercises the derivation AND the classification. All staff positions
+    // and expected shifts are LilyPond 2.26.0 measurements of
+    // input/regression/collision-seconds.ly (2026-08-07, SVG head X to 4 decimals).
+
+    [Fact]
+    public void SuspendedHeads_TakeNoPartInClassification_UnisonPairMerges()
+    {
+        // m1p1  << <a' b>2 \\ <g a> >> : the full sets make phantom seconds (a-b, g-a),
+        // but the normal-side sets are both {a} — a plain full collide, so the pair
+        // MERGES: shift 0, and LilyPond prints both half heads at literally one
+        // coordinate (x 17.6332). Classifying with the full sets sent this to the
+        // 0.52 close-half branch and spread the columns a full head apart.
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(
+            new[] { -1, 0 }, new[] { -2, -1 },
+            upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Merge, result.Type);
+        Assert.Equal(0.0, result.UpStemXOffset, 6);
+        Assert.False(result.UpHeadTransparent);
+        Assert.False(result.DownHeadTransparent);
+    }
+
+    [Fact]
+    public void SuspendedHeads_TakeNoPartInClassification_DistantHalf()
+    {
+        // m1p2  << <a b d e>2 \\ <a b> >> : full sets fully collide (a and b in both),
+        // but the normal sides are {a, d} against {b} — a lone distant-half second, so
+        // the up group moves right 0.4 (LP columns 1.1019 = 2 × 0.4 × 1.3774 apart).
+        // The old whole-set classification called this a MERGE and the old merge wipe
+        // then dropped both of the down chord's heads from the page (59 heads vs LP's 61).
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(
+            new[] { -1, 0, 2, 3 }, new[] { -1, 0 },
+            upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
+
+        Assert.False(result.ShouldMerge);
+        Assert.Equal(0.4, result.UpStemXOffset, 6);
+        Assert.Equal(-0.4, result.DownStemXOffset, 6);
+    }
+
+    [Fact]
+    public void SuspendedHeads_TakeNoPartInClassification_Meshing()
+    {
+        // m4p1  << <f g c>2 \\ <g a e'> >> : the full sets share g (a full collide plus
+        // a phantom second), the normal sides {f, c} vs {a, e} interleave without ever
+        // coming within a second — the plain meshing case, 0.17
+        // (LP columns 0.4683 = 2 × 0.17 × 1.3774 apart).
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(
+            new[] { -3, -2, 1 }, new[] { -2, -1, 3 },
+            upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Meshing, result.Type);
+        Assert.Equal(0.17, result.UpStemXOffset, 6);
+    }
+
+    [Fact]
+    public void SuspendedHeads_TakeNoPartInClassification_CloseHalf()
+    {
+        // m5p2  << <f g c d>2 \\ <g a b> >> : normal sides {f, c} vs {g, b} — a distant
+        // half (f under g) AND a close half (c over b), which :191 promotes to full,
+        // and close-half wins the multiplier chain: 0.52
+        // (LP columns 1.4325 = 2 × 0.52 × 1.3774 apart).
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(
+            new[] { -3, -2, 1, 2 }, new[] { -2, -1, 0 },
+            upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.CloseHalf, result.Type);
+        Assert.Equal(0.52, result.UpStemXOffset, 6);
+    }
+
+    [Fact]
+    public void VoiceOffsets_ChordEntries_DeriveTheNormalSideThemselves()
+    {
+        // End-to-end m1p1 and m1p2 through CalculateVoiceOffsets with real ChordItems:
+        // the normal-side sets come out of ChordHeadPositioning (the one house that
+        // knows which head a second reverses), not from a second spelling of the rule.
+        var collision = new NoteCollision();
+
+        // m1p1: merged — both columns pinned at the slot, nobody wiped.
+        var m1p1 = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeChord(Fraction.Half, -1, 0), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeChord(Fraction.Half, -2, -1), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+        var offsets = collision.CalculateVoiceOffsets(m1p1);
+        Assert.All(offsets, o => Assert.Equal(0.0, o.XOffset, 6));
+        Assert.All(offsets, o => Assert.False(o.HeadTransparent));
+
+        // m1p2: distant half — up group right by 2 × 0.4 × half-head width, and the
+        // down chord's heads STAY (the old merge wipe deleted them).
+        var m1p2 = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeChord(Fraction.Half, -1, 0, 2, 3), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeChord(Fraction.Half, -1, 0), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+        offsets = collision.CalculateVoiceOffsets(m1p2);
+        double up = offsets.First(o => o.VoiceId == 1).XOffset;
+        double down = offsets.First(o => o.VoiceId == 2).XOffset;
+        Assert.Equal(2 * 0.4 * GlyphMetrics.NoteheadHalf.Width, up, 4);
+        Assert.Equal(0.0, down, 6);
+        Assert.All(offsets, o => Assert.False(o.HeadTransparent));
+    }
+
+    private static ChordItem MakeChord(Fraction baseDuration, params int[] staffPositions) =>
+        new(staffPositions.Select(p => new ChordNoteInfo(p, null, false)).ToImmutableArray(),
+            baseDuration, 0, 0);
 
     // --- LILYPOND-REF dot direction adjustment tests (I-4) ---
 

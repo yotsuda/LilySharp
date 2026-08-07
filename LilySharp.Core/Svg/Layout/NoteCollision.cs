@@ -70,7 +70,8 @@ internal sealed record NoteCollisionInfo
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-collision.cc:254-318
-    /// Head wipe hides overlapping noteheads in merged multi-voice contexts.
+    /// Set only when a merge crosses a dot or head-type difference (the
+    /// merge-differently-* switches); a plain equal-headed merge wipes nothing.
     /// </remarks>
     public bool UpHeadTransparent { get; }
 
@@ -79,7 +80,8 @@ internal sealed record NoteCollisionInfo
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-collision.cc:254-318
-    /// In standard merge cases, the down-stem notehead is wiped.
+    /// Set only when a merge crosses a dot or head-type difference; a plain
+    /// equal-headed merge draws BOTH heads coincident (wipe_ball stays null).
     /// </remarks>
     public bool DownHeadTransparent { get; }
 
@@ -126,7 +128,17 @@ internal sealed record NoteCollisionInfo
 ///   full_collide = 0.5, distant_half = 0.4
 /// IMPLEMENTED — meshing multipliers:
 ///   meshing_dotted = 0.1, meshing_general = 0.17
-/// IMPLEMENTED — head wipe (note-collision.cc:254-318: merge hides the overlapping notehead)
+/// IMPLEMENTED — merge head wipe (note-collision.cc:254-318). ⚠️ Equal ball types with
+///   equal dots wipe NOTHING (:276-289 leaves wipe_ball null — both heads print
+///   coincident); this line used to say "merge hides the overlapping notehead", and the
+///   code wiped the whole down-stem ITEM, silently dropping a chord (collision-seconds.ly
+///   m1p2). Wipes only fire across a dot/head-type difference, i.e. only under the
+///   non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
+/// IMPLEMENTED — suspended-head filter (note-collision.cc:77-87 + stem.cc:303-345
+///   note_head_positions): merge and collision classification read only the heads on the
+///   normal side of each stem; too-far (:64-66) and touch (:68-75) read the full set.
+///   Classifying with the full set made every reversed low head a phantom second —
+///   all six wrong shifts of collision-seconds.ly came from this one omission.
 /// IMPLEMENTED — width-based shift normalization (note-collision.cc:427-437 and :447 in
 ///   calc_positioning_done — NOT automatic_shift, which this line used to name)
 /// NOT YET IMPLEMENTED — the half+eighth merge shift (note-collision.cc:305-307: a merge whose
@@ -250,15 +262,21 @@ internal sealed class NoteCollision
     }
 
     /// <summary>
-    /// Analyzes collision between two note columns (up-stem and down-stem).
+    /// Analyzes collision between two note columns (up-stem and down-stem). The
+    /// NORMAL-side head sets that merge/classification read (LP's filter=true re-read)
+    /// are derived internally from the given positions — callers cannot forget them.
     /// </summary>
+    /// <param name="sameHeadStyle">Whether the two columns' first heads share one
+    /// notehead style (LP compares <c>fh_up</c>/<c>fh_down</c> "style"). Not derivable
+    /// from positions, so it stays a parameter; the default models the common case.</param>
     public NoteCollisionInfo AnalyzeCollision(
         IReadOnlyList<int> upStaffPositions,
         IReadOnlyList<int> downStaffPositions,
         int upNoteValue,
         int downNoteValue,
         int upDots,
-        int downDots)
+        int downDots,
+        bool sameHeadStyle = true)
     {
         if (upStaffPositions.Count == 0 || downStaffPositions.Count == 0)
             return NoteCollisionInfo.NoCollision;
@@ -278,8 +296,32 @@ internal sealed class NoteCollision
         // two stems can share one vertical line.
         bool touch = CheckTouch(ups, downs, threshold);
 
+        // LILYPOND-REF: note-collision.cc:77-87 — from here on LilyPond RE-READS the head
+        // positions with filter=true: heads reversed to the far side of their stem (the
+        // 'o's in its picture) take no part in the merge decision or the collision
+        // classification, because they already sit a head-width away from the opposite
+        // voice. Derived HERE, from the same inputs, exactly as check_meshing_chords
+        // derives its own filtered sets — it used to be an optional caller-supplied
+        // parameter whose null default silently fell back to the full set, i.e. a future
+        // caller forgetting it would have quietly restored the bug this fixes:
+        // classifying with the full set put every merged pair of collision-seconds.ly on
+        // the 0.52 close-half shift (the down chord's reversed low head formed a phantom
+        // second against the up chord's main head).
+        ups = NormalSideStaffPositions(upStaffPositions, stemUp: true, upNoteValue);
+        downs = NormalSideStaffPositions(downStaffPositions, stemUp: false, downNoteValue);
+        // Unreachable at present — the first (support) head of a column is never
+        // reversed, so a filtered set is never empty — but LP's merge check (:91) also
+        // guards `!ups.empty () && !dps.empty ()`, and the reads below index [0].
+        if (ups.Count == 0 || downs.Count == 0)
+            return NoteCollisionInfo.NoCollision;
+
         // Check for merge possibility
         bool mergePossible = CheckMergePossible(ups, downs, upNoteValue, downNoteValue, upDots, downDots);
+
+        // LILYPOND-REF: note-collision.cc:94-97 — do not merge notes typeset in
+        // different style.
+        if (!sameHeadStyle)
+            mergePossible = false;
 
         // Detect collision types
         var (closeHalf, distantHalf, fullCollide) = DetectCollisionTypes(ups, downs, threshold, ref mergePossible);
@@ -379,7 +421,7 @@ internal sealed class NoteCollision
         // So mergePossible surviving implies fullCollide and no half-collide: the conjuncts
         // could never have excluded anything.
         if (mergePossible)
-            return ComputeMergeInfo(upNoteValue, downNoteValue);
+            return ComputeMergeInfo(upNoteValue, downNoteValue, upDots, downDots);
 
         // LILYPOND-REF: note-collision.cc:319-337 — "these numbers are magic", in this order.
         CollisionType type;
@@ -450,27 +492,45 @@ internal sealed class NoteCollision
     }
 
     /// <summary>
-    /// Merge case: two colliding heads at the same column combine into one.
-    /// Same-headed merge wipes the down-stem head; a differently-headed merge
-    /// (half + quarter/eighth) hides the FILLED head and keeps the open (half)
-    /// head visible.
+    /// Merge case: the two columns share one X (shift 0) and their coinciding heads
+    /// print on top of each other. Equal ball types with equal dot counts wipe NO
+    /// head — LilyPond leaves both alive and the identical glyphs overlap exactly
+    /// (measured in collision-seconds.ly: the merged half-note unisons are two head
+    /// paths at one coordinate). A head is wiped only when the two differ: equal
+    /// types with different VISIBLE dot counts (reachable only under
+    /// merge-differently-dotted) wipe the less-dotted head; a differently-headed
+    /// merge (reachable only under merge-differently-headed) wipes the shorter head.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/note-collision.cc:254-318</remarks>
-    private static NoteCollisionInfo ComputeMergeInfo(int upNoteValue, int downNoteValue)
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:254-318 — wipe_ball starts null and the
+    ///   equal-type equal-dots arm (:276-289) never assigns it.
+    /// ⚠️ THIS USED TO WIPE THE DOWN HEAD ON EVERY SAME-HEADED MERGE, which silently
+    /// dropped the down voice's chord in collision-seconds.ly m1p2 (its citation
+    /// named :381-407, a range inside calc_positioning_done with no wipe code).
+    /// ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
+    /// every merge (:262-314); Lily# has no dot-wipe channel, so an equal-dots merge
+    /// draws both voices' dots coincident (same ink, one glyph too many).
+    /// </remarks>
+    private static NoteCollisionInfo ComputeMergeInfo(int upNoteValue, int downNoteValue,
+        int upDots, int downDots)
     {
         bool upIsOpen = upNoteValue <= 2; // whole(1) or half(2) = open notehead
         bool downIsOpen = downNoteValue <= 2;
 
-        bool hideUp, hideDown;
+        bool hideUp = false, hideDown = false;
         if (upNoteValue == downNoteValue)
         {
-            // Same heads: standard merge, hide down-stem
-            hideUp = false;
-            hideDown = true;
+            // LILYPOND-REF: note-collision.cc:276-290 — equal heads: wipe only on a
+            // visible-dot-count difference, the less-dotted side.
+            if (downDots < upDots)
+                hideDown = true;
+            else if (downDots > upDots)
+                hideUp = true;
         }
         else
         {
-            // Different heads: hide the filled (shorter duration) head
+            // LILYPOND-REF: note-collision.cc:291-299 — different heads: hide the
+            // filled (shorter duration) head, keep the open one.
             hideUp = !upIsOpen;   // hide up if it's filled (quarter/eighth)
             hideDown = !downIsOpen; // hide down if it's filled
         }
@@ -697,7 +757,9 @@ internal sealed class NoteCollision
         // inner_offset = check_meshing_chords over the FIRST group of each direction
         // (:526-529), 0.0 when either direction is empty. Dimensionless, in down-stem
         // head widths — the extent ratio is applied inside AnalyzeCollision, the width
-        // below. A merge returns 0 with its head wipes.
+        // below. A merge returns 0 with its head wipes. The normal-side sets for the
+        // merge/classification half (LP's filter=true re-read) are derived inside
+        // AnalyzeCollision from these same positions.
         var collision = upEntries.Count > 0 && downEntries.Count > 0
             ? AnalyzeCollision(
                 GetStaffPositions(new List<VoiceEntry> { upEntries[0] }),
@@ -705,7 +767,8 @@ internal sealed class NoteCollision
                 GetNoteInfo(upEntries[0]).noteValue,
                 GetNoteInfo(downEntries[0]).noteValue,
                 GetNoteInfo(upEntries[0]).dots,
-                GetNoteInfo(downEntries[0]).dots)
+                GetNoteInfo(downEntries[0]).dots,
+                sameHeadStyle: GetNoteheadStyle(upEntries[0]) == GetNoteheadStyle(downEntries[0]))
             : NoteCollisionInfo.NoCollision;
         // :200-201 — the sign carries the direction; UpStemXOffset IS +shift_amount.
         double inner = collision.UpStemXOffset;
@@ -806,6 +869,54 @@ internal sealed class NoteCollision
             _ => null
         };
     }
+
+    /// <summary>
+    /// Staff positions of the heads on the NORMAL side of the stem, sorted ascending —
+    /// the set LilyPond's <c>Stem::note_head_positions (stem, true)</c> returns. A head
+    /// that <see cref="ChordHeadPositioning"/> reverses to the far side of the stem
+    /// (the second/unison displacement) is excluded; a single note or a chord without
+    /// seconds keeps all of its heads. Reversal depends only on the position multiset,
+    /// the stem direction and the head glyph, so the set is derivable right here —
+    /// ChordHeadPositioning stays the one house that knows which head flips.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:303-345 note_head_positions — the filter keeps a
+    /// head only when its X offset inside the column is 0 (<c>tolerated</c> is the
+    /// point interval [0,0]); reversed heads sit a head-width off and drop out.
+    /// The one widening of that interval — a harmonic head centered on a stemless
+    /// whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
+    /// centered harmonic head yet (@notehead(diamond) keeps column X), and no
+    /// corpus book observes it.
+    /// </remarks>
+    private static List<int> NormalSideStaffPositions(
+        IReadOnlyList<int> positions, bool stemUp, int noteValue)
+    {
+        if (positions.Count < 2)
+            return positions.OrderBy(p => p).ToList();
+
+        var notes = positions
+            .Select(p => new ChordNoteInfo(p, null, false))
+            .ToImmutableArray();
+        var offsets = ChordHeadPositioning.CalculateOffsets(notes, stemUp, noteValue);
+        var kept = new List<int>();
+        for (int i = 0; i < offsets.Length; i++)
+            if (offsets[i] == 0.0)
+                kept.Add(positions[i]);
+        kept.Sort();
+        return kept;
+    }
+
+    /// <summary>The notehead style LP's merge check compares (fh_up/fh_down "style").
+    /// ⚠️ LP reads the FIRST HEAD's style; this reads the chord-level style, and
+    /// <see cref="ChordNoteInfo.Notehead"/> can override per note (drum chords mix
+    /// heads) — a mixed-head chord would compare the wrong head. No producer puts a
+    /// mixed-head chord into a two-voice collision yet; refine when one arrives.</summary>
+    private static NoteheadStyle GetNoteheadStyle(VoiceEntry entry) => entry.Item switch
+    {
+        NoteItem note => note.Notehead,
+        ChordItem chord => chord.Notehead,
+        _ => NoteheadStyle.Default
+    };
 
     private static List<int> GetStaffPositions(List<VoiceEntry> entries)
     {

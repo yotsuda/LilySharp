@@ -2389,11 +2389,13 @@ public sealed partial class MeasureCollector
         _drumOverrides = DrumOverrides.Build(root);
 
         // Whether BARE top-level music (notes outside any part/section/phrase) has
-        // already streamed past — a `clef` AFTER it is a mid-music change of the bare
-        // stream, not the file default. Without this, `g'1 clef bass` declared BASS as
-        // the file default (wrong system-start glyph) and the music walk then swallowed
-        // the change as "unchanged". Key/time/tempo share the same wrinkle and keep it
-        // for now — no regression book pins them yet.
+        // already streamed past — a `clef`/`key`/`time`/`tempo` AFTER it is a mid-music
+        // change of the bare stream, not the file default. Without this, `g'1 clef bass`
+        // declared BASS as the file default (wrong system-start glyph) and the music walk
+        // then swallowed the change as "unchanged"; `g'1 key g major` opened the piece IN
+        // G (sharp in the opening signature) while the walk ALSO engraved the change, and
+        // `g'1 time 3/4` / `g'1 tempo N` double-printed the same way (wrong opening value
+        // plus a change grob). The guard makes the walk's mid-music path the only writer.
         bool topLevelMusicSeen = false;
 
         foreach (var node in root.DescendantNodes())
@@ -2420,8 +2422,10 @@ public sealed partial class MeasureCollector
                 case TempoDeclarationSyntax tempoDecl:
                     // Only the top-level (initial) tempo sets the score default;
                     // mid-music tempo changes are handled in the music stream
-                    // (a Tempo MusicMark at the change point).
-                    if (!IsInsideMusicContent(tempoDecl))
+                    // (a Tempo MusicMark at the change point). A tempo AFTER bare
+                    // top-level music is that stream's mid-music change (see
+                    // topLevelMusicSeen above; it double-printed before).
+                    if (!IsInsideMusicContent(tempoDecl) && !topLevelMusicSeen)
                         CollectTempo(tempoDecl);
                     break;
 
@@ -2429,7 +2433,9 @@ public sealed partial class MeasureCollector
                     // Only the top-level (initial) time sets the global default;
                     // mid-music changes are handled in the music stream (a
                     // TimeSignatureChangeItem re-arms the per-measure length).
-                    if (!IsInsideMusicContent(timeSig))
+                    // A time AFTER bare top-level music is that stream's mid-music
+                    // change (see topLevelMusicSeen above; it double-printed before).
+                    if (!IsInsideMusicContent(timeSig) && !topLevelMusicSeen)
                     {
                         _meta.TimeBeats = timeSig.Beats;
                         _meta.TimeBeatsText = timeSig.BeatsText;
@@ -2440,8 +2446,11 @@ public sealed partial class MeasureCollector
                     break;
 
                 case KeySignatureSyntax key:
-                    // Only process top-level key declarations (not inside phrases/sections)
-                    if (!IsInsideMusicContent(key))
+                    // Only process top-level key declarations (not inside phrases/sections).
+                    // A key AFTER bare top-level music is that stream's mid-music change
+                    // (see topLevelMusicSeen above; it opened the piece in the changed key
+                    // AND engraved the change before).
+                    if (!IsInsideMusicContent(key) && !topLevelMusicSeen)
                     {
                         _meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
                         if (!key.IsCustom)

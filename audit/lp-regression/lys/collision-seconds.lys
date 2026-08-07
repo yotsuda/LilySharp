@@ -1,0 +1,28 @@
+// lilypond-src/input/regression/collision-seconds.ly の Lily# 訳。
+// CLAIM: 2度は衝突アルゴリズムを混乱させない。各小節の 1 つ目の和音対は
+// merge/mesh/近接し、2 つ目の対は「どの音がどの声部か」が分かるだけの
+// 間隔を取る(=下声部が右へシフトする)。
+// 綴り: LP 無引数 \relative の開始基準は f(F3)。voice 分岐は LP では連鎖
+// (分岐2は分岐1の出口に相対)だが Lily# は全分岐が span 開始フレームを読む
+// (MeasureCollector.MusicWalk の _parallelSpans)——ここでは両分岐とも
+// 曲頭 C4 アンカーから書く。和音メンバは root の上へ積む(Lily# アンカー
+// モデル)ので LP の per-member 連鎖 (<a e' f> 等) の ' は不要になる。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    voice {
+      <a b>'2 <a b d e> | <a e f> <a e f> | <a b c> <f g a> ||
+      <f g c> <g a c> | <f g c d> <f g c d> |.
+    } {
+      <g a>'2 <a b> | <g a e> <g a c e> | <f g a> <a b c> |
+      <g a e> <g a e> | <g c d> <g a b>
+    }
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

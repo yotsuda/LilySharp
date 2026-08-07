@@ -2138,7 +2138,9 @@
     },
     "collision-seconds.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "2度は衝突判定を混乱させない——各小節第1対はmerge/mesh/近接、第2対は声部帰属が分かる間隔を取る",
+      "notes": "fixed第21号(2026-08-07)。乖離の根2つ: (1)分類とmerge判定が全符頭で走っていた——LPはnote_head_positions(filter=true)=flip側(suspended)符頭を除外して分類(note-collision.cc:77-87+stem.cc:303-345)。phantom 2度で6/10モーメントが誤分類。(2)同型mergeがdown itemを丸ごとwipe——LP :276-289はwipe_ball null=両符頭を同座標に重ね描き(m1p2でdown和音2枚が消え59 vs LP61)。修正後10モーメント全部LP指紋一致: merge重ね0 / mesh 0.468 / distant 1.102 / full 1.377 / close_half 1.432 (=2×s×半符頭ink幅1.3774)。観測者=NoteCollisionTests SuspendedHeads_*4本+VoiceOffsets_ChordEntries_*1本。残差=列間spacing: 小節内gap LS+0.198(5例中4・m2p1後のみ一致)・小節境界gap LS-0.55〜-1.16=note-spacing wish/springs regime(起票・衝突の主張とは別)"
     },
     "collision-single-head.ly": {
       "category": "scheme",
@@ -2150,7 +2152,9 @@
     },
     "collisions.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "多声(2-5声)の衝突は中間声部(voiceThree/Four/Five)の水平シフトで回避される——総合本(2声/2声+和音/3声/5声和音hairyChord/minims/semibreves/sequence)",
+      "notes": "2026-08-07 第103S。**衝突の主張自体は exact**——101符頭(黒62/半23/全16・両者同数・改行も同一)の全モーメントで内部形状がLP一致: unison merge重ね・touch 1.304・distant 1.043(=2×0.4×1.3042)・同方向clear-heads 1.0arm(半1.377/全1.962)・stemless 0.5arm(0.981)・4声中間shift(±0.689/±0.981)全部一致=fixed21の網の検証になった。残差3系統で open: (1)★声部横断の復元♮欠落——v2の es(E♭4,beat21)の後 v3の E4(beat22)にLPは♮(x=91.662-8.536)、Lily#は無印字。_measureAccidentals は1辞書だが walk が voice0全時系列→extra voices の順で、staff時間順の状態共有が構造的に不成立(臨時エンジンのアーキ課題)。(2)hairy和音の♯3枚の列順: LP=ais,fis,cis(94.735/96.035/97.099)・Lily#=fis,ais,cis(94.77/96.05/97.34)=臨時stack既知regime。(3)列間spacing配分(±0.2〜2.0・両者同幅にjustify)=collision-seconds起票と同regime。twin書法: 隣接voiceスパンは1スパンに畳まれる誤り回復があるため前半4束を5声1スパンに融合しs(spacer)でタイミング保存・LP時価stickyはソース順で声部を跨ぐ(minims=半/semibreves=全)・小節は|明示"
     },
     "color-css.ly": {
       "category": "scheme",
@@ -2162,7 +2166,9 @@
     },
     "completion-heads-alternating-polyphony.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "複雑なcompletion headsが多声環境で正しく働く",
+      "notes": "skip(2026-08-07 第103S)。\\layout{\\context{\\Voice \\remove Note_heads_engraver \\consists Completion_heads_engraver}}のengraver差し替え本=小節線跨ぎ音符の自動分割+タイ。Lily#に対応物なし(明示小節の設計と衝突する入力簡略化機能・足すなら文法/機能のユーザー判断)。⚠️categorizerは\\consists/\\removeを見ない=false plainの新ゲート(completion族11冊全部がengraver-swap)"
     },
     "completion-heads-dotted-durations.ly": {
       "category": "override",
@@ -2182,7 +2188,9 @@
     },
     "completion-heads-polyphony.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "completion headsは小節線で分割される(リズムの違う多声に惑わされない)",
+      "notes": "skip(2026-08-07 第103S)。\\layout{\\context{\\Voice \\remove Note_heads_engraver \\consists Completion_heads_engraver}}のengraver差し替え本=小節線跨ぎ音符の自動分割+タイ。Lily#に対応物なし(明示小節の設計と衝突する入力簡略化機能・足すなら文法/機能のユーザー判断)。⚠️categorizerは\\consists/\\removeを見ない=false plainの新ゲート(completion族11冊全部がengraver-swap)"
     },
     "completion-heads-tie.ly": {
       "category": "scheme",
@@ -2190,7 +2198,9 @@
     },
     "completion-heads-tuplets.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "completion headsは連符・圧縮された音楽でも使える",
+      "notes": "skip(2026-08-07 第103S)。\\layout{\\context{\\Voice \\remove Note_heads_engraver \\consists Completion_heads_engraver}}のengraver差し替え本=小節線跨ぎ音符の自動分割+タイ。Lily#に対応物なし(明示小節の設計と衝突する入力簡略化機能・足すなら文法/機能のユーザー判断)。⚠️categorizerは\\consists/\\removeを見ない=false plainの新ゲート(completion族11冊全部がengraver-swap)"
     },
     "completion-heads-unit.ly": {
       "category": "override",

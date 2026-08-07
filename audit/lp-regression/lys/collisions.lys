@@ -1,0 +1,43 @@
+// lilypond-src/input/regression/collisions.ly の Lily# 訳。
+// CLAIM: 通常の衝突規則に加えて多声のサポートがある——中間声部(voiceThree/Four/Five)は
+// 水平シフトで衝突を避ける。2声/2声+和音/3声/5声和音(hairyChord・第4分岐は空)/
+// minims(半)/semibreves(全)/sequence(voiceOne-Four)の総合本。
+// 綴りメモ:
+// - LP の時価はソース順で声部を跨いで sticky——minims の c'' は直前の e''2 を継いで
+//   半音符・semibreves は全音符(名前の通り)。Lily# は各所に明示時価。
+// - LP の \transpose c c' 3 束(twovoice/chords/threevoice)は 1 オクターブ上げて直接記譜。
+// - Lily# は隣接 voice スパンを 1 スパンに畳む誤り回復(RepeatedVoiceKeyword)があり、
+//   小節は | で明示なので、前半 4 束(境界が拍 8/15/23=小節中含む)は 1 つの 5 声スパンに
+//   融合し、遅入りの声部は s(spacer)でタイミングを保存する(v3=拍15から・v4=空・
+//   v5=拍23の ais のみ)。声部番号は並び順(奇数=up・horizontal-shift=(n-1)/2)で
+//   LP の \\ 列・\voiceN と一致。後半 3 束は break / || がスパン区切りを兼ねる。
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    voice {
+      g'4 f f e | e d d c | e'4 d c b | a g f g4 | f e f g | a g2 e'4 |
+    } {
+      c4 c d d | e e f f | <a c>4 <a c> <a c> <a c> | <a c> <a c> <a c> c,4 |
+      d e d c | d es s4 fis4 |
+    } {
+      s1 | s1 | s1 | s2 s4 e4 | e e e e | e e e cis'4 |
+    } {
+      s1 | s1 | s1 | s1 | s1 | s1 |
+    } {
+      s1 | s1 | s1 | s1 | s1 | s2 s4 ais'4 |
+    }
+    break
+    voice { e'2 e | e, d } { c'2 s2 | s1 } { c2 c | c c } { g'2 s2 | s1 }
+    ||
+    voice { e'1 | e | e, | d } { c'1 | s1 | s1 | s1 } { c1 | c | c | c } { g'1 | s1 | s1 | s1 }
+    ||
+    voice { g''1 | e2 d | e d |. } { c1 | c2 d | e d } { c'2 b | a1 | b } { g'1 | e2 f | a1 }
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }
