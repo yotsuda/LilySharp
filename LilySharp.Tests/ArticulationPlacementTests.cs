@@ -137,6 +137,39 @@ public class ArticulationPlacementTests
     }
 
     [Fact]
+    public void FermataFamily_OverAnAccent_ClearsTheAccentOutlinePointwise()
+    {
+        // fermata-dot-position.ly block B (the accent pairs), measured against the
+        // LilyPond twin scratch/lpreg/fermata-dot-b.{ly,lys}: the accent keeps the
+        // engraver answer (LP 4.167) and each fermata-family glyph clears the ACCENT'S
+        // OUTLINE pointwise — engraver floor from the script-column support chain
+        // (pointwise + own padding 0.40), finished by the outside-staff pass
+        // (pointwise + 0.46) — giving three LEVELS (LP fermata 4.9496 / short 4.897 /
+        // long 4.877). The old per-note box stack (prev box height + 0.2) parked all
+        // three ~0.16-0.18 too high (5.12/5.06/5.06) because a box stack cannot see
+        // where the accent's wedge slopes away under the fermata's ink.
+        // LILYPOND-REF: lily/script-column.cc:168-171 Side_position_interface::add_support
+        //   — every priority-less script so far supports the next script on the note.
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 a''4@accent a4@accent@fermata" +
+                " a4@accent@shortfermata a4@accent@longfermata"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        double middle = MiddleLineY(svg);
+        var glyphs = MusicGlyphs(svg);
+        double YUpOf(char c)
+        {
+            var g = Assert.Single(glyphs.Where(x => x.Glyph == c));
+            return middle - g.Y;
+        }
+        Assert.Equal(4.95, YUpOf(EmmentalerGlyphs.FermataAbove), 2);      // LP 4.9496
+        Assert.Equal(4.90, YUpOf(EmmentalerGlyphs.FermataShortAbove), 2); // LP 4.897
+        Assert.Equal(4.87, YUpOf(EmmentalerGlyphs.FermataLongAbove), 2);  // LP 4.877
+        var accents = glyphs.Where(x => x.Glyph == EmmentalerGlyphs.ArticAccentAbove).ToList();
+        Assert.Equal(4, accents.Count);
+        Assert.All(accents, a => Assert.Equal(4.16, middle - a.Y, 2));    // LP 4.167
+    }
+
+    [Fact]
     public void Trill_SitsOnTheStaffPaddingRefpointFloor()
     {
         // The articulations-book residual (Δ0.45): the trill glyph's origin IS its

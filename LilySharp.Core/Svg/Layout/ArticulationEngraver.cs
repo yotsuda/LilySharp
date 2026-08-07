@@ -90,6 +90,17 @@ internal static class ArticulationEngraver
     // LILYPOND-REF: define-grobs.scm:3004 staff-padding = 0.25
     private const double StaffPadding = 0.25;
 
+    /// <summary>The Script grob's horizon-padding — the horizontal widening its
+    /// engraver-level side-position pays in every skyline distance ("to avoid
+    /// interleaving with accidentals"). The outside-staff PASS does not pay it
+    /// (that pass's horizon padding is outside-staff-horizontal-padding, which
+    /// Script leaves at 0 — see OutsideStaffStacker.PlaceAboveArticulations).</summary>
+    // LILYPOND-REF: lily/side-position-interface.cc:354-357 aligned_side — spends the
+    //   grob's horizon-padding in dim.distance(my_dim, hpad); the 0.1 is the Script
+    //   grob's own declaration (scm/define-grobs.scm:2999, "to avoid interleaving
+    //   with accidentals").
+    private const double ScriptHorizonPadding = 0.1;
+
     // Bend/fall glyph X placement (staff-spaces; Lily#'s own tuning, no direct
     // LP grob — LP renders bends via a different mechanism).
     /// <summary>X offset of a bend glyph from the note on a TAB staff.</summary>
@@ -207,10 +218,14 @@ internal static class ArticulationEngraver
         var beamedTips = BuildBeamedStemTips(beamLayouts);
         var beamGroups = BuildBeamGroupMap(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);
-        // Per-note, per-side running offset so stacked scripts don't overprint:
-        // each successive script on the same (staff, measure, item, side) is pushed
-        // outward past the previous glyph + a small padding.
-        var stackOffset = new Dictionary<(int, int, int, bool), double>();
+        // Per-note, per-side SUPPORT CHAIN so stacked scripts don't overprint: every
+        // priority-less script already placed on the same (staff, measure, item, side)
+        // becomes a side-position support of the scripts after it.
+        // LILYPOND-REF: lily/script-column.cc:160-186 order_grobs — each script without
+        //   an outside-staff-priority is added to the side-support-elements of the
+        //   scripts ordered after it (:168-171); the ones WITH a priority are movers
+        //   and are left to the outside-staff machinery.
+        var supportScripts = new Dictionary<(int, int, int, bool), List<ArticulationLayout>>();
 
         foreach (int arti in order)
         {
@@ -578,17 +593,8 @@ internal static class ArticulationEngraver
             double yUp = CalculateYPosition(effArt, staffPosition, stemUp, item,
                 NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX));
 
-            // Stack multiple scripts on the same note & side OUTWARD (past the
-            // previous glyph + a small padding) instead of overprinting them —
-            // outward is up (+) for above, down (−) for below in the Y-up frame.
-            var stackKey = (effArt.StaffIndex, effArt.MeasureIndex,
-                effArt.ItemIndex, effArt.IsAbove);
-            double stackDelta = stackOffset.GetValueOrDefault(stackKey, 0.0);
-            yUp += effArt.IsAbove ? stackDelta : -stackDelta;
             var seedBBox = GetSeedBBoxFor(effArt);
-            stackOffset[stackKey] = stackDelta + seedBBox.Height + ScriptStackPadding;
-
-            layouts.Add(new ArticulationLayout(
+            var layout = new ArticulationLayout(
                 effArt.MeasureIndex,
                 effArt.ItemIndex,
                 x,
@@ -603,7 +609,51 @@ internal static class ArticulationEngraver
                 SkylineHorizontalPadding:
                     ArticulationSpacing.SkylineHorizontalPadding(effArt.Type),
                 OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt.Type)
-            ));
+            );
+
+            // Stack multiple scripts on one note & side by the support chain, not by
+            // box arithmetic: the next script sits at pointwise distance + its OWN
+            // padding over the placed profiles, maxed with its own note answer (one
+            // that already clears them stays put). A quantized script keeps its
+            // quantized answer unless the chain pushes it (no re-quantize — the box
+            // stack didn't either). A mover (fermata family) reads the chain — the
+            // engraver floor script-column gives it — and the outside-staff pass
+            // finishes it over the same profiles at its own outside-staff-padding.
+            // LILYPOND-REF: lily/script-column.cc:168-171 Side_position_interface::add_support
+            //   — every script so far supports the current one; side-position then answers
+            //   pointwise distance with the Script's own horizon-padding spent in the
+            //   distance call (lily/side-position-interface.cc:354-357 aligned_side), plus
+            //   this script's `padding` (lily/side-position-interface.cc:360-378 aligned_side).
+            var stackKey = (effArt.StaffIndex, effArt.MeasureIndex,
+                effArt.ItemIndex, effArt.IsAbove);
+            if (supportScripts.TryGetValue(stackKey, out var supports))
+            {
+                var (myUp, myDown) = ScriptSkylines(layout, yUp);
+                double closest = double.NegativeInfinity;
+                foreach (var s in supports)
+                {
+                    // Padding ONE side of the distance is LP's own equivalence (its
+                    // distance(other, hpad) comment: padding other = doubling hpad).
+                    var (sUp, sDown) = ScriptSkylines(s, s.YUp);
+                    closest = Math.Max(closest, effArt.IsAbove
+                        ? myDown.Distance(sUp, ScriptHorizonPadding)
+                        : myUp.Distance(sDown, ScriptHorizonPadding));
+                }
+                double move = Math.Max(0.0, closest + PaddingFor(effArt.Type));
+                if (move > 0)
+                {
+                    yUp += effArt.IsAbove ? move : -move;
+                    layout = layout with { YUp = yUp };
+                }
+            }
+            if (layout.OutsideStaffPriority is null)
+            {
+                if (!supportScripts.TryGetValue(stackKey, out var placed))
+                    supportScripts[stackKey] = placed = new List<ArticulationLayout>();
+                placed.Add(layout);
+            }
+
+            layouts.Add(layout);
         }
 
         return layouts.ToImmutable();
@@ -639,10 +689,6 @@ internal static class ArticulationEngraver
         type is not (ArticulationType.Fall or ArticulationType.Doit
             or ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop
             or ArticulationType.Breath or ArticulationType.Caesura);
-
-    // Padding between two stacked scripts (staff-spaces).
-    // LILYPOND-REF: scm/script.scm padding ~0.2.
-    private const double ScriptStackPadding = 0.2;
 
     // LilyPond script-priority: lower = closer to the note. Only some scripts set
     // it explicitly; the rest use the Script grob default (0).

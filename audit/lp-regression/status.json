@@ -2788,13 +2788,15 @@
     },
     "fermata-dot-position.ly": {
       "category": "plain",
-      "state": "pending",
+      "state": "fixed",
       "claim": "Fermata family keeps appropriate distance to dots, note heads, other articulations",
-      "notes": "IN PROGRESS (session 107: block A REPAIRED, block B measured = open). BLOCK A (dots, twin scratch\\lpreg\\fermata-dot-a.ly + audit lys\\fermata-dot-position.lys): the drawn dots now join the staff skyline seed (SkylineBuilder.AddMusicItemToSkylines + MergeDotRow, note/chord/rest branches at the renderer's own column X / DotConfiguration position). Mechanism: LP's Dots declares no vertical-skylines -> EXTENT BOX into the inside-staff profile (define-grobs.scm:1272-1288, grob.cc:81-85), and the fermata family (outside-staff-priority 75) clears it POINTWISE + 0.46 in the existing pass (PlaceArticulations was already there; only the seed lacked the dot). Verified origin Y-up: LP fermata 4.2548 / long 4.1828 / short 4.0028 vs Lily# 4.26 / 4.19 / 4.02 (was 4.08/4.02/4.02 = two levels). Arithmetic check: dot top 3.5+0.225 + 0.46 = 4.185 = LP long exactly; short (narrow) never reaches the dot X, its +0.017 residual is pre-existing engraver-level (other regime). Collision DotAdjustment (ColumnMinX / direction flip) is NOT wired into the seed - same simplification the head seed makes (comment flags it). Observer +1 (SkylineStaffSpacingTests.InsideStaffSkyline_CarriesTheDrawnDot_AndItsUndottedTwinDoesNot). Snapshots 0, ledger 481 unchanged. BLOCK B (accents, twin scratch\\lpreg\\fermata-dot-b.{ly,lys}, both rendered): accent 4.167/4.16 exact; fermata family OVER the accent is +0.16..0.18 TOO HIGH in Lily# (LP fermata 4.947 / short 4.897 / long 4.877 = three levels vs LS 5.12 / 5.06 / 5.06). ROOT PINNED (session 107, 2nd errand, tweak probes in scratch\\lpreg\\fermata-dot-b-probe.ly): LP's binder is the COLLISION PASS - outside-staff-padding #0 moves the fermata down by exactly 0.06 (=0.46-0.40), padding #0 does not move it, outside-staff-priority ##f drops to the engraver answer 4.8896 - so LP final = pointwise(accent outline, fermata outline) + 0.46, d_LP = 0.325; the engraver side is script-column.cc:160-186 order_grobs (earlier priority-less script joins the next script's side-position SUPPORT, :168-171, own padding 0.40) sitting 0.06 under the pass. LS's root is ArticulationEngraver.Calculate's stackOffset (:581-589): a LILYSHARP-OWN box stack (prior script's BBox height + flat 0.2) lifts the 2nd+ script on a note/side - arithmetic check fermata 4.08+0.89+0.2~5.17 =~ measured 5.12 - and the pass can only push UP, so the box floor hides the pointwise answer. REPAIR (next errand): drop the box stack; 2nd+ script = max(own side-position yUp, pointwise distance to the prior scripts' profiles + own VerticalPadding) per script-column's support chain; the fermata family then finishes in the existing 0.46 pass (accent already seeded as outline). Expect every stacked-script snapshot to move - approve by element census. The +0.1 priority bump (:178-185) is for same-priority chains (two fermatas on one note) - port when a book steps on it."
+      "notes": "FIXED #28 (session 108: block B repaired; block A repaired in session 107). BLOCK A (dots, twin scratch\\lpreg\\fermata-dot-a.ly + audit lys\\fermata-dot-position.lys): the drawn dots now join the staff skyline seed (SkylineBuilder.AddMusicItemToSkylines + MergeDotRow, note/chord/rest branches at the renderer's own column X / DotConfiguration position). Mechanism: LP's Dots declares no vertical-skylines -> EXTENT BOX into the inside-staff profile (define-grobs.scm:1272-1288, grob.cc:81-85), and the fermata family (outside-staff-priority 75) clears it POINTWISE + 0.46 in the existing pass (PlaceArticulations was already there; only the seed lacked the dot). Verified origin Y-up: LP fermata 4.2548 / long 4.1828 / short 4.0028 vs Lily# 4.26 / 4.19 / 4.02 (was 4.08/4.02/4.02 = two levels). Arithmetic check: dot top 3.5+0.225 + 0.46 = 4.185 = LP long exactly; short (narrow) never reaches the dot X, its +0.017 residual is pre-existing engraver-level (other regime). Collision DotAdjustment (ColumnMinX / direction flip) is NOT wired into the seed - same simplification the head seed makes (comment flags it). Observer +1 (SkylineStaffSpacingTests.InsideStaffSkyline_CarriesTheDrawnDot_AndItsUndottedTwinDoesNot). Snapshots 0, ledger 481 unchanged. BLOCK B (accents, twin scratch\\lpreg\\fermata-dot-b.{ly,lys}): accent 4.167/4.16 exact and unchanged; the fermata family over the accent was +0.16..0.18 too high (LP fermata 4.9496 / short 4.897 / long 4.877 = three levels vs LS 5.12 / 5.06 / 5.06 = two). Root (pinned session 107 by tweak probes, scratch\\lpreg\\fermata-dot-b-probe.ly): LP final = pointwise(accent outline, fermata outline) + 0.46 in the collision pass, engraver floor 0.06 under it via script-column's support chain; LS's ArticulationEngraver.Calculate stackOffset was a LILYSHARP-OWN box stack (prior script's BBox height + flat 0.2) and the pass can only push UP, so the box floor hid the pointwise answer. REPAIR (session 108, two sites): (1) engraver - box stack replaced by the support chain (LILYPOND-REF lily/script-column.cc:168-171 Side_position_interface::add_support): every placed priority-less script on the same (staff, measure, item, side) becomes a support, and the next script takes max(own side-position yUp, pointwise ScriptSkylines distance - with the Script's horizon-padding 0.1 spent in the distance call, the letter of aligned_side (side-position-interface.cc:354-357; found and added by the session-108 self-audit) - + own VerticalPadding); a mover (fermata family, priority 75) reads the chain but does not join it. (2) OutsideStaffStacker.SeedAboveTrackers - the above-staff priority-less script seed switched from the flat ink-box plateau to the Script's one profile (ScriptSkylines), the same object the below-side twin merge and the staff profile already carry; the plateau max-merged OVER the staff profile's outline and ate the 0.135 pointwise term. Verified on the twin: LS 4.95 / 4.90 / 4.87 vs LP 4.9496 / 4.897 / 4.877 (three levels reproduced); block A rechecked unchanged (4.26 / 4.19 / 4.02, dot row 3.5). Observer +1 (ArticulationPlacementTests.FermataFamily_OverAnAccent_ClearsTheAccentOutlinePointwise). Snapshots 3, approved by element census: test/script-stacking = 3 stacked-script glyphs settle 0.09-0.21 tighter (pointwise vs box arithmetic); test/ornaments = rigid page-headroom growth +0.06 = the trill glyph's walked outline top 2.16 vs designed box top 2.10 (probe-measured d = 0.0600 exactly), now honored by the seed; test/editorial-accidental = rigid +0.03/+0.02, same mechanism at font-size -2. Ledger 481 unchanged. Leftovers (other regimes): the same-priority +0.1 bump (script-column.cc:178-185, two fermatas on one note) ports when a book steps on it; short fermata's +0.017 engraver-level residual (block A)."
     },
     "fermata-outside-staff-priority.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "Trills and trill spanners sit below fermatas; fermatas sit below ottava spanners",
+      "notes": "OPEN (session 108: measured, order claim reproduces EXACTLY, residuals rooted). Twin pair scratch\\lpreg\\fermata-osp.ly (LP, both scores on one page) + fermata-osp-{a,b}.lys (Lily#, one score each; @ottava writes the note an octave lower like LP's \\ottava, so the frames align - g'' drawn at g', stem up, accent on the DOWN side). Y-up about the staff middle. SCORE 1 (trill SPANNER): the claimed order reproduces exactly - accent -2.67/-2.670, spanner 'tr' 3.00/3.000, wave 3.60/3.600, fermata 5.64/5.636 (the fermata clears the PLACED spanner: priority 50 before 75, LP's pass order), ottava above all. SCORE 2 (trill SCRIPT): order holds; tr 2.70 vs LP 2.744 (d 0.044) and the fermata inherits it (5.38 vs 5.4234). Root: the trill script's engraver side-position is stem tip + padding + FLAT near-extent (2.5 + 0.2 + 0 = 2.70), where LilyPond's aligned_side takes a SKYLINE distance - the tr outline's ink at the stem's X adds the 0.044 (lily/side-position-interface.cc:229-264 aligned_side skyline branch). Same engraver-level pointwise-support regime as fermata-dot-position block A's short-fermata +0.017. OTTAVA (its own regime, not this book's claim): LS line Y-up 8.32 vs LP 7.932 (score 1) / 7.7195 (score 2, where LP's bracket is SHORTER - x 9.18..10.56 - and settles lower); LS prints '8va' where LP's default ottavation is the digit '8'; LS bracket X runs 12.01..17.75 (a gap after the text, ends at the barline with an end hook) where LP runs 9.18..13.28 (score 1: line starts right after the digit, ends at the \\ottava #0 rest's left edge). Those repairs belong to ottava-bracket books; the claim here needs none of them."
     },
     "fermata-rest-position.ly": {
       "category": "scheme",
@@ -2814,7 +2816,9 @@
     },
     "figured-bass-continuation-empty.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "A figured bass continuation line after an empty bass figure has a correct vertical position",
+      "notes": "SKIP (session 108: family gate). The claim IS the machinery Lily# does not have: an independent \\figures rhythm track (r8, <_>2, q, 8*5 durations spanning the bass line) and drawn extender/continuation LINES (\\bassFigureExtendersOn). Lily#'s figured bass is a note-bound @fig(...) annotation (MeasureCollector.Annotations) and the renderer draws figure text rows only - no extender line anywhere (SharedRenderer.DrawFiguredBass; grep confirms no figured-bass extender code). Adding the continuo machinery (own-duration figures, extenders, modifier spellings, staff-context alignment) is a grammar/feature decision for the user - same shelf as the dynamics-alignment family gate. The one testable family member with today's machinery is figured-bass-empty-figures (evaluated, open)."
     },
     "figured-bass-continuation-end-position.ly": {
       "category": "scheme",
@@ -2826,7 +2830,9 @@
     },
     "figured-bass-continuation-modifiers.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Figured bass extender lines break when a figure has a different alteration, augmentation, or diminishment",
+      "notes": "SKIP (session 108: family gate, see figured-bass-continuation-empty). Needs extender lines (absent) AND the modifier spellings the book is made of - slashed figures (6\\\\, 6/), augmented/diminished plus (4\\+, \\!), and stacked ++ - where Lily#'s @fig grammar has only s/f/n/# alterations (FiguredBassItem.ParseFigures). Both the machinery and the spellings are the claim itself; no both-sides drop is possible."
     },
     "figured-bass-continuation.ly": {
       "category": "scheme",
@@ -2838,7 +2844,9 @@
     },
     "figured-bass-empty-figures.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "Bass figures may be empty and still take up space",
+      "notes": "OPEN (session 108: measured, the space-holding claim reproduces EXACTLY, divergences named). Twin pair scratch\\lpreg\\figbass-empty.{ly,lys} (octave absolute; all 24 chord pitches verified equal via lysc check --pitches; @fig paren form). The three-row figure grid is IDENTICAL to the digit on both sides - rows at page Y 18.98 / 20.48 / 21.98 (1.5 ss apart, staff 10.69..14.69) across all six columns, and every hold reproduces: <_ 6 4> leaves the TOP row open, <_ 3> the top, <9 _ 6> the MIDDLE - the 6 sits on row 3 exactly as LP's. Ledger-line chords (C2) at 16.69 both sides. DIVERGENCES: (1) Lily#'s '_' PRINTS an en dash (U+2013) in the held row where LP's <_> prints NOTHING - Lily# designed '_' as a continuo continuation mark (FiguredBassItem.ParseFigures comment), LP separates empty placeholders from extender lines; whether '_' should go silent (LP shape) or keep the dash belongs to the same user-judgment shelf as the family's extender machinery (see figured-bass-continuation-empty). (2) '<8 _- 5>' (alteration on an EMPTY figure - LP prints the flat alone in the middle row) has no Lily# spelling; the twin drops the flat. (3) Lexer gap: the DOTTED form rejects a LEADING held slot - @fig._.6.4 errors with 'Undefined variable or phrase: _' while @fig.9._.6 parses; the paren form @fig(_ 6 4) works. Small parser defect, worth a fix of its own. (4) X: LS centres the figure run where LP left-aligns (LILYSHARP-OWN, documented in SharedRenderer.DrawFiguredBass; LS col 1 at 8.25 vs LP 8.70 origin-relative)."
     },
     "figured-bass-extenders-markup.ly": {
       "category": "scheme",
@@ -2846,7 +2854,9 @@
     },
     "figured-bass-extenders-spacing.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Figured bass extenders do not distort vertical spacing",
+      "notes": "SKIP (session 108: family gate, see figured-bass-continuation-empty). Needs extender lines and own-duration figures (<5>4 4 4 4 against quarter notes); Lily# has neither - @fig is note-bound and no extender is drawn. The claim compares two scores' spacing WITH vs WITHOUT extenders, so there is nothing to measure until the machinery exists."
     },
     "figured-bass-ignore-rest.ly": {
       "category": "scheme",
@@ -2862,7 +2872,9 @@
     },
     "figured-bass-script.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Figured bass in a Staff context doesn't collide with articulations",
+      "notes": "SKIP (session 108: family gate, see figured-bass-continuation-empty). The book puts \\figuremode INTO a Staff context (figures ride above/below the staff among the articulations) with \\bassFigureStaffAlignmentDown and an independent rhythm (s8 skips). Lily#'s @fig has one home - the row below its staff - and no staff-context placement or alignment-down switch; the collision the book tests cannot arise until that home exists."
     },
     "figured-bass-slashed-numbers.ly": {
       "category": "scheme",

@@ -862,18 +862,20 @@ internal static class OutsideStaffStacker
                 double inkTop = relY + a.Ink.Top;     // BBox Top is up-positive
                 if (inkTop <= staffTopUp)
                     continue; // entirely inside the staff — its own profile covers it
-                // ⚠️ The SEED still reads the designed ink box's TOP as a flat line, where a
-                // mover of the same grob reads the glyph's real outline
-                // (ArticulationEngraver.ScriptSkylines) — LilyPond has ONE profile for both
-                // roles. Pointwise it matters: a mark over a fermata's arch or an accent's
-                // wedge clears a flat plateau here where LilyPond clears the slope. Switching
-                // it is a measured step of its own and it moves the corpus (ornaments,
-                // editorial accidentals, the swing mark), so it waits for its book: a mark
-                // over a WIDE script whose outline drops away under the mark's X. No point
-                // reaches this today.
-                trackers(sysIdx, a.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
-                    a.X + a.Ink.Left, a.X + a.Ink.Right, inkTop, inkTop,
-                    VerticalDirection.Up));
+                // The Script grob's profile, from its one house (the padded outline) — the
+                // same object the staff profile carries (SkylineBuilder) and the movers of
+                // this grob are placed with; LilyPond has ONE vertical-skylines per grob.
+                // It was a flat plateau at the ink box's top until 2026-08-07, and the flat
+                // top max-merged OVER the staff profile's real outline — a fermata over an
+                // accent cleared the plateau where LilyPond clears the wedge's slope
+                // (fermata-dot-position block B measured the 0.135 it cost). Like the below
+                // side's twin of this merge, it is INERT where a staff profile is supplied
+                // and load-bearing where none is, and it must not be a second spelling
+                // there either.
+                // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines —
+                //   a priority-less script's own profile is what goes into it.
+                var (seedUp, _) = ArticulationEngraver.ScriptSkylines(a, relY);
+                trackers(sysIdx, a.StaffIndex).MergeSupport(up: seedUp);
             }
         }
 

@@ -58,6 +58,126 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第108セッション第4便（＝第1便 fermata-dot-position.ly **block B 修理→fixed 第28号**・
+`0a25de20`・第2便 fermata-outside-staff-priority.ly **評価→open（序列 exact・残差 2 系統
+根特定済）**・`ff483dd8`・第3便 figured-bass 族 5 冊＝**skip 4（族ゲート・continuo 器材）+
+empty-figures open（行 grid exact・乖離 4 件命名）**・`449ff094`・第4便 自己監査＝
+**horizon-padding 0.1 の未払いを発見・配線**）。frontier は **pending の次の本**
+（§0 どおり status.json から取ること——固定で書くと腐る。第107 起票の §2A「skyline 参加者
+列挙の手動→録画層」も棚。第1便の SeedAboveTrackers 輪郭化はその workstream の 1 件を
+先に返した形）。
+
+★★ **③（第3便）figured-bass 族 5 冊 = skip 4 + open 1**:
+- **族ゲート（skip 4）**: continuation-empty・continuation-modifiers・extenders-spacing・
+  script。主張が器材そのもの: ⑴ 独立時価の `\figures` トラック（r8・`<_>2`・q・8*5・s8）
+  ⑵ **extender 線の描画**（`\bassFigureExtendersOn`——renderer は figure text 行のみ・
+  extender コードは grep で不在確認）⑶ modifier 綴り（`\\`・`/`・`\+`・`\!`・`++`——
+  Lily# は s/f/n/# のみ）⑷ Staff 内 figures+`\bassFigureStaffAlignmentDown`。
+  **continuo 器材の追加は要ユーザー判断**（dynamics-alignment 族ゲートと同じ棚）。
+- **empty-figures = open（主張 exact）**: twin scratch\lpreg\figbass-empty.{ly,lys}
+  （**octave absolute** で音高簿記を回避・24 音 check --pitches 一致）。**3 行 grid が
+  両側で桁まで一致**（頁 Y 18.98/20.48/21.98・行間 1.5・全 6 列）——`<_ 6 4>` の上段保持・
+  `<9 _ 6>` の中段保持も再現。**乖離 4 件**: ⑴ Lily# の `_` は **en dash「–」を印字**
+  （LP の `<_>` は無印字。Lily# は `_` を continuo 継続線として設計＝extender 棚と同じ
+  ユーザー判断）⑵ `_-`（空 figure に flat・LP は flat 単独印字）の綴り無し
+  ⑶ **lexer 欠陥: dotted 形の先頭 `_` だけ落ちる**（`@fig._.6.4` エラー・`@fig.9._.6` は
+  通る・括弧形 `@fig(_ 6 4)` は通る）＝単独で直す価値のある小欠陥 ⑷ X は centring
+  （LILYSHARP-OWN 開示済・LP は左揃え）。
+- **twin 書法の学び**: `octave absolute` 宣言で相対簿記を丸ごと回避できる（相対の
+  chord 枠読みで 2 回誤った後に発見。bass 域の本はこれで書く）。
+- コード変更 0・snapshot 0。
+
+★★ **④（第4便）自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）= 1 件修正**:
+- **見つけた逸脱 = horizon-padding 0.1 の未払い**: LP の aligned_side は skyline 距離に
+  **grob の horizon-padding を渡し**（side-position-interface.cc:354-357）、**Script は
+  0.1 を宣言**（define-grobs.scm:2999「to avoid interleaving with accidentals」）。
+  第1便の support 連鎖の Distance がこれを払っていなかった→ `ScriptHorizonPadding` 0.1 を
+  距離呼び出しに配線（片側 pad は LP 自身の等価性——distance(other,hpad) コメント）。
+  **block B twin 4.95/4.90/4.87 不変・osp twin 不変・snapshot は script-stacking の
+  stack 3 本目 1 glyph が +0.03 外へ**（=hpad 項そのもの・census 済）。
+- **宣言済み逸脱（ハックではなく開示）を再確認**: ⑴ 同 priority +0.1 bump 未移植（起票済）
+  ⑵ 音符側の答は旧 extent 算術のまま（merge した support への距離 = 成分ごとの距離の max
+  なので合成は正当。ただし音符側成分自体が旧模型＝第2便の 0.044 regime）⑶ 連鎖 push 後の
+  再 quantize 無し（コメント開示・旧 box stack も同じ）⑷ SeedAboveTrackers の五線内 skip と
+  up 側のみ merge は既存形（LP に無し・起票⑶）。
+- **引用ラチェットの学び 2 件目**: シンボル規則は「`_`/`-` 結合トークン・hyphen は 3 節・
+  8 字以上」（LooksLikeLilyPondSymbol）——`Script` も `horizon-padding`（2 節）も不適格。
+  REF 行は適格シンボル（aligned_side 等）を範囲と同じ行に置く。scanner は
+  **LILYPOND-REF を含む行しか読まない**（継続行の address は追跡外）。
+- 新規チューニング定数ゼロ（第1便で ScriptStackPadding 0.2 を撤去・今便の 0.1 は LP 宣言値）。
+
+★★ **②（第2便）fermata-outside-staff-priority.ly = open（序列 exact・残差起票）**:
+- **主張**: trill（script も spanner も）は fermata の下・fermata は ottava の下＝
+  priority 50 < 75 < 400 の序列。**両 score とも序列は再現**。
+- **twin**: scratch\lpreg\fermata-osp.ly（LP・2 score 1 頁）+ fermata-osp-{a,b}.lys。
+  ⚠️ 前提確認済: Lily# の `@ottava` も LP 同様**書面を 1 オクターブ下げる**（g''→g' 描画・
+  符尾 up・accent は下側）＝枠一致。
+- **score 1（spanner）は 4 点 exact**: accent −2.67/−2.670・tr 3.00/3.000・wave 3.60/3.600・
+  fermata 5.64/5.636（spanner を置いてから fermata が clear＝pass 順も LP と同じ）。
+- **score 2（script）Δ0.044**: tr 2.70 vs LP 2.744・fermata が継承（5.38 vs 5.4234）。
+  **根 = trill script の engraver side-position が flat near-extent**（stem tip 2.5+0.2+0）
+  vs LP aligned_side は **skyline 距離**（tr 輪郭の stem X の ink が 0.044 足す・
+  side-position-interface.cc:229-264）。block A short fermata +0.017 と同じ
+  **engraver レベル pointwise 支持 regime**＝まとめて 1 regime で返す棚。
+- **ottava は別 regime**（本の主張外・起票のみ）: 線 Y-up LS 8.32 vs LP 7.932/7.720
+  （LP score 2 は bracket が短く 9.18..10.56 で低く降りる）・表記 LS「8va」vs LP 既定
+  **数字「8」**・X span LS 12.01..17.75（text 後に隙間・小節線まで+終端 hook）vs LP
+  9.18..13.28（数字直後から `\ottava #0` の rest 左端まで）。ottava 族の本で返す。
+- snapshot 0・コード変更 0（評価のみ）。
+
+★★★ **①（第1便）fixed 第28号 = fermata-dot-position.ly（block B = accent 対）**:
+- **主張**: fermata 族は dots・符頭・他 articulation から適切な距離を取る。block A（dot 側）は
+  第107 修理済（`910300ee`）・block B（accent 上の 3 レベル）が今便＝本が閉じた。
+- **修理 2 site**:
+  ⑴ **ArticulationEngraver.Calculate の箱 stack 撤去→support 連鎖**
+  （script-column.cc:168-171 Side_position_interface::add_support）: 同一
+  (staff,measure,item,side) に置いた **priority 無し** script が後続の support になり、後続は
+  max(own side-position yUp, 前 profiles との pointwise ScriptSkylines 距離+自分の
+  VerticalPadding)。mover（fermata 族 75）は連鎖を**読むが入らない**。quantize 系は
+  再 quantize しない（旧 box stack も同じ＝形は保存）。
+  ⑵ **OutsideStaffStacker.SeedAboveTrackers の flat box→輪郭**（ScriptSkylines・下側枝と
+  同型に）: flat 台地が staff profile の輪郭に max-merge で勝ち、pointwise 項 0.135 を
+  食べていた。profile がある所では inert・無い harness 経路で load-bearing（下側と同じ文）。
+- **照合（twin scratch\lpreg\fermata-dot-b.{ly,lys}・origin Y-up）**: LS 4.95／4.90／4.87 vs
+  LP fermata 4.9496／short 4.897／long 4.877 ＝ **3 レベル再現**・accent 4.16 不変（LP 4.167）。
+  block A 再確認: 4.26／4.19／4.02・dot 行 3.5 不変。
+- **観測者 +1**: ArticulationPlacementTests.FermataFamily_OverAnAccent_ClearsTheAccentOutlinePointwise
+  （LP 数字でピン。⚠️ twin 書法: Lily# は相対 octave——`a''` を毎音書くと毎回上がる。
+  2 音目以降は裸の `a`）。
+- **snapshot 3 枚＝要素 census で承認**: test/script-stacking＝stack した script 3 glyph が
+  0.09〜0.21 締まる（箱算術→pointwise）のみ・test/ornaments＝**剛体 +0.06 の頁 headroom**＝
+  trill glyph の歩いた輪郭 top 2.16 vs 設計箱 top 2.10（**使い捨て probe テストで実測
+  d=0.0600 ぴったり・測って削除**）＝seed が実輪郭を運ぶ帰結・test/editorial-accidental＝
+  剛体 +0.03/+0.02（font-size −2 の同型）。系内の相対配置は 3 冊とも不変を census で確認。
+  ⚠️ census 手順: git show の glyph 文字は cp932 で化けて照合が全滅する——
+  `[Console]::OutputEncoding = UTF8` にしてから読む。
+- **引用ラチェットの再演**: `:168-171` を範囲だけで書いて +1 で落ちた→同じ行に
+  Side_position_interface::add_support を名指しして通過（第107 の学びどおり）。
+- **perf（先回り A/B・scratch\lpreg\perf-ab5.ps1・Release・交互×両順・中央値）**: 重い側=
+  scripts1k（accent+staccato 密・全部五線上に突出・1000 小節＝seed 4000×2 pass+連鎖 1000）
+  **+1.5％／+5.7%**、**対照 noscripts1k（素の音）が +4.2%／+2.1%**＝対照が同幅で揺れる
+  機械なので drift 内・劣化シグナル無し。対照 book の SVG hash は base/curr 一致。
+  perf worktree（LilySharp-perfbase-2158）は撤去済。**呼び出し構造**: pass 数・walk 数は
+  不変・O(n²) 無し。追加は ⑴ 上側 seed が FromBox→outline の placed 対（glyph 単位の
+  profile cache 済・下側 seed と同じ綴り）⑵ stack した script（希少）ごとの距離。
+  **劣化が出たらここ**: seed の placed 対を builder 用の MergeScriptProfile（295MB→139MB の
+  実測が家にある安い綴り）へ——下側 seed も同型なので一緒に。測ってゼロだったので発明しない。
+- ⚠️ 起票（残・別 regime）: ⑴ 同 priority 連鎖の +0.1 bump（script-column.cc:178-185・
+  fermata 2 個持ち等）＝踏む対が出たら ⑵ short fermata の +0.017（block A・engraver
+  レベル）⑶ 上側 seed は `inkTop <= staffTopUp` の五線内 skip を保持（profile が同じ物を
+  運ぶ前提。録画層 §2A が来たら一緒に消える形）。
+
+plain 322 / 処理済 **115**（fixed **28**・exact **17**・skip **59**・open **11**・
+pending 207。数えたら state 別内訳も一緒に書くこと）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4182 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 第108 は 3 枚（census 承認済・上記）**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第107セッション第1〜4便の経緯
+
 最終更新 第107セッション第4便（＝第1便 fermata-dot-position.ly **block A 修理**
 `910300ee`・第2便 block B root 特定＝open・第3便 自己監査（dot 列=1 箱 `dd540614`）+
 perf A/B（drift 内・boost 罠発見）・第4便 **§2A に「skyline 参加者列挙の手動→録画層」を
