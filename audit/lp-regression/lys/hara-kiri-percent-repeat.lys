@@ -1,0 +1,30 @@
+// lilypond-src/input/regression/hara-kiri-percent-repeat.ly の Lily# 訳。
+// CLAIM: percent repeat を持つ Staff/TabStaff/DrumStaff/RhythmicStaff は
+// \RemoveEmptyStaves でも消されない (LP: percent-repeat-interface ∈
+// keepAliveInterfaces)。break 後の第2系が本丸: percent 小節しか持たない 4 譜が
+// 生き残ること。Lily# は percent を unfold+マーカーで持つので生存は NoteItem 経由
+// (HaraKiri.IsStaffEmpty) = 構造的に同値。陽性対照 scratch\lpreg\
+// harakiri-percent-ctrl.lys (percent→r1 で system 2 の譜が実際に消える)。
+// 綴り: Lily# c = LP c' (octave absolute)。RhythmicStaff は Lily# に無い →
+// lines 1 + b (中央線上) で対にする (LP は音高無視で線上、視覚同値。LP 側は
+// clef 無し・Lily# lines 1 は treble clef を刷る = 対象外の既知差)。
+// 部名は ~ で抑止 (LP twin に instrument name 無し)・~Main で見出し抑止。
+octave absolute
+
+part n1 { removeEmpty true }
+part n2 { removeEmpty true }
+part tb { removeEmpty true }
+part dr { clef percussion removeEmpty true }
+part rs { lines 1 removeEmpty true }
+
+section Main {
+  n1 { c'1 | c' | break c' | c' | }
+  n2 { repeat percent 4 { c1 | } }
+  tb { repeat percent 4 { c,1 | } }
+  dr { repeat percent 4 { hh1 | } }
+  rs { repeat percent 4 { b1 | } }
+}
+
+form main { ~Main }
+
+score main { staff ~n1 staff ~n2 tab tb staff ~dr staff ~rs }

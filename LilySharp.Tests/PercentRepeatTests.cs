@@ -175,6 +175,76 @@ public class PercentRepeatTests
         Assert.True(score.PercentRepeats.IsEmpty);
     }
 
+    // --- Renderer: the sign lives in its staff's own frame ---
+
+    [Fact]
+    public void Renderer_TabPercent_CentresOnTabMiddleAndScalesByStringSpace()
+    {
+        // LILYPOND-REF: lily/percent-repeat-interface.cc:40-49 brew_slash —
+        // "Scale everything by staff-space": a TabStaff's staff-space is 1.5, so
+        // its slash runs 3.0 with a 0.72 thickness against the notation staff's
+        // 2.0 / 0.48; and the Y-offset-less grob's stencil is align_to'd CENTER
+        // on the staff's own middle — 3.75 below a six-string tab's top line,
+        // not the 5-line frame's 2.0. Pinned against LilyPond 2.26 SVG output
+        // (scratch\lpreg\harakiri-percent.ly: tab slash run 3, horizontal edge
+        // 1.0182 = 0.72·√2, centre on the tab middle to the digit).
+        var svg = LiveRender.SvgFromRenderSpec("""
+            octave absolute
+            part g { }
+            section A { g { repeat percent 2 { c4 c c c | } } }
+            form main { ~A }
+            score main { staff g tab g }
+            """);
+
+        // Horizontal staff lines: 5 notation lines (1.0 apart) above 6 tab
+        // strings (1.5 apart).
+        var horizontals = new List<double>();
+        var diagonals = new List<(double Cx, double Cy, double Run, double Rise, string Thick)>();
+        foreach (System.Text.RegularExpressions.Match m in
+            System.Text.RegularExpressions.Regex.Matches(svg, "<line ([^>]*)/>"))
+        {
+            var a = m.Groups[1].Value;
+            double x1 = Attr(a, "x1"), x2 = Attr(a, "x2"), y1 = Attr(a, "y1"), y2 = Attr(a, "y2");
+            // Staff/string rows all START at the system's left edge; ledger
+            // lines and the fret-digit-split later segments of a string do not.
+            if (y1 == y2 && x2 > x1 && x1 < 0.05)
+                horizontals.Add(y1);
+            else if (x1 != x2 && y1 != y2)
+                diagonals.Add(((x1 + x2) / 2, (y1 + y2) / 2, x2 - x1,
+                    System.Math.Abs(y2 - y1),
+                    System.Text.RegularExpressions.Regex.Match(a, "stroke-width=\"([^\"]+)\"").Groups[1].Value));
+        }
+        horizontals.Sort();
+        Assert.Equal(11, horizontals.Count);
+        double staffMid = horizontals[2];
+        double tabMid = (horizontals[5] + horizontals[10]) / 2;
+
+        var staffSlash = Assert.Single(diagonals, d => d.Thick == "0.480");
+        Assert.Equal(2.0, staffSlash.Run, 2);
+        Assert.Equal(2.0, staffSlash.Rise, 2);
+        Assert.Equal(staffMid, staffSlash.Cy, 2);
+
+        var tabSlash = Assert.Single(diagonals, d => d.Thick == "0.720");
+        Assert.Equal(3.0, tabSlash.Run, 2);
+        Assert.Equal(3.0, tabSlash.Rise, 2);
+        Assert.Equal(tabMid, tabSlash.Cy, 2);
+
+        // Dots: ±0.5·staff-space vertically (percent-repeat-interface.cc:76-77) —
+        // ±0.75 on the tab; the dot glyph itself keeps its size.
+        var dots = System.Text.RegularExpressions.Regex.Matches(svg, "<circle ([^>]*)/>")
+            .Select(c => (Cx: Attr(c.Groups[1].Value, "cx"), Cy: Attr(c.Groups[1].Value, "cy")))
+            .Where(c => System.Math.Abs(c.Cx - tabSlash.Cx) < 2
+                && System.Math.Abs(c.Cy - tabMid) < 2)
+            .OrderBy(c => c.Cy).ToList();
+        Assert.Equal(2, dots.Count);
+        Assert.Equal(tabMid - 0.75, dots[0].Cy, 2);
+        Assert.Equal(tabMid + 0.75, dots[1].Cy, 2);
+
+        static double Attr(string attrs, string name) => double.Parse(
+            System.Text.RegularExpressions.Regex.Match(attrs, name + "=\"([^\"]+)\"").Groups[1].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     [Fact]
     public void Collector_PercentRepeat_WithPrecedingMeasures()
     {

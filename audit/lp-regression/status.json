@@ -3510,7 +3510,9 @@
     },
     "hara-kiri-percent-repeat.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Staves/RhythmicStaves/TabStaves/DrumStaves with percent repeats are not suppressed (RemoveEmptyStaves)",
+      "notes": "主張=exact: 両系×5譜生存・譜内Yグリッド(段内ギャップ5.0/3.25/3.25/7.0)はLP桁一致。陽性対照 scratch\\lpreg\\harakiri-percent-ctrl.lys(percent→r1でsystem2の譜が消える)。生存機構はunfoldされたNoteItem経由(percent-repeat-interface相当は構造的)。修理=第32号: tab上の%記号がtop+2.0固定(5線前提)+等倍だった→staffの実高で中心化+staff-space 1.5倍スケール(percent-repeat-interface.cc:40-49,69-77字面)。LP照合: tab slash run3/横厚1.0182=0.72*sqrt2/中心=tab中央=全部桁一致・dots±0.75一致。残: %のdot X はLily#近似(円r0.25+stroked line vs LPのdots.dot glyph+平行四辺形=LPのdot X は約0.19-0.3外側)・系間縦間隔 LP10.0 vs LS6.32(頁縦regime)・X drift<=0.36(note-spacing regime)・rhythmic対はlines1+b代用(LPはclef無し/Lily#はtreble clef印字)。RhythmicStaff固有物(音高無視)はLily#に無い。twin=audit\\lp-regression\\lys + scratch\\lpreg\\harakiri-percent.{ly,lys}"
     },
     "hara-kiri-rhythmicstaff.ly": {
       "category": "scheme",

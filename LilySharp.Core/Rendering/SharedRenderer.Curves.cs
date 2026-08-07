@@ -285,6 +285,25 @@ internal static partial class SharedRenderer
                 : double.NaN;
 
         /// <summary>
+        /// The staff's PLACED layout in the measure's system — the carrier of its
+        /// real height and tab identity (<see cref="StaffLayout.Tuning"/>), for
+        /// drawers whose geometry follows the staff's own frame rather than the
+        /// nominal 5-line one. Null when the measure is on another page or the
+        /// layout carries no staff table (single-staff fallback).
+        /// </summary>
+        public StaffLayout? StaffLayoutOf(int staffIndex, int measureIndex)
+        {
+            if (staffIndex < 0 || !_systems.TryGetValue(measureIndex, out var system)
+                || system.StaffGroups.IsDefaultOrEmpty)
+                return null;
+            foreach (var g in system.StaffGroups)
+                foreach (var s in g.Staves)
+                    if (s.StaffIndex == staffIndex)
+                        return s;
+            return null;
+        }
+
+        /// <summary>
         /// The ossia affine (<see cref="Y"/>) expressed in the Y-up frame: the
         /// conjugate of <see cref="Y"/> under the output flip, an affine of the
         /// same shape but contracting toward the staff top's <em>Y-up</em>

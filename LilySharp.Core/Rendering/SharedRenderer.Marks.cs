@@ -161,30 +161,43 @@ internal static partial class SharedRenderer
         if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
         const double slope = 1.0;
         const double thickness = 0.48;
-        const double slashWidth = 2.0;
         const double dotRadius = 0.25;
-        // LILYPOND-REF: lily/percent-repeat-interface.cc x_percent — each dot is
-        // translated ±0.5 staff-space vertically and pulled to just off the slash's
-        // left/right edge (slash half-width 1.0 minus the 0.75 dot-negative-kern, plus
-        // the dot's own radius ≈ 0.5). The upper dot sits upper-LEFT, the lower dot
-        // lower-RIGHT — the "%" glyph.
-        const double dotDx = 0.5;
-        const double dotDy = 0.5;
-        double slashHeight = slashWidth * slope;
 
         foreach (var pr in layout.PercentRepeatLayouts)
         {
             if (!sysTopYUp.ContainsKey(pr.MeasureIndex)) continue;
+            // LILYPOND-REF: lily/percent-repeat-interface.cc:40-49 brew_slash —
+            // "Scale everything by staff-space": wid = 2.0/slope·ss and
+            // thick = thickness·ss; :69-77 x_percent translates each dot ±0.5·ss.
+            // A TabStaff sets StaffSymbol.staff-space = 1.5, so its sign is
+            // one-and-a-half-sized; the dot GLYPH itself comes from the font and
+            // keeps its size (only its offsets scale).
+            var staff = os.StaffLayoutOf(pr.StaffIndex, pr.MeasureIndex);
+            double ss = staff?.Tuning is { } tuning
+                ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning))
+                : 1.0;
+            double slashWidth = 2.0 / slope * ss;
+            double slashHeight = slashWidth * slope;
+            double thick = thickness * ss;
+            // Each dot: ±0.5·ss vertically; horizontally just off the slash's
+            // left/right edge — slash half-width 1.0·ss minus the 0.75·ss
+            // dot-negative-kern, plus the dot's own (unscaled) radius. The upper
+            // dot sits upper-LEFT, the lower dot lower-RIGHT — the "%" glyph.
+            double dotDx = (1.0 - 0.75) * ss + dotRadius;
+            double dotDy = 0.5 * ss;
             double cx = pr.X;
-            // Page Y-up against this sign's own staff middle.
-            double cy = os.StaffMiddleYUp(pr.StaffIndex, pr.MeasureIndex, StaffHeight) + pr.YUp;
+            // Page Y-up against this sign's own staff middle — the staff's REAL
+            // height (a six-string tab's lines span 7.5, not the nominal 4.0; the
+            // grob has no Y-offset and its stencil is align_to'd CENTER on it).
+            double cy = os.StaffMiddleYUp(pr.StaffIndex, pr.MeasureIndex,
+                staff?.Height ?? StaffHeight) + pr.YUp;
             using (gc.Source(pr.SourcePosition))
             {
                 // Slash from bottom-left to top-right, with a dot in each pocket it
                 // leaves — upper-LEFT and lower-RIGHT, like the "%" glyph.
                 gc.DrawLine(cx - slashWidth / 2, cy - slashHeight / 2,
                     cx + slashWidth / 2, cy + slashHeight / 2,
-                    Color.Black, thickness);
+                    Color.Black, thick);
                 gc.DrawCircle(cx - dotDx, cy + dotDy, dotRadius, Color.Black);
                 gc.DrawCircle(cx + dotDx, cy - dotDy, dotRadius, Color.Black);
             }

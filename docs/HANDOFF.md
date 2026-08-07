@@ -58,6 +58,51 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第111セッション第1便（＝fixed **第32号 = hara-kiri-percent-repeat.ly**・
+この handoff と同 commit）。
+
+★★★ **第1便 fixed 第32号 = hara-kiri-percent-repeat.ly**:
+- **主張（percent repeat の譜は RemoveEmptyStaves でも消えない）= exact**: 両系×5譜
+  （Staff×2・Tab・Drum・Rhythmic 代用）生存・段内 Y グリッド（譜間 5.0/3.25/3.25/7.0）は
+  **LP 桁一致**。生存機構は unfold 済み NoteItem 経由（LP の percent-repeat-interface ∈
+  keepAliveInterfaces に構造的に相当）。**陽性対照** scratch\lpreg\harakiri-percent-ctrl.lys
+  （percent→r1 に変えると system 2 の譜が実際に消える＝主張は空でない）。
+- **修理 = 比較が出した tab 上の %**: DrawPercentRepeats が ⑴ 5線前提の StaffHeight 定数で
+  中心化（tab は top+2.0 に刷っていた・正は top+3.75）⑵ staff-space 非スケールだった。
+  字面移植 percent-repeat-interface.cc:40-49 brew_slash「Scale everything by staff-space」
+  + :69-77 dots ±0.5·ss（OssiaShrink.StaffLayoutOf 新設＝StaffLayout の実 Height/Tuning を
+  読む）。**LP 照合**: tab slash run 3・横縁 1.0182 = 0.72√2・中心 = tab 中央＝全部桁一致・
+  dots ±0.75 一致。dot の GLYPH 自体は font サイズのまま（LP も非スケール）。
+- **観測者 +1**（PercentRepeatTests.Renderer_TabPercent_CentresOnTabMiddleAndScalesByStringSpace・
+  LP 数字ピン）・**snapshot 1 枚**（test/tab-percent-repeat・差分は bass tab の % 2 個 =
+  6 要素のみ・census 済）。perf: 呼び出し構造不変（% 1 個ごとに staff 表の小走査・alloc 0）
+  ＝A/B 省略、理由ごとここに開示。
+- **twin の学び**: 部名先頭 `s`+数字は spacer と衝突（LYS0002）・合奏既定ラベルの抑止は
+  **`staff ~name`（チルダは名前の前）**・セクション見出し抑止は form の `~Main`・tab entry は
+  元々ラベルを持たない。**dotnet run の増分は今回も腐った**（Release 再ビルドが走ったのに
+  旧挙動・`--no-incremental` で解消＝memory 記載の再演）。Release 構成の Core は既存の
+  XML doc 警告が多数出る（§0 の 0 warning は Debug の話）。
+- **起票（残・別 regime）**: ⑴ % の slash/dot の形は Lily# 近似（stroked line+円 r0.25 vs
+  LP 平行四辺形+dots.dot glyph＝LP の dot X は 0.19〜0.3 外側。コード内コメントで開示済み）
+  ⑵ 系間の縦間隔 LP 10.0 vs LS 6.32（頁縦 regime・主張外）⑶ `lines 1` は treble clef を刷る
+  （LP RhythmicStaff は clef 無し・音高無視モデルも Lily# に無い＝status notes に開示）。
+
+⚠️ **前回引継ぎの state 内訳は 2 点ズレていた**（exact 25→実 24・skip 66→実 65。
+処理済 131 自体は一致）。数えたら §0 の数え方で state 別も一緒に検算すること。
+
+plain 322 / 処理済 **132**（fixed **32**・exact **24**・skip **65**・open **11**・
+pending 190。数えたら state 別内訳も一緒に書くこと）。
+frontier は **pending の次の本**（§0 どおり status.json から取ること。今の先頭は
+horizontal-bracket-tweak.ly——固定で書くと腐る）。第107 起票の §2A workstream は棚のまま。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4186 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
+snapshot 第111 は 1 枚（census 上記）**・base worktree = C:\MyProj\LilySharp-base
+（cc19cccc・残置）。
+
+## 以下は第110セッション第1〜6便の経緯
+
 最終更新 第110セッション第6便（＝第1便 gliss-cross-staff skip + grace 2冊 exact・`5d2c3153`・
 第2便 grace 族 3冊 skip2+exact1・`6a164012`・第3便 gregorian skip + hairpin 2冊 exact・
 `c1ef0db6`・第4便 **fixed 第31号 = hairpin-span-bar**・`08a7087c`・第5便 自己監査＝
