@@ -86,6 +86,11 @@ public readonly record struct NoteColumnLayout
     /// stem gate over it (see <see cref="StemSupportDistanceDeviceY"/>).</summary>
     public Semantics.Fraction BaseDuration { get; init; }
 
+    /// <summary>The head STYLE — it picks which glyph's stem-attachment point the stem's
+    /// X (and drawn begin) read, exactly as <see cref="NoteValue"/> picks between the
+    /// half and black heads (see <see cref="LayoutUtilities.StemAttachX(bool, int, NoteheadStyle, double)"/>).</summary>
+    public NoteheadStyle Notehead { get; init; }
+
     /// <summary>The column's RESOLVED stem direction — multi-voice forcing and the beam's
     /// direction override are the CALLER's policy, applied before construction.</summary>
     public bool StemUp { get; init; }
@@ -125,6 +130,7 @@ public readonly record struct NoteColumnLayout
             BottomHeadPosition = n.StaffPosition,
             NoteValue = LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration),
             BaseDuration = n.BaseDuration,
+            Notehead = n.Notehead,
             StemUp = forcedStemUp ?? n.StemUp,
             IsCue = n.IsCue,
             Beam = beam,
@@ -136,6 +142,7 @@ public readonly record struct NoteColumnLayout
             BottomHeadPosition = c.Notes.Min(x => x.StaffPosition),
             NoteValue = LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration),
             BaseDuration = c.BaseDuration,
+            Notehead = c.Notehead,
             StemUp = forcedStemUp ?? c.StemUp,
             IsCue = c.IsCue,
             Beam = beam,

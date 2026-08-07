@@ -2258,7 +2258,8 @@ internal static class SpacingRules
             if (flag != default)
                 ink = Math.Max(ink,
                     LayoutUtilities.StemAttachX(
-                        up: true, GlyphMetrics.NoteValueOf(note.BaseDuration), font)
+                        up: true, GlyphMetrics.NoteValueOf(note.BaseDuration),
+                        NoteheadStyle.Default, font)
                     + flag.Width);
         }
         return ink + DefaultExtraSpacingWidth;

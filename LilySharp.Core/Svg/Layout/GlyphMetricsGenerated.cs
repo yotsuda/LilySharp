@@ -758,13 +758,16 @@ internal static partial class GlyphMetrics
     /// <summary>Figured-bass sharp (U+266F) — advance width (next-glyph horizontal feed).</summary>
     public const double FigBassSharpAdvance = 1.100000;
 
-    // ========== Up-stem attachment points (from the font's LILC table) ==========
-    // The point where an up stem's lower-right corner meets the head — X is the
-    // head's designed right edge, Y the height above the centre line the stem's
-    // lower end starts at. LilyPond serves it via Font_metric::attachment_point to
-    // Note_head::get_stem_attachment (lily/note-head.cc:164-196), and
-    // \note-by-number turns it back into the stem's lower-end coordinate
-    // (scm/define-markup-commands.scm attach-off).
+    // ========== Stem attachment points (from the font's LILC table) ==========
+    // The point where a stem meets its head — for an UP stem the font's `attachment`
+    // entry (X the head's designed right edge, Y the height above the centre line the
+    // stem's lower end starts at); for a DOWN stem the `attachment-down` entry, which
+    // an asymmetric shape places somewhere other than the mirror of the UP point.
+    // LilyPond serves them via Font_metric::attachment_point
+    // (lily/open-type-font.cc:334-369; rotation fallback unused — 2.26.0 Emmentaler
+    // carries attachment-down) to Note_head::get_stem_attachment
+    // (lily/note-head.cc:164-196), and \note-by-number turns the UP point back into
+    // the stem's lower-end coordinate (scm/define-markup-commands.scm attach-off).
 
     /// <summary>noteheads.s1 up-stem attachment point (staff spaces about the
     /// glyph origin: X from the ink left, Y above the centre line).</summary>
@@ -772,11 +775,131 @@ internal static partial class GlyphMetrics
     /// attachment_point — the font's LILC attachment entry.</remarks>
     public static readonly (double X, double Y) NoteheadHalfStemAttachment = (1.377400, 0.259000);
 
+    /// <summary>noteheads.s1 down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadHalfStemAttachmentDown = (0.000000, -0.259000);
+
     /// <summary>noteheads.s2 up-stem attachment point (staff spaces about the
     /// glyph origin: X from the ink left, Y above the centre line).</summary>
     /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
     /// attachment_point — the font's LILC attachment entry.</remarks>
     public static readonly (double X, double Y) NoteheadBlackStemAttachment = (1.304200, 0.186200);
+
+    /// <summary>noteheads.s2 down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadBlackStemAttachmentDown = (0.000000, -0.186200);
+
+    /// <summary>noteheads.s1triangle up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadTriangleHalfStemAttachment = (1.659200, 0.126200);
+
+    /// <summary>noteheads.s1triangle down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadTriangleHalfStemAttachmentDown = (0.262200, -0.682800);
+
+    /// <summary>noteheads.s2triangle up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadTriangleBlackStemAttachment = (1.382800, 0.126200);
+
+    /// <summary>noteheads.s2triangle down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadTriangleBlackStemAttachmentDown = (0.218600, -0.682800);
+
+    /// <summary>noteheads.s1diamond up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadDiamondHalfStemAttachment = (1.443400, 0.385400);
+
+    /// <summary>noteheads.s1diamond down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.385400);
+
+    /// <summary>noteheads.s2diamond up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadDiamondBlackStemAttachment = (1.461600, 0.392600);
+
+    /// <summary>noteheads.s2diamond down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.392600);
+
+    /// <summary>noteheads.s1cross up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadCrossHalfStemAttachment = (1.504200, 0.293600);
+
+    /// <summary>noteheads.s1cross down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.293600);
+
+    /// <summary>noteheads.s2cross up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadCrossBlackStemAttachment = (1.304200, 0.390400);
+
+    /// <summary>noteheads.s2cross down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.390400);
+
+    /// <summary>noteheads.s1slash up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadSlashHalfStemAttachment = (2.345200, 0.990000);
+
+    /// <summary>noteheads.s1slash down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.990000);
+
+    /// <summary>noteheads.s2slash up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadSlashBlackStemAttachment = (1.715200, 0.990000);
+
+    /// <summary>noteheads.s2slash down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.990000);
+
+    /// <summary>noteheads.s2xcircle up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadXCircleStemAttachment = (1.551000, 0.000000);
+
+    /// <summary>noteheads.s2xcircle down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000);
 
     // ========== Advance widths (extracted from hmtx table) ==========
 
@@ -1362,8 +1485,48 @@ internal static partial class GlyphMetrics
         public double FigBassSharpAdvance { get; init; }
         /// <summary>noteheads.s1 up-stem attachment point (staff spaces about the glyph origin).</summary>
         public (double X, double Y) NoteheadHalfStemAttachment { get; init; }
+        /// <summary>noteheads.s1 down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadHalfStemAttachmentDown { get; init; }
         /// <summary>noteheads.s2 up-stem attachment point (staff spaces about the glyph origin).</summary>
         public (double X, double Y) NoteheadBlackStemAttachment { get; init; }
+        /// <summary>noteheads.s2 down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadBlackStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s1triangle up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadTriangleHalfStemAttachment { get; init; }
+        /// <summary>noteheads.s1triangle down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadTriangleHalfStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s2triangle up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadTriangleBlackStemAttachment { get; init; }
+        /// <summary>noteheads.s2triangle down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadTriangleBlackStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s1diamond up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadDiamondHalfStemAttachment { get; init; }
+        /// <summary>noteheads.s1diamond down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadDiamondHalfStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s2diamond up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadDiamondBlackStemAttachment { get; init; }
+        /// <summary>noteheads.s2diamond down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadDiamondBlackStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s1cross up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadCrossHalfStemAttachment { get; init; }
+        /// <summary>noteheads.s1cross down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadCrossHalfStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s2cross up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadCrossBlackStemAttachment { get; init; }
+        /// <summary>noteheads.s2cross down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadCrossBlackStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s1slash up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadSlashHalfStemAttachment { get; init; }
+        /// <summary>noteheads.s1slash down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadSlashHalfStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s2slash up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadSlashBlackStemAttachment { get; init; }
+        /// <summary>noteheads.s2slash down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadSlashBlackStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s2xcircle up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadXCircleStemAttachment { get; init; }
+        /// <summary>noteheads.s2xcircle down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadXCircleStemAttachmentDown { get; init; }
         /// <summary>G (treble) clef advance width</summary>
         public double GClefAdvance { get; init; }
         /// <summary>F (bass) clef advance width</summary>
@@ -1808,7 +1971,27 @@ internal static partial class GlyphMetrics
                 FigBassSharpOutline.Right * magnification, FigBassSharpOutline.Top * magnification),
             FigBassSharpAdvance = FigBassSharpAdvance * magnification,
             NoteheadHalfStemAttachment = (NoteheadHalfStemAttachment.X * magnification, NoteheadHalfStemAttachment.Y * magnification),
+            NoteheadHalfStemAttachmentDown = (NoteheadHalfStemAttachmentDown.X * magnification, NoteheadHalfStemAttachmentDown.Y * magnification),
             NoteheadBlackStemAttachment = (NoteheadBlackStemAttachment.X * magnification, NoteheadBlackStemAttachment.Y * magnification),
+            NoteheadBlackStemAttachmentDown = (NoteheadBlackStemAttachmentDown.X * magnification, NoteheadBlackStemAttachmentDown.Y * magnification),
+            NoteheadTriangleHalfStemAttachment = (NoteheadTriangleHalfStemAttachment.X * magnification, NoteheadTriangleHalfStemAttachment.Y * magnification),
+            NoteheadTriangleHalfStemAttachmentDown = (NoteheadTriangleHalfStemAttachmentDown.X * magnification, NoteheadTriangleHalfStemAttachmentDown.Y * magnification),
+            NoteheadTriangleBlackStemAttachment = (NoteheadTriangleBlackStemAttachment.X * magnification, NoteheadTriangleBlackStemAttachment.Y * magnification),
+            NoteheadTriangleBlackStemAttachmentDown = (NoteheadTriangleBlackStemAttachmentDown.X * magnification, NoteheadTriangleBlackStemAttachmentDown.Y * magnification),
+            NoteheadDiamondHalfStemAttachment = (NoteheadDiamondHalfStemAttachment.X * magnification, NoteheadDiamondHalfStemAttachment.Y * magnification),
+            NoteheadDiamondHalfStemAttachmentDown = (NoteheadDiamondHalfStemAttachmentDown.X * magnification, NoteheadDiamondHalfStemAttachmentDown.Y * magnification),
+            NoteheadDiamondBlackStemAttachment = (NoteheadDiamondBlackStemAttachment.X * magnification, NoteheadDiamondBlackStemAttachment.Y * magnification),
+            NoteheadDiamondBlackStemAttachmentDown = (NoteheadDiamondBlackStemAttachmentDown.X * magnification, NoteheadDiamondBlackStemAttachmentDown.Y * magnification),
+            NoteheadCrossHalfStemAttachment = (NoteheadCrossHalfStemAttachment.X * magnification, NoteheadCrossHalfStemAttachment.Y * magnification),
+            NoteheadCrossHalfStemAttachmentDown = (NoteheadCrossHalfStemAttachmentDown.X * magnification, NoteheadCrossHalfStemAttachmentDown.Y * magnification),
+            NoteheadCrossBlackStemAttachment = (NoteheadCrossBlackStemAttachment.X * magnification, NoteheadCrossBlackStemAttachment.Y * magnification),
+            NoteheadCrossBlackStemAttachmentDown = (NoteheadCrossBlackStemAttachmentDown.X * magnification, NoteheadCrossBlackStemAttachmentDown.Y * magnification),
+            NoteheadSlashHalfStemAttachment = (NoteheadSlashHalfStemAttachment.X * magnification, NoteheadSlashHalfStemAttachment.Y * magnification),
+            NoteheadSlashHalfStemAttachmentDown = (NoteheadSlashHalfStemAttachmentDown.X * magnification, NoteheadSlashHalfStemAttachmentDown.Y * magnification),
+            NoteheadSlashBlackStemAttachment = (NoteheadSlashBlackStemAttachment.X * magnification, NoteheadSlashBlackStemAttachment.Y * magnification),
+            NoteheadSlashBlackStemAttachmentDown = (NoteheadSlashBlackStemAttachmentDown.X * magnification, NoteheadSlashBlackStemAttachmentDown.Y * magnification),
+            NoteheadXCircleStemAttachment = (NoteheadXCircleStemAttachment.X * magnification, NoteheadXCircleStemAttachment.Y * magnification),
+            NoteheadXCircleStemAttachmentDown = (NoteheadXCircleStemAttachmentDown.X * magnification, NoteheadXCircleStemAttachmentDown.Y * magnification),
             GClefAdvance = GClefAdvance * magnification,
             FClefAdvance = FClefAdvance * magnification,
             CClefAdvance = CClefAdvance * magnification,
@@ -2071,7 +2254,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = new(0.000000, -0.300000, 1.100000, 2.300000),
         FigBassSharpAdvance = 1.100000,
         NoteheadHalfStemAttachment = (1.390726, 0.211407),
+        NoteheadHalfStemAttachmentDown = (0.000000, -0.211407),
         NoteheadBlackStemAttachment = (1.289478, 0.136541),
+        NoteheadBlackStemAttachmentDown = (0.000000, -0.136541),
+        NoteheadTriangleHalfStemAttachment = (1.781099, 0.131550),
+        NoteheadTriangleHalfStemAttachmentDown = (0.273439, -0.711940),
+        NoteheadTriangleBlackStemAttachment = (1.484487, 0.131550),
+        NoteheadTriangleBlackStemAttachmentDown = (0.227807, -0.711940),
+        NoteheadDiamondHalfStemAttachment = (1.504807, 0.401781),
+        NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.401781),
+        NoteheadDiamondBlackStemAttachment = (1.523702, 0.409268),
+        NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.409268),
+        NoteheadCrossHalfStemAttachment = (1.592151, 0.188591),
+        NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.188591),
+        NoteheadCrossBlackStemAttachment = (1.289478, 0.331906),
+        NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.331906),
+        NoteheadSlashHalfStemAttachment = (2.375393, 0.968624),
+        NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.968624),
+        NoteheadSlashBlackStemAttachment = (1.745448, 0.968624),
+        NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.968624),
+        NoteheadXCircleStemAttachment = (1.533328, 0.000000),
+        NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000),
         GClefAdvance = 2.564000,
         FClefAdvance = 2.680000,
         CClefAdvance = 2.768000,
@@ -2333,7 +2536,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = new(0.000000, -0.288000, 1.100000, 2.288000),
         FigBassSharpAdvance = 1.100000,
         NoteheadHalfStemAttachment = (1.389202, 0.225396),
+        NoteheadHalfStemAttachmentDown = (0.000000, -0.225396),
         NoteheadBlackStemAttachment = (1.294282, 0.150476),
+        NoteheadBlackStemAttachmentDown = (0.000000, -0.150476),
+        NoteheadTriangleHalfStemAttachment = (1.750788, 0.130158),
+        NoteheadTriangleHalfStemAttachmentDown = (0.270793, -0.704760),
+        NoteheadTriangleBlackStemAttachment = (1.459043, 0.130158),
+        NoteheadTriangleBlackStemAttachmentDown = (0.225396, -0.704760),
+        NoteheadDiamondHalfStemAttachment = (1.489519, 0.397459),
+        NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.397459),
+        NoteheadDiamondBlackStemAttachment = (1.508249, 0.405078),
+        NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.405078),
+        NoteheadCrossHalfStemAttachment = (1.571424, 0.214602),
+        NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.214602),
+        NoteheadCrossBlackStemAttachment = (1.294282, 0.346666),
+        NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.346666),
+        NoteheadSlashHalfStemAttachment = (2.367929, 0.973965),
+        NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.973965),
+        NoteheadSlashBlackStemAttachment = (1.738090, 0.973965),
+        NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.973965),
+        NoteheadXCircleStemAttachment = (1.539360, 0.000000),
+        NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000),
         GClefAdvance = 2.564000,
         FClefAdvance = 2.680000,
         CClefAdvance = 2.756000,
@@ -2595,7 +2818,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = new(0.000000, -0.276000, 1.100000, 2.276000),
         FigBassSharpAdvance = 1.096000,
         NoteheadHalfStemAttachment = (1.386987, 0.236492),
+        NoteheadHalfStemAttachmentDown = (0.000000, -0.236492),
         NoteheadBlackStemAttachment = (1.298161, 0.161810),
+        NoteheadBlackStemAttachmentDown = (0.000000, -0.161810),
+        NoteheadTriangleHalfStemAttachment = (1.723904, 0.128996),
+        NoteheadTriangleHalfStemAttachmentDown = (0.268175, -0.698161),
+        NoteheadTriangleBlackStemAttachment = (1.436492, 0.128996),
+        NoteheadTriangleBlackStemAttachmentDown = (0.223479, -0.698161),
+        NoteheadDiamondHalfStemAttachment = (1.475813, 0.394059),
+        NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.394059),
+        NoteheadDiamondBlackStemAttachment = (1.494484, 0.401414),
+        NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.401414),
+        NoteheadCrossHalfStemAttachment = (1.552475, 0.237907),
+        NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.237907),
+        NoteheadCrossBlackStemAttachment = (1.298161, 0.359547),
+        NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.359547),
+        NoteheadSlashHalfStemAttachment = (2.361245, 0.978784),
+        NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.978784),
+        NoteheadSlashBlackStemAttachment = (1.731259, 0.978784),
+        NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.978784),
+        NoteheadXCircleStemAttachment = (1.543706, 0.000000),
+        NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000),
         GClefAdvance = 2.564000,
         FClefAdvance = 2.680000,
         CClefAdvance = 2.744000,
@@ -2857,7 +3100,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = new(0.000000, -0.268000, 1.100000, 2.268000),
         FigBassSharpAdvance = 1.100000,
         NoteheadHalfStemAttachment = (1.383743, 0.245495),
+        NoteheadHalfStemAttachmentDown = (0.000000, -0.245495),
         NoteheadBlackStemAttachment = (1.300819, 0.171393),
+        NoteheadBlackStemAttachmentDown = (0.000000, -0.171393),
+        NoteheadTriangleHalfStemAttachment = (1.699811, 0.128040),
+        NoteheadTriangleHalfStemAttachmentDown = (0.265911, -0.692376),
+        NoteheadTriangleBlackStemAttachment = (1.416509, 0.128040),
+        NoteheadTriangleBlackStemAttachmentDown = (0.221550, -0.692376),
+        NoteheadDiamondHalfStemAttachment = (1.463894, 0.390674),
+        NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.390674),
+        NoteheadDiamondBlackStemAttachment = (1.482294, 0.398236),
+        NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.398236),
+        NoteheadCrossHalfStemAttachment = (1.534972, 0.258601),
+        NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.258601),
+        NoteheadCrossBlackStemAttachment = (1.300819, 0.371267),
+        NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.371267),
+        NoteheadSlashHalfStemAttachment = (2.355388, 0.982987),
+        NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.982987),
+        NoteheadSlashBlackStemAttachment = (1.725268, 0.982987),
+        NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.982987),
+        NoteheadXCircleStemAttachment = (1.547070, 0.000000),
+        NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000),
         GClefAdvance = 2.564000,
         FClefAdvance = 2.680000,
         CClefAdvance = 2.736000,
@@ -3119,7 +3382,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = new(0.000000, -0.256000, 1.100000, 2.256000),
         FigBassSharpAdvance = 1.100000,
         NoteheadHalfStemAttachment = (1.380471, 0.252974),
+        NoteheadHalfStemAttachmentDown = (0.000000, -0.252974),
         NoteheadBlackStemAttachment = (1.302806, 0.179349),
+        NoteheadBlackStemAttachmentDown = (0.000000, -0.179349),
+        NoteheadTriangleHalfStemAttachment = (1.678339, 0.127048),
+        NoteheadTriangleHalfStemAttachmentDown = (0.263973, -0.687318),
+        NoteheadTriangleBlackStemAttachment = (1.398653, 0.127048),
+        NoteheadTriangleBlackStemAttachmentDown = (0.219978, -0.687318),
+        NoteheadDiamondHalfStemAttachment = (1.452974, 0.387879),
+        NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.387879),
+        NoteheadDiamondBlackStemAttachment = (1.471380, 0.395286),
+        NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.395286),
+        NoteheadCrossHalfStemAttachment = (1.518967, 0.277217),
+        NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.277217),
+        NoteheadCrossBlackStemAttachment = (1.302806, 0.381369),
+        NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.381369),
+        NoteheadSlashHalfStemAttachment = (2.349944, 0.986756),
+        NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.986756),
+        NoteheadSlashBlackStemAttachment = (1.720090, 0.986756),
+        NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.986756),
+        NoteheadXCircleStemAttachment = (1.549270, 0.000000),
+        NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000),
         GClefAdvance = 2.564000,
         FClefAdvance = 2.680000,
         CClefAdvance = 2.728000,
@@ -3383,7 +3666,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = FigBassSharpOutline,
         FigBassSharpAdvance = FigBassSharpAdvance,
         NoteheadHalfStemAttachment = NoteheadHalfStemAttachment,
+        NoteheadHalfStemAttachmentDown = NoteheadHalfStemAttachmentDown,
         NoteheadBlackStemAttachment = NoteheadBlackStemAttachment,
+        NoteheadBlackStemAttachmentDown = NoteheadBlackStemAttachmentDown,
+        NoteheadTriangleHalfStemAttachment = NoteheadTriangleHalfStemAttachment,
+        NoteheadTriangleHalfStemAttachmentDown = NoteheadTriangleHalfStemAttachmentDown,
+        NoteheadTriangleBlackStemAttachment = NoteheadTriangleBlackStemAttachment,
+        NoteheadTriangleBlackStemAttachmentDown = NoteheadTriangleBlackStemAttachmentDown,
+        NoteheadDiamondHalfStemAttachment = NoteheadDiamondHalfStemAttachment,
+        NoteheadDiamondHalfStemAttachmentDown = NoteheadDiamondHalfStemAttachmentDown,
+        NoteheadDiamondBlackStemAttachment = NoteheadDiamondBlackStemAttachment,
+        NoteheadDiamondBlackStemAttachmentDown = NoteheadDiamondBlackStemAttachmentDown,
+        NoteheadCrossHalfStemAttachment = NoteheadCrossHalfStemAttachment,
+        NoteheadCrossHalfStemAttachmentDown = NoteheadCrossHalfStemAttachmentDown,
+        NoteheadCrossBlackStemAttachment = NoteheadCrossBlackStemAttachment,
+        NoteheadCrossBlackStemAttachmentDown = NoteheadCrossBlackStemAttachmentDown,
+        NoteheadSlashHalfStemAttachment = NoteheadSlashHalfStemAttachment,
+        NoteheadSlashHalfStemAttachmentDown = NoteheadSlashHalfStemAttachmentDown,
+        NoteheadSlashBlackStemAttachment = NoteheadSlashBlackStemAttachment,
+        NoteheadSlashBlackStemAttachmentDown = NoteheadSlashBlackStemAttachmentDown,
+        NoteheadXCircleStemAttachment = NoteheadXCircleStemAttachment,
+        NoteheadXCircleStemAttachmentDown = NoteheadXCircleStemAttachmentDown,
         GClefAdvance = GClefAdvance,
         FClefAdvance = FClefAdvance,
         CClefAdvance = CClefAdvance,
@@ -3645,7 +3948,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = new(0.000000, -0.244000, 1.100000, 2.244000),
         FigBassSharpAdvance = 1.096000,
         NoteheadHalfStemAttachment = (1.374610, 0.264053),
+        NoteheadHalfStemAttachmentDown = (0.000000, -0.264053),
         NoteheadBlackStemAttachment = (1.305122, 0.191893),
+        NoteheadBlackStemAttachmentDown = (0.000000, -0.191893),
+        NoteheadTriangleHalfStemAttachment = (1.642227, 0.125434),
+        NoteheadTriangleHalfStemAttachmentDown = (0.260668, -0.678842),
+        NoteheadTriangleBlackStemAttachment = (1.368552, 0.125434),
+        NoteheadTriangleBlackStemAttachmentDown = (0.217194, -0.678842),
+        NoteheadDiamondHalfStemAttachment = (1.435011, 0.383073),
+        NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.383073),
+        NoteheadDiamondBlackStemAttachment = (1.453007, 0.390379),
+        NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.390379),
+        NoteheadCrossHalfStemAttachment = (1.490958, 0.308241),
+        NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.308241),
+        NoteheadCrossBlackStemAttachment = (1.305122, 0.398396),
+        NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.398396),
+        NoteheadSlashHalfStemAttachment = (2.341024, 0.992962),
+        NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.992962),
+        NoteheadSlashBlackStemAttachment = (1.711180, 0.992962),
+        NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.992962),
+        NoteheadXCircleStemAttachment = (1.552071, 0.000000),
+        NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000),
         GClefAdvance = 2.564000,
         FClefAdvance = 2.680000,
         CClefAdvance = 2.712000,
@@ -3907,7 +4230,27 @@ internal static partial class GlyphMetrics
         FigBassSharpOutline = new(0.000000, -0.236000, 1.100000, 2.236000),
         FigBassSharpAdvance = 1.100000,
         NoteheadHalfStemAttachment = (1.372063, 0.268413),
+        NoteheadHalfStemAttachmentDown = (0.000000, -0.268413),
         NoteheadBlackStemAttachment = (1.305873, 0.196667),
+        NoteheadBlackStemAttachmentDown = (0.000000, -0.196667),
+        NoteheadTriangleHalfStemAttachment = (1.627143, 0.124762),
+        NoteheadTriangleHalfStemAttachmentDown = (0.259365, -0.675238),
+        NoteheadTriangleBlackStemAttachment = (1.356032, 0.124762),
+        NoteheadTriangleBlackStemAttachmentDown = (0.216190, -0.675238),
+        NoteheadDiamondHalfStemAttachment = (1.427302, 0.380952),
+        NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.380952),
+        NoteheadDiamondBlackStemAttachment = (1.445238, 0.388254),
+        NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.388254),
+        NoteheadCrossHalfStemAttachment = (1.478730, 0.321429),
+        NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.321429),
+        NoteheadCrossBlackStemAttachment = (1.305873, 0.405397),
+        NoteheadCrossBlackStemAttachmentDown = (0.000000, -0.405397),
+        NoteheadSlashHalfStemAttachment = (2.337302, 0.995556),
+        NoteheadSlashHalfStemAttachmentDown = (0.000000, -0.995556),
+        NoteheadSlashBlackStemAttachment = (1.707302, 0.995556),
+        NoteheadSlashBlackStemAttachmentDown = (0.000000, -0.995556),
+        NoteheadXCircleStemAttachment = (1.552857, 0.000000),
+        NoteheadXCircleStemAttachmentDown = (0.000000, 0.000000),
         GClefAdvance = 2.564000,
         FClefAdvance = 2.680000,
         CClefAdvance = 2.704000,

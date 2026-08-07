@@ -235,12 +235,14 @@ internal static class TupletBracketEngraver
             // Each bound reads its OWN head shape: :71-85 hands back that column's stem, and
             // a stem's x is its head's attachment (LayoutUtilities.StemAttachX). A tuplet
             // whose ends are a half note and a quarter has two different offsets.
+            var startItem = TupletItemAt(tuplet, tupMeasures, tuplet.StartNoteIndex);
+            var endItem = TupletItemAt(tuplet, tupMeasures, tuplet.EndNoteIndex);
             double startAttach = LayoutUtilities.StemAttachX(isStemUp,
-                GlyphMetrics.NoteValueOf(
-                    TupletItemAt(tuplet, tupMeasures, tuplet.StartNoteIndex)));
+                GlyphMetrics.NoteValueOf(startItem),
+                LayoutUtilities.NoteheadStyleOf(startItem));
             double endAttach = LayoutUtilities.StemAttachX(isStemUp,
-                GlyphMetrics.NoteValueOf(
-                    TupletItemAt(tuplet, tupMeasures, tuplet.EndNoteIndex)));
+                GlyphMetrics.NoteValueOf(endItem),
+                LayoutUtilities.NoteheadStyleOf(endItem));
             double halfStem = EngravingDefaults.StemThickness / 2;
             double startX = measureLayout.X + startOffset + startAttach - halfStem;
             double endX = measureLayout.X + endOffset + endAttach + halfStem;
@@ -278,9 +280,11 @@ internal static class TupletBracketEngraver
                     // the head for up-stems (same correction DrawBeams makes),
                     // per OUTER MEMBER's head shape, as DrawBeams also does.
                     startX = beam.LeftX + LayoutUtilities.StemAttachX(
-                        isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[0].Item));
+                        isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[0].Item),
+                        LayoutUtilities.NoteheadStyleOf(beam.Group.Members[0].Item));
                     endX = beam.RightX + LayoutUtilities.StemAttachX(
-                        isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[^1].Item));
+                        isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[^1].Item),
+                        LayoutUtilities.NoteheadStyleOf(beam.Group.Members[^1].Item));
                     // TAB BRANCH ONLY: the tab renderer's text offset assumes a
                     // baseline-anchored digit, so its clearance arithmetic still
                     // carries the digit height. The notation branch below no
@@ -318,9 +322,11 @@ internal static class TupletBracketEngraver
                         // Read it from the tuplet's tab notes (which carry the strings).
                         isStemUp = geom.GroupStemUp(TupletNoteItems(tuplet, tupMeasures));
                         startX = beam.LeftX + LayoutUtilities.StemAttachX(
-                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[0].Item));
+                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[0].Item),
+                            LayoutUtilities.NoteheadStyleOf(beam.Group.Members[0].Item));
                         endX = beam.RightX + LayoutUtilities.StemAttachX(
-                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[^1].Item));
+                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[^1].Item),
+                            LayoutUtilities.NoteheadStyleOf(beam.Group.Members[^1].Item));
                         const double tabClearance = 0.5; // baseline above beam edge
                         double sEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, startX);
                         double eEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, endX);
@@ -694,7 +700,8 @@ internal static class TupletBracketEngraver
                     ? mb.beam.MemberXPositions[mb.memberIndex]
                     : ml.X
                       + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml)
-                      + LayoutUtilities.StemAttachX(itemUp, GlyphMetrics.NoteValueOf(item));
+                      + LayoutUtilities.StemAttachX(itemUp, GlyphMetrics.NoteValueOf(item),
+                          LayoutUtilities.NoteheadStyleOf(item));
                 // The single house of a column's reach (HANDOFF §5.2.1②). Of() cannot
                 // return null here — the `pos` gate above keeps only notes/chords.
                 tip = NoteColumnLayout.Of(item, null, member?.beam, stemX) is { } col

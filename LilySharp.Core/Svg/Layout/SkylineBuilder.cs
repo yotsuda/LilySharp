@@ -1502,7 +1502,7 @@ internal sealed class SkylineBuilder
                 {
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleUp, size,
                         chordStemUp, chordNoteValue,
-                        upSkyline, downSkyline, reserveStem);
+                        upSkyline, downSkyline, reserveStem, chord.Notehead);
                 }
                 // Chord accidentals go through the REAL placement machinery
                 // (stagger columns, reversed-head offsets) so the skyline
@@ -1764,7 +1764,7 @@ internal sealed class SkylineBuilder
         bool stemUp = note.ForcedStemUp ?? forcedStemUp ?? note.StemUp;
 
         AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleUp, size,
-            stemUp, noteValue, upSkyline, downSkyline, reserveStem);
+            stemUp, noteValue, upSkyline, downSkyline, reserveStem, note.Notehead);
     }
 
     /// <summary>
@@ -1794,7 +1794,8 @@ internal sealed class SkylineBuilder
         int noteValue,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
-        bool reserveStem = true)
+        bool reserveStem = true,
+        NoteheadStyle headStyle = NoteheadStyle.Default)
     {
         // Translate a Y-up coordinate (staff-spaces above THIS staff's middle line)
         // into the shared skyline Y-up frame (whose origin is the system/staff top).
@@ -1939,7 +1940,10 @@ internal sealed class SkylineBuilder
         // stem LilyPond's thin sliver lets it tuck beside (DSQ).
         // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head;
         //   scm/define-grobs.scm Stem thickness 1.3 (line-thickness units).
-        double stemCentre = x + size.Span(LayoutUtilities.StemAttachX(stemUp, noteValue));
+        // Per head SHAPE too: a styled head's stem stands at that glyph's own
+        // attachment point (the head BOX above stays the default head's — a separate
+        // pre-existing simplification, out of this seed's stem claim).
+        double stemCentre = x + size.Span(LayoutUtilities.StemAttachX(stemUp, noteValue, headStyle));
         double stemHalfWidth = size.Span(EngravingDefaults.StemThickness / 2);
         double flagWidth = size.Span(EngravingDefaults.FlagWidth);
 

@@ -2978,7 +2978,9 @@
     },
     "flag-stem-begin-position.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "merge された符頭に符尾が正しい始点で届く (aikenHeads の 8 分 flag・tremolo 4 分・8 分対)",
+      "notes": "aikenHeads(fa/mi)は形が無い→両側triangle置換。修理=styled headのstem attachmentをfont LILC attachment/attachment-downから読む(抽出器+GetNoteheadStemAttachment(style,dir)+StemAttachX/StemAttachYOffset全site配線)。照合: down begin 2.1828/2.6828・up begin 1.3738/1.8738・stem X対1.0342=LP桁一致。残差(主張外): flag原点-0.04(半blot)・tremolo stem+0.125と斜線間隔0.81vs1.28(第100起票済regime)・spacing drift。起票: default頭のbegin Yは手規則±0.15のまま(font±0.1862/±0.259=全snapshot移動級・別点)。snapshot 1枚(drum-groove=cross/xcircle stemがfont値へ・census済)"
     },
     "flageolet.ly": {
       "category": "scheme",

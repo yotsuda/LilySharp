@@ -138,12 +138,20 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/stem.cc:1063-1064 internal_calc_stem_offset_from_head —
             //   an invisible stem centres on its support head.
             bool InvisibleStem(int i) => GlyphMetrics.NoteValueOf(grp.Members[i].Item) <= 1;
+            // Per MEMBER head SHAPE as well as value: a styled head's stem stands at that
+            // glyph's own attachment point (see LayoutUtilities.StemAttachX).
+            NoteheadStyle MemberStyle(int i) => grp.Members[i].Item switch
+            {
+                NoteItem n => n.Notehead,
+                ChordItem ch => ch.Notehead,
+                _ => NoteheadStyle.Default,
+            };
             double StemAttachX(int i) =>
                 InvisibleStem(i)
                     ? LayoutUtilities.InvisibleStemX(beam.MemberXPositions[i],
                         GlyphMetrics.NoteValueOf(grp.Members[i].Item))
                     : LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i),
-                        GlyphMetrics.NoteValueOf(grp.Members[i].Item));
+                        GlyphMetrics.NoteValueOf(grp.Members[i].Item), MemberStyle(i));
 
             double leftBeamY = staffMiddleY + beam.LeftY / 2.0;
             double rightBeamY = staffMiddleY + beam.RightY / 2.0;
@@ -361,12 +369,8 @@ internal static partial class SharedRenderer
                         ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) - StaffHeight / 2
                         : staffMiddleY;
                     headY = memberStaffMiddleY + GetMemberStaffPosition(member, up) / 2.0
-                        - StemAttachYOffset(member.Item switch
-                        {
-                            NoteItem n => n.Notehead,
-                            ChordItem ch => ch.Notehead,
-                            _ => NoteheadStyle.Default,
-                        }, up, noteValue: 8); // beamed heads are always filled (8th or shorter)
+                        - StemAttachYOffset(MemberStyle(i), up,
+                            noteValue: 8); // beamed heads are always filled (8th or shorter)
                 }
                 // The stem ends at the OUTERMOST beam rank on its own side — the extreme
                 // of this stem's ranks in its direction (up ⇒ max rank, down ⇒ min), so

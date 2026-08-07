@@ -58,6 +58,63 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第109セッション第1便（＝flag-stem-begin-position.ly **修理→fixed 第29号**・
+`9b2173cc`）。frontier は **pending の次の本**（§0 どおり status.json から取ること——
+固定で書くと腐る。第1便終了時点の先頭は follow-voice-consecutive.ly）。第107 起票の
+§2A「skyline 参加者列挙の手動→録画層」workstream は棚のまま。
+
+★★★ **①（第1便）fixed 第29号 = flag-stem-begin-position.ly**:
+- **主張**: merge された符頭に符尾が正しい始点で届く（\aikenHeads の 8分 flag 対・
+  tremolo 4分対・8分×2 対＝全モーメント 2声 unison merge）。
+- **枠**: \aikenHeads（f=fa・e=mi）は Lily# に形が無い→**両側 triangle 置換**
+  （henze→short/long 両側置換と同型。noteheads.s2triangle＝Lily# @notehead(triangle)
+  の同一グリフ）。3 つの `<< \\ >>` は連続束＝多声 1 スパン融合+s spacer・s8 で 4/4 完結。
+  twin scratch\lpreg\flagstem.{ly,lys}・確定 lys は audit\lp-regression\lys。
+- **根 = styled head の符尾接続が手書き規則だった**（StemAttachYOffset の
+  Triangle→0.5・Cross/Slash→±0.5、X は down=定数 0.065）。LP は **font の LILC
+  attachment（up）/attachment-down（down）**を読む（open-type-font.cc:334-369
+  attachment_point・stem.cc:934-963 internal_calc_stem_begin_position・:1071-1086 の
+  -d*rule_thick*0.5）。s2triangle は up (1.3828, +0.1262)・down (0.2186, −0.6828)＝
+  **鏡映でない**（非対称形は各符尾を ink の在る所に着ける）。
+- **修理 4 層**: ⑴ 抽出器 Extract-EmmentalerMetrics.py に styled 5 形×(half,black)+
+  既定 s1/s2 の attachment/attachment-down 計 22 本を追加→GlyphMetricsGenerated
+  再生成（全 8 design）⑵ GetNoteheadStemAttachment(style, dir, noteValue) 新設
+  （Default は既存 s1/s2 欄に合流＝二重綴り無し）⑶ StemAttachX/StemX に style 引数
+  （**required にして全 caller をコンパイラに数えさせた**——renderer・quanter・
+  skyline・spacing・tuplet・tie 輪郭・tab・dynamics の全 site。NoteColumnLayout に
+  Notehead 追加・NoteheadStyleOf ヘルパ）⑷ StemAttachYOffset の styled 枝→font 値
+  （Default 枝は旧 ±0.15 のまま＝下の起票⑴）。
+- **照合（twin・middle 相対）**: down begin 2.1828／2.6828・up begin 1.3738／1.8738・
+  merge 列の stem X 対 1.0342 ＝ **全部 LP 桁一致**（font 値がそのまま LP の描画値）。
+- **観測者 +1**: StyledHeadStemAttachmentTests（LP 数字ピン）。**snapshot 1 枚**＝
+  test/drum-groove：cross up-stem 始点が corner 規則 +0.5→font +0.3904 above centre
+  ×12 本・xcircle stem X +0.2468／begin Y=centre（font (1.551, 0.000)）＝全差分が
+  font 値そのもの・census 承認済。
+- ⚠️ **起票（残・別 regime）**: ⑴ **default 頭の begin Y は手規則 ±0.15 のまま**
+  （font は ±0.1862(s2)／±0.259(s1)＝全 snapshot の stem rect が動く級。
+  SharedRenderer.Noteheads の StemAttachYOffset コメントに開示）⑵ flag 原点：LP は
+  stem 端 −0.04（半 blot）・LS は stem 端ちょうど（全 flag 共通の既存）⑶ tremolo 側
+  stem が LP は +0.125 伸びる+斜線間隔 0.81 vs 1.28（第100 起票済 LILYSHARP-OWN・
+  Marks.cs:947）⑷ 列 spacing drift ≤0.08・最終小節線 −1.2（note-spacing regime）。
+- **引用ラチェット**: 引用を消したら KnownUnverifiedSymbols も消す（mf/feta-noteheads
+  |stem_attachment の逆方向 assert で発覚）・stem.cc:1071-1086 は
+  internal_calc_stem_offset_from_head を同じ行に名指しで通過。
+- **perf**: 呼び出し構造不変（定数読み→別の定数読み・switch は既存と同型・
+  alloc 追加ゼロ・pass/walk 数不変）＝A/B 省略、理由ごとここに開示。
+- **twin の学び**: @notehead は**括弧形 @notehead(triangle)**（ドット形は LYS1008 で
+  無視警告）・単音 tremolo は `f4:32` が直接書ける（repeat tremolo 不要）。
+
+plain 322 / 処理済 **116**（fixed **29**・exact **17**・skip **59**・open **11**・
+pending 206。数えたら state 別内訳も一緒に書くこと）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4183 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot 第109 は 1 枚（census 承認済・上記）**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第108セッション第1〜4便の経緯
+
 最終更新 第108セッション第4便（＝第1便 fermata-dot-position.ly **block B 修理→fixed 第28号**・
 `0a25de20`・第2便 fermata-outside-staff-priority.ly **評価→open（序列 exact・残差 2 系統
 根特定済）**・`ff483dd8`・第3便 figured-bass 族 5 冊＝**skip 4（族ゲート・continuo 器材）+

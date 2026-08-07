@@ -270,12 +270,17 @@ ADVANCE_GLYPHS: list[GlyphSpec] = [
 ]
 
 
-def load_lilc_attachments(font) -> dict[str, tuple[float, float]]:
-    """Parse the font's LILC `attachment` points into {glyph: (x, y)} in staff spaces —
-    the UP-stem attachment. This is the same per-glyph datum LilyPond's
-    Font_metric::attachment_point serves to Note_head::get_stem_attachment
-    (lily/note-head.cc:164-196), which \\note-by-number turns back into the stem's
-    lower-end coordinate (define-markup-commands.scm attach-off). Empty if no LILC."""
+def load_lilc_attachments(font) -> dict[str, dict[str, tuple[float, float]]]:
+    """Parse the font's LILC `attachment` (UP-stem) and `attachment-down` (DOWN-stem)
+    points into {glyph: {key: (x, y)}} in staff spaces. This is the same per-glyph
+    datum LilyPond's Font_metric::attachment_point serves to
+    Note_head::get_stem_attachment (lily/note-head.cc:164-196): for an UP stem it reads
+    `attachment`; for DOWN it reads `attachment-down`, falling back to rotating the UP
+    point about the head centre for older fonts (lily/open-type-font.cc:334-369) — the
+    bundled 2.26.0 Emmentaler carries both keys for every stemmed notehead, so the
+    fallback is never taken here and a missing key is an ERROR, not a rotation.
+    \\note-by-number turns the UP point back into the stem's lower-end coordinate
+    (define-markup-commands.scm attach-off). Empty if no LILC."""
     keys = font.reader.keys()
     if "LILC" not in keys or "LILY" not in keys:
         return {}
@@ -288,21 +293,54 @@ def load_lilc_attachments(font) -> dict[str, tuple[float, float]]:
     except zlib.error:
         pass
     lilc = raw.decode("latin-1")
-    pat = re.compile(
-        r"\(([^\s()]+)\s*\.\s*\(\(bbox\s*\.\s*\([^)]*\)\)\s*"
-        r"\(attachment\s*\.\s*\(([-0-9.eE]+)\s*\.\s*([-0-9.eE]+)\)\)",
-        re.S)
-    out: dict[str, tuple[float, float]] = {}
-    for gm in pat.finditer(lilc):
-        out[gm.group(1)] = (float(gm.group(2)) / staff_space,
-                            float(gm.group(3)) / staff_space)
+    # One glyph entry = "(<name> . ((bbox . (...)) (key . v) ...))" — walk entries, then
+    # pull both attachment keys out of each entry's own segment (their order inside the
+    # alist is the font's business, not ours).
+    entry_pat = re.compile(
+        r"\(([^\s()]+)\s*\.\s*\(\(bbox\s*\.\s*\([^)]*\)\)(.*?)(?=\n\(|\Z)", re.S)
+    key_pat = re.compile(
+        r"\((attachment|attachment-down)\s*\.\s*\(([-0-9.eE]+)\s*\.\s*([-0-9.eE]+)\)\)")
+    out: dict[str, dict[str, tuple[float, float]]] = {}
+    for gm in entry_pat.finditer(lilc):
+        entry: dict[str, tuple[float, float]] = {}
+        for km in key_pat.finditer(gm.group(2)):
+            entry[km.group(1)] = (float(km.group(2)) / staff_space,
+                                  float(km.group(3)) / staff_space)
+        if entry:
+            out[gm.group(1)] = entry
     return out
 
 
-# Noteheads whose UP-stem attachment point is emitted (the stemless whole needs none).
-ATTACHMENT_GLYPHS: list[tuple[str, str]] = [
-    ("NoteheadHalfStemAttachment",  "noteheads.s1"),
-    ("NoteheadBlackStemAttachment", "noteheads.s2"),
+# Noteheads whose stem attachment points are emitted (the stemless whole needs none):
+# (C# name, feta glyph, LILC key). The styled heads (triangle/diamond/cross/slash/
+# xcircle) are the shapes NoteheadStyle offers; each stemmed value gets both the
+# UP point (`attachment`) and the DOWN point (`attachment-down`), because a styled
+# head's DOWN attachment is NOT the mirror of its UP one (s2triangle's down point
+# is (1.093, -3.414) font units — an asymmetric shape attaches each stem where the
+# ink is). LILYPOND-REF: lily/open-type-font.cc:334-369 attachment_point.
+ATTACHMENT_GLYPHS: list[tuple[str, str, str]] = [
+    ("NoteheadHalfStemAttachment",          "noteheads.s1",         "attachment"),
+    ("NoteheadHalfStemAttachmentDown",      "noteheads.s1",         "attachment-down"),
+    ("NoteheadBlackStemAttachment",         "noteheads.s2",         "attachment"),
+    ("NoteheadBlackStemAttachmentDown",     "noteheads.s2",         "attachment-down"),
+    ("NoteheadTriangleHalfStemAttachment",      "noteheads.s1triangle", "attachment"),
+    ("NoteheadTriangleHalfStemAttachmentDown",  "noteheads.s1triangle", "attachment-down"),
+    ("NoteheadTriangleBlackStemAttachment",     "noteheads.s2triangle", "attachment"),
+    ("NoteheadTriangleBlackStemAttachmentDown", "noteheads.s2triangle", "attachment-down"),
+    ("NoteheadDiamondHalfStemAttachment",       "noteheads.s1diamond",  "attachment"),
+    ("NoteheadDiamondHalfStemAttachmentDown",   "noteheads.s1diamond",  "attachment-down"),
+    ("NoteheadDiamondBlackStemAttachment",      "noteheads.s2diamond",  "attachment"),
+    ("NoteheadDiamondBlackStemAttachmentDown",  "noteheads.s2diamond",  "attachment-down"),
+    ("NoteheadCrossHalfStemAttachment",         "noteheads.s1cross",    "attachment"),
+    ("NoteheadCrossHalfStemAttachmentDown",     "noteheads.s1cross",    "attachment-down"),
+    ("NoteheadCrossBlackStemAttachment",        "noteheads.s2cross",    "attachment"),
+    ("NoteheadCrossBlackStemAttachmentDown",    "noteheads.s2cross",    "attachment-down"),
+    ("NoteheadSlashHalfStemAttachment",         "noteheads.s1slash",    "attachment"),
+    ("NoteheadSlashHalfStemAttachmentDown",     "noteheads.s1slash",    "attachment-down"),
+    ("NoteheadSlashBlackStemAttachment",        "noteheads.s2slash",    "attachment"),
+    ("NoteheadSlashBlackStemAttachmentDown",    "noteheads.s2slash",    "attachment-down"),
+    ("NoteheadXCircleStemAttachment",           "noteheads.s2xcircle",  "attachment"),
+    ("NoteheadXCircleStemAttachmentDown",       "noteheads.s2xcircle",  "attachment-down"),
 ]
 
 
@@ -437,11 +475,12 @@ def extract(font_path: Path, rounded: int) -> DesignMetrics | None:
 
     attachment_points = load_lilc_attachments(font)
     attachments: dict[str, tuple[float, float]] = {}
-    for cname, glyph in ATTACHMENT_GLYPHS:
-        if glyph not in attachment_points:
-            sys.stderr.write(f"ERROR: {font_path.name}: glyph {glyph} has no LILC attachment\n")
+    for cname, glyph, key in ATTACHMENT_GLYPHS:
+        if glyph not in attachment_points or key not in attachment_points[glyph]:
+            sys.stderr.write(
+                f"ERROR: {font_path.name}: glyph {glyph} has no LILC {key}\n")
             return None
-        attachments[cname] = attachment_points[glyph]
+        attachments[cname] = attachment_points[glyph][key]
 
     for spec in ADVANCE_GLYPHS:
         adv, _lsb = hmtx[spec.glyph]
@@ -559,20 +598,24 @@ def main() -> int:
         lines.append("")
 
     # Stem attachment points (LILC `attachment`)
-    lines.append("    // ========== Up-stem attachment points (from the font's LILC table) ==========")
-    lines.append("    // The point where an up stem's lower-right corner meets the head — X is the")
-    lines.append("    // head's designed right edge, Y the height above the centre line the stem's")
-    lines.append("    // lower end starts at. LilyPond serves it via Font_metric::attachment_point to")
-    lines.append("    // Note_head::get_stem_attachment (lily/note-head.cc:164-196), and")
-    lines.append("    // \\note-by-number turns it back into the stem's lower-end coordinate")
-    lines.append("    // (scm/define-markup-commands.scm attach-off).")
+    lines.append("    // ========== Stem attachment points (from the font's LILC table) ==========")
+    lines.append("    // The point where a stem meets its head — for an UP stem the font's `attachment`")
+    lines.append("    // entry (X the head's designed right edge, Y the height above the centre line the")
+    lines.append("    // stem's lower end starts at); for a DOWN stem the `attachment-down` entry, which")
+    lines.append("    // an asymmetric shape places somewhere other than the mirror of the UP point.")
+    lines.append("    // LilyPond serves them via Font_metric::attachment_point")
+    lines.append("    // (lily/open-type-font.cc:334-369; rotation fallback unused — 2.26.0 Emmentaler")
+    lines.append("    // carries attachment-down) to Note_head::get_stem_attachment")
+    lines.append("    // (lily/note-head.cc:164-196), and \\note-by-number turns the UP point back into")
+    lines.append("    // the stem's lower-end coordinate (scm/define-markup-commands.scm attach-off).")
     lines.append("")
-    for cname, glyph in ATTACHMENT_GLYPHS:
+    for cname, glyph, key in ATTACHMENT_GLYPHS:
         ax, ay = base.attachments[cname]
-        lines.append(f"    /// <summary>{glyph} up-stem attachment point (staff spaces about the")
+        which = "down-stem" if key == "attachment-down" else "up-stem"
+        lines.append(f"    /// <summary>{glyph} {which} attachment point (staff spaces about the")
         lines.append("    /// glyph origin: X from the ink left, Y above the centre line).</summary>")
         lines.append("    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,")
-        lines.append("    /// attachment_point — the font's LILC attachment entry.</remarks>")
+        lines.append(f"    /// attachment_point — the font's LILC {key} entry.</remarks>")
         lines.append(f"    public static readonly (double X, double Y) {cname} = ({fmt(ax)}, {fmt(ay)});")
         lines.append("")
 
@@ -601,9 +644,10 @@ def main() -> int:
         members.append(("double", f"{name}Advance",
                         f"{spec.summary} — advance width (next-glyph horizontal feed).",
                         lambda d, n=name: d.advances[n]))
-    for cname, glyph in ATTACHMENT_GLYPHS:
+    for cname, glyph, key in ATTACHMENT_GLYPHS:
+        which = "down-stem" if key == "attachment-down" else "up-stem"
         members.append(("attach", cname,
-                        f"{glyph} up-stem attachment point (staff spaces about the glyph origin).",
+                        f"{glyph} {which} attachment point (staff spaces about the glyph origin).",
                         lambda d, n=cname: d.attachments[n]))
     for spec in ADVANCE_GLYPHS:
         members.append(("double", spec.csharp_name, spec.summary,

@@ -1108,7 +1108,13 @@ internal static class ArticulationEngraver
         for (int i = 0; i < n; i++)
             xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0)
                   + LayoutUtilities.StemAttachX(
-                        up, GlyphMetrics.NoteValueOf(beam.Group.Members[i].Item));
+                        up, GlyphMetrics.NoteValueOf(beam.Group.Members[i].Item),
+                        beam.Group.Members[i].Item switch
+                        {
+                            NoteItem note => note.Notehead,
+                            ChordItem chord => chord.Notehead,
+                            _ => NoteheadStyle.Default,
+                        });
         var line = TabBeamQuant.Compute(beam.Group, xs, geom, up);
         double half = EngravingDefaults.BeamThickness / 2;
         return TabBeamMath.At(line, noteX) + (up ? -half : half);

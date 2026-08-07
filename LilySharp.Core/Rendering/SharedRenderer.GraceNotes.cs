@@ -343,7 +343,8 @@ internal static partial class SharedRenderer
         //     shorter, which is also why this has never shown up as a residual.
         const int graceHeadNoteValue = 4;
         double StemX(int i) =>
-            LayoutUtilities.StemX(xs[i], up: true, graceHeadNoteValue, headFont);
+            LayoutUtilities.StemX(xs[i], up: true, graceHeadNoteValue,
+                NoteheadStyle.Default, headFont);
         // Stem end: the up-stem runs from the head to stemLen above it — up is larger
         // Y-up, so add in the native page Y-up frame.
         double StemEndY(int i) => ys[i] + stemLen;

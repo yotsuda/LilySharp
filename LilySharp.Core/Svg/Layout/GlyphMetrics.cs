@@ -742,6 +742,63 @@ internal static partial class GlyphMetrics
     };
 
     /// <summary>
+    /// The stem-attachment point of the head a given (style, note value) pair draws, per
+    /// stem DIRECTION: the font's <c>attachment</c> entry for an up stem,
+    /// <c>attachment-down</c> for a down stem. The two are NOT mirrors on an asymmetric
+    /// shape — s2triangle attaches an up stem at (1.3828, +0.1262) but a down stem at
+    /// (0.2186, −0.6828), each where the shape's ink is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/open-type-font.cc:334-369 attachment_point — DOWN reads the
+    ///   font's attachment-down, falling back to rotating the UP point only for fonts
+    ///   that predate it; the bundled 2.26.0 Emmentaler carries both for every stemmed
+    ///   head, so the fallback branch has no reader here.
+    /// LILYPOND-REF: lily/note-head.cc:164-196 Note_head::get_stem_attachment — the
+    ///   normalisation round-trips (see <see cref="GetNoteheadStemAttachment(int)"/>),
+    ///   so this is the font's own coordinate.
+    /// <para>
+    /// The DEFAULT style routes to the same s1/s2 fields the style-less overload serves,
+    /// so the two spellings cannot drift; its down X is 0.000000 in every design (the
+    /// left edge), which is why <see cref="EngravingDefaults.StemDownAttachX"/> could be
+    /// a constant for as long as only default heads had stems.
+    /// </para>
+    /// </remarks>
+    public static (double X, double Y) GetNoteheadStemAttachment(
+        Model.NoteheadStyle style, bool up, int noteValue)
+        => GetNoteheadStemAttachment(Design20, style, up, noteValue);
+
+    /// <summary>The same lookup asked of ONE font — see
+    /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
+    public static (double X, double Y) GetNoteheadStemAttachment(
+        DesignMetrics font, Model.NoteheadStyle style, bool up, int noteValue)
+        => (style, halfHead: noteValue == 2) switch
+    {
+        (Model.NoteheadStyle.Cross, true) => up
+            ? font.NoteheadCrossHalfStemAttachment : font.NoteheadCrossHalfStemAttachmentDown,
+        (Model.NoteheadStyle.Cross, false) => up
+            ? font.NoteheadCrossBlackStemAttachment : font.NoteheadCrossBlackStemAttachmentDown,
+        (Model.NoteheadStyle.Diamond, true) => up
+            ? font.NoteheadDiamondHalfStemAttachment : font.NoteheadDiamondHalfStemAttachmentDown,
+        (Model.NoteheadStyle.Diamond, false) => up
+            ? font.NoteheadDiamondBlackStemAttachment : font.NoteheadDiamondBlackStemAttachmentDown,
+        (Model.NoteheadStyle.Triangle, true) => up
+            ? font.NoteheadTriangleHalfStemAttachment : font.NoteheadTriangleHalfStemAttachmentDown,
+        (Model.NoteheadStyle.Triangle, false) => up
+            ? font.NoteheadTriangleBlackStemAttachment : font.NoteheadTriangleBlackStemAttachmentDown,
+        (Model.NoteheadStyle.Slash, true) => up
+            ? font.NoteheadSlashHalfStemAttachment : font.NoteheadSlashHalfStemAttachmentDown,
+        (Model.NoteheadStyle.Slash, false) => up
+            ? font.NoteheadSlashBlackStemAttachment : font.NoteheadSlashBlackStemAttachmentDown,
+        // The xcircle is ONE glyph for every value (EmmentalerGlyphs.GetNotehead).
+        (Model.NoteheadStyle.XCircle, _) => up
+            ? font.NoteheadXCircleStemAttachment : font.NoteheadXCircleStemAttachmentDown,
+        (_, true) => up
+            ? font.NoteheadHalfStemAttachment : font.NoteheadHalfStemAttachmentDown,
+        (_, false) => up
+            ? font.NoteheadBlackStemAttachment : font.NoteheadBlackStemAttachmentDown,
+    };
+
+    /// <summary>
     /// Gets the flag bounding box for a given note value and stem direction.
     /// </summary>
     /// <param name="noteValue">8=eighth, 16=sixteenth, etc.</param>

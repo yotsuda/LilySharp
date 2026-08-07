@@ -53,11 +53,12 @@ internal static class LayoutUtilities
     /// 1.377400 − 1.304200 = 0.073200 left of LilyPond's; MEASURED as exactly that by ledger
     /// <c>stem.up.right-edge.half-head</c> against its control
     /// <c>stem.up.right-edge.black-head</c>, one bar apart at one pitch.
-    /// ⚠️ A DOWN stem does not move, and that is a fact about the FONT rather than a
-    /// simplification: every Emmentaler head box starts at x 0.000000
-    /// (<see cref="GlyphMetrics.NoteheadHalf"/> and <see cref="GlyphMetrics.NoteheadBlack"/>
-    /// are (0, 1.377400) and (0, 1.304200)), so the left edge is shape-independent and
-    /// <see cref="EngravingDefaults.StemDownAttachX"/> stays a constant. It is also why each
+    /// ⚠️ A DOWN stem reads the font too — the LILC <c>attachment-down</c> entry
+    /// (lily/open-type-font.cc:334-369). For a DEFAULT head that X is 0.000000 in every
+    /// design (the box's left edge), which kept
+    /// <see cref="EngravingDefaults.StemDownAttachX"/> a constant while only default
+    /// heads had stems; a styled shape attaches each stem where its ink is
+    /// (s2triangle's down point is X 0.218600, a fifth of the way in). The default UP
     /// attachment X equals its own box's RIGHT edge exactly.
     /// </para>
     /// <para>
@@ -79,11 +80,17 @@ internal static class LayoutUtilities
     /// the left edge, which does not move with the scale. At noteValue 4 and scale 1.0 this is
     /// <see cref="EngravingDefaults.StemUpAttachX"/> exactly.
     /// </param>
-    public static double StemAttachX(bool up, int noteValue, double headScale = 1.0) =>
-        up
-            ? GlyphMetrics.GetNoteheadStemAttachment(noteValue).X * headScale
-              - EngravingDefaults.StemThickness / 2
-            : EngravingDefaults.StemDownAttachX;
+    public static double StemAttachX(bool up, int noteValue, NoteheadStyle style,
+        double headScale = 1.0) =>
+        // Both directions are the font's own attachment coordinate for THIS head's
+        // glyph, pulled back half a stem thickness toward the head so the stem's EDGE
+        // meets the point.
+        // LILYPOND-REF: lily/stem.cc:1071-1086 internal_calc_stem_offset_from_head — r += -d * rule_thick * 0.5
+        // For a DEFAULT head the down X is 0.000000 in every design, which is what
+        // EngravingDefaults.StemDownAttachX pinned while only default heads had stems;
+        // a styled shape (s2triangle: 0.2186) attaches its down stem where its ink is.
+        GlyphMetrics.GetNoteheadStemAttachment(style, up, noteValue).X * headScale
+        + (up ? -1 : 1) * EngravingDefaults.StemThickness / 2;
 
     /// <summary>
     /// The same offset for a head read from ANOTHER FONT — a grace's, whose head comes out of
@@ -95,24 +102,34 @@ internal static class LayoutUtilities
     /// MEASURED (ledger grace.stem.thickness against grace.stem.thickness.full-size-control)
     /// LilyPond draws both at 0.13.
     /// </remarks>
-    public static double StemAttachX(bool up, int noteValue, GlyphMetrics.DesignMetrics? font) =>
-        up
-            ? (font is { } f
-                   ? GlyphMetrics.GetNoteheadStemAttachment(f, noteValue).X
-                   : GlyphMetrics.GetNoteheadStemAttachment(noteValue).X)
-              - EngravingDefaults.StemThickness / 2
-            : EngravingDefaults.StemDownAttachX;
+    public static double StemAttachX(bool up, int noteValue, NoteheadStyle style,
+        GlyphMetrics.DesignMetrics? font) =>
+        GlyphMetrics.GetNoteheadStemAttachment(
+            font ?? GlyphMetrics.Design20, style, up, noteValue).X
+        + (up ? -1 : 1) * EngravingDefaults.StemThickness / 2;
+
+    /// <summary>The head STYLE of the item a stem attaches to — Default for anything
+    /// that has no styled head (a rest, a spacer, null). The style picks which glyph's
+    /// attachment point <see cref="StemAttachX(bool, int, NoteheadStyle, double)"/>
+    /// reads, exactly as the note value picks between the half and black heads.</summary>
+    public static NoteheadStyle NoteheadStyleOf(MusicItem? item) => item switch
+    {
+        NoteItem n => n.Notehead,
+        ChordItem c => c.Notehead,
+        _ => NoteheadStyle.Default,
+    };
 
     /// <summary>The x a stem stands at, given its note column's x.</summary>
-    /// <remarks>See <see cref="StemAttachX(bool, int, double)"/>.</remarks>
-    public static double StemX(double columnX, bool up, int noteValue, double headScale = 1.0) =>
-        columnX + StemAttachX(up, noteValue, headScale);
+    /// <remarks>See <see cref="StemAttachX(bool, int, NoteheadStyle, double)"/>.</remarks>
+    public static double StemX(double columnX, bool up, int noteValue, NoteheadStyle style,
+        double headScale = 1.0) =>
+        columnX + StemAttachX(up, noteValue, style, headScale);
 
     /// <summary>The x a stem stands at, for a head read from <paramref name="font"/>.</summary>
-    /// <remarks>See <see cref="StemAttachX(bool, int, GlyphMetrics.DesignMetrics)"/>.</remarks>
-    public static double StemX(double columnX, bool up, int noteValue,
+    /// <remarks>See <see cref="StemAttachX(bool, int, NoteheadStyle, GlyphMetrics.DesignMetrics)"/>.</remarks>
+    public static double StemX(double columnX, bool up, int noteValue, NoteheadStyle style,
         GlyphMetrics.DesignMetrics? font) =>
-        columnX + StemAttachX(up, noteValue, font);
+        columnX + StemAttachX(up, noteValue, style, font);
 
     /// <summary>
     /// The x an INVISIBLE stem stands at: the centre of its head's ink. A whole-note

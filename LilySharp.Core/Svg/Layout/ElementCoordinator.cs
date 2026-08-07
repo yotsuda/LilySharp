@@ -667,7 +667,8 @@ internal sealed class ElementCoordinator
 
         double chordStartY = chordStartPosition * 0.5;
         collisions.Add(new BeamCollision(
-            LayoutUtilities.StemX(itemX, up, noteValue) - beamOriginX,
+            LayoutUtilities.StemX(itemX, up, noteValue,
+                LayoutUtilities.NoteheadStyleOf(item)) - beamOriginX,
             up ? chordStartY : double.NegativeInfinity,
             up ? double.PositiveInfinity : chordStartY,
             beamed ? stemCollisionFactor : 1.0));
@@ -735,7 +736,8 @@ internal sealed class ElementCoordinator
         // Per MEMBER head shape, not per beam: a two-note tremolo pair beams HALF notes
         // (BeamDetector.IsBeamable), whose stem stands 0.073200 further right.
         return LayoutUtilities.StemX(columnX, up,
-            GlyphMetrics.NoteValueOf(group.Members[memberIndex].Item));
+            GlyphMetrics.NoteValueOf(group.Members[memberIndex].Item),
+            LayoutUtilities.NoteheadStyleOf(group.Members[memberIndex].Item));
     }
 
     /// <summary>Single-ape / chord accidental placement — the SAME instance path the
@@ -1380,7 +1382,8 @@ internal sealed class ElementCoordinator
         var stemInfo = SpacingRules.StemSpacingInfo(item);
         var stem = new TieOutlineStem(
             IsNormal: stemInfo is not null,
-            CentreX: LayoutUtilities.StemX(supportLeft, stemUp, noteValue),
+            CentreX: LayoutUtilities.StemX(supportLeft, stemUp, noteValue,
+                LayoutUtilities.NoteheadStyleOf(item)),
             TipY: stemInfo is { } si ? (stemUp ? si.StemMax : si.StemMin) * 0.5 : 0,
             NearHeadPosition: supportPos,
             SupportHeadCentreX: supportLeft + (headLeftInk + headRightInk) / 2.0);
@@ -1416,7 +1419,8 @@ internal sealed class ElementCoordinator
             if (flagBBox != default)
             {
                 double tipY = (stemUp ? stemInfo.Value.StemMax : stemInfo.Value.StemMin) * 0.5;
-                double flagX = LayoutUtilities.StemX(supportLeft, stemUp, noteValue);
+                double flagX = LayoutUtilities.StemX(supportLeft, stemUp, noteValue,
+                    LayoutUtilities.NoteheadStyleOf(item));
                 flag.Add(new TieOutlineBox(
                     tipY + flagBBox.Bottom, tipY + flagBBox.Top, flagX, flagX + flagBBox.Width));
             }

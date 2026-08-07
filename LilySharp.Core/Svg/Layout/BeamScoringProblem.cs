@@ -271,7 +271,8 @@ internal sealed class BeamScoringProblem
                 ? LayoutUtilities.InvisibleStemX(itemXPositions[m.ItemIndex],
                     GlyphMetrics.NoteValueOf(m.Item))
                 : LayoutUtilities.StemX(itemXPositions[m.ItemIndex], m.MemberStemUp,
-                    GlyphMetrics.NoteValueOf(m.Item), headFont);
+                    GlyphMetrics.NoteValueOf(m.Item),
+                    LayoutUtilities.NoteheadStyleOf(m.Item), headFont);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 

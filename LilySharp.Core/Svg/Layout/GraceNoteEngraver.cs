@@ -365,7 +365,8 @@ internal static class GraceNoteEngraver
                 var flag = GlyphMetrics.GetFlagBBox(font, d.Denominator, stemUp: true);
                 if (flag != default)
                     return LayoutUtilities.StemAttachX(
-                        up: true, GlyphMetrics.NoteValueOf(d), font) + flag.Width;
+                        up: true, GlyphMetrics.NoteValueOf(d),
+                        NoteheadStyle.Default, font) + flag.Width;
             }
         }
         return graceGroupWidth;

@@ -113,7 +113,6 @@ public sealed class LpReferenceCitationTests
         "get_encompass_infos|lily/slur-scoring.cc",
         "key_signature|lily/key-engraver.cc",
         "listen_glissando|scm/scheme-engravers.scm",
-        "stem_attachment|mf/feta-noteheads.mf",
         "calc_springs|lily/grace-spacing-engraver.cc",
         "footnote_height|lily/page-layout-problem.cc",
         "get_break_align_spacing|lily/break-alignment-interface.cc",

@@ -423,23 +423,32 @@ internal static partial class SharedRenderer
         }
     }
 
-    /// <summary>Stem start offset from the head CENTER for styled noteheads:
-    /// cross/slash ink only reaches the attach edge at its CORNERS, so the stem
-    /// joins the corner on the stem's side (±½ss); the do-triangle's corners
-    /// are both at the bottom. A FILLED round head starts the stem just INSIDE the
-    /// head (toward the stem's far end): the stem is painted over the head, and on a
-    /// slanted oval its straight edge would otherwise step past the head's tapering
-    /// corner at the exact centre — recessing the start hides that step where the
-    /// head is wider. An OPEN head (half / whole) must NOT recess: its centre is
-    /// hollow, so a recessed stem would show inside the void; it butts the centre.</summary>
-    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf stem_attachment per head style;
-    ///   the stem overlaps the head stencil rather than butting its centre.</remarks>
+    /// <summary>Stem start offset from the head CENTER, in the renderer's Y-up frame
+    /// (the drawn start is <c>noteY − offset</c>, so NEGATIVE is above the centre).
+    /// A styled head reads the font's own per-direction attachment point — the same
+    /// LILC entry the stem's X comes from — because an asymmetric shape attaches each
+    /// stem where its ink is: s2triangle starts an up stem 0.1262 ABOVE centre but a
+    /// down stem 0.6828 BELOW it, and neither is the mirror of the other.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:934-963 internal_calc_stem_begin_position — begin =
+    ///   head position + the font attachment Y (the normalisation round-trips, see
+    ///   GlyphMetrics.GetNoteheadStemAttachment).
+    /// LILYPOND-REF: lily/open-type-font.cc:334-369 attachment_point — DOWN is the
+    ///   font's attachment-down entry, not a reflection.
+    /// <para>
+    /// ⚠️ The DEFAULT head keeps the older hand rule (filled heads recess the start
+    /// ±<see cref="StemHeadInset"/> toward the stem's far end; open heads butt the
+    /// centre) instead of the font's ±0.186200 (s2) / ±0.259000 (s1) — switching it
+    /// moves every stem rect in every snapshot by 0.036 (black) / 0.259 (half) and
+    /// wants its own point (ticketed 2026-08-07, session 108: default-head
+    /// stem-begin regime).
+    /// </para>
+    /// </remarks>
     private static double StemAttachYOffset(NoteheadStyle style, bool stemUp, int noteValue) => style switch
     {
-        NoteheadStyle.Cross or NoteheadStyle.Slash => stemUp ? -0.5 : 0.5,
-        NoteheadStyle.Triangle => 0.5,
-        _ when noteValue >= 4 => stemUp ? -StemHeadInset : StemHeadInset,
-        _ => 0,
+        NoteheadStyle.Default when noteValue >= 4 => stemUp ? -StemHeadInset : StemHeadInset,
+        NoteheadStyle.Default => 0,
+        _ => -GlyphMetrics.GetNoteheadStemAttachment(style, stemUp, noteValue).Y,
     };
 
     /// <summary>How far a filled round head recesses the stem's start toward the far
@@ -550,7 +559,7 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head —
             // the offset comes from the (scaled) head extent.
             double headScale = note.IsCue ? EngravingDefaults.CueScale : 1.0;
-            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, headScale);
+            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, note.Notehead, headScale);
             // Duration-dependent length + unnatural-direction shortening + the
             // extend-to-center-line rule, faithfully following LilyPond's
             // Stem::internal_calc_stem_end_position (lily/stem.cc:481).
@@ -793,7 +802,7 @@ internal static partial class SharedRenderer
             //   replaces the stencil with an empty box of the same extent.
             bool stemTransparent = resolver.GetBool("Stem", "transparent") == true;
             // Up-stems attach at the (cue-scaled) head's right edge; see DrawNote.
-            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, headScale);
+            double stemX = x + LayoutUtilities.StemAttachX(stemUp, noteValue, chord.Notehead, headScale);
             // Stem attaches at the far notehead; its length is reckoned from the
             // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
             // following LilyPond's Stem::internal_calc_stem_end_position (stem.cc:481).

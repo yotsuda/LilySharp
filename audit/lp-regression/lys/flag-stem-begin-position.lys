@@ -1,0 +1,30 @@
+// lilypond-src/input/regression/flag-stem-begin-position.ly の Lily# 訳。
+// CLAIM: merge された符頭に符尾が正しい始点で届く (flag 付き 8 分・tremolo 付き
+// 4 分・8 分対の 3 モーメント、全部 2 声 unison merge)。
+// 枠: 原本の \aikenHeads (f=fa・e=mi) は Lily# に形が無い → 両側とも
+// triangle (noteheads.s2triangle = @notehead(triangle) と同一グリフ) に置換
+// (henze→short/long 両側置換と同型)。LP twin = scratch/lpreg/flagstem.ly。
+// 綴り: octave absolute (Lily# の f = LP の f')。原本の 3 つの << \\ >> は
+// 連続束 = 多声 1 スパン融合 + s spacer でタイミング保存。s8 で 4/4 完結。
+// 照合 (fixed 第29号): 符尾始点 down 2.1828/2.68・up 1.3738/1.87・
+// 符尾 X 対 1.0342 = 全部 LP 一致 (font LILC attachment/attachment-down)。
+// 観測者: StyledHeadStemAttachmentTests。
+// 主張外の残差: ⑴ flag 原点が LP は stem 端 −0.04 (半 blot)・Lily# は stem 端
+// ⑵ tremolo 側 stem が LP は +0.125 伸びる + 斜線間隔 0.81 vs 1.28
+//   (stem-tremolo regime・第100セッション起票済 LILYSHARP-OWN) ⑶ 列 spacing
+//   drift ≤0.08 + 最終小節線 −1.2 (note-spacing regime)。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    voice { f8@notehead(triangle) f4:32@notehead(triangle) e8@notehead(triangle) f8@notehead(triangle) s4 s8 }
+          { f8@notehead(triangle) f4@notehead(triangle) e8@notehead(triangle) f8@notehead(triangle) s4 s8 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }
