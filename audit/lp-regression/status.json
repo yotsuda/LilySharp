@@ -3246,7 +3246,9 @@
     },
     "glissando-cross-staff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "cross staff の glissando が(別譜の)端点に正しく届く",
+      "notes": "\\change Staff の描画表面がゼロ=主張の器材そのもの。@cross は文法・collector・CrossStaffEngraver.Calculate まで在るが CrossStaffLayouts の読者ゼロ(renderer 未配線=HANDOFF-ARCHIVE 2026-07-24 起票済の到達不能ギャップ・SkylineStaffSpacingTests:116-119 にも札)。twin scratch/lpreg/gliss-xstaff.{ly,lys} 実測: a,,(A1)@cross が bass 譜へ移らず treble 譜下に加線9本で描かれ、その結果 gliss 線は『自分が描いた頭』には正しく届く(treble 側端点は LP 桁一致: gliss1 始点 middle 相対 +4.51/+4.52・X 10.174/10.19→13.588/13.57・gliss2 終点 +3.016/+3.04)=乖離は全部『音符が移らない』に帰着し gliss 機構の欠陥ではない。器材が入ったら Y フレーム(GlissandoLayout は単一 StaffIndex 相対=両端別譜 frame 不可)が次の山。同族 broken 4冊は category=scheme でキュー外"
     },
     "glissando-dots.ly": {
       "category": "scheme",
@@ -3298,7 +3300,9 @@
     },
     "grace-direction-polyphony.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "\\voiceOne の設定が grace 群を抜けた後も保持される(C6 の符尾 3 本とも強制 up)",
+      "notes": "コード変更0。twin scratch/lpreg/grace-dirpoly.{ly,lys}(\\voiceOne=voice{}第1分岐+全spacer第2分岐・無引数\\relativeのc'''=C6)。全glyph X がLP桁一致(head1 8.585/8.59・grace head 10.987/10.99・head2 12.925/12.93・stem X 9.824/9.82・11.840/11.84・14.165/14.16・終止線 15.928/15.93)・head Y/ledger幅(1.956/1.96・grace 1.377/1.37)も一致。陽性対照 grace-dirpoly-ctrl.lys: voice{}無しなら本符2本ともdown=upはvoice{}の効果で主張は本物。grace stemはLily#無条件up=LP自身のscore-grace-settings((Voice Stem direction UP)=music-functions.scm:633-637・GraceNoteEngraver:272-274に引用済)と同型。残差(主張外・起票済regime): stem begin Y +4.15 vs LP +4.1862(default頭の手規則±0.15 vs font±0.1862=第109第1便起票⑴)・grace stem begin/top Δ0.11/0.07(同regimeのgrace縮尺+flag原点⑵)"
     },
     "grace-end-expression.ly": {
       "category": "scheme",
@@ -3342,11 +3346,15 @@
     },
     "grace-partial.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "\\partial (pickup) と \\grace が併用できる(1/4 pickup 小節の頭に grace・小節構造保持)",
+      "notes": "コード変更0。twin scratch/lpreg/grace-partial.{ly,lys}(partial 4 は section レベル宣言)。系内の相対距離は全て桁一致(grace頭→pickup小節線 5.0838/5.08・→終止線 13.7238/13.72・whole ledger幅 2.943/2.94・stem top=middle 一致)。乖離は time 以降の全要素が一定 −0.1955(LP grace ledger 左 7.3555 vs LS 7.16)のみで、対照 grace-partial-ctrl.{ly,lys}(partial 無しの行頭 grace)でも同値=**partial 由来の乖離ゼロ**。起票: 行頭(prefix 直後)grace の前間隔が LP より 0.1955 狭い regime(leading-grace prefix gap・partial と直交・grace-accidental-line-start 族の隣)。残差(既知): stem begin Y ±0.15 手規則"
     },
     "grace-slashed-no-slur.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\slashedGrace = slash 付き・slur 無しの grace(次音への tie と併用する用途)",
+      "notes": "slash+無slur の綴りが Lily# に無い=主張の器材そのもの。Lily# は grace(素)/acciaccatura(slash+自動slur)/appoggiatura(無slash+自動slur)の3綴りで、acciaccatura の slur は無条件(SharedRenderer.GraceNotes.cs:171-173)。綴り追加は要ユーザー判断。**副産物の起票: grace{}内の ~ は無警告 silent drop**(素の grace{c16~} c1 で曲線ゼロ=grace→本音 tie 未配線。probe scratch/lpreg/grace-tie-probe.lys・acciaccatura probe の曲線は自動 slur の方)。本の主張の後半(tie 併用)もこの穴に当たる"
     },
     "grace-staff-length.ly": {
       "category": "scheme",
@@ -3354,7 +3362,9 @@
     },
     "grace-start-context.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "grace 音楽 4 種(\\acciaccatura/\\appoggiatura/\\grace/\\slashedGrace)は文脈生成の仕方が同じ(各 \\context Score ブロックの grace が新しい Staff を暗黙生成する)",
+      "notes": "主張の器材 = LP の \\context 明示文脈+暗黙 Staff 生成の意味論そのもの。Lily# に \\context 構文も暗黙文脈生成も無い(staff は score ブロックの宣言でのみ生まれる設計)=context-*-def 族・context-nested-staffgroup と同じゲート。\\slashedGrace の綴り無し(grace-slashed-no-slur の同穴)も重なる"
     },
     "grace-start.ly": {
       "category": "scheme",
@@ -3378,7 +3388,9 @@
     },
     "grace-unfold-repeat.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "改行は grace の手前で起きる(行頭に来た grace は次行の頭に付き、前行末に残らない)",
+      "notes": "コード変更0。twin scratch/lpreg/grace-unfold.{ly,lys}(\\repeat unfold 10 は入力糖衣=10小節書き下しで写す。Lily# の repeat は volta 系のみで unfold 綴りは無いが本の主張には不要)。両側とも改行前の行末は c-d-e-f の4音で終わり grace の残留ゼロ・次行頭に grace ✓。乖離(主張外・既知regime): 小節配分 LS 5+5(全行justify・両行102.43) vs LP 6+4(ragged-right 92.20/62.38)=Lily# は ragged-right を持たず全行 justify する README 既知の枠+note-spacing 幅 regime の複合。行頭 grace の前間隔 −0.2 regime(grace-partial で起票)も同乗"
     },
     "grace-volta-repeat-merge-barline.ly": {
       "category": "scheme",
@@ -3398,7 +3410,9 @@
     },
     "gregorian-transcription-no-ligatures.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "GregorianTranscriptionStaff はリガチャ(\\[ \\])を印字しない",
+      "notes": "GregorianTranscriptionStaff も \\[ \\] リガチャ括弧も Lily# に対応物ゼロ=主張の器材そのもの。グレゴリオ聖歌転写系コンテキストの追加は要ユーザー判断"
     },
     "grid-lines.ly": {
       "category": "scheme",
@@ -3430,7 +3444,9 @@
     },
     "hairpin-clef.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "折返し後(行頭 treble clef の後)の broken hairpin がずれた高さに刷られない",
+      "notes": "コード変更0。twin scratch/lpreg/hairpin-clef.{ly,lys}。両側置換2件を開示: 終端 \\! → \\f/@f(綴り無し)・^\\< → 既定の下側 hairpin(Lily# の hairpin は常に下=意図した設計・.up は LYS0002 で拒否=dynamics-alignment 族ゲートと同根。下側でも機構=broken 左 bound X+support は同じ)。両セグメント桁一致: seg1 (8.585,15.6743)→102.43 開き0→0.4444 = LS (8.59,15.67)→102.43・seg2 (4.365,27.8667)→76.599 開き0.2222→0.6666 = LS (4.37,27.865)→76.60。行頭 clef 後の Y(=主張の核)も桁一致。明示 break 本=LP twin ragged-right 無し規約"
     },
     "hairpin-dashed.ly": {
       "category": "scheme",
@@ -3442,7 +3458,9 @@
     },
     "hairpin-key-signature.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "折返し後(行頭の調号の後)の broken hairpin がずれた高さに刷られない",
+      "notes": "コード変更0。twin scratch/lpreg/hairpin-keysig.{ly,lys}(置換は hairpin-clef と同じ2件)。両セグメント桁一致: seg1 (12.681,15.6743)→102.43 = LS (12.67,15.67)→102.43・seg2 (8.485,27.8672)→77.657 = LS (8.48,27.87)→77.65。調号(a major 3♯)ぶん右へ寄った行頭 bound X も桁一致"
     },
     "hairpin-neighboring-span-dynamics.ly": {
       "category": "scheme",
