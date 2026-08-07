@@ -124,11 +124,18 @@ internal static class TieVariantEngraver
             xr = -xGap;
         }
 
-        // Curve direction: forced by ^/_ on the event when given, else opposite
-        // to the stem, like a regular tie.
+        // Curve direction: forced by ^/_ on the event when given (that half is
+        // the letter).
         // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head —
-        //   the event's direction is copied onto the tie and outranks the automatic choice;
-        // LILYPOND-REF: lily/tie.cc calc_direction — direction defaults opposite to stem.
+        //   the event's direction is copied onto the tie and outranks the automatic choice.
+        // ⚠️ The UNFORCED fallback (opposite the stem) is LILYSHARP-OWN: LilyPond
+        //   routes it through the semi-tie column's scorer instead —
+        //   LILYPOND-REF: lily/semi-tie-column.cc:51-86 calc_positioning_done —
+        //   Tie_formatting_problem::generate_optimal_configuration assigns each
+        //   tie's direction (and quantized Y). Opposite-the-stem is that scorer's
+        //   single-tie outcome (verified on lvchords: LP prints DOWN there), but
+        //   several unforced ties in one chord would split directions the scorer's
+        //   way, which this cannot. Ticketed with the semi-tie scorer port.
         bool curveUp = forcedUp ?? !stemUp;
         double baseY = -staffPosition / 2.0 + (curveUp ? -NoteOffset : NoteOffset);
         double arc = Math.Min(BowHeightLimit, BowRatio * (xr - xl));

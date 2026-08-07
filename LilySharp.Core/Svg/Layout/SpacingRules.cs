@@ -4691,12 +4691,12 @@ internal static class SpacingRules
         // LILYPOND-REF: lily/separation-item.cc:163-164 Separation_item::boxes —
         //   every item's extent in the paper column's frame joins the spacing box.
         // LILYPOND-REF: lily/tie-formatting-problem.cc:436-441 from_semi_ties.
-        bool hasLv = item switch
-        {
-            NoteItem n => n.HasLaissezVibrer,
-            ChordItem c => c.Notes.Any(m => m.HasLaissezVibrer),
-            _ => false,
-        };
+        // Plain loop, not LINQ: this runs per column in the spacing rods, and
+        // an IEnumerable Any() boxes ImmutableArray's enumerator on every call.
+        bool hasLv = item is NoteItem { HasLaissezVibrer: true };
+        if (item is ChordItem lvChord)
+            foreach (var m in lvChord.Notes)
+                if (m.HasLaissezVibrer) { hasLv = true; break; }
         if (hasLv)
             extent = Math.Max(extent, GlyphMetrics.GetNoteheadBBox(noteValue).Right
                 + TieVariantEngraver.OpenReach - TieDetails.Default.XGap);

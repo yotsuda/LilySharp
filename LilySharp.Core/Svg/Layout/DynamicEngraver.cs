@@ -189,8 +189,9 @@ internal static class DynamicEngraver
             //   lily/self-alignment-interface.cc:159-175 (non-number aligns add 0).
             double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
+            string labelText = dynamic.Text ?? string.Empty;
             double x = xColumn + (dynamic.IsExpressiveText
-                ? LabelHalfWidth(dynamic.Text ?? string.Empty, expressive: true)
+                ? LabelHalfWidth(labelText, expressive: true)
                 : AnchorCentreOffset(
                     AnchorItem(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex)));
 
@@ -225,7 +226,7 @@ internal static class DynamicEngraver
                 dynamic.ItemIndex,
                 x,
                 yUp,
-                dynamic.Text,
+                labelText,
                 dynamic.SourcePosition,
                 di,
                 dynamic.IsAbove,

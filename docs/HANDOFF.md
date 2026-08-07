@@ -63,8 +63,45 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第3便 **key-signature-space.ly = open**・`2014c9d8`・第4便 skip 2 + fixed **第34/35号 =
 laissez-vibrer 族**・`4eb24f51`・第5便 skip 5 + exact 1 + fixed **第36号 =
 lyric-extender-completion.ly**・`61180c6f`・第6便 fixed **第37号 =
-lyric-extender-right-margin.ly**・`201951cd`・第7便 **lyric-hyphen-grace.ly 下見のみ**
-（state=pending のまま・この handoff と同 commit）。
+lyric-extender-right-margin.ly**・`201951cd`・第7便 **lyric-hyphen-grace.ly 下見のみ**・
+`695fd85d`・第8便 自己監査＝**挙動変更 0・開示 2 札 + Core 警告 1 件修正**・`852a47f4`・
+第9便 perf A/B round 8＝**drift 内・hash 一致**（+alloc 2 件を先に loop 化）・
+この handoff と同 commit）。
+
+★★ **第9便 perf A/B round 8（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
+- **先に常時コスト 2 件を潰した**（挙動不変）: ⑴ CalculateNoteheadRightExtent の
+  `Notes.Any(...)`（rod 経路で ImmutableArray の enumerator を毎回 box）→ 素の loop
+  ⑵ ItemFactory の per-member lv 検出 LINQ（採集 walk＝プレビュー増分再コンパイルでも
+  毎和音走る）→ 素の loop。
+- **機材**: scratch\lpreg\perf-ab8.ps1・base=965f4b39 worktree（撤去済）・Release・
+  交互×両順・中央値 of 5・999 小節 2 冊（chordsec1k=吊り2度和音×4/小節＝lv 検出・
+  AddSemiTies・main-extent の既定コスト側・**hash 必須**／lyrhyph1k=hyphen 歌詞＝歌詞
+  centring+hyphen 経路・第37号で跨ぎ Y が設計変更なので hash 無し）。
+- **結果**: chordsec1k −9.4%/+5.3%・lyrhyph1k −16.4%/+1.3%＝**両冊とも順序で符号反転＝
+  純 drift**（同一バイナリのバッチ振れ 4.6〜12.1s）。**chordsec1k の SVG hash は
+  base/curr 完全一致**（仕事同一の計測）。
+- **呼び出し構造**: pass/walk 数不変・O(n²) 無し・新規追加は per-item の bool フィールド
+  検査と tie 持ち item のみの箱 1 個（alloc 0）。プレビュー増分経路（IncrementalCompiler）
+  は今セッション非接触＝増分再コンパイルは同じ walk/pass を dirty 領域にだけ回す。
+
+★★ **第8便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
+挙動変更 0・開示 2 札 + 警告 1 件**:
+- **①% の dot X 式が字面のように読めた**→札（DrawPercentRepeats）。実は LILYSHARP-OWN 近似:
+  LP は :79-80 add_at_edge(−0.75·ss) で **平行四辺形の ink エッジ**（中心から 1.34·ss）に
+  dots.dot グリフ（w≈0.45）を重ね、実測で LP の dot 中心は slash 中心から 0.81(ss=1)／
+  1.11(ss=1.5)——Lily# の 0.5／0.625 との差 0.19〜0.3 は stroked line が持たない
+  平行四辺形の半厚。slash 形の乖離と同札で起票済み。
+- **②l.v. の無強制向き「符尾の逆」の引用が過剰に単純だった**→札（SemiTieGeometry）。
+  LP は semi-tie-column.cc:51-86 calc_positioning_done → **scorer が向きを割り当てる**
+  （「符尾の逆」は単独 tie の結果に過ぎない。lvchords で LP=DOWN を実測確認）。同一和音に
+  無強制 lv 複数の場合は scorer の割り方になる＝semi-tie scorer 起票と同じ棚。
+- **③監査ビルドが Core 警告 1 件を発見・修正**: 便2 の `dynamic.Text ?? string.Empty` が
+  null フロー解析を教育し、既存の後続使用（DynamicLayout ctor）が CS8604 化していた
+  （§0 の 0-warning チェックを便2 以降走らせていなかった＝**便ごとに Debug ビルドも
+  回すこと**）。labelText に一本化して 0 warning 復帰。
+- REF ラチェット・逆方向 assert（引用シンボル実在）は全スイート内で通過＝引用は検証済み。
+  新規チューニング定数はセッション全体でゼロ（宣言値 ×ss・font 箱・0.2/1.5 の宣言+導出のみ。
+  既存近似定数は再調整せず札のみ）。
 
 ★★★ **第7便 = lyric-hyphen-grace.ly 下見（修理は次セッションの本命・LyricHyphen print
 regime 丸ごと）**: twin レンダ済（scratch\lpreg\lyhygrace.{ly,lys}・LP svg も残置）。

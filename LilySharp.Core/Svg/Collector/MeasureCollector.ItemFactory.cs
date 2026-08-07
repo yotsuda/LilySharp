@@ -331,9 +331,16 @@ public sealed partial class MeasureCollector
             // Member-level @laissezVibrer (<d@laissezVibrer g> = LP <d-\laissezVibrer g>):
             // this head only; the chord-level event covers every head and wins
             // (the engraver reads the heard event before the articulation).
-            var memberLv = pitch.Articulations.OfType<ArticulationSyntax>().FirstOrDefault(
-                a => a.Type == ArticulationType.None
-                    && a.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase));
+            // Plain loop, not LINQ: this runs per member of every chord on every
+            // collect walk (the preview's incremental recompiles included).
+            ArticulationSyntax? memberLv = null;
+            foreach (var a in pitch.Articulations)
+                if (a is ArticulationSyntax { Type: ArticulationType.None } la
+                    && la.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                {
+                    memberLv = la;
+                    break;
+                }
 
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental, needsLedger,

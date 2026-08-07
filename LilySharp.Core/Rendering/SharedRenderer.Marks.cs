@@ -179,10 +179,17 @@ internal static partial class SharedRenderer
             double slashWidth = 2.0 / slope * ss;
             double slashHeight = slashWidth * slope;
             double thick = thickness * ss;
-            // Each dot: ±0.5·ss vertically; horizontally just off the slash's
-            // left/right edge — slash half-width 1.0·ss minus the 0.75·ss
-            // dot-negative-kern, plus the dot's own (unscaled) radius. The upper
-            // dot sits upper-LEFT, the lower dot lower-RIGHT — the "%" glyph.
+            // Each dot: ±0.5·ss vertically (that half is the letter, :76-77).
+            // ⚠️ The HORIZONTAL term is LILYSHARP-OWN, an approximation of
+            // :79-80 add_at_edge(-0.75·ss): there the dot's edge overlaps the
+            // slash's INK edge — a parallelogram reaching (wid + thick·√2)/2 =
+            // 1.34·ss from centre — and the dot is the font's dots.dot glyph
+            // (w ≈ 0.45), not this r=0.25 circle. Measured against 2.26 SVG
+            // (harakiri-percent twin): LP's dot centres sit 0.81·(ss=1) /
+            // 1.11·(ss=1.5) off the slash centre vs this 0.5 / 0.625 — the
+            // 0.19–0.3 gap is the parallelogram half-thickness this stroked
+            // line does not have. Ticketed with the slash-form deviation.
+            // The upper dot sits upper-LEFT, the lower lower-RIGHT — the "%".
             double dotDx = (1.0 - 0.75) * ss + dotRadius;
             double dotDy = 0.5 * ss;
             double cx = pr.X;
