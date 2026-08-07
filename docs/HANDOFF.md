@@ -58,10 +58,64 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第105セッション第1便（＝dots.ly **fixed 第24号**・`1a985363`+`3c989549`＝
-2 修理。frontier の pending 先頭は **dynamics-alignment-autobreak.ly**——族 5 冊が
-まとまって DynamicLineSpanner 自動分割 regime。第104 の下見どおり**族として評価してから
-1 冊ずつ**。Lily# hairpin は `\!` の綴りが無い既知の文法宿題+向き .up/.down はある）。
+最終更新 第105セッション第6便（＝第1便 dots.ly **fixed 第24号**・`1a985363`+`3c989549`・
+第2便 dynamics-alignment 族 5 冊+cross-staff-stem=**skip 6 冊**・
+第3〜4便 dynamics-broken-hairpin.ly=**fixed 第25号**＝hairpin bound X 法則の port・
+`2ac0352d`・第5便=自己監査（未開示 2 件をコメント化+case3 同フレーム照合・`1fc64078`）・
+第6便=perf A/B（hairpin×dynamics 走査 +17%→辞書 index で drift 内・`e096c95f`・
+③の perf 欄参照）。frontier の pending 先頭は **dynamics-line.ly**（次いで
+dynamics-rest-positioning.ly——rest 上の dynamic は第104⑤の rest regime と交差するかも。
+開いてから信じること）。
+
+★★★ **③（第3〜4便）fixed 第25号 = hairpin の bound X 法則（dynamics-broken-hairpin.ly）**:
+- **主張の核（折れ開口）は最初から一致**: h=0.6666・cresc 先頭片 0→2h/3・続き片 h/3→h・
+  decresc は鏡像——既存 port どおり。spanner Y も sys1/2 一致（sys3 のみ Δ0.073＝
+  \p が同じ DynamicLineSpanner に乗る項・起票のまま）。
+- **乖離だった bound X を 4 法則で移植**（hairpin.cc:184-290・LP 実測 3 冊で裏取り）:
+  ⑴ 素の音の左 bound＝**符頭列左端 pad 無し**（旧法則=割当幅右端+pad/2 は justify で
+  伸びた 1 音小節の wedge を行末に張り付け MinimumLength 2.0 に潰していた＝この本の欠陥）
+  ⑵ **DynamicText 同座の bound＝文字 ink±bound-padding 1.0**（hairpin.cc:214-218
+  Text_interface 枝。実測 start=p右+1.0=8.186・end=f左−1.0=9.132。dynamicLayouts を
+  HairpinEngraver.Calculate へ渡して ConcurrentDynamic で判定）⑶ **小節頭終端＝
+  to-barline**（Hairpin 既定 #t・bar-engraver.cc:548-558 set_bound RIGHT）＝前小節線
+  右端−1.0（実測 3 箇所）。**終端小節が行頭なら bound は前行末 bar＝片リストを
+  1 小節手前で止める**——止めないと行頭に MinimumLength stub が湧き次の hairpin と
+  stack して台帳 hairpin.page.quiet が Height+outside-staff-padding=1.1266 動く
+  （**台帳が欠陥を釘付けた**。導入時に一度踏んで bisect で特定）⑷ 破断左＝
+  折れ列右端+1.0（実測 4.365。ReattachSpanX は共有なので hairpin 側で加算）。
+- **照合**: 本の 8 片全部+陽性対照 3 ケース（scratch\lpreg\probe-hairpin-bounds 対）が
+  LP X と 2 桁一致。観測者: HairpinTests 再ピン+TextBounds_PadOffTheDynamicInk 新設・
+  台帳 hairpin.page.quiet（bisect の要）。**snapshot 6 枚＝hairpin 線のみの動きで承認**
+  （01-expressions は頁 1.5ss 短縮＝stub 解消の改善向き・03-piano の初回不一致行も
+  hairpin 線で確認）。台帳 481 点不変。
+- **枠の学び**: ⑴ 明示 break の本は **Lily# が全行 justify**——LP twin は ragged-right を
+  **書かずに**揃える（README の ragged-right 規約はこの形の本には逆）⑵ 多ページ SVG は
+  ページ座標が重なる——**scratch の野良 repro で Y を読まない**（bisect を 2 度誤誘導した。
+  台帳/harness をオラクルにする）。抽出器: scratch\lpreg\extract-hairpin-{lp,ls}.ps1。
+- ⚠️ 起票（残・別 regime）: ⑴ sys3 の spanner Y Δ0.073（hairpin と終端 \p を同一
+  DynamicLineSpanner に乗せる項）⑵ 隣接 hairpin 同座（back-to-back）の
+  e.center∓pad/3（hairpin.cc:258-259・踏む対なし）。
+- **perf（第5〜6便・ユーザー問で A/B 実測・`e096c95f`）**: text-bound lookup の
+  hairpin×dynamics 線形走査が 1000 小節 hairpin+dynamic 頁で **+17%**（Release CLI・
+  交互 min-of-5・3821→4472ms）——**辞書 index 1 回構築で +1.9%＝機械 drift 内に収束**。
+  多声 dotted 2000 moment は両ラウンド劣化なし（−4〜−8%＝ノイズ。dot pass は多声
+  column 限定×2 pass・単声 staff は Voices.Length<2 で素通り）。手順: perf worktree
+  （965cd92f・Release・Test-Path 確認）→ 100 小節では起動ノイズに沈む→**1000 小節で
+  描画支配にして交互実行 min 比較**（scratch\lpreg\perf-ab2.ps1）。worktree は撤去済。
+  自己監査（同ユーザー問・`1fc64078`）: 未開示 2 件をコメントへ（dot 縦行の per-item
+  据置 vs LP 単一 Dot_configuration・hairpin 左 bound の flip 頭 extent）+case3 の
+  同フレーム照合を実測で closure（終端−符頭 = LP −0.944 / LS −0.94）。
+
+★★ **②（第2便）dynamics-alignment 族の評価 = 全 5 冊 skip（族ゲート）**:
+- 族の主張は DynamicLineSpanner の分割（autobreak=向き衝突で自動・breaker 4 冊=
+  `\breakDynamicSpan` で手動）。**器材が主張そのもので両側落とし不可**。
+- ゲート: ⑴ `^\<`/`_\>`（hairpin の per-dynamic 向き——Lily# は**意図したエラー**・
+  SYNTAX_REFERENCE 260-262）⑵ `\!` 終端の綴り無し（既知）⑶ `\breakDynamicSpan` の
+  対応物なし。**文法追加は要ユーザー判断**（§2D と同じ棚）。
+- 機構の家は在る: DynamicEngraver に DynamicLineSpanner の padding/staff-padding/
+  minimum-space が port 済（EngravingDefaults 977-989）——文法が入れば族は再開できる。
+- dynamics-avoid-cross-staff-stem も skip（`\change Staff`＝§2B ゲート+主張は LP 内部の
+  循環依存回帰）。dynamics-alignment-no-line 2 冊は scheme＝対象外。
 
 ★★★ **① fixed 第24号 = 付点法則の統合本（dots.ly）・修理 2 件**:
 - **修理⑴ voice 既定 vs per-note @stemDown/@stemUp＝書き手勝ち**（`1a985363`）。
@@ -101,14 +155,14 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 - perf: 追加は**多声 dotted moment の列ごと O(頭数)**（collect/layout の既存呼び出し
   回数不変・per-system 再実行経路への追加ゼロ）＝§7.9 の構造で言える側。
 
-plain 322 / 処理済 **95**（fixed **24**・exact **17**・skip **46**・open **8**・
-pending 227。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **102**（fixed **25**・exact **17**・skip **52**・open **8**・
+pending 220。数えたら state 別内訳も一緒に書くこと）。
 
-未 push **19**（第104 までの 16+第105 の 2+この handoff。数え直すこと。
+未 push **26**（第104 までの 16+第105 の 10＝自己監査+perf 込み。数え直すこと。
 **⚠️ push しない**）・
-テスト **4173 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
+テスト **4174 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning・snapshot 動き 0 枚**・
+**Core 0 warning・snapshot は第25号で 6 枚＝hairpin 線のみ（証明は commit message）**・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第104セッション第1〜7便の経緯

@@ -168,12 +168,41 @@ public class HairpinTests
         Assert.Equal(HairpinDirection.Crescendo, h.Direction);
         Assert.Equal(0, h.StartMeasureIndex);
         Assert.Equal(42, h.SourcePosition);
-        // StartX: measure[0].X + item[0].X + item[0].Width + BoundPadding*0.5
-        // = 0 + 1.0 + 2.0 + 0.5 = 3.5
-        Assert.Equal(3.5, h.StartX, 2);
-        // EndX: measure[2].X + item[0].X - BoundPadding*0.5
-        // = 40 + 1.0 - 0.5 = 40.5
-        Assert.Equal(40.5, h.EndX, 2);
+        // StartX: the note column's LEFT edge, unpadded — measure[0].X + item[0].X
+        // = 0 + 1.0 = 1.0 (LILYPOND-REF: lily/hairpin.cc:184-290 — x_points = e[LEFT]).
+        Assert.Equal(1.0, h.StartX, 2);
+        // EndX: the terminator sits on measure 2's START, so to-barline binds the
+        // hairpin to the bar line before it — whose right edge is the measure's X —
+        // minus the full bound-padding: 40 − 1.0 = 39.0.
+        // LILYPOND-REF: lily/bar-engraver.cc:548-558 — set_bound (RIGHT, bar_)
+        Assert.Equal(39.0, h.EndX, 2);
+    }
+
+    [Fact]
+    public void Calculate_TextBounds_PadOffTheDynamicInk()
+    {
+        var measures = CreateMeasureLayouts(4);
+        var systems = CreateSingleSystem(4);
+        // A cresc whose start note carries a "p" and whose MID-MEASURE terminator
+        // carries an "f": both bounds are the TEXT, padded by the full bound-padding
+        // off its ink — not the note column.
+        // LILYPOND-REF: lily/hairpin.cc:214-218 — Text_interface bound,
+        //   x_points[d] = e[-d] − d·padding. Measured: probe-hairpin-bounds line 2
+        //   (start = p-right + 1.0) and line 3 (end = f-left − 1.0).
+        var hairpins = ImmutableArray.Create(new HairpinItem(
+            HairpinDirection.Crescendo, 0, 0, 2, 1, 0));
+        var dynamics = ImmutableArray.Create(
+            new DynamicLayout(0, 0, 2.0, 0, "p", 0),
+            new DynamicLayout(2, 1, 45.0, 0, "f", 0));
+
+        var result = HairpinEngraver.Calculate(hairpins, systems, measures,
+            dynamicLayouts: dynamics);
+
+        var h = Assert.Single(result);
+        double pw = DynamicOutline.AdvanceWidth("p")!.Value;
+        double fw = DynamicOutline.AdvanceWidth("f")!.Value;
+        Assert.Equal(2.0 + pw / 2.0 + 1.0, h.StartX, 6);
+        Assert.Equal(45.0 - fw / 2.0 - 1.0, h.EndX, 6);
     }
 
     [Fact]

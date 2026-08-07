@@ -2610,23 +2610,33 @@
     },
     "dynamics-alignment-autobreak.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "明示方向が spanner の向きと違う dynamic は DynamicLineSpanner を自動分割する",
+      "notes": "文法ギャップ=族ゲート: ^\\<//_\\>(hairpinのper-dynamic向き=Lily#では意図したエラー)+\\!終端の綴り無し。器材が主張そのもので両側落とし不可。機構の家=DynamicEngraver(DynamicLineSpanner padding/staff-padding/minimum-space はport済)。文法追加(\\!・hairpin向き)は要ユーザー判断"
     },
     "dynamics-alignment-breaker-linebreak.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\breakDynamicSpan が改行を跨ぐ spanner でも効く",
+      "notes": "文法ギャップ=族ゲート: \\breakDynamicSpan の対応物なし(autobreak の notes 参照)"
     },
     "dynamics-alignment-breaker-order.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\breakDynamicSpan は spanner の開始側/終了側どちらに置いても同じ",
+      "notes": "文法ギャップ=族ゲート: \\breakDynamicSpan の対応物なし(autobreak の notes 参照)"
     },
     "dynamics-alignment-breaker-subsequent-spanner.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\breakDynamicSpan の効果は現在の spanner だけで後続に及ばない",
+      "notes": "文法ギャップ=族ゲート: \\breakDynamicSpan の対応物なし(autobreak の notes 参照)"
     },
     "dynamics-alignment-breaker.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\breakDynamicSpan で hairpin/DynamicTextSpanner/dynamic の整列を手動分割",
+      "notes": "文法ギャップ=族ゲート: \\breakDynamicSpan の対応物なし+\\dimTextDim も無し。要ユーザー判断(autobreak の notes 参照)"
     },
     "dynamics-alignment-no-line-linebreak.ly": {
       "category": "scheme",
@@ -2638,11 +2648,15 @@
     },
     "dynamics-avoid-cross-staff-stem.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "cross-staff の Dynamic が direction 解決で循環依存を起こさない",
+      "notes": "文法ギャップ: \\change Staff の表面なし(cross-staff-beams と同じ§2Bゲート)。主張自体もLP内部の循環依存回帰=対応装置なし"
     },
     "dynamics-broken-hairpin.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "hairpinが改行で折れたら破断点側の端は開く(cresc: 0→2h/3 / h/3→h・decrescは鏡像)",
+      "notes": "fixed25=bound X法則のport(hairpin.cc:184-290)。折れ開口(2h/3・h/3)とY levelは既port分で最初から一致。乖離だった bound X を4法則で移植: (1)素の音の左bound=符頭列左端pad無し(旧法則=割当幅右端+pad/2はjustifyされた1音小節で行末に張り付きMinimumLength 2.0に潰れていた) (2)DynamicText同座のboundは文字ink±bound-padding 1.0(hairpin.cc:214-218。実測 start=p右+1.0=8.186・end=f左-1.0=9.132) (3)小節頭終端=to-barline(bar-engraver.cc set_bound RIGHT)で前小節線右端-1.0(実測51.025-1.0/50.598-1.0/21.021-1.0)。終端小節が行頭ならbound=前行末barで片リストを1小節手前で止める(止めないと行頭にMinimumLength stubが湧き次のhairpinとstackしてhairpin.page.quiet台帳点がHeight+outside-staff-padding=1.1266動く=台帳が欠陥を釘付けた) (4)破断左=折れ列右端+1.0(実測4.365)。照合: 本の8片全部+陽性対照3ケース(scratch/lpreg/probe-hairpin-bounds対)がLP Xと2桁一致。残差=sys3のspanner Y Δ0.073(\\pが同一DynamicLineSpannerに乗る項・起票)。観測者: HairpinTests 2本+台帳hairpin.page.quiet(不変で通過)。snapshot 6枚=hairpin線のみ動き承認(01-expressionsは頁1.5ss短縮=stub解消)"
     },
     "dynamics-context-textspan.ly": {
       "category": "override",

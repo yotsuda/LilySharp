@@ -960,6 +960,11 @@ internal sealed class NoteCollision
         // LILYPOND-REF: lily/dot-configuration.cc:129-137 x_offset — a max of point samples
         // ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
         //   rests never reach this column (VoiceCollector keeps them off the timeline).
+        //   And the VERTICAL rows stay per-item: LilyPond runs ONE Dot_configuration
+        //   over the whole moment's dots (dot-column.cc:194-224 — insertion across
+        //   voices), so two voices whose dots land on the SAME rows would cascade
+        //   there and not here. No corpus book reaches it (dots.ly's voices are a
+        //   ninth apart); the X unification below is blind to it either way.
         if (column.Entries.Length > 1)
         {
             var dotted = column.Entries.Where(e => GetNoteInfo(e).dots > 0).ToList();

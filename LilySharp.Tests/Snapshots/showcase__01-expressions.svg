@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="375.8" viewBox="0 0 119.50 37.58" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="360.7" viewBox="0 0 119.50 36.07" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="37.58" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="36.07" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="98">Expressions &amp; Dynamics</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="132">Lily# Showcase</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -113,10 +113,10 @@
   <text class="music" x="40.93" y="25.93" font-size="4.00" data-pos="405"></text>
   <text class="music" x="43.64" y="26.43" font-size="4.00" data-pos="416"></text>
   <text class="music" x="99.48" y="18.90" font-size="4.00" data-pos="646"></text>
-  <line x1="26.40" y1="25.49" x2="30.82" y2="24.82" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
-  <line x1="26.40" y1="25.49" x2="30.82" y2="26.15" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
-  <line x1="50.07" y1="30.51" x2="54.50" y2="31.17" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
-  <line x1="50.07" y1="31.84" x2="54.50" y2="31.17" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
+  <line x1="23.17" y1="25.73" x2="30.34" y2="25.07" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="23.17" y1="25.73" x2="30.34" y2="26.40" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
+  <line x1="46.86" y1="27.66" x2="53.18" y2="28.32" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
+  <line x1="46.86" y1="28.99" x2="53.18" y2="28.32" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
   <text class="music" x="7.54" y="18.12" font-size="3.56" data-pos="0"></text>
   <line x1="8.64" y1="17.95" x2="8.64" y2="15.44" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="9.31" y="18.60" font-size="2.20" data-pos="0">= 120</text>

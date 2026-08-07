@@ -1,0 +1,15 @@
+// lilypond-src/input/regression/dynamics-broken-hairpin.ly の Lily# 訳。
+// CLAIM: hairpin が改行で折れたら、破断点側の端は「開いた」形になる
+// (cresc: 先頭片 0→2h/3・続き片 h/3→h。decresc は鏡像 = hairpin.cc:300-313)。
+// 枠合わせ: 原本の \! 終端は Lily# に綴りが無いので、両側とも \p 終端に置換
+// (終端の種類は主張に付随しない)。原本の \layout line-width 4cm は落とし、
+// 両者とも明示 break で折る (indent 0 + ragged-right は LP 側 paper に)。
+// 綴り: LP 無引数 \relative の c''=C5=Lily# c'。以降の bare c は同オクターブ。
+
+c'1 @cresc |
+break
+c1 |
+c1 @decresc |
+break
+c1 |
+c1@p |
