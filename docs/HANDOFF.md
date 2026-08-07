@@ -58,13 +58,72 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第107セッション第4便（＝第1便 fermata-dot-position.ly **block A 修理**
+`910300ee`・第2便 block B root 特定＝open・第3便 自己監査（dot 列=1 箱 `dd540614`）+
+perf A/B（drift 内・boost 罠発見）・第4便 **§2A に「skyline 参加者列挙の手動→録画層」を
+起票**＝ユーザー指示）。frontier は **fermata-dot-position.ly の継続（block B）**。
+
+★★★ **①（第1便）fermata-dot-position.ly = block A 修理・block B open**:
+- **主張**: fermata 族は dots・符頭・他 articulation から適切な距離を取る。
+- **修理（block A）= 描かれる dot を staff skyline seed へ**
+  （SkylineBuilder.AddMusicItemToSkylines+MergeDotRow・note/chord/rest 3 枝・
+  renderer と同じ座標式: 頭 ink 右+1 dot 幅・DotConfiguration の解決位置・rest は
+  +0.5 固定）。機構: **LP の Dots は vertical-skylines 無宣言→extent 箱**で
+  inside-staff skyline に参加（define-grobs.scm:1272-1288・grob.cc:81-85）し、
+  fermata 族（priority 75）の上側 pass が **dot 上端+0.46 を pointwise** にクリア。
+  pass（PlaceArticulations）は既在——**seed に dot が無かっただけ**。
+- **照合（twin 対・origin Y-up・同 glyph）**: LP fermata 4.2548／long 4.1828／
+  short 4.0028 vs 修理後 4.26／4.19／4.02（旧 4.08/4.02/4.02＝2 レベル）。数字の裏:
+  dot 箱上端 3.5+0.225、+0.46=**4.185=LP long ぴったり**・fermata は arch 底 −0.07 分上・
+  short（幅狭）は dot X に届かず不動＝**+0.017 残差は既存の engraver レベル（別 regime）**。
+- ⚠️ collision の DotAdjustment（ColumnMinX 押し出し・向き flip）は seed に配線せず＝
+  head seed が collision X を見ないのと同型の既存簡略（コメントに札）。
+- **観測者 +1**（SkylineStaffSpacingTests.InsideStaffSkyline_CarriesTheDrawnDot…＝
+  dotted/plain 摂動対+低音の down 側）。**snapshot 0 枚・台帳 481 点不変・全スイート緑**。
+- **perf（第3便・ユーザー問で A/B 実測）**: 重い側=dots-poly1k（多声 dotted 2000 moment・
+  Release・base a26b4670・scratch\lpreg\perf-ab4.ps1）。**中央値 Δ ＝ +0.6／+3.2／−0.9%
+  （3 round・両方向）・対照 hairpin1k（dotted 無し）が +3.8%**＝機械 drift の中。
+  **A/B の SVG は両 book とも hash 一致**（同じ仕事の計測・かつこの 2 頁では dot seed は
+  出力を 1 バイトも動かさない）。⚠️ この機械の新しい罠: **バッチ先頭の 1 走だけ
+  2.7〜2.9s に boost し以後 4.4〜5s に落ちる**——interleave で先に走る側が min 比較で
+  系統的に有利（順序を入れ替えて確認済）。min でなく**中央値と対照 book** で読むこと。
+  worktree は撤去済。追加仕事の桁: dotted item×seed 建て直し回数ぶんの
+  Resolve+箱 merge（batch 済）＝2000 dotted 和音の頁で数千個の小 alloc/layout。
+- ★★ **block B（accent 対）実測+root 特定済=open（修理は次便）**: twin
+  scratch\lpreg\fermata-dot-b.{ly,lys}（両側レンダ済）。accent 4.167/4.16 exact。
+  **accent 上の fermata 族が LS +0.16..0.18 高い**（LP fermata 4.9496／short 4.897／
+  long 4.877＝3 レベル vs LS 5.12／5.06／5.06）。
+  - **LP の束縛は tweak 摂動で証明済**（scratch\lpreg\fermata-dot-b-probe.ly）:
+    `outside-staff-padding #0`→4.8896（**−0.06=0.46−0.40 動く＝pass が束縛**）・
+    `padding #0`→不動・`outside-staff-priority ##f`→4.8896（=engraver 答）。
+    ⇒ LP 最終値=**accent 輪郭との pointwise 距離+0.46**（d_LP=0.325）。engraver 側は
+    script-column.cc:160-186 order_grobs——**priority 無しの前 script が次の script の
+    side-position support に入る**（:168-171・fermata 自身の 0.40）＝pass の 0.06 下で同型。
+  - **LS の root=ArticulationEngraver.Calculate の stackOffset（:581-589）**——
+    同一音・同側の 2 本目以降を「**前 script の箱高+ScriptStackPadding 0.2**」で
+    持ち上げる **LILYSHARP-OWN の箱 stack**（LP に対応物なし。算術検算:
+    fermata 自座 4.08+accent 箱 0.89+0.2≈5.17≒実測 5.12・short 4.02+1.09≈5.11≒5.06）。
+    pass は上へしか動かせないので箱 stack が床になり pointwise の答に届かない。
+  - **修理の形（次便）**: stackOffset の箱加算を撤去し、2 本目以降は
+    ⑴ 前 scripts の profile（ScriptSkylines・置いた Y）との pointwise 距離+自分の
+    VerticalPadding を own side-position yUp と max（=script-column の support 連鎖・
+    priority 無し同士の stack はこれが本体）⑵ fermata 族は既存 pass（0.46・accent は
+    seed に輪郭で既在）が仕上げ。⚠️ staccato+accent 等**多重 script の snapshot が
+    全部動く**——要素 census で承認。⚠️ :178-185 の「同 priority 連鎖は +0.1 bump」は
+    fermata 2 個持ち等の稀ケース＝踏む対が出たら。d の残差 0.325 が出ない場合だけ
+    profile の量子化を疑う（フィット禁止）。
+- 引用ラチェットの学び: **範囲だけ書いて同じ行にシンボル無しは +1 で落ちる**。
+  hyphen 語は 3 パーツ要る（vertical-skylines は 2 で不適格・Dots は単語）→
+  範囲に実在する dots::calc-dot-stencil で名指す。シンボルは**address と同じ行**。
+
+## 以下は第106セッション第1〜7便の経緯
+
 最終更新 第106セッション第4便（＝第1便 dynamics-line.ly **fixed 第26号**・`f7a993d0`・
 第2便 dynamics-rest-positioning.ly **fixed 第27号**・`7a2627b4`・
 第3便 dynamics-text 族 2 冊+easy-notation=**skip 3 冊**（`\crescTextCresc`/
 `\dimTextDim`＝text 式 cresc の綴りなし——**機構は在る**（TextSpannerItem の
 dashed+text）ので文法が入れば族再開可・`\easyHeadsOn` は対応物ゼロ）・
 第4便 empty-chord.ly=**open（核 exact・修理 3 件）**・`fee81717`）。
-frontier の pending 先頭は **fermata-dot-position.ly**。
 
 ★★★ **④（第4便）empty-chord.ly = open（核 exact）・修理 3 件**:
 - **主張**: `<>` は articulation を受け・時間を占めず・既定時価も変えない。
@@ -81,15 +140,27 @@ frontier の pending 先頭は **fermata-dot-position.ly**。
   Y 5.41=5.406。
 - **修理⑶ 最終音の先の end moment＝最終小節線**（to-barline）。旧: 範囲外 guard が
   span 丸ごと swallow。wedge2 50.50..57.35 中心 3.37 = LP 50.503..57.355/3.367。
-- ⚠️ 起票（残・open の理由）: ⑴ **末尾 `<>@pp` 自体が無印字**（anchor できる
-  staffless 最終列が無い——cue-clef R1 / staffless-command-column regime と同根。
-  LP は pp を 58.36 に印字）⑵ `<>` 上の slur close は LYS4010 で drop（LP は描く）
-  ⑶ @text の X は中央揃え vs LP TextScript は列に左揃え（sul D・ΔY 0.25 も）。
+- ⚠️ 起票（残・open の理由）: ⑴ `<>` 上の slur close は LYS4010 で drop（LP は描く）
+  ⑵ @text の X は中央揃え vs LP TextScript は列に左揃え（sul D・ΔY 0.25 も）。
+  **⚠️ 第6便の自己監査で撤回**: 「末尾 `<>@pp` の無印字が乖離・LP は pp を 58.36 に
+  印字」は**推論を実測と書いた嘘**だった——LP 出力を検証すると c1 以降は最終小節線
+  rect 2 本のみで **LP も pp を印字しない＝一致**。wedge2 の終端も pp text bound
+  でなく**最終 bar 右端 58.355−1.0**＝実装どおり（bar bound で正）。同便で
+  「同 moment text=左 bound」の引用先を dynamic-align-engraver から
+  **dynamic-engraver.cc:170-176**（set_bound LEFT/RIGHT to script_）へ訂正。
 - **twin 書法**: `\enddecr`→両側 `\pp` 置換・`\repeat unfold` は Lily# 側で手展開
   （`|` 明示のため。展開は枠に中立）。
 - **snapshot 2 枚**（test/dynamics・multi-line-spanners）＝全差分が「wedge 左端が
   mark の音列へ」「dynamics の線着座」のみ（git diff 要素 census で承認）。
   観測者 DynamicAlignTests +2。
+- **perf（第7便・ユーザー問で A/B 実測）**: 第106の変更で重くなる側は AlignLines の
+  ⑴ 群 support skyline の再構築（Calculate と二重）⑵ BuildLines の O(lines×dynamics)
+  走査。**最悪形＝hairpin1k（1000 小節・全 hairpin が群化）で base b6d6dfb4 比
+  −6.9%（4768→4439ms）・dots1k −0.9%＝両方 drift 内、劣化なし**（Release・
+  交互 min-of-5・scratch\lpreg\perf-ab3.ps1。分散大きめ 4.4〜5.4s——min 比較が頼り）。
+  群 pass が per-member Place を置き換えた分の相殺もある。二重 support は
+  「劣化が出たら (SourceIndex, system) キーの cache で消せる」形（未実施＝測って
+  ゼロだったので発明しない）。perf worktree は撤去済。
 
 ★★ **②（第2便）fixed 第27号 = rest 上の dynamic（dynamics-rest-positioning.ly）**:
 - **主張**: rest に付いた text dynamic は親（rest）の ink 中心に X 揃え。
@@ -146,13 +217,14 @@ frontier の pending 先頭は **fermata-dot-position.ly**。
   ⑷ `\breakDynamicSpan`（spanner-broken）は文法ごと無し（②の族ゲートのまま）。
 
 plain 322 / 処理済 **108**（fixed **27**・exact **17**・skip **55**・open **9**・
-pending 214。数えたら state 別内訳も一緒に書くこと）。
+pending 214。fermata-dot-position は block B が残るので **pending のまま**＝処理済に
+数えない。数えたら state 別内訳も一緒に書くこと）。
 
-未 push **31**（第105 までの 26+第106 の 5。数え直すこと。**⚠️ push しない**）・
-テスト **4180 passed / 0 failed / 4 skipped**（観測者 +6 込み・全スイート確認済）・
+未 push 多数（第106 末で 35+第107 の便数。**§0 のコマンドで開始時に数える**——固定数を
+ここに書くと便ごとに腐る。**⚠️ push しない**）・
+テスト **4181 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
 台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
-**Core 0 warning・snapshot は第26号 6 枚+第4便 2 枚＝dynamics/hairpin のみ（証明は
-commit message）・第27号は 0 枚**・base worktree = C:\MyProj\LilySharp-base
+**Core 0 warning・snapshot 第107 は 0 枚**・base worktree = C:\MyProj\LilySharp-base
 （cc19cccc・残置）。
 
 ## 以下は第105セッション第1〜6便の経緯
@@ -12015,6 +12087,37 @@ LP は当該 spec で stretchability を**明示宣言**している）。**コ�
 LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量を計算する場所が 2 つ以上ある**なら
 それが次の欠陥の住所（§5.2.1②）。現在わかっている残り:
 
+- ★★★ **この族の親玉: skyline の参加者列挙が手動**（2026-08-07・第107セッション・
+  ユーザー指示で起票・**未着手＝workstream**）。
+  - **現状**: `SkylineBuilder` は参加者を家族別に手列挙する（`Add*ToSkyline` 約 10 本＋
+    `SeedClef`/`SeedStaffSymbol`）。**「seed に居ない参加者」欠陥が測定されるたびに 1 本
+    生えた系譜**: accidental・rest（第93頃）・tie・slur・beam・script・**dots（第107・
+    `910300ee`）**。LP は grob が一様に `vertical-skylines` プロパティを持ち、
+    `skyline_spacing` はそれを列挙して merge するだけ（axis-group-interface.cc:914-935）
+    ——**汎用性は skyline 機構でなくプロパティシステムの副産物**。Lily# に一様な grob 層は
+    無いので、同じ汎用性は**録画層**からしか生えない。
+  - **終点の形**: レイアウトと renderer の間に**インクイベントの録画層（display list）**を
+    置き、renderer と skyline が**同じ一次資料**を消費する（`MergeScriptProfile` の注記
+    「LP は grob ごとに 1 つの vertical-skylines を全消費者に配る」の一般化）。
+    **プロファイル選択規則は残す**——LP が箱と宣言するもの（符頭・Dots）は箱・
+    stencil 宣言（Clef/Accidental/Script）は輪郭。全輪郭化は忠実度でも perf でも損。
+  - **壁は perf でなく相（phase）**: skyline はインク確定**前**に要る（staff 間距離・
+    mover 配置・改頁）。LP は遅延プロパティ＋pure/unpure 二重高さで解いている
+    （LP 本体でも有数のバグ源）。Lily# でやるなら **inside-staff インクを先に録画→収穫→
+    mover を置く→merge** の相分割を録画層の上で守る（既存 `PlaceDynamicsOn` の 75→250 順は
+    そのまま相の骨になる）。
+  - **perf の条件（実測済みの根拠）**: seed はレイアウトごとに建て直される——
+    multi-page 本で **66 回**（第41セッション実測・回数で測る島）。素朴な
+    「フルレンダ×建て直し回数」は負ける。**per-item プロファイルのキャッシュ＋placement は
+    shift** の形なら払える（前例 3 つ: `GlyphOutlineCache`・script の padded profile cache＝
+    箱比 1% 以内・resolved copy 0.29%）。
+  - **束ねる相手**: F3/増分アーキテクチャ（録画層は増分再描画の前提でもある）と、
+    下の第92項の残り近似「部屋は mover を engraver 位置で予約する＝消すなら部屋が pass を
+    走らせるしかない」——録画層＋相分割はその解でもある。
+  - **着手前にこの棚で決めること**: ⑴ 録画層の API 案（engraver が emit する型付き
+    インク primitive の粒度＝grob 相当か描画 primitive か）⑵ 消費者の移行順
+    （page stacking→staff 間→部屋→pass の順に「後で読む」消費者から）⑶ 建て直し回数の
+    再実測（キャッシュ キーの設計が回数で決まる）。**単独の修理として着手しないこと。**
 - ✅✅ ★★★ **閉じた（2026-08-05・第97セッション）。臨時記号の列は譜のモーメントに 1 本になった。**
   **LP の `AccidentalPlacement` は譜のモーメントに 1 個**で、**声部をまたいで詰め**、
   **note-collision のシフトに乗らない**（`accidental-placement.cc:479-518`）。Lily# は

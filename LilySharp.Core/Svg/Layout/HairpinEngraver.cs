@@ -518,15 +518,16 @@ internal static class HairpinEngraver
 
             // A hairpin ends at a dynamic / next hairpin ON THE SAME STAFF, and
             // STRICTLY AFTER the start moment: a dynamic AT the start moment is the
-            // hairpin's opening text (the engraver acknowledges both in the same
-            // timestep and the text becomes the LEFT bound), never the terminator.
+            // hairpin's opening text and becomes its LEFT bound, never the
+            // terminator — and a text at a LATER moment ends it as the RIGHT bound.
             // Until 2026-08-07 "c\f\> ..." ended its own wedge on that f. Without
             // the staff filter a cresc on staff 2 terminated against staff 1's cresc
             // in the same measure, collapsing both spans to nothing (they share the
             // single score.MusicMarks / Dynamics tables).
-            // LILYPOND-REF: lily/dynamic-align-engraver.cc:119-160 acknowledge_dynamic
-            //   — the same-timestep text joins the line; :210 the line ends in a LATER
-            //   timestep with no running spanner.
+            // LILYPOND-REF: lily/dynamic-engraver.cc:170-176 process_music — the
+            //   same-timestep DynamicText item is wired
+            //   current_spanner_->set_bound (LEFT, script_) and the ending one
+            //   finished_spanner_->set_bound (RIGHT, script_).
             var nextDynamic = sortedDynamics
                 .FirstOrDefault(d =>
                     d.StaffIndex == mark.StaffIndex &&

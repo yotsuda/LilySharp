@@ -1441,6 +1441,40 @@ internal sealed class SkylineBuilder
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleUp, size,
                     upSkyline, downSkyline, forcedStemUp, reserveStem);
+                // The augmentation dots the renderer draws, as their EXTENT boxes: a Dots
+                // grob declares no vertical-skylines, so it enters LilyPond's inside-staff
+                // profile through the default — a box from its extents — and the
+                // outside-staff pass then clears it pointwise (a wide fermata over a
+                // dotted note binds on the DOT, its short sibling on the head; LP prints
+                // three levels where an unseeded dot gave two).
+                // LILYPOND-REF: scm/define-grobs.scm:1272-1288 Dots — dots::calc-dot-stencil,
+                //   dot-count, staff-position; NO vertical-skylines entry among them, so the
+                //   extents default applies.
+                // LILYPOND-REF: lily/grob.cc:81-85 simple_vertical_skylines_from_extents_proc
+                //   — the vertical-skylines default for a grob that declares none (the same
+                //   sentence the notehead seed above cites).
+                // LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing —
+                //   Dots is an inside-staff grob, so it is in what the movers clear.
+                if (note.Dots > 0)
+                {
+                    // The renderer's own column X and Dot_configuration position
+                    // (SharedRenderer.Noteheads, single-note branch): base X = head INK
+                    // right + one dot width, position = the badness solve with the
+                    // voice-wide preferred direction. The NoteCollision DotAdjustment
+                    // (ColumnMinX push / direction flip) is NOT read here — the seed has
+                    // no collision tables, the same simplification the head seed already
+                    // makes about collision X offsets.
+                    int dottedValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
+                    double noteDotX = x + size.Ink(GlyphMetrics.GetNoteheadBBox(dottedValue)).Right
+                        + size.Span(GlyphMetrics.AugmentationDot.Width);
+                    int noteDotDir = forcedStemUp switch { true => 1, false => -1, null => 0 };
+                    int noteDotPos = DotConfiguration.Resolve(
+                        new[] { note.StaffPosition },
+                        noteDotDir != 0 ? new[] { noteDotDir } : null)[0];
+                    MergeDotRow(note.Dots, noteDotX,
+                        staffMiddleUp + size.Span(noteDotPos * 0.5),
+                        size, upSkyline, downSkyline);
+                }
                 if (note.Accidental != null)
                 {
                     double accY = size.Span(note.StaffPosition * 0.5) + staffMiddleUp;
@@ -1486,6 +1520,29 @@ internal sealed class SkylineBuilder
                     MergeAccidentalInk(acc, accX, accHeadY, size,
                         upSkyline, downSkyline);
                 }
+                // The chord's dot rows, as the renderer draws them (see the NoteItem case
+                // for why a drawn dot belongs in this profile): one row per member, all in
+                // one column right of the heads — reversed heads push the column right, so
+                // the same offsets solve feeds it. The collision DotAdjustment is not read
+                // here either (NoteItem case's remark).
+                if (chord.Dots > 0 && chord.Notes.Length > 0)
+                {
+                    var chordHeadOffsets = ChordHeadPositioning.CalculateOffsets(
+                        chord.Notes, chordStemUp, chordNoteValue, 1.0);
+                    double chordDotX = x + size.Ink(GlyphMetrics.GetNoteheadBBox(chordNoteValue)).Right
+                        + size.Span(Math.Max(0, chordHeadOffsets.Max()))
+                        + size.Span(GlyphMetrics.AugmentationDot.Width);
+                    int chordDotDir = forcedStemUp switch { true => 1, false => -1, null => 0 };
+                    var chordDotPositions = DotConfiguration.Resolve(
+                        chord.Notes.Select(n => n.StaffPosition).ToArray(),
+                        chordDotDir != 0
+                            ? Enumerable.Repeat(chordDotDir, chord.Notes.Length).ToArray()
+                            : null);
+                    foreach (int p in chordDotPositions)
+                        MergeDotRow(chord.Dots, chordDotX,
+                            staffMiddleUp + size.Span(p * 0.5),
+                            size, upSkyline, downSkyline);
+                }
                 break;
             case RestItem restItem:
                 // The GLYPH THE RENDERER DRAWS, at the ORIGIN IT DRAWS IT AT — not a nominal
@@ -1523,8 +1580,57 @@ internal sealed class SkylineBuilder
                     x + restBox.Left, x + restBox.Right, restBottom, restTop, VerticalDirection.Down);
                 upSkyline.Merge(restUp);
                 downSkyline.Merge(restDown);
+                // The rest's dots, where the renderer puts them (SharedRenderer.DrawRest):
+                // one dot width right of the rest's LILC ink, fixed in the space above the
+                // middle line — the drawn Y does NOT follow a collision-shifted rest, so
+                // neither does the seed. See the NoteItem case for why drawn dots belong
+                // in this profile at all.
+                if (restItem.Dots > 0)
+                {
+                    double restDotX = x + size.Ink(GlyphMetrics.GetRestBBox(restValue)).Right
+                        + size.Span(GlyphMetrics.AugmentationDot.Width);
+                    MergeDotRow(restItem.Dots, restDotX, staffMiddleUp + size.Span(0.5),
+                        size, upSkyline, downSkyline);
+                }
                 break;
         }
+    }
+
+    /// <summary>
+    /// Merges one drawn dot row — <paramref name="dotCount"/> augmentation dots advancing
+    /// two dot widths apart from <paramref name="dotStartX"/> (the renderer's spacing) —
+    /// into both skylines as ONE extent box at <paramref name="dotUp"/> (Y-up, this
+    /// skyline's frame).
+    /// </summary>
+    /// <remarks>
+    /// ONE BOX FOR THE WHOLE ROW, deliberately, and a box rather than an outline: the
+    /// Dots grob's stencil is the entire row — <c>ly:dots::print</c> stacks
+    /// <c>dot-count</c> copies of the dot stencil with one dot width of padding — and
+    /// Dots declares no <c>vertical-skylines</c>, so LilyPond's profile for it is the
+    /// extents default over that WHOLE stencil: the inter-dot gaps are inside the box.
+    /// Per-dot boxes would leave those gaps open, which is a shape LilyPond never shows
+    /// anybody. The same extents choice the notehead seed makes, and the opposite of the
+    /// Clef/Accidental outline walks beside it.
+    /// LILYPOND-REF: scm/output-lib.scm:686-690 ly:dots::print — stack-stencils of
+    ///   dot-count dot stencils, padding = one dot width.
+    /// LILYPOND-REF: scm/define-grobs.scm:1272-1288 Dots — <c>dots::calc-dot-stencil</c>,
+    ///   <c>Y-extent</c> from stencil; no vertical-skylines entry among them.
+    /// LILYPOND-REF: lily/grob.cc:81-85 simple_vertical_skylines_from_extents_proc — the
+    ///   extents default that entry's absence falls to.
+    /// </remarks>
+    private static void MergeDotRow(int dotCount, double dotStartX, double dotUp,
+        StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (dotCount <= 0)
+            return;
+        var dotBox = size.Ink(GlyphMetrics.AugmentationDot);
+        double advance = 2 * size.Span(GlyphMetrics.AugmentationDot.Width);
+        double left = dotStartX + dotBox.Left;
+        double right = dotStartX + (dotCount - 1) * advance + dotBox.Right;
+        upSkyline.Merge(VerticalSkyline.FromBox(left, right,
+            dotUp + dotBox.Bottom, dotUp + dotBox.Top, VerticalDirection.Up));
+        downSkyline.Merge(VerticalSkyline.FromBox(left, right,
+            dotUp + dotBox.Bottom, dotUp + dotBox.Top, VerticalDirection.Down));
     }
 
     /// <summary>

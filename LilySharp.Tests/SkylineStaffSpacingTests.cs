@@ -440,4 +440,60 @@ public class SkylineStaffSpacingTests
         Assert.True(skylines[1].Up.MaxHeight() > 3.0);
         Assert.True(skylines[1].Down.MaxHeight() < -3.0);
     }
+
+    /// <summary>Inside-staff skylines for one staff holding a single one-measure voice.</summary>
+    private static (VerticalSkyline Up, VerticalSkyline Down) BuildOneItemStaffSkylines(
+        MusicItem item)
+    {
+        var measure = new Measure(ImmutableArray.Create(item),
+            BarlineType.None, BarlineType.Single, null, 0, 0);
+        var staff = Staff.Create(ClefType.Treble,
+            new Voice("v", ImmutableArray.Create(measure)));
+        return new SkylineBuilder(StaffHeight)
+            .BuildInsideStaffSkylines(staff, CreateSimpleMeasureLayouts(1));
+    }
+
+    /// <summary>
+    /// A DRAWN AUGMENTATION DOT IS IN THE STAFF'S OWN SKYLINE — as its extent box, at the
+    /// renderer's column X and resolved position — and an undotted twin reserves nothing
+    /// there. The dot is what LilyPond's outside-staff pass makes a WIDE fermata clear
+    /// (three script levels over a dotted note where a boxless seed gave two:
+    /// input/regression/fermata-dot-position.ly block A, LP 4.255/4.183/4.003).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1272-1288 Dots — dots::calc-dot-stencil and
+    ///   friends, but NO vertical-skylines entry, so the extents default applies.
+    /// LILYPOND-REF: lily/grob.cc:81-85 simple_vertical_skylines_from_extents_proc.
+    /// </remarks>
+    [Fact]
+    public void InsideStaffSkyline_CarriesTheDrawnDot_AndItsUndottedTwinDoesNot()
+    {
+        // A5 (staff position 6, ON the first ledger line): the dot resolves into the
+        // space above (position 7), centre Y-up 3.5 — past the head top and the ledger.
+        NoteItem Note(int dots) => new(6, Fraction.Quarter, dots, null, true, 0);
+
+        // The renderer's dot column: head ink right + one dot width from the item's
+        // column (5.0 in CreateSimpleMeasureLayouts); probe the dot box's centre.
+        double probeX = 5.0 + GlyphMetrics.GetNoteheadBBox(4).Right
+            + GlyphMetrics.AugmentationDot.Width * 1.5;
+
+        var dotted = BuildOneItemStaffSkylines(Note(1));
+        Assert.Equal(3.5 + GlyphMetrics.AugmentationDot.Top,
+            dotted.Up.Height(probeX), 9);
+
+        // The undotted twin holds only the staff symbol's own ink at that X — the dot's
+        // reach is the DOT's, not a widened head (the ledger stops short of this X).
+        var plain = BuildOneItemStaffSkylines(Note(0));
+        Assert.True(plain.Up.Height(probeX) < 3.0,
+            $"nothing but the staff should be at the dot's X, read {plain.Up.Height(probeX):F6}");
+
+        // ...and the DOWN skyline of a low dotted note carries the dot too, for the
+        // below-staff readers (position -6, on the ledger below the staff: the dot
+        // resolves into the space at -5, centre Y-up -2.5, whose box bottom -2.725
+        // reaches past the staff's own -2.05).
+        var lowDotted = BuildOneItemStaffSkylines(
+            new NoteItem(-6, Fraction.Quarter, 1, null, true, 0));
+        Assert.Equal(-2.5 + GlyphMetrics.AugmentationDot.Bottom,
+            lowDotted.Down.Height(probeX), 9);
+    }
 }
