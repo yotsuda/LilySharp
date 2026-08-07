@@ -3476,7 +3476,9 @@
     },
     "hairpin-span-bar.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "hairpin は SpanBar と衝突しない(手前で止まる)。SpanBar が無い行(隣譜 hara-kiri)では行末まで伸びる",
+      "notes": "fixed 第31号。twin scratch/lpreg/hairpin-spanbar.{ly,lys}(score1 のみ=score2/3 は ^\\< 上側 hairpin が要り Lily# は hairpin 常時下の意図した設計で書けない・開示。置換: \\! → \\f/@f)。欠陥=行末で切れた broken hairpin が SpanBar を素通りして行末まで走っていた。修理=LP Hairpin::broken_bound_padding の字面移植(hairpin.cc:53-109: 自譜と hairpin 方向(下)の隣譜が同一 SpanBar を持つ行末 bound だけ bound-padding/2=0.5 後退・define-grobs.scm:1780-1781)。Lily# 側条件=segment.IsLast でない+同一 delimited group 内の下隣譜がその system で可視(hara-kiri は IsHidden で判る=renderer DrawSpanBars と同じゲート)。照合: 系1(SpanBar有)終端 101.93=LP 完全一致・系2(下譜消滅)102.43=LP 一致・系3(実 bound=f)不変。観測者+1(HairpinTests.Calculate_BrokenRightBound_BacksOffHalfBoundPaddingOnlyUnderASpanBar)・snapshot 0 枚(既存 fixture に群譜×行末 broken hairpin の組合せ無し)。perf: 呼び出し構造不変(broken 段ごとに群配列の小走査のみ・alloc 無し)。**A/B 実測済(round 7・perf-ab7.ps1・base c1ef0db6・999小節)**: 熱側 hairpingrand1k(両譜 3小節 hairpin×333=多数が行末で切れる)は −5.1%/+8.6% と順序で符号反転=純 drift(同一バイナリのバッチ振れ 4825〜7525ms)・対照 hairpinsingle1k(単譜=判定は走り常に false)は −10.5%/+5.0% で **SVG hash 完全一致**=仕事同一。劣化なし。残差(主張外): 最終行の列 X drift ≤0.43(grand staff の note-spacing regime・hairpin 終端は両者とも f ink−1.0 の同型則)・f は LS text 描画。**自己監査の起票(未移植・札済)**: LP は同じ行末で切れた concurrent hairpin 全部でこの padding の max を取り終端を揃える(hairpin.cc:199-208・Concurrent_hairpin_engraver は Score レベル=engraver-init.ly:776=全譜横断)。Lily# は各自払いのみ——読者ゼロ(同じ行末で複数 hairpin が切れ span-bar の答が割れる fixture/本が無い)。もう1枚: 行末 barline の実在は見ていない(LP は実 BarLine の has-span-bar を読む)"
     },
     "hairpin-to-barline-mark.ly": {
       "category": "scheme",

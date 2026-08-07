@@ -411,6 +411,46 @@ public class HairpinTests
     }
 
     [Fact]
+    public void Calculate_BrokenRightBound_BacksOffHalfBoundPaddingOnlyUnderASpanBar()
+    {
+        // A line-end (broken RIGHT) bound clears the span bar between its staff and
+        // the staff below by bound-padding/2 = 0.5 — and pays NOTHING when that
+        // neighbor is hara-kiri'd away (the span bar goes with it). Twin: regression
+        // hairpin-span-bar.ly — line-end 101.93 = 102.43 − 0.5 with the span bar,
+        // 102.43 exactly without (both LilyPond-matched to the digit).
+        // LILYPOND-REF: lily/hairpin.cc:53-109 Hairpin::broken_bound_padding — bound-padding / 2.0 only when both staves share the line-end span bar
+        // LILYPOND-REF: scm/define-grobs.scm:1780-1781 Hairpin — bound-padding 1.0 and the broken-bound-padding callback
+        var (measures, systems) = CreateTwoSystemLayout();
+        var hairpins = ImmutableArray.Create(new HairpinItem(
+            HairpinDirection.Crescendo, 0, 0, 3, 0, 0));
+
+        StaffGroupLayout Group(bool lowerHidden)
+        {
+            var staves = ImmutableArray.Create(
+                new StaffLayout(0, ClefType.Treble, 0, 4.0),
+                new StaffLayout(1, ClefType.Bass, -9.0, 4.0, IsHidden: lowerHidden));
+            return StaffGroupLayout.CreateGrandStaff(
+                staves, 0, 13.0, new GrandStaffLayout(staves, 0, 0, -13.0));
+        }
+
+        // Both staves stand on system 0: the piece's line-end bound backs off 0.5.
+        var spanned = ImmutableArray.Create(
+            systems[0] with { StaffGroups = ImmutableArray.Create(Group(lowerHidden: false)) },
+            systems[1]);
+        var withBar = HairpinEngraver.Calculate(hairpins, spanned, measures);
+        Assert.Equal(2, withBar.Length);
+        Assert.Equal(40.0 - 0.5, withBar[0].EndX, 4);
+
+        // The lower staff is hidden on system 0: no span bar, the piece runs to the
+        // line end untouched.
+        var bare = ImmutableArray.Create(
+            systems[0] with { StaffGroups = ImmutableArray.Create(Group(lowerHidden: true)) },
+            systems[1]);
+        var noBar = HairpinEngraver.Calculate(hairpins, bare, measures);
+        Assert.Equal(40.0, noBar[0].EndX, 4);
+    }
+
+    [Fact]
     public void Calculate_SameSystem_NormalOpenings()
     {
         // Hairpin within one system should have normal openings

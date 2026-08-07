@@ -58,6 +58,73 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第110セッション第6便（＝第1便 gliss-cross-staff skip + grace 2冊 exact・`5d2c3153`・
+第2便 grace 族 3冊 skip2+exact1・`6a164012`・第3便 gregorian skip + hairpin 2冊 exact・
+`c1ef0db6`・第4便 **fixed 第31号 = hairpin-span-bar**・`08a7087c`・第5便 自己監査＝
+concurrent max 未移植の札+起票⑷・`72600f80`・第6便 perf A/B round 7＝drift 内・下記⑥）。
+
+★★ **⑥（第6便）perf A/B round 7（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
+- **機材**: scratch\lpreg\perf-ab7.ps1・base=c1ef0db6 worktree（撤去済）・Release・
+  交互×両順・中央値 of 5・999 小節 2 冊（hairpingrand1k=両譜 3 小節 hairpin×333＝
+  新コードの熱側・hairpinsingle1k=単譜対照＝判定は走り常に false・hash 必須）。
+- **結果**: 熱側 −5.1%/+8.6%・対照 −10.5%/+5.0%＝**両冊とも順序で符号反転＝純 drift**
+  （同一バイナリのバッチ振れ 4825〜7525ms）。**対照の SVG hash は base/curr 完全一致**
+  （仕事同一の計測）。追加コスト＝broken 段ごとの群配列小走査（≤群×譜・alloc 0・
+  pass/walk 数不変）＝ns 級で床の下、実測もそれと整合。プレビュー増分経路は
+  hairpin layout pass の中の同じ場所＝構造変化なし。
+frontier は **pending の次の本**（§0 どおり status.json から取ること。今の先頭は
+hara-kiri-percent-repeat.ly——固定で書くと腐る）。第107 起票の §2A workstream は棚のまま。
+
+★★★ **第4便 fixed 第31号 = hairpin-span-bar.ly**:
+- **欠陥**: 行末で切れた broken hairpin が SpanBar を素通りして行末まで走っていた。
+- **修理**: `Hairpin::broken_bound_padding` の字面移植（hairpin.cc:53-109・
+  define-grobs.scm:1780-1781 bound-padding 1.0 → /2 = **0.5 後退**）。Lily# 側条件 =
+  broken RIGHT bound（segment.IsLast でない）+ **同一 delimited group の下隣譜がその
+  system で可視**（hara-kiri は StaffLayout.IsHidden で判る = renderer DrawSpanBars と
+  同じゲート。Lily# の hairpin は常時下なので隣は常に DOWN 側）。
+- **照合**: 系1（SpanBar 有）終端 101.93 = LP 完全一致・系2（下譜 hara-kiri で SpanBar 無し）
+  102.43 = LP 一致・系3（実 bound = f）不変。**観測者 +1**（HairpinTests.
+  Calculate_BrokenRightBound_BacksOffHalfBoundPaddingOnlyUnderASpanBar）・**snapshot 0 枚**
+  （既存 fixture に群譜×行末 broken hairpin の組合せ無し）・perf 構造不変（broken 段ごとの
+  群配列小走査のみ・alloc 無し）= A/B 省略、理由ごとここに開示。
+- twin は score1 のみ（score2/3 は `^\<` 上側 hairpin が要る = Lily# は hairpin 常時下の
+  意図した設計で書けない・台帳 notes に開示）。
+
+★★ **起票（今セッション・修理せず）**:
+- ⑴ **grace{} 内の `~` は無警告 silent drop**（grace→本音 tie 未配線。素の grace{c16~} c1 で
+  曲線ゼロ・acciaccatura で見える曲線は自動 slur の方。probe scratch\lpreg\grace-tie-probe.lys）。
+  silent drop 系の鉱脈。grace-slashed-no-slur の notes 参照。
+- ⑵ **行頭（prefix 直後）の leading grace の前間隔が LP より 0.1955 狭い**（time 以降の全要素が
+  一定 −0.1955。partial と直交 = 対照 grace-partial-ctrl で証明。grace-partial の notes 参照）。
+- ⑶ **@cross は文法→collector→CrossStaffLayouts まで在るが読者ゼロ**（renderer 未配線 =
+  HANDOFF-ARCHIVE 2026-07-24 起票済の再確認。\change Staff 系の本は全部これで塞がる。
+  gliss-cross-staff の notes に実測: gliss 機構自体は自分の頭に桁一致で届いており、乖離は
+  全部「音符が移らない」に帰着）。
+- ⑷ **（第5便・自己監査で発見）第31号の未移植枝 = concurrent hairpin の max**：LP は同じ
+  行末で切れた concurrent hairpin 全部で broken-bound-padding の **max** を取り終端を揃える
+  （hairpin.cc:199-208・Concurrent_hairpin_engraver ∈ Score = engraver-init.ly:776 =
+  **全譜横断**）。Lily# は各 hairpin が自分の span-bar 答だけ払う——読者ゼロ（同じ行末で
+  複数 hairpin が切れ答が割れる fixture/本なし）。HairpinEngraver に departs-from 札済。
+  同札にもう1枚: 行末 barline の実在は見ていない（LP は実 BarLine の has-span-bar を読む）。
+
+★ **評価の学び（再確認込み）**:
+- hairpin の `\!` は綴り無し・`^\<` は意図的非対応（常時下・LYS0002）→ **両側置換**（終端 \f・
+  下側 hairpin）で主張は保てる（hairpin-clef/key-signature = 置換の上で全セグメント桁一致）。
+- grace stem の無条件 up は **LP 自身の score-grace-settings**（music-functions.scm:633-637・
+  GraceNoteEngraver:272-274 に引用済）= Lily# の挙動はそのまま LP 既定。
+- 明示 break 本 = LP twin ragged-right 無し・自然折返し本 = 有り（第105 規約の再確認）。
+- 無引数 \relative の c''' = C6（先頭音は f 基準の相対）。
+
+plain 322 / 処理済 **131**（fixed **31**・exact **25**・skip **66**・open **11**・
+pending 191。数えたら state 別内訳も一緒に書くこと）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4185 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core 0 warning・snapshot 第110 は 0 枚**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第109セッション第1〜6便の経緯
+
 最終更新 第109セッション第6便（＝第1便 fixed 第29号・`9b2173cc`・第2便 skip 2+下見・
 第3便 fixed 第30号・`4e4ac148`・第4便 gliss 族 2 冊 exact・第5便 自己監査＝開示 4 札・
 第6便 perf A/B＝drift 内・下記⑥）。

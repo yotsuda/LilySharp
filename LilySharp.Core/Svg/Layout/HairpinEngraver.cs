@@ -268,6 +268,35 @@ internal static class HairpinEngraver
                 if (!segment.IsFirst)
                     segStartX += BoundPadding;
 
+                // A broken RIGHT bound (line end) backs off HALF the bound-padding to
+                // clear the SPAN BAR between its staff and the next staff below — paid
+                // only when that neighbor is VISIBLE on this system (a hara-kiri'd
+                // neighbor takes the span bar with it, and the wedge runs to the line
+                // end — that contrast is regression hairpin-span-bar.ly's claim).
+                // Lily#'s hairpin hangs below its staff, so the neighbor side is
+                // always DOWN (LilyPond reads the DynamicLineSpanner's direction; UP
+                // is unreachable here — the parser rejects '@cresc.up'). Measured:
+                // hairpin-span-bar twin, line-end 101.93 = 102.43 − 0.5 with the span
+                // bar, 102.43 without.
+                // ⚠️ UNPORTED (disclosed): LilyPond takes the MAX of this padding
+                //   across all CONCURRENT hairpins broken at the same line end, so
+                //   simultaneously broken wedges keep their right ends ALIGNED even
+                //   when only one of them stands over a span bar.
+                //   departs from: lily/hairpin.cc:199-208 Hairpin::print — max over
+                //     the concurrent-hairpins set, which concurrent-hairpin-engraver.cc
+                //     populates SCORE-wide (ly/engraver-init.ly:776), i.e. across staves.
+                //   observed by: NOTHING — no fixture or corpus book breaks two
+                //     hairpins at one line end with differing span-bar answers; when
+                //     one does, wire a per-system max over this padding first.
+                // ⚠️ The line-end bar is assumed to PRINT (LilyPond reads has-span-bar
+                //   off the actual line-end BarLine grob); a barline-less line end is
+                //   not consulted here.
+                // LILYPOND-REF: lily/hairpin.cc:53-109 Hairpin::broken_bound_padding — bound-padding / 2.0 when both staves' line-end bars share one span bar
+                // LILYPOND-REF: lily/hairpin.cc:195-210 Hairpin::print — x_points[RIGHT] -= broken_bound_padding at the broken RIGHT bound
+                // LILYPOND-REF: scm/define-grobs.scm:1780-1781 Hairpin — bound-padding 1.0 and the broken-bound-padding callback
+                if (!segment.IsLast && SpanBarBelowOnSystem(system, staffIdx))
+                    segEndX -= BoundPadding / 2.0;
+
                 // Crossed bounds draw as a point — LilyPond warns "(de)crescendo too
                 // small" and clamps the WIDTH to zero; it never stretches the drawn
                 // wedge to minimum-length (that property is a SPACING rod, spent
@@ -377,6 +406,37 @@ internal static class HairpinEngraver
                     startX, centreYUp - startOpening - half,
                     endX, centreYUp - endOpening - half,
                     thickness: 0, VerticalDirection.Down));
+    }
+
+    /// <summary>
+    /// Whether a span bar stands between the given staff and the next staff below it
+    /// on this system: the staff's group must be delimited (the renderer's span-bar
+    /// gate, <c>DrawSpanBars</c>) and a staff of the same group must be VISIBLE below
+    /// it there — hara-kiri hides a staff together with its share of the span bar.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:53-109 Hairpin::broken_bound_padding — get_neighboring_staff (DOWN) and the shared has-span-bar grob
+    /// </remarks>
+    private static bool SpanBarBelowOnSystem(SystemLayout system, int staffIdx)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return false;
+        foreach (var group in system.StaffGroups)
+        {
+            if (!group.HasDelimiter)
+                continue;
+            var staves = group.Staves;
+            for (int i = 0; i < staves.Length; i++)
+            {
+                if (staves[i].StaffIndex != staffIdx || staves[i].IsHidden)
+                    continue;
+                for (int j = i + 1; j < staves.Length; j++)
+                    if (!staves[j].IsHidden)
+                        return true;
+                return false;
+            }
+        }
+        return false;
     }
 
     /// <summary>
