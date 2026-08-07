@@ -139,6 +139,7 @@ public sealed partial class MeasureCollector
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
             IsDead = HasNamedArticulation(note, "dead"),
             ForcedStemUp = GetStemDirectionOverride(note),
+            LaissezVibrerUp = hasLv ? LaissezVibrerUpOf(note) : null,
         };
     }
 
@@ -237,6 +238,15 @@ public sealed partial class MeasureCollector
         var notes = new List<ChordNoteInfo>();
         var members = new List<ResolvedChordMember>();
 
+        // A chord-level @laissezVibrer half-ties EVERY member; a member-level one
+        // ties just its own head (detected in the member loop below). The event's
+        // ^/_ forces every tie's side.
+        // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:66-108 acknowledge_note_head —
+        // "use the heard event_ for all note heads, or an individual event for
+        // just a single note head"; :99-103 direction copied from the event.
+        bool chordLv = HasLaissezVibrerAnnotation(chord);
+        bool? chordLvUp = chordLv ? LaissezVibrerUpOf(chord) : null;
+
         // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
         // chord uniformly. Applying it to the root's resolved octave (and, for an
         // omitted root, to the tonic anchor) flows through firstOctave into every
@@ -318,13 +328,22 @@ public sealed partial class MeasureCollector
             // LILYPOND-REF: lily/fingering-engraver.cc — per-pitch finger via <c@finger.N>.
             int? pitchFingering = ExtractPitchFingering(pitch);
 
+            // Member-level @laissezVibrer (<d@laissezVibrer g> = LP <d-\laissezVibrer g>):
+            // this head only; the chord-level event covers every head and wins
+            // (the engraver reads the heard event before the articulation).
+            var memberLv = pitch.Articulations.OfType<ArticulationSyntax>().FirstOrDefault(
+                a => a.Type == ArticulationType.None
+                    && a.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase));
+
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental, needsLedger,
                 IsCourtesy: memberCourtesy,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-                SourcePosition: pitch.Position));
+                SourcePosition: pitch.Position,
+                HasLaissezVibrer: chordLv || memberLv != null,
+                LaissezVibrerUp: chordLv ? chordLvUp : memberLv?.ForcedAbove));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -362,7 +381,9 @@ public sealed partial class MeasureCollector
                 rp.StaffPosition is <= -6 or >= 6,
                 IsCourtesy: false,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-                SourcePosition: degree.Position));
+                SourcePosition: degree.Position,
+                HasLaissezVibrer: chordLv,
+                LaissezVibrerUp: chordLvUp));
             members.Add(new ResolvedChordMember(rp.StaffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -377,7 +398,9 @@ public sealed partial class MeasureCollector
                 dinfo.StaffPosition is <= -6 or >= 6,
                 Notehead: dinfo.Notehead,
                 Midi: dinfo.GmKey,
-                SourcePosition: drum.Position));
+                SourcePosition: drum.Position,
+                HasLaissezVibrer: chordLv,
+                LaissezVibrerUp: chordLvUp));
             members.Add(new ResolvedChordMember(dinfo.StaffPosition, null, null, null,
                 dinfo.Notehead, dinfo.GmKey));
         }

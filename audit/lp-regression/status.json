@@ -3596,7 +3596,9 @@
     },
     "horizontal-bracket-tweak.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Horizontal brackets are created with the correct event-cause so tweaks apply to the correct spanner",
+      "notes": "skip理由=器材が主張そのもの: Horizontal_bracket_engraver(\\startGroup/\\stopGroup=analysis bracket)がLily#に無い(TupletBracketEngraverのみ)+\\tweak機構も無い。false plain: #6/#801は数値でschemeフィルタ(#(,#quote,#{,#name)をすり抜け"
     },
     "horizontal-bracket.ly": {
       "category": "scheme",
@@ -3652,7 +3654,9 @@
     },
     "include-identifier.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\include accepts a string-valued variable; expected output is three quarter notes",
+      "notes": "skip理由=器材が主張そのもの: includeのパス変数間接(文字列変数)がLily#に無い。Lily#のusing \"file.lys\"はリテラルパス+トップレベル合成(部/セクションのマージ)のみで、音楽式中へのinline spliceも無い(UsingExpander.cs)"
     },
     "include-string.ly": {
       "category": "scheme",
@@ -3672,7 +3676,9 @@
     },
     "input-order-alignment.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Alignment of lyrics/dynamics/textscripts/articulations on chords with suspended notes does not depend on input order; all align on the main notehead (end of stem)",
+      "notes": "主張(入力順不変)=両エンジンとも成立(両譜全要素同X)。LP dump(inporder-dump.ly, system相対X)で規則照合: DynamicText f中心=main head中心(20.0020 vs 20.0019)・Script中心=main head中心(40.4336=40.4336)・LyricText中心=main head中心(9.7861=9.7861)・TextScript ink左=列原点(29.5290=29.5290)。修理=第33号2件: (1)LyricTextのheをheads unionからmain-extent(=列原点のmain head箱)へ(note-column.cc:179-204+self-alignment-interface.cc:143-145+X-align-on-main-noteheads。SpacingRules.RhythmicHeadExtent。描画と予約が同関数=両方動く) (2)@text(TextScript)を頭中心揃え→列原点ink左揃えへ(TextScript self/parent-align共に#f=offset 0。DynamicEngraver.Calculate)。Lily#のf/Scriptは元からmain head中心=不変。観測者: InputOrderAlignmentTests(新)+DynamicPlacementTests更新。snapshot 1枚(test/text-annotation=@text 4ラベルが半幅-0.69右へ+stacking Y微動)。残(主張外): 絶対X列位置=note-spacing regime・Textの右縁はフォント幅regime(TextFontMetrics vs Pango)。twin=audit lys+scratch\\lpreg\\inporder.{ly,lys}+inporder-dump.ly"
     },
     "instrument-cue-name.ly": {
       "category": "override",
@@ -3768,7 +3774,9 @@
     },
     "key-signature-space.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "Key signatures get the required amount of horizontal space",
+      "notes": "主張核心=exact: 初期4flat(間隔0.92)・時号X 9.015/9.02・m1第1音12.715/12.71桁一致。中間変更列も構造一致(取消4naturals+5sharps・bar→取消1.0・取消→key0.5・sharp間隔1.1全部桁一致)。残差(open理由): (1)mid-line key→第1音 LP3.05 vs LS2.50(origin間Δ0.55。LP KeySignature space-alist first-note=shrink-space 2.5 define-grobs.scm:1996・boundary column経路の未移植枝) (2)各小節第1音→第2音spring LS+0.19(m1 3.90 vs 3.704・m2 2.70 vs 2.504。以降の音間は3.704/2.504/3.705で桁一致=FirstNoteSpring regime) (3)多譜のR1がMMR中央寄せされず音符列Xに描かれる(LS 12.71/40.31 vs LP 18.49/45.79=小節中央。単譜は中央寄せ動作)。起票: 単譜 R1 || R1 で第2小節が幅ゼロに潰れ終止線が複縦線の左に重なる(scratch\\lpreg\\r1probe.lys)。twin=audit lys+scratch\\lpreg\\keysigspace.{ly,lys}"
     },
     "keys.ly": {
       "category": "scheme",
@@ -3776,7 +3784,9 @@
     },
     "kievan-notation-dots.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Kievan notation can contain dots, also in ligatures",
+      "notes": "skip理由=器材が主張そのもの: KievanStaff(キエフ角記譜=専用notehead/ligature/clef)がLily#に無い(grep Kievan=0件)"
     },
     "kievan-notation-optional-material.ly": {
       "category": "scheme",
@@ -3784,7 +3794,9 @@
     },
     "kievan-notation.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "LilyPond typesets Kievan notation",
+      "notes": "skip理由=器材が主張そのもの: KievanVoice/KievanStaffがLily#に無い(grep Kievan=0件)。加えてfalse plain気味: \\paper property-defaults・\\cadenzaOn・\\bar \"k\"・\\lyricsto・ligature \\[\\]も未対応"
     },
     "label-straddling-page-break-bookparts.ly": {
       "category": "scheme",
@@ -3792,11 +3804,15 @@
     },
     "laissez-vibrer-arpeggio.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "l.v. ties should not collide with arpeggio indications",
+      "notes": "修理=第35号: l.v.の弧のinkがspacing boxに不参加で、次和音のarpeggioがtieを素通りしていた→ItemSkylineFactory.AddSemiTiesで列のordinary elementとして箱化(LP: paper-column-engraverの divertはAccidentalPlacement/Arpeggioのみ=LaissezVibrerTieはelements)。幾何はTieVariantEngraver.SemiTieGeometryの一綴り(描画とspacingが同式)。LP照合: tie終端→arpeggio ink左クリアランス LS 0.50 vs LP 0.35(Δ0.15)・対間隔 LS 4.40 vs LP 4.25(+0.15=note-spacing drift級)・衝突なし=主張成立。CalculateNoteheadRightExtentにもtie右reach追加(barline対/keep-inside-line用)。twin=audit lys+scratch\\lpreg\\lvarp.{ly,lys}"
     },
     "laissez-vibrer-chords.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "\\laissezVibrer ties should also work on individual notes of a chord",
+      "notes": "修理=第34号: 和音のl.v.が丸ごと無警告silent dropだった(TieVariantEngraverがNoteItem限定)→member fan(ChordNoteInfo.HasLaissezVibrer/LaissezVibrerUp・和音レベル@laissezVibrerは全頭=acknowledge_note_headの字面)+^/_向き強制(event direction→tie)。X spanも字面化: head ink右+XGap(0.2)..+OpenReach(1.5)-XGap=長さ1.1(from_semi_ties:436-441の1.5。旧実装はitem SLOT右端+固定1.0=全音符で小節中央まで流れる枠バグ)。LP照合: X span桁一致(m1 10.75/11.85 vs LP 10.74/11.84・m2 18.90/20.00完全一致)・向き一致(単独lv=down・^d up/_g down対向)。残(開示): Y baseline±0.4近似(LP scorerは0.34-0.7を量子化=semi-tie scorer(Tie_formatting_problem.from_semi_ties)未移植の起票)・複数lv無強制時の向き割当てもscorer側。repeatTieの和音は未対応(起票)。観測者: LaissezVibrerChordTests。snapshot 1枚(lv-meterchange=tie 1本がslot右→頭縁+1.1span)。twin=audit lys+scratch\\lpreg\\lvchords.{ly,lys}"
     },
     "laissez-vibrer-tie-beam.ly": {
       "category": "scheme",

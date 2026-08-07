@@ -69,13 +69,14 @@ public readonly record struct TieVariantLayout(
 internal static class TieVariantEngraver
 {
     /// <summary>
-    /// Visual length of the half-tie in staff spaces (how far the curve extends from the
-    /// host note). LilyPond has NO fixed length for these grobs — Semi_tie_column places
-    /// them from the note-head extent and gap (lily/semi-tie-column.cc); this is a Lily#
-    /// fixed approximation of that short span. (The earlier "minimum-length 1.5" reference
-    /// was incorrect — the grob has no minimum-length property.)
+    /// How far the half-tie's OPEN end reaches past the head's ink edge, before the
+    /// attachment gaps: <c>from_semi_ties</c> builds the open-side chord outline at
+    /// <c>extremal − head_dir · 1.5</c>, the head-side outline being the heads
+    /// themselves.
     /// </summary>
-    private const double TieLength = 1.0;
+    /// <remarks>LILYPOND-REF: lily/tie-formatting-problem.cc:436-441 from_semi_ties.
+    /// Internal: SpacingRules charges the same span as the column's rightward ink.</remarks>
+    internal const double OpenReach = 1.5;
 
     /// <summary>The half-tie's bow parameters, from its grob details. The arc height is
     /// LilyPond's bezier-bow shape: <c>min(height-limit, ratio × width)</c>.</summary>
@@ -84,14 +85,55 @@ internal static class TieVariantEngraver
     private const double BowRatio = 0.333;
     private const double BowHeightLimit = 1.0;
 
-    /// <summary>Arc height (peak above the baseline): ratio × width, capped at the
-    /// height-limit — the height LilyPond's bezier bow gives a tie of this width.</summary>
-    private static readonly double ArcHeight = Math.Min(BowHeightLimit, BowRatio * TieLength);
-
     /// <summary>Y offset from notehead center to the tie's flat baseline. Lily# placement
     /// approximation (~notehead half-height, no single LP constant); LP anchors the semi-tie
     /// at the note-head edge via Semi_tie_column.</summary>
     private const double NoteOffset = 0.4;
+
+    /// <summary>
+    /// The ONE spelling of a half-tie's geometry, relative to the host column: X span
+    /// from the column origin (= head ink left), the flat baseline in device-down
+    /// staff spaces from the staff MIDDLE, and the signed arc (negative = bulges up).
+    /// <see cref="BuildLayout"/> draws from it and <see cref="ItemSkylineFactory"/>
+    /// boxes it for the spacing skylines — the pair HANDOFF 5.2.1② warns about.
+    /// </summary>
+    internal static (double XLeft, double XRight, double BaseYFromMiddleDown, double SignedArc)
+        SemiTieGeometry(int noteValue, int staffPosition, bool stemUp, bool? forcedUp,
+            TieVariantKind kind)
+    {
+        // X span, in LilyPond's own numbers: the head-side end stands the tie
+        // details' note-head gap (0.2) off the head's INK edge, the free end
+        // OpenReach (1.5) out less the same gap.
+        // (Verified against 2.26 SVG: a whole-note chord's l.v. spans
+        // headRight+0.2 .. headRight+1.3 to the digit — scratch\lpreg\lvchords.)
+        // LILYPOND-REF: lily/laissez-vibrer-engraver.cc acknowledge_note_head — head-direction LEFT (tie RIGHT of head)
+        // LILYPOND-REF: lily/repeat-tie-engraver.cc make_my_tie — head-direction RIGHT (tie LEFT of head)
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:436-441 from_semi_ties — open outline at extremal − dir·1.5
+        double xGap = TieDetails.Default.XGap;
+        double xl, xr;
+        if (kind == TieVariantKind.LaissezVibrer)
+        {
+            double edge = GlyphMetrics.GetNoteheadBBox(noteValue).Right;
+            xl = edge + xGap;
+            xr = edge + OpenReach - xGap;
+        }
+        else
+        {
+            // The head's ink LEFT is the column origin (every head's ink Left is 0).
+            xl = -OpenReach + xGap;
+            xr = -xGap;
+        }
+
+        // Curve direction: forced by ^/_ on the event when given, else opposite
+        // to the stem, like a regular tie.
+        // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head —
+        //   the event's direction is copied onto the tie and outranks the automatic choice;
+        // LILYPOND-REF: lily/tie.cc calc_direction — direction defaults opposite to stem.
+        bool curveUp = forcedUp ?? !stemUp;
+        double baseY = -staffPosition / 2.0 + (curveUp ? -NoteOffset : NoteOffset);
+        double arc = Math.Min(BowHeightLimit, BowRatio * (xr - xl));
+        return (xl, xr, baseY, curveUp ? -arc : arc);
+    }
 
     /// <summary>
     /// Calculates layouts for all half-ties (laissez-vibrer + repeat-tie) in the score.
@@ -120,17 +162,42 @@ internal static class TieVariantEngraver
             var measure = voice.Measures[mi];
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
-                if (measure.Items[ii] is not NoteItem note)
-                    continue;
-                if (!note.HasLaissezVibrer && !note.HasRepeatTie)
-                    continue;
+                switch (measure.Items[ii])
+                {
+                    case NoteItem note when note.HasLaissezVibrer || note.HasRepeatTie:
+                        int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
+                        if (note.HasLaissezVibrer)
+                            builder.Add(BuildLayout(
+                                note.StaffPosition, note.StemUp, note.LaissezVibrerUp,
+                                note.SourcePosition, noteValue, mi, ii, measureLayout, system,
+                                staffIndex, TieVariantKind.LaissezVibrer));
+                        if (note.HasRepeatTie)
+                            builder.Add(BuildLayout(
+                                note.StaffPosition, note.StemUp, null,
+                                note.SourcePosition, noteValue, mi, ii, measureLayout, system,
+                                staffIndex, TieVariantKind.Repeat));
+                        break;
 
-                if (note.HasLaissezVibrer)
-                    builder.Add(BuildLayout(note, mi, ii, measureLayout, system, staffIndex,
-                        TieVariantKind.LaissezVibrer));
-                if (note.HasRepeatTie)
-                    builder.Add(BuildLayout(note, mi, ii, measureLayout, system, staffIndex,
-                        TieVariantKind.Repeat));
+                    // A chord fans one half-tie per marked member — a chord-level
+                    // @laissezVibrer marks all of them, a member-level one just its
+                    // own head. This used to silently drop every chord l.v.
+                    // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:66-108 acknowledge_note_head
+                    //   — one LaissezVibrerTie per head.
+                    case ChordItem chordItem:
+                        foreach (var member in chordItem.Notes)
+                        {
+                            if (!member.HasLaissezVibrer)
+                                continue;
+                            builder.Add(BuildLayout(
+                                member.StaffPosition, chordItem.StemUp, member.LaissezVibrerUp,
+                                member.SourcePosition >= 0
+                                    ? member.SourcePosition : chordItem.SourcePosition,
+                                GlyphMetrics.NoteValueOf(chordItem.BaseDuration),
+                                mi, ii, measureLayout, system,
+                                staffIndex, TieVariantKind.LaissezVibrer));
+                        }
+                        break;
+                }
             }
         }
 
@@ -138,21 +205,24 @@ internal static class TieVariantEngraver
     }
 
     private static TieVariantLayout BuildLayout(
-        NoteItem note, int measureIndex, int itemIndex,
+        int staffPosition, bool stemUp, bool? forcedUp, int sourcePosition, int noteValue,
+        int measureIndex, int itemIndex,
         MeasureLayout measureLayout, SystemLayout system, int staffIndex,
         TieVariantKind kind)
     {
-        // Reads the raw item slot (X and Width). Safe on every path: MultiStaffLayouter
-        // derives Items[i].X/.Width FROM the timing columns (see
+        // Reads the raw item slot X. Safe on every path: MultiStaffLayouter
+        // derives Items[i].X FROM the timing columns (see
         // MeasureLayouter.LayoutItemsFromColumns), so the slot equals the column-grid X the
         // renderer draws the notehead at even when a bar opens with a mid-piece time/clef
         // change; single-staff layouts have no columns and the slot is already the grid.
         var itemLayout = measureLayout.Items[itemIndex];
-        double noteCenterX = measureLayout.X + itemLayout.X + itemLayout.Width / 2.0;
+        double headLeftX = measureLayout.X + itemLayout.X;
 
-        // Curve direction: opposite to stem, like a regular tie.
-        // LILYPOND-REF: lily/tie.cc — direction defaults opposite to stem.
-        bool curveUp = !note.StemUp;
+        // The half-tie's own geometry (X span, baseline, signed arc) — the one
+        // spelling shared with the spacing skylines' box (SemiTieGeometry).
+        var (xLeft, xRight, baseYFromMiddle, signedArc) = SemiTieGeometry(
+            noteValue, staffPosition, stemUp, forcedUp, kind);
+        bool curveUp = signedArc < 0;
 
         const double StaffHeight = 4.0;
         // Within-system Y offset (device, down from the system top) of the staff
@@ -164,24 +234,17 @@ internal static class TieVariantEngraver
         // internal arc geometry stays device-frame (intentional-device island 2).
         double staffMiddleOffset = LayoutUtilities.StaffOffsetInSystemDown(system, staffIndex)
             + StaffHeight / 2.0;
-        double noteY = staffMiddleOffset - note.StaffPosition / 2.0;
-        double baseY = curveUp ? noteY - NoteOffset : noteY + NoteOffset;
+        double baseY = staffMiddleOffset + baseYFromMiddle;
 
-        // Half-tie geometry: starts at the note edge, extends TieLength away.
-        // LaissezVibrer extends to the RIGHT; RepeatTie comes in from the LEFT.
-        // LILYPOND-REF: lily/laissez-vibrer-engraver.cc — extends RIGHT
-        // LILYPOND-REF: lily/repeat-tie-engraver.cc — extends LEFT
-        double anchorX = noteCenterX + (kind == TieVariantKind.LaissezVibrer ? itemLayout.Width / 2.0 : -itemLayout.Width / 2.0);
-        double freeX = anchorX + (kind == TieVariantKind.LaissezVibrer ? TieLength : -TieLength);
-
-        double startX = Math.Min(anchorX, freeX);
-        double endX = Math.Max(anchorX, freeX);
-
-        double directedHeight = curveUp ? -ArcHeight : ArcHeight;
+        // It used to hang off the item SLOT's right edge — a whole note's slot
+        // spans the measure, which pushed the tie mid-bar (~4 ss past LilyPond's).
+        double startX = headLeftX + xLeft;
+        double endX = headLeftX + xRight;
+        double directedHeight = signedArc;
         // Cubic-bezier control points inset from each end by 0.3 of the tie length — a
         // bow-shape approximation (LP builds the tie bezier from tie-details rather than a
         // single inset fraction; 0.3 reproduces the near-circular arc well enough here).
-        double indent = TieLength * 0.3;
+        double indent = (endX - startX) * 0.3;
         var control1 = (X: startX + indent, Y: baseY + directedHeight);
         var control2 = (X: endX - indent, Y: baseY + directedHeight);
 
@@ -195,7 +258,7 @@ internal static class TieVariantEngraver
             Control1: control1,
             Control2: control2,
             CurveUp: curveUp,
-            SourcePosition: note.SourcePosition,
+            SourcePosition: sourcePosition,
             StaffIndex: staffIndex);
     }
 }

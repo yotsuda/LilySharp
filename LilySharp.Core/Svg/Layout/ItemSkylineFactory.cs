@@ -244,8 +244,53 @@ internal static class ItemSkylineFactory
         AddStem(parts, item, noteheadLeftX, staffY);
         AddFlag(parts, item, noteheadLeftX, staffY, noteValue);
         AddDots(parts, item, maxNoteheadRightX, staffY);
+        AddSemiTies(parts, item, noteheadLeftX, staffY, noteValue);
 
         return parts;
+    }
+
+    /// <summary>
+    /// Half-ties (laissez-vibrer / repeat-tie): ORDINARY elements of their column —
+    /// LilyPond's paper-column engraver diverts only AccidentalPlacement and Arpeggio
+    /// to conditional-elements — so their ink joins the spacing boxes, and the NEXT
+    /// column's arpeggio stands clear of an l.v. (laissez-vibrer-arpeggio.ly; without
+    /// this the arpeggio ran straight through the tie). Geometry is the ONE spelling
+    /// in <see cref="TieVariantEngraver.SemiTieGeometry"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column-engraver.cc:246-261 stop_translation_timestep —
+    ///   every acknowledged Item enters its column's <c>elements</c>;
+    ///   LaissezVibrerTie/RepeatTie are not diverted.
+    /// LILYPOND-REF: scm/define-grobs.scm:2030-2051 LaissezVibrerTie extra-spacing-height
+    ///   (-0.5 . 0.5) widens the Y band, not X (not ported — see the
+    ///   <see cref="ColumnPart"/> remark); width takes the default (-0.1 . 0.1).
+    /// </remarks>
+    private static void AddSemiTies(List<ColumnPart> parts, MusicItem item,
+        double noteheadLeftX, double staffY, int noteValue)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+                if (n.HasLaissezVibrer)
+                    Add(n.StaffPosition, n.StemUp, n.LaissezVibrerUp, TieVariantKind.LaissezVibrer);
+                if (n.HasRepeatTie)
+                    Add(n.StaffPosition, n.StemUp, null, TieVariantKind.Repeat);
+                break;
+            case ChordItem c:
+                foreach (var m in c.Notes)
+                    if (m.HasLaissezVibrer)
+                        Add(m.StaffPosition, c.StemUp, m.LaissezVibrerUp, TieVariantKind.LaissezVibrer);
+                break;
+        }
+
+        void Add(int pos, bool stemUp, bool? forcedUp, TieVariantKind kind)
+        {
+            var (xl, xr, baseY, arc) = TieVariantEngraver.SemiTieGeometry(
+                noteValue, pos, stemUp, forcedUp, kind);
+            double yA = staffY + baseY, yB = staffY + baseY + arc;
+            parts.Add(ColumnPart.Ink(Math.Min(yA, yB), Math.Max(yA, yB),
+                noteheadLeftX + xl, noteheadLeftX + xr));
+        }
     }
 
     /// <summary>

@@ -1,0 +1,25 @@
+// lilypond-src/input/regression/input-order-alignment.ly の Lily# 訳。
+// CLAIM: 吊り2度和音に付く lyrics/dynamics/textscript/articulation の X 揃えは
+// 入力順 (<b' c''> vs <c'' b'>) に依らず main notehead (符尾側・列原点の頭) 基準。
+// 綴り: Lily# c = LP c' (octave absolute)。^"Text" = @text("Text").up・
+// -! = @staccatissimo・\f = @f。歌詞は 1 音節のみ (LP \addlyrics { blah } と同型)。
+// 検証: 両譜の全要素が同 X (svg)・LP dump (scratch\lpreg\inporder-dump.ly) と規則一致:
+//   f/staccatissimo/blah = main head の ink 中心・Text = 列原点に ink 左揃え。
+// 観測者: InputOrderAlignmentTests + DynamicPlacementTests (TextScript 左揃え)。
+octave absolute
+time 4/4
+
+part one { }
+part two { }
+
+lyrics wa { section Main { blah | | | | } }
+lyrics wb { section Main { blah | | | | } }
+
+section Main {
+  one { <b c'>2 s2 | <b c'>2@f s2 | <b c'>2@text("Text").up s2 | <b c'>2@staccatissimo s2 | }
+  two { <c' b>2 s2 | <c' b>2@f s2 | <c' b>2@text("Text").up s2 | <c' b>2@staccatissimo s2 | }
+}
+
+form main { ~Main }
+
+score main { staff ~one with lyrics wa staff ~two with lyrics wb }

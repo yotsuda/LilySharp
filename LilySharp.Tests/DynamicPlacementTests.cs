@@ -164,7 +164,15 @@ public class DynamicPlacementTests
 
         var above = layout.DynamicLayouts.Where(d => d.IsAbove).OrderBy(d => d.YUp).ToList();
         Assert.Equal(2, above.Count);
-        Assert.Equal(above[0].X, above[1].X, 3); // genuinely the same column
+        // Genuinely the same column, but with each grob's own LP alignment: the
+        // dynamic's ink CENTRE on the main note head, the expressive text's ink
+        // LEFT on the column origin (LP TextScript declares no self/parent
+        // alignment — input-order-alignment.ly; see DynamicEngraver.Calculate).
+        var f = above.Single(d => !d.IsExpressiveText);
+        var txt = above.Single(d => d.IsExpressiveText);
+        double column = f.X - GlyphMetrics.GetNoteheadBBox(4).CenterX;
+        Assert.Equal(column,
+            txt.X - LilySharp.Core.Rendering.TextFontMetrics.Serif("cresc", 2.0) / 2.0, 3);
         Assert.True(above[1].YUp - above[0].YUp >= 1.5,
             $"stacked above-staff grobs must be separated (got {above[0].YUp} and {above[1].YUp})");
     }

@@ -58,8 +58,68 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第111セッション第1便（＝fixed **第32号 = hara-kiri-percent-repeat.ly**・
+最終更新 第111セッション第4便（＝第1便 fixed **第32号 = hara-kiri-percent-repeat.ly**・
+`b8a4f128`・第2便 skip 2 + fixed **第33号 = input-order-alignment.ly**・`fd93d1c5`・
+第3便 **key-signature-space.ly = open**・`2014c9d8`・第4便 skip 2（kievan 両冊＝KievanStaff
+無し）+ fixed **第34号 = laissez-vibrer-chords.ly** + **第35号 = laissez-vibrer-arpeggio.ly**・
 この handoff と同 commit）。
+
+★★★ **第4便 fixed 第34/35号 = laissez-vibrer 族 2 冊**:
+- **欠陥⑴（第34号）**: 和音の l.v. が丸ごと**無警告 silent drop**（TieVariantEngraver が
+  NoteItem 限定・glissando 第30号と同じ鉱脈）→ member fan（ChordNoteInfo.HasLaissezVibrer/
+  LaissezVibrerUp・和音レベル @laissezVibrer は全頭 = acknowledge_note_head の字面）+
+  **^/_ 向き強制**（event direction → tie）。**X span も字面化**: head ink 右 + XGap(0.2)
+  〜 +OpenReach(1.5)−XGap = 長さ 1.1（from_semi_ties:436-441 の 1.5。旧実装は item SLOT
+  右端 + 固定 1.0 ＝全音符で小節中央まで流れる枠バグ）。**LP 照合: X span 桁一致**
+  （m2 18.90/20.00 完全一致）・向き一致（単独 = down・^d up / _g down の対向）。
+- **欠陥⑵（第35号）**: l.v. の弧の ink が spacing box に不参加 → 次和音の **arpeggio が
+  tie を素通り**していた → ItemSkylineFactory.AddSemiTies（LP: paper-column-engraver の
+  divert は AccidentalPlacement/Arpeggio のみ＝LaissezVibrerTie は ordinary element）。
+  幾何は **TieVariantEngraver.SemiTieGeometry の一綴り**（描画と spacing が同式＝5.2.1②）。
+  照合: tie 終端→arpeggio クリアランス LS 0.50 vs LP 0.35・対間隔 +0.15（drift 級）・衝突なし。
+- **観測者 +1**（LaissezVibrerChordTests）・**snapshot 1 枚**（lv-meterchange＝tie 1 本が
+  slot 右→頭縁 1.1 span・census 済）。perf: 呼び出し構造不変（tie 持ち item のみ小分岐）。
+- **起票（残・別 regime）**: ⑴ semi-tie scorer（Tie_formatting_problem::from_semi_ties→
+  generate_optimal_configuration）未移植＝Y baseline は ±0.4 近似（LP は 0.34〜0.7 を量子化）・
+  複数 lv 無強制時の向き割当も scorer 側 ⑵ **repeatTie の和音は依然 silent drop**
+  ⑶ REF ラチェットの学び再演: 引用行は**同一行**に適格シンボル（`_`結合等）が要る——
+  継続行に置いて 1 回落ちた。
+
+★★ **第3便 key-signature-space.ly = open（主張核心 exact・残差 3 系統起票・コード変更 0）**:
+- **桁一致**: 初期 4♭（間隔 0.92）・時号 X 9.015/9.02・m1 第1音 12.715/12.71・中間変更列の
+  構造（取消 4♮ + 5♯・**bar→取消 1.0・取消→key 0.5**・♯間隔 1.1）全部。
+- **残差**: ⑴ mid-line key→第1音 LP 3.05 vs LS 2.50（KeySignature space-alist
+  first-note = **shrink-space 2.5**・define-grobs.scm:1996——boundary column 経路の未移植枝）
+  ⑵ 各小節の第1音→第2音 spring だけ LS +0.19（以降の音間は桁一致 = FirstNoteSpring regime）
+  ⑶ **多譜の R1 が MMR 中央寄せされず音符列 X に描かれる**（LS 12.71/40.31 vs LP 小節中央
+  18.49/45.79。単譜は中央寄せが動く）。
+- **起票（新欠陥）**: 単譜 `R1 || R1` で**第2小節が幅ゼロに潰れ、終止線が複縦線の左に
+  重なる**（probe scratch\lpreg\r1probe.lys。フル休符小節の compact spring 疑い）。
+
+★★★ **第2便 fixed 第33号 = input-order-alignment.ly**（+ skip 2: horizontal-bracket-tweak =
+Horizontal_bracket_engraver も \tweak も無い false plain・include-identifier = include の
+変数間接が無い（using はリテラル+トップレベル合成のみ））:
+- **主張（吊り2度和音の lyrics/dynamics/text/articulation の X は入力順に依らず main
+  notehead 基準）**: 入力順不変は両エンジン成立（両譜全要素同 X）。**LP dump
+  （scratch\lpreg\inporder-dump.ly・after-line-breaking の system 相対 X extent）で規則照合**:
+  f 中心 20.0020 vs main head 中心 20.0019・Script 中心 40.4336=40.4336・LyricText 中心
+  9.7861=9.7861・**TextScript は ink 左 29.5290 = 列原点ぴったり**（self/parent-align 共に
+  #f = offset 0）。
+- **修理 2 件（Lily# の乖離）**: ⑴ **LyricText の he が heads の union だった** → main-extent
+  （列原点の main head の箱。note-column.cc:179-204 calc_main_extent +
+  self-alignment-interface.cc:143-145 **X-align-on-main-noteheads** + define-grobs:2228。
+  SpacingRules.RhythmicHeadExtent——描画と予約が同関数なので両方一緒に動く）⑵ **@text
+  （=LP TextScript）が頭中心揃えだった** → 列原点に ink 左揃え（DynamicEngraver.Calculate。
+  格納 X は中心のまま = 中心 = 列 + 半幅）。**Lily# の f/Script は元から main head 中心 =
+  LP と一致・不変**（main head = offset 0 の頭 = CalculateOffsets の非反転頭）。
+- **観測者**: InputOrderAlignmentTests（新・本の主張ごとピン）+ DynamicPlacementTests
+  更新（TextScript 左揃えの字面ピン）。**snapshot 1 枚**（test/text-annotation・@text
+  4 ラベルが「半幅−0.69」右へ + それに伴う stacking Y 微動・census 済）。perf: 呼び出し
+  構造不変（定数選択の分岐 1 個・alloc 0）＝A/B 省略。
+- **調査の学び**: Fix B は予約（歌詞 reach→rod）も動かすので列 X 自体が動く——「blah の
+  絶対 X が不変」に一度騙された（noteX −0.65 と centre +0.655 が相殺）。**絶対 X でなく
+  「規則（どの頭に揃うか）」で照合すること**。LP twin に Scheme dump を使うのは可
+  （.lys 側が plain ならよい）。
 
 ★★★ **第1便 fixed 第32号 = hara-kiri-percent-repeat.ly**:
 - **主張（percent repeat の譜は RemoveEmptyStaves でも消えない）= exact**: 両系×5譜
@@ -90,15 +150,16 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ⚠️ **前回引継ぎの state 内訳は 2 点ズレていた**（exact 25→実 24・skip 66→実 65。
 処理済 131 自体は一致）。数えたら §0 の数え方で state 別も一緒に検算すること。
 
-plain 322 / 処理済 **132**（fixed **32**・exact **24**・skip **65**・open **11**・
-pending 190。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **140**（fixed **35**・exact **24**・skip **69**・open **12**・
+pending 182。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること。今の先頭は
-horizontal-bracket-tweak.ly——固定で書くと腐る）。第107 起票の §2A workstream は棚のまま。
+layout-from.ly——固定で書くと腐る）。第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4186 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+テスト **4188 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
 lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
-snapshot 第111 は 1 枚（census 上記）**・base worktree = C:\MyProj\LilySharp-base
+snapshot 第111 は 3 枚（第1便 tab-percent-repeat + 第2便 text-annotation + 第4便
+lv-meterchange・census 各便）**・base worktree = C:\MyProj\LilySharp-base
 （cc19cccc・残置）。
 
 ## 以下は第110セッション第1〜6便の経緯

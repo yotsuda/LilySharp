@@ -176,10 +176,23 @@ internal static class DynamicEngraver
             //   lily/self-alignment-interface.cc aligned_on_parent (the parent extent's
             //   centre; measured for the anchor classes in
             //   audit/lp-geometry — see reference self-alignment-parent-extent).
+            // Free expressive text is LP's TextScript, and TextScript does NOT
+            // centre: self-alignment-X and parent-alignment-X are both #f, so
+            // aligned_on_parent adds nothing and the text's ink LEFT stands on
+            // the note column's reference point (input-order-alignment.ly:
+            // TextScript ink-left 29.5290 == column origin == main head left, to
+            // the digit). The stored X stays the label's CENTRE (the draw and
+            // the skylines both anchor middle), so left-aligning means centre =
+            // column + half the label's own width.
+            // LILYPOND-REF: scm/define-grobs.scm:3810-3820 TextScript
+            //   parent-alignment-X #f / self-alignment-X #f;
+            //   lily/self-alignment-interface.cc:159-175 (non-number aligns add 0).
             double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
-            double x = xColumn + AnchorCentreOffset(
-                AnchorItem(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex));
+            double x = xColumn + (dynamic.IsExpressiveText
+                ? LabelHalfWidth(dynamic.Text ?? string.Empty, expressive: true)
+                : AnchorCentreOffset(
+                    AnchorItem(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex)));
 
             // The supports: EVERY voice's note column at this timing (a lower voice's
             // down-stem must not be overlapped by a dynamic positioned from the upper

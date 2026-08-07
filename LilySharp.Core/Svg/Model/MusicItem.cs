@@ -212,6 +212,15 @@ public sealed record NoteItem : MusicItem
     public bool HasLaissezVibrer { get; }
 
     /// <summary>
+    /// Forced curve side of the l.v. tie from <c>@laissezVibrer.up/.down</c>
+    /// (LP's <c>^\laissezVibrer</c>/<c>_\laissezVibrer</c>); null = automatic
+    /// (opposite the stem).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head
+    /// — the event's direction property is copied onto the tie.</remarks>
+    public bool? LaissezVibrerUp { get; init; }
+
+    /// <summary>
     /// True when this note has a repeat-tie — a half-tie pointing in from the LEFT,
     /// typically used after a repeat barline to indicate continuation from the
     /// previous volta.
@@ -430,7 +439,16 @@ public readonly record struct ChordNoteInfo(
     // reference point, once the whole staff column's accidentals have been packed
     // together — null where this chord stands alone on its column and the per-item
     // solve is the same answer. Same frame and same reason as NoteItem.AccidentalX.
-    double? AccidentalX = null
+    double? AccidentalX = null,
+    // Laissez-vibrer half-tie on THIS member. A chord-level @laissezVibrer marks
+    // every member; a member-level one marks just its own head.
+    // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:66-108 acknowledge_note_head —
+    // "use the heard event_ for all note heads, or an individual event for just
+    // a single note head (attached as an articulation inside a chord)".
+    bool HasLaissezVibrer = false,
+    // Forced curve side from ^/_ on the l.v. event (acknowledge_note_head copies
+    // the event's direction onto the tie, :99-103); null = automatic.
+    bool? LaissezVibrerUp = null
 );
 
 /// <summary>

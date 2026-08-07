@@ -3337,6 +3337,21 @@ public sealed partial class MeasureCollector
         => HasNamedArticulation(node, "laissezvibrer");
 
     /// <summary>
+    /// The forced curve side (<c>.up</c>/<c>.down</c>) of a node's
+    /// <c>@laissezVibrer</c> annotation, or null when absent or automatic.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head
+    /// — the l.v. event's direction is copied onto the LaissezVibrerTie.</remarks>
+    private static bool? LaissezVibrerUpOf(SyntaxNode node)
+    {
+        foreach (var art in ArticulationsOf(node))
+            if (art is ArticulationSyntax { Type: ArticulationType.None } a
+                && a.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                return a.ForcedAbove;
+        return null;
+    }
+
+    /// <summary>
     /// Detects whether a note carries a <c>@repeatTie</c> articulation.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/repeat-tie-engraver.cc — repeat-tie attachment.</remarks>

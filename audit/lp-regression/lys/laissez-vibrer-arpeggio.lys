@@ -1,0 +1,23 @@
+// lilypond-src/input/regression/laissez-vibrer-arpeggio.ly の Lily# 訳。
+// CLAIM: l.v. tie は次の和音の arpeggio 記号と衝突しない。
+// 綴り: Lily# c = LP c'。LP <e'> = <e>・<f f'> = <f, f>。既定4分。
+// 修理: l.v. の弧の ink を列の spacing box に参加させた (ItemSkylineFactory.AddSemiTies)
+// = LP は LaissezVibrerTie が列の ordinary element で separation box に入る。
+// 照合: tie 終端→arpeggio ink 左のクリアランス LS 0.50 vs LP 0.35 (Δ0.15)・
+// 対の間隔 LS 4.40 vs LP 4.25 (+0.15 = note-spacing drift 級)。衝突なし。
+// twin scratch\lpreg\lvarp.{ly,lys}。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    <e>4@laissezVibrer <f, f>4@arpeggio <e>4@laissezVibrer <g, f>4@arpeggio |
+    <e>4@laissezVibrer <a, f>4@arpeggio <e>4@laissezVibrer <b, f>4@arpeggio |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

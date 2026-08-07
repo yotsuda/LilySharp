@@ -3920,9 +3920,10 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// One item's contribution to the note-column extent above: the note heads it draws, or
-    /// the rest, measured from the column's reference point. Null for anything that is not a
-    /// rhythmic grob (a note column holds no clef or bar line).
+    /// One item's contribution to the note-column extent above: its MAIN note head (the
+    /// unreversed one at the column origin), or the rest, measured from the column's
+    /// reference point. Null for anything that is not a rhythmic grob (a note column holds
+    /// no clef or bar line).
     /// </summary>
     private static (double Left, double Right)? RhythmicHeadExtent(MusicItem? item)
     {
@@ -3939,15 +3940,19 @@ internal static class SpacingRules
         }
 
         var head = GlyphMetrics.GetNoteheadBBox(noteValue);
-        if (item is ChordItem chord)
-        {
-            // Seconds reverse a head to the other side of the stem, so the group is wider
-            // than one head on whichever side the reversal happened.
-            // LILYPOND-REF: lily/stem.cc:606-760 — the same offsets CalculateLeftExtent reads.
-            double[] offsets = ChordHeadPositioning.CalculateOffsets(
-                chord.Notes, chord.StemUp, noteValue);
-            return (offsets.Min() + head.Left, offsets.Max() + head.Right);
-        }
+        // A chord contributes only its MAIN notehead, not the union with reversed
+        // (suspended) heads: the aligning grobs (LyricText, TextScript) declare
+        // X-align-on-main-noteheads #t, which swaps the note column's extent for
+        // its main-extent — the extent of first_head, the head the stem walk
+        // starts from, which the positioning leaves at offset 0 (reversed heads
+        // are the ones shifted, stem-up right / stem-down left). So the main
+        // head's box IS the plain head box at the column origin, for NoteItem
+        // and ChordItem alike. input-order-alignment.ly measured the union
+        // mis-centring a suspended chord's syllable by half a head (10.245 vs
+        // LP's main-head centre 9.7861).
+        // LILYPOND-REF: lily/note-column.cc:179-204 calc_main_extent
+        // LILYPOND-REF: lily/self-alignment-interface.cc:143-145 aligned_on_parent
+        // LILYPOND-REF: scm/define-grobs.scm:2228 LyricText X-align-on-main-noteheads
         return (head.Left, head.Right);
     }
 
@@ -4676,6 +4681,25 @@ internal static class SpacingRules
             double dotGap = EngravingDefaults.DotGap;
             extent += dotGap + dots * dotWidth + (dots - 1) * dotGap;
         }
+
+        // A laissez-vibrer half-tie hangs off the head's right ink edge, and its
+        // ink is an item of the column like any other, so the spacing boxes carry
+        // it — without this the NEXT column's arpeggio ran straight through the
+        // tie (laissez-vibrer-arpeggio.ly: LP holds tie-end → arpeggio clear).
+        // The tie's span is headRight + xGap .. headRight + OpenReach − xGap
+        // (TieVariantEngraver, LP's from_semi_ties open-outline numbers).
+        // LILYPOND-REF: lily/separation-item.cc:163-164 Separation_item::boxes —
+        //   every item's extent in the paper column's frame joins the spacing box.
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:436-441 from_semi_ties.
+        bool hasLv = item switch
+        {
+            NoteItem n => n.HasLaissezVibrer,
+            ChordItem c => c.Notes.Any(m => m.HasLaissezVibrer),
+            _ => false,
+        };
+        if (hasLv)
+            extent = Math.Max(extent, GlyphMetrics.GetNoteheadBBox(noteValue).Right
+                + TieVariantEngraver.OpenReach - TieDetails.Default.XGap);
 
         return extent;
     }
