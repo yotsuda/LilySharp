@@ -65,7 +65,8 @@ public readonly record struct HairpinLayout(
 /// Hairpin parameters from LilyPond:
 /// - height: 0.6666 staff spaces (maximum opening)
 /// - bound-padding: 1.0
-/// - minimum-length: 2.0
+/// - minimum-length: 2.0 — a SPACING rod (springs-and-rods =
+///   ly:spanner::set-spacing-rods), never a draw-time stretch; unported (springs regime)
 /// - thickness: 1.0 (staff line widths)
 /// </remarks>
 internal static class HairpinEngraver
@@ -82,12 +83,6 @@ internal static class HairpinEngraver
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1780 (bound-padding . 1.0)</remarks>
     private const double BoundPadding = 1.0;
-
-    /// <summary>
-    /// Minimum hairpin length.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1786 (minimum-length . 2.0)</remarks>
-    private const double MinimumLength = 2.0;
 
     /// <summary>
     /// The staff middle's own place in the frame a <see cref="HairpinLayout"/> stores:
@@ -155,8 +150,17 @@ internal static class HairpinEngraver
 
         foreach (var hairpin in hairpins)
         {
+            // An end of (lastMeasure+1, 0) is the moment PAST the music — the FINAL
+            // barline. Under to-barline that is a drawable bound (the bar at the last
+            // measure's end), so only truly unplaceable spans are skipped. A trailing
+            // "c1\> <>\pp" used to vanish whole here.
+            // LILYPOND-REF: lily/bar-engraver.cc:548-558 process_acknowledged —
+            //   set_bound (RIGHT, bar_) rewrites the bound to the bar item standing
+            //   at the end timestep, and the final bar stands at the final timestep.
+            bool endsAtFinalBar = hairpin.EndItemIndex == 0
+                && hairpin.EndMeasureIndex == measureLayouts.Length;
             if (hairpin.StartMeasureIndex >= measureLayouts.Length ||
-                hairpin.EndMeasureIndex >= measureLayouts.Length)
+                (hairpin.EndMeasureIndex >= measureLayouts.Length && !endsAtFinalBar))
                 continue;
 
             // The wedge hangs below ITS staff; add the staff's within-system offset so a
@@ -183,7 +187,7 @@ internal static class HairpinEngraver
             // measure OPENS a system, the bar it binds to is the PREVIOUS system's
             // end bar (drawn inside that measure's width), and the spanner never
             // enters the terminator's system — the piece list must stop a measure
-            // early, or a phantom MinimumLength stub appears at the new line's head
+            // early, or a phantom stub piece appears at the new line's head
             // and stacks against the next hairpin. Measured: 51.025−1.0 and
             // 50.598−1.0 (dynamics-broken-hairpin), 21.021−1.0 (probe-hairpin-bounds).
             // LILYPOND-REF: lily/bar-engraver.cc:579-587 acknowledge_end_spanner and
@@ -195,11 +199,15 @@ internal static class HairpinEngraver
             if (hairpin.EndItemIndex == 0 && hairpin.EndMeasureIndex > 0)
             {
                 bool opensSystem =
-                    measureToSystemIdx.TryGetValue(hairpin.EndMeasureIndex, out int endSys)
+                    !endsAtFinalBar
+                    && measureToSystemIdx.TryGetValue(hairpin.EndMeasureIndex, out int endSys)
                     && measureToSystemIdx.TryGetValue(hairpin.EndMeasureIndex - 1, out int prevSys)
                     && endSys != prevSys;
-                if (opensSystem)
+                if (opensSystem || endsAtFinalBar)
                 {
+                    // The bar the bound rewrites to is drawn INSIDE the previous
+                    // measure's width (a system-opening measure's previous line-end
+                    // bar, or the final barline).
                     endMeasureIdx = hairpin.EndMeasureIndex - 1;
                     var prevM = measureLayouts[endMeasureIdx];
                     ownEndX = prevM.X + prevM.Width - BoundPadding;
@@ -260,8 +268,18 @@ internal static class HairpinEngraver
                 if (!segment.IsFirst)
                     segStartX += BoundPadding;
 
-                if (segEndX - segStartX < MinimumLength)
-                    segEndX = segStartX + MinimumLength;
+                // Crossed bounds draw as a point — LilyPond warns "(de)crescendo too
+                // small" and clamps the WIDTH to zero; it never stretches the drawn
+                // wedge to minimum-length (that property is a SPACING rod, spent
+                // between the bound columns — unported, the spring side's ticket).
+                // Measured: dynamics-line.ly's to-barline end 21.985 − start 20.474 =
+                // 1.511 < 2.0, drawn as-is.
+                // LILYPOND-REF: lily/hairpin.cc:292-299 Hairpin::print — width = x_points[RIGHT]
+                //   − x_points[LEFT]; if (width < 0) width = 0 (with the "too small" warning)
+                // LILYPOND-REF: scm/define-grobs.scm:1786-1788 Hairpin minimum-length 2.0 rides springs-and-rods
+                //   (ly:spanner::set-spacing-rods), the spacing side, not the stencil
+                if (segEndX < segStartX)
+                    segEndX = segStartX;
 
                 double startOpening, endOpening;
                 if (hairpin.Direction == HairpinDirection.Crescendo)
@@ -493,15 +511,27 @@ internal static class HairpinEngraver
                 ? HairpinDirection.Crescendo
                 : HairpinDirection.Decrescendo;
 
-            // A hairpin ends at a dynamic / next hairpin ON THE SAME STAFF. Without
+            // The wedge starts at the mark's OWN moment (\< is a post-event of its
+            // note); a collector that didn't stamp the anchor leaves -1 and keeps
+            // the old measure-head start.
+            int startItem = Math.Max(0, mark.AnchorItemIndex);
+
+            // A hairpin ends at a dynamic / next hairpin ON THE SAME STAFF, and
+            // STRICTLY AFTER the start moment: a dynamic AT the start moment is the
+            // hairpin's opening text (the engraver acknowledges both in the same
+            // timestep and the text becomes the LEFT bound), never the terminator.
+            // Until 2026-08-07 "c\f\> ..." ended its own wedge on that f. Without
             // the staff filter a cresc on staff 2 terminated against staff 1's cresc
             // in the same measure, collapsing both spans to nothing (they share the
             // single score.MusicMarks / Dynamics tables).
+            // LILYPOND-REF: lily/dynamic-align-engraver.cc:119-160 acknowledge_dynamic
+            //   — the same-timestep text joins the line; :210 the line ends in a LATER
+            //   timestep with no running spanner.
             var nextDynamic = sortedDynamics
                 .FirstOrDefault(d =>
                     d.StaffIndex == mark.StaffIndex &&
                     (d.MeasureIndex > mark.MeasureIndex ||
-                     (d.MeasureIndex == mark.MeasureIndex && d.ItemIndex > 0)));
+                     (d.MeasureIndex == mark.MeasureIndex && d.ItemIndex > startItem)));
 
             // Find the next cresc/decresc mark on this staff (another hairpin starts
             // there). A same-measure mark only counts if it is at a LATER item, so a
@@ -539,12 +569,12 @@ internal static class HairpinEngraver
 
             // Only add if there's actually a span
             if (endMeasure > mark.MeasureIndex ||
-                (endMeasure == mark.MeasureIndex && endItem > 0))
+                (endMeasure == mark.MeasureIndex && endItem > startItem))
             {
                 hairpins.Add(new HairpinItem(
                     Direction: direction,
                     StartMeasureIndex: mark.MeasureIndex,
-                    StartItemIndex: 0,
+                    StartItemIndex: startItem,
                     EndMeasureIndex: endMeasure,
                     EndItemIndex: endItem,
                     SourcePosition: mark.SourcePosition,

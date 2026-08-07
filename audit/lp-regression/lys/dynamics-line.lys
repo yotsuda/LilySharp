@@ -1,0 +1,18 @@
+// lilypond-src/input/regression/dynamics-line.ly の Lily# 訳。
+// CLAIM: dynamics は譜の下 (または上) に付く。(de)cresc で連結された複数の
+// dynamics は同一線上 (DynamicLineSpanner)。孤立 dynamic は向きを強制できる
+// (原本 a1^\sfz = @sfz.up)。\p の後の孤立 \f は 2 つ目の spanner を得る。
+// 枠合わせ: 原本の c,,\!\pp は \! が \pp と同座なので @pp だけで写る
+// (hairpin は次の dynamic 到達で終わる = 終端の綴りは主張に付随しない)。
+// 綴り: Lily# も相対 (anchor c=C4=LP c')。LP \relative c'' の先頭 a=A4 は
+// Lily# の C4 起点では a' が要る。以降は LP 本文と同綴り
+// (a=A4・c,,=C3・a''=A4・d=D5・a=A4。lysc check --pitches で検算済)。
+
+a'1@sfz.up |
+a1@fff @decresc |
+c,,1@pp |
+a''1 |
+a1@p |
+a1 |
+d1@f |
+a1 |

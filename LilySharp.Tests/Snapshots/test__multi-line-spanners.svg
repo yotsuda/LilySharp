@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="674.9" viewBox="0 0 119.50 67.49" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="680.6" viewBox="0 0 119.50 68.06" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="67.49" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="68.06" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="197">Multi-line Spanners</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="228">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -110,9 +110,9 @@
   <path d="M 9.54,21.02 C 13.06,18.95 98.60,17.11 102.13,19.02 C 98.60,17.23 13.07,19.07 9.54,21.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 3.67,30.02 C 6.40,28.40 27.70,29.99 30.42,32.02 C 27.69,30.11 6.39,28.52 3.67,30.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="56.32" y="49.88" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="597">p</text>
-  <text x="78.24" y="61.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
-  <line x1="58.05" y1="48.40" x2="102.43" y2="47.96" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
-  <line x1="58.05" y1="48.40" x2="102.43" y2="48.85" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <text x="78.24" y="61.68" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
+  <line x1="67.25" y1="48.28" x2="102.43" y2="47.83" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="67.25" y1="48.28" x2="102.43" y2="48.72" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <line x1="4.37" y1="60.85" x2="76.60" y2="60.41" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <line x1="4.37" y1="61.30" x2="76.60" y2="61.74" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <text x="0.00" y="29.49" font-size="1.75" font-weight="bold" text-anchor="end">3</text>

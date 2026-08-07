@@ -2993,6 +2993,19 @@ internal sealed class LayoutEngine
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
             voicesByStaff, measuresByStaff, beamLayouts ?? default, dynamicLayouts);
 
+        // Texts and wedges linked by RUNNING hairpins ride one DynamicLineSpanner: the
+        // group is side-positioned once and every member re-seats on the shared line
+        // (the fff of "a1\fff\>" drops to the level the terminating pp's low column
+        // demands). Must run before the text spanners read the dynamics' Y. The groups
+        // ride to the outside-staff pass, which moves each as ONE grob.
+        // LILYPOND-REF: lily/dynamic-align-engraver.cc:194-235 stop_translation_timestep.
+        ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> dynamicLineGroups;
+        (dynamicLayouts, hairpinLayouts, dynamicLineGroups) = DynamicAlignEngraver.AlignLines(
+            hairpinItems, dynamics, dynamicLayouts, hairpinLayouts, systems, ml, staffYAt,
+            score != null && staffVoices.IsDefaultOrEmpty
+                ? ImmutableArray.Create(score.Voice) : staffVoices,
+            voicesByStaff, measuresByStaff, beamLayouts ?? default);
+
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them
         var textSpannerItems = TextSpannerEngraver.DetectTextSpanners(musicMarks);
@@ -3263,7 +3276,7 @@ internal sealed class LayoutEngine
         var (stackedDynamics, stackedHairpins, stackedArticulations) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
                 articulationLayouts, applyStaffOffsets: staffYAt != null,
-                staffProfile: staffProfile);
+                staffProfile: staffProfile, lineGroups: dynamicLineGroups);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,

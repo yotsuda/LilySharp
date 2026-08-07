@@ -50,8 +50,8 @@
   <rect x="25.62" y="22.90" width="0.19" height="4.00" data-pos="628"/>
   <rect x="35.24" y="22.90" width="0.19" height="4.00" data-pos="638"/>
   <rect x="35.73" y="22.90" width="0.60" height="4.00" data-pos="638"/>
-  <text x="27.54" y="19.66" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="599">f</text>
-  <text x="27.54" y="28.72" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">p</text>
+  <text x="27.54" y="19.76" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="599">f</text>
+  <text x="27.54" y="28.87" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">p</text>
   <line x1="17.24" y1="19.16" x2="24.81" y2="18.49" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="583"/>
   <line x1="17.24" y1="19.16" x2="24.81" y2="19.82" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="583"/>
   <line x1="17.24" y1="27.60" x2="24.81" y2="28.27" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="620"/>

@@ -150,7 +150,8 @@ internal static class OutsideStaffStacker
             ImmutableArray<HairpinLayout> hairpins,
             ImmutableArray<ArticulationLayout> articulations = default,
             bool applyStaffOffsets = false,
-            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null)
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null,
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default)
     {
         // A below-staff script that DECLARES a priority (the fermata family's 75) is a mover
         // of this pass in its own right, so the pass has to run for it even on a page with
@@ -325,14 +326,108 @@ internal static class OutsideStaffStacker
         // --- Priority 250: DynamicLineSpanner (dynamics + hairpins) ---
         // LILYPOND-REF: scm/define-grobs.scm:1407 DynamicLineSpanner.outside-staff-priority = 250
 
+        // A multi-member line (texts + wedges linked by running hairpins) is ONE grob of
+        // this pass: its members' combined outline takes one Place and one move, so a tie
+        // under the wedge pushes the WHOLE line down and the members stay aligned —
+        // placing them one by one would push the wedge below its own line's text.
+        // The members' Y is already the shared line DynamicAlignEngraver seated them on.
+        // LILYPOND-REF: lily/axis-group-interface.cc:700-760 add_grobs_of_one_priority —
+        //   the grob placed at 250 is the DynamicLineSpanner, not its children.
+        var groupedDynIdx = new HashSet<int>();
+        var groupedHpIdx = new HashSet<int>();
+        var adjDynamics = dynamics;
+        var adjHairpins = hairpins;
+        if (!lineGroups.IsDefaultOrEmpty)
+        {
+            var dynB = dynamics.IsDefaultOrEmpty ? null : dynamics.ToBuilder();
+            var hpB = hairpins.IsDefaultOrEmpty ? null : hairpins.ToBuilder();
+            foreach (var g in lineGroups)
+            {
+                foreach (int di in g.DynamicIndices)
+                    groupedDynIdx.Add(di);
+                foreach (int hi in g.HairpinIndices)
+                    groupedHpIdx.Add(hi);
+
+                // The group's system and staff, from any member (one broken piece =
+                // one system, one staff, by construction).
+                int sysIdx, staffIdx;
+                if (g.DynamicIndices.Length > 0 && dynB != null)
+                {
+                    var d0 = dynB[g.DynamicIndices[0]];
+                    if (!measureToSystem.TryGetValue(d0.MeasureIndex, out sysIdx))
+                        continue;
+                    staffIdx = d0.StaffIndex;
+                }
+                else if (g.HairpinIndices.Length > 0 && hpB != null)
+                {
+                    var h0 = hpB[g.HairpinIndices[0]];
+                    if (!measureToSystem.TryGetValue(h0.StartMeasureIndex, out sysIdx))
+                        continue;
+                    staffIdx = h0.StaffIndex;
+                }
+                else
+                    continue;
+
+                double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
+                    && staffYBySystem[sysIdx].TryGetValue(staffIdx, out var gso) ? gso : 0;
+
+                // The members' combined outline, each in the tracker's system-relative
+                // frame — the same shapes the individual placements below use.
+                (VerticalSkyline Up, VerticalSkyline Down)? dim = null;
+                void Fold((VerticalSkyline Up, VerticalSkyline Down) part)
+                {
+                    if (dim is { } d)
+                    {
+                        d.Up.Merge(part.Up);
+                        d.Down.Merge(part.Down);
+                    }
+                    else
+                        dim = part;
+                }
+                foreach (int di in g.DynamicIndices)
+                {
+                    var dyn = dynB![di];
+                    Fold(DynamicEngraver.LabelSkylines(
+                        dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp - off - 2.0));
+                }
+                foreach (int hi in g.HairpinIndices)
+                {
+                    // The wedge's REAL sloped outline, not a box over its extremes: the
+                    // pass clears the tie off the arm where the arm actually is.
+                    // LILYPOND-REF: scm/define-grobs.scm Hairpin vertical-skylines =
+                    //   grob::unpure-vertical-skylines-from-stencil — the profile is the
+                    //   drawn wedge.
+                    var hp = hpB![hi];
+                    Fold(HairpinEngraver.WedgeSkylines(
+                        hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening, hp.YUp));
+                }
+                if (dim is not { } my)
+                    continue;
+
+                double move = Track(sysIdx, staffIdx).Place(my.Up, my.Down, OutsideStaffPadding);
+                if (move != 0)
+                {
+                    foreach (int di in g.DynamicIndices)
+                        dynB![di] = dynB[di] with { YUp = dynB[di].YUp + move };
+                    foreach (int hi in g.HairpinIndices)
+                        hpB![hi] = hpB[hi] with { YUp = hpB[hi].YUp + move };
+                }
+            }
+            if (dynB != null)
+                adjDynamics = dynB.ToImmutable();
+            if (hpB != null)
+                adjHairpins = hpB.ToImmutable();
+        }
+
         // Dynamics: push below anything already occupying their X range
         // (below-staff scripts), then record their own extent.
-        var adjDynamics = dynamics;
-        if (!dynamics.IsDefaultOrEmpty)
+        if (!adjDynamics.IsDefaultOrEmpty)
         {
-            var dynBuilder = dynamics.ToBuilder();
+            var dynBuilder = adjDynamics.ToBuilder();
             for (int i = 0; i < dynBuilder.Count; i++)
             {
+                if (groupedDynIdx.Contains(i))
+                    continue;
                 var dyn = dynBuilder[i];
                 // Forced-above dynamics sit above the staff (DynamicEngraver placed them);
                 // the below-staff stacker leaves them untouched and ignores them as
@@ -365,12 +460,13 @@ internal static class OutsideStaffStacker
         }
 
         // Adjust hairpins: avoid overlapping with dynamics in the same X range
-        var adjHairpins = hairpins;
-        if (!hairpins.IsDefaultOrEmpty)
+        if (!adjHairpins.IsDefaultOrEmpty)
         {
-            var builder = hairpins.ToBuilder();
+            var builder = adjHairpins.ToBuilder();
             for (int i = 0; i < builder.Count; i++)
             {
+                if (groupedHpIdx.Contains(i))
+                    continue;
                 var hp = builder[i];
                 if (!measureToSystem.TryGetValue(hp.StartMeasureIndex, out int sysIdx))
                     continue;

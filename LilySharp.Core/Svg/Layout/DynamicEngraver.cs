@@ -72,7 +72,9 @@ internal static class DynamicEngraver
     // LILYPOND-REF: define-grobs.scm:1450 DynamicText (Y-offset . (scale-by-font-size
     //   -0.6)) — "center on an 'm'". side-position places the SPANNER, and the text hangs
     //   this far below the spanner's own origin, so the two frames differ by 0.6.
-    private const double TextOffsetInSpanner = 0.6;
+    //   (internal: DynamicAlignEngraver spends the same child offset when it re-seats a
+    //   grouped text on its line spanner.)
+    internal const double TextOffsetInSpanner = 0.6;
 
     // Staff geometry (5 lines = 4 staff spaces)
     private const double StaffMiddle = EngravingDefaults.StaffMiddle;  // staff bottom (4.0) / 2

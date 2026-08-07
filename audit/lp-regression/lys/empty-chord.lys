@@ -1,0 +1,9 @@
+// lilypond-src/input/regression/empty-chord.ly の Lily# 訳。
+// CLAIM: 空和音 <> は articulation を受け、時間を占めず、既定時価も変えない。
+// 枠合わせ: 原本の \enddecr (素の終端) は綴りが無いので両側 \pp/@pp に置換。
+// \repeat unfold は小節線を跨ぐので Lily# 側は手展開 (| 明示のため。展開は
+// 枠に中立)。綴り: LP 無引数 \relative 基準 F3 の e'=E4 = Lily# の素の e。
+
+r4 e8( g <>)@text("sul D").up@f @decresc c8@staccato c@staccato c@staccato c@staccato |
+c@staccato c@staccato c@staccato c@staccato <>@sfz <>@downbow c g c g |
+c1 @decresc <>@pp |

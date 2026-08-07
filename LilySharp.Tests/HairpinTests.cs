@@ -220,10 +220,18 @@ public class HairpinTests
     }
 
     [Fact]
-    public void Calculate_MinimumLength_Enforced()
+    public void Calculate_ShortSpan_DrawsAtItsBounds_NotStretchedToMinimumLength()
     {
-        // LILYPOND-REF: scm/define-grobs.scm:1659 (minimum-length . 2.0)
-        // Create hairpin within same measure with very close start/end
+        // minimum-length is a SPACING rod (it rides springs-and-rods and widens the
+        // gap between the bound columns), never a draw-time stretch: the stencil is
+        // drawn at whatever the bounds give. Measured: dynamics-line.ly's to-barline
+        // wedge is 1.511 long (21.985 − 20.474) and LilyPond draws it as-is. The old
+        // law stretched EndX to StartX + 2.0 here, which is a second spelling of a
+        // rod the spacing side does not have yet.
+        // LILYPOND-REF: lily/hairpin.cc:292-299 Hairpin::print — width = x_points[RIGHT]
+        //   − x_points[LEFT]; only negative width clamps (to 0, with a warning)
+        // LILYPOND-REF: scm/define-grobs.scm:1786-1788 Hairpin minimum-length 2.0 rides
+        //   springs-and-rods (ly:spanner::set-spacing-rods)
         var items = ImmutableArray.Create(
             new ItemLayout(0, 1.0, 0.5),
             new ItemLayout(1, 2.0, 0.5));
@@ -235,9 +243,12 @@ public class HairpinTests
 
         var result = HairpinEngraver.Calculate(hairpins, systems, measures);
 
-        Assert.Single(result);
-        double length = result[0].EndX - result[0].StartX;
-        Assert.True(length >= 2.0, $"Hairpin length {length:F2} should be >= 2.0 (minimum-length)");
+        var h = Assert.Single(result);
+        // Left bound: the note column's left edge, unpadded (measure.X + item.X = 1.0).
+        Assert.Equal(1.0, h.StartX, 6);
+        // Right bound: mid-measure musical end (item.X − padding/2 = 1.5) — shorter
+        // than minimum-length, and drawn that way.
+        Assert.Equal(1.5, h.EndX, 6);
     }
 
     [Fact]

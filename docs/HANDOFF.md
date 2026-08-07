@@ -58,6 +58,105 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第106セッション第4便（＝第1便 dynamics-line.ly **fixed 第26号**・`f7a993d0`・
+第2便 dynamics-rest-positioning.ly **fixed 第27号**・`7a2627b4`・
+第3便 dynamics-text 族 2 冊+easy-notation=**skip 3 冊**（`\crescTextCresc`/
+`\dimTextDim`＝text 式 cresc の綴りなし——**機構は在る**（TextSpannerItem の
+dashed+text）ので文法が入れば族再開可・`\easyHeadsOn` は対応物ゼロ）・
+第4便 empty-chord.ly=**open（核 exact・修理 3 件）**・`fee81717`）。
+frontier の pending 先頭は **fermata-dot-position.ly**。
+
+★★★ **④（第4便）empty-chord.ly = open（核 exact）・修理 3 件**:
+- **主張**: `<>` は articulation を受け・時間を占めず・既定時価も変えない。
+- **修理⑴ `<>` は render クラッシュだった**（CreateChordItem が空メンバで
+  "Sequence contains no elements"）→ **zero-time carrier**: item を足さず時間も
+  進めず、post-event は**現 moment＝次列に anchor**（LP と同型・全 11 列 X が
+  3 桁一致 17.354..50.503）。⚠️ 「空」は**全種メンバ無し**——最初の版は
+  `Pitches.Any()` だけ見て**度数和音 `<1 3 5>` を吸い込み**（Degrees/DrumNames も
+  見る。和音テスト 4 本が捕まえた）。
+- **修理⑵ hairpin は mark 自身の moment から**（collector が MusicMarkItem に
+  anchor item を刻む）＋**同 moment の dynamic は開始 text＝左 bound**（ink+pad）
+  であり終端ではない。旧: `c\f\> …` が小節頭から wedge を張り自分の f で終端。
+  wedge1 19.64..36.49 中心 4.81 = LP 19.638..36.492/4.806・終端 sfz が線に同乗
+  Y 5.41=5.406。
+- **修理⑶ 最終音の先の end moment＝最終小節線**（to-barline）。旧: 範囲外 guard が
+  span 丸ごと swallow。wedge2 50.50..57.35 中心 3.37 = LP 50.503..57.355/3.367。
+- ⚠️ 起票（残・open の理由）: ⑴ **末尾 `<>@pp` 自体が無印字**（anchor できる
+  staffless 最終列が無い——cue-clef R1 / staffless-command-column regime と同根。
+  LP は pp を 58.36 に印字）⑵ `<>` 上の slur close は LYS4010 で drop（LP は描く）
+  ⑶ @text の X は中央揃え vs LP TextScript は列に左揃え（sul D・ΔY 0.25 も）。
+- **twin 書法**: `\enddecr`→両側 `\pp` 置換・`\repeat unfold` は Lily# 側で手展開
+  （`|` 明示のため。展開は枠に中立）。
+- **snapshot 2 枚**（test/dynamics・multi-line-spanners）＝全差分が「wedge 左端が
+  mark の音列へ」「dynamics の線着座」のみ（git diff 要素 census で承認）。
+  観測者 DynamicAlignTests +2。
+
+★★ **②（第2便）fixed 第27号 = rest 上の dynamic（dynamics-rest-positioning.ly）**:
+- **主張**: rest に付いた text dynamic は親（rest）の ink 中心に X 揃え。
+- **根 = 共有 `ArticulationsOf`（MeasureCollector.cs）に RestSyntax の腕が無い**——
+  CollectDynamics は rest で常に空を舐め、`r2@p` の p が**無警告で消えていた**
+  （rest 自体は描かれ、rest の script（@fermata）は CollectArticulations **内の別
+  switch** で生きていた＝穴が隠れた構図）。腕を追加＋rest walk 2 site（主 walk・
+  tuplet-scaled emitter）に CollectDynamics 呼び出しを追加（**walk 全数の教訓**）。
+- **照合（twin 対・4 個全部 2 桁一致）**: p on g 中心 9.27/9.28・**p on 半休符
+  13.61/13.616（主張の核）**・f on g4 19.00/19.00・f on r4 24.72/24.72。
+  Y: p 3.82/3.818・f 4.55/4.546。X anchor は AnchorCentreOffset の rest 枝（既在）が
+  そのまま正しかった＝欠けていたのは collect だけ。
+- **snapshot 0 枚**（fixture に rest dynamic の綴りゼロ＝grep で事前確認）。
+  観測者 DynamicAlignTests +1。
+- **デバッグの学び**: ⑴ `lysc ly` で exporter に写して**parse は生きている**ことを
+  先に切り分ける（exporter は syntax 直読みなので collector の穴と分離できる）
+  ⑵ pwsh の `$lp` は汚染変数（既知）——`$drpSvg` 等の固有名で。
+
+★★★ **fixed 第26号 = hairpin 連結 dynamics の同一線（dynamics-line.ly）**:
+- **主張**: (de)cresc で連結された複数 dynamics は同じ線に乗る。孤立 dynamic は
+  自分の spanner を得る。`a1^\sfz` は上向き強制。
+- **port⑴ = DynamicAlignEngraver.AlignLines（新設）**: dynamic-align-engraver.cc
+  :194-235 stop_translation_timestep の regime——**走行中の hairpin が line を
+  生かし続ける**（:210 `end = line_ && running_.empty()`）ので、開始 text＋wedge＋
+  終端 text（＋同 moment で連鎖する次の hairpin）は **1 本の DynamicLineSpanner**。
+  群の my_dim（text=−0.6・wedge=中心 0 の合成 outline）で SpannerOffsetY を
+  **system ごとに 1 回**走らせ全員を再着座。LayoutEngine は hairpin layout 直後・
+  TextSpanner が dynamics の Y を読む前に呼ぶ。**外側 pass も群で 1 grob**
+  （OutsideStaffStacker に lineGroups を配線。250 の priority は spanner のもの）。
+- **port⑵ = MinimumLength の描画伸ばし撤去**: LP の minimum-length は
+  **spacing rod**（springs-and-rods=set-spacing-rods・未移植の spring 側起票）で、
+  Hairpin::print (hairpin.cc:292-299) は**負幅を 0 に clamp するだけ**。この本の
+  to-barline wedge は長さ 1.511 のまま描かれ LP と一致（旧法則は 2.0 に伸ばしていた）。
+- **照合（twin 対・2 桁一致）**: fff/pp 同一線 −8.813・wedge 中心 −8.2131 開口
+  ±0.6666 X 20.474..21.985・孤立 \p −3.8181・2 本目 spanner の \f −4.5461・
+  ^\sfz 上 +3.342。**twin 書法: LP `\relative c''` 先頭 a は Lily#（C4 相対）では
+  `a'` が要る**（本文残りは同綴り・lysc check --pitches で 8 音検算）。
+- **観測者**: DynamicAlignTests 新設 3 本（摂動で同一線／child offset 差 0.6／
+  BuildLines の連鎖と分断）・HairpinTests の MinimumLength テストは no-stretch
+  観測者に書換・**OutsideStaffSeedTests の tie 本は終端を @f→@pp に**（群 quiet が
+  深くなり f では tie が効かなくなった——**LP 実測で f 本は tie 有無同 Y・pp 本は
+  0.187 動く**＝本が分離しなくなっただけ。scratch\lpreg\dyngroup-{tie,notie}*）。
+- **snapshot 6 枚**（01-expressions・03-piano・test/dynamics・multi-staff-hairpins・
+  multi-line-spanners・text-annotation）＝**全差分が dynamic <text> と hairpin arm
+  <line> の 0.1〜0.9ss 下方移動（群の線への着座）＋頁高の帰結のみ**を git diff の
+  要素census で確認して承認（証明は commit message）。⚠️ CLI で fixture を描いて
+  snapshot と Compare-Object すると **CRLF 差で data-pos が全ズレした偽差分**が出る
+  （03-piano で踏んだ）——**snapshot 差分は LILYSHARP_UPDATE_SNAPSHOTS=1 で更新して
+  git diff で読む**。
+- ⚠️ 起票（残・別 regime）: ⑴ minimum-length rod（spacing 側・springs regime）
+  ⑵ 向き違い explicit direction での spanner 分断（:125-138——Lily# は hairpin
+  常時下なので forced-above text を群から外すだけ。LILYSHARP-OWN 開示済）
+  ⑶ 同列 stacking は群 text に再適用しない（LP では 2 Voice=2 line。開示済）
+  ⑷ `\breakDynamicSpan`（spanner-broken）は文法ごと無し（②の族ゲートのまま）。
+
+plain 322 / 処理済 **108**（fixed **27**・exact **17**・skip **55**・open **9**・
+pending 214。数えたら state 別内訳も一緒に書くこと）。
+
+未 push **31**（第105 までの 26+第106 の 5。数え直すこと。**⚠️ push しない**）・
+テスト **4180 passed / 0 failed / 4 skipped**（観測者 +6 込み・全スイート確認済）・
+台帳 **481 点／ss 非ゼロ 83・総和 3.612832552／count 点 106 うち非ゼロ 2＝全部不変**・
+**Core 0 warning・snapshot は第26号 6 枚+第4便 2 枚＝dynamics/hairpin のみ（証明は
+commit message）・第27号は 0 枚**・base worktree = C:\MyProj\LilySharp-base
+（cc19cccc・残置）。
+
+## 以下は第105セッション第1〜6便の経緯
+
 最終更新 第105セッション第6便（＝第1便 dots.ly **fixed 第24号**・`1a985363`+`3c989549`・
 第2便 dynamics-alignment 族 5 冊+cross-staff-stem=**skip 6 冊**・
 第3〜4便 dynamics-broken-hairpin.ly=**fixed 第25号**＝hairpin bound X 法則の port・

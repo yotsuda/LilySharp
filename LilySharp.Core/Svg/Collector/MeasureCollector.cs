@@ -3273,13 +3273,20 @@ public sealed partial class MeasureCollector
                 }
                 else
                 {
-                    // @cresc, @decresc, @dim — parsed as DynamicSyntax but Level=None
-                    // Collect as MusicMark for hairpin detection
+                    // @cresc, @decresc, @dim — parsed as DynamicSyntax but Level=None.
+                    // Collect as MusicMark for hairpin detection, WITH the host item's
+                    // index: the wedge starts at the mark's own moment (LilyPond's \<
+                    // is a post-event of its note), not at the measure head — and a
+                    // dynamic at that same moment is the START text, never the
+                    // terminator. Until 2026-08-07 the index was dropped, so a
+                    // mid-measure "c\f\> ..." started its wedge at the measure's
+                    // first column and ended it on its own f.
                     var markName = dynamicSyntax.DynamicToken.Text;
                     var markType = MusicMarkItem.ParseMarkName(markName);
                     if (markType != null)
                     {
-                        _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, dynamicSyntax.Position) { StaffIndex = _currentStaffIndex });
+                        _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex,
+                            dynamicSyntax.Position, itemIndex) { StaffIndex = _currentStaffIndex });
                     }
                 }
             }
@@ -3372,6 +3379,12 @@ public sealed partial class MeasureCollector
         ChordRepetitionSyntax rep => rep.Articulations,
         DrumNoteSyntax drum => drum.Articulations,
         ArpeggioSyntax arpeggio => arpeggio.Articulations,
+        // A rest carries post-events too (r2\p) — this arm was missing, so
+        // CollectDynamics saw an empty list for every rest and r@p dropped the
+        // p silently while the fermata path (its own switch in Annotations.cs)
+        // kept working. LILYPOND-REF: lily/parser.yy — post-events attach to
+        // rests; regression dynamics-rest-positioning.ly is the pin.
+        RestSyntax rest => rest.Articulations,
         _ => Enumerable.Empty<SyntaxNode>()
     };
 

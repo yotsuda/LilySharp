@@ -1,0 +1,7 @@
+// lilypond-src/input/regression/dynamics-rest-positioning.ly の Lily# 訳。
+// CLAIM: rest に付いた text dynamic は親オブジェクト (rest) の中心に X 揃えされる。
+// 綴り: LP 無引数 \relative の基準は F3 → g'=G4。Lily# の C4 相対では初音 g が
+// G3 に落ちるので g' が要る。以降は同綴り (r の時価は sticky で 2 分)。
+
+g'2@p r@p |
+g4@f s r4@f s |

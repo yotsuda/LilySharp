@@ -511,6 +511,15 @@ public sealed partial class MeasureCollector
                         // Rests have no stem; stemUp=false makes the default
                         // direction UP, matching scripts over rests.
                         CollectArticulations(rest, restMeasureIndex, restItemIndex, stemUp: false, anchorTiming: restAnchorTiming);
+                        // A dynamic rides a rest exactly as it rides a note (r2@p) —
+                        // the engraver listens to the EVENT, not the note, and the
+                        // text X-centres on the rest's ink (AnchorCentreOffset's rest
+                        // branch). This walk was the one caller missing the collect:
+                        // r@p rendered the rest and silently dropped the p.
+                        // LILYPOND-REF: lily/dynamic-engraver.cc Dynamic_engraver — the
+                        //   dynamic is its own event stream, unanchored to note heads
+                        //   (regression dynamics-rest-positioning.ly is the pin).
+                        CollectDynamics(rest, restMeasureIndex, restItemIndex);
                     }
                     else
                     {
@@ -529,6 +538,25 @@ public sealed partial class MeasureCollector
                     int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction chordAnchorTiming = builder.CurrentDuration;
+                    // The EMPTY chord <> is a zero-time carrier: it adds NO item,
+                    // advances NO time, leaves the running default duration alone,
+                    // and its post-events (dynamics, scripts) attach at the CURRENT
+                    // moment — which is the next item's column index, exactly where
+                    // the timestep's grobs go. It used to fall through to
+                    // CreateChordItem, which threw on the empty member list
+                    // ("Sequence contains no elements") and killed the render.
+                    // LILYPOND-REF: lily/parser.yy chord_body "<>" — an event chord
+                    //   with only post-events; regression empty-chord.ly is the pin
+                    //   ("occupy no time, and leave the current duration unchanged").
+                    // "Empty" means no member of ANY kind — a degree chord <1 3 5>
+                    // and a drum chord have no Pitches but are full chords.
+                    if (!chord.Pitches.Any() && !chord.Degrees.Any() && !chord.DrumNames.Any())
+                    {
+                        CollectDynamics(chord, measureIndex, itemIndex);
+                        CollectArticulations(chord, measureIndex, itemIndex,
+                            stemUp: false, anchorTiming: chordAnchorTiming);
+                        break;
+                    }
                     // Process grace notes BEFORE the main chord so they get correct octave context
                     if (_pendingGrace != null)
                     {
@@ -1054,6 +1082,8 @@ public sealed partial class MeasureCollector
                 var restItem = CreateRestItem(rest);
                 builder.AddItemWithoutDuration(restItem with { TimeScale = scale });
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
+                // Same repair as the main walk's rest case: a rest carries dynamics too.
+                CollectDynamics(rest, annMeasureIndex, annItemIndex);
                 return restItem.Duration;
             }
             case ChordSyntax chord:

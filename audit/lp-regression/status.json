@@ -2684,7 +2684,9 @@
     },
     "dynamics-line.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Dynamics below/above staff; hairpin-linked dynamics share one DynamicLineSpanner line; isolated dynamics get their own spanner; ^\\sfz forces up",
+      "notes": "fixed 26: dynamic-align-engraver.cc port (DynamicAlignEngraver.AlignLines) - running hairpin links texts+wedge onto ONE spanner, side-positioned once per system (group my_dim = texts at -0.6 + wedge at centre); outside-staff pass moves the group as one grob; MinimumLength draw-stretch removed (it is a spacing rod, hairpin.cc:292-299 only clamps negative width). LP match 2dp: fff/pp line -8.813, wedge centre -8.2131 mouth +-0.6666 X 20.474-21.985 (to-barline, 1.511 long, NOT stretched), isolated p -3.8181, second-spanner f -4.5461, sfz up +3.342. Twin: LP \\relative c' head needs a-prime in Lily# C4-relative frame."
     },
     "dynamics-outside-staff-priority.ly": {
       "category": "override",
@@ -2692,7 +2694,9 @@
     },
     "dynamics-rest-positioning.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Text dynamics on rests are positioned correctly, centered on the parent (rest)",
+      "notes": "fixed 27: the shared ArticulationsOf (MeasureCollector.cs) had NO RestSyntax arm - every rest dynamic (r2\\p) was dropped silently (rest drew, p vanished; rest scripts kept working via CollectArticulations own switch). Added the arm + CollectDynamics calls at both rest walk sites (main + tuplet-scaled). LP match 2dp all 4 dynamics: p-on-g centre 9.27/9.28, p-on-half-rest 13.61/13.616 (the claim: centred on rest ink), f-on-g4 19.00/19.00, f-on-r4 24.72/24.72; Y p 3.82/3.818 f 4.55/4.546. Snapshot 0 (no fixture spells r@dynamic). Twin: LP bare \\relative anchor F3 -> g-prime=G4 needs g-prime in Lily# C4 frame too."
     },
     "dynamics-text-dynamics-context.ly": {
       "category": "override",
@@ -2700,7 +2704,9 @@
     },
     "dynamics-text-left-text-alignment.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "DynamicTextSpanner left text is left-aligned to its anchor note",
+      "notes": "gate: \\crescTextCresc/\\dimTextDim (hairpin->text style switch) has no Lily# spelling - @cresc is always a wedge; bare \\! terminator also unspelled (known). Machinery exists (TextSpannerItem dashed+text, TextSpannerEngraver) so the family reopens if grammar adds a text-cresc spelling (user-decision shelf, same as dynamics-alignment gate)."
     },
     "dynamics-text-right-padding.ly": {
       "category": "override",
@@ -2712,7 +2718,9 @@
     },
     "dynamics-text-spanner-padding.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "The 2nd (broken) half of a text cresc. spanner keeps its distance from the notes",
+      "notes": "gate: same as dynamics-text-left-text-alignment (\\crescTextCresc + bare \\!). Also needs \\break+line-width paper."
     },
     "dynamics-text-spanner-postfix.ly": {
       "category": "scheme",
@@ -2724,7 +2732,9 @@
     },
     "easy-notation-accidentals.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Accidentals positioned correctly with Easy notation (note names in heads)",
+      "notes": "gate: \\easyHeadsOn (easy-notation note heads) has no Lily# counterpart - no spelling, no renderer (grep easyHeads/EasyNotation over Core+docs = zero)."
     },
     "easy-notation-size.ly": {
       "category": "scheme",
@@ -2756,7 +2766,9 @@
     },
     "empty-chord.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "Empty chords <> accept articulations, occupy no time, leave the current duration unchanged",
+      "notes": "CORE EXACT after 3 repairs (session 106): (1) <> was a render CRASH (CreateChordItem on empty members, Sequence-contains-no-elements) -> zero-time carrier: no item, no time, marks anchor at the current moment = next column, matching LP (all 11 column X exact 17.354..50.503); (2) hairpin start = marks OWN moment + same-moment dynamic is the START text bound (was: started at measure head, ended on its own f) -> wedge1 19.64..36.49 c4.81 = LP 19.638..36.492 c4.806 exact, sfz joins the line Y 5.41=5.406; (3) end past last note = final barline bound (was: whole wedge vanished) -> wedge2 50.50..57.35 c3.37 = LP 50.503..57.355 c3.367 exact. RESIDUALS (open): trailing <>\\pp does not PRINT (no staffless final column to anchor - LP prints pp ~58.36; cue-clef R1/staffless-command-column regime); slur close on <> dropped with LYS4010 (LP draws it); @text sul D X: Lily# centres (DynamicText CENTER) vs LP TextScript LEFT-aligned at column, Y -3.29 vs -3.037. Twin: \\enddecr->\\pp both sides; unfold hand-expanded (bar | explicit)."
     },
     "engraver-make-item-spanner.ly": {
       "category": "scheme",

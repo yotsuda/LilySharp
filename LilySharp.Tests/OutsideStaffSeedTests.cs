@@ -252,11 +252,20 @@ public class OutsideStaffSeedTests
     /// like the defect. The hairpin spans the tie and is placed against the profile over that
     /// span. Before 2026-08-04 it read -8.887 with the tie and -8.887 without, while the room
     /// widened by 0.420441.
+    /// <para>
+    /// ⚠️ THE TERMINATOR IS pp, NOT f, since the DynamicLineSpanner grouping (2026-08-07):
+    /// the terminating text rides the hairpin's line, so its descender is in the group's own
+    /// quiet outline. With f the quiet line is already deep enough to clear this tie —
+    /// MEASURED IN LILYPOND on the twin pair (scratch\lpreg\dyngroup-{tie,notie}.ly): the
+    /// f book's dynamics sit at identical Y with the tie and without it (20.2316 both),
+    /// while the pp book moves 0.187 for the tie (8.000 vs 7.813 below the middle line).
+    /// A book that does not separate cannot observe the seed; pp still does.
+    /// </para>
     /// </remarks>
     [Fact]
     public void BelowHairpin_ClearsATieUnderTheStaff()
         => SeedSeesWhatTheRoomSees(
-            "e,1@cresc e,1~ e,1@f", "e,1@cresc e,1 e,1@f", "tie", "12/4", "d,1 d,1 d,1");
+            "e,1@cresc e,1~ e,1@pp", "e,1@cresc e,1 e,1@pp", "tie", "12/4", "d,1 d,1 d,1");
 
     /// <summary>
     /// A below-staff dynamic clears a slur belonging to the staff's SECOND voice.
