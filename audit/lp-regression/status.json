@@ -4114,15 +4114,18 @@
     },
     "lyric-volta-alternative-end.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第4便・lyric-volta族3冊)。lyrics内の\\repeat volta/\\alternative構造+\\unfoldRepeatsの第2 score が主題。Lily#の歌詞ブロック文法は音節/--/~/_/|のみ(ParseLyricSyllable)=repeat構造の綴りなし。歌詞は独立トラック+小節wrapのverse積みが設計(lyric-combine族skipと同棚)"
     },
     "lyric-volta-alternative.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第4便・lyric-volta族)。同族 lyric-volta-alternative-end の notes 参照(lyrics内repeat構造の綴りなし)"
     },
     "lyric-volta-fine.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第4便・lyric-volta族)。lyrics内\\repeat volta+\\volta \\fine。同族 lyric-volta-alternative-end の notes 参照(綴りなし。\\fine のnav対応物も別機能)"
     },
     "lyrics-after-grace.ly": {
       "category": "scheme",
@@ -4154,7 +4157,9 @@
     },
     "lyrics-pass-under-bar.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "Long lyrics should be allowed to pass under the bar line",
+      "notes": "open(第112第5便・主張はLS不成立・アーキ起票・コード変更0=実験はrevert)。twin scratch\\lpreg\\lypassbar.{ly,lys,svg,-ls.svg}。LP実測: foooooooo ink左=先行小節線の3.16左=下を通り、m1幅18.73/m2幅12.95は歌詞に縛られない(小節線は歌詞高さにinkが無くLPの高さ考慮separationはrodを張らない)。LSはLyricSpacingの先頭/末尾クリアランス(GetLyric*Extent+MinItemGap)が小節線通過を禁じ、m2先頭列を押す(m2幅21.7)。**撤去実験の負の結果(陽性対照込み)**: クリアランスを外すとtwinは3.52跨ぎでLP同挙動になるが、snapshot 12冊で音節ink重なり0.1〜12.5ss発生(lyric-break-pricingは壊滅・基線は重なりゼロ)=クリアランスはper-measure springチェーンにおける跨ぎ衝突の唯一の防壁。真の修理=行全体を一つのspacing問題にする跨ぎrod/高さ考慮separation(§2A録画層workstreamと同棚・単独修理として着手しない)。観測者+1: SnapshotLyricOverlapTests=全snapshotの同一行音節重なりゼロの恒久ガード(この実験が8冊で見つけた壊れ方の網)"
     },
     "lyrics-spanbar.ly": {
       "category": "override",

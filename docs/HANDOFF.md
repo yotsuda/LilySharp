@@ -58,9 +58,28 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第112セッション第3便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
+最終更新 第112セッション第5便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
 第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
+`69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・
 この handoff と同 commit）。
+
+★★★ **第5便 lyrics-pass-under-bar.ly = open（主張は LS 不成立・アーキ起票・コード変更 0 =
+実験は revert・恒久ガード +1）**:
+- **LP 実測**: foooooooo の ink 左 = 先行小節線の **3.16 左**（下を通る）・m1/m2 幅は歌詞に
+  縛られない。機構 = 小節線は歌詞高さに ink が無く、LP の高さ考慮 separation は rod を張らない。
+- **LS**: LyricSpacing の先頭/末尾クリアランスが通過を禁じ m2 先頭列を押す（m2 幅 21.7 vs
+  LP 12.95）。
+- **撤去実験の負の結果**: 外すと twin は 3.52 跨ぎで LP 同挙動になるが、**snapshot 12 冊で
+  音節 ink 重なり 0.1〜12.5ss 発生**（lyric-break-pricing は壊滅・基線は重なりゼロ）＝
+  クリアランスは per-measure spring チェーンにおける跨ぎ衝突の**唯一の防壁**。真の修理 =
+  行全体を一つの spacing 問題にする跨ぎ rod / 高さ考慮 separation（§2A 録画層と同棚・
+  単独修理として着手しない）。
+- **観測者 +1 = SnapshotLyricOverlapTests**（全 snapshot の同一行音節重なりゼロの恒久ガード。
+  予約をいじる前にこれを回すこと——今回 8 冊の壊れ方を一発で数えた）。
+
+★ **第4便 lyric-volta 族 3 冊 = skip**（lyrics 内 \repeat volta/\alternative/\volta \fine
+構造 + \unfoldRepeats の第2 score。Lily# の歌詞ブロック文法は音節/--/~/_/| のみ
+（ParseLyricSyllable）＝綴りなし。歌詞は独立トラック + verse 積みが設計・lyric-combine 族と同棚）。
 
 ★★ **第3便 lyric-tie.ly = open（主張核心成立・コード変更 0・観測者 +2）**:
 - **主張（音節内の ~ はタイ記号へ変換）は両エンジン成立**: LS は collector の
@@ -119,13 +138,13 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
   再演——引かずに「11.90 は何の右縁?」を一周した）。
 
-plain 322 / 処理済 **151**（fixed **39**・exact **25**・skip **74**・open **13**・
-pending 171。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **155**（fixed **39**・exact **25**・skip **77**・open **14**・
+pending 167。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
-第107 起票の §2A workstream は棚のまま。
+第107 起票の §2A workstream は棚のまま（第5便の跨ぎ separation も同棚に積んだ）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4197 passed / 0 failed / 4 skipped**（観測者 +7 込み・全スイート確認済）・
+テスト **4198 passed / 0 failed / 4 skipped**（観測者 +8 込み・全スイート確認済）・
 lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
 snapshot 第112 は 13 枚（第1便 hyphen 11 + 第2便 melisma 2・census 各便）**・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
