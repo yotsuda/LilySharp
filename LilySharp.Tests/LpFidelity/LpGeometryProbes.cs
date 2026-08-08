@@ -2653,13 +2653,15 @@ internal static class LpGeometryProbes
     /// <list type="bullet">
     /// <item>TBSD (descending g'-e'-c' after a c''2) 7.177716698449803 = number top
     /// (midpoint 3.5 + half-ink 0.627717) + 2.05 + 1 SIX-DIGIT; positions (3.6 . 3.4) —
-    /// dy = −0.2, the LEFT end 2.5 + 1.1 = 3.6 EXACT (the g' stem IS the left bound, so
-    /// it binds at x = 0).</item>
+    /// dy = −0.2, and the offset-pass binder is the STAFF POINT AT x1 (2.3 + 0.2 = 2.5)
+    /// + 1.1 = 3.6 exact. Decomposed six-digit (scratch tbs-x probe, 2026-08-09): the
+    /// point x is the column REFPOINT (head left) − x0 (left bound STEM's left face) —
+    /// the left column's own x is NEGATIVE (−1.1742) and never binds here.</item>
     /// <item>TBSA (the ascending mirror) 7.223978049187602 = number top (3.546261 +
     /// 0.627717) + 2.05 + 1; positions (3.446261350737798 . 3.646261350737798) — dy =
-    /// +0.2 mirrors, but the OFFSET does not: the binding g' now sits mid-span under a
-    /// sloped line and the bracket lands +0.046261 higher. The LP-IDENTITY prediction
-    /// was FALSIFIED by exactly this — the asymmetry is the binding point's x, and the
+    /// +0.2 mirrors, but the OFFSET does not: the binder is the g' COLUMN mid-span,
+    /// 2.5 − 0.2·(4.3342/5.6384) = 2.346261 + 1.1 six-digit. The LP-IDENTITY prediction
+    /// was FALSIFIED by exactly this — the asymmetry is which point binds, and the
     /// port reproducing 0.046261 is its own check.</item>
     /// </list>
     /// <para>

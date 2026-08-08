@@ -31,7 +31,10 @@
 %% THE BOOKS (one claim, one quantity; LP-IDENTITY pair):
 %%   TBSD — c''2 \tuplet 3/2 { g'4 e' c' }: DESCENDING quarter triplet, stems up,
 %%          bracket above. LP's bracket is nearly FLAT (dy ≈ -0.2, the staff-edge
-%%          union); the line's LEFT end sits at g' tip 2.5 + 1.1 = 3.6.
+%%          union); the LEFT end lands at 3.6 = the STAFF POINT at x1 (2.3 + 0.2)
+%%          + 1.1 — decomposed six-digit 2026-08-09, see the ledger whys: the
+%%          offset-pass point x is the column REFPOINT minus x0 (the bound STEM's
+%%          face), so the left column's own x is NEGATIVE and never binds here.
 %%   TBSA — c''2 \tuplet 3/2 { c'4 e' g' }: the ASCENDING mirror. Same extreme,
 %%          same midpoint, same number ink by symmetry.
 %%

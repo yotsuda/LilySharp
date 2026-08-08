@@ -61,7 +61,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第118セッション（＝第1便 **fixed 第47号 = slur-rest-direction.ly 完結 =
 fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分同期込み・
 `57bd399a`・第2便 **slur-shift-region.ly 下見 = 乖離 2 つに分解 + bracket 傾きの
-台帳対 TBSD/TBSA 起票（LP 六桁ピン・予測全的中・LP 恒等は反証）**・
+台帳対 TBSD/TBSA 起票（LP 六桁ピン・予測全的中・LP 恒等は反証）**・`ec98bbd0`・
+第3便 **offset pass の束縛 x を六桁分解（起票時の誤読 1 つ訂正）+ ⑵の呼び順確認**・
 この handoff と同 commit）。
 
 ★★★ **第2便 slur-shift-region.ly（state=open）= 乖離は独立に 2 つ**（双子
@@ -82,10 +83,13 @@ bracket 不変を確認済）:
   **LP 恒等は +0.046261 で反証**（束縛 g' が span 中腹に来て slope 越しに高く着地）
   ——**この非対称の再現が port の検算器**。LS は両冊 **8.730000000 九桁恒等**
   （5.6+線半厚 0.08+2.05+1・鏡像対称な自前式）＝residual +1.552/+1.506。
-  ⚠️ **port 時の宿題**: desc の束縛が「ちょうど 3.6」＝ g' 点の x が x0 と**厳密に
-  一致**している（LP の点 x = column relative_coordinate・x0 = 左 bound(stem) の
-  extent LEFT——なぜ一致するかは未分解。asc の 0.046261 と合わせて式を確定させる
-  こと）。⚠️ 罠 1 つ踏んだ: 最初の probe は上譜 treble で **clef 対 8.210039 に
+  ★★ **束縛 x は第3便で六桁分解済**（scratch\lpreg\tbs-x.{ly,err} 残置・
+  after-line-breaking で relx/stem extent を印字）: **点の x = 列 refpoint（頭
+  左端）− x0（左 bound stem の左面）＝左 bound 列は負（−1.1742）**・staff 点
+  y=2.3 が x=0 と x=span に立つ・offset = max(y_i − dy·x_i/span) + 1.1。
+  **desc の 3.6 の束縛は g' でなく staff 点@x1**（2.3+0.2+1.1）・asc は g' 列が
+  中腹で束縛（2.5−0.2·(4.3342/5.6384) = 2.346261+1.1 = 3.446261 六桁一致）。
+  起票時の「g' が束縛」は誤読で台帳 why・probe header とも訂正済。⚠️ 罠 1 つ踏んだ: 最初の probe は上譜 treble で **clef 対 8.210039 に
   束縛されて tuplet に聾**だった（tuplet-number-beamed.ly の header が警告する罠の
   鏡像・tuplet 抜き対照で検出・probe header に記録済）。
 - **⑵ slur が TupletNumber を extra encompass に入れていない**: LP は
@@ -98,6 +102,12 @@ bracket 不変を確認済）:
   未拡張上限そのもの。**⑴→⑵の順で直す**（番号の箱が⑴に依存）。LS の
   TupletBracket は outside-staff 不参加（LayoutEngine:2743 に明記）＝slur を
   避けない設計は LP と同型・bracket 高さだけが乖離。
+  ⚠️ **⑵の呼び順**（第3便で確認）: TupletBracketEngraver.Calculate は
+  LayoutEngine:3314 の**注釈 phase**＝LayoutSlurs（:890・spanner phase）の**後**。
+  選択肢 ⒜ Calculate を beam 後・slur 前に hoist（staffFinalBeams は :890 時点で
+  在る）⒝ slurgrace 第1便の前例どおり **LayoutSlurs 側で覆う tuplet の番号箱を
+  同じ産地から再構築**（TupletBracketEngraver の式を internal 化して読む）。
+  ⒝が家風（配管より産地の再読）だが Calculate の入力が重い——次セッションで判断。
 
 ★★★ **第1便 fig4 の真相 = LP の stem_extent_ は stem∪flag**（get_bound_info
 slur-scoring.cc:188-203 `s.unite (flag->extent)`——第117第2便 port (:738-760) の
@@ -142,7 +152,7 @@ plain 322 / 処理済 **262**（fixed **47**・exact **34**・skip **164**・ope
 pending **60**。status.json 同期後の実数。数えたら state 別内訳も一緒に書くこと）。
 frontier = **slur-shift-region の port ⑴ = calc_position_and_height no-beam 枝**
 （検算器 = 台帳対 TBSD/TBSA の positions 四つ組 (3.6 . 3.4)/(3.446261 . 3.646261)
-と gap 2 値・†束縛 x の宿題は上記第2便）→ **port ⑵ = TupletNumber を slur extras
+と gap 2 値・**offset pass の式は第3便で六桁分解済**＝上記第2便ブロック★★）→ **port ⑵ = TupletNumber を slur extras
 へ**（slurshift 双子で slur −4.045/−3.695 を照合・LayoutSlurs から bracket layout
 が見える呼び順の確認から）→ 閉じたら fixed 第48号 → slur-vertical-skylines。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚——文法が入ったら
