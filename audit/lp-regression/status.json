@@ -6910,7 +6910,9 @@
     },
     "semi-tie-cross-staff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "cross-staff の RepeatTie/LaissezVibrerTie が direction の循環依存で programming error を出さない",
+      "notes": "skip 第116第1便。\\change Staff の表面なし(dynamics-avoid-cross-staff-stem と同型ゲート)。主張自体も LP 内部の循環依存回帰=対応装置なし。lv/repeatTie 機構自体は第34/40号の観測者済"
     },
     "semi-tie-manual-direction.ly": {
       "category": "scheme",
@@ -6934,7 +6936,9 @@
     },
     "shift-durations-negative-dots.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\shiftDurations が負の dot 値でクラッシュしない",
+      "notes": "skip 第116第1便。\\shiftDurations の対応物ゼロ(Core grep 0件)=機構が主張そのもの。LP 内部 crash 回帰"
     },
     "shorthands.ly": {
       "category": "scheme",
@@ -6974,7 +6978,9 @@
     },
     "skip-music.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\skip が music 引数を取り中のイベント(slur/text/tie/mark/fine)を全部無視して時間だけ進める",
+      "notes": "skip 第116第1便。\\skip(music 引数)の綴りなし。spacer s で長さは写せるが「中の音楽イベントを無視する」機構が主張の核=書き換えると主張が消える"
     },
     "skip-of-length.ly": {
       "category": "scheme",
@@ -7104,7 +7110,9 @@
     },
     "slur-cross-staff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "cross-staff slur(PianoStaff 両譜跨ぎ)が改行込みで decent に描ける",
+      "notes": "skip 第116第1便。全 slur が \\change Staff 跨ぎ=表面なし(cross-staff-beams と同ゲート)。単譜の broken slur は既存 fixture が持つ"
     },
     "slur-dash.ly": {
       "category": "scheme",
