@@ -1063,19 +1063,30 @@ internal sealed class ElementCoordinator
     /// for it.
     /// </para>
     /// <para>
-    /// ⚠️ NOT PORTED, and named rather than left to be discovered: the REST-VERSUS-REST
-    /// branch (rest-collision.cc:142-210), which spreads two voices' rests around the middle
-    /// line. Nothing in the corpus has two printed rests sounding together, so it would be an
-    /// untested branch — HANDOFF 5.4's rule. LilyPond's "too many colliding rests" warning
-    /// (:287-288) is likewise absent.
+    /// The rest's STARTING position is the voiced one — <c>rest.cc</c>'s
+    /// <c>staff_position_internal</c>: <c>dir × voiced-position</c> (4), quarter and
+    /// shorter take it as-is, a half aligns down to the nearest staff line, a whole
+    /// hangs from the next line above (lower voice one line lower) — and the collision
+    /// then TRANSLATES from there. rest-avoid-note.ly is the pin: an uncollided
+    /// half rest in an up voice sits at +4, not the middle.
+    /// LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal;
+    /// LILYPOND-REF: scm/define-grobs.scm Rest — voiced-position 4.
     /// </para>
     /// <para>
-    /// ⚠️ THE NOTE EXTENT IS THE HEAD ONLY when the other column points the opposite way
-    /// (:246-265). LilyPond takes the whole column — stem included — only for a column
-    /// pointing the SAME way at the SAME musical moment, and its comment says why it avoids
-    /// the stem otherwise: reading a beamed note's stem would force beam positioning early.
-    /// Here the same distinction falls out of the direction test alone, because this pass
-    /// only ever compares columns at one moment.
+    /// ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
+    /// branch (rest-collision.cc:142-210), which spreads two voices' rests around the
+    /// middle line when NO note sounds at the moment. rest-avoid-note.ly does not reach
+    /// it (every colliding moment there has a note, so its rests take THIS branch) —
+    /// still no corpus book, HANDOFF 5.4's rule. LilyPond's "too many colliding rests"
+    /// warning (:287-288) is likewise absent (no diagnostics channel here).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE NOTE EXTENT IS THE HEAD ONLY except for a column pointing the SAME way at
+    /// the SAME musical moment, which counts whole — stem included (:246-265). A note
+    /// that started EARLIER but still sounds also collides, head only — LilyPond's
+    /// "if the note has already happened … don't look at the stem" arm, keyed there by
+    /// column inequality. Before that arm was read, this pass required onset equality
+    /// and rest-avoid-note.ly's eighth rest sat on the middle line under a held note.
     /// </para>
     /// </remarks>
     /// <remarks>
@@ -1121,18 +1132,26 @@ internal sealed class ElementCoordinator
 
                 foreach (var (time, item, itemIndex) in byVoice[v])
                 {
-                    if (item is not RestItem rest || rest.IsSpacer)
+                    if (item is not RestItem rest || rest.IsSpacer || rest.IsMultiMeasure)
                         continue;
 
-                    // The rest's own ink, in staff POSITIONS about the middle line, at the
-                    // place the renderer draws it (whole rests hang a space higher).
+                    // The rest STARTS at its voiced position (dir × 4, line-aligned per
+                    // duration) — rest.cc's staff_position_internal — and everything
+                    // below translates from there. The renderer's default is the
+                    // NEUTRAL letter (middle; whole hangs at +2), so the emitted shift
+                    // carries the base displacement too.
                     int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                    var box = GlyphMetrics.GetRestBBox(restValue);
-                    double restOrigin = restValue == 1 ? 1.0 : 0.0;   // staff spaces, up
-                    double restLow = (restOrigin + box.Bottom) * 2.0;  // → positions
-                    double restHigh = (restOrigin + box.Top) * 2.0;
+                    double basePos = VoicedRestPosition(dir, restValue);
+                    double defaultPos = restValue == 1 ? 2.0 : 0.0;
 
-                    // The other voices' heads at this moment.
+                    // The rest's own ink, in staff POSITIONS about the middle line, at
+                    // its voiced place (a whole rest's glyph hangs from basePos).
+                    var box = GlyphMetrics.GetRestBBox(restValue);
+                    double restLow = basePos + box.Bottom * 2.0;
+                    double restHigh = basePos + box.Top * 2.0;
+
+                    // The other voices' notes SOUNDING at this moment — started here or
+                    // earlier and still held.
                     double noteLow = double.PositiveInfinity, noteHigh = double.NegativeInfinity;
                     for (int o = 0; o < staff.Voices.Length; o++)
                     {
@@ -1140,9 +1159,10 @@ internal sealed class ElementCoordinator
                         bool otherUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, o, m) ?? (o % 2 == 0);
                         foreach (var (otherTime, otherItem, _) in byVoice[o])
                         {
-                            if (otherTime != time)
-                                continue;
                             if (otherItem is not (NoteItem or ChordItem))
+                                continue;
+                            if (otherTime > time
+                                || otherTime + GetItemDuration(otherItem) <= time)
                                 continue;
                             foreach (double p in StaffPositionsOf(otherItem))
                             {
@@ -1151,9 +1171,11 @@ internal sealed class ElementCoordinator
                                 noteLow = Math.Min(noteLow, p - half);
                                 noteHigh = Math.Max(noteHigh, p + half);
                             }
-                            // Same direction as the rest at the same moment: LilyPond unites
-                            // the whole COLUMN, so the stem counts too.
-                            if (otherUp == voiceUp)
+                            // Same direction at the SAME moment: LilyPond unites the whole
+                            // COLUMN, so the stem counts too. A note that merely holds over
+                            // from an earlier moment stays head-only, whatever its side
+                            // (the different-column arm of :246-265).
+                            if (otherUp == voiceUp && otherTime == time)
                             {
                                 double tip = StemTipPositionOf(otherItem, otherUp);
                                 noteLow = Math.Min(noteLow, tip);
@@ -1161,31 +1183,31 @@ internal sealed class ElementCoordinator
                             }
                         }
                     }
-                    if (double.IsInfinity(noteLow))
-                        continue;   // nothing sounding against it — LilyPond moves nothing
 
-                    double minimumDist = RestCollisionMinimumDistance * 2.0;  // ss → positions
-                    double restNear = dir > 0 ? restLow : restHigh;
-                    double noteFar = dir > 0 ? noteHigh : noteLow;
-                    double y = dir * Math.Max(0.0, -dir * restNear + dir * noteFar + minimumDist);
-                    if (y == 0.0)
-                        continue;
+                    double discrete = 0.0;
+                    if (!double.IsInfinity(noteLow))
+                    {
+                        double minimumDist = RestCollisionMinimumDistance * 2.0;  // ss → positions
+                        double restNear = dir > 0 ? restLow : restHigh;
+                        double noteFar = dir > 0 ? noteHigh : noteLow;
+                        double y = dir * Math.Max(0.0, -dir * restNear + dir * noteFar + minimumDist);
 
-                    // Half spaces first (a position IS a half space, so this is a ceil to 1).
-                    double discrete = dir * Math.Ceiling(dir * y);
+                        // Half spaces first (a position IS a half space, so this is a ceil to 1).
+                        discrete = dir * Math.Ceiling(dir * y);
 
-                    // ...then whole spaces while the rest is still inside the staff, widened
-                    // by one position on each side.
-                    double restPos = restOrigin * 2.0;
-                    if (restPos + discrete >= -5.0 && restPos + discrete <= 5.0)
-                        discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;
+                        // ...then whole spaces while the rest is still inside the staff,
+                        // widened by one position on each side.
+                        if (basePos + discrete >= -5.0 && basePos + discrete <= 5.0)
+                            discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;
+                    }
 
-                    if (discrete == 0.0)
+                    double shift = basePos - defaultPos + discrete;
+                    if (shift == 0.0)
                         continue;
                     var key = new RestShiftKey(m, v, itemIndex);
                     if (!shifts.TryGetValue(key, out var existing)
-                        || Math.Abs(discrete) > Math.Abs(existing))
-                        shifts[key] = discrete;
+                        || Math.Abs(shift) > Math.Abs(existing))
+                        shifts[key] = shift;
                 }
             }
         }
@@ -1197,6 +1219,50 @@ internal sealed class ElementCoordinator
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2981-2984 RestCollision
     /// <c>minimum-distance</c> = 0.75, read by rest-collision.cc:239-241.</remarks>
     private const double RestCollisionMinimumDistance = 0.75;
+
+    /// <summary>
+    /// The staff position a voiced rest STARTS at, for the standard five-line staff:
+    /// <c>dir × voiced-position</c> (4); a quarter or shorter takes it as-is; a half
+    /// aligns down to the nearest line at or below; a whole first drops one line in a
+    /// lower voice, then hangs from the next line above (the top line when there is
+    /// none). The proper-side check against the neutral letter is the tail of the
+    /// same function.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal (the
+    /// unpitched arm); LILYPOND-REF: scm/define-grobs.scm Rest — voiced-position 4.</remarks>
+    private static double VoicedRestPosition(int dir, int restValue)
+    {
+        const double VoicedPosition = 4.0;
+        double pos = dir * VoicedPosition;
+        if (restValue >= 4)   // duration_log > 1: no line alignment
+            return pos;
+
+        double[] lines = { -4.0, -2.0, 0.0, 2.0, 4.0 };
+        if (restValue == 1)
+        {
+            // Whole: "lower voice semibreve rests generally hang a line lower",
+            // then from the next available line.
+            if (dir < 0)
+                pos -= 2;
+            double hang = lines[^1];
+            foreach (var l in lines)
+                if (l > pos) { hang = l; break; }
+            pos = hang;
+        }
+        else
+        {
+            // Half (and breve): the line at or below, clamped to the bottom line.
+            double aligned = lines[0];
+            foreach (var l in lines)
+                if (l <= pos) aligned = l;
+            pos = aligned;
+        }
+
+        // Keep the voiced position only on the proper side of the neutral one
+        // (+2 for a hanging whole, 0 otherwise on this staff).
+        double neutral = restValue == 1 ? 2.0 : 0.0;
+        return dir * (pos - neutral) > 0 ? pos : neutral + dir * VoicedPosition;
+    }
 
     /// <summary>Staff positions of every head in a note or chord.</summary>
     private static IEnumerable<double> StaffPositionsOf(MusicItem item) => item switch
@@ -1230,7 +1296,20 @@ internal sealed class ElementCoordinator
         if (positions.Count == 0)
             return stemUp ? double.NegativeInfinity : double.PositiveInfinity;
         double root = stemUp ? positions.Max() : positions.Min();
-        return root + (stemUp ? 1 : -1) * EngravingDefaults.DefaultStemLength * 2.0;
+        // THE STEM THE RENDERER DRAWS — duration-dependent length, unnatural-side
+        // shortening and the reach-the-middle-line rule — not a fixed default. A
+        // fixed 3.5 ss here overshot a half note's 3.0 ss stem and pushed the
+        // colliding rest one half-space too far (rest-avoid-note.ly, the lower
+        // voice's r2 against g2: LilyPond lands at −11, the fixed length said −12).
+        // Frame adapter only: StemCalculator is device (Y-down); positions are
+        // Y-up halves of a staff space about the middle line.
+        int durLog = StemCalculator.GetDurationLog(noteValue);
+        const double mid = 10.0;                      // arbitrary device middle
+        double deviceNoteY = mid - root / 2.0;
+        double deviceStaffTop = mid - 2.0;            // staff top = +4 positions
+        double deviceTipY = StemCalculator.CalculateStemEndY(
+            deviceNoteY, stemUp, deviceStaffTop, durLog, (int)Math.Round(root));
+        return (mid - deviceTipY) * 2.0;
     }
 
     /// <summary>

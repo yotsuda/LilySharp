@@ -58,9 +58,35 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第113セッション第3便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
+最終更新 第113セッション第4便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
 第2便 fixed **第41号 = repeat-tremolo-chord-rep.ly**・`b68d24aa`・
-第3便 **repeat-volta-initial-grace.ly = open**・この handoff と同 commit）。
+第3便 **repeat-volta-initial-grace.ly = open**・`4eec7fd4`・
+第4便 fixed **第42号 = rest-avoid-note.ly**・この handoff と同 commit）。
+
+★★★ **第4便 fixed 第42号 = rest-avoid-note.ly**（休符は音符を避け自 voice の符尾方向へ動く・
+起票済 rest-in-voice 変位 regime＝第104 起票の返済）:
+- **修理 3 層**（すべて ElementCoordinator.CalculateRestNoteCollisions）:
+  ⑴ **voiced-position 基底** = rest.cc:46-141 staff_position_internal の港
+  （dir×4・4分以下そのまま・2分は下の line へ整列・全音符は下声 −2 して上の line へ hang・
+  neutral 側チェック＝VoicedRestPosition 新設）——旧は「衝突時のみ中央から押す」＝
+  無衝突 rest が中央に残った ⑵ **跨ぎ音符の head-only 参加** = rest-collision.cc の
+  「already happened」腕（列不一致 → stem を見ない）——旧は onset 一致のみ＝保持音下の
+  r8 が中央に残った ⑶ **StemTipPositionOf が固定 3.5ss ＝描画（StemCalculator）と別綴り**
+  （§5.2.1② の生きた実例）→ 同計算機読みに。半音符 stem 3.0ss で LP の −11 に一致
+  （固定長だと −12 に押しすぎ＝この 1 点が別綴りを釘付けた）。
+- **両側置換**: pitched rest（a4\rest / f2\rest）は綴りなし → plain rest（twin 両側）。
+  pitched rest の綴り自体は文法宿題（§2D 系）。
+- **LP 照合（restavoid twin）**: **6/6 休符桁一致**——r4 +3.0・r8 −3.0・r2 +2.0／−2.0×2
+  **重なり**（同方向 voice の重なり許容＝主張どおり）／+5.5（譜外は half-space の奇数位置）。
+- **開示**: LP の「too many colliding rests」警告は未実装（layout に診断チャネルなし）・
+  only-rests 枝（rest-collision.cc:142-210）は**この本でも不発**（全 moment に音符が居る）＝
+  未 port のまま・コーパス未踏継続。
+- 観測者 +1（RestAvoidNoteTests = LP 逆算 6 点ピン）・**snapshot 6 枚**（collision／
+  cross-voice-accidental／cue-region-measure／dot-cross-voice-spacing／drum-groove／
+  scripts-dynamics＝**全差分 rest グリフ Y のみ**・X 不動・census 済）。
+- **学び**: 引用ラチェットの hyphen 語規則を 2 回踏んだ——`voiced-position`（2 節）は
+  名指しにならない（規則: `_` 入り or ハイフン 3 節・8 字以上 = LooksLikeLilyPondSymbol）。
+  範囲を捨てて住所だけにするのが正解のことがある。
 
 ★★ **第3便 repeat-volta-initial-grace.ly = open（主張は LS 不成立・アーキ起票 2 件・
 コード変更 0）**:
@@ -117,16 +143,17 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   無警告 drop（EmitChord のコメントに明記・起票）。
 - 観測者 +1（RepeatTieChordTests: fan 数 5・強制/既定向き・X 式 LP 逆算ピン）・snapshot 0 枚。
 
-plain 322 / 処理済 **238**（fixed **41**・exact **29**・skip **152**・open **16**・
-pending 84。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **239**（fixed **42**・exact **29**・skip **152**・open **16**・
+pending 83。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る。
-次 = rest-avoid-note）。
+次 = rest-collision-note-duration = 同 regime の続き・第42号の器材が効くか先に見る）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4202 passed / 0 failed / 4 skipped**（観測者 +4 込み・全スイート確認済）・
+テスト **4203 passed / 0 failed / 4 skipped**（観測者 +5 込み・全スイート確認済）・
 lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
-snapshot 第113 は 0 枚**・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+snapshot 第113 は 6 枚（第4便 rest Y のみ・census 済）**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第112セッション第1〜13便の経緯
 

@@ -6646,7 +6646,9 @@
     },
     "rest-avoid-note.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Rests avoid notes. Each rest is moved in the direction of the stems in its voice. Rests may overlap other rests in voices with the same stem direction",
+      "notes": "fixed 第42号(第113第4便)。起票済rest-in-voice変位regime(第104起票)の返済。修理3層(ElementCoordinator.CalculateRestNoteCollisions): ⑴**voiced-position基底**=rest.cc:46-141 staff_position_internal港(dir×4・4分以下そのまま・2分はline下寄せ整列・全は下声-2してから上のlineへhang・neutral側チェック=VoicedRestPosition新設。旧: 衝突時のみ中央から押す=無衝突restが中央のまま) ⑵**跨ぎ音符のhead-only参加**=rest-collision.ccの「already happened」腕(列不一致→stemを見ない。旧: onset一致のみ=保持音下のr8が中央に残った) ⑶**StemTipPositionOfが固定3.5ss=描画(StemCalculator)と別綴り**(§5.2.1②実例)→同計算機読みに(半音符stem3.0ssでLP -11に一致。固定長だと-12に押しすぎ)。両側置換: pitched rest(a4\\rest/f2\\rest)は綴りなし→plain rest化(twin両側)。LP照合: **6/6休符桁一致**(r4=+3.0・r8=-3.0・r2=+2.0/-2.0×2重なり=同方向重なり許容の主張どおり/+5.5=譜外half-space奇数位置)。開示: LPの「too many colliding rests」警告は未実装(診断チャネルなし)・only-rests枝(:142-210)は本書でも不発=未port(コーパス未踏のまま)。観測者+1(RestAvoidNoteTests=LP逆算6点ピン)・**snapshot 6枚**(collision/cross-voice-accidental/cue-region-measure/dot-cross-voice-spacing/drum-groove/scripts-dynamics=全差分restグリフYのみ・census済)。twin=audit lys+scratch\\lpreg\\restavoid.{ly,lys}"
     },
     "rest-collision-beam-note.ly": {
       "category": "scheme",
