@@ -2016,7 +2016,11 @@ internal sealed class ElementCoordinator
         bool hasStem = GlyphMetrics.NoteValueOf(baseDuration) >= 2;
         // Beamed on the INNER side (toward the other endpoint).
         bool beamedInner = beamed && (leftEdge ? !hasBeamEnd : !hasBeamStart);
-        return new SlurEdgeInfo(hasStem, stemUp, beamedInner, beamed);
+        // The endpoint head's ink width — LP's slur_head_x_extent_, consumed by the
+        // tilt X shift and the extra-encompass edge check.
+        double headWidth = GlyphMetrics.GetNoteheadBBox(
+            GlyphMetrics.NoteValueOf(baseDuration)).Width;
+        return new SlurEdgeInfo(hasStem, stemUp, beamedInner, beamed, headWidth);
     }
 
     /// <summary>
@@ -2122,6 +2126,114 @@ internal sealed class ElementCoordinator
         return obstacles;
     }
 
+    /// <summary>
+    /// Extra-encompass objects for a slur segment: the augmentation-dot rows of
+    /// every dotted note, chord member and rest the slur covers, as extent boxes
+    /// in device coordinates. LilyPond's Slur_engraver acknowledges each Dots
+    /// grob into the open slur's <c>encompass-objects</c>; Dots declares
+    /// <c>avoid-slur: inside</c>, so the scorer keeps the curve clear of them —
+    /// "Slurs avoid dots" (input/regression/slur-dot-collision.ly).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-engraver.cc:78 ADD_ACKNOWLEDGER_FOR(acknowledge_extra_object, dots).
+    /// LILYPOND-REF: scm/define-grobs.scm Dots — (avoid-slur . inside).
+    /// LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos — a
+    ///   dots-interface grob's Y extent widens by 0.2, then every box widens by
+    ///   thickness*0.5 vertically and thickness*1.0 horizontally; penalty =
+    ///   extra-object-collision-penalty.
+    /// The dot row geometry is the same recipe the skyline seed and the renderer
+    /// spell (SkylineBuilder.AddMusicItemToSkylines / MergeDotRow): base X = head
+    /// ink right + one dot width, row advance two dot widths, position from
+    /// DotConfiguration.Resolve. The collision DotAdjustment is not read here
+    /// either (the same simplification the skyline seed discloses).
+    /// </remarks>
+    private static IReadOnlyList<SlurExtraObject> BuildSlurExtraObjects(
+        Voice voice, SystemLayout segSystem, SlurItem slur,
+        double staffMiddleDown, double segStartX, double segEndX)
+    {
+        // thickness_ = Slur.thickness (1.2, define-grobs.scm) * the layout
+        // line-thickness dimension (0.1 ss at default staff size) = 0.12 ss.
+        // LILYPOND-REF: lily/slur-scoring.cc:248-251 line_thickness field.
+        const double slurThickness = 1.2 * 0.1;
+        const double eps = 0.001;
+        var extras = new List<SlurExtraObject>();
+
+        void AddDotRow(int dotCount, double dotStartX, double dotCenterDeviceY)
+        {
+            var dotBox = GlyphMetrics.AugmentationDot;
+            double advance = 2 * dotBox.Width;
+            double left = dotStartX + dotBox.Left - slurThickness;
+            double right = dotStartX + (dotCount - 1) * advance + dotBox.Right + slurThickness;
+            // Device Y down: top edge = centre - (half height + widens).
+            double halfH = dotBox.Top + 0.2 + slurThickness * 0.5;
+            extras.Add(new SlurExtraObject(
+                left, right,
+                dotCenterDeviceY - halfH, dotCenterDeviceY + halfH,
+                SlurAvoidType.Inside,
+                SlurScoreParameters.Default.ExtraObjectCollisionPenalty));
+        }
+
+        foreach (var ml in segSystem.Measures)
+        {
+            int mi = ml.MeasureIndex;
+            if (mi < slur.StartMeasureIndex || mi > slur.EndMeasureIndex)
+                continue;
+            if (mi >= voice.Measures.Length)
+                continue;
+
+            var items = voice.Measures[mi].Items;
+            int lo = mi == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
+            int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
+            hi = Math.Min(hi, items.Length - 1);
+
+            for (int i = lo; i <= hi; i++)
+            {
+                double x = ml.X + GetItemXOffset(voice, mi, i, ml);
+                if (x < segStartX - eps || x > segEndX + eps)
+                    continue;
+
+                switch (items[i])
+                {
+                    case NoteItem { Dots: > 0 } note:
+                    {
+                        int value = GlyphMetrics.NoteValueOf(note.BaseDuration);
+                        double dotX = x + GlyphMetrics.GetNoteheadBBox(value).Right
+                            + GlyphMetrics.AugmentationDot.Width;
+                        int pos = DotConfiguration.Resolve(new[] { note.StaffPosition })[0];
+                        AddDotRow(note.Dots, dotX, staffMiddleDown - pos / 2.0);
+                        break;
+                    }
+                    case ChordItem { Dots: > 0 } chord when chord.Notes.Length > 0:
+                    {
+                        int value = GlyphMetrics.NoteValueOf(chord.BaseDuration);
+                        var headOffsets = ChordHeadPositioning.CalculateOffsets(
+                            chord.Notes, chord.StemUp, value, 1.0);
+                        double dotX = x + GlyphMetrics.GetNoteheadBBox(value).Right
+                            + Math.Max(0, headOffsets.Max())
+                            + GlyphMetrics.AugmentationDot.Width;
+                        var positions = DotConfiguration.Resolve(
+                            chord.Notes.Select(n => n.StaffPosition).ToArray());
+                        foreach (int p in positions)
+                            AddDotRow(chord.Dots, dotX, staffMiddleDown - p / 2.0);
+                        break;
+                    }
+                    case RestItem { Dots: > 0 } rest:
+                    {
+                        int value = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                        double dotX = x + GlyphMetrics.GetRestBBox(value).Right
+                            + GlyphMetrics.AugmentationDot.Width;
+                        // A rest's dots sit in the space above the middle line
+                        // (position 1), as the renderer draws them.
+                        AddDotRow(rest.Dots, dotX, staffMiddleDown - 0.5);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return extras;
+    }
+
     public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default)
         => LayoutSlurs(_slurDetector.DetectSlurs(score), score, systems, staffIndex, staff,
             graceNotes, beamLayouts);
@@ -2214,6 +2326,15 @@ internal sealed class ElementCoordinator
                     continue;
                 }
 
+                // The obstacle/extra-object builders below filter items to the
+                // segment's column window — captured BEFORE the endpoints shift to
+                // the head CENTRE, because the edge columns' own X (the head's left
+                // edge) sits half a head LEFT of the shifted endpoint and must stay
+                // in the window: the left bound's own dots are exactly what
+                // "Slurs avoid dots" is about.
+                double windowStartX = segStartX;
+                double windowEndX = segEndX;
+
                 // LILYPOND-REF: slur-scoring.cc:562 get_base_attachments — the base
                 // attachment X is the NOTEHEAD CENTER; segStartX/segEndX are the head's
                 // left-edge column X, so shift each real endpoint right by half a head.
@@ -2281,7 +2402,10 @@ internal sealed class ElementCoordinator
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 var obstacles = BuildSlurObstacles(
-                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, segStartX, segEndX);
+                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX);
+
+                var extraObjects = BuildSlurExtraObjects(
+                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX);
 
                 // A slur avoids only other slurs whose SPAN OVERLAPS IT IN TIME. LilyPond
                 // populates a slur's encompass-objects at ENGRAVE time: an acknowledged slur
@@ -2306,7 +2430,8 @@ internal sealed class ElementCoordinator
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast,
                     leftEdge: leftEdgeInfo,
-                    rightEdge: rightEdgeInfo);
+                    rightEdge: rightEdgeInfo,
+                    extraObjects: extraObjects);
                 slurLayouts.Add(problem.Solve() with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }

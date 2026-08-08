@@ -288,8 +288,10 @@ public class ArticulationPlacementTests
         // staccato is 'inside and stays on the head (LilyPond bends the SLUR
         // around an inside script instead; that half is the slur scorer's).
         // Against the LP twin (scratch/lpreg/scriptstack1.{ly,lys}) the lifted
-        // stack reads 0.11 low — the drawn slur's own apex sits that much under
-        // LP's (the slur-scoring regime), and the avoidance reads the drawn slur.
+        // stack reads 0.12 low — LP's slur END sits one 0.5-grid step higher
+        // (its 'inside staccato at the slur end enters the slur's OWN extra
+        // encompass and lifts it — the unported half named above), and the
+        // avoidance reads the drawn slur.
         // LILYPOND-REF: lily/slur.cc:262-359 outside_slur_callback
         // LILYPOND-REF: scm/script.scm avoid-slur declarations
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
@@ -310,9 +312,9 @@ public class ArticulationPlacementTests
         Assert.Equal(2, downbows.Count);
         Assert.Equal(2, fingers.Count);
         Assert.Equal(2, staccatos.Count);
-        Assert.Equal(3.29, middle - accents[0].Y, 2);   // LP 3.40 — off the slur's bow
-        Assert.Equal(4.15, middle - fingers[0].Y, 2);   // LP 4.26 — chain over the lifted accent
-        Assert.Equal(5.48, middle - downbows[0].Y, 2);  // LP 5.58 — chain top
+        Assert.Equal(3.28, middle - accents[0].Y, 2);   // LP 3.40 — off the slur's bow
+        Assert.Equal(4.14, middle - fingers[0].Y, 2);   // LP 4.26 — chain over the lifted accent
+        Assert.Equal(5.47, middle - downbows[0].Y, 2);  // LP 5.58 — chain top
         Assert.Equal(1.50, middle - staccatos[0].Y, 2); // LP 1.50 — 'inside at the slur end, unmoved
         // The unslurred d keeps its plain chain: tenuto then downbow.
         Assert.Equal(2.78, middle - downbows[1].Y, 2);

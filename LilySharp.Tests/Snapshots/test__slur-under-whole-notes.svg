@@ -53,8 +53,8 @@
   <rect x="20.73" y="13.12" width="0.19" height="13.51"/>
   <rect x="33.94" y="13.12" width="0.19" height="13.51"/>
   <rect x="34.43" y="13.12" width="0.60" height="13.51"/>
-  <path d="M 9.89,20.66 C 11.11,21.71 14.13,21.71 15.35,20.66 C 14.13,21.83 11.11,21.83 9.89,20.66 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 23.10,19.09 C 24.32,17.92 27.34,17.92 28.56,19.09 C 27.34,18.04 24.32,18.04 23.10,19.09 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 9.59,20.66 C 10.90,21.71 14.34,21.71 15.65,20.66 C 14.34,21.83 10.90,21.83 9.59,20.66 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 22.80,19.09 C 24.11,17.92 27.55,17.92 28.86,19.09 C 27.55,18.04 24.11,18.04 22.80,19.09 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="0.30" y="8.26" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1345"/>
   <text x="1.23" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1345">S</text>
   </g>

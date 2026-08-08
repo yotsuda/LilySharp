@@ -1,0 +1,9 @@
+// lilypond-src/input/regression/slur-dot-collision.ly の Lily# 訳。
+// CLAIM: Slurs avoid dots (= slur は付点を避ける。slur-scoring の
+// extra-encompass に dot が入る)。
+// 綴り: LP は無引数 \relative で先頭 e''' = E6 (絶対と同じ)・次の e,, は
+// 同字なので同 octave から 2 下 = E4。Lily# も相対 (anchor = LP c' 基準):
+// e'' = E6・次の bare e は同 octave なので e,, で E4。付点16分+32分 = 1/8 の
+// 不完全小節 1 個。LP は 16.+32 を自動 beam (8分+16分 full + 32分 stub)。
+
+e''16.( e,,32)

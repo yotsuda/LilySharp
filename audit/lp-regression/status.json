@@ -7120,7 +7120,9 @@
     },
     "slur-dot-collision.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "slur は dot を避ける",
+      "notes": "fixed 第45号(第116第2便)。修理=slur-scoring の候補生成+curve 生成の字面port: ⑴get_y_attachment_range(反対側base/nc外縁+1/region の max=grid範囲。旧=固定RegionSize) ⑵enumerate_attachments=slope/min-length超過候補は捨てずX矯正+tilt X shift(旧=continue で全滅→素のbase attachmentへfallback=頭直付け急降下) ⑶move_away_from_staffline(base±0.15) ⑷dot=extra encompass(avoid-slur inside・0.2 widen・additional_ys+score_extra_encompass object項) ⑸generate_curve=弦回転frameの実bezier+fit_factor+avoid_staff_line(新設Bezier型)・scorerは実curve評価・描画=scored curve そのもの ⑹LILYSHARP-OWN staff線ペナルティ撤去。LP照合: 両端/control 4点全部桁一致(9.51,-6.545/13.67,-3.195/-6.638/-4.80)。観測者=SlurScoringTests。snapshot 13枚=全差分 slur path のみ census済。開示: stem attach X規則未port・encompass の stem 項未配線(obstacle に stem 無し)・tie forbidden attachment 未port・nc extent は頭箱近似"
     },
     "slur-dot-distance.ly": {
       "category": "plain",

@@ -33,6 +33,13 @@ internal sealed class SlurCandidate : IScorableConfig
     public double Demerits { get; set; }
 
     /// <summary>
+    /// The candidate's generated curve (Y-up frame) — LilyPond's
+    /// <c>Slur_configuration::curve_</c>; every scorer that needs "the slur's Y
+    /// at x" evaluates THIS, not a parabolic stand-in.
+    /// </summary>
+    public Bezier Curve { get; set; }
+
+    /// <summary>
     /// Scorer progress for lazy evaluation (priority-queue optimization).
     /// LILYPOND-REF: lily/include/slur-configuration.hh Slur_scorers enum
     /// </summary>
@@ -61,6 +68,41 @@ internal enum SlurObstacleType
 }
 
 /// <summary>
+/// How an extra-encompass object wants the slur to treat it — LilyPond's
+/// <c>avoid-slur</c> values that reach the scorer ('outside objects never enter
+/// the slur's own scoring; they ride the finished curve via side-position).
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/slur-configuration.cc:438-448 score_extra_encompass —
+/// 'around uses the full-box distance, 'inside the directed overshoot.
+/// </remarks>
+internal enum SlurAvoidType
+{
+    Inside,
+    Around
+}
+
+/// <summary>
+/// One extra-encompass object (augmentation dots, ...) the slur scores its curve
+/// against, as its extent box in DEVICE coordinates (Y down; TopY &lt; BottomY).
+/// The box arrives already widened the way LilyPond widens it at collection time
+/// (dots +0.2 vertically, then thickness*0.5 vertically / thickness*1.0
+/// horizontally) so the scorer stays shape-agnostic.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos — the
+/// non-slur branch: extents plus the dots-interface and thickness widens, penalty
+/// per grob kind, <c>avoid-slur</c> read into <c>type_</c>.
+/// </remarks>
+internal readonly record struct SlurExtraObject(
+    double LeftX,
+    double RightX,
+    double TopY,
+    double BottomY,
+    SlurAvoidType Type,
+    double Penalty);
+
+/// <summary>
 /// Solves the slur positioning problem using LilyPond's priority-queue
 /// scoring approach with lazy scorer evaluation.
 /// Scorers (in LilyPond order):
@@ -80,7 +122,14 @@ internal enum SlurObstacleType
 /// edge_has_beams_, and Stem::get_beaming(stem, -d) (beamed on the INNER side, toward the
 /// other endpoint).
 /// </summary>
-internal readonly record struct SlurEdgeInfo(bool HasStem, bool StemUp, bool BeamedInner, bool Beamed);
+/// <remarks>
+/// <paramref name="HeadWidth"/> is the endpoint notehead's ink width in staff spaces
+/// (0 for a rest or a broken edge): LilyPond reads it as
+/// <c>extremes_[d].slur_head_x_extent_</c> both for the tilt X shift
+/// (slur-scoring.cc:780-793 slur_head_x_extent_) and for the extra-encompass
+/// edge check (slur-configuration.cc:405-425 slur_head_x_extent_).
+/// </remarks>
+internal readonly record struct SlurEdgeInfo(bool HasStem, bool StemUp, bool BeamedInner, bool Beamed, double HeadWidth = 0.0);
 
 internal sealed class SlurScoringProblem
 {
@@ -91,6 +140,7 @@ internal sealed class SlurScoringProblem
     private readonly double _endY;
     private readonly SlurScoreParameters _parameters;
     private readonly IReadOnlyList<SlurObstacle>? _obstacles;
+    private readonly IReadOnlyList<SlurExtraObject>? _extraObjects;
     private readonly IReadOnlyList<SlurLayout>? _existingSlurs;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
@@ -101,13 +151,10 @@ internal sealed class SlurScoringProblem
     // Musical dy: pitch difference in staff spaces
     private readonly double _musicalDy;
 
-    // The five staff lines in this scorer's Y-up frame (yUp = -yDevice, absolute
-    // page). LilyPond avoids staff lines in STAFF-RELATIVE positions
-    // (slur-configuration.cc on_staff_line); our config Y is absolute-page, so the
-    // lines must be placed absolutely too — a fixed {0,-1,-2,-3,-4} was only right
-    // for a staff whose middle sits at device Y=2 (single top staff), silently
-    // disabling the penalty on every other staff. Built from staffMiddleDown below.
-    private readonly double[] _staffLinePositions;
+    // The staff middle's device-Y offset — the anchor for every staff-line
+    // position this scorer reasons about (move_away_from_staffline on the base
+    // attachments, avoid_staff_line on the generated curves).
+    private readonly double _staffMiddleDown;
 
     public SlurScoringProblem(
         SlurItem slur,
@@ -122,7 +169,8 @@ internal sealed class SlurScoringProblem
         bool isBrokenLeft = false,
         bool isBrokenRight = false,
         SlurEdgeInfo leftEdge = default,
-        SlurEdgeInfo rightEdge = default)
+        SlurEdgeInfo rightEdge = default,
+        IReadOnlyList<SlurExtraObject>? extraObjects = null)
     {
         // Internal vertical frame: LilyPond's native Y-up. We obtain it from
         // the device frame (Y-down) by exact negation (yUp = -yDevice), so the
@@ -131,10 +179,17 @@ internal sealed class SlurScoringProblem
         // < 0, ...). Negation is exact in IEEE, so the round-trip is
         // byte-neutral; CreateLayout negates the result back to device.
         _slur = slur;
+        int slurDir = slur.CurveUp ? 1 : -1;
+        // The base attachment steps off a staff line it would sit too close to —
+        // BEFORE the grid is enumerated, so every candidate inherits the nudge
+        // (0.15 ss slurward when the attachment rounds onto one of the five lines).
+        // LILYPOND-REF: lily/slur-scoring.cc:559-616 move_away_from_staffline —
+        //   both the real-head (:559) and broken-edge (:616) base attachments
+        //   pass through it.
         _startX = startX;
-        _startY = -startY;
+        _startY = MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir);
         _endX = endX;
-        _endY = -endY;
+        _endY = MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir);
         _parameters = parameters ?? SlurScoreParameters.Default;
         _existingSlurs = existingSlurs;
         _isBrokenLeft = isBrokenLeft;
@@ -158,16 +213,25 @@ internal sealed class SlurScoringProblem
             _obstacles = null;
         }
 
+        // Extra-encompass objects into the same Y-up frame (negate both edges;
+        // TopY stays the visual top, now the numerically larger one).
+        if (extraObjects != null)
+        {
+            var reflected = new List<SlurExtraObject>(extraObjects.Count);
+            foreach (var e in extraObjects)
+                reflected.Add(e with { TopY = -e.TopY, BottomY = -e.BottomY });
+            _extraObjects = reflected;
+        }
+        else
+        {
+            _extraObjects = null;
+        }
+
         // Musical dy in the Y-up frame: higher pitch = larger Y.
         // LILYPOND-REF: lily/slur-scoring.cc:334-341
         _musicalDy = (slur.EndStaffPosition - slur.StartStaffPosition) / 2.0;
 
-        // The 5 staff lines in this scorer's frame (yUp = -yDevice). A line at
-        // staff position p sits at device staffMiddleDown - p/2, i.e. at -(that) here.
-        // Lines are at p in {4,2,0,-2,-4} -> offsets {2,1,0,-1,-2} ss above middle.
-        _staffLinePositions = new double[5];
-        for (int i = 0; i < 5; i++)
-            _staffLinePositions[i] = -staffMiddleDown + (2.0 - i);
+        _staffMiddleDown = staffMiddleDown;
     }
 
     // ---------------------------------------------------------------
@@ -183,14 +247,226 @@ internal sealed class SlurScoringProblem
         BezierBow.Indent(_parameters.HeightLimit, width);
 
     /// <summary>
-    /// Interpolates slur Y at parameter t using parabolic arc.
+    /// Nudges a base attachment 0.15 ss slurward when it rounds onto one of the
+    /// five staff lines (Y-up frame; staff space = 1).
     /// </summary>
-    private static double InterpolateSlurY(double startY, double endY, double height, bool curveUp, double t)
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:639-658 move_away_from_staffline —
+    /// pos = y * 2 / staff_space; the round is <c>round_halfway_up</c>
+    /// (floor(x+0.5)) for the closeness test but <c>rint</c> (half-to-even) for
+    /// the line lookup, and on_staff_line means an even position within the five
+    /// lines. y += 1.5 * staff_space * dir / 10 when both hold.
+    /// </remarks>
+    private static double MoveAwayFromStaffline(double yUp, double staffMiddleDown, int dir)
     {
-        double linearY = startY + t * (endY - startY);
-        double arc = 4 * height * t * (1 - t);
-        // Y-up: an up slur peaks ABOVE the chord line (larger Y).
-        return curveUp ? linearY + arc : linearY - arc;
+        double pos = (yUp + staffMiddleDown) * 2.0;
+        double roundedUp = Math.Floor(pos + 0.5);
+        int rint = (int)Math.Round(pos, MidpointRounding.ToEven);
+        bool onLine = rint % 2 == 0 && Math.Abs(rint) <= 4;
+        if (Math.Abs(pos - roundedUp) < 0.2 && onLine)
+            yUp += 1.5 * dir / 10.0;
+        return yUp;
+    }
+
+    /// <summary>
+    /// The points a candidate's curve must clear, in the Y-up frame: interior
+    /// note columns (their slurward edge plus free-head-distance) and 'inside
+    /// extra objects (their slurward box edge), plus overlapping slurs' midpoints
+    /// lifted by free-slur-distance. fit_factor amplifies the curve height until
+    /// these fit under (over) it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:660-707 generate_avoid_offsets —
+    /// note columns skip the extremes; ⚠️ LP's per-column
+    /// <c>max(dir·head, dir·stem)</c> reads the stem tip too, which the obstacle
+    /// list does not carry yet — the head box stands in (differs only when an
+    /// interior stem points slurward past its head, e.g. \stemUp under an up
+    /// slur).
+    /// </remarks>
+    private List<(double X, double Y)> BuildAvoidOffsets(int dir)
+    {
+        var avoid = new List<(double X, double Y)>();
+        if (_obstacles != null)
+        {
+            for (int i = 1; i + 1 < _obstacles.Count; i++)
+            {
+                var o = _obstacles[i];
+                double edge = dir > 0 ? o.TopY : o.BottomY;
+                avoid.Add((o.X, edge + dir * _parameters.FreeHeadDistance));
+            }
+        }
+        if (_extraObjects != null)
+        {
+            foreach (var e in _extraObjects)
+            {
+                if (e.Type != SlurAvoidType.Inside)
+                    continue;
+                avoid.Add(((e.LeftX + e.RightX) / 2.0, dir > 0 ? e.TopY : e.BottomY));
+            }
+        }
+        if (_existingSlurs != null)
+        {
+            // LILYPOND-REF: lily/slur-scoring.cc:682-694 free_slur_distance —
+            // the small slur's curve midpoint plus that distance.
+            foreach (var s in _existingSlurs)
+            {
+                double midX = (s.StartX + s.EndX) / 2.0;
+                double midY = (s.Control1.Y + s.Control2.Y) / 2.0;
+                avoid.Add((midX, midY + dir * _parameters.FreeSlurDistance));
+            }
+        }
+        return avoid;
+    }
+
+    /// <summary>
+    /// How much the flat bow must amplify its height so every avoid point fits on
+    /// its slurward side, measured in the chord-aligned frame.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/slur-configuration.cc:93-133 fit_factor.</remarks>
+    private static double FitFactor(
+        (double X, double Y) dzUnit, (double X, double Y) dzPerp,
+        double closeToEdgeLength, Bezier curve, int dir,
+        IReadOnlyList<(double X, double Y)> avoid)
+    {
+        double fit = 0.0;
+        double x0X = curve.X0, x0Y = curve.Y0;
+        curve.Translate(-x0X, -x0Y);
+        curve.Rotate(-Math.Atan2(dzUnit.Y, dzUnit.X) * 180.0 / Math.PI);
+        curve.Scale(1, dir);
+
+        double xLo = Math.Min(curve.X0, curve.X3);
+        double xHi = Math.Max(curve.X0, curve.X3);
+
+        foreach (var a in avoid)
+        {
+            double zX = a.X - x0X, zY = a.Y - x0Y;
+            double pX = zX * dzUnit.X + zY * dzUnit.Y;
+            double pY = dir * (zX * dzPerp.X + zY * dzPerp.Y);
+
+            // Skip points close to either edge: shaping is not adapted for them
+            // (they still count in the scoring).
+            if (pX - xLo < closeToEdgeLength || xHi - pX < closeToEdgeLength)
+                continue;
+
+            // The ±eps window around pX must lie (essentially) fully inside the
+            // curve's x range, or the point is skipped.
+            const double eps = 0.01;
+            double lo = Math.Max(pX - eps, xLo), hi = Math.Min(pX + eps, xHi);
+            if (hi < lo || hi - lo <= 1.999 * eps)
+                continue;
+
+            double y = curve.GetOtherCoordinate(pX);
+            if (y != 0.0)
+                fit = Math.Max(fit, pY / y);
+        }
+        return fit;
+    }
+
+    /// <summary>
+    /// Bends the curve off a staff line its horizontal point sits too close to:
+    /// the middle control points move by the resolution dy, the whole curve by
+    /// the remainder.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-configuration.cc:41-91 avoid_staff_line —
+    /// thickness = Slur.thickness (1.2) × line-thickness (0.1) and
+    /// line_thickness_ is the layout dimension itself.
+    /// </remarks>
+    private Bezier AvoidStaffLine(Bezier bez, int dir)
+    {
+        const double slurThickness = 1.2 * 0.1;
+        const double lineThickness = 0.1;
+
+        Span<double> ts = stackalloc double[3];
+        int n = bez.SolveHorizontalTangent(ts);
+        if (n == 0)
+            return bez;
+
+        double t = ts[0]; // the first (usually only) point where slur is horizontal
+        double y = bez.CurveY(t);
+        // A Bezier curve at t moves 3t-3t² as far as the middle control points.
+        double factor = 3.0 * t * (1.0 - t);
+
+        // Y-up frame: the staff middle line sits at -staffMiddleDown.
+        double p = 2 * (y + _staffMiddleDown);
+        int roundP = (int)Math.Floor(p + 0.5);
+        bool OnLine(int pos) => pos % 2 == 0 && Math.Abs(pos) <= 4;
+        if (!OnLine(roundP))
+            roundP += (p > roundP) ? 1 : -1;
+        if (!OnLine(roundP))
+            return bez;
+
+        double distance = (p - roundP) / 2.0;
+        // Half the slur's thickness at t, plus one basic blot-diameter (half for
+        // the slur outline, half for the staff line).
+        double minDistance = 0.5 * slurThickness * factor + lineThickness
+            + ((dir * distance > 0.0)
+                ? _parameters.GapToStafflineInside
+                : _parameters.GapToStafflineOutside);
+        if (Math.Abs(distance) < minDistance)
+        {
+            int resolutionDir = distance > 0.0 ? 1 : -1;
+            double dy = resolutionDir * (minDistance - Math.Abs(distance));
+            // Shape the curve, moving the horizontal point by factor * dy.
+            bez.Y1 += dy;
+            bez.Y2 += dy;
+            // Move the entire curve by the remaining amount.
+            bez.Translate(0.0, dy - factor * dy);
+        }
+        return bez;
+    }
+
+    /// <summary>
+    /// Generates the candidate's real curve: the flat bow built in the
+    /// chord-aligned frame (height PERPENDICULAR to the chord, indent along it),
+    /// amplified by fit_factor for the avoid points, then nudged off staff
+    /// lines. Sets <see cref="SlurCandidate.Curve"/> and stores the final height
+    /// in <see cref="SlurCandidate.Height"/> (LP's <c>height_</c>, the variance
+    /// normalizer).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-configuration.cc:135-206 generate_curve —
+    /// eccentricity defaults to 0.
+    /// </remarks>
+    private void GenerateCurve(SlurCandidate config, IReadOnlyList<(double X, double Y)> avoid)
+    {
+        int dir = config.CurveUp ? 1 : -1;
+        double dzX = config.EndX - config.StartX;
+        double dzY = config.EndY - config.StartY;
+        double len = Math.Sqrt(dzX * dzX + dzY * dzY);
+        if (len < 0.001)
+            len = 0.001;
+        var dzUnit = (X: dzX / len, Y: dzY / len);
+        var dzPerp = (X: -dzUnit.Y, Y: dzUnit.X);
+
+        double indent = CalculateIndent(len);
+        double height = CalculateSlurHeight(len);
+
+        double maxIndent = len / 3.1;
+        indent = Math.Min(indent, maxIndent);
+
+        double a1 = len * len / 3.0;
+        double a2 = 0.75 * (indent + len / 3.0) * (indent + len / 3.0);
+        double maxH = a1 - a2;
+        maxH = maxH < 0 ? len / 3.0 : Math.Sqrt(maxH);
+
+        double x1 = indent;   // eccentricity 0
+        double x2 = -indent;
+
+        Bezier Build(double h) => new(
+            config.StartX, config.StartY,
+            config.StartX + dzPerp.X * h * dir + dzUnit.X * x1,
+            config.StartY + dzPerp.Y * h * dir + dzUnit.Y * x1,
+            config.EndX + dzPerp.X * h * dir + dzUnit.X * x2,
+            config.EndY + dzPerp.Y * h * dir + dzUnit.Y * x2,
+            config.EndX, config.EndY);
+
+        double ff = FitFactor(dzUnit, dzPerp, _parameters.CloseToEdgeLength,
+            Build(height), dir, avoid);
+        height = Math.Max(height, Math.Min(height * ff, maxH));
+
+        config.Curve = AvoidStaffLine(Build(height), dir);
+        config.Height = height;
     }
 
     // ---------------------------------------------------------------
@@ -253,18 +529,61 @@ internal sealed class SlurScoringProblem
     // ---------------------------------------------------------------
 
     /// <summary>
-    /// Generates candidate slur configurations on a grid.
-    /// LilyPond enumerates attachment points at half-staff-space intervals
-    /// within a region.
+    /// The Y the attachment grid may climb to on one side (Y-up frame): at least
+    /// region-size staff spaces beyond that side's base, at least one space beyond
+    /// the edge note column's slurward extreme, and never short of the OTHER
+    /// side's base — the term that lets a slur from a high note stay flat over a
+    /// deep drop instead of diving to the far head.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/slur-scoring.cc:722-804 enumerate_attachments()
+    /// LILYPOND-REF: lily/slur-scoring.cc:483-516 get_y_attachment_range —
+    /// end_ys[d] = dir * max(max(dir*(base[d] + region_size*dir),
+    ///                           dir*(dir + nc_extent[dir])),
+    ///                       dir*base[-d]).
+    /// The note-column extent is approximated by the edge obstacle's HEAD box:
+    /// the ⚠️ stem part of LP's column extent exceeds base + region_size only for
+    /// an unusually long stem pointing slurward, and a slurward-beamed stem
+    /// already IS the base (the caller attaches there).
+    /// </remarks>
+    private double EndYFor(bool left, int dir)
+    {
+        double baseOwn = left ? _startY : _endY;
+        double baseOther = left ? _endY : _startY;
+        double range = dir * (baseOwn + _parameters.RegionSize * dir);
+        if (_obstacles is { Count: > 0 })
+        {
+            var edge = left ? _obstacles[0] : _obstacles[^1];
+            double ncEdge = dir > 0 ? edge.TopY : edge.BottomY;
+            range = Math.Max(range, dir * (dir + ncEdge));
+        }
+        range = Math.Max(range, dir * baseOther);
+        return dir * range;
+    }
+
+    /// <summary>
+    /// Generates candidate slur configurations on a grid: every half-staff-space
+    /// attachment pair from the base up to the per-side Y range. Nothing is
+    /// filtered here — a too-short or too-steep pair is still a candidate (its X
+    /// snaps back to the head centre in LilyPond, which is where our X already
+    /// is) and the SLOPE scorer prices it; the old skip-and-fallback dropped
+    /// every candidate of a deep slur and shipped the raw head-to-head chord.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:722-804 enumerate_attachments() —
+    /// the while-loops to end_ys, the min-length/max-slope X correction
+    /// (:763-778, keeps the candidate), and the tilt X shift (:780-793).
+    /// ⚠️ The stem-attachment X rule (:738-760 — X moves to the stem's edge when
+    /// the endpoint's stem points WITH the slur and the base Y lies within the
+    /// widened stem extent) is not ported; it needs per-edge stem X/Y extents the
+    /// caller does not supply yet. Fires only for slurward stems (e.g. \stemUp
+    /// slur-up), where today's X stays the head centre.
+    /// LILYPOND-REF: lily/slur-scoring.cc:290-326 additional_ys — 'inside
+    /// extra objects push the range further so the grid can clear them.
     /// </remarks>
     private List<SlurCandidate> GenerateCandidates(double width)
     {
         var candidates = new List<SlurCandidate>();
 
-        double baseHeight = CalculateSlurHeight(width);
         bool preferUp = _slur.CurveUp;
         // Y-up: an up slur sits ABOVE its notes, so attachments move to larger Y.
         int dir = preferUp ? 1 : -1;
@@ -277,60 +596,106 @@ internal sealed class SlurScoringProblem
         double baseStartY = _startY;
         double baseEndY = _endY;
 
-        // Generate grid: regionSize steps at 0.5 staff-space intervals
-        // LILYPOND-REF: lily/slur-scoring.cc:739-740
-        int regionSize = _parameters.RegionSize;
-        double step = 0.5; // half staff space
+        // LILYPOND-REF: lily/slur-scoring.cc:286 get_y_attachment_range
+        double endYLeft = EndYFor(left: true, dir);
+        double endYRight = EndYFor(left: false, dir);
 
-        for (int i = 0; i <= regionSize; i++)
+        // 'inside extra objects (dots, ...) sticking out beyond the straight
+        // base-to-range line extend the range so the grid can climb over them.
+        // LILYPOND-REF: lily/slur-scoring.cc:290-326 — additional_ys.
+        if (_extraObjects != null)
         {
-            double leftY = baseStartY + i * dir * step;
-
-            for (int j = 0; j <= regionSize; j++)
+            // ONE extension applied to BOTH sides: LP's inner expression does not
+            // depend on the loop's d, and its `(dir_ == LEFT ? 0 : -1)` compares
+            // the slur DIRECTION against LEFT (= -1), i.e. down slurs use
+            // normalize + 0 and up slurs normalize - 1.
+            double additional = 0.0;
+            foreach (var info in _extraObjects)
             {
-                double rightY = baseEndY + j * dir * step;
-
-                double adjustedStartX = _startX + _parameters.FreeHeadDistance;
-                double adjustedEndX = _endX - _parameters.FreeHeadDistance;
-                double dz_x = adjustedEndX - adjustedStartX;
-                double dz_y = rightY - leftY;
-
-                // Skip if too short or too steep
-                // LILYPOND-REF: lily/slur-scoring.cc:770-775
-                if (dz_x < 1.0)
+                if (info.Type != SlurAvoidType.Inside)
                     continue;
-                if (Math.Abs(dz_y / dz_x) > _parameters.MaxSlope)
-                    continue;
+                double xc = (info.LeftX + info.RightX) / 2.0;
+                // linear_interpolate(xc, base_R.x, base_L.x, end_R, end_L)
+                double span = _startX - _endX;
+                double norm = Math.Abs(span) < 0.001 ? 0.0 : (xc - _endX) / span;
+                double yPlace = endYRight + norm * (endYLeft - endYRight);
+                double encompassPlace = dir > 0 ? info.TopY : info.BottomY;
+                if (dir * encompassPlace >= dir * yPlace)
+                {
+                    double mult = norm + (dir == -1 ? 0.0 : -1.0);
+                    double ext = dir * (_parameters.EncompassObjectRangeOvershoot
+                        + (yPlace - encompassPlace) * mult);
+                    additional = dir > 0
+                        ? Math.Max(additional, ext)
+                        : Math.Min(additional, ext);
+                }
+            }
+            endYLeft += additional;
+            endYRight += additional;
+        }
+
+        const double step = 0.5; // half staff space
+        const double eps = 1e-9;
+
+        // The avoid points every candidate's curve is amplified over.
+        // LILYPOND-REF: lily/slur-scoring.cc:709-719 generate_curves.
+        var avoid = BuildAvoidOffsets(dir);
+
+        for (double leftY = baseStartY; dir * leftY <= dir * endYLeft + eps; leftY += dir * step)
+        {
+            for (double rightY = baseEndY; dir * rightY <= dir * endYRight + eps; rightY += dir * step)
+            {
+                // X starts at the base attachment (the notehead centre; see the
+                // caller). LP's min-length / max-slope correction (:763-778) moves a
+                // violating candidate's X back to the head centre — a no-op here —
+                // and KEEPS it; score_slopes prices the steepness.
+                double startX = _startX;
+                double endX = _endX;
+
+                // Horizontally move tilted slurs a little, more for bigger tilts:
+                // both ends shift by -dir * head_width * (unit dy) / 3.
+                // LILYPOND-REF: lily/slur-scoring.cc:780-793 slur_head_x_extent field.
+                double dzX = endX - startX;
+                double dzY = rightY - leftY;
+                double len = Math.Sqrt(dzX * dzX + dzY * dzY);
+                if (len > 0.001)
+                {
+                    double unitDy = dzY / len;
+                    startX -= dir * _leftEdge.HeadWidth * unitDy / 3.0;
+                    endX -= dir * _rightEdge.HeadWidth * unitDy / 3.0;
+                }
 
                 var candidate = new SlurCandidate
                 {
-                    StartX = adjustedStartX,
+                    StartX = startX,
                     StartY = leftY,
-                    EndX = adjustedEndX,
+                    EndX = endX,
                     EndY = rightY,
-                    Height = baseHeight,
                     CurveUp = preferUp,
                     Demerits = 0,
                     NextScorerTodo = 1
                 };
+                GenerateCurve(candidate, avoid);
                 candidates.Add(candidate);
             }
         }
 
-        // Always include default configuration
+        // Unreachable in practice (the while-bounds always admit the base pair);
+        // kept as a defensive floor.
         if (candidates.Count == 0)
         {
-            candidates.Add(new SlurCandidate
+            var candidate = new SlurCandidate
             {
-                StartX = _startX + _parameters.FreeHeadDistance,
+                StartX = _startX,
                 StartY = baseStartY,
-                EndX = _endX - _parameters.FreeHeadDistance,
+                EndX = _endX,
                 EndY = baseEndY,
-                Height = baseHeight,
                 CurveUp = preferUp,
                 Demerits = 0,
                 NextScorerTodo = 1
-            });
+            };
+            GenerateCurve(candidate, avoid);
+            candidates.Add(candidate);
         }
 
         return candidates;
@@ -453,49 +818,81 @@ internal sealed class SlurScoringProblem
     // ---------------------------------------------------------------
 
     /// <summary>
-    /// Scores collision with staff lines and extra objects (accidentals, etc.)
-    /// using peak_around for smooth penalties.
+    /// Scores the curve against the extra-encompass set (dots, other slurs).
+    /// LilyPond has NO staff-line penalty here — staff lines are handled by
+    /// move_away_from_staffline (base attachments) and avoid_staff_line (the
+    /// generated curve); the endpoint/peak-vs-line penalty terms that used to
+    /// live in this scorer were LILYSHARP-OWN and are gone.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/slur-configuration.cc:351-462 score_extra_encompass()
+    /// LILYPOND-REF: lily/slur-configuration.cc:348-459 score_extra_encompass()
     /// </remarks>
     private void ScoreExtraEncompass(SlurCandidate config)
     {
         double demerit = 0.0;
 
-        // Staff line collision at endpoints and peak
-        double gapInside = _parameters.GapToStafflineInside;
-        double gapOutside = _parameters.GapToStafflineOutside;
-
-        // Check endpoints against staff lines
-        foreach (double lineY in _staffLinePositions)
+        // Extra-encompass OBJECTS (augmentation dots, ...): the curve is scored
+        // against each object's box — 'around by full-box distance, 'inside by the
+        // directed overshoot past the box's slurward edge — through the same
+        // peak_around ramp. An object over an edge notehead reads the attachment Y
+        // itself (the slur-ending can be almost vertical, making the curve Y a bad
+        // approximation there); RIGHT wins when both edges match, as LP's
+        // unbroken {LEFT, RIGHT} loop leaves the last match in y.
+        // LILYPOND-REF: lily/slur-configuration.cc:390-458 score_extra_encompass.
+        // ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
+        // not in the extra set yet (their own shelf).
+        if (_extraObjects != null)
         {
-            double startDist = Math.Abs(config.StartY - lineY);
-            if (startDist < gapInside)
+            int dir = config.CurveUp ? 1 : -1;
+            double slurWid = config.EndX - config.StartX;
+            foreach (var info in _extraObjects)
             {
-                demerit += _parameters.ExtraObjectCollisionPenalty
-                           * BezierBow.PeakAround(0.1 * gapInside, gapInside, startDist);
-            }
+                double y = 0.0;
+                bool found = false;
+                if (_leftEdge.HeadWidth > 0
+                    && info.RightX >= _startX - _leftEdge.HeadWidth / 2.0
+                    && info.LeftX <= _startX + _leftEdge.HeadWidth / 2.0)
+                {
+                    y = config.StartY;
+                    found = true;
+                }
+                if (_rightEdge.HeadWidth > 0
+                    && info.RightX >= _endX - _rightEdge.HeadWidth / 2.0
+                    && info.LeftX <= _endX + _rightEdge.HeadWidth / 2.0)
+                {
+                    y = config.EndY;
+                    found = true;
+                }
 
-            double endDist = Math.Abs(config.EndY - lineY);
-            if (endDist < gapInside)
-            {
-                demerit += _parameters.ExtraObjectCollisionPenalty
-                           * BezierBow.PeakAround(0.1 * gapInside, gapInside, endDist);
-            }
-        }
+                if (!found)
+                {
+                    double x = (info.LeftX + info.RightX) / 2.0;
+                    if (x < config.StartX || x > config.EndX || slurWid < 0.001)
+                        continue;
+                    // The config's REAL curve, not a parabolic stand-in.
+                    // LILYPOND-REF: lily/slur-configuration.cc:434 get_other_coordinate.
+                    y = config.Curve.GetOtherCoordinate(x);
+                }
 
-        // Check peak against staff lines
-        double midY = (config.StartY + config.EndY) / 2;
-        double peakY = config.CurveUp ? midY + config.Height : midY - config.Height;
+                double dist;
+                if (info.Type == SlurAvoidType.Around)
+                {
+                    // Interval.distance(y): 0 inside the box, else the gap to it.
+                    dist = y > info.TopY ? y - info.TopY
+                        : y < info.BottomY ? info.BottomY - y
+                        : 0.0;
+                }
+                else
+                {
+                    dist = dir * (y - (dir > 0 ? info.TopY : info.BottomY));
+                }
+                dist = Math.Max(dist, 0.0);
 
-        foreach (double lineY in _staffLinePositions)
-        {
-            double peakDist = Math.Abs(peakY - lineY);
-            if (peakDist < gapOutside)
-            {
-                demerit += _parameters.ExtraObjectCollisionPenalty * 0.5
-                           * BezierBow.PeakAround(0.1 * gapOutside, gapOutside, peakDist);
+                demerit += info.Penalty
+                           * BezierBow.PeakAround(
+                               0.1 * _parameters.ExtraEncompassFreeDistance,
+                               _parameters.ExtraEncompassFreeDistance,
+                               dist);
             }
         }
 
@@ -509,6 +906,12 @@ internal sealed class SlurScoringProblem
         //   lily/slur-configuration.cc:349 score_extra_encompass.
         if (_existingSlurs != null)
         {
+            // This config's apex, read off the real curve (its horizontal-tangent
+            // point; the curve midpoint when the tangent never levels).
+            Span<double> ts = stackalloc double[3];
+            int nTs = config.Curve.SolveHorizontalTangent(ts);
+            double peakY = config.Curve.CurveY(nTs > 0 ? ts[0] : 0.5);
+
             foreach (var existing in _existingSlurs)
             {
                 bool xOverlap = !(config.EndX < existing.StartX || config.StartX > existing.EndX);
@@ -563,9 +966,10 @@ internal sealed class SlurScoringProblem
             if (obstacle.X <= config.StartX || obstacle.X >= config.EndX)
                 continue;
 
-            // Calculate slur Y at obstacle X
+            // The config's REAL curve at the obstacle's X.
+            // LILYPOND-REF: slur-configuration.cc:254 bez.get_other_coordinate.
             double t = (obstacle.X - config.StartX) / width;
-            double slurY = InterpolateSlurY(config.StartY, config.EndY, config.Height, config.CurveUp, t);
+            double slurY = config.Curve.GetOtherCoordinate(obstacle.X);
 
             bool isEdge = j == 0 || j == _obstacles.Count - 1;
 
@@ -685,29 +1089,25 @@ internal sealed class SlurScoringProblem
     /// </summary>
     private SlurLayout CreateLayout(SlurCandidate config)
     {
-        double width = config.EndX - config.StartX;
-        double indent = CalculateIndent(width);
-
-        // Y-up: an up slur's control points sit ABOVE the chord line (larger Y).
-        double directedHeight = config.CurveUp ? config.Height : -config.Height;
-        // Control points follow start-end line with arc height offset
-        // LILYPOND-REF: lily/bezier-bow.cc flat bow + shear for dy
-        double cpT1 = (width > 0) ? indent / width : 0;
-        double cpT2 = (width > 0) ? 1 - indent / width : 1;
-        var control1 = (X: config.StartX + indent, Y: config.StartY + cpT1 * (config.EndY - config.StartY) + directedHeight);
-        var control2 = (X: config.EndX - indent, Y: config.StartY + cpT2 * (config.EndY - config.StartY) + directedHeight);
+        // The drawn curve IS the scored curve: the winning candidate's generated
+        // bezier (chord-aligned bow + fit_factor + avoid_staff_line), verbatim.
+        // The old flat-bow-with-vertical-shear reconstruction drew a DIFFERENT
+        // curve from the one the scorers had judged.
+        // LILYPOND-REF: lily/slur.cc Slur::print consumes the configuration's
+        // curve_ unchanged.
+        var curve = config.Curve;
 
         // Store the scored Y verbatim in the page Y-up frame — no exit negation.
         // The scorer already reasons in Y-up (slur-scoring.cc), and BowLayout keeps
         // that frame; the renderer's YFlipDrawingContext performs the single device flip.
         return new SlurLayout(
             _slur,
-            config.StartX,
-            config.StartY,
-            config.EndX,
-            config.EndY,
-            (control1.X, control1.Y),
-            (control2.X, control2.Y),
+            curve.X0,
+            curve.Y0,
+            curve.X3,
+            curve.Y3,
+            (curve.X1, curve.Y1),
+            (curve.X2, curve.Y2),
             isBrokenLeft: _isBrokenLeft,
             isBrokenRight: _isBrokenRight);
     }
