@@ -268,6 +268,23 @@ internal static class ItemSkylineFactory
     private static void AddSemiTies(List<ColumnPart> parts, MusicItem item,
         double noteheadLeftX, double staffY, int noteValue)
     {
+        // One cheap flag scan first: column parts are rebuilt on every break
+        // attempt for every item, and almost no item carries a half-tie — the
+        // tie-less common case must not pay the per-kind fan below.
+        bool any = false;
+        switch (item)
+        {
+            case NoteItem n:
+                any = n.HasLaissezVibrer || n.HasRepeatTie;
+                break;
+            case ChordItem c:
+                foreach (var m in c.Notes)
+                    if (m.HasLaissezVibrer || m.HasRepeatTie) { any = true; break; }
+                break;
+        }
+        if (!any)
+            return;
+
         // The fan (which heads) and the curve sides are SemiTiesOf's — the same
         // list the drawing fan consumes, so the boxes are the ink's.
         foreach (var kind in TieVariantEngraver.KindPair)

@@ -64,7 +64,26 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第4便 fixed **第42号 = rest-avoid-note.ly**・`5f92858b`・
 第5便 **rest-collision-note-duration.ly = exact**・`1557f9b1`・
 第6便 **5 冊バッチ skip 5**・`fbdafa71`・第7便 **script-skip = skip（probe 付き）**・
-`ec7e9b66`・第8便 **自己監査＝挙動変更 0・実測検証 2・開示 1 札**・この handoff と同 commit）。
+`ec7e9b66`・第8便 **自己監査＝挙動変更 0・実測検証 2・開示 1 札**・`b981af73`・
+第9便 **perf A/B round 10 = 劣化なし・対照 hash 一致・tie-less 早期 return +1**・
+この handoff と同 commit）。
+
+★★ **第9便 perf A/B round 10（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
+- **機材**: scratch\lpreg\perf-ab10.ps1（+10b）・base = 8a1e92db worktree（撤去済）・Release・
+  交互×両順・中央値 of 5・999 小節 2 冊（**chordsemi1k** = tie 無し 4 和音/小節 =
+  AddSemiTies/SemiTiesOf の既定コスト側・**hash 必須**／**restpoly1k** = 2 声 rest 毎小節 =
+  第42号 collision 走査 + StemCalculator 読みの熱側。rest Y 設計変更なので hash 無し）。
+- **1 回目に容疑**: chordsemi1k が両順とも正（+9.1%/+3.9% = 符号反転しない）。
+  restpoly1k は +3.2%/−3.3% = 順序で符号反転 = 純 drift。
+- **対処 = AddSemiTies に tie-less 早期 return**（item のフラグを 1 走査してから per-kind
+  fan へ。1 綴りは維持——fan は引き続き SemiTiesOf）。**再測で −0.7%/+6.2% = 符号反転 =
+  drift 内**（バッチ振れ 4.6〜9.2s の荒い機械）。**SVG hash は base/curr 完全一致**
+  （挙動不変の証明 + 仕事同一の計測）。
+- **呼び出し構造**: pass/walk 数不変・新規 O(n²) 無し。SemiTiesOf は tie 持ち item のみ
+  alloc（tie-less は guard で走査ゼロ）・CalculateRestNoteCollisions は従来どおり
+  staff 単位 memo 1 回（区間テストは同ループ内のフィルタ替え）・StemTipPositionOf の
+  StemCalculator 読みは same-dir same-onset 対のみ。**プレビュー増分経路
+  （IncrementalCompiler）は今セッション非接触**＝増分再コンパイルの構造不変。
 
 ★★ **第8便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
 挙動変更 0・新規チューニング定数ゼロ検算済**:
