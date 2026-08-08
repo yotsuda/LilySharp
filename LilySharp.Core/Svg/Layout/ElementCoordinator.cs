@@ -1230,7 +1230,9 @@ internal sealed class ElementCoordinator
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal (the
     /// unpitched arm); LILYPOND-REF: scm/define-grobs.scm Rest — voiced-position 4.</remarks>
-    private static double VoicedRestPosition(int dir, int restValue)
+    // internal: ItemSkylineFactory prices a voiced rest's separation box at this same
+    // position (the PURE side of the offset chain — the collision push below is unpure).
+    internal static double VoicedRestPosition(int dir, int restValue)
     {
         const double VoicedPosition = 4.0;
         double pos = dir * VoicedPosition;

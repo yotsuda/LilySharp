@@ -7258,7 +7258,9 @@
     },
     "spacing-accidental-rest.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "臨時記号は下にシフトされた rest と衝突しない（voiced rest の separation 箱）",
+      "notes": "fixed50: 乖離=aeses列がLS 1.01左（重フラットがrest inkに食い込み）。root=ItemSkylineFactoryの無beam restが「中央線の符頭箱」近似（開示済みの札）=voiced Yでflatと重ならずminが立たない。port3層: ⑴RestItem.VoiceDirection新設・ResolveVoiceStemDirections（voice-props配布の家）で焼込=make-voice-props-setはRestにもdirectionを配る ⑵ItemSkylineFactoryにvoiced腕=実rest glyph箱をpure voiced位置（ElementCoordinator.VoicedRestPosition共有・collision pushは不算入=pure-chain-offset-callbackが素通し, output-lib.scm:1273-1278）⑶中央線phantom近似は無voice restにのみ残置（札更新）。修理後 flat 10.26/頭12.05 vs LP 10.30/12.10=Δ0.04-0.05（note-spacing regime級）。rest描画位置は両エンジン+3.50一致（collision pushは描画のみ=LP同型）。snapshot 1枚=cross-voice-accidental（X drift +0.10〜+0.32・voiced restが実ink分の部屋を取る方向・台帳XVA/XVB/XVC不動・census済）。観測者=VoicedRestSpacingTests.AccidentalClearsTheShiftedDownRest。twin=scratch\\lpreg\\spacc-rest.{lys,-gen.ly,svg,-lp.svg}"
     },
     "spacing-accidental-staffs.ly": {
       "category": "scheme",

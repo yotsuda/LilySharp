@@ -408,6 +408,20 @@ public sealed record RestItem : MusicItem
     public double PureBeamShift { get; init; }
 
     /// <summary>
+    /// The voice direction forced on this rest by a <c>voice { } { }</c> span
+    /// (+1 up / −1 down), 0 outside any span. Baked by
+    /// <c>MeasureCollector.BakeVoicedRestDirections</c> from the same
+    /// <c>VoiceDefaults.GetDefaultStemUpAt</c> reading every other consumer spends,
+    /// so the horizontal spacing can price the rest at its PURE voiced position —
+    /// LilyPond's Rest carries <c>direction</c> from the voice-props layer and its
+    /// separation box reads the pure Y that direction produces.
+    /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set —
+    /// direction on direction-polyphonic-grobs (Rest is in the list);
+    /// LILYPOND-REF: lily/separation-item.cc:163 boxes — pure_y_extent.
+    /// </summary>
+    public int VoiceDirection { get; init; }
+
+    /// <summary>
     /// True when a slur OPENS on this rest (LilyPond <c>r16(</c>). A rest is a
     /// legal slur bound: LilyPond's rests live inside NoteColumn grobs, so the
     /// Slur_engraver binds to them like any column ("slur-rest-direction.ly").

@@ -218,16 +218,39 @@ internal static class ItemSkylineFactory
                 restY - restBox.Top, restY - restBox.Bottom,
                 noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
         }
+        else if (item is RestItem { VoiceDirection: not 0 } voicedRest)
+        {
+            // A VOICED rest (inside a voice { } { } span) enters at its PURE voiced
+            // position — rest.cc's staff_position_internal, dir × 4 with the per-duration
+            // line alignment — with its REAL glyph box. The rest-collision push is NOT
+            // included: LilyPond chains it with pure-chain-offset-callback, whose pure
+            // side passes the previous offset through, so spacing sees the voiced base
+            // only (spacing-accidental-rest.ly: the next column's double flat prices
+            // itself against the lowered rest, not a phantom head on the middle line).
+            // LILYPOND-REF: lily/separation-item.cc:163 boxes — pure_y_extent;
+            // LILYPOND-REF: lily/rest-collision.cc:76-84 add_column — the collision
+            //   shift is chained with Lily::pure_chain_offset_callback;
+            // LILYPOND-REF: scm/output-lib.scm:1273-1278 pure-chain-offset-callback —
+            //   "simply pass the previous calculated offset value".
+            int restValue = GlyphMetrics.NoteValueOf(item);
+            var restBox = GlyphMetrics.GetRestBBox(restValue);
+            double restY = staffY
+                - ElementCoordinator.VoicedRestPosition(voicedRest.VoiceDirection, restValue)
+                    / 2.0;
+            parts.Add(ColumnPart.Ink(
+                restY - restBox.Top, restY - restBox.Bottom,
+                noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
+        }
         else
         {
             // A rest, and anything else without a staff position, sits on the middle line.
-            // ⚠️ An UNBEAMED REST STILL TAKES A NOTEHEAD-SHAPED BOX HERE while
+            // ⚠️ An UNBEAMED, UNVOICED REST STILL TAKES A NOTEHEAD-SHAPED BOX HERE while
             //   SpacingRules.CalculateNoteheadRightExtent gives it the REST glyph's own
             //   extent (lily/rest.cc Rest::width). Two spellings of one quantity, named
             //   rather than fixed: pre-existing, and changing it is not this port. The
-            //   beamed branch above DOES use the real box — its position is the whole
-            //   point there, and the notehead approximation has no defensible reading
-            //   once the rest leaves the middle line.
+            //   beamed and voiced branches above DO use the real box — the position is
+            //   the whole point there, and the notehead approximation has no defensible
+            //   reading once the rest leaves the middle line.
             double noteY = item switch
             {
                 NoteItem n => staffY - n.StaffPosition / 2.0,

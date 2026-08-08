@@ -59,7 +59,29 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 第119セッション（＝第1便 **fixed 第49号 = slur-vertical-skylines.ly =
-trill span の to-barline port**・この handoff と同 commit）。
+trill span の to-barline port**・`e94a2583`・第2便 **fixed 第50号 =
+spacing-accidental-rest.ly = voiced rest の separation 箱 port**・この handoff と
+同 commit）。
+
+★★ **第2便 spacing-accidental-rest.ly（claim: 臨時記号は下にシフトされた rest と
+衝突しない）**:
+- **乖離 = aeses 列が LS 1.01 左**（重フラットの ink が rest に食い込む＝claim 不成立
+  だった）。root = **ItemSkylineFactory の無 beam rest が「中央線の符頭箱」近似**
+  （自分の札が開示していた）——voiced で下がった rest の Y で flat と重ならず
+  min が立たない。同 voice の r8→aeses 対は per-voice spring 経路
+  （CalculateSkylineDistance）で価格付けされる（cross-voice 対は 4230 の skip）。
+- **port 3 層**: ⑴ `RestItem.VoiceDirection` 新設・**ResolveVoiceStemDirections
+  （voice-props 配布の家）で焼込**——make-voice-props-set は Rest にも direction を
+  配る ⑵ ItemSkylineFactory に voiced 腕＝**実 rest glyph 箱を pure voiced 位置**
+  （`ElementCoordinator.VoicedRestPosition` を internal 化して共有・**collision
+  push は不算入**＝LP は pure-chain-offset-callback が素通し・output-lib.scm:
+  1273-1278）⑶ 中央線 phantom 近似は無 voice の rest にのみ残置（札を更新）。
+- **照合**: flat 10.26 / 頭 12.05 vs LP 10.30 / 12.10 = **Δ0.04-0.05**（note-spacing
+  regime 級・修理前 Δ1.01）。rest の描画位置は両エンジン +3.50 一致（collision push
+  は描画のみ＝LP と同じ分業）。第1列・小節線は exact。
+- snapshot **1 枚 = cross-voice-accidental**（X drift +0.10〜+0.32 のみ・voiced rest
+  が実 ink 分の部屋を取る方向・**台帳 XVA/XVB/XVC 不動**・census 済）。
+  観測者 = VoicedRestSpacingTests.AccidentalClearsTheShiftedDownRest（LP 4 点ピン）。
 
 ★★ **第1便 slur-vertical-skylines.ly（claim: slur は outside-staff-priority の
 十分高い grob を押し上げ過ぎない——^"rit" TextScript 450・trill span 50・\f 250）**:
@@ -81,19 +103,21 @@ trill span の to-barline port**・この handoff と同 commit）。
 - 観測者 = TrillSpannerTests.MeasureStartStop_EndsTheWaveAtTheBarline（LP 4 点
   ピン）。snapshot 0 枚・台帳不動（既存 trill fixture/probe は全部 mid-measure stop）。
 
-plain 322 / 処理済 **263**（fixed **49**・exact **34**・skip **164**・open **16**・
-pending **59**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **spacing-accidental-rest**（slur 島は完食＝spacing 族へ）。
+plain 322 / 処理済 **264**（fixed **50**・exact **34**・skip **164**・open **16**・
+pending **58**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **spacing-accidental-stretch**（spacing 族の 2 冊目）。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
 入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4217 passed / 0 failed / 4 skipped**（第1便観測者+1・全スイート確認済）・
-snapshot 第119 は **0 枚**・Core (Debug) 0 warning・
+テスト **4218 passed / 0 failed / 4 skipped**（第1便観測者+1・第2便観測者+1・
+全スイート確認済）・snapshot 第119 は **1 枚**（第2便 cross-voice-accidental・
+census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
 C:\MyProj\LilySharp-perfbase-0c63（第118 残置）。
 probe 残置: **scratch\lpreg\slurvsky.{lys,svg,-gen.ly,-lp.svg,-lp.log}＋
-extract-slurvsky-lp.ps1（第119 の双子・観測者の照合材）**＋第118 以前の
+extract-slurvsky-lp.ps1・spacc-rest.{lys,svg,-gen.ly,-lp.svg,-lp.log}
+（第119 の双子・観測者の照合材）**＋第118 以前の
 slurrest-fig4/slurshift/slurgrace 一式（下の第118 の節参照）。
 
 ## 以下は第118セッションの経緯

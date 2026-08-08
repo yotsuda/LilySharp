@@ -1702,12 +1702,21 @@ public sealed partial class MeasureCollector
                 bool measureChanged = false;
                 for (int ii = 0; ii < items.Count; ii++)
                 {
+                    // The same voice-props distribution reaches RESTS: LilyPond's
+                    // make-voice-props-set puts direction on every
+                    // direction-polyphonic-grob, and Rest is in that list — the
+                    // spacing reads it as the rest's pure voiced position.
+                    // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set
+                    int restDir = forced ? 1 : -1;
                     MusicItem? updated = items[ii] switch
                     {
                         NoteItem n when n.ForcedStemUp is null && n.StemUpOverride != forced
                             => n with { StemUpOverride = forced },
                         ChordItem c when c.ForcedStemUp is null && c.StemUpOverride != forced
                             => c with { StemUpOverride = forced },
+                        RestItem { IsSpacer: false, IsMultiMeasure: false } r
+                                when r.VoiceDirection != restDir
+                            => r with { VoiceDirection = restDir },
                         _ => null,
                     };
                     if (updated == null)
