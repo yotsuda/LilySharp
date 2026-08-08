@@ -7308,7 +7308,9 @@
     },
     "spacing-empty-bar.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "空の小節線 (\\bar \\\"\\\") は spacing に影響しない",
+      "notes": "skip: 器材が主張そのもの。\\bar \\\"\\\"（空barline）の綴りがLily#に無い（barline種は | || |. ! |: :| :|: のみ・SyntaxFacts.IsBarlineKind）。しかも第1行は小節中の\\bar \\\"\\\"+\\break=小節中改行点でLily#の小節モデル外・\\noBreakも綴りなし。BarlineType.Noneはモデルに在るが書き手ゼロ=文法が入れば再開可"
     },
     "spacing-end-of-line.ly": {
       "category": "scheme",
@@ -7372,7 +7374,9 @@
     },
     "spacing-loose-polyphony.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "loose column（小節中の treble clef）は多譜 polyphony で正しく space される",
+      "notes": "open(下見済・実測記録)。twin=scratch\\lpreg\\sploose.{lys,-gen.ly,svg,-lp.svg}(grandStaff 2譜・下譜 fis,,8 cis, clef treble g8 fis,・上譜 tuplet 3/2 {g4 a2})。照合: 前3列は両譜exact(頭9.45/12.81・♯8.00/11.36)・A4列 LS14.01 vs LP14.06。乖離=小節中clef列から先が平行+2.10: clef LS15.61 vs LP14.26(+1.35)・G4 18.66 vs 16.56・F#3 21.17 vs 19.07(+2.10)。C#3→clef gap LP1.45/LS2.80・clef→G4 LP2.30/LS3.05。root候補=LPはloose columnをspring系から外し解いた後に隣接列間へ補間(lily/spacing-loose-columns.cc)・LSはMidMeasureChangeGapsがclef幅をspringへ課金する別モデル——単譜probe MCでは合っていたが、多譜で他譜のt=1/6列(tuplet A4)がclefの隣接対(1/8→2/8)に挟まると過大。修理=spacing-loose-columns.ccの字面を読んでから(focused session)。"
     },
     "spacing-mark-width.ly": {
       "category": "scheme",

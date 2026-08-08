@@ -63,7 +63,22 @@ trill span の to-barline port**・`e94a2583`・第2便 **fixed 第50号 =
 spacing-accidental-rest.ly = voiced rest の separation 箱 port**・`80c4eede`・
 第3便 **spacing-accidental-stretch.ly = exact（コード変更 0・伸縮分配の初照合）**・
 `18e0b6da`・第4便 **fixed 第51号 = spacing-correction-accidentals.ly = spring wish
-の min 置換（increment 床の撤去）**・この handoff と同 commit）。
+の min 置換（increment 床の撤去）**・`01d035c8`・第5便 **spacing-empty-bar.ly =
+skip（\bar "" の綴りなし＝器材が主張の核・小節中改行点も小節モデル外・
+BarlineType.None は書き手ゼロ）**・第6便 **spacing-loose-polyphony.ly 下見 =
+open（小節中 clef の loose column が +2.10 過大）**・この handoff と同 commit）。
+
+★★ **第6便 spacing-loose-polyphony.ly（state=open・次の focused session 候補）**:
+- twin = scratch\lpreg\sploose.{lys,-gen.ly,svg,-lp.svg}（grandStaff 2 譜・下譜
+  fis,,8 cis, clef treble g8 fis,・上譜 tuplet 3/2 { g4 a2 }）。**前 3 列は両譜
+  exact**（頭 9.45/12.81・♯ 8.00/11.36 まで一致）・A4 列 LS 14.01 vs LP 14.06。
+- **乖離 = 小節中 clef 列から先が平行 +2.10**: clef LS 15.61 vs LP 14.26（+1.35）・
+  G4 18.66 vs 16.56・F#3 21.17 vs 19.07。C#3→clef gap LP 1.45 / LS 2.80。
+- **root 候補**: LP は loose column を spring 系から**外し**、解いた後に隣接列間へ
+  補間する専用機構（**lily/spacing-loose-columns.cc**）。LS は MidMeasureChangeGaps
+  が clef 幅を spring へ課金する別モデル——単譜 probe MC では合っていたが、多譜で
+  他譜の t=1/6 列（tuplet の A4）が clef の隣接対（1/8→2/8）に挟まると過大。
+  **修理は spacing-loose-columns.cc の字面を読んでから**（1 セッション級）。
 
 ★★★ **第4便 spacing-correction-accidentals.ly（claim: 右列に臨時記号があっても
 optical correction は効く——stem 向きが違う対のみ）= fixed 第51号**:
@@ -139,9 +154,11 @@ optical correction は効く——stem 向きが違う対のみ）= fixed 第51�
 - 観測者 = TrillSpannerTests.MeasureStartStop_EndsTheWaveAtTheBarline（LP 4 点
   ピン）。snapshot 0 枚・台帳不動（既存 trill fixture/probe は全部 mid-measure stop）。
 
-plain 322 / 処理済 **266**（fixed **51**・exact **35**・skip **164**・open **16**・
-pending **56**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **spacing-empty-bar**（spacing 族の 4 冊目）。
+plain 322 / 処理済 **268**（fixed **51**・exact **35**・skip **165**・open **17**・
+pending **54**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **span-bar-articulation**（spacing 族は完食＝span-bar 族へ。ただし
+**第6便の open（spacing-loose-polyphony = loose column 補間の port）を focused
+session で先にやる選択肢が濃い**——spacing-loose-columns.cc を読んでから）。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
 入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
 
@@ -152,7 +169,8 @@ census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
 C:\MyProj\LilySharp-perfbase-0c63（第118 残置）。
 probe 残置: **scratch\lpreg\slurvsky.{lys,svg,-gen.ly,-lp.svg,-lp.log}＋
-extract-slurvsky-lp.ps1・spacc-rest.*・spacc-stretch.*・spacc-corr{,-noacc}.*
+extract-slurvsky-lp.ps1・spacc-rest.*・spacc-stretch.*・spacc-corr{,-noacc}.*・
+sploose.*（第6便 open の照合材）
 （第119 の双子・観測者の照合材）**＋第118 以前の
 slurrest-fig4/slurshift/slurgrace 一式（下の第118 の節参照）。
 
