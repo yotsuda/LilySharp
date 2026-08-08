@@ -722,7 +722,12 @@ internal static class TupletBracketEngraver
                     _ => isStemUp
                 };
                 var member = itemUp == isStemUp ? MemberBeam(i) : null;
-                lpAnyBeam ??= MemberBeam(i);
+                // LP scans the columns from the END and keeps the first beam it
+                // meets — i.e. the LAST beamed column's beam. Forward loop here,
+                // so overwrite instead of keep-first.
+                // LILYPOND-REF: lily/tuplet-bracket.cc:584 calc_position_and_height
+                //   `for (vsize i = columns.size (); i--;)` ... break.
+                lpAnyBeam = MemberBeam(i) ?? lpAnyBeam;
                 double colX = ml.X
                     + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml);
                 double stemX = member is { } mb && !mb.beam.MemberXPositions.IsDefaultOrEmpty
@@ -766,6 +771,20 @@ internal static class TupletBracketEngraver
         //   (graphical dy, sign gates, damping); lily/tuplet-bracket.cc:633-637
         //   calc_position_and_height staff points; lily/tuplet-bracket.cc:708-746
         //   calc_position_and_height offset pass + flat quantize.
+        // ⚠️ Unported clauses, disclosed (no pinned point reaches any of them):
+        //   ⑴ the follow-beam branch (:491-519) — vacuously false here: a beam
+        //     covering the WHOLE tuplet hides the bracket (bracket-visibility
+        //     if-no-beam) and that case takes the invisible-bracket path in the
+        //     caller, so a DRAWN bracket never carries LP's par_beam;
+        //   ⑵ the scripts term (:682-706 avoid-scripts) — articulation boxes do
+        //     not join the points, so a script under the bracket can collide;
+        //   ⑶ nested-tuplet points (:646-680) — the Lily#-own NestingDepthOffset
+        //     step below stands in;
+        //   ⑷ staff-padding's cross-staff gate (:466-477) — every bracket this
+        //     engraver sees lives on one staff, vacuously true;
+        //   ⑸ x0/x1 come from the caller's stem-attach faces for BOTH bounds —
+        //     LP's get_x_bound_item falls back to the COLUMN when a bound stem
+        //     points AGAINST the bracket (mixed-direction tuplets).
         if (lpPoints.Count > 0 && !double.IsNaN(bracketStartX) && bracketWidth > 0.001)
         {
             int dir = isStemUp ? 1 : -1;             // Y-up

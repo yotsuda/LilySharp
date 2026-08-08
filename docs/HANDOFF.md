@@ -66,7 +66,34 @@ fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分
 `36a76259`・第4便 **port ⑴ 完了 = calc_position_and_height no-beam 枝 →
 CalculateSlope・台帳対が両側 +0.000021102 に閉じた・snapshot 8 枚 census 済**・
 `cf0bd442`・第5便 **port ⑵ 完了 = TupletNumber → slur extras・slurshift 全点
-LP exact = fixed 第48号**・この handoff と同 commit）。
+LP exact = fixed 第48号**・`9181a932`・第6便 **自己監査（ユーザー三問）＝字面違反
+1 修正（出力不変）・札 7 開示**・この handoff と同 commit）。
+
+★★ **第6便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
+- **検算で白 9**: ⑴ flag unite は両軸（:188-203。Y は headward 側のみ実効＝
+  interval union と等価） ⑵ attach X = extent[-d]−d·0.3・past-tip = 合併中心
+  (:751/:759) ⑶ graphical_dy = bound 列∪staff の [dir] 端差（staff ink+0.25 =
+  2.3 は台帳 probe 六桁確証） ⑷ 符号ゲート 3 段は sign(0) 含め等価 (:544-549)
+  ⑸ damping の min/max 構造 (:566-630)・quantized-positions は**差分のみ**消費
+  ＝outer-edge 読みで等価 ⑹ offset pass の点 x = 列 refpoint−x0（負も可）・
+  factor 分岐・padding 後段 (:708-719) ⑺ flat quantize の rint(half-even)/
+  on_line/+dir (:726-746) ⑻ 番号 extras の widen(th·0.5/th·1.0)+penalty
+  (:850-884) ⑼ OutwardTipDeviceY の反対 stem 列 = 頭 ink ＝
+  cross_staff_extent[dir] と同型。
+- **字面違反 1 = 修正（出力不変・全緑 4216）**: 覆い beam の走査——LP :584 は
+  **末尾から**走査し最後の beamed 列の beam を採る・LS は先頭のを採っていた
+  （現コーパスは bracket 下に beam 1 本の本しか無く挙動不変・複数 beam 本は
+  未踏のまま修正）。
+- **札 7（開示コメント追記・挙動不変）**: bracket 側⑴ follow-beam 枝 :491-519
+  は LS では恒偽（全 beam 被覆→bracket 非表示の別経路） ⑵ scripts 項 :682-706
+  未 port（bracket 下の script と衝突し得る） ⑶ 入れ子点 :646-680 は
+  NestingDepthOffset が代役 ⑷ staff-padding の cross-staff ゲートは恒真
+  ⑸ x0/x1 は両端 stem 面固定（LP は反 slurward bound で列 extent へ fallback＝
+  混合 stem tuplet 未踏）。extras 側⑹ LP は「slur が開いている間に立った番号」
+  だけ・LS は時間範囲の重なり全部 ⑺ 番号 X は LS bracket span 中点（LP は
+  X-positions/shorten-pair で ±0.2 伸びた描画 bracket の中点＝bracket X regime
+  未 port の再掲）。
+- 引用ラチェット緑＝新 REF 全部に住所+symbol（第5便の全大文字マクロ罠も含め）。
 
 ★★★ **第5便: port ⑵ = 設計⒝（産地の再読）で完了**——LayoutSlurs の pass 頭で
 TupletBracketEngraver.Calculate を**同じ産地として再呼出**（staff-scoped な

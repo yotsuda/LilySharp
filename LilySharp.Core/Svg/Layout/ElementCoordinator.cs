@@ -2501,6 +2501,13 @@ internal sealed class ElementCoordinator
         // grid climb over it (slur-shift-region.ly's claim).
         // LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos —
         //   the non-slur branch; no dots-0.2, ye.widen(th*0.5), xe.widen(th*1.0).
+        // ⚠️ Two stand-ins, disclosed: ⑴ LP acknowledges a number only when its
+        //   tuplet STARTS while the slur is open (engraver timing); this gate is
+        //   plain time-range OVERLAP, so a tuplet begun before the slur also
+        //   contributes. ⑵ The number's X centres on Lily#'s bracket span (bound
+        //   stem faces); LP centres on the DRAWN bracket, which X-positions /
+        //   shorten-pair extend ~0.2 per side (unported, the bracket X regime) —
+        //   the box can sit a few tenths off LP's along X.
         if (!tupletNumbers.IsDefaultOrEmpty)
         {
             foreach (var t in tupletNumbers)
