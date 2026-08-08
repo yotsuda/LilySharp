@@ -65,6 +65,7 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第5便 **slur-flag.ly = skip（probe 付き・核は 4 点完全一致）**・`90b7845f`・
 第6便 **slur-grace.ly 下見 = root 特定+実測済（pending のまま）**・`3d082538`・
 第7便 **自己監査＝挙動変更 0（開示コメントのみ）・検算で白 8・札 5 追記**・
+`d57afd51`・第8便 **perf 追試 = grace slur 描画側容疑を実測で白・退行なし**・
 この handoff と同 commit）。
 
 ★★ **第7便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
@@ -88,6 +89,26 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   ⑸ dot 行 recipe は skyline seed の**再綴り**（scale 1+direction 無し——強制 voice
   の score では描画と 1 position ずれ得る）。
 - 引用ラチェット 3 本とも緑＝REF は全部住所実在+symbol 名指し済。
+
+★ **第8便 perf 追試（ユーザー問「プレビュー速度を落とす実装は?」）＝退行なし・
+描画側の容疑 1 個を実測で白**:
+- **容疑 = grace slur**: SharedRenderer.GraceNotes:560 が**描画側**で
+  SlurScoringProblem.Solve() を呼ぶ（round 11b の「プレビュー毎フレーム再描画」
+  経路）。再建で Solve 1 回が重くなった（grid 拡大+全候補で実 curve 生成）ので
+  grace 密集本で A/B → **grace200（800 grace slur・Release）: base 2002ms /
+  curr 1966ms = parity**。1 solve あたりの増分は測定不能量（空 avoid・obstacle 2 の
+  grace 問題は候補あたり数十 flops）。プレビュー可視頁の grace slur は高々数十本＝
+  frame 予算に乗らない。**もし将来 grace 過密頁で lag が出たら Solve() は純関数
+  なので DigitRun 型 memo が正手**（round 11b と同型・発明は測ってから）。
+- **プレビュー規模の re-layout**: slur40（80 slur）= base 1680ms / curr 1713ms
+  （+2% = noise 床内・散らばり 1.1〜3.2s の機械）。
+- 構造の検分: BestFirstScorer は実 PriorityQueue+lazy scoring（高い scorer は
+  競争力のある候補にしか走らない= LP 自身の設計）・avoid list は per-slur 1 回
+  （per-candidate でない）・solver は stackalloc（scoring 中 heap churn なし）・
+  grid は音楽（音高差）で有界= LP と同じ界・**slur 無し score は早期 return +
+  extras 不生成**（round 14 の対照 hash 一致が証明）・IncrementalCompiler 非接触。
+- **プレビューを本当に脅かすのは第3便起票の既存超線形 2 件**（全付点本・slur 本の
+  n²・base で再現済）——大譜面のプレビュー速度はここを直すのが本丸。
 
 ★★ **第6便 slur-grace.ly 下見**（コード変更 0・state は pending のまま）:
 - 構造は一致: 両エンジン外側 2+grace slur 3 の計 5 本・警告なし＝主張の核
