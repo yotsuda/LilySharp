@@ -62,7 +62,20 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第2便 fixed **第41号 = repeat-tremolo-chord-rep.ly**・`b68d24aa`・
 第3便 **repeat-volta-initial-grace.ly = open**・`4eec7fd4`・
 第4便 fixed **第42号 = rest-avoid-note.ly**・`5f92858b`・
-第5便 **rest-collision-note-duration.ly = exact**・この handoff と同 commit）。
+第5便 **rest-collision-note-duration.ly = exact**・`1557f9b1`・
+第6便 **5 冊バッチ skip 5**・この handoff と同 commit）。
+
+★ **第6便 = 5 冊バッチ（skip 5・コード変更 0）**:
+- **rest-pitched-beam = skip**（pitched rest `a\rest` の綴りなし＝主張の核「pitched rest は
+  beam シフトを受けず書いた音高に留まる」が書けない。plain 置換では既済 beamed-rest 機構の
+  再テストになる。第42号の pitched rest 文法宿題と同項＝綴りが入れば両方再訪）。
+- **satb-template 族 plain 2 冊 = skip**（false plain: 本体は `\include "midi/…"` 1 行・
+  include 先は LP 組込 SATB template エンジン（ly/satb.ly = Scheme 駆動）+ \lyricmode/
+  \set stanza/\tag + MIDI 比較主張 = SVG オラクル枠外）。
+- **script-accidental-collision = skip**（espressivo script 対応物ゼロ + 強制臨時 `!` 綴り
+  なし——主張の核 = 幅広 script の正確な skyline 箱は espressivo 側。部分表面 = fermata +
+  実音臨時 8 例は書けるが核でない。綴りが入れば再訪・機構は第107 blockA/B 系 workstream）。
+- **script-no-stencil = skip**（`\single \omit Script` の crash 回帰 = false plain）。
 
 ★ **第5便 rest-collision-note-duration.ly = exact（コード変更 0）**: 第42号の跨ぎ音符
 head-only 腕がこの本の主張そのもの＝**4/4 休符 Y 桁一致**（g1/g2 保持中の r8 = +3.5 =
@@ -149,10 +162,10 @@ pos −7 の譜外 half-space・g2 が切れた 4 つ目だけ既定 −4 へ復
   無警告 drop（EmitChord のコメントに明記・起票）。
 - 観測者 +1（RepeatTieChordTests: fan 数 5・強制/既定向き・X 式 LP 逆算ピン）・snapshot 0 枚。
 
-plain 322 / 処理済 **240**（fixed **42**・exact **30**・skip **152**・open **16**・
-pending 82。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **245**（fixed **42**・exact **30**・skip **157**・open **16**・
+pending 77。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る。
-次 = rest-pitched-beam）。
+次 = script-skip）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・

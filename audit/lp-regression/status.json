@@ -6702,7 +6702,9 @@
     },
     "rest-pitched-beam.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Pitched rests under beams",
+      "notes": "skip(第113第6便)。pitched rest(a\\rest)の綴りなし=主張の核(pitched restはbeam rest-collisionシフトを受けず書いた音高に留まる)が書けない。plain rest置換では既済のbeamed-rest機構(d46e624a)の再テストになり本の主張でない。文法宿題=第42号notesと同項(rest-avoid-note.lyのa4\\rest/f2\\restと同じ穴・pitched rest綴りが入れば両方再訪)"
     },
     "rest-polyphonic.ly": {
       "category": "scheme",
@@ -6742,7 +6744,9 @@
     },
     "satb-template-on-two-staves-with-verses.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "One-measure SATB score on two staves with five verses and piano accompaniment; MIDI has extra silence at the caesura",
+      "notes": "skip(第113第6便)。false plain: 本体は\\include \"midi/...\"1行で、include先はLPの組込SATB templateエンジン(ly/satb.ly=Scheme駆動・TwoVoicesPerStaff等の変数規約)+\\lyricmode/\\set stanza/\\tag+MIDI比較主張(SVGオラクル枠外)。satb族の親=既存schemeカテゴリのsatb-template-*と同棚"
     },
     "satb-template-soprano-and-tenor-may-be-omitted.ly": {
       "category": "scheme",
@@ -6754,7 +6758,9 @@
     },
     "satb-template-with-keyboard-reduction.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "SATB template with keyboard reduction",
+      "notes": "skip(第113第6便)。false plain: \\include \"midi/...\"のSATB templateエンジン本=on-two-staves-with-versesと同ゲート(組込template+MIDI主張)"
     },
     "satb-template-with-men-women-and-descant.ly": {
       "category": "scheme",
@@ -6806,7 +6812,9 @@
     },
     "script-accidental-collision.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Scripts use skylines with accurate boxes to avoid accidentals",
+      "notes": "skip(第113第6便)。espressivo scriptの綴りなし(<>記号・対応物ゼロ)+強制臨時`!`の綴りなし(Lily#は@courtesy=括弧形のみ)。主張の核=幅広scriptの正確なskyline箱はespressivo側が担う設計(24例中espressivo12+e!行8)。部分表面=fermata+実音臨時(ees/eis)8例は書けるが本の核でない。espressivoか`!`の綴りが入れば再訪。script-vs-臨時のskyline機構自体は§1第107 blockA/B系の既存workstream"
     },
     "script-center-seconds.ly": {
       "category": "scheme",
@@ -6826,7 +6834,9 @@
     },
     "script-no-stencil.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Omitted scripts on skips do not cause crashes",
+      "notes": "skip(第113第6便)。\\single \\omit Script=override機構のcrash回帰本(false plain: `s\\single \\omit Script -. ^>`のみ)。Lily#に\\omit/\\single綴りなし・主張はLP内部のstencil無しScript処理"
     },
     "script-shift-staccato.ly": {
       "category": "override",
