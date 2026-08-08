@@ -278,6 +278,17 @@ internal static class ArticulationEngraver
         //   last_initial_outside_staff carried across the sorted loop.
         var lastOnKey = new Dictionary<(int, int, int, bool),
             (double? InitialOsp, double? CurrentOsp)>();
+        // The bump can only ever fire when SOME script declares a priority (a mover is
+        // what converts its followers), so a mover-less page — the common one — skips
+        // the last-script bookkeeping entirely: one flag test per script instead of
+        // two dictionary operations, and the walk is the pre-bump walk.
+        bool anyMover = false;
+        foreach (var a in articulations)
+            if (ArticulationSpacing.OutsideStaffPriority(a.Type) is not null)
+            {
+                anyMover = true;
+                break;
+            }
 
         // Column-participating fingerings by note, each queue sorted by priority; a
         // fingering is FLUSHED into the chain when the walk reaches its slot — before
@@ -346,7 +357,8 @@ internal static class ArticulationEngraver
                 if (!supportScripts.TryGetValue(key, out var placedList))
                     supportScripts[key] = placedList = new List<ArticulationLayout>();
                 placedList.Add(synth);
-                lastOnKey[key] = (null, null);
+                if (anyMover)
+                    lastOnKey[key] = (null, null);
             }
         }
 
@@ -755,7 +767,7 @@ internal static class ArticulationEngraver
             if (effArt.IsAbove)
                 FlushFingerings(stackKey, ScriptPriority(effArt.Type));
             double? declaredOsp = layout.OutsideStaffPriority;
-            if (lastOnKey.TryGetValue(stackKey, out var lastScript)
+            if (anyMover && lastOnKey.TryGetValue(stackKey, out var lastScript)
                 && lastScript.CurrentOsp is { } moverOsp)
             {
                 // The previous script of this note & side (in priority order) is a
@@ -795,7 +807,8 @@ internal static class ArticulationEngraver
                     layout = layout with { YUp = yUp };
                 }
             }
-            lastOnKey[stackKey] = (declaredOsp, layout.OutsideStaffPriority);
+            if (anyMover)
+                lastOnKey[stackKey] = (declaredOsp, layout.OutsideStaffPriority);
             if (layout.OutsideStaffPriority is null)
             {
                 if (!supportScripts.TryGetValue(stackKey, out var placed))
