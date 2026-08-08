@@ -7492,7 +7492,9 @@
     },
     "span-bar-articulation.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "cross-staff stem 上の articulation は span bar と衝突しない",
+      "notes": "skip: \\change Staff（cross-staff stem）が主張の核=既知ゲート（@crossは描画表面なし）。\\espressivoも対応物ゼロ（script-accidental-collision と同じ）"
     },
     "span-bar-break-align-anchor.ly": {
       "category": "override",
@@ -7512,7 +7514,9 @@
     },
     "span-bar-spacing.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "臨時記号の左端は barline/SpanBar の右端より左に来ない（pure-from-neighbor）",
+      "notes": "skip: 強制臨時記号 e!（毎音♮を強制印字）が主張の器材=READMEの正典skip例（Lily#では ! は点線小節線・LYS4009）。R1.（付点全休符MMR）はある"
     },
     "span-bar-true.ly": {
       "category": "scheme",
@@ -7528,7 +7532,9 @@
     },
     "spanner-alignment.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "spanner は paper column の musical grob に整列する（pedal 等は無視）",
+      "notes": "skip: \\new Dynamics コンテキスト（譜間 dynamics/pedal 行・s拍のみ）が枠=既知「Dynamicsコンテキストなし」ゲート（script-skip と同）。\\cresc/\\dim のtext式綴りも無し（dynamics-text族と同）"
     },
     "spanner-break-beyond-parent.ly": {
       "category": "scheme",
@@ -7540,7 +7546,9 @@
     },
     "spanner-empty-bound.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "line spanner の空 bound text で無限ループしない（LP内部回帰）",
+      "notes": "skip: false plain（categorizer は \\tweak を見ない）。\\tweak bound-details.left.text \\\"\\\" が器材の全て・主張はLPの無限ループ回帰=SVGオラクル枠外。Lily#のtrill spanは固定tr glyph=空bound形なし"
     },
     "ssaattbb-template-with-all-staves.ly": {
       "category": "scheme",
@@ -7564,11 +7572,15 @@
     },
     "staff-add-at-linebreak.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "改行位置で新しい staff を足しても crash しない（LP crash 回帰）",
+      "notes": "skip: 音楽中の動的 \\new Staff（mid-piece staff 追加）が器材=Lily# の score は staff 静的宣言・対応物ゼロ。主張自体も crash 回帰=SVGオラクル枠外"
     },
     "staff-change-autobeam.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "auto beam が完了するまで staff が生きる",
+      "notes": "skip: \\change Staff が器材の核=既知ゲート（@cross は描画表面なし）"
     },
     "staff-extend-to-staff-bar.ly": {
       "category": "scheme",
@@ -7580,11 +7592,15 @@
     },
     "staff-highlight-ossia.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "staff highlight（色帯）の範囲規則",
+      "notes": "skip: \\staffHighlight 対応物ゼロ（族3冊）。ossia本はさらに \\layout \\context \\remove/\\consists=false plain ゲート（categorizerは\\consistsを見ない・completion族と同）"
     },
     "staff-highlight-rhythmicstaff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "staff highlight（色帯）の範囲規則",
+      "notes": "skip: \\staffHighlight 対応物ゼロ（族3冊）。ossia本はさらに \\layout \\context \\remove/\\consists=false plain ゲート（categorizerは\\consistsを見ない・completion族と同）"
     },
     "staff-highlight-score-rhythmic-staves.ly": {
       "category": "override",
@@ -7592,7 +7608,9 @@
     },
     "staff-highlight-score.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "staff highlight（色帯）の範囲規則",
+      "notes": "skip: \\staffHighlight 対応物ゼロ（族3冊）。ossia本はさらに \\layout \\context \\remove/\\consists=false plain ゲート（categorizerは\\consistsを見ない・completion族と同）"
     },
     "staff-highlight-staffgroup.ly": {
       "category": "override",

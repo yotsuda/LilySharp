@@ -66,7 +66,28 @@ spacing-accidental-rest.ly = voiced rest の separation 箱 port**・`80c4eede`�
 の min 置換（increment 床の撤去）**・`01d035c8`・第5便 **spacing-empty-bar.ly =
 skip（\bar "" の綴りなし＝器材が主張の核・小節中改行点も小節モデル外・
 BarlineType.None は書き手ゼロ）**・第6便 **spacing-loose-polyphony.ly 下見 =
-open（小節中 clef の loose column が +2.10 過大）**・この handoff と同 commit）。
+open（小節中 clef の loose column が +2.10 過大）**・`53c0c587`・第7便
+**skip 9 冊バッチ**（span-bar-articulation = \change Staff+\espressivo・
+span-bar-spacing = 強制臨時記号 `!`＝README 正典例・spanner-alignment =
+Dynamics コンテキスト・spanner-empty-bound = false plain（categorizer は \tweak を
+見ない）・staff-add-at-linebreak = 動的 \new Staff＝crash 回帰・
+staff-change-autobeam = \change Staff・staff-highlight 族 3 冊 = \staffHighlight
+対応物ゼロ）・この handoff と同 commit）。
+
+★ **第6便の port 設計（第2読了分・次セッションの入口）**: LP 源は 2 ファイル——
+⑴ **spacing-determine-loose-columns.cc:46-112 is_loose_column** = 非音楽列で、
+自譜の Note_spacing 隣接対（left/right-neighbor）と全体列リストの隣接（l/r）が
+**食い違う**とき loose（`l==l_neighbor && r==r_neighbor` かつ幅>0 なら not loose・
+barline 列は除外）⑵ **spacing-loose-columns.cc:34-222 set_loose_columns** =
+loose 列は spring 系から**外れ**、解いた後に**右 anchor から**
+`tight + (ideal−tight)·scale` で吊るす（ideal/tight = 隣への
+standard_breakable_column_spacing の spring・scale = 隣接列間の余地から
+:198-201・left_padding 0.15）。**sploose 本では scale=0（A4 の ink が場所を食う）
+＝tight で吊るされ、clef は他譜 A4 と X 重なりを許される**——LS の描画は既に
+「host 列から後ろへ吊るす」右 anchor（MidMeasureChangeRightGap）なので、port の核は
+⑴ loose 判定を CreateInterColumnSpring に足して changeGaps 課金を止める
+⑵ 吊るし距離を tight/ideal×scale にする、の 2 点。単譜 probe MC の検証済み挙動
+（not loose 側）は⑴の gate が守る。
 
 ★★ **第6便 spacing-loose-polyphony.ly（state=open・次の focused session 候補）**:
 - twin = scratch\lpreg\sploose.{lys,-gen.ly,svg,-lp.svg}（grandStaff 2 譜・下譜
@@ -154,11 +175,12 @@ optical correction は効く——stem 向きが違う対のみ）= fixed 第51�
 - 観測者 = TrillSpannerTests.MeasureStartStop_EndsTheWaveAtTheBarline（LP 4 点
   ピン）。snapshot 0 枚・台帳不動（既存 trill fixture/probe は全部 mid-measure stop）。
 
-plain 322 / 処理済 **268**（fixed **51**・exact **35**・skip **165**・open **17**・
-pending **54**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **span-bar-articulation**（spacing 族は完食＝span-bar 族へ。ただし
-**第6便の open（spacing-loose-polyphony = loose column 補間の port）を focused
-session で先にやる選択肢が濃い**——spacing-loose-columns.cc を読んでから）。
+plain 322 / 処理済 **277**（fixed **51**・exact **35**・skip **174**・open **17**・
+pending **45**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **staff-tabstaff-spacing**（次いで stem-pure-height-beamed——どちらも
+明白なゲート無し＝実評価が要る）。ただし **第6便の open（spacing-loose-polyphony =
+loose column の port）を focused session で先にやる選択肢が濃い**——源 2 ファイルは
+読了済み・設計は上の★参照。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
 入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
 
