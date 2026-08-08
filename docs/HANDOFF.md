@@ -58,10 +58,25 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第112セッション第5便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
+最終更新 第112セッション第8便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
 第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
 `69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・
-この handoff と同 commit）。
+`2401380a`・第6〜8便 **26 冊バッチ**・この handoff と同 commit）。
+
+★ **第6〜8便 = 26 冊バッチ（skip 25 + exact 1・コード変更 0）**:
+- **第6便 magnify 族 plain 8 冊 = skip**（\magnifyMusic = 任意スパンのインライン拡縮・
+  \magnifyStaff = 譜全体の任意倍率——どちらも綴りなし。部分表面: StaffSize 型が ossia 固定
+  縮尺 magstep(−3) で machineryは port 済＝任意倍率の文法が入れば magnifyStaff 系再開可。
+  親 notes = magnifyMusic-dots-beamlets）。
+- **第7便 4 冊**: measure-counter-event-order = skip（\consists 本 = false plain）・
+  mensural = skip（Kievan/Petrucci/MensuralStaff = 対応物ゼロ）・
+  metronome-multimeasure-rest-no-segfault = skip（\remove/\consists 本）・
+  **metronome-parenthesized = exact**（空テキスト \tempo "" 4=80 の**括弧付き「(♩ = 80)」を
+  LS も既に刷る**＝構造一致・m1|m2 小節線 14.645/14.65 完全一致。残差: tempo mark X が
+  LS +0.61 = mark anchor regime・最終小節幅 Δ1.4）。
+- **第8便 midi 族 plain 14 冊 = skip**（主張が MIDI イベント列/midi2ly 往復 = SVG 座標
+  オラクルの枠外。**Lily# は MIDI 出力を持つ**ので、LP .midi vs lysc midi のイベント diff
+  harness が入れば族ごと再開可。親 notes = midi-drums）。
 
 ★★★ **第5便 lyrics-pass-under-bar.ly = open（主張は LS 不成立・アーキ起票・コード変更 0 =
 実験は revert・恒久ガード +1）**:
@@ -138,8 +153,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
   再演——引かずに「11.90 は何の右縁?」を一周した）。
 
-plain 322 / 処理済 **155**（fixed **39**・exact **25**・skip **77**・open **14**・
-pending 167。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **181**（fixed **39**・exact **26**・skip **102**・open **14**・
+pending 141。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
 第107 起票の §2A workstream は棚のまま（第5便の跨ぎ separation も同棚に積んだ）。
 

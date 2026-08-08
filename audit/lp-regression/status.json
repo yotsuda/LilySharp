@@ -4171,7 +4171,8 @@
     },
     "magnifyMusic-dots-beamlets.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族plain 8冊の親notes)。ゲート=機構が主張そのもの: \\magnifyMusic(任意スパンのインライン拡縮・spacer声部から適用)はLily#に綴りなし・\\magnifyStaff(譜全体の任意倍率)も文法なし。部分表面: StaffSize型(Svg/Layout/StaffSize.cs)がossia固定縮尺=magstep(-3)でmagnifyStaffの機構(fontSize+staff-space同時スケール・Ink/Span分離)を既にport済——任意倍率の文法が入ればmagnifyStaff系5冊(plain3+override1+…)は再開可。magnifyMusic系はスパン粒度のサイズ切替がモデルに無い=別の山"
     },
     "magnifyMusic-laissez-vibrer-ties.ly": {
       "category": "scheme",
@@ -4179,7 +4180,8 @@
     },
     "magnifyMusic-phrasing-slurs.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族)。親notes=magnifyMusic-dots-beamlets(\\magnifyMusic綴りなし)"
     },
     "magnifyMusic-repeat-ties.ly": {
       "category": "scheme",
@@ -4187,15 +4189,18 @@
     },
     "magnifyMusic-slurs.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族)。親notes=magnifyMusic-dots-beamlets(\\magnifyMusic綴りなし)"
     },
     "magnifyMusic-stem-beam-spacing.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族)。親notes=magnifyMusic-dots-beamlets(\\magnifyMusic綴りなし)"
     },
     "magnifyMusic-tablature-double-stems.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族)。親notes=magnifyMusic-dots-beamlets(\\magnifyMusic綴りなし)"
     },
     "magnifyMusic-text-interface.ly": {
       "category": "markup",
@@ -4211,7 +4216,8 @@
     },
     "magnifyStaff-dots-beamlets.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族)。親notes=magnifyMusic-dots-beamlets(\\magnifyStaffの任意倍率文法なし)"
     },
     "magnifyStaff-dynamics.ly": {
       "category": "override",
@@ -4231,11 +4237,13 @@
     },
     "magnifyStaff-staff-line-thickness.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族)。親notes=magnifyMusic-dots-beamlets(\\magnifyStaffの任意倍率文法なし。StaffSize機構はossia固定縮尺で既在=文法が入れば再開)"
     },
     "magnifyStaff-tablature-double-stems.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第6便・magnify族)。親notes=magnifyMusic-dots-beamlets(\\magnifyStaffの任意倍率文法なし)"
     },
     "magnifyStaff-text-interface.ly": {
       "category": "scheme",
@@ -4671,7 +4679,8 @@
     },
     "measure-counter-event-order.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第7便)。false plain: \\consists Measure_counter_engraver(categorizerは\\consists/\\removeを見ないゲート)+\\startMeasureCount/\\stopMeasureCountの綴りなし。主張自体もイベント順の警告回帰(描画でない)"
     },
     "measure-counter-grace.ly": {
       "category": "override",
@@ -4711,7 +4720,8 @@
     },
     "mensural.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第7便)。KievanStaff/PetrucciStaff/MensuralStaff コンテキスト+petrucci/mensural clef+\\breve/\\longa=計量記譜の対応物ゼロ(gregorianと同棚)"
     },
     "merge-mmrest-numbers-engraver.ly": {
       "category": "markup",
@@ -4759,11 +4769,14 @@
     },
     "metronome-multimeasure-rest-no-segfault.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第7便)。false plain: \\remove/\\consists でMetronome_mark_engraverをStaffへ移す本(engraver差し替えゲート)。主張=segfaultしない、の回帰"
     },
     "metronome-parenthesized.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "Using an empty text in the metronome marks, one can generate parenthesized tempo marks",
+      "notes": "exact(第112第7便・コード変更0)。twin scratch\\lpreg\\metropar.{ly,lys,svg,-ls.svg}。主張核心=構造一致: 両エンジンとも tempo 4=60 は「♩ = 60」括弧なし・tempo \"\" 4=80 は「(♩ = 80)」括弧付き(LSは (/glyph/= 80) の3要素合成=LP同構造)。m1|m2小節線 14.645/14.65=完全一致。残差: tempo mark X が LS +0.61(LPは括弧inkがm2第1音列ink左に一致・LSは列+0.6=mark anchor regime)・最終小節幅Δ1.4(final measure regime)"
     },
     "metronome-precision.ly": {
       "category": "scheme",
@@ -4783,7 +4796,8 @@
     },
     "midi-drums.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族plain 14冊の親notes)。ゲート=主張がMIDIイベント列/midi2ly往復(note-off順序・drum channel・grace/tie/pedal/microtoneのMIDI性能)でレイアウト比較の枠外。このworkstreamのオラクルはSVG座標——Lily#はMIDI出力を持つので、MIDIイベントdiffの器材(LP .midi vs lysc midi のイベント列比較 harness)が入れば族ごと再開可。個別ゲートも複数(\\drummode/DrumStaff・\\partial midi・microtone)"
     },
     "midi-dynamics.ly": {
       "category": "override",
@@ -4791,55 +4805,68 @@
     },
     "midi-grace-after-rest.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-grace-after-tie.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-key-signature.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-lyric-barcheck.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-microtone-off.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-microtone.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-notes.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-partial.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-pedal.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-scales.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-transposition.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-tuplets.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第8便・midi族)。親notes=midi-drums(主張がMIDIイベント列=レイアウト比較の枠外)"
     },
     "midi-unisons.ly": {
       "category": "scheme",
