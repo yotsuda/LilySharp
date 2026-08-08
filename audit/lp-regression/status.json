@@ -6185,7 +6185,8 @@
     },
     "quote-cyclic.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。\\addQuote/\\cueDuringの名前参照quote機構(相互参照の解決が主張)。Lily#のcueはインラインcue{}のみ=quote registryなし"
     },
     "quote-during-subvoice.ly": {
       "category": "scheme",
@@ -6237,7 +6238,9 @@
     },
     "ragged-right-compressed.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "When a score takes up only a single line and it is compressed, it is not printed as ragged",
+      "notes": "exact(第112第11便・コード変更0)。twin scratch\\\\lpreg\\\\ragcomp.{ly,lys,svg,-ls.svg}(9小節=行いっぱい)。両エンジンとも1行に圧縮でjustify(ragged無し): LP小節線9本 17.90..102.24/行102.38・LS 17.78..101.34/行102.43=構造一致・drift累積≤0.9(spacing配分regime)"
     },
     "ragged-right-disabled.ly": {
       "category": "scheme",
@@ -6245,7 +6248,9 @@
     },
     "ragged-right-one-line.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "When a score takes up only a single line and it is stretched, it is printed as ragged by default",
+      "notes": "exact(第112第11便・コード変更0)。twin scratch\\\\lpreg\\\\ragone.{ly,lys,svg,-ls.svg}(1小節)。両エンジンとも右へ伸ばさずragged: LP行幅21.53(\\\\bar |.込み)・LS 21.90=Δ0.37は1小節の自然幅regime。行幅102への stretch は両者とも起きない=主張成立"
     },
     "recursive-text-replacement.ly": {
       "category": "scheme",
@@ -6261,11 +6266,13 @@
     },
     "rehearsal-mark-end-of-score.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。主張=最終音の後(score末尾=終止線moment)の\\mark \\defaultが壊れない。Lily#のmarkは@mark(\"A\")のnote-attachedのみ=音の無いmomentへのmark綴りなし(+\\defaultの自動連番もなし)"
     },
     "rehearsal-mark-final-score.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。主張=最終小節末の\\markが自動可視化。rehearsal-mark-end-of-scoreと同ゲート(末尾barlineへのmark綴りなし)"
     },
     "rehearsal-mark-formatters.ly": {
       "category": "scheme",
@@ -6281,11 +6288,13 @@
     },
     "relative-repeat.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。in-musicの\\repeat unfold+\\alternativeと\\relative状態の相互作用が主張=in-music repeat綴りなし(Lily#のrepeatはnav/form層)"
     },
     "relative.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。\\relative/\\absolute/\\fixedの入れ子切替が主張。Lily#のoctaveモードはファイル/ブロック宣言(octave absolute等)で音楽中の入れ子切替綴りなし。相対authoring自体は別機能で既在"
     },
     "remove-empty-context-mod.ly": {
       "category": "scheme",
@@ -6297,11 +6306,13 @@
     },
     "remove-empty-staves-dynamics.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。\\RemoveAllEmptyStaves(layout context mod)+\\new Dynamics context=どちらも文法なし。RemoveEmpty機構自体はAPI面に既在(HaraKiriVisualTests=ProgrammaticSnapshot経由)=文法が入れば再開可"
     },
     "remove-empty-staves-with-rests.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。\\RemoveAllEmptyStaves文法なし(remove-empty-staves-dynamicsと同ゲート)+\\partial 16の刻み。機構はAPI面に既在"
     },
     "remove-layer-symbol.ly": {
       "category": "scheme",
@@ -6485,11 +6496,13 @@
     },
     "repeat-slash-mixed.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便・probe付き)。主張=混合時価パターンのbeat repeatは二重%記号。LSのrepeat percentは小節粒度設計: sub-beat body はprobe(scratch\\\\lpreg\\\\slashprobe.lys)で「first measure is shorter than the meter」警告=beat repeat(slash/二重%)未実装。measure %は第32号で字面化済"
     },
     "repeat-slash-multi.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便・probe付き)。主張=8分未満の同時価パターンは複数slash。repeat-slash-mixedと同ゲート(beat repeat未実装・probe同)"
     },
     "repeat-slash.ly": {
       "category": "scheme",
@@ -6561,11 +6574,13 @@
     },
     "repeat-volta-body-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。in-music \\repeat volta(bodyがgrace単体)+\\new Score×2=in-music repeat綴りなし(Lily#のrepeatはnav/form層)"
     },
     "repeat-volta-body-simultaneous.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第11便)。in-music \\repeat voltaのbodyが<<>>同時音楽(Issue #6022回帰)=in-music repeat綴りなし"
     },
     "repeat-volta-body-zero-duration.ly": {
       "category": "scheme",

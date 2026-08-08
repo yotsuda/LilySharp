@@ -62,7 +62,25 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
 `69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・
 `2401380a`・第6〜8便 **26 冊バッチ**・`a380a63a`・第9便 **23 冊バッチ**・`d25b83a3`・
-第10便 **16 冊バッチ**・この handoff と同 commit）。
+第10便 **16 冊バッチ**・`433aa050`・第11便 **13 冊バッチ**・この handoff と同 commit）。
+
+★★ **第11便 = 13 冊バッチ（skip 11 + exact 2・コード変更 0）**:
+- **exact: ragged-right 族 2 冊**（行 justify 方針の構造一致）: one-line = 両エンジンとも
+  右へ伸ばさず ragged（LP 行幅 21.53・LS 21.90・Δ0.37 = 1 小節自然幅 regime）・compressed =
+  両エンジンとも 9 小節で justify（小節線 9 本 17.90..102.24 vs 17.78..101.34 = 構造一致・
+  drift 累積 ≤0.9）。
+- **skip 11**: quote-cyclic（\addQuote/\cueDuring の名前参照 quote——LS の cue はインライン
+  cue{} のみ）・rehearsal-mark 2 冊（**最終音の後**＝終止線 moment への mark が書けない。
+  @mark("A") 綴り自体は在る）・relative 2 冊（in-music repeat / 入れ子 octave モード切替）・
+  remove-empty 2 冊（\RemoveAllEmptyStaves 文法なし——**機構は API 面に既在** =
+  HaraKiriVisualTests の ProgrammaticSnapshot 経由）・repeat-slash 2 冊（**probe 済**:
+  sub-beat body は「measure が短い」警告 = beat repeat（slash/二重%）未実装・measure % は
+  第32号済）・repeat-volta-body 2 冊（in-music \repeat volta 綴りなし）。
+- **起票候補（未確認）**: probe で `c1 @mark("B")`（スペース挟みの注釈）が無警告で消えた
+  疑い（scratch\lpreg\markprobe.lys・A は描画・B が出ない）。silent-drop 系の鉱脈——次に検分。
+- **仕掛かり**: repeat-tie-chords = **起票済「repeatTie 和音 silent drop」の本**（第34号 lv
+  member fan の鏡映修理・次の fix 候補筆頭）・repeat-tremolo-chord-rep（probe コンパイル通過
+  `repeat tremolo 4 { q16 }`・bare `q16` body は brace 必須 = LP 照合が残り）。
 
 ★★ **第10便 = 16 冊バッチ（skip 15 + open 1・コード変更 0）**:
 - **open: phrasing-slur-tuplet.ly**（slur は tuplet 番号と衝突しない）: 両側置換
@@ -184,8 +202,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
   再演——引かずに「11.90 は何の右縁?」を一周した）。
 
-plain 322 / 処理済 **222**（fixed **39**・exact **27**・skip **141**・open **15**・
-pending 100。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **235**（fixed **39**・exact **29**・skip **152**・open **15**・
+pending 87。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
 第107 起票の §2A workstream は棚のまま（第5便の跨ぎ separation も同棚に積んだ）。
 
