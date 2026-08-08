@@ -62,8 +62,24 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 **第45号 = slur-dot-collision.ly = slur-scoring 再建**・`0538a07b`・第3便
 **perf A/B round 14 = 重い側 drift・対照 hash 一致・既存超線形 2 件起票**・
 `204b0901`・第4便 **slur-dot-distance.ly = exact（コード変更 0）**・`e38e2273`・
-第5便 **slur-flag.ly = skip（probe 付き・核は 4 点完全一致）**・
+第5便 **slur-flag.ly = skip（probe 付き・核は 4 点完全一致）**・`90b7845f`・
+第6便 **slur-grace.ly 下見 = root 特定+実測済（pending のまま）**・
 この handoff と同 commit）。
+
+★★ **第6便 slur-grace.ly 下見**（コード変更 0・state は pending のまま）:
+- 構造は一致: 両エンジン外側 2+grace slur 3 の計 5 本・警告なし＝主張の核
+  （nested slur）は成立。**acciaccatura / appoggiatura キーワードは Lily# に在る**・
+  twin は `octave absolute` で書けた（相対 anchor の罠回避——以後この指令を既定に）。
+- 乖離: **外側 slur 左端 LS −1.54 vs LP −3.54（2.0ss = 4 grid step 低い）**・右端
+  −3.04 vs −3.54。root = **grace 音柱（stem 常時 up・tip ≈ −4.2）が LP では外側 slur
+  の encompass に入り曲線を持ち上げる**が、LS は ⑴ BuildSlurObstacles が voice items
+  のみ = grace 列不参加 ⑵ stem 項が obstacle 未配線（第45号開示⑵そのもの）。
+- **修理形 = stem 配管**: obstacle に Stem 種を建てる（unbeamed = StemCalculator
+  読み・beamed = BeamLayout・grace 列も）→ ScoreEncompass の stem 枝と EndYFor /
+  avoid offsets が自動で食う。grace slur 自体の Δ（始点 Y 0.31・終点 X 0.74）は
+  別実装（SharedRenderer.GraceNotes）の regime = 別勘定。
+- twin 残置 scratch\lpreg\slurgrace.{ly,lys}。**focused session で着手のこと**
+  （scriptstack1 の 'inside script 棚とも地続き）。
 
 ★★ **第4便 slur-dot-distance.ly = exact**（付点 slur の head 距離は無付点と同じ・
 コード変更 0 = **第45号の再建がそのまま当たった初の追試**）:
@@ -153,8 +169,8 @@ scratch\lpreg\slurflag.{ly,lys}。文法が入れば fixed 候補 = stem attach 
 
 plain 322 / 処理済 **257**（fixed **45**・exact **33**・skip 163・open 16・
 pending 65。数えたら state 別内訳も一緒に書くこと）。
-frontier = **slur-* 島の続き**（アルファベット順）: slur-grace（acciaccatura/
-appoggiatura の nested slur——grace slur の綴りから確認）→ slur-height-capping
+frontier = **slur-grace の修理（第6便下見済・stem 配管）から**。次いで
+slur-height-capping
 （端の物は shaping 無視・scoring 参加＝fit_factor の close-to-edge がそのまま主張）→
 slur-nice（line-width 120mm+\break+\stemNeutral スパン+\slurUp/\slurDown = slur-flag
 と同じ向き綴りゲートの可能性大）→ slur-rest-direction（4 score 頁組み注意・rest は

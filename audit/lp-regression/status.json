@@ -7154,7 +7154,9 @@
     },
     "slur-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "pending",
+      "claim": "acciaccatura/appoggiatura は既定と別の slur を使う=外側 slur の中に nested slur が警告なしで立つ",
+      "notes": "第116第6便=下見(root特定+実測済・コード変更0・state pending のまま)。構造は一致: 両エンジン外側2+grace slur3の計5本・警告なし=主張の核は成立(acciaccatura/appoggiatura キーワードは Lily# に在る・octave absolute で書けた)。乖離: 外側slur左端 LS -1.54 vs LP -3.54(2.0ss=4 grid step)・右端 -3.04 vs -3.54。root=**grace音柱(stem常時up・tip≈-4.2)がLPでは外側slurのencompassに入る**が LS は⑴BuildSlurObstaclesがvoice itemsのみ=grace列不参加 ⑵stem項がobstacle未配線(第45号開示⑵)。修理形=stem配管: obstacle に Stem 種を建てる(unbeamed=StemCalculator読み・beamed=BeamLayout・grace列も)→ScoreEncompassのstem枝とEndYFor/avoid offsetsが自動で食う。grace slur自体のΔ(始点Y0.31・終点X0.74)は別実装(SharedRenderer.GraceNotes)のregime=別勘定。twin残置 scratch\\lpreg\\slurgrace.{ly,lys}。focused session で着手のこと"
     },
     "slur-height-capping.ly": {
       "category": "plain",
