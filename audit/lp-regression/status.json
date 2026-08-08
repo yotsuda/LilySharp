@@ -7240,7 +7240,9 @@
     },
     "slur-vertical-skylines.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "slur は outside-staff-priority の高い grob（^rit TextScript 450・trillspan 50・\\f 250）を押し上げ過ぎない（slur v-skyline を pointwise に読む）",
+      "notes": "fixed49: slur3本の端点・小節線列・音列 全LP一致(2桁)。claim核: tr -2.55/波 -3.15/f +5.81(LP 5.842) 全て五線近傍=slur頂点-6.55に押し上げられない。乖離1=trill波が5個(stop列まで) vs LP3個=to-barline未port→TrillSpannerEngraver に bar-engraver.cc:580-588 set_bound(RIGHT,bar_) port・stop が小節頭なら右bound=小節線ink左端(bound-details padding無し)・波 38.31/39.31/40.31=LP 38.30/39.30/40.30。残差: rit Y LS-3.29 vs LP-2.55=@text Y/X 既起票regime(exporter の @text drop 穴も再確認=warning出る)。観測者=TrillSpannerTests.MeasureStartStop_EndsTheWaveAtTheBarline(LP4点ピン)。twin=scratch\\lpreg\\slurvsky.{lys,-gen.ly,svg,-lp.svg}"
     },
     "slur-vestigial-outside-staff-callback.ly": {
       "category": "scheme",

@@ -170,6 +170,71 @@ score main ""test"" { staff melody }
     }
 
     [Fact]
+    public void MeasureStartStop_EndsTheWaveAtTheBarline_NotTheStopColumn()
+    {
+        // slur-vertical-skylines.ly (the outside-staff-vs-slur book): the trill
+        // spans g1~ | g1@stopTrillSpan — the stop event lands on a measure
+        // START, so the Bar_engraver rewrites the right bound to the BAR LINE
+        // and the wave never enters the stop measure. LP draws exactly 3
+        // trill_element repetitions (staff-rel X 38.30/39.30/40.30); before the
+        // to-barline port Lily# ran the wave to the stop column (5 elements).
+        // The tr glyph and wave heights and the f dynamic are the book's CLAIM
+        // (priorities 50/250 sit pointwise, not at the slur's apex) — all
+        // pinned against the LP twin (scratch\lpreg\slurvsky.{lys,-gen.ly}).
+        // LILYPOND-REF: lily/bar-engraver.cc:580-588 acknowledge_end_spanner
+        // LILYPOND-REF: scm/define-grobs.scm TrillSpanner — (to-barline . #t)
+        string svg = Render(
+            "octave absolute\n\n" +
+            "f8@text(\"rit\").up( c'8 f' c'' f'') r8 r4 |\n" +
+            "c''2( c'2 |\n" +
+            "g1)~@startTrillSpan |\n" +
+            "g1@stopTrillSpan |\n" +
+            "g1(@f |\n" +
+            "g,1) |\n");
+        double middle = MiddleLineY(svg);
+
+        var waves = MusicGlyphs(svg, LilySharp.Core.Svg.EmmentalerGlyphs.OrnTrillElement);
+        Assert.Equal(3, waves.Count);                          // LP: 3 repetitions
+        Assert.Equal(38.30, waves[0].X, 0.05);                 // LP 38.3022
+        Assert.Equal(40.30, waves[2].X, 0.05);                 // LP 40.3022
+        Assert.Equal(-3.15, waves[0].Y - middle, 0.011);       // LP -3.15
+
+        var tr = Assert.Single(MusicGlyphs(svg, LilySharp.Core.Svg.EmmentalerGlyphs.OrnTrill));
+        Assert.Equal(-2.55, tr.Y - middle, 0.011);             // LP -2.55
+
+        var f = System.Text.RegularExpressions.Regex.Match(svg,
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*font-weight=\"bold\"[^>]*>f</text>");
+        Assert.True(f.Success, "no f dynamic in the SVG");
+        Assert.Equal(5.84, double.Parse(f.Groups[2].Value) - middle, 0.05);  // LP 5.8421
+    }
+
+    private static string Render(string source) =>
+        LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse(source),
+            new SvgRenderOptions { EmbedFont = false });
+
+    /// <summary>The middle staff line's device Y: the 3rd of the five long horizontals.</summary>
+    private static double MiddleLineY(string svg)
+    {
+        var lineYs = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"")
+            .Where(m => m.Groups[2].Value == m.Groups[4].Value
+                && double.Parse(m.Groups[3].Value) - double.Parse(m.Groups[1].Value) > 5)
+            .Select(m => double.Parse(m.Groups[2].Value))
+            .Distinct().OrderBy(v => v).ToList();
+        Assert.Equal(5, lineYs.Count);
+        return lineYs[2];
+    }
+
+    /// <summary>All music glyphs of one codepoint: (X, Y) in document order.</summary>
+    private static List<(double X, double Y)> MusicGlyphs(string svg, char glyph) =>
+        System.Text.RegularExpressions.Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(.)</text>")
+            .Where(m => m.Groups[3].Value[0] == glyph)
+            .Select(m => (double.Parse(m.Groups[1].Value), double.Parse(m.Groups[2].Value)))
+            .ToList();
+
+    [Fact]
     public void TrillSpanner_NoStopEvent_NoPairing()
     {
         // Unpaired start should not produce a spanner

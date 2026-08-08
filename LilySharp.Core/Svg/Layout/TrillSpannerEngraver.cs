@@ -149,12 +149,33 @@ internal static class TrillSpannerEngraver
                 DynamicEngraver.AnchorItem(trillVoices, spanner.VoiceIndex,
                     spanner.StartMeasureIndex, spanner.StartItemIndex));
 
+            // The RIGHT bound under to-barline: a stop event landing on a measure START
+            // binds the trill to the BAR LINE before it — TrillSpanner has to-barline
+            // = #t, so the Bar_engraver rewrites the right bound to the BarLine item
+            // standing at the end timestep, and the spanner never enters the stop
+            // measure (the piece list stops a measure early, like the hairpin's).
+            // Unlike the hairpin, nothing is then subtracted: TrillSpanner's right
+            // bound-details declare (attach-dir . LEFT) and no padding, so the line
+            // ends at the bar's ink LEFT edge.
+            // LILYPOND-REF: scm/define-grobs.scm TrillSpanner — (to-barline . #t)
+            // LILYPOND-REF: lily/bar-engraver.cc:580-588 acknowledge_end_spanner and
+            //   :548-558 process_acknowledged — set_bound (RIGHT, bar_)
+            // The gate is the BAR's existence, not the measure boundary's: the
+            // acknowledger runs only `if (bar_)`, so a boundary whose bar is None
+            // keeps the note-column bound.
+            bool endsOnMeasureStart = spanner.EndItemIndex == 0
+                && spanner.EndMeasureIndex > spanner.StartMeasureIndex
+                && spanner.EndMeasureIndex <= measureLayouts.Length
+                && EndBarlineOf(spanner.EndMeasureIndex - 1, trillVoices) != BarlineType.None;
+            int lastSpannedMeasure = endsOnMeasureStart
+                ? spanner.EndMeasureIndex - 1 : spanner.EndMeasureIndex;
+
             // The broken pieces' X geometry first: aligned_side is POINTWISE, so the Y
             // below is read against these very X ranges.
             // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
             var pieces = new List<(SpannerBreakSegment Segment, double GlyphX, double LineStartX, double EndX)>();
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
-                spanner.StartMeasureIndex, spanner.EndMeasureIndex, systems, measureToSystem))
+                spanner.StartMeasureIndex, lastSpannedMeasure, systems, measureToSystem))
             {
                 // First segment carries the "tr" glyph; continuation segments draw line only.
                 double glyphX, lineStartX;
@@ -173,7 +194,9 @@ internal static class TrillSpannerEngraver
                 double endX;
                 if (segment.IsLast)
                 {
-                    endX = GetEndX(spanner, measureLayouts);
+                    endX = endsOnMeasureStart
+                        ? BarlineLeftEdge(spanner.EndMeasureIndex - 1, measureLayouts, trillVoices)
+                        : GetEndX(spanner, measureLayouts);
                 }
                 else
                 {
@@ -389,6 +412,32 @@ internal static class TrillSpannerEngraver
     ///   0.0486 short of this point. Lily# draws a continuous polyline, so it reaches the
     ///   bound exactly; the remainder goes when the wave becomes the real glyph run.
     /// </remarks>
+    /// <summary>
+    /// The ink LEFT edge of the bar line closing <paramref name="measureIndex"/> — the
+    /// bound a measure-start terminator rewrites to under <c>to-barline</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/line-spanner.cc:155-175 calc_bound_info — the right
+    ///   bound-details' <c>(attach-dir . LEFT)</c> takes the bound grob extent's LEFT
+    ///   point, and TrillSpanner declares no bound-details padding, so nothing more is
+    ///   subtracted. The drawn bar's right edge sits on the measure's right edge
+    ///   (the same identity MultiMeasureRestEngraver's frame spends).
+    /// </remarks>
+    private static double BarlineLeftEdge(
+        int measureIndex, ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Voice> voices)
+    {
+        var ml = measureLayouts[measureIndex];
+        return ml.X + ml.Width
+            - EngravingDefaults.BarlineDrawnWidth(EndBarlineOf(measureIndex, voices));
+    }
+
+    private static BarlineType EndBarlineOf(int measureIndex, ImmutableArray<Voice> voices)
+        => !voices.IsDefaultOrEmpty && measureIndex >= 0
+            && measureIndex < voices[0].Measures.Length
+            ? voices[0].Measures[measureIndex].EndBarline
+            : BarlineType.Single;
+
     private static double GetEndX(TrillSpannerItem spanner, ImmutableArray<MeasureLayout> measureLayouts)
     {
         if (spanner.EndMeasureIndex < measureLayouts.Length)

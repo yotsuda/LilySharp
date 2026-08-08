@@ -58,6 +58,46 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第119セッション（＝第1便 **fixed 第49号 = slur-vertical-skylines.ly =
+trill span の to-barline port**・この handoff と同 commit）。
+
+★★ **第1便 slur-vertical-skylines.ly（claim: slur は outside-staff-priority の
+十分高い grob を押し上げ過ぎない——^"rit" TextScript 450・trill span 50・\f 250）**:
+- **claim は核ごと成立**（twin = scratch\lpreg\slurvsky.{lys,-gen.ly}・LP 側は
+  `lysc ly` の出力 + ^"rit" 手復元＝exporter の **@text drop 穴**を再確認・warning は
+  出る）: slur 3 本の端点・小節線列・音列・stem すべて LP と 2 桁一致。
+  tr **−2.55**・波 **−3.15**・f **+5.81**（LP 5.842）＝全部五線近傍で、slur 頂点
+  （−6.55）には押し上げられない＝pointwise 読みの証明。
+- **乖離 1 = trill 波が 5 個（stop 列まで）vs LP 3 個 → to-barline port = fixed
+  第49号**: stop event が小節頭に落ちると Bar_engraver が右 bound を BarLine に
+  書き換える（bar-engraver.cc:580-588 acknowledge_end_spanner・:548-558
+  set_bound(RIGHT, bar_)。TrillSpanner は to-barline #t・右 bound-details は
+  attach-dir LEFT + padding 無し＝bar ink 左端）。TrillSpannerEngraver に Hairpin
+  と同じ産地の腕を追加——piece 列も 1 小節手前で止める・bar が None の境界は
+  旧経路（`if (bar_)` の字面）。修理後 波 38.31/39.31/40.31 = LP 38.30/39.30/40.30。
+  Hairpin 型「house はあるのに trill だけ訊いていない」の一例。
+- 残差 1 = rit Y LS −3.29 vs LP −2.55 ＝ **@text Y/X の既起票 regime**（中央揃え vs
+  左揃え・italic 2.0 vs serif 2.2 も同棚）。
+- 観測者 = TrillSpannerTests.MeasureStartStop_EndsTheWaveAtTheBarline（LP 4 点
+  ピン）。snapshot 0 枚・台帳不動（既存 trill fixture/probe は全部 mid-measure stop）。
+
+plain 322 / 処理済 **263**（fixed **49**・exact **34**・skip **164**・open **16**・
+pending **59**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **spacing-accidental-rest**（slur 島は完食＝spacing 族へ）。
+slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
+入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4217 passed / 0 failed / 4 skipped**（第1便観測者+1・全スイート確認済）・
+snapshot 第119 は **0 枚**・Core (Debug) 0 warning・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
+C:\MyProj\LilySharp-perfbase-0c63（第118 残置）。
+probe 残置: **scratch\lpreg\slurvsky.{lys,svg,-gen.ly,-lp.svg,-lp.log}＋
+extract-slurvsky-lp.ps1（第119 の双子・観測者の照合材）**＋第118 以前の
+slurrest-fig4/slurshift/slurgrace 一式（下の第118 の節参照）。
+
+## 以下は第118セッションの経緯
+
 最終更新 第118セッション（＝第1便 **fixed 第47号 = slur-rest-direction.ly 完結 =
 fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分同期込み・
 `57bd399a`・第2便 **slur-shift-region.ly 下見 = 乖離 2 つに分解 + bracket 傾きの
