@@ -829,6 +829,11 @@ internal static class ArticulationEngraver
             // side can bind: the far-side bow hugs the head's other edge and tops out
             // below the head, so its skyline never reaches the script — LilyPond gets
             // the same no-op out of the full stencil skyline's distance.
+            // ⚠️ That skip is an EQUIVALENCE, not LilyPond's letter: aligned_side's
+            // direction filter is for STEM supports only (a support whose direction
+            // opposes the script's is skipped at side-position-interface.cc:273-281
+            // — the branch is gated on has_interface<Stem>), so LP does measure the
+            // far-side tie and gets a never-binding distance where this skips it.
             // LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie /
             //   acknowledge_end_tie; lily/side-position-interface.cc:354-378
             //   aligned_side — Tie declares vertical-skylines from its stencil
@@ -1064,6 +1069,10 @@ internal static class ArticulationEngraver
     /// system answers, picked as the piece with the greatest start measure not
     /// past the note (a piece that lost its left bound starts at its own system's
     /// first measure = RenderMeasureIndex).
+    /// The same greatest-start rule makes a note that ENDS one slur and STARTS
+    /// another pick the starting slur — which is LilyPond's own preference
+    /// (auxiliary_acknowledge_extra_object takes a RUNNING slur over an ended one,
+    /// slurs[0] before end_slurs[0]).
     /// </summary>
     private static SlurLayout? CoveringSlurPiece(List<SlurLayout> voiceSlurs, int m, int i)
     {

@@ -63,7 +63,31 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第3便 **script avoid-slur port = scriptstack1 の +0.73 が +0.12 へ**・`310d1d2c`・
 第4便 **perf A/B round 13 = 重い側符号反転 = drift・対照 hash 一致**・`dda7daaa`・
 第5便 **slur-avoid.ly = exact・tenuto-priority.ly = exact（コード変更 0・2 冊とも）**・
+`bb6f963d`・第6便 **自己監査＝挙動変更 0・検算で白 4・札 2 追記**・
 この handoff と同 commit）。
+
+★★ **第6便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
+挙動変更 0（コメント強化のみ）・新規チューニング定数ゼロ検算済**:
+- **検算で白 4**: ⑴ tie support = aligned_side の max 合成と等価（base→tie→chain の
+  逐次 max・padding/horizon-padding とも LP の同じ表を消費） ⑵ outside_slur_callback を
+  条項ごとに再突合——contains・widen(slur-padding 0.2)・'outside の clamp 式
+  （minmax(∓d,…) = lo/hi）・'around の箱交差・avoidance = minmax − yext[-dir]・
+  EPS 1e-5・**曲線は中心線（Slur::get_curve = sandwich/pen 無し）**まで全一致
+  ⑶ member gate の住所実在（new-fingering-engraver.cc:89-129 の :109-110 script-event 腕・
+  :144-157 add_script） ⑷ **@thumb は LP では Fingering**（script-init.ly:74
+  thumb = \finger …）＝表の Around + padding 0.2 は Fingering の宣言と一致・
+  **@pluck = StrokeFinger は avoid-slur 宣言を持つが Slur_engraver の acknowledger に
+  居ない＝宣言が死んでいる**→ Ignore が正。CoveringSlurPiece の greatest-start 規則が
+  「終わる slur と始まる slur が同じ音に居たら始まる方」= LP の slurs[0] 優先と同じ選択に
+  なることも確認（コメント追記済）。
+- **札⑴（追記）**: tie の CurveUp≠IsAbove skip は **LP の字面でなく幾何等価**——
+  aligned_side の向きフィルタ（side-position-interface.cc:273-281）は
+  **has_interface&lt;Stem&gt; ゲートの Stem 専用**で、LP は反対向き tie も距離に入れて
+  常に非拘束を得る。スキップとの差は無し（コード内 ⚠️ 追記済）。
+- **札⑵**: mover(fermata 族)×**tie** の対はコーパス未踏（mover×slur は slurav の fermata が
+  mover 経路ごと測定済＝白）。
+- 既開示の再掲: fingering 単独の slur 回避未配線・'outside 端 y と極値のサンプル近似
+  （64 点）・'inside の slur 側（extra encompass）未 port。
 
 ★ **第5便 = 2 冊バッチ（exact 2・コード変更 0）**:
 - **slur-avoid.ly = exact**（claim: slur は avoid object をよく扱う）: slur 終端 b'' の
