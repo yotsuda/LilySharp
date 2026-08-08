@@ -114,10 +114,25 @@ base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 o
   MergeScriptProfile 系の cache（第108 の 295MB→139MB と同型）。
 - 呼び出し構造: pass/walk 数不変・新規 O(n²) 無し。IncrementalCompiler 非接触＝増分構造不変。
 
+★ **第3便 script-tie-collision.ly 下見（root 特定+実測済・コード変更 0・state は pending の
+まま）**:
+- **LP 機構 = script-engraver.cc:204-222 acknowledge_tie / acknowledge_end_tie**——tie の
+  開始/終端 moment の script に **Tie が side-position support として入る**（=「Scripts avoid
+  ties」の実体。修理形: ArticulationEngraver の支持に tie profile を配線）。
+- **twin = scratch\lpreg\scripttie.{ly,lys}（両側レンダ済）**。枠: \break 両側落とし・裸時価
+  リピート（`4->`）は両側音名明示・`-_`=@portato・和音メンバは `<g@tenuto c@accent>`。
+- **実測（C6=pos8・頭 −4.0・staff 相対 Y-down）**: 無タイ accent = **両エンジン −5.17 完全一致**
+  （基線は正しい）。LP はタイ開始側 **−5.43**（+0.26）・終端側 **−5.76〜−5.79**（+0.59〜0.62）
+  に持ち上がるが **LS は全部 −5.17 のまま**＝tie support 不在が乖離のすべて。
+- ⚠️ **謎 2 点（修理前に切り分けること）**: ⑴ LS の bar1-2 だけ accent −5.51（bar5 以降の同綴り
+  タイは −5.17——何が bar1-2 を持ち上げたか未特定）⑵ LS 最終小節（無タイ c4@accent）が −5.87
+  （LP −5.17）。LP 側の和音 bar（line14）の member script 積みも未照合。
+- 修理は accent×tie の fixture snapshot が動く見込み＝要素 census 前提・focused session で。
+
 plain 322 / 処理済 **247**（fixed **43**・exact **30**・skip **158**・open **16**・
 pending 75。数えたら state 別内訳も一緒に書くこと）。
-frontier = **script-tie-collision.ly**（第107 blockB 起票のもう 1 冊 = script vs tie の
-skyline 参加。avoid-slur 起票と同棚・多重 script の snapshot が動く見込み＝要素 census 前提）。
+frontier = **script-tie-collision.ly**（第107 blockB 起票のもう 1 冊 = 上記下見済み。
+avoid-slur 起票と同棚）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
 テスト **4204 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
