@@ -2061,6 +2061,11 @@ internal sealed class ElementCoordinator
         {
             case NoteItem n: dur = n.BaseDuration; break;
             case ChordItem c: dur = c.BaseDuration; break;
+            case RestItem { IsSpacer: false } r:
+                // A rest bound attaches at the rest's ink centre — LP's fallback
+                // when the column has no first head (fh null → bound extent
+                // centre). LILYPOND-REF: slur-scoring.cc:561-564.
+                return GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(r.BaseDuration)).CenterX;
             default: return 0;
         }
         return GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(dur)).Width / 2.0;
@@ -2151,10 +2156,38 @@ internal sealed class ElementCoordinator
 
             for (int i = lo; i <= hi; i++)
             {
+                // A REST column participates too: LilyPond's Slur_engraver
+                // acknowledges every NoteColumn engraved while the slur is open,
+                // and get_encompass_info's no-stem branch reads the COLUMN's Y
+                // extent — the rest's own ink ("slur-rest-direction.ly": the
+                // interior rests are what push an all-rest slur off its base).
+                // LILYPOND-REF: slur-scoring.cc:117-122 — !stem: head_ = stem_ =
+                //   notecol->extent(Y)[dir_].
+                if (items[i] is RestItem { IsSpacer: false } rest
+                    && !rest.IsMultiMeasure)
+                {
+                    double rx = ml.X + GetItemXOffset(voice, mi, i, ml);
+                    if (rx < segStartX - eps || rx > segEndX + eps)
+                        continue;
+                    int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                    var restBox = GlyphMetrics.GetRestBBox(restValue);
+                    // The glyph origin the renderer draws at: a whole rest hangs
+                    // one space above the middle, everything else sits on it
+                    // (SharedRenderer.DrawRest / the skyline seed's shared rule).
+                    // ⚠️ The beam-collision shift (PureBeamShift) is not read —
+                    // no corpus book slurs over a beamed rest yet.
+                    double originDown = staffMiddleDown - (restValue == 1 ? 1.0 : 0.0);
+                    obstacles.Add(new SlurObstacle(
+                        rx + restBox.CenterX,
+                        originDown - restBox.Top,
+                        originDown - restBox.Bottom));
+                    continue;
+                }
+
                 int? topPos = MusicItem.EdgeStaffPosition(items[i], preferTop: true);
                 int? bottomPos = MusicItem.EdgeStaffPosition(items[i], preferTop: false);
                 if (topPos is null || bottomPos is null)
-                    continue; // rest / spacer / barline — no head
+                    continue; // spacer / barline — no column
 
                 // The column X (head's LEFT edge) keeps the window test the same
                 // one the extra-object builder runs; the scored x_ is the head's
@@ -2564,8 +2597,22 @@ internal sealed class ElementCoordinator
                     : default;
                 const double stemTipGap = 0.5; // staff-spaces beyond the beam (LP dir_*0.5*staff_space)
 
+                // A REST bound has no head: LP's base-attachment branch reads
+                // neither stem nor head, leaving y at the refpoint (= the staff
+                // middle) plus the plain dir·0.5 — no head-half term.
+                // LILYPOND-REF: slur-scoring.cc:543-559 — stem null, head null;
+                //   y = 0; y += dir_ * 0.5 * staff_space.
+                bool startIsRest = segment.IsFirst
+                    && ItemAt(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex)
+                        is RestItem { IsSpacer: false };
+                bool endIsRest = segment.IsLast
+                    && ItemAt(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex)
+                        is RestItem { IsSpacer: false };
+
                 double segStartY;
-                if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
+                if (startIsRest)
+                    segStartY = staffMiddleDown + (slur.CurveUp ? -0.5 : 0.5);
+                else if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamLayouts, slur.StartMeasureIndex, slur.StartItemIndex,
                         segStartX, staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
@@ -2574,7 +2621,9 @@ internal sealed class ElementCoordinator
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 double segEndY;
-                if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
+                if (endIsRest)
+                    segEndY = staffMiddleDown + (slur.CurveUp ? -0.5 : 0.5);
+                else if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamLayouts, slur.EndMeasureIndex, slur.EndItemIndex,
                         segEndX, staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);

@@ -182,4 +182,53 @@ public class SlurScoringTests
         Assert.True(Math.Abs((c[6] - c[0]) - 2.1472) < 0.01,
             $"X span {c[6] - c[0]} vs LP 2.1472");
     }
+
+    /// <summary>All drawn bows: M x0,y0 C x1,y1 x2,y2 x3,y3 per bow (outer arm).</summary>
+    private static List<double[]> AllBowCurves(string svg)
+    {
+        var list = new List<double[]>();
+        foreach (System.Text.RegularExpressions.Match m in
+            System.Text.RegularExpressions.Regex.Matches(svg,
+                "<path d=\"M ([-\\d.]+),([-\\d.]+) C ([-\\d.]+),([-\\d.]+) ([-\\d.]+),([-\\d.]+) ([-\\d.]+),([-\\d.]+)"))
+            list.Add(Enumerable.Range(1, 8).Select(i => double.Parse(m.Groups[i].Value)).ToArray());
+        return list;
+    }
+
+    [Fact]
+    public void RestBoundSlurs_ExistAndKeepTheDefaultDownDirection()
+    {
+        // slur-rest-direction.ly (half-note row): rests don't change slur
+        // direction (default down), and a rest is a legal slur BOUND — the
+        // all-rest figure r2( r r) used to be dropped on the floor entirely
+        // (the rest's slur flags never reached the RestItem).
+        // Pinned against the LP twin (scratch/lpreg/slurrest-h.{ly,lys}):
+        //  fig1 C3( r C3)   -> DOWN (below middle), LP start/end +1.545
+        //  fig2 C4( r C4)   -> UP,   LP -4.045
+        //  fig3 C4( r C3)   -> UP,   LP -4.045 .. -0.545
+        //  fig4 C3( r C4)   -> UP,   LP -0.545 .. -4.045
+        //  fig5 r2( r r)    -> DOWN at the rest base, LP +0.5 exact (a half
+        //     rest's ink sits ON the middle, so the base binds; the 16th row's
+        //     deep rest ink is a disclosed residual, see HANDOFF).
+        // LILYPOND-REF: lily/slur.cc calc_direction — default DOWN, UP only
+        //   for a stem-DOWN note column; rest columns cast no vote.
+        // LILYPOND-REF: lily/slur-scoring.cc:543-559 get_base_attachments —
+        //   a rest bound reads neither stem nor head: y = dir * 0.5.
+        string svg = Render(
+            "octave absolute\nclef bass\ntime 4/2\n\n" +
+            "c,2( r c,) r | c( r c) r | c( r c,) r | c,( r c) r | r( r r) r |\n");
+        double middle = MiddleLineY(svg);
+        var bows = AllBowCurves(svg);
+
+        Assert.Equal(5, bows.Count);   // the all-rest slur exists
+        double[] startY = bows.Select(b => b[1] - middle).ToArray();
+        double[] endY = bows.Select(b => b[7] - middle).ToArray();
+
+        Assert.True(startY[0] > 0 && endY[0] > 0, "fig1 must bow DOWN");
+        Assert.True(startY[1] < 0 && endY[1] < 0, "fig2 must bow UP");
+        Assert.True(startY[2] < 0 && endY[2] < 0, "fig3 must bow UP");
+        Assert.True(startY[3] < 0 && endY[3] < 0, "fig4 must bow UP");
+        // fig5: DOWN at the rest-bound base, LP +0.5000 on both ends.
+        Assert.Equal(0.5, startY[4], 2);
+        Assert.Equal(0.5, endY[4], 2);
+    }
 }

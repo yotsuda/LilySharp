@@ -62,8 +62,39 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第2便 **stem-attach X 規則 (:738-760) port = 第45号開示⑴の返済**・第3便
 **perf A/B round 15 = 3 バッチ全て符号跨ぎ = drift・対照 hash 一致**・
 以上 `2091d7fd`・第4便 **slur-height-capping.ly = exact（コード変更 0・両 slur
-8 点+X 全一致）**・第5便 **slur-nice.ly = skip（slur-flag と同じ向き綴りゲート）**・
+8 点+X 全一致）**・第5便 **slur-nice.ly = skip（slur-flag と同じ向き綴りゲート）**・以上 `66d1edc7`・
+第6便 **slur-rest-direction.ly 下見+修理 2 段（rest-bound slur の再建・rest 列の
+encompass 参加）＝向きの核は全図一致・Y 残差 2 点残し pending**・
 この handoff と同 commit）。
+
+★★ **第6便 slur-rest-direction.ly（pending・修理 2 つ入り・残差 2 点開示）**:
+- **出土した欠陥⑴ = rest-bound slur の黙殺**: `r16( r r)` の slur flag が
+  MeasureCollector の rest 腕で**床に落ちていた**（RestItem に HasSlurStart/End が
+  無く・SlurDetector も rest を bound と認めず）＝全 rest slur は警告なしで消えて
+  いた。修理 = RestItem にフラグ追加（main walk + tuplet walk の 2 腕・
+  「1 腕だけ直す」再犯防止に両方）・SlurDetector に rest 腕（IsSpacer 除外）・
+  base attachment = **LP :543-559 の rest 枝**（stem も head も無し → y = refpoint
+  + dir·0.5 だけ・頭半分 1.045 は足さない）・X = rest ink 中心（fh null → bound
+  extent center :561-564）。
+- **出土した欠陥⑵ = rest 列が encompass 不参加**: BuildSlurObstacles は
+  EdgeStaffPosition null で rest を捨てていたが、**LP は rest 列も NoteColumn
+  として acknowledge し、no-stem 枝 (:117-122) が列 extent = rest ink を読む**。
+  修理 = rest obstacle（head_=stem_=ink・origin = 全休符のみ 1ss 上・
+  X = ink 中心）。⚠️ PureBeamShift 未読（beam 下の rest を slur が跨ぐ本は未踏）。
+- **照合（scratch\lpreg\slurrest.ly 原本 + 行別双子 slurrest-{s,e,q,h}.lys）**:
+  **向き = 4 行×5 図オール一致**（fig1 DOWN・fig2-4 UP・fig5 DOWN = 既定）＝
+  **本の claim の核は成立**。Y は fig1-3 exact（例: h 行 1.54/−4.05/−4.05→−0.55 =
+  LP 1.545/−4.045/−4.045→−0.545）・**half 行 fig5（全 rest）= 0.50/0.50 = LP 0.5
+  exact**（半休符 ink は middle 上＝base が bind）。
+- **残差 2 点（LP の中で何が起きるか instrument してから閉じる）**: ⑴ fig4
+  （c,( r c') 上向き）start が LS base 留まり −0.545 vs **LP は 1 grid 登って
+  −1.045**（4 行とも同型） ⑵ **16分行 fig5 が LS 1.53 vs LP 2.55**（r16 ink 底
+  −2.05 は参加済みで 0.53→1.53 まで動いた。残り 1.0 = 2 grid。variance 項の
+  rest 参加規則 or 別項の疑い——**LP の候補 demerits を dump してから**。
+  half 行が exact なので base/向き機構は白・深い ink の時だけ鳴る）。
+- 観測者 +1（SlurScoringTests.RestBoundSlurs_ExistAndKeepTheDefaultDownDirection =
+  向き 5 本 + h 行 fig5 の LP 0.5 ピン 2 点）・snapshot 0 枚（全スイート不変 =
+  既存 fixture に rest-bound slur なし）・全緑 4210。
 
 ★★ **第4便 slur-height-capping.ly = exact**（コード変更 0 = 第45号+第46号の機構が
 そのまま当たった追試。claim: 整形は端近くの物を無視＝素の弓のまま・scoring には参加）:
@@ -159,21 +190,22 @@ drift・scriptsym1k の SVG hash base/curr 完全一致**（slur 無し本は挙
 
 plain 322 / 処理済 **260**（fixed **46**・exact **34**・skip **164**・open 16・
 pending **62**。slurgrace が pending→fixed・slurhcap 新規 exact・slur-nice 新規
-skip。数えたら state 別内訳も一緒に書くこと）。
-frontier = **slur-rest-direction**（4 score 頁組み注意・rest は slur 向きを
-変えない = calc_direction の non-rest gate を測る）→ slur-shift-region
+skip・slur-rest-direction は修理 2 段入りで **pending のまま**。数えたら state 別
+内訳も一緒に書くこと）。
+frontier = **slur-rest-direction の残差 2 点**（第6便・LP の候補 demerits を
+-dinclude-settings の debug-slur-scoring で dump してから）→ slur-shift-region
 （tuplet 内終端）→ slur-vertical-skylines（^"rit"+trill span+\f =
 outside-staff 対 slur）。slur-flag / slur-nice は文法宿題（slur 向き強制の
 綴りなし）の棚で待機——**stem-attach X 規則自体は第2便で multivoice を測定器に
 port 済**＝文法が入ったら追試になる。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4209 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
-snapshot 第117 は 4 枚（全部 slur path・census 済）・Core (Debug) 0 warning・
-base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。probe 残置:
-scratch\lpreg\slurgrace.{ly,lys}・slurhcap.{ly,lys}・mvslur-probe.{ly,svg}・
-mls.{ly,lys→svg}・perf-ab15.ps1
-（＋第116 以前の perf-slur*/perf-sd*/perf-{nodot-slur,dot-noslur}）。
+テスト **4210 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
+snapshot 第117 は 4 枚（全部 slur path・第1-2便で census 済・第6便は 0 枚）・
+Core (Debug) 0 warning・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+probe 残置: scratch\lpreg\slurgrace.{ly,lys}・slurhcap.{ly,lys}・
+slurrest.{ly,svg}+slurrest-{s,e,q,h}.lys・mvslur-probe.{ly,svg}・mls.{ly,lys→svg}・
+perf-ab15.ps1（＋第116 以前の perf-slur*/perf-sd*/perf-{nodot-slur,dot-noslur}）。
 
 ## 以下は第116セッションの経緯
 

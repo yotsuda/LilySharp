@@ -499,6 +499,11 @@ public sealed partial class MeasureCollector
 
             case RestSyntax rest:
                 {
+                    // A rest is a legal slur bound (LilyPond r16( … r): rests live
+                    // inside NoteColumn grobs, so the Slur_engraver binds to them
+                    // like any column — "slur-rest-direction.ly". These flags used
+                    // to be dropped on the floor here, which silently swallowed a
+                    // rest-bound slur with no warning.
                     var restItem = CreateRestItem(rest);
                     int restMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int restItemIndex = builder.CurrentItemCount;
@@ -506,7 +511,11 @@ public sealed partial class MeasureCollector
                     int count = rest.MeasureCount;
                     if (count <= 1)
                     {
-                        builder.AddItem(restItem);
+                        builder.AddItem(restItem with
+                        {
+                            HasSlurStart = hasSlurStartAfter,
+                            HasSlurEnd = hasSlurEndAfter,
+                        });
                         // Post-events on the rest (r4@fermata, r2@coda, ...).
                         // Rests have no stem; stemUp=false makes the default
                         // direction UP, matching scripts over rests.
@@ -1099,7 +1108,13 @@ public sealed partial class MeasureCollector
             }
             case RestSyntax rest:
             {
-                var restItem = CreateRestItem(rest);
+                // Slur bounds on a tuplet rest too — same repair as the main
+                // walk's rest arm (one-arm-of-two, like the rest dynamics above).
+                var restItem = CreateRestItem(rest) with
+                {
+                    HasSlurStart = hasSlurStartAfter,
+                    HasSlurEnd = hasSlurEndAfter,
+                };
                 builder.AddItemWithoutDuration(restItem with { TimeScale = scale });
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                 // Same repair as the main walk's rest case: a rest carries dynamics too.

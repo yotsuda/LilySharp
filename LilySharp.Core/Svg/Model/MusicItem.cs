@@ -407,6 +407,20 @@ public sealed record RestItem : MusicItem
     /// </summary>
     public double PureBeamShift { get; init; }
 
+    /// <summary>
+    /// True when a slur OPENS on this rest (LilyPond <c>r16(</c>). A rest is a
+    /// legal slur bound: LilyPond's rests live inside NoteColumn grobs, so the
+    /// Slur_engraver binds to them like any column ("slur-rest-direction.ly").
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/slur-scoring.cc:543-573 get_base_attachments —
+    /// the note-column branch runs for a rest bound too (stem and head both
+    /// null), giving y = dir·0.5·staff-space off the refpoint.</remarks>
+    public bool HasSlurStart { get; init; }
+
+    /// <summary>True when a slur CLOSES on this rest (LilyPond <c>r)</c>).
+    /// See <see cref="HasSlurStart"/>.</summary>
+    public bool HasSlurEnd { get; init; }
+
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;

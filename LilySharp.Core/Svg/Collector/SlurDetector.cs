@@ -86,6 +86,11 @@ internal sealed class SlurDetector
         {
             case NoteItem n: hasStart = n.HasSlurStart; hasEnd = n.HasSlurEnd; return true;
             case ChordItem c: hasStart = c.HasSlurStart; hasEnd = c.HasSlurEnd; return true;
+            // A rest is a legal slur bound (r16( … r) — LilyPond's rests live in
+            // NoteColumn grobs, so the Slur_engraver binds to them like any column.
+            // Its edge staff position resolves to null downstream; the layout takes
+            // the rest-bound base attachment instead ("slur-rest-direction.ly").
+            case RestItem r when !r.IsSpacer: hasStart = r.HasSlurStart; hasEnd = r.HasSlurEnd; return true;
             default: hasStart = false; hasEnd = false; return false;
         }
     }
