@@ -63,8 +63,31 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 **perf A/B round 14 = 重い側 drift・対照 hash 一致・既存超線形 2 件起票**・
 `204b0901`・第4便 **slur-dot-distance.ly = exact（コード変更 0）**・`e38e2273`・
 第5便 **slur-flag.ly = skip（probe 付き・核は 4 点完全一致）**・`90b7845f`・
-第6便 **slur-grace.ly 下見 = root 特定+実測済（pending のまま）**・
+第6便 **slur-grace.ly 下見 = root 特定+実測済（pending のまま）**・`3d082538`・
+第7便 **自己監査＝挙動変更 0（開示コメントのみ）・検算で白 8・札 5 追記**・
 この handoff と同 commit）。
+
+★★ **第7便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
+挙動変更 0（snapshot バイト不変・4207 緑のまま）・新規チューニング定数ゼロ検算済**:
+- **検算で白 8**: ⑴ additional_ys の `(dir_ == LEFT ? 0 : -1)` は side でなく slur
+  方向の分岐＝奇妙だが原文どおり ⑵ tilt X shift の dir_ も slur 方向（d でない）
+  ⑶ extra の edge 判定は LEFT→RIGHT 無 break＝RIGHT 勝ち ⑷ move_away は
+  round_halfway_up（floor+0.5）で近さ・rint（half-even）で線判定という使い分けまで
+  一致 ⑸ fit_factor の translate→rotate→scale(1,dir) と close_to_edge 式 ⑹ max_h =
+  √(len²/3 − 0.75(indent+len/3)²)・負なら len/3 ⑺ minimum-length は X 矯正条件のみ
+  ＝X が頭中心の今は no-op で正 ⑻ パラメタ既定は全部 layout-slur.scm と一致・
+  0.15/0.5/+1ss/0.2 widen/1.2×0.1 全部 LP 宣言/導出値（0.1 line-thickness は LP 自身
+  の SVG の staff 線 stroke-width 0.1000 で裏取り）。
+- **札 5（開示コメント追記済・挙動は変えていない）**: ⑴ cubic solver の許容度 3 点
+  ——LP clean は**相対** fudge/こちら絶対 1e-12・filter_solutions は**厳密** [0,1]/
+  こちら ±1e-6 clamp・根の順は LP ソルバ内順（先頭消費）/こちら昇順＝x が折り返す
+  縮退曲線でだけ答えが変わり得る ⑵ avoid_staff_line の「両端同一 staff」gate 未 port
+  （単一 staff frame では恒真） ⑶ get_y_attachment_range の slur_head-only 枝
+  （+0.3 最小移動）未 port（呼び手なし） ⑷ additional_ys の key/clef/time-sig 除外
+  （:302-308）未記＝extras が dot だけの今は空振り・prefatory grob が入る日に port
+  ⑸ dot 行 recipe は skyline seed の**再綴り**（scale 1+direction 無し——強制 voice
+  の score では描画と 1 position ずれ得る）。
+- 引用ラチェット 3 本とも緑＝REF は全部住所実在+symbol 名指し済。
 
 ★★ **第6便 slur-grace.ly 下見**（コード変更 0・state は pending のまま）:
 - 構造は一致: 両エンジン外側 2+grace slur 3 の計 5 本・警告なし＝主張の核

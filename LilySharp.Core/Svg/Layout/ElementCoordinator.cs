@@ -2146,6 +2146,11 @@ internal sealed class ElementCoordinator
     /// ink right + one dot width, row advance two dot widths, position from
     /// DotConfiguration.Resolve. The collision DotAdjustment is not read here
     /// either (the same simplification the skyline seed discloses).
+    /// ⚠️ Two further simplifications against that seed: geometry is read at
+    /// scale 1 (the same choice BuildSlurObstacles makes with its 0.5 head box),
+    /// and DotConfiguration.Resolve runs with NO direction where the seed feeds
+    /// the voice-forced one — a forced-voice score could seat the scored dot row
+    /// one position off the drawn one.
     /// </remarks>
     private static IReadOnlyList<SlurExtraObject> BuildSlurExtraObjects(
         Voice voice, SystemLayout segSystem, SlurItem slur,

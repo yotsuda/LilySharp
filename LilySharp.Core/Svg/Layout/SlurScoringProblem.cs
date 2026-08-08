@@ -370,7 +370,12 @@ internal sealed class SlurScoringProblem
     /// <remarks>
     /// LILYPOND-REF: lily/slur-configuration.cc:41-91 avoid_staff_line —
     /// thickness = Slur.thickness (1.2) × line-thickness (0.1) and
-    /// line_thickness_ is the layout dimension itself.
+    /// line_thickness_ is the layout dimension itself. The 0.1 is verified
+    /// against LilyPond's own output: the twin SVGs draw staff lines at
+    /// stroke-width 0.1000 staff space.
+    /// ⚠️ LP gates this on both extremes sharing one staff (its "TODO: handle
+    /// case of broken slur") — not ported; every slur this scorer sees lives on
+    /// a single staff frame, so the gate is vacuously true here.
     /// </remarks>
     private Bezier AvoidStaffLine(Bezier bez, int dir)
     {
@@ -544,6 +549,10 @@ internal sealed class SlurScoringProblem
     /// the ⚠️ stem part of LP's column extent exceeds base + region_size only for
     /// an unusually long stem pointing slurward, and a slurward-beamed stem
     /// already IS the base (the caller attaches there).
+    /// ⚠️ LP's slur_head-only branch (:505-508 — a bound with a head but no note
+    /// column allows only 0.3 of movement) is not ported: every edge here
+    /// carries a note column or a broken-edge stand-in, so the branch has no
+    /// caller.
     /// </remarks>
     private double EndYFor(bool left, int dir)
     {
@@ -609,6 +618,10 @@ internal sealed class SlurScoringProblem
             // depend on the loop's d, and its `(dir_ == LEFT ? 0 : -1)` compares
             // the slur DIRECTION against LEFT (= -1), i.e. down slurs use
             // normalize + 0 and up slurs normalize - 1.
+            // ⚠️ LP exempts key-signature / clef / time-signature 'inside grobs
+            // from this extension (slur-scoring.cc:302-308) — unwritten here,
+            // vacuously: the extra set carries only augmentation dots today.
+            // Port the exemption when prefatory grobs join the set.
             double additional = 0.0;
             foreach (var info in _extraObjects)
             {

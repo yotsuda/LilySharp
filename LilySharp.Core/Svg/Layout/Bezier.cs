@@ -140,6 +140,15 @@ internal struct Bezier
     /// dispatches on the effective degree (solve_quadric / solve_linear too).
     /// LILYPOND-REF: lily/bezier.cc:201-208 — filter_solutions drops roots
     /// outside [0,1].
+    /// ⚠️ Three tolerance/order deviations from the letter, all float guards:
+    /// LP's Polynomial::clean drops leading coefficients by a RELATIVE fudge
+    /// (flower/polynomial.cc, "only do relative comparisons") where this uses an
+    /// absolute 1e-12; LP's filter_solutions is a STRICT [0,1] with no epsilon
+    /// where this admits ±1e-6 and clamps; and LP returns roots in solver
+    /// order (solve_cubic pushes t·cos(φ) first) while this sorts ascending —
+    /// get_other_coordinate takes the FIRST root, so the answers can differ
+    /// only when the curve doubles back in x (several roots at one x), which
+    /// the flat slur bows scored here do not do.
     /// </remarks>
     internal static int SolveInUnitInterval(
         double a0, double a1, double a2, double a3, Span<double> roots)
