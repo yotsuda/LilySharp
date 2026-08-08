@@ -1,0 +1,21 @@
+// lilypond-src/input/regression/repeat-volta-initial-grace.ly の Lily# 訳。
+// CLAIM: 冒頭 grace + volta repeat の開始リピート線が期待位置 (grace の後) に出る。
+// 綴り: LP \repeat volta 2 = Lily# 記号形 |: … :|。LP absolute f'8/b'1 = F4/B4。
+// state=open: LS は開始リピート線が grace の前 + dots が grace ink と重なる
+// (LP は grace→.|: の順・中間位置では |→grace→.|: と bar 群 2 つの間に挟む)。
+// 根 = leading grace が音符列 prefix (小節 frame 内側) = grace column アーキ起票。
+// 副 defect: grace×|:..:| で末尾に幽霊空小節 +1 (対照 ctl1-4 で切り分け済)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    grace { f8 } |: b1 :|
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

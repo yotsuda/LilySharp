@@ -58,8 +58,25 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第113セッション第2便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
-第2便 fixed **第41号 = repeat-tremolo-chord-rep.ly**・この handoff と同 commit）。
+最終更新 第113セッション第3便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
+第2便 fixed **第41号 = repeat-tremolo-chord-rep.ly**・`b68d24aa`・
+第3便 **repeat-volta-initial-grace.ly = open**・この handoff と同 commit）。
+
+★★ **第3便 repeat-volta-initial-grace.ly = open（主張は LS 不成立・アーキ起票 2 件・
+コード変更 0）**:
+- **主張（冒頭 grace の後に開始リピート線）は LS 不成立**: LS は thick 7.73/thin 8.63/
+  dots 9.32 → grace 9.17 の順＝**bar が grace の前**で dots と grace ink が重なる。
+  LP は grace 7.58 → `.|:` 9.52-10.91＝grace の後。**中間位置の対照（ctl4）で LP は
+  `|` 13.43 → grace 14.30 → `.|:` 16.24-17.63 と bar 群 2 つの間に grace を挟む**＝
+  LP の grace は独立 timestep/column。
+- **根 = grace column アーキ**: LS の leading grace は音符列の prefix（小節 frame の内側）で
+  bar の後ろにしか立てない。§2A break-align/prefix-width と同棚に起票。
+- **副 defect 起票**: grace×in-music repeat（`|:..:|`）の組で**末尾に幽霊空小節 +1**
+  （対照 4 本: grace 無し/repeat 無しでは出ない・grace の位置不問・後続音楽有りでも常に末尾・
+  機構未特定）。probe = scratch\lpreg\voltagrace-ctl{1..4}。
+- **枠の学び**: `\repeat volta` の Lily# 訳は**記号形 `|: … :|`**（パーサ診断 LYS0006 が案内）。
+  第112第11便の repeat-volta-body 2 冊の skip 理由「in-music repeat 綴りなし」は不正確
+  （記号形は在る）——ただし skip 自体は他根拠で立つ（台帳 notes 訂正済）。
 
 ★★★ **第2便 fixed 第41号 = repeat-tremolo-chord-rep.ly**（tremolo は和音リピート q でも働く）:
 - **欠陥 3 件**: ⑴ **和音の単発 tremolo 斜線が綴りに関わらず silent drop**——DrawChord が
@@ -100,10 +117,10 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   無警告 drop（EmitChord のコメントに明記・起票）。
 - 観測者 +1（RepeatTieChordTests: fan 数 5・強制/既定向き・X 式 LP 逆算ピン）・snapshot 0 枚。
 
-plain 322 / 処理済 **237**（fixed **41**・exact **29**・skip **152**・open **15**・
-pending 85。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **238**（fixed **41**・exact **29**・skip **152**・open **16**・
+pending 84。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る。
-次 = repeat-volta-initial-grace）。
+次 = rest-avoid-note）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・

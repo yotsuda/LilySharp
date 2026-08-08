@@ -6612,7 +6612,9 @@
     },
     "repeat-volta-initial-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "A piece beginning with grace notes followed by a volta repeat has an opening repeat bar in the expected position",
+      "notes": "open(第113第3便・コード変更0)。主張はLS不成立: **開始リピート線がgraceの前に出る**(LS: thick7.73/thin8.63/dots9.32→grace9.17=dotsとgrace ink重なり。LP: grace7.58→.|: 9.52-10.91=graceの後)。中間位置も同型(ctl4実測: LPは|13.43→grace14.30→.|:16.24-17.63と**bar群2つの間にgraceを挟む**=grace timestepが独立column)。根=LSのleading graceは音符列のprefix(小節frameの内側)でbarの後ろにしか立てない=grace column アーキ起票(§2A break-align/prefix-widthと同棚)。副defect起票: **grace×in-music repeat(|:..:|)の組で末尾に幽霊空小節+1**(対照4本: grace無し/repeat無しでは出ない・graceの位置不問・後続音楽有りでも常に末尾。機構未特定)。twin=audit lys+scratch\\lpreg\\voltagrace.{ly,lys}+ctl1-4残置。綴り: \\repeat volta 2=記号形|: :|(パーサ診断が案内)。⚠️repeat-volta-body 2冊のskip理由「in-music repeat綴りなし」は不正確(記号形は在る)——ただしskip自体は他根拠で立つ(grace本=\\new Score×6の多score頁組み・simultaneous本=claimがLP内部Issue#6022回帰で記号形はbar機構が別)"
     },
     "repeat-volta-one-alternative.ly": {
       "category": "scheme",
