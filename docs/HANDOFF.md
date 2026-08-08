@@ -58,11 +58,25 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第112セッション第9便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
+最終更新 第112セッション第10便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
 第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
 `69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・
-`2401380a`・第6〜8便 **26 冊バッチ**・`a380a63a`・第9便 **23 冊バッチ**・
-この handoff と同 commit）。
+`2401380a`・第6〜8便 **26 冊バッチ**・`a380a63a`・第9便 **23 冊バッチ**・`d25b83a3`・
+第10便 **16 冊バッチ**・この handoff と同 commit）。
+
+★★ **第10便 = 16 冊バッチ（skip 15 + open 1・コード変更 0）**:
+- **open: phrasing-slur-tuplet.ly**（slur は tuplet 番号と衝突しない）: 両側置換
+  \( \)→( ) + \voiceOne = voice{}{} 第1分岐で twin。**両エンジン無衝突 = 主張成立**・番号は
+  ほぼ同座標（11.885/8.445 vs 12.33/8.29）。**起票 = 積み順が逆**: LP は番号が slur 弧の内側
+  （TupletNumber avoid-slur 既定 inside・slur scoring の extra-encompass）で slur が外に膨らむ・
+  LS は outside-staff stacker が番号を slur の外（上）へ積む。⚠️ 枠の学び:
+  **\voiceOne を外すと番号/beam が下へ行き主張が発火しない**（一度踏んだ）。
+- **skip 15**: **part-combine 族 10 冊**（\partCombine 綴りなし。機構は PartCombineAnalyzer =
+  determine-split-list の port が **LayoutOptions.EnablePartCombine の後ろに既在だが書き手ゼロ**
+  ＝文法が入れば族再開・§2D 棚・親 = part-combine-3voices）・partial-polymetric
+  （\enablePerStaffTiming）・pdfmark（PDF メタデータ = backend 枠外）・post-events-wrapper
+  （post-event ラッパー変数）・predefined-fretboards-transpose（Scheme include + FretBoards
+  なし）・prefatory-separation（line-width 5cm の圧縮枠が作れない）。
 
 ★ **第9便 = 23 冊バッチ（skip 22 + exact 1・コード変更 0）**:
 - **exact: ottava-consecutive.ly**（連続 ottava は結合されない）: @ottava → 次小節で
@@ -170,8 +184,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
   再演——引かずに「11.90 は何の右縁?」を一周した）。
 
-plain 322 / 処理済 **206**（fixed **39**・exact **27**・skip **126**・open **14**・
-pending 116。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **222**（fixed **39**・exact **27**・skip **141**・open **15**・
+pending 100。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
 第107 起票の §2A workstream は棚のまま（第5便の跨ぎ separation も同棚に積んだ）。
 
