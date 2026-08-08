@@ -58,8 +58,21 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第112セッション第2便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
-第2便 fixed **第39号 = lyric-melisma-melisma.ly**・この handoff と同 commit）。
+最終更新 第112セッション第3便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
+第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
+この handoff と同 commit）。
+
+★★ **第3便 lyric-tie.ly = open（主張核心成立・コード変更 0・観測者 +2）**:
+- **主張（音節内の ~ はタイ記号へ変換）は両エンジン成立**: LS は collector の
+  DisplaySyllable が ~→‿(U+203F) 変換し、**Schola face に実 glyph**（ink bottom −0.6464/
+  top −0.2112 = 基線下の弧・advance 1.6047@3.2ss）。LP 自身も tied-lyric の as-string 形は
+  ~→U+203F（define-markup-commands.scm:4724）。
+- **残差（起票 = tied-lyric 合成 regime）**: LP の描画形は feta ties.lyric.default/.short を
+  [hspace word-space/2] で挟む concat（scm:4740-4773）＝接合 advance 計 0.6・tie glyph は
+  zero-advance で中点。LS は ‿ の font advance 1.24@2.47 ＝語が約 1ss 太る + 字形 Schola。
+  port は歌詞テキストの合成 model（text run + feta 挿入 + 幅推定連動）。
+- **観測者 +2**（LyricTieTests: 変換 + face に ‿ 実在 = 基線下の弧・font 差し替えの番犬）。
+  snapshot 0 枚。twin scratch\lpreg\lytie.*（素の \lyrics ブロック → LS は lyrics row）。
 
 ★★★ **第2便 fixed 第39号 = lyric-melisma-melisma.ly**（melisma 音節は左揃え）:
 - **両側置換**: \melisma/\melismaEnd → slur（Lily# に手動 melisma 綴りなし。LP は slur でも
@@ -106,13 +119,13 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
   再演——引かずに「11.90 は何の右縁?」を一周した）。
 
-plain 322 / 処理済 **150**（fixed **39**・exact **25**・skip **74**・open **12**・
-pending 172。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **151**（fixed **39**・exact **25**・skip **74**・open **13**・
+pending 171。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4195 passed / 0 failed / 4 skipped**（観測者 +5 込み・全スイート確認済）・
+テスト **4197 passed / 0 failed / 4 skipped**（観測者 +7 込み・全スイート確認済）・
 lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
 snapshot 第112 は 13 枚（第1便 hyphen 11 + 第2便 melisma 2・census 各便）**・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。

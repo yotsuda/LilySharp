@@ -4104,7 +4104,9 @@
     },
     "lyric-tie.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "Tildes in lyric syllables are converted to tie symbols",
+      "notes": "open(第112第3便・主張核心成立・コード変更0・観測者+2)。twin scratch\\lpreg\\lytie.{ly,lys,svg,-ls.svg}(素の\\lyricsブロック→Lily#はlyrics row)。LS: collectorのDisplaySyllableが音節内~→‿(U+203F)へ変換し、束ねたSchola faceに実glyph(ink bottom -0.6464/top -0.2112=基線下の弧・advance 1.6047@3.2ss)=タイ記号は実描画される。LP自身もtied-lyricのas-string形は~→U+203F(define-markup-commands.scm:4724)。残差(起票=tied-lyric合成regime): LPの描画形はfeta ties.lyric.default/.shortのmusicglyphを[hspace word-space/2]で挟んで連結(scm:4740-4773)——接合advance=word-space計0.6(実測: wa端11.40→o 12.00・tie glyphはzero-advanceで中点)・LSは‿のfont advance 1.24@2.47=語が約1ss太る+字形がSchola。portするなら歌詞テキストの合成model(text run+feta挿入+幅推定の連動)。観測者: LyricTieTests(変換+faceに‿実在=基線下の弧・font差し替えの番犬)"
     },
     "lyric-tweak.ly": {
       "category": "scheme",
