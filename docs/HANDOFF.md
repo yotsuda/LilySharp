@@ -61,6 +61,7 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第114セッション（＝第1便 fixed **第43号 = script-stack-order1.ly**・`67458e64`・
 第2便 **perf A/B round 11 = 対照 drift 内+hash 一致・mover 無し guard**・`608d3c5c`・
 第3便 **script-tie-collision 下見**・`54038b97`・第4便 **自己監査＝挙動変更 0・開示 2 札**・
+`595dbc8f`・第5便 **perf round 11b = DigitRun memo で重い側 −2.6%/−3.3%**・
 この handoff と同 commit）。
 
 ★★ **第4便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
@@ -128,11 +129,15 @@ base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 o
   1 回目 +17.6/+7.4 = 両順正 = 容疑 → **guard（mover 無しは lastOnKey 簿記 skip）→再測
   −1.9%/+4.1% = 符号反転 = drift**・**SVG hash base/curr 完全一致**（挙動不変+仕事同一の
   証明）。
-- **重い側 fingstack1k**（毎音 staccato+tenuto+finger+bow）: +2.9%/+5.0%（両順正・バッチ
-  振れ 7.0〜12.3s の荒い機械・設計上 curr の仕事が増える側 = 連鎖 distance+feta digit）。
-  **劣化が実在した時の候補筆頭**: fingering flush の ScriptSkylines placed 対→
-  MergeScriptProfile 系の cache（第108 の 295MB→139MB と同型）。
-- 呼び出し構造: pass/walk 数不変・新規 O(n²) 無し。IncrementalCompiler 非接触＝増分構造不変。
+- **重い側 fingstack1k**（毎音 staccato+tenuto+finger+bow）: 1 回目 +2.9%/+5.0% = 両順正 =
+  容疑 → **round 11b（第5便）: DigitRun に単桁 0-9 の静的 memo**（島 pass・column flush・
+  プレビュー毎フレーム再描画の 3 か所が毎回 glyph run を 3 往復していた——純関数なので memo は
+  厳密）＋単桁は Pieces 配列を作らず直接 DrawGlyph → **再測 −2.6%/−3.3%（両順とも curr が
+  速い）＝容疑消滅・重い側も base 以下**。残る候補（未発動）: fingering flush の placed 対→
+  MergeScriptProfile 系 cache（第108 の 295MB→139MB と同型・測って白なので発明しない）。
+- 呼び出し構造: pass/walk 数不変・新規 O(n²) 無し。IncrementalCompiler 非接触を grep で検分＝
+  **変更は LayoutEngine.Layout の共有経路の中だけ**（プレビューの layout-skip 経路は不変・
+  re-layout 時の 1 回あたりコスト = この A/B が測った量そのもの）。
 
 ★ **第3便 script-tie-collision.ly 下見（root 特定+実測済・コード変更 0・state は pending の
 まま）**:

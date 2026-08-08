@@ -99,6 +99,21 @@ internal static class FingeringEngraver
     /// </remarks>
     internal static (string Glyphs, GlyphMetrics.BBox Ink, double Width) DigitRun(int number)
     {
+        // The ten single digits — every fingering in practice — are answered from a
+        // table built once: DigitRun runs per fingering in the island pass, the
+        // column flush AND every preview redraw, and each uncached call walks the
+        // glyph run three times (pieces, width, ink). A pure function of the number,
+        // so the memo is exact.
+        if (number is >= 0 and <= 9)
+            return SingleDigitRuns[number] ??= BuildDigitRun(number);
+        return BuildDigitRun(number);
+    }
+
+    private static readonly (string, GlyphMetrics.BBox, double)?[] SingleDigitRuns =
+        new (string, GlyphMetrics.BBox, double)?[10];
+
+    private static (string Glyphs, GlyphMetrics.BBox Ink, double Width) BuildDigitRun(int number)
+    {
         string text = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var glyphs = new System.Text.StringBuilder(text.Length);
         foreach (var piece in FiguredBassGlyphRun.Pieces(text))

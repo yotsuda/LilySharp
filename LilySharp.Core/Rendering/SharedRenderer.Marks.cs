@@ -294,18 +294,24 @@ internal static partial class SharedRenderer
             // own staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(f.StaffIndex, f.MeasureIndex, StaffHeight);
             double y = os.YUp(midYup + f.YUp, f.StaffIndex, f.MeasureIndex);
-            string text = f.Number.ToString();
-            double x0 = f.X - FiguredBassGlyphRun.Width(text) / 2.0;
+            // The metric home is DigitRun (memoized for the ten single digits — the
+            // preview redraws this every frame); a single-glyph run draws without
+            // building a pieces array, the multi-glyph rarity walks the run.
+            var (glyphs, _, width) = FingeringEngraver.DigitRun(f.Number);
+            double x0 = f.X - width / 2.0;
             using (gc.Source(f.SourcePosition))
             {
-                foreach (var piece in FiguredBassGlyphRun.Pieces(text))
-                {
-                    if (piece.IsGlyph)
-                        gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
-                    else
-                        gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, "serif",
-                            FontStyle.Regular, TextAnchor.Start, Color.Black);
-                }
+                if (glyphs.Length == 1)
+                    gc.DrawGlyph(glyphs[0], x0, y, size, Color.Black);
+                else
+                    foreach (var piece in FiguredBassGlyphRun.Pieces(f.Number.ToString()))
+                    {
+                        if (piece.IsGlyph)
+                            gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
+                        else
+                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, "serif",
+                                FontStyle.Regular, TextAnchor.Start, Color.Black);
+                    }
             }
         }
     }
