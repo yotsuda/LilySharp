@@ -58,10 +58,27 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第112セッション第8便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
+最終更新 第112セッション第9便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
 第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
 `69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・
-`2401380a`・第6〜8便 **26 冊バッチ**・この handoff と同 commit）。
+`2401380a`・第6〜8便 **26 冊バッチ**・`a380a63a`・第9便 **23 冊バッチ**・
+この handoff と同 commit）。
+
+★ **第9便 = 23 冊バッチ（skip 22 + exact 1・コード変更 0）**:
+- **exact: ottava-consecutive.ly**（連続 ottava は結合されない）: @ottava → 次小節で
+  @ottava(bassa) 直切替（loco なし）で両エンジンとも 2 本別々の括弧。**頭 X 8.585/8.59・
+  16.735/16.74 = 完全一致・8va 破線 Y 7.6406/7.64 = 完全一致・mark X 一致**。残差:
+  ⑴ ラベル字面 = LP 既定は数字 8（ottavation-default = digits）vs LS 8va/8vb → 破線始端が
+  ラベル幅分ずれる ⑵ 第1括弧の右端 LP = 音符右 +0.6 vs LS 14.24 = bracket terminus regime。
+- **skip 22**: modal-transforms（modal 変換 music function なし）・MMR 2 冊
+  （no-staff = \consists 本・text-spanned = 2/3 score 綴りなし——**probe 済**: f1( R1@fermata
+  e1) は無 crash・fermata 描画・slur 貼架 = crash 回帰は再現せず）・newaddlyrics（変数間接）・
+  **shape-note 族 6 冊**（\aikenHeads 等の音度→頭形自動 style と専用 glyph 群なし・親 =
+  note-head-aiken）・note-names 2 冊（NoteNames context / makam include）・nullvoice・
+  ottava-per-voice（engraver 移設本）・page-breaking-end-of-score / page-overflow / paper 2 冊
+  （多 score 頁組み・\paper 文法なし）・parallelmusic-partial・**parenthesize 族 5 冊**
+  （\parenthesize 汎用括弧の綴りなし・部分表面 = @courtesy 括弧臨時のみ・親 =
+  parenthesize-breakable）。
 
 ★ **第6〜8便 = 26 冊バッチ（skip 25 + exact 1・コード変更 0）**:
 - **第6便 magnify 族 plain 8 冊 = skip**（\magnifyMusic = 任意スパンのインライン拡縮・
@@ -153,8 +170,8 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
   再演——引かずに「11.90 は何の右縁?」を一周した）。
 
-plain 322 / 処理済 **181**（fixed **39**・exact **26**・skip **102**・open **14**・
-pending 141。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **206**（fixed **39**・exact **27**・skip **126**・open **14**・
+pending 116。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
 第107 起票の §2A workstream は棚のまま（第5便の跨ぎ separation も同棚に積んだ）。
 

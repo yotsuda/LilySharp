@@ -4894,7 +4894,8 @@
     },
     "modal-transforms.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。\\modalTranspose/\\retrograde/\\inversion/\\modalInversion のmodal変換music functionは綴りなし(Lily#のtransposeは半音移調のみ)。s1-\"text\"のspacer注釈も枠外"
     },
     "modern-tab-clef-scaled.ly": {
       "category": "scheme",
@@ -4946,7 +4947,8 @@
     },
     "multi-measure-rest-no-staff.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。false plain: \\type Engraver_group カスタムcontext+\\consists/\\remove(engraver差し替えゲート)。主張=segfaultしない回帰"
     },
     "multi-measure-rest-number-threshold.ly": {
       "category": "override",
@@ -4970,7 +4972,8 @@
     },
     "multi-measure-rest-text-spanned.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・probe付き)。3 score中2つが綴りなし(score1=\\tuplet+R1*3/2のduration scaling・score3=in-music \\repeat volta \\alternative)。綴れる核心はprobe確認済(scratch\\lpreg\\mmrspan-probe.{lys,svg}): f1( R1@fermata e1) = 無crash・fermataがMMR上に描画(17.44,8.63)・slurがMMRをまたいで1本=主張のcrash回帰はLSで再現せず"
     },
     "multi-measure-rest-text.ly": {
       "category": "scheme",
@@ -5026,7 +5029,8 @@
     },
     "newaddlyrics-music-identifiers.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。\\addlyricsの変数間接(brace無し引数・music identifier)=パーサ主張。Lily#のlyricsは名前付きトラックで変数間接なし(include-identifierと同棚)"
     },
     "newaddlyrics.ly": {
       "category": "scheme",
@@ -5070,7 +5074,8 @@
     },
     "note-head-aiken.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・shape-note族6冊の親notes)。ゲート=機構が主張そのもの: \\aikenHeads/\\funkHeads/\\sacredHarpHeads(Minor)/\\southernHarmonyHeads/\\walkerHeads の音度→頭形自動マッピングは綴りなし・専用shape glyph群(do/re/mi/fa/sol/la/ti)も未搭載(styled頭はtriangle/diamond/cross/slash/xcircleの5種=第29号)。per-note @notehead で手写ししてもLSのマッピングを何も検査しない"
     },
     "note-head-attachment-mixed.ly": {
       "category": "scheme",
@@ -5090,7 +5095,8 @@
     },
     "note-head-funk.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・shape-note族)。親notes=note-head-aiken(音度→頭形の自動styleと専用glyph群なし)"
     },
     "note-head-harmonic-dotted.ly": {
       "category": "scheme",
@@ -5106,11 +5112,13 @@
     },
     "note-head-sacred-harp.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・shape-note族)。親notes=note-head-aiken(音度→頭形の自動styleと専用glyph群なし)"
     },
     "note-head-shape-minor.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・shape-note族)。親notes=note-head-aiken(音度→頭形の自動styleと専用glyph群なし)"
     },
     "note-head-solfa.ly": {
       "category": "scheme",
@@ -5118,7 +5126,8 @@
     },
     "note-head-southern-harmony.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・shape-note族)。親notes=note-head-aiken(音度→頭形の自動styleと専用glyph群なし)"
     },
     "note-head-style.ly": {
       "category": "scheme",
@@ -5126,7 +5135,8 @@
     },
     "note-head-walker.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・shape-note族)。親notes=note-head-aiken(音度→頭形の自動styleと専用glyph群なし)"
     },
     "note-line.ly": {
       "category": "scheme",
@@ -5138,11 +5148,13 @@
     },
     "note-names-context.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。NoteNames context(音名を行として刷る)の対応物なし+\\paper system-system-spacing override(false plain気味)"
     },
     "note-names-makam.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。false plain: \\include makam.ly(Scheme満載include)+makam微分音。includeのある本は開いてから信じる、の再演"
     },
     "note-names.ly": {
       "category": "scheme",
@@ -5158,7 +5170,8 @@
     },
     "nullvoice-slur.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。NullVoice contextの対応物なし(主張=エラー無し回帰)"
     },
     "number-staff-lines.ly": {
       "category": "override",
@@ -5230,7 +5243,9 @@
     },
     "ottava-consecutive.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "Consecutive ottavas with the same label are not incorrectly merged",
+      "notes": "exact(第112第9便・コード変更0)。twin scratch\\\\lpreg\\\\ottcons.{ly,lys,svg,-ls.svg}(綴り: @ottava→次小節で@ottava(bassa)直切替=locoなし)。主張核心=両エンジンとも2本別々の括弧(8va上+8vb下)で結合されない。桁一致: 頭X 8.585/8.59・16.735/16.74=完全一致・8va破線Y 7.6406/7.64=完全一致・mark X 7.785/7.79・15.935/15.94一致。残差: (1)ラベル字面=LP既定は数字8(ottavation-default=digits・既知reference)vs LS 8va/8vb→破線始端がラベル幅分ずれる(12.01 vs 9.178) (2)第1括弧の右端 LP=音符右+0.6(11.15)vs LS 14.24=bracket terminus regime (3)8vb線YΔ0.07"
     },
     "ottava-double-percent-repeat-end.ly": {
       "category": "scheme",
@@ -5262,7 +5277,8 @@
     },
     "ottava-per-voice.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。false plain: \\remove/\\consists でOttava_spanner_engraverをVoiceへ移す本(engraver差し替えゲート)。声部単位ottavaの表面もLSに無し(@ottavaはstaff単位)"
     },
     "ottava-percent-repeat-end.ly": {
       "category": "scheme",
@@ -5326,7 +5342,8 @@
     },
     "page-breaking-end-of-score.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。\\book内の複数トップレベルscore+score間\\noPageBreak+paper-height指定=多score頁組み機構の対応物なし(lyscは1 score/render)"
     },
     "page-breaking-good-estimation.ly": {
       "category": "scheme",
@@ -5458,7 +5475,8 @@
     },
     "page-overflow-compression.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。頁overflow圧縮(collide容認)+paper-height+\\textMark=頁縦regime+綴りなし"
     },
     "page-ref.ly": {
       "category": "scheme",
@@ -5622,7 +5640,8 @@
     },
     "paper-margins-line-width.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。\\paper line-width指定と系の水平中央寄せ=paper文法なし(頁regime)"
     },
     "paper-margins-no-checks.ly": {
       "category": "scheme",
@@ -5642,7 +5661,8 @@
     },
     "paper-nested-override.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。\\paper内nested property(system-system-spacing.minimum-distance)=paper文法なし"
     },
     "paper-nested-override2.ly": {
       "category": "scheme",
@@ -5670,7 +5690,8 @@
     },
     "parallelmusic-partial.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便)。\\parallelMusic(声部インターリーブ記法)+\\fixed=綴りなし。主張もパーサ警告回帰"
     },
     "parent-alignment-synchronized-with-self-alignment.ly": {
       "category": "scheme",
@@ -5678,7 +5699,8 @@
     },
     "parenthesize-breakable.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・parenthesize族4冊の親notes)。\\parenthesize(任意グロブの汎用括弧機構)の綴りなし。部分表面=@courtesy(括弧付き臨時記号)のみ。族の他項も同ゲート(+\\breathe/\\break等)"
     },
     "parenthesize-chords.ly": {
       "category": "override",
@@ -5686,7 +5708,8 @@
     },
     "parenthesize-horizontal-placement.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・parenthesize族)。親notes=parenthesize-breakable(綴りなし。和音内\\parenthesize+flip頭)"
     },
     "parenthesize-horizontal-spacing-cosy.ly": {
       "category": "scheme",
@@ -5694,7 +5717,8 @@
     },
     "parenthesize-horizontal-spacing-tight.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・parenthesize族)。親notes=parenthesize-breakable(綴りなし。括弧のspacing予約)"
     },
     "parenthesize-laissezvibrer.ly": {
       "category": "scheme",
@@ -5706,7 +5730,8 @@
     },
     "parenthesize-notes-accidentals.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・parenthesize族)。親notes=parenthesize-breakable(綴りなし。臨時+付点を含む括弧の縦中心)"
     },
     "parenthesize-singlenotes-chords-rests.ly": {
       "category": "scheme",
@@ -5714,7 +5739,8 @@
     },
     "parenthesize-spanners.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "notes": "skip(第112第9便・parenthesize族)。親notes=parenthesize-breakable(綴りなし。spanner両端の括弧)"
     },
     "parenthesize-time-based.ly": {
       "category": "override",
