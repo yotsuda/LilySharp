@@ -6848,7 +6848,9 @@
     },
     "script-skip.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Scripts on skips are supported",
+      "notes": "skip(第113第7便・probe付き)。本の枠が書けない: \\after music function綴りなし+\\new Dynamicsコンテキスト対応物なし+PianoStaff scoreと{s^>^^}の**多score頁組み**。**部分表面probe済=主張の核はLSで成立**: s4@accent@marcatoで2つのscriptがskipの列に描画・stack(scratch\\lpreg\\scriptskip-probe.lys)。\\afterか多score頁が入れば再訪"
     },
     "script-stack-horizontal.ly": {
       "category": "scheme",

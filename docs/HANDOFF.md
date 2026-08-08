@@ -63,7 +63,19 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第3便 **repeat-volta-initial-grace.ly = open**・`4eec7fd4`・
 第4便 fixed **第42号 = rest-avoid-note.ly**・`5f92858b`・
 第5便 **rest-collision-note-duration.ly = exact**・`1557f9b1`・
-第6便 **5 冊バッチ skip 5**・この handoff と同 commit）。
+第6便 **5 冊バッチ skip 5**・`fbdafa71`・第7便 **script-skip = skip（probe 付き）**・
+この handoff と同 commit）。
+
+★ **第7便 script-skip = skip（probe 付き・コード変更 0）**: 本の枠が書けない
+（\after music function 綴りなし + \new Dynamics コンテキスト対応物なし + 多 score 頁組み）。
+**部分表面 probe 済＝主張の核は LS で成立**: `s4@accent@marcato` で 2 つの script が
+skip の列に描画・stack（scratch\lpreg\scriptskip-probe.lys）。
+⚠️ **次の 2 冊（script-stack-order1・script-tie-collision）は第107 blockB 起票の本命修理**
+（ArticulationEngraver の箱 stack 撤去 → script-column support 連鎖・fermata 族は既存 0.46
+pass が仕上げ）＝**focused session で着手すること**。下見 probe =
+scratch\lpreg\fermata-dot-b-probe.ly（第107 第2便で root 釘付け済・§1 第107 の記録参照）。
+stack-order1 は 8 種の script 積み順の統合本＝修理の直接 e2e・tie-collision は
+script-vs-tie の skyline 参加（多重 script の snapshot が動く見込み＝要素 census 前提）。
 
 ★ **第6便 = 5 冊バッチ（skip 5・コード変更 0）**:
 - **rest-pitched-beam = skip**（pitched rest `a\rest` の綴りなし＝主張の核「pitched rest は
@@ -162,10 +174,10 @@ pos −7 の譜外 half-space・g2 が切れた 4 つ目だけ既定 −4 へ復
   無警告 drop（EmitChord のコメントに明記・起票）。
 - 観測者 +1（RepeatTieChordTests: fan 数 5・強制/既定向き・X 式 LP 逆算ピン）・snapshot 0 枚。
 
-plain 322 / 処理済 **245**（fixed **42**・exact **30**・skip **157**・open **16**・
-pending 77。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **246**（fixed **42**・exact **30**・skip **158**・open **16**・
+pending 76。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る。
-次 = script-skip）。
+次 = script-stack-order1 = **第107 blockB 修理の本命・focused session で**）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
