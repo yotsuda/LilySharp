@@ -7214,9 +7214,9 @@
     },
     "slur-shift-region.ly": {
       "category": "plain",
-      "state": "open",
+      "state": "fixed",
       "claim": "slur の shift region は extra encompass 要素(tuplet 番号)を収めるため自動で高くなる",
-      "notes": "open 第118第2便=下見+台帳対の起票。乖離は独立に2つ: ⑴bracket 傾き規則—LP は graphical_dy を bound 列 extent∪(staff ink 2.05+staff-padding 0.25) で取るので五線内 tuplet はほぼ水平 (positions (3.6 . 3.4))・LS は音勾配 ±2.0 そのまま (左端 -5.60)。台帳対 staff.staff.tuplet-bracket-sloped-{desc,asc} を起票済 (LP 7.177717/7.223978・LS 8.730 九桁恒等・予測全的中・LP 恒等は +0.046261 で反証=port の検算器)。⑵slur が TupletNumber を extra encompass ('inside) に入れていない=additional_ys 不発火で LS slur end -1.69 vs LP -3.695 (11 step 登り。LP start -4.045/end -3.695・slur-engraver.cc:80 が tuplet_number を acknowledge・get_extra_encompass_infos :850-884 非slur枝)。⑴を port してから⑵ (番号の箱が⑴に依存)。双子残置 scratch\\lpreg\\slurshift{,-noslur}.{ly,lys,svg}"
+      "notes": "fixed 第48号(第118第2-5便)。乖離は独立に2つで両方 port: ⑴bracket 傾き=calc_position_and_height no-beam 枝 (graphical_dy は bound 列 extent∪(staff ink 2.05+staff-padding 0.25)・符号ゲート・damping 0.5*last_x・offset pass=列 refpoint-x0 の点+staff 端@x0/x1+padding 1.1・flat quantize)。台帳対 staff.staff.tuplet-bracket-sloped-{desc,asc} が両側 +0.000021102 に閉じ LP 非対称 0.046261 を完全再現。⑵TupletNumber を slur extras へ ('inside・penalty=extra-object-collision・番号箱=bracket midpoint±TextFontMetrics ink・LayoutSlurs が TupletBracketEngraver.Calculate を同じ産地として再呼出)=additional_ys が発火し右端 11 step 登る。照合=slurshift 双子: slur -4.045/-3.695・C1 -5.407/C2 -5.186・span 9.39・bracket 3.6/3.4・番号 3.5 全部 LP exact。観測者 SlurShiftRegion_ClimbsOverTheTupletNumber。双子残置 scratch\\lpreg\\slurshift{,-noslur}.{ly,lys,svg}"
     },
     "slur-stroke-fingering-inside.ly": {
       "category": "scheme",

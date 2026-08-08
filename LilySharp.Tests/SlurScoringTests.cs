@@ -301,4 +301,29 @@ public class SlurScoringTests
         Assert.Equal(-0.545, c[1] - middle, 0.011);  // start (LP -0.5450)
         Assert.Equal(-4.045, c[7] - middle, 0.011);  // end (LP -4.0450)
     }
+
+    [Fact]
+    public void SlurShiftRegion_ClimbsOverTheTupletNumber()
+    {
+        // slur-shift-region.ly: "A slur's shift region is automatically made
+        // higher to accommodate extra encompass elements." The tuplet NUMBER
+        // (not the bracket) is an 'inside extra-encompass object; additional_ys
+        // extends the attachment range so the grid can climb over it — the
+        // right end climbs 11 grid steps, far past EndYFor's unextended bound
+        // (Y-up ≈1.5, device -1.545). Pinned against the LP twin
+        // (scratch/lpreg/slurshift.{ly,lys}); needs BOTH session-118 ports: the
+        // bracket's staff-edge-united positions (the number's box hangs off the
+        // bracket midpoint) and the number joining the slur's extra set.
+        // LILYPOND-REF: lily/slur-scoring.cc:290-326 additional_ys.
+        // LILYPOND-REF: lily/slur-engraver.cc:80 acknowledge_extra_object —
+        //   ADD_ACKNOWLEDGER_FOR (acknowledge_extra_object, tuplet_number).
+        string svg = Render("octave absolute\n\nc'2( tuplet 3/2 { g4 e c) } |\n");
+        double middle = MiddleLineY(svg);
+        var c = BowCurve(svg);
+
+        Assert.Equal(-4.045, c[1] - middle, 0.011);  // start (LP -4.0450)
+        Assert.Equal(-3.695, c[7] - middle, 0.011);  // end (LP -3.6950)
+        Assert.Equal(-5.407, c[3] - middle, 0.015);  // C1 (LP -5.4072)
+        Assert.Equal(-5.186, c[5] - middle, 0.015);  // C2 (LP -5.1857)
+    }
 }

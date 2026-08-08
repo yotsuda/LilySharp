@@ -2409,7 +2409,9 @@ internal sealed class ElementCoordinator
     /// </remarks>
     private static IReadOnlyList<SlurExtraObject> BuildSlurExtraObjects(
         Voice voice, SystemLayout segSystem, SlurItem slur,
-        double staffMiddleDown, double segStartX, double segEndX)
+        double staffMiddleDown, double segStartX, double segEndX,
+        ImmutableArray<TupletBracketLayout> tupletNumbers = default,
+        ImmutableArray<TupletBracketItem> tupletItems = default)
     {
         // thickness_ = Slur.thickness (1.2, define-grobs.scm) * the layout
         // line-thickness dimension (0.1 ss at default staff size) = 0.12 ss.
@@ -2491,6 +2493,58 @@ internal sealed class ElementCoordinator
             }
         }
 
+        // Tuplet NUMBERS the slur's span covers — LP's engraver acknowledges the
+        // number while the slur is open; the box is the number's ink (centred on
+        // the bracket midpoint, the same TextFontMetrics read the staff skyline
+        // makes) plus the standard thickness widens. 'inside with the default
+        // extra-object penalty — the additional_ys extension is what lets the
+        // grid climb over it (slur-shift-region.ly's claim).
+        // LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos —
+        //   the non-slur branch; no dots-0.2, ye.widen(th*0.5), xe.widen(th*1.0).
+        if (!tupletNumbers.IsDefaultOrEmpty)
+        {
+            foreach (var t in tupletNumbers)
+            {
+                if (string.IsNullOrEmpty(t.NumberText))
+                    continue;
+                // Time overlap with the slur (item-level at the boundary measures
+                // when the source item is known; measure-level otherwise).
+                int tStart = 0, tEnd = int.MaxValue;
+                if (!tupletItems.IsDefaultOrEmpty
+                    && t.SourceIndex >= 0 && t.SourceIndex < tupletItems.Length)
+                {
+                    tStart = tupletItems[t.SourceIndex].StartNoteIndex;
+                    tEnd = tupletItems[t.SourceIndex].EndNoteIndex;
+                }
+                bool startsAfterSlur = t.MeasureIndex > slur.EndMeasureIndex
+                    || (t.MeasureIndex == slur.EndMeasureIndex && tStart > slur.EndItemIndex);
+                bool endsBeforeSlur = t.MeasureIndex < slur.StartMeasureIndex
+                    || (t.MeasureIndex == slur.StartMeasureIndex && tEnd < slur.StartItemIndex);
+                if (startsAfterSlur || endsBeforeSlur)
+                    continue;
+                // This SEGMENT only (a broken slur's other segment keeps its own).
+                if (t.NumberX < segStartX - eps || t.NumberX > segEndX + eps)
+                    continue;
+
+                double halfW = Rendering.TextFontMetrics.Advance(
+                    t.NumberText, TupletBracketEngraver.NumberFontSize,
+                    sans: false, TupletBracketEngraver.NumberFontStyle) / 2.0;
+                double halfH = Rendering.TextFontMetrics.InkHeight(
+                    t.NumberText, TupletBracketEngraver.NumberFontSize,
+                    sans: false, TupletBracketEngraver.NumberFontStyle) / 2.0;
+                // NumberYUp is staff-spaces above this staff's TOP line (the
+                // layout ran with no staff offset); page device Y down.
+                double cy = staffMiddleDown - 2.0 - t.NumberYUp;
+                extras.Add(new SlurExtraObject(
+                    t.NumberX - halfW - slurThickness,
+                    t.NumberX + halfW + slurThickness,
+                    cy - halfH - slurThickness * 0.5,
+                    cy + halfH + slurThickness * 0.5,
+                    SlurAvoidType.Inside,
+                    SlurScoreParameters.Default.ExtraObjectCollisionPenalty));
+            }
+        }
+
         return extras;
     }
 
@@ -2552,6 +2606,38 @@ internal sealed class ElementCoordinator
                     // returned the FIRST matching layout — last-wins flipped one
                     // multi-voice snapshot (test/dot-cross-voice-spacing).
                     beamByMember.TryAdd((m.ResolveMeasureIndex(bl.Group.MeasureIndex), m.ItemIndex), bl);
+        }
+
+        // Tuplet-NUMBER boxes, once per pass: LilyPond's slur engraver acknowledges
+        // the TupletNumber (NOT the bracket) into encompass-objects, where it is an
+        // 'inside extra-encompass object — additional_ys then raises the attachment
+        // range over it ("a slur's shift region is automatically made higher",
+        // slur-shift-region.ly). The geometry is rebuilt from the same producer the
+        // renderer draws from (TupletBracketEngraver.Calculate), the slurgrace
+        // precedent. ⚠️ Scale 1 and no per-voice force (the same simplifications
+        // the other extras disclose); the bracket itself casts no box, as in LP.
+        // LILYPOND-REF: lily/slur-engraver.cc:80 acknowledge_extra_object —
+        //   ADD_ACKNOWLEDGER_FOR (acknowledge_extra_object, tuplet_number).
+        // LILYPOND-REF: scm/define-grobs.scm TupletNumber (avoid-slur . inside).
+        ImmutableArray<TupletBracketLayout> tupletNumberLayouts = default;
+        if (!score.TupletBrackets.IsDefaultOrEmpty && systems.Length > 0
+            && !score.Voices.IsDefaultOrEmpty)
+        {
+            int maxMi = 0;
+            foreach (var sys in systems)
+                foreach (var m in sys.Measures)
+                    maxMi = Math.Max(maxMi, m.MeasureIndex);
+            var mlArr = new MeasureLayout[maxMi + 1];
+            foreach (var sys in systems)
+                foreach (var m in sys.Measures)
+                    if (m.MeasureIndex <= maxMi)
+                        mlArr[m.MeasureIndex] = m;
+            var beamGroups = beamLayouts.IsDefaultOrEmpty
+                ? ImmutableArray<BeamGroup>.Empty
+                : beamLayouts.Select(bl => bl.Group).ToImmutableArray();
+            tupletNumberLayouts = TupletBracketEngraver.Calculate(
+                score.TupletBrackets, mlArr.ToImmutableArray(),
+                score.Voices[0].Measures, beamGroups, beamLayouts);
         }
 
         // The slur end attaches to the note-head EDGE, then lifts 0.5 staff-space
@@ -2740,7 +2826,8 @@ internal sealed class ElementCoordinator
                     graceByMeasure, graceGeomCache);
 
                 var extraObjects = BuildSlurExtraObjects(
-                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX);
+                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
+                    tupletNumberLayouts, score.TupletBrackets);
 
                 // A slur avoids only other slurs whose SPAN OVERLAPS IT IN TIME. LilyPond
                 // populates a slur's encompass-objects at ENGRAVE time: an acknowledged slur

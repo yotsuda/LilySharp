@@ -65,7 +65,31 @@ fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分
 第3便 **offset pass の束縛 x を六桁分解（起票時の誤読 1 つ訂正）+ ⑵の呼び順確認**・
 `36a76259`・第4便 **port ⑴ 完了 = calc_position_and_height no-beam 枝 →
 CalculateSlope・台帳対が両側 +0.000021102 に閉じた・snapshot 8 枚 census 済**・
-この handoff と同 commit）。
+`cf0bd442`・第5便 **port ⑵ 完了 = TupletNumber → slur extras・slurshift 全点
+LP exact = fixed 第48号**・この handoff と同 commit）。
+
+★★★ **第5便: port ⑵ = 設計⒝（産地の再読）で完了**——LayoutSlurs の pass 頭で
+TupletBracketEngraver.Calculate を**同じ産地として再呼出**（staff-scoped な
+score.TupletBrackets・systems から global-index の MeasureLayout 配列・
+beamLayouts から beamGroups 再構成・staffYAt 無し=staff-top 相対）し、
+BuildSlurExtraObjects が**番号の ink 箱**（bracket midpoint 中心・
+TextFontMetrics.Advance/InkHeight——staff skyline と同じ読み・thickness widen
+X±0.12/Y±0.06・'inside・penalty = extra-object-collision）を slur の時間範囲
+（境界小節は item 単位・segment X gate 付き）で extras に足す。**bracket は
+LP どおり箱を出さない**。
+- **照合（slurshift 双子・第2便の残置材）= 全点 LP exact**: slur start **−4.045** /
+  end **−3.695**（11 step 登り＝additional_ys の発火）・C1 −5.41（LP −5.4072）・
+  C2 −5.19（−5.1857）・span 9.39（9.387）・bracket −3.60/−3.40・番号中心 −3.50。
+- **snapshot churn 0 枚**（既存 snapshot に「tuplet 番号を跨ぐ slur」の本が無い）・
+  観測者 +1 = SlurShiftRegion_ClimbsOverTheTupletNumber（LP 4 点ピン）。
+- ⚠️ 引用ラチェットの新罠 1 つ: **単一行番号 `:80` 直後の全大文字マクロ
+  （ADD_ACKNOWLEDGER_FOR）は「symbol 無し」と判定される**——小文字 symbol
+  （acknowledge_extra_object）を同じ行に置いて解決。
+- **札 2（開示のみ）**: ⑴ 番号箱は scale 1（ossia の縮尺番号は skyline 側と違い
+  未縮尺＝他 extras と同じ既存簡略の再掲） ⑵ LayoutSlurs の再呼出は
+  voicesByStaff/measuresByStaff/forceStemUp を渡さない＝多声 staff の voice-2
+  tuplet 番号を slur が跨ぐ本では描画側とずれ得る（コーパス未踏・注釈 phase の
+  呼び出しと引数が違うことも含めて開示）。
 
 ★★★ **第4便: bracket 傾き port 完了**——**台帳対が両側 +0.000021102 に閉じた**
 （TBSD 7.177738・TBSA 7.223999・**差 0.046261351 = LP 非対称の完全再現**・残差は
@@ -170,20 +194,18 @@ slur-scoring.cc:188-203 `s.unite (flag->extent)`——第117第2便 port (:738-7
   pending のまま = HANDOFF の数 260 と実数 257 が乖離）→ 4 冊まとめて同期
   （claim/notes 付き）。**corpus の数は status.json に訊いてから書く**。
 
-plain 322 / 処理済 **262**（fixed **47**・exact **34**・skip **164**・open **17**・
-pending **60**。status.json 同期後の実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **slur-shift-region の port ⑵**（⑴は第4便で完了。設計判断＝第3便の
-⒜ hoist / ⒝ 産地再構築から。番号箱 = bracket midpoint ± 半 ink 0.627717・
-'inside・penalty = extra-object-collision。照合 = slurshift 双子で slur start
-−4.045 / end −3.695・11 step 登り）→ 閉じたら fixed 第48号 →
-slur-vertical-skylines。
+plain 322 / 処理済 **262**（fixed **48**・exact **34**・skip **164**・open **16**・
+pending **60**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **slur-vertical-skylines**（^"rit"+trill span+\f = outside-staff 対
+slur——第117 から棚上げの次番）。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚——文法が入ったら
 **slur-flag の追試を最初に**（stem-attach X が flag 込みになったので当時の skip
 測定より一段深く効く）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4215 passed / 0 failed / 4 skipped**（第1便観測者+2・第2便台帳+2 込み・
-全スイート確認済）・snapshot 第118 は **0 枚**・Core (Debug) 0 warning・
+テスト **4216 passed / 0 failed / 4 skipped**（第1便観測者+2・第2便台帳+2・
+第5便観測者+1 込み・全スイート確認済）・snapshot 第118 は **8 枚**（第4便の
+bracket 平坦化・census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 probe 残置: **scratch\lpreg\slurrest-fig4.lys（fig4 単独・観測者の下見材）・
 slurshift{,-noslur}.{ly,lys,svg}（第2便の双子・port ⑵の照合材）**＋
