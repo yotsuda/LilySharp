@@ -63,7 +63,24 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 `69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・
 `2401380a`・第6〜8便 **26 冊バッチ**・`a380a63a`・第9便 **23 冊バッチ**・`d25b83a3`・
 第10便 **16 冊バッチ**・`433aa050`・第11便 **13 冊バッチ**・`9b705f14`・
-第12便 **自己監査＝挙動変更 0・開示 5 札**・この handoff と同 commit）。
+第12便 **自己監査＝挙動変更 0・開示 5 札**・`3d9ff953`・第13便 **perf A/B round 9 =
+劣化なし・対照 hash 一致**・この handoff と同 commit）。
+
+★★ **第13便 perf A/B round 9（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
+- **機材**: scratch\lpreg\perf-ab9.ps1・base = 502660d2 worktree（撤去済）・Release・
+  交互×両順・中央値 of 5・999 小節 2 冊（**lyrmel1k** = hyphen + __ ~ extender 毎小節 =
+  AppendDashes・collector marker 書換・melisma edges・HeldEndInkRight の systems 走査 =
+  今セッションの熱側全部。設計変更ありなので hash 無し／**lyrplain1k** = plain 中央揃え歌詞 =
+  edges タプル化 + span 予約書換の既定コスト側・**hash 必須**）。
+- **結果**: 熱側 **−10.5%/−19.6%（両順で curr が速い）**——旧 MaxDashLength 3.0 モデルは
+  gap ごとに 3〜4 本 dash を刷っていたのが period 10 で 1 本になった分 + 行頭 stub kill。
+  対照 −0.6%/+4.0% = 順序で符号反転 = 純 drift（バッチ振れ 6.6〜16.9s の荒い機械）。
+  **対照の SVG hash は base/curr 完全一致** = edges 化と span 予約書換は plain 歌詞で
+  バイト同一（挙動不変の証明 + 仕事同一の計測）。
+- **呼び出し構造**: pass/walk 数不変・新規 O(n²) 無し。HeldEndInkRight は extender ごとに
+  全 measure 走査（999×999 でも熱側が速くなった床の下・既存 MelismaEndInkRight と同形）。
+  collector の with-copy は marker ごと 1 obj（collect 時のみ）。プレビュー増分経路
+  （IncrementalCompiler）は今セッション非接触＝増分再コンパイルの構造不変。
 
 ★★ **第12便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
 挙動変更 0・開示 5 札・新規チューニング定数ゼロ検算済**:
