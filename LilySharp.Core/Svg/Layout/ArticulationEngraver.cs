@@ -202,9 +202,10 @@ internal static class ArticulationEngraver
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, Staff>? staffByIndex = null,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        ImmutableArray<TieLayout> tieLayouts = default)
         => CalculateWithFingerings(score, articulations, measureLayouts, measuresByStaff,
-            staffYAt, staffByIndex, beamLayouts, default, out _);
+            staffYAt, staffByIndex, beamLayouts, tieLayouts, default, out _);
 
     // The Fingering grob's own side-position padding (its vertical float off whatever
     // supports it in the column) — the Script table does not carry it because Fingering
@@ -242,6 +243,7 @@ internal static class ArticulationEngraver
         Func<int, int, double>? staffYAt,
         Dictionary<int, Staff>? staffByIndex,
         ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableArray<TieLayout> tieLayouts,
         ImmutableArray<FingeringLayout> fingerings,
         out ImmutableArray<FingeringLayout> adjustedFingerings)
     {
@@ -250,6 +252,41 @@ internal static class ArticulationEngraver
             return ImmutableArray<ArticulationLayout>.Empty;
 
         int[] order = OrderByScriptPriority(articulations);
+
+        // The drawn ties whose START or END moment a script sits on: each becomes a
+        // side-position SUPPORT of that moment's scripts, which is the whole of
+        // LilyPond's "scripts avoid ties" — the accent on a tied note rides up over
+        // the bow's shoulder. Keyed by the script's own note; a chord's per-member
+        // ties all land on the one item and all support all of its scripts, exactly
+        // as every one of them is acknowledged in LilyPond. A tie broken at a system
+        // break supports through the piece that KEEPS the relevant bound (the start
+        // moment reads the un-broken-left piece, the end moment the un-broken-right
+        // one — break substitution hands LilyPond the same piece).
+        // LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie /
+        //   acknowledge_end_tie — Side_position_interface::add_support (script, tie)
+        //   at the tie's start and end timesteps respectively.
+        Dictionary<(int Staff, int Voice, int Measure, int Item), List<TieLayout>>?
+            tiesAtBound = null;
+        if (!tieLayouts.IsDefaultOrEmpty)
+        {
+            foreach (var t in tieLayouts)
+            {
+                int tieStaff = Math.Max(t.StaffIndex, 0);
+                if (!t.IsBrokenLeft)
+                    AddTieBound((tieStaff, t.Tie.VoiceIndex,
+                        t.Tie.StartMeasureIndex, t.Tie.StartItemIndex), t);
+                if (!t.IsBrokenRight)
+                    AddTieBound((tieStaff, t.Tie.VoiceIndex,
+                        t.Tie.EndMeasureIndex, t.Tie.EndItemIndex), t);
+            }
+            void AddTieBound((int, int, int, int) key, TieLayout t)
+            {
+                tiesAtBound ??= new Dictionary<(int, int, int, int), List<TieLayout>>();
+                if (!tiesAtBound.TryGetValue(key, out var list))
+                    tiesAtBound[key] = list = new List<TieLayout>();
+                list.Add(t);
+            }
+        }
 
         // WHICH entry of the list a measure index names. The annotation pass hands the whole
         // score's layouts, where the two coincide; the per-staff skyline pass hands ONE
@@ -750,6 +787,42 @@ internal static class ArticulationEngraver
                 OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt.Type)
             );
 
+            // A tie starting or ending on this note supports this script: pointwise
+            // distance over the bow's outline, the script's own horizon-padding spent
+            // in the distance call and its own padding on top — the same aligned_side
+            // reading the chain below makes, folded into the note answer BEFORE the
+            // chain so the scripts stacked above ride up with it. The push is a push,
+            // not a re-quantize (the chain's rule). Only the bow on the script's own
+            // side can bind: the far-side bow hugs the head's other edge and tops out
+            // below the head, so its skyline never reaches the script — LilyPond gets
+            // the same no-op out of the full stencil skyline's distance.
+            // LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie /
+            //   acknowledge_end_tie; lily/side-position-interface.cc:354-378
+            //   aligned_side — Tie declares vertical-skylines from its stencil
+            //   (scm/define-grobs.scm Tie), so the support profile IS the drawn bow.
+            if (tiesAtBound != null && TakesTieSupport(effArt)
+                && tiesAtBound.TryGetValue((effArt.StaffIndex, effArt.VoiceIndex,
+                    effArt.MeasureIndex, effArt.ItemIndex), out var boundTies))
+            {
+                var (tieMyUp, tieMyDown) = ScriptSkylines(layout, yUp);
+                double closestTie = double.NegativeInfinity;
+                foreach (var t in boundTies)
+                {
+                    if (t.CurveUp != effArt.IsAbove)
+                        continue;
+                    var bowSky = TieSupportSkyline(t, staffOffset, effArt.IsAbove);
+                    closestTie = Math.Max(closestTie, effArt.IsAbove
+                        ? tieMyDown.Distance(bowSky, ScriptHorizonPadding)
+                        : tieMyUp.Distance(bowSky, ScriptHorizonPadding));
+                }
+                double tieMove = Math.Max(0.0, closestTie + PaddingFor(effArt.Type));
+                if (tieMove > 0)
+                {
+                    yUp += effArt.IsAbove ? tieMove : -tieMove;
+                    layout = layout with { YUp = yUp };
+                }
+            }
+
             // Stack multiple scripts on one note & side by the support chain, not by
             // box arithmetic: the next script sits at pointwise distance + its OWN
             // padding over the placed profiles, maxed with its own note answer (one
@@ -862,6 +935,54 @@ internal static class ArticulationEngraver
             FontSizeStep: -5.0,
             Ink: ink,
             StaffIndex: Math.Max(fg.StaffIndex, 0));
+    }
+
+    /// <summary>
+    /// Which marks take a tie as side-position support — the ones Script_engraver
+    /// makes, because it is the ONLY engraver with a tie acknowledger. A chord
+    /// MEMBER's script is New_fingering_engraver's (supports: head, stem/flag, chord
+    /// heads — no ties), an editorial accidental is Accidental_engraver's
+    /// AccidentalSuggestion, and pluck/fret-frame are markup-family marks with no LP
+    /// Script grob at all.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie /
+    ///   acknowledge_end_tie; lily/new-fingering-engraver.cc:144-157 add_script.
+    /// Measured (scratch/lpreg/sctten.ly + sctten2.ly): a member tenuto on EITHER
+    /// head of a tied chord stays at the island answer (−4.83) at both tie bounds —
+    /// its own head's tie included — while the chord-level tenuto on the same music
+    /// lifts to −5.35. The split is per-engraver, not per-tie-direction.
+    /// </remarks>
+    private static bool TakesTieSupport(in ArticulationItem a) =>
+        !a.IsChordMember
+        && !a.IsEditorialAccidental
+        && a.Type is not (ArticulationType.Pluck or ArticulationType.FretFrame);
+
+    /// <summary>
+    /// One tie's drawn bow as a side-position support profile, in the script frame
+    /// (staff-spaces about this staff's middle line, up-positive). The tie scorer hands
+    /// its Y system-relative with the staff offset baked in (BowLayout's frame,
+    /// <c>yUp = −yDevice</c>), so the door conversion is that offset plus the middle
+    /// line — the inverse of the "no staff offset" the script's own YUp carries. The
+    /// outline model is <see cref="SkylineBuilder.MergeBowOuterEdge"/>, the SAME core the
+    /// staff skyline's bow reservation flattens (SkylineBuilder.SeedBowInk) — the support
+    /// a script clears and the band the staff reserves come from one sandwich, not two.
+    /// </summary>
+    private static VerticalSkyline TieSupportSkyline(
+        TieLayout t, double staffOffset, bool above)
+    {
+        var direction = above ? VerticalDirection.Up : VerticalDirection.Down;
+        var sky = new VerticalSkyline(direction);
+        double dy = staffOffset + StaffMiddle;
+        SkylineBuilder.MergeBowOuterEdge(
+            sky, direction,
+            t.StartX, t.StartYUp + dy,
+            (t.Control1.X, t.Control1.Y + dy),
+            (t.Control2.X, t.Control2.Y + dy),
+            t.EndX, t.EndYUp + dy,
+            0.5 * EngravingDefaults.SlurMidThickness,
+            0.5 * EngravingDefaults.BowEndRounding);
+        return sky;
     }
 
     /// <summary>

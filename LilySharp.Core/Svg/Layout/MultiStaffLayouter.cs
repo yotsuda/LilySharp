@@ -2156,15 +2156,18 @@ internal sealed class MultiStaffLayouter
                     ? ImmutableArray<DynamicItem>.Empty
                     : score.Dynamics.Where(d => d.StaffIndex == thisStaff).ToImmutableArray();
                 var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts, systemIndex);
+                // Ties before scripts: a script on a tie's bound note clears the bow
+                // (its tie SUPPORT — see StaffArticulationLayouts), so the band the
+                // skyline reserves for it has to be the raised one the drawn pass draws.
+                var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
                 // The staff's own Scripts — a fermata reaching UP into the gap above it, a
                 // marcato hanging DOWN into the gap below. See StaffArticulationLayouts for
                 // why a Script belongs in this silhouette at all.
                 var articulations = StaffArticulationLayouts(
-                    score, staff, thisStaff, measureLayouts, beams);
+                    score, staff, thisStaff, measureLayouts, beams, ties);
                 var tupletBrackets = StaffTupletBracketLayouts(
                     score, staff, thisStaff, measureLayouts, beams);
                 var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
-                var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
                 spanners.Add(new StaffInsideSpanners(slurs, ties, tupletBrackets));
                 // ⚠️ CurrentIndent is where this system's clef is, and it is the same value
                 // LayoutEngine hands BuildSystemSkylines as its systemLeft. The two
@@ -2448,7 +2451,8 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     private ImmutableArray<ArticulationLayout> StaffArticulationLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
-        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableArray<TieLayout> tieLayouts)
     {
         if (score.Articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
@@ -2473,6 +2477,12 @@ internal sealed class MultiStaffLayouter
                 b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
                 b.MemberXPositions, staffIndex, b.SystemIndex,
                 b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
+        // Restamped with this staff's index for the same reason the beams are:
+        // StaffTieLayouts builds them on a trivial one-staff system (index 0), and
+        // the engraver keys its tie supports by the script's staff.
+        var staffTies = tieLayouts.IsDefaultOrEmpty
+            ? tieLayouts
+            : tieLayouts.Select(t => t with { StaffIndex = staffIndex }).ToImmutableArray();
 
         var staffScore = new Score(
             staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
@@ -2483,7 +2493,8 @@ internal sealed class MultiStaffLayouter
                 { [staffIndex] = staff.PrimaryVoice.Measures },
             staffYAt: null,
             staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
-            beamLayouts: staffBeams);
+            beamLayouts: staffBeams,
+            tieLayouts: staffTies);
     }
 
     /// <summary>

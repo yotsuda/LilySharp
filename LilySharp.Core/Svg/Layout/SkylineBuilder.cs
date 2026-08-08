@@ -1164,7 +1164,6 @@ internal sealed class SkylineBuilder
         c1.Y = size.Span(c1.Y) + staffTopUp;
         c2.Y = size.Span(c2.Y) + staffTopUp;
 
-        const int samples = 16;
         // The bow's own ink, which is font-sized like any other: a small staff's slur is
         // drawn with a thinner pen.
         double halfCurve = size.Span(0.5 * EngravingDefaults.SlurMidThickness);
@@ -1172,9 +1171,28 @@ internal sealed class SkylineBuilder
 
         // Up bow if the controls sit above the chord midline (Y-up), else down.
         bool curveUp = (c1.Y + c2.Y) >= (p0y + p3y);
-        double dir = curveUp ? 1.0 : -1.0;
         var sky = curveUp ? upSkyline : downSkyline;
         var direction = curveUp ? VerticalDirection.Up : VerticalDirection.Down;
+        MergeBowOuterEdge(sky, direction, p0x, p0y, c1, c2, p3x, p3y, halfCurve, halfPen);
+    }
+
+    /// <summary>
+    /// The sampling core of <see cref="SeedBowInk"/>: one bow's OUTER edge (centreline
+    /// controls pushed out by <paramref name="halfCurve"/>, plus the
+    /// <paramref name="halfPen"/> stroke), flattened into slope segments and merged into
+    /// <paramref name="sky"/>. The four points arrive ALREADY in the target skyline's own
+    /// Y-up frame — the callers each own their one conversion at their door (SeedBowInk's
+    /// staff-top/size door; ArticulationEngraver's staff-middle door for the tie a script
+    /// must clear). Split out so the drawn bow's reservation and the script's tie support
+    /// read ONE outline model, not two spellings of the sandwich.
+    /// </summary>
+    internal static void MergeBowOuterEdge(
+        VerticalSkyline sky, VerticalDirection direction,
+        double p0x, double p0y, (double X, double Y) c1, (double X, double Y) c2,
+        double p3x, double p3y, double halfCurve, double halfPen)
+    {
+        const int samples = 16;
+        double dir = direction == VerticalDirection.Up ? 1.0 : -1.0;
 
         // Shift the interior control points onto the outer edge. Only the Y component of the
         // chord normal matters to this vertical skyline: |perp_Y| of a unit normal is

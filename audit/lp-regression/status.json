@@ -6876,7 +6876,9 @@
     },
     "script-tie-collision.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Scripts avoid ties",
+      "notes": "fixed 第44号(第115). 修理: tie を script の side-position support に配線 (script-engraver.cc:204-222 acknowledge_tie/acknowledge_end_tie の port = ArticulationEngraver.tiesAtBound。開始/終端両moment・SkylineBuilder.MergeBowOuterEdge 共有の bow 輪郭 vs script skyline の pointwise + padding)。第2の欠陥: 和音メンバ script は New_fingering_engraver 製で tie acknowledger を持たない=tie 支持ゼロ (micro-probe sctten/sctten2: <g-- c>~ のメンバ tenuto はどちらの頭に付けても両bound -4.83 のまま・chord-level は -5.35 へ lift) → IsChordMember gate。LP照合 (sctchord probe・両側1system): 10/10 桁一致 — plain 開始5.43/終端5.76/無タイ5.17・和音1 5.35/5.71/6.40・和音2 メンバ4.83+chord5.76・和音3 4.83/5.79/portato7.31。双子 scripttie の直接比較点も全一致 (残差<=0.02=タイ幾何regime)。改行差の点 (LSはb9後で折る) は broken piece 幾何どおり。下見の謎2点(bar1-2 -5.51/最終小節-5.87)は計器のX束ね穴 (2 system が同じx帯) で、実体は和音 stack だった。twin=scratch\\lpreg\\scripttie.{ly,lys}・probe=sctchord/sctten/sctten2"
     },
     "section-label-style.ly": {
       "category": "scheme",

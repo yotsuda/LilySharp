@@ -296,6 +296,7 @@ internal sealed class LayoutEngine
             // beam itself.
             BeamGroups = _elementCoordinator.DetectBeamGroups(primaryScore),
             BeamLayouts = allBeamLayouts.ToImmutableArray(),
+            TieLayouts = allTieLayouts.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
             StaffSkylines = placed.StaffSkylines,
             StaffSpanners = placed.StaffSpanners,
@@ -652,6 +653,7 @@ internal sealed class LayoutEngine
             TrillSpanners = score.TrillSpanners,
             BeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore),
             BeamLayouts = prelimBeams.ToImmutableArray(),
+            TieLayouts = prelimTies.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
             TupletForceStemUp = prelimStaff.IsMultiVoice,
             StaffVoices = prelimStaff.Voices,
@@ -2684,6 +2686,15 @@ internal sealed class LayoutEngine
         public ImmutableArray<TrillSpannerItem>? TrillSpanners { get; init; }
         public ImmutableArray<BeamGroup>? BeamGroups { get; init; }
         public ImmutableArray<BeamLayout>? BeamLayouts { get; init; }
+
+        /// <summary>
+        /// The drawn ties, for the scripts' tie supports ("scripts avoid ties" —
+        /// ArticulationEngraver's tiesAtBound). Supplied by BOTH passes — the
+        /// preliminary pass lays its own ties out just above its context — because a
+        /// table the two passes disagree about is invisible in the drawing and comes
+        /// out as spacing (see <see cref="RestCollisionsOf"/>'s remark).
+        /// </summary>
+        public ImmutableArray<TieLayout> TieLayouts { get; init; }
         public IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? SystemSkylines { get; init; }
 
         /// <summary>
@@ -2975,7 +2986,7 @@ internal sealed class LayoutEngine
         if (score != null)
             articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
                 score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
-                beamLayouts ?? default, fingeringLayouts, out fingeringLayouts);
+                beamLayouts ?? default, ctx.TieLayouts, fingeringLayouts, out fingeringLayouts);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);

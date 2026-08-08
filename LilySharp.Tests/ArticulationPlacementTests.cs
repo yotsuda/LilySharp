@@ -235,4 +235,45 @@ public class ArticulationPlacementTests
         var trill = Assert.Single(MusicGlyphs(svg).Where(g => g.Glyph == ''));
         Assert.Equal(middle - 2.30, trill.Y, 2);
     }
+
+    [Fact]
+    public void Scripts_AvoidTies_ButChordMemberScriptsDoNot()
+    {
+        // script-tie-collision.ly: a script on a tie's START or END note takes the
+        // drawn bow as a side-position support, so the accent on a tied C6 rides up
+        // over the bow's shoulder — start 5.43, end 5.76, against the untied 5.17.
+        // A chord MEMBER's script (<g@tenuto c>) is New_fingering_engraver's — its
+        // supports are the head, stem/flag and chord heads, with NO tie acknowledger
+        // — so it keeps the island answer (4.83) at BOTH tie bounds while the
+        // chord-level script on the same chord lifts (measured
+        // scratch/lpreg/sctten.ly and sctten2.ly: the split holds on either head).
+        // All values pinned against LP on scratch/lpreg/sctchord.{ly,lys}.
+        // LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie
+        // LILYPOND-REF: lily/new-fingering-engraver.cc:144-157 add_script
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 r2. c''4@accent~ | c@accent r2. |" +
+                " r2. <g@tenuto c@accent>4@tenuto~ |" +
+                " <g@tenuto c>4@accent~ <g c@tenuto@portato>4@accent r2 |"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        double middle = MiddleLineY(svg);
+        var glyphs = MusicGlyphs(svg);
+        var accents = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove)
+            .OrderBy(g => g.X).ToList();
+        Assert.Equal(5, accents.Count);
+        Assert.Equal(5.42, middle - accents[0].Y, 2); // tie START lift (LP 5.43)
+        Assert.Equal(5.76, middle - accents[1].Y, 2); // tie END lift (LP 5.76)
+        Assert.Equal(6.39, middle - accents[2].Y, 2); // chord1 member accent — chain over the lifted tenutos (LP 6.40)
+        Assert.Equal(5.76, middle - accents[3].Y, 2); // chord2 CHORD accent — the tie-end answer beats the chain (LP 5.76)
+        Assert.Equal(5.78, middle - accents[4].Y, 2); // chord3 chord accent (LP 5.79)
+        var tenutos = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticTenutoAbove)
+            .OrderBy(g => g.X).ThenBy(g => middle - g.Y).ToList();
+        Assert.Equal(4, tenutos.Count);
+        Assert.Equal(5.35, middle - tenutos[0].Y, 2); // chord1 CHORD tenuto lifts over its own tie (LP 5.35)
+        Assert.Equal(5.71, middle - tenutos[1].Y, 2); // chord1 member tenuto — chain only (LP 5.71)
+        Assert.Equal(4.82, middle - tenutos[2].Y, 2); // chord2 MEMBER tenuto — no tie support (LP 4.83)
+        Assert.Equal(4.82, middle - tenutos[3].Y, 2); // chord3 member tenuto (LP 4.83)
+        var portato = Assert.Single(
+            glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticPortatoBelow));
+        Assert.Equal(7.32, middle - portato.Y, 2);    // chord3 member portato — chain (LP 7.31)
+    }
 }

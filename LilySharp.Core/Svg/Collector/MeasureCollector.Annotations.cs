@@ -341,23 +341,27 @@ public sealed partial class MeasureCollector
     private void CollectArticulations(SyntaxNode node, int measureIndex, int itemIndex, bool stemUp,
         string? editorialAccidental = null, Fraction anchorTiming = default)
     {
+        // A chord's scripts come from the whole-chord post-events AND from each
+        // member (<c@staccato e@accent>), and the two are DIFFERENT GROBS in
+        // LilyPond, not one list: a chord/note-level script is Script_engraver's,
+        // a member script is New_fingering_engraver's (add_script) — they join the
+        // same script column, but only Script_engraver acknowledges ties, which is
+        // why the member flag rides along (see ArticulationItem.IsChordMember).
+        // LILYPOND-REF: lily/script-engraver.cc (listen_articulation);
+        //   lily/new-fingering-engraver.cc:109-110,144-157 add_script.
         var articulations = node switch
         {
-            NoteSyntax note => note.Articulations,
-            // A chord's scripts come from the whole-chord post-events AND from
-            // each member (<c@staccato e@accent>): LP's Script_engraver hears
-            // every member note event's articulations, so member scripts join
-            // the chord's script column like the chord-level ones.
-            // LILYPOND-REF: lily/script-engraver.cc Script_engraver — scripts
-            // are made from events, and chord members each carry their own.
-            ChordSyntax chord => chord.Articulations.Concat(
-                chord.Pitches.SelectMany(p => p.Articulations)),
-            ChordRepetitionSyntax rep => rep.Articulations,
-            RestSyntax rest => rest.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
+            NoteSyntax note => note.Articulations.Select(a => (Node: a, IsMember: false)),
+            ChordSyntax chord => chord.Articulations
+                .Select(a => (Node: a, IsMember: false))
+                .Concat(chord.Pitches.SelectMany(
+                    p => p.Articulations.Select(a => (Node: a, IsMember: true)))),
+            ChordRepetitionSyntax rep => rep.Articulations.Select(a => (Node: a, IsMember: false)),
+            RestSyntax rest => rest.Articulations.Select(a => (Node: a, IsMember: false)),
+            _ => Enumerable.Empty<(SyntaxNode Node, bool IsMember)>()
         };
 
-        foreach (var articulation in articulations)
+        foreach (var (articulation, isChordMember) in articulations)
         {
             if (articulation is ArticulationSyntax articulationSyntax)
             {
@@ -396,7 +400,11 @@ public sealed partial class MeasureCollector
 
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove,
                         articulationSyntax.Position, _currentStaffIndex)
-                    { DirectionForced = directionForced, VoiceIndex = _currentVoiceIndex });
+                    {
+                        DirectionForced = directionForced,
+                        VoiceIndex = _currentVoiceIndex,
+                        IsChordMember = isChordMember,
+                    });
                 }
                 else
                 {
@@ -427,7 +435,7 @@ public sealed partial class MeasureCollector
                             ArticulationItem.EditorialTypeFor(editorialAccidental),
                             measureIndex, itemIndex, isAbove: true,
                             articulationSyntax.Position, _currentStaffIndex)
-                        { VoiceIndex = _currentVoiceIndex });
+                        { VoiceIndex = _currentVoiceIndex, IsChordMember = isChordMember });
                     }
                     else
                     {

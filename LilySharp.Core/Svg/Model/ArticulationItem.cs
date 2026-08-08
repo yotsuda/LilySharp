@@ -87,6 +87,24 @@ public sealed record ArticulationItem
     /// </remarks>
     public int VoiceIndex { get; init; }
 
+    /// <summary>
+    /// True when this script was written on a chord MEMBER (<c>&lt;g@tenuto c&gt;</c>)
+    /// rather than on the chord or note itself. The member/chord split is an
+    /// ENGRAVER split in LilyPond, not a notation nicety: a member script is made by
+    /// New_fingering_engraver, whose supports are the head, stem/flag and chord heads
+    /// only — it has no tie acknowledger — while a note/chord-level script is
+    /// Script_engraver's and takes the ties of its moment as supports.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc:109-110 acknowledge_rhythmic_head
+    ///   (script-event inside a note event → add_script) and :144-157 add_script;
+    ///   lily/script-engraver.cc:204-222 acknowledge_tie / acknowledge_end_tie.
+    /// Measured (scratch/lpreg/sctten.ly, sctten2.ly): a member tenuto on either head
+    /// of a tied chord stays at the island answer (−4.83) at BOTH tie bounds while
+    /// the chord-level tenuto on the same chord lifts over the bow to −5.35.
+    /// </remarks>
+    public bool IsChordMember { get; init; }
+
     /// <summary>Creates an articulation mark of the given type.</summary>
     public ArticulationItem(ArticulationType type, int measureIndex, int itemIndex,
         bool isAbove, int sourcePosition, int staffIndex = 0)
