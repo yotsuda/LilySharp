@@ -58,6 +58,43 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第113セッション第1便（＝fixed **第40号 = repeat-tie-chords.ly**・
+この handoff と同 commit）。
+
+★★★ **第1便 fixed 第40号 = repeat-tie-chords.ly**（\repeatTie は和音の個々の音にも効く・
+起票済「repeatTie 和音 silent drop」の返済＝第34号 lv member fan の鏡映）:
+- **根拠**: Repeat_tie_engraver は Laissez_vibrer_engraver の**派生そのもの**
+  （repeat-tie-engraver.cc:27-33——event class と grob 名だけ差し替え）＝lv と機構完全共有。
+- **修理 5 件**: ⑴ ChordNoteInfo に HasRepeatTie/RepeatTieUp + ItemFactory fan
+  （chord/member/degree/drum 全腕） ⑵ NoteItem.RepeatTieUp 新設（^/_ 強制は note 経路でも
+  落ちていた） ⑶ **TieVariantEngraver.SemiTiesOf 新設＝描画 fan と skyline 箱が同じ列を
+  消費**（§5.2.1② の 1 綴り化。ItemSkylineFactory の手組み switch は撤去） ⑷ **無強制の
+  向き = set_ties_config_standard_directions の字面 port**（tie-formatting-problem.cc:
+  1026-1066: 単独 = sign(position)・0 は neutral=DOWN／複数 = 底 DOWN・頂 UP・隣接 1 位置
+  以内は split）——旧 LILYSHARP-OWN「stem 反対」は撤去（既存 fixture 全部で答え一致＝
+  snapshot 0 枚） ⑸ exporter: member 片タイ書出し + ^/_ 方向保存（`<d-\repeatTie g>` =
+  本の字面を roundtrip・LP で陽性対照済＝tie 5 本）。
+- **LP 照合**（rtchords twin・staff 相対）: 5 本全部が正しい head に正しい向き
+  （m1 member d=DOWN・m2 強制 ^d UP/_g DOWN・m3 和音レベル d DOWN/g UP = port 規則どおり）・
+  **X 式は -1.3..-0.2 の local span 両者完全一致**。Y 残差 0.06〜0.3 = 既起票
+  semi-tie scorer regime（Y 量子化 + NoteOffset 0.4 近似・scorer port と同棚）。
+- **開示**: exporter の member 注釈は片タイ 2 種以外（finger/courtesy/string…）今も
+  無警告 drop（EmitChord のコメントに明記・起票）。
+- 観測者 +1（RepeatTieChordTests: fan 数 5・強制/既定向き・X 式 LP 逆算ピン）・snapshot 0 枚。
+
+plain 322 / 処理済 **236**（fixed **40**・exact **29**・skip **152**・open **15**・
+pending 86。数えたら state 別内訳も一緒に書くこと）。
+frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る。
+次 = repeat-tremolo-chord-rep = 第112第11便の仕掛かり・probe 通過・LP 照合残り）。
+第107 起票の §2A workstream は棚のまま。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4199 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
+snapshot 第113 は 0 枚**・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第112セッション第1〜13便の経緯
+
 最終更新 第112セッション第10便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
 第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
 `69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・

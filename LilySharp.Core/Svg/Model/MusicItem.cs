@@ -214,7 +214,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>
     /// Forced curve side of the l.v. tie from <c>@laissezVibrer.up/.down</c>
     /// (LP's <c>^\laissezVibrer</c>/<c>_\laissezVibrer</c>); null = automatic
-    /// (opposite the stem).
+    /// (the standard-directions rule — see TieVariantEngraver.SemiTiesOf).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head
     /// — the event's direction property is copied onto the tie.</remarks>
@@ -230,6 +230,16 @@ public sealed record NoteItem : MusicItem
     /// LilyPond syntax: <c>c4\repeatTie</c>; LilySharp surface: <c>c4@repeatTie</c>.
     /// </remarks>
     public bool HasRepeatTie { get; }
+
+    /// <summary>
+    /// Forced curve side of the repeat tie from <c>@repeatTie.up/.down</c>
+    /// (LP's <c>^\repeatTie</c>/<c>_\repeatTie</c>); null = automatic.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head
+    /// — the event's direction is copied onto the tie; Repeat_tie_engraver inherits
+    /// this whole path (repeat-tie-engraver.cc:27-33, a Laissez_vibrer_engraver that
+    /// only swaps the event class and grob names).</remarks>
+    public bool? RepeatTieUp { get; init; }
     private readonly int _sourcePosition;
 
     /// <summary>
@@ -448,7 +458,16 @@ public readonly record struct ChordNoteInfo(
     bool HasLaissezVibrer = false,
     // Forced curve side from ^/_ on the l.v. event (acknowledge_note_head copies
     // the event's direction onto the tie, :99-103); null = automatic.
-    bool? LaissezVibrerUp = null
+    bool? LaissezVibrerUp = null,
+    // Repeat-tie half-tie on THIS member — the same fan as the l.v. above:
+    // Repeat_tie_engraver IS a Laissez_vibrer_engraver (it only swaps the event
+    // class and the grob names), so a chord-level @repeatTie half-ties every
+    // member and a member-level one just its own head.
+    // LILYPOND-REF: lily/repeat-tie-engraver.cc:27-33 Repeat_tie_engraver —
+    // class Repeat_tie_engraver final : public Laissez_vibrer_engraver.
+    bool HasRepeatTie = false,
+    // Forced curve side from ^/_ on the repeat-tie event; null = automatic.
+    bool? RepeatTieUp = null
 );
 
 /// <summary>

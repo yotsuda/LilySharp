@@ -3358,6 +3358,22 @@ public sealed partial class MeasureCollector
     private static bool HasRepeatTieAnnotation(SyntaxNode node)
         => HasNamedArticulation(node, "repeattie");
 
+    /// <summary>
+    /// The forced curve side (<c>.up</c>/<c>.down</c>) of a node's
+    /// <c>@repeatTie</c> annotation, or null when absent or automatic.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head
+    /// — the event's direction is copied onto the tie; Repeat_tie_engraver inherits the
+    /// path (repeat-tie-engraver.cc:27-33).</remarks>
+    private static bool? RepeatTieUpOf(SyntaxNode node)
+    {
+        foreach (var art in ArticulationsOf(node))
+            if (art is ArticulationSyntax { Type: ArticulationType.None } a
+                && a.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
+                return a.ForcedAbove;
+        return null;
+    }
+
     /// <summary>The explicit tab string number from a <c>\N</c> annotation on a
     /// note/chord, or null for automatic string selection.</summary>
     private static int? ExtractStringNumber(SyntaxNode node)

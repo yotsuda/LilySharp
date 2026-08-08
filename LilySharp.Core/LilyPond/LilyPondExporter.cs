@@ -1526,6 +1526,25 @@ public sealed class LilyPondExporter
                 chainStep = step;
                 chainOctave = want;
             }
+
+            // Member-level half-ties (<d@repeatTie g> = LP <d-\repeatTie g>): the only
+            // member articulations this exporter writes — Lily# renders them
+            // (ChordNoteInfo.HasLaissezVibrer/HasRepeatTie), so a twin that dropped them
+            // would silently show fewer ties than its source. The unforced spelling takes
+            // the neutral `-`, the member form the regression books themselves write
+            // (repeat-tie-chords.ly, laissez-vibrer-chords.ly); ^/_ comes back from
+            // MapArticulation already prefixed. Other member articulations (finger,
+            // courtesy, …) are still dropped — a standing exporter hole.
+            foreach (var art in p.Articulations)
+                if (art is ArticulationSyntax { Type: ArticulationType.None } ma
+                    && (ma.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase)
+                        || ma.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase)))
+                {
+                    string ev = MapArticulation(ma);
+                    if (ev[0] == '\\')
+                        sb.Append('-');
+                    sb.Append(ev);
+                }
             first = false;
         }
 
@@ -2032,15 +2051,14 @@ public sealed class LilyPondExporter
             //   spelling is `<c e g>1\arpeggio`. ly/property-init.ly:67 is where the command
             //   itself is `#(make-music 'ArpeggioEvent)`.
             case "arpeggio": return "\\arpeggio";
-            // Added 2026-08-05 (session 98). These five are POST-EVENTS THAT TAKE NO
-            // DIRECTION, so like \arpeggio they answer here and never reach the
-            // `dir + glyph` tail below — the tail would prepend `-`/`^`/`_`, asserting a
-            // side the fixture never stated (the \arpeggio remark above is the same
-            // mistake bought once already). MEASURED before adding, on 2.26.0 (scratch
-            // probe, after-line-breaking dump per book): each bare spelling engraves
-            // exactly ONE grob of its kind — \glissando a Glissando,
-            // \startTrillSpan…\stopTrillSpan ONE TrillSpanner, \laissezVibrer a
-            // LaissezVibrerTie, \repeatTie a RepeatTie.
+            // Added 2026-08-05 (session 98). These five answer here and never reach
+            // the `dir + glyph` tail below — for an UNFORCED spelling the tail would
+            // prepend `-`, asserting a side the fixture never stated (the \arpeggio
+            // remark above is the same mistake bought once already). MEASURED before
+            // adding, on 2.26.0 (scratch probe, after-line-breaking dump per book):
+            // each bare spelling engraves exactly ONE grob of its kind — \glissando a
+            // Glissando, \startTrillSpan…\stopTrillSpan ONE TrillSpanner,
+            // \laissezVibrer a LaissezVibrerTie, \repeatTie a RepeatTie.
             // LILYPOND-REF: ly/property-init.ly:378 glissando = #(make-music 'GlissandoEvent)
             // LILYPOND-REF: ly/spanners-init.ly:48-49 startTrillSpan / stopTrillSpan
             //   = #(make-span-event 'TrillSpanEvent START/STOP)
@@ -2049,8 +2067,25 @@ public sealed class LilyPondExporter
             case "glissando": return "\\glissando";
             case "starttrillspan": return "\\startTrillSpan";
             case "stoptrillspan": return "\\stopTrillSpan";
-            case "laissezvibrer": return "\\laissezVibrer";
-            case "repeattie": return "\\repeatTie";
+            // The half-tie events DO carry a meaningful written direction — ^/_ is
+            // copied onto the tie (laissez-vibrer-engraver.cc:99-103, inherited by
+            // Repeat_tie_engraver) and repeat-tie-chords.ly writes `d^\repeatTie` —
+            // so a FORCED side must survive into the twin; unforced stays bare
+            // (never `-`, same reason as above).
+            case "laissezvibrer":
+                return a.ForcedAbove switch
+                {
+                    true => "^\\laissezVibrer",
+                    false => "_\\laissezVibrer",
+                    null => "\\laissezVibrer",
+                };
+            case "repeattie":
+                return a.ForcedAbove switch
+                {
+                    true => "^\\repeatTie",
+                    false => "_\\repeatTie",
+                    null => "\\repeatTie",
+                };
         }
 
         // Common LilyPond articulations. `@name.up/.down` → -^ / _^ direction.

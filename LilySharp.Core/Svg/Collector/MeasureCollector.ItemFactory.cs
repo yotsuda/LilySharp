@@ -140,6 +140,7 @@ public sealed partial class MeasureCollector
             IsDead = HasNamedArticulation(note, "dead"),
             ForcedStemUp = GetStemDirectionOverride(note),
             LaissezVibrerUp = hasLv ? LaissezVibrerUpOf(note) : null,
+            RepeatTieUp = hasRepeatTie ? RepeatTieUpOf(note) : null,
         };
     }
 
@@ -246,6 +247,11 @@ public sealed partial class MeasureCollector
         // just a single note head"; :99-103 direction copied from the event.
         bool chordLv = HasLaissezVibrerAnnotation(chord);
         bool? chordLvUp = chordLv ? LaissezVibrerUpOf(chord) : null;
+        // The repeat-tie fans over the members the same way — Repeat_tie_engraver
+        // IS a Laissez_vibrer_engraver with the event class and grob names swapped.
+        // LILYPOND-REF: lily/repeat-tie-engraver.cc:27-33 Repeat_tie_engraver.
+        bool chordRt = HasRepeatTieAnnotation(chord);
+        bool? chordRtUp = chordRt ? RepeatTieUpOf(chord) : null;
 
         // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
         // chord uniformly. Applying it to the root's resolved octave (and, for an
@@ -328,18 +334,23 @@ public sealed partial class MeasureCollector
             // LILYPOND-REF: lily/fingering-engraver.cc — per-pitch finger via <c@finger.N>.
             int? pitchFingering = ExtractPitchFingering(pitch);
 
-            // Member-level @laissezVibrer (<d@laissezVibrer g> = LP <d-\laissezVibrer g>):
-            // this head only; the chord-level event covers every head and wins
-            // (the engraver reads the heard event before the articulation).
-            // Plain loop, not LINQ: this runs per member of every chord on every
-            // collect walk (the preview's incremental recompiles included).
+            // Member-level @laissezVibrer / @repeatTie (<d@laissezVibrer g> =
+            // LP <d-\laissezVibrer g>): this head only; the chord-level event covers
+            // every head and wins (the engraver reads the heard event before the
+            // articulation). Plain loop, not LINQ: this runs per member of every
+            // chord on every collect walk (the preview's incremental recompiles
+            // included).
             ArticulationSyntax? memberLv = null;
+            ArticulationSyntax? memberRt = null;
             foreach (var a in pitch.Articulations)
-                if (a is ArticulationSyntax { Type: ArticulationType.None } la
-                    && la.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                if (a is ArticulationSyntax { Type: ArticulationType.None } la)
                 {
-                    memberLv = la;
-                    break;
+                    if (memberLv == null
+                        && la.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                        memberLv = la;
+                    else if (memberRt == null
+                        && la.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
+                        memberRt = la;
                 }
 
             notes.Add(new ChordNoteInfo(
@@ -350,7 +361,9 @@ public sealed partial class MeasureCollector
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
                 SourcePosition: pitch.Position,
                 HasLaissezVibrer: chordLv || memberLv != null,
-                LaissezVibrerUp: chordLv ? chordLvUp : memberLv?.ForcedAbove));
+                LaissezVibrerUp: chordLv ? chordLvUp : memberLv?.ForcedAbove,
+                HasRepeatTie: chordRt || memberRt != null,
+                RepeatTieUp: chordRt ? chordRtUp : memberRt?.ForcedAbove));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -390,7 +403,9 @@ public sealed partial class MeasureCollector
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
                 SourcePosition: degree.Position,
                 HasLaissezVibrer: chordLv,
-                LaissezVibrerUp: chordLvUp));
+                LaissezVibrerUp: chordLvUp,
+                HasRepeatTie: chordRt,
+                RepeatTieUp: chordRtUp));
             members.Add(new ResolvedChordMember(rp.StaffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -407,7 +422,9 @@ public sealed partial class MeasureCollector
                 Midi: dinfo.GmKey,
                 SourcePosition: drum.Position,
                 HasLaissezVibrer: chordLv,
-                LaissezVibrerUp: chordLvUp));
+                LaissezVibrerUp: chordLvUp,
+                HasRepeatTie: chordRt,
+                RepeatTieUp: chordRtUp));
             members.Add(new ResolvedChordMember(dinfo.StaffPosition, null, null, null,
                 dinfo.Notehead, dinfo.GmKey));
         }

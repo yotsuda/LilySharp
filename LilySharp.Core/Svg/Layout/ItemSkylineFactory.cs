@@ -268,29 +268,17 @@ internal static class ItemSkylineFactory
     private static void AddSemiTies(List<ColumnPart> parts, MusicItem item,
         double noteheadLeftX, double staffY, int noteValue)
     {
-        switch (item)
-        {
-            case NoteItem n:
-                if (n.HasLaissezVibrer)
-                    Add(n.StaffPosition, n.StemUp, n.LaissezVibrerUp, TieVariantKind.LaissezVibrer);
-                if (n.HasRepeatTie)
-                    Add(n.StaffPosition, n.StemUp, null, TieVariantKind.Repeat);
-                break;
-            case ChordItem c:
-                foreach (var m in c.Notes)
-                    if (m.HasLaissezVibrer)
-                        Add(m.StaffPosition, c.StemUp, m.LaissezVibrerUp, TieVariantKind.LaissezVibrer);
-                break;
-        }
-
-        void Add(int pos, bool stemUp, bool? forcedUp, TieVariantKind kind)
-        {
-            var (xl, xr, baseY, arc) = TieVariantEngraver.SemiTieGeometry(
-                noteValue, pos, stemUp, forcedUp, kind);
-            double yA = staffY + baseY, yB = staffY + baseY + arc;
-            parts.Add(ColumnPart.Ink(Math.Min(yA, yB), Math.Max(yA, yB),
-                noteheadLeftX + xl, noteheadLeftX + xr));
-        }
+        // The fan (which heads) and the curve sides are SemiTiesOf's — the same
+        // list the drawing fan consumes, so the boxes are the ink's.
+        foreach (var kind in TieVariantEngraver.KindPair)
+            foreach (var tie in TieVariantEngraver.SemiTiesOf(item, kind))
+            {
+                var (xl, xr, baseY, arc) = TieVariantEngraver.SemiTieGeometry(
+                    noteValue, tie.StaffPosition, tie.CurveUp, kind);
+                double yA = staffY + baseY, yB = staffY + baseY + arc;
+                parts.Add(ColumnPart.Ink(Math.Min(yA, yB), Math.Max(yA, yB),
+                    noteheadLeftX + xl, noteheadLeftX + xr));
+            }
     }
 
     /// <summary>

@@ -96,16 +96,18 @@ internal static class TieVariantEngraver
     /// staff spaces from the staff MIDDLE, and the signed arc (negative = bulges up).
     /// <see cref="BuildLayout"/> draws from it and <see cref="ItemSkylineFactory"/>
     /// boxes it for the spacing skylines — the pair HANDOFF 5.2.1② warns about.
+    /// The curve side comes resolved from <see cref="SemiTiesOf"/> (the one place
+    /// that knows the item's whole column).
     /// </summary>
     internal static (double XLeft, double XRight, double BaseYFromMiddleDown, double SignedArc)
-        SemiTieGeometry(int noteValue, int staffPosition, bool stemUp, bool? forcedUp,
-            TieVariantKind kind)
+        SemiTieGeometry(int noteValue, int staffPosition, bool curveUp, TieVariantKind kind)
     {
         // X span, in LilyPond's own numbers: the head-side end stands the tie
         // details' note-head gap (0.2) off the head's INK edge, the free end
         // OpenReach (1.5) out less the same gap.
         // (Verified against 2.26 SVG: a whole-note chord's l.v. spans
-        // headRight+0.2 .. headRight+1.3 to the digit — scratch\lpreg\lvchords.)
+        // headRight+0.2 .. headRight+1.3 to the digit — scratch\lpreg\lvchords;
+        // the repeat-tie mirror spans headLeft−1.3 .. headLeft−0.2 — rtchords.)
         // LILYPOND-REF: lily/laissez-vibrer-engraver.cc acknowledge_note_head — head-direction LEFT (tie RIGHT of head)
         // LILYPOND-REF: lily/repeat-tie-engraver.cc make_my_tie — head-direction RIGHT (tie LEFT of head)
         // LILYPOND-REF: lily/tie-formatting-problem.cc:436-441 from_semi_ties — open outline at extremal − dir·1.5
@@ -124,22 +126,100 @@ internal static class TieVariantEngraver
             xr = -xGap;
         }
 
-        // Curve direction: forced by ^/_ on the event when given (that half is
-        // the letter).
-        // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head —
-        //   the event's direction is copied onto the tie and outranks the automatic choice.
-        // ⚠️ The UNFORCED fallback (opposite the stem) is LILYSHARP-OWN: LilyPond
-        //   routes it through the semi-tie column's scorer instead —
-        //   LILYPOND-REF: lily/semi-tie-column.cc:51-86 calc_positioning_done —
-        //   Tie_formatting_problem::generate_optimal_configuration assigns each
-        //   tie's direction (and quantized Y). Opposite-the-stem is that scorer's
-        //   single-tie outcome (verified on lvchords: LP prints DOWN there), but
-        //   several unforced ties in one chord would split directions the scorer's
-        //   way, which this cannot. Ticketed with the semi-tie scorer port.
-        bool curveUp = forcedUp ?? !stemUp;
         double baseY = -staffPosition / 2.0 + (curveUp ? -NoteOffset : NoteOffset);
         double arc = Math.Min(BowHeightLimit, BowRatio * (xr - xl));
         return (xl, xr, baseY, curveUp ? -arc : arc);
+    }
+
+    /// <summary>One half-tie of an item's column, its curve side resolved.</summary>
+    internal readonly record struct SemiTie(int StaffPosition, bool CurveUp, int SourcePosition);
+
+    /// <summary>
+    /// The half-ties of one <paramref name="kind"/> on one item — the COLUMN LilyPond
+    /// builds per kind (LaissezVibrerTieColumn / RepeatTieColumn): a note contributes
+    /// its own head when flagged, a chord one tie per flagged member. Directions are
+    /// forced by ^/_ where written and otherwise assigned by the standard-directions
+    /// rule below. Both the drawing fan (<see cref="Calculate"/>) and the spacing
+    /// skylines (<see cref="ItemSkylineFactory"/>) consume THIS list — one spelling.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc:66-108 acknowledge_note_head —
+    ///   "use the heard event_ for all note heads, or an individual event for just
+    ///   a single note head"; :99-103 the event's direction is copied onto the tie.
+    /// LILYPOND-REF: lily/semi-tie-column.cc:51-86 calc_positioning_done — ties are
+    ///   sorted by head position (Semi_tie::less) and the unforced directions come
+    ///   from the formatting problem's base configuration.
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:1026-1066
+    ///   set_ties_config_standard_directions — a single unforced tie takes
+    ///   sign(position) (0 → neutral-direction, DOWN when unset — tie-details.cc:43-46);
+    ///   in a column of several, the bottom tie takes DOWN, the top UP, adjacent ties
+    ///   within a second split DOWN/UP, and the rest take sign(position) (0 → DOWN).
+    /// ⚠️ LilyPond then SCORES variations of the whole configuration
+    ///   (generate_optimal_configuration) which can overturn these seeds and also
+    ///   quantizes each tie's Y off staff lines; that scorer is not ported (ticketed) —
+    ///   this is the base-configuration letter only.
+    /// </remarks>
+    internal static ImmutableArray<SemiTie> SemiTiesOf(MusicItem item, TieVariantKind kind)
+    {
+        bool lv = kind == TieVariantKind.LaissezVibrer;
+        switch (item)
+        {
+            case NoteItem n when lv ? n.HasLaissezVibrer : n.HasRepeatTie:
+            {
+                bool? forced = lv ? n.LaissezVibrerUp : n.RepeatTieUp;
+                // Column of one: sign(position), 0 → neutral (DOWN).
+                bool curveUp = forced ?? n.StaffPosition > 0;
+                return ImmutableArray.Create(new SemiTie(n.StaffPosition, curveUp, n.SourcePosition));
+            }
+
+            case ChordItem c:
+            {
+                int count = 0;
+                foreach (var m in c.Notes)
+                    if (lv ? m.HasLaissezVibrer : m.HasRepeatTie)
+                        count++;
+                if (count == 0)
+                    return ImmutableArray<SemiTie>.Empty;
+
+                // Sorted by head position, bottom first (Semi_tie::less).
+                var ties = new (int Pos, bool? Dir, int Src)[count];
+                int k = 0;
+                foreach (var m in c.Notes)
+                    if (lv ? m.HasLaissezVibrer : m.HasRepeatTie)
+                        ties[k++] = (m.StaffPosition,
+                            lv ? m.LaissezVibrerUp : m.RepeatTieUp,
+                            m.SourcePosition >= 0 ? m.SourcePosition : c.SourcePosition);
+                Array.Sort(ties, static (a, b) => a.Pos.CompareTo(b.Pos));
+
+                // set_ties_config_standard_directions, on the sorted column.
+                if (ties[0].Dir == null)
+                {
+                    if (count == 1 && ties[0].Pos != 0)
+                        ties[0].Dir = ties[0].Pos > 0;
+                    // Several ties → bottom DOWN; a lone tie on the middle line →
+                    // neutral-direction, DOWN when unset (tie-details.cc:43-46).
+                    ties[0].Dir ??= false;
+                }
+                if (ties[^1].Dir == null)
+                    ties[^1].Dir = true;
+                // Seconds: adjacent ties within one position split DOWN/UP. (The
+                // column-span arm is dead here — every head of one chord shares the
+                // column, so span_diff is always 0.)
+                for (int i = 1; i < count; i++)
+                    if (Math.Abs(ties[i].Pos - ties[i - 1].Pos) <= 1)
+                    {
+                        ties[i - 1].Dir ??= false;
+                        ties[i].Dir ??= true;
+                    }
+                var builder = ImmutableArray.CreateBuilder<SemiTie>(count);
+                foreach (var t in ties)
+                    builder.Add(new SemiTie(t.Pos, t.Dir ?? t.Pos > 0, t.Src));
+                return builder.MoveToImmutable();
+            }
+
+            default:
+                return ImmutableArray<SemiTie>.Empty;
+        }
     }
 
     /// <summary>
@@ -169,41 +249,29 @@ internal static class TieVariantEngraver
             var measure = voice.Measures[mi];
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
-                switch (measure.Items[ii])
+                // One half-tie per marked head, per kind — the fan and the curve
+                // sides are SemiTiesOf's (a chord-level event marks every member,
+                // a member-level one just its own head; chord repeat-ties used to
+                // silently drop here, the mirror of the chord-l.v. drop before it).
+                // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:66-108 acknowledge_note_head
+                //   — one tie per head; Repeat_tie_engraver inherits the path
+                //   (repeat-tie-engraver.cc:27-33).
+                var item = measure.Items[ii];
+                foreach (var kind in KindPair)
                 {
-                    case NoteItem note when note.HasLaissezVibrer || note.HasRepeatTie:
-                        int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
-                        if (note.HasLaissezVibrer)
-                            builder.Add(BuildLayout(
-                                note.StaffPosition, note.StemUp, note.LaissezVibrerUp,
-                                note.SourcePosition, noteValue, mi, ii, measureLayout, system,
-                                staffIndex, TieVariantKind.LaissezVibrer));
-                        if (note.HasRepeatTie)
-                            builder.Add(BuildLayout(
-                                note.StaffPosition, note.StemUp, null,
-                                note.SourcePosition, noteValue, mi, ii, measureLayout, system,
-                                staffIndex, TieVariantKind.Repeat));
-                        break;
-
-                    // A chord fans one half-tie per marked member — a chord-level
-                    // @laissezVibrer marks all of them, a member-level one just its
-                    // own head. This used to silently drop every chord l.v.
-                    // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:66-108 acknowledge_note_head
-                    //   — one LaissezVibrerTie per head.
-                    case ChordItem chordItem:
-                        foreach (var member in chordItem.Notes)
-                        {
-                            if (!member.HasLaissezVibrer)
-                                continue;
-                            builder.Add(BuildLayout(
-                                member.StaffPosition, chordItem.StemUp, member.LaissezVibrerUp,
-                                member.SourcePosition >= 0
-                                    ? member.SourcePosition : chordItem.SourcePosition,
-                                GlyphMetrics.NoteValueOf(chordItem.BaseDuration),
-                                mi, ii, measureLayout, system,
-                                staffIndex, TieVariantKind.LaissezVibrer));
-                        }
-                        break;
+                    var ties = SemiTiesOf(item, kind);
+                    if (ties.IsEmpty)
+                        continue;
+                    int noteValue = GlyphMetrics.NoteValueOf(item switch
+                    {
+                        NoteItem n => n.BaseDuration,
+                        ChordItem c => c.BaseDuration,
+                        _ => default,
+                    });
+                    foreach (var tie in ties)
+                        builder.Add(BuildLayout(
+                            tie.StaffPosition, tie.CurveUp, tie.SourcePosition,
+                            noteValue, mi, ii, measureLayout, system, staffIndex, kind));
                 }
             }
         }
@@ -211,8 +279,11 @@ internal static class TieVariantEngraver
         return builder.ToImmutable();
     }
 
+    internal static readonly TieVariantKind[] KindPair =
+        { TieVariantKind.LaissezVibrer, TieVariantKind.Repeat };
+
     private static TieVariantLayout BuildLayout(
-        int staffPosition, bool stemUp, bool? forcedUp, int sourcePosition, int noteValue,
+        int staffPosition, bool curveUp, int sourcePosition, int noteValue,
         int measureIndex, int itemIndex,
         MeasureLayout measureLayout, SystemLayout system, int staffIndex,
         TieVariantKind kind)
@@ -228,8 +299,7 @@ internal static class TieVariantEngraver
         // The half-tie's own geometry (X span, baseline, signed arc) — the one
         // spelling shared with the spacing skylines' box (SemiTieGeometry).
         var (xLeft, xRight, baseYFromMiddle, signedArc) = SemiTieGeometry(
-            noteValue, staffPosition, stemUp, forcedUp, kind);
-        bool curveUp = signedArc < 0;
+            noteValue, staffPosition, curveUp, kind);
 
         const double StaffHeight = 4.0;
         // Within-system Y offset (device, down from the system top) of the staff

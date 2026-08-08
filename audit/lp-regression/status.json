@@ -6510,7 +6510,9 @@
     },
     "repeat-tie-chords.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "\\repeatTie ties should also work on individual notes of a chord",
+      "notes": "fixed 第40号(第113第1便)。起票済「repeatTie和音silent drop」の本=第34号lv member fanの鏡映(Repeat_tie_engraverはLaissez_vibrer_engraverの派生=機構完全共有)。修理: ⑴ChordNoteInfoにHasRepeatTie/RepeatTieUp腕+ItemFactory fan(chord/member/degree/drum) ⑵NoteItem.RepeatTieUp新設(^/_強制がnote経路でも落ちていた) ⑶TieVariantEngraver.SemiTiesOf新設=描画fanとskyline箱が同じ列を消費(1綴り) ⑷無強制の向き=set_ties_config_standard_directions港(tie-formatting-problem.cc:1026-1066: 単独=sign(position)/複数=底DOWN頂UP/2度split。旧LILYSHARP-OWN「stem反対」撤去=既存fixtureで全一致) ⑸exporter: member片タイ書出+^/_方向保存(<d-\\repeatTie g>=本の字面をroundtrip)。LP照合(rtchords twin): 5本全部正しいheadに正しい向き・X式-1.3..-0.2両者完全一致・Y残差0.06-0.3=既起票semi-tie scorer regime(量子化+NoteOffset0.4近似)。観測者+1(RepeatTieChordTests)・snapshot 0枚。twin=audit lys+scratch\\lpreg\\rtchords.{ly,lys}"
     },
     "repeat-tie-parenthesize.ly": {
       "category": "scheme",

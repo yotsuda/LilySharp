@@ -108,17 +108,19 @@ public class TieVariantTests
     }
 
     [Fact]
-    public void Layout_LowNote_StemUp_CurvesDown()
+    public void Layout_LowNote_CurvesDown()
     {
-        // Low c (StaffPosition < 0) → stem up → tie curves down.
+        // A single unforced semi-tie takes sign(position): low c (StaffPosition < 0)
+        // → DOWN. LILYPOND-REF: lily/tie-formatting-problem.cc:1026-1066
+        // set_ties_config_standard_directions.
         var (_, layout) = BuildLayout("c4@laissezVibrer |");
         Assert.False(layout.TieVariantLayouts[0].CurveUp);
     }
 
     [Fact]
-    public void Layout_HighNote_StemDown_CurvesUp()
+    public void Layout_HighNote_CurvesUp()
     {
-        // c'' is high (StaffPosition > 0) → stem down → tie curves up.
+        // c'' is high (StaffPosition > 0) → sign(position) = UP.
         var (_, layout) = BuildLayout("c''4@laissezVibrer |");
         Assert.True(layout.TieVariantLayouts[0].CurveUp);
     }
