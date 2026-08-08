@@ -58,10 +58,16 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第113セッション第4便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
+最終更新 第113セッション第5便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
 第2便 fixed **第41号 = repeat-tremolo-chord-rep.ly**・`b68d24aa`・
 第3便 **repeat-volta-initial-grace.ly = open**・`4eec7fd4`・
-第4便 fixed **第42号 = rest-avoid-note.ly**・この handoff と同 commit）。
+第4便 fixed **第42号 = rest-avoid-note.ly**・`5f92858b`・
+第5便 **rest-collision-note-duration.ly = exact**・この handoff と同 commit）。
+
+★ **第5便 rest-collision-note-duration.ly = exact（コード変更 0）**: 第42号の跨ぎ音符
+head-only 腕がこの本の主張そのもの＝**4/4 休符 Y 桁一致**（g1/g2 保持中の r8 = +3.5 =
+pos −7 の譜外 half-space・g2 が切れた 4 つ目だけ既定 −4 へ復帰——両エンジン同型）。
+残差 = X drift ≤1.3（v1 が m2 半分で終わる本 = measure 幅 spacing regime）。
 
 ★★★ **第4便 fixed 第42号 = rest-avoid-note.ly**（休符は音符を避け自 voice の符尾方向へ動く・
 起票済 rest-in-voice 変位 regime＝第104 起票の返済）:
@@ -143,10 +149,10 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   無警告 drop（EmitChord のコメントに明記・起票）。
 - 観測者 +1（RepeatTieChordTests: fan 数 5・強制/既定向き・X 式 LP 逆算ピン）・snapshot 0 枚。
 
-plain 322 / 処理済 **239**（fixed **42**・exact **29**・skip **152**・open **16**・
-pending 83。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **240**（fixed **42**・exact **30**・skip **152**・open **16**・
+pending 82。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る。
-次 = rest-collision-note-duration = 同 regime の続き・第42号の器材が効くか先に見る）。
+次 = rest-pitched-beam）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・

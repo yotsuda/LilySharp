@@ -1,0 +1,20 @@
+// lilypond-src/input/regression/rest-collision-note-duration.ly の Lily# 訳。
+// CLAIM: 多声譜の休符の縦位置は音符の時価に従う (早く既定位置へ戻らない)。
+// state=exact (第42号の跨ぎ音符 head-only 腕の直接 e2e・4/4 休符 Y 桁一致)。
+// 綴り: LP \relative 無引数 g'1 = G4・v2 の d = D4。repeat unfold 2 は書き下し。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    voice
+    { g1 | g2 }
+    { r8 d4 d8 r8 d4 d8 | r8 d4 d8 r8 d4 d8 | }
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

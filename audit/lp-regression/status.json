@@ -6668,7 +6668,9 @@
     },
     "rest-collision-note-duration.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "Vertical rest positions in a multi-voice staff should obey the duration of notes; they shouldn't return to a default position too early",
+      "notes": "exact(第113第5便・コード変更0)。第42号の跨ぎ音符head-only腕がこの本の主張そのもの=**4/4休符Y桁一致**(g1/g2保持中のr8=+3.5=pos-7の譜外half-space・g2が切れた4つ目だけ既定-4=+2.0へ復帰。両エンジン同型)。残差=X drift≤1.3(v1がm2半分で終わる本=measure幅spacing regime・LYS2001警告はLily#の意図した検査)。twin=audit lys+scratch\\lpreg\\restdur.{ly,lys}"
     },
     "rest-collision.ly": {
       "category": "scheme",
