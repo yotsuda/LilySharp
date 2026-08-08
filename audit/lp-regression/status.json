@@ -7148,7 +7148,9 @@
     },
     "slur-flag.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "slur は flag の extent を考慮する",
+      "notes": "skip 第116第5便(probe付き)。主張の発火には \\stemUp+\\slurUp が要る(C5 の stem を上げ slur を上に強制して flag を弓の経路に入れる)——Lily# に slur 向き強制の綴りなし(LP の ^(/_( 対応物ゼロ・@stemUp はある)=文法宿題。強制なしの核は測定済: slurflag twin で slur 4点(両端+control)が LP と 0.01 以内完全一致(素の b8( c) は slur が flag の下を通り主張が発火しない)。probe残置 scratch\\lpreg\\slurflag.{ly,lys}。文法が入れば fixed 候補=stem attach X 規則(第45号開示⑴)の測定本"
     },
     "slur-grace.ly": {
       "category": "plain",
