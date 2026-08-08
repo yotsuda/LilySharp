@@ -231,4 +231,25 @@ public class SlurScoringTests
         Assert.Equal(0.5, startY[4], 2);
         Assert.Equal(0.5, endY[4], 2);
     }
+
+    [Fact]
+    public void AllRestSlur_BasesOnTheRestInk_NotTheMiddleLine()
+    {
+        // The 16th row of slur-rest-direction.ly separates the two spellings the
+        // half row cannot: a rest bound's base is the REST'S INK edge + 0.5 (the
+        // r16 glyph reaches 2.05 below the middle -> 2.55), not middle + 0.5.
+        // MEASURED with debug-slur-scoring (scratch/lpreg/slurrest-dbg.ly): the
+        // winning candidate is idx=0 TOTAL=0.00 AT 2.55 — the base itself.
+        // LILYPOND-REF: lily/slur-scoring.cc:587-619 get_base_attachments, the
+        //   no-note-column loop: y = robust_relative_extent(col, Y)[dir] +
+        //   dir * 0.5 * staff_space.
+        string svg = Render(
+            "octave absolute\nclef bass\ntime 2/4\n\n" +
+            "r16( r r) r r4 |\n");
+        double middle = MiddleLineY(svg);
+        var c = BowCurve(svg);
+
+        Assert.Equal(2.55, c[1] - middle, 2);  // start (LP 2.5500)
+        Assert.Equal(2.55, c[7] - middle, 2);  // end (LP 2.5500)
+    }
 }

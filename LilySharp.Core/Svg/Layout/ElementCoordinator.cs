@@ -2597,21 +2597,36 @@ internal sealed class ElementCoordinator
                     : default;
                 const double stemTipGap = 0.5; // staff-spaces beyond the beam (LP dir_*0.5*staff_space)
 
-                // A REST bound has no head: LP's base-attachment branch reads
-                // neither stem nor head, leaving y at the refpoint (= the staff
-                // middle) plus the plain dir·0.5 — no head-half term.
-                // LILYPOND-REF: slur-scoring.cc:543-559 — stem null, head null;
-                //   y = 0; y += dir_ * 0.5 * staff_space.
-                bool startIsRest = segment.IsFirst
+                // A REST bound is not a note-column bound to LP: the fallback
+                // loop reads the FIRST/LAST encompassed column's Y extent — the
+                // rest's own ink — plus dir·0.5. MEASURED (debug-slur-scoring,
+                // scratch\lpreg\slurrest-dbg): the all-rest 16th slur's WINNING
+                // candidate is idx=0 TOTAL=0.00 sitting at 2.55 = the r16 ink
+                // bottom 2.05 + 0.5 — the base itself, not a scored climb; the
+                // half-rest row's 0.5 = its ink bottom 0 + 0.5, same rule.
+                // LILYPOND-REF: slur-scoring.cc:587-619 get_base_attachments,
+                //   the !note_column_ loop: y = robust_relative_extent(col,
+                //   Y)[dir] + dir * 0.5 * staff_space.
+                double RestBoundBaseY(RestItem r)
+                {
+                    int rv = GlyphMetrics.NoteValueOf(r.BaseDuration);
+                    var box = GlyphMetrics.GetRestBBox(rv);
+                    double originDown = staffMiddleDown - (rv == 1 ? 1.0 : 0.0);
+                    return slur.CurveUp
+                        ? originDown - box.Top - 0.5
+                        : originDown - box.Bottom + 0.5;
+                }
+
+                RestItem? startRest = segment.IsFirst
                     && ItemAt(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex)
-                        is RestItem { IsSpacer: false };
-                bool endIsRest = segment.IsLast
+                        is RestItem { IsSpacer: false } sr ? sr : null;
+                RestItem? endRest = segment.IsLast
                     && ItemAt(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex)
-                        is RestItem { IsSpacer: false };
+                        is RestItem { IsSpacer: false } er ? er : null;
 
                 double segStartY;
-                if (startIsRest)
-                    segStartY = staffMiddleDown + (slur.CurveUp ? -0.5 : 0.5);
+                if (startRest is { } sRest)
+                    segStartY = RestBoundBaseY(sRest);
                 else if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamLayouts, slur.StartMeasureIndex, slur.StartItemIndex,
                         segStartX, staffMiddleDown, slur.CurveUp, out double startTip))
@@ -2621,8 +2636,8 @@ internal sealed class ElementCoordinator
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 double segEndY;
-                if (endIsRest)
-                    segEndY = staffMiddleDown + (slur.CurveUp ? -0.5 : 0.5);
+                if (endRest is { } eRest)
+                    segEndY = RestBoundBaseY(eRest);
                 else if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamLayouts, slur.EndMeasureIndex, slur.EndItemIndex,
                         segEndX, staffMiddleDown, slur.CurveUp, out double endTip))
