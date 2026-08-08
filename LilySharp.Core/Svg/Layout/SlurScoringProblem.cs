@@ -48,24 +48,26 @@ internal sealed class SlurCandidate : IScorableConfig
 }
 
 /// <summary>
-/// Represents an obstacle that a slur should avoid.
+/// One encompassed note column the slur scores its curve over — LilyPond's
+/// <c>Encompass_info</c>: the head box on the slur's path plus, when the
+/// column's stem points WITH the slur, the stem's reach (<see cref="StemY"/>).
+/// Device coordinates (Y down; TopY &lt; BottomY).
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/slur-scoring.cc:111-161 get_encompass_info — one info per
+/// note column carrying <c>x_</c>, <c>head_</c> and <c>stem_</c>. <c>stem_</c>
+/// is the stem's Y extent on the slur's side plus half the beam's thickness
+/// when beamed (:146-150), and falls back to <c>head_</c> when the stem points
+/// away or is absent (:157-158) — spelled here as <see cref="StemY"/> = NaN.
+/// The head/stem values are ONE info; a separate stem entry in the list would
+/// corrupt the scorer's first/last-column edge flags
+/// (slur-configuration.cc:247-248), which index note columns, not grobs.
+/// </remarks>
 internal readonly record struct SlurObstacle(
     double X,
     double TopY,
     double BottomY,
-    SlurObstacleType Type);
-
-/// <summary>
-/// Types of obstacles for slur avoidance.
-/// </summary>
-internal enum SlurObstacleType
-{
-    NoteHead,
-    Stem,
-    Accidental,
-    Articulation
-}
+    double StemY = double.NaN);
 
 /// <summary>
 /// How an extra-encompass object wants the slur to treat it — LilyPond's
@@ -129,7 +131,17 @@ internal readonly record struct SlurExtraObject(
 /// (slur-scoring.cc:780-793 slur_head_x_extent_) and for the extra-encompass
 /// edge check (slur-configuration.cc:405-425 slur_head_x_extent_).
 /// </remarks>
-internal readonly record struct SlurEdgeInfo(bool HasStem, bool StemUp, bool BeamedInner, bool Beamed, double HeadWidth = 0.0);
+/// <param name="StemX">The stem line's centre X (device) — LP's
+/// <c>extremes_[d].stem_extent_[X_AXIS]</c> centre; its faces sit half a stem
+/// thickness either side. NaN when the edge has no stem or the caller did not
+/// resolve one.</param>
+/// <param name="StemTipY">Device Y of the stem's tip (the far end, on the
+/// quanted beam for a beamed stem). NaN when unresolved.</param>
+/// <param name="StemBeginY">Device Y of the stem's head-side end (the head it
+/// hangs off). NaN when unresolved.</param>
+internal readonly record struct SlurEdgeInfo(
+    bool HasStem, bool StemUp, bool BeamedInner, bool Beamed, double HeadWidth = 0.0,
+    double StemX = double.NaN, double StemTipY = double.NaN, double StemBeginY = double.NaN);
 
 internal sealed class SlurScoringProblem
 {
@@ -195,8 +207,16 @@ internal sealed class SlurScoringProblem
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
         // A broken edge is an artificial break point — no real stem/beam there.
-        _leftEdge = isBrokenLeft ? default : leftEdge;
-        _rightEdge = isBrokenRight ? default : rightEdge;
+        // The edge stem Ys reflect into the same Y-up frame as everything else
+        // (NaN survives negation).
+        _leftEdge = isBrokenLeft ? default : leftEdge with
+        {
+            StemTipY = -leftEdge.StemTipY, StemBeginY = -leftEdge.StemBeginY,
+        };
+        _rightEdge = isBrokenRight ? default : rightEdge with
+        {
+            StemTipY = -rightEdge.StemTipY, StemBeginY = -rightEdge.StemBeginY,
+        };
         _edgeHasBeams = _leftEdge.Beamed || _rightEdge.Beamed;
 
         // Reflect obstacle extents into the Y-up frame (negate both edges; the
@@ -205,7 +225,8 @@ internal sealed class SlurScoringProblem
         {
             var reflected = new List<SlurObstacle>(obstacles.Count);
             foreach (var o in obstacles)
-                reflected.Add(new SlurObstacle(o.X, -o.TopY, -o.BottomY, o.Type));
+                // -NaN is still NaN, so the no-stem marker survives the flip.
+                reflected.Add(new SlurObstacle(o.X, -o.TopY, -o.BottomY, -o.StemY));
             _obstacles = reflected;
         }
         else
@@ -277,11 +298,10 @@ internal sealed class SlurScoringProblem
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/slur-scoring.cc:660-707 generate_avoid_offsets —
-    /// note columns skip the extremes; ⚠️ LP's per-column
-    /// <c>max(dir·head, dir·stem)</c> reads the stem tip too, which the obstacle
-    /// list does not carry yet — the head box stands in (differs only when an
-    /// interior stem points slurward past its head, e.g. \stemUp under an up
-    /// slur).
+    /// note columns skip the extremes; the per-column point is
+    /// <c>max(dir·head_, dir·stem_)</c> (:673), so a slurward stem (a grace
+    /// column's forced-up stem under an up slur, \stemUp under an up slur)
+    /// pushes the curve off its TIP, not just its head.
     /// </remarks>
     private List<(double X, double Y)> BuildAvoidOffsets(int dir)
     {
@@ -292,6 +312,8 @@ internal sealed class SlurScoringProblem
             {
                 var o = _obstacles[i];
                 double edge = dir > 0 ? o.TopY : o.BottomY;
+                if (!double.IsNaN(o.StemY))
+                    edge = dir > 0 ? Math.Max(edge, o.StemY) : Math.Min(edge, o.StemY);
                 avoid.Add((o.X, edge + dir * _parameters.FreeHeadDistance));
             }
         }
@@ -545,10 +567,9 @@ internal sealed class SlurScoringProblem
     /// end_ys[d] = dir * max(max(dir*(base[d] + region_size*dir),
     ///                           dir*(dir + nc_extent[dir])),
     ///                       dir*base[-d]).
-    /// The note-column extent is approximated by the edge obstacle's HEAD box:
-    /// the ⚠️ stem part of LP's column extent exceeds base + region_size only for
-    /// an unusually long stem pointing slurward, and a slurward-beamed stem
-    /// already IS the base (the caller attaches there).
+    /// The note-column extent is the edge obstacle's head box extended by its
+    /// slurward stem when it carries one (LP's column extent covers head AND
+    /// stem; a stem pointing away contributes nothing on this side).
     /// ⚠️ LP's slur_head-only branch (:505-508 — a bound with a head but no note
     /// column allows only 0.3 of movement) is not ported: every edge here
     /// carries a note column or a broken-edge stand-in, so the branch has no
@@ -563,10 +584,51 @@ internal sealed class SlurScoringProblem
         {
             var edge = left ? _obstacles[0] : _obstacles[^1];
             double ncEdge = dir > 0 ? edge.TopY : edge.BottomY;
+            if (!double.IsNaN(edge.StemY))
+                ncEdge = dir > 0 ? Math.Max(ncEdge, edge.StemY) : Math.Min(ncEdge, edge.StemY);
             range = Math.Max(range, dir * (dir + ncEdge));
         }
         range = Math.Max(range, dir * baseOther);
         return dir * range;
+    }
+
+    /// <summary>
+    /// The slur's minimum X length in staff spaces — below it a candidate's X
+    /// snaps back to the head centres.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm Slur (minimum-length . 1.5),
+    /// consumed at lily/slur-scoring.cc:728-730.</remarks>
+    private const double MinimumLength = 1.5;
+
+    /// <summary>
+    /// The stem-attachment X rule for one candidate endpoint: when the edge
+    /// note's stem points WITH the slur, the X moves onto the stem's inner face
+    /// plus 0.3 while the candidate Y lies within the stem's widened Y extent
+    /// (returns true = attached), or onto the stem's centre once the candidate
+    /// has climbed past the tip. Y-up frame; no-op for a stemless or
+    /// counter-stem edge.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:738-760 enumerate_attachments —
+    /// stem_y.widen(0.25); contains → x = stem_extent_[X][-d] - d*0.3;
+    /// past-tip → x = stem_extent_[X].center().
+    /// </remarks>
+    private bool StemAttachmentX(
+        in SlurEdgeInfo edge, double y, bool left, int dir, ref double x)
+    {
+        if (!edge.HasStem || edge.StemUp != _slur.CurveUp || double.IsNaN(edge.StemX))
+            return false;
+        double lo = Math.Min(edge.StemBeginY, edge.StemTipY) - 0.25;
+        double hi = Math.Max(edge.StemBeginY, edge.StemTipY) + 0.25;
+        double halfStem = EngravingDefaults.StemThickness / 2.0;
+        if (y >= lo && y <= hi)
+        {
+            x = left ? edge.StemX + halfStem + 0.3 : edge.StemX - halfStem - 0.3;
+            return true;
+        }
+        if (dir * edge.StemTipY < dir * y)
+            x = edge.StemX;
+        return false;
     }
 
     /// <summary>
@@ -659,23 +721,52 @@ internal sealed class SlurScoringProblem
             for (double rightY = baseEndY; dir * rightY <= dir * endYRight + eps; rightY += dir * step)
             {
                 // X starts at the base attachment (the notehead centre; see the
-                // caller). LP's min-length / max-slope correction (:763-778) moves a
-                // violating candidate's X back to the head centre — a no-op here —
-                // and KEEPS it; score_slopes prices the steepness.
+                // caller), then moves to the STEM when the edge stem points WITH
+                // the slur: onto its face (+0.3 clear of it) while the candidate Y
+                // lies within the widened stem extent, or onto its centre once the
+                // candidate has climbed past the tip. This is what parks a
+                // voice-two down-slur's ends against the down stems instead of
+                // letting the encompass stem term chase the slur away from them.
+                // LILYPOND-REF: lily/slur-scoring.cc:738-760.
                 double startX = _startX;
                 double endX = _endX;
+                bool attachLeft = StemAttachmentX(_leftEdge, leftY, left: true, dir, ref startX);
+                bool attachRight = StemAttachmentX(_rightEdge, rightY, left: false, dir, ref endX);
 
-                // Horizontally move tilted slurs a little, more for bigger tilts:
-                // both ends shift by -dir * head_width * (unit dy) / 3.
-                // LILYPOND-REF: lily/slur-scoring.cc:780-793 slur_head_x_extent field.
+                // A too-short or too-steep pair snaps X back to the head centre
+                // (= the base X) and is KEPT; score_slopes prices the steepness.
+                // LILYPOND-REF: lily/slur-scoring.cc:763-778; minimum-length 1.5
+                // (scm/define-grobs.scm Slur), max-slope from the details table.
                 double dzX = endX - startX;
                 double dzY = rightY - leftY;
+                if (dzX < MinimumLength
+                    || (dzX > 0.001 && Math.Abs(dzY / dzX) > _parameters.MaxSlope))
+                {
+                    if (_leftEdge.HeadWidth > 0)
+                    {
+                        startX = _startX;
+                        attachLeft = false;
+                    }
+                    if (_rightEdge.HeadWidth > 0)
+                    {
+                        endX = _endX;
+                        attachRight = false;
+                    }
+                }
+
+                // Horizontally move tilted slurs a little, more for bigger tilts:
+                // each non-stem-attached end shifts by -dir * head_width * (unit dy) / 3.
+                // LILYPOND-REF: lily/slur-scoring.cc:780-793 slur_head_x_extent field,
+                //   gated on !attach_to_stem[d] (:783).
+                dzX = endX - startX;
                 double len = Math.Sqrt(dzX * dzX + dzY * dzY);
                 if (len > 0.001)
                 {
                     double unitDy = dzY / len;
-                    startX -= dir * _leftEdge.HeadWidth * unitDy / 3.0;
-                    endX -= dir * _rightEdge.HeadWidth * unitDy / 3.0;
+                    if (!attachLeft)
+                        startX -= dir * _leftEdge.HeadWidth * unitDy / 3.0;
+                    if (!attachRight)
+                        endX -= dir * _rightEdge.HeadWidth * unitDy / 3.0;
                 }
 
                 var candidate = new SlurCandidate
@@ -986,7 +1077,7 @@ internal sealed class SlurScoringProblem
 
             bool isEdge = j == 0 || j == _obstacles.Count - 1;
 
-            if (!isEdge && obstacle.Type == SlurObstacleType.NoteHead)
+            if (!isEdge)
             {
                 // Head encompass scoring
                 // LILYPOND-REF: slur-configuration.cc:260-291
@@ -1009,21 +1100,35 @@ internal sealed class SlurScoringProblem
                     hd = Math.Clamp(hd, 0.0, _parameters.HeadEncompassPenalty);
                     demerit += hd;
 
-                    // Track distance for variance calculation
+                    // Track distance for variance calculation. The column's point is
+                    // Encompass_info::get_point(dir) = the FARTHER of head_ and stem_
+                    // on the slur's side — a slurward stem (a grace run's) measures
+                    // from its tip, not its head, or the variance reads a phantom gap.
+                    // LILYPOND-REF: slur-configuration.cc:283-291; lily/include/
+                    //   slur-scoring.hh Encompass_info::get_point.
                     double lineY = config.StartY + t * (config.EndY - config.StartY);
-                    double closest = config.CurveUp
-                        ? Math.Max(obstacle.TopY, lineY)
-                        : Math.Min(obstacle.BottomY, lineY);
+                    double colPoint = headY;
+                    if (!double.IsNaN(obstacle.StemY))
+                        colPoint = dir > 0
+                            ? Math.Max(colPoint, obstacle.StemY)
+                            : Math.Min(colPoint, obstacle.StemY);
+                    double closest = dir > 0
+                        ? Math.Max(colPoint, lineY)
+                        : Math.Min(colPoint, lineY);
                     double d = Math.Abs(closest - slurY);
                     convexHeadDistances.Add(d);
                 }
             }
 
-            // Stem encompass
-            // LILYPOND-REF: slur-configuration.cc:293-306
-            if (obstacle.Type == SlurObstacleType.Stem)
+            // Stem encompass — runs for EVERY column, edges included. stem_ falls
+            // back to the head edge when the column's stem does not point with the
+            // slur (get_encompass_info :157-158 ei.stem_ = ei.head_), so the term
+            // also prices a curve that dips through a head's own band.
+            // LILYPOND-REF: slur-configuration.cc:295-302
             {
-                double stemY = config.CurveUp ? obstacle.TopY : obstacle.BottomY;
+                double stemY = double.IsNaN(obstacle.StemY)
+                    ? (config.CurveUp ? obstacle.TopY : obstacle.BottomY)
+                    : obstacle.StemY;
                 if (dir * (slurY - stemY) < 0)
                 {
                     double stemDem = _parameters.StemEncompassPenalty;
@@ -1036,20 +1141,6 @@ internal sealed class SlurScoringProblem
                         stemDem /= 5;
                     demerit += stemDem;
                 }
-            }
-
-            // Accidental/articulation encompass
-            if (obstacle.Type == SlurObstacleType.Accidental)
-            {
-                double objY = config.CurveUp ? obstacle.TopY : obstacle.BottomY;
-                if (dir * (slurY - objY) < 0)
-                    demerit += _parameters.AccidentalCollision;
-            }
-            else if (obstacle.Type == SlurObstacleType.Articulation)
-            {
-                double objY = config.CurveUp ? obstacle.TopY : obstacle.BottomY;
-                if (dir * (slurY - objY) < 0)
-                    demerit += _parameters.ExtraObjectCollisionPenalty;
             }
         }
 

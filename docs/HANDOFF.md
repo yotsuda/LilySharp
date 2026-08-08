@@ -58,6 +58,104 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第117セッション（＝第1便 **fixed 第46号 = slur-grace.ly = stem 配管**・
+第2便 **stem-attach X 規則 (:738-760) port = 第45号開示⑴の返済**・第3便
+**perf A/B round 15 = 3 バッチ全て符号跨ぎ = drift・対照 hash 一致**・
+この handoff と同 commit）。
+
+★★★ **第1便 fixed 第46号 = slur-grace.ly**（第6便下見の修理形どおり stem 配管——
+ただし §116 の「obstacle に Stem **種**を建てる」ではなく **LP の Encompass_info の形
+= 列 1 info に head_ と stem_ が同乗**。別 entry にすると score_encompass の
+l_edge/r_edge が列 index でなく grob index になり壊れる）:
+- **移植 = get_encompass_info（slur-scoring.cc:111-161）の字面**: slurward stem
+  （stem_dir == dir_）の stem_ = stem Y 端（beamed はさらに +0.5·beam厚 :149-150）・
+  x_ = stem X 中心 (:152-155)・非 slurward は stem_ = head_ (:157-158)。
+  **非 slurward 列の x_ も頭 ink 中心へ**（旧 = 頭左端の列 X。中心だと端列が
+  attachment X 上に乗り、LP の strictly-inside 除外
+  （slur-configuration.cc:251）を再現する）。stem の読みは既存の正席:
+  beamed = `BeamGroup.OuterEdgeStaffSpaceAtX`（= LP stem extent。
+  beam_end_corrective 込み＝stem.cc:142 を set_stem_positions が length に
+  焼き込む）・unbeamed = `NoteColumnLayout.OutwardTipDeviceY`。
+- **食う側 4 か所**: ScoreEncompass の stem 項（:295-302 = **全列**・edge は
+  (l∧UP)/(r∧DOWN) で /5・stem_=head_ フォールバック込み）・BuildAvoidOffsets
+  （:673 max(dir·head, dir·stem)）・EndYFor（nc extent に stem 参加＝第45号開示⑷の
+  返済）・★★ **variance の get_point(dir)**（slur-configuration.cc:283-291——
+  **これが決め手**。stem 抜きの closest は grace 列に 2.4ss の幻の距離を立て、
+  外れ値が候補間の得点差を食い潰して端が登らない）。
+- **grace 列の参加**: Slur_engraver は slur が開いている間に立つ**全**音柱を
+  acknowledge ＝ start 音自身の grace（slur が開く前に鳴る）は不参加・後続の
+  grace 列は参加。幾何は renderer と同じ産地から再構築
+  （SpacingRules.GraceColumns・GraceNoteEngraver.QuantGraceBeam（internal 化）・
+  単独 grace の stem = 描画側 recipe = DefaultStemLength × magstep(−3)）。
+  **札 4 枚**: ⑴ scale1・ossia 無視（head 箱と同じ既存の簡略） ⑵ script-overhang
+  shift 未消費（fermata 付き main 音の grace は描画だけ左に逃げる——コーパス未踏）
+  ⑶ **beamed grace の stem_（quant線 + 全 GraceBeamThickness）はコーパス未踏**
+  （双子の grace は単独 8 分＝flag） ⑷ LS 単独 grace stem tip −3.98 vs LP −4.2
+  （renderer の固定長 regime。今回は 4 点一致に響かなかったが LP は
+  length-fraction 0.8 の実 stem）。
+- **LP 照合（scratch\lpreg\slurgrace twin・staff 相対）= 外側 slur 4 点完全一致**:
+  両端 −3.54 = LP −3.5450・C1/C2 −5.02 = LP −5.0225・X span 10.34 = 10.3449・
+  indent 1.82 = 1.819。修理前 LS = −1.54/−3.04（base のまま・avoid の fit で
+  曲線だけ持ち上がる歪な弓）。grace slur 自体（SharedRenderer.GraceNotes の別
+  regime）は不変＝既知Δ（始点 Y 0.31・終点 X 0.74）のまま＝別勘定続行。
+★★★ **第2便 stem-attach X 規則（slur-scoring.cc:738-760）port = 第45号開示⑴の
+返済**——**stem 配管だけだと multivoice-spanners が LP から逃げる**のが出土品:
+- voice2 の下向き slur `g'( e')`（stem down = 両端 slurward）で、新設の stem 項が
+  base 候補に /5=6 を課金し、edges（両端 /5 で 6 歩 4.0）の方が安くなって端が
+  3ss 下へ逃げた。**LP 実測（scratch\lpreg\mvslur-probe.ly）= base に留まる**——
+  :738-760 が attachment X を stem 面+0.3 へ動かすので端列 x_（stem 中心）が
+  範囲外になり base が無課金になるから。
+- port = 候補ごとに: 候補 Y が stem Y 幅（0.25 widen）内 → X = stem 面 ∓(半厚+0.3)
+  ＝attach（tilt shift は :783 のとおり無効）・tip を越えた候補は X = stem 中心
+  (:754-759)・minimum-length 1.5（define-grobs.scm Slur）/ max-slope 1.1 違反は
+  頭中心へ戻して**保持** (:763-778)。SlurEdgeInfo に StemX/StemTipY/StemBeginY を
+  配管（ResolveSlurEdge が beamed=OuterEdge・unbeamed=OutwardTip の正席を読む）。
+- **照合**: multivoice = LP probe と端 Y 完全一致（−1.455/−0.455）・X span 2.15 =
+  LP 2.147（control は Δ0.055 = curve gen の既知系）。**multi-line-spanners は
+  双子（scratch\lpreg\mls）で Y 全点一致に改善**: piece1 +0.80/−1.55 =
+  LP +0.805/−1.545・C1 −3.10 = −3.088・C2 −5.27 = −5.258・piece2 −2.20/−0.55 =
+  LP −2.195/−0.545。**旧 snapshot は +1.68/−1.67 と 0.9 ずれていた＝この本は
+  前から LP とずれていて今回の port が直した**（X は spacing regime の既知 drift
+  0.2-0.5 のみ）。
+- **snapshot 4 枚 = 全差分 slur path のみ census 済**: multivoice・multi-line =
+  上記 LP 照合済・tab-grace-slur = tab gate で双子不可＝機構で受理（notation 側
+  slur の slurward-stem 取り付き + grace 参加で 1.0-1.5ss 移動）・
+  dot-cross-voice-spacing = X のみ ±0.63（past-tip 枝 x_ = stem 中心・Y 不変）。
+- 観測者 +2（SlurScoringTests.OuterSlur_EncompassesTheGraceColumnsStem = LP 4 点
+  + span / VoiceTwoSlur_AttachesToItsSlurwardStems_AndStaysAtBase = LP 2 点 +
+  span）・引用ラチェット: `get_encompass_infos`（LP に無い綴りだった旧コメント）が
+  KnownUnverifiedSymbols から出た。
+★ **第3便 perf A/B round 15**（機材 = scratch\lpreg\perf-ab15.ps1・base = 27dacde7
+worktree（撤去済）・Release・交互×両順・中央値 of 3）: **slur300 = −4.0%/+5.9%・
+grace200 = −5.2%/+2.6%・対照 scriptsym1k = +7.1%/−3.0% ＝ 3 つとも符号跨ぎ =
+drift・scriptsym1k の SVG hash base/curr 完全一致**（slur 無し本は挙動不変）。
+- ⚠️ **罠 2 つ（測り方・§5.3 級）**: ⑴ **slur を測るときは同じレンダの staff line
+  から middle を取る**——修理で slur の丈が変わると頁組みが staff を svg 内で
+  動かすので、旧レンダの middle で新 slur を読むと 0.455 の幻のずれが出る（今回
+  これで「修正が効いていない」「1 grid 行き過ぎ」を続けて誤診し、DrawCurve まで
+  容疑をかけた。真相は全部測り違い＝コードは最初から LP の答えを出していた）。
+  ⑵ **候補ダンプは sort してから読む**——(1.545,1.545)=10.80 を「最小」と目視で
+  書きかけたが、sort したら (−3.545,…)=4.00 が下に居た。
+★ scratch の旧 slurgrace.svg（下見時の残置）は**さらに古い build の産物**で、
+第6便の実測値 −1.54/−3.04 とすら合わない＝stale。双子照合は毎回レンダし直すこと。
+
+plain 322 / 処理済 **258**（fixed **46**・exact 33・skip 163・open 16・
+pending **64**。slurgrace が pending→fixed。数えたら state 別内訳も一緒に書くこと）。
+frontier = **slur-height-capping**（端の物は shaping 無視・scoring 参加＝fit_factor
+の close-to-edge がそのまま主張）→ slur-nice → slur-rest-direction →
+slur-shift-region → slur-vertical-skylines（§116 の並びのまま）。slur-flag は
+文法宿題（slur 向き強制の綴りなし）のままだが、**測るはずだった stem-attach X
+規則自体は今回 multivoice で実測・port 済**＝文法が入ったら追試になる。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4209 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
+snapshot 第117 は 4 枚（全部 slur path・census 済）・Core (Debug) 0 warning・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。probe 残置:
+scratch\lpreg\slurgrace.{ly,lys}・mvslur-probe.{ly,svg}・mls.{ly,lys→svg}・
+perf-ab15.ps1（＋第116 以前の perf-slur*/perf-sd*/perf-{nodot-slur,dot-noslur}）。
+
+## 以下は第116セッションの経緯
+
 最終更新 第116セッション（＝第1便 **4冊 skip**・`6e80a05c`・第2便 fixed
 **第45号 = slur-dot-collision.ly = slur-scoring 再建**・`0538a07b`・第3便
 **perf A/B round 14 = 重い側 drift・対照 hash 一致・既存超線形 2 件起票**・

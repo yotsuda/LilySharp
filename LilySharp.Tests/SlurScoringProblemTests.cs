@@ -158,7 +158,7 @@ public class SlurScoringProblemTests
         var slur = CreateSlur(0, 0);
         var obstacles = new[]
         {
-            new SlurObstacle(30, 1.5, 2.5, SlurObstacleType.NoteHead)
+            new SlurObstacle(30, 1.5, 2.5)
         };
 
         var problemWithObstacle = new SlurScoringProblem(

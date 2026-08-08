@@ -110,4 +110,76 @@ public class SlurScoringTests
         double mt = 1 - t;
         return c0 * mt * mt * mt + 3 * c1 * t * mt * mt + 3 * c2 * t * t * mt + c3 * t * t * t;
     }
+
+    [Fact]
+    public void OuterSlur_EncompassesTheGraceColumnsStem()
+    {
+        // slur-grace.ly: an outer slur spans a note carrying an acciaccatura.
+        // The grace column is a note column the engraver acknowledges while the
+        // slur is open, and its FORCED-UP stem points with the up slur — so its
+        // stem tip (not its head) is what the curve must clear, through the
+        // encompass stem term, the avoid offsets and the variance's
+        // get_point(dir). Without the stem the ends sat at -1.545/-3.045 (the
+        // bases) with a lumpy fitted curve; LP parks both ends at -3.545 with
+        // the plain bow. Pinned against the LP twin
+        // (scratch/lpreg/slurgrace.{ly,lys}): all four curve Ys and the span.
+        // LILYPOND-REF: lily/slur-scoring.cc:111-161 get_encompass_info —
+        //   stem_ = stem extent on the slur's side; x_ moves to the stem.
+        // LILYPOND-REF: lily/slur-configuration.cc:283-302 — get_point(dir) in
+        //   the variance term, and the stem term over every column.
+        string svg = Render(
+            "octave absolute\ntime 4/4\n\n" +
+            "c'4( acciaccatura { e'8 } d'4 e'4 f'4) |\n" +
+            "c'4( appoggiatura { e'8 } d'4 e'4 f'4) |\n" +
+            "c'4 appoggiatura { e'8 } d'4 e'4 f'4 |\n");
+        double middle = MiddleLineY(svg);
+        var c = BowCurve(svg);
+
+        Assert.Equal(-3.54, c[1] - middle, 2);  // start Y (LP -3.5450)
+        Assert.Equal(-3.54, c[7] - middle, 2);  // end Y (LP -3.5450)
+        Assert.Equal(-5.02, c[3] - middle, 2);  // control1 Y (LP -5.0225)
+        Assert.Equal(-5.02, c[5] - middle, 2);  // control2 Y (LP -5.0225)
+        // X span: LP 10.9970-0.6521 = 10.3449 (a 2-decimal Equal would split on
+        // the rounding boundary, so bound the difference instead).
+        Assert.True(Math.Abs((c[6] - c[0]) - 10.3449) < 0.01,
+            $"X span {c[6] - c[0]} vs LP 10.3449");
+    }
+
+    [Fact]
+    public void VoiceTwoSlur_AttachesToItsSlurwardStems_AndStaysAtBase()
+    {
+        // A voice-two down-slur on stem-down quarters (test/multivoice-spanners'
+        // g'( e')). Both edge stems point WITH the slur, so each candidate's X
+        // moves onto the stem's face + 0.3 (slur-scoring.cc:738-760) — which
+        // puts the encompass x_ OUTSIDE the attachment range, so the base pays
+        // no stem penalty and the slur stays hugging the heads. Before that
+        // rule was ported, plumbing the stems alone made the base pay the /5
+        // stem term and the slur fled 3ss below the tips — away from LP.
+        // Pinned against scratch/lpreg/mvslur-probe.ly: LP start -1.4550,
+        // end -0.4550, X span 2.5772-0.4300 = 2.147.
+        // LILYPOND-REF: lily/slur-scoring.cc:738-760 enumerate_attachments.
+        string svg = Render(
+            "octave absolute\n" +
+            "part mel { clef treble }\n" +
+            "section S {\n" +
+            "  mel {\n" +
+            "    voice { c''4 d'' e'' f'' }\n" +
+            "    { e'4 g' g'( e') }\n" +
+            "  }\n" +
+            "}\n" +
+            "form main { S }\n" +
+            "score main \"obs\" { staff mel }\n");
+        double middle = MiddleLineY(svg);
+        var c = BowCurve(svg);
+
+        // Start/end Y = the bases (LP -1.4550 / -0.4550). The SVG prints 2
+        // decimals, so a .xx5 value can land either way — bound the difference.
+        Assert.True(Math.Abs((c[1] - middle) - (-1.455)) < 0.015,
+            $"start Y {c[1] - middle} vs LP -1.4550");
+        Assert.True(Math.Abs((c[7] - middle) - (-0.455)) < 0.015,
+            $"end Y {c[7] - middle} vs LP -0.4550");
+        // X span (stem-to-stem): LP 2.5772-0.4300 = 2.1472.
+        Assert.True(Math.Abs((c[6] - c[0]) - 2.1472) < 0.01,
+            $"X span {c[6] - c[0]} vs LP 2.1472");
+    }
 }

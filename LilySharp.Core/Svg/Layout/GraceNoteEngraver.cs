@@ -241,7 +241,7 @@ internal static class GraceNoteEngraver
     /// the right one for both.
     /// </para>
     /// </remarks>
-    private static (double?, double?) QuantGraceBeam(
+    internal static (double?, double?) QuantGraceBeam(
         GraceNoteItem grace, ImmutableArray<double> columnOffsets)
     {
         var notes = grace.Notes;

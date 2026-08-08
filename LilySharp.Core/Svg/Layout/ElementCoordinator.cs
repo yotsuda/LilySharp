@@ -1986,7 +1986,9 @@ internal sealed class ElementCoordinator
     /// LILYPOND-REF: lily/slur-scoring.cc Slur_score_state extremes_ / edge_has_beams_.
     /// </summary>
     private static SlurEdgeInfo ResolveSlurEdge(
-        Voice voice, int measureIndex, int itemIndex, bool leftEdge)
+        Voice voice, int measureIndex, int itemIndex, bool leftEdge,
+        double columnX = double.NaN, double staffMiddleDown = double.NaN,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
             return default;
@@ -2020,7 +2022,27 @@ internal sealed class ElementCoordinator
         // tilt X shift and the extra-encompass edge check.
         double headWidth = GlyphMetrics.GetNoteheadBBox(
             GlyphMetrics.NoteValueOf(baseDuration)).Width;
-        return new SlurEdgeInfo(hasStem, stemUp, beamedInner, beamed, headWidth);
+
+        // The edge stem's frame — LP's extremes_[d].stem_extent_, consumed by the
+        // stem-attachment X rule (slur-scoring.cc:738-760). The tip is the same
+        // canonical read the encompass obstacles take: the quanted beam's outer
+        // face for a beamed stem, the drawn stem end otherwise.
+        double stemX = double.NaN, stemTipY = double.NaN, stemBeginY = double.NaN;
+        if (hasStem && !double.IsNaN(columnX)
+            && NoteColumnLayout.Of(items[itemIndex]) is { } col)
+        {
+            stemX = LayoutUtilities.StemX(columnX, stemUp, col.NoteValue, col.Notehead);
+            stemBeginY = staffMiddleDown - col.HeadPositionToward(!stemUp) / 2.0;
+            if (TryGetBeamedStemTipDeviceY(beamLayouts, measureIndex, itemIndex,
+                    stemX, staffMiddleDown, stemUp, out double tip))
+                stemTipY = tip;
+            else
+                stemTipY = staffMiddleDown - EngravingDefaults.StaffMiddle
+                    + col.OutwardTipDeviceY(stemUp);
+        }
+
+        return new SlurEdgeInfo(hasStem, stemUp, beamedInner, beamed, headWidth,
+            stemX, stemTipY, stemBeginY);
     }
 
     /// <summary>
@@ -2072,19 +2094,43 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Note-head obstacles the slur encompasses within this broken segment, in
-    /// device coordinates and sorted by X. The scorer treats the first and last
-    /// columns as the slur's edges and scores head encompass over the interior,
-    /// so the curve lifts to clear notes that bulge into its path. Returns an
-    /// empty list when the segment covers no note column.
+    /// The note columns the slur encompasses within this broken segment — voice
+    /// columns AND the grace columns hanging inside the span — in device
+    /// coordinates and sorted by X. The scorer treats the first and last columns
+    /// as the slur's edges and scores head encompass over the interior; a column
+    /// whose stem points WITH the slur also carries its stem's reach, so the
+    /// curve lifts clear of slurward stem tips (a grace run's forced-up stems
+    /// under an up slur — "slur-grace.ly").
+    /// Returns an empty list when the segment covers no note column.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/slur-scoring.cc Slur_score_state::get_encompass_infos —
-    /// the encompassed note columns (bounds included) feed score_encompass().
+    /// LILYPOND-REF: lily/slur-scoring.cc:111-161 get_encompass_info — x_ is the
+    ///   head's ink CENTER (:127-132), or the stem's X when the stem points with
+    ///   the slur (:152-155); stem_ = the stem's Y extent on the slur side plus
+    ///   half the beam's thickness when beamed (:146-150), else head_.
+    /// LILYPOND-REF: lily/slur-engraver.cc acknowledge_note_column — every
+    ///   column engraved while the slur is OPEN joins, which covers a grace run
+    ///   attached to any note after the start (the start note's own graces sound
+    ///   before the slur opens and stay out).
+    /// The stem reads are the canonical houses: a beamed stem ends on
+    /// <see cref="BeamGroup.OuterEdgeStaffSpaceAtX"/> (= LP's stem extent, which
+    /// includes the half-thickness beam_end_corrective, stem.cc:142), an
+    /// unbeamed one on <see cref="NoteColumnLayout.OutwardTipDeviceY"/>; a grace
+    /// stem on the renderer's own recipe (SharedRenderer.GraceNotes — fixed
+    /// DefaultStemLength × the grace magstep, or the quanted grace beam).
+    /// ⚠️ Grace geometry is rebuilt from the same producers the renderer reads
+    /// (SpacingRules.GraceColumns / GraceNoteEngraver.QuantGraceBeam) at scale 1
+    /// with no ossia factor — the same simplification the head boxes take — and
+    /// without GraceNoteEngraver's script-overhang shift (a fermata on the main
+    /// note pushes the drawn run further left than the scored one; no corpus
+    /// book pairs a covered grace with such a script yet).
     /// </remarks>
     private static IReadOnlyList<SlurObstacle> BuildSlurObstacles(
         Voice voice, SystemLayout segSystem, SlurItem slur,
-        double staffMiddleDown, double segStartX, double segEndX)
+        double staffMiddleDown, double segStartX, double segEndX,
+        ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableArray<GraceNoteItem> graceNotes,
+        int staffIndex)
     {
         const double headHalfHeight = 0.5; // staff spaces, half a notehead
         const double eps = 0.001;
@@ -2110,20 +2156,148 @@ internal sealed class ElementCoordinator
                 if (topPos is null || bottomPos is null)
                     continue; // rest / spacer / barline — no head
 
+                // The column X (head's LEFT edge) keeps the window test the same
+                // one the extra-object builder runs; the scored x_ is the head's
+                // ink CENTER, as LP reads it (:127-132) — which also puts an edge
+                // column exactly ON its attachment X, where LP's strictly-inside
+                // test (slur-configuration.cc:251) leaves it out of the scoring
+                // unless a candidate's tilt shift moves the attachment off it.
                 double x = ml.X + GetItemXOffset(voice, mi, i, ml);
                 if (x < segStartX - eps || x > segEndX + eps)
                     continue;
+                double obstacleX = x + EndpointHeadHalfWidth(voice, mi, i);
 
                 // Visual top edge = highest pitch (smallest device Y) minus half a
                 // head; visual bottom edge = lowest pitch plus half a head.
                 double topY = (staffMiddleDown - topPos.Value / 2.0) - headHalfHeight;
                 double bottomY = (staffMiddleDown - bottomPos.Value / 2.0) + headHalfHeight;
-                obstacles.Add(new SlurObstacle(x, topY, bottomY, SlurObstacleType.NoteHead));
+
+                // stem_ / the stem-x_ move, only when the stem points WITH the slur.
+                // LILYPOND-REF: slur-scoring.cc:146-158.
+                double stemY = double.NaN;
+                if (NoteColumnLayout.Of(items[i]) is { } col
+                    && col.HasStem && col.StemUp == slur.CurveUp)
+                {
+                    double stemX = LayoutUtilities.StemX(
+                        x, col.StemUp, col.NoteValue, col.Notehead);
+                    if (TryGetBeamedStemTipDeviceY(beamLayouts, mi, i, stemX,
+                            staffMiddleDown, col.StemUp, out double beamTip))
+                        // Beamed: the extent already ends on the stack's outer face
+                        // (beam_end_corrective, stem.cc:142); LP adds another half
+                        // beam thickness on top (slur-scoring.cc:149-150).
+                        stemY = beamTip + (col.StemUp ? -0.5 : 0.5)
+                            * EngravingDefaults.BeamThickness;
+                    else
+                        // Unbeamed: the drawn stem end, from the one house
+                        // (staff-top frame, middle at EngravingDefaults.StaffMiddle).
+                        stemY = staffMiddleDown - EngravingDefaults.StaffMiddle
+                            + col.OutwardTipDeviceY(col.StemUp);
+                    obstacleX = stemX;
+                }
+
+                obstacles.Add(new SlurObstacle(obstacleX, topY, bottomY, stemY));
             }
+
+            AddGraceObstaclesForMeasure(
+                obstacles, voice, slur, graceNotes, staffIndex, ml, mi, hi,
+                staffMiddleDown, segStartX, segEndX);
         }
 
         obstacles.Sort((a, b) => a.X.CompareTo(b.X));
         return obstacles;
+    }
+
+    /// <summary>
+    /// Adds the grace columns the slur covers in measure <paramref name="mi"/> to
+    /// <paramref name="obstacles"/> — heads at the grace font's own ink, stems
+    /// forced UP (score-grace-settings), the group's geometry rebuilt from the
+    /// same producers the renderer reads. See
+    /// <see cref="BuildSlurObstacles"/> for the LP references and disclosures.
+    /// </summary>
+    private static void AddGraceObstaclesForMeasure(
+        List<SlurObstacle> obstacles, Voice voice, SlurItem slur,
+        ImmutableArray<GraceNoteItem> graceNotes, int staffIndex,
+        MeasureLayout ml, int mi, int hi,
+        double staffMiddleDown, double segStartX, double segEndX)
+    {
+        if (graceNotes.IsDefaultOrEmpty)
+            return;
+        const double eps = 0.001;
+        int graceStaff = Math.Max(staffIndex, 0);
+
+        foreach (var g in graceNotes)
+        {
+            if (g.StaffIndex != graceStaff || g.MeasureIndex != mi
+                || g.Notes.IsDefaultOrEmpty)
+                continue;
+            // Covered = the grace's MAIN note lies inside the span, excluding the
+            // start note itself: its grace run sounds BEFORE the slur opens, so
+            // LP's engraver never acknowledges it into this slur.
+            bool afterStart = mi > slur.StartMeasureIndex
+                || g.MainNoteItemIndex > slur.StartItemIndex;
+            bool beforeEnd = mi < slur.EndMeasureIndex
+                || g.MainNoteItemIndex <= slur.EndItemIndex;
+            if (!afterStart || !beforeEnd || g.MainNoteItemIndex > hi)
+                continue;
+
+            var mainItem = ItemAt(voice, mi, g.MainNoteItemIndex);
+            var columns = SpacingRules.GraceColumns(g.Notes, mainItem);
+            double groupX = ml.X
+                + GetItemXOffset(voice, mi, g.MainNoteItemIndex, ml)
+                - columns.Span;
+
+            var font = GraceNoteItem.Font;
+            double headHalf = font.NoteheadBlack.Top;
+            // The quanted grace beam (null for a lone / unbeamable run): the
+            // scored line's staff-position pair at the two OUTER STEMS, exactly
+            // what the renderer anchors the drawn beam on.
+            var (beamL, beamR) = GraceNoteEngraver.QuantGraceBeam(g, columns.Offsets);
+            double StemXAt(int k) => LayoutUtilities.StemX(
+                groupX + (k < columns.Offsets.Length ? columns.Offsets[k] : 0.0),
+                up: true, noteValue: 4, NoteheadStyle.Default, font);
+
+            for (int k = 0; k < g.Notes.Length; k++)
+            {
+                double hx = groupX + (k < columns.Offsets.Length ? columns.Offsets[k] : 0.0);
+                if (hx < segStartX - eps || hx > segEndX + eps)
+                    continue;
+                var note = g.Notes[k];
+                double headCenterY = staffMiddleDown - note.StaffPosition / 2.0;
+
+                // Grace stems are forced UP whatever the pitch
+                // (scm/music-functions.scm:633-637 score-grace-settings), so the
+                // stem participates only under an UP slur.
+                double stemY = double.NaN;
+                double obstacleX = hx + font.NoteheadBlackAdvance / 2.0;
+                if (slur.CurveUp)
+                {
+                    double stemX = StemXAt(k);
+                    if (beamL is { } bl && beamR is { } br && g.Notes.Length > 1)
+                    {
+                        // Beamed run: the quanted line interpolated to this stem's
+                        // X, plus a full grace beam thickness — half for the stem
+                        // extent's beam_end_corrective, half for LP's encompass
+                        // margin (slur-scoring.cc:149-150).
+                        double xL = StemXAt(0), xR = StemXAt(g.Notes.Length - 1);
+                        double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
+                        double centerUp = (bl + (br - bl) * t) / 2.0;
+                        stemY = staffMiddleDown
+                            - (centerUp + EngravingDefaults.GraceBeamThickness);
+                    }
+                    else
+                    {
+                        // Lone / flagged grace: the drawn stem end — head centre
+                        // plus the renderer's fixed grace stem length.
+                        stemY = headCenterY
+                            - EngravingDefaults.DefaultStemLength * GraceNoteItem.ScaleFactor;
+                    }
+                    obstacleX = stemX;
+                }
+
+                obstacles.Add(new SlurObstacle(
+                    obstacleX, headCenterY - headHalf, headCenterY + headHalf, stemY));
+            }
+        }
     }
 
     /// <summary>
@@ -2381,10 +2555,12 @@ internal sealed class ElementCoordinator
                 // note's stem points the same way as the slur AND is beamed on the inner side;
                 // otherwise to the notehead (slurOffset). This lifts the slur clear of the beam.
                 var leftEdgeInfo = segment.IsFirst
-                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, leftEdge: true)
+                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, leftEdge: true,
+                        windowStartX, staffMiddleDown, beamLayouts)
                     : default;
                 var rightEdgeInfo = segment.IsLast
-                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false)
+                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false,
+                        windowEndX, staffMiddleDown, beamLayouts)
                     : default;
                 const double stemTipGap = 0.5; // staff-spaces beyond the beam (LP dir_*0.5*staff_space)
 
@@ -2407,7 +2583,8 @@ internal sealed class ElementCoordinator
                         + (slur.CurveUp ? -slurOffset : slurOffset);
 
                 var obstacles = BuildSlurObstacles(
-                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX);
+                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown,
+                    windowStartX, windowEndX, beamLayouts, graceNotes, staffIndex);
 
                 var extraObjects = BuildSlurExtraObjects(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX);

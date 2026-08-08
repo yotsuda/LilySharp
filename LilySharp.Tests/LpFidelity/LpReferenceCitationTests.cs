@@ -110,7 +110,6 @@ public sealed class LpReferenceCitationTests
     {
         "break_substitute|lily/break-substitution.cc",
         "church_rest|lily/rest.cc",
-        "get_encompass_infos|lily/slur-scoring.cc",
         "key_signature|lily/key-engraver.cc",
         "listen_glissando|scm/scheme-engravers.scm",
         "calc_springs|lily/grace-spacing-engraver.cc",

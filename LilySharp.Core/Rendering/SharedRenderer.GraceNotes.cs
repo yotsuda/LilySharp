@@ -554,8 +554,8 @@ internal static partial class SharedRenderer
         double graceHalf = 0.5 * scale, mainHalf = 0.5;
         var obstacles = new List<SlurObstacle>
         {
-            new(startX, graceY - graceHalf, graceY + graceHalf, SlurObstacleType.NoteHead),
-            new(endX, mainY - mainHalf, mainY + mainHalf, SlurObstacleType.NoteHead),
+            new(startX, graceY - graceHalf, graceY + graceHalf),
+            new(endX, mainY - mainHalf, mainY + mainHalf),
         };
         var solved = new SlurScoringProblem(
             slurItem, startX, startY, endX, endY, staffMiddleYDevice,
