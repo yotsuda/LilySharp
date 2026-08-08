@@ -2027,6 +2027,10 @@ internal sealed class ElementCoordinator
         // stem-attachment X rule (slur-scoring.cc:738-760). The tip is the same
         // canonical read the encompass obstacles take: the quanted beam's outer
         // face for a beamed stem, the drawn stem end otherwise.
+        // ⚠️ The begin is the anchor HEAD'S CENTRE; LP's stem-begin-position is
+        // the attachment point, ~0.17 ss off the centre toward the tip — only
+        // the 0.25-widened containment window's head-side edge reads it, so a
+        // candidate exactly on that margin could attach differently.
         double stemX = double.NaN, stemTipY = double.NaN, stemBeginY = double.NaN;
         if (hasStem && !double.IsNaN(columnX)
             && NoteColumnLayout.Of(items[itemIndex]) is { } col)
@@ -2062,9 +2066,15 @@ internal sealed class ElementCoordinator
             case NoteItem n: dur = n.BaseDuration; break;
             case ChordItem c: dur = c.BaseDuration; break;
             case RestItem { IsSpacer: false } r:
-                // A rest bound attaches at the rest's ink centre — LP's fallback
-                // when the column has no first head (fh null → bound extent
-                // centre). LILYPOND-REF: slur-scoring.cc:561-564.
+                // A rest bound attaches at the rest's ink centre. ⚠️ STAND-IN:
+                // LP's rest bound goes through the no-note-column loop, whose X
+                // is the BOUND grob's extent edge (ext[-d]), not an ink centre —
+                // the bound there is not the rest column, and what its extent is
+                // in Lily# terms has no answer yet. The Y side of the same loop
+                // is ported exactly (see the rest-base branch in LayoutSlurs);
+                // the X was NOT compared against LP.
+                // LILYPOND-REF: slur-scoring.cc:594-598 —
+                //   breakable_bound_extent / generic_bound_extent, x = ext[-d].
                 return GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(r.BaseDuration)).CenterX;
             default: return 0;
         }
@@ -2161,7 +2171,10 @@ internal sealed class ElementCoordinator
                 // and get_encompass_info's no-stem branch reads the COLUMN's Y
                 // extent — the rest's own ink ("slur-rest-direction.ly": the
                 // interior rests are what push an all-rest slur off its base).
-                // LILYPOND-REF: slur-scoring.cc:117-122 — !stem: head_ = stem_ =
+                // LILYPOND-REF: slur-scoring.cc:117-122 — !stem: x_ = the
+                //   column's own refpoint (relative_coordinate — the rest ink's
+                //   LEFT edge, every rest glyph's bbox starting at 0), NOT the
+                //   ink centre the headed branch reads; head_ = stem_ =
                 //   notecol->extent(Y)[dir_].
                 if (items[i] is RestItem { IsSpacer: false } rest
                     && !rest.IsMultiMeasure)
@@ -2178,7 +2191,7 @@ internal sealed class ElementCoordinator
                     // no corpus book slurs over a beamed rest yet.
                     double originDown = staffMiddleDown - (restValue == 1 ? 1.0 : 0.0);
                     obstacles.Add(new SlurObstacle(
-                        rx + restBox.CenterX,
+                        rx + restBox.Left,
                         originDown - restBox.Top,
                         originDown - restBox.Bottom));
                     continue;

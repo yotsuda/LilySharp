@@ -211,8 +211,10 @@ public class SlurScoringTests
         //     deep rest ink is a disclosed residual, see HANDOFF).
         // LILYPOND-REF: lily/slur.cc calc_direction — default DOWN, UP only
         //   for a stem-DOWN note column; rest columns cast no vote.
-        // LILYPOND-REF: lily/slur-scoring.cc:543-559 get_base_attachments —
-        //   a rest bound reads neither stem nor head: y = dir * 0.5.
+        // LILYPOND-REF: lily/slur-scoring.cc:587-619 get_base_attachments —
+        //   a rest bound takes the no-note-column loop: y = the edge encompassed
+        //   column's Y extent (the rest's ink) + dir * 0.5 (a half rest's ink
+        //   bottom is 0, hence the 0.5 pin below).
         string svg = Render(
             "octave absolute\nclef bass\ntime 4/2\n\n" +
             "c,2( r c,) r | c( r c) r | c( r c,) r | c,( r c) r | r( r r) r |\n");

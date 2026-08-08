@@ -65,8 +65,34 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 8 点+X 全一致）**・第5便 **slur-nice.ly = skip（slur-flag と同じ向き綴りゲート）**・以上 `66d1edc7`・
 第6便 **slur-rest-direction.ly 下見+修理 2 段（rest-bound slur の再建・rest 列の
 encompass 参加）**・`42455447`・第7便 **rest-bound base = rest ink 端+0.5 の実測
-port ＝ 全 4 行の全 rest slur が exact・残差は fig4 の 1 点だけ**・
-この handoff と同 commit）。
+port ＝ 全 4 行の全 rest slur が exact・残差は fig4 の 1 点だけ**・`30041e60`・
+第8便 **自己監査（ユーザー三問）＝字面違反 1 修正（rest x_）・stale REF 2 修正・
+札 3 追記・出力不変（双子全点不変・snapshot 0 枚）**・この handoff と同 commit）。
+
+★★ **第8便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
+- **検算で白 9**: ⑴ stem_ の gate = stem_dir==dir_ && extent 非空 (:146)
+  ⑵ beamed stem_ = 尖端(corrective 込み) + 0.5·beam厚 (:148-150) ⑶ x_ の stem
+  移動 = stem extent 中心 (:152-155)＝StemX の半厚戻しと同じ線 ⑷ variance の
+  get_point = Interval{stem_,head_}[dir]（slur-scoring.hh:64-70・max/min と等価）
+  ⑸ stem-attach X = 0.25 widen・face∓0.3・past-tip は中心 (:738-760 三桁一致の
+  edge 0.07 でも検算済) ⑹ min-length 1.5(grob 宣言)/max-slope 1.1 违反は頭中心へ
+  戻して保持 (:763-778) ⑺ tilt shift の !attach gate (:783) ⑻ EndYFor の
+  nc extent = 列 extent（stem 込み・robust_relative_extent と同じ向き）
+  ⑼ rest base にも move_away が乗る（LP :616——LS は scorer 入口で全 base に
+  適用済＝同じ 1 回）。
+- **字面違反 1 = 修正（出力不変）**: 中間 rest 列の x_ を ink 中心と書いていたが
+  **LP :119 は列の refpoint = rest ink 左端**（rest glyph は bbox Left 0）→
+  ink 左端へ修正。双子 4 行 20 弓・slurgrace とも全点不変（今の勝者は
+  この 0.6 に依存しない）。
+- **stale REF 2 = 修正**: RestItem doc と観測者コメントの「rest bound は
+  note-column 枝 :543-573」＝第6便の読み——**第7便の debug-slur-scoring 実測が
+  反証済**（正 = :587-619 の第2ループ）なのに文面が残っていた。
+- **札 3（開示のみ・挙動不変）**: ⑴ rest bound の X = ink 中心は**代役**
+  （LP は bound grob の extent 端 ext[-d] :594-598・Y は exact 照合済だが X は
+  未照合） ⑵ stem-attach 窓の begin 側 = 頭中心（LP は attachment 点＝
+  中心から ≈0.17 尖端寄り。0.25 widen の頭側縁だけが読む） ⑶ voice 列の
+  obstacle 頭箱は従来の nominal 0.5 半高（LP ink 0.545。base 側は 0.545+0.5 で
+  正・obstacle 側だけ 0.045 甘い＝第45号以前からの既存簡略の再掲）。
 
 ★★ **第6便 slur-rest-direction.ly（pending・修理 2 つ入り・残差 2 点開示）**:
 - **出土した欠陥⑴ = rest-bound slur の黙殺**: `r16( r r)` の slur flag が

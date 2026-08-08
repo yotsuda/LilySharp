@@ -412,9 +412,14 @@ public sealed record RestItem : MusicItem
     /// legal slur bound: LilyPond's rests live inside NoteColumn grobs, so the
     /// Slur_engraver binds to them like any column ("slur-rest-direction.ly").
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/slur-scoring.cc:543-573 get_base_attachments —
-    /// the note-column branch runs for a rest bound too (stem and head both
-    /// null), giving y = dir·0.5·staff-space off the refpoint.</remarks>
+    /// <remarks>LILYPOND-REF: lily/slur-scoring.cc:587-619 get_base_attachments —
+    /// a rest bound is NOT a note-column bound to the scorer (extremes_ carries
+    /// no note_column_): the fallback loop reads the first/last ENCOMPASSED
+    /// column's Y extent — the rest's own ink — plus dir·0.5·staff-space.
+    /// MEASURED with debug-slur-scoring (the all-rest 16th slur's winner is
+    /// idx=0 TOTAL=0.00 at ink-bottom 2.05 + 0.5 = 2.55); an earlier remark here
+    /// claimed the note-column branch (:543-573), which that measurement
+    /// refuted.</remarks>
     public bool HasSlurStart { get; init; }
 
     /// <summary>True when a slur CLOSES on this rest (LilyPond <c>r)</c>).
