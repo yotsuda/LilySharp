@@ -64,7 +64,26 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第4便 fixed **第42号 = rest-avoid-note.ly**・`5f92858b`・
 第5便 **rest-collision-note-duration.ly = exact**・`1557f9b1`・
 第6便 **5 冊バッチ skip 5**・`fbdafa71`・第7便 **script-skip = skip（probe 付き）**・
-この handoff と同 commit）。
+`ec7e9b66`・第8便 **自己監査＝挙動変更 0・実測検証 2・開示 1 札**・この handoff と同 commit）。
+
+★★ **第8便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
+挙動変更 0・新規チューニング定数ゼロ検算済**:
+- **検算で白**: ⑴ set_ties_config_standard_directions の port を字面と再突き合わせ
+  （front/back/2度 split/剰余 sign・LP の span_diff 腕は同和音列で恒真に死ぬ旨も注記どおり）
+  ⑵ VoicedRestPosition を rest.cc:46-141 と再突き合わせ（half の下限 clamp = *begin・
+  whole の上限 clamp = back()・proper-side tail まで一致）⑶ 離散化式・staff span widen(1)・
+  whole-space 丸めの各式一致 ⑷ stem-engraver.cc の StemTremolo 生成 = REF 主張実在確認。
+- **実測検証 2**（監査が観測者ゼロを 2 つ潰した）: ⑴ **第41号で観測者ゼロのまま入れた
+  stemless 枝（全音符和音 tremolo）を qtrem-whole-probe で LP 照合＝斜線 3 本の左右両端 Y・
+  X とも桁一致**（左端 +0.69/−0.12/−0.93。残差 = 斜線長 1.5 vs 1.42 = stroked line vs
+  平行四辺形の既存札）⑵ **第40号 exporter roundtrip 双子の tie 5 本が book 綴りとバイト同一**
+  （translate・path 完全一致——本数だけでなく幾何で検証）。
+- **札⑴ StemTipPositionOf の beamed 近似**: 同方向同 onset 列の beamed 音符も非 beam 式
+  （CalculateStemEndY）で stem を読む——LP は列 extent（beam 駆動 stem）。読む腕自体が
+  same-dir same-moment 限定で corpus 未踏＝開示のみ（コード内 ⚠️ 追記済）。
+- 軽微（札にせず記録）: TieVariantEngraver.Calculate の noteValue switch `_ => default` 腕は
+  SemiTiesOf が先に空を返すため到達不能（コンパイラ要求の腕・§5.2 の「化ける」対象として
+  次に触る人は注意）。
 
 ★ **第7便 script-skip = skip（probe 付き・コード変更 0）**: 本の枠が書けない
 （\after music function 綴りなし + \new Dynamics コンテキスト対応物なし + 多 score 頁組み）。

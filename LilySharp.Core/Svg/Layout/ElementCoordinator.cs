@@ -1303,6 +1303,10 @@ internal sealed class ElementCoordinator
         // voice's r2 against g2: LilyPond lands at −11, the fixed length said −12).
         // Frame adapter only: StemCalculator is device (Y-down); positions are
         // Y-up halves of a staff space about the middle line.
+        // ⚠️ A BEAMED note's drawn stem ends where the beam does, which this
+        // unbeamed formula cannot know — LilyPond reads the column's extent there.
+        // Only the same-direction-same-moment arm ever reads a stem at all, and no
+        // corpus book puts a beamed column in it; disclosed, not solved.
         int durLog = StemCalculator.GetDurationLog(noteValue);
         const double mid = 10.0;                      // arbitrary device middle
         double deviceNoteY = mid - root / 2.0;
