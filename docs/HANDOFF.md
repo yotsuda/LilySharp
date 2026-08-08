@@ -59,8 +59,28 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 第114セッション（＝第1便 fixed **第43号 = script-stack-order1.ly**・`67458e64`・
-第2便 **perf A/B round 11 = 対照 drift 内+hash 一致・mover 無し guard**・`608d3c5c`。
-この handoff はその次の commit）。
+第2便 **perf A/B round 11 = 対照 drift 内+hash 一致・mover 無し guard**・`608d3c5c`・
+第3便 **script-tie-collision 下見**・`54038b97`・第4便 **自己監査＝挙動変更 0・開示 2 札**・
+この handoff と同 commit）。
+
+★★ **第4便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
+挙動変更 0・新規チューニング定数ゼロ検算済・開示 2 札**:
+- **検算で白 4**: ⑴ bump port を script-column.cc:130-189 と再突合（直前 osp は現在値・
+  :181 の未設定 last_initial=0 既定・新 osp=現在値+0.1——全一致。「全 scripts so far を
+  support」も **sort 順の帰結として最初の mover 以降は全員 mover 化する**ので
+  「priority 無しのみ」と恒真等価） ⑵ finger_prio の `from_scm(…, 200)` 既定は Fingering の
+  宣言 100 で不発＝定数 100 は正 ⑶ extent 箱は無宣言既定+実測（輪郭だと −4.19 で LP −4.40 に
+  届かない）の両面で正 ⑷ 定数出所全部 LP 宣言/導出値・撤去側（1.4/1.9・0.56em・serif 面）が
+  LILYSHARP-OWN だった。
+- **札⑴ fingering の stem support 未移植**: LP は stem+flag を支持に足す
+  （new-fingering-engraver.cc:186-190）が add-stem-support=only-if-beamed ゲート——
+  **unbeamed（本の全音符）は同値・beamed 音符上の fingering は低く座る**（corpus 未踏・
+  FingeringEngraver に ⚠️ 済）。
+- **札⑵ 同 priority の fingering vs script 順**: LS は strict-less flush = LP の stable sort と
+  違い得る（踏む綴りなし・FlushFingerings に ⚠️ 済）。
+- 軽微（札にせず記録）: BuildLayout の below 枝は isAbove 恒真で到達不能（§5.2 の「化ける」
+  注意対象）・bump された mover の pass 所属は数値でなく grob 族（75.1 が 250 を跨ぐには
+  1 音に fermata 1750 個要る＝実質不発）。
 
 ★★★ **第1便 fixed 第43号 = script-stack-order1.ly**（script の縦積み＝script-priority 梯子・
 第107 blockB 起票の本命 e2e。もう 1 冊の script-tie-collision が次）:

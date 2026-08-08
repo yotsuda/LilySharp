@@ -293,6 +293,13 @@ internal static class FingeringEngraver
             // Vertical fingerings are scripts of the note's column: priority 100 +
             // direction × head position (direction here is UP, the default bucket).
             // LILYPOND-REF: lily/new-fingering-engraver.cc:334-335 set_property
+            // ⚠️ THE STEM IS NOT A SUPPORT HERE. LilyPond adds the stem and its flag
+            // to the fingering's supports (new-fingering-engraver.cc:186-190), but
+            // Fingering gates them with add-stem-support = only-if-beamed
+            // (scm/define-grobs.scm:1543), so an UNBEAMED note — every note of
+            // script-stack-order1, where this port was measured — reads identically.
+            // A fingering over a BEAMED note sits too low until that gate is ported;
+            // no fixture or corpus book reaches the pairing yet.
             ColumnPriority: 100 + note.StaffPosition);
     }
 }

@@ -321,6 +321,10 @@ internal static class ArticulationEngraver
         // distance over the placed profiles + its own padding 0.5), then becomes a
         // support itself. The reader-side horizon padding is the FINGERING's — it
         // declares none, so 0 (the Script's 0.1 is not borrowed).
+        // ⚠️ upTo is STRICTLY-LESS: a fingering whose priority ties a script's exact
+        // number flushes AFTER that script, where LilyPond's stable sort keeps
+        // acknowledgment order — no spelling reaches the tie (Fingering is 100 +
+        // position, scripts declare −100/−50/0/50/150/175/180).
         // LILYPOND-REF: lily/side-position-interface.cc:354-378 aligned_side — the
         //   distance call spends the placed-grob's horizon-padding and the padding is
         //   the moving grob's own.
