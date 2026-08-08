@@ -254,4 +254,51 @@ public class SlurScoringTests
         Assert.Equal(2.55, c[1] - middle, 2);  // start (LP 2.5500)
         Assert.Equal(2.55, c[7] - middle, 2);  // end (LP 2.5500)
     }
+
+    [Fact]
+    public void FlaggedSlurwardEdge_AttachesPastItsFlag_AndClimbsOneGrid()
+    {
+        // slur-rest-direction fig4, 16th row: the left C3's up stem points WITH
+        // the up slur and carries a FLAG. LP's stem_extent_ is the stem's
+        // extent UNITED with the flag's (get_bound_info), so the attachment X
+        // sits past the flag's ink (stem centre +1.128, not stem face +0.365)
+        // — the base pair's post-tilt slope then breaks max-slope 1.1 and the
+        // slope charge (≈1.86) sends the winner one grid up, where only the
+        // L-edge term (LP 0.0708, LS 0.0713) remains. Before the flag unite the
+        // base pair scored a clean 0.00 and never climbed.
+        // Pinned against LP (scratch/lpreg/slurrest-dbg.ly fig4; the 16th and
+        // 8th rows of scratch/lpreg/slurrest.ly climb, quarter/half stay).
+        // LILYPOND-REF: lily/slur-scoring.cc:188-203 get_bound_info —
+        //   s.unite (flag->extent (common_[ax], ax)).
+        // LILYPOND-REF: lily/slur-scoring.cc:738-760 enumerate_attachments.
+        string svg = Render(
+            "octave absolute\nclef bass\ntime 2/4\n\n" +
+            "c,16( r c) r |\n");
+        double middle = MiddleLineY(svg);
+        var c = BowCurve(svg);
+
+        // The SVG prints 2-decimal coordinates, so two roundings can drift
+        // ±0.01 — the tolerance is the printed precision, not the claim's.
+        Assert.Equal(-1.045, c[1] - middle, 0.011);  // start (LP -1.0450)
+        Assert.Equal(-4.045, c[7] - middle, 0.011);  // end (LP -4.0450)
+        Assert.Equal(2.95, c[6] - c[0], 0.011);      // X span (LP 2.9573) — a
+                                                     // head-centre attach reads ≈3.9
+    }
+
+    [Fact]
+    public void UnflaggedSlurwardEdge_StaysAtItsBase()
+    {
+        // The quarter spelling of the same figure is the control: no flag, so
+        // the united extent IS the bare stem, the base pair keeps a legal slope,
+        // and the slur stays at its base — as LP's quarter and half rows do
+        // (slurrest.ly rows 3-4: -0.5450, where rows 1-2 climb to -1.0450).
+        string svg = Render(
+            "octave absolute\nclef bass\ntime 4/4\n\n" +
+            "c,4( r c) r |\n");
+        double middle = MiddleLineY(svg);
+        var c = BowCurve(svg);
+
+        Assert.Equal(-0.545, c[1] - middle, 0.011);  // start (LP -0.5450)
+        Assert.Equal(-4.045, c[7] - middle, 0.011);  // end (LP -4.0450)
+    }
 }

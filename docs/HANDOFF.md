@@ -58,6 +58,66 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第118セッション（＝第1便 **fixed 第47号 = slur-rest-direction.ly 完結 =
+fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分同期込み・
+この handoff と同 commit）。
+
+★★★ **第1便 fig4 の真相 = LP の stem_extent_ は stem∪flag**（get_bound_info
+slur-scoring.cc:188-203 `s.unite (flag->extent)`——第117第2便 port (:738-760) の
+読み落とし。手順: ⑴ LS 候補ダンプ（LILYSHARP_SLUR_DEBUG 型を一時復活→撤去済。
+候補の **clone** を全スコアラで採点し staff 相対で印字——lazy solve を汚さない）
+= LS idx0 TOTAL 0.00 / idx9 0.1029 で idx0 が勝っていた ⑵ **LP probe SVG
+（slurrest-dbg.svg）の勝者 X 精読** = start 28.047 が「stem 面+0.3 = 27.28」に
+合わず **flag ink 右端+0.3 に一致** ⑶ LP 源で unite の字面を発見）:
+- **機構**: flag 込み attach で idx0 の dx が 3.73→2.93 に縮み、**tilt shift 後の
+  slope 1.193 > max-slope 1.1 → slope 課金 1.86**（:763-778 の X 矯正は発火
+  **しない**——矯正判定は tilt 前の dx 3.25 = slope 1.08 < 1.1）。idx9（L +1 grid・
+  slope 1.014）は edgeL 0.0713 だけ = **LP 0.0708 と三桁一致**で勝つ。
+- ★ **前便の stale を 1 つ斬った**: 第117第7便の「fig4 残差は 4 行とも同型」は
+  **誤り**。LP 実測（slurrest.svg 4 系統の fig4 start）= 16分/8分行（flag 持ち）
+  だけ **−1.045** に登り、**4分/2分行は base −0.545 = LS と元から一致**。LS 側が
+  4 行同値なのを LP 側も同型と書き写していた（残差は最初から s/e 行だけ）。
+- **修理**: SlurEdgeInfo の StemX（中心）→ **StemXLo/StemXHi（stem∪flag 合併
+  extent）**。ResolveSlurEdge が GetFlagBBox を合併（X = stemX..stemX+flag.Width
+  ＝ItemSkylineFactory と同じ予約枠・Y 窓の head 側も flag reach で unite）・
+  attach X = XHi+0.3 / XLo−0.3（:751 の [-d]−d·0.3）・past-tip X = 合併中心
+  (:759)。perf 影響なし（slur 端ごとに静的表 1 引き）。
+- **照合**: s 行 fig4 **のみ**変化 = **start −1.045 / end −4.045 exact・X span
+  2.95（LP 2.9573）・C1/C2 ±0.008・start X の stem 比 +1.128 = LP +1.128**。
+  e 行 −1.045 exact。**q/h 行 diff 0**・figs1/2/3/5 全行不変（fig1/2 = 非
+  slurward・fig3 = 右端 attach は XLo 側で flag 無関係・fig5 = rest）。
+  slurflag twin も再レンダで **IDENTICAL**（stem 反 slurward）。**snapshot 0 枚・
+  全緑 4213**（観測者+2: FlaggedSlurwardEdge_AttachesPastItsFlag_AndClimbsOneGrid
+  = −1.045+span 2.95 ピン / UnflaggedSlurwardEdge_StaysAtItsBase = 4分対照
+  −0.545）。SVG 座標は 2 桁丸め→観測者は tolerance 0.011（precision 2 だと二重
+  丸めで −1.04 vs −1.05 に割れる=「粗い桁」の教訓を今回も踏んだ）。
+- **札 2（開示のみ）**: ⑴ 32分以下の flag bbox は 16分の代用（GlyphMetrics 既存
+  簡略）＝32分 flag の attach X はその分ずれ得る（コーパス未踏） ⑵ flag Y unite
+  が効くのは「flag が stem より長い」縁だけ（通常 no-op・LP は両軸 unite の字面
+  なので両軸とも書いた）。
+- stale REF 1 修正: GenerateCandidates remarks の「:738-760 未 port」（第117第2便
+  で port 済みなのに残存）。
+- ★★ **status.json が第117分ごと stale だった**（slur-grace/slurhcap/slur-nice が
+  pending のまま = HANDOFF の数 260 と実数 257 が乖離）→ 4 冊まとめて同期
+  （claim/notes 付き）。**corpus の数は status.json に訊いてから書く**。
+
+plain 322 / 処理済 **261**（fixed **47**・exact **34**・skip **164**・open 16・
+pending **61**。status.json 同期後の実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **slur-shift-region（tuplet 内終端）** → slur-vertical-skylines
+（^"rit"+trill span+\f = outside-staff 対 slur）。slur-flag / slur-nice は文法宿題
+（slur 向き強制の綴りなし）の棚——文法が入ったら **slur-flag の追試を最初に**
+（stem-attach X が flag 込みになったので当時の skip 測定より一段深く効く）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4213 passed / 0 failed / 4 skipped**（観測者+2 込み・全スイート確認済）・
+snapshot 第118 は **0 枚**・Core (Debug) 0 warning・base worktree =
+C:\MyProj\LilySharp-base（cc19cccc・残置）。
+probe 残置: **scratch\lpreg\slurrest-fig4.lys（fig4 単独・観測者の下見材）**＋
+第117 以前の slurgrace/slurhcap/slurrest*（-dbg 含む）/mvslur/mls/slurflag/perf-*
+一式（下の第117 の節参照）。
+
+## 以下は第117セッションの経緯
+
 最終更新 第117セッション（＝第1便 **fixed 第46号 = slur-grace.ly = stem 配管**・
 第2便 **stem-attach X 規則 (:738-760) port = 第45号開示⑴の返済**・第3便
 **perf A/B round 15 = 3 バッチ全て符号跨ぎ = drift・対照 hash 一致**・

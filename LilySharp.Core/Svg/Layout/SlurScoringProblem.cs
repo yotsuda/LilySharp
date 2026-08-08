@@ -131,17 +131,24 @@ internal readonly record struct SlurExtraObject(
 /// (slur-scoring.cc:780-793 slur_head_x_extent_) and for the extra-encompass
 /// edge check (slur-configuration.cc:405-425 slur_head_x_extent_).
 /// </remarks>
-/// <param name="StemX">The stem line's centre X (device) — LP's
-/// <c>extremes_[d].stem_extent_[X_AXIS]</c> centre; its faces sit half a stem
-/// thickness either side. NaN when the edge has no stem or the caller did not
-/// resolve one.</param>
+/// <param name="StemXLo">Left edge of the stem's X extent UNITED WITH ITS FLAG
+/// (device) — LP's <c>extremes_[d].stem_extent_[X_AXIS]</c> is
+/// <c>stem-&gt;extent ∪ flag-&gt;extent</c> (slur-scoring.cc:188-203
+/// get_bound_info), so a flagged 8th-or-shorter unbeamed stem reaches to the
+/// flag's ink, not the bare line. NaN when the edge has no stem or the caller
+/// did not resolve one.</param>
+/// <param name="StemXHi">Right edge of the same united extent (the flag hangs
+/// on the stem's right in both directions, so only this side moves).</param>
 /// <param name="StemTipY">Device Y of the stem's tip (the far end, on the
-/// quanted beam for a beamed stem). NaN when unresolved.</param>
-/// <param name="StemBeginY">Device Y of the stem's head-side end (the head it
-/// hangs off). NaN when unresolved.</param>
+/// quanted beam for a beamed stem). The flag never reaches past the tip, so
+/// the union leaves it. NaN when unresolved.</param>
+/// <param name="StemBeginY">Device Y of the head-side end of the united
+/// extent (the head the stem hangs off; pushed further only by a flag longer
+/// than its stem). NaN when unresolved.</param>
 internal readonly record struct SlurEdgeInfo(
     bool HasStem, bool StemUp, bool BeamedInner, bool Beamed, double HeadWidth = 0.0,
-    double StemX = double.NaN, double StemTipY = double.NaN, double StemBeginY = double.NaN);
+    double StemXLo = double.NaN, double StemXHi = double.NaN,
+    double StemTipY = double.NaN, double StemBeginY = double.NaN);
 
 internal sealed class SlurScoringProblem
 {
@@ -611,23 +618,28 @@ internal sealed class SlurScoringProblem
     /// <remarks>
     /// LILYPOND-REF: lily/slur-scoring.cc:738-760 enumerate_attachments —
     /// stem_y.widen(0.25); contains → x = stem_extent_[X][-d] - d*0.3;
-    /// past-tip → x = stem_extent_[X].center().
+    /// past-tip → x = stem_extent_[X].center(). stem_extent_ is the stem's
+    /// extent UNITED WITH ITS FLAG (get_bound_info :188-203), which
+    /// <see cref="SlurEdgeInfo.StemXLo"/>/<see cref="SlurEdgeInfo.StemXHi"/>
+    /// carry — a flagged left edge attaches past the flag's ink, and its
+    /// past-tip centre shifts flagward.
     /// </remarks>
     private bool StemAttachmentX(
         in SlurEdgeInfo edge, double y, bool left, int dir, ref double x)
     {
-        if (!edge.HasStem || edge.StemUp != _slur.CurveUp || double.IsNaN(edge.StemX))
+        if (!edge.HasStem || edge.StemUp != _slur.CurveUp || double.IsNaN(edge.StemXLo))
             return false;
         double lo = Math.Min(edge.StemBeginY, edge.StemTipY) - 0.25;
         double hi = Math.Max(edge.StemBeginY, edge.StemTipY) + 0.25;
-        double halfStem = EngravingDefaults.StemThickness / 2.0;
         if (y >= lo && y <= hi)
         {
-            x = left ? edge.StemX + halfStem + 0.3 : edge.StemX - halfStem - 0.3;
+            // stem_extent_[X][-d] - d*0.3: the extent edge FACING the slur's
+            // interior (LEFT edge reads [RIGHT], RIGHT edge reads [LEFT]).
+            x = left ? edge.StemXHi + 0.3 : edge.StemXLo - 0.3;
             return true;
         }
         if (dir * edge.StemTipY < dir * y)
-            x = edge.StemX;
+            x = (edge.StemXLo + edge.StemXHi) / 2.0;
         return false;
     }
 
@@ -641,13 +653,9 @@ internal sealed class SlurScoringProblem
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/slur-scoring.cc:722-804 enumerate_attachments() —
-    /// the while-loops to end_ys, the min-length/max-slope X correction
+    /// the while-loops to end_ys, the stem-attachment X rule (:738-760, see
+    /// <see cref="StemAttachmentX"/>), the min-length/max-slope X correction
     /// (:763-778, keeps the candidate), and the tilt X shift (:780-793).
-    /// ⚠️ The stem-attachment X rule (:738-760 — X moves to the stem's edge when
-    /// the endpoint's stem points WITH the slur and the base Y lies within the
-    /// widened stem extent) is not ported; it needs per-edge stem X/Y extents the
-    /// caller does not supply yet. Fires only for slurward stems (e.g. \stemUp
-    /// slur-up), where today's X stays the head centre.
     /// LILYPOND-REF: lily/slur-scoring.cc:290-326 additional_ys — 'inside
     /// extra objects push the range further so the grid can clear them.
     /// </remarks>

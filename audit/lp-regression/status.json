@@ -7154,13 +7154,15 @@
     },
     "slur-grace.ly": {
       "category": "plain",
-      "state": "pending",
+      "state": "fixed",
       "claim": "acciaccatura/appoggiatura は既定と別の slur を使う=外側 slur の中に nested slur が警告なしで立つ",
-      "notes": "第116第6便=下見(root特定+実測済・コード変更0・state pending のまま)。構造は一致: 両エンジン外側2+grace slur3の計5本・警告なし=主張の核は成立(acciaccatura/appoggiatura キーワードは Lily# に在る・octave absolute で書けた)。乖離: 外側slur左端 LS -1.54 vs LP -3.54(2.0ss=4 grid step)・右端 -3.04 vs -3.54。root=**grace音柱(stem常時up・tip≈-4.2)がLPでは外側slurのencompassに入る**が LS は⑴BuildSlurObstaclesがvoice itemsのみ=grace列不参加 ⑵stem項がobstacle未配線(第45号開示⑵)。修理形=stem配管: obstacle に Stem 種を建てる(unbeamed=StemCalculator読み・beamed=BeamLayout・grace列も)→ScoreEncompassのstem枝とEndYFor/avoid offsetsが自動で食う。grace slur自体のΔ(始点Y0.31・終点X0.74)は別実装(SharedRenderer.GraceNotes)のregime=別勘定。twin残置 scratch\\lpreg\\slurgrace.{ly,lys}。focused session で着手のこと"
+      "notes": "fixed 第46号(第117第1便)。修理=get_encompass_info(slur-scoring.cc:111-161)の字面port: 列1 info に head_/stem_ 同乗(slurward stem の stem_=stem Y端+beam半厚・x_=stem X中心)・grace 列も engraver 同様に参加(幾何は renderer と同じ産地から再構築)。食う側4=ScoreEncompass stem項・BuildAvoidOffsets・EndYFor・variance get_point(これが決め手)。LP照合=外側 slur 4点完全一致(-3.5450/-5.0225×2/span 10.3449)。第2便で stem-attach X 規則(:738-760)も port=multivoice/multi-line が LP 一致。grace slur 自体(SharedRenderer.GraceNotes)の既知Δは別勘定続行。twin残置 scratch\\lpreg\\slurgrace.{ly,lys}"
     },
     "slur-height-capping.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "整形は端近くの物を無視する=素の弓のまま(scoring には参加)",
+      "notes": "exact 第117第4便(コード変更0=第45/46号の機構がそのまま当たった追試)。bass clef・C3-D4 ジグザグ8音slur×2。slur1/slur2 とも4点完全一致(例 slur1: -3.5450/-5.3800/-6.1152/-4.5450・span 17.7794)。LP自身が m2 の始点を 1 grid 下げる差まで再現。twin残置 scratch\\lpreg\\slurhcap.{ly,lys}"
     },
     "slur-inspect-quants.ly": {
       "category": "scheme",
@@ -7180,7 +7182,9 @@
     },
     "slur-nice.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "強制向きの下で曲率は頭を避けるためだけに最小限増える",
+      "notes": "skip 第117第5便。発火に \\slurUp/\\slurDown+音中 \\stemUp/\\stemDown/\\stemNeutral スパンが要る=Lily# に slur 向き強制の綴りなし(slur-flag と同じ文法宿題の棚)。強制なしの素の対は slurgrace/slurhcap の exact が既に踏んでいる"
     },
     "slur-no-stem.ly": {
       "category": "scheme",
@@ -7188,7 +7192,9 @@
     },
     "slur-rest-direction.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "rest は slur の向きを変えない(既定 down)",
+      "notes": "fixed 第47号(第117第6-7便+第118第1便)。修理3段: ⑴rest-bound slur の再建(RestItem に slur flag・SlurDetector rest 腕・全 rest slur が黙って消えていた) ⑵rest 列の encompass 参加(no-stem 枝=rest ink) ⑶rest base=get_base_attachments 第2ループ(:587-619)の実測 port(端の encompass 列 Y extent+dir*0.5)。最終残差 fig4 は stem_extent_=stem∪flag(get_bound_info :188-203 の s.unite(flag->extent))の読み落とし=flag 込み attach X で idx0 が tilt 後 slope>1.1 の課金を受け 1 grid 登る。LP照合=4行×5図 向き全一致・全 rest slur exact・fig4 -1.0450/-4.0450 exact(16分/8分行が登り4分/2分行は base=「4行同型」は stale だった)。観測者4。twin残置 scratch\\lpreg\\slurrest*.{ly,lys}+slurrest-dbg(debug-slur-scoring 計器)"
     },
     "slur-rest.ly": {
       "category": "scheme",

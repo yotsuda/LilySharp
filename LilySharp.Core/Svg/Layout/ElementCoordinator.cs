@@ -2031,11 +2031,22 @@ internal sealed class ElementCoordinator
         // the attachment point, ~0.17 ss off the centre toward the tip — only
         // the 0.25-widened containment window's head-side edge reads it, so a
         // candidate exactly on that margin could attach differently.
-        double stemX = double.NaN, stemTipY = double.NaN, stemBeginY = double.NaN;
+        // The extent is the stem UNITED WITH ITS FLAG on both axes — LP builds
+        // stem_extent_ as stem->extent ∪ flag->extent (get_bound_info
+        // slur-scoring.cc:188-203). The flag hangs on the stem's right in both
+        // stem directions and never reaches past the tip, so the union widens
+        // X to the flag's reserved ink (ItemSkylineFactory reserves the same
+        // [stemX, stemX + width] frame) and can push only the Y window's
+        // head-side edge.
+        double stemXLo = double.NaN, stemXHi = double.NaN,
+            stemTipY = double.NaN, stemBeginY = double.NaN;
         if (hasStem && !double.IsNaN(columnX)
             && NoteColumnLayout.Of(items[itemIndex]) is { } col)
         {
-            stemX = LayoutUtilities.StemX(columnX, stemUp, col.NoteValue, col.Notehead);
+            double stemX = LayoutUtilities.StemX(columnX, stemUp, col.NoteValue, col.Notehead);
+            double halfStem = EngravingDefaults.StemThickness / 2.0;
+            stemXLo = stemX - halfStem;
+            stemXHi = stemX + halfStem;
             stemBeginY = staffMiddleDown - col.HeadPositionToward(!stemUp) / 2.0;
             if (TryGetBeamedStemTipDeviceY(beamByMember, measureIndex, itemIndex,
                     stemX, staffMiddleDown, stemUp, out double tip))
@@ -2043,10 +2054,23 @@ internal sealed class ElementCoordinator
             else
                 stemTipY = staffMiddleDown - EngravingDefaults.StaffMiddle
                     + col.OutwardTipDeviceY(stemUp);
+            var flag = beamed ? default : GlyphMetrics.GetFlagBBox(col.NoteValue, stemUp);
+            if (flag != default)
+            {
+                stemXHi = Math.Max(stemXHi, stemX + flag.Width);
+                // The flag's reach from the tip toward the head (device Y),
+                // spelled the way ItemSkylineFactory reserves the same ink.
+                double flagInnerY = stemUp
+                    ? stemTipY - flag.Bottom - flag.Top
+                    : stemTipY + flag.Top - flag.Bottom;
+                stemBeginY = stemUp
+                    ? Math.Max(stemBeginY, flagInnerY)
+                    : Math.Min(stemBeginY, flagInnerY);
+            }
         }
 
         return new SlurEdgeInfo(hasStem, stemUp, beamedInner, beamed, headWidth,
-            stemX, stemTipY, stemBeginY);
+            stemXLo, stemXHi, stemTipY, stemBeginY);
     }
 
     /// <summary>
