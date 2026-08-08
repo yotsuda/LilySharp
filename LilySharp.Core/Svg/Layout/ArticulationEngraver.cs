@@ -56,14 +56,18 @@ internal readonly record struct ArticulationLayout(
     // this number (lily/stencil-integral.cc:881-893), so every consumer of the profile sees
     // a shape up to 2× the glyph's own width. See ArticulationSpacing.SkylineHorizontalPadding.
     double SkylineHorizontalPadding = 0.0,
-    int? OutsideStaffPriority = null // The script's DECLARED outside-staff-priority (the
-                            // fermata family's 75), or null for the scripts that declare
-                            // none — LilyPond's #f, which is not a zero (a grob declaring 0
-                            // would be the first MOVER placed). Baked from the type by the
-                            // engraver, the way LilyPond resolves a Script's properties out
-                            // of scm/script.scm: a script WITH a priority is a mover in the
-                            // outside-staff collision pass, one without seeds the occupancy
-                            // the movers clear. See ArticulationSpacing.OutsideStaffPriority.
+    double? OutsideStaffPriority = null // The script's outside-staff-priority (the
+                            // fermata family's DECLARED 75), or null for the scripts that
+                            // declare none — LilyPond's #f, which is not a zero (a grob
+                            // declaring 0 would be the first MOVER placed). Baked from the
+                            // type by the engraver the way LilyPond resolves a Script's
+                            // properties out of scm/script.scm — EXCEPT that a priority-less
+                            // script sorted after a mover on the same note & side is bumped
+                            // to mover_priority + 0.1 by the script-column walk (Calculate),
+                            // which is why this is a double: 75.1 is a real LilyPond value.
+                            // A script WITH a priority is a mover in the outside-staff
+                            // collision pass, one without seeds the occupancy the movers
+                            // clear. See ArticulationSpacing.OutsideStaffPriority.
 );
 
 /// <summary>
@@ -199,7 +203,49 @@ internal static class ArticulationEngraver
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, Staff>? staffByIndex = null,
         ImmutableArray<BeamLayout> beamLayouts = default)
+        => CalculateWithFingerings(score, articulations, measureLayouts, measuresByStaff,
+            staffYAt, staffByIndex, beamLayouts, default, out _);
+
+    // The Fingering grob's own side-position padding (its vertical float off whatever
+    // supports it in the column) — the Script table does not carry it because Fingering
+    // is its own grob, not a script.scm entry.
+    // LILYPOND-REF: scm/define-grobs.scm:1543-1550 Fingering, add-stem-support block — (padding . 0.5)
+    private const double FingeringPadding = 0.5;
+
+    /// <summary>
+    /// <see cref="Calculate"/>, with the note-attached FINGERINGS entering each note's
+    /// script column: a vertically-oriented fingering is a script at priority
+    /// 100 + direction × head position (<see cref="FingeringLayout.ColumnPriority"/>),
+    /// so it is stacked INTO the walk — it clears the scripts below its slot and the
+    /// scripts above its slot clear it. <paramref name="fingerings"/> come in at their
+    /// island answer (staff/head clearance) and leave in <paramref name="adjustedFingerings"/>
+    /// at their column answer; entries that do not enter a column (chord fingerings)
+    /// pass through unchanged.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc:314-340 position_scripts — an
+    ///   up/down-oriented fingering gets Side_position_interface Y-axis and
+    ///   script-priority 100 + d·position, which is what makes Script_column sort it
+    ///   between a tenuto (−50) and a bow (180);
+    ///   lily/script-column.cc:160-186 order_grobs — the shared walk.
+    /// ⚠️ The per-staff SKYLINE pass (MultiStaffLayouter.StaffArticulationLayouts) still
+    /// calls the fingering-less overload, so a mover's occupancy seed over a
+    /// fingering-bearing stack carries the scripts' chain answers without the fingering's
+    /// ink — no corpus book or fixture reaches that pairing yet (a fermata directly over
+    /// a fingered note); when one does, that call site needs the same fingerings.
+    /// </remarks>
+    internal static ImmutableArray<ArticulationLayout> CalculateWithFingerings(
+        Score score,
+        ImmutableArray<ArticulationItem> articulations,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+        Func<int, int, double>? staffYAt,
+        Dictionary<int, Staff>? staffByIndex,
+        ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableArray<FingeringLayout> fingerings,
+        out ImmutableArray<FingeringLayout> adjustedFingerings)
     {
+        adjustedFingerings = fingerings;
         if (articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
 
@@ -226,6 +272,83 @@ internal static class ArticulationEngraver
         //   scripts ordered after it (:168-171); the ones WITH a priority are movers
         //   and are left to the outside-staff machinery.
         var supportScripts = new Dictionary<(int, int, int, bool), List<ArticulationLayout>>();
+        // The previous script of each (note, side) in the priority-ordered walk: its
+        // DECLARED priority and its CURRENT one (they differ once a script is bumped).
+        // LILYPOND-REF: lily/script-column.cc:147-156 order_grobs — last /
+        //   last_initial_outside_staff carried across the sorted loop.
+        var lastOnKey = new Dictionary<(int, int, int, bool),
+            (double? InitialOsp, double? CurrentOsp)>();
+
+        // Column-participating fingerings by note, each queue sorted by priority; a
+        // fingering is FLUSHED into the chain when the walk reaches its slot — before
+        // the first same-side script whose priority exceeds its own — or after the
+        // loop when nothing outranks it.
+        ImmutableArray<FingeringLayout>.Builder? adjFingerings = null;
+        Dictionary<(int, int, int), List<int>>? pendingFingerings = null;
+        if (!fingerings.IsDefaultOrEmpty)
+        {
+            for (int fi = 0; fi < fingerings.Length; fi++)
+            {
+                var fg = fingerings[fi];
+                if (fg.ColumnPriority == int.MinValue || !fg.IsAbove)
+                    continue;
+                adjFingerings ??= fingerings.ToBuilder();
+                pendingFingerings ??= new Dictionary<(int, int, int), List<int>>();
+                var nk = (Math.Max(fg.StaffIndex, 0), fg.MeasureIndex, fg.ItemIndex);
+                if (!pendingFingerings.TryGetValue(nk, out var queue))
+                    pendingFingerings[nk] = queue = new List<int>();
+                queue.Add(fi);
+            }
+            if (pendingFingerings != null)
+                foreach (var queue in pendingFingerings.Values)
+                    queue.Sort((x, y) => fingerings[x].ColumnPriority
+                        .CompareTo(fingerings[y].ColumnPriority));
+        }
+
+        // Sit the note's queued fingerings below priority <paramref>upTo</paramref>
+        // into the chain of (note, UP): each takes max(its island answer, pointwise
+        // distance over the placed profiles + its own padding 0.5), then becomes a
+        // support itself. The reader-side horizon padding is the FINGERING's — it
+        // declares none, so 0 (the Script's 0.1 is not borrowed).
+        // LILYPOND-REF: lily/side-position-interface.cc:354-378 aligned_side — the
+        //   distance call spends the placed-grob's horizon-padding and the padding is
+        //   the moving grob's own.
+        void FlushFingerings((int, int, int, bool) key, int upTo)
+        {
+            var (kStaff, kMeasure, kItem, _) = key;
+            if (pendingFingerings == null
+                || !pendingFingerings.TryGetValue(
+                    (Math.Max(kStaff, 0), kMeasure, kItem), out var queue))
+                return;
+            while (queue.Count > 0 && adjFingerings![queue[0]].ColumnPriority < upTo)
+            {
+                int fi = queue[0];
+                queue.RemoveAt(0);
+                var fg = adjFingerings[fi];
+                var synth = FingeringScriptLayout(fg);
+                if (supportScripts.TryGetValue(key, out var sup) && sup.Count > 0)
+                {
+                    var (_, myDown) = ScriptSkylines(synth, fg.YUp);
+                    double closest = double.NegativeInfinity;
+                    foreach (var s in sup)
+                    {
+                        var (sUp, _) = ScriptSkylines(s, s.YUp);
+                        closest = Math.Max(closest, myDown.Distance(sUp, 0.0));
+                    }
+                    double move = Math.Max(0.0, closest + FingeringPadding);
+                    if (move > 0)
+                    {
+                        fg = fg with { YUp = fg.YUp + move };
+                        synth = synth with { YUp = fg.YUp };
+                        adjFingerings[fi] = fg;
+                    }
+                }
+                if (!supportScripts.TryGetValue(key, out var placedList))
+                    supportScripts[key] = placedList = new List<ArticulationLayout>();
+                placedList.Add(synth);
+                lastOnKey[key] = (null, null);
+            }
+        }
 
         foreach (int arti in order)
         {
@@ -626,7 +749,33 @@ internal static class ArticulationEngraver
             //   this script's `padding` (lily/side-position-interface.cc:360-378 aligned_side).
             var stackKey = (effArt.StaffIndex, effArt.MeasureIndex,
                 effArt.ItemIndex, effArt.IsAbove);
-            if (supportScripts.TryGetValue(stackKey, out var supports))
+            // The note's fingerings whose priority is below this script's enter the
+            // column FIRST — they support this script, and this script's own walk
+            // slot stays after them (the priority sort is the shared order).
+            if (effArt.IsAbove)
+                FlushFingerings(stackKey, ScriptPriority(effArt.Type));
+            double? declaredOsp = layout.OutsideStaffPriority;
+            if (lastOnKey.TryGetValue(stackKey, out var lastScript)
+                && lastScript.CurrentOsp is { } moverOsp)
+            {
+                // The previous script of this note & side (in priority order) is a
+                // MOVER: a follower that declares no priority — or the same one —
+                // becomes a mover itself, one notch above, and gets NO chain supports;
+                // the outside-staff pass stacks it right after the one before it.
+                // That is how a bow ends up ABOVE a fermata (175 vs 180 in script
+                // priority, yet the fermata's 75 makes it a mover first).
+                // LILYPOND-REF: lily/script-column.cc:178-185 set_property — the
+                //   follower's outside-staff-priority := previous + 0.1 "in order to
+                //   preserve ordering"; the unset previous INITIAL priority (:181,
+                //   last_initial_outside_staff) compares as 0.
+                if (declaredOsp is null
+                    || Math.Abs(declaredOsp.Value - (lastScript.InitialOsp ?? 0.0)) < 0.001)
+                    layout = layout with
+                    {
+                        OutsideStaffPriority = moverOsp + 0.1
+                    };
+            }
+            else if (supportScripts.TryGetValue(stackKey, out var supports))
             {
                 var (myUp, myDown) = ScriptSkylines(layout, yUp);
                 double closest = double.NegativeInfinity;
@@ -646,6 +795,7 @@ internal static class ArticulationEngraver
                     layout = layout with { YUp = yUp };
                 }
             }
+            lastOnKey[stackKey] = (declaredOsp, layout.OutsideStaffPriority);
             if (layout.OutsideStaffPriority is null)
             {
                 if (!supportScripts.TryGetValue(stackKey, out var placed))
@@ -656,7 +806,45 @@ internal static class ArticulationEngraver
             layouts.Add(layout);
         }
 
+        // Fingerings nothing outranked (no same-side script above their slot): they
+        // still take the chain answer over whatever the walk placed below them.
+        if (pendingFingerings != null)
+        {
+            foreach (var nk in pendingFingerings.Keys.ToArray())
+                FlushFingerings((nk.Item1, nk.Item2, nk.Item3, true), int.MaxValue);
+            adjustedFingerings = adjFingerings!.ToImmutable();
+        }
+
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The fingering as a script-column PARTICIPANT: its digit run's ink BOX at
+    /// font-size −5, origin at the run's left baseline (X centres the run on the head
+    /// the way the pen does). The Glyph is left EMPTY on purpose: Fingering declares no
+    /// <c>vertical-skylines</c>, so LilyPond gives it the EXTENT-BOX profile, not the
+    /// walked outline — the same rule the Dots seed follows. Walking the digit's real
+    /// outline let a bow sink 0.21 into the round shoulder of a "0" (measured on
+    /// script-stack-order1, LP −4.40 vs walked −4.19).
+    /// LILYPOND-REF: lily/grob.cc:81-85 simple_vertical_skylines_from_extents_proc —
+    ///   a grob without a vertical-skylines declaration answers with its extent box;
+    ///   scm/define-grobs.scm:1540-1571 Fingering declares Y-extent but no
+    ///   vertical-skylines.
+    /// Never added to the returned layouts: the drawn pass is SharedRenderer.DrawFingerings.
+    /// </summary>
+    private static ArticulationLayout FingeringScriptLayout(in FingeringLayout fg)
+    {
+        var (_, ink, width) = FingeringEngraver.DigitRun(fg.Number);
+        return new ArticulationLayout(
+            fg.MeasureIndex, fg.ItemIndex,
+            X: fg.X - width / 2.0,
+            YUp: fg.YUp,
+            Glyph: string.Empty,
+            IsAbove: true,
+            SourcePosition: fg.SourcePosition,
+            FontSizeStep: -5.0,
+            Ink: ink,
+            StaffIndex: Math.Max(fg.StaffIndex, 0));
     }
 
     /// <summary>
@@ -691,14 +879,19 @@ internal static class ArticulationEngraver
             or ArticulationType.Breath or ArticulationType.Caesura);
 
     // LilyPond script-priority: lower = closer to the note. Only some scripts set
-    // it explicitly; the rest use the Script grob default (0).
+    // it explicitly; the rest use the Script grob default (0). These five arms are
+    // ALL the declarations in scm/script.scm for types Lily# has a spelling for —
+    // staccatissimo, portato, marcato and accent declare none and stay 0.
     // LILYPOND-REF: scm/script.scm; scm/define-grobs.scm Script.script-priority = 0.
-    private static int ScriptPriority(ArticulationType type) => type switch
+    internal static int ScriptPriority(ArticulationType type) => type switch
     {
         ArticulationType.Staccato => -100,
         ArticulationType.Tenuto => -50,
+        ArticulationType.Flageolet => 50,
+        ArticulationType.Trill => 150,
         ArticulationType.Fermata or ArticulationType.FermataShort
             or ArticulationType.FermataLong => 175,
+        ArticulationType.UpBow or ArticulationType.DownBow => 180,
         _ => 0,
     };
 

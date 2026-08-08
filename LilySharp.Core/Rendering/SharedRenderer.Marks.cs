@@ -268,17 +268,25 @@ internal static partial class SharedRenderer
     // ---------- Fingering ----------
 
     /// <summary>
-    /// Draws fingering numerals (1-5) next to noteheads.
+    /// Draws fingering numerals next to noteheads — the fetaText digit run at
+    /// font-size −5, the same glyphs and em the figured bass draws with, centred on
+    /// the layout's X the way the profile the script column stacked was measured
+    /// (<c>FingeringEngraver.DigitRun</c> — one metric home for pen and reservation).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob
-    /// LILYPOND-REF: scm/define-grobs.scm Fingering (font-size = -5 → ~0.56×)
+    /// LILYPOND-REF: scm/define-grobs.scm:1547-1568 Fingering (self-alignment-interface
+    ///   family) — font-encoding fetaText, font-features cv47 ss01, font-size −5; its
+    ///   stencil is ly:text-interface::print (:1559).
+    /// ⚠️ IT WAS A SERIF DIGIT AT 0.56 EM until 2026-08-08 — about half LilyPond's
+    /// ink (feta numerals are 2.0 design-ss tall), so a bow stacked over a fingering
+    /// sat half a space low. Like the figured bass, the run does not scale on an
+    /// ossia staff (the two halves — pen here, metric in DigitRun — stay together).
     /// </remarks>
     private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FingeringLayouts.IsDefaultOrEmpty) return;
-        double size = FontSize * 0.56;  // magstep(-5)
+        double size = FiguredBassGlyphRun.Em;
         foreach (var f in layout.FingeringLayouts)
         {
             if (!sysTopYUp.ContainsKey(f.MeasureIndex)) continue; // other page
@@ -286,10 +294,19 @@ internal static partial class SharedRenderer
             // own staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(f.StaffIndex, f.MeasureIndex, StaffHeight);
             double y = os.YUp(midYup + f.YUp, f.StaffIndex, f.MeasureIndex);
+            string text = f.Number.ToString();
+            double x0 = f.X - FiguredBassGlyphRun.Width(text) / 2.0;
             using (gc.Source(f.SourcePosition))
-                gc.DrawText(f.Number.ToString(), f.X, y,
-                    os.Size(size, f.StaffIndex), "serif",
-                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
+            {
+                foreach (var piece in FiguredBassGlyphRun.Pieces(text))
+                {
+                    if (piece.IsGlyph)
+                        gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
+                    else
+                        gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, "serif",
+                            FontStyle.Regular, TextAnchor.Start, Color.Black);
+                }
+            }
         }
     }
 

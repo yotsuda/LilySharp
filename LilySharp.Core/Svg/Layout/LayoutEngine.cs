@@ -2966,10 +2966,16 @@ internal sealed class LayoutEngine
         // stays in the staff's support skyline that those rows drop below. Without the
         // augmented DOWN skyline a marcato hanging under a low note overprints the
         // syllable beneath it. LILYPOND-REF: lily/axis-group-interface.cc:359-474.
-        var articulationLayouts = score != null
-            ? ArticulationEngraver.Calculate(score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
-                beamLayouts ?? default)
-            : ImmutableArray<ArticulationLayout>.Empty;
+        // The fingerings go in WITH them: a vertical fingering is a script of its
+        // note's column (priority 100 + position), so the one walk stacks both — a
+        // bow over a fingering over a tenuto, in script-priority order, not islands.
+        // LILYPOND-REF: lily/new-fingering-engraver.cc:314-340 position_scripts.
+        var fingeringLayouts = ComputeFingeringIslands(score, systems, voicesByStaff);
+        var articulationLayouts = ImmutableArray<ArticulationLayout>.Empty;
+        if (score != null)
+            articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
+                score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
+                beamLayouts ?? default, fingeringLayouts, out fingeringLayouts);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);
@@ -3319,10 +3325,9 @@ internal sealed class LayoutEngine
         // already stacked them pointwise, LilyPond's shape. The chart-pair device
         // died with the tempo port — see MusicMarkEngraver's note.)
 
-        // The fingerings clear the scripts where the pass LEFT them — one array, read after
-        // the pass, so a fingering never dodges a fermata's pre-move height.
-        var fingeringLayouts = LayoutFingerings(
-            score, systems, voicesByStaff, stackedArticulations, staffYAt);
+        // The fingerings were placed in the script-column walk itself (with the
+        // articulations, above) — nothing to re-clamp after the movers' pass: a
+        // fingering does not dodge a fermata; the fermata, a MOVER, goes above it.
 
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
@@ -3901,34 +3906,30 @@ internal sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Every staff's fingerings, pushed OUTSIDE any articulation that shares the note and
-    /// the side so the two do not overprint.
+    /// Every staff's fingerings at their ISLAND answer — staff/head clearance only. The
+    /// script-column walk (<see cref="ArticulationEngraver.CalculateWithFingerings"/>)
+    /// finishes them against the note's other scripts, in script-priority order.
     /// </summary>
     /// <remarks>
-    /// Extracted verbatim from <see cref="CalculateAnnotationLayouts"/>.
-    /// <para>
     /// Fingerings live on the NoteItem, so they must be read from EACH staff's own voice
     /// (<c>score.Voice</c> is only the first staff) and positioned at that staff's index —
     /// otherwise lower-staff fingerings vanish.
-    /// </para>
     /// <para>
-    /// LilyPond keeps the articulation (Script) close to the note and places the fingering
-    /// on the OUTSIDE — verified against LilyPond 2.24.4: a fingering and a marcato forced
-    /// above the same note render marcato inner, fingering outer (the digit sits above the
-    /// marcato). So the FINGERING is the one that moves, not the articulation.
-    /// LILYPOND-REF: lily/new-fingering-engraver.cc; empirical stacking order.
+    /// ⚠️ Until 2026-08-08 the fingering was clamped OUTSIDE the outermost articulation
+    /// with a tuned gap (1.4/1.9) — a LILYSHARP-OWN box step with no LilyPond counterpart.
+    /// LilyPond sorts the fingering INTO the column at priority 100 + position, so a bow
+    /// (180) goes above it and a tenuto (−50) stays below — measured on
+    /// script-stack-order1 (staccato −2.94 / tenuto −3.42 / finger −4.00 / bow −5.33).
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc:314-340 position_scripts.
     /// </para>
     /// </remarks>
-    private ImmutableArray<FingeringLayout> LayoutFingerings(
+    private ImmutableArray<FingeringLayout> ComputeFingeringIslands(
         Score? score, ImmutableArray<SystemLayout> systems,
-        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
-        ImmutableArray<ArticulationLayout> articulationLayouts,
-        Func<int, int, double>? staffYAt)
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff)
     {
-        ImmutableArray<FingeringLayout> fingeringLayouts;
         if (score == null)
-            fingeringLayouts = ImmutableArray<FingeringLayout>.Empty;
-        else if (voicesByStaff != null && voicesByStaff.Count > 0)
+            return ImmutableArray<FingeringLayout>.Empty;
+        if (voicesByStaff != null && voicesByStaff.Count > 0)
         {
             var fb = ImmutableArray.CreateBuilder<FingeringLayout>();
             foreach (var kv in voicesByStaff)
@@ -3939,50 +3940,9 @@ internal sealed class LayoutEngine
                     score.KeySignature, score.Clef, score.Tempo);
                 fb.AddRange(FingeringEngraver.Calculate(staffScore, systems, kv.Key));
             }
-            fingeringLayouts = fb.ToImmutable();
+            return fb.ToImmutable();
         }
-        else
-            fingeringLayouts = FingeringEngraver.Calculate(score, systems);
-
-        if (fingeringLayouts.IsDefaultOrEmpty || articulationLayouts.IsDefaultOrEmpty)
-            return fingeringLayouts;
-
-        // Gap from the outermost articulation's anchor to the fingering baseline.
-        // Below needs more: the fingering baseline is the digit's lower edge.
-        const double aboveGap = 1.4;
-        const double belowGap = 1.9;
-        // Outermost articulation anchor per note & side, in Y-up: "outermost" is the MOST
-        // above (max YUp) or MOST below (min YUp). StaffIndex is -1 for single-staff
-        // fingerings and 0 for their articulations, so normalise a negative staff to 0 on
-        // both sides before matching.
-        var artOuter = new Dictionary<(int, int, int, bool), double>();
-        foreach (var a in articulationLayouts)
-        {
-            var key = (a.StaffIndex < 0 ? 0 : a.StaffIndex, a.MeasureIndex, a.ItemIndex, a.IsAbove);
-            artOuter[key] = artOuter.TryGetValue(key, out var cur)
-                ? (a.IsAbove ? System.Math.Max(cur, a.YUp) : System.Math.Min(cur, a.YUp))
-                : a.YUp;
-        }
-        var fb2 = fingeringLayouts.ToBuilder();
-        for (int i = 0; i < fb2.Count; i++)
-        {
-            var fg = fb2[i];
-            var key = (fg.StaffIndex < 0 ? 0 : fg.StaffIndex, fg.MeasureIndex, fg.ItemIndex, fg.IsAbove);
-            if (artOuter.TryGetValue(key, out var artYUp))
-            {
-                // Both are Y-up now; do the gap clamp in device against the shared
-                // staff middle (fingering & its articulation are the same note/staff),
-                // then reflect back to Y-up.
-                double staffMid = (staffYAt?.Invoke(fg.MeasureIndex, fg.StaffIndex) ?? 0)
-                    + _options.StaffHeight / 2.0;
-                double artY = staffMid - artYUp; // ToDevice
-                double fgY = staffMid - fg.YUp;  // ToDevice
-                double target = fg.IsAbove ? artY - aboveGap : artY + belowGap;
-                double newY = fg.IsAbove ? System.Math.Min(fgY, target) : System.Math.Max(fgY, target);
-                fb2[i] = fg with { YUp = staffMid - newY }; // ToUp
-            }
-        }
-        return fb2.ToImmutable();
+        return FingeringEngraver.Calculate(score, systems);
     }
 
     /// <summary>

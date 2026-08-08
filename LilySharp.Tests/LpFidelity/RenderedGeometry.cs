@@ -3070,19 +3070,34 @@ internal sealed class RenderedGeometry
     /// difference of 0.981000, which is 1.962/2. The falsifier was 0.980000 (the advance's
     /// half) and it did not fire.
     /// </para>
-    /// Lily# draws a fingering with <c>TextAnchor.Middle</c>, so the drawn X IS the centre.
+    /// Lily# draws a fingering as its fetaText digit run at the run's LOGICAL centre
+    /// (origin + advance/2 — the same frame LilyPond's text extent answers in), so the
+    /// centre this reads is the drawn origin plus half the run's advance.
     /// </remarks>
     public double NoteheadAnchorToFingeringCentre(int page = 0)
     {
-        var f = _pages[page].Texts.Where(t => t.Anchor == TextAnchor.Middle).ToList();
-        if (f.Count != 1)
+        var digits = _pages[page].Glyphs
+            .Where(g => FigBassDigitChar(g.Glyph) is not null)
+            .OrderBy(g => g.X)
+            .ToList();
+        if (digits.Count != 1)
         {
             throw new InvalidOperationException(
-                $"page {page}: expected exactly ONE centred text (the fingering), found "
-                + $"{f.Count} — the probe is not measuring what it claims.\n"
+                $"page {page}: expected exactly ONE fingering digit glyph, found "
+                + $"{digits.Count} — the probe is not measuring what it claims.\n"
                 + "Drawn geometry:\n" + Describe());
         }
-        return f[0].X - NoteheadAnchor(0);
+        string text = FigBassDigitChar(digits[0].Glyph)!.Value.ToString();
+        return digits[0].X + FiguredBassGlyphRun.Width(text) / 2.0 - NoteheadAnchor(0);
+    }
+
+    /// <summary>The plain digit a fetaText bass-figure/fingering glyph spells, or null.</summary>
+    private static char? FigBassDigitChar(char glyph)
+    {
+        for (char c = '0'; c <= '9'; c++)
+            if (GlyphMetrics.TryGetFiguredBassGlyph(c, out char g, out _, out _) && g == glyph)
+                return c;
+        return null;
     }
 
     /// <summary>The <paramref name="index"/>-th notehead's anchor, 0-based, left to right.</summary>

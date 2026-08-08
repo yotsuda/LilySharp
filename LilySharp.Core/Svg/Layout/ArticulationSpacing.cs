@@ -91,7 +91,7 @@ internal static class ArticulationSpacing
     /// plain rest (<c>r4@fermata</c>, fixture feature-tour) IS an ordinary Script.
     /// </para>
     /// </remarks>
-    public static int? OutsideStaffPriority(ArticulationType type) => type switch
+    public static double? OutsideStaffPriority(ArticulationType type) => type switch
     {
         ArticulationType.Fermata or ArticulationType.FermataShort
             or ArticulationType.FermataLong => 75,

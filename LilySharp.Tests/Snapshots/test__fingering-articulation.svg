@@ -29,9 +29,9 @@
   <text class="music" x="12.49" y="10.29" font-size="4.00" data-pos="640"></text>
   <text class="music" x="12.49" y="10.01" font-size="4.00" data-pos="647"></text>
   <text class="music" x="15.24" y="12.62" font-size="4.00" data-pos="669"></text>
-  <text x="9.24" y="10.47" font-size="2.24" text-anchor="middle" data-pos="612">1</text>
-  <text x="12.49" y="8.61" font-size="2.24" text-anchor="middle" data-pos="636">3</text>
-  <text x="15.24" y="11.22" font-size="2.24" text-anchor="middle" data-pos="666">2</text>
+  <text class="music" x="8.79" y="10.27" font-size="2.24" data-pos="612"></text>
+  <text class="music" x="12.04" y="8.41" font-size="2.24" data-pos="636"></text>
+  <text class="music" x="14.79" y="11.92" font-size="2.24" data-pos="666"></text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="697"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="697">Main</text>
   </g>

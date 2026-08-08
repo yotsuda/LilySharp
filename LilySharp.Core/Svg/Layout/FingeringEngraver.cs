@@ -46,7 +46,17 @@ public readonly record struct FingeringLayout(
     int SourcePosition,
     // F3/B: staff index of the host note/chord, so a reused layout re-derives
     // data-pos from the live score (SharedRenderer.ResolveDataPos). -1 = unresolved.
-    int StaffIndex = -1);
+    int StaffIndex = -1,
+    // The fingering's script-priority in its note's SCRIPT COLUMN, or int.MinValue
+    // when it does not enter the column (chord fingerings — FingeringColumn is a
+    // different mechanism). A vertically-oriented fingering is a script like any
+    // other: priority 100 (the Fingering grob's declaration) + direction × the
+    // head's staff position, sorted into the same per-note walk that stacks
+    // staccato under tenuto under a bow (ArticulationEngraver.CalculateWithFingerings).
+    // LILYPOND-REF: lily/new-fingering-engraver.cc:334-335 set_property
+    //   "script-priority" (finger_prio + d * ft.position_);
+    //   scm/define-grobs.scm:1554 Fingering script-priority = 100.
+    int ColumnPriority = int.MinValue);
 
 /// <summary>
 /// Calculates positions for fingering numbers attached to notes.
@@ -70,14 +80,36 @@ internal static class FingeringEngraver
     private const double StaffPadding = 0.5;
 
     /// <summary>
-    /// Approximate digit height for fingering at LP's font-size = -5.
+    /// The digits of a fingering as feta-text glyph metrics AT THE FINGERING'S OWN SIZE
+    /// (font-size −5 of the 4-ss staff-height base — the same em the figured bass shares,
+    /// <see cref="EngravingDefaults.FiguredBassFontSize"/>, both being fetaText at −5):
+    /// the mapped glyph run, its ink box relative to the run's LEFT BASELINE origin, and
+    /// its advance width. One home for the pen (SharedRenderer.DrawFingerings), the
+    /// script-column profile (ArticulationEngraver) and the placement below.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm Fingering (font-size . -5)
-    /// magstep(-5) ≈ 0.561; a glyph at full size is ~1.0 staff space tall, so
-    /// reduced height ≈ 0.56.
+    /// LILYPOND-REF: scm/define-grobs.scm:1547-1568 Fingering (outside-staff-interface
+    ///   family) — font-encoding fetaText, font-features cv47 ss01, font-size −5;
+    ///   its stencil is text-interface::print of fingering::calc-text (:1559-1560),
+    ///   so the drawn ink IS these glyphs at that size.
+    /// ⚠️ IT WAS A SERIF DIGIT AT 0.56 EM until 2026-08-08 — roughly HALF LilyPond's ink
+    /// (feta numerals are 2.0 design-ss tall → 1.12 at −5), so everything stacked over a
+    /// fingering sat a half-space too low. Measured on script-stack-order1: a bow over a
+    /// fingering is at −5.33 (LP) = digit top 1.13 + padding 0.20.
     /// </remarks>
-    private const double DigitHeight = 0.56;
+    internal static (string Glyphs, GlyphMetrics.BBox Ink, double Width) DigitRun(int number)
+    {
+        string text = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var glyphs = new System.Text.StringBuilder(text.Length);
+        foreach (var piece in FiguredBassGlyphRun.Pieces(text))
+            if (piece.IsGlyph)
+                glyphs.Append(piece.Ch);
+        double width = FiguredBassGlyphRun.Width(text);
+        return (glyphs.ToString(),
+            new GlyphMetrics.BBox(0.0, FiguredBassGlyphRun.InkBottom(text),
+                width, FiguredBassGlyphRun.InkTop(text)),
+            width);
+    }
 
     /// <summary>
     /// Calculates layouts for all fingerings in a single-staff score.
@@ -232,14 +264,22 @@ internal static class FingeringEngraver
         // EngravingDefaults.NoteheadHalfHeight, whose own remark records that it is 0.045
         // short of the glyph. Reading them from there is output-identical and means a future
         // correction reaches this call site too, instead of leaving it behind.
-        const double StaffHalf = EngravingDefaults.StaffMiddle;
+        // The staff support is the StaffSymbol's INK — its outermost line's top edge
+        // (2.0 + half the line thickness = 2.05), the same 2.05 every other
+        // side-positioned grob pays before its padding (bar numbers, text scripts:
+        // ledger textscript.no-descender.staff-to-baseline = 2.05 + 0.5). Measured on
+        // script-stack-order1: an isolated fingering over a staff-clearing head sits
+        // at 2.55 in LilyPond, not 2.50.
+        const double StaffInk = EngravingDefaults.StaffMiddle
+            + EngravingDefaults.StaffLineThickness / 2.0;
         const double NoteheadHalfHeight = EngravingDefaults.NoteheadHalfHeight;
+        double digitTop = DigitRun(note.Fingering!.Value).Ink.Top;
         double noteUp = note.StaffPosition * 0.5;
         double yUp = isAbove
-            ? System.Math.Max(StaffHalf + StaffPadding,
+            ? System.Math.Max(StaffInk + StaffPadding,
                 noteUp + NoteheadHalfHeight + StaffPadding)
-            : System.Math.Min(-StaffHalf - StaffPadding - DigitHeight,
-                noteUp - NoteheadHalfHeight - StaffPadding - DigitHeight);
+            : System.Math.Min(-StaffInk - StaffPadding - digitTop,
+                noteUp - NoteheadHalfHeight - StaffPadding - digitTop);
 
         return new FingeringLayout(
             MeasureIndex: measureIndex,
@@ -249,6 +289,10 @@ internal static class FingeringEngraver
             YUp: yUp,
             IsAbove: isAbove,
             SourcePosition: note.SourcePosition,
-            StaffIndex: staffIndex);
+            StaffIndex: staffIndex,
+            // Vertical fingerings are scripts of the note's column: priority 100 +
+            // direction × head position (direction here is UP, the default bucket).
+            // LILYPOND-REF: lily/new-fingering-engraver.cc:334-335 set_property
+            ColumnPriority: 100 + note.StaffPosition);
     }
 }

@@ -170,6 +170,56 @@ public class ArticulationPlacementTests
     }
 
     [Fact]
+    public void ScriptStack_OrdersByScriptPriority_FingeringAndBumpedBowIncluded()
+    {
+        // script-stack-order1.ly (the stacking-ladder book), measured against the
+        // LilyPond twin scratch\lpreg\scriptstack1.{ly,lys}. Three regimes pinned:
+        // (1) the FINGERING enters the note's script column at priority 100+position
+        //     — over f'' it sits BETWEEN the tenuto and the bow (LP staccato −2.94 /
+        //     tenuto −3.42 / finger −4.00 / upbow −5.33), and over e, between the
+        //     tenuto and the downbow (LP −2.50 / −3.08 / −4.40); the digit's profile
+        //     is its extent BOX (LP: no vertical-skylines declaration on Fingering),
+        //     which is why the bow cannot sink into the "0"'s round shoulder.
+        // (2) the +0.1 BUMP: over e' the upbow (priority 180, no outside-staff
+        //     priority) follows the fermata (175, mover at 75) in the sorted walk,
+        //     so it BECOMES a mover at 75.1 and stacks above the fermata — LP
+        //     flageolet −6.14 / fermata −7.08 / upbow −8.99.
+        // (3) the priority table: flageolet 50 keeps the flageolet under everything.
+        // LILYPOND-REF: lily/script-column.cc:160-186 order_grobs — the walk;
+        //   lily/new-fingering-engraver.cc:314-340 position_scripts — the fingering.
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 f'4@staccato@tenuto@finger(3)@upbow" +
+                " e'@flageolet@fermata@upbow e,@tenuto@finger(0)@downbow r4 |"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        double middle = MiddleLineY(svg);
+        var glyphs = MusicGlyphs(svg);
+        double YUpOfSingle(char c)
+        {
+            var g = Assert.Single(glyphs.Where(x => x.Glyph == c));
+            return middle - g.Y;
+        }
+        // f'' — staccato, tenuto, FINGER 3, upbow, bottom-up:
+        Assert.Equal(2.94, YUpOfSingle(EmmentalerGlyphs.ArticStaccatoAbove), 2); // LP 2.94
+        var tenutos = glyphs.Where(x => x.Glyph == EmmentalerGlyphs.ArticTenutoAbove)
+            .OrderBy(x => x.X).ToList();
+        Assert.Equal(2, tenutos.Count);
+        Assert.Equal(3.42, middle - tenutos[0].Y, 2);                       // LP 3.42
+        Assert.Equal(4.00, YUpOfSingle(EmmentalerGlyphs.FigBassDigit3), 2); // LP 4.00
+        var upbows = glyphs.Where(x => x.Glyph == EmmentalerGlyphs.ArticUpBowAbove)
+            .OrderBy(x => x.X).ToList();
+        Assert.Equal(2, upbows.Count);
+        Assert.Equal(5.32, middle - upbows[0].Y, 2);                        // LP 5.33
+        // e' — flageolet, fermata, then the BUMPED upbow above the mover:
+        Assert.Equal(6.14, YUpOfSingle(EmmentalerGlyphs.ArticFlageolet), 2); // LP 6.14
+        Assert.Equal(7.08, YUpOfSingle(EmmentalerGlyphs.FermataAbove), 2);   // LP 7.08
+        Assert.Equal(8.99, middle - upbows[1].Y, 2);                        // LP 8.99
+        // e, — tenuto, FINGER 0, downbow:
+        Assert.Equal(2.50, middle - tenutos[1].Y, 2);                       // LP 2.50
+        Assert.Equal(3.08, YUpOfSingle(EmmentalerGlyphs.FigBassDigit0), 2); // LP 3.08
+        Assert.Equal(4.40, YUpOfSingle(EmmentalerGlyphs.ArticDownBowAbove), 2); // LP 4.40
+    }
+
+    [Fact]
     public void Trill_SitsOnTheStaffPaddingRefpointFloor()
     {
         // The articulations-book residual (Δ0.45): the trill glyph's origin IS its

@@ -6862,7 +6862,9 @@
     },
     "script-stack-order1.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Scripts stack from least to most technical, closest to the note first: articulation, flageolet, fingering, RH fingering, string number, fermata, bowing, text script (= script-priority order)",
+      "notes": "fixed 第43号(第114). 修理3件: ⑴fingeringがscript column不参加(常に最外+調整定数1.4/1.9のclamp)→new-fingering-engraver.cc:314-340港=priority 100+d×positionで連鎖に参加(profileはextent箱=vertical-skylines無宣言・digitはfetaText -5=figbassと同glyph同em。旧serif0.56em=LP inkの半分) ⑵script-column.cc:178-185の+0.1 bump港=fermata(mover75)の後のosp無しscript(bow180)がosp75.1のmover化=fermataの上に積まれる ⑶ScriptPriority表完成(flageolet50/trill150/bow180追加)。LP照合(scriptstack1 twin): f''=stac-2.94/ten-3.42/finger-4.00/bow-5.32(LP-5.33)・e'=flag-6.14/ferm-7.08/bow-8.99完全一致・e,=ten-2.50/finger-3.08/bow-4.40完全一致・d,のfinger単独-2.55=staff ink2.05+0.5一致。score1(弦番号\\3\\5)は標準譜string number綴りなし=両側省略(文法宿題)。残差: e''のslur付きstack=剛体+0.73(gap 0.86/1.32はLP同一)=script avoid-slur未実装の起票・@text div. Y-6.83 vs LP-6.22+X中央揃え=既起票@text regime。twin=audit lys+scratch\\lpreg\\scriptstack1.{ly,lys}"
     },
     "script-stacked.ly": {
       "category": "scheme",

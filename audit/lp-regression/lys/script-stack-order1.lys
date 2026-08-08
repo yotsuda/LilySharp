@@ -1,0 +1,14 @@
+// lilypond-src/input/regression/script-stack-order1.ly の Lily# 訳 (score 2)。
+// CLAIM: script の縦積み順は「技巧度の低いものが音符の近く」= articulation <
+// flageolet < fingering < (RH fingering < string number <) fermata < bowing < text
+// = script-priority 順 (staccato -100 / tenuto -50 / accent 0 / flageolet 50 /
+// finger 100+position / fermata 175 / bow 180 / text 200)。
+// 枠合わせ: score 1 ({ d''16\3-3 d'\5-4 } = 弦番号 vs 運指) は標準譜の
+// string number 綴りが無く両側省略。^"div." = @text(..).up。
+// 綴り: LP 無引数 \relative 基準 F3 の e''=E5 = Lily# の e'。
+// 残差: e'' (slur 起点) の stack は剛体 +0.73 (gap は LP 同一) = script の
+// avoid-slur 未実装の起票・@text の Y/X は既起票 @text regime。
+
+e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
+r4 a@staccato@tenuto@upbow f''@staccato@tenuto@finger(3)@upbow e'@flageolet@fermata@upbow |
+e,@tenuto@finger(0)@downbow@text("div.").up |

@@ -48,11 +48,11 @@
   <rect x="29.04" y="22.12" width="0.19" height="4.00" data-pos="547"/>
   <rect x="37.19" y="22.12" width="0.19" height="4.00" data-pos="562"/>
   <rect x="37.68" y="22.12" width="0.60" height="4.00" data-pos="562"/>
-  <text x="17.89" y="21.62" font-size="2.24" text-anchor="middle" data-pos="498">1</text>
-  <text x="20.90" y="21.62" font-size="2.24" text-anchor="middle" data-pos="511">2</text>
-  <text x="23.90" y="21.62" font-size="2.24" text-anchor="middle" data-pos="523">3</text>
-  <text x="26.91" y="21.62" font-size="2.24" text-anchor="middle" data-pos="535">5</text>
-  <text x="32.11" y="21.62" font-size="2.24" text-anchor="middle" data-pos="549">1</text>
+  <text class="music" x="17.44" y="21.57" font-size="2.24" data-pos="498"></text>
+  <text class="music" x="20.45" y="21.57" font-size="2.24" data-pos="511"></text>
+  <text class="music" x="23.46" y="21.57" font-size="2.24" data-pos="523"></text>
+  <text class="music" x="26.46" y="21.57" font-size="2.24" data-pos="535"></text>
+  <text class="music" x="31.66" y="21.57" font-size="2.24" data-pos="549"></text>
   <rect x="8.84" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="448"/>
   <text x="11.94" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="448">Main</text>
   </g>
