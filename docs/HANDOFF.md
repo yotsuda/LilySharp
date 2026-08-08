@@ -61,7 +61,25 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第117セッション（＝第1便 **fixed 第46号 = slur-grace.ly = stem 配管**・
 第2便 **stem-attach X 規則 (:738-760) port = 第45号開示⑴の返済**・第3便
 **perf A/B round 15 = 3 バッチ全て符号跨ぎ = drift・対照 hash 一致**・
+以上 `2091d7fd`・第4便 **slur-height-capping.ly = exact（コード変更 0・両 slur
+8 点+X 全一致）**・第5便 **slur-nice.ly = skip（slur-flag と同じ向き綴りゲート）**・
 この handoff と同 commit）。
+
+★★ **第4便 slur-height-capping.ly = exact**（コード変更 0 = 第45号+第46号の機構が
+そのまま当たった追試。claim: 整形は端近くの物を無視＝素の弓のまま・scoring には参加）:
+- 枠: \relative **無引数は f 基準**（c' でない——最初の c は C3）。bass clef・
+  C3↔D4 のジグザグ 8 音 slur ×2。双子 scratch\lpreg\slurhcap.{ly,lys} 残置・
+  頭 position 検分済（+0.5/−3.5/−2.0 が両側一致）。
+- **slur1 = 4 点完全一致**: −3.55/−5.38/−6.12/−4.55 = LP −3.5450/−5.3800/
+  −6.1152/−4.5450・X offset 2.26/15.33/span 17.78 = LP 2.2585/15.3293/17.7794。
+  **slur2 も 4 点完全一致**: −4.05/−5.83/−6.20/−4.55 = LP −4.0450/−5.8264/
+  −6.1967/−4.5450・span 18.45 = 18.4494。
+- 予測の外れが収穫: 「m1/m2 は同型」は外れ——**LP 自身が m2（des 変化）の始点を
+  1 grid 下げており、LS はその差ごと再現**＝機構が同じ答えを出している証拠。
+★ **第5便 slur-nice.ly = skip**: 主張（強制向きの下で曲率は頭を避けるためだけに
+最小限増える）の発火に \slurUp/\slurDown + 音中 \stemUp/\stemDown/\stemNeutral
+スパンが要る——**Lily# に slur 向き強制の綴りなし**（第5便§116 slur-flag と同じ
+文法宿題の棚）。強制なしの素の対は slurgrace/slurhcap の exact が既に踏んでいる。
 
 ★★★ **第1便 fixed 第46号 = slur-grace.ly**（第6便下見の修理形どおり stem 配管——
 ただし §116 の「obstacle に Stem **種**を建てる」ではなく **LP の Encompass_info の形
@@ -139,20 +157,23 @@ drift・scriptsym1k の SVG hash base/curr 完全一致**（slur 無し本は挙
 ★ scratch の旧 slurgrace.svg（下見時の残置）は**さらに古い build の産物**で、
 第6便の実測値 −1.54/−3.04 とすら合わない＝stale。双子照合は毎回レンダし直すこと。
 
-plain 322 / 処理済 **258**（fixed **46**・exact 33・skip 163・open 16・
-pending **64**。slurgrace が pending→fixed。数えたら state 別内訳も一緒に書くこと）。
-frontier = **slur-height-capping**（端の物は shaping 無視・scoring 参加＝fit_factor
-の close-to-edge がそのまま主張）→ slur-nice → slur-rest-direction →
-slur-shift-region → slur-vertical-skylines（§116 の並びのまま）。slur-flag は
-文法宿題（slur 向き強制の綴りなし）のままだが、**測るはずだった stem-attach X
-規則自体は今回 multivoice で実測・port 済**＝文法が入ったら追試になる。
+plain 322 / 処理済 **260**（fixed **46**・exact **34**・skip **164**・open 16・
+pending **62**。slurgrace が pending→fixed・slurhcap 新規 exact・slur-nice 新規
+skip。数えたら state 別内訳も一緒に書くこと）。
+frontier = **slur-rest-direction**（4 score 頁組み注意・rest は slur 向きを
+変えない = calc_direction の non-rest gate を測る）→ slur-shift-region
+（tuplet 内終端）→ slur-vertical-skylines（^"rit"+trill span+\f =
+outside-staff 対 slur）。slur-flag / slur-nice は文法宿題（slur 向き強制の
+綴りなし）の棚で待機——**stem-attach X 規則自体は第2便で multivoice を測定器に
+port 済**＝文法が入ったら追試になる。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
 テスト **4209 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
 snapshot 第117 は 4 枚（全部 slur path・census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。probe 残置:
-scratch\lpreg\slurgrace.{ly,lys}・mvslur-probe.{ly,svg}・mls.{ly,lys→svg}・
-perf-ab15.ps1（＋第116 以前の perf-slur*/perf-sd*/perf-{nodot-slur,dot-noslur}）。
+scratch\lpreg\slurgrace.{ly,lys}・slurhcap.{ly,lys}・mvslur-probe.{ly,svg}・
+mls.{ly,lys→svg}・perf-ab15.ps1
+（＋第116 以前の perf-slur*/perf-sd*/perf-{nodot-slur,dot-noslur}）。
 
 ## 以下は第116セッションの経緯
 
