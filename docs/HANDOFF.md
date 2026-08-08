@@ -58,6 +58,45 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第112セッション第1便（＝fixed **第38号 = lyric-hyphen-grace.ly**・
+この handoff と同 commit）。
+
+★★★ **第1便 fixed 第38号 = lyric-hyphen-grace.ly**（行頭 grace の下に hyphen を刷らない）:
+- **修理 = LyricHyphen print regime 丸ごと**（第111便7の下見どおり）: CalculateHyphenLayout を
+  lyric-hyphen.cc:35-158 の字面へ書き直し。⑴ span = 音節 ink 縁（旧 padding 0.3 撤去）
+  ⑵ dash 分布 = n=ceil(l/period−0.5)・space_left/2 中央配置・宣言値（period 10.0・length 0.66・
+  height 0.42・th 1.3lt・padding 0.07・min-length 0.3 = define-grobs.scm:2149-2161）
+  ⑶ **行頭 piece は実時間ゼロで kill**（次音節が系先頭小節の onset 0。grace は時間を持たない
+  = 本の主張。kill-zero-spanned-time の字面）⑷ 行末 piece = 小節線 ink 左縁まで周期充填
+  （broken 右 bound は squeeze/消滅両ガードを skip）。
+- **LP 照合**（twin svg・staff 相対 = LP 頁 X−8.5358）: 式が 4 桁一致（mid first dash 10.2198・
+  行末充填 69.1194..99.1194・行頭 survivor 6.7970）。LS 描画も LP 同構造（系3/系4/下譜の
+  行頭 stub 全滅・melisma 跨ぎの系2だけ生存・行末充填）。
+- **観測者 +3**（LyricHyphenTests に LP 逆算値ピン）+ 宣言値ピンへ 1 本書き換え。
+  **snapshot 11 枚**（85 要素全部 hyphen dash のみ: 厚み 0.16→0.13・長 0.8→0.66・Y +0.015・
+  旧 MaxDashLength 3.0 の多 dash→period 10 で 1 本化 = 中心不変・census 済）。
+- **開示（LILYSHARP-OWN 札）**: 行頭 piece 左 bound = ml.X（prefix END）vs LP は break-align 群
+  の clef ink 右 3.365（境界列 regime）・行末 bar 幅は thin 固定（|. の厚棒は見ない）。
+  perf: 呼び出し構造不変（per-hyphen 小ループ・pass/walk 数不変）= A/B 省略、理由ごとここに開示。
+- **学び**: ⑴ `default(Fraction)` は 0/0 で `Fraction.Zero`（0/1）と値等価でない——onset ゼロ
+  判定は Numerator==0 で書く ⑵ 引用ラチェットは C++ 側の underscored ローカル
+  （dash_period/space_left 等）を名指すと property 宣言行でも通る（hyphen 語 3 パーツ規則の
+  実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
+  再演——引かずに「11.90 は何の右縁?」を一周した）。
+
+plain 322 / 処理済 **149**（fixed **38**・exact **25**・skip **74**・open **12**・
+pending 173。数えたら state 別内訳も一緒に書くこと）。
+frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
+第107 起票の §2A workstream は棚のまま。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4193 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
+lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
+snapshot 第112 は 11 枚（第1便 hyphen census）**・base worktree = C:\MyProj\LilySharp-base
+（cc19cccc・残置）。
+
+## 以下は第111セッション第1〜9便の経緯
+
 最終更新 第111セッション第5便（＝第1便 fixed **第32号 = hara-kiri-percent-repeat.ly**・
 `b8a4f128`・第2便 skip 2 + fixed **第33号 = input-order-alignment.ly**・`fd93d1c5`・
 第3便 **key-signature-space.ly = open**・`2014c9d8`・第4便 skip 2 + fixed **第34/35号 =

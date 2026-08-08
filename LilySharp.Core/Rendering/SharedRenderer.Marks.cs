@@ -861,7 +861,9 @@ internal static partial class SharedRenderer
     private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
-        const double thickness = 0.16;
+        // LILYPOND-REF: lily/lyric-hyphen.cc:64-65 th = get_dimension of the layout
+        // line-thickness × the LyricHyphen thickness 1.3 (scm/define-grobs.scm).
+        const double thickness = 1.3 * EngravingDefaults.LineThickness;
         foreach (var h in layout.LyricHyphenLayouts)
         {
             // A system-crossing connector's SECOND piece lives on the NEXT
@@ -884,7 +886,7 @@ internal static partial class SharedRenderer
                     var dash = h.Dashes[di];
                     var src = layout.LyricLayouts[h.LyricIndex];
                     if (!sysTopYUp.TryGetValue(src.Item.MeasureIndex, out var syUp)) continue; // other page
-                    if (h.CrossesSystemBreak && di == 1 && NextSystemTop() is { } nt)
+                    if (h.CrossesSystemBreak && dash.OnNextSystem && NextSystemTop() is { } nt)
                         syUp = nt;
                     double dashY = syUp - dash.Y;
                     gc.DrawLine(dash.X1, dashY, dash.X2, dashY,

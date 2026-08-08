@@ -71,9 +71,7 @@
   <text x="6.66" y="17.68" font-size="2.20" data-pos="0">= 96</text>
   <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="164"/>
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="164">Main</text>
-  <line x1="13.59" y1="25.38" x2="14.39" y2="25.38" stroke="#000000" stroke-width="0.160"/>
-  <line x1="15.48" y1="25.38" x2="16.28" y2="25.38" stroke="#000000" stroke-width="0.160"/>
-  <line x1="22.76" y1="25.38" x2="23.32" y2="25.38" stroke="#000000" stroke-width="0.160"/>
-  <line x1="23.87" y1="25.38" x2="24.43" y2="25.38" stroke="#000000" stroke-width="0.160"/>
+  <line x1="14.61" y1="25.40" x2="15.27" y2="25.40" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.26" y1="25.40" x2="23.92" y2="25.40" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

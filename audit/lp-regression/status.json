@@ -4032,9 +4032,9 @@
     },
     "lyric-hyphen-grace.ly": {
       "category": "plain",
-      "state": "pending",
+      "state": "fixed",
       "claim": "No hyphen should be printed under a grace note at the start of a line if the grace main note starts a new syllable",
-      "notes": "下見済(第111第7便・修理は次セッション)。twin scratch\\lpreg\\lyhygrace.{ly,lys}レンダ済。LS実測の乖離3系統: (1)行頭stub: LPは既定で行頭側pieceを刷らない(lyric-hyphen.cc:45-49 kill-zero-spanned-time=区間が実時間ゼロならSCM_EOL・grace付き行頭が本の主張)がLSは全brokenで3.87..4.73のstubを刷る(claimの反例=graceの下にも出る) (2)行末: LPは行末までdash周期充填(69..99に4個・:107,120の「行末では消えない」例外)だがLSはstart..systemEnd-0.5の一本線(42ssのsolid=extender見た目) (3)dash分布: LP dash-period10.0/length0.66/height0.42/thickness1.3*lt/padding0.07/min-length0.3(define-grobs.scm:2149-2161)+n=ceil(l/period-0.5)・中央配置(space_left/2)——LSはMaxDashLength3.0で0.8幅を2.68間隔(15個 vs LP5個)+ゼロ長dashのゴミ(x0..0がsystem毎)。修理の形: CalculateHyphenLayoutをlyric-hyphen.cc:35-158 printの字面へ書き直し(スパン=左音節ink右..右音節ink左・行頭piece抑止・行末piece周期充填)+LyricHyphenParametersをdefine-grobs宣言値へ。snapshot影響: hyphen使用fixture(cjk-lyric等14冊弱)が動く見込み=census前提。LPレンダ済svg=scratch\\lpreg\\lyhygrace.svg"
+      "notes": "fixed 第38号(第112第1便)。第111第7便の乖離3系統をCalculateHyphenLayoutのlyric-hyphen.cc:35-158字面書き直しで全部返済: (1)行頭piece=実時間ゼロでkill(次音節が系先頭小節のonset 0。graceは時間を持たない=本の主張。LS描画で系3/系4/下譜の全行頭stub消滅・melisma跨ぎの系2だけ生存=LP同構造) (2)行末piece=小節線ink左縁まで周期充填(broken右boundはsqueeze/消滅両ガードをskip) (3)dash分布=span(音節ink縁・padding無し)にn=ceil(l/period-0.5)・space_left/2で中央配置・period10.0/length0.66/height0.42/th1.3lt/padding0.07/min-length0.3の宣言値。観測者3本=LP svg逆算値ピン(mid first dash 10.2198・行末充填69.1194..99.1194・行頭survivor 6.7970=式が4桁一致)+宣言値ピン1本。snapshot 11枚(85要素全部hyphen dash線のみ: 厚み0.16→0.13・長0.8→0.66・Y+0.015・旧MaxDashLength3.0の多dash→period10で1本化=中心不変・census済)。残差開示(LILYSHARP-OWN札): 行頭piece左bound=ml.X(prefix END)vs LPはbreak-align群のclef ink右3.365=境界列regime・行末bar幅はthin固定(終止線|.の厚棒は見ない)。perf: 呼び出し構造不変(per-hyphen小ループ)=A/B省略。twin両svg残置(lyhygrace.svg/lyhygrace-ls.svg)"
     },
     "lyric-hyphen-retain.ly": {
       "category": "scheme",

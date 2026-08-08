@@ -29,27 +29,37 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal sealed record LyricHyphenParameters
 {
-    /// <summary>Minimum length of a single hyphen dash (in staff spaces).</summary>
-    public double MinDashLength { get; init; } = 0.4;
+    /// <summary>Distance between the starts of consecutive dashes (in staff spaces).</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:72 dash_period read; the value 10.0
+    /// is the LyricHyphen dash-period in scm/define-grobs.scm.</remarks>
+    public double DashPeriod { get; init; } = 10.0;
 
-    /// <summary>Maximum length before adding additional hyphens (in staff spaces).</summary>
-    public double MaxDashLength { get; init; } = 3.0;
+    /// <summary>Length of one dash (in staff spaces).</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:73 dash_length read; the value 0.66
+    /// is the LyricHyphen length in scm/define-grobs.scm.</remarks>
+    public double DashLength { get; init; } = 0.66;
 
-    /// <summary>Dash thickness for hyphen (in staff spaces).</summary>
-    public double DashThickness { get; init; } = 0.12;
+    /// <summary>Dash BOTTOM above the text baseline (in staff spaces) — the dash box
+    /// spans height..height+thickness upward.</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:125 dash_mol's Box Y is (h, h + th);
+    /// the value 0.42 is the LyricHyphen height in scm/define-grobs.scm.</remarks>
+    public double HyphenHeight { get; init; } = 0.42;
 
-    /// <summary>Padding between syllable edge and hyphen start (in staff spaces).</summary>
-    public double HyphenPadding { get; init; } = 0.3;
+    /// <summary>Dash thickness, in LINE-THICKNESS units (not staff spaces).</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:64-65 th = get_dimension of the
+    /// layout line-thickness × the LyricHyphen thickness 1.3 (scm/define-grobs.scm).</remarks>
+    public double HyphenThickness { get; init; } = 1.3;
 
-    /// <summary>Minimum gap required to draw a hyphen (in staff spaces).</summary>
-    public double MinGapForHyphen { get; init; } = 0.8;
+    /// <summary>Padding kept between a syllable and a squeezed dash (in staff spaces).
+    /// NOT part of the span points — those are the bare syllable ink edges.</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:107-112 dash_length squeezes between
+    /// paddings; the value 0.07 is the LyricHyphen padding in scm/define-grobs.scm.</remarks>
+    public double HyphenPadding { get; init; } = 0.07;
 
-    /// <summary>Vertical offset from text baseline for hyphen (in staff spaces).</summary>
-    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:67 — height = 0.5 ABOVE the
-    /// baseline (a hyphen sits at mid x-height, like the text glyph would);
-    /// device Y is down-positive, hence negative. The old +0.4 drew the dash
-    /// BELOW the baseline — it read as an underscore.</remarks>
-    public double HyphenYOffset { get; init; } = -0.5;
+    /// <summary>Shortest a squeezed dash may get (in staff spaces).</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:109-111 minimum_length floor; the
+    /// value 0.3 is the LyricHyphen minimum-length in scm/define-grobs.scm.</remarks>
+    public double HyphenMinimumLength { get; init; } = 0.3;
 
     /// <summary>Extender line thickness (in staff spaces).</summary>
     public double ExtenderThickness { get; init; } = 0.08;
@@ -75,7 +85,11 @@ public sealed record HyphenDash(
     // End X position (in staff spaces).
     double X2,
     // Y position (in staff spaces).
-    double Y
+    double Y,
+    // True when this dash belongs to the piece on the NEXT system of a broken
+    // hyphen: the draw resolves it against that system's top (via
+    // LyricHyphenLayout.NextLyricIndex), and Y is relative to THAT system.
+    bool OnNextSystem = false
 );
 
 /// <summary>
@@ -241,6 +255,7 @@ internal sealed class LyricHyphenEngraver
             bool crossesSystem = false;
             double systemEndX = 0;
             double nextSystemStartX = 0;
+            bool nextAtSystemStart = false;
 
             if (measureToSystem.TryGetValue(current.Item.MeasureIndex, out var currentSystem) &&
                 measureToSystem.TryGetValue(next.Item.MeasureIndex, out var nextSystem))
@@ -250,12 +265,25 @@ internal sealed class LyricHyphenEngraver
                 {
                     systemEndX = currentSystem.systemEndX;
                     nextSystemStartX = nextSystem.systemStartX;
+                    // Whether the right syllable sits on the new line's FIRST musical
+                    // moment: its measure opens the system and its onset is zero.
+                    // LilyPond kills a broken-hyphen piece spanning no musical time —
+                    // and a grace note takes none, so a grace under the would-be stub
+                    // does not save it (the claim of lyric-hyphen-grace.ly).
+                    // LILYPOND-REF: scm/define-grobs.scm:2151 after-line-breaking =
+                    //   ly:spanner::kill-zero-spanned-time on LyricHyphen.
+                    var nextSys = systems[nextSystem.systemIndex];
+                    // Numerator, not == Fraction.Zero: a default Fraction is 0/0
+                    // and its value equality checks the denominator too.
+                    nextAtSystemStart = nextSys.Measures.Length > 0
+                        && next.Item.MeasureIndex == nextSys.Measures[0].MeasureIndex
+                        && next.Item.Timing.Numerator == 0;
                 }
             }
 
             var layout = current.Item.ConnectorType switch
             {
-                LyricConnectorType.Hyphen => CalculateHyphenLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX),
+                LyricConnectorType.Hyphen => CalculateHyphenLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX, nextAtSystemStart),
                 LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX),
                 _ => null
             };
@@ -361,12 +389,15 @@ internal sealed class LyricHyphenEngraver
     };
 
     /// <summary>
-    /// Calculate hyphen layout with support for multiple dashes.
+    /// Calculate hyphen layout: dashes repeat on a fixed period across the span
+    /// between the bound syllables' ink edges, the leftover space split evenly
+    /// at both ends. A too-tight mid-line dash squeezes down to minimum-length
+    /// and then disappears — but never at a line end, where the piece instead
+    /// fills with full dashes to the barline. A line-START piece only exists
+    /// when it spans real musical time.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/lyric-hyphen.cc:80-120
-    ///
-    /// For wide gaps, LilyPond distributes multiple hyphens evenly.
+    /// LILYPOND-REF: lily/lyric-hyphen.cc:37-158 Lyric_hyphen::print.
     /// </remarks>
     private LyricHyphenLayout? CalculateHyphenLayout(
         int index,
@@ -375,90 +406,118 @@ internal sealed class LyricHyphenEngraver
         int nextIndex,
         bool crossesSystem,
         double systemEndX,
-        double nextSystemStartX)
+        double nextSystemStartX,
+        bool nextAtSystemStart)
     {
-        double startX = current.X + current.Width / 2 + _params.HyphenPadding;
-        double endX = next.X - next.Width / 2 - _params.HyphenPadding;
+        // Span points are the bound syllables' INK edges — no padding here.
+        // LILYPOND-REF: lily/lyric-hyphen.cc:51-62 span_points from each bound's
+        //   generic_bound_extent, taking the inner edge.
+        double spanLeft = current.X + current.Width / 2;
+        double spanRight = next.X - next.Width / 2;
 
-        // Lyric baselines are stored Y-up from the system top; the hyphen layout is
-        // still system-relative device, so reflect back (= -YUp) for the dash Y.
-        double currentBaselineY = -current.YUp;
-        double nextBaselineY = -next.YUp;
+        // The dash box spans (h .. h+th) ABOVE the baseline; the stored Y is the
+        // box centre as a device offset from the system top (lyric YUp is up-positive).
+        // LILYPOND-REF: lily/lyric-hyphen.cc:125 dash_mol Box Y = (h, h + th).
+        double th = _params.HyphenThickness * EngravingDefaults.LineThickness;
+        double yCurrent = -current.YUp - (_params.HyphenHeight + th / 2);
 
         if (crossesSystem)
         {
-            // Hyphen at end of current system, hyphen at start of next system.
-            // Each dash's Y is relative to its OWN system (the second uses the
-            // next syllable's baseline); the draw resolves the second dash
-            // against the next syllable's system via NextLyricIndex.
-            var dashes = ImmutableArray.Create(
-                new HyphenDash(startX, systemEndX - 0.5, currentBaselineY + _params.HyphenYOffset),
-                new HyphenDash(nextSystemStartX + 0.5, endX, nextBaselineY + _params.HyphenYOffset)
-            );
+            var dashes = ImmutableArray.CreateBuilder<HyphenDash>();
 
+            // Line-END piece: left syllable ink right → the end barline's ink
+            // LEFT edge (LP: the break column's bound extent). The right bound
+            // is broken, so the dash neither squeezes nor disappears — the
+            // period just keeps filling to the line end.
+            // LILYPOND-REF: lily/lyric-hyphen.cc:107-121 break_status_dir of the
+            //   RIGHT bound skips both the squeeze and the disappear.
+            // LILYSHARP-OWN: the barline's ink width is taken as the THIN
+            //   barline's; a final "|." group's extra thick bar is not seen here.
+            AppendDashes(dashes,
+                spanLeft, systemEndX - EngravingDefaults.ThinBarlineThickness,
+                yCurrent, rightBroken: true, onNextSystem: false);
+
+            // Line-START piece: killed outright when it spans no musical time
+            // (the right syllable on the new line's first moment — the common
+            // case, and the claim: a grace there takes no time and does not
+            // save it). Otherwise it runs from the line-start prefix end to the
+            // right syllable's ink left, with the full mid-line squeeze rules.
+            // LILYPOND-REF: scm/define-grobs.scm:2151 after-line-breaking =
+            //   ly:spanner::kill-zero-spanned-time.
+            // LILYSHARP-OWN: the left bound is the first measure's X (= where
+            //   music spacing starts); LP bounds on the break-align group's ink
+            //   (clef right edge, measured 3.365 vs prefix end ~4.6) —
+            //   boundary-column regime.
+            if (!nextAtSystemStart)
+            {
+                double yNext = -next.YUp - (_params.HyphenHeight + th / 2);
+                AppendDashes(dashes,
+                    nextSystemStartX, spanRight,
+                    yNext, rightBroken: false, onNextSystem: true);
+            }
+
+            if (dashes.Count == 0)
+                return null;
             return new LyricHyphenLayout(
                 index,
                 LyricConnectorType.Hyphen,
-                dashes,
+                dashes.ToImmutable(),
                 CrossesSystemBreak: true,
                 NextLyricIndex: nextIndex
             );
         }
 
-        // Tight gap: LP shrinks the dash to max(gap - 2*padding, minimum 0.3)
-        // and only lets the hyphen DISAPPEAR when there is truly no room
-        // (mid-line; the cross-system case above always keeps its dashes).
-        // LILYPOND-REF: lily/lyric-hyphen.cc:107-121.
-        double gap = endX - startX;
-        if (gap < _params.MinGapForHyphen)
-        {
-            double squeezed = Math.Max(gap - 2 * _params.HyphenPadding, 0.3);
-            if (gap <= 0)
-                return null;
-            return new LyricHyphenLayout(
-                index,
-                LyricConnectorType.Hyphen,
-                ImmutableArray.Create(new HyphenDash(
-                    (startX + endX) / 2 - squeezed / 2,
-                    (startX + endX) / 2 + squeezed / 2,
-                    currentBaselineY + _params.HyphenYOffset)));
-        }
-
-        double y = currentBaselineY + _params.HyphenYOffset;
-        var dashList = new List<HyphenDash>();
-
-        // Calculate number of hyphens needed
-        int numHyphens = 1;
-        if (gap > _params.MaxDashLength)
-        {
-            numHyphens = (int)Math.Ceiling(gap / _params.MaxDashLength);
-        }
-
-        if (numHyphens == 1)
-        {
-            // Single hyphen centered in gap
-            double dashLength = Math.Min(gap * 0.6, _params.MinDashLength * 2);
-            double center = (startX + endX) / 2;
-            dashList.Add(new HyphenDash(center - dashLength / 2, center + dashLength / 2, y));
-        }
-        else
-        {
-            // Multiple hyphens evenly distributed
-            double spacing = gap / (numHyphens + 1);
-            double dashLength = Math.Min(spacing * 0.5, _params.MinDashLength * 2);
-
-            for (int i = 1; i <= numHyphens; i++)
-            {
-                double center = startX + spacing * i;
-                dashList.Add(new HyphenDash(center - dashLength / 2, center + dashLength / 2, y));
-            }
-        }
-
+        var single = ImmutableArray.CreateBuilder<HyphenDash>();
+        AppendDashes(single, spanLeft, spanRight, yCurrent,
+            rightBroken: false, onNextSystem: false);
+        if (single.Count == 0)
+            return null;
         return new LyricHyphenLayout(
             index,
             LyricConnectorType.Hyphen,
-            dashList.ToImmutableArray()
+            single.ToImmutable()
         );
+    }
+
+    /// <summary>
+    /// The dash distribution of Lyric_hyphen::print for one (possibly broken)
+    /// piece: n = ceil(l/period − ½) dashes of the declared length, one period
+    /// apart, the leftover space split half at each end. A span too tight for a
+    /// full dash squeezes it to max(l − 2·padding, minimum-length); a span with
+    /// negative leftover drops the dash entirely — both ONLY when the right
+    /// bound is a real syllable (never at a broken line end). Appends nothing
+    /// when the piece disappears.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:98-134 space_left around
+    /// dash_period steps.</remarks>
+    private void AppendDashes(
+        ImmutableArray<HyphenDash>.Builder dashes,
+        double spanLeft, double spanRight, double y,
+        bool rightBroken, bool onNextSystem)
+    {
+        double period = _params.DashPeriod;
+        double length = _params.DashLength;
+        if (period < length)
+            period = 1.5 * length;
+
+        double l = spanRight - spanLeft;
+        int n = (int)Math.Ceiling(l / period - 0.5);
+        if (n <= 0)
+            n = 1;
+
+        if (l < length + 2 * _params.HyphenPadding && !rightBroken)
+            length = Math.Max(l - 2 * _params.HyphenPadding, _params.HyphenMinimumLength);
+
+        double spaceLeft = l - length - (n - 1) * period;
+        if (spaceLeft < 0.0 && !rightBroken)
+            return;
+        spaceLeft = Math.Max(spaceLeft, 0.0);
+
+        for (int i = 0; i < n; i++)
+        {
+            double x1 = spanLeft + i * period + spaceLeft / 2;
+            dashes.Add(new HyphenDash(x1, x1 + length, y, onNextSystem));
+        }
     }
 
     /// <summary>

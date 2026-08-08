@@ -58,9 +58,9 @@
   <text x="6.66" y="17.68" font-size="2.20" data-pos="0">= 120</text>
   <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="154"/>
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="154">Main</text>
-  <line x1="14.56" y1="25.89" x2="15.36" y2="25.89" stroke="#000000" stroke-width="0.160"/>
-  <line x1="27.85" y1="25.89" x2="28.65" y2="25.89" stroke="#000000" stroke-width="0.160"/>
-  <line x1="37.84" y1="25.89" x2="38.58" y2="25.89" stroke="#000000" stroke-width="0.160"/>
-  <line x1="60.26" y1="25.89" x2="61.06" y2="25.89" stroke="#000000" stroke-width="0.160"/>
+  <line x1="14.63" y1="25.91" x2="15.29" y2="25.91" stroke="#000000" stroke-width="0.130"/>
+  <line x1="27.92" y1="25.91" x2="28.58" y2="25.91" stroke="#000000" stroke-width="0.130"/>
+  <line x1="37.88" y1="25.91" x2="38.54" y2="25.91" stroke="#000000" stroke-width="0.130"/>
+  <line x1="60.33" y1="25.91" x2="60.99" y2="25.91" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

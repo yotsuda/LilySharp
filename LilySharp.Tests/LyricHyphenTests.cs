@@ -35,9 +35,11 @@ public class LyricHyphenTests
         double y,
         double width,
         LyricConnectorType connectorType = LyricConnectorType.None,
-        int verseNumber = 1)
+        int verseNumber = 1,
+        LilySharp.Core.Semantics.Fraction timing = default)
     {
-        var item = new LyricItem(text, measureIndex, itemIndex, connectorType, 0, verseNumber);
+        var item = new LyricItem(text, measureIndex, itemIndex, connectorType, 0, verseNumber,
+            Timing: timing);
         // LyricLayout stores Y-up from the system top; the helper's y is a device
         // baseline, so store its negation.
         return new LyricLayout(item, x, -y, width);
@@ -167,14 +169,121 @@ public class LyricHyphenTests
     }
 
     [Fact]
-    public void Parameters_DefaultValues_AreReasonable()
+    public void Parameters_Defaults_AreTheLilyPondDeclaredValues()
     {
-        var params1 = LyricHyphenParameters.Default;
+        // LILYPOND-REF: lily/lyric-hyphen.cc:64-74 dash_period, dash_length reads of
+        // the LyricHyphen defaults (set in scm/define-grobs.scm).
+        var p = LyricHyphenParameters.Default;
 
-        Assert.True(params1.MinDashLength > 0);
-        Assert.True(params1.MaxDashLength > params1.MinDashLength);
-        Assert.True(params1.DashThickness > 0);
-        Assert.True(params1.ExtenderThickness > 0);
+        Assert.Equal(10.0, p.DashPeriod);
+        Assert.Equal(0.66, p.DashLength);
+        Assert.Equal(0.42, p.HyphenHeight);
+        Assert.Equal(1.3, p.HyphenThickness);
+        Assert.Equal(0.07, p.HyphenPadding);
+        Assert.Equal(0.3, p.HyphenMinimumLength);
+        Assert.True(p.ExtenderThickness > 0);
+    }
+
+    // ---- LP-pinned observers: lyric-hyphen-grace.ly twin (LilyPond 2.26.0 SVG,
+    //      staff-relative X = page X − 8.5358, syllable ink width 3.0045) ----
+
+    private static ImmutableArray<SystemLayout> CreateTwoSystems(
+        (int measureIndex, double x, double width) m0,
+        (int measureIndex, double x, double width) m1)
+    {
+        return ImmutableArray.Create(
+            new SystemLayout(0, 0, m0.x + m0.width, 0, ImmutableArray.Create(
+                new MeasureLayout(m0.measureIndex, m0.x, m0.width, ImmutableArray<ItemLayout>.Empty))),
+            new SystemLayout(1, 20, m1.x + m1.width, 0, ImmutableArray.Create(
+                new MeasureLayout(m1.measureIndex, m1.x, m1.width, ImmutableArray<ItemLayout>.Empty))));
+    }
+
+    [Fact]
+    public void CalculateLayouts_MidLine_LaysDashesOnTheDeclaredPeriodWithTheLeftoverSplit()
+    {
+        // System 4 staff one: bla (ink 4.9864..7.9909) -- bla (ink left 53.1085).
+        // LilyPond prints 5 dashes of 0.66 starting at 10.2198, exactly 10.0 apart:
+        // n = ceil(45.1176/10 − ½) = 5, leftover 4.4576 split half at each end.
+        // LILYPOND-REF: lily/lyric-hyphen.cc:101-133 space_left around dash_period steps.
+        var engraver = new LyricHyphenEngraver();
+        var lyrics = new List<LyricLayout>
+        {
+            CreateLyricLayout("bla", 0, 0, 6.48865, 10, 3.0045, LyricConnectorType.Hyphen),
+            CreateLyricLayout("bla", 0, 1, 54.61075, 10, 3.0045)
+        };
+        var systems = CreateSingleSystem((0, 0, 102.43));
+
+        var result = engraver.CalculateLayouts(lyrics, systems);
+
+        Assert.Single(result);
+        var dashes = result[0].Dashes;
+        Assert.Equal(5, dashes.Length);
+        Assert.Equal(10.2198, dashes[0].X1, 3);
+        Assert.Equal(10.2198 + 0.66, dashes[0].X2, 3);
+        for (int i = 1; i < dashes.Length; i++)
+            Assert.Equal(10.0, dashes[i].X1 - dashes[i - 1].X1, 6);
+        // The dash box sits (height .. height+th) ABOVE the baseline; the stored Y
+        // is its centre: baseline − (0.42 + 0.13/2).
+        Assert.Equal(10 - 0.485, dashes[0].Y, 6);
+    }
+
+    [Fact]
+    public void CalculateLayouts_RightSyllableOnTheLineStartMoment_FillsTheLineEndAndKillsTheStub()
+    {
+        // The fixture's claim: a broken piece whose right syllable sits on the new
+        // line's FIRST moment spans no musical time and is killed — a grace note
+        // under it takes none. The line-END piece still fills to the barline's ink:
+        // system 1 staff one, bla ink right 66.6587 → barline left 102.2399,
+        // 4 dashes starting 69.1194 (LilyPond page 77.6552..107.6552).
+        // LILYPOND-REF: scm/define-grobs.scm:2151 after-line-breaking
+        //   (kill-zero-spanned-time);
+        // LILYPOND-REF: lily/lyric-hyphen.cc:107-121 break_status_dir of the RIGHT
+        //   bound skips the squeeze/disappear guards.
+        var engraver = new LyricHyphenEngraver();
+        var lyrics = new List<LyricLayout>
+        {
+            CreateLyricLayout("bla", 0, 0, 65.15645, 10, 3.0045, LyricConnectorType.Hyphen),
+            CreateLyricLayout("bla", 1, 0, 8.0, 10, 3.0045) // Timing 0 = first moment
+        };
+        var systems = CreateTwoSystems((0, 0, 102.4299), (1, 3.365, 99.0649));
+
+        var result = engraver.CalculateLayouts(lyrics, systems);
+
+        Assert.Single(result);
+        Assert.True(result[0].CrossesSystemBreak);
+        var dashes = result[0].Dashes;
+        Assert.All(dashes, d => Assert.False(d.OnNextSystem)); // no line-start stub
+        Assert.Equal(4, dashes.Length);
+        Assert.Equal(69.1194, dashes[0].X1, 3);
+        Assert.Equal(99.1194, dashes[3].X1, 3);
+    }
+
+    [Fact]
+    public void CalculateLayouts_SpannedTimeIntoTheNewLine_KeepsTheLineStartPiece()
+    {
+        // System 2 staff one: the melisma runs into the new line and the right
+        // syllable sits mid-measure (Timing ½) — the line-start piece SURVIVES:
+        // 6 dashes from the line's music start (LilyPond bounds on the clef ink
+        // right, 3.365) to the syllable ink left 60.8890, first at 6.7970.
+        // LILYPOND-REF: lily/lyric-hyphen.cc:101-133 space_left around dash_period steps.
+        var engraver = new LyricHyphenEngraver();
+        var lyrics = new List<LyricLayout>
+        {
+            CreateLyricLayout("bla", 0, 0, 65.15645, 10, 3.0045, LyricConnectorType.Hyphen),
+            CreateLyricLayout("bla", 1, 0, 62.39125, 10, 3.0045,
+                timing: new LilySharp.Core.Semantics.Fraction(1, 2))
+        };
+        var systems = CreateTwoSystems((0, 0, 102.4299), (1, 3.365, 99.0649));
+
+        var result = engraver.CalculateLayouts(lyrics, systems);
+
+        Assert.Single(result);
+        var stub = result[0].Dashes.Where(d => d.OnNextSystem).ToList();
+        Assert.Equal(6, stub.Count);
+        Assert.Equal(6.7970, stub[0].X1, 3);
+        // The stub's Y is relative to the NEXT syllable's system (its baseline).
+        Assert.Equal(10 - 0.485, stub[0].Y, 6);
+        Assert.Equal(4, result[0].Dashes.Length - stub.Count); // line-end fill stays
     }
 
     [Fact]
