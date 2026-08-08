@@ -260,7 +260,8 @@ internal static class TupletBracketEngraver
             // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
             // Calculate slope based on first/last note staff positions
             var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX,
-                isTabStaff ? default : beamLayouts, measureLayout, useRealExtents: !isTabStaff);
+                isTabStaff ? default : beamLayouts, measureLayout, useRealExtents: !isTabStaff,
+                bracketStartX: startX);
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -602,7 +603,7 @@ internal static class TupletBracketEngraver
     private static (double startY, double endY) CalculateSlope(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth,
         ImmutableArray<BeamLayout> beamLayouts = default, MeasureLayout? measureLayout = null,
-        bool useRealExtents = false)
+        bool useRealExtents = false, double bracketStartX = double.NaN)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -654,6 +655,18 @@ internal static class TupletBracketEngraver
         // Get staff positions of first and last notes, and — separately — the most
         // OUTWARD point any of them reaches on the bracket's side.
         int? firstPos = null, lastPos = null;
+        // LP port inputs: per-column encompass points (x = column LEFT edge, the
+        // column REFPOINT — measured six-digit on the TBSD/TBSA pair: the offset
+        // pass's x is refpoint − x0 and goes NEGATIVE at the left bound — and
+        // y = the column's outward reach in Y-up staff-middle spaces), plus the
+        // bound columns' head-position INTERVALS for the musical sign gates.
+        // LILYPOND-REF: lily/tuplet-bracket.cc:554-562 calc_position_and_height
+        //   points loop; lily/tuplet-bracket.cc:537-542 head_positions_interval
+        //   into musical_dy.
+        var lpPoints = new List<(double X, double YUp)>();
+        int firstLo = 0, firstHi = 0, lastLo = 0, lastHi = 0;
+        double firstTipUp = 0, lastTipUp = 0, lastColX = double.NaN;
+        (BeamLayout beam, int memberIndex)? lpAnyBeam = null;
         // The extreme ENCOMPASS POINT in the staff-top device frame (down-positive),
         // not the extreme staff POSITION. Those are different aggregates the moment the
         // tuplet's members differ in duration: a stemless whole note reaches only its own
@@ -677,6 +690,19 @@ internal static class TupletBracketEngraver
 
             if (pos == null) continue;
 
+            // Head-position interval of the column (chord: min..max) — only the
+            // SIGNS of last−first feed the LP gates.
+            (int lo, int hi) posIv = item switch
+            {
+                NoteItem n2 => (n2.StaffPosition, n2.StaffPosition),
+                ChordItem c2 => (c2.Notes.Min(n => n.StaffPosition),
+                                 c2.Notes.Max(n => n.StaffPosition)),
+                _ => (pos.Value, pos.Value),
+            };
+            if (firstPos == null)
+                (firstLo, firstHi) = posIv;
+            (lastLo, lastHi) = posIv;
+
             firstPos ??= pos;
             lastPos = pos;
 
@@ -696,10 +722,12 @@ internal static class TupletBracketEngraver
                     _ => isStemUp
                 };
                 var member = itemUp == isStemUp ? MemberBeam(i) : null;
+                lpAnyBeam ??= MemberBeam(i);
+                double colX = ml.X
+                    + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml);
                 double stemX = member is { } mb && !mb.beam.MemberXPositions.IsDefaultOrEmpty
                     ? mb.beam.MemberXPositions[mb.memberIndex]
-                    : ml.X
-                      + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml)
+                    : colX
                       + LayoutUtilities.StemAttachX(itemUp, GlyphMetrics.NoteValueOf(item),
                           LayoutUtilities.NoteheadStyleOf(item));
                 // The single house of a column's reach (HANDOFF §5.2.1②). Of() cannot
@@ -707,6 +735,13 @@ internal static class TupletBracketEngraver
                 tip = NoteColumnLayout.Of(item, null, member?.beam, stemX) is { } col
                     ? col.OutwardTipDeviceY(isStemUp)
                     : RawOutwardTip(pos.Value, duration, isStemUp);
+                // Y-up staff-middle spaces (device staff-top middle = 2.0).
+                double tipUp = 2.0 - tip;
+                if (lpPoints.Count == 0)
+                    firstTipUp = tipUp;
+                lastTipUp = tipUp;
+                lastColX = colX;
+                lpPoints.Add((colX, tipUp));
             }
             else
             {
@@ -719,6 +754,112 @@ internal static class TupletBracketEngraver
 
         if (firstPos == null || lastPos == null || extremeTip == null)
             return (baseY, baseY);
+
+        // ---- LP port: calc_position_and_height, the no-beam (drawn-bracket)
+        // branch — graphical dy from the bound columns UNITED WITH THE STAFF,
+        // sign gates, damping, then the per-point offset pass. Pinned six-digit
+        // by the ledger pair staff.staff.tuplet-bracket-sloped-{desc,asc}
+        // (positions (3.6 . 3.4) / (3.446261350737798 . 3.646261350737798)).
+        // The tab/fallback path below keeps the old derived formula (tab staff
+        // positions are string slots; no ledger point measures that regime).
+        // LILYPOND-REF: lily/tuplet-bracket.cc:520-631 calc_position_and_height
+        //   (graphical dy, sign gates, damping); lily/tuplet-bracket.cc:633-637
+        //   calc_position_and_height staff points; lily/tuplet-bracket.cc:708-746
+        //   calc_position_and_height offset pass + flat quantize.
+        if (lpPoints.Count > 0 && !double.IsNaN(bracketStartX) && bracketWidth > 0.001)
+        {
+            int dir = isStemUp ? 1 : -1;             // Y-up
+            double span = bracketWidth;              // x0..x1 = bound stem faces
+            double x0 = bracketStartX;
+            // The staff, ink 2.05 widened by staff-padding 0.25, united into the
+            // bound columns' extents — THIS is what flattens a within-staff
+            // tuplet (:530-535 rv.unite (staff)).
+            double staffEdge = 2.3 * dir;
+            double lvDir = dir > 0
+                ? Math.Max(firstTipUp, staffEdge) : Math.Min(firstTipUp, staffEdge);
+            double rvDir = dir > 0
+                ? Math.Max(lastTipUp, staffEdge) : Math.Min(lastTipUp, staffEdge);
+            double graphicalDy = rvDir - lvDir;
+
+            // Musical sign gates (:537-549): zero the dy when the chord's top and
+            // bottom move opposite ways, or when the graphical dy contradicts them.
+            int musUp = Math.Sign(lastHi - firstHi);
+            int musDown = Math.Sign(lastLo - firstLo);
+            double dy;
+            if (musUp != musDown)
+                dy = 0.0;
+            else if (Math.Sign(graphicalDy) != musDown)
+                dy = 0.0;
+            else
+                dy = graphicalDy;
+
+            // Damping (:566-630): max_dy = max-slope-factor × the LAST column's x;
+            // a covering beam lends its own slope as the cap.
+            if (dy != 0.0)
+            {
+                double lpSlope = Math.Abs(dy / span);
+                double lastX = lastColX - x0;
+                double lpMaxDy = MaxSlopeFactor * lastX * Math.Sign(dy);
+                double beamDy = 0.0, subSpan = 0.0;
+                if (lpAnyBeam is { } ab)
+                {
+                    // The beam's quanted outer-edge Y-up at its two ends — the
+                    // spelled stand-in for LP's quantized-positions read (:576-604).
+                    beamDy = ab.beam.OuterEdgeStaffSpaceAtX(ab.beam.RightX, isStemUp)
+                        - ab.beam.OuterEdgeStaffSpaceAtX(ab.beam.LeftX, isStemUp);
+                    subSpan = ab.beam.RightX - ab.beam.LeftX;
+                }
+                if (beamDy != 0.0)
+                {
+                    double beamSlope = Math.Abs(beamDy / (subSpan > 0.001 ? subSpan : span));
+                    double maxSlope = beamSlope != 0.0
+                        ? Math.Max(beamSlope, MaxSlopeFactor) : MaxSlopeFactor;
+                    lpSlope = Math.Min(lpSlope, maxSlope);
+                    if (Math.Abs(dy) > Math.Abs(lpMaxDy))
+                        dy = Math.Abs(dy * lpSlope) <= Math.Abs(lpMaxDy) ? dy * lpSlope : lpMaxDy;
+                }
+                else if (Math.Abs(dy) > Math.Abs(lpMaxDy))
+                {
+                    dy = lpMaxDy;
+                }
+            }
+
+            // The offset pass (:708-719): every column point + the staff edge at
+            // x0 and x1, cleared against the sloped chord, then padding 1.1.
+            double factor = lpPoints.Count > 1 ? 1.0 / span : 1.0;
+            double offsetUp = dir > 0 ? double.NegativeInfinity : double.PositiveInfinity;
+            void Clear(double px, double py)
+            {
+                double tuplety = dy * px * factor;
+                if (dir * py > dir * (offsetUp + tuplety))
+                    offsetUp = py - tuplety;
+            }
+            foreach (var p in lpPoints)
+                Clear(p.X - x0, p.YUp);
+            Clear(0.0, staffEdge);
+            Clear(span, staffEdge);
+            offsetUp += BracketPadding * dir;
+            // Nested brackets keep the Lily#-own stacking step (LP stacks via the
+            // inner tuplets' boxes, :646-680 — not ported; no pinned point).
+            offsetUp += nestingOffset * dir;
+
+            // A flat bracket quantizes onto a line/space and steps OFF a line
+            // when it lands inside the widened staff (:726-746).
+            if (Math.Abs(dy) < 0.01)
+            {
+                double posQ = offsetUp / 0.5;
+                if (posQ >= -5.0 && posQ <= 5.0)
+                {
+                    posQ = Math.Round(posQ, MidpointRounding.ToEven);
+                    if ((int)posQ % 2 == 0 && Math.Abs((int)posQ) <= 4)
+                        posQ += dir;
+                    offsetUp = posQ * 0.5;
+                }
+            }
+
+            // Back to the device staff-top frame (middle line = 2.0).
+            return (2.0 - offsetUp, 2.0 - (offsetUp + dy));
+        }
 
         // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
         // Convert staff position difference to slope (half staff spaces)

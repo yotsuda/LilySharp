@@ -63,7 +63,29 @@ fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分
 `57bd399a`・第2便 **slur-shift-region.ly 下見 = 乖離 2 つに分解 + bracket 傾きの
 台帳対 TBSD/TBSA 起票（LP 六桁ピン・予測全的中・LP 恒等は反証）**・`ec98bbd0`・
 第3便 **offset pass の束縛 x を六桁分解（起票時の誤読 1 つ訂正）+ ⑵の呼び順確認**・
+`36a76259`・第4便 **port ⑴ 完了 = calc_position_and_height no-beam 枝 →
+CalculateSlope・台帳対が両側 +0.000021102 に閉じた・snapshot 8 枚 census 済**・
 この handoff と同 commit）。
+
+★★★ **第4便: bracket 傾き port 完了**——**台帳対が両側 +0.000021102 に閉じた**
+（TBSD 7.177738・TBSA 7.223999・**差 0.046261351 = LP 非対称の完全再現**・残差は
+TPS/TNB と同じ番号 half-ink スライバ族「do NOT fit here」・台帳 why 更新済）。
+- 実装 = TupletBracketEngraver.cs: 収集ループで lpPoints（列 refpoint X・tipUp
+  Y-up）+ 首尾 head-position 区間 + lpAnyBeam を集め、LP 式（staff ink∪2.3 の
+  graphical dy・符号ゲート・damping max_dy=0.5·last_x・offset pass・flat quantize
+  [−5,5]→rint→線なら +dir）で positions を出して device へ戻す。tab / fallback
+  は旧式のまま gate。呼び側は bracketStartX（=x0 絶対）を追加供給。
+- **snapshot 8 枚 census 済**（showcase/{02-ornaments,05-special-techniques}・
+  test/{multistaff-tuplet-beams,multivoice-voice2-tuplet,tuplets,tuplet-lower-staff,
+  voice-tuplet,ossia-beams}）: **X 座標は全冊完全一致**・差分は bracket/番号線の
+  移動（例: test/tuplets の五線内 bracket が音勾配追従→**staff-edge 束縛の flat
+  3.4 = 2.3+1.1 ちょうど**）と、その分の頁リフロー（一様 Y シフト −0.32〜−0.95）
+  だけ。ossia の番号は font-size 1.23（縮尺）で動いた 1 行＝番号線。
+  ⚠️ census 時の 05 の data-pos 差は **CLI 経由レンダの CRLF オフセット**（テスト
+  経路とは無関係のアーティファクト）。snapshot は LILYSHARP_UPDATE_SNAPSHOTS=1 で
+  更新・全緑 4215。
+- 引用ラチェット: 新 REF 3 本に calc_position_and_height の症状名を付与
+  （「line range but no symbol」の基線 742 を超えない）。
 
 ★★★ **第2便 slur-shift-region.ly（state=open）= 乖離は独立に 2 つ**（双子
 scratch\lpreg\slurshift{,-noslur}.{ly,lys,svg} 残置・slur 有無で両エンジンとも
@@ -150,11 +172,11 @@ slur-scoring.cc:188-203 `s.unite (flag->extent)`——第117第2便 port (:738-7
 
 plain 322 / 処理済 **262**（fixed **47**・exact **34**・skip **164**・open **17**・
 pending **60**。status.json 同期後の実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **slur-shift-region の port ⑴ = calc_position_and_height no-beam 枝**
-（検算器 = 台帳対 TBSD/TBSA の positions 四つ組 (3.6 . 3.4)/(3.446261 . 3.646261)
-と gap 2 値・**offset pass の式は第3便で六桁分解済**＝上記第2便ブロック★★）→ **port ⑵ = TupletNumber を slur extras
-へ**（slurshift 双子で slur −4.045/−3.695 を照合・LayoutSlurs から bracket layout
-が見える呼び順の確認から）→ 閉じたら fixed 第48号 → slur-vertical-skylines。
+frontier = **slur-shift-region の port ⑵**（⑴は第4便で完了。設計判断＝第3便の
+⒜ hoist / ⒝ 産地再構築から。番号箱 = bracket midpoint ± 半 ink 0.627717・
+'inside・penalty = extra-object-collision。照合 = slurshift 双子で slur start
+−4.045 / end −3.695・11 step 登り）→ 閉じたら fixed 第48号 →
+slur-vertical-skylines。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚——文法が入ったら
 **slur-flag の追試を最初に**（stem-attach X が flag 込みになったので当時の skip
 測定より一段深く効く）。
