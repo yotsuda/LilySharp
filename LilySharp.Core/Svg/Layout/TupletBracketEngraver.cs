@@ -721,13 +721,17 @@ internal static class TupletBracketEngraver
                     ChordItem c => c.StemUp,
                     _ => isStemUp
                 };
-                var member = itemUp == isStemUp ? MemberBeam(i) : null;
+                // ONE MemberBeam probe per column: it scans beamLayouts×members
+                // (the bars² family perf round 16 already had to cache for slurs)
+                // — the stem read and the damping's beam pick must share it.
+                var probedBeam = MemberBeam(i);
+                var member = itemUp == isStemUp ? probedBeam : null;
                 // LP scans the columns from the END and keeps the first beam it
                 // meets — i.e. the LAST beamed column's beam. Forward loop here,
                 // so overwrite instead of keep-first.
                 // LILYPOND-REF: lily/tuplet-bracket.cc:584 calc_position_and_height
                 //   `for (vsize i = columns.size (); i--;)` ... break.
-                lpAnyBeam = MemberBeam(i) ?? lpAnyBeam;
+                lpAnyBeam = probedBeam ?? lpAnyBeam;
                 double colX = ml.X
                     + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml);
                 double stemX = member is { } mb && !mb.beam.MemberXPositions.IsDefaultOrEmpty

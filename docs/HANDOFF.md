@@ -67,7 +67,30 @@ fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分
 CalculateSlope・台帳対が両側 +0.000021102 に閉じた・snapshot 8 枚 census 済**・
 `cf0bd442`・第5便 **port ⑵ 完了 = TupletNumber → slur extras・slurshift 全点
 LP exact = fixed 第48号**・`9181a932`・第6便 **自己監査（ユーザー三問）＝字面違反
-1 修正（出力不変）・札 7 開示**・この handoff と同 commit）。
+1 修正（出力不変）・札 7 開示**・`d06048d8`・第7便 **perf 監査 round 17
+（ユーザー問「プレビューを落とす実装は?」）＝机上検出 2 件を修理→A/B で
+残 +8-10% は「LP と同じ仕事の形」判定**・この handoff と同 commit）。
+
+★★ **第7便 perf round 17**（機材 = scratch\lpreg\perf-ab17.ps1・base = 0c63deac
+worktree C:\MyProj\LilySharp-perfbase-0c63（残置）・perf-{slurtuplet300,
+tuplet300,slurtupletsep300}.lys 新造・対照 = 既存 slurbeam300）:
+- **机上検出→修理⑴**: CalculateSlope の **MemberBeam 二重呼び**（stem 読みと
+  damping の beam 採りが別々に呼んでいた——beamLayouts×members 線形走査＝
+  round 16 が slur 側で辞書化した bars² 族）→ 1 probe 共有に。
+- **机上検出→修理⑵**: LayoutSlurs の Calculate が**無条件**だった→
+  **slur×tuplet の小節重なり事前ゲート**（O(slurs×tuplets) の int 比較のみ）。
+  効果は sep300（slur と tuplet が別小節×150+150）で実証: **+1.9/−1.4 =
+  符号跨ぎ = 無料**。
+- **A/B（interleaved・median of 3・両順・テスト並走なし）**:
+  slurtuplet300（毎小節 slur が tuplet を跨ぐ）**+10.4/+7.6% = 実**・
+  tuplet300（slur 無し）+0.3/−1.7 = drift（bracket port 自体は無料）・
+  slurbeam300（tuplet 無し対照）−3.8/−1.6・**hash MATCH**（コード経路不変＝drift）。
+- **残 +8-10% の分解**: Calculate は tuplet300 で無料と実証済→正体は
+  **additional_ys の候補グリッド拡大 + 番号 box の extra 採点**＝slur が番号を
+  跨ぐ本で **LP 自身も払う同じ仕事**（round 16 の grace obstacle と同じ判例）。
+  絶対量 ≈ 0.8ms/跨ぎ小節・可視頁で数 ms 級 = 受理して記録。将来の micro 候補:
+  Calculate が 1 layout で最大 3 回走る（prelim slurs / final slurs / 注釈 phase）
+  ——memo 化は tuplet300 ≈ 0% の現状では急がない。
 
 ★★ **第6便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
 - **検算で白 9**: ⑴ flag unite は両軸（:188-203。Y は headward 側のみ実効＝

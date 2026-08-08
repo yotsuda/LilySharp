@@ -2627,8 +2627,30 @@ internal sealed class ElementCoordinator
         //   ADD_ACKNOWLEDGER_FOR (acknowledge_extra_object, tuplet_number).
         // LILYPOND-REF: scm/define-grobs.scm TupletNumber (avoid-slur . inside).
         ImmutableArray<TupletBracketLayout> tupletNumberLayouts = default;
+        // Gated on some slur's span actually TOUCHING some tuplet: Calculate
+        // walks every tuplet's columns (with per-column beam probes), and this
+        // runs on every layout pass — a tuplet-free slur book, or a score whose
+        // tuplets and slurs never meet, must not pay it on each preview edit.
+        bool slurMeetsTuplet = false;
         if (!score.TupletBrackets.IsDefaultOrEmpty && systems.Length > 0
             && !score.Voices.IsDefaultOrEmpty)
+        {
+            foreach (var s in slurs)
+            {
+                foreach (var t in score.TupletBrackets)
+                {
+                    if (t.MeasureIndex >= s.StartMeasureIndex
+                        && t.MeasureIndex <= s.EndMeasureIndex)
+                    {
+                        slurMeetsTuplet = true;
+                        break;
+                    }
+                }
+                if (slurMeetsTuplet)
+                    break;
+            }
+        }
+        if (slurMeetsTuplet)
         {
             int maxMi = 0;
             foreach (var sys in systems)
