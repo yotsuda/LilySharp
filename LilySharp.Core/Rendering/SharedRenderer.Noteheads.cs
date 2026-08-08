@@ -840,15 +840,43 @@ internal static partial class SharedRenderer
             //   per Stem (and :165-172 kills it only for a BEAMED stem);
             // LILYPOND-REF: lily/flag.cc:118-165 Flag::print — the glyph is chosen by
             //   duration-log and stem direction alone.
+            bool hasFlag = false;
             if (noteValue >= 8)
             {
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 // The flag inherits the stem's transparency — see DrawNote.
                 // LILYPOND-REF: scm/define-grobs.scm:1631-1632 Flag transparent = grob::inherit-parent-property
-                if (flag.HasValue && !stemTransparent)
-                    gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
-                        noteFontSize, stemColor);
+                if (flag.HasValue)
+                {
+                    if (!stemTransparent)
+                        gc.DrawGlyph(flag.Value, LayoutUtilities.FlagDrawX(stemX), stemEndY,
+                            noteFontSize, stemColor);
+                    hasFlag = true;
+                }
             }
+
+            // The tremolo is the STEM's grob too — one StemTremolo per stem however
+            // many heads hang on it, the single-note recipe exactly (DrawNote). This
+            // call was MISSING outright, like the flag branch above once was: a chord
+            // tremolo (`<c e g>4:16`, `\repeat tremolo 4 q16`) drew a bare stem with
+            // no slashes while the single-note form drew them
+            // (repeat-tremolo-chord-rep.ly, 2026-08-08).
+            // LILYPOND-REF: lily/stem-engraver.cc — the StemTremolo hangs on the Stem;
+            // LILYPOND-REF: lily/stem-tremolo.cc — geometry reads only the stem/flag.
+            if (chord.HasTremolo)
+                DrawTremolo(stemX, stemStartY, stemEndY, stemUp, chord.TremoloBeams, hasFlag, gc);
+        }
+        else if (noteValue < 2 && !isBeamed && chord.HasTremolo && chord.Notes.Length > 0)
+        {
+            // Whole-note chord tremolo: no stem, so the slashes anchor off the
+            // OUTERMOST head in the (would-be) stem direction — the head LilyPond's
+            // whole-note branch reads — and centre on the head column, exactly the
+            // single-note recipe (DrawNote).
+            // LILYPOND-REF: lily/stem-tremolo.cc:349-366 y_offset — end_y =
+            //   note_head + dir * 1.5 when duration_log <= 0 (invisible stem).
+            double headCenterX = x + GlyphMetrics.GetNoteheadBBox(noteValue).Width / 2 * headScale;
+            DrawStemlessTremolo(headCenterX, stemUp ? topY : bottomY, stemUp,
+                chord.TremoloBeams, gc);
         }
     }
 

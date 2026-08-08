@@ -644,6 +644,23 @@ public sealed partial class MeasureCollector
                         builder.AddItem(repItem);
                         break;
                     }
+                    if (_tremoloPairShape is { } tpr)
+                    {
+                        // Two-note tremolo with a chord-repetition body (`repeat
+                        // tremolo 4 { c16 q16 }`): same halving/beam-joining as the
+                        // note and chord arms — this arm used to skip it, so the
+                        // repeated chord silently rendered at its written value
+                        // with a flag (regression repeat-tremolo-chord-rep.ly).
+                        chordCopy = chordCopy with
+                        {
+                            TimeScale = chordCopy.TimeScale * new Fraction(1, 2),
+                            TremoloPairBeams = tpr.Beams,
+                            TremoloGapCount = tpr.GapCount,
+                            HasBeamStart = _tremoloPairFirst,
+                            HasBeamEnd = !_tremoloPairFirst,
+                        };
+                        _tremoloPairFirst = false;
+                    }
                     if (arpBracket)
                         chordCopy = chordCopy with { HasArpeggioBracket = true };
                     if (ExtractNoteheadStyle(rep) is var repStyle && repStyle != NoteheadStyle.Default)

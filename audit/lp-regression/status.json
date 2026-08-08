@@ -6528,7 +6528,9 @@
     },
     "repeat-tremolo-chord-rep.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Tremolos work with chord repetitions",
+      "notes": "fixed 第41号(第113第2便)。欠陥3件: ⑴**和音の単発tremolo斜線が綴りに関わらずsilent drop**(DrawChordがDrawTremolo未呼出=flag枝と同型の欠け。<c e g>4:16もrepeat形も)→stem枝にDrawTremolo+全音符和音のstemless枝も新設 ⑵pair内のq=CreateChordRepetitionItemに_tremoloPairShape表示上書きが無く+rep walk腕にpairブロックが無く、qが素の16分+旗で出た→両腕に鏡映 ⑶bare body `repeat tremolo 4 q16`はLily#はbrace必須(両側m2/m3=同音楽で吸収)。LP照合(qtrem twin): X格子完全一致(m1頭8.59・斜線左16.22/19.23・pair梁22.99-26.12・stem 16.97/19.98/23.05まで桁一致)・頭glyph両側一致(単発=黒/pair=半=総時価表示の慣行)。Y残差=既起票2 regime(stemmed slash stackのLILYSHARP-OWN中点モデル=第100起票snapshot pin・pair梁Y quanting)。観測者+3(RepeatTremoloChordRepTests)・snapshot 0枚。twin=audit lys+scratch\\lpreg\\qtrem.{ly,lys}+probe2"
     },
     "repeat-tremolo-dots.ly": {
       "category": "scheme",

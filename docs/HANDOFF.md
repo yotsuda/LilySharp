@@ -58,8 +58,26 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第113セッション第1便（＝fixed **第40号 = repeat-tie-chords.ly**・
-この handoff と同 commit）。
+最終更新 第113セッション第2便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
+第2便 fixed **第41号 = repeat-tremolo-chord-rep.ly**・この handoff と同 commit）。
+
+★★★ **第2便 fixed 第41号 = repeat-tremolo-chord-rep.ly**（tremolo は和音リピート q でも働く）:
+- **欠陥 3 件**: ⑴ **和音の単発 tremolo 斜線が綴りに関わらず silent drop**——DrawChord が
+  DrawTremolo を呼んでいなかった（同関数の flag 枝が「丸ごと欠けていた」のと同型・probe2 で
+  `<c e g>4:16` も repeat 形も全滅を確認）→ stem 枝に DrawTremolo + 全音符和音の
+  stemless 枝も新設（stem-tremolo.cc:349-366 y_offset の whole_note 枝） ⑵ **pair 内の q**:
+  CreateChordRepetitionItem に _tremoloPairShape 表示上書きが無く、rep walk 腕（main walk）に
+  pair ブロックが無く、`repeat tremolo 4 { c16 q16 }` の q が**素の 16分+旗**で出た →
+  note/chord 腕の鏡映を 2 か所に（tuplet walk の rep 腕は pair 状態が届かない＝対象外）
+  ⑶ bare body `\repeat tremolo 4 q16` は Lily# では brace 必須（両側置換 m2/m3 = 同音楽）。
+- **LP 照合**（qtrem twin・staff 相対）: **X 格子完全一致**（m1 頭 8.59・斜線左 16.22/19.23・
+  pair 梁 22.99..26.12・stem X 3 本とも桁一致）・頭 glyph 両側一致（単発 = 黒・pair = 半 =
+  総時価表示の慣行）。**Y 残差 = 既起票 2 regime のみ**（stemmed slash stack の
+  LILYSHARP-OWN 中点モデル＝第100 起票・snapshot pin「measure first」／pair 梁 Y quanting）。
+- 観測者 +3（RepeatTremoloChordRepTests: 単発 q の combine+斜線・pair q の表示/beam join・
+  renderer 斜線 4 本）・snapshot 0 枚。
+- **学び**: 引用ラチェットは「複数住所を 1 行」も「範囲と記号が別行」も落とす——新テストの
+  class-doc で 1 回踏んだ（742→743 で検出・分割で復帰）。
 
 ★★★ **第1便 fixed 第40号 = repeat-tie-chords.ly**（\repeatTie は和音の個々の音にも効く・
 起票済「repeatTie 和音 silent drop」の返済＝第34号 lv member fan の鏡映）:
@@ -82,14 +100,14 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   無警告 drop（EmitChord のコメントに明記・起票）。
 - 観測者 +1（RepeatTieChordTests: fan 数 5・強制/既定向き・X 式 LP 逆算ピン）・snapshot 0 枚。
 
-plain 322 / 処理済 **236**（fixed **40**・exact **29**・skip **152**・open **15**・
-pending 86。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **237**（fixed **41**・exact **29**・skip **152**・open **15**・
+pending 85。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る。
-次 = repeat-tremolo-chord-rep = 第112第11便の仕掛かり・probe 通過・LP 照合残り）。
+次 = repeat-volta-initial-grace）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4199 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+テスト **4202 passed / 0 failed / 4 skipped**（観測者 +4 込み・全スイート確認済）・
 lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
 snapshot 第113 は 0 枚**・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 

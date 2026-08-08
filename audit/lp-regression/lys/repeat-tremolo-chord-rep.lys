@@ -1,0 +1,25 @@
+// lilypond-src/input/regression/repeat-tremolo-chord-rep.ly の Lily# 訳。
+// CLAIM: tremolo は和音リピート (q) でも働く。
+// 綴り: LP \relative 無引数の <c' e g> = C4E4G4 = Lily# <c e g> (octave absolute)。
+// LP の bare body `\repeat tremolo 4 q16` は Lily# では brace 必須 =
+// `repeat tremolo 4 { q16 }` (m2/m3 は LP でも同じ音楽)。
+// 修理前: 和音の単発 tremolo 斜線が綴りに関わらず silent drop
+// (DrawChord が DrawTremolo 未呼出) + pair 内の q が素の 16分+旗で出た。
+// 観測者: RepeatTremoloChordRepTests。twin scratch\lpreg\qtrem.{ly,lys}。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    <c e g>1 |
+    repeat tremolo 4 { q16 }
+    repeat tremolo 4 { q16 }
+    repeat tremolo 4 { c16 q16 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

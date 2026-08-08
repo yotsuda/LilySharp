@@ -513,6 +513,16 @@ public sealed partial class MeasureCollector
             dots = combined.Dots;
         }
 
+        // Two-note tremolo: this chord prints at the pair's total duration
+        // (same override as CreateNoteItem/CreateChordItem — the q arm used to
+        // skip it, so `repeat tremolo 4 { c16 q16 }` printed the q at its
+        // written 16th; regression repeat-tremolo-chord-rep.ly).
+        if (_tremoloPairShape is { } pairDisp)
+        {
+            noteValue = pairDisp.Value;
+            dots = pairDisp.Dots;
+        }
+
         if (Music.ChordRepetitions.OriginalOf(rep) is not { } original
             || !_resolvedChordMembers.TryGetValue(original, out var members))
             return new RestItem(Fraction.FromNoteValue(noteValue), dots, rep.Position) { IsSpacer = true };
