@@ -72,7 +72,37 @@ span-bar-spacing = 強制臨時記号 `!`＝README 正典例・spanner-alignment
 Dynamics コンテキスト・spanner-empty-bound = false plain（categorizer は \tweak を
 見ない）・staff-add-at-linebreak = 動的 \new Staff＝crash 回帰・
 staff-change-autobeam = \change Staff・staff-highlight 族 3 冊 = \staffHighlight
-対応物ゼロ）・この handoff と同 commit）。
+対応物ゼロ）・`00bfaa78`・第8便 **自己監査（ユーザー三問）＝誤引用 1 訂正
+（出力不変・挙動は測って差し戻し）・札 6 開示**・この handoff と同 commit）。
+
+★★ **第8便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
+- **検算で白 8**: ⑴ to-barline の bound = bar ink 左端（attach-dir LEFT・padding
+  無し）＝波 3 個の床値 floor(3.75/1.0) と両立 ⑵ 停止小節を piece 列から外す形は
+  hairpin と同型・除外列は pointwise で無効（線 ink 42.05 vs 列 44.1＝X 不重なり）
+  ⑶ voiced rest の pure Y = staff_position_internal のみ・collision push 不算入 =
+  pure-chain-offset-callback の素通し（scm 原文で確認） ⑷ VoicedRestPosition は
+  internal 化した 1 つの家を両消費者が読む ⑸ rest 箱の X フレーム＝描画 ink と一致
+  （定数 + 実レンダの pen X 8.59 で確認） ⑹ knee ±1.1742 は両向き正
+  （一時 debug 実測→撤去） ⑺ wish min 置換 = set_min_distance の字面・headroom は
+  skyline min の上（spring.cc:122）・wish ideal clamp 0.0 = note-spacing.cc:113
+  ⑻ 引用ラチェット緑（基線 742 不変）。
+- **違反 1 = spacing-spanner.cc:380-393 の誤引用（訂正済・出力不変）**: 「wish 無し
+  対は base spring が increment min ごと残る」と書いたが、**LP は musical 対なら
+  min を 0.0 に落とす**（hemiola 分岐・set_min_distance (0.0) が引用行に在る）。
+  字面どおりに直して**みた**——動いたのは test/lead-sheet の 1 枚だけ
+  （m3 内 +0.60）＝**staffless chords/lyrics 行という Lily# 固有構造の本で LP
+  オラクルが無い**上、LS の「wish 無し」集合は LP の springs.empty より広い。
+  →挙動は差し戻し、**named 札**としてコメントに実測値ごと開示（LP オラクルの
+  ある本がこの分岐を測ったら 0.0 にする、と条件も明記）。
+- **札 6（開示のみ）**: ⑴ trill の EndBarlineOf は voices[0] 読み（cross-voice
+  merge した barline と食い違い得る＝MMR と同じ読み） ⑵ trill の BoundPadding
+  device 2 つ（stop 列無し・継続 piece 左端）は未測定のまま残置 ⑶ beamed×voiced
+  rest は beamed 腕が勝つ（LP は voiced 基底+beam 推定の連鎖・LS beamed 腕は
+  中立基底＝既存簡略・コーパス未踏） ⑷ voiced rest 箱は LP の列全体 extent でなく
+  rest glyph 箱（spacc-rest の残差 0.04-0.05 はこの縫い目＝regime 級）
+  ⑸ MergeVoiceStemWishesToBarline の wish min は未接触（end spring 経路は実測済の
+  独自 skyline 処理を保持） ⑹ wish 無し対にも LS は headroom を掛ける（LP は
+  merge 自体走らない）＝違反 1 と同じ棚。
 
 ★ **第6便の port 設計（第2読了分・次セッションの入口）**: LP 源は 2 ファイル——
 ⑴ **spacing-determine-loose-columns.cc:46-112 is_loose_column** = 非音楽列で、

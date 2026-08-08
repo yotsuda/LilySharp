@@ -428,17 +428,26 @@ internal sealed class MeasureLayouter
         // floor at 1.2 + 0.3 = 1.5: the down→up KNEE pair of
         // spacing-correction-accidentals.ly has ideal 1.330 (base − 1.2 + 1.3042 −
         // 1.1742 knee) and LilyPond draws exactly that; the old ensure shipped 1.500.
-        // A pair with NO wish (a voice boundary) keeps the base spring untouched,
-        // increment minimum and all — spacing-spanner.cc:380-391 uses the base spring
-        // only when the wish list is empty.
+        // ⚠️ A pair with NO wish: LilyPond's springs.empty() branch ("polyphonic
+        // spacing of hemiolas") sets the musical pair's minimum to 0.0 outright — the
+        // increment minimum survives on NO musical pair at all; only the IDEAL stays
+        // the raw duration one (the voice-boundary reading). Lily# KEEPS the increment
+        // minimum there, NAMED not fixed: Lily#'s no-wish set is wider than LilyPond's
+        // (a staffless chords/lyrics row makes timing columns LilyPond has no frame
+        // for), and the one page the zero moved when tried (session 119 self-audit)
+        // was test/lead-sheet — an own-construct book with no LP twin to arbitrate,
+        // +0.60 inside its third measure. Zero it when a book with an LP oracle
+        // measures this branch. (The misreading corrected here: this arm was cited as
+        // "keeps the base spring untouched, increment minimum and all" — false;
+        // set_min_distance (0.0) is on the line the citation names.)
         // Both strengths stay where the duration spring put them (the compressibility
         // stays fraction * (duration_space - increment) and does not become
         // ideal - skyline). Measured against LilyPond's own compressed line: 1.698045 for
         // a quarter-to-quarter spring (audit/lp-geometry/probes/compressed-line-force.ly).
         // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing —
         //   min_dist = max (0.0, distance); base.set_min_distance (min_dist);
-        // LILYPOND-REF: lily/spacing-spanner.cc:380-391 musical_column_spacing — the
-        //   base spring survives only when springs.empty ().
+        // LILYPOND-REF: lily/spacing-spanner.cc:380-393 musical_column_spacing —
+        //   springs.empty () ? spring.set_min_distance (0.0) : merge_springs.
         if (anyWish)
             spring = spring.WithMinDistance(Math.Max(0.0, maxSkyDist));
 
