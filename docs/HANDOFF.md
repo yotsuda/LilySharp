@@ -58,6 +58,94 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第116セッション（＝第1便 **4冊 skip**・`6e80a05c`・第2便 fixed
+**第45号 = slur-dot-collision.ly = slur-scoring 再建**・`0538a07b`・第3便
+**perf A/B round 14 = 重い側 drift・対照 hash 一致・既存超線形 2 件起票**・
+この handoff と同 commit）。
+
+★★★ **第2便 fixed 第45号 = slur-dot-collision.ly**（Slurs avoid dots・slur-* 島の
+初戦。乖離 = LS の slur が E6→E4 へ頭直付けで 4.1ss 急降下 vs LP は浅い弓で右端を
+譜上 −3.195 に浮かせる）:
+- **修理 = 候補生成+curve 生成の字面 port**（旧実装の欠陥 3 つが根）:
+  ⑴ **grid 範囲 = get_y_attachment_range**（slur-scoring.cc:483-516）——反対側 base・
+  音柱外縁+1ss・base+region の max（旧 = 固定 RegionSize step）。'inside extra の
+  additional_ys（:290-326）も port。
+  ⑵ **急勾配/短小候補は捨てない**（enumerate_attachments :722-804）——min-length/
+  max-slope 違反は X を頭中心へ戻して**保持**し SLOPE scorer が課金（LS は X が既に
+  頭中心 = no-op）+ tilt X shift。**旧 = slope 超過 continue で全候補死→素の base
+  attachment fallback** = この本の 4.1ss の全て。
+  ⑶ **move_away_from_staffline**（:639-658）——base が staff 線に丸まると 0.15
+  slurward。右 base −0.955→−0.805 がこれで、**LP の答えが 0.5 グリッドで割り切れる
+  ようになる**（j=8 で −3.195 ぴったり＝機構検算の釘）。
+  ⑷ **dot = extra encompass**——Dots は avoid-slur 'inside・dots-interface は 0.2
+  widen（get_extra_encompass_infos :850-884）・score_extra_encompass の object 項
+  （slur-configuration.cc:390-458・'inside/'around・edge 頭と X 交差する物は
+  attachment Y を直読み）。dot 行 box = skyline seed と同 recipe
+  （ElementCoordinator.BuildSlurExtraObjects）。この項が左端を 1 step 持ち上げる
+  （−6.045→−6.545）＝本のタイトルそのもの。
+  ⑸ **実 curve = generate_curve port**（slur-configuration.cc:135-206）——弦に回転した
+  frame で height を弦の**法線**に立てる bezier + fit_factor（:93-133）+
+  avoid_staff_line（:41-91）。**新設 Bezier 型**（Svg\Layout\Bezier.cs = bezier.cc の
+  curve_point / get_other_coordinate / solve_point 実 cubic solver / 水平接線）。
+  ENCOMPASS / EXTRA scorer は**実 curve を評価**（旧 = 縦 shear 放物線）・
+  **描画 = scored curve そのもの**（旧は判定した曲線と別の曲線を描いていた）。
+  ⑹ **LILYSHARP-OWN 撤去**——scorer 内の「staff 線 vs 端点/peak」ペナルティ項は LP に
+  無い（⑶+⑸が正席）。
+- **呼び出し側の欠陥 1 個**: obstacles/extras の X 窓が頭中心 shift **後**の
+  segStartX で建ち**左端音柱ごと窓から漏れていた**（左 bound の dot が主張の核なのに
+  extras が空）→ shift 前の窓で建てる。
+- **LP 照合（scratch\lpreg\slurdot twin・staff 相対）**: **両端+control 4 点全部
+  桁一致**——start (9.51,−6.545)=(9.51,−6.54)・C1 (11.08,−6.638)=(11.13,−6.64)・
+  C2 (13.36,−4.799)=(13.41,−4.80)・end (13.67,−3.195)=(13.67,−3.19)。残差 =
+  control X の 0.05 のみ。
+- 観測者 = **SlurScoringTests**（LP 数字 6 点ピン + dot ink 上のクリアランスを cubic
+  実サンプルで直接検証）・**snapshot 13 枚 = 全差分 slur path のみ census 済**
+  （slur-chords の頁高 0.01 は slur extent 追随）・scriptstack 観測者 3 点を −0.01
+  更新（3.28/4.14/5.47。**LP 残差 0.12 の出所を特定: LP は slur 終端の 'inside
+  staccato が slur 自身の extra encompass に入り右端が 1 グリッド高い**＝既開示
+  「'inside script の slur 側」棚の実測値）。
+- **開示 5 札**: ⑴ stem attach X 規則（enumerate :738-760・slurward stem のとき X が
+  stem 縁へ）未 port——slur-flag 級の本が測る ⑵ encompass の stem 項は obstacle に
+  stem が無く不発 ⑶ tie forbidden attachment（slur-configuration.cc:352-388）未 port
+  ⑷ nc extent は頭箱近似（stem tip 不参加） ⑸ slur-slur 項は従来の peak 距離近似の
+  まま。
+- 引用ラチェットの学び: **末尾アンダースコア語（`foo_`）は SymbolPattern に
+  一致しない**（`_` は word 文字で \b が立たない）——`slur_head_x_extent_.` で 3 回
+  落ちた。名指しは trailing `_` を落として書く。
+
+★ **第3便 perf A/B round 14**: 機材 = scratch\lpreg\perf-ab14.ps1・base = 6e80a05c
+worktree（撤去済）・Release・交互×両順・中央値 of 5。**重い側 slur300**（毎小節
+slur×2・300 小節）= **−0.2%/+6.6% = 符号跨ぎ = drift**。**対照 scriptsym1k**（slur
+無し 999 小節）= −6.5%/+1.3%・**SVG hash base/curr 完全一致**（挙動不変+仕事同一）。
+- ★★ **起票 2 件（既存・この変更の bill でないことを base 実測で証明済）**:
+  ⑴ **全付点本の超線形**——200 小節全付点（slur 無し）が Debug で base(cc19cccc)
+  127s / curr 134s（Δ=drift）。⑵ **slur 本の超線形**——100→200 小節で 2.9×
+  （両 build 共有）。999 小節の slur/dot 本は分単位になるので A/B は 300 小節で実施
+  （数字は perf-ab14.ps1 ヘッダにも）。容疑候補: 頁鎖/改行探索と per-slur
+  overlappingSlurs 走査の O(n²)——**次に測ってから**。
+
+★ **第1便 = 4冊 skip**（`6e80a05c`）: semi-tie-cross-staff（\change Staff 表面なし+
+主張が LP 内部循環依存回帰）・shift-durations-negative-dots（\shiftDurations 対応物
+ゼロ・crash 回帰）・skip-music（\skip music 引数の綴りなし＝「中のイベントを無視」が
+主張の核で s 置換では消える）・slur-cross-staff（全 slur が cross-staff = 器材が主張）。
+
+plain 322 / 処理済 **255**（fixed **45**・exact **32**・skip 162・open 16・
+pending 67。数えたら state 別内訳も一緒に書くこと）。
+frontier = **slur-* 島の続き**（アルファベット順）: slur-dot-distance（\cadenzaOn
+両側落とし要）→ slur-flag（stemUp slurUp = 開示⑴の stem attach X を測る本）→
+slur-grace → slur-height-capping → slur-nice → slur-rest-direction（4 score 頁組み
+注意）→ slur-shift-region → slur-vertical-skylines。**新機構で残差の出所が数字で
+読めるようになった**——scriptstack1 の 0.12 は特定済（上記）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4207 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+lp-geometry 台帳 481 点不変・Core (Debug) 0 warning・snapshot 第116 は 13 枚
+（全部 slur path・census 済）・base worktree = C:\MyProj\LilySharp-base
+（cc19cccc・残置）。probe 残置: scratch\lpreg\slurdot.{ly,lys}・perf-slur*.lys・
+perf-sd*.lys・perf-{nodot-slur,dot-noslur}.lys（超線形起票の再現材）。
+
+## 以下は第115セッションの経緯
+
 最終更新 第115セッション（＝第1便 fixed **第44号 = script-tie-collision.ly**・`ea05b68a`・
 第2便 **perf A/B round 12 = 重い側 4 バッチ全て curr 非劣化・対照 hash 一致**・`f2ada471`・
 第3便 **script avoid-slur port = scriptstack1 の +0.73 が +0.12 へ**・`310d1d2c`・
