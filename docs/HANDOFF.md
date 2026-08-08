@@ -62,7 +62,26 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 第2便 fixed **第39号 = lyric-melisma-melisma.ly**・`5f940186`・第3便 **lyric-tie.ly = open**・
 `69ea375e`・第4便 **lyric-volta 族 3 冊 skip**・第5便 **lyrics-pass-under-bar.ly = open**・
 `2401380a`・第6〜8便 **26 冊バッチ**・`a380a63a`・第9便 **23 冊バッチ**・`d25b83a3`・
-第10便 **16 冊バッチ**・`433aa050`・第11便 **13 冊バッチ**・この handoff と同 commit）。
+第10便 **16 冊バッチ**・`433aa050`・第11便 **13 冊バッチ**・`9b705f14`・
+第12便 **自己監査＝挙動変更 0・開示 5 札**・この handoff と同 commit）。
+
+★★ **第12便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
+挙動変更 0・開示 5 札・新規チューニング定数ゼロ検算済**:
+- AppendDashes は lyric-hyphen.cc:98-134 と一対一（squeeze→space_left の順序・
+  rightBroken ゲート = break_status_dir 対応込み）を突き合わせで再確認。
+- **札⑴ h の font-size 項**: LP は h×2^(font_size_step/6)（:66-68）・LS は係数 1 固定
+  （per-grob font-size なし）→ HyphenHeight に開示。
+- **札⑵ blot + whiteout**: LP dash は round_filled_box 0.8·lt の角丸（svg 実測 ry=0.04）+
+  whiteout 枝（既定 off）・LS は素の矩形 → renderer に開示。
+- **札⑶ kill の proxy**: LP =「span した実時間ゼロ」・LS =「次音節が系頭小節の onset 0」。
+  小節グリッド上は等価だが **pickup（partial）小節が系頭に来る場合は未検証エッジ** → 開示。
+- **札⑷ melisma 検出の狭め**: LP は voice の melismaBusy（slur 下の音節はマーカー無しでも
+  左揃え）・LS は歌詞側マーカー駆動のみ + lyricMelismaAlignment は LEFT 固定
+  （LP は設定可能プロパティ）→ LyricItem に開示。
+- **札⑸ HeldEndInkRight の crossing 除外**: 跨ぎ extender は第37号ピンの経路のまま =
+  rebounding はその regime の仕事、と理由を明記。
+- 引用ラチェット・逆方向 assert は全スイート内で通過（新 REF は
+  font_size_step/dash_mol を住所の後ろに置く並びで適合）。
 
 ★★ **第11便 = 13 冊バッチ（skip 11 + exact 2・コード変更 0）**:
 - **exact: ragged-right 族 2 冊**（行 justify 方針の構造一致）: one-line = 両エンジンとも
