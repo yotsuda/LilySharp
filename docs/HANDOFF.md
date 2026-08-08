@@ -73,7 +73,21 @@ Dynamics コンテキスト・spanner-empty-bound = false plain（categorizer �
 見ない）・staff-add-at-linebreak = 動的 \new Staff＝crash 回帰・
 staff-change-autobeam = \change Staff・staff-highlight 族 3 冊 = \staffHighlight
 対応物ゼロ）・`00bfaa78`・第8便 **自己監査（ユーザー三問）＝誤引用 1 訂正
-（出力不変・挙動は測って差し戻し）・札 6 開示**・この handoff と同 commit）。
+（出力不変・挙動は測って差し戻し）・札 6 開示**・`c2acd054`・第9便 **perf 監査
+round 18（ユーザー問「プレビューを落とす実装は?」）＝実退行なし**・この handoff と
+同 commit）。
+
+★★ **第9便 perf round 18**（機材 = scratch\lpreg\perf-ab18.ps1・base = ae2afd25
+worktree C:\MyProj\LilySharp-perfbase-ae2a（残置）・既存 perf 本 2 冊）:
+- **restpoly1k（2 声 rest = voiced rest 焼込+skyline 腕の重い側）: +1.8/−12.8% =
+  符号跨ぎ = drift・hash MATCH**（voiced 箱はこの本では bind しない＝出力不変も証明）。
+- **plain1k（密な単声 = spring 並べ替え+min 置換が全対に走る側）: +8.9/−1.2% =
+  符号跨ぎ = drift・hash MATCH**（+8.9 はバッチ先頭 boost の既知罠の側・両順
+  median で判定）。
+- 静的検分: trill = O(1)/spanner・rest 焼込 = collect 時 1 回（collect は全描画の
+  約 3%）・skyline voiced 腕 = phantom 腕と同型 1 箱・spring は呼び出し数不変の
+  並べ替えのみ・**RestItem は record class**（第109 の「record struct 1 フィールド
+  増」型の罠は非該当）・IncrementalCompiler 経路は非接触。
 
 ★★ **第8便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
 - **検算で白 8**: ⑴ to-barline の bound = bar ink 左端（attach-dir LEFT・padding
