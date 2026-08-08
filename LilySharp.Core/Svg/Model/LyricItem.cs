@@ -97,6 +97,10 @@ public sealed record LyricItem(
     // LILYPOND-REF: lily/lyric-engraver.cc:180-183 stop_translation_timestep —
     //   a syllable on a melisma_busy voice takes self-alignment-X =
     //   lyricMelismaAlignment (default LEFT).
+    // LILYSHARP-OWN: the trigger is the LYRIC-side marker, not the voice's
+    // melismaBusy state — a syllable written under a slurred note WITHOUT a
+    // marker stays centred (LP would left-align it), and the alignment is fixed
+    // LEFT (LP's lyricMelismaAlignment is a settable context property).
     bool MelismaAlignLeft = false,
 
     // The LAST note this syllable's melisma markers consumed (-1 = none): where

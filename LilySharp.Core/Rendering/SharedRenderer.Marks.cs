@@ -863,6 +863,10 @@ internal static partial class SharedRenderer
         if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
         // LILYPOND-REF: lily/lyric-hyphen.cc:64-65 th = get_dimension of the layout
         // line-thickness × the LyricHyphen thickness 1.3 (scm/define-grobs.scm).
+        // LILYSHARP-OWN: LP draws each dash as a round_filled_box with blot 0.8·lt
+        // (lily/lyric-hyphen.cc:126 dash_mol — corner radius 0.04 in its SVG); this
+        // draws a square-ended line. The whiteout branch (:135-153, default OFF at
+        // whiteout −1) is not ported.
         const double thickness = 1.3 * EngravingDefaults.LineThickness;
         foreach (var h in layout.LyricHyphenLayouts)
         {

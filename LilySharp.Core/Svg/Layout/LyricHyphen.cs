@@ -42,7 +42,10 @@ internal sealed record LyricHyphenParameters
     /// <summary>Dash BOTTOM above the text baseline (in staff spaces) — the dash box
     /// spans height..height+thickness upward.</summary>
     /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:125 dash_mol's Box Y is (h, h + th);
-    /// the value 0.42 is the LyricHyphen height in scm/define-grobs.scm.</remarks>
+    /// the value 0.42 is the LyricHyphen height in scm/define-grobs.scm.
+    /// LILYSHARP-OWN: LP scales h by lily/lyric-hyphen.cc:66-68 font_size_step
+    /// (2^(step/6)); Lily# has no per-grob font-size property, so the factor is
+    /// the default 1.</remarks>
     public double HyphenHeight { get; init; } = 0.42;
 
     /// <summary>Dash thickness, in LINE-THICKNESS units (not staff spaces).</summary>
@@ -275,6 +278,10 @@ internal sealed class LyricHyphenEngraver
                     var nextSys = systems[nextSystem.systemIndex];
                     // Numerator, not == Fraction.Zero: a default Fraction is 0/0
                     // and its value equality checks the denominator too.
+                    // LILYSHARP-OWN: "onset 0 in the system's first measure" stands in
+                    // for LP's spanned-musical-time-zero test — equivalent on the
+                    // measure-grid Lily# breaks on; a pickup (partial) bar opening a
+                    // system is an unverified edge of this proxy.
                     nextAtSystemStart = nextSys.Measures.Length > 0
                         && next.Item.MeasureIndex == nextSys.Measures[0].MeasureIndex
                         && next.Item.Timing.Numerator == 0;
@@ -542,6 +549,10 @@ internal sealed class LyricHyphenEngraver
         // not at the next syllable: the line must not run on under notes the NEXT
         // syllable owns. Fall back to the next syllable's ink left only when the
         // held notes are unknown (no markers, or no score measures — unit tests).
+        // A CROSSING extender keeps the segment bounds below unchanged — its
+        // held-end may sit on either side of the break, and the broken-piece
+        // geometry (segment ends, per-system Y) is pinned by
+        // lyric-extender-right-margin (第37号); rebounding it is that regime's work.
         // MEASURED (lyric-melisma-melisma twin): LP extender right 27.210 = the
         // f16 head's ink right (25.906 + head width), while the next syllable
         // stands at 29.07.
