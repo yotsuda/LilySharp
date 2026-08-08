@@ -61,8 +61,26 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第115セッション（＝第1便 fixed **第44号 = script-tie-collision.ly**・`ea05b68a`・
 第2便 **perf A/B round 12 = 重い側 4 バッチ全て curr 非劣化・対照 hash 一致**・`f2ada471`・
 第3便 **script avoid-slur port = scriptstack1 の +0.73 が +0.12 へ**・`310d1d2c`・
-第4便 **perf A/B round 13 = 重い側符号反転 = drift・対照 hash 一致**・
+第4便 **perf A/B round 13 = 重い側符号反転 = drift・対照 hash 一致**・`dda7daaa`・
+第5便 **slur-avoid.ly = exact・tenuto-priority.ly = exact（コード変更 0・2 冊とも）**・
 この handoff と同 commit）。
+
+★ **第5便 = 2 冊バッチ（exact 2・コード変更 0）**:
+- **slur-avoid.ly = exact**（claim: slur は avoid object をよく扱う）: slur 終端 b'' の
+  fermata ('around) が bow から降りる——**LS −4.83 / LP −4.90（Δ0.07）・slur 終端 Y は
+  −4.54/−4.55 で一致・島の答え（≈−4.46）から +0.37 の lift = 第3便の
+  outside_slur_callback が効いた量**。両エンジンとも fermata = 自分の曲線の x 窓 max +
+  slur-padding 0.2 に座り、Δ0.07 は曲線形状差（scriptstack1 の 0.11-0.12 と同根 =
+  slur-scoring の island）。
+  ⚠️ **枠の学び: lysc ly の相対 anchor は LP c' 基準**——bare `a` は LP a（小文字オクターブ）
+  に落ちる。最初の版は 1 octave 低い双子を作っており、**twin の頭位置（両側レンダ）で検分して
+  捕まえた**（`a'` が LP a'・続く `b'` が LP b''）。双子の音が原本と合っているかは
+  頭 position で毎回見ること。
+- **tenuto-priority.ly = exact**（claim: tenuto 込み複合 stack は書いた順に依らない）:
+  **8/8 点一致**（下側 stack・c' stem-up・両順とも）——tenuto+accent = −3.83/−4.51
+  （LP −3.82/−4.51）・staccato+tenuto = −3.95/−4.43（LP −3.94/−4.43）・X 格子完全一致。
+  第43号の priority 表 + stable sort がこの本の主張そのもの。
+- twin 残置: scratch\lpreg\slurav.{ly,lys}・tenpri.{ly,lys}。
 
 ★★★ **第3便 script avoid-slur port**（第114起票「scriptstack1 の e'' slur 起点 stack が
 剛体 +0.73」の返済 = 第44号と同棚の slur 側）:
@@ -156,11 +174,13 @@ base = 2c143080 worktree（撤去済）・Release・交互×両順・中央値 o
   O(タイ数)・script 1 本あたり dict TryGetValue 1 回・bow skyline は bound 上の script
   のみ（16 sample×両 bound）。
 
-plain 322 / 処理済 **248**（fixed **44**・exact 30・skip 158・open 16・
-pending 74。数えたら state 別内訳も一緒に書くこと）。
-frontier = **第107 blockB の 2 冊は完結**（stack-order1 第43号・tie-collision 第44号）し、
-**avoid-slur 起票も第3便で返済**（残差 0.11-0.12 = slur-scoring regime へ帰着）。
-次は queue の pending から新しい本を開く。
+plain 322 / 処理済 **250**（fixed **44**・exact **32**・skip 158・open 16・
+pending 72。数えたら state 別内訳も一緒に書くこと）。
+frontier = **第107 blockB の 2 冊は完結**（stack-order1 第43号・tie-collision 第44号）・
+**avoid-slur 起票も第3便で返済**・その e2e の slur-avoid.ly と tenuto-priority.ly も
+第5便で exact。次は queue の pending から（slur-* 島が並んでいる: slur-dot-collision／
+slur-flag／slur-grace／slur-height-capping 等 = slur-scoring regime を測る本たち。
+scriptstack1/slurav の残差 0.07〜0.12 の出所がこの島で割れる見込み）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
 テスト **4206 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
