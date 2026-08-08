@@ -59,8 +59,51 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 第115セッション（＝第1便 fixed **第44号 = script-tie-collision.ly**・`ea05b68a`・
-第2便 **perf A/B round 12 = 重い側 4 バッチ全て curr 非劣化・対照 hash 一致**・
+第2便 **perf A/B round 12 = 重い側 4 バッチ全て curr 非劣化・対照 hash 一致**・`f2ada471`・
+第3便 **script avoid-slur port = scriptstack1 の +0.73 が +0.12 へ**・`310d1d2c`・
+第4便 **perf A/B round 13 = 重い側符号反転 = drift・対照 hash 一致**・
 この handoff と同 commit）。
+
+★★★ **第3便 script avoid-slur port**（第114起票「scriptstack1 の e'' slur 起点 stack が
+剛体 +0.73」の返済 = 第44号と同棚の slur 側）:
+- **修理 = outside_slur_callback の port**（slur.cc:262-359）: slur が**覆う音**
+  （開始〜終端 note・Slur_engraver は走行中に作られた全 Script grob を acknowledge）の
+  'around/'outside script は、**side-position の答えの上に chain される剛体 offset** で
+  bow から降りる——'around は**曲線が padded 箱に入ったときだけ**・'outside は端 x で
+  曲線が箱の近縁を越えたら常に。offset = 曲線の x 重なり区間の極値 − 箱の近縁
+  （slur-padding 0.2 で widen・曲線は**中心線 control 点**＝sandwich/pen 無し）。
+  chain の**後**・支持化の**前**に適用するので上の script は連鎖で一体に上がる
+  （LP の剛体 stack と同じ機構で同じ形）。avoid-slur 表は scm/script.scm の宣言を
+  1 腕 1 型で写経（accent/portato/fermata族/flageolet/bow/mordent族 = around・
+  staccato/staccatissimo/tenuto/marcato/stopped/turn 族 = inside・trill/snappizz =
+  outside・LP Script でない印 = ignore）。**tie と違い member gate 無し**
+  （ADD_ACKNOWLEDGER(script) は grob を見る＝作り手を見ない）。
+- **照合（scriptstack1 twin・e' slur 起点 stack・staff 相対）**: accent −2.67→−3.28
+  （LP −3.40）・finger −3.53→−4.15（LP −4.26）・downbow −4.85→−5.47（LP −5.58）＝
+  **+0.73 の剛体乖離が +0.11〜0.12 へ**。slur 終端の staccato（'inside）は両側 −1.5 で
+  不動・無 slur の音は全部不変。**残差 0.11-0.12 の出所は slur 曲線そのもの**
+  （LS の apex が LP より ≈0.13 低い = slur-scoring regime・回避は自エンジンの描かれた
+  曲線に対して正確に 0.2 padding で噛んでいる——両曲線の実測 control 点で確認）。
+- **開示 3 枚**: ⑴ 'inside script の**slur 側**（LP は staccato を extra encompass にして
+  **slur が曲がる**）は未 port＝SlurScoringProblem の棚 ⑵ fingering の**単独** slur 回避は
+  未配線（FingeringLayout に VoiceIndex が無い。stack 内の fingering は持ち上がった
+  accent の chain で正しく上がる＝twin で検証済） ⑶ 'outside の端 y はサンプル補間
+  （LP は get_other_coordinate の厳密解・コード内開示済）。
+- **lookup は measure キー**（slursAtMeasure = 各 slur の span を小節へ展開）＝
+  script 1 本あたり dict hit + その小節の数本走査。**新規 O(n²) 無し**（voice 全 slur の
+  線形走査で書いた最初の版は自分で差し戻した）。
+- 観測者 +1（ArticulationPlacementTests.Scripts_RideOffASlur_InsideOnesStayPut =
+  slurred stack 3 点 + inside 不動 + 無 slur 対照）・**snapshot 0 枚**（全スイート
+  バイト不変）・引用ラチェット 1 回鳴いた（slur-padding = ハイフン 2 節は名指し不可 =
+  第42号の学びと同型→範囲を捨て住所だけに）。
+- probe 残置: scratch\lpreg\slurscript-obs.lys（観測者の値取り）。
+
+★ **第4便 perf A/B round 13**: 機材 = scratch\lpreg\perf-ab13.ps1・base = f2ada471
+worktree（撤去済）。**重い側 slurscript1k**（毎小節 slur×4 accent）: −5.4%/+7.3% =
+**符号反転 = drift ＝劣化なし**。**対照 scriptsym1k**（slur 無し）: **hash 完全一致**・
+時間は +4.4/+10.3・再測 +1.1/+9.0——**本日の機械は hash 同一の仕事が −35%〜+10% に
+振れる**（round 12 と合わせ両符号を跨ぐ＝noise floor ±10%。slur-less 経路の追加コードは
+script 1 本あたり null check 1 個で、この量の説明にならない）。
 
 ★★★ **第1便 fixed 第44号 = script-tie-collision.ly**（scripts はタイを避ける・
 第107 blockB 起票の 2 冊目 = **blockB 完結**。下見は第114第3便）:
@@ -115,12 +158,12 @@ base = 2c143080 worktree（撤去済）・Release・交互×両順・中央値 o
 
 plain 322 / 処理済 **248**（fixed **44**・exact 30・skip 158・open 16・
 pending 74。数えたら state 別内訳も一緒に書くこと）。
-frontier = **第107 blockB の 2 冊は完結**（stack-order1 第43号・tie-collision 第44号）。
-次は queue の pending から。同棚の続き物 = **script の avoid-slur 未実装**（第114起票・
-scriptstack1 の e'' の slur 起点 stack が剛体 +0.73）が slur 側 regime として残っている。
+frontier = **第107 blockB の 2 冊は完結**（stack-order1 第43号・tie-collision 第44号）し、
+**avoid-slur 起票も第3便で返済**（残差 0.11-0.12 = slur-scoring regime へ帰着）。
+次は queue の pending から新しい本を開く。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4205 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+テスト **4206 passed / 0 failed / 4 skipped**（観測者 +2 込み・全スイート確認済）・
 lp-geometry 台帳 481 点不変・**Core (Debug) 0 warning・snapshot 第115 は 0 枚**・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
