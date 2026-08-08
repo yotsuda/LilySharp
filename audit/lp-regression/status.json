@@ -7214,7 +7214,9 @@
     },
     "slur-shift-region.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "slur の shift region は extra encompass 要素(tuplet 番号)を収めるため自動で高くなる",
+      "notes": "open 第118第2便=下見+台帳対の起票。乖離は独立に2つ: ⑴bracket 傾き規則—LP は graphical_dy を bound 列 extent∪(staff ink 2.05+staff-padding 0.25) で取るので五線内 tuplet はほぼ水平 (positions (3.6 . 3.4))・LS は音勾配 ±2.0 そのまま (左端 -5.60)。台帳対 staff.staff.tuplet-bracket-sloped-{desc,asc} を起票済 (LP 7.177717/7.223978・LS 8.730 九桁恒等・予測全的中・LP 恒等は +0.046261 で反証=port の検算器)。⑵slur が TupletNumber を extra encompass ('inside) に入れていない=additional_ys 不発火で LS slur end -1.69 vs LP -3.695 (11 step 登り。LP start -4.045/end -3.695・slur-engraver.cc:80 が tuplet_number を acknowledge・get_extra_encompass_infos :850-884 非slur枝)。⑴を port してから⑵ (番号の箱が⑴に依存)。双子残置 scratch\\lpreg\\slurshift{,-noslur}.{ly,lys,svg}"
     },
     "slur-stroke-fingering-inside.ly": {
       "category": "scheme",

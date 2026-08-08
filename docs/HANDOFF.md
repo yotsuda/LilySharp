@@ -60,7 +60,44 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 最終更新 第118セッション（＝第1便 **fixed 第47号 = slur-rest-direction.ly 完結 =
 fig4 残差の解体・stem_extent_ は flag 込み**・status.json の第117分同期込み・
+`57bd399a`・第2便 **slur-shift-region.ly 下見 = 乖離 2 つに分解 + bracket 傾きの
+台帳対 TBSD/TBSA 起票（LP 六桁ピン・予測全的中・LP 恒等は反証）**・
 この handoff と同 commit）。
+
+★★★ **第2便 slur-shift-region.ly（state=open）= 乖離は独立に 2 つ**（双子
+scratch\lpreg\slurshift{,-noslur}.{ly,lys,svg} 残置・slur 有無で両エンジンとも
+bracket 不変を確認済）:
+- **⑴ bracket 傾き規則**: LP calc_position_and_height の no-beam 枝は音勾配で
+  傾けない——graphical_dy = **bound 列 extent ∪ (staff ink 2.05 + staff-padding
+  0.25 = 2.3)** (tuplet-bracket.cc:530-535 rv.unite(staff)) なので五線内 tuplet は
+  dy = 2.5−2.3 = ±0.2 に潰れ、offset pass (:708-719: 全列 extent[dir] + staff 端
+  を x で按分・+padding 1.1) が g' stem を束縛点にする。LS CalculateSlope は
+  音勾配 ±2.0 そのまま（自前コメントが「DERIVED, NOT TRANSCRIBED・対を先に開けよ」
+  と明記していた装置）。
+- **台帳対 staff.staff.tuplet-bracket-sloped-{desc,asc} 起票済**（probes/
+  tuplet-bracket-sloped.ly・§5.0 の型どおり予測先書き→LS 実測→全的中）:
+  **TBSD（下降 g'e'c'）LP 7.177716698449803** = 番号 top(3.5+0.627717)+2.05+1
+  六桁・**positions (3.6 . 3.4)**＝g' が左 bound で**ちょうど** 2.5+1.1。
+  **TBSA（上昇鏡像）LP 7.223978049187602・positions (3.446261 . 3.646261)**＝
+  **LP 恒等は +0.046261 で反証**（束縛 g' が span 中腹に来て slope 越しに高く着地）
+  ——**この非対称の再現が port の検算器**。LS は両冊 **8.730000000 九桁恒等**
+  （5.6+線半厚 0.08+2.05+1・鏡像対称な自前式）＝residual +1.552/+1.506。
+  ⚠️ **port 時の宿題**: desc の束縛が「ちょうど 3.6」＝ g' 点の x が x0 と**厳密に
+  一致**している（LP の点 x = column relative_coordinate・x0 = 左 bound(stem) の
+  extent LEFT——なぜ一致するかは未分解。asc の 0.046261 と合わせて式を確定させる
+  こと）。⚠️ 罠 1 つ踏んだ: 最初の probe は上譜 treble で **clef 対 8.210039 に
+  束縛されて tuplet に聾**だった（tuplet-number-beamed.ly の header が警告する罠の
+  鏡像・tuplet 抜き対照で検出・probe header に記録済）。
+- **⑵ slur が TupletNumber を extra encompass に入れていない**: LP は
+  slur-engraver.cc:80 が tuplet_number を acknowledge（**bracket は不参加・番号
+  だけ**・define-grobs TupletNumber avoid-slur=inside）→ get_extra_encompass_infos
+  :850-884 非 slur 枝（extent + thickness widen・penalty = extra-object-collision）
+  → **additional_ys が発火して右端が 11 step 登る**（LP slur start −4.045 = base
+  −1.545+5 step・end −3.695 = nudge 済 base 1.805−11 step。EndYFor の素の上限
+  Y-up≈1.5 では説明不能＝拡張の証明）。LS は extras が dot のみ＝end −1.69 で
+  未拡張上限そのもの。**⑴→⑵の順で直す**（番号の箱が⑴に依存）。LS の
+  TupletBracket は outside-staff 不参加（LayoutEngine:2743 に明記）＝slur を
+  避けない設計は LP と同型・bracket 高さだけが乖離。
 
 ★★★ **第1便 fig4 の真相 = LP の stem_extent_ は stem∪flag**（get_bound_info
 slur-scoring.cc:188-203 `s.unite (flag->extent)`——第117第2便 port (:738-760) の
@@ -101,18 +138,23 @@ slur-scoring.cc:188-203 `s.unite (flag->extent)`——第117第2便 port (:738-7
   pending のまま = HANDOFF の数 260 と実数 257 が乖離）→ 4 冊まとめて同期
   （claim/notes 付き）。**corpus の数は status.json に訊いてから書く**。
 
-plain 322 / 処理済 **261**（fixed **47**・exact **34**・skip **164**・open 16・
-pending **61**。status.json 同期後の実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **slur-shift-region（tuplet 内終端）** → slur-vertical-skylines
-（^"rit"+trill span+\f = outside-staff 対 slur）。slur-flag / slur-nice は文法宿題
-（slur 向き強制の綴りなし）の棚——文法が入ったら **slur-flag の追試を最初に**
-（stem-attach X が flag 込みになったので当時の skip 測定より一段深く効く）。
+plain 322 / 処理済 **262**（fixed **47**・exact **34**・skip **164**・open **17**・
+pending **60**。status.json 同期後の実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **slur-shift-region の port ⑴ = calc_position_and_height no-beam 枝**
+（検算器 = 台帳対 TBSD/TBSA の positions 四つ組 (3.6 . 3.4)/(3.446261 . 3.646261)
+と gap 2 値・†束縛 x の宿題は上記第2便）→ **port ⑵ = TupletNumber を slur extras
+へ**（slurshift 双子で slur −4.045/−3.695 を照合・LayoutSlurs から bracket layout
+が見える呼び順の確認から）→ 閉じたら fixed 第48号 → slur-vertical-skylines。
+slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚——文法が入ったら
+**slur-flag の追試を最初に**（stem-attach X が flag 込みになったので当時の skip
+測定より一段深く効く）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4213 passed / 0 failed / 4 skipped**（観測者+2 込み・全スイート確認済）・
-snapshot 第118 は **0 枚**・Core (Debug) 0 warning・base worktree =
-C:\MyProj\LilySharp-base（cc19cccc・残置）。
-probe 残置: **scratch\lpreg\slurrest-fig4.lys（fig4 単独・観測者の下見材）**＋
+テスト **4215 passed / 0 failed / 4 skipped**（第1便観測者+2・第2便台帳+2 込み・
+全スイート確認済）・snapshot 第118 は **0 枚**・Core (Debug) 0 warning・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+probe 残置: **scratch\lpreg\slurrest-fig4.lys（fig4 単独・観測者の下見材）・
+slurshift{,-noslur}.{ly,lys,svg}（第2便の双子・port ⑵の照合材）**＋
 第117 以前の slurgrace/slurhcap/slurrest*（-dbg 含む）/mvslur/mls/slurflag/perf-*
 一式（下の第117 の節参照）。
 

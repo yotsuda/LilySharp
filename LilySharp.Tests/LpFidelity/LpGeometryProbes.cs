@@ -2637,6 +2637,69 @@ internal static class LpGeometryProbes
         "tuplet 3/2 { b4 c' b } tuplet 3/2 { b4 c' b } | tuplet 3/2 { b4 c' b } tuplet 3/2 { b4 c' b } | b1 |");
 
     /// <summary>
+    /// THE DRAWN BRACKET's SLOPE inside the staff — the mirrors of
+    /// tuplet-bracket-sloped.ly's books TBSD / TBSA, the pair CalculateSlope's own
+    /// comment demands before its port (points before ports).
+    /// </summary>
+    /// <remarks>
+    /// calc_position_and_height's no-beam branch does NOT slope from the notes: its
+    /// graphical_dy is the BOUND columns' extents UNITED WITH THE STAFF INK widened by
+    /// staff-padding (tuplet-bracket.cc:530-535 — staff ink 2.05 + 0.25 = 2.3), so a
+    /// within-staff tuplet's dy collapses to (poking stem 2.5) − (staff edge 2.3) = 0.2,
+    /// and the offset pass (:708-719) then clears every column + the staff edge, +
+    /// padding 1.1. MEASURED (audit/lp-geometry/probes/tuplet-bracket-sloped.ly,
+    /// 2026-08-09; upper staff BASS — treble over treble binds on the CLEF PAIR at
+    /// 8.210039 with the tuplet REMOVED, the deaf-book falsifier is in the probe header):
+    /// <list type="bullet">
+    /// <item>TBSD (descending g'-e'-c' after a c''2) 7.177716698449803 = number top
+    /// (midpoint 3.5 + half-ink 0.627717) + 2.05 + 1 SIX-DIGIT; positions (3.6 . 3.4) —
+    /// dy = −0.2, the LEFT end 2.5 + 1.1 = 3.6 EXACT (the g' stem IS the left bound, so
+    /// it binds at x = 0).</item>
+    /// <item>TBSA (the ascending mirror) 7.223978049187602 = number top (3.546261 +
+    /// 0.627717) + 2.05 + 1; positions (3.446261350737798 . 3.646261350737798) — dy =
+    /// +0.2 mirrors, but the OFFSET does not: the binding g' now sits mid-span under a
+    /// sloped line and the bracket lands +0.046261 higher. The LP-IDENTITY prediction
+    /// was FALSIFIED by exactly this — the asymmetry is the binding point's x, and the
+    /// port reproducing 0.046261 is its own check.</item>
+    /// </list>
+    /// <para>
+    /// Lily#'s CalculateSlope slopes the full musical dy (g→c = ±2.0): the line's high
+    /// end reaches ≈5.6 and beats its own number (4.6 + 0.63), so BOTH books should read
+    /// ≈ +1.5 — and IDENTICAL to each other (Lily# applies ±slope/2 around a common mid,
+    /// mirror-symmetric by construction). A split between the Lily# books would be a
+    /// direction-dependent slope bug, a second defect.
+    /// </para>
+    /// </remarks>
+    private static string SlopedTupletScore(string name, string lowerBars) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part upper { clef bass }
+        part lower { clef treble }
+
+        section Main {
+          upper { d,1 | d,1 | d,1 | }
+          lower { {{lowerBars}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff upper
+          staff lower
+        }
+        """;
+
+    /// <summary>Descending within-staff quarter triplet — LP flattens to (3.6 . 3.4).</summary>
+    private static readonly string TBSD = SlopedTupletScore("TBSD",
+        "c'2 tuplet 3/2 { g4 e c } | c'2 tuplet 3/2 { g4 e c } | b1 |");
+
+    /// <summary>The ascending mirror — LP lands +0.046261 higher, not identical.</summary>
+    private static readonly string TBSA = SlopedTupletScore("TBSA",
+        "c'2 tuplet 3/2 { c4 e g } | c'2 tuplet 3/2 { c4 e g } | b1 |");
+
+    /// <summary>
     /// A DYNAMIC under a forced-down column — the mirrors of dynamic-support.ly's books
     /// DSQ / DSW / DSB, the points that gate the LAST raw-3.5 read
     /// (<c>NoteColumnLayout.RawSupportEdgeUp</c>, session 35's model table).
@@ -8571,6 +8634,15 @@ internal static class LpGeometryProbes
         new("staff.staff.tuplet-bracket-partial-beam", TPB, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-partial-beam-control", TPC, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-shortened-stem", TPS, g => g.StaffGap(), ZeroStaffStaffPaper),
+
+        // --- the DRAWN bracket's SLOPE inside the staff (TBSD/TBSA) ---
+        // The pair CalculateSlope's own comment gates its port on: LilyPond's
+        // graphical_dy unites the bound columns with the staff ink + staff-padding
+        // (dy collapses to ±0.2 here) while Lily# slopes the full musical ±2.0. The
+        // LP sides are NOT identical (+0.046261 asc) — the binding-x asymmetry is
+        // part of the claim. See SlopedTupletScore's remark for the decomposition.
+        new("staff.staff.tuplet-bracket-sloped-desc", TBSD, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-bracket-sloped-asc", TBSA, g => g.StaffGap(), ZeroStaffStaffPaper),
 
         // --- the DYNAMIC's support (DSQ/DSW/DSB + mechanism pair DMF/DMW) ---
         // The points that gate the last raw-3.5 read (NoteColumnLayout.RawSupportEdgeUp).
