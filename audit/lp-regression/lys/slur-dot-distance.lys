@@ -1,0 +1,10 @@
+// lilypond-src/input/regression/slur-dot-distance.ly の Lily# 訳・第1 score
+// (無付点対照)。CLAIM: 付点音符の slur は、衝突しない限り無付点と同じ
+// head 距離を持つ。
+// 枠: 原本は \cadenzaOn (小節線なし)×2 score。Lily# に cadenza が無いので
+// 両側落とし: 行の総時価に合う拍子で 1 小節化 (line1 = 4×4分+4×8分 = 6/4)。
+// 綴り: LP \relative c''' の先頭 g = g''(G5)。Lily# の相対 anchor は LP c'(C4)
+// なので G5 = g''(1 apostrophe 差ではない——頭 position で検分するのが規約)。
+
+time 6/4
+g''4( f4) g4( a4) g8( c8) c8( g8)

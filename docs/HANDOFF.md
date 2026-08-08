@@ -61,7 +61,20 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第116セッション（＝第1便 **4冊 skip**・`6e80a05c`・第2便 fixed
 **第45号 = slur-dot-collision.ly = slur-scoring 再建**・`0538a07b`・第3便
 **perf A/B round 14 = 重い側 drift・対照 hash 一致・既存超線形 2 件起票**・
+`204b0901`・第4便 **slur-dot-distance.ly = exact（コード変更 0）**・
 この handoff と同 commit）。
+
+★★ **第4便 slur-dot-distance.ly = exact**（付点 slur の head 距離は無付点と同じ・
+コード変更 0 = **第45号の再建がそのまま当たった初の追試**）:
+- 枠: \cadenzaOn×2 score → 両側落とし+行ごと拍子合わせの双子 2 対
+  （line1 = 6/4・line2 = **17/8**・scratch\lpreg\slurdist-{a,b}.{ly,lys} 残置）。
+- **無付点側 = slur 4 本×4 点（両端+control）が全部 0.01 以内で完全一致**。
+  付点側 = Y 全点 ≤0.06 一致（付点 slur の開始 −3.54 = 無付点と同値 = 主張の核）・
+  X は全体 −1.13 drift（17/8 前置幅+dot 列幅 = 既起票 spacing regime。slur 幅自体は
+  4.41=4.41 一致）。
+- ⚠️ 枠の再犯: **Lily# の相対 anchor は LP c'（C4）基準——G5 は `g''`**。1 apostrophe
+  下げ規則は絶対綴りの話で相対には当たらない。slurav と同じ罠・同じ捕まえ方
+  （双子の頭 position 検分）。3 回目なので §5 級。
 
 ★★★ **第2便 fixed 第45号 = slur-dot-collision.ly**（Slurs avoid dots・slur-* 島の
 初戦。乖離 = LS の slur が E6→E4 へ頭直付けで 4.1ss 急降下 vs LP は浅い弓で右端を
@@ -129,13 +142,16 @@ slur×2・300 小節）= **−0.2%/+6.6% = 符号跨ぎ = drift**。**対照 scr
 ゼロ・crash 回帰）・skip-music（\skip music 引数の綴りなし＝「中のイベントを無視」が
 主張の核で s 置換では消える）・slur-cross-staff（全 slur が cross-staff = 器材が主張）。
 
-plain 322 / 処理済 **255**（fixed **45**・exact **32**・skip 162・open 16・
-pending 67。数えたら state 別内訳も一緒に書くこと）。
-frontier = **slur-* 島の続き**（アルファベット順）: slur-dot-distance（\cadenzaOn
-両側落とし要）→ slur-flag（stemUp slurUp = 開示⑴の stem attach X を測る本）→
-slur-grace → slur-height-capping → slur-nice → slur-rest-direction（4 score 頁組み
-注意）→ slur-shift-region → slur-vertical-skylines。**新機構で残差の出所が数字で
-読めるようになった**——scriptstack1 の 0.12 は特定済（上記）。
+plain 322 / 処理済 **256**（fixed **45**・exact **33**・skip 162・open 16・
+pending 66。数えたら state 別内訳も一緒に書くこと）。
+frontier = **slur-* 島の続き**（アルファベット順）: slur-flag（\stemUp+\slurUp =
+開示⑴の stem attach X を測る本。**slur 向き強制の綴りが Lily# にあるか先に確認**）→
+slur-grace（acciaccatura/appoggiatura の nested slur）→ slur-height-capping →
+slur-nice（line-width 120mm+\break+\stemNeutral スパン）→ slur-rest-direction
+（4 score 頁組み注意・rest は slur 向きを変えない）→ slur-shift-region（tuplet 内
+終端）→ slur-vertical-skylines（^"rit"+trill span+\f = outside-staff 対 slur）。
+**新機構で残差の出所が数字で読めるようになった**——scriptstack1 の 0.12 は特定済
+（上記）・slur-dot-distance は追試 exact（第4便）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
 テスト **4207 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・

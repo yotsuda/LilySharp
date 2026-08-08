@@ -7126,7 +7126,9 @@
     },
     "slur-dot-distance.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "付点音符の slur は衝突しない限り無付点と同じ head 距離を持つ",
+      "notes": "exact 第116第4便(コード変更0=第45号の slur-scoring 再建がそのまま当たった)。枠: \\cadenzaOn×2score は両側落とし+行ごとの拍子合わせ双子2対(line1=6/4・line2=17/8)。照合: 無付点側=slur 4本×4点(両端+control)が全部0.01以内で完全一致・付点側=Y全点≤0.06一致(付点slurの開始-3.54=無付点と同値=主張の核)・Xは全体-1.13 drift=17/8前置幅+dot列幅の spacing regime(slur幅自体は4.41=4.41一致)。twin残置 scratch\\lpreg\\slurdist-{a,b}.{ly,lys}。枠の学び(再犯): 相対anchorはLP c'基準でなくLP c(1)基準=G5はg'——頭positionで検分して捕まえた(slurav と同じ罠)"
     },
     "slur-dots.ly": {
       "category": "scheme",
