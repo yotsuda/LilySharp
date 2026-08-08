@@ -60,8 +60,22 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 最終更新 第119セッション（＝第1便 **fixed 第49号 = slur-vertical-skylines.ly =
 trill span の to-barline port**・`e94a2583`・第2便 **fixed 第50号 =
-spacing-accidental-rest.ly = voiced rest の separation 箱 port**・この handoff と
-同 commit）。
+spacing-accidental-rest.ly = voiced rest の separation 箱 port**・`80c4eede`・
+第3便 **spacing-accidental-stretch.ly = exact（コード変更 0・伸縮分配の初照合）**・
+この handoff と同 commit）。
+
+★★ **第3便 spacing-accidental-stretch.ly（claim: 臨時記号は伸縮空間の量に影響
+しない）= exact**:
+- **枠の翻訳が本体**: 原本は単一 system を「not ragged-right!! + line-width 18cm」で
+  強制 justify するが、LS に paper 綴りが無い。**LS の既定 line width =
+  210−15−15 mm ＝ちょうど 18cm** なので、両側同一の音楽を 12 小節へ延長して
+  **非最終行の justify** で同じ伸縮分配を踏ませた（\accidentalStyle piano-cautionary
+  は両側落とし＝既定 style の ♯16/♮4 で核は立つ）。
+- **照合**: 3 system 構成一致・行別グリフ数 38/39/39 一致・**全頭+臨時の X
+  max|Δ| = 0.012**（SVG 2 桁丸めの水準）＝justify の伸ばし先も臨時記号の非伸縮量も
+  LP と一致していた。
+- ⚠️ exporter quirk 1 つ: 先頭の `time 2/4` が \time 2/4 の**二重出力**になる
+  （LP は同値の重複を 1 つに畳むので実害なし・双子は手で 1 つに）。
 
 ★★ **第2便 spacing-accidental-rest.ly（claim: 臨時記号は下にシフトされた rest と
 衝突しない）**:
@@ -103,9 +117,9 @@ spacing-accidental-rest.ly = voiced rest の separation 箱 port**・この hand
 - 観測者 = TrillSpannerTests.MeasureStartStop_EndsTheWaveAtTheBarline（LP 4 点
   ピン）。snapshot 0 枚・台帳不動（既存 trill fixture/probe は全部 mid-measure stop）。
 
-plain 322 / 処理済 **264**（fixed **50**・exact **34**・skip **164**・open **16**・
-pending **58**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **spacing-accidental-stretch**（spacing 族の 2 冊目）。
+plain 322 / 処理済 **265**（fixed **50**・exact **35**・skip **164**・open **16**・
+pending **57**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **spacing-correction-accidentals**（spacing 族の 3 冊目）。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
 入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
 
@@ -116,7 +130,7 @@ census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
 C:\MyProj\LilySharp-perfbase-0c63（第118 残置）。
 probe 残置: **scratch\lpreg\slurvsky.{lys,svg,-gen.ly,-lp.svg,-lp.log}＋
-extract-slurvsky-lp.ps1・spacc-rest.{lys,svg,-gen.ly,-lp.svg,-lp.log}
+extract-slurvsky-lp.ps1・spacc-rest.*・spacc-stretch.*
 （第119 の双子・観測者の照合材）**＋第118 以前の
 slurrest-fig4/slurshift/slurgrace 一式（下の第118 の節参照）。
 

@@ -7268,7 +7268,9 @@
     },
     "spacing-accidental-stretch.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "臨時記号は伸縮空間の量に影響しない（非伸縮の少量だけ足す）",
+      "notes": "exact(コード変更0)。枠の翻訳: 原本=単一systemをnot ragged-right+line-width 18cmで強制justify。LSにpaper綴り無しだが既定line width=210-15-15mm=ちょうど18cm→両側同一で12小節に延長し非最終行justifyで同じ伸縮分配を踏ませた(accidentalStyle piano-cautionaryは両側落とし=既定styleの♯16/♮4で核は立つ)。照合: 3system構成一致・行別グリフ数38/39/39一致・全頭+臨時のX max|Δ|=0.012(SVG2桁丸め水準)=伸縮行の分配・臨時の非伸縮量とも一致。twin=scratch\\lpreg\\spacc-stretch.{lys,-gen.ly,svg,-lp.svg}(exporterの\\time二重出力quirkは手で1つに)"
     },
     "spacing-accidental-tie.ly": {
       "category": "scheme",
