@@ -58,11 +58,79 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第115セッション（＝第1便 fixed **第44号 = script-tie-collision.ly**・`ea05b68a`・
+第2便 **perf A/B round 12 = 重い側 4 バッチ全て curr 非劣化・対照 hash 一致**・
+この handoff と同 commit）。
+
+★★★ **第1便 fixed 第44号 = script-tie-collision.ly**（scripts はタイを避ける・
+第107 blockB 起票の 2 冊目 = **blockB 完結**。下見は第114第3便）:
+- **修理 = tie を script の side-position support に**（script-engraver.cc:204-222
+  acknowledge_tie / acknowledge_end_tie の port）: タイの**開始/終端 moment** の script が
+  **drawn bow の輪郭 skyline に pointwise + 自分の padding** で乗る
+  （ArticulationEngraver.tiesAtBound。輪郭は SkylineBuilder.MergeBowOuterEdge =
+  SeedBowInk のサンプリング核を抽出して共有・1 綴り）。chain より前に基底へ fold するので
+  上に積まれた script も一緒に上がる。**push であって re-quantize ではない**（chain の規則）。
+  prelim/final 両 pass に同じ表（AnnotationLayoutContext.TieLayouts）・per-staff skyline
+  pass にも配線（StaffTieLayouts を script より先に計算し staffIndex restamp = beam と
+  同じ形）。broken tie は「その bound を保つ piece」が支持（開始= !IsBrokenLeft・
+  終端= !IsBrokenRight）。
+- ★★ **第2の欠陥 = 和音メンバ script は tie 支持を受けない**: メンバ script は
+  **New_fingering_engraver 製**（new-fingering-engraver.cc:144-157 add_script =
+  head/stem/flag/和音 head のみ・**tie acknowledger 無し**）。micro-probe
+  （scratch\lpreg\sctten{,2}.ly）が釘付け: `<g-- c>~` のメンバ tenuto は**どちらの頭に
+  付けても両 bound で −4.83 のまま**・同じ和音の chord-level tenuto は −5.35 へ lift＝
+  **エンジン別の split であって tie 向きの filter ではない**。→ collector で
+  IsChordMember を立てて gate（editorial/pluck/frame も Script 外なので対象外）。
+- **LP 照合（sctchord probe = 両側 1 system・staff 相対 Y-down）**: **10/10 桁一致**——
+  plain accent 無タイ −5.17／開始 −5.42 (LP −5.43)／**終端 −5.76 完全一致**・
+  和音1 (タイ開始) **chord-tenuto −5.35 / member-tenuto −5.71 / member-accent −6.39 =
+  LP −5.35/−5.71/−6.40**・和音2 **member-tenuto −4.82 (LP −4.83 = gate の直接証明)・
+  chord-accent −5.76 完全一致**・和音3 −4.82／−5.78 (LP −5.79)／portato −7.32 (LP −7.31)。
+  双子 scripttie も直接比較点は全一致（残差 ≤0.02 = 既起票タイ幾何 regime）。**改行差の
+  点は比較不能で正**（LS は b9 直後で折る→和音1 の出タイ/和音2 の入りタイが broken piece
+  = bow が script の x 帯から外れる/長い浅い弓になる——機構どおりに動く）。
+- ★★ **下見の謎2点は計器の穴だった**（§5.3「2 つの system は同じ x 帯を占める」を
+  下見自身が踏んでいた）: 「bar1-2 accent −5.51」= system2 先頭の和音2/3 の chord-accent・
+  「最終小節 −5.87」= system1 末尾の和音1 の member-accent。**plain accent は全小節一様に
+  −5.17 だった**＝乖離のすべてが tie support 不在で、bar 固有の謎は無かった。
+- 観測者 +1（ArticulationPlacementTests.Scripts_AvoidTies_ButChordMemberScriptsDoNot =
+  LP 数字 10 点ピン）・**snapshot 0 枚**（全スイート バイト不変＝corpus fixture に
+  タイ×script の対が無い）・台帳 481 点不変。
+- probe 残置: scratch\lpreg\sctchord.{ly,lys}（和音照合・両側 1 system）・sctten.ly／
+  sctten2.ly（メンバ gate の micro-probe）・scripttie-extract{,-lp}.ps1（SVG から
+  script Y を system 割り当て付きで抜く読み器）。
+
+★ **第2便 perf A/B round 12（先回り実測）**: 機材 = scratch\lpreg\perf-ab12.ps1・
+base = 2c143080 worktree（撤去済）・Release・交互×両順・中央値 of 5・999 小節 2 冊。
+- **重い側 tiescript1k**（毎音 tie+accent = 毎 script が両 bound を読む）: −13.5%/−12.6%・
+  再測 −5.7%/−35.4% = **4 バッチ全て curr が非劣化**。ただし出力構造は同一
+  （同バイト長・同 text 数・Y の数字だけ違う）で**速くなる機構は無い**＝振れ幅 5〜35% は
+  この機械の noise floor（主張として残すのは「curr が遅くない」だけ）。
+- **対照 scriptsym1k**（tie 無し）: −3.4%/−6.4%・**SVG hash base/curr 完全一致**
+  （挙動不変+仕事同一の証明。tie が無ければ tiesAtBound は null で walk は従来のまま。
+  articulation 無しの本は早期 return で表も作らない）。
+- 呼び出し構造: pass/walk 数不変・新規 O(n²) 無し。tie 表は annotation pass 1 回あたり
+  O(タイ数)・script 1 本あたり dict TryGetValue 1 回・bow skyline は bound 上の script
+  のみ（16 sample×両 bound）。
+
+plain 322 / 処理済 **248**（fixed **44**・exact 30・skip 158・open 16・
+pending 74。数えたら state 別内訳も一緒に書くこと）。
+frontier = **第107 blockB の 2 冊は完結**（stack-order1 第43号・tie-collision 第44号）。
+次は queue の pending から。同棚の続き物 = **script の avoid-slur 未実装**（第114起票・
+scriptstack1 の e'' の slur 起点 stack が剛体 +0.73）が slur 側 regime として残っている。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4205 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+lp-geometry 台帳 481 点不変・**Core (Debug) 0 warning・snapshot 第115 は 0 枚**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第114セッション第1〜5便の経緯
+
 最終更新 第114セッション（＝第1便 fixed **第43号 = script-stack-order1.ly**・`67458e64`・
 第2便 **perf A/B round 11 = 対照 drift 内+hash 一致・mover 無し guard**・`608d3c5c`・
 第3便 **script-tie-collision 下見**・`54038b97`・第4便 **自己監査＝挙動変更 0・開示 2 札**・
 `595dbc8f`・第5便 **perf round 11b = DigitRun memo で重い側 −2.6%/−3.3%**・
-この handoff と同 commit）。
+`2c143080`）。
 
 ★★ **第4便 自己監査（ユーザー三問「字面どおり? ハック無し? REF 付けた?」）＝
 挙動変更 0・新規チューニング定数ゼロ検算済・開示 2 札**:
@@ -153,17 +221,6 @@ base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 o
   タイは −5.17——何が bar1-2 を持ち上げたか未特定）⑵ LS 最終小節（無タイ c4@accent）が −5.87
   （LP −5.17）。LP 側の和音 bar（line14）の member script 積みも未照合。
 - 修理は accent×tie の fixture snapshot が動く見込み＝要素 census 前提・focused session で。
-
-plain 322 / 処理済 **247**（fixed **43**・exact **30**・skip **158**・open **16**・
-pending 75。数えたら state 別内訳も一緒に書くこと）。
-frontier = **script-tie-collision.ly**（第107 blockB 起票のもう 1 冊 = 上記下見済み。
-avoid-slur 起票と同棚）。
-
-未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4204 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
-lp-geometry 台帳 481 点不変（fingering probe は読み方のみ更新・値/残差不変）・
-**Core (Debug) 0 warning・snapshot 第114 は 3 枚（census 済）**・
-base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第113セッション第1〜9便の経緯
 
