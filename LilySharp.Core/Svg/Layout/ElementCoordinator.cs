@@ -1988,7 +1988,7 @@ internal sealed class ElementCoordinator
     private static SlurEdgeInfo ResolveSlurEdge(
         Voice voice, int measureIndex, int itemIndex, bool leftEdge,
         double columnX = double.NaN, double staffMiddleDown = double.NaN,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember = null)
     {
         if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
             return default;
@@ -2037,7 +2037,7 @@ internal sealed class ElementCoordinator
         {
             stemX = LayoutUtilities.StemX(columnX, stemUp, col.NoteValue, col.Notehead);
             stemBeginY = staffMiddleDown - col.HeadPositionToward(!stemUp) / 2.0;
-            if (TryGetBeamedStemTipDeviceY(beamLayouts, measureIndex, itemIndex,
+            if (TryGetBeamedStemTipDeviceY(beamByMember, measureIndex, itemIndex,
                     stemX, staffMiddleDown, stemUp, out double tip))
                 stemTipY = tip;
             else
@@ -2088,24 +2088,18 @@ internal sealed class ElementCoordinator
     /// converts to device once. False when the note is not in any supplied beam layout.
     /// </summary>
     private static bool TryGetBeamedStemTipDeviceY(
-        ImmutableArray<BeamLayout> beamLayouts, int measureIndex, int itemIndex, double noteX,
+        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember,
+        int measureIndex, int itemIndex, double noteX,
         double staffMiddleDown, bool curveUp, out double stemTipDeviceY)
     {
         stemTipDeviceY = 0;
-        if (beamLayouts.IsDefaultOrEmpty) return false;
-        foreach (var bl in beamLayouts)
-        {
-            bool hit = false;
-            foreach (var m in bl.Group.Members)
-                if (m.ItemIndex == itemIndex && m.ResolveMeasureIndex(bl.Group.MeasureIndex) == measureIndex)
-                    hit = true;
-            if (!hit) continue;
+        if (beamByMember is null
+            || !beamByMember.TryGetValue((measureIndex, itemIndex), out var bl))
+            return false;
 
-            // curveUp == the endpoint note's stem direction here (caller gates on StemUp == curveUp).
-            stemTipDeviceY = staffMiddleDown - bl.OuterEdgeStaffSpaceAtX(noteX, curveUp);
-            return true;
-        }
-        return false;
+        // curveUp == the endpoint note's stem direction here (caller gates on StemUp == curveUp).
+        stemTipDeviceY = staffMiddleDown - bl.OuterEdgeStaffSpaceAtX(noteX, curveUp);
+        return true;
     }
 
     /// <summary>
@@ -2143,9 +2137,10 @@ internal sealed class ElementCoordinator
     private static IReadOnlyList<SlurObstacle> BuildSlurObstacles(
         Voice voice, SystemLayout segSystem, SlurItem slur,
         double staffMiddleDown, double segStartX, double segEndX,
-        ImmutableArray<BeamLayout> beamLayouts,
+        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember,
         ImmutableArray<GraceNoteItem> graceNotes,
-        int staffIndex)
+        Dictionary<int, List<int>>? graceByMeasure,
+        GraceObstacleGeom?[]? graceGeomCache)
     {
         const double headHalfHeight = 0.5; // staff spaces, half a notehead
         const double eps = 0.001;
@@ -2226,7 +2221,7 @@ internal sealed class ElementCoordinator
                 {
                     double stemX = LayoutUtilities.StemX(
                         x, col.StemUp, col.NoteValue, col.Notehead);
-                    if (TryGetBeamedStemTipDeviceY(beamLayouts, mi, i, stemX,
+                    if (TryGetBeamedStemTipDeviceY(beamByMember, mi, i, stemX,
                             staffMiddleDown, col.StemUp, out double beamTip))
                         // Beamed: the extent already ends on the stack's outer face
                         // (beam_end_corrective, stem.cc:142); LP adds another half
@@ -2245,13 +2240,24 @@ internal sealed class ElementCoordinator
             }
 
             AddGraceObstaclesForMeasure(
-                obstacles, voice, slur, graceNotes, staffIndex, ml, mi, hi,
-                staffMiddleDown, segStartX, segEndX);
+                obstacles, voice, slur, graceNotes, graceByMeasure, graceGeomCache,
+                ml, mi, hi, staffMiddleDown, segStartX, segEndX);
         }
 
         obstacles.Sort((a, b) => a.X.CompareTo(b.X));
         return obstacles;
     }
+
+    /// <summary>
+    /// One grace group's slur-obstacle geometry, resolved ONCE per
+    /// <see cref="LayoutSlurs"/> pass and cached by group index: the column
+    /// springs (<see cref="SpacingRules.GraceColumns"/>) and the beam quant
+    /// (<see cref="GraceNoteEngraver.QuantGraceBeam"/>) are the expensive
+    /// parts, and re-solving them for every covering slur segment cost +36%
+    /// wall-clock on a 300-bar grace-under-slur book (perf-slurgrace300).
+    /// </summary>
+    private readonly record struct GraceObstacleGeom(
+        ImmutableArray<double> Offsets, double Span, double? BeamLeftY, double? BeamRightY);
 
     /// <summary>
     /// Adds the grace columns the slur covers in measure <paramref name="mi"/> to
@@ -2262,20 +2268,19 @@ internal sealed class ElementCoordinator
     /// </summary>
     private static void AddGraceObstaclesForMeasure(
         List<SlurObstacle> obstacles, Voice voice, SlurItem slur,
-        ImmutableArray<GraceNoteItem> graceNotes, int staffIndex,
+        ImmutableArray<GraceNoteItem> graceNotes,
+        Dictionary<int, List<int>>? graceByMeasure, GraceObstacleGeom?[]? graceGeomCache,
         MeasureLayout ml, int mi, int hi,
         double staffMiddleDown, double segStartX, double segEndX)
     {
-        if (graceNotes.IsDefaultOrEmpty)
+        if (graceByMeasure is null || graceGeomCache is null
+            || !graceByMeasure.TryGetValue(mi, out var groupIndices))
             return;
         const double eps = 0.001;
-        int graceStaff = Math.Max(staffIndex, 0);
 
-        foreach (var g in graceNotes)
+        foreach (int gi in groupIndices)
         {
-            if (g.StaffIndex != graceStaff || g.MeasureIndex != mi
-                || g.Notes.IsDefaultOrEmpty)
-                continue;
+            var g = graceNotes[gi];
             // Covered = the grace's MAIN note lies inside the span, excluding the
             // start note itself: its grace run sounds BEFORE the slur opens, so
             // LP's engraver never acknowledges it into this slur.
@@ -2286,25 +2291,31 @@ internal sealed class ElementCoordinator
             if (!afterStart || !beforeEnd || g.MainNoteItemIndex > hi)
                 continue;
 
-            var mainItem = ItemAt(voice, mi, g.MainNoteItemIndex);
-            var columns = SpacingRules.GraceColumns(g.Notes, mainItem);
+            if (graceGeomCache[gi] is not { } geom)
+            {
+                var mainItem = ItemAt(voice, mi, g.MainNoteItemIndex);
+                var columns = SpacingRules.GraceColumns(g.Notes, mainItem);
+                var (bl, br) = GraceNoteEngraver.QuantGraceBeam(g, columns.Offsets);
+                geom = new GraceObstacleGeom(columns.Offsets, columns.Span, bl, br);
+                graceGeomCache[gi] = geom;
+            }
             double groupX = ml.X
                 + GetItemXOffset(voice, mi, g.MainNoteItemIndex, ml)
-                - columns.Span;
+                - geom.Span;
 
             var font = GraceNoteItem.Font;
             double headHalf = font.NoteheadBlack.Top;
             // The quanted grace beam (null for a lone / unbeamable run): the
             // scored line's staff-position pair at the two OUTER STEMS, exactly
             // what the renderer anchors the drawn beam on.
-            var (beamL, beamR) = GraceNoteEngraver.QuantGraceBeam(g, columns.Offsets);
+            var (beamL, beamR) = (geom.BeamLeftY, geom.BeamRightY);
             double StemXAt(int k) => LayoutUtilities.StemX(
-                groupX + (k < columns.Offsets.Length ? columns.Offsets[k] : 0.0),
+                groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0),
                 up: true, noteValue: 4, NoteheadStyle.Default, font);
 
             for (int k = 0; k < g.Notes.Length; k++)
             {
-                double hx = groupX + (k < columns.Offsets.Length ? columns.Offsets[k] : 0.0);
+                double hx = groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0);
                 if (hx < segStartX - eps || hx > segEndX + eps)
                     continue;
                 var note = g.Notes[k];
@@ -2479,6 +2490,46 @@ internal sealed class ElementCoordinator
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var slurLayouts = new List<SlurLayout>();
 
+        // Grace-obstacle pre-resolution, once per pass: this staff's groups
+        // bucketed by measure, and a lazy geometry cache by group index — the
+        // spring/beam-quant solve happens once per COVERED group, not once per
+        // covering slur segment (see GraceObstacleGeom).
+        Dictionary<int, List<int>>? graceByMeasure = null;
+        GraceObstacleGeom?[]? graceGeomCache = null;
+        if (!graceNotes.IsDefaultOrEmpty)
+        {
+            int graceStaff = Math.Max(staffIndex, 0);
+            for (int gi = 0; gi < graceNotes.Length; gi++)
+            {
+                var g = graceNotes[gi];
+                if (g.StaffIndex != graceStaff || g.Notes.IsDefaultOrEmpty)
+                    continue;
+                graceByMeasure ??= new Dictionary<int, List<int>>();
+                if (!graceByMeasure.TryGetValue(g.MeasureIndex, out var list))
+                    graceByMeasure[g.MeasureIndex] = list = new List<int>();
+                list.Add(gi);
+            }
+            if (graceByMeasure != null)
+                graceGeomCache = new GraceObstacleGeom?[graceNotes.Length];
+        }
+
+        // Beam lookup, once per pass: (measure, item) → its beam layout. The
+        // per-column stem resolution used to scan every beam layout's member
+        // list for every covered column of every slur — quadratic in bars on a
+        // beamed-and-slurred book (perf-slurbeam300).
+        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember = null;
+        if (!beamLayouts.IsDefaultOrEmpty)
+        {
+            beamByMember = new Dictionary<(int, int), BeamLayout>();
+            foreach (var bl in beamLayouts)
+                foreach (var m in bl.Group.Members)
+                    // TryAdd, not indexer: (measure, item) is ambiguous across
+                    // VOICES on a shared staff, and the linear scan this replaces
+                    // returned the FIRST matching layout — last-wins flipped one
+                    // multi-voice snapshot (test/dot-cross-voice-spacing).
+                    beamByMember.TryAdd((m.ResolveMeasureIndex(bl.Group.MeasureIndex), m.ItemIndex), bl);
+        }
+
         // The slur end attaches to the note-head EDGE, then lifts 0.5 staff-space
         // beyond it (the beamed stem-tip path below lifts the same 0.5 off the beam).
         // Every standard notehead shares the LILC Y half-extent, so the head edge is
@@ -2602,11 +2653,11 @@ internal sealed class ElementCoordinator
                 // otherwise to the notehead (slurOffset). This lifts the slur clear of the beam.
                 var leftEdgeInfo = segment.IsFirst
                     ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, leftEdge: true,
-                        windowStartX, staffMiddleDown, beamLayouts)
+                        windowStartX, staffMiddleDown, beamByMember)
                     : default;
                 var rightEdgeInfo = segment.IsLast
                     ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false,
-                        windowEndX, staffMiddleDown, beamLayouts)
+                        windowEndX, staffMiddleDown, beamByMember)
                     : default;
                 const double stemTipGap = 0.5; // staff-spaces beyond the beam (LP dir_*0.5*staff_space)
 
@@ -2641,7 +2692,7 @@ internal sealed class ElementCoordinator
                 if (startRest is { } sRest)
                     segStartY = RestBoundBaseY(sRest);
                 else if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
-                    && TryGetBeamedStemTipDeviceY(beamLayouts, slur.StartMeasureIndex, slur.StartItemIndex,
+                    && TryGetBeamedStemTipDeviceY(beamByMember, slur.StartMeasureIndex, slur.StartItemIndex,
                         segStartX, staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
@@ -2652,7 +2703,7 @@ internal sealed class ElementCoordinator
                 if (endRest is { } eRest)
                     segEndY = RestBoundBaseY(eRest);
                 else if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
-                    && TryGetBeamedStemTipDeviceY(beamLayouts, slur.EndMeasureIndex, slur.EndItemIndex,
+                    && TryGetBeamedStemTipDeviceY(beamByMember, slur.EndMeasureIndex, slur.EndItemIndex,
                         segEndX, staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
@@ -2661,7 +2712,8 @@ internal sealed class ElementCoordinator
 
                 var obstacles = BuildSlurObstacles(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown,
-                    windowStartX, windowEndX, beamLayouts, graceNotes, staffIndex);
+                    windowStartX, windowEndX, beamByMember, graceNotes,
+                    graceByMeasure, graceGeomCache);
 
                 var extraObjects = BuildSlurExtraObjects(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX);

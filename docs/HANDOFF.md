@@ -67,7 +67,37 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 encompass 参加）**・`42455447`・第7便 **rest-bound base = rest ink 端+0.5 の実測
 port ＝ 全 4 行の全 rest slur が exact・残差は fig4 の 1 点だけ**・`30041e60`・
 第8便 **自己監査（ユーザー三問）＝字面違反 1 修正（rest x_）・stale REF 2 修正・
-札 3 追記・出力不変（双子全点不変・snapshot 0 枚）**・この handoff と同 commit）。
+札 3 追記・出力不変（双子全点不変・snapshot 0 枚）**・`05f1fd5e`・第9便
+**perf 監査 round 16（ユーザー問「プレビューを落とす実装は?」）＝実退行 2 件検出
+→ キャッシュ 2 つで返済・残 1 件は分解して起票**・この handoff と同 commit）。
+
+★★★ **第9便 perf round 16**（機材 = scratch\lpreg\perf-ab16.ps1・base = 27dacde7
+worktree（撤去済）・**round 15 が測っていなかった重い側 3 つ**を新造:
+perf-{slurgrace300,slurbeam300,slurrest300}.lys 残置）:
+- **実退行⑴ = slurgrace300 +36/+47%（両順）**: 被覆 grace の GraceColumns（ばね）
+  + QuantGraceBeam（beam 量子化）を**覆う slur セグメントごとに再解き**していた。
+  修理 = LayoutSlurs 1 pass に 1 回の lazy cache（GraceObstacleGeom・group index
+  キー）+ 小節→group 索引。
+- **実退行⑵ = slurbeam300 +34.7%（片順・もう片順 +5.4）**: 被覆列ごとの stem 解決が
+  **beamLayouts×members を線形走査**＝beamed+slurred 本で bars² 族。修理 =
+  (measure,item)→BeamLayout 辞書を pass に 1 回。⚠️ **辞書化の等価性罠を 1 回踏んだ**:
+  旧走査は**最初に**当たった beam・辞書の indexer は**最後勝ち**——多声 staff では
+  (measure,item) が声部間で衝突するので 1 snapshot（dot-cross-voice-spacing）が
+  動いて教えた。**TryAdd（先勝ち）で走査と等価**・全緑復帰。
+- **修理後の再測**: slurbeam +5.0/−2.4・slurrest +4.1/−13.7・対照 scriptsym1k
+  +0.5/−4.7 = **全部符号跨ぎ = drift・対照 hash 完全一致**。
+- **残 1 件 = slurgrace300 +24.5/+27.4%（x5 両順・キャッシュ後も残存）＝分解済・
+  起票**: ⑴ grid 拡大説は**反証**（SLURGRID print: n=81 で不変＝region 項が支配）
+  ⑵ env ゲート切り分けで **+0.9s ≈ 全部 grace obstacle の下流**（no-grace で base
+  水準・stem 側は noise）＝ **obstacle/avoid 点が 2→4 に増え、81 候補×全候補
+  curve 生成（fit_factor の Bezier.GetOtherCoordinate cubic solve）が倍増**した
+  対価。**LP と同じ仕事の形**（LP も全 config に curve を生成し avoid 全点を食う）
+  で、絶対量は grace 被覆 slur 1 本 ≈ +1.5ms＝可視頁数十本で数十 ms。**次の一手は
+  ⒜ Bezier.GetOtherCoordinate の micro-cost（全 slur 本に効く）⒝ Solve() の
+  DigitRun 型 memo（§116 第8便が既に名指し）——どちらも測ってから**。solver の
+  数値経路変更は snapshot churn リスクがあるので単独 commit で。
+- ⚠️ **A/B とテストを並走させない**（今回 1 回汚した——curr-first だけ +76% が出て
+  ベンチ機の他プロセスが犯人。round は捨てて再走した）。
 
 ★★ **第8便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
 - **検算で白 9**: ⑴ stem_ の gate = stem_dir==dir_ && extent 非空 (:146)
@@ -247,8 +277,9 @@ Core (Debug) 0 warning・base worktree = C:\MyProj\LilySharp-base（cc19cccc・�
 probe 残置: scratch\lpreg\slurgrace.{ly,lys}・slurhcap.{ly,lys}・
 slurrest.{ly,svg}+slurrest-{s,e,q,h}.lys+**slurrest-dbg.{ly,svg}
 （debug-slur-scoring 計器・fig4 分解の再現材）**・mvslur-probe.{ly,svg}・
-mls.{ly,lys→svg}・perf-ab15.ps1
-（＋第116 以前の perf-slur*/perf-sd*/perf-{nodot-slur,dot-noslur}）。
+mls.{ly,lys→svg}・perf-ab15.ps1・**perf-ab16.ps1 +
+perf-{slurgrace300,slurbeam300,slurrest300}.lys（第9便の重い側・grace 残退行の
+再現材）**（＋第116 以前の perf-slur*/perf-sd*/perf-{nodot-slur,dot-noslur}）。
 
 ## 以下は第116セッションの経緯
 
