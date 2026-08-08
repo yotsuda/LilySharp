@@ -58,6 +58,75 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第114セッション（＝第1便 fixed **第43号 = script-stack-order1.ly**・`67458e64`・
+第2便 **perf A/B round 11 = 対照 drift 内+hash 一致・mover 無し guard**・`608d3c5c`。
+この handoff はその次の commit）。
+
+★★★ **第1便 fixed 第43号 = script-stack-order1.ly**（script の縦積み＝script-priority 梯子・
+第107 blockB 起票の本命 e2e。もう 1 冊の script-tie-collision が次）:
+- **修理 3 件**:
+  ⑴ **fingering が script column 不参加**（LayoutFingerings の「常に最外+調整定数 1.4/1.9」
+  clamp = LILYSHARP-OWN）→ new-fingering-engraver.cc:314-340 port: 縦置き fingering は
+  **priority 100+d×position** で連鎖参加（ArticulationEngraver.CalculateWithFingerings・
+  FingeringLayout.ColumnPriority。chord fingering は対象外 = FingeringColumn 別機構のまま）。
+  **profile は extent 箱**（Fingering は vertical-skylines 無宣言 = grob.cc:81-85・第107 の
+  Dots と同規則。輪郭を歩かせると bow が「0」の丸い肩に 0.21 沈む——LP −4.40 が釘付けた）。
+  **digit は fetaText −5 = figbass と同 glyph・同 em**（FiguredBassGlyphRun 共有・
+  FingeringEngraver.DigitRun = pen/profile 1 綴り。旧 serif 0.56em は LP ink の半分）。
+  島の staff 支持は **staff ink 2.05**（d, の単独 finger −2.55 一致が釘付け）。
+  ⑵ **script-column.cc:178-185 の +0.1 bump port**（第107 起票「踏む対が出たら」の対が
+  この本）: priority 順 walk で直前が mover（fermata osp 75）の osp 無し script（bow 180）は
+  **osp = 75.1 の mover に変換**＝外側 pass が fermata の直後に積む。OutsideStaffPriority は
+  int?→double?。**mover 無し score はこの簿記を丸ごと skip**（第2便 guard・対照 hash 一致で
+  挙動不変を証明）。
+  ⑶ **ScriptPriority 表完成**: flageolet 50・trill 150・upbow/downbow 180 追加
+  （staccatissimo/portato/marcato/accent は LP も無宣言 = 0 が正）。
+- **LP 照合（scriptstack1 twin・staff 相対 Y-up）**: f'' = staccato 2.94／tenuto 3.42／
+  **finger 4.00**／bow 5.32（LP 5.33）・e' = flageolet 6.14／**fermata 7.08／bow 8.99
+  完全一致**（bump の直接証明）・e, = tenuto 2.50／**finger 3.08／downbow 4.40 完全一致**・
+  d, 単独 finger −2.55 一致・a/c/d も桁一致。
+- **枠**: score 1（`\3`/`\5` = 弦番号 vs 運指）は標準譜 string number の綴りなし＝両側省略
+  （文法宿題）。
+- **起票**: ⑴ **script の avoid-slur 未実装**——e''（slur 起点）の stack が剛体 +0.73
+  （stack 内 gap 0.86/1.32 は LP 完全同一＝連鎖は正しく slur 項だけ無い）。
+  script-tie-collision と同棚 ⑵ @text: Y −6.83 vs LP −6.22 ＋ X 中央揃え＝既起票 @text
+  regime ⑶ 多桁 finger は箱 fallback（音楽 glyph walk は単字のみ）。
+- **開示**: per-staff skyline パス（MultiStaffLayouter.StaffArticulationLayouts）は
+  fingering 無し overload のまま＝fermata-over-finger の seed が薄い（corpus 未踏・
+  コード ⚠️ 済）。fingering は figbass 同様 ossia で縮尺しない（snapshot ossia-beams の
+  差分 1 件 = これ）。
+- 観測者 +1（ArticulationPlacementTests.ScriptStack_Orders… = LP 数字 11 点ピン）・台帳 probe
+  fingering.whole.column-to-ink-centre を glyph run 読みへ（**値不変・残差不変**）・
+  **snapshot 3 枚**（fingering 2 冊 = 数字の glyph 化+column Y のみ・ossia-beams =
+  非縮尺化・census 済）。
+- 引用ラチェットの学び: **後節が大文字始まりの語は不適格**（parent-alignment-X は「X」で
+  落ちる・grob::always-Y-extent-from-stencil も「Y」で落ちる）——+6 で 1 回落ちた。
+
+★ **第2便 perf A/B round 11（先回り実測）**: 機材 = scratch\lpreg\perf-ab11.ps1・
+base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 of 5・999 小節 2 冊。
+- **対照 scriptsym1k**（accent+staccato・mover/finger 無し = 既定コスト側・hash 必須）:
+  1 回目 +17.6/+7.4 = 両順正 = 容疑 → **guard（mover 無しは lastOnKey 簿記 skip）→再測
+  −1.9%/+4.1% = 符号反転 = drift**・**SVG hash base/curr 完全一致**（挙動不変+仕事同一の
+  証明）。
+- **重い側 fingstack1k**（毎音 staccato+tenuto+finger+bow）: +2.9%/+5.0%（両順正・バッチ
+  振れ 7.0〜12.3s の荒い機械・設計上 curr の仕事が増える側 = 連鎖 distance+feta digit）。
+  **劣化が実在した時の候補筆頭**: fingering flush の ScriptSkylines placed 対→
+  MergeScriptProfile 系の cache（第108 の 295MB→139MB と同型）。
+- 呼び出し構造: pass/walk 数不変・新規 O(n²) 無し。IncrementalCompiler 非接触＝増分構造不変。
+
+plain 322 / 処理済 **247**（fixed **43**・exact **30**・skip **158**・open **16**・
+pending 75。数えたら state 別内訳も一緒に書くこと）。
+frontier = **script-tie-collision.ly**（第107 blockB 起票のもう 1 冊 = script vs tie の
+skyline 参加。avoid-slur 起票と同棚・多重 script の snapshot が動く見込み＝要素 census 前提）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4204 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
+lp-geometry 台帳 481 点不変（fingering probe は読み方のみ更新・値/残差不変）・
+**Core (Debug) 0 warning・snapshot 第114 は 3 枚（census 済）**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
+
+## 以下は第113セッション第1〜9便の経緯
+
 最終更新 第113セッション第5便（＝第1便 fixed **第40号 = repeat-tie-chords.ly**・`0f86ba76`・
 第2便 fixed **第41号 = repeat-tremolo-chord-rep.ly**・`b68d24aa`・
 第3便 **repeat-volta-initial-grace.ly = open**・`4eec7fd4`・
