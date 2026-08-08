@@ -111,6 +111,7 @@ internal sealed class LyricCollector
         int lm = 0;     // local measure within the current verse (0 .. measureCount-1)
         int pos = 0;    // note position within the current measure
         int verse = verseNumber;
+        int lastPlaced = -1;   // index in `lyrics` of the last placed syllable
 
         foreach (var (text, connectorType, position, isBarline, isMelisma) in syllables)
         {
@@ -124,14 +125,38 @@ internal sealed class LyricCollector
                 {
                     lm = 0;
                     verse++;
+                    lastPlaced = -1;   // a marker cannot hold across verses
                 }
                 continue;
             }
 
             // A melisma (~ / __ / _) holds the previous syllable over one more note
             // in THIS bar — consume a note position without placing a syllable.
+            // The held syllable is LEFT-aligned on its column, and remembers the
+            // LAST note it holds (where its extender, if any, ends) — see
+            // LyricItem.MelismaAlignLeft / MelismaEndMeasureIndex.
             if (isMelisma)
             {
+                if (lastPlaced >= 0)
+                {
+                    // The marker declares the melisma (→ LEFT alignment) even when it
+                    // has no note left in this bar to consume; the held-end note is
+                    // recorded only when there is one.
+                    if (lm < measureCount && pos < measures[lm].Count)
+                    {
+                        var (heldMeasure, _, heldTiming) = measures[lm][pos];
+                        lyrics[lastPlaced] = lyrics[lastPlaced] with
+                        {
+                            MelismaAlignLeft = true,
+                            MelismaEndMeasureIndex = heldMeasure,
+                            MelismaEndTiming = heldTiming,
+                        };
+                    }
+                    else
+                    {
+                        lyrics[lastPlaced] = lyrics[lastPlaced] with { MelismaAlignLeft = true };
+                    }
+                }
                 pos++;
                 continue;
             }
@@ -143,6 +168,7 @@ internal sealed class LyricCollector
             if (lm < measureCount && pos < measures[lm].Count)
             {
                 var (measureIndex, itemIndex, timing) = measures[lm][pos];
+                lastPlaced = lyrics.Count;
                 lyrics.Add(new LyricItem(
                     Text: text,
                     MeasureIndex: measureIndex,
@@ -157,6 +183,7 @@ internal sealed class LyricCollector
             }
             else
             {
+                lastPlaced = -1;   // a marker after a DROPPED syllable holds nothing
                 // More syllables than notes in this bar — the word would vanish.
                 if (unplacedSyllableCount == 0)
                 {

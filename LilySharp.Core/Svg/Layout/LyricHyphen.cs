@@ -284,7 +284,7 @@ internal sealed class LyricHyphenEngraver
             var layout = current.Item.ConnectorType switch
             {
                 LyricConnectorType.Hyphen => CalculateHyphenLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX, nextAtSystemStart),
-                LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX),
+                LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX, measuresByStaff, systems),
                 _ => null
             };
 
@@ -533,10 +533,24 @@ internal sealed class LyricHyphenEngraver
         int nextIndex,
         bool crossesSystem,
         double systemEndX,
-        double nextSystemStartX)
+        double nextSystemStartX,
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+        IReadOnlyList<SystemLayout> systems)
     {
         double startX = current.X + current.Width / 2 + _params.ExtenderPadding;
-        double endX = next.X - next.Width / 2 - _params.ExtenderPadding;
+        // The extender ends at the LAST HELD note's ink right — the melisma's end —
+        // not at the next syllable: the line must not run on under notes the NEXT
+        // syllable owns. Fall back to the next syllable's ink left only when the
+        // held notes are unknown (no markers, or no score measures — unit tests).
+        // MEASURED (lyric-melisma-melisma twin): LP extender right 27.210 = the
+        // f16 head's ink right (25.906 + head width), while the next syllable
+        // stands at 29.07.
+        // LILYPOND-REF: lily/lyric-extender.cc:80-84 print — right_point is
+        //   raised to the last head's extent RIGHT.
+        double endX = !crossesSystem
+            && HeldEndInkRight(current.Item, measuresByStaff, systems) is { } heldEnd
+                ? heldEnd
+                : next.X - next.Width / 2 - _params.ExtenderPadding;
         // Lyric baseline is stored Y-up from the system top; reflect back for the
         // still-device extender layout.
         double y = -current.YUp + _params.ExtenderYOffset;
@@ -576,6 +590,41 @@ internal sealed class LyricHyphenEngraver
             ExtenderEndX: endX,
             ExtenderY: y
         );
+    }
+
+    /// <summary>
+    /// Ink RIGHT edge (absolute X) of the LAST note the syllable's melisma markers
+    /// consumed (LyricItem.MelismaEndMeasureIndex/-Timing), or null when unknown —
+    /// no markers recorded, no score measures (unit tests without a score), or the
+    /// note's measure is not in the laid-out systems.
+    /// </summary>
+    private static double? HeldEndInkRight(
+        LyricItem lyric,
+        IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+        IReadOnlyList<SystemLayout> systems)
+    {
+        if (lyric.MelismaEndMeasureIndex < 0
+            || measuresByStaff == null
+            || !measuresByStaff.TryGetValue(lyric.StaffIndex, out var measures)
+            || lyric.MelismaEndMeasureIndex >= measures.Length)
+            return null;
+
+        MusicItem? held = null;
+        var onset = Fraction.Zero;
+        foreach (var it in measures[lyric.MelismaEndMeasureIndex].Items)
+        {
+            if (onset == lyric.MelismaEndTiming) { held = it; break; }
+            onset += it.Duration;
+        }
+        if (held == null)
+            return null;
+
+        foreach (var system in systems)
+            foreach (var m in system.Measures)
+                if (m.MeasureIndex == lyric.MelismaEndMeasureIndex)
+                    return m.X + m.GetXForTiming(lyric.MelismaEndTiming)
+                        + GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(held)).Right;
+        return null;
     }
 
 }

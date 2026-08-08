@@ -3885,7 +3885,7 @@ internal static class SpacingRules
     /// A stem is in the group but never widens it: it stands at a head's own edge.
     /// </para>
     /// </remarks>
-    internal static double[] ParentAlignmentCentresPerColumn(
+    internal static (double Left, double Centre)[] ParentAlignmentEdgesPerColumn(
         IReadOnlyList<Model.Measure> measures, IReadOnlyList<Fraction> timings)
     {
         var left = new double[timings.Count];
@@ -3910,13 +3910,15 @@ internal static class SpacingRules
             }
         }
 
-        var centres = new double[timings.Count];
+        // Both alignment points a self-aligned grob can take on the extent: its LEFT
+        // edge (a melisma syllable, lyricMelismaAlignment) and its CENTER (everything
+        // else). The placeholder extent is (0 . 1.35): left 0, centre half the width.
+        var edges = new (double Left, double Centre)[timings.Count];
         for (int t = 0; t < timings.Count; t++)
-            centres[t] = seen[t]
-                // The placeholder extent is (0 . 1.35), so its CENTER is half the width.
-                ? (left[t] + right[t]) / 2
-                : EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
-        return centres;
+            edges[t] = seen[t]
+                ? (left[t], (left[t] + right[t]) / 2)
+                : (0.0, EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2);
+        return edges;
     }
 
     /// <summary>

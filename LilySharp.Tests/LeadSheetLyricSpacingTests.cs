@@ -47,9 +47,9 @@ public class LeadSheetLyricSpacingTests
     /// LilyPond regime at all, so a test that quietly assumed one would be asserting Lily#'s
     /// old invention. See ledger lyric.syllable-centre.placeholder-column.
     /// </remarks>
-    private static double[] PlaceholderCentres(int columns) =>
+    private static (double Left, double Centre)[] PlaceholderCentres(int columns) =>
         Enumerable.Repeat(
-            LilySharp.Core.Svg.EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2,
+            (0.0, LilySharp.Core.Svg.EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2),
             columns).ToArray();
 
     [Fact]
@@ -91,7 +91,8 @@ public class LeadSheetLyricSpacingTests
         // column, where a syllable centred on the column would owe only the half width.
         // LILYPOND-REF: lily/self-alignment-interface.cc:117-176.
         Assert.Equal(
-            LyricSpacing.GetLyricRightExtent(new List<LyricItem> { what }, 0) + centres[3],
+            LyricSpacing.GetLyricRightExtent(new List<LyricItem> { what }, (0.0, 0.0))
+                + centres[3].Centre,
             LyricSpacing.GetLyricRightExtent(new List<LyricItem> { what }, centres[3]),
             precision: 6);
     }

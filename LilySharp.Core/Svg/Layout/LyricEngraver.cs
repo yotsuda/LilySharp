@@ -128,17 +128,19 @@ internal sealed class LyricEngraver
     private readonly LyricParameters _params;
 
     /// <summary>
-    /// The point on a column that a CENTER-aligned grob aligns to, by (measure index, timing)
-    /// — LilyPond's <c>he.linear_combination (CENTER)</c>. Supplied by the caller, which is
-    /// what holds the music; the default is the placeholder every staff-less column takes.
+    /// The points on a column a self-aligned grob can align to, by (measure index, timing):
+    /// the alignment extent's LEFT edge (a melisma syllable) and its CENTER (everything
+    /// else) — LilyPond's <c>he.linear_combination (align)</c>. Supplied by the caller,
+    /// which is what holds the music; the default is the placeholder every staff-less
+    /// column takes.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/self-alignment-interface.cc:121-139 — <c>he</c> is the paper column's
     /// note-column extent, falling back to <c>X-alignment-extent</c> when that is empty.
-    /// See <see cref="Svg.Layout.SpacingRules.ParentAlignmentCentresPerColumn"/> for which
+    /// See <see cref="Svg.Layout.SpacingRules.ParentAlignmentEdgesPerColumn"/> for which
     /// grobs are in that extent (MEASURED — heads and rests yes, accidentals and dots no).
     /// </remarks>
-    private readonly Func<int, Fraction, double> _parentAlignmentCentre;
+    private readonly Func<int, Fraction, (double Left, double Centre)> _parentAlignmentEdge;
 
     /// <summary>
     /// <c>system-system-spacing</c>'s padding — the term that rides on the minimum of the
@@ -168,12 +170,12 @@ internal sealed class LyricEngraver
 
     public LyricEngraver(
         LyricParameters? parameters = null,
-        Func<int, Fraction, double>? parentAlignmentCentre = null,
+        Func<int, Fraction, (double Left, double Centre)>? parentAlignmentEdge = null,
         double? systemPadding = null)
     {
         _params = parameters ?? LyricParameters.Default;
-        _parentAlignmentCentre = parentAlignmentCentre
-            ?? ((_, _) => EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2);
+        _parentAlignmentEdge = parentAlignmentEdge
+            ?? ((_, _) => (0.0, EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2));
         _systemPadding = systemPadding ?? VerticalSpacingParameters.Default.SystemSystem.Padding;
     }
 
@@ -1086,7 +1088,7 @@ internal sealed class LyricEngraver
         var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
         foreach (var (_, st, idx) in score.EnumerateStaves())
             measuresByStaff[idx] = st.PrimaryVoice.Measures;
-        return new LyricEngraver(parentAlignmentCentre: ParentAlignmentCentre(measuresByStaff, null));
+        return new LyricEngraver(parentAlignmentEdge: ParentAlignmentEdge(measuresByStaff, null));
     }
 
     /// <summary>
@@ -1107,19 +1109,19 @@ internal sealed class LyricEngraver
     /// the engraver is the thing that has to agree with itself.
     /// </para>
     /// </remarks>
-    internal static Func<int, Fraction, double> ParentAlignmentCentre(
+    internal static Func<int, Fraction, (double Left, double Centre)> ParentAlignmentEdge(
         IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
         ImmutableArray<Measure>? measures)
     {
         const double placeholderCentre = EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
-        var alignmentCentreCache = new Dictionary<int, Dictionary<Fraction, double>>();
-        return Centre;
+        var alignmentEdgeCache = new Dictionary<int, Dictionary<Fraction, (double Left, double Centre)>>();
+        return Edge;
 
-        double Centre(int measureIndex, Fraction timing)
+        (double Left, double Centre) Edge(int measureIndex, Fraction timing)
         {
-            if (!alignmentCentreCache.TryGetValue(measureIndex, out var byTiming))
+            if (!alignmentEdgeCache.TryGetValue(measureIndex, out var byTiming))
             {
-                byTiming = new Dictionary<Fraction, double>();
+                byTiming = new Dictionary<Fraction, (double Left, double Centre)>();
                 // EVERY staff's bar at this index — a paper column is shared by all of them,
                 // and so is the extent a grob on it aligns to.
                 var barMeasures = new List<Measure>();
@@ -1145,14 +1147,14 @@ internal sealed class LyricEngraver
                 }
                 barTimings.Sort();
 
-                var centres = SpacingRules.ParentAlignmentCentresPerColumn(barMeasures, barTimings);
+                var edges = SpacingRules.ParentAlignmentEdgesPerColumn(barMeasures, barTimings);
                 for (int c = 0; c < barTimings.Count; c++)
-                    byTiming[barTimings[c]] = centres[c];
-                alignmentCentreCache[measureIndex] = byTiming;
+                    byTiming[barTimings[c]] = edges[c];
+                alignmentEdgeCache[measureIndex] = byTiming;
             }
             // A moment no staff plays on — a lyric row's own finer grid — has an empty
             // note-column extent, which is exactly when LilyPond takes the placeholder.
-            return byTiming.TryGetValue(timing, out var centre) ? centre : placeholderCentre;
+            return byTiming.TryGetValue(timing, out var edge) ? edge : (0.0, placeholderCentre);
         }
     }
 
@@ -1399,13 +1401,23 @@ internal sealed class LyricEngraver
         // `column + he.centre`: the -w/2 that centres it and the +w/2 back to the centre
         // cancel, which is why this needs no text width at all.
         // `he` is the column's note-column extent, or the (0 . 1.35) placeholder when the
-        // column carries no rhythmic grob — SpacingRules.ParentAlignmentCentresPerColumn.
+        // column carries no rhythmic grob — SpacingRules.ParentAlignmentEdgesPerColumn.
         // MEASURED (audit/lp-geometry/probes/staffless-system.ly): 0.675000 with no note
         // head (CLI/CLA), 0.688700 over a 1.377400 head (LSH), 0.750000 over a half rest
         // (LSR); ledger lyric.syllable-centre.{placeholder-column,note-column}.
         // ⚠️ Lily# used to draw the syllable centred on the column itself, i.e. with this
         // term missing entirely — both regimes, not one branch of them.
-        double syllableX = noteX + _parentAlignmentCentre(lyric.MeasureIndex, lyric.Timing);
+        //
+        // A MELISMA syllable is LEFT-aligned instead: self_align = LEFT puts its ink
+        // LEFT on `column + he.left` (the stored X stays the ink centre, so + w/2).
+        // MEASURED (lyric-melisma-melisma twin): LP "looong" ink left 26.9292 = the
+        // c16 head's ink left, exactly.
+        // LILYPOND-REF: lily/lyric-engraver.cc:180-183 melisma_busy →
+        //   self-alignment-X = lyricMelismaAlignment (default LEFT).
+        var edge = _parentAlignmentEdge(lyric.MeasureIndex, lyric.Timing);
+        double syllableX = lyric.MelismaAlignLeft
+            ? noteX + edge.Left + textWidth / 2
+            : noteX + edge.Centre;
 
         // y is the verse baseline in system-relative device (down+ from the system
         // top); store it Y-up from the system top (= its negation), offset-free.

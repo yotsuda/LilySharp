@@ -89,5 +89,20 @@ public sealed record LyricItem(
     // `~`-marked per-occurrence verse (`[~2. …]`): the words apply to the pass but
     // the number label is hidden. Does not affect the multi-verse count, so other
     // verses still get their numbers.
-    bool HideStanza = false
+    bool HideStanza = false,
+
+    // True when this syllable holds over following notes (a melisma marker
+    // `~`/`__`/`_` follows it): it is then LEFT-aligned on its column instead of
+    // centred — its ink left lands on the alignment extent's left edge.
+    // LILYPOND-REF: lily/lyric-engraver.cc:180-183 stop_translation_timestep —
+    //   a syllable on a melisma_busy voice takes self-alignment-X =
+    //   lyricMelismaAlignment (default LEFT).
+    bool MelismaAlignLeft = false,
+
+    // The LAST note this syllable's melisma markers consumed (-1 = none): where
+    // an extender (`__`) ends — at that head's ink right, not at the next
+    // syllable. LILYPOND-REF: lily/lyric-extender.cc:80-84 print — right_point
+    //   is raised to the last head's extent RIGHT.
+    int MelismaEndMeasureIndex = -1,
+    LilySharp.Core.Semantics.Fraction MelismaEndTiming = default
 );

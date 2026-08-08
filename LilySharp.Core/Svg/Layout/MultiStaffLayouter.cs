@@ -1166,11 +1166,11 @@ internal sealed class MultiStaffLayouter
             // centre, or the placeholder's when the column has neither. The syllable reaches
             // from there, not from the column.
             // LILYPOND-REF: lily/self-alignment-interface.cc:121-139.
-            var alignmentCentres = SpacingRules.ParentAlignmentCentresPerColumn(
+            var alignmentEdges = SpacingRules.ParentAlignmentEdgesPerColumn(
                 allMeasures, allTimings);
             var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
                 springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet,
-                alignmentCentres);
+                alignmentEdges);
             var chordWidth = SpacingRules.ChordInkRightReachPerColumn(
                 allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
             var leftOverhangs = new double[allTimings.Count];
@@ -1444,10 +1444,10 @@ internal sealed class MultiStaffLayouter
                 // (chords and lyrics subdivide the bar differently), so reserve by column.
                 ? LyricSpacing.ApplyLeadSheetLyricSpacing(
                     springs, allTimings, measureIndex, score.Lyrics,
-                    SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings))
+                    SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings))
                 : LyricSpacing.ApplyLyricSpacing(
                     springs, primaryMeasure, allTimings, measureIndex, score.Lyrics,
-                    SpacingRules.ParentAlignmentCentresPerColumn(allMeasures, allTimings));
+                    SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings));
         }
         if (score.IsLeadSheet)
         {

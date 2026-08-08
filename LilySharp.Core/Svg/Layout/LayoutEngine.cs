@@ -3570,7 +3570,7 @@ internal sealed class LayoutEngine
         }
 
         var engraver = new LyricEngraver(
-            parentAlignmentCentre: LyricEngraver.ParentAlignmentCentre(measuresByStaff, measures),
+            parentAlignmentEdge: LyricEngraver.ParentAlignmentEdge(measuresByStaff, measures),
             systemPadding: _options.VerticalSpacing.SystemSystem.Padding);
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,

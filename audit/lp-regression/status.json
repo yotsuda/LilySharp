@@ -4066,7 +4066,9 @@
     },
     "lyric-melisma-melisma.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "A syllable aligned with a melisma delimited with \\melisma and \\melismaEnd should be left-aligned",
+      "notes": "fixed 第39号(第112第2便)。両側置換: \\melisma/\\melismaEnd→slur(Lily#に手動melisma綴りなし。LPはslurでもmelismaBusy=lyric-engraver.cc:180-183の同機構)。twin scratch\\lpreg\\lymelmel.{ly,lys,svg,-ls.svg}。修理3件: (1)melisma音節の左揃え=LyricItem.MelismaAlignLeft(collectorで~/__/_が続く音節に印)+alignment供給を(centre)→(Left,Centre)拡張(ParentAlignmentEdgesPerColumn)——描画と予約が同式(LyricEngraver+LyricSpacing両方)。LP照合: looong ink左=c16頭ink左=LS 18.39/LP 18.393(頁X-8.5358)完全一致・ha/hoは中心揃えのまま一致 (2)予約のspan化=by-item ApplyLyricSpacingの隣接pair押しをby-column同様のBumpSpanMinスパン束縛へ(melismaの保持音を音節幅で押していた)——d/e/f16の列XがLP桁一致(20.90/23.40/25.91) (3)extender右端=~が消費した最終音の頭ink右(MelismaEndMeasureIndex/Timing記録→HeldEndInkRight)=LS 27.21/LP 27.210桁一致(旧: 次音節手前まで31.79に走った)。観測者+2(collector印/e2e ink左=頭ink左)。snapshot 2枚(test__lyrics+lyrics-verses=~入りfixtureのみ・melisma音節左揃え+同行respacing+歌詞基線+0.01=skyline標本追随・census済)。残差開示: g4列+4.3(BumpSpanMinが不足分を最終springに集中+ideal引き上げ=rod配分regime・LILYSHARP-OWN)・extender始端=音節右+0.2 padding(LPはink右直=第36号既開示)"
     },
     "lyric-no-association-rhythm.ly": {
       "category": "scheme",

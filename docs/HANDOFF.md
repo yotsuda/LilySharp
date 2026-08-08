@@ -58,8 +58,30 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第112セッション第1便（＝fixed **第38号 = lyric-hyphen-grace.ly**・
-この handoff と同 commit）。
+最終更新 第112セッション第2便（＝第1便 fixed **第38号 = lyric-hyphen-grace.ly**・`59bed8c3`・
+第2便 fixed **第39号 = lyric-melisma-melisma.ly**・この handoff と同 commit）。
+
+★★★ **第2便 fixed 第39号 = lyric-melisma-melisma.ly**（melisma 音節は左揃え）:
+- **両側置換**: \melisma/\melismaEnd → slur（Lily# に手動 melisma 綴りなし。LP は slur でも
+  melismaBusy = lyric-engraver.cc:180-183 の同機構）。
+- **修理 3 件**: ⑴ **melisma 音節の左揃え** = LyricItem.MelismaAlignLeft（collector で
+  ~/__/_ が続く音節に印）+ alignment 供給を (centre)→(Left, Centre) へ拡張
+  （ParentAlignmentEdgesPerColumn）——**描画と予約が同式**（LyricEngraver + LyricSpacing）。
+  LP 照合: looong ink 左 = c16 頭 ink 左 = 18.39/18.393 完全一致・ha/ho は中心のまま一致。
+  ⑵ **予約の span 化**: by-item ApplyLyricSpacing の隣接 pair 押し（melisma の保持音を
+  音節幅で押す）→ by-column 同様の BumpSpanMin スパン束縛。d/e/f16 列 X が LP 桁一致
+  （20.90/23.40/25.91）。⑶ **extender 右端 = ~ が消費した最終音の頭 ink 右**
+  （MelismaEndMeasureIndex/Timing を collector が記録 → HeldEndInkRight）= 27.21/27.210
+  桁一致（旧: 次音節手前 31.79 まで走った）。
+- **観測者 +2**（LyricMelismaAlignmentTests: collector 印 + e2e ink 左 = 頭 ink 左）・
+  **snapshot 2 枚**（test__lyrics + lyrics-verses = `~` 入り fixture のみ。melisma 音節の
+  左揃え + 同行 respacing + 歌詞基線 +0.01 = skyline 標本追随・census 済）。
+- **開示**: g4 列 +4.3 = BumpSpanMin が span 不足分を最終 spring に集中し ideal も引き上げる
+  rod 配分 regime（LILYSHARP-OWN・LP は spacer が rod を全 spring に配る）・extender 始端 =
+  音節右 +0.2 padding（第36号既開示）。perf: 呼び出し構造不変（edge tuple 化 + 印読みのみ）
+  = A/B 省略。
+- **学び**: `saved~ |`（小節内に消費音が無い `~`）も左揃えの印は立てる——held-end 記録だけ
+  音がある時に限る（ゲートを共有すると snapshot が割れて教えてくれた）。
 
 ★★★ **第1便 fixed 第38号 = lyric-hyphen-grace.ly**（行頭 grace の下に hyphen を刷らない）:
 - **修理 = LyricHyphen print regime 丸ごと**（第111便7の下見どおり）: CalculateHyphenLayout を
@@ -84,16 +106,16 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   実用回避）⑶ LP twin svg の頁 X は譜線開始 8.5358 を引いて staff 相対で読む（memory 記載の
   再演——引かずに「11.90 は何の右縁?」を一周した）。
 
-plain 322 / 処理済 **149**（fixed **38**・exact **25**・skip **74**・open **12**・
-pending 173。数えたら state 別内訳も一緒に書くこと）。
+plain 322 / 処理済 **150**（fixed **39**・exact **25**・skip **74**・open **12**・
+pending 172。数えたら state 別内訳も一緒に書くこと）。
 frontier は **pending の次の本**（§0 どおり status.json から取ること——固定で書くと腐る）。
 第107 起票の §2A workstream は棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4193 passed / 0 failed / 4 skipped**（観測者 +3 込み・全スイート確認済）・
+テスト **4195 passed / 0 failed / 4 skipped**（観測者 +5 込み・全スイート確認済）・
 lp-geometry 台帳は今セッション非接触（481 点のまま）・**Core (Debug) 0 warning・
-snapshot 第112 は 11 枚（第1便 hyphen census）**・base worktree = C:\MyProj\LilySharp-base
-（cc19cccc・残置）。
+snapshot 第112 は 13 枚（第1便 hyphen 11 + 第2便 melisma 2・census 各便）**・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 
 ## 以下は第111セッション第1〜9便の経緯
 
