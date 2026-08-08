@@ -1312,10 +1312,15 @@ internal static class SpacingRules
             double corr = CalculateStemCorrection(left, ApproachColumn(right), noteParams);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
-            // strength (lily/spring.cc:131-141).
+            // strength (lily/spring.cc:131-141). The clamp is at ZERO, not at the minimum
+            // (:113 max (0.0, ideal)) — the caller has already replaced the base spring's
+            // minimum with the skyline distance, and a knee pull may legitimately take
+            // the ideal below the old increment floor (spacing-correction-accidentals.ly:
+            // the down→up pair's ideal is 1.330, under the 1.2 + 0.3 headroom the old
+            // min-clamped spelling froze it at).
             wishes.Add(corr != 0
                 ? baseSpring.WithIdealDistance(
-                    Math.Max(baseSpring.MinDistance, baseSpring.IdealDistance + corr))
+                    Math.Max(0.0, baseSpring.IdealDistance + corr))
                 : baseSpring);
         }
         return wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;

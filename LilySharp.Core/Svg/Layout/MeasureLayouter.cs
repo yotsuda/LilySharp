@@ -370,12 +370,6 @@ internal sealed class MeasureLayouter
         var changeGaps = SpacingRules.MidMeasureChangeGaps(
             nextItems, prevItems, spring.IdealDistance);
 
-        // Stem-direction optical correction ([Wanske]), merged across simultaneous
-        // voices' wishes (single voice = its own wish; polyphony = averaged).
-        if (changeGaps is null)
-            spring = SpacingRules.MergeVoiceStemWishes(
-                spring, measuresToScan, timings[i - 1], timings[i],
-                NoteSpacingParameters.Default);
         // Collision rods are PER VOICE: two noteheads force a horizontal minimum only when the
         // SAME voice puts one at each of these adjacent columns. Pairing items across voices/staves
         // (as the aggregated prev/nextItems do, all at staffY 0) made a triplet note in ONE staff
@@ -403,12 +397,14 @@ internal sealed class MeasureLayouter
         // while every spring-bound book in the same set stayed EXACT.
         double maxSkyDist = 0;
         double maxRod = 0;
+        bool anyWish = false;
         foreach (var vm in measuresToScan)
         {
             var prev = ItemStartingAt(vm, timings[i - 1]);
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)
                 continue;
+            anyWish = true;
             // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the
             //   spring's own minimum, taken with the right column's skyline-vertical-padding
             //   and with NO spanner padding.
@@ -425,12 +421,36 @@ internal sealed class MeasureLayouter
             // LILYPOND-REF: lily/beam.cc:429-449 tremolo_springs_and_rods.
             maxRod = Math.Max(maxRod, SpacingRules.TremoloPairRod(prev, next));
         }
-        // LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance — raising the
-        // minimum leaves BOTH strengths where the duration spring put them, so the
-        // compressibility stays fraction * (duration_space - increment) and does not become
-        // ideal - skyline. Measured against LilyPond's own compressed line: 1.698045 for a
-        // quarter-to-quarter spring (audit/lp-geometry/probes/compressed-line-force.ly).
-        spring = spring.EnsureMinDistance(maxSkyDist);
+        // The wish REPLACES the base spring's increment minimum with the skyline
+        // distance — set_min_distance, not ensure — so a pair whose columns never meet
+        // in Y carries min 0 and merge_springs' +0.3 headroom is measured from THERE,
+        // not from the increment. Maxing with the increment instead held every such
+        // floor at 1.2 + 0.3 = 1.5: the down→up KNEE pair of
+        // spacing-correction-accidentals.ly has ideal 1.330 (base − 1.2 + 1.3042 −
+        // 1.1742 knee) and LilyPond draws exactly that; the old ensure shipped 1.500.
+        // A pair with NO wish (a voice boundary) keeps the base spring untouched,
+        // increment minimum and all — spacing-spanner.cc:380-391 uses the base spring
+        // only when the wish list is empty.
+        // Both strengths stay where the duration spring put them (the compressibility
+        // stays fraction * (duration_space - increment) and does not become
+        // ideal - skyline). Measured against LilyPond's own compressed line: 1.698045 for
+        // a quarter-to-quarter spring (audit/lp-geometry/probes/compressed-line-force.ly).
+        // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing —
+        //   min_dist = max (0.0, distance); base.set_min_distance (min_dist);
+        // LILYPOND-REF: lily/spacing-spanner.cc:380-391 musical_column_spacing — the
+        //   base spring survives only when springs.empty ().
+        if (anyWish)
+            spring = spring.WithMinDistance(Math.Max(0.0, maxSkyDist));
+
+        // Stem-direction optical correction ([Wanske]), merged across simultaneous
+        // voices' wishes (single voice = its own wish; polyphony = averaged). Runs
+        // AFTER the min replacement above because every wish inside carries that same
+        // skyline minimum — get_spacing sets it on each wish BEFORE merge_springs, so
+        // the merge's +0.3 floor stands on the skyline, not on the increment.
+        if (changeGaps is null)
+            spring = SpacingRules.MergeVoiceStemWishes(
+                spring, measuresToScan, timings[i - 1], timings[i],
+                NoteSpacingParameters.Default);
 
         // The change column's two gaps, computed above, become this one spring — see
         // SpacingRules.MidMeasureChangeGaps for the derivation, the measurements, and what

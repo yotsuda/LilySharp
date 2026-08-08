@@ -7302,7 +7302,9 @@
     },
     "spacing-correction-accidentals.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "右列に臨時記号があっても optical spacing correction は効く（stem 向きが違う対のみ）",
+      "notes": "fixed51: claim自体は両エンジン成立(♯有無で全gap不変=対照twin spacc-corr-noacc)。乖離=down→up knee対の列間 LS1.50 vs LP1.33(+0.17)。root=spring wishのminがincrement 1.2のままMergeSpringsに入り+0.3床が1.5でidealを凍結——LPはget_spacingがwishごとにmin←max(0,skyline距離)へ置換(note-spacing.cc:78-83)し、merge_springsの床はskylineの上(spring.cc:122)。knee項±1.1742自体は正しかった(debug実測)。修理: ⑴CreateInterColumnSpringでwish存在時にWithMinDistance置換(EnsureMinでなく)+MergeVoiceStemWishesを置換後に実行 ⑵wish idealのclampをmin→0.0(:113の字面。barline側は元から0)。修理後全列LP exact(頭8.49/12.17/14.67/16.00・♯10.71/14.55)。snapshot 0・台帳不動=旧床を踏む形(knee pull)はfixture未踏。観測者=KneeSpringFloorTests.DownUpKneePair_PullsUnderTheIncrementFloor(LP6点ピン)。twin=scratch\\lpreg\\spacc-corr{,-noacc}.{lys,-gen.ly,svg,-lp.svg}"
     },
     "spacing-empty-bar.ly": {
       "category": "plain",

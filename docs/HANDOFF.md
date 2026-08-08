@@ -62,7 +62,29 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 trill span の to-barline port**・`e94a2583`・第2便 **fixed 第50号 =
 spacing-accidental-rest.ly = voiced rest の separation 箱 port**・`80c4eede`・
 第3便 **spacing-accidental-stretch.ly = exact（コード変更 0・伸縮分配の初照合）**・
-この handoff と同 commit）。
+`18e0b6da`・第4便 **fixed 第51号 = spacing-correction-accidentals.ly = spring wish
+の min 置換（increment 床の撤去）**・この handoff と同 commit）。
+
+★★★ **第4便 spacing-correction-accidentals.ly（claim: 右列に臨時記号があっても
+optical correction は効く——stem 向きが違う対のみ）= fixed 第51号**:
+- **claim 自体は両エンジンで成立**（♯を抜いた対照 twin spacc-corr-noacc で全 gap
+  不変を両側確認）。乖離 = **down→up knee 対の列間 LS 1.50 vs LP 1.33（+0.17）**。
+- **root = spring wish の min が increment 1.2 のまま MergeSprings に入り、
+  +0.3 headroom（spring.cc:122）が ideal 1.330 を 1.5 で凍結**していた。LP は
+  get_spacing が wish ごとに **min ← max(0, skyline 距離) へ置換**
+  （note-spacing.cc:78-83 set_min_distance——`Spring.WithMinDistance` の doc が
+  まさに引用していた家・呼び手だけが Ensure を使っていた = trill to-barline と
+  同型）。knee 項 ±1.1742 自体は正しかった（一時 debug 実測・撤去済）。
+- **修理 2 点**: ⑴ CreateInterColumnSpring で wish 存在時（voice 境界は除外＝
+  spacing-spanner.cc:380-391 の springs.empty 分岐）に WithMinDistance 置換・
+  MergeVoiceStemWishes を**置換後**に実行 ⑵ wish ideal の clamp を
+  min → **0.0**（note-spacing.cc:113 の字面。barline 側は元から 0 だった）。
+- **照合: 全列 LP exact**（頭 8.49/12.17/14.67/16.00・♯ 10.71/14.55——♯が高い
+  左頭の下に tuck する所まで）。**snapshot 0・台帳不動**＝旧床 1.5 を下回る形
+  （knee pull）は既存 fixture 未踏で、この本が初めて踏んだ。
+- 観測者 = KneeSpringFloorTests.DownUpKneePair_PullsUnderTheIncrementFloor
+  （LP 6 点ピン）。⚠️ 圧縮行は min が下がった分深く潰せるようになったが、
+  compressed-line-force 台帳・全 snapshot 不動＝現コーパスの圧縮は未到達。
 
 ★★ **第3便 spacing-accidental-stretch.ly（claim: 臨時記号は伸縮空間の量に影響
 しない）= exact**:
@@ -117,20 +139,20 @@ spacing-accidental-rest.ly = voiced rest の separation 箱 port**・`80c4eede`�
 - 観測者 = TrillSpannerTests.MeasureStartStop_EndsTheWaveAtTheBarline（LP 4 点
   ピン）。snapshot 0 枚・台帳不動（既存 trill fixture/probe は全部 mid-measure stop）。
 
-plain 322 / 処理済 **265**（fixed **50**・exact **35**・skip **164**・open **16**・
-pending **57**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **spacing-correction-accidentals**（spacing 族の 3 冊目）。
+plain 322 / 処理済 **266**（fixed **51**・exact **35**・skip **164**・open **16**・
+pending **56**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **spacing-empty-bar**（spacing 族の 4 冊目）。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
 入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4218 passed / 0 failed / 4 skipped**（第1便観測者+1・第2便観測者+1・
+テスト **4219 passed / 0 failed / 4 skipped**（第1・2・4便で観測者+3・
 全スイート確認済）・snapshot 第119 は **1 枚**（第2便 cross-voice-accidental・
 census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
 C:\MyProj\LilySharp-perfbase-0c63（第118 残置）。
 probe 残置: **scratch\lpreg\slurvsky.{lys,svg,-gen.ly,-lp.svg,-lp.log}＋
-extract-slurvsky-lp.ps1・spacc-rest.*・spacc-stretch.*
+extract-slurvsky-lp.ps1・spacc-rest.*・spacc-stretch.*・spacc-corr{,-noacc}.*
 （第119 の双子・観測者の照合材）**＋第118 以前の
 slurrest-fig4/slurshift/slurgrace 一式（下の第118 の節参照）。
 
