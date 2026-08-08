@@ -203,9 +203,10 @@ internal static class ArticulationEngraver
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, Staff>? staffByIndex = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        ImmutableArray<TieLayout> tieLayouts = default)
+        ImmutableArray<TieLayout> tieLayouts = default,
+        ImmutableArray<SlurLayout> slurLayouts = default)
         => CalculateWithFingerings(score, articulations, measureLayouts, measuresByStaff,
-            staffYAt, staffByIndex, beamLayouts, tieLayouts, default, out _);
+            staffYAt, staffByIndex, beamLayouts, tieLayouts, slurLayouts, default, out _);
 
     // The Fingering grob's own side-position padding (its vertical float off whatever
     // supports it in the column) — the Script table does not carry it because Fingering
@@ -244,6 +245,7 @@ internal static class ArticulationEngraver
         Dictionary<int, Staff>? staffByIndex,
         ImmutableArray<BeamLayout> beamLayouts,
         ImmutableArray<TieLayout> tieLayouts,
+        ImmutableArray<SlurLayout> slurLayouts,
         ImmutableArray<FingeringLayout> fingerings,
         out ImmutableArray<FingeringLayout> adjustedFingerings)
     {
@@ -285,6 +287,37 @@ internal static class ArticulationEngraver
                 if (!tiesAtBound.TryGetValue(key, out var list))
                     tiesAtBound[key] = list = new List<TieLayout>();
                 list.Add(t);
+            }
+        }
+
+        // The drawn slurs by (staff, voice, measure) — every measure a slur's span
+        // touches carries its pieces, so a script's lookup is one dictionary hit
+        // and a scan of that measure's few slurs, not the voice's whole list. A
+        // script on any note a slur COVERS (start note through end note —
+        // Slur_engraver acknowledges every Script grob made while its slur runs)
+        // gets outside_slur_callback chained onto its side-position answer, keyed
+        // by its avoid-slur declaration. Unlike the ties above there is NO
+        // chord-member gate: a member's Script grob is acknowledged like any other
+        // (ADD_ACKNOWLEDGER (script) matches the grob, not its maker).
+        // LILYPOND-REF: lily/slur-engraver.cc:162-167 acknowledge_script;
+        //   lily/slur.cc:388-402 auxiliary_acknowledge_extra_object — 'outside /
+        //   'around chain outside_slur_callback, 'inside becomes extra encompass
+        //   (the SLUR bends, the script stays), 'ignore does nothing.
+        Dictionary<(int Staff, int Voice, int Measure), List<SlurLayout>>? slursAtMeasure = null;
+        if (!slurLayouts.IsDefaultOrEmpty)
+        {
+            slursAtMeasure = new Dictionary<(int, int, int), List<SlurLayout>>();
+            foreach (var s in slurLayouts)
+            {
+                int slurStaff = Math.Max(s.StaffIndex, 0);
+                var sl = s.Slur;
+                for (int m = sl.StartMeasureIndex; m <= sl.EndMeasureIndex; m++)
+                {
+                    var key = (slurStaff, sl.VoiceIndex, m);
+                    if (!slursAtMeasure.TryGetValue(key, out var list))
+                        slursAtMeasure[key] = list = new List<SlurLayout>();
+                    list.Add(s);
+                }
             }
         }
 
@@ -884,6 +917,35 @@ internal static class ArticulationEngraver
                     layout = layout with { YUp = yUp };
                 }
             }
+
+            // A slur covering this note pushes an 'around/'outside script off its
+            // bow — CHAINED ON TOP of the side-position answer, the way LilyPond
+            // chains outside_slur_callback after aligned_side, and BEFORE this
+            // script becomes a support: the scripts stacked above ride up with it
+            // through the chain, which is why LP's slurred stack moves as one rigid
+            // body. An 'inside script (staccato/tenuto/…) stays put — LP makes it
+            // extra encompass instead, i.e. the SLUR is the one that moves (that
+            // half is the slur scorer's and is NOT ported here; disclosed below).
+            // LILYPOND-REF: lily/slur.cc:262-359 outside_slur_callback.
+            if (slursAtMeasure != null
+                && slursAtMeasure.TryGetValue((effArt.StaffIndex, effArt.VoiceIndex,
+                    effArt.MeasureIndex), out var voiceSlurs))
+            {
+                var policy = SlurAvoidanceOf(effArt.Type);
+                if (policy is SlurAvoid.Around or SlurAvoid.Outside
+                    && CoveringSlurPiece(voiceSlurs, effArt.MeasureIndex,
+                        effArt.ItemIndex) is { } slurPiece)
+                {
+                    double shift = SlurAvoidanceShift(slurPiece, layout, yUp,
+                        staffOffset, around: policy == SlurAvoid.Around);
+                    if (shift != 0.0)
+                    {
+                        yUp += shift;
+                        layout = layout with { YUp = yUp };
+                    }
+                }
+            }
+
             if (anyMover)
                 lastOnKey[stackKey] = (declaredOsp, layout.OutsideStaffPriority);
             if (layout.OutsideStaffPriority is null)
@@ -957,6 +1019,159 @@ internal static class ArticulationEngraver
         !a.IsChordMember
         && !a.IsEditorialAccidental
         && a.Type is not (ArticulationType.Pluck or ArticulationType.FretFrame);
+
+    /// <summary>How a script relates to a slur that covers its note.</summary>
+    private enum SlurAvoid { Ignore, Inside, Around, Outside }
+
+    // The Script grob's slur-padding — the widening of the script's box before the
+    // slur avoidance is measured (Fingering declares the same 0.2). The property
+    // name is a two-section hyphen word, which the citation ratchet rightly
+    // refuses as a symbol — so the address stays line-less on purpose.
+    // LILYPOND-REF: scm/define-grobs.scm Script, the slur-padding declaration (0.2).
+    private const double ScriptSlurPadding = 0.2;
+
+    /// <summary>
+    /// The avoid-slur declaration of each mark Lily# spells — one arm per
+    /// scm/script.scm entry. 'inside means the SLUR goes around the script (extra
+    /// encompass — the slur scorer's half, not handled here); 'around/'outside
+    /// mean the script is pushed off the bow; the marks with no LP Script grob
+    /// (editorial, pluck, frame, tab letters, bends, breaths) fall to Ignore —
+    /// no Slur_engraver ever acknowledges them.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/script.scm avoid-slur declarations.</remarks>
+    private static SlurAvoid SlurAvoidanceOf(ArticulationType t) => t switch
+    {
+        ArticulationType.Staccato or ArticulationType.Staccatissimo
+            or ArticulationType.Tenuto or ArticulationType.Marcato
+            or ArticulationType.Stopped or ArticulationType.Turn
+            or ArticulationType.InvertedTurn => SlurAvoid.Inside,
+        ArticulationType.Trill or ArticulationType.SnapPizz => SlurAvoid.Outside,
+        ArticulationType.Accent or ArticulationType.Portato
+            or ArticulationType.Fermata or ArticulationType.FermataShort
+            or ArticulationType.FermataLong or ArticulationType.Flageolet
+            or ArticulationType.UpBow or ArticulationType.DownBow
+            or ArticulationType.Mordent or ArticulationType.Prall
+            or ArticulationType.PrallTriller or ArticulationType.Thumb
+            or ArticulationType.Heel or ArticulationType.Toe => SlurAvoid.Around,
+        _ => SlurAvoid.Ignore,
+    };
+
+    /// <summary>
+    /// The slur piece whose span covers the note at (<paramref name="m"/>,
+    /// <paramref name="i"/>), or null. The span test is the SLUR's (start note
+    /// through end note inclusive — the timesteps Slur_engraver acknowledges
+    /// scripts in); among a broken slur's pieces the one on the script's own
+    /// system answers, picked as the piece with the greatest start measure not
+    /// past the note (a piece that lost its left bound starts at its own system's
+    /// first measure = RenderMeasureIndex).
+    /// </summary>
+    private static SlurLayout? CoveringSlurPiece(List<SlurLayout> voiceSlurs, int m, int i)
+    {
+        SlurLayout? best = null;
+        int bestStart = int.MinValue;
+        foreach (var s in voiceSlurs)
+        {
+            var sl = s.Slur;
+            bool onOrAfterStart = sl.StartMeasureIndex < m
+                || (sl.StartMeasureIndex == m && sl.StartItemIndex <= i);
+            bool onOrBeforeEnd = m < sl.EndMeasureIndex
+                || (m == sl.EndMeasureIndex && i <= sl.EndItemIndex);
+            if (!onOrAfterStart || !onOrBeforeEnd)
+                continue;
+            int pieceStart = s.IsBrokenLeft ? s.RenderMeasureIndex : sl.StartMeasureIndex;
+            if (pieceStart > m)
+                continue;
+            if (best == null || pieceStart > bestStart)
+            {
+                best = s;
+                bestStart = pieceStart;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// LilyPond's outside_slur_callback: the rigid Y shift that puts this script
+    /// off the slur's bow, or 0. The script's padded ink box is tested against the
+    /// curve — 'around shifts only when the curve actually enters the box,
+    /// 'outside when the curve pokes past the box's near edge at the script's x
+    /// edges — and the shift is the curve's extremum over the box's x-overlap
+    /// minus the box's near edge, signed by the script's direction. The curve is
+    /// the CENTRELINE control polygon (no sandwich, no pen: LP reads
+    /// Slur::get_curve), flattened by sampling where LP solves exactly.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur.cc:262-359 outside_slur_callback — the contains
+    ///   test (:298-303), the padded-box widen (:309-311), the 'outside edge test
+    ///   (:316-327), the 'around box-crossing test (:328-348) and the
+    ///   curve.minmax − yext[-dir] shift (:350-356).
+    /// </remarks>
+    private static double SlurAvoidanceShift(
+        SlurLayout piece, in ArticulationLayout layout, double yUp,
+        double staffOffset, bool around)
+    {
+        var ink = layout.Ink;
+        double xL = layout.X + ink.Left, xR = layout.X + ink.Right;
+        // LP's guard is on extent length, not emptiness (0-extent tab scripts).
+        if (xR - xL <= 0 || ink.Top - ink.Bottom <= 0)
+            return 0.0;
+        double dy = staffOffset + StaffMiddle;
+        double p0x = piece.StartX, p0y = piece.StartYUp + dy;
+        double p3x = piece.EndX, p3y = piece.EndYUp + dy;
+        double p1x = piece.Control1.X, p1y = piece.Control1.Y + dy;
+        double p2x = piece.Control2.X, p2y = piece.Control2.Y + dy;
+        // contains: either x edge of the script inside the curve's x span.
+        if (!((xL >= p0x && xL <= p3x) || (xR >= p0x && xR <= p3x)))
+            return 0.0;
+        double dir = layout.IsAbove ? 1.0 : -1.0;
+        double yBottom = yUp + ink.Bottom - ScriptSlurPadding;
+        double yTop = yUp + ink.Top + ScriptSlurPadding;
+        const double Eps = 1e-5;
+        double lo = Math.Max(xL, p0x + Eps), hi = Math.Min(xR, p3x - Eps);
+        if (lo > hi)
+            return 0.0;
+        const int Samples = 64;
+        bool doShift = false;
+        double extreme = dir > 0 ? double.NegativeInfinity : double.PositiveInfinity;
+        double prevX = 0.0, prevY = 0.0;
+        for (int i = 0; i <= Samples; i++)
+        {
+            double t = (double)i / Samples;
+            double mt = 1 - t;
+            double b0 = mt * mt * mt, b1 = 3 * mt * mt * t, b2 = 3 * mt * t * t, b3 = t * t * t;
+            double x = b0 * p0x + b1 * p1x + b2 * p2x + b3 * p3x;
+            double y = b0 * p0y + b1 * p1y + b2 * p2y + b3 * p3y;
+            if (!doShift)
+            {
+                if (around)
+                {
+                    doShift = x >= xL && x <= xR && y >= yBottom && y <= yTop;
+                }
+                else if (i > 0 && x > prevX)
+                {
+                    // 'outside: the curve's y AT the script's clamped x edges,
+                    // past the box's near edge.
+                    foreach (double xe in stackalloc[] { lo, hi })
+                        if (prevX <= xe && x >= xe)
+                        {
+                            double ye = prevY + (y - prevY) * (xe - prevX) / (x - prevX);
+                            if (dir > 0 ? ye >= yBottom : ye <= yTop)
+                            {
+                                doShift = true;
+                                break;
+                            }
+                        }
+                }
+            }
+            if (x >= lo && x <= hi)
+                extreme = dir > 0 ? Math.Max(extreme, y) : Math.Min(extreme, y);
+            prevX = x;
+            prevY = y;
+        }
+        if (!doShift || double.IsInfinity(extreme))
+            return 0.0;
+        return extreme - (dir > 0 ? yBottom : yTop);
+    }
 
     /// <summary>
     /// One tie's drawn bow as a side-position support profile, in the script frame

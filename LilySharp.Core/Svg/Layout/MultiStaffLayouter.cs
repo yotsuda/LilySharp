@@ -2156,18 +2156,20 @@ internal sealed class MultiStaffLayouter
                     ? ImmutableArray<DynamicItem>.Empty
                     : score.Dynamics.Where(d => d.StaffIndex == thisStaff).ToImmutableArray();
                 var beams = StaffBeamLayouts(score, staff, thisStaff, measureLayouts, systemIndex);
-                // Ties before scripts: a script on a tie's bound note clears the bow
-                // (its tie SUPPORT — see StaffArticulationLayouts), so the band the
-                // skyline reserves for it has to be the raised one the drawn pass draws.
+                // Ties and slurs before scripts: a script on a tie's bound note
+                // clears the bow (its tie SUPPORT), and one under a slur rides off
+                // the slur's bow (outside_slur_callback) — see
+                // StaffArticulationLayouts — so the band the skyline reserves for
+                // it has to be the raised one the drawn pass draws.
                 var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
+                var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
                 // The staff's own Scripts — a fermata reaching UP into the gap above it, a
                 // marcato hanging DOWN into the gap below. See StaffArticulationLayouts for
                 // why a Script belongs in this silhouette at all.
                 var articulations = StaffArticulationLayouts(
-                    score, staff, thisStaff, measureLayouts, beams, ties);
+                    score, staff, thisStaff, measureLayouts, beams, ties, slurs);
                 var tupletBrackets = StaffTupletBracketLayouts(
                     score, staff, thisStaff, measureLayouts, beams);
-                var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
                 spanners.Add(new StaffInsideSpanners(slurs, ties, tupletBrackets));
                 // ⚠️ CurrentIndent is where this system's clef is, and it is the same value
                 // LayoutEngine hands BuildSystemSkylines as its systemLeft. The two
@@ -2452,7 +2454,7 @@ internal sealed class MultiStaffLayouter
     private ImmutableArray<ArticulationLayout> StaffArticulationLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
-        ImmutableArray<TieLayout> tieLayouts)
+        ImmutableArray<TieLayout> tieLayouts, ImmutableArray<SlurLayout> slurLayouts)
     {
         if (score.Articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
@@ -2483,6 +2485,9 @@ internal sealed class MultiStaffLayouter
         var staffTies = tieLayouts.IsDefaultOrEmpty
             ? tieLayouts
             : tieLayouts.Select(t => t with { StaffIndex = staffIndex }).ToImmutableArray();
+        var staffSlurs = slurLayouts.IsDefaultOrEmpty
+            ? slurLayouts
+            : slurLayouts.Select(s => s with { StaffIndex = staffIndex }).ToImmutableArray();
 
         var staffScore = new Score(
             staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
@@ -2494,7 +2499,8 @@ internal sealed class MultiStaffLayouter
             staffYAt: null,
             staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
             beamLayouts: staffBeams,
-            tieLayouts: staffTies);
+            tieLayouts: staffTies,
+            slurLayouts: staffSlurs);
     }
 
     /// <summary>

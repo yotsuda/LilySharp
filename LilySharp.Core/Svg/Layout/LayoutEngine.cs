@@ -297,6 +297,7 @@ internal sealed class LayoutEngine
             BeamGroups = _elementCoordinator.DetectBeamGroups(primaryScore),
             BeamLayouts = allBeamLayouts.ToImmutableArray(),
             TieLayouts = allTieLayouts.ToImmutableArray(),
+            SlurLayouts = allSlurLayouts.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
             StaffSkylines = placed.StaffSkylines,
             StaffSpanners = placed.StaffSpanners,
@@ -654,6 +655,7 @@ internal sealed class LayoutEngine
             BeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore),
             BeamLayouts = prelimBeams.ToImmutableArray(),
             TieLayouts = prelimTies.ToImmutableArray(),
+            SlurLayouts = prelimSlurs.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
             TupletForceStemUp = prelimStaff.IsMultiVoice,
             StaffVoices = prelimStaff.Voices,
@@ -2695,6 +2697,13 @@ internal sealed class LayoutEngine
         /// out as spacing (see <see cref="RestCollisionsOf"/>'s remark).
         /// </summary>
         public ImmutableArray<TieLayout> TieLayouts { get; init; }
+
+        /// <summary>
+        /// The drawn slurs, for the scripts' slur avoidance (outside_slur_callback —
+        /// an 'around/'outside script rides off the bow). Supplied by BOTH passes,
+        /// same reason as <see cref="TieLayouts"/>.
+        /// </summary>
+        public ImmutableArray<SlurLayout> SlurLayouts { get; init; }
         public IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? SystemSkylines { get; init; }
 
         /// <summary>
@@ -2986,7 +2995,8 @@ internal sealed class LayoutEngine
         if (score != null)
             articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
                 score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
-                beamLayouts ?? default, ctx.TieLayouts, fingeringLayouts, out fingeringLayouts);
+                beamLayouts ?? default, ctx.TieLayouts, ctx.SlurLayouts,
+                fingeringLayouts, out fingeringLayouts);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);

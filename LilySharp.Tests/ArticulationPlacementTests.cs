@@ -276,4 +276,45 @@ public class ArticulationPlacementTests
             glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticPortatoBelow));
         Assert.Equal(7.32, middle - portato.Y, 2);    // chord3 member portato — chain (LP 7.31)
     }
+
+    [Fact]
+    public void Scripts_RideOffASlur_InsideOnesStayPut()
+    {
+        // script-stack-order1's slurred note (the "avoid-slur 未実装" ticket): an
+        // 'around script on a slurred note takes outside_slur_callback ON TOP of
+        // its side-position answer — the accent over the slur-start e' rides off
+        // the bow (2.67 with no slur term), and the finger and downbow above it
+        // ride up through the support chain, one rigid body — while the slur-END
+        // staccato is 'inside and stays on the head (LilyPond bends the SLUR
+        // around an inside script instead; that half is the slur scorer's).
+        // Against the LP twin (scratch/lpreg/scriptstack1.{ly,lys}) the lifted
+        // stack reads 0.11 low — the drawn slur's own apex sits that much under
+        // LP's (the slur-scoring regime), and the avoidance reads the drawn slur.
+        // LILYPOND-REF: lily/slur.cc:262-359 outside_slur_callback
+        // LILYPOND-REF: scm/script.scm avoid-slur declarations
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+            SyntaxTree.Parse("time 4/4 e'4(@accent@finger(0)@downbow c4@staccato)" +
+                " d@tenuto@downbow d,@staccato@finger(0)@accent |"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        double middle = MiddleLineY(svg);
+        var glyphs = MusicGlyphs(svg);
+        var accents = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove)
+            .OrderBy(g => g.X).ToList();
+        var downbows = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticDownBowAbove)
+            .OrderBy(g => g.X).ToList();
+        var fingers = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.FigBassDigit0)
+            .OrderBy(g => g.X).ToList();
+        var staccatos = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticStaccatoAbove)
+            .OrderBy(g => g.X).ToList();
+        Assert.Equal(2, accents.Count);
+        Assert.Equal(2, downbows.Count);
+        Assert.Equal(2, fingers.Count);
+        Assert.Equal(2, staccatos.Count);
+        Assert.Equal(3.29, middle - accents[0].Y, 2);   // LP 3.40 — off the slur's bow
+        Assert.Equal(4.15, middle - fingers[0].Y, 2);   // LP 4.26 — chain over the lifted accent
+        Assert.Equal(5.48, middle - downbows[0].Y, 2);  // LP 5.58 — chain top
+        Assert.Equal(1.50, middle - staccatos[0].Y, 2); // LP 1.50 — 'inside at the slur end, unmoved
+        // The unslurred d keeps its plain chain: tenuto then downbow.
+        Assert.Equal(2.78, middle - downbows[1].Y, 2);
+    }
 }
