@@ -89,6 +89,30 @@ pending 0**（status.json 実数・§0 の数え方で確認済）。
 2. **open 18 の focused session 消化**（多 score 頁の鎖・grace column・録画層 §2A 等）。
 3. **markup 55 / override 89 の個別判断キュー**。
 
+★★ **第12-13便 自己監査（三問）+ perf 監査 round 24（ユーザー問）**:
+- 自己監査 = **違反 1 訂正**（第60号の過剰収集: LP の tuplet engraver は Script/
+  Fingering/StringNumber しか acknowledge しないのに breath/caesura/bend が同じ
+  ArticulationLayout 層から流入 → 両呼び手に IsSidePositionedScript の篩・
+  `158aa549`）・開示 2 追記（rest 列 no-op は等価論法＝ピン済み tie 全ケースが
+  rest 込みで一致という実証根拠に書き換え／CalculateSlope 既存枝の
+  「MemberXPositions = stem 実端」は嘘＝head アンカー。partial-beam の sloped
+  regime で発火する時限と⚠️明記）・新規チューニング定数ゼロ・REF ラチェット緑。
+- perf round 24（perf-ab24.ps1・base = 31a08b0f worktree
+  C:\MyProj\LilySharp-perfbase-31a0・残置・median-of-3 両順）= **実退行なし**:
+  tupscr300（新設・300小節×(drawn tuplet+beamed tuplet+script3個)＝篩と
+  per-tuplet script 走査の重い側）−2.8/+10.9 = 符号跨ぎ・**対照 plain1k
+  （非接触）が −6.9/+15.9 と重い本より大きく振れる**＝機械 drift 支配。
+  plain1k hash MATCH。tupscr300 の hash 差は**全300行が beamed 番号 y −0.08
+  （sloped beam の不可視 bracket を自前 stem X で評価する第63号の設計変更
+  そのもの）**＝行単位で全数説明済み。
+- 静的検分（毎キーストロークの目線）: 新規コストは per-layout O(scripts) の篩
+  （tuplets×scripts 併存時のみ・配列1本）+ per-drawn-tuplet O(scripts) 走査 +
+  per-beamed-tuplet O(members) + OuterEdge の比較1個 + volta chain（希少・微小）。
+  IncrementalCompiler 非接触＝共有 Layout 経路のみ・新キャッシュ層/新 per-
+  keystroke 状態なし。**札**: avoid-scripts 走査は O(tuplets×scripts)——LP は
+  engraving 中の per-tuplet 集合で O(scripts) 償却。病的な本（数千 tuplet×数千
+  script）が出たら measure 別バケツ化が修理形。
+
 ★ **第123 の学び**:
 - **lysc は CLI プロジェクトのビルドが要る**（`dotnet build LilySharp.Core` だけでは
   lysc.exe が旧 Core を抱いたまま＝TBDBG 無反応で発覚。増分腐るの新例）。
