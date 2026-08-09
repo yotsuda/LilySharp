@@ -3315,11 +3315,28 @@ internal sealed class LayoutEngine
         // scripts the bracket must clear are exactly the priority-less ones
         // (LP :690-692 skips the movers), and those are seeds the outside-staff
         // passes never move — their YUp is final here.
+        // Only the SCRIPT family may join: LilyPond's tuplet engraver
+        // acknowledges Script (dynamics excluded), Fingering and StringNumber
+        // grobs and nothing else — the breath/caesura/bend marks riding this
+        // same layout stream are not Scripts in LP (no acknowledger), so they
+        // must not add points. The multi-staff path is pre-filtered by the same
+        // sieve (StaffArticulationLayouts → IsSidePositionedScript).
+        // LILYPOND-REF: lily/tuplet-engraver.cc:199-233 acknowledge_script.
+        var tupletScripts = articulationLayouts;
+        if (!tupletBrackets.IsDefaultOrEmpty && !articulationLayouts.IsDefaultOrEmpty)
+        {
+            var sb = ImmutableArray.CreateBuilder<ArticulationLayout>(articulationLayouts.Length);
+            foreach (var a in articulationLayouts)
+                if (a.SourceIndex >= 0 && a.SourceIndex < articulations.Length
+                    && ArticulationEngraver.IsSidePositionedScript(articulations[a.SourceIndex].Type))
+                    sb.Add(a);
+            tupletScripts = sb.ToImmutable();
+        }
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
             tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
             forceStemUp: tupletForceStemUp,
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
-            staffByIndex: staffByIndex, scripts: articulationLayouts);
+            staffByIndex: staffByIndex, scripts: tupletScripts);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,

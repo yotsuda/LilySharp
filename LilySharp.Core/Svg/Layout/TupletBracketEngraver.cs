@@ -498,9 +498,11 @@ internal static class TupletBracketEngraver
             double extDown = double.PositiveInfinity;
             for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < measure.Items.Length; i++)
             {
-                // A rest column's head interval is EMPTY in LP, so its minmax
-                // contributes nothing (:803-809 walks it as a no-op) — skipping
-                // rests here is the same answer without the ±∞ bookkeeping.
+                // A rest column's head interval is EMPTY in LP (:803-809 walks
+                // it), so skipping rests here reads as the same answer. That is
+                // an EQUIVALENCE argument, not LP's letter — but every pinned
+                // tie case carries a rest column (tuplet-rest t1/t7/t8,
+                // tuplet-bracket-direction t4/t5) and all match LP.
                 switch (measure.Items[i])
                 {
                     case NoteItem n:
@@ -808,6 +810,16 @@ internal static class TupletBracketEngraver
                 lpAnyBeam = probedBeam ?? lpAnyBeam;
                 double colX = ml.X
                     + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, ml);
+                // ⚠️ MemberXPositions are HEAD anchors, not stem centres (the
+                // renderer applies LayoutUtilities.StemX on top — established
+                // by tuplet-number-slur-script.ly, 2026-08-09), so the beamed
+                // branch here reads the stem's X half a head LEFT on up-stems.
+                // Left standing: it only feeds a DRAWN bracket over a PARTIAL
+                // beam, where the pinned point (staff.staff.tuplet-bracket-
+                // partial-beam) is a FLAT beam — the face Y it reads is the
+                // same at either X. A SLOPED partial beam would surface the
+                // seam (face shifts by slope × attach); no corpus book measures
+                // that regime.
                 double stemX = member is { } mb && !mb.beam.MemberXPositions.IsDefaultOrEmpty
                     ? mb.beam.MemberXPositions[mb.memberIndex]
                     : colX
@@ -986,6 +998,10 @@ internal static class TupletBracketEngraver
             //   ⑶ pairing is (staff, measure, item range) — LP pairs by Voice
             //     context, so a polyphonic staff whose OTHER voice scripts the
             //     same item indices would over-collect.
+            // The CALLERS owe this loop Script-family layouts only: breath /
+            // caesura / bend marks share the ArticulationLayout stream but are
+            // not Scripts in LP (no tuplet acknowledger) — both wires sieve
+            // through IsSidePositionedScript before passing `scripts`.
             if (!scripts.IsDefaultOrEmpty)
             {
                 foreach (var a in scripts)
