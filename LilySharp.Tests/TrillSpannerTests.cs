@@ -235,9 +235,16 @@ score main ""test"" { staff melody }
             .ToList();
 
     [Fact]
-    public void TrillSpanner_NoStopEvent_NoPairing()
+    public void TrillSpanner_NoStopEvent_RunsToEndOfScore()
     {
-        // Unpaired start should not produce a spanner
+        // An unpaired start runs to the END of the score (it used to be silently
+        // dropped): the virtual stop sits at item 0 one measure PAST the last,
+        // which the engraver's to-barline branch turns into "stop short of the
+        // final barline" — the same term a written stop-at-bar gets (LP measured:
+        // both gaps 1.75, trillimpl/trillbar twins,
+        // trill-spanner-terminated-implicitly.ly).
+        // LILYPOND-REF: scm/scheme-engravers.scm:1797-1860 Trill_spanner_engraver
+        //   — finalize sets the open spanner's RIGHT bound to currentCommandColumn.
         var source = @"
 part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f | }
@@ -248,6 +255,10 @@ score main ""test"" { staff melody }
         var tree = SyntaxTree.Parse(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
 
-        Assert.Empty(singleScore.TrillSpanners);
+        var spanner = Assert.Single(singleScore.TrillSpanners);
+        Assert.Equal(0, spanner.StartMeasureIndex);
+        Assert.Equal(0, spanner.StartItemIndex);
+        Assert.Equal(1, spanner.EndMeasureIndex); // one past the last measure
+        Assert.Equal(0, spanner.EndItemIndex);
     }
 }

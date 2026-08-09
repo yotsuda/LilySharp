@@ -985,7 +985,9 @@ public sealed partial class MeasureCollector
     /// the single reader of the collector's output state — the three build sites used
     /// to each re-list ~25 arguments (and drifted).
     /// </summary>
-    private ScoreContent CaptureScoreContent() => new(
+    /// <param name="measureCount">Total measures collected — the virtual stop an
+    /// unterminated trill spanner runs to (one past the last measure).</param>
+    private ScoreContent CaptureScoreContent(int measureCount) => new(
         new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
         new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom), // initial key, not the post-change state
         _meta.InitialClef, // initial clef, not the post-change state
@@ -1008,7 +1010,7 @@ public sealed partial class MeasureCollector
         _crossStaffItems.ToImmutableArray(),
         _grobOverrides.ToImmutableArray(),
         _grobReverts.ToImmutableArray(),
-        PairTrillSpannerEvents(),
+        PairTrillSpannerEvents(measureCount),
         new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition),
         _meta.TempoText,
         _meta.TempoBeatUnit,
@@ -1119,7 +1121,7 @@ public sealed partial class MeasureCollector
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
                 attachedChordDisplay);
 
-        return ScoreAssembler.BuildScore(voice, CaptureScoreContent());
+        return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
     }
 
     /// <summary>
@@ -1563,7 +1565,9 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
-        return ScoreAssembler.BuildMultiStaffScore(staffGroups, CaptureScoreContent());
+        return ScoreAssembler.BuildMultiStaffScore(staffGroups, CaptureScoreContent(
+            staffGroups.SelectMany(sg => sg.Staves).SelectMany(st => st.Voices)
+                .Select(v => v.Measures.Length).DefaultIfEmpty(0).Max()));
     }
 
     /// <summary>
@@ -2012,7 +2016,8 @@ public sealed partial class MeasureCollector
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord
         // names / percent repeats, which the old construction here silently dropped.
         return ScoreAssembler.BuildScore(
-            ResolveStaffColumns(voices.ToImmutableArray()), CaptureScoreContent());
+            ResolveStaffColumns(voices.ToImmutableArray()),
+            CaptureScoreContent(voices.Select(v => v.Measures.Length).DefaultIfEmpty(0).Max()));
     }
 
     /// <summary>

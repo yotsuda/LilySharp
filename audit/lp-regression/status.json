@@ -8377,11 +8377,17 @@
     },
     "trill-spanner-pitched-consecutive.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "同名同オクターブ連続の pitched trill でもトリル音の臨時記号が全部出る",
+      "notes": "skip: \\pitchedTrill 綴りなし(tie-pitched-trill と同ゲート)=トリル音(括弧付き補助音)の臨時記号が主張の核。@startTrillSpan 自体は実装済",
+      "seeAlso": "tie-pitched-trill.ly"
     },
     "trill-spanner-pitched-forced.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "pitched trill の臨時記号は es! で強制できる",
+      "notes": "skip: \\pitchedTrill 綴りなし+強制臨時記号 ! も綴りなし(既知)=二重ゲート",
+      "seeAlso": "tie-pitched-trill.ly"
     },
     "trill-spanner-pitched.ly": {
       "category": "scheme",
@@ -8393,11 +8399,15 @@
     },
     "trill-spanner-terminated-implicitly.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "@stopTrillSpan を書かなければ trill spanner は score 末尾まで走る",
+      "notes": "fixed(第59号): 旧 LS は未終端 start を PairTrillSpannerEvents のループ末尾で silent drop(trill が丸ごと消える・probe で2枚目に ink ゼロ)。port = Trill_spanner_engraver の finalize(scheme-engravers.scm:1797-1860・open spanner の右 bound を currentCommandColumn=終端の非音楽列へ)——「(小節数, item 0) の仮想 stop」に符号化すると既存 to-barline 枝(endsOnMeasureStart は EndMeasureIndex <= measureLayouts.Length を許す)にそのまま乗る。照合: tr=頭+0.98・終端=最終小節線−1.75・波間隔1.0 が LP と一致(to-barline 本と同じ項=LP 実測で両本とも gap 1.75)。CaptureScoreContent(measureCount) 化(3呼び手)。旧挙動への釘テスト NoStopEvent_NoPairing を LP 主張(RunsToEndOfScore)に書換。snapshot 0枚。twin=scratch\\lpreg\\trillimpl{,-lp}一式"
     },
     "trill-spanner-to-barline.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "小節頭の音で終わる trill spanner は直前の小節線までしか伸びない(to-barline 既定)",
+      "notes": "exact(コード変更0・第119 第1便の to-barline port の直接 e2e): tr=頭+0.98・波3節@1.0 間隔・終端=小節線−1.75(最終波開始基準)が LP と全部一致・spanner は m2 の音に届かない。裸の '1'(時価のみ繰返し)は c'1 に展開(両側同music)。twin=scratch\\lpreg\\trillbar{,-lp}一式"
     },
     "trill-spanner.ly": {
       "category": "scheme",

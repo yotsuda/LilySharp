@@ -613,7 +613,7 @@ public sealed partial class MeasureCollector
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm:1798 Trill_spanner_engraver
     /// </remarks>
-    private ImmutableArray<TrillSpannerItem> PairTrillSpannerEvents()
+    private ImmutableArray<TrillSpannerItem> PairTrillSpannerEvents(int measureCount)
     {
         if (_trillSpannerEvents.Count == 0)
             return ImmutableArray<TrillSpannerItem>.Empty;
@@ -644,6 +644,25 @@ public sealed partial class MeasureCollector
                 pendingStart = null;
             }
         }
+
+        // A start with no @stopTrillSpan runs to the END OF THE SCORE (it used to
+        // be dropped without a mark). Encoded as a virtual stop at item 0 of the
+        // measure PAST the last one, it rides the existing to-barline branch —
+        // the engraver's endsOnMeasureStart allows EndMeasureIndex ==
+        // measureLayouts.Length exactly for this — so the line stops short of the
+        // final barline by the same term a written stop-at-bar does (LP measured:
+        // both gaps 1.75, trillimpl/trillbar twins).
+        // LILYPOND-REF: scm/scheme-engravers.scm:1798 Trill_spanner_engraver —
+        //   finalize ends an open spanner at the piece's end column.
+        if (pendingStart != null)
+            items.Add(new TrillSpannerItem(
+                pendingStart.Value.measureIndex,
+                pendingStart.Value.itemIndex,
+                measureCount,
+                0,
+                pendingStart.Value.sourcePosition,
+                pendingStart.Value.staffIndex,
+                pendingStart.Value.voiceIndex));
 
         return items.ToImmutable();
     }

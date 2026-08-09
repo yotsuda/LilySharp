@@ -80,7 +80,23 @@ time-signature-numeric-and-default = 時号 style 切替綴りなし・
 （TrillSpannerEngraver:62）・@startTrillSpan.down は無警告 silent 無視
 （probe trillsdir-probe）・LP は TrillSpanner ∈ direction-polyphonic-grobs
 （\voiceTwo 既定 DOWN）+^/_ 優先。修理形 = .up/.down 配線 + voice 既定配布 +
-下側 side-position/skyline＝棚）・この handoff と同 commit）。
+下側 side-position/skyline＝棚）・`71417c79`・第9便 **trill-spanner 族完食 =
+skip 2 + exact 第40 + fixed 第59号**・この handoff と同 commit）。
+
+★★ **第9便 trill-spanner 族 4冊**:
+- pitched 2冊 = skip（\pitchedTrill 綴りなし・forced は `!` も無し＝二重ゲート）。
+- **exact 第40 = trill-spanner-to-barline**（コード変更0・第119 第1便 to-barline
+  port の直接 e2e）: tr=頭+0.98・波3節@1.0・終端=小節線−1.75 が LP と全一致。
+  twin = trillbar{,-lp}。
+- **fixed 第59号 = trill-spanner-terminated-implicitly**: 旧 LS は未終端 start を
+  PairTrillSpannerEvents ループ末尾で **silent drop**（trill 丸ごと無描画）。
+  port = Trill_spanner_engraver の finalize（scheme-engravers.scm:1797-1860・
+  右 bound = currentCommandColumn）——**「(小節数, item 0) の仮想 stop」に符号化
+  すると既存 to-barline 枝（endsOnMeasureStart が EndMeasureIndex ==
+  measureLayouts.Length を許す）にそのまま乗る**。照合: LP と同項（未終端も
+  to-barline 本と同じ gap 1.75・LP 実測で両本一致）。CaptureScoreContent(
+  measureCount) 化（3呼び手）。旧挙動への釘テスト NoStopEvent_NoPairing →
+  RunsToEndOfScore に書換。snapshot 0枚。twin = trillimpl{,-lp}。
 
 ★ **第6便 exact 第39 tablature-tremolo.ly**: 2 score 本→a/b の2対に分割
 （twin = tabtrem-{a,b}{,-lp}・score 間の頁鎖 = 第120 起票の別件）。⑴ 既定
@@ -186,26 +202,28 @@ tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp �
   ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
   LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
 
-plain 322 / 処理済 **301**（fixed **58**・exact **39**・skip **186**・open **18**・
-pending **21**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **trill-spanner-pitched-consecutive 以降の trill-spanner 族 4冊**
-（pitched 2冊は \pitchedTrill 綴りなしゲート濃厚・terminated-implicitly /
-to-barline は第119 の to-barline port が既在＝実評価候補）→ tuplet-bracket 族。
+plain 322 / 処理済 **305**（fixed **59**・exact **40**・skip **188**・open **18**・
+pending **17**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tuplet-bracket-avoid-scripts 以降の tuplet 族 5冊**
+（avoid-scripts / direction / no-stems / number-alignment / number-slur-script。
+tuplet番号 memory = reference_lilypond_beamed_tuplet_number_skyline と
+no-stem梁 memory を先に引くこと）→ 残り 12 冊。
 第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
 slur-flag / slur-nice は文法宿題の棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
 テスト **4228 passed / 0 failed / 4 skipped**（第2/3便+2・第5便+2・第7便+1・
-全スイート確認済）・snapshot 第122 = **6枚（第2便）+2枚（第3便）＋0枚（第5/7便）＝
-census 済・上記**・Core (Debug) 0 warning・
+第9便は釘テスト書換のみ＝±0・全スイート確認済）・snapshot 第122 = **6枚（第2便）
++2枚（第3便）＋0枚（第5/7/9便）＝census 済・上記**・Core (Debug) 0 warning・
 base worktree = 第121 の節の 5 つそのまま残置。
 probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）＋tabdbltrem 一式＋
 ntrem-probe 一式（第55号の照合材）＋tabgrace 一式（第56号の照合材）＋tabspacer 一式
 （exact 第38の照合材）＋tabtie-probe{,2,-lp} 一式（第57号の照合材）＋
 tabtrem-{a,b}{,-lp} 一式（exact 第39の照合材）＋tabnum{,-lp,-probe,-probe2} 一式
-（第58号の照合材）＋tabdot-dump{,-ls}.ps1（LP/LS SVG 一覧化・LP 側は polygon
-対応済）**＋第121 以前の stclash / sttremcol / sploose / sptab / stempure
-ほか一式（下の各節参照）。
+（第58号の照合材）＋trillimpl{,-lp}・trillbar{,-lp} 一式（第59号/exact 第40の
+照合材）＋trillsdir-probe（open 第18の照合材）＋tabdot-dump{,-ls}.ps1（LP/LS SVG
+一覧化・LP 側は polygon 対応済）**＋第121 以前の stclash / sttremcol / sploose /
+sptab / stempure ほか一式（下の各節参照）。
 
 ## 以下は第121セッションの経緯
 
