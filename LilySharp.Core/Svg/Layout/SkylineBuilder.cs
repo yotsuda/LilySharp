@@ -1661,8 +1661,8 @@ internal sealed class SkylineBuilder
                 {
                     double restDotX = x + size.Ink(GlyphMetrics.GetRestBBox(restValue)).Right
                         + size.Span(GlyphMetrics.AugmentationDot.Width);
-                    double restDotUp = restOriginUp
-                        + size.Span((restDotRel ?? (restValue == 1 ? -1 : 1)) * 0.5);
+                    double restDotUp = restOriginUp + size.Span(
+                        (restDotRel ?? ElementCoordinator.RestDotDefaultOffset(restValue)) * 0.5);
                     MergeDotRow(restItem.Dots, restDotX, restDotUp,
                         size, upSkyline, downSkyline);
                 }

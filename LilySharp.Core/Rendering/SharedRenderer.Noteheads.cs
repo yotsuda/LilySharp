@@ -1074,7 +1074,8 @@ internal static partial class SharedRenderer
         {
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
             double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + dotWidth;
-            double dotY = y + (dotOffset ?? (noteValue == 1 ? -1 : 1)) * 0.5;
+            double dotY = y
+                + (dotOffset ?? LilySharp.Core.Svg.Layout.ElementCoordinator.RestDotDefaultOffset(noteValue)) * 0.5;
             for (int d = 0; d < rest.Dots; d++)
                 using (gc.Source(rest.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,

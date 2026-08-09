@@ -1073,11 +1073,15 @@ internal sealed class ElementCoordinator
     /// inside the staff widened by one (:277-284).
     /// LILYPOND-REF: scm/define-grobs.scm:2981-2984 RestCollision <c>minimum-distance</c> 0.75.
     /// <para>
-    /// ⚠️ IT IS THE COLLISION, NOT THE VOICE, and this was measured before it was written:
-    /// on 2.26.0 a staff's VerticalAxisGroup reaches -3.55 for one voice AND for a
-    /// <c>\voiceTwo</c> whose partner holds spacer rests, and only -4.25 once that partner
-    /// has NOTES. So a rest alone in a voice must not move, and this pass returns nothing
-    /// for it.
+    /// ⚠️ A CLAIM THAT USED TO STAND HERE WAS REFUTED BY A DIRECT RENDER (2026-08-09,
+    /// probes vrest-probe / vrest2-probe): it read a VerticalAxisGroup extent pair
+    /// (−3.55 with a spacer partner, −4.25 with notes) as "a rest alone in a voice must
+    /// not move". LilyPond 2.26.0 places the rest of EITHER voice at its voiced ±4 when
+    /// the partner holds nothing but spacers — the direction comes from the Voice
+    /// context, not from any collision — so the extent pair measured something else
+    /// (plausibly the notes' own ink). What gates the voiced base now is the collector's
+    /// span-scoped <c>VoiceDirection</c> stamp: zero (outside every span) keeps the rest
+    /// on the neutral letter, anything else takes the voiced position, collision or not.
     /// </para>
     /// <para>
     /// The rest's STARTING position is the voiced one — <c>rest.cc</c>'s
@@ -1318,10 +1322,14 @@ internal sealed class ElementCoordinator
     /// to reproduce. The rest dot then rode the rest's unpure +10 to LilyPond's +13.
     /// </para>
     /// <para>
-    /// ⚠️ TIES IN THE INSERTION ORDER ARE THE VOICE ORDER (LilyPond acknowledges in
-    /// context order and sorts with a strict less, so equal pure positions keep it):
-    /// the pin above needs the NOTE dot inserted first — the reversed order settles on
-    /// (note +3, rest +5) instead.
+    /// ⚠️ TIES IN THE INSERTION ORDER ARE THE VOICE ORDER, AND THAT IS MEASURED, NOT
+    /// DERIVED: LilyPond sorts its dots with <c>std::sort</c> over pure positions
+    /// (dot-column.cc:150), whose order on EQUAL keys is unspecified — nothing in the
+    /// source promises the acknowledgment order survives. What is known is the
+    /// rendering: dot-column-vertical-positioning.ly lands only if the NOTE dot is
+    /// inserted first (the reversed order settles on note +3, rest +5 instead), and
+    /// voice order reproduces it. If another book measures the opposite on some other
+    /// tie, this ordering — not the badness — is the suspect.
     /// </para>
     /// <para>
     /// ⚠️ NOTE dots are read here only as column NEIGHBOURS; the renderer keeps its
@@ -1337,6 +1345,16 @@ internal sealed class ElementCoordinator
 
     internal static ImmutableDictionary<RestShiftKey, int> RestDotOffsetsOf(Staff staff)
         => _restDotOffsets.GetValue(staff, CalculateRestDotOffsets);
+
+    /// <summary>
+    /// The solo answer of the same solve, for rests the table holds no entry for: one
+    /// position up off the origin's line — one position DOWN for a hanging semibreve,
+    /// whose origin is already the line above. ONE home: the renderer's DrawRest and the
+    /// skyline's rest-dot seed both read this, so the default letter cannot fork.
+    /// LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position;
+    /// lily/dot-column.cc:194-227 calc_positioning_done (the on-line remove_collision).
+    /// </summary>
+    internal static int RestDotDefaultOffset(int restValue) => restValue == 1 ? -1 : 1;
 
     private static ImmutableDictionary<RestShiftKey, int> CalculateRestDotOffsets(Staff staff)
     {
