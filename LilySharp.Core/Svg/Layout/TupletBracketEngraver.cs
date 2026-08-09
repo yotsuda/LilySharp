@@ -343,16 +343,41 @@ internal static class TupletBracketEngraver
                     }
                     else
                     {
+                        // The INVISIBLE bracket spans the TUPLET'S OWN outer stems,
+                        // not the covering beam's ends: one auto-beam can cover
+                        // several tuplets (two 16th triplets inside one beat —
+                        // tuplet-number-alignment.ly), and reading the beam's span
+                        // stacked every number onto the same beam midpoint.
+                        // LILYPOND-REF: lily/tuplet-bracket.cc:495-519
+                        //   calc_position_and_height follow-beam — points from
+                        //   columns[0] / columns.back(), the tuplet's own stems;
+                        // LILYPOND-REF: lily/tuplet-number.cc:294-299 calc_x_offset —
+                        //   the number centres on the bracket's own X-positions.
+                        if (!beam.MemberXPositions.IsDefaultOrEmpty)
+                        {
+                            for (int mi = 0; mi < beam.Group.Members.Length; mi++)
+                            {
+                                var m = beam.Group.Members[mi];
+                                if (m.ResolveMeasureIndex(beam.Group.MeasureIndex)
+                                    != tuplet.MeasureIndex)
+                                    continue;
+                                if (m.ItemIndex == tuplet.StartNoteIndex)
+                                    startX = beam.MemberXPositions[mi];
+                                if (m.ItemIndex == tuplet.EndNoteIndex)
+                                    endX = beam.MemberXPositions[mi];
+                            }
+                        }
                         // The INVISIBLE bracket's position: the beam's OUTER edge (where
                         // the stems end — a multi-line beam pushes it out by its full
-                        // thickness) plus the bracket's own padding, and the number's
-                        // CENTRE rides its midpoint exactly as it rides a drawn bracket.
-                        // Measured six-digit in two musics on 2.26.0 (audit/lp-geometry
-                        // staff.staff.beamed-tuplet-number): centre = beam edge + 1.100 —
-                        // NOT stem tip + TupletNumber padding 0.5, and NOT the old
-                        // 0.5 + digitHeight − 0.8 here, which compensated a renderer text
-                        // offset DrawTupletBrackets no longer applies (it draws
-                        // VerticalAnchor.Middle at NumberYUp since 99ecd3aa).
+                        // thickness) at the bracket's OWN bound Xs, plus the bracket's
+                        // padding; the number's CENTRE rides its midpoint exactly as it
+                        // rides a drawn bracket. Measured six-digit in two musics on
+                        // 2.26.0 (audit/lp-geometry staff.staff.beamed-tuplet-number):
+                        // centre = beam edge + 1.100 — NOT stem tip + TupletNumber
+                        // padding 0.5, and NOT the old 0.5 + digitHeight − 0.8 here,
+                        // which compensated a renderer text offset DrawTupletBrackets
+                        // no longer applies (it draws VerticalAnchor.Middle at
+                        // NumberYUp since 99ecd3aa).
                         // LILYPOND-REF: lily/tuplet-number.cc:342 calc_y_offset — the
                         //   bracket midpoint, for every tuplet that is not a knee.
                         // LILYPOND-REF: scm/define-grobs.scm TupletBracket (padding . 1.1).
@@ -360,8 +385,8 @@ internal static class TupletBracketEngraver
                         // OuterEdgeStaffSpaceAtX is Y-up staff-space from the middle
                         // line (frame B); reflect it to the bracket's device top frame
                         // (device = middle 2.0 − Y-up).
-                        startY = (2.0 - beam.OuterEdgeStaffSpaceAtX(beam.LeftX, isStemUp)) + offset;
-                        endY = (2.0 - beam.OuterEdgeStaffSpaceAtX(beam.RightX, isStemUp)) + offset;
+                        startY = (2.0 - beam.OuterEdgeStaffSpaceAtX(startX, isStemUp)) + offset;
+                        endY = (2.0 - beam.OuterEdgeStaffSpaceAtX(endX, isStemUp)) + offset;
                     }
                 }
             }

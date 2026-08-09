@@ -399,14 +399,22 @@ public sealed record BeamLayout
     public double GetYAtX(double x) => LeftY + Slope * (x - LeftX);
 
     /// <summary>
-    /// Staff-space Y (Y-UP from the middle line — frame B) of the beam stack's OUTER edge at
-    /// <paramref name="x"/>, on the given stem side. This is the single canonical "where a stem
-    /// tip reaches" line: the outermost beam's far face = beam centre ± (thickness/2 +
-    /// (beamCount-1)·translation). Slur endpoints, scripts, and tuplet brackets that must clear
-    /// a beam all measure to THIS line, so they share this one computation instead of each
-    /// re-deriving the beam-thickness math. LeftY/RightY are half-space staff positions, so the
-    /// centre is halved to staff spaces here.
-    /// LILYPOND-REF: lily/stem.cc — a beamed stem ends at the beam it joins (its outer face).
+    /// Staff-space Y (Y-UP from the middle line — frame B) of the beam stack's edge at
+    /// <paramref name="x"/>, on the given side. The quanted LeftY/RightY name the PRIMARY
+    /// (rank 0) beam line — the one FURTHEST from the noteheads — and secondary beams stack
+    /// from it TOWARD the heads (SharedRenderer.Beams rank walk, LP beam.cc print). So the
+    /// STEM-side face is just centre ± thickness/2 wherever a stem tip reaches, while the
+    /// HEAD-side face adds the stack: centre ∓ (thickness/2 + (beamCount−1)·translation).
+    /// Slur endpoints, scripts, and tuplet brackets that must clear a beam all measure to
+    /// this one computation. LeftY/RightY are half-space staff positions, so the centre is
+    /// halved to staff spaces here.
+    /// Until 2026-08-09 BOTH sides carried the stack term, which pushed every stem-side
+    /// consumer one translation too far on a multi-line beam — the 16th-triplet score of
+    /// tuplet-number-alignment.ly pinned it (LP numbers sit at the same Y for the 8th and
+    /// 16th scores; the 16th number sat 0.81 low here).
+    /// LILYPOND-REF: lily/stem.cc — a beamed stem ends at the beam it joins (the primary
+    ///   line; LP's drawn stem rect stops at that line's centre, measured tupnumb-lp);
+    /// LILYPOND-REF: lily/beam.cc:129-145 get_beam_translation (count-aware from 4 beams).
     /// </summary>
     public double OuterEdgeStaffSpaceAtX(double x, bool stemUp)
     {
@@ -415,8 +423,12 @@ public sealed record BeamLayout
         int beamCount = 1;
         foreach (var m in Group.Members)
             beamCount = System.Math.Max(beamCount, m.BeamCount);
+        bool stemSide = stemUp == Group.StemUp;
         double halfStack = Svg.EngravingDefaults.BeamThickness / 2.0
-            + (beamCount - 1) * Svg.EngravingDefaults.BeamTranslation;           // staff-space
+            + (stemSide
+                ? 0.0
+                : (beamCount - 1) * Svg.EngravingDefaults.BeamTranslationOf(
+                    Svg.EngravingDefaults.BeamThickness, 1.0, beamCount));       // staff-space
         return centerSs + (stemUp ? halfStack : -halfStack);
     }
 }

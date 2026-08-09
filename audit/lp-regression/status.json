@@ -8519,11 +8519,15 @@
     },
     "tuplet-no-stems.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Removing Stem_engraver does not cause crashes",
+      "notes": "skip (s123). 器材=\\layout\\context の \\remove Beam/Stem_engraver+\\omit TupletNumber/TimeSignature=エンジン内部のengraver除去が主張そのもの・Lily#に対応綴りなし(実質false plain: 機械選別はremove/omitを見ない)。no-crash核はLS最近傍で成立: tab as numbers(stem/beam/tuplet番号を抑制する唯一の表面)×tuplet 3/2=エラーなしレンダ(probe=tupnostem-probe.lys)。"
     },
     "tuplet-number-alignment.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Tuplet numbers of flat beams vertically align with similar looking beams",
+      "notes": "fixed 62 (s123). 2score本=a/b分割(twin=tupnum{a,b}{,-lp})。修理2枚: ⑴suppressed bracket枝のbracket範囲がbeam全幅——1つのauto-beamが複数tupletを覆う(16分triplet×2が1拍)と全番号が同じbeam中点に積み重なる→tuplet自前の両端memberのstem X(tuplet-number.cc:294-299=X-positions中心・tuplet-bracket.cc:495-519 follow-beamはcolumns[0]/back()) ⑵**BeamGroup.OuterEdgeStaffSpaceAtXのstem側が(beamCount−1)·translationを二重加算**——副beamは符頭側に積まれる(rank0=quant位置が外側線・LP stem rect実測=primary中心線で終端)。stem側=±thickness/2のみ・符頭側=±(thickness/2+stack)に分離+count-aware translation化。読者=slur端/scripts/skyline/tuplet番号の共有の家。LP照合: 番号間隔7.51が両score一致・8分と16分の番号Yが同値(LPは両scoreとも15.315)。残差=番号中心規約(LS em中心 vs LP text box・~0.15)+0.04 stroke系統=既知regime。観測者TupletNumberAlignmentTests2本。snapshot 9枚census済(多重beam予約±0.81是正・番号x≤1.24自tuplet化・tuplets-beamedの+1.73=header行が正置番号を避ける玉突き)。"
     },
     "tuplet-number-french-kneed-beams.ly": {
       "category": "scheme",

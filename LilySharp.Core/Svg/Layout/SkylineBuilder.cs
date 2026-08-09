@@ -933,8 +933,8 @@ internal sealed class SkylineBuilder
     ///   cross-staff iff its beam is.
     /// A same-staff KNEED beam still keeps the per-note fixed stem: LilyPond DOES carry
     /// its real Beam/Stem stencils in the skylines, but Lily# has no faithful model of
-    /// the knee's stencil band yet (OuterEdgeStaffSpaceAtX is symmetric about the primary
-    /// beam's centre and cannot name the stack's inner face), so porting it is deferred
+    /// the knee's stencil band yet (a knee has stems on BOTH sides, so neither of
+    /// OuterEdgeStaffSpaceAtX's two faces names its band), so porting it is deferred
     /// until the band is measured from LP — see HANDOFF §1.
     /// audit/lp-geometry staff.staff.beam-{under,over}-notes.
     /// </remarks>
