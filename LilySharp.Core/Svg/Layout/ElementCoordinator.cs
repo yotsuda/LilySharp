@@ -931,11 +931,23 @@ internal sealed class ElementCoordinator
     /// invisible stems <see cref="BeamGroup.RestStems"/> carries — so membership is
     /// read from there, not re-derived by item-index containment. A rest outside
     /// any beam is left alone.
+    /// <para>
+    /// ⚠️ THE MOVERS CHAIN, they do not compete: LP hands this callback the offset the
+    /// earlier movers (voiced position, <c>Rest_collision</c>) already gave the rest as
+    /// <c>prev_offset</c>, evaluates the rest's ink WHERE THEY PUT IT (beam.cc:1388-1390
+    /// translates <c>rest_extent</c> by it) and returns <c>offset + shift</c> (:1414).
+    /// So <paramref name="priorShifts"/> is that table, each entry this pass emits is the
+    /// chained TOTAL under the same key, and the caller lets it replace the prior entry.
+    /// Before this was read, the ink was priced at the neutral origin and the two tables
+    /// merged larger-wins — a voiced +4 beat the chained +4−2 and the beam push never
+    /// landed (dot-rest-beam-trigger.ly is the pin: LP rel −1.0, Lily# sat at −2.0).
+    /// </para>
     /// </remarks>
     public ImmutableDictionary<RestShiftKey, double> CalculateRestShifts(
         Score score,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<BeamLayout> beamLayouts)
+        ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableDictionary<RestShiftKey, double> priorShifts)
     {
         if (beamLayouts.Length == 0)
             return ImmutableDictionary<RestShiftKey, double>.Empty;
@@ -998,11 +1010,16 @@ internal sealed class ElementCoordinator
                 double stemY = beamLayout.GetYAtX(restX);
                 double beamY = stemY - d * heightOfBeams;
 
-                // LILYPOND-REF: beam.cc:1389-1392 rest_dim = rest_extent[d] — the rest's
-                // REAL glyph extent at its default origin (a semibreve hangs from the
-                // line above the middle, rest.cc:101-121; every shorter rest sits at 0).
+                // LILYPOND-REF: beam.cc:1388-1392 rest_dim = rest_extent[d], the extent
+                // TRANSLATED by prev_offset — the rest's REAL glyph ink where the voiced
+                // position and Rest_collision already put it, on top of its default origin
+                // (a semibreve hangs from the line above the middle, rest.cc:101-121;
+                // every shorter rest sits at 0). The key is the beam's OWN voice: the rest
+                // this pass moves is a member of the beam, and the beam knows whose it is.
+                var key = new RestShiftKey(measureIndex, group.VoiceIndex, rest.ItemIndex);
+                priorShifts.TryGetValue(key, out double prior);
                 var restBox = GlyphMetrics.GetRestBBox(rest.NoteValue);
-                double restOrigin = rest.NoteValue == 1 ? 2.0 : 0.0;
+                double restOrigin = (rest.NoteValue == 1 ? 2.0 : 0.0) + prior;
                 double restTop = restOrigin + EngravingDefaults.ToStaffPositions(restBox.Top);
                 double restBottom = restOrigin + EngravingDefaults.ToStaffPositions(restBox.Bottom);
                 double restDim = d > 0 ? restTop : restBottom;
@@ -1029,14 +1046,14 @@ internal sealed class ElementCoordinator
                 if (insideStaff)
                     shift = Math.Ceiling(Math.Abs(shift) / 2.0) * 2.0 * Math.Sign(shift);
 
-                // Voice 0: CalculateRestShifts is handed the staff's PRIMARY-voice score, so
-                // the rests it can see are that voice's. A beamed rest in voice two gets no
-                // beam shift, which is the granularity this pass has always had — named here
-                // rather than implied now that the key can tell voices apart.
-                var key = new RestShiftKey(measureIndex, 0, rest.ItemIndex);
+                // LILYPOND-REF: beam.cc:1414 return offset + staff_space * shift — the
+                // callback answers with the CHAINED total, not its own push alone. Two
+                // beams sharing one rest slot keep the larger push (degenerate; LP has
+                // one stem -> one beam per rest).
+                double total = prior + shift;
                 if (!shifts.TryGetValue(key, out var existing)
-                    || Math.Abs(shift) > Math.Abs(existing))
-                    shifts[key] = shift;
+                    || Math.Abs(total - prior) > Math.Abs(existing - prior))
+                    shifts[key] = total;
             }
         }
 

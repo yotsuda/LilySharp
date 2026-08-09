@@ -864,25 +864,25 @@ internal sealed class LayoutEngine
                 : staffScore;
             var staffFinalBeams = _elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex);
             allBeamLayouts.AddRange(staffFinalBeams);
-            // Push beamed rests clear of their beam (Beam::rest_collision_callback).
-            var staffRestShifts = _elementCoordinator.CalculateRestShifts(
-                staffScore, systemsArray, staffFinalBeams.ToImmutableArray());
-            foreach (var kv in staffRestShifts)
-                if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
-                    || Math.Abs(kv.Value) > Math.Abs(existing))
-                    restShiftsBuilder[kv.Key] = kv.Value;
-            // ...and clear of the OTHER VOICE'S notes (Rest_collision), which is the shift
-            // that takes a rest out of the staff at all. Merged into the same table by the
-            // same larger-wins rule LilyPond's two passes end at: the beam callback and the
-            // collision each translate the rest, and what survives is the outer position.
-            // ⚠️ THROUGH THE ROOM'S MEMO, NOT A SECOND CALL. This used to call
-            // ElementCoordinator.CalculateRestNoteCollisions directly, while
-            // MultiStaffLayouter.BuildAllStaffSkylines asked the same question of the same
-            // Staff through RestCollisionsOf — so every layout ran that WHOLE-SCORE scan
-            // twice for every polyphonic staff, and an edit pays it on each keystroke. The
-            // answer is a function of the Staff alone (see CalculateRestNoteCollisions'
+            // The rest movers CHAIN in LilyPond's callback order: the voiced position and
+            // Rest_collision translate first, and Beam::rest_collision_callback evaluates
+            // the rest's ink WHERE THEY PUT IT, adding its push on top (beam.cc:1388-1390
+            // reads prev_offset; :1414 returns offset + shift). A beamed rest's entry is
+            // therefore the chained TOTAL and REPLACES the collision entry (SetItems) —
+            // merging larger-wins instead kept a voiced +4 over the chained +4−2 and the
+            // beam push never landed (dot-rest-beam-trigger.ly is the pin).
+            // ⚠️ THE COLLISION TABLE COMES THROUGH THE ROOM'S MEMO, NOT A SECOND CALL.
+            // This used to call ElementCoordinator.CalculateRestNoteCollisions directly,
+            // while MultiStaffLayouter.BuildAllStaffSkylines asked the same question of the
+            // same Staff through RestCollisionsOf — so every layout ran that WHOLE-SCORE
+            // scan twice for every polyphonic staff, and an edit pays it on each keystroke.
+            // The answer is a function of the Staff alone (see CalculateRestNoteCollisions'
             // remark), which is what makes the memo sound and made the duplicate invisible.
-            foreach (var kv in restCollisionsOf(staff))
+            var staffCollisionShifts = restCollisionsOf(staff);
+            var staffRestShifts = _elementCoordinator.CalculateRestShifts(
+                staffScore, systemsArray, staffFinalBeams.ToImmutableArray(),
+                staffCollisionShifts);
+            foreach (var kv in staffCollisionShifts.SetItems(staffRestShifts))
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
                     || Math.Abs(kv.Value) > Math.Abs(existing))
                     restShiftsBuilder[kv.Key] = kv.Value;
