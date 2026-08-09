@@ -76,6 +76,7 @@ public static class SemanticValidation
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new EmptyScoreValidator(),          // a score block with no staff to engrave
+        new CondensedStaffValidator(),      // a condensedStaff with <2 parts, or a non-part member
         new DuplicateCellValidator(),       // a (section × part) cell filled twice
         new DuplicateTrackSectionValidator(),// a chords/lyrics track names a section twice
         new RevertContextValidator(),       // a revert/once outside a music stream

@@ -1262,10 +1262,14 @@ public sealed partial class MeasureCollector
         var attachedLyrics = new List<(string PartName, int StaffIndex, string StaffVoice)>();
         // Chord rows are also deferred (see the ChordRowSpec branch below).
         var pendingChordRows = new List<(string Name, int StaffIndex, ChordDisplayMode Mode)>();
-        foreach (var (voiceName, withChords, chordDisplay, withLyrics) in renderSpec.GetVoiceBindings())
+        foreach (var (voiceName, withChords, chordDisplay, withLyrics, sharesStaff) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
-            _currentStaffIndex = collectStaffIndex++;
+            // A condensed staff yields one binding per part but ONE staff, so its later
+            // parts take the staff index already handed out instead of opening a new one
+            // (see GetVoiceBindings) — otherwise every staff below would be tagged one
+            // index too high.
+            _currentStaffIndex = sharesStaff ? collectStaffIndex - 1 : collectStaffIndex++;
             _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
             _defaultDots = 0;

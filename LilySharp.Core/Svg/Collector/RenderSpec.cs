@@ -81,6 +81,20 @@ public sealed record SingleStaffSpec(StaffSpec Staff) : RenderItemSpec;
 public sealed record GrandStaffRenderSpec(GrandStaffSpec GrandStaff) : RenderItemSpec;
 
 /// <summary>
+/// Condensed-staff render item: <c>condensedStaff { partA partB … }</c> puts N parts onto
+/// ONE staff, one voice each, in source order.
+/// </summary>
+/// <remarks>
+/// This is the plain condensation — the parts keep their own notes and get the ordinary
+/// polyphony treatment (voice 1 up, voice 2 down, collision resolution). It does NOT merge
+/// unisons or print a2/Solo; that is the part combiner, which is a separate item.
+/// </remarks>
+public sealed record CondensedStaffSpec(
+    ClefType Clef,
+    ImmutableArray<string> PartNames,
+    string? InstrumentName = null) : RenderItemSpec;
+
+/// <summary>
 /// Tablature staff render item.
 /// </summary>
 public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transposition = 0,
@@ -151,7 +165,13 @@ public sealed record RenderSpec(
     /// does: the single-staff path renders plain notation and has no tab support,
     /// so a tab-only score would otherwise fall back to a notation staff.
     /// </summary>
-    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab || HasChordRow || HasLyricsRow;
+    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab || HasChordRow
+        || HasLyricsRow || HasCondensedStaff;
+
+    /// <summary>Whether this render contains a condensed staff. A lone one still needs the
+    /// multi-staff pipeline: the single-staff path takes ONE part's voices, which is exactly
+    /// what a condensed staff is not.</summary>
+    public bool HasCondensedStaff => Items.Any(i => i is CondensedStaffSpec);
 
     /// <summary>Whether this render contains an independent chord row. A chord-only
     /// score (just <c>chords name</c>) still needs the multi-staff pipeline — the
@@ -172,7 +192,13 @@ public sealed record RenderSpec(
     /// the voice name plus the staff's attached chord part, if any
     /// (<c>staff NAME with chords CHORDPART</c>).
     /// </summary>
-    public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics)> GetVoiceBindings()
+    /// <remarks>
+    /// ⚠️ <c>SharesStaffWithPrevious</c> breaks the one-binding-one-staff assumption on
+    /// purpose: a <c>condensedStaff</c> yields ONE binding per part but builds ONE staff, so
+    /// a caller that increments blindly would shift every later staff index by N-1. Those
+    /// parts genuinely are on the same staff, so they take the same index.
+    /// </remarks>
+    public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, bool SharesStaffWithPrevious)> GetVoiceBindings()
     {
         static ImmutableArray<string> Ly(ImmutableArray<string> a) => a.IsDefault ? ImmutableArray<string>.Empty : a;
         foreach (var item in OrderedItems())
@@ -180,23 +206,31 @@ public sealed record RenderSpec(
             switch (item)
             {
                 case SingleStaffSpec single:
-                    yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics));
+                    yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics), false);
                     break;
                 case GrandStaffRenderSpec grand:
                     foreach (var staff in grand.GrandStaff.Staves)
-                        yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay, Ly(staff.WithLyrics));
+                        yield return (staff.VoiceName, staff.WithChords, staff.ChordDisplay, Ly(staff.WithLyrics), false);
+                    break;
+                // Every condensed part is COLLECTED even though they share one staff — the
+                // binding list is what tells the collector whose music to gather — but only
+                // the first opens a new staff index.
+                case CondensedStaffSpec condensed:
+                    for (int i = 0; i < condensed.PartNames.Length; i++)
+                        yield return (condensed.PartNames[i], null, ChordDisplayMode.Names,
+                            ImmutableArray<string>.Empty, i > 0);
                     break;
                 case TabStaffSpec tab:
-                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay, Ly(tab.Staff.WithLyrics));
+                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay, Ly(tab.Staff.WithLyrics), false);
                     break;
                 case OssiaStaffSpec ossia:
-                    yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty);
+                    yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, false);
                     break;
                 case ChordRowSpec chordRow:
-                    yield return (chordRow.PartName, null, chordRow.DisplayMode, ImmutableArray<string>.Empty);
+                    yield return (chordRow.PartName, null, chordRow.DisplayMode, ImmutableArray<string>.Empty, false);
                     break;
                 case LyricsRowSpec lyricsRow:
-                    yield return (lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty);
+                    yield return (lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, false);
                     break;
             }
         }
@@ -261,6 +295,19 @@ public sealed record RenderSpec(
                         PedalStyle = single.Staff.PedalStyle,
                     };
                     yield return StaffGroup.CreateSingle(singleStaff);
+                    break;
+
+                // N parts -> ONE staff. A Staff already holds N voices and the whole
+                // polyphony path (stem directions by voice order, collision resolution,
+                // rest displacement) reads staff.Voices, so condensing is a matter of
+                // handing it the concatenated voice list. A part that is itself polyphonic
+                // contributes all of its voices, in its own order.
+                case CondensedStaffSpec condensed:
+                    var condensedVoices = condensed.PartNames
+                        .SelectMany(name => (IEnumerable<Voice>)getVoices(name))
+                        .ToImmutableArray();
+                    yield return StaffGroup.CreateSingle(
+                        Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName));
                     break;
 
                 case GrandStaffRenderSpec grand:

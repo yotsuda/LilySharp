@@ -488,6 +488,7 @@ internal sealed partial class Parser
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.StaffGroupKeyword => ParseGrandStaffRender(),
             SyntaxKind.ChoirStaffKeyword => ParseGrandStaffRender(),
+            SyntaxKind.CondensedStaffKeyword => ParseCondensedStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
@@ -598,6 +599,64 @@ internal sealed partial class Parser
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new GrandStaffRenderGreen(grandStaffKeyword, openBrace, [.. staves], closeBrace);
+    }
+
+    /// <summary>
+    /// Parse a condensed-staff render: <c>condensedStaff { partA partB … }</c>.
+    /// </summary>
+    /// <remarks>
+    /// The members are BARE part names, like <c>tab m</c> / <c>ossia m</c> / <c>chords p</c>
+    /// and unlike <c>grandStaff { staff a staff b }</c> — a grand staff really does contain
+    /// staves, while everything written here ends up as a VOICE of the one staff that comes
+    /// out. Source order is voice order: the first part is voice 1 (stems up), exactly as the
+    /// first block of a <c>voice { … } { … }</c> span.
+    /// The arity rule (two or more) is enforced semantically, not here, so a half-typed
+    /// <c>condensedStaff { fl1 }</c> still produces a tree for the editor.
+    /// </remarks>
+    private CondensedStaffRenderGreen ParseCondensedStaffRender()
+    {
+        var keyword = Expect(SyntaxKind.CondensedStaffKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+
+        var partNames = new List<SyntaxToken>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            if (IsPartNameStart())
+            {
+                partNames.Add(ExpectPartName());
+                continue;
+            }
+
+            // A member that is not a part name — `staff X`, a nested group, a tab. Reported
+            // HERE rather than left to the brace mismatch: stopping the loop and failing on
+            // the missing '}' produces "Expected 'CloseBrace'", which describes the parser's
+            // predicament and not the writer's mistake. `condensedStaff { staff a staff b }`
+            // is the first thing a grandStaff user tries, so it has to answer well.
+            _diagnostics.Error(
+                new TextSpan(_textPosition, Current.FullWidth),
+                DiagnosticCodes.CondensedStaffBadMember,
+                $"'condensedStaff' cannot contain '{Current.Text}' — write bare part names, "
+                + "e.g. condensedStaff { flute1 flute2 }. Everything inside becomes a VOICE "
+                + "of the one staff it produces, and a staff or a group of staves is not a voice.");
+
+            // Skip the offending item so the rest of the block still parses: the keyword,
+            // then a braced body if it has one.
+            Advance();
+            if (Check(SyntaxKind.OpenBrace))
+            {
+                int depth = 0;
+                do
+                {
+                    if (Check(SyntaxKind.OpenBrace)) depth++;
+                    else if (Check(SyntaxKind.CloseBrace)) depth--;
+                    Advance();
+                }
+                while (depth > 0 && !Check(SyntaxKind.EndOfFile));
+            }
+        }
+
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new CondensedStaffRenderGreen(keyword, openBrace, [.. partNames], closeBrace);
     }
 
     private bool IsClefKeyword() => SyntaxFacts.IsClefKeyword(Current.Kind);

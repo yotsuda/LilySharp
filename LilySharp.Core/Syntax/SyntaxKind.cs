@@ -91,6 +91,9 @@ public enum SyntaxKind : ushort
     StaffGroupKeyword,
     /// <summary>The <c>choirStaff</c> keyword (bracket, disconnected barlines).</summary>
     ChoirStaffKeyword,
+    /// <summary>The <c>condensedStaff</c> keyword: several parts, each of which would be
+    /// its own staff, put onto ONE staff as separate voices (a condensed score).</summary>
+    CondensedStaffKeyword,
     /// <summary>The <c>tab</c> keyword.</summary>
     TabKeyword,
     /// <summary>The <c>ossia</c> keyword.</summary>
@@ -381,6 +384,9 @@ public enum SyntaxKind : ushort
     StaffRender,
     /// <summary>A grand-staff render node (<c>grandStaff { staff staff }</c> inside render).</summary>
     GrandStaffRender,
+    /// <summary>A condensed-staff render node (<c>condensedStaff { fl1 fl2 }</c> inside
+    /// score): the named parts share ONE staff, one voice each.</summary>
+    CondensedStaffRender,
     /// <summary>A tablature render node (<c>tab guitar { guitar }</c> inside render).</summary>
     TabRender,
     /// <summary>An ossia render node (<c>ossia treble { alternative }</c> inside render).</summary>

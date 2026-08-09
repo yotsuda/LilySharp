@@ -580,6 +580,60 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Represents a condensed-staff render item: <c>condensedStaff { partA partB … }</c>.
+/// </summary>
+/// <remarks>
+/// The members are BARE part names rather than <c>staff</c> items: however many parts go in,
+/// exactly one staff comes out, and each part becomes one of its voices. Read it as "these
+/// things, each of which would be its own staff, condensed onto one" — the same reading that
+/// lets a <c>combinedStaff</c> sit inside it without lying about what it is.
+/// </remarks>
+public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
+{
+    internal CondensedStaffRenderSyntax(CondensedStaffRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>condensedStaff</c> keyword token.</summary>
+    public SyntaxTokenNode CondensedStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The part names to condense, in source order — which is also VOICE order,
+    /// so the first part gets voice 1 (stems up) exactly as the first block of a
+    /// <c>voice { … } { … }</c> span does.</summary>
+    public IEnumerable<string> PartNames
+    {
+        get
+        {
+            // Slots: keyword, '{', name…, '}'. Skip the three fixed tokens by kind rather
+            // than by index, so a missing brace (error recovery) cannot shift the names.
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode t
+                    && t.Kind is not (SyntaxKind.CondensedStaffKeyword
+                        or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
+                    yield return t.Text;
+            }
+        }
+    }
+
+    /// <summary>The part-name tokens, for diagnostics that need a span.</summary>
+    public IEnumerable<SyntaxTokenNode> PartNameTokens
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode t
+                    && t.Kind is not (SyntaxKind.CondensedStaffKeyword
+                        or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
+                    yield return t;
+            }
+        }
+    }
+}
+
+/// <summary>
 /// Represents an ossia render item: ossia [clef] { partName }
 /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
 /// </summary>

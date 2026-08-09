@@ -454,6 +454,22 @@ public static class DiagnosticCodes
     /// rather than shipped, because an empty page looks like a layout failure.</summary>
     public const string EmptyScore = "LYS6002";
 
+    /// <summary>Render error: a <c>condensedStaff { … }</c> names fewer than two parts.
+    /// Condensing one part onto one staff is what <c>staff NAME</c> already is.</summary>
+    /// <remarks>
+    /// Its own code rather than a reuse of <see cref="EmptyScore"/>: <c>grandStaff</c> drops
+    /// an under-filled group silently and lets the score report "its body declares no staff"
+    /// about a body that plainly declares one, which names neither the container nor the
+    /// rule it broke.
+    /// </remarks>
+    public const string CondensedStaffNeedsTwoParts = "LYS6003";
+
+    /// <summary>Render error: a <c>condensedStaff { … }</c> contains something other than a
+    /// part name — a staff group, or another condensed staff. Everything inside it becomes a
+    /// VOICE of the one staff that comes out, and a bracketed group of staves is not a
+    /// voice.</summary>
+    public const string CondensedStaffBadMember = "LYS6004";
+
     // Structure / section-part grid errors (LYS7xxx)
 
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>

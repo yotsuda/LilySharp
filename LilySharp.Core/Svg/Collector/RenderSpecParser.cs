@@ -60,6 +60,10 @@ public static class RenderSpecParser
                         items.Add(new GrandStaffRenderSpec(grandSpec));
                     break;
 
+                case CondensedStaffRenderSyntax condensed:
+                    items.Add(ParseCondensedStaff(condensed));
+                    break;
+
                 case StaffRenderSyntax staff when !IsInsideGrandStaff(staff):
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
@@ -200,6 +204,26 @@ public static class RenderSpecParser
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// <c>condensedStaff { partA partB … }</c> → one staff carrying every named part's
+    /// voices. The clef is the FIRST part's, since a condensed staff has only one and the
+    /// leading part is the one whose register the writer put on top.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Unlike <see cref="ParseGrandStaff"/> this NEVER returns null. A group of fewer
+    /// than two staves is dropped there, and the score then reports "its body declares no
+    /// staff" (LYS6002) about a body that plainly declares one — a message that cannot lead
+    /// anyone to the real mistake. The arity here is a diagnostic of its own
+    /// (CondensedStaffNeedsTwoParts), and the item survives so the rest of the score still
+    /// renders.
+    /// </remarks>
+    private static CondensedStaffSpec ParseCondensedStaff(CondensedStaffRenderSyntax condensed)
+    {
+        var names = condensed.PartNames.Where(n => n.Length > 0).ToImmutableArray();
+        var clef = (names.Length > 0 ? GetPartClef(condensed, names[0]) : null) ?? ClefType.Treble;
+        return new CondensedStaffSpec(clef, names);
     }
 
     private static GrandStaffSpec? ParseGrandStaff(GrandStaffRenderSyntax grandStaff)

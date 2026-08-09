@@ -355,6 +355,7 @@ ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } 
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
                | 'grandStaff' , '{' , { StaffRender } , '}'
+               | CondensedStaff                     (* several parts on ONE staff *)
                | 'tab' , [ TuningName ] , PartRef    (* tablature: tab partName, or
                                                         tab bass5 partName to override the
                                                         part header's own `tuning` *)
@@ -362,6 +363,23 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
                | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
                ;
+
+CondensedStaff = 'condensedStaff' , '{' , PartRef , PartRef , { PartRef } , '}' ;
+                 (* A CONDENSED score: the named parts, each of which would otherwise be its
+                    own staff, share ONE staff — one voice each, in source order, so the
+                    first part is voice 1 (stems up) exactly as the first block of a
+                    `voice { … } { … }` span. Two or more parts are required (one part on one
+                    staff is what `staff NAME` already is — LYS6003), and the members are
+                    BARE part names: everything inside becomes a voice, and a `staff` item or
+                    a braced group of staves is not a voice (LYS6004).
+
+                    Because it is a SCORE-level item, one source can print both forms:
+                      score full  { condensedStaff { fl1 fl2 } }
+                      score parts { staff fl1  staff fl2 }
+
+                    This is plain condensation. Unisons are NOT merged into one notehead and
+                    no "a2"/"Solo" text is printed — that is the part combiner, which is a
+                    separate item and is not implemented yet. *)
 
 StaffRender    = 'staff' , [ ClefName ] , PartRef , { 'with' ( 'chords' PartRef | 'lyrics' PartRef ) } ;
                  (* Each 'with' clause ADDS to the staff: 'with chords NAME' aligns the

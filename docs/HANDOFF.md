@@ -148,7 +148,46 @@ grep 済＝製品側の合成パースは 2 箇所のみ（他方は `ChordHarmo
 ⇒ **綴りを入れる判断の前提が変わる**: 「綴りだけ」ではなく **engraving 側の移植が本体**。
 解錠は plain **10 冊**（31 冊中 20 は scheme・1 は markup ＝綴りが入っても枠外）。
 
-**テスト 4267 passed / 0 failed / 4 skipped**（第1便 4260・第2便 +7 = EmptyChordTests）・
+★★★ **第4便 = 文法追加 landed: `condensedStaff { partA partB … }`**（ユーザー判断・段①）。
+N パートを **1 段** に載せる score レベルの容器。中身は**裸のパート参照**（`tab m`/`ossia m`
+と同じ流儀。`staff` を書かせないのは、入れたものが**声部**になり譜にならないから）。
+**ソース順＝声部順**（先頭が voice 1＝符尾上）。**score レベルなので 1 ソースから
+`score full { condensedStaff { fl1 fl2 } }` と `score parts { staff fl1 staff fl2 }` の
+両方が出る**——LP は音楽を複製しないとこれができない。
+- **実装は小さい**: `Staff` は元から N 声部を持ち、多声経路（符尾方向・衝突・rest 変位）は
+  `staff.Voices` を読むので、`RenderSpec.ToStaffGroups` で**声部リストを連結して渡すだけ**。
+- ⚠️ **`GetVoiceBindings` の不変条件を壊すので明示フラグを足した**（`SharesStaffWithPrevious`）。
+  束縛は「1 束縛 = 1 譜」で譜インデックスに一致する契約だったが、condensed は
+  **N 束縛 = 1 譜**。素直に yield すると**以降の譜が全部 1 ずれる**（観測者
+  `AStaffAfterACondensedStaff_KeepsItsOwnStaffIndex`）。
+- **照合**: 同じ音楽を「1 パート＋`voice{}{}`」で書いた対照と比べ、**Y は 52 個全一致・
+  stem 12 本一致**（＝声部割り当てと符尾方向は正しい）。
+- ⚠️ **開示 = 水平に残差**。第1小節は完全一致、**第2小節から 0.08 → 0.11 で頭打ち**
+  （probe `scratch\lpreg\cond3-{probe,ctl}.lys`）。Y が完全一致なので**小節ばね側**で
+  あって声部割り当てではない。**テストでピン済**（`HorizontalSpacingStillDriftsFromTheTwoVoiceSpelling`）。
+  ⇒ **起票: 同じ音楽が「1 パート 2 声」と「2 パート condensed」で違う幅になる。**
+- 診断 3 種: **LYS6003**（2 未満＝`grandStaff` の先例が「黙って spec を消して
+  『譜の宣言が無い』と言う」のを踏まないため専用コード）・**LYS6004**（パート名以外の
+  メンバ。**パーサで報告**＝`Expected 'CloseBrace'` にせず、`condensedStaff { staff a staff b }`
+  という grandStaff 利用者が最初に試す形に正しく答える）・大小文字は既存の
+  「未定義パート」エラーで捕まる（黙って誤読はしない・実測済）。
+- 観測者 `CondensedStaffTests`（12 本）・docs 2 更新。
+
+★★ **前提が 1 つ崩れた（実測・設計に影響）**: 「声部の並び順が符尾方向を決めるので LP の
+`\partCombineUp`/`Down` に相当する綴りは要らない」は**段②では偽**。LP で
+`<< \partCombineUp \a \b \\ \c >>` から `Up` を外すと**出力が 80 行変わる**
+（`scratch\lpreg\pc3-{up,plain}.ly`）＝合体した組の内部方向が外側スロットの方向を
+上書きしない。⇒ **段② の実装は「スロット方向を能動的に強制する」段が要る**。
+利用者が向きを書く必要は無い（`condensedStaff` 内の位置から導ける）が、**自動では効かない**。
+
+★ **段②（`combinedStaff { X Y }`）は未実装**。綴りだけ足すと**合体しないのに
+combined と名乗る**ことになるので、engraving（ユニゾンの符頭/符尾の畳み込み・solo 単声化・
+相手休符の削除・moment ベース判定への書き直し）と同時に入れる。設計は確定済み:
+ちょうど 2 パート・単独なら 1 段・`condensedStaff` の中なら 1 声部・
+`condensedStaff` は 2 項目以上なので同義語は書けない。
+
+**テスト 4279 passed / 0 failed / 4 skipped**（第1便 4260・第2便 +7 = EmptyChordTests・
+第4便 +12 = CondensedStaffTests）・
 Core 0 warning。**未 push は §0 で数える（⚠️ push しない）**。
 probe 残置（第125）: **`ecslur-{a,b,c}.ly`（LP オラクル）・`ecslur-ls-{a,c,noslur}.lys`**。
 

@@ -44,6 +44,20 @@ score main "out" {                   // one or more render blocks
 }
 ```
 
+**Several parts on ONE staff** (a condensed score) — `condensedStaff { … }` takes BARE part
+names, two or more, and gives each one a voice of the single staff it produces, in source
+order (first part = voice 1, stems up). Members are bare names, not `staff` items, because
+what goes in becomes a voice, not a staff. Being a score-level item, one source prints both
+the condensed score and the separate parts:
+
+```
+score full  { condensedStaff { flute1 flute2 } }
+score parts { staff flute1  staff flute2 }
+```
+
+This is plain condensation: unisons are not merged into one notehead and no "a2"/"Solo" is
+printed.
+
 A minimal single-staff document:
 
 ```

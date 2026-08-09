@@ -610,6 +610,7 @@ internal sealed class Lexer
             "grandStaff" => SyntaxKind.GrandStaffKeyword,
             "staffGroup" => SyntaxKind.StaffGroupKeyword,
             "choirStaff" => SyntaxKind.ChoirStaffKeyword,
+            "condensedStaff" => SyntaxKind.CondensedStaffKeyword,
             "voice" => SyntaxKind.VoiceKeyword,
             "phrase" => SyntaxKind.PhraseKeyword,
             "repeat" => SyntaxKind.RepeatKeyword,

@@ -1037,6 +1037,23 @@ internal sealed class GrandStaffRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Condensed-staff render: <c>condensedStaff { partA partB … }</c> — bare part names, not
+/// <c>staff</c> items, because the result is ONE staff however many parts go in.
+/// </summary>
+internal sealed class CondensedStaffRenderGreen : GreenSyntaxNode
+{
+    public CondensedStaffRenderGreen(
+        SyntaxToken condensedStaffKeyword,
+        SyntaxToken openBrace,
+        SyntaxToken[] partNames,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.CondensedStaffRender,
+               [condensedStaffKeyword, openBrace, ..partNames, closeBrace])
+    {
+    }
+}
+
+/// <summary>
 /// Ossia render: ossia [clef] { partName }
 /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
 /// </summary>
