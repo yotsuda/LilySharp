@@ -414,11 +414,20 @@ public sealed partial class MeasureCollector
                     var nameLower = nameText.ToLowerInvariant();
                     if (nameLower == "starttrillspan")
                     {
-                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
+                        // .up/.down forces the spanner's direction — LilyPond's
+                        // ^\startTrillSpan / _\startTrillSpan, which the engraver sets
+                        // on the grob over the voice default. Until 2026-08-09 the
+                        // suffix was accepted and silently dropped (trillsdir-probe).
+                        // LILYPOND-REF: scm/scheme-engravers.scm:1818-1820 Trill_spanner_engraver.
+                        int forcedDir = articulationSyntax.ForcedAbove switch
+                        {
+                            true => 1, false => -1, null => 0,
+                        };
+                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex, _currentVoiceIndex, forcedDir));
                     }
                     else if (nameLower == "stoptrillspan")
                     {
-                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
+                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex, _currentVoiceIndex, 0));
                     }
                     else if (nameLower == "courtesy")
                     {
@@ -465,11 +474,11 @@ public sealed partial class MeasureCollector
                 var markName = markSyntax.MarkName.ToLowerInvariant();
                 if (markName == "trillspan.start")
                 {
-                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
+                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex, 0));
                 }
                 else if (markName == "trillspan.stop")
                 {
-                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex));
+                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex, 0));
                 }
                 else if (markName.StartsWith("pluck.") && markName.Length == 7
                          && markName[6] is 'p' or 'i' or 'm' or 'a')
@@ -620,12 +629,31 @@ public sealed partial class MeasureCollector
 
         var items = ImmutableArray.CreateBuilder<TrillSpannerItem>();
         (bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex,
-            int voiceIndex)? pendingStart = null;
+            int voiceIndex, int forcedDir)? pendingStart = null;
 
         foreach (var evt in _trillSpannerEvents)
         {
             if (evt.isStart)
             {
+                // A NEW START while a spanner runs ENDS the running one at the new
+                // start's own column — LilyPond's `ender = (or stop-event start-event)`:
+                // the ended trill's right bound becomes the column the new one begins
+                // on. Until 2026-08-09 the pending start was simply overwritten and the
+                // running trill vanished without a mark (trill-spanner-direction.ly
+                // chains four starts with no stop and lost the first three).
+                // LILYPOND-REF: scm/scheme-engravers.scm:1809-1814 Trill_spanner_engraver
+                //   process-music — the ender path; :1833-1837 note-column-interface
+                //   acknowledger — the ended trill's right bound is the current column.
+                if (pendingStart != null)
+                    items.Add(new TrillSpannerItem(
+                        pendingStart.Value.measureIndex,
+                        pendingStart.Value.itemIndex,
+                        evt.measureIndex,
+                        evt.itemIndex,
+                        pendingStart.Value.sourcePosition,
+                        pendingStart.Value.staffIndex,
+                        pendingStart.Value.voiceIndex,
+                        Direction: pendingStart.Value.forcedDir));
                 pendingStart = evt;
             }
             else if (pendingStart != null)
@@ -640,7 +668,8 @@ public sealed partial class MeasureCollector
                     evt.itemIndex,
                     pendingStart.Value.sourcePosition,
                     pendingStart.Value.staffIndex,
-                    pendingStart.Value.voiceIndex));
+                    pendingStart.Value.voiceIndex,
+                    Direction: pendingStart.Value.forcedDir));
                 pendingStart = null;
             }
         }
@@ -662,7 +691,8 @@ public sealed partial class MeasureCollector
                 0,
                 pendingStart.Value.sourcePosition,
                 pendingStart.Value.staffIndex,
-                pendingStart.Value.voiceIndex));
+                pendingStart.Value.voiceIndex,
+                Direction: pendingStart.Value.forcedDir));
 
         return items.ToImmutable();
     }

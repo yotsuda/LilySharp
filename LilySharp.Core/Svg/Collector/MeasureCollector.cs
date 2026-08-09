@@ -846,7 +846,7 @@ public sealed partial class MeasureCollector
     private readonly List<GrobOverride> _grobOverrides = new();
     private readonly List<GrobRevert> _grobReverts = new();
     // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
-    private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex, int voiceIndex)> _trillSpannerEvents = new();
+    private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex, int voiceIndex, int forcedDir)> _trillSpannerEvents = new();
     // Within-measure accidental memory: (diatonic step, octave) → the alteration
     // currently in effect for that pitch in the CURRENT measure. Seeded from the
     // key signature and updated as notes are engraved; reset at every measure

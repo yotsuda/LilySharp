@@ -143,7 +143,8 @@ internal static class OutsideStaffStacker
     /// </remarks>
     public static (ImmutableArray<DynamicLayout> Dynamics,
                     ImmutableArray<HairpinLayout> Hairpins,
-                    ImmutableArray<ArticulationLayout> Articulations)
+                    ImmutableArray<ArticulationLayout> Articulations,
+                    ImmutableArray<TrillSpannerLayout> Trills)
         StackBelowStaff(
             ImmutableArray<SystemLayout> systems,
             ImmutableArray<DynamicLayout> dynamics,
@@ -151,18 +152,22 @@ internal static class OutsideStaffStacker
             ImmutableArray<ArticulationLayout> articulations = default,
             bool applyStaffOffsets = false,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null,
-            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default)
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default,
+            ImmutableArray<TrillSpannerLayout> trills = default)
     {
         // A below-staff script that DECLARES a priority (the fermata family's 75) is a mover
         // of this pass in its own right, so the pass has to run for it even on a page with
         // no dynamic and no hairpin anywhere — LilyPond's pass is not conditional on what
-        // else is present.
+        // else is present. A DOWN trill spanner (priority 50, below the fermatas) is the
+        // same kind of mover on this side.
         bool anyBelowScriptMover = !articulations.IsDefaultOrEmpty
             && articulations.Any(a => !a.IsAbove && a.OutsideStaffPriority is not null);
-        if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty && !anyBelowScriptMover)
+        bool anyBelowTrill = !trills.IsDefaultOrEmpty && trills.Any(t => t.Direction < 0);
+        if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty && !anyBelowScriptMover
+                && !anyBelowTrill)
             || systems.Length == 0)
         {
-            return (dynamics, hairpins, articulations);
+            return (dynamics, hairpins, articulations, trills);
         }
 
         // Build measure-to-system mapping
@@ -257,6 +262,12 @@ internal static class OutsideStaffStacker
                 if (!a.IsAbove && a.OutsideStaffPriority is not null
                     && measureToSystem.TryGetValue(a.MeasureIndex, out int asys))
                     placedStaves.Add((asys, a.StaffIndex));
+        // ...and so does a DOWN trill spanner.
+        if (!trills.IsDefaultOrEmpty)
+            foreach (var t in trills)
+                if (t.Direction < 0
+                    && measureToSystem.TryGetValue(t.StartMeasureIndex, out int tsys))
+                    placedStaves.Add((tsys, t.StaffIndex));
 
         // Below-staff scripts that declare NO outside-staff-priority sit against the note,
         // and everything at 250+ side-positions BELOW them: seed them as occupancy. The
@@ -295,6 +306,33 @@ internal static class OutsideStaffStacker
                 var (_, seedDown) = ArticulationEngraver.ScriptSkylines(a, aYup);
                 Track(sysIdx, a.StaffIndex).MergeSupport(down: seedDown);
             }
+        }
+
+        // --- Priority 50: DOWN trill spanners, BELOW the staff ---
+        // The first mover of the below pass (the fermatas' 75 and the dynamics' 250 come
+        // after), the mirror of PlaceTrills on the above side: the same 2-piece profile
+        // (glyph plateau + wave run), the same outside-staff-padding, against this side's
+        // trackers. The trill's YUp is already system-relative (the engraver resolved the
+        // staff offset), so it enters the tracker directly, like the above pass's does.
+        // LILYPOND-REF: scm/define-grobs.scm:4078 TrillSpanner outside-staff-priority 50;
+        //   lily/axis-group-interface.cc:945-972 skyline_spacing — one pass, both
+        //   directions.
+        var adjTrills = trills;
+        if (anyBelowTrill)
+        {
+            var tb = trills.ToBuilder();
+            for (int i = 0; i < tb.Count; i++)
+            {
+                var t = tb[i];
+                if (t.Direction >= 0
+                    || !measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
+                    continue;
+                var (qUp, qDown) = TrillProfileSkylines(t);
+                double move = Track(sysIdx, t.StaffIndex).Place(qUp, qDown, OutsideStaffPadding);
+                if (move != 0)
+                    tb[i] = t with { YUp = t.YUp + move };
+            }
+            adjTrills = tb.ToImmutable();
         }
 
         // --- Priority 75: the fermata family, BELOW the staff ---
@@ -491,7 +529,42 @@ internal static class OutsideStaffStacker
 
         // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
         // TextSpanner direction=UP) by StackAboveStaff, not here.
-        return (adjDynamics, adjHairpins, adjArticulations);
+        return (adjDynamics, adjHairpins, adjArticulations, adjTrills);
+    }
+
+    /// <summary>
+    /// A trill spanner's 2-piece profile pair about its stored YUp — the glyph plateau
+    /// (its stencil-offset reach below the line, its outline top above it) and the wave
+    /// run — the one house both stacking directions and the engraver's aligned_side read.
+    /// LILYPOND-REF: scm/define-grobs.scm:4054-4068 make-with-dimension-from-markup
+    ///   ("straight line as the vertical skyline"), :4085 vertical-skylines from the
+    ///   stencil.
+    /// </summary>
+    private static (VerticalSkyline Up, VerticalSkyline Down) TrillProfileSkylines(
+        in TrillSpannerLayout t)
+    {
+        bool hasGlyph = t.GlyphX < t.LineStartX;
+        double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
+        double top = GlyphMetrics.OrnTrillGlyph.Top - reach;
+        var qUp = new VerticalSkyline(VerticalDirection.Up);
+        var qDown = new VerticalSkyline(VerticalDirection.Down);
+        if (hasGlyph)
+        {
+            double gx0 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left;
+            double gx1 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
+            qUp.Merge(VerticalSkyline.FromBox(gx0, gx1,
+                t.YUp - reach, t.YUp + top, VerticalDirection.Up));
+            qDown.Merge(VerticalSkyline.FromBox(gx0, gx1,
+                t.YUp - reach, t.YUp + top, VerticalDirection.Down));
+        }
+        if (t.LineStartX < t.LineEndX)
+        {
+            var line = TrillWaveOutline.Place(
+                t.LineStartX, t.LineEndX - t.LineStartX, t.YUp);
+            qUp.Merge(line.Up);
+            qDown.Merge(line.Down);
+        }
+        return (qUp, qDown);
     }
 
     // =================================================================
@@ -928,7 +1001,10 @@ internal static class OutsideStaffStacker
         for (int i = 0; i < b.Count; i++)
         {
             var t = b[i];
-            if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
+            // A DOWN trill was placed by the below pass (StackBelowStaff, priority 50
+            // there too) and passes through here untouched.
+            if (t.Direction < 0
+                || !measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
                 continue;
             // System-relative Y-up: t.YUp is Y-up from the system top, entering the
             // tracker directly; the placed anchor writes back unchanged.
@@ -949,9 +1025,6 @@ internal static class OutsideStaffStacker
             // LILYPOND-REF: lily/side-position-interface.cc:361-370 aligned_side padding;
             // lily/axis-group-interface.cc:747-749 add_grobs_of_one_priority — the
             //   collision padding is outside-staff-padding (default 0.46).
-            bool hasGlyph = t.GlyphX < t.LineStartX;
-            double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
-            double top = GlyphMetrics.OrnTrillGlyph.Top - reach;
             // The entry carries the outside-staff-padding — the
             // trill declares none, so the 0.46 default — which is what a later grob
             // (a metronome mark at 1300) pays to clear it. MEASURED:
@@ -983,34 +1056,16 @@ internal static class OutsideStaffStacker
             //   skyline"), :4085 vertical-skylines from the stencil;
             // lily/axis-group-interface.cc:770-773,:798-800 add_grobs_of_one_priority
             //   — v_skylines goes to avoid_outside_staff_collisions AND to all_v_skylines.
-            var qUp = new VerticalSkyline(VerticalDirection.Up);
-            var qDown = new VerticalSkyline(VerticalDirection.Down);
-            if (hasGlyph)
-            {
-                // X reach: the glyph's TRUE (outline) left and right, not its bounding
-                // box — LilyPond wraps the bound text in make-with-true-dimension-markup
-                // exactly because "the trill glyph has a loop on its left, which sticks
-                // out of its bounding box" (its own comment).
-                // LILYPOND-REF: scm/define-grobs.scm:4056-4066 TrillSpanner bound-details,
-                //   make-with-true-dimension-markup on scripts.trill
-                double gx0 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left;
-                double gx1 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
-                qUp.Merge(VerticalSkyline.FromBox(gx0, gx1,
-                    t.YUp - reach, t.YUp + top, VerticalDirection.Up));
-                qDown.Merge(VerticalSkyline.FromBox(gx0, gx1,
-                    t.YUp - reach, t.YUp + top, VerticalDirection.Down));
-            }
-            // The line itself: the run of trill_element glyphs, the same house the
-            // engraver's aligned_side reads (TrillWaveOutline). Its ink is what a later
-            // grob clears over the wave — measured: a metronome mark's digits sit there
-            // (ledger tempo.trill-cleared.staff-to-baseline).
-            if (t.LineStartX < t.LineEndX)
-            {
-                var line = TrillWaveOutline.Place(
-                    t.LineStartX, t.LineEndX - t.LineStartX, t.YUp);
-                qUp.Merge(line.Up);
-                qDown.Merge(line.Down);
-            }
+            // X reach inside the helper: the glyph's TRUE (outline) left and right, not
+            // its bounding box — LilyPond wraps the bound text in
+            // make-with-true-dimension-markup exactly because "the trill glyph has a
+            // loop on its left, which sticks out of its bounding box" (its own comment).
+            // The line: the run of trill_element glyphs, the same house the engraver's
+            // aligned_side reads (TrillWaveOutline). Its ink is what a later grob clears
+            // over the wave (ledger tempo.trill-cleared.staff-to-baseline).
+            // LILYPOND-REF: scm/define-grobs.scm:4056-4066 TrillSpanner bound-details,
+            //   make-with-true-dimension-markup on scripts.trill
+            var (qUp, qDown) = TrillProfileSkylines(t);
             double move = trackers(sysIdx, t.StaffIndex).Place(qUp, qDown, OutsideStaffPadding, 0);
             b[i] = t with { YUp = t.YUp + move };
         }

@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -47,7 +48,14 @@ public readonly record struct TrillSpannerLayout(
     // (Until 2026-07-30 the stacker de-collided staff 0 only and lower staves kept
     // their engraver Y — ledger trill.lower-staff.staff-to-line priced that at −2.455.)
     int StaffIndex = 0,
-    int SourceIndex = -1   // F3/B: index into score.TrillSpanners (shared by all broken pieces)
+    int SourceIndex = -1,  // F3/B: index into score.TrillSpanners (shared by all broken pieces)
+    // Resolved direction: +1 above the staff (the grob default), −1 below. Resolved
+    // ONCE here (writer's ^/_ > voice default > UP) so the outside-staff passes and
+    // any later consumer read one answer instead of re-deriving it.
+    // LILYPOND-REF: scm/scheme-engravers.scm:1818-1820 Trill_spanner_engraver;
+    // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs;
+    // LILYPOND-REF: scm/define-grobs.scm TrillSpanner — (direction . UP), the grob default.
+    int Direction = 1
 );
 
 /// <summary>
@@ -128,11 +136,35 @@ internal static class TrillSpannerEngraver
                 ? vv : ImmutableArray<Voice>.Empty;
 
             var startMeasure = measureLayouts[spanner.StartMeasureIndex];
-            if (spanner.StartItemIndex >= startMeasure.Items.Length)
+            // Existence is the VOICE's — a later voice's item indices do not exist in
+            // the layout's item slots (those are the primary voice's), and reading them
+            // there dropped every voice-two trill whose index ran past the primary's
+            // count (trill-spanner-direction.ly: the spacer branch has ONE item, so
+            // trills 2..4 vanished and the first ran to the measure end).
+            if (spanner.StartItemIndex >= VoiceItemCount(
+                    trillVoices, spanner.VoiceIndex, spanner.StartMeasureIndex, startMeasure))
                 continue;
 
-            var startItem = startMeasure.Items[spanner.StartItemIndex];
-            double startX = startMeasure.X + startItem.X;
+            double startX = startMeasure.X + VoiceItemX(
+                trillVoices, spanner.VoiceIndex, startMeasure,
+                spanner.StartMeasureIndex, spanner.StartItemIndex);
+
+            // The grob's direction: the writer's ^/_ wins, then the voice default
+            // (TrillSpanner is a direction-polyphonic grob, so an even voice's trills
+            // sit BELOW), then the grob's own UP.
+            // LILYPOND-REF: scm/scheme-engravers.scm:1818-1820 Trill_spanner_engraver —
+            //   the start event's direction is set on the grob over the context's;
+            // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs
+            //   (TrillSpanner is in the list); scm/define-grobs.scm:4076 (direction . UP).
+            // ⚠️ The voice default is read at MEASURE granularity (the reach
+            //   VoiceDefaults.IsPolyphonicAt has); a trill starting after its span
+            //   closed mid-measure would keep the voice's direction — unbound, the same
+            //   family as the collector stamp's named approximation.
+            int dir = spanner.Direction != 0
+                ? spanner.Direction
+                : VoiceDefaults.GetDefaultStemUpAt(
+                        trillVoices, spanner.VoiceIndex, spanner.StartMeasureIndex)
+                    is bool voiceUp ? (voiceUp ? 1 : -1) : 1;
             // The left bound attaches at the CENTRE of the bound note column's X extent
             // (attach-dir CENTER) — the trill's OWN voice's column, since the engraver
             // lives in that Voice context — which Lily# reads as the column X plus the drawn
@@ -196,7 +228,7 @@ internal static class TrillSpannerEngraver
                 {
                     endX = endsOnMeasureStart
                         ? BarlineLeftEdge(spanner.EndMeasureIndex - 1, measureLayouts, trillVoices)
-                        : GetEndX(spanner, measureLayouts);
+                        : GetEndX(spanner, measureLayouts, trillVoices);
                 }
                 else
                 {
@@ -238,7 +270,7 @@ internal static class TrillSpannerEngraver
             {
                 double lineUp = AlignedSideLineY(
                     spanner, piece.Segment, piece.GlyphX, piece.LineStartX, piece.EndX,
-                    trillVoices, measureLayouts, beamMembers);
+                    trillVoices, measureLayouts, beamMembers, dir);
                 // AlignedSideLineY answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own offset within the
@@ -248,7 +280,7 @@ internal static class TrillSpannerEngraver
                 layouts.Add(new TrillSpannerLayout(
                     piece.Segment.StartMeasureIndex, piece.GlyphX, piece.LineStartX,
                     piece.EndX, lineUp - EngravingDefaults.StaffMiddle - staffOffset,
-                    spanner.SourcePosition, spanner.StaffIndex, ti));
+                    spanner.SourcePosition, spanner.StaffIndex, ti, dir));
             }
         }
 
@@ -307,11 +339,21 @@ internal static class TrillSpannerEngraver
         double glyphX, double lineStartX, double endX,
         ImmutableArray<Voice> voices, ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
-            (BeamLayout Beam, double MemberX, bool StemUp)> beamMembers)
+            (BeamLayout Beam, double MemberX, bool StemUp)> beamMembers,
+        int dir)
     {
-        // :225-259 — my_dim: the grob's own DOWN profile about its line (Y = 0 here). Its
+        // The DOWN arm (dir = −1) is the same aligned_side with every side flipped: my_dim
+        // becomes the grob's UP profile (skyp[-dir]), the supports contribute their DOWN
+        // skylines, the staff floor sits at the BOTTOM extent, and the answer leaves with
+        // dir's sign. The glyph still hangs its stencil-offset reach BELOW the line in
+        // both directions — the offset is (0 . -1) unconditionally (LP oracle
+        // trillsdir-lp.svg: tr baseline 0.6 below the line on both sides).
+        // LILYPOND-REF: lily/side-position-interface.cc:188-455 aligned_side — every
+        //   dir-signed step below cites the same lines the UP transcription does.
+
+        // :225-259 — my_dim: the grob's own FACING profile about its line (Y = 0 here). Its
         // two pieces are kept SEPARATE and their distances maxed below rather than merged
-        // into one skyline: the pieces' X ranges are disjoint, so for a DOWN profile
+        // into one skyline: the pieces' X ranges are disjoint, so for a facing profile
         // max(distance(plateau), distance(run)) IS distance(merge(plateau, run)) — the
         // merge would only resolve the run's buildings a second time, and a long line has
         // one per glyph edge per copy.
@@ -320,23 +362,27 @@ internal static class TrillSpannerEngraver
         // (it is built twice per trill, here and in the stacker, and copied out of the
         // cache each time). Named in HANDOFF with the lever; do not read this comment as
         // "the merge was the problem".
+        var facing = dir > 0 ? VerticalDirection.Down : VerticalDirection.Up;
         double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
         VerticalSkyline? plateau = segment.IsFirst
             ? VerticalSkyline.FromBox(
                 glyphX + GlyphMetrics.OrnTrillGlyphOutline.Left,
                 glyphX + GlyphMetrics.OrnTrillGlyphOutline.Right,
-                -reach, GlyphMetrics.OrnTrillGlyph.Top - reach, VerticalDirection.Down)
+                -reach, GlyphMetrics.OrnTrillGlyph.Top - reach, facing)
             : null;
         // The line's own ink: the run of trill_element glyphs, pointwise.
-        VerticalSkyline? run = lineStartX < endX
-            ? TrillWaveOutline.Place(lineStartX, endX - lineStartX, 0.0).Down
-            : null;
+        var runPair = lineStartX < endX
+            ? TrillWaveOutline.Place(lineStartX, endX - lineStartX, 0.0)
+            : default((VerticalSkyline Up, VerticalSkyline Down)?);
+        VerticalSkyline? run = runPair is { } rp ? (dir > 0 ? rp.Down : rp.Up) : null;
 
         // :323-330 — the staff symbol's extent is the minimum under whatever the columns
-        // contribute (include_staff, which declaring staff-padding turns on).
+        // contribute (include_staff, which declaring staff-padding turns on) — the
+        // dir-side extent: +2 for an UP spanner, −2 for a DOWN one.
         var support = VerticalSkyline.FromBox(
             double.NegativeInfinity, double.PositiveInfinity,
-            DynamicEngraver.StaffExtent, DynamicEngraver.StaffExtent, VerticalDirection.Up);
+            dir * DynamicEngraver.StaffExtent, dir * DynamicEngraver.StaffExtent,
+            dir > 0 ? VerticalDirection.Up : VerticalDirection.Down);
         // ⚠️ NOT LITERAL, and named rather than fixed: LilyPond's support here is each
         // NoteColumn's whole skyline, so every element of the column is in it — dots,
         // accidentals, flags — while ColumnSupportSkylines builds the HEAD and the STEM
@@ -368,29 +414,33 @@ internal static class TrillSpannerEngraver
                 : count - 1;
             for (int ii = first; ii <= last; ii++)
             {
-                double xColumn = ml.X + (ii < ml.Items.Length ? ml.Items[ii].X : 0.0);
+                double xColumn = ml.X + VoiceItemX(voices, voiceIndex, ml, mi, ii);
                 int cmi = mi, cii = ii;
-                var (up, _) = DynamicEngraver.ColumnSupportSkylines(voices, voiceIndex, mi, ii,
+                var (up, down) = DynamicEngraver.ColumnSupportSkylines(voices, voiceIndex, mi, ii,
                     xColumn,
                     v => beamMembers.TryGetValue((spanner.StaffIndex, v, cmi, cii),
                         out var b) ? b : null);
-                support.Merge(up);
+                support.Merge(dir > 0 ? up : down);
             }
         }
 
-        // :354-358 (dir = UP, horizon-padding absent) and :370.
+        // :354-358 (total_off = dir * dim.distance(my_dim), horizon-padding absent)
+        // and :370 (+= dir * padding) — carried as the dir-FACING magnitude and signed
+        // once at the return.
         double overlap = double.NegativeInfinity;
         if (plateau is { } p)
             overlap = Math.Max(overlap, p.Distance(support));
         if (run is { } r)
             overlap = Math.Max(overlap, r.Distance(support));
         double totalOff = overlap + EngravingDefaults.TrillSpannerPadding;
-        // :433-453 — the refpoint floor. The trill's reach subsumes it whenever
-        // reach > staff-padding - padding, which 1.0 always satisfies; it is written
-        // because LilyPond computes it (HANDOFF §5.2: do not fold a term to its value).
+        // :433-453 — the refpoint floor (dir * staff_extent[dir] + staff-padding, against
+        // the dir-signed offset — the same magnitude both sides). The trill's reach
+        // subsumes it whenever reach > staff-padding - padding, which 1.0 always
+        // satisfies; it is written because LilyPond computes it (HANDOFF §5.2: do not
+        // fold a term to its value).
         double diff = DynamicEngraver.StaffExtent
             + EngravingDefaults.TrillSpannerStaffPadding - totalOff;
-        return totalOff + Math.Max(diff, 0.0);
+        return dir * (totalOff + Math.Max(diff, 0.0));
     }
 
     /// <summary>
@@ -438,16 +488,17 @@ internal static class TrillSpannerEngraver
             ? voices[0].Measures[measureIndex].EndBarline
             : BarlineType.Single;
 
-    private static double GetEndX(TrillSpannerItem spanner, ImmutableArray<MeasureLayout> measureLayouts)
+    private static double GetEndX(TrillSpannerItem spanner,
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<Voice> voices)
     {
         if (spanner.EndMeasureIndex < measureLayouts.Length)
         {
             var endMeasure = measureLayouts[spanner.EndMeasureIndex];
-            if (spanner.EndItemIndex < endMeasure.Items.Length)
-            {
-                var endItem = endMeasure.Items[spanner.EndItemIndex];
-                return endMeasure.X + endItem.X;
-            }
+            if (spanner.EndItemIndex < VoiceItemCount(
+                    voices, spanner.VoiceIndex, spanner.EndMeasureIndex, endMeasure))
+                return endMeasure.X + VoiceItemX(
+                    voices, spanner.VoiceIndex, endMeasure,
+                    spanner.EndMeasureIndex, spanner.EndItemIndex);
             // No stop column: the bound is the bar line (to-barline #t). Lily# stops a
             // BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,
             // named at the constant), because no point measures a barline-bound trill.
@@ -455,5 +506,46 @@ internal static class TrillSpannerEngraver
         }
         var lastMeasure = measureLayouts[^1];
         return lastMeasure.X + lastMeasure.Width - BoundPadding;
+    }
+
+    /// <summary>
+    /// How many items the spanner's OWN voice has in a measure — the frame its item
+    /// indices live in. The layout's item slots are the primary voice's; falling back to
+    /// them keeps the historical single-voice behaviour when no voices were supplied.
+    /// </summary>
+    private static int VoiceItemCount(
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, MeasureLayout ml)
+        => !voices.IsDefaultOrEmpty
+            && voiceIndex >= 0 && voiceIndex < voices.Length
+            && measureIndex < voices[voiceIndex].Measures.Length
+            ? voices[voiceIndex].Measures[measureIndex].Items.Length
+            : ml.Items.Length;
+
+    /// <summary>
+    /// A voice item's X within its measure layout (measure-relative). The PRIMARY
+    /// voice's items are the layout's own item slots; a later voice's map through their
+    /// musical timing — the same alignment the cross-voice beam collisions use.
+    /// LILYPOND-REF: the note column IS shared across voices at one moment (one
+    /// PaperColumn per timestep), so timing is the identity that finds it.
+    /// </summary>
+    private static double VoiceItemX(
+        ImmutableArray<Voice> voices, int voiceIndex, MeasureLayout ml,
+        int measureIndex, int itemIndex)
+    {
+        if (voiceIndex <= 0 || voices.IsDefaultOrEmpty || voiceIndex >= voices.Length
+            || measureIndex >= voices[voiceIndex].Measures.Length)
+            return itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : 0.0;
+
+        var items = voices[voiceIndex].Measures[measureIndex].Items;
+        var t = Fraction.Zero;
+        for (int i = 0; i < itemIndex && i < items.Length; i++)
+            t += items[i] switch
+            {
+                NoteItem n => n.Duration,
+                ChordItem c => c.Duration,
+                RestItem r => r.Duration,
+                _ => Fraction.Zero,
+            };
+        return ml.GetXForTiming(t);
     }
 }

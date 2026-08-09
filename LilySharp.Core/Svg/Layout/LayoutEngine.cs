@@ -3311,10 +3311,11 @@ internal sealed class LayoutEngine
         // (scm/script.scm), so it is a MOVER of this pass — below here, above in
         // StackAboveStaff, which is handed the below pass's result so one array carries
         // both halves' moves.
-        var (stackedDynamics, stackedHairpins, stackedArticulations) =
+        var (stackedDynamics, stackedHairpins, stackedArticulations, belowStackedTrills) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
                 articulationLayouts, applyStaffOffsets: staffYAt != null,
-                staffProfile: staffProfile, lineGroups: dynamicLineGroups);
+                staffProfile: staffProfile, lineGroups: dynamicLineGroups,
+                trills: trillSpannerLayouts);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
@@ -3364,7 +3365,7 @@ internal sealed class LayoutEngine
              stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners,
              stackedArticulationsAbove) = OutsideStaffStacker.StackAboveStaff(
             systems, systemSkylines, tupletBracketLayouts,
-            trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
+            belowStackedTrills, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
             stackedArticulations, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts,
             staffProfile: staffProfile);

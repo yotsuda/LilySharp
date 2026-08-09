@@ -8363,9 +8363,9 @@
     },
     "trill-spanner-direction.ly": {
       "category": "plain",
-      "state": "open",
+      "state": "fixed",
       "claim": "trill spanner の向きは ^/_ で強制でき、\\voiceTwo の既定 DOWN より優先される",
-      "notes": "open(root 釘付け): LS の trill spanner は常時 UP(TrillSpannerEngraver.cs:62 doc に明記)。probe: @startTrillSpan.down は無警告で受理され UP に描かれる(silent 無視・trillsdir-probe.lys)。LP は TrillSpanner ∈ direction-polyphonic-grobs(\\voiceTwo で既定 DOWN)+^/_ が優先。修理形=⑴annotation の .up/.down を TrillSpannerItem へ配線 ⑵voice 既定 direction の配布(make-voice-props-set の配布先一覧に TrillSpanner が居るか要確認) ⑶DOWN 時の下側 side-position+skyline 参加(現実装は上側 pass 前提)。単独 \\voiceTwo の枠(voice{}{} 第2分岐のみ)も要検討"
+      "notes": "起票時: LS の trill spanner は常時 UP・@startTrillSpan.down は silent 無視。**fixed 第69号(第124S第4便)**: 修理5枚 ⑴**pairing が LP の字面でなかった**——連続 start は pendingStart を上書き=前の spanner が無警告で消えていた(本書は start×4 無 stop で3本消失)→LP の ender 規則(scheme-engravers.scm:1809-1814=新 start/stop が走行中 spanner を現在列で終端・右bound=新startの列)に書換 ⑵.up/.down 配線(ForcedAbove→TrillSpannerItem.Direction。event の direction が voice 既定に優先=:1818-1820) ⑶**voice 既定 DOWN**(TrillSpanner ∈ direction-polyphonic-grobs=music-functions.scm:617-634 で裏取り。engraver で一度だけ解決し layout.Direction に載せ全消費者が読む) ⑷**DOWN 側 aligned_side+下側 stacker 参加**——AlignedSideLineY を dir 鏡映(facing profile/column down skyline/staff床−2/dir符号)・StackBelowStaff に priority50 の trill 置きを追加(profile は上下共有の TrillProfileSkylines=綴り1本) ⑸engraver が非primary voice の item を layout の item 枠(=primary枠)で index→voice-2 trill が範囲外 guard で全滅+終端が小節末 fallback(「単独\\voiceTwo の枠」の実体)→VoiceItemX/VoiceItemCount(voice の timing で X を引く)。照合: **tr 4本の Y が LP 桁一致**(+9.6/−2.55/+9.6/+11.564=4本目は下側 stacker の積みまで一致)・wave Y 一致(+9.0/−3.15/+9.0/+10.964)・**X も桁一致**(9.24/12.24/15.24/18.24)。twin=audit lys+scratch\\lpreg\\trillsdir-lp.{ly,svg}。観測者=TrillSpannerDirectionTests。snapshot 0枚(単声=UP・primary=X恒等)。札: ⑴LP の right-neighbor/adjust-on-neighbor(隣接 trill への右端詰め)未読 ⑵voice 既定は小節粒度(span 実届 onset ゲート未配線=stamp と同族の近似) ⑶'-'(強制中立)は裸と同扱い"
     },
     "trill-spanner-grace.ly": {
       "category": "scheme",

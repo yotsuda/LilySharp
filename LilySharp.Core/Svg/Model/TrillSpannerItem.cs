@@ -47,5 +47,14 @@ public sealed record TrillSpannerItem(
     // sides off ITS OWN voice's grobs; another voice's ink reaches it through the
     // outside-staff collision pass instead. Same field, same reason, as
     // DynamicItem.VoiceIndex.
-    int VoiceIndex = 0
+    int VoiceIndex = 0,
+    // The direction the WRITER forced with @startTrillSpan.up/.down (LilyPond's
+    // ^\startTrillSpan / _\startTrillSpan): +1 / −1, or 0 when unforced — the engraver
+    // then falls to the voice default (TrillSpanner is a direction-polyphonic grob, so
+    // an even voice's trills sit BELOW) and lastly the grob's own UP.
+    // LILYPOND-REF: scm/scheme-engravers.scm:1818-1820 Trill_spanner_engraver — the
+    //   start event's direction is set on the grob when the writer gave one;
+    // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs —
+    //   TrillSpanner is in the list; scm/define-grobs.scm:4076 — (direction . UP).
+    int Direction = 0
 );
