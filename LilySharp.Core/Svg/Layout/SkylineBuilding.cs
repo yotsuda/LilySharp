@@ -188,7 +188,14 @@ internal static class SkylineMath
             {
                 double lo = Math.Max(b1.Start, b2.Start);
                 double hi = Math.Min(b1.End, b2.End);
-                if (lo < hi)
+                // <=, not <: a ZERO-WIDTH overlap — buildings that merely TOUCH at one
+                // x — is a real pairing in LilyPond. Its walk evaluates both heights AT
+                // every merge boundary (skyline.cc:630-633 start_dist/end_dist), so two
+                // stems whose seed boxes share an edge constrain each other at full
+                // height. Measured: stems-clash-between-staves.ly, where the upper
+                // staff's down stem ends exactly where the lower staff's up stem begins
+                // (x 18.425) and the whole 6.5 + 3.333 clearance rides on that point.
+                if (lo <= hi)
                 {
                     double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
                     double dHi = b1.ValueAt(hi) + b2.ValueAt(hi);
@@ -227,7 +234,11 @@ internal static class SkylineMath
             var b2 = b[j];
             double lo = Math.Max(b1.Start, b2.Start);
             double hi = Math.Min(b1.End, b2.End);
-            if (lo < hi)
+            // <=, not <: a zero-width touch counts, as in the all-pairs loop above —
+            // LilyPond's walk reaches the same pairing through its zero-length merge
+            // segment (skyline.cc:628-645: after the boundary advance, start == end and
+            // start_dist is still taken). stems-clash-between-staves.ly measures it.
+            if (lo <= hi)
             {
                 double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
                 double dHi = b1.ValueAt(hi) + b2.ValueAt(hi);

@@ -4370,6 +4370,17 @@ internal static class SpacingRules
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
         Model.Staff, ImmutableDictionary<VoiceItemKey, double>> s_staffVoiceOffsets = new();
 
+    /// <summary>
+    /// The staff's note-collision X shifts, settled once per staff — THE answer every
+    /// consumer reads (this spacing pass, and the skyline seed that must reserve a
+    /// shifted voice where it is DRAWN). Keys are 1-based VoiceId, matching
+    /// VoiceCollector / the renderer's VoiceItemKey.
+    /// </summary>
+    internal static ImmutableDictionary<VoiceItemKey, double> VoiceCollisionShiftsOf(
+        Model.Staff staff)
+        => s_staffVoiceOffsets.GetValue(staff,
+            s => ElementCoordinator.ComputeVoiceOffsets(s.Voices).VoiceOffsets);
+
     internal static ImmutableArray<Spring> ApplyCrossVoiceColumnSpacing(
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
@@ -4380,8 +4391,7 @@ internal static class SpacingRules
         if (staffVoices.Length < 2 || springs.Length != timings.Count + 1)
             return springs;
 
-        var offsets = s_staffVoiceOffsets.GetValue(staff,
-            s => ElementCoordinator.ComputeVoiceOffsets(s.Voices).VoiceOffsets);
+        var offsets = VoiceCollisionShiftsOf(staff);
 
         // The items STARTING at each timing column, each with the shift it is drawn at.
         // VoiceId is 1-based, matching VoiceCollector / the renderer's VoiceItemKey.

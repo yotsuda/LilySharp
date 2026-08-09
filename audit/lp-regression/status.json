@@ -7669,7 +7669,9 @@
     },
     "stem-cross-staff-articulation.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "cross-staff stem が articulation を避け、邪魔しない articulation は水平空間を生まない",
+      "notes": "skip: \\change Staff が主張の核(cross-staff stem)+\\espressivo 対応物ゼロ。既存ゲート2つ(span-bar-articulation と同型)"
     },
     "stem-direction-context-bar-lines.ly": {
       "category": "override",
@@ -7724,7 +7726,9 @@
     },
     "stem-tremolo-cross-staff-beam.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "cross-staff beam 上の stem tremolo が循環依存を起こさない(crash 回帰)",
+      "notes": "skip: \\change Staff ゲート+crash 回帰本(cross-staff beam 自体が Lily# に無い)"
     },
     "stem-tremolo-forced-dir.ly": {
       "category": "scheme",
@@ -7732,7 +7736,9 @@
     },
     "stem-tremolo-note-collision.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "tremolo 斜線は同譜の他音符をできるだけ避ける(避けられねば警告)",
+      "notes": "exact: 斜線3本中心Y 5.00/5.81/6.62 完全一致(0.81梯子)・頭相対X +0.23/0.27(stroke ink系統差0.04)・ink幅1.5一致。twin=sttremcol.{lys,svg,-lp.ly,-lp.svg}(\\repeat tremolo 32 <b g'>32 → <b, g>1:32)。副起票⑴lysc lyが和音tremolo :N を無警告drop(手復元) ⑵voiced graceのstem向き: LPは第2声graceがstem down(voice向きがgrace up既定に勝つ)・LSは無条件up=off-claim乖離(LS 4.00→1.53 up+flag vs LP 4.11→6.40 down+flag)。X drift 末尾0.9級=grace列spacing regime"
     },
     "stem-tremolo-note-column.ly": {
       "category": "scheme",
@@ -7756,7 +7762,9 @@
     },
     "stems-clash-between-staves.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "隣接2譜の縦間隔は互いに近づく stem が clash しないだけ広く取られる",
+      "notes": "fixed 第54号(第121)。LP=refpoint距離10.833=down-stem 6.5+up-stem 3.333+padding 1.0。LS旧9.55(stem端0.28重なり=claim不成立)。root 2枚: ⑴skyline seedが衝突シフト未適用(voice2列が描画より1.304左に予約=SpacingRules.VoiceCollisionShiftsOfを公開しAddStaffToSkylinesで適用) ⑵SkylineBuilding.Distance{,Resolved}のlo<hiが幅ゼロ接触を捨てる(LP skyline.cc:628-645は境界で両高さ評価=接触も数える→lo<=hi)。両stem seed箱はX一点接触(18.425)でこの本の拘束全部がそこに乗る。修正後10.83=LP exact。観測者StaffClashSpacingTests(LP4点)。snapshot 0(全緑4223)。twin=stclash.{lys,svg,-lp.ly,-lp.svg}(indent 10cmは水平の器材=省略)"
     },
     "stencil-color-rotation.ly": {
       "category": "scheme",

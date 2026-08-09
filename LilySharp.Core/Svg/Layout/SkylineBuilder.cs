@@ -483,6 +483,20 @@ internal sealed class SkylineBuilder
             return;
         }
 
+        // A voice the collision pass pushed sideways is reserved WHERE IT IS DRAWN.
+        // The renderer adds this shift to every head, stem and ledger X it draws
+        // (SharedRenderer via LayoutEngine.CalculateVoiceCollisions), so a seed without
+        // it puts the whole shifted column one head-width from its ink — and the gap to
+        // the next staff rests on ink that is not there. The answer is the one memoised
+        // home the spacing pass reads too (SpacingRules.VoiceCollisionShiftsOf), not a
+        // recomputation. LILYPOND-REF: lily/note-collision.cc calc_positioning_done runs
+        // before vertical spacing reads the grobs, so LilyPond's skylines carry the
+        // shift by construction. Measured: stems-clash-between-staves.ly, where the
+        // shifted voice's down stem is the whole inter-staff constraint.
+        var collisionShifts = staff.Voices.Length >= 2
+            ? SpacingRules.VoiceCollisionShiftsOf(staff)
+            : null;
+
         for (int vi = 0; vi < staff.Voices.Length; vi++)
         {
             var voice = staff.Voices[vi];
@@ -517,6 +531,13 @@ internal sealed class SkylineBuilder
                     var item = measure.Items[itemIndex];
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         voice.Measures, measureIndex, itemIndex, measureLayout);
+
+                    // ...plus the drawn collision shift (VoiceId is 1-based). A staff-owned
+                    // length, so it scales with the staff like every other seed quantity.
+                    if (collisionShifts is not null
+                        && collisionShifts.TryGetValue(
+                            new VoiceItemKey(measureIndex, vi + 1, itemIndex), out var collisionShift))
+                        itemX += StaffSize.Of(staff).Span(collisionShift);
 
                     // A beamed note whose beam is seeded (AddBeamsToSkyline) must NOT also
                     // reserve an unbeamed stem, or the stale over-reservation would win.
