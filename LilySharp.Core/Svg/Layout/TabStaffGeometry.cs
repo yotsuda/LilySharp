@@ -53,8 +53,18 @@ internal static class TabConstants
     /// </remarks>
     public const double FretFontSize = 3.0;
 
-    /// <summary>Grace fret digits relative to the main fret size (just slightly smaller).</summary>
-    public const double GraceFretScale = 0.8;
+    /// <summary>Grace fret digits relative to the main fret size.</summary>
+    /// <remarks>
+    /// LilyPond's ratio, applied to Lily#'s own (larger) base size: a normal
+    /// TabNoteHead is font-size −2 and a grace one −4, two size steps = 2^(−2/6)
+    /// ≈ 0.7937 (measured on 2.26.0: whiteout heights 0.9366/1.1800 — the
+    /// tablature-grace-notes twin). Was 0.8, a Lily#-own round number.
+    /// LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings —
+    ///   (Voice TabNoteHead font-size -4).
+    /// LILYPOND-REF: scm/define-grobs.scm:3717-3745 tab-note-head::print — the
+    ///   TabNoteHead block, (font-size . -2).
+    /// </remarks>
+    public const double GraceFretScale = 0.7937005259840998; // 2^(-2/6)
 
     /// <summary>Height (staff spaces) of a fret digit's occluding box — the digit's
     /// visual extent, centred on its string line. Shared by the renderer (the

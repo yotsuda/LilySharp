@@ -7916,7 +7916,9 @@
     },
     "tablature-grace-notes.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "grace 音のフレット数字は通常より小さい",
+      "notes": "fixed(第56号): GraceFretScale 0.8(LILYSHARP-OWN の丸め値)→2^(−2/6)=0.7937 = LP の比(通常 TabNoteHead font-size −2・grace −4 = general-grace-settings、music-functions.scm:636-650)。LP 実測: 白抜き高 0.9366/1.1800=0.7937 で裏取り。比は Lily# 固有の拡大基準サイズ(FretFontSize 3.0=批准済み逸脱)に乗る=絶対サイズは設計どおり別。枠: 原書 TabStaff は \\tabFullNotation 無し=数字のみ既定 → Lily# は full 既定なので tab m as numbers で揃える(この本が as numbers の初 LP 照合)。\\grace \\parenthesize は \\parenthesize 綴りなし=両側 plain grace 落とし。通常譜の grace 縮尺 2.83/4.00=2^(−3/6) は既に LP 一致。観測者=TabGraceFretScaleTests。snapshot 2枚(tab-grace/tab-grace-slur)=grace fs 2.40→2.38 のみ census 済。札: LP は appoggiatura/acciaccatura の auto-slur を tab 譜にも描く——Lily# tab grace は数字のみ(意図・GraceNotes.cs 明記)=対応物なし・通常譜側の auto-slur は両者在り。twin=scratch\\lpreg\\tabgrace.{lys,svg,-lp.ly,-lp.svg}"
     },
     "tablature-harmonic-functions.ly": {
       "category": "scheme",

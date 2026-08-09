@@ -61,7 +61,26 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第122セッション（＝第1便 **exact 第37 = tablature-dot-placement.ly
 （コード変更0・tab 島 1冊目）**・`b9646b54`・第2便 **fixed 第55号 =
 tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
-（第100起票の返済）+ 二重符幹 0.5（named 債務の返済）**・この handoff と同 commit）。
+（第100起票の返済）+ 二重符幹 0.5（named 債務の返済）**・`a274191a`・第3便
+**fixed 第56号 = tablature-grace-notes.ly = grace fret 比 2^(−2/6)**・
+この handoff と同 commit）。
+
+★★ **第3便 fixed 第56号 tablature-grace-notes.ly**:
+- twin = scratch\lpreg\tabgrace.{lys,svg,-lp.ly,-lp.svg}。**枠 2 つ**: ⑴ 原書
+  TabStaff は \tabFullNotation 無し＝**数字のみ既定**（LP 出力に tab stem ゼロで発覚）
+  → Lily# は full 既定なので **`tab m as numbers` で揃える**（as numbers の初 LP 照合）
+  ⑵ \grace \parenthesize は綴りなし＝両側 plain grace 落とし。
+- 修理 = GraceFretScale **0.8（OWN の丸め値）→ 2^(−2/6) = 0.7937 = LP の比**
+  （通常 TabNoteHead font-size −2（define-grobs）・grace −4（general-grace-settings・
+  music-functions.scm:636-650）。LP 実測 白抜き高 0.9366/1.1800 = 0.7937 で裏取り）。
+  比は Lily# 固有の拡大基準（FretFontSize 3.0 = 批准済み逸脱）に乗る＝絶対サイズは
+  設計どおり別。通常譜 grace 縮尺 2.83/4.00 = 2^(−3/6) は既に LP 一致（確認のみ）。
+- 観測者 = TabGraceFretScaleTests・snapshot 2枚（tab-grace / tab-grace-slur）＝
+  grace fs 2.40→2.38 のみ census 済。
+- **札**: LP は appoggiatura/acciaccatura の auto-slur を **tab 譜にも**描く——
+  Lily# tab grace は数字のみ（意図・GraceNotes.cs 明記）。通常譜側 auto-slur は両者在り
+  （LS の slur path 2 本を実確認）。引用ラチェット学び: **単語 1 節の CamelCase
+  （TabNoteHead）はシンボル資格なし**＝同範囲の tab-note-head::print を名指す。
 
 ★★★ **第2便 fixed 第55号 tablature-double-stem-tremolo.ly**:
 - twin = scratch\lpreg\tabdbltrem.{lys,svg,-lp.ly,-lp.svg}（`a2:32` 単体 TabVoice・
@@ -107,21 +126,23 @@ tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
   ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
   LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
 
-plain 322 / 処理済 **289**（fixed **55**・exact **37**・skip **180**・open **17**・
-pending **33**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **tablature-grace-notes** 以降の tab 島続き（grace/harmonic/tie/
-new-line-spacer）＝tab 幾何 memory（tab頁 anchor・tab幾何・tabタイ弦）併読。
+plain 322 / 処理済 **290**（fixed **56**・exact **37**・skip **180**・open **17**・
+pending **32**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tablature-harmonic-tie** 以降の tab 島続き（harmonic/tie/tremolo/
+new-line-spacer/tablature.ly）＝tab 幾何 memory（tab頁 anchor・tab幾何・tabタイ弦）
+併読・tabタイ弦 memory は tie 2冊の前に必読。
 第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
 slur-flag / slur-nice は文法宿題の棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4224 passed / 0 failed / 4 skipped**（第2便観測者+1・全スイート確認済）・
-snapshot 第122 = **6枚（第2便・census 済・上記）**・Core (Debug) 0 warning・
+テスト **4225 passed / 0 failed / 4 skipped**（第2便観測者+1・第3便観測者+1・
+全スイート確認済）・snapshot 第122 = **6枚（第2便）+2枚（第3便）＝census 済・上記**・
+Core (Debug) 0 warning・
 base worktree = 第121 の節の 5 つそのまま残置。
 probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）＋tabdbltrem 一式＋
-ntrem-probe 一式（第55号の照合材）＋tabdot-dump{,-ls}.ps1（tab SVG 一覧化・
-polygon 対応済）**＋第121 以前の stclash / sttremcol / sploose / sptab / stempure
-ほか一式（下の各節参照）。
+ntrem-probe 一式（第55号の照合材）＋tabgrace 一式（第56号の照合材）＋
+tabdot-dump{,-ls}.ps1（LP/LS SVG 一覧化・LP 側は polygon 対応済）**＋第121 以前の
+stclash / sttremcol / sploose / sptab / stempure ほか一式（下の各節参照）。
 
 ## 以下は第121セッションの経緯
 
