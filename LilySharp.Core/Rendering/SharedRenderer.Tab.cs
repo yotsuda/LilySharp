@@ -123,8 +123,11 @@ internal static partial class SharedRenderer
             }
         }
 
+        bool measuresLineStart = true;
         foreach (var ml in system.Measures)
         {
+            bool atMeasuresLineStart = measuresLineStart;
+            measuresLineStart = false;
             // A percent-repeat iteration prints ONLY the % sign — the notation staff
             // hides its notes (SharedRenderer.Noteheads), and the tab must hide its fret
             // digits the same way. Their stems/beams are already suppressed, so without
@@ -137,7 +140,7 @@ internal static partial class SharedRenderer
                 if (ml.MeasureIndex < voice.Measures.Length)
                     DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
                         tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems,
-                        gc, digitGaps, pageHeight);
+                        gc, digitGaps, pageHeight, atMeasuresLineStart);
             }
         }
 
@@ -199,8 +202,19 @@ internal static partial class SharedRenderer
         Staff staff, int staffIndex, int voiceNumber,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps,
-        double pageHeight)
+        double pageHeight, bool atLineStart = false)
     {
+        // The first sounding item of a line-starting measure is where a tie can have
+        // been split by the line break (a tie's two ends are always adjacent, so a
+        // target any later in the line has its source on the same line).
+        int firstSoundingIndex = -1;
+        if (atLineStart)
+            for (int j = 0; j < measure.Items.Length; j++)
+                if (measure.Items[j] is NoteItem or ChordItem)
+                {
+                    firstSoundingIndex = j;
+                    break;
+                }
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
         var currentTiming = Fraction.Zero;
         double stringSpace = EngravingDefaults.TabStringSpace(stringCount);
@@ -235,11 +249,23 @@ internal static partial class SharedRenderer
                     if (note.TabBelowRange)
                         break;
                     // A tie's destination keeps its rhythm (stem/beam) but hides
-                    // its fret number — the held string is not re-struck.
-                    if (!note.IsTieTarget)
+                    // its fret number — the held string is not re-struck. When the
+                    // tie was SPLIT by a line break (the target opens the line), or
+                    // the note carries \repeatTie, the fret prints in PARENTHESES
+                    // instead: the reader re-entering mid-hold needs the number.
+                    // LILYPOND-REF: scm/tablature.scm:186-224 tab-note-head::handle-ties
+                    //   — tied + at-line-begin? or repeat-tied? → 'parenthesized #t;
+                    //   plain tied → 'transparent. (The span-start branch — a slur or
+                    //   glissando starting at the tie's end — is not wired here.)
+                    if (!note.IsTieTarget && !note.HasRepeatTie)
                         DrawTabNote(note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
                             numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead);
+                    else if (note.HasRepeatTie || (note.IsTieTarget && i == firstSoundingIndex))
+                        DrawTabNote(note.Midi, itemX, staffY,
+                            tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
+                            numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead,
+                            parenthesized: true);
                     if (!numbersOnly)
                         DrawUnbeamedTabStem(note, note.BaseDuration, dirGeom.StringStemUp(dirGeom.MeanString(note)),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
@@ -431,11 +457,13 @@ internal static partial class SharedRenderer
     private static void DrawTabNote(int midi,
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
         double stringSpace, int sourcePosition, int dots, IDrawingContext gc,
-        List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false)
+        List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
+        bool parenthesized = false)
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
-        DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead);
+        DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead,
+            parenthesized);
         double noteY = staffY - (stringNum - 1) * stringSpace;
         double digitWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(
             isDead ? "×" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -476,7 +504,8 @@ internal static partial class SharedRenderer
     /// </summary>
     private static void DrawTabFret(int fret, int stringNum, double x, double staffY,
         double stringSpace, int sourcePosition, IDrawingContext gc,
-        List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false)
+        List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
+        bool parenthesized = false)
     {
         // String 1 (highest pitch) is the TOP tab line; string N the bottom
         // (device down = smaller Y-up).
@@ -497,7 +526,8 @@ internal static partial class SharedRenderer
         // 2.08 is taller than the 1.5 string gap, so it blanked pieces of the NEIGHBOURING
         // lines too — the ceiling that stopped the digits growing. A gap has neither
         // problem: it spends no colour, and it is confined to the digit's own line.
-        digitGaps.Add((stringNum - 1, x - bgWidth / 2, x + bgWidth / 2));
+        double gapPad = parenthesized ? TabTieParenClearance : 0;
+        digitGaps.Add((stringNum - 1, x - bgWidth / 2 - gapPad, x + bgWidth / 2 + gapPad));
 
         using (gc.Source(sourcePosition))
         {
@@ -509,6 +539,56 @@ internal static partial class SharedRenderer
                     fretText, TabFretFontSize),
                 TabFretFontSize, "serif",
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            if (parenthesized)
+                DrawTabFretParens(x, noteY, bgWidth, gc);
+        }
+    }
+
+    // A split/repeat-tied fret's parentheses, sized to the digit box. LilyPond builds
+    // them as two filled bow stencils; the bow's page-frame geometry reduces to: the
+    // outer edge bulges 4/3 × width from the spine, the inner edge one half-thickness
+    // less, and the control points sit 0.1 + 0.3 × angularity of the way along the
+    // span — with the TabNoteHead's declared width 0.25 / half-thickness 0.075 /
+    // angularity 0.4 that is a 0.3333 outer, 0.2583 inner bulge and 0.22/0.78 stops
+    // (all three measured intact on the tabtie-probe twin). Each bow is stroked 0.1
+    // with round caps, so the spine stands half that outside the digit ink.
+    // LILYPOND-REF: scm/stencil.scm:33-114 make-bow-stencil — outer-control =
+    //   4/3 · bow-height / length; inner-control = |outer| − thickness/length;
+    //   left-control = 0.1 + 0.3 · angularity.
+    // LILYPOND-REF: scm/stencil.scm:182-213 make-parenthesis-stencil — the bow pair
+    //   over the stencil's Y extent, line-width 0.1.
+    // LILYPOND-REF: scm/define-grobs.scm:3721-3735 tab-note-head::print — details
+    //   cautionary-properties: (angularity . 0.4) (half-thickness . 0.075)
+    //   (padding . 0) (width . 0.25).
+    private const double TabTieParenWidth = 0.25;
+    private const double TabTieParenHalfThickness = 0.075;
+    private const double TabTieParenAngularity = 0.4;
+    private const double TabTieParenLineWidth = 0.1;
+    /// <summary>How far a paren's ink can reach past the digit ink on each side —
+    /// the string-line gap widens by this much.</summary>
+    private const double TabTieParenClearance =
+        4.0 / 3 * TabTieParenWidth + TabTieParenLineWidth;
+
+    private static void DrawTabFretParens(double x, double noteY, double digitWidth,
+        IDrawingContext gc)
+    {
+        double h = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight / 2;
+        double control = 0.1 + 0.3 * TabTieParenAngularity;      // 0.22
+        double outer = 4.0 / 3 * TabTieParenWidth;               // 0.3333
+        double inner = outer - TabTieParenHalfThickness;         // 0.2583
+        double c1Y = noteY + h - control * 2 * h;
+        double c2Y = noteY - h + control * 2 * h;
+        foreach (int dir in stackalloc int[] { -1, 1 })
+        {
+            double spineX = x + dir * (digitWidth / 2 + TabTieParenLineWidth / 2);
+            gc.DrawClosedBezier(
+                (spineX, noteY + h),
+                (spineX + dir * outer, c1Y),
+                (spineX + dir * outer, c2Y),
+                (spineX, noteY - h),
+                (spineX + dir * inner, c2Y),
+                (spineX + dir * inner, c1Y),
+                Color.Black, TabTieParenLineWidth);
         }
     }
 

@@ -67,7 +67,29 @@ tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
 主張の核・tie 半分は tablature-tie-behaviour が測る）+ exact 第38 =
 tablature-new-line-spacer.ly（行頭 s2 crash 回帰・コード変更0・両者 2 行で
 エラーなし・off-claim: spacer 半分の行内配分 LP72% vs LS53% = justify spring
-regime 野良観測・twin = tabspacer 一式）**・この handoff と同 commit）。
+regime 野良観測・twin = tabspacer 一式）**・`d3f72e32`・第5便 **fixed 第57号 =
+tablature-tie-behaviour.ly = 行跨ぎタイの括弧フレット port**・この handoff と
+同 commit）。
+
+★★★ **第5便 fixed 第57号 tablature-tie-behaviour.ly**:
+- 縮約 twin = scratch\lpreg\tabtie-probe{,2,-lp}（f2~f4 e / c'1~ break c'2~ c'2・
+  @repeatTie）。**旧 LS は行跨ぎタイの先も完全非表示**（= LP の
+  \hideSplitTiedTabNotes 相当が既定・LP 既定の括弧表示が丸ごと無い。probe で
+  2行目が空になって発覚）。
+- port = **tab-note-head::handle-ties（tablature.scm:186-224）の 3 分岐**:
+  tied+行頭 → 括弧付きフレット・repeat-tied → 常に括弧（@repeatTie 発火・probe2）・
+  その他 tied → 非表示（既存）。括弧の描画 = **make-bow-stencil（stencil.scm:33-114）
+  の字面**: 外側 4/3·width=0.3333・内側 −half-thickness=0.2583・制御点
+  0.1+0.3·angularity=0.22（**3 値とも LP SVG 実測と一致**）・線幅 0.1 fill+stroke・
+  digit ink 高に伸縮（DrawClosedBezier 流用）・白抜きギャップも拡幅。
+- 照合: LP と構造一致（行頭 = 括弧付き・行中 = 非表示・repeatTie = 括弧）。
+  観測者 = TabSplitTieParenTests 2本。**snapshot 0枚**（split tie / repeatTie を
+  踏む fixture なし）。
+- **札 4**: ⑴ hide/showSplitTiedTabNotes 綴りなし（旧挙動がその hide 相当） ⑵
+  span-start 枝（タイ終端から slur/gliss 開始→括弧）未配線 ⑶ 和音メンバの
+  split/repeatTie 括弧未対応（本書の和音は volta 内＝枠が書けない） ⑷ volta/
+  alternative・\textMark・裸時価 `4` 綴りなし＝thirdpart は枠外。off-claim:
+  c' の選弦 LP=弦2/f1 vs LS=弦3/f5（固有選弦＝数字自体が違う・批准済）。
 
 ★★ **第3便 fixed 第56号 tablature-grace-notes.ly**:
 - twin = scratch\lpreg\tabgrace.{lys,svg,-lp.ly,-lp.svg}。**枠 2 つ**: ⑴ 原書
@@ -130,21 +152,21 @@ regime 野良観測・twin = tabspacer 一式）**・この handoff と同 commi
   ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
   LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
 
-plain 322 / 処理済 **293**（fixed **56**・exact **38**・skip **182**・open **17**・
-pending **29**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **tablature-tie-behaviour**（tabタイ弦 memory =
-project_lilysharp_tab_chord_tie_string を先に引くこと）→ tablature-tremolo →
-tablature.ly → tabstaff-choirstaff-brace で tab 島完食。
+plain 322 / 処理済 **294**（fixed **57**・exact **38**・skip **182**・open **17**・
+pending **28**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tablature-tremolo** → tablature.ly → tabstaff-choirstaff-brace で
+tab 島完食。
 第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
 slur-flag / slur-nice は文法宿題の棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4225 passed / 0 failed / 4 skipped**（第2便観測者+1・第3便観測者+1・
-全スイート確認済）・snapshot 第122 = **6枚（第2便）+2枚（第3便）＝census 済・上記**・
-Core (Debug) 0 warning・
+テスト **4227 passed / 0 failed / 4 skipped**（第2/3便観測者+2・第5便観測者+2・
+全スイート確認済）・snapshot 第122 = **6枚（第2便）+2枚（第3便）＋0枚（第5便）＝
+census 済・上記**・Core (Debug) 0 warning・
 base worktree = 第121 の節の 5 つそのまま残置。
 probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）＋tabdbltrem 一式＋
-ntrem-probe 一式（第55号の照合材）＋tabgrace 一式（第56号の照合材）＋
+ntrem-probe 一式（第55号の照合材）＋tabgrace 一式（第56号の照合材）＋tabspacer 一式
+（exact 第38の照合材）＋tabtie-probe{,2,-lp} 一式（第57号の照合材）＋
 tabdot-dump{,-ls}.ps1（LP/LS SVG 一覧化・LP 側は polygon 対応済）**＋第121 以前の
 stclash / sttremcol / sploose / sptab / stempure ほか一式（下の各節参照）。
 
