@@ -8697,7 +8697,9 @@
     },
     "vertical-alignment-spanner-only.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Score-level vertical alignment ignores non-spanner axis groups",
+      "notes": "skip (s123). 器材が主張そのもの: Devnullコンテキスト(対応物ゼロ)+\\change Staff(既定skipゲート)+スパナでないaxis groupの無視=Vertical_align_engraver内部回帰。SVG表面の主張が立たない。"
     },
     "voice-follower-broken-several-systems.ly": {
       "category": "scheme",
@@ -8783,7 +8785,9 @@
     },
     "volta-spec-after-grace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\volta can add volta-specific grace notes",
+      "notes": "skip (s123). 器材が主張そのもの: \\volta N spec(対応物ゼロ)+\\unfoldRepeats+\\fixed+2score。volta-spec族6冊共通ゲート。"
     },
     "volta-spec-dynamic.ly": {
       "category": "scheme",
@@ -8791,7 +8795,9 @@
     },
     "volta-spec-in-alternative.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Simultaneous alternatives as elements of sequential alternatives",
+      "notes": "skip (s123). \\volta N spec+\\repeat unfold+\\alternative同時形=展開エンジンの回帰・対応綴りなし(volta-spec族ゲート)。"
     },
     "volta-spec-once.ly": {
       "category": "scheme",
@@ -8799,7 +8805,9 @@
     },
     "volta-spec-ossia.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "A new context inside \\volta ends at the proper time",
+      "notes": "skip (s123). \\volta N spec+\\new Staff in volta=コンテキスト寿命の回帰(issue 6402)・対応綴りなし(volta-spec族ゲート)。"
     },
     "volta-spec-rhythm.ly": {
       "category": "scheme",
@@ -8811,15 +8819,21 @@
     },
     "volta-spec-tie.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\volta can add a volta-specific tie",
+      "notes": "skip (s123). \\volta N spec+\\unfoldRepeats+2score・対応綴りなし(volta-spec族ゲート)。"
     },
     "volta-spec-unfold-in-unfold.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Simultaneous alternatives in nested repeats unfold per the innermost repeat",
+      "notes": "skip (s123). \\volta N spec+入れ子\\repeat unfold=展開エンジンの回帰・対応綴りなし(volta-spec族ゲート)。"
     },
     "volta-spec-unused.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "Music marked for an out-of-range volta is ignored when unfolding",
+      "notes": "skip (s123). \\volta N spec+\\repeat unfold+範囲外volta無視=展開エンジンの回帰・対応綴りなし(volta-spec族ゲート)。"
     },
     "volta-spec-volta-in-segno.ly": {
       "category": "scheme",
@@ -8899,11 +8913,15 @@
     },
     "whole-note-tremolo-accidentals.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "Whole note tremolos (and longer) do not collide with accidentals",
+      "notes": "exact 42 (s123)・コード変更0(核)。6score本=a..f分割(twin=wntacc{a..f}{.lys,-lp.ly})。核=score1/2(whole-note 32分対): 5+3 tremolo群のbeam幅指紋がLPと群別完全一致(LP 1.9/1.7/1.8/1.9/1.9 vs LS+0.1=fill対strokeの既知系統差のみ)=臨時記号gap(get_gaps臨時枝: 0.8+臨時union幅+1.0)が♭/♯/𝄪/和音の全変種で写っている(第101 chord-tremolo-accidental portの直接e2e)。両側置換: poly声部の d,! (強制`!`綴りなし)→des(実臨時記号で主張保存)。**枠: score3-6(16分対=breve表示・8分対=longa表示)はbreve/longa時価が綴りなし=枠外**——LSのTremoloPairShapeはtotal表現不可でunfoldへフォールバック(else枝の意図された挙動・silent dropではない)。札: breve/longa時価が入ればpair tremolo側もTremoloPairShapeの表現域拡張が要る。"
     },
     "whole-note-tremolo-direction.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "Whole note tremolos starting on the third line take the direction of their beamed counterparts",
+      "notes": "exact 41 (s123)・コード変更0。twin=wntremdir{.lys,-lp.ly}(無引数\\relative基準f: b a=B4 A4・b c=B4 C5→LS絶対b/a/c 1apos)。4群(b-a/b-c × whole/half)全部でbeam帯3本のY範囲がLP一致(±0.04=stroke系統差のみ): b-a群=中線上・b-c群=中線下=向き4/4一致。第101のno-stem梁port+第122のtremolo工事がそのまま効いた。"
     },
     "with-link-test.ly": {
       "category": "scheme",
