@@ -46,9 +46,12 @@ $refRegex = [regex]::new(
     '(?<![A-Za-z])LILYPOND-REF:\s*(?<body>[^\r\n]+)',
     'Compiled')
 # Path looks like: <dir>/<file>.<ext> where dir starts with lily|scm|mf|ly|input
-# and ext is one of .cc .hh .scm .mf .ly. Followed optionally by ":<linespec>".
+# and ext is one of .cc .hh .scm .mf .ly .yy. Followed optionally by ":<linespec>".
+# ⚠️ .yy (lily/parser.yy, the Bison grammar) was missing until 2026-08-09, so EVERY
+# citation of the actual syntax rules counted as FREE-FORM and had its line range
+# checked by nobody — the refs that look the most precise were the least guarded.
 $pathRegex = [regex]::new(
-    '^(?<path>(?:lily|scm|mf|ly|input|flower|stepmake)/[^\s,:]+\.(?:cc|hh|scm|mf|ly))(?::(?<lines>[0-9\-,]+))?',
+    '^(?<path>(?:lily|scm|mf|ly|input|flower|stepmake)/[^\s,:]+\.(?:cc|hh|scm|mf|ly|yy))(?::(?<lines>[0-9\-,]+))?',
     'Compiled')
 
 function Get-LineCount([string]$file) {

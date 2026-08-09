@@ -604,9 +604,11 @@ public sealed class ChordSyntax : SyntaxNode
 
     /// <summary>
     /// The EMPTY chord <c>&lt;&gt;</c> — no member of ANY kind. It is a carrier for
-    /// post-events only: it occupies no time and leaves the running default duration
-    /// unchanged (LILYPOND-REF: lily/parser.yy chord_body "&lt;&gt;"; regression
-    /// empty-chord.ly pins both).
+    /// post-events only and occupies no time.
+    /// LILYPOND-REF: lily/parser.yy:3166-3183 — <c>chord_body</c> builds an
+    /// <c>event_chord</c> and <c>chord_body_elements</c> has an empty production, so
+    /// <c>&lt;&gt;</c> is an event chord carrying only the post-events that
+    /// <c>note_chord_element</c> (:3148-3164) appends to its element list.
     /// </summary>
     /// <remarks>
     /// ⚠️ "Empty" is NOT "has no Pitches": a degree chord <c>&lt;1 3 5&gt;</c> and a drum

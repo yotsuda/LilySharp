@@ -396,9 +396,17 @@ public sealed partial class MeasureCollector
     /// <c>r4 e'8( g' &lt;&gt;) c''4</c> and of <c>r4 e'8( g' c''4)</c> are the SAME curve
     /// (both 1.2883 → 6.1207), while closing on <c>g'</c> gives a different one
     /// (0.7803 → 3.5345). ⚠️ Do not "fix" this to end on the visually preceding note.
-    /// LILYPOND-REF: lily/slur-engraver.cc — the Slur_engraver ends the slur at the current
-    /// timestep's note column; lily/parser.yy chord_body "&lt;&gt;" is an event chord of
-    /// post-events only.
+    /// LILYPOND-REF: lily/slur-engraver.cc:131-137 — <c>acknowledge_note_column</c> adds the
+    /// column it is handed to every slur waiting in <c>end_slurs_</c>, so a STOP ends the
+    /// slur at the NEXT note column to arrive.
+    /// LILYPOND-REF: lily/parser.yy:3166-3183 — <c>chord_body</c> makes an
+    /// <c>event_chord</c> and <c>chord_body_elements</c> has an empty production, so
+    /// <c>&lt;&gt;</c> is an event chord whose only elements are the post-events that
+    /// <c>note_chord_element</c> (:3148-3164) appends.
+    /// ⚠️ NOT a transcription of the engraver: LP reaches this by holding the slur in
+    /// <c>end_slurs_</c> until a column is acknowledged, Lily# by holding the MARK until an
+    /// item that can bind one is emitted. Same rule, different machine — the measured
+    /// identity above is what pins them together, so keep that probe.
     /// ⚠️ Disclosed: a grace group between the empty chord and the next main note takes the
     /// mark to the MAIN note (grace items are collected on their own path). Untested against
     /// LP — no fixture reaches it.
@@ -606,6 +614,20 @@ public sealed partial class MeasureCollector
                     //   ("occupy no time, and leave the current duration unchanged").
                     if (chord.IsEmpty)
                     {
+                        // A duration written on the empty chord sets the running default for
+                        // what follows, though the chord itself takes no time. The metric
+                        // side must not be the only one that knows this, or the two
+                        // disagree again.
+                        // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration
+                        //   — the same rule the neighbouring _defaultDuration writes already
+                        //   cite; <> reaches it through note_chord_element (:3148-3164).
+                        // Measured: MeasureDurations' ChordSyntax{IsEmpty} arm lists the
+                        // three LP bar-checks that separate "takes time" from "sets default".
+                        if (chord.Duration != null)
+                        {
+                            _defaultDuration = Fraction.FromNoteValue(chord.Duration.Value);
+                            _defaultDots = chord.Duration.DotCount;
+                        }
                         CollectDynamics(chord, measureIndex, itemIndex);
                         CollectArticulations(chord, measureIndex, itemIndex,
                             stemUp: false, anchorTiming: chordAnchorTiming);

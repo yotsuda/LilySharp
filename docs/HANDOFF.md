@@ -180,6 +180,35 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
 上書きしない。⇒ **段② の実装は「スロット方向を能動的に強制する」段が要る**。
 利用者が向きを書く必要は無い（`condensedStaff` 内の位置から導ける）が、**自動では効かない**。
 
+★★★ **第5便 = 自己監査（ユーザー問「字面通り移植できたか・ハックは・REF は」）＝ 欠陥 1・
+ツール穴 1 を自分で出した**:
+- ⚠️⚠️ **私の第2便が LP と食い違っていた**。`<>4`（時価つき空和音）で **`MeasureDurations` は
+  既定を据え置く**実装にし、テストでもそう主張していた。**LP 実測で誤り**
+  （`scratch\lpreg\ecdur-p{1,2,3}.ly`・bar check 読み）: **⑴裸 `<>` は何も変えない
+  ⑵`<>4` も時間は取らない ⑶`<>4` は走行既定を 4 分に更新する**。修正済み（計量側・collect 側の
+  両方）。テストは 3 本に分割して LP の 3 事実を別々にピン。
+- ★★★ **出所 = texidoc からの推測**。「occupy no time, and leave the current duration
+  unchanged」は**その本が書く裸の `<>` の話**なのに `<>4` まで覆うと読んだ。⚠️ **正しい規則は
+  この tree に既に 4 箇所で正しく引用済みだった**（`lily/parser.yy:3505-3514`
+  optional_notemode_duration = 書かれた時価は `parser->default_duration_` になる・
+  MeasureCollector の `_defaultDuration`・ItemFactory・arpeggio total・ly exporter）。
+  **読めば済んだ。** ⇒ 家訓追加: **texidoc の一文を規則として使う前に、同じ規則が
+  tree 内で既に引用されていないか grep する。**
+- ⚠️ **陽性対照が偽陰性を暴いた**。最初 `lilypond` の警告を grep して「無警告＝4/4」と読んだが、
+  **出力が日本語ロケールで mojibake** していた。**わざと壊した対照**を出したら両方に
+  `bar check failed` が出て、最初の読みが嘘だと分かった。⇒ `chcp 65001` を噛ませて再測。
+- ⚠️ **REF ラチェットの穴を修理**（`audit\scripts\Verify-LilyPondRefs.ps1`）: パス正規表現の
+  拡張子が `cc|hh|scm|mf|ly` で **`.yy` が無く、`lily/parser.yy` の引用が全部 FREE-FORM＝
+  行範囲を誰も検査していなかった**（**構文規則を指す、いちばん精密に見える引用が
+  いちばん無防備**）。`yy` 追加で **FREE-FORM 390→366・OK 2664→2690・EXIT 0**（既存分も全て
+  範囲内）。
+- **REF の格上げ**: 今回書いた引用は行番号つきに（`slur-engraver.cc:131-137`＝
+  `acknowledge_note_column` が `end_slurs_` に列を足す・`parser.yy:3166-3183`＝
+  `chord_body_elements` の空生成）。**実ソースを読んで確認済み**。
+  ★ **開示を明記**: スラーの修理は**engraver の字面移植ではない**（LP は `end_slurs_` で
+  待つ・Lily# は印を待たせる）。**同じ規則・別の機械**なので、両者を繋いでいるのは
+  実測した恒等（a≡c）だけ＝**あの probe を捨てるな**と comment に書いた。
+
 ★★★ **次の一手 = 段②（`combinedStaff { X Y }`）＝ focused session 1 本**。綴りだけ足すのは
 禁止（**合体しないのに combined と名乗る**＝この repo が最も嫌う形）。engraving と同時に入れる。
 **設計は確定済み**: ちょうど 2 パート・単独なら 1 段・`condensedStaff` の中なら 1 声部・

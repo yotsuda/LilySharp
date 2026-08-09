@@ -57,12 +57,29 @@ internal static class MeasureDurations
                 if (rest.Duration != null) defaultDuration = restDuration;
                 return restDuration;
 
-            // The EMPTY chord <> is a post-event carrier: no time, and the running
-            // default is left alone. Charging it the running duration made a correct bar
-            // report overfull (`r4 e8 g <> c'4 r4` = 4/4 was called 9/8) — the metric side
-            // was spelling "how long is a chord" differently from the collector, which adds
-            // no item for it at all. Both now read ChordSyntax.IsEmpty.
-            case ChordSyntax { IsEmpty: true }:
+            // The EMPTY chord <> is a post-event carrier and occupies NO time — with or
+            // without a written duration. A duration written on it still SETS the running
+            // default for what follows, exactly as one written on any other chord does.
+            // ★ MEASURED against LilyPond 2.26.0, three bar-checks
+            // (scratch/lpreg/ecdur-p{1,2,3}.ly):
+            //   p1  e'8 g' <>   c''×6            = 4/4 exactly  -> bare <> changes nothing
+            //   p3  e'8 g' <>4  c''8×6           = 4/4 exactly  -> <>4 consumes no time
+            //   p2  e'8 g' <>4  c''×6 (inherited)= 7/4          -> <>4 DID set the default
+            // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration — a written
+            //   duration becomes parser->default_duration_. It is PARSER state, set by the
+            //   grammar rule every event goes through, and `note_chord_element: chord_body
+            //   optional_notemode_duration post_events` (:3148-3164) means <> goes through
+            //   it like anything else. Nothing there asks whether the chord had members.
+            // ⚠️ The regression's texidoc says "occupy no time, and leave the current
+            // duration unchanged", and that sentence is about the BARE <> the book writes.
+            // Reading it as covering <>4 too — which is how this was first written — makes
+            // the notes after <>4 inherit the wrong value in silence. The rule was already
+            // cited correctly in four other places in this tree (MeasureCollector's
+            // _defaultDuration, ItemFactory, the arpeggio total, the .ly exporter); the
+            // mistake was inferring from a texidoc sentence instead of reading them.
+            case ChordSyntax { IsEmpty: true } empty:
+                if (empty.Duration != null)
+                    defaultDuration = DurationCalculator.GetDuration(empty, defaultDuration);
                 return Fraction.Zero;
 
             case ChordSyntax chord:

@@ -65,15 +65,37 @@ public class EmptyChordTests
     }
 
     [Fact]
-    public void EmptyChord_LeavesTheRunningDurationAlone()
+    public void ABareEmptyChord_LeavesTheRunningDurationAlone()
     {
-        // `<>4` carries a written duration, and it must change NOTHING: the two `c` after
-        // it are still EIGHTHS (inherited from g), so the bar is
-        //   1/4 + 1/8 + 1/8 + 0 + 1/8 + 1/8 + 1/4 = 4/4.
-        // Had the `4` become the running default, they would be quarters and the bar 5/4.
-        // LILYPOND-REF: regression empty-chord.ly — "occupy no time, and leave the current
-        // duration unchanged" (both halves of the claim, in one bar).
-        Assert.Empty(MeasureDiagnostics("r4 e8 g <>4 c c r4 |"));
+        // `r4 e8 g <> c c r4` = 1/4 + 1/8 + 1/8 + 0 + 1/8 + 1/8 + 1/4 = 4/4. The bare <>
+        // carries no duration, so there is nothing for it to change.
+        // LILYPOND-REF: input/regression/empty-chord.ly texidoc — "Empty chords accept
+        // articulations, occupy no time, and leave the current duration unchanged."
+        Assert.Empty(MeasureDiagnostics("r4 e8 g <> c c r4 |"));
+    }
+
+    [Fact]
+    public void ADurationWrittenOnAnEmptyChord_SetsTheRunningDefault()
+    {
+        // ⚠️ The texidoc sentence above is about the BARE <>, which is all that book writes.
+        // A duration written on one still SETS the default for what follows — measured in
+        // LilyPond 2.26.0 with three bar-checks (scratch/lpreg/ecdur-p{1,2,3}.ly): with the
+        // following notes inheriting, `e'8 g' <>4 c''×6` reaches 7/4, not 4/4.
+        // So after `<>4` the two c's are QUARTERS, and this bar is 1/4 + 1/8 + 1/8 + 0 +
+        // 1/4 + 1/4 = 1, exactly 4/4.
+        Assert.Empty(MeasureDiagnostics("r4 e8 g <>4 c c |"));
+
+        // …and reading it the other way round — eighths after the <>4 — now comes up short.
+        Assert.NotEmpty(MeasureDiagnostics("r4 e8 g <>4 c8 c8 |"));
+    }
+
+    [Fact]
+    public void AnEmptyChordWithADuration_StillTakesNoTime()
+    {
+        // The other half, isolated: with explicit eighths after it the running default
+        // cannot matter, so anything the bar is missing would be time the <>4 ate.
+        // LP: `e'8 g' <>4 c''8×6` is 4/4 exactly (ecdur-p3.ly).
+        Assert.Empty(MeasureDiagnostics("e8 g <>4 c8 c8 c8 c8 c8 c8 |"));
     }
 
     [Fact]
