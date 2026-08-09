@@ -322,15 +322,10 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: scm/tablature.scm:97-111
             // tabvoice::make-double-stem-width-for-half-notes — LilyPond widens the Stem's
             // X-extent to `single-stem-width + separation` and centres it, so the two lines'
-            // centres end up `separation` apart.
-            // ⚠️ LILYSHARP-OWN: 0.355 is NOT that separation. LilyPond reads
-            // `double-stem-separation`, whose default is 0.5 (scm/tablature.scm:107), and
-            // 0.355 was taken off a measured tab rendering instead — the shape HANDOFF 5.2
-            // calls "pasting the measurement". The port is to draw at 0.5 and let the
-            // property carry it; it moves the tab snapshots, so it is named here rather than
-            // done in passing. (Found 2026-07-28 by the citation checker: the old REF,
-            // `ly/tablature-init.ly`, names a file LilyPond does not have.)
-            const double halfGap = 0.355 / 2;
+            // centres end up `separation` apart; `double-stem-separation` defaults to 0.5
+            // (the :107 fallback). Measured on 2.26.0: stem-line centres exactly 0.5 apart
+            // (tablature-double-stem-tremolo twin, 17.44/17.94).
+            const double halfGap = EngravingDefaults.TabDoubleStemSeparation / 2;
             gc.DrawLine(stemX - halfGap, nearY, stemX - halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
             gc.DrawLine(stemX + halfGap, nearY, stemX + halfGap, farY, Color.Black, EngravingDefaults.StemThickness);
         }
@@ -338,6 +333,24 @@ internal static partial class SharedRenderer
         {
             gc.DrawLine(stemX, nearY, stemX, farY, Color.Black, EngravingDefaults.StemThickness);
         }
+
+        // The tremolo is the Stem's grob on a tab staff exactly as on a notation
+        // staff — stem-tremolo.cc has no staff-kind branch, so the one DrawTremolo
+        // serves both; the stack centres on the stem's X, which the double stem
+        // straddles symmetrically (make-double-stem-width-for-half-notes widens
+        // the extent about its centre). This call was MISSING outright: a tab
+        // tremolo (`a2:32` under \tabFullNotation) drew its (double) stem with no
+        // slashes — the tab twin of the chord path's once-missing call.
+        // LILYPOND-REF: lily/stem-tremolo.cc — geometry reads only the stem/flag.
+        int tremoloBeams = item switch
+        {
+            NoteItem n => n.TremoloBeams,
+            ChordItem c => c.TremoloBeams,
+            _ => 0,
+        };
+        if (tremoloBeams > 0)
+            DrawTremolo(stemX, farY, stemUp, noteValue, tremoloBeams,
+                hasFlag: noteValue >= 8, gc: gc);
 
         if (noteValue >= 8)
         {

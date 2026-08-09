@@ -7898,7 +7898,9 @@
     },
     "tablature-double-stem-tremolo.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "TabVoice の二重符幹(半音符)に付く tremolo 斜線は二重符幹の中心に乗る",
+      "notes": "fixed(第55号・修理3枚): ⑴tab 経路に tremolo 描画が丸ごと無かった(silent 無描画)→DrawUnbeamedTabStem から共有 DrawTremolo を配線(stem-tremolo.cc は staff 種別で分岐しない=one house) ⑵DrawTremolo 自体が第100起票の LILYSHARP-OWN(中点 anchor+梯子1.28)→LP 字面に port: 端側斜線の中心=stem端−dir·0.81・梯子0.81・flag枝=さらに(log−2)·0.81(UPは+0.405)・slope は常に右上がり(旧実装は down で反転) ⑶二重符幹間隔 0.355(測定貼付の named 債務)→double-stem-separation 0.5(tablature.scm:107)。照合: 斜線中心X=二重符幹中心・梯子0.81・端−0.81 が LP と法則一致(LP 実測 17.69/15.38=16.19−0.81)。陽性対照 ntrem-probe(通常譜): a4:32=頭相対3点完全一致・e''8:32 で**第4の欠陥発見=斜線本数が flag 数を差し引かない**(LS3 vs LP2)→stem-engraver.cc:63-104 の字面を DrawTremolo に一元 port(a8:32=2本)。観測者=TabDoubleStemTremoloTests(LP 5点ピン)。snapshot 6枚 census 済(tab 5枚=二重符幹の対のみ中心不変±0.0725・ornaments=斜線Yのみ)。札2: LP は flag付き tremolo で stem を延長(stem.cc・未移植=ntrem-probe 8分の頭相対0.53差の出所)・StemTremolo の skyline 参加なし(既存)。twin=scratch\\lpreg\\tabdbltrem一式+ntrem-probe一式"
     },
     "tablature-fretboard-open-string.ly": {
       "category": "scheme",

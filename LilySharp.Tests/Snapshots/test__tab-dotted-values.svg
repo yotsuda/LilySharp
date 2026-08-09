@@ -66,8 +66,8 @@
   <text class="music" x="35.91" y="19.62" font-size="4.00" data-pos="114"></text>
   <text class="music" x="35.91" y="21.12" font-size="4.00" data-pos="114"></text>
   <text class="music" x="35.91" y="22.62" font-size="4.00" data-pos="114"></text>
-  <line x1="32.89" y1="24.66" x2="32.89" y2="29.16" stroke="#000000" stroke-width="0.130"/>
-  <line x1="33.24" y1="24.66" x2="33.24" y2="29.16" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.82" y1="24.66" x2="32.82" y2="29.16" stroke="#000000" stroke-width="0.130"/>
+  <line x1="33.32" y1="24.66" x2="33.32" y2="29.16" stroke="#000000" stroke-width="0.130"/>
   <text x="40.21" y="21.41" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="124">5</text>
   <text x="38.31" y="22.91" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="124">6</text>
   <text x="40.21" y="24.41" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="124">7</text>

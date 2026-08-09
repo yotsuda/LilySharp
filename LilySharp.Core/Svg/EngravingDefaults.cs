@@ -639,6 +639,19 @@ internal static class EngravingDefaults
     /// </summary>
     public const double TabHeadCenterOffset = NoteheadBlackWidth / 2;
 
+    /// <summary>Distance between the two stem-line centres of a tab half note's
+    /// double stem (staff spaces).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/tablature.scm:97-111 tabvoice::make-double-stem-width-for-half-notes
+    /// — the Stem's X-extent widens to
+    /// single-stem-width + `double-stem-separation`, whose fallback is 0.5 (:107), and the
+    /// draw callback puts one stem line at each edge of that extent. Measured on 2.26.0:
+    /// centres exactly 0.5 apart (tablature-double-stem-tremolo twin). Until 2026-08-09 this
+    /// was 0.355, a pasted measurement of unknown provenance — the debt its drawing site
+    /// carried as a ⚠️ since 2026-07-28.
+    /// </remarks>
+    public const double TabDoubleStemSeparation = 0.5;
+
 
     // === Staff geometry (local engraver coordinates) ===
     /// <summary>Device-Y of the staff's middle line in the engravers' local

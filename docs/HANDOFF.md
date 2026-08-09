@@ -59,7 +59,33 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 第122セッション（＝第1便 **exact 第37 = tablature-dot-placement.ly
-（コード変更0・tab 島 1冊目）**・この handoff と同 commit）。
+（コード変更0・tab 島 1冊目）**・`b9646b54`・第2便 **fixed 第55号 =
+tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
+（第100起票の返済）+ 二重符幹 0.5（named 債務の返済）**・この handoff と同 commit）。
+
+★★★ **第2便 fixed 第55号 tablature-double-stem-tremolo.ly**:
+- twin = scratch\lpreg\tabdbltrem.{lys,svg,-lp.ly,-lp.svg}（`a2:32` 単体 TabVoice・
+  treble_8 部の同綴りで LP a = Lily# a・半小節は pickup 警告のみ）。
+  **LP 実測: 二重符幹中心 17.69（2本 0.5 間隔）＝斜線3本の中心X・梯子 0.81・
+  最下斜線中心 15.38 = stem端 16.19 − 0.81**。
+- **修理 4枚**: ⑴ **tab 経路に tremolo 描画ゼロ（silent 無描画）**→DrawUnbeamedTabStem
+  から共有 DrawTremolo を配線（stem-tremolo.cc に staff 種別分岐なし＝one house）
+  ⑵ **DrawTremolo の LP port（第100起票 LILYSHARP-OWN の返済）**: 中点 anchor+梯子
+  1.28 → 端側斜線中心 = stem端 − dir·0.81・梯子 0.81（y_offset :314-368 の字面）・
+  flag 枝 = (log−2)·0.81 追加（UP はさらに 0.405）・slope 常に右上がり（旧は down で
+  反転） ⑶ **二重符幹間隔 0.355 → 0.5**（測定貼付と自札済みの named 債務・
+  double-stem-separation 既定 0.5 = tablature.scm:107・EngravingDefaults.
+  TabDoubleStemSeparation 新設） ⑷ **斜線本数が音符自身の flag を差し引かない**
+  （陽性対照 ntrem-probe で発見: e''8:32 が LS 3本 vs LP 2本）→stem-engraver.cc:63-104
+  make_stem の字面（flags = log2(type)−2 − max(log−2,0)）を DrawTremolo に一元 port。
+- 照合: tab = 中心X/梯子/端−0.81 全一致。通常譜対照 ntrem-probe = a4:32 頭相対 3点
+  **完全一致**・e''8:32 は本数・Y法則・slope 0.40 一致。観測者 =
+  TabDoubleStemTremoloTests（LP 5点ピン）。**snapshot 6枚 census 済**（tab 5枚 =
+  二重符幹の対のみ・中心不変 ±0.0725 / ornaments = 斜線 Y のみ・4分 tremolo で本数不変）。
+- **札 2**: ⑴ LP は flag 付き tremolo で stem を延長（stem.cc の tremolo 項・未移植 =
+  ntrem-probe 8分の頭相対 0.53 差の出所・corpus が測ったら） ⑵ StemTremolo の
+  skyline 参加なし（既存・LP は参加）。perf: 描画ループ同型（呼び出し数不変か減）＝
+  A/B 省略。
 
 ★ **第1便 tablature-dot-placement.ly = exact**:
 - twin = scratch\lpreg\tabdot.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（\tabFullNotation =
@@ -81,19 +107,21 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
   LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
 
-plain 322 / 処理済 **288**（fixed **54**・exact **37**・skip **180**・open **17**・
-pending **34**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **tablature-double-stem-tremolo** 以降の tab 島続き（grace/harmonic/tie/
-tremolo/new-line-spacer）＝tab 幾何 memory（tab頁 anchor・tab幾何・tabタイ弦）併読。
+plain 322 / 処理済 **289**（fixed **55**・exact **37**・skip **180**・open **17**・
+pending **33**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tablature-grace-notes** 以降の tab 島続き（grace/harmonic/tie/
+new-line-spacer）＝tab 幾何 memory（tab頁 anchor・tab幾何・tabタイ弦）併読。
 第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
 slur-flag / slur-nice は文法宿題の棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4223 passed / 0 failed / 4 skipped**（開始時全スイート確認済・第1便は
-コード変更0）・snapshot 第122 = **0枚**・Core (Debug) 0 warning・
+テスト **4224 passed / 0 failed / 4 skipped**（第2便観測者+1・全スイート確認済）・
+snapshot 第122 = **6枚（第2便・census 済・上記）**・Core (Debug) 0 warning・
 base worktree = 第121 の節の 5 つそのまま残置。
-probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）**＋第121 以前の
-stclash / sttremcol / sploose / sptab / stempure ほか一式（下の各節参照）。
+probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）＋tabdbltrem 一式＋
+ntrem-probe 一式（第55号の照合材）＋tabdot-dump{,-ls}.ps1（tab SVG 一覧化・
+polygon 対応済）**＋第121 以前の stclash / sttremcol / sploose / sptab / stempure
+ほか一式（下の各節参照）。
 
 ## 以下は第121セッションの経緯
 

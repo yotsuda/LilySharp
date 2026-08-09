@@ -619,7 +619,7 @@ internal static partial class SharedRenderer
                 // StemTremolo declares NO transparent inheritance (unlike Flag/Beam,
                 // scm/define-grobs.scm StemTremolo), so its slashes keep their ink
                 // even on a transparent stem.
-                DrawTremolo(stemX, noteY, stemEndY, stemUp, note.TremoloBeams, hasFlag, gc);
+                DrawTremolo(stemX, stemEndY, stemUp, noteValue, note.TremoloBeams, hasFlag, gc);
         }
         else if (noteValue < 2 && !isBeamed && note.HasTremolo)
         {
@@ -871,7 +871,7 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/stem-engraver.cc — the StemTremolo hangs on the Stem;
             // LILYPOND-REF: lily/stem-tremolo.cc — geometry reads only the stem/flag.
             if (chord.HasTremolo)
-                DrawTremolo(stemX, stemStartY, stemEndY, stemUp, chord.TremoloBeams, hasFlag, gc);
+                DrawTremolo(stemX, stemEndY, stemUp, noteValue, chord.TremoloBeams, hasFlag, gc);
         }
         else if (noteValue < 2 && !isBeamed && chord.HasTremolo && chord.Notes.Length > 0)
         {

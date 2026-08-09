@@ -1011,37 +1011,64 @@ internal static partial class SharedRenderer
         }
     }
 
-    // ⚠️ LILYSHARP-OWN (ticketed 2026-08-06, session 100): this STEMMED slash
-    // model is NOT LilyPond's. It steps thickness+0.8 = 1.28 between slashes
-    // where LP steps beam_translation 0.81 (stem-tremolo.cc:115-125 — the same
-    // 0.81 DrawStemlessTremolo below uses = a second spelling of one quantity),
-    // and it centres the stack on the stem MIDPOINT where LP anchors at the
-    // stem end minus flag/beam corrections (stem-tremolo.cc:314-368 y_offset).
-    // Pinned only by Lily#'s own snapshot (grammar-2026-06-09); no LP-measured
-    // observer. Fixing it means re-basing that snapshot — measure first.
+    // The slash stack hangs off the STEM END, not the stem midpoint: the slash
+    // nearest the end centres one beam-translation short of it, and the rest
+    // march a translation apiece back toward the head. An unbeamed flagged stem
+    // backs the stack off (duration_log − 2) more translations to clear the
+    // flag, an UP flagged stem another half. The slash always RISES to the
+    // right — the slope's sign does not follow the stem direction.
+    // LILYPOND-REF: lily/stem-tremolo.cc:314-368 y_offset — end_y =
+    //   stem extent[dir] − dir·max(beam_count,1)·beam_translation (beamless
+    //   beam_count folds to 1); the flag branch subtracts dir·(log−2)·bt and,
+    //   for UP, another bt·0.5.
+    // LILYPOND-REF: lily/stem-tremolo.cc:115-125 get_beam_translation —
+    //   beamless translation = ss × length-fraction × 0.81 (length-fraction
+    //   folded to 1.0, exactly as DrawStemlessTremolo above).
+    // LILYPOND-REF: lily/stem-tremolo.cc:128-169 raw_stencil — beam-like
+    //   slash, beam-thickness 0.48 (define-grobs.scm StemTremolo), each slash
+    //   centre-aligned on both axes; :86-98 calc_width — 1.5, 1.0 for an UP
+    //   flagged stem; :45-79 calc_slope — 0.25, 0.40 for a DOWN flagged stem.
+    // LILYPOND-REF: scm/define-grobs.scm StemTremolo
+    //   (parent-alignment-X . CENTER) — the stack centres on the stem's X.
+    // ⚠️ The slash is a stroked line where LP draws a vertical-ended
+    //   parallelogram — the known 0.04 ink-extent difference of this family.
     private static void DrawTremolo(
-        double stemX, double stemAttachY, double stemEndY,
-        bool stemUp, int beamCount, bool hasFlag, IDrawingContext gc)
+        double stemX, double stemEndY,
+        bool stemUp, int noteValue, int beamCount, bool hasFlag, IDrawingContext gc)
     {
+        // The note's own flags already show that many subdivision levels, so the
+        // drawn slash count subtracts them: a8:32 gets 2 slashes where a4:32
+        // gets 3 (probe ntrem-probe, LP 2 slashes vs a former Lily# 3). LP warns
+        // "tremolo duration is too long" when nothing is left; here the stack
+        // just vanishes.
+        // LILYPOND-REF: lily/stem-engraver.cc:63-104 make_stem —
+        //   tremolo_flags = intlog2 (requested_type) - 2 - (dur->duration_log ()
+        //   > 2 ? dur->duration_log () - 2 : 0).
+        int durationLog = (int)Math.Log2(noteValue);
+        beamCount -= Math.Max(durationLog - 2, 0);
         if (beamCount <= 0) return;
+        double dir = stemUp ? 1 : -1;
         double beamWidth = (stemUp && hasFlag) ? 1.0 : 1.5;
         const double beamThickness = EngravingDefaults.BeamThickness;
-        const double beamGap = 0.8;
+        const double translation = 0.81;
         double slope = (!stemUp && hasFlag) ? 0.40 : 0.25;
 
-        double stemMidY = (stemAttachY + stemEndY) / 2;
-        double totalHeight = beamCount * beamThickness + (beamCount - 1) * beamGap;
-        // Offsets from the stem midpoint flip into the Y-up frame.
-        double startY = stemMidY + totalHeight / 2 - beamThickness / 2;
+        // Y-up page frame: the end-side slash sits one translation inside the
+        // stem end; successive slashes step toward the head.
+        double endY = stemEndY - dir * translation;
+        if (hasFlag)
+        {
+            endY -= dir * (durationLog - 2) * translation;
+            if (stemUp)
+                endY -= translation * 0.5;
+        }
 
         for (int i = 0; i < beamCount; i++)
         {
-            double y = startY - i * (beamThickness + beamGap);
+            double y = endY - dir * translation * i;
             double halfW = beamWidth / 2;
             double dy = halfW * slope;
-            double y1 = stemUp ? y - dy : y + dy;
-            double y2 = stemUp ? y + dy : y - dy;
-            gc.DrawLine(stemX - halfW, y1, stemX + halfW, y2,
+            gc.DrawLine(stemX - halfW, y - dy, stemX + halfW, y + dy,
                 Color.Black, beamThickness);
         }
     }
