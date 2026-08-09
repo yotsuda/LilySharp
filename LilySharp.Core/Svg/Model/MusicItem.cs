@@ -140,6 +140,23 @@ public sealed record NoteItem : MusicItem
     /// </remarks>
     public int? BeamId { get; init; }
 
+    /// <summary>
+    /// The PURE tip of this note's beamed stem, in staff positions (+up): the extreme of
+    /// the beam group's same-direction members' UNBEAMED stem tips. Null when unbeamed.
+    /// Baked by <c>MeasureCollector.ResolveBeamStemDirections</c> — the Lily# form of
+    /// LilyPond's per-stem pure-height cache — and consumed by
+    /// <c>SpacingRules.StemSpacingInfo</c>, whose whole band every spacing reader shares.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height — the calc_beam
+    ///   branch unites the same-direction members' unbeamed heights and clips the
+    ///   NON-stem side back to this stem's own (:443 iv.intersect); the clip means one
+    ///   number (the stem-side extreme) carries the whole result.
+    /// LILYPOND-REF: lily/stem.cc:449-458 Stem::cache_pure_height — LilyPond itself
+    ///   stores the answer on each stem, which is what baking it here mirrors.
+    /// </remarks>
+    public double? PureBeamedStemTip { get; init; }
+
     /// <summary>Whether this note belongs to a beam group (set by BeamDetector once the
     /// group is resolved). Unlike <see cref="HasBeamStart"/>/<see cref="HasBeamEnd"/> this
     /// is true for a mid-beam note too, so slur edge scoring can ask "is this note beamed".
@@ -559,6 +576,9 @@ public sealed record ChordItem : MusicItem
     /// <summary>Identity of the beam this chord's stem belongs to; see
     /// <see cref="NoteItem.BeamId"/>.</summary>
     public int? BeamId { get; init; }
+    /// <summary>The PURE tip of this chord's beamed stem, in staff positions (+up); see
+    /// <see cref="NoteItem.PureBeamedStemTip"/>.</summary>
+    public double? PureBeamedStemTip { get; init; }
     /// <summary>Whether this chord belongs to a beam group (set by BeamDetector; true for a
     /// mid-beam chord too). See <see cref="NoteItem.IsBeamed"/>.</summary>
     public bool IsBeamed => BeamId is not null;

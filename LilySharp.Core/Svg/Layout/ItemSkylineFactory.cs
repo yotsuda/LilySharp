@@ -334,20 +334,19 @@ internal static class ItemSkylineFactory
     ///   and <c>X-extent</c> is <c>ly:stem::width</c> = ±thickness/2 about its X-offset.
     /// </para>
     /// <para>
-    /// ⚠️ The Y range is the UNBEAMED one, and the beamed branch is NOT PORTED — stated
-    /// rather than hidden.
+    /// The Y range is the PURE one, beamed branch included: a beamed item carries its
+    /// group's united tip (<c>NoteItem.PureBeamedStemTip</c>, baked by
+    /// MeasureCollector.ResolveBeamStemDirections), so an accidental hung between two
+    /// tall beamed stems meets the stem's real pure reach — the very case
+    /// stem-pure-height-beamed.ly claims (a flat clearing an up stem whose beam carried
+    /// it two octaves past its head).
     /// LILYPOND-REF: lily/stem.cc:393-398 Stem::internal_pure_height — with
     ///   <c>calc_beam = false</c> (or no beam at all) the interval is just this stem's own
-    ///   <c>internal_height</c>, which is what is ported here.
+    ///   <c>internal_height</c>.
     /// LILYPOND-REF: lily/stem.cc:399-444 Stem::internal_pure_height — the
     ///   <c>calc_beam = true</c> branch unites it with the pure heights of the beam's other
-    ///   same-direction stems. That needs the beam's members and this walk has one item.
-    /// LILYPOND-REF: lily/stem.cc:443 Stem::internal_pure_height —
-    ///   <c>iv.intersect (overshoot)</c> clips the union back on the NON-stem side, so the
-    ///   union can only ever grow the interval past its own end in the stem's direction.
-    ///   Therefore the unbeamed range UNDER-reserves and never over-reserves, and it is
-    ///   exact whenever the stem is its group's extreme one — the case a collision is
-    ///   usually about.
+    ///   same-direction stems; :443 <c>iv.intersect (overshoot)</c> clips the union back on
+    ///   the NON-stem side, so only the tip moves — which is why one baked number carries it.
     /// </para>
     /// </remarks>
     private static void AddStem(List<ColumnPart> parts, MusicItem item,

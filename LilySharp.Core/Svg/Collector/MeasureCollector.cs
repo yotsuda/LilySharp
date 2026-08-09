@@ -1806,6 +1806,65 @@ public sealed partial class MeasureCollector
                     isPickup: measure.IsPickup);
             }
 
+            // Bake the PURE beamed stem tip on every member: the extreme of the group's
+            // same-direction members' UNBEAMED stem tips. Spacing runs before any beam
+            // is quanted, so LilyPond prices a beamed stem by its PURE height — the
+            // calc_beam branch unites the same-direction members' unbeamed heights and
+            // clips the non-stem side back to the stem's own, so the whole result is
+            // the own head-side end plus this one shared tip. LilyPond caches the
+            // answer per stem; this bake is that cache.
+            // The cross-staff coords term (:421-436) is identically zero here: a Lily#
+            // beam group never spans staves, so every member's pure Y refpoint is the
+            // same and the per-member adjustment vanishes.
+            // LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height — :399-444
+            //   the calc_beam branch; :443 iv.intersect (overshoot).
+            // LILYPOND-REF: lily/stem.cc:449-458 Stem::cache_pure_height.
+            double upTip = double.NegativeInfinity, downTip = double.PositiveInfinity;
+            var memberBands = new List<(int Mi, int ItemIndex, bool StemUp)>();
+            foreach (var member in group.Members)
+            {
+                int mi = member.MeasureIndex >= 0 ? member.MeasureIndex : group.MeasureIndex;
+                if (mi < 0 || mi >= measures.Count
+                    || member.ItemIndex < 0 || member.ItemIndex >= measures[mi].Items.Length)
+                    continue;
+                // The items were just stamped with their resolved directions, and their
+                // PureBeamedStemTip is still unset, so this reads the UNBEAMED band.
+                if (Layout.SpacingRules.StemSpacingInfo(measures[mi].Items[member.ItemIndex])
+                    is not { } info)
+                    continue;
+                if (info.StemUp)
+                    upTip = Math.Max(upTip, info.StemMax);
+                else
+                    downTip = Math.Min(downTip, info.StemMin);
+                memberBands.Add((mi, member.ItemIndex, info.StemUp));
+            }
+            foreach (var (mi, itemIndex, stemUp) in memberBands)
+            {
+                double tip = stemUp ? upTip : downTip;
+                if (double.IsInfinity(tip))
+                    continue;
+                var measure = measures[mi];
+                MusicItem? withTip = measure.Items[itemIndex] switch
+                {
+                    NoteItem n => n with { PureBeamedStemTip = tip },
+                    ChordItem c => c with { PureBeamedStemTip = tip },
+                    _ => null,
+                };
+                if (withTip == null)
+                    continue;
+                measures[mi] = new Measure(
+                    measure.Items.SetItem(itemIndex, withTip),
+                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
+                    measure.SourceStart, measure.SourceEnd,
+                    hasBreakAfter: measure.HasBreakAfter,
+                    lineBreakPermission: measure.LineBreakPermission,
+                    breakPenalty: measure.BreakPenalty,
+                    pageBreakPermission: measure.PageBreakPermission,
+                    pageTurnPermission: measure.PageTurnPermission,
+                    sectionLabelPosition: measure.SectionLabelPosition,
+                    isPickup: measure.IsPickup);
+            }
+
             // Bake the PURE beam-push estimate into every rest this manual beam runs
             // over, so horizontal spacing sees the rest roughly where the beam will
             // put it — spacing runs before any beam is quanted; the print later uses

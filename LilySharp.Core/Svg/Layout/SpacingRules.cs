@@ -1533,6 +1533,19 @@ internal static class SpacingRules
                 // off centre. LILYPOND-REF: lily/stem.cc:934-963.
                 double beginPos = StemBeginPosition(n.StaffPosition, n.StemUp, noteValue, n.IsCue);
                 double endPos = StemEndPosition(n.StaffPosition, n.StemUp, noteValue, n.StaffPosition, n.IsCue);
+                // A beamed stem's band is the PURE beamed one: the tip carries the beam
+                // group's united reach (baked at collect time), the head side stays this
+                // stem's own — the overshoot clip in one number. Every reader of this
+                // house wants exactly that: LilyPond's skyline boxes, its note-spacing
+                // stem correction and its staff-spacing optical correction all read
+                // pure_y_extent, whose beamed branch this is.
+                // LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height;
+                // LILYPOND-REF: lily/note-spacing.cc:272-273 stem_dir_correction —
+                //   stem->pure_y_extent (stem, 0, INT_MAX) * (2 / ss);
+                // LILYPOND-REF: lily/staff-spacing.cc:55-59 optical_correction —
+                //   the same pure_y_extent, intersected with the bar's band.
+                if (n.PureBeamedStemTip is { } beamedTip)
+                    endPos = beamedTip;
                 return (n.StemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     n.StaffPosition, n.StaffPosition, n.BeamId);
@@ -1551,6 +1564,10 @@ internal static class SpacingRules
                 // stem attachment. LILYPOND-REF: lily/stem.cc:934-963.
                 double beginPos = StemBeginPosition(c.StemUp ? minPos : maxPos, c.StemUp, noteValue, c.IsCue);
                 double endPos = StemEndPosition(tipPos, c.StemUp, noteValue, tipPos, c.IsCue);
+                // The PURE beamed tip, exactly as in the NoteItem arm above.
+                // LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height.
+                if (c.PureBeamedStemTip is { } beamedTip)
+                    endPos = beamedTip;
                 return (c.StemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     minPos, maxPos, c.BeamId);

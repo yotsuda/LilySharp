@@ -61,28 +61,39 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第120セッション（＝第1便 focused session **fixed 第52号 =
 spacing-loose-polyphony.ly = loose column の port 完結（第119第6便の open を回収）**・
 `315d4047`・第2便 **staff-tabstaff-spacing.ly 下見 = open（多score頁の鎖が無い＝
-アーキ級起票）**・`554c8e68`・第3便 **stem-pure-height-beamed.ly 下見 = open
-（beamed stem pure height の calc_beam 枝＝既開示札の初 corpus 踏み・次 focused
-session の本命）**・この handoff と同 commit）。
+アーキ級起票）**・`554c8e68`・第3便 stem-pure-height-beamed.ly 下見・`fde998cf`・
+第4便 **fixed 第53号 = stem-pure-height-beamed.ly = beamed stem pure height の
+calc_beam 枝 port（下見の open を同セッションで回収）**・この handoff と同 commit）。
 
-★★★ **第3便 stem-pure-height-beamed.ly（claim: beamed stem の pure height で外側
-衝突を避ける）= open・root 釘付け・次の focused session 候補筆頭**:
+★★★ **第4便 fixed 第53号 stem-pure-height-beamed.ly = 全列 LP exact**:
 - twin = scratch\lpreg\stempure.{lys,svg,-gen.ly,-lp.svg,-lp.log}（\stemUp で
-  A3↔G#5/Bb5 の 2 oct 跨ぎ梁・`!` 強制臨時記号は綴りなし＝両側落とし）。
-- **照合: 第1-2列+全 stem 端は exact・第3列（♭付き Bb5）から一様 −0.67**＝
-  対 2→3 の 1 本だけ短い（LP 2.02 vs LS 1.35）。**♭が A3 の上向き beamed stem
-  （−6 まで）を避ける項が無い**。
-- root = ItemSkylineFactory.AddStem の Y 帯が **unbeamed pure height のみ**——
-  「beamed branch NOT PORTED」と⚠️明記済の札を**この本が初めて踏んだ**。LP は
-  Stem::internal_pure_height（stem.cc:387-447）の calc_beam 枝＝beam 仲間の同方向
-  stem の unbeamed pure height を unite・逆側は overshoot で自分に clip
-  （:399-444・per-stem cache :449-458）。
-- **修理形**: MeasureCollector.ResolveBeamStemDirections（beam 群を既に歩く家）で
-  beamed pure 帯を item へ焼込（LP 自身の cache_pure_height の字面対応）→
-  AddStem が beamed 枝で読む。⚠️ 全 beamed 本の skyline 帯が広がり得る =
-  snapshot census 前提・StemSpacingInfo は optical correction と「one house」の
-  約束があるので**読者を数えてから**（AddStem だけ beamed 帯にするか、家ごと
-  beamed 化するかは LP の stem_dir_correction の読みで決める）。
+  A3↔G#5/Bb5 の 2 oct 跨ぎ梁・`!` 強制臨時記号は綴りなし＝両側落とし）。乖離は
+  第3列（♭付き Bb5）から一様 −0.67 = **♭が A3 の上向き beamed stem（pure height で
+  −6 まで）を避ける項の欠落**——「beamed branch NOT PORTED」と⚠️明記済の札を
+  この本が初めて corpus で踏んだ。
+- **読者を数えた結果 = 家ごと beamed 化が字面**: LP は 3 読者全部が
+  pure_y_extent（= beamed 込み pure height）を読む——separation-item の skyline 箱・
+  note-spacing.cc:272-273 stem_dir_correction・staff-spacing.cc:55-59
+  optical_correction。「one house」は LP 側でも成立していた。
+- **port 3枚**: ⑴ NoteItem/ChordItem に **PureBeamedStemTip** 新設
+  ⑵ MeasureCollector.ResolveBeamStemDirections（beam 群を既に歩く家）で**同方向
+  member の unbeamed tip の極値を焼込**——Stem::internal_pure_height（stem.cc:
+  387-447）calc_beam 枝の字面: unite+逆側 overshoot clip は「共有 tip 1個 + 自分の
+  begin」に畳める・cross-staff coords 項（:421-436）は LS beam 群が単一譜なので
+  恒等 0 と開示・LP 自身の cache_pure_height（:449-458）が焼込の対応物
+  ⑶ SpacingRules.StemSpacingInfo が tip で帯を置換＝AddStem／stem 補正／barline
+  optical が一斉に beamed 化。
+- **照合: 全列 LP exact**（♭ **13.61**・頭 9.34/11.59/14.76/17.02/19.77/22.03/
+  24.78/27.03・stem 8 本全部）。観測者 =
+  BeamedPureStemSpacingTests.AccidentalClearsTheBeamCarriedStem（LP 9点ピン）。
+- **snapshot 17枚 census 済 = 全部 X drift 0.01-0.06 級・Y 不変**（beamed 本全般:
+  notes / beaming / multivoice 族 / timesig 族 / tempo 族 / tab-tuplet-number /
+  drum-groove / beamlets-over-rests / fermata-note-spacing / beam-under-staves /
+  dot-cross-voice-spacing / showcase 06）。**台帳は全緑 = LP ピン保持**。
+- **perf round 20**（scratch\lpreg\perf-ab20.ps1・base = 87c4c62f worktree 共用）:
+  slurbeam300（bake+帯拡大の重い側）**−14.9/−2.6%**・plain1k **−9.3/−36.0%**＝
+  全部 curr 側が速いか同等＝退行なし（この日の機械はノイズ大・base 側 6.2s〜28.8s）・
+  **plain1k hash MATCH**（無 beam 本は出力不変も証明）。
 
 ★★ **第2便 staff-tabstaff-spacing.ly（claim: Staff score と TabStaff score の
 score 間縦間隔は一致）= open・root 釘付け**:
@@ -147,25 +158,25 @@ score 間縦間隔は一致）= open・root 釘付け**:
   drift**・**両冊 hash MATCH**（多譜 homophonic と単譜密は出力不変も証明）。
   ComputeLooseChangeHangs は「変更 item 無し即 null」の早期ゲート付き。
 
-plain 322 / 処理済 **279**（fixed **52**・exact **35**・skip **174**・open **18**・
+plain 322 / 処理済 **279**（fixed **53**・exact **35**・skip **174**・open **17**・
 pending **43**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = アルファベット順の次の pending（stem-shorten 以降）。ただし**第3便の
-open（beamed pure height の焼込 = 修理形特定済・1 セッション級）を focused session で
-先にやる選択肢が濃い**——次いで第2便の open（多 score 頁の鎖＝アーキ級）。
+frontier = アルファベット順の次の pending（stem-shorten 以降・明白なゲート無し＝
+実評価が要る）。第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
 入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4221 passed / 0 failed / 4 skipped**（観測者+1・ApplyRods isinf 枝+1・
-全スイート確認済）・snapshot 第120 は **5枚**（census 済・上記）・Core (Debug)
-0 warning・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
+テスト **4222 passed / 0 failed / 4 skipped**（第1便観測者+1・ApplyRods isinf 枝+1・
+第4便観測者+1・全スイート確認済）・snapshot 第120 は **5枚（第1便）+17枚（第4便）**
+（両方 census 済・上記）・Core (Debug) 0 warning・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
 C:\MyProj\LilySharp-perfbase-0c63（第118残置）＋
 C:\MyProj\LilySharp-perfbase-ae2a（第119残置）＋
 C:\MyProj\LilySharp-perfbase-87c4（第120残置）。
 probe 残置: **sploose.{lys,-gen.ly,svg,-lp.svg,-lp.log}（第52号の照合材）＋
 sploose-norod.svg / sploose-dbg.svg（rod 切り分けの一時対照・消してよい）＋
 sptab.{lys,svg,-lp.ly,-lp.svg,-lp.log}（第2便 open の照合材）＋
-stempure.{lys,svg,-gen.ly,-lp.svg,-lp.log}（第3便 open の照合材）**＋
+stempure.{lys,svg,-gen.ly,-lp.svg,-lp.log}（第53号の照合材）**＋
 第119 以前の slurvsky / spacc-rest / spacc-stretch / spacc-corr{,-noacc} 一式
 （下の第119 の節参照）。
 
