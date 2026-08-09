@@ -8445,7 +8445,9 @@
     },
     "tuplet-bracket-direction.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Bracket direction = majority of stem directions; ties resolved by extremal positions",
+      "notes": "fixed 61 (s123). 主張の9 tuplet=LP実測 UP DOWN UP DOWN UP UP DOWN UP DOWN で全一致(twin=tupdir{.lys,-lp.ly}・hookのdy符号で読取)。旧LSは同数→無条件UP=t4(C6+F4の1対1)が逆。port=get_default_dir:793-813のextremal tiebreak(自向きの譜端はみ出し深い側が勝つ・staff定数は比較で相殺するが字面維持・rest列=空interval no-op)+無stem→UP。texidocの「ties going to UP」は字面通りではなくLP自身がtiebreakを持つ(t4がDOWNの証拠)。枠の学び=相対→絶対の誤訳(f,,をF3と読んだ・正=上4度F6基準でF4)が偽乖離を作った=頭position検分の再犯4回目。観測者TupletBracketDirectionTests(9方向ピン)。snapshot 0枚。"
     },
     "tuplet-bracket-max-slope.ly": {
       "category": "scheme",

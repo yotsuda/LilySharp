@@ -410,8 +410,9 @@ internal static class TupletBracketEngraver
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir implementation
-    /// Counts stem directions and returns majority direction.
-    /// If equal, returns UP (bracket above).
+    /// Counts stem directions and returns the majority direction. Equal counts
+    /// tiebreak on the extremal head positions (no stems at all → UP); see the
+    /// port in the body.
     /// </remarks>
     private static bool CalculateDirection(TupletBracketItem tuplet, ImmutableArray<Measure> measures)
     {
@@ -445,9 +446,45 @@ internal static class TupletBracketEngraver
             }
         }
 
-        // LILYPOND-REF: lily/tuplet-bracket.cc:793-816
-        // Return majority direction, or UP if equal
-        return stemsUp >= stemsDown;
+        // Equal counts: no stems at all → UP; otherwise the tie goes to the side
+        // whose extreme head protrudes deeper past the staff edge in its own
+        // direction — a down-stem C6 outweighs an up-stem F4 (the regression book
+        // tuplet-bracket-direction.ly pinned this: LP puts that bracket DOWN).
+        // The staff-edge constants cancel in the comparison (it reduces to
+        // extUp + extDown <= 0), but the letter keeps them: staff extent ±2.0
+        // staff SPACES against head POSITIONS in half-spaces is LP's own unit mix.
+        // LILYPOND-REF: lily/tuplet-bracket.cc:793-813 get_default_dir
+        //   (the extremal-positions tiebreak; :795-796 the no-stem UP).
+        if (stemsUp == stemsDown)
+        {
+            if (stemsUp == 0)
+                return true;
+            double extUp = double.NegativeInfinity;
+            double extDown = double.PositiveInfinity;
+            for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < measure.Items.Length; i++)
+            {
+                // A rest column's head interval is EMPTY in LP, so its minmax
+                // contributes nothing (:803-809 walks it as a no-op) — skipping
+                // rests here is the same answer without the ±∞ bookkeeping.
+                switch (measure.Items[i])
+                {
+                    case NoteItem n:
+                        if (n.StemUp) extUp = Math.Max(extUp, n.StaffPosition);
+                        else extDown = Math.Min(extDown, n.StaffPosition);
+                        break;
+                    case ChordItem c when c.Notes.Length > 0:
+                        if (c.StemUp) extUp = Math.Max(extUp, c.Notes.Max(x => x.StaffPosition));
+                        else extDown = Math.Min(extDown, c.Notes.Min(x => x.StaffPosition));
+                        break;
+                }
+            }
+            double protrudeUp = extUp - 2.0;      // -UP · (staff[UP] − ext[UP])
+            double protrudeDown = -2.0 - extDown; // -DOWN · (staff[DOWN] − ext[DOWN])
+            return protrudeUp <= protrudeDown;    // :813 — UP keeps the final tie
+        }
+
+        // LILYPOND-REF: lily/tuplet-bracket.cc:816 get_default_dir majority
+        return stemsUp > stemsDown;
     }
 
     /// <summary>
