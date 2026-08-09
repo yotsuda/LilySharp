@@ -61,10 +61,33 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択。第1便 fixed 第66号 =
 dot-rest-beam-trigger.ly = rest mover の連鎖化**(`276a2c4a`)・**第2便 = open 全冊
 HEAD 再測の棚卸し + fixed 第67号 = dot-column-vertical-positioning.ly =
-rest の dot を dot column に参加させた**(`52240900`)。
+rest の dot を dot column に参加させた**(`52240900`)・**第3便 = 棚卸しの変化2冊を
+LP 再照合 → exact 第43 = phrasing-slur-tuplet(コード変更0)+ fixed 第68号 =
+collision-harmonic-no-dots = voiced 変位を span の実届範囲に閉じた**(`753c09fe`)。
 
-**台帳: plain 322 = fixed 67・exact 42・skip 197・open 16・pending 0**
+**台帳: plain 322 = fixed 68・exact 43・skip 197・open 14・pending 0**
 (status.json 実数・§0 の数え方で確認済)。
+
+★★ **第3便の中身**(照合値は台帳 notes):
+- **exact 第43 = phrslurtup**: slur path が 4 座標とも LP 桁一致(端点 −4.55/−4.05・
+  制御点 −5.73/−5.43 = 第116 fixed45 slur-scoring 再建の波及)・番号中心 X 桁一致・
+  積み順(番号が slur の内側)が LP と同形で成立。avoid-slur inside 機構自体の未移植は
+  札のまま(この本の枠では発火しない)。
+- **fixed 第68号 = colharm**: 実欠陥は 1 点=**span 後の r4 が voiced +4 のまま**
+  (LP は中央)。LP 真値は probe vrest-probe.{ly,-lp.svg} で確定——**span 内 rest は
+  partner が全 spacer でも voiced・span 後/外は中央**(ElementCoordinator 旧 doc の
+  「spacer partner は動かない」読みはこの形では非成立と判明)。修理=
+  ⑴ ResolveVoiceStemDirections の stamp を span の実届範囲で onset ゲート
+  (spanEnd = 後続 voice の content 長)⑵ collision/dot pass が rest の
+  **stamp 済 VoiceDirection** を読む(ItemSkylineFactory と同じ答え=綴り 1 本化。
+  旧再導出の fallback は **span を持つ staff の span 外小節の rest 全部**を +4 に
+  化けさせていた)。観測者 = VoicedDisplacementDiesWithTheSpan。
+  **snapshot 3 枚 census 済 re-bless**(collision / cross-voice-accidental /
+  cue-region-measure = いずれも span 外小節の rest +4→中央 = 全部 LP 側への移動)。
+  札: 第1ブロックが後続より長い ragged 形は spanEnd 近似が LP より早く切る
+  (未踏・stamp site に ⚠️ 明記)。
+- 引用ラチェットの新例: **REF 行の資格語は同一行に**(改行で次行へ落とすと
+  「names nothing」に数えられる)。
 
 ★★ **第2便の棚卸し(「open も再測から」の横展開)= 旧 LS レンダが残る twin を
 HEAD 再レンダして幾何 diff**:
@@ -121,20 +144,22 @@ TryGetValue 1回 + per-staff の SetItems 1回(beam rest 無しなら Empty で�
 新規チューニング定数ゼロ・IncrementalCompiler 非接触(共有 Layout 経路のみ)。
 出力不変は全 snapshot 緑が証明。引用ラチェット緑。
 
-★ **次の一手 = open 16 の続き**(ユーザー3択の②継続)。候補メモ:
+★ **次の一手 = open 14 の続き**(ユーザー3択の②継続)。候補メモ:
 trill-spanner-direction(修理形釘付け済 = .up/.down 配線 + voice 既定配布 +
-下側 side-position/skyline)・phrslurtup/colharm の再照合(第124 で LS 出力変化を
-検出済・claim の再測だけで昇格の可能性)・cue-clef-manually(R1-in-voice MMR =
-アーキ級)・多 score 頁の鎖・grace column・録画層 §2A(→ **着手前に棚の3決定が
-要る・単独修理として着手しない**)。①文法拡張(推奨提示済・skip 197 の ≥74 冊解錠)
-と③ markup 55 / override 89 は棚のまま。
+下側 side-position/skyline・第124 再測で不変確認済)・lypassbar の再照合(LS 出力
+変化 15 要素検出済・§2A 棚は不変)・cue-clef-manually(R1-in-voice MMR = アーキ級)・
+多 score 頁の鎖・grace column・録画層 §2A(→ **着手前に棚の3決定が要る・単独修理と
+して着手しない**)。①文法拡張(推奨提示済・skip 197 の ≥74 冊解錠)と③ markup 55 /
+override 89 は棚のまま。
 
-未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 95)・
-テスト **4239 passed / 0 failed / 4 skipped**(+2 = BeamRestChainTests・
-RestDotColumnTests・全スイート確認済)・snapshot 動き 0・Core (Debug) 0 warning・
+未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 97)・
+テスト **4240 passed / 0 failed / 4 skipped**(+3 = BeamRestChainTests・
+RestDotColumnTests・VoicedDisplacementDiesWithTheSpan・全スイート確認済)・
+snapshot 動き 3 枚(第68号・census 済 re-bless・上記)・Core (Debug) 0 warning・
 base worktree = 第122 の節のまま(C:\MyProj\LilySharp-perfbase-31a0 残置)。
-probe 残置(第124 追加分): **drbt-head{,2}.svg・drbt-fix2.svg・dcvp-fix.svg・
-*-head124.svg 一式(棚卸しの HEAD 再レンダ)**＋第123 以前の一式(下の節参照)。
+probe 残置(第124 追加分): **drbt-head{,2}.svg・drbt-fix{2,3}.svg・dcvp-fix{,2}.svg・
+vrest-probe 一式(.lys/.ly/-lp.svg = 第68号の LP オラクル)・*-head124.svg 一式
+(棚卸しの HEAD 再レンダ)**＋第123 以前の一式(下の節参照)。
 
 ## 以下は第123セッションの経緯
 
