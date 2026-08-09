@@ -938,6 +938,19 @@ internal static class PartCombiner
     /// voice its machine names, the dropped ones are not engraved at all, and two parts in
     /// the shared voice at one moment become a chord.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYPOND HAS FIVE VOICE CONTEXTS HERE AND THIS HAS TWO SLOTS — not a simplification
+    /// but a consequence, and the argument is worth keeping because it is what would break if
+    /// the tables changed. Read the two machines column by column: for every configuration the
+    /// pair (part one's voice, part two's voice) is one of
+    /// <c>(one, two)</c>, <c>(shared, shared)</c>, or one engraved against one <c>null</c>.
+    /// There is no configuration that puts one part in <c>one</c> and the other in
+    /// <c>shared</c>, so at most two voices ever sound, and whichever part is engraved alone
+    /// is engraved in a voice with no settings. Slot 0 therefore carries whatever is singular
+    /// (one / shared / solo, whichever part it comes from) and slot 1 only ever carries
+    /// <c>two</c> — which is also why slot 1 stays absent in a piece that never separates.
+    /// <c>(shared, shared)</c> is the case that needs a merge rather than a slot.
+    /// </remarks>
     private static PartCombineResult Route(
         Voice one, Voice two,
         VoiceState[] states1, VoiceState[] states2,
@@ -1108,6 +1121,28 @@ internal static class PartCombiner
         }
     }
 
+    /// <summary>
+    /// Puts both parts' notes into one note column, which is what two note events in one
+    /// Voice context are.
+    /// </summary>
+    /// <remarks>
+    /// The pitches of both survive (they are the point); everything else is taken from part
+    /// ONE, and it is worth saying which "everything else" can differ and which cannot.
+    /// <list type="bullet">
+    /// <item>CANNOT: a slur, tie or manual beam that starts or is held here. A 'chords
+    /// moment requires the span state of BOTH parts to be empty — LILYPOND-REF:
+    /// scm/part-combiner.scm:431-476 analyze-notes, over comparable-note-events, whose last
+    /// condition is exactly that — and
+    /// a note that opens one of those has it in its span state. So no spanner of part two is
+    /// dropped here — there is none.</item>
+    /// <item>CAN, and IS dropped: part two's per-note decoration — cue size, notehead style,
+    /// tremolo, fingering, an editorial accidental. LilyPond keeps both events, so both
+    /// decorations reach the column. Closing it means carrying them on
+    /// <see cref="ChordNoteInfo"/>, which today holds pitch, accidental, ledgers and
+    /// fingering only. ⚠️ No point observes it: the corpus has no combined pair whose two
+    /// parts decorate the same moment differently.</item>
+    /// </list>
+    /// </remarks>
     private static MusicItem MergeIntoChord(MusicItem first, MusicItem second)
     {
         var notes = ChordNotesOf(first).AddRange(ChordNotesOf(second))
@@ -1154,12 +1189,25 @@ internal static class PartCombiner
 
     /// <summary>Strips the direction off an item routed to the shared or solo voice: those
     /// contexts carry no voice settings, so the stem follows the pitch.</summary>
+    /// <remarks>
+    /// ⚠️ UNCONDITIONALLY, INCLUDING A BEAMED ITEM'S BAKED DIRECTION. <c>StemUpOverride</c>
+    /// is the one slot this tree keeps two of LilyPond's quantities in — the voice-props
+    /// direction AND the beam-resolved one — so a beamed note arrives here carrying the
+    /// direction its beam had IN ITS OWN PART. That group is not this staff's group: the
+    /// routing drops notes, merges others into chords, and MultiStaffLayouter re-runs
+    /// BeamDetector over the voices that come out. Keeping the old value would hand the new
+    /// beam a direction decided for a group that no longer exists.
+    /// <para>
+    /// This was written with a <c>BeamId is null</c> guard on the note arm and no guard on
+    /// the chord arm — the same question answered two ways, with no reason given for either.
+    /// The guard is the wrong half: LilyPond's shared and solo contexts set no direction at
+    /// all, so the beam decides, and here the beam decides after this runs.
+    /// </para>
+    /// </remarks>
     private static MusicItem WithoutVoiceDirection(MusicItem item) => item switch
     {
-        NoteItem n when n.StemUpOverride is not null && n.BeamId is null
-            => n with { StemUpOverride = null },
-        ChordItem c when c.StemUpOverride is not null
-            => c with { StemUpOverride = null },
+        NoteItem { StemUpOverride: not null } n => n with { StemUpOverride = null },
+        ChordItem { StemUpOverride: not null } c => c with { StemUpOverride = null },
         RestItem { VoiceDirection: not 0 } r => r with { VoiceDirection = 0 },
         _ => item,
     };

@@ -4032,6 +4032,16 @@ internal sealed class LayoutEngine
         // The a2/Solo labels belong to a combinedStaff and come off the model with the
         // voices they were computed alongside (Staff.PartCombineMarks). Placement is the
         // only part of them that is layout's business.
+        //
+        // ⚠️ ONLY THE FIRST COMBINED STAFF'S LABELS ARE PLACED, and a score may now hold two
+        // (`score s { combinedStaff { a b } combinedStaff { c d } }`). This is a gap, stated
+        // rather than hidden: PartCombineLayout carries a measure index and no STAFF index,
+        // and the renderer hangs every label off the SYSTEM top (DrawPartCombine), so a
+        // second staff's labels have nowhere correct to go — carrying them anyway would draw
+        // "Solo" for the lower pair above the upper one, which is worse than not drawing it.
+        // Closing it is one field (the staff index) plus the height coming from the staff
+        // instead of the system, which is the same move that would put the label on the
+        // outside-staff stacker where LilyPond has it (priority 475).
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
             if (staff.PartCombineMarks.IsDefaultOrEmpty)

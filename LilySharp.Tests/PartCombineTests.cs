@@ -359,6 +359,29 @@ public class PartCombineTests
     }
 
     [Fact]
+    public void ABeamedItemLosesItsOldDirectionWhenItJoinsTheSharedVoice()
+    {
+        // StemUpOverride is the one slot this tree keeps two of LilyPond's quantities in:
+        // the voice-props direction and the beam-resolved one. A note arriving here already
+        // carries the direction its beam had IN ITS OWN PART — and that group is not this
+        // staff's group, because MultiStaffLayouter re-runs BeamDetector over the voices the
+        // combiner produces. LilyPond's shared context sets no direction at all.
+        //
+        // ⚠️ NO SCORE REACHES THIS YET, which is why it is asserted on the model: the
+        // configurations that route a beamed note to `shared` without also merging it into a
+        // chord (unisono, silence1) need a beamed unison, and neither the corpus nor the
+        // probes have one. Written from the model so the rule has an observer at all.
+        var beamed = Note(-6, Fraction.Eighth) with { StemUpOverride = false, BeamId = 1 };
+        var v1 = MakeVoice("1", MakeMeasure(beamed, beamed));
+        var v2 = MakeVoice("2", MakeMeasure(beamed, beamed));
+
+        var result = PartCombiner.Combine(v1, v2);
+
+        Assert.All(result.Voices[0].Measures[0].Items,
+            i => Assert.Null(((NoteItem)i).StemUpOverride));
+    }
+
+    [Fact]
     public void TheSecondVoiceIsNotCreatedWhenThePartsNeverSeparate()
     {
         var v1 = MakeVoice("1", MakeMeasure(Note(0, Fraction.Whole)));
