@@ -58,6 +58,61 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第123セッション＝**plain 322 完済**（第1便 **fixed 第60号 =
+tuplet-bracket-avoid-scripts.ly = avoid-scripts 項 port**・`7379d1d0`・第2便
+**fixed 第61号 = tuplet-bracket-direction.ly = get_default_dir の extremal
+tiebreak port**・`ba812cb9`・第3便 skip（tuplet-no-stems = \remove/\omit 器材・
+probe=tab as numbers で no-crash 核成立）・第4便 **fixed 第62号 =
+tuplet-number-alignment.ly = ⑴番号が共有 beam の中点に重なる→自 tuplet member 化
+⑵OuterEdgeStaffSpaceAtX の stem 側 (count−1)·translation 二重加算撤去（副 beam は
+符頭側に積まれる・LP stem rect 実測で裏取り）**・`40dad7ec`・第5便 **fixed 第63号 =
+tuplet-number-slur-script.ly = MemberXPositions は head アンカー→attach 補正
+（up-stem で番号が半頭左だった）**・`dda5c7b5`・第6便 **fixed 第64号 =
+tuplet-rest.ly = all-rest tuplet の固定 4.5 fallback→LP offset pass（staff 2.3+1.1
+=3.4）**・`290d0d12`・第7-8便 skip 2（unfolded-spec / vertical-alignment-spanner-
+only = 器材が主張）・第9便 **fixed 第65号 = volta-bracket-vertical-skylines.ly =
+VoltaBracketSpanner を per-system→per-chain（volta-engraver.cc:371-374/:493-499）+
+profile を flat 箱→描画実体の pointwise（hook/番号は自 X のみ）。LP=D7 鎖 7.085/
+A7 鎖 9.085 vs LS 7.070/9.070**・`dfd420db`・第10便 skip 6（volta-spec 族 =
+\volta N spec 器材）・第11便 **exact 第41 = whole-note-tremolo-direction（4群の
+beam 帯 Y 完全一致・コード変更0）** + **exact 第42 = whole-note-tremolo-accidentals
+（核=score1/2 の gap 指紋群別一致・score3-6 は breve/longa 時価綴りなし=枠外・
+6score を a..f 分割）**・`b7e2ec4e`）。
+
+**台帳最終: plain 322 / 処理済 322 = fixed 65・exact 42・skip 197・open 18・
+pending 0**（status.json 実数・§0 の数え方で確認済）。
+
+★ **次の一手はユーザー判断の 3 択**（第123 冒頭の方向性検証で提示済・完済で分岐点到達）:
+1. **文法拡張**（推奨提示済）——skip 197 のうち綴りなし系 ≥74 冊が解錠対象
+   （part-combine 族 10・dynamics-alignment 族 5・magnify 族 8・parenthesize 族 5 等）。
+   文法追加は従来から要ユーザー判断の棚。
+2. **open 18 の focused session 消化**（多 score 頁の鎖・grace column・録画層 §2A 等）。
+3. **markup 55 / override 89 の個別判断キュー**。
+
+★ **第123 の学び**:
+- **lysc は CLI プロジェクトのビルドが要る**（`dotnet build LilySharp.Core` だけでは
+  lysc.exe が旧 Core を抱いたまま＝TBDBG 無反応で発覚。増分腐るの新例）。
+- **枠の再犯**: 相対→絶対の誤訳 2 回（tupdir の f,,=F4 を F3 と誤読・tupnuma の
+  test 断片で c' が C6 に跳ぶ）＋**無引数 \relative の基準は f（F3）**（tuprest で
+  LP 符頭 Y 実測により確定。c' 基準と誤読して一周）。頭 position 検分の家訓どおり。
+- **texidoc は字面どおりとは限らない**（tuplet-bracket-direction の「ties going to
+  UP」——LP 実装は extremal tiebreak を持ち、t4 は DOWN。texidoc より実測）。
+- **縫い目を疑う前に同じレンダ内で相対を測る**（volta で page が縮んで staff が
+  動いただけの +1.97 を幽霊フレームと誤読して一周）。
+- **@accent( は引数括弧に食われる**→ `e8(@accent` の順（文法学び）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**・第123 終了時点で 89）・
+テスト **4237 passed / 0 failed / 4 skipped**（第1便+3・第2便+1・第4便+2・第5便+1・
+第6便+1・第9便+1・全スイート確認済）・snapshot 第123 = **9枚（第62号）+6枚（第63号）
++3枚（第65号）＝全 census 済**・Core (Debug) 0 warning・base worktree = 第122 の節
+のまま。
+probe 残置（第123 追加分）: **tupavsc 一式（第60号）・tupdir 一式（第61号）・
+tupnostem-probe（skip の核証明）・tupnum{a,b} 一式（第62号）・tupnumss 一式
+（第63号）・tuprest 一式（第64号）・voltasky 一式（第65号）・wntremdir 一式
+（exact 第41）・wntacc{a..f} 一式（exact 第42）**＋第122 以前の一式（下の節参照）。
+
+## 以下は第122セッションの経緯
+
 最終更新 第122セッション（＝第1便 **exact 第37 = tablature-dot-placement.ly
 （コード変更0・tab 島 1冊目）**・`b9646b54`・第2便 **fixed 第55号 =
 tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
