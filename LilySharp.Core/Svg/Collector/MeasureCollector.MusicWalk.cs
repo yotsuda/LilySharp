@@ -433,7 +433,10 @@ public sealed partial class MeasureCollector
 
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {
-        if (BindsASlur(node))
+        // ⚠️ The two bool reads come FIRST on purpose: they are false for every item of
+        // every score that never writes `<>`, and that short-circuit keeps the type switch
+        // in BindsASlur out of the per-item path this walk runs on every keystroke.
+        if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(node))
             TakeEmptyChordSlurs(ref hasSlurStartAfter, ref hasSlurEndAfter);
 
         switch (node)
@@ -1163,7 +1166,8 @@ public sealed partial class MeasureCollector
     {
         // The first item inside a tuplet can be the carrier for a slur mark left by an
         // empty chord just before the group (the same hole the glissando note below records).
-        if (BindsASlur(item))
+        // Flags first, as in ProcessMusicNode — this is the tuplet body's per-item path.
+        if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(item))
             TakeEmptyChordSlurs(ref hasSlurStartAfter, ref hasSlurEndAfter);
 
         int annMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;

@@ -209,6 +209,31 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
   待つ・Lily# は印を待たせる）。**同じ規則・別の機械**なので、両者を繋いでいるのは
   実測した恒等（a≡c）だけ＝**あの probe を捨てるな**と comment に書いた。
 
+★★ **第6便 = perf 監査 round 26（ユーザー問「プレビュー更新を劣化させないか」）= 実退行なし**
+（`scratch\lpreg\perf-ab26.ps1`・base = `0bda152b` worktree
+`C:\MyProj\LilySharp-perfbase-0bda152b` 残置・median-of-5 両順）:
+
+| 入力 | base-first | curr-first | hash |
+|---|---|---|---|
+| chordsemi1k（毎小節和音＝新しい per-chord `IsEmpty`） | −10.1% | +0.0% | MATCH |
+| chordsec1k（和音 section） | +5.7% | −5.3% | MATCH |
+| plain1k（**非接触対照**） | −2.8% | +7.5% | MATCH |
+
+**全入力で符号が順序によって反転し、非接触対照が 10 ポイント振れている**＝機械の drift 支配
+（round 25 の「±13% 級」と整合）。**hash は全部 MATCH**＝既に妥当だったファイルの出力は
+1 ビットも動いていない。
+- ★ **プレビュー速度の要は増分の採用経路で、そこは非接触**: `ParseCompilationUnit` は
+  未変更の top-level green を**採用してから** `ParseTopLevelItem` を呼ぶので、新しい
+  `IsTopLevelMusicStart()` は**採用が外れた項目にしか走らない**（`Parser.cs:259-267`）。
+  `IncrementalCompiler` は無編集・新キャッシュ層なし・新しい per-keystroke 状態は bool 2 個。
+- **測る前に 2 箇所軽くした**（毎キーストロークに乗るため）:
+  ⑴ `ChordSyntax.IsEmpty` を **LINQ の反復子 3 本 → 1 スロット走査**（先頭メンバで早期脱出）。
+  walk と `MeasureDurations` の**両方が全和音に訊く**ので、ここは per-chord per-keystroke。
+  ⑵ スラーの持ち越し判定を **bool 2 個の短絡を先に**（型 switch を全アイテムの経路から外す）。
+  ⇒ 和音本が base より速い測定が出たのはこれが効いた公算。
+- **札**: `condensedStaff` は `IsMultiStaff` に `Items.Any` を 1 本足すが**per-render**で
+  アイテム単位ではない。
+
 ★★★ **次の一手 = 段②（`combinedStaff { X Y }`）＝ focused session 1 本**。綴りだけ足すのは
 禁止（**合体しないのに combined と名乗る**＝この repo が最も嫌う形）。engraving と同時に入れる。
 **設計は確定済み**: ちょうど 2 パート・単独なら 1 段・`condensedStaff` の中なら 1 声部・

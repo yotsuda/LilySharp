@@ -618,7 +618,23 @@ public sealed class ChordSyntax : SyntaxNode
     /// <see cref="Semantics.MeasureDurations"/> charged it the running duration, so a
     /// correct bar was reported overfull (found 2026-08-09). One definition, both readers.
     /// </remarks>
-    public bool IsEmpty => !Pitches.Any() && !Degrees.Any() && !DrumNames.Any();
+    /// <remarks>
+    /// ⚠️ ONE slot pass, not <c>!Pitches.Any() &amp;&amp; !Degrees.Any() &amp;&amp;
+    /// !DrumNames.Any()</c>. Those are three iterator properties: three enumerator
+    /// allocations and up to three full scans, and this is asked of EVERY chord by the music
+    /// walk AND by <see cref="Semantics.MeasureDurations"/> — i.e. per chord per keystroke.
+    /// The single pass also exits on the first member, which is the common case.
+    /// </remarks>
+    public bool IsEmpty
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is PitchSyntax or ScaleDegreeSyntax or DrumNoteSyntax)
+                    return false;
+            return true;
+        }
+    }
 
     /// <summary>The root pitch (first member) of a degree chord — the anchor the
     /// degrees stack on; null if the chord has no pitch member.</summary>
