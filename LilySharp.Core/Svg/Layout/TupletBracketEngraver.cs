@@ -836,7 +836,36 @@ internal static class TupletBracketEngraver
         }
 
         if (firstPos == null || lastPos == null || extremeTip == null)
+        {
+            // An ALL-REST tuplet still runs LP's offset pass: with no note
+            // points the staff edge at both bounds is the only encompass, so
+            // the flat bracket sits at staff ink 2.3 + padding 1.1 = 3.4 above
+            // the middle line (tuplet-rest.ly t4, LP 3.400 measured; the old
+            // fallback parked it at the fixed 4.5).
+            // LILYPOND-REF: lily/tuplet-bracket.cc:633-637 calc_position_and_height
+            //   (the staff points join regardless of columns); :708-726 the
+            //   offset pass + padding.
+            // ⚠️ Disclosed: LP also pushes the REST columns' own ink as points
+            //   (:554-562 walks every column raw) and takes a rest column as a
+            //   slope BOUND (:525-535) — a default mid-staff rest never beats
+            //   the staff edge, so neither is wired; tuplet-rest.ly t5/t6
+            //   measure the bound seam at ≤0.055 (rest-bound slope regime).
+            if (useRealExtents && !double.IsNaN(bracketStartX) && bracketWidth > 0.001)
+            {
+                int rdir = isStemUp ? 1 : -1;
+                double off = (2.3 + BracketPadding) * rdir + nestingOffset * rdir;
+                double posQ = off / 0.5;
+                if (posQ >= -5.0 && posQ <= 5.0)
+                {
+                    posQ = Math.Round(posQ, MidpointRounding.ToEven);
+                    if ((int)posQ % 2 == 0 && Math.Abs((int)posQ) <= 4)
+                        posQ += rdir;
+                    off = posQ * 0.5;
+                }
+                return (2.0 - off, 2.0 - off);
+            }
             return (baseY, baseY);
+        }
 
         // ---- LP port: calc_position_and_height, the no-beam (drawn-bracket)
         // branch — graphical dy from the bound columns UNITED WITH THE STAFF,

@@ -39,6 +39,25 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class TupletBracketDirectionTests
 {
+    /// <summary>
+    /// An ALL-REST tuplet's bracket still runs the offset pass: the staff edge
+    /// (ink 2.3) is the only encompass, plus padding 1.1 — LP puts it 3.400
+    /// above the middle line (tuplet-rest.ly t4, twin scratch/lpreg/tuprest*).
+    /// The old fallback parked it at the fixed 4.5.
+    /// </summary>
+    [Fact]
+    public void AllRestTuplet_SitsAtStaffEdgePlusPadding()
+    {
+        var tree = SyntaxTree.Parse("tuplet 3/2 { r4 r4 r4 } r2 |");
+        var score = new MeasureCollector().Collect(tree);
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(score);
+        var bracket = Assert.Single(layout.TupletBracketLayouts);
+
+        Assert.True(bracket.IsStemUp);                      // no stems → UP
+        Assert.Equal(bracket.StartYUp, bracket.EndYUp, precision: 9);
+        Assert.Equal(1.4, bracket.StartYUp, precision: 9);  // 3.4 above middle
+    }
+
     [Fact]
     public void NineBookTuplets_MatchLpDirections()
     {
