@@ -2281,8 +2281,12 @@ internal sealed class MultiStaffLayouter
                 // why a Script belongs in this silhouette at all.
                 var articulations = StaffArticulationLayouts(
                     score, staff, thisStaff, measureLayouts, beams, ties, slurs);
+                // Scripts BEFORE tuplet brackets: the bracket's avoid-scripts term
+                // reads their placed boxes, and both answers are in the same
+                // staff-local frame (staffYAt null on both) — so the band the
+                // skyline reserves is the raised bracket the drawn pass draws.
                 var tupletBrackets = StaffTupletBracketLayouts(
-                    score, staff, thisStaff, measureLayouts, beams);
+                    score, staff, thisStaff, measureLayouts, beams, articulations);
                 spanners.Add(new StaffInsideSpanners(slurs, ties, tupletBrackets));
                 // ⚠️ CurrentIndent is where this system's clef is, and it is the same value
                 // LayoutEngine hands BuildSystemSkylines as its systemLeft. The two
@@ -2454,7 +2458,8 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     private ImmutableArray<TupletBracketLayout> StaffTupletBracketLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
-        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableArray<ArticulationLayout> articulations = default)
     {
         if (score.TupletBrackets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -2492,7 +2497,8 @@ internal sealed class MultiStaffLayouter
                 { [staffIndex] = staff.PrimaryVoice.Measures },
             voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
             staffYAt: null,
-            staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff });
+            staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+            scripts: articulations);
     }
 
     /// <summary>

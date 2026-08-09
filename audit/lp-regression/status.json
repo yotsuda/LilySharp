@@ -8427,7 +8427,9 @@
     },
     "tuplet-bracket-avoid-scripts.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Tuplet brackets avoid scripts by default",
+      "notes": "fixed 60 (s123). ^\\espressivo→@accent.up 両側置換(espressivo綴りなし・accentはOSP無宣言でavoid-scripts参加資格同等)。port=tuplet-bracket.cc:682-706 avoid-scripts項をCalculateSlopeのoffset passへ(OSP持ちscriptはskip=LP :690-692)。配線=LayoutEngine:3318(pre-stack層=OSP無しscriptのYUpは最終)+MultiStaffLayouter StaffTupletBracketLayouts(scripts先計算を渡す)。LP照合: bracket中線上5.14/accent anchor 3.62/stem端3.00全一致・bracket−accent ink頂=1.10=padding。ElementCoordinatorのslur用番号箱はscript無し=札(tuplet-number-slur-scriptが測る)。札: finger/string-number未配線・slur-skip条項は対象なし・pairing=(staff,measure,item範囲)でvoice区別なし。観測者TupletBracketAvoidScriptsTests3本(fermata=OSP75不動の陰性対照込み)。snapshot 0枚。twin=scratch\\lpreg\\tupavsc{.lys,-lp.ly}"
     },
     "tuplet-bracket-avoid-string-number.ly": {
       "category": "scheme",

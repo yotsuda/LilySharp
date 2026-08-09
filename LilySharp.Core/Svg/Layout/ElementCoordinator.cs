@@ -2625,6 +2625,10 @@ internal sealed class ElementCoordinator
         // renderer draws from (TupletBracketEngraver.Calculate), the slurgrace
         // precedent. ⚠️ Scale 1 and no per-voice force (the same simplifications
         // the other extras disclose); the bracket itself casts no box, as in LP.
+        // ⚠️ No scripts are passed either: when a script pushes the bracket up
+        // (avoid-scripts), the number box this rebuild hands the slur sits at
+        // the script-less height — tuplet-number-slur-script.ly measures that
+        // seam if it ever binds.
         // LILYPOND-REF: lily/slur-engraver.cc:80 acknowledge_extra_object —
         //   ADD_ACKNOWLEDGER_FOR (acknowledge_extra_object, tuplet_number).
         // LILYPOND-REF: scm/define-grobs.scm TupletNumber (avoid-slur . inside).

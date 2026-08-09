@@ -3311,11 +3311,15 @@ internal sealed class LayoutEngine
         // LilyPond runs the pass on one staff's VerticalAxisGroup at a time.
         // Replaces the old pairwise hacks (bar-number-vs-volta in the
         // renderer; music-mark-vs-volta inside MusicMarkEngraver).
+        // The PRE-STACK articulations are the right frame for avoid-scripts: the
+        // scripts the bracket must clear are exactly the priority-less ones
+        // (LP :690-692 skips the movers), and those are seeds the outside-staff
+        // passes never move — their YUp is final here.
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
             tupletBrackets, ml, measures, beamGroups ?? default, beamLayouts ?? default,
             forceStemUp: tupletForceStemUp,
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
-            staffByIndex: staffByIndex);
+            staffByIndex: staffByIndex, scripts: articulationLayouts);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,

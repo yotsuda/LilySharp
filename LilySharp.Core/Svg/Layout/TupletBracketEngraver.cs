@@ -158,7 +158,8 @@ internal static class TupletBracketEngraver
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         Func<int, int, double>? staffYAt = null,
-        Dictionary<int, Staff>? staffByIndex = null)
+        Dictionary<int, Staff>? staffByIndex = null,
+        ImmutableArray<ArticulationLayout> scripts = default)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -261,7 +262,7 @@ internal static class TupletBracketEngraver
             // Calculate slope based on first/last note staff positions
             var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX,
                 isTabStaff ? default : beamLayouts, measureLayout, useRealExtents: !isTabStaff,
-                bracketStartX: startX);
+                bracketStartX: startX, scripts: scripts);
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -603,7 +604,8 @@ internal static class TupletBracketEngraver
     private static (double startY, double endY) CalculateSlope(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp, double bracketWidth,
         ImmutableArray<BeamLayout> beamLayouts = default, MeasureLayout? measureLayout = null,
-        bool useRealExtents = false, double bracketStartX = double.NaN)
+        bool useRealExtents = false, double bracketStartX = double.NaN,
+        ImmutableArray<ArticulationLayout> scripts = default)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -780,8 +782,9 @@ internal static class TupletBracketEngraver
         //     covering the WHOLE tuplet hides the bracket (bracket-visibility
         //     if-no-beam) and that case takes the invisible-bracket path in the
         //     caller, so a DRAWN bracket never carries LP's par_beam;
-        //   ⑵ the scripts term (:682-706 avoid-scripts) — articulation boxes do
-        //     not join the points, so a script under the bracket can collide;
+        //   ⑵ the scripts term (:682-706 avoid-scripts) — PORTED into the offset
+        //     pass below (tuplet-bracket-avoid-scripts.ly pinned it), with its
+        //     own narrowings disclosed at the port site;
         //   ⑶ nested-tuplet points (:646-680) — the Lily#-own NestingDepthOffset
         //     step below stands in;
         //   ⑷ staff-padding's cross-staff gate (:466-477) — every bracket this
@@ -861,6 +864,42 @@ internal static class TupletBracketEngraver
                 Clear(p.X - x0, p.YUp);
             Clear(0.0, staffEdge);
             Clear(span, staffEdge);
+            // The avoid-scripts term: every script of this tuplet's notes that
+            // declares NO outside-staff-priority adds the point (its X centre
+            // − x0, its ink edge on the bracket's side), and the same max pass
+            // clears the bracket over it. TupletBracket declares avoid-scripts
+            // #t and no outside-staff-priority of its own by default, and no
+            // Lily# grammar can override either — the gate is always open. A
+            // script WITH a priority (the fermata family's 75) is skipped: it
+            // is an outside-staff MOVER and clears the bracket, not the other
+            // way around.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:682-706 calc_position_and_height
+            //   (the avoid-scripts block); lily/tuplet-engraver.cc:199-233
+            //   acknowledge_script → add_script_to_all_tuplets (dynamics excluded).
+            // ⚠️ Disclosed narrowings (no pinned point reaches them):
+            //   ⑴ LP feeds Fingering and StringNumber grobs into the same set
+            //     (acknowledge_finger/_string_number) — not wired here;
+            //   ⑵ LP skips a script that rides a slur (:696-697) — Lily# scripts
+            //     never link to slurs (avoid-slur unported), so the skip has
+            //     nothing to act on;
+            //   ⑶ pairing is (staff, measure, item range) — LP pairs by Voice
+            //     context, so a polyphonic staff whose OTHER voice scripts the
+            //     same item indices would over-collect.
+            if (!scripts.IsDefaultOrEmpty)
+            {
+                foreach (var a in scripts)
+                {
+                    if (a.OutsideStaffPriority != null)     // LP :690-692
+                        continue;
+                    if (a.StaffIndex != tuplet.StaffIndex
+                        || a.MeasureIndex != tuplet.MeasureIndex
+                        || a.ItemIndex < tuplet.StartNoteIndex
+                        || a.ItemIndex > tuplet.EndNoteIndex)
+                        continue;
+                    Clear(a.X + a.Ink.CenterX - x0,
+                        a.YUp + (dir > 0 ? a.Ink.Top : a.Ink.Bottom));
+                }
+            }
             offsetUp += BracketPadding * dir;
             // Nested brackets keep the Lily#-own stacking step (LP stacks via the
             // inner tuplets' boxes, :646-680 — not ported; no pinned point).
