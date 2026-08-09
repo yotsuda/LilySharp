@@ -184,12 +184,24 @@ public sealed record Staff(
     public bool TabNumbersOnly { get; init; }
 
     /// <summary>
-    /// Creates a tablature staff with the specified tuning.
+    /// Creates a tablature staff with the specified tuning, carrying EVERY voice of its
+    /// part: LilyPond's TabStaff holds TabVoices the same way Staff holds Voices, so a
+    /// <c>voice { } { }</c> span's second voice prints fret digits too. Until 2026-08-09
+    /// this took ONE voice and a polyphonic part's tab dropped voice two entirely
+    /// (automatic-polyphony-tabstaff.ly: six of seven digits missing).
+    /// LILYPOND-REF: ly/engraver-init.ly TabStaff — defaultchild TabVoice, \accepts
+    ///   TabVoice: the polyphony machinery is the ordinary Voice one.
     /// </summary>
+    public static Staff CreateTab(TuningType tuning, ImmutableArray<Voice> voices,
+        ClefType sourceClef = ClefType.Treble,
+        int transposition = 0, bool numbersOnly = false)
+        => new(ClefType.Tab, voices, tuning)
+        { TabSourceClef = sourceClef, Transposition = transposition, TabNumbersOnly = numbersOnly };
+
+    /// <summary>Single-voice convenience overload (tests and callers with one voice).</summary>
     public static Staff CreateTab(TuningType tuning, Voice voice, ClefType sourceClef = ClefType.Treble,
         int transposition = 0, bool numbersOnly = false)
-        => new(ClefType.Tab, ImmutableArray.Create(voice), tuning)
-        { TabSourceClef = sourceClef, Transposition = transposition, TabNumbersOnly = numbersOnly };
+        => CreateTab(tuning, ImmutableArray.Create(voice), sourceClef, transposition, numbersOnly);
 
     /// <summary>
     /// Creates an ossia staff (small alternative passage).

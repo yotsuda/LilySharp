@@ -19,4 +19,4 @@ section Main {
 
 form main { ~Main }
 
-score main { staff gt tab gt }
+score main { staff gt tab gt as numbers }

@@ -284,12 +284,23 @@ public sealed record RenderSpec(
                     };
                     break;
 
-                // Tab / ossia staves don't support intra-staff polyphony; they
-                // take the primary voice only.
+                // A tab staff carries EVERY voice of its part, like the notation staff:
+                // LilyPond's TabStaff accepts TabVoices and \\ spans work in it. (Until
+                // 2026-08-09 it took the primary voice only and a polyphonic part's tab
+                // dropped voice two — automatic-polyphony-tabstaff.ly.) The tab draw
+                // walk already iterates staff.Voices and places items by TIMING, so the
+                // second voice's digits land on the shared columns.
                 case TabStaffSpec tab:
-                    var tabStaff = Staff.CreateTab(tab.Tuning, FirstVoiceOrEmpty(tab.Staff.VoiceName), tab.Staff.Clef, tab.Transposition, tab.NumbersOnly);
+                    var tabVoices = getVoices(tab.Staff.VoiceName);
+                    if (tabVoices.Length == 0)
+                        tabVoices = ImmutableArray.Create(
+                            new Voice(tab.Staff.VoiceName, ImmutableArray<Measure>.Empty));
+                    var tabStaff = Staff.CreateTab(tab.Tuning, tabVoices, tab.Staff.Clef, tab.Transposition, tab.NumbersOnly);
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
+
+                // Ossia staves don't support intra-staff polyphony; they take the
+                // primary voice only.
 
                 case OssiaStaffSpec ossia:
                     var ossiaStaff = Staff.CreateOssia(
