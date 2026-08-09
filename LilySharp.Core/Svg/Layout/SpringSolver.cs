@@ -320,54 +320,69 @@ internal sealed class SpringSolver
                 for (int i = left; i < right; i++)
                     idealLen += result[i].IdealDistance;
 
-                if (idealLen < dist)
-                {
-                    // Guard the divide the same way the blocking-force branch guards
-                    // invK below: a range of springs with zero total ideal length
-                    // cannot be scaled up, and dist / 0 would poison every spring with
-                    // NaN (0 * +Inf). Valid springs always have IdealDistance > 0, so
-                    // this only trips on degenerate input; skip the rod rather than NaN.
-                    if (idealLen <= 0)
-                        continue;
+                // The rod's blocking force: the force at which the range spans exactly
+                // dist — a STRETCH (positive) when the rod is longer than the range's
+                // ideal, a compression (negative) otherwise. Which stiffness answers is
+                // decided by that same comparison, so a rod longer than the ideals
+                // STRETCHES the springs in proportion to their stretchability — it does
+                // NOT scale the ideals up; that is the fallback below for a range with
+                // no give at all. (Scaling here instead is what an over-long loose-column
+                // rod used to do: it redistributed the two spanned springs proportionally
+                // to their ideals and put the polyphony column 0.30 off LilyPond.)
+                // LILYPOND-REF: lily/simple-spacer.cc:76-87 rod_force — range_stiffness
+                //   (left, right, dist > ideal_length), infinite stiffness short-circuits;
+                //   :147-156 range_stiffness picks stretch vs compress per that flag.
+                // ⚠️ SIMPLIFICATION: LilyPond's rod_force runs range_solve, which walks
+                // the range's EXISTING blocking forces piecewise; this closed form
+                // assumes none are above the answer. The convergence loop below re-checks
+                // satisfaction, which is exact whenever the rods land disjoint or nested.
+                bool stretchRod = dist > idealLen;
+                double invK = 0;
+                for (int i = left; i < right; i++)
+                    invK += stretchRod
+                        ? result[i].InverseStretchStrength
+                        : result[i].InverseCompressStrength;
 
-                    // Need to scale up ideal distances
-                    double factor = dist / idealLen;
-                    for (int i = left; i < right; i++)
-                    {
-                        // LILYPOND-REF: lily/simple-spacer.cc:116-117
-                        //   springs_[i].set_ideal_distance (… * factor) — the SETTER, which
-                        //   leaves both strengths alone (lily/spring.cc:131-141).
-                        result[i] = result[i].WithIdealDistance(result[i].IdealDistance * factor);
-                    }
-                    changed = true;
-                }
-                else
+                if (invK <= 0)
                 {
-                    // Calculate blocking force for this rod
-                    double invK = 0;
-                    for (int i = left; i < right; i++)
-                        invK += result[i].InverseCompressStrength;
-
-                    if (invK > 0)
+                    // Nothing can move in the needed direction: fall back on scaling
+                    // the ideals so the range still reaches the rod at force 0.
+                    // Valid springs always have IdealDistance > 0; guard the divide so
+                    // degenerate input skips the rod rather than poisoning it with NaN.
+                    // LILYPOND-REF: lily/simple-spacer.cc:104-122 add_rod isinf branch — set_ideal_distance
+                    //   scales by dist / spring_dist and leaves both strengths alone.
+                    if (idealLen < dist && idealLen > 0)
                     {
-                        double blockForce = (dist - idealLen) / invK;
+                        double factor = dist / idealLen;
                         for (int i = left; i < right; i++)
-                        {
-                            var s = result[i];
-                            double newBlockForce = Math.Max(blockForce, s.BlockingForce);
-                            if (newBlockForce > s.BlockingForce)
-                            {
-                                double newMin = Math.Max(s.MinDistance,
-                                    s.IdealDistance + newBlockForce * s.InverseCompressStrength);
-                                // LILYPOND-REF: lily/spring.cc:183-195
-                                //   Spring::set_blocking_force sets min_distance_ = length (f)
-                                //   and then only update_blocking_force (): the strengths are
-                                //   what make the new blocking force come out as f, so
-                                //   recomputing them here would undo the rod.
-                                result[i] = s.WithMinDistance(newMin);
-                                changed = true;
-                            }
-                        }
+                            result[i] = result[i].WithIdealDistance(
+                                result[i].IdealDistance * factor);
+                        changed = true;
+                    }
+                    continue;
+                }
+
+                double blockForce = (dist - idealLen) / invK;
+                for (int i = left; i < right; i++)
+                {
+                    var s = result[i];
+                    double newBlockForce = Math.Max(blockForce, s.BlockingForce);
+                    if (newBlockForce > s.BlockingForce)
+                    {
+                        // set_blocking_force: min_distance = length (f), whose inverse
+                        // constant is the compress one for f < 0 and the stretch one for
+                        // f >= 0; the Spring constructor then re-derives the blocking
+                        // force from that min, landing back on f.
+                        // LILYPOND-REF: lily/spring.cc:183-195 set_blocking_force —
+                        //   min_distance_ = length (f); :218-237 length picks inv_k by
+                        //   the force's sign.
+                        double newMin = Math.Max(s.MinDistance,
+                            s.IdealDistance + newBlockForce
+                            * (newBlockForce < 0
+                                ? s.InverseCompressStrength
+                                : s.InverseStretchStrength));
+                        result[i] = s.WithMinDistance(newMin);
+                        changed = true;
                     }
                 }
             }

@@ -1132,7 +1132,8 @@ internal sealed class MultiStaffLayouter
             var nextMeasure = i + 1 < primaryVoice.Measures.Length
                 ? primaryVoice.Measures[i + 1] : null;
             var springs = _measureLayouter.CreateTimingSprings(
-                primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure);
+                primaryMeasure, allTimings, baseShortestDuration, allMeasures, nextMeasure,
+                CollectStaffIndicesAtIndex(score, i));
 
             // An empty placeholder measure (`| |`) has no timing springs at all —
             // without a floor it collapses to its barlines and reads as a double
@@ -1385,12 +1386,95 @@ internal sealed class MultiStaffLayouter
             if (itemLayouts.IsDefaultOrEmpty && primaryMeasure.Items.Length > 0)
                 itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
 
-            var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
+            var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts)
+            {
+                LooseChangeHangs = ComputeLooseChangeHangs(
+                    measureAllMeasures[i], measureTimings[i],
+                    measureColumnOverhangs[i].Right, columnLayouts),
+            };
             layouts.Add(measureLayout);
             currentX += measureLayout.Width;
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// Hang distances for this measure's LOOSE mid-measure change columns, computed from
+    /// the SOLVED column positions — the scale factor needs the room the line actually
+    /// left, so this cannot run until after the springs are solved. Null when the measure
+    /// has none, which is nearly every measure.
+    /// </summary>
+    /// <remarks>
+    /// The loose decision here must match the one CreateInterColumnSpring made when it
+    /// pruned the column from the springs — both call the same
+    /// <see cref="SpacingRules.IsLooseChangeColumn"/> on the same inputs.
+    /// LILYPOND-REF: lily/spacing-loose-columns.cc:33-222 set_loose_columns — loose columns
+    ///   are draped around the columns in between-cols after the line is solved.
+    /// </remarks>
+    private static ImmutableDictionary<Fraction, double>? ComputeLooseChangeHangs(
+        List<Measure> allMeasures, List<Fraction> allTimings,
+        double[] columnInkRight, ImmutableArray<ColumnLayout> columns)
+    {
+        if (columns.IsDefaultOrEmpty || columnInkRight.Length < allTimings.Count)
+            return null;
+
+        // Nearly every measure has no change item at all — bail before the per-timing
+        // walk below, which is the only part of this that costs anything.
+        bool anyChange = false;
+        foreach (var m in allMeasures)
+        {
+            foreach (var item in m.Items)
+                if (SpacingRules.IsMidMeasureChangeColumn(item))
+                {
+                    anyChange = true;
+                    break;
+                }
+            if (anyChange)
+                break;
+        }
+        if (!anyChange)
+            return null;
+
+        ImmutableDictionary<Fraction, double>.Builder? hangs = null;
+        for (int c = 1; c < allTimings.Count; c++)
+        {
+            var changeTiming = allTimings[c];
+            List<MusicItem>? columnItems = null;
+            foreach (var m in allMeasures)
+            {
+                var t = Fraction.Zero;
+                foreach (var item in m.Items)
+                {
+                    if (t == changeTiming)
+                        (columnItems ??= new List<MusicItem>()).Add(item);
+                    else if (t > changeTiming)
+                        break;
+                    t += item.Duration;
+                }
+            }
+            if (columnItems == null
+                || !columnItems.Any(SpacingRules.IsMidMeasureChangeColumn))
+                continue;
+
+            var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(allMeasures, columnItems);
+            if (!SpacingRules.IsLooseChangeColumn(allTimings, ownLeft, changeTiming, columnItems))
+                continue;
+
+            int leftIndex = allTimings.IndexOf(ownLeft!.Value);
+            if (leftIndex < 0)
+                continue;
+
+            // permissible_distance = the right neighbor's origin minus the left
+            // neighbor's ink RIGHT edge, both at their solved positions.
+            // LILYPOND-REF: lily/spacing-loose-columns.cc:182-184 set_loose_columns.
+            double permissible = columns[c].X
+                                 - (columns[leftIndex].X + columnInkRight[leftIndex]);
+            hangs ??= ImmutableDictionary.CreateBuilder<Fraction, double>();
+            hangs[changeTiming] = SpacingRules.LooseChangeColumnHangDistance(
+                columnItems, permissible);
+        }
+        return hangs?.ToImmutable();
     }
 
     /// <summary>
@@ -1654,6 +1738,35 @@ internal sealed class MultiStaffLayouter
         }
 
         return measures;
+    }
+
+    /// <summary>
+    /// Which STAFF each entry of <see cref="CollectAllMeasuresAtIndex"/> belongs to, as a
+    /// parallel list of global staff ordinals — the two walks are the same loop, so the
+    /// indices line up. The spacing-wish scan needs this because LilyPond's neighbor map is
+    /// per staff, not per voice: two voices of ONE staff occupying adjacent columns carry a
+    /// NoteSpacing wish between them (Note_spacing_engraver keys its last-spacing map by the
+    /// voice's parent context), where two different staves do not.
+    /// LILYPOND-REF: lily/note-spacing-engraver.cc:109-128 stop_translation_timestep —
+    ///   <c>last_spacings_[parent]</c>, the parent being the Staff.
+    /// </summary>
+    internal static List<int> CollectStaffIndicesAtIndex(MultiStaffScore score, int measureIndex)
+    {
+        var staffIds = new List<int>();
+        int staffId = 0;
+        foreach (var staffGroup in score.StaffGroups)
+        {
+            foreach (var staff in staffGroup.Staves)
+            {
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex < voice.Measures.Length)
+                        staffIds.Add(staffId);
+                }
+                staffId++;
+            }
+        }
+        return staffIds;
     }
 
     // --- Skyline-based staff spacing ---

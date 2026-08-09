@@ -425,20 +425,48 @@ public class SpringRodModelTests
     }
 
     [Fact]
-    public void ApplyRods_ExceedsIdeal_ScalesUp()
+    public void ApplyRods_ExceedsIdeal_StretchesByBlockingForce()
     {
         var springs = ImmutableArray.Create(
             new Spring(10, 5, 5),
             new Spring(10, 5, 5)
         );
 
-        // Rod distance 30 across springs 0-2: ideal is 10+10=20, need scaling
+        // Rod distance 30 across springs 0-2: ideal is 10+10=20 and the springs CAN
+        // stretch, so LilyPond raises a positive blocking force — it does NOT scale
+        // the ideals (that fallback is only for a range with infinite stiffness).
+        // rod_force = (30 - 20) / (5 + 5) = 1.0, each spring frozen at
+        // length (1.0) = 10 + 1.0 * 5 = 15.
+        // LILYPOND-REF: lily/simple-spacer.cc:89-127 add_rod calls set_blocking_force per spring.
+        // LILYPOND-REF: lily/spring.cc:183-195 set_blocking_force — min_distance_ = length (f).
+        var rods = new[] { (Left: 0, Right: 2, Distance: 30.0) };
+        var result = SpringSolver.ApplyRods(springs, rods);
+
+        Assert.Equal(10.0, result[0].IdealDistance, 6);
+        Assert.Equal(10.0, result[1].IdealDistance, 6);
+        Assert.Equal(15.0, result[0].Length(0), 6);
+        Assert.Equal(15.0, result[1].Length(0), 6);
+        Assert.Equal(1.0, result[0].BlockingForce, 6);
+        // The range holds the rod distance at every force at or below the blocking force.
+        Assert.Equal(30.0, result[0].Length(-2) + result[1].Length(-2), 6);
+    }
+
+    [Fact]
+    public void ApplyRods_ExceedsIdeal_InextensibleRangeScalesUp()
+    {
+        // A range with NO stretchability cannot take a blocking force — this is the
+        // isinf branch, the only one that scales the ideals.
+        // LILYPOND-REF: lily/simple-spacer.cc:104-122 add_rod isinf branch — set_ideal_distance
+        //   scales by dist / spring_dist.
+        var springs = ImmutableArray.Create(
+            new Spring(10, 5, 0),
+            new Spring(10, 5, 0)
+        );
         var rods = new[] { (Left: 0, Right: 2, Distance: 30.0) };
         var result = SpringSolver.ApplyRods(springs, rods);
 
         double totalIdeal = result[0].IdealDistance + result[1].IdealDistance;
-        Assert.True(totalIdeal >= 30.0 - 0.01,
-            $"Total ideal ({totalIdeal}) should be >= rod distance 30");
+        Assert.Equal(30.0, totalIdeal, 6);
     }
 
     [Fact]

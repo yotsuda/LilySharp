@@ -168,7 +168,8 @@ internal sealed class SystemBreaker
             // drawn before this bar line, so the break gate must price it here too.
             var springs = layouter.CreateTimingSprings(
                 primaryMeasure, allTimings, baseShortestDuration, allMeasures,
-                i + 1 < measures.Length ? measures[i + 1] : null);
+                i + 1 < measures.Length ? measures[i + 1] : null,
+                MultiStaffLayouter.CollectStaffIndicesAtIndex(score, i));
 
             // The shared-column reservations (lyrics, chords, tab digits, wide
             // scripts) — the SAME list the system layout applies, from the one home

@@ -388,7 +388,10 @@ public class LineStartColumnTests
     /// (lily/simple-spacer.cc:559 <c>add_rod (0, i, -keep_inside_line_[LEFT])</c>). MEASURED
     /// (same probe, CL / CLX / CLL): a syllable reaching 2.312540 left of its column puts the
     /// column on 2.312539, not on that plus the spring's 0.5; remove the reach (CLL) and the
-    /// column drops back to the bare 0.500000.
+    /// column drops back to the bare 0.500000. The rod lands as a BLOCKING FORCE — the
+    /// spring's ideal stays 0.5 and its LENGTH is held at the rod distance at every force
+    /// at or below that blocking force, which is what the measured 2.312539 is
+    /// (lily/simple-spacer.cc:89-127 add_rod → lily/spring.cc:183-195 set_blocking_force).
     /// </summary>
     [Fact]
     public void KeepInsideLineRod_MovesTheFirstColumnByTheOverhangAlone()
@@ -402,9 +405,13 @@ public class LineStartColumnTests
 
         var rodded = SpringSolver.ApplyRods(
             chain, new[] { (Left: 0, Right: 1, Distance: 2.312540) });
-        Assert.Equal(2.312540, rodded[0].IdealDistance, 6);
+        // The spring holds the rod distance at the solved (natural-or-compressed) force…
+        Assert.Equal(2.312540, rodded[0].Length(0), 6);
+        // …by blocking force, not by an inflated ideal.
+        Assert.Equal(0.500000, rodded[0].IdealDistance, 6);
         // The rod does not touch the springs it does not span.
         Assert.Equal(4.000000, rodded[1].IdealDistance, 6);
+        Assert.Equal(4.000000, rodded[1].Length(0), 6);
     }
 
     /// <summary>

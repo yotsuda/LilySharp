@@ -173,7 +173,8 @@ internal sealed class MeasureLayouter
         Measure measure, List<Fraction> timings,
         double? baseShortestDuration = null,
         IReadOnlyList<Measure>? allMeasures = null,
-        Measure? nextMeasure = null)
+        Measure? nextMeasure = null,
+        IReadOnlyList<int>? staffOfMeasures = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
@@ -214,18 +215,27 @@ internal sealed class MeasureLayouter
 
         var springs = new List<Spring>();
 
+        // Rods raised over the neighbors of PRUNED loose change columns — they span two
+        // or more springs, so they go through the blocking-force machinery, not a
+        // single spring's minimum. LILYPOND-REF: lily/spacing-determine-loose-columns.cc:180-184
+        //   set_distances_for_loose_col — r.item_drul_ = next_door; r.add_to_cols ().
+        var looseRods = new List<(int Left, int Right, double Distance)>();
+
         // Spring 0: barline → first column (see CreateBarlineToFirstSpring).
         springs.Add(CreateBarlineToFirstSpring(timings, timingToItems));
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
-            springs.Add(CreateInterColumnSpring(i, timings, timingToItems, measuresToScan, baseShortestDuration));
+            springs.Add(CreateInterColumnSpring(i, timings, timingToItems, measuresToScan,
+                baseShortestDuration, looseRods, staffOfMeasures));
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs.Add(CreateLastToBarlineSpring(timings, timingToItems, measuresToScan, totalDuration,
             baseShortestDuration, SpacingRules.BoundaryClefAllowance(measure.EndBarline, nextMeasure)));
 
-        return springs.ToImmutableArray();
+        return looseRods.Count > 0
+            ? SpringSolver.ApplyRods(springs.ToImmutableArray(), looseRods)
+            : springs.ToImmutableArray();
     }
 
     /// <summary>
@@ -325,7 +335,9 @@ internal sealed class MeasureLayouter
     private Spring CreateInterColumnSpring(
         int i, List<Fraction> timings,
         Dictionary<Fraction, List<MusicItem>> timingToItems,
-        IReadOnlyList<Measure> measuresToScan, double? baseShortestDuration)
+        IReadOnlyList<Measure> measuresToScan, double? baseShortestDuration,
+        List<(int Left, int Right, double Distance)> looseRods,
+        IReadOnlyList<int>? staffOfMeasures)
     {
         // This spring connects timings[i-1] → timings[i]; its duration is
         // THAT segment. (A previous off-by-one used the FOLLOWING segment's
@@ -349,26 +361,6 @@ internal sealed class MeasureLayouter
 
         timingToItems.TryGetValue(timings[i - 1], out var prevItems);
         timingToItems.TryGetValue(timings[i], out var nextItems);
-
-        // Refine the duration-based ideal to the LEFT column's actual head width
-        // (LilyPond's note-spacing.cc:77), BEFORE the stem correction — unless the pair
-        // straddles a VOICE boundary, where LilyPond's wish does not reach the right column
-        // and the spring keeps its raw duration ideal (spacing-spanner.cc:352-358 / :380-391).
-        // That is why nextItems is passed: see SpacingRules.CrossesVoiceBoundary.
-        if (prevItems != null)
-            spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems, nextItems);
-
-        // A mid-measure clef/key/time change (zero duration, so it shares the NEXT
-        // column's timing) gets its own non-musical column in LilyPond, and the gaps
-        // around it are priced from the ideal as it stands HERE — before the stem
-        // correction, which LilyPond applies afterwards (note-spacing.cc:87-109 then
-        // :111) and which contributes nothing when the right column is non-musical:
-        // stem_dir_correction only looks at grobs with the Note_column interface
-        // (:235-238), and a change column has none. Taking the correction first put the
-        // mid-measure clef of probe MC 0.188 too far right, because the low notes after
-        // it earn a correction that LilyPond charges to a pair this one is not.
-        var changeGaps = SpacingRules.MidMeasureChangeGaps(
-            nextItems, prevItems, spring.IdealDistance);
 
         // Collision rods are PER VOICE: two noteheads force a horizontal minimum only when the
         // SAME voice puts one at each of these adjacent columns. Pairing items across voices/staves
@@ -421,6 +413,80 @@ internal sealed class MeasureLayouter
             // LILYPOND-REF: lily/beam.cc:429-449 tremolo_springs_and_rods.
             maxRod = Math.Max(maxRod, SpacingRules.TremoloPairRod(prev, next));
         }
+
+        // The wish map is per STAFF, not per voice: two voices of ONE staff occupying
+        // the two columns carry a NoteSpacing wish between them (the engraver keys its
+        // last-spacing map by the voice's parent Staff — see
+        // MultiStaffLayouter.CollectStaffIndicesAtIndex), so such a pair takes the wish
+        // pipeline, not the hemiola branch. Their skyline minimum and separation rod
+        // still come only from same-voice pairs above; the cross-voice floors live in
+        // ApplyCrossVoiceColumnSpacing, which prices them WITH the renderer's collision
+        // shifts — a shift-blind rod here could overreach it.
+        if (!anyWish && staffOfMeasures != null
+            && staffOfMeasures.Count == measuresToScan.Count)
+        {
+            var prevStaves = new HashSet<int>();
+            for (int m = 0; m < measuresToScan.Count; m++)
+                if (ItemStartingAt(measuresToScan[m], timings[i - 1]) != null)
+                    prevStaves.Add(staffOfMeasures[m]);
+            if (prevStaves.Count > 0)
+                for (int m = 0; m < measuresToScan.Count; m++)
+                    if (prevStaves.Contains(staffOfMeasures[m])
+                        && ItemStartingAt(measuresToScan[m], timings[i]) != null)
+                    {
+                        anyWish = true;
+                        break;
+                    }
+        }
+
+        // Refine the duration-based ideal to the LEFT column's actual head width
+        // (LilyPond's note-spacing.cc:77), BEFORE the stem correction — but ONLY when the
+        // pair has a wish at all: the refinement is a line of Note_spacing::get_spacing,
+        // which runs once per wish, so a pair no single voice occupies at both ends (the
+        // springs.empty () hemiola branch below) keeps its raw duration ideal. Running it
+        // anyway held the two cross-staff gaps of spacing-loose-polyphony.ly at 1.20/1.70
+        // where LilyPond's bare ideals are 0.80/1.60. The cue check stays on top of this:
+        // see SpacingRules.CrossesVoiceBoundary (spacing-spanner.cc:352-358).
+        if (anyWish && prevItems != null)
+            spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems, nextItems);
+
+        // A mid-measure clef/key/time change (zero duration, so it shares the NEXT
+        // column's timing) gets its own non-musical column in LilyPond, and the gaps
+        // around it are priced from the ideal as it stands HERE — before the stem
+        // correction, which LilyPond applies afterwards (note-spacing.cc:87-109 then
+        // :111) and which contributes nothing when the right column is non-musical:
+        // stem_dir_correction only looks at grobs with the Note_column interface
+        // (:235-238), and a change column has none. Taking the correction first put the
+        // mid-measure clef of probe MC 0.188 too far right, because the low notes after
+        // it earn a correction that LilyPond charges to a pair this one is not.
+        var changeGaps = SpacingRules.MidMeasureChangeGaps(
+            nextItems, prevItems, spring.IdealDistance);
+
+        // A LOOSE change column — another staff's column stands between it and its own
+        // staff's previous note — is PRUNED from the spring chain: this pair is priced
+        // as if the change were not there, the renderer drapes the glyphs back from the
+        // next column (SpacingRules.LooseChangeColumnHangDistance, attached in
+        // MultiStaffLayouter), and the room the pruned column still needs under
+        // compression becomes a rod spanning its own-staff neighbors.
+        // LILYPOND-REF: lily/spacing-determine-loose-columns.cc:192-278 prune_loose_columns
+        //   — loose columns leave the cols vector and get between-cols instead.
+        if (changeGaps is { } pruned && nextItems != null)
+        {
+            var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(measuresToScan, nextItems);
+            if (SpacingRules.IsLooseChangeColumn(timings, ownLeft, timings[i], nextItems))
+            {
+                // The rod's two arms are the same wish minimums the change gaps carry:
+                // Note_spacing's skyline minimum on the left, Staff_spacing's
+                // Paper_column::minimum_distance on the right — summed over next_door.
+                // LILYPOND-REF: lily/spacing-determine-loose-columns.cc:135-185
+                //   set_distances_for_loose_col.
+                int leftIndex = timings.IndexOf(ownLeft!.Value);
+                if (leftIndex >= 0)
+                    looseRods.Add((leftIndex + 1, i + 1, pruned.MinDistance));
+                changeGaps = null;
+            }
+        }
+
         // The wish REPLACES the base spring's increment minimum with the skyline
         // distance — set_min_distance, not ensure — so a pair whose columns never meet
         // in Y carries min 0 and merge_springs' +0.3 headroom is measured from THERE,
@@ -428,18 +494,19 @@ internal sealed class MeasureLayouter
         // floor at 1.2 + 0.3 = 1.5: the down→up KNEE pair of
         // spacing-correction-accidentals.ly has ideal 1.330 (base − 1.2 + 1.3042 −
         // 1.1742 knee) and LilyPond draws exactly that; the old ensure shipped 1.500.
-        // ⚠️ A pair with NO wish: LilyPond's springs.empty() branch ("polyphonic
-        // spacing of hemiolas") sets the musical pair's minimum to 0.0 outright — the
-        // increment minimum survives on NO musical pair at all; only the IDEAL stays
-        // the raw duration one (the voice-boundary reading). Lily# KEEPS the increment
-        // minimum there, NAMED not fixed: Lily#'s no-wish set is wider than LilyPond's
-        // (a staffless chords/lyrics row makes timing columns LilyPond has no frame
-        // for), and the one page the zero moved when tried (session 119 self-audit)
-        // was test/lead-sheet — an own-construct book with no LP twin to arbitrate,
-        // +0.60 inside its third measure. Zero it when a book with an LP oracle
-        // measures this branch. (The misreading corrected here: this arm was cited as
-        // "keeps the base spring untouched, increment minimum and all" — false;
-        // set_min_distance (0.0) is on the line the citation names.)
+        // A pair with NO wish takes LilyPond's springs.empty () branch ("polyphonic
+        // spacing of hemiolas"): minimum 0.0 outright, the raw duration ideal, no
+        // left-head refinement and no merge headroom — the whole wish pipeline is per
+        // wish. MEASURED: spacing-loose-polyphony.ly is the LP-oracle book this branch
+        // waited for (the previous NAMED keep of the increment minimum said "zero it
+        // when a book with an LP oracle measures this branch") — its two cross-staff
+        // pairs price bare at 0.80/1.60 and the loose-column rod's blocking force
+        // stretches them to LilyPond's exact 1.25/2.50.
+        // ⚠️ Lily#'s no-wish set is still wider than LilyPond's where no staff frame
+        // exists at all (a staffless chords/lyrics row), and a SAME-staff cross-voice
+        // pair — where LilyPond's per-staff neighbor map does carry a wish — reads as
+        // no-wish here because this scan is per voice-measure; both named below the
+        // loose-column walk with the same disclosure.
         // Both strengths stay where the duration spring put them (the compressibility
         // stays fraction * (duration_space - increment) and does not become
         // ideal - skyline). Measured against LilyPond's own compressed line: 1.698045 for
@@ -448,8 +515,7 @@ internal sealed class MeasureLayouter
         //   min_dist = max (0.0, distance); base.set_min_distance (min_dist);
         // LILYPOND-REF: lily/spacing-spanner.cc:380-393 musical_column_spacing —
         //   springs.empty () ? spring.set_min_distance (0.0) : merge_springs.
-        if (anyWish)
-            spring = spring.WithMinDistance(Math.Max(0.0, maxSkyDist));
+        spring = spring.WithMinDistance(anyWish ? Math.Max(0.0, maxSkyDist) : 0.0);
 
         // Stem-direction optical correction ([Wanske]), merged across simultaneous
         // voices' wishes (single voice = its own wish; polyphony = averaged). Runs
@@ -484,11 +550,15 @@ internal sealed class MeasureLayouter
             SpacingRules.LeadingGracePrefixWidth(nextItems));
 
         // LilyPond merges every wish through merge_springs, which floors the ideal at
-        // min + 0.3. A no-op for an ordinary note-to-note ideal (~3.0 vs a ~1.8 floor).
+        // min + 0.3. A no-op for an ordinary note-to-note ideal (~3.0 vs a ~1.8 floor)
+        // — and NOT taken at all on a wishless pair, whose hemiola branch above never
+        // calls merge_springs (a change column always has its Staff_spacing wish, so a
+        // change pair keeps the headroom even when this scan saw no note wish).
         // LILYPOND-REF: lily/spacing-spanner.cc:380-393 note_spacing — `merge_springs`
         //   is taken whenever the wish list is non-empty, i.e. also for a single wish.
         // LILYPOND-REF: lily/spring.cc:122 — avg_distance = max (min_distance + 0.3, …).
-        spring = SpacingRules.ApplyMergeSpringsHeadroom(spring);
+        if (anyWish || changeGaps != null)
+            spring = SpacingRules.ApplyMergeSpringsHeadroom(spring);
 
         // …and only NOW the rod, which is a floor on the COMPRESSED length and nothing else:
         // it stands 0.1 above the same skyline distance the headroom just put 0.3 above, so

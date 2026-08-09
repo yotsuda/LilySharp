@@ -273,8 +273,15 @@ internal static partial class SharedRenderer
                     // ONE column and are sequenced left to right from that origin; they used
                     // to be hung independently from the note column and so overprinted.
                     // LILYPOND-REF: lily/staff-spacing.cc:166-215.
+                    // A LOOSE column (pruned from the springs, multi-staff polyphony) hangs
+                    // by the solved-room distance the layouter stored instead — the springs
+                    // reserved nothing for it (my_offset = right_point - distance_to_next).
+                    // LILYPOND-REF: lily/spacing-loose-columns.cc:202-220 set_loose_columns.
                     var columnItems = ChangeColumnItems(measure, itemIdx);
-                    itemX -= SpacingRules.MidMeasureChangeRightGap(columnItems);
+                    itemX -= ml.LooseChangeHangs != null
+                             && ml.LooseChangeHangs.TryGetValue(currentTiming, out var hang)
+                        ? hang
+                        : SpacingRules.MidMeasureChangeRightGap(columnItems);
                     itemX += SpacingRules.MidMeasureChangeOffsetWithin(columnItems, item);
                 }
 

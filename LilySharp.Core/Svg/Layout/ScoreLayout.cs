@@ -54,6 +54,16 @@ internal sealed record MeasureLayout
     public ImmutableArray<ColumnLayout> Columns { get; }  // Timing-based columns (for multi-staff)
 
     /// <summary>
+    /// Per change-column hang distances for LOOSE mid-measure change columns, keyed by the
+    /// moment the change shares with its note. Null (the overwhelmingly common case) when
+    /// this measure has no loose column. The renderer hangs the change glyphs back from the
+    /// note column by this distance instead of the spring-charged
+    /// <see cref="SpacingRules.MidMeasureChangeRightGap"/>, because a pruned column's room
+    /// is not in the springs at all — see <see cref="SpacingRules.LooseChangeColumnHangDistance"/>.
+    /// </summary>
+    public ImmutableDictionary<Fraction, double>? LooseChangeHangs { get; init; }
+
+    /// <summary>
     /// Creates a MeasureLayout with item-based positioning (for single-staff scores).
     /// </summary>
     public MeasureLayout(int measureIndex, double x, double width, ImmutableArray<ItemLayout> items)

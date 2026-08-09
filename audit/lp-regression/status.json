@@ -7374,9 +7374,9 @@
     },
     "spacing-loose-polyphony.ly": {
       "category": "plain",
-      "state": "open",
+      "state": "fixed",
       "claim": "loose column（小節中の treble clef）は多譜 polyphony で正しく space される",
-      "notes": "open(下見済・実測記録)。twin=scratch\\lpreg\\sploose.{lys,-gen.ly,svg,-lp.svg}(grandStaff 2譜・下譜 fis,,8 cis, clef treble g8 fis,・上譜 tuplet 3/2 {g4 a2})。照合: 前3列は両譜exact(頭9.45/12.81・♯8.00/11.36)・A4列 LS14.01 vs LP14.06。乖離=小節中clef列から先が平行+2.10: clef LS15.61 vs LP14.26(+1.35)・G4 18.66 vs 16.56・F#3 21.17 vs 19.07(+2.10)。C#3→clef gap LP1.45/LS2.80・clef→G4 LP2.30/LS3.05。root候補=LPはloose columnをspring系から外し解いた後に隣接列間へ補間(lily/spacing-loose-columns.cc)・LSはMidMeasureChangeGapsがclef幅をspringへ課金する別モデル——単譜probe MCでは合っていたが、多譜で他譜のt=1/6列(tuplet A4)がclefの隣接対(1/8→2/8)に挟まると過大。修理=spacing-loose-columns.ccの字面を読んでから(focused session)。"
+      "notes": "fixed 第52号(第120)。port 3枚: ⑴loose判定=is_loose_column(spacing-determine-loose-columns.cc:45-133)をCreateInterColumnSpringへ——自譜neighbor対(per-voice walk)と全列隣接が食い違えばprune=changeGaps課金停止・set_distances_for_loose_colのrod(dists和=MidMeasureChangeGaps.MinDistance)を隣接対スパンに ⑵ApplyRodsのLP分岐修正=rod>ideal合計でも伸長剛性が有限ならblocking force(spring.cc:183-195 min=length(f))で剛性比例分配——旧ideal比例拡大はisinf枝限定(simple-spacer.cc:89-127) ⑶renderer吊るし=set_loose_columns(spacing-loose-columns.cc:33-222)のtight+(ideal-tight)*scale(permissible=右隣origin−左隣ink右・left_padding0.15)をMultiStaffLayouterで解いた後に計算しMeasureLayout.LooseChangeHangsへ。付随: wish無し対=springs.empty hemiola分岐の完全形(min0+素ideal+左頭精算なし+headroomなし——本本が第119札の条件『LPオラクル本が測ったら』を満たした)・wish判定はstaff単位(note-spacing-engraver.ccのlast_spacings_[parent])=CollectStaffIndicesAtIndex。照合: 全列LP exact(9.45/12.81/A4 14.06/clef 14.26/G4 16.56/F#3 19.07・stem 5本も一致)。裏の算術: 素ideal 0.8/1.6・rod3.75→f_b=1.125→1.25/2.50=LP完全再現。観測者=LooseChangeColumnTests(LP 7点ピン)。snapshot5枚census済(全部X drift: multistaff-tuplet-beams/ossia-beams=多譜interleave圧縮・lead-sheet+0.60=第119監査の予告どおり・chordnames/rows-song-sheet微動)。札: 同staff他voiceのneighbor未読(per-voice walk・corpus未踏)・loose連鎖clique未対応・item spring系はloose非対応(幅見積のみ)。"
     },
     "spacing-mark-width.ly": {
       "category": "scheme",

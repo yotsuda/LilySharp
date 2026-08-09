@@ -2850,6 +2850,175 @@ internal static class SpacingRules
         Math.Max(columnWidth + ChangeItemSpaceToNextNote(lastChange),
                  SpringHeadroom + rightRod);
 
+    // ========================================
+    // Loose change columns (multi-staff polyphony)
+    // ========================================
+
+    /// <summary>
+    /// The timing of the change column's LEFT NEIGHBOR in its own staff: the onset of the
+    /// last musical item before the change in the voice(s) that carry it. Null when no item
+    /// precedes the change (an opening change, which the boundary column owns instead).
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's <c>left-neighbor</c> is set from spacing wishes, which link a note column
+    /// to the NEXT column of the SAME staff (Note_spacing_engraver keys its
+    /// <c>last_spacings_</c> map by the voice's parent context), so another staff's column
+    /// in between is invisible to it — that mismatch is exactly what
+    /// <see cref="IsLooseChangeColumn"/> detects. When several staves change at one moment,
+    /// the neighbor with the LARGEST rank wins.
+    /// LILYPOND-REF: lily/spacing-determine-loose-columns.cc:283-319 set_explicit_neighbor_columns
+    ///   — :311-315 keeps the left col with <c>left_rank > old_left_neighbor->get_rank ()</c>.
+    /// ⚠️ SIMPLIFICATION: the walk sees only the voice the change item sits in. In LilyPond
+    /// the neighbor map is per STAFF, so a second voice of the same staff with a note
+    /// between this voice's note and the change would BE the neighbor and make the column
+    /// not loose; the corpus has no mid-measure change in a multi-voice staff yet.
+    /// </remarks>
+    internal static Fraction? LooseChangeLeftNeighborTiming(
+        IReadOnlyList<Measure> measures, IReadOnlyList<MusicItem> columnItems)
+    {
+        Fraction? best = null;
+        foreach (var m in measures)
+        {
+            var t = Fraction.Zero;
+            Fraction? lastMusicalOnset = null;
+            foreach (var item in m.Items)
+            {
+                if (IsChangeItem(item) && ContainsByReference(columnItems, item))
+                {
+                    if (lastMusicalOnset is { } onset && (best is not { } b || onset > b))
+                        best = onset;
+                    break;
+                }
+                if (!IsChangeItem(item))
+                    lastMusicalOnset = t;
+                t += item.Duration;
+            }
+        }
+        return best;
+
+        static bool ContainsByReference(IReadOnlyList<MusicItem> items, MusicItem item)
+        {
+            foreach (var candidate in items)
+                if (ReferenceEquals(candidate, item))
+                    return true;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Whether a mid-measure change column is LOOSE: fixed to neither neighbor by the
+    /// spring chain, because another staff's column stands between it and its own staff's
+    /// previous note. A loose column is pruned from the springs (the pair across it is
+    /// priced as if the change were not there) and the renderer drapes it back from its
+    /// right neighbor by <see cref="LooseChangeColumnHangDistance"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-determine-loose-columns.cc:45-133 is_loose_column.
+    /// The clauses, in LilyPond's order:
+    /// <list type="bullet">
+    /// <item><c>allow-loose-spacing</c> — #t by default on both PaperColumn and
+    ///   NonMusicalPaperColumn (scm/define-grobs.scm), and Lily# has no override
+    ///   spelling.</item>
+    /// <item>float_nonmusical_columns_ / float_grace_columns_ (:52-56) — both come from
+    ///   <c>uniform-stretching</c> options that default off.</item>
+    /// <item>a musical column is never loose (:58-59) — this is only called for change
+    ///   columns.</item>
+    /// <item>missing neighbors (:82-90) — <paramref name="ownLeftNeighborTiming"/> null.</item>
+    /// <item>the series check (:95-99): placed nicely in series with its neighbors AND
+    ///   non-empty → not loose. The right neighbor always matches (the change shares its
+    ///   note's moment, so no column can intervene); the left one mismatches exactly when
+    ///   some timing falls strictly between the own-staff neighbor and the change.</item>
+    /// <item>sensible bounds (:106-112) — the own-staff neighbors are note onsets, i.e.
+    ///   musical columns, so this always holds here.</item>
+    /// <item>never move bar lines (:117-130) — a Lily# mid-measure change column carries
+    ///   no staff-bar group.</item>
+    /// </list>
+    /// </remarks>
+    internal static bool IsLooseChangeColumn(
+        IReadOnlyList<Fraction> allTimings, Fraction? ownLeftNeighborTiming,
+        Fraction changeTiming, IReadOnlyList<MusicItem>? columnItems)
+    {
+        if (ownLeftNeighborTiming is not { } left)
+            return false;
+
+        var (columnWidth, first, _) = MeasureChangeColumn(columnItems);
+        if (first == null)
+            return false;
+
+        // The series check: `(l == l_neighbor) && (r == r_neighbor)` with positive width.
+        // LILYPOND-REF: lily/spacing-determine-loose-columns.cc:95-99 is_loose_column —
+        //   `col->extent (col, X_AXIS).length () > 0`.
+        bool leftNeighborAdjacent = true;
+        foreach (var t in allTimings)
+            if (t > left && t < changeTiming)
+            {
+                leftNeighborAdjacent = false;
+                break;
+            }
+        if (leftNeighborAdjacent && columnWidth > 0)
+            return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// How far a LOOSE change column's origin hangs back from its right neighbor's origin,
+    /// given the room the solved line actually left for it. Aims for the ideal spacing and
+    /// falls back on the tight (minimum) spacing as the room closes.
+    /// </summary>
+    /// <param name="columnItems">Everything at the change's moment — the change items and
+    /// the note(s) they precede.</param>
+    /// <param name="permissibleDistance">Solved room for the clique: the right neighbor
+    /// column's origin minus the left neighbor column's ink RIGHT edge.
+    /// LILYPOND-REF: lily/spacing-loose-columns.cc:182-184 — <c>permissible_distance =
+    /// clique.back ()->relative_coordinate (...) - robust_relative_extent (clique[0], ...)[RIGHT]</c>.</param>
+    /// <remarks>
+    /// The ideal/tight pair for a change → note clique edge comes from
+    /// <c>standard_breakable_column_spacing</c>, which is the same
+    /// <c>Staff_spacing::get_spacing</c> shape <see cref="MidMeasureChangeGaps"/>'s right
+    /// gap already implements; both are then floored by the loose column's own length.
+    /// LILYPOND-REF: lily/spacing-loose-columns.cc:151-179 set_loose_columns — the spring,
+    ///   then <c>base_note_space = std::max (..., loose_col_horizontal_length)</c> and the
+    ///   same for <c>tight_note_space</c>.
+    /// <para>
+    /// ⚠️ SIMPLIFICATION: a Lily# clique is always the three columns [left neighbor, loose,
+    /// right neighbor]. LilyPond chains consecutive loose columns into one clique
+    /// (spacing-loose-columns.cc:51-81); two adjacent loose change columns would each hang
+    /// from their own right neighbor here. The corpus has no such book.
+    /// </para>
+    /// </remarks>
+    internal static double LooseChangeColumnHangDistance(
+        IReadOnlyList<MusicItem>? columnItems, double permissibleDistance)
+    {
+        var (columnWidth, first, last) = MeasureChangeColumn(columnItems);
+        if (first == null)
+            return 0;
+
+        double rightRod = RightRod(columnItems!, columnWidth, last!);
+        double tight = Math.Max(rightRod, columnWidth);
+        double ideal = Math.Max(RightGap(columnWidth, last!, rightRod), columnWidth);
+
+        // "currently a magic number - what would be a good grob to hold this property?"
+        // LILYPOND-REF: lily/spacing-loose-columns.cc:192 — <c>Real left_padding = 0.15</c>.
+        const double leftPadding = 0.15;
+
+        // The single-pair clique sums are just the pair itself (clique_spacing[0] is 0.0).
+        // A zero denominator reaches the same answer LilyPond's clamp does: scale 1 and
+        // ideal == tight collapse to tight either way.
+        // LILYPOND-REF: lily/spacing-loose-columns.cc:198-201 — <c>scale_factor = std::max
+        //   (0.0, std::min (1.0, (permissible_distance - left_padding - sum_tight_spacing)
+        //   / (sum_spacing - sum_tight_spacing)))</c>.
+        double scale = ideal > tight
+            ? Math.Max(0.0, Math.Min(1.0, (permissibleDistance - leftPadding - tight)
+                                          / (ideal - tight)))
+            : 1.0;
+
+        // LILYPOND-REF: lily/spacing-loose-columns.cc:209-213 — <c>distance_to_next =
+        //   clique_tight_spacing[j] + (clique_spacing[j] - clique_tight_spacing[j]) *
+        //   scale_factor</c>, hung back from the right point.
+        return tight + (ideal - tight) * scale;
+    }
+
     /// <summary>
     /// Width that leading grace notes need in FRONT of their main note's column.
     /// Grace notes hang to the left of the note (like a mid-measure clef change),

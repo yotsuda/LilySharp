@@ -58,6 +58,73 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第120セッション（＝focused session **fixed 第52号 =
+spacing-loose-polyphony.ly = loose column の port 完結（第119第6便の open を回収）**・
+この handoff と同 commit）。
+
+★★★ **fixed 第52号 spacing-loose-polyphony.ly = 全列 LP exact**:
+- **port 3枚**: ⑴ **loose 判定 = is_loose_column を CreateInterColumnSpring へ**
+  （spacing-determine-loose-columns.cc:45-133）——自譜 neighbor 対（per-voice walk =
+  SpacingRules.LooseChangeLeftNeighborTiming）と全列隣接が食い違えば prune =
+  changeGaps 課金停止・set_distances_for_loose_col の rod（dists 和 = 既存
+  MidMeasureChangeGaps.MinDistance と同値）を隣接対スパンの looseRods へ
+  ⑵ **SpringSolver.ApplyRods の分岐を LP の字面に**——rod > ideal 合計でも伸長剛性が
+  有限なら **blocking force**（spring.cc の set_blocking_force = min←length(f)・
+  伸びは剛性比例に分配）。旧「ideal 比例拡大」は isinf（剛性ゼロ）枝限定
+  ⑶ **renderer の吊るし = set_loose_columns**（spacing-loose-columns.cc:33-222）——
+  tight+(ideal−tight)·scale（permissible = 右隣 origin − 左隣 ink 右・left_padding
+  0.15・tight/ideal は既存 RightRod/RightGap を流用）を**解いた後に**
+  MultiStaffLayouter が計算し MeasureLayout.LooseChangeHangs で renderer へ渡す。
+- **付随 2 枚**: ⒜ **wish 無し対 = springs.empty hemiola 分岐の完全形**（min 0 +
+  素 ideal + 左頭精算なし + headroom なし）——第119 named 札の条件「LP オラクル本が
+  この分岐を測ったら」を本本が満たした ⒝ **wish 判定は staff 単位**
+  （note-spacing-engraver.cc last_spacings_[parent] = staff key）=
+  CollectStaffIndicesAtIndex を配線。⚠️ per-voice のままだと**単一譜多声本の改行が
+  変わる regression**（台帳 system.tuplet-bracket-up/down が「1譜しかない」で落ちた）
+  ——staff 段 fallback で復緑。sky/rod 対は従来どおり per-voice（cross-voice 床は
+  ApplyCrossVoiceColumnSpacing の持ち場）。
+- **照合: 全列 LP exact**（9.45/12.81・**A4 14.06・clef 14.26・G4 16.56・F#3 19.07**・
+  stem 5 本 10.69/14.05/15.37/17.80/20.31 も一致）。裏の算術が LP を完全再現:
+  素 ideal 0.8/1.6・rod 3.75 → f_b=1.125 → **1.25/2.50**。
+- 観測者 = LooseChangeColumnTests.MidMeasureClef_HangsLooseBetweenTheOtherStaffsColumns
+  （LP 7点ピン）。**snapshot 5枚 census 済・全部 X drift のみ**:
+  multistaff-tuplet-beams / ossia-beams = 多譜 interleave の圧縮（本 port の regime）・
+  **lead-sheet +0.60 = 第119 監査の予告どおり**（LP オラクル無し本の priced-in cost）・
+  chordnames / rows-song-sheet 微動（±0.1 級）。機構テスト 2 本
+  （ApplyRods_ExceedsIdeal_ScalesUp・KeepInsideLineRod）は**旧実装への釘**だったので
+  LP 挙動（length は同値・ideal 不変）の主張に書換（isinf 枝テスト +1）。
+- **札 3**: ⑴ loose 判定の neighbor walk は per-voice——**同 staff 他 voice の音は
+  neighbor に見えない**（多声譜の小節中 clef・corpus 未踏・LooseChangeLeftNeighborTiming
+  に開示） ⑵ **loose 連鎖 clique 未対応**（連続 loose 列は各自が右隣から独立に吊るされる・
+  LP は clique 歩き・corpus 未踏） ⑶ item spring 系（ChangeColumnItemSpring = 幅見積）は
+  loose 非対応＝loose 本の見積が実 layout よりやや広い。
+- **perf round 19**（scratch\lpreg\perf-ab19.ps1・base = 87c4c62f worktree
+  C:\MyProj\LilySharp-perfbase-87c4・残置）: hairpingrand1k（多譜=staff-index+
+  hang-gate の重い側）**−1.7/−18.1% = 退行なし**・plain1k **+12.0/−18.8 = 符号跨ぎ =
+  drift**・**両冊 hash MATCH**（多譜 homophonic と単譜密は出力不変も証明）。
+  ComputeLooseChangeHangs は「変更 item 無し即 null」の早期ゲート付き。
+
+plain 322 / 処理済 **277**（fixed **52**・exact **35**・skip **174**・open **16**・
+pending **45**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **staff-tabstaff-spacing**（次いで stem-pure-height-beamed——どちらも
+明白なゲート無し＝実評価が要る）。
+slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
+入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4221 passed / 0 failed / 4 skipped**（観測者+1・ApplyRods isinf 枝+1・
+全スイート確認済）・snapshot 第120 は **5枚**（census 済・上記）・Core (Debug)
+0 warning・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
+C:\MyProj\LilySharp-perfbase-0c63（第118残置）＋
+C:\MyProj\LilySharp-perfbase-ae2a（第119残置）＋
+C:\MyProj\LilySharp-perfbase-87c4（第120残置）。
+probe 残置: **sploose.{lys,-gen.ly,svg,-lp.svg,-lp.log}（第52号の照合材）＋
+sploose-norod.svg / sploose-dbg.svg（rod 切り分けの一時対照・消してよい）**＋
+第119 以前の slurvsky / spacc-rest / spacc-stretch / spacc-corr{,-noacc} 一式
+（下の第119 の節参照）。
+
+## 以下は第119セッションの経緯
+
 最終更新 第119セッション（＝第1便 **fixed 第49号 = slur-vertical-skylines.ly =
 trill span の to-barline port**・`e94a2583`・第2便 **fixed 第50号 =
 spacing-accidental-rest.ly = voiced rest の separation 箱 port**・`80c4eede`・
