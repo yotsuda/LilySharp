@@ -128,19 +128,48 @@ renderer 他 8 か所が読む `VoiceDefaults.GetDefaultStemUpAt` は**小節粒
 `MeasureContentKey.AddStaffIdentity` の `IsDefaultOrEmpty` 判定 1 個**（早期 return つき）。
 `RenderSpec.IsMultiStaff` の `Items.Any` は per-render。⇒ §7.9 の「足していない例」側。
 
+★★★ **第2便 = 解錠した台帳の消化に着手＝2 冊 exact（コード変更 0）**。
+**台帳: plain 322 = fixed 70・exact 45・skip 195・open 12**（§0 の数え方で確認）。
+- **exact 第44 = part-combine-slur**（「`\partCombine` はスラーで壊れない」）: 両声部が同一
+  なので全 moment が unisono。**符頭 4 個 pos `-6 -5 -5 -3` が LP dump と一致・符尾 4 本とも
+  UP・`a2` 1 つ・スラーとタイの曲線 2 本・両engine 警告ゼロ**（twin `pcslur-probe.lys`）。
+- **exact 第45 = part-combine-global**（「解析は非局所＝2 番目の音符での判断が 1 番目に及ぶ」）:
+  **第1小節=二声（pos −1/−3 が 4 moment・符尾 上4/下4）・第2小節=2音和音 4 つ（符尾 上4）
+  ＝12 本、LP も 12 本（上8/下4）**（twin `pcglobal-probe.lys`）。
+  ★★ **非局所性の正体は手動ビームだった**——moment 0 は両声部でビームが開いていて
+  span 状態が空でないので `analyze-notes` が `chords` を置けず**未決のまま**残り、
+  moment 1 で tie の span 状態が食い違って `apart` が**後方へ埋まる**。
+  ⇒ **`put` の後方埋めを移植していなければ第1音だけ和音になっていた。**
+  音符間隔は LP 2.50/2.50/2.51 対 LS 2.50/2.51/2.50、**小節またぎだけ +0.12**（spacing regime）。
+
+★★★ **起票 = `~` を `]` の後ろに書くと Lily# は黙ってタイを落とす**（この便の副産物・**未修正**）。
+LP は post-event の順序を問わないので `f8[ f]~` と書く（`part-combine-global.ly` の字面が
+まさにそれ）。Lily# は **`f8[ f~]` しか受けず、`f8[ f]~` では診断も出ずタイが消える**
+（probe `scratch\lpreg\tiebeam-order.lys`＝2 パートに両綴りを並べた対・**曲線は 1 本しか出ない**）。
+⚠️ **最初この綴りで双子を書いて「移植が chords に畳んでいる」と誤読しかけた**——
+§5.0 の「対の両側が同じ音楽か」の新例で、**今回は engine ではなく*綴りの受理範囲*が対を壊した**。
+⇒ **選択肢は 2 つ**: ⑴ `]` の後ろの post-event を受ける（LP と同じ）⑵ 受けないなら**診断を出す**。
+**どちらも言語の話なのでユーザー判断**（§2D）。⚠️ **黙って落とすのが一番悪い**ことだけは確か。
+
 **次の一手（候補・ユーザー判断）**:
-⑴ **台帳 10 冊の消化**——`part-combine-*` の plain 10 冊は「`\partCombine` の綴り無し」で
-skip されていた。**綴りは入った**ので、1 冊ずつ双子で照合できる（`part-combine-silence`・
-`part-combine-global`・`part-combine-slur`・`part-combine-relative` あたりが素直）。
-⚠️ **3voices/keep-with-tag は段③（Up/Down）が要る。**
+⑴ **台帳の残り**——`part-combine-*` の plain は 10 冊中 **2 冊消化・残り 8**。
+**段③ 不要で届くのは 6 冊**（`silence`・`silence-mixed`・`relative`・`tuplet-end`・
+`mmrest-shared`・`mmrest-after-apart-silence`）。⚠️ **`3voices` と `keep-with-tag` は
+段③（Up/Down）と `\keepWithTag` が要る。**
 ⑵ **段③ = `condensedStaff` の中の `combinedStaff`**（スロット方向の能動的強制）。
 ⑶ **向きの粒度**（上の開示）＝§2A の島。
+⑷ **上の起票（`]~` のタイ）**——言語の判断が要る。
 
 **テスト 4298 passed / 0 failed / 4 skipped**（開始時の実測は 4281＝引継ぎの 4279 が stale
 だった。新規 `CombinedStaffTests` 12 本・`PartCombineTests` は旧 20 本を 24 本に差し替え）。
 Core 0 warning。**未 push は §0 で数える（⚠️ push しない）**。
 probe 残置（第126）: **`pcdump.ily`（LP の grob dump・そのまま再実行できる）・
-`pcomb-probe.lys`（Lily# 側の双子）・`pcomb-cond.lys`（condensedStaff の対照）**。
+`pcomb-probe.lys`（Lily# 側の双子）・`pcomb-cond.lys`（condensedStaff の対照）・
+`pcglobal-probe.lys`／`pcslur-probe.lys`（台帳 2 冊の双子）・
+`tiebeam-order.lys`（`]~` 起票の対）**。
+⚠️ **LP の grob dump は score の最初の符頭を 1 個落とす**（`pcombine-lp` でも
+`part-combine-global` でも同じ・NOINK の NullVoice 頭は出るのに ink の方が出ない）。
+**数えるなら符尾のほうを数えること。**
 
 ---
 

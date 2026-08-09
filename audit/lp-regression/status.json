@@ -5781,8 +5781,9 @@
     },
     "part-combine-global.ly": {
       "category": "plain",
-      "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
+      "state": "exact",
+      "claim": "The part combiners analysis is non-local: the decision taken on the second note reaches the first",
+      "notes": "exact(第126)・コード変更0(combinedStaffは同セッションの前commit)。twin=scratch/lpreg/pcglobal-probe.lys。LP dumpと構造一致: 第1小節=二声(pos -1と-3が4 moment・符尾 上4/下4)・第2小節=2音和音4つ(符尾 上4)=符尾12本、LPも12本(上8/下4)。★非局所性の正体は手動ビーム: moment0は両声部でビームが開いておりspan状態が空でないのでchordsを置けず未決、moment1でtieのspan状態が食い違ってapartが後方へ埋まる。音符間隔はLP 2.50/2.50/2.51に対しLS 2.50/2.51/2.50・小節またぎのみ+0.12(spacing regime)。⚠️twinのtieは f8[ f~] と書く(f8[ f]~ はLily#が黙って落とす=別途起票)。"
     },
     "part-combine-inside-grace.ly": {
       "category": "scheme",
@@ -5836,8 +5837,9 @@
     },
     "part-combine-slur.ly": {
       "category": "plain",
-      "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
+      "state": "exact",
+      "claim": "partCombine handles slurs without errors",
+      "notes": "exact(第126)・コード変更0(combinedStaffは同セッションの前commit)。twin=scratch/lpreg/pcslur-probe.lys。両声部が同一なので全momentがunisono=1声部: 符頭4個 pos -6 -5 -5 -3 がLP dump(pcdump.ily)と一致・符尾4本ともUP・a2が1つ・スラーとタイの曲線2本。両engineとも警告ゼロ=claimの核。"
     },
     "part-combine-solo-end.ly": {
       "category": "scheme",
