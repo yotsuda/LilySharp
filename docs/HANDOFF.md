@@ -58,15 +58,28 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択。4便で open 5冊消化**:
+最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択。5便で open 6冊処理**:
 第1便 **fixed 66 = dot-rest-beam-trigger**(rest mover の連鎖化・`276a2c4a`)・第2便
 **棚卸し + fixed 67 = dot-column-vertical-positioning**(rest dot の列参加・`52240900`)・
 第3便 **exact 43 = phrasing-slur-tuplet(コード変更0)+ fixed 68 =
 collision-harmonic-no-dots**(voiced 変位の span スコープ化・`753c09fe`)・第4便
-**fixed 69 = trill-spanner-direction = trill の向き一式 port**(`66d8b5e1`)。
+**fixed 69 = trill-spanner-direction = trill の向き一式 port**(`66d8b5e1`)・第5便
+**lypassbar 再照合(乖離拡大を記録・§2A 棚のまま)+ fixed 70 =
+automatic-polyphony-tabstaff = tab の全 voice 化**(`0d9f35da`)。
 
-**台帳: plain 322 = fixed 69・exact 43・skip 197・open 13・pending 0**
+**台帳: plain 322 = fixed 70・exact 43・skip 197・open 12・pending 0**
 (status.json 実数・§0 の数え方で確認済)。
+
+★ **第5便の中身**:
+- **lypassbar 再照合**: 乖離は +2.9 → **+8.6 ss に拡大**(最終小節線 LS 40.31 vs
+  LP 31.69)。第120 ApplyRods 修理(rod>ideal でも剛性比例 blocking force)が自前の
+  音節 clearance rod(§2A 防壁)の伸長を LP 正の力学で増幅した疑い。クリアランス撤去は
+  SnapshotLyricOverlapTests が防壁と証明済=**アーキ棚のまま**・台帳に記録。
+- **fixed 70**: 修理=`Staff.CreateTab` の全 voice 化(1声コンストラクタが唯一のゲート
+  ——tab 描画 walk は既に staff.Voices を回り X は timing ベースだった)。twin に
+  as numbers 追記(LP 既定 tab=数字のみ)。照合: **7桁全部印字・弦/フレット選択が
+  LP と同一集合・弦行 Y 3行とも桁一致・2声が t=0 の同列を共有**。観測者
+  TabPolyphonyTests。snapshot 0枚。札: full notation 時の per-voice tab stem 方向未検。
 
 ★★ **第69号の中身**(照合値・修理5枚の内訳は台帳 notes):
 - **pairing が LP の字面でなかった**: 連続 start が pendingStart を上書き=前の spanner
@@ -165,28 +178,33 @@ TryGetValue 1回 + per-staff の SetItems 1回(beam rest 無しなら Empty で�
 新規チューニング定数ゼロ・IncrementalCompiler 非接触(共有 Layout 経路のみ)。
 出力不変は全 snapshot 緑が証明。引用ラチェット緑。
 
-★ **次の一手 = open 13 の続き**(ユーザー3択の②継続)。候補メモ:
-lypassbar の再照合(LS 出力変化 15 要素検出済・§2A 棚は不変)・breathing-sign-
-accidentals(port 入口 = LP breathing-sign spacing membership)・automatic-polyphony-
-tabstaff(tab の voice 2 全落ち)・cue-clef-manually(R1-in-voice MMR = アーキ級)・
-多 score 頁の鎖・grace column・録画層 §2A(→ **着手前に棚の3決定が要る・単独修理と
-して着手しない**)。①文法拡張(推奨提示済・skip 197 の ≥74 冊解錠)と③ markup 55 /
-override 89 は棚のまま。
+★ **次の一手 = open 12 の続き**(ユーザー3択の②継続)。残り 12 冊 =
+breathing-sign-accidentals(port 入口 = LP breathing-sign の spacing 列参加=
+breathing-sign.cc。LS は固定 offset・notehead→comma 1.92 vs LP 3.77)・
+chords-funky-ignatzek(auto @chord の LP 綴り命名=**要ユーザー判断**)・collisions
+(spacing 残差)・cue-clef-manually(R1-in-voice MMR=アーキ級)・empty-chord・
+fermata-outside-staff-priority・figured-bass-empty-figures・key-signature-space・
+lyric-tie・lyrics-pass-under-bar(§2A 棚)・repeat-volta-initial-grace(grace column=
+アーキ級)・staff-tabstaff-spacing(多 score 頁の鎖=アーキ級)。録画層 §2A は
+**着手前に棚の3決定が要る・単独修理として着手しない**。①文法拡張(推奨提示済・
+skip 197 の ≥74 冊解錠)と③ markup 55 / override 89 は棚のまま。
 
 ★ perf(第4便も静的検分のみ・A/B 未実施 = 開示): 第69号の新規コスト = per-trill の
 dir 解決1回 + 下側 stacker の per-DOWN-trill 置き(DOWN trill 無しなら早期 return
 恒等)+ VoiceItemX(非 primary のみ O(item))。新規チューニング定数ゼロ・
 IncrementalCompiler 非接触。出力不変(単声/primary)は全 snapshot 緑が証明。
 
-未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 99)・
-テスト **4241 passed / 0 failed / 4 skipped**(+4 = BeamRestChainTests・
+未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 101)・
+テスト **4242 passed / 0 failed / 4 skipped**(+5 = BeamRestChainTests・
 RestDotColumnTests・VoicedDisplacementDiesWithTheSpan・TrillSpannerDirectionTests・
-全スイート確認済)・snapshot 動き 3 枚(第68号・census 済 re-bless)・Core (Debug)
-0 warning・base worktree = 第122 の節のまま(C:\MyProj\LilySharp-perfbase-31a0 残置)。
+TabPolyphonyTests・全スイート確認済)・snapshot 動き 3 枚(第68号・census 済
+re-bless)・Core (Debug) 0 warning・base worktree = 第122 の節のまま
+(C:\MyProj\LilySharp-perfbase-31a0 残置)。
 probe 残置(第124 追加分): **drbt-head{,2}.svg・drbt-fix{2,3}.svg・dcvp-fix{,2}.svg・
 vrest-probe 一式(第68号の LP オラクル)・trillsdir-lp.{ly,svg}(第69号の LP オラクル)・
-trillsdir-ls{,2,3}.svg・ts2-probe 一式・*-head124.svg 一式(棚卸しの HEAD 再レンダ)**
-＋第123 以前の一式(下の節参照)。
+trillsdir-ls{,2,3}.svg・ts2-probe 一式・apts-lp.{ly,svg}/apts-ls.svg(第70号の
+LP オラクル)・*-head124.svg 一式(棚卸しの HEAD 再レンダ)**＋第123 以前の一式
+(下の節参照)。
 
 ## 以下は第123セッションの経緯
 
