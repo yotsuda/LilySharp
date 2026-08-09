@@ -58,9 +58,31 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第120セッション（＝focused session **fixed 第52号 =
+最終更新 第120セッション（＝第1便 focused session **fixed 第52号 =
 spacing-loose-polyphony.ly = loose column の port 完結（第119第6便の open を回収）**・
-この handoff と同 commit）。
+`315d4047`・第2便 **staff-tabstaff-spacing.ly 下見 = open（多score頁の鎖が無い＝
+アーキ級起票）**・この handoff と同 commit）。
+
+★★ **第2便 staff-tabstaff-spacing.ly（claim: Staff score と TabStaff score の
+score 間縦間隔は一致）= open・root 釘付け**:
+- twin = scratch\lpreg\sptab.{lys,svg,-lp.ly,-lp.svg,-lp.log}（3 score:
+  Staff/TabStaff/Staff・piece title は両側落とし）。**LP = score 間 refpoint 距離
+  14.0/14.0 = score-system-spacing の basic-distance・ink ギャップ 8.25/8.25 一致 =
+  claim 成立**（1頁 = ragged-last-bottom 既定 #t = 自然高さ・ばねは ideal）。
+- **LS（--combined）= 28.59/27.09 で不一致**。root = GenerateMultiMovement →
+  CombineMovements（SvgGenerator.cs）が**各 score を独立レンダした SVG 文字列を連結**
+  （movementSpacing 6.0 + movementTitleSpacing 3.0 の LILYSHARP-OWN 定数・各 block が
+  自前の頁上余白を持ち込む・Δ1.5 = tab の背の高さ差の漏れ）。
+- **着地点は既在**: VerticalSpacingParameters.ScoreSystem（14/8/1/120 転記済）+
+  SelectSpec(currentIsNewScore) は実装済みだが **PageLayouter が
+  currentIsNewScore:false を固定給電**＝多 score 頁問題が存在しない。修理形 =
+  文字列連結を捨て全 score の system を 1 つの頁の鎖へ（LayoutEngine.Layout の
+  多 score 化 + renderer 再基準化 + piece title は markup 行として
+  ScoreMarkup/MarkupSystem spec に参加）＝**アーキ級・focused session 候補**。
+  ⚠️ 独自 stacking を CombineMovements に足すのは頁ばねモデルの3つ目の実装
+  （§5.2.1⑵の型）＝やらない。
+- **副起票: lysc ly が第2 score 以降と \header を無警告で落とす**（exporter 穴・
+  今回は LP 双子を手復元＝slurvsky の @text 穴と同じ扱い）。
 
 ★★★ **fixed 第52号 spacing-loose-polyphony.ly = 全列 LP exact**:
 - **port 3枚**: ⑴ **loose 判定 = is_loose_column を CreateInterColumnSpring へ**
@@ -104,10 +126,10 @@ spacing-loose-polyphony.ly = loose column の port 完結（第119第6便の ope
   drift**・**両冊 hash MATCH**（多譜 homophonic と単譜密は出力不変も証明）。
   ComputeLooseChangeHangs は「変更 item 無し即 null」の早期ゲート付き。
 
-plain 322 / 処理済 **277**（fixed **52**・exact **35**・skip **174**・open **16**・
-pending **45**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **staff-tabstaff-spacing**（次いで stem-pure-height-beamed——どちらも
-明白なゲート無し＝実評価が要る）。
+plain 322 / 処理済 **278**（fixed **52**・exact **35**・skip **174**・open **17**・
+pending **44**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **stem-pure-height-beamed**（明白なゲート無し＝実評価が要る）。
+第2便の open（多 score 頁の鎖）は focused session 候補——着地点は上の★参照。
 slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の棚のまま——文法が
 入ったら **slur-flag の追試を最初に**（第118 の理由そのまま）。
 
@@ -119,7 +141,8 @@ C:\MyProj\LilySharp-perfbase-0c63（第118残置）＋
 C:\MyProj\LilySharp-perfbase-ae2a（第119残置）＋
 C:\MyProj\LilySharp-perfbase-87c4（第120残置）。
 probe 残置: **sploose.{lys,-gen.ly,svg,-lp.svg,-lp.log}（第52号の照合材）＋
-sploose-norod.svg / sploose-dbg.svg（rod 切り分けの一時対照・消してよい）**＋
+sploose-norod.svg / sploose-dbg.svg（rod 切り分けの一時対照・消してよい）＋
+sptab.{lys,svg,-lp.ly,-lp.svg,-lp.log}（第2便 open の照合材）**＋
 第119 以前の slurvsky / spacc-rest / spacc-stretch / spacc-corr{,-noacc} 一式
 （下の第119 の節参照）。
 

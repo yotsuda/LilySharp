@@ -7654,7 +7654,10 @@
     },
     "staff-tabstaff-spacing.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "Staff を含む score と TabStaff を含む score の間の縦間隔は一致する（3 score の間隔が全部等しい）",
+      "notes": "open(第120下見・root釘付け・アーキ級)。twin=scratch\\lpreg\\sptab.{lys,svg,-lp.ly,-lp.svg,-lp.log}(3 score: Staff/TabStaff/Staff・c4 d e f | g1・\\header piece は両側落とし=LS --combined はLP形式のpiece titleを描かないため。claimの核はタイトル無しで立つ)。LP実測: score間refpoint距離 **14.0/14.0** = score-system-spacing の basic-distance(14/8/1/120)・inkギャップ **8.25/8.25 で一致=claim成立**(1頁=最終頁=ragged-last-bottom既定#tで自然高さ=ばねはideal)。LS(--combined): inkギャップ **28.59/27.09 で不一致**=claim不成立。root=GenerateMultiMovement→CombineMovements(SvgGenerator.cs)が**各scoreを独立レンダしたSVG文字列を連結**——movementSpacing 6.0+movementTitleSpacing 3.0のLILYSHARP-OWN定数・各blockが自前の頁上余白を持ち込む・title(2枚目以降のみ・serif 2.0固定)も独自。着地点は既在: VerticalSpacingParameters.ScoreSystem(14/8/1/120=paper-defaults転記済)+SelectSpec(currentIsNewScore)は実装済みだが**PageLayouter が currentIsNewScore:false を固定給電**=多score頁問題が存在しない。修理形=文字列連結を捨て全scoreのsystemを1つの頁の鎖へ(LayoutEngine.Layoutの多score化+renderer再基準化+piece titleはmarkup行としてScoreMarkup/MarkupSystem specに参加)=アーキ級・focused session。副起票: **lysc ly が第2score以降と\\headerを無警告で落とす**(exporter穴・今回はLP双子を手復元)。",
+      "measured": "LP: 五線Y 9.69-13.69 / tab 21.94-29.44(1.5間隔6線) / 41.69-37.69・refpoint(中央線)11.69/25.69/39.69=間隔14.0ちょうど×2。LS: block offset 0/32.59/67.18・inkギャップ28.59/27.09(Δ1.5=tabの背の高さ差の漏れ)。"
     },
     "staff-tweak.ly": {
       "category": "scheme",
