@@ -58,6 +58,73 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第121セッション（＝第1便 **skip 2冊**（stem-cross-staff-articulation =
+\change Staff が主張の核+\espressivo 対応物ゼロ・stem-tremolo-cross-staff-beam =
+\change Staff+crash 回帰本）・第2便 **stem-tremolo-note-collision = exact**・第3便
+**fixed 第54号 = stems-clash-between-staves = 譜間 gap の 2枚 port**・`d482e1b9`・
+第4便 **perf round 22 = 容疑→guard→drift 化**・この handoff と同 commit）。
+
+★★★ **第3便 fixed 第54号 stems-clash-between-staves.ly = LP exact**:
+- twin = scratch\lpreg\stclash.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（LP の indent=10cm は
+  水平の器材のみ＝省略・時価なしは 4分既定）。**LP = refpoint 距離 10.833 =
+  down-stem 6.5 + up-stem 3.333 + staff-staff padding 1.0**。LS 旧 9.55 =
+  向き合う stem 端が 0.28 **重なり** = claim 不成立。
+- **root 2枚**: ⑴ **skyline seed が音符の衝突シフト未適用**——シフトされた voice2 の
+  列（頭・stem・ledger）が描画より 1.304（黒頭 ink 幅）左に予約されていた。rest には
+  既に配線済みの「押された先で予約」（RestShiftKey）の**音符版**。修理 =
+  SpacingRules.**VoiceCollisionShiftsOf** 新設（ApplyCrossVoiceColumnSpacing の既存
+  CWT 一綴りを公開・**VoiceId は 1-based**）+ AddStaffToSkylines が適用
+  （StaffSize.Span で staff 所有量として scale・譜内/系 silhouette の両呼び手が自動で
+  揃う） ⑵ **SkylineBuilding.Distance / DistanceResolved の `lo < hi` が幅ゼロの
+  接触を捨てる**——LP の internal_distance（skyline.cc:618-649）は merge 境界で
+  **両建物の height を評価**するのでゼロ幅 touch も全高で立つ → `lo <= hi`。
+  この本は down-stem seed 左端 = up-stem seed 右端 = 18.425 の**一点接触**に拘束の
+  全部が乗る（衝突シフト＝ちょうど黒頭 ink 幅で edge が一致・double でも exact）。
+  **2枚とも要る**（シフトだけだと接触が strict で捨てられ 9.55 のまま）。
+- 照合: 修正後 10.83 = LP exact・stem 端間ちょうど 1.0 = padding。観測者 =
+  StaffClashSpacingTests（LP 4点ピン）。**snapshot 0・台帳全緑（4223 passed）**。
+- 手順の学び: 9.55 の算術分解（6.5+2.05+1.0）から「下譜 up-stem 不在」と読んだが、
+  実体は**上譜の down-stem の X が 1.304 左**＝頭の算術で仮説を立てたら**建物を
+  dump して住所まで確かめる**（env ゲート一時 dump→撤去）。
+- ★★ **第4便 perf round 22**（scratch\lpreg\perf-ab22.ps1・base = ca46fc07 worktree
+  C:\MyProj\LilySharp-perfbase-ca46・残置）: 初回 restpoly1k **+46.5/+10.0 = 両順正 =
+  容疑**→数えたら **ComputeVoiceOffsets は全 run で 1 回**（CWT 完璧）＝残る per-item
+  コストは空 dict への TryGetValue のみ→**guard（空 dict→null・shift 無し多声譜は
+  per-item 課金ゼロ）を入れて再測 → +6.3/−5.7 = 符号跨ぎ = drift・plain1k も drift・
+  両冊 hash MATCH ＝容疑消滅**（第113 の型「guard 入れて再測=消えれば安くて確実」の
+  3例目。base 自身が順序間で 39〜60% 振れる日だった）。
+
+★ **第2便 stem-tremolo-note-collision.ly = exact**（コード変更 0）:
+- twin = sttremcol.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（`\repeat tremolo 32 <b g'>32` →
+  `<b, g>1:32`）。**斜線 3本の中心 Y 5.00/5.81/6.62 完全一致**（0.81 梯子）・頭相対
+  X +0.23/0.27（stroke ink 系統差 0.04）・ink 幅 1.5 一致。X drift 末尾 0.9級 =
+  grace 列 spacing regime。
+- **副起票 2**: ⑴ **lysc ly が和音 tremolo `:N` を無警告 drop**（exporter 穴・
+  repeatTie 型・今回は手復元） ⑵ **voiced grace の stem 向き**——LP は第2声の grace が
+  stem **down**（voice 向きが grace up 既定に勝つ: LP 4.11→6.40 down+flag）・LS は
+  無条件 up（4.00→1.53 up+flag）＝off-claim 乖離・修理は grace 向き規則の棚。
+
+plain 322 / 処理済 **283**（fixed **54**・exact **36**・skip **176**・open **17**・
+pending **39**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **string-number-around-slur**（下見未着手。avoid-slur 未実装（第114起票）の
+棚の可能性＋\textLengthOn 綴りなし——枠が書けるかから）。以降 system-separator 族・
+tablature 族（treble_8 の綴り規約は README 比較器の罠の節）。第120 第2便の open
+（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。slur-flag / slur-nice は
+文法宿題の棚のまま。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4223 passed / 0 failed / 4 skipped**（第3便観測者+1・全スイート確認済）・
+snapshot 第121 = **0枚**・Core (Debug) 0 warning・
+base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
+C:\MyProj\LilySharp-perfbase-0c63（第118残置）＋
+C:\MyProj\LilySharp-perfbase-ae2a（第119残置）＋
+C:\MyProj\LilySharp-perfbase-87c4（第120残置）＋
+C:\MyProj\LilySharp-perfbase-ca46（第121残置）。
+probe 残置: **stclash 一式（第54号の照合材）＋ sttremcol 一式（exact の照合材）**＋
+第120 以前の sploose / sptab / stempure ほか一式（下の第120 の節参照）。
+
+## 以下は第120セッションの経緯
+
 最終更新 第120セッション（＝第1便 focused session **fixed 第52号 =
 spacing-loose-polyphony.ly = loose column の port 完結（第119第6便の open を回収）**・
 `315d4047`・第2便 **staff-tabstaff-spacing.ly 下見 = open（多score頁の鎖が無い＝

@@ -493,8 +493,11 @@ internal sealed class SkylineBuilder
         // before vertical spacing reads the grobs, so LilyPond's skylines carry the
         // shift by construction. Measured: stems-clash-between-staves.ly, where the
         // shifted voice's down stem is the whole inter-staff constraint.
+        // (Empty → null, so a shift-less multi-voice staff — e.g. a rests-only second
+        // voice — pays no per-item lookup at all.)
         var collisionShifts = staff.Voices.Length >= 2
-            ? SpacingRules.VoiceCollisionShiftsOf(staff)
+            && SpacingRules.VoiceCollisionShiftsOf(staff) is { IsEmpty: false } shifts
+            ? shifts
             : null;
 
         for (int vi = 0; vi < staff.Voices.Length; vi++)
