@@ -218,20 +218,6 @@ internal sealed record LayoutOptions
     /// </remarks>
     public double ShortIndent { get; init; } = 0;
 
-    // === Part Combination ===
-
-    /// <summary>
-    /// If true, two-voice staves are analyzed for part combination and annotated
-    /// with "a2" / "Solo" / "Solo II" text. Default false.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/part-combiner.scm — part combination is opt-in via
-    /// \partcombine; plain simultaneous voices (&lt;&lt; … \\ … &gt;&gt;) are NOT combined
-    /// and carry no a2/Solo text. Lily# has no \partcombine syntax yet, so this
-    /// stays off to match LilyPond's default rendering of simultaneous voices.
-    /// </remarks>
-    public bool EnablePartCombine { get; init; } = false;
-
     // === Computed Properties ===
 
     /// <summary>Available width for music content in staff spaces.</summary>

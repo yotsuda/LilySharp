@@ -443,7 +443,7 @@ public class IncrementalReuseSoundnessTests
             nameof(Staff.PerStaffKeySignature), nameof(Staff.IsTextRow), nameof(Staff.TextRowVerses),
             nameof(Staff.IsLyricsTextRow),
         nameof(Staff.TabSourceClef), nameof(Staff.Transposition), nameof(Staff.TabNumbersOnly),
-        nameof(Staff.Lines), nameof(Staff.PedalStyle),
+        nameof(Staff.Lines), nameof(Staff.PedalStyle), nameof(Staff.PartCombineMarks),
         };
         var capturedElsewhere = new[] { nameof(Staff.Clef), nameof(Staff.Voices) };
         var accounted = foldedByStaffIdentity.Concat(capturedElsewhere).ToHashSet(StringComparer.Ordinal);

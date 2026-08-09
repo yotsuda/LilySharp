@@ -470,6 +470,21 @@ public static class DiagnosticCodes
     /// voice.</summary>
     public const string CondensedStaffBadMember = "LYS6004";
 
+    /// <summary>Render error: a <c>combinedStaff { … }</c> does not name exactly two parts.
+    /// Its own code rather than a reuse of <see cref="CondensedStaffNeedsTwoParts"/>: the
+    /// rules differ (two or more there, exactly two here) and so does the way out.</summary>
+    /// <remarks>
+    /// Two is not an arbitrary limit. Combining is defined pairwise — at each moment the
+    /// analysis asks what THESE TWO parts are doing relative to each other — and every one
+    /// of its answers ("a2", "Solo", "Solo II") names one of two parts.
+    /// LILYPOND-REF: scm/part-combiner.scm:339-342 determine-split-list — two event lists.
+    /// </remarks>
+    public const string CombinedStaffNeedsTwoParts = "LYS6005";
+
+    /// <summary>Render error: a <c>combinedStaff { … }</c> contains something other than a
+    /// part name.</summary>
+    public const string CombinedStaffBadMember = "LYS6006";
+
     // Structure / section-part grid errors (LYS7xxx)
 
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>

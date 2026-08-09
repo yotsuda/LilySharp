@@ -1054,6 +1054,24 @@ internal sealed class CondensedStaffRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Combined-staff render: <c>combinedStaff { partA partB }</c> — the same bare part names as
+/// <c>condensedStaff</c>, because the result is one staff either way. What differs is that
+/// this one MERGES: the parts share a notehead where they agree.
+/// </summary>
+internal sealed class CombinedStaffRenderGreen : GreenSyntaxNode
+{
+    public CombinedStaffRenderGreen(
+        SyntaxToken combinedStaffKeyword,
+        SyntaxToken openBrace,
+        SyntaxToken[] partNames,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.CombinedStaffRender,
+               [combinedStaffKeyword, openBrace, ..partNames, closeBrace])
+    {
+    }
+}
+
+/// <summary>
 /// Ossia render: ossia [clef] { partName }
 /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
 /// </summary>

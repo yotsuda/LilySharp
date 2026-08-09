@@ -4027,16 +4027,19 @@ internal sealed class LayoutEngine
             foreach (var kv in vo) voiceOffsetsBuilder[kv.Key] = kv.Value;
             foreach (var k in hw) headWipeBuilder.Add(k);
             foreach (var kv in da) dotAdjustBuilder[kv.Key] = kv.Value;
+        }
 
-            // Part combination is opt-in (\partcombine); plain << \\ >> voices
-            // carry no a2/Solo text. Gated off by default to match LilyPond.
-            if (_options.EnablePartCombine && partCombineLayouts.IsEmpty)
-            {
-                var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
-                var combineItems = PartCombineAnalyzer.Analyze(
-                    staff.Voices[0], staff.Voices[1]);
-                partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml, staff.Voices[0].Measures);
-            }
+        // The a2/Solo labels belong to a combinedStaff and come off the model with the
+        // voices they were computed alongside (Staff.PartCombineMarks). Placement is the
+        // only part of them that is layout's business.
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            if (staff.PartCombineMarks.IsDefaultOrEmpty)
+                continue;
+            var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
+            partCombineLayouts = PartCombineAnalyzer.Calculate(
+                staff.PartCombineMarks, ml, staff.Voices[0].Measures);
+            break;
         }
         return (voiceOffsetsBuilder.ToImmutable(), headWipeBuilder.ToImmutable(),
                 dotAdjustBuilder.ToImmutable(), partCombineLayouts);

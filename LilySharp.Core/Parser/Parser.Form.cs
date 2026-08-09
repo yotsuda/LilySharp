@@ -489,6 +489,7 @@ internal sealed partial class Parser
             SyntaxKind.StaffGroupKeyword => ParseGrandStaffRender(),
             SyntaxKind.ChoirStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.CondensedStaffKeyword => ParseCondensedStaffRender(),
+            SyntaxKind.CombinedStaffKeyword => ParseCombinedStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
@@ -617,7 +618,48 @@ internal sealed partial class Parser
     {
         var keyword = Expect(SyntaxKind.CondensedStaffKeyword);
         var openBrace = Expect(SyntaxKind.OpenBrace);
+        var partNames = ParseBarePartNameMembers(
+            "condensedStaff", DiagnosticCodes.CondensedStaffBadMember,
+            "Everything inside becomes a VOICE of the one staff it produces, and a staff or "
+            + "a group of staves is not a voice.");
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new CondensedStaffRenderGreen(keyword, openBrace, [.. partNames], closeBrace);
+    }
 
+    /// <summary>
+    /// Parse a combined-staff render: <c>combinedStaff { partA partB }</c>.
+    /// </summary>
+    /// <remarks>
+    /// Same shape as <see cref="ParseCondensedStaffRender"/> — bare part names, one staff
+    /// out. The arity (exactly two) is enforced semantically so a half-typed
+    /// <c>combinedStaff { fl1 }</c> still produces a tree for the editor.
+    /// </remarks>
+    private CombinedStaffRenderGreen ParseCombinedStaffRender()
+    {
+        var keyword = Expect(SyntaxKind.CombinedStaffKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        var partNames = ParseBarePartNameMembers(
+            "combinedStaff", DiagnosticCodes.CombinedStaffBadMember,
+            "It combines two PARTS — it has to see each part's own music to decide, moment "
+            + "by moment, whether they are playing the same thing.");
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new CombinedStaffRenderGreen(keyword, openBrace, [.. partNames], closeBrace);
+    }
+
+    /// <summary>
+    /// The body shared by <c>condensedStaff</c> and <c>combinedStaff</c>: bare part names
+    /// until the closing brace, with anything else reported and skipped.
+    /// </summary>
+    /// <remarks>
+    /// A non-part member is reported HERE rather than left to the brace mismatch: stopping
+    /// the loop and failing on the missing '}' produces "Expected 'CloseBrace'", which
+    /// describes the parser's predicament and not the writer's mistake.
+    /// <c>condensedStaff { staff a staff b }</c> is the first thing a grandStaff user tries,
+    /// so it has to answer well.
+    /// </remarks>
+    private List<SyntaxToken> ParseBarePartNameMembers(
+        string containerName, string diagnosticCode, string why)
+    {
         var partNames = new List<SyntaxToken>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
@@ -627,17 +669,11 @@ internal sealed partial class Parser
                 continue;
             }
 
-            // A member that is not a part name — `staff X`, a nested group, a tab. Reported
-            // HERE rather than left to the brace mismatch: stopping the loop and failing on
-            // the missing '}' produces "Expected 'CloseBrace'", which describes the parser's
-            // predicament and not the writer's mistake. `condensedStaff { staff a staff b }`
-            // is the first thing a grandStaff user tries, so it has to answer well.
             _diagnostics.Error(
                 new TextSpan(_textPosition, Current.FullWidth),
-                DiagnosticCodes.CondensedStaffBadMember,
-                $"'condensedStaff' cannot contain '{Current.Text}' — write bare part names, "
-                + "e.g. condensedStaff { flute1 flute2 }. Everything inside becomes a VOICE "
-                + "of the one staff it produces, and a staff or a group of staves is not a voice.");
+                diagnosticCode,
+                $"'{containerName}' cannot contain '{Current.Text}' — write bare part names, "
+                + $"e.g. {containerName} {{ flute1 flute2 }}. " + why);
 
             // Skip the offending item so the rest of the block still parses: the keyword,
             // then a braced body if it has one.
@@ -654,9 +690,7 @@ internal sealed partial class Parser
                 while (depth > 0 && !Check(SyntaxKind.EndOfFile));
             }
         }
-
-        var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new CondensedStaffRenderGreen(keyword, openBrace, [.. partNames], closeBrace);
+        return partNames;
     }
 
     private bool IsClefKeyword() => SyntaxFacts.IsClefKeyword(Current.Kind);

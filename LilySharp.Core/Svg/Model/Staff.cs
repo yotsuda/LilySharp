@@ -150,6 +150,22 @@ public sealed record Staff(
     /// </summary>
     public PedalStyle PedalStyle { get; init; } = PedalStyle.Bracket;
 
+    /// <summary>
+    /// The "a2" / "Solo" / "Solo II" labels a <c>combinedStaff</c> produced, each naming the
+    /// item of this staff's voices it belongs to. Empty for every other staff.
+    /// </summary>
+    /// <remarks>
+    /// They are carried on the MODEL rather than recomputed in layout because the analysis
+    /// that produced them is the same one that produced the voices — LilyPond emits the
+    /// marks from the very split list it routes the music with
+    /// (LILYPOND-REF: ly/music-functions-init.ly:1643-1651 make-directed-part-combine-music's
+    /// body, where <c>#pc-music</c> and
+    /// <c>#(make-part-combine-marks split-list)</c> are siblings). Asking a second time,
+    /// from the already-merged voices, would be asking a different question: by then the
+    /// unison IS one voice and there is nothing left to compare.
+    /// </remarks>
+    public ImmutableArray<Collector.PartCombineMark> PartCombineMarks { get; init; } = [];
+
     /// <summary>Creates a single-voice staff.</summary>
     public static Staff Create(ClefType clef, Voice voice, string? instrumentName = null)
         => new(clef, ImmutableArray.Create(voice), null, instrumentName);

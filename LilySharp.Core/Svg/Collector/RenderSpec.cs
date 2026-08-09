@@ -95,6 +95,20 @@ public sealed record CondensedStaffSpec(
     string? InstrumentName = null) : RenderItemSpec;
 
 /// <summary>
+/// Combined-staff render item: <c>combinedStaff { partA partB }</c> puts TWO parts onto one
+/// staff and merges them where they agree — one notehead for a unison, one voice for a solo
+/// with the other part's rests gone, and "a2"/"Solo"/"Solo II" to say which is which.
+/// </summary>
+/// <remarks>
+/// The counterpart of <see cref="CondensedStaffSpec"/>, which keeps both parts whole. See
+/// <see cref="PartCombiner"/> for what "agree" means at each moment.
+/// </remarks>
+public sealed record CombinedStaffSpec(
+    ClefType Clef,
+    ImmutableArray<string> PartNames,
+    string? InstrumentName = null) : RenderItemSpec;
+
+/// <summary>
 /// Tablature staff render item.
 /// </summary>
 public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transposition = 0,
@@ -166,12 +180,16 @@ public sealed record RenderSpec(
     /// so a tab-only score would otherwise fall back to a notation staff.
     /// </summary>
     public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab || HasChordRow
-        || HasLyricsRow || HasCondensedStaff;
+        || HasLyricsRow || HasCondensedStaff || HasCombinedStaff;
 
     /// <summary>Whether this render contains a condensed staff. A lone one still needs the
     /// multi-staff pipeline: the single-staff path takes ONE part's voices, which is exactly
     /// what a condensed staff is not.</summary>
     public bool HasCondensedStaff => Items.Any(i => i is CondensedStaffSpec);
+
+    /// <summary>Whether this render contains a combined staff. A lone one needs the
+    /// multi-staff pipeline for the same reason a condensed one does.</summary>
+    public bool HasCombinedStaff => Items.Any(i => i is CombinedStaffSpec);
 
     /// <summary>Whether this render contains an independent chord row. A chord-only
     /// score (just <c>chords name</c>) still needs the multi-staff pipeline — the
@@ -218,6 +236,14 @@ public sealed record RenderSpec(
                 case CondensedStaffSpec condensed:
                     for (int i = 0; i < condensed.PartNames.Length; i++)
                         yield return (condensed.PartNames[i], null, ChordDisplayMode.Names,
+                            ImmutableArray<string>.Empty, i > 0);
+                    break;
+                // Same bookkeeping as a condensed staff: both parts are collected, one
+                // staff index is opened. Whether the two end up as one voice or two is
+                // decided later, by the music.
+                case CombinedStaffSpec combined:
+                    for (int i = 0; i < combined.PartNames.Length; i++)
+                        yield return (combined.PartNames[i], null, ChordDisplayMode.Names,
                             ImmutableArray<string>.Empty, i > 0);
                     break;
                 case TabStaffSpec tab:
@@ -308,6 +334,35 @@ public sealed record RenderSpec(
                         .ToImmutableArray();
                     yield return StaffGroup.CreateSingle(
                         Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName));
+                    break;
+
+                // TWO parts -> ONE staff, MERGED. Unlike the condensed staff above, the
+                // voices that come out are not the voices that went in: the combiner
+                // rewrites the music (PartCombiner.Combine), which is what LilyPond's
+                // \partCombine does too.
+                case CombinedStaffSpec combined:
+                    var combineParts = combined.PartNames
+                        .Select(name => getVoices(name))
+                        .ToArray();
+                    // A part with no music of its own still has to take part in the
+                    // analysis — that is how the OTHER part's passage becomes a solo.
+                    Voice PartVoice(int i) => i < combineParts.Length && combineParts[i].Length > 0
+                        ? combineParts[i][0]
+                        : new Voice(combined.PartNames.Length > i ? combined.PartNames[i] : "",
+                            ImmutableArray<Measure>.Empty);
+                    var result = PartCombiner.Combine(PartVoice(0), PartVoice(1));
+                    // ⚠️ A part that is itself polyphonic contributes its FIRST voice to the
+                    // combination and its remaining voices to the staff untouched — the
+                    // combiner compares two streams, and a voice { } { } span is already two.
+                    var extraVoices = combineParts
+                        .SelectMany(vs => vs.Skip(1))
+                        .ToImmutableArray();
+                    yield return StaffGroup.CreateSingle(
+                        Staff.Create(combined.Clef,
+                            result.Voices.AddRange(extraVoices),
+                            combined.InstrumentName)
+                        with
+                        { PartCombineMarks = result.Marks });
                     break;
 
                 case GrandStaffRenderSpec grand:

@@ -310,6 +310,21 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(staff.TabNumbersOnly);
         hc.Add(staff.Lines);
         hc.Add((int)staff.PedalStyle);
+
+        // The part combiner's labels. They are a function of the two parts that went INTO
+        // the combination, not of the voices that came out, so the voices' own hashes do
+        // not stand in for them: an edit can change which part carries a shared passage —
+        // and so whether "a2" prints — while leaving the engraved notes identical.
+        // Guarded rather than folded unconditionally because this runs per staff per
+        // measure on every keystroke, and every staff but a combinedStaff has none.
+        if (staff.PartCombineMarks.IsDefaultOrEmpty)
+            return;
+        foreach (var mark in staff.PartCombineMarks)
+        {
+            hc.Add(mark.MeasureIndex);
+            hc.Add(mark.ItemIndex);
+            hc.Add(mark.Text);
+        }
     }
 
     // --- side-tables, bucketed onto measures by MeasureIndex ---

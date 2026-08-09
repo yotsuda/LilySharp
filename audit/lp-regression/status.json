@@ -5753,7 +5753,7 @@
     "part-combine-3voices.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族10冊の親notes)。ゲート=\\partCombine(Up/Down)の綴りなし: 機構はPartCombineAnalyzer(scm/part-combiner.scm determine-split-listのport・a2/Solo/Solo IIラベル+renderer配線済)がLayoutOptions.EnablePartCombineの後ろに既在だが、**書き手ゼロ**(.lys綴りもCLIも設定経路なし)=ソースから到達不能。文法が入れば族10冊(global/relative/silence系/mmrest系/slur/tuplet-end/keep-with-tag/3voices)を再開可。文法追加は要ユーザー判断(§2D棚)。keep-with-tagは\\keepWithTag=tag機構も別途なし"
+      "notes": "skip(第112第10便・part-combine族10冊の親notes)。ゲート=第126で combinedStaff{X Y}(=\\partCombine)が入った。残るゲートは\\partCombineUp/Downのみ(段③)。旧ゲート=綴りなし: 機構はPartCombineAnalyzer(scm/part-combiner.scm determine-split-listのport・a2/Solo/Solo IIラベル+renderer配線済)がLayoutOptions.EnablePartCombineの後ろに既在だが、**書き手ゼロ**(.lys綴りもCLIも設定経路なし)=ソースから到達不能。文法が入れば族10冊(global/relative/silence系/mmrest系/slur/tuplet-end/keep-with-tag/3voices)を再開可。文法追加は要ユーザー判断(§2D棚)。keep-with-tagは\\keepWithTag=tag機構も別途なし"
     },
     "part-combine-a2.ly": {
       "category": "scheme",
@@ -5782,7 +5782,7 @@
     "part-combine-global.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-inside-grace.ly": {
       "category": "scheme",
@@ -5795,7 +5795,7 @@
     "part-combine-keep-with-tag.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-markup.ly": {
       "category": "markup",
@@ -5804,7 +5804,7 @@
     "part-combine-mmrest-after-apart-silence.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-mmrest-after-solo.ly": {
       "category": "scheme",
@@ -5817,27 +5817,27 @@
     "part-combine-mmrest-shared.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-relative.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-silence-mixed.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-silence.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-slur.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-solo-end.ly": {
       "category": "scheme",
@@ -5866,7 +5866,7 @@
     "part-combine-tuplet-end.ly": {
       "category": "plain",
       "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ)"
+      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
     },
     "part-combine-tuplet-single.ly": {
       "category": "scheme",

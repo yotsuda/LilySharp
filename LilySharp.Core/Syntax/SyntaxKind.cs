@@ -94,6 +94,9 @@ public enum SyntaxKind : ushort
     /// <summary>The <c>condensedStaff</c> keyword: several parts, each of which would be
     /// its own staff, put onto ONE staff as separate voices (a condensed score).</summary>
     CondensedStaffKeyword,
+    /// <summary>The <c>combinedStaff</c> keyword: exactly two parts put onto one staff and
+    /// MERGED — unisons become one notehead, a solo drops the other part's rests.</summary>
+    CombinedStaffKeyword,
     /// <summary>The <c>tab</c> keyword.</summary>
     TabKeyword,
     /// <summary>The <c>ossia</c> keyword.</summary>
@@ -387,6 +390,9 @@ public enum SyntaxKind : ushort
     /// <summary>A condensed-staff render node (<c>condensedStaff { fl1 fl2 }</c> inside
     /// score): the named parts share ONE staff, one voice each.</summary>
     CondensedStaffRender,
+    /// <summary>A combined-staff render node (<c>combinedStaff { fl1 fl2 }</c> inside
+    /// score): two parts share one staff and are COMBINED where they agree.</summary>
+    CombinedStaffRender,
     /// <summary>A tablature render node (<c>tab guitar { guitar }</c> inside render).</summary>
     TabRender,
     /// <summary>An ossia render node (<c>ossia treble { alternative }</c> inside render).</summary>

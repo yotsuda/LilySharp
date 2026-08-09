@@ -64,6 +64,10 @@ public static class RenderSpecParser
                     items.Add(ParseCondensedStaff(condensed));
                     break;
 
+                case CombinedStaffRenderSyntax combined:
+                    items.Add(ParseCombinedStaff(combined));
+                    break;
+
                 case StaffRenderSyntax staff when !IsInsideGrandStaff(staff):
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
@@ -224,6 +228,22 @@ public static class RenderSpecParser
         var names = condensed.PartNames.Where(n => n.Length > 0).ToImmutableArray();
         var clef = (names.Length > 0 ? GetPartClef(condensed, names[0]) : null) ?? ClefType.Treble;
         return new CondensedStaffSpec(clef, names);
+    }
+
+    /// <summary>
+    /// <c>combinedStaff { partA partB }</c> → one staff whose two parts are merged where
+    /// they agree. The clef is the FIRST part's, as for a condensed staff.
+    /// </summary>
+    /// <remarks>
+    /// Never returns null, and for the same reason <see cref="ParseCondensedStaff"/> does
+    /// not: an item that disappears makes the score report a missing staff about a body
+    /// that declares one. The arity is its own diagnostic (CombinedStaffNeedsTwoParts).
+    /// </remarks>
+    private static CombinedStaffSpec ParseCombinedStaff(CombinedStaffRenderSyntax combined)
+    {
+        var names = combined.PartNames.Where(n => n.Length > 0).ToImmutableArray();
+        var clef = (names.Length > 0 ? GetPartClef(combined, names[0]) : null) ?? ClefType.Treble;
+        return new CombinedStaffSpec(clef, names);
     }
 
     private static GrandStaffSpec? ParseGrandStaff(GrandStaffRenderSyntax grandStaff)

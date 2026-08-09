@@ -950,14 +950,18 @@ internal static partial class SharedRenderer
     private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.PartCombineLayouts.IsDefaultOrEmpty) return;
-        double size = FontSize * 0.65;
+        // LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript, outside-staff-priority
+        // 475: it declares (font-series . bold) and NO font-shape or font-size entry, so the
+        // label is upright text at the default size, not italic. MEASURED
+        // (scratch/lpreg/pcombine-lp.ly, dumped): series=bold shape=() size=().
+        double size = LilySharp.Core.Svg.EngravingDefaults.CombineTextFontSize;
         foreach (var pc in layout.PartCombineLayouts)
         {
             if (!sysTopYUp.TryGetValue(pc.MeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: system top plus the stored offset.
             double y = syUp + pc.YUp;
             gc.DrawText(pc.Text, pc.X, y, size, "serif",
-                FontStyle.Italic, TextAnchor.Start, Color.Black);
+                FontStyle.Bold, TextAnchor.Start, Color.Black);
         }
     }
 

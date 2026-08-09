@@ -58,6 +58,24 @@ score parts { staff flute1  staff flute2 }
 This is plain condensation: unisons are not merged into one notehead and no "a2"/"Solo" is
 printed.
 
+**Two parts COMBINED** — `combinedStaff { partA partB }` takes exactly two bare part names
+and merges them wherever they agree, the way an orchestral score condenses two players onto
+one staff:
+
+```
+score full { combinedStaff { flute1 flute2 } }
+```
+
+- the same notes → **one** notehead, marked `a2`
+- different notes, same rhythm, within a ninth → **one voice of chords**
+- only one part sounding → one voice, marked `Solo` / `Solo II`, and the other part's rests
+  are not engraved at all
+- anything else → two voices, stems up and down
+
+⚠️ The chord case is the usual outcome, not a corner: two parts a third or a sixth apart in
+the same rhythm become chords in one voice. Use `condensedStaff` when the two lines must stay
+visibly separate.
+
 A minimal single-staff document:
 
 ```

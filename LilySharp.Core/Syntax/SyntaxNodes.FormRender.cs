@@ -634,6 +634,44 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Represents a combined-staff render item: <c>combinedStaff { partA partB }</c>.
+/// </summary>
+/// <remarks>
+/// Exactly two parts, and bare names for the same reason <c>condensedStaff</c> takes them:
+/// one staff comes out. The difference is what happens to the music — a condensed staff
+/// keeps both parts and draws them as two voices, while a combined staff MERGES them where
+/// they agree, which is what makes the "a2" and "Solo" it prints true.
+/// </remarks>
+public sealed partial class CombinedStaffRenderSyntax : SyntaxNode
+{
+    internal CombinedStaffRenderSyntax(CombinedStaffRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>combinedStaff</c> keyword token.</summary>
+    public SyntaxTokenNode CombinedStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The two part names, in source order: the first is the part whose stems go
+    /// UP where the two are engraved apart, and the one "Solo" refers to.</summary>
+    public IEnumerable<string> PartNames
+    {
+        get
+        {
+            // Skip the three fixed tokens by KIND, not index, so error recovery on a
+            // missing brace cannot shift the names (as in CondensedStaffRenderSyntax).
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode t
+                    && t.Kind is not (SyntaxKind.CombinedStaffKeyword
+                        or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
+                    yield return t.Text;
+            }
+        }
+    }
+}
+
+/// <summary>
 /// Represents an ossia render item: ossia [clef] { partName }
 /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
 /// </summary>

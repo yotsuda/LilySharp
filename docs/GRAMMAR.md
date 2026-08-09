@@ -356,6 +356,7 @@ ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
                | 'grandStaff' , '{' , { StaffRender } , '}'
                | CondensedStaff                     (* several parts on ONE staff *)
+               | CombinedStaff                      (* two parts on one staff, MERGED *)
                | 'tab' , [ TuningName ] , PartRef    (* tablature: tab partName, or
                                                         tab bass5 partName to override the
                                                         part header's own `tuning` *)
@@ -378,8 +379,32 @@ CondensedStaff = 'condensedStaff' , '{' , PartRef , PartRef , { PartRef } , '}' 
                       score parts { staff fl1  staff fl2 }
 
                     This is plain condensation. Unisons are NOT merged into one notehead and
-                    no "a2"/"Solo" text is printed — that is the part combiner, which is a
-                    separate item and is not implemented yet. *)
+                    no "a2"/"Solo" text is printed — that is `combinedStaff`, below. *)
+
+CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
+                 (* The part COMBINER: exactly two parts on one staff, merged wherever they
+                    agree. At each moment the two are compared —
+
+                      the same notes                  -> one notehead, marked "a2"
+                      different notes, same rhythm,
+                        within a ninth                -> ONE voice of two-note chords
+                      only part one sounding          -> one voice, marked "Solo";
+                                                         part two's rests are not engraved
+                      only part two sounding          -> one voice, marked "Solo II"
+                      anything else                   -> two voices, stems up and down
+
+                    Exactly two, because combining is defined pairwise and every label it
+                    prints names one of two parts (LYS6005 — for more, use `condensedStaff`).
+                    Members are bare part names, as for `condensedStaff` (LYS6006).
+
+                    ⚠️ The chord case is the common one, not the exception: two parts a third
+                    or a sixth apart with the same rhythm come out as chords in a single
+                    voice, which is what an orchestral part looks like. Use `condensedStaff`
+                    when the two lines must stay visibly separate.
+
+                    Score-level like `condensedStaff`, so one source prints both:
+                      score full  { combinedStaff { fl1 fl2 } }
+                      score parts { staff fl1  staff fl2 } *)
 
 StaffRender    = 'staff' , [ ClefName ] , PartRef , { 'with' ( 'chords' PartRef | 'lyrics' PartRef ) } ;
                  (* Each 'with' clause ADDS to the staff: 'with chords NAME' aligns the

@@ -58,6 +58,94 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第126セッション＝**段② landed: `combinedStaff { X Y }`＝part combiner 本体**
+（綴り＋engraving を同時投入・前セッションの「次の一手」そのもの）。
+`scm/part-combiner.scm` の `determine-split-list` を**字面移植**し、collect 相の音楽変換
+（`Svg/Collector/PartCombiner.cs`・新規）として `RenderSpec.ToStaffGroups` に配線した。
+
+★★★ **前セッションの見積もりの数が 3 つとも違っていた（実測で訂正）**。引継ぎは
+「stem 24→16・glyph 24→18・text 1→4」と書いていたが、**probe を grob 単位で dump したら
+stem 12・inked head 16・text 3**（`scratch\lpreg\pcdump.ily` → `pcdump.log`）。
+出所は **SVG の要素を数えた**こと（LP の `<rect>` には小節線が・`<path>` には clef と
+時値記号が混じる）。⇒ ★★ **家訓の新例**: **engine の出力を「要素の数」で比べるなら、
+その要素が何かを 1 回 dump して確かめる**（§5.3 の「推論せず測る」の計数版）。
+⚠️ **NullVoice は grob を作る**ので、dump には `NOINK` の符頭が混じる——
+`ly:grob-property-data g 'stencil` で分けた。
+
+★★★ **そして probe 自身のヘッダが嘘だった＝いちばん効いた発見**。`pcombine-lp.ly` は
+第4小節を「different → two voices, stems up/down（`<< \\ >>` の見た目）」と書いていたが、
+**LP は 4 つの 2 音和音・符尾 4 本・1 声部**にする。理由は **`chord-range` の既定が
+`'(0 . 8)`＝9度**（`ly/music-functions-init.ly:1653-1671`）で、**リズムが同じで 9 度以内なら
+和音に畳む**から。⇒ **`\partCombine` の常態は「二声」ではなく「和音」**。
+⚠️ **旧 `PartCombineAnalyzer.Analyze` はこれを「Apart」と主張し、テストが 20 本それを
+守っていた**（`Analyze_DifferentNotes_ReturnsApart` が 6 度で apart を要求）。
+**テストごと差し替えた**（§5.4 の「テストを実測に合わせる」）。
+
+★★ **照合＝ LP の dump と 1 対 1**（`scratch\lpreg\pcomb-probe.lys` 対 `pcombine-lp.ly`）:
+**符頭 16 個の staff-position が全一致**（`-6 -5 -4 -3 / -2 -2 / -9 -9 / (-9,-6)(-9,-4)(-9,-2)(-9,-4)`）・
+**符尾 12 本・全て UP**（LP も dir=1 が 12 本）・**ラベル 3 個が同じ順**。
+観測者 `CombinedStaffTests`（12 本・y から staff-position へ 1 回の換算で比較＝snapshot ではない）。
+
+★ **移植の中身**（`PartCombiner.cs`・約 1100 行の大半は doc）:
+- **4 パス**を字面で: `analyze-time-step`（`put` の**後方埋め**＝解析が非局所である正体）/
+  `analyze-a2` / `analyze-solo12`（`try-solo`・`analyze-apart`・`analyze-apart-silence`）。
+- **状態 10 種**（apart/apart-silence/apart-spanner/chords/unisono/unisilence/solo1/solo2/
+  silence1/silence2）と **2 つの文脈遷移機械**（Initial/Demoted・Initial/Promoted）を表で移植。
+- **spanner state**（slur/tie/beam）を `analyze-spanner-states` の順序どおりに（tie の
+  end→start の順が `c~ c~ c` を繋ぐ）。
+- **routing**: one→スロット0(UP強制)・two→スロット1(DOWN強制)・**shared/solo→スロット0で
+  向きを剥がす**（LP の shared/solo 文脈は `\with` を持たない＝音高則）・**null は engrave しない**
+  （相手の休符が消えるのはこれ）。**chords は 2 アイテムを 1 つの `ChordItem` に併合**。
+- **ラベル**: `default-part-combine-mark-alist` ＋ merge-same-label ＋
+  `partCombineTextsOnNote`（音符のある moment まで待つ）。**apart と chords は同じ Divisi
+  ラベル＝無印字**なので第4小節に文字は出ない。
+
+★★ **発明を 2 つ消した**（⒟）: ⑴ `LayoutOptions.EnablePartCombine`（宣言1・読み1・
+`true` を書く箇所ゼロ＝到達不能）を**削除** ⑵ ラベルの字面 **italic・`FontSize*0.65`(=2.6)**
+→ **bold・upright・2.2**（`CombineTextScript` は `font-series . bold` を宣言し
+`font-shape`/`font-size` を持たない＝`scm/define-grobs.scm:1077-1094`・dump も
+`series=bold shape=() size=()`）。**和音記号の 2.6 と同じ形の誤り**（§5.0 の「フォント量は
+残差の分類として弱い」の 4 例目）。定数は `EngravingDefaults.CombineTextFontSize`。
+
+★ **⑸ も直った**: unison 判定が **StaffPosition だけ**だったので `c` と `cis` が同じ音と
+見なされていた（＝臨時記号を黙って落とす）。`(StaffPosition, Accidental)` で比べる。
+⚠️ **開示**: `NoteItem` は**印字される臨時記号**しか持たないので、片方だけが臨時記号を
+書き直す形は今も不一致になる。**閉じるにはモデルに alteration を載せる**。
+
+⚠️ **未移植と、それが「できない」理由**（⒞ ではなく ⒝ の負債として明記済み）:
+⑴ `analyze-forced-combine`＝`\partCombineApart` 系の綴りが Lily# に無い（イベントが作れない）
+⑵ cresc/decr の span state＝**Lily# の強弱はアイテム列に居ない**（annotation）
+⑶ `condensedStaff` の中に `combinedStaff` を書く形（＝LP の `\partCombineUp`/`Down` 相当）は
+**まだ綴れない**。**スロット方向の能動的強制（前セッションの ⑷）はそこで要る**ので、
+段③ として残す。**今は文法に無いので、嘘のコードは 1 行も入っていない。**
+
+⚠️ **開示 = 向きの粒度**。`combinedStaff` は向きをアイテム単位で焼く（`StemUpOverride`）が、
+renderer 他 8 か所が読む `VoiceDefaults.GetDefaultStemUpAt` は**小節粒度**なので、
+**1 小節の中で apart と chords が混ざる**と非 apart 側も強制されうる。probe は小節境界で
+切り替わるので**今のコーパスでは binding しない**。閉じるのは §2A（予約と描画の統一）の側。
+
+★ **perf**: 新しい走査は combinedStaff のときだけ。**毎キーストロークの経路に足したのは
+`MeasureContentKey.AddStaffIdentity` の `IsDefaultOrEmpty` 判定 1 個**（早期 return つき）。
+`RenderSpec.IsMultiStaff` の `Items.Any` は per-render。⇒ §7.9 の「足していない例」側。
+
+**次の一手（候補・ユーザー判断）**:
+⑴ **台帳 10 冊の消化**——`part-combine-*` の plain 10 冊は「`\partCombine` の綴り無し」で
+skip されていた。**綴りは入った**ので、1 冊ずつ双子で照合できる（`part-combine-silence`・
+`part-combine-global`・`part-combine-slur`・`part-combine-relative` あたりが素直）。
+⚠️ **3voices/keep-with-tag は段③（Up/Down）が要る。**
+⑵ **段③ = `condensedStaff` の中の `combinedStaff`**（スロット方向の能動的強制）。
+⑶ **向きの粒度**（上の開示）＝§2A の島。
+
+**テスト 4298 passed / 0 failed / 4 skipped**（開始時の実測は 4281＝引継ぎの 4279 が stale
+だった。新規 `CombinedStaffTests` 12 本・`PartCombineTests` は旧 20 本を 24 本に差し替え）。
+Core 0 warning。**未 push は §0 で数える（⚠️ push しない）**。
+probe 残置（第126）: **`pcdump.ily`（LP の grob dump・そのまま再実行できる）・
+`pcomb-probe.lys`（Lily# 側の双子）・`pcomb-cond.lys`（condensedStaff の対照）**。
+
+---
+
+## 以下は第125セッションの経緯
+
 最終更新 第125セッション＝**文法変更 1 件を landed: トップレベルの音楽を拒否（LYS0020）**。
 ユーザー判断で **§2D⑵ は「bare 廃止」＝広い範囲で拒否**（音符列・`{ … }` ブロック・
 grace/tuplet・`break`・`$ref`）。宣言（`title`/`clef`/`key`/`time`/`tempo`/`octave`/
@@ -233,6 +321,10 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
   ⇒ 和音本が base より速い測定が出たのはこれが効いた公算。
 - **札**: `condensedStaff` は `IsMultiStaff` に `Items.Any` を 1 本足すが**per-render**で
   アイテム単位ではない。
+
+✅ **閉じた（第126セッション）。以下は着手前の見立てで、数は 3 つとも実測で外れていた**
+（§1 の冒頭を読むこと。stem 24→16 は 12・glyph 24→18 は 16・text 1→4 は 3、そして第4小節は
+二声ではなく**和音**だった）。**⑷ スロット方向の強制だけは段③として残っている。**
 
 ★★★ **次の一手 = 段②（`combinedStaff { X Y }`）＝ focused session 1 本**。綴りだけ足すのは
 禁止（**合体しないのに combined と名乗る**＝この repo が最も嫌う形）。engraving と同時に入れる。
