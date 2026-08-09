@@ -7926,11 +7926,17 @@
     },
     "tablature-harmonic-tie.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "tab でタイされた harmonic の第2音はフレット数字も山括弧も出ない",
+      "notes": "skip: \\harmonic 綴りなし(lexer に無し・部分表面は @flageolet=丸印 script と @notehead(diamond)=通常譜の頭のみ)=山括弧つき tab harmonic が主張の核。加えて \\clef moderntab も綴りなし。claim のタイ半分(第2音のフレット隠し)は tablature-tie-behaviour.ly が harmonic 無しで測る(そちらで実評価)",
+      "seeAlso": "tablature-tie-behaviour.ly"
     },
     "tablature-harmonic.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "tab の harmonic はフレット数字に山括弧・和音内でも弦指定の有無に関わらず正しい弦(この例では常に弦1)",
+      "notes": "skip: \\harmonic 綴りなし=器材(山括弧 TabNoteHead style)が主張の核。弦選択の半分も \\harmonic が pitch を実音の倍音として扱う機構(LP は sounding pitch から弦を選ぶ)に依存=綴りが入るまで枠が書けない。Lily# の tab 弦選択は固有機能(memory: tab弦=固有)",
+      "seeAlso": "tablature-tie-behaviour.ly"
     },
     "tablature-letter.ly": {
       "category": "scheme",
@@ -7946,7 +7952,9 @@
     },
     "tablature-new-line-spacer.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "行頭の spacer (s2) がエラーにならない(crash 回帰本)",
+      "notes": "exact(コード変更0): 両エンジンとも 2 行レンダ・行頭 s2 の後の b が小節中に立つ・crash なし=claim 成立。tab は原書どおり数字のみ(as numbers)で枠揃え。off-claim 残差: spacer 半分の行内配分が LP 72% 位置 vs LS 53%(明示 break 行の justify で spacer spring の強さが違う regime・野良観測)。twin=scratch\\lpreg\\tabspacer.{lys,svg,-lp.ly,-lp.svg}"
     },
     "tablature-open-string-chord.ly": {
       "category": "override",

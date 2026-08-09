@@ -62,8 +62,12 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 （コード変更0・tab 島 1冊目）**・`b9646b54`・第2便 **fixed 第55号 =
 tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
 （第100起票の返済）+ 二重符幹 0.5（named 債務の返済）**・`a274191a`・第3便
-**fixed 第56号 = tablature-grace-notes.ly = grace fret 比 2^(−2/6)**・
-この handoff と同 commit）。
+**fixed 第56号 = tablature-grace-notes.ly = grace fret 比 2^(−2/6)**・`f395ed39`・
+第4便 **skip 2冊（tablature-harmonic{,-tie} = \harmonic 綴りなし＝山括弧器材が
+主張の核・tie 半分は tablature-tie-behaviour が測る）+ exact 第38 =
+tablature-new-line-spacer.ly（行頭 s2 crash 回帰・コード変更0・両者 2 行で
+エラーなし・off-claim: spacer 半分の行内配分 LP72% vs LS53% = justify spring
+regime 野良観測・twin = tabspacer 一式）**・この handoff と同 commit）。
 
 ★★ **第3便 fixed 第56号 tablature-grace-notes.ly**:
 - twin = scratch\lpreg\tabgrace.{lys,svg,-lp.ly,-lp.svg}。**枠 2 つ**: ⑴ 原書
@@ -126,11 +130,11 @@ tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
   ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
   LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
 
-plain 322 / 処理済 **290**（fixed **56**・exact **37**・skip **180**・open **17**・
-pending **32**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **tablature-harmonic-tie** 以降の tab 島続き（harmonic/tie/tremolo/
-new-line-spacer/tablature.ly）＝tab 幾何 memory（tab頁 anchor・tab幾何・tabタイ弦）
-併読・tabタイ弦 memory は tie 2冊の前に必読。
+plain 322 / 処理済 **293**（fixed **56**・exact **38**・skip **182**・open **17**・
+pending **29**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tablature-tie-behaviour**（tabタイ弦 memory =
+project_lilysharp_tab_chord_tie_string を先に引くこと）→ tablature-tremolo →
+tablature.ly → tabstaff-choirstaff-brace で tab 島完食。
 第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
 slur-flag / slur-nice は文法宿題の棚のまま。
 
