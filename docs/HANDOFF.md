@@ -178,6 +178,23 @@ TryGetValue 1回 + per-staff の SetItems 1回(beam rest 無しなら Empty で�
 新規チューニング定数ゼロ・IncrementalCompiler 非接触(共有 Layout 経路のみ)。
 出力不変は全 snapshot 緑が証明。引用ラチェット緑。
 
+★★ **第7便 = 自己監査(三問・ユーザー問)= 違反 2 訂正・白 3・開示は札のまま**(`c20b9144`):
+- **違反 1 = 第67号の同点挿入順の根拠が嘘だった**——「strict less なので同点は保たれる」
+  と書いたが std::sort は同点で順序未規定。**実測がピン**(本書は note dot 先入れでのみ
+  成立・逆順は note+3/rest+5 に落ちる)と書き直し、別の本が逆を測ったらこの順序が容疑
+  第一と明記。
+- **違反 2 = 反証済みの旧 doc を放置していた**——CalculateRestNoteCollisions の
+  「rest alone in a voice must not move」(VAG −3.55/−4.25 の読み)は
+  **vrest2-probe(\voiceTwo × 全 spacer 相手)の LP 実測で反証**(rest は voiced −4 に
+  動く=LS と一致)。旧測定は別の量(音符の ink)を読んだ可能性、と書き換え。
+- 白 3: ⑴ 第70号の引用 `\defaultchild TabVoice` を engraver-init.ly:1195-1204 実読で
+  確認(真) ⑵ vrest2-probe = voiceTwo 側の voiced 挙動を LP 実測で実証 ⑶ 新規
+  チューニング定数ゼロ・引用ラチェット緑(4242 全緑で確認)。
+- ついで 1: rest dot の default arm が renderer と skyline で 2 度綴られていた →
+  `ElementCoordinator.RestDotDefaultOffset` の 1 つの家に畳んだ(出力不変)。
+- 開示済み札(現状のまま): SetItems 置換=連鎖の字面・note dot per-item 継ぎ目・
+  ragged spanEnd 近似・trill right-neighbor 未読・voice 既定の小節粒度。
+
 ★ **次の一手 = open 12 の続き**(ユーザー3択の②継続)。残り 12 冊 =
 breathing-sign-accidentals(port 入口 = LP breathing-sign の spacing 列参加=
 breathing-sign.cc。LS は固定 offset・notehead→comma 1.92 vs LP 3.77)・
