@@ -190,11 +190,12 @@ internal static class SkylineMath
                 double hi = Math.Min(b1.End, b2.End);
                 // <=, not <: a ZERO-WIDTH overlap — buildings that merely TOUCH at one
                 // x — is a real pairing in LilyPond. Its walk evaluates both heights AT
-                // every merge boundary (skyline.cc:630-633 start_dist/end_dist), so two
-                // stems whose seed boxes share an edge constrain each other at full
-                // height. Measured: stems-clash-between-staves.ly, where the upper
-                // staff's down stem ends exactly where the lower staff's up stem begins
-                // (x 18.425) and the whole 6.5 + 3.333 clearance rides on that point.
+                // every merge boundary, so two stems whose seed boxes share an edge
+                // constrain each other at full height. Measured:
+                // stems-clash-between-staves.ly, where the upper staff's down stem ends
+                // exactly where the lower staff's up stem begins (x 18.425) and the
+                // whole 6.5 + 3.333 clearance rides on that point.
+                // LILYPOND-REF: lily/skyline.cc:628-645 internal_distance — start_dist is taken at start == end after the boundary advance, so the zero-length segment still contributes.
                 if (lo <= hi)
                 {
                     double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
@@ -209,13 +210,18 @@ internal static class SkylineMath
     /// <summary>
     /// <see cref="Distance"/> for RESOLVED building lists (sorted by start,
     /// non-overlapping — <see cref="VerticalSkyline"/>'s invariant): the O(n+m) merge
-    /// walk. Bit-identical to the all-pairs loop over such lists — the walk visits
-    /// every overlapping pair, and a pair's linear sum takes its extremum at an
-    /// overlap endpoint either way.
+    /// walk. Identical to the all-pairs loop on every strict overlap — a pair's linear
+    /// sum takes its extremum at an overlap endpoint either way. At a ZERO-WIDTH touch
+    /// where BOTH lists step at the same x, the two are not the same loop: the
+    /// all-pairs visit also sums the cross pair (earlier building here, later building
+    /// there) that this walk never pairs — and neither does LilyPond's, whose iterator
+    /// advance this walk copies (skyline.cc:640-644). THIS walk is the literal port;
+    /// the all-pairs loop serves the lazy envelope contract, where summing every
+    /// covering pair is the point.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/skyline.cc:617-649 internal_distance() — LilyPond advances
-    ///   two iterators in step (:645-648), never the cross product; its skylines are
+    ///   two iterators in step (:640-644), never the cross product; its skylines are
     ///   always resolved. The all-pairs cost was what the pointwise dynamics port made
     ///   visible: a label's outline (~dozens of buildings) against a full system
     ///   profile (~hundreds) per dynamic priced a dynamics-heavy page at 3×
@@ -245,7 +251,9 @@ internal static class SkylineMath
                 max = Math.Max(max, Math.Max(dLo, dHi));
             }
             // Advance the list whose building ends first — sorted and disjoint per
-            // list, so every overlapping pair is still visited (skyline.cc:645-648).
+            // list, so every overlapping pair is still visited (skyline.cc:640-644).
+            // ⚠️ The range said :645-648 until 2026-08-09 (session 121) — that is the
+            // loop EXIT (touch_point/return), the neighbour of the advance it named.
             if (b1.End <= b2.End) i++;
             else j++;
         }

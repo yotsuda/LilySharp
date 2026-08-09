@@ -535,12 +535,21 @@ internal sealed class SkylineBuilder
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         voice.Measures, measureIndex, itemIndex, measureLayout);
 
-                    // ...plus the drawn collision shift (VoiceId is 1-based). A staff-owned
-                    // length, so it scales with the staff like every other seed quantity.
+                    // ...plus the drawn collision shift (VoiceId is 1-based), RAW — not
+                    // through StaffSize.Span. The renderer adds this offset to itemX in
+                    // UNSCALED page X even on an ossia (SharedRenderer wraps ossia drawing
+                    // in UnscaledXDrawingContext, so the X axis never scales, and voiceX is
+                    // the full-size head width there too — a pre-existing renderer
+                    // simplification this seed must MATCH, not correct). Scaling it here
+                    // was tried first, from the seed rule "a staff-owned length scales":
+                    // identical on a plain staff (Span is the identity), wrong by
+                    // 1 − magstep(-3) of a head on an ossia's shifted voice. No corpus
+                    // point reaches an ossia multi-voice collision yet — the audit caught
+                    // it, not a measurement.
                     if (collisionShifts is not null
                         && collisionShifts.TryGetValue(
                             new VoiceItemKey(measureIndex, vi + 1, itemIndex), out var collisionShift))
-                        itemX += StaffSize.Of(staff).Span(collisionShift);
+                        itemX += collisionShift;
 
                     // A beamed note whose beam is seeded (AddBeamsToSkyline) must NOT also
                     // reserve an unbeamed stem, or the stale over-reservation would win.

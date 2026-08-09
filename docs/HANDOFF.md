@@ -66,8 +66,28 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 （string-number-around-slur = \3 の消費者は tab 経路のみ＝通常譜の丸数字 grob
 対応物ゼロ+\textLengthOn 綴りなし・system-separator 族 2冊 = \paper
 system-separator-markup が器材そのもの・tablature-chord-repetition-finger =
-\tabChordRepeats 綴りなし+open string 強制 -0 の fret 選択消費なし）・この handoff と
-同 commit）。
+\tabChordRepeats 綴りなし+open string 強制 -0 の fret 選択消費なし）・`e51e379a`・
+第6便 **自己監査（ユーザー三問）＝違反 1 訂正（出力不変）・誤引用 1 訂正・白 4**・
+この handoff と同 commit）。
+
+★★ **第6便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
+- **違反 1 = 衝突シフト seed の Span（訂正済・出力不変）**: 「staff 所有量は scale」
+  という seed の規則から**推定**で `StaffSize.Span(shift)` を掛けていた——renderer の
+  実体は **UnscaledXDrawingContext**（ossia の group は 0.7071 でも X 軸は 1/scale
+  補償＝素の page X・voiceX も素のまま加算）。default staff は Span 恒等＝**照合 exact
+  でも捕まらない時限**（ossia×多声衝突で発火・corpus 未踏）＝第120 の loose ideal と
+  同型 2 例目。素の加算に訂正・renderer が ossia でも full-size 頭幅の voiceX を使う
+  既存簡略は「seed は描画に合わせる（正さない）」とコメントに named。
+- **誤引用 1（訂正済・開示付き）**: SkylineBuilding の既存引用 :645-648（iterator
+  advance の名指し）は **loop exit（touch_point/return）＝隣**を指していた→ :640-644。
+  「範囲が隣の分岐を指す」型（§7 の 2026-07-28 と同じ）。
+- **検算で白 4**: ⑴ lo<=hi の等価性——merge walk は LP の advance（:640-644）を
+  丸写し＝境界で LP が組む対だけ組む（両側同時段差の cross 対は LP も組まない）。
+  all-pairs 版は cross 対も足す＝lazy envelope 契約用の Lily# 固有装置、と
+  「Bit-identical」doc を訂正して開示 ⑵ :628-645/:630-633 の行番号は実読で一致
+  ⑶ VoiceId 1-based は stclash の voice2 シフトがヒットしたことで実測証明
+  ⑷ calc_positioning_done の実在 grep + skyline.cc の正式 REF 行を追加
+  （ラチェット緑・全緑 4223 で確認）。
 
 ★★★ **第3便 fixed 第54号 stems-clash-between-staves.ly = LP exact**:
 - twin = scratch\lpreg\stclash.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（LP の indent=10cm は
