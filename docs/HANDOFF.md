@@ -189,12 +189,22 @@ lyric-tie・lyrics-pass-under-bar(§2A 棚)・repeat-volta-initial-grace(grace c
 **着手前に棚の3決定が要る・単独修理として着手しない**。①文法拡張(推奨提示済・
 skip 197 の ≥74 冊解錠)と③ markup 55 / override 89 は棚のまま。
 
-★ perf(第4便も静的検分のみ・A/B 未実施 = 開示): 第69号の新規コスト = per-trill の
-dir 解決1回 + 下側 stacker の per-DOWN-trill 置き(DOWN trill 無しなら早期 return
-恒等)+ VoiceItemX(非 primary のみ O(item))。新規チューニング定数ゼロ・
-IncrementalCompiler 非接触。出力不変(単声/primary)は全 snapshot 緑が証明。
+★★ **perf 監査 round 25 実施(第6便・perf-ab25.ps1・base = 3fce5fea worktree
+C:\MyProj\LilySharp-perfbase-3fce・残置・median-of-3 両順)= 実退行なし・違反 1 修正**:
+- **違反 1 = skyline の rest-dot memo を per-REST-ITEM で CWT lookup していた**
+  (SkylineBuilder・毎キーストロークのループ)→ per-staff に hoist(`bd7ae229`)。
+  初測 restdot300(新設・300小節×2声×付点 rest/付点音の同モーメント共存=今週の
+  重い側)が両順 +3.1/+8.5 = 容疑 → hoist 後 **−2.5/−11.0 = 両順 curr が速い=
+  容疑消滅(guard 再測型の4例目)**。hash MATCH(この本の形は出力不変で正=voiced/
+  solo dot とも旧規則と同着地・span 全小節で colharm 形も不発)。
+- tab300(tab 経路対照)+1.5/−5.2 = 符号跨ぎ drift・hash MATCH(CreateTab 全 voice 化は
+  単声で恒等の証明)。plain1k(非接触対照)−13.6/−2.4・hash MATCH——**この機械の
+  drift 帯は ±13% 級**(minでなく中央値+対照で読む家訓の再確認)。
+- 静的検分: 第69号 = per-trill dir 解決1回 + 下側 stacker(DOWN 無しなら恒等)+
+  VoiceItemX(非 primary のみ O(item))。第70号 = CreateTab の配列コピーのみ。
+  新規チューニング定数ゼロ・IncrementalCompiler 非接触(全便共有 Layout 経路のみ)。
 
-未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 101)・
+未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 103)・
 テスト **4242 passed / 0 failed / 4 skipped**(+5 = BeamRestChainTests・
 RestDotColumnTests・VoicedDisplacementDiesWithTheSpan・TrillSpannerDirectionTests・
 TabPolyphonyTests・全スイート確認済)・snapshot 動き 3 枚(第68号・census 済
