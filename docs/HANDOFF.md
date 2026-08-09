@@ -124,9 +124,29 @@ renderer 他 8 か所が読む `VoiceDefaults.GetDefaultStemUpAt` は**小節粒
 **1 小節の中で apart と chords が混ざる**と非 apart 側も強制されうる。probe は小節境界で
 切り替わるので**今のコーパスでは binding しない**。閉じるのは §2A（予約と描画の統一）の側。
 
-★ **perf**: 新しい走査は combinedStaff のときだけ。**毎キーストロークの経路に足したのは
-`MeasureContentKey.AddStaffIdentity` の `IsDefaultOrEmpty` 判定 1 個**（早期 return つき）。
-`RenderSpec.IsMultiStaff` の `Items.Any` は per-render。⇒ §7.9 の「足していない例」側。
+★★ **perf 監査 round 27**（`scratch\lpreg\perf-ab27.ps1`・base = `875d7324` worktree
+`C:\MyProj\LilySharp-perfbase-8753` 残置・median-of-5 両順）。
+**まず数えた**（§5.3「性能は回数で測る」）——combinedStaff を**使わない**楽譜に足したものは:
+⑴ `MeasureContentKey.AddStaffIdentity` に `IsDefaultOrEmpty` 判定 1 個（早期 return）。
+**これは毎キーストロークの経路**（`IncrementalCompiler.cs:151` が `Compute` を 1 回呼び、
+中は 譜×小節 回）＝**譜×小節 回のブール判定**。同メソッドは元から `hc.Add` を 15 本
+持つので、その関数自身の中でも 1/15 以下。⑵ `LayoutEngine.CalculateVoiceCollisions` に
+譜の走査 1 本（per-layout）⑶ `RenderSpec.IsMultiStaff` の `Items.Any` は**呼び手 1 か所・
+per-render**（`SvgGenerator.cs:149`）。**per-item のものはゼロ。**
+
+| 入力 | base-first | curr-first | hash |
+|---|---|---|---|
+| hairpingrand1k（grand staff×1000小節＝譜×小節が最多＝重い側） | −0.9% | +6.0% | MATCH |
+| plain1k（**非接触対照**） | −1.1% | −6.2% | MATCH |
+
+**重い側で符号が順序によって反転し、非接触対照が 5 ポイント振れている**＝機械の drift 支配
+（round 25/26 と同じ帯）。⇒ **「退行なし」ではなく「この帯では計測不能」**、そして
+**在処を名指せるのは上の数え方のほう**。**hash は両方 MATCH**＝combinedStaff を含まない
+楽譜の出力は 1 ビットも動いていない。
+★ **combinedStaff を*使う*側も測った**（`perf-comb300.lys` 対 `perf-cond300.lys`＝
+同じ音楽 300 小節を combined と condensed で・同一バイナリ）: **combined のほうが速い**
+（−5.9% / −14.8%・両順とも同符号）。合体で**列が半分になる**ので、解析の増分より
+下流のレイアウトの減分が大きい。⚠️ 絶対値は順序で 2516→3349ms と振れるので**符号だけ**主張する。
 
 ★★★ **第2便 = 解錠した台帳の消化に着手＝2 冊 exact（コード変更 0）**。
 **台帳: plain 322 = fixed 70・exact 45・skip 195・open 12**（§0 の数え方で確認）。
