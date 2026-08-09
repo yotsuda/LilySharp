@@ -483,6 +483,10 @@ internal sealed class SkylineBuilder
             return;
         }
 
+        // The rest-dot column memo, once per staff (a static CWT hit) — the per-item
+        // read below is a plain dictionary lookup.
+        var restDotOffsets = ElementCoordinator.RestDotOffsetsOf(staff);
+
         // A voice the collision pass pushed sideways is reserved WHERE IT IS DRAWN.
         // The renderer adds this shift to every head, stem and ledger X it draws
         // (SharedRenderer via LayoutEngine.CalculateVoiceCollisions), so a seed without
@@ -571,12 +575,13 @@ internal sealed class SkylineBuilder
                     // ...and its DOT where the dot column put it (relative to the rest,
                     // so it rides the same shift) — the renderer's DrawRest reads the
                     // identical memo, which is what keeps this a seed and not a second
-                    // spelling. Null falls to the solo default inside.
+                    // spelling. Null falls to the solo default inside. The memo is
+                    // fetched ONCE per staff (restDotOffsets above), not per item —
+                    // this loop is per keystroke.
                     int? restDotRel = item is RestItem { Dots: > 0 }
-                        ? ElementCoordinator.RestDotOffsetsOf(staff)
-                            .TryGetValue(new RestShiftKey(measureIndex, vi, itemIndex), out var rd)
-                            ? rd
-                            : null
+                        && restDotOffsets.TryGetValue(
+                            new RestShiftKey(measureIndex, vi, itemIndex), out var rd)
+                        ? rd
                         : null;
 
                     AddMusicItemToSkylines(item, itemX, staffMiddleUp, StaffSize.Of(staff),
