@@ -110,7 +110,9 @@ internal static partial class SharedRenderer
                         // (glyph + dots) together. LILYPOND-REF: lily/beam.cc:1331.
                         double restShiftY =
                             layout.GetRestShift(ml.MeasureIndex, voiceNumber - 1, itemIdx) * 0.5;
-                        DrawRest(rest, itemX, staffY + restShiftY, gc);
+                        DrawRest(rest, itemX, staffY + restShiftY,
+                            layout.GetRestDotOffset(ml.MeasureIndex, voiceNumber - 1, itemIdx),
+                            gc);
                     }
                     break;
                 case ChordItem chord:
@@ -1046,7 +1048,8 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawRest(RestItem rest, double x, double staffY, IDrawingContext gc)
+    private static void DrawRest(RestItem rest, double x, double staffY, int? dotOffset,
+        IDrawingContext gc)
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
         char glyph = EmmentalerGlyphs.GetRest(noteValue);
@@ -1059,15 +1062,19 @@ internal static partial class SharedRenderer
         using (gc.Source(rest.SourcePosition))
             gc.DrawGlyph(glyph, x, y, FontSize);
 
-        // Augmentation dots: one dot-width right of the rest's ink, in the
-        // space above the middle line (standard rest-dot position).
-        // LILYPOND-REF: lily/dot-column.cc:252-257 — rest dots translate by
-        //   the rest extent plus the DotColumn padding (one dot width).
+        // Augmentation dots: one dot-width right of the rest's ink, at the position the
+        // dot COLUMN solved RELATIVE to the rest's origin (the dot's Y-parent is the
+        // rest, so it rides every shift the rest took). Absent an entry, the solo answer
+        // applies: one position up off the origin's line — one position DOWN for a
+        // hanging semibreve.
+        // LILYPOND-REF: lily/dot-column.cc:194-227 calc_positioning_done;
+        //   :252-257 — rest dots translate by the rest extent plus one dot width;
+        // LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position.
         if (rest.Dots > 0)
         {
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
             double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + dotWidth;
-            double dotY = staffY - 2 + 0.5; // staff position +1 (3rd space)
+            double dotY = y + (dotOffset ?? (noteValue == 1 ? -1 : 1)) * 0.5;
             for (int d = 0; d < rest.Dots; d++)
                 using (gc.Source(rest.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,

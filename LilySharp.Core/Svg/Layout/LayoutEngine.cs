@@ -326,6 +326,14 @@ internal sealed class LayoutEngine
         var (voiceOffsets, headWipes, dotAdjustments, partCombineLayouts) =
             CalculateVoiceCollisions(score, systemsArray);
 
+        // The dot-column answer for every dotted rest, through the static memo so the
+        // renderer and the skyline seed read what one solve produced (same slot-sharing
+        // granularity across staves as RestShifts — the key has no staff axis).
+        var restDotOffsetsBuilder = ImmutableDictionary.CreateBuilder<RestShiftKey, int>();
+        foreach (var (_, staffForDots, _) in score.EnumerateStaves())
+            foreach (var kv in ElementCoordinator.RestDotOffsetsOf(staffForDots))
+                restDotOffsetsBuilder[kv.Key] = kv.Value;
+
         var result = BuildScoreLayout(pages, systemsArray,
             allBeamLayouts.ToImmutableArray(), allTieLayouts.ToImmutableArray(),
             allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
@@ -334,7 +342,10 @@ internal sealed class LayoutEngine
             headWipes,
             dotAdjustments,
             restShifts,
-            partCombineLayouts);
+            partCombineLayouts) with
+        {
+            RestDotOffsets = restDotOffsetsBuilder.ToImmutable(),
+        };
         return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
     }
 

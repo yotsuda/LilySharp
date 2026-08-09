@@ -2098,7 +2098,7 @@
       "category": "plain",
       "state": "open",
       "claim": "付点付きharmonic符頭(付点は隠される)の声部衝突解決がクラッシュしない",
-      "notes": "第102セッション下見+実測(twin=lys/にあり・両者クラッシュせず=主張の核は両立)。綴りの学び: LP \\harmonic(ダイヤ+付点抑制)=Lily# @notehead(diamond)——@harmonicは○(flageolet別名)の明記設計・**@注釈の複合は括弧形@notehead(diamond)**(dotは.up/.down専用・@notehead.diamondはパース不能でvalidator一覧のdot表記はMarkName内部表現)。乖離3件: ⑴harmonic付点が消えない(LPは\\harmonicで付点抑制=Lily#に対応物なし・枠差) ⑵**衝突シフト1.377 vs LP 1.300(Δ0.073=1.3774-1.3042=半vs黒符頭幅の差そのもの)**——advance/ink族・§2Aの「4例目GetColumnNoteheadWidth読者ゼロ」に観測者が付いた可能性・note-collision.cc:427-438のwid=support head extentの読み比べが要る(dot-force-down/meshing regimeと同族) ⑶voice span+継続r4でLYS2001誤警告(2声目の小節3/4扱い)。ダイヤ頭/シャープ/fis X=LP完全一致(9.34)・rest Δ0.10はシフト差の下流 【第4便で機構確定】LP dump実測(dump-nc.ily=NoteColumnのsystem相対X): up列shift 0.000・down列shift +1.3000=ダイヤ頭ink幅そのもの(fis頭extent 0..1.2999・e頭 0..1.3774)。正規化式(upRight-downLeft)/wid×widの網の中でLily#はupRight=HeadWidth(noteValue)=style盲の1.3774を読む=Δ0.073の正体は**advance/inkでなくstyle-blind**(NoteCollision.cs:435-442の警告コメント「次のstyleが来たら黙って間違う」が的中)。修正=⑴Extract-EmmentalerMetrics.pyにdiamond/cross等のstyle別notehead箱を追加+再生成 ⑵GetNoteheadBBoxのstyle-aware化 ⑶NoteCollisionの2呼び出し元(collect時StaffAccidentalColumns/layout時CalculateVoiceOffsets)へstyle配線。collision-seconds.lyは通常頭のみ=この修正と独立に処理可能"
+      "notes": "【第124再測: LS出力が起票時から3要素変化(stem短縮・glyph x+1.38・pos568頭が rel−2.0へ上移動=第97 touch/衝突系修理の波及疑い)。claim核(両者no-crash)は不変・LP再照合未実施】第102セッション下見+実測(twin=lys/にあり・両者クラッシュせず=主張の核は両立)。綴りの学び: LP \\harmonic(ダイヤ+付点抑制)=Lily# @notehead(diamond)——@harmonicは○(flageolet別名)の明記設計・**@注釈の複合は括弧形@notehead(diamond)**(dotは.up/.down専用・@notehead.diamondはパース不能でvalidator一覧のdot表記はMarkName内部表現)。乖離3件: ⑴harmonic付点が消えない(LPは\\harmonicで付点抑制=Lily#に対応物なし・枠差) ⑵**衝突シフト1.377 vs LP 1.300(Δ0.073=1.3774-1.3042=半vs黒符頭幅の差そのもの)**——advance/ink族・§2Aの「4例目GetColumnNoteheadWidth読者ゼロ」に観測者が付いた可能性・note-collision.cc:427-438のwid=support head extentの読み比べが要る(dot-force-down/meshing regimeと同族) ⑶voice span+継続r4でLYS2001誤警告(2声目の小節3/4扱い)。ダイヤ頭/シャープ/fis X=LP完全一致(9.34)・rest Δ0.10はシフト差の下流 【第4便で機構確定】LP dump実測(dump-nc.ily=NoteColumnのsystem相対X): up列shift 0.000・down列shift +1.3000=ダイヤ頭ink幅そのもの(fis頭extent 0..1.2999・e頭 0..1.3774)。正規化式(upRight-downLeft)/wid×widの網の中でLily#はupRight=HeadWidth(noteValue)=style盲の1.3774を読む=Δ0.073の正体は**advance/inkでなくstyle-blind**(NoteCollision.cs:435-442の警告コメント「次のstyleが来たら黙って間違う」が的中)。修正=⑴Extract-EmmentalerMetrics.pyにdiamond/cross等のstyle別notehead箱を追加+再生成 ⑵GetNoteheadBBoxのstyle-aware化 ⑶NoteCollisionの2呼び出し元(collect時StaffAccidentalColumns/layout時CalculateVoiceOffsets)へstyle配線。collision-seconds.lyは通常頭のみ=この修正と独立に処理可能"
     },
     "collision-head-chords.ly": {
       "category": "scheme",
@@ -2514,9 +2514,9 @@
     },
     "dot-column-vertical-positioning.ly": {
       "category": "plain",
-      "state": "open",
+      "state": "fixed",
       "claim": "dot column が line breaking 前に縦 spacing を起動しない(LP 内部の programming_error 回帰)",
-      "notes": "open。主張自体は LP 内部の評価順序(programming_error 有無)で Lily# に対応装置なし——比較はレイアウトのみ。twin は voiceOne+voiceThree を「第2分岐=全 spacer」で写す(voice{} は分岐順=声番号)。構造一致: F5/E5 の beamed 付点対・A4 16分・voiceThree の r8. が beam の上へ押し上がる機構は両者にある(Lily# GetRestShift=beam.cc:1331 port)。乖離(rest-over-beam regime・sub-ss): ⑴ 休符 Y=LP rel −7.0 vs Lily# −7.5(押し上げ量の量子化 Δ0.5)⑵ 休符の付点=LP (x10.34, rel −6.5)=休符の右下 vs Lily# (10.04, −8.0)=上(rest dot の位置規則が別・要 LP 字面 rest-dot 読み)⑶ 第2列(E5/A4)X が +0.15。f7 LP 側 copy に \\bar |. 入れ忘れ(内部比較には影響なし・再測時に足す)。beam 付点対の dot(F5 の −2.5)は LP 一致"
+      "notes": "open時: 主張自体は LP 内部の評価順序(programming_error 有無)で Lily# に対応装置なし——比較はレイアウトのみ。twin は voiceOne+voiceThree を「第2分岐=全 spacer」で写す(voice{} は分岐順=声番号)。起票時乖離: ⑴休符Y LP−7.0 vs LS−7.5 ⑵休符の付点 LP rel−6.5 vs LS−8.0 ⑶第2列X+0.15。**fixed 第67号(第124S・open再測便)**: ⑴は第113 fixed42 が既に返済(HEAD再測で rel−7.0=LP一致)——起票notesはsnapshot。⑵が本修理=**rest の dot が dot column に不参加**(旧LS=「anchor の1 position 上」固定則)。LP機構=dot-column.cc:143-150/194-227: dot は**PURE位置**(rest=voiced +4)で列に入り、同列の f'8. の dot(+4,dir UP)が先に+5を取るため rest dot のUPシフトは note dot を+7へ玉突き(badness 20)→**DOWN勝ち(+3・badness 5)**=dot-configuration.cc:25-44。dot のY親はrestなので**unpure押し上げ(+4→+14)に乗って+13=LP rel−6.5 完全一致**。solo なら UP(+15)=旧固定則が偶然一致していた形。port=ElementCoordinator.RestDotOffsetsOf(static CWT memo・voice順=同点挿入順は本書がピン)→renderer DrawRest+skyline seed が同じ表を読む(seed は旧来 shift も読まない別綴りだった=同commitで統一)。DotConfiguration.Resolve(既存port)を列単位で消費。照合: rest−7.0/rest dot−6.5/f' dot−2.5/e16−1.5/a'16+0.5/beam中心−4.81・−3.77 全部LP一致=譜相対Yは全要素一致。観測者=RestDotColumnTests。snapshot 0枚。札: ⑴note dot は per-item resolve のまま(列解が note dot を動かす玉突き形は書き戻さない・未踏)⑵DotAdjustment の direction 上書きは列解に未配線(voice既定のみ)⑶X は spacing regime(LS譜幅16.79 vs LP15.62)。f7 LP 側 copy に \\bar |. 入れ忘れ(内部比較には影響なし・再測時に足す)"
     },
     "dot-dot-count-override.ly": {
       "category": "override",
@@ -4159,7 +4159,7 @@
       "category": "plain",
       "state": "open",
       "claim": "Long lyrics should be allowed to pass under the bar line",
-      "notes": "open(第112第5便・主張はLS不成立・アーキ起票・コード変更0=実験はrevert)。twin scratch\\lpreg\\lypassbar.{ly,lys,svg,-ls.svg}。LP実測: foooooooo ink左=先行小節線の3.16左=下を通り、m1幅18.73/m2幅12.95は歌詞に縛られない(小節線は歌詞高さにinkが無くLPの高さ考慮separationはrodを張らない)。LSはLyricSpacingの先頭/末尾クリアランス(GetLyric*Extent+MinItemGap)が小節線通過を禁じ、m2先頭列を押す(m2幅21.7)。**撤去実験の負の結果(陽性対照込み)**: クリアランスを外すとtwinは3.52跨ぎでLP同挙動になるが、snapshot 12冊で音節ink重なり0.1〜12.5ss発生(lyric-break-pricingは壊滅・基線は重なりゼロ)=クリアランスはper-measure springチェーンにおける跨ぎ衝突の唯一の防壁。真の修理=行全体を一つのspacing問題にする跨ぎrod/高さ考慮separation(§2A録画層workstreamと同棚・単独修理として着手しない)。観測者+1: SnapshotLyricOverlapTests=全snapshotの同一行音節重なりゼロの恒久ガード(この実験が8冊で見つけた壊れ方の網)"
+      "notes": "【第124再測: LS出力が起票時から変化(幾何15要素)。アーキ起票(§2A棚)は不変・LP再照合未実施】open(第112第5便・主張はLS不成立・アーキ起票・コード変更0=実験はrevert)。twin scratch\\lpreg\\lypassbar.{ly,lys,svg,-ls.svg}。LP実測: foooooooo ink左=先行小節線の3.16左=下を通り、m1幅18.73/m2幅12.95は歌詞に縛られない(小節線は歌詞高さにinkが無くLPの高さ考慮separationはrodを張らない)。LSはLyricSpacingの先頭/末尾クリアランス(GetLyric*Extent+MinItemGap)が小節線通過を禁じ、m2先頭列を押す(m2幅21.7)。**撤去実験の負の結果(陽性対照込み)**: クリアランスを外すとtwinは3.52跨ぎでLP同挙動になるが、snapshot 12冊で音節ink重なり0.1〜12.5ss発生(lyric-break-pricingは壊滅・基線は重なりゼロ)=クリアランスはper-measure springチェーンにおける跨ぎ衝突の唯一の防壁。真の修理=行全体を一つのspacing問題にする跨ぎrod/高さ考慮separation(§2A録画層workstreamと同棚・単独修理として着手しない)。観測者+1: SnapshotLyricOverlapTests=全snapshotの同一行音節重なりゼロの恒久ガード(この実験が8冊で見つけた壊れ方の網)"
     },
     "lyrics-spanbar.ly": {
       "category": "override",
@@ -5986,7 +5986,7 @@
       "category": "plain",
       "state": "open",
       "claim": "Phrasing slurs do not collide with tuplet numbers",
-      "notes": "open(第112第10便・主張核心成立・コード変更0)。twin scratch\\\\lpreg\\\\phrslurtup.{ly,lys,svg,-ls.svg}。両側置換: \\\\( \\\\)→( )(phrasing slur綴りなし・衝突機構は同じ)・\\\\voiceOne=voice{}{}第1分岐(第2分岐s1)。両エンジンとも無衝突=主張成立: 番号はLP(11.885,8.445)/LS(12.33,8.29)でほぼ同座標。**残差(起票)=積み順が逆**: LPは番号がslur弧の内側(slurが外に膨らむ=TupletNumberのavoid-slur既定inside・slur scoringのextra-encompass)でclearance≈0.5・LSは番号がslurの外側(outside-staff stackerが番号を上へ積む)でclearance≈0.26。avoid-slur=inside regime未移植。⚠️枠の学び: \\\\voiceOneを外すと符尾/beam/番号が下へ行き主張が発火しない(一度踏んだ)——番号とslurを同側に置くのがこの本の前提"
+      "notes": "【第124再測: slur path のみ起票時から変化(左端 9.54,8.89→9.85,7.89=上/平坦化・第116 fixed45 slur-scoring 再建の波及疑い)。積み順 claim の LP 再照合は未実施】open(第112第10便・主張核心成立・コード変更0)。twin scratch\\\\lpreg\\\\phrslurtup.{ly,lys,svg,-ls.svg}。両側置換: \\\\( \\\\)→( )(phrasing slur綴りなし・衝突機構は同じ)・\\\\voiceOne=voice{}{}第1分岐(第2分岐s1)。両エンジンとも無衝突=主張成立: 番号はLP(11.885,8.445)/LS(12.33,8.29)でほぼ同座標。**残差(起票)=積み順が逆**: LPは番号がslur弧の内側(slurが外に膨らむ=TupletNumberのavoid-slur既定inside・slur scoringのextra-encompass)でclearance≈0.5・LSは番号がslurの外側(outside-staff stackerが番号を上へ積む)でclearance≈0.26。avoid-slur=inside regime未移植。⚠️枠の学び: \\\\voiceOneを外すと符尾/beam/番号が下へ行き主張が発火しない(一度踏んだ)——番号とslurを同側に置くのがこの本の前提"
     },
     "point-and-click-types.ly": {
       "category": "scheme",

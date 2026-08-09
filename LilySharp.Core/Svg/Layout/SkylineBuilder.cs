@@ -568,8 +568,20 @@ internal sealed class SkylineBuilder
                             ? rs * 0.5
                             : 0.0;
 
+                    // ...and its DOT where the dot column put it (relative to the rest,
+                    // so it rides the same shift) — the renderer's DrawRest reads the
+                    // identical memo, which is what keeps this a seed and not a second
+                    // spelling. Null falls to the solo default inside.
+                    int? restDotRel = item is RestItem { Dots: > 0 }
+                        ? ElementCoordinator.RestDotOffsetsOf(staff)
+                            .TryGetValue(new RestShiftKey(measureIndex, vi, itemIndex), out var rd)
+                            ? rd
+                            : null
+                        : null;
+
                     AddMusicItemToSkylines(item, itemX, staffMiddleUp, StaffSize.Of(staff),
-                        upSkyline, downSkyline, forcedStemUp, reserveStem, restShiftUp);
+                        upSkyline, downSkyline, forcedStemUp, reserveStem, restShiftUp,
+                        restDotRel);
                 }
             }
         }
@@ -1485,7 +1497,8 @@ internal sealed class SkylineBuilder
         VerticalSkyline downSkyline,
         bool? forcedStemUp = null,
         bool reserveStem = true,
-        double restShiftUp = 0.0)
+        double restShiftUp = 0.0,
+        int? restDotRel = null)
     {
         switch (item)
         {
@@ -1632,15 +1645,20 @@ internal sealed class SkylineBuilder
                 upSkyline.Merge(restUp);
                 downSkyline.Merge(restDown);
                 // The rest's dots, where the renderer puts them (SharedRenderer.DrawRest):
-                // one dot width right of the rest's LILC ink, fixed in the space above the
-                // middle line — the drawn Y does NOT follow a collision-shifted rest, so
-                // neither does the seed. See the NoteItem case for why drawn dots belong
-                // in this profile at all.
+                // one dot width right of the rest's LILC ink, at the dot-column answer
+                // RELATIVE to the glyph origin — riding the same shift the glyph took.
+                // Until 2026-08-09 this seeded a fixed "space above the middle line" while
+                // the drawn dot followed the shifted rest (the comment here even claimed
+                // the drawing did not follow — it did), the two-spellings shape again.
+                // The default arm is DrawRest's: +1 off the origin's line, −1 for a
+                // hanging semibreve.
                 if (restItem.Dots > 0)
                 {
                     double restDotX = x + size.Ink(GlyphMetrics.GetRestBBox(restValue)).Right
                         + size.Span(GlyphMetrics.AugmentationDot.Width);
-                    MergeDotRow(restItem.Dots, restDotX, staffMiddleUp + size.Span(0.5),
+                    double restDotUp = restOriginUp
+                        + size.Span((restDotRel ?? (restValue == 1 ? -1 : 1)) * 0.5);
+                    MergeDotRow(restItem.Dots, restDotX, restDotUp,
                         size, upSkyline, downSkyline);
                 }
                 break;

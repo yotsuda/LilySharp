@@ -1283,6 +1283,138 @@ internal sealed class ElementCoordinator
         return dir * (pos - neutral) > 0 ? pos : neutral + dir * VoicedPosition;
     }
 
+    /// <summary>
+    /// Each dotted REST's augmentation-dot position, in staff positions RELATIVE to the
+    /// rest's own glyph origin, from solving the dot COLUMN the rest shares with the other
+    /// voices' dotted items at the same musical moment. Memoised per <see cref="Staff"/>
+    /// (the answer is a function of the music alone) so the renderer, the skyline seed and
+    /// any later consumer read ONE answer without re-running the whole-staff scan.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dot-column.cc:143-150, 194-227 calc_positioning_done — dots
+    /// enter the configuration at their PURE positions and a rest's pure position is its
+    /// VOICED one (<see cref="VoicedRestPosition"/>): the Rest_collision and beam pushes
+    /// are unpure, and the dot, whose Y-parent is the rest, RIDES them afterwards — which
+    /// is why the emitted answer is relative to the rest, not absolute.
+    /// LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position — a log 2..4
+    /// rest's dot starts AT the rest's position (offset 0; a semibreve's at −2 relative to
+    /// its hanging origin is the −1 the renderer's default arm keeps).
+    /// <para>
+    /// dot-column-vertical-positioning.ly is the pin: its r8. dot lands DOWN (pure +4 → +3)
+    /// only because the f'8. dot in the same column already holds +5 — shifting the rest
+    /// dot UP would cascade the note dot to +7 (badness 20 against 5). Solo, the same dot
+    /// goes UP, which is what the old fixed "one position above the origin" rule happened
+    /// to reproduce. The rest dot then rode the rest's unpure +10 to LilyPond's +13.
+    /// </para>
+    /// <para>
+    /// ⚠️ TIES IN THE INSERTION ORDER ARE THE VOICE ORDER (LilyPond acknowledges in
+    /// context order and sorts with a strict less, so equal pure positions keep it):
+    /// the pin above needs the NOTE dot inserted first — the reversed order settles on
+    /// (note +3, rest +5) instead.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOTE dots are read here only as column NEIGHBOURS; the renderer keeps its
+    /// per-item <see cref="DotConfiguration.Resolve"/> for them. A cascade that moves a
+    /// NOTE's dot (two dotted items colliding across voices) would disagree with that
+    /// per-item answer — no corpus book binds one yet, and the seam is named here rather
+    /// than discovered. The note-collision DotAdjustment direction override is likewise
+    /// not read (voice-default directions only, as the renderer's fallback arm).
+    /// </para>
+    /// </remarks>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Staff, ImmutableDictionary<RestShiftKey, int>> _restDotOffsets = new();
+
+    internal static ImmutableDictionary<RestShiftKey, int> RestDotOffsetsOf(Staff staff)
+        => _restDotOffsets.GetValue(staff, CalculateRestDotOffsets);
+
+    private static ImmutableDictionary<RestShiftKey, int> CalculateRestDotOffsets(Staff staff)
+    {
+        if (staff.Voices.Length < 2)
+            return ImmutableDictionary<RestShiftKey, int>.Empty;
+
+        var offsets = ImmutableDictionary.CreateBuilder<RestShiftKey, int>();
+        int measureCount = staff.Voices.Min(v => v.Measures.Length);
+
+        for (int m = 0; m < measureCount; m++)
+        {
+            // Dotted items by onset, voices in order — the column is "starts at the same
+            // moment": a held note's dot lives at its own earlier column (LP acknowledges
+            // grobs during their timestep), so onset equality is the membership.
+            Dictionary<Fraction, List<(int Voice, MusicItem Item, int ItemIndex)>>? moments = null;
+            bool anyDottedRest = false;
+            for (int v = 0; v < staff.Voices.Length; v++)
+            {
+                var t = new Fraction(0, 1);
+                var items = staff.Voices[v].Measures[m].Items;
+                for (int i = 0; i < items.Length; i++)
+                {
+                    var item = items[i];
+                    bool dotted = item switch
+                    {
+                        RestItem r => r.Dots > 0 && !r.IsSpacer && !r.IsMultiMeasure,
+                        NoteItem n => n.Dots > 0,
+                        ChordItem c => c.Dots > 0,
+                        _ => false,
+                    };
+                    if (dotted)
+                    {
+                        moments ??= new Dictionary<Fraction, List<(int, MusicItem, int)>>();
+                        if (!moments.TryGetValue(t, out var list))
+                            moments[t] = list = new List<(int, MusicItem, int)>();
+                        list.Add((v, item, i));
+                        anyDottedRest |= item is RestItem;
+                    }
+                    t += GetItemDuration(item);
+                }
+            }
+            if (!anyDottedRest)
+                continue;
+
+            foreach (var column in moments!.Values)
+            {
+                if (!column.Exists(e => e.Item is RestItem))
+                    continue;
+
+                var positions = new List<int>();
+                var dirs = new List<int>();
+                var restSlots = new List<(int InputIndex, int Voice, int ItemIndex, int Pure)>();
+                foreach (var (v, item, i) in column)
+                {
+                    bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, v, m) ?? (v % 2 == 0);
+                    int dir = voiceUp ? 1 : -1;
+                    switch (item)
+                    {
+                        case RestItem rest:
+                            int pure = (int) VoicedRestPosition(
+                                dir, GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                            restSlots.Add((positions.Count, v, i, pure));
+                            positions.Add(pure);
+                            dirs.Add(0);   // a rest's dot declares no direction (dp.dir_
+                                           // is set for note heads only, dot-column.cc:203-205)
+                            break;
+                        case NoteItem note:
+                            positions.Add(note.StaffPosition);
+                            dirs.Add(dir);
+                            break;
+                        case ChordItem chord:
+                            foreach (var n in chord.Notes)
+                            {
+                                positions.Add(n.StaffPosition);
+                                dirs.Add(dir);
+                            }
+                            break;
+                    }
+                }
+
+                var solved = DotConfiguration.Resolve(positions, dirs);
+                foreach (var (idx, v, i, pure) in restSlots)
+                    offsets[new RestShiftKey(m, v, i)] = solved[idx] - pure;
+            }
+        }
+
+        return offsets.ToImmutable();
+    }
+
     /// <summary>Staff positions of every head in a note or chord.</summary>
     private static IEnumerable<double> StaffPositionsOf(MusicItem item) => item switch
     {

@@ -260,6 +260,15 @@ internal sealed record ScoreLayout(
     public GrobPropertyResolver GrobPropertyResolver { get; init; } = GrobPropertyResolver.Empty;
 
     /// <summary>
+    /// Each dotted rest's augmentation-dot position relative to the rest's glyph origin,
+    /// in staff positions — the dot-column solve of
+    /// <c>ElementCoordinator.RestDotOffsetsOf</c>. Rests absent here take the default arm
+    /// of <see cref="GetRestDotOffset"/>.
+    /// </summary>
+    public ImmutableDictionary<RestShiftKey, int> RestDotOffsets { get; init; }
+        = ImmutableDictionary<RestShiftKey, int>.Empty;
+
+    /// <summary>
     /// Layout options used to compute this layout. Renderers consult these for
     /// page margins, indents, and other paper-level parameters.
     /// </summary>
@@ -316,6 +325,21 @@ internal sealed record ScoreLayout(
     {
         var key = new RestShiftKey(measureIndex, voiceIndex, itemIndex);
         return RestShifts.TryGetValue(key, out var shift) ? shift : 0;
+    }
+
+    /// <summary>
+    /// The rest's augmentation-dot position relative to its glyph origin, in staff
+    /// positions — <c>null</c> when the dot-column solve holds no entry, in which case the
+    /// consumer's default arm applies: one position up for every short rest (its origin
+    /// sits on a line), which for a hanging semibreve — whose origin is already the line
+    /// above — is one position DOWN into that space.
+    /// LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position;
+    /// lily/dot-column.cc:194-227 (the on-line remove_collision).
+    /// </summary>
+    public int? GetRestDotOffset(int measureIndex, int voiceIndex, int itemIndex)
+    {
+        var key = new RestShiftKey(measureIndex, voiceIndex, itemIndex);
+        return RestDotOffsets.TryGetValue(key, out var rel) ? rel : null;
     }
 
     /// <summary>

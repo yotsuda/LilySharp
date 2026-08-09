@@ -288,16 +288,18 @@ internal static partial class SharedRenderer
                     // own +1/+2 origin offsets are now −1/−2, so the synthetic origins
                     // passed here flip sign to match.
                     double lowerCentralLineY = staffY - (stringCount / 2) * stringSpace;
+                    // dotOffset null: a tab rest keeps the solo default — the dot column
+                    // is a notation-staff device and no tab book has bound one.
                     if (restValue == 2)      // half: DrawRest origin (its bottom) at staffY−2
-                        DrawRest(rest, itemX, lowerCentralLineY + 2.0, gc);
+                        DrawRest(rest, itemX, lowerCentralLineY + 2.0, null, gc);
                     else if (restValue == 1) // whole: DrawRest origin (its top) at staffY−1
-                        DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, gc);
+                        DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, null, gc);
                     else
                     {
                         var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
                         double tabMiddle = staffY - (stringCount - 1) * stringSpace / 2.0;
                         double restOriginY = tabMiddle - (restBBox.Top + restBBox.Bottom) / 2.0;
-                        DrawRest(rest, itemX, restOriginY + 2.0, gc);
+                        DrawRest(rest, itemX, restOriginY + 2.0, null, gc);
                     }
                     break;
             }
