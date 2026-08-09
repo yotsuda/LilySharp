@@ -978,8 +978,8 @@ internal static class PartCombiner
         }
 
         int measureCount = Math.Max(one.Measures.Length, two.Measures.Length);
-        var slot0 = new List<MusicItem>[measureCount];
-        var slot1 = new List<MusicItem>[measureCount];
+        var slot0 = new List<SlotEntry>[measureCount];
+        var slot1 = new List<SlotEntry>[measureCount];
         for (int m = 0; m < measureCount; m++)
         {
             slot0[m] = [];
@@ -988,17 +988,128 @@ internal static class PartCombiner
 
         // Where each sounding item ended up, so a label can name a position in the voice
         // that comes OUT rather than in the part that went in.
-        var landed = new Dictionary<VoiceState, (int Slot, int Measure, int Index)>();
+        var landed = new Dictionary<VoiceState, (int Slot, int Measure, int Entry)>();
         // Where part one put the item of a given moment, so part two's item of the same
         // moment can join it in one note column.
-        var sharedAt = new Dictionary<int, (int Measure, int Index)>();
+        var sharedAt = new Dictionary<int, (int Measure, int Entry)>();
 
         PlaceItems(one, states1, voice1Of, result, slot0, slot1, landed, sharedAt, isPartOne: true);
         PlaceItems(two, states2, voice2Of, result, slot0, slot1, landed, sharedAt, isPartOne: false);
 
-        var voices = BuildVoices(one, two, slot0, slot1, measureCount);
-        var marks = BuildMarks(result, landed);
+        var items0 = new ImmutableArray<MusicItem>[measureCount];
+        var items1 = new ImmutableArray<MusicItem>[measureCount];
+        var index0 = new int[measureCount][];
+        var index1 = new int[measureCount][];
+        for (int m = 0; m < measureCount; m++)
+        {
+            (items0[m], index0[m]) = Materialise(slot0[m]);
+            (items1[m], index1[m]) = Materialise(slot1[m]);
+        }
+
+        // Materialise inserts spacers, so the entry numbers the routing handed out are not
+        // the item indices the built voice has. Translate before the labels are placed.
+        var placed = new Dictionary<VoiceState, (int Slot, int Measure, int Index)>(landed.Count);
+        foreach (var (vs, where) in landed)
+            placed[vs] = (where.Slot, where.Measure,
+                          (where.Slot == 0 ? index0 : index1)[where.Measure][where.Entry]);
+
+        var voices = BuildVoices(one, two, items0, items1, measureCount);
+        var marks = BuildMarks(result, placed);
         return new PartCombineResult(voices, marks, splitList);
+    }
+
+    /// <summary>One routed item and the moment WITHIN ITS MEASURE that it sounds at.</summary>
+    /// <remarks>
+    /// The onset has to be carried because the two parts write into the same slot and a part
+    /// can fall silent in the middle of a measure. Reconstructing the timing by adding up the
+    /// durations of whatever landed in the slot — which is what this did first — puts every
+    /// item after a gap at the wrong moment.
+    /// </remarks>
+    private readonly record struct SlotEntry(Fraction Onset, MusicItem Item);
+
+    /// <summary>
+    /// Turns one slot's routed entries into the item sequence a <see cref="Measure"/> holds,
+    /// filling the gaps with spacer rests, and reports where each entry ended up.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond does not need this step: its five contexts run side by side on a common
+    /// clock, so a context that is handed nothing for a while is simply silent there. A
+    /// Lily# voice is a SEQUENCE whose x follows from the durations in it, so the same
+    /// silence has to be written down — as a spacer, which is never drawn.
+    /// <para>
+    /// ⚠️ An entry whose onset is EARLIER than the end of the entry before it cannot be
+    /// expressed: one Lily# voice cannot hold two overlapping items. It is appended where it
+    /// falls instead, which puts it late. This is not hypothetical — LilyPond reaches it
+    /// whenever the split changes in the middle of a rest, e.g. part one holding r4 in "one"
+    /// while part two starts a solo an eighth later (input/regression/part-combine-silence.ly
+    /// score 2, bar 1: LP's columns are 2.400 apart, this tree's are 4.600 then 2.750).
+    /// Closing it needs the solo/shared stream to be able to move to the other slot, which is
+    /// the same architecture the direction-granularity note in HANDOFF §1 is about.
+    /// </para>
+    /// </remarks>
+    private static (ImmutableArray<MusicItem> Items, int[] IndexOfEntry) Materialise(
+        List<SlotEntry> entries)
+    {
+        var indexOfEntry = new int[entries.Count];
+        if (entries.Count == 0)
+            return ([], indexOfEntry);
+
+        var order = new int[entries.Count];
+        for (int i = 0; i < order.Length; i++)
+            order[i] = i;
+        // Stable: entries written at one onset keep the order the routing gave them, which is
+        // what puts a clef or key change before the note it belongs to.
+        var onsets = entries;
+        Array.Sort(order, (a, b) =>
+        {
+            int c = onsets[a].Onset.CompareTo(onsets[b].Onset);
+            return c != 0 ? c : a.CompareTo(b);
+        });
+
+        var items = ImmutableArray.CreateBuilder<MusicItem>(entries.Count);
+        var position = Fraction.Zero;
+        foreach (int e in order)
+        {
+            var (onset, item) = entries[e];
+            if (onset > position)
+            {
+                foreach (var gap in SpacerDurations(onset - position))
+                    items.Add(new RestItem(gap, 0, item.SourcePosition) { IsSpacer = true });
+                position = onset;
+            }
+            indexOfEntry[e] = items.Count;
+            items.Add(item);
+            var end = onset + SoundingDuration(item);
+            if (end > position)
+                position = end;
+        }
+        return (items.ToImmutable(), indexOfEntry);
+    }
+
+    /// <summary>
+    /// Writes a gap as spacer values, largest first. Only the total matters — a spacer is
+    /// never drawn — but a gap that IS writable is written the way it would be written by
+    /// hand, so a dump of the combined voice reads as music.
+    /// </summary>
+    private static List<Fraction> SpacerDurations(Fraction gap)
+    {
+        var pieces = new List<Fraction>();
+        var remaining = gap;
+        var unit = new Fraction(1, 1);
+        var smallest = new Fraction(1, 128);
+        while (remaining > Fraction.Zero && unit >= smallest)
+        {
+            while (unit <= remaining)
+            {
+                pieces.Add(unit);
+                remaining -= unit;
+            }
+            unit = new Fraction(unit.Numerator, unit.Denominator * 2);
+        }
+        // A gap left by a tuplet is not a sum of written values; one spacer carries it.
+        if (remaining > Fraction.Zero)
+            pieces.Add(remaining);
+        return pieces;
     }
 
     /// <summary>
@@ -1058,10 +1169,10 @@ internal static class PartCombiner
         VoiceState[] states,
         PartCombineVoiceId[] voiceOf,
         SplitState[] result,
-        List<MusicItem>[] slot0,
-        List<MusicItem>[] slot1,
-        Dictionary<VoiceState, (int Slot, int Measure, int Index)> landed,
-        Dictionary<int, (int Measure, int Index)> sharedAt,
+        List<SlotEntry>[] slot0,
+        List<SlotEntry>[] slot1,
+        Dictionary<VoiceState, (int Slot, int Measure, int Entry)> landed,
+        Dictionary<int, (int Measure, int Entry)> sharedAt,
         bool isPartOne)
     {
         var byPosition = new Dictionary<(int Measure, int Item), VoiceState>();
@@ -1072,7 +1183,8 @@ internal static class PartCombiner
         for (int m = 0; m < part.Measures.Length; m++)
         {
             var items = part.Measures[m].Items;
-            bool partOneWroteCommands = isPartOne || slot0[m].Any(i => SoundingDuration(i) == Fraction.Zero);
+            bool partOneWroteCommands = isPartOne || slot0[m].Any(e => SoundingDuration(e.Item) == Fraction.Zero);
+            var onset = Fraction.Zero;
 
             for (int ii = 0; ii < items.Length; ii++)
             {
@@ -1080,19 +1192,28 @@ internal static class PartCombiner
                 if (SoundingDuration(item) == Fraction.Zero)
                 {
                     if (isPartOne || !partOneWroteCommands)
-                        slot0[m].Add(item);
+                        slot0[m].Add(new SlotEntry(onset, item));
                     continue;
                 }
 
                 var vs = byPosition[(m, ii)];
                 var target = voiceOf[vs.SplitIndex];
+                var sounding = SoundingDuration(item);
                 if (target == PartCombineVoiceId.Null)
+                {
+                    // LilyPond routes the part into NullVoice, a context that runs alongside
+                    // the others on the same clock: the music is still there and still takes
+                    // its time, it is just engraved by nobody. Only the ENGRAVING is dropped
+                    // here; the onset walks on, so what the part writes next keeps its moment.
+                    onset += sounding;
                     continue;
+                }
 
                 if (target == PartCombineVoiceId.Two)
                 {
-                    slot1[m].Add(WithVoiceDirection(item, up: false));
+                    slot1[m].Add(new SlotEntry(onset, WithVoiceDirection(item, up: false)));
                     landed[vs] = (1, m, slot1[m].Count - 1);
+                    onset += sounding;
                     continue;
                 }
 
@@ -1106,17 +1227,20 @@ internal static class PartCombiner
                 if (!isPartOne
                     && result[vs.SplitIndex].Config == PartCombineConfig.Chords
                     && sharedAt.TryGetValue(vs.SplitIndex, out var at)
-                    && at.Index < slot0[at.Measure].Count)
+                    && at.Entry < slot0[at.Measure].Count)
                 {
-                    slot0[at.Measure][at.Index] = MergeIntoChord(slot0[at.Measure][at.Index], routed);
-                    landed[vs] = (0, at.Measure, at.Index);
+                    var host = slot0[at.Measure][at.Entry];
+                    slot0[at.Measure][at.Entry] = host with { Item = MergeIntoChord(host.Item, routed) };
+                    landed[vs] = (0, at.Measure, at.Entry);
+                    onset += sounding;
                     continue;
                 }
 
-                slot0[m].Add(routed);
+                slot0[m].Add(new SlotEntry(onset, routed));
                 landed[vs] = (0, m, slot0[m].Count - 1);
                 if (isPartOne)
                     sharedAt[vs.SplitIndex] = (m, slot0[m].Count - 1);
+                onset += sounding;
             }
         }
     }
@@ -1213,7 +1337,9 @@ internal static class PartCombiner
     };
 
     private static ImmutableArray<Voice> BuildVoices(
-        Voice one, Voice two, List<MusicItem>[] slot0, List<MusicItem>[] slot1, int measureCount)
+        Voice one, Voice two,
+        ImmutableArray<MusicItem>[] slot0, ImmutableArray<MusicItem>[] slot1,
+        int measureCount)
     {
         var measures0 = ImmutableArray.CreateBuilder<Measure>(measureCount);
         var measures1 = ImmutableArray.CreateBuilder<Measure>(measureCount);
@@ -1230,9 +1356,9 @@ internal static class PartCombiner
             if (template == null)
                 continue;
 
-            measures0.Add(template with { Items = slot0[m].ToImmutableArray() });
-            measures1.Add(template with { Items = slot1[m].ToImmutableArray() });
-            anySecond |= slot1[m].Count > 0;
+            measures0.Add(template with { Items = slot0[m] });
+            measures1.Add(template with { Items = slot1[m] });
+            anySecond |= slot1[m].Length > 0;
         }
 
         var first = new Voice(one.Name, measures0.ToImmutable());

@@ -58,6 +58,80 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第127セッション＝**未 push 117 件を push（`502660d2..2222418d`・ユーザー指示）**＋
+**LP 回帰台帳の part-combine 族を再開して 1 冊処理**。第112 で「`\partCombine` の綴りが無い」として
+skip した 8 冊は、第126 で `combinedStaff` が入った時点で**札が stale**（台帳の notes 自身が
+「未再測」と書いてあった）。段③ 不要で届く 6 冊のうち **`part-combine-silence` を消化**。
+⚠️ **段③ と `]~` タイの起票は言語判断が要るので手を付けていない**（下の「次の一手」）。
+
+★★★ **修理 1 枚 = Null に落とした要素が時間を食っていなかった**。LP の NullVoice は
+**他の文脈と同じ時計で走る**（音楽は在り、engrave だけ誰もしない）が、移植は
+`PlaceItems` で `continue` して**要素ごと捨てて**いた。スロットは要素の時価を足して x を出すので、
+**落とした 1 つぶんだけ以降が前に詰まる**——score 1 で、合体した `r2` の後の part2 の `r4` が
+**3/4 列ではなく 1/4 列に出ていた**（LP はそこに下の休符を持たない）。
+修理＝スロットを `(onset, item)` で持ち、`Materialise` が onset 順に並べて**隙間を spacer で埋める**
+（`SlotEntry`・`Materialise`・`SpacerDurations` 新設）。LP は 5 つの文脈が共通の時計で走るので
+この段が要らない——**Lily# の声部は時価の列なので、沈黙を書き下す必要がある**、が移植の理屈。
+
+★★ **照合 = LP の grob dump と 1 対 1**（`scratch\lpreg\pcsil-{a,b,c}.ly` 対 `pcsil-*-probe.lys`・
+どちらも譜中心線からの staff space）:
+- **score 1 = 6 列・休符 8 個・位置全一致**（`+2/-2 / -2 / 0 / +2/-2 / +2 / +1`）。
+  **merge 2 つ**（`r2` 対 `r2`・`r1` 対 `r1`）と**非 merge 2 つ**（`r4` 対 `r8`・`r8` 対 `r4`）が
+  **同じ時価の対を順序だけ変えたもの**なので、「長い方が勝つ」では説明できない＝claim の陽性対照。
+- **score 3 = mmrest 対 rest は通常 rest が勝ち、MMR は 1 つも出ない**。4 要素とも位置一致・
+  ラベル `Solo`/`Solo II` 同順。
+- ⚠️ **残差 = score 2 の第1小節だけ**。apart-silence の `r4`（part1・voice one）が**鳴っている最中に**
+  part2 の solo が 1/8 で入る＝LP は "one" と "solo" の**2 文脈で重なる**が、**Lily# の 1 声部は
+  重なる要素を持てない**ので後ろに付く。**LP 列間隔 2.400/2.400 対 LS 4.600/2.750**（第2小節は正しい）。
+  閉じるには **solo/shared の流れが他スロットへ移れること**＝§2A の「向きの粒度」と同じ枠。⇒ **open のまま**。
+
+★ **X 残差の在処が名指せた**: score 1 の LS の列は **LP の `\voiceOne`/`\voiceTwo` 対照
+（`pcsil-ctl.ly`）と 0.005 以内で一致**し、**LP 自身の `\partCombine` 出力だけが ±0.10〜0.20 ずれる**
+（col3 +0.20・col4-6 −0.10）。⇒ **これは Lily# の spacing の誤差ではなく、LP の partCombine が
+二声綴りと違う幅を出すという事実**。score 3 は LS 2.64/6.23/2.65 対 LP 2.898/6.299/2.898。
+
+★★★ **起票 ⑴ = `condensedStaff` が休符に voiced 位置を付けない**（この本の陽性対照の副産物・**未修正**）。
+`pcsil-a-cond.lys` = 同じ音楽を condensed で組むと、**二声の全休符が中心線で完全に重なる**
+（全部 y=0.0、全休符だけ +1.0 が 2 つ）。LP の対照は全列 **+2/−2**。
+root = `MeasureCollector.ResolveVoiceStemDirections` は **part 単位で走る**ので、
+**別 part から組み上げた譜の多声を見ていない**（`VoiceDefaults.IsPolyphonicAt` に届かない）。
+符尾の向きは別経路（`GetDefaultStemUpAt`）で付くので**符尾だけ二声・休符は単声**という食い違い。
+⚠️ **combinedStaff は無傷**（`WithVoiceDirection` が焼くので）。**snapshot が動く見込みなので別便で。**
+
+★★★ **起票 ⑵ = 計器の罠。Rest の `Y-offset` は位置ではない**。`Rest_collision` は
+`force_shift_callback_rest` を rest の Y offset に**鎖でつなぎ**、そのコールバックは
+**渡された offset を `translate_axis` で適用してから 0.0 を返す**（`lily/rest-collision.cc:46-66`）。
+⇒ **他の休符と同じモーメントに居る休符は、どこに描かれていても Y-offset が 0 と読める**。
+これで **1 便まるごと「LP は voice one の休符を 0 に置く」と誤読しかけた**——陽性対照
+（`pcsil-ctl.ly` の素の `\voiceOne`/`\voiceTwo`）が同じ 0.0 を出したので嘘だと分かった。
+`pcdump.ily` は **system 相対 Y ＋ `STAFF sy=` 記録**に切り替え済（`src=`＝**書かれた行:桁**も追加。
+`\partCombine` は声部を書き換えるので、**印字された grob がどちらのパート由来かは src でしか分からない**）。
+⚠️ `ly:input-file-line-char-column` は**値 4 つではなくリスト 1 つ**を返す（`call-with-values` は死ぬ）。
+
+**台帳: plain 322 = fixed 70・exact 45・skip 194・open 13**（§0 の数え方で確認）。
+**テスト 4303 passed / 0 failed / 4 skipped**（開始時 4299＝引継ぎの 4298 が 1 本 stale。
+新規 `PartCombineSilenceTests` 4 本）。**snapshot 0 枚**・Core 0 warning。
+
+**次の一手（候補・ユーザー判断）**:
+⑴ **台帳の続き**——part-combine の plain は 10 冊中 **3 冊消化・残り 7**。**段③ 不要で届くのは 5 冊**
+（`silence-mixed`・`relative`・`tuplet-end`・`mmrest-shared`・`mmrest-after-apart-silence`）。
+⚠️ **`silence-mixed` は `s` と `<< >>` の同時休符積み・`relative` は `\relative` の作用域そのものが
+主張**なので、枠が書けるかの検分から。
+⑵ **起票 ⑴ の修理**＝condensedStaff の休符 voicing（snapshot census 前提）。
+⑶ **段③ = `condensedStaff` の中の `combinedStaff`**（スロット方向の能動的強制）。
+⑷ **向きの粒度**＝§2A の島。**score 2 の残差もここに合流する**（solo/shared がスロットを移れること）。
+⑸ **`]~` のタイを黙って落とす件**（第126 の起票）——言語の判断が要る。
+
+probe 残置（第127）: `pcsil-{a,b,c}.ly`（LP・3 score を 1 冊ずつ）・`pcsil-ctl.ly`（LP の二声対照）・
+`pcsil-{a,b,c}-probe.lys`（Lily# 双子）・`pcsil-a-cond.lys`（起票 ⑴ の対照）・
+`pcsil-extract.ps1`（Lily# SVG を譜中心線基準の ss で読む）。
+⚠️ **`pcsil-extract.ps1` と dump の突き合わせは `data-pos` を持つグリフだけ**——
+**付点は data-pos の無い音楽グリフ**なので、外さないと `f2.` が同じ高さの列 2 つに見える。
+
+---
+
+## 以下は第126セッションの経緯
+
 最終更新 第126セッション＝**段② landed: `combinedStaff { X Y }`＝part combiner 本体**
 （綴り＋engraving を同時投入・前セッションの「次の一手」そのもの）。
 `scm/part-combiner.scm` の `determine-split-list` を**字面移植**し、collect 相の音楽変換
