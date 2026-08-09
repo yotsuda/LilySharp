@@ -1305,20 +1305,6 @@ internal static class OutsideStaffStacker
     {
         if (voltas.IsDefaultOrEmpty)
             return voltas;
-        double VoltaBottom(VoltaBracketLayout v)
-        {
-            // anchor = bracket line. Hooks drop EdgeHeight; the volta number hangs from
-            // 0.3 below the line with VerticalAnchor.Hanging ("y is the top of the glyph
-            // extents"), so its ink reaches its own HEIGHT further down — measured from
-            // the face at the size and style the draw uses (DrawVoltaBrackets: Bold at
-            // 0.6 x 4sp). The deeper of the two bounds the extent.
-            double textDepth = string.IsNullOrEmpty(v.VoltaText)
-                ? 0
-                : 0.3 + TextFontMetrics.InkHeight(
-                    v.VoltaText, 0.6 * 4.0, sans: false, FontStyle.Bold);
-            return Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
-        }
-
         var b = voltas.ToBuilder();
         foreach (var sysGroup in Enumerable.Range(0, b.Count)
             .Where(i => measureToSystem.ContainsKey(b[i].StartMeasureIndex))
@@ -1326,33 +1312,88 @@ internal static class OutsideStaffStacker
         {
             int sysIdx = sysGroup.Key;
 
-            // The spanner is ONE grob: merge every bracket's extent into one pair at
-            // the shared starting anchor (the highest engraver anchor in the group),
-            // place it once, and the move applies to all brackets together.
-            // Frame = system-relative Y-up (system top = 0); v.YUp enters directly.
-            double anchor0 = double.MinValue;
-            foreach (int i in sysGroup)
-                anchor0 = Math.Max(anchor0, b[i].YUp);
-
-            var spanUp = new VerticalSkyline(VerticalDirection.Up);
-            var spanDown = new VerticalSkyline(VerticalDirection.Down);
-            foreach (int i in sysGroup)
+            // ONE spanner per CHAIN of consecutive endings, not per system: the
+            // engraver closes the spanner when a bracket ends with no new one
+            // starting, and the next repeat's alternatives get a fresh spanner —
+            // so two repeats on one line side-position INDEPENDENTLY (volta-
+            // bracket-vertical-skylines.ly: LP fits the d'''' chain at 8.771 and
+            // the a'''' chain at 6.771 in the same system).
+            // LILYPOND-REF: lily/volta-engraver.cc:371-374 make_spanner — a
+            //   bracket with no open spanner makes one;
+            //   lily/volta-engraver.cc:493-499 add_support — the chain's last
+            //   end hands the spanner its staves and closes it.
+            // Within a chain the brackets share one placed Y — that part is the
+            // spanner being a single axis group.
+            // LILYPOND-REF: scm/define-grobs.scm VoltaBracketSpanner —
+            //   (axes . (Y)) (outside-staff-priority . 600) (side-axis . Y).
+            var ordered = sysGroup.OrderBy(i => b[i].StartMeasureIndex).ToList();
+            var chains = new List<List<int>>();
+            foreach (int i in ordered)
             {
-                var v = b[i];
-                // Per bracket the extent stays the box the interval tracker held —
-                // line top at anchor + 0.1, hooks/number depth below — but the
-                // SPANNER's profile is their pointwise union across the system.
-                spanUp.Merge(VerticalSkyline.FromBox(v.StartX, v.EndX,
-                    anchor0 - VoltaBottom(v), anchor0 + 0.1, VerticalDirection.Up));
-                spanDown.Merge(VerticalSkyline.FromBox(v.StartX, v.EndX,
-                    anchor0 - VoltaBottom(v), anchor0 + 0.1, VerticalDirection.Down));
+                if (chains.Count > 0
+                    && b[i].StartMeasureIndex
+                        <= b[chains[^1][^1]].EndMeasureIndex + 1)
+                    chains[^1].Add(i);
+                else
+                    chains.Add(new List<int> { i });
             }
 
-            double anchor = anchor0 + trackers(sysIdx, topStaff[sysIdx])
-                .Place(spanUp, spanDown, OutsideStaffPadding);
+            foreach (var chain in chains)
+            {
+                // Merge the chain's extents into one profile at the shared
+                // starting anchor (the highest engraver anchor in the chain),
+                // place it once, and the move applies to the whole chain.
+                // Frame = system-relative Y-up (system top = 0); v.YUp enters directly.
+                double anchor0 = double.MinValue;
+                foreach (int i in chain)
+                    anchor0 = Math.Max(anchor0, b[i].YUp);
 
-            foreach (int i in sysGroup)
-                b[i] = b[i] with { YUp = anchor };
+                var spanUp = new VerticalSkyline(VerticalDirection.Up);
+                var spanDown = new VerticalSkyline(VerticalDirection.Down);
+                foreach (int i in chain)
+                {
+                    var v = b[i];
+                    // The spanner's profile is the DRAWN stencil, pointwise: the
+                    // thin line spans the bracket, while the hooks and the number
+                    // reach deeper only over their own X. A flat full-width box
+                    // held the hook depth over every note and floated the whole
+                    // chain ~2 ss above LP (volta-bracket-vertical-skylines.ly:
+                    // LP's line clears a d'''' head by padding alone, 0.56, its
+                    // hook dropping harmlessly beside it).
+                    // Geometry mirrored from SharedRenderer.DrawVoltaBrackets:
+                    // line thickness 0.13, start hook iff text, end hook iff
+                    // closed, number ink 0.3 below the line at StartX + 0.5.
+                    void AddBox(double x0, double x1, double bottom)
+                    {
+                        spanUp.Merge(VerticalSkyline.FromBox(
+                            x0, x1, bottom, anchor0 + 0.1, VerticalDirection.Up));
+                        spanDown.Merge(VerticalSkyline.FromBox(
+                            x0, x1, bottom, anchor0 + 0.1, VerticalDirection.Down));
+                    }
+                    bool hasText = !string.IsNullOrEmpty(v.VoltaText);
+                    AddBox(v.StartX, v.EndX, anchor0 - 0.065);          // the line
+                    if (hasText)
+                        AddBox(v.StartX - 0.065, v.StartX + 0.065,      // start hook
+                            anchor0 - VoltaBracketEngraver.GetEdgeHeight());
+                    if (v.IsClosed)
+                        AddBox(v.EndX - 0.065, v.EndX + 0.065,          // end hook
+                            anchor0 - VoltaBracketEngraver.GetEdgeHeight());
+                    if (hasText)
+                    {
+                        double w = TextFontMetrics.Advance(
+                            v.VoltaText, 0.6 * 4.0, sans: false, FontStyle.Bold);
+                        AddBox(v.StartX + 0.5, v.StartX + 0.5 + w,      // the number
+                            anchor0 - 0.3 - TextFontMetrics.InkHeight(
+                                v.VoltaText, 0.6 * 4.0, sans: false, FontStyle.Bold));
+                    }
+                }
+
+                double anchor = anchor0 + trackers(sysIdx, topStaff[sysIdx])
+                    .Place(spanUp, spanDown, OutsideStaffPadding);
+
+                foreach (int i in chain)
+                    b[i] = b[i] with { YUp = anchor };
+            }
         }
         return b.ToImmutable();
     }

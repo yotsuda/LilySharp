@@ -8659,7 +8659,9 @@
     },
     "unfolded-spec.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\unfolded hides music until a repeat is unfolded",
+      "notes": "skip (s123). 器材が主張そのもの: \\unfolded+\\unfoldRepeats(対応物ゼロ)・\\context Staff=名指しコンテキスト意味論・\\fixed・2 score頁(第120起票の別件)。unfold時だけ第2譜が現れる=repeat展開エンジンの回帰でSVG表面の部分置換が立たない。"
     },
     "unpure-pure-container.ly": {
       "category": "scheme",
@@ -8739,7 +8741,9 @@
     },
     "volta-bracket-vertical-skylines.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Volta brackets are vertically fit to objects below them",
+      "notes": "fixed 65 (s123). twin=voltasky{.lys,-lp.ly}(\\repeat volta 3+\\alternative→インライン・ボルタ |: [1.] :| [2.] :| [3.] 両側置換・a''''=A7→LS a(3apos))。修理2枚: ⑴**VoltaBracketSpannerのchain粒度**——LSは1 system=1 spanner(全bracket同Y)、LPはchainが切れるとspannerを閉じ次のrepeatは新spanner(volta-engraver.cc:371-374/:493-499)→同一段のrepeat2つが独立にside-position。連続判定=次Start<=前End+1でchain分割 ⑵**spanner profileがflat箱**(hook/番号深さを全幅適用=線が音符をhook深さ2.0で避けていた)→描画実体(DrawVoltaBrackets)を写したpointwise profile(線=thin全幅・hook=自X±0.065・番号=StartX+0.5..+ink幅)。照合: LP=D7鎖7.085/A7鎖9.085(staff top上・同一段でΔ2.0)vs LS 7.070/9.070=Δ0.015で一致。枠の学び: 縫い目を疑う前に同じレンダ内で相対を測る(pageが縮んでstaffが動いただけの+1.97を幽霊フレームと誤読して一周)。札: quiet床=engraverのYOffsetYUp 3.0(hand-tuned LILYSHARP-OWN・LP quiet~2.46想定・quiet本が測ったら)。観測者VoltaBracketSkylineTests。snapshot 3枚census済(volta行が締まりpage縮小・ラベル行上移=正着の玉突き)。"
     },
     "volta-bracket-warning-end-prematurely.ly": {
       "category": "scheme",
