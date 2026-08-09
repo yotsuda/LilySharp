@@ -8563,7 +8563,9 @@
     },
     "tuplet-number-slur-script.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "Tuplet number position is correct when slurs and scripts are present",
+      "notes": "fixed 63 (s123). twin=tupnumss{.lys,-lp.ly}(R1→r1両側置換・明示break=LP側ragged-right無し・小節はr4 r2で両側充填)。構造: up-stemのbeamed tuplet+slur+accent——LP=番号はbeam上・slur/accentは下側=番号を動かさない。LS照合: beam中心1.00上・slur開始3.05下(LP3.045)・accent3.97下(LP4.001)全一致。修理1枚=**番号XがMemberXPositions(headアンカー)をstem Xとして読んでいた**——SharedRenderer.BeamsはStemXを上乗せする=up-stemで半頭分左(LS16.83=head中点 vs LP26.69=stem中点26.73)。attach補正を追加(第62号のmember X化の続き)。番号Y中心=LSベ0.16差=既知text box regime。観測者SlurAndScript_DoNotMoveTheBeamedNumber(+stem中点ピン)。snapshot 6枚census済(up-stem番号+1.24=attach分・beam=tuplet一致fixtureは第62号以前の値へ回帰=member+attach≡旧式の証明)。文法学び: @accent( は引数括弧に食われる→ e8(@accent の順。"
     },
     "tuplet-number-staffline-size10.ly": {
       "category": "scheme",

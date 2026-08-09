@@ -353,18 +353,28 @@ internal static class TupletBracketEngraver
                         //   columns[0] / columns.back(), the tuplet's own stems;
                         // LILYPOND-REF: lily/tuplet-number.cc:294-299 calc_x_offset —
                         //   the number centres on the bracket's own X-positions.
+                        // MemberXPositions are HEAD anchors (SharedRenderer.Beams
+                        // applies LayoutUtilities.StemX on top of them), so the
+                        // stem centre needs the same attach correction here —
+                        // an up-stem tuplet's number sat half a head left without
+                        // it (LP centres on the stems: tupnumss twin, stem
+                        // midpoint 26.73 = LP number centre 26.69).
                         if (!beam.MemberXPositions.IsDefaultOrEmpty)
                         {
-                            for (int mi = 0; mi < beam.Group.Members.Length; mi++)
+                            for (int mi = 0; mi < beam.Group.Members.Length
+                                 && mi < beam.MemberXPositions.Length; mi++)
                             {
                                 var m = beam.Group.Members[mi];
                                 if (m.ResolveMeasureIndex(beam.Group.MeasureIndex)
                                     != tuplet.MeasureIndex)
                                     continue;
+                                double attach = LayoutUtilities.StemAttachX(isStemUp,
+                                    GlyphMetrics.NoteValueOf(m.Item),
+                                    LayoutUtilities.NoteheadStyleOf(m.Item));
                                 if (m.ItemIndex == tuplet.StartNoteIndex)
-                                    startX = beam.MemberXPositions[mi];
+                                    startX = beam.MemberXPositions[mi] + attach;
                                 if (m.ItemIndex == tuplet.EndNoteIndex)
-                                    endX = beam.MemberXPositions[mi];
+                                    endX = beam.MemberXPositions[mi] + attach;
                             }
                         }
                         // The INVISIBLE bracket's position: the beam's OUTER edge (where

@@ -63,6 +63,37 @@ public class TupletNumberAlignmentTests
             $"numbers collapsed: {brackets[0].NumberX} vs {brackets[1].NumberX}");
     }
 
+    /// <summary>
+    /// tuplet-number-slur-script.ly: the number position is correct when slurs
+    /// and scripts are present. With up stems the slur and the accent both sit
+    /// BELOW the notes while the number rides the beam above — so neither may
+    /// move it. LP twin (scratch/lpreg/tupnumss*): LP number centre 26.69 =
+    /// outer stem midpoint 26.73 (±0.04); slur start 3.045 below the middle
+    /// line, accent 4.001 below — all matched by Lily# after the head-anchor
+    /// attach fix (the number sat half a head left of the stems).
+    /// </summary>
+    [Fact]
+    public void SlurAndScript_DoNotMoveTheBeamedNumber()
+    {
+        var plain = BuildLayout("tuplet 3/2 { e8 e8 e8 } r4 r2 |");
+        var scripted = BuildLayout("tuplet 3/2 { e8(@accent e8 e8) } r4 r2 |");
+        var p = Assert.Single(plain.TupletBracketLayouts);
+        var s = Assert.Single(scripted.TupletBracketLayouts);
+
+        Assert.Equal(p.NumberX, s.NumberX, precision: 6);
+        Assert.Equal(p.NumberYUp, s.NumberYUp, precision: 6);
+
+        // And the number centres on the OUTER STEMS (head anchor + attach),
+        // not on the head anchors.
+        var beam = Assert.Single(scripted.BeamLayouts);
+        double StemX(int mi) => beam.MemberXPositions[mi]
+            + LilySharp.Core.Svg.Layout.LayoutUtilities.StemAttachX(s.IsStemUp,
+                LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(beam.Group.Members[mi].Item),
+                LilySharp.Core.Svg.Layout.LayoutUtilities.NoteheadStyleOf(beam.Group.Members[mi].Item));
+        double stemMid = (StemX(0) + StemX(beam.Group.Members.Length - 1)) / 2.0;
+        Assert.Equal(stemMid, s.NumberX, precision: 6);
+    }
+
     [Fact]
     public void EighthAndSixteenthBeams_PutTheNumberAtTheSameHeight()
     {

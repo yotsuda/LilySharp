@@ -101,8 +101,17 @@ public class TupletNumberTests
         Assert.False(bracket.ShowBracket); // beat-long, fully beamed: number only
         var beam = Assert.Single(layout.BeamLayouts);
 
-        double edgeLeft = beam.OuterEdgeStaffSpaceAtX(beam.LeftX, bracket.IsStemUp);
-        double edgeRight = beam.OuterEdgeStaffSpaceAtX(beam.RightX, bracket.IsStemUp);
+        // The invisible bracket bounds are the tuplet's OWN outer stems (LP
+        // follow-beam reads columns[0]/back()); MemberXPositions are head
+        // anchors, so the stem centre adds the attach — the same Xs the
+        // engraver evaluates the beam face at.
+        double StemX(int mi) => beam.MemberXPositions[mi]
+            + LilySharp.Core.Svg.Layout.LayoutUtilities.StemAttachX(bracket.IsStemUp,
+                LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(beam.Group.Members[mi].Item),
+                LilySharp.Core.Svg.Layout.LayoutUtilities.NoteheadStyleOf(beam.Group.Members[mi].Item));
+        double edgeLeft = beam.OuterEdgeStaffSpaceAtX(StemX(0), bracket.IsStemUp);
+        double edgeRight = beam.OuterEdgeStaffSpaceAtX(
+            StemX(beam.Group.Members.Length - 1), bracket.IsStemUp);
         double padding = bracket.IsStemUp ? -1.1 : 1.1; // device down-positive
         // Device frame from the staff top (middle line = 2.0), reflected to stored Y-up.
         double expected = -((2.0 - edgeLeft) + padding + (2.0 - edgeRight) + padding) / 2.0;
