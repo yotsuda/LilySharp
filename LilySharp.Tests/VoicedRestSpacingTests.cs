@@ -61,6 +61,31 @@ public class VoicedRestSpacingTests
         Assert.Equal(12.10, heads.Max(h => h.X), 0.06);            // LP 12.1022 (was 11.09)
     }
 
+    [Fact]
+    public void VoicedDisplacementDiesWithTheSpan()
+    {
+        // The voiced position is the SPAN's, not the measure's: LilyPond forces a rest
+        // inside << { } \\ { } >> (a spacer partner included — the context alone sets
+        // Rest.direction), and leaves the music after the span unforced. Pinned against
+        // LP 2.26.0 (scratch\lpreg\vrest-probe.{ly,-lp.svg}): the span's r4 at rel −2.0,
+        // the trailing r2 ON the middle line. Before the stamp was scoped to the span's
+        // reach, the measure-granular voice default voiced the trailing rest too
+        // (collision-harmonic-no-dots.ly's r4 sat at −2.0 where LP has the middle), and
+        // rests in a spanned staff's OTHER measures leaked the same way through the
+        // collision pass's own re-derivation.
+        // LILYPOND-REF: scm/music-functions.scm:1042-1057 make-voice-props-set —
+        // the forcing lives and dies with each \\ sublist's own Voice context
+        // (voicify-sublist wraps each block in its own Voice).
+        string svg = Render("time 4/4\n\nvoice { r4 c'4 } { s2 } r2 |\n");
+        double middle = MiddleLineY(svg);
+
+        var r4 = Assert.Single(MusicGlyphs(svg, EmmentalerGlyphs.RestQuarter));
+        Assert.Equal(-2.0, r4.Y - middle, 0.011);                  // LP −2.0 (voiced +4)
+
+        var r2 = Assert.Single(MusicGlyphs(svg, EmmentalerGlyphs.RestHalf));
+        Assert.Equal(0.0, r2.Y - middle, 0.011);                   // LP 0.0 (middle line)
+    }
+
     private static string Render(string source) =>
         LilySharp.Core.Svg.SvgGenerator.Generate(
             SyntaxTree.Parse(source),

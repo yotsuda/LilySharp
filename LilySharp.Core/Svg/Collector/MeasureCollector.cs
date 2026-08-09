@@ -1688,6 +1688,16 @@ public sealed partial class MeasureCollector
         if (voices.Length <= 1)
             return voices;
 
+        // Duration already includes dots (the instance GetItemDuration's rule; this
+        // walk is static, so the three-arm switch is restated here).
+        static Fraction ItemSoundingDuration(MusicItem item) => item switch
+        {
+            NoteItem note => note.Duration,
+            RestItem rest => rest.Duration,
+            ChordItem chord => chord.Duration,
+            _ => Fraction.Zero,
+        };
+
         var rebuilt = voices.ToBuilder();
         for (int vi = 0; vi < voices.Length; vi++)
         {
@@ -1704,8 +1714,40 @@ public sealed partial class MeasureCollector
                 var measure = measures[mi];
                 var items = measure.Items.ToBuilder();
                 bool measureChanged = false;
+                // The span's reach WITHIN the measure: the primary voice's stream keeps
+                // flowing after the span closes (`voice { fis2. } { e2. } r4`), and the
+                // music after it is back in the surrounding context — LilyPond leaves it
+                // unforced (probe vrest-probe.ly: the trailing r2 sits on the MIDDLE
+                // line while the span's own rest takes the voiced +4, spacer partner or
+                // not). The extra voices' tracks hold nothing but span content, so the
+                // span is over where their content ends. ⚠️ An approximation with the
+                // same named reach as the measure-granular one above: a first block
+                // LONGER than every later one (`voice { fis2. r8 } { e2. } …`) stops
+                // forcing where the later blocks stop, where LilyPond's \voiceOne holds
+                // to the end of its own block. Carrying the span's extent on the model
+                // is what closing that would take; the corpus binds only the trailing
+                // case (collision-harmonic-no-dots.ly).
+                var spanEnd = Fraction.Zero;
+                if (vi == 0)
+                {
+                    for (int ov = 1; ov < voices.Length; ov++)
+                    {
+                        if (mi >= voices[ov].Measures.Length)
+                            continue;
+                        var covered = Fraction.Zero;
+                        foreach (var it in voices[ov].Measures[mi].Items)
+                            covered += ItemSoundingDuration(it);
+                        if (covered > spanEnd)
+                            spanEnd = covered;
+                    }
+                }
+                var onset = Fraction.Zero;
                 for (int ii = 0; ii < items.Count; ii++)
                 {
+                    var itemOnset = onset;
+                    onset += ItemSoundingDuration(items[ii]);
+                    if (vi == 0 && itemOnset >= spanEnd)
+                        continue;
                     // The same voice-props distribution reaches RESTS: LilyPond's
                     // make-voice-props-set puts direction on every
                     // direction-polyphonic-grob, and Rest is in that list — the

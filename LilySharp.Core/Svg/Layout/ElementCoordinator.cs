@@ -1141,16 +1141,27 @@ internal sealed class ElementCoordinator
 
             for (int v = 0; v < staff.Voices.Length; v++)
             {
-                // The rest's direction is its voice's: LilyPond reads the Rest's own
-                // direction and falls back to the note column's (:224-226), and in an
-                // ordinary polyphonic texture both are the voice's forced stem direction.
-                bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, v, m) ?? (v % 2 == 0);
-                int dir = voiceUp ? 1 : -1;
-
                 foreach (var (time, item, itemIndex) in byVoice[v])
                 {
                     if (item is not RestItem rest || rest.IsSpacer || rest.IsMultiMeasure)
                         continue;
+
+                    // The rest's direction is the one the collector STAMPED on it
+                    // (ResolveVoiceStemDirections — make-voice-props-set reaches Rest),
+                    // scoped to the span's actual reach; zero means the rest is outside
+                    // every span and takes no voiced displacement at all. Re-deriving
+                    // the measure-granular voice default here instead voiced the
+                    // trailing rest AFTER a span closed mid-measure
+                    // (collision-harmonic-no-dots.ly: its r4 sat two spaces high where
+                    // LilyPond leaves it on the middle line — probe vrest-probe.ly) and
+                    // was a SECOND spelling of the answer ItemSkylineFactory already
+                    // reads off the model.
+                    // LILYPOND-REF: lily/rest.cc:224-226 — the Rest's own direction,
+                    // the note column's only as fallback.
+                    if (rest.VoiceDirection == 0)
+                        continue;
+                    int dir = rest.VoiceDirection;
+                    bool voiceUp = dir > 0;
 
                     // The rest STARTS at its voiced position (dir × 4, line-aligned per
                     // duration) — rest.cc's staff_position_internal — and everything
@@ -1385,8 +1396,13 @@ internal sealed class ElementCoordinator
                     switch (item)
                     {
                         case RestItem rest:
-                            int pure = (int) VoicedRestPosition(
-                                dir, GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                            // Pure position from the STAMPED direction (zero = outside
+                            // every span → the neutral origin), the same slot
+                            // ItemSkylineFactory prices — not a re-derived voice default.
+                            int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                            int pure = rest.VoiceDirection == 0
+                                ? (restValue == 1 ? 2 : 0)
+                                : (int) VoicedRestPosition(rest.VoiceDirection, restValue);
                             restSlots.Add((positions.Count, v, i, pure));
                             positions.Add(pure);
                             dirs.Add(0);   // a rest's dot declares no direction (dp.dir_
