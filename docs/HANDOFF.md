@@ -83,7 +83,28 @@ time-signature-numeric-and-default = 時号 style 切替綴りなし・
 下側 side-position/skyline＝棚）・`71417c79`・第9便 **trill-spanner 族完食 =
 skip 2 + exact 第40 + fixed 第59号**・`83d599d2`・第10便 **自己監査
 （ユーザー三問）＝違反 1 訂正（paren seam・ink 0.05 移動）・開示 2 追記・白 5**・
-この handoff と同 commit）。
+`adfb41b7`・第11便 **perf 監査 round 23＝実退行なし・LINQ 違反 1 修正・
+3冊 hash MATCH**・この handoff と同 commit）。
+
+★★ **第11便 perf 監査 round 23（ユーザー問「プレビューを落とす実装は?」）＝
+実退行なし・違反 1 修正**:
+- **違反 1 = 第58号の和音レベル分配が LINQ だった（修正済）**: `chord.Articulations
+  .OfType<>().ToList()` を全和音・毎 collect（プレビューの増分再コンパイル込み）で
+  実行＝\N の無い普通の和音でも割当。同じ関数の数行上に「Plain loop, not LINQ」の
+  家訓コメントが既にあった——**lazy な plain loop（無ければ null のまま＝割当ゼロ）
+  に書換**。
+- **A/B round 23**（scratch\lpreg\perf-ab23.ps1・base = b9646b54 worktree
+  C:\MyProj\LilySharp-perfbase-b964・残置・median-of-3 両順）:
+  chordsemi1k（和音 collect の重い側）**−10.7/−9.3% = 両順 curr が速い＝退行なし**・
+  tab300（新設・密 tab: tremolo switch+tie 分岐+行頭 scan の重い側・4分+小節内タイ
+  のみ＝出力不変設計）**+0.3/−25.0 = 符号跨ぎ = drift**・plain1k（対照・非接触）
+  −2.5/−3.4 = 機械 drift。**3冊とも hash MATCH**（触っていない出力は不変も証明）。
+- 静的検分（毎キーストロークの目線）: DrawTremolo = 描画のみ・ループ同型・
+  Math.Log2 が 1回/tremolo 増のみ・tab 配線 = per-stem の型 switch（割当なし）・
+  第57号 = 行頭小節のみ O(items) の firstSounding scan + paren は該当音のみ・
+  第59号 = collect 毎 1 回の measureCount（LINQ だが 1 回）・Articulations フィルタ
+  拡張 = ノード毎の型チェック 1 個増。IncrementalCompiler = 共有 Collect/Layout
+  経路のみ（新キャッシュ層・新 per-keystroke 状態なし）。
 
 ★★ **第10便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
 - **違反 1 = 第57号 paren の spine seam（訂正済・ink 0.05/側 移動・snapshot 0）**:
@@ -237,7 +258,8 @@ slur-flag / slur-nice は文法宿題の棚のまま。
 テスト **4228 passed / 0 failed / 4 skipped**（第2/3便+2・第5便+2・第7便+1・
 第9便は釘テスト書換のみ＝±0・全スイート確認済）・snapshot 第122 = **6枚（第2便）
 +2枚（第3便）＋0枚（第5/7/9便）＝census 済・上記**・Core (Debug) 0 warning・
-base worktree = 第121 の節の 5 つそのまま残置。
+base worktree = 第121 の節の 5 つ＋ C:\MyProj\LilySharp-perfbase-b964
+（第122残置・round 23 の base）。
 probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）＋tabdbltrem 一式＋
 ntrem-probe 一式（第55号の照合材）＋tabgrace 一式（第56号の照合材）＋tabspacer 一式
 （exact 第38の照合材）＋tabtie-probe{,2,-lp} 一式（第57号の照合材）＋

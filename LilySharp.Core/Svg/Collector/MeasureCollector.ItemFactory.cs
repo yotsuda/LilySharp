@@ -373,13 +373,18 @@ public sealed partial class MeasureCollector
         // chord-level one, so <e dis'>\5\4 == <e\5 dis'\4> == <e dis'\4>\5
         // (tablature.ly's claim). LilyPond walks the notes in order, the in-chord
         // articulation winning, and REPEATS the last outside event once the list
-        // is exhausted — the repeat is ported as-is.
+        // is exhausted — the repeat is ported as-is. Plain loop with a lazy list,
+        // not LINQ: this runs per chord on every collect walk (the preview's
+        // incremental recompiles included), and almost no chord carries \N — the
+        // common case must not allocate.
         // LILYPOND-REF: lily/articulations.cc:38-80 articulation_list — per note
         //   event, the note's own articulation wins; else articulation_events[j],
         //   j advancing only while more remain.
-        var chordStrings = chord.Articulations
-            .OfType<StringNumberAnnotationSyntax>().ToList();
-        if (chordStrings.Count > 0)
+        List<StringNumberAnnotationSyntax>? chordStrings = null;
+        foreach (var art in chord.Articulations)
+            if (art is StringNumberAnnotationSyntax sn)
+                (chordStrings ??= new()).Add(sn);
+        if (chordStrings != null)
         {
             int j = 0;
             for (int i = 0; i < notes.Count; i++)
