@@ -65,7 +65,28 @@ spacing-loose-polyphony.ly = loose column の port 完結（第119第6便の ope
 第4便 **fixed 第53号 = stem-pure-height-beamed.ly = beamed stem pure height の
 calc_beam 枝 port（下見の open を同セッションで回収）**・`da0ad942`・第5便
 **自己監査（ユーザー三問）＝字面違反 1 訂正（出力不変・全緑 4222）・開示 2 追記**・
-この handoff と同 commit）。
+`cab01507`・第6便 **perf 監査 round 21（ユーザー問「プレビューを落とす実装は?」）＝
+実退行なし**・この handoff と同 commit）。
+
+★★ **第6便 perf round 21（静的検分＋round 19/20 の A/B 証拠の総括）**:
+- **A/B（base = 87c4c62f = セッション開始時点）**: hairpingrand1k −1.7/−18.1・
+  plain1k +12.0/−18.8（符号跨ぎ=drift）・slurbeam300（bake の重い側）−14.9/−2.6・
+  plain1k −9.3/−36.0——**両順で正になった本ゼロ**・plain1k/hairpingrand1k は
+  **hash MATCH**（触っていない本は出力も仕事も不変）。
+- **増分（プレビュー）経路**: IncrementalCompiler は CollectScore と
+  LayoutEngine.Layout の**共有経路のみ**（今回触った家の複製なし・grep 検分）。
+  layout-skip パス（ScoreLayout 再利用）は今回のコードを**丸ごと通らない**——
+  MeasureLayout.LooseChangeHangs も再利用側に乗るので一貫。
+- **静的検分（毎キーストロークの目線）**: loose gate = changeGaps があるペアのみ
+  （稀）・staff 段 wish fallback = wishless ペアのみ（HashSet 1 個 + O(voices×items)）・
+  ComputeLooseChangeHangs = 「変更 item 無し即 null」ゲートで全小節 O(items) のみ・
+  CollectStaffIndicesAtIndex = O(voices) の List ×2/小節・ApplyRods = 分岐順のみで
+  複雑度不変・bake = 既存 stamping ループと同型をbeam群にもう 1 周（collect は
+  全描画の約 3% の枠内・slurbeam300 で不可視を実証）・StemSpacingInfo = null check
+  1 個。**record struct 罠（第109）非該当**: NoteItem/ChordItem は record class・
+  ColumnLayout は太らせず MeasureLayout の null 既定 dict を選んだ。
+- **micro 候補（急がない・A/B に出ない）**: ⑴ bake を第1 stamping ループに畳んで
+  Measure 再構築を 1 周に ⑵ staff fallback の HashSet をスクラッチ再利用。
 
 ★★ **第5便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
 - **違反 1 = loose 吊るしの ideal（訂正済・出力不変）**: set_loose_columns が呼ぶのは
