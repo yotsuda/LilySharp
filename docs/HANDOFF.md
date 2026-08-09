@@ -58,6 +58,52 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択・第1便 fixed 第66号 =
+dot-rest-beam-trigger.ly = rest mover の連鎖化**(`276a2c4a`)。
+
+**台帳: plain 322 = fixed 66・exact 42・skip 197・open 17・pending 0**
+(status.json 実数・§0 の数え方で確認済)。
+
+★★ **第66号の中身**(式検算・照合値は台帳 notes に):
+- **起票残差の大半は既に第113 fixed42 が返済済みだった**(HEAD 再測で確認:
+  r8.×2 = rel +2.0・dot +1.5 = LP 一致)——**open も着手前に再測から**
+  (§0 家訓の新例・起票 notes は書いた時点の snapshot)。
+- 残る1点 = beamed r16 が voiced +4(rel −2.0)のまま beam を避けない。root =
+  ⑴ **rest mover の合成が larger-wins で、LP の連鎖(offset 加算)でなかった**
+  ——LayoutEngine の旧コメントは「larger-wins = LP の2 pass の終着」と主張していたが
+  誤読(|+4| > |+4−2| で beam push が丸ごと消える)
+  ⑵ beam pass が rest ink を中立原点で評価(beam.cc:1388-1390 の prev_offset
+  translate 落とし) ⑶ key が voice0 固定(→ group.VoiceIndex へ)。
+- 修理 = CalculateRestShifts に priorShifts(voiced+Rest_collision 表)を渡して
+  連鎖化(chained total を emit・LayoutEngine は SetItems で置換)。裏取り =
+  Beam_engraver::acknowledge_rest(beam-engraver.cc:211-220)の chain_offset_callback
+  が既存 Y-offset を prev に包む字面 + Rest.minimum-distance = 0.25
+  (define-grobs.scm:2962)。照合: r16 rel −1.0 = LP 完全一致。観測者 =
+  BeamRestChainTests。**snapshot 0枚**(単声 beamed-rest fixture は prev=0 で恒等)。
+- off-claim 札: 列 step 第4 が +0.15(起票時は一致→fixed42 の voiced spacing box
+  副作用の疑い・rest 列の spacing regime・台帳 notes に5 step 全数)。
+
+★ perf(静的検分のみ・**A/B 未実施 = 開示**): 新規コスト = per-beamed-rest の
+TryGetValue 1回 + per-staff の SetItems 1回(beam rest 無しなら Empty で恒等)。
+新規チューニング定数ゼロ・新キャッシュ層/per-keystroke 状態なし・IncrementalCompiler
+非接触(共有 Layout 経路のみ)。出力不変は全 snapshot 緑が証明。引用ラチェット緑。
+
+★ **次の一手 = open 17 の続き**(ユーザー3択の②継続)。候補メモ:
+trill-spanner-direction(修理形釘付け済 = .up/.down 配線 + voice 既定配布 +
+下側 side-position/skyline)・cue-clef-manually(R1-in-voice MMR = アーキ級)・
+多 score 頁の鎖・grace column・録画層 §2A(→ **着手前に棚の3決定が要る・単独修理と
+して着手しない**)。①文法拡張(推奨提示済・skip 197 の ≥74 冊解錠)と③ markup 55 /
+override 89 は棚のまま。
+
+未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 93)・
+テスト **4238 passed / 0 failed / 4 skipped**(+1 = BeamRestChainTests・全スイート
+確認済)・snapshot 動き 0・Core (Debug) 0 warning・base worktree = 第122 の節のまま
+(C:\MyProj\LilySharp-perfbase-31a0 残置)。
+probe 残置(第124 追加分): **drbt-head{,2}.svg**(dot-rest-beam-trigger の HEAD
+再レンダ・修理前/後)＋第123 以前の一式(下の節参照)。
+
+## 以下は第123セッションの経緯
+
 最終更新 第123セッション＝**plain 322 完済**（第1便 **fixed 第60号 =
 tuplet-bracket-avoid-scripts.ly = avoid-scripts 項 port**・`7379d1d0`・第2便
 **fixed 第61号 = tuplet-bracket-direction.ly = get_default_dir の extremal
