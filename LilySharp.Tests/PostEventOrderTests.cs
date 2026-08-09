@@ -30,7 +30,9 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class PostEventOrderTests
 {
-    private static SyntaxTree Parse(string source) => SyntaxTree.Parse(source);
+    // Every case here is a bare note stream, which is no longer a legal top level —
+    // it rides in the minimal document instead.
+    private static SyntaxTree Parse(string music) => MusicSource.Parse(music);
 
     [Theory]
     [InlineData("g4(@cresc a b c) |")]      // marker before articulation

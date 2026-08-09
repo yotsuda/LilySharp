@@ -8,5 +8,17 @@
 
 time 12/8
 tempo 4 = 60
-a''4. a@fermata a@shortfermata a@longfermata |
-a4.@shortfermata a@longfermata a@shortfermata a@longfermata |
+
+part melody
+
+section A {
+  melody {
+    a''4. a@fermata a@shortfermata a@longfermata |
+    a4.@shortfermata a@longfermata a@shortfermata a@longfermata |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

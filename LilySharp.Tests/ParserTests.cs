@@ -610,7 +610,7 @@ key g major
     public void BackToBackRepeatBarline_Inline_ParsesCleanly()
     {
         // ':|:' is a single back-to-back repeat token, not ':|' + a stray ':'.
-        var tree = SyntaxTree.Parse("{ c4 c c c :|: d4 d d d }");
+        var tree = MusicSource.Parse("c4 c c c :|: d4 d d d");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         Assert.DoesNotContain(tree.Diagnostics,
             d => d.Code == DiagnosticCodes.UnexpectedCharacter);
@@ -629,7 +629,7 @@ key g major
     [Fact]
     public void SinglePlacementSuffix_IsClean()
     {
-        var tree = SyntaxTree.Parse("c4@staccato.up");
+        var tree = MusicSource.Parse("c4@staccato.up");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 
@@ -647,7 +647,7 @@ $theme");
     [Fact]
     public void ParseNoteWithArticulation()
     {
-        var tree = SyntaxTree.Parse("{ c4@staccato }");
+        var tree = MusicSource.Parse("c4@staccato");
         Assert.False(tree.HasErrors);
 
         var root = tree.GetRoot();
@@ -657,42 +657,42 @@ $theme");
     [Fact]
     public void ParseNoteWithDynamic()
     {
-        var tree = SyntaxTree.Parse(@"{ c4@p }");
+        var tree = MusicSource.Parse(@"c4@p");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseNoteWithMultipleArticulations()
     {
-        var tree = SyntaxTree.Parse(@"{ c4@staccato@accent@f }");
+        var tree = MusicSource.Parse(@"c4@staccato@accent@f");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseDynamicSequence()
     {
-        var tree = SyntaxTree.Parse(@"{ c4@p d@cresc e@f }");
+        var tree = MusicSource.Parse(@"c4@p d@cresc e@f");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseNoteWithTrill()
     {
-        var tree = SyntaxTree.Parse("{ c4@trill }");
+        var tree = MusicSource.Parse("c4@trill");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseNoteWithMultipleOrnaments()
     {
-        var tree = SyntaxTree.Parse("{ c4@trill d4@mordent e4@turn f4@prall }");
+        var tree = MusicSource.Parse("c4@trill d4@mordent e4@turn f4@prall");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseNoteWithOrnamentAndDynamic()
     {
-        var tree = SyntaxTree.Parse(@"{ c4@trill@p }");
+        var tree = MusicSource.Parse(@"c4@trill@p");
         Assert.False(tree.HasErrors);
     }
 
@@ -700,7 +700,7 @@ $theme");
     public void ParseNoteWithDynamicAtPrefix()
     {
         // New @ prefix for dynamics
-        var tree = SyntaxTree.Parse(@"{ c4@p d@f e@mf }");
+        var tree = MusicSource.Parse(@"c4@p d@f e@mf");
         Assert.False(tree.HasErrors);
     }
 
@@ -710,19 +710,19 @@ $theme");
         // Backslash annotations are no longer accepted: '@' is the one canonical
         // prefix, and backslash is reserved for tablature (\3 string numbers, \tuning).
         // A '\p' is flagged with a hint pointing at '@p'.
-        var tree = SyntaxTree.Parse(@"{ c4\p }");
+        var tree = MusicSource.Parse(@"c4\p");
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics, d => d.Message.Contains("@p"));
 
         // The canonical '@' form is clean.
-        Assert.False(SyntaxTree.Parse(@"{ c4@p }").HasErrors);
+        Assert.False(MusicSource.Parse(@"c4@p").HasErrors);
     }
 
     [Fact]
     public void ParseNoteWithArticulationAndDynamicAtPrefix()
     {
         // Articulation and dynamic both with @ prefix
-        var tree = SyntaxTree.Parse(@"{ c4@staccato@p d@accent@f }");
+        var tree = MusicSource.Parse(@"c4@staccato@p d@accent@f");
         Assert.False(tree.HasErrors);
     }
 
@@ -745,7 +745,7 @@ $theme");
     public void OverrideValue_AcceptsString()
     {
         // Override values may be strings (e.g. a color), not just integers/identifiers.
-        var tree = SyntaxTree.Parse("{ once override NoteHead.color = \"red\" c4 d e f }");
+        var tree = MusicSource.Parse("once override NoteHead.color = \"red\" c4 d e f");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 
@@ -754,7 +754,8 @@ $theme");
     {
         // LilyPond grob properties are kebab-case (force-hshift, X-offset). The lexer
         // splits on '-', so the override parser reassembles the name into ONE token.
-        const string src = "{ override NoteColumn.force-hshift = 2 c4 d e f }";
+        // Round-tripped against the WRAPPED document, since that is the source parsed.
+        var src = MusicSource.Wrap("override NoteColumn.force-hshift = 2 c4 d e f");
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var ov = tree.GetRoot().DescendantNodes<OverrideDeclarationSyntax>().Single();
@@ -766,7 +767,7 @@ $theme");
     [Fact]
     public void RevertProperty_AcceptsHyphenatedLilyPondName()
     {
-        const string src = "{ override NoteColumn.force-hshift = 1 c4 revert NoteColumn.force-hshift d }";
+        var src = MusicSource.Wrap("override NoteColumn.force-hshift = 1 c4 revert NoteColumn.force-hshift d");
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var rv = tree.GetRoot().DescendantNodes<RevertDeclarationSyntax>().Single();
@@ -795,10 +796,11 @@ $theme");
     [Fact]
     public void ParseRepeatUnfold()
     {
-        var tree = SyntaxTree.Parse("repeat unfold 2 { c4 d e f }");
+        var tree = MusicSource.Parse("repeat unfold 2 { c4 d e f }");
         Assert.False(tree.HasErrors);
 
-        var repeat = tree.Root.GetSlot(0) as RepeatExpressionGreen;
+        // Wrapped, so the repeat is no longer a root slot — search the whole tree.
+        var repeat = tree.GetNodes<RepeatExpressionSyntax>().Single();
         Assert.NotNull(repeat);
         Assert.Equal(SyntaxKind.RepeatExpression, repeat.Kind);
     }
@@ -831,7 +833,8 @@ $theme");
     [Fact]
     public void ParseRepeatUnfoldRoundTrip()
     {
-        var source = "repeat unfold 2 { c4 d e f | g2 g | }";
+        // The round-trip subject is the whole parsed document, so compare the wrapped source.
+        var source = MusicSource.Wrap("repeat unfold 2 { c4 d e f | g2 g | }");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());
@@ -853,10 +856,11 @@ $theme");
     [Fact]
     public void ParseParallelExpression()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 d } { e2 f }");
+        var tree = MusicSource.Parse(@"voice { c2 d } { e2 f }");
         Assert.False(tree.HasErrors);
 
-        var parallel = tree.Root.GetSlot(0) as ParallelExpressionGreen;
+        // Wrapped, so the span is no longer a root slot — search the whole tree.
+        var parallel = tree.GetNodes<ParallelExpressionSyntax>().Single();
         Assert.NotNull(parallel);
         Assert.Equal(SyntaxKind.ParallelExpression, parallel.Kind);
     }
@@ -864,14 +868,15 @@ $theme");
     [Fact]
     public void ParseParallelWithMusicBlocks()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 d } { e2 f }");
+        var tree = MusicSource.Parse(@"voice { c2 d } { e2 f }");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseParallelRoundTrip()
     {
-        var source = @"voice { c2 d } { e2 f }";
+        // The round-trip subject is the whole parsed document, so compare the wrapped source.
+        var source = MusicSource.Wrap(@"voice { c2 d } { e2 f }");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());
@@ -880,14 +885,14 @@ $theme");
     [Fact]
     public void ParseParallelThreeVoices()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 } { e2 } { g2 }");
+        var tree = MusicSource.Parse(@"voice { c2 } { e2 } { g2 }");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseNamedVoices_CarryTheirNames()
     {
-        var tree = SyntaxTree.Parse(@"voice sop { c2 } alt { e2 }");
+        var tree = MusicSource.Parse(@"voice sop { c2 } alt { e2 }");
         Assert.False(tree.HasErrors);
         var parallel = tree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>().Single();
@@ -943,7 +948,7 @@ $theme");
     [Fact]
     public void ParseUnnamedVoicesAndLyrics_HaveNoNames()
     {
-        var tree = SyntaxTree.Parse(@"voice { c2 } { e2 }");
+        var tree = MusicSource.Parse(@"voice { c2 } { e2 }");
         Assert.False(tree.HasErrors);
         var parallel = tree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>().Single();
@@ -1080,8 +1085,7 @@ $theme");
     [Fact]
     public void ParseTupletTriplet()
     {
-        var source = "tuplet 3/2 { c d e }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse("tuplet 3/2 { c d e }");
 
         Assert.False(tree.HasErrors);
         var tuplet = tree.GetNodes<TupletExpressionSyntax>().First();
@@ -1093,8 +1097,7 @@ $theme");
     [Fact]
     public void ParseTupletQuintuplet()
     {
-        var source = "tuplet 5/4 { c d e f g }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse("tuplet 5/4 { c d e f g }");
 
         Assert.False(tree.HasErrors);
         var tuplet = tree.GetNodes<TupletExpressionSyntax>().First();
@@ -1105,13 +1108,9 @@ $theme");
     [Fact]
     public void ParseKeyClefTupletCombined()
     {
-        var source = @"
-clef treble
-key g major
-tuplet 3/2 { c d e }
-c4 d e f
-";
-        var tree = SyntaxTree.Parse(source);
+        // clef/key stay at FILE level — in the part header they would re-anchor the
+        // relative octave.
+        var tree = MusicSource.Parse("tuplet 3/2 { c d e } c4 d e f", "clef treble\nkey g major");
 
         Assert.False(tree.HasErrors);
         Assert.Single(tree.GetNodes<ClefDeclarationSyntax>());
@@ -1140,8 +1139,7 @@ c4 d e f
     [Fact]
     public void ParseGraceNotes()
     {
-        var source = "grace { c16 d e } c4";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse("grace { c16 d e } c4");
 
         Assert.False(tree.HasErrors);
         var grace = tree.GetNodes<GraceExpressionSyntax>().First();
@@ -1151,8 +1149,7 @@ c4 d e f
     [Fact]
     public void ParseAcciaccatura()
     {
-        var source = "acciaccatura { c16 } d4";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse("acciaccatura { c16 } d4");
 
         Assert.False(tree.HasErrors);
         var grace = tree.GetNodes<GraceExpressionSyntax>().First();
@@ -1162,8 +1159,7 @@ c4 d e f
     [Fact]
     public void ParseAppoggiatura()
     {
-        var source = "appoggiatura { c8 } d4";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse("appoggiatura { c8 } d4");
 
         Assert.False(tree.HasErrors);
         var grace = tree.GetNodes<GraceExpressionSyntax>().First();
@@ -1194,11 +1190,8 @@ c4 d e f
     [Fact]
     public void ParseMusicWithLyrics()
     {
-        var source = @"
-{ c d e f g }
-lyrics { do re mi fa sol }
-";
-        var tree = SyntaxTree.Parse(source);
+        // The notes move into the part; `lyrics { … }` is still a top-level block.
+        var tree = MusicSource.Parse("c d e f g", "lyrics { do re mi fa sol }");
 
         Assert.False(tree.HasErrors);
         Assert.Single(tree.GetNodes<LyricsBlockSyntax>());
@@ -1290,7 +1283,7 @@ lyrics { do re mi fa sol }
     [InlineData("aes", 'a', -1)]
     public void PitchSyntax_DutchFlatContractions(string source, char baseName, int offset)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
         var pitch = tree.GetNodes<PitchSyntax>().First();
 
         Assert.Equal(baseName, pitch.BaseName);
@@ -1550,10 +1543,10 @@ form main { Verse }
     [Fact]
     public void ParseDollarVariableReference()
     {
-        var tree = SyntaxTree.Parse(@"phrase theme { c d e f }
-$theme");
+        var tree = MusicSource.Parse("$theme", "phrase theme { c d e f }");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
-        var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
+        // Wrapped, so the reference is no longer a root slot — search the whole tree.
+        var varRef = tree.GetNodes<VariableReferenceSyntax>().Single();
         Assert.NotNull(varRef);
         Assert.Equal(SyntaxKind.VariableReference, varRef.Kind);
         // $name is the blessed form — it must not trip the bare-reference error.
@@ -1610,8 +1603,7 @@ form main { Main }
         // A phrase reference carries the SAME trailing octave marks as a pitch —
         // intro' lands the movable phrase an octave up, intro,, two octaves down.
         // The name stays intact; the marks contribute only to OctaveOffset.
-        var source = $"phrase intro {{ c4 d e f | }}\n{{ {reference} }}";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(reference, "phrase intro { c4 d e f | }");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         var varRef = tree.GetNodes<VariableReferenceSyntax>().Single();
         Assert.Equal("intro", varRef.Name.Text);

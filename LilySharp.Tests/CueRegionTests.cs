@@ -37,9 +37,10 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class CueRegionTests
 {
-    private static Score Collect(string source)
+    /// <summary>Collects a music FRAGMENT — music no longer stands alone as a file.</summary>
+    private static Score Collect(string music)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(music);
         Assert.False(tree.HasErrors);
         return new MeasureCollector().Collect(tree, null);
     }
@@ -50,7 +51,7 @@ public class CueRegionTests
     [Fact]
     public void RegionMarksItsNotesAndOnlyItsNotes()
     {
-        var notes = Notes(Collect("{ c'4 d' cue { e'4 f' } | }"));
+        var notes = Notes(Collect("c'4 d' cue { e'4 f' } |"));
         Assert.Equal(4, notes.Count);
         Assert.False(notes[0].IsCue);
         Assert.False(notes[1].IsCue);
@@ -67,7 +68,7 @@ public class CueRegionTests
     [Fact]
     public void RegionEndsAtItsClosingBrace()
     {
-        var notes = Notes(Collect("{ cue { c'4 d' } e'4 f' | }"));
+        var notes = Notes(Collect("cue { c'4 d' } e'4 f' |"));
         Assert.Equal(4, notes.Count);
         Assert.True(notes[0].IsCue);
         Assert.True(notes[1].IsCue);
@@ -124,7 +125,7 @@ public class CueRegionTests
     [Fact]
     public void WholeMeasureCueInTheFirstVoiceBlockIsWalkedOnce()
     {
-        var score = Collect("{ c'4 d' e' f' | voice { cue { aes'4 r r r } } { g'4 r r r } | }");
+        var score = Collect("c'4 d' e' f' | voice { cue { aes'4 r r r } } { g'4 r r r } |");
 
         // Was 3 with the drifted skip list: the flattened duplicate rolled a third bar.
         Assert.Equal(2, score.Voices[0].Measures.Length);
@@ -146,7 +147,7 @@ public class CueRegionTests
     [Fact]
     public void WholeMeasureCueInASecondVoiceBlockDoesNotLeakIntoTheNextMeasure()
     {
-        var score = Collect("{ voice { g'4 r r r } { cue { aes'4 r r r } } | c'4 d' e' f' | }");
+        var score = Collect("voice { g'4 r r r } { cue { aes'4 r r r } } | c'4 d' e' f' |");
 
         Assert.Equal(2, score.Voices.Length);
         Assert.Equal(2, score.Voices[0].Measures.Length);

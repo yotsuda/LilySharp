@@ -2521,23 +2521,16 @@ public sealed partial class MeasureCollector
         _root = root;
         _drumOverrides = DrumOverrides.Build(root);
 
-        // Whether BARE top-level music (notes outside any part/section/phrase) has
-        // already streamed past — a `clef`/`key`/`time`/`tempo` AFTER it is a mid-music
-        // change of the bare stream, not the file default. Without this, `g'1 clef bass`
-        // declared BASS as the file default (wrong system-start glyph) and the music walk
-        // then swallowed the change as "unchanged"; `g'1 key g major` opened the piece IN
-        // G (sharp in the opening signature) while the walk ALSO engraved the change, and
-        // `g'1 time 3/4` / `g'1 tempo N` double-printed the same way (wrong opening value
-        // plus a change grob). The guard makes the walk's mid-music path the only writer.
-        bool topLevelMusicSeen = false;
-
+        // A top-level `clef`/`key`/`time`/`tempo` is unconditionally the FILE DEFAULT.
+        // It used to depend on whether bare music had already streamed past (the whole
+        // point of the retired `topLevelMusicSeen` guard): music at the top level meant a
+        // later directive was that stream's mid-music change, and the same spelling
+        // therefore meant "default" or "change" by position alone. Top-level music is now
+        // a parse error (LYS0020), so the ambiguity — and the four ways it was got wrong —
+        // cannot arise: the only mid-music directives left are inside a part/section/
+        // phrase, which IsInsideMusicContent already separates.
         foreach (var node in root.DescendantNodes())
         {
-            if (!topLevelMusicSeen
-                && node is NoteSyntax or ChordSyntax or RestSyntax
-                && !IsInsideMusicContent(node))
-                topLevelMusicSeen = true;
-
             switch (node)
             {
                 case MetadataDeclarationSyntax metadata:
@@ -2555,10 +2548,8 @@ public sealed partial class MeasureCollector
                 case TempoDeclarationSyntax tempoDecl:
                     // Only the top-level (initial) tempo sets the score default;
                     // mid-music tempo changes are handled in the music stream
-                    // (a Tempo MusicMark at the change point). A tempo AFTER bare
-                    // top-level music is that stream's mid-music change (see
-                    // topLevelMusicSeen above; it double-printed before).
-                    if (!IsInsideMusicContent(tempoDecl) && !topLevelMusicSeen)
+                    // (a Tempo MusicMark at the change point).
+                    if (!IsInsideMusicContent(tempoDecl))
                         CollectTempo(tempoDecl);
                     break;
 
@@ -2566,9 +2557,7 @@ public sealed partial class MeasureCollector
                     // Only the top-level (initial) time sets the global default;
                     // mid-music changes are handled in the music stream (a
                     // TimeSignatureChangeItem re-arms the per-measure length).
-                    // A time AFTER bare top-level music is that stream's mid-music
-                    // change (see topLevelMusicSeen above; it double-printed before).
-                    if (!IsInsideMusicContent(timeSig) && !topLevelMusicSeen)
+                    if (!IsInsideMusicContent(timeSig))
                     {
                         _meta.TimeBeats = timeSig.Beats;
                         _meta.TimeBeatsText = timeSig.BeatsText;
@@ -2580,10 +2569,7 @@ public sealed partial class MeasureCollector
 
                 case KeySignatureSyntax key:
                     // Only process top-level key declarations (not inside phrases/sections).
-                    // A key AFTER bare top-level music is that stream's mid-music change
-                    // (see topLevelMusicSeen above; it opened the piece in the changed key
-                    // AND engraved the change before).
-                    if (!IsInsideMusicContent(key) && !topLevelMusicSeen)
+                    if (!IsInsideMusicContent(key))
                     {
                         _meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
                         if (!key.IsCustom)
@@ -2607,9 +2593,7 @@ public sealed partial class MeasureCollector
                     // clef of its own started in the CHANGED clef (wrong system-start glyph
                     // and wrong default octave, since Phase 1.5 derives both from _meta.Clef).
                     // The neighbouring key / octave / partial cases already guard this way.
-                    // A clef AFTER bare top-level music is that stream's mid-music change,
-                    // not the file default (see topLevelMusicSeen above).
-                    if (!IsInsideMusicContent(clef) && !topLevelMusicSeen)
+                    if (!IsInsideMusicContent(clef))
                     {
                         _meta.Clef = clef.ClefName.Text.ToLowerInvariant();
                         _meta.ClefPosition = clef.ClefName.Span.Start;

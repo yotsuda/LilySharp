@@ -412,8 +412,9 @@ public class DoubleAngleArpeggioTests
     public void PostEvents_AttachAfterTheClosingAngles()
     {
         // '@chord' (and post-events generally) attach after '>>' like a chord's,
-        // and the green tokens round-trip the source exactly.
-        var src = "{ << c e g >>@chord }";
+        // and the green tokens round-trip the source exactly. Spelled out rather
+        // than via Parse() because the round-trip needs the source text itself.
+        var src = $"section A {{ m {{ << c e g >>@chord }} }}{Tail}";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         Assert.Equal(src, tree.Root.ToFullString());

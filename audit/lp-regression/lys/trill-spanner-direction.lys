@@ -5,4 +5,15 @@
 octave absolute
 time 4/4
 
-voice { s1 } { g,4@startTrillSpan g,4@startTrillSpan.up g,4@startTrillSpan.down g,4@startTrillSpan } |
+part melody
+
+section A {
+  melody {
+    voice { s1 } { g,4@startTrillSpan g,4@startTrillSpan.up g,4@startTrillSpan.down g,4@startTrillSpan } |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

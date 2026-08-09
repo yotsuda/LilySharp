@@ -12,11 +12,22 @@
 //   voice 既定に勝つ(LP: \\ の外の音楽は voicify されない)。
 time 6/8
 
-d'4. g,, |
-<b c d e>''4.@stemDown <f g a b>4.@stemDown |
-<f a c>4.@stemDown <e a c>4.@stemDown |
-voice {
-  <b f c' g'>4.@stemDown f4. | <b c>4. r4. |
-} {
-  s4. b,4. | <a b>4. r4. |
+part melody
+
+section A {
+  melody {
+    d'4. g,, |
+    <b c d e>''4.@stemDown <f g a b>4.@stemDown |
+    <f a c>4.@stemDown <e a c>4.@stemDown |
+    voice {
+      <b f c' g'>4.@stemDown f4. | <b c>4. r4. |
+    } {
+      s4. b,4. | <a b>4. r4. |
+    }
+  }
 }
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

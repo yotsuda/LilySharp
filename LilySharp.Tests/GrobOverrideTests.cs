@@ -212,11 +212,14 @@ public class GrobOverrideTests
     }
 
     // --- Parser Tests ---
+    // The note stream is wrapped in the minimal document (MusicSource) — music at the top
+    // level of a file is LYS0020 — so these pin the IN-MUSIC, positional spelling of
+    // override/revert/once, which is where they now have to be written.
 
     [Fact]
     public void Parse_Override_Basic()
     {
-        var tree = SyntaxTree.Parse("override Stem.length = 10 c4 d e f");
+        var tree = MusicSource.Parse("override Stem.length = 10 c4 d e f");
         Assert.False(tree.HasErrors);
         var overrideNode = tree.GetRoot().DescendantNodes()
             .OfType<OverrideDeclarationSyntax>()
@@ -230,7 +233,7 @@ public class GrobOverrideTests
     [Fact]
     public void Parse_Revert_Basic()
     {
-        var tree = SyntaxTree.Parse("revert Stem.length c4 d e f");
+        var tree = MusicSource.Parse("revert Stem.length c4 d e f");
         Assert.False(tree.HasErrors);
         var revertNode = tree.GetRoot().DescendantNodes()
             .OfType<RevertDeclarationSyntax>()
@@ -243,7 +246,7 @@ public class GrobOverrideTests
     [Fact]
     public void Parse_OnceOverride()
     {
-        var tree = SyntaxTree.Parse("once override Stem.length = 10 c4 d e f");
+        var tree = MusicSource.Parse("once override Stem.length = 10 c4 d e f");
         Assert.False(tree.HasErrors);
         var onceNode = tree.GetRoot().DescendantNodes()
             .OfType<OnceModifierSyntax>()
@@ -257,7 +260,7 @@ public class GrobOverrideTests
     [Fact]
     public void Parse_Override_IdentifierValue()
     {
-        var tree = SyntaxTree.Parse("override Stem.direction = up c4 d e f");
+        var tree = MusicSource.Parse("override Stem.direction = up c4 d e f");
         Assert.False(tree.HasErrors);
         var overrideNode = tree.GetRoot().DescendantNodes()
             .OfType<OverrideDeclarationSyntax>()
@@ -270,7 +273,7 @@ public class GrobOverrideTests
     [Fact]
     public void Parse_Override_NegativeValue()
     {
-        var tree = SyntaxTree.Parse("override Beam.positions = -3 c8 d e f");
+        var tree = MusicSource.Parse("override Beam.positions = -3 c8 d e f");
         Assert.False(tree.HasErrors);
         var overrideNode = tree.GetRoot().DescendantNodes()
             .OfType<OverrideDeclarationSyntax>()
@@ -282,7 +285,7 @@ public class GrobOverrideTests
     [Fact]
     public void Parse_MultipleOverrides()
     {
-        var tree = SyntaxTree.Parse("override Stem.length = 10 override Beam.thickness = 2 c8 d e f");
+        var tree = MusicSource.Parse("override Stem.length = 10 override Beam.thickness = 2 c8 d e f");
         Assert.False(tree.HasErrors);
         var overrides = tree.GetRoot().DescendantNodes()
             .OfType<OverrideDeclarationSyntax>()
@@ -295,7 +298,7 @@ public class GrobOverrideTests
     [Fact]
     public void Parse_OverrideThenRevert()
     {
-        var tree = SyntaxTree.Parse("override Stem.length = 10 c4 d revert Stem.length e f");
+        var tree = MusicSource.Parse("override Stem.length = 10 c4 d revert Stem.length e f");
         Assert.False(tree.HasErrors);
         Assert.Single(tree.GetRoot().DescendantNodes().OfType<OverrideDeclarationSyntax>());
         Assert.Single(tree.GetRoot().DescendantNodes().OfType<RevertDeclarationSyntax>());
@@ -535,11 +538,15 @@ public class GrobOverrideTests
     // --- Pipeline Integration Tests ---
     // LILYPOND-REF: lily/grob-property.cc — end-to-end override/revert pipeline
 
-    private static string RenderToSvg(string input)
+    /// <summary>Renders a music fragment in the minimal document (music at the top level is
+    /// LYS0020). The wrapping is geometry-neutral, so the glyph counts and notehead Xs these
+    /// tests compare are the same numbers as when the fragment was a file of its own.</summary>
+    private static string RenderToSvg(string music)
     {
-        var tree = SyntaxTree.Parse(input);
+        var source = MusicSource.Wrap(music);
+        var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, $"Parse errors: {string.Join(", ", tree.Diagnostics)}");
-        return LiveRender.Svg(input);
+        return LiveRender.Svg(source);
     }
 
     [Fact]

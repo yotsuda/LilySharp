@@ -9,6 +9,17 @@
 // 残差: e'' (slur 起点) の stack は剛体 +0.73 (gap は LP 同一) = script の
 // avoid-slur 未実装の起票・@text の Y/X は既起票 @text regime。
 
-e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
-r4 a@staccato@tenuto@upbow f''@staccato@tenuto@finger(3)@upbow e'@flageolet@fermata@upbow |
-e,@tenuto@finger(0)@downbow@text("div.").up |
+part melody
+
+section A {
+  melody {
+    e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
+    r4 a@staccato@tenuto@upbow f''@staccato@tenuto@finger(3)@upbow e'@flageolet@fermata@upbow |
+    e,@tenuto@finger(0)@downbow@text("div.").up |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

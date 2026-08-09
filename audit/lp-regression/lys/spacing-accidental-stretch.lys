@@ -9,15 +9,26 @@
 octave absolute
 time 2/4
 
-d'16 d' d' d' d' d' cis' d' |
-dis' dis' dis' dis' d' d' d' d' |
-d' d' cis' d' dis' dis' dis' dis' |
-d' d' d' d' d' d' cis' d' |
-dis' dis' dis' dis' d' d' d' d' |
-d' d' cis' d' dis' dis' dis' dis' |
-d' d' d' d' d' d' cis' d' |
-dis' dis' dis' dis' d' d' d' d' |
-d' d' cis' d' dis' dis' dis' dis' |
-d' d' d' d' d' d' cis' d' |
-dis' dis' dis' dis' d' d' d' d' |
-d' d' cis' d' dis' dis' dis' dis' |
+part melody
+
+section A {
+  melody {
+    d'16 d' d' d' d' d' cis' d' |
+    dis' dis' dis' dis' d' d' d' d' |
+    d' d' cis' d' dis' dis' dis' dis' |
+    d' d' d' d' d' d' cis' d' |
+    dis' dis' dis' dis' d' d' d' d' |
+    d' d' cis' d' dis' dis' dis' dis' |
+    d' d' d' d' d' d' cis' d' |
+    dis' dis' dis' dis' d' d' d' d' |
+    d' d' cis' d' dis' dis' dis' dis' |
+    d' d' d' d' d' d' cis' d' |
+    dis' dis' dis' dis' d' d' d' d' |
+    d' d' cis' d' dis' dis' dis' dis' |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

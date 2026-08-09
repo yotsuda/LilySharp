@@ -43,7 +43,7 @@ public class AtCompletionParsesTests
             // Strip snippet placeholders ($0, $1, ${1:…}) — editor cursors, not text.
             // e.g. the 'chord($0)' item becomes '@chord()' (a recognized empty chord).
             var label = System.Text.RegularExpressions.Regex.Replace(raw, @"\$\{[^}]*\}|\$\d+", "");
-            var tree = SyntaxTree.Parse("{ c4@" + label + " }");
+            var tree = MusicSource.Parse("c4@" + label);
 
             var problems = tree.Diagnostics
                 .Where(d => d.Severity == DiagnosticSeverity.Error)
@@ -83,7 +83,7 @@ public class AtCompletionParsesTests
         Assert.Equal("chord", chord.InsertText); // no '(…)': auto-derive from the notes
         Assert.Null(chord.Command);
 
-        var tree = SyntaxTree.Parse("{ <c e g>@chord }");
+        var tree = MusicSource.Parse("<c e g>@chord");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 

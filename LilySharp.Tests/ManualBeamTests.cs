@@ -32,7 +32,7 @@ public class ManualBeamTests
     [Fact]
     public void ParseBeamMarkers_NoErrors()
     {
-        var tree = SyntaxTree.Parse("{ c8[ d e f] }");
+        var tree = MusicSource.Parse("c8[ d e f]");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.ToString())));
     }
 
@@ -183,7 +183,8 @@ score main ""test"" {
     [Fact]
     public void EndToEnd_ManualBeam_SvgRendered()
     {
-        var source = "{ c8[ d e f] g a b c' | }";
+        // Rendered from the same text that is parsed, so it must be a complete document.
+        var source = MusicSource.Wrap("c8[ d e f] g a b c' |");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.ToString())));
 

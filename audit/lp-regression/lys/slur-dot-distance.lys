@@ -7,4 +7,16 @@
 // なので G5 = g''(1 apostrophe 差ではない——頭 position で検分するのが規約)。
 
 time 6/4
-g''4( f4) g4( a4) g8( c8) c8( g8)
+
+part melody
+
+section A {
+  melody {
+    g''4( f4) g4( a4) g8( c8) c8( g8)
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

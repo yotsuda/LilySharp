@@ -6,4 +6,15 @@
 // e'' = E6・次の bare e は同 octave なので e,, で E4。付点16分+32分 = 1/8 の
 // 不完全小節 1 個。LP は 16.+32 を自動 beam (8分+16分 full + 32分 stub)。
 
-e''16.( e,,32)
+part melody
+
+section A {
+  melody {
+    e''16.( e,,32)
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

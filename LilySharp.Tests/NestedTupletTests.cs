@@ -72,7 +72,7 @@ score main { staff m }
     public void Parser_NestedTuplet_ParsesWithoutError()
     {
         var source = "tuplet 3/2 { c8 tuplet 3/2 { d8 e f } g }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
 
         Assert.False(tree.HasErrors);
         var tuplets = tree.GetNodes<TupletExpressionSyntax>().ToList();

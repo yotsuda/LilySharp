@@ -8,6 +8,17 @@
 // s(spacer) でタイミングを保存する(collisions 便の誤り回復と同型)。
 time 4/4
 
-<f g>4. s8 <f g>4. s8 |
-<g a>4. s8 <a b>4. s8 |
-voice { <f g>4 s8 s8 <f g>4 s8 s8 } { <b c>4. s8 b4. s8 } |
+part melody
+
+section A {
+  melody {
+    <f g>4. s8 <f g>4. s8 |
+    <g a>4. s8 <a b>4. s8 |
+    voice { <f g>4 s8 s8 <f g>4 s8 s8 } { <b c>4. s8 b4. s8 } |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

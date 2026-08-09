@@ -4,4 +4,15 @@
 // 音高: LP 絶対 g'=G4 → g / aeses=A♭♭3 → aeses,。
 octave absolute
 
-voice { g4 } { r8 aeses,8 } |
+part melody
+
+section A {
+  melody {
+    voice { g4 } { r8 aeses,8 } |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

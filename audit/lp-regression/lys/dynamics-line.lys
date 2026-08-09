@@ -8,11 +8,22 @@
 // Lily# の C4 起点では a' が要る。以降は LP 本文と同綴り
 // (a=A4・c,,=C3・a''=A4・d=D5・a=A4。lysc check --pitches で検算済)。
 
-a'1@sfz.up |
-a1@fff @decresc |
-c,,1@pp |
-a''1 |
-a1@p |
-a1 |
-d1@f |
-a1 |
+part melody
+
+section A {
+  melody {
+    a'1@sfz.up |
+    a1@fff @decresc |
+    c,,1@pp |
+    a''1 |
+    a1@p |
+    a1 |
+    d1@f |
+    a1 |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

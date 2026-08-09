@@ -327,7 +327,7 @@ public class FiguredBassTests
     public void Collector_FiguredBass_SharpPrefix()
     {
         var source = "c4 @fig(#6) d e f";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var collector = new MeasureCollector();
@@ -344,7 +344,7 @@ public class FiguredBassTests
     public void Collector_FiguredBass_HeldFigure()
     {
         var source = "c4 @fig(7 _) d e f";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var collector = new MeasureCollector();

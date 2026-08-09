@@ -152,7 +152,7 @@ public class MidiTests
     {
         // The interval argument must be GLUED: `M' (c d)` keeps the plain
         // octave-marked reference followed by a slurred pair.
-        var tree = SyntaxTree.Parse("phrase M { e4 }\n{ M' (c4 d4) }");
+        var tree = MusicSource.Parse("M' (c4 d4)", "phrase M { e4 }");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var varRef = tree.GetRoot().DescendantNodes<VariableReferenceSyntax>().Single();
         Assert.Equal(1, varRef.OctaveOffset);
@@ -516,7 +516,7 @@ public class MidiTests
     public void DynamicsParsing()
     {
         var source = @"c4@p d4@f";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
 
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
 

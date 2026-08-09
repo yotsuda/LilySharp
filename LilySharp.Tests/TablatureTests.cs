@@ -31,44 +31,50 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class TablatureTests
 {
+    /// <summary>
+    /// A tab staff in the smallest complete document. Music cannot stand alone at the
+    /// top level any more, and the tuning rides on the score's <c>tab</c> item —
+    /// <c>tab bass5 melody</c> — where the old <c>\tabStaff \tuning …</c> prefix sat.
+    /// </summary>
+    private static string TabDoc(string tuning, string music) =>
+        "part melody\n"
+        + "section A { melody { " + music + " } }\n"
+        + "form main { ~A }\n"
+        + "score main { tab " + (tuning.Length > 0 ? tuning + " " : "") + "melody }\n";
+
     [Fact]
     public void ParseTabStaff_NoTuning()
     {
-        var source = @"$tabStaff { e4 a d' }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        var tree = SyntaxTree.Parse(TabDoc("", "e4 a d'"));
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithGuitarTuning()
     {
-        var source = @"$tabStaff \tuning $guitar { e4 a d' }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        var tree = SyntaxTree.Parse(TabDoc("guitar", "e4 a d'"));
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithBassTuning()
     {
-        var source = @"$tabStaff \tuning bass { e,4 a, d g }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        var tree = SyntaxTree.Parse(TabDoc("bass", "e,4 a, d g"));
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithBass5Tuning()
     {
-        var source = @"$tabStaff \tuning $bass5 { b,,4 e, a, d g }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        var tree = SyntaxTree.Parse(TabDoc("bass5", "b,,4 e, a, d g"));
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithUkuleleTuning()
     {
-        var source = @"$tabStaff \tuning $ukulele { g c' e' a' }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        var tree = SyntaxTree.Parse(TabDoc("ukulele", "g c' e' a'"));
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]

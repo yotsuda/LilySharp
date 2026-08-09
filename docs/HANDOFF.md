@@ -58,6 +58,67 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第125セッション＝**文法変更 1 件を landed: トップレベルの音楽を拒否（LYS0020）**。
+ユーザー判断で **§2D⑵ は「bare 廃止」＝広い範囲で拒否**（音符列・`{ … }` ブロック・
+grace/tuplet・`break`・`$ref`）。宣言（`title`/`clef`/`key`/`time`/`tempo`/`octave`/
+`partial`/`part`/`phrase`/`section`/`form`/`score`/`override` 等）は top-level のまま。
+
+★★★ **経緯の訂正 = ユーザー指摘が記録と一致した**。bare 形式は**文書化された機能では
+なかった**（`GRAMMAR.md` の `TopLevelItem` は音楽を含まず・`GRAMMAR_FOR_LLM.md` の
+「最小ドキュメント」は構造ありの 4 行・新規ファイルテンプレも part-major）。パース経路
+自体は古い（2025-12-10 のリネーム commit より前）が、**意味づけと防御テストは
+`e2e49097`(2026-08-06)・`79a982d3`(2026-08-07) = LP 回帰キューの commit 内で無断で
+足したもの**。⇒ 未文書の寛容なパースを機能に育てていた。
+
+★★★ **§2D⑵ の主張は誇張だった（下で訂正済）**: 「walk 自体と欠陥クラスごと消える」は誤り。
+`IsInsideMusicContent`（3ファイル14箇所）は Phase 7.3 由来で **A でも B でも残る**——
+仕事は part ヘッダ/phrase/section 入れ子の判別。実際に消えたのは `topLevelMusicSeen`
+の bool 1 個と 4 case のガードだけ。**掃除の量は A と B で同じ**で、だから
+「未文書の第二の文法面を消す」B が勝った。
+
+★★ **B を決定づけた新事実 = bare は小節長検査を受けていなかった**（実測）。同一の音楽
+`c4 d e f g | c4 d e f |` が bare では `No errors found`・構造ありでは
+`Measure duration 5/4 exceeds time signature 4/4`。**audit コーパス 80 本中 20 本が
+bare** だった＝それらの LP 双子は一度も小節数検査を通っていない。散らかりでなく
+**測定の健全性の穴**（双子法は「両側が同じ音楽」に全面依存）。
+
+★★ **包み替えは幾何完全一致**（実測・byte 一致、差は `data-pos` の源位置のみ）。2 点が効く:
+⑴ `form main { ~A }` で section ラベルの箱を抑制（付くと譜が 2.66 下がる）⑵ 表示名も
+`instrument` も無いので譜名も字下げも出ず X 不変。⚠️ **先頭の `clef`/`key`/`time`/`tempo`
+は part ヘッダに入れず top-level に残すこと**——相対オクターブの基準は**ファイル級の
+clef** から来るので、`clef bass` を part ヘッダへ移すと 1 オクターブ黙って上がる
+（c が C3→C4・実測）。⚠️ `partial` は例外で**構造ありでは top-level は LYS1024**＝
+`section A { partial N }` へ。
+
+★ **変更の面**: Core 4（`Parser.cs` の `IsTopLevelMusicStart`/`ReportTopLevelMusic`＋
+`_topLevelMusicReported`・`Diagnostic.cs` の LYS0020・`MeasureCollector.cs` の
+`topLevelMusicSeen` 撤去・`PhraseExtractor.cs`）・テスト 27 ファイル・
+audit コーパス 20 本・docs 2・samples 1。新設 = `LilySharp.Tests/MusicSource.cs`
+（`Wrap`/`Parse`・幾何中立の根拠と 2 つの罠を doc コメント化）+
+`TopLevelMusicRejectedTests.cs`（21 本）。削除 = `BareTopLevelChangeTests.cs`
+（主題ごと消滅）。
+
+★★ **製品コードの巻き添え 1 件（重要）**: `PhraseExtractor.NameParsesAsPhrase` が
+候補名を **bare `{ name }` でパースして**読み戻していた → 全名称が「使えない」になり
+**「フレーズ抽出」が全件拒否**。`section A { melody { name } }` host に修正。
+⚠️ **教訓: 合成ソースを parse する製品コードは文法変更の巻き添えを食う。**
+grep 済＝製品側の合成パースは 2 箇所のみ（他方は `ChordHarmonizer.SectionForm` の
+`form main { … }`＝宣言なので無傷）。
+
+★ **起票 = `<>` に密着した `)` はスラーを閉じない**（実測・`empty-chord` は open 12 の 1 冊）。
+`r4 e8( g <>) c4` は `a slur '(' is never closed`（line 6 col 8）・対照
+`r4 e8( g c) c4` は無警告。**bare のとき小節検査ごと黙っていたので見えていなかった**類。
+
+★ **probe/コーパスの状態**: audit 80 本 = **エラー 0**。scratch probe 196 本 = **エラー 2**
+（`tabchoir`＝`staffGroup { tab … }` 不可・`voltagrace-probe`＝`repeat volta` 拒否＝
+**どちらも「その綴りが無いこと」を記録するのが目的の既存 probe**）。
+`bare-{key,time,tempo}.lys` は**主題ごと消えたので削除**。
+
+**テスト 4260 passed / 0 failed / 4 skipped**（前 4246→ +21 新設 −3 削除 −4 重複整理）・
+Core 0 warning。**未 push は §0 で数える（⚠️ push しない）**。
+
+## 以下は第124セッションの経緯
+
 最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択。5便で open 6冊処理**:
 第1便 **fixed 66 = dot-rest-beam-trigger**(rest mover の連鎖化・`276a2c4a`)・第2便
 **棚卸し + fixed 67 = dot-column-vertical-positioning**(rest dot の列参加・`52240900`)・
@@ -15391,13 +15452,16 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `g'4`→`g4` を 1 回踏んだ。twin 作業の頻出事故クラス＝memory
   reference_lilysharp_relative_octave_authoring）。**効率と正確性の両方に効く最有力案**。
   ⚠️ 綴りは sigil 規則（§3D・LP が記号で綴るものだけ記号）に従うこと。
-- ★★ **⑵ file 既定と楽中変更の構文的区別**。現行は「bare music の中で最初の音より前か後か」で
-  clef/key/time/tempo の意味（file 既定 vs 楽中変更）が変わる＝**順序依存の意味論**で、
-  判定に `topLevelMusicSeen`＋音符ごとの祖先 walk が要る。clef は fixed 第20号・
-  key/time/tempo は**第103セッション第3便で同じガードに揃えた**（それまでは「既定を
-  書き換え＋変更も印字」の二重欠陥だった＝BareTopLevelChangeTests が観測者）。
-  文法で「既定は part{}／ヘッダにだけ書ける・bare music 中は常に変更」と決めれば、
-  **この walk 自体と欠陥クラスごと消える**（1 パス化）。
+- ✅ **⑵ file 既定と楽中変更の構文的区別 = 第125セッションで landed**（ユーザー判断＝
+  **bare 廃止**。詳細は §1）。トップレベルの音楽は LYS0020 で拒否になり、top-level の
+  clef/key/time/tempo は**無条件でファイル既定**になった（並び立つ音楽が書けないので、
+  同じ綴りが位置で意味を変えようがない）。
+  ⚠️ **ここに書いてあった「この walk 自体と欠陥クラスごと消える（1 パス化）」は誤りだった。**
+  `IsInsideMusicContent` は Phase 7.3（中間小節調号変更）由来で、仕事は part ヘッダ /
+  phrase / section 入れ子の判別＝**bare の有無と無関係に残る**。実際に消えたのは
+  `topLevelMusicSeen` の bool 1 個と 4 case のガードだけ。
+  ★ **この誤りの出所は「コードで確かめずに台帳の言明を引き写した」こと**——§5 の
+  「corpus に訊く」と同じ穴を、台帳自身が踏んでいた。**台帳の効能書きも実測の対象。**
 - ★ **⑶ voice スパンの遅入り**。隣接 voice スパンを 1 スパンに畳む誤り回復
   （`RepeatedVoiceKeyword`）は良い罠塞ぎだが、その結果**小節中で声部数が変わる音楽は
   spacer パディングでしか書けない**（collisions.ly の twin で実測: 前半 4 束を 5 声

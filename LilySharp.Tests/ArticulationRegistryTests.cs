@@ -30,9 +30,10 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class ArticulationRegistryTests
 {
-    private static ArticulationType ParseArticulationType(string source)
+    // The fragment is a note stream, so it needs the minimal document around it.
+    private static ArticulationType ParseArticulationType(string music)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(music);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         return tree.GetRoot().DescendantNodes<ArticulationSyntax>().First().Type;
     }
@@ -72,11 +73,11 @@ public sealed class ArticulationRegistryTests
     }
 
     [Theory]
-    [InlineData("{ c4@staccato }", ArticulationType.Staccato)]
-    [InlineData("{ c4@trill }", ArticulationType.Trill)]
-    public void ParsedArticulation_ResolvesType(string source, ArticulationType expected)
+    [InlineData("c4@staccato", ArticulationType.Staccato)]
+    [InlineData("c4@trill", ArticulationType.Trill)]
+    public void ParsedArticulation_ResolvesType(string music, ArticulationType expected)
     {
-        Assert.Equal(expected, ParseArticulationType(source));
+        Assert.Equal(expected, ParseArticulationType(music));
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public sealed class ArticulationRegistryTests
     {
         // 'tremolo' used to lex as a keyword that the repeat parser rejected; as a
         // plain identifier 'repeat tremolo N { … }' now parses.
-        var tree = SyntaxTree.Parse("repeat tremolo 4 { c16 }");
+        var tree = MusicSource.Parse("repeat tremolo 4 { c16 }");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 }

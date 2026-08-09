@@ -40,7 +40,10 @@ public class OctaveTests
     {
         // c d e f in treble clef: all stay in octave 4
         // Treble: staffPosition 0 = b4, so c4 = -6, d4 = -5, e4 = -4, f4 = -3
-        var notes = CollectNotes("{ c4 d e f | }");
+        // The music lives inside a part now (top-level music is LYS0020). The wrapper
+        // declares no clef, so the relative-octave anchor is still the file default —
+        // treble, octave 4 — exactly as when this was a bare note stream.
+        var notes = CollectNotes(MusicSource.Wrap("c4 d e f |"));
         Assert.Equal(4, notes.Count);
 
         // Each note should be higher than the previous (stepwise ascending)
@@ -55,7 +58,7 @@ public class OctaveTests
     public void RelativeOctave_StepwiseDescending_StaysInSameOctave()
     {
         // f e d c: all stay in same octave (stepwise)
-        var notes = CollectNotes("{ f4 e d c | }");
+        var notes = CollectNotes(MusicSource.Wrap("f4 e d c |"));
         Assert.Equal(4, notes.Count);
 
         for (int i = 1; i < notes.Count; i++)
@@ -71,7 +74,7 @@ public class OctaveTests
         // c4 then f: interval c->f = +3 (within range), stays same octave
         // c4 then g: interval c->g = +4 (> 3), so octave adjusts down
         // In relative mode, g after c should go DOWN (g3, not g4)
-        var notes = CollectNotes("{ c4 g | }");
+        var notes = CollectNotes(MusicSource.Wrap("c4 g |"));
         Assert.Equal(2, notes.Count);
 
         // g should be LOWER than c (jumped down)
@@ -83,7 +86,7 @@ public class OctaveTests
     public void RelativeOctave_OctaveMarkUp_ForcesHigherOctave()
     {
         // c then g': the ' forces g UP even though interval > 3
-        var notes = CollectNotes("{ c4 g' | }");
+        var notes = CollectNotes(MusicSource.Wrap("c4 g' |"));
         Assert.Equal(2, notes.Count);
 
         Assert.True(notes[1].StaffPosition > notes[0].StaffPosition,
@@ -94,7 +97,7 @@ public class OctaveTests
     public void RelativeOctave_OctaveMarkDown_ForcesLowerOctave()
     {
         // c then d,: the , forces d DOWN
-        var notes = CollectNotes("{ c4 d, | }");
+        var notes = CollectNotes(MusicSource.Wrap("c4 d, |"));
         Assert.Equal(2, notes.Count);
 
         Assert.True(notes[1].StaffPosition < notes[0].StaffPosition,
@@ -128,7 +131,7 @@ score main ""test"" {
     {
         // Default treble clef, initial octave is 4
         // c4 in treble clef: staffPosition = pitchIndex(c) - pitchIndex(b) + (4-4)*7 = 0 - 6 = -6
-        var notes = CollectNotes("{ c4 | }");
+        var notes = CollectNotes(MusicSource.Wrap("c4 |"));
         Assert.Single(notes);
         Assert.Equal(-6, notes[0].StaffPosition);
     }
@@ -365,7 +368,7 @@ score main ""test"" {
     {
         // c->f: interval = 3 (not > 3), should stay in same octave (f4, not f3)
         // This is the boundary case: interval=3 stays, interval=4 (fifth) jumps
-        var notes = CollectNotes("{ c4 f | }");
+        var notes = CollectNotes(MusicSource.Wrap("c4 f |"));
         Assert.Equal(2, notes.Count);
 
         // f should be HIGHER than c (same octave, ascending fourth)
@@ -378,7 +381,7 @@ score main ""test"" {
     {
         // f->c: interval = -3 (not < -3), should stay in same octave
         // f4->c4 (descending fourth)
-        var notes = CollectNotes("{ f4 c | }");
+        var notes = CollectNotes(MusicSource.Wrap("f4 c |"));
         Assert.Equal(2, notes.Count);
 
         // c should be LOWER than f (same octave, descending fourth)

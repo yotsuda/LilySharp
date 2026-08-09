@@ -54,7 +54,7 @@ public sealed class PartialDeclarationTests
     [Fact]
     public void PartialDoesNotProduceParseErrors()
     {
-        var tree = SyntaxTree.Parse("{ time 4/4 partial 8 g8 c'4 d e f }");
+        var tree = MusicSource.Parse("time 4/4 partial 8 g8 c'4 d e f");
         Assert.Empty(tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error));
     }
 

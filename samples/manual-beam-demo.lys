@@ -2,7 +2,16 @@ title "Manual Beam Demo"
 time 4/4
 tempo 120
 
-{
+part melody
+
+section A {
+  melody {
     c8[ d e f g a] b c' |
     c'8 b a g f e d c |
+  }
 }
+
+// ~A hides the section label: this demo is two bars of beaming, not a form.
+form main { ~A }
+
+score main { staff melody }

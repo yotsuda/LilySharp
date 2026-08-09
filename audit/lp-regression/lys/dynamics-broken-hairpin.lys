@@ -6,10 +6,21 @@
 // 両者とも明示 break で折る (indent 0 + ragged-right は LP 側 paper に)。
 // 綴り: LP 無引数 \relative の c''=C5=Lily# c'。以降の bare c は同オクターブ。
 
-c'1 @cresc |
-break
-c1 |
-c1 @decresc |
-break
-c1 |
-c1@p |
+part melody
+
+section A {
+  melody {
+    c'1 @cresc |
+    break
+    c1 |
+    c1 @decresc |
+    break
+    c1 |
+    c1@p |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

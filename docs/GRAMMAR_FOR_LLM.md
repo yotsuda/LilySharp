@@ -53,6 +53,16 @@ form main { Main }
 score main "out" { staff melody }
 ```
 
+**Music always lives inside a part.** A file is a set of declarations; a note stream at the
+top level is an error (LYS0020), as are a top-level `{ … }` block, `grace`/`tuplet` group,
+`break`, or `$phrase` reference. This is what makes a top-level `clef`/`key`/`time`/`tempo`
+unambiguous: with no music able to stand beside them they are always the FILE DEFAULTS, and
+a directive written among the notes is always a mid-music change.
+
+Below, a code block that is only music (no `part`/`section`/`score`) is showing a **section
+body** — the four lines above are omitted so each example shows just what it teaches. To run
+one, put it where `c4 d e f |` sits in the minimal document.
+
 ## Pitches
 
 - Names: `c d e f g a b`. Sharp `is`, flat `es`: `cis`=C#, `ees`=Eb, `cisis`=C##, `eses`=Dbb.

@@ -330,13 +330,18 @@ public static class PhraseExtractor
     /// <summary>A usable phrase name both DECLARES as a phrase and READS BACK as a
     /// reference — this rejects pitch spellings (c, ees), keywords and operators
     /// without duplicating the lexer's vocabulary.</summary>
+    /// <remarks>
+    /// ⚠️ The read-back probe is HOSTED in a section. A bare <c>{ … }</c> block is no
+    /// longer a document (<see cref="DiagnosticCodes.TopLevelMusic"/>), so probing with
+    /// one made EVERY name unusable and refused every extraction.
+    /// </remarks>
     private static bool NameParsesAsPhrase(string name)
     {
         var decl = SyntaxTree.Parse($"phrase {name} {{ }}");
         if (decl.HasErrors || decl.GetRoot().DescendantNodes().OfType<PhraseDeclarationSyntax>()
                 .SingleOrDefault()?.Name.Text != name)
             return false;
-        var reference = SyntaxTree.Parse($"{{ {name} }}");
+        var reference = SyntaxTree.Parse($"section A {{ melody {{ {name} }} }}");
         return !reference.HasErrors && reference.GetRoot().DescendantNodes()
             .OfType<VariableReferenceSyntax>().SingleOrDefault()?.Name.Text == name;
     }

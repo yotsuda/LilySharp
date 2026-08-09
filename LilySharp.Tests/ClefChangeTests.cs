@@ -284,8 +284,11 @@ score main ""test"" { staff melody }
         // Before the fix the clef drew ON the final barline and the trailing
         // placeholder minted a second thin bar beside it.
         // LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders
+        // 'time' is a file default; the trailing 'clef bass' is the subject and stays
+        // at the END of the music. (The wrapper is geometry-neutral, so the measured
+        // distances below are unchanged.)
         string svg = SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 g'1 clef bass"),
+            MusicSource.Parse("g'1 clef bass", "time 4/4"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
         var glyphs = System.Text.RegularExpressions.Regex.Matches(svg,

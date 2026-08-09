@@ -9,4 +9,15 @@
 // 自動(8.+16 は 1 拍で自動連桁)。
 time 4/4
 
-voice { f'8. e16 } { s8. s16 } { r8. a'16 } |
+part melody
+
+section A {
+  melody {
+    voice { f'8. e16 } { s8. s16 } { r8. a'16 } |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

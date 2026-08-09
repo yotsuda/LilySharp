@@ -73,11 +73,15 @@ public class IncrementalParsingTests
     [Fact]
     public void WithChange_PreservesParseability()
     {
-        var tree = SyntaxTree.Parse("$relative c' { c d e f }");
-        var newTree = tree.WithChange(TextChange.Replace(new TextSpan(15, 1), "c"));
+        // The music rides in the minimal document, so the edited span is located
+        // rather than hard-coded: replace the first note of the block with itself.
+        var source = MusicSource.Wrap("$relative c' { c d e f }");
+        var tree = SyntaxTree.Parse(source);
+        int firstNote = source.IndexOf("c d e f", System.StringComparison.Ordinal);
+        var newTree = tree.WithChange(TextChange.Replace(new TextSpan(firstNote, 1), "c"));
 
         Assert.False(newTree.HasErrors);
-        Assert.Equal("$relative c' { c d e f }", newTree.Text);
+        Assert.Equal(source, newTree.Text);
     }
 
     [Fact]

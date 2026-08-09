@@ -43,15 +43,17 @@ public class MusicXmlRoundTripTests
     [Fact]
     public void Melody_PitchesDurationsDotsRestsTies_SurviveRoundTrip()
     {
-        AssertRoundTrips("""
+        // The directives stay at FILE level: the relative-octave anchor comes from there,
+        // and these fixtures exist to prove the pitches survive the loop.
+        AssertRoundTrips(MusicSource.Wrap(
+            "c'4 d' e' fis' | g'2 a'4. b'8 | c''1 | r2 g'4 fis' | e'2~ e'2 |",
+            """
             octave absolute
             title "Round Trip"
             tempo 96
             time 4/4
             key g major
-
-            c'4 d' e' fis' | g'2 a'4. b'8 | c''1 | r2 g'4 fis' | e'2~ e'2 |
-            """);
+            """));
     }
 
     /// <summary>
@@ -112,13 +114,13 @@ public class MusicXmlRoundTripTests
     [Fact]
     public void FlatKeyAndAccidentals_SurviveRoundTrip()
     {
-        AssertRoundTrips("""
+        AssertRoundTrips(MusicSource.Wrap(
+            "ees'4 g' bes' | aes'2 f'4 | ees'2. |",
+            """
             octave absolute
             time 3/4
             key ees major
-
-            ees'4 g' bes' | aes'2 f'4 | ees'2. |
-            """);
+            """));
     }
 
     [Fact]
@@ -615,12 +617,13 @@ public class MusicXmlRoundTripTests
     {
         // A triplet + a quintuplet: the scaled durations must match, which only holds
         // if the tuplet ratio round-trips (plain 8ths would overflow the bar).
-        AssertRoundTrips("""
+        AssertRoundTrips(MusicSource.Wrap(
+            "tuplet 3/2 { c'8 d' e' } f'4 g'4 a'4 | tuplet 5/4 { c'16 d' e' f' g' } b'4 c''4 d''4 |",
+            """
             octave absolute
             time 4/4
             key c major
-            tuplet 3/2 { c'8 d' e' } f'4 g'4 a'4 | tuplet 5/4 { c'16 d' e' f' g' } b'4 c''4 d''4 |
-            """);
+            """));
     }
 
     [Fact]

@@ -236,6 +236,21 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string UnexpectedCharacter = "LYS0018";
 
+    /// <summary>Parse error: MUSIC was written at the top level of a file (a note stream,
+    /// a <c>{ … }</c> block, a grace/tuplet group, a <c>break</c>, or a <c>$phrase</c>
+    /// reference). A file is a set of DECLARATIONS; notes belong to a part, reached through
+    /// a section. The top-level <c>clef</c>/<c>key</c>/<c>time</c>/<c>tempo</c> directives
+    /// stay — with no music beside them they are unambiguously the file defaults, which is
+    /// the point: the same spelling no longer means "default" or "change" depending on
+    /// whether a note happens to precede it.</summary>
+    /// <remarks>
+    /// The headerless note stream was never a documented form — <c>GRAMMAR.md</c>'s
+    /// <c>TopLevelItem</c> has never listed music and <c>GRAMMAR_FOR_LLM.md</c>'s "minimal
+    /// document" is the four-line structured one — it was only ever a permissive parse.
+    /// It also skipped measure validation, so a miscounted bar in such a file said nothing.
+    /// </remarks>
+    public const string TopLevelMusic = "LYS0020";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

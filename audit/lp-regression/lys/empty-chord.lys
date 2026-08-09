@@ -4,6 +4,17 @@
 // \repeat unfold は小節線を跨ぐので Lily# 側は手展開 (| 明示のため。展開は
 // 枠に中立)。綴り: LP 無引数 \relative 基準 F3 の e'=E4 = Lily# の素の e。
 
-r4 e8( g <>)@text("sul D").up@f @decresc c8@staccato c@staccato c@staccato c@staccato |
-c@staccato c@staccato c@staccato c@staccato <>@sfz <>@downbow c g c g |
-c1 @decresc <>@pp |
+part melody
+
+section A {
+  melody {
+    r4 e8( g <>)@text("sul D").up@f @decresc c8@staccato c@staccato c@staccato c@staccato |
+    c@staccato c@staccato c@staccato c@staccato <>@sfz <>@downbow c g c g |
+    c1 @decresc <>@pp |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

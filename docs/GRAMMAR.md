@@ -124,6 +124,16 @@ TopLevelItem   = MetadataDecl                     (* title, composer *)
                | OverrideDecl                     (* engraving overrides *)
                ;
 
+(* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
+   '{ … }' block, a grace/tuplet group, a 'break', and a '$phrase' reference all belong
+   inside a part, reached through a section. The parser accepted a headerless note stream
+   for a long time without the grammar ever listing it; that permissiveness is closed.
+
+   This is what makes GlobalSetting unambiguous. A top-level clef/key/time/tempo is ALWAYS
+   the file default, because no music can stand beside it to make the same spelling mean a
+   mid-music change instead — which is exactly what it used to mean when written after a
+   top-level note, and what each of the four directives was independently got wrong. *)
+
 ### 2.2 Metadata
 
 MetadataDecl   = MetadataKey , String ;
@@ -345,7 +355,9 @@ ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } 
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
                | 'grandStaff' , '{' , { StaffRender } , '}'
-               | 'tab' , PartRef                     (* tablature: tab partName *)
+               | 'tab' , [ TuningName ] , PartRef    (* tablature: tab partName, or
+                                                        tab bass5 partName to override the
+                                                        part header's own `tuning` *)
                | 'ossia' , [ ClefName ] , PartRef       (* ossia partName — BARE, like staff *)
                | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
                | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)

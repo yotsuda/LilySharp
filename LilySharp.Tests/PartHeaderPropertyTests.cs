@@ -72,7 +72,9 @@ public sealed class PartHeaderPropertyTests
     [Fact]
     public void MusicStream_TimeBare_Works()
     {
-        var source = "time 4/4 { c4 d e f }";
+        // The subject is 'time' written INSIDE a music stream, so it goes in the
+        // part's music — not in the file-level defaults, which is the header form.
+        var source = MusicSource.Wrap("time 4/4 c4 d e f");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());

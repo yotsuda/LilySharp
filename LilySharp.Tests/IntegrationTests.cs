@@ -187,8 +187,7 @@ score main ""test"" {
     [Fact]
     public void PngGenerator_ProducesValidPng()
     {
-        var source = "{ c4 d e f | g a b c' | }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse("c4 d e f | g a b c' |");
         Assert.False(tree.HasErrors);
 
         var fontDir = Path.Combine(AppContext.BaseDirectory, "fonts");
@@ -289,7 +288,9 @@ score main ""movement2"" {
     [Fact]
     public void GenerateAll_NoRenderBlocks_FallsBackToDefault()
     {
-        var source = "{ c4 d e f | g a b c' | }";
+        // Hand-written rather than MusicSource.Wrap: the subject is a document with NO
+        // score block, and the wrapper always emits one.
+        var source = "part melody\nsection A { melody { c4 d e f | g a b c' | } }\nform main { ~A }\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 
@@ -326,7 +327,7 @@ score main ""third"" { staff treble rh }
     public void CueNotes_RenderedWithScaleTransform()
     {
         // LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
-        var source = "{ c'4 d' cue { e'4 f' } | g'1 | }";
+        var source = MusicSource.Wrap("c'4 d' cue { e'4 f' } | g'1 |");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 
@@ -359,7 +360,7 @@ score main ""third"" { staff treble rh }
     [Fact]
     public void CueChords_RenderedWithScaleTransform()
     {
-        var source = "{ <c' e'>4 cue { <d' f'>4 } | <c' e' g'>1 | }";
+        var source = MusicSource.Wrap("<c' e'>4 cue { <d' f'>4 } | <c' e' g'>1 |");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 
@@ -376,7 +377,7 @@ score main ""third"" { staff treble rh }
     public void CueNotes_NonCueNotesUnaffected()
     {
         // Ensure @cue doesn't affect non-annotated notes
-        var source = "{ c'4 d' e' f' | g'1 | }";
+        var source = MusicSource.Wrap("c'4 d' e' f' | g'1 |");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 

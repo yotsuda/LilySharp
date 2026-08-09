@@ -67,8 +67,7 @@ public sealed class BreathMarkTests
     public void BreathAndCaesura_BothRecognized_NoUnknownAnnotation()
     {
         // The annotation sweep must not flag @breath / @caesura as unknown.
-        var src = "{ time 4/4 c4@breath d e a@caesura }";
-        var tree = SyntaxTree.Parse(src);
+        var tree = MusicSource.Parse("time 4/4 c4@breath d e a@caesura");
         Assert.DoesNotContain(tree.Diagnostics,
             d => d.Severity == DiagnosticSeverity.Error);
     }

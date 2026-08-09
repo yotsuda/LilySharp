@@ -229,7 +229,7 @@ public class ChordNameTests
         // chord names (BuildMultiVoiceScore omitted them). It must keep them, just
         // like the single-voice case above.
         var source = "c4 @chord(c) voice { d e } { d e } f";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
         Assert.Empty(tree.Diagnostics); // supported syntax, no rejection
 
         var score = new MeasureCollector().Collect(tree);
@@ -293,7 +293,7 @@ score main {{ staff m with chords prog }}
     public void Collector_ChordName_SharpChord()
     {
         var source = "c4 @chord(cis:m7) d e f";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var collector = new MeasureCollector();
@@ -309,7 +309,7 @@ score main {{ staff m with chords prog }}
         // An altered chord (not in the diatonic vocabulary) prints verbatim via the
         // quoted free-text escape.
         var source = "c4 @chord(\"G7#9\") d e f";
-        var tree = SyntaxTree.Parse(source);
+        var tree = MusicSource.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var collector = new MeasureCollector();

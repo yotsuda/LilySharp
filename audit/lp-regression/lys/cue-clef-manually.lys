@@ -6,8 +6,19 @@
 // 主声部=\voiceTwo(R1)なので、Lily# の voice 分岐は cue が第1分岐(上)。
 time 4/4
 
-c4 c c c |
-// ⚠️ cue の bass clef は相対 anchor を octave 3 に引くので(clef 依存 anchor)、
-// LP の「C4 継続」に合わせるには先頭だけ c' が要る(検算: lysc check --pitches)。
-voice { cue bass { c'4 c c c } } { R1 } |
-c4 c c c |
+part melody
+
+section A {
+  melody {
+    c4 c c c |
+    // ⚠️ cue の bass clef は相対 anchor を octave 3 に引くので(clef 依存 anchor)、
+    // LP の「C4 継続」に合わせるには先頭だけ c' が要る(検算: lysc check --pitches)。
+    voice { cue bass { c'4 c c c } } { R1 } |
+    c4 c c c |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

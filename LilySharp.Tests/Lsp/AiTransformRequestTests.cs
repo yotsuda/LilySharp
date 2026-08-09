@@ -34,12 +34,15 @@ public class AiTransformRequestTests
 {
     private static LilySharpLanguageServer Server() => new(Stream.Null, Stream.Null);
 
-    private const string ValidDoc = """
+    // A candidate the AI hands back is a whole FILE, so the "valid" fixture is a
+    // complete document — a bare note stream is a top-level parse error.
+    private static readonly string ValidDoc = MusicSource.Wrap(
+        "c'4 d' e' f' | g'1 |",
+        """
         octave absolute
         time 4/4
         key c major
-        c'4 d' e' f' | g'1 |
-        """;
+        """);
 
     // ---- checkCandidate ----
 

@@ -4,4 +4,15 @@
 // 綴り: LP 絶対 cis''=C#5=Lily# cis'。時価は sticky(cis' も 16. を継ぐ)。
 time 4/4
 
-r16. cis' |
+part melody
+
+section A {
+  melody {
+    r16. cis' |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

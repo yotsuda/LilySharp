@@ -6,4 +6,15 @@
 // 手動 beam の [ ] は Lily# にもある(rest を跨げるのは手動のみ)。
 time 12/16
 
-voice { c'16[ b a r b g] } { r8. r } |
+part melody
+
+section A {
+  melody {
+    voice { c'16[ b a r b g] } { r8. r } |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

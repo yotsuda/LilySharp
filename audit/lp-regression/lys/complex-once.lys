@@ -7,13 +7,24 @@
 // once も 2 本並べる(Lily# に複合操作の束は無い=枠差)。
 time 4/4
 
-c4 d
-override NoteHead.transparent = true
-override Stem.transparent = true
-e4 f |
-revert NoteHead.transparent
-revert Stem.transparent
-g a
-once override NoteHead.transparent = true
-once override Stem.transparent = true
-b c |
+part melody
+
+section A {
+  melody {
+    c4 d
+    override NoteHead.transparent = true
+    override Stem.transparent = true
+    e4 f |
+    revert NoteHead.transparent
+    revert Stem.transparent
+    g a
+    once override NoteHead.transparent = true
+    once override Stem.transparent = true
+    b c |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

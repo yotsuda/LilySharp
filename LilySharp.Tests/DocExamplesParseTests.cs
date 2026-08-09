@@ -71,6 +71,18 @@ public class DocExamplesParseTests
         }
     }
 
+    /// <summary>
+    /// Every example must be EITHER a complete document, OR music that is valid once placed
+    /// in a part. Most of the spec's blocks are the second kind — showing four lines of
+    /// part/section/form/score around every two-note illustration would bury what each one
+    /// teaches — so the doc says once that its music blocks are section bodies.
+    ///
+    /// The two kinds are told apart by the parser rather than by a keyword heuristic: a block
+    /// whose ONLY complaint is LYS0020 (music at the top level) is a fragment, and is then
+    /// required to parse clean inside <see cref="MusicSource.Wrap"/>. Any other diagnostic —
+    /// or a diagnostic that survives the wrapping — is still a failure, so the test keeps its
+    /// original teeth: it cannot be satisfied by a block that is merely broken in a new way.
+    /// </summary>
     [Fact]
     public void GrammarForLlm_AllExamplesParse()
     {
@@ -82,12 +94,26 @@ public class DocExamplesParseTests
         {
             if (string.IsNullOrWhiteSpace(code))
                 continue;
+
             var tree = SyntaxTree.Parse(code);
-            if (tree.HasErrors)
+            if (!tree.HasErrors)
+                continue;
+
+            bool isFragment = tree.Diagnostics
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .All(d => d.Code == DiagnosticCodes.TopLevelMusic);
+            if (isFragment)
             {
-                var msgs = string.Join(" | ", tree.Diagnostics.Select(d => d.Message));
-                failures.Add($"block #{index}:\n{code}\n  -> {msgs}");
+                var wrapped = SyntaxTree.Parse(MusicSource.Wrap(code));
+                if (!wrapped.HasErrors)
+                    continue;
+                var wrappedMsgs = string.Join(" | ", wrapped.Diagnostics.Select(d => d.Message));
+                failures.Add($"block #{index} (as a section body):\n{code}\n  -> {wrappedMsgs}");
+                continue;
             }
+
+            var msgs = string.Join(" | ", tree.Diagnostics.Select(d => d.Message));
+            failures.Add($"block #{index}:\n{code}\n  -> {msgs}");
         }
 
         Assert.True(failures.Count == 0,

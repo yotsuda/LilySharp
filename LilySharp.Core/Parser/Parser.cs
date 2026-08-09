@@ -29,6 +29,7 @@ internal sealed partial class Parser
     private readonly IncrementalReuseMap? _reuse;
     private int _position;
     private int _textPosition; // Tracks position in source text
+    private bool _topLevelMusicReported; // LYS0020 is reported once per file, not per note
 
     public Parser(IEnumerable<SyntaxToken> tokens)
         : this(tokens, reuse: null)
@@ -383,8 +384,66 @@ internal sealed partial class Parser
         return x.FullWidth == y.FullWidth && x.ToFullString() == y.ToFullString();
     }
 
+    /// <summary>
+    /// Whether the current token opens MUSIC at the top level. A file is a set of
+    /// DECLARATIONS — notes live in a part, reached through a section — so every one of
+    /// these is an error (<see cref="DiagnosticCodes.TopLevelMusic"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This mirrors the music-producing arms of <see cref="ParseTopLevelItem"/>; the two
+    /// must be kept in step when an arm is added. The <c>false</c> arms are the tokens
+    /// <see cref="IsMusicItemStart"/> also claims but which an EARLIER arm of the switch
+    /// dispatches as file-level declarations, so they are not music here.
+    /// </remarks>
+    private bool IsTopLevelMusicStart() => Current.Kind switch
+    {
+        SyntaxKind.OpenBrace => true,                                    // { … } music block
+        SyntaxKind.Dollar => true,                                       // $phrase reference
+        SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword
+            or SyntaxKind.AppoggiaturaKeyword => true,
+        SyntaxKind.TupletKeyword => true,
+        SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => true,
+
+        SyntaxKind.TimeKeyword or SyntaxKind.TempoKeyword or SyntaxKind.KeyKeyword
+            or SyntaxKind.ClefKeyword or SyntaxKind.OctaveKeyword
+            or SyntaxKind.PartialKeyword or SyntaxKind.LyricsKeyword
+            or SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword
+            or SyntaxKind.OnceKeyword => false,
+        SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => false,
+
+        _ => IsMusicItemStart(),
+    };
+
+    /// <summary>
+    /// Reports top-level music ONCE per file. A note stream produces one of these per item,
+    /// and a three-hundred-note file saying the same thing three hundred times buries the
+    /// one sentence that fixes it.
+    /// </summary>
+    private void ReportTopLevelMusic()
+    {
+        if (_topLevelMusicReported)
+            return;
+        _topLevelMusicReported = true;
+        _diagnostics.Error(
+            new TextSpan(_textPosition, Current.FullWidth),
+            DiagnosticCodes.TopLevelMusic,
+            "Music cannot go at the top level — a file declares parts, sections and scores, "
+            + "and the notes live inside a part. Wrap this music:\n"
+            + "  part melody\n"
+            + "  section A { melody { … } }\n"
+            + "  form main { ~A }\n"
+            + "  score main { staff melody }\n"
+            + "Leading 'clef' / 'key' / 'time' / 'tempo' stay at the top level — they are "
+            + "the file's defaults.");
+    }
+
     private GreenNode? ParseTopLevelItem()
     {
+        // Parse the item anyway once reported: the tree stays complete so the editor keeps
+        // working (highlighting, completion, incremental reparse) on a file being typed.
+        if (IsTopLevelMusicStart())
+            ReportTopLevelMusic();
+
         return Current.Kind switch
         {
             // New section-oriented structure

@@ -32,7 +32,7 @@ public class RestArticulationTests
     [Fact]
     public void RestWithFermata_ParsesWithoutDiagnostics()
     {
-        var tree = SyntaxTree.Parse("b2. r4@fermata |");
+        var tree = MusicSource.Parse("b2. r4@fermata |");
         Assert.Empty(tree.Diagnostics);
     }
 
@@ -70,7 +70,7 @@ public class RestArticulationTests
     [Fact]
     public void PlainRest_StillParses()
     {
-        var tree = SyntaxTree.Parse("c2 r2 | R1*2 | c1 |");
+        var tree = MusicSource.Parse("c2 r2 | R1*2 | c1 |");
         Assert.Empty(tree.Diagnostics);
         var score = new MeasureCollector().Collect(tree);
         Assert.DoesNotContain(score.Articulations, a => true);
