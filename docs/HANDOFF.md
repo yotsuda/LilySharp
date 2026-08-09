@@ -58,11 +58,42 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択・第1便 fixed 第66号 =
-dot-rest-beam-trigger.ly = rest mover の連鎖化**(`276a2c4a`)。
+最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択。第1便 fixed 第66号 =
+dot-rest-beam-trigger.ly = rest mover の連鎖化**(`276a2c4a`)・**第2便 = open 全冊
+HEAD 再測の棚卸し + fixed 第67号 = dot-column-vertical-positioning.ly =
+rest の dot を dot column に参加させた**(`52240900`)。
 
-**台帳: plain 322 = fixed 66・exact 42・skip 197・open 17・pending 0**
+**台帳: plain 322 = fixed 67・exact 42・skip 197・open 16・pending 0**
 (status.json 実数・§0 の数え方で確認済)。
+
+★★ **第2便の棚卸し(「open も再測から」の横展開)= 旧 LS レンダが残る twin を
+HEAD 再レンダして幾何 diff**:
+- **不変 8**(残差そのまま): collisions・cue-clef-manually・fermata-osp a/b・
+  figbass-empty・keysigspace・lytie・trillsdir-probe。
+- **変化 3**(起票 notes の測定が stale・台帳に【第124再測】印字済):
+  phrslurtup(slur path のみ上/平坦化=第116 fixed45 の波及疑い・積み順 claim 再照合
+  未実施)・colharm(3要素・claim核 no-crash は不変)・lypassbar(15要素・§2A 棚不変)。
+- sptab は旧レンダが手復元系で比較不能。audit 直下 lys の残り(automatic-polyphony-
+  tabstaff・breathing-sign-accidentals・chords-funky-ignatzek・empty-chord・
+  key-signature-space・repeat-volta-initial-grace)は旧 LS レンダ無し=この便では未再測。
+
+★★ **第67号の中身**(式検算・照合値は台帳 notes):
+- 起票乖離⑴(rest Y −7.5 vs LP −7.0)は**第113 fixed42 が既に返済**(再測で確認)。
+- 本修理=⑵ **rest の dot が dot column 不参加**(旧 LS は「anchor の 1 position 上」
+  固定則)。LP 機構(dot-column.cc:143-150/194-227): dot は **PURE 位置**(rest =
+  voiced +4)で列に入り、同列の f'8. の dot が +5 を先取 → rest dot の UP は note dot
+  を +7 へ玉突き(badness 20)→ **DOWN 勝ち(+3・badness 5)**。dot の Y 親は rest
+  なので **unpure 押し上げ(+4→+14)に乗って +13 = LP rel −6.5 完全一致**。solo なら
+  UP = 旧固定則が偶然一致していた形(drbt がその形=バイト不変を確認)。
+- port = `ElementCoordinator.RestDotOffsetsOf`(static CWT memo・**同点挿入順=voice 順**
+  を本書がピン)→ renderer `DrawRest` と skyline seed が同じ表を読む(seed は従来
+  **shift すら読まない別綴り**で、コメントの「drawn は shift に従わない」も嘘だった=
+  同 commit で統一)。既存 `DotConfiguration.Resolve`(忠実 port 済)を列単位で消費。
+- 照合: rest −7.0・rest dot −6.5・f' dot −2.5・e16 −1.5・a'16 +0.5・beam 中心
+  −4.81/−3.77 = **譜相対 Y 全要素 LP 一致**。観測者 RestDotColumnTests。snapshot 0枚。
+- 札: note dot は per-item resolve のまま(列解が note dot を動かす玉突き形は書き
+  戻さない・未踏)・DotAdjustment の direction 上書きは列解に未配線・X は spacing
+  regime(LS 譜幅 16.79 vs LP 15.62)。
 
 ★★ **第66号の中身**(式検算・照合値は台帳 notes に):
 - **起票残差の大半は既に第113 fixed42 が返済済みだった**(HEAD 再測で確認:
@@ -83,24 +114,27 @@ dot-rest-beam-trigger.ly = rest mover の連鎖化**(`276a2c4a`)。
 - off-claim 札: 列 step 第4 が +0.15(起票時は一致→fixed42 の voiced spacing box
   副作用の疑い・rest 列の spacing regime・台帳 notes に5 step 全数)。
 
-★ perf(静的検分のみ・**A/B 未実施 = 開示**): 新規コスト = per-beamed-rest の
+★ perf(静的検分のみ・**A/B 未実施 = 開示**): 第66号 = per-beamed-rest の
 TryGetValue 1回 + per-staff の SetItems 1回(beam rest 無しなら Empty で恒等)。
-新規チューニング定数ゼロ・新キャッシュ層/per-keystroke 状態なし・IncrementalCompiler
-非接触(共有 Layout 経路のみ)。出力不変は全 snapshot 緑が証明。引用ラチェット緑。
+第67号 = static CWT memo 1本(Staff 単位・pure 関数・単声は即 Empty。編集で Staff が
+替われば旧エントリは weak で回収)+ per-rest の辞書引き(renderer/skyline とも)。
+新規チューニング定数ゼロ・IncrementalCompiler 非接触(共有 Layout 経路のみ)。
+出力不変は全 snapshot 緑が証明。引用ラチェット緑。
 
-★ **次の一手 = open 17 の続き**(ユーザー3択の②継続)。候補メモ:
+★ **次の一手 = open 16 の続き**(ユーザー3択の②継続)。候補メモ:
 trill-spanner-direction(修理形釘付け済 = .up/.down 配線 + voice 既定配布 +
-下側 side-position/skyline)・cue-clef-manually(R1-in-voice MMR = アーキ級)・
-多 score 頁の鎖・grace column・録画層 §2A(→ **着手前に棚の3決定が要る・単独修理と
-して着手しない**)。①文法拡張(推奨提示済・skip 197 の ≥74 冊解錠)と③ markup 55 /
-override 89 は棚のまま。
+下側 side-position/skyline)・phrslurtup/colharm の再照合(第124 で LS 出力変化を
+検出済・claim の再測だけで昇格の可能性)・cue-clef-manually(R1-in-voice MMR =
+アーキ級)・多 score 頁の鎖・grace column・録画層 §2A(→ **着手前に棚の3決定が
+要る・単独修理として着手しない**)。①文法拡張(推奨提示済・skip 197 の ≥74 冊解錠)
+と③ markup 55 / override 89 は棚のまま。
 
-未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 93)・
-テスト **4238 passed / 0 failed / 4 skipped**(+1 = BeamRestChainTests・全スイート
-確認済)・snapshot 動き 0・Core (Debug) 0 warning・base worktree = 第122 の節のまま
-(C:\MyProj\LilySharp-perfbase-31a0 残置)。
-probe 残置(第124 追加分): **drbt-head{,2}.svg**(dot-rest-beam-trigger の HEAD
-再レンダ・修理前/後)＋第123 以前の一式(下の節参照)。
+未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 95)・
+テスト **4239 passed / 0 failed / 4 skipped**(+2 = BeamRestChainTests・
+RestDotColumnTests・全スイート確認済)・snapshot 動き 0・Core (Debug) 0 warning・
+base worktree = 第122 の節のまま(C:\MyProj\LilySharp-perfbase-31a0 残置)。
+probe 残置(第124 追加分): **drbt-head{,2}.svg・drbt-fix2.svg・dcvp-fix.svg・
+*-head124.svg 一式(棚卸しの HEAD 再レンダ)**＋第123 以前の一式(下の節参照)。
 
 ## 以下は第123セッションの経緯
 
