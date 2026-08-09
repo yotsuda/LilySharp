@@ -368,6 +368,30 @@ public sealed partial class MeasureCollector
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
+        // String numbers OUTSIDE the brackets (<e dis'>\5\4) pair with the members
+        // in written order: each member without its own \N takes the next
+        // chord-level one, so <e dis'>\5\4 == <e\5 dis'\4> == <e dis'\4>\5
+        // (tablature.ly's claim). LilyPond walks the notes in order, the in-chord
+        // articulation winning, and REPEATS the last outside event once the list
+        // is exhausted — the repeat is ported as-is.
+        // LILYPOND-REF: lily/articulations.cc:38-80 articulation_list — per note
+        //   event, the note's own articulation wins; else articulation_events[j],
+        //   j advancing only while more remain.
+        var chordStrings = chord.Articulations
+            .OfType<StringNumberAnnotationSyntax>().ToList();
+        if (chordStrings.Count > 0)
+        {
+            int j = 0;
+            for (int i = 0; i < notes.Count; i++)
+            {
+                if (notes[i].StringNumber != null)
+                    continue;
+                notes[i] = notes[i] with { StringNumber = chordStrings[j].StringNumber };
+                if (j + 1 < chordStrings.Count)
+                    j++;
+            }
+        }
+
         // Omitted root (<1 3 5> / <3 5>): the degrees are relative to the KEY'S
         // TONIC (degree 1 = tonic). Anchor the (unsounded) tonic in the relative
         // frame like a written root would be, so a following note stays relative

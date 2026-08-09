@@ -7996,7 +7996,10 @@
     },
     "tablature-tremolo.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "tremolo は \\tabFullNotation の時だけ tab に出る(既定=数字のみでは出ない)。tab の梁の太さは Staff と同一",
+      "notes": "exact(コード変更0・第55号の tab tremolo 配線がそのまま効いた): ⑴既定 tab = 両エンジンとも tremolo 印ゼロ(数字のみ・LS は as numbers で stems/斜線とも抑止) ⑵full tab = 両者とも斜線6本(和音:16=2+単音 repeat tremolo=2+和音 pair=2)+pair 梁2本 ⑶梁厚 0.48 = Staff と同一(LS poly 実測 0.48・LP poly 0.4+stroke0.08)。2 score 本なので a/b の2対に分割(score 間の頁鎖=第120起票の別件)。off-claim: c' の選弦差(LP 弦2/f1 vs LS 弦3/f5=固有選弦)・**\\stemUp を LP の tab は尊重するが LS の tab 方向は弦基準の固有機能**(@stemUp は tab 未消費=札・単音 c' の stem 向きが逆に出る)。twin=scratch\\lpreg\\tabtrem-{a,b}{,-lp}一式",
+      "seeAlso": "tablature-double-stem-tremolo.ly"
     },
     "tablature-zero-finger.ly": {
       "category": "scheme",
@@ -8004,7 +8007,9 @@
     },
     "tablature.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "fixed",
+      "claim": "弦番号は和音内の音符付き(note articulation)と和音の外(chord articulation)の両方で書ける",
+      "notes": "fixed(第58号・修理2枚): ⑴**Pitch/ChordSyntax.Articulations の型フィルタが StringNumberAnnotationSyntax を silent 落とし**——parser は付けて collector は OfType で聞くのに列挙が返さない(和音内 \\4 が丸ごと無効・tabdot 本は和音の玉突きで偶然一致していた) ⑵**和音レベル \\5\\4 の分配が未実装**→articulation_list(articulations.cc:38-80)の字面 port: 音順に own 優先・無ければ外側イベントを順に(尽きたら最後を繰返す quirk ごと)。照合: 強制形3種(<e\\5 dis'\\4>/<e dis'>\\5\\4/<e dis'\\4>\\5)が全部 LP と同フレット(e=弦5/f7・dis'=弦4/f13)。auto の <e dis'> も両者 4/2 一致(偶然)。乖離1=<e dis'\\4> の auto メンバ e: LP=弦6/f12(maxFretStretch4 で 13 と離れた弦5 を拒否) vs LS=弦5/f7(TabResolver.AssignChordStrings=最低フレット優先の固有選弦・批准済=起票しない)。観測者=TabStringNumberEntryTests(LP 6桁ピン)。snapshot 0枚(既存 fixture は和音 \\N を踏んでいなかった=silent drop の傍証)。副観測: LP は通常譜に丸数字③⑤(LS 対応物ゼロ・既知)。twin=scratch\\lpreg\\tabnum{,-lp,-probe,-probe2}一式"
     },
     "tabstaff-choirstaff-brace.ly": {
       "category": "plain",

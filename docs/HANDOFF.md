@@ -68,8 +68,33 @@ tablature-double-stem-tremolo.ly = tab tremolo 配線 + StemTremolo の LP port
 tablature-new-line-spacer.ly（行頭 s2 crash 回帰・コード変更0・両者 2 行で
 エラーなし・off-claim: spacer 半分の行内配分 LP72% vs LS53% = justify spring
 regime 野良観測・twin = tabspacer 一式）**・`d3f72e32`・第5便 **fixed 第57号 =
-tablature-tie-behaviour.ly = 行跨ぎタイの括弧フレット port**・この handoff と
+tablature-tie-behaviour.ly = 行跨ぎタイの括弧フレット port**・`3e12113d`・第6便
+**exact 第39 = tablature-tremolo.ly（コード変更0・第55号の配線がそのまま効いた）**・
+第7便 **fixed 第58号 = tablature.ly = 弦番号の両記法 port**・この handoff と
 同 commit）。
+
+★ **第6便 exact 第39 tablature-tremolo.ly**: 2 score 本→a/b の2対に分割
+（twin = tabtrem-{a,b}{,-lp}・score 間の頁鎖 = 第120 起票の別件）。⑴ 既定
+（数字のみ）tab = 両者 tremolo 印ゼロ ⑵ full tab = 両者 斜線6本+pair 梁2本
+⑶ 梁厚 0.48 = Staff と同一（LS poly 実測）。off-claim 札: **\stemUp を LP の
+tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp は tab 未消費）。
+
+★★★ **第7便 fixed 第58号 tablature.ly**:
+- twin = scratch\lpreg\tabnum{,-lp,-probe,-probe2}。**修理 2 枚**:
+  ⑴ **Pitch/ChordSyntax.Articulations の型フィルタが StringNumberAnnotationSyntax
+  を silent 落とし**——parser は付け、collector は OfType で聞くのに、列挙が
+  返さない（和音内 \4 が丸ごと無効。tabdot 本は和音の玉突きで偶然一致していた＝
+  probe f'4.\2 の陽性対照は単音経路しか証明していなかった）
+  ⑵ **和音レベル \5\4 の分配が未実装** → articulation_list（articulations.cc:38-80）
+  の字面 port（音順に own 優先・外側イベントを順に・尽きたら最後を繰返す quirk ごと・
+  CreateChordItem 内）。
+- 照合: 強制形 3 種が全部 LP と同フレット（e=弦5/f7・dis'=弦4/f13）。auto の
+  <e dis'> も両者 4/2 一致（偶然）。乖離 1 = <e dis'\4> の auto メンバ e:
+  LP=弦6/f12（maxFretStretch 4）vs LS=弦5/f7（**TabResolver.AssignChordStrings =
+  最低フレット優先の固有選弦・批准済＝起票しない**。描画側 Tunings.
+  CalculateChordFrets の auto 枝は resolver の焼込で実質デッド＝2つ目の綴りの札）。
+- 観測者 = TabStringNumberEntryTests（LP 6桁ピン）。**snapshot 0枚**（既存 fixture は
+  和音 \N を踏んでいなかった＝silent drop の傍証）。
 
 ★★★ **第5便 fixed 第57号 tablature-tie-behaviour.ly**:
 - 縮約 twin = scratch\lpreg\tabtie-probe{,2,-lp}（f2~f4 e / c'1~ break c'2~ c'2・
@@ -152,23 +177,26 @@ tablature-tie-behaviour.ly = 行跨ぎタイの括弧フレット port**・こ�
   ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
   LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
 
-plain 322 / 処理済 **294**（fixed **57**・exact **38**・skip **182**・open **17**・
-pending **28**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **tablature-tremolo** → tablature.ly → tabstaff-choirstaff-brace で
-tab 島完食。
+plain 322 / 処理済 **296**（fixed **58**・exact **39**・skip **182**・open **17**・
+pending **26**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tabstaff-choirstaff-brace**（ChoirStaff 対応物の有無から）で tab 島
+完食 → 以降アルファベット順 pending（text-mark-marklengthon / tie-pitched-trill /
+time-signature-numeric-and-default / trill-spanner-direction …）。
 第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
 slur-flag / slur-nice は文法宿題の棚のまま。
 
 未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
-テスト **4227 passed / 0 failed / 4 skipped**（第2/3便観測者+2・第5便観測者+2・
-全スイート確認済）・snapshot 第122 = **6枚（第2便）+2枚（第3便）＋0枚（第5便）＝
+テスト **4228 passed / 0 failed / 4 skipped**（第2/3便+2・第5便+2・第7便+1・
+全スイート確認済）・snapshot 第122 = **6枚（第2便）+2枚（第3便）＋0枚（第5/7便）＝
 census 済・上記**・Core (Debug) 0 warning・
 base worktree = 第121 の節の 5 つそのまま残置。
 probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）＋tabdbltrem 一式＋
 ntrem-probe 一式（第55号の照合材）＋tabgrace 一式（第56号の照合材）＋tabspacer 一式
 （exact 第38の照合材）＋tabtie-probe{,2,-lp} 一式（第57号の照合材）＋
-tabdot-dump{,-ls}.ps1（LP/LS SVG 一覧化・LP 側は polygon 対応済）**＋第121 以前の
-stclash / sttremcol / sploose / sptab / stempure ほか一式（下の各節参照）。
+tabtrem-{a,b}{,-lp} 一式（exact 第39の照合材）＋tabnum{,-lp,-probe,-probe2} 一式
+（第58号の照合材）＋tabdot-dump{,-ls}.ps1（LP/LS SVG 一覧化・LP 側は polygon
+対応済）**＋第121 以前の stclash / sttremcol / sploose / sptab / stempure
+ほか一式（下の各節参照）。
 
 ## 以下は第121セッションの経緯
 

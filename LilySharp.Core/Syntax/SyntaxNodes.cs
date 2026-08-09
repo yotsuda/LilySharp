@@ -142,6 +142,11 @@ public sealed class PitchSyntax : SyntaxNode
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/parser.yy chord_body grammar — post-event articulations.
+    /// ⚠️ This is a TYPE FILTER, and until 2026-08-09 it silently swallowed the
+    /// member's string number (<c>&lt;e dis'\4&gt;</c>): the parser attached a
+    /// StringNumberAnnotation, the collector asked for it with OfType, and this
+    /// list never yielded it — the chord fretted as if unforced
+    /// (tablature.ly's claim is exactly these entry forms).
     /// </remarks>
     public IEnumerable<SyntaxNode> Articulations
     {
@@ -150,7 +155,8 @@ public sealed class PitchSyntax : SyntaxNode
             for (int i = 1; i < SlotCount; i++)
             {
                 var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
+                    or StringNumberAnnotationSyntax)
                     yield return child;
             }
         }
@@ -664,7 +670,9 @@ public sealed class ChordSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// Gets the articulations, dynamics, and music marks attached to this chord.
+    /// Gets the articulations, dynamics, music marks and string numbers attached
+    /// to this chord (after the closing <c>&gt;</c> — string numbers there pair
+    /// with the members in order, <c>&lt;e dis'&gt;\5\4</c>).
     /// </summary>
     public IEnumerable<SyntaxNode> Articulations
     {
@@ -673,7 +681,8 @@ public sealed class ChordSyntax : SyntaxNode
             for (int i = 0; i < Green.SlotCount; i++)
             {
                 var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
+                    or StringNumberAnnotationSyntax)
                     yield return child;
             }
         }
