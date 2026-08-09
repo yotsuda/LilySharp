@@ -7892,7 +7892,9 @@
     },
     "tablature-dot-placement.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "exact",
+      "claim": "full notation の tab では付点が 2 桁フレット数字(f'\\3=fret10)を避けた X に置かれる",
+      "notes": "exact(コード変更0): 付点の法則が LP と同一——和音の付点は単一 X 列で「最幅数字の右端 + dot 幅 0.45」(LP=dot-column pad-by-one-dot-width・LS=SharedRenderer.Tab の GlyphMetrics.AugmentationDot.Width、同じ出典で同じ数)。Y=弦線から 0.75 上(半 tab-space UP)も両者一致。LP 実測: dot 19.23/23.08=数字右端18.78/22.63+0.45。LS 実測: 14.95/21.73=白抜き右端14.50/21.28+0.45。フレット格子 8,10,10/10,8,10/10,10,10 完全一致。絶対 X の差は Lily# の数字拡大+zigzag(tab-chord-spacing fixture に明記の固有機能)の regime。twin=scratch\\lpreg\\tabdot.{lys,svg,-lp.ly,-lp.svg,-gen.ly}。陽性対照: f'4.\\2 で弦2 fret6=StringNumber 消費証明(tabdot-probe2)。副観測3: ⑴LP は通常譜に \\3 の丸数字③を描く=LS 対応物ゼロ(string-number-around-slur で既知) ⑵lysc ly が \\3 を無警告 drop(exporter 穴・tremolo :N と同族。本書は和音の玉突きで同弦になり無害) ⑶LS の強制弦は後続の同音に粘る(probe で観測・本書は全音 \\3 明示で off-claim)"
     },
     "tablature-double-stem-tremolo.ly": {
       "category": "plain",

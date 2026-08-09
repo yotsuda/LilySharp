@@ -58,6 +58,45 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第122セッション（＝第1便 **exact 第37 = tablature-dot-placement.ly
+（コード変更0・tab 島 1冊目）**・この handoff と同 commit）。
+
+★ **第1便 tablature-dot-placement.ly = exact**:
+- twin = scratch\lpreg\tabdot.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（\tabFullNotation =
+  Lily# は full 既定なので裸の `tab`・treble_8 部は LP と同綴り＝README の罠の節どおり・
+  LP 無引数 \relative は先頭 f' が絶対）。
+- **付点の法則が LP と同一（既実装・LILYPOND-REF 済）**: 和音の tab 付点は単一 X 列 =
+  「最幅数字の右端 + dot 幅 0.45」（LP = dot-column pad-by-one-dot-width
+  （output-lib.scm・dot 自身の幅）・LS = SharedRenderer.Tab:528-540 の
+  GlyphMetrics.AugmentationDot.Width＝**同じ出典・同じ数**）。Y = 弦線から
+  半 tab-space（0.75）上も一致。実測: LP dot 19.23/23.08 = 数字右端 18.78/22.63+0.45・
+  LS 14.95/21.73 = 白抜き右端 14.50/21.28+0.45。フレット格子
+  8,10,10 / 10,8,10 / 10,10,10 完全一致・譜側の符頭行も一致。絶対 X の差 =
+  Lily# の数字拡大+zigzag（固有機能・tab-chord-spacing fixture に開示済）の regime。
+- 陽性対照: 単音 f'4.\2 が弦2 fret6 に動く（tabdot-probe2）= StringNumber 消費証明
+  （\3 だけだと Lily# 自動選弦も同答＝対照にならない）。
+- **副観測 3**: ⑴ LP は通常譜に \3 の丸数字③を描く＝LS 対応物ゼロ
+  （string-number-around-slur で既知・off-claim） ⑵ **lysc ly が \3 を無警告 drop**
+  （exporter 穴・tremolo :N / 第2 score と同族。本書は和音の玉突きで同弦になり無害）
+  ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
+  LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
+
+plain 322 / 処理済 **288**（fixed **54**・exact **37**・skip **180**・open **17**・
+pending **34**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tablature-double-stem-tremolo** 以降の tab 島続き（grace/harmonic/tie/
+tremolo/new-line-spacer）＝tab 幾何 memory（tab頁 anchor・tab幾何・tabタイ弦）併読。
+第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
+slur-flag / slur-nice は文法宿題の棚のまま。
+
+未 push は §0 のコマンドで開始時に数える（**⚠️ push しない**）・
+テスト **4223 passed / 0 failed / 4 skipped**（開始時全スイート確認済・第1便は
+コード変更0）・snapshot 第122 = **0枚**・Core (Debug) 0 warning・
+base worktree = 第121 の節の 5 つそのまま残置。
+probe 残置: **tabdot 一式＋tabdot-probe{,2}（exact の照合材）**＋第121 以前の
+stclash / sttremcol / sploose / sptab / stempure ほか一式（下の各節参照）。
+
+## 以下は第121セッションの経緯
+
 最終更新 第121セッション（＝第1便 **skip 2冊**（stem-cross-staff-articulation =
 \change Staff が主張の核+\espressivo 対応物ゼロ・stem-tremolo-cross-staff-beam =
 \change Staff+crash 回帰本）・第2便 **stem-tremolo-note-collision = exact**・第3便
