@@ -7796,7 +7796,9 @@
     },
     "string-number-around-slur.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "string number は衝突時のみ slur の外へ動く",
+      "notes": "skip: \\3 綴りは在るが消費者は tab 経路のみ(Tunings/SharedRenderer.Tab)=通常譜の丸数字 grob 描画に対応物ゼロ(tab弦選択は固有設計)。加えて \\textLengthOn 綴りなし・script avoid-slur 未実装(第114起票棚)"
     },
     "string-number-no-stencil.ly": {
       "category": "scheme",
@@ -7832,11 +7834,15 @@
     },
     "system-separator-spaceable-staves.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "system separator の配置が全 spaceable staff コンテキストで働く",
+      "notes": "skip: 同上(\\slashSeparator)+\\book 直下複数 score+DrumStaff/RhythmicStaff 対応物ゼロ"
     },
     "system-separator.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "system-separator-markup(paper)のセパレータが系の境界譜間で中央揃え",
+      "notes": "skip: \\paper system-separator-markup が主張の器材=対応物ゼロ(paper 指定の文法なし)"
     },
     "system-start-bar-collapse-staffspace.ly": {
       "category": "override",
@@ -7872,7 +7878,9 @@
     },
     "tablature-chord-repetition-finger.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "TabStaff の和音リピート q は \\tabChordRepeats で string/finger 情報を保持する(通常譜と対照)",
+      "notes": "skip: \\tabChordRepeats 綴りなし=器材が主張の核(texidoc がコマンド名で主張)。加えて -0(open string 強制)の fret 選択消費は Lily# 固有 fret 選択に無い。Lily# q はメンバ snapshot 継承=別機構(StringNumber も snapshot に乗る見込み・probe 未実施)"
     },
     "tablature-chord-repetition.ly": {
       "category": "scheme",

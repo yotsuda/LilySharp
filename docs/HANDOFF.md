@@ -62,7 +62,12 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 \change Staff が主張の核+\espressivo 対応物ゼロ・stem-tremolo-cross-staff-beam =
 \change Staff+crash 回帰本）・第2便 **stem-tremolo-note-collision = exact**・第3便
 **fixed 第54号 = stems-clash-between-staves = 譜間 gap の 2枚 port**・`d482e1b9`・
-第4便 **perf round 22 = 容疑→guard→drift 化**・この handoff と同 commit）。
+第4便 **perf round 22 = 容疑→guard→drift 化**・`35c20c2a`・第5便 **skip 4冊バッチ**
+（string-number-around-slur = \3 の消費者は tab 経路のみ＝通常譜の丸数字 grob
+対応物ゼロ+\textLengthOn 綴りなし・system-separator 族 2冊 = \paper
+system-separator-markup が器材そのもの・tablature-chord-repetition-finger =
+\tabChordRepeats 綴りなし+open string 強制 -0 の fret 選択消費なし）・この handoff と
+同 commit）。
 
 ★★★ **第3便 fixed 第54号 stems-clash-between-staves.ly = LP exact**:
 - twin = scratch\lpreg\stclash.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（LP の indent=10cm は
@@ -104,11 +109,14 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
   stem **down**（voice 向きが grace up 既定に勝つ: LP 4.11→6.40 down+flag）・LS は
   無条件 up（4.00→1.53 up+flag）＝off-claim 乖離・修理は grace 向き規則の棚。
 
-plain 322 / 処理済 **283**（fixed **54**・exact **36**・skip **176**・open **17**・
-pending **39**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **string-number-around-slur**（下見未着手。avoid-slur 未実装（第114起票）の
-棚の可能性＋\textLengthOn 綴りなし——枠が書けるかから）。以降 system-separator 族・
-tablature 族（treble_8 の綴り規約は README 比較器の罠の節）。第120 第2便の open
+plain 322 / 処理済 **287**（fixed **54**・exact **36**・skip **180**・open **17**・
+pending **35**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **tablature-dot-placement**（★実評価本。\tabFullNotation = **Lily# は
+full が既定**なので裸の `tab` で枠が書ける（memory tab表示・LP は数字既定で逆）・
+`\3` 綴り在り・claim = 2桁フレット(f'\3=fret10)の後の付点 X。treble_8 の綴り規約は
+README 比較器の罠の節——**両側同じ綴りが正解**）。以降 tablature 族 8冊 =
+まとまった島（grace/harmonic/tie/tremolo/new-line-spacer）＝tab 幾何 memory
+（tab頁 anchor・tab幾何・tabタイ弦）を先に引くこと。第120 第2便の open
 （多 score 頁の鎖＝アーキ級）は focused session 候補のまま。slur-flag / slur-nice は
 文法宿題の棚のまま。
 
