@@ -1032,6 +1032,16 @@ internal static partial class SharedRenderer
     //   (parent-alignment-X . CENTER) — the stack centres on the stem's X.
     // ⚠️ The slash is a stroked line where LP draws a vertical-ended
     //   parallelogram — the known 0.04 ink-extent difference of this family.
+    //   LP additionally switches to a sharp-cornered ROTATED BOX for an UP
+    //   flagged stem (calc_shape, "rectangle") — same slope and width, corner
+    //   shape only; the line approximates both shapes here.
+    // ⚠️ y_offset's beam-end term is DROPPED: per
+    //   lily/stem.cc:830-844 beam_end_corrective — half a beam thickness only
+    //   `if (beam)`, else 0.0 — it vanishes for an unbeamed stem, and every
+    //   caller sits inside `!isBeamed` (a beamed note's stem is the Beams
+    //   path's, which never calls here). The beamed anchor law (end at the
+    //   beam minus beam_count translations) is therefore unported and
+    //   unreachable, not approximated.
     private static void DrawTremolo(
         double stemX, double stemEndY,
         bool stemUp, int noteValue, int beamCount, bool hasFlag, IDrawingContext gc)

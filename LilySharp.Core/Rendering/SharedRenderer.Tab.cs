@@ -551,7 +551,13 @@ internal static partial class SharedRenderer
     // span — with the TabNoteHead's declared width 0.25 / half-thickness 0.075 /
     // angularity 0.4 that is a 0.3333 outer, 0.2583 inner bulge and 0.22/0.78 stops
     // (all three measured intact on the tabtie-probe twin). Each bow is stroked 0.1
-    // with round caps, so the spine stands half that outside the digit ink.
+    // with round caps.
+    // ⚠️ MEASURED, NOT DERIVED: the spine stands one full line-width (0.1) outside
+    //   the digit ink — LP's between-parens span is 1.0877 for a 0.8877 digit, a
+    //   0.1000 seam per side (tabtie-probe twin). Deriving it from combine-at-edge
+    //   padding 0 + the widened bow extent predicts 0.05; the digit stencil LP
+    //   attaches to is evidently wider than its ink by the other half. The
+    //   measurement wins; the seam rides Lily#'s own (larger) digit metrics.
     // LILYPOND-REF: scm/stencil.scm:33-114 make-bow-stencil — outer-control =
     //   4/3 · bow-height / length; inner-control = |outer| − thickness/length;
     //   left-control = 0.1 + 0.3 · angularity.
@@ -565,9 +571,10 @@ internal static partial class SharedRenderer
     private const double TabTieParenAngularity = 0.4;
     private const double TabTieParenLineWidth = 0.1;
     /// <summary>How far a paren's ink can reach past the digit ink on each side —
-    /// the string-line gap widens by this much.</summary>
+    /// the string-line gap widens by this much: the measured spine seam, the outer
+    /// bulge, and the stroke's outward half.</summary>
     private const double TabTieParenClearance =
-        4.0 / 3 * TabTieParenWidth + TabTieParenLineWidth;
+        TabTieParenLineWidth + 4.0 / 3 * TabTieParenWidth + TabTieParenLineWidth / 2;
 
     private static void DrawTabFretParens(double x, double noteY, double digitWidth,
         IDrawingContext gc)
@@ -580,7 +587,7 @@ internal static partial class SharedRenderer
         double c2Y = noteY - h + control * 2 * h;
         foreach (int dir in stackalloc int[] { -1, 1 })
         {
-            double spineX = x + dir * (digitWidth / 2 + TabTieParenLineWidth / 2);
+            double spineX = x + dir * (digitWidth / 2 + TabTieParenLineWidth);
             gc.DrawClosedBezier(
                 (spineX, noteY + h),
                 (spineX + dir * outer, c1Y),

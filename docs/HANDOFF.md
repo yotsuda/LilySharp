@@ -81,7 +81,29 @@ time-signature-numeric-and-default = 時号 style 切替綴りなし・
 （probe trillsdir-probe）・LP は TrillSpanner ∈ direction-polyphonic-grobs
 （\voiceTwo 既定 DOWN）+^/_ 優先。修理形 = .up/.down 配線 + voice 既定配布 +
 下側 side-position/skyline＝棚）・`71417c79`・第9便 **trill-spanner 族完食 =
-skip 2 + exact 第40 + fixed 第59号**・この handoff と同 commit）。
+skip 2 + exact 第40 + fixed 第59号**・`83d599d2`・第10便 **自己監査
+（ユーザー三問）＝違反 1 訂正（paren seam・ink 0.05 移動）・開示 2 追記・白 5**・
+この handoff と同 commit）。
+
+★★ **第10便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
+- **違反 1 = 第57号 paren の spine seam（訂正済・ink 0.05/側 移動・snapshot 0）**:
+  combine-at-edge padding 0 + bow の widened extent から **0.05 と推定**していたが、
+  LP 実測は**括弧間スパン 1.0877 − 数字 0.8877 = seam 0.1000/側 = line-width
+  ちょうど**（LP が attach する digit stencil は ink より半 line-width 広い）。
+  実測 0.10 に訂正・MEASURED NOT DERIVED とコメントに named（「読まずに規則から
+  推定」型の 3 例目・照合が構造レベルだと捕まらない時限だった）。
+- **開示 2 追記（挙動不変）**: ⑴ DrawTremolo は y_offset の **beam_end_corrective
+  項を落としている**——unbeamed は 0.0（stem.cc:830-844 実読・`if (beam)` のみ）で
+  全呼び手が `!isBeamed` 内＝beamed anchor 法則は未港かつ非到達、と明記
+  ⑵ **UP+flag/beamed の shape="rectangle" 分岐**（calc_shape・角の形のみ）は
+  stroked line の近似に畳んでいる、と明記。
+- **検算で白 5**: ⑴ flag-count 減算 = make_stem の字面（max(log−2,0)・LP は警告+0、
+  LS は無警告消灯を開示済）＋ LP probe 本数一致 ⑵ GraceFretScale = 宣言値
+  （font-size −2/−4）と実測（0.9366/1.1800）の両方から同じ 0.7937 ⑶ handle-ties
+  3 分岐の cond 順序等価（span-start 未配線は札済） ⑷ articulation_list の
+  j-advance と last-repeat quirk 逐語一致 ⑸ 第59号の仮想 stop は GetEndX の
+  `[^1]` fallback＋support loop guard で終止線 None でも範囲外安全（実読）。
+  引用ラチェット緑（4228 全緑で確認）。
 
 ★★ **第9便 trill-spanner 族 4冊**:
 - pitched 2冊 = skip（\pitchedTrill 綴りなし・forced は `!` も無し＝二重ゲート）。
