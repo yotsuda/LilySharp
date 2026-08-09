@@ -127,6 +127,27 @@ grep 済＝製品側の合成パースは 2 箇所のみ（他方は `ChordHarmo
 **どちらも「その綴りが無いこと」を記録するのが目的の既存 probe**）。
 `bare-{key,time,tempo}.lys` は**主題ごと消えたので削除**。
 
+★★★ **第3便 = 棚の検分（コード変更 0）＝ part-combine の見積もりが台帳と違う**。
+「機構は PartCombineAnalyzer = determine-split-list の port が既在・文法が入れば族再開」は
+**半分だけ本当**だった。⚠️ **移植されているのは注記の半分だけで、合体そのものは無い**:
+- **在るもの**: `PartCombineAnalyzer.Analyze`（5 状態 Apart/Unison/Solo1/Solo2/Silence）+
+  `Calculate`（"a2"/"Solo"/"Solo II" の**テキスト配置のみ**を返す = `PartCombineLayout` は
+  `Text/X/YUp/MeasureIndex` の 4 つだけ）・`LayoutEngine.cs:4033` の呼び出し・
+  `SharedRenderer.Marks.cs:950 DrawPartCombine` の描画・`PartCombineTests` 約20本。
+  `LayoutOptions.EnablePartCombine`（既定 false）は**宣言1・読み1・`true` を書く箇所ゼロ**
+  ＝ .lys から到達不能・**配線経路を通るテストもゼロ**。
+- **無いもの＝ LP の仕事の本体**: **声部の合体**。LP 実測（`scratch\lpreg\pcombine-{lp,ctl}.ly`・
+  同じ音楽を `\partCombine` と `<< \\ >>` で）= **stem 24→16・glyph 24→18・text 1→4**。
+  つまり unison 小節は符頭も符尾も 1 つに畳まれ、solo 小節は相手の休符ごと消える。
+  Lily# は**二声のまま描いた上にラベルだけ載る**ことになる。
+- **他 2 件の札**: ⑴ `Analyze` は**アイテム番号で対応付けており moment を見ていない**
+  （`timePos` を宣言して未使用・`idx1++/idx2++` が同期進行）＝**リズムが違う二声で誤判定**
+  （`c4 d4 e4 f4` 対 `g2 g2` は LP なら全域 Apart・移植は後半 Solo1）。
+  ⑵ `AreUnison` は **StaffPosition 比較**なので同じ線上の異名（c と cis）を unison と見る。
+  ⑶ ラベルの字面: **LP は bold serif 2.2**・Lily# は italic（`DrawPartCombine`）。
+⇒ **綴りを入れる判断の前提が変わる**: 「綴りだけ」ではなく **engraving 側の移植が本体**。
+解錠は plain **10 冊**（31 冊中 20 は scheme・1 は markup ＝綴りが入っても枠外）。
+
 **テスト 4267 passed / 0 failed / 4 skipped**（第1便 4260・第2便 +7 = EmptyChordTests）・
 Core 0 warning。**未 push は §0 で数える（⚠️ push しない）**。
 probe 残置（第125）: **`ecslur-{a,b,c}.ly`（LP オラクル）・`ecslur-ls-{a,c,noslur}.lys`**。
