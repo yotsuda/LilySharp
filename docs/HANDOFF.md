@@ -58,15 +58,36 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択。第1便 fixed 第66号 =
-dot-rest-beam-trigger.ly = rest mover の連鎖化**(`276a2c4a`)・**第2便 = open 全冊
-HEAD 再測の棚卸し + fixed 第67号 = dot-column-vertical-positioning.ly =
-rest の dot を dot column に参加させた**(`52240900`)・**第3便 = 棚卸しの変化2冊を
-LP 再照合 → exact 第43 = phrasing-slur-tuplet(コード変更0)+ fixed 第68号 =
-collision-harmonic-no-dots = voiced 変位を span の実届範囲に閉じた**(`753c09fe`)。
+最終更新 第124セッション＝**ユーザー3択で②「open 18 の消化」を選択。4便で open 5冊消化**:
+第1便 **fixed 66 = dot-rest-beam-trigger**(rest mover の連鎖化・`276a2c4a`)・第2便
+**棚卸し + fixed 67 = dot-column-vertical-positioning**(rest dot の列参加・`52240900`)・
+第3便 **exact 43 = phrasing-slur-tuplet(コード変更0)+ fixed 68 =
+collision-harmonic-no-dots**(voiced 変位の span スコープ化・`753c09fe`)・第4便
+**fixed 69 = trill-spanner-direction = trill の向き一式 port**(`66d8b5e1`)。
 
-**台帳: plain 322 = fixed 68・exact 43・skip 197・open 14・pending 0**
+**台帳: plain 322 = fixed 69・exact 43・skip 197・open 13・pending 0**
 (status.json 実数・§0 の数え方で確認済)。
+
+★★ **第69号の中身**(照合値・修理5枚の内訳は台帳 notes):
+- **pairing が LP の字面でなかった**: 連続 start が pendingStart を上書き=前の spanner
+  が無警告で消えていた → LP の ender 規則(scheme-engravers.scm:1809-1814・新 start/stop
+  が走行中 spanner を現在列で終端)に書換。
+- **.up/.down 配線 + voice 既定 DOWN**(TrillSpanner ∈ direction-polyphonic-grobs を
+  music-functions.scm:617-634 で裏取り)。engraver で一度だけ解決し
+  TrillSpannerLayout.Direction に載せ、renderer/stacker は読むだけ。
+- **DOWN 側 aligned_side**: AlignedSideLineY を dir 鏡映(facing profile・column down
+  skyline・staff 床 −2・dir 符号)。renderer は無変更(YUp が全てを運ぶ・tr は両方向とも
+  線の 1.0 下 = stencil-offset (0 . -1) 無条件を LP オラクルで確認)。
+- **下側 stacker 参加**: StackBelowStaff に priority 50 の trill 置き(profile は上下
+  共有の TrillProfileSkylines = 綴り1本)。
+- **副修理 = 「単独 \voiceTwo の枠」の実体**: engraver が非 primary voice の item を
+  layout の item 枠(= primary 枠)で index → voice-2 trill が範囲外 guard で全滅+
+  終端が小節末 fallback → VoiceItemX/VoiceItemCount(voice の timing で X を引く)。
+- 照合: **tr 4本の Y と X が LP 桁一致**(+9.6/−2.55/+9.6/+11.564・4本目は下側 stacker
+  の積みまで一致)。観測者 TrillSpannerDirectionTests。snapshot 0枚。
+- 札: right-neighbor/adjust-on-neighbor 未読・voice 既定は小節粒度・`-` は裸と同扱い。
+- ラチェットの新例2: **単行引用(:N)も資格語が要る**(範囲だけでなく From>0 全部)・
+  行番号なしの grob 名指し形(`define-grobs.scm TrillSpanner — …`)は対象外。
 
 ★★ **第3便の中身**(照合値は台帳 notes):
 - **exact 第43 = phrslurtup**: slur path が 4 座標とも LP 桁一致(端点 −4.55/−4.05・
@@ -144,22 +165,28 @@ TryGetValue 1回 + per-staff の SetItems 1回(beam rest 無しなら Empty で�
 新規チューニング定数ゼロ・IncrementalCompiler 非接触(共有 Layout 経路のみ)。
 出力不変は全 snapshot 緑が証明。引用ラチェット緑。
 
-★ **次の一手 = open 14 の続き**(ユーザー3択の②継続)。候補メモ:
-trill-spanner-direction(修理形釘付け済 = .up/.down 配線 + voice 既定配布 +
-下側 side-position/skyline・第124 再測で不変確認済)・lypassbar の再照合(LS 出力
-変化 15 要素検出済・§2A 棚は不変)・cue-clef-manually(R1-in-voice MMR = アーキ級)・
+★ **次の一手 = open 13 の続き**(ユーザー3択の②継続)。候補メモ:
+lypassbar の再照合(LS 出力変化 15 要素検出済・§2A 棚は不変)・breathing-sign-
+accidentals(port 入口 = LP breathing-sign spacing membership)・automatic-polyphony-
+tabstaff(tab の voice 2 全落ち)・cue-clef-manually(R1-in-voice MMR = アーキ級)・
 多 score 頁の鎖・grace column・録画層 §2A(→ **着手前に棚の3決定が要る・単独修理と
 して着手しない**)。①文法拡張(推奨提示済・skip 197 の ≥74 冊解錠)と③ markup 55 /
 override 89 は棚のまま。
 
-未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 97)・
-テスト **4240 passed / 0 failed / 4 skipped**(+3 = BeamRestChainTests・
-RestDotColumnTests・VoicedDisplacementDiesWithTheSpan・全スイート確認済)・
-snapshot 動き 3 枚(第68号・census 済 re-bless・上記)・Core (Debug) 0 warning・
-base worktree = 第122 の節のまま(C:\MyProj\LilySharp-perfbase-31a0 残置)。
+★ perf(第4便も静的検分のみ・A/B 未実施 = 開示): 第69号の新規コスト = per-trill の
+dir 解決1回 + 下側 stacker の per-DOWN-trill 置き(DOWN trill 無しなら早期 return
+恒等)+ VoiceItemX(非 primary のみ O(item))。新規チューニング定数ゼロ・
+IncrementalCompiler 非接触。出力不変(単声/primary)は全 snapshot 緑が証明。
+
+未 push は §0 のコマンドで開始時に数える(**⚠️ push しない**・第124 終了時点で 99)・
+テスト **4241 passed / 0 failed / 4 skipped**(+4 = BeamRestChainTests・
+RestDotColumnTests・VoicedDisplacementDiesWithTheSpan・TrillSpannerDirectionTests・
+全スイート確認済)・snapshot 動き 3 枚(第68号・census 済 re-bless)・Core (Debug)
+0 warning・base worktree = 第122 の節のまま(C:\MyProj\LilySharp-perfbase-31a0 残置)。
 probe 残置(第124 追加分): **drbt-head{,2}.svg・drbt-fix{2,3}.svg・dcvp-fix{,2}.svg・
-vrest-probe 一式(.lys/.ly/-lp.svg = 第68号の LP オラクル)・*-head124.svg 一式
-(棚卸しの HEAD 再レンダ)**＋第123 以前の一式(下の節参照)。
+vrest-probe 一式(第68号の LP オラクル)・trillsdir-lp.{ly,svg}(第69号の LP オラクル)・
+trillsdir-ls{,2,3}.svg・ts2-probe 一式・*-head124.svg 一式(棚卸しの HEAD 再レンダ)**
+＋第123 以前の一式(下の節参照)。
 
 ## 以下は第123セッションの経緯
 
