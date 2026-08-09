@@ -105,17 +105,31 @@ audit コーパス 20 本・docs 2・samples 1。新設 = `LilySharp.Tests/Music
 grep 済＝製品側の合成パースは 2 箇所のみ（他方は `ChordHarmonizer.SectionForm` の
 `form main { … }`＝宣言なので無傷）。
 
-★ **起票 = `<>` に密着した `)` はスラーを閉じない**（実測・`empty-chord` は open 12 の 1 冊）。
-`r4 e8( g <>) c4` は `a slur '(' is never closed`（line 6 col 8）・対照
-`r4 e8( g c) c4` は無警告。**bare のとき小節検査ごと黙っていたので見えていなかった**類。
+★★ **第2便 = empty-chord の 2 件を修理**（`open 12` の 1 冊・状態は **open のまま**＝
+残差は `@text` の X 揃えのみ）。⚠️ **訂正**: スラーの件は**新規発見ではなく第106
+セッションで台帳に記録済みの残差**だった（notes の "slur close on `<>` dropped"）——
+第1便でこれを「起票」と書いたのは不正確。**新規は時価の方**。
+- **⑷ スラー残差を返済**: `<>` 上のスラー印は捨てられていた → 空和音の moment を占める
+  アイテムまで持ち越す（`TakeEmptyChordSlurs`）。⚠️ **終端は「`)` が字面で続く音符」では
+  なく次の音符**。**LP オラクルで確定**（2.26.0・`scratch\lpreg\ecslur-{a,b,c}.ly`）:
+  `r4 e'8( g' <>) c''4` と `r4 e'8( g' c''4)` が**同一曲線**（両方 1.2883→6.1207）・
+  `g'` で閉じる形は別物（0.7803→3.5345）。**Lily# もこの恒等を byte 一致で再現**（a≡c）。
+- **⑸ 新規欠陥 = 計量側が `<>` に時価を課していた**（台帳未記録）。正しい 4/4 の
+  `r4 e8 g <> c'4 r4` を **9/8** と報告＝**描画側は時間ゼロ・`MeasureDurations` は
+  走行時価を加算**の食い違い（§5.2.1 の「予約と描画を別々に綴る」の validator 版）。
+  ⇒ **`ChordSyntax.IsEmpty` に綴りを 1 本化**して両者が同じ定義を読む。
+- **双子ファイルは無警告になった**（元は小節超過 3 + 未閉スラー 1）。観測者
+  `EmptyChordTests`（7 本）。⚠️ 開示: `<>` とスラーの間に grace 群が入る場合は主音符に
+  付く（LP 未照合・到達する fixture なし）。
 
 ★ **probe/コーパスの状態**: audit 80 本 = **エラー 0**。scratch probe 196 本 = **エラー 2**
 （`tabchoir`＝`staffGroup { tab … }` 不可・`voltagrace-probe`＝`repeat volta` 拒否＝
 **どちらも「その綴りが無いこと」を記録するのが目的の既存 probe**）。
 `bare-{key,time,tempo}.lys` は**主題ごと消えたので削除**。
 
-**テスト 4260 passed / 0 failed / 4 skipped**（前 4246→ +21 新設 −3 削除 −4 重複整理）・
+**テスト 4267 passed / 0 failed / 4 skipped**（第1便 4260・第2便 +7 = EmptyChordTests）・
 Core 0 warning。**未 push は §0 で数える（⚠️ push しない）**。
+probe 残置（第125）: **`ecslur-{a,b,c}.ly`（LP オラクル）・`ecslur-ls-{a,c,noslur}.lys`**。
 
 ## 以下は第124セッションの経緯
 

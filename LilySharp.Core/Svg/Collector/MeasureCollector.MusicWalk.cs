@@ -379,8 +379,55 @@ public sealed partial class MeasureCollector
         _ => null,
     };
 
+    // A slur mark written on an empty chord, waiting for the item that occupies the empty
+    // chord's moment. See TakeEmptyChordSlurs.
+    private bool _pendingEmptyChordSlurStart;
+    private bool _pendingEmptyChordSlurEnd;
+
+    /// <summary>
+    /// Merges a slur mark carried by a preceding empty chord <c>&lt;&gt;</c> into the item
+    /// now being emitted, and clears it.
+    /// </summary>
+    /// <remarks>
+    /// <c>&lt;&gt;</c> occupies no time, so its moment IS the following note's moment, and a
+    /// slur mark on it binds to the note column that lands there — the FOLLOWING note, not
+    /// the preceding one the <c>)</c> visually trails.
+    /// ★ MEASURED against LilyPond 2.26.0 (scratch/lpreg/ecslur-{a,b,c}.ly): the slur of
+    /// <c>r4 e'8( g' &lt;&gt;) c''4</c> and of <c>r4 e'8( g' c''4)</c> are the SAME curve
+    /// (both 1.2883 → 6.1207), while closing on <c>g'</c> gives a different one
+    /// (0.7803 → 3.5345). ⚠️ Do not "fix" this to end on the visually preceding note.
+    /// LILYPOND-REF: lily/slur-engraver.cc — the Slur_engraver ends the slur at the current
+    /// timestep's note column; lily/parser.yy chord_body "&lt;&gt;" is an event chord of
+    /// post-events only.
+    /// ⚠️ Disclosed: a grace group between the empty chord and the next main note takes the
+    /// mark to the MAIN note (grace items are collected on their own path). Untested against
+    /// LP — no fixture reaches it.
+    /// </remarks>
+    private void TakeEmptyChordSlurs(ref bool hasSlurStartAfter, ref bool hasSlurEndAfter)
+    {
+        if (!_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd)
+            return;
+        hasSlurStartAfter |= _pendingEmptyChordSlurStart;
+        hasSlurEndAfter |= _pendingEmptyChordSlurEnd;
+        _pendingEmptyChordSlurStart = false;
+        _pendingEmptyChordSlurEnd = false;
+    }
+
+    /// <summary>Whether this node emits an item a slur can bind to — the carrier an empty
+    /// chord's slur mark is waiting for. A wrapper (tuplet, grace, repeat) is not one; its
+    /// own inner emit picks the mark up.</summary>
+    private static bool BindsASlur(SyntaxNode node) => node switch
+    {
+        ChordSyntax c => !c.IsEmpty,
+        NoteSyntax or RestSyntax or ChordRepetitionSyntax or ArpeggioSyntax => true,
+        _ => false,
+    };
+
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {
+        if (BindsASlur(node))
+            TakeEmptyChordSlurs(ref hasSlurStartAfter, ref hasSlurEndAfter);
+
         switch (node)
         {
             case GraceExpressionSyntax grace:
@@ -557,13 +604,19 @@ public sealed partial class MeasureCollector
                     // LILYPOND-REF: lily/parser.yy chord_body "<>" — an event chord
                     //   with only post-events; regression empty-chord.ly is the pin
                     //   ("occupy no time, and leave the current duration unchanged").
-                    // "Empty" means no member of ANY kind — a degree chord <1 3 5>
-                    // and a drum chord have no Pitches but are full chords.
-                    if (!chord.Pitches.Any() && !chord.Degrees.Any() && !chord.DrumNames.Any())
+                    if (chord.IsEmpty)
                     {
                         CollectDynamics(chord, measureIndex, itemIndex);
                         CollectArticulations(chord, measureIndex, itemIndex,
                             stemUp: false, anchorTiming: chordAnchorTiming);
+                        // A SLUR mark needs a carrier grob, so unlike a dynamic it cannot be
+                        // addressed by column index — it waits for the item that occupies
+                        // this moment (TakeEmptyChordSlurs). Dropping it here drew no slur
+                        // and, until the file had to be structured, said nothing either:
+                        // the twin of regression empty-chord.ly lost its phrase mark in
+                        // silence (LYS0020 work, 2026-08-09).
+                        _pendingEmptyChordSlurStart |= hasSlurStartAfter;
+                        _pendingEmptyChordSlurEnd |= hasSlurEndAfter;
                         break;
                     }
                     // Process grace notes BEFORE the main chord so they get correct octave context
@@ -1086,6 +1139,11 @@ public sealed partial class MeasureCollector
     private Fraction EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
         bool hasTieAfter, bool hasSlurStartAfter, bool hasSlurEndAfter, bool hasBeamStartAfter, bool hasBeamEndAfter)
     {
+        // The first item inside a tuplet can be the carrier for a slur mark left by an
+        // empty chord just before the group (the same hole the glissando note below records).
+        if (BindsASlur(item))
+            TakeEmptyChordSlurs(ref hasSlurStartAfter, ref hasSlurEndAfter);
+
         int annMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
         int annItemIndex = builder.CurrentItemCount;
         Fraction annAnchor = builder.CurrentDuration;

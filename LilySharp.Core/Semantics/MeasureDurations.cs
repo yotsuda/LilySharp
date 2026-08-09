@@ -57,6 +57,14 @@ internal static class MeasureDurations
                 if (rest.Duration != null) defaultDuration = restDuration;
                 return restDuration;
 
+            // The EMPTY chord <> is a post-event carrier: no time, and the running
+            // default is left alone. Charging it the running duration made a correct bar
+            // report overfull (`r4 e8 g <> c'4 r4` = 4/4 was called 9/8) — the metric side
+            // was spelling "how long is a chord" differently from the collector, which adds
+            // no item for it at all. Both now read ChordSyntax.IsEmpty.
+            case ChordSyntax { IsEmpty: true }:
+                return Fraction.Zero;
+
             case ChordSyntax chord:
                 var chordDuration = DurationCalculator.GetDuration(chord, defaultDuration);
                 if (chord.Duration != null) defaultDuration = chordDuration;

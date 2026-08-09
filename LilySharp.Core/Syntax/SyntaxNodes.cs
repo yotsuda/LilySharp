@@ -602,6 +602,22 @@ public sealed class ChordSyntax : SyntaxNode
         }
     }
 
+    /// <summary>
+    /// The EMPTY chord <c>&lt;&gt;</c> — no member of ANY kind. It is a carrier for
+    /// post-events only: it occupies no time and leaves the running default duration
+    /// unchanged (LILYPOND-REF: lily/parser.yy chord_body "&lt;&gt;"; regression
+    /// empty-chord.ly pins both).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ "Empty" is NOT "has no Pitches": a degree chord <c>&lt;1 3 5&gt;</c> and a drum
+    /// chord <c>&lt;bd hh&gt;</c> have no pitch members and are full chords.
+    /// ★ This lives on the node because the test was spelled TWICE and the two spellings
+    /// disagreed: the collector gave <c>&lt;&gt;</c> no time while
+    /// <see cref="Semantics.MeasureDurations"/> charged it the running duration, so a
+    /// correct bar was reported overfull (found 2026-08-09). One definition, both readers.
+    /// </remarks>
+    public bool IsEmpty => !Pitches.Any() && !Degrees.Any() && !DrumNames.Any();
+
     /// <summary>The root pitch (first member) of a degree chord — the anchor the
     /// degrees stack on; null if the chord has no pitch member.</summary>
     public PitchSyntax? Root
