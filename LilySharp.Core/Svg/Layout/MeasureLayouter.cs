@@ -497,7 +497,10 @@ internal sealed class MeasureLayouter
         // A pair with NO wish takes LilyPond's springs.empty () branch ("polyphonic
         // spacing of hemiolas"): minimum 0.0 outright, the raw duration ideal, no
         // left-head refinement and no merge headroom — the whole wish pipeline is per
-        // wish. MEASURED: spacing-loose-polyphony.ly is the LP-oracle book this branch
+        // wish. The zero is gated on the RIGHT column being musical (:382); a wishless
+        // pair into a change column keeps its base minimum, which the changeGaps
+        // override below replaces anyway, so the gate has no separate reader here.
+        // MEASURED: spacing-loose-polyphony.ly is the LP-oracle book this branch
         // waited for (the previous NAMED keep of the increment minimum said "zero it
         // when a book with an LP oracle measures this branch") — its two cross-staff
         // pairs price bare at 0.80/1.60 and the loose-column rod's blocking force

@@ -2991,9 +2991,15 @@ internal static class SpacingRules
     /// clique.back ()->relative_coordinate (...) - robust_relative_extent (clique[0], ...)[RIGHT]</c>.</param>
     /// <remarks>
     /// The ideal/tight pair for a change → note clique edge comes from
-    /// <c>standard_breakable_column_spacing</c>, which is the same
-    /// <c>Staff_spacing::get_spacing</c> shape <see cref="MidMeasureChangeGaps"/>'s right
-    /// gap already implements; both are then floored by the loose column's own length.
+    /// <c>standard_breakable_column_spacing</c>. The loose column shares its note's
+    /// moment, so that lands in the dt == 0 arm — "Staff_spacing should handle the job,
+    /// using dt when it is 0 is silly" — whose spring is simply
+    /// <c>(min_dist + 0.5, min_dist)</c> over <c>Paper_column::minimum_distance</c>;
+    /// both are then floored by the loose column's own length. (NOT the
+    /// <c>Staff_spacing::get_spacing</c> ideal the change column's own spring carries —
+    /// misread that way at first, which only the scale factor could have told apart.)
+    /// LILYPOND-REF: lily/spacing-basic.cc:41-83 standard_breakable_column_spacing —
+    ///   :44 min_dist; :71-77 the dt == 0 arm, <c>ideal = min_dist + 0.5</c>.
     /// LILYPOND-REF: lily/spacing-loose-columns.cc:151-179 set_loose_columns — the spring,
     ///   then <c>base_note_space = std::max (..., loose_col_horizontal_length)</c> and the
     ///   same for <c>tight_note_space</c>.
@@ -3011,9 +3017,9 @@ internal static class SpacingRules
         if (first == null)
             return 0;
 
-        double rightRod = RightRod(columnItems!, columnWidth, last!);
-        double tight = Math.Max(rightRod, columnWidth);
-        double ideal = Math.Max(RightGap(columnWidth, last!, rightRod), columnWidth);
+        double minDist = RightRod(columnItems!, columnWidth, last!);
+        double tight = Math.Max(minDist, columnWidth);
+        double ideal = Math.Max(minDist + LooseColumnZeroDtSpace, columnWidth);
 
         // "currently a magic number - what would be a good grob to hold this property?"
         // LILYPOND-REF: lily/spacing-loose-columns.cc:192 — <c>Real left_padding = 0.15</c>.
@@ -3035,6 +3041,14 @@ internal static class SpacingRules
         //   scale_factor</c>, hung back from the right point.
         return tight + (ideal - tight) * scale;
     }
+
+    /// <summary>
+    /// The ideal headroom a same-moment (dt == 0) pair gets over its minimum in
+    /// <c>standard_breakable_column_spacing</c> — the spring a loose column's clique edge
+    /// is priced by, since a change column shares its note's moment.
+    /// LILYPOND-REF: lily/spacing-basic.cc:71-77 — <c>ideal = min_dist + 0.5</c>.
+    /// </summary>
+    private const double LooseColumnZeroDtSpace = 0.5;
 
     /// <summary>
     /// Width that leading grace notes need in FRONT of their main note's column.

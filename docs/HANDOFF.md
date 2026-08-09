@@ -63,7 +63,40 @@ spacing-loose-polyphony.ly = loose column の port 完結（第119第6便の ope
 `315d4047`・第2便 **staff-tabstaff-spacing.ly 下見 = open（多score頁の鎖が無い＝
 アーキ級起票）**・`554c8e68`・第3便 stem-pure-height-beamed.ly 下見・`fde998cf`・
 第4便 **fixed 第53号 = stem-pure-height-beamed.ly = beamed stem pure height の
-calc_beam 枝 port（下見の open を同セッションで回収）**・この handoff と同 commit）。
+calc_beam 枝 port（下見の open を同セッションで回収）**・`da0ad942`・第5便
+**自己監査（ユーザー三問）＝字面違反 1 訂正（出力不変・全緑 4222）・開示 2 追記**・
+この handoff と同 commit）。
+
+★★ **第5便 自己監査（「字面どおり? ハック無し? REF 付けた?」）**:
+- **違反 1 = loose 吊るしの ideal（訂正済・出力不変）**: set_loose_columns が呼ぶのは
+  standard_breakable_column_spacing で、**同 moment 対（dt==0）の実体は
+  `ideal = min_dist + 0.5`**（spacing-basic.cc:71-77「Staff_spacing の仕事・dt=0 で
+  使うのは silly」）——読まずに「Staff_spacing::get_spacing と同形」と推定して
+  RightGap（width+1.0 系）を ideal に使っていた。**照合が exact でも捕まらない型**
+  （sploose は scale=0＝hang=tight で ideal が bind しない）＝scale∈(0,1) の本が
+  来た時だけ発火する時限。min+0.5 に訂正・定数は LooseColumnZeroDtSpace として
+  出典つき宣言・全 snapshot/台帳不動で出力不変を確認。
+- **検算で白 8**: ⑴ is_loose_column の節順・width>0 の向き・r==r_neighbor 恒真の根拠
+  ⑵ rod = dists[LEFT]+dists[RIGHT] が既存 MidMeasureChangeGaps.MinDistance と同値
+  （左=note wish skyline・右=Paper_column::minimum_distance＝既存家の流用）
+  ⑶ ApplyRods の blocking 分岐: newMin=max(min, ideal+f·inv) の max も符号別 inv も
+  spring.cc:218-237 length の字面・既存 blocking との max も :124-126 どおり
+  ⑷ scale の 0/0: C++ の std::min(1.0,NaN)→1.0 と自分の ideal≤tight→scale1 が同値
+  ⑸ hemiola 分岐 = springs.empty で set_min_distance(0.0) のみ・base 温存
+  （spacing-spanner.cc:380-393 実読で確認） ⑹ staff 単位 wish の根拠 =
+  last_spacings_[parent]（note-spacing-engraver.cc:109-128 実読） ⑺ beamed pure:
+  unite+逆側 clip＝「共有 tip1個+自分の begin」への畳みは cache_pure_height
+  （:449-458）の per-member overshoot と一致・同方向 filter・rest 非参加 ⑻ 3 読者
+  （skyline 箱・note-spacing:272-273・staff-spacing:55-59）全部 pure_y_extent＝
+  家ごと beamed 化の license。
+- **開示 2 追記（挙動不変）**: ⑴ hemiola の min 0 は LP では右列 musical ゲート付き
+  （:382）——LS では changeGaps override が同じ穴を塞ぐので別読者なし、と明記
+  ⑵ ApplyRods の isinf 枝のゼロ ideal 退避（LP は dist/(right−left) を配る
+  :109-119）は unreachable として named。
+- 既存札の再掲: ApplyRods の rod_force は range_solve でなく閉形式（範囲内の既存
+  blocking force を無視・収束ループが救う）＝⚠️コメント済。tab の beamed 帯は
+  記譜 position 系のまま（tab 幾何は別 frame・tab-tuplet-number の census 済
+  X drift に含まれる）。
 
 ★★★ **第4便 fixed 第53号 stem-pure-height-beamed.ly = 全列 LP exact**:
 - twin = scratch\lpreg\stempure.{lys,svg,-gen.ly,-lp.svg,-lp.log}（\stemUp で

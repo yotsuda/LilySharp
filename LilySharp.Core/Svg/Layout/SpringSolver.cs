@@ -349,6 +349,9 @@ internal sealed class SpringSolver
                     // the ideals so the range still reaches the rod at force 0.
                     // Valid springs always have IdealDistance > 0; guard the divide so
                     // degenerate input skips the rod rather than poisoning it with NaN.
+                    // (LilyPond's own zero-ideal arm sets every ideal to
+                    // dist / (right - left) instead, :109-119 — unreachable here, and
+                    // named rather than ported.)
                     // LILYPOND-REF: lily/simple-spacer.cc:104-122 add_rod isinf branch — set_ideal_distance
                     //   scales by dist / spring_dist and leaves both strengths alone.
                     if (idealLen < dist && idealLen > 0)
