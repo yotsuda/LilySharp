@@ -180,11 +180,33 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
 上書きしない。⇒ **段② の実装は「スロット方向を能動的に強制する」段が要る**。
 利用者が向きを書く必要は無い（`condensedStaff` 内の位置から導ける）が、**自動では効かない**。
 
-★ **段②（`combinedStaff { X Y }`）は未実装**。綴りだけ足すと**合体しないのに
-combined と名乗る**ことになるので、engraving（ユニゾンの符頭/符尾の畳み込み・solo 単声化・
-相手休符の削除・moment ベース判定への書き直し）と同時に入れる。設計は確定済み:
-ちょうど 2 パート・単独なら 1 段・`condensedStaff` の中なら 1 声部・
-`condensedStaff` は 2 項目以上なので同義語は書けない。
+★★★ **次の一手 = 段②（`combinedStaff { X Y }`）＝ focused session 1 本**。綴りだけ足すのは
+禁止（**合体しないのに combined と名乗る**＝この repo が最も嫌う形）。engraving と同時に入れる。
+**設計は確定済み**: ちょうど 2 パート・単独なら 1 段・`condensedStaff` の中なら 1 声部・
+`condensedStaff` が 2 項目以上を要求するので同義語は書けない。
+
+- **再利用できるもの（確認済）**: `PartCombineState` の語彙 5 状態 /
+  `PartCombineAnalyzer.Calculate` のテキスト配置 / `SharedRenderer.Marks.cs:950
+  DrawPartCombine` の描画 / **head wipe**（`ElementCoordinator` ・LILYPOND-REF
+  note-collision.cc:254-317 ＝ユニゾン符頭の併合は既にある）/ Stem transparent の
+  override 経路 / 器 `condensedStaff`（第4便で landed）。
+- **足りないもの（各々に LP オラクルを取ること）**:
+  ⑴ **moment ベース判定への書き直し**——現 `Analyze` は**アイテム番号の同期進行**で
+  `timePos` は未使用＝リズムの違う二声で誤判定。
+  ⑵ **ユニゾンの符尾も 1 本にする**——head wipe だけでは**符頭 1 個に符尾 2 本**になり
+  a2 の見た目にならない（LP 実測 stem 24→16 は符尾も畳まれている）。
+  ⑶ **solo の単声化＋相手休符の削除**（LP 実測 glyph 24→18 の残りはこれ）。
+  ⑷ **スロット方向の能動的強制**（上の「前提が崩れた」項）。
+  ⑸ `AreUnison` が **StaffPosition 比較**＝同じ線上の異名を unison と見る。
+  ⑹ ラベルは **LP が bold serif 2.2**・Lily# は italic。
+- ★ **実装方針の当たり**: layout を触るより、**collect 相で 2 パートから合体済みの声部列を
+  作る**方が筋が良い（LP の `\partCombine` も music transformation）。既存の多声経路が
+  そのまま使えるので、触る面が小さくなる。⚠️ ただし「単声パッセージは符尾が音高で決まる」
+  ため、**item 単位の neutral 方向**が要る（今は声部番号で決まる）——ここが設計の要。
+- **probe 残置（第4便で作成済・次セッションの出発点）**: `pc3-lp.ly`（LP の 3 声本の複製）・
+  `pc3-{up,plain}.ly`（Up の非冗長性＝⑷ の根拠）・`pcombine-{lp,ctl}.ly`（合体の量＝
+  stem 24→16・glyph 24→18・text 1→4）・`cond{,3}-{probe,ctl}.lys`（段①の対照）。
+- **解錠は plain 10 冊**（`part-combine-*` は台帳 31 冊だが 20 は scheme・1 は markup＝枠外）。
 
 **テスト 4279 passed / 0 failed / 4 skipped**（第1便 4260・第2便 +7 = EmptyChordTests・
 第4便 +12 = CondensedStaffTests）・
