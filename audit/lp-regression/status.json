@@ -8013,7 +8013,9 @@
     },
     "tabstaff-choirstaff-brace.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "ChoirStaff 内の TabStaff に余計な bracket が付かない(StaffGroup 版と同じ見た目)",
+      "notes": "skip: グループ内に tab が書けない(staffGroup { tab m } は LYS0002・probe 実施)=器材が主張の核。choirStaff キーワードと StaffGroupType.ChoirStaff 自体は実装済(グループ機構は在る)・tab-in-group の文法が入れば再開可。probe=scratch\\lpreg\\tabchoir.lys"
     },
     "tag-filter.ly": {
       "category": "scheme",
@@ -8043,7 +8045,9 @@
     },
     "text-mark-marklengthon.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\markLengthOn は text mark にも効く(mark の幅が spacing に参加する)",
+      "notes": "skip: \\textMark(音符から独立した standalone text mark)も \\markLengthOn も綴りなし=器材が主張の核。部分表面=@mark(\"…\")/@text は音符付き注釈のみ(スペース挟み standalone は既知の drop 疑い起票済・markprobe.lys)"
     },
     "text-mark.ly": {
       "category": "scheme",
@@ -8163,7 +8167,9 @@
     },
     "tie-pitched-trill.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\pitchedTrill の補助音がタイの未終端警告を誘発しない(c1~ の~は補助音 d でなく次の c1 に繋がる)",
+      "notes": "skip: \\pitchedTrill(トリル補助音を括弧付き音符で示す)綴りなし=補助音が居ないと claim(タイが補助音を飛び越える)の枠が書けない。@startTrillSpan/@stopTrillSpan 自体は実装済(trill-spanner fixture)。タイの半分(c1~ c1 の素通し)は自明に成立"
     },
     "tie-semi-single.ly": {
       "category": "scheme",
@@ -8259,7 +8265,9 @@
     },
     "time-signature-numeric-and-default.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "skip",
+      "claim": "\\numericTimeSignature/\\defaultTimeSignature は \\time 同様、同時進行の全譜に効く",
+      "notes": "skip: 時号 style 切替(\\numericTimeSignature=4/4 を C でなく数字で・\\defaultTimeSignature=戻す)の綴りなし=器材が主張の核。Lily# の時号は常時 LP 既定 style(4/4=C グリフ)"
     },
     "time-signature-senza-misura-context.ly": {
       "category": "scheme",
@@ -8355,7 +8363,9 @@
     },
     "trill-spanner-direction.ly": {
       "category": "plain",
-      "state": "pending"
+      "state": "open",
+      "claim": "trill spanner の向きは ^/_ で強制でき、\\voiceTwo の既定 DOWN より優先される",
+      "notes": "open(root 釘付け): LS の trill spanner は常時 UP(TrillSpannerEngraver.cs:62 doc に明記)。probe: @startTrillSpan.down は無警告で受理され UP に描かれる(silent 無視・trillsdir-probe.lys)。LP は TrillSpanner ∈ direction-polyphonic-grobs(\\voiceTwo で既定 DOWN)+^/_ が優先。修理形=⑴annotation の .up/.down を TrillSpannerItem へ配線 ⑵voice 既定 direction の配布(make-voice-props-set の配布先一覧に TrillSpanner が居るか要確認) ⑶DOWN 時の下側 side-position+skyline 参加(現実装は上側 pass 前提)。単独 \\voiceTwo の枠(voice{}{} 第2分岐のみ)も要検討"
     },
     "trill-spanner-grace.ly": {
       "category": "scheme",

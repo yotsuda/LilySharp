@@ -70,8 +70,17 @@ tablature-new-line-spacer.ly（行頭 s2 crash 回帰・コード変更0・両�
 regime 野良観測・twin = tabspacer 一式）**・`d3f72e32`・第5便 **fixed 第57号 =
 tablature-tie-behaviour.ly = 行跨ぎタイの括弧フレット port**・`3e12113d`・第6便
 **exact 第39 = tablature-tremolo.ly（コード変更0・第55号の配線がそのまま効いた）**・
-第7便 **fixed 第58号 = tablature.ly = 弦番号の両記法 port**・この handoff と
-同 commit）。
+第7便 **fixed 第58号 = tablature.ly = 弦番号の両記法 port**・`aeda2bb2`・第8便
+**skip 4冊 + open 第18**（tabstaff-choirstaff-brace = グループ内に tab が書けない
+（probe LYS0002・choirStaff キーワード自体は在る）＝**tab 島完食**・
+text-mark-marklengthon = \textMark/\markLengthOn 綴りなし・tie-pitched-trill =
+\pitchedTrill 綴りなし（@startTrillSpan 自体は在る）・
+time-signature-numeric-and-default = 時号 style 切替綴りなし・
+**trill-spanner-direction = open**: LS trill spanner は常時 UP
+（TrillSpannerEngraver:62）・@startTrillSpan.down は無警告 silent 無視
+（probe trillsdir-probe）・LP は TrillSpanner ∈ direction-polyphonic-grobs
+（\voiceTwo 既定 DOWN）+^/_ 優先。修理形 = .up/.down 配線 + voice 既定配布 +
+下側 side-position/skyline＝棚）・この handoff と同 commit）。
 
 ★ **第6便 exact 第39 tablature-tremolo.ly**: 2 score 本→a/b の2対に分割
 （twin = tabtrem-{a,b}{,-lp}・score 間の頁鎖 = 第120 起票の別件）。⑴ 既定
@@ -177,11 +186,11 @@ tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp �
   ⑶ **LS の強制弦は後続の同音に粘る**（probe 観測: f'4.\2 f' f' が全部 fret6。
   LP の \N はその音のみ。本書は全音 \3 明示で off-claim・tab 島の後続本で発火し得る札）。
 
-plain 322 / 処理済 **296**（fixed **58**・exact **39**・skip **182**・open **17**・
-pending **26**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
-frontier = **tabstaff-choirstaff-brace**（ChoirStaff 対応物の有無から）で tab 島
-完食 → 以降アルファベット順 pending（text-mark-marklengthon / tie-pitched-trill /
-time-signature-numeric-and-default / trill-spanner-direction …）。
+plain 322 / 処理済 **301**（fixed **58**・exact **39**・skip **186**・open **18**・
+pending **21**。status.json 実数。数えたら state 別内訳も一緒に書くこと）。
+frontier = **trill-spanner-pitched-consecutive 以降の trill-spanner 族 4冊**
+（pitched 2冊は \pitchedTrill 綴りなしゲート濃厚・terminated-implicitly /
+to-barline は第119 の to-barline port が既在＝実評価候補）→ tuplet-bracket 族。
 第120 第2便の open（多 score 頁の鎖＝アーキ級）は focused session 候補のまま。
 slur-flag / slur-nice は文法宿題の棚のまま。
 
