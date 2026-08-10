@@ -346,24 +346,12 @@ internal static class PartCombiner
                 edited2 == null ? two : two with { Measures = edited2.ToImmutable() });
     }
 
-    /// <summary>
-    /// The index of the bar's ONLY sounding item when that item is an explicit
-    /// multi-measure rest, else -1. Zero-duration items (a clef / key / time change) ride
-    /// the bar without making it anything other than a rested bar.
-    /// </summary>
+    // "This bar rests with a written R" is spelled ONCE, in the engraver that groups the
+    // runs — see MultiMeasureRestEngraver.BarRestIndex. A second spelling here skipped every
+    // zero-duration item rather than only the break-aligned ones, so the two could disagree
+    // about a bar; the fold and the grouping it feeds must ask the same question.
     private static int BarRestIndex(Measure measure)
-    {
-        int found = -1;
-        for (int i = 0; i < measure.Items.Length; i++)
-        {
-            if (SoundingDuration(measure.Items[i]) == Fraction.Zero)
-                continue;
-            if (found >= 0 || measure.Items[i] is not RestItem { IsMultiMeasure: true, IsSpacer: false })
-                return -1;
-            found = i;
-        }
-        return found;
-    }
+        => Layout.MultiMeasureRestEngraver.BarRestIndex(measure);
 
     private static Measure OpenWrittenRestAt(Measure measure, int index)
     {
@@ -1281,15 +1269,18 @@ internal static class PartCombiner
 
                 if (target == PartCombineVoiceId.Two)
                 {
-                    slot1[m].Add(new SlotEntry(onset, WithVoiceDirection(item, up: false)));
+                    slot1[m].Add(new SlotEntry(onset,
+                        InContext(WithVoiceDirection(item, up: false), target)));
                     landed[vs] = (1, m, slot1[m].Count - 1);
                     onset += sounding;
                     continue;
                 }
 
-                var routed = target == PartCombineVoiceId.One
-                    ? WithVoiceDirection(item, up: true)
-                    : WithoutVoiceDirection(item);
+                var routed = InContext(
+                    target == PartCombineVoiceId.One
+                        ? WithVoiceDirection(item, up: true)
+                        : WithoutVoiceDirection(item),
+                    target);
 
                 // Two parts in the shared voice at one moment are ONE note column:
                 // LilyPond puts both note events into the same Voice context, which is a
@@ -1360,6 +1351,31 @@ internal static class PartCombiner
         ChordItem c => c.Notes,
         _ => [],
     };
+
+    /// <summary>
+    /// Records on the item WHICH of LilyPond's five contexts the routing put it in.
+    /// </summary>
+    /// <remarks>
+    /// The stem direction <see cref="WithVoiceDirection"/> bakes is the only other thing the
+    /// routing leaves on an item, and it is not enough to answer this: <c>shared</c> and
+    /// <c>solo</c> both carry no voice settings, so they are indistinguishable by direction,
+    /// and they are exactly the pair whose boundary horizontal spacing has to see (measured:
+    /// scratch/lpreg/pctend.log, where the shared voice's wish at the half rest reaches
+    /// straight past the whole solo run to the note it engraves next).
+    /// </remarks>
+    private static MusicItem InContext(MusicItem item, PartCombineVoiceId target) =>
+        item with
+        {
+            VoiceContext = target switch
+            {
+                PartCombineVoiceId.One => VoiceContextId.CombineOne,
+                PartCombineVoiceId.Two => VoiceContextId.CombineTwo,
+                PartCombineVoiceId.Shared => VoiceContextId.CombineShared,
+                PartCombineVoiceId.Solo => VoiceContextId.CombineSolo,
+                // Null never reaches a slot — PlaceItems drops it before this is called.
+                _ => VoiceContextId.Default,
+            }
+        };
 
     /// <summary>
     /// Bakes <c>\voiceOne</c>/<c>\voiceTwo</c> onto an item routed to part one's or part

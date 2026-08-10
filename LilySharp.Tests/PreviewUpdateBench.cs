@@ -1,0 +1,125 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
+using Xunit;
+
+namespace LilySharp.Tests;
+
+/// <summary>
+/// Times the PREVIEW path — <see cref="IncrementalCompiler.RenderIncremental"/>, the entry the
+/// LSP preview calls on every keystroke — rather than a whole <c>lysc svg</c> run.
+/// </summary>
+/// <remarks>
+/// ⚠️ NOT A TEST. It asserts nothing and is skipped unless <c>LILYSHARP_PREVIEW_BENCH</c> names
+/// an output file, because a timing loop in the suite is a flaky test waiting to happen.
+/// Run it in a worktree of the baseline commit and in the working tree, then compare the files:
+///   $env:LILYSHARP_PREVIEW_BENCH = "…\preview-base.txt"
+///   dotnet test … --filter FullyQualifiedName~PreviewUpdateBench
+/// <para>
+/// The loop re-renders an UNCHANGED tree. That is the keystroke that reuses the most — a full
+/// cache hit — and so the one where the per-edit fixed costs (collect the score, fold every
+/// item into a content key, price the break gate) are the whole of the time. An edit that
+/// actually changes a measure pays those PLUS a relayout, which dilutes exactly the thing being
+/// measured here, so the unchanged tree is the sharper probe, not the more flattering one.
+/// </para>
+/// </remarks>
+[Trait("Category", "Bench")]
+public class PreviewUpdateBench
+{
+    private const int Warmups = 2;
+    private const int Rounds = 7;
+
+    public static IEnumerable<object[]> Books()
+    {
+        yield return ["perf-plain1k.lys"];
+        yield return ["perf-comb300.lys"];
+    }
+
+    [Theory]
+    [MemberData(nameof(Books))]
+    public void TimeOneKeystroke(string book)
+    {
+        var outPath = Environment.GetEnvironmentVariable("LILYSHARP_PREVIEW_BENCH");
+        if (string.IsNullOrEmpty(outPath))
+            return;
+
+        var path = Path.Combine(@"C:\MyProj\LilySharp\scratch\lpreg", book);
+        if (!File.Exists(path))
+        {
+            File.AppendAllText(outPath, $"{book}\tMISSING\n");
+            return;
+        }
+
+        var tree = SyntaxTree.Parse(File.ReadAllText(path));
+        var options = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(tree, options);
+
+        for (int i = 0; i < Warmups; i++)
+            compiler.RenderIncremental(tree);
+
+        var times = new List<double>(Rounds);
+        string? svg = null;
+        for (int i = 0; i < Rounds; i++)
+        {
+            var sw = Stopwatch.StartNew();
+            svg = compiler.RenderIncremental(tree);
+            sw.Stop();
+            times.Add(sw.Elapsed.TotalMilliseconds);
+        }
+
+        // …and the ONE stage this session's field reaches, on its own. A whole keystroke is
+        // collect + key + gate + (maybe) layout, so a few per cent of it is inside this
+        // measurement's noise; the content key is where the new property is folded, and it is
+        // the only place a score with no combiner pays anything at all.
+        var spec = RenderSpecParser.FindFirst(tree);
+        var score = SvgGenerator.CollectScore(tree, spec);
+        for (int i = 0; i < Warmups; i++)
+            MeasureContentKey.Compute(score);
+        var keyTimes = new List<double>(Rounds);
+        for (int i = 0; i < Rounds; i++)
+        {
+            var sw = Stopwatch.StartNew();
+            // 100 folds per round: one fold of a 1000-bar score is ~7 ms and the machine's
+            // per-sample spread is wider than the whole effect being looked for, so the
+            // averaging has to happen inside the clock, not across rounds.
+            for (int k = 0; k < 100; k++)
+                MeasureContentKey.Compute(score);
+            sw.Stop();
+            keyTimes.Add(sw.Elapsed.TotalMilliseconds / 100.0);
+        }
+        keyTimes.Sort();
+
+        times.Sort();
+        // The hash of the rendered SVG goes in the line too: a timing comparison between two
+        // builds means nothing unless both are drawing the same picture.
+        long h = 17;
+        foreach (char c in svg ?? "")
+            h = h * 31 + c;
+        File.AppendAllText(outPath,
+            $"{book}\tkeystroke floor {times[0]:F1} ms\tmedian {times[times.Count / 2]:F1} ms"
+            + $"\tcontentkey floor {keyTimes[0]:F3} ms\tmedian {keyTimes[keyTimes.Count / 2]:F3} ms"
+            + $"\tsvg {h:X16}\n");
+    }
+}

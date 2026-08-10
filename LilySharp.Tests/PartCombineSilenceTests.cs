@@ -125,6 +125,28 @@ public class PartCombineSilenceTests
     }
 
     [Fact]
+    public void TheColumnsSitWhereLilyPondPutsThem()
+    {
+        // Score 1's six columns, from LilyPond's own dump of the book
+        // (scratch/lpreg/pcsil-a.ly, REST records). This used to be the book's X residual: the
+        // columns matched LilyPond's \voiceOne / \voiceTwo CONTROL to 0.005 while LilyPond's
+        // own \partCombine output sat 0.10-0.20 away (measured then: 12.99 / 18.09 / 20.29 /
+        // 24.57 against the numbers below). The whole of it was the left-head refinement of
+        // note-spacing.cc:77 running over pairs that no single voice occupies at both ends —
+        // the shared voice's wish at 13.185 reaches straight past the two-voice columns to
+        // 24.475, the next column the shared voice engraves anything in.
+        // ⚠️ This is the SECOND book the rule was measured on; the first, and the one that
+        // carries the derivation, is part-combine-tuplet-end (PartCombineTupletEndTests).
+        double[] expected = [8.585, 10.785, 13.185, 17.985, 20.185, 24.475];
+
+        var xs = Glyphs(Svg(ScoreOne())).Select(g => g.X).Distinct().OrderBy(x => x).ToArray();
+
+        Assert.Equal(expected.Length, xs.Length);
+        for (int i = 0; i < expected.Length; i++)
+            Assert.Equal(expected[i], xs[i], 0.006);   // the SVG prints two decimals
+    }
+
+    [Fact]
     public void ASilencedPartStillSpendsItsTime()
     {
         // The regression this book found. Part two's r2 is dropped — it is the merged half

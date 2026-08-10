@@ -3530,6 +3530,46 @@ internal static class SpacingRules
     };
 
     /// <summary>
+    /// The voice context an item belongs to for spacing: what the routing stamped, or the cue
+    /// region its per-note flag stands for.
+    /// </summary>
+    private static VoiceContextId ContextOf(MusicItem item) =>
+        item.VoiceContext != VoiceContextId.Default ? item.VoiceContext
+        : IsCueItem(item) ? VoiceContextId.Cue
+        : VoiceContextId.Default;
+
+    /// <summary>
+    /// The set of contexts holding a NOTE COLUMN in this column, one bit per
+    /// <see cref="VoiceContextId"/>; 0 when the column has none.
+    /// </summary>
+    /// <remarks>
+    /// Only the items LilyPond makes a wish for count, so a bar line, a clef or a key change
+    /// contributes nothing — which is what makes a change column belong to every voice rather
+    /// than to a sixth one of its own. A SPACER contributes nothing either: it engraves no
+    /// grob, so no context acknowledges anything at its moment. That is the same reading
+    /// <see cref="ApplyLeftHeadWidth"/> already spends on the width (a spacer prices NaN, not
+    /// a phantom rest).
+    /// LILYPOND-REF: lily/note-spacing-engraver.cc:88-91 acknowledge_rhythmic_grob — every
+    /// rhythmic grob, and note columns beside it, is what a wish is made from.
+    /// <para>
+    /// ⚠️ One bit per enum member, so <see cref="VoiceContextId"/> may not grow past 32. It has
+    /// six, and the only way it grows is a new engraving voice — which is a design change, not
+    /// a drift — so this is a note rather than a guard.
+    /// </para>
+    /// </remarks>
+    private static int ContextMask(IEnumerable<MusicItem> items)
+    {
+        int mask = 0;
+        foreach (var item in items)
+        {
+            if (item is not (NoteItem or ChordItem or RestItem { IsSpacer: false }))
+                continue;
+            mask |= 1 << (int)ContextOf(item);
+        }
+        return mask;
+    }
+
+    /// <summary>
     /// Whether the refinement runs at all over this column pair — it does not across a VOICE
     /// boundary, where the spring keeps its raw duration ideal.
     /// </summary>
@@ -3539,8 +3579,32 @@ internal static class SpacingRules
     /// untouched when no wish matches. A wish belongs to a VOICE, so the pair that straddles two
     /// of them is refined by neither.
     /// <para>
-    /// ⚠️ THE READING IS NOT ABOUT CUES, though a cue region is the only place Lily# can spell a
-    /// sequential voice change today. audit/lp-geometry/probes/voice-boundary-spacing.ly measured
+    /// ⚠️ THE READING IS NOT ABOUT CUES. It used to be spelled as one — "is one side cued and the
+    /// other not" — with a note saying a cue region was the only sequential voice change Lily#
+    /// could spell. <c>combinedStaff</c> made that false: the part combiner routes ONE stream
+    /// through five contexts, so its shared→solo step is a voice change in the middle of a
+    /// measure with no cue anywhere. The condition below is LilyPond's own instead — DOES ANY
+    /// CONTEXT OCCUPY BOTH COLUMNS — of which the cue reading is the two-context case.
+    /// MEASURED, scratch/lpreg/pctend.log dumps every wish of
+    /// input/regression/part-combine-tuplet-end.ly: the shared voice's wish at the half rest
+    /// carries right-items (31.403, 29.313) — the note it engraves next and the bar line — and
+    /// NOT the solo note at 14.087 that follows it, so that pair alone loses the refinement and
+    /// sits 1.5 − 1.2 = 0.300 tighter than the same music without the combiner (5.502 against
+    /// 5.802, control pctend-ctl.ly).
+    /// <para>
+    /// ⚠️ A VOICE CHANGE ACROSS A BAR LINE COSTS NOTHING, and the same book says so: the last
+    /// solo note's wish DOES name the bar-line column, because the engraver adds
+    /// <c>currentCommandColumn</c> to the running wish at every timestep, and a bar line
+    /// belongs to every voice.
+    /// LILYPOND-REF: lily/note-spacing-engraver.cc:115-120 stop_translation_timestep — the
+    /// command column joins the previous wish's right-items whenever the staff has spacing.
+    /// So the
+    /// solo→shared step over the bar line into the a2 keeps its refinement (26.608→bar line
+    /// measures the same in both scores) while the shared→solo step inside bar 1 does not. This
+    /// falls out of the mask rule below without a clause: a bar-line column contributes no
+    /// context at all, and an empty mask is never a boundary.
+    /// </para>
+    /// audit/lp-geometry/probes/voice-boundary-spacing.ly measured
     /// it with no cue in the book at all: VB-VOICE is four full-size quarters whose last two sit
     /// in a plain <c>\new Voice</c>, and its boundary loses the same 0.104200 that
     /// <c>cue.column.main-to-cue</c> records. VB-OUT is the half that says the refinement is
@@ -3579,17 +3643,23 @@ internal static class SpacingRules
     ///     head-width term and not some other quantity that happens to sit nearby.
     /// </para>
     /// <para>
-    /// ⚠️ TWO PLACES WHERE THIS PREDICATE IS NARROWER THAN LilyPond'S CONDITION, both because
+    /// ⚠️ ONE PLACE WHERE THIS PREDICATE IS STILL NARROWER THAN LilyPond'S CONDITION, because
     /// <see cref="NoteItem.IsCue"/> is a per-note flag and not a region identity:
     ///   departs from: :352-358 for ADJACENT cue regions. <c>cue { … } cue { … }</c> is two
     ///     CueVoice contexts in LilyPond (probe cue-span.ly C-TWO shows both are made), so their
-    ///     shared edge IS a voice boundary; here both sides answer IsCue and the pair is refined.
-    ///   departs from: :352-358 again when SIMULTANEOUS voices disagree about being cued — the
-    ///     loop below gives up and refines, where LilyPond builds one wish per voice and lets
-    ///     merge_springs (:380-393) combine whatever each of them decided.
-    ///   goes away when: an item can say WHICH region it belongs to, not merely that it is cued.
-    ///   observed by: NOTHING in either case. No fixture or sample writes two cue blocks back to
-    ///     back or a cue against a simultaneous non-cue voice (grep, 2026-08-03).
+    ///     shared edge IS a voice boundary; here both sides answer
+    ///     <see cref="VoiceContextId.Cue"/> and the pair is refined.
+    ///   goes away when: a cue item can say WHICH region it belongs to, the way a combined
+    ///     item now says which context it was routed into — i.e. when
+    ///     <see cref="VoiceContextId.Cue"/> stops being derived and starts being stamped.
+    ///   observed by: NOTHING. No fixture or sample writes two cue blocks back to back
+    ///     (grep, 2026-08-03; re-checked 2026-08-10).
+    /// <para>
+    /// ⚠️ The SECOND departure this note used to carry — simultaneous voices disagreeing about
+    /// being cued, where the old loop gave up and refined — is gone, and not because it was
+    /// patched: the mask rule below refines that pair for LilyPond's own reason, namely that
+    /// the non-cued voice occupies both columns and its wish spans them.
+    /// </para>
     /// </para>
     /// </remarks>
     private static bool CrossesVoiceBoundary(
@@ -3597,20 +3667,25 @@ internal static class SpacingRules
     {
         if (rightItems is null)
             return false;
-        bool leftCue = false, sawLeft = false;
-        foreach (var l in leftItems)
-        {
-            if (sawLeft && IsCueItem(l) != leftCue)
-                return false;   // simultaneous voices disagree — see the second departure above
-            leftCue = IsCueItem(l);
-            sawLeft = true;
-        }
-        if (!sawLeft)
+        int left = ContextMask(leftItems);
+        if (left == 0)
             return false;
-        foreach (var r in rightItems)
-            if (IsCueItem(r) != leftCue)
-                return true;
-        return false;
+        int right = ContextMask(rightItems);
+        if (right == 0)
+            return false;
+        // LILYPOND-REF: lily/spacing-spanner.cc:350-393 musical_column_spacing — the pair is
+        // refined once per wish whose right-items name the right column, and merge_springs
+        // combines them; no such wish at all leaves the base spring.
+        // ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
+        // saying out loud: the two columns are ADJACENT. A context's wish chain links the
+        // columns IT occupies, consecutively, so a context holding both ends of an adjacent
+        // pair has them next to each other in its own chain and its wish spans them — while a
+        // context that skips over the pair (the shared voice of pctend.log, whose wish jumps
+        // the whole solo run) names some column further on and links nothing here. With a
+        // column between them the pair would not be adjacent and would not be spaced as one.
+        // So, for the pairs this is ever asked about, "some context occupies both columns" and
+        // "some wish spans the pair" are the same statement.
+        return (left & right) == 0;
     }
 
     internal static Spring ApplyLeftHeadWidth(

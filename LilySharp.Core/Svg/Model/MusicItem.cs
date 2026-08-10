@@ -40,12 +40,65 @@ public enum NoteheadStyle
 }
 
 /// <summary>
+/// Which engraving voice — LilyPond's <c>Voice</c> CONTEXT — an item was routed into.
+/// </summary>
+/// <remarks>
+/// Only horizontal spacing asks: LilyPond's left-head refinement of a column pair runs once
+/// per <c>NoteSpacing</c> wish, and a wish's <c>right-items</c> are filled by
+/// <c>last_spacing_</c>, an INSTANCE member of a Voice engraver — so a pair no single context
+/// occupies at both ends is linked by nothing and keeps its raw duration spring.
+/// LILYPOND-REF: lily/note-spacing-engraver.cc:75-78 add_spacing_item — the previous wish of
+/// THIS engraver gets the new column;
+/// LILYPOND-REF: ly/engraver-init.ly:419 Note_spacing_engraver — consisted by <c>Voice</c>.
+/// <para>
+/// ⚠️ NOT A LITERAL PORT: LilyPond never records this on an event, because there the context
+/// IS the object that owns the engraver. Lily# flattens the combiner's five contexts into two
+/// item sequences, which discards exactly which one each item came from, so the fact has to
+/// ride the item. Derived from LilyPond, so cited as such (HANDOFF §7.6 ⒝).
+/// </para>
+/// </remarks>
+public enum VoiceContextId
+{
+    /// <summary>Not routed by the part combiner: the staff's ordinary voice.</summary>
+    Default,
+
+    /// <summary>
+    /// A cue region. ⚠️ DERIVED, NOT STAMPED — <see cref="NoteItem.IsCue"/> is a per-note
+    /// flag and the only thing a cue item carries today, so spacing maps it onto this value
+    /// rather than reading it here. Two adjacent cue regions are two <c>CueVoice</c> contexts
+    /// in LilyPond and are still one value here; that departure is named at
+    /// <c>SpacingRules.CrossesVoiceBoundary</c>.
+    /// </summary>
+    Cue,
+
+    /// <summary>The part combiner's <c>one</c> context (part one, kept apart).</summary>
+    CombineOne,
+
+    /// <summary>The part combiner's <c>two</c> context (part two, kept apart).</summary>
+    CombineTwo,
+
+    /// <summary>The part combiner's <c>shared</c> context (both parts, one voice).</summary>
+    CombineShared,
+
+    /// <summary>The part combiner's <c>solo</c> context (one part sounding alone).</summary>
+    CombineSolo,
+}
+
+/// <summary>
 /// Base type for all music items that have duration.
 /// </summary>
 public abstract record MusicItem
 {
     /// <summary>The duration of this item as a fraction of a whole note.</summary>
     public abstract Fraction Duration { get; }
+
+    /// <summary>
+    /// Which engraving voice engraved this item; <see cref="VoiceContextId.Default"/> for
+    /// everything the part combiner did not route. Stamped by
+    /// <c>Collector.PartCombiner.InContext</c> and read only by horizontal spacing — see
+    /// <see cref="VoiceContextId"/> for why the fact has to be on the item at all.
+    /// </summary>
+    public VoiceContextId VoiceContext { get; init; }
 
     /// <summary>Source position in the syntax tree for click-to-source mapping.</summary>
     public abstract int SourcePosition { get; }
@@ -423,6 +476,20 @@ public sealed record RestItem : MusicItem
     /// Default true: every other way a rest is built (a plain <c>r</c>/<c>R</c>, a spacer, a
     /// combined part's rest) IS its own written event, so only the expansion loop in
     /// <c>MeasureCollector.MusicWalk</c> clears it.
+    /// <para>
+    /// ⚠️ NOT a literal port, and LilyPond has no field like it — the fact it carries is
+    /// LilyPond's, but the need for a field is ours. There, the <c>*N</c> factor rides ONE
+    /// event all the way to the engraver, so "which bar did the writer start a rest on" is
+    /// never lost and never has to be recorded. Lily# expands the event into N identical
+    /// per-bar items during collection, which discards exactly that, so the fact has to be
+    /// carried on the items instead. Derived from LilyPond, so it is cited as such rather
+    /// than as <c>LILYSHARP-OWN</c> (HANDOFF §7.6 ⒝).
+    /// </para>
+    /// <para>
+    /// ⚠️ The default is silent: a future site that builds a rest standing for the 2nd..Nth
+    /// bar of an event would get <c>true</c> and be wrong. Only the expansion loop makes such
+    /// items today, which is what makes the default safe — not the type.
+    /// </para>
     /// LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST — the <c>*N</c> factor rides
     /// ONE event; LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music — one
     /// Multi_measure_rest spanner per event.

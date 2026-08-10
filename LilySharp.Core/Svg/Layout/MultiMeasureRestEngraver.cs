@@ -309,9 +309,6 @@ internal static class MultiMeasureRestEngraver
         // Where the clef GLYPH sits differs from key/time (LP puts clef BEFORE the bar
         // line, key/time after — scm/define-grobs.scm:650-664 break-align-orders), but
         // that is a drawing question and does not change the run grouping.
-        static bool IsBreakAlignedChange(MusicItem it)
-            => it is KeySignatureChangeItem or TimeSignatureChangeItem or ClefChangeItem;
-
         static bool HasLeadingBreakAlignedChange(Measure m)
             => m.Items.Length > 0 && IsBreakAlignedChange(m.Items[0]);
 
@@ -320,12 +317,8 @@ internal static class MultiMeasureRestEngraver
         // what a run swallows; the leading changes stay on the run's left bound.
         static bool IsMmrMeasure(Measure m, Fraction meter)
         {
-            int i = 0;
-            while (i < m.Items.Length && IsBreakAlignedChange(m.Items[i]))
-                i++;
-            return i == m.Items.Length - 1
-                && m.Items[i] is RestItem { IsMultiMeasure: true, IsSpacer: false } rest
-                && rest.Duration >= meter;
+            int i = BarRestIndex(m);
+            return i >= 0 && ((RestItem)m.Items[i]).Duration >= meter;
         }
 
         bool RestsEverywhere(int m)
@@ -345,11 +338,8 @@ internal static class MultiMeasureRestEngraver
         // Multi_measure_rest spanner per written event.
         static bool StartsWrittenRest(Measure m)
         {
-            int i = 0;
-            while (i < m.Items.Length && IsBreakAlignedChange(m.Items[i]))
-                i++;
-            return i < m.Items.Length
-                && m.Items[i] is RestItem { IsMultiMeasure: true, OpensWrittenRun: true };
+            int i = BarRestIndex(m);
+            return i >= 0 && ((RestItem)m.Items[i]).OpensWrittenRun;
         }
 
         // A break-aligned change at the START of a rest bar forces a run boundary there:
@@ -454,6 +444,47 @@ internal static class MultiMeasureRestEngraver
             meters[m] = meter;
         }
         return meters;
+    }
+
+    /// <summary>
+    /// A clef / key / time change LilyPond hangs on the run's opening NonMusicalPaperColumn,
+    /// so it rides the bar rather than being its content.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders — the break-aligned
+    /// grobs, which are placed relative to the bar line rather than to a musical column.
+    /// </remarks>
+    internal static bool IsBreakAlignedChange(MusicItem it)
+        => it is KeySignatureChangeItem or TimeSignatureChangeItem or ClefChangeItem;
+
+    /// <summary>
+    /// The index of the bar's explicit multi-measure rest when the bar holds NOTHING BUT
+    /// that rest (optionally behind break-aligned changes, which ride the opening column);
+    /// -1 otherwise.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This is the ONE spelling of "this bar rests with a written <c>R</c>". It was
+    /// written three times before being unified — twice here and once in
+    /// <c>PartCombiner</c>, where the third copy skipped EVERY zero-duration item instead of
+    /// only the break-aligned ones, so the two could disagree about a bar (an ottava or any
+    /// other zero-duration item made one say "rested bar" and the other say "not a run
+    /// bar"). Nothing read the disagreement yet, because the flag it guards is only consulted
+    /// where the stricter test already holds — which is exactly the kind of containment that
+    /// stops being true after an unrelated edit.
+    /// <para>
+    /// Deliberately does NOT compare the rest against the meter: run grouping adds that (see
+    /// <c>IsMmrMeasure</c>), while callers that merely need to FIND the bar's rest run before
+    /// the per-bar meters are known.
+    /// </para>
+    /// </remarks>
+    internal static int BarRestIndex(Measure m)
+    {
+        int i = 0;
+        while (i < m.Items.Length && IsBreakAlignedChange(m.Items[i]))
+            i++;
+        return i == m.Items.Length - 1
+            && m.Items[i] is RestItem { IsMultiMeasure: true, IsSpacer: false }
+            ? i : -1;
     }
 
     /// <summary>
