@@ -367,6 +367,231 @@ internal static class PartCombiner
     public static ImmutableArray<PartCombineSplit> DetermineSplitList(Voice one, Voice two)
         => Combine(one, two).SplitList;
 
+    // ------------------------------------------------- the part's own simultaneous silence
+
+    /// <summary>
+    /// Brings the silence a part writes SIMULTANEOUSLY WITH ITSELF into the voice the
+    /// combiner reads, choosing between the candidates the way LilyPond does: a rest or a
+    /// multi-measure rest is the part's silence, and a skip is one only when there is no rest.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/part-combiner.scm:76-86 silence-events, which keeps multi-measure-rest-event
+    /// and rest-event and takes skip-event only when neither is there — "There may be skips in
+    /// the same part with rests for various reasons.  Regard the skips only if there are no
+    /// rests." That sentence IS the second half of input/regression/part-combine-silence-mixed:
+    /// <c>&lt;&lt; R1 s1 s4 &gt;&gt;</c> against <c>&lt;&lt; s4 s1 R1 &gt;&gt;</c> is one
+    /// multi-measure rest against one multi-measure rest, so the parts are in unisilence and
+    /// one rest is printed — and the answer cannot depend on the order the three are written
+    /// in, which is why the book writes them mirrored.
+    /// <para>
+    /// ⚠️ ⒝ DERIVED, NOT LITERAL, and the reason is the model. LilyPond's Voice-state holds a
+    /// LIST of events per moment (<c>events</c>, :21-105), so it can look past the skips
+    /// without moving anything; a Lily# <c>VoiceState</c> holds ONE item, because a Lily#
+    /// voice is a sequence. So the choice has to happen before the states are built, and it is
+    /// made by SWAPPING the chosen silence into the part's first voice — the one
+    /// <c>RenderSpec</c> hands to <see cref="Combine"/> — and leaving what was there in the
+    /// branch it came from. Nothing is deleted and no voice changes length: both sides of a
+    /// swap are silences, and the loser is a skip, which draws nothing wherever it sits.
+    /// Making this literal means giving <c>VoiceState</c> an item LIST, and that reaches the
+    /// routing too (LilyPond moves a whole Voice context, so all of a moment's events travel
+    /// together) — that is the shape of the change, not a note that one is missing.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT THIS DOES NOT REACH, stated as narrowings rather than as answers — none of them
+    /// is written by any book in the corpus, and each is a place the swap declines to act, NOT
+    /// a place the combiner then gets right. Whatever the first voice happens to hold still
+    /// goes to <see cref="Combine"/>, so a declined moment is answered by that item.
+    /// <list type="bullet">
+    /// <item>TWO CANDIDATES OF ONE KIND at a moment — two rests, or (no rests and) two skips.
+    /// LilyPond's <c>silence-events</c> returns both and <c>analyze-synced-silence</c>
+    /// (:512-533) requires exactly one on each side, which is how it reaches apart-silence;
+    /// one item per moment cannot hold that. The arm in
+    /// <see cref="AnalyzeSyncedApartSilence"/> that says the same thing is its other half.</item>
+    /// <item>A MOMENT THE FIRST VOICE DOES NOT REACH. The swap trades against what that voice
+    /// writes, so there has to be something there to trade with.</item>
+    /// <item>A MEASURE THAT HOLDS A NOTE in any of the part's voices is skipped whole. The
+    /// granularity is the measure because the swap is expressed on measures, not because
+    /// LilyPond stops at one — it asks per moment, and a part with a note in bar 4 would still
+    /// have its bar-4 silences chosen between.</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SWAP MOVES THE ITEM AND NOT WHAT HANGS OFF IT. A label is a
+    /// <c>DynamicItem</c> keyed by (measure, item index, voice) in <c>Score.Dynamics</c>,
+    /// outside the item stream — the same reason a label outlives the event the combiner sends
+    /// to the null voice — so <c>&lt;&lt; R1^"R" s1 &gt;&gt;</c> would print its label over the
+    /// skip's branch. The corpus book puts no labels on the branches it stacks, so this is
+    /// unobserved rather than known-good; it closes when the labels travel with their items.
+    /// </para>
+    /// </remarks>
+    public static ImmutableArray<Voice> ChooseSilenceWithinPart(ImmutableArray<Voice> partVoices)
+    {
+        if (partVoices.Length < 2)
+            return partVoices;
+
+        int measureCount = partVoices.Max(v => v.Measures.Length);
+        Dictionary<int, ImmutableArray<Measure>.Builder>? edited = null;
+
+        for (int m = 0; m < measureCount; m++)
+        {
+            var candidates = SimultaneousSilenceAt(partVoices, m);
+            if (candidates == null)
+                continue;
+
+            foreach (var (_, group) in candidates)
+            {
+                int chosen = ChooseSilence(group);
+                if (chosen < 0)                       // two rests at one moment — see above
+                    continue;
+                // The swap can only be made against what the FIRST voice writes at this
+                // moment, because that is the stream RenderSpec hands to Combine. A moment
+                // the first voice does not reach is left alone rather than moved into a
+                // place there is nothing to trade with.
+                int mine = group.FindIndex(c => c.Voice == 0);
+                if (mine < 0 || mine == chosen)
+                    continue;
+
+                var (voiceA, indexA) = (0, group[mine].ItemIndex);
+                var (voiceB, indexB) = (group[chosen].Voice, group[chosen].ItemIndex);
+
+                edited ??= new Dictionary<int, ImmutableArray<Measure>.Builder>();
+                var measuresA = MeasuresOf(edited, partVoices, voiceA);
+                var measuresB = MeasuresOf(edited, partVoices, voiceB);
+
+                var itemA = measuresA[m].Items[indexA];
+                var itemB = measuresB[m].Items[indexB];
+                measuresA[m] = ReplaceItem(measuresA[m], indexA, itemB);
+                measuresB[m] = ReplaceItem(measuresB[m], indexB, itemA);
+            }
+        }
+
+        if (edited == null)
+            return partVoices;
+
+        var result = partVoices.ToBuilder();
+        foreach (var (voiceIndex, measures) in edited)
+            result[voiceIndex] = partVoices[voiceIndex] with { Measures = measures.ToImmutable() };
+        return result.ToImmutable();
+    }
+
+    /// <summary>One of the silences a part writes at one moment, and where it is written.</summary>
+    private readonly record struct SilenceCandidate(int Voice, int ItemIndex, RestItem Rest);
+
+    /// <summary>
+    /// The moments of measure <paramref name="measureIndex"/> at which the part writes MORE
+    /// THAN ONE silence, or null when the measure holds anything that is not a silence.
+    /// </summary>
+    /// <remarks>
+    /// A measure that holds a note in ANY of the part's voices is left entirely alone. That is
+    /// this port's granularity, not LilyPond's: LilyPond asks per MOMENT, and would still
+    /// choose between the silences of a bar that also has a note somewhere. The swap is
+    /// expressed on measures, so the gate is on measures — see the narrowings on
+    /// <see cref="ChooseSilenceWithinPart"/>.
+    /// </remarks>
+    private static List<(Fraction Onset, List<SilenceCandidate> Group)>? SimultaneousSilenceAt(
+        ImmutableArray<Voice> partVoices, int measureIndex)
+    {
+        var byOnset = new Dictionary<Fraction, List<SilenceCandidate>>();
+        var order = new List<Fraction>();
+        bool anySimultaneous = false;
+
+        for (int v = 0; v < partVoices.Length; v++)
+        {
+            if (measureIndex >= partVoices[v].Measures.Length)
+                continue;
+            var items = partVoices[v].Measures[measureIndex].Items;
+            var onset = Fraction.Zero;
+            for (int i = 0; i < items.Length; i++)
+            {
+                var duration = SoundingDuration(items[i]);
+                if (duration == Fraction.Zero)
+                    continue;
+                if (items[i] is not RestItem rest)
+                    return null;
+                if (!byOnset.TryGetValue(onset, out var group))
+                {
+                    group = [];
+                    byOnset[onset] = group;
+                    order.Add(onset);
+                }
+                else
+                {
+                    anySimultaneous = true;
+                }
+                group.Add(new SilenceCandidate(v, i, rest));
+                onset += duration;
+            }
+        }
+
+        if (!anySimultaneous)
+            return null;
+
+        order.Sort();
+        return order
+            .Where(o => byOnset[o].Count > 1)
+            .Select(o => (o, byOnset[o]))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Which of a moment's silences the part is understood to be resting with, or -1 when
+    /// LilyPond's answer is not a single one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/part-combiner.scm:76-86 silence-events over multi-measure-rest-event,
+    /// which filters on that and on rest-event and re-filters on skip-event only when the
+    /// first came out empty. It returns a LIST, and :512-533 analyze-synced-silence asks for
+    /// exactly one on each side — so "two of them" is an answer of its own and NOT a tie to be
+    /// broken. ⚠️ That applies to the SKIPS TOO, which the first version of this got wrong: it
+    /// declined two rests and then picked the first of several skips, so a part writing two
+    /// skips at one moment would have been folded to one and could reach unisilence where
+    /// LilyPond has apart-silence.
+    /// </remarks>
+    private static int ChooseSilence(List<SilenceCandidate> group)
+    {
+        var (rests, onlyRest) = OnlyOne(group, spacers: false);
+        // ⚠️ The fallback is reached by "the rest filter came out EMPTY", not by "it did not
+        // come out with one" — several rests are an answer, and skips are not consulted there.
+        if (rests > 0)
+            return rests == 1 ? onlyRest : -1;
+        var (skips, onlySkip) = OnlyOne(group, spacers: true);
+        return skips == 1 ? onlySkip : -1;
+    }
+
+    /// <summary>How many candidates of the requested kind the moment holds, and where the
+    /// last one is.</summary>
+    private static (int Count, int Index) OnlyOne(List<SilenceCandidate> group, bool spacers)
+    {
+        int count = 0, found = -1;
+        for (int i = 0; i < group.Count; i++)
+        {
+            if (group[i].Rest.IsSpacer != spacers)
+                continue;
+            count++;
+            found = i;
+        }
+        return (count, found);
+    }
+
+    private static ImmutableArray<Measure>.Builder MeasuresOf(
+        Dictionary<int, ImmutableArray<Measure>.Builder> edited,
+        ImmutableArray<Voice> partVoices, int voiceIndex)
+    {
+        if (!edited.TryGetValue(voiceIndex, out var measures))
+        {
+            measures = partVoices[voiceIndex].Measures.ToBuilder();
+            edited[voiceIndex] = measures;
+        }
+        return measures;
+    }
+
+    private static Measure ReplaceItem(Measure measure, int index, MusicItem item)
+    {
+        var items = measure.Items.ToBuilder();
+        items[index] = item;
+        return measure with { Items = items.ToImmutable() };
+    }
+
     // ---------------------------------------------------------------- building states
 
     private static Fraction SoundingDuration(MusicItem item) => item switch

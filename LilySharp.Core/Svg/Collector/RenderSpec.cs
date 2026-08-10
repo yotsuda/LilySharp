@@ -357,7 +357,11 @@ public sealed record RenderSpec(
                 // \partCombine does too.
                 case CombinedStaffSpec combined:
                     var combineParts = combined.PartNames
-                        .Select(name => getVoices(name))
+                        // A part that rests with ITSELF — LilyPond's << R1 s1 s4 >>, a
+                        // voice { } { } span here — settles which of those silences is the
+                        // part's before the two parts are compared, because a skip is only a
+                        // silence when there is no rest beside it.
+                        .Select(name => PartCombiner.ChooseSilenceWithinPart(getVoices(name)))
                         .ToArray();
                     // A part with no music of its own still has to take part in the
                     // analysis — that is how the OTHER part's passage becomes a solo.

@@ -58,6 +58,119 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第130セッション＝**part-combine 族の最後の 1 冊 `silence-mixed` を測り、主張の後半を移植した**。
+**第1便＋自己監査の第2便**（`a9a4b179` / `7df7dc42`）。**未 push 21 件**・**push はしていない**（ユーザー判断待ち）。
+**テスト 4330 passed / 0 failed / 4 skipped**（開始時 4326＝引継ぎと一致・**+4 は新しい観測者**）。
+Core 0 warning・**snapshot 0 枚**。
+**台帳: plain 322 = fixed 73・exact 46・skip 189・open 14**（`update-ledger-130.ps1`）。
+⇒ **`part-combine-silence-mixed` が skip → open**（**閉じていない**・下の ⑴⑵）。
+
+⚠️⚠️ ★ **引継ぎの前提が半分外れた**。第129 は「枠は在る（`combinedStaff` は part の中の
+`voice { } { }` span を受ける）ので**双子を書いて突き合わせるだけ**」と書いていたが、
+**受け付けるのと同じ意味であるのは別**だった——LP の `<< R1 s1 s4 >>` は**1 つの Voice の中の同時 event**、
+Lily# の `voice { } { }` は**別々の声部**で、**`RenderSpec.cs:369-374` は第1枝だけを合体器に渡し
+残りは素通しで譜へ流す**。⇒ **枠の検分は「綴れるか」ではなく「同じものを指すか」まで見る。**
+
+★★★ **第1便 = 主張の後半＝`silence-events` を移植**（`a9a4b179`）。texidoc の
+「同じパートに休符と skip が在れば skip は無視される」は **`scm/part-combiner.scm:76-86 silence-events`
+が rest/mmrest で先に絞り、無いときだけ skip を見る**というフィルタそのもの。
+Lily# は枝順に依存していた——★★ **対照 `pcsm-order-probe.lys`（両パートの枝順を*揃えた*版）は
+移植前から LP の答えを出し、鏡に書いたこの本だけが休符 2 つを出した**。**LP は両者を区別できない**ので、
+これが在処の名指しになった。修理＝`PartCombiner.ChooseSilenceWithinPart`（選んだ休符を
+合体器が読む枝へ **swap**・負けた skip は元の枝へ）。**⒝ 字面ではない**: LP の Voice-state は
+1 モーメントに **event のリスト**を持ち、Lily# の `VoiceState` は **1 item**。
+**字面にするには `VoiceState` を item リストにする＝routing まで届く**（LP は Voice 文脈ごと動かすので
+同時 event は一緒に移る）。⇒ **小節 4・5 が LP 一致**（**どちらのパートの event が印字されるかまで一致**＝
+part2 の `r1`・`pcsm.log` の src 14:74）。観測者 4 本（主張・**枝順の対照**・
+**混ざれば merge しない陽性対照**・swap の非破壊性）。
+
+★★★ **第2便 = 自己監査（三問）＝違反 1（コード）＋散文の言い過ぎ 3 件を訂正**（`7df7dc42`・
+**挙動変更ゼロ**——監査後に `pcsm-probe` を再レンダして**全 13 レコードが監査前と一致**）。
+数え: Core **+188 行に REF 2 本・OWN 0 本・新規定数 0**。
+⚠️⚠️ **違反＝「1 つでなければ答えない」を休符側にだけ掛けていた**。`silence-events` は**リストを返し**、
+`analyze-synced-silence` が**両側に「ちょうど 1 つ」**を要求する＝**「複数」はそれ自体が答え**で、
+**割って選ぶものではない**。旧版は休符 2 つは降りるのに **skip が複数なら先頭を選んで**いたので、
+`<< s1 s1 >>` を 1 つに畳んで **LP が apart-silence の所で unisilence に届き得た**。
+★ **fallback の条件も「休符フィルタが*空*だったとき」**で、「1 つにならなかったとき」ではない
+（＝休符が複数でも skip には落ちない）。
+⚠️ **言い過ぎ 3 件**: ⑴「答えずに降りる」は嘘——**降りるのは swap だけで、第1声部が持つ item は
+そのまま `Combine` へ行く**（＝その item で答えてしまう）。⑵ 小節粒度は**この移植の都合**で
+LP のものではない（LP はモーメントで訊く）。⑶ ★★ **swap は item を動かして、item にぶら下がるものを
+動かさない**——ラベルは `Score.Dynamics` の平配列（下の ⑵ と同じ理由）なので、
+`<< R1^"R" s1 >>` は**ラベルが skip の枝の上に出る**。**本がその枝にラベルを置いていないので
+未観測なだけで、安全と分かっているのではない。**
+★ **新規 REF は `(Get-Content f)[n-1]` で実照合**（`:76` = `silence-events`・`:79` =
+`multi-measure-rest-event`・`:84` = `skip-event`・`:512` = `analyze-synced-silence`・`:21` =
+`<Voice-state>`＝**5 本とも住所は正しい**）。
+⚠️ **ラチェットに 2 回鳴かされた**——どちらも**住所が行末に来て 3 語の記号名が次の行へ折り返した**から。
+**`silence-events` は 2 語なので名前に数えない**（3 語以上か `_` 入りだけ）。
+
+⚠️⚠️ ★★★ **計器の訂正＝MMR の縦位置は `y=` で比べてはいけない**。最初の読みは
+「Lily# の 1 小節 MMR が 1.0 ss 高い」という**在りもしない欠陥**を名指し、
+**`multi-measure-rest-single.lys` の「第4線から吊る」というコメントを*LP と逆*だと誤断した**。
+実際は `multi-measure-rest.cc:254-264` が通常休符の位置から **2 を引き**、`:284-292` が**吊るし字形**を選ぶので
+**`y=` は 1.0 違って ink は同じ**（`mmr1.log`＝中立 `R1` y=0.0 ink +0.375..+1.0／`r1` y=+1.0 **同 ink**）。
+⇒ `pcdump.ily` に **`REST`/`MMREST` の `yext=`（描画インク）**を追加した。**旗の相殺と同じ型**。
+
+**この本が残す一般欠陥 2 件（どちらも本の外で単独に測ってある・次の一手）**:
+⑴ ★★ **MMR は譜に 1 つしか彫られず voice を取らない**。**合体器を使わない素の多声譜**で実測——
+   `voice { R1 } { R1 }` は Lily# が **MMR 1 つ +1.0**、LP は **2 つ**（ink **+1.375..+2.000** と
+   **−2.625..−2.000**）＝`mmr-voice-probe.lys` 対 `mmr1.ly` の第2 score。
+   ★ **すぐ隣の小節 `voice { r1 } { r1 }` は +2.0/−2.0 で正しい**＝**陽性対照が同じ本の中に在る**。
+   LP: `MultiMeasureRest` は `direction-polyphonic-grobs`（`scm/music-functions.scm:617-634`）で、
+   `lily/rest.cc:76` が direction を `voiced-position` 4 に変える。
+   在処＝`MultiMeasureRestEngraver.Calculate`（**譜ごと**・Y は `staffHeight/2` 固定・run 検出も譜横断）。
+   ⇒ **この本の小節 2 が +1.0 で出る**。
+   ★ **先に数えた（第130・着手前）＝動く snapshot は 0 枚の見込み**。**書かれた `R` を持つ fixture は
+   ちょうど 10 冊**（`R\d` を**大小文字を区別して** grep——⚠️ PowerShell の `-match` は既定で
+   区別しないので、素朴に数えると `r1` を拾って **50 冊**と出る）。**そのうち多声なのは
+   `showcase/grammar-tour.lys` だけ**で、その `R1*4`(:90) と `voice { } { }`(:114) は**別の節**に在る。
+   ⇒ **単声の run は中立のまま＝不動**という予測。**外れたらそれが所見**（§5.0）。
+   ⚠️ **着手前に分かっている設計上の壁**: `Calculate` は譜ごとの**第1声部の measures しか受け取らない**
+   （`LayoutEngine.cs:3414-3417` が渡すのは `measuresByStaff`＝`staff.PrimaryVoice.Measures`）ので、
+   **「その譜のどの声部が run を書いたか」と各声部の向きが今の引数からは引けない**。
+   ⇒ **最初の一手は「声部を届かせる」**であって位置計算ではない。位置は測ってある:
+   **中立 0 / voiceOne +2 / voiceTwo −6**（staff position・`rest.cc:76` の `voiced-position` 4 と
+   `multi-measure-rest.cc:259` の −2）。⚠️ 譜の一部だけ per-voice にする形は §7.7 の
+   「guard で島ごと飛ばす」になるので取らないこと。
+⑵ ★★ **Null へ落とした event のラベルが残る**（この本の小節 1 の `R1^"R"`）。ラベルは
+   `(MeasureIndex, ItemIndex)` で引く `DynamicItem`（`DynamicItem.cs:37-40`）で、
+   **`Score.Dynamics` の平配列＝合体器が書き換える item 流の外**。**落ちも付いて行きもしない。**
+   ⇒ 合体器が「落とした item」「移した item」を報告し、呼び手が `Dynamics` を書き換える形になる。
+
+⚠️ **perf（ユーザーの問い「プレビューの更新速度は？」）＝数えた。A/B は取れていない。**
+**足したのは 1 か所だけ**（`RenderSpec.cs:364`・呼び手は grep で 1 件）で、
+`ChooseSilenceWithinPart` は **`partVoices.Length < 2` で即戻る**＝
+**`combinedStaff` を持たない楽譜は 1 行も通らない**。
+⚠️⚠️ ★ **時間は測ったが A/B としては使えない**。第129 の `PreviewUpdateBench` を現ツリーで 3 周回すと
+**plain1k の床 568.6 / 618.7 / 650.8 ms**——第129 が同じ bench で記録した
+**base 191.9・curr 188.4 ms の約 3 倍**。**条件が違う**（この便は裏で build と全テストを回し続けていた）。
+⇒ **この数から「退行なし」と言うのは「1 サンプル目を信じかけた」と同じ型**なので言わない。
+**言えるのは 2 つだけ**: ⑴ **SVG ハッシュは 3 周とも不動**（plain1k `C1824A1927B69B4A`・
+comb300 `278200920E99FF45`）＝**絵は動いていない** ⑵ **content key は打鍵 1 回の約 3%**
+（18.4/618・2.4/114）＝第129 と同じ比率。
+⇒ ★ **正しくやるなら機械を空にした同一セッション A/B**。⚠️ `C:\MyProj\LilySharp-perfbase-a70a`
+（`a70a0fd8`）は残っているが**この便の base は `853651cc`**で、**`PreviewUpdateBench.cs` は
+その 853651cc で入った**＝**base worktree には無いのでコピーが要る**（第129 の札のとおり）。
+
+**次の一手（候補・ユーザー判断）**:
+⓪ **上の A/B を取り直す**（機械を空にして base worktree に bench をコピー・両側 3 周・**床**で読む）。
+⑴ **上の ⑴（MMR の voice）**——LP 側は測り終えて在り、陽性対照も在る。**snapshot 承認が要る。**
+⑵ **上の ⑵（ラベルが event に付いて行く）**——`PartCombineResult` に写像を足す設計。
+⑶ **`VoiceState` を item リストにする**＝⒝ を字面へ。上の 2 件とは独立。
+⑷ **cue を stamp 側へ**（第129 の札）・**段③ `condensedStaff` の中の `combinedStaff`**・
+   **向きの粒度（§2A の島）**・**`]~` のタイを黙って落とす件**（第126 の起票）は据え置き。
+
+probe 残置（第130）: `pcsm-probe.lys`（**双子**）・`pcsm-order-probe.lys`（**枝順の対照＝在処を名指した本・捨てないこと**）・
+`mmr1.ly`／`mmr1.log`（**MMR の中立/voiceOne/voiceTwo を ink で測った本**）・`mmr1b.ly`（`R1*1/2/3` は
+**全部 y=0.0**）・`mmr1-probe.lys`・`mmr-voice-probe.lys`（**⑴ の陽性対照つき双子**）・
+`pcsm-extract.ps1`（**ラベルも小節線も出す抽出器**——⚠️ **ラベルは `class` 属性を持たない**ので
+`class="…"` を要求する正規表現は「ラベル 6 個の頁」を「0 個」と報告する）・`update-ledger-130.ps1`。
+
+---
+
+## 以下は第129セッションの経緯
+
 最終更新 第129セッション＝**LP 回帰台帳の part-combine 族を 2 冊消化**。
 **第1便 `part-combine-tuplet-end`＝本の主張は最初から成立していて、代わりに*別の一般欠陥*が落ちてきた**
 （**note-spacing の左頭精算を voice 境界で止める規則が、cue しか知らなかった**）。
