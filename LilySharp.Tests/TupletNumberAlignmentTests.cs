@@ -56,9 +56,10 @@ public class TupletNumberAlignmentTests
         var brackets = layout.TupletBracketLayouts.OrderBy(b => b.NumberX).ToArray();
         Assert.Equal(2, brackets.Length);
         // ⚠️ THIS USED TO ASSERT THE OPPOSITE ("beamed tuplets draw no bracket"), which is
-        // not LilyPond's rule. The bracket is hidden only when the beam is EQUALLY LONG
-        // (lily/tuplet-bracket.cc:100-115 bracket_basic_visibility + :88-98 equal_bounds);
+        // not LilyPond's rule. The bracket is hidden only when the beam is EQUALLY LONG;
         // here ONE beam covers BOTH tuplets, so neither tuplet's bounds are the beam's.
+        // LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility, whose
+        //   equally_long is lily/tuplet-bracket.cc:88-98 equal_bounds.
         // MEASURED on this test's own LP twin scratch/lpreg/tupnumb-lp.svg: 8 bracket
         // lines = 4 per tuplet (two 0.7 edge hooks, and the horizontal run broken around
         // the number). Its 8th-note sibling tupnuma-lp.svg, where each beam DOES match its

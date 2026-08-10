@@ -244,13 +244,40 @@ internal static class BeamSubdivision
                 double xL = stems[i].X;
                 double xR = stems[e].X;
 
+                // The beamlet reach at stem `at`, measured toward `nb`.
+                // LILYPOND-REF: lily/beam.cc:602-624 calc_beam_segments —
+                //   length = beamlet-default-length, capped at
+                //   |neighbour stem x − this stem x| × beamlet-max-length-proportion
+                //   when the stem is an inner one.
+                double Beamlet(int at, int nb) =>
+                    nb >= 0 && nb < n
+                        ? Math.Min(beamletLength,
+                                   Math.Abs(stems[nb].X - stems[at].X) * maxProportion)
+                        : beamletLength;
+
                 if (e > i)
                 {
-                    // A real span from stem i to stem e: both ends stop at a stem, and
-                    // both overhang it by half its width (beam.cc:627-631) — an interior
-                    // rank drop covers its stem flush exactly like a terminal end.
-                    xL -= halfStemWidth;
-                    xR += halfStemWidth;
+                    // A span from stem i to stem e. Each END is asked LilyPond's question
+                    // separately: is this the edge FURTHEST from its stem (a free end), or
+                    // the edge closest to it (a continuation)?
+                    // LILYPOND-REF: lily/beam.cc:589-631 calc_beam_segments — `seg.dir_ ==
+                    //   event_dir` takes the beamlet arm (:602-624), otherwise the edge only
+                    //   overhangs its stem by width/2 (:627-631).
+                    // ⚠️ THIS USED TO GIVE BOTH ENDS THE HALF-STEM OVERHANG, on the reading
+                    //   that a beamlet is what a LONE rank makes. It is not: a RUN whose end
+                    //   stem carries the rank on its outward side while the neighbour there
+                    //   does not is a beamlet that MERGES with the run — LilyPond builds one
+                    //   segment per stem-side and merges by rank, so the two are the same
+                    //   drawing. Measured on audit/lp-regression's autobeam-tuplet-recheck,
+                    //   beam group 2 (c8 c16 c16 c16): LilyPond's 16th beam runs
+                    //   24.954..31.829, i.e. 1.100 PAST the second stem at 26.054; Lily#
+                    //   started it at the stem and the forward stub was missing.
+                    bool leftFree = Contains(ranks[i].Left, rank)
+                                    && (i == 0 || !Contains(ranks[i - 1].Right, rank));
+                    bool rightFree = Contains(ranks[e].Right, rank)
+                                     && (e == n - 1 || !Contains(ranks[e + 1].Left, rank));
+                    xL = leftFree ? xL - Beamlet(i, i - 1) : xL - halfStemWidth;
+                    xR = rightFree ? xR + Beamlet(e, e + 1) : xR + halfStemWidth;
                 }
                 else
                 {

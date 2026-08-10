@@ -1074,9 +1074,10 @@ internal sealed class SkylineBuilder
         {
             double dir = b.IsStemUp ? 1.0 : -1.0;
             // The DRAWN ends, not the logical bounds: a TupletBracket's skyline is built
-            // from its stencil (scm/define-grobs.scm
-            // grob::unpure-vertical-skylines-from-stencil), and shorten-pair puts that
-            // stencil 0.2 further out at each end — TupletBracketLayout.DrawnStartX.
+            // from its STENCIL, and shorten-pair puts that stencil 0.2 further out at each
+            // end — TupletBracketLayout.DrawnStartX carries the rule.
+            // LILYPOND-REF: scm/define-grobs.scm:4114 grob::unpure-vertical-skylines-from-stencil
+            //   — TupletBracket's vertical-skylines come from its stencil, not its bounds.
             bool leftFirst = b.StartX <= b.EndX;
             double xLeft = leftFirst ? b.DrawnStartX : b.DrawnEndX;
             double xRight = leftFirst ? b.DrawnEndX : b.DrawnStartX;

@@ -572,12 +572,13 @@ internal sealed class ElementCoordinator
         bool anyBooked = false;
         switch (item)
         {
-            // ⚠️ NO `case RestItem` — a rest is not in the Beam's
-            // scm/define-grobs.scm:496-504 collision-interfaces, and the caller drops it
-            // before reaching here. The removed arm booked the rest's box at its DEFAULT
-            // position and lifted the beam over it; LilyPond moves the REST instead
-            // (lily/beam.cc:1331 rest_collision_callback). Do not restore it: the missing
-            // entry in the interface list IS the rule.
+            // ⚠️ NO `case RestItem` — a rest is not in the Beam's collision-interfaces, and
+            // the caller drops it before reaching here. The removed arm booked the rest's
+            // box at its DEFAULT position and lifted the beam over it; LilyPond moves the
+            // REST instead. Do not restore it: the missing entry in the list IS the rule.
+            // LILYPOND-REF: scm/define-grobs.scm:496-504 collision-interfaces = note-head-interface,
+            //   stem-interface and seven more, but no rest-interface;
+            //   lily/beam.cc:1331 rest_collision_callback moves the rest instead.
             case NoteItem note:
                 anyBooked = AddHeadCollision(
                     collisions, itemX, note.StaffPosition,

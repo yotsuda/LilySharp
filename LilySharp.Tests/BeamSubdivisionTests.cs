@@ -103,4 +103,45 @@ public class BeamSubdivisionTests
         Assert.True(beamlet.XRight <= 2.1, "beamlet ends at the 16th's stem");
         Assert.True(beamlet.XLeft > 0.0, "and points back toward the dotted eighth");
     }
+
+    /// <summary>
+    /// A RUN's free end is a beamlet too, not just a lone rank: 8 16 16 16 puts the 16th
+    /// beam over the last three stems AND sticks it out ahead of the first of them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:589-624 calc_beam_segments — the edge with
+    ///   <c>seg.dir_ == event_dir</c> is the one furthest from its stem and takes the
+    ///   beamlet length; LilyPond builds one segment per stem-SIDE and merges by rank, so a
+    ///   left beamlet and the run it touches are one drawn segment.
+    /// <para>
+    /// ⚠️ NO FIXTURE AND NO SNAPSHOT COVERS THIS. When the run's ends were given the plain
+    /// half-stem overhang instead, the whole suite stayed green — this test is the only
+    /// thing that would notice, which is why it states the number rather than a shape.
+    /// MEASURED on LilyPond 2.26.0 via audit/lp-regression's autobeam-tuplet-recheck, whose
+    /// second beam group is exactly c8 c16 c16 c16: stems at 22.350 / 26.054 / 28.558 /
+    /// 31.764, and the 16th beam drawn over 24.954..31.829 — 1.100 (beamlet-default-length)
+    /// ahead of the second stem, and half a stem past the last.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EighthThenThreeSixteenths_TheRunsFreeEndSticksOutAhead()
+    {
+        // Stems 2.0 apart so the 0.75 proportion cap (1.5) cannot bind before 1.1 does.
+        // ⚠️ The counts are the STEMS' OWN beam counts — a 16th carries 2 on both sides —
+        // and CalcBeaming decides what actually connects. Handing it the already-clamped
+        // "1" on the second stem's left is a different question and answers it differently.
+        var stems = new[] { S(0, 1, +1, 0), S(2, 2, +1, 2), S(2, 2, +1, 4), S(2, 0, +1, 6) };
+        var ranks = BeamSubdivision.CalcBeaming(stems);
+        var segs = BeamSubdivision.CalcBeamSegments(stems, ranks, 1.1, 0.75, 0.05);
+
+        var primary = segs.Single(s => s.Rank == 0);
+        Assert.Equal(-0.05, primary.XLeft, precision: 9);   // the beam's own end: half a stem
+        Assert.Equal(6.05, primary.XRight, precision: 9);
+
+        // Up stems put the secondary BELOW the primary, toward the heads: rank −1
+        // (the same sign DottedEighthSixteenth_LoneBeamlet reads).
+        var sixteenth = segs.Single(s => s.Rank == -1);
+        Assert.Equal(2.0 - 1.1, sixteenth.XLeft, precision: 9);  // beamlet ahead of stem 1
+        Assert.Equal(6.05, sixteenth.XRight, precision: 9);      // and flush past the last
+    }
 }

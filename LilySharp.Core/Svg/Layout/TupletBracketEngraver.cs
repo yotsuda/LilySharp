@@ -81,13 +81,22 @@ public readonly record struct TupletBracketLayout(
     /// 16.076..19.910 and 22.285..26.119 — 0.2 outward at each of the four ends.
     /// </para>
     /// </remarks>
-    public double DrawnStartX => StartX - BracketShortenPair;
+    public double DrawnStartX => StartX - BracketOutwardReach;
 
     /// <inheritdoc cref="DrawnStartX"/>
-    public double DrawnEndX => EndX + BracketShortenPair;
+    public double DrawnEndX => EndX + BracketOutwardReach;
 
-    /// <summary>The outward reach <c>shorten-pair</c> buys at each end, in staff spaces.</summary>
-    internal const double BracketShortenPair = 0.2;
+    /// <summary>
+    /// How far each end reaches PAST its logical bound, in staff spaces.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE NEGATION OF LilyPond's property, and is named for what it does rather
+    /// than for the property, on purpose. <c>shorten-pair</c> is <c>(-0.2 . -0.2)</c>; a
+    /// constant called BracketShortenPair holding +0.2 would read as the property value
+    /// with the sign silently flipped, and a label that lies preserves the value it lies
+    /// about. The sign is spent in lily/bracket.cc:54-55 (see <see cref="DrawnStartX"/>).
+    /// </remarks>
+    internal const double BracketOutwardReach = 0.2;
 
     /// <summary>
     /// Y-up of the tuplet number's visual center (LP TupletNumber Y, frame B).
@@ -412,13 +421,14 @@ internal static class TupletBracketEngraver
                             }
                         }
                         // ⚠️ THE Y IS NOT RECOMPUTED HERE ANY MORE — only the X is.
-                        // LilyPond's TupletNumber reads the BRACKET's position whether or
-                        // not the bracket is printed (lily/tuplet-number.cc:342
-                        // calc_y_offset — the bracket midpoint, for every tuplet that is
-                        // not a knee), and CalculateSlope now computes that position from
-                        // the beam itself in exactly this case (follow_beam, ported from
-                        // lily/tuplet-bracket.cc:491-519 + :633-637). Keeping a second
-                        // formula here made the two disagree by the bracket thickness.
+                        // LILYPOND-REF: lily/tuplet-number.cc:342 calc_y_offset — the
+                        //   TupletNumber reads the BRACKET's midpoint whether or not the
+                        //   bracket is printed, for every tuplet that is not a knee.
+                        // LILYPOND-REF: lily/tuplet-bracket.cc:491-519 calc_position_and_height
+                        //   follow_beam — the branch CalculateSlope now runs in exactly this
+                        //   case, so the bracket's own position IS the beam-relative one.
+                        // Keeping a second formula here made the two disagree by the
+                        // bracket thickness.
                         // MEASURED on the LP twins scratch/lpreg/tupnum{a,b}-lp.svg, which
                         // differ only in 8ths vs 16ths: LilyPond puts the number at the
                         // SAME y=15.3153 in both — bracket hidden in (a), drawn in (b) —
