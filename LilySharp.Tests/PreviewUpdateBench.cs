@@ -88,6 +88,18 @@ public class PreviewUpdateBench
         // a number that big has to be attributed before anyone reads it as the port's: this
         // book is what says whether the cost is the bows or the digits.
         yield return ["perf-slur300.lys"];
+        // ...and the FIGURED BASS, which had no book here at all until 2026-08-11 — so when
+        // session 134 changed both halves of that grob (the draw gained a face scope and lost
+        // its centring; the metric gained a per-character design lookup where it had been a
+        // static field read) the side it made heavy could not be priced. 100 bars x 2 columns
+        // of two-row figures.
+        // ⚠️ 100 BARS, AND THAT IS A MEASUREMENT: this book does not scale. 100 bars render in
+        // 3.1 s, 300 in 16.0 s — 3x the music for 5.2x the time — and 1000 bars exhausts
+        // memory outright. A 9-render bench round on the 300-bar version costs two minutes,
+        // and a fixture nobody will run twice prices nothing (the same argument slur300
+        // carries). The blow-up itself is a separate, PRE-EXISTING defect, measured against
+        // 41882db9 and unchanged by that session: see HANDOFF §1's next hand.
+        yield return ["perf-figbass100.lys"];
     }
 
     [Theory]

@@ -123,10 +123,20 @@ internal static partial class SharedRenderer
                     // without offsets is a bug in the producer, and a fallback here would draw
                     // the rows on top of each other while looking like it worked.
                     double y = baseY - fb.RowOffsets[i];
-                    // LEFT-ALIGNED ON THE COLUMN, which is where LilyPond puts it: figures are
-                    // left-aligned in a BassFigureLine (scm/define-grobs.scm:366-374
+                    // LEFT-ALIGNED ON THE NOTEHEAD'S INK LEFT, which is where LilyPond puts it:
+                    // figures are left-aligned in a BassFigureLine (scm/define-grobs.scm:366-374
                     // BassFigureAlignment stacks the lines; the figure itself is a rhythmic
                     // grob at its column's X).
+                    // ⚠️ "THE HEAD'S LEFT", NOT "THE COLUMN'S LEFT", and the two are not the
+                    // same edge — the first wording here was an over-claim read off a book
+                    // where the NoteHead, the Stem and the NoteColumn all reported ONE box
+                    // left, so it could not tell which of them the figure was on. MEASURED on
+                    // the case that separates them (scratch/figbass-accidental-x.ly, a bass
+                    // cis with figures): the Accidental sits 1.450000 further left (8.003400
+                    // against 9.453400) and the BassFigure does NOT follow it. An accidental
+                    // is in an AccidentalPlacement group beside the column, not inside its X
+                    // extent, so the column's own left edge stays the head's — which is why
+                    // fb.X, a note anchor, is the right thing to draw at here.
                     // ⚠️ IT WAS CENTRED until 2026-08-11 — <c>fb.X − Width/2</c>, inherited from
                     // an older TextAnchor.Middle draw and kept while nothing watched it. What
                     // opened it is ledger figbass.alone.head-anchor-to-box-left, whose LilyPond
