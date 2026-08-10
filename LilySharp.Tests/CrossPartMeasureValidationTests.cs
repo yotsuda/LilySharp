@@ -240,4 +240,41 @@ public class CrossPartMeasureValidationTests
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }
+
+    [Fact]
+    public void MultiMeasureRest_CountsAsItsOwnBars_NoFalseMismatch()
+    {
+        // `R1*2` is TWO bars written as one token, with one bar line after it, so this
+        // part is three bars long and matches melody2's three. Counting the token as one
+        // bar made this pass report the part as short and say "the shorter part is padded
+        // with rests to align" — while the collector expanded the run and the page came
+        // out three bars, padded by nothing.
+        // ★ MEASURED, both halves in one run: scratch/lpreg/pcmmas-x4.lys warned that its
+        // part spanned 2 bars and drew 3.
+        var diags = Validate("""
+            section B {
+              melody { R1*2 | c1 | }
+              melody2 { c1 | c1 | c1 | }
+            }
+            form main { B }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
+    }
+
+    [Fact]
+    public void MultiMeasureRest_ShorterThanSibling_StillWarnsCount()
+    {
+        // The control for the one above: `R1*2` against FOUR bars is a genuine 3-vs-4
+        // mismatch, so the warning has to survive — otherwise the fix would have been
+        // "stop counting multi-measure rests" rather than "count all of their bars".
+        var diags = Validate("""
+            section B {
+              melody { R1*2 | c1 | }
+              melody2 { c1 | c1 | c1 | c1 | }
+            }
+            form main { B }
+            """);
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+    }
 }

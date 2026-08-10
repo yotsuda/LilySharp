@@ -270,6 +270,8 @@ internal static class PartCombiner
     /// <param name="two">Part two — stems down where the parts are apart.</param>
     public static PartCombineResult Combine(Voice one, Voice two)
     {
+        (one, two) = UnionWrittenRestBoundaries(one, two);
+
         var states1 = MakeVoiceStates(one);
         var states2 = MakeVoiceStates(two);
         var result = MakeSplitState(states1, states2);
@@ -285,6 +287,89 @@ internal static class PartCombiner
             .ToImmutableArray();
 
         return Route(one, two, states1, states2, result, splitList);
+    }
+
+    /// <summary>
+    /// Gives BOTH parts a written-rest boundary at every bar where EITHER part begins one,
+    /// so the merged voice keeps the boundaries of the part that gets dropped.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond changes which rest is printed at every moment a part BEGINS a multi-measure
+    /// rest against the other's ongoing one, so the printed rests break at the UNION of both
+    /// parts' written starts. Measured on 2.26.0 (scratch/lpreg/pcmsh-a.log): part one
+    /// writing 8|16|4 against part two writing 16|8|4 engraves FOUR rests — 8, 8, 8, 4 —
+    /// breaking at 0/8/16/24, so part one's 16-bar rest is CUT at 16 where part two begins.
+    /// LILYPOND-REF: scm/part-combiner.scm:535-552 analyze-unsynced-silence — print the rest
+    /// that begins now.
+    /// <para>
+    /// ⚠️ That analysis cannot reach this case here, and the reason is a model difference,
+    /// not a porting gap: <c>R&lt;dur&gt;*N</c> is expanded into N one-bar copies by
+    /// <c>MeasureCollector.MusicWalk</c> BEFORE the combiner runs, so the two parts are
+    /// never UNSYNCED over rests — every moment holds a one-bar rest in each part and
+    /// <c>AnalyzeSyncedSilence</c> always answers Unisilence. The written start survives
+    /// only as <c>RestItem.OpensWrittenRun</c>, and the part routed to NullVoice takes its
+    /// copy's boundary with it. Folding the boundaries together before routing is what puts
+    /// LilyPond's break back, whichever part ends up being the one engraved.
+    /// </para>
+    /// </remarks>
+    private static (Voice One, Voice Two) UnionWrittenRestBoundaries(Voice one, Voice two)
+    {
+        int n = Math.Min(one.Measures.Length, two.Measures.Length);
+        ImmutableArray<Measure>.Builder? edited1 = null;
+        ImmutableArray<Measure>.Builder? edited2 = null;
+
+        for (int m = 0; m < n; m++)
+        {
+            int i1 = BarRestIndex(one.Measures[m]);
+            int i2 = BarRestIndex(two.Measures[m]);
+            if (i1 < 0 || i2 < 0)
+                continue;
+
+            bool opens1 = ((RestItem)one.Measures[m].Items[i1]).OpensWrittenRun;
+            bool opens2 = ((RestItem)two.Measures[m].Items[i2]).OpensWrittenRun;
+            if (opens1 == opens2)
+                continue;
+
+            if (opens2)
+            {
+                edited1 ??= one.Measures.ToBuilder();
+                edited1[m] = OpenWrittenRestAt(one.Measures[m], i1);
+            }
+            else
+            {
+                edited2 ??= two.Measures.ToBuilder();
+                edited2[m] = OpenWrittenRestAt(two.Measures[m], i2);
+            }
+        }
+
+        return (edited1 == null ? one : one with { Measures = edited1.ToImmutable() },
+                edited2 == null ? two : two with { Measures = edited2.ToImmutable() });
+    }
+
+    /// <summary>
+    /// The index of the bar's ONLY sounding item when that item is an explicit
+    /// multi-measure rest, else -1. Zero-duration items (a clef / key / time change) ride
+    /// the bar without making it anything other than a rested bar.
+    /// </summary>
+    private static int BarRestIndex(Measure measure)
+    {
+        int found = -1;
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            if (SoundingDuration(measure.Items[i]) == Fraction.Zero)
+                continue;
+            if (found >= 0 || measure.Items[i] is not RestItem { IsMultiMeasure: true, IsSpacer: false })
+                return -1;
+            found = i;
+        }
+        return found;
+    }
+
+    private static Measure OpenWrittenRestAt(Measure measure, int index)
+    {
+        var items = measure.Items.ToBuilder();
+        items[index] = (RestItem)items[index] with { OpensWrittenRun = true };
+        return measure with { Items = items.ToImmutable() };
     }
 
     /// <summary>
@@ -1073,8 +1158,15 @@ internal static class PartCombiner
             var (onset, item) = entries[e];
             if (onset > position)
             {
-                foreach (var gap in SpacerDurations(onset - position))
-                    items.Add(new RestItem(gap, 0, item.SourcePosition) { IsSpacer = true });
+                // ONE spacer, whatever the gap is. Its written value may not be a note value
+                // (a gap left by a tuplet is not a sum of them), and that is deliberate: only
+                // the total matters, because a spacer is never drawn. Splitting the gap into
+                // note values instead would be inventing a rhythm LilyPond does not have —
+                // and it is not free, since each spacer is another entry on the voice's clock.
+                // ⚠️ NOT the same as LilyPond, which needs nothing here at all: its silent
+                // context simply has no event. The one binding case in the corpus is a gap of
+                // exactly 1/2 (part-combine-silence score 1), where every shape of this agrees.
+                items.Add(new RestItem(onset - position, 0, item.SourcePosition) { IsSpacer = true });
                 position = onset;
             }
             indexOfEntry[e] = items.Count;
@@ -1086,31 +1178,6 @@ internal static class PartCombiner
         return (items.ToImmutable(), indexOfEntry);
     }
 
-    /// <summary>
-    /// Writes a gap as spacer values, largest first. Only the total matters — a spacer is
-    /// never drawn — but a gap that IS writable is written the way it would be written by
-    /// hand, so a dump of the combined voice reads as music.
-    /// </summary>
-    private static List<Fraction> SpacerDurations(Fraction gap)
-    {
-        var pieces = new List<Fraction>();
-        var remaining = gap;
-        var unit = new Fraction(1, 1);
-        var smallest = new Fraction(1, 128);
-        while (remaining > Fraction.Zero && unit >= smallest)
-        {
-            while (unit <= remaining)
-            {
-                pieces.Add(unit);
-                remaining -= unit;
-            }
-            unit = new Fraction(unit.Numerator, unit.Denominator * 2);
-        }
-        // A gap left by a tuplet is not a sum of written values; one spacer carries it.
-        if (remaining > Fraction.Zero)
-            pieces.Add(remaining);
-        return pieces;
-    }
 
     /// <summary>
     /// Emits the labels: one where the mark label CHANGES, held back until a moment that
@@ -1205,6 +1272,9 @@ internal static class PartCombiner
                     // the others on the same clock: the music is still there and still takes
                     // its time, it is just engraved by nobody. Only the ENGRAVING is dropped
                     // here; the onset walks on, so what the part writes next keeps its moment.
+                    // LILYPOND-REF: ly/music-functions-init.ly:1618-1625 make-part-music — the
+                    // part is ONE notation stream played simultaneously with its list of
+                    // context changes, so which context it is in never moves its moments.
                     onset += sounding;
                     continue;
                 }

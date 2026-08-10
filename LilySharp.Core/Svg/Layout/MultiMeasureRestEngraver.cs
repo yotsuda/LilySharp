@@ -339,18 +339,41 @@ internal static class MultiMeasureRestEngraver
             return true;
         }
 
+        // The bar is the FIRST measure of a written rest event (`R1` on its own, or the
+        // head of an `R1*N`) rather than the 2nd..Nth measure that event expands into.
+        // LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music — one
+        // Multi_measure_rest spanner per written event.
+        static bool StartsWrittenRest(Measure m)
+        {
+            int i = 0;
+            while (i < m.Items.Length && IsBreakAlignedChange(m.Items[i]))
+                i++;
+            return i < m.Items.Length
+                && m.Items[i] is RestItem { IsMultiMeasure: true, OpensWrittenRun: true };
+        }
+
         // A break-aligned change at the START of a rest bar forces a run boundary there:
         // LilyPond splits the compressed rest at the change and hangs it on the new run's
         // left bound (verified on 2.24.4 — `R1*2 \key g\major R1*3` renders "2" then "3",
         // the key sig on the between-column). A run may OPEN on such a bar, never SWALLOW
         // one. The change may sit in any staff, so a boundary in one splits the run in all.
+        //
+        // A NEW WRITTEN REST does the same, and for the same reason: LilyPond builds one
+        // Multi_measure_rest spanner per written event, so `\compressMMRests` compresses
+        // an N-measure event but never fuses separately written rests. Measured on 2.26.0
+        // (scratch/lpreg/pcmsh-r1.log): `R1 | R1 | R1` gives three grobs with bars=1 and NO
+        // count printed, `R1*3` gives one grob with bars=3 and MMNUM "3". Without this the
+        // run grouping saw only "every staff rests here" and merged the three into one.
         bool OpensNewRun(int m)
         {
-            if (m < primaryMeasures.Length && HasLeadingBreakAlignedChange(primaryMeasures[m]))
+            if (m < primaryMeasures.Length &&
+                (HasLeadingBreakAlignedChange(primaryMeasures[m]) ||
+                 StartsWrittenRest(primaryMeasures[m])))
                 return true;
             if (allStaffMeasures != null)
                 foreach (var sm in allStaffMeasures)
-                    if (m < sm.Length && HasLeadingBreakAlignedChange(sm[m]))
+                    if (m < sm.Length &&
+                        (HasLeadingBreakAlignedChange(sm[m]) || StartsWrittenRest(sm[m])))
                         return true;
             return false;
         }

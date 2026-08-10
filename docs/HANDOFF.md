@@ -58,6 +58,93 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第128セッション＝**「書かれた休符 1 つ = MMR 1 本」を 3 便で移植し、
+`part-combine-mmrest-shared` を閉じた**（第127の「次の一手 ⑴」＝いちばん筋がよいとされていた候補）。
+**未 push あり・push はしていない**（ユーザー判断待ち）。
+
+★★★ **第1便 = 汎用欠陥**（`89816a10`）。LP の MMR は **`\compressMMRests` が N 小節イベントを
+圧縮するだけ**で、別々に書かれた休符を**結合しない**。実測（`scratch\lpreg\pcmsh-r1.log` を再読して裏取り）:
+**`R1 | R1 | R1` = 3 本（bars=1・MMNUM 無し）／`R1*3` = 1 本（bars=3・MMNUM "3"）**。
+Lily# は前者を 1 本に畳んでいた。root = `OpensNewRun` が**先頭の clef/key/time 変化しか見ておらず**、
+モデルにも印が無い（`MusicWalk` が**同一コピーを N 個**置く）。
+修理＝`RestItem.OpensWrittenRun`（**既定 true**＝「自分自身が書かれたイベント」・展開ループだけが落とす）を
+`OpensNewRun` が読む。**既定 true にしたので他の生成経路（PartCombiner・spacer・arpeggio）は 1 行も触っていない。**
+
+★★ **census を先にやった＝snapshot 0 枚動く、と予測して当たった**。**219 fixture に隣接した
+書かれた `R` は 1 組も無い**——MMR を持つ 10 冊は全部が音符小節で run を分けており、
+`multi-measure-rest-single.lys` は**コメントにそう明記してある**。隣接が在るのは corpus の外だけ
+（`samples\canon-in-d.lys`・`output\review\20-edge-cases.lys`・scratch 6 冊。canon-in-d は
+別譜に音符が在るので元々無関係）。⚠️ **動かない予測が当たった便は「効いた証拠」が別に要る**（§5.0 の釘）
+⇒ `pcmsh-run.lys` が **28 の 1 本 → 8/16/4 の 3 本**（LP `pcmsh-run.log` = bars 8/16/4）。
+16 小節 run の小節線間隔は **14.79 対 LP 14.790**。**旧観測者は逆を主張していたので実測に差し替えた**（§5.4）。
+
+★★★ **第2便 = 第127の「この規則ならこの本も自動的に届く」が外れ、対照が犯人を名指した**（`e79dff66`）。
+汎用修理だけでは `part-combine-mmrest-shared` の score1 は **8|16|4 のまま**＝**part1 の綴りそのもの**。
+⇒ **パート宣言順を入れ替えたら 16|8|4 に反転**（`pcmsh-a-swap.lys`）。**LP は対称**（境界は和集合なので
+パートを選べない）なので、**この非対称性が在処＝合体器**。
+root = ★★ **LP の規則は移植済だが到達不能**。`AnalyzeUnsyncedSilence` は
+`analyze-unsynced-silence`（「いま始まる方を印字する」）そのものだが、**`R*N` は合体器より前に
+`MusicWalk` が N 個の 1 小節コピーへ展開する**ので、**休符では両パートが決して unsynced にならない**
+（毎モーメント各パートに 1 小節休符が在り、常に Unisilence）。⇒ **MMR に対して unsynced 枝は死んでいる。**
+**移植漏れではなくモデル差**（LP は 5 文脈が共通の時計・各イベントが 1 spanner／Lily# の声部は平坦化済の列）。
+修理＝`UnionWrittenRestBoundaries`＝routing の前に両パートの `OpensWrittenRun` を**和集合**に畳む
+（Unisilence では片方が NullVoice へ**自分の境界を持ち去る**）。
+**照合 = LP と数も幾何も一致**: **8/8/8/4**（LP 同）・内側 2 つの小節線間隔 **14.19 / 14.19 対 LP 14.190 / 14.190**・
+**入替対称も回復**。観測者 `CombinedStaffTests` 3 本（うち 1 本は「和集合がやたらに切る」ことへの陽性対照）。
+
+★★★ **第3便 = score2/3 を測って本を閉じた（コード変更ゼロ）**。第127 は「score2/3 は
+`r1^"r"` の綴りが要る」と書いていたが、**それが誤り**——**Lily# には `@text("…")` が在り、
+`r1@text("r").up` も `.down` も描ける**（`resttext-probe.lys` で先に確認）。⇒ **文法待ちではなかった。**
+LP 実測（`pcmsh-b.log`／`pcmsh-c.log`・`pcdump.ily` に `TextScript` の記録を追加）:
+**5 つ = `MMR8 | REST(dur=0,+"r") | MMR7 | MMR8 | MMR4`**・境界 **0/8/9/16/24**
+＝ **part1 の開始(0,8,9,24) ∪ part2 の開始(0,16,24)**＝ score1 と**同じ規則**。
+★★ **score2 と score3 の LP dump は `TXT` の y と dir 以外バイト同一**＝**近恒等の対**（LP 側が恒等）。
+**Lily# も両書とも `8 | r1+"r" | 7 | 8 | 4` で、違うのは text の向きだけ**。
+幾何も一致: run"7" **16.71 対 LP 16.705**・run"8" **14.19 対 LP 14.190**・
+素の全休符の縦位置 **+1.0 ss（第4線から吊る）** 対 LP `-3.454045-(-4.454045)=+1.0`。
+⇒ **素の休符は MMR に飲まれず素の休符として印字される**（LP は通常 rest を MMR より優先）＝
+これが第1の run を終わらせ 7 を始める。**担当は既存の `AnalyzeSyncedApartSilence`（Rest 対 MMR → Silence1）で、
+移植済みのまま正しく動いていた**——⑵ の和集合が入って初めて**その先の境界が見えるようになった**。
+
+⚠️ **札 = `combinedStaff` は fixture に 1 本も無い**（`condensedStaff` と同じ穴・第127の札の 2 例目）。
+⇒ **この 2 機能の回帰網は単体テストだけ。** 資産を作るかはコーパスの判断（§2D 棚ではない）。
+⚠️ **perf は数えた**（§5.3）。⑴ が素の楽譜にも届くのは**反射的アイテムハッシュに bool 1 つ**だけ
+（`HashContent` は除外リスト式なので新フィールドは自動で入る＝incremental の鍵は 2 つの綴りを区別する）。
+⑵ は `Combine` の中＝`combinedStaff` の無い楽譜にはゼロ。⑶ はコード変更ゼロ。
+⚠️ **A/B は未実施（開示）。**
+★ **数えている途中で違反が 1 つ出た**: 展開ループが**コピーを毎回 clone**していた（`R1*100` で 99 個）。
+コピーは全部同じなので**1 回作って使い回す**形に直した。
+
+**台帳: plain 322 = fixed 72・exact 45・skip 192・open 13**（§0 の数え方で確認）。
+⇒ **`part-combine-mmrest-shared` が open → fixed**（score1/2/3 すべて一致・**この本がこの便の目的**）。
+**テスト 4315 passed / 0 failed / 4 skipped**（開始時 4308＝引継ぎと一致。旧観測者 1 本を差し替え、7 本追加）。
+Core 0 warning・**REF ラチェット exit 0（3107 refs・FREE-FORM 367 のまま）**・**snapshot 0 枚**。
+⚠️ `audit\citation_drift.csv` は**コミットされている版が 910 行・再生成すると 2589 行**＝**stale**。
+診断で走らせると差分が出るので**戻した**（別途の判断事項・この便では触っていない）。
+
+**次の一手（候補・ユーザー判断）**:
+⑴ **台帳の続き**——part-combine の plain は残り 4 冊。**段③ 不要で届くのは 3 冊**
+   （`silence-mixed`・`relative`・`tuplet-end`）。⚠️ `silence-mixed` は `s` と `<< >>` の同時休符積み・
+   `relative` は `\relative` の作用域そのものが主張なので、枠が書けるかの検分から。
+⑵ **combinedStaff / condensedStaff の snapshot 資産を作るか**（上の札・2 機能ぶん）。
+   ★ **この便で資産の素材はできた**——`pcmsh-{a,b,c}-probe.lys` は LP と 1 対 1 で照合済なので、
+   fixture へ移せばそのまま snapshot になる（コーパスに入れるかはユーザー判断）。
+⑶ **段③ = `condensedStaff` の中の `combinedStaff`**（スロット方向の能動的強制）。
+⑷ **向きの粒度**＝§2A の島。**`part-combine-silence` score 2 の残差もここに合流する**
+   （solo/shared がスロットを移れること＝第127 の open）。
+⑸ **`]~` のタイを黙って落とす件**（第126 の起票）——言語の判断が要る。
+
+probe 残置（第128）: `pcmsh-{b,c}.ly`＋`pcmsh-{b,c}-probe.lys`（**score2/3 の近恒等の対**・
+LP 側が恒等なので**捨てない**＝§5.0）・`pcmsh-a-swap.lys`（宣言順の対照・**非対称が閉じたことの観測**）・
+`pcmsh-*-after*.png/svg`（修理後の絵）・`resttext-probe.lys`（休符への text が綴れることの確認）・
+`mmr-written-run-why.md`（**移植前に書いた予測**＝当たり外れの記録）。
+⚠️ `pcdump.ily` に **`TextScript` の記録（`TXT`）を追加**した——合体器のラベルは
+`CombineTextScript` で**別の grob**なので、両方出さないと両方持つ本が読めない。
+
+---
+
+## 以下は第127セッションの経緯
+
 最終更新 第127セッション＝**未 push 117 件を push（`502660d2..2222418d`・ユーザー指示）**＋
 **LP 回帰台帳の part-combine 族を再開して 1 冊処理**。第112 で「`\partCombine` の綴りが無い」として
 skip した 8 冊は、第126 で `combinedStaff` が入った時点で**札が stale**（台帳の notes 自身が
@@ -123,14 +210,116 @@ collector が既に何度も歩いている同じアイテム列を 1 回余分�
 `\partCombine` は声部を書き換えるので、**印字された grob がどちらのパート由来かは src でしか分からない**）。
 ⚠️ `ly:input-file-line-char-column` は**値 4 つではなくリスト 1 つ**を返す（`call-with-values` は死ぬ）。
 
-**台帳: plain 322 = fixed 70・exact 45・skip 194・open 13**（§0 の数え方で確認）。
-**テスト 4305 passed / 0 failed / 4 skipped**（開始時 4299＝引継ぎの 4298 が 1 本 stale。
-新規 `PartCombineSilenceTests` 4 本＋`CondensedStaffTests` 2 本）。Core 0 warning・
-REF ラチェット exit 0（3100 refs・FREE-FORM 367・OK 2733）。
+★★★ **第3便 = `part-combine-mmrest-after-apart-silence` を消化＝fixed 71。
+engraving は無変更で一致し、直したのは診断の方**。
+**この本は自分自身が対照**（2 譜は同じ対を逆順に書いたもの＝規則が何であれ両譜同一に出るはず）。
+LP 実測（`pcmmas.ly`）: 第1小節 = **shared voice の 2 分休符 2 つ**（`dir=()`・譜相対 **0.0**、
+mmrest は落ちる＝claim そのもの）／第2小節 = **MMR 1 つ・bars=1・数字なし**（`MMNUM` レコードがゼロ）。
+Lily#: 2 分休符 **8.59 / 12.98 @0.0**（LP 8.585 / 12.983 @0.0）・第2小節は数字なしの全休符形 1 つ・
+**両譜同一**。⚠️ **LP の MultiMeasureRest の x は左境界（小節線）**なので LP 17.381 = LS の小節線 17.38。
+⚠️ **未照合 1（開示）**: MMR 自身の y は**両 engine で枠が違う**（LP は refpoint が譜中心で glyph offset は
+stencil の中）ので比べていない。
+
+★★★ **修理 = `R1*N` の小節数を数えているのが collect 側だけで、照合側は 1 小節と数えていた**
+（§5.2.1「予約と描画を別々に綴る」の validator 版）。⇒ `R1*2` を書いた双子が**偽の LYS2007**
+（「短い方を rest で埋めて揃える」）を出し、**実際には何も埋まっていなかった**。
+★ **同一実行の中で矛盾が見える対照**＝`pcmmas-x4.lys`（**診断は「pa = 2 小節」・描いた頁は 3 小節**）。
+修理＝`MeasureModel.Split` で `IsMultiMeasure` の rest が `MeasureCount-1` 本の Bar を追加する
+（**最後の 1 本は pending のまま残す**ので後続の小節線が普通に閉じ、空 `| |` の相方に見えない）。
+各 Bar の時価は rest の**書かれた値＝構成上ちょうど 1 小節分**（`R2.*3` が 3/4・`R1*3` が 4/4）なので
+拍子検査の答えは各小節同じ。観測者 `CrossPartMeasureValidationTests` 2 本
+（**一致で無警告**＋**4 小節相手では警告が残る**＝「mmrest を数えない」修理ではないことの対照）。
+
+★★ **起票（計器・修正済）= MMR の記号と数字は `data-pos` を持たない音楽グリフ**（付点も同じ）。
+`data-pos` 必須の抽出器は**「MMR が描かれていない」と嘘をつく**——この便で実際に踏んで、
+既知 fixture（`test/mmr-grandstaff-both-rest.lys`）を陽性対照に出したら計器の側だと分かった。
+`pcsil-extract.ps1` は `(no-src)` 印付きで出すよう修正済。⚠️ **`p` は Lily# の予約語**（LYS0002）。
+
+★★★ **第4便 = `part-combine-mmrest-shared` の下見（コード変更 0）＝ open。
+落ちた先は part-combine ではなく「Lily# は隣り合う *書かれた* 全休符休みを 1 本にまとめる」**。
+LP 実測（`pcmsh-a.ly`・part1 = 8|16|4 対 part2 = 16|8|4）: **engrave されるのは 4 本 = 8/8/8/4**
+（番号 8/8/8/4）＝**どちらかのパートが新しい休符を始める境界（0・8・16・24）で切れる**。
+Lily# は **28 小節を 1 本**にする（教会休符 1 本・2 桁の番号・内部小節線ゼロ）。
+★★ **原因は合体器ではないと対照 2 枚で確定**: 同じ音楽を `condensedStaff` で組んでも、
+**単一パートが `R1*28` と書いても幾何がバイト同一**（rect `x=7.58 w=12.92`・端 tick・同じ 2 桁）。
+★★★ **陽性対照で素の欠陥に落ちた**（`pcmsh-run.{ly,lys}`・`\partCombine` なし 1 声部）:
+`R1*8 | R1*16 | R1*4` を **LP は 8/16/4 の 3 本**に、**Lily# は 28 の 1 本**にする。
+さらに `pcmsh-r1.ly`＝**LP の `R1 | R1 | R1` は 3 本（bars=1・番号なし）・`R1*3` は 1 本（bars=3）**
+⇒ **LilyPond の MMR は「書かれたイベント 1 つ = 1 本」**で、`\compressMMRests` は
+**N 小節イベントを圧縮するだけ**（別々に書いた休符を結合はしない）。
+root = `MultiMeasureRestEngraver.FindRuns` の run 境界が**和音記号**と**先頭の clef/key/time 変化**
+（`OpensNewRun`）だけで、**書かれた休符の境界を見ていない**。モデルにも印が無い——
+`MeasureCollector.MusicWalk.cs:597` が `for (i<count) builder.AddItem(restItem)` と
+**同一コピーを N 個**置くので、どれが書き始めか分からない。
+**修理形** = `RestItem` に「書かれた run を開く」印を足し（先頭コピーだけ）、`OpensNewRun` がそれも読む。
+**この規則ならこの本も自動的に届く**（境界 0/8/16/24 ＝どちらかの譜が新しい休符を始める位置）。
+⚠️ **着手しなかった理由 = 挙動変更の幅**。印を「全ての書かれた `R`」に付けるのが LP 一致だが、
+`R1 | R1 | R1` の見た目が **1 本 → 3 本**に変わるので **snapshot census が要る**。
+第127 の残り予算で正しく測れないので**下見で止めた**。score2/3 は `r1^"r"`（休符への text）が要る。
+
+★★★ **第5便 = 自己監査（ユーザー問「字面通り移植できたか・ハックは・REF は」）＝違反 3 を自分で出して修理**:
+- ⚠️⚠️ **REF がゼロだった（実測）**。ラチェットの `Total refs` が**開始時も第4便後も 3100 で同数**＝
+  **この便までに追加した LILYPOND-REF は 1 本も無い**。新コードは LP を散文で引きながら**印を付けていなかった**
+  （[[REF 印が引用を作る]]の再犯）。3 本足して **3103・FREE-FORM 367 のまま**（＝**3 本とも行範囲つきで解決**）:
+  ⑴ `ly/music-functions-init.ly:1618-1625 make-part-music`＝**パートは 1 本の notation 流を
+  文脈変更リストと同時に演奏する**⇒ どの文脈に居るかは moment を動かさない（Null が時間を食う根拠）
+  ⑵ `lily/parser.yy:3117-3120 MULTI_MEASURE_REST`＝`*N` 因子つきの**1 イベント**（`R1*N` が N 小節の根拠）
+  ⑶ `scm/music-functions.scm:666-674 make-voice-props-set`＝**Rest も direction-polyphonic**
+  （condensedStaff で**符尾でなく休符が壊れた**理由）。
+- ⚠️ **発明を 1 つ消した**: `SpacerDurations` は**貪欲な 2 冪分解＋出所の無い下限 1/128**という
+  **LP に無い規則**だった。しかも**無害ではない**——spacer は描かれないが**1 本ごとに声部の時計に載る**。
+  **1 つの spacer が丸ごと運ぶ**形に置換（定数ゼロ・規則ゼロ）。**出力は不変**（双子 3 対を再レンダして確認・
+  コーパスで binding するのは 1/2 の隙間 1 か所だけで、どの形でも同じ答え）。
+- ⚠️ **開示を釘にした**: `Materialise` の overlap（solo が相手の休符の途中で始まる形）は
+  **黙って位置がずれる**のに、診断もテストも無かった。`ASoloThatStartsInsideTheOtherPartsRestIsStillPlacedLate`
+  を追加（**正しさの主張ではなく釘**・直ったら落ちるように書いてある）。
+- **白（検算して問題なし）**: ⑴ `Materialise` は**LP に無い第二の機械**だが、これは*規則*の発明ではなく
+  **モデルの差**（LP は 5 文脈が共通の時計、Lily# の声部は時価の列）＝remarks に明記済 ⑵ `combinedStaff` に
+  `ResolveVoiceStemDirections` を**掛けていない**のは呼び出しが condensed 枝の中だけだから（構造上の保証）
+  ⑶ 新規チューニング定数ゼロ。
+- ⚠️ **perf を数えていない便が 2 つあった（今数えた・A/B は未実施と開示）**:
+  **第1便** `Materialise` は **`PartCombiner.Combine` の中だけ**＝`combinedStaff` を使わない楽譜への追加はゼロ・
+  per-render で per-item ではない。**第3便** `MeasureModel.Split` は**診断の経路＝毎キーストローク走る**が、
+  追加は**アイテム 1 個につき型判定 1 回**、`R…*N` のときだけ `N-1` 回の append。
+
+★★★ **第6便 = perf 監査 round 28（ユーザー問「プレビューの更新を劣化させないか」）= 実退行なし・
+数えた段階で違反 1 を発見して修正**（`scratch\lpreg\perf-ab28.ps1`・base = `2222418d` worktree
+`C:\MyProj\LilySharp-perfbase-2222` 残置・median-of-5 両順）。
+★ **まず数えた**（§5.3）——3 つの変更の届く範囲は違う:
+⑴ `PartCombiner`（onset＋`Materialise`）は **`PartCombiner.Combine` の中だけ**＝`combinedStaff` の無い楽譜には
+**ゼロ**・per-render で per-item ではない ⑵ `RenderSpec` の 1 走査は **`case CondensedStaffSpec` の中**＝同じくゼロ
+⑶ `MeasureModel.Split` は **アイテム 1 個につき型判定 1 回**＋書かれた `R…*N` につき `N-1` 回の append。
+**⑶ だけが素の楽譜も払う**——そして**これは診断の経路＝エディタが毎キーストローク走らせる側**。
+⚠️ **数えている途中で違反が 1 つ出た**: `MeasureCount` は**計算プロパティ**（子ノード引き＋
+`int.TryParse`）なのに、**ループ条件に書いたので追加する小節ごとに再パース**していた。
+1 回読んで持つ形に修正（`R1*100` で 100 回が 1 回に）。**数えなければ A/B では見えない大きさ**だった。
+
+| 入力 | base-first | curr-first | hash |
+|---|---|---|---|
+| mmr1k（⑶ の重い側＝`R1*4`×200 ＋ 音符 800） | +1.4% | **−6.6%** | MATCH |
+| comb300（⑴ の重い側＝合体器が走る唯一の形） | −1.6% | −11.7% | MATCH |
+| plain1k（⑶ を型判定 1 回だけ払う＝drift 計） | +1.7% | −0.5% | MATCH |
+
+**mmr1k と plain1k は順序で符号が反転**＝機械の drift（同じ base バイナリが plain1k で
+24273 対 22478 ms ＝ **−7.4% 振れる**ので、この入力の drift 帯は ±7% 級）。**comb300 は両順とも負**
+＝現在の方が速い。**3 冊とも hash MATCH ＝ グリフは 1 つも動いていない。**
+⚠️ **開示 2**: ⑴ この A/B は `lysc svg` の端から端なので、**検証の costs はレイアウトと描画に薄められている**
+（診断だけを回す測り方はしていない）⇒ **在処を名指せるのは上の「数えた」ほうで、A/B は「帯の中」しか言えない**。
+⑵ `IncrementalCompiler` 自体は**非接触**（変更 4 ファイルに含まれない）。
+
+**台帳: plain 322 = fixed 71・exact 45・skip 192・open 14**（§0 の数え方で確認）。
+**テスト 4308 passed / 0 failed / 4 skipped**（開始時 4299＝引継ぎの 4298 が 1 本 stale。
+新規 `PartCombineSilenceTests` 5 本＋`CondensedStaffTests` 2 本＋`CrossPartMeasureValidationTests` 2 本）。
+Core 0 warning・**REF ラチェット exit 0（3103 refs・FREE-FORM 367・OK 2736）**。
+⚠️ **ユーザー指示（セッション途中）= push 禁止。** 冒頭の 2 回（`502660d2..2222418d` と
+`74d48644`・`ee1e8a52`）は指示に従って push 済み、**それ以降はコミットのみ**。
 
 **次の一手（候補・ユーザー判断）**:
-⑴ **台帳の続き**——part-combine の plain は 10 冊中 **3 冊消化・残り 7**。**段③ 不要で届くのは 5 冊**
-（`silence-mixed`・`relative`・`tuplet-end`・`mmrest-shared`・`mmrest-after-apart-silence`）。
+⑴ ★ **第4便の修理＝「書かれた MMR の境界で run を切る」**。**いちばん筋がよい**——素の 1 声部で
+LP と食い違う一般欠陥で、直せば `mmrest-shared` も自動的に届く。**snapshot census が前提**
+（`R1 | R1 | R1` が 1 本→3 本になるので、コーパスの連続 `R1` を先に数えること）。
+⑵ **台帳の続き**——part-combine の plain は 10 冊中 **5 冊消化・残り 5**。**段③ 不要で届くのは 3 冊**
+（`silence-mixed`・`relative`・`tuplet-end`）。
 ⚠️ **`silence-mixed` は `s` と `<< >>` の同時休符積み・`relative` は `\relative` の作用域そのものが
 主張**なので、枠が書けるかの検分から。
 ⑵ **condensedStaff の snapshot 資産を作るか**（上の札。今はコーパスに 1 本も無い＝
@@ -16575,6 +16764,24 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
 > **2 つの欠陥を固定する**。
 >
 > ★ **これは何度も繰り返されている指摘。破ったら差し戻し。**
+
+> ## ★★★ **字面通りに移植した関数が「一度も発火しない」ことがある**（2026-08-10・第128セッション）
+>
+> `AnalyzeUnsyncedSilence` は `analyze-unsynced-silence`（「いま始まる方の休符を印字する」）の
+> **正しい字面移植**で、**呼ばれてもいる**。それでも **MMR に対して一度も真にならない**——
+> **前段の `MusicWalk` が `R*N` を N 個の 1 小節コピーへ展開してしまう**ので、
+> **休符では両パートが決して unsynced にならない**（毎モーメント各パートに 1 小節休符が在り、
+> 同期判定が常に Unisilence を返す）。⇒ **移植は正しく、入力の形のほうが LP と違っていた。**
+> ⚠️ **これは「未移植」でも「移植ミス」でもないので、どちらの棚卸しにも出てこない。**
+> 台帳は「規則は在るのに本が落ちる」と書くことになり、**第127 は実際に
+> 「この規則ならこの本も自動的に届く」と書いて外した**。
+> ⇒ ★★ **判定法**: 移植した分岐が**コーパスで一度でも通るか**を見る（カウンタを 1 つ置くか、
+> その分岐だけを狙った本を 1 冊書く）。**通らないなら、疑うのは分岐ではなく前段の変換。**
+> ⇒ ★★★ **そして直し方は「前段を LP に合わせる」とは限らない**。ここでは展開をやめるのではなく、
+> **展開が消した情報（どのコピーが書き始めか）をアイテムに載せて後段に渡した**——
+> **LP と同じ答えに、この模型で到達できる唯一の道**だったから（§7.6 ⒝＝LP 由来・字面でない）。
+> ⚠️ **在処を名指したのは対照**: パート宣言順を入れ替えたら出力が反転した。
+> **LP が対称な量で Lily# が非対称なら、犯人は順序を見ている側**（§5.0 の「恒等の対」の順序版）。
 
 > ## ★★★ **「同型」は測るまで同型でない**（2026-07-31・第54セッション）
 >

@@ -5804,8 +5804,9 @@
     },
     "part-combine-mmrest-after-apart-silence.ly": {
       "category": "plain",
-      "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
+      "state": "fixed",
+      "claim": "Normal rests are preferred over multi-measure rests. A multi-measure rest beginning in one part in the middle of a multi-measure rest in the other part appears as expected.",
+      "notes": "fixed(第127第3便・skip→再測)。双子=scratch/lpreg/pcmmas.ly対pcmmas-probe.lys。\n**engravingは無変更で一致**——修理したのは診断の方(下)。本は自分自身が対照(2譜は同じ対を逆順に書いたものなので、\n規則が何であれ両譜同一に出るはず)。LP実測: bar1=**shared voiceの2分休符2つ**(dir=()・譜相対0.0でmmrestは落ちる=claim)・\nbar2=**MMR 1つ(bars=1・数字なし=MMNUMレコードゼロ)**・両譜ink同一。\nLily#: 2分休符 8.59/12.98 @0.0(LP 8.585/12.983 @0.0)・bar2は数字なしの全休符形1つ・両譜同一。\n**LPのMultiMeasureRestのxは左境界(小節線)**でLP17.381=LS小節線17.38(0.001一致)。\n⚠️未照合1: MMR自身のyは両engineで枠が違う(LPはrefpointが譜中心でglyph offsetがstencilの中)ので比べていない。\n**修理=R1*Nの小節数を数えているのがcollectだけで、照合側(MeasureModel.Split)は1小節と数えていた**\n(§5.2.1「予約と描画を別々に綴る」のvalidator版)。⇒R1*2を書いた双子が**偽のLYS2007**\n(「短い方をrestで埋めて揃える」)を出し、実際には何も埋まっていなかった。\n★同一実行内で矛盾が見える対照=pcmmas-x4.lys(診断は「pa=2小節」・描いた頁は3小節)。\n修理=Split内でIsMultiMeasureのrestがMeasureCount-1本の追加Barを出す(最後の1本はpendingのまま残すので\n後続の小節線が普通に閉じ、空`| |`の相方に見えない)。各Barの時価はrestの書かれた値=構成上ちょうど1小節分\n(R2.*3が3/4・R1*3が4/4)なので拍子検査の答えは各小節同じ。観測者CrossPartMeasureValidationTests2本\n(一致で無警告・4小節相手では警告が残る=「mmrestを数えない」修理でないことの対照)。テスト4307全緑。\n起票(計器): **MMRの記号と数字はdata-posを持たない音楽グリフ**(付点も同じ)。data-pos必須の抽出器は\n「MMRが描かれていない」と嘘をつく——pcsil-extract.ps1は(no-src)印付きで出すよう修正済。"
     },
     "part-combine-mmrest-after-solo.ly": {
       "category": "scheme",
@@ -5817,8 +5818,9 @@
     },
     "part-combine-mmrest-shared.ly": {
       "category": "plain",
-      "state": "skip",
-      "notes": "skip(第112第10便・part-combine族)。親notes=part-combine-3voices(\\partCombine綴りなし=EnablePartCombine書き手ゼロ。⚠️第126で combinedStaff{X Y} が入り綴りのゲートは解除=未再測)"
+      "state": "fixed",
+      "claim": "Multi-measure rests do not have to begin and end simultaneously to be combined.",
+      "notes": "fixed(第128・score1/2/3 すべて一致)。双子=scratch/lpreg/pcmsh-{a,b,c}.ly 対 pcmsh-{a,b,c}-probe.lys\n＋対照 pcmsh-a-swap.lys(宣言順)。claim「MMR は同時に始まり終わる必要はない」。\n★★★ **規則 = 印字される休符は「どちらかのパートが書き始めた境界」で切れる**(＝書かれた開始位置の和集合)。\n- **score1**: part1=8|16|4 対 part2=16|8|4 → LP **4本=8/8/8/4**(x 0.0/21.285/35.475/49.665)。\n  Lily# も **8/8/8/4**・内側の小節線間隔 **14.19/14.19 対 LP 14.190/14.190**・**入替対称も一致**。\n- **score2/3**: part1 が自分の休符を**素の全休符+text**(`r1^\"r\"`)で中断する形。\n  LP(pcmsh-b.log/pcmsh-c.log)= **5つ: MMR8 | REST(dur=0,+\"r\") | MMR7 | MMR8 | MMR4**、\n  境界 0/8/9/16/24 ＝ **part1 の開始(0,8,9,24) ∪ part2 の開始(0,16,24)**。\n  ★★ **score2 と score3 の LP dump は TXT の y と dir 以外バイト同一**＝**近恒等の対**。\n  Lily# も **8 | r1+\"r\" | 7 | 8 | 4** で両書とも同一・text の向きだけ違う。\n  幾何: run\"7\" **16.71 対 LP 16.705**・run\"8\" **14.19 対 LP 14.190**。\n  素の全休符の縦位置 **+1.0 ss(第4線から吊る)** ＝ LP の REST y-STAFF sy = -3.454045-(-4.454045) = +1.0 と一致。\n  ⇒ **素の休符は MMR に飲まれず素の休符として印字される**(LPは通常restをMMRより優先)＝\n  これが第1の run を終わらせ 7 を始める。既存の AnalyzeSyncedApartSilence(Rest対MMR→Silence1)が担当。\n修理は2段(第128):\n⑴ `89816a10` = 汎用欠陥。**LP の MMR は「書かれたイベント1つ=1本」**(pcmsh-r1.log:\n   `R1|R1|R1`=3本(bars=1・番号なし)/`R1*3`=1本(bars=3))で、\\compressMMRests は N小節イベントを\n   圧縮するだけ。Lily# は隣接する書かれた R を畳んでいた。root=`OpensNewRun` が先頭の\n   clef/key/time 変化しか見ず、モデルにも印が無い(`MusicWalk` が同一コピーを N 個置く)。\n   ⇒ `RestItem.OpensWrittenRun`(既定 true・展開ループだけが落とす)を `OpensNewRun` が読む。\n⑵ `e79dff66` = ⑴ だけでは**この本は届かなかった**(第127の見込み違い・第128が実測で訂正)。\n   score1 が **8|16|4 のまま**＝part1 の綴りそのもので、**宣言順を入れ替えると 16|8|4 に反転**。\n   LP は対称なので**この非対称性が在処=合体器**。\n   root=★★ **LP の規則は移植済だが到達不能**: `AnalyzeUnsyncedSilence` は\n   analyze-unsynced-silence(scm/part-combiner.scm:535-552)そのものだが、**R*N は合体器より前に\n   N 個の1小節コピーへ展開される**ので休符では両パートが決して unsynced にならず、常に Unisilence。\n   **移植漏れではなくモデル差**。⇒ `UnionWrittenRestBoundaries` = routing 前に両パートの\n   `OpensWrittenRun` を和集合へ畳む(Unisilence では片方が NullVoice へ自分の境界を持ち去るため)。\n観測者: CombinedStaffTests 5本(score1の4本grouping・入替対称・**素の休符で割れる 8/7/8/4**・\nscore2対score3の近恒等・**両パートが同じ 8|16|4 なら3本のまま**=和集合がやたらに切らないことの陽性対照)。\n⚠️ **札**: `combinedStaff` は fixture に1本も無い(condensedStaff と同じ穴)＝**回帰網は単体テストだけ**。\n⚠️ **未照合(開示)**: MMR 自身の y は両 engine で枠が違う(LP は refpoint が譜中心で glyph offset は\nstencil の中)ので比べていない。x も MMR grob の基準が違うので、比べたのは**小節線間隔**。"
     },
     "part-combine-relative.ly": {
       "category": "plain",

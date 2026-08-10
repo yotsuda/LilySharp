@@ -15,10 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -235,5 +238,126 @@ public class CombinedStaffTests
         // Error recovery: the offending item is skipped, not the block.
         var svg = Svg(FourBars("combinedStaff { staff fl1 staff fl2 }"));
         Assert.Contains("<line", svg);
+    }
+
+    // ------------------------------------------------------- written-rest boundaries
+    //
+    // The twin of score 1 of LilyPond's input/regression/part-combine-mmrest-shared.ly
+    // ("Multi-measure rests do not have to begin and end simultaneously to be combined").
+    // The two parts write three runs each and disagree about where they end, and what
+    // LilyPond engraves is FOUR rests — 8, 8, 8, 4 — one per segment between the
+    // boundaries EITHER part sets. Measured on 2.26.0, scratch/lpreg/pcmsh-a.log:
+    //   MMREST x=0.0 bars=8 | x=21.285 bars=8 | x=35.475 bars=8 | x=49.665 bars=4
+    // so part one's SIXTEEN-bar rest is cut at bar 16, where part two begins its own.
+    // LILYPOND-REF: scm/part-combiner.scm:535-552 analyze-unsynced-silence.
+
+    /// <summary>The multi-measure-rest runs of a combined staff, as the engraver groups them.</summary>
+    private static ImmutableArray<MmrRun> CombinedRuns(string parts, string render)
+    {
+        var tree = SyntaxTree.Parse(Defaults + parts + "\nform main { ~A }\nscore main { " + render + " }\n");
+        var spec = RenderSpecParser.FindFirst(tree);
+        return MultiMeasureRestEngraver.FindRuns(new MeasureCollector().CollectMultiStaff(tree, spec!));
+    }
+
+    private const string DisagreeingRuns = """
+        part vone { clef treble }
+        part vtwo { clef treble }
+        section A {
+          vone { R1*8 | R1*16 | R1*4 | }
+          vtwo { R1*16 | R1*8 | R1*4 | }
+        }
+        """;
+
+    [Fact]
+    public void TheCombinedRestsBreakWhereEitherPartBeginsOne()
+    {
+        // 8 / 8 / 8 / 4, breaking at 0 / 8 / 16 / 24 — the UNION of the two parts' written
+        // starts, not either part's own spelling. Before the boundaries were folded together
+        // this rendered part one's 8|16|4 verbatim, because the part routed to NullVoice took
+        // its written starts with it.
+        var runs = CombinedRuns(DisagreeingRuns, "combinedStaff { vone vtwo }");
+        Assert.Equal(new[] { 0, 8, 16, 24 }, runs.Select(r => r.StartMeasureIndex).ToArray());
+        Assert.Equal(new[] { 8, 8, 8, 4 }, runs.Select(r => r.Count).ToArray());
+    }
+
+    [Fact]
+    public void TheCombinedRestsDoNotDependOnWhichPartIsWrittenFirst()
+    {
+        // LilyPond is symmetric here — the boundary set is a union, so it cannot prefer a
+        // part — and the asymmetry is exactly what the old behaviour had: declaring the
+        // parts the other way round turned 8|16|4 into 16|8|4. Same music, same picture.
+        var declared = CombinedRuns(DisagreeingRuns, "combinedStaff { vone vtwo }");
+        var swapped = CombinedRuns(DisagreeingRuns, "combinedStaff { vtwo vone }");
+        Assert.Equal(declared.Select(r => (r.StartMeasureIndex, r.Count)).ToArray(),
+                     swapped.Select(r => (r.StartMeasureIndex, r.Count)).ToArray());
+    }
+
+    // Scores 2 and 3 of the same regression file: part one interrupts its own rests with an
+    // ORDINARY whole rest carrying a text, against part two's ongoing R1*16. Measured on
+    // 2.26.0 (scratch/lpreg/pcmsh-b.log and pcmsh-c.log) — five engraved silences,
+    //   MMREST bars=8 | REST dur=0 +"r" | MMREST bars=7 | MMREST bars=8 | MMREST bars=4
+    // breaking at 0 / 8 / 9 / 16 / 24, which is again the union of both parts' written
+    // starts (part one at 0, 8, 9, 24; part two at 0, 16, 24). The ordinary rest is printed
+    // as an ordinary rest — LilyPond prefers a normal rest to a multi-measure one — and it
+    // is what ends the first run and starts the seven.
+
+    private const string InterruptedRuns = """
+        part vone { clef treble }
+        part vtwo { clef treble }
+        section A {
+          vone { R1*8 | r1@text("r").up | R1*15 | R1*4 | }
+          vtwo { R1*16 | R1*8 | R1*4 | }
+        }
+        """;
+
+    /// <summary>The same music with the parts exchanged — LilyPond's score 3.</summary>
+    private const string InterruptedRunsSwapped = """
+        part vone { clef treble }
+        part vtwo { clef treble }
+        section A {
+          vone { R1*16 | R1*8 | R1*4 | }
+          vtwo { R1*8 | r1@text("r").down | R1*15 | R1*4 | }
+        }
+        """;
+
+    [Fact]
+    public void AnOrdinaryRestBreaksTheCombinedRunAndIsNotSwallowed()
+    {
+        // Four multi-measure runs — 8, 7, 8, 4 — with bar 8 belonging to none of them,
+        // because the bar holds a plain r1 rather than an R. The seven is the tell: it can
+        // only appear if the run restarts at bar 9 where part one writes R1*15, while part
+        // two is still in the middle of its R1*16.
+        var runs = CombinedRuns(InterruptedRuns, "combinedStaff { vone vtwo }");
+        Assert.Equal(new[] { 0, 9, 16, 24 }, runs.Select(r => r.StartMeasureIndex).ToArray());
+        Assert.Equal(new[] { 8, 7, 8, 4 }, runs.Select(r => r.Count).ToArray());
+    }
+
+    [Fact]
+    public void ExchangingThePartsLeavesTheInterruptedGroupingAlone()
+    {
+        // LilyPond's own scores 2 and 3 are this pair, and its two dumps differ ONLY in the
+        // text script's y and direction — every rest lands identically. So must these.
+        var b = CombinedRuns(InterruptedRuns, "combinedStaff { vone vtwo }");
+        var c = CombinedRuns(InterruptedRunsSwapped, "combinedStaff { vone vtwo }");
+        Assert.Equal(b.Select(r => (r.StartMeasureIndex, r.Count)).ToArray(),
+                     c.Select(r => (r.StartMeasureIndex, r.Count)).ToArray());
+    }
+
+    [Fact]
+    public void AgreeingPartsKeepTheirOwnBoundariesAndGainNoOthers()
+    {
+        // The positive control against "the union just breaks everywhere": when both parts
+        // write the SAME three runs there is nothing to add, and the result is those three —
+        // not four, and not twenty-eight one-bar rests.
+        var runs = CombinedRuns("""
+            part vone { clef treble }
+            part vtwo { clef treble }
+            section A {
+              vone { R1*8 | R1*16 | R1*4 | }
+              vtwo { R1*8 | R1*16 | R1*4 | }
+            }
+            """, "combinedStaff { vone vtwo }");
+        Assert.Equal(new[] { 0, 8, 24 }, runs.Select(r => r.StartMeasureIndex).ToArray());
+        Assert.Equal(new[] { 8, 16, 4 }, runs.Select(r => r.Count).ToArray());
     }
 }

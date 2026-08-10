@@ -111,8 +111,31 @@ internal static class MeasureModel
                 prevBarEnd = barEnd;
                 continue;
             }
-            total += MeasureDurations.ItemDuration(node, ref defaultDuration);
+            var itemDuration = MeasureDurations.ItemDuration(node, ref defaultDuration);
+            total += itemDuration;
             current.Add(node);
+
+            // `R1*N` is N BARS of silence written as one token, and it is written with ONE
+            // barline after it. Counting the token as one bar made this model disagree with
+            // the collector, which expands the run and lays out N bars — so a part resting
+            // `R1*2` against a part writing three bars was reported as two bars long and
+            // "padded with rests to align" (LYS2007) while the layout padded nothing.
+            // ★ MEASURED, both halves in one run: scratch/lpreg/pcmmas-x4.lys warns that
+            // part `pa` spans 2 bars, and the page it draws has three.
+            // LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST — one event carrying
+            // an optional duration, whose `*N` factor is what makes it last N bars.
+            // The N bars are all the rest's own written value — that value IS one bar's
+            // worth by construction (`R2.*3` in 3/4, `R1*3` in 4/4) — so the meter check
+            // sees the same answer for each of them. The LAST of the N is left pending, so
+            // the barline that follows closes it the ordinary way and does not read as the
+            // second half of an empty `| |` pair.
+            // ⚠️ MeasureCount is COMPUTED (a child lookup and an int.TryParse over the token
+            // text), so it is read once and held. Written as the loop's condition it was
+            // re-parsed on every added bar. This walk is on the diagnostics path, which the
+            // editor runs on every keystroke.
+            if (node is RestSyntax rest && rest.MeasureCount is var written && written > 1)
+                for (int extra = 1; extra < written; extra++)
+                    bars.Add(new Bar(itemDuration, node.Span));
         }
         FlushMusic(); // a trailing partial bar (music after the last barline) counts
         return bars;

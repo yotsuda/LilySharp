@@ -155,6 +155,29 @@ public class PartCombineSilenceTests
     }
 
     [Fact]
+    public void ASoloThatStartsInsideTheOtherPartsRestIsStillPlacedLate()
+    {
+        // ⚠️ A NAIL, not a claim of correctness. Score 2 of the book, bar 1: part one holds
+        // r4 in the "one" voice while part two's solo starts an eighth later, so LilyPond has
+        // two voices sounding at once — and one Lily# voice cannot hold two overlapping
+        // items, so the solo is appended after the rest instead of at its own moment.
+        // LilyPond's three columns are 2.400 apart; this tree's are 4.600 then 2.750.
+        // Materialise says so in its remarks; without this the residual is silent, and a
+        // silent wrong position is the thing the corpus keeps getting caught by.
+        // When the solo/shared stream can move to the other slot, this test should FAIL and
+        // be replaced by LilyPond's numbers.
+        var columns = Glyphs(Svg(Combined("r4 f2. | r8 f e2. |", "r8 d f2. | r4 e2. |")))
+            .Select(g => g.X)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        Assert.True(columns[1] - columns[0] > 3.0,
+            $"the first gap is {columns[1] - columns[0]:F2}; LilyPond's is 2.400 — if this is "
+            + "now near 2.4 the overlap has been fixed and the expectation must change");
+    }
+
+    [Fact]
     public void NotCombiningKeepsBothHalfRests()
     {
         // The control for the merge: the same music on a condensed staff — two voices on one

@@ -590,12 +590,24 @@ public sealed partial class MeasureCollector
                     }
                     else
                     {
-                        // LILYPOND-REF: lily/parser.yy — R<dur>*N expands to N
+                        // LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST —
+                        // R<dur>*N is ONE event carrying an N factor, which expands to N
                         // consecutive measure-rests semantically. The MeasureBuilder
                         // auto-completes each measure when its duration reaches the
                         // time signature.
-                        for (int i = 0; i < count; i++)
-                            builder.AddItem(restItem);
+                        // Only the FIRST copy is the written event; the rest are its
+                        // interior. Without that distinction the copies are identical and
+                        // MultiMeasureRestEngraver.FindRuns cannot tell `R1*3` from
+                        // `R1 | R1 | R1`, so it merged the latter into one three-bar rest.
+                        // LilyPond engraves three one-bar rests there (one spanner per
+                        // written event) — measured on 2.26.0, scratch/lpreg/pcmsh-r1.log.
+                        // The interior copies are all identical, so clone ONCE and reuse:
+                        // cloning inside the loop would allocate N-1 records per written
+                        // rest (99 of them for `R1*100`) to no purpose.
+                        var interior = restItem with { OpensWrittenRun = false };
+                        builder.AddItem(restItem);
+                        for (int i = 1; i < count; i++)
+                            builder.AddItem(interior);
                     }
                 }
                 break;

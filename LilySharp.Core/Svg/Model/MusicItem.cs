@@ -412,6 +412,24 @@ public sealed record RestItem : MusicItem
     public bool IsMultiMeasure { get; init; }
 
     /// <summary>
+    /// True iff this item IS a written rest event, rather than one of the 2nd..Nth
+    /// measures an <c>R&lt;dur&gt;*N</c> expands into. In LilyPond a multi-measure rest is ONE
+    /// spanner per written event: <c>\compressMMRests</c> compresses an N-measure event,
+    /// it does not fuse separately written rests. So <c>R1 | R1 | R1</c> engraves THREE
+    /// one-bar rests (no count printed) while <c>R1*3</c> engraves one three-bar rest —
+    /// measured on 2.26.0, scratch/lpreg/pcmsh-r1.log (bars=1,1,1 with no MMNUM vs
+    /// bars=3 with MMNUM "3"). <c>MultiMeasureRestEngraver.OpensNewRun</c> reads this so a
+    /// run never swallows the next written event.
+    /// Default true: every other way a rest is built (a plain <c>r</c>/<c>R</c>, a spacer, a
+    /// combined part's rest) IS its own written event, so only the expansion loop in
+    /// <c>MeasureCollector.MusicWalk</c> clears it.
+    /// LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST — the <c>*N</c> factor rides
+    /// ONE event; LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music — one
+    /// Multi_measure_rest spanner per event.
+    /// </summary>
+    public bool OpensWrittenRun { get; init; } = true;
+
+    /// <summary>
     /// The PURE estimate of how far a beam will push this rest, in staff positions from
     /// its default origin (up-positive), 0 when the rest is under no beam. Baked by
     /// <c>MeasureCollector.ResolveBeamStemDirections</c> for every rest a manual beam

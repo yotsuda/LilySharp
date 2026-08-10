@@ -110,12 +110,52 @@ public class MultiMeasureRestLayoutTests
     }
 
     [Fact]
-    public void ConsecutiveR1_ProducesSingleRunOfThree()
+    public void ConsecutiveR1_StayThreeSeparateOneBarRests()
     {
-        // Three explicit R1 measures should be detected as one MMR run, not three.
+        // ONE written rest event is ONE Multi_measure_rest. \compressMMRests compresses an
+        // N-measure event; it does not fuse rests that were written separately. This test
+        // used to assert the opposite (one three-bar run) — replaced by the measurement.
+        // LilyPond 2.26.0, scratch/lpreg/pcmsh-r1.log:
+        //   \compressMMRests { R1 | R1 | R1 }  ->  3 grobs, bars=1 each, NO MMNUM
+        // LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music — one spanner
+        // per written event; LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST.
         var layout = BuildLayout("R1 | R1 | R1 |");
-        Assert.Single(layout.MultiMeasureRestLayouts);
-        Assert.Equal(3, layout.MultiMeasureRestLayouts[0].MeasureCount);
+        Assert.Equal(3, layout.MultiMeasureRestLayouts.Length);
+        Assert.Equal(new[] { 0, 1, 2 },
+            layout.MultiMeasureRestLayouts.Select(m => m.StartMeasureIndex).ToArray());
+        Assert.All(layout.MultiMeasureRestLayouts, m => Assert.Equal(1, m.MeasureCount));
+    }
+
+    [Fact]
+    public void R1Star3AndThreeWrittenR1_AreTheSameSilenceAndDifferentRests()
+    {
+        // The identity pair: both spellings are three bars of silence, so any rule that
+        // grouped by "every staff rests here" makes them identical. LilyPond does not —
+        // measured on 2.26.0 (scratch/lpreg/pcmsh-r1.log): R1*3 is ONE grob with bars=3
+        // and MMNUM "3"; R1|R1|R1 is THREE grobs with bars=1 and no MMNUM. The engine's
+        // difference between the two IS the ported rule, so this pair is what fails if
+        // the written-event mark ever stops reaching FindRuns.
+        var fused = Runs(Document("4/4", "R1*3 |"));
+        var written = Runs(Document("4/4", "R1 | R1 | R1 |"));
+
+        var one = Assert.Single(fused);
+        Assert.Equal(3, one.Count);
+
+        Assert.Equal(3, written.Length);
+        Assert.All(written, r => Assert.Equal(1, r.Count));
+    }
+
+    [Fact]
+    public void TwoWrittenR1Star2_StayTwoRunsOfTwo()
+    {
+        // The positive control against "the fix just re-counts N": each written event keeps
+        // its OWN measure count, so two `R1*2`s are two two-bar runs — neither fused into
+        // one four-bar run (the old behaviour) nor shattered into four one-bar rests (what
+        // a mark leaking onto the 2nd..Nth expansion copies would produce).
+        var runs = Runs(Document("4/4", "R1*2 | R1*2 |"));
+        Assert.Equal(2, runs.Length);
+        Assert.Equal(new[] { 0, 2 }, runs.Select(r => r.StartMeasureIndex).ToArray());
+        Assert.All(runs, r => Assert.Equal(2, r.Count));
     }
 
     [Fact]
