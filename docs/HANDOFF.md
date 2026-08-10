@@ -90,13 +90,28 @@ skip した 8 冊は、第126 で `combinedStaff` が入った時点で**札が 
 （col3 +0.20・col4-6 −0.10）。⇒ **これは Lily# の spacing の誤差ではなく、LP の partCombine が
 二声綴りと違う幅を出すという事実**。score 3 は LS 2.64/6.23/2.65 対 LP 2.898/6.299/2.898。
 
-★★★ **起票 ⑴ = `condensedStaff` が休符に voiced 位置を付けない**（この本の陽性対照の副産物・**未修正**）。
-`pcsil-a-cond.lys` = 同じ音楽を condensed で組むと、**二声の全休符が中心線で完全に重なる**
-（全部 y=0.0、全休符だけ +1.0 が 2 つ）。LP の対照は全列 **+2/−2**。
-root = `MeasureCollector.ResolveVoiceStemDirections` は **part 単位で走る**ので、
-**別 part から組み上げた譜の多声を見ていない**（`VoiceDefaults.IsPolyphonicAt` に届かない）。
-符尾の向きは別経路（`GetDefaultStemUpAt`）で付くので**符尾だけ二声・休符は単声**という食い違い。
-⚠️ **combinedStaff は無傷**（`WithVoiceDirection` が焼くので）。**snapshot が動く見込みなので別便で。**
+★★★ **第2便 = 起票 ⑴ を修理＝`condensedStaff` が休符に voiced 位置を付けていなかった**
+（第1便の陽性対照の副産物）。`pcsil-a-cond.lys` = 同じ音楽を condensed で組むと
+**二声の全休符が中心線で完全に重なって**いた（全部 y=0.0、全休符だけ +1.0 が 2 つ）。
+LP の対照は全列 **+2/−2**。
+root = **声部の props（`\voiceOne`/`\voiceTwo`）は「譜」の仕事なのに「パート」で配っていた**——
+`MeasureCollector.ResolveVoiceStemDirections` は part 単位で走り、**パート単体は単声なので
+`voices.Length <= 1` で即 return**。⇒ 別 part から組み上げた譜には**誰も配っていなかった**。
+**符尾だけは正しかった**（renderer が `GetDefaultStemUpAt` で声部番号から引き直すため）が、
+**休符は焼かれた印を読む**（`ElementCoordinator`・`ItemSkylineFactory`）ので 0 のままだった。
+修理＝`RenderSpec.ToStaffGroups` の condensed 枝で**同じ綴りを呼ぶ**（`internal` 化）。
+⚠️ **combinedStaff には掛けない**——合体器が既に向きを決めており、LP の shared/solo 文脈は
+**voice settings を一切持たない**から。
+**照合 = LP の `\voiceOne`/`\voiceTwo` 対照（`pcsil-ctl.ly`）と休符 10 個・列 6 本が全一致**
+（X も 0.005 以内）。観測者 `CondensedStaffTests` に 2 本追加。
+⚠️ **既存の `VerticalPlacementIsExactlyTheTwoVoiceSpan` は同じ主張を既にしていた**——
+**fixture に休符が 1 つも無かった**ので拘束していなかった。新しい対は休符だけの音楽で回す。
+⚠️ **「snapshot 0 枚」はここでは空手形**: **audit コーパスにも samples にも `condensedStaff` は
+1 本も無い**（grep 済＝出現はテスト 3 ファイルのみ）。**動かなかったのではなく、動く対象が無い。**
+⇒ **札: condensedStaff の snapshot 資産がゼロ**（足すかはユーザー判断・§2D 棚ではなくコーパスの話）。
+**perf は数えた**（§5.3）: 追加したのは **`case CondensedStaffSpec` の中の 1 走査だけ**＝
+**condensedStaff を使わない楽譜への追加はゼロ**（コードが case の中に在る）。使う側では
+collector が既に何度も歩いている同じアイテム列を 1 回余分に歩く。⚠️ **A/B は未実施（開示）。**
 
 ★★★ **起票 ⑵ = 計器の罠。Rest の `Y-offset` は位置ではない**。`Rest_collision` は
 `force_shift_callback_rest` を rest の Y offset に**鎖でつなぎ**、そのコールバックは
@@ -109,15 +124,20 @@ root = `MeasureCollector.ResolveVoiceStemDirections` は **part 単位で走る*
 ⚠️ `ly:input-file-line-char-column` は**値 4 つではなくリスト 1 つ**を返す（`call-with-values` は死ぬ）。
 
 **台帳: plain 322 = fixed 70・exact 45・skip 194・open 13**（§0 の数え方で確認）。
-**テスト 4303 passed / 0 failed / 4 skipped**（開始時 4299＝引継ぎの 4298 が 1 本 stale。
-新規 `PartCombineSilenceTests` 4 本）。**snapshot 0 枚**・Core 0 warning。
+**テスト 4305 passed / 0 failed / 4 skipped**（開始時 4299＝引継ぎの 4298 が 1 本 stale。
+新規 `PartCombineSilenceTests` 4 本＋`CondensedStaffTests` 2 本）。Core 0 warning・
+REF ラチェット exit 0（3100 refs・FREE-FORM 367・OK 2733）。
 
 **次の一手（候補・ユーザー判断）**:
 ⑴ **台帳の続き**——part-combine の plain は 10 冊中 **3 冊消化・残り 7**。**段③ 不要で届くのは 5 冊**
 （`silence-mixed`・`relative`・`tuplet-end`・`mmrest-shared`・`mmrest-after-apart-silence`）。
 ⚠️ **`silence-mixed` は `s` と `<< >>` の同時休符積み・`relative` は `\relative` の作用域そのものが
 主張**なので、枠が書けるかの検分から。
-⑵ **起票 ⑴ の修理**＝condensedStaff の休符 voicing（snapshot census 前提）。
+⑵ **condensedStaff の snapshot 資産を作るか**（上の札。今はコーパスに 1 本も無い＝
+この機能の回帰は単体テストだけが見ている）。ついでに**臨時記号の列が譜単位になっているかは未測**
+——`ResolveStaffColumns` は `StaffAccidentalColumns.Resolve` と対で走るが、
+condensed 枝で呼んでいるのは**向きの方だけ**（今回測ったのは休符だけなので、
+測っていないものを直さない方針でそのままにした）。
 ⑶ **段③ = `condensedStaff` の中の `combinedStaff`**（スロット方向の能動的強制）。
 ⑷ **向きの粒度**＝§2A の島。**score 2 の残差もここに合流する**（solo/shared がスロットを移れること）。
 ⑸ **`]~` のタイを黙って落とす件**（第126 の起票）——言語の判断が要る。

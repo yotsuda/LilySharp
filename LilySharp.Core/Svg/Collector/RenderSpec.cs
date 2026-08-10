@@ -328,10 +328,22 @@ public sealed record RenderSpec(
                 // rest displacement) reads staff.Voices, so condensing is a matter of
                 // handing it the concatenated voice list. A part that is itself polyphonic
                 // contributes all of its voices, in its own order.
+                //
+                // ⚠️ …with ONE step that is not free: the voice props. LilyPond's
+                // \voiceOne/\voiceTwo belong to the STAFF's voices, and
+                // MeasureCollector.ResolveVoiceStemDirections runs per PART, so nothing
+                // applied them here — each part is monophonic on its own and returns at
+                // `voices.Length <= 1`. The stems still came out right, because the renderer
+                // re-derives those from the voice index, but a RESTS reads the stamp
+                // (ElementCoordinator, ItemSkylineFactory): both parts' rests kept direction
+                // 0 and were drawn on the centre line ON TOP OF EACH OTHER. Measured against
+                // LilyPond's own \voiceOne/\voiceTwo control, which puts them at ±4:
+                // scratch/lpreg/pcsil-a-cond.lys vs pcsil-ctl.ly.
                 case CondensedStaffSpec condensed:
-                    var condensedVoices = condensed.PartNames
-                        .SelectMany(name => (IEnumerable<Voice>)getVoices(name))
-                        .ToImmutableArray();
+                    var condensedVoices = MeasureCollector.ResolveVoiceStemDirections(
+                        condensed.PartNames
+                            .SelectMany(name => (IEnumerable<Voice>)getVoices(name))
+                            .ToImmutableArray());
                     yield return StaffGroup.CreateSingle(
                         Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName));
                     break;

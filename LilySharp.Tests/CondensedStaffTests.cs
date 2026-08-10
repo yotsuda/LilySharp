@@ -235,4 +235,81 @@ public class CondensedStaffTests
 
         Assert.NotEmpty(errors);
     }
+
+    // ------------------------------------------------------------------ rests
+    //
+    // ⚠️ The fixture above has no rest in it, and that is how a condensed staff shipped
+    // with its rests unvoiced: the voice props are applied by
+    // MeasureCollector.ResolveVoiceStemDirections, which ran per PART, and a part on its
+    // own is monophonic and returns early. Stems were right anyway — the renderer
+    // re-derives those from the voice index — but a RESTS reads the stamped direction, so
+    // both parts' rests kept 0 and were drawn on the centre line, one on top of the other.
+    // The music below is input/regression/part-combine-silence.ly's first score, whose
+    // every column is a rest.
+
+    /// <summary>Two parts of nothing but rests, condensed onto one staff.</summary>
+    private static string RestParts(string render) => Defaults + """
+        part fl1 { clef treble }
+        part fl2 { clef treble }
+        section A {
+          fl1 { r4 r2 r8 r8 | r1 | }
+          fl2 { r8 r8 r2 r4 | r1 | }
+        }
+        form main { ~A }
+        """ + "\nscore main { " + render + " }\n";
+
+    /// <summary>The same rests as one part holding a two-voice span.</summary>
+    private static readonly string RestTwoVoiceControl = Defaults + """
+        part fl { clef treble }
+        section A {
+          fl { voice { r4 r2 r8 r8 | r1 | } { r8 r8 r2 r4 | r1 | } }
+        }
+        form main { ~A }
+        score main { staff fl }
+        """ + "\n";
+
+    [Fact]
+    public void RestsArePlacedExactlyAsTheTwoVoiceSpan()
+    {
+        // The same claim VerticalPlacementIsExactlyTheTwoVoiceSpan makes, on music that
+        // binds it: every y matches the one-part two-voice control.
+        Assert.Equal(AllYs(Svg(RestTwoVoiceControl)),
+                     AllYs(Svg(RestParts("condensedStaff { fl1 fl2 }"))));
+    }
+
+    [Fact]
+    public void RestsSitAtLilyPondsVoicedPositions()
+    {
+        // …and the control itself is LilyPond's. Measured from LilyPond 2.26.0's grob dump
+        // of the same music written \voiceOne / \voiceTwo (scratch/lpreg/pcsil-ctl.ly),
+        // in staff spaces above the centre line, column by column:
+        //   r4/r8   +2 -2      r8      -2      r2/r2   +2 -2
+        //   r8/r4   +2 -2      r8      +2      r1/r1   +2 -2
+        // Every rest is at ±2 = LilyPond's voiced-position 4 half-spaces times the voice's
+        // direction (rest.cc:76-81 over define-grobs.scm:2966). The lone eighth in the
+        // fourth column is the one that shows the direction is real and not a collision
+        // being resolved: it has no partner to be pushed away from.
+        //
+        // ⚠️ Positions, never LilyPond's Y-offset — Rest_collision chains a callback that
+        // applies the offset and then reports the property as 0.0, so in LilyPond every
+        // rest that shares a moment with another reads back as 0 wherever it is drawn.
+        double[][] expected =
+            [[2, -2], [-2], [2, -2], [2, -2], [2], [2, -2]];
+
+        var columns = Regex
+            .Matches(Svg(RestParts("condensedStaff { fl1 fl2 }")),
+                     "<text class=\"music\"[^>]*x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*data-pos=")
+            .Select(m => (X: double.Parse(m.Groups[1].Value),
+                          Y: Math.Round(11.69 - double.Parse(m.Groups[2].Value), 3)))
+            .OrderBy(g => g.X)
+            .Skip(2)                            // the clef and the metre
+            .GroupBy(g => g.X)
+            .OrderBy(g => g.Key)
+            .Select(g => g.OrderByDescending(h => h.Y).Select(h => h.Y).ToArray())
+            .ToList();
+
+        Assert.Equal(expected.Length, columns.Count);
+        for (int i = 0; i < expected.Length; i++)
+            Assert.Equal(expected[i], columns[i]);
+    }
 }

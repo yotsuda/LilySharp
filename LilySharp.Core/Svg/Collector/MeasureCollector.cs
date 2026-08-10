@@ -1687,7 +1687,20 @@ public sealed partial class MeasureCollector
     /// of monophonic sections that merely shared a part with one <c>voice { }</c>.
     /// LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
     /// </remarks>
-    private static ImmutableArray<Voice> ResolveVoiceStemDirections(ImmutableArray<Voice> voices)
+    /// <remarks>
+    /// ⚠️ Also called from <see cref="RenderSpec.ToStaffGroups"/> for a
+    /// <c>condensedStaff</c>, whose voices come from SEPARATE parts and so are only a
+    /// polyphonic staff once they have been put together. Applying the voice props is the
+    /// staff's business, not the part's, and running it per part left the rests of a
+    /// condensed staff with no direction at all — both parts' whole rests landed on the
+    /// centre line, one on top of the other, where LilyPond's <c>\voiceOne</c>/<c>\voiceTwo</c>
+    /// control puts them at ±4 (measured: scratch/lpreg/pcsil-a-cond.lys against pcsil-ctl.ly).
+    /// The stems were right on their own, because the renderer re-derives THOSE from the
+    /// voice index; it is the rests that read the stamp.
+    /// ⚠️ NOT for a <c>combinedStaff</c>: the combiner has already decided each item's
+    /// direction, and LilyPond's shared and solo contexts carry no voice settings at all.
+    /// </remarks>
+    internal static ImmutableArray<Voice> ResolveVoiceStemDirections(ImmutableArray<Voice> voices)
     {
         if (voices.Length <= 1)
             return voices;
