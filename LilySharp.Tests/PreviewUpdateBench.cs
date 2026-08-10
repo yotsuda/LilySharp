@@ -55,6 +55,19 @@ public class PreviewUpdateBench
     {
         yield return ["perf-plain1k.lys"];
         yield return ["perf-comb300.lys"];
+        // ...and the book that is HEAVY on the side session 132's fingering island made
+        // heavy: 3996 fingerings over 1000 bars, each on a note that also carries two
+        // scripts and a bow. plain1k is the same measurement with ZERO fingerings, which is
+        // where the island's per-layout OVERHEAD shows with nothing to hide behind.
+        yield return ["perf-fingstack1k.lys"];
+        // ...and the PAIR that prices session 133's avoid-slur #'inside port, which made the
+        // slur pass buy a script walk of its own. inside1k is a slur over four STACCATOS in
+        // every bar of 1000 — every bow scored against four extra boxes, and every staff's
+        // scripts placed once WITHOUT slurs before the bows are chosen, once per system.
+        // script1k is the same music with ACCENTS: avoid-slur #'around, so it runs the gate
+        // and stops. The difference between the two is the whole of what the port costs.
+        yield return ["perf-slurinside1k.lys"];
+        yield return ["perf-slurscript1k.lys"];
     }
 
     [Theory]

@@ -285,14 +285,18 @@ public class ArticulationPlacementTests
         // its side-position answer — the accent over the slur-start e' rides off
         // the bow (2.67 with no slur term), and the finger and downbow above it
         // ride up through the support chain, one rigid body — while the slur-END
-        // staccato is 'inside and stays on the head (LilyPond bends the SLUR
-        // around an inside script instead; that half is the slur scorer's).
-        // Against the LP twin (scratch/lpreg/scriptstack1.{ly,lys}) the lifted
-        // stack reads 0.12 low — LP's slur END sits one 0.5-grid step higher
-        // (its 'inside staccato at the slur end enters the slur's OWN extra
-        // encompass and lifts it — the unported half named above), and the
-        // avoidance reads the drawn slur.
+        // staccato is 'inside and stays on the head, the SLUR bending around it
+        // instead (ElementCoordinator.BuildSlurExtraObjects).
+        // ★ THE TWO HALVES MEET HERE, AND THIS BOOK IS WHERE THE SECOND ONE WAS
+        // PREDICTED FROM. Until 2026-08-10 the lifted stack read 0.12 LOW against
+        // the LP twin (scratch/lpreg/scriptstack1.{ly,lys}) — 3.28 / 4.14 / 5.47
+        // against LP's 3.40 / 4.26 / 5.58 — and this remark named the cause: LP's
+        // slur END sits one 0.5-grid step higher because its 'inside staccato is in
+        // the bow's OWN extra encompass, which Lily# had not ported. Porting that
+        // (the slur.script.* ledger pair) closed all three to LP with nothing here
+        // touched, so the 0.12 was that one cause and not three.
         // LILYPOND-REF: lily/slur.cc:262-359 outside_slur_callback
+        // LILYPOND-REF: lily/slur.cc:364-387 auxiliary_acknowledge_extra_object
         // LILYPOND-REF: scm/script.scm avoid-slur declarations
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
             SyntaxTree.Parse("time 4/4 e'4(@accent@finger(0)@downbow c4@staccato)" +
@@ -312,9 +316,12 @@ public class ArticulationPlacementTests
         Assert.Equal(2, downbows.Count);
         Assert.Equal(2, fingers.Count);
         Assert.Equal(2, staccatos.Count);
-        Assert.Equal(3.28, middle - accents[0].Y, 2);   // LP 3.40 — off the slur's bow
-        Assert.Equal(4.14, middle - fingers[0].Y, 2);   // LP 4.26 — chain over the lifted accent
-        Assert.Equal(5.47, middle - downbows[0].Y, 2);  // LP 5.58 — chain top
+        Assert.Equal(3.40, middle - accents[0].Y, 2);   // LP 3.40 — off the slur's bow
+        Assert.Equal(4.26, middle - fingers[0].Y, 2);   // LP 4.26 — chain over the lifted accent
+        // LP 5.58. The 0.01 is the chain's own, not the slur's: before the 'inside
+        // port the three read 0.12 / 0.12 / 0.11 low, so the top link already wobbled
+        // by that much against the two below it, which now sit on LP exactly.
+        Assert.Equal(5.59, middle - downbows[0].Y, 2);  // LP 5.58 — chain top
         Assert.Equal(1.50, middle - staccatos[0].Y, 2); // LP 1.50 — 'inside at the slur end, unmoved
         // The unslurred d keeps its plain chain: tenuto then downbow.
         Assert.Equal(2.78, middle - downbows[1].Y, 2);

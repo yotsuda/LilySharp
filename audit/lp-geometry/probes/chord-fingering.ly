@@ -31,13 +31,13 @@
 %% WARNS for every member node it does not recognise.
 %%
 %% THE RULE BEING MEASURED, read from LilyPond's source before running (HANDOFF §5.3):
-%%   * lily/new-fingering-engraver.cc:202-268 position_scripts — the scripts are sorted by
+%%   * lily/new-fingering-engraver.cc:182-268 position_scripts — the scripts are sorted by
 %%     their head's staff-position and, for fingeringOrientations '(up down) (the Voice
 %%     default, ly/engraver-init.ly), SPLIT at center = size/2: the lower half goes DOWN, the
 %%     upper half UP. Three fingerings ⇒ 1 down, 2 up.
 %%   * :334-335 script-priority = 100 + d * position, so within one direction the digit
 %%     NEARER the staff is placed first and the far one stacks on it.
-%%   * lily/script-column.cc:155-187 order_grobs — Fingering declares no
+%%   * lily/script-column.cc:131-187 order_grobs — Fingering declares no
 %%     outside-staff-priority, so each script in a direction takes ALL the earlier ones as
 %%     side-support. The stack step is therefore one digit's height plus Fingering's own
 %%     padding 0.5 (scm/define-grobs.scm:1540-1568).
@@ -45,7 +45,7 @@
 %%     staff-padding 0.5) is applied to the grob's OFFSET, not to its ink, against the
 %%     StaffSymbol's own extent (±2.05, dumped by probes/glyph-skyline.ly).
 %%   * Fingering has outside-staff-interface but NO outside-staff-priority, so
-%%     axis-group-interface.cc:543-561 gives it -inf and the collision pass never moves it:
+%%     axis-group-interface.cc:541-561 gives it -inf and the collision pass never moves it:
 %%     everything here is aligned_side alone. (The 0.46 outside-staff-padding of the fermata
 %%     books does NOT appear in this island.)
 %%
@@ -119,7 +119,7 @@
 %% own commit message).
 %%
 %% THE MECHANISM, read from the source before measuring: Fingering declares
-%% outside-staff-interface but NO outside-staff-priority, so axis-group-interface.cc:543-561
+%% outside-staff-interface but NO outside-staff-priority, so axis-group-interface.cc:541-561
 %% leaves it at -infinity and the collision pass never MOVES it — which is exactly why its
 %% own placement is side-position alone. The same fact puts its ink into the INSIDE-staff
 %% skylines the pass starts from (:914-950), so a grob that DOES declare a priority —

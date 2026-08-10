@@ -2925,7 +2925,7 @@ internal static class LpGeometryProbes
     /// The other half of the placement claim (HANDOFF §5.0: placement and reservation are
     /// ONE claim). LilyPond's Fingering carries no outside-staff-priority, so it is not
     /// MOVED by the collision pass but IS in the inside-staff skylines that pass starts
-    /// from (axis-group-interface.cc:543-561, :914-950) — and DynamicLineSpanner, which
+    /// from (axis-group-interface.cc:541-561, :914-950) — and DynamicLineSpanner, which
     /// declares 250, has to clear it by outside-staff-padding. Measured: the down digit
     /// pushes the dynamic 1.495999 further down; an UP digit pushes it by nothing.
     /// <para>
@@ -2967,6 +2967,48 @@ internal static class LpGeometryProbes
     /// the dynamic must read the control's number. The book that says the difference is the
     /// DOWN digit and not the presence of a fingering.</summary>
     private static readonly string DYU = ChordDynamicScore("DYU", "<c e g@finger(5)>");
+
+    /// <summary>
+    /// The pair that measures a SLUR getting out of a SCRIPT's way — the OTHER direction of
+    /// the slur/script relation, and the one Lily# does not have.
+    /// </summary>
+    /// <remarks>
+    /// A staccatissimo declares <c>avoid-slur = #'inside</c> (scm/script.scm:386-389), so it
+    /// is not moved out of the bow: the bow is scored around IT
+    /// (lily/slur-scoring.cc:695-704 puts an 'inside encompass-object's extent edge into the
+    /// avoid list). Lily# ports only the opposite direction — a script riding OFF a bow
+    /// through <c>outside_slur_callback</c> — and its slur scorer's extra-encompass list
+    /// holds dots and tuplet numbers but no scripts.
+    /// <para>
+    /// Minimal on purpose: the sighting is on corpus book chord-repetition, whose second
+    /// slur carries two scripts, three fingerings, a dynamic and a beam. Measured there the
+    /// difference is the same 1.000000, and removing the fingerings and the dynamic changes
+    /// neither reading — so this pair stands for that book rather than replacing it.
+    /// </para>
+    /// </remarks>
+    private static string SlurScriptScore(string name, string second) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { <c e g>4( <c e g>{{second}}) r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The slurred pair whose SECOND chord carries the staccatissimo.</summary>
+    private static readonly string SSC = SlurScriptScore("SSC", "@staccatissimo");
+
+    /// <summary>The control: the same slur over the same two chords, no script.</summary>
+    private static readonly string SSN = SlurScriptScore("SSN", "");
 
     /// <summary>
     /// The system-clef-floor recipe applied to the STAFF-STAFF spring: ideal and minimum
@@ -8826,6 +8868,15 @@ internal static class LpGeometryProbes
             g => g.DynamicInkTopAboveStaff(), RaggedBottomPaper),
         new("fingering.chord.dynamic-up-digit.staff-to-ink-top", DYU,
             g => g.DynamicInkTopAboveStaff(), RaggedBottomPaper),
+
+        // --- a SLUR scored around a SCRIPT (books SSC/SSN) ---
+        // The direction Lily# does not have: an avoid-slur #'inside script stays put and the
+        // BOW moves. Read as a pair — the control is the plain base attachment, and what the
+        // rule is worth is the difference.
+        new("slur.script.attachment-with-script", SSC,
+            g => g.BowAttachmentAboveStaffMiddle(0), RaggedBottomPaper),
+        new("slur.script.attachment-control", SSN,
+            g => g.BowAttachmentAboveStaffMiddle(0), RaggedBottomPaper),
 
         new("script.staccato-below.staff-to-ink-top", DSK,
             g => g.ScriptInkEdgeAboveStaff(

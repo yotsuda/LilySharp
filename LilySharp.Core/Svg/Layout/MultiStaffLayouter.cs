@@ -2275,7 +2275,12 @@ internal sealed class MultiStaffLayouter
                 // StaffArticulationLayouts — so the band the skyline reserves for
                 // it has to be the raised one the drawn pass draws.
                 var ties = StaffTieLayouts(score, staff, thisStaff, measureLayouts);
-                var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts);
+                // …and the avoid-slur #'inside marks before the SLURS, which is the other
+                // half of the same rule and runs the other way: those the bow does not push
+                // aside are the ones the bow is scored AROUND, so their boxes have to exist
+                // before it is chosen. Legal because such a mark's placement is slur-free —
+                // ArticulationEngraver.InsideSlurScriptLayouts.
+                var slurs = StaffSlurLayouts(score, staff, thisStaff, measureLayouts, beams, ties);
                 // The staff's own Scripts — a fermata reaching UP into the gap above it, a
                 // marcato hanging DOWN into the gap below. See StaffArticulationLayouts for
                 // why a Script belongs in this silhouette at all.
@@ -2764,7 +2769,9 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     private ImmutableArray<SlurLayout> StaffSlurLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        ImmutableArray<TieLayout> tieLayouts = default)
     {
         var staffLayout = new StaffLayout(
             0, staff.Clef, Y: 0, Height: _options.StaffHeight,
@@ -2778,9 +2785,42 @@ internal sealed class MultiStaffLayouter
             StaffGroups: ImmutableArray.Create(group),
             Indent: 0);
         var items = StaffSpannerItemsOf(score, staff);
+        // This system's bars only — the same scoping StaffArticulationLayouts argues for:
+        // the engraver drops a mark whose measure is not in the layouts it was handed, so
+        // the answer is the same either way but the WORK is per system.
+        var systemMeasures = new HashSet<int>();
+        foreach (var ml in measureLayouts)
+            systemMeasures.Add(ml.MeasureIndex);
+        var staffScripts = ArticulationEngraver.SidePositionedScriptsOf(
+            score.Articulations, staffIndex, systemMeasures);
+        // The scripts arrive stamped with the score's REAL staff index and the engraver
+        // keys its stem tips and tie supports by it, so the beams and ties are restamped
+        // UP to meet them — the same restamp StaffArticulationLayouts makes, for the same
+        // reason (their own builders lay them out on a trivial one-staff system, index 0).
+        // The frame is unaffected: staffYAt null means every YUp comes back about the
+        // script's own staff middle whatever that index reads, which is the origin the
+        // trivial system's slur scorer measures against.
+        var localBeams = beamLayouts.IsDefaultOrEmpty
+            ? beamLayouts
+            : beamLayouts.Select(b => new BeamLayout(
+                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
+                b.MemberXPositions, staffIndex, b.SystemIndex,
+                b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
+        var localTies = tieLayouts.IsDefaultOrEmpty
+            ? tieLayouts
+            : tieLayouts.Select(t => t with { StaffIndex = staffIndex }).ToImmutableArray();
         return _elementCoordinator.LayoutSlurs(
             items.Slurs, items.LocalScore, ImmutableArray.Create(system),
-            staffIndex: 0, staff, score.GraceNotes);
+            staffIndex: 0, staff, score.GraceNotes,
+            insideScripts: staffScripts.IsEmpty ? null : () =>
+                ArticulationEngraver.InsideSlurScriptLayouts(
+                    items.LocalScore, staffScripts, measureLayouts,
+                    measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                        { [staffIndex] = staff.PrimaryVoice.Measures },
+                    staffYAt: null,
+                    staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+                    beamLayouts: localBeams,
+                    tieLayouts: localTies));
     }
 
     /// <summary>

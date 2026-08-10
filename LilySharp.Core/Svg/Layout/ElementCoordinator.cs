@@ -2599,7 +2599,8 @@ internal sealed class ElementCoordinator
         Voice voice, SystemLayout segSystem, SlurItem slur,
         double staffMiddleDown, double segStartX, double segEndX,
         ImmutableArray<TupletBracketLayout> tupletNumbers = default,
-        ImmutableArray<TupletBracketItem> tupletItems = default)
+        ImmutableArray<TupletBracketItem> tupletItems = default,
+        ImmutableArray<InsideSlurScript> insideScripts = default)
     {
         // thickness_ = Slur.thickness (1.2, define-grobs.scm) * the layout
         // line-thickness dimension (0.1 ss at default staff size) = 0.12 ss.
@@ -2740,24 +2741,105 @@ internal sealed class ElementCoordinator
             }
         }
 
+        // The SCRIPTS the slur's span covers that declare avoid-slur #'inside — a
+        // staccato, staccatissimo, tenuto, marcato, stopped or (inverted) turn. They are
+        // NOT moved out of the bow's way: Slur_engraver acknowledges them into the open
+        // slur's encompass-objects and the BOW is scored around them, which is the exact
+        // mirror of the 'around/'outside marks ArticulationEngraver rides off the finished
+        // curve. Same box recipe as the tuplet number above (no dots-0.2 widen).
+        // LILYPOND-REF: lily/slur.cc:364-387 auxiliary_acknowledge_extra_object — a tie or
+        //   an 'inside grob goes to add_extra_encompass on every OPEN slur; 'around and
+        //   'outside instead chain outside_slur_callback onto the grob itself.
+        // LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos — the
+        //   non-slur branch: ye.widen(th*0.5), xe.widen(th*1.0), extra-object penalty;
+        //   lily/slur-scoring.cc:695-704 generate_avoid_offsets puts the box's dir edge in
+        //   the curve's avoid list too (SlurScoringProblem.BuildAvoidOffsets).
+        // ⚠️ The gate is the SLUR's span, item-level at the boundary measures, because LP's
+        //   is engraver timing: a script is acknowledged at a timestep where the slur is
+        //   open, and a slur is open at both of its own bound notes (slurs[] at the start,
+        //   end_slurs[] at the end). The same rule CoveringSlurPiece uses for the other
+        //   direction.
+        // ⚠️ The script boxes arrive from a walk run WITHOUT slurs
+        //   (ArticulationEngraver.InsideSlurScriptLayouts) — sound because an 'inside mark's
+        //   placement does not depend on the bow; see that method's remark.
+        // ⚠️ THE SEGMENT TEST IS THE MEASURE, NOT THE COLUMN WINDOW the dots and the tuplet
+        //   number are filtered by. A script's X is its own ink's CENTRE on the head, which
+        //   sits half a head to the RIGHT of the column X those windows are cut at — gating a
+        //   script by [segStartX, segEndX] drops every mark on the slur's last note, which is
+        //   the whole of book SSC. Measures never straddle a break, so membership of this
+        //   system's bars is an exact segment test.
+        if (!insideScripts.IsDefaultOrEmpty)
+        {
+            foreach (var (s, voiceIndex) in insideScripts)
+            {
+                // LP's Slur_engraver lives in the Voice context: a bow never sees another
+                // voice's script (the key the 'around direction looks slurs up by too).
+                if (voiceIndex != slur.VoiceIndex)
+                    continue;
+                if (s.MeasureIndex < slur.StartMeasureIndex
+                    || s.MeasureIndex > slur.EndMeasureIndex)
+                    continue;
+                if (s.MeasureIndex == slur.StartMeasureIndex && s.ItemIndex < slur.StartItemIndex)
+                    continue;
+                if (s.MeasureIndex == slur.EndMeasureIndex && s.ItemIndex > slur.EndItemIndex)
+                    continue;
+                // This SEGMENT only (a broken slur's other piece keeps its own).
+                bool onThisSystem = false;
+                foreach (var ml in segSystem.Measures)
+                    if (ml.MeasureIndex == s.MeasureIndex) { onThisSystem = true; break; }
+                if (!onThisSystem)
+                    continue;
+
+                var ink = s.Ink;
+                // LP's own guard: an empty extent contributes nothing (a tab letter's
+                // 0-extent stand-in reaches here through the same list).
+                if (ink.Right - ink.Left <= 0 || ink.Top - ink.Bottom <= 0)
+                    continue;
+
+                // YUp is up-positive about THIS staff's middle line; page device Y down.
+                double topDown = staffMiddleDown - (s.YUp + ink.Top);
+                double bottomDown = staffMiddleDown - (s.YUp + ink.Bottom);
+                extras.Add(new SlurExtraObject(
+                    s.X + ink.Left - slurThickness,
+                    s.X + ink.Right + slurThickness,
+                    topDown - slurThickness * 0.5,
+                    bottomDown + slurThickness * 0.5,
+                    SlurAvoidType.Inside,
+                    SlurScoreParameters.Default.ExtraObjectCollisionPenalty));
+            }
+        }
+
         return extras;
     }
 
-    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default)
+    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default, Func<ImmutableArray<InsideSlurScript>>? insideScripts = null)
         => LayoutSlurs(_slurDetector.DetectSlurs(score), score, systems, staffIndex, staff,
-            graceNotes, beamLayouts);
+            graceNotes, beamLayouts, insideScripts);
 
     /// <summary>The same, on slurs the caller has ALREADY detected — the slur twin of
     /// <see cref="LayoutTies(ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>,
     /// and for the same reason.</summary>
+    /// <param name="insideScripts">This staff's <c>avoid-slur = #'inside</c> marks, already
+    /// placed in the staff's own frame — see
+    /// <see cref="ArticulationEngraver.InsideSlurScriptLayouts"/>. A FACTORY, not an array,
+    /// so that the extra script walk is paid only by a staff that has slurs at all: a
+    /// script-heavy but slur-free book must not buy it once per staff per system.</param>
     internal ImmutableArray<SlurLayout> LayoutSlurs(
         ImmutableArray<SlurItem> slurs, Score score, ImmutableArray<SystemLayout> systems,
         int staffIndex = -1, Model.Staff? staff = null,
         ImmutableArray<GraceNoteItem> graceNotes = default,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        Func<ImmutableArray<InsideSlurScript>>? insideScripts = null)
     {
         if (slurs.Length == 0)
             return ImmutableArray<SlurLayout>.Empty;
+
+        // Placed WITHOUT slurs, once for this staff — the boxes the scorer's
+        // extra-encompass set needs (BuildSlurExtraObjects). Behind the slur count
+        // above, and behind the factory's own "does this staff HAVE an 'inside mark"
+        // gate, so the ordinary book pays nothing.
+        var insideScriptLayouts = insideScripts?.Invoke()
+            ?? ImmutableArray<InsideSlurScript>.Empty;
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
@@ -3048,7 +3130,7 @@ internal sealed class ElementCoordinator
 
                 var extraObjects = BuildSlurExtraObjects(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
-                    tupletNumberLayouts, score.TupletBrackets);
+                    tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts);
 
                 // A slur avoids only other slurs whose SPAN OVERLAPS IT IN TIME. LilyPond
                 // populates a slur's encompass-objects at ENGRAVE time: an acknowledged slur

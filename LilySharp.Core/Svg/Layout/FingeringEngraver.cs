@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -96,7 +96,7 @@ internal static class FingeringEngraver
     /// ⚠️ Fingering ALSO declares (staff-padding . 0.5), and the two are NOT the same device:
     /// staff-padding drives a second clamp on the grob's OFFSET
     /// (side-position-interface.cc:433-451), while the staff reaches the digit through the
-    /// SUPPORT skyline (:325-331 include_staff, <c>dim.set_minimum_height (staff_extents
+    /// SUPPORT skyline (:323-329 include_staff, <c>dim.set_minimum_height (staff_extents
     /// [dir])</c>) and is cleared by this padding like any other support. MEASURED
     /// (ledger fingering.chord.below.staff-to-ink-top, both books): the digit's INK clears
     /// the staff's ink by 0.5 on both sides, which the offset clamp cannot produce — the
@@ -110,7 +110,7 @@ internal static class FingeringEngraver
     /// <c>include_staff</c> puts into the support skyline.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/side-position-interface.cc:325-331 — the staff's own EXTENT, and
+    /// LILYPOND-REF: lily/side-position-interface.cc:323-329 — the staff's own EXTENT, and
     /// probes/glyph-skyline.ly dumps that extent as (−2.05 . 2.05).
     /// </remarks>
     private const double StaffInk =
@@ -206,6 +206,16 @@ internal static class FingeringEngraver
         return Calculate(score, map, _ => true, staffIndex);
     }
 
+    /// <remarks>
+    /// ⚠️ THE WALK IS OVER THE MEASURES THIS CALLER HOLDS, not over the score's. The
+    /// difference is invisible in the answer and not in the WORK: this body runs once per
+    /// (system, staff) from the skyline pass, so iterating <c>voice.Measures</c> there made
+    /// every one of a score's systems pay for all of its measures — the O(score) per-system
+    /// shape <c>MultiStaffLayouter.StaffArticulationLayouts</c>'s own remark warns about, and
+    /// a preview relayout is exactly the caller that cannot afford it.
+    /// The keys are walked in ascending order so the layouts come out in the order the
+    /// measures do, which is the order the renderer draws them in.
+    /// </remarks>
     private static ImmutableArray<FingeringLayout> Calculate(
         Score score,
         Dictionary<int, MeasureLayout> measureMap,
@@ -215,13 +225,16 @@ internal static class FingeringEngraver
         var layouts = ImmutableArray.CreateBuilder<FingeringLayout>();
 
         var voice = score.Voice;
-        for (int mi = 0; mi < voice.Measures.Length; mi++)
+        var indices = new List<int>(measureMap.Count);
+        foreach (int mi in measureMap.Keys)
+            if (mi >= 0 && mi < voice.Measures.Length && isPlaced(mi))
+                indices.Add(mi);
+        indices.Sort();
+
+        foreach (int mi in indices)
         {
             var measure = voice.Measures[mi];
-            if (!measureMap.TryGetValue(mi, out var measureLayout))
-                continue;
-            if (!isPlaced(mi))
-                continue;
+            var measureLayout = measureMap[mi];
 
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
@@ -259,7 +272,7 @@ internal static class FingeringEngraver
     /// <c>New_fingering_engraver::position_scripts</c> for the vertical orientations.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/new-fingering-engraver.cc:202-268 position_scripts — the scripts
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc:182-268 position_scripts — the scripts
     ///   are sorted by their head's staff-position (:202-204, operator&lt;) and, for
     ///   <c>fingeringOrientations</c> <c>'(up down)</c> (ly/engraver-init.ly, the Voice
     ///   default), cut at <c>center = size / 2</c>: <c>[0, center)</c> goes DOWN and the
@@ -269,11 +282,11 @@ internal static class FingeringEngraver
     ///   fingering, so the up bucket clears the chord's TOP head and the down bucket its
     ///   BOTTOM one, not each digit's own note.
     /// LILYPOND-REF: :334-335 — script-priority 100 + d·position, and
-    ///   lily/script-column.cc:155-187 order_grobs makes each later script of a direction a
+    ///   lily/script-column.cc:131-187 order_grobs makes each later script of a direction a
     ///   side-support of all the earlier ones (Fingering declares no
     ///   outside-staff-priority, so that branch is the one that runs). ⇒ within a bucket the
     ///   digit NEARER the staff is placed first and the next stacks on its ink.
-    /// LILYPOND-REF: lily/side-position-interface.cc:325-331 include_staff — the STAFF's own
+    /// LILYPOND-REF: lily/side-position-interface.cc:323-329 include_staff — the STAFF's own
     ///   extent joins the support skyline, so a digit clears the staff's ink by
     ///   <see cref="Padding"/> exactly as it clears a head.
     /// <para>
@@ -311,6 +324,14 @@ internal static class FingeringEngraver
         double centerX = CentreX(baseDuration, measureIndex, itemIndex, measureLayout, measures);
 
         // The support set: every head's own INK edge, and the staff's.
+        // ⚠️ DERIVATION, NOT A TRANSCRIPTION, and it is the shape of the code that differs:
+        // LilyPond merges each support's SKYLINE and takes a pointwise distance
+        // (side-position-interface.cc:288-320), where this takes the max/min of the heads'
+        // edges — a scalar. The two agree exactly while the heads share one X, which is
+        // every chord without a second and every single note; a chord whose seconds are
+        // shifted apart would let LilyPond's digit tuck beside the offset head where this
+        // clears it. No point reaches that texture, and it is named here rather than
+        // silently approximated.
         // The head's half-ink is the glyph's, not the nominal 0.5 — measured by the CFH
         // book, whose up bucket clears the top head's 0.545 and not a nominal half
         // (ledger fingering.chord.above-head-inner.staff-to-ink-bottom = 4.045000, whose
@@ -352,6 +373,13 @@ internal static class FingeringEngraver
 
         // DOWN, inner to outer: priority 100 − position, so ascending priority is
         // DESCENDING position — the highest note of the down bucket is nearest the staff.
+        // ⚠️ DERIVATION: LilyPond SORTS the bucket by the script-priority it has just set
+        // (script-column.cc:131-187 order_grobs, a stable sort on that property) where this
+        // walks the position-sorted bucket BACKWARDS. Same order, fewer moving parts — but
+        // only because this direction's priority is 100 − position, which is monotonically
+        // decreasing in the key the bucket is already sorted by. If a fingering ever gets a
+        // priority that is not that function (LilyPond's finger_prio comes from the grob,
+        // and StringNumber/StrokeFinger have their own), the sort has to come back.
         support = System.Math.Min(-StaffInk, headsBottom);
         for (int i = center - 1; i >= 0; i--)
         {

@@ -842,7 +842,7 @@ internal sealed class SkylineBuilder
         // ...and the FINGERINGS beside them, for the same reason and by the same rule: a
         // Fingering declares no outside-staff-priority, so it is never MOVED by the collision
         // pass and is always IN the profile that pass starts from.
-        // LILYPOND-REF: lily/axis-group-interface.cc:543-561 internal_calc_pure_relevant_grobs — a grob with no
+        // LILYPOND-REF: lily/axis-group-interface.cc:541-561 internal_calc_pure_relevant_grobs — a grob with no
         //   outside-staff-priority is left at -infinity and so is not a mover; :914-950
         //   inside_staff_skylines collects exactly those, and add_grobs_of_one_priority then
         //   places the movers against them.
@@ -1321,6 +1321,17 @@ internal sealed class SkylineBuilder
     /// draws and the script column stacks by, so the reserved band cannot drift from the
     /// printed one.
     /// </para>
+    /// <para>
+    /// ⚠️ THE POSITION SCALES WITH THE STAFF AND THE GLYPH DOES NOT, and that asymmetry is
+    /// the PEN's, copied here rather than corrected: <c>SharedRenderer.DrawFingerings</c>
+    /// draws the run at <c>FiguredBassGlyphRun.Em</c> flat while it reflects the baseline
+    /// through the ossia shrink, and its own remark records that (the figured bass is the
+    /// same). Scaling the ink here — which is what every neighbouring seed does, because
+    /// every other grob's pen scales — would reserve 0.7 of the ink an ossia staff really
+    /// prints. LilyPond has no such split (font-size is context-relative there, so the
+    /// digits shrink with the staff); reserving what Lily# DRAWS keeps the two halves of
+    /// one grob together, and the divergence stays one thing rather than two.
+    /// </para>
     /// </remarks>
     private static void AddFingeringsToSkyline(
         ImmutableArray<FingeringLayout> fingerings,
@@ -1333,8 +1344,8 @@ internal sealed class SkylineBuilder
         {
             var (_, ink, width) = FingeringEngraver.DigitRun(f.Number);
             double baseline = size.Span(f.YUp) + staffMiddleUp;
-            double bottom = baseline + size.Span(ink.Bottom);
-            double top = baseline + size.Span(ink.Top);
+            double bottom = baseline + ink.Bottom;
+            double top = baseline + ink.Top;
             double x0 = f.X - width / 2.0;
             var box = VerticalSkyline.FromBox(x0, x0 + width, bottom, top, VerticalDirection.Up);
             upSkyline.Merge(box);

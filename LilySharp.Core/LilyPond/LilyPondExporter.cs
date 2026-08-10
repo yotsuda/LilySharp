@@ -1542,7 +1542,7 @@ public sealed class LilyPondExporter
             // member articulation the loop did not recognise simply fell out of the `if`.
             // ⇒ every unrecognised member node now warns, so the next hole in this family
             // is visible the way the last one was.
-            // LILYPOND-REF: lily/parser.yy chord_body_element — a chord member takes
+            // LILYPOND-REF: lily/parser.yy:3165-3166 chord_body_element — a chord member takes
             //   post-events (`<g-1 b-3 d'-5>`), the same spelling as a note's.
             foreach (var art in p.Articulations)
                 switch (art)

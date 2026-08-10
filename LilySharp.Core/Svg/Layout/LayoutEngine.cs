@@ -616,8 +616,25 @@ internal sealed class LayoutEngine
                 : staffScore;
             var staffPrelimBeams = _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex);
             prelimBeams.AddRange(staffPrelimBeams);
-            prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
-            prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams));
+            var staffPrelimTies = _elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff);
+            prelimTies.AddRange(staffPrelimTies);
+            // The same 'inside script boxes the FINAL pass scores its bows against
+            // (LayoutAllSpanners) — a prelim bow that ignored them would shape the
+            // spacing extents for a curve the final pass then moves.
+            var prelimStaffScripts = ArticulationEngraver.SidePositionedScriptsOf(
+                score.Articulations, staffIndex);
+            prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(
+                staffScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams,
+                insideScripts: prelimStaffScripts.IsEmpty ? null : () =>
+                    ArticulationEngraver.InsideSlurScriptLayouts(
+                        staffScore, prelimStaffScripts,
+                        prelimSystems.SelectMany(s => s.Measures).ToImmutableArray(),
+                        measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                            { [staffIndex] = staff.PrimaryVoice.Measures },
+                        staffYAt: null,
+                        staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+                        beamLayouts: staffPrelimBeams,
+                        tieLayouts: staffPrelimTies)));
         }
         // The SAME per-staff / per-voice lookups the final annotation pass gets. Without
         // them TupletBracketEngraver falls back to the PRIMARY staff's PRIMARY voice for
@@ -897,8 +914,27 @@ internal sealed class LayoutEngine
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
                     || Math.Abs(kv.Value) > Math.Abs(existing))
                     restShiftsBuilder[kv.Key] = kv.Value;
-            allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
-            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams));
+            var staffTies = _elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff);
+            allTieLayouts.AddRange(staffTies);
+            // The bow is scored around this staff's avoid-slur #'inside marks, so they have
+            // to be PLACED before it — the ordering half of that rule; the mark's own
+            // placement is slur-free, which is what makes the order legal (see
+            // ArticulationEngraver.InsideSlurScriptLayouts). Passed as a factory so a
+            // slur-free staff never runs the walk.
+            var staffScripts = ArticulationEngraver.SidePositionedScriptsOf(
+                score.Articulations, staffIndex);
+            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(
+                staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams,
+                insideScripts: staffScripts.IsEmpty ? null : () =>
+                    ArticulationEngraver.InsideSlurScriptLayouts(
+                        staffSpannerScore, staffScripts,
+                        systemsArray.SelectMany(s => s.Measures).ToImmutableArray(),
+                        measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                            { [staffIndex] = staff.PrimaryVoice.Measures },
+                        staffYAt: null,
+                        staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+                        beamLayouts: staffFinalBeams,
+                        tieLayouts: staffTies)));
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
         }
         return (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts,

@@ -71,6 +71,16 @@ internal readonly record struct ArticulationLayout(
 );
 
 /// <summary>
+/// An <c>avoid-slur = #'inside</c> mark placed for a slur's scorer, carrying the VOICE it was
+/// written in: LilyPond's Slur_engraver is consisted into the <c>Voice</c> context, so a bow is
+/// only scored around the marks of its own voice — the same key the opposite direction
+/// (<c>outside_slur_callback</c>) looks scripts up by.
+/// </summary>
+/// <remarks>LILYPOND-REF: ly/engraver-init.ly Voice — Slur_engraver and Script_engraver are
+/// both consisted there, so a script and a slur meet only inside one voice.</remarks>
+internal readonly record struct InsideSlurScript(ArticulationLayout Layout, int VoiceIndex);
+
+/// <summary>
 /// Calculates positions for articulation marks.
 /// Implements LilyPond's articulation positioning algorithm.
 /// </summary>
@@ -207,6 +217,86 @@ internal static class ArticulationEngraver
         ImmutableArray<SlurLayout> slurLayouts = default)
         => CalculateWithFingerings(score, articulations, measureLayouts, measuresByStaff,
             staffYAt, staffByIndex, beamLayouts, tieLayouts, slurLayouts, default, out _);
+
+    /// <summary>Whether a mark is one the SLUR has to be scored around rather than one the
+    /// slur pushes aside — <c>avoid-slur = #'inside</c>.</summary>
+    internal static bool IsInsideSlurScript(ArticulationType type) =>
+        SlurAvoidanceOf(type) == SlurAvoid.Inside;
+
+    /// <summary>
+    /// One staff's marks that go through the side-position walk — the input every per-staff
+    /// caller of this engraver wants, spelled once. <paramref name="measures"/> narrows it
+    /// further to a system's own bars when the caller runs per system.
+    /// </summary>
+    internal static ImmutableArray<ArticulationItem> SidePositionedScriptsOf(
+        ImmutableArray<ArticulationItem> articulations, int staffIndex,
+        HashSet<int>? measures = null)
+    {
+        if (articulations.IsDefaultOrEmpty)
+            return ImmutableArray<ArticulationItem>.Empty;
+        var b = ImmutableArray.CreateBuilder<ArticulationItem>();
+        foreach (var a in articulations)
+            if (a.StaffIndex == staffIndex && IsSidePositionedScript(a.Type)
+                && (measures == null || measures.Contains(a.MeasureIndex)))
+                b.Add(a);
+        return b.ToImmutable();
+    }
+
+    /// <summary>
+    /// The <c>avoid-slur = #'inside</c> marks of one staff, placed with NO slur — the boxes a
+    /// slur's scorer needs in its extra-encompass set (<c>ElementCoordinator.LayoutSlurs</c>).
+    /// Empty when the staff carries no such mark, which is the gate: the walk is not run for a
+    /// staff whose scripts all ride OFF the bow instead.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS AN ORDERING CLAIM, NOT A SHORTCUT. An <c>'inside</c> script's own placement
+    /// does not depend on the slur — that is precisely what <c>'inside</c> means in
+    /// scm/script.scm, and why LilyPond can hand the scorer the script's extent while the bow
+    /// is still being chosen (lily/slur-scoring.cc:850-884 asks each encompass-object for
+    /// <c>extent</c>, which triggers that grob's own side-position callback). So the walk is
+    /// run here WITHOUT slurs and its <c>'inside</c> answers are final; the drawn pass runs it
+    /// again WITH them, and only the <c>'around</c>/<c>'outside</c> marks move between the two.
+    /// <para>
+    /// ⚠️ THE SAME ENGRAVER, NOT A SECOND SPELLING — the argument
+    /// <see cref="MultiStaffLayouter.StaffArticulationLayouts"/> makes for the skyline's copy.
+    /// The whole script list is walked, not just the <c>'inside</c> marks, because a note's
+    /// column stacks them together (a marcato sits on the staccato below it); only the RESULT
+    /// is filtered.
+    /// </para>
+    /// <para>
+    /// ⚠️ Fingerings are not in this walk (the fingering-less overload, as the per-staff
+    /// skyline pass uses), so an <c>'inside</c> mark stacked ABOVE a fingering on the same note
+    /// hands the scorer the band it would have had without the digit. No book reaches that
+    /// pairing; the ledger's <c>slur.script.*</c> pair does not.
+    /// </para>
+    /// </remarks>
+    internal static ImmutableArray<InsideSlurScript> InsideSlurScriptLayouts(
+        Score score,
+        ImmutableArray<ArticulationItem> articulations,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Func<int, int, double>? staffYAt = null,
+        Dictionary<int, Staff>? staffByIndex = null,
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        ImmutableArray<TieLayout> tieLayouts = default)
+    {
+        if (articulations.IsDefaultOrEmpty)
+            return ImmutableArray<InsideSlurScript>.Empty;
+        bool anyInside = false;
+        foreach (var a in articulations)
+            if (IsInsideSlurScript(a.Type)) { anyInside = true; break; }
+        if (!anyInside)
+            return ImmutableArray<InsideSlurScript>.Empty;
+
+        var placed = Calculate(score, articulations, measureLayouts, measuresByStaff,
+            staffYAt, staffByIndex, beamLayouts, tieLayouts, slurLayouts: default);
+        var inside = ImmutableArray.CreateBuilder<InsideSlurScript>();
+        foreach (var l in placed)
+            if (l.SourceIndex >= 0 && l.SourceIndex < articulations.Length
+                && IsInsideSlurScript(articulations[l.SourceIndex].Type))
+                inside.Add(new InsideSlurScript(l, articulations[l.SourceIndex].VoiceIndex));
+        return inside.ToImmutable();
+    }
 
     // The Fingering grob's own side-position padding (its vertical float off whatever
     // supports it in the column) — the Script table does not carry it because Fingering
@@ -930,8 +1020,10 @@ internal static class ArticulationEngraver
             // script becomes a support: the scripts stacked above ride up with it
             // through the chain, which is why LP's slurred stack moves as one rigid
             // body. An 'inside script (staccato/tenuto/…) stays put — LP makes it
-            // extra encompass instead, i.e. the SLUR is the one that moves (that
-            // half is the slur scorer's and is NOT ported here; disclosed below).
+            // extra encompass instead, i.e. the SLUR is the one that moves. That half
+            // IS ported, and it lives on the slur's side of the seam: the bow's scorer
+            // reads these marks' boxes out of a slur-free run of this very walk
+            // (InsideSlurScriptLayouts → ElementCoordinator.BuildSlurExtraObjects).
             // LILYPOND-REF: lily/slur.cc:262-359 outside_slur_callback.
             if (slursAtMeasure != null
                 && slursAtMeasure.TryGetValue((effArt.StaffIndex, effArt.VoiceIndex,
@@ -1039,7 +1131,8 @@ internal static class ArticulationEngraver
     /// <summary>
     /// The avoid-slur declaration of each mark Lily# spells — one arm per
     /// scm/script.scm entry. 'inside means the SLUR goes around the script (extra
-    /// encompass — the slur scorer's half, not handled here); 'around/'outside
+    /// encompass — the slur scorer's half, see <see cref="InsideSlurScriptLayouts"/>);
+    /// 'around/'outside
     /// mean the script is pushed off the bow; the marks with no LP Script grob
     /// (editorial, pluck, frame, tab letters, bends, breaths) fall to Ignore —
     /// no Slur_engraver ever acknowledges them.
