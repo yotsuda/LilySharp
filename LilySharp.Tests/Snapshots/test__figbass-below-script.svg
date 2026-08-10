@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="253.5" viewBox="0 0 119.50 25.35" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="253.6" viewBox="0 0 119.50 25.36" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  @font-face { font-family: 'Emmentaler-11'; src: local('Emmentaler-11'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="25.35" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="25.36" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.29" x2="25.36" y2="11.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="12.29" x2="25.36" y2="12.29" stroke="#000000" stroke-width="0.100"/>
@@ -21,10 +22,10 @@
   <rect x="17.02" y="11.29" width="0.19" height="4.00" data-pos="429"/>
   <rect x="25.17" y="11.29" width="0.19" height="4.00" data-pos="441"/>
   <text class="music" x="9.39" y="15.59" font-size="4.00" data-pos="400"></text>
-  <text class="music" x="8.25" y="18.16" font-size="2.24" data-pos="391"></text>
-  <text class="music" x="8.25" y="19.66" font-size="2.24" data-pos="391"></text>
-  <text class="music" x="12.53" y="18.16" font-size="2.24" data-pos="421"></text>
-  <text class="music" x="18.66" y="18.16" font-size="2.24" data-pos="433"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="8.70" y="18.17" font-size="2.24" data-pos="391"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="8.70" y="19.67" font-size="2.24" data-pos="391"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="12.98" y="18.17" font-size="2.24" data-pos="421"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="19.11" y="18.17" font-size="2.24" data-pos="433"></text>
   <rect x="0.30" y="7.49" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="367"/>
   <text x="3.40" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="367">Main</text>
   </g>

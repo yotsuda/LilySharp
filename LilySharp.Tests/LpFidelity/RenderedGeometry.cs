@@ -2424,6 +2424,41 @@ internal sealed class RenderedGeometry
               .ToList();
 
     /// <summary>
+    /// The first notehead's anchor → the FIRST COLUMN's bass figures' box LEFT. Zero in
+    /// LilyPond, and the whole content of the reading.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (probes/figured-bass-placement.ly, book FBLA, 2026-08-11): in EVERY column of
+    /// every book the NoteHead, the Stem, the NoteColumn and the BassFigure report the same
+    /// box left to fifteen digits (8.703400, 12.978844999134612, …) — so a figure is aligned
+    /// on its column's left edge, and for a down stem that edge is the head's own ink left.
+    /// NoteHead was added to that probe's dump for this reading, because a COLUMN's left edge
+    /// is not always a head's and the two had to be told apart rather than assumed.
+    /// <para>
+    /// ⚠️ Lily# CENTRES the run instead (<c>SharedRenderer.DrawFiguredBass</c>:
+    /// <c>x0 = fb.X − Width/2</c>), which its own remark already calls LILYSHARP-OWN. This is
+    /// the point that remark says does not exist yet.
+    /// </para>
+    /// Both figures of the first column share one X, so the leftmost is taken and the
+    /// duplicate is not a choice — the assertion below checks they agree.
+    /// </remarks>
+    public double NoteheadAnchorToBassFigureBoxLeft(int page = 0)
+    {
+        var figures = _pages[page].Glyphs
+            .Where(g => IsFiguredBassGlyph(g.Glyph)
+                        && Math.Abs(g.FontSize - EngravingDefaults.FiguredBassFontSize) < 1e-9)
+            .OrderBy(g => g.X)
+            .ToList();
+        if (figures.Count < 2 || Math.Abs(figures[0].X - figures[1].X) > 1e-9)
+        {
+            throw new InvalidOperationException(
+                "expected the first column's TWO figures to share one X — the probe is not "
+                + "measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        return figures[0].X - NoteheadAnchor(0);
+    }
+
+    /// <summary>
     /// The topmost bass-figure baseline below staff <paramref name="staffIndex"/>, measured
     /// from that staff's middle line.
     /// </summary>

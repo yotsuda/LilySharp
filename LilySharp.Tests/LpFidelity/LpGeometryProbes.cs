@@ -9255,6 +9255,14 @@ internal static class LpGeometryProbes
         // system, the same shape as the session-40 lower-staff fermata.
         new("figbass.alone.staff-to-baseline", FBA,
             g => g.FigureBaselineBelowStaff(staffIndex: 0, staffCount: 1), RaggedBottomPaper),
+        // ...and the X the whole figured-bass block has been missing. Three remarks in three
+        // files (SharedRenderer.DrawFiguredBass, FiguredBassEngraver.MinFigureBoxWidth,
+        // FiguredBassGlyphRun) each say "no figured-bass point measures X yet" and defer to
+        // the pair that would; this is that point, and it needed no new book — only NoteHead
+        // added to the probe's dump, which showed the figure's box left sitting ON its
+        // column's to fifteen digits in every column of every book.
+        new("figbass.alone.head-anchor-to-box-left", FBA,
+            g => g.NoteheadAnchorToBassFigureBoxLeft(), RaggedBottomPaper),
         // The QUIET half of the placement pair: the staff decides, not the column. Without
         // it a port would have to guess how side-position's staff-padding is spelled.
         new("figbass.quiet.staff-to-baseline", FBQ,

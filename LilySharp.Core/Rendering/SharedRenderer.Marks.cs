@@ -103,6 +103,10 @@ internal static partial class SharedRenderer
     {
         if (layout.FiguredBassLayouts.IsDefaultOrEmpty) return;
         double size = FiguredBassGlyphRun.Em;
+        // The design the metrics came out of, opened once for the whole pass — a figure's
+        // 11.2246 pt lands on emmentaler-11 and the two halves of that claim must not be
+        // decided separately (IDrawingContext.MusicFace).
+        using var face = gc.MusicFace(FiguredBassGlyphRun.Design);
         foreach (var fb in layout.FiguredBassLayouts)
         {
             if (!sysTopYUp.ContainsKey(fb.MeasureIndex)) continue;
@@ -119,16 +123,21 @@ internal static partial class SharedRenderer
                     // without offsets is a bug in the producer, and a fallback here would draw
                     // the rows on top of each other while looking like it worked.
                     double y = baseY - fb.RowOffsets[i];
-                    // LILYSHARP-OWN: the CENTRING. LilyPond's figures are left-aligned in a
-                    // BassFigureLine (scm/define-grobs.scm:366-374 BassFigureAlignment stacks
-                    // the lines; the figure itself is a rhythmic grob at its column's X), so
-                    // this half-width shift has no LilyPond counterpart. It is the anchor the
-                    // old TextAnchor.Middle draw had, kept unchanged so this port moves the
-                    // FACE and the SIZE only — no figured-bass point measures X yet, and the
-                    // pair to open is a figure whose digits differ in width (the "tnum"
-                    // advances are equal, so a centred and a left-aligned row differ only
-                    // where an alteration joins the run).
-                    double x0 = fb.X - FiguredBassGlyphRun.Width(text) / 2.0;
+                    // LEFT-ALIGNED ON THE COLUMN, which is where LilyPond puts it: figures are
+                    // left-aligned in a BassFigureLine (scm/define-grobs.scm:366-374
+                    // BassFigureAlignment stacks the lines; the figure itself is a rhythmic
+                    // grob at its column's X).
+                    // ⚠️ IT WAS CENTRED until 2026-08-11 — <c>fb.X − Width/2</c>, inherited from
+                    // an older TextAnchor.Middle draw and kept while nothing watched it. What
+                    // opened it is ledger figbass.alone.head-anchor-to-box-left, whose LilyPond
+                    // side is an IDENTITY: the NoteHead, the Stem, the NoteColumn and the
+                    // BassFigure share one box left to fifteen digits in every column of every
+                    // book of probes/figured-bass-placement.ly. Lily# read −0.448984819 there,
+                    // which is half the run and NOTHING ELSE — so the whole defect was this
+                    // term, and the run's WIDTH (still the 20 design's tabular 1.600 unhinted
+                    // against LilyPond's emmentaler-11 1.656 hinted) no longer reaches the
+                    // drawn X at all. That width stays as it is until something watches it.
+                    double x0 = fb.X;
                     // LILYPOND-REF: lily/modified-font-metric.cc:125-143 text_stencil — the
                     // glyphs of the run at their own advances, which FiguredBassGlyphRun has
                     // already accumulated; the reservation reads the same house.

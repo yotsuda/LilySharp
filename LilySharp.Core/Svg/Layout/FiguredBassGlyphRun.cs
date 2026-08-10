@@ -74,28 +74,58 @@ internal static class FiguredBassGlyphRun
     /// <see cref="EngravingDefaults.FiguredBassFontSize"/>, where the derivation lives.</remarks>
     internal static double Em => EngravingDefaults.FiguredBassFontSize;
 
-    /// <summary>Design-size boxes and advances to this figure's em.</summary>
+    /// <summary>The <c>font-size</c> a figure is set at, in LilyPond's sixths of an octave.</summary>
+    /// <remarks>LILYPOND-REF: scm/translation-functions.scm:468-470 format-bass-figure —
+    /// <c>(make-fontsize-markup -5 fig-markup)</c>.</remarks>
+    internal const double FontSizeStep = -5.0;
+
+    /// <summary>
+    /// The Emmentaler design a figure is drawn from — the PEN needs it as well as the metrics.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size — 20·magstep(−5)
+    /// = 11.2246 pt lands on <c>emmentaler-11</c>.</remarks>
+    internal static int Design => EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
+
+    /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
     /// <remarks>
     /// LILYPOND-REF: lily/modified-font-metric.cc:62-68 <c>Modified_font_metric</c>'s
     /// <c>b.scale (magnification_)</c> — LilyPond does not multiply at the call sites; the
     /// grob reads a font that is ALREADY at its size, and every dimension that font reports
-    /// is scaled once, here. The 4 is the design size in staff spaces (the font's own
-    /// convention, GlyphMetricsGenerated's header: 1 ss = unitsPerEm / 4).
+    /// is scaled once.
+    /// <para>
+    /// ⚠️ IT READ THE 20 DESIGN AND MULTIPLIED BY <c>Em/4</c> until 2026-08-11, which is the
+    /// same defect the fingering digits carried: Emmentaler is optically sized, and 11.2246 pt
+    /// lands on <c>emmentaler-11</c>, where the fixed-width five's ink top is 2.004 design-ss
+    /// against the 20 design's 2.000. That difference IS the <c>-0.002333187</c> six
+    /// <c>figbass.*</c> ledger points carried — the books' top figure is a five — and the
+    /// residual it leaves is the ~9e-5 Pango hinting the whole fetaText family has.
+    /// </para>
     /// </remarks>
-    private static double Scale => Em / 4.0;
+    private static GlyphMetrics.DesignMetrics Font => GlyphMetrics.AtFontSize(FontSizeStep);
 
     /// <summary>The run's pieces, left to right, with X relative to the run's left edge.</summary>
     /// <remarks>
     /// LILYPOND-REF: lily/modified-font-metric.cc:125-143 <c>text_stencil</c> — a text
     /// stencil is its glyphs fed by their own advances, which for these digits is the hmtx
-    /// advance the font declares (all ten are 1.6 design-ss wide: "tnum" is TABULAR
-    /// figures, so a two-digit figure cannot shift its column).
+    /// advance the font declares (all ten are the same width: "tnum" is TABULAR figures, so
+    /// a two-digit figure cannot shift its column — 1.656 design-ss at the 11 design).
+    /// LILYPOND-REF: lily/pango-font.cc:344-362 Pango_font::pango_item_string_stencil — the
+    ///   advance is HINTED to a device pixel at PANGO_RESOLUTION 1200, per glyph, which is
+    ///   why this snaps rather than multiplying straight through.
     /// ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
     /// Lily#'s continuation dash (<c>FiguredBassFigure.DisplayText</c>'s en dash for a held
     /// figure), which LilyPond does not draw as text at all — it is a
     /// <c>BassFigureContinuation</c> spanner (lily/figured-bass-engraver.cc:197-238
     /// center_continuations). Drawn in the serif face at this em so that the fallback's size
     /// and its metric still come from one place; it retires with the continuation port.
+    /// <para>
+    /// ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
+    /// (2026-08-11, ledger <c>figbass.alone.head-anchor-to-box-left</c>) the run's total no
+    /// longer reaches the drawn X at all; it survives as the feed BETWEEN glyphs, and Lily#'s
+    /// grammar has no two-glyph figure to show it (<c>@fig(13)</c> does not parse). It is
+    /// corrected here only because the design is one decision for the whole run and splitting
+    /// it would be the invention.
+    /// </para>
     /// </remarks>
     internal static ImmutableArray<Piece> Pieces(string text)
     {
@@ -104,12 +134,42 @@ internal static class FiguredBassGlyphRun
         double x = 0;
         foreach (char c in text)
         {
-            bool isGlyph = GlyphMetrics.TryGetFiguredBassGlyph(c, out char glyph, out _, out double adv);
-            double advance = isGlyph ? adv * Scale : TextFontMetrics.Serif(c.ToString(), Em);
+            bool isGlyph = TryGetFigure(c, out char glyph, out _, out double adv);
+            double advance = isGlyph
+                ? TextFontMetrics.QuantiseToPangoPixel(adv)
+                : TextFontMetrics.Serif(c.ToString(), Em);
             pieces.Add(new Piece(isGlyph ? glyph : c, x, advance, isGlyph));
             x += advance;
         }
         return pieces.ToImmutable();
+    }
+
+    /// <summary>
+    /// The glyph, its outline box and its UNHINTED advance for one figure character, all in
+    /// the page's staff spaces out of the figure's own design.
+    /// </summary>
+    private static bool TryGetFigure(char c, out char glyph, out GlyphMetrics.BBox outline,
+        out double advance)
+    {
+        var f = Font;
+        (glyph, outline, advance) = c switch
+        {
+            '0' => (EmmentalerGlyphs.FigBassDigit0, f.FigBassDigit0Outline, f.FigBassDigit0Advance),
+            '1' => (EmmentalerGlyphs.FigBassDigit1, f.FigBassDigit1Outline, f.FigBassDigit1Advance),
+            '2' => (EmmentalerGlyphs.FigBassDigit2, f.FigBassDigit2Outline, f.FigBassDigit2Advance),
+            '3' => (EmmentalerGlyphs.FigBassDigit3, f.FigBassDigit3Outline, f.FigBassDigit3Advance),
+            '4' => (EmmentalerGlyphs.FigBassDigit4, f.FigBassDigit4Outline, f.FigBassDigit4Advance),
+            '5' => (EmmentalerGlyphs.FigBassDigit5, f.FigBassDigit5Outline, f.FigBassDigit5Advance),
+            '6' => (EmmentalerGlyphs.FigBassDigit6, f.FigBassDigit6Outline, f.FigBassDigit6Advance),
+            '7' => (EmmentalerGlyphs.FigBassDigit7, f.FigBassDigit7Outline, f.FigBassDigit7Advance),
+            '8' => (EmmentalerGlyphs.FigBassDigit8, f.FigBassDigit8Outline, f.FigBassDigit8Advance),
+            '9' => (EmmentalerGlyphs.FigBassDigit9, f.FigBassDigit9Outline, f.FigBassDigit9Advance),
+            '♭' => (EmmentalerGlyphs.FigBassFlat, f.FigBassFlatOutline, f.FigBassFlatAdvance),
+            '♮' => (EmmentalerGlyphs.FigBassNatural, f.FigBassNaturalOutline, f.FigBassNaturalAdvance),
+            '♯' => (EmmentalerGlyphs.FigBassSharp, f.FigBassSharpOutline, f.FigBassSharpAdvance),
+            _ => ('\0', default, 0.0),
+        };
+        return glyph != '\0';
     }
 
     /// <summary>The run's advance width in staff spaces.</summary>
@@ -139,8 +199,8 @@ internal static class FiguredBassGlyphRun
         if (string.IsNullOrEmpty(text)) return top;
         foreach (char c in text)
         {
-            double t = GlyphMetrics.TryGetFiguredBassGlyph(c, out _, out var outline, out _)
-                ? outline.Top * Scale
+            double t = TryGetFigure(c, out _, out var outline, out _)
+                ? outline.Top
                 // No feta glyph: the same face and size the drawing falls back to, so this
                 // path keeps the two halves together as well.
                 : TextFontMetrics.Ink(c.ToString(), Em).Top;
@@ -172,8 +232,8 @@ internal static class FiguredBassGlyphRun
         if (string.IsNullOrEmpty(text)) return bottom;
         foreach (char c in text)
         {
-            double b = GlyphMetrics.TryGetFiguredBassGlyph(c, out _, out var outline, out _)
-                ? outline.Bottom * Scale
+            double b = TryGetFigure(c, out _, out var outline, out _)
+                ? outline.Bottom
                 : TextFontMetrics.Ink(c.ToString(), Em).Bottom;
             bottom = System.Math.Min(bottom, b);
         }

@@ -208,9 +208,14 @@
                                (for-each
                                 (lambda (g)
                                   (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
+                                    ;; ⚠️ NoteHead is here for the X reading and not the Y one:
+                                    ;; the figure's box LEFT turns out to be its NoteColumn's
+                                    ;; to fifteen digits, and a COLUMN's left edge is not a
+                                    ;; head's when the stem is down — so which of the two the
+                                    ;; figure is aligned on has to be read, not assumed.
                                     (if (memq nm '(StaffSymbol BassFigure BassFigureLine
                                                    BassFigureAlignmentPositioning
-                                                   NoteColumn Stem TimeSignature))
+                                                   NoteColumn NoteHead Stem TimeSignature))
                                         (format #t "PROBEV GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=~a fs=~a fam=~a\n"
                                                 n i nm
                                                 (ly:grob-relative-coordinate g sg Y)
