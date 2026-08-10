@@ -51,6 +51,18 @@ public class PreviewUpdateBench
     private const int Warmups = 2;
     private const int Rounds = 7;
 
+    /// <remarks>
+    /// ⚠️⚠️ EVERY BOOK HERE MUST PIN <c>octave absolute</c>. These fixtures are synthesised by
+    /// repeating ONE bar of text, and in relative octave each repetition starts from the previous
+    /// bar's last pitch — so the music WALKS OFF THE PAGE and every note pays ledger lines
+    /// proportional to how far it has walked. MEASURED (session 135): perf-slur300 reached staff
+    /// position 10493 by bar 300 and drew 3,146,917 ledger lines = a 303 MB SVG; pinning the
+    /// octave leaves the same 300 bars at 408 KB, and the render drops 6051.2 -> 11.8 ms.
+    /// That defect — not any engraving cost — is where every "seconds per keystroke" number this
+    /// shelf ever produced came from. The per-book <c>pos</c> column below is the guard: it is
+    /// the reach of the music the book actually engraves, so a drifting book says so in its own
+    /// output line instead of being read as an engine cost.
+    /// </remarks>
     public static IEnumerable<object[]> Books()
     {
         yield return ["perf-plain1k.lys"];
@@ -79,26 +91,37 @@ public class PreviewUpdateBench
         // that bow, 1200 times. fingbeam1k above is the control for the OTHER half of the same
         // commit — fingerings with NO scripts, the book whose early-out was removed, so it
         // pays the script walk's prologue and none of the slur work.
-        // ⚠️ 300 BARS, NOT 1000, AND THAT IS A MEASUREMENT: the 1000-bar version of this book
-        // takes MINUTES per render — 2000 scored bows — and a fixture nobody will run twice
-        // prices nothing. perf-slur300 is sized the same way for the same reason.
+        // ⚠️ 300 BARS, NOT 1000: a 1000-bar fixture nobody will run twice prices nothing.
+        // ⚠️ The reason once given here — "the 1000-bar version takes MINUTES per render, 2000
+        // scored bows" — was FALSE, and measurably so: the minutes were the drifting octave's
+        // ledger lines, not scored bows. Pinned, this book's keystroke floor is 258.4 ms.
         yield return ["perf-fingslur300.lys"];
         // ...and the SAME 300 bars of slurs with no fingerings at all. It is here because
         // fingslur300 turned out to cost SECONDS per keystroke on both sides of the port, and
         // a number that big has to be attributed before anyone reads it as the port's: this
         // book is what says whether the cost is the bows or the digits.
+        // ★ It did its job and the answer was NEITHER. Session 133 read this book as slower
+        // than fingslur300 and concluded "the seconds are the bow scoring itself"; session 135
+        // measured that the two books ranked by how far their octaves had DRIFTED (10493 vs
+        // 8391), and that on an unchanged tree F3's whole-layout reuse fires — so not one bow
+        // is scored on the keystroke being timed. Pinned: 4189 -> 162.2 ms.
         yield return ["perf-slur300.lys"];
         // ...and the FIGURED BASS, which had no book here at all until 2026-08-11 — so when
         // session 134 changed both halves of that grob (the draw gained a face scope and lost
         // its centring; the metric gained a per-character design lookup where it had been a
         // static field read) the side it made heavy could not be priced. 100 bars x 2 columns
         // of two-row figures.
-        // ⚠️ 100 BARS, AND THAT IS A MEASUREMENT: this book does not scale. 100 bars render in
-        // 3.1 s, 300 in 16.0 s — 3x the music for 5.2x the time — and 1000 bars exhausts
-        // memory outright. A 9-render bench round on the 300-bar version costs two minutes,
-        // and a fixture nobody will run twice prices nothing (the same argument slur300
-        // carries). The blow-up itself is a separate, PRE-EXISTING defect, measured against
-        // 41882db9 and unchanged by that session: see HANDOFF §1's next hand.
+        // ⚠️⚠️ THE PARAGRAPH THAT USED TO STAND HERE WAS WRONG, AND IT IS KEPT NAMED BECAUSE
+        // IT WAS FILED AS AN ENGINE DEFECT. It read: "this book does not scale. 100 bars render
+        // in 3.1 s, 300 in 16.0 s — 3x the music for 5.2x the time — and 1000 bars exhausts
+        // memory outright... a separate, PRE-EXISTING defect". Every number in it was real and
+        // every attribution was false: the book was written `c,,2` REPEATED in relative octave,
+        // so each bar fell two octaves below the last — bar 100 sat at staff position -2806,
+        // i.e. 1401 ledger lines under ONE note. The 5.2x was the ledger count growing with the
+        // square of the bars, and the OOM was a multi-gigabyte SVG string. Pinned (and the note
+        // moved onto the staff), 100 bars keystroke in 13.3 ms.
+        // ★ The lesson is the one §5.3 now carries: a superlinear TIME is not a scaling defect
+        // until the amount of INK has been counted.
         yield return ["perf-figbass100.lys"];
     }
 
@@ -162,9 +185,23 @@ public class PreviewUpdateBench
         long h = 17;
         foreach (char c in svg ?? "")
             h = h * 31 + c;
+        // …and the reach of the music, because a synthesised book can silently stop measuring
+        // the engine (see Books()' remarks). A staff holds [-4, 4]; everything past that is a
+        // ledger line on every note that gets there, and a drifting book's reach grows with the
+        // bar count — so this pair, not the clock, is what says the fixture is still a fixture.
+        int lo = int.MaxValue, hi = int.MinValue;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            foreach (var m in staff.PrimaryVoice.Measures)
+                foreach (var item in m.Items)
+                {
+                    if (MusicItem.EdgeStaffPosition(item, preferTop: true) is { } t)
+                        hi = Math.Max(hi, t);
+                    if (MusicItem.EdgeStaffPosition(item, preferTop: false) is { } b)
+                        lo = Math.Min(lo, b);
+                }
         File.AppendAllText(outPath,
             $"{book}\tkeystroke floor {times[0]:F1} ms\tmedian {times[times.Count / 2]:F1} ms"
             + $"\tcontentkey floor {keyTimes[0]:F3} ms\tmedian {keyTimes[keyTimes.Count / 2]:F3} ms"
-            + $"\tsvg {h:X16}\n");
+            + $"\tpos [{lo}..{hi}]\tsvg {h:X16}\n");
     }
 }

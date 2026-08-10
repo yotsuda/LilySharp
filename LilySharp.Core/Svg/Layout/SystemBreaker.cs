@@ -63,7 +63,8 @@ internal sealed class SystemBreaker
     /// </summary>
     public List<List<Measure>> BreakIntoSystems(MultiStaffScore score,
                                                 double? baseShortestDuration = null,
-                                                IReadOnlyList<int>? precomputedLineSizes = null)
+                                                IReadOnlyList<int>? precomputedLineSizes = null,
+                                                MeasureSpringData[]? precomputedSprings = null)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
 
@@ -117,7 +118,16 @@ internal sealed class SystemBreaker
                 continuationPrefixWidth,
                 raggedRight: _options.RaggedRight);
 
-            return breaker.BreakIntoLines(measures, ComputeMultiStaffSpringData(score, baseShortestDuration));
+            // The incremental driver has ALREADY built this vector — it is the line-break
+            // gate it just compared — so when it hands it over the breaker does not build a
+            // second one. Both come from ComputeMultiStaffSpringData(score, shortest) with
+            // the same score instance and the same shortest duration (both sides call
+            // SpacingRules.CalculateCommonShortestDuration on that score), so the vector is
+            // the same object's worth of data either way; passing it is not a new model.
+            // MEASURED: 385-780 ms per edit on a 1000-bar book, paid twice.
+            var springData = precomputedSprings
+                ?? ComputeMultiStaffSpringData(score, baseShortestDuration);
+            return breaker.BreakIntoLines(measures, springData);
         }
 
         return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);

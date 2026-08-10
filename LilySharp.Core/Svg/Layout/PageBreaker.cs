@@ -583,18 +583,51 @@ internal sealed class PageBreaker
                     if (j < n) continue;
                 }
 
+                bool isLastPage = (j == n);
+                bool isRagged = _params.RaggedBottom
+                    || (isLastPage && _params.RaggedLastBottom);
+
+                // The page's demerits do not depend on WHICH page it is, only on whether it
+                // is the first one (which loses the header's height from its available
+                // space) — CalculatePagePenalty's other inputs are the system range and the
+                // two flags above, all fixed for this (i, j). So the p loop below asks for
+                // at most TWO distinct numbers, and it used to recompute one of them for
+                // every page count: with maxPages = n that is an O(n) factor on top of the
+                // O(n²) (i, j) pairs, each costing another O(j - i) to append the systems.
+                // MEASURED on a 200-system book: 1,265,322 penalty calls / 64,068,701 system
+                // appends per break, against 12,926 / 146,896 for a 43-system one — 4.65x the
+                // systems for 436x the work, i.e. the fourth power. Memoising the two values
+                // is arithmetically identical (the function is pure: it builds its own
+                // PageSpacing and reads only readonly configuration).
+                double firstPenalty = 0, restPenalty = 0;
+                bool haveFirst = false, haveRest = false;
+
                 for (int p = 1; p <= maxPages; p++)
                 {
                     int prevIdx = i * cols + (p - 1);
                     if (dp[prevIdx] >= double.MaxValue) continue;
 
-                    bool isFirstPage = (p == 1);
-                    bool isLastPage = (j == n);
-                    bool isRagged = _params.RaggedBottom
-                        || (isLastPage && _params.RaggedLastBottom);
-
-                    double penalty = CalculatePagePenalty(
-                        systems, i, j, isFirstPage, isLastPage, isRagged);
+                    double penalty;
+                    if (p == 1)
+                    {
+                        if (!haveFirst)
+                        {
+                            firstPenalty = CalculatePagePenalty(
+                                systems, i, j, isFirstPage: true, isLastPage, isRagged);
+                            haveFirst = true;
+                        }
+                        penalty = firstPenalty;
+                    }
+                    else
+                    {
+                        if (!haveRest)
+                        {
+                            restPenalty = CalculatePagePenalty(
+                                systems, i, j, isFirstPage: false, isLastPage, isRagged);
+                            haveRest = true;
+                        }
+                        penalty = restPenalty;
+                    }
 
                     if (penalty < double.MaxValue)
                     {

@@ -211,7 +211,11 @@ public sealed class IncrementalCompiler
         }
         else
         {
-            layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null, cacheForEdit);
+            // ...and the spring vector this method just built for the gate goes WITH it: when
+            // the gate moved there is no cached line-size answer, so the breaker runs its DP
+            // and used to rebuild the identical vector to feed it. One quantity, two places
+            // (HANDOFF §2 A) — in its perf clothing.
+            layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null, cacheForEdit, springs);
             // Reuse the prior line sizes on a gate-skip (still the correct solution);
             // otherwise capture the fresh ones.
             if (!skip)

@@ -266,12 +266,22 @@ internal sealed class KnuthPlassBreaker
         var cumInvStretch = new double[n + 1];
         var cumInvCompress = new double[n + 1];
         var cumMin = new double[n + 1];
+        // ...and the same idiom for the FORCED-BREAK question below, which is a range query
+        // like the others and was being answered by re-scanning the range: "is there a Force
+        // permission strictly inside this candidate line". That scan costs O(j - i) per pair
+        // and so O(n³) over the DP — MEASURED at exactly n³/6 iterations (166,666,500 for a
+        // 1000-bar book, 4,499,950 for a 300-bar one). A prefix count answers it in O(1) and
+        // is the same predicate: the scan covered k in [i, j-2], which is nonempty exactly
+        // when the count over that range is positive.
+        var cumForce = new int[n + 1];
         for (int i = 0; i < n; i++)
         {
             cumIdeal[i + 1] = cumIdeal[i] + springData[i].IdealWidth;
             cumInvStretch[i + 1] = cumInvStretch[i] + springData[i].InverseStretchStrength;
             cumInvCompress[i + 1] = cumInvCompress[i] + springData[i].InverseCompressStrength;
             cumMin[i + 1] = cumMin[i] + springData[i].MinWidth;
+            cumForce[i + 1] = cumForce[i]
+                + (springData[i].BreakPermission == BreakPermission.Force ? 1 : 0);
         }
 
         // The DP state is (break index, LINE COUNT), as LilyPond's is (break index, system
@@ -300,16 +310,7 @@ internal sealed class KnuthPlassBreaker
 
                 // Skip if there's a forced break between i and j-1 (exclusive)
                 // 1-4: Also skip if there's a Force permission in the middle
-                bool hasForcedBreakInMiddle = false;
-                for (int k = i; k < j - 1; k++)
-                {
-                    if (springData[k].BreakPermission == BreakPermission.Force)
-                    {
-                        hasForcedBreakInMiddle = true;
-                        break;
-                    }
-                }
-                if (hasForcedBreakInMiddle)
+                if (cumForce[j - 1] - cumForce[i] > 0)
                     continue;
 
                 bool isFirstLine = i == 0;

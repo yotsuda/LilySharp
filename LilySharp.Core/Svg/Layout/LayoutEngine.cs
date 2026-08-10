@@ -59,7 +59,7 @@ internal sealed class LayoutEngine
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>
     public ScoreLayout Layout(MultiStaffScore score, IReadOnlyList<int>? precomputedLineSizes = null,
-        SystemLayoutCache? systemCache = null)
+        SystemLayoutCache? systemCache = null, MeasureSpringData[]? precomputedSprings = null)
     {
         double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
 
@@ -92,7 +92,8 @@ internal sealed class LayoutEngine
         // F3 incremental cutoff: when the line-break gate is unchanged the driver
         // passes the cached per-line measure counts so SystemBreaker regroups the
         // new measures and skips the DP. Null => normal (byte-identical) breaking.
-        var systemMeasures = _systemBreaker.BreakIntoSystems(score, commonShortestDuration, precomputedLineSizes);
+        var systemMeasures = _systemBreaker.BreakIntoSystems(
+            score, commonShortestDuration, precomputedLineSizes, precomputedSprings);
 
         // Chord symbols on a TEXT ROW (lead sheets) live in their own band and must not
         // inflate a music staff's up-extent; inline chord symbols (nameless `chords { }`) sit
