@@ -1324,7 +1324,7 @@ internal sealed class SkylineBuilder
     /// <para>
     /// ⚠️ THE POSITION SCALES WITH THE STAFF AND THE GLYPH DOES NOT, and that asymmetry is
     /// the PEN's, copied here rather than corrected: <c>SharedRenderer.DrawFingerings</c>
-    /// draws the run at <c>FiguredBassGlyphRun.Em</c> flat while it reflects the baseline
+    /// draws the run at <c>FingeringGlyphRun.Em</c> flat while it reflects the baseline
     /// through the ossia shrink, and its own remark records that (the figured bass is the
     /// same). Scaling the ink here — which is what every neighbouring seed does, because
     /// every other grob's pen scales — would reserve 0.7 of the ink an ossia staff really

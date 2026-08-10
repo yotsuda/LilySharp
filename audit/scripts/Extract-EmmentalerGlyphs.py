@@ -135,6 +135,26 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("TimeSigCommon", "timesig.C44", ""),
     ("TimeSigCutCommon", "timesig.C22", ""),
 
+    # A Fingering is fetaText as well (scm/define-grobs.scm:1547-1548,
+    # ly:text-interface::print over fingering::calc-text) but declares font-features
+    # ("cv47" "ss01") -- the figure's three MINUS tnum. Without tabular figures the digits
+    # are the PROPORTIONAL fattened.<n>, the same cut the time signature draws, and cv47
+    # still puts the .alt shapes on 4 and 7 -- which is the ONLY thing that keeps these ten
+    # from being the ten below. Read off the page, not deduced: ly:stencil-expr printed
+    # `fattened.one` for a Fingering where a BassFigure printed
+    # `fattened.fixedwidth.one` (audit/lp-geometry/probes/fingering-digit-width.ly).
+    ("#", "Fingering digits (fetaText, cv47 + ss01 -- proportional, NOT tabular)", ""),
+    ("FingeringDigit0", "fattened.zero", ""),
+    ("FingeringDigit1", "fattened.one", ""),
+    ("FingeringDigit2", "fattened.two", ""),
+    ("FingeringDigit3", "fattened.three", ""),
+    ("FingeringDigit4", "fattened.four.alt", "cv47 picks the .alt four"),
+    ("FingeringDigit5", "fattened.five", ""),
+    ("FingeringDigit6", "fattened.six", ""),
+    ("FingeringDigit7", "fattened.seven.alt", "cv47 picks the .alt seven"),
+    ("FingeringDigit8", "fattened.eight", ""),
+    ("FingeringDigit9", "fattened.nine", ""),
+
     # A bass figure is `\number` markup (scm/translation-functions.scm:349-470
     # format-bass-figure -> make-number-markup), i.e. the fetaText encoding, and
     # scm/define-grobs.scm:354 declares BassFigure's font-features ("tnum" "cv47" "ss01").

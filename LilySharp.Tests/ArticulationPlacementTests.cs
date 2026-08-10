@@ -86,9 +86,18 @@ public class ArticulationPlacementTests
     }
 
     /// <summary>All music-glyph (x, y, char) triples in a rendered SVG.</summary>
+    /// <remarks>
+    /// ⚠️ THE ATTRIBUTES BEFORE <c>x</c> ARE NOT OPTIONAL TO SKIP. A glyph drawn from a
+    /// NON-DEFAULT Emmentaler design carries <c>font-family="Emmentaler-11, …"</c> ahead of
+    /// <c>x</c>, so a pattern that demanded <c>x</c> immediately after <c>class="music"</c>
+    /// matched none of them and this returned a list with the digits silently missing. A
+    /// fingering is set at font-size −5, which lands on the 11 design, so it is exactly such
+    /// a glyph — and the two tests below that count fingerings failed with "found 0" until
+    /// this admitted the attribute.
+    /// </remarks>
     private static List<(double X, double Y, char Glyph)> MusicGlyphs(string svg) =>
         System.Text.RegularExpressions.Regex.Matches(svg,
-                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(&#x([0-9A-Fa-f]+);|.)</text>")
+                "<text class=\"music\"[^>]*? x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(&#x([0-9A-Fa-f]+);|.)</text>")
             .Select(m => (
                 X: double.Parse(m.Groups[1].Value),
                 Y: double.Parse(m.Groups[2].Value),
@@ -204,7 +213,7 @@ public class ArticulationPlacementTests
             .OrderBy(x => x.X).ToList();
         Assert.Equal(2, tenutos.Count);
         Assert.Equal(3.42, middle - tenutos[0].Y, 2);                       // LP 3.42
-        Assert.Equal(4.00, YUpOfSingle(EmmentalerGlyphs.FigBassDigit3), 2); // LP 4.00
+        Assert.Equal(4.00, YUpOfSingle(EmmentalerGlyphs.FingeringDigit3), 2); // LP 4.00
         var upbows = glyphs.Where(x => x.Glyph == EmmentalerGlyphs.ArticUpBowAbove)
             .OrderBy(x => x.X).ToList();
         Assert.Equal(2, upbows.Count);
@@ -215,7 +224,7 @@ public class ArticulationPlacementTests
         Assert.Equal(8.99, middle - upbows[1].Y, 2);                        // LP 8.99
         // e, — tenuto, FINGER 0, downbow:
         Assert.Equal(2.50, middle - tenutos[1].Y, 2);                       // LP 2.50
-        Assert.Equal(3.08, YUpOfSingle(EmmentalerGlyphs.FigBassDigit0), 2); // LP 3.08
+        Assert.Equal(3.08, YUpOfSingle(EmmentalerGlyphs.FingeringDigit0), 2); // LP 3.08
         Assert.Equal(4.40, YUpOfSingle(EmmentalerGlyphs.ArticDownBowAbove), 2); // LP 4.40
     }
 
@@ -308,7 +317,7 @@ public class ArticulationPlacementTests
             .OrderBy(g => g.X).ToList();
         var downbows = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticDownBowAbove)
             .OrderBy(g => g.X).ToList();
-        var fingers = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.FigBassDigit0)
+        var fingers = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.FingeringDigit0)
             .OrderBy(g => g.X).ToList();
         var staccatos = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticStaccatoAbove)
             .OrderBy(g => g.X).ToList();
@@ -317,11 +326,21 @@ public class ArticulationPlacementTests
         Assert.Equal(2, fingers.Count);
         Assert.Equal(2, staccatos.Count);
         Assert.Equal(3.40, middle - accents[0].Y, 2);   // LP 3.40 — off the slur's bow
-        Assert.Equal(4.26, middle - fingers[0].Y, 2);   // LP 4.26 — chain over the lifted accent
-        // LP 5.58. The 0.01 is the chain's own, not the slur's: before the 'inside
-        // port the three read 0.12 / 0.12 / 0.11 low, so the top link already wobbled
-        // by that much against the two below it, which now sit on LP exactly.
-        Assert.Equal(5.59, middle - downbows[0].Y, 2);  // LP 5.58 — chain top
+        // LP 4.26. ★ THE 0.01 ARRIVED WITH THE DIGIT-RUN PORT (2026-08-11) AND IS THE SAME
+        // NAMED RESIDUAL THE LEDGER CARRIES. This digit is on the slur's own bound note, so
+        // it takes outside_slur_callback, whose shift is the curve's extremum over the
+        // digit's OWN x window — and that window just became LilyPond's (the proportional
+        // cut, the 11 design, Pango-hinted; ledger fingering.digit-0.head-anchor-to-box-left,
+        // exact). With the window right, what is left is the 64-sample flattening of the
+        // curve, measured as -0.011491008 on ledger fingering.slur.bound-note and worth this
+        // 0.01 here. ⚠️ The chain above it moved by the same amount and landed ON LilyPond:
+        // the downbow below was 5.59 against LP's 5.58 and is now 5.58.
+        Assert.Equal(4.25, middle - fingers[0].Y, 2);   // LP 4.26 — chain over the lifted accent
+        // ★ EXACT since the digit-run port (2026-08-11). It read 5.59 against LP's 5.58, and
+        // that 0.01 was recorded here as "the chain's own, not the slur's" — the top link
+        // wobbling against the two below it. It was neither: it was the digit's box, and it
+        // went when the box did. The remark above says where the same 0.01 went instead.
+        Assert.Equal(5.58, middle - downbows[0].Y, 2);  // LP 5.58 — chain top
         Assert.Equal(1.50, middle - staccatos[0].Y, 2); // LP 1.50 — 'inside at the slur end, unmoved
         // The unslurred d keeps its plain chain: tenuto then downbow.
         Assert.Equal(2.78, middle - downbows[1].Y, 2);

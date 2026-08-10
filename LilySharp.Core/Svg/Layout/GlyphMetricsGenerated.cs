@@ -731,6 +731,96 @@ internal static partial class GlyphMetrics
     /// <summary>Figured-bass digit 9 — advance width (next-glyph horizontal feed).</summary>
     public const double FigBassDigit9Advance = 1.600000;
 
+    /// <summary>Fingering digit 0 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.zero (fattened.zero = U+E0B8 in this build)</remarks>
+    public static readonly BBox FingeringDigit0 = new(0.000000, 0.000000, 1.468000, 2.000000);
+    /// <summary>Fingering digit 0 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit0Outline = new(0.000000, 0.000000, 1.468000, 2.000000);
+    /// <summary>Fingering digit 0 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit0Advance = 1.464000;
+
+    /// <summary>Fingering digit 1 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.one (fattened.one = U+E0B9 in this build)</remarks>
+    public static readonly BBox FingeringDigit1 = new(-0.008000, 0.000000, 1.296000, 2.016000);
+    /// <summary>Fingering digit 1 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit1Outline = new(-0.008000, 0.000000, 1.296000, 2.016000);
+    /// <summary>Fingering digit 1 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit1Advance = 1.292000;
+
+    /// <summary>Fingering digit 2 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.two (fattened.two = U+E0BA in this build)</remarks>
+    public static readonly BBox FingeringDigit2 = new(0.000000, 0.000000, 1.468000, 2.000000);
+    /// <summary>Fingering digit 2 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit2Outline = new(0.000000, 0.000000, 1.468000, 2.000000);
+    /// <summary>Fingering digit 2 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit2Advance = 1.464000;
+
+    /// <summary>Fingering digit 3 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.three (fattened.three = U+E0BB in this build)</remarks>
+    public static readonly BBox FingeringDigit3 = new(0.000000, 0.000000, 1.332000, 2.000000);
+    /// <summary>Fingering digit 3 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit3Outline = new(0.000000, 0.000000, 1.332000, 2.000000);
+    /// <summary>Fingering digit 3 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit3Advance = 1.332000;
+
+    /// <summary>Fingering digit 4 (cv47 variant) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.four.alt (fattened.four.alt = U+E0BD in this build)</remarks>
+    public static readonly BBox FingeringDigit4 = new(-0.012000, 0.000000, 1.612000, 2.004000);
+    /// <summary>Fingering digit 4 (cv47 variant) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit4Outline = new(-0.012000, 0.000000, 1.612000, 2.004000);
+    /// <summary>Fingering digit 4 (cv47 variant) — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit4Advance = 1.600000;
+
+    /// <summary>Fingering digit 5 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.five (fattened.five = U+E0BE in this build)</remarks>
+    public static readonly BBox FingeringDigit5 = new(0.000000, 0.000000, 1.420000, 2.000000);
+    /// <summary>Fingering digit 5 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit5Outline = new(0.000000, 0.000000, 1.420000, 2.000000);
+    /// <summary>Fingering digit 5 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit5Advance = 1.348000;
+
+    /// <summary>Fingering digit 6 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.six (fattened.six = U+E0BF in this build)</remarks>
+    public static readonly BBox FingeringDigit6 = new(0.000000, 0.000000, 1.360000, 2.000000);
+    /// <summary>Fingering digit 6 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit6Outline = new(0.000000, 0.000000, 1.360000, 2.000000);
+    /// <summary>Fingering digit 6 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit6Advance = 1.356000;
+
+    /// <summary>Fingering digit 7 (cv47 variant) — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.seven.alt (fattened.seven.alt = U+E0C1 in this build)</remarks>
+    public static readonly BBox FingeringDigit7 = new(0.000000, -0.004000, 1.424000, 2.000000);
+    /// <summary>Fingering digit 7 (cv47 variant) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit7Outline = new(0.000000, -0.004000, 1.424000, 2.000000);
+    /// <summary>Fingering digit 7 (cv47 variant) — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit7Advance = 1.288000;
+
+    /// <summary>Fingering digit 8 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.eight (fattened.eight = U+E0C2 in this build)</remarks>
+    public static readonly BBox FingeringDigit8 = new(0.000000, 0.000000, 1.488000, 2.000000);
+    /// <summary>Fingering digit 8 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit8Outline = new(0.000000, 0.000000, 1.488000, 2.000000);
+    /// <summary>Fingering digit 8 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit8Advance = 1.464000;
+
+    /// <summary>Fingering digit 9 — BBox (outline bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.nine (fattened.nine = U+E0C3 in this build)</remarks>
+    public static readonly BBox FingeringDigit9 = new(0.000000, 0.000000, 1.360000, 2.000000);
+    /// <summary>Fingering digit 9 — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox FingeringDigit9Outline = new(0.000000, 0.000000, 1.360000, 2.000000);
+    /// <summary>Fingering digit 9 — advance width (next-glyph horizontal feed).</summary>
+    public const double FingeringDigit9Advance = 1.356000;
+
     /// <summary>Figured-bass flat (U+266D) — BBox (outline bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flats.mf — flat.figbass (accidentals.flat.figbass = U+266D in this build)</remarks>
     public static readonly BBox FigBassFlat = new(0.112000, -0.176000, 0.988000, 2.204000);
@@ -1465,6 +1555,66 @@ internal static partial class GlyphMetrics
         public BBox FigBassDigit9Outline { get; init; }
         /// <summary>Figured-bass digit 9 — advance width (next-glyph horizontal feed).</summary>
         public double FigBassDigit9Advance { get; init; }
+        /// <summary>Fingering digit 0 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit0 { get; init; }
+        /// <summary>Fingering digit 0 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit0Outline { get; init; }
+        /// <summary>Fingering digit 0 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit0Advance { get; init; }
+        /// <summary>Fingering digit 1 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit1 { get; init; }
+        /// <summary>Fingering digit 1 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit1Outline { get; init; }
+        /// <summary>Fingering digit 1 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit1Advance { get; init; }
+        /// <summary>Fingering digit 2 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit2 { get; init; }
+        /// <summary>Fingering digit 2 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit2Outline { get; init; }
+        /// <summary>Fingering digit 2 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit2Advance { get; init; }
+        /// <summary>Fingering digit 3 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit3 { get; init; }
+        /// <summary>Fingering digit 3 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit3Outline { get; init; }
+        /// <summary>Fingering digit 3 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit3Advance { get; init; }
+        /// <summary>Fingering digit 4 (cv47 variant) — BBox (outline bbox).</summary>
+        public BBox FingeringDigit4 { get; init; }
+        /// <summary>Fingering digit 4 (cv47 variant) — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit4Outline { get; init; }
+        /// <summary>Fingering digit 4 (cv47 variant) — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit4Advance { get; init; }
+        /// <summary>Fingering digit 5 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit5 { get; init; }
+        /// <summary>Fingering digit 5 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit5Outline { get; init; }
+        /// <summary>Fingering digit 5 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit5Advance { get; init; }
+        /// <summary>Fingering digit 6 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit6 { get; init; }
+        /// <summary>Fingering digit 6 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit6Outline { get; init; }
+        /// <summary>Fingering digit 6 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit6Advance { get; init; }
+        /// <summary>Fingering digit 7 (cv47 variant) — BBox (outline bbox).</summary>
+        public BBox FingeringDigit7 { get; init; }
+        /// <summary>Fingering digit 7 (cv47 variant) — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit7Outline { get; init; }
+        /// <summary>Fingering digit 7 (cv47 variant) — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit7Advance { get; init; }
+        /// <summary>Fingering digit 8 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit8 { get; init; }
+        /// <summary>Fingering digit 8 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit8Outline { get; init; }
+        /// <summary>Fingering digit 8 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit8Advance { get; init; }
+        /// <summary>Fingering digit 9 — BBox (outline bbox).</summary>
+        public BBox FingeringDigit9 { get; init; }
+        /// <summary>Fingering digit 9 — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox FingeringDigit9Outline { get; init; }
+        /// <summary>Fingering digit 9 — advance width (next-glyph horizontal feed).</summary>
+        public double FingeringDigit9Advance { get; init; }
         /// <summary>Figured-bass flat (U+266D) — BBox (outline bbox).</summary>
         public BBox FigBassFlat { get; init; }
         /// <summary>Figured-bass flat (U+266D) — the box its SKYLINE is built from (glyph outline).</summary>
@@ -1955,6 +2105,56 @@ internal static partial class GlyphMetrics
             FigBassDigit9Outline = new(FigBassDigit9Outline.Left * magnification, FigBassDigit9Outline.Bottom * magnification,
                 FigBassDigit9Outline.Right * magnification, FigBassDigit9Outline.Top * magnification),
             FigBassDigit9Advance = FigBassDigit9Advance * magnification,
+            FingeringDigit0 = new(FingeringDigit0.Left * magnification, FingeringDigit0.Bottom * magnification,
+                FingeringDigit0.Right * magnification, FingeringDigit0.Top * magnification),
+            FingeringDigit0Outline = new(FingeringDigit0Outline.Left * magnification, FingeringDigit0Outline.Bottom * magnification,
+                FingeringDigit0Outline.Right * magnification, FingeringDigit0Outline.Top * magnification),
+            FingeringDigit0Advance = FingeringDigit0Advance * magnification,
+            FingeringDigit1 = new(FingeringDigit1.Left * magnification, FingeringDigit1.Bottom * magnification,
+                FingeringDigit1.Right * magnification, FingeringDigit1.Top * magnification),
+            FingeringDigit1Outline = new(FingeringDigit1Outline.Left * magnification, FingeringDigit1Outline.Bottom * magnification,
+                FingeringDigit1Outline.Right * magnification, FingeringDigit1Outline.Top * magnification),
+            FingeringDigit1Advance = FingeringDigit1Advance * magnification,
+            FingeringDigit2 = new(FingeringDigit2.Left * magnification, FingeringDigit2.Bottom * magnification,
+                FingeringDigit2.Right * magnification, FingeringDigit2.Top * magnification),
+            FingeringDigit2Outline = new(FingeringDigit2Outline.Left * magnification, FingeringDigit2Outline.Bottom * magnification,
+                FingeringDigit2Outline.Right * magnification, FingeringDigit2Outline.Top * magnification),
+            FingeringDigit2Advance = FingeringDigit2Advance * magnification,
+            FingeringDigit3 = new(FingeringDigit3.Left * magnification, FingeringDigit3.Bottom * magnification,
+                FingeringDigit3.Right * magnification, FingeringDigit3.Top * magnification),
+            FingeringDigit3Outline = new(FingeringDigit3Outline.Left * magnification, FingeringDigit3Outline.Bottom * magnification,
+                FingeringDigit3Outline.Right * magnification, FingeringDigit3Outline.Top * magnification),
+            FingeringDigit3Advance = FingeringDigit3Advance * magnification,
+            FingeringDigit4 = new(FingeringDigit4.Left * magnification, FingeringDigit4.Bottom * magnification,
+                FingeringDigit4.Right * magnification, FingeringDigit4.Top * magnification),
+            FingeringDigit4Outline = new(FingeringDigit4Outline.Left * magnification, FingeringDigit4Outline.Bottom * magnification,
+                FingeringDigit4Outline.Right * magnification, FingeringDigit4Outline.Top * magnification),
+            FingeringDigit4Advance = FingeringDigit4Advance * magnification,
+            FingeringDigit5 = new(FingeringDigit5.Left * magnification, FingeringDigit5.Bottom * magnification,
+                FingeringDigit5.Right * magnification, FingeringDigit5.Top * magnification),
+            FingeringDigit5Outline = new(FingeringDigit5Outline.Left * magnification, FingeringDigit5Outline.Bottom * magnification,
+                FingeringDigit5Outline.Right * magnification, FingeringDigit5Outline.Top * magnification),
+            FingeringDigit5Advance = FingeringDigit5Advance * magnification,
+            FingeringDigit6 = new(FingeringDigit6.Left * magnification, FingeringDigit6.Bottom * magnification,
+                FingeringDigit6.Right * magnification, FingeringDigit6.Top * magnification),
+            FingeringDigit6Outline = new(FingeringDigit6Outline.Left * magnification, FingeringDigit6Outline.Bottom * magnification,
+                FingeringDigit6Outline.Right * magnification, FingeringDigit6Outline.Top * magnification),
+            FingeringDigit6Advance = FingeringDigit6Advance * magnification,
+            FingeringDigit7 = new(FingeringDigit7.Left * magnification, FingeringDigit7.Bottom * magnification,
+                FingeringDigit7.Right * magnification, FingeringDigit7.Top * magnification),
+            FingeringDigit7Outline = new(FingeringDigit7Outline.Left * magnification, FingeringDigit7Outline.Bottom * magnification,
+                FingeringDigit7Outline.Right * magnification, FingeringDigit7Outline.Top * magnification),
+            FingeringDigit7Advance = FingeringDigit7Advance * magnification,
+            FingeringDigit8 = new(FingeringDigit8.Left * magnification, FingeringDigit8.Bottom * magnification,
+                FingeringDigit8.Right * magnification, FingeringDigit8.Top * magnification),
+            FingeringDigit8Outline = new(FingeringDigit8Outline.Left * magnification, FingeringDigit8Outline.Bottom * magnification,
+                FingeringDigit8Outline.Right * magnification, FingeringDigit8Outline.Top * magnification),
+            FingeringDigit8Advance = FingeringDigit8Advance * magnification,
+            FingeringDigit9 = new(FingeringDigit9.Left * magnification, FingeringDigit9.Bottom * magnification,
+                FingeringDigit9.Right * magnification, FingeringDigit9.Top * magnification),
+            FingeringDigit9Outline = new(FingeringDigit9Outline.Left * magnification, FingeringDigit9Outline.Bottom * magnification,
+                FingeringDigit9Outline.Right * magnification, FingeringDigit9Outline.Top * magnification),
+            FingeringDigit9Advance = FingeringDigit9Advance * magnification,
             FigBassFlat = new(FigBassFlat.Left * magnification, FigBassFlat.Bottom * magnification,
                 FigBassFlat.Right * magnification, FigBassFlat.Top * magnification),
             FigBassFlatOutline = new(FigBassFlatOutline.Left * magnification, FigBassFlatOutline.Bottom * magnification,
@@ -2244,6 +2444,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = new(0.124000, 0.000000, 1.536000, 2.000000),
         FigBassDigit9Outline = new(0.124000, 0.000000, 1.536000, 2.000000),
         FigBassDigit9Advance = 1.656000,
+        FingeringDigit0 = new(0.000000, 0.000000, 1.520000, 2.000000),
+        FingeringDigit0Outline = new(0.000000, 0.000000, 1.520000, 2.000000),
+        FingeringDigit0Advance = 1.520000,
+        FingeringDigit1 = new(-0.012000, 0.000000, 1.444000, 2.024000),
+        FingeringDigit1Outline = new(-0.012000, 0.000000, 1.444000, 2.024000),
+        FingeringDigit1Advance = 1.444000,
+        FingeringDigit2 = new(0.000000, 0.000000, 1.520000, 2.000000),
+        FingeringDigit2Outline = new(0.000000, 0.000000, 1.520000, 2.000000),
+        FingeringDigit2Advance = 1.520000,
+        FingeringDigit3 = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit3Outline = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit3Advance = 1.380000,
+        FingeringDigit4 = new(-0.012000, 0.000000, 1.680000, 2.004000),
+        FingeringDigit4Outline = new(-0.012000, 0.000000, 1.680000, 2.004000),
+        FingeringDigit4Advance = 1.656000,
+        FingeringDigit5 = new(0.000000, 0.000000, 1.484000, 2.004000),
+        FingeringDigit5Outline = new(0.000000, 0.000000, 1.484000, 2.004000),
+        FingeringDigit5Advance = 1.396000,
+        FingeringDigit6 = new(0.000000, 0.000000, 1.408000, 2.000000),
+        FingeringDigit6Outline = new(0.000000, 0.000000, 1.408000, 2.000000),
+        FingeringDigit6Advance = 1.408000,
+        FingeringDigit7 = new(0.000000, -0.004000, 1.468000, 2.000000),
+        FingeringDigit7Outline = new(0.000000, -0.004000, 1.468000, 2.000000),
+        FingeringDigit7Advance = 1.304000,
+        FingeringDigit8 = new(0.000000, 0.000000, 1.540000, 2.000000),
+        FingeringDigit8Outline = new(0.000000, 0.000000, 1.540000, 2.000000),
+        FingeringDigit8Advance = 1.520000,
+        FingeringDigit9 = new(0.000000, 0.000000, 1.408000, 2.000000),
+        FingeringDigit9Outline = new(0.000000, 0.000000, 1.408000, 2.000000),
+        FingeringDigit9Advance = 1.408000,
         FigBassFlat = new(0.096000, -0.196000, 1.004000, 2.236000),
         FigBassFlatOutline = new(0.096000, -0.196000, 1.004000, 2.236000),
         FigBassFlatAdvance = 1.100000,
@@ -2526,6 +2756,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = new(0.124000, 0.000000, 1.524000, 2.000000),
         FigBassDigit9Outline = new(0.124000, 0.000000, 1.524000, 2.000000),
         FigBassDigit9Advance = 1.648000,
+        FingeringDigit0 = new(0.000000, 0.000000, 1.512000, 2.000000),
+        FingeringDigit0Outline = new(0.000000, 0.000000, 1.512000, 2.000000),
+        FingeringDigit0Advance = 1.508000,
+        FingeringDigit1 = new(-0.012000, 0.000000, 1.420000, 2.020000),
+        FingeringDigit1Outline = new(-0.012000, 0.000000, 1.420000, 2.020000),
+        FingeringDigit1Advance = 1.420000,
+        FingeringDigit2 = new(0.000000, 0.000000, 1.512000, 2.000000),
+        FingeringDigit2Outline = new(0.000000, 0.000000, 1.512000, 2.000000),
+        FingeringDigit2Advance = 1.508000,
+        FingeringDigit3 = new(0.000000, 0.000000, 1.376000, 2.000000),
+        FingeringDigit3Outline = new(0.000000, 0.000000, 1.376000, 2.000000),
+        FingeringDigit3Advance = 1.372000,
+        FingeringDigit4 = new(-0.012000, 0.000000, 1.668000, 2.004000),
+        FingeringDigit4Outline = new(-0.012000, 0.000000, 1.668000, 2.004000),
+        FingeringDigit4Advance = 1.648000,
+        FingeringDigit5 = new(0.000000, 0.000000, 1.476000, 2.004000),
+        FingeringDigit5Outline = new(0.000000, 0.000000, 1.476000, 2.004000),
+        FingeringDigit5Advance = 1.388000,
+        FingeringDigit6 = new(0.000000, 0.000000, 1.400000, 2.000000),
+        FingeringDigit6Outline = new(0.000000, 0.000000, 1.400000, 2.000000),
+        FingeringDigit6Advance = 1.400000,
+        FingeringDigit7 = new(0.000000, -0.004000, 1.460000, 2.000000),
+        FingeringDigit7Outline = new(0.000000, -0.004000, 1.460000, 2.000000),
+        FingeringDigit7Advance = 1.300000,
+        FingeringDigit8 = new(0.000000, 0.000000, 1.532000, 2.000000),
+        FingeringDigit8Outline = new(0.000000, 0.000000, 1.532000, 2.000000),
+        FingeringDigit8Advance = 1.508000,
+        FingeringDigit9 = new(0.000000, 0.000000, 1.400000, 2.000000),
+        FingeringDigit9Outline = new(0.000000, 0.000000, 1.400000, 2.000000),
+        FingeringDigit9Advance = 1.400000,
         FigBassFlat = new(0.100000, -0.192000, 1.000000, 2.228000),
         FigBassFlatOutline = new(0.100000, -0.192000, 1.000000, 2.228000),
         FigBassFlatAdvance = 1.100000,
@@ -2808,6 +3068,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = new(0.124000, 0.000000, 1.516000, 2.000000),
         FigBassDigit9Outline = new(0.124000, 0.000000, 1.516000, 2.000000),
         FigBassDigit9Advance = 1.636000,
+        FingeringDigit0 = new(0.000000, 0.000000, 1.504000, 2.000000),
+        FingeringDigit0Outline = new(0.000000, 0.000000, 1.504000, 2.000000),
+        FingeringDigit0Advance = 1.500000,
+        FingeringDigit1 = new(-0.012000, 0.000000, 1.396000, 2.020000),
+        FingeringDigit1Outline = new(-0.012000, 0.000000, 1.396000, 2.020000),
+        FingeringDigit1Advance = 1.392000,
+        FingeringDigit2 = new(0.000000, 0.000000, 1.504000, 2.000000),
+        FingeringDigit2Outline = new(0.000000, 0.000000, 1.504000, 2.000000),
+        FingeringDigit2Advance = 1.500000,
+        FingeringDigit3 = new(0.000000, 0.000000, 1.364000, 2.000000),
+        FingeringDigit3Outline = new(0.000000, 0.000000, 1.364000, 2.000000),
+        FingeringDigit3Advance = 1.364000,
+        FingeringDigit4 = new(-0.012000, 0.000000, 1.656000, 2.004000),
+        FingeringDigit4Outline = new(-0.012000, 0.000000, 1.656000, 2.004000),
+        FingeringDigit4Advance = 1.636000,
+        FingeringDigit5 = new(0.000000, 0.000000, 1.464000, 2.004000),
+        FingeringDigit5Outline = new(0.000000, 0.000000, 1.464000, 2.004000),
+        FingeringDigit5Advance = 1.380000,
+        FingeringDigit6 = new(0.000000, 0.000000, 1.392000, 2.000000),
+        FingeringDigit6Outline = new(0.000000, 0.000000, 1.392000, 2.000000),
+        FingeringDigit6Advance = 1.392000,
+        FingeringDigit7 = new(0.000000, -0.004000, 1.452000, 2.000000),
+        FingeringDigit7Outline = new(0.000000, -0.004000, 1.452000, 2.000000),
+        FingeringDigit7Advance = 1.300000,
+        FingeringDigit8 = new(0.000000, 0.000000, 1.524000, 2.000000),
+        FingeringDigit8Outline = new(0.000000, 0.000000, 1.524000, 2.000000),
+        FingeringDigit8Advance = 1.500000,
+        FingeringDigit9 = new(0.000000, 0.000000, 1.392000, 2.000000),
+        FingeringDigit9Outline = new(0.000000, 0.000000, 1.392000, 2.000000),
+        FingeringDigit9Advance = 1.392000,
         FigBassFlat = new(0.100000, -0.188000, 1.000000, 2.220000),
         FigBassFlatOutline = new(0.100000, -0.188000, 1.000000, 2.220000),
         FigBassFlatAdvance = 1.096000,
@@ -3090,6 +3380,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = new(0.124000, 0.000000, 1.504000, 2.000000),
         FigBassDigit9Outline = new(0.124000, 0.000000, 1.504000, 2.000000),
         FigBassDigit9Advance = 1.624000,
+        FingeringDigit0 = new(0.000000, 0.000000, 1.492000, 2.000000),
+        FingeringDigit0Outline = new(0.000000, 0.000000, 1.492000, 2.000000),
+        FingeringDigit0Advance = 1.488000,
+        FingeringDigit1 = new(-0.012000, 0.000000, 1.364000, 2.020000),
+        FingeringDigit1Outline = new(-0.012000, 0.000000, 1.364000, 2.020000),
+        FingeringDigit1Advance = 1.364000,
+        FingeringDigit2 = new(0.000000, 0.000000, 1.492000, 2.000000),
+        FingeringDigit2Outline = new(0.000000, 0.000000, 1.492000, 2.000000),
+        FingeringDigit2Advance = 1.488000,
+        FingeringDigit3 = new(0.000000, 0.000000, 1.356000, 2.000000),
+        FingeringDigit3Outline = new(0.000000, 0.000000, 1.356000, 2.000000),
+        FingeringDigit3Advance = 1.356000,
+        FingeringDigit4 = new(-0.012000, 0.000000, 1.644000, 2.004000),
+        FingeringDigit4Outline = new(-0.012000, 0.000000, 1.644000, 2.004000),
+        FingeringDigit4Advance = 1.624000,
+        FingeringDigit5 = new(0.000000, 0.000000, 1.452000, 2.004000),
+        FingeringDigit5Outline = new(0.000000, 0.000000, 1.452000, 2.004000),
+        FingeringDigit5Advance = 1.372000,
+        FingeringDigit6 = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit6Outline = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit6Advance = 1.380000,
+        FingeringDigit7 = new(0.000000, -0.004000, 1.444000, 2.000000),
+        FingeringDigit7Outline = new(0.000000, -0.004000, 1.444000, 2.000000),
+        FingeringDigit7Advance = 1.296000,
+        FingeringDigit8 = new(0.000000, 0.000000, 1.512000, 2.000000),
+        FingeringDigit8Outline = new(0.000000, 0.000000, 1.512000, 2.000000),
+        FingeringDigit8Advance = 1.488000,
+        FingeringDigit9 = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit9Outline = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit9Advance = 1.380000,
         FigBassFlat = new(0.104000, -0.184000, 0.996000, 2.216000),
         FigBassFlatOutline = new(0.104000, -0.184000, 0.996000, 2.216000),
         FigBassFlatAdvance = 1.100000,
@@ -3372,6 +3692,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = new(0.120000, 0.000000, 1.492000, 2.000000),
         FigBassDigit9Outline = new(0.120000, 0.000000, 1.492000, 2.000000),
         FigBassDigit9Advance = 1.612000,
+        FingeringDigit0 = new(0.000000, 0.000000, 1.480000, 2.000000),
+        FingeringDigit0Outline = new(0.000000, 0.000000, 1.480000, 2.000000),
+        FingeringDigit0Advance = 1.476000,
+        FingeringDigit1 = new(-0.012000, 0.000000, 1.332000, 2.020000),
+        FingeringDigit1Outline = new(-0.012000, 0.000000, 1.332000, 2.020000),
+        FingeringDigit1Advance = 1.332000,
+        FingeringDigit2 = new(0.000000, 0.000000, 1.480000, 2.000000),
+        FingeringDigit2Outline = new(0.000000, 0.000000, 1.480000, 2.000000),
+        FingeringDigit2Advance = 1.476000,
+        FingeringDigit3 = new(0.000000, 0.000000, 1.344000, 2.000000),
+        FingeringDigit3Outline = new(0.000000, 0.000000, 1.344000, 2.000000),
+        FingeringDigit3Advance = 1.344000,
+        FingeringDigit4 = new(-0.012000, 0.000000, 1.628000, 2.004000),
+        FingeringDigit4Outline = new(-0.012000, 0.000000, 1.628000, 2.004000),
+        FingeringDigit4Advance = 1.612000,
+        FingeringDigit5 = new(0.000000, 0.000000, 1.436000, 2.000000),
+        FingeringDigit5Outline = new(0.000000, 0.000000, 1.436000, 2.000000),
+        FingeringDigit5Advance = 1.360000,
+        FingeringDigit6 = new(0.000000, 0.000000, 1.372000, 2.000000),
+        FingeringDigit6Outline = new(0.000000, 0.000000, 1.372000, 2.000000),
+        FingeringDigit6Advance = 1.372000,
+        FingeringDigit7 = new(0.000000, -0.004000, 1.436000, 2.000000),
+        FingeringDigit7Outline = new(0.000000, -0.004000, 1.436000, 2.000000),
+        FingeringDigit7Advance = 1.292000,
+        FingeringDigit8 = new(0.000000, 0.000000, 1.500000, 2.000000),
+        FingeringDigit8Outline = new(0.000000, 0.000000, 1.500000, 2.000000),
+        FingeringDigit8Advance = 1.476000,
+        FingeringDigit9 = new(0.000000, 0.000000, 1.372000, 2.000000),
+        FingeringDigit9Outline = new(0.000000, 0.000000, 1.372000, 2.000000),
+        FingeringDigit9Advance = 1.372000,
         FigBassFlat = new(0.108000, -0.180000, 0.992000, 2.208000),
         FigBassFlatOutline = new(0.108000, -0.180000, 0.992000, 2.208000),
         FigBassFlatAdvance = 1.100000,
@@ -3656,6 +4006,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = FigBassDigit9,
         FigBassDigit9Outline = FigBassDigit9Outline,
         FigBassDigit9Advance = FigBassDigit9Advance,
+        FingeringDigit0 = FingeringDigit0,
+        FingeringDigit0Outline = FingeringDigit0Outline,
+        FingeringDigit0Advance = FingeringDigit0Advance,
+        FingeringDigit1 = FingeringDigit1,
+        FingeringDigit1Outline = FingeringDigit1Outline,
+        FingeringDigit1Advance = FingeringDigit1Advance,
+        FingeringDigit2 = FingeringDigit2,
+        FingeringDigit2Outline = FingeringDigit2Outline,
+        FingeringDigit2Advance = FingeringDigit2Advance,
+        FingeringDigit3 = FingeringDigit3,
+        FingeringDigit3Outline = FingeringDigit3Outline,
+        FingeringDigit3Advance = FingeringDigit3Advance,
+        FingeringDigit4 = FingeringDigit4,
+        FingeringDigit4Outline = FingeringDigit4Outline,
+        FingeringDigit4Advance = FingeringDigit4Advance,
+        FingeringDigit5 = FingeringDigit5,
+        FingeringDigit5Outline = FingeringDigit5Outline,
+        FingeringDigit5Advance = FingeringDigit5Advance,
+        FingeringDigit6 = FingeringDigit6,
+        FingeringDigit6Outline = FingeringDigit6Outline,
+        FingeringDigit6Advance = FingeringDigit6Advance,
+        FingeringDigit7 = FingeringDigit7,
+        FingeringDigit7Outline = FingeringDigit7Outline,
+        FingeringDigit7Advance = FingeringDigit7Advance,
+        FingeringDigit8 = FingeringDigit8,
+        FingeringDigit8Outline = FingeringDigit8Outline,
+        FingeringDigit8Advance = FingeringDigit8Advance,
+        FingeringDigit9 = FingeringDigit9,
+        FingeringDigit9Outline = FingeringDigit9Outline,
+        FingeringDigit9Advance = FingeringDigit9Advance,
         FigBassFlat = FigBassFlat,
         FigBassFlatOutline = FigBassFlatOutline,
         FigBassFlatAdvance = FigBassFlatAdvance,
@@ -3938,6 +4318,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = new(0.120000, 0.000000, 1.464000, 2.000000),
         FigBassDigit9Outline = new(0.120000, 0.000000, 1.464000, 2.000000),
         FigBassDigit9Advance = 1.580000,
+        FingeringDigit0 = new(0.000000, 0.000000, 1.452000, 2.000000),
+        FingeringDigit0Outline = new(0.000000, 0.000000, 1.452000, 2.000000),
+        FingeringDigit0Advance = 1.448000,
+        FingeringDigit1 = new(-0.008000, 0.000000, 1.256000, 2.016000),
+        FingeringDigit1Outline = new(-0.008000, 0.000000, 1.256000, 2.016000),
+        FingeringDigit1Advance = 1.252000,
+        FingeringDigit2 = new(0.000000, 0.000000, 1.452000, 2.000000),
+        FingeringDigit2Outline = new(0.000000, 0.000000, 1.452000, 2.000000),
+        FingeringDigit2Advance = 1.448000,
+        FingeringDigit3 = new(0.000000, 0.000000, 1.320000, 2.000000),
+        FingeringDigit3Outline = new(0.000000, 0.000000, 1.320000, 2.000000),
+        FingeringDigit3Advance = 1.316000,
+        FingeringDigit4 = new(-0.012000, 0.000000, 1.596000, 2.004000),
+        FingeringDigit4Outline = new(-0.012000, 0.000000, 1.596000, 2.004000),
+        FingeringDigit4Advance = 1.580000,
+        FingeringDigit5 = new(0.000000, 0.000000, 1.404000, 2.000000),
+        FingeringDigit5Outline = new(0.000000, 0.000000, 1.404000, 2.000000),
+        FingeringDigit5Advance = 1.336000,
+        FingeringDigit6 = new(0.000000, 0.000000, 1.348000, 2.000000),
+        FingeringDigit6Outline = new(0.000000, 0.000000, 1.348000, 2.000000),
+        FingeringDigit6Advance = 1.344000,
+        FingeringDigit7 = new(0.000000, -0.004000, 1.412000, 2.000000),
+        FingeringDigit7Outline = new(0.000000, -0.004000, 1.412000, 2.000000),
+        FingeringDigit7Advance = 1.280000,
+        FingeringDigit8 = new(0.000000, 0.000000, 1.472000, 2.000000),
+        FingeringDigit8Outline = new(0.000000, 0.000000, 1.472000, 2.000000),
+        FingeringDigit8Advance = 1.448000,
+        FingeringDigit9 = new(0.000000, 0.000000, 1.348000, 2.000000),
+        FingeringDigit9Outline = new(0.000000, 0.000000, 1.348000, 2.000000),
+        FingeringDigit9Advance = 1.344000,
         FigBassFlat = new(0.112000, -0.172000, 0.988000, 2.200000),
         FigBassFlatOutline = new(0.112000, -0.172000, 0.988000, 2.200000),
         FigBassFlatAdvance = 1.096000,
@@ -4220,6 +4630,36 @@ internal static partial class GlyphMetrics
         FigBassDigit9 = new(0.116000, 0.000000, 1.448000, 2.000000),
         FigBassDigit9Outline = new(0.116000, 0.000000, 1.448000, 2.000000),
         FigBassDigit9Advance = 1.564000,
+        FingeringDigit0 = new(0.000000, 0.000000, 1.436000, 2.000000),
+        FingeringDigit0Outline = new(0.000000, 0.000000, 1.436000, 2.000000),
+        FingeringDigit0Advance = 1.432000,
+        FingeringDigit1 = new(-0.008000, 0.000000, 1.208000, 2.016000),
+        FingeringDigit1Outline = new(-0.008000, 0.000000, 1.208000, 2.016000),
+        FingeringDigit1Advance = 1.208000,
+        FingeringDigit2 = new(0.000000, 0.000000, 1.436000, 2.000000),
+        FingeringDigit2Outline = new(0.000000, 0.000000, 1.436000, 2.000000),
+        FingeringDigit2Advance = 1.432000,
+        FingeringDigit3 = new(0.000000, 0.000000, 1.304000, 2.000000),
+        FingeringDigit3Outline = new(0.000000, 0.000000, 1.304000, 2.000000),
+        FingeringDigit3Advance = 1.304000,
+        FingeringDigit4 = new(-0.008000, 0.000000, 1.576000, 2.004000),
+        FingeringDigit4Outline = new(-0.008000, 0.000000, 1.576000, 2.004000),
+        FingeringDigit4Advance = 1.564000,
+        FingeringDigit5 = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit5Outline = new(0.000000, 0.000000, 1.384000, 2.000000),
+        FingeringDigit5Advance = 1.320000,
+        FingeringDigit6 = new(0.000000, 0.000000, 1.332000, 2.000000),
+        FingeringDigit6Outline = new(0.000000, 0.000000, 1.332000, 2.000000),
+        FingeringDigit6Advance = 1.328000,
+        FingeringDigit7 = new(0.000000, -0.004000, 1.396000, 2.000000),
+        FingeringDigit7Outline = new(0.000000, -0.004000, 1.396000, 2.000000),
+        FingeringDigit7Advance = 1.272000,
+        FingeringDigit8 = new(0.000000, 0.000000, 1.456000, 2.000000),
+        FingeringDigit8Outline = new(0.000000, 0.000000, 1.456000, 2.000000),
+        FingeringDigit8Advance = 1.432000,
+        FingeringDigit9 = new(0.000000, 0.000000, 1.332000, 2.000000),
+        FingeringDigit9Outline = new(0.000000, 0.000000, 1.332000, 2.000000),
+        FingeringDigit9Advance = 1.328000,
         FigBassFlat = new(0.116000, -0.168000, 0.984000, 2.196000),
         FigBassFlatOutline = new(0.116000, -0.168000, 0.984000, 2.196000),
         FigBassFlatAdvance = 1.100000,

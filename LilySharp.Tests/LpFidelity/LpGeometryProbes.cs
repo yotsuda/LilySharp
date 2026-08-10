@@ -3016,6 +3016,65 @@ internal static class LpGeometryProbes
     private static readonly string FSC =
         FingeringSlurScore("FSC", "g'8 g'8@finger(1) g'8 r8 r2 |");
 
+    /// <summary>
+    /// How WIDE a fingering digit is — one note, one digit, and the reading is its box's LEFT
+    /// edge about its own head's anchor, which comes to <c>0.6521 − width/2</c>.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's box for a TEXT stencil is X = the LOGICAL rect (lily/pango-font.cc:358-360
+    /// Pango_font::pango_item_string_stencil),
+    /// so what these books read is an ADVANCE and not an ink edge — every LilyPond xext in the
+    /// probe starts at 0.0, which is that fact printed five times.
+    /// <para>
+    /// ⚠️ THE DIGITS ARE NOT THE FIGURED BASS'S. Fingering declares font-features
+    /// <c>("cv47" "ss01")</c> against BassFigure's <c>("tnum" "cv47" "ss01")</c>
+    /// (scm/define-grobs.scm:1548, :354): no <c>tnum</c> means no TABULAR figures, so a
+    /// fingering is set in the proportional <c>fattened.*</c> cut where every digit has its
+    /// own width, and Lily# fed it the fixed-width one where they are all as wide as the
+    /// widest. <c>ly:stencil-expr</c> named the glyph on the page and settled it.
+    /// </para>
+    /// <para>
+    /// FIVE books, one per DISTINCT pixel width — the widths repeat across the ten digits
+    /// (0/2/8 and 3/5/6/9 each share one), so ten books would carry no more. FD4 is in
+    /// because it is the only digit LilyPond draws WIDER than Lily# did: its residual has the
+    /// other sign, and it is what a constant fitted to the other four would move backwards.
+    /// FD4 and FD7 are also the two <c>.alt</c> glyphs <c>cv47</c> selects.
+    /// </para>
+    /// </remarks>
+    private static string FingeringDigitScore(string name, int digit) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { g'4@finger({{digit}}) r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The NARROWEST digit — fattened.seven.alt, 21 Pango pixels.</summary>
+    private static readonly string FD7 = FingeringDigitScore("FD7", 7);
+
+    /// <summary>The width 3, 5, 6 and 9 share — fattened.three, 23 pixels.</summary>
+    private static readonly string FD3 = FingeringDigitScore("FD3", 3);
+
+    /// <summary>The digit the four fingering-slur books use — fattened.one, 24 pixels.</summary>
+    private static readonly string FD1 = FingeringDigitScore("FD1", 1);
+
+    /// <summary>The width 0, 2 and 8 share — fattened.zero, 25 pixels.</summary>
+    private static readonly string FD0 = FingeringDigitScore("FD0", 0);
+
+    /// <summary>The WIDEST — fattened.four.alt, 27 pixels, and the one whose residual has the
+    /// other sign.</summary>
+    private static readonly string FD4 = FingeringDigitScore("FD4", 4);
+
     /// <summary>BEAMED: a second eighth on the same beat, so the two beam and the gate holds.
     /// ⚠️ CFM, not CFB — barline-spacing.ly owns that tag.</summary>
     private static readonly string CFM = ChordFingeringStemScore("CFM", "<c e g>8");
@@ -8991,6 +9050,22 @@ internal static class LpGeometryProbes
             g => g.FingeringInkEdgeAboveStaff('1'), RaggedBottomPaper),
         new("fingering.slur.interior-control.staff-to-ink-bottom", FSC,
             g => g.FingeringInkEdgeAboveStaff('1'), RaggedBottomPaper),
+
+        // --- session 134 round 1: how WIDE a digit is (books FD7/FD3/FD1/FD0/FD4) ---
+        // One claim, five instances, and the instances are the argument: the five books read
+        // five DIFFERENT numbers out of one rule, so no constant passes them. Read them in
+        // width order — the residual walks monotonically from -0.09 to +0.01 and CHANGES SIGN,
+        // which is what says the defect was a wrong table and not a wrong offset.
+        new("fingering.digit-7.head-anchor-to-box-left", FD7,
+            g => g.NoteheadAnchorToFingeringBoxLeft('7'), RaggedBottomPaper),
+        new("fingering.digit-3.head-anchor-to-box-left", FD3,
+            g => g.NoteheadAnchorToFingeringBoxLeft('3'), RaggedBottomPaper),
+        new("fingering.digit-1.head-anchor-to-box-left", FD1,
+            g => g.NoteheadAnchorToFingeringBoxLeft('1'), RaggedBottomPaper),
+        new("fingering.digit-0.head-anchor-to-box-left", FD0,
+            g => g.NoteheadAnchorToFingeringBoxLeft('0'), RaggedBottomPaper),
+        new("fingering.digit-4.head-anchor-to-box-left", FD4,
+            g => g.NoteheadAnchorToFingeringBoxLeft('4'), RaggedBottomPaper),
 
         // --- round 2: what a fingering DISPLACES (books DYF/DYN/DYU) ---
         // The reservation half of the same claim. Read as a SET: DYN is the base, DYF is

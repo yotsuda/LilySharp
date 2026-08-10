@@ -2,6 +2,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="243.5" viewBox="0 0 119.50 24.35" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  @font-face { font-family: 'Emmentaler-11'; src: local('Emmentaler-11'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
   <rect x="0" y="0" width="119.50" height="24.35" fill="#FFFFFF"/>
@@ -28,9 +29,9 @@
   <text class="music" x="12.49" y="10.29" font-size="4.00" data-pos="640"></text>
   <text class="music" x="12.49" y="10.01" font-size="4.00" data-pos="647"></text>
   <text class="music" x="15.24" y="12.62" font-size="4.00" data-pos="669"></text>
-  <text class="music" x="8.79" y="10.27" font-size="2.24" data-pos="612"></text>
-  <text class="music" x="12.04" y="8.41" font-size="2.24" data-pos="636"></text>
-  <text class="music" x="14.79" y="11.92" font-size="2.24" data-pos="666"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="8.83" y="10.27" font-size="2.24" data-pos="612"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="12.10" y="8.41" font-size="2.24" data-pos="636"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="14.81" y="11.92" font-size="2.24" data-pos="666"></text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="697"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="697">Main</text>
   </g>

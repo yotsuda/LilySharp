@@ -118,11 +118,10 @@ internal static class FingeringEngraver
 
     /// <summary>
     /// The digits of a fingering as feta-text glyph metrics AT THE FINGERING'S OWN SIZE
-    /// (font-size −5 of the 4-ss staff-height base — the same em the figured bass shares,
-    /// <see cref="EngravingDefaults.FiguredBassFontSize"/>, both being fetaText at −5):
-    /// the mapped glyph run, its ink box relative to the run's LEFT BASELINE origin, and
-    /// its advance width. One home for the pen (SharedRenderer.DrawFingerings), the
-    /// script-column profile (ArticulationEngraver) and the placement below.
+    /// (<see cref="FingeringGlyphRun"/>): the mapped glyph run, its box relative to the run's
+    /// LEFT BASELINE origin, and its advance width. One home for the pen
+    /// (SharedRenderer.DrawFingerings), the script-column profile (ArticulationEngraver), the
+    /// reservation (SkylineBuilder) and the placement below.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:1547-1568 Fingering (outside-staff-interface
@@ -134,17 +133,11 @@ internal static class FingeringEngraver
     /// fingering sat a half-space too low. Measured on script-stack-order1: a bow over a
     /// fingering is at −5.33 (LP) = digit top 1.13 + padding 0.20.
     /// <para>
-    /// ⚠️ THE BOX'S X IS THE ADVANCE, NOT THE INK — <c>Left</c> is 0 and <c>Right</c> is the
-    /// advance <c>width</c>, while LilyPond's Fingering X-extent is the glyph's own stencil.
-    /// MEASURED (probes/fingering-slur.ly, book FSB): LP reads <c>xext = (0.0 . 0.819439)</c>
-    /// for a "1" at font-size −5 where this answers about 0.90, so the box runs ~0.043 too far
-    /// right. It is invisible to every consumer that only asks how TALL a digit is, and
-    /// visible to the one that asks where its EDGE is: ledger
-    /// <c>fingering.slur.bound-note.staff-to-ink-bottom</c> keeps +0.005981557 of which
-    /// +0.016984728 is this (the rest is the curve sampler, the other way).
-    /// ⚠️ Correcting it is output-moving for all THREE consumers named above — the pen, the
-    /// script-column profile and the placement — so it needs its own point first, exactly as
-    /// the Y side of this box did.
+    /// ⚠️ AND IT WAS THE FIGURED BASS'S DIGITS until 2026-08-11 — the TABULAR cut, out of the
+    /// 20 design, unhinted. LilyPond's box is <c>(0 . advance)</c> in X and the ink in Y
+    /// (lily/pango-font.cc:358-360 Pango_font::pango_item_string_stencil), so the SHAPE here was always right and the ADVANCE was
+    /// wrong three ways; <see cref="FingeringGlyphRun"/> carries the account and the citations.
+    /// The ledger reads it as <c>fingering.digit-*</c>, five points at five distinct widths.
     /// </para>
     /// </remarks>
     internal static (string Glyphs, GlyphMetrics.BBox Ink, double Width) DigitRun(int number)
@@ -166,13 +159,13 @@ internal static class FingeringEngraver
     {
         string text = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var glyphs = new System.Text.StringBuilder(text.Length);
-        foreach (var piece in FiguredBassGlyphRun.Pieces(text))
+        foreach (var piece in FingeringGlyphRun.Pieces(text))
             if (piece.IsGlyph)
                 glyphs.Append(piece.Ch);
-        double width = FiguredBassGlyphRun.Width(text);
+        double width = FingeringGlyphRun.Width(text);
         return (glyphs.ToString(),
-            new GlyphMetrics.BBox(0.0, FiguredBassGlyphRun.InkBottom(text),
-                width, FiguredBassGlyphRun.InkTop(text)),
+            new GlyphMetrics.BBox(0.0, FingeringGlyphRun.InkBottom(text),
+                width, FingeringGlyphRun.InkTop(text)),
             width);
     }
 

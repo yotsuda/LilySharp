@@ -3082,11 +3082,17 @@ internal sealed class RenderedGeometry
     /// Lily# draws a fingering as its fetaText digit run at the run's LOGICAL centre
     /// (origin + advance/2 — the same frame LilyPond's text extent answers in), so the
     /// centre this reads is the drawn origin plus half the run's advance.
+    /// <para>
+    /// ⚠️ HALF A WRONG WIDTH CANCELS HERE, which is why this point stayed exact through a run
+    /// that was the wrong cut, the wrong optical design and unhinted all at once. The EDGE is
+    /// where that shows: <see cref="NoteheadAnchorToFingeringBoxLeft"/> is its pair, and the
+    /// two together are the reason a centre reading is not enough.
+    /// </para>
     /// </remarks>
     public double NoteheadAnchorToFingeringCentre(int page = 0)
     {
         var digits = _pages[page].Glyphs
-            .Where(g => FigBassDigitChar(g.Glyph) is not null)
+            .Where(g => FingeringDigitChar(g.Glyph) is not null)
             .OrderBy(g => g.X)
             .ToList();
         if (digits.Count != 1)
@@ -3096,8 +3102,39 @@ internal sealed class RenderedGeometry
                 + $"{digits.Count} — the probe is not measuring what it claims.\n"
                 + "Drawn geometry:\n" + Describe());
         }
-        string text = FigBassDigitChar(digits[0].Glyph)!.Value.ToString();
-        return digits[0].X + FiguredBassGlyphRun.Width(text) / 2.0 - NoteheadAnchor(0);
+        string text = FingeringDigitChar(digits[0].Glyph)!.Value.ToString();
+        return digits[0].X + FingeringGlyphRun.Width(text) / 2.0 - NoteheadAnchor(0);
+    }
+
+    /// <summary>
+    /// The sole notehead's anchor → the sole FINGERING's box LEFT. The same self-alignment
+    /// as the centre reading, one edge out: it comes to <c>head ink centre − width/2</c>, so
+    /// it observes the run's WIDTH directly and through the consumer that PLACES the digit.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/pango-font.cc:358-360 Pango_font::pango_item_string_stencil — a text
+    ///   stencil's X box is the LOGICAL rect,
+    ///   so LilyPond's own left edge is the pen origin and this difference is exactly the
+    ///   negative half-advance the centring applied. Every book of
+    ///   probes/fingering-digit-width.ly dumps <c>xext = (0.0 . …)</c>, which is that fact.
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:147 aligned_on_parent — the parent's own
+    ///   stencil extent, i.e. the head's INK (1.3042 on a black head, so the centre is 0.6521).
+    /// The digit is named rather than indexed for the same reason the ink-edge reader names
+    /// one: which digit is where is part of what the fingering books are asking.
+    /// </remarks>
+    public double NoteheadAnchorToFingeringBoxLeft(char digit, int page = 0)
+    {
+        var hits = _pages[page].Glyphs
+            .Where(g => FingeringDigitChar(g.Glyph) == digit)
+            .ToList();
+        if (hits.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE fingering digit '{digit}', found "
+                + $"{hits.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return hits[0].X - NoteheadAnchor(0);
     }
 
     /// <summary>
@@ -3111,7 +3148,7 @@ internal sealed class RenderedGeometry
     /// would make the reading assume its own answer. The books therefore spell three
     /// DIFFERENT digits (1/3/5), and each one names itself.
     /// <para>
-    /// The ink box is the digit run's own — the same <c>FiguredBassGlyphRun</c> metrics
+    /// The ink box is the digit run's own — the same <c>FingeringGlyphRun</c> metrics
     /// <c>FingeringEngraver.DigitRun</c> places by and <c>SharedRenderer.DrawFingerings</c>
     /// draws with, so this reads the drawn ink and not a nominal box. LilyPond's side is the
     /// Fingering grob's <c>ext</c>, which is <c>grob::always-Y-extent-from-stencil</c>
@@ -3131,7 +3168,7 @@ internal sealed class RenderedGeometry
                 + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
         var hits = _pages[page].Glyphs
-            .Where(g => FigBassDigitChar(g.Glyph) == digit)
+            .Where(g => FingeringDigitChar(g.Glyph) == digit)
             .ToList();
         if (hits.Count != 1)
         {
@@ -3142,8 +3179,8 @@ internal sealed class RenderedGeometry
         }
         string text = digit.ToString();
         double edge = above
-            ? FiguredBassGlyphRun.InkBottom(text)
-            : FiguredBassGlyphRun.InkTop(text);
+            ? FingeringGlyphRun.InkBottom(text)
+            : FingeringGlyphRun.InkTop(text);
         // Device-down: an edge `e` staff-spaces up from the drawn origin sits at Y - e.
         return refs[0] - (hits[0].Y - edge);
     }
@@ -3192,14 +3229,26 @@ internal sealed class RenderedGeometry
         return refs[0] - (hits[0].Y - inkTop);
     }
 
-    /// <summary>The plain digit a fetaText bass-figure/fingering glyph spells, or null.</summary>
-    private static char? FigBassDigitChar(char glyph)
+    /// <summary>The plain digit a fetaText FINGERING glyph spells, or null.</summary>
+    /// <remarks>
+    /// ⚠️ NOT THE FIGURED BASS'S TEN GLYPHS, which is what this used to ask
+    /// (<c>GlyphMetrics.TryGetFiguredBassGlyph</c>) and what the port these observers watch
+    /// took away: a Fingering declares font-features without <c>tnum</c>, so it is set in the
+    /// PROPORTIONAL cut where a BassFigure gets the tabular one (<c>FingeringGlyphRun</c>'s
+    /// remark carries the reading that says so). Asked of the run itself rather than listed
+    /// here, so this cannot become a second spelling of the mapping.
+    /// </remarks>
+    private static char? FingeringDigitChar(char glyph)
     {
         for (char c = '0'; c <= '9'; c++)
-            if (GlyphMetrics.TryGetFiguredBassGlyph(c, out char g, out _, out _) && g == glyph)
+        {
+            var pieces = FingeringGlyphRun.Pieces(c.ToString());
+            if (pieces.Length == 1 && pieces[0].IsGlyph && pieces[0].Ch == glyph)
                 return c;
+        }
         return null;
     }
+
 
     /// <summary>The <paramref name="index"/>-th notehead's anchor, 0-based, left to right.</summary>
     public double NoteheadAnchor(int index)

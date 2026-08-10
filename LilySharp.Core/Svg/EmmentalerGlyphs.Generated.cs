@@ -176,6 +176,28 @@ internal static partial class EmmentalerGlyphs
     /// <summary>timesig.C22</summary>
     public const char TimeSigCutCommon = '\uE096';
 
+    // === Fingering digits (fetaText, cv47 + ss01 -- proportional, NOT tabular) ===
+    /// <summary>fattened.zero</summary>
+    public const char FingeringDigit0 = '\uE0B8';
+    /// <summary>fattened.one</summary>
+    public const char FingeringDigit1 = '\uE0B9';
+    /// <summary>fattened.two</summary>
+    public const char FingeringDigit2 = '\uE0BA';
+    /// <summary>fattened.three</summary>
+    public const char FingeringDigit3 = '\uE0BB';
+    /// <summary>fattened.four.alt (cv47 picks the .alt four)</summary>
+    public const char FingeringDigit4 = '\uE0BD';
+    /// <summary>fattened.five</summary>
+    public const char FingeringDigit5 = '\uE0BE';
+    /// <summary>fattened.six</summary>
+    public const char FingeringDigit6 = '\uE0BF';
+    /// <summary>fattened.seven.alt (cv47 picks the .alt seven)</summary>
+    public const char FingeringDigit7 = '\uE0C1';
+    /// <summary>fattened.eight</summary>
+    public const char FingeringDigit8 = '\uE0C2';
+    /// <summary>fattened.nine</summary>
+    public const char FingeringDigit9 = '\uE0C3';
+
     // === Figured bass digits (fetaText, tnum + cv47 + ss01 applied) ===
     /// <summary>fattened.fixedwidth.zero</summary>
     public const char FigBassDigit0 = '\uE0C4';

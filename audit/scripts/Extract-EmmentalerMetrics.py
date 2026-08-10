@@ -245,6 +245,31 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("FigBassDigit7", "fattened.fixedwidth.seven.alt", "Figured-bass digit 7 (cv47 variant)", "mf/feta-numbers.mf — fattened.fixedwidth.seven.alt", source="outline"),
     GlyphSpec("FigBassDigit8", "fattened.fixedwidth.eight", "Figured-bass digit 8",  "mf/feta-numbers.mf — fattened.fixedwidth.eight", source="outline"),
     GlyphSpec("FigBassDigit9", "fattened.fixedwidth.nine",  "Figured-bass digit 9",  "mf/feta-numbers.mf — fattened.fixedwidth.nine", source="outline"),
+    # --- Fingering digits: the SAME family, the OTHER cut ---
+    # A Fingering is fetaText too (scm/define-grobs.scm:1547-1548,
+    # ly:text-interface::print over fingering::calc-text), so it is the TEXT path and
+    # source="outline" for the same reason the figures above are.
+    # ⚠️ WHAT DIFFERS IS ONE FEATURE. Fingering declares font-features ("cv47" "ss01")
+    # where BassFigure declares ("tnum" "cv47" "ss01"): tnum is TABULAR figures, so the
+    # figure gets the .fixedwidth cut (every digit 1.656 wide at the 11 design) and the
+    # fingering gets the PROPORTIONAL one (1.304 through 1.656). Read off the page rather
+    # than deduced -- ly:stencil-expr names the glyph, and it printed fattened.one for a
+    # Fingering against fattened.fixedwidth.one for a BassFigure
+    # (audit/lp-geometry/probes/fingering-digit-width.ly's header records the reading).
+    # cv47 is what makes 4 and 7 the .alt shapes; the two carry the same metrics as their
+    # base glyphs in every design, so only the PEN can tell them apart -- and it is the pen
+    # that named them, so they are what is extracted.
+    GlyphSpec("FingeringDigit0", "fattened.zero",     "Fingering digit 0", "mf/feta-numbers.mf — fattened.zero", source="outline"),
+    GlyphSpec("FingeringDigit1", "fattened.one",      "Fingering digit 1", "mf/feta-numbers.mf — fattened.one", source="outline"),
+    GlyphSpec("FingeringDigit2", "fattened.two",      "Fingering digit 2", "mf/feta-numbers.mf — fattened.two", source="outline"),
+    GlyphSpec("FingeringDigit3", "fattened.three",    "Fingering digit 3", "mf/feta-numbers.mf — fattened.three", source="outline"),
+    GlyphSpec("FingeringDigit4", "fattened.four.alt", "Fingering digit 4 (cv47 variant)", "mf/feta-numbers.mf — fattened.four.alt", source="outline"),
+    GlyphSpec("FingeringDigit5", "fattened.five",     "Fingering digit 5", "mf/feta-numbers.mf — fattened.five", source="outline"),
+    GlyphSpec("FingeringDigit6", "fattened.six",      "Fingering digit 6", "mf/feta-numbers.mf — fattened.six", source="outline"),
+    GlyphSpec("FingeringDigit7", "fattened.seven.alt", "Fingering digit 7 (cv47 variant)", "mf/feta-numbers.mf — fattened.seven.alt", source="outline"),
+    GlyphSpec("FingeringDigit8", "fattened.eight",    "Fingering digit 8", "mf/feta-numbers.mf — fattened.eight", source="outline"),
+    GlyphSpec("FingeringDigit9", "fattened.nine",     "Fingering digit 9", "mf/feta-numbers.mf — fattened.nine", source="outline"),
+
     GlyphSpec("FigBassFlat",    "accidentals.flat.figbass",    "Figured-bass flat (U+266D)",    "mf/feta-flats.mf — flat.figbass", source="outline"),
     GlyphSpec("FigBassNatural", "accidentals.natural.figbass", "Figured-bass natural (U+266E)", "mf/feta-naturals.mf — natural.figbass", source="outline"),
     GlyphSpec("FigBassSharp",   "accidentals.sharp.figbass",   "Figured-bass sharp (U+266F)",   "mf/feta-sharps.mf — sharp.figbass", source="outline"),

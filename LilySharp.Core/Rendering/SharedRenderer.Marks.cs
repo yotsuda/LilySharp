@@ -269,9 +269,9 @@ internal static partial class SharedRenderer
 
     /// <summary>
     /// Draws fingering numerals next to noteheads — the fetaText digit run at
-    /// font-size −5, the same glyphs and em the figured bass draws with, centred on
-    /// the layout's X the way the profile the script column stacked was measured
-    /// (<c>FingeringEngraver.DigitRun</c> — one metric home for pen and reservation).
+    /// font-size −5, centred on the layout's X the way the profile the script column
+    /// stacked was measured (<c>FingeringEngraver.DigitRun</c> — one metric home for pen
+    /// and reservation).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:1547-1568 Fingering (self-alignment-interface
@@ -281,12 +281,20 @@ internal static partial class SharedRenderer
     /// ink (feta numerals are 2.0 design-ss tall), so a bow stacked over a fingering
     /// sat half a space low. Like the figured bass, the run does not scale on an
     /// ossia staff (the two halves — pen here, metric in DigitRun — stay together).
+    /// ⚠️ AND IT DREW THE FIGURED BASS'S DIGITS until 2026-08-11 — the tabular cut, out of
+    /// the default design. A Fingering declares font-features WITHOUT <c>tnum</c>, so the
+    /// glyphs are the proportional ones, and its 11.2246 pt lands on <c>emmentaler-11</c>:
+    /// hence the face scope below. <see cref="FingeringGlyphRun"/> holds both halves of that
+    /// claim, and <c>DigitRun</c> has already applied the metric half.
     /// </remarks>
     private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FingeringLayouts.IsDefaultOrEmpty) return;
-        double size = FiguredBassGlyphRun.Em;
+        double size = FingeringGlyphRun.Em;
+        // The design the metrics came out of, opened once for the whole pass: every
+        // fingering in a score is at the same font-size, so this scope never nests.
+        using var face = gc.MusicFace(FingeringGlyphRun.Design);
         foreach (var f in layout.FingeringLayouts)
         {
             if (!sysTopYUp.ContainsKey(f.MeasureIndex)) continue; // other page
@@ -304,7 +312,7 @@ internal static partial class SharedRenderer
                 if (glyphs.Length == 1)
                     gc.DrawGlyph(glyphs[0], x0, y, size, Color.Black);
                 else
-                    foreach (var piece in FiguredBassGlyphRun.Pieces(f.Number.ToString()))
+                    foreach (var piece in FingeringGlyphRun.Pieces(f.Number.ToString()))
                     {
                         if (piece.IsGlyph)
                             gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
