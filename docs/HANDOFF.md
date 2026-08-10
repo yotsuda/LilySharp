@@ -876,6 +876,36 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### G. 保守性の負債・未 commit のプローブ
 
+> ## ★★ XML doc の警告 476 件が **Release だけで出て、誰も見ていない**（2026-08-11・第135セッションで起票・**未着手**）
+>
+> **§0 の開始時ビルドは Debug で、Debug は 0 件**。`LilySharp.Core.csproj:20-21` が
+> **`GenerateDocumentationFile` を Release の `PropertyGroup` にだけ置いている**ので、
+> **doc コメントが検査されるのは Release ビルドのときだけ**——`lysc` を Release で建てた人しか見ない。
+> **数え方**（`-v n` でないと警告行が出ない）:
+> ```powershell
+> $rel = dotnet build LilySharp.Core\LilySharp.Core.csproj -c Release --no-incremental -v n 2>&1 |
+>        Select-String 'warning CS'
+> "$($rel.Count) 本"   # 2026-08-11 実測 = 476（Debug は 0）
+> ```
+> **内訳**: **CS1573 312**（`<param>` が一部だけ書かれている）／**CS0419 48**（cref が曖昧）／
+> **CS1574 36**（cref が解決できない）／**CS1570 24**（XML が壊れていてタグが閉じていない）／
+> **CS1734 16**（`paramref` の相手が居ない）／**CS1591 14**（public に doc が無い）／
+> **CS1587 10**（doc が置ける場所に無い）／**CS1571 8**（`<param>` の重複）／**CS1572 8**（`<param>` の相手が居ない）。
+> 密度の上位は `SpacingRules.cs` 34 ／ `ElementCoordinator.cs` 28 ／
+> `DynamicEngraver.cs`・`OutsideStaffStacker.cs`・`LayoutEngine.cs` 各 24。
+>
+> ★★★ **これは体裁の問題ではない。少なくとも 84 件（CS1574＋CS0419）は「`<see cref>` の相手がもう居ない」**
+> ——**§5.1 のリネーム規律が名指しで警戒している「grep 不可視の消費者の取りこぼし」そのもの**を、
+> **コンパイラが既に検出して報告している**のに、**その報告が出る構成を誰も建てていない**。
+> **CS1570 の 24 件は `<remarks>`/`<para>` の入れ子が壊れている**＝**その doc は整形されずに落ちる**。
+> ⇒ **この棚の価値は「警告を 0 にすること」ではなく、まず 84 件の壊れた cref を読むこと**
+> （**リネームで失われた参照の一覧＝どの島が黙って字面を失ったかの地図**）。
+> ⚠️ **一括で直さない**（§5.2「一覧は欠陥の一覧ではなく*候補*の一覧」）。**CS1573/CS1591 の 326 件は
+> 純粋に doc の不足**で、**急がない**。
+> ⚠️ ★ **直す前に決めること**: **`GenerateDocumentationFile` を Debug にも入れるか**。
+> 入れれば §0 の開始時ビルドが毎回この 476 件を吐くので、**先に減らしてからでないと
+> 「Core 0 warning」という引継ぎの決まり文句が意味を失う**。**順序は「読む → 減らす → 構成を揃える」。**
+>
 > ## ★★ `LILYSHARP-OWN` の棚卸し（2026-08-01 に開いた・**まだ終わっていない**）
 >
 > §5.2／§7.6 の訂正（**LP から導出したものは字面でなくても `LILYPOND-REF`。
