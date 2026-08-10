@@ -68,6 +68,26 @@ public class PreviewUpdateBench
         // and stops. The difference between the two is the whole of what the port costs.
         yield return ["perf-slurinside1k.lys"];
         yield return ["perf-slurscript1k.lys"];
+        // ...and the pair that prices session 133's add-stem-support port, which made the
+        // fingering island ask a beam map and a column reach per note. fingbeam1k is a
+        // three-fingered chord BEAMED four times a bar over 1000 bars — the gate open on
+        // every digit. fingstack1k above is its control: the same fingering load on QUARTERS,
+        // where nothing beams, the beam list is empty and the island pays nothing at all.
+        yield return ["perf-fingbeam1k.lys"];
+        // ...and the pair that prices session 133's avoid-slur #'around port. fingslur300 runs
+        // the new work: every digit asks which slur covers it and then walks 64 samples of
+        // that bow, 1200 times. fingbeam1k above is the control for the OTHER half of the same
+        // commit — fingerings with NO scripts, the book whose early-out was removed, so it
+        // pays the script walk's prologue and none of the slur work.
+        // ⚠️ 300 BARS, NOT 1000, AND THAT IS A MEASUREMENT: the 1000-bar version of this book
+        // takes MINUTES per render — 2000 scored bows — and a fixture nobody will run twice
+        // prices nothing. perf-slur300 is sized the same way for the same reason.
+        yield return ["perf-fingslur300.lys"];
+        // ...and the SAME 300 bars of slurs with no fingerings at all. It is here because
+        // fingslur300 turned out to cost SECONDS per keystroke on both sides of the port, and
+        // a number that big has to be attributed before anyone reads it as the port's: this
+        // book is what says whether the cost is the bows or the digits.
+        yield return ["perf-slur300.lys"];
     }
 
     [Theory]

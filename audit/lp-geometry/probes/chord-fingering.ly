@@ -148,6 +148,62 @@
 %%   NOTHING (DYU is DYN to fifteen digits). The decomposition: the digit's own ink bottom is
 %%   at -5.180999 and the dynamic's ink top lands at -5.641022 — a clearance of 0.460023,
 %%   which is outside-staff-padding 0.46 (the pass's number, not side-position's 0.5).
+%%
+%% ─────────────────────────────────────────────────────────────────────────────────
+%% ROUND 3 (2026-08-10, session 133) — THE STEM AS A SUPPORT, AND THE GATE ON IT.
+%% What the corpus book still owes after round 1 shipped: on chord-repetition the up digits
+%% sit 0.190000 lower in Lily# than in LilyPond, and the two books above cannot say why
+%% because they were built with NO STEM on purpose. HANDOFF §1 named the remainder as
+%% add-stem-support #only-if-beamed and had already isolated it in scratch (cr-probe.ly, books
+%% CR/CRN/CRB: the corpus chord reads 2.740000, the same chord with beam+slur+dynamic removed
+%% reads 2.550000, and putting back ONLY the beam reads 2.740000 again — so neither the slur
+%% nor the dynamic moves this digit by a hair).
+%%
+%% THE MECHANISM, read from the source before measuring:
+%%   * lily/new-fingering-engraver.cc:180-190 position_scripts — the STEM, and its flag, are
+%%     added as side-position supports of every chord fingering UNCONDITIONALLY. There is no
+%%     beam test here, and the beam is never itself a support.
+%%   * scm/define-grobs.scm:1543 Fingering (add-stem-support . ,only-if-beamed);
+%%     scm/output-lib.scm:463 only-if-beamed — true iff SOME side-support element has a
+%%     `beam` object, i.e. iff the stem is beamed.
+%%   * lily/side-position-interface.cc:302-305 — that property does NOT decide whether the
+%%     stem supports. It decides HOW MUCH of it does: when it holds, the stem's skyline is
+%%     FLATTENED to its own maximum (set_minimum_height (max_height ())), so the digit clears
+%%     the stem's full reach at EVERY x rather than only where the thin line stands.
+%%   ⇒ THE CLAIM IS ABOUT A SKYLINE'S SHAPE, NOT ABOUT A NEW SUPPORT. A port that simply
+%%     "adds the beam" would spell the same number here and be a different rule.
+%%
+%% THE BOOKS (the corpus chord <c-1 e-3 g-5>, one voice; the quantity is a digit's INK edge
+%% about the staff refpoint, up-positive, the same reading rounds 1 and 2 use):
+%%   CFM — BEAMED: a second eighth on the same beat, so the two beam and the gate holds.
+%%   CFF — FLAGGED: the CONTROL. The same chord, the same duration, the same stem, a rest
+%%         after it — so nothing beams and the gate does not hold. ⚠️ Not a QUARTER: cr-probe's
+%%         CRN changed the duration as well as the beaming, so it could not tell a stem-length
+%%         effect from the gate. Same duration, same stem, same flag-or-not is the difference.
+%%
+%% PREDICTIONS, WRITTEN BEFORE RUNNING (HANDOFF §5.0-2, forks named).
+%%   * CFM up inner ("3") ink bottom = 2.740000. ⚠️ DISCLOSED: this number is NOT a prediction
+%%     that stood a test — it was measured in scratch first, as the diagnosis (cr-probe.ly
+%%     CRB). What it buys here is the DECOMPOSITION: 2.740000 = the beamed stem's ink top
+%%     2.240000 (= the Beam's own Y-extent top, dumped below) + Fingering's padding 0.500000.
+%%     FORK: 2.500000 would mean the flattened stem stops at the beam's CENTRE, not its ink.
+%%   * CFF up inner ("3") ink bottom = 2.550000 — THE STAFF CLAMP, the same answer CFL's up
+%%     side gives, because with the gate open the stem is a thin line at the chord's right
+%%     edge and the digit is centred on the heads, so nothing of it stands under the digit.
+%%     ★ THIS ONE IS A REAL PREDICTION — no scratch book measured a flagged chord.
+%%     ★ FALSIFIER, and it is the whole point of the pair: 2.740000 (or anything above 2.55)
+%%     means the stem lifts the digit whether or not it is beamed — then the rule is "stem
+%%     support" and only-if-beamed is not what Lily# is missing. A value BETWEEN 2.55 and 2.74
+%%     means the FLAG's ink is what decides, which is a third mechanism and would need its
+%%     own point.
+%%   * CFM stack step (up outer "5" ink bottom - up inner "3" ink bottom) = the SAME step CFL
+%%     and CFH both read, h + 0.500000. ⇒ the beam raises the FLOOR of the stack and nothing
+%%     else. FORK: a different step means the beam is in the chain between the two digits,
+%%     which no reading of the source above allows.
+%%   * Both books: exactly THREE Fingering rows on the first chord. CFM prints a Beam row and
+%%     CFF does not — read that off the dump rather than trusting the duration spelling.
+%%
+%% MEASURED: see the ledger entries fingering.chord.beamed.* / fingering.chord.flagged.* .
 
 #(define (probe-dump-pages layout pages)
    (let loop ((ps pages) (n 1))
@@ -171,7 +227,12 @@
                                (for-each
                                 (lambda (g)
                                   (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
-                                    (if (memq nm '(Fingering NoteHead StaffSymbol DynamicText))
+                                    ;; Beam and Stem joined the list in round 3: the claim
+                                    ;; there is about the STEM's skyline and the number is
+                                    ;; decomposed against the BEAM's own ink, so both have to
+                                    ;; be read off the dump rather than asserted.
+                                    (if (memq nm '(Fingering NoteHead StaffSymbol DynamicText
+                                                   Beam Stem))
                                         (format #t "PROBEC GROB ~a ~a name=~a text=~a rel=~a ext=(~a . ~a) x=~a\n"
                                                 n i nm
                                                 (if (eq? nm 'Fingering)
@@ -242,6 +303,30 @@ probeTag =
   \paper { ragged-bottom = ##t indent = 0 }
   \score {
     \new Staff { \clef treble \fixed c' { \time 4/4 \key c \major <c e g-5>4\p r4 r2 | } }
+    \layout { indent = 0\mm }
+  }
+}
+
+%% ── ROUND 3: the stem as a support, and the gate on it (see the header) ──
+
+%% CFM — generated from cfm.lys; BEAMED, so only-if-beamed holds and the stem's skyline is
+%%       flattened to its full reach.
+\book {
+  \probeTag "CFM"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    \new Staff { \clef treble \fixed c' { \time 4/4 \key c \major <c-1 e-3 g-5>8 <c e g>8 r4 r2 | } }
+    \layout { indent = 0\mm }
+  }
+}
+
+%% CFF — generated from cff.lys; the CONTROL. Same chord, same duration, same stem, a rest
+%%       after it, so nothing beams and the gate does not hold.
+\book {
+  \probeTag "CFF"
+  \paper { ragged-bottom = ##t indent = 0 }
+  \score {
+    \new Staff { \clef treble \fixed c' { \time 4/4 \key c \major <c-1 e-3 g-5>8 r8 r4 r2 | } }
     \layout { indent = 0\mm }
   }
 }

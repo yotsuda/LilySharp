@@ -133,6 +133,19 @@ internal static class FingeringEngraver
     /// (feta numerals are 2.0 design-ss tall → 1.12 at −5), so everything stacked over a
     /// fingering sat a half-space too low. Measured on script-stack-order1: a bow over a
     /// fingering is at −5.33 (LP) = digit top 1.13 + padding 0.20.
+    /// <para>
+    /// ⚠️ THE BOX'S X IS THE ADVANCE, NOT THE INK — <c>Left</c> is 0 and <c>Right</c> is the
+    /// advance <c>width</c>, while LilyPond's Fingering X-extent is the glyph's own stencil.
+    /// MEASURED (probes/fingering-slur.ly, book FSB): LP reads <c>xext = (0.0 . 0.819439)</c>
+    /// for a "1" at font-size −5 where this answers about 0.90, so the box runs ~0.043 too far
+    /// right. It is invisible to every consumer that only asks how TALL a digit is, and
+    /// visible to the one that asks where its EDGE is: ledger
+    /// <c>fingering.slur.bound-note.staff-to-ink-bottom</c> keeps +0.005981557 of which
+    /// +0.016984728 is this (the rest is the curve sampler, the other way).
+    /// ⚠️ Correcting it is output-moving for all THREE consumers named above — the pen, the
+    /// script-column profile and the placement — so it needs its own point first, exactly as
+    /// the Y side of this box did.
+    /// </para>
     /// </remarks>
     internal static (string Glyphs, GlyphMetrics.BBox Ink, double Width) DigitRun(int number)
     {
@@ -169,14 +182,15 @@ internal static class FingeringEngraver
     public static ImmutableArray<FingeringLayout> Calculate(
         Score score,
         ImmutableArray<SystemLayout> systems,
-        int staffIndex = -1)
+        int staffIndex = -1,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
 
         var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
         var systemMap = LayoutUtilities.BuildMeasureMap(systems);
-        return Calculate(score, measureMap, systemMap.ContainsKey, staffIndex);
+        return Calculate(score, measureMap, systemMap.ContainsKey, staffIndex, beamLayouts);
     }
 
     /// <summary>
@@ -196,14 +210,15 @@ internal static class FingeringEngraver
     public static ImmutableArray<FingeringLayout> Calculate(
         Score score,
         ImmutableArray<MeasureLayout> measureLayouts,
-        int staffIndex)
+        int staffIndex,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
         var map = new Dictionary<int, MeasureLayout>();
         foreach (var ml in measureLayouts)
             map[ml.MeasureIndex] = ml;
-        return Calculate(score, map, _ => true, staffIndex);
+        return Calculate(score, map, _ => true, staffIndex, beamLayouts);
     }
 
     /// <remarks>
@@ -220,9 +235,17 @@ internal static class FingeringEngraver
         Score score,
         Dictionary<int, MeasureLayout> measureMap,
         System.Func<int, bool> isPlaced,
-        int staffIndex)
+        int staffIndex,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         var layouts = ImmutableArray.CreateBuilder<FingeringLayout>();
+
+        // Which beam each note belongs to — the STEM is a support of every fingering and a
+        // beamed stem ends on the beam, so the gate below needs the same map the scripts use.
+        // Empty (and free) for the unbeamed book, which is why the caller may omit the beams.
+        var beamedTips = beamLayouts.IsDefaultOrEmpty
+            ? null
+            : ArticulationEngraver.BuildBeamedStemTips(beamLayouts);
 
         var voice = score.Voice;
         var indices = new List<int>(measureMap.Count);
@@ -239,13 +262,22 @@ internal static class FingeringEngraver
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
                 var item = measure.Items[ii];
+                // The engraver serves the staff's PRIMARY voice (its callers build a score of
+                // that one voice), so the beam lookup asks for voice 0 — the same key
+                // ArticulationEngraver queries with the script's own voice index.
+                NoteColumnLayout? column = null;
+                if (beamedTips != null
+                    && beamedTips.TryGetValue((System.Math.Max(0, staffIndex), 0, mi, ii),
+                        out var beamTip))
+                    column = NoteColumnLayout.Of(item, beamTip.StemUp, beamTip.Beam, beamTip.MemberX);
+
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
                     BuildLayouts(
                         new[] { (note.StaffPosition, note.Fingering.Value) },
                         new[] { note.StaffPosition },
                         note.BaseDuration, note.SourcePosition,
-                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures);
+                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column);
                 }
                 else if (item is ChordItem chord)
                 {
@@ -259,7 +291,7 @@ internal static class FingeringEngraver
                         fingered,
                         chord.Notes.Select(n => n.StaffPosition).ToArray(),
                         chord.BaseDuration, chord.SourcePosition,
-                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures);
+                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column);
                 }
             }
         }
@@ -298,11 +330,38 @@ internal static class FingeringEngraver
     /// (fingering.chord.*, books CFL/CFH of probes/chord-fingering.ly) measure what
     /// LilyPond does instead, and they were raised BEFORE this port.
     /// </para>
-    /// ⚠️ THE STEM AND ITS FLAG ARE SUPPORTS IN LILYPOND (:186-190) but Fingering gates them
-    /// with <c>add-stem-support = only-if-beamed</c> (scm/define-grobs.scm:1543), so an
-    /// unbeamed note reads identically without them. A fingering over a BEAMED note sits
-    /// too low until that gate is ported; the books that measured this port are whole
-    /// notes, and no ledger point reaches the beamed pairing yet.
+    /// ★ THE STEM IS A SUPPORT IN LILYPOND (:186-190), UNCONDITIONALLY — and the beam never
+    /// is. What Fingering's <c>add-stem-support = only-if-beamed</c> (scm/define-grobs.scm:1543,
+    /// scm/output-lib.scm:463) decides is HOW MUCH of the stem counts:
+    /// lily/side-position-interface.cc:302-305 flattens the stem's skyline to its own maximum
+    /// when the predicate holds, so the digit clears the stem's FULL reach at every x instead
+    /// of only where the thin line stands. Ported here as <paramref name="column"/>: non-null
+    /// exactly when this note is BEAMED, and read for its reach on the bucket's side.
+    /// <para>
+    /// ⚠️ THE GATE STANDS IN FOR THE FLATTENING, and that is a modelling choice, not a
+    /// transcription. This support set is a SCALAR (the derivation above says so), so there is
+    /// no x at which a thin stem could fail to stand under the digit — an unflattened stem
+    /// would be over-applied here. Including the stem only when the flattening fires is what
+    /// makes the scalar reproduce both books. MEASURED, and the pair is what forced it: the
+    /// FLAGGED stem of ledger <c>fingering.chord.flagged-inner.staff-to-ink-bottom</c> reaches
+    /// 2.500000, HIGHER than the beamed stem's 2.240000, yet its digit reads the staff clamp
+    /// 2.550000 while the beamed one reads 2.740000. A model that counted the stem's height
+    /// whenever there is a stem would put the FLAGGED book above the beamed one.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THIS GATE IS THE THING TO DELETE, not to extend, when this support set becomes
+    /// POINTWISE. The moment the walk reads a skyline instead of a scalar — the move
+    /// <see cref="NoteColumnLayout"/>'s own remark records the dynamics and the trill already
+    /// making, because a scalar edge could not answer two books at any value — the stem should
+    /// go in UNCONDITIONALLY, as LilyPond puts it in, and <c>add-stem-support</c> should become
+    /// what it actually is: the stem profile's own maximum imposed on itself. The two
+    /// spellings agree on every book measured today and stop agreeing the moment a digit and a
+    /// stem stand at different x, which is a chord with a seconds shift — the same texture
+    /// this method's scalar derivation already names as its limit.
+    /// </para>
+    /// ⚠️ THE FLAG IS A SUPPORT TOO (:188-190) and is not here: the same argument retires it
+    /// (it only ever stands beside an unbeamed stem, where the gate is shut), and the flagged
+    /// book measures that its ink changes nothing.
     /// ⚠️ THE ACCIDENTALS ARE SUPPORTS TOO on a chord (:329-332). Not ported: no point
     /// observes it, and a chord whose accidental out-reaches its own head vertically does
     /// not exist (an accidental is centred on its head and is barely taller).
@@ -315,7 +374,8 @@ internal static class FingeringEngraver
         int measureIndex, int itemIndex,
         MeasureLayout measureLayout, int staffIndex,
         ImmutableArray<FingeringLayout>.Builder layouts,
-        ImmutableArray<Measure> measures)
+        ImmutableArray<Measure> measures,
+        NoteColumnLayout? column = null)
     {
         if (measureLayout.Columns.IsDefaultOrEmpty
             && itemIndex >= measureLayout.Items.Length)
@@ -351,9 +411,21 @@ internal static class FingeringEngraver
         var sorted = fingered.OrderBy(f => f.Position).ToArray();
         int center = sorted.Length / 2;
 
+        // The BEAMED stem's reach, on each side, in the same Y-up-about-the-middle frame the
+        // heads are in — <c>column</c> is non-null exactly when this note is beamed (see the
+        // remark). The house that answers it is the one the tuplet bracket and the scripts
+        // already read, so the digit clears the SAME quanted beam face they do.
+        // LILYPOND-REF: lily/side-position-interface.cc:302-305 add-stem-support.
+        double stemUpReach = double.NegativeInfinity, stemDownReach = double.PositiveInfinity;
+        if (column is { } col)
+        {
+            stemUpReach = EngravingDefaults.StaffMiddle - col.OutwardTipDeviceY(towardUp: true);
+            stemDownReach = EngravingDefaults.StaffMiddle - col.OutwardTipDeviceY(towardUp: false);
+        }
+
         // UP, inner to outer: priority 100 + position ascends with the position, so the
         // bucket is walked in the order it was just sorted into.
-        double support = System.Math.Max(StaffInk, headsTop);
+        double support = System.Math.Max(System.Math.Max(StaffInk, headsTop), stemUpReach);
         for (int i = center; i < sorted.Length; i++)
         {
             var ink = DigitRun(sorted[i].Number).Ink;
@@ -380,7 +452,7 @@ internal static class FingeringEngraver
         // decreasing in the key the bucket is already sorted by. If a fingering ever gets a
         // priority that is not that function (LilyPond's finger_prio comes from the grob,
         // and StringNumber/StrokeFinger have their own), the sort has to come back.
-        support = System.Math.Min(-StaffInk, headsBottom);
+        support = System.Math.Min(System.Math.Min(-StaffInk, headsBottom), stemDownReach);
         for (int i = center - 1; i >= 0; i--)
         {
             var ink = DigitRun(sorted[i].Number).Ink;

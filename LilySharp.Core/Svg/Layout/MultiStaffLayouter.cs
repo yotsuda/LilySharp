@@ -2317,7 +2317,7 @@ internal sealed class MultiStaffLayouter
                 // (no outside-staff-priority) and were in no Lily# skyline at all until
                 // 2026-08-10 — see SkylineBuilder.AddFingeringsToSkyline for the measurement
                 // and ledger fingering.chord.dynamic-* for the books.
-                var fingerings = StaffFingeringLayouts(staff, thisStaff, measureLayouts, score);
+                var fingerings = StaffFingeringLayouts(staff, thisStaff, measureLayouts, score, beams);
                 var insideSky = skylineBuilder.BuildInsideStaffSkylines(
                     staff, measureLayouts, articulations, tupletBrackets, slurs, ties, beams,
                     CurrentIndent, restShifts, fingerings);
@@ -2602,12 +2602,21 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     private static ImmutableArray<FingeringLayout> StaffFingeringLayouts(
         Staff staff, int staffIndex, ImmutableArray<MeasureLayout> measureLayouts,
-        MultiStaffScore score)
+        MultiStaffScore score, ImmutableArray<BeamLayout> beamLayouts = default)
     {
         var staffScore = new Score(
             staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
-        return FingeringEngraver.Calculate(staffScore, measureLayouts, staffIndex);
+        // The beams arrive stamped with the trivial one-staff system's index 0 and the
+        // engraver keys its stem tips by staff, so they are restamped to meet the score's
+        // real index — the same restamp StaffArticulationLayouts makes, for the same reason.
+        var localBeams = beamLayouts.IsDefaultOrEmpty
+            ? beamLayouts
+            : beamLayouts.Select(b => new BeamLayout(
+                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX,
+                b.MemberXPositions, staffIndex, b.SystemIndex,
+                b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
+        return FingeringEngraver.Calculate(staffScore, measureLayouts, staffIndex, localBeams);
     }
 
     private ImmutableArray<ArticulationLayout> StaffArticulationLayouts(

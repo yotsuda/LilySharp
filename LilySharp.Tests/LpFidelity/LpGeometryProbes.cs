@@ -2918,6 +2918,113 @@ internal static class LpGeometryProbes
         ChordFingeringScore("CFH", "<d'@finger(1) f'@finger(3) a'@finger(5)>");
 
     /// <summary>
+    /// ROUND 3 — the STEM as a fingering's support, and the gate that decides how much of it
+    /// counts. The corpus chord, in the two durations that separate the gate's two answers.
+    /// </summary>
+    /// <remarks>
+    /// The whole-note books above were built with NO stem on purpose, so
+    /// <c>add-stem-support</c> could not fire; these two are the books that make it fire and
+    /// the book that makes it not. LilyPond adds the stem (and its flag) as a side-position
+    /// support of every chord fingering UNCONDITIONALLY
+    /// (lily/new-fingering-engraver.cc:182-190 position_scripts), and Fingering's
+    /// <c>add-stem-support</c> is <c>only-if-beamed</c> (scm/define-grobs.scm:1543,
+    /// scm/output-lib.scm:463) — a predicate that asks whether any side-support element has a
+    /// <c>beam</c> object. What the property controls is not WHETHER the stem supports but HOW
+    /// MUCH of it does: lily/side-position-interface.cc:302-305 flattens the stem's skyline to
+    /// its own maximum (<c>set_minimum_height (max_height ())</c>) when it holds, so the digit
+    /// clears the stem's full reach at every x instead of only where the thin line is.
+    /// <para>
+    /// CFM is beamed, CFF is the same chord as a lone flagged eighth. The pair is what says
+    /// the gate is the BEAM and not the stem: if both read alike the rule is "stem support",
+    /// not <c>only-if-beamed</c>.
+    /// </para>
+    /// </remarks>
+    private static string ChordFingeringStemScore(string name, string tail) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { <c@finger(1) e@finger(3) g@finger(5)>8 {{tail}} r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// A fingering that has to get out of a SLUR's way — the OTHER direction of
+    /// <c>avoid-slur</c> from the one session 133 gave the scripts, and the one that runs on
+    /// the digit rather than on the bow.
+    /// </summary>
+    /// <remarks>
+    /// Fingering declares <c>avoid-slur #'around</c> (scm/define-grobs.scm Fingering) and
+    /// Slur_engraver acknowledges it (lily/slur-engraver.cc:74), so lily/slur.cc:364-387 chains
+    /// <c>outside_slur_callback</c> onto the DIGIT: the digit rides off the bow, the bow does
+    /// not move. Lily# ports that callback for SCRIPTS
+    /// (<c>ArticulationEngraver.SlurAvoidanceShift</c>) and a fingering never enters it.
+    /// <para>
+    /// The note is <c>g'</c> so the HEAD chain decides the digit's height (3.545 = head ink top
+    /// 3.045 + Fingering's padding 0.5) and not the staff clamp 2.55 — a floor shared with the
+    /// answer would hide the whole effect (HANDOFF §5.0). One fingering goes UP whatever the
+    /// pitch (<c>1 / 2 == 0</c> leaves the down bucket empty), and the slur is above because
+    /// the stems are down.
+    /// </para>
+    /// ⚠️ THE CORPUS SIGHTING IS NOT THE MEASUREMENT: on chord-repetition the down digit
+    /// touches the bow in Lily#, but LilyPond's own slur moves that book's digits by NOTHING
+    /// (scratch cr-probe.ly) — its digits are clamped far outside the staff, well clear of the
+    /// bow. Hence a different texture, which is what these books are.
+    /// </remarks>
+    private static string FingeringSlurScore(string name, string music) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The digit on the slur's own BOUND note, where the attachment (head top + 1.045)
+    /// sits above the digit's chain answer (head top + 0.5).</summary>
+    private static readonly string FSB =
+        FingeringSlurScore("FSB", "g'8@finger(1)( g'8) r4 r2 |");
+
+    /// <summary>FSB's control — the same music with no slur.</summary>
+    private static readonly string FSN =
+        FingeringSlurScore("FSN", "g'8@finger(1) g'8 r4 r2 |");
+
+    /// <summary>The digit on an INTERIOR note of a three-note slur, where the bow's own peak
+    /// passes over it.</summary>
+    private static readonly string FSI =
+        FingeringSlurScore("FSI", "g'8( g'8@finger(1) g'8) r8 r2 |");
+
+    /// <summary>FSI's control — the same music with no slur.</summary>
+    private static readonly string FSC =
+        FingeringSlurScore("FSC", "g'8 g'8@finger(1) g'8 r8 r2 |");
+
+    /// <summary>BEAMED: a second eighth on the same beat, so the two beam and the gate holds.
+    /// ⚠️ CFM, not CFB — barline-spacing.ly owns that tag.</summary>
+    private static readonly string CFM = ChordFingeringStemScore("CFM", "<c e g>8");
+
+    /// <summary>FLAGGED: the control. The same chord, the same duration, the same stem — but a
+    /// rest after it, so nothing beams and the gate does not hold.</summary>
+    private static readonly string CFF = ChordFingeringStemScore("CFF", "r8");
+
+    /// <summary>
     /// ROUND 2 — what a fingering DISPLACES: the three books that read one <c>\p</c>'s ink
     /// top with a down digit over it, with no digit, and with the digit sent UP.
     /// </summary>
@@ -8857,6 +8964,33 @@ internal static class LpGeometryProbes
             g => g.FingeringInkEdgeAboveStaff('5'), RaggedBottomPaper),
         new("fingering.chord.below-clamp.staff-to-ink-top", CFH,
             g => g.FingeringInkEdgeAboveStaff('1', above: false), RaggedBottomPaper),
+
+        // --- round 3: the STEM as a support, and the gate on it (books CFM/CFF) ---
+        // Read as a TRIO, and each has a different job. The beamed inner is what the corpus
+        // book owes; the flagged inner is the control that must NOT move when that is paid;
+        // the beamed outer says the beam raises the stack's FLOOR and touches nothing else,
+        // because its residual has to come out as the inner's plus the optical-size
+        // remainder the CFL/CFH outers already carry.
+        new("fingering.chord.beamed-inner.staff-to-ink-bottom", CFM,
+            g => g.FingeringInkEdgeAboveStaff('3'), RaggedBottomPaper),
+        new("fingering.chord.beamed-outer.staff-to-ink-bottom", CFM,
+            g => g.FingeringInkEdgeAboveStaff('5'), RaggedBottomPaper),
+        new("fingering.chord.flagged-inner.staff-to-ink-bottom", CFF,
+            g => g.FingeringInkEdgeAboveStaff('3'), RaggedBottomPaper),
+
+        // --- round 4: a fingering rides OFF a slur (books FSB/FSN/FSI/FSC) ---
+        // Two pairs, and the pair is the whole reading: the two controls are the same number
+        // to fifteen digits (same music height, same chain), so the two shifts are directly
+        // comparable and the difference between them is the bow's shape alone. A constant
+        // fitted to either book misses the other by half a staff space.
+        new("fingering.slur.bound-note.staff-to-ink-bottom", FSB,
+            g => g.FingeringInkEdgeAboveStaff('1'), RaggedBottomPaper),
+        new("fingering.slur.bound-control.staff-to-ink-bottom", FSN,
+            g => g.FingeringInkEdgeAboveStaff('1'), RaggedBottomPaper),
+        new("fingering.slur.interior-note.staff-to-ink-bottom", FSI,
+            g => g.FingeringInkEdgeAboveStaff('1'), RaggedBottomPaper),
+        new("fingering.slur.interior-control.staff-to-ink-bottom", FSC,
+            g => g.FingeringInkEdgeAboveStaff('1'), RaggedBottomPaper),
 
         // --- round 2: what a fingering DISPLACES (books DYF/DYN/DYU) ---
         // The reservation half of the same claim. Read as a SET: DYN is the base, DYF is

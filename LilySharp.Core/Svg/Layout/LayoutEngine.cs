@@ -3037,7 +3037,11 @@ internal sealed class LayoutEngine
         // note's column (priority 100 + position), so the one walk stacks both — a
         // bow over a fingering over a tenuto, in script-priority order, not islands.
         // LILYPOND-REF: lily/new-fingering-engraver.cc:314-340 position_scripts.
-        var fingeringLayouts = ComputeFingeringIslands(score, systems, voicesByStaff);
+        // The beams go in with them: a BEAMED note's stem is a fingering's support and it ends
+        // on the beam, so the island answer has to be built against the quanted beam the
+        // renderer draws (ledger fingering.chord.beamed-*).
+        var fingeringLayouts = ComputeFingeringIslands(
+            score, systems, voicesByStaff, beamLayouts ?? default);
         var articulationLayouts = ImmutableArray<ArticulationLayout>.Empty;
         if (score != null)
             articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
@@ -4015,7 +4019,8 @@ internal sealed class LayoutEngine
     /// </remarks>
     private ImmutableArray<FingeringLayout> ComputeFingeringIslands(
         Score? score, ImmutableArray<SystemLayout> systems,
-        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff)
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (score == null)
             return ImmutableArray<FingeringLayout>.Empty;
@@ -4028,11 +4033,11 @@ internal sealed class LayoutEngine
                     continue;
                 var staffScore = new Score(kv.Value[0], score.TimeSignature,
                     score.KeySignature, score.Clef, score.Tempo);
-                fb.AddRange(FingeringEngraver.Calculate(staffScore, systems, kv.Key));
+                fb.AddRange(FingeringEngraver.Calculate(staffScore, systems, kv.Key, beamLayouts));
             }
             return fb.ToImmutable();
         }
-        return FingeringEngraver.Calculate(score, systems);
+        return FingeringEngraver.Calculate(score, systems, -1, beamLayouts);
     }
 
     /// <summary>

@@ -76,8 +76,9 @@ internal readonly record struct ArticulationLayout(
 /// only scored around the marks of its own voice — the same key the opposite direction
 /// (<c>outside_slur_callback</c>) looks scripts up by.
 /// </summary>
-/// <remarks>LILYPOND-REF: ly/engraver-init.ly Voice — Slur_engraver and Script_engraver are
-/// both consisted there, so a script and a slur meet only inside one voice.</remarks>
+/// <remarks>LILYPOND-REF: ly/engraver-init.ly:359-423 — Slur_engraver (:423) and
+/// Script_engraver (:415) are both consisted into the <c>\name Voice</c> context declared at
+/// :359, so a script and a slur meet only inside one voice.</remarks>
 internal readonly record struct InsideSlurScript(ArticulationLayout Layout, int VoiceIndex);
 
 /// <summary>
@@ -341,7 +342,14 @@ internal static class ArticulationEngraver
         out ImmutableArray<FingeringLayout> adjustedFingerings)
     {
         adjustedFingerings = fingerings;
-        if (articulations.IsDefaultOrEmpty)
+        // ⚠️ THE FINGERINGS ARE A SECOND REASON TO BE HERE, and until 2026-08-11 they were
+        // not: a score with digits and NO scripts returned on this line, so the fingering
+        // flush below — which is where a digit takes its column supports and, since the same
+        // date, rides off a slur's bow — never ran for the commonest fingered book of all.
+        // The ledger pair fingering.slur.{bound,interior}-note is exactly such a book (one
+        // note, one digit, one slur, no script), and it read its control until this guard
+        // learned to count both lists.
+        if (articulations.IsDefaultOrEmpty && fingerings.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
 
         int[] order = OrderByScriptPriority(articulations);
@@ -519,6 +527,58 @@ internal static class ArticulationEngraver
                         adjFingerings[fi] = fg;
                     }
                 }
+
+                // A slur covering this note pushes the DIGIT off its bow. Fingering is
+                // avoid-slur #'around, so LilyPond chains outside_slur_callback onto the
+                // digit itself and the bow does not move — the exact mirror of the 'inside
+                // rule, where the mark stays and the bow is scored around it
+                // (ElementCoordinator.BuildSlurExtraObjects). Chained HERE, on top of the
+                // side-position answer and BEFORE the digit becomes a support, which is the
+                // same place and the same order the scripts' own block below uses: a script
+                // stacked over a lifted digit rides up with it, as LP's chain makes it.
+                // LILYPOND-REF: lily/slur-engraver.cc:74 acknowledge_extra_object — the
+                //   ADD_ACKNOWLEDGER_FOR line that makes a Fingering one of them.
+                // LILYPOND-REF: lily/slur.cc:364-387 auxiliary_acknowledge_extra_object —
+                //   its 'around branch chains the callback onto the grob.
+                // LILYPOND-REF: lily/slur.cc:262-359 outside_slur_callback — the callback,
+                //   which takes the curve's extremum over the script's own x-extent and
+                //   subtracts the near edge of the box widened by slur-padding.
+                // MEASURED: ledger fingering.slur.{bound,interior}-note.staff-to-ink-bottom,
+                //   whose two controls are the halves that say nothing else moved.
+                // ⚠️ THIS IS THE ABOVE HALF ONLY, and it is a property of where the code
+                //   sits rather than of the rule: the fingering queue this flush drains
+                //   holds only IsAbove digits (a DOWN digit never enters a script column),
+                //   so a below digit still ignores a bow. No book measures one — the corpus
+                //   sighting IS a below digit, and LilyPond moves it by nothing there
+                //   (scratch cr-probe.ly), so the point for it has to come from a texture
+                //   that does not exist yet. Named, not silently approximated.
+                // ⚠️ THE PER-STAFF SKYLINE PASS DOES NOT GET THIS EITHER:
+                //   MultiStaffLayouter.StaffFingeringLayouts calls the ISLAND directly, so a
+                //   lifted digit reserves the band it would have had without the bow — the
+                //   same approximation that file already records for the script movers.
+                // ⚠️ THE VOICE IS 0 BY CONSTRUCTION, not by assumption: FingeringEngraver
+                //   serves the staff's PRIMARY voice only (both of its callers build a score
+                //   of that one voice), so every FingeringLayout here came from voice 0 —
+                //   which is also why FingeringLayout carries no voice axis. A second voice's
+                //   fingerings are laid out nowhere today; when they are, this key and that
+                //   record need the axis together.
+                if (slursAtMeasure != null
+                    && slursAtMeasure.TryGetValue((Math.Max(kStaff, 0), 0, kMeasure),
+                        out var fgVoiceSlurs)
+                    && CoveringSlurPiece(fgVoiceSlurs, kMeasure, kItem) is { } fgSlurPiece)
+                {
+                    double fgStaffOffset =
+                        staffYAt?.Invoke(kMeasure, Math.Max(kStaff, 0)) ?? 0;
+                    double slurShift = SlurAvoidanceShift(
+                        fgSlurPiece, synth, fg.YUp, fgStaffOffset, around: true);
+                    if (slurShift != 0.0)
+                    {
+                        fg = fg with { YUp = fg.YUp + slurShift };
+                        synth = synth with { YUp = fg.YUp };
+                        adjFingerings[fi] = fg;
+                    }
+                }
+
                 if (!supportScripts.TryGetValue(key, out var placedList))
                     supportScripts[key] = placedList = new List<ArticulationLayout>();
                 placedList.Add(synth);
@@ -1769,7 +1829,11 @@ internal static class ArticulationEngraver
         return TabBeamMath.At(line, noteX) + (up ? -half : half);
     }
 
-    private static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double MemberX, bool StemUp)>
+    /// <summary>Which beam a (staff, voice, measure, item) is a member of, with the member's
+    /// own X and the beam's stem direction — <see cref="FingeringEngraver"/> asks the same
+    /// question for the same reason (a beamed stem ends on the beam), so the map is spelled
+    /// here once rather than twice.</summary>
+    internal static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double MemberX, bool StemUp)>
         BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts)
     {
         var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
