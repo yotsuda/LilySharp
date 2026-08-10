@@ -97,24 +97,23 @@
   <text class="music" x="0.80" y="57.57" font-size="4.00"></text>
   <text class="music" x="5.80" y="57.57" font-size="4.00" data-pos="622"></text>
   <line x1="7.04" y1="57.42" x2="7.04" y2="54.07" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="29.72" y="57.07" font-size="4.00" data-pos="627"></text>
-  <line x1="30.96" y1="56.92" x2="30.96" y2="53.57" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="53.66" y="56.57" font-size="4.00" data-pos="629"></text>
-  <line x1="53.73" y1="56.72" x2="53.73" y2="59.90" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="77.58" y="56.07" font-size="4.00" data-pos="631"></text>
-  <line x1="77.65" y1="56.22" x2="77.65" y2="59.57" stroke="#000000" stroke-width="0.130"/>
-  <rect x="101.34" y="54.57" width="0.19" height="4.00" data-pos="635"/>
-  <rect x="101.83" y="54.57" width="0.60" height="4.00" data-pos="635"/>
+  <text class="music" x="29.95" y="57.07" font-size="4.00" data-pos="627"></text>
+  <line x1="31.19" y1="56.92" x2="31.19" y2="53.57" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="54.11" y="56.57" font-size="4.00" data-pos="629"></text>
+  <line x1="54.18" y1="56.72" x2="54.18" y2="59.90" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="78.26" y="56.07" font-size="4.00" data-pos="631"></text>
+  <line x1="78.32" y1="56.22" x2="78.32" y2="59.57" stroke="#000000" stroke-width="0.130"/>
+  <rect x="102.24" y="54.57" width="0.19" height="4.00" data-pos="635"/>
   <path d="M 90.62,35.07 C 91.92,35.90 100.93,35.90 102.23,35.07 C 100.93,36.02 91.92,36.02 90.62,35.07 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 3.57,47.07 C 4.06,47.53 5.11,47.53 5.60,47.07 C 5.11,47.65 4.06,47.65 3.57,47.07 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 10.19,21.37 C 13.62,17.47 98.81,15.30 102.43,19.02 C 98.81,15.42 13.62,17.59 10.19,21.37 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 3.37,30.37 C 6.23,28.71 28.30,30.03 30.95,32.02 C 28.29,30.15 6.22,28.83 3.37,30.37 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="56.32" y="49.88" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="597">p</text>
-  <text x="78.24" y="61.68" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
+  <text x="78.91" y="61.68" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="632">f</text>
   <line x1="67.25" y1="48.28" x2="102.43" y2="47.83" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <line x1="67.25" y1="48.28" x2="102.43" y2="48.72" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
-  <line x1="4.37" y1="60.85" x2="76.60" y2="60.41" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
-  <line x1="4.37" y1="61.30" x2="76.60" y2="61.74" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="4.37" y1="60.85" x2="77.28" y2="60.41" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="4.37" y1="61.30" x2="77.28" y2="61.74" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <text x="0.00" y="29.49" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
   <text x="0.00" y="41.49" font-size="1.75" font-weight="bold" text-anchor="end">6</text>
   <text x="0.00" y="53.49" font-size="1.75" font-weight="bold" text-anchor="end">8</text>

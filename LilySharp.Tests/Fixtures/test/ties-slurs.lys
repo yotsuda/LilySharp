@@ -27,7 +27,13 @@ phrase tieDirection {
   // Low note (stem up) - tie curves down
   c4~ c4 r2 |
   // High note (stem down) - tie curves up
-  b'4~ b4 r2 |
+  // ⚠️ THE `|.` IS LOAD-BEARING and must stay written. This fixture is the Lily# side of
+  // the ledger pair `compressed.line-start.time-to-first-note` (probe score TSJ), whose
+  // LilyPond twin ties-slurs-breaks.ly writes `\bar "|."` on purpose. The final barline is
+  // 0.9 ss of natural width, and this book is read COMPRESSED, so dropping it on one side
+  // only changes the force and moves the point (measured: residual 0 -> 0.005535).
+  // Lily# stopped stamping a final barline by itself, so this side now says it out loud.
+  b'4~ b4 r2 |.
 }
 
 section Main {

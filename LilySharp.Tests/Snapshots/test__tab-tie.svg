@@ -9,7 +9,6 @@
   <text class="music" x="0.60" y="14.60" font-size="4.00"></text>
   <rect x="16.20" y="12.35" width="0.19" height="4.50" data-pos="227"/>
   <rect x="27.80" y="12.35" width="0.19" height="4.50" data-pos="242"/>
-  <rect x="28.29" y="12.35" width="0.60" height="4.50" data-pos="242"/>
   <text x="6.45" y="17.89" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="214">5</text>
   <line x1="7.04" y1="15.56" x2="7.04" y2="11.06" stroke="#000000" stroke-width="0.130"/>
   <line x1="10.04" y1="15.56" x2="10.04" y2="11.06" stroke="#000000" stroke-width="0.130"/>
@@ -18,12 +17,12 @@
   <line x1="18.64" y1="14.06" x2="18.64" y2="9.56" stroke="#000000" stroke-width="0.130"/>
   <line x1="21.64" y1="14.06" x2="21.64" y2="9.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="24.05" y="15.35" font-size="4.00" data-pos="239"></text>
-  <line x1="0.00" y1="12.35" x2="28.89" y2="12.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.85" x2="28.89" y2="13.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.35" x2="27.99" y2="12.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.85" x2="27.99" y2="13.85" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.35" x2="17.19" y2="15.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="18.90" y1="15.35" x2="28.89" y2="15.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="18.90" y1="15.35" x2="27.99" y2="15.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="16.85" x2="5.60" y2="16.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="7.31" y1="16.85" x2="28.89" y2="16.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="7.31" y1="16.85" x2="27.99" y2="16.85" stroke="#000000" stroke-width="0.100"/>
   <path d="M 7.96,18.53 C 8.30,18.85 8.91,18.85 9.25,18.53 C 8.91,18.97 8.30,18.97 7.96,18.53 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 19.55,13.84 C 19.90,13.40 20.50,13.40 20.85,13.84 C 20.50,13.52 19.90,13.52 19.55,13.84 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="0.30" y="7.49" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="197"/>

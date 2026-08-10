@@ -8,11 +8,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="249">Mid-Piece Voice Dynamics</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="285">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="18.57" x2="42.46" y2="18.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.57" x2="42.46" y2="19.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.57" x2="42.46" y2="20.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="21.57" x2="42.46" y2="21.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="22.57" x2="42.46" y2="22.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.57" x2="41.56" y2="18.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.57" x2="41.56" y2="19.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.57" x2="41.56" y2="20.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="21.57" x2="41.56" y2="21.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="22.57" x2="41.56" y2="22.57" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="21.57" font-size="4.00" data-pos="333"></text>
   <text class="music" x="4.88" y="20.57" font-size="4.00" data-pos="302"></text>
   <line x1="21.23" y1="17.57" x2="23.30" y2="17.57" stroke="#000000" stroke-width="0.200"/>
@@ -55,7 +55,6 @@
   <rect x="20.36" y="18.57" width="0.19" height="4.00" data-pos="379"/>
   <rect x="30.03" y="18.57" width="0.19" height="4.00" data-pos="411"/>
   <rect x="41.37" y="18.57" width="0.19" height="4.00" data-pos="422"/>
-  <rect x="41.86" y="18.57" width="0.60" height="4.00" data-pos="422"/>
   <text x="22.26" y="25.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="392">f</text>
   <text x="22.26" y="27.35" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="403">p</text>
   <text class="music" x="4.88" y="17.20" font-size="3.56" data-pos="0"></text>

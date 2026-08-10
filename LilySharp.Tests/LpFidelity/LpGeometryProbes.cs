@@ -7584,7 +7584,12 @@ internal static class LpGeometryProbes
 
         phrase tieDirection {
           c4~ c4 r2 |
-          b'4~ b4 r2 |
+          // ⚠️ THE `|.` IS LOAD-BEARING, for the same reason the twin's `\bar "|."` is
+          // (probes/ties-slurs-breaks.ly says so in its own header): the final barline is
+          // 0.9 ss of natural width and this score is read COMPRESSED, so a final bar on
+          // one side only re-solves the springs. Lily# stopped adding one by itself, so
+          // both sides now write it. Fixtures/test/ties-slurs.lys carries the same mark.
+          b'4~ b4 r2 |.
         }
 
         section Main {

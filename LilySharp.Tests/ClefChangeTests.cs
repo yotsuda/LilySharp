@@ -272,11 +272,17 @@ score main ""test"" { staff melody }
         // there is ONE bar moment: the small change clef hangs back into the last
         // measure's closing gap, and no extra measure bar appears beside the final
         // barline. MEASURED on the paper-aligned pair
-        // scratch/lpreg/clef-change-at-end.{ly,svg} (LilyPond 2.26.0, \bar "|."):
+        // scratch/lpreg/clef-change-at-end-nofinal.{ly,svg} (LilyPond 2.26.0, NO \bar):
         //   note left → change-clef left: 20.334 − 17.121 = 3.213
         //   clef left → thin bar left:    23.181 − 20.334 = 2.847
         //     (= change-clef width + Clef.space-alist staff-bar extra-space 0.7)
-        //   thin left → thick left:       23.671 − 23.181 = 0.490 (0.19 + kern 0.3)
+        // ⚠️ THE PAIR WAS RE-CUT. It used to be scratch/lpreg/clef-change-at-end.ly, which
+        //   wrote `\bar "|."` on the LilyPond side for the stated reason "matches Lily#'s
+        //   always-final-barline design". That design is gone (MeasureCollector
+        //   .FinalizeMeasures), so the twin that matches is the one where NEITHER side
+        //   writes a final bar. RE-MEASURED, not assumed: dropping `\bar "|."` moves
+        //   nothing — note 17.1208, clef 20.3343, thin bar 23.1809 are the same six
+        //   figures as before. Only the 0.60 thick piece (and its 0.490 kern) is gone.
         // The note→clef / clef→bar split differs by 0.003: Lily#'s F_change ink
         // width is 2.150 (font bbox) where LilyPond's stencil extent is 2.147 —
         // the known glyph-extent systematic. The bar itself sits LP-exact
@@ -302,18 +308,61 @@ score main ""test"" { staff melody }
         double note = Assert.Single(glyphs.Where(g => g.Glyph == EmmentalerGlyphs.NoteheadWhole)).X;
         double clef = Assert.Single(glyphs.Where(g => g.Glyph == EmmentalerGlyphs.FClefChange)).X;
 
-        // Exactly the final barline's two pieces — no extra measure bar.
+        // Exactly ONE closing bar — the trailing clef mints no second one. This is the
+        // assertion the test exists for, and it is now stated against LilyPond's own
+        // closing bar (a single thin 0.19) rather than against an invented `|.`.
         var bars = System.Text.RegularExpressions.Regex.Matches(svg,
                 "<rect x=\"([-\\d.]+)\" y=\"[-\\d.]+\" width=\"(0\\.19|0\\.60)\"")
             .Select(m => (X: double.Parse(m.Groups[1].Value), W: m.Groups[2].Value))
             .OrderBy(b => b.X).ToList();
-        Assert.Equal(2, bars.Count);
-        Assert.Equal("0.19", bars[0].W);
-        Assert.Equal("0.60", bars[1].W);
+        Assert.Equal("0.19", Assert.Single(bars).W);
 
         Assert.Equal(3.210, clef - note, 2);            // LP 3.213 (ink systematic 0.003)
         Assert.Equal(2.850, bars[0].X - clef, 2);       // LP 2.847 (same 0.003, other side)
         Assert.Equal(6.060, bars[0].X - note, 2);       // LP 6.060 — the bar is LP-exact
+    }
+
+    /// <summary>
+    /// A barline WRITTEN at the end survives the trailing clef, whatever its type.
+    /// </summary>
+    /// <remarks>
+    /// The trailing clef-only column owns no bar moment, so its bar moves onto the measure
+    /// before it — and that move used to OVERWRITE the previous measure's barline with the
+    /// clef column's default <c>Single</c>, silently deleting whatever the author wrote.
+    /// Measured before the fix: <c>g'1 clef bass |.</c>, <c>g'1 |. clef bass</c> and
+    /// <c>g'1 clef bass ||</c> ALL drew a single thin 0.19 bar.
+    /// <para>
+    /// ⚠️ NOTHING IN THE CORPUS CAUGHT THIS. It was invisible while a final barline was
+    /// stamped on the last measure automatically (both sides were then Final, so the
+    /// overwrite was a no-op), and no fixture writes a typed bar before a trailing clef.
+    /// This test IS the missing book — do not delete it as a duplicate of the sibling above:
+    /// that one measures the bar's PLACE, this one measures that the bar is the one written.
+    /// </para>
+    /// <para>
+    /// LilyPond twin: scratch/lpreg/clef-change-at-end.ly, which is this exact music with
+    /// <c>\bar "|."</c> — thin bar left 23.181, thick left 23.671, so the two pieces sit
+    /// 0.490 apart (0.19 + kern 0.3). The note→clef→bar distances are the sibling's.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("g'1 clef bass |.", "0.19", "0.60")]   // written after the clef
+    [InlineData("g'1 |. clef bass", "0.19", "0.60")]   // written before it — same moment
+    [InlineData("g'1 clef bass ||", "0.19", "0.19")]   // not just the final: any type
+    public void TrailingClefChange_KeepsAWrittenBarline(string source, string first, string second)
+    {
+        string svg = SvgGenerator.Generate(
+            MusicSource.Parse(source, "time 4/4"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+
+        var bars = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<rect x=\"([-\\d.]+)\" y=\"[-\\d.]+\" width=\"(0\\.19|0\\.60)\" height=\"4\\.00\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value), W: m.Groups[2].Value))
+            .OrderBy(b => b.X).ToList();
+
+        Assert.Equal(2, bars.Count);
+        Assert.Equal(first, bars[0].W);
+        Assert.Equal(second, bars[1].W);
+        // LP: 23.671 − 23.181. The kern is the same 0.3 for both types.
         Assert.Equal(0.490, bars[1].X - bars[0].X, 2);
     }
 

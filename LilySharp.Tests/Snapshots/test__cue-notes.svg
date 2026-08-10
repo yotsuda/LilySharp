@@ -8,11 +8,11 @@
   <rect x="0" y="0" width="119.50" height="26.60" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="2407">Cue Notes Demo</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="15.36" x2="32.91" y2="15.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.36" x2="32.91" y2="16.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.36" x2="32.91" y2="17.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.36" x2="32.91" y2="18.36" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.36" x2="32.91" y2="19.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.36" x2="32.01" y2="15.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.36" x2="32.01" y2="16.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.36" x2="32.01" y2="17.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.36" x2="32.01" y2="18.36" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.36" x2="32.01" y2="19.36" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="18.36" font-size="4.00"></text>
   <text class="music" x="4.88" y="17.36" font-size="4.00" data-pos="2434"></text>
   <line x1="8.26" y1="20.36" x2="10.22" y2="20.36" stroke="#000000" stroke-width="0.200"/>
@@ -36,7 +36,6 @@
   <line x1="29.51" y1="13.51" x2="29.51" y2="17.36" stroke="#000000" stroke-width="0.130"/>
   <rect x="19.66" y="15.36" width="0.19" height="4.00" data-pos="2597"/>
   <rect x="31.82" y="15.36" width="0.19" height="4.00" data-pos="2620"/>
-  <rect x="32.31" y="15.36" width="0.60" height="4.00" data-pos="2620"/>
   <text class="music" x="4.88" y="13.99" font-size="3.56" data-pos="0"></text>
   <line x1="5.99" y1="13.83" x2="5.99" y2="11.32" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="6.66" y="14.48" font-size="2.20" data-pos="0">= 120</text>

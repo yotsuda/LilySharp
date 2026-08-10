@@ -46,16 +46,15 @@
   <text class="music" x="0.80" y="28.12" font-size="4.00"></text>
   <text class="music" x="5.80" y="29.12" font-size="4.00" data-pos="483"></text>
   <line x1="7.04" y1="28.97" x2="7.04" y2="25.62" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.06" y="28.62" font-size="4.00" data-pos="490"></text>
-  <line x1="21.30" y1="28.47" x2="21.30" y2="25.12" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="34.33" y="28.12" font-size="4.00" data-pos="492"></text>
-  <line x1="35.57" y1="27.97" x2="35.57" y2="24.62" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="48.59" y="27.62" font-size="4.00" data-pos="494"></text>
-  <line x1="49.83" y1="27.47" x2="49.83" y2="24.12" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="68.10" y="28.12" font-size="4.00" data-pos="498"></text>
-  <rect x="63.02" y="25.12" width="0.19" height="4.00" data-pos="496"/>
-  <rect x="101.34" y="25.12" width="0.19" height="4.00" data-pos="501"/>
-  <rect x="101.83" y="25.12" width="0.60" height="4.00" data-pos="501"/>
+  <text class="music" x="20.20" y="28.62" font-size="4.00" data-pos="490"></text>
+  <line x1="21.44" y1="28.47" x2="21.44" y2="25.12" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="34.60" y="28.12" font-size="4.00" data-pos="492"></text>
+  <line x1="35.84" y1="27.97" x2="35.84" y2="24.62" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="49.00" y="27.62" font-size="4.00" data-pos="494"></text>
+  <line x1="50.24" y1="27.47" x2="50.24" y2="24.12" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="68.67" y="28.12" font-size="4.00" data-pos="498"></text>
+  <rect x="63.56" y="25.12" width="0.19" height="4.00" data-pos="496"/>
+  <rect x="102.24" y="25.12" width="0.19" height="4.00" data-pos="501"/>
   <text x="0.00" y="24.04" font-size="1.75" font-weight="bold" text-anchor="end">3</text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="400"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="400">Main</text>

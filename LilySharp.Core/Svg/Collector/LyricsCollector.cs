@@ -476,11 +476,12 @@ internal sealed class LyricsCollector
         for (int i = 0; i <= maxIndex; i++)
         {
             var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
-            // A lyrics row separates measures with plain `|`; give each a drawn
-            // boundary (final on the last) so a standalone lyrics-only lead sheet
-            // shows a measure grid. The score-wide barline sync merges these
+            // A lyrics row separates measures with plain `|` so a standalone lyrics-only
+            // lead sheet shows a measure grid. The score-wide barline sync merges these
             // harmlessly with any music staff (which dominates via Stronger).
-            var end = i == maxIndex ? BarlineType.Final : BarlineType.Single;
+            // ⚠️ The last measure used to get BarlineType.Final here — removed with the
+            // same rule in MeasureCollector.FinalizeMeasures: `|.` is written, not inferred.
+            var end = BarlineType.Single;
             measures.Add(new Measure(items, BarlineType.None, end, null, 0, 0));
         }
         return measures.MoveToImmutable();

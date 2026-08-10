@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="25.89" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="887">Multi-voice tuplet + beams</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="14.66" x2="31.55" y2="14.66" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.66" x2="31.55" y2="15.66" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.66" x2="31.55" y2="16.66" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.66" x2="31.55" y2="17.66" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.66" x2="31.55" y2="18.66" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.66" x2="30.65" y2="14.66" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.66" x2="30.65" y2="15.66" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.66" x2="30.65" y2="16.66" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.66" x2="30.65" y2="17.66" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.66" x2="30.65" y2="18.66" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="17.66" font-size="4.00" data-pos="927"></text>
   <text class="music" x="4.88" y="16.66" font-size="4.00"></text>
   <line x1="8.26" y1="13.66" x2="10.22" y2="13.66" stroke="#000000" stroke-width="0.200"/>
@@ -42,7 +42,6 @@
   <text class="music" x="25.69" y="14.16" font-size="4.00" data-pos="1035"></text>
   <text class="music" x="28.20" y="14.66" font-size="4.00" data-pos="1038"></text>
   <rect x="30.46" y="14.66" width="0.19" height="4.00" data-pos="1006"/>
-  <rect x="30.95" y="14.66" width="0.60" height="4.00" data-pos="1006"/>
   <polygon points="8.59,17.42 17.63,16.61 17.63,17.09 8.59,17.90"/>
   <line x1="8.65" y1="15.31" x2="8.65" y2="17.65" stroke="#000000" stroke-width="0.130"/>
   <line x1="11.15" y1="14.81" x2="11.15" y2="17.43" stroke="#000000" stroke-width="0.130"/>
@@ -53,10 +52,10 @@
   <line x1="23.25" y1="13.81" x2="23.25" y2="17.09" stroke="#000000" stroke-width="0.130"/>
   <line x1="25.76" y1="14.31" x2="25.76" y2="17.28" stroke="#000000" stroke-width="0.130"/>
   <line x1="28.26" y1="14.81" x2="28.26" y2="17.46" stroke="#000000" stroke-width="0.130"/>
-  <line x1="9.76" y1="9.06" x2="9.76" y2="9.76" stroke="#000000" stroke-width="0.160" data-pos="973"/>
-  <line x1="9.76" y1="9.06" x2="12.38" y2="9.06" stroke="#000000" stroke-width="0.160" data-pos="973"/>
-  <line x1="14.38" y1="9.06" x2="17.00" y2="9.06" stroke="#000000" stroke-width="0.160" data-pos="973"/>
-  <line x1="17.00" y1="9.06" x2="17.00" y2="9.76" stroke="#000000" stroke-width="0.160" data-pos="973"/>
+  <line x1="9.56" y1="9.06" x2="9.56" y2="9.76" stroke="#000000" stroke-width="0.160" data-pos="973"/>
+  <line x1="9.56" y1="9.06" x2="12.38" y2="9.06" stroke="#000000" stroke-width="0.160" data-pos="973"/>
+  <line x1="14.38" y1="9.06" x2="17.20" y2="9.06" stroke="#000000" stroke-width="0.160" data-pos="973"/>
+  <line x1="17.20" y1="9.06" x2="17.20" y2="9.76" stroke="#000000" stroke-width="0.160" data-pos="973"/>
   <text x="13.38" y="9.06" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="973">3</text>
   <rect x="0.30" y="9.80" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="941"/>
   <text x="1.23" y="12.00" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="941">S</text>

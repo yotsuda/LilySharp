@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="28.21" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="326">Lyrics under a mid-piece meter change</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="13.12" x2="64.87" y2="13.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.12" x2="64.87" y2="14.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.12" x2="64.87" y2="15.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.12" x2="64.87" y2="16.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.12" x2="64.87" y2="17.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.12" x2="63.97" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.12" x2="63.97" y2="14.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.12" x2="63.97" y2="15.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.12" x2="63.97" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.12" x2="63.97" y2="17.12" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="16.12" font-size="4.00" data-pos="402"></text>
   <text class="music" x="4.88" y="15.12" font-size="4.00" data-pos="366"></text>
   <text class="music" x="4.88" y="17.12" font-size="4.00" data-pos="366"></text>
@@ -46,7 +46,6 @@
   <rect x="19.23" y="13.12" width="0.19" height="4.00" data-pos="436"/>
   <rect x="47.66" y="13.12" width="0.19" height="4.00" data-pos="456"/>
   <rect x="63.78" y="13.12" width="0.19" height="4.00" data-pos="466"/>
-  <rect x="64.27" y="13.12" width="0.60" height="4.00" data-pos="466"/>
   <text x="9.14" y="22.48" font-size="2.47" text-anchor="middle" data-pos="485">la</text>
   <text x="12.94" y="22.48" font-size="2.47" text-anchor="middle" data-pos="488">la</text>
   <text x="16.74" y="22.48" font-size="2.47" text-anchor="middle" data-pos="491">la</text>

@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="24.35" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="738">Custom Key</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="13.12" x2="37.45" y2="13.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.12" x2="37.45" y2="14.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.12" x2="37.45" y2="15.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.12" x2="37.45" y2="16.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.12" x2="37.45" y2="17.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.12" x2="36.55" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.12" x2="36.55" y2="14.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.12" x2="36.55" y2="15.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.12" x2="36.55" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.12" x2="36.55" y2="17.12" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="16.12" font-size="4.00"></text>
   <text class="music" x="4.19" y="13.12" font-size="4.00" data-pos="777"></text>
   <text class="music" x="5.29" y="14.62" font-size="4.00" data-pos="777"></text>
@@ -34,7 +34,6 @@
   <line x1="33.62" y1="14.27" x2="33.62" y2="17.62" stroke="#000000" stroke-width="0.130"/>
   <rect x="23.44" y="13.12" width="0.19" height="4.00" data-pos="835"/>
   <rect x="36.36" y="13.12" width="0.19" height="4.00" data-pos="850"/>
-  <rect x="36.85" y="13.12" width="0.60" height="4.00" data-pos="850"/>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="855"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="855">Main</text>
   </g>

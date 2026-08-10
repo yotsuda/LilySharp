@@ -53,8 +53,41 @@ public readonly record struct TupletBracketLayout(
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tuplet-number.cc — TupletNumber sits at bracket midpoint.
+    /// ⚠️ Off the LOGICAL bounds, not the drawn ones: <c>shorten-pair</c> moves the two
+    /// ends by the same amount in opposite directions, so the midpoint is the same either
+    /// way — but LilyPond's own number reads X-positions (:294-299 calc_x_offset), which
+    /// the shorten never touches. Keep it that way.
     /// </remarks>
     public double NumberX => (StartX + EndX) / 2.0;
+
+    /// <summary>
+    /// The bracket's DRAWN left / right end — the logical bound moved out by
+    /// <c>shorten-pair</c>. One house for the two readers (renderer and skyline).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket <c>(shorten-pair . (-0.2 . -0.2))</c>,
+    ///   spent in lily/bracket.cc:54-55 make_bracket:
+    ///   <c>straight_corners[d] += -d * shorten[d] / length * dz</c>. A NEGATIVE shorten
+    ///   therefore LENGTHENS: the horizontal run and the edge hook at each end both move
+    ///   outward along the bracket by 0.2 staff spaces.
+    /// <para>
+    /// ⚠️ The stencil is what a TupletBracket's skyline is built from
+    /// (scm/define-grobs.scm: <c>grob::unpure-vertical-skylines-from-stencil</c>), so the
+    /// skyline reads THESE, not the logical bounds.
+    /// </para>
+    /// <para>
+    /// MEASURED on audit/lp-regression's autobeam-tuplet-recheck: LilyPond draws the two
+    /// brackets over 15.876..20.110 and 22.085..26.319 where the logical stem faces are
+    /// 16.076..19.910 and 22.285..26.119 — 0.2 outward at each of the four ends.
+    /// </para>
+    /// </remarks>
+    public double DrawnStartX => StartX - BracketShortenPair;
+
+    /// <inheritdoc cref="DrawnStartX"/>
+    public double DrawnEndX => EndX + BracketShortenPair;
+
+    /// <summary>The outward reach <c>shorten-pair</c> buys at each end, in staff spaces.</summary>
+    internal const double BracketShortenPair = 0.2;
 
     /// <summary>
     /// Y-up of the tuplet number's visual center (LP TupletNumber Y, frame B).
@@ -248,8 +281,9 @@ internal static class TupletBracketEngraver
             double startX = measureLayout.X + startOffset + startAttach - halfStem;
             double endX = measureLayout.X + endOffset + endAttach + halfStem;
 
-            // LILYPOND-REF: scm/define-grobs.scm bracket-visibility = if-no-beam
-            bool showBracket = !AreAllNotesBeamed(tuplet, beamGroups, tupMeasures);
+            // LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility —
+            //   the bracket is hidden ONLY when the tuplet's own beam is equally long.
+            bool showBracket = !HasEquallyLongBeam(tuplet, beamGroups, tupMeasures);
 
             // Tab staves keep the raw-reach fallback: their staff positions are
             // string slots, not pitches, and no ledger point measures the tab
@@ -377,26 +411,23 @@ internal static class TupletBracketEngraver
                                     endX = beam.MemberXPositions[mi] + attach;
                             }
                         }
-                        // The INVISIBLE bracket's position: the beam's OUTER edge (where
-                        // the stems end — a multi-line beam pushes it out by its full
-                        // thickness) at the bracket's OWN bound Xs, plus the bracket's
-                        // padding; the number's CENTRE rides its midpoint exactly as it
-                        // rides a drawn bracket. Measured six-digit in two musics on
-                        // 2.26.0 (audit/lp-geometry staff.staff.beamed-tuplet-number):
-                        // centre = beam edge + 1.100 — NOT stem tip + TupletNumber
-                        // padding 0.5, and NOT the old 0.5 + digitHeight − 0.8 here,
-                        // which compensated a renderer text offset DrawTupletBrackets
-                        // no longer applies (it draws VerticalAnchor.Middle at
-                        // NumberYUp since 99ecd3aa).
-                        // LILYPOND-REF: lily/tuplet-number.cc:342 calc_y_offset — the
-                        //   bracket midpoint, for every tuplet that is not a knee.
-                        // LILYPOND-REF: scm/define-grobs.scm TupletBracket (padding . 1.1).
-                        double offset = isStemUp ? -BracketPadding : BracketPadding;
-                        // OuterEdgeStaffSpaceAtX is Y-up staff-space from the middle
-                        // line (frame B); reflect it to the bracket's device top frame
-                        // (device = middle 2.0 − Y-up).
-                        startY = (2.0 - beam.OuterEdgeStaffSpaceAtX(startX, isStemUp)) + offset;
-                        endY = (2.0 - beam.OuterEdgeStaffSpaceAtX(endX, isStemUp)) + offset;
+                        // ⚠️ THE Y IS NOT RECOMPUTED HERE ANY MORE — only the X is.
+                        // LilyPond's TupletNumber reads the BRACKET's position whether or
+                        // not the bracket is printed (lily/tuplet-number.cc:342
+                        // calc_y_offset — the bracket midpoint, for every tuplet that is
+                        // not a knee), and CalculateSlope now computes that position from
+                        // the beam itself in exactly this case (follow_beam, ported from
+                        // lily/tuplet-bracket.cc:491-519 + :633-637). Keeping a second
+                        // formula here made the two disagree by the bracket thickness.
+                        // MEASURED on the LP twins scratch/lpreg/tupnum{a,b}-lp.svg, which
+                        // differ only in 8ths vs 16ths: LilyPond puts the number at the
+                        // SAME y=15.3153 in both — bracket hidden in (a), drawn in (b) —
+                        // and its beam ink edge is 13.4756 in both, so the offset is
+                        // +1.26 either way. The old spelling here used +1.100 (padding
+                        // alone) and left the hidden-bracket book 0.16 short, which is
+                        // precisely what TupletNumberAlignmentTests
+                        // .EighthAndSixteenthBeams_PutTheNumberAtTheSameHeight asserts
+                        // against.
                     }
                 }
             }
@@ -525,27 +556,68 @@ internal static class TupletBracketEngraver
     }
 
     /// <summary>
-    /// Checks whether all notes in the tuplet are covered by a beam group.
-    /// If so, the bracket can be hidden (bracket-visibility = if-no-beam).
+    /// True when the tuplet's own beam has the SAME BOUNDS as the tuplet — the one case
+    /// in which the bracket is not drawn.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility = if-no-beam
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:98-146 bracket visibility check
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility —
+    ///   <c>bracket_visibility = !(par_beam &amp;&amp; equally_long)</c>, where
+    ///   <c>equally_long</c> is lily/tuplet-bracket.cc:88-98 equal_bounds: the beam and the
+    ///   bracket must share the same LEFT column and the same RIGHT column. A beam that
+    ///   merely COVERS the tuplet is not enough.
+    /// <para>
+    /// ⚠️ TupletBracket has NO <c>bracket-visibility</c> default — read
+    /// scm/define-grobs.scm:4097-4125, the whole grob definition: the property is absent, so
+    /// <c>scm_is_bool</c> and the <c>if-no-beam</c> branch are both skipped and the
+    /// equal-bounds rule above is what runs. The old code here cited
+    /// "define-grobs.scm bracket-visibility = if-no-beam" for a default that is not there,
+    /// and implemented the STRONGER rule that citation implies (any covering beam hides the
+    /// bracket).
+    /// </para>
+    /// <para>
+    /// MEASURED with a positive control (scratch/beamskip/lp-tuplet.ly, three scores, one
+    /// paper): beam exactly over the tuplet -&gt; <b>0</b> bracket lines; no beam at all
+    /// -&gt; 4; beam LONGER than the tuplet (autobeam-tuplet-recheck's shape) -&gt; 4 per
+    /// tuplet. Lily# drew none in the third case — the number floated with no bracket.
+    /// </para>
     /// </remarks>
-    private static bool AreAllNotesBeamed(TupletBracketItem tuplet,
+    private static bool HasEquallyLongBeam(TupletBracketItem tuplet,
         ImmutableArray<BeamGroup> beamGroups, ImmutableArray<Measure> tupMeasures)
     {
         if (beamGroups.IsDefaultOrEmpty)
             return false;
 
-        // Find the tuplet's OWN beam: one group covering every note of the range.
+        // Covers() answers "is this the tuplet's OWN beam" (par_beam); the bounds test
+        // answers "equally_long". LilyPond needs both.
         foreach (var beam in beamGroups)
         {
-            if (Covers(beam, tuplet, tupMeasures))
+            if (!Covers(beam, tuplet, tupMeasures))
+                continue;
+            if (HasSameBounds(beam, tuplet))
                 return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// The port of <c>equal_bounds</c>: the beam's outer stems stand on the tuplet's outer
+    /// columns.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:88-98 equal_bounds — LilyPond compares the
+    ///   spanners' bound COLUMNS. A beam member's item index is that column here.
+    /// </remarks>
+    private static bool HasSameBounds(BeamGroup beam, TupletBracketItem tuplet)
+    {
+        if (beam.Members.Length == 0)
+            return false;
+        var first = beam.Members[0];
+        var last = beam.Members[^1];
+        return first.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex
+               && last.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex
+               && first.ItemIndex == tuplet.StartNoteIndex
+               && last.ItemIndex == tuplet.EndNoteIndex;
     }
 
     /// <summary>
@@ -891,10 +963,14 @@ internal static class TupletBracketEngraver
         //   calc_position_and_height staff points; lily/tuplet-bracket.cc:708-746
         //   calc_position_and_height offset pass + flat quantize.
         // ⚠️ Unported clauses, disclosed (no pinned point reaches any of them):
-        //   ⑴ the follow-beam branch (:491-519) — vacuously false here: a beam
-        //     covering the WHOLE tuplet hides the bracket (bracket-visibility
-        //     if-no-beam) and that case takes the invisible-bracket path in the
-        //     caller, so a DRAWN bracket never carries LP's par_beam;
+        //   ⑴ ★ PORTED (was: "vacuously false here"). The old reasoning was
+        //     "a beam covering the WHOLE tuplet hides the bracket, so a DRAWN bracket
+        //     never carries LP's par_beam" — true only under the WRONG visibility rule
+        //     this engraver used to have. LilyPond hides the bracket only when the beam
+        //     is EQUALLY LONG (see HasEquallyLongBeam), so a covering-but-longer beam
+        //     draws a bracket AND carries par_beam. Measured on autobeam-tuplet-recheck:
+        //     with the staff floor still applied the bracket came out 1.90 ss above
+        //     LilyPond's (Lily# 8.29 vs LP 10.1906 device, beams identical).
         //   ⑵ the scripts term (:682-706 avoid-scripts) — PORTED into the offset
         //     pass below (tuplet-bracket-avoid-scripts.ly pinned it), with its
         //     own narrowings disclosed at the port site;
@@ -910,14 +986,27 @@ internal static class TupletBracketEngraver
             int dir = isStemUp ? 1 : -1;             // Y-up
             double span = bracketWidth;              // x0..x1 = bound stem faces
             double x0 = bracketStartX;
+            // LILYPOND-REF: lily/tuplet-bracket.cc:491-492 calc_position_and_height —
+            //   follow_beam = par_beam && the beam points the bracket's way && not knee.
+            //   It selects LP's FIRST branch (:495-519), where the encompass points are
+            //   the two outer STEM TIPS and the staff never enters: neither the slope
+            //   (:530-533 rv/lv.unite(staff) live in the ELSE branch) nor the offset pass
+            //   (:633-637 pushes the staff edge only `if (!follow_beam)`).
+            // ⚠️ default(ImmutableArray<T>) throws on foreach — the unit tests call this
+            //    with no beams at all. Same guard the caller uses before FindCoveringBeam.
+            var parBeam = beamLayouts.IsDefaultOrEmpty
+                ? null : FindCoveringBeam(beamLayouts, tuplet, measures);
+            bool followBeam = parBeam != null
+                              && parBeam.Group.StemUp == isStemUp
+                              && !parBeam.Group.IsKnee;
             // The staff, ink 2.05 widened by staff-padding 0.25, united into the
             // bound columns' extents — THIS is what flattens a within-staff
             // tuplet (:530-535 rv.unite (staff)).
             double staffEdge = 2.3 * dir;
-            double lvDir = dir > 0
-                ? Math.Max(firstTipUp, staffEdge) : Math.Min(firstTipUp, staffEdge);
-            double rvDir = dir > 0
-                ? Math.Max(lastTipUp, staffEdge) : Math.Min(lastTipUp, staffEdge);
+            double lvDir = followBeam ? firstTipUp
+                : dir > 0 ? Math.Max(firstTipUp, staffEdge) : Math.Min(firstTipUp, staffEdge);
+            double rvDir = followBeam ? lastTipUp
+                : dir > 0 ? Math.Max(lastTipUp, staffEdge) : Math.Min(lastTipUp, staffEdge);
             double graphicalDy = rvDir - lvDir;
 
             // Musical sign gates (:537-549): zero the dy when the chord's top and
@@ -975,8 +1064,15 @@ internal static class TupletBracketEngraver
             }
             foreach (var p in lpPoints)
                 Clear(p.X - x0, p.YUp);
-            Clear(0.0, staffEdge);
-            Clear(span, staffEdge);
+            // LILYPOND-REF: lily/tuplet-bracket.cc:633-637 calc_position_and_height —
+            //   `if (!follow_beam) { points.push_back(staff[dir]) ×2 }`. A bracket that
+            //   rides its own beam is NOT lifted clear of the staff; it sits one padding
+            //   off the beam wherever the beam is, INSIDE the staff when the beam is.
+            if (!followBeam)
+            {
+                Clear(0.0, staffEdge);
+                Clear(span, staffEdge);
+            }
             // The avoid-scripts term: every script of this tuplet's notes that
             // declares NO outside-staff-priority adds the point (its X centre
             // − x0, its ink edge on the bracket's side), and the same max pass

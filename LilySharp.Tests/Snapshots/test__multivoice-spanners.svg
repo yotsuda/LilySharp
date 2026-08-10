@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="26.69" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="533">Multi-voice spanners</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="15.46" x2="34.74" y2="15.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.46" x2="34.74" y2="16.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.46" x2="34.74" y2="17.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.46" x2="34.74" y2="18.46" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.46" x2="34.74" y2="19.46" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.46" x2="33.84" y2="15.46" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.46" x2="33.84" y2="16.46" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.46" x2="33.84" y2="17.46" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.46" x2="33.84" y2="18.46" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.46" x2="33.84" y2="19.46" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="18.46" font-size="4.00" data-pos="567"></text>
   <text class="music" x="4.88" y="17.46" font-size="4.00"></text>
   <line x1="8.26" y1="14.46" x2="10.22" y2="14.46" stroke="#000000" stroke-width="0.200"/>
@@ -76,7 +76,6 @@
   <line x1="30.83" y1="15.61" x2="30.83" y2="18.96" stroke="#000000" stroke-width="0.130"/>
   <rect x="20.48" y="15.46" width="0.19" height="4.00" data-pos="630"/>
   <rect x="33.65" y="15.46" width="0.19" height="4.00" data-pos="650"/>
-  <rect x="34.14" y="15.46" width="0.60" height="4.00" data-pos="650"/>
   <path d="M 26.26,15.75 C 26.58,16.03 27.11,16.03 27.42,15.75 C 27.11,16.15 26.58,16.15 26.26,15.75 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 15.14,16.00 C 15.52,16.72 16.50,17.18 17.29,17.00 C 16.45,17.29 15.47,16.83 15.14,16.00 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round"/>
   <line x1="10.33" y1="15.72" x2="11.27" y2="15.20" stroke="#000000" stroke-width="0.100" data-pos="660"/>

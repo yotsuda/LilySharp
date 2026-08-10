@@ -1065,34 +1065,33 @@
   <line x1="0.00" y1="86.24" x2="102.43" y2="86.24" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="87.24" x2="102.43" y2="87.24" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="86.24" font-size="4.00"></text>
-  <line x1="42.80" y1="88.24" x2="45.74" y2="88.24" stroke="#000000" stroke-width="0.200"/>
+  <line x1="43.15" y1="88.24" x2="46.09" y2="88.24" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="5.80" y="86.74" font-size="4.00" data-pos="3801"></text>
-  <text class="music" x="13.30" y="86.24" font-size="4.00" data-pos="3806"></text>
-  <text class="music" x="20.79" y="86.74" font-size="4.00" data-pos="3811"></text>
-  <text class="music" x="28.29" y="87.24" font-size="4.00" data-pos="3816"></text>
-  <text class="music" x="35.79" y="87.74" font-size="4.00" data-pos="3821"></text>
-  <text class="music" x="43.29" y="88.24" font-size="4.00" data-pos="3826"></text>
-  <text class="music" x="50.78" y="87.74" font-size="4.00" data-pos="3835"></text>
-  <text class="music" x="58.28" y="87.24" font-size="4.00" data-pos="3840"></text>
-  <text class="music" x="65.78" y="86.74" font-size="4.00" data-pos="3845"></text>
-  <text class="music" x="73.27" y="86.24" font-size="4.00" data-pos="3850"></text>
-  <text class="music" x="80.77" y="86.74" font-size="4.00" data-pos="3855"></text>
-  <text class="music" x="88.27" y="87.24" font-size="4.00" data-pos="3860"></text>
-  <text class="music" x="95.77" y="87.74" font-size="4.00" data-pos="3865"></text>
-  <rect x="11.37" y="83.24" width="0.19" height="4.00" data-pos="3804"/>
-  <rect x="18.87" y="83.24" width="0.19" height="4.00" data-pos="3809"/>
-  <rect x="26.37" y="83.24" width="0.19" height="4.00" data-pos="3814"/>
-  <rect x="33.87" y="83.24" width="0.19" height="4.00" data-pos="3819"/>
-  <rect x="41.36" y="83.24" width="0.19" height="4.00" data-pos="3824"/>
-  <rect x="48.86" y="83.24" width="0.19" height="4.00" data-pos="3833"/>
-  <rect x="56.36" y="83.24" width="0.19" height="4.00" data-pos="3838"/>
-  <rect x="63.85" y="83.24" width="0.19" height="4.00" data-pos="3843"/>
-  <rect x="71.35" y="83.24" width="0.19" height="4.00" data-pos="3848"/>
-  <rect x="78.85" y="83.24" width="0.19" height="4.00" data-pos="3853"/>
-  <rect x="86.35" y="83.24" width="0.19" height="4.00" data-pos="3858"/>
-  <rect x="93.84" y="83.24" width="0.19" height="4.00" data-pos="3863"/>
-  <rect x="101.34" y="83.24" width="0.19" height="4.00" data-pos="3868"/>
-  <rect x="101.83" y="83.24" width="0.60" height="4.00" data-pos="3868"/>
+  <text class="music" x="13.37" y="86.24" font-size="4.00" data-pos="3806"></text>
+  <text class="music" x="20.94" y="86.74" font-size="4.00" data-pos="3811"></text>
+  <text class="music" x="28.50" y="87.24" font-size="4.00" data-pos="3816"></text>
+  <text class="music" x="36.07" y="87.74" font-size="4.00" data-pos="3821"></text>
+  <text class="music" x="43.64" y="88.24" font-size="4.00" data-pos="3826"></text>
+  <text class="music" x="51.21" y="87.74" font-size="4.00" data-pos="3835"></text>
+  <text class="music" x="58.77" y="87.24" font-size="4.00" data-pos="3840"></text>
+  <text class="music" x="66.34" y="86.74" font-size="4.00" data-pos="3845"></text>
+  <text class="music" x="73.91" y="86.24" font-size="4.00" data-pos="3850"></text>
+  <text class="music" x="81.48" y="86.74" font-size="4.00" data-pos="3855"></text>
+  <text class="music" x="89.05" y="87.24" font-size="4.00" data-pos="3860"></text>
+  <text class="music" x="96.61" y="87.74" font-size="4.00" data-pos="3865"></text>
+  <rect x="11.43" y="83.24" width="0.19" height="4.00" data-pos="3804"/>
+  <rect x="18.99" y="83.24" width="0.19" height="4.00" data-pos="3809"/>
+  <rect x="26.56" y="83.24" width="0.19" height="4.00" data-pos="3814"/>
+  <rect x="34.13" y="83.24" width="0.19" height="4.00" data-pos="3819"/>
+  <rect x="41.70" y="83.24" width="0.19" height="4.00" data-pos="3824"/>
+  <rect x="49.27" y="83.24" width="0.19" height="4.00" data-pos="3833"/>
+  <rect x="56.83" y="83.24" width="0.19" height="4.00" data-pos="3838"/>
+  <rect x="64.40" y="83.24" width="0.19" height="4.00" data-pos="3843"/>
+  <rect x="71.97" y="83.24" width="0.19" height="4.00" data-pos="3848"/>
+  <rect x="79.54" y="83.24" width="0.19" height="4.00" data-pos="3853"/>
+  <rect x="87.10" y="83.24" width="0.19" height="4.00" data-pos="3858"/>
+  <rect x="94.67" y="83.24" width="0.19" height="4.00" data-pos="3863"/>
+  <rect x="102.24" y="83.24" width="0.19" height="4.00" data-pos="3868"/>
   <text x="0.00" y="8.64" font-size="1.75" font-weight="bold" text-anchor="end">313</text>
   <text x="0.00" y="20.90" font-size="1.75" font-weight="bold" text-anchor="end">325</text>
   <text x="0.00" y="33.15" font-size="1.75" font-weight="bold" text-anchor="end">337</text>

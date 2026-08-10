@@ -83,39 +83,42 @@ public class TupletNumberTests
     }
 
     /// <summary>
-    /// A fully beamed tuplet's number sits centred on the INVISIBLE bracket: the beam's
-    /// outer edge plus TupletBracket padding 1.1 — NOT stem tip + TupletNumber padding
-    /// 0.5, and NOT a clearance/digit-height arithmetic. Measured six-digit in two musics
-    /// on 2.26.0 (audit/lp-geometry staff.staff.beamed-tuplet-number: centre = beam lower
-    /// edge 3.240 + 1.100). The 1.1 is pinned as the measured number, deliberately not
-    /// read back from the engraver's constant.
+    /// A fully beamed tuplet's number sits centred on the INVISIBLE bracket — the SAME
+    /// bracket position the engraver computes when the bracket is drawn, not a second
+    /// formula of its own.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-number.cc:342 calc_y_offset — the TupletNumber reads the
+    ///   bracket's midpoint for every tuplet that is not a knee, whether or not the bracket
+    ///   is printed. The bracket's own position comes from
+    ///   lily/tuplet-bracket.cc:444-746 calc_position_and_height, which runs the same way
+    ///   for an invisible bracket — including the flat-bracket quantize at :726-746.
+    /// <para>
+    /// ⚠️ THIS TEST USED TO RE-DERIVE "beam outer edge + padding 1.1" and compare against
+    /// it. That model omits LilyPond's quantize step, and the engraver kept a SECOND
+    /// spelling of the number's Y to satisfy it — the two then disagreed by up to the
+    /// bracket thickness. MEASURED on the LP twins scratch/lpreg/tupnum{a,b}-lp.svg (same
+    /// music in 8ths and 16ths, bracket hidden in one and drawn in the other): LilyPond
+    /// puts the number at y=15.3153 in BOTH. The absolute is pinned by the ledger point
+    /// staff.staff.beamed-tuplet-number (LilyPond 8.017717); what is pinned HERE is that
+    /// there is only one house — the number is the bracket's midpoint, always.
+    /// </para>
+    /// </remarks>
     [Theory]
     [InlineData("tuplet 3/2 { c8 d e } |")]   // stems up — number above the beam
     [InlineData("tuplet 3/2 { b8 c' b } |")]  // stems down — number below the beam
-    public void BeamedTupletNumber_CentresOnTheInvisibleBracket_BeamEdgePlusPadding(
-        string source)
+    public void BeamedTupletNumber_CentresOnTheInvisibleBracket(string source)
     {
         var layout = BuildLayout(source);
         var bracket = Assert.Single(layout.TupletBracketLayouts);
         Assert.False(bracket.ShowBracket); // beat-long, fully beamed: number only
-        var beam = Assert.Single(layout.BeamLayouts);
+        Assert.Single(layout.BeamLayouts);
 
-        // The invisible bracket bounds are the tuplet's OWN outer stems (LP
-        // follow-beam reads columns[0]/back()); MemberXPositions are head
-        // anchors, so the stem centre adds the attach — the same Xs the
-        // engraver evaluates the beam face at.
-        double StemX(int mi) => beam.MemberXPositions[mi]
-            + LilySharp.Core.Svg.Layout.LayoutUtilities.StemAttachX(bracket.IsStemUp,
-                LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(beam.Group.Members[mi].Item),
-                LilySharp.Core.Svg.Layout.LayoutUtilities.NoteheadStyleOf(beam.Group.Members[mi].Item));
-        double edgeLeft = beam.OuterEdgeStaffSpaceAtX(StemX(0), bracket.IsStemUp);
-        double edgeRight = beam.OuterEdgeStaffSpaceAtX(
-            StemX(beam.Group.Members.Length - 1), bracket.IsStemUp);
-        double padding = bracket.IsStemUp ? -1.1 : 1.1; // device down-positive
-        // Device frame from the staff top (middle line = 2.0), reflected to stored Y-up.
-        double expected = -((2.0 - edgeLeft) + padding + (2.0 - edgeRight) + padding) / 2.0;
-        Assert.Equal(expected, bracket.NumberYUp, precision: 6);
+        // The number rides the bracket's midpoint — the invisible bracket is a real
+        // position, not a placeholder. A second Y formula for the hidden case would break
+        // this the moment the two drifted.
+        Assert.Equal((bracket.StartYUp + bracket.EndYUp) / 2.0, bracket.NumberYUp,
+            precision: 9);
     }
 
     /// <summary>

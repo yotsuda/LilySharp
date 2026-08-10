@@ -1073,9 +1073,13 @@ internal sealed class SkylineBuilder
         foreach (var b in tupletBrackets)
         {
             double dir = b.IsStemUp ? 1.0 : -1.0;
+            // The DRAWN ends, not the logical bounds: a TupletBracket's skyline is built
+            // from its stencil (scm/define-grobs.scm
+            // grob::unpure-vertical-skylines-from-stencil), and shorten-pair puts that
+            // stencil 0.2 further out at each end — TupletBracketLayout.DrawnStartX.
             bool leftFirst = b.StartX <= b.EndX;
-            double xLeft = leftFirst ? b.StartX : b.EndX;
-            double xRight = leftFirst ? b.EndX : b.StartX;
+            double xLeft = leftFirst ? b.DrawnStartX : b.DrawnEndX;
+            double xRight = leftFirst ? b.DrawnEndX : b.DrawnStartX;
             if (xRight <= xLeft)
                 continue;
 

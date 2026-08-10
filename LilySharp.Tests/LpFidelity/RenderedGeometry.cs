@@ -1643,8 +1643,17 @@ internal sealed class RenderedGeometry
 
         // Staff and ledger lines are horizontal, so "x1 == x2" separates them; a bar line
         // would qualify but cannot fall inside a beam's span.
+        // ⚠️ VERTICAL IS NOT ENOUGH — the thickness is part of the identification. A TUPLET
+        // BRACKET's two end hooks are vertical strokes of TupletBracket thickness
+        // (1.6 line-thicknesses = 0.16) and they land INSIDE the beam's x span whenever a
+        // bracket rides its own beam. This instrument counted them as stems and reported
+        // "the outermost two are not at the beam's ends" for books whose engraving was
+        // correct — it began lying the moment the bracket-visibility rule was corrected to
+        // LilyPond's (a beam LONGER than its tuplet draws a bracket). A stem is
+        // EngravingDefaults.StemThickness thick; nothing else vertical here is.
         var stems = _pages[page].Lines
-            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9)
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - EngravingDefaults.StemThickness) < 1e-9)
             .Select(l => l.X1)
             .Where(x => x >= span.Left - 1e-9 && x <= span.Right + 1e-9)
             .Distinct()

@@ -540,21 +540,25 @@ internal static partial class SharedRenderer
             {
                 if (b.ShowBracket)
                 {
-                    gc.DrawLine(b.StartX, startY, b.StartX, startY - edgeHeight * hookDir,
+                    // The DRAWN ends: shorten-pair reaches 0.2 further out than the logical
+                    // bound at each side (TupletBracketLayout.DrawnStartX carries the rule).
+                    double drawnStartX = b.DrawnStartX;
+                    double drawnEndX = b.DrawnEndX;
+                    gc.DrawLine(drawnStartX, startY, drawnStartX, startY - edgeHeight * hookDir,
                         Color.Black, thickness);
 
                     const double numberGap = 1.0;
-                    double totalWidth = b.EndX - b.StartX;
-                    double leftFrac = totalWidth > 0 ? (midX - numberGap - b.StartX) / totalWidth : 0.5;
-                    double rightFrac = totalWidth > 0 ? (midX + numberGap - b.StartX) / totalWidth : 0.5;
+                    double totalWidth = drawnEndX - drawnStartX;
+                    double leftFrac = totalWidth > 0 ? (midX - numberGap - drawnStartX) / totalWidth : 0.5;
+                    double rightFrac = totalWidth > 0 ? (midX + numberGap - drawnStartX) / totalWidth : 0.5;
                     double leftGapY = startY + (endY - startY) * leftFrac;
                     double rightGapY = startY + (endY - startY) * rightFrac;
 
-                    gc.DrawLine(b.StartX, startY, midX - numberGap, leftGapY,
+                    gc.DrawLine(drawnStartX, startY, midX - numberGap, leftGapY,
                         Color.Black, thickness);
-                    gc.DrawLine(midX + numberGap, rightGapY, b.EndX, endY,
+                    gc.DrawLine(midX + numberGap, rightGapY, drawnEndX, endY,
                         Color.Black, thickness);
-                    gc.DrawLine(b.EndX, endY, b.EndX, endY - edgeHeight * hookDir,
+                    gc.DrawLine(drawnEndX, endY, drawnEndX, endY - edgeHeight * hookDir,
                         Color.Black, thickness);
                 }
 

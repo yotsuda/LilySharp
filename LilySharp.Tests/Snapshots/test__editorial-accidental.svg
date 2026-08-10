@@ -9,11 +9,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="162">Editorial Accidentals</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="195">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="20.80" x2="35.25" y2="20.80" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="21.80" x2="35.25" y2="21.80" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="22.80" x2="35.25" y2="22.80" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="23.80" x2="35.25" y2="23.80" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="24.80" x2="35.25" y2="24.80" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.80" x2="34.35" y2="20.80" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="21.80" x2="34.35" y2="21.80" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="22.80" x2="34.35" y2="22.80" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="23.80" x2="34.35" y2="23.80" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="24.80" x2="34.35" y2="24.80" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="23.80" font-size="4.00"></text>
   <text class="music" x="4.88" y="22.80" font-size="4.00" data-pos="214"></text>
   <line x1="8.26" y1="25.80" x2="10.22" y2="25.80" stroke="#000000" stroke-width="0.200"/>
@@ -36,7 +36,6 @@
   <line x1="30.17" y1="20.30" x2="30.17" y2="23.80" stroke="#000000" stroke-width="0.130"/>
   <rect x="20.84" y="20.80" width="0.19" height="4.00" data-pos="309"/>
   <rect x="34.16" y="20.80" width="0.19" height="4.00" data-pos="330"/>
-  <rect x="34.65" y="20.80" width="0.60" height="4.00" data-pos="330"/>
   <text class="music" font-family="Emmentaler-16, Emmentaler, serif" x="8.97" y="19.36" font-size="3.17" data-pos="268"></text>
   <text class="music" font-family="Emmentaler-16, Emmentaler, serif" x="12.05" y="19.36" font-size="3.17" data-pos="282"></text>
   <text class="music" font-family="Emmentaler-16, Emmentaler, serif" x="15.39" y="20.03" font-size="3.17" data-pos="296"></text>

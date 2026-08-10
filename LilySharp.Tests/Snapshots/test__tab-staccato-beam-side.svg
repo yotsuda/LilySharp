@@ -9,19 +9,18 @@
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text class="music" x="0.60" y="15.37" font-size="4.00"></text>
   <rect x="16.09" y="13.12" width="0.19" height="4.50" data-pos="473"/>
-  <rect x="16.58" y="13.12" width="0.60" height="4.50" data-pos="473"/>
   <text x="6.45" y="18.66" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="441">3</text>
   <text x="8.96" y="18.66" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="453">3</text>
   <text x="11.71" y="15.66" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="455">5</text>
   <text x="14.21" y="15.66" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="469">5</text>
-  <line x1="0.00" y1="13.12" x2="17.18" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.12" x2="16.28" y2="13.12" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="14.62" x2="10.86" y2="14.62" stroke="#000000" stroke-width="0.100"/>
   <line x1="12.56" y1="14.62" x2="13.36" y2="14.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="15.07" y1="14.62" x2="17.18" y2="14.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.12" x2="17.18" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="15.07" y1="14.62" x2="16.28" y2="14.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.12" x2="16.28" y2="16.12" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="17.62" x2="5.60" y2="17.62" stroke="#000000" stroke-width="0.100"/>
   <line x1="7.31" y1="17.62" x2="8.10" y2="17.62" stroke="#000000" stroke-width="0.100"/>
-  <line x1="9.81" y1="17.62" x2="17.18" y2="17.62" stroke="#000000" stroke-width="0.100"/>
+  <line x1="9.81" y1="17.62" x2="16.28" y2="17.62" stroke="#000000" stroke-width="0.100"/>
   <polygon points="6.97,11.94 14.87,9.88 14.87,10.36 6.97,12.42"/>
   <line x1="7.04" y1="16.33" x2="7.04" y2="12.16" stroke="#000000" stroke-width="0.130"/>
   <line x1="9.54" y1="16.33" x2="9.54" y2="11.51" stroke="#000000" stroke-width="0.130"/>

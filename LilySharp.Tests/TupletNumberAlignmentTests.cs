@@ -55,7 +55,16 @@ public class TupletNumberAlignmentTests
             "tuplet 3/2 { b''16 c'16 d16 } tuplet 3/2 { e16 f16 g16 } r2 r4 |");
         var brackets = layout.TupletBracketLayouts.OrderBy(b => b.NumberX).ToArray();
         Assert.Equal(2, brackets.Length);
-        Assert.False(brackets.All(b => b.ShowBracket), "beamed tuplets draw no bracket");
+        // ⚠️ THIS USED TO ASSERT THE OPPOSITE ("beamed tuplets draw no bracket"), which is
+        // not LilyPond's rule. The bracket is hidden only when the beam is EQUALLY LONG
+        // (lily/tuplet-bracket.cc:100-115 bracket_basic_visibility + :88-98 equal_bounds);
+        // here ONE beam covers BOTH tuplets, so neither tuplet's bounds are the beam's.
+        // MEASURED on this test's own LP twin scratch/lpreg/tupnumb-lp.svg: 8 bracket
+        // lines = 4 per tuplet (two 0.7 edge hooks, and the horizontal run broken around
+        // the number). Its 8th-note sibling tupnuma-lp.svg, where each beam DOES match its
+        // tuplet, has 0.
+        Assert.True(brackets.All(b => b.ShowBracket),
+            "one beam over two tuplets is equally long with neither — LilyPond brackets both");
 
         // LP twin: number-to-number spacing 7.51 ss — the pin here is that they
         // are DISTINCT and each centres within its own tuplet's X span.

@@ -8,11 +8,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="373">Transpose</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="394">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="24.71" x2="50.36" y2="24.71" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="25.71" x2="50.36" y2="25.71" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="26.71" x2="50.36" y2="26.71" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="27.71" x2="50.36" y2="27.71" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="28.71" x2="50.36" y2="28.71" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="24.71" x2="49.46" y2="24.71" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="25.71" x2="49.46" y2="25.71" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="26.71" x2="49.46" y2="26.71" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="27.71" x2="49.46" y2="27.71" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="28.71" x2="49.46" y2="28.71" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="27.71" font-size="4.00" data-pos="439"></text>
   <text class="music" x="4.19" y="24.71" font-size="4.00" data-pos="412"></text>
   <text class="music" x="5.29" y="26.21" font-size="4.00" data-pos="412"></text>
@@ -74,7 +74,6 @@
   <rect x="23.03" y="24.71" width="0.19" height="4.00" data-pos="506"/>
   <rect x="36.38" y="24.71" width="0.19" height="4.00" data-pos="518"/>
   <rect x="49.27" y="24.71" width="0.19" height="4.00" data-pos="532"/>
-  <rect x="49.76" y="24.71" width="0.60" height="4.00" data-pos="532"/>
   <rect x="0.30" y="19.85" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="466"/>
   <text x="3.40" y="22.05" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="466">Main</text>
   </g>

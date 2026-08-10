@@ -8,11 +8,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="38">Bass Test</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="59">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="16.24" x2="36.06" y2="16.24" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.24" x2="36.06" y2="17.24" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.24" x2="36.06" y2="18.24" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.24" x2="36.06" y2="19.24" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.24" x2="36.06" y2="20.24" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.24" x2="35.16" y2="16.24" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.24" x2="35.16" y2="17.24" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.24" x2="35.16" y2="18.24" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.24" x2="35.16" y2="19.24" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.24" x2="35.16" y2="20.24" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="17.24" font-size="4.00" data-pos="119"></text>
   <text class="music" x="4.30" y="19.24" font-size="4.00" data-pos="87"></text>
   <text class="music" x="6.37" y="18.24" font-size="4.00" data-pos="78"></text>
@@ -40,7 +40,6 @@
   <line x1="32.17" y1="13.89" x2="32.17" y2="18.24" stroke="#000000" stroke-width="0.130"/>
   <rect x="21.87" y="16.24" width="0.19" height="4.00" data-pos="159"/>
   <rect x="34.97" y="16.24" width="0.19" height="4.00" data-pos="170"/>
-  <rect x="35.46" y="16.24" width="0.60" height="4.00" data-pos="170"/>
   <text class="music" x="6.37" y="14.87" font-size="3.56" data-pos="0"></text>
   <line x1="7.48" y1="14.70" x2="7.48" y2="12.20" stroke="#000000" stroke-width="0.116" data-pos="0"/>
   <text x="8.15" y="15.36" font-size="2.20" data-pos="0">= 120</text>

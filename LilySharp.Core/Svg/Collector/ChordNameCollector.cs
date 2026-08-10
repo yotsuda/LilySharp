@@ -433,12 +433,10 @@ internal sealed class ChordNameCollector
             var end = measureEndBar.GetValueOrDefault(i, BarlineType.Single);
             measures.Add(new Measure(items, start, end, null, 0, 0));
         }
-        // Auto-set the final barline on the last measure (music convention), matching
-        // MeasureCollector — a written end-repeat / double bar there is kept.
-        var lastMeasure = measures[maxIndex];
-        if (lastMeasure.EndBarline == BarlineType.Single)
-            measures[maxIndex] = new Measure(
-                lastMeasure.Items, lastMeasure.StartBarline, BarlineType.Final, null, 0, 0);
+        // ⚠️ NO AUTOMATIC FINAL BARLINE — the same rule (and the same removal) as
+        // MeasureCollector.FinalizeMeasures: `|.` is written, never inferred. A chord row
+        // that stamped Final here also dominated the score-wide barline merge, so it put a
+        // final barline on the music staff of any lead sheet.
         return measures.MoveToImmutable();
     }
 

@@ -514,15 +514,25 @@ internal sealed class ElementCoordinator
 
             var item = measure.Items[i];
 
-            // A rest sitting BETWEEN the beam's outer members belongs to the beam
-            // (rest -> stem -> beam in LilyPond) and is moved clear of it by
-            // rest_collision_callback (see CalculateRestShifts) — the beam itself
-            // is quanted as if the rest were not there. LilyPond's beam quanter
-            // likewise ignores such rests (verified: `c'8[ r8 c'8]` and
-            // `c'8[ c'8]` quant to identical positions). Treating the rest as a
-            // collision object would instead lift the BEAM to clear it, which LP
-            // never does. LILYPOND-REF: lily/beam.cc:1331 rest_collision_callback.
-            if (item is RestItem && i > firstMemberIndex && i < lastMemberIndex)
+            // A REST IS NEVER A COVERED GROB — not between the beam's members, not in
+            // another voice, not anywhere.
+            // LILYPOND-REF: scm/define-grobs.scm:496-504 collision-interfaces — note-head-interface
+            //   and stem-interface are in the Beam's list; rest-interface is NOT. The
+            //   engraver reads that list in lily/beam-collision-engraver.cc:100-103
+            //   covered_grob_has_interface and has no acknowledge_rest beside its
+            //   acknowledge_note_head / acknowledge_stem, so a Rest never enters the beam's
+            //   covered set and the quanter never sees it.
+            // ⚠️ A rest BETWEEN the members is moved clear of the beam instead
+            //   (lily/beam.cc:1331 rest_collision_callback — see CalculateRestShifts);
+            //   the beam is quanted as if the rest were not there.
+            // ⚠️ This guard used to carry the index range `i > firstMemberIndex &&
+            //   i < lastMemberIndex`, which caught only the between case. Rests OUTSIDE
+            //   that range — in practice the other voice of a `voice { } { }` span, whose
+            //   items share this list — still booked a box and LIFTED the beam: measured
+            //   1.810 ss above the middle line for `voice { c4 c8 c8 } { r8 r8 r8 r8 }`
+            //   where LP puts the beam ON the middle line. A spacer took the same path.
+            //   The interface list is the whole rule; the range was a symptom patch.
+            if (item is RestItem)
                 continue;
             double itemX = itemXPositions[i];
 
@@ -562,20 +572,12 @@ internal sealed class ElementCoordinator
         bool anyBooked = false;
         switch (item)
         {
-            case RestItem rest:
-            {
-                var box = GlyphMetrics.GetRestBBox(
-                    LayoutUtilities.GetNoteValueFromFraction(rest.BaseDuration));
-                // ⚠️ The rest is taken at its DEFAULT position. A rest that another voice
-                // (or CalculateRestShifts) has moved covers a different band, and this does
-                // not know it — the same staleness the rest's own shift already carries.
-                double centreSs = EngravingDefaults.RestCenterPosition * 0.5;
-                anyBooked = AddBoxCollision(
-                    collisions, itemX + box.Left, itemX + box.Right,
-                    centreSs + box.Bottom, centreSs + box.Top,
-                    beamEdgeLeftX, beamEdgeRightX, beamOriginX);
-                break;
-            }
+            // ⚠️ NO `case RestItem` — a rest is not in the Beam's
+            // scm/define-grobs.scm:496-504 collision-interfaces, and the caller drops it
+            // before reaching here. The removed arm booked the rest's box at its DEFAULT
+            // position and lifted the beam over it; LilyPond moves the REST instead
+            // (lily/beam.cc:1331 rest_collision_callback). Do not restore it: the missing
+            // entry in the interface list IS the rule.
             case NoteItem note:
                 anyBooked = AddHeadCollision(
                     collisions, itemX, note.StaffPosition,

@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="25.85" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="240">Mixed meters and beaming</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="13.12" x2="85.12" y2="13.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.12" x2="85.12" y2="14.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.12" x2="85.12" y2="15.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.12" x2="85.12" y2="16.12" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.12" x2="85.12" y2="17.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.12" x2="84.22" y2="13.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.12" x2="84.22" y2="14.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.12" x2="84.22" y2="15.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.12" x2="84.22" y2="16.12" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.12" x2="84.22" y2="17.12" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="16.12" font-size="4.00" data-pos="288"></text>
   <text class="music" x="4.19" y="13.12" font-size="4.00" data-pos="267"></text>
   <text class="music" x="6.44" y="15.12" font-size="4.00"></text>
@@ -84,7 +84,6 @@
   <rect x="44.52" y="13.12" width="0.19" height="4.00" data-pos="385"/>
   <rect x="54.41" y="13.12" width="0.19" height="4.00" data-pos="395"/>
   <rect x="84.03" y="13.12" width="0.19" height="4.00" data-pos="437"/>
-  <rect x="84.52" y="13.12" width="0.60" height="4.00" data-pos="437"/>
   <polygon points="11.21,14.69 23.86,14.07 23.86,14.55 11.21,15.17"/>
   <line x1="11.28" y1="19.47" x2="11.28" y2="14.93" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.78" y1="18.97" x2="13.78" y2="14.80" stroke="#000000" stroke-width="0.130"/>

@@ -8,11 +8,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="486">Octave Base (absolute)</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="520">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="15.26" x2="61.14" y2="15.26" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.26" x2="61.14" y2="16.26" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.26" x2="61.14" y2="17.26" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.26" x2="61.14" y2="18.26" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.26" x2="61.14" y2="19.26" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.26" x2="60.24" y2="15.26" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.26" x2="60.24" y2="16.26" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.26" x2="60.24" y2="17.26" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.26" x2="60.24" y2="18.26" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.26" x2="60.24" y2="19.26" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="16.26" font-size="4.00" data-pos="562"></text>
   <text class="music" x="5.00" y="17.26" font-size="4.00" data-pos="528"></text>
   <line x1="30.49" y1="14.26" x2="32.45" y2="14.26" stroke="#000000" stroke-width="0.200"/>
@@ -53,7 +53,6 @@
   <rect x="33.64" y="15.26" width="0.19" height="4.00" data-pos="627"/>
   <rect x="46.64" y="15.26" width="0.19" height="4.00" data-pos="638"/>
   <rect x="60.05" y="15.26" width="0.19" height="4.00" data-pos="648"/>
-  <rect x="60.54" y="15.26" width="0.60" height="4.00" data-pos="648"/>
   <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="584"/>
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="584">Main</text>
   </g>

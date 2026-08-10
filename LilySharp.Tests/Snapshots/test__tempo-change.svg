@@ -8,11 +8,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="393">Tempo Changes</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="418">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="18.57" x2="45.88" y2="18.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.57" x2="45.88" y2="19.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.57" x2="45.88" y2="20.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="21.57" x2="45.88" y2="21.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="22.57" x2="45.88" y2="22.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.57" x2="44.98" y2="18.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.57" x2="44.98" y2="19.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.57" x2="44.98" y2="20.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="21.57" x2="44.98" y2="21.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="22.57" x2="44.98" y2="22.57" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="21.57" font-size="4.00" data-pos="461"></text>
   <text class="music" x="4.88" y="20.57" font-size="4.00" data-pos="437"></text>
   <line x1="24.29" y1="17.57" x2="26.25" y2="17.57" stroke="#000000" stroke-width="0.200"/>
@@ -41,7 +41,6 @@
   <rect x="20.36" y="18.57" width="0.19" height="4.00" data-pos="512"/>
   <rect x="33.39" y="18.57" width="0.19" height="4.00" data-pos="533"/>
   <rect x="44.79" y="18.57" width="0.19" height="4.00" data-pos="543"/>
-  <rect x="45.28" y="18.57" width="0.60" height="4.00" data-pos="543"/>
   <text class="music" x="27.62" y="16.58" font-size="3.56" data-pos="519"></text>
   <line x1="28.73" y1="16.41" x2="28.73" y2="13.90" stroke="#000000" stroke-width="0.116" data-pos="519"/>
   <text x="29.40" y="17.06" font-size="2.20" data-pos="519">= 160</text>

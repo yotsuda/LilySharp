@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="30.47" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="393">Navigation marks</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="16.58" x2="73.00" y2="16.58" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.58" x2="73.00" y2="17.58" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.58" x2="73.00" y2="18.58" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.58" x2="73.00" y2="19.58" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.58" x2="73.00" y2="20.58" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.58" x2="72.10" y2="16.58" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.58" x2="72.10" y2="17.58" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.58" x2="72.10" y2="18.58" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.58" x2="72.10" y2="19.58" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.58" x2="72.10" y2="20.58" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="19.58" font-size="4.00" data-pos="432"></text>
   <text class="music" x="4.88" y="18.58" font-size="4.00" data-pos="412"></text>
   <line x1="8.26" y1="21.58" x2="10.22" y2="21.58" stroke="#000000" stroke-width="0.200"/>
@@ -69,7 +69,6 @@
   <rect x="55.61" y="16.58" width="0.19" height="4.00" data-pos="554"/>
   <rect x="63.76" y="16.58" width="0.19" height="4.00" data-pos="574"/>
   <rect x="71.91" y="16.58" width="0.19" height="4.00" data-pos="588"/>
-  <rect x="72.40" y="16.58" width="0.60" height="4.00" data-pos="588"/>
   <text class="music" x="0.30" y="12.82" font-size="4.00" data-pos="469"></text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="447"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="447">Main</text>
@@ -78,6 +77,6 @@
   <text x="41.92" y="24.08" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="515">D.S. al Coda</text>
   <text class="music" x="42.42" y="13.72" font-size="4.00" data-pos="535"></text>
   <text x="63.45" y="24.08" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="556">D.C. al Fine</text>
-  <text x="72.50" y="14.08" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="576">Fine</text>
+  <text x="71.60" y="12.02" font-size="2.80" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="576">Fine</text>
   </g>
 </svg>

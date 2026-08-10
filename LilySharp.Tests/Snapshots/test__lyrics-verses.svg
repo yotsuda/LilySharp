@@ -8,11 +8,11 @@
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="74">Two Verses</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="96">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="18.57" x2="98.11" y2="18.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.57" x2="98.11" y2="19.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.57" x2="98.11" y2="20.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="21.57" x2="98.11" y2="21.57" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="22.57" x2="98.11" y2="22.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.57" x2="97.21" y2="18.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.57" x2="97.21" y2="19.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.57" x2="97.21" y2="20.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="21.57" x2="97.21" y2="21.57" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="22.57" x2="97.21" y2="22.57" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="21.57" font-size="4.00" data-pos="149"></text>
   <text class="music" x="4.88" y="20.57" font-size="4.00" data-pos="113"></text>
   <line x1="47.55" y1="17.57" x2="49.51" y2="17.57" stroke="#000000" stroke-width="0.200"/>
@@ -43,7 +43,6 @@
   <rect x="61.84" y="18.57" width="0.19" height="4.00" data-pos="210"/>
   <rect x="86.30" y="18.57" width="0.19" height="4.00" data-pos="221"/>
   <rect x="97.02" y="18.57" width="0.19" height="4.00" data-pos="226"/>
-  <rect x="97.51" y="18.57" width="0.60" height="4.00" data-pos="226"/>
   <text x="10.91" y="25.89" font-size="2.47" text-anchor="middle" data-pos="247">A</text>
   <text x="19.85" y="25.89" font-size="2.47" text-anchor="middle" data-pos="250">ma</text>
   <text x="27.97" y="25.89" font-size="2.47" text-anchor="middle" data-pos="254">zing</text>

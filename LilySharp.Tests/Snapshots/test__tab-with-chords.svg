@@ -9,7 +9,6 @@
   <text class="music" x="0.60" y="16.10" font-size="4.00"></text>
   <rect x="17.82" y="12.35" width="0.19" height="7.50" data-pos="356"/>
   <rect x="31.18" y="12.35" width="0.19" height="7.50" data-pos="371"/>
-  <rect x="31.67" y="12.35" width="0.60" height="7.50" data-pos="371"/>
   <text x="6.45" y="14.91" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="343">1</text>
   <line x1="5.87" y1="15.14" x2="5.87" y2="19.64" stroke="#000000" stroke-width="0.130"/>
   <text x="9.70" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="347">0</text>
@@ -33,13 +32,13 @@
   <line x1="20.61" y1="12.35" x2="22.15" y2="12.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="23.86" y1="12.35" x2="25.40" y2="12.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="27.11" y1="12.35" x2="28.16" y2="12.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="29.86" y1="12.35" x2="32.27" y2="12.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="29.86" y1="12.35" x2="31.37" y2="12.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="13.85" x2="5.60" y2="13.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="7.31" y1="13.85" x2="32.27" y2="13.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.35" x2="32.27" y2="15.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.85" x2="32.27" y2="16.85" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.35" x2="32.27" y2="18.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.85" x2="32.27" y2="19.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="7.31" y1="13.85" x2="31.37" y2="13.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.35" x2="31.37" y2="15.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.85" x2="31.37" y2="16.85" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.35" x2="31.37" y2="18.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.85" x2="31.37" y2="19.85" stroke="#000000" stroke-width="0.100"/>
   <text x="5.80" y="10.67" font-size="2.62" font-family="sans-serif" data-pos="406">C</text>
   <text x="19.10" y="10.67" font-size="2.62" font-family="sans-serif" data-pos="411">F</text>
   <rect x="0.30" y="7.49" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="331"/>

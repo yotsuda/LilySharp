@@ -599,7 +599,7 @@ internal sealed class MeasureBuilder
         => EmitMeasure(sourceEnd, endType, explicitBar: true);
 
 
-    public List<Measure> FinalizeMeasures(bool autoFinalBarline = true)
+    public List<Measure> FinalizeMeasures()
     {
         // Handle any remaining items as the final measure
         if (_currentItems.Count > 0)
@@ -651,22 +651,23 @@ internal sealed class MeasureBuilder
             }
         }
 
-        // Auto-set final barline on the last measure (music convention). Skipped
-        // for sub-streams that end mid-piece (a << \\ >> span's extra voice):
-        // their last measure is not the piece's last, and the Final would win
-        // the cross-voice barline merge.
-        if (autoFinalBarline && _measures.Count > 0)
-        {
-            var last = _measures[^1];
-            if (last.EndBarline == BarlineType.Single)
-            {
-                _measures[^1] = new Measure(
-                    last.Items, last.StartBarline, BarlineType.Final,
-                    last.SectionLabel, last.SourceStart, last.SourceEnd, last.HasBreakAfter,
-                    sectionLabelPosition: last.SectionLabelPosition,
-                    isPickup: last.IsPickup);
-            }
-        }
+        // ⚠️ NO AUTOMATIC FINAL BARLINE. The last measure keeps the barline it was
+        // written with. `|.` is a thing the author writes.
+        // ⚠️ MEASURED, NOT CITED — deliberately. The claim is that LilyPond does NOT do
+        //   something, and the honest evidence for an absence is LilyPond's own output,
+        //   not an address. (A first draft cited lily/bar-line.cc here; that file is not
+        //   in the 2.26.0 tree at all. Absence claims are where invented citations grow.)
+        // MEASURED (scratch/beamskip/lp-bar.ly, 4 scores, same paper): a complete final measure ends with a
+        //   THIN bar 0.19 wide; an INCOMPLETE final measure (`{ c'4 }`) gets NO bar at all;
+        //   0.19 + 0.60 appears only where `\bar "|."` is written.
+        // ⚠️ This used to stamp BarlineType.Final here on the claim "music convention",
+        //   with no LilyPond citation behind it. It made the last measure 0.9 ss wider
+        //   than LilyPond's in essentially every book — the single most visible systematic
+        //   divergence in the LP regression corpus, and a documented comparison trap
+        //   (HANDOFF 5.3 "LP は \bar "|." を書かないと終止線を細い | にする").
+        // ⚠️ STILL NOT LILYPOND: an incomplete final measure gets a thin bar here where
+        //   LilyPond draws none. That is a different rule (whether a bar is engraved at
+        //   all) and is not fixed by this change.
 
         // A trailing measure holding ONLY clef changes (a clef written after the last
         // note — clef-change-at-end.ly) owns no bar moment of its own: LilyPond engraves
@@ -682,10 +683,28 @@ internal sealed class MeasureBuilder
             var tail = _measures[^1];
             if (tail.Items.Length > 0 && tail.Items.All(i => i is ClefChangeItem))
             {
-                _measures[^2] = _measures[^2] with
+                // ⚠️ MERGE, DO NOT OVERWRITE. A typed barline written against a
+                // directive-only span has ALREADY been retro-applied to the previous
+                // measure by HandleBarline (the `endType != Single` branch), so the
+                // previous measure is where `g'1 clef bass |.` keeps its `|.`. Copying the
+                // tail's EndBarline over it threw that away and printed a plain `|`:
+                // measured, `g'1 clef bass |.` and `g'1 |. clef bass` both drew one thin
+                // bar, and so did `g'1 clef bass ||` — every written type was lost, not
+                // just the final. It went unnoticed while a final barline was stamped on
+                // the last measure automatically, because then both sides were Final and
+                // the overwrite was a no-op.
+                // The rule is the one two barlines at one moment already follow elsewhere
+                // in this collector — see Stronger, the cross-voice merge.
+                var prev = _measures[^2];
+                var merged = MeasureCollector.Stronger(prev.EndBarline, tail.EndBarline);
+                // The click target follows the bar that WON. When the tail brings only the
+                // default Single (the ordinary `g'1 clef bass`), the tail's source stays the
+                // target exactly as before, so no existing fixture's data-pos moves.
+                bool prevWon = merged == prev.EndBarline && merged != tail.EndBarline;
+                _measures[^2] = prev with
                 {
-                    EndBarline = tail.EndBarline,
-                    SourceEnd = tail.SourceEnd,
+                    EndBarline = merged,
+                    SourceEnd = prevWon ? prev.SourceEnd : tail.SourceEnd,
                 };
                 _measures[^1] = tail with
                 {
@@ -1186,7 +1205,13 @@ public sealed partial class MeasureCollector
     /// Of two barline types at the same timestep, the more significant wins
     /// (repeats and finals over plain bars; both-repeat over either half).
     /// </summary>
-    private static BarlineType Stronger(BarlineType a, BarlineType b)
+    /// <remarks>
+    /// ⚠️ Shared with <see cref="MeasureBuilder.FinalizeMeasures"/>, which merges the bar of
+    /// a trailing clef-only column into the measure before it. Two barlines landing on one
+    /// moment get ONE answer, and it is this one — the cross-voice merge and the
+    /// trailing-clef merge must not drift into two rules.
+    /// </remarks>
+    internal static BarlineType Stronger(BarlineType a, BarlineType b)
     {
         // A repeat-end meeting a repeat-start at the same point = both.
         if ((a == BarlineType.RepeatEnd && b == BarlineType.RepeatStart)
@@ -2140,11 +2165,7 @@ public sealed partial class MeasureCollector
                 _currentVoiceIndex = t;
                 // Render voice number is t+1 — an override in this sub-voice scopes to it.
                 _currentVoiceScope = t + 1;
-                // No auto-final barline: this is a SPAN inside the piece, and a
-                // Final stamped on the span's last measure would win the
-                // cross-voice barline merge and print a final barline mid-piece.
-                var sub = CollectMeasuresFromNode(blocks[t], autoFinalBarline: false,
-                    applyFilePartial: start == 0);
+                var sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0);
                 ResolveBeamStemDirections(sub);
                 _currentVoiceScope = null;
                 _currentVoiceIndex = 0;
@@ -2217,7 +2238,9 @@ public sealed partial class MeasureCollector
         return musicNodes;
     }
 
-    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode, bool autoFinalBarline = true,
+    // ⚠️ The `autoFinalBarline: false` parameter this used to carry is GONE with the rule
+    // it suppressed (see FinalizeMeasures). Do not reintroduce either.
+    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
         bool applyFilePartial = true)
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
@@ -2249,7 +2272,7 @@ public sealed partial class MeasureCollector
 
         FinalizeInlineVoltas();
 
-        return builder.FinalizeMeasures(autoFinalBarline);
+        return builder.FinalizeMeasures();
     }
 
     private void Reset()
