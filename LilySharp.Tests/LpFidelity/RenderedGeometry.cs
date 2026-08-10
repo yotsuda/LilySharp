@@ -3100,6 +3100,98 @@ internal sealed class RenderedGeometry
         return digits[0].X + FiguredBassGlyphRun.Width(text) / 2.0 - NoteheadAnchor(0);
     }
 
+    /// <summary>
+    /// The fingering digit <paramref name="digit"/>'s staff-FACING ink edge above the sole
+    /// staff's refpoint, signed up-positive: its ink BOTTOM when it sits above the staff,
+    /// its ink TOP when below. The quantity the chord-fingering books read.
+    /// </summary>
+    /// <remarks>
+    /// Selected by the DIGIT, never by an index: a chord's fingerings are what the books
+    /// measure and their order on the page is precisely what is in question, so an index
+    /// would make the reading assume its own answer. The books therefore spell three
+    /// DIFFERENT digits (1/3/5), and each one names itself.
+    /// <para>
+    /// The ink box is the digit run's own — the same <c>FiguredBassGlyphRun</c> metrics
+    /// <c>FingeringEngraver.DigitRun</c> places by and <c>SharedRenderer.DrawFingerings</c>
+    /// draws with, so this reads the drawn ink and not a nominal box. LilyPond's side is the
+    /// Fingering grob's <c>ext</c>, which is <c>grob::always-Y-extent-from-stencil</c>
+    /// (scm/define-grobs.scm:1540-1568) — the same object.
+    /// </para>
+    /// ⚠️ A fingering's drawn Y is its BASELINE, and a feta digit's ink runs UP from there
+    /// (LilyPond dumps ext=(0.0 . 1.12…) on all three digits of both books), so the ink
+    /// bottom is the baseline itself and the ink top is the baseline plus the run's height.
+    /// </remarks>
+    public double FingeringInkEdgeAboveStaff(char digit, bool above = true, int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        if (refs.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE staff, found {refs.Count} — the probe is "
+                + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var hits = _pages[page].Glyphs
+            .Where(g => FigBassDigitChar(g.Glyph) == digit)
+            .ToList();
+        if (hits.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE fingering digit '{digit}', found "
+                + $"{hits.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        string text = digit.ToString();
+        double edge = above
+            ? FiguredBassGlyphRun.InkBottom(text)
+            : FiguredBassGlyphRun.InkTop(text);
+        // Device-down: an edge `e` staff-spaces up from the drawn origin sits at Y - e.
+        return refs[0] - (hits[0].Y - edge);
+    }
+
+    /// <summary>
+    /// The sole DYNAMIC label's ink TOP above the staff refpoint, signed up-positive — how
+    /// far under the staff a <c>\p</c> ends up, and therefore what has to have got out of
+    /// its way. The books DYF / DYN / DYU read this one quantity three times.
+    /// </summary>
+    /// <remarks>
+    /// The label's ink is <c>GlyphMetrics.TryGetDynamicInk</c>, the same union of fetaText
+    /// letter boxes <c>DynamicEngraver.InkOf</c> reserves by and the same object LilyPond
+    /// dumps as the DynamicText grob's Y-extent (<c>grob::always-Y-extent-from-stencil</c>).
+    /// ⚠️ Lily# PRINTS a dynamic as bold-italic serif text while it MEASURES it by those
+    /// feta boxes, so this reading is the reserved ink, not the printed outline. That
+    /// difference is a constant of the label and appears in every book here identically —
+    /// which is why the three points are read as a set: what the pair says is the
+    /// DIFFERENCE between them, and the label's own metric cancels out of it.
+    /// </remarks>
+    public double DynamicInkTopAboveStaff(string label = "p", int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        if (refs.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE staff, found {refs.Count} — the probe is "
+                + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var hits = _pages[page].Texts
+            .Where(t => t.Text == label && t.FontFamily != "sans-serif")
+            .ToList();
+        if (hits.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE dynamic reading \"{label}\", found "
+                + $"{hits.Count} — the probe is not measuring what it claims.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        if (!GlyphMetrics.TryGetDynamicInk(label, out _, out double inkTop))
+        {
+            throw new InvalidOperationException(
+                $"\"{label}\" is not spelled from the fetaText dynamic letters, so it has no "
+                + "ink box to read — pick a label that is.");
+        }
+        // Device-down: an edge `e` staff-spaces up from the drawn baseline sits at Y - e.
+        return refs[0] - (hits[0].Y - inkTop);
+    }
+
     /// <summary>The plain digit a fetaText bass-figure/fingering glyph spells, or null.</summary>
     private static char? FigBassDigitChar(char glyph)
     {

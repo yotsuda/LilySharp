@@ -2857,6 +2857,118 @@ internal static class LpGeometryProbes
     private static readonly string FNG = InkFrameScore("FNG", "4/4", "c'1@finger(2) |");
 
     /// <summary>
+    /// The two books that observe where a CHORD's fingerings go — the placement RULE Lily#
+    /// does not have, found by eye in the side-by-side report and measured here.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond splits a chord's fingerings by <c>fingeringOrientations</c> (the Voice
+    /// default <c>'(up down)</c>): the scripts are sorted by their head's staff-position and
+    /// cut at <c>size/2</c>, so three digits go 1 DOWN / 2 UP, and each side is stacked
+    /// OUTSIDE the staff — the lower of the two upper digits nearest the staff, the other
+    /// on top of it. Lily# sets every digit at its OWN head's height instead
+    /// (<c>FingeringEngraver.BuildChordFingerings</c>), so on the corpus book
+    /// chord-repetition all three land on the noteheads and the stem, unreadable.
+    /// <para>
+    /// ONE whole-note chord and nothing else: no stem (so <c>add-stem-support</c>'s
+    /// <c>only-if-beamed</c> gate cannot fire), no beam, no slur (Fingering is
+    /// <c>avoid-slur #around</c>), no dynamic. The corpus book carries all three of those,
+    /// which is why it is the sighting and not the measurement.
+    /// </para>
+    /// <list type="bullet">
+    /// <item>CFL — <c>&lt;g b d'&gt;</c>, every head inside the staff and the chord low: the
+    /// STAFF decides on the up side (heads reach 1.545, the staff's own ink + padding 2.55)
+    /// and it turned out to decide the down side too.</item>
+    /// <item>CFH — the same three digits a fourth higher: the top head reaches 3.545, so the
+    /// HEAD decides above, while below the chord floats entirely above the middle line and
+    /// only the staff can put a digit outside it.</item>
+    /// </list>
+    /// LilyPond twins live in audit/lp-geometry/probes/chord-fingering.ly and their music is
+    /// GENERATED from these strings by <c>lysc ly</c> — which had to be FIXED first: the
+    /// exporter dropped a chord MEMBER's <c>@finger</c> in silence, so the generated twin was
+    /// a bare <c>&lt;g b d'&gt;1</c> carrying no Fingering grob at all. The probe header
+    /// tells that story; it is session 96's note-level hole one level down.
+    /// </remarks>
+    private static string ChordFingeringScore(string name, string chord) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{chord}}1 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>A LOW chord: the staff decides where the digits go, not the heads.
+    /// ⚠️ CFL, not CFB — barline-spacing.ly already owns that tag
+    /// (chord.accidental.flat-column-gap-below).</summary>
+    private static readonly string CFL =
+        ChordFingeringScore("CFL", "<g@finger(1) b@finger(3) d'@finger(5)>");
+
+    /// <summary>The same three digits a fourth higher: the HEAD decides above, and below the
+    /// digit has to be dragged outside a staff its chord never enters.</summary>
+    private static readonly string CFH =
+        ChordFingeringScore("CFH", "<d'@finger(1) f'@finger(3) a'@finger(5)>");
+
+    /// <summary>
+    /// ROUND 2 — what a fingering DISPLACES: the three books that read one <c>\p</c>'s ink
+    /// top with a down digit over it, with no digit, and with the digit sent UP.
+    /// </summary>
+    /// <remarks>
+    /// The other half of the placement claim (HANDOFF §5.0: placement and reservation are
+    /// ONE claim). LilyPond's Fingering carries no outside-staff-priority, so it is not
+    /// MOVED by the collision pass but IS in the inside-staff skylines that pass starts
+    /// from (axis-group-interface.cc:543-561, :914-950) — and DynamicLineSpanner, which
+    /// declares 250, has to clear it by outside-staff-padding. Measured: the down digit
+    /// pushes the dynamic 1.495999 further down; an UP digit pushes it by nothing.
+    /// <para>
+    /// ⚠️ NOT through side-position support: Dynamic_align_engraver acknowledges heads and
+    /// stems only (dynamic-align-engraver.cc:108-117), the fact
+    /// <c>DynamicEngraver.ColumnSupportSkylines</c> already carries. A port that added the
+    /// fingering there would land these books for the wrong reason, and would also push a
+    /// dynamic that is nowhere near the digit's X — that support is scalar per column where
+    /// the pass is pointwise.
+    /// </para>
+    /// </remarks>
+    private static string ChordDynamicScore(string name, string chord) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble }
+
+        section Main {
+          melody { {{chord}}4@p r4 r2 | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>The corpus book's first beat, isolated: the down digit is the only thing
+    /// between the chord and the dynamic.</summary>
+    private static readonly string DYF =
+        ChordDynamicScore("DYF", "<c@finger(1) e@finger(3) g@finger(5)>");
+
+    /// <summary>The control: same chord, same dynamic, no digits.</summary>
+    private static readonly string DYN = ChordDynamicScore("DYN", "<c e g>");
+
+    /// <summary>ONE fingering, which the split sends UP — so nothing is below the staff and
+    /// the dynamic must read the control's number. The book that says the difference is the
+    /// DOWN digit and not the presence of a fingering.</summary>
+    private static readonly string DYU = ChordDynamicScore("DYU", "<c e g@finger(5)>");
+
+    /// <summary>
     /// The system-clef-floor recipe applied to the STAFF-STAFF spring: ideal and minimum
     /// taken away (padding stays 1), so the gap IS the two staves' skyline distance + 1.
     /// Both the grouped and the ungrouped spelling are zeroed so the reading cannot
@@ -8684,6 +8796,36 @@ internal static class LpGeometryProbes
         new("ledger.whole.above-span", LDG, g => g.LedgerLineSpan()),
         new("dots.whole.column-to-dot-ink-left", DOT, g => g.NoteheadAnchorToDotInkLeft()),
         new("fingering.whole.column-to-ink-centre", FNG, g => g.NoteheadAnchorToFingeringCentre()),
+
+        // --- where a CHORD's fingerings go (books CFB/CFH) ---
+        // Six readings of ONE claim: LilyPond splits the digits by fingeringOrientations and
+        // stacks each side OUTSIDE the staff, where Lily# hangs every digit on its own head.
+        // Two books so the up side is decided by the STAFF in one and by the HEAD in the
+        // other, and the down side answers the same -2.550000 in BOTH — an identity the port
+        // has to reproduce twice, from two different chains.
+        new("fingering.chord.above-inner.staff-to-ink-bottom", CFL,
+            g => g.FingeringInkEdgeAboveStaff('3'), RaggedBottomPaper),
+        new("fingering.chord.above-outer.staff-to-ink-bottom", CFL,
+            g => g.FingeringInkEdgeAboveStaff('5'), RaggedBottomPaper),
+        new("fingering.chord.below.staff-to-ink-top", CFL,
+            g => g.FingeringInkEdgeAboveStaff('1', above: false), RaggedBottomPaper),
+        new("fingering.chord.above-head-inner.staff-to-ink-bottom", CFH,
+            g => g.FingeringInkEdgeAboveStaff('3'), RaggedBottomPaper),
+        new("fingering.chord.above-head-outer.staff-to-ink-bottom", CFH,
+            g => g.FingeringInkEdgeAboveStaff('5'), RaggedBottomPaper),
+        new("fingering.chord.below-clamp.staff-to-ink-top", CFH,
+            g => g.FingeringInkEdgeAboveStaff('1', above: false), RaggedBottomPaper),
+
+        // --- round 2: what a fingering DISPLACES (books DYF/DYN/DYU) ---
+        // The reservation half of the same claim. Read as a SET: DYN is the base, DYF is
+        // DYN plus a down digit, DYU is DYN plus an UP one — so the label's own metric
+        // cancels and what is left is whether the digit is in the skyline the pass reads.
+        new("fingering.chord.dynamic-cleared.staff-to-ink-top", DYF,
+            g => g.DynamicInkTopAboveStaff(), RaggedBottomPaper),
+        new("fingering.chord.dynamic-control.staff-to-ink-top", DYN,
+            g => g.DynamicInkTopAboveStaff(), RaggedBottomPaper),
+        new("fingering.chord.dynamic-up-digit.staff-to-ink-top", DYU,
+            g => g.DynamicInkTopAboveStaff(), RaggedBottomPaper),
 
         new("script.staccato-below.staff-to-ink-top", DSK,
             g => g.ScriptInkEdgeAboveStaff(

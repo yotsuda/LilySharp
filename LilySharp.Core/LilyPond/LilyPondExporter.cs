@@ -1527,23 +1527,41 @@ public sealed class LilyPondExporter
                 chainOctave = want;
             }
 
-            // Member-level half-ties (<d@repeatTie g> = LP <d-\repeatTie g>): the only
-            // member articulations this exporter writes — Lily# renders them
-            // (ChordNoteInfo.HasLaissezVibrer/HasRepeatTie), so a twin that dropped them
-            // would silently show fewer ties than its source. The unforced spelling takes
-            // the neutral `-`, the member form the regression books themselves write
-            // (repeat-tie-chords.ly, laissez-vibrer-chords.ly); ^/_ comes back from
-            // MapArticulation already prefixed. Other member articulations (finger,
-            // courtesy, …) are still dropped — a standing exporter hole.
+            // Member-level post-events. Lily# renders these per MEMBER
+            // (ChordNoteInfo.HasLaissezVibrer/HasRepeatTie, NoteInChord.Fingering), so a
+            // twin that dropped one would show fewer ties — or fewer digits — than its
+            // source. The half-ties take the neutral `-`, the member form the regression
+            // books themselves write (repeat-tie-chords.ly, laissez-vibrer-chords.ly);
+            // ^/_ comes back from MapArticulation already prefixed.
+            // ⚠️ THE FINGERING WAS DROPPED IN SILENCE UNTIL 2026-08-10, and it is the SAME
+            // defect session 96 closed one level up: <c@finger(1) e@finger(3) g@finger(5)>
+            // exported as a bare <c e g>, a twin that COMPILES and is DIFFERENT MUSIC. It
+            // was caught building audit/lp-geometry/probes/chord-fingering.ly, whose two
+            // books measure exactly the digits that went missing. The note-level hole was
+            // caught by the exporter's WARNING; this one had none to raise, because a
+            // member articulation the loop did not recognise simply fell out of the `if`.
+            // ⇒ every unrecognised member node now warns, so the next hole in this family
+            // is visible the way the last one was.
+            // LILYPOND-REF: lily/parser.yy chord_body_element — a chord member takes
+            //   post-events (`<g-1 b-3 d'-5>`), the same spelling as a note's.
             foreach (var art in p.Articulations)
-                if (art is ArticulationSyntax { Type: ArticulationType.None } ma
-                    && (ma.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase)
-                        || ma.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase)))
+                switch (art)
                 {
-                    string ev = MapArticulation(ma);
-                    if (ev[0] == '\\')
-                        sb.Append('-');
-                    sb.Append(ev);
+                    case ArticulationSyntax { Type: ArticulationType.None } ma
+                        when ma.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase)
+                             || ma.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase):
+                        string ev = MapArticulation(ma);
+                        if (ev[0] == '\\')
+                            sb.Append('-');
+                        sb.Append(ev);
+                        break;
+                    case MusicMarkSyntax mk when Fingering(mk) is { } fg:
+                        sb.Append(fg);
+                        break;
+                    default:
+                        _warnings.Add(
+                            $"chord member {p.PitchName}: {art.GetType().Name} dropped (out of scope)");
+                        break;
                 }
             first = false;
         }

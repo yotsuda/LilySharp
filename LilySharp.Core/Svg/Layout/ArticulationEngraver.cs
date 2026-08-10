@@ -210,9 +210,10 @@ internal static class ArticulationEngraver
 
     // The Fingering grob's own side-position padding (its vertical float off whatever
     // supports it in the column) — the Script table does not carry it because Fingering
-    // is its own grob, not a script.scm entry.
-    // LILYPOND-REF: scm/define-grobs.scm:1543-1550 Fingering, add-stem-support block — (padding . 0.5)
-    private const double FingeringPadding = 0.5;
+    // is its own grob, not a script.scm entry. ONE HOME: the island pass spends the same
+    // 0.5 off the staff, the heads and the digit below (FingeringEngraver.Padding), and
+    // the two used to be two literals with two citations of the same property.
+    private const double FingeringPadding = FingeringEngraver.Padding;
 
     /// <summary>
     /// <see cref="Calculate"/>, with the note-attached FINGERINGS entering each note's

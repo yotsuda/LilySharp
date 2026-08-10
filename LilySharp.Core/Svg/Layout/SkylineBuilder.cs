@@ -769,7 +769,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<TieLayout> ties = default,
         ImmutableArray<BeamLayout> beams = default,
         double systemLeft = double.NaN,
-        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
+        ImmutableArray<FingeringLayout> fingerings = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -837,6 +838,21 @@ internal sealed class SkylineBuilder
         // forced-above fermata dropped into the gap onto the staff above's low
         // noteheads. Their staff-local extent is spacing-independent, so seed it now.
         AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleUp, size, upSkyline, downSkyline);
+
+        // ...and the FINGERINGS beside them, for the same reason and by the same rule: a
+        // Fingering declares no outside-staff-priority, so it is never MOVED by the collision
+        // pass and is always IN the profile that pass starts from.
+        // LILYPOND-REF: lily/axis-group-interface.cc:543-561 internal_calc_pure_relevant_grobs — a grob with no
+        //   outside-staff-priority is left at -infinity and so is not a mover; :914-950
+        //   inside_staff_skylines collects exactly those, and add_grobs_of_one_priority then
+        //   places the movers against them.
+        // ⚠️ NOTHING RESERVED A FINGERING UNTIL 2026-08-10, and the defect was reported by
+        // eye before it was measured: on corpus book chord-repetition the down digit and the
+        // \p printed on top of each other. MEASURED (ledger fingering.chord.dynamic-*, books
+        // DYF/DYN/DYU): LilyPond puts that dynamic 1.495999 further down when the digit is
+        // there and NOT ONE THOUSANDTH further when the same book's fingering goes up
+        // instead — the pass, pointwise, clearing real ink.
+        AddFingeringsToSkyline(fingerings, staffMiddleUp, size, upSkyline, downSkyline);
 
         // A tuplet bracket is ordinary ink INSIDE the staff's own axis group in LilyPond,
         // so the staff below must clear it exactly as it clears the clef. Nothing seeded
@@ -1288,6 +1304,45 @@ internal sealed class SkylineBuilder
     /// staff top line (= this skyline's Y origin); the ink transform matches
     /// LayoutEngine.AugmentSkylinesWithScripts (BBox Top is up-positive).
     /// </summary>
+    /// <summary>
+    /// Seeds each fingering's drawn digit run as a box in the staff's own inside profile:
+    /// the run's advance width about its centre, its ink from the baseline the engraver
+    /// placed.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1540-1568 Fingering — ly:script-interface::calc-positioning-done at :1553;
+    ///   no outside-staff-priority anywhere in the block, which is what puts it here rather
+    ///   than among the movers.
+    /// LILYPOND-REF: lily/grob.cc:81-85 simple_vertical_skylines_from_extents — a grob with
+    ///   no vertical-skylines declaration contributes its EXTENT box, and Fingering declares
+    ///   none, so a box is the right shape and not an approximation of an outline.
+    /// <para>
+    /// The metric home is <see cref="FingeringEngraver.DigitRun"/> — the same run the pen
+    /// draws and the script column stacks by, so the reserved band cannot drift from the
+    /// printed one.
+    /// </para>
+    /// </remarks>
+    private static void AddFingeringsToSkyline(
+        ImmutableArray<FingeringLayout> fingerings,
+        double staffMiddleUp, StaffSize size,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (fingerings.IsDefaultOrEmpty)
+            return;
+        foreach (var f in fingerings)
+        {
+            var (_, ink, width) = FingeringEngraver.DigitRun(f.Number);
+            double baseline = size.Span(f.YUp) + staffMiddleUp;
+            double bottom = baseline + size.Span(ink.Bottom);
+            double top = baseline + size.Span(ink.Top);
+            double x0 = f.X - width / 2.0;
+            var box = VerticalSkyline.FromBox(x0, x0 + width, bottom, top, VerticalDirection.Up);
+            upSkyline.Merge(box);
+            downSkyline.Merge(VerticalSkyline.FromBox(
+                x0, x0 + width, bottom, top, VerticalDirection.Down));
+        }
+    }
+
     private void AddArticulationLayoutsToSkyline(
         ImmutableArray<ArticulationLayout> articulationLayouts,
         double staffMiddleUp, StaffSize size,

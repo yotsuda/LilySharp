@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -47,12 +49,16 @@ public readonly record struct FingeringLayout(
     // F3/B: staff index of the host note/chord, so a reused layout re-derives
     // data-pos from the live score (SharedRenderer.ResolveDataPos). -1 = unresolved.
     int StaffIndex = -1,
-    // The fingering's script-priority in its note's SCRIPT COLUMN, or int.MinValue
-    // when it does not enter the column (chord fingerings — FingeringColumn is a
-    // different mechanism). A vertically-oriented fingering is a script like any
-    // other: priority 100 (the Fingering grob's declaration) + direction × the
-    // head's staff position, sorted into the same per-note walk that stacks
-    // staccato under tenuto under a bow (ArticulationEngraver.CalculateWithFingerings).
+    // The fingering's script-priority in its note's SCRIPT COLUMN. A vertically-oriented
+    // fingering is a script like any other: priority 100 (the Fingering grob's
+    // declaration) + direction × the head's staff position, sorted into the same
+    // per-note walk that stacks staccato under tenuto under a bow
+    // (ArticulationEngraver.CalculateWithFingerings).
+    // ⚠️ A CHORD'S FINGERINGS USED TO SIT THIS OUT with int.MinValue, on the ground that
+    // "FingeringColumn is a different mechanism". FingeringColumn serves the LEFT/RIGHT
+    // orientations only (its own callback is ly:fingering-column::calc-positioning-done,
+    // reached from position_scripts' horiz branch); a chord's UP/DOWN fingerings get the
+    // same script-priority line as a single note's, from the same loop.
     // LILYPOND-REF: lily/new-fingering-engraver.cc:334-335 set_property
     //   "script-priority" (finger_prio + d * ft.position_);
     //   scm/define-grobs.scm:1554 Fingering script-priority = 100.
@@ -62,22 +68,53 @@ public readonly record struct FingeringLayout(
 /// Calculates positions for fingering numbers attached to notes.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/fingering-engraver.cc Fingering_engraver
-/// LILYPOND-REF: lily/script-interface.cc — direction calculation (opposite to stem)
-/// LILYPOND-REF: scm/define-grobs.scm Fingering
-///   font-size = -5 (very small), padding = 0.5, avoid-slur = #'inside, side-axis = Y
+/// LILYPOND-REF: lily/new-fingering-engraver.cc New_fingering_engraver — the engraver that
+///   actually places a Fingering (fingering-engraver.cc is the one that only makes it).
+/// LILYPOND-REF: scm/define-grobs.scm:1540-1568 Fingering — ly:script-interface::calc-positioning-done at :1553
+///   font-size = -5 (very small), padding = 0.5, staff-padding = 0.5, avoid-slur = #'around,
+///   side-axis = Y (set by the engraver, per orientation).
 ///
-/// Fingering numbers default to the side opposite the stem; multiple fingerings
-/// on a chord stack vertically (FingeringColumn). This implementation handles
-/// single fingerings per note and stacks chord fingerings via item-index ordering.
+/// Fingerings are NOT placed opposite the stem, and the citation that used to say so here
+/// (script-interface.cc, "direction calculation") was the wrong grob's rule:
+/// New_fingering_engraver buckets them by <c>fingeringOrientations</c> — the Voice default
+/// <c>'(up down)</c> — and each bucket is stacked OUTSIDE the staff by side-position. See
+/// <see cref="BuildLayouts"/>, the port of that function, which serves a lone fingering and
+/// a chord's alike.
+/// ⚠️ <c>avoid-slur #'around</c> is NOT ported: a fingering does not dodge a slur here. It
+/// is visible on corpus book chord-repetition, whose down digit sits under the slur — but
+/// measured (scratch cr-probe.ly), LilyPond's own slur moves that book's digits by nothing,
+/// so the sighting is not yet a measurement.
 /// </remarks>
 internal static class FingeringEngraver
 {
     /// <summary>
-    /// LILYPOND-REF: scm/define-grobs.scm Fingering — staff-padding default.
-    /// Distance from the staff edge to the first fingering digit.
+    /// The Fingering grob's own side-position padding: its float off whatever supports it —
+    /// the staff's ink, a notehead, or the digit already placed under it.
     /// </summary>
-    private const double StaffPadding = 0.5;
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1540-1568 Fingering — (padding . 0.5).
+    /// ⚠️ Fingering ALSO declares (staff-padding . 0.5), and the two are NOT the same device:
+    /// staff-padding drives a second clamp on the grob's OFFSET
+    /// (side-position-interface.cc:433-451), while the staff reaches the digit through the
+    /// SUPPORT skyline (:325-331 include_staff, <c>dim.set_minimum_height (staff_extents
+    /// [dir])</c>) and is cleared by this padding like any other support. MEASURED
+    /// (ledger fingering.chord.below.staff-to-ink-top, both books): the digit's INK clears
+    /// the staff's ink by 0.5 on both sides, which the offset clamp cannot produce — the
+    /// prediction that said it could was written down and falsified.
+    /// The two numbers being equal is why the distinction was invisible for so long.
+    /// </remarks>
+    internal const double Padding = 0.5;
+
+    /// <summary>
+    /// The StaffSymbol's own ink edge — the outermost line's outer edge, which is what
+    /// <c>include_staff</c> puts into the support skyline.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:325-331 — the staff's own EXTENT, and
+    /// probes/glyph-skyline.ly dumps that extent as (−2.05 . 2.05).
+    /// </remarks>
+    private const double StaffInk =
+        EngravingDefaults.StaffMiddle + EngravingDefaults.StaffLineThickness / 2.0;
 
     /// <summary>
     /// The digits of a fingering as feta-text glyph metrics AT THE FINGERING'S OWN SIZE
@@ -139,7 +176,42 @@ internal static class FingeringEngraver
 
         var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
         var systemMap = LayoutUtilities.BuildMeasureMap(systems);
+        return Calculate(score, measureMap, systemMap.ContainsKey, staffIndex);
+    }
 
+    /// <summary>
+    /// <see cref="Calculate(Score, ImmutableArray{SystemLayout}, int)"/> for a caller that
+    /// holds ONE system's measure layouts rather than the placed systems — the shape the
+    /// per-staff skyline pass runs in.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SAME ENGRAVER, NOT A SECOND SPELLING (the argument
+    /// <c>MultiStaffLayouter.StaffArticulationLayouts</c> makes for the scripts): the
+    /// reservation has to be the geometry that will be DRAWN, and the only way to promise
+    /// that is to ask the same function. The answer is staff-local already — a
+    /// <see cref="FingeringLayout"/>'s <c>YUp</c> is about its own staff's middle line and
+    /// no staff offset is ever baked in — so the profile lands in the per-staff skyline's
+    /// own frame with nothing to translate.
+    /// </remarks>
+    public static ImmutableArray<FingeringLayout> Calculate(
+        Score score,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        int staffIndex)
+    {
+        if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
+            return ImmutableArray<FingeringLayout>.Empty;
+        var map = new Dictionary<int, MeasureLayout>();
+        foreach (var ml in measureLayouts)
+            map[ml.MeasureIndex] = ml;
+        return Calculate(score, map, _ => true, staffIndex);
+    }
+
+    private static ImmutableArray<FingeringLayout> Calculate(
+        Score score,
+        Dictionary<int, MeasureLayout> measureMap,
+        System.Func<int, bool> isPlaced,
+        int staffIndex)
+    {
         var layouts = ImmutableArray.CreateBuilder<FingeringLayout>();
 
         var voice = score.Voice;
@@ -148,7 +220,7 @@ internal static class FingeringEngraver
             var measure = voice.Measures[mi];
             if (!measureMap.TryGetValue(mi, out var measureLayout))
                 continue;
-            if (!systemMap.ContainsKey(mi))
+            if (!isPlaced(mi))
                 continue;
 
             for (int ii = 0; ii < measure.Items.Length; ii++)
@@ -156,16 +228,25 @@ internal static class FingeringEngraver
                 var item = measure.Items[ii];
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
-                    var layout = BuildLayout(
-                        note, mi, ii, measureLayout, staffIndex, voice.Measures);
-                    if (layout.HasValue)
-                        layouts.Add(layout.Value);
+                    BuildLayouts(
+                        new[] { (note.StaffPosition, note.Fingering.Value) },
+                        new[] { note.StaffPosition },
+                        note.BaseDuration, note.SourcePosition,
+                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures);
                 }
                 else if (item is ChordItem chord)
                 {
-                    // LILYPOND-REF: lily/fingering-column.cc — stack chord fingerings.
-                    BuildChordFingerings(
-                        chord, mi, ii, measureLayout, staffIndex, layouts, voice.Measures);
+                    var fingered = chord.Notes
+                        .Where(n => n.Fingering.HasValue)
+                        .Select(n => (n.StaffPosition, n.Fingering!.Value))
+                        .ToArray();
+                    if (fingered.Length == 0)
+                        continue;
+                    BuildLayouts(
+                        fingered,
+                        chord.Notes.Select(n => n.StaffPosition).ToArray(),
+                        chord.BaseDuration, chord.SourcePosition,
+                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures);
                 }
             }
         }
@@ -174,19 +255,51 @@ internal static class FingeringEngraver
     }
 
     /// <summary>
-    /// Emits one <see cref="FingeringLayout"/> per chord pitch that carries a
-    /// finger number, stacked vertically on the appropriate side of the chord.
+    /// Places every fingering of ONE note or chord — the port of
+    /// <c>New_fingering_engraver::position_scripts</c> for the vertical orientations.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/fingering-column.cc — FingeringColumn vertical stacking.
-    /// Stem-up chords place fingerings on the LEFT side ordered top-to-bottom;
-    /// stem-down chords place them on the RIGHT, ordered bottom-to-top. This
-    /// implementation uses Y placement that mirrors each pitch's staff position
-    /// so each finger sits at its corresponding note (a simpler, equally LP-compatible
-    /// arrangement).
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc:202-268 position_scripts — the scripts
+    ///   are sorted by their head's staff-position (:202-204, operator&lt;) and, for
+    ///   <c>fingeringOrientations</c> <c>'(up down)</c> (ly/engraver-init.ly, the Voice
+    ///   default), cut at <c>center = size / 2</c>: <c>[0, center)</c> goes DOWN and the
+    ///   rest UP (:248-253). One fingering therefore goes UP — <c>1 / 2 == 0</c> leaves the
+    ///   down bucket empty — which is the melodic default a lone digit has always had here.
+    /// LILYPOND-REF: :206-208 — EVERY head of the timestep becomes a side-support of EVERY
+    ///   fingering, so the up bucket clears the chord's TOP head and the down bucket its
+    ///   BOTTOM one, not each digit's own note.
+    /// LILYPOND-REF: :334-335 — script-priority 100 + d·position, and
+    ///   lily/script-column.cc:155-187 order_grobs makes each later script of a direction a
+    ///   side-support of all the earlier ones (Fingering declares no
+    ///   outside-staff-priority, so that branch is the one that runs). ⇒ within a bucket the
+    ///   digit NEARER the staff is placed first and the next stacks on its ink.
+    /// LILYPOND-REF: lily/side-position-interface.cc:325-331 include_staff — the STAFF's own
+    ///   extent joins the support skyline, so a digit clears the staff's ink by
+    ///   <see cref="Padding"/> exactly as it clears a head.
+    /// <para>
+    /// ⚠️ WHAT THIS REPLACED, AND WHY IT WAS NOT A DIFFERENT-BUT-EQUAL ARRANGEMENT: a
+    /// chord's digits used to be set at their own heads' heights, under a remark calling it
+    /// "a simpler, equally LP-compatible arrangement" that cited FingeringColumn. It is not
+    /// equal and FingeringColumn is not the mechanism: on corpus book chord-repetition the
+    /// three digits printed on the noteheads and the stem, unreadable. Six ledger points
+    /// (fingering.chord.*, books CFL/CFH of probes/chord-fingering.ly) measure what
+    /// LilyPond does instead, and they were raised BEFORE this port.
+    /// </para>
+    /// ⚠️ THE STEM AND ITS FLAG ARE SUPPORTS IN LILYPOND (:186-190) but Fingering gates them
+    /// with <c>add-stem-support = only-if-beamed</c> (scm/define-grobs.scm:1543), so an
+    /// unbeamed note reads identically without them. A fingering over a BEAMED note sits
+    /// too low until that gate is ported; the books that measured this port are whole
+    /// notes, and no ledger point reaches the beamed pairing yet.
+    /// ⚠️ THE ACCIDENTALS ARE SUPPORTS TOO on a chord (:329-332). Not ported: no point
+    /// observes it, and a chord whose accidental out-reaches its own head vertically does
+    /// not exist (an accidental is centred on its head and is barely taller).
     /// </remarks>
-    private static void BuildChordFingerings(
-        ChordItem chord, int measureIndex, int itemIndex,
+    private static void BuildLayouts(
+        (int Position, int Number)[] fingered,
+        int[] headPositions,
+        Fraction baseDuration,
+        int sourcePosition,
+        int measureIndex, int itemIndex,
         MeasureLayout measureLayout, int staffIndex,
         ImmutableArray<FingeringLayout>.Builder layouts,
         ImmutableArray<Measure> measures)
@@ -194,127 +307,94 @@ internal static class FingeringEngraver
         if (measureLayout.Columns.IsDefaultOrEmpty
             && itemIndex >= measureLayout.Items.Length)
             return;
-        // The head's INK centre — see BuildLayout for the rule and the measurement.
-        double centerX = measureLayout.X + LayoutUtilities.GetItemXOffset(
-            measures, measureIndex, itemIndex, measureLayout)
-            + GlyphMetrics.GetNoteheadBBox(
-                chord.BaseDuration.Numerator == 1 ? (int)chord.BaseDuration.Denominator : 1).CenterX;
 
-        bool isAbove = !chord.StemUp;
+        double centerX = CentreX(baseDuration, measureIndex, itemIndex, measureLayout, measures);
 
-        foreach (var note in chord.Notes)
+        // The support set: every head's own INK edge, and the staff's.
+        // The head's half-ink is the glyph's, not the nominal 0.5 — measured by the CFH
+        // book, whose up bucket clears the top head's 0.545 and not a nominal half
+        // (ledger fingering.chord.above-head-inner.staff-to-ink-bottom = 4.045000, whose
+        // named fork 4.000000 did not fire). EngravingDefaults.NoteheadHalfHeight's own
+        // remark listed this site as one that could not be corrected while no point
+        // observed it; one does now.
+        int noteValue = baseDuration.Numerator == 1 ? (int)baseDuration.Denominator : 1;
+        double headHalfInk = GlyphMetrics.GetNoteheadBBox(noteValue).Top;
+        double headsTop = double.NegativeInfinity, headsBottom = double.PositiveInfinity;
+        foreach (int p in headPositions)
         {
-            if (!note.Fingering.HasValue)
-                continue;
+            headsTop = System.Math.Max(headsTop, p * 0.5 + headHalfInk);
+            headsBottom = System.Math.Min(headsBottom, p * 0.5 - headHalfInk);
+        }
 
-            // Y-up (frame B): align with the note's own staff position — a head at
-            // staff-position p sits p/2 spaces above the staff middle. No staff
-            // offset here; the renderer resolves the staff middle at draw time.
-            double yUp = note.StaffPosition * 0.5;
+        // The split. A stable sort by staff position, then LilyPond's own cut.
+        var sorted = fingered.OrderBy(f => f.Position).ToArray();
+        int center = sorted.Length / 2;
 
+        // UP, inner to outer: priority 100 + position ascends with the position, so the
+        // bucket is walked in the order it was just sorted into.
+        double support = System.Math.Max(StaffInk, headsTop);
+        for (int i = center; i < sorted.Length; i++)
+        {
+            var ink = DigitRun(sorted[i].Number).Ink;
+            double yUp = support + Padding - ink.Bottom;
             layouts.Add(new FingeringLayout(
                 MeasureIndex: measureIndex,
                 ItemIndex: itemIndex,
-                Number: note.Fingering.Value,
+                Number: sorted[i].Number,
                 X: centerX,
                 YUp: yUp,
-                IsAbove: isAbove,
-                SourcePosition: chord.SourcePosition,
-                StaffIndex: staffIndex));
+                IsAbove: true,
+                SourcePosition: sourcePosition,
+                StaffIndex: staffIndex,
+                ColumnPriority: 100 + sorted[i].Position));
+            support = yUp + ink.Top;
+        }
+
+        // DOWN, inner to outer: priority 100 − position, so ascending priority is
+        // DESCENDING position — the highest note of the down bucket is nearest the staff.
+        support = System.Math.Min(-StaffInk, headsBottom);
+        for (int i = center - 1; i >= 0; i--)
+        {
+            var ink = DigitRun(sorted[i].Number).Ink;
+            double yUp = support - Padding - ink.Top;
+            layouts.Add(new FingeringLayout(
+                MeasureIndex: measureIndex,
+                ItemIndex: itemIndex,
+                Number: sorted[i].Number,
+                X: centerX,
+                YUp: yUp,
+                IsAbove: false,
+                SourcePosition: sourcePosition,
+                StaffIndex: staffIndex,
+                ColumnPriority: 100 - sorted[i].Position));
+            support = yUp + ink.Bottom;
         }
     }
 
-    private static FingeringLayout? BuildLayout(
-        NoteItem note, int measureIndex, int itemIndex,
-        MeasureLayout measureLayout, int staffIndex,
-        ImmutableArray<Measure> measures)
-    {
-        if (measureLayout.Columns.IsDefaultOrEmpty
-            && itemIndex >= measureLayout.Items.Length)
-            return null;
-
-        // Centered on the notehead glyph (self-alignment-X = CENTER), via the
-        // Items/Columns-aware resolver. The centre is the head's own INK centre: what
-        // aligned_on_parent centres on is the PARENT's stencil extent, and a NoteHead's
-        // extent is its ink — 1.9620 on the whole head, 1.3042 on the black one, dumped
-        // out of LilyPond in audit/lp-geometry/probes/dynamic-support.ly's books, against
-        // advances of 1.960 and 1.304.
-        // LILYPOND-REF: lily/self-alignment-interface.cc:147 aligned_on_parent — he = him->extent (him, a), the parent's own stencil extent
-        // ⚠️ THIS READ THE ADVANCE UNTIL 2026-08-05 (session 95). It is the same defect
-        // DynamicEngraver.AnchorCentreOffset carried, found there because that island had
-        // points; NOTHING in the ledger observes a fingering, so this site is corrected on
-        // the rule and the font table rather than on a residual. If a fingering point is
-        // ever raised, it is 0.001 on a whole head that it should find already paid.
-        double centerX = measureLayout.X + LayoutUtilities.GetItemXOffset(
-            measures, measureIndex, itemIndex, measureLayout)
-            + GlyphMetrics.GetNoteheadBBox(
-                note.BaseDuration.Numerator == 1 ? (int)note.BaseDuration.Denominator : 1).CenterX;
-
-        // Direction: a melodic (single-voice) fingering defaults ABOVE the staff,
-        // NOT opposite the stem. LilyPond's New_fingering_engraver buckets each
-        // fingering by fingeringOrientations and tries them in order; the default
-        // is '(up down), so a lone fingering takes the first orientation = up —
-        // independent of stem direction. (Verified against LilyPond 2.24.4: a
-        // stem-UP bass note still gets its fingering above, i.e. on the same side
-        // as the stem.)
-        // LILYPOND-REF: scm/define-context-properties.scm:411 fingeringOrientations;
-        //   ly/engraver-init.ly:907 fingeringOrientations = #'(up down) (Score-level
-        //   default, propagates to Voice);
-        //   lily/new-fingering-engraver.cc:182,210,360 position_scripts (up/down buckets).
-        bool isAbove = true;
-
-        // Y baseline in Y-up (frame B): place the digit just outside the staff on
-        // the appropriate side, but also clear of the NOTEHEAD. A fingering on a
-        // note above the top line (or below the bottom) must sit outside the
-        // notehead, else it overprints it. Take whichever is farther OUT — the
-        // staff edge or the note — which in Y-up is the max above / min below.
-        // This mirrors LilyPond's side-position (the notehead is a support) while
-        // honouring the Fingering staff-padding. No staff offset: the renderer
-        // resolves the staff middle at draw time.
-        // LILYPOND-REF: lily/side-position-interface.cc; scm/define-grobs.scm Fingering.
-        // ⚠️ BOTH OF THESE HAVE ONE HOME, and both used to be spelled again right here — a
-        // literal 2.0 and a literal 0.5 beside a LILYPOND-REF, which is the shape HANDOFF
-        // 5.2.1② names. The staff half-span is EngravingDefaults.StaffMiddle (the same "half
-        // of a five-line staff" frame) and the nominal notehead half-height is
-        // EngravingDefaults.NoteheadHalfHeight, whose own remark records that it is 0.045
-        // short of the glyph. Reading them from there is output-identical and means a future
-        // correction reaches this call site too, instead of leaving it behind.
-        // The staff support is the StaffSymbol's INK — its outermost line's top edge
-        // (2.0 + half the line thickness = 2.05), the same 2.05 every other
-        // side-positioned grob pays before its padding (bar numbers, text scripts:
-        // ledger textscript.no-descender.staff-to-baseline = 2.05 + 0.5). Measured on
-        // script-stack-order1: an isolated fingering over a staff-clearing head sits
-        // at 2.55 in LilyPond, not 2.50.
-        const double StaffInk = EngravingDefaults.StaffMiddle
-            + EngravingDefaults.StaffLineThickness / 2.0;
-        const double NoteheadHalfHeight = EngravingDefaults.NoteheadHalfHeight;
-        double digitTop = DigitRun(note.Fingering!.Value).Ink.Top;
-        double noteUp = note.StaffPosition * 0.5;
-        double yUp = isAbove
-            ? System.Math.Max(StaffInk + StaffPadding,
-                noteUp + NoteheadHalfHeight + StaffPadding)
-            : System.Math.Min(-StaffInk - StaffPadding - digitTop,
-                noteUp - NoteheadHalfHeight - StaffPadding - digitTop);
-
-        return new FingeringLayout(
-            MeasureIndex: measureIndex,
-            ItemIndex: itemIndex,
-            Number: note.Fingering!.Value,
-            X: centerX,
-            YUp: yUp,
-            IsAbove: isAbove,
-            SourcePosition: note.SourcePosition,
-            StaffIndex: staffIndex,
-            // Vertical fingerings are scripts of the note's column: priority 100 +
-            // direction × head position (direction here is UP, the default bucket).
-            // LILYPOND-REF: lily/new-fingering-engraver.cc:334-335 set_property
-            // ⚠️ THE STEM IS NOT A SUPPORT HERE. LilyPond adds the stem and its flag
-            // to the fingering's supports (new-fingering-engraver.cc:186-190), but
-            // Fingering gates them with add-stem-support = only-if-beamed
-            // (scm/define-grobs.scm:1543), so an UNBEAMED note — every note of
-            // script-stack-order1, where this port was measured — reads identically.
-            // A fingering over a BEAMED note sits too low until that gate is ported;
-            // no fixture or corpus book reaches the pairing yet.
-            ColumnPriority: 100 + note.StaffPosition);
-    }
+    /// <summary>The digit run's X centre: its host head's own INK centre.</summary>
+    /// <remarks>
+    /// Centered on the notehead glyph (self-alignment-X = CENTER), via the Items/Columns-aware
+    /// resolver. The centre is the head's own INK centre: what <c>aligned_on_parent</c> centres
+    /// on is the PARENT's stencil extent, and a NoteHead's extent is its ink — 1.9620 on the
+    /// whole head, 1.3042 on the black one, dumped out of LilyPond in
+    /// audit/lp-geometry/probes/dynamic-support.ly's books, against advances of 1.960 and 1.304.
+    /// The ledger reads it as fingering.whole.column-to-ink-centre (book FNG, exact).
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:147 aligned_on_parent — he = him->extent (him, a), the parent's own stencil extent
+    /// <para>
+    /// ⚠️ ONE X FOR ALL OF A CHORD'S DIGITS, where LilyPond gives each its OWN head as
+    /// X-parent (new-fingering-engraver.cc:326-332 — the note_column branch needs
+    /// <c>X-align-on-main-noteheads</c>, which Fingering does not declare). The two agree
+    /// whenever the chord's heads share a column, which is every chord without a second;
+    /// the books CFL/CFH are such chords and both engines put the three digits within their
+    /// own widths of one x. No ledger point measures a chord fingering's X, so this stays as
+    /// it was rather than being changed unobserved.
+    /// </para>
+    /// </remarks>
+    private static double CentreX(
+        Fraction baseDuration, int measureIndex, int itemIndex,
+        MeasureLayout measureLayout, ImmutableArray<Measure> measures)
+        => measureLayout.X + LayoutUtilities.GetItemXOffset(
+               measures, measureIndex, itemIndex, measureLayout)
+           + GlyphMetrics.GetNoteheadBBox(
+               baseDuration.Numerator == 1 ? (int)baseDuration.Denominator : 1).CenterX;
 }

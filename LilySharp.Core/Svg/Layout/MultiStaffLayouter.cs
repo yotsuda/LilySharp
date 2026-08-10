@@ -2308,9 +2308,14 @@ internal sealed class MultiStaffLayouter
                 // figured-bass drop, the chord row, the loose chain's closing staff) reads
                 // this object instead of rebuilding its own subset of it.
                 // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
+                // ...and this staff's FINGERINGS, which are inside-staff ink in LilyPond
+                // (no outside-staff-priority) and were in no Lily# skyline at all until
+                // 2026-08-10 — see SkylineBuilder.AddFingeringsToSkyline for the measurement
+                // and ledger fingering.chord.dynamic-* for the books.
+                var fingerings = StaffFingeringLayouts(staff, thisStaff, measureLayouts, score);
                 var insideSky = skylineBuilder.BuildInsideStaffSkylines(
                     staff, measureLayouts, articulations, tupletBrackets, slurs, ties, beams,
-                    CurrentIndent, restShifts);
+                    CurrentIndent, restShifts, fingerings);
                 inside.Add(insideSky);
                 // ...and the room's own view: the same profile with the priority-250 movers
                 // placed on a COPY, so the shared one stays the inside profile.
@@ -2570,6 +2575,36 @@ internal sealed class MultiStaffLayouter
     /// <see cref="StaffTupletBracketLayouts"/> makes, for the same reason.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// One staff's fingerings, in that staff's own frame — the reservation half of the
+    /// placement the same engraver does for the page.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SAME ENGRAVER, NOT A SECOND SPELLING, exactly as
+    /// <see cref="StaffArticulationLayouts"/> argues for the scripts: a
+    /// <see cref="FingeringLayout"/>'s <c>YUp</c> is already about its own staff's middle
+    /// line, so the answer needs no staff offset and no translation — it is the drawn
+    /// geometry, asked for again.
+    /// <para>
+    /// ⚠️ THIS IS THE ISLAND ANSWER, and it is the right one to reserve. The script-column
+    /// walk can still raise an ABOVE fingering that a bow outranks
+    /// (<c>ArticulationEngraver.CalculateWithFingerings</c>), and that walk runs after this
+    /// pass — so a fingering under a script reserves the band it would have had alone. The
+    /// same approximation the scripts' own remark records for the movers; the books that
+    /// measure a fingering's reservation (ledger fingering.chord.dynamic-*) reach the DOWN
+    /// side, where nothing outranks anything.
+    /// </para>
+    /// </remarks>
+    private static ImmutableArray<FingeringLayout> StaffFingeringLayouts(
+        Staff staff, int staffIndex, ImmutableArray<MeasureLayout> measureLayouts,
+        MultiStaffScore score)
+    {
+        var staffScore = new Score(
+            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+        return FingeringEngraver.Calculate(staffScore, measureLayouts, staffIndex);
+    }
+
     private ImmutableArray<ArticulationLayout> StaffArticulationLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
