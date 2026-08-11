@@ -226,13 +226,13 @@ internal sealed class LayoutEngine
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
         // spacing extents before the page Y is fixed.
-        var pagingSkylines = RunPreliminaryAnnotationPass(
+        var prelim = RunPreliminaryAnnotationPass(
             score, systems.ToImmutableArray(), perSystemExtents, perSystemSkylines,
             multiStaffLayouter.RestCollisionsOf);
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            lyricsRowStaves, pagingSkylines, perSystemHeights, perSystemBands);
+            lyricsRowStaves, prelim.PagingSkylines, perSystemHeights, perSystemBands);
 
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents, lyricsRowStaves,
@@ -241,7 +241,8 @@ internal sealed class LayoutEngine
 
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
-            LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOf);
+            LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOf,
+                prelim.BeamsByStaff);
 
         // Resolve cross-staff layouts per voice
         var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
@@ -577,7 +578,29 @@ internal sealed class LayoutEngine
     /// per-staff lookup comment inside, which records one that did exactly that.
     /// </para>
     /// </remarks>
-    private List<(VerticalSkyline up, VerticalSkyline down)>? RunPreliminaryAnnotationPass(
+    /// <summary>
+    /// What the preliminary pass produces: the skylines paging spaces against, and the beams
+    /// it laid out on the way — which are the SAME beams the final spanner pass needs.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE BEAMS ARE CARRIED, NOT RECOMPUTED, and that is the point of this type. Both
+    /// passes call <see cref="ElementCoordinator.LayoutBeams"/> per staff, and they build the
+    /// Score they hand it the same way (all voices, this staff's tuplets); they differ only in
+    /// which system array they get, and paging does not touch a system's internal geometry.
+    /// MEASURED (session 136) before this was carried: 14,350 beams over 468 layouts of every
+    /// .lys in the tree — Fixtures, samples and scratch/lpreg, 564 staves — compared
+    /// element-wise (LeftX/LeftY/RightX/RightY/member X positions/system/staff), 0 mismatches,
+    /// with a poisoned control run proving the comparison reports when it should.
+    /// The second layout cost 385.5 ms of a 2.1 s keystroke on perf-plain1k.
+    /// ⚠️ TIES AND SLURS ARE NOT CARRIED and must not be: the preliminary pass lays them out
+    /// on the PRIMARY VOICE ONLY (`staffScore`) while the final pass uses every voice
+    /// (`staffSpannerScore`), so they are not the same quantity — see this method's body.
+    /// </remarks>
+    private readonly record struct PreliminaryPass(
+        List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
+        Dictionary<int, ImmutableArray<BeamLayout>> BeamsByStaff);
+
+    private PreliminaryPass RunPreliminaryAnnotationPass(
         MultiStaffScore score, ImmutableArray<SystemLayout> prelimSystems,
         List<(double upExtent, double downExtent)> perSystemExtents,
         List<(VerticalSkyline up, VerticalSkyline down)> perSystemSkylines,
@@ -594,6 +617,7 @@ internal sealed class LayoutEngine
             TempoDots = score.TempoDots,
         };
         var prelimBeams = new List<BeamLayout>();
+        var prelimBeamsByStaff = new Dictionary<int, ImmutableArray<BeamLayout>>();
         var prelimTies = new List<TieLayout>();
         var prelimSlurs = new List<SlurLayout>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
@@ -616,6 +640,7 @@ internal sealed class LayoutEngine
                     tupletBrackets: staffTuplets)
                 : staffScore;
             var staffPrelimBeams = _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex);
+            prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
             var staffPrelimTies = _elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff);
             prelimTies.AddRange(staffPrelimTies);
@@ -702,12 +727,14 @@ internal sealed class LayoutEngine
         });
         EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
-        return AugmentSkylinesForPaging(
-            perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
-            prelimAnn.VoltaBrackets, prelimSystems,
-            prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
-            prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
-            prelimTies.ToImmutableArray());
+        return new PreliminaryPass(
+            AugmentSkylinesForPaging(
+                perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
+                prelimAnn.VoltaBrackets, prelimSystems,
+                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
+                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
+                prelimTies.ToImmutableArray()),
+            prelimBeamsByStaff);
     }
 
     /// <summary>
@@ -856,7 +883,8 @@ internal sealed class LayoutEngine
     private (List<BeamLayout> Beams, List<TieLayout> Ties, List<SlurLayout> Slurs, List<GlissandoLayout> Glissandos,
              ImmutableDictionary<RestShiftKey, double> RestShifts)
         LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
-            Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
+            Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
+            Dictionary<int, ImmutableArray<BeamLayout>> beamsByStaff)
     {
         var allBeamLayouts = new List<BeamLayout>();
         var allTieLayouts = new List<TieLayout>();
@@ -891,7 +919,12 @@ internal sealed class LayoutEngine
                     ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                     tupletBrackets: staffTuplets)
                 : staffScore;
-            var staffFinalBeams = _elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex);
+            // ...the beams the PRELIMINARY pass already laid out for this staff, not a second
+            // layout of them. See PreliminaryPass' remarks for why they are the same beams and
+            // what was measured to say so. Indexed, not TryGetValue'd with a recompute
+            // fallback: both loops walk score.EnumerateStaves(), so a missing key is a broken
+            // invariant and should say so rather than quietly pay 385 ms.
+            var staffFinalBeams = beamsByStaff[staffIndex];
             allBeamLayouts.AddRange(staffFinalBeams);
             // The rest movers CHAIN in LilyPond's callback order: the voiced position and
             // Rest_collision translate first, and Beam::rest_collision_callback evaluates
