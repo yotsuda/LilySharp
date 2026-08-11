@@ -63,8 +63,10 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第136セッション＝**2 便。⑴ 打鍵の内訳を取り直したら順位が総入れ替えになり、
-⑵ そこで唯一の三乗だった改頁 DP を LP の向きに直した**（`740dfdcc`・**未 push は git に訊くこと**）。
+最終更新 第136セッション＝**3 便。⑴ 打鍵の内訳を取り直したら順位が総入れ替えになり、
+⑵ そこで唯一の三乗だった改頁 DP を LP の向きに直し、⑶ その内訳をもう 1 段割ったら
+首位 802 ms の 750 ms が「梁を 1 打鍵で 2 回置いていた」だった**
+（`740dfdcc` / `1c1cbe52`・**未 push は git に訊くこと**）。
 **テスト 4365 passed / 0 failed / 4 skipped**・Core 0 warning・**snapshot 0 枚**・
 **台帳 507 点・ss 非ゼロ 92・総和 3.608985607（不動）**・**コーパス 0/82**。
 ⚠️ **開始時に引継ぎの数を実測したら、stale だったのは commit hash だけだった**——
@@ -121,6 +123,36 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ⇒ ★★ **一般化して §5.0 に置いた**: **引き継がれた「単調だから安全」は、その単調性を*被移植側の
 関数の中で*確かめるまで主張ではない。**
 
+**第3便（`1c1cbe52`）＝梁は 1 打鍵に 1 回だけ置く。** 第1便が名指した首位 **⒟⁶ を memo の島として
+設計する前に、その 802 ms を 1 段割った**（§5.0＝処方箋の診断を先に測る）。**答えは memo ではなかった**:
+
+| 段（`plain1k`・床） | ms | | 段 | ms |
+|---|---|---|---|---|
+| **prelim.beams** | **364.1** | | **span.beams** | **385.5** |
+| prelim.annotationpass | 84.2 | | span.restshifts | 0.2 |
+| prelim.ties / slurs / enrich | 0.4 / 0.4 / 0.1 | | span.ties / slurs / gliss | 0.4 / 0.4 / 0.4 |
+
+⇒ **861 ms のうち 749.6 ms が `ElementCoordinator.LayoutBeams` の 2 回**＝**§2A の主題そのもの**
+（同じ量を計算する場所が 2 つ・第135第4便のばねベクタと同じ形）。**アーキではなく配管の島だった。**
+
+★★★ **「同じ梁か」は推論せず全ての本に訊いた**（第135第4便と同じ型の一時 assert）:
+2 つの呼び出しは **Score を同じ形で組み**（全声部・その譜の tuplet）、**違うのは渡す system 配列だけ**
+（改頁の前と後）。⇒ `LeftX/LeftY/RightX/RightY/member X/system/staff` を要素比較して
+**`Fixtures` ＋ `samples` ＋ `scratch/lpreg` の全 `.lys` 475 冊・468 レイアウト・564 譜・
+14,350 本の梁で不一致 0**。
+★★ **検査器は先に落として証明した**（§5.4）——**毒入り run は 47 比較中 15 を不一致と報告**（梁を持つ
+15 譜ちょうど）。**だから「0」は「一致」であって「見ていない」ではない。**
+⇒ **移植は `RunPreliminaryAnnotationPass` が置いた梁をそのまま `LayoutAllSpanners` へ渡すだけ。**
+**`span.beams` 385.5 → 0.0 ms**・**`layout.spanners` 392.4 → 5.9 ms**。
+**出力同一の 3 点証明**: **コーパス 0/82**・**台帳全点不動**・**suite 4365 緑 / snapshot 0**。
+
+★★ ⚠️ **タイとスラーは渡していない。これは省略ではなく第2の所見**——**prelim はタイもスラーも
+`staffScore`（primary voice だけ）で置き、final は `staffSpannerScore`（全声部）で置く**。
+⇒ **同じ量ではない**ので渡すと spacing extent が動く。**既存の非対称**で pass 自身のコメントが
+「Ties/slurs keep the primary-voice prelim score (unchanged)」と書いている。
+⇒ **第2声部のタイ・スラーの張り出しは spacing に一度も届いていない**＝**忠実度の穴**で、
+**点が先**（下の ▶ ⒪）。
+
 ---
 
 **次の一手**（⒟ ⒩ は取り下げ・⒟′ は第135第2便・**⒟⁵ と ⒟‴ は第136 で閉じた**。
@@ -136,17 +168,24 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 `d8` にすると列の幅が変わって gate が動く。**⑵ を狙うなら五線内の音**（`g8`→`d8`/`e8`/`f8`/`a8`）。
 **どちらに落ちたかは `LastEditSkippedLineBreak` が言う——ラベルに書く前に必ず読むこと。**
 
-▶ ★★★ **⒟⁶ prelim annotation と spanners が per-system memo に入っていない**（**第136第1便が名指した
-  最大項・802 ms ＝ layout の 58%**）。`RunPreliminaryAnnotationPass` と `LayoutAllSpanners` は
-  **`systemCache` を一度も見ず、`prelimSystems` / `systemsArray` を全 system ぶん歩く**ので、
-  **1 音の編集でも 200 system 全部を採点し直す**。★ **証拠は時計ではなく次数**: 同じ texture を
-  250/500/1000 小節で振ると **115.7 / 237.7 / 456.8** と **97.4 / 198.7 / 345.2**＝**きれいに線形**
-  （＝編集位置に無関係）。**同じ本で per-system pass は 1.1 / 3.4 / 9.6**（memo が効いている側の姿）。
-  ⚠️ **これは「同じ量の 2 つ目の綴り」ではなく増分アーキテクチャの島**（§2A の親玉・F3）なので、
-  **1 便では収まらない**。**着手前に決めること**: ⑴ prelim の入力（beam/tie/slur/annotation）は
-  system 単位でキー付けできるか（`MeasureContentKey` は既に per-system で在る） ⑵ **相**——
-  prelim はページ Y を決める*前*に要るので、`SystemLayoutCache` と同じ相に置けるか
-  ⑶ **spanners は system をまたぐ**（タイ・スラーが行を越える）ので、キーは隣接 system を含む必要がある。
+▶ ★★★ **⒟⁶ 梁のレイアウトが per-system memo に入っていない**（**第136第3便で*半分*閉じた**。
+  **2 回置いていたのを 1 回にしたので、残るのはその 1 回＝`prelim.beams` 365 ms**）。
+  ⇒ **打鍵の首位は今これ**（1000 小節・全体 1.6 秒の約 23%）。`RunPreliminaryAnnotationPass` は
+  **`systemCache` を一度も見ず `prelimSystems` を全 system ぶん歩く**ので、**1 音の編集でも
+  200 system 全部の梁を採点し直す**。★ **証拠は時計ではなく次数**: 同じ texture を 250/500/1000 小節で
+  振ると **115.7 / 237.7 / 456.8**＝**きれいに線形**（＝編集位置に無関係）。**同じ本で per-system pass は
+  1.1 / 3.4 / 9.6**（memo が効いている側の姿）。**`prelim.annotationpass` 84 ms も同じ性質**。
+  ⚠️ **ここからは増分アーキテクチャの島**（§2A の親玉・F3）なので **1 便では収まらない**。
+  **着手前に決めること**: ⑴ 梁の入力は system 単位でキー付けできるか（`MeasureContentKey` は
+  既に per-system で在る） ⑵ **相**——prelim はページ Y を決める*前*に要るので `SystemLayoutCache` と
+  同じ相に置けるか ⑶ **梁は system をまたがない**（`BeamLayout.SystemIndex` が 1 つ）ので、
+  **タイ・スラーより先に梁だけをキー付けするのが最小の一歩**。
+▶ ★★ **⒪ prelim の spacing は第2声部のタイ・スラーを見ていない**（第136第3便が名指した・**点が先**）。
+  prelim は `staffScore`（primary voice だけ）でタイ・スラーを置き、final は `staffSpannerScore`
+  （全声部）で置く。⇒ **voice 2 のタイ・スラーの張り出しは spacing extent に一度も入らない。**
+  ⚠️ **梁は既に直っている**（pass のコメントが「expose every voice so voice 2's beam protrusions
+  join the spacing extents」と書いていて、タイ・スラーだけ `(unchanged)` と明記して残した）
+  ＝**意図的に据え置かれた非対称**。**動く本を探すところから**（多声＋行をまたぐタイ／スラー）。
 ▶ ★ **⒟″ の残り: 改行 DP の line-count ループ**（第135第3便で**数えたが直していない**）。
   `kLoop` は 6,979,000 回まわり、**そのうち 3,995,965 回（57%）は `dp[from] = Infinity` の空振り**。
   **i ごとに到達可能な line count の下限・上限を持てば範囲で回せる**（外は定義上 Infinity なので
