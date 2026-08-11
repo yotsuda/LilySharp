@@ -374,6 +374,53 @@ internal sealed class PageSpacing
     }
 
     /// <summary>
+    /// Adds a system at the TOP of this page — the direction LilyPond's page DP walks.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-spacing.cc:110-126 prepend_system(), transcribed:
+    /// <code>
+    ///   if (rod_height_ != 0.0) spring_len_ += line.spring_length (first_line_);
+    ///   else                    last_line_ = line;
+    ///   rod_height_ -= first_line_.full_height ();
+    ///   rod_height_ += first_line_.tallness_;
+    ///   rod_height_ += line.full_height ();
+    ///   rod_height_ += account_for_footnotes (line);
+    ///   inverse_spring_k_ += line.inverse_hooke_;
+    ///   first_line_ = line;
+    /// </code>
+    /// The three rod terms are why <see cref="AppendSystem"/> cannot be run backwards: the
+    /// system that WAS first stops paying its full height and starts paying only its
+    /// tallness, while the new first one pays its full height. ⚠️ That combination has no
+    /// definite sign, so a page does NOT necessarily get taller as it gains a system at the
+    /// top — see FindOptimalBreaks for what that costs the early exit.
+    ///
+    /// ⚠️ Where LilyPond tests <c>rod_height_ != 0.0</c> for "the page is still empty",
+    /// Lily# tests <c>_firstSystem is null</c>: the two agree because a Line_details default
+    /// has <c>full_height() == tallness_ == 0</c>, so LilyPond's subtract-then-add pair is
+    /// inert on the first prepend, which is exactly what the null branch skips here.
+    /// </remarks>
+    public void PrependSystem(SystemDetails system)
+    {
+        if (_firstSystem != null)
+        {
+            _springLength += system.SpringLengthTo(_firstSystem);
+            _rodHeight -= _firstSystem.Height;
+            _rodHeight += _firstSystem.Tallness;
+        }
+        else
+        {
+            _lastSystem = system;
+        }
+
+        _rodHeight += system.Height;
+        _rodHeight += system.FootnoteHeight;
+        _inverseSpringK += system.InverseHooke;
+        _firstSystem = system;
+
+        CalcForce();
+    }
+
+    /// <summary>
     /// Calculates the force needed to fit systems on page.
     /// </summary>
     /// <summary>
@@ -564,9 +611,50 @@ internal sealed class PageBreaker
 
         for (int j = 1; j <= n; j++)
         {
-            for (int i = 0; i < j; i++)
+            // LILYPOND-REF: lily/page-spacing.cc:312-320 calc_subproblem — LilyPond builds
+            // ONE Page_spacing per (page, line) and walks `page_start` DOWN from `line`,
+            // prepending a system each step, so the page GROWS along the walk. Lily# walked
+            // i UP from 0, which is the same set of (i, j) pairs in the opposite order but
+            // rebuilt the page from scratch for each one: MEASURED at 200 systems,
+            // 1,353,400 AppendSystem calls per break = n³/6, against the n×(systems per
+            // page) this walk pays.
+            // ⚠️ The order is not cosmetic. The DP update below keeps the FIRST i that
+            // reaches the minimum (strict <), so reversing the walk changes which i wins a
+            // TIE — toward LilyPond's, which keeps the largest page_start (:386 keeps the
+            // earlier candidate too). Ties are what the corpus run has to answer for.
+            var pageSpacing = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
+                _vs.TopSystem, _vs.LastBottom);
+            for (int i = j - 1; i >= 0; i--)
             {
                 int systemCount = j - i;
+
+                // LILYPOND-REF: lily/page-spacing.cc:337 space.prepend_system (lines_[page_start])
+                // — unconditional, BEFORE any of the filters below, because the accumulator
+                // has to see every system on the walk even when this (i, j) is not a legal
+                // page.
+                pageSpacing.PrependSystem(systems[i]);
+
+                // LILYPOND-REF: lily/page-spacing.cc:339-349 too_few_lines / page_start guard
+                //   bool overfull = (space.rod_height_ > paper_height || …);
+                //   if (!breaker_->too_few_lines (line_count) && page_start < line && overfull)
+                //     break;
+                // `line_count` there is the count BEFORE this system joins (it is incremented
+                // at :351), i.e. systemCount - 1 here; `page_start < line` exempts the page
+                // holding ONE system, which is the first step of this walk — so a single
+                // system is never rejected and the DP always has an answer.
+                // ⚠️⚠️ THIS EXIT IS NOT A PURE PRUNING, and the handoff entry that asked for
+                // it said it was ("overflow is monotone as systems are added, so every
+                // dropped candidate is MaxValue anyway"). PrependSystem's arithmetic does not
+                // support that: the outgoing first system swaps its full height for its
+                // tallness while the incoming one adds a full height, and
+                // MinWhitespaceAtTopOfPage changes with it — so a page CAN get shorter as it
+                // grows upward. LilyPond takes the exit regardless (its own comment at :343
+                // hedges it as a heuristic), so this is a port of LilyPond's algorithm, not a
+                // free refactor, and the corpus is what says whether any book moves.
+                bool tooFewLines = _params.MinSystemsPerPage > 0
+                    && systemCount - 1 < _params.MinSystemsPerPage;
+                if (!tooFewLines && i < j - 1 && double.IsNegativeInfinity(pageSpacing.Force))
+                    break;
 
                 // Check break permissions
                 if (!IsValidBreak(systems, i, j))
@@ -622,8 +710,13 @@ internal sealed class PageBreaker
                     {
                         if (!haveRest)
                         {
-                            restPenalty = CalculatePagePenalty(
-                                systems, i, j, isFirstPage: false, isLastPage, isRagged);
+                            // ...and this is the page the walk has been accumulating, so it
+                            // is priced rather than rebuilt. The first-page arm above still
+                            // builds its own, because its top margin carries the header —
+                            // and it is reachable only at i == 0 (p == 1 needs dp[i][0],
+                            // which is finite only for i == 0), i.e. once per j.
+                            restPenalty = DemeritsOf(
+                                pageSpacing, systems, i, j, isLastPage, isRagged);
                             haveRest = true;
                         }
                         penalty = restPenalty;
@@ -727,8 +820,6 @@ internal sealed class PageBreaker
         bool isLastPage,
         bool isRagged)
     {
-        int systemCount = endIdx - startIdx;
-
         // Calculate available height
         double topMargin = isFirstPage ? _topMargin + _headerHeight : _topMargin;
         var spacing = new PageSpacing(_pageHeight, topMargin, _bottomMargin,
@@ -740,6 +831,23 @@ internal sealed class PageBreaker
             spacing.AppendSystem(systems[i]);
         }
 
+        return DemeritsOf(spacing, systems, startIdx, endIdx, isLastPage, isRagged);
+    }
+
+    /// <summary>
+    /// Prices a page whose <see cref="PageSpacing"/> has already been built — the ONE
+    /// spelling of the page's demerits, shared by the caller that appends the systems and
+    /// by the DP walk that prepends them one at a time.
+    /// </summary>
+    private double DemeritsOf(
+        PageSpacing spacing,
+        IReadOnlyList<SystemDetails> systems,
+        int startIdx,
+        int endIdx,
+        bool isLastPage,
+        bool isRagged)
+    {
+        int systemCount = endIdx - startIdx;
         double force = spacing.Force;
         bool overfull = double.IsNegativeInfinity(force);
 
