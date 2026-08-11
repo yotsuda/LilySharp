@@ -394,10 +394,24 @@ internal sealed class PageSpacing
     /// definite sign, so a page does NOT necessarily get taller as it gains a system at the
     /// top — see FindOptimalBreaks for what that costs the early exit.
     ///
-    /// ⚠️ Where LilyPond tests <c>rod_height_ != 0.0</c> for "the page is still empty",
-    /// Lily# tests <c>_firstSystem is null</c>: the two agree because a Line_details default
-    /// has <c>full_height() == tallness_ == 0</c>, so LilyPond's subtract-then-add pair is
-    /// inert on the first prepend, which is exactly what the null branch skips here.
+    /// ⚠️ TWO DEPARTURES FROM THE LETTER, and they are separate claims — an earlier version of
+    /// this remark used the second to justify the first, which settles nothing:
+    ///
+    /// ⑴ LilyPond runs the three rod terms UNCONDITIONALLY; the null branch here skips two of
+    /// them. That is sound because they cancel on an empty page: a default-constructed
+    /// Line_details has <c>tallness_ = 0</c>
+    /// (LILYPOND-REF: lily/include/constrained-breaking.hh:93-119 Line_details ctor) and
+    /// <c>full_height ()</c> unites two default Intervals, which are EMPTY, and an empty
+    /// interval's length is 0
+    /// (LILYPOND-REF: lily/constrained-breaking.cc:642-648 Line_details::full_height).
+    /// ⚠️ This was checked in the source, not assumed.
+    ///
+    /// ⑵ LilyPond's "is the page still empty" test is <c>rod_height_ != 0.0</c>; Lily# asks
+    /// <c>_firstSystem is null</c>. These are NOT the same predicate — a page holding one
+    /// system of exactly zero rod height would read empty to LilyPond and non-empty here.
+    /// It is the spelling <see cref="AppendSystem"/> already uses, so the two directions stay
+    /// consistent with each other, and no SystemDetails in the corpus has zero height; it is
+    /// recorded rather than defended.
     /// </remarks>
     public void PrependSystem(SystemDetails system)
     {
@@ -651,6 +665,25 @@ internal sealed class PageBreaker
                 // grows upward. LilyPond takes the exit regardless (its own comment at :343
                 // hedges it as a heuristic), so this is a port of LilyPond's algorithm, not a
                 // free refactor, and the corpus is what says whether any book moves.
+                // ⚠️ ONE MORE CONSEQUENCE, since the exit can end the walk before i == 0: the
+                // p == 1 candidate for this j — the whole prefix 0..j on ONE page — is then
+                // never priced, because dp[i][0] is finite only at i == 0. Every book measured
+                // is unaffected (the page that overflowed is a subset of that one), and the
+                // same hole is in LilyPond, whose walk stops at `page_start > page_num`.
+                // LILYPOND-REF: lily/page-breaking.cc:401-404 Page_breaking::too_few_lines —
+                //   return line_count < min_systems_per_page ();
+                // ⚠️ `line_count` IS NOT THE SYSTEM COUNT IN LILYPOND. It is the running sum of
+                // Line_details::compressed_nontitle_lines_count_ (constrained-breaking.cc:632),
+                // which is 0 for a title line and can exceed 1 for a compressed run. Lily# has
+                // no such field on SystemDetails, and CalculateLineCountPenalty below ALREADY
+                // equates the two — this guard is a second reader of that same fold, not a new
+                // one. ⇒ With min-systems-per-page set on a book that pages a title line, this
+                // exit can fire one system earlier than LilyPond's would. Closing it wants the
+                // compressed/title line count on SystemDetails, which is where the orphan rule
+                // (see CalculateLineCountPenalty's remarks) also stalls.
+                // ⚠️ The `> 0` is Lily#'s "unset" convention for this parameter, used by the
+                // three filters above; LilyPond needs no such test because an unset
+                // min-systems-per-page is 0 and `line_count < 0` is already false.
                 bool tooFewLines = _params.MinSystemsPerPage > 0
                     && systemCount - 1 < _params.MinSystemsPerPage;
                 if (!tooFewLines && i < j - 1 && double.IsNegativeInfinity(pageSpacing.Force))
