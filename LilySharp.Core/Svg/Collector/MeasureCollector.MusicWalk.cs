@@ -896,7 +896,11 @@ public sealed partial class MeasureCollector
                         break;
                     _meta.Clef = newClef;
                     _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
-                    var clefChange = new ClefChangeItem(ParseClefType(newClef), clefDecl.Position);
+                    // The clef NAME's token span — `clef |bass`. Not clefDecl.Position,
+                    // which is the declaration's FULL span and so starts at the trivia
+                    // in front of it (see TimeDataPos for what that costs).
+                    var clefChange = new ClefChangeItem(
+                        ParseClefType(newClef), clefDecl.ClefName.Span.Start);
                     builder.AddItem(clefChange);
                 }
                 break;
@@ -938,7 +942,8 @@ public sealed partial class MeasureCollector
                         // Mid-piece change: a zero-duration grob printed at the
                         // change point, re-arming the following measures' length.
                         var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText);
-                        builder.AddItem(new TimeSignatureChangeItem(newTime, timeSigChange.Position));
+                        // The numerator, not the keyword — see TimeDataPos.
+                        builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange)));
                     }
                 }
                 break;
@@ -958,7 +963,8 @@ public sealed partial class MeasureCollector
                     if (tempoChange.Bpm is int bpm)
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, bpm.ToString(),
-                            builder.CurrentMeasureIndex, tempoChange.Position,
+                            // The declaration's first VALUE — see TempoDataPos.
+                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             // The mid-music path dropped everything but the
@@ -973,7 +979,8 @@ public sealed partial class MeasureCollector
                         // no metronome equation.
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, "",
-                            builder.CurrentMeasureIndex, tempoChange.Position,
+                            // The declaration's first VALUE — see TempoDataPos.
+                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             TempoText = markingOnly,
@@ -1048,7 +1055,9 @@ public sealed partial class MeasureCollector
             string cueClef = clefToken.Text.ToLowerInvariant();
             _meta.Clef = cueClef;
             _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
-            builder.AddItem(new ClefChangeItem(ParseClefType(cueClef), clefToken.Position, isCue: true));
+            // The token's span, not its Position — the clef name, not the trivia.
+            builder.AddItem(new ClefChangeItem(
+                ParseClefType(cueClef), clefToken.Span.Start, isCue: true));
         }
 
         _cueDepth++;

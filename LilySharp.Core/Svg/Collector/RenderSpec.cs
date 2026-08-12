@@ -155,7 +155,13 @@ public sealed record RenderSpec(
     // The form this score renders, resolved from its `score <FormName>` header
     // against the file's `form <Name> { ... }` declarations. Null when the name is
     // missing or unknown (a validator error) — the score then renders nothing.
-    FormDeclarationSyntax? Form = null
+    FormDeclarationSyntax? Form = null,
+    // `title` / `composer` written INSIDE this score block, which restate the file
+    // header for this score alone (`score sub { title "Violin I" staff vln }`).
+    // Empty when the score states none, and applied over the file's own values by
+    // MeasureCollector.CollectDefinitions — so a score that restates nothing keeps
+    // them and no score can leak its header to another.
+    ImmutableArray<MetadataDeclarationSyntax> HeaderOverrides = default
 )
 {
     /// <summary>

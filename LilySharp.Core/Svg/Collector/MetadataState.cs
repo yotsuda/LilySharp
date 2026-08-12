@@ -41,6 +41,7 @@ internal sealed class MetadataState
     public int TimePosition;
     public int KeyPosition;
     public int ClefPosition;
+    public int TempoPosition;
 
     public int? Tempo;
     public string? TempoText;
@@ -82,6 +83,7 @@ internal sealed class MetadataState
         TimePosition = 0;
         KeyPosition = 0;
         ClefPosition = 0;
+        TempoPosition = 0;
         Tempo = null;
         TempoText = null;
         TempoBeatUnit = 4;

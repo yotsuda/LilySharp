@@ -28,7 +28,13 @@ public readonly record struct HeaderPositions(
     int Composer = 0,
     int Time = 0,
     int Key = 0,
-    int Clef = 0
+    int Clef = 0,
+    // The OPENING metronome mark's `tempo` declaration. A mid-piece `tempo`
+    // carries its own offset on the mark itself (the music walk reads it off the
+    // syntax node); the opening one is synthesised from the score's metadata by
+    // MusicMarkEngraver.MergeTempoMark, which has no syntax to read, so its
+    // offset travels here with the rest of the header.
+    int Tempo = 0
 );
 
 /// <summary>
@@ -227,7 +233,13 @@ public sealed record MultiStaffScore
         // Preserve ALL voices (polyphony), not just the primary, so the renderer
         // can draw every voice. (Voice collision offsets in the multi-staff layout
         // path remain a separate refinement.)
-        var staff = Staff.Create(clef, score.Voices, instrumentName) with { Lines = lines, PedalStyle = pedalStyle };
+        // The one staff a solo score has IS the one the score's clef declaration set, so it
+        // carries that offset. ⚠️ Needed because the renderer reads the clef's data-pos off
+        // the STAFF now (a multi-staff score's staves each have their own); without this the
+        // wrap left it 0 and a solo score's clef — the one case that always worked — would
+        // have lost its tag.
+        var staff = Staff.Create(clef, score.Voices, instrumentName)
+            with { Lines = lines, PedalStyle = pedalStyle, ClefPosition = score.Header.Clef };
         var staffGroup = StaffGroup.CreateSingle(staff);
 
         return new MultiStaffScore(

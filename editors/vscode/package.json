@@ -340,6 +340,84 @@
         "command": "lilysharp.playMeasureAtCursor",
         "key": "alt+m",
         "when": "editorTextFocus && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "'",
+        "args": { "text": "'" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": ",",
+        "args": { "text": "," },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": ".",
+        "args": { "text": "." },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "0",
+        "args": { "text": "0" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "1",
+        "args": { "text": "1" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "2",
+        "args": { "text": "2" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "3",
+        "args": { "text": "3" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "4",
+        "args": { "text": "4" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "5",
+        "args": { "text": "5" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "6",
+        "args": { "text": "6" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "7",
+        "args": { "text": "7" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "8",
+        "args": { "text": "8" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.smartType",
+        "key": "9",
+        "args": { "text": "9" },
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
       }
     ]
   },

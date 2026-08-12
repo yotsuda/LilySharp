@@ -70,6 +70,7 @@ internal sealed class PdfDocumentContext : IDocumentContext
     private static EmmentalerFontResolver? _installedResolver;
 
     private readonly PdfDocumentOptions _options;
+    private readonly EmmentalerFontResolver _resolver;
     private readonly PdfDocument _document;
     private PdfDrawingContext? _currentPage;
     private XGraphics? _currentGfx;
@@ -78,11 +79,11 @@ internal sealed class PdfDocumentContext : IDocumentContext
     public PdfDocumentContext(PdfDocumentOptions? options = null)
     {
         _options = options ?? new PdfDocumentOptions();
-        var resolver = EnsureFontResolver(_options.FontDirectory);
+        _resolver = EnsureFontResolver(_options.FontDirectory);
         // Per-document text font + embed intent (font "X" [embedded]). The resolver
         // is a process global set once, but this target is mutable and refreshed per
         // document.
-        resolver.SetTextFont(_options.TextFontFamily, _options.EmbedTextFont);
+        _resolver.SetTextFont(_options.TextFontFamily, _options.EmbedTextFont);
         _document = new PdfDocument();
     }
 
@@ -109,7 +110,7 @@ internal sealed class PdfDocumentContext : IDocumentContext
         }
 
         _currentGfx = XGraphics.FromPdfPage(page);
-        _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace, originPt);
+        _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace, originPt, _resolver);
         return _currentPage;
     }
 

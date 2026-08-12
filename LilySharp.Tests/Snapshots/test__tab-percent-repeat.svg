@@ -12,7 +12,7 @@
   <line x1="0.00" y1="13.29" x2="102.43" y2="13.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="14.29" x2="102.43" y2="14.29" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.29" x2="102.43" y2="15.29" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="12.29" font-size="4.00"></text>
+  <text class="music" x="0.80" y="12.29" font-size="4.00" data-pos="952"></text>
   <text class="music" x="5.12" y="13.29" font-size="4.00"></text>
   <text class="music" x="8.42" y="14.79" font-size="4.00" data-pos="985"></text>
   <line x1="9.66" y1="14.64" x2="9.66" y2="11.29" stroke="#000000" stroke-width="0.130"/>

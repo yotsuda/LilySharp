@@ -605,13 +605,14 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
     {
         get
         {
-            // Slots: keyword, '{', name…, '}'. Skip the three fixed tokens by kind rather
-            // than by index, so a missing brace (error recovery) cannot shift the names.
+            // Slots: keyword, '{', member…, '}'. Selected by KIND rather than by index, so
+            // a missing brace (error recovery) cannot shift the names.
+            // ⚠️ Positively a PART NAME, not merely "not a brace": a member the container
+            // rejected is KEPT in the tree so its width survives (ParseBarePartNameMembers),
+            // and a `not` test would hand that rejected token back as a part name.
             for (int i = 0; i < SlotCount; i++)
             {
-                if (GetChild(i) is SyntaxTokenNode t
-                    && t.Kind is not (SyntaxKind.CondensedStaffKeyword
-                        or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
+                if (GetChild(i) is SyntaxTokenNode t && SyntaxFacts.IsPartNameKind(t.Kind))
                     yield return t.Text;
             }
         }
@@ -658,13 +659,12 @@ public sealed partial class CombinedStaffRenderSyntax : SyntaxNode
     {
         get
         {
-            // Skip the three fixed tokens by KIND, not index, so error recovery on a
-            // missing brace cannot shift the names (as in CondensedStaffRenderSyntax).
+            // Selected by KIND, not index, so error recovery on a missing brace cannot
+            // shift the names — and positively a part name, so a rejected member kept for
+            // its width is not returned as one (as in CondensedStaffRenderSyntax).
             for (int i = 0; i < SlotCount; i++)
             {
-                if (GetChild(i) is SyntaxTokenNode t
-                    && t.Kind is not (SyntaxKind.CombinedStaffKeyword
-                        or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
+                if (GetChild(i) is SyntaxTokenNode t && SyntaxFacts.IsPartNameKind(t.Kind))
                     yield return t.Text;
             }
         }

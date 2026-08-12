@@ -21,11 +21,16 @@ const BETWEEN_EVENTS = /[|:.*[\]~()\-0-9]/;
 // accidental spelling. The marks go after these and BEFORE the duration.
 const PITCH_LETTERS = /^[a-g](?:isis|eses|is|es)?/;
 
-// Every DurationBase there is (GRAMMAR.md §Duration). Tested as a PREFIX, never
-// as a member: '3' is not a duration but it is the first keystroke of '32', and
-// '12' is the first two of '128'. Dots and a ':' tremolo are separate slots.
+// Every DurationBase there is (GRAMMAR.md §Duration). Tested as a PREFIX for
+// what a keystroke could still become — '3' is not a duration but it is the
+// first keystroke of '32', and '12' is the first two of '128' — and as a MEMBER
+// for what one already is. Dots and a ':' tremolo are separate slots.
 const DURATIONS = ['1', '2', '4', '8', '16', '32', '64', '128'];
 const isDurationPrefix = (digits: string) => DURATIONS.some(d => d.startsWith(digits));
+// ⚠️ The two tests disagree on exactly 3 and 6, and that gap is what tells a
+// FRESH duration from one being BUILT UP: nothing sounds for six, so a typed '6'
+// can only ever be reaching for 16 or 64.
+const isDuration = (digits: string) => DURATIONS.includes(digits);
 
 // A mid-music command, which changes context between two notes without being one
 // — a slur spans it, so the scan for the following note skips the whole command
@@ -47,7 +52,7 @@ const windows = new Map<string, { base: number, text: string }>();
 // The insertions this module reacts to — the pairs VS Code auto-closes included.
 // Checked BEFORE the document text is read, so an ordinary letter, a space or a
 // paste never pays for a full getText().
-const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '~', '[', '[]', ']']);
+const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '.', '~', '[', '[]', ']']);
 
 // The durations that carry a flag, and so can be beamed. A note that spells no
 // duration inherits the running one — `c8 d e f` beams all four and only the
@@ -159,16 +164,44 @@ let applyingFix = false;
  *
  * 16. A digit typed anywhere on a note moves into the duration slot, which sits
  *    AFTER the octave marks (`|c` and `c,|` alike → `c,4`).
- * 17. Digits already there are EXTENDED while the result is still a duration in
- *    the making — `c1` + '6' → `c16` from ANY caret position on the note, since
- *    `c61` is not a duration and `c16` is. The test is a PREFIX test against
- *    1/2/4/8/16/32/64/128: '3' is no duration but it is the first keystroke of
- *    '32', so it has to be accepted to be extended.
- * 18. When the digits cannot become one they are REPLACED (`c4` + '2' → `c2`:
- *    neither `c42` nor `c24` exists). Retyping the SAME digit (`c1` + '1') is
- *    that case with nothing to change, so only the caret moves — to just after
- *    the digits, where a following '6' or '28' continues it. A digit that starts
- *    no duration at all (5, 7, 9, 0) is left exactly as typed.
+ * 17. With the caret DIRECTLY AFTER the digits the keystroke lands in the slot by
+ *    itself and simply EXTENDS them: `c1|` + '6' → `c16`, and `c1|.` + '2' →
+ *    `c12.`, which is the one place a 128th can still be spelled out. The test is
+ *    a PREFIX test against 1/2/4/8/16/32/64/128.
+ * 18. ANYWHERE ELSE on the note it turns on whether the digit IS a duration.
+ *    1, 2, 4 and 8 are, so they start a FRESH one: `c1.|` + '2' is `c2.`, a
+ *    dotted half, and not the `c12.` that reading it as a 128th in the making
+ *    would give. 3 and 6 are not — nothing sounds for six — so they can only be
+ *    building one, and they EXTEND: `c1.|` + '6' is `c16.`.
+ * 18a. A digit that cannot stand alone and has nothing to extend is COMPLETED to
+ *    the one duration that begins with it — '3' writes `32` and '6' writes `64`,
+ *    so `c1.|` + '3' is `c32.` and `c2.|` + '6' is `c64.`. Nothing is guessed:
+ *    those are the only durations beginning with those digits, and the half-typed
+ *    `c3` sounds as nothing, so there was never a reason to leave it on the page.
+ *    ⚠️ Only a digit that is the WHOLE of what gets written is completed. A run
+ *    being BUILT UP is left alone (`c1|` + '2' stays `c12`, rule 17): finishing
+ *    it to `c128` would turn the '8' the typist goes on to press into `c8`.
+ *    DECIDED (user, 2026-08-11): a 128th is rare enough that a caret past the
+ *    digits is better evidence of a fresh duration than of one being built up,
+ *    but only where the digit could have meant a fresh duration at all. So the
+ *    ambiguous keystrokes (1/2/4/8) restart and the unambiguous ones (3/6) do
+ *    not, and `c1|.` keeps both readings reachable. Retyping the SAME digit
+ *    changes nothing at all, and a digit that starts no duration (5, 7, 9, 0) is
+ *    left exactly as typed.
+ *
+ * 23. An augmentation dot is the LAST thing on a note's core, after the duration
+ *    and after the dots already there, so one typed anywhere else on the note
+ *    moves to the end of that run: `c|'8.` + '.' → `c'8..`. A REST takes dots on
+ *    the same terms (`r4.`), unlike octave marks.
+ *
+ * Rules 14–23 move TEXT and never the CARET: the mark or digit travels to the
+ * slot it belongs in and the cursor keeps the position it was pressed at (see
+ * stayPut), because a correction to what was typed is not a request to go
+ * somewhere. Octave marks stay reachable from wherever the caret rests and stack
+ * there (`c4|` + "'" + "'" → `c''4|`), the slot being re-read off the note each
+ * time rather than remembered from the caret. Durations read the caret once, and
+ * only to break a tie: right after the digits it always builds on them (rule 17),
+ * and elsewhere the digit itself decides (rule 18).
  *
  * A caret INSIDE a chord is pointing at a member (`<c, e g>`, `<c 3 5>` — the
  * spaced digits are scale degrees), and one past the note's core is in its
@@ -285,12 +318,75 @@ export function registerSmartTyping(
             } else if (change.text === ']') {
                 onInsertBeamClose(editor, text, offset, log);
             } else if (change.text === "'" || change.text === ',') {
-                onInsertOctaveMark(editor, text, offset, change.text, log);
-            } else if (/^[0-9]$/.test(change.text)) {
-                onInsertDuration(editor, text, offset, change.text, log);
+                // The pre-keystroke text, which is what the plan is decided on.
+                const before = text.slice(0, offset) + text.slice(offset + 1);
+                const plan = octaveMarkPlan(before, offset, change.text);
+                if (plan) { applyPlanAfterKeystroke(editor, text, offset, plan, log, change.text); }
+            } else if (change.text === '.' || /^[0-9]$/.test(change.text)) {
+                const before = text.slice(0, offset) + text.slice(offset + 1);
+                const plan = planFor(change.text, before, offset);
+                if (plan) { applyPlanAfterKeystroke(editor, text, offset, plan, log, change.text); }
             }
         })
     );
+    registerSmartTypeKeys(context, log);
+}
+
+/** The characters whose keys are intercepted, mapped to what they plan. */
+function planFor(ch: string, before: string, offset: number): TypePlan | null {
+    if (ch === "'" || ch === ',') { return octaveMarkPlan(before, offset, ch); }
+    if (ch === '.') { return dotPlan(before, offset); }
+    if (/^[0-9]$/.test(ch)) { return durationPlan(before, offset, ch); }
+    return null;
+}
+
+/**
+ * Handles the keys whose character this module RELOCATES, before VS Code inserts
+ * anything — the only way the caret can be made not to move at all.
+ *
+ * The onDidChangeTextDocument route above cannot do it. By the time a change
+ * event reaches the extension host, VS Code has already inserted the character at
+ * the cursor and advanced the cursor past it, in the renderer; the rewrite that
+ * puts both right is a round trip behind, and that gap is visible as the cursor
+ * flicking forward and back. Bound to a command instead, the key never reaches
+ * the default insertion: the character is written straight into its slot and the
+ * cursor is simply never asked to move.
+ *
+ * Everything this module does NOT relocate is delegated to the built-in `type`,
+ * so ordinary typing — auto-closing pairs, suggestions, everything — is untouched
+ * in every case that reaches it. That is most of them: a digit inside `time 4/4`
+ * or a title string, an apostrophe anywhere but on a note.
+ *
+ * ⚠️ IME: keys the input method is processing arrive with keyCode 229 and VS Code
+ * does not dispatch keybindings for them, so composing Japanese in a title,
+ * lyric or `@text` never reaches this command — the composed text arrives through
+ * the composition path instead. The bindings are further held off while the
+ * suggestion widget is up, where a keystroke means "filter", not "insert".
+ *
+ * ⚠️ A binding that does not fire is not a failure: the change-event route is
+ * still there and still relocates the character, with the flicker. That is the
+ * degradation if a keyboard layout does not resolve one of these keys.
+ */
+function registerSmartTypeKeys(context: vscode.ExtensionContext, log: (msg: string) => void) {
+    context.subscriptions.push(vscode.commands.registerCommand(
+        'lilysharp.smartType', async (args?: { text?: string }) => {
+            const ch = args?.text;
+            const editor = vscode.window.activeTextEditor;
+            const plain = () => vscode.commands.executeCommand('type', { text: ch });
+            if (typeof ch !== 'string' || ch.length !== 1) { return plain(); }
+            // Anything the plan cannot speak for goes to the default insertion:
+            // another language, a selection to overtype, several cursors.
+            if (!editor || editor.document.languageId !== 'lilysharp'
+                || editor.selections.length !== 1 || !editor.selection.isEmpty) {
+                return plain();
+            }
+            const before = editor.document.getText();
+            const offset = editor.document.offsetAt(editor.selection.active);
+            const plan = planFor(ch, before, offset);
+            if (!plan) { return plain(); }
+            applyPlanForTypedKey(editor, before, offset, plan, log, ch);
+        }));
+    log('smartTyping: key interception registered for \' , and 0-9');
 }
 
 /** Applies a follow-up rewrite AND places the caret in ONE operation.
@@ -307,7 +403,8 @@ export function registerSmartTyping(
  * position below `lo` is untouched by definition, so the two agree there and
  * the tabstop can be placed by simple subtraction. */
 function applyFixWithCaret(editor: vscode.TextEditor, text: string,
-    edits: { at: number, del?: number, ins?: string }[], caret: number) {
+    edits: { at: number, del?: number, ins?: string }[], caret: number,
+    ownUndoStep = false) {
     let lo = Infinity;
     let hi = -Infinity;
     for (const e of edits) {
@@ -348,10 +445,89 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
     snippet.value += '${0}';
     snippet.appendText(out.slice(caretIn));
     applyingFix = true;
+    // A follow-up to a keystroke merges into that keystroke's undo step. An
+    // INTERCEPTED key has no keystroke edit to merge with, so it opens its own —
+    // without this it would join whatever the user did before, and one undo would
+    // take that away too.
     editor.insertSnippet(snippet,
         new vscode.Range(editor.document.positionAt(lo), editor.document.positionAt(hi)),
-        { undoStopBefore: false, undoStopAfter: true })
+        { undoStopBefore: ownUndoStep, undoStopAfter: true })
         .then(() => { applyingFix = false; }, () => { applyingFix = false; });
+}
+
+/** What a typed octave mark or duration digit does to the text, decided ENTIRELY
+ * on the text as it stands WITHOUT that keystroke.
+ *
+ * That framing is what lets one decision serve both routes into this module. The
+ * `type` interception has the pre-keystroke text in hand already; the
+ * onDidChangeTextDocument fallback reconstructs it. Neither can be decided on the
+ * text WITH the keystroke in it — a mark parked mid-note splits the very token
+ * that has to be read (`c|2` + "'" reads as `c`, `'`, `2` and hides the note
+ * `c2`) — so both want the same view, and now compute the same answer from it.
+ *
+ * `at`/`del`/`ins` replace one span; `caret` is the finished text's offset for
+ * the cursor. A plan whose `ins` equals what it replaces is a NO-OP: the
+ * keystroke is absorbed and nothing is edited at all. */
+interface TypePlan { at: number, del: number, ins: string, caret: number, what: string }
+
+/** Where the caret belongs when a keystroke was RELOCATED rather than accepted
+ * where it was pressed: exactly where the typist left it.
+ *
+ * The marks that travel — an octave mark into its slot, a digit into the
+ * duration — are corrections to the TEXT, not requests to move the cursor, and
+ * moving it makes the editor feel like it is typing back. So the caret keeps the
+ * position it had BEFORE the keystroke (`at`, in the text without it), adjusted
+ * only for characters the rewrite added or removed IN FRONT of it: text sliding
+ * under a cursor is not the cursor moving.
+ *
+ * `spanAt` is where the rewritten run starts, `oldLen`/`newLen` its length before
+ * and after — all in the pre-keystroke text, which is what every caller computes
+ * in. A caret at or before the run's start does not move; one past its end shifts
+ * by the length change; one INSIDE it is clamped to the rewritten run, which is
+ * as close to "unmoved" as a caret in text that no longer exists can be.
+ *
+ * ⚠️ A keystroke that ALREADY lands in its slot never reaches here — those return
+ * early and are typed the ordinary way, carrying the caret past the character as
+ * typing does. `c1|` + '6' → `c16|` is that case; `c1.|` + '2' → `c2.|` is this
+ * one, where the digit travelled and the caret did not. */
+function stayPut(at: number, spanAt: number, oldLen: number, newLen: number): number {
+    if (at <= spanAt) { return at; }
+    if (at >= spanAt + oldLen) { return at + newLen - oldLen; }
+    return Math.min(at, spanAt + newLen);
+}
+
+/** Carries out a plan on a document that ALREADY holds the keystroke — the
+ * fallback route, used when the key was not intercepted. The typed character is
+ * removed and the plan's span rewritten in ONE replacement, so the two can
+ * overlap freely (a digit typed inside the digit run is exactly that case).
+ *
+ * ⚠️ THE CARET IS STILL SEEN TO MOVE ON THIS ROUTE, once, for one extension-host
+ * round trip: VS Code inserted the character at the cursor and advanced it before
+ * this module was told anything, and no edit made afterwards can un-paint that.
+ * Interception is what removes it — see registerSmartTypeKeys. */
+function applyPlanAfterKeystroke(editor: vscode.TextEditor, text: string, offset: number,
+    plan: TypePlan, log: (msg: string) => void, typed: string) {
+    const lo = Math.min(plan.at, offset);
+    const hi = Math.max(plan.at + plan.del, offset);
+    const before = text.slice(0, offset) + text.slice(offset + 1);
+    const replacement =
+        before.slice(lo, plan.at) + plan.ins + before.slice(plan.at + plan.del, hi);
+    applyFixWithCaret(editor, text, [{ at: lo, del: hi + 1 - lo, ins: replacement }], plan.caret);
+    log(`smartTyping: ${typed} typed -> ${plan.what}`);
+}
+
+/** Carries out a plan on a document that does NOT hold the keystroke — the
+ * intercepted route. Nothing was inserted at the cursor, so there is no keystroke
+ * to take back out and no moment at which the caret sat anywhere else. */
+function applyPlanForTypedKey(editor: vscode.TextEditor, before: string, offset: number,
+    plan: TypePlan, log: (msg: string) => void, typed: string) {
+    if (plan.ins === before.slice(plan.at, plan.at + plan.del) && plan.caret === offset) {
+        log(`smartTyping: ${typed} typed -> ${plan.what} (absorbed, nothing to change)`);
+        return;
+    }
+    applyFixWithCaret(editor, before,
+        [{ at: plan.at, del: plan.del, ins: plan.ins }], plan.caret, true);
+    log(`smartTyping: ${typed} typed -> ${plan.what}`);
 }
 
 /** Applies one follow-up edit, merged into the keystroke's undo step. */
@@ -1009,44 +1185,34 @@ function noteAtCaret(text: string, offset: number)
  * slot rather than splitting the token. Typed against the OPPOSITE mark it
  * CANCELS one instead — "'" undoes a ',' and vice versa — so an overshot octave
  * is walked back with the key that caused it, no selecting or backspacing. */
-function onInsertOctaveMark(editor: vscode.TextEditor, text: string, offset: number,
-    mark: string, log: (msg: string) => void) {
-    if (inStringOrComment(text, offset)) { return; }
-    // Everything is decided on the text WITHOUT the keystroke: a mark parked at
-    // the caret would otherwise split the very note token being read.
-    const before = text.slice(0, offset) + text.slice(offset + 1);
+function octaveMarkPlan(before: string, offset: number, mark: string): TypePlan | null {
+    if (inStringOrComment(before, offset)) { return null; }
     const found = noteAtCaret(before, offset);
-    if (!found || found.slots.octave === null) { return; } // a rest takes none
+    if (!found || found.slots.octave === null) { return null; } // a rest takes none
     const { octave, marksEnd } = found.slots;
-
-    // Offsets are read off `before`; the document still holds the keystroke, so
-    // everything from it on has shifted by one.
-    const shifted = (p: number) => (p < offset ? p : p + 1);
 
     const opposite = mark === "'" ? ',' : "'";
     const cancel = before.lastIndexOf(opposite, marksEnd - 1);
     if (cancel >= octave) {
-        // The caret lands at the END of what is left of the mark run — where the
-        // cancelled mark was, and where the next one would go. Placed in the same
-        // edit rather than left to the editor's own shifting, so cancelling from
-        // the middle of a note (`c'|2` + ',' → `c|2`) puts it in the same place
-        // as cancelling from the end.
-        applyFixWithCaret(editor, text, [
-            { at: offset, del: 1 },
-            { at: shifted(cancel), del: 1 },
-        ], marksEnd - 1);
-        log(`smartTyping: ${mark} typed -> cancelled one ${opposite}`);
-        return;
+        // The caret STAYS where it was pressed (stayPut): the cancelled mark is
+        // one character leaving the note, so a caret after it slides back with
+        // the text and one before it does not move at all.
+        return {
+            at: cancel, del: 1, ins: '',
+            caret: stayPut(offset, cancel, 1, 0),
+            what: `cancelled one ${opposite}`,
+        };
     }
-    if (marksEnd === offset) { return; } // already in the slot
-    // The caret follows the mark it typed — in the same edit, so it is never
-    // seen at the key's position. Leaving it behind would also make the NEXT
-    // mark travel all over again instead of simply stacking.
-    applyFixWithCaret(editor, text, [
-        { at: offset, del: 1 },
-        { at: marksEnd <= offset ? marksEnd : marksEnd + 1, ins: mark },
-    ], marksEnd + 1);
-    log(`smartTyping: ${mark} typed -> moved into the octave slot`);
+    if (marksEnd === offset) { return null; } // already in the slot — type it normally
+    // The caret STAYS where it was pressed (stayPut). The mark travelling into
+    // the slot is not a cursor movement the typist asked for, and each further
+    // mark stacks correctly anyway — the slot is re-read from the note every
+    // time, not remembered from where the caret was left.
+    return {
+        at: marksEnd, del: 0, ins: mark,
+        caret: stayPut(offset, marksEnd, 0, 1),
+        what: 'moved into the octave slot',
+    };
 }
 
 /** A digit typed in music: a duration belongs AFTER the octave marks (`c,4`),
@@ -1056,34 +1222,83 @@ function onInsertOctaveMark(editor: vscode.TextEditor, text: string, offset: num
  * REPLACED when it cannot become one (`c4` + '2' → `c2`, since neither `c42`
  * nor `c24` exists). A digit that starts no duration at all — 5, 7, 9, 0 — is
  * left exactly as typed. */
-function onInsertDuration(editor: vscode.TextEditor, text: string, offset: number,
-    digit: string, log: (msg: string) => void) {
-    if (inStringOrComment(text, offset)) { return; }
-    const before = text.slice(0, offset) + text.slice(offset + 1);
+function durationPlan(before: string, offset: number, digit: string): TypePlan | null {
+    if (inStringOrComment(before, offset)) { return null; }
     const found = noteAtCaret(before, offset);
-    if (!found) { return; }
+    if (!found) { return null; }
     const { marksEnd, digitsEnd } = found.slots;
     const digits = before.slice(marksEnd, digitsEnd);
 
-    const extend = isDurationPrefix(digits + digit);
-    if (extend && digitsEnd === offset) { return; }      // already in place
-    if (!extend && !isDurationPrefix(digit)) { return; } // not a duration at all
-    const written = extend ? digits + digit : digit;
+    const atRunEnd = offset === digitsEnd;
+    let written: string;
+    if (atRunEnd && isDurationPrefix(digits + digit)) {
+        // The caret is where the digits are being typed, so the keystroke simply
+        // joins them: `c1|` + '6' → `c16`, `c1|.` + '2' → `c12.`.
+        written = digits + digit;
+    } else if (!isDurationPrefix(digit)) {
+        return null;                                  // 5, 7, 9, 0 — no duration
+    } else if (!isDuration(digit) && isDurationPrefix(digits + digit)) {
+        // A '6' is no duration — nothing sounds for six — so it can only be
+        // building one, and it extends what is already there: `c1.|` + '6'.
+        written = digits + digit;
+    } else {
+        written = digit;                              // a fresh duration
+    }
 
-    // One replace over everything affected — the digit run AND the keystroke,
-    // which may sit inside it. `lo` is at or before the keystroke, so it is the
-    // same offset in both texts; `hi` is at or after it, so it shifts by one.
-    const lo = Math.min(marksEnd, offset);
-    const hi = Math.max(digitsEnd, offset);
-    const replacement = before.slice(lo, marksEnd) + written + before.slice(digitsEnd, hi);
-    // Caret right after the digits, in the same edit, so the next keystroke
-    // keeps building: `c1` then '6' lands on `c16`, not `c61`.
-    applyFixWithCaret(editor, text, [{ at: lo, del: hi + 1 - lo, ins: replacement }],
-        marksEnd + written.length);
-    // `written === digits` is the same duration retyped (`c1` + '1'): the text
-    // does not move, only the caret — that '1' is the first of a `16` or a `128`.
-    const action = extend ? 'extended' : written === digits ? 'restarted' : 'replaced';
-    log(`smartTyping: ${digit} typed -> duration ${action} (${written})`);
+    // A digit that cannot stand alone is FINISHED here rather than left for the
+    // typist to complete: only 32 begins with a 3 and only 64 with a 6, so there
+    // is nothing to guess and `c3` — which sounds as nothing — never has to be
+    // written down. ⚠️ Only when the digit is the WHOLE of what gets written. A
+    // run being built up must not be finished for the typist: completing the
+    // `c12` of a 128th would turn the '8' they go on to press into `c8`.
+    const finishes = DURATIONS.filter(d => d.startsWith(written));
+    let action: string;
+    if (written === digit && !isDuration(written) && finishes.length === 1) {
+        written = finishes[0];
+        action = 'completed';
+    } else if (written !== digit) { action = 'extended'; }
+    else if (written === digits) { action = 'restarted'; }
+    else { action = 'replaced'; }
+
+    // Ordinary typing already produces this, so leave it to do so — that path
+    // relocates nothing and cannot flicker.
+    if (atRunEnd && written === digits + digit) { return null; }
+
+    // At the run end the digits are being typed and the caret carries on past
+    // what was written, exactly where ordinary typing would have left it.
+    // Everywhere else it STAYS where it was pressed (stayPut), the digit run
+    // having grown or shrunk under it — `c1.|` + '2' gives `c2.|`.
+    // `written === digits` is the same duration retyped (`c1.` + '1'): the plan
+    // is then a no-op, and the keystroke is simply absorbed.
+    return {
+        at: marksEnd, del: digitsEnd - marksEnd, ins: written,
+        caret: atRunEnd ? marksEnd + written.length
+            : stayPut(offset, marksEnd, digitsEnd - marksEnd, written.length),
+        what: `duration ${action} (${written})`,
+    };
+}
+
+/** '.' typed in music: an augmentation dot is the LAST thing on a note's core —
+ * after the duration and after any dots already there — so one typed anywhere
+ * else on the note moves to the end of that run (`c|'8.` + '.' → `c'8..`), the
+ * same slot rule the octave marks and the duration follow.
+ *
+ * A dot is the one slot a REST takes on the same terms as a note (`r4.`), so
+ * unlike an octave mark this does not ask whether the event has a pitch. Past the
+ * core the caret is in the note's annotations, where a '.' is an argument's
+ * decimal point or the `.up` of a placement suffix — noteAtCaret already refuses
+ * those, and they are typed exactly as pressed. */
+function dotPlan(before: string, offset: number): TypePlan | null {
+    if (inStringOrComment(before, offset)) { return null; }
+    const found = noteAtCaret(before, offset);
+    if (!found) { return null; }
+    const { coreEnd } = found.slots;
+    if (coreEnd === offset) { return null; } // already in the slot — type it normally
+    return {
+        at: coreEnd, del: 0, ins: '.',
+        caret: stayPut(offset, coreEnd, 0, 1),
+        what: 'moved into the dot slot',
+    };
 }
 
 /** '<' typed: wrap the following note, or — against an existing '<' — promote

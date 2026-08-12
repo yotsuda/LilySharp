@@ -132,12 +132,32 @@ public static class FontEmbedInfo
     {
         if (string.IsNullOrEmpty(family))
             return null;
+        var tf = SKTypeface.FromFamilyName(family);
+        if (tf == null || !tf.FamilyName.Equals(family, StringComparison.OrdinalIgnoreCase))
+            return null;
+        return TryGetFontBytes(tf);
+    }
+
+    /// <summary>
+    /// Reads the raw font file bytes behind an ALREADY-RESOLVED typeface — the per-codepoint
+    /// face <c>SKFontManager.MatchCharacter</c> hands back for a character the bundled Latin
+    /// faces cannot draw. The family overload cannot serve that: matching by name would look
+    /// the face up a second time and can land on a different one.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A face inside a COLLECTION (.ttc — Yu Gothic, Meiryo and MS Gothic all ship that
+    /// way on Japanese Windows) streams as the WHOLE collection, with the face's index in it
+    /// as <see cref="SKTypeface.OpenStream"/>'s out parameter. An embedder wants one font
+    /// program and has nowhere to put an index, so the face is lifted out here
+    /// (<see cref="SfntExtractor"/>) and the caller never sees a container.
+    /// </remarks>
+    public static byte[]? TryGetFontBytes(SKTypeface typeface)
+    {
+        if (typeface == null)
+            return null;
         try
         {
-            var tf = SKTypeface.FromFamilyName(family);
-            if (tf == null || !tf.FamilyName.Equals(family, StringComparison.OrdinalIgnoreCase))
-                return null;
-            using var s = tf.OpenStream(out _);
+            using var s = typeface.OpenStream(out int faceIndex);
             if (s == null)
                 return null;
             using var ms = new MemoryStream();
@@ -145,11 +165,31 @@ public static class FontEmbedInfo
             int read;
             while ((read = s.Read(chunk, chunk.Length)) > 0)
                 ms.Write(chunk, 0, read);
-            return ms.ToArray();
+            var bytes = ms.ToArray();
+            if (bytes.Length == 0)
+                return null;
+            return SfntExtractor.IsCollection(bytes)
+                ? SfntExtractor.ExtractFont(bytes, faceIndex)
+                : bytes;
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Classifies an already-resolved typeface, without a name lookup — the fsType half of
+    /// <see cref="Classify(string)"/> applied to the face the caller already holds.
+    /// </summary>
+    public static FontEmbedClass Classify(SKTypeface typeface)
+    {
+        if (typeface == null)
+            return FontEmbedClass.NotFound;
+        ushort fsType = 0;
+        var bytes = typeface.GetTableData(Os2Tag);
+        if (bytes != null && bytes.Length >= 10)
+            fsType = (ushort)((bytes[8] << 8) | bytes[9]);
+        return ClassifyFsTypeAndName(fsType, typeface.FamilyName);
     }
 }

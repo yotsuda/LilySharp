@@ -329,4 +329,10 @@ internal static partial class EmmentalerGlyphs
     // === Repeat dots ===
     /// <summary>dots.dot</summary>
     public const char RepeatDots = '\uE038';
+
+    // === System-start bracket tips ===
+    /// <summary>brackettips.up (top end of a SystemStartBracket)</summary>
+    public const char BracketTipUp = '\uE09E';
+    /// <summary>brackettips.down (bottom end of a SystemStartBracket)</summary>
+    public const char BracketTipDown = '\uE09F';
 }

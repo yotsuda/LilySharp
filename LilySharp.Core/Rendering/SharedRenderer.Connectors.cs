@@ -351,19 +351,22 @@ internal static partial class SharedRenderer
 
     /// <summary>How thick Lily# draws a system-start bracket's vertical stroke.</summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/system-start-delimiter.cc:36-67 staff_bracket — <c>Real thickness =
-    /// from_scm&lt;double&gt; (get_property (me, "thickness"), 0.25)</c>.
+    /// LILYPOND-REF: scm/define-grobs.scm:3685-3693 ly:system-start-delimiter::print — the
+    /// SystemStartBracket entry, whose <c>(thickness . 0.45)</c> is :3692.
     /// <para>
-    /// ⚠️ 0.25 IS LILYPOND'S FALLBACK, NOT THE VALUE IT USES. That literal is the default the
-    /// C++ falls back to when the property is ABSENT, and it is never absent: the
-    /// SystemStartBracket entry at scm/define-grobs.scm:3685-3693 ly:system-start-delimiter::print
-    /// declares <c>(thickness . 0.45)</c>, at :3692. So LilyPond draws 0.45
-    /// where Lily# draws 0.25, and this constant is a Lily# value that happens to have been
-    /// copied off the fallback branch. Left alone rather than corrected here: changing it moves
-    /// every bracketed score's ink and wants its own measurement and approval, and there is no
-    /// ledger point on a bracket yet. ⚠️ A comment claiming 0.45 was multiplied by the line
-    /// thickness to reach 0.25 stood here for one commit and was an invention — 0.45 × 0.1 is
-    /// 0.045, and staff_bracket multiplies the thickness by nothing.
+    /// ⚠️ THE 0.25 IN <c>staff_bracket</c> IS A FALLBACK AND IS NEVER TAKEN. That literal is
+    /// <c>from_scm&lt;double&gt; (get_property (me, "thickness"), 0.25)</c> at
+    /// lily/system-start-delimiter.cc:43 staff_bracket — the default for an ABSENT property, and
+    /// SystemStartBracket always declares one. This constant carried the fallback for a
+    /// while, and a comment claiming 0.45 was multiplied by the line thickness to reach it
+    /// stood here for one commit and was an invention (0.45 × 0.1 is 0.045, and
+    /// <c>staff_bracket</c> multiplies the thickness by nothing).
+    /// </para>
+    /// <para>
+    /// The stroke and the tip glyph are ONE number: mf/feta-brackettips.mf draws the tip with
+    /// <c>thick_sharp = 0.45 staff_space#</c>, which is why its bbox reaches ±0.225 across the
+    /// join. A 0.25 stroke under a 0.45 tip steps visibly at the seam, so <see
+    /// cref="DrawSystemStartBracket"/> cannot use the real glyph and keep the old width.
     /// </para>
     /// <para>
     /// ⚠️ LilyPond's bracket box is <c>Interval (0, thickness)</c> — the stroke runs RIGHT from
@@ -372,7 +375,7 @@ internal static partial class SharedRenderer
     /// an instrument name has to clear is the ink this renderer puts on the page.
     /// </para>
     /// </remarks>
-    private const double SystemStartBracketThickness = 0.25;
+    private const double SystemStartBracketThickness = 0.45;
 
     /// <summary>LILYPOND-REF: lily/system-start-delimiter.cc:89-95 simple_bar — a single
     /// vertical line of <c>line-thickness x thickness</c>, and the 1.6 is the SystemStartBar
@@ -463,25 +466,44 @@ internal static partial class SharedRenderer
         }
     }
 
-    // LILYPOND-REF: lily/system-start-delimiter.cc System_start_delimiter::staff_bracket —
-    // vertical filled box (thickness default 0.25) capped by brackettips.down/up serif
-    // glyphs, with overlap = 0.1 x thickness where the tips join the line.
+    /// <summary>
+    /// A system-start bracket: a vertical stroke with an Emmentaler tip glyph hung
+    /// off each end.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc:36-66 staff_bracket — a filled box
+    ///   <c>Interval (0, thickness) x Interval (-1, 1) * (height / 2 + overlap)</c> with
+    ///   <c>overlap = 0.1 * thickness</c>, capped by <c>brackettips.down</c> and
+    ///   <c>brackettips.up</c> attached with <c>add_at_edge (Y_AXIS, d, tips[d], -overlap)</c>.
+    /// <para>
+    /// THE TIP IS A GLYPH, NOT A SERIF WE DRAW. A pair of hand-built triangles stood here and
+    /// did not look like LilyPond's at any size: the real tip is a long tapering curve that
+    /// sweeps out and away from the staff, and no two constants reproduce it. Asking the font
+    /// for it is also what makes the tip track the stroke — mf/feta-brackettips.mf draws it
+    /// with <c>thick_sharp = 0.45 staff_space#</c>, exactly the stroke it is meant to cap.
+    /// </para>
+    /// <para>
+    /// <c>add_at_edge</c> places by EXTENT, so the arithmetic is the tips' bboxes: the UP tip
+    /// goes where its own bottom edge lands on the stroke's top, i.e. its origin sits at
+    /// <c>top - BracketTipUp.Bottom</c> (the bbox bottom is negative), and the DOWN tip
+    /// mirrors it. The stroke itself is the one drawn OVER-LONG by <c>overlap</c> at each
+    /// end, so the join has no seam.
+    /// </para>
+    /// </remarks>
     private static void DrawSystemStartBracket(double x, double top, double bottom, IDrawingContext gc)
     {
         double thickness = SystemStartBracketThickness;
-        double serifH = 0.4, serifW = 0.6;
-        gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
-        // Top serif (right-pointing triangle filled); serif tip drops toward the
-        // staff (device down = smaller Y-up).
-        gc.DrawClosedBezier(
-            (x, top), (x + serifW, top), (x + serifW, top),
-            (x + serifW * 0.3, top - serifH), (x + serifW * 0.3, top - serifH), (x + serifW * 0.3, top - serifH),
-            Color.Black);
-        // Bottom serif
-        gc.DrawClosedBezier(
-            (x, bottom), (x + serifW, bottom), (x + serifW, bottom),
-            (x + serifW * 0.3, bottom + serifH), (x + serifW * 0.3, bottom + serifH), (x + serifW * 0.3, bottom + serifH),
-            Color.Black);
+        double overlap = 0.1 * thickness;
+        gc.DrawLine(x, top + overlap, x, bottom - overlap, Color.Black, thickness);
+
+        // LilyPond's stroke runs RIGHT from the grob origin (Interval (0, thickness)) and the
+        // tips share that origin; Lily# centres the stroke on x, so the tips go half a
+        // thickness to its left. SystemStartDelimiterInkLeft reports the same edge.
+        double glyphX = x - thickness / 2.0;
+        gc.DrawGlyph(EmmentalerGlyphs.BracketTipUp, glyphX,
+            top - GlyphMetrics.BracketTipUp.Bottom, FontSize);
+        gc.DrawGlyph(EmmentalerGlyphs.BracketTipDown, glyphX,
+            bottom - GlyphMetrics.BracketTipDown.Top, FontSize);
     }
 
     // LILYPOND-REF: lily/system-start-delimiter.cc System_start_delimiter::line_bracket —

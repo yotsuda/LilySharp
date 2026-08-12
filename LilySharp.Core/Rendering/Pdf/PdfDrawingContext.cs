@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Concurrent;
 using PdfSharpCore.Drawing;
+using SkiaSharp;
 
 namespace LilySharp.Core.Rendering.Pdf;
 
@@ -24,6 +26,9 @@ internal sealed class PdfDrawingContext : IDrawingContext
     private readonly XGraphics _gfx;
     private readonly double _scale;  // points per staff-space
     private readonly double _originPt; // page-margin offset applied to positions
+    // Where a covering system face gets registered so PdfSharpCore can embed it; null in
+    // the tests that build a context directly, which then draw .notdef as before.
+    private readonly EmmentalerFontResolver? _fontResolver;
 
     // XFont is immutable and reused across every glyph/text of the same face+size;
     // a full score draws thousands, so cache them instead of allocating per draw.
@@ -33,11 +38,13 @@ internal sealed class PdfDrawingContext : IDrawingContext
     /// <see cref="IDrawingContext.MusicFace"/>.</summary>
     private int _musicDesign = EmmentalerFaces.DefaultDesign;
 
-    public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0)
+    public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0,
+        EmmentalerFontResolver? fontResolver = null)
     {
         _gfx = gfx;
         _scale = pointsPerSpace;
         _originPt = originPt;
+        _fontResolver = fontResolver;
     }
 
     // Positions are offset by the page margin; sizes (T) are not.
@@ -274,8 +281,169 @@ internal sealed class PdfDrawingContext : IDrawingContext
             int end = i + 1 < glyphs.Count ? glyphs[i + 1].Cluster : text.Length;
             if (end <= start)
                 continue;   // a mark or a second glyph inside one cluster — already drawn
-            _gfx.DrawString(text[start..end], font, brush,
-                X(left + glyphs[i].X), X(baselineY), XStringFormats.BaseLineLeft);
+            // A character the bundled face cannot draw is shaped to .notdef, and .notdef in a
+            // PDF is BLANK — a Japanese title left no ink at all. ShapeRun reports the source
+            // code point for exactly this: draw it in a face that has the glyph.
+            var fallback = glyphs[i].MissingCodepoint is int cp
+                ? FallbackFont(cp, fontSize, style)
+                : default;
+            var clusterFont = fallback.Font ?? font;
+            double px = X(left + glyphs[i].X);
+            double py = X(baselineY);
+            if (fallback.Oblique)
+                DrawObliqued(text[start..end], clusterFont, brush, px, py);
+            else
+                _gfx.DrawString(text[start..end], clusterFont, brush, px, py,
+                    XStringFormats.BaseLineLeft);
+        }
+    }
+
+    /// <summary>
+    /// The shear a SYNTHESISED oblique applies: how far x moves per unit of height above
+    /// the baseline.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, not picked. The PNG backend's CJK slant comes from the face
+    /// <c>SKFontManager.MatchCharacter</c> returns for an italic request, which on Windows
+    /// is a DirectWrite OBLIQUE SIMULATION. Drawing 山田太郎 at 1000 units through the
+    /// upright and the italic face and differencing the ink widths gives
+    /// (4060.5 − 3802.7) / 901.4 = 0.2859 — 16.0°. This backend uses that number so the two
+    /// RASTERISING backends agree.
+    /// <para>
+    /// ⚠️ It cannot agree with everything, and does not claim to: the SVG backend writes
+    /// <c>font-style="italic"</c> and leaves the synthesis to the VIEWER, and another
+    /// platform's font manager would choose its own angle. What is pinned here is PDF
+    /// against PNG.
+    /// </para>
+    /// </remarks>
+    private const double ObliqueShear = 0.2859;
+
+    /// <summary>The same slant as an ANGLE IN DEGREES, which is what
+    /// <see cref="XGraphics.ShearTransform(double, double)"/> takes.</summary>
+    /// <remarks>
+    /// ⚠️ It takes DEGREES, not a shear factor — WPF's Skew semantics. Handing it the
+    /// factor 0.2859 emitted <c>1 -0 0.0049899 1 … cm</c>, i.e. tan(0.2859°): a slant of
+    /// one two-hundredth, invisible on the page and indistinguishable from the upright
+    /// text it was meant to replace. Read off the content stream, not guessed.
+    /// </remarks>
+    private static readonly double ObliqueDegrees = Math.Atan(ObliqueShear) * 180.0 / Math.PI;
+
+    /// <summary>
+    /// Draws one run with a synthesised oblique — the slant a face without a real italic
+    /// gets. The TEXT is sheared by the page transform; the embedded FONT PROGRAM is not
+    /// touched, which is what every PDF producer does for a fake italic.
+    /// </summary>
+    /// <remarks>
+    /// Sheared about the run's own baseline origin (translate there first), or the shear
+    /// would displace the text by an amount proportional to its distance from the page
+    /// origin. The sign is negative because this frame is Y-DOWN: above the baseline y is
+    /// negative, and the top has to lean RIGHT.
+    /// </remarks>
+    private void DrawObliqued(string text, XFont font, XBrush brush, double xPt, double yPt)
+    {
+        var state = _gfx.Save();
+        _gfx.TranslateTransform(xPt, yPt);
+        _gfx.ShearTransform(-ObliqueDegrees, 0);
+        _gfx.DrawString(text, font, brush, 0, 0, XStringFormats.BaseLineLeft);
+        _gfx.Restore(state);
+    }
+
+    /// <summary>The covering family for one codepoint, and whether its run has to be
+    /// sheared because the bytes being embedded carry no slant of their own.</summary>
+    private readonly record struct FallbackChoice(string? Family, bool Oblique);
+
+    // Per (codepoint, style). Cached because MatchCharacter is a system font-manager query
+    // and a CJK lyric asks per character.
+    private static readonly ConcurrentDictionary<(int Cp, FontStyle Style), FallbackChoice>
+        FallbackFamilies = new();
+
+    /// <summary>
+    /// A PdfSharpCore font for <paramref name="codepoint"/> in a system face that has the
+    /// glyph, registered with the resolver so its bytes are subset-embedded. Null when no
+    /// installed face covers the character or its licence forbids embedding.
+    /// </summary>
+    /// <remarks>
+    /// The face is picked with <c>SKFontManager.MatchCharacter</c> — the same query
+    /// <c>PngDrawingContext.ResolveFace</c> makes, so the two backends land on the same font
+    /// rather than each choosing its own idea of "a Japanese face".
+    /// <para>
+    /// ⚠️ EMBEDDING IS NOT OPTIONAL HERE, unlike <c>font "X" [embedded]</c>. That switch
+    /// exists so a NAMED font is never embedded without the author asking; this path is
+    /// reached only when the alternative is dropping the author's text on the floor, and
+    /// PdfSharpCore has no way to reference a face it has no bytes for. A face whose fsType
+    /// RESTRICTS embedding is still refused — that one is a licence prohibition, not a
+    /// default — and its characters go back to being blank.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE POSITION IS THE RESERVED ONE, not this face's own advance.
+    /// <c>TextFontMetrics.MissingGlyphAdvance</c> already spent a full em on each CJK
+    /// character, which is what a CJK face actually advances, so the cluster positions the
+    /// layout paid for are the right ones to draw at.
+    /// </para>
+    /// </remarks>
+    private (XFont? Font, bool Oblique) FallbackFont(int codepoint, double fontSize, FontStyle style)
+    {
+        if (_fontResolver == null)
+            return default;
+        var choice = FallbackFamilies.GetOrAdd((codepoint, style), key =>
+        {
+            bool bold = (key.Style & FontStyle.Bold) != 0;
+            bool italic = (key.Style & FontStyle.Italic) != 0;
+            var matched = SKFontManager.Default.MatchCharacter(
+                null,
+                new SKFontStyle(
+                    bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+                    SKFontStyleWidth.Normal,
+                    italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
+                null, key.Cp);
+            if (matched == null)
+                return default;
+            if (FontEmbedInfo.Classify(matched) == FontEmbedInfo.FontEmbedClass.Forbidden)
+                return default;
+            var bytes = FontEmbedInfo.TryGetFontBytes(matched);
+            if (bytes == null)
+                return default;
+            _fontResolver.RegisterFallback(matched.FamilyName, bold, italic, bytes,
+                simulateBold: bold && !matched.IsBold,
+                simulateItalic: italic && !matched.IsItalic);
+            // Whether the run needs a synthesised slant is decided by the BYTES, not by the
+            // face the matcher handed back.
+            // ⚠️ The two disagree, and that is the whole reason a CJK composer used to come
+            // out upright. Asked for an italic, the Windows matcher returns a face reporting
+            // slant=Oblique — but that is a DirectWrite SIMULATION, applied at draw time and
+            // absent from the font FILE. OpenStream therefore yields the upright outlines,
+            // which is what gets embedded, so `matched.IsItalic` says "already slanted" about
+            // a face whose bytes are not. Reading the extracted bytes back answers the only
+            // question that matters: does what we are embedding lean?
+            return new FallbackChoice(matched.FamilyName, italic && !BytesAreItalic(bytes));
+        });
+        if (choice.Family == null)
+            return default;
+        var pdfStyle = ((style & FontStyle.Bold) != 0, (style & FontStyle.Italic) != 0) switch
+        {
+            (true, true) => XFontStyle.BoldItalic,
+            (true, false) => XFontStyle.Bold,
+            (false, true) => XFontStyle.Italic,
+            _ => XFontStyle.Regular,
+        };
+        return (GetFont(choice.Family, T(fontSize), pdfStyle), choice.Oblique);
+    }
+
+    /// <summary>Does this font program carry a slant of its own? Read from the extracted
+    /// bytes, so a simulation applied by the platform's font manager cannot answer for
+    /// them. False when the bytes cannot be read back at all — a run then leans, which is
+    /// the recoverable side of the guess.</summary>
+    private static bool BytesAreItalic(byte[] bytes)
+    {
+        try
+        {
+            using var data = SKData.CreateCopy(bytes);
+            using var face = SKTypeface.FromData(data);
+            return face?.IsItalic ?? false;
+        }
+        catch
+        {
+            return false;
         }
     }
 

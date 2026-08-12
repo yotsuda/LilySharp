@@ -264,7 +264,10 @@ internal sealed class LayoutEngine
             tupletBrackets: score.TupletBrackets, swingSubdivision: score.SwingSubdivision,
             // The MMR engraver reads score.ChordNames to keep a chord-bearing
             // rest bar out of a compressed run (see MultiMeasureRestEngraver).
-            chordNames: score.ChordNames)
+            chordNames: score.ChordNames,
+            // The mark engraver reads Header.Tempo off THIS score to give the opening
+            // metronome mark its data-pos, so the header offsets have to come along.
+            header: score.Header)
         {
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,
@@ -610,7 +613,7 @@ internal sealed class LayoutEngine
         var prelimScore = new Score(
             prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
-            tupletBrackets: score.TupletBrackets)
+            tupletBrackets: score.TupletBrackets, header: score.Header)
         {
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,

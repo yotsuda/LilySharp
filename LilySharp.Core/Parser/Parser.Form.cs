@@ -399,11 +399,10 @@ internal sealed partial class Parser
     /// </summary>
     private bool IsPartNameStart() => IsPartNameKind(Current.Kind);
 
-    private static bool IsPartNameKind(SyntaxKind? kind) => kind is SyntaxKind.Identifier
-        or SyntaxKind.BassKeyword
-        or SyntaxKind.TrebleKeyword
-        or SyntaxKind.AltoKeyword
-        or SyntaxKind.TenorKeyword;
+    // Delegates to the one home for the rule — the render nodes read the same predicate
+    // when deciding which of their kept tokens are members (see SyntaxFacts).
+    private static bool IsPartNameKind(SyntaxKind? kind) =>
+        kind is { } k && SyntaxFacts.IsPartNameKind(k);
 
     /// <summary>
     /// Expect a part name (Identifier or instrument keyword like bass).
@@ -492,6 +491,12 @@ internal sealed partial class Parser
             SyntaxKind.CombinedStaffKeyword => ParseCombinedStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
+            // A per-score header: `score main { title "…" composer "…" staff … }`
+            // restates the file's title/composer for THIS score only. Parsed as the
+            // ordinary metadata node so it round-trips and keeps its source spans —
+            // an unrecognised token here falls to ParseList's Advance(), which drops
+            // the token's width and shifts every following source offset.
+            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
             _ => null
         };
@@ -660,12 +665,12 @@ internal sealed partial class Parser
     private List<SyntaxToken> ParseBarePartNameMembers(
         string containerName, string diagnosticCode, string why)
     {
-        var partNames = new List<SyntaxToken>();
+        var members = new List<SyntaxToken>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
             if (IsPartNameStart())
             {
-                partNames.Add(ExpectPartName());
+                members.Add(ExpectPartName());
                 continue;
             }
 
@@ -675,9 +680,17 @@ internal sealed partial class Parser
                 $"'{containerName}' cannot contain '{Current.Text}' — write bare part names, "
                 + $"e.g. {containerName} {{ flute1 flute2 }}. " + why);
 
-            // Skip the offending item so the rest of the block still parses: the keyword,
-            // then a braced body if it has one.
-            Advance();
+            // Pass over the offending item — the keyword, then a braced body if it has one
+            // — but KEEP every token it spans.
+            // ⚠️ Reporting is not enough: consuming these with a bare Advance() dropped
+            // their WIDTH, so every source offset after the block shifted left and the
+            // preview's click-to-jump landed short (measured — a `condensedStaff { staff
+            // fl1 staff fl2 }` lost the two `staff ` words and moved a later score's title
+            // data-pos off its string). The tokens are kept as members of the green node
+            // and filtered out by KIND where the names are read (SyntaxFacts.IsPartNameKind
+            // in CondensedStaffRenderSyntax / CombinedStaffRenderSyntax), so they cost
+            // nothing but the width they are here to preserve.
+            members.Add(Advance());
             if (Check(SyntaxKind.OpenBrace))
             {
                 int depth = 0;
@@ -685,12 +698,12 @@ internal sealed partial class Parser
                 {
                     if (Check(SyntaxKind.OpenBrace)) depth++;
                     else if (Check(SyntaxKind.CloseBrace)) depth--;
-                    Advance();
+                    members.Add(Advance());
                 }
                 while (depth > 0 && !Check(SyntaxKind.EndOfFile));
             }
         }
-        return partNames;
+        return members;
     }
 
     private bool IsClefKeyword() => SyntaxFacts.IsClefKeyword(Current.Kind);

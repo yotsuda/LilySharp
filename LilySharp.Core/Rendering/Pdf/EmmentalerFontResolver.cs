@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Concurrent;
 using PdfSharpCore.Fonts;
 
 namespace LilySharp.Core.Rendering.Pdf;
@@ -41,6 +42,46 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     // instead, so a non-`embedded` document never silently embeds a system font.
     private string? _textFamily;
     private byte[]? _embedBytes;
+
+    // Per-codepoint SYSTEM fallback faces, keyed by the face name below. The bundled text
+    // faces are Latin-only, so a CJK title has no glyph in them and PdfSharpCore would emit
+    // .notdef for every character — the text simply vanishes from the PDF (the SVG and PNG
+    // backends never showed this because both resolve a covering face at draw time:
+    // TextFontMetrics.MissingGlyphAdvance's remark, PngDrawingContext.SegmentByTypeface).
+    // PdfDrawingContext resolves the covering face and registers its bytes here; from
+    // PdfSharpCore's side it is then an ordinary face to subset and embed.
+    // ⚠️ Concurrent because the renderer registers while PdfSharpCore reads.
+    private readonly ConcurrentDictionary<string, FallbackFace> _fallbackFaces = new(StringComparer.Ordinal);
+
+    /// <summary>A registered fallback: its font program, and whether the emphasis has to be
+    /// SYNTHESISED because the family ships no such face (Yu Gothic UI has a bold but no
+    /// italic).</summary>
+    /// <remarks>
+    /// ⚠️ THE SIMULATION FLAGS ARE INERT IN PdfSharpCore 1.3.65 — measured 2026-08-11, by
+    /// exporting the same score with and without them: 113 bytes differ, and two runs of ONE
+    /// build differ by 114 (the creation date), so the flags changed nothing. They are set
+    /// because they are the truthful answer to what the resolver is asked, not because they
+    /// currently move the page. What that costs today: a CJK composer line, italic in the
+    /// SVG and PNG backends (Skia obliques it), stands upright in the PDF.
+    /// </remarks>
+    private readonly record struct FallbackFace(byte[] Bytes, bool SimulateBold, bool SimulateItalic);
+
+    /// <summary>The face name a registered fallback family answers to. Style is IN the name:
+    /// the matcher returns a different face per weight/slant and they are different font
+    /// programs, unlike the single <c>LysEmbed#</c> face whose emphasis PdfSharpCore
+    /// synthesises.</summary>
+    internal static string FallbackFaceName(string family, bool isBold, bool isItalic)
+        => $"LysFallback:{family}:{(isBold ? 'b' : '-')}{(isItalic ? 'i' : '-')}#";
+
+    /// <summary>
+    /// Registers a covering system face's bytes so a later <see cref="ResolveTypeface"/> for
+    /// <paramref name="family"/> at that style serves them. Idempotent — the renderer asks
+    /// once per codepoint but many codepoints share a face.
+    /// </summary>
+    public void RegisterFallback(string family, bool isBold, bool isItalic, byte[] bytes,
+        bool simulateBold, bool simulateItalic)
+        => _fallbackFaces.TryAdd(FallbackFaceName(family, isBold, isItalic),
+            new FallbackFace(bytes, simulateBold, simulateItalic));
 
     public EmmentalerFontResolver(string? fontDirectory = null, IFontResolver? fallback = null)
     {
@@ -126,6 +167,10 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         // never silently embeds a system (possibly proprietary) font.
         if (_textFamily != null && string.Equals(familyName, _textFamily, StringComparison.OrdinalIgnoreCase))
             return _embedBytes != null ? new FontResolverInfo("LysEmbed#") : SerifFace(isBold, isItalic);
+        // A system face the renderer resolved for characters no bundled face covers.
+        var fallbackFace = FallbackFaceName(familyName, isBold, isItalic);
+        if (_fallbackFaces.TryGetValue(fallbackFace, out var fb))
+            return new FontResolverInfo(fallbackFace, fb.SimulateBold, fb.SimulateItalic);
         return _fallback?.ResolveTypeface(familyName, isBold, isItalic);
     }
 
@@ -134,6 +179,9 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         if (faceName == "LysEmbed#")
             return _embedBytes ?? throw new InvalidOperationException(
                 "Embed font requested but its bytes were not loaded.");
+
+        if (_fallbackFaces.TryGetValue(faceName, out var fallback))
+            return fallback.Bytes;
 
         // "Emmentaler-14#" and friends — the face name is the family plus the '#' this
         // resolver marks its own faces with, so one bundled OTF answers per design.

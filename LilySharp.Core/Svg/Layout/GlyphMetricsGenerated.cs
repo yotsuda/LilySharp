@@ -173,6 +173,24 @@ internal static partial class GlyphMetrics
     /// <summary>Augmentation dot — advance width (next-glyph horizontal feed).</summary>
     public const double AugmentationDotAdvance = 0.448000;
 
+    /// <summary>System-start bracket, upper tip — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-brackettips.mf — brackettips.up (brackettips.up = U+E09E in this build)</remarks>
+    public static readonly BBox BracketTipUp = new(0.000000, -0.225000, 1.900000, 1.368000);
+    /// <summary>System-start bracket, upper tip — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox BracketTipUpOutline = new(0.000000, -0.224000, 1.864000, 1.332000);
+    /// <summary>System-start bracket, upper tip — advance width (next-glyph horizontal feed).</summary>
+    public const double BracketTipUpAdvance = 1.896000;
+
+    /// <summary>System-start bracket, lower tip — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-brackettips.mf — brackettips.down (brackettips.down = U+E09F in this build)</remarks>
+    public static readonly BBox BracketTipDown = new(0.000000, -1.368000, 1.900000, 0.225000);
+    /// <summary>System-start bracket, lower tip — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox BracketTipDownOutline = new(0.000000, -1.332000, 1.864000, 0.224000);
+    /// <summary>System-start bracket, lower tip — advance width (next-glyph horizontal feed).</summary>
+    public const double BracketTipDownAdvance = 1.896000;
+
     /// <summary>Trill ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.trill (scripts.trill = U+E05E in this build)</remarks>
     public static readonly BBox OrnTrillGlyph = new(-0.850000, 0.000000, 0.850000, 2.100000);
@@ -1183,6 +1201,18 @@ internal static partial class GlyphMetrics
         public BBox AugmentationDotOutline { get; init; }
         /// <summary>Augmentation dot — advance width (next-glyph horizontal feed).</summary>
         public double AugmentationDotAdvance { get; init; }
+        /// <summary>System-start bracket, upper tip — BBox (LILC bbox).</summary>
+        public BBox BracketTipUp { get; init; }
+        /// <summary>System-start bracket, upper tip — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox BracketTipUpOutline { get; init; }
+        /// <summary>System-start bracket, upper tip — advance width (next-glyph horizontal feed).</summary>
+        public double BracketTipUpAdvance { get; init; }
+        /// <summary>System-start bracket, lower tip — BBox (LILC bbox).</summary>
+        public BBox BracketTipDown { get; init; }
+        /// <summary>System-start bracket, lower tip — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox BracketTipDownOutline { get; init; }
+        /// <summary>System-start bracket, lower tip — advance width (next-glyph horizontal feed).</summary>
+        public double BracketTipDownAdvance { get; init; }
         /// <summary>Trill ornament — BBox (LILC bbox).</summary>
         public BBox OrnTrillGlyph { get; init; }
         /// <summary>Trill ornament — the box its SKYLINE is built from (glyph outline).</summary>
@@ -1795,6 +1825,16 @@ internal static partial class GlyphMetrics
             AugmentationDotOutline = new(AugmentationDotOutline.Left * magnification, AugmentationDotOutline.Bottom * magnification,
                 AugmentationDotOutline.Right * magnification, AugmentationDotOutline.Top * magnification),
             AugmentationDotAdvance = AugmentationDotAdvance * magnification,
+            BracketTipUp = new(BracketTipUp.Left * magnification, BracketTipUp.Bottom * magnification,
+                BracketTipUp.Right * magnification, BracketTipUp.Top * magnification),
+            BracketTipUpOutline = new(BracketTipUpOutline.Left * magnification, BracketTipUpOutline.Bottom * magnification,
+                BracketTipUpOutline.Right * magnification, BracketTipUpOutline.Top * magnification),
+            BracketTipUpAdvance = BracketTipUpAdvance * magnification,
+            BracketTipDown = new(BracketTipDown.Left * magnification, BracketTipDown.Bottom * magnification,
+                BracketTipDown.Right * magnification, BracketTipDown.Top * magnification),
+            BracketTipDownOutline = new(BracketTipDownOutline.Left * magnification, BracketTipDownOutline.Bottom * magnification,
+                BracketTipDownOutline.Right * magnification, BracketTipDownOutline.Top * magnification),
+            BracketTipDownAdvance = BracketTipDownAdvance * magnification,
             OrnTrillGlyph = new(OrnTrillGlyph.Left * magnification, OrnTrillGlyph.Bottom * magnification,
                 OrnTrillGlyph.Right * magnification, OrnTrillGlyph.Top * magnification),
             OrnTrillGlyphOutline = new(OrnTrillGlyphOutline.Left * magnification, OrnTrillGlyphOutline.Bottom * magnification,
@@ -2258,6 +2298,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = new(0.000000, -0.212120, 0.424241, 0.212120),
         AugmentationDotOutline = new(0.000000, -0.212000, 0.424000, 0.212000),
         AugmentationDotAdvance = 0.424000,
+        BracketTipUp = new(0.000000, -0.224955, 1.900171, 1.367910),
+        BracketTipUpOutline = new(0.000000, -0.224000, 1.844000, 1.312000),
+        BracketTipUpAdvance = 1.896000,
+        BracketTipDown = new(0.000000, -1.367910, 1.900171, 0.224955),
+        BracketTipDownOutline = new(0.000000, -1.312000, 1.844000, 0.224000),
+        BracketTipDownAdvance = 1.896000,
         OrnTrillGlyph = new(-0.849908, 0.000000, 0.849908, 2.099814),
         OrnTrillGlyphOutline = new(-1.288000, -0.044000, 1.100000, 2.160000),
         OrnTrillGlyphAdvance = 0.848000,
@@ -2570,6 +2616,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = new(0.000000, -0.215237, 0.430792, 0.215237),
         AugmentationDotOutline = new(0.000000, -0.216000, 0.432000, 0.216000),
         AugmentationDotAdvance = 0.428000,
+        BracketTipUp = new(0.000000, -0.225079, 1.899994, 1.367932),
+        BracketTipUpOutline = new(0.000000, -0.224000, 1.848000, 1.316000),
+        BracketTipUpAdvance = 1.896000,
+        BracketTipDown = new(0.000000, -1.367932, 1.899994, 0.225079),
+        BracketTipDownOutline = new(0.000000, -1.316000, 1.848000, 0.224000),
+        BracketTipDownAdvance = 1.896000,
         OrnTrillGlyph = new(-0.850156, 0.000000, 0.850156, 2.099993),
         OrnTrillGlyphOutline = new(-1.288000, -0.040000, 1.100000, 2.160000),
         OrnTrillGlyphAdvance = 0.848000,
@@ -2882,6 +2934,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = new(0.000000, -0.218105, 0.436492, 0.218105),
         AugmentationDotOutline = new(0.000000, -0.220000, 0.436000, 0.220000),
         AugmentationDotAdvance = 0.436000,
+        BracketTipUp = new(0.000000, -0.224894, 1.899859, 1.368034),
+        BracketTipUpOutline = new(0.000000, -0.224000, 1.852000, 1.320000),
+        BracketTipUpAdvance = 1.896000,
+        BracketTipDown = new(0.000000, -1.368034, 1.899859, 0.224894),
+        BracketTipDownOutline = new(0.000000, -1.320000, 1.852000, 0.224000),
+        BracketTipDownAdvance = 1.896000,
         OrnTrillGlyph = new(-0.850071, 0.000000, 0.850071, 2.099859),
         OrnTrillGlyphOutline = new(-1.288000, -0.040000, 1.104000, 2.160000),
         OrnTrillGlyphAdvance = 0.848000,
@@ -3194,6 +3252,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = new(0.000000, -0.220794, 0.441336, 0.220794),
         AugmentationDotOutline = new(0.000000, -0.220000, 0.440000, 0.220000),
         AugmentationDotAdvance = 0.440000,
+        BracketTipUp = new(0.000000, -0.225079, 1.899937, 1.368116),
+        BracketTipUpOutline = new(0.000000, -0.224000, 1.856000, 1.324000),
+        BracketTipUpAdvance = 1.896000,
+        BracketTipDown = new(0.000000, -1.368116, 1.899937, 0.225079),
+        BracketTipDownOutline = new(0.000000, -1.324000, 1.856000, 0.224000),
+        BracketTipDownAdvance = 1.896000,
         OrnTrillGlyph = new(-0.849905, 0.000000, 0.849905, 2.100063),
         OrnTrillGlyphOutline = new(-1.288000, -0.040000, 1.104000, 2.160000),
         OrnTrillGlyphAdvance = 0.848000,
@@ -3506,6 +3570,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = new(0.000000, -0.222896, 0.446016, 0.222896),
         AugmentationDotOutline = new(0.000000, -0.224000, 0.444000, 0.224000),
         AugmentationDotAdvance = 0.444000,
+        BracketTipUp = new(0.000000, -0.224916, 1.899888, 1.367901),
+        BracketTipUpOutline = new(0.000000, -0.224000, 1.860000, 1.328000),
+        BracketTipUpAdvance = 1.896000,
+        BracketTipDown = new(0.000000, -1.367901, 1.899888, 0.224916),
+        BracketTipDownOutline = new(0.000000, -1.328000, 1.860000, 0.224000),
+        BracketTipDownAdvance = 1.896000,
         OrnTrillGlyph = new(-0.850056, 0.000000, 0.850056, 2.099888),
         OrnTrillGlyphOutline = new(-1.288000, -0.040000, 1.104000, 2.160000),
         OrnTrillGlyphAdvance = 0.848000,
@@ -3820,6 +3890,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = AugmentationDot,
         AugmentationDotOutline = AugmentationDotOutline,
         AugmentationDotAdvance = AugmentationDotAdvance,
+        BracketTipUp = BracketTipUp,
+        BracketTipUpOutline = BracketTipUpOutline,
+        BracketTipUpAdvance = BracketTipUpAdvance,
+        BracketTipDown = BracketTipDown,
+        BracketTipDownOutline = BracketTipDownOutline,
+        BracketTipDownAdvance = BracketTipDownAdvance,
         OrnTrillGlyph = OrnTrillGlyph,
         OrnTrillGlyphOutline = OrnTrillGlyphOutline,
         OrnTrillGlyphAdvance = OrnTrillGlyphAdvance,
@@ -4132,6 +4208,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = new(0.000000, -0.226815, 0.453630, 0.226815),
         AugmentationDotOutline = new(0.000000, -0.228000, 0.452000, 0.228000),
         AugmentationDotAdvance = 0.452000,
+        BracketTipUp = new(0.000000, -0.225033, 1.900045, 1.368018),
+        BracketTipUpOutline = new(0.000000, -0.224000, 1.864000, 1.332000),
+        BracketTipUpAdvance = 1.896000,
+        BracketTipDown = new(0.000000, -1.368018, 1.900045, 0.225033),
+        BracketTipDownOutline = new(0.000000, -1.332000, 1.864000, 0.224000),
+        BracketTipDownAdvance = 1.896000,
         OrnTrillGlyph = new(-0.850067, 0.000000, 0.850067, 2.099955),
         OrnTrillGlyphOutline = new(-1.288000, -0.040000, 1.108000, 2.160000),
         OrnTrillGlyphAdvance = 0.848000,
@@ -4444,6 +4526,12 @@ internal static partial class GlyphMetrics
         AugmentationDot = new(0.000000, -0.228413, 0.456825, 0.228413),
         AugmentationDotOutline = new(0.000000, -0.228000, 0.456000, 0.228000),
         AugmentationDotAdvance = 0.456000,
+        BracketTipUp = new(0.000000, -0.224921, 1.900000, 1.367937),
+        BracketTipUpOutline = new(0.000000, -0.224000, 1.868000, 1.336000),
+        BracketTipUpAdvance = 1.896000,
+        BracketTipDown = new(0.000000, -1.367937, 1.900000, 0.224921),
+        BracketTipDownOutline = new(0.000000, -1.336000, 1.868000, 0.224000),
+        BracketTipDownAdvance = 1.896000,
         OrnTrillGlyph = new(-0.850000, 0.000000, 0.850000, 2.100000),
         OrnTrillGlyphOutline = new(-1.288000, -0.040000, 1.108000, 2.160000),
         OrnTrillGlyphAdvance = 0.848000,

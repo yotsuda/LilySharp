@@ -32,6 +32,7 @@ public static class RenderSpecParser
     public static RenderSpec? Parse(RenderDeclarationSyntax render)
     {
         var items = new List<RenderItemSpec>();
+        var headerOverrides = new List<MetadataDeclarationSyntax>();
 
         // Header: `score <FormName> ["basename"] [transpose …]`. The form name says
         // WHICH form to render; the basename names the OUTPUT file.
@@ -93,6 +94,12 @@ public static class RenderSpecParser
                 case LyricsRowRenderSyntax lyricsRow:
                     items.Add(new LyricsRowSpec(lyricsRow.PartName));
                     break;
+
+                // `title` / `composer` inside the score block: this score's own
+                // header, applied over the file's when it is collected.
+                case MetadataDeclarationSyntax meta:
+                    headerOverrides.Add(meta);
+                    break;
             }
         }
 
@@ -127,7 +134,8 @@ public static class RenderSpecParser
         // is missing or unresolved — the validator reports it; the score renders nothing.
         var form = ResolveForm(render, formName);
 
-        return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form);
+        return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
+            [.. headerOverrides]);
     }
 
     /// <summary>

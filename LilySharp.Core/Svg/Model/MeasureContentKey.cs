@@ -302,6 +302,13 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(staff.RemoveFirst);
         hc.Add(staff.StaffAffinity);
         hc.Add(staff.PerStaffKeySignature);
+        // ⚠️ Staff.ClefPosition is deliberately NOT folded in. It is a SOURCE OFFSET, not
+        // content: it changes whenever text is inserted earlier in the file, so hashing it
+        // would make a content-unchanged edit miss the cache and defeat whole-layout reuse
+        // (measured — it broke ContentUnchangedEdit_ReusesWholeLayout_AndMatchesFull and
+        // three of its siblings). It cannot go stale on reuse either, because the renderer
+        // reads it off the LIVE score's staff at draw time; only the geometry is cached.
+        // The canary in IncrementalReuseSoundnessTests records the same triage.
         hc.Add(staff.IsTextRow);
         hc.Add(staff.TextRowVerses);
         hc.Add(staff.IsLyricsTextRow);

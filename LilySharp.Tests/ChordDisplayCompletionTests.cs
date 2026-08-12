@@ -62,6 +62,50 @@ public class ChordDisplayCompletionTests
     }
 
     [Fact]
+    public void ScoreBlockCompletions_OfferEveryRenderItemTheParserAccepts()
+    {
+        // The one list a writer sees inside `score { }` must name every construct
+        // ParseRenderItem takes — the four staff GROUPS were missing, so nothing in
+        // the editor mentioned them.
+        var labels = LilySharpLanguageServer.GetScoreBlockCompletions()
+            .Items.Select(i => i.Label).ToArray();
+        foreach (var kw in new[]
+        {
+            "staff", "grandStaff", "staffGroup", "choirStaff",
+            "condensedStaff", "combinedStaff", "tab", "ossia",
+            "chords", "lyrics", "title", "composer",
+        })
+            Assert.Contains(kw, labels);
+    }
+
+    [Theory]
+    // grandStaff / staffGroup / choirStaff take `staff` ITEMS and nothing else —
+    // `grandStaff { combinedStaff … }` is LYS0002 "Expected 'CloseBrace'".
+    [InlineData("score main { grandStaff { ")]
+    [InlineData("score main { staffGroup { ")]
+    [InlineData("score main { choirStaff { ")]
+    public void InsideAStaffGroup_OffersOnlyStaff(string text)
+    {
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.StaffGroupBlock, Ctx(text));
+        var labels = LilySharpLanguageServer.GetStaffGroupBlockCompletions()
+            .Items.Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "staff" }, labels);
+    }
+
+    [Theory]
+    // …but condensedStaff / combinedStaff take BARE PART NAMES: a `staff` inside one
+    // is a parse error, so the parts are what belongs in the popup.
+    [InlineData("score main { condensedStaff { ")]
+    [InlineData("score main { combinedStaff { ")]
+    public void InsideABarePartNameGroup_OffersTheParts(string text)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffRef, Ctx(text));
+
+    [Fact]
+    public void AfterOssia_OffersTheParts()
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffRef,
+            Ctx("score main { ossia "));
+
+    [Fact]
     public void ScoreBlockCompletions_StaffAndTab_RetriggerPartNameSuggestions()
     {
         var items = LilySharpLanguageServer.GetScoreBlockCompletions().Items;

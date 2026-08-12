@@ -744,6 +744,14 @@ public sealed partial class MeasureCollector
     /// </summary>
     public (int step, int alt, int oct)? ScoreTranspose { get; set; }
 
+    /// <summary>
+    /// The <c>title</c> / <c>composer</c> the score being collected states for itself
+    /// (<c>score sub { title "Violin I" … }</c>). Set by the render pipeline before
+    /// collecting, and applied by <see cref="CollectDefinitions"/> after the file-level
+    /// walk — so a score that restates nothing inherits the file's header.
+    /// </summary>
+    public ImmutableArray<MetadataDeclarationSyntax> HeaderOverrides { get; set; }
+
     // The relative-octave chain plus the part transpose that composes on top of
     // it, bundled into one named collaborator (see OctaveContext). The main walk
     // drives this in place on every note / chord / grace / tuplet.
@@ -1030,7 +1038,7 @@ public sealed partial class MeasureCollector
         _grobOverrides.ToImmutableArray(),
         _grobReverts.ToImmutableArray(),
         PairTrillSpannerEvents(measureCount),
-        new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition),
+        new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition, _meta.TempoPosition),
         _meta.TempoText,
         _meta.TempoBeatUnit,
         _meta.TempoDots,
@@ -1062,9 +1070,15 @@ public sealed partial class MeasureCollector
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _currentStaffIndex);
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
+            // The POSITION follows the clef it describes. A part without its own
+            // `clef` keeps the top-level one, so overwriting the offset regardless
+            // dropped it to 0 — and 0 reads as "no position", which left the clef
+            // with no data-pos and nothing to click through to.
             if (partClef != null)
+            {
                 _meta.Clef = partClef;
-            _meta.ClefPosition = partClefPos;
+                _meta.ClefPosition = partClefPos;
+            }
             _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             // ABSOLUTE mode sees the part's OWN `octave N` and nothing else — not the preset
             // and not the clef. See GetPartDefaults' remarks for what folding them cost.
@@ -1272,6 +1286,9 @@ public sealed partial class MeasureCollector
         // Per-voice transposed key signature (only for transposed parts); used
         // to give that voice's staff its own key in a multi-staff score.
         var voiceKeyDict = new Dictionary<string, KeySignature>();
+        // Per-voice source offset of the `clef` that set that part's clef (0 = none), so
+        // each staff's line-start clef can carry its own data-pos.
+        var voiceClefPosDict = new Dictionary<string, int>();
         // GetVoiceNames() yields names in the SAME order ToStaffGroups() builds
         // staves, so this counter equals the global staff index (see
         // EnumerateStaves) and tags each staff's dynamics correctly.
@@ -1341,6 +1358,10 @@ public sealed partial class MeasureCollector
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName);
             _meta.Clef = partClef ?? "treble";
             _meta.ClefPosition = partClefPos;
+            // …and remember it per VOICE: the staff built for this part carries its own
+            // clef's offset, so a multi-staff score's line-start clefs each click through
+            // to the `clef` that set them (stamped after ToStaffGroups below).
+            voiceClefPosDict[voiceName] = partClefPos;
 
             // Set initial octave: explicit > instrument default > clef default
             _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
@@ -1498,17 +1519,25 @@ public sealed partial class MeasureCollector
                 : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)))
             .ToImmutableArray();
 
-        // Attach per-staff key signatures to transposed parts (a staff is keyed
-        // by its primary voice's name). Concert-pitch staves keep null and fall
-        // back to the score key.
-        if (voiceKeyDict.Count > 0)
+        // Per-staff facts only the collector knows, stamped onto the staves the render
+        // spec just built (a staff is keyed by its primary voice's name):
+        //   · the transposed part's own key — concert staves keep null and fall back to
+        //     the score key;
+        //   · the offset of the `clef` that set this staff, so each staff's line-start
+        //     clef carries its OWN data-pos instead of the score sharing one.
+        if (voiceKeyDict.Count > 0 || voiceClefPosDict.Count > 0)
             staffGroups = staffGroups
                 .Select(sg => sg with
                 {
                     Staves = sg.Staves
-                        .Select(st => voiceKeyDict.TryGetValue(st.PrimaryVoice.Name, out var k)
-                            ? st with { PerStaffKeySignature = k }
-                            : st)
+                        .Select(st =>
+                        {
+                            if (voiceKeyDict.TryGetValue(st.PrimaryVoice.Name, out var k))
+                                st = st with { PerStaffKeySignature = k };
+                            if (voiceClefPosDict.TryGetValue(st.PrimaryVoice.Name, out var cp) && cp > 0)
+                                st = st with { ClefPosition = cp };
+                            return st;
+                        })
                         .ToImmutableArray()
                 })
                 .ToImmutableArray();
@@ -2503,7 +2532,10 @@ public sealed partial class MeasureCollector
                 if (propName == "clef")
                 {
                     clef = valueToken.Text.ToLowerInvariant();
-                    clefPos = prop.NameToken.Span.Start;
+                    // The VALUE, not the property name: a clicked clef puts the caret
+                    // on what it says (`clef: |bass`), the same rule the top-level
+                    // `clef` and the time signature follow.
+                    clefPos = valueToken.Span.Start;
                 }
                 else if (propName == "instrument")
                 {
@@ -2553,7 +2585,7 @@ public sealed partial class MeasureCollector
             _meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
         }
         _meta.KeyCustom = key.IsCustom ? KeySignature.EncodeCustom(key.CustomAlterations) : null;
-        _meta.KeyPosition = key.Span.Start;
+        _meta.KeyPosition = KeyDataPos(key);
     }
 
     private void CollectDefinitions(SyntaxNode root)
@@ -2574,7 +2606,12 @@ public sealed partial class MeasureCollector
             switch (node)
             {
                 case MetadataDeclarationSyntax metadata:
-                    CollectMetadata(metadata);
+                    // A `title` / `composer` written inside a `score { … }` belongs to
+                    // THAT score, not the file: it is applied below, for the score being
+                    // collected only. Reading it here would make one score's header the
+                    // file's and leak it into every other score (last one wins).
+                    if (!IsInsideRenderDeclaration(metadata))
+                        CollectMetadata(metadata);
                     break;
 
                 case FontDeclarationSyntax font:
@@ -2603,7 +2640,7 @@ public sealed partial class MeasureCollector
                         _meta.TimeBeatsText = timeSig.BeatsText;
                         _meta.TimeSenzaMisura = timeSig.IsSenzaMisura;
                         _meta.TimeBeatType = timeSig.BeatType;
-                        _meta.TimePosition = timeSig.Span.Start;
+                        _meta.TimePosition = TimeDataPos(timeSig);
                     }
                     break;
 
@@ -2621,7 +2658,7 @@ public sealed partial class MeasureCollector
                         _meta.KeyCustom = key.IsCustom
                             ? KeySignature.EncodeCustom(key.CustomAlterations)
                             : null;
-                        _meta.KeyPosition = key.Span.Start;
+                        _meta.KeyPosition = KeyDataPos(key);
                     }
                     break;
 
@@ -2733,6 +2770,15 @@ public sealed partial class MeasureCollector
                     CollectOverride(od, 0, 0, isOnce: false, staffIndex: null); // global = all staves
             }
         }
+
+        // LAST: the score being collected restates the header for itself
+        // (`score sub { title "Violin I" … }`). After the file-level walk so it WINS,
+        // and only for this render — the walk above skipped every render-scoped
+        // metadata, so no score's header can reach another. A score that restates
+        // one of the two keeps the file's other.
+        if (!HeaderOverrides.IsDefaultOrEmpty)
+            foreach (var meta in HeaderOverrides)
+                CollectMetadata(meta);
     }
 
     private void CollectMetadata(MetadataDeclarationSyntax metadata)
@@ -2759,6 +2805,53 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>
+    /// Where a <c>tempo</c> declaration's metronome mark points its data-pos: at the
+    /// declaration's FIRST VALUE, so clicking the mark in the preview lands on the
+    /// thing worth editing rather than on the keyword —
+    /// <c>tempo "|Moderato" 4 = 92</c> and <c>tempo |4 = 92</c>.
+    /// </summary>
+    /// <remarks>
+    /// The caret lands INSIDE a marking's quotes for free: a string value's own span
+    /// starts at the opening quote, and the editor's jump steps over one (the same
+    /// rule that puts the caret inside a title's string). Falls back to the keyword
+    /// for a declaration with no values at all.
+    /// <para>
+    /// ⚠️ A TOKEN's Span.Start, never the declaration's Position or Span. Trivia hangs
+    /// off the TOKEN here, so the declaration's own span still starts at the newline
+    /// in front of it — measured: `tempo` sits at 111 in test/notes.lys and both
+    /// Position and Span.Start reported 110. The editor's jump steps over spaces and
+    /// tabs but deliberately never crosses a newline, so that landed a line short.
+    /// </para>
+    /// </remarks>
+    private static int TempoDataPos(TempoDeclarationSyntax tempoDecl)
+        => tempoDecl.Values.FirstOrDefault()?.Span.Start
+           ?? tempoDecl.TempoKeyword.Span.Start;
+
+    /// <summary>
+    /// Where a <c>time</c> declaration's meter points its data-pos: at the NUMERATOR,
+    /// so clicking the time signature in the preview lands on the value —
+    /// <c>time |4/4</c>. Same rule as <see cref="TempoDataPos"/>, and the same reason
+    /// for reading a TOKEN's span: the declaration's own span starts at the trivia in
+    /// front of it, which would put the caret a line short.
+    /// </summary>
+    private static int TimeDataPos(TimeSignatureSyntax timeSig)
+        => timeSig.Numerator.Span.Start;
+
+    /// <summary>
+    /// Where a <c>key</c> declaration's signature points its data-pos: at the TONIC
+    /// (<c>key |f major</c>), or at the <c>custom</c> word for a custom signature.
+    /// Same rule as <see cref="TempoDataPos"/> and <see cref="TimeDataPos"/>, and the
+    /// same reason for reading a TOKEN's span rather than the declaration's.
+    /// </summary>
+    private static int KeyDataPos(KeySignatureSyntax key)
+        => key.GetChild(1) switch
+        {
+            PitchSyntax pitch => pitch.PitchToken.Span.Start,  // key f major
+            SyntaxTokenNode word => word.Span.Start,           // key custom …
+            _ => key.KeyKeyword.Span.Start,
+        };
+
     private void CollectTempo(TempoDeclarationSyntax tempoDecl)
     {
         // Every written form reaches the opening mark: `tempo 120`,
@@ -2769,6 +2862,7 @@ public sealed partial class MeasureCollector
             _meta.Tempo = bpm;
         if (tempoDecl.Marking is string marking)
             _meta.TempoText = marking;
+        _meta.TempoPosition = TempoDataPos(tempoDecl);
         // Beat unit incl. dots: walk back from `=` over the dot tokens to the
         // unit number ("4." lexes as IntegerLiteral 4 + Dot at declaration
         // level, so the dots arrive as separate tokens).
@@ -3261,6 +3355,16 @@ public sealed partial class MeasureCollector
     /// Checks if a node is inside music content (phrase/section/variable body).
     /// Used by CollectDefinitions to distinguish top-level declarations from mid-music changes.
     /// </summary>
+    /// <summary>True when <paramref name="node"/> sits inside a <c>score { … }</c>
+    /// block — a per-score setting rather than a file-level one.</summary>
+    private static bool IsInsideRenderDeclaration(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is RenderDeclarationSyntax)
+                return true;
+        return false;
+    }
+
     private static bool IsInsideMusicContent(SyntaxNode node)
     {
         var parent = node.Parent;

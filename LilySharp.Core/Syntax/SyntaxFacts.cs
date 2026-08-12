@@ -64,6 +64,21 @@ internal static class SyntaxFacts
         SyntaxKind.Treble8Keyword;
 
     /// <summary>
+    /// The token kinds that can spell a PART NAME: a plain identifier, or one of the four
+    /// clef words, which are legal part names (<c>part bass { … }</c>).
+    /// </summary>
+    /// <remarks>
+    /// One home for the rule, shared by the parser (which decides what to consume) and the
+    /// render nodes (which decide what counts as a member). They must agree: a container
+    /// that KEEPS a rejected token so its width survives would otherwise hand that token
+    /// back as a part name.
+    /// </remarks>
+    public static bool IsPartNameKind(SyntaxKind kind) => kind is
+        SyntaxKind.Identifier or
+        SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword or
+        SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
+
+    /// <summary>
     /// The eight dynamic token KINDS the lexer emits, mapped to their level.
     /// Returns <see cref="DynamicLevel.None"/> for any non-dynamic kind. The lexer
     /// remains the sole producer of these kinds; this is the single consumer-side

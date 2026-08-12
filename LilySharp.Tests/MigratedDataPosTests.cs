@@ -100,10 +100,14 @@ public class MigratedDataPosTests
 
             // MusicMark SourceIndex points into the reconstructed BuildAllMarks() list,
             // not a flat score side-table, so rebuild the edited table the same way
-            // SharedRenderer.ResolveDataPos does. Section labels carry a real (shifted)
-            // offset; the initial tempo mark carries 0 (no data-pos) and is skipped.
+            // SharedRenderer.ResolveDataPos does — EVERY argument included. Section
+            // labels and the initial tempo mark both carry a real (shifted) offset;
+            // the tempo one arrives via Header.Tempo, and passing anything less here
+            // would rebuild it at 0 and compare a stale table against a live layout.
             var editedMarks = MusicMarkEngraver.BuildAllMarks(
-                s2.MusicMarks, s2.PrimaryContentStaff.PrimaryVoice.Measures, s2.Tempo);
+                s2.MusicMarks, s2.PrimaryContentStaff.PrimaryVoice.Measures, s2.Tempo,
+                s2.SwingSubdivision, s2.TempoText, s2.TempoBeatUnit, s2.TempoDots,
+                s2.Header.Tempo);
             Check(fx, "MusicMark", l1.MusicMarkLayouts, l2.MusicMarkLayouts, editedMarks,
                 x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered,
                 skipNoDataPos: true);

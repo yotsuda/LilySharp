@@ -13,8 +13,8 @@
   <line x1="0.00" y1="18.32" x2="27.43" y2="18.32" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="19.32" x2="27.43" y2="19.32" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="20.32" x2="27.43" y2="20.32" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="19.32" font-size="4.00" data-pos="530"></text>
-  <text class="music" x="4.88" y="18.32" font-size="4.00" data-pos="491"></text>
+  <text class="music" x="0.80" y="19.32" font-size="4.00" data-pos="535"></text>
+  <text class="music" x="4.88" y="18.32" font-size="4.00" data-pos="497"></text>
   <line x1="8.24" y1="21.32" x2="10.31" y2="21.32" stroke="#000000" stroke-width="0.200"/>
   <line x1="12.52" y1="21.32" x2="14.58" y2="21.32" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="8.59" y="21.32" font-size="4.00" data-pos="560"></text>

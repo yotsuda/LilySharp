@@ -73,7 +73,10 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
                 // PER-PART default, not a global one — a part that sets no key of its
                 // own still inherits the top-level key. So it must not group with the
                 // global settings, or it would falsely flag the global as overwritten.
-                or PartDeclarationSyntax)
+                or PartDeclarationSyntax
+                // Likewise a score's own header (`score sub { title "…" }`): it is a
+                // PER-SCORE restatement, and scores that state none keep the file's.
+                or RenderDeclarationSyntax)
                 return true;
         return false;
     }

@@ -174,7 +174,8 @@ internal static class MusicMarkEngraver
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
-            score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0);
+            score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
+            score?.Header.Tempo ?? 0);
 
         if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
@@ -583,10 +584,12 @@ internal static class MusicMarkEngraver
         int swingSubdivision = 0,
         string? tempoText = null,
         int tempoBeatUnit = 4,
-        int tempoDots = 0)
+        int tempoDots = 0,
+        int tempoPosition = 0)
     {
         var allMarks = MergeSectionLabels(musicMarks, measures);
-        return MergeTempoMark(allMarks, tempo, swingSubdivision, tempoText, tempoBeatUnit, tempoDots);
+        return MergeTempoMark(allMarks, tempo, swingSubdivision, tempoText, tempoBeatUnit,
+            tempoDots, tempoPosition);
     }
 
     /// <summary>
@@ -641,14 +644,19 @@ internal static class MusicMarkEngraver
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
         ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0,
-        string? tempoText = null, int tempoBeatUnit = 4, int tempoDots = 0)
+        string? tempoText = null, int tempoBeatUnit = 4, int tempoDots = 0,
+        int tempoPosition = 0)
     {
         // A textual marking without a BPM ("tempo \"Grave\"") still prints.
         if (tempo == null && tempoText == null)
             return marks;
 
+        // The mark is SYNTHESISED from the score's metadata rather than walked off a
+        // syntax node, so its source offset has to be carried in — it used to be 0,
+        // which is a real offset (the file's first character), so clicking the opening
+        // metronome mark in the preview jumped to the top of the file.
         var tempoMark = new MusicMarkItem(
-            MusicMarkType.Tempo, tempo?.ToString() ?? "", 0, 0)
+            MusicMarkType.Tempo, tempo?.ToString() ?? "", 0, tempoPosition)
         {
             SwingSubdivision = swingSubdivision,
             TempoText = tempoText,

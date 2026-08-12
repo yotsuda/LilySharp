@@ -106,6 +106,13 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("Flag16thDown", "flags.d4", "16th note flag (downward stem)",  "mf/feta-flags.mf — flags.d4"),
     # Augmentation dot
     GlyphSpec("AugmentationDot", "dots.dot", "Augmentation dot", "mf/feta-noteheads.mf — dots.dot"),
+    # System-start bracket tips. staff_bracket hangs one off each END of the vertical
+    # stroke with add_at_edge, so it is the Y extent that places them: the UP tip's
+    # BOTTOM meets the stroke's top, the DOWN tip's TOP meets its bottom. Both bboxes
+    # are needed to do that, which is why they are extracted rather than guessed.
+    # LILYPOND-REF: lily/system-start-delimiter.cc:36-66 staff_bracket.
+    GlyphSpec("BracketTipUp",   "brackettips.up",   "System-start bracket, upper tip",  "mf/feta-brackettips.mf — brackettips.up"),
+    GlyphSpec("BracketTipDown", "brackettips.down", "System-start bracket, lower tip",  "mf/feta-brackettips.mf — brackettips.down"),
     # Ornament / mark glyphs (ink extents for outside-staff stacking)
     GlyphSpec("OrnTrillGlyph", "scripts.trill", "Trill ornament", "mf/feta-scripts.mf — scripts.trill"),
     # The wavy line's UNIT. LilyPond builds a trill spanner's line by repeating this one

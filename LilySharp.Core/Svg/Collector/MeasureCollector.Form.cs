@@ -419,7 +419,8 @@ public sealed partial class MeasureCollector
             return;
         }
 
-        builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, keySig.Position));
+        // The TONIC's token, not the declaration's Position — see KeyDataPos.
+        builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, KeyDataPos(keySig)));
     }
 
     /// <summary>The first direct-child directive of type <typeparamref name="T"/> (the

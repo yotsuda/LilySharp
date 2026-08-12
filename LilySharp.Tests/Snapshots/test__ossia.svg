@@ -28,8 +28,8 @@
   <line x1="0.00" y1="23.76" x2="102.43" y2="23.76" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="24.76" x2="102.43" y2="24.76" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="23.76" font-size="4.00"></text>
-  <text class="music" x="4.19" y="20.76" font-size="4.00"></text>
-  <text class="music" x="6.44" y="22.76" font-size="4.00" data-pos="516"></text>
+  <text class="music" x="4.19" y="20.76" font-size="4.00" data-pos="508"></text>
+  <text class="music" x="6.44" y="22.76" font-size="4.00" data-pos="521"></text>
   <line x1="9.81" y1="25.76" x2="11.77" y2="25.76" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="10.13" y="25.76" font-size="4.00" data-pos="554"></text>
   <line x1="11.37" y1="25.61" x2="11.37" y2="22.26" stroke="#000000" stroke-width="0.130"/>

@@ -15,9 +15,9 @@
   <line x1="0.00" y1="14.35" x2="25.39" y2="14.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.35" x2="25.39" y2="15.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="16.35" x2="25.39" y2="16.35" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="15.35" font-size="4.00"></text>
-  <text class="music" x="5.00" y="14.35" font-size="4.00"></text>
-  <text class="music" x="5.00" y="16.35" font-size="4.00"></text>
+  <text class="music" x="0.80" y="15.35" font-size="4.00" data-pos="767"></text>
+  <text class="music" x="5.00" y="14.35" font-size="4.00" data-pos="745"></text>
+  <text class="music" x="5.00" y="16.35" font-size="4.00" data-pos="745"></text>
   <line x1="8.15" y1="17.35" x2="10.10" y2="17.35" stroke="#000000" stroke-width="0.200"/>
   <line x1="8.15" y1="18.35" x2="10.10" y2="18.35" stroke="#000000" stroke-width="0.200"/>
   <line x1="16.75" y1="17.35" x2="18.70" y2="17.35" stroke="#000000" stroke-width="0.200"/>
@@ -35,9 +35,9 @@
   <line x1="0.00" y1="23.35" x2="25.39" y2="23.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="24.35" x2="25.39" y2="24.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="25.35" x2="25.39" y2="25.35" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="22.35" font-size="4.00"></text>
-  <text class="music" x="5.00" y="23.35" font-size="4.00"></text>
-  <text class="music" x="5.00" y="25.35" font-size="4.00"></text>
+  <text class="music" x="0.80" y="22.35" font-size="4.00" data-pos="794"></text>
+  <text class="music" x="5.00" y="23.35" font-size="4.00" data-pos="745"></text>
+  <text class="music" x="5.00" y="25.35" font-size="4.00" data-pos="745"></text>
   <text class="music" x="8.47" y="23.35" font-size="4.00" data-pos="843"></text>
   <text class="music" x="10.98" y="22.85" font-size="4.00" data-pos="846"></text>
   <text class="music" x="13.73" y="21.35" font-size="4.00" data-pos="848"></text>
@@ -53,8 +53,6 @@
   <polygon points="19.58,25.92 23.06,25.30 23.06,25.78 19.58,26.40"/>
   <line x1="19.64" y1="23.00" x2="19.64" y2="26.15" stroke="#000000" stroke-width="0.130"/>
   <line x1="23.00" y1="22.00" x2="23.00" y2="25.55" stroke="#000000" stroke-width="0.130"/>
-  <rect x="15.98" y="12.35" width="0.19" height="13.00"/>
-  <rect x="25.20" y="12.35" width="0.19" height="13.00"/>
   <rect x="0.30" y="7.49" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="802"/>
   <text x="3.40" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="802">Main</text>
   </g>

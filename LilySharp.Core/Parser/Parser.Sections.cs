@@ -200,10 +200,7 @@ internal sealed partial class Parser
             }
 
             var item = ParseChordBodyItem();
-            if (item != null)
-                items.Add(item);
-            else
-                Advance(); // error recovery — skip stray tokens
+            items.Add(item ?? SkipStrayChordToken());
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
@@ -223,18 +220,45 @@ internal sealed partial class Parser
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
             var item = ParseChordBodyItem();
-            if (item != null)
-                items.Add(item);
-            else
-                Advance();
+            items.Add(item ?? SkipStrayChordToken());
         }
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
     }
 
+    /// <summary>
+    /// A token a chord block's body cannot read: REPORTED, and then kept in the tree.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ KEEPING IT IS THE WHOLE POINT. Consuming it with a bare <c>Advance()</c> — what
+    /// this did until 2026-08-11 — drops the token's WIDTH, and every source offset after
+    /// it shifts by that much. Measured on a real file: a
+    /// <c>chords prog { C | F | G | C }</c> lost 8 characters (four uppercase roots and
+    /// their spaces), so a later <c>score</c>'s title carried a data-pos 8 short and
+    /// clicking that title in the preview put the caret on the <c>title</c> keyword
+    /// instead of inside its string. NOTHING reported it — the only symptom was that the
+    /// tree stopped round-tripping. Same lesson as the part-header <c>key</c>
+    /// (ParsePartDeclaration): a parser that silently skips a token breaks every
+    /// position-based feature downstream, and <c>ToFullString() == source</c> is the
+    /// detector.
+    /// </remarks>
+    private SyntaxToken SkipStrayChordToken()
+    {
+        string text = Current.Text;
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, text.Length);
+        // By far the likeliest mistake: the chord written the way it PRINTS. A root is
+        // written lowercase and printed uppercase (GRAMMAR §ChordEntry — `c` = C).
+        bool looksLikePrintedRoot = text.Length > 0 && text[0] is >= 'A' and <= 'G';
+        _diagnostics.Error(span, DiagnosticCodes.ChordBlockBadMember,
+            looksLikePrintedRoot
+                ? $"A chord root is written in LOWERCASE: '{char.ToLowerInvariant(text[0])}{text[1..]}' "
+                  + $"is what prints as '{text}'."
+                : $"'chords' takes chord entries and barlines; '{text}' is neither.");
+        return Advance();
+    }
+
     /// <summary>One item of a chord-block body: a barline or a chord entry, or null
-    /// for a stray token (the caller skips it). Shared by the flat and the
-    /// per-section chord-block forms.</summary>
+    /// for a stray token (the caller reports and keeps it).</summary>
     private GreenNode? ParseChordBodyItem()
     {
         if (SyntaxFacts.IsMeasureBarlineKind(Current.Kind))

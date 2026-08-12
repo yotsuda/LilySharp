@@ -8,9 +8,9 @@
 // NB: Lily# `octave absolute` is one octave above LilyPond, so Lily# c = LP c'.
 octave absolute
 time 3/8
-part p { clef treble }
+part melody { clef treble }
 section Main {
-  p {
+  melody {
     c8[ r8 c8 ] |
     e8[ r8 e8 ] |
     g8[ r8 g8 ] |
@@ -20,4 +20,4 @@ section Main {
   }
 }
 form main { Main }
-score main "beamed-rest" { staff p }
+score main "beamed-rest" { staff melody }

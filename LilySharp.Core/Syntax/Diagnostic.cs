@@ -269,6 +269,16 @@ public static class DiagnosticCodes
     /// itself, directly or through a chain (x -> y -> x, or x -> y -> z -> x). It can
     /// never expand to a finite piece, so it is reported rather than silently truncated.</summary>
     public const string PhraseReferenceCycle = "LYS1027";
+    /// <summary>Syntax error: a <c>chords { … }</c> body holds something that is neither a
+    /// chord entry nor a barline — most often a chord symbol written the way it PRINTS
+    /// (<c>C</c>), where a root is written lowercase (GRAMMAR §ChordEntry: <c>c</c>=C).</summary>
+    /// <remarks>
+    /// ⚠️ Reported at all only since 2026-08-11. The token used to be skipped in silence,
+    /// which also dropped its WIDTH, shifting every source offset after it — see
+    /// Parser.Sections.SkipStrayChordToken for what that cost.
+    /// </remarks>
+    public const string ChordBlockBadMember = "LYS1028";
+
     /// <summary>Semantic error: reference to an undefined part.</summary>
     public const string UndefinedPart = "LYS1007";
     /// <summary>Semantic error: an unknown annotation was used.</summary>

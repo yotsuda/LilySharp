@@ -494,11 +494,15 @@ internal static partial class SharedRenderer
                 if (drawClef)
                 {
                     // Tag the clef with its declaration for click-to-jump, on the first
-                    // line of a single-staff score: there it IS the declared clef (later
-                    // lines may show a mid-piece change, which owns its own position),
-                    // and a multi-staff score's per-staff clefs would all wrongly point
-                    // at the one score-level position.
-                    int clefPos = isFirstSystem && score.TotalStaffCount == 1 ? score.Header.Clef : 0;
+                    // line: there it IS the declared clef (later lines may show a
+                    // mid-piece change, which owns its own position).
+                    // Read from the STAFF, which carries the offset of the `clef` that set
+                    // it. It used to be the score-level Header.Clef, and a multi-staff
+                    // score had to be excluded outright — one offset cannot stand for
+                    // several staves' own declarations — so every clef but a solo score's
+                    // went untagged. A staff that inherited a default carries 0 and is
+                    // still drawn untagged.
+                    int clefPos = isFirstSystem ? staff.ClefPosition : 0;
                     using (SourceScope(sgc, clefPos))
                         prefixEndX = DrawClef(clef, systemStartX, localStaffY, maxClefWidth,
                             clefGroupInkLeft, sgc);
@@ -676,50 +680,12 @@ internal static partial class SharedRenderer
         // outside the Phase 2-A scope so we draw at full scale)
         DrawBeams(score, layout, system, gc, pageHeight);
 
-        // SpanBars: connect barlines across the staves of each multi-staff group.
-        DrawSpanBars(score, system, gc);
-    }
-
-    /// <summary>
-    /// Draws barlines spanning the full height of each multi-staff group, so the
-    /// per-staff barlines read as one continuous barline across the group.
-    /// Repeat dots stay per-staff (drawn by <see cref="DrawBarlines"/>).
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/span-bar-engraver.cc — SpanBar across a connected group.</remarks>
-    private static void DrawSpanBars(MultiStaffScore score, SystemLayout system, IDrawingContext gc)
-    {
-        if (system.StaffGroups.IsDefaultOrEmpty) return;
-        double systemYUp = LayoutUtilities.SystemTopYUp(system);
-
-        for (int gi = 0; gi < system.StaffGroups.Length && gi < score.StaffGroups.Length; gi++)
-        {
-            // Only connected, multi-staff groups (those with a delimiter) get a span bar.
-            if (system.StaffGroups[gi].GrandStaffLayout is not { } delim) continue;
-
-            double top = systemYUp + delim.BraceTop;
-            double height = delim.TotalHeight;
-            if (height <= StaffHeight + 0.001) continue; // single staff — nothing to span
-
-            // Barline types are a measure property shared by all staves in the group.
-            var voice = score.StaffGroups[gi].Staves[0].PrimaryVoice;
-            bool lineStart = true;
-            foreach (var ml in system.Measures)
-            {
-                if (ml.MeasureIndex >= voice.Measures.Length) continue;
-                var measure = voice.Measures[ml.MeasureIndex];
-                bool atLineStart = lineStart;
-                lineStart = false;
-
-                // Line-start start barline clears the redrawn clef (see DrawBarlines).
-                if (measure.StartBarline != BarlineType.None)
-                    DrawBarline(measure.StartBarline,
-                        atLineStart ? ml.X + LineStartBarClearance : ml.X, top, height, gc, withDots: false);
-
-                double endX = ml.X + ml.Width;
-                DrawBarline(measure.EndBarline, endX - GetVisualBarlineWidth(measure.EndBarline),
-                    top, height, gc, withDots: false);
-            }
-        }
+        // NOTE: span bars are NOT drawn here. DrawStaffConnectors (called above)
+        // owns them: it fills the inter-staff GAPS, leaving each staff's own
+        // barline to DrawBarlines. A second full-height pass used to run here and
+        // was wrong twice over — it painted over ChoirStaff, which has no
+        // Span_bar_engraver, and it ignored the hidden/ossia and MMR-inner
+        // suppressions that the connector pass applies.
     }
 
     private static void DrawStaffLines(double staffY, double width, IDrawingContext gc, double startX = 0,

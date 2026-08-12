@@ -846,6 +846,56 @@ interface ExportResponse {
     Error: string | null;
 }
 
+// Opening/revealing an exported file goes to the OS directly rather than through
+// vscode.env.openExternal / the revealFileInOS command, because both of those
+// stringify the URI on the way out: openExternal hands the shell
+// `uri.toString()`, so 日本語.pdf arrives as %E6%97%A5%E6%9C%AC%E8%AA%9E.pdf and
+// nothing opens (microsoft/vscode#83610), and revealFileInOS reveals whichever
+// editor has focus when it is driven from code instead of the explorer
+// (microsoft/vscode#105666). Spawning the platform's opener passes the path as an
+// argv entry, which no encoding step can touch. Note `cmd /c start` is NOT an
+// option here — cmd's OEM code page mangles non-ASCII names by itself.
+function spawnOpener(cmd: string, args: string[]) {
+    try {
+        const child = cp.spawn(cmd, args, { detached: true, stdio: 'ignore' });
+        // explorer.exe exits 1 even when it succeeded, so only a spawn failure
+        // (missing binary) is worth reporting.
+        child.on('error', err => outputChannel.appendLine(
+            `open failed: ${cmd} ${args.join(' ')} — ${err}`));
+        child.unref();
+    } catch (err) {
+        outputChannel.appendLine(`open failed: ${cmd} ${args.join(' ')} — ${err}`);
+    }
+}
+
+function openInDefaultApp(file: string) {
+    if (process.platform === 'win32') {
+        spawnOpener('explorer.exe', [file]);
+    } else if (process.platform === 'darwin') {
+        spawnOpener('open', [file]);
+    } else {
+        spawnOpener('xdg-open', [file]);
+    }
+}
+
+function revealInFileManager(file: string) {
+    // A file that was never written under the dialog's name (multi-page PNG
+    // export splits into BASE-page1.png, BASE-page2.png, …) still has a folder
+    // worth showing; selecting a missing path just lands Explorer on Documents.
+    const exists = fs.existsSync(file);
+    const dir = path.dirname(file);
+    if (process.platform === 'win32') {
+        // `/select,` and the path are ONE argument — a space between them makes
+        // Explorer ignore the path and open the user's Documents folder.
+        spawnOpener('explorer.exe', exists ? [`/select,${file}`] : [dir]);
+    } else if (process.platform === 'darwin') {
+        spawnOpener('open', exists ? ['-R', file] : [dir]);
+    } else {
+        // No portable "select this file" on Linux; the folder is the best we do.
+        spawnOpener('xdg-open', [dir]);
+    }
+}
+
 // Export the currently-previewed score: open the save dialog straight away and let
 // its "Save as type" dropdown choose the format; the saved file's extension decides
 // what the language server generates. SVG/PNG/PDF honour the selected score; MIDI
@@ -928,9 +978,16 @@ async function exportPreview(
             const choice = await vscode.window.showInformationMessage(
                 `Exported to ${response.OutputPath}`, openAction, revealAction);
             if (choice === openAction) {
-                vscode.env.openExternal(target);
+                if (fs.existsSync(target.fsPath)) {
+                    openInDefaultApp(target.fsPath);
+                } else {
+                    // Multi-page PNG never writes the single name the dialog
+                    // collected, so there is nothing to hand the default app —
+                    // show the folder holding the pages instead.
+                    revealInFileManager(target.fsPath);
+                }
             } else if (choice === revealAction) {
-                vscode.commands.executeCommand('revealFileInOS', target);
+                revealInFileManager(target.fsPath);
             }
         } else {
             vscode.window.showErrorMessage(`Lily# export failed: ${response.Error}`);

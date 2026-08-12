@@ -115,8 +115,9 @@ public class ChordTremoloPairTests
         // LILYPOND-REF: lily/stem.cc:1006-1018 Stem::print (is_valid_stem);
         //   lily/beam-quanting.cc:485-510 no_visible_stem_positions;
         //   lily/beam.cc:637-654 calc_beam_segments (the Stem::is_invisible clamp).
+        const string src = "time 4/4 repeat tremolo 32 { g''64 a }";
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 repeat tremolo 32 { g''64 a }"),
+            SyntaxTree.Parse(src),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
         // No stem ink: no vertical line at stem thickness anywhere.
@@ -157,8 +158,16 @@ public class ChordTremoloPairTests
         Assert.Equal(middleLineY - 0.05, ys.Max(), 2);
 
         // The gapped beams clear both heads by half a gap (0.4) from the inner edges.
+        // ⚠️ "a music glyph carrying a data-pos" does NOT mean "a notehead": the time
+        // signature is one too. It only read as one here because `time 4/4` sits at
+        // offset 0 and the meter's data-pos was computed from the DECLARATION's span,
+        // which is 0 there — so it was suppressed as "no position". The meter now
+        // carries its numerator's offset (MeasureCollector.TimeDataPos), so select the
+        // heads by what they are: the glyphs written inside the tremolo body.
+        int bodyStart = src.IndexOf('{');
         var headXs = System.Text.RegularExpressions.Regex.Matches(svg,
-                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*data-pos")
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*data-pos=\"(\\d+)\"")
+            .Where(m => int.Parse(m.Groups[3].Value) > bodyStart)
             .Select(m => double.Parse(m.Groups[1].Value)).OrderBy(v => v).ToList();
         Assert.Equal(2, headXs.Count);
         double headWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(1).Right;

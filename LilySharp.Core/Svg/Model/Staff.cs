@@ -104,6 +104,14 @@ public sealed record Staff(
     // multi-staff score so the staff shows its own (transposed) key while the
     // concert-pitch staves keep the score key. Null = use the score key.
     KeySignature? PerStaffKeySignature = null,
+    // Source offset of the `clef` that set THIS staff's clef, so the line-start clef can
+    // carry a data-pos and the preview can click through to it. 0 = none known (the staff
+    // inherited a default rather than being told), and the clef is then drawn untagged.
+    // ⚠️ Per STAFF, not per score: each part declares its own clef, so one score-level
+    // offset would send every staff's clef to the same line (which is why the multi-staff
+    // case went untagged until this existed). Stamped by the collector after the staves
+    // are built, exactly as PerStaffKeySignature is.
+    int ClefPosition = 0,
     // Whether this is an independent TEXT row (chord symbols or lyric syllables) —
     // no staff lines, no notes, just text laid out by timing in its own band. The
     // layout/renderer treat every text row the same; the chord-vs-lyric content

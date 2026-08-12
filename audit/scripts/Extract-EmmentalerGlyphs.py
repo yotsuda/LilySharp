@@ -262,6 +262,13 @@ GLYPHS: list[tuple[str, str, str]] = [
 
     ("#", "Repeat dots", ""),
     ("RepeatDots", "dots.dot", ""),
+
+    # lily/system-start-delimiter.cc:36-66 staff_bracket asks the font for these
+    # two by name and hangs one off each end of the vertical stroke. They are the
+    # bracket's shape -- drawing a stand-in serif is inventing a second Emmentaler.
+    ("#", "System-start bracket tips", ""),
+    ("BracketTipUp", "brackettips.up", "top end of a SystemStartBracket"),
+    ("BracketTipDown", "brackettips.down", "bottom end of a SystemStartBracket"),
 ]
 
 

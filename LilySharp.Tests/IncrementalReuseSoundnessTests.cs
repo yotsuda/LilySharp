@@ -446,7 +446,16 @@ public class IncrementalReuseSoundnessTests
         nameof(Staff.Lines), nameof(Staff.PedalStyle), nameof(Staff.PartCombineMarks),
         };
         var capturedElsewhere = new[] { nameof(Staff.Clef), nameof(Staff.Voices) };
-        var accounted = foldedByStaffIdentity.Concat(capturedElsewhere).ToHashSet(StringComparer.Ordinal);
+        // A third outcome for the triage: a field that is NOT CONTENT and has to stay OUT
+        // of the key. A source offset moves whenever text is inserted earlier in the file,
+        // so folding one in makes a content-unchanged edit miss the cache and lose
+        // whole-layout reuse — measured, when Staff.ClefPosition was first hashed it broke
+        // ContentUnchangedEdit_ReusesWholeLayout_AndMatchesFull and three siblings. It
+        // cannot go stale either: the renderer reads it off the LIVE score's staff at draw
+        // time, and only the geometry is ever cached.
+        var notContent = new[] { nameof(Staff.ClefPosition) };
+        var accounted = foldedByStaffIdentity.Concat(capturedElsewhere).Concat(notContent)
+            .ToHashSet(StringComparer.Ordinal);
 
         // Stateful == init/set-settable positional record members; computed getters
         // (PrimaryVoice, IsMultiVoice, MeasureCount, IsTab) are get-only and derived.

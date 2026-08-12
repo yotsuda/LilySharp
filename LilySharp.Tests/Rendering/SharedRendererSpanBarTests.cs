@@ -28,18 +28,28 @@ using Xunit;
 namespace LilySharp.Tests.Rendering;
 
 /// <summary>
-/// In a grand staff, barlines must connect across the staves (LilyPond SpanBar):
-/// a barline rect taller than one staff bridges the gap between the two staves.
-/// A single-staff score has no such tall barline.
+/// Which group types carry the barline across the gap between their staves
+/// (LilyPond SpanBar), and which leave each staff its own.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: ly/engraver-init.ly — GrandStaff/PianoStaff/StaffGroup have a
+///   Span_bar_engraver; ChoirStaff does not, and an ungrouped staff has no group
+///   to span.
+/// </remarks>
 public sealed class SharedRendererSpanBarTests
 {
     private const double StaffHeight = 4.0;
 
-    [Fact]
-    public void GrandStaff_DrawsBarlineSpanningBothStaves()
+    [Theory]
+    // A brace or bracket at the left edge says nothing about the barlines:
+    // choirStaff is bracketed exactly like staffGroup and still must not span.
+    [InlineData("grandStaff", true)]
+    [InlineData("staffGroup", true)]
+    [InlineData("choirStaff", false)]
+    public void GroupBarlines_BridgeTheStaffGap_OnlyWhenTheGroupSpansThem(
+        string keyword, bool expectSpan)
     {
-        var grand = Render("""
+        var rendered = Render($$"""
             title "T"
             time 4/4
 
@@ -50,15 +60,14 @@ public sealed class SharedRendererSpanBarTests
             form main { Main }
 
             score main "t" {
-              grandStaff {
+              {{keyword}} {
                 staff treble melody
                 staff bass bass
               }
             }
             """);
 
-        bool spanBar = grand.Rects.Any(r => IsVerticalBar(r) && r.H > StaffHeight + 1.0);
-        Assert.True(spanBar, "grand staff should have a barline spanning both staves");
+        Assert.Equal(expectSpan, HasBarlineBridgingTheGap(rendered));
     }
 
     [Fact]
@@ -71,8 +80,41 @@ public sealed class SharedRendererSpanBarTests
             score main "s" { staff line }
             """);
 
-        bool spanBar = single.Rects.Any(r => IsVerticalBar(r) && r.H > StaffHeight + 1.0);
-        Assert.False(spanBar, "single staff should not have a group-spanning barline");
+        Assert.False(HasBarlineBridgingTheGap(single),
+            "single staff should not have a group-spanning barline");
+    }
+
+    /// <summary>
+    /// Is there an x where the barline runs UNBROKEN past one staff's worth of
+    /// height — i.e. out of a staff and across the gap?
+    /// </summary>
+    /// <remarks>
+    /// This asks about the line on the page, not about how it was emitted. The
+    /// span is drawn as the staff bars plus a separate gap filler, so the older
+    /// form of this test — "some single rect is taller than a staff" — held only
+    /// while a second pass also painted one full-height rect over the group. That
+    /// pass was the ChoirStaff bug: it had no idea the group must not span.
+    /// </remarks>
+    private static bool HasBarlineBridgingTheGap(RectRecorder rendered)
+    {
+        // Abutting rects are computed by different expressions; let them touch.
+        const double Touching = 0.01;
+
+        return rendered.Rects
+            .Where(IsVerticalBar)
+            .GroupBy(r => Math.Round(r.X, 3))
+            .Any(column =>
+            {
+                double reach = double.NegativeInfinity, runTop = 0;
+                foreach (var r in column.OrderBy(r => r.Y))
+                {
+                    // A rect that starts past the current run's end begins a new run.
+                    if (r.Y > reach + Touching) { runTop = r.Y; reach = r.Y + r.H; }
+                    else reach = Math.Max(reach, r.Y + r.H);
+                    if (reach - runTop > StaffHeight + Touching) return true;
+                }
+                return false;
+            });
     }
 
     private static bool IsVerticalBar((double X, double Y, double W, double H) r)

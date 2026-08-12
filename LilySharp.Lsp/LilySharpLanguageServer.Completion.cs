@@ -133,6 +133,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterFontName => GetFontNameCompletions(),
             CompletionContext.AfterFontKeyword => GetFontQuoteInsertCompletion(),
             CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
+            CompletionContext.StaffGroupBlock => GetStaffGroupBlockCompletions(),
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
             CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
@@ -543,6 +544,7 @@ public sealed partial class LilySharpLanguageServer
         AfterFontName,
         AfterFontKeyword,
         ScoreBlock,
+        StaffGroupBlock,
         AfterStaffRef,
         AfterChordsRef,
         AfterLyricsRef,
@@ -734,9 +736,28 @@ public sealed partial class LilySharpLanguageServer
                 // `tab` references a part too (an optional tuning may precede the
                 // name, but the part is the useful suggestion right after `tab`).
                 case "tab": return CompletionContext.AfterStaffRef;
+                // `ossia NAME` references a part directly, like `staff`.
+                case "ossia": return CompletionContext.AfterStaffRef;
                 case "chords": return CompletionContext.AfterChordsRef;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
                 case "with": return CompletionContext.AfterWith;
+            }
+            // What a staff GROUP's body accepts is narrower than the score's, and the
+            // parser says so with its own diagnostics — so the popup must not offer the
+            // wider list inside one. Measured 2026-08-11:
+            //   condensedStaff { combinedStaff … } → LYS6004 "cannot contain"
+            //   grandStaff     { combinedStaff … } → LYS0002 "Expected 'CloseBrace'"
+            var openBlocks = ScanOpenBlocks(text, offset, ReadFrame);
+            if (openBlocks.Count > 0)
+            {
+                string block = openBlocks[^1].Name;
+                // condensedStaff / combinedStaff take BARE PART NAMES only.
+                if (IsBarePartNameGroup(block))
+                    return CompletionContext.AfterStaffRef;
+                // grandStaff / staffGroup / choirStaff take `staff` ITEMS only
+                // (ParseGrandStaffRender loops on StaffKeyword and nothing else).
+                if (IsStaffGroupKeyword(block))
+                    return CompletionContext.StaffGroupBlock;
             }
             // `chords NAME |` / `with chords NAME |`: after the attached chord part's
             // name, offer the `as roman|both|names` display selector (plus the normal
@@ -897,8 +918,8 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// True when <paramref name="offset"/> sits inside a <c>score … { }</c> or
-    /// <c>grandStaff { }</c> body. A score block usually carries a name
+    /// True when <paramref name="offset"/> sits inside a <c>score … { }</c> body or
+    /// one of the staff GROUPS nested in it. A score block usually carries a name
     /// (<c>score "sheet" {</c> / <c>score practice {</c>) between the keyword
     /// and the brace, so the innermost-block scan must skip one quoted or bare
     /// name before reading the keyword.
@@ -908,6 +929,22 @@ public sealed partial class LilySharpLanguageServer
         var stack = ScanOpenBlocks(text, offset, IsScoreBlockOpener);
         return stack.Count > 0 && stack[^1];
     }
+
+    /// <summary>The staff-group keywords whose <c>{ }</c> body is part of the render
+    /// spec: they open a block directly inside a score.</summary>
+    /// <remarks>
+    /// ⚠️ The first three take <c>staff</c> ITEMS; <c>condensedStaff</c> and
+    /// <c>combinedStaff</c> take BARE PART NAMES (a staff or a group inside one is a
+    /// parse error — see ParseBarePartNameMembers), which is why the context split in
+    /// DetermineContext hands those two the part names instead of the render keywords.
+    /// </remarks>
+    private static bool IsStaffGroupKeyword(string w) =>
+        w is "grandStaff" or "staffGroup" or "choirStaff"
+          or "condensedStaff" or "combinedStaff";
+
+    /// <summary>The two groups whose body is a list of bare part names.</summary>
+    internal static bool IsBarePartNameGroup(string w) =>
+        w is "condensedStaff" or "combinedStaff";
 
     private static bool IsScoreBlockOpener(string text, int braceIndex)
     {
@@ -929,7 +966,7 @@ public sealed partial class LilySharpLanguageServer
             while (j >= 0 && IsWordChar(text[j])) j--;
             w1 = text.Substring(j + 1, end - (j + 1));
         }
-        if (w1 == "score" || w1 == "grandStaff")
+        if (w1 == "score" || IsStaffGroupKeyword(w1))
             return true;
         // Blocks that take NO name before their brace: if w1 is one of these,
         // this brace opens that block, not a score.
@@ -954,7 +991,7 @@ public sealed partial class LilySharpLanguageServer
             int e2 = j + 1;
             while (j >= 0 && IsWordChar(text[j])) j--;
             string w = text.Substring(j + 1, e2 - (j + 1));
-            if (w == "score" || w == "grandStaff")
+            if (w == "score" || IsStaffGroupKeyword(w))
                 return true;
             if (w is "section" or "part" or "phrase" or "form" or "chords"
                 or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
@@ -1192,15 +1229,28 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetScoreBlockCompletions()
     {
         // Retrigger = the item takes a part-name reference next, so re-open the
-        // completion popup after inserting the keyword and list the declared parts
-        // (grandStaff opens a brace block instead, so it doesn't).
+        // completion popup after inserting the keyword and list the declared parts.
+        // A keyword that opens a BRACE body does not retrigger — the caret lands
+        // inside the block, where the next completion request answers on its own.
+        // ⚠️ Every keyword ParseRenderItem accepts belongs here. The four staff
+        // GROUPS were missing, so the one list the writer sees inside `score { }`
+        // did not mention the constructs the parser has always taken.
         var specs = new (string Label, string Insert, string Detail, bool Retrigger)[]
         {
             ("staff", "staff $0", "A staff rendering the named part", true),
-            ("tab", "tab $0", "A tablature staff for the named part", true),
             ("grandStaff", "grandStaff {\n\t$0\n}", "Braced staff group (piano)", false),
+            ("staffGroup", "staffGroup {\n\t$0\n}", "Bracketed staff group (orchestral family)", false),
+            ("choirStaff", "choirStaff {\n\t$0\n}", "Choir staff group (vocal ensemble)", false),
+            ("condensedStaff", "condensedStaff {\n\t$0\n}",
+                "One staff carrying several parts as voices — bare part names inside", false),
+            ("combinedStaff", "combinedStaff {\n\t$0\n}",
+                "Two parts merged onto one staff, a2 where they agree — bare part names inside", false),
+            ("tab", "tab $0", "A tablature staff for the named part", true),
+            ("ossia", "ossia $0", "An ossia staff (small alternative reading) for the named part", true),
             ("chords", "chords $0", "Chord row (no staff) for the named chord part", true),
             ("lyrics", "lyrics $0", "Lyrics row (no staff) for the named lyrics part", true),
+            ("title", "title \"$0\"", "This score's own title, overriding the file's", false),
+            ("composer", "composer \"$0\"", "This score's own composer, overriding the file's", false),
         };
         return new CompletionList
         {
@@ -1218,6 +1268,38 @@ public sealed partial class LilySharpLanguageServer
             }).ToArray()
         };
     }
+
+    /// <summary>
+    /// Inside <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c>: the body is a
+    /// run of <c>staff</c> items and NOTHING else, so that is the whole list.
+    /// </summary>
+    /// <remarks>
+    /// ParseGrandStaffRender loops <c>while (Check(StaffKeyword))</c> and then demands
+    /// the closing brace, so any other render keyword here is a syntax error — measured:
+    /// <c>grandStaff { combinedStaff { … } }</c> reports LYS0002 "Expected 'CloseBrace',
+    /// found 'CombinedStaffKeyword'". Offering the score's wider list here would be
+    /// suggesting what the parser rejects.
+    /// </remarks>
+    internal static CompletionList GetStaffGroupBlockCompletions() => new()
+    {
+        Items =
+        [
+            new CompletionItem
+            {
+                Label = "staff",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "staff $0",
+                Detail = "A staff of this group, rendering the named part",
+                SortText = "0",
+                Command = new Command
+                {
+                    Title = "Suggest part name",
+                    CommandIdentifier = "editor.action.triggerSuggest",
+                },
+            },
+        ]
+    };
 
     /// <summary>After <c>staff NAME with</c> the only continuation is <c>chords</c>.</summary>
     internal static CompletionList GetWithCompletions()

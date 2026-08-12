@@ -69,6 +69,87 @@ public class RenderSpecTests
         Assert.Equal("bass", grandStaffItem.GrandStaff.Staves[1].VoiceName);
     }
 
+    // A part score restates the header for itself: `score main "vln" { title "Violin I" … }`.
+    // Written once and read by all three tests below, so they cannot drift apart on what
+    // the file says versus what each score says.
+    private const string PerScoreHeaderSource = """
+        title "File Title"
+        composer "File Composer"
+        octave absolute
+        part vln
+        part vla
+        section A {
+          vln { c''1 }
+          vla { c'1 }
+        }
+        form main { ~A }
+        score main { staff vln staff vla }
+        score main "vln" {
+          title "Violin I"
+          composer "Score Composer"
+          staff vln
+        }
+        score main "vla" {
+          title "Viola"
+          staff vla
+        }
+        """;
+
+    private static MultiStaffScore CollectByName(string name)
+    {
+        var tree = SyntaxTree.Parse(PerScoreHeaderSource);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+        var spec = RenderSpecParser.FindByName(tree, name);
+        Assert.NotNull(spec);
+        return LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec);
+    }
+
+    [Fact]
+    public void ScoreWithoutItsOwnHeader_KeepsTheFileHeader()
+    {
+        var score = CollectByName("main");
+        Assert.Equal("File Title", score.Title);
+        Assert.Equal("File Composer", score.Composer);
+    }
+
+    [Fact]
+    public void ScoreHeader_OverridesTheFileHeaderForThatScoreOnly()
+    {
+        var vln = CollectByName("vln");
+        Assert.Equal("Violin I", vln.Title);
+        Assert.Equal("Score Composer", vln.Composer);
+
+        // …and does not leak: the full score, collected from the same tree, is untouched.
+        var main = CollectByName("main");
+        Assert.Equal("File Title", main.Title);
+        Assert.Equal("File Composer", main.Composer);
+    }
+
+    [Fact]
+    public void ScoreStatingOnlyOne_InheritsTheOtherFromTheFile()
+    {
+        // `score main "vla"` restates the title and says nothing about the composer.
+        var vla = CollectByName("vla");
+        Assert.Equal("Viola", vla.Title);
+        Assert.Equal("File Composer", vla.Composer);
+    }
+
+    [Fact]
+    public void ScoreHeader_KeepsEveryOtherSourceOffsetIntact()
+    {
+        // A render item the parser does not recognise is SKIPPED by ParseList's
+        // Advance(), which drops its width and shifts every following source offset —
+        // the failure mode that once broke note highlighting after a part-header `key`.
+        // So the header must round-trip and the notes must keep their real positions.
+        var tree = SyntaxTree.Parse(PerScoreHeaderSource);
+        Assert.Equal(PerScoreHeaderSource, tree.GetRoot().ToFullString());
+
+        var score = CollectByName("vln");
+        // The title's data-pos points INSIDE this score's own string, not the file's.
+        int at = score.Header.Title;
+        Assert.Equal("Violin I", PerScoreHeaderSource.Substring(at + 1, "Violin I".Length));
+    }
+
     [Fact]
     public void StaffReferencingAPartNamedLikeAClef_UsesThePartsClef()
     {

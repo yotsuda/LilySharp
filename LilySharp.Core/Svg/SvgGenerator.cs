@@ -146,6 +146,11 @@ public static class SvgGenerator
     /// </summary>
     internal static MultiStaffScore CollectScore(MeasureCollector collector, SyntaxTree tree, RenderSpec? renderSpec)
     {
+        // The score's own `title` / `composer`, if it states any. Set here rather than
+        // on either branch below because BOTH collect definitions, and the single-staff
+        // path takes no RenderSpec at all.
+        collector.HeaderOverrides = renderSpec?.HeaderOverrides ?? default;
+
         if (renderSpec != null && renderSpec.IsMultiStaff)
             return collector.CollectMultiStaff(tree, renderSpec);
 
