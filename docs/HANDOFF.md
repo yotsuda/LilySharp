@@ -63,57 +63,73 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第140セッション＝**2 便。⑴ ⒪ を起票（voice 2 の弓の非対称が台帳の 4 点に）
-⑵ ⒪ を閉じた（prelim が final と同じ全声部でタイ・スラーを置く）**
-（`75941376`＝起票・`f003f471`＝移植・未 push は git に訊くこと）。
-**テスト 4393 passed / 0 failed / 4 skipped（+4＝新 4 点）**・Core 0 warning・**snapshot 0 動**・
-**台帳 511 点・ss 非ゼロ 94・総和 3.609962441**（+4 点で +0.000976834＝新 2 点の残存 sliver・
-**既存 507 点は移植の前後とも全点不動**）・**count 点 106 / 非ゼロ 2**・**コーパス 0/82**
-（HEAD worktree の Release バイナリで基線 0/82 を確認してから作業木で 0/82＝第138 の規律）。
+最終更新 第143セッション＝**1 便＝測定のみ（エンジンのコード変更ゼロ・計器は commit していない・
+commit はこの文書の更新だけ）。第142 の指示どおり ▶ の値段を Release で取り直した**——
+第136第1便以来初の段内訳更新で、**打鍵の首位が「▶ に存在しない段」だった**（下）。
+**テスト 4395 passed / 0 failed / 4 skipped（±0・§0 開始時に実測・以後エンジン不変）**・
+Core 0 warning・**snapshot 0 動**・**台帳 511 点・ss 非ゼロ 94・総和 3.609962441・
+count 点 106 / 非ゼロ 2（全部不動・§0 の数え方で再測）**・**コーパスは走らせていない**
+（エンジンのバイトが 1 つも動いていないため。基線は第142 の 0/82 のまま）。
 
-- **第1便＝起票**（コード変更ゼロ）。プローブは `voice2-spanner-page.ly`（専用 1 本＝
-  `Measure-LilyPondProbe.ps1` で約 15 秒・gap を自分で計算して印字・音楽は `lysc ly` 生成＝
-  手書きゼロ・.lys 源は `scratch/lpreg/v{ssd,ssc,tsid,tsic}.lys` 未追跡・同じ音楽は
-  `LpGeometryProbes.cs` に commit 済み）。設計は SSD/TSID の規律の移植（内側 gap・slur は
-  床超え／tie は符頭超えの深さ・voice 1 は中央線の全音符＝gap の両縁に ink を足さない）。
-  **予測は 4 点とも桁まで的中**: LP は voice 2 の弓を**単声と 15 桁同一に予約**
-  （VSSD 13.122500648479456 = SSD・VTSID 13.512560327518216 = TSID）、Lily# は床/符頭に座り
-  **slur −1.122500648・tie −0.917560328**（tie は単声 TSID の seed 前と同数字）。対照 2 点
-  exact＝voice{} texture は間隔に届かず・**voice-2 の符頭は paging skyline に入っている**。
-- **第2便＝移植**。`RunPreliminaryAnnotationPass` に final の `staffSpannerScore` 綴りを
-  そのまま写し（Voices.Length>1 なら全声部・単声は primary スコアを**同一 instance で**再利用
-  ＝単声はバイト不変）、`LayoutTies`/`LayoutSlurs`/`InsideSlurScriptLayouts` の 3 呼び出しに
-  渡した。定数ゼロ・LP 式の転写無し（LP 側の根拠は台帳 4 点の why が持つ・新 REF 無し＝
-  §7.6 ⒟「既存の家の指し直し」）。★ 追補 `9ed7ef73`: 写した結果**構築が 2 綴りになっていた**
-  （§5.2.1② を自分で作った）ので、`StaffSpannerScoreOf` の **1 軒**に畳んで両 pass が共有
-  （梁の `StaffBeamScoreOf` と同じ形・suite 全緑＝出力不変）。
-  **残差は単声対の数字そのものに収束**: slur **+0.000534361**（= 単声 `system.slur-under-notes`
-  と同値）・tie **+0.000442473**（単声 +0.000442474 と 1 ulp 差）＝予約が入った後に残るのは
-  両対共通の弓形状 sliver（X 軸系・単声対の why が台帳）。
-- **血の広がりはゼロが実測**: suite 全緑（snapshot 0 動）＋コーパス 0/82＝**voice-2 の弓が
-  binding になる本は committed fixture / コーパスに 1 冊も無い**。動いた絵は scratch の
-  第139 現物だけ——`v2slur-probe.lys` の段 top-to-top **12.05 → 14.16**（LP 14.1649・SVG 2 桁
-  一致）＝**次の段への食い込みは解消（目視値）**。
-- ⚠️ ★★ **第3便＝重い側の perf を測った（ユーザー指摘）——多声＋弓の本は打鍵が +40% 遅くなった**。
-  既存ベンチ本は全部単声＝影響ゼロが実測（plain1k 1381→1382・fingbeam1k 3472→3390/3472＝
-  ノイズ内）。**重い側の新ベンチ本 `perf-v2bow1k.lys`**（1000 小節・2 声・voice 2 に slur 500＋
-  tie 500・scratch/lpreg 未追跡・`EditKeystrokeBench` に行は commit 済 `7a48b06e`）:
-  **床 1629.2/1638.8 → 2274.8/2392.7 ms（+646〜754 ms・交互 2 巡・両側 gateMoved True）**。
-  **原因は構造ごと分かっている**——移植前の prelim は primary voice の弓だけ（この本では 0 本）、
-  移植後は全声部＝**final と同じ全弓 layout を prelim が 2 回目として払う**。⇒ **返済は carry**
-  （▶ ⒪′）。単声本は同一 instance 分岐なので恒久にゼロ。
-- ⚠️ **旧 exporter ゲート「voice{} は双子にならない」（§6 の第58 リスト）は stale**——
-  現 `lysc ly` は `<< { } \\ { } >>` を warning 無しで出す（このプローブがその実測）。
-⚠️ **▶ の順位は動かしていない**（perf を測っていない便）。
+- **形**: 第136/141/142 と同じ StageClock 型の一時計器（`IncrementalCompiler` の compile.* ＋
+  `LayoutEngine.Layout` の layout.* ＋ prelim 下位段）＋ `EditKeystrokeBench` と同じ編集
+  プロトコルの一時ベンチ（warmup 2・n=14 交互編集・**段ごとの床**＝各段の n14 min）。
+  **Release・warm プロセス**。生データは `scratch\stagebench-143b.txt`（untracked・逐語）。
+  ⚠️ ★ **cold は JIT を先に捨てないと測れない**（実測: 使い捨て compiler で全パイプラインを
+  一度温めないと、プロセス最初の 1 冊の cold に JIT が ~4.3 秒混ざる——plain1k cold が
+  温め無し 6218.5 → 温め後 1883.6 ms）。「cold」＝**warm プロセスで新しい文書の初回 layout**
+  （LSP で本を開く regime）。
+- ★★★ **発見: 打鍵の首位は 3 冊とも `compile.collect`＝▶ に一度も載ったことのない段**。
+  打鍵床（Release・gateMoved True / reusedLayout False＝regime ⑶）:
+
+  | 段 | plain1k（総 313.8） | fingbeam1k（総 938.0） | v2bow1k（総 319.9） |
+  |---|---|---|---|
+  | compile.collect | **90.4** | **540.5（58%）** | **70.0** |
+  | compile.render | 55.0 | 103.5 | 30.6 |
+  | compile.springs | 47.7 | 76.2 | 37.6 |
+  | prelim.annpass | 23.1 | 61.8 | 19.4 |
+  | layout.break / pages | 18.7 / 16.5 | 17.0 / 18.7 | 36.9 / 36.7 |
+  | layout.finalann | 5.6 | 31.4 | 7.3 |
+  | prelim.slurs | 0.1 | 0.1 | 26.9 |
+
+  **fingbeam の 540 は異常ではなくソース 319 KB（plain の 10 倍）に比例した数**＝collect は
+  **打鍵ごとに O(全書)** を払う。第138〜142 で layout 側の memo が積み上がった結果、
+  **非増分の前半（collect）と後半（render）が首位に露出した**——`IncrementalCompiler` の
+  doc 自身が「Later slices (S5) memoize per-measure semantics/layout to skip more」と
+  予告している段そのもの（▶ ⒭ に起票）。
+- **cold（Release・warm プロセス・初回 layout）**:
+
+  | 段 | plain1k（総 1883.6） | fingbeam1k（総 1933.9） | v2bow1k（総 789.8） |
+  |---|---|---|---|
+  | layout.persys | **608.3** | **564.5** | 164.2 |
+  | compile.collect | 401.2 | **640.5** | 112.3 |
+  | prelim.beams | **325.1** | 160.2 | 0.0 |
+  | compile.render | 252.4 | 155.1 | 62.7 |
+  | prelim.annpass | 44.2 | 150.1 | 22.6 |
+  | prelim.augment | 0.6 | 1.8 | **133.6** |
+
+  ⒪′ が求めた「Release で cold の段内訳」はこれ（段レベル。`MergeInternal` の内訳までは
+  割っていない）。**⒪′ cold の本体＝v2bow の augment 133.6 ms＝cold 総の 17%**。
+  ⒟⁶⑴ の量子器は plain cold の prelim.beams **325.1 ms**（Debug の旧数 ~365 と同じ桁）。
+  cold の首位は 3 冊とも persys/collect＝彫版と収集そのもの。
+⚠️ **▶ は下で並べ替えた（第136第1便以来初）**——根拠は全部この表。第142 までの Debug の
+値段は落とし、Release の値段に書き換えた。⚠️ 計器はいつもどおり commit していない——
+**次に取り直す人は同じ場所に同じ形で仕込むこと**（compile.collect/keys/springs/layout/render・
+layout.break/firstsys/persys/prelim/pages/spanners/finalann・prelim.beams/ties/slurs/annpass/
+enrich/augment＝この §1 の表の行がそのまま計器の配線図）。
 
 ---
 
 **次の一手**（⒟ ⒩ は取り下げ・⒟′ は第135第2便・**⒟⁵ と ⒟‴ は第136 で閉じた・
-⒟⁶ の warm 側は第138 で・⒫ は第139 で閉じた**。**以下の順位は第136第1便の実測そのもの**——
-**推測ではないので、並べ替えるときは測り直すこと**。**第138・第139 は端到端の打鍵と cold しか
-測っていない（段の内訳は取り直していない）ので、順位は 1 つも動かしていない**）:
-⚠️ **以下が名指す「第135第N便」「第136第N便」「第138第N便」の経緯は `HANDOFF-ARCHIVE.md` へ落ちた**
-（終了時チェックリスト 3.5）。**第139 はまだこのファイルの下段にある**（第138 以前は ARCHIVE）。
+⒟⁶ の warm 側は第138 で・⒫ は第139 で閉じた**）。
+★★ **順位は第143 の Release 実測（§1 の表）で並べ替え済み**——perf の新順位は
+**打鍵: ⒭ collect（90〜540 ms）＞ render（31〜104・⒭ 第2項）＞ ⒟⁗ springs（38〜76）＞
+⒟⁶⑵ annpass（19〜62）＞ v2bow の break+pages（37+37）**、
+**cold: persys/collect（彫版と収集そのもの・item 無し）＞ ⒟⁶⑴ 量子器（plain 325）＞
+render ＞ ⒪′ augment（v2bow 134）**。ms を書き足した項は Release・書いていない旧 ms は
+出所セッションの Debug の数（桁の当てのみ）。
+⚠️ **以下が名指す「第135第N便」〜「第141第N便」の経緯は `HANDOFF-ARCHIVE.md` へ落ちた**
+（終了時チェックリスト 3.5）。**第142 はまだこのファイルの下段にある**。
 
 ⚠️⚠️ **着手前に読むこと: 「打鍵」には 3 つの regime があり、混ぜると測れない**（第135第2便・第136第1便）。
 **⑴ 内容不変の木**（`PreviewUpdateBench` が測るもの）は**全体再利用が発火して layout が丸ごと消える**ので、
@@ -130,12 +146,27 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 **どちらに落ちたかは `LastEditSkippedLineBreak` が言う——ラベルに書く前に必ず読むこと**
 （実編集の測定は `EditKeystrokeBench` が gateMoved / reusedLayout を行に印字する）。
 
+▶ ★★★ **⒭ collect（と render）の増分化＝打鍵の新首位**（第143 起票・Release 実測 §1）。
+  `SvgGenerator.CollectScore`（＝`MeasureCollector` walk）は**打鍵ごとに全書を歩き直す**——
+  打鍵床の首位が 3 冊とも collect（plain1k 90.4 / fingbeam1k **540.5＝総の 58%** / v2bow1k
+  70.0 ms）で、値段は**編集位置と無関係にソース量へ正比例**（fingbeam のソースは plain の
+  10 倍で collect も ~6 倍）。`compile.render`（SVG 全文再生成）も同族の非増分後半
+  （55.0 / 103.5 / 30.6 ms）。**layout 側の memo が第138〜142 で積み上がった結果、初めて
+  首位に出た**——`IncrementalCompiler` の doc が予告する「S5: per-measure semantics の memo」
+  がこの島の設計名。⚠️ **着手は設計から**: content key（`MeasureContentKey.Compute`・打鍵
+  8〜10 ms）は既に per-measure で回っているので「変わった小節だけ collect し直す」形が
+  素直だが、**collect は score 全体の側表（tuplets/dynamics/lyrics…）と臨時記号状態を
+  持つ**——§2C ⑴（多声 walk の moment 順再設計）と同じ土地に立つので、**部分修理で
+  3 つ目の walk を生やさないこと**（§2C ⑴ の警告そのまま）。**render の増分化は別の島**
+  （system 単位の SVG 断片 cache が素直・data-pos の再解決と衝突しない形が要る）。
 ▶ ★★ **⒟⁶ 梁のレイアウトの memo 化**（**第136第3便が 2 回→1 回・第138 が warm のその 1 回を
   per-system memo に入れ・第139 が検出を 1 memo に畳んだ**＝warm と検出は閉じた。
   plain1k 実編集の床 1937.7→1435.4 ms（第138）・cold 床 15386.5→3773.9 ms（第139）。**残りは 2 つ**:
   ⑴ **cold の量子器は不変**——検出の 404 回は第139 で消えたが**彫版は残る**（cold の
-  prelim.beams ≈365 ms＝量子器 2,030 本×0.16 ms＝**本物の彫版**・第136第3便の表は ARCHIVE へ）。
-  ⑵ **`prelim.annotationpass` 84 ms** は memo 外のまま（第136第1便の線形項）。
+  prelim.beams＝**Release 実測 plain1k 325.1 / fingbeam1k 160.2 ms（第143・cold 総の 17%/8%）**・
+  量子器 2,030 本×0.16 ms＝**本物の彫版**・第136第3便の表は ARCHIVE へ）。
+  ⑵ **`prelim.annotationpass`** は memo 外のまま（第136第1便の線形項。**Release 打鍵床
+  23.1 / 61.8 / 19.4 ms＝plain/fingbeam/v2bow・第143**）。
   ⚠️ **system をまたぐ梁を持つ譜は丸ごと旧経路にフォールバック**（出力は同一）——
   その本では memo が効かない。**効かせたいなら鍵に隣 system の被覆を足す設計から。**
 ▶ ~~**⒫ `DetectBeamGroups` が 1 打鍵に 6 回走る**~~ — **第139 で閉じた**（§1。検出は
@@ -153,30 +184,32 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
   `system.slur-under-notes` / `system.tie-under-notes` の why が台帳。voice-2 対はそれに
   相乗りしているだけなので、単声側が閉じればこちらも動くはず＝動かなければ別の欠陥）。
   ⑵ → **▶ ⒪′ に昇格（値段が付いた）**。
-▶ ★★ **⒪′ タイ・スラーの carry（prelim→final）＝⒪ の移植が作った借りの返済**（**第140第3便が
-  値段を実測**: `perf-v2bow1k` の実編集打鍵 **1629→2275 ms（+40%）**＝prelim が final と同じ
-  全弓 layout を 2 回目として払うようになった。**単声本は同一 instance 分岐で恒久ゼロ**＝
-  plain1k/fingbeam1k 不動が実測）。⒪ で prelim/final は**同じ量**になったので carry は成立しうる
-  ——**ただし梁の型（第136第3便＝14,350 本の element-wise 実測網＋毒対照）を先に通すこと**。
-  弓は system 内幾何だけを読むか（paging が動かすのは system の Y だけ、という梁と同じ事実に
-  乗れるか）を計器で言ってから畳む。`PreliminaryPass` の remarks が住所。
-  **返せば多声本は移植前より速くなるはず**（final 側の 1 回が消える）。
-▶ ★ **⒟″ の残り: 改行 DP の line-count ループ**（第135第3便で**数えたが直していない**）。
-  `kLoop` は 6,979,000 回まわり、**そのうち 3,995,965 回（57%）は `dp[from] = Infinity` の空振り**。
-  **i ごとに到達可能な line count の下限・上限を持てば範囲で回せる**（外は定義上 Infinity なので
-  出力同一）。★ **第136 の実測で「唯一の二乗」になった**——250/500/1000 小節で **4.3 / 16.3 / 64.4 ms**
-  （×3.79・×3.95）。⚠️ **1000 小節では打鍵の 4.6% しかない**ので、**⒟⁶ より後**。
-  **ただし小節数が 4 倍になれば 1 秒**——**次数が残っている項はこれと ⒟‴′ の 2 つだけ。**
-▶ ★★ **⒟‴′ 改頁 DP の p ループの空振り**（**第136第2便で数えたが直していない・引継ぎに無かった項**）。
-  早期打ち切りを入れた後でも **`pLoop` は n²（200 systems で 652,800）で、その 55% が
-  `dp[prev] == MaxValue` の空振り**＝**⒟″ とまったく同じ形が改頁 DP にもある**。
-  **直し方も同じ**（i ごとに到達可能な頁数の範囲を持つ）。**⒟″ と一緒にやるのが自然**——
-  **1 つの手口で 2 か所**（§5.0 の「値の意味を変える移植は grep 全件に当てる」の *形* 版）。
+▶ ★★ **⒪′ タイ・スラーの残債＝carry（第141）＋augment memo＋Distance memo（第142）で返済済み**。
+  第141 の carry が final の重複弓 layout（~152 ms・cold Debug）を消し、第142 の augment memo が
+  `AugmentSkylinesForPaging` を編集 system だけに（209.5 → 3.7 ms/打鍵・Release）、
+  同第4便の per-pair Distance memo が positioning を対の再測だけに（85.4 → 0.9 ms）。
+  **v2bow1k 打鍵床は第141 開始時の Debug 2428 ms から Release 実測 ~270〜380 ms 帯へ**（§1）。
+  ⚠️ ★★ **batch 化は第141第2便が A/B 網で棄却済み——蒸し返さないこと**:
+  `VerticalSkyline.Merge` の remark の「batch は byte-identical」は **flat 箱専用の真実**で、
+  slope は分割順で交点の丸めが変わり **4,878 building が ULP 不一致・コーパス本にも及ぶ**。
+  ⚠️ **skyline の segment 数を減らす向きは出力が動くので不可**（第141 の注意そのまま）。
+  **残りは cold（初回 layout）だけ**——memo 2 つはどちらも warm の装置。cold を詰めるなら
+  ⑵ **MergeInternal の同一算術高速化**（全 sort+rebuild を局所挿入にする——**同じ operand 対に
+  同じ演算**を証明できる形でだけ。できなければ触らない）が唯一の残存候補。
+  **cold の段内訳は第143 が Release で取った**（§1 の表）: **v2bow1k cold の prelim.augment
+  133.6 ms＝cold 総 789.8 の 17%**（plain 0.6 / fingbeam 1.8＝弓の無い本は払っていない）。
+  `MergeInternal` 内部の内訳までは割っていない——**着手する便がそこから**。
+▶ ~~**⒟″ の残り: 改行 DP の line-count ループ**~~・~~**⒟‴′ 改頁 DP の p ループの空振り**~~ —
+  **両方とも第141第3便で閉じた**（§1。1 つの手口で 2 か所＝到達可能バンド。kLoop
+  6,979,000 → 2,983,035・pLoop 652,800 → 295,280・出力同一は構成＋3 点証明）。
+  ⚠️ **「唯一の二乗」だった 2 項が消えた**——第136 の断面（250/500/1000 で ×3.79/×3.95）は
+  もう成立しない。**次に打鍵の段の内訳を取り直す人は、この 2 段の次数から測り直すこと。**
 ▶ ~~**⒟⁗ 打鍵ごとに全曲のばねベクタを作り直している**~~ — **第138第2便で閉じた**（§1。
   plain1k 内容不変打鍵の床 855→480 ms・**安全網の除去は remarks に明記**・番人は
   incremental==full の網）。⚠️ **regime ⑵⑶（内容が動く編集）では今も全小節ぶん再構築する**——
   per-measure のばね memo はまだ無い（content key が動いた小節だけ作り直す形が次の一歩。
-  第136第1便の compile.springs 267.3 ms がその値段）。
+  **Release 打鍵床 47.7 / 76.2 / 37.6 ms＝plain/fingbeam/v2bow・第143**＝⒭ に次ぐ第3位。
+  ⒭ の per-measure collect memo と**同じ鍵（content key）で回る**ので、設計は ⒭ と一緒に）。
 ▶ ★ **⒟″ スラーの 64 サンプル平坦化は「精度」の課題として残る**（⒟ の perf 側が消えても
   **これは消えない**）。`fingering.slur.bound-note` の残差 −0.011491008 のうち
   **−0.011291475 が 64 サンプルの平坦化**で、4096 にすると −0.000199533 まで落ちる。
@@ -250,42 +283,63 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 
 ---
 
-## 以下は第139セッションの経緯
+## 以下は第142セッションの経緯
 
-最終更新 第139セッション＝**1 便。⒫ を閉じた＝「譜の量」の梁検出が 1 つの memo になった**
-（`54f3d7e0`・**未 push は git に訊くこと**）。起票の指示どおり**「誰がどの Score でいつ検出するか」を
-先に 1 枚に書いた**（地図は `MultiStaffLayouter.StaffBeamGroupsOf` の remarks に恒久化）:
-検出は **3 つの量**——⑴ collect の焼き込みプローブ（モデル前段・共有不能）⑵ 注釈の量
-（primary voice＋全 tuplet・第138 で carry 済）⑶ **譜の量（全声部＋その譜の tuplet）を
-4 つの消費者が別々に検出していた**（prelim per-staff・EdgeStaffBeams→`StaffBeamLayouts`・
-staff-skyline miss 側・`StaffTupletBracketLayouts` の per-voice fan）。
-**テスト 4389 passed / 0 failed / 4 skipped（±0）**・Core 0 warning・**snapshot 0 動**・
-**台帳 507 点・ss 非ゼロ 92・総和 3.608985607（不動）・count 点 106 / 非ゼロ 2**
-（開始時に §0 の数え方で再測＝第138 の数は全部生きていた）・**コーパス 0/82**。
+最終更新 第142セッション＝**4 便。⑴ §0 裏取り＋発見: 引継ぎの打鍵床・段の内訳（第136〜141）は
+すべて Debug 構成の数だった ⑵ ⒪′ 残債の残り候補「per-system augment memo」を実装
+（`AugmentSkylinesForPaging` を per-system の op プログラムに再構成＋`SystemLayoutCache` に memo）
+⑶ after 実測＝v2bow1k 打鍵床 −28%（Release・交互 A/B） ⑷ pages 側も返済＝**pages 税の正体は
+ほぼ全部 `Distance`（対ごと ~0.87 ms）**で、per-pair memo（参照同一性・CWT）が
+plain1k −18% / v2bow1k・fingbeam1k も両巡下**（コードは commit・hash は git に
+訊くこと・未 push も同様）。
+**テスト 4395 passed / 0 failed / 4 skipped（+1＝incremental==full gate 1 本）**・Core 0 warning・
+**snapshot 0 動**・**台帳 511 点・ss 非ゼロ 94・総和 3.609962441・count 点 106 / 非ゼロ 2（全部不動・
+§0 の数え方で再測）**・**コーパス 0/82**（HEAD `6564ac60` の Release バイナリで基線 0/82 →作業木
+0/82＝第138 の規律）。
 
-- **形**: `StaffBeamScoreOf`（構築の 1 軒＝prelim とで 2 綴りだった）＋ `StaffBeamGroupsOf`
-  （検出の 1 軒＝**Staff instance キーの CWT**・`_restCollisions` と同じ論証。譜の外に住む
-  2 入力＝**拍子（値）と score tuplet 配列（同一性）**を検証してから返す）。
-- ★★ **fan の同値は推論で済ませていない**——単声譜では旧綴り（voiceTuplets＋常時
-  forceStemUpAt）と Score 入口（staffTuplets・force 無し）が字面で違う。⑴ 両読み場所は
-  `?.Invoke ?? 既定` で単声の lambda は全小節 null、⑵ 単声譜の tuplet は全部 VoiceIndex 0
-  （非零は voice{} ブロック内のみ＝そのとき Voices.Length>1）——を論証した上で、
-  **一時 assert を全 .lys に当てた: 470 冊・567 譜・14,356 群で不一致 0・毒対照（新側から
-  1 群落とす）は 124 件検出**（第136 と同じ型・計器は commit していない）。
-- **回数（warm は時計で主張しない）**: 打鍵あたりの検出 **4 → 3（定常・交互編集）・初回編集
-  6 → 3**。⚠️ 引継ぎの「5」は呼び場所の数えで、**実測の定常は 4**＝世代キャッシュが交互編集の
-  miss 側 2 回を既に呑んでいた（§5.5 罠 9 の世代方式が、ここでは効いている側で出た）。
-- ★★★ **本当の金脈は cold だった（誰も数えていなかった）**: cold は検出を **404 回**
-  （system ごとに 2 回×約 200 system・毎回全曲 walk）回していて、**3 回**になった。
-  **cold 床（n=6 の min・Debug・HEAD worktree 対 作業木・HEAD を先に測った＝セッション中の
-  ドリフトは上向きで HEAD に有利）**: plain1k **15386.5 → 3773.9 ms（床 −75%）**・
-  fingbeam1k **30389.4 → 7215.8 ms（−76%）**。差 ÷ 401 回 ≈ 29 / 58 ms per 検出＝
-  第136 の「≈17–22 ms @1000 小節」と整合。
-- **出力同一の 3 点証明**: **コーパス 0/82**（基線を HEAD バイナリで取り直し＝「既に HEAD と
-  一致・0/82」を確認してから作業木で 0/82）・**台帳全点不動**・**suite 4389 緑 / snapshot 0**。
-  memo の打鍵またぎ面の番人は incremental==full の網（第138 の梁網を含む 75 本）。
-⚠️ **▶ の順位は今回も動かしていない**——第136 の打鍵内訳に基づく順位のうち、今回測ったのは
-検出の**回数**と **cold** だけで、打鍵の段の内訳は取り直していない。
+- ⚠️ ★★★ **発見⑴: 「打鍵の床」の系譜（第136〜141 の 858 / 1435 / 1629 / 2216 / 2428 …）は
+  全部 Debug 構成の数**——今日 Debug で再測すると一致し（plain1k 1487.8・v2bow1k 2371.5・
+  fingbeam1k 3662.9 ms）、**Release は桁下**（plain1k 462.8・v2bow1k 782.7・fingbeam1k 1471.7）。
+  出所はベンチ手順が構成を書いていなかったこと（`EditKeystrokeBench` は `dotnet test` の既定＝
+  Debug でも走る）。⇒ **今後、床・内訳には構成を必ず書く。既存 ▶ の値段は桁ごと Debug。**
+  ★ ただし**診断の形は Release でも同じ**が実測: v2bow1k 打鍵（Release・床 746.9 ms）中
+  `AugmentSkylinesForPaging` **209.5 ms**・pages **104.9 ms**（plain1k の augment は 4.6）＝
+  弓税の本体は augment（StageClock 型の一時計器・commit していない・第141第2便と同じ型）。
+- **⑵ の形**: `AugmentSkylinesForPaging` を family-major の場所打ち merge から **per-system の
+  op プログラム構築 → system ごとに逐次実行**へ（`PagingAugmentProgram`。merge の家族順・
+  家族内配列順・1 step 1 wrapper の結合順を厳密保存＝**byte 不変が構成**。batch 化ではない——
+  **第141 の棄却はそのまま**・program の remark が理由ごと引いている）。memo は
+  `SystemLayoutCache.GetOrComputePagingAugment`: **鍵＝(base skyline pair の参照同一性,
+  op 列＝merge が消費する解決済み引数そのもの)**。⇒ 第141 が警戒した「+1 項（弓が焼き込む
+  自譜 offset）」は**解決済みで op 列に入る**ので被覆論証が局所で完結（annotation 層の純度の
+  主張が一切要らない）。列挙リスクは scripts/tuplet の「payload は鍵の外」だけ＝両 callee
+  （`MergeScriptProfile`・`AddTupletBracketsToSkyline`）に鍵とのロックステップ remark を置いた。
+  scripts 家族の帰属＋anchor は `AppendScriptSteps` の 1 軒に畳み、final pass の
+  `AugmentSkylinesWithScripts` も同じ家を消費（§5.2.1② を作らない形）。
+- **網**: ⑴ **incremental==full gate 1 本を commit**（`ChainedEditsOnABowedTwoVoiceScore_
+  AlwaysMatchFull`＝弓 2 声＋staccato の多 system 本に hit 混在 toggle → 逆転 → re-break 全 miss
+  の 3 手・毎手 byte 一致） ⑵ **全 .lys A/B（一時計器・commit していない）: 1,441 冊・
+  14,203 system・1,555,556 building element-wise 不一致 0・毒対照 1419/1419 検出・
+  同一内容再 layout の memo hit 13,909/13,909＝100%** ⑶ suite / snapshot / 台帳 / コーパス（上）。
+- **⑶ after（Release・交互 A/B・base＝HEAD worktree `perfbase-6564` 残置）**: v2bow1k 床
+  **472.5/471.1 → 344.2/337.7 ms（−128〜−135 ms ≈ −28%・2 巡一致・両側 gateMoved True）**・
+  fingbeam1k **1035.0/1038.1 → 963.1/963.9 ms（−7%＝script profile の merge も memo に入った分）**・
+  plain1k **ドリフト内**（3 巡 +1.8 / +51.4 / −0.3 ms・augment 4.6 ms の本に 51 の機構は無い）。
+  warm 打鍵の augment は **209.5 → 3.7 ms**。⚠️ **今日も絶対値のドリフトが大きい**（同一バイナリの
+  plain1k 床が 293〜696 で振れた）——**主張は交互の差だけ**（第141 と同じ）。
+- **第4便＝pages 側の返済**。着手前にもう 1 段割った（§5.0 の家訓）: **pages 段の正体は
+  breaker DP 0.8〜6.7 ms・shapes 0.9〜1.7 ms・positioning 42.6〜85.8 ms で、positioning の
+  ~99% が `Distance`**（v2bow1k 85.4 ms/98 対・**plain1k も 41.7 ms/184 対**＝弓の無い本も
+  払っていた）。修理＝`PageLayouter.InterSystemSkylineDistance`: **up 側 instance を鍵にした
+  static CWT**（`StaffBeamGroupsOf` と同じ型）が「どの down instance と測ったか」を 1 スロット
+  持つ——**⑵ の memo が unchanged system の skyline instance を打鍵越しに安定させている**ので、
+  参照同一性だけが健全性論証（Distance は 2 つの instance＋定数 padding の純関数）。
+  実測 after: **85.4→0.9 / 41.7→0.5 ms**。網＝既存の chained-edit gate 2 本が warm hit を
+  byte 一致で拘束・suite 4395/0/4・snapshot 0・コーパス 0/82→0/82。**交互 A/B（両 memo 対
+  無し・2 巡）: plain1k 336.0/343.6 → 271.6/285.2（−18%）・v2bow1k 504.9/500.6 → 378.8/269.3・
+  fingbeam1k 1317.7/1138.6 → 942.2/851.7＝全書・両巡とも curr が下**（絶対値はドリフト帯）。
+⚠️ **▶ の順位は動かしていない**が、**その値段の桁は全部 Debug だったと判明**（発見⑴）——
+**第143 が Release で取り直して並べ替えた**（§1）。
 
 ---
 

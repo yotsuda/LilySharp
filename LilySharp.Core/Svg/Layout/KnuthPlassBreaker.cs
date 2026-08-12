@@ -299,10 +299,32 @@ internal sealed class KnuthPlassBreaker
         dp[0] = 0;          // no measures in no lines
         lineForce[0] = 0;   // no previous line
 
+        // The REACHABLE line-count band per break index: minLines[i]..maxLines[i] brackets
+        // every k with dp[i, k] < Infinity (holes inside the band keep the guard below).
+        // A break's states are all written while the outer loop stands at j == that break,
+        // and only read at j > it, so the band is stable by the time it is read. Iterating
+        // k outside the band skips only iterations whose sole act was the dp[from] >=
+        // Infinity `continue` — the k loop has no other effect for an unreachable state —
+        // which is what makes this bounded walk output-identical by construction rather
+        // than by measurement. MEASURED (session 135, before this): 6,979,000 k-iterations
+        // per 1000-bar break, 3,995,965 of them (57%) that empty `continue`.
+        var minLines = new int[n + 1];
+        var maxLines = new int[n + 1];
+        Array.Fill(minLines, int.MaxValue);
+        Array.Fill(maxLines, int.MinValue);
+        minLines[0] = 0;
+        maxLines[0] = 0;
+
         for (int j = 1; j <= n; j++)
         {
             for (int i = 0; i < j; i++)
             {
+                // A start no line count reaches prices to nothing: every k below would hit
+                // the dp[from] >= Infinity `continue`, so the whole line pricing for this
+                // (i, j) is dead work. Same construction argument as the band itself.
+                if (minLines[i] > maxLines[i])
+                    continue;
+
                 // 1-4: Check break permission — skip if Forbid at break point i (except start)
                 // LILYPOND-REF: lily/include/constrained-breaking.hh:73 break_permission_
                 if (i > 0 && springData[i - 1].BreakPermission == BreakPermission.Forbid)
@@ -387,7 +409,10 @@ internal sealed class KnuthPlassBreaker
                 if (penalty >= Infinity)
                     continue;
 
-                for (int k = 1; k <= n; k++)
+                // Predecessor states live at (i, k - 1), so k walks the band shifted by
+                // one. The guard stays: the band brackets the reachable set, it does not
+                // promise it is gapless.
+                for (int k = minLines[i] + 1; k <= maxLines[i] + 1; k++)
                 {
                     int from = i * cols + (k - 1);
                     if (dp[from] >= Infinity)
@@ -412,6 +437,8 @@ internal sealed class KnuthPlassBreaker
                         dp[to] = total;
                         prev[to] = i;
                         lineForce[to] = storedForce;
+                        if (k < minLines[j]) minLines[j] = k;
+                        if (k > maxLines[j]) maxLines[j] = k;
                     }
                 }
             }

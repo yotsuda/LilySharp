@@ -1608,6 +1608,10 @@ internal static class ArticulationEngraver
     /// double, double)"/>, the same page allocates within a per-cent of the box. The
     /// accidental island paid this exact tax first — see that Merge overload's remark.
     /// </remarks>
+    // ⚠️ THE READS HERE ARE A MEMO KEY: PagingAugmentProgram stores a script step's key as
+    // exactly the fields this method (and its FallbackBoxSkylines path) reads — Glyph,
+    // FontSizeStep, SkylineHorizontalPadding, X, Ink, plus anchorY. Reading a new field of
+    // <paramref name="a"/> here without adding it to that key makes the paging memo stale.
     internal static void MergeScriptProfile(
         VerticalSkyline target, in ArticulationLayout a, double anchorY,
         double magnification = 1.0)

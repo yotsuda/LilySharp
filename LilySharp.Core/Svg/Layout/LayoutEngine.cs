@@ -243,7 +243,8 @@ internal sealed class LayoutEngine
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
             LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOf,
-                prelim.BeamsByStaff);
+                prelim.BeamsByStaff, prelim.TiesByStaff, prelim.SlursByStaff,
+                systems.ToImmutableArray());
 
         // Resolve cross-staff layouts per voice
         var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
@@ -609,18 +610,31 @@ internal sealed class LayoutEngine
     /// preliminary context's detection consumed the SAME voice/time-signature/tuplet
     /// instances, and the detector is a stateless pure function of exactly those three —
     /// see the carry site in <c>Layout</c> for the full argument.
-    /// ⚠️ TIES AND SLURS ARE NOT CARRIED. Since session 140 both passes lay them on the
-    /// SAME quantity (every voice — the staffSpannerScore spelling; before that the prelim
-    /// read the primary voice only, measured as system.voice2-{slur,tie}-under-notes), so a
-    /// carry is now COHERENT but not yet PROVEN: the beams' carry stands on a measured
-    /// element-wise comparison across prelim/final system arrays (above). Ties and slurs
-    /// would need the same instrumented sweep before riding along — a perf follow-up, not
-    /// assumed here.
+    /// ⚠️ TIES AND SLURS ARE CARRIED TOO (session 141), GATED PER STAFF. Both passes lay
+    /// them on the SAME quantity since session 140 (every voice — the staffSpannerScore
+    /// spelling), but unlike a beam (whose Y is staff positions), a bow bakes its own
+    /// staff's WITHIN-SYSTEM offset into its Y as an additive base
+    /// (BuildTieSpecification's staffY, the slur scorer's staffMiddleDown) — and page
+    /// justification can MOVE that offset, because the staff springs sit in the page
+    /// chain. MEASURED (2026-08-12, every .lys in the tree, 1,243 books): the divergence
+    /// is exactly that — 4,201 of 26,140 bows differed, all of them ties on staves below
+    /// the first in multi-page books, every one a rigid Y shift equal to the offset
+    /// delta, X bit-identical. Re-anchoring the carried bows by the delta closed all but
+    /// 87 to the bit and left those 87 ONE ULP off (the shift is rigid in exact
+    /// arithmetic, not in floats) — so the carry is gated on
+    /// <c>StaffOffsetsUnmoved</c> instead of re-anchored: a staff paging moved falls
+    /// back to the final layout (byte-identical by construction, the same shape as the
+    /// beam fallback above), and a staff paging left alone — every staff of every
+    /// single-page book, and staff 0 always — carries. With the gate: 21,793 bows
+    /// compared element-wise, 0 mismatches, poisoned control detected in 365/365
+    /// books with bows.
     /// </remarks>
     private readonly record struct PreliminaryPass(
         List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
         Dictionary<int, ImmutableArray<BeamLayout>> BeamsByStaff,
-        ImmutableArray<BeamGroup> AnnotationBeamGroups);
+        ImmutableArray<BeamGroup> AnnotationBeamGroups,
+        Dictionary<int, ImmutableArray<TieLayout>> TiesByStaff,
+        Dictionary<int, ImmutableArray<SlurLayout>> SlursByStaff);
 
     private PreliminaryPass RunPreliminaryAnnotationPass(
         MultiStaffScore score, MultiStaffLayouter layouter,
@@ -644,6 +658,8 @@ internal sealed class LayoutEngine
         var prelimBeamsByStaff = new Dictionary<int, ImmutableArray<BeamLayout>>();
         var prelimTies = new List<TieLayout>();
         var prelimSlurs = new List<SlurLayout>();
+        var prelimTiesByStaff = new Dictionary<int, ImmutableArray<TieLayout>>();
+        var prelimSlursByStaff = new Dictionary<int, ImmutableArray<SlurLayout>>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
@@ -668,13 +684,14 @@ internal sealed class LayoutEngine
             prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
             var staffPrelimTies = _elementCoordinator.LayoutTies(staffSpannerScore, prelimSystems, staffIndex, staff);
+            prelimTiesByStaff[staffIndex] = staffPrelimTies;
             prelimTies.AddRange(staffPrelimTies);
             // The same 'inside script boxes the FINAL pass scores its bows against
             // (LayoutAllSpanners) — a prelim bow that ignored them would shape the
             // spacing extents for a curve the final pass then moves.
             var prelimStaffScripts = ArticulationEngraver.SidePositionedScriptsOf(
                 score.Articulations, staffIndex);
-            prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(
+            var staffPrelimSlurs = _elementCoordinator.LayoutSlurs(
                 staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams,
                 insideScripts: prelimStaffScripts.IsEmpty ? null : () =>
                     ArticulationEngraver.InsideSlurScriptLayouts(
@@ -685,7 +702,9 @@ internal sealed class LayoutEngine
                         staffYAt: null,
                         staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
                         beamLayouts: staffPrelimBeams,
-                        tieLayouts: staffPrelimTies)));
+                        tieLayouts: staffPrelimTies));
+            prelimSlursByStaff[staffIndex] = staffPrelimSlurs;
+            prelimSlurs.AddRange(staffPrelimSlurs);
         }
         // The SAME per-staff / per-voice lookups the final annotation pass gets. Without
         // them TupletBracketEngraver falls back to the PRIMARY staff's PRIMARY voice for
@@ -761,9 +780,11 @@ internal sealed class LayoutEngine
                 prelimAnn.VoltaBrackets, prelimSystems,
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
                 prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
-                prelimTies.ToImmutableArray()),
+                prelimTies.ToImmutableArray(), systemCache),
             prelimBeamsByStaff,
-            annotationBeamGroups);
+            annotationBeamGroups,
+            prelimTiesByStaff,
+            prelimSlursByStaff);
     }
 
     /// <summary>
@@ -1040,7 +1061,10 @@ internal sealed class LayoutEngine
              ImmutableDictionary<RestShiftKey, double> RestShifts)
         LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
             Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
-            Dictionary<int, ImmutableArray<BeamLayout>> beamsByStaff)
+            Dictionary<int, ImmutableArray<BeamLayout>> beamsByStaff,
+            Dictionary<int, ImmutableArray<TieLayout>> prelimTiesByStaff,
+            Dictionary<int, ImmutableArray<SlurLayout>> prelimSlursByStaff,
+            ImmutableArray<SystemLayout> prelimSystems)
     {
         var allBeamLayouts = new List<BeamLayout>();
         var allTieLayouts = new List<TieLayout>();
@@ -1099,31 +1123,75 @@ internal sealed class LayoutEngine
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
                     || Math.Abs(kv.Value) > Math.Abs(existing))
                     restShiftsBuilder[kv.Key] = kv.Value;
-            var staffTies = _elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff);
+            // ...and the ties/slurs too (since session 141), gated per staff: a bow bakes
+            // its OWN staff's within-system offset into its Y (the scorers feed
+            // StaffOffsetInSystemDown as the additive base), and page justification can
+            // move that offset (the staff springs sit in the page chain) — so a staff
+            // whose offset paging moved falls back to the final layout, byte-identical
+            // to the old path by construction, the way the beam memo falls back on
+            // cross-system groups. See PreliminaryPass' remarks for the measured
+            // account (every .lys in the tree, element-wise, poisoned control).
+            bool carrySafe = StaffOffsetsUnmoved(prelimSystems, systemsArray, staffIndex);
+            var staffTies = carrySafe
+                ? prelimTiesByStaff[staffIndex]
+                : _elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff);
             allTieLayouts.AddRange(staffTies);
-            // The bow is scored around this staff's avoid-slur #'inside marks, so they have
-            // to be PLACED before it — the ordering half of that rule; the mark's own
-            // placement is slur-free, which is what makes the order legal (see
-            // ArticulationEngraver.InsideSlurScriptLayouts). Passed as a factory so a
-            // slur-free staff never runs the walk.
-            var staffScripts = ArticulationEngraver.SidePositionedScriptsOf(
-                score.Articulations, staffIndex);
-            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(
-                staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams,
-                insideScripts: staffScripts.IsEmpty ? null : () =>
-                    ArticulationEngraver.InsideSlurScriptLayouts(
-                        staffSpannerScore, staffScripts,
-                        systemsArray.SelectMany(s => s.Measures).ToImmutableArray(),
-                        measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
-                            { [staffIndex] = staff.PrimaryVoice.Measures },
-                        staffYAt: null,
-                        staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
-                        beamLayouts: staffFinalBeams,
-                        tieLayouts: staffTies)));
+            ImmutableArray<SlurLayout> staffSlurs;
+            if (carrySafe)
+            {
+                staffSlurs = prelimSlursByStaff[staffIndex];
+            }
+            else
+            {
+                // The bow is scored around this staff's avoid-slur #'inside marks, so they
+                // have to be PLACED before it — the ordering half of that rule; the mark's
+                // own placement is slur-free, which is what makes the order legal (see
+                // ArticulationEngraver.InsideSlurScriptLayouts). Passed as a factory so a
+                // slur-free staff never runs the walk.
+                var staffScripts = ArticulationEngraver.SidePositionedScriptsOf(
+                    score.Articulations, staffIndex);
+                staffSlurs = _elementCoordinator.LayoutSlurs(
+                    staffSpannerScore, systemsArray, staffIndex, staff, score.GraceNotes, staffFinalBeams,
+                    insideScripts: staffScripts.IsEmpty ? null : () =>
+                        ArticulationEngraver.InsideSlurScriptLayouts(
+                            staffSpannerScore, staffScripts,
+                            systemsArray.SelectMany(s => s.Measures).ToImmutableArray(),
+                            measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                                { [staffIndex] = staff.PrimaryVoice.Measures },
+                            staffYAt: null,
+                            staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+                            beamLayouts: staffFinalBeams,
+                            tieLayouts: staffTies));
+            }
+            allSlurLayouts.AddRange(staffSlurs);
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
         }
         return (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts,
                 restShiftsBuilder.ToImmutable());
+    }
+
+    /// <summary>
+    /// Whether ONE staff's within-system offset is bit-identical between the
+    /// preliminary systems and the paged ones. Page justification stretches the staff
+    /// springs (they sit in the page chain), so a staff below the first can move
+    /// WITHIN its system when the page is solved; a bow bakes that offset into its Y
+    /// as an additive base, so a moved staff's carried bows would be off by the move.
+    /// The delta is mathematically a rigid shift, but not bitwise — measured
+    /// 2026-08-12 over every .lys in the tree (1,243 books, 26,140 bows): re-anchoring
+    /// carried bows by the delta left 87 bows one ulp (~9e-16) from the final layout's.
+    /// So the carry is gated on UNMOVED instead: exact by construction, and the moved
+    /// staves (multi-page, multi-staff books only) keep the final layout.
+    /// </summary>
+    private static bool StaffOffsetsUnmoved(
+        ImmutableArray<SystemLayout> prelimSystems, ImmutableArray<SystemLayout> finalSystems,
+        int staffIndex)
+    {
+        if (prelimSystems.Length != finalSystems.Length) return false;
+        for (int s = 0; s < finalSystems.Length; s++)
+            if (LayoutUtilities.StaffOffsetInSystemDown(finalSystems[s], staffIndex)
+                != LayoutUtilities.StaffOffsetInSystemDown(prelimSystems[s], staffIndex))
+                return false;
+        return true;
     }
 
     // F3/S5-3a: route a system's measure layout through the session cache when one
@@ -1861,19 +1929,47 @@ internal sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Returns per-system skylines with the scripts' ink merged in — above
-    /// scripts into the UP skyline, below scripts into the DOWN skyline. The
-    /// input skylines are NOT mutated; non-augmented systems reuse the
-    /// originals. LilyPond's axis-group skyline contains the note-bound
-    /// scripts, so anything spaced against it (the chord-name line above, the
-    /// figured-bass row below) clears a staccato or fermata over a protruding
-    /// note; these system skylines are built before script layout exists,
-    /// hence this second pass. Inner-staff scripts merge harmlessly (the
-    /// system silhouette already dominates them). The ink transform mirrors
-    /// OutsideStaffStacker's script seeding; script Y is system-local
-    /// (staff offset already applied).
-    /// LILYPOND-REF: lily/axis-group-interface.cc:359-474 — grobs without
-    /// outside-staff-priority stay in the support skyline.
+    /// The ONE spelling of the script family's attribution and anchor: which system a
+    /// note-bound script's ink belongs to, and its anchor in that system's Y-up frame.
+    /// Both consumers of a script-augmented skyline append through here — the paging
+    /// augment (<see cref="AugmentSkylinesForPaging"/>) and the final annotation pass's
+    /// lyric support (<see cref="AugmentSkylinesWithScripts"/>).
+    /// </summary>
+    /// <remarks>
+    /// ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle); the system
+    /// skyline is Y-up too (system-top origin). Translate against this staff's
+    /// system-local middle, and take the offset in the SAME frame so the whole line adds —
+    /// the middle sits half a staff BELOW the staff top, which in Y-up subtracts. Ink
+    /// Top/Bottom stay up-positive, so they ADD. This is the same expression as
+    /// OutsideStaffStacker's articulation branch; the two used to be one Y-up and one
+    /// Y-down spelling of it. The merge itself is the Script grob's one profile (the
+    /// padded outline) — see MergeScriptProfile's remark for what per-consumer copies cost.
+    /// </remarks>
+    private static void AppendScriptSteps(
+        ImmutableArray<ArticulationLayout> articulations,
+        ImmutableArray<SystemLayout> systems,
+        Dictionary<int, int> measureToSystem,
+        Func<int, PagingAugmentProgram.Builder> builderAt)
+    {
+        if (articulations.IsDefaultOrEmpty)
+            return;
+        foreach (var a in articulations)
+        {
+            if (!measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+                continue;
+            var sys = systems[sysIdx];
+            double staffMidUp = LayoutUtilities.StaffOffsetInSystemUp(sys, a.StaffIndex) - 2.0;
+            builderAt(sysIdx).AddScript(a, a.YUp + staffMidUp);
+        }
+    }
+
+    /// <summary>
+    /// Returns per-system skylines with the scripts' ink merged in — the final annotation
+    /// pass's consumer of the script family (the lyric rows drop below these). The input
+    /// skylines are NOT mutated; non-augmented systems reuse the originals. The steps come
+    /// from <see cref="AppendScriptSteps"/>, the same one spelling the paging augment
+    /// consumes, and are replayed by <see cref="PagingAugmentProgram.Execute"/> in the
+    /// same one-wrapper-per-script association the family loop always had.
     /// </summary>
     private static IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? AugmentSkylinesWithScripts(
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
@@ -1888,40 +1984,14 @@ internal sealed class LayoutEngine
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;
 
+        var builders = new PagingAugmentProgram.Builder?[systemSkylines.Count];
+        AppendScriptSteps(articulations, systems, measureToSystem,
+            s => builders[s] ??= new PagingAugmentProgram.Builder());
+
         var augmented = systemSkylines.ToArray();
-        foreach (var a in articulations)
-        {
-            if (!measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
-                continue;
-            // ArticulationLayout.YUp is Y-up (staff-spaces above the staff middle);
-            // this skyline is Y-up too (system-top origin). Translate against this
-            // staff's system-local middle, and take the offset in the SAME frame so the
-            // whole line adds — the middle sits half a staff BELOW the staff top, which
-            // in Y-up subtracts. Ink Top/Bottom stay up-positive, so they ADD.
-            // This is now the same expression as OutsideStaffStacker's articulation
-            // branch; the two used to be one Y-up and one Y-down spelling of it.
-            var sys = systems[sysIdx];
-            double staffMidUp = LayoutUtilities.StaffOffsetInSystemUp(sys, a.StaffIndex) - 2.0;
-            double aY = a.YUp + staffMidUp;
-            // The Script grob's one profile (the padded outline), as everywhere else that
-            // reads a script's silhouette — this used to be a fourth spelling of it. Merged
-            // without a placed copy: see MergeScriptProfile's remark for what the copies
-            // cost on a script-dense page.
-            if (a.IsAbove)
-            {
-                var up = new VerticalSkyline(VerticalDirection.Up);
-                up.Merge(augmented[sysIdx].up);
-                ArticulationEngraver.MergeScriptProfile(up, a, aY);
-                augmented[sysIdx] = (up, augmented[sysIdx].down);
-            }
-            else
-            {
-                var down = new VerticalSkyline(VerticalDirection.Down);
-                down.Merge(augmented[sysIdx].down);
-                ArticulationEngraver.MergeScriptProfile(down, a, aY);
-                augmented[sysIdx] = (augmented[sysIdx].up, down);
-            }
-        }
+        for (int s = 0; s < augmented.Length; s++)
+            if (builders[s] is { } builder)
+                augmented[s] = builder.Build().Execute(augmented[s]);
         return augmented;
     }
 
@@ -1935,6 +2005,19 @@ internal sealed class LayoutEngine
     /// LILYPOND-REF: lily/page-layout-problem.cc build_system_skyline — LP's
     /// paging skylines contain every grob of the system.
     /// </summary>
+    /// <remarks>
+    /// Restructured system-major (session 142): each family loop APPENDS its per-system
+    /// steps, with every merge argument resolved, to that system's
+    /// <see cref="PagingAugmentProgram"/> instead of merging on the spot; the program then
+    /// replays the identical merge sequence per system (same family order, same
+    /// within-family array order, same one-wrapper-per-step association — see the program's
+    /// remarks for why the association is load-bearing). That makes one system's augment a
+    /// pure function of (its base skyline pair, its program), which is what
+    /// <see cref="SystemLayoutCache.GetOrComputePagingAugment"/> memoizes: on a keystroke,
+    /// only systems whose base skyline instance or resolved annotation ink changed
+    /// re-merge. MEASURED (session 142, Release): the merge was 209.5 ms of a 746.9 ms
+    /// v2bow1k keystroke, ~all of it in unchanged systems' bow re-seeding.
+    /// </remarks>
     private static List<(VerticalSkyline up, VerticalSkyline down)>? AugmentSkylinesForPaging(
         List<(VerticalSkyline up, VerticalSkyline down)>? skylines,
         ImmutableArray<ArticulationLayout> articulations,
@@ -1947,16 +2030,30 @@ internal sealed class LayoutEngine
         ImmutableArray<BarNumberLayout> barNumbers = default,
         ImmutableArray<TupletBracketLayout> tupletBrackets = default,
         ImmutableArray<SlurLayout> slurs = default,
-        ImmutableArray<TieLayout> ties = default)
+        ImmutableArray<TieLayout> ties = default,
+        SystemLayoutCache? systemCache = null)
     {
         if (skylines == null)
             return null;
-        var result = AugmentSkylinesWithScripts(skylines, articulations, systems)!.ToList();
+        int systemCount = skylines.Count;
 
         var measureToSystem = new Dictionary<int, int>();
-        for (int s = 0; s < systems.Length && s < result.Count; s++)
+        for (int s = 0; s < systems.Length && s < systemCount; s++)
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;
+
+        var builders = new PagingAugmentProgram.Builder?[systemCount];
+        PagingAugmentProgram.Builder BuilderAt(int s) => builders[s] ??= new();
+
+        // NOTE-BOUND SCRIPTS, both directions — above scripts into the UP skyline, below
+        // scripts into the DOWN one. LilyPond's axis-group skyline contains the note-bound
+        // scripts, so anything spaced against it (the chord-name line above, the
+        // figured-bass row below) clears a staccato or fermata over a protruding note;
+        // these system skylines are built before script layout exists, hence this second
+        // pass. Inner-staff scripts merge harmlessly (the system silhouette already
+        // dominates them). LILYPOND-REF: lily/axis-group-interface.cc:359-474 — grobs
+        // without outside-staff-priority stay in the support skyline.
+        AppendScriptSteps(articulations, systems, measureToSystem, BuilderAt);
 
         // A tuplet bracket is ordinary ink inside its staff's axis group in LilyPond, so
         // the next system has to clear it exactly as it clears the notes. This skyline is
@@ -1978,10 +2075,6 @@ internal sealed class LayoutEngine
                     continue;
                 // *YUp here IS the system frame (the annotation pass baked the staff
                 // offset in through staffYAt), which is this skyline's own frame.
-                var up = new VerticalSkyline(VerticalDirection.Up);
-                up.Merge(result[s].up);
-                var down = new VerticalSkyline(VerticalDirection.Down);
-                down.Merge(result[s].down);
                 // staffTopUp 0: the SYSTEM skyline's origin is the top staff's top line and
                 // these layouts are already in it (the annotation pass baked the staff offset
                 // in), so there is no half-staff to close here. The PER-STAFF seeding passes a
@@ -1994,9 +2087,7 @@ internal sealed class LayoutEngine
                 // THIS path is reserved full size. It is the same unit question as
                 // SkylineBuilder's, one frame further out, and it goes when the annotation
                 // layouts carry the staff they belong to.
-                SkylineBuilder.AddTupletBracketsToSkyline(
-                    group.ToImmutableArray(), staffTopUp: 0, StaffSize.FullSize, up, down);
-                result[s] = (up, down);
+                BuilderAt(s).AddTupletGroup(group.ToImmutableArray());
             }
         }
 
@@ -2015,22 +2106,19 @@ internal sealed class LayoutEngine
         // audit/lp-geometry system.slur-{under,over}-notes.
         if (!slurs.IsDefaultOrEmpty)
         {
-            foreach (var group in slurs.GroupBy(sl => measureToSystem.TryGetValue(
-                sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex, out int s) ? s : -1))
+            // staffTopUp 0 and FullSize — the system frame and its units again, as for
+            // the brackets above, and open in the same way for an ossia. One bow-group
+            // step per system, the bows in array order, exactly the old GroupBy's slice.
+            var slursBySystem = new List<SlurLayout>?[systemCount];
+            foreach (var sl in slurs)
             {
-                int s = group.Key;
-                if (s < 0 || s >= result.Count)
-                    continue;
-                var up = new VerticalSkyline(VerticalDirection.Up);
-                up.Merge(result[s].up);
-                var down = new VerticalSkyline(VerticalDirection.Down);
-                down.Merge(result[s].down);
-                // staffTopUp 0 and FullSize — the system frame and its units again, as for
-                // the brackets above, and open in the same way for an ossia.
-                SkylineBuilder.AddSlursToSkyline(
-                    group.ToImmutableArray(), staffTopUp: 0, StaffSize.FullSize, up, down);
-                result[s] = (up, down);
+                if (measureToSystem.TryGetValue(
+                        sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex, out int s))
+                    (slursBySystem[s] ??= new List<SlurLayout>()).Add(sl);
             }
+            for (int s = 0; s < systemCount; s++)
+                if (slursBySystem[s] is { } sysSlurs)
+                    BuilderAt(s).AddBowGroup(sysSlurs);
         }
 
         // A tie is the same inside-staff grob as the slur one line up -- vertical-skylines from
@@ -2046,22 +2134,18 @@ internal sealed class LayoutEngine
         // audit/lp-geometry system.tie-{under,over}-notes.
         if (!ties.IsDefaultOrEmpty)
         {
-            foreach (var group in ties.GroupBy(t => measureToSystem.TryGetValue(
-                t.IsBrokenLeft ? t.Tie.EndMeasureIndex : t.Tie.StartMeasureIndex, out int s) ? s : -1))
+            // Same shape as the slurs — a tie's bow group comes AFTER the slur group for
+            // every system, which is the family order the old loops produced.
+            var tiesBySystem = new List<TieLayout>?[systemCount];
+            foreach (var t in ties)
             {
-                int s = group.Key;
-                if (s < 0 || s >= result.Count)
-                    continue;
-                var up = new VerticalSkyline(VerticalDirection.Up);
-                up.Merge(result[s].up);
-                var down = new VerticalSkyline(VerticalDirection.Down);
-                down.Merge(result[s].down);
-                // staffTopUp 0 and FullSize — the system frame and its units again, as for
-                // the brackets above, and open in the same way for an ossia.
-                SkylineBuilder.AddTiesToSkyline(
-                    group.ToImmutableArray(), staffTopUp: 0, StaffSize.FullSize, up, down);
-                result[s] = (up, down);
+                if (measureToSystem.TryGetValue(
+                        t.IsBrokenLeft ? t.Tie.EndMeasureIndex : t.Tie.StartMeasureIndex, out int s))
+                    (tiesBySystem[s] ??= new List<TieLayout>()).Add(t);
             }
+            for (int s = 0; s < systemCount; s++)
+                if (tiesBySystem[s] is { } sysTies)
+                    BuilderAt(s).AddBowGroup(sysTies);
         }
 
         foreach (var fb in figuredBasses)
@@ -2078,11 +2162,7 @@ internal sealed class LayoutEngine
             double top = fbY + FiguredBassEngraver.FigureInkTop(
                 fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty);
             double bottom = fbY - BassFigureAlignment.ColumnDepth(fb.RowOffsets, fb.FigureTexts);
-            var down = new VerticalSkyline(VerticalDirection.Down);
-            down.Merge(result[s].down);
-            down.Merge(VerticalSkyline.FromBox(
-                fb.X - half, fb.X + half, bottom, top, VerticalDirection.Down));
-            result[s] = (result[s].up, down);
+            BuilderAt(s).AddFiguredBassBox(fb.X - half, fb.X + half, bottom, top);
         }
 
         // Volta brackets and their "End1"-style label boxes rise above the
@@ -2094,12 +2174,7 @@ internal sealed class LayoutEngine
                 continue;
             // YUp is Y-up from the system top; this skyline is Y-up too, so use it directly.
             double vY = v.YUp;
-            var up = new VerticalSkyline(VerticalDirection.Up);
-            up.Merge(result[s].up);
-            up.Merge(VerticalSkyline.FromBox(
-                v.StartX, v.EndX, vY - 1.6, vY + 0.1, VerticalDirection.Up));
-            result[s] = (result[s].up, result[s].down);
-            result[s] = (up, result[s].down);
+            BuilderAt(s).AddVoltaBox(v.StartX, v.EndX, vY - 1.6, vY + 0.1);
         }
 
         // Section labels, rehearsal marks and navigation text (Fine, D.C. …)
@@ -2112,13 +2187,7 @@ internal sealed class LayoutEngine
         {
             if (!measureToSystem.TryGetValue(measureIndex, out int s))
                 return;
-            var up = new VerticalSkyline(VerticalDirection.Up);
-            up.Merge(result[s].up);
-            up.Merge(VerticalSkyline.FromBox(x0, x1, bottom, top, VerticalDirection.Up));
-            var down = new VerticalSkyline(VerticalDirection.Down);
-            down.Merge(result[s].down);
-            down.Merge(VerticalSkyline.FromBox(x0, x1, bottom, top, VerticalDirection.Down));
-            result[s] = (up, down);
+            BuilderAt(s).AddMarkBox(x0, x1, bottom, top);
         }
         if (!musicMarks.IsDefaultOrEmpty)
         {
@@ -2182,12 +2251,25 @@ internal sealed class LayoutEngine
                 double capTop = Rendering.TextFontMetrics.Ink(
                     bn.Text, BarNumberEngraver.FontSize,
                     sans: false, Rendering.FontStyle.Bold).Top;
-                var up = new VerticalSkyline(VerticalDirection.Up);
-                up.Merge(result[s].up);
-                up.Merge(VerticalSkyline.FromBox(
-                    x0, x0 + w, rel, rel + capTop, VerticalDirection.Up));
-                result[s] = (up, result[s].down);
+                BuilderAt(s).AddBarNumberBox(x0, x0 + w, rel, rel + capTop);
             }
+        }
+
+        // Replay each system's program — through the memo when a cache rides along, so an
+        // unchanged system's merges are skipped entirely. A system no step touched keeps
+        // its ORIGINAL skyline pair, exactly as the family-major loops left it.
+        var result = new List<(VerticalSkyline up, VerticalSkyline down)>(systemCount);
+        for (int s = 0; s < systemCount; s++)
+        {
+            if (builders[s] is not { } builder)
+            {
+                result.Add(skylines[s]);
+                continue;
+            }
+            var program = builder.Build();
+            result.Add(systemCache is null
+                ? program.Execute(skylines[s])
+                : systemCache.GetOrComputePagingAugment(s, skylines[s], program));
         }
         return result;
     }

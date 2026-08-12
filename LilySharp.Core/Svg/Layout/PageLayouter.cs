@@ -59,6 +59,53 @@ internal sealed class PageLayouter
     }
 
     /// <summary>
+    /// The inter-system skyline distance, memoized per facing pair by INSTANCE identity.
+    /// </summary>
+    /// <remarks>
+    /// <c>Distance</c> is a pure walk over the two skylines' buildings (plus the constant
+    /// horizontal padding), so the same two INSTANCES always yield the same number —
+    /// reference identity is the whole soundness argument, exactly as in
+    /// <see cref="SystemLayoutCache.GetOrComputePagingAugment"/>, whose cached pairs are
+    /// what make the identities stable across keystrokes (an unchanged system's paging
+    /// skyline comes back as the same object; an edited one arrives fresh and misses).
+    /// MEASURED (session 142, Release, warm keystroke): the positioning pass was ~99%
+    /// this walk — 85.4 ms over 98 pairs on perf-v2bow1k (bow-fattened skylines),
+    /// 41.7 ms over 184 pairs on perf-plain1k — while the page-break DP itself cost
+    /// 0.8–6.7 ms.
+    /// <para>
+    /// Keyed on the UP side via a <see cref="ConditionalWeakTable{TKey,TValue}"/> (the
+    /// same static-CWT shape as <c>MultiStaffLayouter.StaffBeamGroupsOf</c>): one entry
+    /// per up-skyline, holding the down-instance it was measured against. A given up
+    /// skyline faces one predecessor per layout, so one slot suffices; a re-pairing
+    /// (systems re-broken) just recomputes. The table never outlives its keys, and an
+    /// entry's strong reference to its down-instance only ties two objects whose
+    /// lifetimes the skyline cache already couples.
+    /// </para>
+    /// ⚠️ Skylines must stay immutable after construction for this to hold —
+    /// <c>VerticalSkyline.Merge</c> merges INTO a fresh wrapper everywhere on the paging
+    /// path, and <c>SystemLayoutCache</c>'s remarks pin the shared-instance contract.
+    /// </remarks>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        VerticalSkyline, PairDistanceEntry> PairDistances = new();
+
+    private sealed class PairDistanceEntry
+    {
+        public VerticalSkyline? Down;
+        public double Value;
+    }
+
+    private static double InterSystemSkylineDistance(VerticalSkyline nextUp, VerticalSkyline prevDown)
+    {
+        var e = PairDistances.GetOrCreateValue(nextUp);
+        if (!ReferenceEquals(e.Down, prevDown))
+        {
+            e.Value = nextUp.Distance(prevDown, EngravingDefaults.SystemSkylineHorizontalPadding);
+            e.Down = prevDown;
+        }
+        return e.Value;
+    }
+
+    /// <summary>
     /// Creates pages using optimal page breaking algorithm with full skyline collision detection.
     /// </summary>
     /// <remarks>
@@ -431,8 +478,7 @@ internal sealed class PageLayouter
                     // inter-system distance is measured with the System grob's
                     // skyline-horizontal-padding, so nearly-X-adjacent facing
                     // ink still interacts through the 45° shoulders.
-                    double dist = nextUp.Distance(prevDown,
-                        EngravingDefaults.SystemSkylineHorizontalPadding);
+                    double dist = InterSystemSkylineDistance(nextUp, prevDown);
                     // Distance() returns negative infinity for empty skylines;
                     // fall back to scalar calculation in that case
                     if (double.IsNegativeInfinity(dist))

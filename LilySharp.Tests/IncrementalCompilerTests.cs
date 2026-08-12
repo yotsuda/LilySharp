@@ -670,6 +670,64 @@ public class IncrementalCompilerTests
             $"fixture shrank to {lastLayout.AllSystems.Length} system(s); the memo has nothing to reuse");
     }
 
+    /// <summary>
+    /// The per-system PAGING-AUGMENT memo's incremental==full gate (HANDOFF §1 ⒪′). The
+    /// beamed fixture above never returns a cached AUGMENTED skyline into a rendered
+    /// picture — its books carry no bows and few scripts, so the paging programs are
+    /// trivial. This one is the v2bow texture in miniature: two voices, the second
+    /// carrying a slur and a tie per pair of bars, staccati on the first — so every
+    /// system's paging skyline is built through a real program (script steps + two bow
+    /// groups), and on each keystroke the unedited systems' pairs come back from
+    /// <c>SystemLayoutCache.GetOrComputePagingAugment</c> while the edited system misses
+    /// (its base skyline instance and its resolved bow numbers both change). Byte-equality
+    /// against a cache-free full render on EVERY step is what says a hit is the same
+    /// silhouette, bit for bit, as a fresh merge — the paging skylines decide the
+    /// inter-system springs, so a stale hit moves whole systems on the page.
+    /// </summary>
+    [Fact]
+    public void ChainedEditsOnABowedTwoVoiceScore_AlwaysMatchFull()
+    {
+        // 26 bars per voice over multiple systems (18 broke into only 2 on the default
+        // paper and the premise assert below fired). Bar 13 of voice 2 is spelled
+        // uniquely (its "e4( d g," ) purely so the toggle below has an unambiguous anchor.
+        var v1 = string.Join(" ", Enumerable.Repeat("g'4@staccato a' b' c'' | b'2 a'2 |", 13));
+        var v2 = string.Join(" ", Enumerable.Repeat("e4( c g, c,) | g,2~ g,2 |", 6))
+            + " e4( d g, c,) | g,2~ g,2 | "
+            + string.Join(" ", Enumerable.Repeat("e4( c g, c,) | g,2~ g,2 |", 6));
+        string source = "time 4/4\nkey c major\noctave absolute\npart m { clef treble }\n"
+            + "section Main { m { voice { " + v1 + " } { " + v2 + " } } }\n"
+            + "form main { Main }\nscore main \"x\" { staff m }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        Assert.Equal(Full(source), Norm(session.Render()));
+
+        // (find, replace) — a slurred-note pitch toggle in the unique bar (one system's
+        // program changes, the rest hit), its inverse (the memo must return to the FIRST
+        // edit's answer through hits, not stale entries), then a rhythm re-spelling near
+        // the head that moves the break gate and re-breaks systems (every base skyline
+        // instance changes, so every program must miss and re-merge).
+        var steps = new (string Find, string Replace)[]
+        {
+            ("e4( d g,", "e4( f g,"),
+            ("e4( f g,", "e4( d g,"),
+            ("b'2 a'2 | g'4@staccato", "b'1 | g'4@staccato"),
+        };
+        foreach (var (find, replace) in steps)
+        {
+            string current = session.Tree.Text;
+            var change = Replace(current, find, replace);
+            int at = current.IndexOf(find, System.StringComparison.Ordinal);
+            string editedText = current[..at] + replace + current[(at + find.Length)..];
+
+            var incremental = Norm(session.Edit(change));
+            Assert.Equal(Full(editedText), incremental);
+        }
+
+        var lastLayout = new LayoutEngine().Layout(
+            SvgGenerator.CollectScore(session.Tree, RenderSpecParser.FindFirst(session.Tree)));
+        Assert.True(lastLayout.AllSystems.Length >= 3,
+            $"fixture shrank to {lastLayout.AllSystems.Length} system(s); the memo has nothing to reuse");
+    }
+
     [Fact]
     public void ChainedEdits_AlwaysMatchFull_WithExpectedSkips()
     {

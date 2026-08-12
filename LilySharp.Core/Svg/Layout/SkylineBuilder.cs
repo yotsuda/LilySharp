@@ -1078,6 +1078,10 @@ internal sealed class SkylineBuilder
     /// nothing until a staff below it collides. <c>StaffSkylineFrameTests</c> holds the
     /// number to the same frame as its line for exactly that reason.
     /// </param>
+    // ⚠️ THE READS HERE ARE A MEMO KEY: PagingAugmentProgram stores a tuplet-group step's
+    // key as exactly the per-bracket fields this method reads (IsStemUp, ShowBracket,
+    // StartX/EndX, DrawnStartX/DrawnEndX, StartYUp/EndYUp, NumberText, NumberX, NumberYUp).
+    // Reading a new layout field here without adding it to that key makes the paging memo stale.
     internal static void AddTupletBracketsToSkyline(
         ImmutableArray<TupletBracketLayout> tupletBrackets, double staffTopUp, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
@@ -1218,7 +1222,9 @@ internal sealed class SkylineBuilder
     /// thickness (both 1.2 / 0.8 × line-thickness), so a single half-extent serves both.
     /// </para>
     /// </remarks>
-    private static void SeedBowInk(
+    // ⚠️ internal for PagingAugmentProgram's bow-group step, whose key is exactly these
+    // eight numbers (see that class's remark) — a new input here must join that key.
+    internal static void SeedBowInk(
         double p0x, double p0y, (double X, double Y) c1, (double X, double Y) c2,
         double p3x, double p3y, double staffTopUp, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)

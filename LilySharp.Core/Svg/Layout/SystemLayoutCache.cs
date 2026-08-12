@@ -166,6 +166,49 @@ internal sealed class SystemLayoutCache
             isLastSystem, indent, commonShortestDuration, extra: systemIndex,
             compute, out _, extra2: staffIndex);
 
+    /// <summary>Reuses or computes ONE system's augmented PAGING skyline — its base
+    /// skyline pair with the annotation ink merged in (scripts, tuplet brackets, bows,
+    /// figured bass, voltas, marks, texts, chord names, bar numbers).</summary>
+    /// <remarks>
+    /// ⚠️ KEYED DIFFERENTLY from every other memo here, and soundly SIMPLER: the key is the
+    /// function's own inputs, not the content-key slice they were derived from. One
+    /// system's augment is <c>program.Execute(baseline)</c> where the
+    /// <see cref="PagingAugmentProgram"/> carries every merge argument RESOLVED (see its
+    /// remarks); Execute is deterministic. So "same baseline INSTANCES + equal program ⇒
+    /// bit-identical output" holds with no coverage claim about what the annotation
+    /// layouts depend on — staff offsets, neighbours, fonts are all inside the resolved
+    /// arguments. The baseline is compared by REFERENCE: an unchanged system's base pair
+    /// comes back from <see cref="GetOrComputeSkyline"/> as the same instances, and a
+    /// recomputed (even if byte-equal) pair just misses into a recompute — conservative,
+    /// never wrong.
+    /// <para>
+    /// One entry per system index, overwritten on miss — the store is bounded by the
+    /// widest system count the session ever saw, so it needs no generation eviction. The
+    /// cached pair is SHARED across keystrokes; the paging consumer only reads
+    /// (<c>PageLayouter</c>'s <c>Distance</c>), verified 2026-08-12.
+    /// </para>
+    /// </remarks>
+    public (VerticalSkyline up, VerticalSkyline down) GetOrComputePagingAugment(
+        int systemIndex, (VerticalSkyline up, VerticalSkyline down) baseline,
+        PagingAugmentProgram program)
+    {
+        if (_pagingAugments.TryGetValue(systemIndex, out var e)
+            && ReferenceEquals(e.BaseUp, baseline.up)
+            && ReferenceEquals(e.BaseDown, baseline.down)
+            && program.Matches(e.Program))
+            return e.Value;
+        var value = program.Execute(baseline);
+        _pagingAugments[systemIndex] = new PagingAugmentEntry(
+            baseline.up, baseline.down, program, value);
+        return value;
+    }
+
+    private sealed record PagingAugmentEntry(
+        VerticalSkyline BaseUp, VerticalSkyline BaseDown,
+        PagingAugmentProgram Program, (VerticalSkyline up, VerticalSkyline down) Value);
+
+    private readonly Dictionary<int, PagingAugmentEntry> _pagingAugments = new();
+
     // A keyed memo: bucket by a hash of (system identity + extra scalar + content
     // slice), verify the full key exactly on hit so collisions only cost a recompute.
     private sealed class TypedCache<T>
