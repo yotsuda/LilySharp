@@ -164,8 +164,33 @@ public sealed class IncrementalCompiler
             cacheForEdit = _systemCache;
         }
 
-        double shortest = SpacingRules.CalculateCommonShortestDuration(score);
-        var springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
+        // ⒟⁗ (HANDOFF §1 ▶): when every per-measure content key matches the PREVIOUS edit's,
+        // the spring vector is the same function of the same inputs — reuse it instead of
+        // rebuilding every measure's springs on a keystroke that changed nothing (the
+        // content-unchanged regime's single largest term, 336 ms of a 717 ms plain1k
+        // keystroke, measured session 135/136). The implication (keys equal => springs
+        // equal) is the same one whole-layout reuse below already stands on: the key folds
+        // every staff's voices, side-tables and entry context, and the common shortest
+        // duration is a function of those same measures.
+        // ⚠️ THIS REMOVES A SAFETY NET, deliberately (the ticket requires saying so): the
+        // spring rebuild-and-compare used to be an independent SECOND OPINION on the content
+        // key's completeness — a spring input missing from the key would fail the gate
+        // comparison and force a recompute. On a content-unchanged edit that opinion is now
+        // silent; what stands guard instead is the incremental==full net
+        // (IncrementalCompilerTests, incl. the beamed multi-system chained-edit net).
+        bool sameContentAsLastEdit = allowSkip
+            && !contentKeys.IsDefault && !_contentKeys.IsDefault
+            && contentKeys.AsSpan().SequenceEqual(_contentKeys.AsSpan());
+        MeasureSpringData[] springs;
+        if (sameContentAsLastEdit && _springs != null)
+        {
+            springs = _springs;
+        }
+        else
+        {
+            double shortest = SpacingRules.CalculateCommonShortestDuration(score);
+            springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
+        }
         // The break gate's OWN key model — the union of the signatures the staves engrave
         // (SpacingRules.WidestActiveKeyInk), which is what SystemBreaker now prices a line
         // start from. This pair is a CHANGE DETECTOR, not the gate's number (it carries no
@@ -181,7 +206,9 @@ public sealed class IncrementalCompiler
             && _springs != null
             && firstPrefix == _firstPrefix
             && contPrefix == _contPrefix
-            && springs.AsSpan().SequenceEqual(_springs);
+            // Reference-equal when the content-unchanged reuse above fired; the
+            // element-wise comparison is the real gate on every content-changing edit.
+            && (ReferenceEquals(springs, _springs) || springs.AsSpan().SequenceEqual(_springs));
 
         // F3/B-2: whole-layout reuse. When the line-break gate is unchanged AND every
         // per-measure content key matches AND the score-global layout inputs match AND
@@ -199,9 +226,8 @@ public sealed class IncrementalCompiler
         bool reuse = skip
             && reuseEligible
             && _cachedLayout != null
-            && !_contentKeys.IsDefault
+            && sameContentAsLastEdit
             && globalKey == _globalKey
-            && contentKeys.AsSpan().SequenceEqual(_contentKeys.AsSpan())
             && ReuseSafe(_cachedLayout);
 
         ScoreLayout layout;

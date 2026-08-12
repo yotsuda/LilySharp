@@ -207,10 +207,17 @@ internal sealed class ElementCoordinator
     /// member's X position is resolved against its OWN measure's layout, and
     /// cross-system spans are split into broken pieces per system.
     /// </remarks>
+    /// <param name="precomputedGroups">The detection result to lay out, when the caller has
+    /// already run <see cref="DetectBeamGroups"/> on <paramref name="score"/> — the per-staff
+    /// detection memo (<c>MultiStaffLayouter.StaffBeamGroupsOf</c>) hands its one detection to
+    /// every layout call, and the per-system beam memo partitions it by system and hands each
+    /// partition back through here, so detection and layout cannot diverge. Null detects
+    /// internally, exactly as before (no production caller passes null any more).</param>
     public ImmutableArray<BeamLayout> LayoutBeams(
-        Score score, ImmutableArray<SystemLayout> systems, int staffIndex)
+        Score score, ImmutableArray<SystemLayout> systems, int staffIndex,
+        ImmutableArray<BeamGroup>? precomputedGroups = null)
     {
-        var beamGroups = _beamDetector.DetectBeamGroups(score);
+        var beamGroups = precomputedGroups ?? _beamDetector.DetectBeamGroups(score);
 
         if (beamGroups.Length == 0)
             return ImmutableArray<BeamLayout>.Empty;

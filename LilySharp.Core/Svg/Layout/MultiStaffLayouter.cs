@@ -2479,19 +2479,11 @@ internal sealed class MultiStaffLayouter
         if (staffTuplets.IsEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
 
-        var detector = new BeamDetector();
-        var beamGroups = ImmutableArray.CreateBuilder<BeamGroup>();
-        for (int v = 0; v < staff.Voices.Length; v++)
-        {
-            // A tuplet bounds beaming only inside its OWN voice — the same filter
-            // BeamDetector.DetectBeamGroups(Score) applies, for the same reason.
-            var voiceTuplets = staffTuplets.Where(t => t.VoiceIndex == v).ToImmutableArray();
-            int voiceIndex = v;
-            beamGroups.AddRange(detector.DetectBeamGroups(
-                staff.Voices[v], score.TimeSignature, voiceTuplets,
-                voiceIndex: v,
-                forceStemUpAt: mi => VoiceDefaults.GetDefaultStemUpAt(staff.Voices, voiceIndex, mi)));
-        }
+        // The staff quantity, read from the per-staff memo. The per-voice fan that lived
+        // here was BeamDetector.DetectBeamGroups(Score)'s own multi-voice fan spelt a
+        // second time — see StaffBeamGroupsOf for the map and the single-voice
+        // equivalence argument.
+        var beamGroups = StaffBeamGroupsOf(score, staff, staffIndex);
 
         var staffBeams = beamLayouts.IsDefaultOrEmpty
             ? beamLayouts
@@ -2501,7 +2493,7 @@ internal sealed class MultiStaffLayouter
                 b1.MemberStaffIndices, b1.RestXPositions)).ToImmutableArray();
         return TupletBracketEngraver.Calculate(
             staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
-            beamGroups.ToImmutable(), beamLayouts: staffBeams,
+            beamGroups, beamLayouts: staffBeams,
             forceStemUp: staff.IsMultiVoice,
             measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                 { [staffIndex] = staff.PrimaryVoice.Measures },
@@ -2905,10 +2897,33 @@ internal sealed class MultiStaffLayouter
             Measures: measureLayouts,
             StaffGroups: ImmutableArray.Create(group),
             Indent: 0);
+        var staffScore = StaffBeamScoreOf(score, staff, staffIndex);
+        return _elementCoordinator.LayoutBeams(
+            staffScore, ImmutableArray.Create(system), staffIndex: 0,
+            StaffBeamGroupsOf(score, staff, staffIndex));
+    }
+
+    /// <summary>
+    /// The score one staff's beams are detected and laid out on: every voice of the staff
+    /// (auto-beaming runs per voice, so a second-voice beam never forms on a
+    /// primary-voice-only score) and only THIS staff's tuplets (beam detection breaks at
+    /// tuplet boundaries by note index, so a tuplet on another staff would split a beam at
+    /// a colliding index).
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME ON PURPOSE: this construction used to be spelt twice — here and in
+    /// <c>LayoutEngine.RunPreliminaryAnnotationPass</c> — and the beam memo's soundness
+    /// rests on the spellings agreeing (HANDOFF §5.2.1②). The detector reads exactly three
+    /// things of this score — Voices, TimeSignature, TupletBrackets — and nothing else
+    /// (<see cref="BeamDetector"/> is stateless and its Score entry touches only those), so
+    /// the clef/tempo/header fields here serve the LAYOUT call, not the detection.
+    /// </remarks>
+    internal static Score StaffBeamScoreOf(MultiStaffScore score, Staff staff, int staffIndex)
+    {
         var staffTuplets = score.TupletBrackets.IsDefaultOrEmpty
             ? ImmutableArray<TupletBracketItem>.Empty
             : score.TupletBrackets.Where(t => t.StaffIndex == staffIndex).ToImmutableArray();
-        var staffScore = staff.Voices.Length > 1
+        return staff.Voices.Length > 1
             ? new Score(
                 staff.Voices, score.TimeSignature, score.KeySignature,
                 LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
@@ -2917,7 +2932,76 @@ internal sealed class MultiStaffLayouter
                 staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                 LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                 tupletBrackets: staffTuplets);
-        return _elementCoordinator.LayoutBeams(staffScore, ImmutableArray.Create(system), staffIndex: 0);
+    }
+
+    private sealed record StaffBeamGroupsEntry(
+        int StaffIndex, TimeSignature TimeSignature,
+        ImmutableArray<TupletBracketItem> ScoreTuplets, ImmutableArray<BeamGroup> Groups);
+
+    /// <summary>One staff's detected beam groups, computed once per staff and read by every
+    /// consumer of the staff quantity — see <see cref="StaffBeamGroupsOf"/>.</summary>
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Staff, StaffBeamGroupsEntry> _staffBeamGroups = new();
+
+    /// <summary>
+    /// This staff's beam groups — <see cref="BeamDetector"/> run on
+    /// <see cref="StaffBeamScoreOf"/> — detected once and shared by every consumer of that
+    /// quantity, where each consumer used to run its own detection per keystroke
+    /// (HANDOFF §1 ⒫: ~17–22 ms per detection at 1000 measures, times the caller count).
+    /// </summary>
+    /// <remarks>
+    /// WHO DETECTS, ON WHICH SCORE, WHEN — the map this memo folds (session 139):
+    /// <list type="bullet">
+    /// <item>THE STAFF QUANTITY (this memo): all of the staff's voices + the score's time
+    /// signature + this staff's tuplets. Four consumers, every one of which detected it
+    /// itself before this memo: the preliminary per-staff beam pass
+    /// (<c>LayoutEngine.LayoutPreliminaryStaffBeams</c>, every keystroke × every staff), the
+    /// edge-staff beams seeding the first page Y and each system's silhouette
+    /// (<c>LayoutEngine</c>'s <c>EdgeStaffBeams</c> → <see cref="StaffBeamLayouts"/>,
+    /// unconditional + per system-skyline miss), the per-staff skylines' beams
+    /// (<c>BuildAllStaffSkylines</c> → <see cref="StaffBeamLayouts"/>, per staff-skyline
+    /// miss) and the tuplet bracket-visibility groups
+    /// (<see cref="StaffTupletBracketLayouts"/>, same misses, tuplet staves only).</item>
+    /// <item>THE ANNOTATION QUANTITY IS NOT THIS ONE and stays out: the primary staff's
+    /// PRIMARY VOICE against the WHOLE score's tuplet list, detected once per layout and
+    /// carried prelim→final (<c>PreliminaryPass.AnnotationBeamGroups</c>). On a multi-voice
+    /// or multi-staff score it differs from every staff quantity (no second voice, no
+    /// stem-direction forcing, foreign staves' tuplets present).</item>
+    /// <item>THE COLLECT-PHASE PROBE (<c>MeasureCollector.ResolveBeamStemDirections</c>)
+    /// runs before any <see cref="Staff"/> exists, to bake the stem directions INTO the
+    /// items this detection then reads — it cannot share by construction.</item>
+    /// </list>
+    /// SOUNDNESS: keyed on the <see cref="Staff"/> INSTANCE — replaced wholesale when the
+    /// music is edited, the same argument <c>_restCollisions</c> makes — and validated
+    /// against the only two detection inputs living OUTSIDE the staff: the score's time
+    /// signature (by value) and its tuplet list (by array identity). A score-level change
+    /// of either recomputes; a rebuilt-but-content-equal tuplet array merely misses.
+    /// <para>
+    /// ⚠️ A SINGLE-VOICE STAFF TAKES THE Score ENTRY'S UNFANNED PATH, which
+    /// <see cref="StaffTupletBracketLayouts"/>' old per-voice fan spelt differently
+    /// (voice-filtered tuplets + an always-supplied <c>forceStemUpAt</c>). Same function
+    /// there, twice over: ⑴ both read sites take <c>forceStemUpAt?.Invoke(..) ?? …</c>
+    /// (BeamDetector :335/:595) and <c>GetDefaultStemUpAt</c> of a one-voice staff is null
+    /// at every measure (<c>IsPolyphonicAt</c> finds no second track), so the lambda IS the
+    /// null; ⑵ a one-voice staff's tuplets all carry VoiceIndex 0 — a nonzero index is
+    /// assigned only inside a <c>voice { }</c> block (<c>MeasureCollector._currentVoiceIndex</c>),
+    /// which builds extra voice tracks, so the voice filter drops nothing. The multi-voice
+    /// fan is the Score entry's own fan, line for line.
+    /// </para>
+    /// </remarks>
+    internal ImmutableArray<BeamGroup> StaffBeamGroupsOf(
+        MultiStaffScore score, Staff staff, int staffIndex)
+    {
+        if (_staffBeamGroups.TryGetValue(staff, out var hit)
+            && hit.StaffIndex == staffIndex
+            && hit.TimeSignature == score.TimeSignature
+            && hit.ScoreTuplets == score.TupletBrackets)
+            return hit.Groups;
+        var groups = _elementCoordinator.DetectBeamGroups(
+            StaffBeamScoreOf(score, staff, staffIndex));
+        _staffBeamGroups.AddOrUpdate(staff, new StaffBeamGroupsEntry(
+            staffIndex, score.TimeSignature, score.TupletBrackets, groups));
+        return groups;
     }
 
     /// <summary>Half-height (ss) of a bold sans chord symbol's cap above its

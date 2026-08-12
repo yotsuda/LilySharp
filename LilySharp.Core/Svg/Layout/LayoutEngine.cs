@@ -227,8 +227,9 @@ internal sealed class LayoutEngine
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
         // spacing extents before the page Y is fixed.
         var prelim = RunPreliminaryAnnotationPass(
-            score, systems.ToImmutableArray(), perSystemExtents, perSystemSkylines,
-            multiStaffLayouter.RestCollisionsOf);
+            score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
+            perSystemSkylines, multiStaffLayouter.RestCollisionsOf, systemCache,
+            commonShortestDuration);
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
@@ -299,7 +300,15 @@ internal sealed class LayoutEngine
             // them every tuplet bracket draws even when fully beamed. The
             // beam LAYOUTS let the suppressed-bracket number attach to the
             // beam itself.
-            BeamGroups = _elementCoordinator.DetectBeamGroups(primaryScore),
+            // ⚠️ CARRIED from the preliminary pass, not detected a second time: the two
+            // detections consumed IDENTICAL inputs — prelimScore and primaryScore hand
+            // BeamDetector the same PrimaryVoice, TimeSignature and TupletBrackets
+            // instances (detection reads nothing else of the Score, and the detector is
+            // stateless) — so this is the same value, not an approximation of it. The
+            // fields the two Scores DO differ in (swing, chord names, header) never
+            // reach the detector; if detection ever grows such an input, this carry
+            // must be re-examined.
+            BeamGroups = prelim.AnnotationBeamGroups,
             BeamLayouts = allBeamLayouts.ToImmutableArray(),
             TieLayouts = allTieLayouts.ToImmutableArray(),
             SlurLayouts = allSlurLayouts.ToImmutableArray(),
@@ -595,19 +604,27 @@ internal sealed class LayoutEngine
     /// element-wise (LeftX/LeftY/RightX/RightY/member X positions/system/staff), 0 mismatches,
     /// with a poisoned control run proving the comparison reports when it should.
     /// The second layout cost 385.5 ms of a 2.1 s keystroke on perf-plain1k.
+    /// ⚠️ THE ANNOTATION-CONTEXT BEAM GROUPS RIDE ALONG TOO (session 138): the final
+    /// annotation context used to run its own <c>DetectBeamGroups(primaryScore)</c>, but the
+    /// preliminary context's detection consumed the SAME voice/time-signature/tuplet
+    /// instances, and the detector is a stateless pure function of exactly those three —
+    /// see the carry site in <c>Layout</c> for the full argument.
     /// ⚠️ TIES AND SLURS ARE NOT CARRIED and must not be: the preliminary pass lays them out
     /// on the PRIMARY VOICE ONLY (`staffScore`) while the final pass uses every voice
     /// (`staffSpannerScore`), so they are not the same quantity — see this method's body.
     /// </remarks>
     private readonly record struct PreliminaryPass(
         List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
-        Dictionary<int, ImmutableArray<BeamLayout>> BeamsByStaff);
+        Dictionary<int, ImmutableArray<BeamLayout>> BeamsByStaff,
+        ImmutableArray<BeamGroup> AnnotationBeamGroups);
 
     private PreliminaryPass RunPreliminaryAnnotationPass(
-        MultiStaffScore score, ImmutableArray<SystemLayout> prelimSystems,
+        MultiStaffScore score, MultiStaffLayouter layouter,
+        ImmutableArray<SystemLayout> prelimSystems,
         List<(double upExtent, double downExtent)> perSystemExtents,
         List<(VerticalSkyline up, VerticalSkyline down)> perSystemSkylines,
-        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf)
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
+        SystemLayoutCache? systemCache, double commonShortestDuration)
     {
         var prelimStaff = score.PrimaryContentStaff;
         var prelimScore = new Score(
@@ -625,24 +642,21 @@ internal sealed class LayoutEngine
         var prelimSlurs = new List<SlurLayout>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
-            // Beam detection breaks at tuplet boundaries by note index, so a
-            // per-staff beam score must see only THIS staff's tuplets — else a
-            // tuplet on another staff would split a beam at a colliding index.
             var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
             var staffScore = new Score(
                 staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                 ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                 tupletBrackets: staffTuplets);
-            // Beams detect per voice — expose every voice so voice 2's beam
-            // protrusions join the spacing extents (matches the final pass).
+            // Beams live on the staff quantity — every voice (so voice 2's beam
+            // protrusions join the spacing extents, matching the final pass), this
+            // staff's tuplets only (a foreign staff's tuplet would split a beam at a
+            // colliding note index) — whose one construction and one detection are
+            // MultiStaffLayouter.StaffBeamScoreOf / StaffBeamGroupsOf.
             // Ties/slurs keep the primary-voice prelim score (unchanged).
-            var staffBeamScore = staff.Voices.Length > 1
-                ? new Score(
-                    staff.Voices, score.TimeSignature, score.KeySignature,
-                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                    tupletBrackets: staffTuplets)
-                : staffScore;
-            var staffPrelimBeams = _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex);
+            var staffBeamScore = MultiStaffLayouter.StaffBeamScoreOf(score, staff, staffIndex);
+            var staffPrelimBeams = LayoutPreliminaryStaffBeams(
+                staffBeamScore, layouter.StaffBeamGroupsOf(score, staff, staffIndex),
+                prelimSystems, staffIndex, systemCache, commonShortestDuration);
             prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
             var staffPrelimTies = _elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff);
@@ -691,6 +705,9 @@ internal sealed class LayoutEngine
                 foreach (var st in sg.Staves)
                     prelimStaffYByIndex[st.StaffIndex] = -st.Y;
 
+        // Detected ONCE for both annotation contexts — the final context carries this
+        // value instead of re-detecting on primaryScore (see the carry site in Layout).
+        var annotationBeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore);
         var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = prelimScore,
@@ -709,7 +726,7 @@ internal sealed class LayoutEngine
             ChordNames = score.ChordNames,
             PercentRepeats = score.PercentRepeats,
             TrillSpanners = score.TrillSpanners,
-            BeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore),
+            BeamGroups = annotationBeamGroups,
             BeamLayouts = prelimBeams.ToImmutableArray(),
             TieLayouts = prelimTies.ToImmutableArray(),
             SlurLayouts = prelimSlurs.ToImmutableArray(),
@@ -737,8 +754,136 @@ internal sealed class LayoutEngine
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
                 prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
                 prelimTies.ToImmutableArray()),
-            prelimBeamsByStaff);
+            prelimBeamsByStaff,
+            annotationBeamGroups);
     }
+
+    /// <summary>
+    /// One staff's preliminary beams, reused per system through the
+    /// <see cref="SystemLayoutCache"/>: on an edit, only the systems whose content changed
+    /// re-run the quanter; every other system's beams come back from the memo. Without
+    /// this, one keystroke re-scored every beam in the score (measured session 136:
+    /// 2,030 quanter runs / 365 ms of a 1.6 s plain1k keystroke, linear in the measure
+    /// count and independent of the edit position).
+    /// </summary>
+    /// <remarks>
+    /// SOUNDNESS: a system's beams are a function of the cache's existing key — see
+    /// <see cref="SystemLayoutCache.GetOrComputeStaffSystemBeams"/> for the coverage
+    /// argument and why (staffIndex, systemIndex) join it. Three structural points here:
+    /// <list type="bullet">
+    /// <item>ONE DETECTION, EVERY CONSUMER: the groups arrive from the per-staff detection
+    /// memo (<see cref="MultiStaffLayouter.StaffBeamGroupsOf"/>, shared with the skyline
+    /// and tuplet consumers) and the same instances are both partitioned and handed to
+    /// every layout call (the <c>precomputedGroups</c> parameter), so the partition can
+    /// never disagree with what the layout lays out.</item>
+    /// <item>CROSS-SYSTEM GROUPS DEFEAT THE MEMO for the whole staff: a group whose
+    /// members span systems depends on a NEIGHBOUR system's content, which the per-system
+    /// key does not cover — so the staff falls back to the unmemoized call (byte-identical
+    /// to the old path). Groups touching a measure outside every system take the same
+    /// fallback, conservatively.</item>
+    /// <item>REASSEMBLY IS IN DETECTION ORDER, cursor-matched by each group's identity
+    /// (voice, first member's measure, first member's item) — NOT per-system concatenation,
+    /// which would reorder a polyphonic staff's beams (detection is voice-major) and the
+    /// renderer draws in list order. A group the layout skipped (its guards) simply fails
+    /// the identity match and advances nothing, exactly reproducing the unpartitioned
+    /// call's output.</item>
+    /// </list>
+    /// The per-system sub-call sees a ONE-SYSTEM measure map, which resolves exactly the
+    /// measures this partition's groups live in, so its per-group answers are the ones the
+    /// full call computes.
+    /// </remarks>
+    private ImmutableArray<BeamLayout> LayoutPreliminaryStaffBeams(
+        Score staffBeamScore, ImmutableArray<BeamGroup> groups,
+        ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
+        SystemLayoutCache? systemCache, double commonShortestDuration)
+    {
+        if (systemCache is null || groups.IsEmpty || prelimSystems.Length == 0)
+            return _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex, groups);
+
+        var measureToSystem = new Dictionary<int, int>();
+        for (int k = 0; k < prelimSystems.Length; k++)
+            foreach (var ml in prelimSystems[k].Measures)
+                measureToSystem[ml.MeasureIndex] = k;
+
+        // Which single system each group lives in; -1 = spans systems or reaches an
+        // unmapped measure (either way: not memoizable).
+        var groupSystem = new int[groups.Length];
+        for (int i = 0; i < groups.Length; i++)
+        {
+            int home = -2;
+            foreach (var m in groups[i].Members)
+            {
+                if (!measureToSystem.TryGetValue(
+                        m.ResolveMeasureIndex(groups[i].MeasureIndex), out int k)
+                    || (home != -2 && home != k))
+                {
+                    home = -1;
+                    break;
+                }
+                home = k;
+            }
+            groupSystem[i] = home == -2 ? -1 : home;
+            if (groupSystem[i] < 0)
+                return _elementCoordinator.LayoutBeams(
+                    staffBeamScore, prelimSystems, staffIndex, groups);
+        }
+
+        var groupsBySystem = new Dictionary<int, List<BeamGroup>>();
+        for (int i = 0; i < groups.Length; i++)
+        {
+            if (!groupsBySystem.TryGetValue(groupSystem[i], out var list))
+                groupsBySystem[groupSystem[i]] = list = new List<BeamGroup>();
+            list.Add(groups[i]);
+        }
+
+        var perSystem = new Dictionary<int, ImmutableArray<BeamLayout>>();
+        foreach (var (k, sysGroups) in groupsBySystem)
+        {
+            var sys = prelimSystems[k];
+            // The scalar key is exactly the one this system's measure layouts were
+            // memoized under (LayoutSystems): its measure range, edge flags, ITS indent
+            // (SystemLayout.Indent carries the first/short choice) and the score-wide
+            // common shortest duration.
+            perSystem[k] = systemCache.GetOrComputeStaffSystemBeams(
+                staffIndex, sys.SystemIndex,
+                sys.Measures[0].MeasureIndex, sys.Measures.Length,
+                isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
+                sys.Indent, commonShortestDuration,
+                () => _elementCoordinator.LayoutBeams(
+                    staffBeamScore, ImmutableArray.Create(sys), staffIndex,
+                    sysGroups.ToImmutableArray()));
+        }
+
+        var cursors = new Dictionary<int, int>();
+        var result = ImmutableArray.CreateBuilder<BeamLayout>();
+        for (int i = 0; i < groups.Length; i++)
+        {
+            int k = groupSystem[i];
+            var laid = perSystem[k];
+            int c = cursors.GetValueOrDefault(k);
+            if (c < laid.Length && SameBeamGroupIdentity(laid[c].Group, groups[i]))
+            {
+                result.Add(laid[c]);
+                cursors[k] = c + 1;
+            }
+        }
+        return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// Whether two detections name the SAME beam group: same voice, same first stem
+    /// (its measure and item). Unique per staff — no two groups share a first stem.
+    /// Compared by content, not reference, because a memo hit returns layouts whose
+    /// <see cref="BeamLayout.Group"/> came from a PREVIOUS edit's detection of the same
+    /// (unchanged) music. An intra-system multi-measure piece's group anchors at its
+    /// first member's measure (see <c>LayoutCrossMeasureBeamPieces</c>), so the resolved
+    /// first-member comparison holds for it too.
+    /// </summary>
+    private static bool SameBeamGroupIdentity(BeamGroup a, BeamGroup b)
+        => a.VoiceIndex == b.VoiceIndex
+           && a.Members[0].ResolveMeasureIndex(a.MeasureIndex)
+              == b.Members[0].ResolveMeasureIndex(b.MeasureIndex)
+           && a.Members[0].ItemIndex == b.Members[0].ItemIndex;
 
     /// <summary>
     /// The per-staff lookups and the anchor Ys the annotation engravers position against.

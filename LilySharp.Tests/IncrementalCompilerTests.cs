@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -608,6 +611,63 @@ public class IncrementalCompilerTests
         Assert.True(session.LastEditSkippedLineBreak);
         Assert.False(session.LastEditReusedLayout);
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    /// <summary>
+    /// The per-system BEAM memo's incremental==full gate (HANDOFF §1 ⒟⁶ first step). Every
+    /// other session fixture here is beamless quarters, so before this test no suite member
+    /// ever returned a CACHED beam layout into a rendered picture: a keystroke edits one
+    /// measure, the edited system recomputes (miss), and every other system's preliminary
+    /// beams come back from <c>SystemLayoutCache.GetOrComputeStaffSystemBeams</c> (hits) —
+    /// then ride into the final spanner pass. Byte-equality against a cache-free full render
+    /// on EVERY step is what says a hit is the same beams, in the same order, as a fresh
+    /// layout (the reassembly is cursor-matched by group identity; a defect there reorders
+    /// or drops a beam and changes the SVG).
+    /// </summary>
+    [Fact]
+    public void ChainedEditsOnABeamedMultiSystemScore_AlwaysMatchFull()
+    {
+        // 18 eighth-note measures: breaks into multiple systems on the default paper,
+        // 2 beams per measure — so an edit in ONE measure leaves most systems' beams
+        // to the memo. Bar 10 is spelled uniquely (its double g8) purely so the toggle
+        // below has an unambiguous anchor in an otherwise-repeated text.
+        // (Verified multi-system below, so the fixture cannot silently shrink into a
+        // single-system score where the memo has nothing to reuse.)
+        var plain = string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 9));
+        var bars = plain + " c8 d8 e8 f8 g8 g8 b8 c'8 | "
+            + string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 8));
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { " + bars + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        Assert.Equal(Full(source), Norm(session.Render()));
+
+        // (find, replace) — a pitch toggle in the unique bar (one system misses, the rest
+        // hit), then its inverse, then a structural insertion at the head that SHIFTS every
+        // later system's index (the memo keys on systemIndex, so shifted systems must miss
+        // and recompute rather than reuse a stale stamp).
+        var steps = new (string Find, string Replace)[]
+        {
+            ("g8 g8 b8", "a8 a8 b8"),
+            ("a8 a8 b8", "g8 g8 b8"),
+            ("melody { c8", "melody { r1 | c8"),
+        };
+        foreach (var (find, replace) in steps)
+        {
+            string current = session.Tree.Text;
+            var change = Replace(current, find, replace);
+            int at = current.IndexOf(find, System.StringComparison.Ordinal);
+            string editedText = current[..at] + replace + current[(at + find.Length)..];
+
+            var incremental = Norm(session.Edit(change));
+            Assert.Equal(Full(editedText), incremental);
+        }
+
+        // The fixture's premise, asserted so it cannot rot: the final layout really has
+        // several systems (else every step above degenerated to one-system misses).
+        var lastLayout = new LayoutEngine().Layout(
+            SvgGenerator.CollectScore(session.Tree, RenderSpecParser.FindFirst(session.Tree)));
+        Assert.True(lastLayout.AllSystems.Length >= 3,
+            $"fixture shrank to {lastLayout.AllSystems.Length} system(s); the memo has nothing to reuse");
     }
 
     [Fact]

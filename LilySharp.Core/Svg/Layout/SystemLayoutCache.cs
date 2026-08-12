@@ -55,6 +55,7 @@ internal sealed class SystemLayoutCache
     private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new();
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new();
     private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new();
+    private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -66,6 +67,7 @@ internal sealed class SystemLayoutCache
         _measures.NextGeneration();
         _skylines.NextGeneration();
         _staffSkylines.NextGeneration();
+        _staffSystemBeams.NextGeneration();
     }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
@@ -132,6 +134,38 @@ internal sealed class SystemLayoutCache
         => _skylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: systemHeight, compute, out _);
 
+    /// <summary>Reuses or computes ONE staff's laid-out beams for ONE system — the
+    /// preliminary annotation pass's per-(staff, system) unit of work.</summary>
+    /// <remarks>
+    /// Keyed like <see cref="GetOrComputeMeasures"/> — the beams are a function of that
+    /// system's measure layouts (member Xs come from <c>MeasureLayout.X</c> /
+    /// <c>GetXForTiming</c>) plus the voices' own measures, tuplet spans and the entry
+    /// time signature, all of which the content-key slice already folds. That is the same
+    /// coverage claim <see cref="GetOrComputeStaffSkylines"/> makes for the beams IT
+    /// computes (via <c>MultiStaffLayouter.StaffBeamLayouts</c>), and the same one the
+    /// edge-beam lambda in <c>LayoutEngine</c> relies on.
+    /// <list type="bullet">
+    /// <item><paramref name="systemIndex"/> is in the key because <see cref="BeamLayout"/>
+    /// stamps <c>SystemIndex</c> — the same reason firstMeasureIndex is (an absolute stamp
+    /// must not survive a reuse under a different absolute).</item>
+    /// <item><paramref name="staffIndex"/> is in the key because the value is one staff's
+    /// beams and the stamp rides in <c>BeamLayout.StaffIndex</c>.</item>
+    /// <item>⚠️ A group whose members CROSS a system boundary must never be memoized here:
+    /// its piece in this system exists only because the group reaches into a NEIGHBOUR
+    /// system's measures, which this key does not cover. The caller
+    /// (<c>LayoutEngine.LayoutPreliminaryStaffBeams</c>) falls back to the unmemoized path
+    /// for the whole staff when any such group exists.</item>
+    /// </list>
+    /// </remarks>
+    public ImmutableArray<BeamLayout> GetOrComputeStaffSystemBeams(
+        int staffIndex, int systemIndex,
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        Func<ImmutableArray<BeamLayout>> compute)
+        => _staffSystemBeams.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
+            isLastSystem, indent, commonShortestDuration, extra: systemIndex,
+            compute, out _, extra2: staffIndex);
+
     // A keyed memo: bucket by a hash of (system identity + extra scalar + content
     // slice), verify the full key exactly on hit so collisions only cost a recompute.
     private sealed class TypedCache<T>
@@ -140,7 +174,7 @@ internal sealed class SystemLayoutCache
         {
             public readonly int First, Count;
             public readonly bool IsFirst, IsLast;
-            public readonly double Indent, Shortest, Extra;
+            public readonly double Indent, Shortest, Extra, Extra2;
             public readonly ImmutableArray<MeasureContentKey> Content;
             public readonly T Value;
 
@@ -149,20 +183,22 @@ internal sealed class SystemLayoutCache
             public int Generation;
 
             public Entry(int first, int count, bool isFirst, bool isLast, double indent,
-                double shortest, double extra, ImmutableArray<MeasureContentKey> content, T value,
-                int generation)
+                double shortest, double extra, double extra2,
+                ImmutableArray<MeasureContentKey> content, T value, int generation)
             {
                 First = first; Count = count; IsFirst = isFirst; IsLast = isLast;
-                Indent = indent; Shortest = shortest; Extra = extra; Content = content; Value = value;
+                Indent = indent; Shortest = shortest; Extra = extra; Extra2 = extra2;
+                Content = content; Value = value;
                 Generation = generation;
             }
 
             public bool Matches(int first, int count, bool isFirst, bool isLast, double indent,
-                double shortest, double extra, ReadOnlySpan<MeasureContentKey> content)
+                double shortest, double extra, double extra2,
+                ReadOnlySpan<MeasureContentKey> content)
             {
                 if (First != first || Count != count || IsFirst != isFirst || IsLast != isLast
                     || Indent != indent || Shortest != shortest || Extra != extra
-                    || Content.Length != content.Length)
+                    || Extra2 != extra2 || Content.Length != content.Length)
                     return false;
                 for (int i = 0; i < content.Length; i++)
                     if (Content[i] != content[i])
@@ -195,7 +231,7 @@ internal sealed class SystemLayoutCache
 
         public T GetOrCompute(ImmutableArray<MeasureContentKey> keys,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
-            double extra, Func<T> compute, out bool hit)
+            double extra, Func<T> compute, out bool hit, double extra2 = 0)
         {
             if (keys.IsDefault || first < 0 || first + count > keys.Length)
             {
@@ -215,6 +251,7 @@ internal sealed class SystemLayoutCache
             hc.Add(indent);
             hc.Add(shortest);
             hc.Add(extra);
+            hc.Add(extra2);
             foreach (var k in slice)
                 hc.Add(k);
             int bucketKey = hc.ToHashCode();
@@ -223,7 +260,7 @@ internal sealed class SystemLayoutCache
             {
                 foreach (var e in list)
                 {
-                    if (e.Matches(first, count, isFirst, isLast, indent, shortest, extra, slice))
+                    if (e.Matches(first, count, isFirst, isLast, indent, shortest, extra, extra2, slice))
                     {
                         e.Generation = _generation; // live this pass -> eviction-exempt
                         hit = true;
@@ -238,7 +275,7 @@ internal sealed class SystemLayoutCache
             }
 
             var fresh = compute();
-            var entry = new Entry(first, count, isFirst, isLast, indent, shortest, extra,
+            var entry = new Entry(first, count, isFirst, isLast, indent, shortest, extra, extra2,
                 slice.ToImmutableArray(), fresh, _generation);
             list.Add(entry);
             _insertionOrder.Enqueue((bucketKey, entry));
