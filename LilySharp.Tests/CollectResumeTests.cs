@@ -15,11 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -40,9 +38,9 @@ namespace LilySharp.Tests;
 /// difference on whichever fixture exercises it.
 /// </summary>
 /// <remarks>
-/// Same-document only (Δ=0) by design: the per-measure collect memo adds the
-/// edit-window diff and the source-position shifter ON TOP of this machinery,
-/// so the resume path proven here is the one the memo will drive.
+/// Same-document only (Δ=0) by design — the skip/adopt/restore path itself.
+/// The cross-edit (Δ≠0) prefix resume built on top of it (CollectResumePlanner)
+/// has its own net, <see cref="CollectEditResumeTests"/>.
 /// </remarks>
 public class CollectResumeTests
 {
@@ -183,7 +181,7 @@ public class CollectResumeTests
                     }
                     else
                     {
-                        var diff = DeepDiff.FirstDifference(full, resumedScore, "score");
+                        var diff = ModelDeepDiff.FirstDifference(full, resumedScore, "score");
                         if (diff != null)
                             failures.Add($"{where}: {diff}");
                     }
@@ -219,9 +217,9 @@ public class CollectResumeTests
         return $"lengths {a.Length}/{b.Length}, first diff at {i}: …{context}…";
     }
 
-    // ---------- book discovery ----------
+    // ---------- book discovery (shared with CollectEditResumeTests) ----------
 
-    private static IEnumerable<string> NetBooks()
+    internal static IEnumerable<string> NetBooks()
     {
         var root = FindRepoRoot();
         var dirs = new[]
@@ -239,7 +237,7 @@ public class CollectResumeTests
         }
     }
 
-    private static string FindRepoRoot()
+    internal static string FindRepoRoot()
     {
         var dir = AppContext.BaseDirectory;
         while (dir != null)
@@ -251,86 +249,5 @@ public class CollectResumeTests
         throw new DirectoryNotFoundException("Cannot find the repository root");
     }
 
-    // ---------- exact deep comparison ----------
-
-    /// <summary>
-    /// Structural equality over the whole model, positions included — unlike
-    /// <see cref="MeasureContentKey"/>, which deliberately excludes them. Record
-    /// <c>Equals</c> cannot be trusted here (ImmutableArray members compare by
-    /// reference), so everything is walked: primitives by value, enumerables
-    /// element-wise, everything else property-by-property. Returns a describing
-    /// path for the FIRST difference, or null when the graphs match.
-    /// </summary>
-    private static class DeepDiff
-    {
-        private static readonly Dictionary<Type, PropertyInfo[]> Props = new();
-
-        public static string? FirstDifference(object? a, object? b, string path)
-        {
-            if (ReferenceEquals(a, b))
-                return null;
-            if (a is null || b is null)
-                return $"{path}: {Describe(a)} vs {Describe(b)}";
-            var type = a.GetType();
-            if (type != b.GetType())
-                return $"{path}: type {a.GetType().Name} vs {b.GetType().Name}";
-
-            if (type.IsPrimitive || type.IsEnum || a is string || a is decimal)
-                return a.Equals(b) ? null : $"{path}: {a} vs {b}";
-            if (a is double da && b is double db)
-                return da.Equals(db) ? null : $"{path}: {da:R} vs {db:R}";
-
-            if (a is IEnumerable ea && b is IEnumerable eb)
-                return EnumerableDifference(ea, eb, path);
-
-            var props = GetProps(type);
-            if (props.Length == 0)
-                return a.Equals(b) ? null : $"{path}: {a} vs {b}";
-            foreach (var p in props)
-            {
-                object? va, vb;
-                try { va = p.GetValue(a); }
-                catch (Exception ex) { va = $"<threw {ex.GetBaseException().GetType().Name}>"; }
-                try { vb = p.GetValue(b); }
-                catch (Exception ex) { vb = $"<threw {ex.GetBaseException().GetType().Name}>"; }
-                var diff = FirstDifference(va, vb, $"{path}.{p.Name}");
-                if (diff != null)
-                    return diff;
-            }
-            return null;
-        }
-
-        private static string? EnumerableDifference(IEnumerable a, IEnumerable b, string path)
-        {
-            List<object?> la, lb;
-            try { la = a.Cast<object?>().ToList(); }
-            catch (InvalidOperationException) { la = new(); } // default ImmutableArray
-            try { lb = b.Cast<object?>().ToList(); }
-            catch (InvalidOperationException) { lb = new(); }
-            if (la.Count != lb.Count)
-                return $"{path}: count {la.Count} vs {lb.Count}";
-            for (int i = 0; i < la.Count; i++)
-            {
-                var diff = FirstDifference(la[i], lb[i], $"{path}[{i}]");
-                if (diff != null)
-                    return diff;
-            }
-            return null;
-        }
-
-        private static PropertyInfo[] GetProps(Type type)
-        {
-            if (Props.TryGetValue(type, out var cached))
-                return cached;
-            var props = type
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
-                .OrderBy(p => p.Name, StringComparer.Ordinal)
-                .ToArray();
-            Props[type] = props;
-            return props;
-        }
-
-        private static string Describe(object? v) => v?.ToString() ?? "null";
-    }
+    // Exact deep comparison: ModelDeepDiff.cs (shared with CollectEditResumeTests).
 }

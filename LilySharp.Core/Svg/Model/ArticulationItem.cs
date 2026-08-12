@@ -62,7 +62,7 @@ public sealed record ArticulationItem
     public string? PluckLetter { get; init; }
 
     /// <summary>Source position for click-to-source mapping.</summary>
-    public int SourcePosition { get; }
+    public int SourcePosition { get; init; }
 
     /// <summary>Global staff index this articulation belongs to (multi-staff
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>

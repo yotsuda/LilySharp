@@ -145,8 +145,21 @@ internal sealed class SystemBreaker
     /// by the primary staff alone would pack lines wherever that staff rests
     /// while another staff is dense.
     /// </remarks>
+    /// <param name="memo">Per-measure reuse hook (⒟⁗, HANDOFF §1 ▶): returns the PREVIOUS
+    /// edit's <see cref="MeasureSpringData"/> for index <c>i</c> when the incremental
+    /// driver has proven it unchanged, or null to compute it here. The proof lives with
+    /// the caller (<c>IncrementalCompiler.SpringReusable</c>): a measure's springs read
+    /// only measure <c>i</c> (all staves/voices, side-tables, entry context — all folded
+    /// into its content key), plus exactly three things from outside it — the previous
+    /// measure's end bar line (<see cref="SpacingRules.RunLeftBoundBarline"/>), the next
+    /// measure's run membership (<see cref="MmrRunMap.ForbidsBreakAfter"/>; its clef
+    /// allowance is already folded into key i), and the score-global common shortest
+    /// duration. There is deliberately NO second per-measure implementation: the memo
+    /// short-circuits THIS loop body, so a reused and a computed entry come from the one
+    /// implementation (§2 A — no second spelling of the same quantity).</param>
     internal static MeasureSpringData[] ComputeMultiStaffSpringData(MultiStaffScore score,
-                                                                    double? baseShortestDuration)
+                                                                    double? baseShortestDuration,
+                                                                    Func<int, MeasureSpringData?>? memo = null)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var layouter = new MeasureLayouter();
@@ -161,6 +174,12 @@ internal sealed class SystemBreaker
 
         for (int i = 0; i < measures.Length; i++)
         {
+            if (memo?.Invoke(i) is { } reused)
+            {
+                springData[i] = reused;
+                continue;
+            }
+
             var primaryMeasure = measures[i];
 
             if (runMap.IsInterior(i))

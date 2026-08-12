@@ -40,7 +40,7 @@ public sealed record DynamicItem
     public int ItemIndex { get; }
 
     /// <summary>Source position for click-to-source mapping.</summary>
-    public int SourcePosition { get; }
+    public int SourcePosition { get; init; }
 
     /// <summary>
     /// Global staff index (see <c>MultiStaffScore.EnumerateStaves</c>) this

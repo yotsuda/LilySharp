@@ -34,14 +34,39 @@ namespace LilySharp.Core.Svg.Collector;
 /// </summary>
 /// <remarks>
 /// <para>
-/// WHY SAME-DOCUMENT ONLY (this slice): resuming across an EDIT additionally
-/// needs (1) the dirty window (old/new text common prefix+suffix), (2) a source
-/// position shifter over the adopted prefix/suffix (every burned-in
-/// <c>SourcePosition</c>, <c>Measure.SourceStart/End</c>, side-table positions
-/// — HANDOFF §1 ⒭ ⑶ has the inventory), and (3) checkpoint-vs-state equality
-/// modulo that shift. All of that composes ON TOP of this machinery without
-/// changing it: the Δ=0 resume already exercises the whole skip/adopt/restore
-/// path, which is where the correctness risk lives.
+/// CROSS-EDIT (Δ≠0) PREFIX RESUME: <see cref="CollectResumePlanner"/> extends the
+/// same-document resume across an edit, for the PREFIX side only. The planner
+/// computes the dirty window (old/new text common prefix P + common suffix) and
+/// resumes each walk from its last checkpoint whose <b>entire read set</b> lies
+/// in the unchanged prefix (<see cref="WalkCheckpoint.MaxSourceRead"/> ≤ P) —
+/// so every adopted position is textually unchanged and NO position shifter is
+/// needed. That is also why adopting old-tree node references
+/// (<see cref="VoiceWalkRecording.ParallelSpans"/>) is sound here: their whole
+/// subtrees live in the unchanged prefix, so walking them later produces the
+/// same values a new-tree walk would.
+/// </para>
+/// <para>
+/// CROSS-EDIT SUFFIX SPLICE (⒭ ⑵, second slice — second half): once the live
+/// walk has processed PAST the dirty window, its state can meet a recorded
+/// checkpoint again. At each clean boundary the walk looks the current address
+/// up in <see cref="VoiceResumePlan.SuffixCandidates"/> (recorded checkpoints
+/// whose own node and remaining header reads lie outside the window); on an
+/// address hit it compares the ENTIRE live value state against the recorded
+/// checkpoint — position-bearing fields compared through the per-position map
+/// p ≤ P → p, p ≥ S → p+Δ (mixed provenance is real: a tail item cites its own
+/// shifted text, a phrase-expanded tail item cites an unshifted prefix body).
+/// When the state matches, the recorded tail — measures, cumulative side-table
+/// slices up to <see cref="VoiceWalkRecording.EndCheckpoint"/>'s watermarks,
+/// walk-local lists — is adopted as position-shifted COPIES, old-tree node
+/// references (<see cref="VoiceWalkRecording.ParallelSpans"/>) are re-resolved
+/// against the new tree, the collector's value state jumps to the recorded
+/// end-of-walk state, and the rest of the walk is skipped. Any doubt — a
+/// position inside the window, an unresolvable node, a changed canonical bar
+/// count — declines the splice and the walk simply keeps running live: a
+/// declined splice costs speed, never correctness (same posture as the plan).
+/// Δm ≠ 0 needs no separate bail: the state comparison includes the emitted
+/// measure count and every side-table watermark, so an edit that changed how
+/// many measures/items the window produces never matches any checkpoint.
 /// </para>
 /// <para>
 /// WHY "SAME WALK RE-ENTRY": HANDOFF §2C ⑴ forbids growing a third walk. The
@@ -76,9 +101,64 @@ internal sealed class CollectWalkProbe
     /// runs fully.</summary>
     public Dictionary<int, VoiceResumePlan> ResumePlans { get; } = new();
 
+    /// <summary>RESUME mode: the dirty window in OLD-text coordinates — the
+    /// old/new common prefix length, the old-text start of the common suffix,
+    /// and the length delta. The per-position shift map every suffix-splice
+    /// comparison and copy goes through is
+    /// <c>p ≤ WindowPrefix → p; p ≥ WindowSuffixStart → p + WindowDelta;
+    /// else undefined</c> (an undefined position declines the splice).</summary>
+    public int WindowPrefix;
+    /// <inheritdoc cref="WindowPrefix"/>
+    public int WindowSuffixStart;
+    /// <inheritdoc cref="WindowPrefix"/>
+    public int WindowDelta;
+
+    /// <summary>RESUME mode: whether the canonical section bar counts of the
+    /// edited text were verified equal to the recording's (null = not yet
+    /// checked; the first splice attempt of the collect computes it once).
+    /// The adopted tail contains section spacer padding whose COUNT is the
+    /// canonical bar count — a function of every part's cell text, which the
+    /// per-position output checks cannot see (HANDOFF §1 ⒭: "Δm≠0 は bail —
+    /// canonical bars／spacer padding が他 part の小節数を読む").</summary>
+    public bool? CanonicalBarsVerified;
+
+    /// <summary>RESUME mode: the two trees, for the LAZY parse-agreement check
+    /// (layer 4's suffix half — see <see cref="CollectResumePlanner"/>'s layer-4
+    /// remarks), plus its once-per-collect memo. Lazy on purpose: the whole-tree
+    /// structural walk is worth paying only when a splice's cheaper guards have
+    /// all passed — pricing it at plan time taxed every keystroke whose splice
+    /// candidates all decline (measured +30ms on perf-v2bow1k, session 148).
+    /// ⚠️ Do NOT read that as "perf-v2bow1k can never splice" (session 149,
+    /// measured and byte-verified): its one m=0 candidate splices the WHOLE
+    /// primary-walk recording whenever the edit sits in a non-primary voice of
+    /// the whole-book parallel span — the primary walk adopts no edited byte,
+    /// and voices 2..N are rebuilt live from the re-resolved spans. What always
+    /// declines is a PRIMARY-voice edit, whose adopted tail overlaps the window.
+    /// Both regimes are held by CollectEditResumeTests' V2bowWholeBookSpan
+    /// tests.</summary>
+    public Syntax.SyntaxNode? BaselineRoot;
+    /// <inheritdoc cref="BaselineRoot"/>
+    public Syntax.SyntaxNode? NewRoot;
+    /// <inheritdoc cref="BaselineRoot"/>
+    public bool? ParseAgreementsVerified;
+
     public static CollectWalkProbe Recorder() => new(recording: true);
 
     public static CollectWalkProbe Resumer() => new(recording: false);
+}
+
+/// <summary>
+/// A resume could not proceed: a runtime validation (walk-order address,
+/// cumulative-table watermark, voice identity) found the document's structure
+/// drifted from the recording in a way the plan-time guards could not see.
+/// The collect in progress is unusable; the caller falls back to a full
+/// collect with a FRESH collector (<see cref="IncrementalCompiler"/> does, and
+/// re-records the baseline there). Correctness is never at stake — a bail only
+/// costs the reuse.
+/// </summary>
+internal sealed class CollectResumeAbortException : Exception
+{
+    public CollectResumeAbortException(string message) : base(message) { }
 }
 
 /// <summary>Everything one primary walk recorded: its checkpoints plus the
@@ -88,12 +168,38 @@ internal sealed class VoiceWalkRecording
 {
     public string? VoiceName;
 
+    /// <summary>The cumulative side tables' counts when this walk STARTED — the
+    /// cross-edit resume verifies the live counts against these at walk entry,
+    /// because a checkpoint's <see cref="WalkCheckpoint.TableCounts"/> watermark
+    /// bakes in every earlier walk's contribution: if an edit changed an earlier
+    /// walk's item count, the watermark slices would land at shifted offsets.</summary>
+    public int[]? StartTableCounts;
+
+    /// <summary>The header spans this walk read, in walk order: the part's
+    /// name/config children at entry, then each visited section's name and
+    /// header directives. These reads burn label/data-pos positions and seed
+    /// prologue state but are NOT in <see cref="WalkCheckpoint.MaxSourceRead"/>
+    /// (declarations often sit BELOW the music that references them, so a scalar
+    /// max would reject everything); instead each checkpoint records how many
+    /// were read (<see cref="WalkCheckpoint.HeaderReadCount"/>) and the planner
+    /// verifies that prefix span-by-span — content AND position stable.</summary>
+    public List<Syntax.TextSpan>? HeaderReads;
+
     public List<WalkCheckpoint> Checkpoints { get; } = new();
 
     /// <summary>The walk's measures BEFORE <c>FinalizeMeasures</c> mutates them
     /// (repeat collapse, trailing clef column) — the values a resumed builder
     /// must re-enter with, so its own finalize reproduces those mutations.</summary>
     public List<Measure>? PreFinalizeMeasures;
+
+    /// <summary>The end-of-walk state, captured at the walk's final clean
+    /// boundary (null when the walk ends mid-measure or a carry is in flight —
+    /// such a walk cannot suffix-splice, only prefix-resume). Its address
+    /// fields are sentinels (-2/-1); what a splice consumes is the VALUE state
+    /// (the state post-walk passes read: metadata for CaptureScoreContent,
+    /// the section maps, the key timeline) and the watermark counts that end
+    /// the adopted tail slices.</summary>
+    public WalkCheckpoint? EndCheckpoint;
 
     /// <summary>Walk-local, cleared-per-walk lists, copied at walk end. Their
     /// prefix (by checkpoint count) is what a resume adopts.</summary>
@@ -108,19 +214,35 @@ internal sealed class VoiceWalkRecording
 }
 
 /// <summary>A resume instruction for one primary walk: skip to
-/// <see cref="Checkpoint"/>, adopting the prefix from <see cref="Recording"/>
-/// (walk-local lists, pre-finalize measures) and the cumulative side-table
-/// slices from <see cref="Source"/>'s final lists (append-only, so their first
-/// N entries are exactly what stood at the checkpoint).</summary>
+/// <see cref="Checkpoint"/> (the PREFIX side; null when no prefix checkpoint
+/// qualifies but a suffix splice might), adopting the prefix from
+/// <see cref="Recording"/> (walk-local lists, pre-finalize measures) and the
+/// cumulative side-table slices from <see cref="Source"/>'s final lists
+/// (append-only, so their first N entries are exactly what stood at the
+/// checkpoint). <see cref="SuffixCandidates"/> is the SUFFIX side: recorded
+/// checkpoints the live walk may re-meet past the dirty window, keyed at walk
+/// entry by their shifted address for O(1) lookup per clean boundary.</summary>
 internal sealed class VoiceResumePlan
 {
-    public required WalkCheckpoint Checkpoint { get; init; }
+    public required WalkCheckpoint? Checkpoint { get; init; }
     public required VoiceWalkRecording Recording { get; init; }
     public required MeasureCollector Source { get; init; }
 
-    /// <summary>Set when the walk actually restored this plan — a plan left
-    /// unconsumed means the walk never reached its target (a bug).</summary>
+    /// <summary>Recorded checkpoints eligible as suffix splice targets: their
+    /// own node and every header read at-or-after theirs lies outside the dirty
+    /// window, and the recording has an <see cref="VoiceWalkRecording.EndCheckpoint"/>
+    /// to jump to. In walk order (a subrange of the recording's checkpoints).</summary>
+    public IReadOnlyList<WalkCheckpoint>? SuffixCandidates { get; init; }
+
+    /// <summary>Set when the walk actually restored this plan's prefix
+    /// checkpoint — a prefix plan left unconsumed means the walk never reached
+    /// its target (a bug).</summary>
     public bool Consumed;
+
+    /// <summary>Set when the walk spliced the recorded suffix: how many
+    /// measures the splice adopted (the tail from the matched checkpoint to the
+    /// walk's end). 0 = no splice (the walk ran live to its end).</summary>
+    public int SplicedMeasures;
 }
 
 /// <summary>Full snapshot of <see cref="OctaveContext"/> (the existing
@@ -174,6 +296,30 @@ internal sealed class WalkCheckpoint
     /// padding epilogue of a partially-resumed section computes the bars it
     /// produced from the right base.</summary>
     public required int SectionStartMeasure { get; init; }
+
+    // --- cross-edit (Δ≠0) validity ---
+    /// <summary>The end of the furthest source text the walk had READ when this
+    /// boundary was captured: every processed node (any depth, phrase bodies
+    /// included), every lookahead peek, and — at each section end — the whole
+    /// span every part contributes to that section (the padding epilogue prices
+    /// the section off ALL parts' bar counts). A checkpoint is valid across an
+    /// edit iff this is ≤ the old/new common prefix: then the adopted state is a
+    /// function of unchanged text, positions included. The walk's OTHER reads —
+    /// part headers, section names/header directives, file-level defaults — are
+    /// deliberately not folded here (a scalar high-water mark would poison every
+    /// phrase-style book whose declarations sit below the music); they are
+    /// plan-time-checkable constants, verified per edit by
+    /// <see cref="CollectResumePlanner"/>'s top-level window guard.</summary>
+    public required int MaxSourceRead { get; init; }
+    /// <summary>Source start (full span) of the node at <see cref="NodeIndex"/>
+    /// when recorded. Revalidated on the NEW tree at restore: the prefix text is
+    /// unchanged, so an unchanged address holds a node with the same start —
+    /// anything else is structural drift and the resume bails.</summary>
+    public required int NodeStart { get; init; }
+    /// <summary>How many of the walk's <see cref="VoiceWalkRecording.HeaderReads"/>
+    /// had been read at this boundary — the planner validates exactly that prefix,
+    /// so a shifted LATER section header does not reject an EARLIER checkpoint.</summary>
+    public required int HeaderReadCount { get; init; }
 
     // --- builder ---
     public required MeasureBuilder.BuilderCheckpoint Builder { get; init; }

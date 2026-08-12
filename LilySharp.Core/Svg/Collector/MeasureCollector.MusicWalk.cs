@@ -433,6 +433,15 @@ public sealed partial class MeasureCollector
 
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {
+        // Record mode (CollectWalkProbe): every processed node at ANY depth funnels
+        // through here — including phrase/variable bodies inlined from elsewhere in
+        // the file, whose spans are NOT inside the flat-list caller's span. Folding
+        // at this one funnel is what makes WalkCheckpoint.MaxSourceRead the walk's
+        // true read extent. One null-check per node when a probe records; nothing
+        // when off (production CLI path).
+        if (_probeRecording != null)
+            _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, node.FullSpan.End);
+
         // ⚠️ The two bool reads come FIRST on purpose: they are false for every item of
         // every score that never writes `<>`, and that short-circuit keeps the type switch
         // in BindsASlur out of the per-item path this walk runs on every keystroke.

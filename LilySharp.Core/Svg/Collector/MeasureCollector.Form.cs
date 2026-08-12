@@ -144,9 +144,33 @@ public sealed partial class MeasureCollector
         // recording and a resume of the same document address the same boundary.
         int visit = _sectionVisit++;
         _invocationInSection = 0;
+        // A spliced walk adopted every remaining section — prologue, music,
+        // padding epilogue — inside the recorded tail (the end checkpoint
+        // carries the section maps and metadata the prologue would write).
+        if (_suffixSpliced)
+            return;
+        // Record mode (cross-edit resume): the prologue consumes this section's
+        // NAME (label + its data-pos) and header directives (the _sectionHeader*
+        // map values are sourced from these direct children). Deliberately NOT
+        // folded into MaxSourceRead — declarations often sit BELOW the music they
+        // reference, so a scalar max would reject every checkpoint of every
+        // phrase-style book. Recorded as discrete header-read spans instead; the
+        // planner validates each checkpoint's read prefix span-by-span
+        // (VoiceWalkRecording.HeaderReads). ⚠️ A standalone same-named header node
+        // (`section A { key g }` beside a music-bearing `section A { … }`) would be
+        // a SECOND source this does not see; today Sections maps one node per name.
+        if (_probeRecording != null)
+        {
+            _walkHeaderReads.Add(section.Name.Span);
+            foreach (var child in section.ChildNodes())
+                if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+                    or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
+                    or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
+                    _walkHeaderReads.Add(child.FullSpan);
+        }
         if (_resumePending is { } plan)
         {
-            if (visit < plan.Checkpoint.SectionVisit)
+            if (visit < plan.Checkpoint!.SectionVisit) // _resumePending is only armed with a prefix target
                 return;
         }
         else
@@ -419,6 +443,18 @@ public sealed partial class MeasureCollector
 
         if (_voiceName != null && builder.CurrentItemCount == 0)
         {
+            // Record mode: the canonical bar count is a function of EVERY part's
+            // music for this section (GetCanonicalSectionBars — keep the fold's
+            // enumeration in step with it), so the whole section span and every
+            // part-major cell of this section join the walk's read extent. The
+            // decision "no padding needed" reads them just as much as the padding.
+            if (_probeRecording != null)
+            {
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, section.FullSpan.End);
+                foreach (var kv in _sectionState.PartMajorCells)
+                    if (kv.Key.section == section.SectionName)
+                        _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, kv.Value.FullSpan.End);
+            }
             int produced = builder.CurrentMeasureIndex - startMeasure;
             int canonical = GetCanonicalSectionBars(section);
             for (int i = produced; i < canonical; i++)

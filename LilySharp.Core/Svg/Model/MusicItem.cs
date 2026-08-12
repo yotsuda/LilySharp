@@ -100,8 +100,12 @@ public abstract record MusicItem
     /// </summary>
     public VoiceContextId VoiceContext { get; init; }
 
-    /// <summary>Source position in the syntax tree for click-to-source mapping.</summary>
-    public abstract int SourcePosition { get; }
+    /// <summary>Source position in the syntax tree for click-to-source mapping.
+    /// <c>init</c> (and declared on the base, not per subtype) so the collect
+    /// resume's suffix splice can re-home an adopted item across an edit with a
+    /// single <c>with</c> — positions are click-to-source data only, never read
+    /// by the engravers (they key on measure/item indices).</summary>
+    public int SourcePosition { get; init; }
 
     /// <summary>
     /// Whether this item is a "loose" column that does not participate in spacing.
@@ -310,7 +314,6 @@ public sealed record NoteItem : MusicItem
     /// this whole path (repeat-tie-engraver.cc:27-33, a Laissez_vibrer_engraver that
     /// only swaps the event class and grob names).</remarks>
     public bool? RepeatTieUp { get; init; }
-    private readonly int _sourcePosition;
 
     /// <summary>
     /// Time scale applied by enclosing tuplets (base/ratio, compounded when
@@ -322,8 +325,6 @@ public sealed record NoteItem : MusicItem
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
-    /// <summary>The note's source position in the syntax tree.</summary>
-    public override int SourcePosition => _sourcePosition;
 
     /// <summary>
     /// Beam-resolved stem direction. A beam forces ONE direction onto all its
@@ -430,7 +431,7 @@ public sealed record NoteItem : MusicItem
         Fingering = fingering;
         HasLaissezVibrer = hasLaissezVibrer;
         HasRepeatTie = hasRepeatTie;
-        _sourcePosition = sourcePosition;
+        SourcePosition = sourcePosition;
     }
 }
 
@@ -443,7 +444,6 @@ public sealed record RestItem : MusicItem
     public Fraction BaseDuration { get; }
     /// <summary>The number of augmentation dots on the rest.</summary>
     public int Dots { get; }
-    private readonly int _sourcePosition;
 
     /// <summary>Tuplet time scale; see <see cref="NoteItem.TimeScale"/>.</summary>
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
@@ -545,15 +545,13 @@ public sealed record RestItem : MusicItem
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
-    /// <summary>The rest's source position in the syntax tree.</summary>
-    public override int SourcePosition => _sourcePosition;
 
     /// <summary>Initializes a new <see cref="RestItem"/>.</summary>
     public RestItem(Fraction baseDuration, int dots, int sourcePosition)
     {
         BaseDuration = baseDuration;
         Dots = dots;
-        _sourcePosition = sourcePosition;
+        SourcePosition = sourcePosition;
     }
 }
 
@@ -693,7 +691,6 @@ public sealed record ChordItem : MusicItem
     /// <summary>Whether this chord is a cue chord (drawn at reduced size).</summary>
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue { get; }
-    private readonly int _sourcePosition;
 
     /// <summary>Tuplet time scale; see <see cref="NoteItem.TimeScale"/>.</summary>
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
@@ -701,8 +698,6 @@ public sealed record ChordItem : MusicItem
     /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
-    /// <summary>The chord's source position in the syntax tree.</summary>
-    public override int SourcePosition => _sourcePosition;
 
     /// <summary>Beam-resolved stem direction; see <see cref="NoteItem.StemUpOverride"/>.</summary>
     public bool? StemUpOverride { get; init; }
@@ -753,7 +748,7 @@ public sealed record ChordItem : MusicItem
         HasTieStart = hasTieStart;
         HasSlurStart = hasSlurStart;
         HasSlurEnd = hasSlurEnd;
-        _sourcePosition = sourcePosition;
+        SourcePosition = sourcePosition;
     }
 }
 
@@ -771,12 +766,8 @@ public sealed record ClefChangeItem : MusicItem
     /// <summary>The new clef type after the change.</summary>
     public ClefType NewClef { get; }
 
-    private readonly int _sourcePosition;
-
     /// <summary>Always <c>Fraction.Zero</c> — the clef change occupies horizontal space but no time.</summary>
     public override Fraction Duration => Fraction.Zero;
-    /// <summary>The clef change's source position in the syntax tree.</summary>
-    public override int SourcePosition => _sourcePosition;
 
     /// <summary>
     /// True for the two clefs a <c>cue &lt;clef&gt; { … }</c> region raises — LilyPond's
@@ -798,7 +789,7 @@ public sealed record ClefChangeItem : MusicItem
     public ClefChangeItem(ClefType newClef, int sourcePosition, bool isCue = false)
     {
         NewClef = newClef;
-        _sourcePosition = sourcePosition;
+        SourcePosition = sourcePosition;
         IsCue = isCue;
     }
 }
@@ -819,19 +810,15 @@ public sealed record KeySignatureChangeItem : MusicItem
     /// <summary>The previous key signature (for cancellation naturals).</summary>
     public KeySignature PreviousKey { get; }
 
-    private readonly int _sourcePosition;
-
     /// <summary>Always <c>Fraction.Zero</c> — the key change occupies horizontal space but no time.</summary>
     public override Fraction Duration => Fraction.Zero;
-    /// <summary>The key change's source position in the syntax tree.</summary>
-    public override int SourcePosition => _sourcePosition;
 
     /// <summary>Initializes a new <see cref="KeySignatureChangeItem"/>.</summary>
     public KeySignatureChangeItem(KeySignature newKey, KeySignature previousKey, int sourcePosition)
     {
         NewKey = newKey;
         PreviousKey = previousKey;
-        _sourcePosition = sourcePosition;
+        SourcePosition = sourcePosition;
     }
 }
 
@@ -848,17 +835,13 @@ public sealed record TimeSignatureChangeItem : MusicItem
     /// <summary>The new time signature after the change.</summary>
     public TimeSignature NewTime { get; }
 
-    private readonly int _sourcePosition;
-
     /// <summary>Always <c>Fraction.Zero</c> — the time-signature change occupies horizontal space but no time.</summary>
     public override Fraction Duration => Fraction.Zero;
-    /// <summary>The time-signature change's source position in the syntax tree.</summary>
-    public override int SourcePosition => _sourcePosition;
 
     /// <summary>Initializes a new <see cref="TimeSignatureChangeItem"/>.</summary>
     public TimeSignatureChangeItem(TimeSignature newTime, int sourcePosition)
     {
         NewTime = newTime;
-        _sourcePosition = sourcePosition;
+        SourcePosition = sourcePosition;
     }
 }

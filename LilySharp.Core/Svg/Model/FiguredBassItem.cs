@@ -89,7 +89,7 @@ public sealed record FiguredBassItem
     public int ItemIndex { get; }
 
     /// <summary>Source position for click-to-source mapping.</summary>
-    public int SourcePosition { get; }
+    public int SourcePosition { get; init; }
 
     /// <summary>Global staff index this figured bass belongs to (multi-staff
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>

@@ -1084,6 +1084,22 @@ public sealed partial class MeasureCollector
     private VoiceResumePlan? _resumePending;         // resume mode: set until the target checkpoint is restored
     private int _sectionStartMeasureForResume;       // mirror of ProcessSection's startMeasure local, for capture
     private int? _resumeRestoredSectionStart;        // the target section's true start, injected at restore
+    // Resume mode, suffix side (see CollectWalkProbe's suffix-splice remarks):
+    // the current walk's plan when it carries suffix candidates, those candidates
+    // keyed by their SHIFTED walk-order address for O(1) lookup at each clean
+    // boundary, the dirty window the shifts go through, and whether the walk
+    // already spliced (everything after a splice is skipped).
+    private VoiceResumePlan? _suffixPlan;
+    private Dictionary<(int Visit, int Invocation, int NodeStart), WalkCheckpoint>? _suffixTargets;
+    private CollectTailShifter.Window _suffixWindow;
+    private bool _suffixSpliced;
+    // Record mode only: the end of the furthest source text this walk has read
+    // (WalkCheckpoint.MaxSourceRead — see its remarks for the fold sites).
+    private int _walkMaxSourceRead;
+    // Record mode only: the header spans this walk read, in walk order (part
+    // name/config at entry, then each visited section's name + header directives).
+    // See VoiceWalkRecording.HeaderReads.
+    private readonly List<TextSpan> _walkHeaderReads = new();
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -2437,6 +2453,7 @@ public sealed partial class MeasureCollector
         _probeRecording = null;
         _resumePending = null;
         _resumeRestoredSectionStart = null;
+        _walkMaxSourceRead = 0;
     }
 
     /// <summary>
@@ -2595,6 +2612,12 @@ public sealed partial class MeasureCollector
     /// (PartHeaderDefaults.SoundingShiftSemitones); only the ANCHOR is per-mode, which is what
     /// the two modes are for. See AbsoluteModeAnchorTests.
     /// </remarks>
+    // NOTE (cross-edit resume): the part-level config reads that seed a walk's entry
+    // state — GetPartDefaults (clef/instrument/octave/transpose/header key) and
+    // CollectPartBodyOverrides — are plan-time-checkable constants, verified by
+    // CollectResumePlanner.WindowRespectsTopLevel (every part declaration's
+    // non-section direct children must be content- and position-stable across the
+    // edit), NOT folded into MaxSourceRead. See ProcessSection's matching note.
     private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
@@ -3122,38 +3145,116 @@ public sealed partial class MeasureCollector
         _resumeRestoredSectionStart = null;
         _probeRecording = null;
         _resumePending = null;
+        _suffixPlan = null;
+        _suffixTargets = null;
+        _suffixSpliced = false;
+        _walkMaxSourceRead = 0;
+        _walkHeaderReads.Clear();
         if (WalkProbe is { } probe)
         {
             if (probe.IsRecording)
             {
-                _probeRecording = new VoiceWalkRecording { VoiceName = _voiceName };
+                var tables = CumulativeSideTables();
+                var startCounts = new int[tables.Length];
+                for (int t = 0; t < tables.Length; t++)
+                    startCounts[t] = tables[t].Count;
+                _probeRecording = new VoiceWalkRecording
+                {
+                    VoiceName = _voiceName,
+                    StartTableCounts = startCounts,
+                };
                 probe.Recordings[walkOrdinal] = _probeRecording;
+                // The part-level config reads that seeded this walk's entry state —
+                // GetPartDefaults (clef/instrument/octave/transpose/header key) and
+                // CollectPartBodyOverrides both consume direct children of the
+                // part's declaration(s); part-major section cells are walked as
+                // music and fold themselves into MaxSourceRead instead.
+                if (_voiceName != null && _root != null)
+                {
+                    foreach (var partDecl in _root.ChildNodes().OfType<PartDeclarationSyntax>())
+                    {
+                        if (partDecl.Name.Text != _voiceName)
+                            continue;
+                        _walkHeaderReads.Add(partDecl.Name.Span);
+                        foreach (var child in partDecl.ChildNodes())
+                            if (child is not SectionDeclarationSyntax)
+                                _walkHeaderReads.Add(child.FullSpan);
+                    }
+                }
             }
             else if (probe.ResumePlans.TryGetValue(walkOrdinal, out var resume))
             {
-                _resumePending = resume;
+                // Cross-edit validity at walk entry: the plan must target the SAME
+                // walk (ordinal drift after a part add/remove would pair it with
+                // another voice), and every earlier walk of THIS collect must have
+                // contributed exactly the counts the recording's watermarks bake in
+                // (see VoiceWalkRecording.StartTableCounts). Δ=0 passes trivially.
+                if (!string.Equals(resume.Recording.VoiceName, _voiceName, StringComparison.Ordinal))
+                    throw new CollectResumeAbortException(
+                        $"collect resume walk #{walkOrdinal} is now voice '{_voiceName}', recorded '{resume.Recording.VoiceName}'");
+                var tables = CumulativeSideTables();
+                var startCounts = resume.Recording.StartTableCounts;
+                if (startCounts == null || startCounts.Length != tables.Length)
+                    throw new CollectResumeAbortException("collect resume recording has no start-table counts");
+                for (int t = 0; t < tables.Length; t++)
+                    if (tables[t].Count != startCounts[t])
+                        throw new CollectResumeAbortException(
+                            $"collect resume: side table {t} has {tables[t].Count} entries at walk entry, recorded {startCounts[t]}");
+                if (resume.Checkpoint != null)
+                    _resumePending = resume;
+                if (resume.SuffixCandidates is { } candidates)
+                {
+                    _suffixPlan = resume;
+                    _suffixWindow = new CollectTailShifter.Window(
+                        probe.WindowPrefix, probe.WindowSuffixStart, probe.WindowDelta);
+                    // Keyed by shifted address; the planner already filtered out
+                    // candidates whose node stands in the window. Indexer, not
+                    // Add: two markers can share a start, and a lost pairing
+                    // only costs reuse (the state comparison owns correctness).
+                    _suffixTargets = new(candidates.Count);
+                    foreach (var ck in candidates)
+                        if (_suffixWindow.TryShift(ck.NodeStart, out int shifted))
+                            _suffixTargets[(ck.SectionVisit, ck.Invocation, shifted)] = ck;
+                }
             }
         }
 
         void ProcessNodes(IEnumerable<SyntaxNode> nodes)
         {
+            // A spliced walk is done: everything after the adopted tail is state
+            // the splice already restored (the end-of-walk checkpoint).
+            if (_suffixSpliced)
+                return;
             int invocation = _invocationInSection++;
             int startIndex = 0;
+            List<SyntaxNode> nodeList;
             if (_resumePending is { } plan)
             {
+                var target = plan.Checkpoint!; // _resumePending is only armed with a prefix target
                 // Only the TARGET section's invocations (or the section-less root
                 // path's) reach here — earlier sections return whole at
                 // ProcessSection's entry gate. An invocation before the target is
                 // wholly inside the adopted prefix.
-                if (invocation < plan.Checkpoint.Invocation)
+                if (invocation < target.Invocation)
                     return;
-                if (invocation > plan.Checkpoint.Invocation)
-                    throw new InvalidOperationException(
-                        $"collect resume overshot its target invocation ({invocation} > {plan.Checkpoint.Invocation})");
+                if (invocation > target.Invocation)
+                    throw new CollectResumeAbortException(
+                        $"collect resume overshot its target invocation ({invocation} > {target.Invocation})");
+                nodeList = nodes.ToList();
+                // Cross-edit address revalidation: the prefix text is unchanged, so
+                // an unchanged walk-order address holds a node with an unchanged
+                // start. Anything else is structural drift — bail to a full collect.
+                if (target.NodeIndex >= nodeList.Count
+                    || nodeList[target.NodeIndex].FullSpan.Start != target.NodeStart)
+                    throw new CollectResumeAbortException(
+                        $"collect resume address drifted (node {target.NodeIndex} of invocation {invocation})");
                 RestoreWalkCheckpoint(plan, builder);
-                startIndex = plan.Checkpoint.NodeIndex;
+                startIndex = target.NodeIndex;
             }
-            var nodeList = nodes.ToList();
+            else
+            {
+                nodeList = nodes.ToList();
+            }
             for (int i = startIndex; i < nodeList.Count; i++)
             {
                 var node = nodeList[i];
@@ -3161,7 +3262,18 @@ public sealed partial class MeasureCollector
                 // Record mode: an eligible measure boundary right before node i is a
                 // resume point. Cheap when off (_probeRecording null in production).
                 if (_probeRecording is { IneligibleReason: null } rec && builder.AtCleanBoundary)
-                    TryCaptureWalkCheckpoint(rec, builder, invocation, i);
+                    TryCaptureWalkCheckpoint(rec, builder, invocation, i, node.FullSpan.Start);
+
+                // Resume mode, suffix side: at a clean boundary whose shifted
+                // walk-order address matches a recorded checkpoint, try to splice
+                // the recorded tail in place of walking it. A declined attempt
+                // (state mismatch, window position, unresolvable node) just keeps
+                // the walk live — reuse lost, correctness untouched.
+                if (_suffixTargets is { } targets && builder.AtCleanBoundary
+                    && targets.TryGetValue(
+                        (_sectionVisit - 1, invocation, node.FullSpan.Start), out var spliceTarget)
+                    && TrySpliceSuffix(spliceTarget, builder))
+                    return;
 
                 // Phrase-reference boundary: evaluate the body in the default
                 // frame (same handling as ProcessMusicNodeSequence). The boundary
@@ -3184,7 +3296,17 @@ public sealed partial class MeasureCollector
 
                 // Same skip as ProcessMusicNodeSequence: a note-attached mark in
                 // the flat list must not shadow the tie/slur/beam marker behind it.
-                ProcessMusicNode(node, builder, PeekMarkers(PeekPastAttachedMarks(nodeList, i)));
+                var peeked = PeekPastAttachedMarks(nodeList, i);
+                // The peek READS the next non-mark node's type, and a checkpoint can
+                // sit between the peeking node and the peeked one (`c1 d1` — the
+                // boundary is before d, but c's lookahead read d). Fold the peeked
+                // extent so an edit at the peeked node invalidates that boundary.
+                // Nested walks need no such fold: no checkpoint is captured inside
+                // them, and every peeked node is processed (and folded) before the
+                // enclosing top-level node completes.
+                if (_probeRecording != null && peeked != null)
+                    _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, peeked.FullSpan.End);
+                ProcessMusicNode(node, builder, PeekMarkers(peeked));
             }
         }
 
@@ -3203,7 +3325,10 @@ public sealed partial class MeasureCollector
                 // the adopted prefix (RecordSectionStart via the checkpoint's section
                 // maps, the label via the builder state) — re-running it here would
                 // read a pre-restore builder. ProcessSection's own gate does the skip.
-                if (_resumePending == null)
+                // A SPLICED walk's remaining sections are in the adopted tail the same
+                // way (the end checkpoint carries the section maps; the measure index
+                // here would be the post-splice total, a wrong start).
+                if (_resumePending == null && !_suffixSpliced)
                 {
                     RecordSectionStart(section.SectionName, builder.CurrentMeasureIndex);
                     builder.SectionLabel = section.SectionName;
@@ -3220,16 +3345,28 @@ public sealed partial class MeasureCollector
         }
 
         if (_resumePending != null)
-            throw new InvalidOperationException(
+            throw new CollectResumeAbortException(
                 "collect resume never reached its target checkpoint (walk-order address mismatch)");
         if (_probeRecording is { } recording)
         {
+            // The end-of-walk state a suffix splice jumps to. Only at a clean,
+            // carry-free final boundary (a walk ending mid-measure or with a
+            // pending carry keeps EndCheckpoint null and prefix-resumes only).
+            // Captured BEFORE FinalizeInlineVoltas: its volta-bracket appends
+            // happen after the checkpoint's watermarks on both sides, so a
+            // spliced walk's own live finalize reproduces them.
+            if (recording.IneligibleReason == null && builder.AtCleanBoundary
+                && WalkCarriesNothing())
+                recording.EndCheckpoint = BuildWalkCheckpoint(
+                    builder, sectionVisit: -2, invocation: -1, nodeIndex: -1, nodeStart: -1);
+
             // Harvest what a resume adopts: the measures BEFORE FinalizeMeasures
             // mutates them, and the walk-local lists (cleared per walk, so the
             // collector's final state does not retain them for this walk).
             recording.PreFinalizeMeasures = builder.MeasuresSnapshot();
             recording.PendingInlineVoltas = new(_pendingInlineVoltas);
             recording.ParallelSpans = new(_parallelSpans);
+            recording.HeaderReads = new(_walkHeaderReads);
             _probeRecording = null;
         }
 
@@ -3264,27 +3401,47 @@ public sealed partial class MeasureCollector
     /// checkpoint only costs reuse; see CollectWalkProbe's eligibility remarks).
     /// </summary>
     private void TryCaptureWalkCheckpoint(
-        VoiceWalkRecording rec, MeasureBuilder builder, int invocation, int nodeIndex)
+        VoiceWalkRecording rec, MeasureBuilder builder, int invocation, int nodeIndex,
+        int nodeStart)
     {
-        if (_pendingGrace != null || !_pendingLeadingGrace.IsDefaultOrEmpty
-            || _pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd
-            || _tremoloPairShape != null
-            || _cueDepth != 0 || _currentVoiceScope != null || _metadataMeasureOffset != 0
-            || _phraseTransposeSaves.Count > 0
-            || _measureAccidentals.Count > 0)
+        if (!WalkCarriesNothing())
             return;
+        rec.Checkpoints.Add(BuildWalkCheckpoint(
+            builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart));
+    }
 
+    /// <summary>True when no cross-measure carry is in flight — the shared
+    /// eligibility of a mid-walk checkpoint (record side) and of a suffix
+    /// splice boundary (live side; the same quiescence the recorded checkpoint
+    /// vouches for must hold in the live walk before their states can meet).</summary>
+    private bool WalkCarriesNothing()
+        => _pendingGrace == null && _pendingLeadingGrace.IsDefaultOrEmpty
+            && !_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd
+            && _tremoloPairShape == null
+            && _cueDepth == 0 && _currentVoiceScope == null && _metadataMeasureOffset == 0
+            && _phraseTransposeSaves.Count == 0
+            && _measureAccidentals.Count == 0;
+
+    /// <summary>The checkpoint capture core (see <see cref="WalkCheckpoint"/>'s
+    /// inventory remarks); the end-of-walk capture passes sentinel address
+    /// fields (-2/-1) — a splice consumes its value state, never its address.</summary>
+    private WalkCheckpoint BuildWalkCheckpoint(
+        MeasureBuilder builder, int sectionVisit, int invocation, int nodeIndex, int nodeStart)
+    {
         var tables = CumulativeSideTables();
         var counts = new int[tables.Length];
         for (int t = 0; t < tables.Length; t++)
             counts[t] = tables[t].Count;
 
-        rec.Checkpoints.Add(new WalkCheckpoint
+        return new WalkCheckpoint
         {
-            SectionVisit = _sectionVisit - 1, // -1 = the section-less root path
+            SectionVisit = sectionVisit, // -1 = the section-less root path
             Invocation = invocation,
             NodeIndex = nodeIndex,
             SectionStartMeasure = _sectionStartMeasureForResume,
+            MaxSourceRead = _walkMaxSourceRead,
+            NodeStart = nodeStart,
+            HeaderReadCount = _walkHeaderReads.Count,
             Builder = builder.Capture(),
             Octave = OctaveCheckpoint.Capture(_octave),
             Meta = _meta.Clone(),
@@ -3306,7 +3463,7 @@ public sealed partial class MeasureCollector
             PendingInlineVoltaCount = _pendingInlineVoltas.Count,
             ParallelSpanCount = _parallelSpans.Count,
             MeasureCount = builder.CurrentMeasureIndex,
-        });
+        };
     }
 
     /// <summary>
@@ -3317,10 +3474,10 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void RestoreWalkCheckpoint(VoiceResumePlan plan, MeasureBuilder builder)
     {
-        var ck = plan.Checkpoint;
+        var ck = plan.Checkpoint!; // only a prefix-armed plan reaches the restore
         var rec = plan.Recording;
         if (rec.IneligibleReason is { } why)
-            throw new InvalidOperationException($"resuming an ineligible walk recording: {why}");
+            throw new CollectResumeAbortException($"resuming an ineligible walk recording: {why}");
 
         // Value state.
         ck.Octave.Restore(_octave);
@@ -3371,7 +3528,7 @@ public sealed partial class MeasureCollector
         for (int t = 0; t < dst.Length; t++)
         {
             if (dst[t].Count > ck.TableCounts[t])
-                throw new InvalidOperationException(
+                throw new CollectResumeAbortException(
                     $"resume: side table {t} is already past its checkpoint watermark");
             for (int j = dst[t].Count; j < ck.TableCounts[t]; j++)
                 dst[t].Add(src[t][j]);
@@ -3385,6 +3542,414 @@ public sealed partial class MeasureCollector
         _resumeRestoredSectionStart = ck.SectionStartMeasure;
         _resumePending = null;
         plan.Consumed = true;
+    }
+
+    /// <summary>
+    /// The suffix splice (see CollectWalkProbe's remarks): at a live clean
+    /// boundary whose shifted address matched the recorded checkpoint
+    /// <paramref name="ck"/>, compare the ENTIRE live value state against the
+    /// checkpoint (positions through the window map) and, on a match, adopt the
+    /// recorded tail — position-shifted copies of the measures and side-table
+    /// slices up to the end-of-walk watermarks, re-resolved parallel-span nodes
+    /// — jump the value state to the recorded end of the walk, and skip the
+    /// rest. Every validation failure returns false and the walk keeps running
+    /// live: a declined splice costs reuse, never correctness. Two phases on
+    /// purpose — everything is validated and copied BEFORE the first mutation,
+    /// so a decline never leaves the collector half-spliced.
+    /// </summary>
+    private bool TrySpliceSuffix(WalkCheckpoint ck, MeasureBuilder builder)
+    {
+        var plan = _suffixPlan!;
+        var rec = plan.Recording;
+        var w = _suffixWindow;
+        if (rec.EndCheckpoint is not { } endCk || rec.PreFinalizeMeasures is not { } pre)
+            return false;
+
+        // Live-side carry quiescence: the recorded boundary was carry-free, so
+        // the live one must be too before their states are even comparable.
+        if (!WalkCarriesNothing())
+            return false;
+
+        // Recorded-side rewrite quiescence: the recorded tail must not have
+        // rewritten the measure standing AT this boundary (SetBreak /
+        // AddEndBarlineSource reach back into _measures[^1]); the live [^1] is
+        // the edited text's own and must stand as produced. The recorded final
+        // value differing from the checkpoint-time pin is exactly "the tail
+        // rewrote it" — a later candidate (past the rewrite) remains usable.
+        if (ck.MeasureCount > 0
+            && !pre[ck.MeasureCount - 1].Equals(ck.Builder.LastMeasure))
+            return false;
+
+        // Cheapest decline first: a tail measure whose source span overlaps a
+        // NON-EMPTY dirty window can never be adopted (the window lies inside
+        // its text), and finding out inside the copy loop below would first
+        // COPY every measure before it — for a candidate standing before the
+        // window (the m=0 case) that is half the book, paid on every keystroke
+        // just to decline. An EMPTY window (a pure position shift — prefix ==
+        // suffixStart) overlaps nothing: a measure straddling the insertion
+        // point shifts per-position and is fine.
+        if (w.Prefix < w.SuffixStart)
+        {
+            for (int i = ck.MeasureCount; i < pre.Count; i++)
+            {
+                if (pre[i].SourceStart < w.SuffixStart && pre[i].SourceEnd > w.Prefix)
+                    return false;
+            }
+        }
+
+        if (!SuffixStateMatches(ck, builder, w))
+            return false;
+
+        // The adopted tail contains section spacer padding whose COUNT is the
+        // canonical section bar count — a function of EVERY part's cell text,
+        // invisible to the per-position checks. Verified once per collect
+        // against the recording's memo (HANDOFF §1 ⒭: Δm in another part).
+        var probe = WalkProbe!;
+        probe.CanonicalBarsVerified ??= CanonicalBarsMatch(plan.Source);
+        if (probe.CanonicalBarsVerified != true)
+            return false;
+
+        // Layer 4's suffix half (lazy, memoized once per collect): the parse
+        // agreements that make an adopted tail trustworthy at all — see
+        // CollectResumePlanner.ParseAgreementsHold. Placed after the cheap
+        // per-walk guards so a book that always declines never pays it.
+        if (!CollectResumePlanner.ParseAgreementsHold(probe))
+            return false;
+
+        // --- prepare: validate and copy everything before touching any state ---
+        // IDENTITY fast path: an empty window with Δ=0 means the baseline and
+        // edited TEXTS are equal (the restore keystroke of an alternating edit
+        // session) — every shift is the identity, so the recorded instances are
+        // adopted by reference instead of being cloned one by one (the models
+        // are immutable records; the prefix adoption shares them the same way,
+        // old-tree node references included: an identical text's walk is
+        // value-identical by determinism).
+        bool identity = w.Delta == 0 && w.Prefix >= w.SuffixStart;
+
+        List<Measure> tailMeasures;
+        if (identity)
+        {
+            tailMeasures = pre.GetRange(ck.MeasureCount, pre.Count - ck.MeasureCount);
+        }
+        else
+        {
+            tailMeasures = new List<Measure>(pre.Count - ck.MeasureCount);
+            for (int i = ck.MeasureCount; i < pre.Count; i++)
+            {
+                if (CollectTailShifter.ShiftMeasure(pre[i], w) is not { } m)
+                    return false;
+                tailMeasures.Add(m);
+            }
+        }
+
+        var src = plan.Source.CumulativeSideTables();
+        var dst = CumulativeSideTables();
+        var tailSlices = new List<object>[dst.Length];
+        for (int t = 0; t < dst.Length; t++)
+        {
+            var slice = new List<object>(endCk.TableCounts[t] - ck.TableCounts[t]);
+            for (int j = ck.TableCounts[t]; j < endCk.TableCounts[t]; j++)
+            {
+                if (identity)
+                {
+                    slice.Add(src[t][j]!);
+                    continue;
+                }
+                if (CollectTailShifter.ShiftSideEntry(src[t][j]!, w) is not { } entry)
+                    return false;
+                slice.Add(entry);
+            }
+            tailSlices[t] = slice;
+        }
+
+        var voltaTail = new List<(int, int, string, bool, int)>(
+            endCk.PendingInlineVoltaCount - ck.PendingInlineVoltaCount);
+        for (int i = ck.PendingInlineVoltaCount; i < endCk.PendingInlineVoltaCount; i++)
+        {
+            var v = rec.PendingInlineVoltas![i];
+            if (!w.TryShift(v.Item5, out int vp))
+                return false;
+            voltaTail.Add((v.Item1, v.Item2, v.Item3, v.Item4, vp));
+        }
+
+        // The wall (HANDOFF §1 ⑶): the recorded spans hold OLD-tree node
+        // references, and their extra voices are walked LIVE after this walk —
+        // they must be re-resolved against the new tree, not adopted (except on
+        // the identity path, where the old tree's text IS the new text).
+        var spanTail = new List<(ParallelExpressionSyntax, int, OctaveSnapshot)>(
+            endCk.ParallelSpanCount - ck.ParallelSpanCount);
+        for (int i = ck.ParallelSpanCount; i < endCk.ParallelSpanCount; i++)
+        {
+            var (oldNode, startMeasure, frame) = rec.ParallelSpans![i];
+            if (identity)
+            {
+                spanTail.Add((oldNode, startMeasure, frame));
+                continue;
+            }
+            if (_root == null
+                || CollectTailShifter.ResolveShifted(_root, oldNode, w)
+                    is not ParallelExpressionSyntax resolved)
+                return false;
+            spanTail.Add((resolved, startMeasure, frame));
+        }
+
+        var endMeta = endCk.Meta.Clone();
+        if (!identity && !ShiftMetaPositions(endMeta, w))
+            return false;
+
+        var shiftedEndBuilder = endCk.Builder;
+        if (!identity)
+        {
+            if (!w.TryShift(shiftedEndBuilder.SectionLabelPosition, out int endLabelPos)
+                || !w.TryShift(shiftedEndBuilder.MeasureSourceStart, out int endSourceStart))
+                return false;
+            Measure? endLast = null;
+            if (shiftedEndBuilder.LastMeasure is { } last)
+            {
+                endLast = CollectTailShifter.ShiftMeasure(last, w);
+                if (endLast == null)
+                    return false;
+            }
+            shiftedEndBuilder = shiftedEndBuilder with
+            {
+                SectionLabelPosition = endLabelPos,
+                MeasureSourceStart = endSourceStart,
+                LastMeasure = endLast,
+            };
+        }
+
+        // --- commit: jump to the recorded end of the walk ---
+        endCk.Octave.Restore(_octave);
+        _meta.CopyFrom(endMeta);
+        _defaultDuration = endCk.DefaultDuration;
+        _defaultDots = endCk.DefaultDots;
+        _ambientTonicStep = endCk.AmbientTonicStep;
+        _ambientTonicAlter = endCk.AmbientTonicAlter;
+        _ambientTonicValid = endCk.AmbientTonicValid;
+        _openingKeyOverride = endCk.OpeningKeyOverride;
+        _tremoloRepeatCount = endCk.TremoloRepeatCount;
+        _tremoloPairShape = endCk.TremoloPairShape;
+        _tremoloPairFirst = endCk.TremoloPairFirst;
+        _sectionActiveGrobProps.Clear();
+        foreach (var prop in endCk.SectionActiveGrobProps)
+            _sectionActiveGrobProps.Add(prop);
+        _keyByMeasure.Clear();
+        foreach (var kv in endCk.KeyByMeasure)
+            _keyByMeasure[kv.Key] = kv.Value;
+        _sectionState.StartMeasure.Clear();
+        foreach (var kv in endCk.SectionStartMeasures)
+            _sectionState.StartMeasure[kv.Key] = kv.Value;
+        _sectionState.AllStarts.Clear();
+        foreach (var kv in endCk.SectionAllStarts)
+            _sectionState.AllStarts[kv.Key] = new List<int>(kv.Value);
+        _measureAccidentals.Clear();
+
+        for (int t = 0; t < dst.Length; t++)
+            foreach (var entry in tailSlices[t])
+                dst[t].Add(entry);
+        _pendingInlineVoltas.AddRange(voltaTail);
+        _parallelSpans.AddRange(spanTail);
+
+        var measures = builder.MeasuresSnapshot();
+        measures.AddRange(tailMeasures);
+        builder.Restore(shiftedEndBuilder, measures);
+
+        _suffixSpliced = true;
+        plan.SplicedMeasures = pre.Count - ck.MeasureCount;
+        return true;
+    }
+
+    /// <summary>The suffix splice's state comparison: the live walk state at a
+    /// clean boundary against a recorded checkpoint, field for field over the
+    /// SAME inventory <see cref="BuildWalkCheckpoint"/> snapshots — recorded
+    /// positions compared through the window map. Anything unequal (including
+    /// an unshiftable recorded position) means the dirty window changed state
+    /// the tail depends on: no splice.</summary>
+    private bool SuffixStateMatches(WalkCheckpoint ck, MeasureBuilder builder, in CollectTailShifter.Window w)
+    {
+        if (builder.CurrentMeasureIndex != ck.MeasureCount)
+            return false;
+        if (_sectionStartMeasureForResume != ck.SectionStartMeasure)
+            return false;
+
+        // Builder cross-measure state. LastMeasure content is deliberately NOT
+        // compared — the boundary measure is the edited text's own (its content
+        // legitimately differs from the recording); what the tail needs from it
+        // is only that it will not be rewritten (checked by the caller).
+        var live = builder.Capture();
+        var recB = ck.Builder;
+        if (live.ConfirmableBoundary != recB.ConfirmableBoundary
+            || live.BoundaryRetargetable != recB.BoundaryRetargetable
+            || live.LastEndAutoFill != recB.LastEndAutoFill
+            || live.TimeSignature != recB.TimeSignature
+            || live.PartialRestore != recB.PartialRestore
+            || live.PendingStartBarline != recB.PendingStartBarline
+            || live.PendingEndBarline != recB.PendingEndBarline
+            || live.PendingBreak != recB.PendingBreak
+            || live.PendingNoBreak != recB.PendingNoBreak
+            || !string.Equals(live.SectionLabel, recB.SectionLabel, StringComparison.Ordinal))
+            return false;
+        if (!w.TryShift(recB.SectionLabelPosition, out int labelPos)
+            || live.SectionLabelPosition != labelPos)
+            return false;
+        if (!w.TryShift(recB.MeasureSourceStart, out int sourceStart)
+            || live.MeasureSourceStart != sourceStart)
+            return false;
+
+        if (OctaveCheckpoint.Capture(_octave) != ck.Octave)
+            return false;
+        if (!MetaMatchesShifted(ck.Meta, w))
+            return false;
+        if (_defaultDuration != ck.DefaultDuration || _defaultDots != ck.DefaultDots)
+            return false;
+        if (_ambientTonicStep != ck.AmbientTonicStep
+            || _ambientTonicAlter != ck.AmbientTonicAlter
+            || _ambientTonicValid != ck.AmbientTonicValid)
+            return false;
+        if (_openingKeyOverride != ck.OpeningKeyOverride)
+            return false;
+        if (_tremoloRepeatCount != ck.TremoloRepeatCount
+            || _tremoloPairShape != ck.TremoloPairShape
+            || _tremoloPairFirst != ck.TremoloPairFirst)
+            return false;
+
+        if (_sectionActiveGrobProps.Count != ck.SectionActiveGrobProps.Count
+            || !_sectionActiveGrobProps.SetEquals(ck.SectionActiveGrobProps))
+            return false;
+
+        if (_keyByMeasure.Count != ck.KeyByMeasure.Count)
+            return false;
+        foreach (var kv in ck.KeyByMeasure)
+            if (!_keyByMeasure.TryGetValue(kv.Key, out var key) || key != kv.Value)
+                return false;
+
+        if (_sectionState.StartMeasure.Count != ck.SectionStartMeasures.Count)
+            return false;
+        foreach (var kv in ck.SectionStartMeasures)
+            if (!_sectionState.StartMeasure.TryGetValue(kv.Key, out int start) || start != kv.Value)
+                return false;
+        if (_sectionState.AllStarts.Count != ck.SectionAllStarts.Count)
+            return false;
+        foreach (var kv in ck.SectionAllStarts)
+            if (!_sectionState.AllStarts.TryGetValue(kv.Key, out var starts)
+                || !starts.SequenceEqual(kv.Value))
+                return false;
+
+        // Watermark equality = "the window produced exactly the recorded item
+        // counts", which is what makes the adopted tail slices land at the same
+        // indices — and is the Δm≠0 bail for this walk's own measures/items.
+        var tables = CumulativeSideTables();
+        for (int t = 0; t < tables.Length; t++)
+            if (tables[t].Count != ck.TableCounts[t])
+                return false;
+
+        if (_pendingInlineVoltas.Count != ck.PendingInlineVoltaCount)
+            return false;
+        for (int i = 0; i < _pendingInlineVoltas.Count; i++)
+        {
+            var recorded = planVolta(i);
+            if (!w.TryShift(recorded.Item5, out int pos))
+                return false;
+            var liveVolta = _pendingInlineVoltas[i];
+            if (liveVolta.Item1 != recorded.Item1 || liveVolta.Item2 != recorded.Item2
+                || !string.Equals(liveVolta.Item3, recorded.Item3, StringComparison.Ordinal)
+                || liveVolta.Item4 != recorded.Item4 || liveVolta.Item5 != pos)
+                return false;
+        }
+
+        if (_parallelSpans.Count != ck.ParallelSpanCount)
+            return false;
+        for (int i = 0; i < _parallelSpans.Count; i++)
+        {
+            var (liveNode, liveStart, liveFrame) = _parallelSpans[i];
+            var (recNode, recStart, recFrame) = _suffixPlan!.Recording.ParallelSpans![i];
+            if (liveStart != recStart || liveFrame != recFrame)
+                return false;
+            if (!w.TryShift(recNode.FullSpan.Start, out int nodeStart)
+                || liveNode.FullSpan.Start != nodeStart
+                || liveNode.FullSpan.End - liveNode.FullSpan.Start
+                    != recNode.FullSpan.End - recNode.FullSpan.Start)
+                return false;
+        }
+
+        return true;
+
+        (int, int, string, bool, int) planVolta(int i)
+            => _suffixPlan!.Recording.PendingInlineVoltas![i];
+    }
+
+    /// <summary>Compares the live <see cref="MetadataState"/> against a recorded
+    /// one, the six header positions through the window map. All other fields
+    /// are value scalars/strings.</summary>
+    private bool MetaMatchesShifted(MetadataState rec, in CollectTailShifter.Window w)
+    {
+        if (!w.TryShift(rec.TitlePosition, out int title) || _meta.TitlePosition != title
+            || !w.TryShift(rec.ComposerPosition, out int composer) || _meta.ComposerPosition != composer
+            || !w.TryShift(rec.TimePosition, out int time) || _meta.TimePosition != time
+            || !w.TryShift(rec.KeyPosition, out int key) || _meta.KeyPosition != key
+            || !w.TryShift(rec.ClefPosition, out int clef) || _meta.ClefPosition != clef
+            || !w.TryShift(rec.TempoPosition, out int tempo) || _meta.TempoPosition != tempo)
+            return false;
+
+        return _meta.Title == rec.Title
+            && _meta.Composer == rec.Composer
+            && _meta.TextFont == rec.TextFont
+            && _meta.EmbedFont == rec.EmbedFont
+            && _meta.Tempo == rec.Tempo
+            && _meta.TempoText == rec.TempoText
+            && _meta.TempoBeatUnit == rec.TempoBeatUnit
+            && _meta.TempoDots == rec.TempoDots
+            && _meta.SwingSubdivision == rec.SwingSubdivision
+            && _meta.TimeBeats == rec.TimeBeats
+            && _meta.TimeBeatsText == rec.TimeBeatsText
+            && _meta.TimeSenzaMisura == rec.TimeSenzaMisura
+            && _meta.TimeBeatType == rec.TimeBeatType
+            && _meta.KeySharps == rec.KeySharps
+            && _meta.KeyCustom == rec.KeyCustom
+            && _meta.InitialKeyCustom == rec.InitialKeyCustom
+            && _meta.InitialKeySharps == rec.InitialKeySharps
+            && _meta.KeyTonicStep == rec.KeyTonicStep
+            && _meta.KeyTonicAlter == rec.KeyTonicAlter
+            && _meta.Clef == rec.Clef
+            && _meta.InitialClef == rec.InitialClef;
+    }
+
+    /// <summary>Re-homes a cloned <see cref="MetadataState"/>'s six header
+    /// positions through the window map (the splice's end-state jump); false
+    /// when one lies inside the dirty window.</summary>
+    private static bool ShiftMetaPositions(MetadataState meta, in CollectTailShifter.Window w)
+    {
+        if (!w.TryShift(meta.TitlePosition, out int title)
+            || !w.TryShift(meta.ComposerPosition, out int composer)
+            || !w.TryShift(meta.TimePosition, out int time)
+            || !w.TryShift(meta.KeyPosition, out int key)
+            || !w.TryShift(meta.ClefPosition, out int clef)
+            || !w.TryShift(meta.TempoPosition, out int tempo))
+            return false;
+        meta.TitlePosition = title;
+        meta.ComposerPosition = composer;
+        meta.TimePosition = time;
+        meta.KeyPosition = key;
+        meta.ClefPosition = clef;
+        meta.TempoPosition = tempo;
+        return true;
+    }
+
+    /// <summary>Verifies every canonical section bar count the RECORDED collect
+    /// computed still holds on the edited text (the live memo fills as a side
+    /// effect, so later section ends reuse the counts). A section name that no
+    /// longer resolves, or a changed count, declines the splice — some part's
+    /// cell inside the window gained or lost a bar (Δm in another part).</summary>
+    private bool CanonicalBarsMatch(MeasureCollector recordedSource)
+    {
+        foreach (var (oldSection, recordedBars) in recordedSource._canonicalSectionBars)
+        {
+            if (!_sectionState.Sections.TryGetValue(oldSection.SectionName, out var liveSection))
+                return false;
+            if (GetCanonicalSectionBars(liveSection) != recordedBars)
+                return false;
+        }
+        return true;
     }
 
     /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
@@ -3425,8 +3990,9 @@ public sealed partial class MeasureCollector
                     {
                         // Resume: bookkeeping of a section at-or-before the target is in
                         // the adopted prefix; re-running it here would read a pre-restore
-                        // builder. ProcessSection's own gate does the skip.
-                        if (_resumePending == null)
+                        // builder. ProcessSection's own gate does the skip. A SPLICED
+                        // walk's remaining sections live in the adopted tail the same way.
+                        if (_resumePending == null && !_suffixSpliced)
                         {
                             RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
                             builder.SectionLabel = ResolveSectionLabel(reference);
@@ -3446,7 +4012,9 @@ public sealed partial class MeasureCollector
                 case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
                     // Resume: prefix marks are in the adopted _musicMarks, and the
                     // pre-restore builder would give this one a garbage measure index.
-                    if (_resumePending != null)
+                    // Post-splice the mirror holds: tail marks are in the adopted
+                    // slice, and the builder already stands at the walk's END.
+                    if (_resumePending != null || _suffixSpliced)
                         break;
                     var navMark = NavigationToMusicMark(nav.MarkType);
                     // Target signs (segno/coda — where a jump lands) sit at the START
@@ -3471,8 +4039,9 @@ public sealed partial class MeasureCollector
                 // collector never produced the item, so it parsed but silently
                 // printed nothing.
                 case CustomTextSyntax custom when !IsInsideRepeatBlock(custom):
-                    // Resume: same reasoning as the navigation-mark arm above.
-                    if (_resumePending != null)
+                    // Resume: same reasoning as the navigation-mark arm above
+                    // (both directions — prefix pending and post-splice).
+                    if (_resumePending != null || _suffixSpliced)
                         break;
                     // Same per-part guard as the navigation marks above.
                     int textMeasure = Math.Max(0, builder.CurrentMeasureIndex - 1);
@@ -3505,8 +4074,9 @@ public sealed partial class MeasureCollector
                 // emitted measure). Runs once per part; each flags the same measure
                 // index, so the score-wide break stays consistent.
                 case BreakSyntax brk when !IsInsideRepeatBlock(brk):
-                    // Resume: the flag is baked into the adopted prefix measures.
-                    if (_resumePending != null)
+                    // Resume: the flag is baked into the adopted prefix measures —
+                    // and, post-splice, into the adopted tail measures.
+                    if (_resumePending != null || _suffixSpliced)
                         break;
                     if (brk.IsNoBreak) builder.SetNoBreak();
                     else builder.SetBreak();

@@ -73,7 +73,7 @@ public sealed record GraceNoteItem
     public int MainNoteItemIndex { get; }
 
     /// <summary>Source position for click-to-source mapping.</summary>
-    public int SourcePosition { get; }
+    public int SourcePosition { get; init; }
 
     /// <summary>Global staff index this grace group belongs to (multi-staff
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>

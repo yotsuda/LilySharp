@@ -65,6 +65,10 @@ public sealed class IncrementalCompiler
     private double _firstPrefix;
     private double _contPrefix;
     private int[]? _lineSizes;
+    // The score-global common shortest duration _springs was built with (⒟⁗ per-measure
+    // memo): every spring's duration space is a function of it, so the memo may only
+    // reuse a measure's springs while it is unchanged. Null until the first build.
+    private double? _shortest;
 
     // F3/S5-3a: persists across edits so unchanged systems reuse their (spring)
     // measure layout. Installed only for the single-staff, override-free path
@@ -82,6 +86,18 @@ public sealed class IncrementalCompiler
     private (string? Title, string? Composer, int? Tempo, int SwingSubdivision,
         string? TempoText, int TempoBeatUnit, int TempoDots) _globalKey;
 
+    // F3/S5-4 (⒭ ⑵, second slice — prefix side): the collect walk's checkpoint
+    // recording from the last FULL collect, kept as the resume baseline. An edit
+    // resumes each walk from its last checkpoint that reads only the old/new
+    // texts' common prefix (CollectResumePlanner), so the walk skips the measures
+    // before the edit instead of re-collecting the whole book per keystroke.
+    // Resumed collects do NOT re-record: the baseline stays pinned to
+    // _collectBaselineTree's text until a full collect refreshes it (first
+    // compile, an unplannable edit, or a mid-collect bail).
+    private MeasureCollector? _collectSource;
+    private CollectWalkProbe? _collectRecording;
+    private SyntaxTree? _collectBaselineTree;
+
     /// <summary>Whether the most recent <see cref="Edit"/> reused the cached
     /// break solution (true) or recomputed it (false). For diagnostics / tests.</summary>
     public bool LastEditSkippedLineBreak { get; private set; }
@@ -90,6 +106,26 @@ public sealed class IncrementalCompiler
     /// ScoreLayout (skipping <see cref="LayoutEngine"/>.Layout outright). Implies
     /// <see cref="LastEditSkippedLineBreak"/>. For diagnostics / tests.</summary>
     public bool LastEditReusedLayout { get; private set; }
+
+    /// <summary>How many collect walks the most recent compile resumed from a
+    /// recorded checkpoint (0 = full collect), how many measures those resumes
+    /// adopted instead of re-collecting, plus the suffix side: how many walks
+    /// spliced their recorded tail and how many measures those splices adopted.
+    /// For diagnostics / tests.</summary>
+    internal (int Walks, int AdoptedMeasures, int SplicedWalks, int SplicedMeasures)
+        LastCollectResume { get; private set; }
+
+    /// <summary>How the most recent spring-vector build was paid for (⒟⁗): how many
+    /// measures' springs were reused from the previous edit's vector via the per-measure
+    /// content-key memo, and how many were recomputed. (0, 0) when the whole vector was
+    /// reused by reference (content-unchanged edit) or on a full compile.
+    /// For diagnostics / tests.</summary>
+    internal (int Reused, int Recomputed) LastSpringMemo { get; private set; }
+
+    /// <summary>The spring vector the most recent compile ended with — the same array the
+    /// break gate and the layout consumed. For the tests that assert the per-measure memo
+    /// reproduces a from-scratch build exactly.</summary>
+    internal MeasureSpringData[]? SpringsForTest => _springs;
 
     /// <summary>The current syntax tree (after the last edit).</summary>
     public SyntaxTree Tree => _tree;
@@ -125,7 +161,7 @@ public sealed class IncrementalCompiler
     private string Compile(SyntaxTree tree, bool allowSkip)
     {
         var spec = RenderSpecParser.FindFirst(tree);
-        var score = SvgGenerator.CollectScore(tree, spec);
+        var score = CollectWithResume(tree, spec, allowResume: allowSkip);
 
         // F3/S5-3: install/refresh the per-system layout cache for scores without
         // grob overrides (overrides can change spacing GLOBALLY, so a per-measure key
@@ -176,8 +212,11 @@ public sealed class IncrementalCompiler
         // spring rebuild-and-compare used to be an independent SECOND OPINION on the content
         // key's completeness — a spring input missing from the key would fail the gate
         // comparison and force a recompute. On a content-unchanged edit that opinion is now
-        // silent; what stands guard instead is the incremental==full net
-        // (IncrementalCompilerTests, incl. the beamed multi-system chained-edit net).
+        // silent — and since the ⒟⁗ second slice (the per-measure memo in the else branch
+        // below) it is silent for the UNCHANGED measures of a content-changing edit too;
+        // what stands guard instead is the incremental==full net
+        // (IncrementalCompilerTests, incl. the beamed multi-system chained-edit net) plus
+        // the memo==full deep-compare nets beside it.
         bool sameContentAsLastEdit = allowSkip
             && !contentKeys.IsDefault && !_contentKeys.IsDefault
             && contentKeys.AsSpan().SequenceEqual(_contentKeys.AsSpan());
@@ -185,11 +224,44 @@ public sealed class IncrementalCompiler
         if (sameContentAsLastEdit && _springs != null)
         {
             springs = _springs;
+            LastSpringMemo = (0, 0);
         }
         else
         {
+            // ⒟⁗ second slice (HANDOFF §1 ▶): on a CONTENT-CHANGING edit (regimes ⑵⑶),
+            // rebuild only the measures whose content-key NEIGHBOURHOOD moved and reuse the
+            // rest of the previous vector per measure. Springs[i] reads measure i (all
+            // staves/voices/side-tables/entry context — folded into key i), the previous
+            // measure's end bar line (SpacingRules.RunLeftBoundBarline), the next measure's
+            // run membership (MmrRunMap.ForbidsBreakAfter) and the score-global shortest
+            // duration — nothing else (inventoried session 150); so keys i−1..i+1 unchanged
+            // (index-aligned) plus an unchanged shortest make springs[i] the same function
+            // of the same inputs. Reuse is index-aligned on purpose: an inserted/deleted
+            // measure shifts every later key and correctly rebuilds the tail, and the
+            // index-dependent inputs (isFirstSystem == 0, startMeasureIndex) stay valid.
             double shortest = SpacingRules.CalculateCommonShortestDuration(score);
-            springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
+            int reusedCount = 0, recomputedCount = 0;
+            Func<int, MeasureSpringData?>? memo = null;
+            if (allowSkip && _springs != null && _shortest == shortest
+                && !contentKeys.IsDefault && !_contentKeys.IsDefault)
+            {
+                var prevSprings = _springs;
+                var prevKeys = _contentKeys;
+                var newKeys = contentKeys;
+                memo = i =>
+                {
+                    if (SpringReusable(i, newKeys, prevKeys))
+                    {
+                        reusedCount++;
+                        return prevSprings[i];
+                    }
+                    recomputedCount++;
+                    return null;
+                };
+            }
+            springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest, memo);
+            _shortest = shortest;
+            LastSpringMemo = (reusedCount, recomputedCount);
         }
         // The break gate's OWN key model — the union of the signatures the staves engrave
         // (SpacingRules.WidestActiveKeyInk), which is what SystemBreaker now prices a line
@@ -261,6 +333,110 @@ public sealed class IncrementalCompiler
         // Only a reused layout carries stale (pre-edit) data-pos that the renderer must
         // re-derive from the live score; a freshly laid-out layout already has it right.
         return SvgGenerator.RenderToSvg(score, layout, _options, resolveDataPos: reuse);
+    }
+
+    /// <summary>
+    /// Whether measure <paramref name="i"/>'s springs from the previous edit's vector are
+    /// provably identical to what a from-scratch build would produce — the ⒟⁗ per-measure
+    /// memo's key test. Index-aligned: keys i−1, i and i+1 must all be unchanged.
+    /// </summary>
+    /// <remarks>
+    /// The neighbourhood window is not caution, it is the inventory (session 150 — every
+    /// read of SystemBreaker.ComputeMultiStaffSpringData's loop body traced to its fold):
+    /// <list type="bullet">
+    /// <item>LEFT (i−1): a multi-measure-rest run OPENING at i whose measure declares no
+    /// start bar line reads the previous measure's <c>EndBarline</c> for the run rod
+    /// (<see cref="SpacingRules.RunLeftBoundBarline"/>) — that field is folded into key
+    /// i−1, not key i.</item>
+    /// <item>RIGHT (i+1): <see cref="MmrRunMap.ForbidsBreakAfter"/> asks whether a break
+    /// after i would split a run, i.e. whether i+1 belongs to the SAME run — visible in
+    /// key i+1 (its content/interior-ness), not in key i. (The next measure's opening
+    /// clef is NOT why: that allowance is already folded into key i.) The last-measure
+    /// case pins the window's edge: i+1 must exist in both vectors or in neither.</item>
+    /// <item>Everything else springs[i] reads is folded into key i itself (all
+    /// staves/voices at i, side-tables, entry context, run membership/count, the boundary
+    /// clef allowance), is score-global-and-folded-into-every-key (staff structure, clefs,
+    /// lead-sheet-ness), or is the shortest duration, which the caller compares
+    /// separately.</item>
+    /// </list>
+    /// </remarks>
+    private static bool SpringReusable(
+        int i, ImmutableArray<MeasureContentKey> newKeys, ImmutableArray<MeasureContentKey> prevKeys)
+    {
+        if (i >= prevKeys.Length || newKeys[i] != prevKeys[i])
+            return false;
+        if (i > 0 && newKeys[i - 1] != prevKeys[i - 1])
+            return false;
+        bool hasRight = i + 1 < newKeys.Length;
+        bool hadRight = i + 1 < prevKeys.Length;
+        if (hasRight != hadRight)
+            return false;
+        return !hasRight || newKeys[i + 1] == prevKeys[i + 1];
+    }
+
+    /// <summary>
+    /// Collects <paramref name="tree"/> the way <see cref="SvgGenerator.CollectScore(SyntaxTree, RenderSpec?)"/>
+    /// does, resuming the collect walks from the recorded baseline when the edit
+    /// window allows it (see <see cref="CollectResumePlanner"/>). Any resume path —
+    /// planned or bailed — produces a score identical to a full collect of
+    /// <paramref name="tree"/>; the CollectResumeTests / CollectEditResumeTests
+    /// completeness nets and this class's incremental==full net stand on that.
+    /// </summary>
+    private MultiStaffScore CollectWithResume(SyntaxTree tree, RenderSpec? spec, bool allowResume)
+    {
+        if (allowResume && _collectRecording != null && _collectSource != null
+            && _collectBaselineTree != null)
+        {
+            var resumer = CollectResumePlanner.Plan(
+                _collectBaselineTree, tree, _collectRecording, _collectSource);
+            if (resumer != null)
+            {
+                try
+                {
+                    var collector = new MeasureCollector
+                    {
+                        ScoreTranspose = spec?.ScoreTranspose,
+                        WalkProbe = resumer,
+                    };
+                    var resumed = SvgGenerator.CollectScore(collector, tree, spec);
+                    int walks = 0, adopted = 0, splicedWalks = 0, spliced = 0;
+                    foreach (var plan in resumer.ResumePlans.Values)
+                    {
+                        if (plan.Consumed)
+                        {
+                            walks++;
+                            adopted += plan.Checkpoint!.MeasureCount;
+                        }
+                        if (plan.SplicedMeasures > 0)
+                        {
+                            splicedWalks++;
+                            spliced += plan.SplicedMeasures;
+                        }
+                    }
+                    LastCollectResume = (walks, adopted, splicedWalks, spliced);
+                    return resumed;
+                }
+                catch (CollectResumeAbortException)
+                {
+                    // Structural drift the plan-time guards could not see. The
+                    // half-collected state is discarded; fall through to the full
+                    // collect below, which also re-records the baseline.
+                }
+            }
+        }
+
+        LastCollectResume = (0, 0, 0, 0);
+        var recorder = CollectWalkProbe.Recorder();
+        var source = new MeasureCollector
+        {
+            ScoreTranspose = spec?.ScoreTranspose,
+            WalkProbe = recorder,
+        };
+        var score = SvgGenerator.CollectScore(source, tree, spec);
+        _collectSource = source;
+        _collectRecording = recorder;
+        _collectBaselineTree = tree;
+        return score;
     }
 
     // F3/B-2: a cached layout is safe to reuse only if it carries no annotation whose

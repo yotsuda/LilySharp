@@ -756,4 +756,171 @@ public class IncrementalCompilerTests
             Assert.Equal(expectSkip, session.LastEditSkippedLineBreak);
         }
     }
+
+    // --- ⒟⁗ per-measure spring memo (HANDOFF §1 ▶) ---------------------------------
+    // On a content-CHANGING edit the session rebuilds only the measures whose content-key
+    // neighbourhood (keys i−1..i+1, index-aligned) moved, and reuses the rest of the
+    // previous spring vector entry by entry. These nets hold the memo to the one standard
+    // that matters: the vector it hands the gate and the layout must be VALUE-IDENTICAL to
+    // a from-scratch build of the edited score — plus liveness (the reuse actually fires),
+    // because a memo that silently recomputes everything passes every equality net.
+
+    /// <summary>The memo'd vector must equal a from-scratch build of the session's current
+    /// tree, element for element (MeasureSpringData is a record struct, so this is deep
+    /// value equality down through the LineStartSpring).</summary>
+    private static void AssertSpringsMatchFromScratch(IncrementalCompiler session)
+    {
+        var tree = session.Tree;
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        double shortest = SpacingRules.CalculateCommonShortestDuration(score);
+        Assert.Equal(SystemBreaker.ComputeMultiStaffSpringData(score, shortest),
+            session.SpringsForTest);
+    }
+
+    /// <summary>
+    /// The memo's basic contract on a plain content-changing edit (an added accidental —
+    /// regime ⑶, the gate moves): the spring vector equals a from-scratch build, the SVG
+    /// equals a full recompile, and EXACTLY the edited measure plus its two neighbours were
+    /// recomputed — the rest came back from the previous vector. The neighbour count is
+    /// asserted exactly so the window cannot silently widen (a perf regression) or narrow
+    /// (a soundness hole) without this saying so.
+    /// </summary>
+    [Fact]
+    public void SpringMemo_RebuildsOnlyTheEditedNeighbourhood_AndMatchesFromScratch()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            phrase p { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
+            section Main { melody { $p } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "f4 g a b", "fis4 g a b");   // measure index 5
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
+        // 8 measures; key 5 moved -> measures 4 (right-neighbour window), 5 and 6
+        // (left-neighbour window) recomputed, the other 5 reused.
+        Assert.Equal((5, 3), session.LastSpringMemo);
+    }
+
+    /// <summary>
+    /// The LEFT-neighbour window is load-bearing: a multi-measure-rest run whose opening
+    /// measure declares no start bar line prices its run rod from the PREVIOUS measure's
+    /// end bar line (SpacingRules.RunLeftBoundBarline) — a spring input that lives in key
+    /// i−1, not in key i. The edit flips that bar line (double → regular) while leaving
+    /// the run-opening measure's own key untouched; a memo that only compared key i would
+    /// hand back the run's rod priced from the OLD bar line.
+    /// </summary>
+    [Fact]
+    public void SpringMemo_RunRodReadsThePreviousMeasuresBarline_LeftNeighbourWindow()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody { c1 || R1*2 | c4 d e f | c4 d e f | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var before = session.SpringsForTest![1];
+
+        var change = Replace(src, "c1 ||", "c1 |");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
+        // The hazard is real, not vacuous: the run-opening measure's springs DID change
+        // even though its own content key did not (the rod reaches the left bar line).
+        Assert.NotEqual(before, session.SpringsForTest![1]);
+        // 5 measures; key 0 moved -> measure 0 (its own key) and 1 (left-neighbour
+        // window) recomputed, measures 2..4 reused.
+        Assert.Equal((3, 2), session.LastSpringMemo);
+    }
+
+    /// <summary>
+    /// The RIGHT-neighbour window is load-bearing: whether a break is forbidden AFTER
+    /// measure i asks whether i+1 belongs to the same multi-measure-rest run
+    /// (MmrRunMap.ForbidsBreakAfter) — visible in key i+1, never in key i. Extending the
+    /// run (<c>R1*2</c> → <c>R1*3</c>) flips the old run tail's break permission while its
+    /// own key is unchanged (an interior rested measure both times); a memo that compared
+    /// only key i would hand back BreakPermission.Allow on a boundary the run now spans —
+    /// which is exactly what the from-scratch comparison below would catch.
+    /// </summary>
+    [Fact]
+    public void SpringMemo_RunExtension_FlipsForbidsBreakAfter_RightNeighbourWindow()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody { c2 d2 | R1*2 | c1 | e2 f2 | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // Run 1..2: a break after its LAST measure (index 2) is where a break belongs.
+        Assert.Equal(BreakPermission.Allow, session.SpringsForTest![2].BreakPermission);
+
+        var change = Replace(src, "R1*2", "R1*3");             // run 1..2 grows to 1..3
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
+        // The old run tail now sits INSIDE the run: a break after it would split the MMR.
+        Assert.Equal(BreakPermission.Forbid, session.SpringsForTest![2].BreakPermission);
+    }
+
+    /// <summary>
+    /// The memo on a MULTI-STAFF score: every staff's content at the measure index folds
+    /// into one key, so an accidental added in the soprano rebuilds that measure's combined
+    /// springs (and its window) and reuses the rest — and the vector still equals a
+    /// from-scratch build of the grand staff.
+    /// </summary>
+    [Fact]
+    public void SpringMemo_OnAGrandStaff_MatchesFromScratch()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part sop { clef treble }
+            part bas { clef bass }
+            section A {
+              sop { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | g'4 a' b' c'' | }
+              bas { c4 d e f | g4 a b c' | c4 d e f | g4 a b c' | }
+            }
+            form main { A }
+            score main "x" {
+              grandStaff {
+                staff sop "Soprano"
+                staff bas "Bass"
+              }
+            }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "g'4 a' b' c''", "g'4 a' bes' c''");   // measure index 1
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
+        // 4 measures; key 1 moved -> measures 0..2 recomputed, measure 3 reused.
+        Assert.Equal((1, 3), session.LastSpringMemo);
+    }
 }

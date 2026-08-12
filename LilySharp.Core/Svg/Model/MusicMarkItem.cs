@@ -168,7 +168,7 @@ public sealed record MusicMarkItem
     public int StaffIndex { get; init; }
 
     /// <summary>Source position for click-to-source mapping.</summary>
-    public int SourcePosition { get; }
+    public int SourcePosition { get; init; }
 
     /// <summary>
     /// Index of the measure item (note/rest) this mark anchors on, or -1 when
