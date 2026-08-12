@@ -75,6 +75,12 @@ internal sealed class ChordNameCollector
     /// <summary>All collected chord-name items.</summary>
     public IReadOnlyList<ChordNameItem> Items => _items;
 
+    /// <summary>The mutable list, for the checkpoint/resume probe only — inline
+    /// <c>@chord</c> items are appended DURING the primary walk, so a resumed walk
+    /// adopts this table's prefix like the collector's own lists
+    /// (<c>MeasureCollector.CumulativeSideTables</c>).</summary>
+    internal List<ChordNameItem> ItemsList => _items;
+
     /// <summary>Resets between reused collection passes.</summary>
     public void Clear() => _items.Clear();
 

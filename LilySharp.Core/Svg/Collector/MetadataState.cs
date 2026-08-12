@@ -68,6 +68,43 @@ internal sealed class MetadataState
     public string Clef = "treble";
     public string InitialClef = "treble"; // preserved for Score.Clef (not mutated by mid-measure clef changes)
 
+    /// <summary>A field-for-field copy, for the collect walk checkpoint
+    /// (CollectWalkProbe). All fields are scalars/strings, so a shallow
+    /// memberwise clone IS a full snapshot.</summary>
+    public MetadataState Clone() => (MetadataState)MemberwiseClone();
+
+    /// <summary>Restores every field from a <see cref="Clone"/> snapshot.</summary>
+    public void CopyFrom(MetadataState other)
+    {
+        Title = other.Title;
+        Composer = other.Composer;
+        TextFont = other.TextFont;
+        EmbedFont = other.EmbedFont;
+        TitlePosition = other.TitlePosition;
+        ComposerPosition = other.ComposerPosition;
+        TimePosition = other.TimePosition;
+        KeyPosition = other.KeyPosition;
+        ClefPosition = other.ClefPosition;
+        TempoPosition = other.TempoPosition;
+        Tempo = other.Tempo;
+        TempoText = other.TempoText;
+        TempoBeatUnit = other.TempoBeatUnit;
+        TempoDots = other.TempoDots;
+        SwingSubdivision = other.SwingSubdivision;
+        TimeBeats = other.TimeBeats;
+        TimeBeatsText = other.TimeBeatsText;
+        TimeSenzaMisura = other.TimeSenzaMisura;
+        TimeBeatType = other.TimeBeatType;
+        KeySharps = other.KeySharps;
+        KeyCustom = other.KeyCustom;
+        InitialKeyCustom = other.InitialKeyCustom;
+        InitialKeySharps = other.InitialKeySharps;
+        KeyTonicStep = other.KeyTonicStep;
+        KeyTonicAlter = other.KeyTonicAlter;
+        Clef = other.Clef;
+        InitialClef = other.InitialClef;
+    }
+
     /// <summary>
     /// Resets to first-bar defaults for a fresh collection pass. NOTE:
     /// <see cref="KeyTonicStep"/> is intentionally NOT reset here — the original

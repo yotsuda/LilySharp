@@ -31,7 +31,12 @@ public static class PartTranspose
     /// <summary>The effective transpose for <paramref name="partName"/>, or null.</summary>
     public static (int step, int alt, int oct)? Read(SyntaxNode root, string partName)
     {
-        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        // Part declarations are top-level only (Parser.ParseTopLevelItem), so the
+        // root's direct children are the whole search space (SyntaxNode.ChildNodes).
+        // ReadScoreDefault below is left on the descendant walk deliberately: its
+        // "not inside a part" filter can match a transpose property nested deeper
+        // (e.g. a render block's), and narrowing it would change what it finds.
+        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
             if (partDecl.Name.Text == partName)
             {
                 var own = Read(partDecl);

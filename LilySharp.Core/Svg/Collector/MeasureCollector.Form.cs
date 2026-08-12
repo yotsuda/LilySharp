@@ -29,6 +29,12 @@ public sealed partial class MeasureCollector
 {
     private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
+        // Checkpoint/resume: a repeat block's bookkeeping (volta start/end measure
+        // indices, the synthesized barline invocations between sections) reads
+        // builder state a mid-block skip would corrupt, so a walk that crosses one
+        // is not resumable yet. A missed recording only costs reuse.
+        _probeRecording?.MarkIneligible("form-repeat-block");
+
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)>();
 
@@ -129,6 +135,36 @@ public sealed partial class MeasureCollector
 
     private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
+        // Checkpoint/resume gate (CollectWalkProbe): a section wholly before the
+        // resume target is in the adopted prefix — prologue, music and epilogue —
+        // so it is skipped whole. The TARGET section skips only its prologue (it
+        // ran inside the prefix); the container walk below restores the checkpoint
+        // at the target invocation and runs the tail live. Section visits and
+        // per-section invocation ordinals are deterministic per document, so a
+        // recording and a resume of the same document address the same boundary.
+        int visit = _sectionVisit++;
+        _invocationInSection = 0;
+        if (_resumePending is { } plan)
+        {
+            if (visit < plan.Checkpoint.SectionVisit)
+                return;
+        }
+        else
+        {
+            ProcessSectionPrologue(section, builder);
+        }
+
+        int startMeasure = builder.CurrentMeasureIndex;
+        _sectionStartMeasureForResume = startMeasure;
+        ProcessSectionBody(section, processNodes, builder, startMeasure);
+    }
+
+    /// <summary>The section-boundary prologue: frame/duration/meter/key/override
+    /// reverts and the section's own header directives. Extracted verbatim from
+    /// <see cref="ProcessSection"/> so the resume gate can skip it as one unit
+    /// (it ran inside the adopted prefix when the resume target sits mid-section).</summary>
+    private void ProcessSectionPrologue(SectionDeclarationSyntax section, MeasureBuilder builder)
+    {
         // Reset the relative frame (and revert the octave mode to the file
         // default) at each section boundary. The default DURATION resets too, so a
         // section is self-contained: an un-numbered first note starts a quarter
@@ -187,9 +223,13 @@ public sealed partial class MeasureCollector
         // inline-music section walks its override as music instead, so it is excluded.
         if (!SectionHasInlineMusic(section))
         {
-            foreach (var child in section.DescendantNodes())
+            // Direct children only — the old descendant walk re-read the section's whole
+            // music body to apply a filter (`child.Parent == section`) that IS the
+            // direct-child test, so the narrowing is an identity (session 145: that walk
+            // enumerated 234k nodes per keystroke per part on perf-fingbeam1k).
+            foreach (var child in section.ChildNodes())
             {
-                if (child.Parent == section && child is OverrideDeclarationSyntax secOv)
+                if (child is OverrideDeclarationSyntax secOv)
                 {
                     CollectOverride(secOv, builder.CurrentMeasureIndex, builder.CurrentItemCount,
                         isOnce: false, staffIndex: _currentStaffIndex);
@@ -301,9 +341,20 @@ public sealed partial class MeasureCollector
         if (_sectionHeaderPartials.TryGetValue(section.SectionName, out var sectionPartial))
             builder.SetPartial(sectionPartial.ToFraction());
 
-        int startMeasure = builder.CurrentMeasureIndex;
+    }
+
+    /// <summary>The section's container walk and padding epilogue — the part of
+    /// <see cref="ProcessSection"/> after the prologue (see the resume gate there).</summary>
+    private void ProcessSectionBody(SectionDeclarationSyntax section,
+        Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder, int startMeasure)
+    {
         bool matched = false;
-        foreach (var child in section.DescendantNodes())
+        // Direct children only: a PartBlockSyntax is produced exclusively by
+        // ParseSectionItem (Parser.Sections.cs — the Identifier and clef-keyword arms),
+        // so every part block is a DIRECT child of its section declaration. The old
+        // descendant walk visited part v's entire music body before reaching sibling
+        // part w — O(section) per part, per section, per keystroke.
+        foreach (var child in section.ChildNodes())
         {
             if (child is PartBlockSyntax partBlock)
             {
@@ -358,6 +409,14 @@ public sealed partial class MeasureCollector
         // caller's pending SectionLabel still lands on the first filled measure, so
         // the section mark shows on this staff too. Only pad at a clean bar boundary
         // (a mid-measure section is malformed and flagged elsewhere).
+        // A mid-section resume restored the builder AFTER startMeasure was read off
+        // the pre-restore builder; the checkpoint carries the section's true start.
+        if (_resumeRestoredSectionStart is { } resumedStart)
+        {
+            startMeasure = resumedStart;
+            _resumeRestoredSectionStart = null;
+        }
+
         if (_voiceName != null && builder.CurrentItemCount == 0)
         {
             int produced = builder.CurrentMeasureIndex - startMeasure;
@@ -465,6 +524,13 @@ public sealed partial class MeasureCollector
     /// </summary>
     private int GetCanonicalSectionBars(SectionDeclarationSyntax section)
     {
+        // One answer per section per collect: the count is a pure function of the
+        // syntax (PartMajorCells is filled once by CollectDefinitions), yet every
+        // part's walk — and every reprise of the section in a form — re-counted every
+        // part's bars from scratch, O(parts² × section syntax) per keystroke.
+        if (_canonicalSectionBars.TryGetValue(section, out int cached))
+            return cached;
+
         int max = 0;
 
         // Part-major: every `part <p> { section <name> { ... } }` cell for this name.
@@ -472,14 +538,17 @@ public sealed partial class MeasureCollector
             if (kv.Key.section == section.SectionName)
                 max = Math.Max(max, CountBarsInScope(kv.Value));
 
-        // Section-major: the sibling part blocks inside the section declaration.
-        foreach (var part in section.DescendantNodes().OfType<PartBlockSyntax>())
+        // Section-major: the sibling part blocks inside the section declaration
+        // (direct children — see ProcessSection's discovery loop for the grammar
+        // guarantee; the descendant walk here re-read the whole section body).
+        foreach (var part in section.ChildNodes().OfType<PartBlockSyntax>())
             max = Math.Max(max, CountBarsInScope(part));
 
         // Fallback: a standalone section whose own descendants are the music.
         if (max == 0)
             max = CountBarsInScope(section);
 
+        _canonicalSectionBars[section] = max;
         return max;
     }
 

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using LilySharp.Core.Syntax.InternalSyntax;
 
 namespace LilySharp.Core.Syntax;
@@ -223,38 +224,72 @@ public abstract class SyntaxNode
     public string ToFullString() => Green.ToFullString();
 
     /// <summary>
-    /// Returns all descendant nodes.
+    /// Returns the DIRECT child nodes only. For declarations the grammar produces
+    /// exclusively at the top level (Parser.ParseTopLevelItem: <c>score</c>/render,
+    /// <c>form</c>, <c>part</c>, <c>phrase</c>, …) enumerate the root's ChildNodes
+    /// instead of <see cref="DescendantNodes"/> — a descendant walk re-enumerates
+    /// every music body to find nodes that can only sit at depth 1, and those
+    /// discovery walks were about half of the keystroke's collect cost
+    /// (session 144: plain1k 41 of 82 ms, fingbeam1k 208 of 525 ms).
     /// </summary>
-    public IEnumerable<SyntaxNode> DescendantNodes()
+    public IEnumerable<SyntaxNode> ChildNodes()
     {
         for (int i = 0; i < SlotCount; i++)
         {
-            var child = GetChild(i);
-            if (child != null)
-            {
+            if (GetChild(i) is { } child)
                 yield return child;
-                foreach (var descendant in child.DescendantNodes())
-                    yield return descendant;
+        }
+    }
+
+    /// <summary>
+    /// Returns all descendant nodes in pre-order (each child before its own
+    /// descendants, slots in order) — the same sequence the former recursive
+    /// iterator produced.
+    /// </summary>
+    /// <remarks>
+    /// Iterative with an explicit stack: the recursive version chained one
+    /// iterator per tree level, so every element bubbled through O(depth)
+    /// MoveNext calls — measured at ~13 ms (plain1k) / ~76 ms (fingbeam1k) per
+    /// full-tree enumeration on a warm red tree (session 144), and the collect
+    /// phase runs several such walks per keystroke.
+    /// </remarks>
+    public IEnumerable<SyntaxNode> DescendantNodes()
+    {
+        var stack = new Stack<(SyntaxNode Node, int Slot)>();
+        var current = (Node: this, Slot: 0);
+        while (true)
+        {
+            if (current.Slot >= current.Node.SlotCount)
+            {
+                if (stack.Count == 0)
+                    yield break;
+                current = stack.Pop();
+                continue;
+            }
+
+            var child = current.Node.GetChild(current.Slot);
+            current.Slot++;
+            if (child == null)
+                continue;
+
+            yield return child;
+            if (child.SlotCount > 0)
+            {
+                stack.Push(current);
+                current = (child, 0);
             }
         }
     }
 
     /// <summary>
-    /// Returns all descendant nodes of a specific type.
+    /// Returns all descendant nodes of a specific type (pre-order, as
+    /// <see cref="DescendantNodes()"/>).
     /// </summary>
     public IEnumerable<T> DescendantNodes<T>() where T : SyntaxNode
     {
-        for (int i = 0; i < SlotCount; i++)
-        {
-            var child = GetChild(i);
-            if (child != null)
-            {
-                if (child is T typed)
-                    yield return typed;
-                foreach (var descendant in child.DescendantNodes<T>())
-                    yield return descendant;
-            }
-        }
+        foreach (var node in DescendantNodes())
+            if (node is T typed)
+                yield return typed;
     }
 
     /// <summary>

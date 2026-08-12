@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections;
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
@@ -716,6 +717,72 @@ internal sealed class MeasureBuilder
 
         return _measures;
     }
+
+    // --- checkpoint/resume substrate (CollectWalkProbe) ---
+
+    /// <summary>Every cross-measure field of the builder, captured at a clean
+    /// boundary (<see cref="AtCleanBoundary"/> — no pending items, no elapsed
+    /// duration, so <c>_currentItems</c>/<c>_currentDuration</c> need no slot).
+    /// <see cref="LastMeasure"/> pins the value of <c>_measures[^1]</c> AT the
+    /// boundary: it is the one already-emitted element the walk can still
+    /// rewrite afterwards (<see cref="SetBreak"/>, <see cref="AddEndBarlineSource"/>),
+    /// so a prefix harvested from the walk's final list must put it back.</summary>
+    internal readonly record struct BuilderCheckpoint(
+        bool ConfirmableBoundary,
+        bool BoundaryRetargetable,
+        bool LastEndAutoFill,
+        Fraction TimeSignature,
+        Fraction? PartialRestore,
+        BarlineType PendingStartBarline,
+        BarlineType PendingEndBarline,
+        bool PendingBreak,
+        bool PendingNoBreak,
+        string? SectionLabel,
+        int SectionLabelPosition,
+        int MeasureSourceStart,
+        Measure? LastMeasure);
+
+    /// <summary>True at a checkpointable boundary: nothing pending in the
+    /// current measure, not even a zero-duration directive.</summary>
+    internal bool AtCleanBoundary
+        => _currentItems.Count == 0 && _currentDuration == Fraction.Zero;
+
+    internal BuilderCheckpoint Capture() => new(
+        _confirmableBoundary, _boundaryRetargetable, _lastEndAutoFill,
+        _timeSignature, _partialRestore,
+        _pendingStartBarline, _pendingEndBarline,
+        _pendingBreak, _pendingNoBreak,
+        _sectionLabel, _sectionLabelPosition, _measureSourceStart,
+        _measures.Count > 0 ? _measures[^1] : null);
+
+    /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
+    /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
+    /// stays as registered — the resume re-enters THIS builder, not a new one.</summary>
+    internal void Restore(BuilderCheckpoint ck, IReadOnlyList<Measure> prefix)
+    {
+        _measures.Clear();
+        _measures.AddRange(prefix);
+        if (ck.LastMeasure is { } last && _measures.Count > 0)
+            _measures[^1] = last;
+        _currentItems.Clear();
+        _currentDuration = Fraction.Zero;
+        _confirmableBoundary = ck.ConfirmableBoundary;
+        _boundaryRetargetable = ck.BoundaryRetargetable;
+        _lastEndAutoFill = ck.LastEndAutoFill;
+        _timeSignature = ck.TimeSignature;
+        _partialRestore = ck.PartialRestore;
+        _pendingStartBarline = ck.PendingStartBarline;
+        _pendingEndBarline = ck.PendingEndBarline;
+        _pendingBreak = ck.PendingBreak;
+        _pendingNoBreak = ck.PendingNoBreak;
+        _sectionLabel = ck.SectionLabel;
+        _sectionLabelPosition = ck.SectionLabelPosition;
+        _measureSourceStart = ck.MeasureSourceStart;
+    }
+
+    /// <summary>A copy of the emitted measures BEFORE <see cref="FinalizeMeasures"/>
+    /// mutates them — the values a resumed walk re-enters with.</summary>
+    internal List<Measure> MeasuresSnapshot() => new(_measures);
 }
 
 /// <summary>
@@ -999,6 +1066,24 @@ public sealed partial class MeasureCollector
     private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new();
     private readonly Dictionary<string, TempoDeclarationSyntax> _sectionHeaderTempos = new();
     private readonly Dictionary<string, PartialDeclarationSyntax> _sectionHeaderPartials = new();
+    // section node -> canonical bar count (GetCanonicalSectionBars). A pure function of
+    // the syntax within one collect, so it is counted once — not once per part per
+    // reprise. Keyed by node identity; cleared per collect (Reset).
+    private readonly Dictionary<SectionDeclarationSyntax, int> _canonicalSectionBars = new();
+
+    // --- checkpoint/resume probe (S5 substrate — see CollectWalkProbe.cs) ---
+    // Null in production: every guard below is a null check, so the probe costs
+    // the walk nothing until the per-measure collect memo (HANDOFF ▶ ⒭ ⑵) wires
+    // it across keystrokes.
+    /// <summary>Record checkpoints (recorder) or resume from them (resumer).</summary>
+    internal CollectWalkProbe? WalkProbe { get; set; }
+    private int _walkOrdinal;                        // Nth CollectMeasures call of this collect
+    private int _invocationInSection;                // ProcessNodes calls within the current section (or the walk, pre-section)
+    private int _sectionVisit;                       // ProcessSection entries within the current walk
+    private VoiceWalkRecording? _probeRecording;     // record mode: the current walk's recording
+    private VoiceResumePlan? _resumePending;         // resume mode: set until the target checkpoint is restored
+    private int _sectionStartMeasureForResume;       // mirror of ProcessSection's startMeasure local, for capture
+    private int? _resumeRestoredSectionStart;        // the target section's true start, injected at restore
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -1642,7 +1727,7 @@ public sealed partial class MeasureCollector
     {
         var root = tree.GetRoot();
         var rendered = renderSpec.GetVoiceNames().ToHashSet(StringComparer.Ordinal);
-        var omitted = root.DescendantNodes().OfType<PartDeclarationSyntax>()
+        var omitted = root.ChildNodes().OfType<PartDeclarationSyntax>()
             .Select(p => p.Name.Text)
             .Where(n => !rendered.Contains(n))
             .Distinct(StringComparer.Ordinal)
@@ -1689,7 +1774,7 @@ public sealed partial class MeasureCollector
     /// pass when there is nothing to harvest.</summary>
     private static bool PartHasStructure(SyntaxNode root, string partName)
     {
-        var part = root.DescendantNodes().OfType<PartDeclarationSyntax>()
+        var part = root.ChildNodes().OfType<PartDeclarationSyntax>()
             .FirstOrDefault(p => p.Name.Text == partName);
         return part != null && part.DescendantNodes().Any(n =>
             n is NavigationMarkSyntax or InlineVoltaSyntax
@@ -2325,6 +2410,7 @@ public sealed partial class MeasureCollector
         _sectionActiveGrobProps.Clear();
         _keyByMeasure.Clear();
         _voiceMeasuresByName.Clear();
+        _canonicalSectionBars.Clear();
         _trillSpannerEvents.Clear();
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
@@ -2345,6 +2431,12 @@ public sealed partial class MeasureCollector
         _defaultDuration = Fraction.Quarter;
         _defaultDots = 0;
         _meta.Reset();
+        // Probe bookkeeping restarts per collect; WalkProbe itself is the caller's
+        // (set before Collect, read after).
+        _walkOrdinal = 0;
+        _probeRecording = null;
+        _resumePending = null;
+        _resumeRestoredSectionStart = null;
     }
 
     /// <summary>
@@ -2469,14 +2561,13 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void CollectPartBodyOverrides(SyntaxNode root, string partName, int staffIndex)
     {
-        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;
-            foreach (var node in partDecl.DescendantNodes())
+            foreach (var node in partDecl.ChildNodes())
             {
-                if (node.Parent != partDecl)
-                    continue; // direct children only; section-internal directives are walked
+                // Direct children only; section-internal directives are walked as music.
                 // Only a plain `override` is a valid part default; `revert` / `once` in a
                 // part header are positional and meaningless (flagged by the validator).
                 if (node is OverrideDeclarationSyntax od)
@@ -2506,7 +2597,7 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName)
     {
-        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;
@@ -2519,8 +2610,8 @@ public sealed partial class MeasureCollector
 
             // A part-header key (`part p { key bes major … }`) is this part's default
             // key — applied per-part below, not folded into the global (file) key.
-            KeySignatureSyntax? partKey = partDecl.DescendantNodes()
-                .FirstOrDefault(n => n.Parent == partDecl && n is KeySignatureSyntax) as KeySignatureSyntax;
+            KeySignatureSyntax? partKey = partDecl.ChildNodes()
+                .OfType<KeySignatureSyntax>().FirstOrDefault();
 
             // Check properties for clef, instrument, octave, and transpose
             foreach (var prop in partDecl.Properties)
@@ -2759,10 +2850,9 @@ public sealed partial class MeasureCollector
         // CollectMeasures collects them, so this is skipped to avoid double-counting.
         if (_form != null || _sectionState.Sections.Count > 0)
         {
-            foreach (var node in root.DescendantNodes())
+            foreach (var node in root.ChildNodes())
             {
-                if (node.Parent != root)
-                    continue; // only true top-level items; in-section overrides are walked
+                // Only true top-level items; in-section overrides are walked.
                 // Only a plain `override` is a valid global default. `revert` / `once` here
                 // are positional and have no effect at the structural top level — flagged by
                 // RevertContextValidator — so they are not collected.
@@ -3021,12 +3111,57 @@ public sealed partial class MeasureCollector
 
         _pendingInlineVoltas.Clear();
 
+        // Checkpoint/resume probe (CollectWalkProbe). Walks are addressed by their
+        // ordinal — the Nth CollectMeasures call of the collect — which is
+        // deterministic for a given document, so a recording and a later resume of
+        // the same document meet on the same walk.
+        int walkOrdinal = _walkOrdinal++;
+        _invocationInSection = 0;
+        _sectionVisit = 0;
+        _sectionStartMeasureForResume = 0;
+        _resumeRestoredSectionStart = null;
+        _probeRecording = null;
+        _resumePending = null;
+        if (WalkProbe is { } probe)
+        {
+            if (probe.IsRecording)
+            {
+                _probeRecording = new VoiceWalkRecording { VoiceName = _voiceName };
+                probe.Recordings[walkOrdinal] = _probeRecording;
+            }
+            else if (probe.ResumePlans.TryGetValue(walkOrdinal, out var resume))
+            {
+                _resumePending = resume;
+            }
+        }
+
         void ProcessNodes(IEnumerable<SyntaxNode> nodes)
         {
+            int invocation = _invocationInSection++;
+            int startIndex = 0;
+            if (_resumePending is { } plan)
+            {
+                // Only the TARGET section's invocations (or the section-less root
+                // path's) reach here — earlier sections return whole at
+                // ProcessSection's entry gate. An invocation before the target is
+                // wholly inside the adopted prefix.
+                if (invocation < plan.Checkpoint.Invocation)
+                    return;
+                if (invocation > plan.Checkpoint.Invocation)
+                    throw new InvalidOperationException(
+                        $"collect resume overshot its target invocation ({invocation} > {plan.Checkpoint.Invocation})");
+                RestoreWalkCheckpoint(plan, builder);
+                startIndex = plan.Checkpoint.NodeIndex;
+            }
             var nodeList = nodes.ToList();
-            for (int i = 0; i < nodeList.Count; i++)
+            for (int i = startIndex; i < nodeList.Count; i++)
             {
                 var node = nodeList[i];
+
+                // Record mode: an eligible measure boundary right before node i is a
+                // resume point. Cheap when off (_probeRecording null in production).
+                if (_probeRecording is { IneligibleReason: null } rec && builder.AtCleanBoundary)
+                    TryCaptureWalkCheckpoint(rec, builder, invocation, i);
 
                 // Phrase-reference boundary: evaluate the body in the default
                 // frame (same handling as ProcessMusicNodeSequence). The boundary
@@ -3064,9 +3199,16 @@ public sealed partial class MeasureCollector
             // (source order), so a single-section piece needs no structure at all.
             foreach (var section in _sectionState.Sections.Values.OrderBy(s => s.Name.Span.Start))
             {
-                RecordSectionStart(section.SectionName, builder.CurrentMeasureIndex);
-                builder.SectionLabel = section.SectionName;
-                builder.SectionLabelPosition = section.Name.Span.Start;
+                // Resume: the bookkeeping of a skipped/partially-resumed section is in
+                // the adopted prefix (RecordSectionStart via the checkpoint's section
+                // maps, the label via the builder state) — re-running it here would
+                // read a pre-restore builder. ProcessSection's own gate does the skip.
+                if (_resumePending == null)
+                {
+                    RecordSectionStart(section.SectionName, builder.CurrentMeasureIndex);
+                    builder.SectionLabel = section.SectionName;
+                    builder.SectionLabelPosition = section.Name.Span.Start;
+                }
                 ProcessSection(section, ProcessNodes, builder);
             }
         }
@@ -3077,9 +3219,172 @@ public sealed partial class MeasureCollector
             ProcessNodes(musicNodes);
         }
 
+        if (_resumePending != null)
+            throw new InvalidOperationException(
+                "collect resume never reached its target checkpoint (walk-order address mismatch)");
+        if (_probeRecording is { } recording)
+        {
+            // Harvest what a resume adopts: the measures BEFORE FinalizeMeasures
+            // mutates them, and the walk-local lists (cleared per walk, so the
+            // collector's final state does not retain them for this walk).
+            recording.PreFinalizeMeasures = builder.MeasuresSnapshot();
+            recording.PendingInlineVoltas = new(_pendingInlineVoltas);
+            recording.ParallelSpans = new(_parallelSpans);
+            _probeRecording = null;
+        }
+
         FinalizeInlineVoltas();
 
         return builder.FinalizeMeasures();
+    }
+
+    // --- checkpoint/resume probe internals (see CollectWalkProbe.cs) ---
+
+    /// <summary>The append-only output lists a walk grows CUMULATIVELY across the
+    /// whole collect (never cleared between walks), in a fixed order shared by
+    /// capture (counts) and restore (prefix adoption). Excluded on purpose:
+    /// <c>_pendingInlineVoltas</c>/<c>_parallelSpans</c> (cleared per walk —
+    /// adopted from the recording's copies), <c>_measureAccidentals</c> (empty at
+    /// every checkpoint by eligibility), <c>_courtesySourcePositions</c>/
+    /// <c>_fingeringByPosition</c> (position-keyed; an item only ever reads its
+    /// OWN position, so prefix entries have no reader in the resumed tail), and
+    /// the collaborators that run strictly post-walk (lyrics, tab).</summary>
+    private IList[] CumulativeSideTables() => new IList[]
+    {
+        _dynamics, _articulations, _graceNotes, _musicMarks, _customTexts,
+        _voltaBrackets, _tupletBrackets, _arpeggios, _figuredBasses,
+        _percentRepeats, _crossStaffItems, _grobOverrides, _grobReverts,
+        _trillSpannerEvents, _pitchTrace, _navPlacementWarnings,
+        _tieTargetWarnings, _unpairedSlurWarnings, _chordNameCollector.ItemsList,
+    };
+
+    /// <summary>
+    /// Records a checkpoint at a clean measure boundary — unless a cross-measure
+    /// carry is in flight, in which case the boundary is silently skipped (a missed
+    /// checkpoint only costs reuse; see CollectWalkProbe's eligibility remarks).
+    /// </summary>
+    private void TryCaptureWalkCheckpoint(
+        VoiceWalkRecording rec, MeasureBuilder builder, int invocation, int nodeIndex)
+    {
+        if (_pendingGrace != null || !_pendingLeadingGrace.IsDefaultOrEmpty
+            || _pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd
+            || _tremoloPairShape != null
+            || _cueDepth != 0 || _currentVoiceScope != null || _metadataMeasureOffset != 0
+            || _phraseTransposeSaves.Count > 0
+            || _measureAccidentals.Count > 0)
+            return;
+
+        var tables = CumulativeSideTables();
+        var counts = new int[tables.Length];
+        for (int t = 0; t < tables.Length; t++)
+            counts[t] = tables[t].Count;
+
+        rec.Checkpoints.Add(new WalkCheckpoint
+        {
+            SectionVisit = _sectionVisit - 1, // -1 = the section-less root path
+            Invocation = invocation,
+            NodeIndex = nodeIndex,
+            SectionStartMeasure = _sectionStartMeasureForResume,
+            Builder = builder.Capture(),
+            Octave = OctaveCheckpoint.Capture(_octave),
+            Meta = _meta.Clone(),
+            DefaultDuration = _defaultDuration,
+            DefaultDots = _defaultDots,
+            AmbientTonicStep = _ambientTonicStep,
+            AmbientTonicAlter = _ambientTonicAlter,
+            AmbientTonicValid = _ambientTonicValid,
+            OpeningKeyOverride = _openingKeyOverride,
+            TremoloRepeatCount = _tremoloRepeatCount,
+            TremoloPairShape = _tremoloPairShape,
+            TremoloPairFirst = _tremoloPairFirst,
+            SectionActiveGrobProps = new(_sectionActiveGrobProps),
+            KeyByMeasure = new(_keyByMeasure),
+            SectionStartMeasures = new(_sectionState.StartMeasure),
+            SectionAllStarts = _sectionState.AllStarts
+                .ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value)),
+            TableCounts = counts,
+            PendingInlineVoltaCount = _pendingInlineVoltas.Count,
+            ParallelSpanCount = _parallelSpans.Count,
+            MeasureCount = builder.CurrentMeasureIndex,
+        });
+    }
+
+    /// <summary>
+    /// Fast-forwards the walk to <paramref name="plan"/>'s checkpoint: restores the
+    /// collector's value state, adopts the recorded prefix (measures, walk-local
+    /// lists, cumulative side-table slices), and clears the pending plan so
+    /// everything after the checkpoint runs live.
+    /// </summary>
+    private void RestoreWalkCheckpoint(VoiceResumePlan plan, MeasureBuilder builder)
+    {
+        var ck = plan.Checkpoint;
+        var rec = plan.Recording;
+        if (rec.IneligibleReason is { } why)
+            throw new InvalidOperationException($"resuming an ineligible walk recording: {why}");
+
+        // Value state.
+        ck.Octave.Restore(_octave);
+        _meta.CopyFrom(ck.Meta);
+        _defaultDuration = ck.DefaultDuration;
+        _defaultDots = ck.DefaultDots;
+        _ambientTonicStep = ck.AmbientTonicStep;
+        _ambientTonicAlter = ck.AmbientTonicAlter;
+        _ambientTonicValid = ck.AmbientTonicValid;
+        _openingKeyOverride = ck.OpeningKeyOverride;
+        _tremoloRepeatCount = ck.TremoloRepeatCount;
+        _tremoloPairShape = ck.TremoloPairShape;
+        _tremoloPairFirst = ck.TremoloPairFirst;
+        _sectionActiveGrobProps.Clear();
+        foreach (var prop in ck.SectionActiveGrobProps)
+            _sectionActiveGrobProps.Add(prop);
+        _keyByMeasure.Clear();
+        foreach (var kv in ck.KeyByMeasure)
+            _keyByMeasure[kv.Key] = kv.Value;
+        _sectionState.StartMeasure.Clear();
+        foreach (var kv in ck.SectionStartMeasures)
+            _sectionState.StartMeasure[kv.Key] = kv.Value;
+        _sectionState.AllStarts.Clear();
+        foreach (var kv in ck.SectionAllStarts)
+            _sectionState.AllStarts[kv.Key] = new List<int>(kv.Value);
+        _measureAccidentals.Clear();
+        _pendingGrace = null;
+        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+        _pendingEmptyChordSlurStart = false;
+        _pendingEmptyChordSlurEnd = false;
+
+        // Walk-local lists: the recorded prefix (append-only within the walk, so
+        // the recording's first N entries are exactly the checkpoint's state).
+        _pendingInlineVoltas.Clear();
+        for (int i = 0; i < ck.PendingInlineVoltaCount; i++)
+            _pendingInlineVoltas.Add(rec.PendingInlineVoltas![i]);
+        _parallelSpans.Clear();
+        for (int i = 0; i < ck.ParallelSpanCount; i++)
+            _parallelSpans.Add(rec.ParallelSpans![i]);
+
+        // Cumulative side tables: extend to the checkpoint's watermark from the
+        // source's FINAL lists (append-only across the collect, so entries
+        // [0..count) are the prefix regardless of what later walks appended).
+        // Entries below the current count were appended by THIS collect's own
+        // earlier walks and are identical by determinism.
+        var src = plan.Source.CumulativeSideTables();
+        var dst = CumulativeSideTables();
+        for (int t = 0; t < dst.Length; t++)
+        {
+            if (dst[t].Count > ck.TableCounts[t])
+                throw new InvalidOperationException(
+                    $"resume: side table {t} is already past its checkpoint watermark");
+            for (int j = dst[t].Count; j < ck.TableCounts[t]; j++)
+                dst[t].Add(src[t][j]);
+        }
+
+        // Builder: adopt the pre-finalize prefix measures, with the boundary-time
+        // value of the last one (the walk can rewrite _measures[^1] after the
+        // checkpoint — SetBreak / AddEndBarlineSource — and did, in the recording).
+        builder.Restore(ck.Builder, rec.PreFinalizeMeasures!.GetRange(0, ck.MeasureCount));
+
+        _resumeRestoredSectionStart = ck.SectionStartMeasure;
+        _resumePending = null;
+        plan.Consumed = true;
     }
 
     /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
@@ -3118,9 +3423,15 @@ public sealed partial class MeasureCollector
                         break;
                     if (_sectionState.Sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
-                        builder.SectionLabel = ResolveSectionLabel(reference);
-                        builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
+                        // Resume: bookkeeping of a section at-or-before the target is in
+                        // the adopted prefix; re-running it here would read a pre-restore
+                        // builder. ProcessSection's own gate does the skip.
+                        if (_resumePending == null)
+                        {
+                            RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
+                            builder.SectionLabel = ResolveSectionLabel(reference);
+                            builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
+                        }
                         ProcessSection(section, processNodes, builder);
                     }
                     break;
@@ -3133,6 +3444,10 @@ public sealed partial class MeasureCollector
                 // D.C. / D.S. al fine|coda) — engraved like the inline @-marks, at the
                 // boundary of the section just played.
                 case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
+                    // Resume: prefix marks are in the adopted _musicMarks, and the
+                    // pre-restore builder would give this one a garbage measure index.
+                    if (_resumePending != null)
+                        break;
                     var navMark = NavigationToMusicMark(nav.MarkType);
                     // Target signs (segno/coda — where a jump lands) sit at the START
                     // of the next section; the jump-from text (fine / to coda / D.S. /
@@ -3156,6 +3471,9 @@ public sealed partial class MeasureCollector
                 // collector never produced the item, so it parsed but silently
                 // printed nothing.
                 case CustomTextSyntax custom when !IsInsideRepeatBlock(custom):
+                    // Resume: same reasoning as the navigation-mark arm above.
+                    if (_resumePending != null)
+                        break;
                     // Same per-part guard as the navigation marks above.
                     int textMeasure = Math.Max(0, builder.CurrentMeasureIndex - 1);
                     if (!_customTexts.Any(t => t.Text == custom.Text
@@ -3172,9 +3490,13 @@ public sealed partial class MeasureCollector
                         when !IsInsideRepeatBlock(silent)
                           && silent.GetChild(1) is SyntaxTokenNode nameTok
                           && _sectionState.Sections.TryGetValue(nameTok.Text, out var silentSection):
-                    RecordSectionStart(nameTok.Text, builder.CurrentMeasureIndex);
-                    builder.SectionLabel = null;
-                    builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
+                    // Resume: same skip as the labelled reference arm above.
+                    if (_resumePending == null)
+                    {
+                        RecordSectionStart(nameTok.Text, builder.CurrentMeasureIndex);
+                        builder.SectionLabel = null;
+                        builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
+                    }
                     ProcessSection(silentSection, processNodes, builder);
                     break;
 
@@ -3183,6 +3505,9 @@ public sealed partial class MeasureCollector
                 // emitted measure). Runs once per part; each flags the same measure
                 // index, so the score-wide break stays consistent.
                 case BreakSyntax brk when !IsInsideRepeatBlock(brk):
+                    // Resume: the flag is baked into the adopted prefix measures.
+                    if (_resumePending != null)
+                        break;
                     if (brk.IsNoBreak) builder.SetNoBreak();
                     else builder.SetBreak();
                     break;

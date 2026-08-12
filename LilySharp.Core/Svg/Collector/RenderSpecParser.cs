@@ -149,7 +149,10 @@ public static class RenderSpecParser
         SyntaxNode root = render;
         while (root.Parent != null)
             root = root.Parent;
-        return root.DescendantNodes()
+        // Form declarations are top-level only (Parser.ParseTopLevelItem), so the
+        // root's direct children are the whole search space — a descendant walk
+        // here re-enumerated every music body per lookup (see SyntaxNode.ChildNodes).
+        return root.ChildNodes()
             .OfType<FormDeclarationSyntax>()
             .FirstOrDefault(f => string.Equals(f.NameText, formName, System.StringComparison.Ordinal));
     }
@@ -159,7 +162,7 @@ public static class RenderSpecParser
     /// </summary>
     public static RenderSpec? FindFirst(SyntaxTree tree)
     {
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        foreach (var node in tree.GetRoot().ChildNodes())
         {
             if (node is RenderDeclarationSyntax render)
             {
@@ -177,7 +180,7 @@ public static class RenderSpecParser
     public static IReadOnlyList<RenderSpec> FindAll(SyntaxTree tree)
     {
         var specs = new List<RenderSpec>();
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        foreach (var node in tree.GetRoot().ChildNodes())
         {
             if (node is RenderDeclarationSyntax render)
             {
@@ -194,7 +197,7 @@ public static class RenderSpecParser
     /// </summary>
     public static RenderSpec? FindByName(SyntaxTree tree, string name)
     {
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        foreach (var node in tree.GetRoot().ChildNodes())
         {
             if (node is RenderDeclarationSyntax render)
             {
@@ -519,8 +522,9 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
 
-        // Search for part declaration with matching name
-        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        // Search for part declaration with matching name. Part declarations are
+        // top-level only (Parser.ParseTopLevelItem), as for every lookup below.
+        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;
@@ -588,7 +592,7 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
 
-        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
             if (partDecl.Name.Text == partName && partDecl.DisplayName is { } dn)
                 return dn;
         return null;
@@ -603,7 +607,7 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
 
-        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;
@@ -643,7 +647,7 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
 
-        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;

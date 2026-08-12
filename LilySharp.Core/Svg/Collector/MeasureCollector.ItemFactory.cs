@@ -522,6 +522,13 @@ public sealed partial class MeasureCollector
     /// <remarks>LILYPOND-REF: scm/music-functions.scm:854-920 copy-repeat-chord.</remarks>
     private MusicItem CreateChordRepetitionItem(ChordRepetitionSyntax rep, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null)
     {
+        // Checkpoint/resume: a `q` reads _resolvedChordMembers, whose entry is
+        // written when the ORIGINAL chord is walked — a resume whose adopted prefix
+        // holds that chord would find no entry and silently degrade the q to a
+        // spacer. Until the resume resolves originals on demand, a walk that saw a
+        // q is not resumable. A missed recording only costs reuse.
+        _probeRecording?.MarkIneligible("chord-repetition");
+
         // The duration carry applies whether or not the q resolves — a bad
         // repetition still occupies its written time (LP keeps the empty chord).
         int noteValue = forcedDuration?.Value ?? rep.Duration?.Value ?? (int)_defaultDuration.Denominator;
