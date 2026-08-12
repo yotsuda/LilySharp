@@ -184,7 +184,8 @@ public static class SvgGenerator
     }
 
     internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout,
-        SvgRenderOptions options, bool resolveDataPos = false)
+        SvgRenderOptions options, bool resolveDataPos = false,
+        Rendering.Svg.SvgSystemFragmentCache? fragments = null)
     {
         var docOptions = new SvgDocumentOptions
         {
@@ -194,7 +195,7 @@ public static class SvgGenerator
             Interactive = options.Interactive,
         };
         using var doc = new SvgDocumentContext(docOptions);
-        SharedRenderer.RenderTo(score, layout, doc, resolveDataPos);
+        SharedRenderer.RenderTo(score, layout, doc, resolveDataPos, fragments);
         doc.Dispose();
         return doc.ToSvg();
     }

@@ -18,6 +18,92 @@
 
 ---
 
+## 以下は第149セッションの経緯
+
+最終更新 第149セッション＝**2 便**。**第1便＝測定と検証（エンジンのコード変更ゼロ・計器は
+commit していない）**——第147〜148 の引き継ぎ指示どおり打鍵の段内訳を Release で取り直し、
+▶ を並べ替えた（第143 以来の段内訳更新・suffix 継ぎ後は初。ラベルに編集位置と splice の
+有無つき）。**第2便＝発見1 の観測者の返済**（下の第2便 bullet）。テスト **4407 passed /
+0 failed / 4 skipped（+2＝第2便の網。第1便時点は 4405±0）**・**台帳 511 点・ss 非ゼロ 94・
+総和 3.609962441・count 点 106 / 非ゼロ 2（全部不動・§0 の数え方で再測）**・**snapshot 0 動**・
+**コーパスは走らせていない**（エンジンの挙動は 2 便とも不変——第2便の Core 差分は
+`CollectWalkProbe` の XML doc コメントのみ。基線は第148 の 0/82 のまま）。
+
+- **形**: 第143 と同じ StageClock 型の一時計器（compile.* / layout.* / prelim.* ＝第143 の
+  配線図そのまま・**compile.spec（FindFirst）だけ今回から別行**＝全冊 0.0〜0.1 ms で第144 の
+  修理を確認）＋ EditKeystrokeBench と同じプロトコルの一時ベンチ（warmup 2・n=14 交互編集・
+  段ごとの床＝各段の n14 min）を**編集位置 3 点（本文長の 10%/50%/90%）**で。Release・
+  warm プロセス。生データは `scratch\stagebench-149.txt`（untracked・逐語・ラベルの読み方も冒頭に）。
+  ⚠️ 段の床は交互 2 面（編集側／復帰側＝identity）込みの min なので **collect の床は「安い側」**。
+  編集位置依存は弱かった（plain collect 39.1〜49.9 / fingbeam 157.9〜168.5 ms）＝**collect の
+  残りは窓幅ではなく splice の採用コピー＋score assembly 側に居る**（内訳は未分割——
+  次に割る人は第145 の CollectClock の形で）。
+- ★★★ **発見1: v2bow は splice している**（毎打鍵 `splicedMeasures 1000`）——**第148 の
+  「構造的に splice 不能のまま」は HEAD では偽（stale）**。EditKeystrokeBench の編集 token
+  `e4(` は**第2声部のブロック内**で、primary walk（voice 0 インライン）は編集バイトを
+  1 つも採用しない——m=0 checkpoint の suffix splice が記録全量を採用し、第2声部は
+  `BuildExtraVoiceTracks` が再解決済み `_parallelSpans`（`ResolveShifted`）から**毎打鍵ライブ**で
+  再構築する。**検証済み**: 一時テストで 4 round 全てフル再コンパイルと**バイト一致**
+  （revert 済み・レシピは raw ファイル）。第148 の A/B が判定不能帯だったこととも整合——
+  splice が省くのは primary walk ~6〜9 ms だけで、**v2bow の collect の主費用（第2声部の
+  再 walk）は splice の外**。
+  ⚠️ ★★ 発見時点でこの regime の観測者はゼロだった:
+  `CollectEditResumeTests.ResumedCollect_AdoptsThePrefix_OnPerfBooks` は v2bow を「何も
+  採用できない」という理由で**意図的に除外**（コメントも同じ主張）、`CollectWalkProbe.cs` の
+  lazy-parse remark の「always declined」も偽。**→ 第2便で返済済み**（下の第2便 bullet）。
+- ★★ **発見2: voice 0（primary walk 側）の編集は予測どおり decline**（編集側 splicedWalks 0＝
+  毎打鍵ライブ full walk・collect 51.6〜81.3 ms 対 splice 時 26.9〜30.5）・復帰側は identity で
+  splice。**バイト一致は両側確認**。⇒ **旧残件⑴（parallel span 内部の checkpoint）が買えるのは
+  「全身 1 span の本の voice-0 編集」の ~25〜50 ms だけ**——▶ の下位へ降格（v2bow の編集打鍵で
+  大きいのは break+pages 103 と prelim 70〜76 で、collect は 27〜30）。
+- ★★ **第2便＝観測者の返済（発見1 の網とコメント・エンジン挙動不変）**:
+  ⑴ `ResumedCollect_AdoptsThePrefix_OnPerfBooks` に v2bow を追加（splice-only 形＝
+  **adopted==0 かつ spliced>900** を主張・旧除外コメントを訂正）⑵ 新網 2 枚——
+  `V2bowWholeBookSpan_SecondVoiceEdit_SplicesTheWholeWalk_ByteIdentical`（production 配線＝
+  `IncrementalCompiler`・交互 2 round ともフル再コンパイルと**バイト一致**＋spliced>900 の
+  liveness）と `V2bowWholeBookSpan_PrimaryVoiceEdit_DeclinesTheSplice`（voice-0 編集＝
+  adopted 0・spliced 0・深比較）⑶ `CollectWalkProbe` の「always declined」remark を
+  両 regime（第2声部編集は splice／voice-0 編集は decline）の記述に訂正。
+  **陽性対照は 2 種・どちらも revert 済み**: 毒A（splice 入口を常時 decline）→ **liveness 網
+  2 本が fail・decline 網は pass**（decline が正しさ中立である実証込み）／毒B（シフタの
+  窓内 decline＋尻尾 span 事前スキャンの **2 層を毒**）→ 誤 splice が旧音高を採用し
+  **深比較が `Midi: 81 vs 79` で捕捉**（decline 網の歯＝「splice が誤発火したら深比較が噛む」
+  の実証。1 層毒では届かない＝層が独立している実証も兼ねる）。
+- **打鍵の段（Release・edit@0.50・gateMoved True / reusedLayout False＝regime ⑶・床）**:
+
+  | 段 | plain1k（床 348.8） | fingbeam1k（床 679.3） | v2bow1k（床 369.2） |
+  |---|---|---|---|
+  | compile.springs | **78.6** | 115.3 | 57.1 |
+  | compile.render | 74.5 | **149.3** | 41.2 |
+  | compile.collect | 49.9 | **157.9** | 26.9 |
+  | prelim.annpass | 30.3 | 89.0 | 25.8 |
+  | layout.break / pages | 24.7 / 23.6 | 24.3 / 25.9 | **55.2 / 48.0** |
+  | layout.finalann | 7.8 | 45.9 | 10.4 |
+  | prelim.slurs | 0.2 | 0.1 | 37.1 |
+  | compile.keys | 8.7 | 11.7 | 6.7 |
+
+  splice の効き（第148 の続報）: plain / fingbeam は編集側が「prefix 採用＋尻尾 splice」・
+  復帰側が全量 prefix 採用（例 edit@0.50 plain: adopted 500 / spliced 499 ×7 と
+  adopted 1000 ×7）。v2bow は両側とも m=0 からの全量 splice（発見1）。
+- **cold（Release・warm プロセス・初回 layout）**:
+
+  | 段 | plain1k（総 1843.9） | fingbeam1k（総 2245.9） | v2bow1k（総 891.8） |
+  |---|---|---|---|
+  | layout.persys | **703.0** | **877.4** | 168.1 |
+  | prelim.beams | 287.0 | 281.3 | 0.0 |
+  | compile.collect | 230.1 | 456.4 | 89.9 |
+  | compile.render | 203.6 | 176.0 | 47.8 |
+  | compile.springs | 153.0 | 134.9 | 87.1 |
+  | prelim.augment | 0.9 | 0.8 | **197.0** |
+  | layout.pages | 61.7 | 56.8 | 98.8 |
+
+  ⚠️ **第143 の絶対値と比べないこと**（別の日・§7.9。cold 総は fingbeam で 1933.9→2245.9 と
+  日差だけで 16% 動いている）——この表は**今日の中での順位**の根拠。
+  ⚠️ 計器はいつもどおり commit していない——次に取り直す人は同じ場所に同じ形で
+  （表の行がそのまま配線図・collect の下位段は第145 の CollectClock の形）。
+
+---
+
 ## 以下は第148セッションの経緯
 
 最終更新 第148セッション＝**1 便＝⒭ ⑵ の第2切片・後半＝suffix 継ぎ**（HEAD からの未 push 36）。

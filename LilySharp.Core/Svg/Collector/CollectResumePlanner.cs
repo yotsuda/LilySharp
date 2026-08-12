@@ -71,7 +71,6 @@ internal static class CollectResumePlanner
     {
         string oldText = baselineTree.Text;
         string newText = newTree.Text;
-        int prefix = CommonPrefix(oldText, newText);
         // The common suffix bounds the dirty window from the right; the DELTA says
         // whether positions after the window shift. The guard distinguishes three
         // grades of "unchanged" for a baseline span:
@@ -80,8 +79,7 @@ internal static class CollectResumePlanner
         //   in the suffix, Δ≠0  → content unchanged, positions shifted — enough
         //                         only for value-only readers (form order, a
         //                         headerless score block at the file's bottom).
-        int suffixStart = oldText.Length - CommonSuffix(oldText, newText, prefix);
-        int delta = newText.Length - oldText.Length;
+        var (prefix, suffixStart, delta) = ComputeWindow(oldText, newText);
 
         if (!WindowRespectsTopLevel(baselineTree, prefix, suffixStart, delta))
             return null;
@@ -350,6 +348,22 @@ internal static class CollectResumePlanner
             if (!ParsePrefixAgrees(ca, cb!, limit))
                 return false;
         }
+    }
+
+    /// <summary>
+    /// The single edit window between two texts: the common-prefix length P, the
+    /// old-text offset where the common suffix starts, and the position delta for
+    /// offsets at/after it. THE one spelling of this arithmetic — the collect splice
+    /// (this planner / <see cref="CollectTailShifter"/>) and the render fragment
+    /// replay (<c>SvgSystemFragmentCache</c>) both shift burned positions by it.
+    /// </summary>
+    internal static (int Prefix, int SuffixStart, int Delta) ComputeWindow(
+        string oldText, string newText)
+    {
+        int prefix = CommonPrefix(oldText, newText);
+        int suffixStart = oldText.Length - CommonSuffix(oldText, newText, prefix);
+        int delta = newText.Length - oldText.Length;
+        return (prefix, suffixStart, delta);
     }
 
     private static int CommonPrefix(string a, string b)

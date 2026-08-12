@@ -75,6 +75,13 @@ public sealed class IncrementalCompiler
     // (see Compile); null otherwise => full layout, byte-identical.
     private SystemLayoutCache? _systemCache;
 
+    // ⒭ first slice: persists across edits so unchanged systems replay their
+    // recorded SVG text instead of re-drawing (SvgSystemFragmentCache — key
+    // inventory, data-pos re-resolution and decline classes in its remarks).
+    // Retained across ineligible edits like _systemCache; BeginPass's generation
+    // keeps entries from replaying across a pass that did not refresh them.
+    private Rendering.Svg.SvgSystemFragmentCache? _fragments;
+
     // F3/B-2: the whole previous ScoreLayout, plus the complete per-measure content
     // key vector and the score-global layout inputs it was built from. When an edit
     // leaves ALL of these (and the line-break gate) unchanged, the layout geometry is
@@ -121,6 +128,13 @@ public sealed class IncrementalCompiler
     /// reused by reference (content-unchanged edit) or on a full compile.
     /// For diagnostics / tests.</summary>
     internal (int Reused, int Recomputed) LastSpringMemo { get; private set; }
+
+    /// <summary>How the most recent render's per-system SVG text was paid for (⒭):
+    /// how many systems replayed their recorded fragment and how many drew live
+    /// (declined systems count as drawn). (0, 0) on a fragment-ineligible pass.
+    /// For diagnostics / tests.</summary>
+    internal (int Replayed, int Drawn) LastRenderFragments =>
+        _fragments?.LastPass ?? (0, 0);
 
     /// <summary>The spring vector the most recent compile ended with — the same array the
     /// break gate and the layout consumed. For the tests that assert the per-measure memo
@@ -320,6 +334,12 @@ public sealed class IncrementalCompiler
                 _lineSizes = layout.AllSystems.Select(s => s.Measures.Length).ToArray();
         }
 
+        // ⒭ per-system SVG fragment memo: replay needs the window that maps the
+        // PREVIOUS render's source offsets (the entries' slot values) onto this text —
+        // exactly the splice's window (CollectResumePlanner.ComputeWindow), computed
+        // against the tree the previous render drew (_tree, not the collect baseline:
+        // fragments are refreshed EVERY render, the collect recording is not).
+        string oldText = _tree.Text;
         _springs = springs;
         _firstPrefix = firstPrefix;
         _contPrefix = contPrefix;
@@ -330,9 +350,29 @@ public sealed class IncrementalCompiler
         LastEditSkippedLineBreak = skip;
         LastEditReusedLayout = reuse;
 
+        Rendering.Svg.SvgSystemFragmentCache? fragments = null;
+        if (reuseEligible)
+        {
+            _fragments ??= new Rendering.Svg.SvgSystemFragmentCache();
+            bool windowValid = allowSkip;
+            var (prefix, suffixStart, delta) = windowValid
+                ? CollectResumePlanner.ComputeWindow(oldText, tree.Text)
+                : (0, 0, 0);
+            _fragments.BeginPass(contentKeys, windowValid, prefix, suffixStart, delta);
+            fragments = _fragments;
+        }
+        else
+        {
+            // An ineligible pass renders live; bump the generation so nothing this
+            // pass did not refresh can replay on the next one (slot offsets would be
+            // two texts behind the window).
+            _fragments?.BeginPass(default, windowValid: false, 0, 0, 0);
+        }
+
         // Only a reused layout carries stale (pre-edit) data-pos that the renderer must
         // re-derive from the live score; a freshly laid-out layout already has it right.
-        return SvgGenerator.RenderToSvg(score, layout, _options, resolveDataPos: reuse);
+        return SvgGenerator.RenderToSvg(score, layout, _options, resolveDataPos: reuse,
+            fragments);
     }
 
     /// <summary>

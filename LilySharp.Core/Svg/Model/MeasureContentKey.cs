@@ -566,7 +566,10 @@ public readonly record struct MeasureContentKey(long Hash)
     // hash's ~2⁻³² collision odds, which is therefore the effective per-leaf bound
     // (see the class remarks). The `constrained.` call to GetHashCode() means
     // value-type elements (enums, records, MeasureContext) fold without boxing.
-    private struct Hash64
+    // Internal (not private): SvgSystemFragmentCache folds its geometry key with the
+    // SAME accumulator, so "64-bit FNV equality decides reuse" stays one spelling
+    // with one collision-bound argument.
+    internal struct Hash64
     {
         private const ulong Offset = 14695981039346656037UL;
         private const ulong Prime = 1099511628211UL;

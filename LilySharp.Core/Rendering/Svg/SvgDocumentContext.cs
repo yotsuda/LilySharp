@@ -75,6 +75,20 @@ internal sealed class SvgDocumentContext : IDocumentContext
         _options = options ?? new SvgDocumentOptions();
     }
 
+    /// <summary>The open page's text buffer — the append target
+    /// <see cref="SvgSystemFragmentCache"/> replays into and measures captures
+    /// against. Null between pages.</summary>
+    internal StringBuilder? CurrentContent => _currentContent;
+
+    /// <summary>The open page's drawing context — carries the capture hooks
+    /// (<see cref="SvgDrawingContext.SourceLog"/>). Null between pages.</summary>
+    internal SvgDrawingContext? CurrentPage => _currentPage;
+
+    /// <summary>The used-design set (see <see cref="_usedDesigns"/>): a replayed
+    /// fragment merges its recorded designs here, since the draw that would have
+    /// recorded them does not run.</summary>
+    internal HashSet<int> UsedDesigns => _usedDesigns;
+
     public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
     {
         if (_currentPage != null)

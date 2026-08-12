@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering.Svg;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
@@ -72,7 +73,7 @@ internal static partial class SharedRenderer
 
     public static void RenderTo(
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc,
-        bool resolveDataPos = false)
+        bool resolveDataPos = false, SvgSystemFragmentCache? fragments = null)
     {
         // F3/B: a layout freshly built from THIS score already bakes the correct
         // data-pos, so resolution is a no-op there and we skip it (it rebuilds every
@@ -82,6 +83,13 @@ internal static partial class SharedRenderer
         // re-derive each annotation's source offset from the live score.
         if (resolveDataPos)
             layout = ResolveDataPos(layout, score);
+        // ⒭ per-system SVG fragment memo (HANDOFF §1 ▶): SVG-document sessions only —
+        // every other backend (PDF/PNG, the recording contexts) draws live, unchanged.
+        // The memo short-circuits the per-system loop below; the loop body stays the
+        // one implementation (§2A: a replay is a recorded PREVIOUS run of it).
+        var fragHost = fragments != null ? doc as SvgDocumentContext : null;
+        if (fragHost != null)
+            fragments!.PrepareRender(score, layout);
         var options = layout.Options;
         var resolver = layout.GrobPropertyResolver;
         // Items participating in a beam — DrawNote/DrawChord skip stem & flag for these,
@@ -122,7 +130,14 @@ internal static partial class SharedRenderer
             try
             {
                 foreach (var system in page.Systems)
-                    DrawSystem(score, layout, system, resolver, beamedItems, gc, page.Height);
+                {
+                    if (fragHost != null && fragments!.TryReplay(score, system, fragHost, page.Height))
+                        continue;
+                    using (fragHost != null
+                        ? fragments!.BeginCapture(score, system, fragHost, page.Height)
+                        : null)
+                        DrawSystem(score, layout, system, resolver, beamedItems, gc, page.Height);
+                }
                 // Page-level overlays that span systems. The Y-anchor map is
                 // built from THIS page's systems only: system Y is page-local
                 // (each page restarts at MarginTop), so every overlay whose

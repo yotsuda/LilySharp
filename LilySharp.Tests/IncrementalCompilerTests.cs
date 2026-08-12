@@ -923,4 +923,138 @@ public class IncrementalCompilerTests
         // 4 measures; key 1 moved -> measures 0..2 recomputed, measure 3 reused.
         Assert.Equal((1, 3), session.LastSpringMemo);
     }
+
+    // --- ⒭ per-system SVG fragment memo (HANDOFF §1 ▶) -----------------------------
+    // On every edit the renderer replays the recorded SVG text of each system whose
+    // content-key window and drawn geometry are unchanged, re-emitting its data-pos /
+    // data-alt numbers through the edit window (SvgSystemFragmentCache). These nets
+    // hold the memo to byte-identity with a cache-free full render PLUS liveness (the
+    // replay actually fires — a memo that silently redraws everything passes every
+    // equality net), and they pin the two mechanisms an equality net alone would let
+    // rot invisibly: the slot SHIFT (a Δ≠0 edit must move every baked offset) and the
+    // RIGHT window (the end-of-line courtesy reads the next system's opening).
+
+    /// <summary>A pitch toggle in one bar of a multi-system beamed book: the SVG equals
+    /// a full recompile and every system outside the edited window replays its recorded
+    /// text. The drawn count is bounded, not exact, because the edited measure may sit
+    /// at a system boundary (its ±1-measure window then touches two systems).</summary>
+    [Fact]
+    public void RenderFragments_ReplayAllButTheEditedWindow_AndMatchFull()
+    {
+        var plain = string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 9));
+        var bars = plain + " c8 d8 e8 f8 g8 g8 b8 c'8 | "
+            + string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 8));
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { " + bars + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+
+        var change = Replace(source, "g8 g8 b8", "a8 a8 b8");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "g8 g8 b8", "a8 a8 b8")), incremental);
+        var (replayed, drawn) = session.LastRenderFragments;
+        int total = replayed + drawn;
+        Assert.True(total >= 4, $"fixture shrank to {total} system(s); nothing to replay");
+        Assert.True(drawn <= 2, $"window widened: {drawn} of {total} systems drew live");
+        Assert.True(replayed == total - drawn && replayed >= 2,
+            $"replay did not fire: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>
+    /// The data-pos slot shift is load-bearing: a whitespace insertion in the middle of
+    /// the book changes NO content key and NO geometry — every system replays — but it
+    /// shifts every source offset at/after the edit by Δ=+1, so the replayed text must
+    /// re-emit its numbers through the window (offsets before the edit unchanged,
+    /// after it +1). Byte-equality with a full render of the edited text is the claim;
+    /// the inequality with the PREVIOUS render proves the hazard is real (the numbers
+    /// really moved — a fragment replayed verbatim would equal the old bytes instead).
+    /// </summary>
+    [Fact]
+    public void RenderFragments_MidBookTriviaInsertion_ShiftsEveryLaterDataPos()
+    {
+        var bars = string.Join(" ", Enumerable.Repeat("c8 d8 e8 f8 g8 a8 b8 c'8 |", 18));
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { " + bars + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        string before = Norm(session.Render());
+
+        // Insert one space between two bars near the middle: pure trivia, Δ=+1.
+        int mid = source.IndexOf("| c8", source.Length / 2, System.StringComparison.Ordinal);
+        Assert.True(mid >= 0);
+        var change = new TextChange(new TextSpan(mid + 1, 0), " ");
+        var incremental = Norm(session.Edit(change));
+
+        string editedText = source[..(mid + 1)] + " " + source[(mid + 1)..];
+        Assert.Equal(Full(editedText), incremental);
+        Assert.NotEqual(before, incremental); // the offsets moved; verbatim replay would not
+        var (replayed, drawn) = session.LastRenderFragments;
+        Assert.True(replayed >= 4 && drawn == 0,
+            $"expected every system to replay: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>
+    /// The end-of-line courtesy regime stays byte-identical across an edit of the NEXT
+    /// system's opening time change (GetSystemEndTimeChange reads measure last+1 — the
+    /// fragment key's RIGHT window). ⚠️ MEASURED under a window-dropping poison
+    /// (session 151): this net still passes, because the courtesy glyph carries the
+    /// time-change item's own data-pos, which lands INSIDE the edit window and declines
+    /// the fragment through the slot check — so the right window has NO isolating
+    /// positive control yet. It is kept on the fold argument (the neighbour's opening
+    /// items are read; an item whose SourcePosition lags outside its own value text
+    /// would slip past the slot check), and this net pins the regime's byte-identity.
+    /// </summary>
+    [Fact]
+    public void RenderFragments_SystemEndCourtesy_ReadsTheNextSystemsOpening()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              c4 d e f | g4 a b c' |
+              break
+              time 3/4
+              c4 d e | f4 g a |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "time 3/4", "time 2/4");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    /// <summary>
+    /// Interactive (preview) output replays too: the hit rectangles and data-alt alias
+    /// lists are extra baked offsets, and a Δ≠0 edit must shift every one of them. Byte
+    /// equality against a cache-free interactive render is the whole claim.
+    /// </summary>
+    [Fact]
+    public void RenderFragments_InteractiveOutput_ShiftsDataAltAcrossAnEdit()
+    {
+        var interactive = new SvgRenderOptions { EmbedFont = false, Interactive = true };
+        var bars = string.Join(" ", Enumerable.Repeat("<c e g>4 d e f | g4 a b c' |", 8));
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { " + bars + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), interactive);
+        session.Render();
+
+        int mid = source.IndexOf("| g4", source.Length / 2, System.StringComparison.Ordinal);
+        Assert.True(mid >= 0);
+        var change = new TextChange(new TextSpan(mid + 1, 0), " ");
+        var incremental = Norm(session.Edit(change));
+
+        string editedText = source[..(mid + 1)] + " " + source[(mid + 1)..];
+        var full = Norm(SvgGenerator.Generate(SyntaxTree.Parse(editedText), interactive));
+        Assert.Equal(full, incremental);
+        var (replayed, drawn) = session.LastRenderFragments;
+        Assert.True(replayed >= 2 && drawn == 0,
+            $"expected every system to replay: replayed {replayed} / drawn {drawn}");
+    }
 }

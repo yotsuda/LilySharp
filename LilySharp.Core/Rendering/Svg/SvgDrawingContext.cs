@@ -34,6 +34,17 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private IReadOnlyList<int>? _currentAliases;
     private int _musicDesign = EmmentalerFaces.DefaultDesign;
 
+    /// <summary>Capture hook for <see cref="SvgSystemFragmentCache"/>: while set, every
+    /// source value this context EMITS (each data-pos, then each data-alt member, in
+    /// text order) is appended here, so the capture can verify its scan of the emitted
+    /// text against ground truth. Null outside a capture (the common case).</summary>
+    internal List<int>? SourceLog { get; set; }
+
+    /// <summary>Capture hook, same lifetime as <see cref="SourceLog"/>: the Emmentaler
+    /// designs drawn during the capture, so a replayed fragment can re-record them into
+    /// the document's used-design set (the @font-face side channel).</summary>
+    internal HashSet<int>? DesignLog { get; set; }
+
     public SvgDrawingContext(StringBuilder sb, bool interactive = false,
         HashSet<int>? usedDesigns = null)
     {
@@ -138,6 +149,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private string MusicFaceAttr()
     {
         _usedDesigns?.Add(_musicDesign);
+        DesignLog?.Add(_musicDesign);
         // The fallback chain matters: a viewer that has not been given this design's face
         // (the VS Code preview injects Emmentaler itself and omits @font-face entirely) then
         // draws the glyph from the default design instead of showing tofu. It is the wrong
@@ -290,6 +302,12 @@ internal sealed class SvgDrawingContext : IDrawingContext
         if (!_currentSourcePosition.HasValue)
             return "";
         var s = string.Format(Inv, " data-pos=\"{0}\"", _currentSourcePosition.Value);
+        if (SourceLog is { } capture)
+        {
+            capture.Add(_currentSourcePosition.Value);
+            if (_currentAliases is { Count: > 0 })
+                capture.AddRange(_currentAliases);
+        }
         // data-alt lists the extra highlight offsets: a caret on any of them lights this
         // element too (the webview matches data-pos OR a data-alt member); the click still
         // uses data-pos. Only in interactive mode (aliases are null otherwise).
