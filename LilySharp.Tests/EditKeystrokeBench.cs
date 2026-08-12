@@ -54,6 +54,7 @@ public class EditKeystrokeBench
         // (no ledger, no accidental). See the class remarks: the gate still moves.
         yield return ["perf-plain1k.lys", "g8", "a8"];
         yield return ["perf-fingbeam1k.lys", "e@finger(3)", "f@finger(3)"];
+        yield return ["perf-v2bow1k.lys", "e4(", "f4("];
     }
 
     [Theory]

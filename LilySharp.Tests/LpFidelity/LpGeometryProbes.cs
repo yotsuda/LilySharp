@@ -7263,6 +7263,185 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A SECOND VOICE's slur drooping DOWN out of each system — <see cref="SSD"/> with the
+    /// bow moved into voice 2, which is the one place the preliminary annotation pass cannot
+    /// see it. The books behind HANDOFF §1 ⒪.
+    /// </summary>
+    /// <remarks>
+    /// <c>LayoutEngine.RunPreliminaryAnnotationPass</c> lays ties and slurs out on the
+    /// PRIMARY VOICE ONLY (<c>staffScore</c> is built from <c>staff.PrimaryVoice</c>; its own
+    /// comment says "Ties/slurs keep the primary-voice prelim score (unchanged)"), while the
+    /// final pass draws them from <c>staffSpannerScore</c> = every voice. Beams were already
+    /// lifted to the staff quantity ("expose every voice so voice 2's beam protrusions join
+    /// the spacing extents"); ties and slurs were deliberately left behind — a named,
+    /// intentional asymmetry, and these are the first points that reach it. So a voice-2 bow
+    /// that is a system's deepest ink is DRAWN into the gap but reserved NOWHERE (first seen
+    /// moving in session 139's scratch book: LilyPond +2.11 ss, Lily# unmoved, the drawn slur
+    /// crossing into the next system's band).
+    /// <para>
+    /// SSD's measurement discipline, unchanged: floor 12, heads at −8 must NOT beat it
+    /// (8.545 + 2.05 + 1 = 11.595 &lt; 12), the slur must. Voice one holds three middle-line
+    /// whole notes per bar (inside the staff, no stems, so it adds no ink to either edge of
+    /// the gap); voice two carries the slurred G2 pair, whose \voiceTwo direction is DOWN on
+    /// both engines. Four forced 4-bar systems; the ledger reads the INTERIOR gap
+    /// (<c>StaffGapAt(1)</c>): the first system carries the meter and the last the final bar
+    /// line, and a bow's arc is span-dependent (the SSD carve-out).
+    /// </para>
+    /// <para>
+    /// MEASURED on 2.26.0 (probes/voice2-spanner-page.ly, whose body is <c>lysc ly</c> output
+    /// from this very music): the interior gap is 13.122500648479456 — IDENTICAL to
+    /// single-voice SSD's 13.122501, i.e. LilyPond reserves a voice-2 slur exactly as it
+    /// reserves a voice-1 one, and the slur's own down-ink (−10.073035 about the refpoint) is
+    /// the same number in both books. The control VSSC read exactly 12.0 on every gap.
+    /// </para>
+    /// LilyPond twin: <c>\fixed c' { \time 12/4 \repeat unfold 4 {
+    /// &lt;&lt; { b1 b1 b1 } \\ { g,,1 g,,1( g,,1) } &gt;&gt; } }</c> cut 4+4+4+4 by
+    /// <c>\break</c> under <c>\paper { ragged-bottom = ##t ragged-right = ##f }</c>,
+    /// <c>indent = 0</c>.
+    /// </remarks>
+    private static readonly string VSSD = """
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "VSSD" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="VSSD"/> with ONLY the slur parens removed — the identity control. Heads at
+    /// −8 stay under the floor, so both engines must read exactly 12.000000; a control off
+    /// that number means the two-voice texture itself reached the spacing and the PAIR is
+    /// broken (fix the frame before believing VSSD).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on 2.26.0: every gap exactly 12.0, as predicted in the probe header.
+    /// </remarks>
+    private static readonly string VSSC = """
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "VSSC" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// A SECOND VOICE's tie drooping DOWN out of each system — <see cref="TSID"/> with the
+    /// bow moved into voice 2, the tie side of the same prelim asymmetry <see cref="VSSD"/>
+    /// reads (HANDOFF §1 ⒪ names both grobs).
+    /// </summary>
+    /// <remarks>
+    /// TID's design, not SSD's: a tie is flat (height-limit 1.0 / ratio 0.333 vs the slur's
+    /// 2.0 / 0.25), so the HEADS go past the floor (e,, = E2 at −9:
+    /// 9 + 0.545 + 2.05 + 1 = 12.595 &gt; 12) and the residual reads the whole tie droop on
+    /// top of them.
+    /// <para>
+    /// MEASURED on 2.26.0 (probes/voice2-spanner-page.ly): the interior gap is
+    /// 13.512560327518216 — TSID's own number, so LilyPond's voice-2 tie reservation is the
+    /// single-voice one exactly. The control VTSIC read 12.595 on every gap, which also
+    /// proves voice-2 NOTEHEADS do join the paging skylines (only the bows are missing).
+    /// </para>
+    /// LilyPond twin: <c>\fixed c' { \time 12/4 \repeat unfold 4 {
+    /// &lt;&lt; { b1 b1 b1 } \\ { e,,1 e,,1~ e,,1 } &gt;&gt; } }</c> cut 4+4+4+4 by
+    /// <c>\break</c> under <c>\paper { ragged-bottom = ##t ragged-right = ##f }</c>,
+    /// <c>indent = 0</c>.
+    /// </remarks>
+    private static readonly string VTSID = """
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "VTSID" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
+    /// <see cref="VTSID"/> with ONLY the tie removed — the identity control. The heads bind
+    /// past the floor, so both engines must read exactly 12.595000; this is also the check
+    /// that voice-2 noteheads join the paging skylines.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on 2.26.0: every gap 12.594999999999999, as predicted in the probe header.
+    /// </remarks>
+    private static readonly string VTSIC = """
+        octave absolute
+        time 12/4
+        key c major
+
+        part melody
+
+        section Main {
+          melody {
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+            break
+            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+          }
+        }
+
+        form main { ~Main }
+
+        score main "VTSIC" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// A BEAM measured BETWEEN SYSTEMS instead of between staves — the beam's version of
     /// <see cref="TSID"/>/<see cref="TSIU"/>, a forced-down beam drooping DOWN out of one
     /// system toward the next. The first ledger point to reach
@@ -9571,6 +9750,21 @@ internal static class LpGeometryProbes
         // and TSIU. Same INTERIOR gap (index 1) as the slur pair, for the same span-dependence.
         new("system.tie-under-notes", TSID, g => g.StaffGapAt(1)),
         new("system.tie-over-notes", TSIU, g => g.StaffGapAt(1)),
+
+        // The same two bows moved into VOICE 2 — the one place the preliminary annotation
+        // pass cannot see them: RunPreliminaryAnnotationPass lays ties/slurs on the PRIMARY
+        // VOICE ONLY (staffScore) while the final pass draws every voice (staffSpannerScore),
+        // an asymmetry its own comment marks "(unchanged)". Beams already moved to the staff
+        // quantity; these are the first points that reach the tie/slur half (HANDOFF §1 ⒪).
+        // Each probe ships with its identity control (only the bow removed), which pins the
+        // two-voice frame: the controls must read the floor (12) and the bare heads (12.595)
+        // exactly, or the pair is broken before the probe says anything. Interior gap for the
+        // same span-dependence as the single-voice pairs. See probes VSSD/VSSC/VTSID/VTSIC
+        // (voice2-spanner-page.ly).
+        new("system.voice2-slur-under-notes", VSSD, g => g.StaffGapAt(1)),
+        new("system.voice2-slur-control", VSSC, g => g.StaffGapAt(1)),
+        new("system.voice2-tie-under-notes", VTSID, g => g.StaffGapAt(1)),
+        new("system.voice2-tie-control", VTSIC, g => g.StaffGapAt(1)),
 
         // The beam between systems: BMD/BMU reach SkylineBuilder.BuildStaffSkylines, where
         // the drawn beam is seeded and the members' fixed stems suppressed; these are the

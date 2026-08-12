@@ -609,9 +609,13 @@ internal sealed class LayoutEngine
     /// preliminary context's detection consumed the SAME voice/time-signature/tuplet
     /// instances, and the detector is a stateless pure function of exactly those three —
     /// see the carry site in <c>Layout</c> for the full argument.
-    /// ⚠️ TIES AND SLURS ARE NOT CARRIED and must not be: the preliminary pass lays them out
-    /// on the PRIMARY VOICE ONLY (`staffScore`) while the final pass uses every voice
-    /// (`staffSpannerScore`), so they are not the same quantity — see this method's body.
+    /// ⚠️ TIES AND SLURS ARE NOT CARRIED. Since session 140 both passes lay them on the
+    /// SAME quantity (every voice — the staffSpannerScore spelling; before that the prelim
+    /// read the primary voice only, measured as system.voice2-{slur,tie}-under-notes), so a
+    /// carry is now COHERENT but not yet PROVEN: the beams' carry stands on a measured
+    /// element-wise comparison across prelim/final system arrays (above). Ties and slurs
+    /// would need the same instrumented sweep before riding along — a perf follow-up, not
+    /// assumed here.
     /// </remarks>
     private readonly record struct PreliminaryPass(
         List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
@@ -652,14 +656,18 @@ internal sealed class LayoutEngine
             // staff's tuplets only (a foreign staff's tuplet would split a beam at a
             // colliding note index) — whose one construction and one detection are
             // MultiStaffLayouter.StaffBeamScoreOf / StaffBeamGroupsOf.
-            // Ties/slurs keep the primary-voice prelim score (unchanged).
             var staffBeamScore = MultiStaffLayouter.StaffBeamScoreOf(score, staff, staffIndex);
+            // Ties/slurs live on the staff quantity too — the SAME score the final pass
+            // lays its bows on, from the one construction both passes share
+            // (StaffSpannerScoreOf; its remarks carry the measured account of what the
+            // primary-voice-only prelim used to cost).
+            var staffSpannerScore = StaffSpannerScoreOf(score, staff, staffTuplets, staffScore);
             var staffPrelimBeams = LayoutPreliminaryStaffBeams(
                 staffBeamScore, layouter.StaffBeamGroupsOf(score, staff, staffIndex),
                 prelimSystems, staffIndex, systemCache, commonShortestDuration);
             prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
-            var staffPrelimTies = _elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff);
+            var staffPrelimTies = _elementCoordinator.LayoutTies(staffSpannerScore, prelimSystems, staffIndex, staff);
             prelimTies.AddRange(staffPrelimTies);
             // The same 'inside script boxes the FINAL pass scores its bows against
             // (LayoutAllSpanners) — a prelim bow that ignored them would shape the
@@ -667,10 +675,10 @@ internal sealed class LayoutEngine
             var prelimStaffScripts = ArticulationEngraver.SidePositionedScriptsOf(
                 score.Articulations, staffIndex);
             prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(
-                staffScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams,
+                staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes, staffPrelimBeams,
                 insideScripts: prelimStaffScripts.IsEmpty ? null : () =>
                     ArticulationEngraver.InsideSlurScriptLayouts(
-                        staffScore, prelimStaffScripts,
+                        staffSpannerScore, prelimStaffScripts,
                         prelimSystems.SelectMany(s => s.Measures).ToImmutableArray(),
                         measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
                             { [staffIndex] = staff.PrimaryVoice.Measures },
@@ -1059,14 +1067,9 @@ internal sealed class LayoutEngine
                 tupletBrackets: staffTuplets);
             // Beam AND slur/tie/glissando detection run PER VOICE, so a polyphonic
             // staff must expose all its voices (not just the primary) — else voice 2's
-            // eighths never beam. Single-voice staves reuse the primary-voice score,
-            // so their layout is unchanged.
-            var staffSpannerScore = staff.Voices.Length > 1
-                ? new Score(
-                    staff.Voices, score.TimeSignature, score.KeySignature,
-                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                    tupletBrackets: staffTuplets)
-                : staffScore;
+            // eighths never beam. One construction shared with the preliminary pass
+            // (StaffSpannerScoreOf), so the two passes cannot drift apart again.
+            var staffSpannerScore = StaffSpannerScoreOf(score, staff, staffTuplets, staffScore);
             // ...the beams the PRELIMINARY pass already laid out for this staff, not a second
             // layout of them. See PreliminaryPass' remarks for why they are the same beams and
             // what was measured to say so. Indexed, not TryGetValue'd with a recompute
@@ -4409,6 +4412,33 @@ internal sealed class LayoutEngine
         ImmutableArray<TupletBracketItem> all, int staffIndex)
         => all.IsDefaultOrEmpty ? all
             : all.Where(t => t.StaffIndex == staffIndex).ToImmutableArray();
+
+    /// <summary>
+    /// The score a staff's ties and slurs are laid out on: every voice of a polyphonic
+    /// staff, the primary-voice score itself (same instance) otherwise.
+    /// </summary>
+    /// <remarks>
+    /// ONE house for both passes, the way the beams' construction has one
+    /// (<see cref="MultiStaffLayouter.StaffBeamScoreOf"/>) and for the same reason: the
+    /// preliminary pass (<see cref="RunPreliminaryAnnotationPass"/>) and the final pass
+    /// (<c>LayoutAllSpanners</c>) must lay bows on the SAME quantity, and two spellings of
+    /// one construction is how that stops being true. When they differed — the prelim read
+    /// the primary voice only until session 140 — a voice-2 bow was drawn into a gap it was
+    /// reserved nowhere in, measured as system.voice2-slur-under-notes -1.122500648 and
+    /// system.voice2-tie-under-notes -0.917560328 (both landed on their single-voice twins'
+    /// residuals once the passes agreed). Single-voice staves return
+    /// <paramref name="primaryVoiceScore"/> itself, so their layout is byte-unchanged by
+    /// whichever pass calls this.
+    /// </remarks>
+    private static Score StaffSpannerScoreOf(
+        MultiStaffScore score, Staff staff, ImmutableArray<TupletBracketItem> staffTuplets,
+        Score primaryVoiceScore)
+        => staff.Voices.Length > 1
+            ? new Score(
+                staff.Voices, score.TimeSignature, score.KeySignature,
+                ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                tupletBrackets: staffTuplets)
+            : primaryVoiceScore;
 
     private sealed record AnnotationLayouts(
         ImmutableArray<DynamicLayout> Dynamics,
