@@ -141,8 +141,12 @@ internal static class MeasureModel
         return bars;
     }
 
-    /// <summary>Marks a fresh default-duration frame (a phrase reference or one turn of a
-    /// repeat body), matching the collector's phrase-fresh semantics.</summary>
+    /// <summary>Marks a fresh default-duration frame (a phrase reference), matching the
+    /// collector's phrase-fresh semantics (<c>EnterDefaultFrame</c>). A repeat turn is NOT
+    /// one: the collector's <c>ProcessRepeatExpression</c> walks the body with the running
+    /// default — bare notes inherit the note value from BEFORE the repeat and across its
+    /// turns — so resetting per turn counted `c8 … repeat percent 4 { a a … }`'s bare a's
+    /// as quarters (reported 2026-08-13, scratch/ベースタブLy/1stbarline.lys).</summary>
     private sealed class DurationResetMarker
     {
         public static readonly DurationResetMarker Instance = new();
@@ -214,11 +218,10 @@ internal static class MeasureModel
                     }
                     else if (int.TryParse(rep.Count.Text, out int repCount))
                     {
+                        // No DurationResetMarker here: the collector walks each turn with
+                        // the RUNNING default note value (see the marker's remarks).
                         for (int r = 0; r < Math.Max(1, repCount); r++)
-                        {
-                            output.Add(DurationResetMarker.Instance);
                             Flatten(rep.Body, output, activeRefs, phraseBodies);
-                        }
                     }
                     break;
 

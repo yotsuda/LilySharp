@@ -142,7 +142,15 @@ internal sealed class MeasureValidator : ISemanticValidator
         // A tremolo repeat's body ("{ c32 }") is metric material of the
         // ENCLOSING measure (counted above via ItemDuration), never a
         // standalone bar — recursing flagged it as a 1/32 "first measure".
-        if (node is RepeatExpressionSyntax trem && trem.RepeatType.Text == "tremolo")
+        // A percent/volta/unfold body IS a bar stream, but it is validated from
+        // the enclosing stream's pass (ValidateMeasures), which knows the frame
+        // the repeat opens in — the running default note value, meter, and
+        // elapsed beats. Recursing here validated it as a standalone block in a
+        // fresh quarter-note frame: `c8 c c c c c c c | repeat percent 4
+        // { a a … }` flagged duration-2 bars the renderer fills exactly (the
+        // bare a's inherit the eighth ACROSS the repeat, as the collector walks
+        // them — reported 2026-08-13, scratch/ベースタブLy/1stbarline.lys).
+        if (node is RepeatExpressionSyntax)
             return;
 
         // LYS0010 recovery: a nested voice's block INLINES into the enclosing
@@ -263,7 +271,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos,
         Fraction? leadIn = null, Fraction? initialDefault = null)
     {
-        var measures = SplitIntoMeasures(items, startPos, out var voiceSpans);
+        var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans);
 
         // Measure durations in one pass, threading the running default note
         // value (a bare note inherits the previous note's duration across bar
@@ -275,21 +283,46 @@ internal sealed class MeasureValidator : ISemanticValidator
         // running default note value there. Voices 2..N sound from that instant, so this
         // is the lead-in their own first bar is validated with.
         var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default)>();
+        // Where each repeat opened, same scheme: its body is validated with this frame
+        // (plus the meter running at its bar, adopted in the check loop below).
+        var repeatEntry = new List<(RepeatExpressionSyntax Rep, int MeasureIndex, Fraction LeadIn, Fraction Default)>();
         for (int di = 0; di < measures.Count; di++)
         {
             var barItems = measures[di].Items;
             var total = Fraction.Zero;
             int from = 0;
+            // Voice spans and repeats, merged in item order: count up to each address,
+            // snapshot, then carry on — one spelling of the beat count
+            // (MeasureDurations), just read in segments.
+            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep)>();
             foreach (var vs in voiceSpans)
+                if (vs.MeasureIndex == di)
+                    cuts.Add((vs.ItemIndex, vs.Span, null));
+            foreach (var rs in repeatSpans)
+                if (rs.MeasureIndex == di)
+                    cuts.Add((rs.ItemIndex, null, rs.Rep));
+            cuts.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
+            foreach (var (itemIndex, span, rep) in cuts)
             {
-                if (vs.MeasureIndex != di)
-                    continue;
-                // Count up to the span's item index, snapshot, then carry on — one
-                // spelling of the beat count (MeasureDurations), just read twice.
                 total += MeasureDurations.CalculateMeasureDuration(
-                    barItems.GetRange(from, vs.ItemIndex - from), ref defaultDuration);
-                spanEntry.Add((vs.Span, total, defaultDuration));
-                from = vs.ItemIndex;
+                    barItems.GetRange(from, itemIndex - from), ref defaultDuration);
+                from = itemIndex;
+                if (span != null)
+                {
+                    spanEntry.Add((span, total, defaultDuration));
+                }
+                else
+                {
+                    // The body validates with the frame the repeat OPENS in…
+                    repeatEntry.Add((rep!, di, total, defaultDuration));
+                    // …and the stream after the repeat continues with the frame the
+                    // body LEAVES: the collector's _defaultDuration threads through
+                    // the walked body, and the exit value is the same after every
+                    // turn (the body's last written duration, or the entry value
+                    // when it writes none), so ONE body pass reproduces it.
+                    MeasureDurations.CalculateMeasureDuration(
+                        rep!.Body.Items.ToList(), ref defaultDuration);
+                }
             }
             total += MeasureDurations.CalculateMeasureDuration(
                 barItems.GetRange(from, barItems.Count - from), ref defaultDuration);
@@ -335,6 +368,17 @@ internal sealed class MeasureValidator : ISemanticValidator
                 else if (item is PartialDeclarationSyntax pd)
                     partialLength = pd.ToFraction();
             }
+
+            // Repeat bodies that open in THIS bar: each is its own bar stream, validated
+            // in the frame the repeat opens in — the snapshotted default note value and
+            // elapsed beats, and the meter as of this bar (just adopted above). ONE pass
+            // covers every turn: the source spans are the same for all of them, and the
+            // entry frame of turns 2..N (the exit frame of the previous turn) equals
+            // turn 1's own exit frame, which the enclosing stream continues with anyway.
+            foreach (var (rep, mi, repLeadIn, repDefault) in repeatEntry)
+                if (mi == i)
+                    ValidateItemsScoped(rep.Body.Items, rep.Body.Position,
+                        repLeadIn == Fraction.Zero ? null : repLeadIn, repDefault);
 
             var duration = durations[i];
 
@@ -521,12 +565,19 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// within that measure's (already inlined) items where it opened, and the span node.</summary>
     private readonly record struct VoiceSpan(int MeasureIndex, int ItemIndex, ParallelExpressionSyntax Span);
 
+    /// <summary>A percent/volta/unfold repeat met while splitting — same address scheme as
+    /// <see cref="VoiceSpan"/>. Its body is a bar stream of its own, validated with the
+    /// frame the repeat opens in (a tremolo is a metric item instead, folded by
+    /// <see cref="MeasureDurations.ItemDuration"/>).</summary>
+    private readonly record struct RepeatSpan(int MeasureIndex, int ItemIndex, RepeatExpressionSyntax Rep);
+
     private List<MeasureContent> SplitIntoMeasures(IEnumerable<SyntaxNode> blockItems, int blockStartPos,
-        out List<VoiceSpan> voiceSpans)
+        out List<VoiceSpan> voiceSpans, out List<RepeatSpan> repeatSpans)
     {
         var measures = new List<MeasureContent>();
         var currentItems = new List<SyntaxNode>();
         var spans = new List<VoiceSpan>();
+        var repeats = new List<RepeatSpan>();
         int startPos = blockStartPos;
 
         void AddItems(IEnumerable<SyntaxNode> items)
@@ -566,6 +617,12 @@ internal sealed class MeasureValidator : ISemanticValidator
                 }
                 else
                 {
+                    // A percent/volta/unfold repeat stays an opaque zero-duration item in
+                    // its bar (its played bars are the body's), but its address is
+                    // recorded so ValidateMeasures can validate the body in the frame the
+                    // repeat opens in.
+                    if (item is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
+                        repeats.Add(new RepeatSpan(measures.Count, currentItems.Count, rep));
                     currentItems.Add(item);
                 }
             }
@@ -579,6 +636,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         }
 
         voiceSpans = spans;
+        repeatSpans = repeats;
         return measures;
     }
 }

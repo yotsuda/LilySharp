@@ -93,13 +93,13 @@ public sealed partial class MeasureCollector
                 }
             }
 
-            ProcessMusicNode(site.Node, builder, PeekMarkers(PeekPastAttachedMarks(musicNodes, i)));
+            ProcessMusicNode(site.Node, builder, PeekMarkers(musicNodes, i, out _));
         }
     }
 
     /// <summary>
-    /// The lookahead node for position <paramref name="i"/>: the next list entry
-    /// that is not a NOTE-ATTACHED mark. The flattened walk lists a note's own
+    /// True when list entry <paramref name="j"/> is a NOTE-ATTACHED mark the
+    /// lookahead must skip. The flattened walk lists a note's own
     /// <c>@name(...)</c> mark (a MusicMarkSyntax child in its articulations)
     /// right after the note — it must stay in the list, because for a rehearsal
     /// mark the statement arm is the live collection path — but the naive
@@ -110,46 +110,84 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// The kind gate keeps the scan red-free until it lands: only a MusicMark
-    /// can be note-attached, and everything else returns as the answer. The
-    /// peek only runs for sites the walk is about to process (live window), so
-    /// it materializes at most the answer node plus any attached marks it
-    /// skips — never the adopted prefix or the spliced tail.
+    /// can be note-attached, and everything else is an answer for the caller.
+    /// The peek only runs for sites the walk is about to process (live window),
+    /// so it materializes at most the marker run it reads plus any attached
+    /// marks it skips — never the adopted prefix or the spliced tail.
     /// </remarks>
-    private static SyntaxNode? PeekPastAttachedMarks(List<GreenSite> nodes, int i)
-    {
-        for (int j = i + 1; j < nodes.Count; j++)
-        {
-            if (nodes[j].Kind == SyntaxKind.MusicMark
-                && nodes[j].Node is MusicMarkSyntax mark
-                && (mark.IsInside<NoteSyntax>() || mark.IsInside<ChordSyntax>()
-                    || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()
-                    || mark.IsInside<ChordRepetitionSyntax>()))
-                continue;
-            return nodes[j].Node;
-        }
-        return null;
-    }
+    private static bool IsAttachedMark(List<GreenSite> nodes, int j)
+        => nodes[j].Kind == SyntaxKind.MusicMark
+            && nodes[j].Node is MusicMarkSyntax mark
+            && (mark.IsInside<NoteSyntax>() || mark.IsInside<ChordSyntax>()
+                || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()
+                || mark.IsInside<ChordRepetitionSyntax>());
 
     /// <summary>
-    /// One-node lookahead flags. Ties/slurs/beams are written AFTER the note
-    /// they annotate, so a note's flags come from the following node.
+    /// Lookahead flags. Ties/slurs/beams are written AFTER the note they
+    /// annotate, so a note's flags come from the RUN of marker nodes that
+    /// follows it — every consecutive marker, not just the first one.
     /// </summary>
     private readonly record struct MarkerFlags(
         bool HasTieAfter, bool HasSlurStartAfter, bool HasSlurEndAfter,
         bool HasBeamStartAfter, bool HasBeamEndAfter);
 
+    /// <summary>True for the marker nodes that annotate the preceding note and
+    /// are otherwise skipped by the walk ("already processed"), i.e. exactly the
+    /// nodes <see cref="FoldMarker"/> reads.</summary>
+    private static bool IsMarkerNode(SyntaxNode node)
+        => node is TieSyntax or SlurSyntax or BeamMarkerSyntax;
+
+    /// <summary>Adds one marker node to the flags.</summary>
+    private static MarkerFlags FoldMarker(MarkerFlags m, SyntaxNode node) => node switch
+    {
+        TieSyntax => m with { HasTieAfter = true },
+        SlurSyntax { IsOpen: true } => m with { HasSlurStartAfter = true },
+        SlurSyntax { IsOpen: false } => m with { HasSlurEndAfter = true },
+        BeamMarkerSyntax { IsStart: true } => m with { HasBeamStartAfter = true },
+        BeamMarkerSyntax { IsStart: false } => m with { HasBeamEndAfter = true },
+        _ => m,
+    };
+
     /// <summary>
-    /// Computes the tie/slur/beam lookahead for a note from the node that
-    /// follows it. Centralized so the top-level stream, tuplet bodies, and the
-    /// structure walk can't drift — a drifted copy previously silently dropped
-    /// markers inside tuplet/structure bodies.
+    /// Computes the tie/slur/beam lookahead for the note at <paramref name="i"/>
+    /// from the run of marker nodes that follows it, skipping note-attached
+    /// marks the same way (<see cref="IsAttachedMark"/>). Centralized
+    /// so the top-level stream, tuplet bodies, and the structure walk can't
+    /// drift — a drifted copy previously silently dropped markers inside
+    /// tuplet/structure bodies.
     /// </summary>
-    private static MarkerFlags PeekMarkers(SyntaxNode? next) => new(
-        HasTieAfter: next is TieSyntax,
-        HasSlurStartAfter: next is SlurSyntax { IsOpen: true },
-        HasSlurEndAfter: next is SlurSyntax { IsOpen: false },
-        HasBeamStartAfter: next is BeamMarkerSyntax { IsStart: true },
-        HasBeamEndAfter: next is BeamMarkerSyntax { IsStart: false });
+    /// <remarks>
+    /// A run, not one node: LilyPond's post-events are an unordered list and all
+    /// of them bind to the note before them (lily/parser.yy post_events; the
+    /// parser preserves their source order as sequence items). The one-node peek
+    /// read only the first — <c>c8[( c)]</c> lost the <c>(</c> behind the
+    /// <c>[</c> (a bogus LYS4010 and no slur) AND the <c>]</c> behind the
+    /// <c>)</c> (the manual beam never closed). Reported 2026-08-13
+    /// (scratch/ベースタブLy/beam-slur.lys).
+    /// <para>
+    /// <paramref name="furthestRead"/> is the last node the scan examined (the
+    /// terminator, or the last marker when the list ends) — the top-level walk
+    /// folds its extent into the checkpoint read watermark; spans are ordered,
+    /// so folding the furthest covers the whole run.
+    /// </para>
+    /// </remarks>
+    private static MarkerFlags PeekMarkers(
+        List<GreenSite> nodes, int i, out SyntaxNode? furthestRead)
+    {
+        var flags = default(MarkerFlags);
+        furthestRead = null;
+        for (int j = i + 1; j < nodes.Count; j++)
+        {
+            if (IsAttachedMark(nodes, j))
+                continue;
+            var node = nodes[j].Node;
+            furthestRead = node;
+            if (!IsMarkerNode(node))
+                break;
+            flags = FoldMarker(flags, node);
+        }
+        return flags;
+    }
 
     /// <summary>Resets the relative-octave and default-duration state to the
     /// initial frame — the invariant applied at every phrase-reference
@@ -498,7 +536,8 @@ public sealed partial class MeasureCollector
                     // is walked inline here, so it is saved and restored around that walk;
                     // the other voices take the recorded frame in BuildExtraVoiceTracks.
                     var spanFrame = _octave.Snapshot();
-                    _parallelSpans.Add((parallel, builder.CurrentMeasureIndex, spanFrame));
+                    _parallelSpans.Add(
+                        (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame));
                     if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.
@@ -1147,12 +1186,14 @@ public sealed partial class MeasureCollector
         {
             var item = tupletItems[j];
 
-            // One-node lookahead for tie/slur/beam markers that annotate the
+            // Lookahead over the RUN of tie/slur/beam markers that annotate the
             // preceding note — the same rule ProcessMusicNodeSequence applies to
             // the top-level stream. Without this, a tie/slur/beam written inside
             // a tuplet body was silently dropped.
-            var next = j + 1 < tupletItems.Count ? tupletItems[j + 1] : null;
-            var (hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter) = PeekMarkers(next);
+            var flags = default(MarkerFlags);
+            for (int k = j + 1; k < tupletItems.Count && IsMarkerNode(tupletItems[k]); k++)
+                flags = FoldMarker(flags, tupletItems[k]);
+            var (hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter) = flags;
 
             if (item is TupletExpressionSyntax nestedTuplet)
             {

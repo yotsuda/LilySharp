@@ -865,10 +865,15 @@ public sealed partial class MeasureCollector
     // (and marked closed/open) once the whole voice has been processed.
     private readonly List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> _pendingInlineVoltas = new();
     // Parallel-voice spans (<< \\ >>) recorded during the primary (voice-0)
-    // walk: the parallel node and the measure index where its content begins.
+    // walk: the parallel node, the measure index where its content begins, and
+    // the elapsed duration WITHIN that measure at the span's opening.
     // Voice 0 flows into the primary stream so measure indices stay continuous;
     // the remaining voices are reconstructed afterwards (BuildMultiVoiceScore).
     // Cleared at the start of each collection.
+    // StartOffset places a mid-measure span's extra voices at the span's beat:
+    // in `c4 voice { e } { g' }` voice 0 walks c4 then e inline, so e sits on
+    // beat 2 for free — the reconstructed { g' } track needs the recorded offset
+    // (a leading spacer) or its g' lands on beat 1 against the c4.
     // The Frame is the relative-octave state at the span's OPENING: every voice of the
     // span reads from it, and the music after the span reads from it too. A voice span is
     // simultaneous music, so its branches do not chain into one another and none of them
@@ -876,7 +881,7 @@ public sealed partial class MeasureCollector
     // member stacks on the root and `<c e g>` == `<c g e>` (CreateChordItem). Written
     // 2026-08-01 on the user's call; before that voices 2..N restarted at the PART's
     // default octave and voice 0 leaked its last pitch into the music after the span.
-    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, OctaveSnapshot Frame)> _parallelSpans = new();
+    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame)> _parallelSpans = new();
     // Added to the local measure index when collecting a parallel span's EXTRA
     // voices (they're collected with a fresh 0-based builder), so their
     // per-note metadata — dynamics, articulations, etc. — lands at the span's
@@ -2210,7 +2215,7 @@ public sealed partial class MeasureCollector
 
         // Map named voices (voice sop { … }) to their measure track so a
         // `lyrics sop { … }` block can bind to it. Track 0 is voice 1, then extras.
-        foreach (var (parallel, _, _) in _parallelSpans)
+        foreach (var (parallel, _, _, _) in _parallelSpans)
         {
             int vi = 0;
             foreach (var (name, _) in parallel.NamedVoices)
@@ -2274,7 +2279,7 @@ public sealed partial class MeasureCollector
     {
         int totalMeasures = track0.Count;
         int voiceCount = 1;
-        foreach (var (parallel, _, _) in _parallelSpans)
+        foreach (var (parallel, _, _, _) in _parallelSpans)
             voiceCount = Math.Max(voiceCount, parallel.Voices.Count());
 
         var tracks = new List<ImmutableArray<Measure>>();
@@ -2284,7 +2289,7 @@ public sealed partial class MeasureCollector
             for (int m = 0; m < totalMeasures; m++)
                 trackMeasures[m] = EmptyMeasure(track0[m]);
 
-            foreach (var (parallel, start, spanFrame) in _parallelSpans)
+            foreach (var (parallel, start, startOffset, spanFrame) in _parallelSpans)
             {
                 var blocks = parallel.Voices.ToList();
                 if (t >= blocks.Count)
@@ -2311,7 +2316,8 @@ public sealed partial class MeasureCollector
                 _currentVoiceIndex = t;
                 // Render voice number is t+1 — an override in this sub-voice scopes to it.
                 _currentVoiceScope = t + 1;
-                var sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0);
+                var sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0,
+                    leadingOffset: startOffset);
                 ResolveBeamStemDirections(sub);
                 _currentVoiceScope = null;
                 _currentVoiceIndex = 0;
@@ -2383,7 +2389,7 @@ public sealed partial class MeasureCollector
     // ⚠️ The `autoFinalBarline: false` parameter this used to carry is GONE with the rule
     // it suppressed (see FinalizeMeasures). Do not reintroduce either.
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
-        bool applyFilePartial = true)
+        bool applyFilePartial = true, Fraction? leadingOffset = null)
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
         // The file-level pickup arms a sub-collection only when it really sits
@@ -2391,6 +2397,12 @@ public sealed partial class MeasureCollector
         // own first bar).
         if (applyFilePartial && _filePartial is { } subPickup)
             builder.SetPartial(subPickup);
+        // A mid-measure << \\ >> span: pad the sub-voice up to the span's beat
+        // with an invisible spacer, so its first sounding item lands where voice 0
+        // (walked inline in the primary stream) already elapsed to. Same device
+        // PartCombiner uses to pad a part up to an onset.
+        if (leadingOffset is { } offset && offset != Fraction.Zero)
+            builder.AddItem(new RestItem(offset, 0, voiceNode.Position) { IsSpacer = true });
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
 
@@ -3350,18 +3362,19 @@ public sealed partial class MeasureCollector
                 }
 
                 // Same skip as ProcessMusicNodeSequence: a note-attached mark in
-                // the flat list must not shadow the tie/slur/beam marker behind it.
-                var peeked = PeekPastAttachedMarks(nodeList, i);
-                // The peek READS the next non-mark node's type, and a checkpoint can
-                // sit between the peeking node and the peeked one (`c1 d1` — the
-                // boundary is before d, but c's lookahead read d). Fold the peeked
-                // extent so an edit at the peeked node invalidates that boundary.
+                // the flat list must not shadow the tie/slur/beam markers behind it.
+                var flags = PeekMarkers(nodeList, i, out var furthestPeeked);
+                // The peek READS the following nodes' types, and a checkpoint can
+                // sit between the peeking node and a peeked one (`c1 d1` — the
+                // boundary is before d, but c's lookahead read d). Fold the furthest
+                // peeked extent (spans are ordered, so it covers the whole run) so
+                // an edit at any peeked node invalidates that boundary.
                 // Nested walks need no such fold: no checkpoint is captured inside
                 // them, and every peeked node is processed (and folded) before the
                 // enclosing top-level node completes.
-                if (_probeRecording != null && peeked != null)
-                    _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, peeked.FullSpan.End);
-                ProcessMusicNode(site.Node, builder, PeekMarkers(peeked));
+                if (_probeRecording != null && furthestPeeked != null)
+                    _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, furthestPeeked.FullSpan.End);
+                ProcessMusicNode(site.Node, builder, flags);
             }
         }
 
@@ -3737,21 +3750,21 @@ public sealed partial class MeasureCollector
         // references, and their extra voices are walked LIVE after this walk —
         // they must be re-resolved against the new tree, not adopted (except on
         // the identity path, where the old tree's text IS the new text).
-        var spanTail = new List<(ParallelExpressionSyntax, int, OctaveSnapshot)>(
+        var spanTail = new List<(ParallelExpressionSyntax, int, Fraction, OctaveSnapshot)>(
             endCk.ParallelSpanCount - ck.ParallelSpanCount);
         for (int i = ck.ParallelSpanCount; i < endCk.ParallelSpanCount; i++)
         {
-            var (oldNode, startMeasure, frame) = rec.ParallelSpans![i];
+            var (oldNode, startMeasure, startOffset, frame) = rec.ParallelSpans![i];
             if (identity)
             {
-                spanTail.Add((oldNode, startMeasure, frame));
+                spanTail.Add((oldNode, startMeasure, startOffset, frame));
                 continue;
             }
             if (_root == null
                 || CollectTailShifter.ResolveShifted(_root, oldNode, w)
                     is not ParallelExpressionSyntax resolved)
                 return false;
-            spanTail.Add((resolved, startMeasure, frame));
+            spanTail.Add((resolved, startMeasure, startOffset, frame));
         }
 
         var endMeta = endCk.Meta.Clone();
@@ -3922,9 +3935,9 @@ public sealed partial class MeasureCollector
             return false;
         for (int i = 0; i < _parallelSpans.Count; i++)
         {
-            var (liveNode, liveStart, liveFrame) = _parallelSpans[i];
-            var (recNode, recStart, recFrame) = _suffixPlan!.Recording.ParallelSpans![i];
-            if (liveStart != recStart || liveFrame != recFrame)
+            var (liveNode, liveStart, liveOffset, liveFrame) = _parallelSpans[i];
+            var (recNode, recStart, recOffset, recFrame) = _suffixPlan!.Recording.ParallelSpans![i];
+            if (liveStart != recStart || liveOffset != recOffset || liveFrame != recFrame)
                 return false;
             if (!w.TryShift(recNode.FullSpan.Start, out int nodeStart)
                 || liveNode.FullSpan.Start != nodeStart

@@ -204,7 +204,7 @@ internal sealed class VoiceWalkRecording
     /// <summary>Walk-local, cleared-per-walk lists, copied at walk end. Their
     /// prefix (by checkpoint count) is what a resume adopts.</summary>
     public List<(int, int, string, bool, int)>? PendingInlineVoltas;
-    public List<(Syntax.ParallelExpressionSyntax, int, OctaveSnapshot)>? ParallelSpans;
+    public List<(Syntax.ParallelExpressionSyntax, int, Fraction, OctaveSnapshot)>? ParallelSpans;
 
     /// <summary>Non-null when the walk crossed a regime the resume does not
     /// support; its checkpoints must not be resumed from.</summary>
