@@ -18,6 +18,142 @@
 
 ---
 
+## 以下は第151セッションの経緯
+
+最終更新 第151セッション＝**2 便**。**第1便＝⒭ render の第1切片（system 単位の SVG 断片
+cache・`a3aa3416`）**。**第2便＝collect 残りの分割（測定のみ・エンジンのコード変更ゼロ・
+計器は commit していない・一番下の bullet）**。
+⚠️⚠️ **当初のベンチ中ユーザーが同じ PC で作業していた**（事後に判明。fingbeam1k の打鍵床が
+同日内で 357〜639 ms と振れたのがその痕跡）——**静かな窓をもらって同日中に取り直し、
+下の表は全部その再測値**。汚染走の生データも scratch に残っている（比較用）。
+汚染走の教訓 2 つ: ⑴ 汚染時の A/B Δ（−73/−144/−55）は**過大**だった（真値は −29/−101/−37）
+⑵ plain の parseagree 23.6 は**ノイズ**だった（真値 2.7）——**5〜40ms 帯の行の 1 走の床は
+係数 2 程度の分散を持つ**。**以後、ベンチはユーザーに一言かけて静かな窓をもらってから
+走らせる**（memory 化済み）。編集打鍵から**不変 system の DrawSystem 再描画（＝render の支配項）が消えた**
+——`IncrementalCompiler` セッションが system ごとの出力テキストを `SvgSystemFragmentCache` に
+記録し、⑴ content key slice（⒟⁗ と同じ **±1 小節窓**・index 揃え）⑵ 幾何の値 fold
+（system Y/幅/indent・全小節の X/W/Items/Columns・staff 表・pageHeight＝`Hash64` 1 綴り）
+⑶ **live 位置指紋**が不変なら断片を再生する。**data-pos/data-alt は slot 化**し、編集窓
+（`CollectResumePlanner.ComputeWindow`＝splice と同じ算術に統合・1 綴り）で写像して再放出——
+窓内に落ちる slot は断片ごと decline。decline 級: override・ossia・`font "NAME"`・
+cross-system beam 群・capture 時の scan/emission-log 不一致（歌詞に字面 ` data-pos="` が
+入る本まで安全）。**@font-face の side channel**（usedDesigns）は entry が運んで replay 時に
+merge。読みの全数調査と decline 級は `SvgSystemFragmentCache` の remarks に常設。
+テスト **4415 passed / 0 failed / 4 skipped（+4＝網）**・**台帳 511 点・ss 非ゼロ 94・
+総和 3.609962441・count 点 106 / 非ゼロ 2（§0 の数え方で再測・不動）**・**snapshot 0 動**・
+**コーパスは走らせていない**（フル compile（lysc svg）は cache=null で同一コード＝構成上不変。
+基線は第148 の 0/82 のまま）。
+
+- ★★★ **fuzz（`SessionFuzz_RandomizedEdits_AlwaysMatchFull`）が設計の穴を 2 匹その場で
+  捕まえた**——「content key 等値＋幾何等値＝byte 等値」は data-pos については偽:
+  ⑴ **content key の等値は「位置が窓写像に従う」を含意しない**——エラー回復モデルは同じ
+  内容に収束しつつ anchor が別の距離を動く（`melody {`→`me{dy {`・Δ=−1 でモデルの位置は −2）。
+  ⇒ replay は **live 位置指紋**（system 内全 staff×voice の小節 span＋全 item 位置＋和音内
+  音符の位置・第1 system は staff.ClefPosition と Header.Key/Time も）が「記録指紋の窓写像」と
+  一致することを要求する。⚠️ 小節 span だけでは足りない（回復小節は span が点に潰れて item を
+  覆わない——2 匹目の中間発見）。
+  ⑵ **指紋は Values と同じテキスト基準で一緒に進める**——replay 成功時に anchors も live 値へ
+  更新（放置すると 2 連続 replay で検査の基準が 2 テキスト遅れ、偶然通ってドリフトを見逃す）。
+- **陽性対照 3 種**: 毒B（slot シフト無効）→ **10 本 fail**（trivia 挿入網・interactive 網・
+  `BenchmarkFixtures_WidthPreservingEdit`・fuzz）／毒C（指紋検査無効）→ **fuzz 全 5 seed＋
+  Malformed の 6 本 fail**＝2 層が独立に噛む。⚠️ ★ **毒A（±1 窓を落とす）は現行網で 1 本も
+  落ちない＝単離未達**——courtesy を変える編集は必ず「courtesy 自身の data-pos slot が窓内」
+  で先に decline する（実測・remarks と網 doc に正直に記録）。窓は fold 論証（隣 system の
+  開始 item を読む・SourcePosition が自分の字面の外へ lag する形は他層が届かない）で残す。
+- **網 4 枚**（`IncrementalCompilerTests`）: ⑴ 多 system 編集＝byte 等値＋ **drawn≤2 かつ
+  replayed=total−drawn を主張**（窓は黙って広くも狭くもなれない）⑵ 本文中央への空白挿入
+  （Δ=+1・全 system replay・**前回出力と不等**＝シフトが実際に起きた証明つき）⑶ courtesy
+  regime の byte 等値（毒A の正直な doc つき）⑷ Interactive（hit rect＋data-alt もシフト）。
+  既存の fuzz 5 seed＋Malformed＋BenchmarkFixtures（先頭 \n 挿入）が Δ≠0 の番人。
+- **実測（Release・EditKeystrokeBench・同日 A/B・静かな窓での再測＝3 回目が正・
+  A は `a3aa3416~1` のコードを checkout して建てた・両側 gateMoved True /
+  reusedLayout False＝regime ⑶・主張は同日差だけ・§7.9）**:
+
+  | 冊 | 床 A→B | Δ |
+  |---|---|---|
+  | plain1k | 272.4→243.5 | **−28.9** |
+  | fingbeam1k | 581.6→481.0 | **−100.6** |
+  | v2bow1k | 339.3→302.3 | **−37.0** |
+
+  render.systems（DrawSystem ループ）単体は床 **96.4/156.4/56.7 → 3.4/7.6/2.7 ms**
+  （198/198/110 system が replay・drawn 1〜2。⚠️ この段内訳は汚染日の値＝比率と桁だけ信じる。
+  Δ が段の差より小さいのは before 側の段が負荷で膨れていたのと replay 側の指紋・鍵照合の
+  対価）。生データは `scratch\renderfrag-151-{A,B}.txt`（汚染 2 回）と
+  `renderfrag-151-{A3,B3}.txt`（静穏・正）と `renderbench-151*.txt`（render 段内訳・untracked）。
+  ⚠️ **第149 の打鍵の段の表のうち compile.render 行はこの便から stale**（打鍵では systems 分が
+  ほぼ 0）。**render に残る費用は overlay**——fingbeam の `DrawFingerings` **48 ms** が最大
+  （page ごとに全 FingeringLayouts を走査して描く・断片化＝⒭ 第2切片の素直な続き）、
+  v2bow の ties+slurs 〜5 ms、assemble 2〜7 ms。cold は memo が効かない（前 render が無い）。
+- ★★★ **第2便＝collect 残りの分割（測定のみ・CollectClock を第145 の形で再建・面分離
+  ＝編集面／復帰面の床を別掲・静かな窓で再測した値が下表）**。**第149 の仮説「collect の
+  残り＝splice の採用コピー＋score assembly 側」は反証された**——採用コピーは小節+側表で
+  **0.4〜1.7 ms**・assemble は **0.02 ms**。本当の在処（床・Release・edit@0.50・静穏走）:
+
+  | 行 | plain1k 編集/復帰 | fingbeam1k 編集/復帰 | v2bow1k 編集/復帰 |
+  |---|---|---|---|
+  | col.**plan**（`CollectResumePlanner.Plan`） | 3.4 / 5.1 | **26.8 / 81.5** | 0.3 / 0.0 |
+  | col.**defs**（`CollectDefinitions`＝毎打鍵全木 walk） | **16.0** / 4.5 | **40.7** / 16.2 | 5.7 / 5.8 |
+  | col.**beamdirs**（`ResolveBeamStemDirections`＝毎打鍵**全曲** post-pass） | 18.2 / **28.0** | 18.2 / **32.6** | 0.3 / 0.4 |
+  | col.splice.ok の残余（copy/検査の外＝採用**適用**相） | ~0.8 | **~23** | ~0.5 |
+  | col.splice.**parseagree**（`ParseAgreementsHold`・打鍵 1 回） | 2.7 | **10.4** | 2.1 |
+  | col.walk のうち live 窓 | ~3.3 | **~16** | ~1.4 |
+  | splicecopy（小節＋側表） | 0.6 | 1.7 | 0.4 |
+  | col.extras（v2bow 第2声部再構築）＋staffcols | — | — | 5.0＋3.5 |
+
+  生データは `scratch\collectbench-151-quiet.txt`（正）と `collectbench-151.txt`（汚染走・
+  比較用）。⚠️ 汚染走は plain の parseagree を 23.6 と出していた（真値 2.7）＝**5〜40ms 帯の
+  行は 1 走の床でも係数 2 の分散**——修理便は着手前に自分の走で取り直すこと。
+  ⇒ **次に修理するのは検証・計画層**: ⑴ **plan**（checkpoint 走査——`MaxSourceRead` は
+  非減少なので二分探索可。復帰面 81.5 は prefix=全長で全 checkpoint を舐めるため＝実打鍵でも
+  編集位置が後ろほど高い）⑵ **defs**（fingbeam 40.7——毎打鍵の全木 walk。窓が top-level に
+  触れない打鍵の再利用）⑶ **beamdirs**（全曲 pass——採用小節は記録時に解決済みのはず＝
+  スキップ可能かを先に読む）⑷ **splice 適用相の残余**（fingbeam ~23——側表の per-entry
+  append が疑い・割ってから）⑸ parseagree（fingbeam 10.4）。
+  **どれも「直す前に、その行が正しさのどの層を担っているかを読む」こと**
+  （plan/parseagree は soundness の層そのもの——安くする改造は同じ保証を保ったまま）。
+
+---
+
+## 以下は第150セッションの経緯
+
+最終更新 第150セッション＝**1 便＝⒟⁗ の第2切片（per-measure ばね memo・`049baab5`）**。
+regime ⑵⑶（内容が動く編集）の打鍵から**全小節のばね再構築が消えた**——content key の
+**隣接窓（key[i−1..i+1]・index 揃え）が不変**の小節は前打鍵のベクタの項をそのまま再利用し、
+動いた近傍だけ `ComputeMultiStaffSpringData` の**同じループ本体**で作り直す（memo は入口で
+short-circuit＝2 つ目の実装を作らない・§2A）。テスト 4411 passed / 0 failed / 4 skipped
+（+4＝網）・台帳 511 点・ss 非ゼロ 94・総和 3.609962441・count 点 106 / 非ゼロ 2・
+snapshot 0 動・コーパスは走らせていない（memo は `IncrementalCompiler` の編集経路のみ・
+フル compile（lysc svg）は memo=null で同一コード＝構成上不変。基線は第148 の 0/82 のまま）。
+
+- **健全性＝依存の全数調査**（ループ本体の読み全部を fold まで追った・証明は
+  `IncrementalCompiler.SpringReusable` の remarks に常設）: springs[i] が小節 i の外を
+  読むのは**ちょうど 3 つ**——⑴ **i−1 の EndBarline**（`RunLeftBoundBarline`＝StartBarline
+  None の run 開始が左隣の小節線で rod を値付け・key[i−1] 側に畳まれている）⑵ **i+1 の
+  run 帰属**（`MmrRunMap.ForbidsBreakAfter`＝「i の後で折ると run を割るか」は i+1 が同じ
+  run かで決まる・key[i+1] 側。i+1 の開始 clef allowance は key[i] に畳み済みなので理由は
+  そちらではない）⑶ **共通最短音価（score 全体量）**＝別途等値比較。それ以外の全体量
+  （MaxClefWidth・ClefGroupInkLeft・AnyStaffEngravesTime・lead-sheet 性…）は staff 構造と
+  entry context の関数＝**全小節の key に畳まれている**（動けば全 key が動く）。override
+  持ちは従来どおり全体で不適格（contentKeys が default になるので memo も自動 off）。
+  ★ **run が「1 つの `R1*N` トークン」単位**なのはこの調査の副産物（`R1 | R1` は別々の run
+  ＝LP の \compressMMRests 挙動どおり）——右窓網の最初の綴りはこれで空振りして直した。
+- **網 4 枚**（`IncrementalCompilerTests`・全部 from-scratch ベクタとの**深い値比較**つき）:
+  ⑴ 近傍のみ再計算（8 小節・**(reused 5, recomputed 3) を厳密に主張**＝窓は黙って広くも
+  狭くもなれない）⑵ 左窓（`c1 || R1*2 …` の `||`→`|`＝run 開始自身の key 不動のまま rod が
+  動く形・(3,2)）⑶ 右窓（`R1*2`→`R1*3`＝旧 run 末尾の BreakPermission が Allow→Forbid に
+  飛ぶ形）⑷ grandStaff（(1,3)）。**陽性対照 2 種・revert 済み**: 毒A（隣接窓を落として
+  key[i] だけ比較）→ **4 本全 fail・左網は stale rod を値で捕捉（MinWidth 9.48 対 正 8.99）・
+  右網は stale Allow を捕捉**／毒B（key 等値ごと無視）→ 4 本全 fail。
+  ⚠️ **第138 の「安全網の除去」はここまで拡がった**——内容が動く編集でも、不変小節側では
+  rebuild-and-compare の第二意見が沈黙する。番人は incremental==full 網＋この 4 枚。
+- **実測（Release・EditKeystrokeBench・同日 stash A/B・A=第150便の変更なし working tree・
+  両側 gateMoved True / reusedLayout False＝regime ⑶・主張は同日差だけ・§7.9）**:
+  plain1k 床 529.1→377.7（**−151.4**）／fingbeam1k 1029.4→825.7（**−203.7**）／
+  v2bow1k 556.0→483.9（**−72.1**）。生データは `scratch\springmemo-150-{A,B}.txt`
+  （untracked・逐語）。⚠️ 第149 の絶対値（床 348.8/679.3/369.2）とは比べないこと（別の日・§7.9）。
+
+---
+
 ## 以下は第149セッションの経緯
 
 最終更新 第149セッション＝**2 便**。**第1便＝測定と検証（エンジンのコード変更ゼロ・計器は

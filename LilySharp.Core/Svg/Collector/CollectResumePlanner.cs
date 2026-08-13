@@ -17,6 +17,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Syntax.InternalSyntax;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -266,21 +267,30 @@ internal static class CollectResumePlanner
     /// (byte-identical at/after the window), so node-level agreement pins the
     /// whole suffix parse.</summary>
     private static bool ParseSuffixAgrees(SyntaxNode a, SyntaxNode b, int oldLimit, int delta)
+        => GreenSuffixAgrees(a.Green, a.FullSpan.Start, b.Green, b.FullSpan.Start,
+            oldLimit, delta);
+
+    /// <summary><see cref="ParseSuffixAgrees"/>'s body, on the green trees. See
+    /// <see cref="GreenPrefixAgrees"/> for why: a red node is exactly (green,
+    /// absolute start), so carrying the start alongside the green computes the
+    /// SAME predicate without materializing red wrappers.</summary>
+    private static bool GreenSuffixAgrees(
+        GreenNode a, int aStart,
+        GreenNode b, int bStart, int oldLimit, int delta)
     {
         if (a.Kind != b.Kind)
             return false;
-        bool aAbove = a.FullSpan.Start >= oldLimit;
-        bool bAbove = b.FullSpan.Start >= oldLimit + delta;
+        bool aAbove = aStart >= oldLimit;
+        bool bAbove = bStart >= oldLimit + delta;
         if (aAbove != bAbove)
             return false;
         if (aAbove)
         {
-            if (b.FullSpan.Start != a.FullSpan.Start + delta
-                || b.FullSpan.End - b.FullSpan.Start != a.FullSpan.End - a.FullSpan.Start)
+            if (bStart != aStart + delta || b.FullWidth != a.FullWidth)
                 return false;
             // Same green shifted by exactly the delta = identical subtree
             // (greens are position-free); the Edit path's reuse map hits this.
-            if (ReferenceEquals(a.Green, b.Green))
+            if (ReferenceEquals(a, b))
                 return true;
         }
 
@@ -288,29 +298,36 @@ internal static class CollectResumePlanner
         // the limit (the old side) / the shifted limit (the new side). A
         // straddling node recurses without a start check — its below-window
         // part is the prefix agreement's business, not this one's.
-        using IEnumerator<SyntaxNode> ea = a.ChildNodes().GetEnumerator();
-        using IEnumerator<SyntaxNode> eb = b.ChildNodes().GetEnumerator();
-        SyntaxNode? ca = NextOverlapping(ea, oldLimit);
-        SyntaxNode? cb = NextOverlapping(eb, oldLimit + delta);
+        int sa = 0, sb = 0, pa = aStart, pb = bStart;
         while (true)
         {
+            var ca = NextOverlapping(a, ref sa, ref pa, oldLimit, out int caStart);
+            var cb = NextOverlapping(b, ref sb, ref pb, oldLimit + delta, out int cbStart);
             if ((ca == null) != (cb == null))
                 return false;
             if (ca == null)
                 return true;
-            if (!ParseSuffixAgrees(ca, cb!, oldLimit, delta))
+            if (!GreenSuffixAgrees(ca, caStart, cb!, cbStart, oldLimit, delta))
                 return false;
-            ca = NextOverlapping(ea, oldLimit);
-            cb = NextOverlapping(eb, oldLimit + delta);
         }
 
-        static SyntaxNode? NextOverlapping(IEnumerator<SyntaxNode> e, int limit)
+        // The green mirror of the old red-enumerator NextOverlapping: skip
+        // children ending at/before the limit, keep scanning to the slot end.
+        static GreenNode? NextOverlapping(
+            GreenNode parent, ref int slot, ref int pos, int limit,
+            out int start)
         {
-            while (e.MoveNext())
+            while (slot < parent.SlotCount)
             {
-                if (e.Current.FullSpan.End > limit)
-                    return e.Current;
+                var g = parent.GetSlot(slot++);
+                if (g == null)
+                    continue;
+                start = pos;
+                pos += g.FullWidth;
+                if (start + g.FullWidth > limit)
+                    return g;
             }
+            start = 0;
             return null;
         }
     }
@@ -321,32 +338,67 @@ internal static class CollectResumePlanner
     /// function of the text (byte-identical below the window), so node-level
     /// agreement pins the whole prefix parse.</summary>
     private static bool ParsePrefixAgrees(SyntaxNode a, SyntaxNode b, int limit)
+        => GreenPrefixAgrees(a.Green, a.FullSpan.Start, b.Green, b.FullSpan.Start, limit);
+
+    /// <summary><see cref="ParsePrefixAgrees"/>'s body, on the green trees. A red
+    /// node is exactly (green, absolute start) — Kind/FullSpan/ChildNodes are all
+    /// projections of the green plus an accumulated start — so walking the greens
+    /// with the start carried alongside computes the SAME predicate while
+    /// materializing no red wrappers. The wrappers mattered because agreement
+    /// walks run where green sharing does NOT short-circuit them: a fresh parse
+    /// shares nothing, and even the Edit path's incremental reuse adopts
+    /// top-level items only, so an edit inside a section rebuilds that whole
+    /// section's greens (session 146's design memo). Measured (session 152,
+    /// same-run probe, identical node-visit counters on both sides): the two
+    /// agreement walks were 94–99% of the plan's cost on the perf books — the
+    /// checkpoint scan was ~0.2 ms even over 5000 checkpoints, which is why the
+    /// scan stays a linear loop — and the green walk cut the plan row ~6–19×.</summary>
+    private static bool GreenPrefixAgrees(
+        GreenNode a, int aStart,
+        GreenNode b, int bStart, int limit)
     {
-        if (a.Kind != b.Kind || a.FullSpan.Start != b.FullSpan.Start)
+        if (a.Kind != b.Kind || aStart != bStart)
             return false;
         // Same green at the same position = identical subtree (greens are
         // position-free); this is what the Edit path's reuse map hits.
-        if (ReferenceEquals(a.Green, b.Green))
+        if (ReferenceEquals(a, b))
             return true;
-        bool aBelow = a.FullSpan.End <= limit;
-        bool bBelow = b.FullSpan.End <= limit;
-        if (aBelow != bBelow || (aBelow && a.FullSpan.End != b.FullSpan.End))
+        bool aBelow = aStart + a.FullWidth <= limit;
+        bool bBelow = bStart + b.FullWidth <= limit;
+        if (aBelow != bBelow || (aBelow && aStart + a.FullWidth != bStart + b.FullWidth))
             return false;
 
-        using var ea = a.ChildNodes().GetEnumerator();
-        using var eb = b.ChildNodes().GetEnumerator();
+        int sa = 0, sb = 0, pa = aStart, pb = bStart;
         while (true)
         {
             // Children are in position order, so the first child at/past the
-            // limit ends the comparison on that side.
-            SyntaxNode? ca = ea.MoveNext() && ea.Current.FullSpan.Start < limit ? ea.Current : null;
-            SyntaxNode? cb = eb.MoveNext() && eb.Current.FullSpan.Start < limit ? eb.Current : null;
+            // limit ends the comparison on that side (the green mirror of the
+            // old red-enumerator loop).
+            var ca = NextBelow(a, ref sa, ref pa, limit, out int caStart);
+            var cb = NextBelow(b, ref sb, ref pb, limit, out int cbStart);
             if ((ca == null) != (cb == null))
                 return false;
             if (ca == null)
                 return true;
-            if (!ParsePrefixAgrees(ca, cb!, limit))
+            if (!GreenPrefixAgrees(ca, caStart, cb!, cbStart, limit))
                 return false;
+        }
+
+        static GreenNode? NextBelow(
+            GreenNode parent, ref int slot, ref int pos, int limit,
+            out int start)
+        {
+            while (slot < parent.SlotCount)
+            {
+                var g = parent.GetSlot(slot++);
+                if (g == null)
+                    continue;
+                start = pos;
+                pos += g.FullWidth;
+                return start < limit ? g : null;
+            }
+            start = 0;
+            return null;
         }
     }
 

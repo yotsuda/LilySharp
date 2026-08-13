@@ -89,7 +89,7 @@ internal sealed class LyricsCollector
         IReadOnlyList<string>? onlyBlocks = null,
         int staffIndex = 0)
     {
-        var lyricsBlocks = root.DescendantNodes().OfType<LyricsBlockSyntax>().ToList();
+        var lyricsBlocks = root.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>().ToList();
         if (lyricsBlocks.Count == 0)
             return;
 
@@ -335,7 +335,7 @@ internal sealed class LyricsCollector
         SyntaxNode root, string partName, int staffIndex, int totalBars,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType)
     {
-        var blocks = root.DescendantNodes().OfType<LyricsBlockSyntax>()
+        var blocks = root.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>()
             .Where(b => b.VoiceName == partName).ToList();
         if (blocks.Count == 0)
             return ImmutableArray<Measure>.Empty;

@@ -70,9 +70,17 @@ public static class PartTranspose
     /// </summary>
     public static (int step, int alt, int oct)? ReadScoreDefault(SyntaxNode root)
     {
-        foreach (var prop in root.DescendantNodes().OfType<PropertyAssignmentSyntax>())
-            if (IsTranspose(prop) && !IsInsidePart(prop))
-                return Parse(prop);
+        // Green finder, not DescendantNodes().OfType<…>(): this reader runs per
+        // part per keystroke, and the red walk materialized a red wrapper for
+        // EVERY descendant just to type-test it — measured as the whole-tree
+        // red-creation cost of the edit keystroke once the collector's own walks
+        // went green (HANDOFF §1 session 153). Same node set, same pre-order;
+        // the matched red carries its Parent chain, so the IsInsidePart guard
+        // is unchanged.
+        foreach (var prop in root.GreenSites(
+                     static g => (g.Kind == SyntaxKind.PropertyAssignment, Descend: true)))
+            if (prop is PropertyAssignmentSyntax pa && IsTranspose(pa) && !IsInsidePart(pa))
+                return Parse(pa);
         return null;
     }
 

@@ -242,6 +242,74 @@ public abstract class SyntaxNode
     }
 
     /// <summary>
+    /// The green-tree finder behind the collector's definition/music gathers and
+    /// the semantics readers: visits every green node under this node in the
+    /// same pre-order <see cref="DescendantNodes()"/> yields red nodes, and
+    /// materializes a red node — with its full Parent chain, through the parent
+    /// chain's cached <see cref="GetChild"/> — only where <paramref name="rule"/>
+    /// collects. Tokens are never offered to the rule and never descended into
+    /// (they have no child slots). Use instead of
+    /// <c>DescendantNodes().OfType&lt;T&gt;()</c> on a hot path: the red walk
+    /// materializes a red wrapper for EVERY descendant (tokens included) just to
+    /// type-test it, which made each such scan an O(whole-tree-allocation) pass
+    /// (HANDOFF §1 sessions 152–153, red-creation counters).
+    /// </summary>
+    internal IEnumerable<SyntaxNode> GreenSites(GreenSiteRule rule)
+    {
+        // Frame: a green node being iterated, the next slot to visit, the slot it
+        // occupies in ITS parent, and its red node once materialized. The red is
+        // filled lazily: only when a match somewhere below needs the spine.
+        var frames = new List<(GreenNode Green, int NextSlot, int SlotInParent, SyntaxNode? Red)>
+        {
+            (Green, 0, -1, this),
+        };
+        while (frames.Count > 0)
+        {
+            var (green, slot, slotInParent, red) = frames[^1];
+            if (slot >= green.SlotCount)
+            {
+                frames.RemoveAt(frames.Count - 1);
+                continue;
+            }
+            frames[^1] = (green, slot + 1, slotInParent, red);
+            var child = green.GetSlot(slot);
+            if (child == null || child.IsToken)
+                continue;
+            var (collect, descend) = rule(child);
+            if (collect)
+            {
+                // Materialize the spine root→parent (the red children are cached
+                // on their parents, so overlapping spines are created once).
+                for (int i = 1; i < frames.Count; i++)
+                {
+                    if (frames[i].Red == null)
+                        frames[i] = (frames[i].Green, frames[i].NextSlot, frames[i].SlotInParent,
+                            frames[i - 1].Red!.GetChild(frames[i].SlotInParent));
+                }
+                var childRed = frames[^1].Red!.GetChild(slot)!;
+                yield return childRed;
+                if (descend && child.SlotCount > 0)
+                    frames.Add((child, 0, slot, childRed));
+            }
+            else if (descend && child.SlotCount > 0)
+            {
+                frames.Add((child, 0, slot, null));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The common <see cref="GreenSites"/> shape: every descendant of exactly
+    /// <paramref name="kind"/>, pre-order, reds materialized only per match —
+    /// the green-walk replacement for <c>DescendantNodes().OfType&lt;T&gt;()</c>
+    /// (kinds are 1:1 with red types; see <see cref="CreateRed"/>). Callers keep
+    /// an <c>OfType&lt;T&gt;()</c> on the result so the type test stays the
+    /// authority over the kind name.
+    /// </summary>
+    internal IEnumerable<SyntaxNode> KindSites(SyntaxKind kind)
+        => GreenSites(g => (g.Kind == kind, Descend: true));
+
+    /// <summary>
     /// Returns all descendant nodes in pre-order (each child before its own
     /// descendants, slots in order) — the same sequence the former recursive
     /// iterator produced.
@@ -330,6 +398,11 @@ public abstract class SyntaxNode
     /// <summary>Returns the node kind and its full span for debugging.</summary>
     public override string ToString() => $"{Kind} [{Position}..{Position + FullWidth})";
 }
+
+/// <summary>Per-node decision of a <see cref="SyntaxNode.GreenSites"/> walk:
+/// whether to materialize and yield this (non-token) green's red node, and
+/// whether to walk into its children. Called once per green node in pre-order.</summary>
+internal delegate (bool Collect, bool Descend) GreenSiteRule(InternalSyntax.GreenNode green);
 
 /// <summary>
 /// A red node wrapper for tokens.

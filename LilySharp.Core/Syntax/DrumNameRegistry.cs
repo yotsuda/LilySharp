@@ -153,9 +153,16 @@ public static class DrumOverrides
     /// <summary>Builds the override map (canonical name → final info) from
     /// every drummap block in the tree; null when there are none.</summary>
     public static Dictionary<string, DrumInfo>? Build(SyntaxNode root)
+        => Build(root.DescendantNodes().OfType<DrummapDeclarationSyntax>());
+
+    /// <summary>Same, from an already-gathered block list (document order).
+    /// The collector's definitions walk feeds this so the keystroke path does
+    /// not enumerate the whole red tree a second time just to find drummaps;
+    /// the tree overload above stays for the exporters, which walk once.</summary>
+    public static Dictionary<string, DrumInfo>? Build(IEnumerable<DrummapDeclarationSyntax> drummaps)
     {
         Dictionary<string, DrumInfo>? map = null;
-        foreach (var dm in root.DescendantNodes().OfType<DrummapDeclarationSyntax>())
+        foreach (var dm in drummaps)
         {
             foreach (var (name, s) in dm.Entries)
             {

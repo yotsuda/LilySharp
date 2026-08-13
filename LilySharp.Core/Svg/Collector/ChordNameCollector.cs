@@ -131,7 +131,8 @@ internal sealed class ChordNameCollector
         // into chords pre-release): symbols align above the co-written staff.
         // A nameless block has no placement selector, so it shows absolute names.
         CollectAligned(
-            root.DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == null),
+            root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>()
+                .Where(b => b.PartName == null),
             sectionStartMeasure, staffIndex, ChordDisplayMode.Names);
     }
 
@@ -146,7 +147,8 @@ internal sealed class ChordNameCollector
         ChordDisplayMode mode = ChordDisplayMode.Names)
     {
         CollectAligned(
-            root.DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == partName),
+            root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>()
+                .Where(b => b.PartName == partName),
             sectionStartMeasure, staffIndex, mode);
         // An inline @chord on this staff should follow the same display as the track.
         ApplyDisplayMode(staffIndex, mode);
@@ -322,7 +324,7 @@ internal sealed class ChordNameCollector
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType,
         ChordDisplayMode mode = ChordDisplayMode.Names)
     {
-        var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>()
+        var blocks = root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>()
             .Where(b => b.PartName == partName).ToList();
         if (blocks.Count == 0)
             return ImmutableArray<Measure>.Empty;

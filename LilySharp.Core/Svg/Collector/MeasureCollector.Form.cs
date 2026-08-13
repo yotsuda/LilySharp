@@ -664,19 +664,16 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void ProcessMusicContainer(SyntaxNode container, Action<IEnumerable<SyntaxNode>> processNodes)
     {
-        // Collect all music nodes, expanding variable references
+        // Collect all music nodes, expanding variable references. MusicSites
+        // walks the green tree and yields only candidate nodes outside processed
+        // containers (tuplet/repeat/grace/inline volta/parallel — their content
+        // is processed by those handlers, so an inline volta passes through as
+        // ONE wrapper node, or the bracket ([1. ]/[2.]) is lost while its notes
+        // leak out flat; a << \\ >> span likewise travels as one node).
         var musicNodes = new List<SyntaxNode>();
 
-        foreach (var node in container.DescendantNodes())
+        foreach (var node in MusicSites(container, includeParallel: true))
         {
-            // Skip nodes inside containers (tuplet/repeat/grace/inline volta/
-            // parallel) — they'll be processed by those handlers. Inline voltas
-            // in particular must pass through as ONE wrapper node, or the
-            // bracket ([1. ]/[2.]) is lost while its notes leak out flat. A
-            // << \\ >> span likewise passes through as one node.
-            if (IsInsideProcessedContainer(node))
-                continue;
-
             if (node is VariableReferenceSyntax varRef)
                 ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef.DiatonicShiftSteps);
             else if (IsCollectableMusicNode(node))
@@ -734,9 +731,8 @@ public sealed partial class MeasureCollector
 
         if (expression is VariableReferenceSyntax || IsCollectableMusicNode(expression))
             Emit(expression);
-        foreach (var n in expression.DescendantNodes())
-            if (!IsInsideProcessedContainer(n))
-                Emit(n);
+        foreach (var n in MusicSites(expression, includeParallel: true))
+            Emit(n);
 
         // Close the phrase so its auto-transpose is dropped before any inline
         // notes that follow the reference (paired with the reset marker above).

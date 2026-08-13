@@ -19,6 +19,7 @@ using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Syntax.InternalSyntax;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -1792,9 +1793,14 @@ public sealed partial class MeasureCollector
     {
         var part = root.ChildNodes().OfType<PartDeclarationSyntax>()
             .FirstOrDefault(p => p.Name.Text == partName);
-        return part != null && part.DescendantNodes().Any(n =>
-            n is NavigationMarkSyntax or InlineVoltaSyntax
-            || (n is BarlineSyntax bl && bl.BarToken.Text.Contains(':')));
+        // Green finder (kind pre-filter, red type test stays the authority):
+        // this gate runs per part per collect, and the red DescendantNodes walk
+        // materialized the part's whole subtree just to type-test it.
+        return part != null && part.GreenSites(static g => (
+                g.Kind is SyntaxKind.NavigationMark or SyntaxKind.InlineVolta or SyntaxKind.Barline,
+                Descend: true))
+            .Any(n => n is NavigationMarkSyntax or InlineVoltaSyntax
+                || (n is BarlineSyntax bl && bl.BarToken.Text.Contains(':')));
     }
 
     /// <summary>The score-level mark types worth harvesting from an unrendered part: navigation
@@ -2359,12 +2365,8 @@ public sealed partial class MeasureCollector
     private List<SyntaxNode> GatherVoiceMusicNodes(SyntaxNode voiceNode)
     {
         var musicNodes = new List<SyntaxNode>();
-        foreach (var node in voiceNode.DescendantNodes())
-        {
-            if (IsInsideProcessedContainerExceptParallel(node))
-                continue;
+        foreach (var node in MusicSites(voiceNode, includeParallel: false))
             GatherMusicNode(node, musicNodes);
-        }
         return musicNodes;
     }
 
@@ -2384,19 +2386,14 @@ public sealed partial class MeasureCollector
 
         _pendingInlineVoltas.Clear();
 
-        // Collect all music nodes, expanding variable references
+        // Collect all music nodes, expanding variable references. Container
+        // expressions travel as one wrapper — EXCEPT parallel: the per-voice
+        // path flattens << \\ >> (see GatherMusicNode), so its descendants
+        // must reach the walk (includeParallel: false).
         var musicNodes = new List<SyntaxNode>();
 
-        foreach (var node in voiceNode.DescendantNodes())
-        {
-            // Skip nodes inside a container expression (they travel as one
-            // wrapper) — EXCEPT parallel: the per-voice path flattens << \\ >>
-            // (see GatherMusicNode), so its descendants must reach the walk.
-            if (IsInsideProcessedContainerExceptParallel(node))
-                continue;
-
+        foreach (var node in MusicSites(voiceNode, includeParallel: false))
             GatherMusicNode(node, musicNodes);
-        }
 
         ProcessMusicNodeSequence(musicNodes, builder);
 
@@ -2705,7 +2702,7 @@ public sealed partial class MeasureCollector
     private void CollectDefinitions(SyntaxNode root)
     {
         _root = root;
-        _drumOverrides = DrumOverrides.Build(root);
+        List<DrummapDeclarationSyntax>? drummaps = null;
 
         // A top-level `clef`/`key`/`time`/`tempo` is unconditionally the FILE DEFAULT.
         // It used to depend on whether bare music had already streamed past (the whole
@@ -2715,10 +2712,17 @@ public sealed partial class MeasureCollector
         // a parse error (LYS0020), so the ambiguity — and the four ways it was got wrong —
         // cannot arise: the only mid-music directives left are inside a part/section/
         // phrase, which IsInsideMusicContent already separates.
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in DefinitionSites(root))
         {
             switch (node)
             {
+                case DrummapDeclarationSyntax dm:
+                    // Gathered here (document order) instead of a second whole-tree
+                    // walk in DrumOverrides.Build(root); built after the loop — the
+                    // map's readers are all in the music walk, which runs later.
+                    (drummaps ??= new List<DrummapDeclarationSyntax>()).Add(dm);
+                    break;
+
                 case MetadataDeclarationSyntax metadata:
                     // A `title` / `composer` written inside a `score { … }` belongs to
                     // THAT score, not the file: it is applied below, for the score being
@@ -2863,6 +2867,8 @@ public sealed partial class MeasureCollector
             }
         }
 
+        _drumOverrides = drummaps == null ? null : DrumOverrides.Build(drummaps);
+
         // A STRUCTURED file (a form or sections) can carry a top-level override / revert /
         // once (grammar §2.1 lists them as TopLevelItems). Such a directive sits OUTSIDE
         // the music stream — the per-voice walk runs through sections and never reaches a
@@ -2893,6 +2899,44 @@ public sealed partial class MeasureCollector
             foreach (var meta in HeaderOverrides)
                 CollectMetadata(meta);
     }
+
+    /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s
+    /// switch consumes — a kind missing here silently skips its case, so the list
+    /// must track the switch (the full suite plus the snapshot books are the net:
+    /// every fixture book exercises the file defaults).</summary>
+    private static bool IsDefinitionKind(SyntaxKind kind) => kind is
+        SyntaxKind.MetadataDeclaration or SyntaxKind.FontDeclaration
+        or SyntaxKind.TempoDeclaration or SyntaxKind.TimeSignature
+        or SyntaxKind.KeySignature or SyntaxKind.ClefDeclaration
+        or SyntaxKind.OctaveDirective or SyntaxKind.PartialDeclaration
+        or SyntaxKind.SectionDeclaration or SyntaxKind.FormDeclaration
+        or SyntaxKind.VariableDeclaration or SyntaxKind.PhraseDeclaration
+        or SyntaxKind.DrummapDeclaration;
+
+    /// <summary>
+    /// The definitions walk's node source: every node of exactly the kinds the
+    /// <see cref="CollectDefinitions"/> switch consumes, in the same pre-order
+    /// <see cref="SyntaxNode.DescendantNodes()"/> yields them. Walks the GREEN
+    /// tree and materializes a red node only at a match — through the parent
+    /// chain's <see cref="SyntaxNode.GetChild"/>, so the yielded node carries its
+    /// full Parent chain and every ancestor guard the case bodies run
+    /// (IsInsideMusicContent, IsInsideRenderDeclaration, IsInsidePartMajorTrack,
+    /// EnclosingPartName) works unchanged.
+    /// </summary>
+    /// <remarks>
+    /// WHY (session 152, red-creation counters in HANDOFF §1): after the splice
+    /// machinery this walk was the keystroke path's first whole-tree RED walk —
+    /// materializing every red wrapper of the edited tree just to visit nodes the
+    /// switch immediately ignores. The green walk visits the SAME node set (every
+    /// green, tokens included, in the same order — there is no pruning decision
+    /// to drift, HANDOFF §2C ⑴'s skip-list lesson) and pays a red spine only per
+    /// match. ⚠️ The red-materialization cost this stops paying does not vanish
+    /// for free: the next whole-tree red walker (the music walk's flat-list
+    /// gather, ProcessMusicContainer) inherits first-touch creation for whatever
+    /// it enumerates — measured and priced in HANDOFF §1 session 152.
+    /// </remarks>
+    private static IEnumerable<SyntaxNode> DefinitionSites(SyntaxNode root)
+        => root.GreenSites(static g => (IsDefinitionKind(g.Kind), Descend: true));
 
     private void CollectMetadata(MetadataDeclarationSyntax metadata)
     {
@@ -3339,8 +3383,11 @@ public sealed partial class MeasureCollector
         }
         else if (_root != null)
         {
-            var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideProcessedContainer(n) && IsCollectableMusicNode(n));
+            // The type test stays as the authority over MusicSites' kind-level
+            // candidates; this path never expanded variable references, so the
+            // filter also drops them (as the old spelling's type test did).
+            var musicNodes = MusicSites(_root, includeParallel: true)
+                .Where(IsCollectableMusicNode);
             ProcessNodes(musicNodes);
         }
 
@@ -4221,12 +4268,12 @@ public sealed partial class MeasureCollector
         int bars = 0;
 
         // Part-major TRACKS: the section sits INSIDE the chord / lyric block.
-        foreach (var block in root.DescendantNodes().OfType<ChordPartBlockSyntax>())
+        foreach (var block in root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>())
             if (block.HasSections)
                 foreach (var sec in block.Sections)
                     if (sec.SectionName == name)
                         bars = Math.Max(bars, ChordNameCollector.CountSectionBars(sec));
-        foreach (var block in root.DescendantNodes().OfType<LyricsBlockSyntax>())
+        foreach (var block in root.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>())
             if (block.HasSections)
                 foreach (var sec in block.Sections)
                     if (sec.SectionName == name)
@@ -4235,9 +4282,9 @@ public sealed partial class MeasureCollector
         // Section-major: the chord / lyric blocks are nested in the (registered) section itself.
         if (_sectionState.Sections.TryGetValue(name, out var representative))
         {
-            foreach (var block in representative.DescendantNodes().OfType<ChordPartBlockSyntax>())
+            foreach (var block in representative.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>())
                 bars = Math.Max(bars, ChordNameCollector.CountBars(block));
-            foreach (var block in representative.DescendantNodes().OfType<LyricsBlockSyntax>())
+            foreach (var block in representative.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>())
                 bars = Math.Max(bars, LyricSyllableReader.CountBars(block));
         }
 
@@ -4324,7 +4371,7 @@ public sealed partial class MeasureCollector
     /// membership test in one place stops the per-walk whitelists from drifting
     /// apart (which silently dropped overrides, drum notes, clefs, etc.).
     /// </summary>
-    private static bool IsCollectableMusicNode(SyntaxNode node) =>
+    internal static bool IsCollectableMusicNode(SyntaxNode node) =>
         node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
             or ChordRepetitionSyntax or ArpeggioSyntax
             or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
@@ -4340,8 +4387,12 @@ public sealed partial class MeasureCollector
     /// True when a node lives inside a container expression that owns its own
     /// walk (tuplet/repeat/grace/inline-volta/parallel/once). Such nodes must be
     /// skipped by the outer walks so the wrapper is processed once, not flattened.
+    /// ⚠️ No production caller since the gathers moved to <see cref="MusicSites"/>
+    /// (which makes this skip structural) — kept internal as the REFERENCE
+    /// SPELLING the equivalence net (MusicSitesEquivalenceTests) runs the old
+    /// red walk with. Do not re-grow production callers.
     /// </summary>
-    private static bool IsInsideProcessedContainer(SyntaxNode node)
+    internal static bool IsInsideProcessedContainer(SyntaxNode node)
     {
         // ONE parent-chain walk for the whole family. Chaining the per-type IsInsideXxx
         // helpers re-walks the ancestor chain once per type (IsInside<T> starts over from
@@ -4363,8 +4414,10 @@ public sealed partial class MeasureCollector
     /// test: a whole-measure <c>cue { … }</c> in a sub-voice was walked twice — once as the
     /// region (cue-sized) and once flattened (full size) — so the duplicate rolled the
     /// measure and the piece gained a bar the exporter does not have.
+    /// ⚠️ Like <see cref="IsInsideProcessedContainer"/>: no production caller
+    /// since <see cref="MusicSites"/> — kept internal for the equivalence net.
     /// </summary>
-    private static bool IsInsideProcessedContainerExceptParallel(SyntaxNode node)
+    internal static bool IsInsideProcessedContainerExceptParallel(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
             if (IsProcessedContainer(p, includeParallel: false))
@@ -4376,7 +4429,7 @@ public sealed partial class MeasureCollector
     /// The ONE membership list behind both walks above — a container expression that owns
     /// its own walk, so its descendants must not be flattened by an outer walk.
     /// </summary>
-    private static bool IsProcessedContainer(SyntaxNode p, bool includeParallel) =>
+    internal static bool IsProcessedContainer(SyntaxNode p, bool includeParallel) =>
         p is TupletExpressionSyntax or RepeatExpressionSyntax or GraceExpressionSyntax
             or InlineVoltaSyntax or OnceModifierSyntax or ArpeggioSyntax
             // A cue REGION owns its body's walk (ProcessCueRegion), and the region is the
@@ -4385,6 +4438,77 @@ public sealed partial class MeasureCollector
             // only symptom is a font-size in the SVG.
             or CueExpressionSyntax
         || (includeParallel && p is ParallelExpressionSyntax);
+
+    /// <summary>Kind-level mirror of <see cref="IsProcessedContainer"/>, for the
+    /// green-tree gather (<see cref="MusicSites"/>) — a container's descendants
+    /// are not walked into, which is exactly what the red walks' per-descendant
+    /// ancestor guard used to skip. The two lists must track each other; kinds
+    /// are 1:1 with the red types (each Green class hard-codes its kind, and
+    /// <c>SyntaxNode.CreateRed</c> maps it back). The net is
+    /// MusicSitesEquivalenceTests (walks every fixture book both ways) plus the
+    /// cue double-walk regression the ancestor guard's own doc cites.</summary>
+    private static bool IsProcessedContainerKind(SyntaxKind kind, bool includeParallel) => kind is
+        SyntaxKind.TupletExpression or SyntaxKind.RepeatExpression or SyntaxKind.GraceExpression
+            or SyntaxKind.InlineVolta or SyntaxKind.OnceModifier or SyntaxKind.Arpeggio
+            or SyntaxKind.CueExpression
+        || (includeParallel && kind is SyntaxKind.ParallelExpression);
+
+    /// <summary>Kind-level mirror of <see cref="IsCollectableMusicNode"/> plus
+    /// <see cref="SyntaxKind.VariableReference"/> (the gather call sites expand
+    /// references in place), for <see cref="MusicSites"/>. Must track the type
+    /// list; the callers keep their type tests as the authority, so an over-wide
+    /// kind here yields a node the caller filters out (harmless), while a missing
+    /// kind silently drops its nodes from the flat list — the net is
+    /// MusicSitesEquivalenceTests plus the full snapshot suite.</summary>
+    private static bool IsMusicCandidateKind(SyntaxKind kind) => kind is
+        SyntaxKind.Note or SyntaxKind.DrumNote or SyntaxKind.Rest or SyntaxKind.Chord
+            or SyntaxKind.ChordRepetition or SyntaxKind.Arpeggio
+            or SyntaxKind.Barline or SyntaxKind.Break or SyntaxKind.Tie or SyntaxKind.Slur
+            or SyntaxKind.BeamMarker
+            or SyntaxKind.GraceExpression or SyntaxKind.CueExpression
+            or SyntaxKind.TupletExpression or SyntaxKind.RepeatExpression
+            or SyntaxKind.ParallelExpression or SyntaxKind.InlineVolta or SyntaxKind.MusicMark
+            or SyntaxKind.NavigationMark
+            or SyntaxKind.OverrideDeclaration or SyntaxKind.RevertDeclaration
+            or SyntaxKind.OnceModifier
+            or SyntaxKind.ClefDeclaration or SyntaxKind.OctaveDirective or SyntaxKind.KeySignature
+            or SyntaxKind.TimeSignature or SyntaxKind.TempoDeclaration
+            or SyntaxKind.PartialDeclaration
+            or SyntaxKind.VariableReference;
+
+    /// <summary>
+    /// The music gather's node source: every candidate node (collectable kinds
+    /// plus variable references) under <paramref name="container"/>, in the same
+    /// pre-order the former <c>DescendantNodes() + IsInsideProcessedContainer*</c>
+    /// spelling visited them — spelled as a green walk
+    /// (<see cref="SyntaxNode.GreenSites"/>) that materializes a red node only
+    /// per candidate, and turns the
+    /// per-descendant ancestor guard into a structural decision: a processed
+    /// container's subtree is simply not walked into.
+    /// <paramref name="includeParallel"/> mirrors the guard's parameter — the
+    /// per-voice walks (false) flatten a <c>&lt;&lt; \\ &gt;&gt;</c> span's
+    /// descendants while every other container still travels as one wrapper.
+    /// </summary>
+    /// <remarks>
+    /// WHY (session 152→153, red-creation counters in HANDOFF §1): after the
+    /// defs walk went green, this gather was the keystroke path's last
+    /// whole-tree RED walk — materializing every red wrapper (tokens included)
+    /// and running an O(depth) Parent-chain guard per descendant, just to build
+    /// the flat list. The green walk visits the same green node set in the same
+    /// order and pays a red spine only per collected node.
+    /// ⚠️ The old guard's parent-chain walk extends ABOVE the container: a
+    /// container standing inside a processed container yielded NOTHING. The
+    /// ancestor pre-check reproduces that boundary exactly.
+    /// </remarks>
+    internal static IEnumerable<SyntaxNode> MusicSites(SyntaxNode container, bool includeParallel)
+    {
+        for (var p = container.Parent; p != null; p = p.Parent)
+            if (IsProcessedContainer(p, includeParallel))
+                return [];
+        return container.GreenSites(g => (
+            IsMusicCandidateKind(g.Kind),
+            !IsProcessedContainerKind(g.Kind, includeParallel)));
+    }
 
     /// <summary>
     /// Collects dynamic markings from note/chord modifiers.
