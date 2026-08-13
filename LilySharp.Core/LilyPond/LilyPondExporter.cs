@@ -973,20 +973,19 @@ public sealed class LilyPondExporter
         string name,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
         List<SyntaxNode> result,
-        string? markLabel = null,
-        bool asEndingBody = false)
+        string? markLabel = null)
     {
         if (!byName.TryGetValue(name, out var entry))
             return;
         _sectionHeaders.TryGetValue(name, out var headers);
         // The section-PLAY sentinel: the \mark and the score-key restore the collector
-        // engraves at this boundary (see SectionPlayMarker). NOT planted inside a volta
-        // ending body — CreateEnding rebuilds its items as GREENS and the zero-width
-        // marker green has no red of its own there; the ending's mark and restore are a
-        // NAMED remaining hole, one regime narrower than the whole-file one this closes.
-        if (!asEndingBody)
-            result.Add(new SectionPlayMarker(
-                markLabel, headers?.Any(h => h is KeySignatureSyntax) == true));
+        // engraves at this boundary (see SectionPlayMarker). Planted inside volta ending
+        // bodies too — the payload rides the marker's GREEN, so it survives
+        // CreateEnding's green rebuild (before that, the endings' marks and restore
+        // were a named remaining hole: the twin kept ending 1's key through ending 2
+        // and carried no ending labels, while the page restores and boxes both).
+        result.Add(new SectionPlayMarker(
+            markLabel, headers?.Any(h => h is KeySignatureSyntax) == true));
         if (headers != null)
             result.AddRange(headers);
         result.AddRange(ContainerMusic(entry.Container));
@@ -1078,7 +1077,10 @@ public sealed class LilyPondExporter
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
     {
         var items = new List<SyntaxNode>();
-        AppendSection(ending.SectionName.Text, byName, items, asEndingBody: true);
+        // The ending's label rule mirrors MeasureCollector.Form.cs's alternative arm
+        // (alt.DisplayLabel ?? name), like the outside-a-repeat FormAlternative case.
+        AppendSection(ending.SectionName.Text, byName, items,
+            markLabel: ending.DisplayLabel ?? ending.SectionName.Text);
 
         var green = new InternalSyntax.InlineVoltaGreen(
             new InternalSyntax.SyntaxToken(SyntaxKind.OpenBracket, "["),
@@ -1262,7 +1264,10 @@ public sealed class LilyPondExporter
         CueExpressionSyntax cue => EmitCue(cue),
         RepeatExpressionSyntax rep => EmitRepeat(rep),
         MusicMarkSyntax mk => EmitMark(mk),
-        SectionPlayMarker sp => EmitSectionPlay(sp),
+        // The section-play sentinel is matched by its GREEN: a marker inside a rebuilt
+        // volta ending comes back as a GenericSyntaxNode red, and only the green (which
+        // carries the payload) survives that rebuild.
+        { Green: SectionPlayGreen sp } => EmitSectionPlay(sp),
         NavigationMarkSyntax nav => EmitNavMark(nav),
         StringNumberAnnotationSyntax sn => sn.StringNumberToken.Text,
         ArticulationSyntax a => MapArticulation(a),
@@ -1744,7 +1749,7 @@ public sealed class LilyPondExporter
     /// running-key state EmitKey advances; the restore re-emits the home DECLARATION
     /// node so mode/spelling come from the source.
     /// </summary>
-    private string EmitSectionPlay(SectionPlayMarker sp)
+    private string EmitSectionPlay(SectionPlayGreen sp)
     {
         var parts = new List<string>(2);
         if (!sp.HasHeaderKey && (_keySharps != _homeKeySharps || _tonic != _homeTonic))
@@ -2869,10 +2874,26 @@ public sealed class LilyPondExporter
 /// silent/suppressed — no mark) and whether a section-header key follows (which
 /// overrides the score-key restore, the collector's else-if).
 /// <c>LilyPondExporter.EmitSectionPlay</c> is the one consumer. Same shape as the
-/// collector's <c>RelativeResetMarker</c>: a synthetic red over a shared
-/// zero-width green, so it can travel a <c>List&lt;SyntaxNode&gt;</c> stream.
+/// collector's <c>RelativeResetMarker</c>: a synthetic red over a zero-width green,
+/// so it can travel a <c>List&lt;SyntaxNode&gt;</c> stream.
+/// ⚠️ The DATA lives on the green (<see cref="SectionPlayGreen"/>), not the red:
+/// <c>CreateEnding</c> rebuilds a volta ending's items as GREENS, and the red the
+/// rebuilt tree hands back is a plain <c>GenericSyntaxNode</c> — the emitter matches
+/// the green's type, which survives the rebuild, where a red-held payload silently
+/// did not (the endings' marks and score-key restore were the exporter's last
+/// silent-drop hole).
 /// </summary>
 internal sealed class SectionPlayMarker : SyntaxNode
+{
+    public SectionPlayMarker(string? markLabel, bool hasHeaderKey)
+        : base(new SectionPlayGreen(markLabel, hasHeaderKey), parent: null, position: 0)
+    {
+    }
+}
+
+/// <summary>The section-play sentinel's green — the payload rides here so it survives
+/// <c>CreateEnding</c>'s green rebuild (see <see cref="SectionPlayMarker"/>).</summary>
+internal sealed class SectionPlayGreen : InternalSyntax.GreenNode
 {
     /// <summary>The boxed label to engrave, or null for no mark (a silent
     /// <c>~Section</c> play, or an occurrence label written <c>""</c>).</summary>
@@ -2882,16 +2903,10 @@ internal sealed class SectionPlayMarker : SyntaxNode
     /// then takes THAT key and the score-key restore stays silent.</summary>
     public bool HasHeaderKey { get; }
 
-    public SectionPlayMarker(string? markLabel, bool hasHeaderKey)
-        : base(MarkerGreen.Shared, parent: null, position: 0)
+    public SectionPlayGreen(string? markLabel, bool hasHeaderKey)
+        : base(SyntaxKind.None, fullWidth: 0)
     {
         MarkLabel = markLabel;
         HasHeaderKey = hasHeaderKey;
-    }
-
-    private sealed class MarkerGreen : InternalSyntax.GreenNode
-    {
-        public static readonly MarkerGreen Shared = new();
-        private MarkerGreen() : base(SyntaxKind.None, fullWidth: 0) { }
     }
 }

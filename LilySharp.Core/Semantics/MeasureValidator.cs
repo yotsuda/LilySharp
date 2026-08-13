@@ -244,8 +244,12 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// non-zero only for voices 2..N of a span opened mid-bar, which sound from there.</param>
     /// <param name="initialDefault">The running default note value at that point (a bare
     /// note inherits the previous note's duration), or null for a fresh quarter-note frame.</param>
+    /// <param name="openTail">True for a repeat body: its trailing chunk (the music after
+    /// its last barline, or the whole body when it has none) is not CLOSED where the body
+    /// ends — turns 2..N and the enclosing stream flow on from it — so that chunk is
+    /// exempt from the underfull check (the enclosing pass owns the bars it flows through).</param>
     private void ValidateItemsScoped(IEnumerable<SyntaxNode> items, int startPos,
-        Fraction? leadIn = null, Fraction? initialDefault = null)
+        Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false)
     {
         // A mid-music `time` re-arms the meter for the rest of THIS block/section
         // only — the state must not leak into the next part's block (each part
@@ -258,7 +262,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         var savedSenza = _senzaMisura;
         try
         {
-            ValidateMeasures(items, startPos, leadIn, initialDefault);
+            ValidateMeasures(items, startPos, leadIn, initialDefault, openTail);
         }
         finally
         {
@@ -269,76 +273,23 @@ internal sealed class MeasureValidator : ISemanticValidator
     }
 
     private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos,
-        Fraction? leadIn = null, Fraction? initialDefault = null)
+        Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false)
     {
-        var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans);
+        var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans,
+            out bool tailUnclosed);
 
-        // Measure durations in one pass, threading the running default note
-        // value (a bare note inherits the previous note's duration across bar
-        // lines). Precomputed so the FINAL bar can be compared against the
-        // OPENING pickup (anacrusis complement) below.
-        var durations = new Fraction[measures.Count];
+        // ONE forward pass: each bar adopts its meter, then its duration is counted in
+        // segments around the voice-span / repeat addresses, then it is checked. (This
+        // used to be two loops — durations first, checks second — but the repeat FLOW
+        // accounting below needs the meter the check loop adopts, and threading the
+        // meter twice would be a second spelling of the same adoption rule.)
         var defaultDuration = initialDefault ?? Fraction.Quarter;
-        // Where each voice span opened: the beats already elapsed in its bar, and the
+        // Where each voice span opened: the beats already elapsed in its RENDERED bar
+        // (including the stream's own lead-in and any bars a repeat flow closed), and the
         // running default note value there. Voices 2..N sound from that instant, so this
-        // is the lead-in their own first bar is validated with.
+        // is the lead-in their own first bar is validated with. Collected during the
+        // pass, validated after it (they are simultaneous with the music counted here).
         var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default)>();
-        // Where each repeat opened, same scheme: its body is validated with this frame
-        // (plus the meter running at its bar, adopted in the check loop below).
-        var repeatEntry = new List<(RepeatExpressionSyntax Rep, int MeasureIndex, Fraction LeadIn, Fraction Default)>();
-        for (int di = 0; di < measures.Count; di++)
-        {
-            var barItems = measures[di].Items;
-            var total = Fraction.Zero;
-            int from = 0;
-            // Voice spans and repeats, merged in item order: count up to each address,
-            // snapshot, then carry on — one spelling of the beat count
-            // (MeasureDurations), just read in segments.
-            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep)>();
-            foreach (var vs in voiceSpans)
-                if (vs.MeasureIndex == di)
-                    cuts.Add((vs.ItemIndex, vs.Span, null));
-            foreach (var rs in repeatSpans)
-                if (rs.MeasureIndex == di)
-                    cuts.Add((rs.ItemIndex, null, rs.Rep));
-            cuts.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
-            foreach (var (itemIndex, span, rep) in cuts)
-            {
-                total += MeasureDurations.CalculateMeasureDuration(
-                    barItems.GetRange(from, itemIndex - from), ref defaultDuration);
-                from = itemIndex;
-                if (span != null)
-                {
-                    spanEntry.Add((span, total, defaultDuration));
-                }
-                else
-                {
-                    // The body validates with the frame the repeat OPENS in…
-                    repeatEntry.Add((rep!, di, total, defaultDuration));
-                    // …and the stream after the repeat continues with the frame the
-                    // body LEAVES: the collector's _defaultDuration threads through
-                    // the walked body, and the exit value is the same after every
-                    // turn (the body's last written duration, or the entry value
-                    // when it writes none), so ONE body pass reproduces it.
-                    MeasureDurations.CalculateMeasureDuration(
-                        rep!.Body.Items.ToList(), ref defaultDuration);
-                }
-            }
-            total += MeasureDurations.CalculateMeasureDuration(
-                barItems.GetRange(from, barItems.Count - from), ref defaultDuration);
-            durations[di] = total;
-        }
-
-        // The bar this stream starts inside may already be part-elapsed (a voice span
-        // opened mid-bar); those beats belong to this voice's first bar too.
-        if (measures.Count > 0 && leadIn is { } lead && lead != Fraction.Zero)
-            durations[0] += lead;
-
-        // A span whose bar never materialized (voice 1 empty at the very end of a stream)
-        // still has voices to check; they simply start on the boundary.
-        foreach (var vs in voiceSpans)
-            if (vs.MeasureIndex >= measures.Count)
-                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration));
 
         // The opening pickup: the first sounding bar, when it is shorter than a
         // full bar. A legitimately shortened FINAL bar must complete it
@@ -350,6 +301,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         for (int i = 0; i < measures.Count; i++)
         {
             var measure = measures[i];
+            var barItems = measure.Items;
 
             // A mid-piece \time takes effect at the bar it appears in
             // (LilyPond applies the new meter from that timestep), so adopt
@@ -358,7 +310,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // A 'partial N' in the bar declares it a pickup of length 1/N, which
             // is then the expected fill for THIS measure only.
             Fraction? partialLength = null;
-            foreach (var item in measure.Items)
+            foreach (var item in barItems)
             {
                 if (item is TimeSignatureSyntax ts)
                 {
@@ -369,18 +321,109 @@ internal sealed class MeasureValidator : ISemanticValidator
                     partialLength = pd.ToFraction();
             }
 
-            // Repeat bodies that open in THIS bar: each is its own bar stream, validated
-            // in the frame the repeat opens in — the snapshotted default note value and
-            // elapsed beats, and the meter as of this bar (just adopted above). ONE pass
-            // covers every turn: the source spans are the same for all of them, and the
-            // entry frame of turns 2..N (the exit frame of the previous turn) equals
-            // turn 1's own exit frame, which the enclosing stream continues with anyway.
-            foreach (var (rep, mi, repLeadIn, repDefault) in repeatEntry)
-                if (mi == i)
-                    ValidateItemsScoped(rep.Body.Items, rep.Body.Position,
-                        repLeadIn == Fraction.Zero ? null : repLeadIn, repDefault);
+            // The bar this stream starts inside may already be part-elapsed (a voice
+            // span opened mid-bar); those beats belong to this voice's first bar too —
+            // and they sit in FRONT of it, so a repeat or span opening later in the bar
+            // sees them in its lead-in.
+            var total = i == 0 && leadIn is { } lead ? lead : Fraction.Zero;
+            // Rendered bars a repeat flow closed INSIDE this written bar (see below).
+            // They fill their meter by construction, so they carry no diagnostic of
+            // their own — but they sound, and they mean the remainder the written
+            // barline eventually closes is NOT the stream's opening bar.
+            int renderedBarsClosed = 0;
 
-            var duration = durations[i];
+            // Voice spans and repeats, merged in item order: count up to each address,
+            // snapshot, then carry on — one spelling of the beat count
+            // (MeasureDurations), just read in segments.
+            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep)>();
+            foreach (var vs in voiceSpans)
+                if (vs.MeasureIndex == i)
+                    cuts.Add((vs.ItemIndex, vs.Span, null));
+            foreach (var rs in repeatSpans)
+                if (rs.MeasureIndex == i)
+                    cuts.Add((rs.ItemIndex, null, rs.Rep));
+            cuts.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
+            int from = 0;
+            foreach (var (itemIndex, span, rep) in cuts)
+            {
+                total += MeasureDurations.CalculateMeasureDuration(
+                    barItems.GetRange(from, itemIndex - from), ref defaultDuration);
+                from = itemIndex;
+                if (span != null)
+                {
+                    spanEntry.Add((span, total, defaultDuration));
+                    continue;
+                }
+
+                // The repeat body is its own bar stream, validated in the frame the
+                // repeat OPENS in — the elapsed beats of its rendered bar, the running
+                // default note value, and the meter just adopted for this bar. ONE pass
+                // covers every turn's default-duration frame (the entry value of turns
+                // 2..N — the previous turn's exit — equals turn 1's own exit); openTail
+                // exempts the body's trailing chunk from the underfull check, because
+                // turns 2..N and the enclosing stream flow on from it and the flow
+                // accounting below owns the bars they cross.
+                ValidateItemsScoped(rep!.Body.Items, rep.Body.Position,
+                    total == Fraction.Zero ? null : total, defaultDuration, openTail: true);
+
+                if (!_senzaMisura && FlowsThroughBarAccounting(rep, out int playCount))
+                {
+                    // The played content flows ACROSS the written bar: mirror
+                    // MeasureBuilder.AddDuration, which auto-completes the rendered bar
+                    // whenever the tally reaches the meter (an overrunning item closes
+                    // its bar overlong — the body-stream check above already reports
+                    // that written chunk, so the flow stays silent about it). A body
+                    // barline closes the rendered bar wherever the tally stands — the
+                    // body stream owns the diagnostics for the bars IT writes. What
+                    // survives is the remainder, which the enclosing written barline
+                    // eventually closes and the checks below judge. Counting the repeat
+                    // as zero instead made `c2 repeat percent 2 { d4 d } |` nudge
+                    // "first measure is 1/2 of 4/4 — declare a pickup" while the render
+                    // (and LilyPond's own bar check on the twin) has bar 1 exactly full
+                    // and the SECOND bar short (reported 2026-08-13).
+                    for (int turn = 0; turn < playCount; turn++)
+                    {
+                        foreach (var bodyItem in rep.Body.Items)
+                        {
+                            if (bodyItem is BarlineSyntax)
+                            {
+                                if (total != Fraction.Zero)
+                                    renderedBarsClosed++;
+                                total = Fraction.Zero;
+                                continue;
+                            }
+                            total += MeasureDurations.ItemDuration(bodyItem, ref defaultDuration);
+                            if (total >= _timeSignature)
+                            {
+                                renderedBarsClosed++;
+                                total = Fraction.Zero;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // A structured body (nested percent/volta repeat, voice span, phrase
+                    // reference, directive, multi-bar rest) stays an opaque zero-duration
+                    // item — pricing only the modeled half of such a body would invent
+                    // misfills. The stream after the repeat still continues with the
+                    // frame the body LEAVES: the collector's _defaultDuration threads
+                    // through the walked body, and the exit value is the same after
+                    // every turn (the body's last written duration, or the entry value
+                    // when it writes none), so ONE body pass reproduces it.
+                    MeasureDurations.CalculateMeasureDuration(
+                        rep.Body.Items.ToList(), ref defaultDuration);
+                }
+            }
+            total += MeasureDurations.CalculateMeasureDuration(
+                barItems.GetRange(from, barItems.Count - from), ref defaultDuration);
+            var duration = total;
+
+            // Bars the flow closed sound BEFORE this bar's leftover: the stream has an
+            // opening already, so the remainder can be neither the opening pickup nor a
+            // bare-anacrusis candidate.
+            if (renderedBarsClosed > 0)
+                seenSounding = true;
 
             // A file-level `partial` describes the PIECE-opening pickup. Blocks
             // are validated per section, so apply it to a block's first bar
@@ -431,10 +474,20 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // A voice of a span (leadIn is set) has no opening of its own to
                     // be an anacrusis of: it starts wherever the span opened, and a
                     // pickup is section-wide anyway, so its short bar is a plain
-                    // short bar and gets the plain message.
-                    bool isBarePickup = isFirst && partialLength == null && leadIn is null;
+                    // short bar and gets the plain message. A bar whose repeat flow
+                    // already closed rendered bars is the same: its remainder starts
+                    // mid-stream, not at an opening.
+                    bool isBarePickup = isFirst && renderedBarsClosed == 0
+                        && partialLength == null && leadIn is null;
 
-                    EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup, isBarePickup);
+                    // A repeat body's trailing chunk (openTail) is not closed where the
+                    // body ends — its shortness is no claim about any rendered bar, so
+                    // only its interior/leading bars are held to the meter here. Its
+                    // length can still be wrong the other way: a chunk LONGER than the
+                    // meter can never fit any rendered bar, so the overfull arm below
+                    // still applies to it.
+                    if (!(openTail && tailUnclosed && isLast))
+                        EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup, isBarePickup);
                 }
                 else if (duration > expected)
                 {
@@ -443,6 +496,12 @@ internal sealed class MeasureValidator : ISemanticValidator
             }
         }
 
+        // A span whose bar never materialized (voice 1 empty at the very end of a stream)
+        // still has voices to check; they simply start on the boundary.
+        foreach (var vs in voiceSpans)
+            if (vs.MeasureIndex >= measures.Count)
+                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration));
+
         // Voices 2..N of each span, once this stream's own bars are counted: they are
         // simultaneous with the music just validated, so each is its own bar stream that
         // begins with the span's lead-in already elapsed (and inherits the running note
@@ -450,6 +509,38 @@ internal sealed class MeasureValidator : ISemanticValidator
         foreach (var (span, spanLeadIn, spanDefault) in spanEntry)
             foreach (var voice in span.Voices.Skip(1))
                 ValidateItemsScoped(ItemsOf(voice), voice.Position, spanLeadIn, spanDefault);
+    }
+
+    /// <summary>True when the repeat's played content can flow through the enclosing
+    /// bar accounting: every top-level body item is one the metric model prices exactly
+    /// (notes, rests, chords, tuplets, arpeggio groups, graces, cues, tremolos — and
+    /// barlines, which close the rendered bar where they stand). A structured body
+    /// (nested percent/volta repeat, voice span, phrase reference, directive, multi-bar
+    /// rest) reports false and stays an opaque zero-duration item instead.
+    /// <paramref name="playCount"/> mirrors the collector's ProcessRepeatExpression:
+    /// every non-tremolo type plays the body count times, defaulting to 2 when the
+    /// count does not parse.</summary>
+    private static bool FlowsThroughBarAccounting(RepeatExpressionSyntax rep, out int playCount)
+    {
+        playCount = System.Math.Max(1, int.TryParse(rep.Count.Text, out int c) ? c : 2);
+        foreach (var item in rep.Body.Items)
+        {
+            switch (item)
+            {
+                case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
+                    or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
+                    or CueExpressionSyntax or BarlineSyntax:
+                    continue;
+                case RestSyntax rest when rest.MeasureCount <= 1:
+                    continue;
+                case RepeatExpressionSyntax trem when trem.RepeatType.Text == "tremolo"
+                    && int.TryParse(trem.Count.Text, out _):
+                    continue;
+                default:
+                    return false;
+            }
+        }
+        return true;
     }
 
     /// <summary>The music items of one voice block of a span.</summary>
@@ -571,8 +662,10 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// <see cref="MeasureDurations.ItemDuration"/>).</summary>
     private readonly record struct RepeatSpan(int MeasureIndex, int ItemIndex, RepeatExpressionSyntax Rep);
 
+    /// <param name="tailUnclosed">True when the stream ended with music after its last
+    /// barline — the final measure is then an OPEN chunk, not a bar anyone closed.</param>
     private List<MeasureContent> SplitIntoMeasures(IEnumerable<SyntaxNode> blockItems, int blockStartPos,
-        out List<VoiceSpan> voiceSpans, out List<RepeatSpan> repeatSpans)
+        out List<VoiceSpan> voiceSpans, out List<RepeatSpan> repeatSpans, out bool tailUnclosed)
     {
         var measures = new List<MeasureContent>();
         var currentItems = new List<SyntaxNode>();
@@ -630,6 +723,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         AddItems(blockItems);
 
         // Add final measure if not empty
+        tailUnclosed = currentItems.Count > 0;
         if (currentItems.Count > 0)
         {
             measures.Add(new MeasureContent(currentItems, startPos));

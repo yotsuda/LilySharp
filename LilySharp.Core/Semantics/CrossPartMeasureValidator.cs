@@ -83,11 +83,18 @@ internal sealed class CrossPartMeasureValidator
     {
         // section name -> each defining part's (name, bar count, section-name span)
         var byName = new Dictionary<string, List<(string Part, int Bars, TextSpan Span)>>();
+        // The running SCORE-level meter in document order (a `time` outside any
+        // part/section body arms everything after it) — it steers the repeat-flow
+        // auto-complete inside MeasureModel.Split, so a part-major section's bar
+        // count agrees with the collector under a non-4/4 score meter too.
+        var time = DurationCalculator.ParseTimeSignature(4, 4);
         foreach (var section in root.DescendantNodes())
         {
+            if (section is TimeSignatureSyntax ts && !ts.IsSenzaMisura && IsScoreLevel(ts))
+                time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
             if (section is not SectionDeclarationSyntax sec || sec.Parent is not PartDeclarationSyntax part)
                 continue; // only sections nested directly in a `part` (part-major)
-            int bars = BuildPartMeasures(sec).Count;
+            int bars = BuildPartMeasures(sec, time).Count;
             if (!byName.TryGetValue(sec.SectionName, out var list))
                 byName[sec.SectionName] = list = new();
             list.Add((part.Name.Text, bars, sec.Name.Span));
@@ -152,7 +159,7 @@ internal sealed class CrossPartMeasureValidator
                     time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
                     break;
                 case PartBlockSyntax pb:
-                    parts.Add((pb.Name, time, pb.PartName.Span, BuildPartMeasures(pb)));
+                    parts.Add((pb.Name, time, pb.PartName.Span, BuildPartMeasures(pb, time)));
                     break;
             }
         }
@@ -229,8 +236,21 @@ internal sealed class CrossPartMeasureValidator
     /// into measures via the shared <see cref="MeasureModel"/> — the one place that
     /// applies the bare-barline rule and expands phrase references. The empty-placeholder
     /// warning is emitted from <see cref="MeasureValidator"/> over the same model, so the
-    /// two passes agree on which bars exist.
+    /// two passes agree on which bars exist (IsEmpty never depends on the meter, so that
+    /// pass omitting it is harmless). The meter in force at the scope steers the
+    /// repeat-flow auto-complete.
     /// </summary>
-    private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope)
-        => MeasureModel.Split(scope, _phraseBodies!);
+    private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope, Fraction time)
+        => MeasureModel.Split(scope, _phraseBodies!, time);
+
+    /// <summary>True for a node outside every part/section/music body — the score level,
+    /// where a <c>time</c> declaration arms the whole document after it (LP's Timing is
+    /// Score-level; Lily# part-local changes are restated per part and stay local).</summary>
+    private static bool IsScoreLevel(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PartDeclarationSyntax or PartBlockSyntax or SectionDeclarationSyntax or MusicBlockSyntax)
+                return false;
+        return true;
+    }
 }

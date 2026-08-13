@@ -100,4 +100,61 @@ public class LilyPondExporterSectionPlayTests
         var ly = Export(Doc("A B A \"\""));
         Assert.Equal(2, Regex.Matches(ly, Regex.Escape("\\mark \\markup \\box")).Count);
     }
+
+    // ---- Volta endings — the boundary must survive CreateEnding's green rebuild ----
+    // (the payload rides the marker's GREEN; a red-held payload came back as a
+    // GenericSyntaxNode and the endings lost their marks and the score-key restore:
+    // the twin kept ending 1's key through ending 2 — a different paper per pass.)
+
+    private static string RepeatDoc => """
+        key d major
+        part melody {
+          clef treble
+          section A { c4 c g' g | }
+          section B { key a major g'4 g f f | }
+          section C { e4 e d d | }
+        }
+        form main { |: A [1. B] :| [2. C] }
+        score main { staff melody }
+        """;
+
+    [Fact]
+    public void AVoltaEndingCarriesItsBoxedMark()
+    {
+        var ly = Export(RepeatDoc);
+        int alt = ly.IndexOf("\\alternative");
+        int b = ly.IndexOf("\\mark \\markup \\box \"B\"");
+        int c = ly.IndexOf("\\mark \\markup \\box \"C\"");
+        Assert.True(alt >= 0 && b > alt && c > b,
+            $"ending marks missing or out of order (alt={alt}, B={b}, C={c})");
+    }
+
+    [Fact]
+    public void TheSecondEndingRestoresTheScoreKey()
+    {
+        // Ending 1 modulates (its header key); ending 2 has none, so the boundary
+        // restores the score's d major — exactly what the page engraves. Without it
+        // LilyPond keeps a major through ending 2 (\key persists across the
+        // \alternative braces) and the twin is a different paper.
+        var ly = Export(RepeatDoc);
+        int modulate = ly.IndexOf("\\key a \\major");
+        int restore = ly.IndexOf("\\key d \\major", Math.Max(0, modulate));
+        int c = ly.IndexOf("\\box \"C\"");
+        Assert.True(modulate >= 0 && restore > modulate && c > restore,
+            $"expected the d-major restore between the endings (mod={modulate}, restore={restore}, C={c})");
+    }
+
+    [Fact]
+    public void AnEndingHeaderKeyOverridesTheRestore()
+    {
+        // Ending 1 (B) carries its own header key: the boundary takes THAT key and
+        // the restore stays silent — no \key d \major between B's mark and its music.
+        var ly = Export(RepeatDoc);
+        int b = ly.IndexOf("\\box \"B\"");
+        int bKey = ly.IndexOf("\\key a \\major", Math.Max(0, b));
+        Assert.True(b >= 0 && bKey > b, $"B's own key missing (B={b}, key={bKey})");
+        int restoreBeforeB = ly.IndexOf("\\key d \\major", ly.IndexOf("\\alternative"));
+        Assert.True(restoreBeforeB > bKey,
+            $"the d-major restore must not precede B's own key (restore={restoreBeforeB}, bKey={bKey})");
+    }
 }

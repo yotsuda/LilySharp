@@ -36,7 +36,11 @@ namespace LilySharp.Core.Semantics;
 /// exactly as the collector treats it. Phrase references expand in a fresh
 /// default-duration frame; tuplet/grace interiors fold into their wrapper via
 /// <see cref="MeasureDurations.ItemDuration"/>; percent/unfold repeats expand to their
-/// played length.
+/// played length, and while their expansion is in flight the bar AUTO-COMPLETES at the
+/// meter (mirroring <c>MeasureBuilder.AddDuration</c>): a body that is no whole number
+/// of bars flows across the bar boundary, so counting its turns into one written bar
+/// disagreed with the collector's bar count (<c>repeat volta 2 { d8×8 }</c> was one
+/// two-whole-note bar here and two rendered bars on the page).
 /// </remarks>
 internal static class MeasureModel
 {
@@ -50,7 +54,14 @@ internal static class MeasureModel
     /// bare-barline rule. Empty <c>| |</c> placeholders are returned as
     /// <see cref="Bar.IsEmpty"/> bars spanning the gap between the two barlines.
     /// </summary>
-    public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
+    /// <param name="initialMeter">The meter in force where the scope starts (callers that
+    /// track the score meter pass it; default 4/4). It only steers the repeat-flow
+    /// auto-complete below — the <see cref="Bar.IsEmpty"/> answer never depends on it, so
+    /// the empty-placeholder pass may omit it. A <c>time</c> written inside the scope
+    /// (or inside a repeat body — the expansion replays it per turn, exactly as the
+    /// collector walks it) updates the running meter from that point.</param>
+    public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
+        Fraction? initialMeter = null)
     {
         var stream = new List<object>();
         Flatten(scope, stream, new HashSet<string>(), phraseBodies);
@@ -62,6 +73,9 @@ internal static class MeasureModel
         // The scope-start boundary absorbs one bare `|`.
         bool confirmable = true;
         int prevBarEnd = -1; // ink end of the last barline, for an empty bar's span
+        var meter = initialMeter ?? DurationCalculator.ParseTimeSignature(4, 4);
+        bool senzaMisura = false; // time none: no auto-complete boundary exists
+        int repeatFlow = 0;       // depth of percent/unfold expansions in flight
 
         void FlushMusic()
         {
@@ -88,7 +102,21 @@ internal static class MeasureModel
                 confirmable = true;
                 continue;
             }
+            if (entry is RepeatFlowMarker flow)
+            {
+                repeatFlow += flow.Delta;
+                continue;
+            }
             var node = (SyntaxNode)entry;
+            if (node is TimeSignatureSyntax time)
+            {
+                // A directive: it re-arms the meter but carries no duration and is not
+                // content (`| time |` stays an empty placeholder pair, as the remark on
+                // this class promises).
+                if (time.IsSenzaMisura) senzaMisura = true;
+                else { senzaMisura = false; meter = DurationCalculator.ParseTimeSignature(time.Beats, time.BeatType); }
+                continue;
+            }
             if (node is BarlineSyntax bar)
             {
                 int barStart = bar.Span.Start;
@@ -114,6 +142,21 @@ internal static class MeasureModel
             var itemDuration = MeasureDurations.ItemDuration(node, ref defaultDuration);
             total += itemDuration;
             current.Add(node);
+
+            // While a repeat expansion is in flight the bar auto-completes at the meter,
+            // as the collector renders it (MeasureBuilder.AddDuration): a repeat opening
+            // mid-bar, or a body that is no whole number of bars, flows across the bar
+            // boundary instead of piling its turns into the surrounding written bar.
+            // The boundary an auto-fill leaves is ATTACHABLE — the builder's
+            // _lastEndAutoFill — so `confirmable` re-arms and a written `|` standing
+            // right on it confirms the close instead of opening an empty `| |` bar.
+            if (repeatFlow > 0 && !senzaMisura && total >= meter)
+            {
+                bars.Add(new Bar(total, MeasureDurations.GetSpan(current)));
+                current = new List<SyntaxNode>();
+                total = Fraction.Zero;
+                confirmable = true;
+            }
 
             // `R1*N` is N BARS of silence written as one token, and it is written with ONE
             // barline after it. Counting the token as one bar made this model disagree with
@@ -158,6 +201,18 @@ internal static class MeasureModel
     private sealed class BoundaryMarker
     {
         public static readonly BoundaryMarker Instance = new();
+    }
+
+    /// <summary>Brackets a percent/unfold expansion in the stream: while the depth is
+    /// positive, the splitter auto-completes the bar at the meter (the collector's
+    /// rendered-bar rule) — outside it, only written barlines close bars, which is the
+    /// whole point of validating what the author wrote. Nested repeats nest the depth.</summary>
+    private sealed class RepeatFlowMarker
+    {
+        public static readonly RepeatFlowMarker Enter = new(+1);
+        public static readonly RepeatFlowMarker Exit = new(-1);
+        public int Delta { get; }
+        private RepeatFlowMarker(int delta) => Delta = delta;
     }
 
     private static void Flatten(SyntaxNode scope, List<object> output, HashSet<string> activeRefs,
@@ -205,6 +260,12 @@ internal static class MeasureModel
                     output.Add(n);
                     break;
 
+                // A meter change steers the repeat-flow auto-complete in Split (it is a
+                // directive there, never content — `| time |` stays an empty pair).
+                case TimeSignatureSyntax:
+                    output.Add(n);
+                    break;
+
                 // Cross-part alignment and bar counting must see repeats at their
                 // PLAYED length: percent/unfold repeat their body COUNT times (the
                 // collector expands them into that many real measures), a tremolo is
@@ -219,9 +280,14 @@ internal static class MeasureModel
                     else if (int.TryParse(rep.Count.Text, out int repCount))
                     {
                         // No DurationResetMarker here: the collector walks each turn with
-                        // the RUNNING default note value (see the marker's remarks).
+                        // the RUNNING default note value (see the marker's remarks). The
+                        // flow markers bracket ALL turns: the seam between turns is inside
+                        // the flow, so a body that is no whole number of bars auto-completes
+                        // across it exactly where the rendered barline falls.
+                        output.Add(RepeatFlowMarker.Enter);
                         for (int r = 0; r < Math.Max(1, repCount); r++)
                             Flatten(rep.Body, output, activeRefs, phraseBodies);
+                        output.Add(RepeatFlowMarker.Exit);
                     }
                     break;
 

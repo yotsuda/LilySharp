@@ -18,6 +18,90 @@
 
 ---
 
+## 以下は第155セッションの経緯
+
+最終更新 第155セッション＝**3 便＝⑴ ⑵′ 後半＝flat list の lazy 化（採用 red を live 窓の外で
+作らない・`9bd5002f`）⑵ その Release 壁時計 A/B（静かな窓・**不動＝帯内**・下の第2便）
+⑶ ⑷ splice 適用相の再測＝**残余 ~23 ms は消滅していた（stale・下の第3便）**。
+第153 の設計メモどおり list を (green, position) で持ち、red 化は消費点だけ:
+- **装置**: `GreenSite`（green＋絶対 full-span start＋遅延 spine `GreenSiteSpine`・
+  `SyntaxNode.GreenSitesLazy(rule)`）。gather は `MusicSitesLazy`（候補集合・順序・container
+  境界は `MusicSites` と同一）が red 無しで flat list を積み、**red を作るのは
+  ProcessMusicNode・attached-mark peek・変数参照展開の 3 消費点だけ**。checkpoint 採取・
+  splice 照準・resume 番地再検証は `site.Position`（== `FullSpan.Start`・red 不要）を読む。
+  型フィルタは kind 化（`IsCollectableMusicKind`＝候補 kind − VariableReference・
+  kind↔型は `CreateRed` で 1:1）。
+- ★★ **相続がまた起きた（第152 remark の 3 例目）**: gather を lazy 化しただけでは plain の
+  red は 1 個も動かなかった（9,075 不変・`redbench-155-B.txt`）——**canonical bars の
+  `WalkBars` が全書 first-touch を相続していた**（スタックサンプラで plain の ~99%）。
+  **WalkBars も green 化**（kind＋bar token text だけの純関数。旧 red 綴りは
+  `CountBarsInScopeRed` として網のオラクル残置）。**2 つで 1 commit**＝前半単独では買いゼロ。
+- **実測（決定的カウンタ＝CreateRed 総数/打鍵・Debug・A=`11e70b5f` を同計器の worktree
+  `LilySharp-redbase-11e7`（残置・計器は revert 済み）で再測＝redbench-153 の B と完全一致・
+  生データ `scratch\redbench-155.txt`・全巡同値）**:
+
+  | 冊 | A（編集/復帰） | B（編集/復帰） |
+  |---|---|---|
+  | plain1k | 9,075/9,042 | **83/41** |
+  | fingbeam1k | 57,207/57,031 | **263/30** |
+  | v2bow1k | 22,555/4,054 | **18,552/47** |
+
+  **plain/fingbeam は −99%＝この切片の設計床**（残りは live 窓の消費＋RenderSpecParser）。
+  **v2bow 編集面の残り 18.5k ＝第2声部再構築**（`BuildExtraVoiceTracks` が `<< \\ >>` の
+  追加声部を毎打鍵 live で歩き直す）——**別の器のまま**（次の一手の ⑵′ 項）。
+- **網（新規 2 枚）**: `MusicSitesLazy_MatchesMaterializedSites`（全 fixture×全 container×
+  両モードで**同一インスタンス・red 無し Position＝実 FullSpan.Start・kind フィルタ≡型
+  フィルタ**）＋`CanonicalBarsEquivalence`（green の小節数 ≡ 旧 red 綴り）。**陽性対照 3 種
+  （revert 済み）**: kind 表から Note を落とす／position fold を Width にする／WalkBars から
+  Chord を落とす→各網 fail。
+- **3 点証明（§5.1・commit message に記載）**: **コーパス rerender 絵が動いた本 0 / 82**・
+  **台帳 511 点・ss 非ゼロ 94・総和 3.609962441・count 点 106 / 非ゼロ 2（§0 の数え方で
+  再測・不動）**・**suite 4425 passed / 0 failed / 4 skipped（+2＝網）・snapshot 0 動**。
+- ★★ **第2便＝Release の壁時計 A/B（静かな窓・ユーザーに一声かけて取得・A=`11e70b5f`
+  worktree `LilySharp-redbase-11e7`・残置／B=`9bd5002f`・`--no-build` 交互 4 巡・両側
+  gateMoved True / reusedLayout False＝regime ⑶・生データ
+  `scratch\editbench-155-{A1..B4}.txt`＋`-summary.txt`）＝壁時計は不動**:
+
+  | 冊 | 床 A→B（各 4 巡の最小） | Δ |
+  |---|---|---|
+  | plain1k | 162.8→167.2 | +4.4（帯内） |
+  | fingbeam1k | 369.6→374.1 | +4.5（帯内） |
+  | v2bow1k | 261.8→260.1 | −1.7（帯内） |
+
+  巡ごとの帯は全冊で交錯（plain は A4=174.3 が B 全巡より上・v2bow は完全に混在）＝
+  **買いも税も帯級（§7.9 の 5〜40ms 分散内）で主張できない**。
+  ★★★ **発見: red 数はこの床では ms の代理にならない**——第153 の −45.7 ms
+  （234k→57k）の支配項は red 生成そのものではなく、**red walk に同乗していたもの
+  （per-descendant 祖先 guard 鎖・iterator）**だった。残り 57k/9k の生成を −99% しても
+  Release 壁時計は帯以下。⇒ **v2bow の 18.5k を red 数を理由に追わないこと**——第2声部
+  memo の値段は「省ける意味処理の ms」で測ってから（red では見込みを立てない）。
+  この切片の正当化は機構側（バイト同一の証明・アロケーション −99%・checkpointed walk の
+  設計床）で、ms ではない。
+- ★★ **第3便＝⑷ splice 適用相の再測（計測のみ・エンジン変更ゼロ・SpliceClock＝
+  `TrySpliceSuffix` の相ブラケット・計器と harness は revert 済み・Release・同じ静かな窓・
+  warmup 2＋交互 14 巡・生データ `scratch\splicebench-155.txt`）＝**
+  **第151 の「残余 fingbeam ~23 ms」は消滅していた（stale）**:
+
+  | 行（fingbeam1k 編集面の床） | ms |
+  |---|---|
+  | ok.total（TrySpliceSuffix 全体・試行 6 回ぶん） | **6.89** |
+  | ok.parseagree | 3.47 |
+  | ok.copy.measures | 1.86 |
+  | ok.copy.tables | 0.65 |
+  | ok.commit.append（**側表 12,000 entry の採用 append**） | **0.22** |
+  | その他（gate/statematch/canon/shift/commit） | ~0.4 |
+
+  内訳は total でほぼ閉じる（未説明 ~0.5 ms）＝**第151 が疑った「側表の per-entry append」は
+  無罪**。第152〜155 の修理（parseagree の green 直歩き 10.4→3.5・defs/beamdirs/walk）が
+  残余の支配項を先に食っていたと読む。plain は ok.total 2.10・v2bow 1.58／復帰面 0.31。
+  試行回数も健全（plain 3・fingbeam 6・v2bow 1／打鍵・decline は overlap gate 0.02 ms）。
+  ⇒ **⑷ は修理対象から外す＝第151 の collect 分割リスト ⑴〜⑸ は完走**。
+- **触らなかったもの（意図的）**: per-voice 経路の red 削減そのもの（全 site が live 消費
+  されるので lazy 単独の買いはゼロ＝第2声部の打鍵またぎ memo とセットで別切片・上の 18.5k）・
+  `MusicSites`（red 綴り）は網の第2オラクルとして残置。
+
+---
+
 ## 以下は第154セッションの経緯
 
 最終更新 第154セッション＝**2 便＝⑶ beamdirs＝検出の per-measure content-key memo 化
