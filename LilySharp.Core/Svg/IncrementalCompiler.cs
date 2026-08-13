@@ -150,6 +150,12 @@ public sealed class IncrementalCompiler
     internal (int Replayed, int Drawn) LastRenderFragments =>
         _fragments?.LastPass ?? (0, 0);
 
+    /// <summary>Same, for the page-level OVERLAY fragments (⒭ second slice — one unit
+    /// per (drawer, page) put on the fragment mechanism; fingerings today). (0, 0) on a
+    /// fragment-ineligible pass and for scores without such overlays.</summary>
+    internal (int Replayed, int Drawn) LastRenderOverlays =>
+        _fragments?.LastOverlayPass ?? (0, 0);
+
     /// <summary>The spring vector the most recent compile ended with — the same array the
     /// break gate and the layout consumed. For the tests that assert the per-measure memo
     /// reproduces a from-scratch build exactly.</summary>

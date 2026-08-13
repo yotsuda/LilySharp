@@ -18,6 +18,79 @@
 
 ---
 
+## 以下は第158セッションの経緯
+
+最終更新 第158セッション＝**⒨「棚卸しの読み方」を完走した便＝OWN 監査＋APPROX/UNWATCHED
+同型通読**（perf は 1 行も
+触っていない——次の一手の順位は第155 のまま生きている。順位の取り直しはベンチであり
+「bench 前に一声」の規律によりユーザー不在では回せないので、非ベンチの ⒨ を選んだ）。
+§5.2 の判定法を OWN 全数（117 行）に当て、**払う前に検査自身を監査**した（メモリ「検査監査」の
+型——実際 117 中 ~15 は負債ですらなかった）。suite は **4459 passed / 0 failed / 4 skipped
+（不動・snapshot/台帳込み全緑）**・エンジン出力は構造上不変（コメントと audit スクリプトのみの
+変更）・未 push 27。
+- **⑴ `debce47f` OWN 棚卸しの §5.2 監査**。内訳は 3 種:
+  ①**札が LP の出所を隠していた 16 件**を NOT PORTED / NOT LITERAL に張り替え（各コメントに
+  「LP has the quantity／§5.2 audit, session 158」を残置）。最大の 1 件は
+  `EngravingDefaults.RestCenterPosition`——**0.0 は lily/rest.cc staff_position_internal の値
+  そのもの**なのに OWN だった＝LILYPOND-REF 化（未移植は semibreve 例外だけと明記）。他は
+  percent 記号 dot の水平項（自称 "approximation of :79-80"）・courtesy paren 省略・grace 黒符頭・
+  hyphen dash の round box・chord bracket の角・PDF の文字置き（backend-blocked）・script の
+  per-type padding・dynamic line の direction break・tie column の solve-once-then-break 順・
+  hyphen の左右 bound 2 件・partcombine ラベルの flat 1.5・tie-dot 衝突の算術・melismaBusy・
+  hyphen kill の proxy（⒝ 化）。
+  ②**~15 行は宣言でなく歴史的言及/メタ**（"was/were/declared/not LILYSHARP-OWN"）——
+  `Build-ApproximationInventory.py` に **OWN_MENTION フィルタ**（キーワードが同一行で marker の
+  *前*にあるときだけ除外）を追加。⚠️ **小数点が `[^.]{0,40}` を遮る**（"Was an invented 0.3 ("）
+  ——tempered dot `(?:[^.]|\.(?=\d))` で解決。regex の届かない 3 箇所（相互参照 2・前行キーワード
+  1）はコメント側を言い換え。
+  ③**残り 83 件は正当な OWN**＝名目箱（flag/rest/hairpin）・帯/枠モデル（HANDOFF 3）・タブ固有・
+  評価済み式ブリッジ（CustomText の型）・**§5.2 が明示的に認める手打ち値**（「LP のどの行から
+  導いたか書けないなら OWN を付けて独自と明示」——手打ち値の OWN は正しい札）。
+  **APPROXIMATIONS.md 再生成: OWN 116→83・APPROX 33→48・UNWATCHED 44→45・計 193→176**
+  （旧 116 は stale な生成物の数でもあった——行番号が大きく漂っていた）。
+- ★ **境界線上で「残す」と裁定した 5 件**（理由は各コメント内・次に触る人へ）:
+  `GlissandoEngraver:142`（break 越え Y の freeze＝設計か未移植かが曖昧）・`VerticalSkyline:173`
+  （segment 数の deviation＝スケーリング島のブリッジ）・`StaffAccidentalColumns:84`（gate 装置・
+  到達不能・起票済）・`BeamingPattern:168`（退化入力 guard）・`SkylineBuilder:216`（two-edge
+  モデルの一部＝§2A workstream と一体）。
+- **⑵（第2便・commit 無し）APPROX 48 / UNWATCHED 45 を同型で通読＝両バケット白**。
+  言及混入 0・札違い 0——この 2 バケットの札は「not ported＋LP 引用」「no observer＋観測する
+  はずの pair の名指し」の型で自己検証的（OWN の「対応物が無い」ほど強い主張をしていない）。
+  **陽性対照**: 同じ読み方が OWN では 16＋15 を検出・⑴ の張り替え行が APPROX 33→48 に正しく
+  現れた。⚠️ **数えは「行」であって「site」ではない**——1 主張が 2〜3 行に割れて複数回
+  数えられる（Beams.cs 480/483/485 の 3 行＝1 site 等）。数を引くときは桁の目安として扱う。
+  ⚠️ **「no observer」主張の実測突合（台帳に点が生えて stale 化していないか＝「穴も測る」の
+  型）は未実施**＝残件。
+- **⑶（第3便・ユーザーの静かな窓で実施・計器は revert 済み＝commit 無し）打鍵と cold の
+  段内訳を取り直した**（第149 の StageClock の形＝同じ配線図・EditKeystrokeBench プロトコル・
+  warmup 2 / n=14 交互 / 床=各段の n14 min・編集位置 3 点・Release。生データ＝逐語で
+  `scratch\stagebench-158.txt`・untracked）。**第149 の表は予告どおり大きく stale だった**——
+  打鍵床（edit@0.50）plain 348.8→**105.0**・fingbeam 679.3→**235.2**・v2bow 369.2→**163.5**
+  （⚠️ 別日比較は §7.9 の注意つき＝主張は「今日の中の順位」だけ）。**新順位は▶の★★に反映**。
+  要点: **打鍵首位は annpass に交代・旧首位 collect は 7〜29 ms に陥落**（splice＋green 化＋
+  memo 群の完済を実測で確認）・v2bow は break+pages 63 が最大塊・fingbeam の render は
+  断片 cache 後 37.7（overlay 側が残り）。⚠️ v2bow の edit@0.10 と @0.50 は同じ token
+  （char 13301）に落ちた＝実質 2 点。⚠️ Release ビルドは既存の CS1570（XML doc）警告族を
+  出す（私の変更由来ではない——未編集の SpacingRules 等にも出る・Debug では非表示）。
+  **第2切片＝annpass の内訳も同じ窓で割った**（`pann.*`/`fann.*` の副段・生データ
+  `scratch\stagebench-158b.txt`・打鍵床は第1切片と整合＝plain 109.5/fingbeam 234.8/
+  v2bow 164.3）: **支配項は全冊で `OutsideStaffStacker.StackAboveStaff`**（prelim+final の床
+  plain 14.5+3.8 / fingbeam 35.9+13.6 / v2bow 16.4+5.5 ms）、**第2項は fingbeam だけの
+  fingscripts**（`ComputeFingeringIslands`＋`CalculateWithFingerings`＋script skyline・
+  15.8+14.8）。**他の副段（lyrics/dyn/trill/volta/tuplet/marks/grace/mmr/ledger…）は全て
+  ~1 ms 未満**＝annpass の memo 化は「全 engraver の memo」ではなく **stackabove（＋その
+  staffProfile 構築）と fingscripts の 2 島**の話。⚠️ この lever はコード自身が予告している——
+  `LayoutEngine` の staffProfile remark「Hoisting it to the layout context would halve
+  that — but the two runs do not necessarily hold the same measure layouts, so a shared
+  cache is only correct if that is checked first. Next session's lever, not this one's.」
+  ⚠️ 第2切片の cold は 1 サンプルで大きくブレた（plain 総 2886 対 第1切片 1812）——**cold の
+  順位は第1切片の表を正とする**（floor 側は両切片で ±5 ms 一致＝安定）。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（「承認ゲート付き単独セッション」指定・
+  第157 と同じ理由で見送り）。
+- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
+
+---
+
 ## 以下は第157セッションの経緯
 
 最終更新 第157セッション＝**⒮ の裁定済み残件 2 件（⑶ 小節途中 repeat・⑵ volta ending）を

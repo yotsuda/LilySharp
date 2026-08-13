@@ -103,9 +103,15 @@ internal static partial class SharedRenderer
         foreach (var (_, st, gi) in score.EnumerateStaves())
             if (st.IsOssia)
                 ossiaStaves.Add(gi);
+        // ⒭ overlay fragment: bucket the fingerings per page ONCE — the old per-page
+        // filter over the whole array was O(pages × fingerings) and measured as the
+        // drawer's dominant term (session 160).
+        var fingeringsByPage = GroupFingeringsByPage(layout);
         bool firstPage = true;
+        int pageIndex = -1;
         foreach (var page in layout.Pages)
         {
+            pageIndex++;
             // Internal layout/geometry is device Y-down; the single conversion to the
             // device output happens here, in the Y-flip decorator wrapping the page
             // context. Every primitive Y handed to `gc` below is page Y-up
@@ -166,7 +172,8 @@ internal static partial class SharedRenderer
                 DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc);
                 DrawBarNumbers(layout, measureToSystemTopYUp, gc);
                 DrawStanzaNumbers(layout, measureToSystemTopYUp, gc);
-                DrawFingerings(layout, measureToSystemTopYUp, os, gc);
+                DrawFingerings(fingeringsByPage?[pageIndex], os, gc,
+                    fragHost, fragments, pageIndex, page);
                 DrawMusicMarks(layout, measureToSystemTopYUp, os, gc);
                 DrawCustomTexts(layout, measureToSystemTopYUp, os, gc);
                 DrawTextSpanners(layout, measureToSystemTopYUp, os, gc);

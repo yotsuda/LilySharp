@@ -1208,4 +1208,98 @@ public class IncrementalCompilerTests
         Assert.True(replayed >= 2 && drawn == 0,
             $"expected every system to replay: replayed {replayed} / drawn {drawn}");
     }
+
+    // --- ⒭ overlay (page-level) fragment memo: fingerings (HANDOFF §1 ▶ ⒭) ---------
+    // The page-level drawers run AFTER the per-system loop, drawer-major, so their
+    // contiguous unit is one drawer's output on one PAGE. Fingerings are the measured
+    // overlay term of the keystroke render floor; their fragment is keyed by a VALUE
+    // FOLD of the exact draw inputs (digit, x, y, page height) plus the same anchor /
+    // slot machinery as the system fragments. These nets hold the memo to byte-identity
+    // with a cache-free full render PLUS liveness, and pin the value fold with an
+    // isolating positive control (a Δ=0 digit edit that no other layer declines).
+
+    /// <summary>The overlay-net fixture: enough fingered bars to spill onto 2+ pages
+    /// (a single treble staff packs ~12 systems a page, so 48 bars stayed on one).</summary>
+    private static string FingeredBook() =>
+        "time 4/4\nkey c major\npart melody { clef treble }\n"
+        + "section Main { melody { "
+        + string.Join(" ", Enumerable.Repeat(
+            "c4@finger(1) d4@finger(2) e4@finger(3) f4@finger(4) |", 160))
+        + " } }\n";
+
+    /// <summary>A multi-page fingered book: after a pitch toggle on the first page, the
+    /// SVG equals a full recompile, every untouched page replays its recorded fingering
+    /// overlay, and only the edited page (± a page-boundary straddle) draws it live.</summary>
+    [Fact]
+    public void OverlayFragments_FingeringsReplayOnUntouchedPages_AndMatchFull()
+    {
+        string source = FingeredBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var (_, pages) = session.LastRenderOverlays;
+        Assert.True(pages >= 2, $"fixture must span 2+ pages; captured {pages} overlay page(s)");
+
+        var change = Replace(source, "e4@finger(3)", "d4@finger(3)");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "e4@finger(3)", "d4@finger(3)")), incremental);
+        var (replayed, drawn) = session.LastRenderOverlays;
+        Assert.True(replayed + drawn == pages,
+            $"page count moved under the edit: {replayed}+{drawn} != {pages}");
+        Assert.True(drawn <= 2, $"overlay window widened: {drawn} of {pages} pages drew live");
+        Assert.True(replayed >= 1, $"overlay replay did not fire: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>
+    /// The value fold is load-bearing, isolated as a LAYER: a same-length digit edit
+    /// (finger 2 → 4, Δ=0) moves NO source offset, so the anchor and slot layers both
+    /// pass and a foldless cache would replay the stale "2" digit verbatim — only the
+    /// value fold (Number, and X0/Y if the digit's advance differs) declines the edited
+    /// page. Byte equality with the full render is the fold's positive control, and the
+    /// liveness assert pins that the OTHER pages did replay (the memo stayed on).
+    /// </summary>
+    [Fact]
+    public void OverlayFragments_DigitEdit_IsCaughtByTheValueFoldAlone()
+    {
+        string source = FingeredBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var (_, pages) = session.LastRenderOverlays;
+        Assert.True(pages >= 2, $"fixture must span 2+ pages; captured {pages} overlay page(s)");
+
+        var change = Replace(source, "@finger(2)", "@finger(4)");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "@finger(2)", "@finger(4)")), incremental);
+        var (replayed, drawn) = session.LastRenderOverlays;
+        Assert.True(replayed >= 1, $"overlay replay did not fire: replayed {replayed} / drawn {drawn}");
+        Assert.True(drawn >= 1 && drawn <= 2,
+            $"the edited page must draw its overlay live: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>A mid-book trivia insertion (Δ=+1, no content or geometry change): every
+    /// page's fingering overlay replays while every emitted data-pos at/after the edit
+    /// shifts — byte equality with the full render proves the slot shift, and the counts
+    /// prove nothing drew live.</summary>
+    [Fact]
+    public void OverlayFragments_TriviaInsertion_ShiftsDataPosInReplayedPages()
+    {
+        string source = FingeredBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        string before = Norm(session.Render());
+        var (_, pages) = session.LastRenderOverlays;
+        Assert.True(pages >= 2, $"fixture must span 2+ pages; captured {pages} overlay page(s)");
+
+        int mid = source.IndexOf("| c4", source.Length / 2, System.StringComparison.Ordinal);
+        Assert.True(mid >= 0);
+        var change = new TextChange(new TextSpan(mid + 1, 0), " ");
+        var incremental = Norm(session.Edit(change));
+
+        string editedText = source[..(mid + 1)] + " " + source[(mid + 1)..];
+        Assert.Equal(Full(editedText), incremental);
+        Assert.NotEqual(before, incremental); // the offsets moved; verbatim replay would not
+        var (replayed, drawn) = session.LastRenderOverlays;
+        Assert.True(replayed == pages && drawn == 0,
+            $"expected every page's overlay to replay: replayed {replayed} / drawn {drawn}");
+    }
 }

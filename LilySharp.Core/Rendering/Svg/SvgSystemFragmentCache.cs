@@ -22,6 +22,15 @@ using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Rendering.Svg;
 
+/// <summary>Identifies one page-level overlay drawer's fragment stream in
+/// <see cref="SvgSystemFragmentCache"/> (⒭ second slice). One id per drawer that has
+/// been put on the fragment mechanism — extend as further drawers earn their keep
+/// (each needs its own value fold; see the class remarks' OVERLAY ENTRIES).</summary>
+internal enum OverlayDrawerId
+{
+    Fingerings = 0,
+}
+
 /// <summary>
 /// F3/S5 (⒭ render, first slice): a session-scoped memo of ONE SYSTEM's DrawSystem
 /// SVG text. On an edit, a system whose content keys and drawn geometry are unchanged
@@ -117,6 +126,19 @@ namespace LilySharp.Core.Rendering.Svg;
 /// a declined or skipped system's entry simply goes stale and the next eligible edit
 /// re-captures it from the live draw.
 /// </para>
+/// <para>
+/// OVERLAY ENTRIES (⒭ second slice — the page-level drawers that run AFTER the
+/// per-system loop, drawer-major, so their per-PAGE output is the contiguous unit):
+/// keyed by (drawer, page) and by a VALUE FOLD of the drawer's exact draw inputs, not
+/// by content keys. An overlay drawer reads nothing but its layout annotation array
+/// and the page's geometry maps, so the caller folds, per drawn item, the very values
+/// the emission is a function of (resolved x/y, the glyph-selecting payload, the page
+/// height the Y-flip bakes into every emitted Y) — key-equality here IS
+/// emission-identity, with no model-fold inventory to keep in sync. Source positions
+/// stay out of the fold (they legitimately shift) and ride the same anchor + slot
+/// machinery as the system entries. Same pass gates (<see cref="PrepareRender"/>),
+/// same staleness, same all-or-nothing replay.
+/// </para>
 /// </remarks>
 internal sealed class SvgSystemFragmentCache
 {
@@ -140,7 +162,21 @@ internal sealed class SvgSystemFragmentCache
         public int Generation;   // pass that produced/last replayed this entry
     }
 
+    // Page-level overlay fragments (⒭ second slice): one drawer's output on one page,
+    // keyed by the caller's value fold of that drawer's draw inputs (see class remarks).
+    private sealed class OverlayEntry
+    {
+        public long ValueHash;
+        public int[] Anchors = [];
+        public string Text = "";
+        public int[] InsertAt = [];
+        public int[] Values = [];
+        public int[]? Designs;
+        public int Generation;
+    }
+
     private readonly Dictionary<int, Entry> _entries = new(); // by SystemIndex
+    private readonly Dictionary<(OverlayDrawerId Drawer, int Page), OverlayEntry> _overlays = new();
     private ImmutableArray<MeasureContentKey> _keys;
     private int _generation;
 
@@ -156,6 +192,10 @@ internal sealed class SvgSystemFragmentCache
     /// <summary>(Replayed, Drawn-and-captured) system counts of the most recent render
     /// pass. Systems declined per pass count as drawn. For diagnostics / tests.</summary>
     public (int Replayed, int Drawn) LastPass { get; private set; }
+
+    /// <summary>(Replayed, Drawn-and-captured) overlay-fragment counts of the most
+    /// recent render pass, over (drawer, page) units. For diagnostics / tests.</summary>
+    public (int Replayed, int Drawn) LastOverlayPass { get; private set; }
 
     /// <summary>Starts an edit pass: the content keys of the CURRENT score and the text
     /// window mapping the previous render's source offsets onto the current text
@@ -183,6 +223,7 @@ internal sealed class SvgSystemFragmentCache
     public void PrepareRender(MultiStaffScore score, ScoreLayout layout)
     {
         LastPass = (0, 0);
+        LastOverlayPass = (0, 0);
         _enabled = !_keys.IsDefault
             && score.GrobOverrides.IsDefaultOrEmpty
             && score.GrobReverts.IsDefaultOrEmpty
@@ -272,45 +313,14 @@ internal sealed class SvgSystemFragmentCache
         // the window shifts by 1. The live anchors must equal the recorded ones mapped
         // through the window, or the recorded slot values are not the live offsets.
         var liveAnchors = PositionFingerprint(score, system);
-        if (liveAnchors.Length != e.Anchors.Length)
+        if (!AnchorsFollowWindow(e.Anchors, liveAnchors))
             return false;
-        for (int i = 0; i < liveAnchors.Length; i++)
-        {
-            int v = e.Anchors[i];
-            if (v >= _windowPrefix)
-            {
-                if (v < _windowSuffixStart)
-                    return false; // inside the edit window — undefined shift
-                v += _windowDelta;
-            }
-            if (liveAnchors[i] != v)
-                return false;
-        }
 
         // Every slot must map before anything is appended (all-or-nothing).
-        var values = e.Values;
-        int[]? mapped = null;
-        for (int i = 0; i < values.Length; i++)
-        {
-            int v = values[i];
-            if (v < _windowPrefix)
-                continue;
-            if (v < _windowSuffixStart)
-                return false; // inside the edit window — undefined shift
-            (mapped ??= (int[])values.Clone())[i] = v + _windowDelta;
-        }
+        if (!TryMapSlots(e.Values, out var final))
+            return false;
 
-        var sb = host.CurrentContent!;
-        var text = e.Text;
-        var final = mapped ?? values;
-        int at = 0;
-        for (int i = 0; i < final.Length; i++)
-        {
-            sb.Append(text, at, e.InsertAt[i] - at);
-            sb.Append(final[i]);
-            at = e.InsertAt[i];
-        }
-        sb.Append(text, at, text.Length - at);
+        AppendFragment(host.CurrentContent!, e.Text, e.InsertAt, final);
 
         if (e.Designs != null)
             foreach (var d in e.Designs)
@@ -330,6 +340,65 @@ internal sealed class SvgSystemFragmentCache
         return true;
     }
 
+    /// <summary>The recorded source anchors, mapped through the edit window, must equal
+    /// the live vector — the certificate that the recorded slot values ARE the live
+    /// offsets (see the load-bearing remark in <see cref="TryReplay"/>). One spelling
+    /// for the system and overlay entries.</summary>
+    private bool AnchorsFollowWindow(int[] recorded, int[] live)
+    {
+        if (live.Length != recorded.Length)
+            return false;
+        for (int i = 0; i < live.Length; i++)
+        {
+            int v = recorded[i];
+            if (v >= _windowPrefix)
+            {
+                if (v < _windowSuffixStart)
+                    return false; // inside the edit window — undefined shift
+                v += _windowDelta;
+            }
+            if (live[i] != v)
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>Maps every recorded slot value through the edit window, all-or-nothing:
+    /// false when any value lands inside the window (undefined shift — the fragment
+    /// must decline). Returns the original array when nothing moved.</summary>
+    private bool TryMapSlots(int[] values, out int[] final)
+    {
+        int[]? mapped = null;
+        for (int i = 0; i < values.Length; i++)
+        {
+            int v = values[i];
+            if (v < _windowPrefix)
+                continue;
+            if (v < _windowSuffixStart)
+            {
+                final = values;
+                return false; // inside the edit window — undefined shift
+            }
+            (mapped ??= (int[])values.Clone())[i] = v + _windowDelta;
+        }
+        final = mapped ?? values;
+        return true;
+    }
+
+    /// <summary>Re-assembles a recorded fragment into the page buffer: the stored text
+    /// with each slot's (possibly shifted) number re-emitted at its insert position.</summary>
+    private static void AppendFragment(StringBuilder sb, string text, int[] insertAt, int[] final)
+    {
+        int at = 0;
+        for (int i = 0; i < final.Length; i++)
+        {
+            sb.Append(text, at, insertAt[i] - at);
+            sb.Append(final[i]);
+            at = insertAt[i];
+        }
+        sb.Append(text, at, text.Length - at);
+    }
+
     /// <summary>Opens a capture scope around a live DrawSystem: records the emitted
     /// text and source values, and stores the entry when the capture verifies. Returns
     /// null when the system is ineligible this pass (the draw simply runs unrecorded).</summary>
@@ -345,35 +414,98 @@ internal sealed class SvgSystemFragmentCache
         var sb = host.CurrentContent;
         if (page == null || sb == null)
             return null;
-        return new CaptureScope(this, score, system, host, page, sb, pageHeight);
+        return new CaptureScope(page, sb, (fragment, log, designs) =>
+            Store(score, system, host, pageHeight, fragment, log, designs));
+    }
+
+    /// <summary>
+    /// Replays one overlay drawer's recorded page output when the caller's value fold
+    /// matches and the live anchors follow the edit window (see the class remarks'
+    /// OVERLAY ENTRIES paragraph). Returns false when the drawer must run live for this
+    /// page (then <see cref="BeginOverlayCapture"/> records it).
+    /// </summary>
+    public bool TryReplayOverlay(OverlayDrawerId drawer, int pageIndex, long valueHash,
+        int[] liveAnchors, SvgDocumentContext host)
+    {
+        if (!_enabled)
+            return false;
+        if (!_overlays.TryGetValue((drawer, pageIndex), out var e)
+            || e.Generation != _generation - 1
+            || !_windowValid
+            || e.ValueHash != valueHash)
+            return false;
+        if (!AnchorsFollowWindow(e.Anchors, liveAnchors))
+            return false;
+        if (!TryMapSlots(e.Values, out var final))
+            return false;
+
+        AppendFragment(host.CurrentContent!, e.Text, e.InsertAt, final);
+
+        if (e.Designs != null)
+            foreach (var d in e.Designs)
+                host.UsedDesigns.Add(d);
+
+        // Values and anchors advance together, same as the system replay (the stale-
+        // basis hazard is identical: both are offsets in the previous render's text).
+        e.Values = final;
+        e.Anchors = liveAnchors;
+        e.Generation = _generation;
+        LastOverlayPass = (LastOverlayPass.Replayed + 1, LastOverlayPass.Drawn);
+        return true;
+    }
+
+    /// <summary>Opens a capture scope around one overlay drawer's live page run, storing
+    /// the entry under the caller's value fold when the capture verifies. Returns null
+    /// when overlay fragments are ineligible this pass (the draw runs unrecorded).</summary>
+    public IDisposable? BeginOverlayCapture(OverlayDrawerId drawer, int pageIndex,
+        long valueHash, int[] liveAnchors, SvgDocumentContext host)
+    {
+        LastOverlayPass = (LastOverlayPass.Replayed, LastOverlayPass.Drawn + 1);
+        if (!_enabled)
+            return null;
+        var page = host.CurrentPage;
+        var sb = host.CurrentContent;
+        if (page == null || sb == null)
+            return null;
+        return new CaptureScope(page, sb, (fragment, log, designs) =>
+            StoreOverlay(drawer, pageIndex, valueHash, liveAnchors, fragment, log, designs));
+    }
+
+    private void StoreOverlay(OverlayDrawerId drawer, int pageIndex, long valueHash,
+        int[] anchors, string fragment, List<int> log, HashSet<int> designs)
+    {
+        if (!TrySplit(fragment, log, out var text, out var insertAt, out var values))
+            return; // decline: the next edit runs this drawer live on this page
+
+        _overlays[(drawer, pageIndex)] = new OverlayEntry
+        {
+            ValueHash = valueHash,
+            Anchors = anchors,
+            Text = text,
+            InsertAt = insertAt,
+            Values = values,
+            Designs = designs.Count > 0 ? [.. designs] : null,
+            Generation = _generation,
+        };
     }
 
     private sealed class CaptureScope : IDisposable
     {
-        private readonly SvgSystemFragmentCache _owner;
-        private readonly MultiStaffScore _score;
-        private readonly SystemLayout _system;
-        private readonly SvgDocumentContext _host;
+        private readonly Action<string, List<int>, HashSet<int>> _store;
         private readonly SvgDrawingContext _page;
         private readonly StringBuilder _sb;
-        private readonly double _pageHeight;
         private readonly int _start;
         private readonly List<int> _log = new();
         private readonly HashSet<int> _designs = new();
         private readonly List<int>? _prevLog;
         private readonly HashSet<int>? _prevDesigns;
 
-        public CaptureScope(SvgSystemFragmentCache owner, MultiStaffScore score,
-            SystemLayout system, SvgDocumentContext host, SvgDrawingContext page,
-            StringBuilder sb, double pageHeight)
+        public CaptureScope(SvgDrawingContext page, StringBuilder sb,
+            Action<string, List<int>, HashSet<int>> store)
         {
-            _owner = owner;
-            _score = score;
-            _system = system;
-            _host = host;
+            _store = store;
             _page = page;
             _sb = sb;
-            _pageHeight = pageHeight;
             _start = sb.Length;
             _prevLog = page.SourceLog;
             _prevDesigns = page.DesignLog;
@@ -385,8 +517,7 @@ internal sealed class SvgSystemFragmentCache
         {
             _page.SourceLog = _prevLog;
             _page.DesignLog = _prevDesigns;
-            _owner.Store(_score, _system, _host, _pageHeight,
-                _sb.ToString(_start, _sb.Length - _start), _log, _designs);
+            _store(_sb.ToString(_start, _sb.Length - _start), _log, _designs);
         }
     }
 
@@ -587,10 +718,18 @@ internal sealed class SvgSystemFragmentCache
         var offsets = new List<int>(log.Count);
         var found = new List<int>(log.Count);
         int i = 0;
+        // Each token's NEXT occurrence at/after i, advanced lazily: −1 = none remain
+        // (never searched again). Re-running both IndexOf calls from i on EVERY hit
+        // made the scan O(hits × fragment) — measured (session 160): a fragment with
+        // ~1500 data-pos and NO data-alt re-scanned to the end 1500 times, ~48 ms for
+        // one page's capture, dwarfing the 3 ms draw it recorded.
+        int p = -2, a = -2; // −2 = not yet searched
         while (i < fragment.Length)
         {
-            int p = fragment.IndexOf(PosToken, i, StringComparison.Ordinal);
-            int a = fragment.IndexOf(AltToken, i, StringComparison.Ordinal);
+            if (p != -1 && p < i)
+                p = fragment.IndexOf(PosToken, i, StringComparison.Ordinal);
+            if (a != -1 && a < i)
+                a = fragment.IndexOf(AltToken, i, StringComparison.Ordinal);
             int next = p < 0 ? a : a < 0 ? p : Math.Min(p, a);
             if (next < 0)
             {

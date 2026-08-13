@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering.Svg;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
@@ -308,17 +309,131 @@ internal static partial class SharedRenderer
     /// hence the face scope below. <see cref="FingeringGlyphRun"/> holds both halves of that
     /// claim, and <c>DigitRun</c> has already applied the metric half.
     /// </remarks>
-    private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
+    /// <summary>⒭ overlay fragment: the score's fingerings bucketed per page, ONCE per
+    /// render. This replaces the old per-page filter over the whole array — that scan
+    /// was O(pages × fingerings) and, measured (session 160), it and the per-item staff
+    /// resolution were the drawer's real cost, so a fragment key that re-ran them per
+    /// page cost as much as the draw it replaced (the session-154 rule: a memo's key
+    /// must be cheaper than the walk it saves). Null when the score has none; a page
+    /// with no fingerings gets an empty list (the draw still opens the face scope,
+    /// preserving the pre-change bytes).</summary>
+    private static List<FingeringLayout>[]? GroupFingeringsByPage(ScoreLayout layout)
+    {
+        if (layout.FingeringLayouts.IsDefaultOrEmpty) return null;
+        var pages = layout.Pages;
+        int maxMeasure = -1;
+        foreach (var p in pages)
+            foreach (var s in p.Systems)
+                if (!s.Measures.IsDefaultOrEmpty && s.Measures.Length > 0)
+                    maxMeasure = Math.Max(maxMeasure, s.Measures[^1].MeasureIndex);
+        var measureToPage = new int[maxMeasure + 1];
+        Array.Fill(measureToPage, -1);
+        for (int pi = 0; pi < pages.Length; pi++)
+            foreach (var s in pages[pi].Systems)
+            {
+                if (s.Measures.IsDefaultOrEmpty)
+                    continue;
+                foreach (var m in s.Measures)
+                    if (m.MeasureIndex >= 0 && m.MeasureIndex <= maxMeasure)
+                        measureToPage[m.MeasureIndex] = pi;
+            }
+        var byPage = new List<FingeringLayout>[pages.Length];
+        for (int i = 0; i < byPage.Length; i++)
+            byPage[i] = new List<FingeringLayout>();
+        foreach (var f in layout.FingeringLayouts)
+        {
+            int pi = f.MeasureIndex >= 0 && f.MeasureIndex <= maxMeasure
+                ? measureToPage[f.MeasureIndex] : -1;
+            if (pi >= 0)
+                byPage[pi].Add(f);
+        }
+        return byPage;
+    }
+
+    /// <summary>
+    /// The page's overlay-fragment value key: everything the emitted bytes are a
+    /// function of EXCEPT source positions (those shift with the edit window and ride
+    /// the anchor/slot machinery). Deliberately folds RAW inputs, not resolved x/y —
+    /// resolving per item is the cost the fragment exists to avoid (session-154 rule).
+    /// The inventory, each read traced: an item's emission is
+    /// f(Number → DigitRun/Pieces, X, YUp, its staff middle) where the staff middle is
+    /// system.Y + staff.Y(StaffIndex) − StaffHeight/2 (<see
+    /// cref="LayoutUtilities.ResolveStaffMiddleY"/> via <see
+    /// cref="OssiaShrink.StaffMiddleYUp"/>; the ossia branch of <see
+    /// cref="OssiaShrink.YUp"/> is unreachable here — an ossia score disables the whole
+    /// cache). So the fold covers: page height (the Y-flip bakes it into every device
+    /// Y), each system's Y + measure range (the measure→system MAPPING — two systems
+    /// can keep their Ys while trading a measure) + staff table (StaffIndex, Y), and
+    /// each item's MeasureIndex/Number/X/YUp/StaffIndex.
+    /// </summary>
+    private static (long Hash, int[] Anchors) FoldFingeringPage(
+        List<FingeringLayout> pageItems, PageLayout page)
+    {
+        var hc = new MeasureContentKey.Hash64();
+        hc.Add(page.Height);
+        foreach (var system in page.Systems)
+        {
+            hc.Add(system.Y);
+            if (!system.Measures.IsDefaultOrEmpty && system.Measures.Length > 0)
+            {
+                hc.Add(system.Measures[0].MeasureIndex);
+                hc.Add(system.Measures[^1].MeasureIndex);
+            }
+            if (!system.StaffGroups.IsDefaultOrEmpty)
+                foreach (var g in system.StaffGroups)
+                    foreach (var st in g.Staves)
+                    {
+                        hc.Add(st.StaffIndex);
+                        hc.Add(st.Y);
+                    }
+        }
+        hc.Add(pageItems.Count);
+        var anchors = new int[pageItems.Count];
+        for (int i = 0; i < pageItems.Count; i++)
+        {
+            var f = pageItems[i];
+            hc.Add(f.MeasureIndex);
+            hc.Add(f.Number);
+            hc.Add(f.X);
+            hc.Add(f.YUp);
+            hc.Add(f.StaffIndex);
+            anchors[i] = f.SourcePosition;
+        }
+        return (hc.ToHashCode(), anchors);
+    }
+
+    /// <summary>⒭ overlay fragment wiring for the one drawer that measured as the
+    /// overlay term of the keystroke render floor (HANDOFF ▶ ⒭ — DrawFingerings is the
+    /// largest page-level drawer; the rest measured ≈ 0 and stay live). Replays the
+    /// recorded page output when the value fold and anchors match, else draws live
+    /// under a capture. Non-SVG backends draw the page's bucket directly.</summary>
+    private static void DrawFingerings(List<FingeringLayout>? pageItems, in OssiaShrink os,
+        IDrawingContext gc, SvgDocumentContext? fragHost,
+        SvgSystemFragmentCache? fragments, int pageIndex, PageLayout page)
+    {
+        if (pageItems == null)
+            return;
+        if (fragHost == null)
+        {
+            DrawFingeringsLive(pageItems, os, gc);
+            return;
+        }
+        var (hash, anchors) = FoldFingeringPage(pageItems, page);
+        if (fragments!.TryReplayOverlay(OverlayDrawerId.Fingerings, pageIndex, hash, anchors, fragHost))
+            return;
+        using (fragments.BeginOverlayCapture(OverlayDrawerId.Fingerings, pageIndex, hash, anchors, fragHost))
+            DrawFingeringsLive(pageItems, os, gc);
+    }
+
+    private static void DrawFingeringsLive(List<FingeringLayout> pageItems,
         in OssiaShrink os, IDrawingContext gc)
     {
-        if (layout.FingeringLayouts.IsDefaultOrEmpty) return;
         double size = FingeringGlyphRun.Em;
         // The design the metrics came out of, opened once for the whole pass: every
         // fingering in a score is at the same font-size, so this scope never nests.
         using var face = gc.MusicFace(FingeringGlyphRun.Design);
-        foreach (var f in layout.FingeringLayouts)
+        foreach (var f in pageItems)
         {
-            if (!sysTopYUp.ContainsKey(f.MeasureIndex)) continue; // other page
             // Frame B -> device: reflect the Y-up baseline against this fingering's
             // own staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(f.StaffIndex, f.MeasureIndex, StaffHeight);
