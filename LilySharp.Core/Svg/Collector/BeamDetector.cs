@@ -88,10 +88,44 @@ internal sealed class BeamDetector
     ///   2. Per-measure pass: <see cref="DetectBeamGroupsInMeasure"/> handles
     ///      single-measure manual + automatic beaming, skipping items already
     ///      consumed by the cross-measure pass.
+    /// <para>
+    /// ⑶ beamdirs (HANDOFF §1): with a <paramref name="memo"/>, the per-measure pass
+    /// replays a previous detection of a content-identical measure instead of walking it
+    /// again. SOUNDNESS — a single-measure detection is a pure function of exactly three
+    /// inputs, all folded into the memo key: ⑴ the measure's position-independent
+    /// detection inputs (<see cref="AddDetectionInputs"/> — the hand fold of everything
+    /// <see cref="DetectBeamGroupsInMeasure"/>, <see cref="MeasureStartPosition"/> and
+    /// <see cref="CreateBeamGroup"/> read off the measure; its remarks carry the field
+    /// list, the cost argument and the Debug drift net), ⑵ the meter in EFFECT at the
+    /// measure (the same effective-signature chain the live loop tracks — also what
+    /// <see cref="BuildTupletSpans"/> prices the spans with), and ⑶ the tuplet brackets
+    /// addressed to this measure index (content, in list order — the spans' other input).
+    /// Auto beams never cross a bar line (<c>EndBeam()</c> runs at every measure end), so
+    /// no other measure reaches into the result. The two NON-local regimes are gated out
+    /// rather than keyed: a measure any cross-measure manual pair touches (the
+    /// <c>consumed</c> set) detects live, and a caller supplying <paramref name="voiceIndex"/>
+    /// ≠ 0 or a <paramref name="forceStemUpAt"/> (the Score entry's multi-voice fan — the
+    /// direction forcing and the stored <c>VoiceIndex</c> would go stale) bypasses the memo
+    /// entirely. Replayed groups are re-based to the live measure index; their members are
+    /// index-addressed (<c>MeasureIndex</c> −1 = the group's), so nothing else in them is
+    /// positional. The stale <c>Member.Item</c> references a stored group carries are never
+    /// read by the bake (<c>ResolveBeamStemDirections</c> addresses the LIVE measure by
+    /// <c>ItemIndex</c>); the groups themselves are discarded after it.
+    /// </para>
+    /// <para>
+    /// ⚠️ BeamId stays OUT of the memo on purpose: identities are numbered by the bake, in
+    /// group order, and the memo preserves that order exactly (cross-measure groups first,
+    /// then per-measure groups measure by measure, manual before automatic within one) —
+    /// which is what keeps a memo-served collect byte-identical to a from-scratch one.
+    /// Guards: the incremental==full nets plus the beam-memo nets in
+    /// <c>IncrementalCompilerTests</c> and the replay-vs-live equivalence net in
+    /// <c>BeamDetectionMemoTests</c>.
+    /// </para>
     /// </remarks>
     public ImmutableArray<BeamGroup> DetectBeamGroups(Voice voice, TimeSignature timeSignature,
         ImmutableArray<TupletBracketItem> tupletBrackets = default,
-        int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null)
+        int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null,
+        BeamDetectionMemo? memo = null)
     {
         var beamGroups = new List<BeamGroup>();
         var consumed = new HashSet<(int measureIndex, int itemIndex)>();
@@ -125,6 +159,18 @@ internal sealed class BeamDetector
         // measure by the initial one (which beamed e.g. a 6/8 measure as 3/4).
         // LILYPOND-REF: lily/beaming-pattern.cc — beaming follows the current
         //   timeSignatureFraction / beatStructure.
+        //
+        // Memo eligibility (see the method remarks): the collect probe's shape only.
+        bool memoEligible = memo != null && voiceIndex == 0 && forceStemUpAt == null;
+        var bracketHashes = memoEligible ? BracketHashesByMeasure(tupletBrackets) : null;
+        HashSet<int>? crossMeasureTouched = null;
+        if (memoEligible && consumed.Count > 0)
+        {
+            crossMeasureTouched = new HashSet<int>();
+            foreach (var (mi, _) in consumed)
+                crossMeasureTouched.Add(mi);
+        }
+
         var effectiveTimeSig = timeSignature;
         for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
         {
@@ -132,10 +178,219 @@ internal sealed class BeamDetector
             foreach (var item in measure.Items)
                 if (item is TimeSignatureChangeItem tsc)
                     effectiveTimeSig = tsc.NewTime;
+
+            if (memoEligible
+                && (crossMeasureTouched == null || !crossMeasureTouched.Contains(measureIndex)))
+            {
+                long bracketsHash = 0;
+                bracketHashes?.TryGetValue(measureIndex, out bracketsHash);
+                long key = MeasureMemoKey(measure, effectiveTimeSig, bracketsHash);
+                if (memo!.TryGet(key, out var stored))
+                {
+#if DEBUG
+                    // Every Debug hit re-detects live and compares — the drift net over
+                    // AddDetectionInputs' hand-rolled read set (see its remarks).
+                    VerifyReplayAgainstLiveDetection(stored, measure, measureIndex,
+                        effectiveTimeSig, consumed, tupletSpans, voiceIndex, forceStemUpAt);
+#endif
+                    // Re-base to the live measure index; everything else in a stored
+                    // per-measure group is measure-local (members carry the −1 sentinel).
+                    foreach (var g in stored)
+                        beamGroups.Add(g.MeasureIndex == measureIndex ? g : new BeamGroup(
+                            g.Members, measureIndex, g.StartIndex, g.StemUp,
+                            g.GrowDirection, g.VoiceIndex, g.RestStems));
+                    continue;
+                }
+                int before = beamGroups.Count;
+                DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups,
+                    consumed, tupletSpans, voiceIndex, forceStemUpAt);
+                var slice = ImmutableArray.CreateBuilder<BeamGroup>(beamGroups.Count - before);
+                for (int g = before; g < beamGroups.Count; g++)
+                    slice.Add(beamGroups[g]);
+                memo.Store(key, slice.MoveToImmutable());
+                continue;
+            }
+
             DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletSpans, voiceIndex, forceStemUpAt);
         }
 
         return beamGroups.ToImmutableArray();
+    }
+
+    /// <summary>The memo key of one measure's detection input (see the memo remarks on
+    /// <see cref="DetectBeamGroups(Voice, TimeSignature, ImmutableArray{TupletBracketItem}, int, Func{int, bool?}?, BeamDetectionMemo?)"/>):
+    /// the detection-input fold + the effective meter + the measure's tuplet brackets.</summary>
+    private static long MeasureMemoKey(
+        Measure measure, TimeSignature effectiveTimeSig, long bracketsHash)
+    {
+        var hc = new MeasureContentKey.Hash64();
+        AddDetectionInputs(ref hc, measure);
+        hc.Add(effectiveTimeSig);
+        hc.Add(bracketsHash);
+        return hc.ToHashCode();
+    }
+
+    /// <summary>
+    /// Folds exactly the measure fields a single-measure detection reads — by hand, not
+    /// through <see cref="MeasureContentKey.Of"/>'s reflection fold, because the key must
+    /// cost far less than the walk it spares: the reflection fold (which boxes every
+    /// property of every item) measured 10.5-11.6 ms per 1000 bars against a live
+    /// detection of 7-17 ms (session 154, Release), cancelling the memo entirely.
+    /// </summary>
+    /// <remarks>
+    /// The read set, field by field (each line names its reader in this class):
+    /// <c>IsPickup</c> (<see cref="MeasureStartPosition"/>); per item, in sequence: the
+    /// item's KIND (a non-beamable item ends the beam and holds an index), sounding
+    /// <c>Duration</c> (<see cref="GetDuration"/> — the position walk), <c>BaseDuration</c>
+    /// (<see cref="IsBeamable"/>/<see cref="GetBeamCount"/>/<see cref="IsBeamedRest"/>),
+    /// <c>HasBeamStart</c>/<c>HasBeamEnd</c> (manual ranges), <c>ForcedStemUp</c>
+    /// (<see cref="ForcedStemUpOf"/>), <c>TremoloPairBeams</c>, head staff positions
+    /// (<see cref="GetStaffPosition"/>/<see cref="GetHeadRange"/> — direction, knees),
+    /// <c>FeatherDirection</c> (grow direction), a rest's <c>IsSpacer</c>/
+    /// <c>IsMultiMeasure</c>, and a mid-measure \time item's <c>NewTime</c> (the
+    /// effective-signature update).
+    /// <para>
+    /// ⚠️ DRIFT GUARD: a hand-rolled read set can silently fall behind the readers
+    /// (HANDOFF §2C's skip-list lesson), and a missing field here is a FALSE REUSE. Two
+    /// nets stand on it: this list lives beside the readers it mirrors, and — the real
+    /// teeth — every DEBUG-build memo hit re-detects the measure live and compares the
+    /// whole bake-visible surface (<see cref="VerifyReplayAgainstLiveDetection"/>), so the
+    /// entire Debug test suite doubles as an exhaustive replay-equivalence net. Release
+    /// pays neither.
+    /// </para>
+    /// </remarks>
+    private static void AddDetectionInputs(ref MeasureContentKey.Hash64 hc, Measure measure)
+    {
+        hc.Add(measure.IsPickup);
+        hc.Add(measure.Items.Length);
+        foreach (var item in measure.Items)
+        {
+            switch (item)
+            {
+                case NoteItem n:
+                    hc.Add(1);
+                    AddFraction(ref hc, n.Duration);
+                    AddFraction(ref hc, n.BaseDuration);
+                    hc.Add(n.HasBeamStart);
+                    hc.Add(n.HasBeamEnd);
+                    hc.Add(n.ForcedStemUp is { } nf ? (nf ? 2 : 1) : 0);
+                    hc.Add(n.TremoloPairBeams);
+                    hc.Add(n.StaffPosition);
+                    hc.Add(n.FeatherDirection);
+                    break;
+                case ChordItem c:
+                    hc.Add(2);
+                    AddFraction(ref hc, c.Duration);
+                    AddFraction(ref hc, c.BaseDuration);
+                    hc.Add(c.HasBeamStart);
+                    hc.Add(c.HasBeamEnd);
+                    hc.Add(c.ForcedStemUp is { } cf ? (cf ? 2 : 1) : 0);
+                    hc.Add(c.TremoloPairBeams);
+                    hc.Add(c.Notes.Length);
+                    foreach (var note in c.Notes)
+                        hc.Add(note.StaffPosition);
+                    break;
+                case RestItem r:
+                    hc.Add(3);
+                    AddFraction(ref hc, r.Duration);
+                    AddFraction(ref hc, r.BaseDuration);
+                    hc.Add(r.IsSpacer);
+                    hc.Add(r.IsMultiMeasure);
+                    break;
+                case TimeSignatureChangeItem tsc:
+                    hc.Add(4);
+                    hc.Add(tsc.NewTime);
+                    break;
+                default:
+                    // Zero duration, not beamable — the KIND still matters: it ends a
+                    // beam being built and occupies an item index the groups address.
+                    hc.Add(5);
+                    hc.Add(item.GetType());
+                    break;
+            }
+        }
+    }
+
+    private static void AddFraction(ref MeasureContentKey.Hash64 hc, Fraction f)
+    {
+        hc.Add(f.Numerator);
+        hc.Add(f.Denominator);
+    }
+
+#if DEBUG
+    /// <summary>Debug-only teeth of the memo's drift guard: a hit re-runs the live
+    /// per-measure detection and compares the whole bake-visible surface against the
+    /// stored groups. A mismatch means <see cref="AddDetectionInputs"/> fell behind a
+    /// reader (a false reuse) — fail loudly, right here, in whichever suite test drove
+    /// the compile. Release builds never pay this.</summary>
+    private void VerifyReplayAgainstLiveDetection(
+        ImmutableArray<BeamGroup> stored, Measure measure, int measureIndex,
+        TimeSignature effectiveTimeSig, HashSet<(int, int)>? consumed,
+        IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans,
+        int voiceIndex, Func<int, bool?>? forceStemUpAt)
+    {
+        var live = new List<BeamGroup>();
+        DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, live, consumed,
+            tupletSpans, voiceIndex, forceStemUpAt);
+        bool Mismatch() // any difference on the surface the bake consumes
+        {
+            if (live.Count != stored.Length)
+                return true;
+            for (int i = 0; i < live.Count; i++)
+            {
+                var a = live[i];
+                var b = stored[i];
+                if (a.StartIndex != b.StartIndex || a.StemUp != b.StemUp
+                    || a.GrowDirection != b.GrowDirection || a.VoiceIndex != b.VoiceIndex
+                    || a.Members.Length != b.Members.Length
+                    || !a.RestStems.SequenceEqual(b.RestStems))
+                    return true;
+                for (int m = 0; m < a.Members.Length; m++)
+                {
+                    var am = a.Members[m];
+                    var bm = b.Members[m];
+                    if (am.ItemIndex != bm.ItemIndex || am.MeasureIndex != bm.MeasureIndex
+                        || am.MemberStemUp != bm.MemberStemUp || am.BeamCount != bm.BeamCount
+                        || am.BeamCountLeft != bm.BeamCountLeft
+                        || am.BeamCountRight != bm.BeamCountRight
+                        || am.StaffPosition != bm.StaffPosition
+                        || am.HeadPositionMin != bm.HeadPositionMin
+                        || am.HeadPositionMax != bm.HeadPositionMax
+                        || am.TargetStaffIndex != bm.TargetStaffIndex)
+                        return true;
+                }
+            }
+            return false;
+        }
+        if (Mismatch())
+            throw new InvalidOperationException(
+                $"BeamDetectionMemo replay diverged from live detection at measure {measureIndex}: "
+                + "AddDetectionInputs' read set has fallen behind a detection reader (false reuse).");
+    }
+#endif
+
+    /// <summary>Per-measure content fold of the voice's tuplet brackets, in list order —
+    /// the whole bracket minus its positional fields (measure index, source offset), the
+    /// same exclusion set the side-table content keys use. Over-sensitive on purpose: a
+    /// bracket the span builder would drop as foreign still moves the key (a missed reuse,
+    /// never a false one).</summary>
+    private static Dictionary<int, long>? BracketHashesByMeasure(
+        ImmutableArray<TupletBracketItem> brackets)
+    {
+        if (brackets.IsDefaultOrEmpty)
+            return null;
+        var accs = new Dictionary<int, MeasureContentKey.Hash64>();
+        foreach (var b in brackets)
+        {
+            if (!accs.TryGetValue(b.MeasureIndex, out var h))
+                h = new MeasureContentKey.Hash64();
+            h.Add(MeasureContentKey.HashSideContent(b));
+            accs[b.MeasureIndex] = h;
+        }
+        var result = new Dictionary<int, long>(accs.Count);
+        foreach (var kv in accs)
+            result[kv.Key] = kv.Value.ToHashCode();
+        return result;
     }
 
     /// <summary>

@@ -18,6 +18,112 @@
 
 ---
 
+## 以下は第152セッションの経緯
+
+最終更新 第152セッション＝**3 便**。**第1便＝collect 検証・計画層の返済 ⑴＋⑸
+（parse-agreement の green 直歩き化・`7f719442`）**。**第2便＝測定のみ（red 引っ越し仮説の
+検証と ⑵ defs の再値付け）**。**第3便＝⑵ の前半＝defs walk の green finder 化
+（`DefinitionSites`・下から 2 番目の bullet）**。第151 の指名は「⑴ plan＝checkpoint 走査の二分探索」だったが、**着手前に
+Plan 内部を 6 バケツ＋カウンタの仮計器で割ったら支配項の名指しが外れていた**：
+**col.plan の 94〜99% は `ParsePrefixAgrees`（red 木歩き）**で、checkpoint 走査は
+**5000 checkpoint 全数でも 0.13〜0.19 ms**＝二分探索は買うものが無い（線形走査のまま残す）。
+⚠️ 第151 の「復帰面 81.5 は prefix=全長で全 checkpoint を舐めるため」は、**同じ引数
+（編集位置が深いほど高い）が parseagree の limit＝deepestRead にも当てはまる**ため
+区別できていなかった——決め手は **plain と fingbeam が同じ 1000 小節・同桁の checkpoint 数
+なのに 5 対 81 だった**こと（違うのはノード数だけ。`SyntaxNode.DescendantNodes` の
+第144 remark「warm red 全木列挙 ~13/76 ms」とも桁が合う）。
+**修理**: `ParsePrefixAgrees`/`ParseSuffixAgrees` を **green 直歩き**（`GreenPrefixAgrees`/
+`GreenSuffixAgrees`）に置換——red node は (green, 絶対 start) の射影なので、start を
+持ち回れば**同じ述語**が red wrapper の具現化ゼロで計算できる。効いていた理由は
+「green 共有が short-circuit しない場面で agreement が走る」から：フル reparse は共有ゼロ、
+**増分 reparse でも green 採用はトップレベル項目単位のみ**（第146 設計メモ）＝section 内
+編集はその section 全 green を作り直す。**⑸ parseagree（splice 時の lazy 検査）も同じ
+装置で落ちた**。
+
+- **実測（同走 A/B・仮計器・比率とカウンタだけ主張——静かな窓を取っていないので絶対値は
+  主張しない・§7.9）**: col.plan 合計（編集/復帰の床）plain 2.87/18.25 → **1.06/1.47**・
+  fingbeam 22.93/81.16 → **3.13/4.29**（≈6〜19×）；col.splice.parseagree plain 21.47 →
+  **0.89**・fingbeam 11.10 → **3.11**・v2bow 1.91 → **0.66**。
+  ★ **agreeNodes カウンタが前後で完全一致**（plain 43075・fingbeam 233711/234012・
+  v2bow 17543）＝**同じ述語が同じノード森を訪れている**（等価の最強の証拠）。
+  生データは `scratch\planbench-152-split.txt`（前）と `planbench-152-split-B.txt`（後・
+  どちらも untracked）。
+- **陽性対照（revert 済み）**: `ParsePrefixAgrees`/`ParseSuffixAgrees` を `=> true` に毒 →
+  `ResumedCollect_MatchesFullCollect_AcrossSyntheticEdits`＋
+  `SpringMemo_OnAGrandStaff_MatchesFromScratch` が fail＝観測者は新しい綴りを見ている。
+- テスト **4415 passed / 0 failed / 4 skipped（±0）**・**台帳 511 点・ss 非ゼロ 94・
+  総和 3.609962441・count 点 106 / 非ゼロ 2（§0 の数え方で再測・不動）**・**snapshot 0 動**・
+  **コーパスは走らせていない**（Plan は `IncrementalCompiler` の編集経路のみ・フル compile
+  （lysc svg）は Plan を呼ばない＝構成上不変。基線は第148 の 0/82 のまま）。
+- **実測（Release・EditKeystrokeBench・同日 A/B・静かな窓＝ユーザーに一声かけて取得・
+  A=`fb35be78` worktree / B=この便・`--no-build` 交互 2 巡・両側 gateMoved True /
+  reusedLayout False・label 内 2 セットは互いに 5% 以内・§7.9）**:
+
+  | 冊 | 床 A→B | Δ |
+  |---|---|---|
+  | plain1k | 187.7→190.1 | +2.4（帯内＝計測不能） |
+  | fingbeam1k | 471.0→447.0 | **−24.0**（巡ごと −28.2 / −20.2・両巡一致） |
+  | v2bow1k | 287.7→281.1 | −6.6（帯内） |
+
+  生データは `scratch\editbench-152-{A1,B1,A2,B2}.txt`（untracked）。
+  ★★ ⚠️ **行 Δ（復帰面 −77ms）より打鍵 Δ（−24）がずっと小さい——差は消えたのではなく
+  引っ越した**（→ 第2便がカウンタで確認・下）。
+- ★★★ **第2便＝測定のみ（引っ越し仮説の検証と ⑵ defs の再値付け・エンジンのコード変更
+  ゼロ・計器は commit していない）**。`SyntaxNode.CreateRed` カウンタ＋plan/defs バケツを
+  A=`fb35be78`／B=`7f719442` の両 worktree に**同じパッチ**で当てた（Release・交互 14 打鍵・
+  主張はカウンタと比率のみ）。fingbeam 復帰面: A は plan が **red 234,010 個**を生成
+  （79.33ms）・defs は **6 個**（13.06ms）／B は plan **0 個**（4.88ms）・defs **234,016 個**
+  （**57.95ms**）。**打鍵合計 red は両側とも 234,030 で不変**＝red 具現化の費用は消えず
+  plan→defs へ移った。算術は ~1ms まで閉じる: plan −74.5 ＋ defs +44.9 ≈ 打鍵 −28.9
+  （実測 489.90→461.00）。編集面も同じ絵（A は plan/defs が半分ずつ 116,805/117,211＝
+  第151 の defs 40.7 は元から半分 red 具現化代だった）。
+  ★★ **keystroke-total ≈ plan＋defs（残差 ~20 個）＝いま defs が打鍵経路で唯一の全木 red
+  具現化者**——⑵ を直せば fingbeam の defs 行 ~58ms は**まるごと**消える見込み（誰も
+  作り直さない。plain は ~5.5ms。v2bow は defs 後に第2声部再構築が red を読むので冊ごとに
+  再測）。生データは `scratch\defsbench-152-{A,B}.txt`（untracked）。
+  ⇒ **⑵ の設計メモ（着手便へ）**: `CollectDefinitions` が消費するのは root 直下の全 case＋
+  **part 内 section**（PartMajorCells／order rep／header 直下 4 種）だけで、**音楽本文内の
+  Key/Time/Clef/Tempo は `IsInsideMusicContent` がどうせ全部却下する**＝全 descend は無駄。
+  ⚠️ 手書きの「音楽 kind は descend しない」skip リストは第98 の drift 教訓（§2C）に触れる。
+  **drift 安全な形は green 木を ancestor スタック持ちで歩き、マッチした場所だけ red を経路
+  具現化する**（O(depth)/match・ガードの ancestor 判定はスタックで足りる・consumer は red を
+  保持するので `_sectionState.Sections`／`_variables`／`_form` の分だけ具現化が要る）。
+  ~~⚠️ `DrumOverrides.Build(root)` も全木 walk かは**未読**~~ — 読んだ。**全木 walk だった**
+  （`DescendantNodes().OfType<Drummap…>`）＝defs バケツのもう半分。第3便が同じ finder に畳んだ。
+- ★★★ **第3便＝⑵ の前半＝defs walk の green finder 化**。`CollectDefinitions` の
+  `root.DescendantNodes()` ループと `DrumOverrides.Build(root)` の全木 red 歩き 2 本を
+  **`DefinitionSites`（green 前順 finder）1 本**に置換——**同じノード集合を同じ前順で訪問**
+  （枝刈りゼロ＝skip リスト drift の余地なし・§2C ⑴）し、**switch が消費する 13 kind に
+  当たった時だけ** red を経路具現化して yield（`GetChild` 経由なので Parent 鎖つき＝
+  `IsInsideMusicContent` 等の既存ガードは無変更で動く）。drummap は同じ walk で拾って
+  `DrumOverrides.Build(IEnumerable<…>)`（新 overload・tree overload は exporter 用に残置）。
+  - **出力同一の証明 3 点（§5.1）**: ⑴ **コーパス rerender 絵が動いた本 0/82** ⑵ 台帳全点
+    不動（suite 内・511 点・ss 非ゼロ 94・総和 3.609962441） ⑶ **suite 4415 passed / 0 failed /
+    4 skipped・snapshot 0 動**。**陽性対照**: `IsDefinitionKind` から KeySignature を落とす毒 →
+    **snapshot 23 本 fail**（revert 済み）＝kind 落ちは網が即捕まえる。
+  - **実測（同日・同計器・比率とカウンタ）**: col.defs 床（編集/復帰）plain 5.55/5.42 →
+    **1.11/1.17**・fingbeam 59.06/57.95 → **4.02/3.47**・v2bow 4.68/3.94 → **0.93/0.97**；
+    **defs の red 生成 234,016 → 5**（fingbeam・plain 9・v2bow 15）。
+    ⚠️ **打鍵合計 red は不変（234,030 等）＝予言どおり red 具現化は gather
+    （`ProcessMusicContainer` の flat list 構築＝col.walk）へ引っ越した**。打鍵床の同日 A/B
+    （静かな窓・A=`9fd8e469` worktree・交互 2 巡）: fingbeam 420.2→**410.2（−10.0）**＝
+    行の算術（defs −54＋gather 側 +45 ≈ −9）と整合・plain ±0・v2bow +14 は帯内
+    （同計器の同走比較では Δ≈0）。生データ `scratch\defsbench-152-C.txt`・
+    `editbench-152c-{A1,B1,A2,B2}.txt`（untracked）。
+  - ⇒ **⑵ の後半＝残る本丸は gather の遅延 red 化**: 打鍵経路で全木 red を具現化するのは
+    もう gather だけ（fingbeam ~45ms/打鍵＋gather 自身の列挙）。ただしそこは walk の背骨——
+    flat list の実体が red（`ProcessMusicNode` が消費・checkpoint の NodeIndex が list 番地）で、
+    `IsInsideProcessedContainer` 系の Parent 鎖ガードが **per-descendant** に走る
+    （`MeasureCollector.cs:4348` の remark）。`DefinitionSites` と同じ「green で見つけて
+    red を経路具現化」を当てるなら、**ガードを ancestor スタックに置換**した上で
+    「採用されない descendant には red を作らない」形に組み直す設計仕事＝**次セッション向き**。
+    ⚠️ v2bow は第2声部再構築（`BuildExtraVoiceTracks`/`GatherVoiceMusicNodes`）も全木を
+    歩く——gather 便はそこも同じ device に載るかを先に読むこと。
+    **（→ 第153 が着手・§1。gather 単独では合計 red は動かず、意味層の全木走査が
+    first-touch を相続していた）**
+
+---
+
 ## 以下は第151セッションの経緯
 
 最終更新 第151セッション＝**2 便**。**第1便＝⒭ render の第1切片（system 単位の SVG 断片

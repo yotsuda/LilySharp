@@ -237,6 +237,12 @@ public readonly record struct MeasureContentKey(long Hash)
     /// <summary>Returns the hash rendered as a fixed-width hex string.</summary>
     public override string ToString() => $"mck:{Hash:x16}";
 
+    /// <summary>Content fold of one side-table item under the side-table exclusion set
+    /// (source offset and absolute measure indices stripped) — exposed for the
+    /// beam-detection memo, which keys a measure's tuplet brackets with the SAME
+    /// spelling the per-measure side-table buckets use.</summary>
+    internal static long HashSideContent(object item) => HashContent(item, SideExclusions);
+
     // --- intrinsic (items + structural fields) ---
 
     private static void AddIntrinsic(ref Hash64 hc, Measure measure)

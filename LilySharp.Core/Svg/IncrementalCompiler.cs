@@ -105,6 +105,13 @@ public sealed class IncrementalCompiler
     private CollectWalkProbe? _collectRecording;
     private SyntaxTree? _collectBaselineTree;
 
+    // ⑶ beamdirs: the per-measure beam-detection memo of the collect-phase probe
+    // (ResolveBeamStemDirections), persisted across edits so a keystroke re-detects only
+    // the measures the edit changed. Generation-swapped per compile (BeginCollect); the
+    // bake — and with it BeamId numbering — always runs live, keeping the resolved model
+    // byte-identical to a memo-free collect (BeamDetector's memo remarks).
+    private readonly BeamDetectionMemo _beamMemo = new();
+
     /// <summary>Whether the most recent <see cref="Edit"/> reused the cached
     /// break solution (true) or recomputed it (false). For diagnostics / tests.</summary>
     public bool LastEditSkippedLineBreak { get; private set; }
@@ -128,6 +135,13 @@ public sealed class IncrementalCompiler
     /// reused by reference (content-unchanged edit) or on a full compile.
     /// For diagnostics / tests.</summary>
     internal (int Reused, int Recomputed) LastSpringMemo { get; private set; }
+
+    /// <summary>How the most recent collect's beam-direction probe paid for its beam
+    /// DETECTION (⑶ beamdirs): how many per-measure detections were replayed from the
+    /// content-key memo, and how many ran live (and were stored). Counts include
+    /// within-collect duplicate measures (a book of identical bars detects one and
+    /// replays the rest even on a full compile). For diagnostics / tests.</summary>
+    internal (int Reused, int Recomputed) LastBeamMemo => (_beamMemo.Hits, _beamMemo.Misses);
 
     /// <summary>How the most recent render's per-system SVG text was paid for (⒭):
     /// how many systems replayed their recorded fragment and how many drew live
@@ -175,6 +189,9 @@ public sealed class IncrementalCompiler
     private string Compile(SyntaxTree tree, bool allowSkip)
     {
         var spec = RenderSpecParser.FindFirst(tree);
+        // ⑶ beamdirs: one generation per compile — the previous compile's per-measure
+        // detections serve this one; anything older ages out.
+        _beamMemo.BeginCollect();
         var score = CollectWithResume(tree, spec, allowResume: allowSkip);
 
         // F3/S5-3: install/refresh the per-system layout cache for scores without
@@ -437,6 +454,7 @@ public sealed class IncrementalCompiler
                     {
                         ScoreTranspose = spec?.ScoreTranspose,
                         WalkProbe = resumer,
+                        BeamMemo = _beamMemo,
                     };
                     var resumed = SvgGenerator.CollectScore(collector, tree, spec);
                     int walks = 0, adopted = 0, splicedWalks = 0, spliced = 0;
@@ -471,6 +489,7 @@ public sealed class IncrementalCompiler
         {
             ScoreTranspose = spec?.ScoreTranspose,
             WalkProbe = recorder,
+            BeamMemo = _beamMemo,
         };
         var score = SvgGenerator.CollectScore(source, tree, spec);
         _collectSource = source;

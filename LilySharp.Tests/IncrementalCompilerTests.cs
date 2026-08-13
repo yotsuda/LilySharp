@@ -924,6 +924,157 @@ public class IncrementalCompilerTests
         Assert.Equal((1, 3), session.LastSpringMemo);
     }
 
+    // --- ⑶ beamdirs per-measure beam-detection memo (HANDOFF §1) --------------------
+    // The collect-phase stem-direction probe (ResolveBeamStemDirections) re-detects, per
+    // keystroke, only the measures whose content-key (intrinsic content + effective meter
+    // + tuplet brackets) moved; the bake — and BeamId numbering — always runs live, so the
+    // resolved model is byte-identical to a from-scratch collect. These nets hold the memo
+    // to byte-identity with a full recompile PLUS liveness (exact hit/miss counts, so the
+    // reuse cannot silently widen into a soundness hole or narrow into a no-op), and they
+    // pin the two guards an equality net alone would let rot: the effective-signature fold
+    // (a mid-piece \time re-beams the UNCHANGED tail measures) and the cross-measure
+    // manual-beam gate (those measures always detect live). The replay-vs-live surface
+    // equivalence lives in BeamDetectionMemoTests.
+
+    private const string BeamedBook = """
+        time 4/4
+        key c major
+        part melody { clef treble }
+        section Main { melody {
+          c8 d e f g f e d |
+          d8 e f g a g f e |
+          e8 f g a b a g f |
+          f8 g a b c b a g |
+          g8 a b c d c b a |
+          a8 b c d e d c b |
+          b8 c d e f e d c |
+          c8 e g e c e g e |
+        } }
+        form main { Main }
+        score main "x" { staff melody }
+        """;
+
+    /// <summary>The memo's basic contract on a pitch edit in a beamed book: the SVG equals
+    /// a full recompile, and EXACTLY the edited measure re-detects — the other seven replay
+    /// from the previous keystroke's detection.</summary>
+    [Fact]
+    public void BeamMemo_PitchEditInABeamedBook_RedetectsOnlyTheEditedMeasure()
+    {
+        var tree = SyntaxTree.Parse(BeamedBook);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(BeamedBook, "e d c b", "e d c a");   // measure index 5
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        Assert.Equal((7, 1), session.LastBeamMemo);
+    }
+
+    /// <summary>
+    /// The EFFECTIVE-signature fold is load-bearing: a mid-piece <c>time</c> edit changes
+    /// how every FOLLOWING measure beams while leaving those measures' own content
+    /// untouched. The meter in effect is folded into each measure's key, so the tail
+    /// re-detects (misses) and only the measures still under the unchanged opening meter
+    /// replay. A key without the fold would replay the tail's old grouping — which the
+    /// byte-identity assertion would catch as a wrong picture.
+    /// </summary>
+    [Fact]
+    public void BeamMemo_MidPieceMeterEdit_RebeamsTheTail_AndMatchesFullRecompile()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              c8 d e f g f e d |
+              time 6/8 e8 f g a g f |
+              f8 g a b a g |
+              g8 a b c b a |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "time 6/8", "time 3/4");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        // Measure 0 (still under 4/4) replays; measure 1 (its own content moved) and
+        // measures 2..3 (content untouched, meter in effect moved) re-detect.
+        Assert.Equal((1, 3), session.LastBeamMemo);
+    }
+
+    /// <summary>
+    /// The cross-measure manual-beam gate: the two measures a <c>[ … | … ]</c> pair spans
+    /// are never served (nor stored) by the memo — their detection depends on each other —
+    /// while the rest of the book still replays. An edit elsewhere must leave the beam's
+    /// picture byte-identical to a full recompile.
+    /// </summary>
+    [Fact]
+    public void BeamMemo_CrossMeasureManualBeam_DetectsLive_AndMatchesFullRecompile()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              c8 d e f g f e d |
+              d8[ e f g a g f e |
+              e8] f g a b a g f |
+              f8 g a b c b a g |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "c b a g", "c b a c");          // measure index 3
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        // Measures 1..2 (the pair's span) are gated out of the counts entirely;
+        // measure 0 replays, measure 3 re-detects.
+        Assert.Equal((1, 1), session.LastBeamMemo);
+    }
+
+    /// <summary>Within-collect dedup: a book of content-identical measures detects ONE
+    /// measure and replays the rest even on the session's very first (full) compile — and
+    /// that compile still equals a memo-free full generate.</summary>
+    [Fact]
+    public void BeamMemo_IdenticalMeasures_DedupWithinOneCollect()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              c8 d e f g f e d |
+              c8 d e f g f e d |
+              c8 d e f g f e d |
+              c8 d e f g f e d |
+              c8 d e f g f e d |
+              c8 d e f g f e d |
+              c8 d e f g f e d |
+              c8 d e f g f e d |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var session = new IncrementalCompiler(SyntaxTree.Parse(src), Opt);
+        Assert.Equal(Full(src), Norm(session.Render()));
+        // One miss: the key folds only what detection READS (AddDetectionInputs), so
+        // measure 0's section label — which detection never looks at — does not split
+        // the key. (Under the earlier MeasureContentKey.Of fold it did: this was (6, 2),
+        // measured — the label sat in the intrinsic key.)
+        Assert.Equal((7, 1), session.LastBeamMemo);
+    }
+
     // --- ⒭ per-system SVG fragment memo (HANDOFF §1 ▶) -----------------------------
     // On every edit the renderer replays the recorded SVG text of each system whose
     // content-key window and drawn geometry are unchanged, re-emitting its data-pos /

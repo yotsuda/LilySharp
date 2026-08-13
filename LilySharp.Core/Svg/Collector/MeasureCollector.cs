@@ -1078,6 +1078,15 @@ public sealed partial class MeasureCollector
     // it across keystrokes.
     /// <summary>Record checkpoints (recorder) or resume from them (resumer).</summary>
     internal CollectWalkProbe? WalkProbe { get; set; }
+
+    /// <summary>⑶ beamdirs: the per-measure beam-DETECTION memo
+    /// <see cref="ResolveBeamStemDirections"/> hands its detector. Null in production
+    /// (lysc, direct SvgGenerator callers) — detection then runs fully, unchanged;
+    /// <c>IncrementalCompiler</c> attaches one instance across edits so a keystroke
+    /// re-detects only the measures the edit changed. The BAKE always runs live,
+    /// so BeamId numbering (and with it the resolved model) is byte-identical to a
+    /// memo-free collect — see <see cref="BeamDetector"/>'s memo remarks.</summary>
+    internal BeamDetectionMemo? BeamMemo { get; set; }
     private int _walkOrdinal;                        // Nth CollectMeasures call of this collect
     private int _invocationInSection;                // ProcessNodes calls within the current section (or the walk, pre-section)
     private int _sectionVisit;                       // ProcessSection entries within the current walk
@@ -1991,7 +2000,8 @@ public sealed partial class MeasureCollector
 
         var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
         var groups = new BeamDetector().DetectBeamGroups(
-            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura), _tupletBrackets.ToImmutableArray());
+            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura), _tupletBrackets.ToImmutableArray(),
+            memo: BeamMemo);
 
         foreach (var group in groups)
         {
