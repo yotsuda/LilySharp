@@ -24,7 +24,7 @@
   <line x1="15.83" y1="22.42" x2="15.83" y2="19.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="17.59" y="22.07" font-size="4.00" data-pos="1280"></text>
   <line x1="18.83" y1="21.92" x2="18.83" y2="18.57" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.02" y="18.57" font-size="4.00"></text>
+  <text class="music" x="22.02" y="18.57" font-size="4.00" data-pos="1292"></text>
   <text class="music" x="39.05" y="21.57" font-size="4.00" data-pos="1307"></text>
   <line x1="40.29" y1="21.42" x2="40.29" y2="18.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="42.06" y="21.07" font-size="4.00" data-pos="1314"></text>

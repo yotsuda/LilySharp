@@ -597,12 +597,39 @@ internal static partial class SharedRenderer
     private static double DrawKeySignatureChange(KeySignatureChangeItem change, double x, double staffY,
         ClefType clef, IDrawingContext gc)
     {
+        var (glyphs, width) = KeyChangeGeometry(change, clef);
+        foreach (var (kind, dx, staffPosition) in glyphs)
+        {
+            double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
+            using (gc.Source(change.SourcePosition))
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x + dx, y, FontSize);
+        }
+        return x + width;
+    }
+
+    /// <summary>
+    /// The glyphs a mid-measure key change engraves — cancellation naturals, then the
+    /// new signature — as (glyph kind, dx from the change's left edge, staff position
+    /// about the middle line — <see cref="KeySignatureGlyphs"/>' frame). Width is the
+    /// full advance, the x the drawer returns. ONE home for the walk: the drawer
+    /// consumes it glyph by glyph, and SkylineBuilder seeds the same ink into the
+    /// inside-staff profile — a KeySignature declares no outside-staff-priority, so the
+    /// outside-staff movers (the section label that sat ON the sharps it could not see,
+    /// reported 2026-08-13) must find it in the profile they clear.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing — KeySignature
+    ///   and KeyCancellation are inside-staff grobs, in the profile like Clef and
+    ///   Accidental.
+    /// </summary>
+    internal static (List<(string Kind, double Dx, int StaffPosition)> Glyphs, double Width)
+        KeyChangeGeometry(KeySignatureChangeItem change, ClefType clef)
+    {
+        var glyphs = new List<(string Kind, double Dx, int StaffPosition)>();
         int prev = change.PreviousKey.Sharps;
         int next = change.NewKey.Sharps;
         double dx = 0;
 
         // A CUSTOM key on either side: cancel every step of the previous
-        // signature that the new one no longer alters, then draw the new
+        // signature that the new one no longer alters, then the new
         // signature (custom or standard) — the simple form of LilyPond's
         // per-step cancellation.
         if (change.PreviousKey.Custom != null || change.NewKey.Custom != null)
@@ -622,9 +649,7 @@ internal static partial class SharedRenderer
                 if (anyNatural)
                     dx += GlyphMetrics.AccidentalNatural.Width
                         + NaturalKernPadding(prevNaturalPos, staffPosition);
-                double ny = (staffY - StaffHeight / 2) + staffPosition / 2.0;
-                using (gc.Source(change.SourcePosition))
-                    gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, ny, FontSize);
+                glyphs.Add(("natural", dx, staffPosition));
                 prevNaturalPos = staffPosition;
                 anyNatural = true;
             }
@@ -634,8 +659,10 @@ internal static partial class SharedRenderer
                 dx += GlyphMetrics.AccidentalNatural.Width
                     + SpacingRules.BreakAlignGap(
                         BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
-            using (gc.Source(change.SourcePosition))
-                return DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc);
+            var customNewSig = KeySignatureGlyphs(change.NewKey, clef, out double customKeyWidth);
+            foreach (var (kind, gdx, pos) in customNewSig)
+                glyphs.Add((kind, dx + gdx, pos));
+            return (glyphs, dx + customKeyWidth);
         }
 
         // Cancellation naturals when the sign flips or count shrinks. Their
@@ -665,9 +692,7 @@ internal static partial class SharedRenderer
                 if (i > 0)
                     dx += GlyphMetrics.AccidentalNatural.Width
                         + NaturalKernPadding(prevNatPos, staffPosition);
-                double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
-                using (gc.Source(change.SourcePosition))
-                    gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, y, FontSize);
+                glyphs.Add(("natural", dx, staffPosition));
                 prevNatPos = staffPosition;
             }
             dx += GlyphMetrics.AccidentalNatural.Width;
@@ -694,9 +719,12 @@ internal static partial class SharedRenderer
                 BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
         }
 
-        return next != 0
-            ? DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc)
-            : x + dx;
+        if (next == 0)
+            return (glyphs, dx);
+        var newSig = KeySignatureGlyphs(change.NewKey, clef, out double keyWidth);
+        foreach (var (kind, gdx, pos) in newSig)
+            glyphs.Add((kind, dx + gdx, pos));
+        return (glyphs, dx + keyWidth);
     }
 
     /// <summary>

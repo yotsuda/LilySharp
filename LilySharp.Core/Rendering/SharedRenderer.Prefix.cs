@@ -451,10 +451,38 @@ internal static partial class SharedRenderer
         KeySignature key, ClefType clef, double x, double staffY, IDrawingContext gc,
         double scale = 1.0)
     {
-        // Non-traditional signature: draw the written (step, alter) pairs in
-        // print order, each on the position the standard tables would give
-        // that step for its sign. LILYPOND-REF: keyAlterations; MusicXML
-        // non-traditional <key-step>/<key-alter> pairs.
+        var glyphs = KeySignatureGlyphs(key, clef, out double width);
+        foreach (var (kind, dx, staffPosition) in glyphs)
+        {
+            double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
+            gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x + dx * scale, y, FontSize);
+        }
+        return x + width * scale;
+    }
+
+    /// <summary>
+    /// The glyphs of an engraved key signature — (glyph kind, dx from the signature's
+    /// left edge, staff position). The position is LilyPond's alteration-positions
+    /// value: half-steps from the MIDDLE line, up-positive — the same frame
+    /// <c>NoteItem.StaffPosition</c> speaks (treble a-major: f♯=4, c♯=1, g♯=5).
+    /// ONE walk, consumed by the drawer and, through <see cref="KeyChangeGeometry"/>,
+    /// by the skyline seed — a second spelling of the positions is the drift §5.2.1②
+    /// names. Advances are unscaled; an ossia consumer multiplies each dx by its
+    /// scale, which commutes with the accumulation (the advances are per-glyph
+    /// constants).
+    /// </summary>
+    /// <remarks>
+    /// Non-traditional signatures draw the written (step, alter) pairs in print
+    /// order, each on the position the standard tables would give that step for its
+    /// sign. LILYPOND-REF: keyAlterations; MusicXML non-traditional
+    /// &lt;key-step&gt;/&lt;key-alter&gt; pairs.
+    /// </remarks>
+    internal static List<(string Kind, double Dx, int StaffPosition)> KeySignatureGlyphs(
+        KeySignature key, ClefType clef, out double width)
+    {
+        var glyphs = new List<(string, double, int)>();
+        double dx = 0;
+
         if (key.Custom is { } custom)
         {
             foreach (var (step, alter) in KeySignature.DecodeCustom(custom))
@@ -467,32 +495,26 @@ internal static partial class SharedRenderer
                     -2 => "doubleFlat",
                     _ => "natural",
                 };
-                int staffPosition = KeySigStaffPositionForStep(clef, alter >= 0, step);
-                double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
-                x += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0) * scale;
+                glyphs.Add((kind, dx, KeySigStaffPositionForStep(clef, alter >= 0, step)));
+                dx += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
             }
-            return x;
+            width = dx;
+            return glyphs;
         }
 
-        if (key.Sharps == 0) return x;
+        if (key.Sharps == 0) { width = 0; return glyphs; }
 
         bool isSharps = key.Sharps > 0;
-        char glyph = isSharps ? EmmentalerGlyphs.AccidentalSharp : EmmentalerGlyphs.AccidentalFlat;
-        int[] positions = isSharps ? KeySigSharpPositions : KeySigFlatPositions;
-        int[] steps = isSharps ? KeySigSharpSteps : KeySigFlatSteps;
-
+        string kindStd = isSharps ? "sharp" : "flat";
         int n = Math.Min(Math.Abs(key.Sharps), 7);
-
-        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps) * scale;
+        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps);
         for (int i = 0; i < n; i++)
         {
-            int staffPosition = KeySigStaffPosition(clef, isSharps, i);
-            double y = (staffY - StaffHeight / 2) + staffPosition / 2.0;
-            gc.DrawGlyph(glyph, x, y, FontSize);
-            x += accidentalWidth;
+            glyphs.Add((kindStd, dx, KeySigStaffPosition(clef, isSharps, i)));
+            dx += accidentalWidth;
         }
-        return x;
+        width = dx;
+        return glyphs;
     }
 
     /// <summary>

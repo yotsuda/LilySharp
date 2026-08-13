@@ -128,6 +128,10 @@ public sealed class LilyPondExporter
     private KeyTonic _tonic = KeyTonic.CMajor;
     private int _homeKeySharps;
     private KeyTonic _homeTonic = KeyTonic.CMajor;
+    // The home key's DECLARATION node (null = default C major): re-emitted verbatim
+    // when a section boundary restores the score key, so mode/spelling come from the
+    // source (see EmitSectionPlay).
+    private KeySignatureSyntax? _homeKeyNode;
 
     /// <summary>
     /// The relative-octave frame, TWICE: where Lily# stands, and where the text this exporter
@@ -226,6 +230,7 @@ public sealed class LilyPondExporter
         // The key a part starts in, before any section header or mid-stream change.
         _homeTonic = ScoreHomeKey.Read(root);
         _homeKeySharps = ScoreHomeKey.Sharps(root);
+        _homeKeyNode = ScoreHomeKey.Declaration(root);
 
         CollectPhrases(root);
 
@@ -736,7 +741,14 @@ public sealed class LilyPondExporter
         {
             foreach (var entry in inOrder)
             {
-                result.AddRange(SectionHeaderMusic(entry.Section));
+                // No form: sections play in declaration order and each is labelled with
+                // its own name (MeasureCollector's form-less arm sets SectionLabel =
+                // SectionName), with the same boundary key-restore a formed play gets.
+                var headerMusic = SectionHeaderMusic(entry.Section).ToList();
+                result.Add(new SectionPlayMarker(
+                    entry.Section.SectionName,
+                    headerMusic.Any(h => h is KeySignatureSyntax)));
+                result.AddRange(headerMusic);
                 result.AddRange(ContainerMusic(entry.Container));
             }
         }
@@ -901,7 +913,12 @@ public sealed class LilyPondExporter
             switch (child)
             {
                 case SectionReferenceSyntax r:
-                    AppendSection(r.SectionName, byName, result);
+                    // The occurrence's display label, the collector's rule verbatim
+                    // (MeasureCollector.ResolveSectionLabel): the quoted label wins
+                    // over the section name, and an EMPTY label suppresses the mark.
+                    AppendSection(r.SectionName, byName, result,
+                        markLabel: (r.DisplayLabel ?? r.SectionName) is { Length: > 0 } lbl
+                            ? lbl : null);
                     break;
 
                 // `~Section` (silent reference) has no red node of its own — it is a generic
@@ -909,7 +926,7 @@ public sealed class LilyPondExporter
                 // music, so the twin carries the same notes as a plain reference.
                 case { Kind: SyntaxKind.SilentSectionReference }
                         when child.GetChild(1) is SyntaxTokenNode silent:
-                    AppendSection(silent.Text, byName, result);
+                    AppendSection(silent.Text, byName, result, markLabel: null);
                     break;
 
                 case FormRepeatBlockSyntax repeat:
@@ -917,9 +934,11 @@ public sealed class LilyPondExporter
                     break;
 
                 // A volta ending OUTSIDE a repeat block is just its section: there is no
-                // \repeat for an \alternative to hang on.
+                // \repeat for an \alternative to hang on. Its label rule mirrors
+                // MeasureCollector.Form.cs (alt.DisplayLabel ?? name).
                 case FormAlternativeSyntax alt:
-                    AppendSection(alt.SectionName.Text, byName, result);
+                    AppendSection(alt.SectionName.Text, byName, result,
+                        markLabel: alt.DisplayLabel ?? alt.SectionName.Text);
                     break;
 
                 // `break` / `nobreak`, navigation marks and `@` marks are music where they
@@ -953,11 +972,22 @@ public sealed class LilyPondExporter
     private void AppendSection(
         string name,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
-        List<SyntaxNode> result)
+        List<SyntaxNode> result,
+        string? markLabel = null,
+        bool asEndingBody = false)
     {
         if (!byName.TryGetValue(name, out var entry))
             return;
-        if (_sectionHeaders.TryGetValue(name, out var headers))
+        _sectionHeaders.TryGetValue(name, out var headers);
+        // The section-PLAY sentinel: the \mark and the score-key restore the collector
+        // engraves at this boundary (see SectionPlayMarker). NOT planted inside a volta
+        // ending body — CreateEnding rebuilds its items as GREENS and the zero-width
+        // marker green has no red of its own there; the ending's mark and restore are a
+        // NAMED remaining hole, one regime narrower than the whole-file one this closes.
+        if (!asEndingBody)
+            result.Add(new SectionPlayMarker(
+                markLabel, headers?.Any(h => h is KeySignatureSyntax) == true));
+        if (headers != null)
             result.AddRange(headers);
         result.AddRange(ContainerMusic(entry.Container));
     }
@@ -1048,7 +1078,7 @@ public sealed class LilyPondExporter
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
     {
         var items = new List<SyntaxNode>();
-        AppendSection(ending.SectionName.Text, byName, items);
+        AppendSection(ending.SectionName.Text, byName, items, asEndingBody: true);
 
         var green = new InternalSyntax.InlineVoltaGreen(
             new InternalSyntax.SyntaxToken(SyntaxKind.OpenBracket, "["),
@@ -1232,6 +1262,7 @@ public sealed class LilyPondExporter
         CueExpressionSyntax cue => EmitCue(cue),
         RepeatExpressionSyntax rep => EmitRepeat(rep),
         MusicMarkSyntax mk => EmitMark(mk),
+        SectionPlayMarker sp => EmitSectionPlay(sp),
         NavigationMarkSyntax nav => EmitNavMark(nav),
         StringNumberAnnotationSyntax sn => sn.StringNumberToken.Text,
         ArticulationSyntax a => MapArticulation(a),
@@ -1701,6 +1732,38 @@ public sealed class LilyPondExporter
             "stemdown" => false,
             _ => null,
         };
+
+    /// <summary>
+    /// One section PLAY: the boxed section label and — when the running key differs
+    /// from the score's home key and no section-header key follows — the <c>\key</c>
+    /// that restores it. The two events the twin used to lose silently (the exporter's
+    /// 7th and 8th silent-drop holes; reported 2026-08-13,
+    /// scratch/ベースタブLy/Untitled-3.lys — the twin kept the modulated key to the end
+    /// and carried no marks). Mirrors MeasureCollector's boundary
+    /// (Form.cs: header key wins over the score-key revert, else-if), reading the same
+    /// running-key state EmitKey advances; the restore re-emits the home DECLARATION
+    /// node so mode/spelling come from the source.
+    /// </summary>
+    private string EmitSectionPlay(SectionPlayMarker sp)
+    {
+        var parts = new List<string>(2);
+        if (!sp.HasHeaderKey && (_keySharps != _homeKeySharps || _tonic != _homeTonic))
+        {
+            if (_homeKeyNode != null)
+            {
+                parts.Add(EmitKey(_homeKeyNode)); // EmitKey advances _keySharps/_tonic
+            }
+            else
+            {
+                parts.Add("\\key c \\major");
+                _keySharps = 0;
+                _tonic = KeyTonic.CMajor;
+            }
+        }
+        if (sp.MarkLabel is { Length: > 0 } label)
+            parts.Add("\\mark \\markup \\box \"" + Escape(label) + "\"");
+        return string.Join(" ", parts);
+    }
 
     // `@mark("Intro")` → a rehearsal mark. MarkName joins the tokens with '.',
     // so the label is what follows "mark." with the quotes stripped.
@@ -2797,4 +2860,38 @@ public sealed class LilyPondExporter
     }
 
     private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+}
+
+/// <summary>
+/// Zero-width sentinel the form expansion plants at each section PLAY — the twin's
+/// section boundary. Carries what the collector decides at the same spot
+/// (MeasureCollector's reference arms): the occurrence's display label (null =
+/// silent/suppressed — no mark) and whether a section-header key follows (which
+/// overrides the score-key restore, the collector's else-if).
+/// <c>LilyPondExporter.EmitSectionPlay</c> is the one consumer. Same shape as the
+/// collector's <c>RelativeResetMarker</c>: a synthetic red over a shared
+/// zero-width green, so it can travel a <c>List&lt;SyntaxNode&gt;</c> stream.
+/// </summary>
+internal sealed class SectionPlayMarker : SyntaxNode
+{
+    /// <summary>The boxed label to engrave, or null for no mark (a silent
+    /// <c>~Section</c> play, or an occurrence label written <c>""</c>).</summary>
+    public string? MarkLabel { get; }
+
+    /// <summary>True when the play's header registry carries a key — the boundary
+    /// then takes THAT key and the score-key restore stays silent.</summary>
+    public bool HasHeaderKey { get; }
+
+    public SectionPlayMarker(string? markLabel, bool hasHeaderKey)
+        : base(MarkerGreen.Shared, parent: null, position: 0)
+    {
+        MarkLabel = markLabel;
+        HasHeaderKey = hasHeaderKey;
+    }
+
+    private sealed class MarkerGreen : InternalSyntax.GreenNode
+    {
+        public static readonly MarkerGreen Shared = new();
+        private MarkerGreen() : base(SyntaxKind.None, fullWidth: 0) { }
+    }
 }

@@ -222,7 +222,9 @@ internal static partial class SharedRenderer
     /// <summary>Total horizontal extent of a barline glyph (for right-edge alignment).</summary>
     // The drawn extent and the reserved spacing width are the same quantity;
     // both come from EngravingDefaults.BarlineDrawnWidth so they cannot drift.
-    private static double GetVisualBarlineWidth(BarlineType type)
+    // internal: SkylineBuilder's key-change seed mirrors the opening-change anchor
+    // (EnumerateStaffItems), which starts past the measure's start barline.
+    internal static double GetVisualBarlineWidth(BarlineType type)
         => EngravingDefaults.BarlineDrawnWidth(type);
 
 }

@@ -359,7 +359,9 @@ internal static partial class SharedRenderer
     /// accidental pushes the column further left). Passing anything narrower would let the
     /// drawn position disagree with the reserved space.
     /// </remarks>
-    private static List<MusicItem> ChangeColumnItems(Measure measure, int itemIdx)
+    // internal: SkylineBuilder's key-change seed reads the same column-run so its
+    // hung-back x cannot drift from the drawn one.
+    internal static List<MusicItem> ChangeColumnItems(Measure measure, int itemIdx)
     {
         int start = itemIdx;
         while (start > 0 && IsChangeItem(measure.Items[start - 1]))

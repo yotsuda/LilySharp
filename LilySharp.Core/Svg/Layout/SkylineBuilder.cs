@@ -584,12 +584,100 @@ internal sealed class SkylineBuilder
                         ? rd
                         : null;
 
-                    AddMusicItemToSkylines(item, itemX, staffMiddleUp, StaffSize.Of(staff),
+                    // A mid-measure key change shares the NEXT note's timing column, but it
+                    // is DRAWN at the change column — hung back from the note, or anchored
+                    // just after the barline when it opens the measure (the renderer's
+                    // EnumerateStaffItems change branches). Re-anchor the seed the same way,
+                    // through the same SpacingRules/ChangeColumnItems homes, so the seeded
+                    // ink stands where the glyphs print — seeded at the raw column x it sat
+                    // a whole spring right of the sharps and the section label never met it.
+                    double seedX = item is KeySignatureChangeItem
+                        ? KeyChangeSeedX(measure, itemIndex, measureLayout, itemX,
+                            firstMeasureOfLine: measureLayouts[0].MeasureIndex)
+                        : itemX;
+                    if (double.IsNaN(seedX))
+                        continue; // a change folded into the line-start prefix (not drawn here)
+
+                    AddMusicItemToSkylines(item, seedX, staffMiddleUp, StaffSize.Of(staff),
                         upSkyline, downSkyline, forcedStemUp, reserveStem, restShiftUp,
-                        restDotRel);
+                        restDotRel, staff.Clef);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// The x a mid-measure key change is DRAWN at — the renderer's change-column rules
+    /// (SharedRenderer.EnumerateStaffItems), re-anchored from the raw timing-column
+    /// <paramref name="itemX"/>: a change OPENING the measure anchors just after the
+    /// barline (sequenced past earlier opening changes); a mid-measure one hangs back
+    /// from the note column by the reserved gap. NaN = the change opens the LINE and is
+    /// folded into the system-start prefix (not drawn as an item; the prefix key
+    /// signature is not seeded — the same score-wide break-align x SeedClef's remark
+    /// already names as out of this builder's reach).
+    /// </summary>
+    /// <remarks>
+    /// The gaps and the column-run come from the SAME homes the renderer reads
+    /// (<see cref="SpacingRules.MidMeasureChangeRightGap"/> /
+    /// <see cref="SpacingRules.MidMeasureChangeOffsetWithin"/> /
+    /// <c>SharedRenderer.ChangeColumnItems</c>), so the seed cannot drift from the drawn
+    /// glyphs. Known simplification: the item-slot (single-staff) path already carries
+    /// the change's own X in <paramref name="itemX"/> and is returned unchanged — only
+    /// the timing-column path re-anchors, mirroring the renderer's
+    /// <c>useColumnTiming</c> guard via <c>MeasureLayout.Columns</c>.
+    /// </remarks>
+    private static double KeyChangeSeedX(
+        Measure measure, int itemIndex, MeasureLayout ml, double itemX, int firstMeasureOfLine)
+    {
+        var timing = Fraction.Zero;
+        for (int i = 0; i < itemIndex; i++)
+            timing += measure.Items[i].Duration;
+
+        bool columnPath = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
+        if (!columnPath)
+            return itemX; // item-slot path: the slot x IS the change's own x
+
+        if (timing == Fraction.Zero)
+        {
+            // A change folded into a later line's prefix is not drawn here.
+            if (ml.MeasureIndex == firstMeasureOfLine && ml.MeasureIndex > 0)
+                return double.NaN;
+            double afterBar = measure.StartBarline != BarlineType.None
+                ? Rendering.SharedRenderer.GetVisualBarlineWidth(measure.StartBarline)
+                : 0;
+            double x = ml.X + afterBar;
+            // Sequence past earlier opening changes, the renderer's openChangeX walk.
+            bool first = true;
+            for (int i = 0; i < itemIndex; i++)
+            {
+                var earlier = measure.Items[i];
+                if (earlier is not (ClefChangeItem or KeySignatureChangeItem
+                    or TimeSignatureChangeItem))
+                    continue;
+                if (first)
+                {
+                    x += SpacingRules.GetBarlineToItemSpace(earlier);
+                    first = false;
+                }
+                var next = i + 1 < measure.Items.Length
+                    && measure.Items[i + 1] is ClefChangeItem or KeySignatureChangeItem
+                        or TimeSignatureChangeItem
+                    ? measure.Items[i + 1] : null;
+                x += SpacingRules.ChangeColumnGlyphAdvance(earlier, next);
+            }
+            if (first)
+                x += SpacingRules.GetBarlineToItemSpace(measure.Items[itemIndex]);
+            return x;
+        }
+
+        var columnItems = Rendering.SharedRenderer.ChangeColumnItems(measure, itemIndex);
+        double hung = itemX;
+        hung -= ml.LooseChangeHangs != null
+                && ml.LooseChangeHangs.TryGetValue(timing, out var hang)
+            ? hang
+            : SpacingRules.MidMeasureChangeRightGap(columnItems);
+        hung += SpacingRules.MidMeasureChangeOffsetWithin(columnItems, measure.Items[itemIndex]);
+        return hung;
     }
 
     /// <summary>
@@ -1580,10 +1668,44 @@ internal sealed class SkylineBuilder
         bool? forcedStemUp = null,
         bool reserveStem = true,
         double restShiftUp = 0.0,
-        int? restDotRel = null)
+        int? restDotRel = null,
+        ClefType clef = ClefType.Treble)
     {
         switch (item)
         {
+            // A mid-measure key change is inside-staff ink like a Clef or an Accidental —
+            // no outside-staff-priority — so the outside-staff movers must see it in the
+            // profile they clear: the section label of the report (2026-08-13,
+            // scratch/ベースタブLy/Untitled-3.lys) printed straight ON the new signature's
+            // sharps because they were in no skyline. LilyPond lifts the mark over them
+            // (the twin's B mark rides 0.93 higher than its A). Geometry is the DRAWER'S
+            // OWN walk (SharedRenderer.KeyChangeGeometry — one home, not a second
+            // spelling); its StaffPosition is LilyPond's alteration-positions value —
+            // half-steps from the MIDDLE line, up-positive, the same frame
+            // NoteItem.StaffPosition speaks (treble a-major: f♯=4, c♯=1, g♯=5) — so the
+            // glyph line is staffMiddle + position/2, exactly as a note accidental's.
+            // ⚠️ A first cut read the drawer's y-expression instead of
+            // KeySigStaffPosition's output and invented an "(8 − position)" flip; it was
+            // right ONLY at position 4, seeded the c♯ 3 ss high, and the section label
+            // cleared thin air 1.2 ss above the real sharps (the follow-up report).
+            // ⚠️ `clef` is the LINE's clef: a clef change earlier in the same line would
+            // shift the seeded positions — the same running-state approximation SeedClef
+            // already documents for its X anchor.
+            // LILYPOND-REF: scm/output-lib.scm:1056 key-signature-interface::alteration-positions
+            //   — staff positions about the middle line.
+            // LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing —
+            //   KeySignature/KeyCancellation carry no outside-staff-priority.
+            case KeySignatureChangeItem keyChange when clef != ClefType.Tab:
+                foreach (var (kind, dx, pos) in
+                    Rendering.SharedRenderer.KeyChangeGeometry(keyChange, clef).Glyphs)
+                {
+                    double originX = x + size.Span(dx);
+                    double glyphY = staffMiddleUp + size.Span(pos * 0.5);
+                    MergeAccidentalInk(kind,
+                        originX + size.Ink(GlyphMetrics.GetAccidentalSkylineBBox(kind)).Left,
+                        glyphY, size, upSkyline, downSkyline);
+                }
+                break;
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleUp, size,
                     upSkyline, downSkyline, forcedStemUp, reserveStem);

@@ -77,6 +77,21 @@ public static class ScoreHomeKey
         return sharps;
     }
 
+    /// <summary>
+    /// The home key's DECLARATION node, or null when the file writes none (C major
+    /// by default). Same walk as <see cref="Read"/> — the LilyPond exporter re-emits
+    /// this node verbatim when a section boundary restores the score key, so mode
+    /// and spelling come from the source instead of a reverse sharps→tonic table.
+    /// </summary>
+    public static KeySignatureSyntax? Declaration(SyntaxNode root)
+    {
+        KeySignatureSyntax? home = null;
+        foreach (var key in root.DescendantNodes().OfType<KeySignatureSyntax>())
+            if (!IsInsideMusicContent(key))
+                home = key;
+        return home;
+    }
+
     // A key inside a section/phrase/part is a modulation, not the score home.
     // Mirrors MeasureCollector / MusicXmlExporter IsInsideMusicContent.
     private static bool IsInsideMusicContent(SyntaxNode node)

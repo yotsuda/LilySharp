@@ -63,85 +63,65 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第155セッション＝**3 便＝⑴ ⑵′ 後半＝flat list の lazy 化（採用 red を live 窓の外で
-作らない・`9bd5002f`）⑵ その Release 壁時計 A/B（静かな窓・**不動＝帯内**・下の第2便）
-⑶ ⑷ splice 適用相の再測＝**残余 ~23 ms は消滅していた（stale・下の第3便）**。
-第153 の設計メモどおり list を (green, position) で持ち、red 化は消費点だけ:
-- **装置**: `GreenSite`（green＋絶対 full-span start＋遅延 spine `GreenSiteSpine`・
-  `SyntaxNode.GreenSitesLazy(rule)`）。gather は `MusicSitesLazy`（候補集合・順序・container
-  境界は `MusicSites` と同一）が red 無しで flat list を積み、**red を作るのは
-  ProcessMusicNode・attached-mark peek・変数参照展開の 3 消費点だけ**。checkpoint 採取・
-  splice 照準・resume 番地再検証は `site.Position`（== `FullSpan.Start`・red 不要）を読む。
-  型フィルタは kind 化（`IsCollectableMusicKind`＝候補 kind − VariableReference・
-  kind↔型は `CreateRed` で 1:1）。
-- ★★ **相続がまた起きた（第152 remark の 3 例目）**: gather を lazy 化しただけでは plain の
-  red は 1 個も動かなかった（9,075 不変・`redbench-155-B.txt`）——**canonical bars の
-  `WalkBars` が全書 first-touch を相続していた**（スタックサンプラで plain の ~99%）。
-  **WalkBars も green 化**（kind＋bar token text だけの純関数。旧 red 綴りは
-  `CountBarsInScopeRed` として網のオラクル残置）。**2 つで 1 commit**＝前半単独では買いゼロ。
-- **実測（決定的カウンタ＝CreateRed 総数/打鍵・Debug・A=`11e70b5f` を同計器の worktree
-  `LilySharp-redbase-11e7`（残置・計器は revert 済み）で再測＝redbench-153 の B と完全一致・
-  生データ `scratch\redbench-155.txt`・全巡同値）**:
-
-  | 冊 | A（編集/復帰） | B（編集/復帰） |
-  |---|---|---|
-  | plain1k | 9,075/9,042 | **83/41** |
-  | fingbeam1k | 57,207/57,031 | **263/30** |
-  | v2bow1k | 22,555/4,054 | **18,552/47** |
-
-  **plain/fingbeam は −99%＝この切片の設計床**（残りは live 窓の消費＋RenderSpecParser）。
-  **v2bow 編集面の残り 18.5k ＝第2声部再構築**（`BuildExtraVoiceTracks` が `<< \\ >>` の
-  追加声部を毎打鍵 live で歩き直す）——**別の器のまま**（次の一手の ⑵′ 項）。
-- **網（新規 2 枚）**: `MusicSitesLazy_MatchesMaterializedSites`（全 fixture×全 container×
-  両モードで**同一インスタンス・red 無し Position＝実 FullSpan.Start・kind フィルタ≡型
-  フィルタ**）＋`CanonicalBarsEquivalence`（green の小節数 ≡ 旧 red 綴り）。**陽性対照 3 種
-  （revert 済み）**: kind 表から Note を落とす／position fold を Width にする／WalkBars から
-  Chord を落とす→各網 fail。
-- **3 点証明（§5.1・commit message に記載）**: **コーパス rerender 絵が動いた本 0 / 82**・
-  **台帳 511 点・ss 非ゼロ 94・総和 3.609962441・count 点 106 / 非ゼロ 2（§0 の数え方で
-  再測・不動）**・**suite 4425 passed / 0 failed / 4 skipped（+2＝網）・snapshot 0 動**。
-- ★★ **第2便＝Release の壁時計 A/B（静かな窓・ユーザーに一声かけて取得・A=`11e70b5f`
-  worktree `LilySharp-redbase-11e7`・残置／B=`9bd5002f`・`--no-build` 交互 4 巡・両側
-  gateMoved True / reusedLayout False＝regime ⑶・生データ
-  `scratch\editbench-155-{A1..B4}.txt`＋`-summary.txt`）＝壁時計は不動**:
-
-  | 冊 | 床 A→B（各 4 巡の最小） | Δ |
-  |---|---|---|
-  | plain1k | 162.8→167.2 | +4.4（帯内） |
-  | fingbeam1k | 369.6→374.1 | +4.5（帯内） |
-  | v2bow1k | 261.8→260.1 | −1.7（帯内） |
-
-  巡ごとの帯は全冊で交錯（plain は A4=174.3 が B 全巡より上・v2bow は完全に混在）＝
-  **買いも税も帯級（§7.9 の 5〜40ms 分散内）で主張できない**。
-  ★★★ **発見: red 数はこの床では ms の代理にならない**——第153 の −45.7 ms
-  （234k→57k）の支配項は red 生成そのものではなく、**red walk に同乗していたもの
-  （per-descendant 祖先 guard 鎖・iterator）**だった。残り 57k/9k の生成を −99% しても
-  Release 壁時計は帯以下。⇒ **v2bow の 18.5k を red 数を理由に追わないこと**——第2声部
-  memo の値段は「省ける意味処理の ms」で測ってから（red では見込みを立てない）。
-  この切片の正当化は機構側（バイト同一の証明・アロケーション −99%・checkpointed walk の
-  設計床）で、ms ではない。
-- ★★ **第3便＝⑷ splice 適用相の再測（計測のみ・エンジン変更ゼロ・SpliceClock＝
-  `TrySpliceSuffix` の相ブラケット・計器と harness は revert 済み・Release・同じ静かな窓・
-  warmup 2＋交互 14 巡・生データ `scratch\splicebench-155.txt`）＝**
-  **第151 の「残余 fingbeam ~23 ms」は消滅していた（stale）**:
-
-  | 行（fingbeam1k 編集面の床） | ms |
-  |---|---|
-  | ok.total（TrySpliceSuffix 全体・試行 6 回ぶん） | **6.89** |
-  | ok.parseagree | 3.47 |
-  | ok.copy.measures | 1.86 |
-  | ok.copy.tables | 0.65 |
-  | ok.commit.append（**側表 12,000 entry の採用 append**） | **0.22** |
-  | その他（gate/statematch/canon/shift/commit） | ~0.4 |
-
-  内訳は total でほぼ閉じる（未説明 ~0.5 ms）＝**第151 が疑った「側表の per-entry append」は
-  無罪**。第152〜155 の修理（parseagree の green 直歩き 10.4→3.5・defs/beamdirs/walk）が
-  残余の支配項を先に食っていたと読む。plain は ok.total 2.10・v2bow 1.58／復帰面 0.31。
-  試行回数も健全（plain 3・fingbeam 6・v2bow 1／打鍵・decline は overlap gate 0.02 ms）。
-  ⇒ **⑷ は修理対象から外す＝第151 の collect 分割リスト ⑴〜⑸ は完走**。
-- **触らなかったもの（意図的）**: per-voice 経路の red 削減そのもの（全 site が live 消費
-  されるので lazy 単独の買いはゼロ＝第2声部の打鍵またぎ memo とセットで別切片・上の 18.5k）・
-  `MusicSites`（red 綴り）は網の第2オラクルとして残置。
+最終更新 第156セッション＝**残債返済を中断し、ユーザー報告のリリースブロッカー 6 件を修理した便**
+（perf 残債は 1 行も触っていない——次の一手の順位は第155 のまま生きている）。全件が
+「起票再現 → 修理 → 網＋陽性対照（revert 済み）→ 3 点証明 → commit」の型。suite は
+4425 → **4448 passed / 0 failed / 4 skipped（+23＝網）**・**コーパス rerender 0/82 と台帳
+（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）は 6 commit とも不動**・
+未 push 21。snapshot が動いたのは ⑷⑹ の keysig 族だけ（ユーザー承認の再ベース・下記）。
+- **⑴ `0944984f` 小節途中の voice span**: `c4 voice { e } { g' }` の第2声部が小節頭に落ちて
+  c と g' が並んでいた。`_parallelSpans` に **StartOffset（span 開始時の小節内経過）** を追加し、
+  extra voice の walk 冒頭に spacer（`IsSpacer`・PartCombiner の onset 詰めと同じ装置）を種付け。
+  tuple は checkpoint 記録・splice 状態照合・spanTail 再解決まで貫通（offset 不一致=splice 辞退）。
+  LP twin と交差声部シフト 0.4434 まで一致。網 `VoiceSpanOnsetTests` 4 本。
+- **⑵ `494b9270` マーカー run 先読み**: `c8[( c)]` で偽 LYS4010＋スラー消失。パーサは無罪
+  （post-event は順不同で順序保存）——collector の `PeekMarkers` が **1 ノード先読み**で
+  `[` の陰の `(` と、**`)` の陰の `]`（手動梁が閉じない同根の潜在欠陥）**を落としていた。
+  後続マーカー run 全体の畳み込みへ（3 呼び出し元とも。top-level walk は**最遠 peek ノード**を
+  checkpoint read 透かしに fold——span 昇順なので run 全体を覆う）。`c( d)( e)` の閉→開も解禁。
+  網 `MarkerRunLookaheadTests` 6 本。
+- **⑶ `7a69bc30` repeat 本体の検証枠**: `c8 …| repeat percent 4 { a a … }` の裸音相続で
+  偽 LYS2002（duration 2）。`ValidateNode` の**独立ブロック再帰（まっさらな 1/4 既定）が
+  collector と非整合**だった。voice-span の前例どおり `SplitIntoMeasures` が repeat を
+  (小節,項目) 番地で記録し、**開いた時点の枠（走行既定音価・経過拍・その小節の拍子）で本体を
+  検証**・既定音価は本体越しに継承（repeat 後の裸音は本体内から相続）。`MeasureModel.Flatten`
+  のターン毎 quarter リセットも削除（DurationResetMarker の契約は phrase 専用に訂正）。
+  1 パスで全ターンを覆う論証（ターン 2..N の入口枠＝ターン 1 の出口枠＝自身の出口枠）は remark。
+  網 `RepeatBodyMeasureValidationTests` 6 本（本物の欠陥 2 種が警告し続けることも主張）。
+- **⑷ `890732a5` 調号が skyline に参加**: セクションラベルが調号変更のシャープ／ナチュラルの
+  真上に印字（**§2A「seed に居ない参加者」族の新例＝調号**。dots 第107 に続く 1 本）。描画側から
+  **`KeySignatureGlyphs` / `KeyChangeGeometry` を単一の家に抽出**し、描画と seed が同じ walk を
+  消費（`MergeAccidentalInk` の既存装置で inside-staff profile へ）。**seed の x は walk の
+  itemX では駄目**——⚠️ **change item の walk itemX（列 x）と描画 x（change-column に hang）は
+  別物**。`KeyChangeSeedX` がレンダラの 3 分岐（開小節アンカー／hung-back／loose hang）を同じ家
+  （`SpacingRules.*`・`ChangeColumnItems`・`GetVisualBarlineWidth`＝internal 化）経由で再現。
+  行頭 prefix の調号は未 seed（SeedClef の remark が名指す「builder に届かない break-align X」
+  と同じ残件＝▶ ⒮⑴）。keysig 族 snapshot 8 冊を承認再ベース。網 `SectionMarkOverKeyChangeTests`。
+- **⑸ `31f7a78e` 双子の黙って落とす穴 7・8 号**: exporter が**セクションマーク**と
+  **セクション末の score 調復帰**を出さず、LP twin がリプライズごとに別の紙になっていた
+  （B の `key a major` が最後まで残る）。form 展開が **`SectionPlayMarker`**（RelativeResetMarker
+  型の零幅 sentinel）を各演奏点に植え、`EmitSectionPlay` が `\mark \markup \box "…"` と、
+  header key が続かないときだけ **home 宣言ノード再出力**の `\key`（`ScoreHomeKey.Declaration`
+  新設＝旋法・綴りが源から出る）を書く。ラベル規則は collector の `ResolveSectionLabel` を鏡写し
+  （引用ラベル優先・`""` 抑止・`~` 無音）。**双子 217 冊の before/after 全数比較（第62手順）＝
+  変化 205 冊・トークン単位で `\mark`/`\key` の挿入のみ**を機械検査＋例外 2 件目視で証明・
+  LP スポット 4 冊コンパイル緑。残る穴 1 regime: volta ending 本体（▶ ⒮⑵）。
+  網 `LilyPondExporterSectionPlayTests` 5 本。
+- **⑹ `9407dacc` ⑷ の seed の縦枠は発明だった**（追撃報告「マークが高すぎる」）: 変換
+  `(8 − position)` は **`KeySigStaffPosition` の出力を読まずに描画式から推測した発明**で、
+  pos=4 だけ偶然一致・c♯ を 3 ss 高く seed→ラベルが幻インクの上に立ち LP 比 +1.2 ss 浮いた。
+  実枠は **LP alteration-positions＝中央線基準・上向き＝`NoteItem.StaffPosition` と同じ**
+  （treble A長調: f♯=4, c♯=1, g♯=5）。特定は stacker の support エントリのダンプ——A/A2 は
+  束縛インクに**厳密に**閉じ、B だけ誰も描いていない場所に束縛されていた。修理後の箱下端は
+  A 2.26 / B 1.96 / A2 2.49（LP `\sectionLabel` 2.43 / 2.04 / 2.80・**並び A≥B も一致**・
+  B は束縛シャープ+0.46 ちょうど）。⚠️ **「A と B の高さが揃わない」は LP も同じ**（skyline
+  配置＝下のインク次第）——揃える方向に直さないこと。網に**「立つ」側の主張**（bottom ≥
+  束縛インク − padding − slack）を追加——**避けるだけの主張はこの欠陥の間ずっと緑だった**。
+  keysig snapshot 3 冊を縮む向きで再ベース。
+- **裁定 2 件（ユーザー基準「このセッションが有利なら着手・不利なら禁止」）**: ⑸ は着手
+  （twin と意味論の文脈が温かい・エンジン出力不変）。**行頭 prefix 調号 seed と小節途中 repeat の
+  偽 nudge は次セッション送り**（▶ ⒮ に理由ごと記載）。
+- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（このセッション開始時から。触っていない）。
 
 ---
 
@@ -211,6 +191,19 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 **どちらに落ちたかは `LastEditSkippedLineBreak` が言う——ラベルに書く前に必ず読むこと**
 （実編集の測定は `EditKeystrokeBench` が gateMoved / reusedLayout を行に印字する）。
 
+▶ ★★ **⒮ 第156 の残件 3 つ**（全部フィデリティ・perf 順位とは独立。⑵⑶ は着手判断済み＝
+  「次セッションの方が有利」の裁定つき）:
+  ⑴ **行頭 prefix 調号＋中間 clef/time 変更グリフの skyline seed**（§2A 同族の続き。
+  中間 clef/time は第156⑷ の `KeyChangeSeedX` と同じ再アンカーで載る形。**prefix の x は
+  SeedClef の remark が名指す「builder に届かない break-align X」＝配管設計から**。全書の
+  行頭に効くので snapshot/コーパスの動く範囲が広い＝**承認ゲート付き単独セッション**）
+  ⑵ **volta ending 本体のマークと調復帰**（`CreateEnding` が items を green 再構築するため
+  `SectionPlayMarker`（零幅・green 無し）が載らない。exporter の残穴＝1 regime）
+  ⑶ **小節途中から始まる repeat の偽 underfull nudge**（`c2 repeat percent 2 { d4 d } |`・
+  **未再現＝起票再現から**。⚠️ **安直な `ItemDuration=本体×回数` は偽 overfull を作る**——
+  中身は小節境界をまたいで流れ込むので、正しい形は検証側小節分割への**拍子 auto-complete の
+  導入**（`MeasureValidator.SplitIntoMeasures` と `MeasureModel.Split` の両方＝§2A の主題に
+  触れる）。focused session 向き）
 ▶ ★★★ **⒭ collect（と render）の増分化＝打鍵の首位**（第143 起票・**第144 が第1切片、
   第145 が測定第2弾＋走査 3 site、第146 が checkpoint/resume 装置（Δ=0）＋完全性網を返済**）。
   ~~⑴ spec 探索の全木走査~~ — **第144 で閉じた**（`14605044`・§1。第143 の collect 行は
@@ -379,65 +372,87 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 
 ---
 
-## 以下は第154セッションの経緯
+## 以下は第155セッションの経緯
 
-最終更新 第154セッション＝**2 便＝⑶ beamdirs＝検出の per-measure content-key memo 化
-（`322543ef`）＋鍵の値段の修理（`1133d07d`）**。第153 の名指し 2 案（検出の範囲化／
-打鍵またぎの content-key 再利用）の**後者**。collect 相の `ResolveBeamStemDirections` は
-毎打鍵、splice 後の全小節（採用小節は resolve 前の写し）を `BeamDetector` で
-**全曲再検出**していた——その detect（第153 床 plain 6.24 / fingbeam 18.17 ms）を、
-小節単位の memo が前打鍵から返す:
-- **装置**: `BeamDetectionMemo`（世代 swap・`IncrementalCompiler` が打鍵をまたいで 1 個保持・
-  collect 内でも現世代が同内容小節を dedup＝初回フル compile でも効く）。**鍵＝⑴
-  検出の read set の手書き fold（`AddDetectionInputs`・下の第2便）⑵ その小節で有効な拍子
-  （live loop と `BuildTupletSpans` が辿るのと同じ effective-sig 連鎖）⑶ その小節番地の
-  tuplet bracket 内容（side-table 除外 fold）**＝単一小節検出の入力全集合（auto beam は
-  小節線を越えない）。**非局所 2 regime は鍵でなくゲート**: 小節またぎ手動梁（`[ … | … ]`）が
-  触る小節は常に live 検出・voice fan 形の呼び出し（voiceIndex≠0 / forceStemUpAt）は memo を
-  素通り。lysc／直呼び SvgGenerator は memo null＝フル compile 経路は行単位で不変。
-- ★ **BeamId は memo に入れない**——bake（stamp/tip/rest/採番）は常に live で走り、群の順序
-  （cross-measure 先・小節順・小節内は手動→自動）を memo が保存するので、**採番列ごと
-  resolved model は memo 無し collect とバイト同一**。stored group の `Member.Item` は
-  旧打鍵の参照だが bake は live 小節を `ItemIndex` で読む＝不読（remark 明記）。
-- **網（新規 7 本）**: `BeamDetectionMemoTests`＝**replay ≡ live（bake 可視面・位置シフト
-  越し）＋液性（hits＝小節数−gate 2）＋fan 素通りカウンタ**；`IncrementalCompilerTests` の
-  `BeamMemo_*` 4 本＝full recompile とのバイト同一を**正確な hit/miss** で主張: 音高編集
-  (7,1)・**mid-piece `time` 編集が内容不変の尾を再検出 (1,3)＝effective-sig fold が荷重**・
-  小節またぎ手動梁は live (1,1)・collect 内 dedup (7,1)（第2便で鍵が read set fold に
-  なった後の数。旧 intrinsic 鍵では (6,2)＝m0 の section label が鍵を割っていた——実測。
-  「最終小節の barline」という最初の推測は**外れていた**）。**陽性対照 2 種（revert 済み）**:
-  鍵から effective-sig を落とす→meter 網 fail／intrinsic を落とす→音高網 fail。
+最終更新 第155セッション＝**3 便＝⑴ ⑵′ 後半＝flat list の lazy 化（採用 red を live 窓の外で
+作らない・`9bd5002f`）⑵ その Release 壁時計 A/B（静かな窓・**不動＝帯内**・下の第2便）
+⑶ ⑷ splice 適用相の再測＝**残余 ~23 ms は消滅していた（stale・下の第3便）**。
+第153 の設計メモどおり list を (green, position) で持ち、red 化は消費点だけ:
+- **装置**: `GreenSite`（green＋絶対 full-span start＋遅延 spine `GreenSiteSpine`・
+  `SyntaxNode.GreenSitesLazy(rule)`）。gather は `MusicSitesLazy`（候補集合・順序・container
+  境界は `MusicSites` と同一）が red 無しで flat list を積み、**red を作るのは
+  ProcessMusicNode・attached-mark peek・変数参照展開の 3 消費点だけ**。checkpoint 採取・
+  splice 照準・resume 番地再検証は `site.Position`（== `FullSpan.Start`・red 不要）を読む。
+  型フィルタは kind 化（`IsCollectableMusicKind`＝候補 kind − VariableReference・
+  kind↔型は `CreateRed` で 1:1）。
+- ★★ **相続がまた起きた（第152 remark の 3 例目）**: gather を lazy 化しただけでは plain の
+  red は 1 個も動かなかった（9,075 不変・`redbench-155-B.txt`）——**canonical bars の
+  `WalkBars` が全書 first-touch を相続していた**（スタックサンプラで plain の ~99%）。
+  **WalkBars も green 化**（kind＋bar token text だけの純関数。旧 red 綴りは
+  `CountBarsInScopeRed` として網のオラクル残置）。**2 つで 1 commit**＝前半単独では買いゼロ。
+- **実測（決定的カウンタ＝CreateRed 総数/打鍵・Debug・A=`11e70b5f` を同計器の worktree
+  `LilySharp-redbase-11e7`（残置・計器は revert 済み）で再測＝redbench-153 の B と完全一致・
+  生データ `scratch\redbench-155.txt`・全巡同値）**:
+
+  | 冊 | A（編集/復帰） | B（編集/復帰） |
+  |---|---|---|
+  | plain1k | 9,075/9,042 | **83/41** |
+  | fingbeam1k | 57,207/57,031 | **263/30** |
+  | v2bow1k | 22,555/4,054 | **18,552/47** |
+
+  **plain/fingbeam は −99%＝この切片の設計床**（残りは live 窓の消費＋RenderSpecParser）。
+  **v2bow 編集面の残り 18.5k ＝第2声部再構築**（`BuildExtraVoiceTracks` が `<< \\ >>` の
+  追加声部を毎打鍵 live で歩き直す）——**別の器のまま**（次の一手の ⑵′ 項）。
+- **網（新規 2 枚）**: `MusicSitesLazy_MatchesMaterializedSites`（全 fixture×全 container×
+  両モードで**同一インスタンス・red 無し Position＝実 FullSpan.Start・kind フィルタ≡型
+  フィルタ**）＋`CanonicalBarsEquivalence`（green の小節数 ≡ 旧 red 綴り）。**陽性対照 3 種
+  （revert 済み）**: kind 表から Note を落とす／position fold を Width にする／WalkBars から
+  Chord を落とす→各網 fail。
 - **3 点証明（§5.1・commit message に記載）**: **コーパス rerender 絵が動いた本 0 / 82**・
   **台帳 511 点・ss 非ゼロ 94・総和 3.609962441・count 点 106 / 非ゼロ 2（§0 の数え方で
-  再測・不動）**・**suite 4423 passed / 0 failed / 4 skipped（+7＝網）・snapshot 0 動**。
-- ★★★ **第2便＝鍵の値段の修理（`1133d07d`）**。静かな窓の 1 回目 A/B（A=`417b2324`
-  worktree `LilySharp-perfbase-4173`・残置／B=`322543ef`・交互 3 巡・生データ
-  `scratch\editbench-154-{A1..B3}.txt`）は **Δ +3.4/+0.8/+8.9 ms＝買い高ゼロ、v2bow は純税**。
-  §5.0 の型で「発火したか／診断が違うか」を割った——**memo は発火している（999/1000 hit）が、
-  鍵＝`MeasureContentKey.Of` の reflection fold（全 property を box）が 1000 小節あたり
-  10.5〜37.9 ms＝live 検出（7〜31 ms）と同額**。算術は 3 冊とも閉じる（18 節約−11 鍵・
-  6−10・0.7−9）。⇒ 鍵を**検出の read set だけの手書き fold**（`AddDetectionInputs`・
-  boxing 無し）に交換——**replay(hit) 44.5→1.09 / 11.13→0.48 ms**（plain/fingbeam・
-  1000 小節）。**手書き read set の drift 網＝Debug ビルドは hit 毎に live 再検出して
-  bake 可視面を照合**（`VerifyReplayAgainstLiveDetection`・乖離は throw）＝**Debug suite
-  全体が replay 等価網**。Release は照合も reflection も払わない。
-- **実測（Release・`EditKeystrokeBench`・同日 A/B・静かな窓・2 回目＝新鍵・
-  A=`417b2324` worktree / B=`1133d07d`・`--no-build` 交互 3 巡・両側 gateMoved True /
-  reusedLayout False＝regime ⑶・生データ `scratch\editbench-154b-{A1..B3}.txt`）**:
+  再測・不動）**・**suite 4425 passed / 0 failed / 4 skipped（+2＝網）・snapshot 0 動**。
+- ★★ **第2便＝Release の壁時計 A/B（静かな窓・ユーザーに一声かけて取得・A=`11e70b5f`
+  worktree `LilySharp-redbase-11e7`・残置／B=`9bd5002f`・`--no-build` 交互 4 巡・両側
+  gateMoved True / reusedLayout False＝regime ⑶・生データ
+  `scratch\editbench-155-{A1..B4}.txt`＋`-summary.txt`）＝壁時計は不動**:
 
-  | 冊 | 床 A→B（各 3 巡の最小） | Δ |
+  | 冊 | 床 A→B（各 4 巡の最小） | Δ |
   |---|---|---|
-  | plain1k | 164.1→156.9 | **−7.2** |
-  | fingbeam1k | 372.8→355.6 | **−17.2** |
-  | v2bow1k | 274.0→269.0 | −5.0 |
+  | plain1k | 162.8→167.2 | +4.4（帯内） |
+  | fingbeam1k | 369.6→374.1 | +4.5（帯内） |
+  | v2bow1k | 261.8→260.1 | −1.7（帯内） |
 
-  ⚠️ 巡ごとの帯は重なる（§7.9 の 5〜40ms 分散のまま）＝plain/v2bow の Δ は帯級の主張に留める。
-  **fingbeam の床 Δ −17.2 は第153 の detect 床 18.2 と整合**・1 回目の v2bow +8.9 税は消えた。
-  機構側の証拠は決定的（counter 999/1000・replay 0.5〜1.1 ms 対 live 7〜31 ms）。
-- **触らなかったもの（意図的）**: 層側の staff 量検出（`StaffBeamGroupsOf` 族——bake 後の
-  items と voice fan 入力＝**別鍵の別切片**。⒫ の「Staff instance の打鍵またぎ再利用」は
-  こちら側の残件のまま）・bake の per-member Measure 再構築の batch 化（bake 全体 3〜4 ms＝
-  第153 が値付け済み・やらない）・⑵′ 後半（flat list の採用 red）と ⑷ splice 適用相の残余。
+  巡ごとの帯は全冊で交錯（plain は A4=174.3 が B 全巡より上・v2bow は完全に混在）＝
+  **買いも税も帯級（§7.9 の 5〜40ms 分散内）で主張できない**。
+  ★★★ **発見: red 数はこの床では ms の代理にならない**——第153 の −45.7 ms
+  （234k→57k）の支配項は red 生成そのものではなく、**red walk に同乗していたもの
+  （per-descendant 祖先 guard 鎖・iterator）**だった。残り 57k/9k の生成を −99% しても
+  Release 壁時計は帯以下。⇒ **v2bow の 18.5k を red 数を理由に追わないこと**——第2声部
+  memo の値段は「省ける意味処理の ms」で測ってから（red では見込みを立てない）。
+  この切片の正当化は機構側（バイト同一の証明・アロケーション −99%・checkpointed walk の
+  設計床）で、ms ではない。
+- ★★ **第3便＝⑷ splice 適用相の再測（計測のみ・エンジン変更ゼロ・SpliceClock＝
+  `TrySpliceSuffix` の相ブラケット・計器と harness は revert 済み・Release・同じ静かな窓・
+  warmup 2＋交互 14 巡・生データ `scratch\splicebench-155.txt`）＝**
+  **第151 の「残余 fingbeam ~23 ms」は消滅していた（stale）**:
+
+  | 行（fingbeam1k 編集面の床） | ms |
+  |---|---|
+  | ok.total（TrySpliceSuffix 全体・試行 6 回ぶん） | **6.89** |
+  | ok.parseagree | 3.47 |
+  | ok.copy.measures | 1.86 |
+  | ok.copy.tables | 0.65 |
+  | ok.commit.append（**側表 12,000 entry の採用 append**） | **0.22** |
+  | その他（gate/statematch/canon/shift/commit） | ~0.4 |
+
+  内訳は total でほぼ閉じる（未説明 ~0.5 ms）＝**第151 が疑った「側表の per-entry append」は
+  無罪**。第152〜155 の修理（parseagree の green 直歩き 10.4→3.5・defs/beamdirs/walk）が
+  残余の支配項を先に食っていたと読む。plain は ok.total 2.10・v2bow 1.58／復帰面 0.31。
+  試行回数も健全（plain 3・fingbeam 6・v2bow 1／打鍵・decline は overlap gate 0.02 ms）。
+  ⇒ **⑷ は修理対象から外す＝第151 の collect 分割リスト ⑴〜⑸ は完走**。
+- **触らなかったもの（意図的）**: per-voice 経路の red 削減そのもの（全 site が live 消費
+  されるので lazy 単独の買いはゼロ＝第2声部の打鍵またぎ memo とセットで別切片・上の 18.5k）・
+  `MusicSites`（red 綴り）は網の第2オラクルとして残置。
 
 ---
 
