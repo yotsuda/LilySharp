@@ -18,6 +18,54 @@
 
 ---
 
+## 以下は第157セッションの経緯
+
+最終更新 第157セッション＝**⒮ の裁定済み残件 2 件（⑶ 小節途中 repeat・⑵ volta ending）を
+閉じた便**（perf は 1 行も触っていない——次の一手の順位は第155 のまま生きている）。両件とも
+「起票再現 → 修理 → 網＋陽性対照（revert 済み）→ 3 点証明 → commit」の型。suite は
+4448 → **4459 passed / 0 failed / 4 skipped（+11＝網 2 枚）**・**コーパス rerender 0/82・台帳
+（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）・snapshot 0 動は 2 commit とも**・
+未 push 24。
+- **⑴ `113c95e2` ⒮⑶ 小節途中 repeat の偽 underfull nudge**: `c2 repeat percent 2 { d4 d } |` が
+  LYS2006「first measure is 1/2 — pickup では」と言っていた（紙は第1小節満杯・LP の bar check は
+  「at 1/2」＝**第2小節**が短い）。起票時の処方どおり**検証側小節分割に拍子 auto-complete を
+  導入**——`ValidateMeasures` を 1 パス化（meter 採用の 2 綴り防止）し、身が純粋な repeat は
+  演奏内容を **item 単位で bar tally に流す**（`MeasureBuilder.AddDuration` の鏡・拍子到達で
+  silent close・残余だけが書かれた `|` の検査対象・流れた満杯 bar があれば pickup nudge 抑止）。
+  repeat body 自身のストリーム検証は**末尾未閉チャンクの underfull を免除**（openTail。
+  `c4 c c c | repeat percent 2 { d4 d }` の偽 nudge も同根だった。overfull は第156 の裁定
+  どおり残す）。`MeasureModel.Split` も repeat 展開中は拍子で auto-flush——`repeat volta 2
+  { d8×8 }` が model 1 小節／紙 2 小節で **cross-part の偽 mismatch 族**だった——＋auto-flush
+  直後の `|` は confirmable で吸収（幻の空小節ペア防止）。構造入り body（入れ子 repeat/span/
+  phrase 参照/directive/複数小節休符）は従来どおり不透明＝半分だけ数える誤りを作らない。
+  網 `MidMeasureRepeatFlowValidationTests` 8 本＋陽性対照 3 種（revert 済み）。クリーン形 4 種
+  （ちょうど満杯・整数小節・repeat 後の音で補完・行頭半小節×2）は **LP 2.26.0 で bar check
+  無しを確認**（volta は collector が unfold するので Lily# 準拠）。⚠️ perf: 追加は repeat 本
+  だけの count×body 分数演算＝`Flatten` が既に払っている展開と同桁・標準 bench 3 冊
+  （repeat 無し）は増分 0。
+- **⑵ `c605a594` ⒮⑵ volta ending のマークと調復帰**（第156⑸ の残穴＝exporter 最後の黙って
+  落とす穴）: `|: A [1. B] :| [2. C]` で twin が ending のラベルを持たず、B の modulate が
+  C まで残っていた（LP の `\key` は `\alternative` の中括弧を越えて残る＝パスごとに別の紙）。
+  原因は **SectionPlayMarker のデータが red に居た**こと——`CreateEnding` は items を green で
+  再構築するので零幅 green の red は `GenericSyntaxNode` に戻る。**データを green
+  （`SectionPlayGreen`）へ移し**、`EmitItem` は **green の型でマッチ**（再構築を定義から
+  生き延びる・元の red も同じ腕）。`AppendSection` の ending ゲートを撤去、label は collector
+  の alternative 腕そのまま（`DisplayLabel ?? name`）。**双子 217 冊 before/after 機械検査＝
+  変化 4 冊・全て `\mark`/`\key` 構成の内側・削除 0**・diff 目視 1 冊・4 冊 LP コンパイル緑。
+  網 `LilyPondExporterSectionPlayTests` +3＋陽性対照 2 種（revert 済み）。エンジン出力は
+  構造上不変（exporter と網のみの commit）。
+- ★ **rerender ベースラインの stale を踏んだ**: 第1回 rerender が「絵が動いた本 2/82」
+  （key-signature-space・slur-vertical-skylines）と言った——stash A/B で **HEAD と本便の描画が
+  全 82 冊ハッシュ一致**＝その 2 冊は**第156 の keysig 便（承認済み）の分がベースライン未反映**
+  だっただけ。ベースラインは本便の実行で更新済み＝以後の基準は 0/82。⚠️ **「動いた」と出たら
+  まず stash A/B で自分の変更と切り分けること**（scratch/lpreport/ls は「前回スクリプトを
+  走らせた時点」との比較で、commit 境界とは同期していない）。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**——「承認ゲート付き単独セッション」指定で、
+  snapshot/コーパスが広く動く＝ユーザー不在では出荷できない（§5.1 の承認ルール）。
+- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
+
+---
+
 ## 以下は第156セッションの経緯
 
 最終更新 第156セッション＝**残債返済を中断し、ユーザー報告のリリースブロッカー 6 件を修理した便**

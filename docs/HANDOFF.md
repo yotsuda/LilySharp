@@ -63,89 +63,68 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第158セッション＝**⒨「棚卸しの読み方」を完走した便＝OWN 監査＋APPROX/UNWATCHED
-同型通読**（perf は 1 行も
-触っていない——次の一手の順位は第155 のまま生きている。順位の取り直しはベンチであり
-「bench 前に一声」の規律によりユーザー不在では回せないので、非ベンチの ⒨ を選んだ）。
-§5.2 の判定法を OWN 全数（117 行）に当て、**払う前に検査自身を監査**した（メモリ「検査監査」の
-型——実際 117 中 ~15 は負債ですらなかった）。suite は **4459 passed / 0 failed / 4 skipped
-（不動・snapshot/台帳込み全緑）**・エンジン出力は構造上不変（コメントと audit スクリプトのみの
-変更）・未 push 27。
-- **⑴ `debce47f` OWN 棚卸しの §5.2 監査**。内訳は 3 種:
-  ①**札が LP の出所を隠していた 16 件**を NOT PORTED / NOT LITERAL に張り替え（各コメントに
-  「LP has the quantity／§5.2 audit, session 158」を残置）。最大の 1 件は
-  `EngravingDefaults.RestCenterPosition`——**0.0 は lily/rest.cc staff_position_internal の値
-  そのもの**なのに OWN だった＝LILYPOND-REF 化（未移植は semibreve 例外だけと明記）。他は
-  percent 記号 dot の水平項（自称 "approximation of :79-80"）・courtesy paren 省略・grace 黒符頭・
-  hyphen dash の round box・chord bracket の角・PDF の文字置き（backend-blocked）・script の
-  per-type padding・dynamic line の direction break・tie column の solve-once-then-break 順・
-  hyphen の左右 bound 2 件・partcombine ラベルの flat 1.5・tie-dot 衝突の算術・melismaBusy・
-  hyphen kill の proxy（⒝ 化）。
-  ②**~15 行は宣言でなく歴史的言及/メタ**（"was/were/declared/not LILYSHARP-OWN"）——
-  `Build-ApproximationInventory.py` に **OWN_MENTION フィルタ**（キーワードが同一行で marker の
-  *前*にあるときだけ除外）を追加。⚠️ **小数点が `[^.]{0,40}` を遮る**（"Was an invented 0.3 ("）
-  ——tempered dot `(?:[^.]|\.(?=\d))` で解決。regex の届かない 3 箇所（相互参照 2・前行キーワード
-  1）はコメント側を言い換え。
-  ③**残り 83 件は正当な OWN**＝名目箱（flag/rest/hairpin）・帯/枠モデル（HANDOFF 3）・タブ固有・
-  評価済み式ブリッジ（CustomText の型）・**§5.2 が明示的に認める手打ち値**（「LP のどの行から
-  導いたか書けないなら OWN を付けて独自と明示」——手打ち値の OWN は正しい札）。
-  **APPROXIMATIONS.md 再生成: OWN 116→83・APPROX 33→48・UNWATCHED 44→45・計 193→176**
-  （旧 116 は stale な生成物の数でもあった——行番号が大きく漂っていた）。
-- ★ **境界線上で「残す」と裁定した 5 件**（理由は各コメント内・次に触る人へ）:
-  `GlissandoEngraver:142`（break 越え Y の freeze＝設計か未移植かが曖昧）・`VerticalSkyline:173`
-  （segment 数の deviation＝スケーリング島のブリッジ）・`StaffAccidentalColumns:84`（gate 装置・
-  到達不能・起票済）・`BeamingPattern:168`（退化入力 guard）・`SkylineBuilder:216`（two-edge
-  モデルの一部＝§2A workstream と一体）。
-- **⑵（第2便・commit 無し）APPROX 48 / UNWATCHED 45 を同型で通読＝両バケット白**。
-  言及混入 0・札違い 0——この 2 バケットの札は「not ported＋LP 引用」「no observer＋観測する
-  はずの pair の名指し」の型で自己検証的（OWN の「対応物が無い」ほど強い主張をしていない）。
-  **陽性対照**: 同じ読み方が OWN では 16＋15 を検出・⑴ の張り替え行が APPROX 33→48 に正しく
-  現れた。⚠️ **数えは「行」であって「site」ではない**——1 主張が 2〜3 行に割れて複数回
-  数えられる（Beams.cs 480/483/485 の 3 行＝1 site 等）。数を引くときは桁の目安として扱う。
-  ⚠️ **「no observer」主張の実測突合（台帳に点が生えて stale 化していないか＝「穴も測る」の
-  型）は未実施**＝残件。
-- **⑶（第3便・ユーザーの静かな窓で実施・計器は revert 済み＝commit 無し）打鍵と cold の
-  段内訳を取り直した**（第149 の StageClock の形＝同じ配線図・EditKeystrokeBench プロトコル・
-  warmup 2 / n=14 交互 / 床=各段の n14 min・編集位置 3 点・Release。生データ＝逐語で
-  `scratch\stagebench-158.txt`・untracked）。**第149 の表は予告どおり大きく stale だった**——
-  打鍵床（edit@0.50）plain 348.8→**105.0**・fingbeam 679.3→**235.2**・v2bow 369.2→**163.5**
-  （⚠️ 別日比較は §7.9 の注意つき＝主張は「今日の中の順位」だけ）。**新順位は▶の★★に反映**。
-  要点: **打鍵首位は annpass に交代・旧首位 collect は 7〜29 ms に陥落**（splice＋green 化＋
-  memo 群の完済を実測で確認）・v2bow は break+pages 63 が最大塊・fingbeam の render は
-  断片 cache 後 37.7（overlay 側が残り）。⚠️ v2bow の edit@0.10 と @0.50 は同じ token
-  （char 13301）に落ちた＝実質 2 点。⚠️ Release ビルドは既存の CS1570（XML doc）警告族を
-  出す（私の変更由来ではない——未編集の SpacingRules 等にも出る・Debug では非表示）。
-  **第2切片＝annpass の内訳も同じ窓で割った**（`pann.*`/`fann.*` の副段・生データ
-  `scratch\stagebench-158b.txt`・打鍵床は第1切片と整合＝plain 109.5/fingbeam 234.8/
-  v2bow 164.3）: **支配項は全冊で `OutsideStaffStacker.StackAboveStaff`**（prelim+final の床
-  plain 14.5+3.8 / fingbeam 35.9+13.6 / v2bow 16.4+5.5 ms）、**第2項は fingbeam だけの
-  fingscripts**（`ComputeFingeringIslands`＋`CalculateWithFingerings`＋script skyline・
-  15.8+14.8）。**他の副段（lyrics/dyn/trill/volta/tuplet/marks/grace/mmr/ledger…）は全て
-  ~1 ms 未満**＝annpass の memo 化は「全 engraver の memo」ではなく **stackabove（＋その
-  staffProfile 構築）と fingscripts の 2 島**の話。⚠️ この lever はコード自身が予告している——
-  `LayoutEngine` の staffProfile remark「Hoisting it to the layout context would halve
-  that — but the two runs do not necessarily hold the same measure layouts, so a shared
-  cache is only correct if that is checked first. Next session's lever, not this one's.」
-  ⚠️ 第2切片の cold は 1 サンプルで大きくブレた（plain 総 2886 対 第1切片 1812）——**cold の
-  順位は第1切片の表を正とする**（floor 側は両切片で ±5 ms 一致＝安定）。
-- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（「承認ゲート付き単独セッション」指定・
-  第157 と同じ理由で見送り）。
+最終更新 第159セッション＝**⒟⁶⑵（annpass＝打鍵首位）の照準⑴「staffProfile の 2 パス共有
+hoist」を閉じ、第2便でユーザー許可の窓の A/B ベンチまで取った便**（`e20e3376`・⑷）。
+remark の予告どおり「2 つの run の measure layouts が
+同一か」の検査から入り、**検査は構築による参照同一性だった**——prelim pass は
+`LayoutSystems` の*後*に走っていて（「systems 配置前」という doc 記述が stale）、歩いている
+systems は `placed.Systems` そのもの・paging は Measures instance を保存・profile は
+staff-local 枠。⇒ **`RunPreliminaryAnnotationPass` が `placed.StaffSpanners` /
+`placed.StaffInside` を運び、`AnnotationLayoutContext` の両フィールドは required 化**
+（RestCollisionsOf と同じ「第3の構築が黙って落とす穴」封じ）。suite **4459 → 4461 passed /
+0 failed / 4 skipped（+2＝網）・snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和
+3.609962441・count 106/非ゼロ 2）**・未 push 28。
+- **⑴ 忠実度の半分＝prelim/final の分岐を閉じた**（「2 つの pass が別の表を読む→描画では
+  見えず spacing に出る」——context 自身が RestCollisionsOf の remark で名指す欠陥クラスの
+  残存）。いままで prelim の 3 profile 消費者（stacker seed・figured-bass drop・下譜
+  chord row）は **SpannersOf=空・script/fingering 無しの rebuild** に落ちていた＝final が
+  slur の下へ押す mover を slur 無しの高さで予約→**ページが「描かれる ink」を取りこぼす**。
+  網 `PreliminaryPassSeedTests` 2 枚（content-size 単一 system 頁は「頁の伸び＝描かれた
+  mover の沈み」が正確に一致する形＝ink 項が delta で消える）＋陽性対照（revert 済み・
+  数値は網の remarks: slur 頁 0.000000 対 沈み 0.884190／tuplet 頁 1.729279 対 3.157279）。
+- **⑵ perf の半分＝prelim の fallback 全システム walk が消えた**（§5.3 の call 数・計器
+  revert 済み）: render あたり multi-page-vertical **33→0**・grammar-tour 6→0・
+  feature-tour 9→0・notes 2→0・04-advanced 3→0。**profileCache remark の歴史カウント
+  （66/12/18）のちょうど半分**＝final 側は 2026-08-04 の room carry で救済済みで、これが
+  prelim 側の返済。**ms は第2便（⑷）で取った。**
+- **⑷（第2便・ユーザーが窓を許可・計器は第143型 StageClock を組み直し全 revert 済み・
+  生データ `scratch\stagebench-159.txt`・Release・edit@0.50・床=n14 min・A/B同一窓・
+  対照B=prelim に空表＝修正前挙動の再現）**:
+  **annpass prelim 側床 22.8→14.3/16.7・62.1→39.8/38.8・19.3→7.5/7.3
+  （plain/fingbeam/v2bow・B→A/A2）＝実体は pann.stackabove 14.7→5.5／36.0→14.9／
+  17.9→6.1**。final 側 stackabove と layout.finalann は帯内不変＝**帰属は prelim seed の
+  walk 消滅そのもの**（call 数 ⑵ と整合）。打鍵総床 fingbeam 246.6→227.4・
+  v2bow 203.2→166.2・plain 116.9→114.2（⚠️ A の plain 145.3 は他段が一様に膨れた
+  ドリフト＝A2 で確定・「主張は同一窓の A/B 差だけ」）。cold も annpass は落ちた
+  （plain 104.7→43.5・1標本＝参考）。⚠️ 今日の絶対値は第158窓より高め
+  （plain 床 105.0 対 114.2）＝§7.9 のとおり窓またぎの絶対値は比べない。
+  **新順位は▶の★★に反映——全冊共通の首位は消えた。**
+- **⑶ コーパス rerender 3/82 動・全て予約のみ**: chord-repetition 頁下端 +1.45／
+  slur-vertical-skylines 頁下端 +0.52（2 冊とも ink はバイト同一）／empty-chord は全頁
+  +0.13 の剛体シフト（機械検査: 非ゼロ座標 delta は全て 0.13）。**採点済 claim は全部
+  五線相対＝3 冊とも不動**（exact/fixed/open のまま）。stash A/B で 3 冊とも本便起因と確定
+  （両方向で同じ 3 冊＝stale baseline 無し）・ベースラインは本便の描画に更新済み＝以後の
+  基準は 0/82。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
+  従来どおり）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
 
 ---
 
 **次の一手**（⒟ ⒩ は取り下げ・⒟′ は第135第2便・**⒟⁵ と ⒟‴ は第136 で閉じた・
 ⒟⁶ の warm 側は第138 で・⒫ は第139 で閉じた**）。
-★★ **順位は第158 の Release 実測（静かな窓・§1 ⑶・生データ `scratch\stagebench-158.txt`）**——
-**打鍵（regime ⑶・床 plain 105.0 / fingbeam 235.2 / v2bow 163.5・edit@0.50・順に
-plain/fingbeam/v2bow の ms）: ⒟⁶⑵ annpass（21.9/58.0/17.3＝**全冊で首位**）＞
-fingbeam の annotation 直列＝⒭ 第2切片 overlay 断片化の島（render 37.7＋finalann 31.7）＞
-break+pages（17+15 / 15+18 / **30+33＝v2bow の最大塊**）＞ v2bow の prelim.slurs 24.8 ＞
-collect の残り（9.2/21.3/8.1＝**旧首位から陥落**——splice＋green 化＋memo 群で完済・
-編集位置依存も弱い）**、
-**cold（総 1812/1842/994）: persys（770/616/231）＞ ⒟⁶⑴ 量子器 prelim.beams（311/200/—）＞
+★★ **打鍵の順位は第159 の Release 実測（ユーザー許可の窓・§1 ⑷・A/B同一窓・edit@0.50・
+生データ `scratch\stagebench-159.txt`）**——**床 plain 114.2 / fingbeam 227.4 / v2bow 166.2。
+⒟⁶⑵⑴ の返済で全冊共通の首位は消えた——本ごとに違う**:
+**v2bow: break+pages（36+34＝最大塊）＞ prelim.slurs 26-27 ＞（annpass は 7.3 に陥落）**；
+**fingbeam: ann 族 ~71 が首位のまま（prelim.annpass 39＝fingscripts 17＋stackabove 15＋帯／
+finalann 32＝fingscripts 16＋stackabove 12）＞ ⒭ overlay render 36-37 ＞ collect 29-36**；
+**plain: 支配項なし（break 20-23 / pages 18 / annpass 14-17 / keys 13-18 / collect 10-19 の帯）**。
+**cold の順位は第158 の第1切片を正とする**（第159 の cold は 1標本＝参考。総 2531/1624/786・
+persys 首位・段の向きは第158 と整合・annpass cold は plain 104.7→43.5 に落ちた）:
+**cold（第158・総 1812/1842/994）: persys（770/616/231）＞ ⒟⁶⑴ 量子器 prelim.beams（311/200/—）＞
 collect（143/403/60）＞ render（286/190/86）＞ ⒪′ augment（v2bow 217）＞
-springs＋keys（113/117/102＝cold は memo 群が効かない）**。ms は明記なきものは Release・第158。
+springs＋keys（113/117/102＝cold は memo 群が効かない）**。ms は明記なきものは Release。
 ~~次の一手は打鍵の首位＝collect の残りの分割から~~ — **第151第2便で割った**（第151経緯の表・
 静かな窓の再測値）。~~順に ⑴ plan（checkpoint 二分探索）…⑸ parseagree~~ — **⑴ と ⑸ は
 第152 で閉じた**（§1。⚠️ 名指しされていた「checkpoint 二分探索」は**支配項の取り違え**で、
@@ -169,7 +148,7 @@ ARCHIVE 第155経緯 第3便）**。ok.total 6.9 ms で内訳が閉じ、疑い�
 0.22 ms＝無罪。**⇒ 第151 の collect 分割リスト ⑴〜⑸ は完走**。
 ⚠️ **第155 の Release A/B は取得済み＝不動（帯内 ±5 ms・ARCHIVE 第155経緯 第2便）**。
 ~~★★ 次に打鍵を詰める人は、段の内訳の取り直しから~~ — **第158 で取り直した**（↑の順位が
-その結果・§1 ⑶。第149 の名指し候補はこの取り直しで裁定済み: **annpass は首位で確定**・
+その結果・第158経緯 ⑶。第149 の名指し候補はこの取り直しで裁定済み: **annpass は首位で確定**・
 collect の残りは陥落・v2bow は break+pages が最大塊に浮上・fingbeam の render は 149.3→37.7
 （断片 cache 後の残り＝overlay 側）**）。
 ~~⑶ beamdirs~~ — **第154 で閉じた**（検出の per-measure content-key memo・`322543ef`＋
@@ -256,13 +235,20 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
   量子器 2,030 本×0.16 ms＝**本物の彫版**・第136第3便の表は ARCHIVE へ）。
   ⑵ **`prelim.annotationpass`** は memo 外のまま（第136第1便の線形項。**Release 打鍵床
   21.9 / 58.0 / 17.3 ms＝plain/fingbeam/v2bow・第158＝いまの打鍵首位**）。
-  ★★ **第158第2切片が内訳を割った（§1 ⑶）**: 支配項は **StackAboveStaff（prelim+final で
+  ★★ **第158第2切片が内訳を割った（第158経緯 ⑶）**: 支配項は **StackAboveStaff（prelim+final で
   plain 18.3 / fingbeam 49.5 / v2bow 21.9）**・第2項は fingbeam の **fingscripts 30.6**・
-  **他の副段は全部 ~1 ms 未満**。⇒ 着手の照準は ⑴ **staffProfile を 2 パス（prelim/final）で
-  共有する hoist**（コードの remark が予告済み——「2 つの run の measure layouts が同一か」を
-  先に検査で立てること）⑵ **stackabove 自体の per-system 増分化**（bar number が全 system に
-  立つ＝全 system を毎打鍵積み直している）⑶ fingbeam は fingscripts（script column walk）の
-  memo。**どれも soundness 層つき＝単独セッションで**。
+  **他の副段は全部 ~1 ms 未満**。⇒ 着手の照準は ~~⑴ **staffProfile を 2 パス（prelim/final）で
+  共有する hoist**~~ — **第159 で閉じた**（`e20e3376`・§1。prelim pass が
+  `placed.StaffSpanners`/`placed.StaffInside` を運ぶ形＝remark の予告した検査は
+  「参照同一性」で成立していた。prelim の fallback 全システム walk が render あたり
+  33/6/9/2/3→0（call 数）・**同時に prelim/final の profile 分岐＝ページの mover
+  取りこぼしも閉じた**——網 `PreliminaryPassSeedTests`。**ms は同便第2便で A/B 実測**:
+  pann.stackabove 床 14.7→5.5／36.0→14.9／17.9→6.1・§1 ⑷）
+  ⑵ **stackabove 自体の per-system 増分化**（bar number が全 system に立つ＝全 system を
+  毎打鍵積み直している。**第159 実測の残り＝pann+fann 合計で plain ~10 / fingbeam ~27 /
+  v2bow ~12 ms**）⑶ fingbeam は fingscripts（script column walk）の memo
+  （**第159 実測 pann 16.8＋fann 16.4＝~33 ms・他 2 冊はほぼ 0**＝fingbeam 専用の島）。
+  **⑵⑶ とも soundness 層つき＝単独セッションで**。
   ⚠️ **system をまたぐ梁を持つ譜は丸ごと旧経路にフォールバック**（出力は同一）——
   その本では memo が効かない。**効かせたいなら鍵に隣 system の被覆を足す設計から。**
 ▶ ~~**⒫ `DetectBeamGroups` が 1 打鍵に 6 回走る**~~ — **第139 で閉じた**（§1。検出は
@@ -384,50 +370,75 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 
 ---
 
-## 以下は第157セッションの経緯
+## 以下は第158セッションの経緯
 
-最終更新 第157セッション＝**⒮ の裁定済み残件 2 件（⑶ 小節途中 repeat・⑵ volta ending）を
-閉じた便**（perf は 1 行も触っていない——次の一手の順位は第155 のまま生きている）。両件とも
-「起票再現 → 修理 → 網＋陽性対照（revert 済み）→ 3 点証明 → commit」の型。suite は
-4448 → **4459 passed / 0 failed / 4 skipped（+11＝網 2 枚）**・**コーパス rerender 0/82・台帳
-（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）・snapshot 0 動は 2 commit とも**・
-未 push 24。
-- **⑴ `113c95e2` ⒮⑶ 小節途中 repeat の偽 underfull nudge**: `c2 repeat percent 2 { d4 d } |` が
-  LYS2006「first measure is 1/2 — pickup では」と言っていた（紙は第1小節満杯・LP の bar check は
-  「at 1/2」＝**第2小節**が短い）。起票時の処方どおり**検証側小節分割に拍子 auto-complete を
-  導入**——`ValidateMeasures` を 1 パス化（meter 採用の 2 綴り防止）し、身が純粋な repeat は
-  演奏内容を **item 単位で bar tally に流す**（`MeasureBuilder.AddDuration` の鏡・拍子到達で
-  silent close・残余だけが書かれた `|` の検査対象・流れた満杯 bar があれば pickup nudge 抑止）。
-  repeat body 自身のストリーム検証は**末尾未閉チャンクの underfull を免除**（openTail。
-  `c4 c c c | repeat percent 2 { d4 d }` の偽 nudge も同根だった。overfull は第156 の裁定
-  どおり残す）。`MeasureModel.Split` も repeat 展開中は拍子で auto-flush——`repeat volta 2
-  { d8×8 }` が model 1 小節／紙 2 小節で **cross-part の偽 mismatch 族**だった——＋auto-flush
-  直後の `|` は confirmable で吸収（幻の空小節ペア防止）。構造入り body（入れ子 repeat/span/
-  phrase 参照/directive/複数小節休符）は従来どおり不透明＝半分だけ数える誤りを作らない。
-  網 `MidMeasureRepeatFlowValidationTests` 8 本＋陽性対照 3 種（revert 済み）。クリーン形 4 種
-  （ちょうど満杯・整数小節・repeat 後の音で補完・行頭半小節×2）は **LP 2.26.0 で bar check
-  無しを確認**（volta は collector が unfold するので Lily# 準拠）。⚠️ perf: 追加は repeat 本
-  だけの count×body 分数演算＝`Flatten` が既に払っている展開と同桁・標準 bench 3 冊
-  （repeat 無し）は増分 0。
-- **⑵ `c605a594` ⒮⑵ volta ending のマークと調復帰**（第156⑸ の残穴＝exporter 最後の黙って
-  落とす穴）: `|: A [1. B] :| [2. C]` で twin が ending のラベルを持たず、B の modulate が
-  C まで残っていた（LP の `\key` は `\alternative` の中括弧を越えて残る＝パスごとに別の紙）。
-  原因は **SectionPlayMarker のデータが red に居た**こと——`CreateEnding` は items を green で
-  再構築するので零幅 green の red は `GenericSyntaxNode` に戻る。**データを green
-  （`SectionPlayGreen`）へ移し**、`EmitItem` は **green の型でマッチ**（再構築を定義から
-  生き延びる・元の red も同じ腕）。`AppendSection` の ending ゲートを撤去、label は collector
-  の alternative 腕そのまま（`DisplayLabel ?? name`）。**双子 217 冊 before/after 機械検査＝
-  変化 4 冊・全て `\mark`/`\key` 構成の内側・削除 0**・diff 目視 1 冊・4 冊 LP コンパイル緑。
-  網 `LilyPondExporterSectionPlayTests` +3＋陽性対照 2 種（revert 済み）。エンジン出力は
-  構造上不変（exporter と網のみの commit）。
-- ★ **rerender ベースラインの stale を踏んだ**: 第1回 rerender が「絵が動いた本 2/82」
-  （key-signature-space・slur-vertical-skylines）と言った——stash A/B で **HEAD と本便の描画が
-  全 82 冊ハッシュ一致**＝その 2 冊は**第156 の keysig 便（承認済み）の分がベースライン未反映**
-  だっただけ。ベースラインは本便の実行で更新済み＝以後の基準は 0/82。⚠️ **「動いた」と出たら
-  まず stash A/B で自分の変更と切り分けること**（scratch/lpreport/ls は「前回スクリプトを
-  走らせた時点」との比較で、commit 境界とは同期していない）。
-- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**——「承認ゲート付き単独セッション」指定で、
-  snapshot/コーパスが広く動く＝ユーザー不在では出荷できない（§5.1 の承認ルール）。
+最終更新 第158セッション＝**⒨「棚卸しの読み方」を完走した便＝OWN 監査＋APPROX/UNWATCHED
+同型通読**（perf は 1 行も
+触っていない——次の一手の順位は第155 のまま生きている。順位の取り直しはベンチであり
+「bench 前に一声」の規律によりユーザー不在では回せないので、非ベンチの ⒨ を選んだ）。
+§5.2 の判定法を OWN 全数（117 行）に当て、**払う前に検査自身を監査**した（メモリ「検査監査」の
+型——実際 117 中 ~15 は負債ですらなかった）。suite は **4459 passed / 0 failed / 4 skipped
+（不動・snapshot/台帳込み全緑）**・エンジン出力は構造上不変（コメントと audit スクリプトのみの
+変更）・未 push 27。
+- **⑴ `debce47f` OWN 棚卸しの §5.2 監査**。内訳は 3 種:
+  ①**札が LP の出所を隠していた 16 件**を NOT PORTED / NOT LITERAL に張り替え（各コメントに
+  「LP has the quantity／§5.2 audit, session 158」を残置）。最大の 1 件は
+  `EngravingDefaults.RestCenterPosition`——**0.0 は lily/rest.cc staff_position_internal の値
+  そのもの**なのに OWN だった＝LILYPOND-REF 化（未移植は semibreve 例外だけと明記）。他は
+  percent 記号 dot の水平項（自称 "approximation of :79-80"）・courtesy paren 省略・grace 黒符頭・
+  hyphen dash の round box・chord bracket の角・PDF の文字置き（backend-blocked）・script の
+  per-type padding・dynamic line の direction break・tie column の solve-once-then-break 順・
+  hyphen の左右 bound 2 件・partcombine ラベルの flat 1.5・tie-dot 衝突の算術・melismaBusy・
+  hyphen kill の proxy（⒝ 化）。
+  ②**~15 行は宣言でなく歴史的言及/メタ**（"was/were/declared/not LILYSHARP-OWN"）——
+  `Build-ApproximationInventory.py` に **OWN_MENTION フィルタ**（キーワードが同一行で marker の
+  *前*にあるときだけ除外）を追加。⚠️ **小数点が `[^.]{0,40}` を遮る**（"Was an invented 0.3 ("）
+  ——tempered dot `(?:[^.]|\.(?=\d))` で解決。regex の届かない 3 箇所（相互参照 2・前行キーワード
+  1）はコメント側を言い換え。
+  ③**残り 83 件は正当な OWN**＝名目箱（flag/rest/hairpin）・帯/枠モデル（HANDOFF 3）・タブ固有・
+  評価済み式ブリッジ（CustomText の型）・**§5.2 が明示的に認める手打ち値**（「LP のどの行から
+  導いたか書けないなら OWN を付けて独自と明示」——手打ち値の OWN は正しい札）。
+  **APPROXIMATIONS.md 再生成: OWN 116→83・APPROX 33→48・UNWATCHED 44→45・計 193→176**
+  （旧 116 は stale な生成物の数でもあった——行番号が大きく漂っていた）。
+- ★ **境界線上で「残す」と裁定した 5 件**（理由は各コメント内・次に触る人へ）:
+  `GlissandoEngraver:142`（break 越え Y の freeze＝設計か未移植かが曖昧）・`VerticalSkyline:173`
+  （segment 数の deviation＝スケーリング島のブリッジ）・`StaffAccidentalColumns:84`（gate 装置・
+  到達不能・起票済）・`BeamingPattern:168`（退化入力 guard）・`SkylineBuilder:216`（two-edge
+  モデルの一部＝§2A workstream と一体）。
+- **⑵（第2便・commit 無し）APPROX 48 / UNWATCHED 45 を同型で通読＝両バケット白**。
+  言及混入 0・札違い 0——この 2 バケットの札は「not ported＋LP 引用」「no observer＋観測する
+  はずの pair の名指し」の型で自己検証的（OWN の「対応物が無い」ほど強い主張をしていない）。
+  **陽性対照**: 同じ読み方が OWN では 16＋15 を検出・⑴ の張り替え行が APPROX 33→48 に正しく
+  現れた。⚠️ **数えは「行」であって「site」ではない**——1 主張が 2〜3 行に割れて複数回
+  数えられる（Beams.cs 480/483/485 の 3 行＝1 site 等）。数を引くときは桁の目安として扱う。
+  ⚠️ **「no observer」主張の実測突合（台帳に点が生えて stale 化していないか＝「穴も測る」の
+  型）は未実施**＝残件。
+- **⑶（第3便・ユーザーの静かな窓で実施・計器は revert 済み＝commit 無し）打鍵と cold の
+  段内訳を取り直した**（第149 の StageClock の形＝同じ配線図・EditKeystrokeBench プロトコル・
+  warmup 2 / n=14 交互 / 床=各段の n14 min・編集位置 3 点・Release。生データ＝逐語で
+  `scratch\stagebench-158.txt`・untracked）。**第149 の表は予告どおり大きく stale だった**——
+  打鍵床（edit@0.50）plain 348.8→**105.0**・fingbeam 679.3→**235.2**・v2bow 369.2→**163.5**
+  （⚠️ 別日比較は §7.9 の注意つき＝主張は「今日の中の順位」だけ）。**新順位は▶の★★に反映**。
+  要点: **打鍵首位は annpass に交代・旧首位 collect は 7〜29 ms に陥落**（splice＋green 化＋
+  memo 群の完済を実測で確認）・v2bow は break+pages 63 が最大塊・fingbeam の render は
+  断片 cache 後 37.7（overlay 側が残り）。⚠️ v2bow の edit@0.10 と @0.50 は同じ token
+  （char 13301）に落ちた＝実質 2 点。⚠️ Release ビルドは既存の CS1570（XML doc）警告族を
+  出す（私の変更由来ではない——未編集の SpacingRules 等にも出る・Debug では非表示）。
+  **第2切片＝annpass の内訳も同じ窓で割った**（`pann.*`/`fann.*` の副段・生データ
+  `scratch\stagebench-158b.txt`・打鍵床は第1切片と整合＝plain 109.5/fingbeam 234.8/
+  v2bow 164.3）: **支配項は全冊で `OutsideStaffStacker.StackAboveStaff`**（prelim+final の床
+  plain 14.5+3.8 / fingbeam 35.9+13.6 / v2bow 16.4+5.5 ms）、**第2項は fingbeam だけの
+  fingscripts**（`ComputeFingeringIslands`＋`CalculateWithFingerings`＋script skyline・
+  15.8+14.8）。**他の副段（lyrics/dyn/trill/volta/tuplet/marks/grace/mmr/ledger…）は全て
+  ~1 ms 未満**＝annpass の memo 化は「全 engraver の memo」ではなく **stackabove（＋その
+  staffProfile 構築）と fingscripts の 2 島**の話。⚠️ この lever はコード自身が予告している——
+  `LayoutEngine` の staffProfile remark「Hoisting it to the layout context would halve
+  that — but the two runs do not necessarily hold the same measure layouts, so a shared
+  cache is only correct if that is checked first. Next session's lever, not this one's.」
+  ⚠️ 第2切片の cold は 1 サンプルで大きくブレた（plain 総 2886 対 第1切片 1812）——**cold の
+  順位は第1切片の表を正とする**（floor 側は両切片で ±5 ms 一致＝安定）。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（「承認ゲート付き単独セッション」指定・
+  第157 と同じ理由で見送り）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
 
 ---

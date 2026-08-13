@@ -226,10 +226,16 @@ internal sealed class LayoutEngine
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
         // spacing extents before the page Y is fixed.
+        // ⚠️ THE ROOM'S TABLES GO WITH IT — placed.StaffSpanners / placed.StaffInside are
+        // built by LayoutSystems from the very system list this pass iterates
+        // (prelimSystems IS placed.Systems, same objects, same indices), so the check the
+        // profile-cache remark demanded — "do the two runs hold the same measure layouts?"
+        // — is reference identity by construction here. See the context fields' remarks
+        // for what diverged while the preliminary pass rebuilt its own profiles.
         var prelim = RunPreliminaryAnnotationPass(
             score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
             perSystemSkylines, multiStaffLayouter.RestCollisionsOf, systemCache,
-            commonShortestDuration);
+            commonShortestDuration, placed.StaffSpanners, placed.StaffInside);
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
@@ -642,7 +648,9 @@ internal sealed class LayoutEngine
         List<(double upExtent, double downExtent)> perSystemExtents,
         List<(VerticalSkyline up, VerticalSkyline down)> perSystemSkylines,
         Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
-        SystemLayoutCache? systemCache, double commonShortestDuration)
+        SystemLayoutCache? systemCache, double commonShortestDuration,
+        List<List<MultiStaffLayouter.StaffInsideSpanners>> staffSpanners,
+        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> staffInside)
     {
         var prelimStaff = score.PrimaryContentStaff;
         var prelimScore = new Score(
@@ -770,6 +778,19 @@ internal sealed class LayoutEngine
             // drawing and comes out as spacing. A profile without the rest shift would leave
             // a dynamic's protrusion short by however far Rest_collision moved the rest.
             RestCollisionsOf = restCollisionsOf,
+            // ⚠️ THE ROOM'S TABLES, for the same reason again — and until 2026-08-14 this
+            // pass had neither, so its three profile consumers (the stacker's seed, the
+            // figured-bass drop, the lower-staff chord row) fell back to a rebuild that
+            // held NO spanners (SpannersOf returned empty), NO scripts and NO fingerings.
+            // A mover the final pass pushes below a slur was reserved at the slur-free
+            // height, so the page under-reserved exactly the ink the drawn pass clears
+            // (net: PreliminaryPassSeedTests). The rebuild also walked the system's music
+            // once per (system, staff) on every keystroke — the dominant term of the
+            // keystroke annotation pass (session 158's stage split: StackAboveStaff
+            // prelim floors 14.5/35.9/16.4 ms vs final's 3.8/13.6/5.5 on
+            // plain/fingbeam/v2bow — the final pass was already reading these tables).
+            StaffSpanners = staffSpanners,
+            StaffInside = staffInside,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
         });
         EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
@@ -3037,7 +3058,7 @@ internal sealed class LayoutEngine
         /// stayed correct (LyricStaffOrderTests
         /// <c>LyricBaseline_RespondsToADynamicUnderItsOwnStaff</c>).
         /// <para>
-        /// Null in the PRELIMINARY pass, which runs before the systems are placed. That pass
+        /// Null in the PRELIMINARY pass, which runs before the page is laid out. That pass
         /// never asks: the lookup is only wired up when <see cref="NoteBoundAnchorY"/> is
         /// non-empty, and the preliminary context supplies none.
         /// </para>
@@ -3070,12 +3091,17 @@ internal sealed class LayoutEngine
         /// on every keystroke.
         /// </para>
         /// <para>
-        /// Null in the PRELIMINARY pass, which runs before the systems are placed — the same
-        /// real absent case <see cref="StaffSkylines"/> has, and the reason both are nullable
-        /// where <see cref="RestCollisionsOf"/> is not.
+        /// ⚠️ SUPPLIED BY BOTH PASSES, AND REQUIRED, since 2026-08-14. The preliminary pass
+        /// runs after <c>LayoutSystems</c> — the systems it iterates ARE the placed list the
+        /// room built these tables from — and while it carried none, its profile consumers
+        /// rebuilt with <see cref="SpannersOf"/> returning empty: the page reserved a mover
+        /// at the spanner-free height the drawn pass then cleared
+        /// (<c>PreliminaryPassSeedTests</c>). Required for the reason
+        /// <see cref="RestCollisionsOf"/> gives: a nullable read with <c>?.</c> would let a
+        /// third construction put the divergence back silently, with the suite green.
         /// </para>
         /// </remarks>
-        public IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>>? StaffSpanners { get; init; }
+        public required IReadOnlyList<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners { get; init; }
 
         /// <summary>
         /// One (system, staff)'s inside-staff spanners, or an empty set when this pass has
@@ -3093,9 +3119,11 @@ internal sealed class LayoutEngine
             => SpannersAt(StaffSpanners, systemIndex, staffIndex);
 
         /// <summary>Per system, each staff's INSIDE-staff skyline as the room built it —
-        /// LilyPond's one profile per VerticalAxisGroup. Null in the preliminary pass, the
-        /// same real absence <see cref="StaffSkylines"/> has.</summary>
-        public IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? StaffInside { get; init; }
+        /// LilyPond's one profile per VerticalAxisGroup. Supplied by BOTH passes and
+        /// required, for the reasons <see cref="StaffSpanners"/> gives — the preliminary
+        /// pass's rebuilds held no scripts, fingerings or spanners, and each rebuild walked
+        /// the system's music on every keystroke.</summary>
+        public required IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside { get; init; }
 
         /// <summary>
         /// One (system, staff)'s inside-staff skyline — a COPY, ready to be raised into the
@@ -3515,12 +3543,20 @@ internal sealed class LayoutEngine
         // showcase/04-advanced 4/0. It saves a build only where the ABOVE and BELOW passes
         // want the SAME (system, staff) in one run; on the three that saved nothing the below
         // pass asks for nothing at all (no below-staff mover), so there was never a duplicate.
-        // ⚠️ AND IT CANNOT SEE THE BIGGER ONE. test/notes' 4 is its 2 SYSTEMS (it has one
-        // staff, not two — the earlier note here said "2 staves-with-movers") × the
-        // annotation pass running TWICE (once for the extents, once final), and this cache
-        // lives inside ONE of those runs. Hoisting it to the layout context would halve that —
-        // but the two runs do not necessarily hold the same measure layouts, so a shared cache
-        // is only correct if that is checked first. Next session's lever, not this one's.
+        // ⚠️ THE BIGGER DUPLICATE IS GONE (2026-08-14): the annotation pass runs TWICE (once
+        // for the extents, once final) and this cache lives inside one run — but BOTH runs
+        // now read the room's one build through ctx.InsideOf (the preliminary pass carries
+        // placed.StaffInside since the same date), so what this cache fronts is a lookup and
+        // a wrap, not a walk. The check the hoist demanded — "do the two runs hold the same
+        // measure layouts?" — is reference identity by construction: the preliminary pass
+        // iterates placed.Systems itself, and the final pass's paging keeps every system's
+        // Measures instance (CreatePages re-Ys the system and at most respaces its staves —
+        // `system with { Y = …, StaffGroups = RespaceStaves(…) }` — and this profile is in
+        // the STAFF-LOCAL frame, which a staff moving within its system does not change;
+        // the offset into the system is applied by the consumers through staffYAt, built
+        // from the CURRENT systems). The BuildInsideStaffSkylines arm below is the
+        // out-of-range guard, not a second profile: InsideAt answers null only for an
+        // index outside what was placed.
         // ⚠️ HOW IT SCALES, counted on the longest fixtures: grammar-tour 12 builds,
         // feature-tour 18, multi-page-vertical 66. A BAR NUMBER sits on every system, so a
         // (system, staff) that places something is nearly every system — and each build walks
