@@ -18,6 +18,71 @@
 
 ---
 
+## 以下は第153セッションの経緯
+
+最終更新 第153セッション＝**1 便＝⑵′ の前半＝打鍵経路の全木 red walker の全滅
+（green finder 化・`7c8051cc`）**。第152 の設計メモ「gather の遅延 red 化」に着手したら、
+**gather 5 site を green 化しても打鍵合計 red は 1 個も動かなかった**（234,030 完全一致）——
+**red 具現化の費用は「その木を最初に歩いた全木 walker」が払う**ので、gather の後ろに並んでいた
+**意味層の全木走査が次々に相続した**（第152 remark の予言そのもの）。CreateRed の
+1/10000 スタックサンプラ（未 commit・revert 済み）で相続者を名指しし、全部同じ装置に載せた:
+- **装置**: 第152 の `DefinitionSites` の frame walker を **`SyntaxNode.GreenSites(rule)`** へ
+  移設（rule＝green node ごとの (collect, descend)・collect で spine 経由の red 具現化・
+  `KindSites(kind)`＝`DescendantNodes().OfType<T>()` の代替形）。`DefinitionSites` は 1 行に。
+- **gather 5 site**（`ProcessMusicContainer`・`GatherVoiceMusicNodes`・
+  `CollectMeasuresFromNode`・section 無し root 経路・`ExpandVariable` の body walk）→
+  **`MusicSites(container, includeParallel)`**。候補 kind だけ yield・processed-container
+  kind は descend しない＝**旧 `IsInsideProcessedContainer*` の per-descendant 祖先 guard が
+  構造化**（guard の「container より上も見る」到達は前置きの祖先検査で再現）。**型述語は
+  呼び出し側に残して authority のまま**（kind 表が広すぎても型検査が落とすだけ）・旧 guard
+  2 本は等値網のオラクルとして internal 残置。
+- **相続者たち**（サンプリングが順に名指した・全部 green 化）: `PartTranspose.ReadScoreDefault`
+  （**part ごと毎打鍵**の全木 OfType）・`ChordNameCollector` 3 site・`LyricsCollector` 2 site・
+  `RowGridSectionBars` 4 site・`PartHasStructure`。
+
+- **実測（決定的カウンタ＝CreateRed 総数/打鍵・Debug・カウンタは機械ノイズ無関係・
+  計器と harness は revert 済み・生データ `scratch\redbench-153.txt`・A 値は
+  `defsbench-152-C.txt` の keystroke-total）**:
+
+  | 冊 | A（編集/復帰） | B（編集/復帰） |
+  |---|---|---|
+  | plain1k | 43,043/43,043 | **9,075/9,042** |
+  | fingbeam1k | 234,030/234,030 | **57,207/57,031** |
+  | v2bow1k | 36,563/36,563 | **22,559/4,054** |
+
+  残りの作り手はサンプル全数が **`MusicSites` 経由＝flat list の採用ノード＋spine 自身**＝
+  この切片の設計床。v2bow の編集面 22.5k は第2声部再構築（walk は変換済みだが**採用ノードは
+  毎打鍵作り直す**）。red 生成が 4〜24 分の 1 になった今、**第151 表の defs 行と
+  col.walk 行の値段は stale**。
+- **実測（Release・`EditKeystrokeBench`・同日 A/B・静かな窓＝ユーザーに一声かけて取得・
+  A=`60092ce3` worktree（`LilySharp-perfbase-6009`・残置）/ B=`7c8051cc`・`--no-build`
+  交互 3 巡・両側 gateMoved True / reusedLayout False＝regime ⑶・§7.9）**:
+
+  | 冊 | 床 A→B（各 3 巡の最小） | Δ |
+  |---|---|---|
+  | plain1k | 189.2→167.6 | **−21.6（−11%）** |
+  | fingbeam1k | 428.3→382.6 | **−45.7（−11%）** |
+  | v2bow1k | 293.5→278.3 | **−15.2（−5%）** |
+
+  ★ **冊ごとに B の全巡が A の全巡より下**（唯一の例外 plain A1=302.4 は帯外＝セッション
+  先頭の cold 走として棄却・同走 median 548.9 がその痕跡）。それ以外は label 内 2〜6%。
+  生データ `scratch\editbench-153-{A1..A3,B1..B3}.txt`（untracked）。
+- **網（新規 1 枚）**: `MusicSitesEquivalenceTests`——全 fixture/サンプル本×全 container 形
+  （root・section・part block・parallel voice・includeParallel 両モード）で **finder の
+  yield 列 ≡ 旧 red 綴りの列（ReferenceEquals・順序込み）**。kind 表↔型表の drift は
+  ここで即死。**陽性対照 2 種（revert 済み）**: 候補 kind から Note を落とす→網 fail／
+  container kind から CueExpression を落とす→網 fail。
+- テスト **4416 passed / 0 failed / 4 skipped（+1＝網）**・**台帳 511 点・ss 非ゼロ 94・
+  総和 3.609962441・count 点 106 / 非ゼロ 2（§0 の数え方で再測・不動）**・**snapshot 0 動**・
+  **コーパス rerender 絵が動いた本 0 / 82**（§5.1 の 3 点証明・commit message に記載）。
+- **触らなかったもの（意図的）**: `_form.DescendantNodes()`（structure block＝小さい）・
+  `CollectResumePlanner` の render block 走査（部分木・小さい）・**flat list の床の下**
+  （採用 red を live 窓の外で作らない＝次の切片。list を (green, position) で持ち、
+  `ProcessNodes`/`PeekPastAttachedMarks`/checkpoint 番地検査の消費点だけ red 化する
+  設計仕事。v2bow 編集面の第2声部再構築 22.5k も同じ器）。
+
+---
+
 ## 以下は第152セッションの経緯
 
 最終更新 第152セッション＝**3 便**。**第1便＝collect 検証・計画層の返済 ⑴＋⑸

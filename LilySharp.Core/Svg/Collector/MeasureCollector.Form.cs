@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
+using InternalSyntax = LilySharp.Core.Syntax.InternalSyntax;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -27,7 +28,7 @@ namespace LilySharp.Core.Svg.Collector;
 // MeasureCollector.cs as a partial class; same instance state, no behavior change.
 public sealed partial class MeasureCollector
 {
-    private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
+    private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<List<GreenSite>> processNodes, MeasureBuilder builder)
     {
         // Checkpoint/resume: a repeat block's bookkeeping (volta start/end measure
         // indices, the synthesized barline invocations between sections) reads
@@ -46,12 +47,12 @@ public sealed partial class MeasureCollector
             {
                 if (token.Text == "|:")
                 {
-                    processNodes(new[] { CreateBarlineSyntax(token.Text, token.Position) });
+                    processNodes([new GreenSite(CreateBarlineSyntax(token.Text, token.Position))]);
                     afterRepeatStart = true;
                 }
                 else if (token.Text == ":|")
                 {
-                    processNodes(new[] { CreateBarlineSyntax(token.Text, token.Position) });
+                    processNodes([new GreenSite(CreateBarlineSyntax(token.Text, token.Position))]);
                 }
                 else if (token.Text == ":|:")
                 {
@@ -59,8 +60,8 @@ public sealed partial class MeasureCollector
                     // the next. The adjacent ':|' + '|:' fuse into the RepeatBoth
                     // glyph at render time, and the following section is still marked
                     // as a repeat (StartBarline = RepeatStart) — exactly ':| |:'.
-                    processNodes(new[] { CreateBarlineSyntax(":|", token.Position) });
-                    processNodes(new[] { CreateBarlineSyntax("|:", token.Position) });
+                    processNodes([new GreenSite(CreateBarlineSyntax(":|", token.Position))]);
+                    processNodes([new GreenSite(CreateBarlineSyntax("|:", token.Position))]);
                     afterRepeatStart = true;
                 }
             }
@@ -133,7 +134,7 @@ public sealed partial class MeasureCollector
             _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
     }
 
-    private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
+    private void ProcessSection(SectionDeclarationSyntax section, Action<List<GreenSite>> processNodes, MeasureBuilder builder)
     {
         // Checkpoint/resume gate (CollectWalkProbe): a section wholly before the
         // resume target is in the adopted prefix — prologue, music and epilogue —
@@ -370,7 +371,7 @@ public sealed partial class MeasureCollector
     /// <summary>The section's container walk and padding epilogue — the part of
     /// <see cref="ProcessSection"/> after the prologue (see the resume gate there).</summary>
     private void ProcessSectionBody(SectionDeclarationSyntax section,
-        Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder, int startMeasure)
+        Action<List<GreenSite>> processNodes, MeasureBuilder builder, int startMeasure)
     {
         bool matched = false;
         // Direct children only: a PartBlockSyntax is produced exclusively by
@@ -412,14 +413,15 @@ public sealed partial class MeasureCollector
         // part and its inline music is that part's alone, so other voices must spacer-fill it.
         if (!matched && section.Parent is CompilationUnitSyntax && SectionHasInlineMusic(section))
         {
-            var inline = new List<SyntaxNode>();
+            // Direct children only, already materialized by GetChild — wrap preset.
+            var inline = new List<GreenSite>();
             for (int i = 0; i < section.SlotCount; i++)
             {
                 var child = section.GetChild(i);
                 if (child is VariableReferenceSyntax varRef)
                     ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline, varRef.DiatonicShiftSteps);
                 else if (child != null && IsCollectableMusicNode(child))
-                    inline.Add(child);
+                    inline.Add(new GreenSite(child));
             }
             processNodes(inline);
         }
@@ -601,32 +603,45 @@ public sealed partial class MeasureCollector
     /// bars: the main stream advances by that voice while the others overlay the same
     /// measures, so counting every voice's barlines would multiply the bar count.
     /// </summary>
-    private static int CountBarsInScope(SyntaxNode scope)
+    internal static int CountBarsInScope(SyntaxNode scope)
     {
         int bars = 0;
         bool pendingMusic = false;
         bool confirmable = true; // the scope-start boundary absorbs one bare `|`
-        WalkBars(scope, ref bars, ref pendingMusic, ref confirmable);
+        WalkBars(scope.Green, ref bars, ref pendingMusic, ref confirmable);
         return bars + (pendingMusic ? 1 : 0);
     }
 
-    private static void WalkBars(SyntaxNode node, ref int bars, ref bool pendingMusic, ref bool confirmable)
+    /// <summary>
+    /// The bar-counting walk, on GREENS. Session 155: after the flat-list
+    /// gather went lazy, this was the walk that INHERITED the whole-book red
+    /// first-touch (the session-152 remark's inheritance chain, third
+    /// occurrence — stack samples put ~99% of the keystroke's remaining red
+    /// creation here on perf-plain1k). The count is a pure function of kinds
+    /// plus the bar token's text, all green-readable; kinds are 1:1 with the
+    /// red types the old spelling switched on (<c>SyntaxNode.CreateRed</c>).
+    /// The net is CanonicalBarsEquivalence (green count ≡ red-spelling count
+    /// on every scope of every fixture book) — the old red walk stays below
+    /// as its oracle.
+    /// </summary>
+    private static void WalkBars(InternalSyntax.GreenNode node, ref int bars, ref bool pendingMusic, ref bool confirmable)
     {
         for (int i = 0; i < node.SlotCount; i++)
         {
-            var child = node.GetChild(i);
-            switch (child)
+            var child = node.GetSlot(i);
+            if (child == null || child.IsToken)
+                continue; // the old walk recursed into tokens as a no-op (no slots)
+            switch (child.Kind)
             {
-                case null:
-                    break;
-                case BarlineSyntax bar:
+                case SyntaxKind.Barline:
                     if (pendingMusic)
                     {
                         bars++; // closes the bar of music before it
                         pendingMusic = false;
                         confirmable = false;
                     }
-                    else if (bar.BarToken.Text != "|")
+                    // The bar token is slot 0 (BarlineSyntax.BarToken's shape).
+                    else if (((InternalSyntax.SyntaxToken)child.GetSlot(0)!).Text != "|")
                     {
                         confirmable = false; // a typed bar decorates the boundary
                     }
@@ -639,6 +654,78 @@ public sealed partial class MeasureCollector
                         bars++; // the second of a `| |` pair: an empty measure
                     }
                     break;
+                case SyntaxKind.Note:
+                case SyntaxKind.Rest:
+                case SyntaxKind.Chord:
+                case SyntaxKind.ChordRepetition:
+                case SyntaxKind.ChordEntry:
+                    pendingMusic = true;
+                    break;
+                case SyntaxKind.ParallelExpression:
+                    // First voice only (ParallelExpressionSyntax.Voices: the
+                    // MusicBlock slots between the << >> tokens).
+                    for (int v = 1; v < child.SlotCount - 1; v++)
+                    {
+                        if (child.GetSlot(v) is { Kind: SyntaxKind.MusicBlock } firstVoice)
+                        {
+                            WalkBars(firstVoice, ref bars, ref pendingMusic, ref confirmable);
+                            break;
+                        }
+                    }
+                    break;
+                default:
+                    WalkBars(child, ref bars, ref pendingMusic, ref confirmable);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The old RED bar-counting spelling, verbatim. ⚠️ No production caller
+    /// since <see cref="WalkBars"/> went green — kept internal as the
+    /// REFERENCE SPELLING the equivalence net (CanonicalBarsEquivalence in
+    /// MusicSitesEquivalenceTests) runs against. Do not re-grow production
+    /// callers: every red descendant it materializes is the whole-book
+    /// first-touch cost the green walk exists to avoid.
+    /// </summary>
+    internal static int CountBarsInScopeRed(SyntaxNode scope)
+    {
+        int bars = 0;
+        bool pendingMusic = false;
+        bool confirmable = true;
+        WalkBarsRed(scope, ref bars, ref pendingMusic, ref confirmable);
+        return bars + (pendingMusic ? 1 : 0);
+    }
+
+    private static void WalkBarsRed(SyntaxNode node, ref int bars, ref bool pendingMusic, ref bool confirmable)
+    {
+        for (int i = 0; i < node.SlotCount; i++)
+        {
+            var child = node.GetChild(i);
+            switch (child)
+            {
+                case null:
+                    break;
+                case BarlineSyntax bar:
+                    if (pendingMusic)
+                    {
+                        bars++;
+                        pendingMusic = false;
+                        confirmable = false;
+                    }
+                    else if (bar.BarToken.Text != "|")
+                    {
+                        confirmable = false;
+                    }
+                    else if (confirmable)
+                    {
+                        confirmable = false;
+                    }
+                    else
+                    {
+                        bars++;
+                    }
+                    break;
                 case NoteSyntax:
                 case RestSyntax:
                 case ChordSyntax:
@@ -649,10 +736,10 @@ public sealed partial class MeasureCollector
                 case ParallelExpressionSyntax parallel:
                     var first = parallel.Voices.FirstOrDefault();
                     if (first != null)
-                        WalkBars(first, ref bars, ref pendingMusic, ref confirmable);
+                        WalkBarsRed(first, ref bars, ref pendingMusic, ref confirmable);
                     break;
                 default:
-                    WalkBars(child, ref bars, ref pendingMusic, ref confirmable);
+                    WalkBarsRed(child, ref bars, ref pendingMusic, ref confirmable);
                     break;
             }
         }
@@ -662,32 +749,37 @@ public sealed partial class MeasureCollector
     /// Process the music inside a container node — a <c>part-block</c> (section-major)
     /// or a part-major inner <c>section</c>. Both expose their music as descendants.
     /// </summary>
-    private void ProcessMusicContainer(SyntaxNode container, Action<IEnumerable<SyntaxNode>> processNodes)
+    private void ProcessMusicContainer(SyntaxNode container, Action<List<GreenSite>> processNodes)
     {
-        // Collect all music nodes, expanding variable references. MusicSites
-        // walks the green tree and yields only candidate nodes outside processed
+        // Collect all music sites, expanding variable references. MusicSitesLazy
+        // walks the green tree and yields only candidate sites outside processed
         // containers (tuplet/repeat/grace/inline volta/parallel — their content
         // is processed by those handlers, so an inline volta passes through as
         // ONE wrapper node, or the bracket ([1. ]/[2.]) is lost while its notes
-        // leak out flat; a << \\ >> span likewise travels as one node).
-        var musicNodes = new List<SyntaxNode>();
+        // leak out flat; a << \\ >> span likewise travels as one node). No red
+        // node is created here — only the consumption points in ProcessNodes
+        // materialize, so an adopted prefix / spliced tail stays red-free.
+        var musicNodes = new List<GreenSite>();
 
-        foreach (var node in MusicSites(container, includeParallel: true))
+        foreach (var site in MusicSitesLazy(container, includeParallel: true))
         {
-            if (node is VariableReferenceSyntax varRef)
+            if (site.Kind == SyntaxKind.VariableReference)
+            {
+                var varRef = (VariableReferenceSyntax)site.Node;
                 ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef.DiatonicShiftSteps);
-            else if (IsCollectableMusicNode(node))
-                musicNodes.Add(node);
+            }
+            else if (IsCollectableMusicKind(site.Kind))
+                musicNodes.Add(site);
         }
 
         processNodes(musicNodes);
     }
 
-    private void ExpandVariable(string name, int octaveOffset, List<SyntaxNode> musicNodes,
+    private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes,
         int diatonicSteps = 0)
         => ExpandVariable(name, octaveOffset, musicNodes, diatonicSteps, new HashSet<string>());
 
-    private void ExpandVariable(string name, int octaveOffset, List<SyntaxNode> musicNodes,
+    private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes,
         int diatonicSteps, HashSet<string> activeRefs)
     {
         if (!_variables.TryGetValue(name, out var expression))
@@ -711,32 +803,36 @@ public sealed partial class MeasureCollector
         // Trailing marks on the reference (Chorus' / Chorus,) shift that fresh
         // frame; a glued interval argument (Chorus'(3)) shifts the body by
         // scale steps. Both shift the outgoing anchor with them.
-        musicNodes.Add(RelativeResetMarker.For(octaveOffset, diatonicSteps,
+        musicNodes.Add(new GreenSite(RelativeResetMarker.For(octaveOffset, diatonicSteps,
             Music.PhraseAnchor.AnchorStep(expression,
-                n => _variables.TryGetValue(n, out var nested) ? nested : null)));
+                n => _variables.TryGetValue(n, out var nested) ? nested : null))));
 
         // A phrase body may itself reference other phrases (phrase x { y }): expand a
         // nested reference IN PLACE — recursing into its own fresh frame — instead of
         // dropping it, so SVG stays in step with the MIDI / MusicXML exporters (which
         // already recurse). A bare music node is collected as before; container
         // expressions travel as ONE wrapper each (inner content skipped).
-        void Emit(SyntaxNode n)
+        void Emit(GreenSite s)
         {
-            if (n is VariableReferenceSyntax nestedRef)
+            if (s.Kind == SyntaxKind.VariableReference)
+            {
+                var nestedRef = (VariableReferenceSyntax)s.Node;
                 ExpandVariable(nestedRef.Name.Text, nestedRef.OctaveOffset, musicNodes,
                     nestedRef.DiatonicShiftSteps, activeRefs);
-            else if (IsCollectableMusicNode(n))
-                musicNodes.Add(n);
+            }
+            else if (IsCollectableMusicKind(s.Kind))
+                musicNodes.Add(s);
         }
 
+        // The declaration's own expression node is a stored red — preset site.
         if (expression is VariableReferenceSyntax || IsCollectableMusicNode(expression))
-            Emit(expression);
-        foreach (var n in MusicSites(expression, includeParallel: true))
-            Emit(n);
+            Emit(new GreenSite(expression));
+        foreach (var s in MusicSitesLazy(expression, includeParallel: true))
+            Emit(s);
 
         // Close the phrase so its auto-transpose is dropped before any inline
         // notes that follow the reference (paired with the reset marker above).
-        musicNodes.Add(PhraseEndMarker.Instance);
+        musicNodes.Add(new GreenSite(PhraseEndMarker.Instance));
         activeRefs.Remove(name);
     }
 

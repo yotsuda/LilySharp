@@ -2372,11 +2372,11 @@ public sealed partial class MeasureCollector
     /// Gathers a voice block's music nodes (variable refs expanded), used to
     /// flow a parallel span's first voice into the primary builder.
     /// </summary>
-    private List<SyntaxNode> GatherVoiceMusicNodes(SyntaxNode voiceNode)
+    private List<GreenSite> GatherVoiceMusicNodes(SyntaxNode voiceNode)
     {
-        var musicNodes = new List<SyntaxNode>();
-        foreach (var node in MusicSites(voiceNode, includeParallel: false))
-            GatherMusicNode(node, musicNodes);
+        var musicNodes = new List<GreenSite>();
+        foreach (var site in MusicSitesLazy(voiceNode, includeParallel: false))
+            GatherMusicSite(site, musicNodes);
         return musicNodes;
     }
 
@@ -2398,12 +2398,12 @@ public sealed partial class MeasureCollector
 
         // Collect all music nodes, expanding variable references. Container
         // expressions travel as one wrapper — EXCEPT parallel: the per-voice
-        // path flattens << \\ >> (see GatherMusicNode), so its descendants
+        // path flattens << \\ >> (see GatherMusicSite), so its descendants
         // must reach the walk (includeParallel: false).
-        var musicNodes = new List<SyntaxNode>();
+        var musicNodes = new List<GreenSite>();
 
-        foreach (var node in MusicSites(voiceNode, includeParallel: false))
-            GatherMusicNode(node, musicNodes);
+        foreach (var site in MusicSitesLazy(voiceNode, includeParallel: false))
+            GatherMusicSite(site, musicNodes);
 
         ProcessMusicNodeSequence(musicNodes, builder);
 
@@ -3273,7 +3273,7 @@ public sealed partial class MeasureCollector
             }
         }
 
-        void ProcessNodes(IEnumerable<SyntaxNode> nodes)
+        void ProcessNodes(List<GreenSite> nodeList)
         {
             // A spliced walk is done: everything after the adopted tail is state
             // the splice already restored (the end-of-walk checkpoint).
@@ -3281,7 +3281,6 @@ public sealed partial class MeasureCollector
                 return;
             int invocation = _invocationInSection++;
             int startIndex = 0;
-            List<SyntaxNode> nodeList;
             if (_resumePending is { } plan)
             {
                 var target = plan.Checkpoint!; // _resumePending is only armed with a prefix target
@@ -3294,29 +3293,25 @@ public sealed partial class MeasureCollector
                 if (invocation > target.Invocation)
                     throw new CollectResumeAbortException(
                         $"collect resume overshot its target invocation ({invocation} > {target.Invocation})");
-                nodeList = nodes.ToList();
                 // Cross-edit address revalidation: the prefix text is unchanged, so
                 // an unchanged walk-order address holds a node with an unchanged
                 // start. Anything else is structural drift — bail to a full collect.
+                // (Site.Position == Node.FullSpan.Start, no red materialized.)
                 if (target.NodeIndex >= nodeList.Count
-                    || nodeList[target.NodeIndex].FullSpan.Start != target.NodeStart)
+                    || nodeList[target.NodeIndex].Position != target.NodeStart)
                     throw new CollectResumeAbortException(
                         $"collect resume address drifted (node {target.NodeIndex} of invocation {invocation})");
                 RestoreWalkCheckpoint(plan, builder);
                 startIndex = target.NodeIndex;
             }
-            else
-            {
-                nodeList = nodes.ToList();
-            }
             for (int i = startIndex; i < nodeList.Count; i++)
             {
-                var node = nodeList[i];
+                var site = nodeList[i];
 
                 // Record mode: an eligible measure boundary right before node i is a
                 // resume point. Cheap when off (_probeRecording null in production).
                 if (_probeRecording is { IneligibleReason: null } rec && builder.AtCleanBoundary)
-                    TryCaptureWalkCheckpoint(rec, builder, invocation, i, node.FullSpan.Start);
+                    TryCaptureWalkCheckpoint(rec, builder, invocation, i, site.Position);
 
                 // Resume mode, suffix side: at a clean boundary whose shifted
                 // walk-order address matches a recorded checkpoint, try to splice
@@ -3325,7 +3320,7 @@ public sealed partial class MeasureCollector
                 // the walk live — reuse lost, correctness untouched.
                 if (_suffixTargets is { } targets && builder.AtCleanBoundary
                     && targets.TryGetValue(
-                        (_sectionVisit - 1, invocation, node.FullSpan.Start), out var spliceTarget)
+                        (_sectionVisit - 1, invocation, site.Position), out var spliceTarget)
                     && TrySpliceSuffix(spliceTarget, builder))
                     return;
 
@@ -3333,19 +3328,25 @@ public sealed partial class MeasureCollector
                 // frame (same handling as ProcessMusicNodeSequence). The boundary
                 // re-arms the confirmable boundary so an edge barline of the phrase
                 // body does not pair with an adjacent outer barline into an empty bar.
-                if (node is RelativeResetMarker reset)
+                // Kind None belongs to the synthetic markers alone (their reds are
+                // preset — no gather kind is None), so real sites skip both type
+                // tests on the kind read.
+                if (site.Kind == SyntaxKind.None)
                 {
-                    EnterDefaultFrame(reset.OctaveOffset);
-                    EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
-                    builder.ResetMeasureBoundary();
-                    continue;
-                }
+                    if (site.Node is RelativeResetMarker reset)
+                    {
+                        EnterDefaultFrame(reset.OctaveOffset);
+                        EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
+                        builder.ResetMeasureBoundary();
+                        continue;
+                    }
 
-                if (node is PhraseEndMarker)
-                {
-                    ExitPhraseTranspose();
-                    builder.ResetMeasureBoundary(retargetableClose: true);
-                    continue;
+                    if (site.Node is PhraseEndMarker)
+                    {
+                        ExitPhraseTranspose();
+                        builder.ResetMeasureBoundary(retargetableClose: true);
+                        continue;
+                    }
                 }
 
                 // Same skip as ProcessMusicNodeSequence: a note-attached mark in
@@ -3360,7 +3361,7 @@ public sealed partial class MeasureCollector
                 // enclosing top-level node completes.
                 if (_probeRecording != null && peeked != null)
                     _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, peeked.FullSpan.End);
-                ProcessMusicNode(node, builder, PeekMarkers(peeked));
+                ProcessMusicNode(site.Node, builder, PeekMarkers(peeked));
             }
         }
 
@@ -3393,11 +3394,14 @@ public sealed partial class MeasureCollector
         }
         else if (_root != null)
         {
-            // The type test stays as the authority over MusicSites' kind-level
-            // candidates; this path never expanded variable references, so the
-            // filter also drops them (as the old spelling's type test did).
-            var musicNodes = MusicSites(_root, includeParallel: true)
-                .Where(IsCollectableMusicNode);
+            // This path never expanded variable references, so the collectable
+            // filter also drops them (as the old spelling's type test did) —
+            // IsCollectableMusicKind is the kind-level twin the equivalence net
+            // pins to the type test.
+            var musicNodes = new List<GreenSite>();
+            foreach (var s in MusicSitesLazy(_root, includeParallel: true))
+                if (IsCollectableMusicKind(s.Kind))
+                    musicNodes.Add(s);
             ProcessNodes(musicNodes);
         }
 
@@ -4033,7 +4037,7 @@ public sealed partial class MeasureCollector
             list.Add(startMeasure);
     }
 
-    private void ProcessForm(Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
+    private void ProcessForm(Action<List<GreenSite>> processNodes, MeasureBuilder builder)
     {
         foreach (var child in _form!.DescendantNodes())
         {
@@ -4394,6 +4398,20 @@ public sealed partial class MeasureCollector
             or TimeSignatureSyntax or TempoDeclarationSyntax or PartialDeclarationSyntax;
 
     /// <summary>
+    /// Kind-level mirror of <see cref="IsCollectableMusicNode"/> for the lazy
+    /// gather (<see cref="MusicSitesLazy"/>), where a type test would cost the
+    /// red node the laziness exists to avoid. Exactly
+    /// <see cref="IsMusicCandidateKind"/> minus the reference kind the gather
+    /// call sites expand in place — kinds are 1:1 with red types (each Green
+    /// class hard-codes its kind and <c>SyntaxNode.CreateRed</c> maps it back),
+    /// so the two filters admit the same nodes. The net is
+    /// MusicSitesEquivalenceTests' lazy fact, which asserts this equality on
+    /// every site of every fixture book.
+    /// </summary>
+    internal static bool IsCollectableMusicKind(SyntaxKind kind)
+        => kind != SyntaxKind.VariableReference && IsMusicCandidateKind(kind);
+
+    /// <summary>
     /// True when a node lives inside a container expression that owns its own
     /// walk (tuplet/repeat/grace/inline-volta/parallel/once). Such nodes must be
     /// skipped by the outer walks so the wrapper is processed once, not flattened.
@@ -4516,6 +4534,33 @@ public sealed partial class MeasureCollector
             if (IsProcessedContainer(p, includeParallel))
                 return [];
         return container.GreenSites(g => (
+            IsMusicCandidateKind(g.Kind),
+            !IsProcessedContainerKind(g.Kind, includeParallel)));
+    }
+
+    /// <summary>
+    /// The production music gather: the same candidate set, order and container
+    /// boundary as <see cref="MusicSites"/>, but each site is handed out as a
+    /// red-free <see cref="GreenSite"/> (green + position + lazy spine). A red
+    /// node is created only where a site is CONSUMED — ProcessMusicNode, the
+    /// attached-mark peek, variable-reference expansion — so a keystroke walk
+    /// that adopts a prefix and splices a tail materializes only the edit
+    /// window's nodes (HANDOFF ▶ ⒭ ⑵′ latter half: the flat list's adopted
+    /// reds were the keystroke path's last whole-book red creation).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <see cref="MusicSites"/> (the red-yielding spelling) has no
+    /// production caller left — it stays internal as the equivalence net's
+    /// second oracle (MusicSitesEquivalenceTests pins lazy sites ≡ MusicSites
+    /// ≡ the old red walk, positions included). Do not re-grow production
+    /// callers of the red spelling.
+    /// </remarks>
+    internal static IEnumerable<GreenSite> MusicSitesLazy(SyntaxNode container, bool includeParallel)
+    {
+        for (var p = container.Parent; p != null; p = p.Parent)
+            if (IsProcessedContainer(p, includeParallel))
+                return [];
+        return container.GreenSitesLazy(g => (
             IsMusicCandidateKind(g.Kind),
             !IsProcessedContainerKind(g.Kind, includeParallel)));
     }
@@ -4821,14 +4866,15 @@ public sealed partial class MeasureCollector
         // ignores VariableReferenceSyntax, so `repeat unfold 8 { $ground }`
         // previously produced NOTHING, silently. ExpandVariable also inserts
         // the phrase-boundary reset marker; honour it like the main loop does
-        // (each $call evaluates in the default frame).
-        var bodyNodes = new List<SyntaxNode>();
+        // (each $call evaluates in the default frame). The body items are reds
+        // already (a repeat body is always live), so the sites wrap them preset.
+        var bodyNodes = new List<GreenSite>();
         foreach (var item in repeat.Body.Items)
         {
             if (item is VariableReferenceSyntax varRef)
                 ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes, varRef.DiatonicShiftSteps);
             else
-                bodyNodes.Add(item);
+                bodyNodes.Add(new GreenSite(item));
         }
 
         // Route through the shared sequence walker so ties/slurs/beams inside a
@@ -4860,8 +4906,8 @@ public sealed partial class MeasureCollector
             }
         }
         else if (type == "tremolo" && bodyNodes.Count == 2
-            && bodyNodes.All(b => b is NoteSyntax or ChordSyntax or ChordRepetitionSyntax)
-            && TremoloPairShape(count, bodyNodes) is { } pairShape)
+            && bodyNodes.All(b => b.Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax)
+            && TremoloPairShape(count, bodyNodes[0].Node, bodyNodes[1].Node) is { } pairShape)
         {
             // Two-note (chord) tremolo: both notes are WRITTEN with the
             // pair's total duration, sound half of it each, and are joined
@@ -4873,8 +4919,8 @@ public sealed partial class MeasureCollector
             _tremoloPairShape = null;
         }
         else if (type == "tremolo" && bodyNodes.Count == 1
-            && bodyNodes[0] is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
-            && TremoloTotalIsPrintable(count, bodyNodes[0]))
+            && bodyNodes[0].Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
+            && TremoloTotalIsPrintable(count, bodyNodes[0].Node))
         {
             // LILYPOND-REF: lily/chord-tremolo-engraver.cc +
             // lily/stem-tremolo.cc — `\repeat tremolo 8 { c32 }` engraves ONE
@@ -4924,9 +4970,10 @@ public sealed partial class MeasureCollector
     /// LILYPOND-REF: lily/chord-tremolo-engraver.cc:117-140 acknowledge_stem —
     /// gap_count = min(flags, intlog2(repeat_count) + 1), set on the Beam
     /// unless Stem::duration_log == 1.</summary>
-    private static (int Value, int Dots, int Beams, int GapCount)? TremoloPairShape(int count, List<SyntaxNode> body)
+    private static (int Value, int Dots, int Beams, int GapCount)? TremoloPairShape(
+        int count, SyntaxNode first, SyntaxNode second)
     {
-        int v1 = NoteOrChordDurationValue(body[0]), v2 = NoteOrChordDurationValue(body[1]);
+        int v1 = NoteOrChordDurationValue(first), v2 = NoteOrChordDurationValue(second);
         if (v2 == 0)
             v2 = v1; // second note inherits the first's duration (c16 e)
         if (v1 < 8 || v1 != v2 || count < 1)

@@ -310,6 +310,69 @@ public abstract class SyntaxNode
         => GreenSites(g => (g.Kind == kind, Descend: true));
 
     /// <summary>
+    /// The fully lazy sibling of <see cref="GreenSites"/>: the SAME green
+    /// walk, the same pre-order, the same rule — but a match materializes NO
+    /// red node at all. Each collected site is handed out as a
+    /// <see cref="GreenSite"/> (green + absolute full-span start + a lazy
+    /// spine), and the red is created only if a consumer reads
+    /// <see cref="GreenSite.Node"/>. Use where most collected sites are never
+    /// consumed — the collector's keystroke flat list adopts a prefix and
+    /// splices a tail, so only the edit window's sites are ever red
+    /// (HANDOFF ▶ ⒭ ⑵′ latter half).
+    /// </summary>
+    /// <remarks>
+    /// Positions are accumulated from green full widths exactly as
+    /// <see cref="GetChildPosition"/> computes them, so
+    /// <c>site.Position == site.Node.FullSpan.Start</c> for every site — the
+    /// checkpoint/splice address reads stay red-free. The spine links
+    /// (<see cref="GreenSiteSpine"/>) are allocated only for ancestor frames
+    /// that own at least one collected site, and hold no red until a site
+    /// below them materializes.
+    /// </remarks>
+    internal IEnumerable<GreenSite> GreenSitesLazy(GreenSiteRule rule)
+    {
+        // Frame: a green node being iterated, the next slot to visit, that
+        // slot's absolute full-span start, the slot this green occupies in ITS
+        // parent, and the frame's spine link once some collected site needs it.
+        var frames = new List<(GreenNode Green, int NextSlot, int NextPos, int SlotInParent, GreenSiteSpine? Spine)>
+        {
+            (Green, 0, Position, -1, new GreenSiteSpine(this)),
+        };
+        while (frames.Count > 0)
+        {
+            var (green, slot, pos, slotInParent, spine) = frames[^1];
+            if (slot >= green.SlotCount)
+            {
+                frames.RemoveAt(frames.Count - 1);
+                continue;
+            }
+            var child = green.GetSlot(slot);
+            frames[^1] = (green, slot + 1, pos + (child?.FullWidth ?? 0), slotInParent, spine);
+            if (child == null || child.IsToken)
+                continue;
+            var (collect, descend) = rule(child);
+            if (collect)
+            {
+                // Build the spine links root→here (link objects only, no reds;
+                // overlapping spines share the links already built).
+                if (spine == null)
+                {
+                    for (int i = 1; i < frames.Count; i++)
+                    {
+                        if (frames[i].Spine == null)
+                            frames[i] = (frames[i].Green, frames[i].NextSlot, frames[i].NextPos,
+                                frames[i].SlotInParent, new GreenSiteSpine(frames[i - 1].Spine!, frames[i].SlotInParent));
+                    }
+                    spine = frames[^1].Spine;
+                }
+                yield return new GreenSite(child, pos, spine!, slot);
+            }
+            if (descend && child.SlotCount > 0)
+                frames.Add((child, 0, pos, slot, null));
+        }
+    }
+
+    /// <summary>
     /// Returns all descendant nodes in pre-order (each child before its own
     /// descendants, slots in order) — the same sequence the former recursive
     /// iterator produced.
@@ -403,6 +466,84 @@ public abstract class SyntaxNode
 /// whether to materialize and yield this (non-token) green's red node, and
 /// whether to walk into its children. Called once per green node in pre-order.</summary>
 internal delegate (bool Collect, bool Descend) GreenSiteRule(InternalSyntax.GreenNode green);
+
+/// <summary>
+/// A lazily materializable ancestor link of a <see cref="GreenSite"/>: one per
+/// ancestor frame of the <see cref="SyntaxNode.GreenSitesLazy"/> walk that owns
+/// at least one collected site. Holds no red node until a site below it is
+/// consumed; then each step is one parent-cached <see cref="SyntaxNode.GetChild"/>,
+/// so overlapping spines converge on the same red instances.
+/// </summary>
+internal sealed class GreenSiteSpine
+{
+    private readonly GreenSiteSpine? _parent;
+    private readonly int _slotInParent;
+    private SyntaxNode? _red;
+
+    /// <summary>The walk root's link — its red exists already.</summary>
+    internal GreenSiteSpine(SyntaxNode red) => _red = red;
+
+    internal GreenSiteSpine(GreenSiteSpine parent, int slotInParent)
+    {
+        _parent = parent;
+        _slotInParent = slotInParent;
+    }
+
+    /// <summary>This frame's red node, materialized on first demand through the
+    /// parent chain.</summary>
+    internal SyntaxNode Node => _red ??= _parent!.Node.GetChild(_slotInParent)!;
+}
+
+/// <summary>
+/// A gathered syntax site held WITHOUT its red node: the green node, its
+/// absolute full-span start, and the lazy spine to materialize the red through
+/// — the (green, position) flat-list element of HANDOFF ▶ ⒭ ⑵′. Reading
+/// <see cref="Node"/> is the ONLY thing that creates a red; kind and address
+/// reads (checkpoint capture, splice targeting, marker/peek gating) are free.
+/// A site can also wrap an ALREADY materialized node (a synthetic phrase
+/// marker, a form-fabricated barline, a direct red child) — then
+/// <see cref="Node"/> just returns it.
+/// </summary>
+internal readonly struct GreenSite
+{
+    internal readonly InternalSyntax.GreenNode Green;
+
+    /// <summary>Absolute full-span start — equals <c>Node.FullSpan.Start</c>
+    /// without materializing anything.</summary>
+    internal readonly int Position;
+
+    private readonly GreenSiteSpine? _parent;
+    private readonly int _slot;
+    private readonly SyntaxNode? _red;
+
+    internal GreenSite(InternalSyntax.GreenNode green, int position, GreenSiteSpine parent, int slot)
+    {
+        Green = green;
+        Position = position;
+        _parent = parent;
+        _slot = slot;
+        _red = null;
+    }
+
+    /// <summary>Wraps an existing red node (synthetic markers, fabricated
+    /// barlines, direct children already materialized by their producer).</summary>
+    internal GreenSite(SyntaxNode red)
+    {
+        Green = red.Green;
+        Position = red.Position;
+        _parent = null;
+        _slot = 0;
+        _red = red;
+    }
+
+    internal SyntaxKind Kind => Green.Kind;
+
+    /// <summary>The site's red node — created on first read (the consumption
+    /// points: ProcessMusicNode, the attached-mark peek, variable-reference
+    /// expansion). Parent-cached <see cref="SyntaxNode.GetChild"/> makes every
+    /// later read the same instance.</summary>
+    internal SyntaxNode Node => _red ?? _parent!.Node.GetChild(_slot)!;
+}
 
 /// <summary>
 /// A red node wrapper for tokens.

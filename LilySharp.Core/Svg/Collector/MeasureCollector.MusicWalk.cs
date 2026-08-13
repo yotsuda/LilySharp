@@ -29,59 +29,71 @@ namespace LilySharp.Core.Svg.Collector;
 public sealed partial class MeasureCollector
 {
     /// <summary>
-    /// Adds a single descendant node to the flat music-node list, expanding
-    /// variable references in place.
+    /// Adds a single gathered site to the flat music-site list, expanding
+    /// variable references in place. Kind reads only — no red is materialized
+    /// except for a reference (rare; its name/marks live on the red).
     /// </summary>
-    private void GatherMusicNode(SyntaxNode node, List<SyntaxNode> musicNodes)
+    private void GatherMusicSite(GreenSite site, List<GreenSite> musicNodes)
     {
-        if (node is VariableReferenceSyntax varRef)
+        if (site.Kind == SyntaxKind.VariableReference)
+        {
+            var varRef = (VariableReferenceSyntax)site.Node;
             ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef.DiatonicShiftSteps);
+        }
         // NOTE: unlike the other walks, the per-voice path does NOT treat a
         // << \\ >> span as one wrapper. Its caller does not skip parallel
         // descendants, so the inner notes are collected (flattened) here — the
         // established multi-voice rendering behavior. A ParallelExpressionSyntax
         // node itself is therefore not added.
-        else if (node is not ParallelExpressionSyntax && IsCollectableMusicNode(node))
-            musicNodes.Add(node);
+        else if (site.Kind != SyntaxKind.ParallelExpression && IsCollectableMusicKind(site.Kind))
+            musicNodes.Add(site);
     }
 
     /// <summary>
-    /// Processes a flat list of music nodes with one-node lookahead for
-    /// ties/slurs/beams (which annotate the preceding note).
+    /// Processes a flat list of music sites with one-node lookahead for
+    /// ties/slurs/beams (which annotate the preceding note). Every site this
+    /// walk reaches is consumed (materialized); the laziness pays off in the
+    /// checkpointed top-level walk (ProcessNodes), which skips an adopted
+    /// prefix and a spliced tail without ever creating their reds.
     /// </summary>
-    private void ProcessMusicNodeSequence(List<SyntaxNode> musicNodes, MeasureBuilder builder)
+    private void ProcessMusicNodeSequence(List<GreenSite> musicNodes, MeasureBuilder builder)
     {
         for (int i = 0; i < musicNodes.Count; i++)
         {
-            var node = musicNodes[i];
+            var site = musicNodes[i];
 
-            // Phrase-reference boundary: evaluate the body in the default frame,
-            // shifted by the reference's octave marks, and auto-transposed from the
-            // score's home key to the ambient key here.
-            if (node is RelativeResetMarker reset)
+            // Kind None belongs to the synthetic phrase markers alone (their
+            // reds are preset); every real site skips both type tests on it.
+            if (site.Kind == SyntaxKind.None)
             {
-                EnterDefaultFrame(reset.OctaveOffset);
-                EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
-                // A phrase reference is ONE item; its boundary re-arms the confirmable
-                // boundary like a section start, so a barline at the edge of the phrase
-                // body does not pair with an adjacent outer barline into an empty measure
-                // (phrase x { … | } then `x | x` is two bars, not two bars + a gap).
-                builder.ResetMeasureBoundary();
-                continue;
+                // Phrase-reference boundary: evaluate the body in the default frame,
+                // shifted by the reference's octave marks, and auto-transposed from the
+                // score's home key to the ambient key here.
+                if (site.Node is RelativeResetMarker reset)
+                {
+                    EnterDefaultFrame(reset.OctaveOffset);
+                    EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
+                    // A phrase reference is ONE item; its boundary re-arms the confirmable
+                    // boundary like a section start, so a barline at the edge of the phrase
+                    // body does not pair with an adjacent outer barline into an empty measure
+                    // (phrase x { … | } then `x | x` is two bars, not two bars + a gap).
+                    builder.ResetMeasureBoundary();
+                    continue;
+                }
+
+                // End of a phrase body: drop its auto-transpose so following inline
+                // notes stay at their written pitch. A phrase that ended with a closed
+                // bar hands that bar over as retargetable, so an OUTER `|` (section {
+                // x | x }) owns the barline the phrase's trailing `|` drew.
+                if (site.Node is PhraseEndMarker)
+                {
+                    ExitPhraseTranspose();
+                    builder.ResetMeasureBoundary(retargetableClose: true);
+                    continue;
+                }
             }
 
-            // End of a phrase body: drop its auto-transpose so following inline
-            // notes stay at their written pitch. A phrase that ended with a closed
-            // bar hands that bar over as retargetable, so an OUTER `|` (section {
-            // x | x }) owns the barline the phrase's trailing `|` drew.
-            if (node is PhraseEndMarker)
-            {
-                ExitPhraseTranspose();
-                builder.ResetMeasureBoundary(retargetableClose: true);
-                continue;
-            }
-
-            ProcessMusicNode(node, builder, PeekMarkers(PeekPastAttachedMarks(musicNodes, i)));
+            ProcessMusicNode(site.Node, builder, PeekMarkers(PeekPastAttachedMarks(musicNodes, i)));
         }
     }
 
@@ -96,16 +108,24 @@ public sealed partial class MeasureCollector
     /// manual beam to the autobeamer (LP regression beaming.ly, the beam over
     /// the bar line), and a tie after such a mark died the same way.
     /// </summary>
-    private static SyntaxNode? PeekPastAttachedMarks(List<SyntaxNode> nodes, int i)
+    /// <remarks>
+    /// The kind gate keeps the scan red-free until it lands: only a MusicMark
+    /// can be note-attached, and everything else returns as the answer. The
+    /// peek only runs for sites the walk is about to process (live window), so
+    /// it materializes at most the answer node plus any attached marks it
+    /// skips — never the adopted prefix or the spliced tail.
+    /// </remarks>
+    private static SyntaxNode? PeekPastAttachedMarks(List<GreenSite> nodes, int i)
     {
         for (int j = i + 1; j < nodes.Count; j++)
         {
-            if (nodes[j] is MusicMarkSyntax mark
+            if (nodes[j].Kind == SyntaxKind.MusicMark
+                && nodes[j].Node is MusicMarkSyntax mark
                 && (mark.IsInside<NoteSyntax>() || mark.IsInside<ChordSyntax>()
                     || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()
                     || mark.IsInside<ChordRepetitionSyntax>()))
                 continue;
-            return nodes[j];
+            return nodes[j].Node;
         }
         return null;
     }
@@ -813,9 +833,9 @@ public sealed partial class MeasureCollector
                     // volta bracket across the measures the ending occupies.
                     int startMeasureIndex = builder.CurrentMeasureIndex;
 
-                    var innerNodes = new List<SyntaxNode>();
+                    var innerNodes = new List<GreenSite>();
                     foreach (var item in volta.Items)
-                        GatherMusicNode(item, innerNodes);
+                        GatherMusicSite(new GreenSite(item), innerNodes);
                     ProcessMusicNodeSequence(innerNodes, builder);
 
                     int endMeasureIndex = builder.CurrentMeasureIndex;
@@ -1070,7 +1090,11 @@ public sealed partial class MeasureCollector
         }
 
         _cueDepth++;
-        ProcessMusicNodeSequence(cue.Body.Items.ToList(), builder);
+        // The body items are reds already (a cue region is always live).
+        var cueSites = new List<GreenSite>();
+        foreach (var item in cue.Body.Items)
+            cueSites.Add(new GreenSite(item));
+        ProcessMusicNodeSequence(cueSites, builder);
         _cueDepth--;
 
         if (outerClef is not null)
