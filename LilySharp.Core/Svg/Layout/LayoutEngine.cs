@@ -4277,7 +4277,7 @@ internal sealed class LayoutEngine
     /// otherwise lower-staff fingerings vanish.
     /// <para>
     /// ⚠️ Until 2026-08-08 the fingering was clamped OUTSIDE the outermost articulation
-    /// with a tuned gap (1.4/1.9) — a LILYSHARP-OWN box step with no LilyPond counterpart.
+    /// with a tuned gap (1.4/1.9) — a box step that was LILYSHARP-OWN, no LilyPond counterpart.
     /// LilyPond sorts the fingering INTO the column at priority 100 + position, so a bow
     /// (180) goes above it and a tenuto (−50) stays below — measured on
     /// script-stack-order1 (staccato −2.94 / tenuto −3.42 / finger −4.00 / bow −5.33).

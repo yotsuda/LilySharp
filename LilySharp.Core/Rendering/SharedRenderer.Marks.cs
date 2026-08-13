@@ -199,8 +199,10 @@ internal static partial class SharedRenderer
             double slashHeight = slashWidth * slope;
             double thick = thickness * ss;
             // Each dot: ±0.5·ss vertically (that half is the letter, :76-77).
-            // ⚠️ The HORIZONTAL term is LILYSHARP-OWN, an approximation of
-            // :79-80 add_at_edge(-0.75·ss): there the dot's edge overlaps the
+            // ⚠️ The HORIZONTAL term is NOT PORTED: an approximation of
+            // :79-80 add_at_edge(-0.75·ss) — LP has the quantity, so the term
+            // is LP-derived-but-divergent, not Lily#'s own (§5.2 audit,
+            // session 158). There the dot's edge overlaps the
             // slash's INK edge — a parallelogram reaching (wid + thick·√2)/2 =
             // 1.34·ss from centre — and the dot is the font's dots.dot glyph
             // (w ≈ 0.45), not this r=0.25 circle. Measured against 2.26 SVG
@@ -913,9 +915,11 @@ internal static partial class SharedRenderer
         if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
         // LILYPOND-REF: lily/lyric-hyphen.cc:64-65 th = get_dimension of the layout
         // line-thickness × the LyricHyphen thickness 1.3 (scm/define-grobs.scm).
-        // LILYSHARP-OWN: LP draws each dash as a round_filled_box with blot 0.8·lt
-        // (lily/lyric-hyphen.cc:126 dash_mol — corner radius 0.04 in its SVG); this
-        // draws a square-ended line. The whiteout branch (:135-153, default OFF at
+        // ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+        // with blot 0.8·lt (lily/lyric-hyphen.cc:126 dash_mol — corner radius 0.04 in
+        // its SVG); this draws a square-ended line. LP has the stencil, so the square
+        // end is a knowing form divergence, not a Lily#-own quantity (§5.2 audit,
+        // session 158). The whiteout branch (:135-153, default OFF at
         // whiteout −1) is not ported.
         const double thickness = 1.3 * EngravingDefaults.LineThickness;
         foreach (var h in layout.LyricHyphenLayouts)

@@ -46,7 +46,8 @@ namespace LilySharp.Core.Svg.Layout;
 ///   (define-grobs.scm:1450 Y-offset, "center on an 'm'") and the Hairpin centres on
 ///   it (self-alignment-Y . CENTER), which is why the text spends −0.6 inside the
 ///   group profile and the wedge spends nothing.
-/// ⚠️ LILYSHARP-OWN, DISCLOSED (no pair measures either):
+/// ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
+///   grouping does not reproduce, not Lily#-own quantities (§5.2 audit, session 158):
 ///   ⑴ LilyPond BREAKS the line when a new dynamic carries an explicit direction
 ///     differing from the line's (:125-138). Lily#'s hairpins are always below
 ///     (the grammar rejects .up on a wedge), so a forced-above text is simply left

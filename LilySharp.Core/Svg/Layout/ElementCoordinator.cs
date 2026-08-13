@@ -1818,7 +1818,10 @@ internal sealed class ElementCoordinator
         {
             // The bounds and the break-up belong to the COLUMN, not to each tie: every tie of a
             // column runs between the same two chords, so they all split at the same systems.
-            // ⚠️ LILYSHARP-OWN: A BROKEN COLUMN IS SOLVED ONCE PER SEGMENT, NOT ONCE.
+            // ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
+            //   ONCE PER SEGMENT, NOT ONCE. LP has the order (the citation below), so this
+            //   is a knowing structural divergence, not a Lily#-own quantity (§5.2 audit,
+            //   session 158).
             //   departs from: lily/tie-column.cc:81-93, where Tie_column::calc_positioning_done
             //     scores the column ONCE on the unbroken spanners and lily/spanner.cc:36-144
             //     then breaks the result. Here each system segment builds its own problem with

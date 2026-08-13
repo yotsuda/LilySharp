@@ -1575,8 +1575,9 @@ internal static class OutsideStaffStacker
                     tDown.Merge(eDown);
                     if (m.SwingSubdivision != 0)
                     {
-                        // The swing feel-equation keeps its named box estimate
-                        // (LILYSHARP-OWN device, see MetronomeMarkGeometry).
+                        // The swing feel-equation keeps its named box estimate — a
+                        // Lily#-own device; the label lives at
+                        // MetronomeMarkGeometry.SwingEquationReach.
                         double sw0 = eqX + TextFontMetrics.Serif(eq, em);
                         double sw1 = sw0 + MetronomeMarkGeometry.SwingEquationReach;
                         tUp.Merge(VerticalSkyline.FromBox(sw0, sw1,
@@ -1750,7 +1751,7 @@ internal static class OutsideStaffStacker
             _entries = new();
         private readonly int _dir;
 
-        // (The LILYSHARP-OWN pocket seal that used to live here — the below pass forced
+        // (The pocket seal that used to live here was LILYSHARP-OWN — the below pass forced
         // MONOTONE because its support was a flat staff edge with no note-column DOWN
         // ink — died on 2026-07-29: the below support now carries the staff's real down
         // profile, so pockets are honest on both sides.

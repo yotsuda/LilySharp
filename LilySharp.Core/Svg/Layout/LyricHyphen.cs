@@ -278,10 +278,12 @@ internal sealed class LyricHyphenEngraver
                     var nextSys = systems[nextSystem.systemIndex];
                     // Numerator, not == Fraction.Zero: a default Fraction is 0/0
                     // and its value equality checks the denominator too.
-                    // LILYSHARP-OWN: "onset 0 in the system's first measure" stands in
-                    // for LP's spanned-musical-time-zero test — equivalent on the
-                    // measure-grid Lily# breaks on; a pickup (partial) bar opening a
-                    // system is an unverified edge of this proxy.
+                    // ⚠️ NOT LITERAL (§7.6 ⒝, the REF above is the source): "onset 0 in
+                    // the system's first measure" stands in for LP's
+                    // spanned-musical-time-zero test — equivalent on the measure-grid
+                    // Lily# breaks on, so it is LP-derived and not Lily#'s own (§5.2
+                    // audit, session 158); a pickup (partial) bar opening a system is
+                    // an unverified edge of this proxy (no point observes it).
                     nextAtSystemStart = nextSys.Measures.Length > 0
                         && next.Item.MeasureIndex == nextSys.Measures[0].MeasureIndex
                         && next.Item.Timing.Numerator == 0;
@@ -438,8 +440,11 @@ internal sealed class LyricHyphenEngraver
             // period just keeps filling to the line end.
             // LILYPOND-REF: lily/lyric-hyphen.cc:107-121 break_status_dir of the
             //   RIGHT bound skips both the squeeze and the disappear.
-            // LILYSHARP-OWN: the barline's ink width is taken as the THIN
-            //   barline's; a final "|." group's extra thick bar is not seen here.
+            // ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
+            //   as the THIN barline's, where LP reads the break column's real bound
+            //   extent (a Lily# shortcut on LP's quantity, not a Lily#-own one —
+            //   §5.2 audit, session 158); a final "|." group's extra thick bar is
+            //   not seen here.
             AppendDashes(dashes,
                 spanLeft, systemEndX - EngravingDefaults.ThinBarlineThickness,
                 yCurrent, rightBroken: true, onNextSystem: false);
@@ -451,10 +456,11 @@ internal sealed class LyricHyphenEngraver
             // right syllable's ink left, with the full mid-line squeeze rules.
             // LILYPOND-REF: scm/define-grobs.scm:2151 after-line-breaking =
             //   ly:spanner::kill-zero-spanned-time.
-            // LILYSHARP-OWN: the left bound is the first measure's X (= where
-            //   music spacing starts); LP bounds on the break-align group's ink
-            //   (clef right edge, measured 3.365 vs prefix end ~4.6) —
-            //   boundary-column regime.
+            // ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
+            //   first measure's X (= where music spacing starts); LP bounds on the
+            //   break-align group's ink (clef right edge, measured 3.365 vs prefix
+            //   end ~4.6). LP has the bound, so this is a divergent stand-in, not
+            //   a Lily#-own quantity (§5.2 audit, session 158).
             if (!nextAtSystemStart)
             {
                 double yNext = -next.YUp - (_params.HyphenHeight + th / 2);

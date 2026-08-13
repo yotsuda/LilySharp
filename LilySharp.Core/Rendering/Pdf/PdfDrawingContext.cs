@@ -251,7 +251,9 @@ internal sealed class PdfDrawingContext : IDrawingContext
     /// 2026-08-03 at 3.16 staff spaces on a ten-letter title. Nothing caught it because the
     /// snapshot corpus holds no PDF at all.
     /// <para>
-    /// ⚠️ LILYSHARP-OWN: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at their own.
+    /// ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
+    /// their own. LP has the counterpart (glyphs at positions, the REF above), so this is a
+    /// knowing divergence and not a Lily#-own quantity (§5.2 audit, session 158);
     /// PdfSharpCore has no glyph-level API to hand a glyph id to, so each cluster's SOURCE TEXT
     /// is drawn where the shaped run put that cluster.
     ///   departs from: :411-426, one <c>glyph_desc</c> per <c>pgs->glyphs[i]</c>. Between

@@ -477,8 +477,9 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/beam.cc:412-419 get_gaps — <c>accs_ext.length ()</c> of
     ///   <c>relative_group_extent</c> over the accidental grobs.
-    /// LILYSHARP-OWN: courtesy parens are NOT counted (LP's grob extent includes
-    /// them) — no whole-display pair in the corpus carries one, so the omission has
+    /// ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
+    /// them — an omission from LP's quantity, not a Lily#-own one (§5.2 audit, session
+    /// 158). No whole-display pair in the corpus carries one, so the omission has
     /// no observer; add the paren widths when a book brings one. The unpacked
     /// fallback (<c>packedX ?? 0.0</c>) likewise collapses a lone accidental to its
     /// bare glyph width, which is exact for one and unobserved for many.

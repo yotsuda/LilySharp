@@ -372,8 +372,10 @@ internal static class EngravingDefaults
     // when the rest-under-beam shift got LilyPond's real inputs (the rest glyph's own
     // extent, Rest.minimum-distance below; LP regression beam-rest-extreme.ly read
     // +2.0 ss where LP prints +3.0 under every raised beam).
-    // LILYSHARP-OWN: the one survivor. The middle line IS a non-semibreve rest's default
-    // origin (lily/rest.cc staff_position_internal), but the beam covered-grob booking
+    // LILYPOND-REF: lily/rest.cc staff_position_internal — the middle line IS a
+    // non-semibreve rest's default origin, so the VALUE is LilyPond's (the label here
+    // was LILYSHARP-OWN until session 158's §5.2 audit; it hid that source).
+    // ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
     // that reads this applies it to EVERY rest including semibreves, which LP hangs one
     // line higher.
     /// <summary>Default staff position for rest center (middle line).</summary>

@@ -732,9 +732,9 @@ internal static class TupletBracketEngraver
     //   sign disagrees with the musical head contour (head_positions_interval).
     // ⚠️ DERIVED, NOT TRANSCRIBED, and REF'd for exactly that reason (HANDOFF 5.2 / 7.6 ⒝):
     //   the quantity below is LilyPond's, the form is not, so the address has to stay
-    //   readable or the next hand reads this as an invention and rebuilds it. It is NOT
-    //   LILYSHARP-OWN — that label is for a quantity LilyPond does not have, and LilyPond
-    //   has this one.
+    //   readable or the next hand reads this as an invention and rebuilds it.
+    //   It is not LILYSHARP-OWN — that label is for a quantity LilyPond does not have,
+    //   and LilyPond has this one.
     // Three differences, all in the direction of SIMPLER, none of them yet measured:
     //   ⑴ Lily# slopes from the outer MUSICAL positions (firstPos/lastPos, staff positions),
     //      LilyPond from the GRAPHICAL extents with the sign guard above;

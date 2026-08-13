@@ -480,8 +480,8 @@ internal static class BreakAlignSpacing
         // (LILYPOND-REF LeftEdge.space-alist (clef . (extra-space . 0.8))); with no clef
         // there is no such gap, and break-alignment-interface.cc:145-146,155-156 skips the
         // empty group rather than spacing past it. Returning 0.8 here made the line-start
-        // spring measure from ink nobody draws, which is what forced the LILYSHARP-OWN
-        // fallback in LineStartColumn.LineStartSpring.
+        // spring measure from ink nobody draws, which is what forced the ownFixedFloor
+        // fallback in LineStartColumn.LineStartSpring (its label lives there).
         double right = placed.Count > 0 ? placed[placed.Count - 1].Right : 0.0;
         return new PrefixColumns(clefX, keyX, timeX, right, hasKey, includeTimeSignature);
     }

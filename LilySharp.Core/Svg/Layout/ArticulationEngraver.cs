@@ -1980,9 +1980,11 @@ internal static class ArticulationEngraver
         //    outer line's ink by the script's own padding: ink edge ≥ 2.05 + 0.20
         //    = 2.25 — numerically the old StaffHalf + 0.25 clamp, kept as is.
         //    LP's accent over c'' sits exactly there (origin 2.67 = 2.25 + 0.42).
-        //    ⚠️ LILYSHARP-OWN: the 2.25 is FLAT, but under the include_staff reading
-        //    it should be 2.05 + PaddingFor(type) — identical only for the
-        //    padding-0.20 scripts. A fermata (script.scm padding 0.40) would want
+        //    ⚠️ NOT PORTED — the per-type padding: the 2.25 is FLAT, but under the
+        //    include_staff reading it should be 2.05 + PaddingFor(type) — identical
+        //    only for the padding-0.20 scripts, so the flat spelling is an
+        //    approximation of LP's formula, not a Lily#-own quantity (§5.2 audit,
+        //    session 158). A fermata (script.scm padding 0.40) would want
         //    2.45; no ledger point or book observes a fermata where this floor
         //    BINDS (the script.* ledger points all pass either way), so the flat
         //    constant stays until a measurement decides it.

@@ -68,7 +68,9 @@ internal static class PartCombineAnalyzer
             return ImmutableArray<PartCombineLayout>.Empty;
 
         var layouts = ImmutableArray.CreateBuilder<PartCombineLayout>();
-        // ⚠️ LILYSHARP-OWN: a flat 1.5 staff-spaces above the system top. LilyPond puts the
+        // ⚠️ NOT PORTED — the outside-staff placement: a flat 1.5 staff-spaces above the
+        // system top stands in for it (LP has the placement, so this is an unported piece
+        // and not a Lily#-own quantity — §5.2 audit, session 158). LilyPond puts the
         // label on the outside-staff stacker at priority 475 with padding 0.5 and
         // staff-padding 0.5 (scm/define-grobs.scm:1084-1090), so its height follows the ink
         // underneath — MEASURED on pcombine-lp.ly, the three labels sit at Y-offset 2.583,

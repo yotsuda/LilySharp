@@ -43,6 +43,18 @@ CATEGORIES: list[tuple[str, str, re.Pattern[str]]] = [
      re.compile(r"LILYSHARP-OWN")),
 ]
 
+# A mention of the marker is not a declaration of it. The session-158 audit of the OWN
+# list found ~1 in 7 hits were HISTORY ("was/were/declared LILYSHARP-OWN until ...") or
+# META ("it is NOT LILYSHARP-OWN") — counting those inflates the OWN total and makes the
+# next reader hunt labels that no longer exist. The keyword must precede the marker on
+# the SAME line (live labels put "not"/"declared" only AFTER it: "LILYSHARP-OWN,
+# DECLARED:"), and cross-references were reworded at their sites instead of matched here.
+# The gap may not cross a sentence end, but a decimal ("Was an invented 0.3 (…") is not
+# one — hence the tempered dot.
+OWN_MENTION = re.compile(
+    r"\b(?:was|were|used to|declared|not|than as)\b(?:[^.]|\.(?=\d)){0,40}LILYSHARP-OWN"
+    r"|LILYSHARP-OWN line\b", re.I)
+
 COMMENT = re.compile(r"^\s*(?:///|//|\*)\s?")
 
 
@@ -70,6 +82,8 @@ def main() -> int:
                 continue
             for key, _, pattern in CATEGORIES:
                 if pattern.search(line):
+                    if key == "OWN" and OWN_MENTION.search(line):
+                        break      # a history/meta MENTION of the marker, not a declaration
                     hits[key].append((rel, n, clean(line)))
                     per_file[rel] += 1
                     break          # one line counts once, in the first category that claims it

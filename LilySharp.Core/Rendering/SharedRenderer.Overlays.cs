@@ -707,8 +707,10 @@ internal static partial class SharedRenderer
             //   :556-557  the BOTTOM tick, the same box at (iv[DOWN] .. iv[DOWN] + thick).
             // Drawn as strokes rather than boxes: a butt-capped line of width `thick` centred
             // on each box's midline covers exactly that box.
-            // ⚠️ LILYSHARP-OWN: THE CORNERS. LilyPond's boxes are round_filled_box(b, blot)
+            // ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
             //   with blot = thick, so its corners are rounded; a stroked line's are square.
+            //   LP has the stencil, so this is a knowing form divergence, not a Lily#-own
+            //   quantity (§5.2 audit, session 158).
             //   The EXTENTS are identical — which is why the ledger's three bracket points
             //   close — and this engine has no blot anywhere, so the difference is a standing
             //   convention rather than something chosen here. Naming it so the next reader does

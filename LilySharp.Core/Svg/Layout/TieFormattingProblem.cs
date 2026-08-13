@@ -1006,7 +1006,9 @@ internal sealed class TieFormattingProblem
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:794-813 dot_x_ / dot_positions_ collision
     /// LILYPOND-REF: lily/dots-engraver.cc:62-80 dot position avoids staff lines
     /// <para>
-    /// ⚠️ LILYSHARP-OWN, AND THE CITATION IS THE RULE'S SHAPE RATHER THAN ITS ARITHMETIC.
+    /// ⚠️ NOT PORTED — THE ARITHMETIC; THE CITATION IS THE RULE'S SHAPE ONLY. LP has the
+    /// quantity (the bow evaluation below), so the flat penalty is an unported
+    /// simplification and not a Lily#-own one (§5.2 audit, session 158).
     /// LilyPond evaluates the DRAWN BOW over the dots' X and charges <c>peak_around</c> on the
     /// distance from EVERY dot position in the column to that height (:794-813: <c>dot_x_
     /// .center ()</c>, <c>b.get_other_coordinate (X_AXIS, x)</c>). This asks only whether the

@@ -12,45 +12,61 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 33 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 44 | 観測者がゼロだと自認しているもの |
-| `OWN` | 116 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **193** | |
+| `APPROX` | 48 | LP に対応物はあるが、形が違うと自認しているもの |
+| `UNWATCHED` | 45 | 観測者がゼロだと自認しているもの |
+| `OWN` | 83 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **176** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/EngravingDefaults.cs` | 16 |
-| `LilySharp.Core/Svg/Layout/LayoutEngine.cs` | 11 |
+| `LilySharp.Core/Svg/EngravingDefaults.cs` | 11 |
+| `LilySharp.Core/Svg/Layout/LayoutEngine.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 6 |
+| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 6 |
-| `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
-| `LilySharp.Core/Svg/Collector/BeamDetector.cs` | 5 |
 | `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs` | 5 |
+| `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs` | 5 |
+| `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs` | 5 |
+| `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（33 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（48 件）
 
+### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
+- **:254** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
+### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
+- **:480** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
+### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
+- **:332** ⚠️ NOT PORTED — the per-duration grace head: the head shape is BLACK for every
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:909** whiteout −1) is not ported.
-- **:1022** NOT ported; this takes the note's own stem direction. No book and
+- **:202** ⚠️ The HORIZONTAL term is NOT PORTED: an approximation of
+- **:918** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:923** whiteout −1) is not ported.
+- **:1036** NOT ported; this takes the note's own stem direction. No book and
+### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
+- **:710** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:286** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:139** ⚠️ WHAT IS NOT PORTED, and why it cannot be reached rather than was skipped:
+### `LilySharp.Core/Svg/EngravingDefaults.cs`
+- **:378** ⚠️ What is NOT ported is the semibreve exception: the beam covered-grob booking
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **:107** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:554** that does not exist yet. Named, not silently approximated.
+- **:1983** ⚠️ NOT PORTED — the per-type padding: the 2.25 is FLAT, but under the
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:766** differ by half the bump whenever MinimumDy actually bites. Not ported here
+### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
+- **:49** ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:1100** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
+- **:1107** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
+- **:1821** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:58** ⚠️ NOT PORTED HERE: LilyPond puts the alteration on the LEFT of the digit by default
 ### `LilySharp.Core/Svg/Layout/FingeringEngraver.cs`
@@ -61,10 +77,13 @@
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:92** NOT ported: no part here declares one, and the grobs that do in LilyPond — the ones
 - **:288** (-0.5 . 0.5) widens the Y band, not X (not ported — see the
+### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
+- **:443** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
+- **:459** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:2073** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:2125** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:2598** same approximation the scripts' own remark records for the movers; the books that
+- **:2590** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:171** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:549** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -72,6 +91,8 @@
 - **:961** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
 - **:1059** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
 - **:1153** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
+### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
+- **:71** ⚠️ NOT PORTED — the outside-staff placement: a flat 1.5 staff-spaces above the
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
 - **:406** case of broken slur") — not ported; every slur this scorer sees lives on
 - **:581** column allows only 0.3 of movement) is not ported: every edge here
@@ -81,42 +102,46 @@
 - **:3679** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
 - **:85** order, so the warning has nothing to fire on and is not ported.
+### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
+- **:1009** ⚠️ NOT PORTED — THE ARITHMETIC; THE CITATION IS THE RULE'S SHAPE ONLY. LP has the
 ### `LilySharp.Core/Svg/Layout/TieVariantEngraver.cs`
 - **:159** quantizes each tie's Y off staff lines; that scorer is not ported (ticketed) —
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
 - **:1128** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:147** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
+### `LilySharp.Core/Svg/Model/LyricItem.cs`
+- **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（44 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（45 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:482** no observer; add the paren widths when a book brings one. The unpacked
-- **:484** bare glyph width, which is exact for one and unobserved for many.
+- **:483** no observer; add the paren widths when a book brings one. The unpacked
+- **:485** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1023** no observer reaches that branch yet.
+- **:1037** no observer reaches that branch yet.
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
-- **:826** inherited from the sets, unobserved, and closes only when the probe
+- **:1081** inherited from the sets, unobserved, and closes only when the probe
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:424** unobserved rather than known-good; it closes when the labels travel with their items.
 - **:1552** fingering only. ⚠️ No point observes it: the corpus has no combined pair whose two
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:101** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
-- **:691** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
+- **:693** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
 - **:174** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:270** hands the scorer the band it would have had without the digit. No book reaches that
 - **:1578** see the difference, and no fixture and no ledger point reaches it.
-- **:1982** 2.45; no ledger point or book observes a fermata where this floor
-- **:2091** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:1988** 2.45; no ledger point or book observes a fermata where this floor
+- **:2097** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:187** no observer, so treat it as unverified until one measures it.
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:1944** observed by: NOTHING. No ledger point reads a tab tie's width, and
-- **:2016** observed by: NOTHING. There is no ledger point on a tab tie's width,
+- **:1954** observed by: NOTHING. No ledger point reads a tab tie's width, and
+- **:2026** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:62** moving output no observer can check.
 - **:122** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
@@ -129,10 +154,12 @@
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:459** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:1588** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
-- **:3892** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:1841** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
+- **:4159** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
+- **:286** an unverified edge of this proxy (no point observes it).
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3011** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:3095** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:445** no observer distinguishes the two until a merge-differently-* producer lands.
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
@@ -152,7 +179,7 @@
 - **:211** every script now clearing one, and NO ledger point observes a tab stem (a tab book is
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:335** so removing the floor here would be an unobserved change to degenerate ties rather
-- **:1019** observed by: NOTHING. No ledger point measures a dotted tie
+- **:1021** observed by: NOTHING. No ledger point measures a dotted tie
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
 - **:504** named at the constant), because no point measures a barline-bound trill.
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
@@ -161,84 +188,58 @@
 - **:716** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
 - **:970** positions are string slots; no ledger point measures that regime).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（116 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（83 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2329** carry LILYPOND-REF and not LILYSHARP-OWN. What could not be copied literally is the
-- **:2719** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2787** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:1475** previous written duration), so this is LILYSHARP-OWN and Lily# used to
-### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
-- **:247** ⚠️ LILYSHARP-OWN: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at their own.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:311** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
-- **:480** LILYSHARP-OWN: courtesy parens are NOT counted (LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
-- **:66** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
+- **:67** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:209** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
-- **:332** ⚠️ LILYSHARP-OWN: the head shape is BLACK for every grace duration, because that is
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:192** ⚠️ The HORIZONTAL term is LILYSHARP-OWN, an approximation of
-- **:374** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
-- **:906** LILYSHARP-OWN: LP draws each dash as a round_filled_box with blot 0.8·lt
-- **:1016** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
-### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:710** ⚠️ LILYSHARP-OWN: THE CORNERS. LilyPond's boxes are round_filled_box(b, blot)
+- **:386** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
+- **:1030** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
 - **:654** LILYSHARP-OWN, tuned on request (2026-08-06): each run's zigzag PHASE puts the
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
-- **:108** and both were LILYSHARP-OWN inventions, falsified by measurement
-- **:706** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
-- **:736** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
-- **:819** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
+- **:961** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
+- **:991** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
+- **:1074** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:168** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:3844** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
+- **:5037** LILYSHARP-OWN: an eighth when the source writes no duration. ⚠️ THIS IS NOT A
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:94** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
-- **:287** ⚠️ IT WAS A HAND-WRITTEN 0.66 UNTIL 2026-08-03, declared LILYSHARP-OWN, and the
-- **:370** CueScale's LILYSHARP-OWN line as theirs). Three of them — a symmetric ±2-position
-- **:375** LILYSHARP-OWN: the one survivor. The middle line IS a non-semibreve rest's default
-- **:397** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
-- **:431** anchor is at 0.8. Was an invented 0.3 (LILYSHARP-OWN), which sat the clef 0.5 too far
-- **:479** ⚠️ IT WAS 2.6, declared LILYSHARP-OWN with LilyPond's own rule quoted right beside it —
-- **:592** LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
-- **:662** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
-- **:673** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
-- **:704** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
-- **:757** ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
-- **:796** ⚠️ LILYSHARP-OWN: LILYPOND HAS NO RADIUS. It draws a GLYPH — scm/bar-line.scm:298-301
-- **:1001** (2026-07-30). It was a LILYSHARP-OWN drawing device with no LilyPond counterpart at
-### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:1979** ⚠️ LILYSHARP-OWN: the 2.25 is FLAT, but under the include_staff reading
+- **:399** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's
+- **:594** LILYSHARP-OWN: hand-tuned, and the only width on this list that is. ⚠️ NOT because
+- **:664** LILYSHARP-OWN: a frame, not a quantity. LilyPond has no counterpart to look up
+- **:675** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
+- **:706** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
+- **:759** ⚠️ LILYSHARP-OWN, AND LILYPOND'S ANSWER IS MEASURABLE THOUGH NOT DECLARED. There is no
+- **:798** ⚠️ LILYSHARP-OWN: LILYPOND HAS NO RADIUS. It draws a GLYPH — scm/bar-line.scm:298-301
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:144** LILYSHARP-OWN: a TAB string position carries no pitch default-direction.
 - **:368** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
 - **:1259** LILYSHARP-OWN: with no normal stems every flat off-line candidate
-### `LilySharp.Core/Svg/Layout/BreakAlignSpacing.cs`
-- **:483** spring measure from ink nobody draws, which is what forced the LILYSHARP-OWN
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
 - **:79** LILYSHARP-OWN: the band is Lily#'s model of an independent row (HANDOFF 3); LilyPond
 - **:101** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
-- **:289** ⚠️ IT WAS 2.6 AND LILYSHARP-OWN, with LilyPond's rule (font-size = 1.5 off the
 - **:300** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
 - **:349** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
-- **:91** was LILYSHARP-OWN and read +8.468502 on that entry.
 - **:93** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
-### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
-- **:49** ⚠️ LILYSHARP-OWN, DISCLOSED (no pair measures either):
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **:82** LILYSHARP-OWN: ink above / below the baseline for a label LilyPond does NOT spell in
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:1647** Lily#-side stem the tie has to be told about. It was LILYSHARP-OWN until 2026-08-03,
-- **:1814** ⚠️ LILYSHARP-OWN: A BROKEN COLUMN IS SOLVED ONCE PER SEGMENT, NOT ONCE.
-- **:1934** ⚠️ LILYSHARP-OWN, AND IT IS A SECOND SPELLING OF "WHERE THE DOTS END".
-- **:2004** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
+- **:1944** ⚠️ LILYSHARP-OWN, AND IT IS A SECOND SPELLING OF "WHERE THE DOTS END".
+- **:2014** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:118** LILYSHARP-OWN: the WIDTH of the box a figure offers the skyline. LilyPond has no such
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -252,15 +253,14 @@
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **:362** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:492** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
-- **:1494** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
-- **:1581** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
-- **:2067** ⚠️ LILYSHARP-OWN: DECLINING HAS NO COUNTERPART — LilyPond always solves. Its chain
-- **:2168** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
-- **:2180** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
-- **:3292** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:3702** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:4013** with a tuned gap (1.4/1.9) — a LILYSHARP-OWN box step with no LilyPond counterpart.
+- **:507** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:1747** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
+- **:1834** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
+- **:2334** ⚠️ LILYSHARP-OWN: DECLINING HAS NO COUNTERPART — LilyPond always solves. Its chain
+- **:2435** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
+- **:2447** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
+- **:3559** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:3969** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
@@ -271,36 +271,27 @@
 - **:313** LILYSHARP-OWN: a row's band is still Lily#'s — its own bar lines run a staff height and
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:46** LILYSHARP-OWN: LP scales h by lily/lyric-hyphen.cc:66-68 font_size_step
-- **:281** LILYSHARP-OWN: "onset 0 in the system's first measure" stands in
-- **:441** LILYSHARP-OWN: the barline's ink width is taken as the THIN
-- **:454** LILYSHARP-OWN: the left bound is the first measure's X (= where
 ### `LilySharp.Core/Svg/Layout/MetronomeMarkGeometry.cs`
 - **:173** the drawn pairs). LILYSHARP-OWN: the shuffle equation is Lily#'s own device with
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:319** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **:400** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
-- **:831** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:839** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:82** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:97** ⚠️ LILYSHARP-OWN, AND IT IS THE THIRD SPELLING OF ONE QUANTITY — named 2026-07-31 by
-- **:1579** (LILYSHARP-OWN device, see MetronomeMarkGeometry).
-- **:1753** (The LILYSHARP-OWN pocket seal that used to live here — the below pass forced
-- **:1822** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1823** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:67** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
-- **:175** ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
-- **:381** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
-### `LilySharp.Core/Svg/Layout/PartCombineAnalyzer.cs`
-- **:71** ⚠️ LILYSHARP-OWN: a flat 1.5 staff-spaces above the system top. LilyPond puts the
+- **:222** ⚠️ LILYSHARP-OWN: THE BREAKER KEEPS THE NOMINAL PAIR, deliberately and under
+- **:428** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:116** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:216** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:275** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
-### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:937** live in this scorer were LILYSHARP-OWN and are gone.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:4303** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
@@ -314,23 +305,16 @@
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:330** ⚠️ LILYSHARP-OWN: the MINIMUM-LENGTH FLOOR. LilyPond puts none here — min-length
 - **:377** ⚠️ LILYSHARP-OWN, AND ONLY ON A TAB. LilyPond has one staff_symbol_referencer_
-- **:1009** ⚠️ LILYSHARP-OWN, AND THE CITATION IS THE RULE'S SHAPE RATHER THAN ITS ARITHMETIC.
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
 - **:81** LILYSHARP-OWN: an X-axis bound gap. LilyPond's (padding . 0.5)
 - **:503** BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,
 ### `LilySharp.Core/Svg/Layout/TrillWaveOutline.cs`
 - **:164** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
-### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
-- **:736** LILYSHARP-OWN — that label is for a quantity LilyPond does not have, and LilyPond
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **:173** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
 - **:606** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
-### `LilySharp.Core/Svg/Model/LyricItem.cs`
-- **:100** LILYSHARP-OWN: the trigger is the LYRIC-side marker, not the voice's
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:185** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
-### `LilySharp.Core/Svg/Model/MusicItem.cs`
-- **:486** than as LILYSHARP-OWN (HANDOFF §7.6 ⒝).
 ### `LilySharp.Core/Tablature/Tunings.cs`
 - **:196** LILYSHARP-OWN. Four is the guitarist's one-finger-per-fret span and also the number
 - **:208** LILYSHARP-OWN. Without it the hand never comes down on its own — "do not move" beats

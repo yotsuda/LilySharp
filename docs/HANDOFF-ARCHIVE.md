@@ -18,6 +18,70 @@
 
 ---
 
+## 以下は第156セッションの経緯
+
+最終更新 第156セッション＝**残債返済を中断し、ユーザー報告のリリースブロッカー 6 件を修理した便**
+（perf 残債は 1 行も触っていない——次の一手の順位は第155 のまま生きている）。全件が
+「起票再現 → 修理 → 網＋陽性対照（revert 済み）→ 3 点証明 → commit」の型。suite は
+4425 → **4448 passed / 0 failed / 4 skipped（+23＝網）**・**コーパス rerender 0/82 と台帳
+（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）は 6 commit とも不動**・
+未 push 21。snapshot が動いたのは ⑷⑹ の keysig 族だけ（ユーザー承認の再ベース・下記）。
+- **⑴ `0944984f` 小節途中の voice span**: `c4 voice { e } { g' }` の第2声部が小節頭に落ちて
+  c と g' が並んでいた。`_parallelSpans` に **StartOffset（span 開始時の小節内経過）** を追加し、
+  extra voice の walk 冒頭に spacer（`IsSpacer`・PartCombiner の onset 詰めと同じ装置）を種付け。
+  tuple は checkpoint 記録・splice 状態照合・spanTail 再解決まで貫通（offset 不一致=splice 辞退）。
+  LP twin と交差声部シフト 0.4434 まで一致。網 `VoiceSpanOnsetTests` 4 本。
+- **⑵ `494b9270` マーカー run 先読み**: `c8[( c)]` で偽 LYS4010＋スラー消失。パーサは無罪
+  （post-event は順不同で順序保存）——collector の `PeekMarkers` が **1 ノード先読み**で
+  `[` の陰の `(` と、**`)` の陰の `]`（手動梁が閉じない同根の潜在欠陥）**を落としていた。
+  後続マーカー run 全体の畳み込みへ（3 呼び出し元とも。top-level walk は**最遠 peek ノード**を
+  checkpoint read 透かしに fold——span 昇順なので run 全体を覆う）。`c( d)( e)` の閉→開も解禁。
+  網 `MarkerRunLookaheadTests` 6 本。
+- **⑶ `7a69bc30` repeat 本体の検証枠**: `c8 …| repeat percent 4 { a a … }` の裸音相続で
+  偽 LYS2002（duration 2）。`ValidateNode` の**独立ブロック再帰（まっさらな 1/4 既定）が
+  collector と非整合**だった。voice-span の前例どおり `SplitIntoMeasures` が repeat を
+  (小節,項目) 番地で記録し、**開いた時点の枠（走行既定音価・経過拍・その小節の拍子）で本体を
+  検証**・既定音価は本体越しに継承（repeat 後の裸音は本体内から相続）。`MeasureModel.Flatten`
+  のターン毎 quarter リセットも削除（DurationResetMarker の契約は phrase 専用に訂正）。
+  1 パスで全ターンを覆う論証（ターン 2..N の入口枠＝ターン 1 の出口枠＝自身の出口枠）は remark。
+  網 `RepeatBodyMeasureValidationTests` 6 本（本物の欠陥 2 種が警告し続けることも主張）。
+- **⑷ `890732a5` 調号が skyline に参加**: セクションラベルが調号変更のシャープ／ナチュラルの
+  真上に印字（**§2A「seed に居ない参加者」族の新例＝調号**。dots 第107 に続く 1 本）。描画側から
+  **`KeySignatureGlyphs` / `KeyChangeGeometry` を単一の家に抽出**し、描画と seed が同じ walk を
+  消費（`MergeAccidentalInk` の既存装置で inside-staff profile へ）。**seed の x は walk の
+  itemX では駄目**——⚠️ **change item の walk itemX（列 x）と描画 x（change-column に hang）は
+  別物**。`KeyChangeSeedX` がレンダラの 3 分岐（開小節アンカー／hung-back／loose hang）を同じ家
+  （`SpacingRules.*`・`ChangeColumnItems`・`GetVisualBarlineWidth`＝internal 化）経由で再現。
+  行頭 prefix の調号は未 seed（SeedClef の remark が名指す「builder に届かない break-align X」
+  と同じ残件＝▶ ⒮⑴）。keysig 族 snapshot 8 冊を承認再ベース。網 `SectionMarkOverKeyChangeTests`。
+- **⑸ `31f7a78e` 双子の黙って落とす穴 7・8 号**: exporter が**セクションマーク**と
+  **セクション末の score 調復帰**を出さず、LP twin がリプライズごとに別の紙になっていた
+  （B の `key a major` が最後まで残る）。form 展開が **`SectionPlayMarker`**（RelativeResetMarker
+  型の零幅 sentinel）を各演奏点に植え、`EmitSectionPlay` が `\mark \markup \box "…"` と、
+  header key が続かないときだけ **home 宣言ノード再出力**の `\key`（`ScoreHomeKey.Declaration`
+  新設＝旋法・綴りが源から出る）を書く。ラベル規則は collector の `ResolveSectionLabel` を鏡写し
+  （引用ラベル優先・`""` 抑止・`~` 無音）。**双子 217 冊の before/after 全数比較（第62手順）＝
+  変化 205 冊・トークン単位で `\mark`/`\key` の挿入のみ**を機械検査＋例外 2 件目視で証明・
+  LP スポット 4 冊コンパイル緑。残る穴 1 regime: volta ending 本体（▶ ⒮⑵）。
+  網 `LilyPondExporterSectionPlayTests` 5 本。
+- **⑹ `9407dacc` ⑷ の seed の縦枠は発明だった**（追撃報告「マークが高すぎる」）: 変換
+  `(8 − position)` は **`KeySigStaffPosition` の出力を読まずに描画式から推測した発明**で、
+  pos=4 だけ偶然一致・c♯ を 3 ss 高く seed→ラベルが幻インクの上に立ち LP 比 +1.2 ss 浮いた。
+  実枠は **LP alteration-positions＝中央線基準・上向き＝`NoteItem.StaffPosition` と同じ**
+  （treble A長調: f♯=4, c♯=1, g♯=5）。特定は stacker の support エントリのダンプ——A/A2 は
+  束縛インクに**厳密に**閉じ、B だけ誰も描いていない場所に束縛されていた。修理後の箱下端は
+  A 2.26 / B 1.96 / A2 2.49（LP `\sectionLabel` 2.43 / 2.04 / 2.80・**並び A≥B も一致**・
+  B は束縛シャープ+0.46 ちょうど）。⚠️ **「A と B の高さが揃わない」は LP も同じ**（skyline
+  配置＝下のインク次第）——揃える方向に直さないこと。網に**「立つ」側の主張**（bottom ≥
+  束縛インク − padding − slack）を追加——**避けるだけの主張はこの欠陥の間ずっと緑だった**。
+  keysig snapshot 3 冊を縮む向きで再ベース。
+- **裁定 2 件（ユーザー基準「このセッションが有利なら着手・不利なら禁止」）**: ⑸ は着手
+  （twin と意味論の文脈が温かい・エンジン出力不変）。**行頭 prefix 調号 seed と小節途中 repeat の
+  偽 nudge は次セッション送り**（▶ ⒮ に理由ごと記載）。
+- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（このセッション開始時から。触っていない）。
+
+---
+
 ## 以下は第155セッションの経緯
 
 最終更新 第155セッション＝**3 便＝⑴ ⑵′ 後半＝flat list の lazy 化（採用 red を live 窓の外で
