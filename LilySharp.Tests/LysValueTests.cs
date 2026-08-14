@@ -78,19 +78,20 @@ public class LysValueTests
     }
 
     [Fact]
-    public void ARealIsNotWritableInTheGrammar()
+    public void ARealIsWritableInTheGrammar()
     {
-        // The lexer has no decimal number (ScanNumber consumes digits only), so
-        // `= 3.5` does NOT reach the collector as one value: the integer stops at the
-        // dot. Measured 2026-08-15: 0 corpus books write a fractional override.
-        // LysValue.Real exists for the C# callers (staff spacing, note collision).
-        // ⚠️ Adding a decimal literal is a GRAMMAR change and belongs to its own
-        // session — if this test starts failing because the lexer grew one, that is
-        // the news, and the value-site audit's §4 performance note applies.
+        // This test used to be ARealIsNotWritableInTheGrammar, and it was written to
+        // FAIL the day the lexer grew a decimal literal — "if this starts failing,
+        // that is the news". It did, and this is the news: `= 3.5` now reaches the
+        // collector as one value instead of storing 3 and dropping the .5.
+        //
+        // Kept here (rather than only in DecimalLiteralTests) because the claim it
+        // pins is about this type: which cases of LysValue a .lys source can write.
+        // Bool is now the only one it cannot.
         var tree = SyntaxTree.Parse("override Stem.length = 3.5 c4 d e f");
         var score = new MeasureCollector().Collect(tree);
 
-        Assert.Equal(new LysValue.Int(3), Assert.Single(score.GrobOverrides).Value);
+        Assert.Equal(new LysValue.Real(3.5), Assert.Single(score.GrobOverrides).Value);
     }
 
     [Fact]

@@ -42,6 +42,18 @@ public enum SyntaxKind : ushort
     // === Literals ===
     /// <summary>An integer literal token.</summary>
     IntegerLiteral,
+    /// <summary>
+    /// A decimal literal token (<c>0.45</c>, <c>-0.15</c> once the parser folds the sign).
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="IntegerLiteral"/> rather than a widened one, because the
+    /// grammar's numbers are mostly NOT reals: a duration, a tuplet ratio, a volta number
+    /// and a repeat count are whole by construction, and the places that accept a real are
+    /// the value positions (an <c>override</c> value, a part property). Keeping the kinds
+    /// apart means every one of those sites says which it takes, instead of accepting
+    /// <c>3.5</c> and truncating it somewhere downstream.
+    /// </remarks>
+    DecimalLiteral,
     /// <summary>A string literal token.</summary>
     StringLiteral,
 

@@ -157,6 +157,11 @@ internal sealed partial class Parser
             // `c 4` parses as the note c and this stray number. Report it here
             // (returning no item; the sequence loop advances past it).
             SyntaxKind.IntegerLiteral => ReportDetachedDuration(),
+
+            // A decimal in a music stream can only have been meant as a duration, and
+            // durations are whole. Reported rather than skipped: `c4.5` used to lex as
+            // a dotted quarter plus a stray `5` that this loop dropped in silence.
+            SyntaxKind.DecimalLiteral => ReportFractionalDuration(),
             _ => null
         };
     }
@@ -182,6 +187,19 @@ internal sealed partial class Parser
         _diagnostics.Error(span, DiagnosticCodes.DetachedDuration,
             "A duration must be GLUED to what it lengthens - write c4 or <c e g>4; "
             + "separated by a space, this number means nothing.");
+        return null;
+    }
+
+    /// <summary>Reports a decimal where a duration was meant (LYS0021) and yields no
+    /// music item — the caller's loop skips the token.</summary>
+    private GreenNode? ReportFractionalDuration()
+    {
+        var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+        _diagnostics.Error(span, DiagnosticCodes.FractionalDuration,
+            $"'{Current.Text}' is not a duration - a duration is a whole number "
+            + "(c4, c8), lengthened by dots (c4. is a dotted quarter). A decimal "
+            + "number is a value, and belongs in a value position such as an "
+            + "override (override Stem.length = 3.5).");
         return null;
     }
 
@@ -578,13 +596,16 @@ internal sealed partial class Parser
         var propertyName = ParseGrobPropertyName();
         var equals = Expect(SyntaxKind.Equals);
 
-        // Value: integer (lengths/positions), identifier (symbolic, e.g. up / red),
-        // string (e.g. color = "red" — the collector strips the quotes), or a negative
-        // integer. The resolver stores the value as a string and reparses it per property
-        // (GetInt / GetDouble / GetString / GetBool), so all four forms flow through.
+        // Value: integer (lengths/positions), decimal (LilyPond's grob values are
+        // routinely fractional — `(padding . 0.5)`, `(thickness . 0.45)`), identifier
+        // (symbolic, e.g. up / red), string (e.g. color = "red" — the value carries the
+        // content, not the quotes), or either number with a leading minus. The value
+        // reaches the collector as a LysValue, so the kind chosen here is the type the
+        // whole compiler sees.
         var value = Current.Kind switch
         {
             SyntaxKind.IntegerLiteral => Advance(),
+            SyntaxKind.DecimalLiteral => Advance(),
             SyntaxKind.Identifier => Advance(),
             SyntaxKind.StringLiteral => Advance(),
             SyntaxKind.Minus => CombineNegativeNumber(),
@@ -628,12 +649,13 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Combines a minus sign with following integer into a negative number token.
+    /// Combines a minus sign with the following number into one negative number token,
+    /// keeping the number's KIND (a negative decimal stays a decimal).
     /// </summary>
     private SyntaxToken CombineNegativeNumber()
     {
         var minus = Advance(); // consume -
-        if (Current.Kind == SyntaxKind.IntegerLiteral)
+        if (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral)
         {
             var num = Advance();
             // Keep ALL consumed text — including any whitespace written between the '-'
@@ -644,7 +666,7 @@ internal sealed partial class Parser
             // when it reads the numeric value.
             string inner = (minus.TrailingTrivia?.ToFullString() ?? "")
                          + (num.LeadingTrivia?.ToFullString() ?? "");
-            return new SyntaxToken(SyntaxKind.IntegerLiteral, "-" + inner + num.Text,
+            return new SyntaxToken(num.Kind, "-" + inner + num.Text,
                 minus.LeadingTrivia, num.TrailingTrivia);
         }
         // Error: minus not followed by number

@@ -18,6 +18,89 @@
 
 ---
 
+## 以下は第165セッションの経緯
+
+最終更新 第165セッション＝**残債返済を止めて文法の整理に舵を切った便。⑴「Scheme の代わりに
+C# 埋め込み」の可否を実測で裁定し ⑵ LP の Scheme 用途を現物から数え ⑶「式」を入れる日に触る
+site を全数調査して `docs/VALUE_SITE_AUDIT.md` に起票した**。
+⚠️⚠️ **本便は §0 の裏取りをほとんど走らせていない**——**build / suite / 台帳は未実行**で、
+**この §1 に suite 数・台帳点数は書いていない**（書けば第164 の数の写しになるので書かなかった）。
+git だけは終わりに確認した＝**⑻**。⚠️ そこで**引継ぎの未 push 数の stale を 1 件拾った＝⑼**。
+**エンジンのコードは 1 行も動いていない**（変更は docs 1 枚の新規と `scratch\` の生データのみ）。
+- **⑴ 決定: C# 埋め込みは v1 に載せない**（ユーザー判断）。**ただし文法は将来の埋め込みと
+  整合する形にいまから整える**——その「整える」の中身は**語彙の予約ではなく構造**。
+  Lily# はプレリリースで後方互換の義務が無く、`#` `%` バッククォート `&` は `SyntaxKind` に
+  未使用のまま（実測）なので、**記号は後からいくらでも取れる＝予約に価値がほぼ無い**。
+- **⑵ ★★ Roslyn scripting の値段（実測）**。⚠️ **Lily# の外**・単独プロセス・Release・
+  .NET 9.0.19・`Microsoft.CodeAnalysis.CSharp.Scripting` 4.14.0・16 コア・
+  生データ `scratch\scriptbench-165.txt`。**楽観的な床**（プロセス内では悪化しうる）:
+  **cold（プロセス最初の 1 本）0.70–1.64 秒**／**本文が変わるたびの再コンパイル＝
+  tiny 65–77 ms・現実的な 10 行 162–200 ms**（min–median）／**本文不変＝キャッシュ命中 11.5–17.2 µs**。
+  ⇒ ★ **スクリプト本文をタイプ中の毎打鍵コンパイルはリアルタイムにならない**——現実的な 10 行が
+  第159 の Release 打鍵床（plain 114.2 / fingbeam 227.4 / v2bow 166.2 ms）と同格以上。
+  **「直前に成功した delegate で描き続け、コンパイルは idle 時だけ」は仕様であって工夫ではない。**
+  ⇒ ★★ **しかしキャッシュ命中は打鍵床の 1 万分の 1**＝**スクリプトを含む本の「音楽」を編集する
+  分には課金ゼロ**。**展開相を parse と collect の間に置けば、下流（collect / splice / layout /
+  render とその全 memo）は 1 行も触らずに済む**ことが、値段の上で裏づいた。
+- **⑶ ⚠️ collectible ALC は最適化ではなく必須**（実測）——25 回コンパイルで
+  ロード済みアセンブリ **12 → 56**、1 つも解放されない。
+- **⑷ ⚠️ ★ 「allowlist は安全性だけでなく速度の得にもなる」は反証された**。参照 7 個の lean は
+  164 個の broad より**再現性をもって 1.5–2 倍遅い**（fresh process の A/B/A/B で 4 回とも同じ向き）。
+  **機構は不明なので説明は作っていない。**⇒ **allowlist は安全のためにやる。速さを理由にしない。**
+  ⚠️ 第1 回の測定は broad と lean を同一プロセスに並べて**順序が交絡**していた（**捨てた**）。
+- **⑸ LP の Scheme 用途を 2.26.0 の現物から数えた**
+  （`C:\bin\lilypond-2.26.0\share\lilypond\2.26.0`）: grob プロパティの**手続き値 507**
+  （`scm\lily\define-grobs.scm` の `. ,ly:` 438 ＋ `. ,(` 69）・
+  `define-{music,scheme,void,event}-function` **235**（`ly\music-functions-init.ly` 155・
+  `ly\property-init.ly` 25）・`define-markup-command(-list)` **217**
+  （`scm\lily\define-markup-commands.scm` 194）。
+  ★ **ユーザーが「文法」だと思っている命令の大半が Scheme 関数**（`\absolute` `\afterGrace`
+  `\applyContext` `\autoChange` `\arpeggioBracket` `\harmonicsOn` `\accidentalStyle`）。
+  ⚠️ **これは LP の中身であってユーザーの書き方ではない**（LSR は手元に無い＝測っていない）。
+  ⇒ Lily# が埋めるべき穴は**生成系（自作命令・markup・楽曲変換）だけ**。ユーザーが打つ `#` の
+  大多数＝**データリテラルと設定一行は、すでにネイティブ構文で置換済み**。
+- **⑹ ★★★ 値 site の全数調査＝`docs/VALUE_SITE_AUDIT.md`**（第166 で数え切り・下記）。
+  **最大の発見は `override` と part property の値が文字列のまま全工程を横断すること**——
+  `OverrideDeclarationSyntax.ValueToken`（`SyntaxNodes.Overrides.cs:41`）は生トークンで、
+  値は `Dictionary<string, Dictionary<string,string>>` に積まれ、
+  `GrobProperty.GetDouble`/`GetInt`（`:218`/`:233`）が**使う場所で初めて数に戻す**。
+  ⇒ **式は `Dictionary<string,string>` を通れない。式の層の本体はこの配管であって、
+  読み取り site の数ではない。**
+  数: **軸A（パーサがリテラルを要求）19 ／ 軸B（構文アクセサが変換）17 ／
+  軸C（下流が自前で再解釈）20**（変換 site は Core 全体 77 件中、文法内 39 件）。
+  ⚠️ **軸A の 19 は床**——`Values` 走査型（`Tempo`/`Metadata`/`PropertyAssignment`/`override`）は
+  数えていない。⚠️ **C > B が主眼**＝同じ値を 2 か所以上が別々に読んでいる（第164 の
+  「カットには表が 2 つある」と同型の形）。
+  **⇒ 第166 が数え切った: 軸A は 68・文法内は 43。**
+  ⚠️ **`DurationSyntax.Value`（`SyntaxNodes.cs:210`）は据え置き**——全音符が通るので式にすると
+  打鍵ごとに全音符分の評価。同 site のコメントが**「壊れた入力で throw すると Problems パネルが
+  空になった」実害**を記録している。
+- **⑺ 副産物 2 つ**: ① `GRAMMAR_STATUS.md` の「Multi-file projects（`include` across files）
+  未実装」は **stale**——`using "file.lys"` は `Parser\UsingExpander.cs` に実在（深さ優先・
+  フルパスで重複排除・循環は停止・読めないファイルは inert）。**文法ドキュメントを整理する便で
+  落とすこと**（本便では `GRAMMAR_STATUS.md` を触っていない）。
+  ② **ユーザーレベルの NuGet.config が、存在しない private feed（UiPath
+  `Autopilot for Everyone-Packages`）を見に行き、新規プロジェクトの restore が 37 秒かけて失敗する。**
+  LilySharp 本体はキャッシュ済みなので気づかないが、**新しくパッケージを足す日に必ず踏む**
+  （回避は当該プロジェクトに `NuGet.config` を置いて `<clear/>` ＋ nuget.org のみ）。
+- **⑻ 本便の終わりに git だけは裏取りした**（**build / suite / 台帳は依然として未実行**）:
+  **HEAD `c25743de`**（`docs/VALUE_SITE_AUDIT.md` の単独コミット）・**未 push 16**・
+  **未追跡は `audit/lp-regression/lp-vs-lilysharp.html` の 1 件のみ**（第156 開始時から。触っていない）。
+  **`docs/HANDOFF.md` と `docs/HANDOFF-ARCHIVE.md` は未コミットのまま。**
+  ⚠️ **`scratch/` は `.gitignore:81` で無視対象**——生データは「未追跡」ではなく
+  **リポジトリに入らない**（`scratch\scriptbench-165.txt` も、第163 の `fingbench-163.txt` も同じ）。
+- **⑼ ⚠️ ★★ 引継ぎの数が stale だった（§0 の罠の 5 例目）**——第164 の §1 は
+  「終了時 未 push 12」と書いていたが**実測 15**（本便のコミット前）。
+  **handoff commit 自身（`d9c2a90e`）と、その後に重ねた 2 便（`d6fc9af5`・`bdbef97d`）が
+  数えられていない**。第164 の ⑽ と ▶ ⒦ の**散文はその 2 便を記述している**ので、
+  **stale なのは数だけ**。⇒ ★ **handoff commit は自分自身を数えられない。**
+  **未 push 数を書いた後に便を重ねたら、その数は必ず古くなる**——
+  **書くなら「いつ数えたか」を添えること。**
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定）。
+
+
+---
+
 ## 以下は第164セッションの経緯
 
 最終更新 第164セッション＝**⒡ の残りを実測で裁定し、そこに実在した拍子桁の欠陥

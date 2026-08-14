@@ -315,8 +315,8 @@ internal sealed partial class Parser
             valueTokens.Add(Advance());
 
         // Collect value tokens: "marking" duration = bpm, plus an optional trailing
-        // 'swing' / 'shuffle' feel word (kept as a value token; the red node reads it
-        // via IsSwing). These are NOT reserved words, so they stay usable as names.
+        // 'swing' / 'shuffle' feel word (kept as a value token; TempoValue reads the
+        // whole run). These are NOT reserved words, so they stay usable as names.
         while (Check(SyntaxKind.StringLiteral) ||
                Check(SyntaxKind.IntegerLiteral) ||
                // a dotted beat unit: "tempo \"Lively\" 4. = 116" lexes as
@@ -324,15 +324,29 @@ internal sealed partial class Parser
                // the dot the parser stopped there and ". = 116" was dropped.
                Check(SyntaxKind.Dot) ||
                Check(SyntaxKind.Equals) ||
+               Check(SyntaxKind.DecimalLiteral) ||
                (Check(SyntaxKind.Identifier) && IsSwingWord(Current.Text)))
         {
+            // A decimal is taken INTO the run and then refused, rather than left to
+            // end it. Ending the run there would drop the rest of the declaration on
+            // the floor — `tempo 4.5 = 116` would keep neither the '=' nor the 116 —
+            // and the reader would be told about a stray number somewhere after a
+            // tempo instead of about the tempo.
+            if (Check(SyntaxKind.DecimalLiteral))
+            {
+                var span = new TextSpan(_textPosition, System.Math.Max(1, Current.FullWidth));
+                _diagnostics.Error(span, DiagnosticCodes.FractionalTempoValue,
+                    $"'{Current.Text}' is not a tempo value - a metronome mark is a whole "
+                    + "number of beats per minute (tempo 4 = 116) and a beat unit is a "
+                    + "note value, dotted with a dot (tempo 4. = 116).");
+            }
             valueTokens.Add(Advance());
         }
 
         return new TempoDeclarationGreen(tempoKeyword, colon, [.. valueTokens]);
     }
 
-    private static bool IsSwingWord(string text) => text is "swing" or "shuffle";
+    private static bool IsSwingWord(string text) => TempoValue.IsFeelWord(text);
 
     // partial <duration> — declares the following measure a pickup (anacrusis)
     // of the given length. The value reuses the note-duration grammar (number +

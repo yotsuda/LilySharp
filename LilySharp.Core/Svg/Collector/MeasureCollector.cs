@@ -3040,41 +3040,28 @@ public sealed partial class MeasureCollector
         // `tempo "Grave"`, `tempo "Grave" 120`, `tempo "Grave" 4 = 54`,
         // `tempo "Lively" 4. = 116`. The text form used to be dropped
         // silently (only a bare leading integer was read).
-        if (tempoDecl.Bpm is int bpm)
+        //
+        // ⚠️ Read the run ONCE. This method used to hold a SIXTH reading of it — a
+        // step back from the `=` over the dot tokens plus a regex on the token before
+        // them — beside the five on the syntax node. The two beat-unit readings
+        // disagreed: on `tempo "x" = 90` this one matched nothing and silently left
+        // whatever the PREVIOUS tempo had put in _meta, while TempoValue.BeatUnit says
+        // a quarter, which is what the '=' with no unit means.
+        var tempo = tempoDecl.Value;
+        if (tempo.Bpm is int bpm)
             _meta.Tempo = bpm;
-        if (tempoDecl.Marking is string marking)
+        if (tempo.Marking is string marking)
             _meta.TempoText = marking;
         _meta.TempoPosition = TempoDataPos(tempoDecl);
-        // Beat unit incl. dots: walk back from `=` over the dot tokens to the
-        // unit number ("4." lexes as IntegerLiteral 4 + Dot at declaration
-        // level, so the dots arrive as separate tokens).
-        var tokens = tempoDecl.Values.OfType<SyntaxTokenNode>().ToList();
-        int eq = tokens.FindIndex(t => t.Kind == SyntaxKind.Equals);
-        if (eq > 0)
+        // No '=' means no beat unit was written, so the standing one stays.
+        if (tempo.BeatUnit is int unit)
         {
-            int i = eq - 1, dots = 0;
-            while (i >= 0 && tokens[i].Kind == SyntaxKind.Dot)
-            {
-                dots++;
-                i--;
-            }
-            var m = i >= 0
-                ? TempoBeatUnitRegex().Match(tokens[i].Text)
-                : System.Text.RegularExpressions.Match.Empty;
-            if (m.Success)
-            {
-                _meta.TempoBeatUnit = int.Parse(m.Groups[1].Value);
-                _meta.TempoDots = dots + m.Groups[2].Value.Length;
-            }
+            _meta.TempoBeatUnit = unit;
+            _meta.TempoDots = tempo.BeatDots;
         }
-        if (tempoDecl.SwingSubdivision != 0)
-            _meta.SwingSubdivision = tempoDecl.SwingSubdivision;
+        if (tempo.SwingSubdivision != 0)
+            _meta.SwingSubdivision = tempo.SwingSubdivision;
     }
-
-    // The tempo beat-unit token: digits then optional dots (e.g. "4", "8."). Source-
-    // generated so the regex is built at compile time, not parsed/JIT'd at runtime.
-    [System.Text.RegularExpressions.GeneratedRegex(@"^([0-9]+)(\.*)$")]
-    private static partial System.Text.RegularExpressions.Regex TempoBeatUnitRegex();
 
     private int CalculateKeySharps(KeySignatureSyntax key)
     {

@@ -112,6 +112,14 @@ public class IncrementalParseTests
     [InlineData("time 4/4", "time 4/")]
     // Edit that changes how a token lexes at the boundary.
     [InlineData("c4 d e f", "c44 d e f")]
+    // Typing the '.' and then the digit of a decimal: the number BEFORE the edit
+    // has to be re-lexed, because ScanNumber decides where it ends by looking two
+    // characters past it. That is the widest lookahead in the lexer and exactly what
+    // IncrementalLexer's Guard is sized for — if the guard ever shrinks, this row
+    // reuses a stale `1` and the trees diverge.
+    [InlineData("e1 |", "e1. |")]
+    [InlineData("e1 |", "e1.5 |")]
+    [InlineData("c4 d e f", "c4.5 d e f")]
     public void WithChange_MatchesFullParse(string find, string replace)
     {
         var old = SyntaxTree.Parse(Source);

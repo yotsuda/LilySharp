@@ -32,8 +32,20 @@ public sealed partial class MeasureCollector
     /// Collects figured bass annotations from note/chord modifiers.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/figured-bass-engraver.cc - listen_bass_figure
-    /// Syntax: @fig.6 (single), @fig.6.4 (two figures), @fig.6.s (with sharp)
+    /// <para>LILYPOND-REF: lily/figured-bass-engraver.cc - listen_bass_figure</para>
+    /// <para>
+    /// Written <c>@fig(6)</c> (single), <c>@fig(3 5)</c> (two figures), <c>@fig(6 s)</c>
+    /// (with sharp). The parser normalises that argument run into the INTERNAL mark name
+    /// <c>fig.6</c> / <c>fig.3.5</c> / <c>fig.6.s</c>, which is what
+    /// <c>FiguredBassItem.ParseFigures</c> reads.
+    /// </para>
+    /// <para>
+    /// ⚠️ The dotted form is the internal NAME, not the syntax. This remark used to say
+    /// "Syntax: @fig.6 … @fig.6.4" and that spelling does not parse — measured
+    /// 2026-08-15, `c4@fig.6` reports LYS0016 and produces no figure. A session read
+    /// this line, believed it, and wrote a corpus claim on top of it (HANDOFF ▶ ⒯⑸).
+    /// If you write a spelling in a remark, parse it first.
+    /// </para>
     /// </remarks>
     private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex)
     {

@@ -140,17 +140,25 @@ internal sealed partial class Parser
     /// </summary>
     private SyntaxToken ExpectMarkName()
     {
-        // Navigation keywords, integers, and pitch/rest tokens can appear as mark names
-        // LILYPOND-REF: lily/figured-bass-engraver.cc - figure numbers (e.g., @fig.6)
-        // Figured bass alterations: @fig.6.s (sharp), @fig.4.f (flat), @fig.7.n (natural)
-        // 's' → RestS, 'f' → PitchF, 'n' → Identifier (handled naturally)
+        // Navigation keywords are the live case here: this function is reached ONLY from
+        // the form-level `@` item (the single caller is ParseFormItem), where the marks
+        // are @ds.al.fine and friends.
+        //
+        // ⚠️ The integer / RestS / PitchF arms below say they are for figured bass, and
+        // that is the wrong island: figured bass is note-attached (Parser.Music.cs), not
+        // form-level, and its written form is `@fig(6 s)` — the dotted `@fig.6.s` the old
+        // comment showed does not parse anywhere (measured 2026-08-15: LYS0016). They are
+        // kept rather than deleted because "unreachable" is a claim and nothing measures
+        // it; NO corpus book or fixture reaches them. Deleting them is a job for whoever
+        // can show a form-level `@6` is meaningless. (A LILYPOND-REF to
+        // figured-bass-engraver.cc sat on this line and pointed at that wrong island.)
         if (Current.Kind is SyntaxKind.Identifier
             or SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
             or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
             or SyntaxKind.AlKeyword
-            or SyntaxKind.IntegerLiteral  // For figured bass numbers (e.g., @fig.6)
-            or SyntaxKind.RestS           // For figured bass sharp suffix (e.g., @fig.6.s)
-            or SyntaxKind.PitchF)         // For figured bass flat suffix (e.g., @fig.4.f)
+            or SyntaxKind.IntegerLiteral  // unobserved — see the note above
+            or SyntaxKind.RestS           // unobserved — 's' lexes as a rest
+            or SyntaxKind.PitchF)         // unobserved — 'f' lexes as a pitch
         {
             return Advance();
         }

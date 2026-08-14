@@ -251,6 +251,28 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string TopLevelMusic = "LYS0020";
 
+    /// <summary>Parse error: a decimal number appeared in a music stream, where the
+    /// only number that means anything is a duration — and a duration is whole
+    /// (<c>c4</c>, <c>c8</c>), lengthened by dots (<c>c4.</c>), never fractional.</summary>
+    /// <remarks>
+    /// This exists because the alternative was SILENCE. Before the lexer had a decimal
+    /// literal, <c>c4.5</c> lexed as <c>c</c> + <c>4</c> + <c>.</c> + <c>5</c> and read as
+    /// a dotted quarter followed by a stray <c>5</c> that the music loop dropped without
+    /// a word — the file said one thing and rendered another. Now the whole <c>4.5</c> is
+    /// one token, and one token can be pointed at.
+    /// </remarks>
+    public const string FractionalDuration = "LYS0021";
+
+    /// <summary>Parse error: a decimal appeared in a <c>tempo</c> value run, which has
+    /// no fractional position — a metronome mark is a whole number of beats per minute
+    /// and a beat unit is a note value (<c>tempo 4. = 116</c>).</summary>
+    /// <remarks>
+    /// Its own code rather than <see cref="FractionalDuration"/>: the decimal is inside
+    /// a tempo, and the reader needs to be told about the tempo. Before the lexer had a
+    /// decimal literal, <c>tempo 4.5 = 116</c> read its beat unit as a 5.
+    /// </remarks>
+    public const string FractionalTempoValue = "LYS0022";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

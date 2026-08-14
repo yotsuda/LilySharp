@@ -46,7 +46,7 @@ cd C:\MyProj\LilySharp
 | `Parser\Lexer.cs:243` | 除外 | **文法内** — トレモロ `:8` の数を字句解析が parse（§3.3 と同じ値の 1 回目） |
 | `Svg\Layout\StaffSpacingParameters.cs:284` | 除外 | **文法内** — **`override` の値**を直に `double.TryParse`（§2 の 5 番目の読み手） |
 | `Rendering\SharedRenderer.Overlays.cs:124` | 除外 | **文法内** — `@bend.N` の半音数（§7 ③ の再 parse） |
-| `Svg\Model\FiguredBassItem.cs:144` | 除外 | **文法内** — `@fig.6` の数字（§3.3 の 4 系統目） |
+| `Svg\Model\FiguredBassItem.cs:144` | 除外 | **文法内** — `@fig(3 5)` の数字（⚠️ 第166 訂正: 綴りは `@fig.6` ではない。§3.3） |
 
 正しく除外のまま: `MusicXmlReader`(25) / `MusicXmlExporter`(2) / `LilyPondExporter`(3) /
 `MidiExporter`(1) / `EmmentalerFaces`(1) / `SvgSystemFragmentCache`(1) / `Score.cs`(1)
@@ -113,7 +113,7 @@ lyrics・chords 行番号の 2（`Sections:350,354`）。
   `Declarations:195`。⇒ **`c''` の「2」は token の個数**。式を入れるには**綴りごと変える**。
 - **トレモロ `:8`**（4）: `Music:241,253,264,437`（音符・和音反復・drum・和音）。
 - **弦番号 `\4`**（1）: `Music:921`。
-- **mark 名の分節に数**（1）: `Form:155`（`ExpectMarkName` が `IntegerLiteral` を受ける＝`@fig.6`）。
+- **mark 名の分節に数**（1）: `Form:155`（`ExpectMarkName` が `IntegerLiteral` を受ける）。⚠️ **第166 訂正: 例に挙げていた `@fig.6` は廃止済みの綴りで、今はパースしない**——図付き低音は `@fig(3 5)`＝A3 の引数 run で書き、パーサが内部 mark 名 `fig.3.5` に正規化する。⚠️⚠️ **第167 で「別途要確認」を確認した: 用途は無い。** `ExpectMarkName` の**呼び手は 1 つだけ**（`Parser.Form.cs:66` の form 直下の `@`＝`@ds.al.fine` の島）で、**図付き低音は音符付き（`Music.cs`）＝別の島**。⇒ `IntegerLiteral`/`RestS`/`PitchF` の 3 腕は**観測者ゼロ**（コーパス 80＋フィクスチャ 209 で 1 件も届かない）。**消さずに「unobserved」と注記した**——「到達不能」は主張であって、それを測っている機械が無い。同じ行に載っていた `LILYPOND-REF: figured-bass-engraver.cc` は**島違いの引用なので消した**。
 - **和音品質 `maj7`**（2）: `Sections:301,305`。
 
 ### 1.2 軸B / 軸C（第165 の数・不変）
@@ -187,7 +187,7 @@ lyrics・chords 行番号の 2（`Sections:350,354`）。
 | `override` の数値 | `Parser.Music.cs:587-589,638` | `GrobProperty.cs:218,233`・**`StaffSpacingParameters.cs:284`** |
 | メタデータの整数 | `Parser.Declarations.cs:227`（回復 run） | `SyntaxNodes.Declarations.cs:402` |
 | `drummap` の `position N` 等 | `Parser.Directives.cs:112`（本体丸ごと生） | `DrumNameRegistry.cs`（2 件） |
-| 図付き低音 `@fig.6` | `Parser.Form.cs:155` | `FiguredBassItem.cs:144` |
+| 図付き低音 `@fig(3 5)` | `Parser.Music.cs:875`（引数 run・A3） | `FiguredBassItem.cs:144`（内部 mark 名 `fig.3.5` を読む） |
 
 ### 3.2 文字列が入る
 
@@ -202,16 +202,36 @@ lyrics・chords 行番号の 2（`Sections:350,354`）。
 **値が識別子の一部**になっているので、式を通すには**綴りごと変える**必要がある。
 **第165 は 3 系統と書いたが、実数は 6 系統**（＋反復で数を表す 8 site＝§1.1 A4）。
 
-| 綴り | パーサ | 読み手 |
-|---|---|---|
-| `@finger.3` | `Music.cs:905` | `MeasureCollector.cs:4780` — `name.AsSpan(7)` |
-| `@bend.half` / `.full` / `.N`（半音数） | `Music.cs:905` | `MeasureCollector.Annotations.cs:503-507` — `markName[5..]`（**さらに §7 ③**） |
-| トレモロ `:8` | `Music.cs:241,253,264,437` | `Lexer.cs:243`（分類のため）＋`MeasureCollector.ItemFactory.cs:216` — `text[1..]` |
-| ★ `@fig.6` / `@fig.6.s`（図付き低音） | `Form.cs:155` | `FiguredBassItem.cs:144` |
-| ★ 弦番号 `\4` | `Music.cs:921` | `SyntaxNodes.Attachments.cs:124` |
-| ★ 和音品質 `maj7` / `sus4` | `Sections.cs:301,305` | 和音名の解釈側 |
+⚠️⚠️ ★★★ **第167 訂正: この表の「綴り」列は 3 行が*内部の mark 名*で、綴りではなかった。**
+**書き方は全部 `@name(引数)` の 1 つ**で、パーサがそれを `name.引数.引数` に正規化する
+（実測 2026-08-15: `@finger(3)`→`finger.3` ／ `@bend(5)`→`bend.5` ／ `@bend(half)`→`bend.half`
+／ `@fig(6 s)`→`fig.6.s`。**点つきの `@fig.6` は LYS0016 で落ち figure は出ない**）。
+⇒ ★ **「名前の中に数が埋まっている」のは*内部表現*の話**であって、**文法の側では
+`@name(引数)` の引数 run（A3・`Music:875`）1 件に集約される**。第165・166 が 6 系統と
+数えたうちの 3 系統は、**同じ 1 つの綴りを 3 回数えていた**。
+⚠️ **コーパス実測（80 冊＋フィクスチャ 209 枚）: 書かれているのは `@finger(` 28 件と
+`@fig(` 5 件だけ。`@bend` は 0 件**（＝§7 ③ の 3 ホップ配管に届く本は 1 冊も無い）。
 
-⇒ **式の層と直交する。起票するなら別項**（HANDOFF ▶ ⒯⑷）。
+| 内部 mark 名 | 綴り（実測） | パーサ | 読み手 |
+|---|---|---|---|
+| `finger.3` | **`@finger(3)`** | `Music.cs:875` | `MeasureCollector.cs:4780` — `name.AsSpan(7)` |
+| `bend.half` / `bend.N` | **`@bend(half)` / `@bend(5)`** | `Music.cs:875` | `MeasureCollector.Annotations.cs:503-507` — `markName[5..]`（**さらに §7 ③**） |
+| `fig.3.5` | **`@fig(3 5)`** | `Music.cs:875` | `FiguredBassItem.cs:144` |
+| — | トレモロ `:8` | `Music.cs:241,253,264,437` | `Lexer.cs:243`（分類のため）＋`MeasureCollector.ItemFactory.cs:216` — `text[1..]` |
+| — | 弦番号 `\4` | `Music.cs:921` | `SyntaxNodes.Attachments.cs:124` |
+| — | 和音品質 `maj7` / `sus4` | `Sections.cs:301,305` | 和音名の解釈側 |
+
+⇒ **式の層と直交するのは下 3 行だけ。上 3 行は ▶ ⒯⑴ ⒟（`@name(引数)` の式の文法）に
+そのまま乗る**（HANDOFF ▶ ⒯⑷ はこのぶん軽くなる）。
+
+⚠️⚠️ ★★★ **その調査中に踏んだ別の欠陥（第167・未修正・起票）: 音符付きの
+`@name.suffix` は点を黙って落とす。** 実測: `c4@feather.up` は **`@featherup`** に、
+`c4@bend.half` は **`@bendhalf`** になり、**診断はゼロ・round-trip も壊れる**
+（`tree.ToFullString()` から `.` が消える）。⇒ **`AnnotationNameValidatorTests:49` の
+`c4@feather.up` が「feather の方向ではない」という理由で warn していると読めるが、
+実際は*点が食われて `featherup` という未知名になっている*から**。
+**綴りの誤りが「知らない名前」に化ける**ので、利用者には直しようが無い。
+⇒ 直すのは ⒟（`@name` の文法）の島。**点を受けるか、受けないなら診断を出すか。**
 
 ### 3.4 閉じた語彙（式にしなくてよい）
 

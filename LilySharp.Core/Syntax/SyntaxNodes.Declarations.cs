@@ -97,18 +97,16 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
         {
             if (ValueText is not { } text)
                 return null;
-            // A quoted value already lost its quotes above, so ask the token KIND rather
-            // than the text — and only when the quoted token is the whole value, since
-            // `instrument violin "1st Violin"` is a preset plus a label, i.e. two values.
+            // ONE token: the lexer already decided what it is, so ask its KIND rather
+            // than re-deriving the type from the joined text. (A quoted value has lost
+            // its quotes to ValueText above; FromToken's Trim is then a no-op.)
             var values = Values.ToList();
-            if (values.Count == 1 && values[0] is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral })
-                return new LysValue.Str(text);
-            return LysValue.FromToken(
-                long.TryParse(text, System.Globalization.NumberStyles.AllowLeadingSign,
-                    System.Globalization.CultureInfo.InvariantCulture, out _)
-                    ? SyntaxKind.IntegerLiteral
-                    : SyntaxKind.Identifier,
-                text);
+            if (values.Count == 1 && values[0] is SyntaxTokenNode single)
+                return LysValue.FromToken(single.Kind, text);
+            // MORE than one token is a run the lexer did not join for us —
+            // `instrument bass-guitar` (word+minus+word), `transpose d'` (pitch+mark).
+            // Those are words, not numbers.
+            return LysValue.FromToken(SyntaxKind.Identifier, text);
         }
     }
 }
@@ -231,135 +229,40 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// Gets the tempo marking string (e.g., "Allegro"), if present — either a
-    /// quoted string anywhere in the values or a bare word in the FIRST value
-    /// position (<c>tempo Comodo 4 = 84</c>; swing/shuffle are feel words,
-    /// not markings).
+    /// What the value run MEANS, read in one pass — the marking, the beat unit and its
+    /// dots, the bpm and the swing subdivision together.
     /// </summary>
-    public string? Marking
-    {
-        get
-        {
-            bool first = true;
-            foreach (var value in Values)
-            {
-                if (value is SyntaxTokenNode token)
-                {
-                    if (token.Kind == SyntaxKind.StringLiteral)
-                        return token.Text.Trim('"');
-                    if (first && token.Kind == SyntaxKind.Identifier
-                        && token.Text is not ("swing" or "shuffle"))
-                        return token.Text;
-                }
-                first = false;
-            }
-            return null;
-        }
-    }
+    /// <remarks>
+    /// A consumer that wants more than one of them should read THIS once rather than
+    /// several of the properties below, each of which re-reads the run.
+    /// </remarks>
+    public TempoValue Value => TempoValue.FromTokens(Values.OfType<SyntaxTokenNode>());
+
+    /// <summary>
+    /// The tempo marking (e.g., "Allegro"), if present — a bare word in the FIRST
+    /// value position (<c>tempo Comodo 4 = 84</c>) or a quoted string.
+    /// </summary>
+    public string? Marking => Value.Marking;
 
     /// <summary>
     /// The note value made to swing by a trailing 'swing'/'shuffle' word, or 0 for no
     /// swing: <c>tempo 120 swing</c> = 8 (eighths), <c>tempo 120 swing 16</c> = 16
     /// (sixteenths). Drives the swing-feel equation drawn beside the metronome mark.
     /// </summary>
-    public int SwingSubdivision
-    {
-        get
-        {
-            bool sawSwing = false;
-            foreach (var value in Values)
-            {
-                if (value is not SyntaxTokenNode t)
-                    continue;
-                if (t.Kind == SyntaxKind.Identifier && (t.Text == "swing" || t.Text == "shuffle"))
-                    sawSwing = true;
-                else if (sawSwing &&
-                         (t.Kind == SyntaxKind.IntegerLiteral) &&
-                         int.TryParse(t.Text, out int n))
-                    return n;  // the value right after the swing word
-            }
-            return sawSwing ? 8 : 0;  // bare 'swing' = eighths
-        }
-    }
+    public int SwingSubdivision => Value.SwingSubdivision;
+
+    /// <summary>The BPM, if present.</summary>
+    public int? Bpm => Value.Bpm;
 
     /// <summary>
-    /// Gets the BPM value, if present. Stops at a 'swing'/'shuffle' word so the
-    /// subdivision number after it (e.g. the 16 in <c>swing 16</c>) is not mistaken
-    /// for the tempo.
+    /// The beat unit (e.g., 4 for quarter note), or null when the run has no <c>=</c> —
+    /// <c>tempo 140</c> is a bpm, and reading its 140 as a beat unit printed a
+    /// 140th-note metronome glyph once already.
     /// </summary>
-    public int? Bpm
-    {
-        get
-        {
-            int? lastInt = null;
-            foreach (var value in Values)
-            {
-                if (value is not SyntaxTokenNode token)
-                    continue;
-                if (token.Kind == SyntaxKind.Identifier && (token.Text == "swing" || token.Text == "shuffle"))
-                    break;
-                if ((token.Kind == SyntaxKind.IntegerLiteral) &&
-                    int.TryParse(token.Text, out var n))
-                    lastInt = n;
-            }
-            return lastInt;
-        }
-    }
-
-    /// <summary>
-    /// Gets the beat unit (e.g., 4 for quarter note), if present.
-    /// </summary>
-    public int? BeatUnit
-    {
-        get
-        {
-            // The beat unit is the integer BEFORE '=' (e.g. `4 = 116`). A plain
-            // `tempo 140` has no '=', so its number is the bpm, NOT a beat unit —
-            // return null and let the consumer default to a quarter note. (The old
-            // code returned the first integer unconditionally, so `tempo 140` was
-            // misread as a 140th-note beat unit and printed the wrong metronome glyph.)
-            int? beat = null;
-            foreach (var value in Values)
-            {
-                if (value is not SyntaxTokenNode token)
-                    continue;
-                if (token.Kind == SyntaxKind.Equals)
-                    return beat ?? 4; // '=' present but no leading integer → quarter
-                if (token.Kind == SyntaxKind.IntegerLiteral && int.TryParse(token.Text, out var n))
-                    beat = n;
-            }
-            return null; // no '=' → plain bpm, no explicit beat unit
-        }
-    }
+    public int? BeatUnit => Value.BeatUnit;
 
     /// <summary>Augmentation dots on the beat unit (<c>4. = 116</c> → 1).</summary>
-    public int BeatDots
-    {
-        get
-        {
-            int dots = 0;
-            bool sawUnit = false;
-            foreach (var value in Values)
-            {
-                if (value is not SyntaxTokenNode t)
-                    continue;
-                if (t.Kind is SyntaxKind.IntegerLiteral)
-                {
-                    sawUnit = true;
-                    dots = 0;
-                    continue;
-                }
-                if (t.Kind == SyntaxKind.Dot && sawUnit)
-                {
-                    dots++;
-                    continue;
-                }
-                if (t.Kind == SyntaxKind.Equals)
-                    return dots;
-            }
-            return 0;
-        }
-    }
+    public int BeatDots => Value.BeatDots;
 }
 
 /// <summary>

@@ -358,6 +358,28 @@ internal sealed class Lexer
             _position += ottLen;
             return (SyntaxKind.Identifier, _text[start.._position]);
         }
+        // A fractional part: digits, '.', digits — one DecimalLiteral. The dot is
+        // REQUIRED to be followed by a digit, which is what keeps every dot the
+        // grammar already spells out of this branch: the augmentation dot (`c4.`,
+        // `R2.*3`, `partial 2.`, `tempo 4. = 116`) is followed by a space, a '*', a
+        // '=' or end-of-line, never by a digit.
+        //
+        // Measured over the corpus (audit\lp-regression\lys, 80 books) and the
+        // fixtures (LilySharp.Tests\Fixtures\test, 209): the ONLY digit-dot-digit
+        // adjacency in any music body is `g2:m7.5-` in chordnames.lys:21, and it does
+        // not reach here — `m7` is taken whole as an identifier, so the `7` never
+        // starts a number. (docs/VALUE_SITE_AUDIT.md §5, HANDOFF ▶ ⒯⑸.)
+        //
+        // ⚠️ This is a 2-character lookahead past the token's end, which is exactly
+        // the guard IncrementalLexer already keeps for the trivia scanner — see the
+        // note there before widening it.
+        if (Current == '.' && char.IsDigit(Peek(1)))
+        {
+            _position++; // '.'
+            while (char.IsDigit(Current))
+                _position++;
+            return (SyntaxKind.DecimalLiteral, _text[start.._position]);
+        }
         return (SyntaxKind.IntegerLiteral, _text[start.._position]);
     }
 

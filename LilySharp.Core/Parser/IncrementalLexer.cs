@@ -29,8 +29,12 @@ namespace LilySharp.Core.Parser;
 /// <list type="bullet">
 /// <item><b>Prefix</b> — a token whose span ends more than two characters
 /// before the edit lexes from unchanged text AND its end was decided by
-/// unchanged characters (the trivia scanner looks at most two characters
-/// ahead: <c>//</c>, <c>/*</c>, <c>\r\n</c>), so it is reused verbatim.</item>
+/// unchanged characters, so it is reused verbatim. Two is the widest lookahead
+/// past a token's end in the lexer, and there are two of them: the trivia
+/// scanner (<c>//</c>, <c>/*</c>, <c>\r\n</c>) and the number scanner, which
+/// reads <c>.</c> plus one digit to decide whether an integer continues into a
+/// decimal. Typing the <c>.</c> of <c>3.5</c> falls inside the guard, so the
+/// <c>3</c> is re-lexed rather than reused.</item>
 /// <item><b>Damage</b> — re-lexed from the first unreusable token's start.</item>
 /// <item><b>Suffix</b> — once the fresh lexer reaches a token start at or
 /// beyond the damage end that coincides with an OLD token start (shifted by
@@ -43,8 +47,10 @@ namespace LilySharp.Core.Parser;
 internal static class IncrementalLexer
 {
     /// <summary>
-    /// Two-character guard: the widest lookahead the trivia scanner uses when
-    /// deciding where a token's trailing trivia stops.
+    /// Two-character guard: the widest lookahead any scanner uses past the end of
+    /// what it has consumed — the trivia scanner deciding where trailing trivia
+    /// stops, and <c>ScanNumber</c> deciding whether <c>.</c> + a digit continues
+    /// the number. Widen this if a third scanner ever looks further.
     /// </summary>
     private const int Guard = 2;
 
