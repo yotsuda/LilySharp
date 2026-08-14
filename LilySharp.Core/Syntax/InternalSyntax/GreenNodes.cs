@@ -505,9 +505,24 @@ internal sealed class VariableReferenceGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class ArticulationGreen : GreenSyntaxNode
 {
-    // directionToken is the optional '.up' / '.down' placement word (null = automatic).
-    public ArticulationGreen(SyntaxToken atToken, SyntaxToken nameToken, SyntaxToken? directionToken = null)
-        : base(SyntaxKind.Articulation, [atToken, nameToken, directionToken])
+    // Slots: '@', name, '.', direction, then any tokens the parser REJECTED but
+    // still consumed (a second '.up'/'.down' — an error, not a silent drop).
+    //
+    // dotToken is the '.' of the '.up' / '.down' placement qualifier. It is a
+    // slot of its own because a token the parser eats without storing is a token
+    // the TREE NO LONGER CONTAINS: `@staccato.up` came back out of the tree as
+    // `@staccatoup` (round trip broken, no diagnostic), and — worse — every node
+    // after it reported a source position one character too early, because a
+    // node's position is the running sum of the green widths before it. That
+    // drives data-pos in the SVG, the LSP's jump targets and the layout
+    // converter that WRITES .lys back out. HANDOFF §5.2.1⑤.
+    public ArticulationGreen(
+        SyntaxToken atToken,
+        SyntaxToken nameToken,
+        SyntaxToken? dotToken = null,
+        SyntaxToken? directionToken = null,
+        params SyntaxToken[] rejectedTokens)
+        : base(SyntaxKind.Articulation, [atToken, nameToken, dotToken, directionToken, .. rejectedTokens])
     {
     }
 }
@@ -517,9 +532,16 @@ internal sealed class ArticulationGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class DynamicGreen : GreenSyntaxNode
 {
-    // directionToken is the optional '.up' / '.down' placement word (null = below default).
-    public DynamicGreen(SyntaxToken backslashToken, SyntaxToken dynamicToken, SyntaxToken? directionToken = null)
-        : base(SyntaxKind.Dynamic, [backslashToken, dynamicToken, directionToken])
+    // Slots: '@', name, '.', direction, then any tokens the parser REJECTED but
+    // still consumed ('.up' on a hairpin trigger — an error, not a silent drop).
+    // dotToken exists for the same reason as ArticulationGreen's: see there.
+    public DynamicGreen(
+        SyntaxToken backslashToken,
+        SyntaxToken dynamicToken,
+        SyntaxToken? dotToken = null,
+        SyntaxToken? directionToken = null,
+        params SyntaxToken[] rejectedTokens)
+        : base(SyntaxKind.Dynamic, [backslashToken, dynamicToken, dotToken, directionToken, .. rejectedTokens])
     {
     }
 }

@@ -48,7 +48,12 @@ public sealed class ArticulationSyntax : SyntaxNode
     /// (<c>@staccato.up</c>): <c>true</c> = above, <c>false</c> = below,
     /// <c>null</c> = automatic (opposite the stem, the default).
     /// </summary>
-    public bool? ForcedAbove => GetChild(2) is SyntaxTokenNode dir
+    /// <remarks>
+    /// Slot 3, not 2: slot 2 holds the qualifier's own <c>.</c>, which the tree
+    /// has to keep or every position after it slides left by one character
+    /// (see <c>ArticulationGreen</c>).
+    /// </remarks>
+    public bool? ForcedAbove => GetChild(3) is SyntaxTokenNode dir
         ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null
         : null;
 }
@@ -72,7 +77,8 @@ public sealed class DynamicSyntax : SyntaxNode
     /// Forced placement from a <c>.up</c> / <c>.down</c> qualifier (<c>@f.up</c>):
     /// <c>true</c> = above, <c>false</c> = below, <c>null</c> = default (below).
     /// </summary>
-    public bool? ForcedAbove => GetChild(2) is SyntaxTokenNode dir
+    /// <remarks>Slot 3 — slot 2 is the qualifier's '.', see ArticulationSyntax.</remarks>
+    public bool? ForcedAbove => GetChild(3) is SyntaxTokenNode dir
         ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null
         : null;
 

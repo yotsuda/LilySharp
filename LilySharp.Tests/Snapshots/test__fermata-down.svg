@@ -18,12 +18,12 @@
   <text class="music" x="17.24" y="12.56" font-size="4.00" data-pos="322"></text>
   <text class="music" x="19.49" y="15.56" font-size="4.00" data-pos="333"></text>
   <text class="music" x="22.00" y="15.56" font-size="4.00" data-pos="346"></text>
-  <text class="music" x="24.50" y="15.56" font-size="4.00" data-pos="360"></text>
-  <text class="music" x="27.17" y="14.06" font-size="4.00" data-pos="370"></text>
-  <text class="music" x="29.67" y="13.56" font-size="4.00" data-pos="372"></text>
-  <text class="music" x="32.18" y="13.06" font-size="4.00" data-pos="374"></text>
-  <text class="music" x="34.68" y="12.56" font-size="4.00" data-pos="376"></text>
-  <rect x="36.95" y="12.06" width="0.19" height="4.00" data-pos="377"/>
+  <text class="music" x="24.50" y="15.56" font-size="4.00" data-pos="361"></text>
+  <text class="music" x="27.17" y="14.06" font-size="4.00" data-pos="371"></text>
+  <text class="music" x="29.67" y="13.56" font-size="4.00" data-pos="373"></text>
+  <text class="music" x="32.18" y="13.06" font-size="4.00" data-pos="375"></text>
+  <text class="music" x="34.68" y="12.56" font-size="4.00" data-pos="377"></text>
+  <rect x="36.95" y="12.06" width="0.19" height="4.00" data-pos="378"/>
   <polygon points="18.41,10.01 25.81,11.63 25.81,12.11 18.41,10.49"/>
   <line x1="18.48" y1="12.41" x2="18.48" y2="10.26" stroke="#000000" stroke-width="0.130"/>
   <line x1="20.73" y1="15.41" x2="20.73" y2="10.76" stroke="#000000" stroke-width="0.130"/>
@@ -37,7 +37,7 @@
   <text class="music" x="17.89" y="16.73" font-size="4.00" data-pos="325"></text>
   <text class="music" x="20.15" y="9.92" font-size="4.00" data-pos="335"></text>
   <text class="music" x="22.65" y="16.64" font-size="4.00" data-pos="347"></text>
-  <text class="music" x="25.15" y="17.37" font-size="4.00" data-pos="361"></text>
+  <text class="music" x="25.15" y="17.37" font-size="4.00" data-pos="362"></text>
   <rect x="8.84" y="8.26" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="310"/>
   <text x="9.87" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="310">A</text>
   </g>

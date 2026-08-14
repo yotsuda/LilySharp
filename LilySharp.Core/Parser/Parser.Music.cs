@@ -834,18 +834,21 @@ private GreenNode?[] ParseArticulations()
                         // explicitly (no silent drop) and recover as a plain trigger.
                         bool isHairpinTrigger = name.Text is "cresc" or "decresc" or "dim";
                         int qStart = _textPosition;
-                        Advance();             // .
+                        var dot = Advance();   // .
                         var dir = Advance();   // up / down
                         if (isHairpinTrigger)
                         {
                             var span = new TextSpan(qStart, System.Math.Max(1, _textPosition - qStart));
                             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                                 $"'.{dir.Text}' placement is not supported on '@{name.Text}' (a hairpin is always below the staff).");
-                            articulations.Add(new DynamicGreen(at, name));
+                            // The qualifier is REJECTED, not forgotten: it stays on the node
+                            // (after the direction slot, which stays null so the reading is
+                            // unchanged) so the tree still spells the source.
+                            articulations.Add(new DynamicGreen(at, name, null, null, dot, dir));
                         }
                         else
                         {
-                            articulations.Add(new DynamicGreen(at, name, dir));
+                            articulations.Add(new DynamicGreen(at, name, dot, dir));
                         }
                     }
                     else
@@ -863,23 +866,28 @@ private GreenNode?[] ParseArticulations()
                         && IsPlacementWord(Peek(2)))
                     {
                         var name = Advance();
-                        Advance();             // .
+                        var dot = Advance();   // .
                         var dir = Advance();   // up / down
-                        articulations.Add(new ArticulationGreen(at, name, dir));
 
                         // A second placement suffix (@staccato.up.down) is a mistake:
                         // an articulation takes only one side. Consume the extra
                         // '.up' / '.down' with a clear message instead of letting the
                         // bare 'up' / 'down' cascade into a confusing "not a note" error.
+                        // The rejected tokens stay ON the node: consumed-and-dropped is
+                        // how `@staccato.up` used to come back out as `@staccatoup`.
+                        var rejected = new List<SyntaxToken>();
                         while (Check(SyntaxKind.Dot) && IsPlacementWord(Peek(1)))
                         {
                             int extraStart = _textPosition;
-                            Advance();              // .
-                            var extra = Advance();  // up / down
+                            var extraDot = Advance();  // .
+                            var extra = Advance();     // up / down
+                            rejected.Add(extraDot);
+                            rejected.Add(extra);
                             var span = new TextSpan(extraStart, Math.Max(1, _textPosition - extraStart));
                             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                                 $"an articulation takes only one of '.up' / '.down'; remove the extra '.{extra.Text}'.");
                         }
+                        articulations.Add(new ArticulationGreen(at, name, dot, dir, [.. rejected]));
                     }
                     // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(d:m),
                     // @mark("A"), @finger(3), @feather(right). The '.' is reserved
