@@ -102,29 +102,23 @@ internal static class FingeringGlyphRun
     /// its OWN hinted advance.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/pango-font.cc:344-362 pango_item_string_stencil — Pango lays the
-    ///   glyphs out by their hinted advances and the run's logical width is their sum, so the
-    ///   snap is PER GLYPH and not on the total (<see cref="TextFontMetrics.Advance"/> makes
-    ///   the same distinction for the text face, and its own remark records what happens when
-    ///   a run is snapped once at the end).
+    /// The loop itself is <see cref="FetaTextRun"/>'s, which is where the LilyPond citations
+    /// for it live; this file supplies WHICH glyph a character is and what em the fallback is
+    /// drawn at.
+    /// ⚠️ NO KERN IS PASSED, and that is a statement about the corpus rather than about the
+    /// font: the fattened digits DO carry GPOS pairs, but a fingering is a single integer in
+    /// every book measured, and the ten one-digit widths this run is pinned to
+    /// (<c>fingering.digit-*</c>) agree with LilyPond to double precision without one. A
+    /// two-digit fingering is what would open that; it needs a point first.
     /// ⚠️ LILYSHARP-OWN: the fallback branch. A fingering is an integer, so the only way a
     /// non-digit reaches here is a negative number's sign; it is drawn in the serif face at
     /// this em so that a nonsense input still has one metric home rather than none.
     /// </remarks>
     internal static ImmutableArray<Piece> Pieces(string text)
     {
-        if (string.IsNullOrEmpty(text)) return ImmutableArray<Piece>.Empty;
-        var pieces = ImmutableArray.CreateBuilder<Piece>(text.Length);
-        double x = 0;
-        foreach (char c in text)
-        {
-            bool isGlyph = TryGetDigit(c, out char glyph, out _, out double adv);
-            double advance = isGlyph
-                ? TextFontMetrics.QuantiseToPangoPixel(adv)
-                : TextFontMetrics.Serif(c.ToString(), Em);
-            pieces.Add(new Piece(isGlyph ? glyph : c, x, advance, isGlyph));
-            x += advance;
-        }
+        var run = FetaTextRun.Pieces(text, TryGetDigit, Em);
+        var pieces = ImmutableArray.CreateBuilder<Piece>(run.Length);
+        foreach (var p in run) pieces.Add(new Piece(p.Ch, p.X, p.Advance, p.IsGlyph));
         return pieces.ToImmutable();
     }
 
@@ -133,12 +127,7 @@ internal static class FingeringGlyphRun
     /// <remarks>LILYPOND-REF: lily/pango-font.cc:358-360 Pango_font::pango_item_string_stencil
     /// — <c>Interval (PANGO_LBEARING
     /// (logical_rect), PANGO_RBEARING (logical_rect))</c>.</remarks>
-    internal static double Width(string text)
-    {
-        double w = 0;
-        foreach (var p in Pieces(text)) w += p.Advance;
-        return w;
-    }
+    internal static double Width(string text) => FetaTextRun.Width(text, TryGetDigit, Em);
 
     /// <summary>The run's ink above its baseline — the union of its glyphs' outline tops.</summary>
     /// <remarks>
@@ -151,19 +140,7 @@ internal static class FingeringGlyphRun
     ///   (lily/modified-font-metric.cc:125-143 Modified_font_metric::text_stencil — the same argument
     ///   <see cref="GlyphMetrics.TryGetDynamicInk"/> carries).
     /// </remarks>
-    internal static double InkTop(string text)
-    {
-        double top = 0;
-        if (string.IsNullOrEmpty(text)) return top;
-        foreach (char c in text)
-        {
-            double t = TryGetDigit(c, out _, out var outline, out _)
-                ? outline.Top
-                : TextFontMetrics.Ink(c.ToString(), Em).Top;
-            top = System.Math.Max(top, t);
-        }
-        return top;
-    }
+    internal static double InkTop(string text) => FetaTextRun.InkTop(text, TryGetDigit, Em);
 
     /// <summary>The run's ink BELOW its baseline (≤ 0) — the other end of the same box.</summary>
     /// <remarks>
@@ -172,18 +149,7 @@ internal static class FingeringGlyphRun
     /// as <c>yext = (-0.002234 . 1.122528)</c> on a fingering "7".
     /// </remarks>
     internal static double InkBottom(string text)
-    {
-        double bottom = 0;
-        if (string.IsNullOrEmpty(text)) return bottom;
-        foreach (char c in text)
-        {
-            double b = TryGetDigit(c, out _, out var outline, out _)
-                ? outline.Bottom
-                : TextFontMetrics.Ink(c.ToString(), Em).Bottom;
-            bottom = System.Math.Min(bottom, b);
-        }
-        return bottom;
-    }
+        => FetaTextRun.InkBottom(text, TryGetDigit, Em);
 
     /// <summary>
     /// The glyph, its outline box and its UNHINTED advance for one digit, all in the page's

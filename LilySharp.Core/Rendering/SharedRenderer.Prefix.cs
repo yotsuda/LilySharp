@@ -392,39 +392,42 @@ internal static partial class SharedRenderer
         const double digitHalfHeight = 1.0; // feta number glyphs are ~2 ss tall
         // Additive meters print the numerator AS WRITTEN ("3+2" over 8), the
         // rows centered on each other. LILYPOND-REF: \compoundMeter numerator.
+        // ⚠️ THE PEN READS THE RESERVATION'S OWN RUN. Until session 164 this loop stepped a
+        // flat 1.4 per digit while GlyphMetrics.GetTimeSigWidth booked the column from the
+        // glyph advances — a third spelling of one quantity on top of the two the metrics
+        // already had (HANDOFF §2 A). MeterGlyphRun is now the single home: it applies each
+        // digit's own advance, the GPOS kern to its neighbour, and Pango's per-glyph pixel
+        // snap, and GetTimeSigWidth is the max of the two rows it produces.
         var num = ts.BeatsText ?? ts.Beats.ToString();
         var den = ts.BeatType.ToString();
-        const double digitW = 1.4, plusW = 1.1;
-        double NumWidth(string s)
-        {
-            double w = 0;
-            foreach (var ch in s) w += ch == '+' ? plusW : digitW;
-            return w;
-        }
-        double numWidth = NumWidth(num), denWidth = NumWidth(den);
+        var numPieces = MeterGlyphRun.Pieces(num);
+        var denPieces = MeterGlyphRun.Pieces(den);
+        double numWidth = 0, denWidth = 0;
+        foreach (var p in numPieces) numWidth += p.Advance;
+        foreach (var p in denPieces) denWidth += p.Advance;
         double total = Math.Max(numWidth, denWidth);
         double nx = x + (total - numWidth) / 2;
-        foreach (var ch in num)
+        foreach (var p in numPieces)
         {
-            if (ch == '+')
+            if (p.IsGlyph)
             {
-                gc.DrawText("+", nx + plusW / 2, staffY - 1 - digitHalfHeight + 0.55,
-                    2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
-                nx += plusW;
+                gc.DrawGlyph(p.Ch, nx + p.X, staffY - 1 - digitHalfHeight, FontSize);
             }
             else
             {
-                gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'),
-                    nx, staffY - 1 - digitHalfHeight, FontSize);
-                nx += digitW;
+                // LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
+                // spells with its own markup rather than a feta glyph. Drawn centred on its
+                // own advance, which is the serif face's at the run's em.
+                gc.DrawText(p.Ch.ToString(), nx + p.X + p.Advance / 2,
+                    staffY - 1 - digitHalfHeight + 0.55,
+                    2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
         }
         double dnx = x + (total - denWidth) / 2;
-        foreach (var ch in den)
+        foreach (var p in denPieces)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'),
-                dnx, staffY - 3 - digitHalfHeight, FontSize);
-            dnx += digitW;
+            if (p.IsGlyph)
+                gc.DrawGlyph(p.Ch, dnx + p.X, staffY - 3 - digitHalfHeight, FontSize);
         }
         return x + total + 0.4;
     }

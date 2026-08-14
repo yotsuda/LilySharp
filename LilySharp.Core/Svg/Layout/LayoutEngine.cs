@@ -552,7 +552,7 @@ internal sealed class LayoutEngine
                 PrefixWidth: SpacingRules.CalculatePrefixWidth(SpacingRules.MaxClefWidth(score),
                     SpacingRules.WidestActiveKeyInk(score, firstMeasureIndex),
                     isFirstSystem && !score.AllStavesTab,
-                    score.TimeSignature.Beats, score.TimeSignature.BeatType),
+                    score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
                 Indent: sysIndent,
                 // The springs the PAGE solves between THIS system's staves.

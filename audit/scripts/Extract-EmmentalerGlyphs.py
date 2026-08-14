@@ -146,26 +146,48 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("#", "Augmentation dot", ""),
     ("AugmentationDot", "dots.dot", ""),
 
-    ("#", "Time signatures (fattened digits)", ""),
-    ("TimeSig0", "fattened.zero", ""),
-    ("TimeSig1", "fattened.one", ""),
-    ("TimeSig2", "fattened.two", ""),
-    ("TimeSig3", "fattened.three", ""),
-    ("TimeSig4", "fattened.four", ""),
-    ("TimeSig5", "fattened.five", ""),
-    ("TimeSig6", "fattened.six", ""),
-    ("TimeSig7", "fattened.seven", ""),
-    ("TimeSig8", "fattened.eight", ""),
-    ("TimeSig9", "fattened.nine", ""),
+    # Meter digits: the PLAIN cut, which is a DIFFERENT GLYPH from the fattened one and not
+    # just a different width. A time signature is \number markup, and \number prepends
+    # 'font-encoding 'fetaText and no font-features at all
+    # (scm/define-markup-commands.scm:3872-3981 define-markup-command for number) -- ss01 is
+    # what selects the fattened digits, and nothing here asks for it.
+    # ⚠️ THESE WERE fattened.* UNTIL 2026-08-14 (session 164), and the pen was the LAST half
+    # of that defect to be found: the metrics moved to the plain cut earlier the same session
+    # while this table still pointed the renderer at the fattened codepoints, so Lily#
+    # reserved one cut's advance and drew the other's glyph.
+    # MEASURED, not deduced, twice over:
+    #   · ly:stencil-expr over eight books of scratch/timesig-digit-cut.ly prints the glyph
+    #     name for every row, and the string "fattened" appears ZERO times in the whole dump;
+    #     the names are one, four, seven ... out of emmentaler-20.otf.
+    #   · the two cuts are DIFFERENT OUTLINES for all ten digits, not merely different
+    #     advances: same bbox to within a unit or two, but the fattened cut carries 5-14%
+    #     more ink area (scratch/plain-vs-fattened-shape.py). So this moves what is drawn on
+    #     every digit-path meter, where the widths moved only the 1 and the 7.
+    # ⚠️ THE PLAIN DIGITS LIVE AT ASCII U+0030-U+0039, where the fattened ones are in the
+    # private use area. That is the same addressing the fetaText DYNAMIC letters already use
+    # (f, m, p ... by their bare ASCII names, DynamicLetter* in Extract-EmmentalerMetrics.py).
+    ("#", "Meter digits (fetaText, no font-features -- the PLAIN cut, NOT fattened)", ""),
+    ("TimeSig0", "zero", ""),
+    ("TimeSig1", "one", ""),
+    ("TimeSig2", "two", ""),
+    ("TimeSig3", "three", ""),
+    ("TimeSig4", "four", ""),
+    ("TimeSig5", "five", ""),
+    ("TimeSig6", "six", ""),
+    ("TimeSig7", "seven", ""),
+    ("TimeSig8", "eight", ""),
+    ("TimeSig9", "nine", ""),
     ("TimeSigCommon", "timesig.C44", ""),
     ("TimeSigCutCommon", "timesig.C22", ""),
 
     # A Fingering is fetaText as well (scm/define-grobs.scm:1547-1548,
     # ly:text-interface::print over fingering::calc-text) but declares font-features
     # ("cv47" "ss01") -- the figure's three MINUS tnum. Without tabular figures the digits
-    # are the PROPORTIONAL fattened.<n>, the same cut the time signature draws, and cv47
-    # still puts the .alt shapes on 4 and 7 -- which is the ONLY thing that keeps these ten
-    # from being the ten below. Read off the page, not deduced: ly:stencil-expr printed
+    # are the PROPORTIONAL fattened.<n>, and cv47 still puts the .alt shapes on 4 and 7 --
+    # which is the ONLY thing that keeps these ten from being the ten below.
+    # ⚠️ NOT THE SAME CUT AS THE METER, though this comment said so until 2026-08-14: a
+    # Fingering asks for ss01 and \number does not, so the meter above is the PLAIN cut.
+    # Read off the page, not deduced: ly:stencil-expr printed
     # `fattened.one` for a Fingering where a BassFigure printed
     # `fattened.fixedwidth.one` (audit/lp-geometry/probes/fingering-digit-width.ly).
     ("#", "Fingering digits (fetaText, cv47 + ss01 -- proportional, NOT tabular)", ""),

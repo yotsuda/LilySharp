@@ -24,11 +24,25 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 public readonly record struct TimeSignature(int Beats, int BeatType, string? BeatsText = null, bool SenzaMisura = false)
 {
-    /// <summary>Beats value whose DIGIT COUNT matches the printed numerator
-    /// width — prefix-width estimation for additive meters ("3+2" ≈ 3 cols).</summary>
-    public int LayoutBeats => BeatsText == null
-        ? Beats
-        : (int)Math.Pow(10, Math.Max(0, BeatsText.Length - 1));
+    /// <summary>The numerator AS PRINTED — the additive spelling when there is one
+    /// ("3+2"), otherwise the beat count.</summary>
+    /// <remarks>
+    /// ⚠️ THE RESERVATION READS THIS, not <see cref="Beats"/>, because the drawing does
+    /// (<c>SharedRenderer.DrawTimeSignature</c>) and the two have to be one run
+    /// (<see cref="Layout.MeterGlyphRun"/>). It replaced a <c>LayoutBeats</c> that
+    /// approximated an additive numerator by "a number with as many digits"
+    /// (<c>10^(len-1)</c>, so "3+2" booked the width of "100") — which was a proxy for a
+    /// width nobody could measure while the reservation could only take ONE digit anyway.
+    /// Now the row is laid out, the proxy has nothing left to do, and the <c>+</c> is the
+    /// only piece whose width is still Lily#'s own (LilyPond spells a compound meter's
+    /// numerator with its own markup; no ledger point watches one).
+    /// </remarks>
+    public string NumeratorText => BeatsText
+        ?? Beats.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The denominator as printed — always a plain number.</summary>
+    public string DenominatorText =>
+        BeatType.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Duration of one full measure.</summary>
     public Fraction MeasureDuration => new(Beats, BeatType);

@@ -41,6 +41,6 @@
   <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="167"/>
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="167">Main</text>
   <text class="music" x="26.12" y="20.57" font-size="4.00"></text>
-  <text class="music" x="25.62" y="18.17" font-size="4.00"></text>
+  <text class="music" x="25.62" y="18.17" font-size="4.00">4</text>
   </g>
 </svg>

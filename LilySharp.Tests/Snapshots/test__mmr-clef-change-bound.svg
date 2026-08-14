@@ -44,6 +44,6 @@
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1617">Main</text>
   <text class="music" x="26.87" y="20.57" font-size="4.00"></text>
   <text class="music" x="30.43" y="19.57" font-size="4.00"></text>
-  <text class="music" x="28.74" y="18.17" font-size="4.00"></text>
+  <text class="music" x="28.74" y="18.17" font-size="4.00">5</text>
   </g>
 </svg>

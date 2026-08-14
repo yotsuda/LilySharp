@@ -313,17 +313,36 @@ ADVANCE_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("GClefAdvance",     "clefs.G", "G (treble) clef advance width",  "mf/feta-clefs.mf — clefs.G"),
     GlyphSpec("FClefAdvance",     "clefs.F", "F (bass) clef advance width",    "mf/feta-clefs.mf — clefs.F"),
     GlyphSpec("CClefAdvance",     "clefs.C", "C (alto/tenor) clef advance width", "mf/feta-clefs.mf — clefs.C"),
-    # Time signature digits (fattened)
-    GlyphSpec("TimeSigDigit0Advance", "fattened.zero", "Time signature '0' digit advance width", "mf/feta-numbers.mf — fattened.zero"),
-    GlyphSpec("TimeSigDigit1Advance", "fattened.one", "Time signature '1' digit advance width", "mf/feta-numbers.mf — fattened.one"),
-    GlyphSpec("TimeSigDigit2Advance", "fattened.two", "Time signature '2' digit advance width", "mf/feta-numbers.mf — fattened.two"),
-    GlyphSpec("TimeSigDigit3Advance", "fattened.three", "Time signature '3' digit advance width", "mf/feta-numbers.mf — fattened.three"),
-    GlyphSpec("TimeSigDigit4Advance", "fattened.four", "Time signature '4' digit advance width", "mf/feta-numbers.mf — fattened.four"),
-    GlyphSpec("TimeSigDigit5Advance", "fattened.five", "Time signature '5' digit advance width", "mf/feta-numbers.mf — fattened.five"),
-    GlyphSpec("TimeSigDigit6Advance", "fattened.six", "Time signature '6' digit advance width", "mf/feta-numbers.mf — fattened.six"),
-    GlyphSpec("TimeSigDigit7Advance", "fattened.seven", "Time signature '7' digit advance width", "mf/feta-numbers.mf — fattened.seven"),
-    GlyphSpec("TimeSigDigit8Advance", "fattened.eight", "Time signature '8' digit advance width", "mf/feta-numbers.mf — fattened.eight"),
-    GlyphSpec("TimeSigDigit9Advance", "fattened.nine", "Time signature '9' digit advance width", "mf/feta-numbers.mf — fattened.nine"),
+    # --- Meter digits: the PLAIN cut ---
+    # A default time signature is \number markup (scm/time-signature.scm:31-41
+    # ly:time-signature::print interprets a markup; scm/time-signature-settings.scm:923 that
+    # markup is (markup #:number "N")), and \number prepends 'font-encoding 'fetaText and
+    # NOTHING else -- scm/define-markup-commands.scm:3872-3981, no font-features at all.
+    # ⚠️ ss01 IS WHAT SELECTS THE FATTENED CUT, and nothing here asks for it. Compare
+    # Fingering ("cv47" "ss01") and BassFigure ("tnum" "cv47" "ss01") above: those two
+    # DO ask, and are extracted from fattened.* accordingly.
+    # ⚠️ THESE WERE fattened.* UNTIL 2026-08-14 (session 164), and eight of the ten digits
+    # are the same width in both cuts, so the regression corpus could not tell them apart.
+    # The two that differ are the 1 (plain 1.268 against fattened 1.292) and the 7 (plain
+    # 1.348 against fattened 1.288) -- in OPPOSITE directions. MEASURED, not deduced:
+    # ly:stencil-expr prints the glyph name and the font file, and for a time signature it
+    # prints `one` / `four` / `seven` out of emmentaler-20.otf -- plain names, no
+    # "fattened." prefix, no ".alt" (ledger line-start.time-to-first-note.digit-{one,seven}).
+    # ⚠️ THE SECOND CONSUMER IS THE MMR NUMBER, and it belongs here too:
+    # MultiMeasureRestNumber declares font-features ("cv47") (define-grobs.scm:2397) --
+    # cv47 and NO ss01 -- so its base cut is this one, and cv47's .alt pair carries
+    # IDENTICAL advances to its base in all eight designs (measured from the font files).
+    # Only the PEN tells the two apart, which is why one table serves both.
+    GlyphSpec("TimeSigDigit0Advance", "zero", "Meter digit '0' advance width (plain fetaText cut)", "mf/feta-numbers.mf — zero"),
+    GlyphSpec("TimeSigDigit1Advance", "one", "Meter digit '1' advance width (plain fetaText cut)", "mf/feta-numbers.mf — one"),
+    GlyphSpec("TimeSigDigit2Advance", "two", "Meter digit '2' advance width (plain fetaText cut)", "mf/feta-numbers.mf — two"),
+    GlyphSpec("TimeSigDigit3Advance", "three", "Meter digit '3' advance width (plain fetaText cut)", "mf/feta-numbers.mf — three"),
+    GlyphSpec("TimeSigDigit4Advance", "four", "Meter digit '4' advance width (plain fetaText cut)", "mf/feta-numbers.mf — four"),
+    GlyphSpec("TimeSigDigit5Advance", "five", "Meter digit '5' advance width (plain fetaText cut)", "mf/feta-numbers.mf — five"),
+    GlyphSpec("TimeSigDigit6Advance", "six", "Meter digit '6' advance width (plain fetaText cut)", "mf/feta-numbers.mf — six"),
+    GlyphSpec("TimeSigDigit7Advance", "seven", "Meter digit '7' advance width (plain fetaText cut)", "mf/feta-numbers.mf — seven"),
+    GlyphSpec("TimeSigDigit8Advance", "eight", "Meter digit '8' advance width (plain fetaText cut)", "mf/feta-numbers.mf — eight"),
+    GlyphSpec("TimeSigDigit9Advance", "nine", "Meter digit '9' advance width (plain fetaText cut)", "mf/feta-numbers.mf — nine"),
 ]
 
 

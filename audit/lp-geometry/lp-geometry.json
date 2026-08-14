@@ -1773,6 +1773,27 @@
       "residual": 0.0,
       "why": "OPENED EXACT as the cut-common half of the C-glyph width pair (with line-start.time-to-first-note.standard-key). LilyPond's default style prints ONLY 2/2 and 4/4 as glyphs (timesig.C22/C44, make-c-time-signature-markup); C22's LILC ink is 1.700000 like C44's, so time -> first note is 3.700000 for BOTH -- the pair's equality is the cross-check that the two C widths ride one (glyph) path while every other fraction stays on the Pango digit path. Lily# reserved 2/2 from the digit table too (GetTimeSigWidth max digit '2' = 1.4657 Pango) under a drawn cut-C glyph; the same fix (GetTimeSigWidth's LP-style branch) closes both."
     },
+    "line-start.time-to-first-note.digit-one": {
+      "probe": "barline-spacing.ly",
+      "score": "TD1",
+      "lilypond": 3.263302,
+      "residual": 3.62e-07,
+      "why": "OPENED AND CLOSED THE SAME SESSION (2026-08-14, session 164): +0.034143669 -> +0.000000362, which IS LilyPond's own six-place reporting (it prints 3.263302 for 3.263302362) and not a residual of the model. The opening value was exactly ONE device pixel (0.034143307). The FIRST point on the \\number DIGIT path -- cut-common's why calls that path the one 'every other fraction stays on', and nothing measured it. \\number prepends 'font-encoding 'fetaText and NO font-features (scm/define-markup-commands.scm:3872-3981), where ss01 is what selects the FATTENED cut a Fingering asks for (define-grobs.scm:1548), so a meter digit is the PLAIN cut and Lily# reads the fattened table (Extract-EmmentalerMetrics.py:317-326). CONFIRMED ON THE PAGE, not deduced: ly:stencil-expr prints '(... emmentaler-20.otf ... one)' -- plain name, and emmentaler-20, so the DESIGN was already right (TimeSignature declares no font-size). LilyPond's one is 37 device pixels (plain advance 1.268), Lily#'s 38 (fattened 1.292). BOTH ROWS ARE THE 1 on purpose: the extent is the MAX of the two rows, which is why the regression corpus's four 1/4 books hide their 1 behind the wider 4."
+    },
+    "line-start.time-to-first-note.digit-seven": {
+      "probe": "barline-spacing.ly",
+      "score": "TD7",
+      "lilypond": 3.331589,
+      "residual": -2.4e-08,
+      "why": "OPENED AND CLOSED THE SAME SESSION (2026-08-14, session 164): -0.034143331 -> -0.000000024, i.e. exact to LilyPond's printed precision. The opening value was ONE device pixel the OTHER WAY from digit-one's +0.034143669, and before the port the two books' Lily# readings were the SAME number (3.297445669) because both computed the fattened 38-pixel row. The OTHER SIGN of the cut defect in line-start.time-to-first-note.digit-one: LilyPond's plain seven is 1.348 -> 39 device pixels against Lily#'s fattened 1.288 -> 38, so here Lily# is too NARROW where digit-one has it too WIDE. The pair is the guard a single digit point could not be: a width fitted to either one moves the other the wrong way (the property fingering-digit-width.ly's FD4 book was cut for). The denominator has to be the 1 -- the seven is narrower than every other power-of-two denominator's row, so no other fraction lets it reach the extent."
+    },
+    "line-start.time-to-first-note.two-digit-kerned": {
+      "probe": "barline-spacing.ly",
+      "score": "TDK",
+      "lilypond": 4.629035,
+      "residual": -3.54e-07,
+      "why": "OPENED AND CLOSED THE SAME SESSION (2026-08-14, session 164): -1.160872795 -> -0.000000354, which is LilyPond's six-place reporting of 4.629034646. The opening value was not a pixel but a whole missing GLYPH: Lily# read 3.468162205 = 1.468162 + 2.0, i.e. ONE digit's width where LilyPond lays out two. These are the two halves of the digit model no single digit can show, the GPOS kern and the SUM. one+zero kern by -0.100000 ss, and taken INSIDE the per-glyph snap -- the spelling session 93 had to correct on the dynamic labels (DynamicOutline: GPOS adjusts the glyph's OWN advance and Pango hints the result) -- that is 34 + 43 = 77 device pixels = 2.629034646, which is LilyPond's dumped numerator row to NINE digits. Without the kern it is 80 and in the fattened cut 78, so this book alone refutes both spellings. Lily# reaches neither: GetTimeSigWidth passes the NUMBER 10 into a per-DIGIT lookup, which falls through to its default and returns ONE digit's width, while the renderer walks the string char by char (SharedRenderer.Prefix.cs) -- reserve and draw are two spellings of one quantity here (HANDOFF section 2 A). This point observes the RESERVATION. 10/8 rather than the corpus's 12/8 because one+two carries no kern; the 12/8 books ride the multi-digit half of the same model."
+    },
     "line-start.ossia-key-alignment.sharps": {
       "probe": "barline-spacing.ly",
       "score": "OKN",

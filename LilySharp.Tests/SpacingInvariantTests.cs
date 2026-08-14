@@ -105,7 +105,7 @@ public class SpacingInvariantTests
         double activeKeyInk = SpacingRules.WidestActiveKeyInk(score, 0);
         double layout = BreakAlignSpacing.CalculatePrefixWidth(
             clefWidth, activeKeyInk, includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+            score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
 
         // The line start LilyPond gives this score, to the digit.
         Assert.Equal(9.353400, layout, precision: 6);
@@ -121,7 +121,7 @@ public class SpacingInvariantTests
         // signature is engraved.
         double scoreKeyModel = SpacingRules.CalculatePrefixWidth(
             clefWidth, score.LeadingKey, includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+            score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
         Assert.Equal(2.650000, layout - scoreKeyModel, precision: 6);
     }
 
@@ -238,14 +238,14 @@ public class SpacingInvariantTests
         double clefWidth = SpacingRules.MaxClefWidth(score);
         double layout = BreakAlignSpacing.CalculatePrefixWidth(
             clefWidth, SpacingRules.WidestActiveKeyInk(score, 0), includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+            score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
 
         Assert.Equal(layout, SystemBreaker.GateFirstPrefixWidth(score, clefWidth), precision: 6);
         Assert.Equal(
             layout,
             SpacingRules.CalculatePrefixWidth(
                 clefWidth, score.LeadingKey, includeTimeSignature: true,
-                score.TimeSignature.Beats, score.TimeSignature.BeatType),
+                score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText),
             precision: 6);
     }
 

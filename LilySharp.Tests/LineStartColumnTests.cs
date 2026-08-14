@@ -72,7 +72,7 @@ public class LineStartColumnTests
         double clefInk = GlyphMetrics.LineStartClefWidth(ClefType.Treble);
         double keyInk = SpacingRules.KeySignatureInkWidth(key);
         var columns = BreakAlignSpacing.SolvePrefixColumns(
-            clefGroupWidth ?? clefInk, keyInk, includeTimeSignature: true, beats, beatType);
+            clefGroupWidth ?? clefInk, keyInk, includeTimeSignature: true, beats.ToString(), beatType.ToString());
 
         var boxes = new List<ColumnBox>();
         var clefBox = GlyphMetrics.ClefG;
@@ -521,7 +521,7 @@ public class LineStartColumnTests
     private static double PrefixRight(KeySignature key, bool hasTime)
         => BreakAlignSpacing.SolvePrefixColumns(
             GlyphMetrics.LineStartClefWidth(ClefType.Treble),
-            SpacingRules.KeySignatureInkWidth(key), hasTime, 4, 4).Right;
+            SpacingRules.KeySignatureInkWidth(key), hasTime, "4", "4").Right;
 
     /// <summary>
     /// SKC's spring, end to end. LilyPond's own numbers for this line start:

@@ -440,3 +440,61 @@ lay =
     \override TimeSignature.after-line-breaking = #(gd "TM4" "TABTIME")
   } { \key c \major c4 d e f | g2 e }
 >> \lay "TM4" }
+
+%% --- TD1 / TD7 / TDK — the DIGIT path's glyph cut, its kern, and its multi-digit run ----
+%%
+%%   WHY THESE THREE EXIST (2026-08-14, session 164). KC2's remark above calls the \number
+%%   markup "the path the digit ledger points pin" — and NO existing point pins it. Every
+%%   time-signature width point in this ledger stands on 4/4 (the C44 GLYPH path), 2/2
+%%   (C22), or a keyed 4/4, and the digits whose two candidate cuts happen to COINCIDE.
+%%   Measured: of the ten digits, eight are the same width in both cuts, so the corpus could
+%%   not tell them apart.
+%%
+%%   WHAT THE CUT IS, read from the source before measuring. \number prepends
+%%   'font-encoding 'fetaText and NOTHING else (scm/define-markup-commands.scm:3872-3981),
+%%   where Fingering declares font-features ("cv47" "ss01") (define-grobs.scm:1548) and
+%%   BassFigure ("tnum" "cv47" "ss01") (:354). ss01 is what selects the FATTENED cut, so a
+%%   time-signature digit is the PLAIN one. Lily# reads the fattened table for it
+%%   (audit/scripts/Extract-EmmentalerMetrics.py:317-326).
+%%   ★ CONFIRMED ON THE PAGE, three ways, not deduced — ly:stencil-expr names the glyph and
+%%   the font file (scratch sighting, session 164):
+%%     `(… emmentaler-20.otf … one)` and `… four`, `… seven` — the PLAIN names, no
+%%     "fattened." prefix and no ".alt"; and emmentaler-20, so the DESIGN was already right
+%%     (TimeSignature declares no font-size, define-grobs.scm:3922-…, so 20·magstep(0)=20pt).
+%%
+%%   THE MODEL, the same three-part one the fingering digits carry:
+%%     row width = Σ over glyphs of quantise( advance(<plain digit>, emmentaler-20)
+%%                                            + GPOS kern to the next glyph )
+%%   with the kern INSIDE the snap — the spelling session 93 had to correct on the dynamic
+%%   labels (DynamicOutline's remark: GPOS adjusts the glyph's OWN advance and Pango hints
+%%   the result, so a kerned pair carries ONE rounding, not a rounding plus a raw kern).
+%%
+%%   THE THREE BOOKS, chosen so the DIVERGING digit is the one the column takes. A
+%%   TimeSignature's X extent is the MAX of its two rows, so a book like 1/4 hides its "1"
+%%   behind the wider "4" — which is exactly why 1/4 in the regression corpus never showed
+%%   this:
+%%     TD1 — \time 1/1, both rows the "1": LilyPond 37 device pixels (plain 1.268),
+%%           Lily# computes 38 (fattened 1.292). Lily# is too WIDE.
+%%     TD7 — \time 7/1, the "7" dominates its "1": LilyPond 39 pixels (plain 1.348),
+%%           Lily# computes 38 (fattened 1.288). Lily# is too NARROW — ★ THE SIGN FLIPS
+%%           against TD1, so a fix fitted to one of them moves the other the wrong way
+%%           (the same property fingering-digit-width.ly's FD4 book was cut for).
+%%     TDK — \time 10/8, the two-glyph run: "10" kerns one+zero by -0.100000 ss, and
+%%           inside the snap that is 34 + 43 = 77 pixels = 2.629034646, which is
+%%           LilyPond's dumped numerator row to NINE digits. Without the kern it is 80,
+%%           with the fattened cut 78 — so this book alone refutes both spellings.
+%%           ⚠️ Lily# does not reach either answer: GetTimeSigWidth passes the NUMBER 10
+%%           into a per-DIGIT lookup, which falls through to its `_ =>` default and returns
+%%           ONE digit's width. The renderer walks the string char by char
+%%           (SharedRenderer.Prefix.cs:417-425), so reserve and draw are two spellings of
+%%           one quantity here (HANDOFF §2 A) — this point observes the RESERVATION.
+%%           The regression corpus's 12/8 books (beam-auto, fermata-dot-position) ride the
+%%           multi-digit half of the same model; 10/8 is used here because it carries the
+%%           kern as well, and one+two has none.
+%%
+%%   THE QUANTITY is KCS's: TIME anchor -> first HEAD anchor, i.e. the time signature's ink
+%%   right plus the space-alist's (first-note . (semi-shrink-space . 2.0)) at its natural
+%%   ragged-right length. It observes the WIDTH through the consumer that PLACES the run.
+\score { \new Staff { \time 1/1 c'1 | c'1 } \lay "TD1" }
+\score { \new Staff { \time 7/1 c'1 | c'1 } \lay "TD7" }
+\score { \new Staff { \time 10/8 c'8 c' c' c' c' c' c' c' c' c' | c'8 c' c' c' c' c' c' c' c' c' } \lay "TDK" }

@@ -176,6 +176,24 @@ CLEFS = [
 # Extract-EmmentalerMetrics.py's DynamicLetter* block).
 DYNAMICS = [(c, c) for c in "fmnprsz"]
 
+# The PLAIN fetaText digits, for the kern half of the meter's glyph run. No skyline is baked
+# for them -- only their pair kerns, which is why they appear here and not among the outlines:
+# this file is where the ONE GPOS walk lives, and a second copy of it in
+# Extract-EmmentalerMetrics.py (which owns the advances) would be the "one quantity, two
+# spellings" the corpus keeps finding defects at (HANDOFF §5.2.1②).
+#
+# WHY THE METER NEEDS THEM. A time signature's row is \number markup, so its pen positions are
+# advances plus these kerns, each KERNED advance snapped to a device pixel -- the same model
+# the dynamic letters above carry. MEASURED against LilyPond (session 164): "10" comes to
+# 34 + 43 = 77 pixels = 2.629034646, which is LilyPond's own dumped row to nine digits;
+# without the kern it is 80. A second, independent control: "11" (no kern, 37+37) and "16"
+# (kern -0.100000, 34+40) both come to 74, and LilyPond prints 74 for both -- two different
+# routes to one number, which an absent kern could not produce.
+DIGITS = [
+    ("0", "zero"), ("1", "one"), ("2", "two"), ("3", "three"), ("4", "four"),
+    ("5", "five"), ("6", "six"), ("7", "seven"), ("8", "eight"), ("9", "nine"),
+]
+
 # The trill line's repeating UNIT, for TrillSpanner's own vertical profile (my_dim in
 # aligned_side, and the mover's pair in the outside-staff pass).
 #
@@ -363,20 +381,37 @@ def build(glyphset, glyph, horizon_axis=1):
     return classify(contour, both, horizon_axis)
 
 
-def dynamic_kern_pairs(font, letters):
-    """GPOS pair kerning among the fetaText dynamic letters, in staff spaces.
+def gpos_pair_kerns(font, letters):
+    """GPOS pair kerning among a set of glyphs, in staff spaces.
 
     The Emmentaler dynamic letters are addressed by their bare cmap names, so the
-    glyph names ARE the letters. Pango applies these adjustments when it shapes a
-    dynamic string (measured: audit/lp-geometry/probes/dynamic-text-x.ly — every
-    kern pair lands with the font's sign and magnitude, plus the shaping
-    quantisation the probe header names). Walks PairPos format 1 and 2, unwrapping
-    extension lookups; only pairs where BOTH glyphs are dynamic letters are kept."""
+    glyph names ARE the letters; the plain digits are named zero..nine. Pango applies
+    these adjustments when it shapes the string (measured:
+    audit/lp-geometry/probes/dynamic-text-x.ly — every kern pair lands with the font's
+    sign and magnitude, plus the shaping quantisation the probe header names). Walks
+    PairPos format 1 and 2, unwrapping extension lookups; only pairs where BOTH glyphs
+    are in the set are kept.
+
+    ⚠️ ONLY THE `kern` FEATURE'S LOOKUPS, and that restriction is load-bearing rather
+    than decorative. The consumers here ask for NO font-features (\\number declares none
+    at all, define-markup-commands.scm:3981), so a lookup that exists only under tnum /
+    ss01 / cv47 must not reach them — and tabular figures are exactly the sort of feature
+    that adjusts side bearings by the +0.100 / +0.048 amounts this walk reports. As it
+    happens Emmentaler's GPOS carries ONE feature, `kern`, so filtering changes nothing
+    today (verified: the emitted dynamic kerns are byte-identical across this change);
+    it is written this way so a font update cannot make the walk wrong silently."""
     pairs = {}
     if "GPOS" not in font:
         return pairs
     glyphs = set(letters)
-    for lookup in font["GPOS"].table.LookupList.Lookup:
+    table = font["GPOS"].table
+    wanted = set()
+    for fr in table.FeatureList.FeatureRecord:
+        if fr.FeatureTag == "kern":
+            wanted.update(fr.Feature.LookupListIndex)
+    for li, lookup in enumerate(table.LookupList.Lookup):
+        if li not in wanted:
+            continue
         for st in lookup.SubTable:
             t = st.ExtSubTable if st.LookupType == 9 else st
             if t.LookupType != 2:
@@ -607,7 +642,12 @@ def main():
         L.append("")
         script_kinds.append((kind, cap))
 
-    kerns = dynamic_kern_pairs(font, [g for _, g in DYNAMICS])
+    kerns = gpos_pair_kerns(font, [g for _, g in DYNAMICS])
+    digit_of = {g: c for c, g in DIGITS}
+    digit_kerns = {
+        (digit_of[a], digit_of[b]): v
+        for (a, b), v in gpos_pair_kerns(font, [g for _, g in DIGITS]).items()
+    }
 
     acc_kinds = [(k, c) for (k, c) in kinds if k not in ("leftParen", "rightParen")]
 
@@ -722,6 +762,32 @@ def main():
     L.append("        _ => 0.0,")
     L.append("    };")
     L.append("")
+    L.append("    /// <summary>GPOS pair kern between two adjacent PLAIN fetaText digits, in the")
+    L.append("    /// DESIGN's staff spaces (0 for every pair the font does not kern) — the meter's")
+    L.append("    /// glyph run and the multi-measure rest's number, which are the two grobs that set")
+    L.append("    /// this cut.</summary>")
+    L.append("    /// <remarks>")
+    L.append("    /// LILYPOND-REF: scm/define-markup-commands.scm:3872-3981 <c>define-markup-command</c>")
+    L.append("    ///   for <c>number</c> — it prepends")
+    L.append("    ///   <c>font-encoding fetaText</c> and no font-features, so the shaper applies the")
+    L.append("    ///   default-on <c>kern</c> feature and nothing else. These pairs come from that")
+    L.append("    ///   feature's lookups only (<c>gpos_pair_kerns</c> says why that matters).")
+    L.append("    /// ⚠️ IN THE DESIGN'S STAFF SPACES, not the page's — like every number in the")
+    L.append("    /// metric tables, a caller at a non-zero <c>font-size</c> scales it by that step's")
+    L.append("    /// magstep. Both of today's consumers declare no font-size, so for them it is the")
+    L.append("    /// same number either way.")
+    L.append("    /// ⚠️ A kern adjusts the FIRST glyph's OWN advance, so it goes INSIDE the per-glyph")
+    L.append("    /// device-pixel snap, never after it — the spelling <c>DynamicOutline</c> had to be")
+    L.append("    /// corrected to, and the one that reproduces LilyPond's \"10\" row (34 + 43 = 77")
+    L.append("    /// pixels) instead of 80.")
+    L.append("    /// </remarks>")
+    L.append("    public static double MeterDigitKern(char first, char second) => (first, second) switch")
+    L.append("    {")
+    for (d1, d2), v in sorted(digit_kerns.items()):
+        L.append(f"        ('{d1}', '{d2}') => {fmt(v)},")
+    L.append("        _ => 0.0,")
+    L.append("    };")
+    L.append("")
     for kind, cap in kinds:
         L.append(f"    private static readonly (HorizontalSkyline Left, HorizontalSkyline Right) AccSkyPair{cap} =")
         L.append(f"        (HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Left, AccSky{cap}L),")
@@ -739,7 +805,7 @@ def main():
     out_path.write_text("\n".join(L), encoding="utf-8")
     print(f"Wrote {out_path} ({len(ACCIDENTALS)} accidentals + {len(PARENS)} parens "
           f"x {len(DESIGNS)} designs + {len(CLEFS)} clefs + {len(DYNAMICS)} dynamic letters "
-          f"in the {BASE_DESIGN}, {len(kerns)} kern pairs)")
+          f"in the {BASE_DESIGN}, {len(kerns)} letter + {len(digit_kerns)} digit kern pairs)")
     return 0
 
 

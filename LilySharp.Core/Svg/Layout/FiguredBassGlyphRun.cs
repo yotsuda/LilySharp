@@ -129,18 +129,9 @@ internal static class FiguredBassGlyphRun
     /// </remarks>
     internal static ImmutableArray<Piece> Pieces(string text)
     {
-        if (string.IsNullOrEmpty(text)) return ImmutableArray<Piece>.Empty;
-        var pieces = ImmutableArray.CreateBuilder<Piece>(text.Length);
-        double x = 0;
-        foreach (char c in text)
-        {
-            bool isGlyph = TryGetFigure(c, out char glyph, out _, out double adv);
-            double advance = isGlyph
-                ? TextFontMetrics.QuantiseToPangoPixel(adv)
-                : TextFontMetrics.Serif(c.ToString(), Em);
-            pieces.Add(new Piece(isGlyph ? glyph : c, x, advance, isGlyph));
-            x += advance;
-        }
+        var run = FetaTextRun.Pieces(text, TryGetFigure, Em);
+        var pieces = ImmutableArray.CreateBuilder<Piece>(run.Length);
+        foreach (var p in run) pieces.Add(new Piece(p.Ch, p.X, p.Advance, p.IsGlyph));
         return pieces.ToImmutable();
     }
 
@@ -173,12 +164,7 @@ internal static class FiguredBassGlyphRun
     }
 
     /// <summary>The run's advance width in staff spaces.</summary>
-    internal static double Width(string text)
-    {
-        double w = 0;
-        foreach (var p in Pieces(text)) w += p.Advance;
-        return w;
-    }
+    internal static double Width(string text) => FetaTextRun.Width(text, TryGetFigure, Em);
 
     /// <summary>
     /// The run's ink above its baseline — the union of its glyphs' outline tops, which is
@@ -193,21 +179,9 @@ internal static class FiguredBassGlyphRun
     /// <see cref="GlyphMetrics.TryGetDynamicInk"/>); a multi-glyph run's box is the UNION of
     /// its glyphs', measured on <c>\mp</c> when the dynamics went this way.
     /// </remarks>
-    internal static double InkTop(string text)
-    {
-        double top = 0;
-        if (string.IsNullOrEmpty(text)) return top;
-        foreach (char c in text)
-        {
-            double t = TryGetFigure(c, out _, out var outline, out _)
-                ? outline.Top
-                // No feta glyph: the same face and size the drawing falls back to, so this
-                // path keeps the two halves together as well.
-                : TextFontMetrics.Ink(c.ToString(), Em).Top;
-            top = System.Math.Max(top, t);
-        }
-        return top;
-    }
+    // No feta glyph: the same face and size the drawing falls back to, so that path keeps
+    // the two halves together as well (FetaTextRun does the fallback).
+    internal static double InkTop(string text) => FetaTextRun.InkTop(text, TryGetFigure, Em);
 
     /// <summary>
     /// The run's ink BELOW its baseline (≤ 0) — the other end of the same
@@ -227,16 +201,5 @@ internal static class FiguredBassGlyphRun
     /// </para>
     /// </remarks>
     internal static double InkBottom(string text)
-    {
-        double bottom = 0;
-        if (string.IsNullOrEmpty(text)) return bottom;
-        foreach (char c in text)
-        {
-            double b = TryGetFigure(c, out _, out var outline, out _)
-                ? outline.Bottom
-                : TextFontMetrics.Ink(c.ToString(), Em).Bottom;
-            bottom = System.Math.Min(bottom, b);
-        }
-        return bottom;
-    }
+        => FetaTextRun.InkBottom(text, TryGetFigure, Em);
 }

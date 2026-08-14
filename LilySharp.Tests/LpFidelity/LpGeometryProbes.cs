@@ -62,6 +62,33 @@ internal static class LpGeometryProbes
 
         """;
 
+    /// <summary>
+    /// The same one-staff score with a meter other than 4/4 — for the probes whose subject
+    /// IS the time signature's own width (TD1 / TD7 / TDK).
+    /// </summary>
+    /// <remarks><see cref="Preamble"/> spells 4/4 because that is what every other probe
+    /// wants; a meter parameter there would put a `4/4` at 80-odd call sites to serve
+    /// three.</remarks>
+    private static string TimedScore(string meter, string music, string name,
+        string key = "c major") =>
+        $$"""
+        octave absolute
+        time {{meter}}
+        key {{key}}
+
+        part melody
+
+        section Main {
+          melody { {{music}} }
+        }
+
+        form main { Main }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
     private static string Score(string music, string name, string key = "c major") =>
         Preamble(key) + $$"""
         section Main {
@@ -7821,6 +7848,68 @@ internal static class LpGeometryProbes
     private static readonly string KC2 = Score("d2 e | fis2 g |", "KC2", "d major");
 
     /// <summary>
+    /// The same quantity on the DIGIT path, with the digit whose glyph cut Lily# gets
+    /// wrong. A time signature is <c>\number</c> markup, and <c>\number</c> prepends
+    /// <c>font-encoding fetaText</c> and NO font-features
+    /// (scm/define-markup-commands.scm:3872-3981 <c>define-markup-command (number …)</c>) —
+    /// where <c>ss01</c> is what selects the FATTENED cut a Fingering asks for —
+    /// scm/define-grobs.scm:1543-1560 <c>add-stem-support</c> … <c>font-features</c> …
+    /// <c>positioning-done</c>. So a meter digit is the
+    /// PLAIN cut, and Lily# reads the fattened table
+    /// (audit/scripts/Extract-EmmentalerMetrics.py:317-326).
+    /// <para>
+    /// ⚠️ BOTH ROWS ARE THE "1" ON PURPOSE. A TimeSignature's X extent is the MAX of its
+    /// two rows, so the regression corpus's own <c>1/4</c> books hide their "1" behind the
+    /// wider "4" — which is why this survived a corpus that contains four of them.
+    /// LilyPond lays the "1" out at 37 device pixels (plain advance 1.268); Lily# computes
+    /// 38 (fattened 1.292), i.e. too WIDE. Paired with TD7, whose sign is the other way.
+    /// </para>
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \time 1/1 c'1 | c'1 }</c> (probe score TD1).
+    /// Both sides leave the measures as written — LilyPond warns about the bar check and
+    /// Lily# warns that the measure is shorter than the meter, and neither moves the line
+    /// start this point reads.</remarks>
+    private static readonly string TD1 = TimedScore("1/1", "c1 | c1 |", "TD1");
+
+    /// <summary>
+    /// The other sign of the same cut defect. The "7" dominates its "1" row, and there
+    /// LilyPond is WIDER than Lily#: plain <c>seven</c> is 1.348 → 39 pixels against the
+    /// fattened 1.288 → 38.
+    /// <para>
+    /// ★ THE PAIR IS THE POINT. TD1's residual and TD7's have OPPOSITE signs, so a fix
+    /// fitted to either one moves the other the wrong way — the property
+    /// fingering-digit-width.ly's FD4 book was cut for, and the reason one digit point
+    /// would not have been enough.
+    /// </para>
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \time 7/1 c'1 | c'1 }</c> (probe score TD7).
+    /// The denominator has to be the 1: the seven is narrower than every other
+    /// power-of-two denominator's row, so no other fraction lets it reach the extent.</remarks>
+    private static readonly string TD7 = TimedScore("7/1", "c1 | c1 |", "TD7");
+
+    /// <summary>
+    /// A TWO-GLYPH meter row, which adds the two halves of the model no single digit can
+    /// show: the GPOS kern, and the sum itself. <c>one</c>+<c>zero</c> kern by
+    /// −0.100000 ss, and taken INSIDE the per-glyph snap (the spelling session 93 had to
+    /// correct on the dynamic labels — see <c>DynamicOutline</c>) that is 34 + 43 = 77
+    /// device pixels = 2.629034646, which is LilyPond's dumped row to NINE digits. Without
+    /// the kern it is 80 pixels and in the fattened cut 78, so this book alone refutes both
+    /// spellings.
+    /// <para>
+    /// ⚠️ Lily# reaches neither: <c>GlyphMetrics.GetTimeSigWidth</c> passes the NUMBER 10
+    /// into a per-DIGIT lookup, which falls through to its <c>_ =&gt;</c> default and returns
+    /// ONE digit's width, while the renderer walks the string char by char
+    /// (<c>SharedRenderer.Prefix.cs</c>) — reserve and draw are two spellings of one
+    /// quantity here (HANDOFF §2 A). This point observes the RESERVATION.
+    /// </para>
+    /// </summary>
+    /// <remarks>LilyPond twin: <c>\new Staff { \time 10/8 c'8 ×10 | c'8 ×10 }</c> (probe
+    /// score TDK). 10/8 rather than the corpus's 12/8 because <c>one</c>+<c>two</c> carries
+    /// no kern; the 12/8 books ride the multi-digit half of the same model.</remarks>
+    private static readonly string TDK =
+        TimedScore("10/8", "c8 c c c c c c c c c | c8 c c c c c c c c c |", "TDK");
+
+    /// <summary>
     /// An ossia (no clef on first appearance) above a keyed main staff — the ossia's key
     /// signature must break-align into the ONE key column spanning the system, exactly
     /// like the grand-staff clef/time columns. The measured quantity is the ossia key X
@@ -10255,6 +10344,15 @@ internal static class LpGeometryProbes
         new("line-start.time-to-first-note.standard-key", KCS, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.custom-key", KCC, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.cut-common", KC2, g => g.TimeSignatureToFirstNotehead()),
+        // The DIGIT path's own three readings, which KC2's remark says these points pin and
+        // which nothing pinned until now: every meter-width point above stands on a C GLYPH
+        // (4/4, 2/2) or on digits whose two candidate cuts coincide — eight of the ten do.
+        // TD1 and TD7 are the cut, with OPPOSITE signs; TDK is the kern and the multi-glyph
+        // sum. See each score's remark for the arithmetic and the LilyPond citations.
+        new("line-start.time-to-first-note.digit-one", TD1, g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.time-to-first-note.digit-seven", TD7, g => g.TimeSignatureToFirstNotehead()),
+        new("line-start.time-to-first-note.two-digit-kerned", TDK,
+            g => g.TimeSignatureToFirstNotehead()),
         new("line-start.ossia-key-alignment.sharps", OKN, g => g.OssiaKeyAlignmentOffset()),
         new("line-start.ossia-key-alignment.flats", OKNF, g => g.OssiaKeyAlignmentOffset()),
         // WHICH staves the key column is made of. A tab staff engraves no key signature

@@ -24,22 +24,22 @@
   <line x1="16.22" y1="18.47" x2="16.22" y2="21.66" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="19.14" y="18.82" font-size="4.00" data-pos="539"></text>
   <line x1="20.38" y1="18.67" x2="20.38" y2="15.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.25" y="18.32" font-size="4.00" data-pos="550"></text>
-  <text class="music" x="23.25" y="20.32" font-size="4.00" data-pos="550"></text>
+  <text class="music" x="23.39" y="18.32" font-size="4.00" data-pos="550">3</text>
+  <text class="music" x="23.25" y="20.32" font-size="4.00" data-pos="550">4</text>
   <text class="music" x="26.85" y="19.32" font-size="4.00" data-pos="554"></text>
   <line x1="28.09" y1="19.17" x2="28.09" y2="15.82" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="29.86" y="18.82" font-size="4.00" data-pos="557"></text>
   <line x1="31.10" y1="18.67" x2="31.10" y2="15.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="32.88" y="18.32" font-size="4.00" data-pos="559"></text>
   <line x1="32.94" y1="18.47" x2="32.94" y2="21.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="36.69" y="18.32" font-size="4.00" data-pos="570"></text>
-  <text class="music" x="36.69" y="20.32" font-size="4.00" data-pos="570"></text>
+  <text class="music" x="36.76" y="18.32" font-size="4.00" data-pos="570">2</text>
+  <text class="music" x="36.69" y="20.32" font-size="4.00" data-pos="570">4</text>
   <text class="music" x="40.29" y="18.82" font-size="4.00" data-pos="574"></text>
   <line x1="41.53" y1="18.67" x2="41.53" y2="15.32" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="43.30" y="19.32" font-size="4.00" data-pos="577"></text>
   <line x1="44.54" y1="19.17" x2="44.54" y2="15.82" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="47.44" y="18.32" font-size="4.00" data-pos="588"></text>
-  <text class="music" x="47.44" y="20.32" font-size="4.00" data-pos="588"></text>
+  <text class="music" x="47.49" y="18.32" font-size="4.00" data-pos="588">6</text>
+  <text class="music" x="47.44" y="20.32" font-size="4.00" data-pos="588">8</text>
   <text class="music" x="50.91" y="18.82" font-size="4.00" data-pos="592"></text>
   <text class="music" x="53.01" y="18.32" font-size="4.00" data-pos="595"></text>
   <text class="music" x="55.12" y="18.82" font-size="4.00" data-pos="597"></text>

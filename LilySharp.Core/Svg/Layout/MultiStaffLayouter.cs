@@ -939,7 +939,9 @@ internal sealed class MultiStaffLayouter
         // merge_springs averages the two ideals.
         return LineStartColumn.LineStartSpring(
             score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score),
-            prefix.HasTime ? GlyphMetrics.GetTimeSigWidth(prefix.Beats, prefix.BeatType) : 0.0,
+            prefix.HasTime
+                ? GlyphMetrics.GetTimeSigWidth(prefix.Numerator, prefix.Denominator)
+                : 0.0,
             startMeasureIndex, ownFixedFloor);
     }
 
@@ -950,8 +952,12 @@ internal sealed class MultiStaffLayouter
         BreakAlignSpacing.PrefixColumns Columns,
         TimeSignatureChangeItem? LeadingTimeChange,
         bool HasTime,
-        int Beats,
-        int BeatType,
+        // The meter's two rows AS PRINTED. Strings rather than beat counts because the
+        // reservation lays out the same run the pen draws (MeterGlyphRun) — an additive
+        // numerator has no integer that spells it, and before session 164 the carrier
+        // approximated one (TimeSignature.LayoutBeats, now retired).
+        string Numerator,
+        string Denominator,
         // The key change that OPENS this system's first measure, or null. Like the meter
         // change above it is engraved in the PREFIX (and as a courtesy at the end of the
         // previous line), never as a column inside bar one — so its width must not be
@@ -1007,14 +1013,16 @@ internal sealed class MultiStaffLayouter
         // The break-align GROUP's width places the shared meter column; each staff's own clef
         // ink inside that group is what its own first-note wish is measured from.
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
-        int prefixBeats = leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats;
-        int prefixBeatType = leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType;
+        string prefixNumerator =
+            leadingTimeChange?.NewTime.NumeratorText ?? score.TimeSignature.NumeratorText;
+        string prefixDenominator =
+            leadingTimeChange?.NewTime.DenominatorText ?? score.TimeSignature.DenominatorText;
         // The break-align table itself, not just its right edge: the min_dist needs every
         // column's X to place the prefatory boxes (staff-spacing.cc:210).
         var prefixColumns = BreakAlignSpacing.SolvePrefixColumns(
-            maxClefWidth, activeKeyInk, prefixHasTime, prefixBeats, prefixBeatType);
+            maxClefWidth, activeKeyInk, prefixHasTime, prefixNumerator, prefixDenominator);
         return new LineStartPrefix(
-            prefixColumns, leadingTimeChange, prefixHasTime, prefixBeats, prefixBeatType,
+            prefixColumns, leadingTimeChange, prefixHasTime, prefixNumerator, prefixDenominator,
             leadingKeyChange);
     }
 

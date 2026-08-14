@@ -184,12 +184,12 @@ internal static class SpacingRules
     }
 
     public static double CalculatePrefixWidth(KeySignature key, bool includeTimeSignature,
-        int timeSigBeats = 4, int timeSigBeatType = 4)
+        string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
         return BreakAlignSpacing.CalculatePrefixWidth(
             GlyphMetrics.LineStartClefWidth(ClefType.Treble),
             KeySignatureInkWidth(key),
-            includeTimeSignature, timeSigBeats, timeSigBeatType);
+            includeTimeSignature, timeSigNumerator, timeSigDenominator);
     }
 
     /// <summary>
@@ -200,12 +200,12 @@ internal static class SpacingRules
     /// Use this overload when the clef type is known for accurate spacing.
     /// </remarks>
     public static double CalculatePrefixWidth(double clefWidth, KeySignature key,
-        bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
+        bool includeTimeSignature, string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
         return BreakAlignSpacing.CalculatePrefixWidth(
             clefWidth,
             KeySignatureInkWidth(key),
-            includeTimeSignature, timeSigBeats, timeSigBeatType);
+            includeTimeSignature, timeSigNumerator, timeSigDenominator);
     }
 
     /// <summary>
@@ -215,10 +215,10 @@ internal static class SpacingRules
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242 calc_positioning_done.</remarks>
     public static double CalculatePrefixWidth(double clefWidth, double keyInkWidth,
-        bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
+        bool includeTimeSignature, string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
         return BreakAlignSpacing.CalculatePrefixWidth(
-            clefWidth, keyInkWidth, includeTimeSignature, timeSigBeats, timeSigBeatType);
+            clefWidth, keyInkWidth, includeTimeSignature, timeSigNumerator, timeSigDenominator);
     }
 
     /// <summary>
@@ -616,7 +616,8 @@ internal static class SpacingRules
         => BreakAlignGap(
                afterCourtesyKey ? BreakAlignSymbol.KeySignature : BreakAlignSymbol.StaffBar,
                BreakAlignSymbol.TimeSignature)
-           + GlyphMetrics.GetTimeSigWidth(change.NewTime.Beats, change.NewTime.BeatType);
+           + GlyphMetrics.GetTimeSigWidth(
+               change.NewTime.NumeratorText, change.NewTime.DenominatorText);
 
     /// <summary>
     /// Gets the width of a barline type.
@@ -863,7 +864,8 @@ internal static class SpacingRules
     /// numerator / denominator digit stacks.
     /// </remarks>
     internal static double GetTimeSignatureChangeWidth(TimeSignatureChangeItem timeChange) =>
-        GlyphMetrics.GetTimeSigWidth(timeChange.NewTime.Beats, timeChange.NewTime.BeatType);
+        GlyphMetrics.GetTimeSigWidth(
+            timeChange.NewTime.NumeratorText, timeChange.NewTime.DenominatorText);
 
     /// <summary>
     /// Calculates the item's LEFTward ink reach from its column, as a positive amount.

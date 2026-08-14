@@ -34,25 +34,56 @@ namespace LilySharp.Tests;
 public class TimeSignaturePangoWidthTests
 {
     /// <summary>
-    /// LilyPond's own markup widths for every digit, measured on the grob. Lily#'s
-    /// unquantised advances are the fattened-digit metrics, which match the ASCII digit
-    /// LilyPond sets only for '4'; the others are pinned to the fattened advance snapped to
-    /// the same grid, which is what Lily# computes today.
+    /// LilyPond's own markup width for EVERY digit, measured on the grob.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS THEORY USED TO COVER SIX DIGITS, AND THE FOUR IT LEFT OUT WERE THE POINT.
+    /// Until 2026-08-14 it pinned only 4, 0, 2, 8, 6 and 9 — with a comment saying in so many
+    /// words that Lily# read the FATTENED cut and that the fattened advance "matches the ASCII
+    /// digit LilyPond sets only for '4'". Every digit it skipped is one where the two cuts
+    /// could disagree, so the test was written to pass under either answer and could not fail
+    /// when the cut was wrong. It was: <c>\number</c> declares no font-features, so LilyPond
+    /// sets the PLAIN digits, and 1 (37 device pixels, not 38) and 7 (39, not 38) were both
+    /// off by a pixel, in opposite directions (ledger
+    /// <c>line-start.time-to-first-note.digit-one</c> / <c>.digit-seven</c>,
+    /// <c>MeterGlyphRun</c>).
+    /// ⇒ All ten are pinned now, each to the width LilyPond laid the digit out at — read off
+    /// its own stencil expressions, where a row's width is twice the centring translation
+    /// (audit/lp-geometry/probes/barline-spacing.ly scores TD1 / TD7 / TDK carry the three
+    /// that a ledger point watches).
+    /// </remarks>
     [Theory]
-    // digit 4 is the one the ledger measures, and the one whose fattened and ASCII
-    // advances coincide, so it is pinned to LilyPond's own markup width to the digit.
-    [InlineData(4, 1.604735)]
-    // The remaining digits are pinned to the quantised FATTENED advance (what Lily# has),
-    // which for these happens to equal LilyPond's ASCII markup width — 0/2/8 share 1.468162
-    // and 6/9 share 1.365732, a grouping only quantisation produces.
-    [InlineData(0, 1.468162)]
-    [InlineData(2, 1.468162)]
-    [InlineData(8, 1.468162)]
-    [InlineData(6, 1.365732)]
-    [InlineData(9, 1.365732)]
+    [InlineData(0, 1.468162)]   // 43 px
+    [InlineData(1, 1.263302)]   // 37 px — the narrowest, and one of the two the cut moved
+    [InlineData(2, 1.468162)]   // 43 px
+    [InlineData(3, 1.331589)]   // 39 px
+    [InlineData(4, 1.604735)]   // 47 px — the widest, and the digit both cuts agree on
+    [InlineData(5, 1.331589)]   // 39 px
+    [InlineData(6, 1.365732)]   // 40 px
+    [InlineData(7, 1.331589)]   // 39 px — the other digit the cut moved, the other way
+    [InlineData(8, 1.468162)]   // 43 px
+    [InlineData(9, 1.365732)]   // 40 px
     public void Digit_WidthIsSnappedToPangosGrid(int digit, double expected)
         => Assert.Equal(expected, GlyphMetrics.GetTimeSigDigitWidth(digit), 6);
+
+    /// <summary>
+    /// A two-glyph row is not the sum of its digits: the pair kerns, and the kern is applied
+    /// INSIDE the per-glyph pixel snap.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's own numerator rows, measured on the grob (scratch sighting, session 164):
+    /// "10" is 77 device pixels, "11" 74, "12" 80 and "16" 74. The 11/16 pair is the control
+    /// that the kern is real — they reach the same total by different routes (37+37 with no
+    /// kern against 34+40 with one), and an implementation that dropped the kern would print
+    /// 74 and 77.
+    /// </remarks>
+    [Theory]
+    [InlineData("10", 2.629035)]
+    [InlineData("11", 2.526605)]
+    [InlineData("12", 2.731465)]
+    [InlineData("16", 2.526605)]
+    public void TwoDigitRow_KernsInsideTheSnap(string row, double expected)
+        => Assert.Equal(expected, LilySharp.Core.Svg.Layout.MeterGlyphRun.Width(row), 6);
 
     /// <summary>
     /// The default 4/4 and 2/2 print the <c>timesig.C44</c>/<c>timesig.C22</c> GLYPHS —

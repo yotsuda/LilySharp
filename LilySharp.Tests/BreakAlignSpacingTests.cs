@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -182,7 +182,7 @@ public class BreakAlignSpacingTests
         // time signature's INK; the 2.0 first-note distance is carried by
         // the first measure's leading spring (LineStartColumn.LineStartSpring), not here.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
-            GlyphMetrics.GClefWidth, 0.0, true, 4, 4);
+            GlyphMetrics.GClefWidth, 0.0, true, "4", "4");
 
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);
         // LeftEdge→Clef 0.8 opens the prefix, then Clef→TimeSignature extra-space 1.52.
@@ -206,7 +206,7 @@ public class BreakAlignSpacingTests
     {
         // D major (2 sharps), first system with 4/4 time — ink end only.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
-            GlyphMetrics.GClefWidth, SharpsInk(2), true, 4, 4);
+            GlyphMetrics.GClefWidth, SharpsInk(2), true, "4", "4");
 
         double keyWidth = 2 * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);

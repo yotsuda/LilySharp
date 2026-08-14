@@ -432,43 +432,83 @@ internal static partial class GlyphMetrics
     /// make-c-time-signature-markup — the glyph branch is exactly (n=2 ∧ d=2) ∨ (n=4 ∧
     /// d=4); :981-982 the default style is that procedure.</remarks>
     public static double GetTimeSigWidth(int beats, int beatType)
+        => GetTimeSigWidth(
+            beats.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            beatType.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+    /// <summary>
+    /// The engraved width of a digit-path time signature written out — the WIDER of its two
+    /// rows, each row laid out as its own glyph run.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/time-signature-settings.scm:922-923 <c>format-compound-time</c> wraps
+    ///   the two rows in <c>make-number-markup</c> and stacks them, so the grob's X extent is
+    ///   the wider row's and the narrower one is centred inside it.
+    /// <para>
+    /// ⚠️ IT IS A RUN, NOT A DIGIT, and until session 164 it was a digit: this took
+    /// <c>max(digit(beats), digit(beatType))</c> with <c>beats</c> passed to a per-DIGIT
+    /// switch, so <c>10/8</c> fell through that switch's default and reserved ONE digit's
+    /// width where LilyPond lays out two (ledger
+    /// <c>line-start.time-to-first-note.two-digit-kerned</c>, −1.160872795). The rows kern:
+    /// LilyPond's "10" is 34 + 43 = 77 device pixels, not 37 + 43 = 80.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE NUMERATOR MAY NOT BE A NUMBER. A compound meter's numerator is written as
+    /// spelled ("3+2"), and the <c>+</c> has no glyph in this cut; <see cref="MeterGlyphRun"/>
+    /// falls back to the serif face for it, which is what the drawing already did.
+    /// </para>
+    /// </remarks>
+    public static double GetTimeSigWidth(string beats, string beatType)
     {
-        if (beats == 4 && beatType == 4)
+        // ⚠️ THE C GLYPHS COME FIRST, and this branch belongs HERE rather than in the int
+        // overload: every reservation site now passes the printed rows, so a glyph test that
+        // only the int path ran would put 4/4 and 2/2 on the digit path — measured, that
+        // moves every C-meter book's first note (the whole line-start.time-to-first-note
+        // family goes off at once, which is how this was caught).
+        if (beats == "4" && beatType == "4")
             return TimeSigCommon.Width;
-        if (beats == 2 && beatType == 2)
+        if (beats == "2" && beatType == "2")
             return TimeSigCutCommon.Width;
-        return System.Math.Max(GetTimeSigDigitWidth(beats), GetTimeSigDigitWidth(beatType));
+        return System.Math.Max(MeterGlyphRun.Width(beats), MeterGlyphRun.Width(beatType));
     }
 
     /// <summary>
-    /// Gets the advance width of a single time signature digit, snapped to Pango's grid the
-    /// way LilyPond's <c>\number</c> markup is.
+    /// Gets the advance width of ONE meter digit, snapped to Pango's grid the way LilyPond's
+    /// <c>\number</c> markup is.
     /// </summary>
     /// <remarks>
-    /// The unquantised advances are the fattened-digit metrics, which agree with the ASCII
-    /// fetaText digits LilyPond actually sets for the digit 4 (both 1.600000) — see the note
-    /// on <see cref="PangoQuantumStaffSpaces"/>. ⚠️ THEY DO NOT AGREE FOR EVERY DIGIT: the
-    /// fattened '1' is 1.292 where the ASCII '1' is 1.268, so a signature like 1/4 would
-    /// quantise the wrong base width. No ledger point measures a non-4 time-signature digit
-    /// yet, so that divergence is unmeasured and left for a probe to seed first rather than
-    /// guessed at here.
+    /// ⚠️ A DIGIT IS NOT A ROW. This is the single-glyph reading, correct only where the
+    /// caller genuinely lays out one glyph at a time (the multi-measure rest's number, whose
+    /// digits it steps through itself). A time signature's row goes through
+    /// <see cref="MeterGlyphRun"/>, which also carries the GPOS kern between adjacent digits —
+    /// summing this per digit misses 0.102429 on a "10".
+    /// <para>
+    /// ⚠️ THE ADVANCES WERE THE FATTENED CUT'S UNTIL 2026-08-14. <c>ss01</c> selects the
+    /// fattened digits and <c>\number</c> asks for no features at all, so these are the plain
+    /// ones now; see <see cref="MeterGlyphRun"/> for the reading that settled it and the two
+    /// digits it moved.
+    /// </para>
     /// </remarks>
     public static double GetTimeSigDigitWidth(int digit) =>
-        PangoQuantise(UnquantisedTimeSigDigitWidth(digit));
+        PangoQuantise(UnquantisedMeterDigitAdvance(Design20, digit));
 
-    private static double UnquantisedTimeSigDigitWidth(int digit) => digit switch
+    /// <summary>The same lookup asked of ONE font — the design a grob's <c>font-size</c>
+    /// selected, optionally already scaled (<see cref="AtFontSize"/>).</summary>
+    /// <remarks>LILYPOND-REF: lily/open-type-font.cc:390-408 get_indexed_char_dimensions — a
+    /// dimension is a question put to a FONT, never to a glyph name alone.</remarks>
+    internal static double UnquantisedMeterDigitAdvance(DesignMetrics font, int digit) => digit switch
     {
-        0 => TimeSigDigit0Advance,
-        1 => TimeSigDigit1Advance,
-        2 => TimeSigDigit2Advance,
-        3 => TimeSigDigit3Advance,
-        4 => TimeSigDigit4Advance,
-        5 => TimeSigDigit5Advance,
-        6 => TimeSigDigit6Advance,
-        7 => TimeSigDigit7Advance,
-        8 => TimeSigDigit8Advance,
-        9 => TimeSigDigit9Advance,
-        _ => TimeSigDigit0Advance, // fallback to widest common digit
+        0 => font.TimeSigDigit0Advance,
+        1 => font.TimeSigDigit1Advance,
+        2 => font.TimeSigDigit2Advance,
+        3 => font.TimeSigDigit3Advance,
+        4 => font.TimeSigDigit4Advance,
+        5 => font.TimeSigDigit5Advance,
+        6 => font.TimeSigDigit6Advance,
+        7 => font.TimeSigDigit7Advance,
+        8 => font.TimeSigDigit8Advance,
+        9 => font.TimeSigDigit9Advance,
+        _ => font.TimeSigDigit0Advance, // fallback to a widest common digit
     };
 
     // ========== Helper methods ==========

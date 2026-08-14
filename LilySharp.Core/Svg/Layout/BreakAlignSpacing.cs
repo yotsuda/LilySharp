@@ -449,10 +449,15 @@ internal static class BreakAlignSpacing
     /// column. A pure forward pass — no fixpoint, no dependency on note positions — so it slots
     /// exactly where the scalar prefix width used to be computed, before the system spring solve.
     /// </remarks>
+    /// <param name="timeSigNumerator">The meter's numerator AS PRINTED, which for an additive
+    /// meter is its spelling ("3+2") — the reservation lays out the same run the pen draws
+    /// (<see cref="MeterGlyphRun"/>), so it takes the row and not a beat count.</param>
+    /// <param name="timeSigDenominator">The denominator as printed.</param>
     public static PrefixColumns SolvePrefixColumns(
         double clefWidth,
         double keyInkWidth,
-        bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
+        bool includeTimeSignature,
+        string timeSigNumerator = "4", string timeSigDenominator = "4")
     {
         bool hasKey = keyInkWidth > 0.0;
 
@@ -468,7 +473,7 @@ internal static class BreakAlignSpacing
             items.Add((BreakAlignSymbol.KeySignature, keyInkWidth));
         if (includeTimeSignature)
             items.Add((BreakAlignSymbol.TimeSignature,
-                GlyphMetrics.GetTimeSigWidth(timeSigBeats, timeSigBeatType)));
+                GlyphMetrics.GetTimeSigWidth(timeSigNumerator, timeSigDenominator)));
 
         var placed = SolveColumns(items, EngravingDefaults.ClefGlyphXOffset);
 
@@ -508,9 +513,10 @@ internal static class BreakAlignSpacing
     public static double CalculatePrefixWidth(
         double clefWidth,
         double keyInkWidth,
-        bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
+        bool includeTimeSignature,
+        string timeSigNumerator = "4", string timeSigDenominator = "4")
         => SolvePrefixColumns(clefWidth, keyInkWidth,
-            includeTimeSignature, timeSigBeats, timeSigBeatType).Right;
+            includeTimeSignature, timeSigNumerator, timeSigDenominator).Right;
 
     /// <summary>
     /// The FIXED distance, the IDEAL distance and the STRETCHABILITY one space-alist entry

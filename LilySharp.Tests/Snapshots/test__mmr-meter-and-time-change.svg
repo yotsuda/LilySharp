@@ -14,8 +14,8 @@
   <line x1="0.00" y1="21.57" x2="62.40" y2="21.57" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="22.57" x2="62.40" y2="22.57" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="21.57" font-size="4.00"></text>
-  <text class="music" x="4.88" y="20.57" font-size="4.00" data-pos="1168"></text>
-  <text class="music" x="4.88" y="22.57" font-size="4.00" data-pos="1168"></text>
+  <text class="music" x="5.02" y="20.57" font-size="4.00" data-pos="1168">3</text>
+  <text class="music" x="4.88" y="22.57" font-size="4.00" data-pos="1168">4</text>
   <line x1="8.16" y1="23.57" x2="10.12" y2="23.57" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="8.49" y="23.57" font-size="4.00" data-pos="1224"></text>
   <line x1="9.73" y1="23.42" x2="9.73" y2="20.07" stroke="#000000" stroke-width="0.130"/>
@@ -29,8 +29,8 @@
   <line x1="35.31" y1="21.42" x2="35.31" y2="18.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="37.07" y="21.07" font-size="4.00" data-pos="1258"></text>
   <line x1="38.31" y1="20.92" x2="38.31" y2="17.57" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="41.18" y="20.57" font-size="4.00" data-pos="1271"></text>
-  <text class="music" x="41.18" y="22.57" font-size="4.00" data-pos="1271"></text>
+  <text class="music" x="41.25" y="20.57" font-size="4.00" data-pos="1271">2</text>
+  <text class="music" x="41.18" y="22.57" font-size="4.00" data-pos="1271">4</text>
   <text class="music" x="56.04" y="21.57" font-size="4.00" data-pos="1282"></text>
   <line x1="57.28" y1="21.42" x2="57.28" y2="18.07" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="59.05" y="21.07" font-size="4.00" data-pos="1289"></text>
@@ -47,9 +47,9 @@
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="1198">Main</text>
   <text class="music" x="21.66" y="20.57" font-size="4.00"></text>
   <text class="music" x="24.74" y="19.57" font-size="4.00"></text>
-  <text class="music" x="23.28" y="18.17" font-size="4.00"></text>
+  <text class="music" x="23.28" y="18.17" font-size="4.00">3</text>
   <text class="music" x="45.09" y="20.57" font-size="4.00"></text>
   <text class="music" x="48.80" y="19.57" font-size="4.00"></text>
-  <text class="music" x="47.03" y="18.17" font-size="4.00"></text>
+  <text class="music" x="47.03" y="18.17" font-size="4.00">3</text>
   </g>
 </svg>

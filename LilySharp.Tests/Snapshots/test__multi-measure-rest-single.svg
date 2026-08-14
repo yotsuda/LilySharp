@@ -78,9 +78,9 @@
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="622">Main</text>
   <text class="music" x="41.17" y="19.57" font-size="4.00"></text>
   <text class="music" x="61.60" y="20.57" font-size="4.00"></text>
-  <text class="music" x="61.16" y="18.17" font-size="4.00"></text>
+  <text class="music" x="61.16" y="18.17" font-size="4.00">2</text>
   <text class="music" x="81.95" y="20.57" font-size="4.00"></text>
   <text class="music" x="85.14" y="19.57" font-size="4.00"></text>
-  <text class="music" x="83.63" y="18.17" font-size="4.00"></text>
+  <text class="music" x="83.63" y="18.17" font-size="4.00">3</text>
   </g>
 </svg>
