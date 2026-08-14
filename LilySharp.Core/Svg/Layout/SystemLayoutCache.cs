@@ -73,6 +73,18 @@ internal sealed class SystemLayoutCache
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
     public int Count => _measures.Count;
 
+    /// <summary>The above-staff stacking memo of the PRELIMINARY annotation pass. One
+    /// instance per pass — the two passes stack different systems every keystroke, so a
+    /// shared store would overwrite itself twice per keystroke and never hit. Entries
+    /// persist across edits by design (a match means the inputs are value-identical, so
+    /// staleness cannot serve a wrong answer — see <see cref="AboveStackMemo"/>); the
+    /// store is bounded by the session's widest system count, like the paging augments.</summary>
+    public AboveStackMemo PreliminaryAboveStack { get; } = new();
+
+    /// <summary>The FINAL annotation pass's above-staff stacking memo
+    /// (see <see cref="PreliminaryAboveStack"/>).</summary>
+    public AboveStackMemo FinalAboveStack { get; } = new();
+
     /// <summary>Whether the most recent <see cref="GetOrComputeMeasures"/> call was a
     /// hit (reused) rather than a miss (computed). For diagnostics / tests.</summary>
     public bool LastWasHit { get; private set; }

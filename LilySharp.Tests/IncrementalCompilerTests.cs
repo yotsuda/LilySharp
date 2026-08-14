@@ -1302,4 +1302,43 @@ public class IncrementalCompilerTests
         Assert.True(replayed == pages && drawn == 0,
             $"expected every page's overlay to replay: replayed {replayed} / drawn {drawn}");
     }
+
+    // --- ⒟⁶⑵ above-staff stacking memo (AboveStackMemo, session 161) -------------
+    // A bar number stands on every system, so every keystroke used to rebuild every
+    // system's tracker (a copy of its whole inside-staff profile) and re-place every
+    // above-staff grob, twice (preliminary + final annotation pass). The memo replays
+    // the systems whose stacking inputs are unchanged; these nets hold it to byte
+    // identity against a cache-free full compile PLUS liveness on both passes' stores.
+
+    /// <summary>A pitch toggle in a multi-system book with above-staff grobs (bar
+    /// numbers on every system, a tuplet, a tempo mark): the SVG equals a full
+    /// recompile and both annotation passes' memos replay unchanged systems.</summary>
+    [Fact]
+    public void AboveStackMemo_ReplaysUnchangedSystems_AndMatchesFull()
+    {
+        string source = "time 4/4\nkey c major\ntempo 96\npart melody { clef treble }\n"
+            + "section Main { melody { tuplet 3/2 { c8 d e } f4 g4 a4 | "
+            + string.Join(" ", Enumerable.Repeat("c4 d e f | g4 a b c' |", 12))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var prelim = session.SystemCache!.PreliminaryAboveStack;
+        var final = session.SystemCache!.FinalAboveStack;
+        int prelimHits0 = prelim.Hits, finalHits0 = final.Hits;
+        int prelimMisses0 = prelim.Misses;
+
+        var change = Replace(source, "g4 a b c'", "g4 a b d'");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "g4 a b c'", "g4 a b d'")), incremental);
+        // Liveness, both passes: the book spans several systems and only the edited
+        // one (± neighbours the respacing touches) may decline.
+        Assert.True(prelim.Hits > prelimHits0,
+            $"preliminary above-stack memo never hit (hits {prelim.Hits}, misses {prelim.Misses})");
+        Assert.True(final.Hits > finalHits0,
+            $"final above-stack memo never hit (hits {final.Hits}, misses {final.Misses})");
+        // The edited system declined (the memo is not replaying everything blindly).
+        Assert.True(prelim.Misses > prelimMisses0,
+            $"the edited system should have declined (misses {prelim.Misses})");
+    }
 }

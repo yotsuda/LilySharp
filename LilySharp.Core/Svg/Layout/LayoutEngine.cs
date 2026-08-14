@@ -336,6 +336,10 @@ internal sealed class LayoutEngine
             TrailingRowStaves = trailingRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, systemsArray),
+            // The FINAL pass's above-stack memo — its own instance, because the
+            // preliminary pass stacks different systems every keystroke and one shared
+            // store would overwrite itself twice per keystroke and never hit.
+            AboveStackMemo = systemCache?.FinalAboveStack,
         };
         var annotations = CalculateAnnotationLayouts(annotationContext);
 
@@ -792,6 +796,8 @@ internal sealed class LayoutEngine
             StaffSpanners = staffSpanners,
             StaffInside = staffInside,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
+            // The PRELIMINARY pass's own above-stack memo (see the final pass's site).
+            AboveStackMemo = systemCache?.PreliminaryAboveStack,
         });
         EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
@@ -3143,6 +3149,28 @@ internal sealed class LayoutEngine
             => InsideAt(StaffInside, systemIndex, staffIndex);
 
         /// <summary>
+        /// The STORED profile instances behind <see cref="InsideOf"/> — the above-stack
+        /// memo's reference key. <see cref="InsideOf"/> hands out a fresh COPY per call
+        /// (its consumers raise the skylines into their own frame), so the copy can never
+        /// be an identity; the identity is the table entry itself, which an unchanged
+        /// system gets back from <see cref="SystemLayoutCache"/> as the same instances.
+        /// Null when the table holds no such (system, staff) — the memo then stacks that
+        /// system live rather than risking a false match (AboveStackMemo's remarks).
+        /// </summary>
+        public (object Up, object Down)? InsideIdentityOf(int systemIndex, int staffIndex)
+        {
+            if (systemIndex < 0 || systemIndex >= StaffInside.Count
+                || staffIndex < 0 || staffIndex >= StaffInside[systemIndex].Count)
+                return null;
+            var (up, down) = StaffInside[systemIndex][staffIndex];
+            return (up, down);
+        }
+
+        /// <summary>This pass's above-staff stacking memo, or null outside the
+        /// incremental session (batch renders, tests). See <see cref="AboveStackMemo"/>.</summary>
+        public AboveStackMemo? AboveStackMemo { get; init; }
+
+        /// <summary>
         /// A staff's rest/note collision shifts — <c>MultiStaffLayouter.RestCollisionsOf</c>
         /// itself, so this pass reserves each rest where the ROOM reserved it and where the
         /// renderer draws it.
@@ -3704,6 +3732,13 @@ internal sealed class LayoutEngine
         // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.
+        // The pass's keystroke-crossing memo: reference identity of each staff's
+        // profile is the STORED table pair, not the copy staffProfile wraps per call
+        // (ctx.InsideIdentityOf). staffProfile's OWN fallback arm (the InsideOf-null
+        // rebuild) has no stable identity, and InsideIdentityOf answers null exactly
+        // there, which makes the memo stack that system live — never a false match.
+        Func<int, int, (object Up, object Down)?>? profileIdentity =
+            staffProfile == null ? null : ctx.InsideIdentityOf;
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
              stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners,
              stackedArticulationsAbove) = OutsideStaffStacker.StackAboveStaff(
@@ -3711,7 +3746,8 @@ internal sealed class LayoutEngine
             belowStackedTrills, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
             stackedArticulations, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts,
-            staffProfile: staffProfile);
+            staffProfile: staffProfile,
+            memo: ctx.AboveStackMemo, profileIdentity: profileIdentity);
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
         // After stacking, sit a boundary "To Coda" on the adjacent section label's

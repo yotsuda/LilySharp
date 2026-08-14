@@ -645,7 +645,322 @@ internal static class OutsideStaffStacker
             ImmutableArray<ArticulationLayout> articulations = default,
             ImmutableArray<DynamicLayout> aboveDynamics = default,
             ImmutableArray<TextSpannerLayout> textSpanners = default,
-            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null)
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null,
+            AboveStackMemo? memo = null,
+            Func<int, int, (object Up, object Down)?>? profileIdentity = null)
+    {
+        if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty)
+            return StackAboveStaffCore(systems, systemSkylines, tupletBrackets, trills,
+                barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
+                aboveDynamics, textSpanners, staffProfile);
+        return StackAboveStaffMemoized(systems, systemSkylines, tupletBrackets, trills,
+            barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
+            aboveDynamics, textSpanners, staffProfile, memo, profileIdentity);
+    }
+
+    /// <summary>Per-system index lists into the pass's ten input arrays — one system's
+    /// slice of each family, in array order.</summary>
+    private sealed class SysPart
+    {
+        public readonly List<int> Trills = new(), BarNumbers = new(), Ottavas = new(),
+            CustomTexts = new(), Voltas = new(), MusicMarks = new(), Articulations = new(),
+            Dynamics = new(), TextSpanners = new(), TupletBrackets = new();
+    }
+
+    /// <summary>
+    /// The memoized front of <see cref="StackAboveStaffCore"/>: partition every input by
+    /// system, replay the systems whose program matches the memo, and run the core only on
+    /// the rest. Sound because the pass holds no cross-system state — every placement and
+    /// seed goes through a per-(system, staff) tracker, so filtering out whole systems
+    /// leaves the remaining systems' work byte-identical (the coverage inventory is
+    /// <see cref="AboveStackMemo"/>'s remarks).
+    /// </summary>
+    private static (ImmutableArray<TrillSpannerLayout> Trills,
+                   ImmutableArray<BarNumberLayout> BarNumbers,
+                   ImmutableArray<OttavaBracketLayout> Ottavas,
+                   ImmutableArray<CustomTextLayout> CustomTexts,
+                   ImmutableArray<VoltaBracketLayout> Voltas,
+                   ImmutableArray<MusicMarkLayout> MusicMarks,
+                   ImmutableArray<DynamicLayout> Dynamics,
+                   ImmutableArray<TextSpannerLayout> TextSpanners,
+                   ImmutableArray<ArticulationLayout> Articulations)
+        StackAboveStaffMemoized(
+            ImmutableArray<SystemLayout> systems,
+            IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
+            ImmutableArray<TupletBracketLayout> tupletBrackets,
+            ImmutableArray<TrillSpannerLayout> trills,
+            ImmutableArray<BarNumberLayout> barNumbers,
+            ImmutableArray<OttavaBracketLayout> ottavas,
+            ImmutableArray<CustomTextLayout> customTexts,
+            ImmutableArray<VoltaBracketLayout> voltas,
+            ImmutableArray<MusicMarkLayout> musicMarks,
+            ImmutableArray<ArticulationLayout> articulations,
+            ImmutableArray<DynamicLayout> aboveDynamics,
+            ImmutableArray<TextSpannerLayout> textSpanners,
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
+            AboveStackMemo memo,
+            Func<int, int, (object Up, object Down)?> profileIdentity)
+    {
+        // The same measure→system map and top-staff resolution the core builds (cheap:
+        // one dictionary fill + one pass over the staves).
+        var measureToSystem = new Dictionary<int, int>();
+        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+            foreach (var m in systems[sysIdx].Measures)
+                measureToSystem[m.MeasureIndex] = sysIdx;
+        var topStaff = TopStaffBySystem(systems);
+
+        // 1. Partition every family by system (grobs whose measure maps to none are the
+        // core's untouched passthroughs and stay on the live path).
+        var parts = new Dictionary<int, SysPart>();
+        SysPart PartOf(int s)
+        {
+            if (!parts.TryGetValue(s, out var p))
+                parts[s] = p = new SysPart();
+            return p;
+        }
+        void Collect<T>(ImmutableArray<T> arr, Func<T, int> measureOf, Func<SysPart, List<int>> sel)
+        {
+            if (arr.IsDefaultOrEmpty)
+                return;
+            for (int i = 0; i < arr.Length; i++)
+                if (measureToSystem.TryGetValue(measureOf(arr[i]), out int s))
+                    sel(PartOf(s)).Add(i);
+        }
+        Collect(trills, t => t.StartMeasureIndex, p => p.Trills);
+        Collect(barNumbers, bn => bn.MeasureIndex, p => p.BarNumbers);
+        Collect(ottavas, o => o.StartMeasureIndex, p => p.Ottavas);
+        Collect(customTexts, ct => ct.MeasureIndex, p => p.CustomTexts);
+        Collect(voltas, v => v.StartMeasureIndex, p => p.Voltas);
+        Collect(musicMarks, m => m.MeasureIndex, p => p.MusicMarks);
+        Collect(articulations, a => a.MeasureIndex, p => p.Articulations);
+        Collect(aboveDynamics, d => d.MeasureIndex, p => p.Dynamics);
+        Collect(textSpanners, ts => ts.StartMeasureIndex, p => p.TextSpanners);
+        Collect(tupletBrackets, tb => tb.MeasureIndex, p => p.TupletBrackets);
+
+        // 2. Build each occupied system's program and consult the memo.
+        var hits = new HashSet<int>();
+        var toStore = new List<(int Sys, AboveStackMemo.SystemEntry Entry)>();
+        foreach (var (s, part) in parts)
+        {
+            var entry = BuildProgram(systems, systemSkylines, s, part, topStaff,
+                profileIdentity, tupletBrackets, trills, barNumbers, ottavas, customTexts,
+                voltas, musicMarks, articulations, aboveDynamics, textSpanners);
+            if (entry == null)
+                continue; // a profile with no stable identity: never memoized
+            if (memo.TryMatch(s, entry))
+                hits.Add(s);
+            else
+                toStore.Add((s, entry));
+        }
+
+        // 3. The live subset: everything not in a hit system, original order preserved.
+        (ImmutableArray<T> Live, int[] Map) Filter<T>(ImmutableArray<T> arr, Func<T, int> measureOf)
+        {
+            if (arr.IsDefaultOrEmpty || hits.Count == 0)
+                return (arr, Array.Empty<int>());
+            var live = ImmutableArray.CreateBuilder<T>(arr.Length);
+            var map = new List<int>(arr.Length);
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (measureToSystem.TryGetValue(measureOf(arr[i]), out int s) && hits.Contains(s))
+                    continue;
+                live.Add(arr[i]);
+                map.Add(i);
+            }
+            return (live.ToImmutable(), map.ToArray());
+        }
+        var (liveTuplets, _) = Filter(tupletBrackets, tb => tb.MeasureIndex);
+        var (liveTrills, mapTrills) = Filter(trills, t => t.StartMeasureIndex);
+        var (liveBarNumbers, mapBarNumbers) = Filter(barNumbers, bn => bn.MeasureIndex);
+        var (liveOttavas, mapOttavas) = Filter(ottavas, o => o.StartMeasureIndex);
+        var (liveCustomTexts, mapCustomTexts) = Filter(customTexts, ct => ct.MeasureIndex);
+        var (liveVoltas, mapVoltas) = Filter(voltas, v => v.StartMeasureIndex);
+        var (liveMarks, mapMarks) = Filter(musicMarks, m => m.MeasureIndex);
+        var (liveArtics, mapArtics) = Filter(articulations, a => a.MeasureIndex);
+        var (liveDynamics, mapDynamics) = Filter(aboveDynamics, d => d.MeasureIndex);
+        var (liveTextSpanners, mapTextSpanners) = Filter(textSpanners, ts => ts.StartMeasureIndex);
+
+        // 4. Stack the live systems (byte-identical to stacking them in the full call:
+        // a system's grobs are all-in or all-out, and only same-system grobs interact).
+        var core = StackAboveStaffCore(systems, systemSkylines, liveTuplets, liveTrills,
+            liveBarNumbers, liveOttavas, liveCustomTexts, liveVoltas, liveMarks, liveArtics,
+            liveDynamics, liveTextSpanners, staffProfile);
+
+        // 5. Reassemble: live results scatter back by index; hit systems replay their
+        // stored outputs, positionally parallel to the (equal) stored inputs.
+        ImmutableArray<T> Rebuild<T>(ImmutableArray<T> original, ImmutableArray<T> coreOut,
+            int[] map, Func<SysPart, List<int>> sel, Func<AboveStackMemo.SystemEntry, T[]> outsOf)
+        {
+            if (original.IsDefaultOrEmpty || hits.Count == 0)
+                return coreOut;
+            var b = original.ToBuilder();
+            for (int k = 0; k < map.Length; k++)
+                b[map[k]] = coreOut[k];
+            foreach (int s in hits)
+            {
+                if (!parts.TryGetValue(s, out var part))
+                    continue;
+                var idxs = sel(part);
+                var vals = outsOf(memo.Get(s)!);
+                for (int k = 0; k < idxs.Count; k++)
+                    b[idxs[k]] = vals[k];
+            }
+            return b.ToImmutable();
+        }
+        var resTrills = Rebuild(trills, core.Trills, mapTrills, p => p.Trills, e => e.OutTrills);
+        var resBarNumbers = Rebuild(barNumbers, core.BarNumbers, mapBarNumbers,
+            p => p.BarNumbers, e => e.OutBarNumbers);
+        var resOttavas = Rebuild(ottavas, core.Ottavas, mapOttavas, p => p.Ottavas, e => e.OutOttavas);
+        var resCustomTexts = Rebuild(customTexts, core.CustomTexts, mapCustomTexts,
+            p => p.CustomTexts, e => e.OutCustomTexts);
+        var resVoltas = Rebuild(voltas, core.Voltas, mapVoltas, p => p.Voltas, e => e.OutVoltas);
+        var resMarks = Rebuild(musicMarks, core.MusicMarks, mapMarks,
+            p => p.MusicMarks, e => e.OutMusicMarks);
+        var resDynamics = Rebuild(aboveDynamics, core.Dynamics, mapDynamics,
+            p => p.Dynamics, e => e.OutDynamics);
+        var resTextSpanners = Rebuild(textSpanners, core.TextSpanners, mapTextSpanners,
+            p => p.TextSpanners, e => e.OutTextSpanners);
+        var resArtics = Rebuild(articulations, core.Articulations, mapArtics,
+            p => p.Articulations, e => e.OutArticulations);
+
+        // 6. Store the missed systems' outputs for the next keystroke.
+        foreach (var (s, entry) in toStore)
+        {
+            var part = parts[s];
+            entry.OutTrills = Gather(resTrills, part.Trills);
+            entry.OutBarNumbers = Gather(resBarNumbers, part.BarNumbers);
+            entry.OutOttavas = Gather(resOttavas, part.Ottavas);
+            entry.OutCustomTexts = Gather(resCustomTexts, part.CustomTexts);
+            entry.OutVoltas = Gather(resVoltas, part.Voltas);
+            entry.OutMusicMarks = Gather(resMarks, part.MusicMarks);
+            entry.OutDynamics = Gather(resDynamics, part.Dynamics);
+            entry.OutTextSpanners = Gather(resTextSpanners, part.TextSpanners);
+            entry.OutArticulations = Gather(resArtics, part.Articulations);
+            memo.Store(s, entry);
+        }
+
+        return (resTrills, resBarNumbers, resOttavas, resCustomTexts, resVoltas, resMarks,
+            resDynamics, resTextSpanners, resArtics);
+    }
+
+    private static T[] Gather<T>(ImmutableArray<T> arr, List<int> idxs)
+    {
+        if (idxs.Count == 0)
+            return Array.Empty<T>();
+        var result = new T[idxs.Count];
+        for (int k = 0; k < idxs.Count; k++)
+            result[k] = arr[idxs[k]];
+        return result;
+    }
+
+    /// <summary>
+    /// One system's program: every input the pass reads for it (the inventory is
+    /// <see cref="AboveStackMemo"/>'s remarks). Null when any profile this system's
+    /// stacking would consume has no stable identity — that system is stacked live
+    /// every keystroke rather than risking a false match.
+    /// </summary>
+    private static AboveStackMemo.SystemEntry? BuildProgram(
+        ImmutableArray<SystemLayout> systems,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
+        int s, SysPart part, int[] topStaff,
+        Func<int, int, (object Up, object Down)?> profileIdentity,
+        ImmutableArray<TupletBracketLayout> tupletBrackets,
+        ImmutableArray<TrillSpannerLayout> trills,
+        ImmutableArray<BarNumberLayout> barNumbers,
+        ImmutableArray<OttavaBracketLayout> ottavas,
+        ImmutableArray<CustomTextLayout> customTexts,
+        ImmutableArray<VoltaBracketLayout> voltas,
+        ImmutableArray<MusicMarkLayout> musicMarks,
+        ImmutableArray<ArticulationLayout> articulations,
+        ImmutableArray<DynamicLayout> aboveDynamics,
+        ImmutableArray<TextSpannerLayout> textSpanners)
+    {
+        var sys = systems[s];
+
+        // Geometry: the read set of TopStaffIndex / StaffOffsetInSystemUp / SeedClefInk.
+        var staves = new List<(int StaffIndex, double Y, bool IsHidden, ClefType Clef)>();
+        if (!sys.StaffGroups.IsDefaultOrEmpty)
+            foreach (var group in sys.StaffGroups)
+                if (!group.Staves.IsDefaultOrEmpty)
+                    foreach (var st in group.Staves)
+                        staves.Add((st.StaffIndex, st.Y, st.IsHidden, st.Clef));
+
+        // The staves this system's stacking consumes a profile for: each grob's own
+        // staff with the tracker's sentinel resolution (-1 → the top staff), plus the
+        // top staff itself (bar numbers and voltas hang there).
+        var used = new SortedSet<int> { topStaff[s] };
+        int Resolve(int rawStaff) => rawStaff < 0 ? topStaff[s] : rawStaff;
+        foreach (int i in part.Trills) used.Add(Resolve(trills[i].StaffIndex));
+        foreach (int i in part.Ottavas) used.Add(Resolve(ottavas[i].StaffIndex));
+        foreach (int i in part.CustomTexts) used.Add(Resolve(customTexts[i].StaffIndex));
+        foreach (int i in part.MusicMarks) used.Add(Resolve(musicMarks[i].StaffIndex));
+        foreach (int i in part.Articulations) used.Add(Resolve(articulations[i].StaffIndex));
+        foreach (int i in part.Dynamics) used.Add(Resolve(aboveDynamics[i].StaffIndex));
+        foreach (int i in part.TextSpanners) used.Add(Resolve(textSpanners[i].StaffIndex));
+        foreach (int i in part.TupletBrackets) used.Add(Resolve(tupletBrackets[i].StaffIndex));
+
+        var profUps = new List<object>(used.Count);
+        var profDowns = new List<object>(used.Count);
+        foreach (int staff in used)
+        {
+            if (profileIdentity(s, staff) is not { } id)
+                return null; // unstable identity: this system stacks live
+            profUps.Add(id.Up);
+            profDowns.Add(id.Down);
+        }
+
+        object? silUp = null, silDown = null;
+        if (systemSkylines != null && s >= 0 && s < systemSkylines.Count)
+        {
+            silUp = systemSkylines[s].up;
+            silDown = systemSkylines[s].down;
+        }
+
+        return new AboveStackMemo.SystemEntry
+        {
+            Indent = sys.Indent,
+            TopStaff = topStaff[s],
+            Staves = staves.ToArray(),
+            ProfileUps = profUps.ToArray(),
+            ProfileDowns = profDowns.ToArray(),
+            SilhouetteUp = silUp,
+            SilhouetteDown = silDown,
+            Trills = Gather(trills, part.Trills),
+            BarNumbers = Gather(barNumbers, part.BarNumbers),
+            Ottavas = Gather(ottavas, part.Ottavas),
+            CustomTexts = Gather(customTexts, part.CustomTexts),
+            Voltas = Gather(voltas, part.Voltas),
+            MusicMarks = Gather(musicMarks, part.MusicMarks),
+            Articulations = Gather(articulations, part.Articulations),
+            Dynamics = Gather(aboveDynamics, part.Dynamics),
+            TextSpanners = Gather(textSpanners, part.TextSpanners),
+            TupletBrackets = Gather(tupletBrackets, part.TupletBrackets),
+        };
+    }
+
+    private static (ImmutableArray<TrillSpannerLayout> Trills,
+                   ImmutableArray<BarNumberLayout> BarNumbers,
+                   ImmutableArray<OttavaBracketLayout> Ottavas,
+                   ImmutableArray<CustomTextLayout> CustomTexts,
+                   ImmutableArray<VoltaBracketLayout> Voltas,
+                   ImmutableArray<MusicMarkLayout> MusicMarks,
+                   ImmutableArray<DynamicLayout> Dynamics,
+                   ImmutableArray<TextSpannerLayout> TextSpanners,
+                   ImmutableArray<ArticulationLayout> Articulations)
+        StackAboveStaffCore(
+            ImmutableArray<SystemLayout> systems,
+            IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
+            ImmutableArray<TupletBracketLayout> tupletBrackets,
+            ImmutableArray<TrillSpannerLayout> trills,
+            ImmutableArray<BarNumberLayout> barNumbers,
+            ImmutableArray<OttavaBracketLayout> ottavas,
+            ImmutableArray<CustomTextLayout> customTexts,
+            ImmutableArray<VoltaBracketLayout> voltas,
+            ImmutableArray<MusicMarkLayout> musicMarks,
+            ImmutableArray<ArticulationLayout> articulations,
+            ImmutableArray<DynamicLayout> aboveDynamics,
+            ImmutableArray<TextSpannerLayout> textSpanners,
+            Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,

@@ -18,6 +18,56 @@
 
 ---
 
+## 以下は第159セッションの経緯
+
+最終更新 第159セッション＝**⒟⁶⑵（annpass＝打鍵首位）の照準⑴「staffProfile の 2 パス共有
+hoist」を閉じ、第2便でユーザー許可の窓の A/B ベンチまで取った便**（`e20e3376`・⑷）。
+remark の予告どおり「2 つの run の measure layouts が
+同一か」の検査から入り、**検査は構築による参照同一性だった**——prelim pass は
+`LayoutSystems` の*後*に走っていて（「systems 配置前」という doc 記述が stale）、歩いている
+systems は `placed.Systems` そのもの・paging は Measures instance を保存・profile は
+staff-local 枠。⇒ **`RunPreliminaryAnnotationPass` が `placed.StaffSpanners` /
+`placed.StaffInside` を運び、`AnnotationLayoutContext` の両フィールドは required 化**
+（RestCollisionsOf と同じ「第3の構築が黙って落とす穴」封じ）。suite **4459 → 4461 passed /
+0 failed / 4 skipped（+2＝網）・snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和
+3.609962441・count 106/非ゼロ 2）**・未 push 28。
+- **⑴ 忠実度の半分＝prelim/final の分岐を閉じた**（「2 つの pass が別の表を読む→描画では
+  見えず spacing に出る」——context 自身が RestCollisionsOf の remark で名指す欠陥クラスの
+  残存）。いままで prelim の 3 profile 消費者（stacker seed・figured-bass drop・下譜
+  chord row）は **SpannersOf=空・script/fingering 無しの rebuild** に落ちていた＝final が
+  slur の下へ押す mover を slur 無しの高さで予約→**ページが「描かれる ink」を取りこぼす**。
+  網 `PreliminaryPassSeedTests` 2 枚（content-size 単一 system 頁は「頁の伸び＝描かれた
+  mover の沈み」が正確に一致する形＝ink 項が delta で消える）＋陽性対照（revert 済み・
+  数値は網の remarks: slur 頁 0.000000 対 沈み 0.884190／tuplet 頁 1.729279 対 3.157279）。
+- **⑵ perf の半分＝prelim の fallback 全システム walk が消えた**（§5.3 の call 数・計器
+  revert 済み）: render あたり multi-page-vertical **33→0**・grammar-tour 6→0・
+  feature-tour 9→0・notes 2→0・04-advanced 3→0。**profileCache remark の歴史カウント
+  （66/12/18）のちょうど半分**＝final 側は 2026-08-04 の room carry で救済済みで、これが
+  prelim 側の返済。**ms は第2便（⑷）で取った。**
+- **⑷（第2便・ユーザーが窓を許可・計器は第143型 StageClock を組み直し全 revert 済み・
+  生データ `scratch\stagebench-159.txt`・Release・edit@0.50・床=n14 min・A/B同一窓・
+  対照B=prelim に空表＝修正前挙動の再現）**:
+  **annpass prelim 側床 22.8→14.3/16.7・62.1→39.8/38.8・19.3→7.5/7.3
+  （plain/fingbeam/v2bow・B→A/A2）＝実体は pann.stackabove 14.7→5.5／36.0→14.9／
+  17.9→6.1**。final 側 stackabove と layout.finalann は帯内不変＝**帰属は prelim seed の
+  walk 消滅そのもの**（call 数 ⑵ と整合）。打鍵総床 fingbeam 246.6→227.4・
+  v2bow 203.2→166.2・plain 116.9→114.2（⚠️ A の plain 145.3 は他段が一様に膨れた
+  ドリフト＝A2 で確定・「主張は同一窓の A/B 差だけ」）。cold も annpass は落ちた
+  （plain 104.7→43.5・1標本＝参考）。⚠️ 今日の絶対値は第158窓より高め
+  （plain 床 105.0 対 114.2）＝§7.9 のとおり窓またぎの絶対値は比べない。
+  **新順位は▶の★★に反映——全冊共通の首位は消えた。**
+- **⑶ コーパス rerender 3/82 動・全て予約のみ**: chord-repetition 頁下端 +1.45／
+  slur-vertical-skylines 頁下端 +0.52（2 冊とも ink はバイト同一）／empty-chord は全頁
+  +0.13 の剛体シフト（機械検査: 非ゼロ座標 delta は全て 0.13）。**採点済 claim は全部
+  五線相対＝3 冊とも不動**（exact/fixed/open のまま）。stash A/B で 3 冊とも本便起因と確定
+  （両方向で同じ 3 冊＝stale baseline 無し）・ベースラインは本便の描画に更新済み＝以後の
+  基準は 0/82。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
+  従来どおり）。
+- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
+
+---
+
 ## 以下は第158セッションの経緯
 
 最終更新 第158セッション＝**⒨「棚卸しの読み方」を完走した便＝OWN 監査＋APPROX/UNWATCHED

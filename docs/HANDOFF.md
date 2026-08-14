@@ -63,52 +63,37 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第160セッション＝**⒭ の最後の残件「overlay の断片化」を閉じ（`9cf3560b`）、
-第2便＝ユーザーがその場で許可した窓の A/B が「効いていない」と出たので、割って 2 欠陥を
-直してから測り直した便**（`c468b019`・⑶⑸）。page-level overlay の drawer 群は system loop の
-*後*に drawer-major で走る＝連続単位は「1 drawer × 1 頁」。値段が付いていたのは
-**DrawFingerings だけ**（fingbeam 打鍵 render 床 37.7 ms の実体・他の頁 drawer は第151 実測で
-≈0）なので、それだけを `SvgSystemFragmentCache` の断片機構に載せた——編集が触らなかった頁は
-録画テキストを再生し、data-pos は system 断片と同じ anchor/slot 機構で窓写像。suite
-**4461 → 4464 passed / 0 failed / 4 skipped（+3＝網）・snapshot 0 動・コーパス rerender 0/82
-（2 code commit とも）・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
-未 push 33。
-- **⑴ 鍵は content key ではなく「描画入力そのものの値 fold」**。overlay drawer は model を
-  読まず layout の annotation 配列＋頁の幾何 map しか読まないので、`BuildFingeringPlan` が
-  per-item の描画入力（digit・x0・y・頁高）を**1 綴りで**解決し、**fold と live 描画が同じ
-  plan を消費**する＝鍵と emission が乖離しようがない（system 断片が要った model fold の
-  inventory がこちらには無い）。source offset は fold の外＝anchor/slot 層が運ぶ。
-  decline/staleness/pass ゲートは system 断片と共有（`PrepareRender`・generation）。
-- **⑵ 網 3 枚**（`IncrementalCompilerTests.OverlayFragments_*`）: 多頁 fingering 本の編集で
-  cache-free full と byte 一致＋他頁 replay の liveness／**Δ=0 の digit 編集（finger 2→4）＝
-  値 fold の隔離陽性対照**——offset が 1 つも動かないので anchor も slot も素通りし、fold だけ
-  が stale digit の再生を止める（full 一致がその証明）／中腹 trivia 挿入（Δ=+1）で全頁
-  replay＋data-pos 全 shift。
-- **⑶（第2便・ユーザー窓・EditKeystrokeBench・Release・床=n14 min・生データ
-  `scratch\editbench-160.txt`・untracked）最初の A/B は「効果ゼロ」と出た**——replay は
-  15/16 頁で発火しているのに（probe で確認）床が動かない。割ったら **2 欠陥**（⑸）。
-  修理後の同一窓・素 binary の A/B/A2: **fingbeam 打鍵床 ON 457.0/482.0 対 OFF 508.0＝
-  機構単独で −26〜51 ms**（fingering 無しの対照 2 冊のドリフト帯は 10〜16: plain
-  216.3/229.1/235.3・v2bow 387.9/403.9/394.0）。同窓の修理前 2 腕（fingbeam 564.5/559.3）
-  からは **−80〜−107**＝capture O(n) 化が system 断片側にも効いた分を含む（plain/v2bow も
-  −10〜29 落ちた）。probe の直接測定では **fingering overlay 項の床 72.7 → 6.4 ms/打鍵**
-  （fold 0.5／replay 2-3／live 3-4／capture 48→0.5-1.0）。⚠️ 本日の絶対値は第158窓の約 2 倍
-  （負荷の高い窓）＝§7.9 のとおり窓またぎの絶対値は比べない。
-- **⑸ 第2便が直した 2 欠陥（両方とも「測ってから直す」で確定）**:
-  ①**鍵が省く walk と同額だった**——第1版の value fold は per-item に x/y を解決しており、
-  drawer の実費は emission ではなく**その解決＋O(頁×fingerings) の filter 走査**だった
-  （第154 の家訓「memo の鍵は省く walk より安いこと」をそのまま踏んだ）。⇒ fingerings を
-  **render あたり 1 回**頁ごとに bucket 化（live 経路も同じ恩恵）し、鍵は**生の入力の fold**
-  （item 値＋各 system の Y/小節範囲/staff 表＋頁高。読みの inventory は
-  `FoldFingeringPage` の remarks）へ。解決は live 描画だけがやる。
-  ②★★ **`TrySplit` が hit ごとに両 token の IndexOf を現在位置から再走査**——data-alt の
-  無い断片では **hit×断片長の二次**（1500 hit の頁で capture 48 ms 対 描画 3 ms）。
-  **第151 から system 断片の capture にも居た**（1 打鍵 ~2 system しか capture しないので
-  見えなかった——修理で plain/v2bow の打鍵床も落ちたのがその分）。両 token の次出現を
-  lazy に持つ O(n) 化で解決。
-- **⑷ 他の overlay drawer は載せていない**（実測 ≈0 に投機 cache を張ると key/staleness の
-  面だけ増える）。載せる日は `OverlayDrawerId` に足して同じ型で——**「その drawer の描画入力を
-  1 綴りの plan に解決してから fold する」**が設計図。
+最終更新 第161セッション＝**⒟⁶⑵「stackabove の per-system 増分化」を閉じた便**（`a3905c96`）。
+ユーザーがその場で窓を許可したので、帰属計測（stackabove 項の直接 probe・revert 済み）→実装→
+同一窓・同一 binary の ON/OFF/ON A/B までを 1 便で。上側 stacking pass は system 横断状態を
+持たない（全配置・全 seed が per-(system, staff) tracker 経由）ので、**per-system の
+「生入力の綴り」program** が前打鍵と一致した system は前回 output を再生し、不一致 system だけを
+filtered 配列で core に流す——program は 10 族の record 値（全部純値 record struct・実地検証済み）＋
+幾何（Indent・全 staff の (Idx, Y, IsHidden, Clef)・topStaff）＋ profile の**参照**
+（`ctx.InsideIdentityOf`＝StaffInside の格納 instance。`InsideOf` は COPY を配るので識別子は
+表の側）＋ silhouette 参照。measure→system 写像は partition 自身が fold する。store は
+prelim/final で**別**（共有すると打鍵ごとに 2 回上書きで永久 miss）・system index ごと上書き＝
+paging augment と同じ有界。suite **4464 → 4468 passed / 0 failed / 4 skipped（+4＝網）・
+snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
+未 push 2。
+- **⑴ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
+  `scratch\stackbench-161.txt`・untracked）**: stackabove 項の床（prelim+final 合計/打鍵）
+  **OFF 16.49/50.58/19.16 → ON 1.38→0.90／1.08→0.98／1.17→1.13 ms（plain/fingbeam/v2bow）＝
+  −15/−50/−18 ms/打鍵**。⚠️ **この窓は総床のドリフトが激しく（plain の総床が同日 194〜694 ms）
+  総床の差は主張しない**——主張は同一 run 内の帰属カウンタ差だけ（§7.9・「bench 前に一声」memo の
+  比率・カウンタ規律。窓はユーザー許可済み）。序盤の A 腕 probe は 34.3/88.6/22.0＝窓の負荷が
+  高い時間帯の値・絶対値は比べない。**stackBelow は 3 冊とも ≈0＝下側 pass は載せない**
+  （第160 ⑷ の型: 実測 ≈0 に投機 cache を張らない）。⚠️ 生データには Debug 混入行あり
+  （suite 実行時に env が残っていた）——ファイル末尾の NOTE が正の block を名指す。
+- **⑵ 網 4 枚**: `OutsideStaffStackMemoTests` 3 枚（同一入力 2 回目が全 system 再生＋liveness
+  カウンタ／値 1 つの編集がその system だけを decline＋memo 無しと深一致＝staleness 陽性対照／
+  **profile 差し替えが decline して答えが動く**＝参照鍵が load-bearing——鍵に無ければ stale YUp を
+  逐語再生するところ）＋`IncrementalCompilerTests.AboveStackMemo_ReplaysUnchangedSystems_AndMatchesFull`
+  （多 system 本の編集が cache-free full とバイト一致＋両 pass の store で hits>0）。
+- **⑶ 鍵は第160 ⑸① の家訓どおり「生入力の fold」**——解決値を作らず、record 値比較＋参照比較のみ
+  （O(総 grob 数)）。identity が取れない (system, staff)（`InsideOf` の fallback rebuild 枝）は
+  その system を毎回 live に落とす＝偽の一致は構造的に無い。**batch 経路（lysc・SvgGenerator）は
+  systemCache=null で memo が挿さらない**＝コーパス出力の不変は構造的（snapshot 0 動が裏）。
 - **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
   従来どおり）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
@@ -121,9 +106,11 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 生データ `scratch\stagebench-159.txt`）**——**床 plain 114.2 / fingbeam 227.4 / v2bow 166.2。
 ⒟⁶⑵⑴ の返済で全冊共通の首位は消えた——本ごとに違う**:
 **v2bow: break+pages（36+34＝最大塊）＞ prelim.slurs 26-27 ＞（annpass は 7.3 に陥落）**；
-**fingbeam: ann 族 ~71 が首位のまま（prelim.annpass 39＝fingscripts 17＋stackabove 15＋帯／
-finalann 32＝fingscripts 16＋stackabove 12）＞ ~~⒭ overlay render 36-37~~（**第160 で断片化＋
-capture O(n) 化＝overlay 項の床は打鍵あたり ~6 ms 帯へ陥落・§1 ⑶**）＞ collect 29-36**；
+**fingbeam: ann 族 ~71 が首位のまま——ただし ~~stackabove 分~~ は**第161 の per-system memo で
+~1 ms/打鍵へ陥落＝残りは fingscripts ~33＋帯・§1**（第159 内訳: prelim.annpass 39＝
+fingscripts 17＋stackabove 15＋帯／finalann 32＝fingscripts 16＋stackabove 12）＞
+~~⒭ overlay render 36-37~~（**第160 で断片化＋capture O(n) 化＝overlay 項の床は打鍵あたり
+~6 ms 帯へ陥落**）＞ collect 29-36**；
 **plain: 支配項なし（break 20-23 / pages 18 / annpass 14-17 / keys 13-18 / collect 10-19 の帯）**。
 **cold の順位は第158 の第1切片を正とする**（第159 の cold は 1標本＝参考。総 2531/1624/786・
 persys 首位・段の向きは第158 と整合・annpass cold は plain 104.7→43.5 に落ちた）:
@@ -252,11 +239,14 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
   33/6/9/2/3→0（call 数）・**同時に prelim/final の profile 分岐＝ページの mover
   取りこぼしも閉じた**——網 `PreliminaryPassSeedTests`。**ms は同便第2便で A/B 実測**:
   pann.stackabove 床 14.7→5.5／36.0→14.9／17.9→6.1・§1 ⑷）
-  ⑵ **stackabove 自体の per-system 増分化**（bar number が全 system に立つ＝全 system を
-  毎打鍵積み直している。**第159 実測の残り＝pann+fann 合計で plain ~10 / fingbeam ~27 /
-  v2bow ~12 ms**）⑶ fingbeam は fingscripts（script column walk）の memo
+  ~~⑵ stackabove 自体の per-system 増分化~~ — **第161 で閉じた**（`a3905c96`・§1。
+  `AboveStackMemo`＝per-system 生入力 fold・prelim/final 別 store・profile は StaffInside の
+  格納 instance を参照比較（`ctx.InsideIdentityOf`）。**同一窓・同一 binary の A/B で
+  stackabove 項床 OFF 16.5/50.6/19.2 → ON ~1 ms/打鍵（plain/fingbeam/v2bow）**・網 4 枚。
+  他の pass を載せる日は同じ型で——ただし stackBelow は実測 ≈0＝張らない）。
+  残るは ⑶ fingbeam の fingscripts（script column walk）の memo
   （**第159 実測 pann 16.8＋fann 16.4＝~33 ms・他 2 冊はほぼ 0**＝fingbeam 専用の島）。
-  **⑵⑶ とも soundness 層つき＝単独セッションで**。
+  **⑶ も soundness 層つき＝単独セッションで**。
   ⚠️ **system をまたぐ梁を持つ譜は丸ごと旧経路にフォールバック**（出力は同一）——
   その本では memo が効かない。**効かせたいなら鍵に隣 system の被覆を足す設計から。**
 ▶ ~~**⒫ `DetectBeamGroups` が 1 打鍵に 6 回走る**~~ — **第139 で閉じた**（§1。検出は
@@ -378,50 +368,54 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 
 ---
 
-## 以下は第159セッションの経緯
+## 以下は第160セッションの経緯
 
-最終更新 第159セッション＝**⒟⁶⑵（annpass＝打鍵首位）の照準⑴「staffProfile の 2 パス共有
-hoist」を閉じ、第2便でユーザー許可の窓の A/B ベンチまで取った便**（`e20e3376`・⑷）。
-remark の予告どおり「2 つの run の measure layouts が
-同一か」の検査から入り、**検査は構築による参照同一性だった**——prelim pass は
-`LayoutSystems` の*後*に走っていて（「systems 配置前」という doc 記述が stale）、歩いている
-systems は `placed.Systems` そのもの・paging は Measures instance を保存・profile は
-staff-local 枠。⇒ **`RunPreliminaryAnnotationPass` が `placed.StaffSpanners` /
-`placed.StaffInside` を運び、`AnnotationLayoutContext` の両フィールドは required 化**
-（RestCollisionsOf と同じ「第3の構築が黙って落とす穴」封じ）。suite **4459 → 4461 passed /
-0 failed / 4 skipped（+2＝網）・snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和
-3.609962441・count 106/非ゼロ 2）**・未 push 28。
-- **⑴ 忠実度の半分＝prelim/final の分岐を閉じた**（「2 つの pass が別の表を読む→描画では
-  見えず spacing に出る」——context 自身が RestCollisionsOf の remark で名指す欠陥クラスの
-  残存）。いままで prelim の 3 profile 消費者（stacker seed・figured-bass drop・下譜
-  chord row）は **SpannersOf=空・script/fingering 無しの rebuild** に落ちていた＝final が
-  slur の下へ押す mover を slur 無しの高さで予約→**ページが「描かれる ink」を取りこぼす**。
-  網 `PreliminaryPassSeedTests` 2 枚（content-size 単一 system 頁は「頁の伸び＝描かれた
-  mover の沈み」が正確に一致する形＝ink 項が delta で消える）＋陽性対照（revert 済み・
-  数値は網の remarks: slur 頁 0.000000 対 沈み 0.884190／tuplet 頁 1.729279 対 3.157279）。
-- **⑵ perf の半分＝prelim の fallback 全システム walk が消えた**（§5.3 の call 数・計器
-  revert 済み）: render あたり multi-page-vertical **33→0**・grammar-tour 6→0・
-  feature-tour 9→0・notes 2→0・04-advanced 3→0。**profileCache remark の歴史カウント
-  （66/12/18）のちょうど半分**＝final 側は 2026-08-04 の room carry で救済済みで、これが
-  prelim 側の返済。**ms は第2便（⑷）で取った。**
-- **⑷（第2便・ユーザーが窓を許可・計器は第143型 StageClock を組み直し全 revert 済み・
-  生データ `scratch\stagebench-159.txt`・Release・edit@0.50・床=n14 min・A/B同一窓・
-  対照B=prelim に空表＝修正前挙動の再現）**:
-  **annpass prelim 側床 22.8→14.3/16.7・62.1→39.8/38.8・19.3→7.5/7.3
-  （plain/fingbeam/v2bow・B→A/A2）＝実体は pann.stackabove 14.7→5.5／36.0→14.9／
-  17.9→6.1**。final 側 stackabove と layout.finalann は帯内不変＝**帰属は prelim seed の
-  walk 消滅そのもの**（call 数 ⑵ と整合）。打鍵総床 fingbeam 246.6→227.4・
-  v2bow 203.2→166.2・plain 116.9→114.2（⚠️ A の plain 145.3 は他段が一様に膨れた
-  ドリフト＝A2 で確定・「主張は同一窓の A/B 差だけ」）。cold も annpass は落ちた
-  （plain 104.7→43.5・1標本＝参考）。⚠️ 今日の絶対値は第158窓より高め
-  （plain 床 105.0 対 114.2）＝§7.9 のとおり窓またぎの絶対値は比べない。
-  **新順位は▶の★★に反映——全冊共通の首位は消えた。**
-- **⑶ コーパス rerender 3/82 動・全て予約のみ**: chord-repetition 頁下端 +1.45／
-  slur-vertical-skylines 頁下端 +0.52（2 冊とも ink はバイト同一）／empty-chord は全頁
-  +0.13 の剛体シフト（機械検査: 非ゼロ座標 delta は全て 0.13）。**採点済 claim は全部
-  五線相対＝3 冊とも不動**（exact/fixed/open のまま）。stash A/B で 3 冊とも本便起因と確定
-  （両方向で同じ 3 冊＝stale baseline 無し）・ベースラインは本便の描画に更新済み＝以後の
-  基準は 0/82。
+最終更新 第160セッション＝**⒭ の最後の残件「overlay の断片化」を閉じ（`9cf3560b`）、
+第2便＝ユーザーがその場で許可した窓の A/B が「効いていない」と出たので、割って 2 欠陥を
+直してから測り直した便**（`c468b019`・⑶⑸）。page-level overlay の drawer 群は system loop の
+*後*に drawer-major で走る＝連続単位は「1 drawer × 1 頁」。値段が付いていたのは
+**DrawFingerings だけ**（fingbeam 打鍵 render 床 37.7 ms の実体・他の頁 drawer は第151 実測で
+≈0）なので、それだけを `SvgSystemFragmentCache` の断片機構に載せた——編集が触らなかった頁は
+録画テキストを再生し、data-pos は system 断片と同じ anchor/slot 機構で窓写像。suite
+**4461 → 4464 passed / 0 failed / 4 skipped（+3＝網）・snapshot 0 動・コーパス rerender 0/82
+（2 code commit とも）・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
+未 push 33。
+- **⑴ 鍵は content key ではなく「描画入力そのものの値 fold」**。overlay drawer は model を
+  読まず layout の annotation 配列＋頁の幾何 map しか読まないので、`BuildFingeringPlan` が
+  per-item の描画入力（digit・x0・y・頁高）を**1 綴りで**解決し、**fold と live 描画が同じ
+  plan を消費**する＝鍵と emission が乖離しようがない（system 断片が要った model fold の
+  inventory がこちらには無い）。source offset は fold の外＝anchor/slot 層が運ぶ。
+  decline/staleness/pass ゲートは system 断片と共有（`PrepareRender`・generation）。
+- **⑵ 網 3 枚**（`IncrementalCompilerTests.OverlayFragments_*`）: 多頁 fingering 本の編集で
+  cache-free full と byte 一致＋他頁 replay の liveness／**Δ=0 の digit 編集（finger 2→4）＝
+  値 fold の隔離陽性対照**——offset が 1 つも動かないので anchor も slot も素通りし、fold だけ
+  が stale digit の再生を止める（full 一致がその証明）／中腹 trivia 挿入（Δ=+1）で全頁
+  replay＋data-pos 全 shift。
+- **⑶（第2便・ユーザー窓・EditKeystrokeBench・Release・床=n14 min・生データ
+  `scratch\editbench-160.txt`・untracked）最初の A/B は「効果ゼロ」と出た**——replay は
+  15/16 頁で発火しているのに（probe で確認）床が動かない。割ったら **2 欠陥**（⑸）。
+  修理後の同一窓・素 binary の A/B/A2: **fingbeam 打鍵床 ON 457.0/482.0 対 OFF 508.0＝
+  機構単独で −26〜51 ms**（fingering 無しの対照 2 冊のドリフト帯は 10〜16: plain
+  216.3/229.1/235.3・v2bow 387.9/403.9/394.0）。同窓の修理前 2 腕（fingbeam 564.5/559.3）
+  からは **−80〜−107**＝capture O(n) 化が system 断片側にも効いた分を含む（plain/v2bow も
+  −10〜29 落ちた）。probe の直接測定では **fingering overlay 項の床 72.7 → 6.4 ms/打鍵**
+  （fold 0.5／replay 2-3／live 3-4／capture 48→0.5-1.0）。⚠️ 本日の絶対値は第158窓の約 2 倍
+  （負荷の高い窓）＝§7.9 のとおり窓またぎの絶対値は比べない。
+- **⑸ 第2便が直した 2 欠陥（両方とも「測ってから直す」で確定）**:
+  ①**鍵が省く walk と同額だった**——第1版の value fold は per-item に x/y を解決しており、
+  drawer の実費は emission ではなく**その解決＋O(頁×fingerings) の filter 走査**だった
+  （第154 の家訓「memo の鍵は省く walk より安いこと」をそのまま踏んだ）。⇒ fingerings を
+  **render あたり 1 回**頁ごとに bucket 化（live 経路も同じ恩恵）し、鍵は**生の入力の fold**
+  （item 値＋各 system の Y/小節範囲/staff 表＋頁高。読みの inventory は
+  `FoldFingeringPage` の remarks）へ。解決は live 描画だけがやる。
+  ②★★ **`TrySplit` が hit ごとに両 token の IndexOf を現在位置から再走査**——data-alt の
+  無い断片では **hit×断片長の二次**（1500 hit の頁で capture 48 ms 対 描画 3 ms）。
+  **第151 から system 断片の capture にも居た**（1 打鍵 ~2 system しか capture しないので
+  見えなかった——修理で plain/v2bow の打鍵床も落ちたのがその分）。両 token の次出現を
+  lazy に持つ O(n) 化で解決。
+- **⑷ 他の overlay drawer は載せていない**（実測 ≈0 に投機 cache を張ると key/staleness の
+  面だけ増える）。載せる日は `OverlayDrawerId` に足して同じ型で——**「その drawer の描画入力を
+  1 綴りの plan に解決してから fold する」**が設計図。
 - **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
   従来どおり）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
