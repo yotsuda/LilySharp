@@ -39,12 +39,24 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - name: Publish lysc (${{ matrix.rid }})
+        # NOT single-file, and ReadyToRun instead. The startup cost a one-bar
+        # score pays before any music is engraved is the whole fixed term, and
+        # PublishSingleFile owns most of it: the host unpacks the bundle on
+        # every invocation. MEASURED (win-x64, Release, floor of 8, one bar):
+        # single-file+compressed 1694 ms, plain directory 1184, directory with
+        # ReadyToRun 862 -- half the fixed cost is the bundle, not the JIT.
+        # ReadyToRun only pays once the bundle is gone: UNDER single-file it
+        # made startup WORSE (--version 545 -> 1093 ms), because R2R takes the
+        # payload from 36.8 to 50.7 MB and the host has to unpack all of it.
+        # The archive below is a zip/tarball either way, so the bundle was
+        # buying nothing a directory does not.
+        # Output is byte-identical to the previously shipped configuration
+        # (svg and midi, three scores, compared by hash).
         run: >
           dotnet publish LilySharp.Cli/LilySharp.Cli.csproj
           -c Release -r ${{ matrix.rid }}
           --self-contained
-          -p:PublishSingleFile=true
-          -p:EnableCompressionInSingleFile=true
+          -p:PublishReadyToRun=true
           -p:Version=${GITHUB_REF_NAME#v}
           -o publish/${{ matrix.rid }}
       - name: Archive
