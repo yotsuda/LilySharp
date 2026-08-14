@@ -214,6 +214,33 @@ internal static class FingeringEngraver
         return Calculate(score, map, _ => true, staffIndex, beamLayouts);
     }
 
+    /// <summary>
+    /// <see cref="Calculate(Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>
+    /// for a caller that runs this body MANY TIMES over one score and has therefore already
+    /// built the beamed-stem-tip map ONCE — the per-(staff, system) shape
+    /// <see cref="FingScriptMemo"/> runs in.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE MAP IS THE ONLY DIFFERENCE, and it is the whole point: the sibling overload
+    /// folds <c>beamLayouts</c> on every call, which is O(the score's beams) per SYSTEM once
+    /// a caller runs per system — the same O(score)-per-system shape
+    /// <c>MultiStaffLayouter.StaffArticulationLayouts</c> warns about, and the shape this
+    /// engraver's own measure-walk remark was written to avoid.
+    /// </remarks>
+    internal static ImmutableArray<FingeringLayout> CalculateWithTips(
+        Score score,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        int staffIndex,
+        Dictionary<(int, int, int, int), (BeamLayout Beam, double MemberX, bool StemUp)>? beamedTips)
+    {
+        if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
+            return ImmutableArray<FingeringLayout>.Empty;
+        var map = new Dictionary<int, MeasureLayout>(measureLayouts.Length);
+        foreach (var ml in measureLayouts)
+            map[ml.MeasureIndex] = ml;
+        return Calculate(score, map, _ => true, staffIndex, default, beamedTips);
+    }
+
     /// <remarks>
     /// ⚠️ THE WALK IS OVER THE MEASURES THIS CALLER HOLDS, not over the score's. The
     /// difference is invisible in the answer and not in the WORK: this body runs once per
@@ -229,16 +256,19 @@ internal static class FingeringEngraver
         Dictionary<int, MeasureLayout> measureMap,
         System.Func<int, bool> isPlaced,
         int staffIndex,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        Dictionary<(int, int, int, int), (BeamLayout Beam, double MemberX, bool StemUp)>?
+            prebuiltTips = null)
     {
         var layouts = ImmutableArray.CreateBuilder<FingeringLayout>();
 
         // Which beam each note belongs to — the STEM is a support of every fingering and a
         // beamed stem ends on the beam, so the gate below needs the same map the scripts use.
         // Empty (and free) for the unbeamed book, which is why the caller may omit the beams.
-        var beamedTips = beamLayouts.IsDefaultOrEmpty
-            ? null
-            : ArticulationEngraver.BuildBeamedStemTips(beamLayouts);
+        var beamedTips = prebuiltTips
+            ?? (beamLayouts.IsDefaultOrEmpty
+                ? null
+                : ArticulationEngraver.BuildBeamedStemTips(beamLayouts));
 
         var voice = score.Voice;
         var indices = new List<int>(measureMap.Count);

@@ -1341,4 +1341,108 @@ public class IncrementalCompilerTests
         Assert.True(prelim.Misses > prelimMisses0,
             $"the edited system should have declined (misses {prelim.Misses})");
     }
+
+    // --- ⒟⁶⑶ fingering memo (FingScriptMemo, session 163) ------------------------
+    // Every digit was re-islanded and re-columned on every keystroke, twice — measured
+    // at islands 28.1 + walk 39.1 ms per keystroke on perf-fingbeam1k (session 163).
+    // The memo replays the (staff, system) units whose inputs are unchanged. These nets
+    // hold it to byte identity against a cache-free full compile, prove the reference
+    // keys are load-bearing (a stale replay would print the OLD digit), and pin the
+    // declared gate: a unit carrying a script is never memoized.
+
+    /// <summary>A fingered book over several systems: an edit far from most of them
+    /// equals a full recompile and both annotation passes replay unchanged units.</summary>
+    [Fact]
+    public void FingScriptMemo_ReplaysUnchangedUnits_AndMatchesFull()
+    {
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(
+                "c4@finger(1) d@finger(2) e@finger(3) f@finger(4) | "
+                + "g4@finger(1) a@finger(2) b@finger(3) c'@finger(4) |", 12))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var prelim = session.SystemCache!.PreliminaryFingScripts;
+        var final = session.SystemCache!.FinalFingScripts;
+        int prelimHits0 = prelim.Hits, finalHits0 = final.Hits, prelimMisses0 = prelim.Misses;
+
+        var change = Replace(source, "g4@finger(1)", "a4@finger(1)");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "g4@finger(1)", "a4@finger(1)")), incremental);
+        Assert.True(prelim.Hits > prelimHits0,
+            $"preliminary fingering memo never hit (hits {prelim.Hits}, misses {prelim.Misses})");
+        Assert.True(final.Hits > finalHits0,
+            $"final fingering memo never hit (hits {final.Hits}, misses {final.Misses})");
+        Assert.True(prelim.Misses > prelimMisses0,
+            $"the edited unit should have declined (misses {prelim.Misses})");
+    }
+
+    /// <summary>STALENESS POSITIVE CONTROL: changing a DIGIT (not a pitch) must decline
+    /// that unit and print the new number. The model measure is the reference key that
+    /// catches it — without it the unit's inputs would look unchanged to a key built out
+    /// of measure layouts alone, and the memo would replay the old digit verbatim.</summary>
+    [Fact]
+    public void FingScriptMemo_ChangedDigit_DeclinesAndMovesTheAnswer()
+    {
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(
+                "c4@finger(1) d@finger(2) e@finger(3) f@finger(4) |", 14))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        string before = Norm(session.Render());
+
+        var change = Replace(source, "e@finger(3)", "e@finger(5)");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "e@finger(3)", "e@finger(5)")), incremental);
+        Assert.NotEqual(before, incremental); // a replayed unit would still say "3"
+    }
+
+    /// <summary>A slur covering the fingered notes: the digit rides off the bow
+    /// (<c>avoid-slur #'around</c>), so the slur layouts are part of the unit's key.
+    /// An edit elsewhere must still equal a full recompile.</summary>
+    [Fact]
+    public void FingScriptMemo_SlurredDigits_MatchFull()
+    {
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(
+                "c4@finger(1)( d@finger(2) e@finger(3) f@finger(4)) |", 14))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+
+        var change = Replace(source, "d@finger(2)", "e@finger(2)");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "d@finger(2)", "e@finger(2)")), incremental);
+    }
+
+    /// <summary>THE DECLARED GATE: a unit carrying ANY script is never memoized, because
+    /// a script and a digit on one note share a column and the articulation half of the
+    /// call is deliberately left unfiltered. With a script in every measure the store
+    /// must stay empty — and the output must still equal a full recompile.</summary>
+    [Fact]
+    public void FingScriptMemo_UnitWithAScript_IsNeverMemoized()
+    {
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(
+                "c4@finger(1)@staccato d@finger(2) e@finger(3) f@finger(4)@accent |", 14))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var prelim = session.SystemCache!.PreliminaryFingScripts;
+        var final = session.SystemCache!.FinalFingScripts;
+
+        var change = Replace(source, "d@finger(2)", "e@finger(2)");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "d@finger(2)", "e@finger(2)")), incremental);
+        Assert.True(prelim.Hits == 0 && final.Hits == 0,
+            $"a scripted unit must never be memoized (prelim {prelim.Hits}, final {final.Hits})");
+    }
 }

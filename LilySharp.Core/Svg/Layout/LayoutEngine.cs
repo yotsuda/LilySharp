@@ -340,6 +340,8 @@ internal sealed class LayoutEngine
             // preliminary pass stacks different systems every keystroke and one shared
             // store would overwrite itself twice per keystroke and never hit.
             AboveStackMemo = systemCache?.FinalAboveStack,
+            // Likewise its own fingering memo (see the preliminary pass's site).
+            FingScriptMemo = systemCache?.FinalFingScripts,
         };
         var annotations = CalculateAnnotationLayouts(annotationContext);
 
@@ -798,6 +800,10 @@ internal sealed class LayoutEngine
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
             // The PRELIMINARY pass's own above-stack memo (see the final pass's site).
             AboveStackMemo = systemCache?.PreliminaryAboveStack,
+            // ...and its own fingering memo, one store per pass for the same reason: the
+            // two passes memoize DIFFERENT systems every keystroke, so a shared store
+            // would be overwritten twice per keystroke and never hit.
+            FingScriptMemo = systemCache?.PreliminaryFingScripts,
         });
         EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
@@ -3170,6 +3176,11 @@ internal sealed class LayoutEngine
         /// incremental session (batch renders, tests). See <see cref="AboveStackMemo"/>.</summary>
         public AboveStackMemo? AboveStackMemo { get; init; }
 
+        /// <summary>This pass's per-(staff, system) fingering memo, or null outside the
+        /// incremental session — where null means the pass runs the whole-score island
+        /// and walk it always ran. See <see cref="FingScriptMemo"/>.</summary>
+        public FingScriptMemo? FingScriptMemo { get; init; }
+
         /// <summary>
         /// A staff's rest/note collision shifts — <c>MultiStaffLayouter.RestCollisionsOf</c>
         /// itself, so this pass reserves each rest where the ROOM reserved it and where the
@@ -3363,14 +3374,9 @@ internal sealed class LayoutEngine
         // The beams go in with them: a BEAMED note's stem is a fingering's support and it ends
         // on the beam, so the island answer has to be built against the quanted beam the
         // renderer draws (ledger fingering.chord.beamed-*).
-        var fingeringLayouts = ComputeFingeringIslands(
-            score, systems, voicesByStaff, beamLayouts ?? default);
-        var articulationLayouts = ImmutableArray<ArticulationLayout>.Empty;
-        if (score != null)
-            articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
-                score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
-                beamLayouts ?? default, ctx.TieLayouts, ctx.SlurLayouts,
-                fingeringLayouts, out fingeringLayouts);
+        var (articulationLayouts, fingeringLayouts) = ComputeFingeringsAndScripts(
+            ctx, score, systems, voicesByStaff, beamLayouts ?? default,
+            articulations, ml, measuresByStaff, staffYAt, staffByIndex);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);
@@ -4377,6 +4383,276 @@ internal sealed class LayoutEngine
             return fb.ToImmutable();
         }
         return FingeringEngraver.Calculate(score, systems, -1, beamLayouts);
+    }
+
+    /// <summary>
+    /// The staff-by-staff walk order the fingering island runs in, spelled ONCE: the
+    /// per-staff score whose primary voice carries the digits, at that staff's index.
+    /// <see cref="ComputeFingeringIslands"/> and the memoized per-(staff, system) path
+    /// both consume it, so the two cannot drift into different staff orders — which is
+    /// what would break the memo's positional reassembly.
+    /// </summary>
+    private static List<(int StaffIndex, Score StaffScore)> FingeringStaffScores(
+        Score score, Dictionary<int, ImmutableArray<Voice>>? voicesByStaff)
+    {
+        var list = new List<(int, Score)>();
+        if (voicesByStaff != null && voicesByStaff.Count > 0)
+        {
+            foreach (var kv in voicesByStaff)
+            {
+                if (kv.Value.IsDefaultOrEmpty)
+                    continue;
+                list.Add((kv.Key, new Score(kv.Value[0], score.TimeSignature,
+                    score.KeySignature, score.Clef, score.Tempo)));
+            }
+            return list;
+        }
+        list.Add((-1, score));
+        return list;
+    }
+
+    /// <summary>
+    /// The pass's fingerings and scripts, with the keystroke-crossing per-(staff, system)
+    /// memo of the FINGERING half applied (<see cref="FingScriptMemo"/>). Outside the
+    /// incremental session the memo is null and this is the old pair of calls, unchanged.
+    /// </summary>
+    /// <remarks>
+    /// The memo replays a unit's digits at their COLUMN answer and keeps them out of the
+    /// walk's <paramref name="articulations"/>-driven pass entirely; the articulation
+    /// argument is never filtered, so that half of the call — its order, its
+    /// <c>SourceIndex</c> stamps, its mover bookkeeping — is the same call it always was.
+    /// See <see cref="FingScriptMemo"/> for why a unit carrying ANY script declines.
+    /// </remarks>
+    private (ImmutableArray<ArticulationLayout> Articulations,
+             ImmutableArray<FingeringLayout> Fingerings)
+        ComputeFingeringsAndScripts(
+            AnnotationLayoutContext ctx,
+            Score? score,
+            ImmutableArray<SystemLayout> systems,
+            Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
+            ImmutableArray<BeamLayout> beamLayouts,
+            ImmutableArray<ArticulationItem> articulations,
+            ImmutableArray<MeasureLayout> ml,
+            Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
+            Func<int, int, double>? staffYAt,
+            Dictionary<int, Staff>? staffByIndex)
+    {
+        var memo = ctx.FingScriptMemo;
+        if (memo == null || score == null)
+        {
+            var islands = ComputeFingeringIslands(score, systems, voicesByStaff, beamLayouts);
+            var scripts = ImmutableArray<ArticulationLayout>.Empty;
+            if (score != null)
+                scripts = ArticulationEngraver.CalculateWithFingerings(
+                    score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
+                    beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, islands, out islands);
+            return (scripts, islands);
+        }
+
+        // ONE fold of each whole-score table, shared by every unit's key and by every
+        // unit's island call — the per-unit shape's whole risk is paying an O(score)
+        // fold per system, which is the cost this memo exists to remove.
+        var tips = beamLayouts.IsDefaultOrEmpty
+            ? null : ArticulationEngraver.BuildBeamedStemTips(beamLayouts);
+        var beamsAt = BuildBeamsByMeasure(beamLayouts);
+        var slursAt = BuildVoiceZeroSlursByMeasure(ctx.SlurLayouts);
+        var scriptedMeasures = new HashSet<(int, int)>();
+        if (!articulations.IsDefaultOrEmpty)
+            foreach (var a in articulations)
+                scriptedMeasures.Add((Math.Max(a.StaffIndex, 0), a.MeasureIndex));
+
+        // Unit plan, in the island's own emission order (staff-major, system-minor,
+        // measures ascending) so the reassembled array is positionally the old one.
+        var units = new List<(int Staff, int System, FingScriptMemo.UnitEntry? Hit,
+                              FingScriptMemo.UnitEntry Probe, bool Eligible)>();
+        var live = ImmutableArray.CreateBuilder<FingeringLayout>();
+        var liveSpans = new List<(int Unit, int Start, int Length)>();
+
+        // The island's measure set, spelled the way the whole-score path spells it:
+        // LayoutUtilities.BuildMeasureLayoutMap keeps the LAST system's layout for a
+        // repeated MeasureIndex, and the walk then visits the indices ASCENDING. Both
+        // properties are load-bearing for the reassembly, so the plan is derived from that
+        // map rather than from the systems directly — a per-system split that walked
+        // systems[s].Measures would emit a repeated index twice.
+        var layoutOf = new Dictionary<int, MeasureLayout>();
+        var systemOf = new Dictionary<int, int>();
+        for (int s = 0; s < systems.Length; s++)
+            foreach (var m in systems[s].Measures)
+            {
+                layoutOf[m.MeasureIndex] = m;
+                systemOf[m.MeasureIndex] = s;
+            }
+        var ascending = new List<int>(layoutOf.Keys);
+        ascending.Sort();
+        // Whether each system's measures form ONE ascending run. They do for any layout
+        // that breaks lines at barlines; a layout that interleaved them would make a
+        // (staff, system) key name two disjoint spans, so the pass declines wholesale
+        // rather than memoizing a unit whose identity is not its key.
+        var runSeen = new HashSet<int>();
+        int lastSystem = -1;
+        bool splittable = true;
+        foreach (int mi in ascending)
+        {
+            int s = systemOf[mi];
+            if (s != lastSystem)
+            {
+                if (!runSeen.Add(s)) { splittable = false; break; }
+                lastSystem = s;
+            }
+        }
+        if (!splittable)
+        {
+            var wholeIslands = ComputeFingeringIslands(score, systems, voicesByStaff, beamLayouts);
+            var wholeScripts = ArticulationEngraver.CalculateWithFingerings(
+                score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
+                beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, wholeIslands, out wholeIslands);
+            return (wholeScripts, wholeIslands);
+        }
+
+        foreach (var (staffIndex, staffScore) in FingeringStaffScores(score, voicesByStaff))
+        {
+            int keyStaff = Math.Max(staffIndex, 0);
+            var voiceMeasures = staffScore.Voice.Measures;
+            var bySystem = new Dictionary<int, ImmutableArray<MeasureLayout>.Builder>();
+            var systemOrder = new List<int>();
+            foreach (int mi in ascending)
+            {
+                if (mi < 0 || mi >= voiceMeasures.Length)
+                    continue;
+                int s = systemOf[mi];
+                if (!bySystem.TryGetValue(s, out var b))
+                {
+                    bySystem[s] = b = ImmutableArray.CreateBuilder<MeasureLayout>();
+                    systemOrder.Add(s);
+                }
+                b.Add(layoutOf[mi]);
+            }
+            foreach (int s in systemOrder)
+            {
+                var layouts = bySystem[s].ToImmutable();
+
+                bool eligible = true;
+                var probe = new FingScriptMemo.UnitEntry
+                {
+                    MeasureIndices = new int[layouts.Length],
+                    Layouts = new object[layouts.Length],
+                    StaffOffsets = new double[layouts.Length],
+                };
+                var beams = new List<object>();
+                var slurs = new List<SlurLayout>();
+                for (int i = 0; i < layouts.Length; i++)
+                {
+                    int mi = layouts[i].MeasureIndex;
+                    probe.MeasureIndices[i] = mi;
+                    probe.Layouts[i] = layouts[i];
+                    probe.StaffOffsets[i] = staffYAt?.Invoke(mi, keyStaff) ?? 0;
+                    if (beamsAt != null && beamsAt.TryGetValue((keyStaff, mi), out var bl))
+                        beams.AddRange(bl);
+                    if (slursAt != null && slursAt.TryGetValue((keyStaff, mi), out var sl))
+                        slurs.AddRange(sl);
+                    if (scriptedMeasures.Count > 0 && scriptedMeasures.Contains((keyStaff, mi)))
+                        eligible = false;
+                }
+                probe.Beams = beams.ToArray();
+                probe.Slurs = slurs.ToArray();
+
+                var hit = eligible ? memo.TryMatch(keyStaff, s, probe) : null;
+                if (hit == null)
+                {
+                    var built = FingeringEngraver.CalculateWithTips(
+                        staffScore, layouts, staffIndex, tips);
+                    liveSpans.Add((units.Count, live.Count, built.Length));
+                    live.AddRange(built);
+                }
+                units.Add((keyStaff, s, hit, probe, eligible));
+            }
+        }
+
+        var liveIslands = live.ToImmutable();
+        var articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
+            score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
+            beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, liveIslands,
+            out var liveAdjusted);
+
+        // Reassemble in unit order: a hit replays its stored digits, a miss takes its own
+        // contiguous slice of the walk's answer and becomes the unit's new entry.
+        var spanOf = new Dictionary<int, (int Start, int Length)>(liveSpans.Count);
+        foreach (var (unit, start, length) in liveSpans)
+            spanOf[unit] = (start, length);
+        var fingerings = ImmutableArray.CreateBuilder<FingeringLayout>();
+        for (int u = 0; u < units.Count; u++)
+        {
+            var unit = units[u];
+            if (unit.Hit != null)
+            {
+                fingerings.AddRange(unit.Hit.Adjusted);
+                continue;
+            }
+            var (start, length) = spanOf[u];
+            var slice = new FingeringLayout[length];
+            for (int i = 0; i < length; i++)
+                slice[i] = liveAdjusted[start + i];
+            fingerings.AddRange(slice);
+            if (unit.Eligible)
+            {
+                unit.Probe.Adjusted = slice;
+                memo.Store(unit.Staff, unit.System, unit.Probe);
+            }
+        }
+        return (articulationLayouts, fingerings.ToImmutable());
+    }
+
+    /// <summary>Which beams touch each (staff, measure) — the reference set a unit's key
+    /// folds, built once per pass rather than once per unit.</summary>
+    private static Dictionary<(int, int), List<BeamLayout>>? BuildBeamsByMeasure(
+        ImmutableArray<BeamLayout> beamLayouts)
+    {
+        if (beamLayouts.IsDefaultOrEmpty)
+            return null;
+        var map = new Dictionary<(int, int), List<BeamLayout>>();
+        foreach (var beam in beamLayouts)
+        {
+            var group = beam.Group;
+            for (int i = 0; i < group.Members.Length; i++)
+            {
+                int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
+                    && i < beam.MemberStaffIndices.Length
+                        ? beam.MemberStaffIndices[i]
+                        : Math.Max(0, beam.StaffIndex);
+                var key = (Math.Max(staff, 0),
+                    group.Members[i].ResolveMeasureIndex(group.MeasureIndex));
+                if (!map.TryGetValue(key, out var list))
+                    map[key] = list = new List<BeamLayout>();
+                // One entry per beam per measure: a group's members all name the same beam.
+                if (list.Count == 0 || !ReferenceEquals(list[^1], beam))
+                    list.Add(beam);
+            }
+        }
+        return map;
+    }
+
+    /// <summary>The voice-0 slurs covering each (staff, measure) — the only ones a digit's
+    /// <c>avoid-slur #'around</c> shift can read (<c>ArticulationEngraver</c>'s flush keys
+    /// its lookup at voice 0 by construction).</summary>
+    private static Dictionary<(int, int), List<SlurLayout>>? BuildVoiceZeroSlursByMeasure(
+        ImmutableArray<SlurLayout> slurLayouts)
+    {
+        if (slurLayouts.IsDefaultOrEmpty)
+            return null;
+        var map = new Dictionary<(int, int), List<SlurLayout>>();
+        foreach (var s in slurLayouts)
+        {
+            if (s.Slur.VoiceIndex != 0)
+                continue;
+            int staff = Math.Max(s.StaffIndex, 0);
+            for (int m = s.Slur.StartMeasureIndex; m <= s.Slur.EndMeasureIndex; m++)
+            {
+                if (!map.TryGetValue((staff, m), out var list))
+                    map[(staff, m)] = list = new List<SlurLayout>();
+                list.Add(s);
+            }
+        }
+        return map;
     }
 
     /// <summary>

@@ -63,81 +63,59 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第162セッション＝**§2 の起票「加線が譜面の長さに対して二次で増える」を実測で
-反証して記録から落とし（`09f8894a`・docs のみ）、第2便でユーザー指示により `lysc` の
-起動固定費を配布形態で半減させた便**（`release.yml` のみ・**エンジンのコードは 1 行も
-動いていない**）。開始時の裏取りで suite **4554 passed / 0 failed / 4 skipped**
-（引継ぎの 4468 は stale＝第161 以降に 2 便 `308dfe8a`・`1d0485f2` が入っていた。
-§1 はその 2 便を記録していない）・HEAD `1d0485f2`・**未 push 4**・台帳不動。
-⚠️ **本便は C# を変更していないので suite は開始時の 1 回だけ**（再実行していない）。
-- **⑴ 起票は誤り。加線は譜面長に対して線形**。起票の素材そのもの
-  （`c'8 d'8 e'8 f'8 g'8 a'8 b'8 c''8 |` の繰り返し・単一 staff）に **`octave absolute` を
-  1 行足すだけ**で **20 小節 5.2 MB / 55,387 `<line>` → 177 KB / 260 本**、
-  **300 小節「Insufficient memory」→ 786 KB・5.6 秒で完走**（Debug・`lysc svg`）。
-  1/5/20/60/300 小節で **17/65/260/780/3,900 本＝13 本/小節の直線**。
-- **⑵ 名指された発生源も無罪**——`SharedRenderer.Noteheads.cs` の
-  `for (int pos = 6; pos <= staffPosition; …)` の `staffPosition` に座標は混ざっていない。
-  出所は `lysc check --pitches` が直に言う: 起票の素材は **1 音ごとに 1 オクターブ上がる**
-  （`c'`→C5・`d'`→D6・`e'`→E7 … **3 小節目で C34**）。**Lily# は相対オクターブ**なので
-  `'` は「最寄りからの補正」＝上行音型に付けると**累積する**。SVG 側と突き合わせると**厳密に
-  一致する**: 第2小節頭の C6 は加線 pos +6/+8 の 2 本、小節末の C8 は pos +6..+22 の 9 本
-  ——**描画は与えられた音高に対して正しい**。⇒ 二次に見えたのは engine ではなく
-  **本が頁の外へ歩き去っていた**から。
-- **⑶ 陽性対照 2 本**（「線形なのは加線を*描いていない*からでは？」を潰す）:
-  **全音符に加線が付く本**＝`c8`×8 の反復（bare `c`＝C4 固定・`check --pitches` で確認）で
-  1/5/20/60/300 小節＝**21/85/340/1,020/5,100 本＝約 17 本/小節の直線**・300 小節 898 KB・9.5 秒。
-  register 安定な非加線本（`c8 d8 e8 f8 g8 f8 e8 d8`）も **10 本/小節の直線**・300 小節 701 KB・3.0 秒。
-- **⑷ ★★ 新種ではなく第135 の罠の再発（4 例目）**。`RULES.md` §5.3 の**先頭項が同じ現象・
-  同じ処方（`octave absolute`）・同じ判定法を逐語で書いている**（`perf-slur300` が staff
-  position 10493・加線 3,146,917 本・303 MB）。**書いてあっても踏んだ**ので、§5.3 に
-  **「合成本は `lysc check --pitches` を 1 回通してから起票する」**（30 秒で決着する最短の
-  弁別子・出力を数えるより更に手前）を足した。
-- **⑸ 連鎖して無効になる主張**: `1d0485f2` の commit message の「長い譜面でエディタが
-  もたつくのは主にこれ」は**根拠を失った**。同便の preview キャレットの位置インデックス化と
-  semanticTokens の二分探索化（1000 小節 1747→416 ms）は**別の実測があるので生きている**。
-  ⇒ **プレビューのもたつきをもう一度主張するなら、register の安定した本で測り直すところから。**
-- **⑹（第2便・ユーザー指示）配布形態で `lysc` の固定費を半分にした**（`release.yml` のみ・
-  **コードは不動**）。⑴ の続きで「300 小節 3.0 秒」の内訳を割ったら、**スケール項は layout だけ
-  （+5.9 ms/小節）で、~1.2 秒は 1 小節の本も払う固定費**だった（Release・別プロセス・min5:
-  起動 91／`ly` 418／`check` 804／`layout` 1,082／`svg` 1,245 ms。**`check` は 300 小節でも
-  961 ms＝parse/意味層は 0.5 ms/小節で効かない**・**描画はほぼ平ら** 163→176 ms）。
-  ★★ **犯人は JIT ではなく `PublishSingleFile`**——**win-x64・Release・floor of 8・1 小節の本**
-  （＝動くのは固定費だけ）で **single-file+圧縮 1,694 ms（現行出荷）／素の directory 1,184／
-  directory+R2R 862**。⇒ **`release.yml` から single-file を落として `PublishReadyToRun` へ**。
-  ⚠️ ★ **順序を逆にすると損をする**: **single-file のままの R2R は startup を悪化させる**
-  （`--version` 545→1,093 ms）——R2R が payload を 36.8→50.7 MB にし、host が毎回それを
-  展開するから。**R2R は bundle を外して初めて黒字**。出力は**旧構成とバイト一致**
-  （svg・midi・3 冊をハッシュ比較）。zip/tarball は元から directory を包むので配布側の損は無い。
-  300 小節でも 2,910→2,507 ms（floor）だが**帯が重なる**＝節約は固定費ぶんの定数なので、
-  **主張の根拠は 1 小節の側に置く**。
-- **⑺ Native AOT は 2 つで塞がっている**（試して確認・**次に試す人は先にこの 2 つ**）:
-  ⑴ この機械に platform linker が無い（VS の「C++ によるデスクトップ開発」ワークロード）。
-  ⑵ **`MeasureContentKey.cs` が property を reflection で舐めている**（IL2070/IL2080）
-  ——第154 の content-key の土地。**trim/AOT では注釈か書き換えが要る**＝フラグ 1 つでは終わらない。
-  ⚠️ **cross-OS R2R 自体は実地で通った**（Windows から linux-x64／osx-x64／osx-arm64 の 3 つとも
-  exit 0・`LilySharp.Core.dll` 2.6→6.7/7.3 MB＝本当に事前コンパイルされている）。
-  workflow は ubuntu から 4 RID を焼くので、**逆向き（linux→win/osx）は次のタグが実証する**。
-- **⑻ `TieredCompilation=0` は却下（実測）。蒸し返さないこと。**
-  合成本では**交点が 60 小節あたりに見えた**（既定／TC=0 で 5 小節 406/501・20 小節 783/936・
-  60 小節 1,023/983・300 小節 2,275/1,717）ので「長い本なら得」と読めたが、
-  ★★ **実在する本に当てると全滅した**——`samples` の 6 冊すべてで既定が勝ち
-  （amazing-grace −151／canon-in-d(61小節) −126／drunken-sailor −159／fur-elise −120／
-  greensleeves −283／manual-beam-demo −105 ms）、**最長の `test/multi-page-vertical`
-  （400 小節）でも既定 483 対 TC0 983＝−500 ms**。
-  ⇒ ★★★ **効くのは小節数ではなく総レイアウト仕事量**。合成本（1 小節に 8 分音符 8 個・
-  300 小節＝2,400 音）は**実在するどの本より重く**、400 小節の実 fixture が 483 ms で
-  終わるのに合成 300 小節は 2,275 ms かかる。**「60 小節」は fixture の密度が作った数**。
-  ⚠️ ★★ **これは本便⑴で反証した罠と同じ形の 2 例目**——**合成本で出した順位は、
-  実物に当てるまで順位ではない**（§5.3。⑴ は音高が暴走した例、こちらは密度が偏った例で、
-  **どちらも「本が代表していない」**）。**コーパスに訊く前に設定を決めないこと。**
-  ⚠️ 参考: `QuickJitForLoops=0` も中間（合成 712／1,780）でどちらにも支配される。
-  ⚠️ 仮に将来この種の設定を入れる日が来ても、**`LilySharp.Cli` だけ**にすること——
-  **LSP/プレビューは常駐＝tier-1＋動的 PGO が効く側**。
-  ★ **同じ A/B で R2R の値段も出た**: `DOTNET_ReadyToRun=0` にすると 1 小節 388→1,384 ms
-  ＝**R2R は JIT を ~1,000 ms 消している**。⇒ **AOT に残された JIT の余地はもう小さく、
-  起動も 75 ms しかない**（AOT の上限は「TC=0 のコード品質を、TC=0 のコンパイル費用なしで」）。
-  ⚠️ **AOT は cross-OS ができない**（R2R と違う）ので、**4 RID を ubuntu 1 台で焼く今の
-  matrix は OS ごとの runner に割る必要がある**——着手する便はそこも見積もること。
+最終更新 第163セッション＝**⒟⁶⑶「fingbeam の fingscripts の memo」を閉じた便**（`4c2f0f42`）。
+ユーザーがその場で 2 度窓を許可したので、**帰属計測（一時プローブ・revert 済み）→設計→実装→
+同一窓・同一 binary の ON/OFF/ON A/B** までを 1 便で。開始時の裏取りで suite
+**4554 passed / 0 failed / 4 skipped**・HEAD `6f350cff`（引継ぎの `1d0485f2` は stale＝
+第162 の 3 便が入っていた）・未 push 8・台帳不動。終了時 suite **4554 → 4558 passed /
+0 failed / 4 skipped（+4＝網）**・**snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・
+総和 3.609962441・count 106/非ゼロ 2）**・未 push 9。
+- **⑴ ★★ 帰属計測が引継ぎの照準を外していた**。第158 は「fingscripts」を**1 つの数**として、
+  第159 は **~33 ms** として記録しており、どちらも**島（`ComputeFingeringIslands`）の費用**
+  と読めた。一時プローブで割ると perf-fingbeam1k は **islands 28.05 ＋ walk 39.11 ms/打鍵**
+  （Release 床・prelim+final 合計）＝**大きいのは walk のほう**（`CalculateWithFingerings` の
+  fingering flush）。**aug（`AugmentSkylinesWithScripts`）は 3 冊とも 0.00**。
+  digit の無い 2 冊は項そのものが **plain 3.4 / v2bow 0.4 ms**＝**fingbeam 専用の島**は正しい。
+  ⇒ **「1 つの数」で引き継いだ段は、着手する便が必ず割り直す。**
+- **⑵ 単位は (staff, system)**。digit の答えは**その音符だけの関数**（島＝自分の頭・音価・
+  数字・X／flush＝自分の列に既に置かれた script と自分を覆うスラー）なので、walk の
+  `fingerings` 引数から単位ごと抜いても**残りの呼び出しはバイト同一**。
+- **⑶ ★★★ モデルは鍵に入れられない**——注釈 pass の `Measure`（と `Items` 配列）は
+  **打鍵ごとに作り直される**（**実測**: 網が hits 0 / misses 6 で落ち、6 単位すべてが
+  この節だけで decline・layout と beam は一致していた）。**これは ▶ ⒫ ⑵⑶ が梁検出の memo
+  について既に名指している壁と同じもの**。代わりに立つのが **`MeasureLayout` の instance**:
+  `SystemLayoutCache` は**ヒット時にだけ**同じ配列を返し、そのヒット判定はその system の
+  `MeasureContentKey` slice を要素ごとに比較する——そして content key は
+  **全譜の items を反射で畳んだ過敏な fold**（`Compute(MultiStaffScore)`）。
+  ⇒ **新しい網羅性の主張ではなく、per-system measure cache と全体再利用が既に立っている
+  同じ主張**。鍵の残りは生入力: 単位に触れる beam の**参照**（per-(staff, system) で
+  cache 済み＝identity が立つ）・voice 0 のスラーの**値**・staff offset の値・小節番号。
+- **⑷ script を持つ単位は memo しない**（**宣言したゲート・網で固定**）。script と digit が
+  同じ音符の 1 つの列に積まれるので、digit を再生するなら**それを読む script ごと**再生する
+  ことになり、articulation 出力の再組み立てと全 `SourceIndex` の付け替えが要る。
+  **script が「在る」だけで単位を降ろす**ことで、**呼び出しの articulation 側は文字通り無傷**
+  （全配列が入り全配列が同じ順・同じ stamp で出る）。⇒ **digit と script が同じ system に
+  同居する本は旧価格のまま**。**測った本にそれは 1 冊も無い**（そう書いた）。
+- **⑸ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
+  `scratch\fingbench-163.txt`・untracked）**: fingscripts 項の床（islands+walk・prelim+final）
+  **fingbeam1k 50.42 → 6.80 / 6.74 ms＝−43.7 ms/打鍵**。digit の無い 2 冊は walk の代わりに
+  partition を払って帯の中で動く（**plain 2.60 → 3.08 / 2.71**・**v2bow 0.27 → 0.46 / 0.40**）。
+  ⚠️ **総床の差は主張しない**（この窓の plain 総床は腕ごとに 148〜204 ms）——主張は同一 run 内の
+  帰属だけ（§7.9・第161 と同じ規律）。⚠️ **生データに Debug 混入行あり**（suite 実行時に
+  `LILYSHARP_EDIT_BENCH` が残っていた——**第161 と同じ踏み方**）。ファイル末尾の NOTE が正の
+  block を名指す。**残る 6.8 ms** は pass ごとの全書 fold（beamed-stem-tip 表・
+  beams-by-measure バケツ）＋編集単位自身の live 島と flush。
+- **⑹ 網 4 枚**（`IncrementalCompilerTests`）: 多 system の指番号本の編集が cache-free full と
+  一致＋両 pass の store で hits>0＋編集単位は decline／**数字だけを変える編集**（音高を変えない
+  ので小節の他は動かない）が decline して**出力も動く**＝**layout-identity 鍵の staleness
+  陽性対照**（鍵が無ければ古い数字を逐語再生するところ）／スラー付き指番号本が full と一致／
+  **全小節に script のある本は store が空のまま full と一致**＝⑷ のゲートを assert。
+- **⑺ 移植物はゼロ**（checklist 7.6 ⒟）——定数も幾何も LP 規則も足していない。2 つの engraver の
+  本体は無傷で、memo は**誰が呼ぶか**だけを決める。`FingeringEngraver` に internal overload を
+  1 本足したのは、既存 overload が**呼ぶたびに全書の梁を畳む**ので per-system 呼び出しが
+  それを system ごとに払ってしまうため。
+- **⑻ batch は構造的に不変**——`lysc`・`SvgGenerator`・session 外の全テストは
+  `systemCache == null` ⇒ memo が null ⇒ 旧来の全書 island と walk（snapshot 0 動が裏）。
 - **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
   従来どおり）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
@@ -150,9 +128,9 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 生データ `scratch\stagebench-159.txt`）**——**床 plain 114.2 / fingbeam 227.4 / v2bow 166.2。
 ⒟⁶⑵⑴ の返済で全冊共通の首位は消えた——本ごとに違う**:
 **v2bow: break+pages（36+34＝最大塊）＞ prelim.slurs 26-27 ＞（annpass は 7.3 に陥落）**；
-**fingbeam: ann 族 ~71 が首位のまま——ただし ~~stackabove 分~~ は**第161 の per-system memo で
-~1 ms/打鍵へ陥落＝残りは fingscripts ~33＋帯・§1**（第159 内訳: prelim.annpass 39＝
-fingscripts 17＋stackabove 15＋帯／finalann 32＝fingscripts 16＋stackabove 12）＞
+**fingbeam: ~~ann 族 ~71 が首位~~ —— stackabove は第161 の per-system memo で ~1 ms/打鍵へ、
+~~fingscripts ~33~~ も第163 で 50.4→6.8 ms へ陥落（§1。⚠️ 「~33」は 1 つの数で照準も外れていた）
+＝ann 族は帯へ落ちた。次に打鍵を詰める人は▶の順位から取り直すこと**＞
 ~~⒭ overlay render 36-37~~（**第160 で断片化＋capture O(n) 化＝overlay 項の床は打鍵あたり
 ~6 ms 帯へ陥落**）＞ collect 29-36**；
 **plain: 支配項なし（break 20-23 / pages 18 / annpass 14-17 / keys 13-18 / collect 10-19 の帯）**。
@@ -288,9 +266,16 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
   格納 instance を参照比較（`ctx.InsideIdentityOf`）。**同一窓・同一 binary の A/B で
   stackabove 項床 OFF 16.5/50.6/19.2 → ON ~1 ms/打鍵（plain/fingbeam/v2bow）**・網 4 枚。
   他の pass を載せる日は同じ型で——ただし stackBelow は実測 ≈0＝張らない）。
-  残るは ⑶ fingbeam の fingscripts（script column walk）の memo
-  （**第159 実測 pann 16.8＋fann 16.4＝~33 ms・他 2 冊はほぼ 0**＝fingbeam 専用の島）。
-  **⑶ も soundness 層つき＝単独セッションで**。
+  ~~残るは ⑶ fingbeam の fingscripts（script column walk）の memo~~ — **第163 で閉じた**
+  （`4c2f0f42`・§1）。⚠️ **引継ぎの「~33 ms」は 1 つの数で、しかも照準が島側に見えていた**
+  ——割ると **islands 28.1 ＋ walk 39.1** で walk のほうが大きかった（§1 ⑴）。
+  単位は (staff, system)・**鍵は `MeasureLayout` の instance**（モデルは打鍵ごとに作り直される
+  ＝▶ ⒫ と同じ壁・§1 ⑶）。**同一窓 A/B で 50.42 → 6.80 ms/打鍵**。
+  ⚠️ **script を持つ単位は memo しない**（宣言したゲート・§1 ⑷）＝**digit と script が同じ
+  system に同居する本は旧価格のまま**。届く本が測れたら、そこは articulation 出力の
+  再組み立てと `SourceIndex` の付け替えから＝別切片。
+  ⚠️ **残る 6.8 ms** は pass ごとの全書 fold（tip 表・beams-by-measure）＋編集単位の live 分。
+  ⇒ **⒟⁶ は ⑴（cold の量子器）だけが残る。**
   ⚠️ **system をまたぐ梁を持つ譜は丸ごと旧経路にフォールバック**（出力は同一）——
   その本では memo が効かない。**効かせたいなら鍵に隣 system の被覆を足す設計から。**
 ▶ ~~**⒫ `DetectBeamGroups` が 1 打鍵に 6 回走る**~~ — **第139 で閉じた**（§1。検出は
@@ -412,42 +397,51 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 
 ---
 
-## 以下は第161セッションの経緯
+## 以下は第162セッションの経緯
 
-最終更新 第161セッション＝**⒟⁶⑵「stackabove の per-system 増分化」を閉じた便**（`a3905c96`）。
-ユーザーがその場で窓を許可したので、帰属計測（stackabove 項の直接 probe・revert 済み）→実装→
-同一窓・同一 binary の ON/OFF/ON A/B までを 1 便で。上側 stacking pass は system 横断状態を
-持たない（全配置・全 seed が per-(system, staff) tracker 経由）ので、**per-system の
-「生入力の綴り」program** が前打鍵と一致した system は前回 output を再生し、不一致 system だけを
-filtered 配列で core に流す——program は 10 族の record 値（全部純値 record struct・実地検証済み）＋
-幾何（Indent・全 staff の (Idx, Y, IsHidden, Clef)・topStaff）＋ profile の**参照**
-（`ctx.InsideIdentityOf`＝StaffInside の格納 instance。`InsideOf` は COPY を配るので識別子は
-表の側）＋ silhouette 参照。measure→system 写像は partition 自身が fold する。store は
-prelim/final で**別**（共有すると打鍵ごとに 2 回上書きで永久 miss）・system index ごと上書き＝
-paging augment と同じ有界。suite **4464 → 4468 passed / 0 failed / 4 skipped（+4＝網）・
-snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
-未 push 2。
-- **⑴ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
-  `scratch\stackbench-161.txt`・untracked）**: stackabove 項の床（prelim+final 合計/打鍵）
-  **OFF 16.49/50.58/19.16 → ON 1.38→0.90／1.08→0.98／1.17→1.13 ms（plain/fingbeam/v2bow）＝
-  −15/−50/−18 ms/打鍵**。⚠️ **この窓は総床のドリフトが激しく（plain の総床が同日 194〜694 ms）
-  総床の差は主張しない**——主張は同一 run 内の帰属カウンタ差だけ（§7.9・「bench 前に一声」memo の
-  比率・カウンタ規律。窓はユーザー許可済み）。序盤の A 腕 probe は 34.3/88.6/22.0＝窓の負荷が
-  高い時間帯の値・絶対値は比べない。**stackBelow は 3 冊とも ≈0＝下側 pass は載せない**
-  （第160 ⑷ の型: 実測 ≈0 に投機 cache を張らない）。⚠️ 生データには Debug 混入行あり
-  （suite 実行時に env が残っていた）——ファイル末尾の NOTE が正の block を名指す。
-- **⑵ 網 4 枚**: `OutsideStaffStackMemoTests` 3 枚（同一入力 2 回目が全 system 再生＋liveness
-  カウンタ／値 1 つの編集がその system だけを decline＋memo 無しと深一致＝staleness 陽性対照／
-  **profile 差し替えが decline して答えが動く**＝参照鍵が load-bearing——鍵に無ければ stale YUp を
-  逐語再生するところ）＋`IncrementalCompilerTests.AboveStackMemo_ReplaysUnchangedSystems_AndMatchesFull`
-  （多 system 本の編集が cache-free full とバイト一致＋両 pass の store で hits>0）。
-- **⑶ 鍵は第160 ⑸① の家訓どおり「生入力の fold」**——解決値を作らず、record 値比較＋参照比較のみ
-  （O(総 grob 数)）。identity が取れない (system, staff)（`InsideOf` の fallback rebuild 枝）は
-  その system を毎回 live に落とす＝偽の一致は構造的に無い。**batch 経路（lysc・SvgGenerator）は
-  systemCache=null で memo が挿さらない**＝コーパス出力の不変は構造的（snapshot 0 動が裏）。
-- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
-  従来どおり）。
-- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
+最終更新 第162セッション＝**§2 の起票「加線が譜面の長さに対して二次で増える」を実測で
+反証して記録から落とし（`09f8894a`・docs のみ）、第2便でユーザー指示により `lysc` の
+起動固定費を配布形態で半減させた便**（`release.yml` のみ・**エンジンのコードは 1 行も
+動いていない**）。開始時の裏取りで suite **4554 passed / 0 failed / 4 skipped**
+（引継ぎの 4468 は stale＝第161 以降に 2 便 `308dfe8a`・`1d0485f2` が入っていた）・
+HEAD `1d0485f2`・**未 push 4**・台帳不動。
+⚠️ **本便は C# を変更していないので suite は開始時の 1 回だけ**（再実行していない）。
+- **⑴ 起票は誤り。加線は譜面長に対して線形**。起票の素材そのもの
+  （`c'8 d'8 e'8 f'8 g'8 a'8 b'8 c''8 |` の繰り返し・単一 staff）に **`octave absolute` を
+  1 行足すだけ**で **20 小節 5.2 MB / 55,387 `<line>` → 177 KB / 260 本**、
+  **300 小節「Insufficient memory」→ 786 KB・5.6 秒で完走**（Debug・`lysc svg`）。
+  1/5/20/60/300 小節で **17/65/260/780/3,900 本＝13 本/小節の直線**。
+- **⑵ 名指された発生源も無罪**——`SharedRenderer.Noteheads.cs` の
+  `for (int pos = 6; pos <= staffPosition; …)` の `staffPosition` に座標は混ざっていない。
+  出所は `lysc check --pitches` が直に言う: 起票の素材は **1 音ごとに 1 オクターブ上がる**
+  （`c'`→C5・`d'`→D6・`e'`→E7 … **3 小節目で C34**）。**Lily# は相対オクターブ**なので
+  `'` は「最寄りからの補正」＝上行音型に付けると**累積する**。SVG 側と突き合わせると**厳密に
+  一致する**。⇒ 二次に見えたのは engine ではなく**本が頁の外へ歩き去っていた**から。
+- **⑶ 陽性対照 2 本**（「線形なのは加線を*描いていない*からでは？」を潰す）:
+  **全音符に加線が付く本**＝`c8`×8 の反復で 1/5/20/60/300 小節＝**21/85/340/1,020/5,100 本
+  ＝約 17 本/小節の直線**・300 小節 898 KB・9.5 秒。register 安定な非加線本も
+  **10 本/小節の直線**・300 小節 701 KB・3.0 秒。
+- **⑷ ★★ 新種ではなく第135 の罠の再発（4 例目）**。`RULES.md` §5.3 の先頭項が同じ現象・
+  同じ処方（`octave absolute`）・同じ判定法を逐語で書いている。**書いてあっても踏んだ**ので、
+  §5.3 に**「合成本は `lysc check --pitches` を 1 回通してから起票する」**を足した。
+- **⑸ 連鎖して無効になる主張**: `1d0485f2` の commit message の「長い譜面でエディタが
+  もたつくのは主にこれ」は**根拠を失った**。同便の preview キャレットの位置インデックス化と
+  semanticTokens の二分探索化（1000 小節 1747→416 ms）は**別の実測があるので生きている**。
+- **⑹（第2便・ユーザー指示）配布形態で `lysc` の固定費を半分にした**（`release.yml` のみ）。
+  スケール項は layout だけ（+5.9 ms/小節）で、~1.2 秒は 1 小節の本も払う固定費。
+  ★★ **犯人は JIT ではなく `PublishSingleFile`**——1 小節の本で **single-file+圧縮 1,694 ms
+  ／素の directory 1,184／directory+R2R 862**。⇒ single-file を落として `PublishReadyToRun` へ。
+  ⚠️ ★ **順序を逆にすると損をする**（single-file のままの R2R は `--version` 545→1,093 ms）。
+  出力は**旧構成とバイト一致**。
+- **⑺ Native AOT は 2 つで塞がっている**: ⑴ platform linker 不在 ⑵ `MeasureContentKey.cs` の
+  reflection（IL2070/IL2080）。⚠️ **cross-OS R2R 自体は実地で通った**（linux-x64／osx-x64／
+  osx-arm64 の 3 つとも exit 0）。
+- **⑻ `TieredCompilation=0` は却下（実測）。蒸し返さないこと。** 合成本では交点が 60 小節
+  あたりに見えたが、**実在する 6 冊すべてで既定が勝ち**、400 小節の実 fixture でも −500 ms。
+  ⇒ ★★★ **効くのは小節数ではなく総レイアウト仕事量**。⚠️ ★★ **合成本で出した順位は、
+  実物に当てるまで順位ではない**（⑴ と同じ形の 2 例目）。
+  ★ 同じ A/B で **R2R は JIT を ~1,000 ms 消している**（`DOTNET_ReadyToRun=0` で 388→1,384 ms）。
+  ⚠️ **AOT は cross-OS ができない**ので 4 RID の matrix は OS ごとの runner に割る必要がある。
 
 ---
 

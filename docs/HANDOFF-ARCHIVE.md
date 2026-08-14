@@ -18,6 +18,45 @@
 
 ---
 
+## 以下は第161セッションの経緯
+
+最終更新 第161セッション＝**⒟⁶⑵「stackabove の per-system 増分化」を閉じた便**（`a3905c96`）。
+ユーザーがその場で窓を許可したので、帰属計測（stackabove 項の直接 probe・revert 済み）→実装→
+同一窓・同一 binary の ON/OFF/ON A/B までを 1 便で。上側 stacking pass は system 横断状態を
+持たない（全配置・全 seed が per-(system, staff) tracker 経由）ので、**per-system の
+「生入力の綴り」program** が前打鍵と一致した system は前回 output を再生し、不一致 system だけを
+filtered 配列で core に流す——program は 10 族の record 値（全部純値 record struct・実地検証済み）＋
+幾何（Indent・全 staff の (Idx, Y, IsHidden, Clef)・topStaff）＋ profile の**参照**
+（`ctx.InsideIdentityOf`＝StaffInside の格納 instance。`InsideOf` は COPY を配るので識別子は
+表の側）＋ silhouette 参照。measure→system 写像は partition 自身が fold する。store は
+prelim/final で**別**（共有すると打鍵ごとに 2 回上書きで永久 miss）・system index ごと上書き＝
+paging augment と同じ有界。suite **4464 → 4468 passed / 0 failed / 4 skipped（+4＝網）・
+snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
+未 push 2。
+- **⑴ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
+  `scratch\stackbench-161.txt`・untracked）**: stackabove 項の床（prelim+final 合計/打鍵）
+  **OFF 16.49/50.58/19.16 → ON 1.38→0.90／1.08→0.98／1.17→1.13 ms（plain/fingbeam/v2bow）＝
+  −15/−50/−18 ms/打鍵**。⚠️ **この窓は総床のドリフトが激しく（plain の総床が同日 194〜694 ms）
+  総床の差は主張しない**——主張は同一 run 内の帰属カウンタ差だけ（§7.9・「bench 前に一声」memo の
+  比率・カウンタ規律。窓はユーザー許可済み）。序盤の A 腕 probe は 34.3/88.6/22.0＝窓の負荷が
+  高い時間帯の値・絶対値は比べない。**stackBelow は 3 冊とも ≈0＝下側 pass は載せない**
+  （第160 ⑷ の型: 実測 ≈0 に投機 cache を張らない）。⚠️ 生データには Debug 混入行あり
+  （suite 実行時に env が残っていた）——ファイル末尾の NOTE が正の block を名指す。
+- **⑵ 網 4 枚**: `OutsideStaffStackMemoTests` 3 枚（同一入力 2 回目が全 system 再生＋liveness
+  カウンタ／値 1 つの編集がその system だけを decline＋memo 無しと深一致＝staleness 陽性対照／
+  **profile 差し替えが decline して答えが動く**＝参照鍵が load-bearing——鍵に無ければ stale YUp を
+  逐語再生するところ）＋`IncrementalCompilerTests.AboveStackMemo_ReplaysUnchangedSystems_AndMatchesFull`
+  （多 system 本の編集が cache-free full とバイト一致＋両 pass の store で hits>0）。
+- **⑶ 鍵は第160 ⑸① の家訓どおり「生入力の fold」**——解決値を作らず、record 値比較＋参照比較のみ
+  （O(総 grob 数)）。identity が取れない (system, staff)（`InsideOf` の fallback rebuild 枝）は
+  その system を毎回 live に落とす＝偽の一致は構造的に無い。**batch 経路（lysc・SvgGenerator）は
+  systemCache=null で memo が挿さらない**＝コーパス出力の不変は構造的（snapshot 0 動が裏）。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
+  従来どおり）。
+- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
+
+---
+
 ## 以下は第160セッションの経緯
 
 最終更新 第160セッション＝**⒭ の最後の残件「overlay の断片化」を閉じ（`9cf3560b`）、

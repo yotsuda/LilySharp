@@ -85,6 +85,15 @@ internal sealed class SystemLayoutCache
     /// (see <see cref="PreliminaryAboveStack"/>).</summary>
     public AboveStackMemo FinalAboveStack { get; } = new();
 
+    /// <summary>The PRELIMINARY annotation pass's per-(staff, system) fingering memo —
+    /// one instance per pass for the reason <see cref="PreliminaryAboveStack"/> gives.
+    /// See <see cref="FingScriptMemo"/>.</summary>
+    public FingScriptMemo PreliminaryFingScripts { get; } = new();
+
+    /// <summary>The FINAL annotation pass's fingering memo
+    /// (see <see cref="PreliminaryFingScripts"/>).</summary>
+    public FingScriptMemo FinalFingScripts { get; } = new();
+
     /// <summary>Whether the most recent <see cref="GetOrComputeMeasures"/> call was a
     /// hit (reused) rather than a miss (computed). For diagnostics / tests.</summary>
     public bool LastWasHit { get; private set; }
