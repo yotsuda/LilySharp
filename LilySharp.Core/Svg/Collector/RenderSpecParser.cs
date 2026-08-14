@@ -409,7 +409,9 @@ public static class RenderSpecParser
         // LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves /
         // RemoveAllEmptyStaves set VerticalAxisGroup.remove-empty (+ remove-first).
         string? removeEmpty = GetPartProperty(staff, voiceName, "removeempty")?.ToLowerInvariant();
-        int lines = int.TryParse(GetPartProperty(staff, voiceName, "lines"), out int ln)
+        // The value arrives typed, so the staff-line count is READ rather than
+        // reparsed out of the joined token text (docs/VALUE_SITE_AUDIT.md §2).
+        int lines = GetPartPropertyValue(staff, voiceName, "lines")?.AsInt is int ln
             && ln is >= 1 and <= 5 ? ln : 5;
         // Piano pedal style (part property `pedal bracket|text|mixed`; default Bracket).
         var pedalStyle = Staff.ParsePedalStyle(
@@ -599,9 +601,17 @@ public static class RenderSpecParser
     }
 
     /// <summary>
-    /// Looks up an arbitrary string property from a part definition.
+    /// Looks up a part property as the word it was written as.
     /// </summary>
     private static string? GetPartProperty(SyntaxNode node, string partName, string propertyName)
+        => GetPartPropertyValue(node, partName, propertyName)?.AsText;
+
+    /// <summary>
+    /// Looks up a part property as a VALUE. The one lookup; the string form above is a
+    /// reading of it, so a numeric property is never recovered by reparsing text
+    /// (docs/VALUE_SITE_AUDIT.md §2).
+    /// </summary>
+    private static LysValue? GetPartPropertyValue(SyntaxNode node, string partName, string propertyName)
     {
         var root = node;
         while (root.Parent != null)
@@ -616,19 +626,13 @@ public static class RenderSpecParser
             {
                 if (prop.NameToken.Text.ToLowerInvariant() == propertyName)
                 {
-                    // Join ALL value tokens — a hyphenated bare value
-                    // ("bass-guitar") is word+minus+word in the green tree.
-                    var sb = new System.Text.StringBuilder();
-                    for (int vi = 2; vi < prop.SlotCount; vi++)
-                        if (prop.GetChild(vi) is SyntaxTokenNode vt)
-                            sb.Append(vt.Text);
-                    if (sb.Length == 0) continue;
-
-                    // Handle string literals (strip quotes) and identifiers
-                    var text = sb.ToString();
-                    if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
-                        text = text[1..^1];
-                    return text;
+                    // The join (a hyphenated bare value like "bass-guitar" is
+                    // word+minus+word in the green tree) and the quote stripping are
+                    // written once, on the node — this method used to hold the only
+                    // live copy while the node's own accessor held a different,
+                    // unused one. docs/VALUE_SITE_AUDIT.md §7 ①.
+                    if (prop.Value is { } value)
+                        return value;
                 }
             }
         }

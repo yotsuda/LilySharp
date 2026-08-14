@@ -63,64 +63,87 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第164セッション＝**⒡ の残りを実測で裁定し、そこに実在した拍子桁の欠陥
-（カット・kern・多桁）を点を起こしてから閉じた便**（`e8b57afa` 点／`0e03a3e3` 移植）。
-開始時の裏取りで suite **4558 passed / 0 failed / 4 skipped**・HEAD `5a448dcd`（引継ぎの
-`4c2f0f42` の次＝第163 の handoff commit 自身）・未 push 10・台帳 511 点で不動。
-終了時 suite **4569 passed / 0 failed / 4 skipped**（+11＝新 3 点＋網 8 例）・
-**台帳 514 点・ss 非ゼロ 97・総和 3.609963181**（開始 3.609962441 との差は新 3 点の残差だけ）・
-**snapshot 17 枚を承認の上で再ベース**・未 push 12。
-- **⑴ ★★ 引継ぎの ⒡「DynamicText と TimeSignature は 20 デザインを読んでいる」は反証**。
-  どちらも LP は **`font-size` を宣言しない**（`define-grobs.scm:1433` / `:3922-3934`）ので
-  20·magstep(0)=20pt ⇒ **design 20 が正解**——LP 自身の `ly:stencil-expr` も
-  `emmentaler-20.otf` と印字する。**⒡ が根拠にしていた
-  `staff.staff.dynamic-under-whole-note` の −0.000076 は ink 高さの Pango 量子化**で、
-  `GlyphMetrics.cs` の Pango quantum の remark が**既にそう名指していた**＝**⒧ の族**。
-  ⇒ **観測者を先に確かめよ、という ⒡ 自身の但し書きが当たった**。
-- **⑵ ★★★ 実在したのは光学サイズではなく**活字**だった**（同じ島・同じ手順）。`\number` は
-  `font-encoding fetaText` **だけ**を被せ `font-features` を宣言しない
-  （`define-markup-commands.scm:3872-3981`）⇒ **平文カット**。Lily# は `fattened.*` を
-  引いていた（`Extract-EmmentalerMetrics.py`）。⚠️ **10 桁のうち 8 桁は両カットで同値**なので
-  コーパスには見えなかった。動くのは **1（38→37 px）と 7（38→39 px）で符号が逆**。
-- **⑶ ★★ コーパスに 1/4 の本が 4 冊あっても見えなかった理由**＝**列幅は 2 行の max** で、
-  `1/4` は広い `4` が `1` を隠す。**乖離する桁を支配させる綴り**が要る＝`1/1` と `7/1`
-  （7 は他のどの 2 冪分母より狭いので分母は 1 しかない）。
-- **⑷ 第3の証人は 2 桁行**。`one+zero` は GPOS kern −0.1 を持ち、**snap の内側**に入れると
-  34+43=**77 px＝2.629034646**＝LP の dump と九桁一致（無 kern 80・fattened 78）。
-  ★ **陽性対照**: `11`（無 kern 37+37）と `16`（kern 付き 34+40）が**別経路で同じ 74 px**に着き、
-  LP も両方 74 と印字する。
-- **⑸ 罠を 1 つ回避した**: GPOS walker は **`kern` feature の lookup だけ**に絞ること——
-  `\number` は feature を要求しないので `tnum` 由来の lookup を拾えば偽物になる
-  （+0.1/+0.048 は等幅図形のベアリング補正に見える値）。Emmentaler の GPOS は `kern` 1 つ
-  だけなので**今日は無操作**（既存 8 対はバイト不変）だが、**フォント更新で静かに壊れない形**にした。
-- **⑹ 予約と描画は 3 綴りだった**——予約は実 advance の max、**描画は `digitW = 1.4` の固定値**、
-  さらに複合拍子は `LayoutBeats`（`10^(len-1)`）の代用値。`MeterGlyphRun` 1 本に畳み、
-  予約の経路を `int` から**印字される行**へ変えて `LayoutBeats` を退役させた。
-- **⑺ 踏んだ穴 2 つ**: ① **C グリフ分岐を string overload に移し忘れ**て 4/4・2/2 が digit 経路に
-  落ち、`line-start.time-to-first-note` 族が一斉に落ちた（**それで気づいた**）
-  ② **引用検査は「アドレスより後ろ」の名前しか数えず、判定は行単位**——折り返しで名前が次行に
-  落ちると効かない。**ハイフン名は 3 分節必要**（`font-features` は 2 で不可）。
-- **⑻ 網の穴も 1 つ閉じた**: `TimeSignaturePangoWidthTests` は **6 桁しか pin していなかった**——
-  コメント自身が「fattened が ASCII と一致するのは 4 だけ」と書いており、**どちらのカットでも
-  通る**テストだった。10 桁全部＋2 桁行 4 本に張り替え。
-- **⑼ 動いた出力は性格づけてある**: snapshot 17 枚の差分は **64 行すべてが `class="music"`
-  グリフの `x` のみ**（0.05〜0.13 ss・y も data-pos も構造も不動）、**4/4 と 2/2 の本は不動**。
-  コーパスは **13/82 冊**（`1` か `12` を持つ 4 冊＋digit 経路の拍子を持つ 9 冊＝描画が 1.4 を
-  やめた分）。
-- **⑽ ★★★ 第3便＝直前 commit の取りこぼしを閉じた**（`0e03a3e3` の半分）。
-  **カットには表が 2 つある**——`Extract-EmmentalerMetrics.py`（advance）と
-  `Extract-EmmentalerGlyphs.py`（**ペンが描くコードポイント**）。前者だけ平文へ移したので、
-  **予約は平文の幅・描画は fattened のグリフ**という不整合を自分で作っていた。
-  ⚠️ **台帳点はこれを捕まえない**——点が読むのは*位置*であって*どのグリフか*ではない。
-  ⇒ **カットを直す便は「幅の表」と「グリフの表」を両方数えること。**
-  ★ 裏取り 2 つ: LP の生 dump 全 8 冊に **`fattened` は 0 回**／2 つのカットは
-  **全 10 桁とも別の輪郭**（bbox はほぼ同じで**インク面積が 5〜14% 多い**＝fattened は太い）。
-  ⇒ **幅が動いたのは 1 と 7 だけだが、絵は 10 桁すべて動く**（snapshot 22 枚・コーパス 13/82）。
-  **差分は 71 行すべて `<text>` の中身だけ**で座標・font-size・data-pos・構造は不動。
-  ⚠️ **平文桁は ASCII U+0030-0039 に居る**（fattened は PUA）＝動的記号 `f`/`m`/`p` と同じ
-  addressing。**`.music` は `serif` を fallback に持つので、フォントが読めない環境では
-  拍子が普通の数字として静かに描かれる**（PUA なら豆腐で気づけた）——動的記号が既に同じ
-  性質なので新種ではないが、名前は付けておく。
+最終更新 第166セッション＝**▶ ⒯ を ⑵→⑴ の順に 2 便で進めた便。第1便が「軸A を数え切る」
+（床 19 → 68・除外の線が隠していた欠陥 4 件）、第2便が「override / part property の
+文字列パイプラインを型付きの値にする」（`LysValue` 導入・読み手 5 つを全部「読む」側へ）**。
+開始時の裏取りは**全項目を走らせた**（第165 が飛ばしたので）——**build 通過**・suite
+**4569 passed / 0 failed / 4 skipped**・HEAD `c25743de`・**未 push 16**（2026-08-15 開始時点で計測）・
+**台帳 514 点・ss 非ゼロ 97・総和 3.609963181・count 点 106/うち非ゼロ 2**。
+★ **引継ぎの数は 1 つも stale でなかった**（第165 の ⑻ が「いつ数えたか」を書いたおかげ＝⑼ の教訓が効いた）。
+終了時 **HEAD `0b846ea6`**・**未 push 18**（2 便ぶんのコミット後に計測。⚠️ **この便の
+handoff commit は自分自身を数えられない**＝第165 ⑼）・suite **4575 passed / 0 failed /
+4 skipped**（+6＝新しい網ちょうど）・**snapshot 0 動・台帳 514 点で不動**
+（ss 非ゼロ 97・総和 3.609963181）。
+- **⑽ ★★★ 第2便＝`LysValue` を入れて `override` を型付きにした**（`0b846ea6`。
+  ユーザーの選択は**判別共用体 record**＋**範囲は override と part property**）。
+  `LilySharp.Core\Syntax\LysValue.cs`＝`Int`/`Real`/`Str`/`Bool`/`Symbol`。
+  ★ **値に型が付くのはコレクトの 1 か所だけ**（`LysValue.FromToken`）——
+  引用符外しと「`- 5` の内側の空白落とし」も**トークンの性質**としてそこへ移した。
+  **`GetDouble`/`GetInt`/`GetString`/`GetBool` は新しい `GetValue` の上の 4 行**になり、
+  **`StaffSpacingParameters:284` の迂回路も `ovr.Value.AsDouble` へ**＝
+  **5 つの読み手が全部「読む」側**。part property は `PropertyAssignmentSyntax.Value`
+  （型付き）と `.ValueText`（全連結）に一本化し、`lines` と `octave` は数として読む。
+  **出力は 1 バイトも動いていない**（snapshot 無変更・台帳不動）。
+- **⑾ ★★★ 文法は小数を書けない**（第2便の副産物・実測）。**字句解析に小数が無い**
+  ——`ScanNumber`（`Parser\Lexer.cs:336-362`）は数字だけを食べ `.` を見ない。
+  ⇒ `override Stem.length = 3.5` は **`3` が値になり `.5` は落ちる**。
+  **コーパスで小数の override を書く本は 0 冊**。★ **`double.TryParse` を 5 か所が
+  持っていたのに、文法はそこへ届く値を作れなかった**——`LysValue.Real` は
+  **C# の呼び手（譜間 spacing・音符衝突のテスト）のためだけに在る**。
+  ⚠️ **小数リテラルを足すのは*文法*の変更で単独便の話**（§4 の性能の但し書きが当たる）。
+  **無断で足さないこと**。網 `LysValueTests.ARealIsNotWritableInTheGrammar` が現状を
+  釘付けにしてある＝**その網が落ちたら字句解析が育ったという報せ**。
+- **⑿ 第2便で 1 つ意図的に振る舞いを変えた**: **`Str` は数ではない**。文字列パイプラインは
+  引用符を外してから積んでいたので `= "10"` が `GetDouble` に 10 と答えていた——
+  **型が無いことの漏れ**であって規則ではない。**本番で文字列として読む property は
+  `color` 1 つだけ**なのでコーパスは動かない（網つき）。⚠️ **プレリリースで後方互換の
+  義務が無い**ことを根拠にしている。
+- **⒀ 第2便で踏んだ穴 1 つ**: 網の題材に `part b { … }` と書いて**パースが落ちた**——
+  **`b` は音名で予約済み**。⇒ 網のパート名は `gtr`/`perc` に。★ **推測せず木を覗いて
+  分かった**（`tree.Diagnostics` を出す使い捨ての網を 1 本書いて消した）。
+  ⚠️ **`tree.Root` は green**——赤が要るなら `tree.GetRoot()`。
+- **⒁ REF の数え（RULES §7.5）**: 第2便の `+` 行 275 に対し **`LILYPOND-REF` 0 本・
+  `LILYSHARP-OWN` 0 本**。★ **これは監査対象ではないと判断した**——足したのは
+  **彫版量ではなく Lily# 自身の値配管**で、LP に対応物が無い（LP の値は Scheme オブジェクト）。
+  **数値定数は 1 つも足していない**（機械の当たりは全部スロット添字の `2`/`3`）。
+- **⑴ ★★★ 軸A は 19 ではなく 68**（監査 §1.1）。第165 の 19 は
+  `Expect(IntegerLiteral|StringLiteral)` にしか当たらず、**`Advance()` で値を受ける site が 49 ある**。
+  **値の性格で 4 クラスに割った**——**A1 数値だけ 24 ／ A2 文字列だけ 12 ／
+  A3 多相（＝文字列で保持される）16 ／ A4 値が綴りか反復に埋まっている 16**。
+  ⚠️ **A3 16 件が工事の対象で、A4 16 件は式の層では閉じない**（別項）。
+  ⚠️ **判定は機械ではない**ので、外したもの（閉じた語彙・名前/参照・回復の読み飛ばし・約物）と
+  その根拠を監査 §1.1 に書いた。**線を引き直す人が引き直せる形にしてある。**
+- **⑵ ★★ `override` の読み手は 4 ではなく 5**（監査 §2）。
+  **`Svg\Layout\StaffSpacingParameters.cs:284` が `GrobProperty` を通さずに
+  `double.TryParse(ovr.Value, …)` を直に呼ぶ**（`StaffGrouper` の spacing。プロパティ名も
+  自前で `Split('.', 2)`）。**⒯⑴ の工事範囲がこのぶん広い。**
+- **⑶ ★★★ 「文法の外」の線がファイルの置き場所で引かれていて、4 件を誤除外していた**
+  （監査 §0.1）。`Lexer.cs:243`（トレモロ `:8`）・`StaffSpacingParameters.cs:284`（override 値）・
+  `SharedRenderer.Overlays.cs:124`（`@bend.N` の半音数）・`FiguredBassItem.cs:144`（`@fig.6`）は
+  **どれも .lys に書かれた値を読んでいる**。⇒ **文法内は 39 ではなく 43。**
+  ★ **教訓: 除外は「どのファイルにあるか」ではなく「その数はどこで書かれたか」で決める。**
+- **⑷ ★★ 型のある int を、わざわざ文字列に戻して再 parse している実例を見つけた**（監査 §7 ③）。
+  `@bend.N` は `markName[5..]`→`int`（`MeasureCollector.Annotations.cs:507`）→
+  `BendSemitones`（**int で保持**）→ `$"bendUp:{…}"` で**文字列 sentinel に再符号化**
+  （`ArticulationEngraver.cs:684`）→ `int.TryParse(a.Glyph.AsSpan(7))`（`SharedRenderer.Overlays.cs:124`）。
+  **3 ホップ・2 回 parse。**⚠️ **これは第165 が除外した側に居た**＝⑶ と同じ穴。
+- **⑸ 同じ配管の実例をあと 3 つ台帳にした**（監査 §7。**どれも今日は壊れていない**＝起票ではなく、
+  型付きの値を入れる便が**同時に消せるもの**）: ① **`PropertyAssignmentSyntax.ValueText` は
+  消費者ゼロで死んでいて、しかも生きている読み手と答が違う**——`GetPartProperty` は
+  **全トークン連結**、`ValueText` は**先頭 1 個**（`instrument bass-guitar` で `bass-guitar` 対 `bass`）
+  ② **パーサが診断のためだけに値を数に戻して捨てる 2 件**（`Parser.Music.cs:532` 度数・
+  `Parser.Declarations.cs:403` フレーズ音程）＝下流が同じ文字をもう一度 parse する。
+  **これは軸 A/B/C のどれにも入っていない**（B+C=37 が文法内 43 に足りない差の内訳）
+  ④ **`drummap { … }` の本体は丸ごと生トークン**（`Parser.Directives.cs:112`）＝
+  **部分言語がまるごと未解釈**。A3 の中で唯一「値の位置」ですらなく「本文」。
+- **⑹ §3.3「名前に数が埋まっている」は 3 系統ではなく 6**（＋`@fig.N`・弦番号 `\4`・和音品質 `maj7`）。
+  さらに**反復で数を表す site が 8**（オクターブ記号 `'` `,`＝`c''` の「2」は token の個数）。
+  ⇒ **⒯⑷ の別項はこの 6+8 で起票し直すこと。**
+- **⑺ ⚠️ 監査 §0 の再現手順（第165 の `rg` 版）はこの環境では走らない**——**`rg` は PATH に無い**。
+  素の PowerShell 版に差し替え、**第165 の数（19・77）を再現することを確認**した。
+  ⚠️ ★ **`Advance()` は 182 マッチ / 181 行**（`Parser.Music.cs:796` が 1 行に 2 呼び出し）——
+  **ripgrep の `-c` は行を数え、`Select-String -AllMatches` は呼び出しを数える。**
+  §0 の「数え方も書く」の 6 例目は**単位そのもの**だった。
 - **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
 
@@ -198,6 +221,37 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 **どちらに落ちたかは `LastEditSkippedLineBreak` が言う——ラベルに書く前に必ず読むこと**
 （実編集の測定は `EditKeystrokeBench` が gateMoved / reusedLayout を行に印字する）。
 
+▶ ★★★ **⒯ 文法に「値と式」を入れる**（第165 起票・**site の台帳は `docs/VALUE_SITE_AUDIT.md`**）。
+  **スクリプトの有無と独立に黒字**——いま `override` の値も `time` も `tempo` もリテラル
+  トークンの直読みなので、式が入る日に**消費者を全部直すことになる**（**枠を揃える**）。
+  着手順は監査 §5 のとおり:
+  ~~⑵ 軸A を数え切る~~ — **第166 で完了**（**19 → 68**・4 クラスに分割・監査 §1.1。
+     ⚠️ 同時に**除外の線が 4 件を隠していた**ことが判明＝**文法内は 39 → 43**・監査 §0.1）。
+  ~~⑴ `override` / part property の文字列パイプラインを型付きの値にする~~ —
+     **第166第2便で返済**（`0b846ea6`・§1 ⑽）。`LysValue`（判別共用体 record）が入り、
+     **読み手 5 つが全部「読む」側**になった（`StaffSpacingParameters` の迂回路も含む）。
+     **出力は 1 バイトも動いていない。**
+     ⚠️ ★ **残りは A3 の 7 件**——`tempo` の値 run（`Declarations:315,329`）・
+     **`drummap` 本体**（`Directives:112`＝部分言語まるごと生トークン。**値の位置ですらない**
+     ので小さなパーサを書く話）・`@name(引数)` run（`Music:875`）・metadata/font の回復 run
+     （`Declarations:227,255`）・MIDI part render（`Form:773`）。**次に切るならここ。**
+  ~~⑶ 値の型集合を決める~~ — **第166 で決定（ユーザー判断）＝判別共用体 record**。
+     `LysValue.Int/Real/Str/Bool/Symbol`。**将来 C# 埋め込みへそのまま公開型にできる形**を
+     条件に選んだ。⚠️ **`Pitch`/`Dur` はまだ作っていない**——今回の範囲（override と
+     part property）に要らなかったので**要る便が足す**（`PartTranspose` が自前で音高を
+     読んでいる site が既にある）。
+  ⑷ **名前に数が埋まった系統は 3 ではなく 6**（`@finger.N`・`@bend.N` 半音数・トレモロ `:8`・
+     **`@fig.6`・弦番号 `\4`・和音品質 `maj7`**）＋**反復で数を表す 8 site**（オクターブ記号
+     `'` `,`＝`c''` の「2」は token の個数）。**式の層では閉じない別項**（監査 §1.1 A4・§3.3）。
+  ⚠️ **`DurationSyntax.Value`（`SyntaxNodes.cs:210`）は据え置き**——全音符が通る＝式にすると
+  打鍵ごとに全音符分の評価。**式の層で唯一、性能が設計を決める site**（監査 §4）。
+  ⚠️ **C# 埋め込み自体は v1 に載せない**（第165 の決定・§1 ⑴）。この項はその可否と独立。
+  ⚠️⚠️ ★★★ **文法は小数を書けない**（第166 実測・§1 ⑾）——`ScanNumber` に `.` が無いので
+  `= 3.5` は `3` になる。**式を入れる日にここへ必ず当たる**（`3.5` が書けないなら
+  `1/2 * 7` も書けない）。**小数リテラルは文法の変更＝単独便**で、無断で足さないこと。
+  ⚠️ ★ **第166 の教訓＝「文法の外」は置き場所で決めない**。除外を「どのファイルにあるか」で
+  引いたせいで、**`@bend.N` が int→文字列→int と 3 ホップしている**のを 1 便見落とした
+  （監査 §7 ③）。**その数はどこで書かれたかで決めること。**
 ▶ ★★ **⒮ 第156 の残件**（フィデリティ・perf 順位とは独立。**⑵ volta ending と ⑶ 小節途中
   repeat は第157 で閉じた**＝§1）:
   ⑴ **行頭 prefix 調号＋中間 clef/time 変更グリフの skyline seed**（§2A 同族の続き。
@@ -409,63 +463,86 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 
 ---
 
-## 以下は第163セッションの経緯
+## 以下は第165セッションの経緯
 
-最終更新 第163セッション＝**⒟⁶⑶「fingbeam の fingscripts の memo」を閉じた便**（`4c2f0f42`）。
-ユーザーがその場で 2 度窓を許可したので、**帰属計測（一時プローブ・revert 済み）→設計→実装→
-同一窓・同一 binary の ON/OFF/ON A/B** までを 1 便で。開始時の裏取りで suite
-**4554 passed / 0 failed / 4 skipped**・HEAD `6f350cff`（引継ぎの `1d0485f2` は stale＝
-第162 の 3 便が入っていた）・未 push 8・台帳不動。終了時 suite **4554 → 4558 passed /
-0 failed / 4 skipped（+4＝網）**・**snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・
-総和 3.609962441・count 106/非ゼロ 2）**・未 push 9。
-- **⑴ ★★ 帰属計測が引継ぎの照準を外していた**。第158 は「fingscripts」を**1 つの数**として、
-  第159 は **~33 ms** として記録しており、どちらも**島（`ComputeFingeringIslands`）の費用**
-  と読めた。一時プローブで割ると perf-fingbeam1k は **islands 28.05 ＋ walk 39.11 ms/打鍵**
-  （Release 床・prelim+final 合計）＝**大きいのは walk のほう**（`CalculateWithFingerings` の
-  fingering flush）。**aug（`AugmentSkylinesWithScripts`）は 3 冊とも 0.00**。
-  digit の無い 2 冊は項そのものが **plain 3.4 / v2bow 0.4 ms**＝**fingbeam 専用の島**は正しい。
-  ⇒ **「1 つの数」で引き継いだ段は、着手する便が必ず割り直す。**
-- **⑵ 単位は (staff, system)**。digit の答えは**その音符だけの関数**（島＝自分の頭・音価・
-  数字・X／flush＝自分の列に既に置かれた script と自分を覆うスラー）なので、walk の
-  `fingerings` 引数から単位ごと抜いても**残りの呼び出しはバイト同一**。
-- **⑶ ★★★ モデルは鍵に入れられない**——注釈 pass の `Measure`（と `Items` 配列）は
-  **打鍵ごとに作り直される**（**実測**: 網が hits 0 / misses 6 で落ち、6 単位すべてが
-  この節だけで decline・layout と beam は一致していた）。**これは ▶ ⒫ ⑵⑶ が梁検出の memo
-  について既に名指している壁と同じもの**。代わりに立つのが **`MeasureLayout` の instance**:
-  `SystemLayoutCache` は**ヒット時にだけ**同じ配列を返し、そのヒット判定はその system の
-  `MeasureContentKey` slice を要素ごとに比較する——そして content key は
-  **全譜の items を反射で畳んだ過敏な fold**（`Compute(MultiStaffScore)`）。
-  ⇒ **新しい網羅性の主張ではなく、per-system measure cache と全体再利用が既に立っている
-  同じ主張**。鍵の残りは生入力: 単位に触れる beam の**参照**（per-(staff, system) で
-  cache 済み＝identity が立つ）・voice 0 のスラーの**値**・staff offset の値・小節番号。
-- **⑷ script を持つ単位は memo しない**（**宣言したゲート・網で固定**）。script と digit が
-  同じ音符の 1 つの列に積まれるので、digit を再生するなら**それを読む script ごと**再生する
-  ことになり、articulation 出力の再組み立てと全 `SourceIndex` の付け替えが要る。
-  **script が「在る」だけで単位を降ろす**ことで、**呼び出しの articulation 側は文字通り無傷**
-  （全配列が入り全配列が同じ順・同じ stamp で出る）。⇒ **digit と script が同じ system に
-  同居する本は旧価格のまま**。**測った本にそれは 1 冊も無い**（そう書いた）。
-- **⑸ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
-  `scratch\fingbench-163.txt`・untracked）**: fingscripts 項の床（islands+walk・prelim+final）
-  **fingbeam1k 50.42 → 6.80 / 6.74 ms＝−43.7 ms/打鍵**。digit の無い 2 冊は walk の代わりに
-  partition を払って帯の中で動く（**plain 2.60 → 3.08 / 2.71**・**v2bow 0.27 → 0.46 / 0.40**）。
-  ⚠️ **総床の差は主張しない**（この窓の plain 総床は腕ごとに 148〜204 ms）——主張は同一 run 内の
-  帰属だけ（§7.9・第161 と同じ規律）。⚠️ **生データに Debug 混入行あり**（suite 実行時に
-  `LILYSHARP_EDIT_BENCH` が残っていた——**第161 と同じ踏み方**）。ファイル末尾の NOTE が正の
-  block を名指す。**残る 6.8 ms** は pass ごとの全書 fold（beamed-stem-tip 表・
-  beams-by-measure バケツ）＋編集単位自身の live 島と flush。
-- **⑹ 網 4 枚**（`IncrementalCompilerTests`）: 多 system の指番号本の編集が cache-free full と
-  一致＋両 pass の store で hits>0＋編集単位は decline／**数字だけを変える編集**（音高を変えない
-  ので小節の他は動かない）が decline して**出力も動く**＝**layout-identity 鍵の staleness
-  陽性対照**（鍵が無ければ古い数字を逐語再生するところ）／スラー付き指番号本が full と一致／
-  **全小節に script のある本は store が空のまま full と一致**＝⑷ のゲートを assert。
-- **⑺ 移植物はゼロ**（checklist 7.6 ⒟）——定数も幾何も LP 規則も足していない。2 つの engraver の
-  本体は無傷で、memo は**誰が呼ぶか**だけを決める。`FingeringEngraver` に internal overload を
-  1 本足したのは、既存 overload が**呼ぶたびに全書の梁を畳む**ので per-system 呼び出しが
-  それを system ごとに払ってしまうため。
-- **⑻ batch は構造的に不変**——`lysc`・`SvgGenerator`・session 外の全テストは
-  `systemCache == null` ⇒ memo が null ⇒ 旧来の全書 island と walk（snapshot 0 動が裏）。
-- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
-  従来どおり）。
+最終更新 第165セッション＝**残債返済を止めて文法の整理に舵を切った便。⑴「Scheme の代わりに
+C# 埋め込み」の可否を実測で裁定し ⑵ LP の Scheme 用途を現物から数え ⑶「式」を入れる日に触る
+site を全数調査して `docs/VALUE_SITE_AUDIT.md` に起票した**。
+⚠️⚠️ **本便は §0 の裏取りをほとんど走らせていない**——**build / suite / 台帳は未実行**で、
+**この §1 に suite 数・台帳点数は書いていない**（書けば第164 の数の写しになるので書かなかった）。
+git だけは終わりに確認した＝**⑻**。⚠️ そこで**引継ぎの未 push 数の stale を 1 件拾った＝⑼**。
+**エンジンのコードは 1 行も動いていない**（変更は docs 1 枚の新規と `scratch\` の生データのみ）。
+- **⑴ 決定: C# 埋め込みは v1 に載せない**（ユーザー判断）。**ただし文法は将来の埋め込みと
+  整合する形にいまから整える**——その「整える」の中身は**語彙の予約ではなく構造**。
+  Lily# はプレリリースで後方互換の義務が無く、`#` `%` バッククォート `&` は `SyntaxKind` に
+  未使用のまま（実測）なので、**記号は後からいくらでも取れる＝予約に価値がほぼ無い**。
+- **⑵ ★★ Roslyn scripting の値段（実測）**。⚠️ **Lily# の外**・単独プロセス・Release・
+  .NET 9.0.19・`Microsoft.CodeAnalysis.CSharp.Scripting` 4.14.0・16 コア・
+  生データ `scratch\scriptbench-165.txt`。**楽観的な床**（プロセス内では悪化しうる）:
+  **cold（プロセス最初の 1 本）0.70–1.64 秒**／**本文が変わるたびの再コンパイル＝
+  tiny 65–77 ms・現実的な 10 行 162–200 ms**（min–median）／**本文不変＝キャッシュ命中 11.5–17.2 µs**。
+  ⇒ ★ **スクリプト本文をタイプ中の毎打鍵コンパイルはリアルタイムにならない**——現実的な 10 行が
+  第159 の Release 打鍵床（plain 114.2 / fingbeam 227.4 / v2bow 166.2 ms）と同格以上。
+  **「直前に成功した delegate で描き続け、コンパイルは idle 時だけ」は仕様であって工夫ではない。**
+  ⇒ ★★ **しかしキャッシュ命中は打鍵床の 1 万分の 1**＝**スクリプトを含む本の「音楽」を編集する
+  分には課金ゼロ**。**展開相を parse と collect の間に置けば、下流（collect / splice / layout /
+  render とその全 memo）は 1 行も触らずに済む**ことが、値段の上で裏づいた。
+- **⑶ ⚠️ collectible ALC は最適化ではなく必須**（実測）——25 回コンパイルで
+  ロード済みアセンブリ **12 → 56**、1 つも解放されない。
+- **⑷ ⚠️ ★ 「allowlist は安全性だけでなく速度の得にもなる」は反証された**。参照 7 個の lean は
+  164 個の broad より**再現性をもって 1.5–2 倍遅い**（fresh process の A/B/A/B で 4 回とも同じ向き）。
+  **機構は不明なので説明は作っていない。**⇒ **allowlist は安全のためにやる。速さを理由にしない。**
+  ⚠️ 第1 回の測定は broad と lean を同一プロセスに並べて**順序が交絡**していた（**捨てた**）。
+- **⑸ LP の Scheme 用途を 2.26.0 の現物から数えた**
+  （`C:\bin\lilypond-2.26.0\share\lilypond\2.26.0`）: grob プロパティの**手続き値 507**
+  （`scm\lily\define-grobs.scm` の `. ,ly:` 438 ＋ `. ,(` 69）・
+  `define-{music,scheme,void,event}-function` **235**（`ly\music-functions-init.ly` 155・
+  `ly\property-init.ly` 25）・`define-markup-command(-list)` **217**
+  （`scm\lily\define-markup-commands.scm` 194）。
+  ★ **ユーザーが「文法」だと思っている命令の大半が Scheme 関数**（`\absolute` `\afterGrace`
+  `\applyContext` `\autoChange` `\arpeggioBracket` `\harmonicsOn` `\accidentalStyle`）。
+  ⚠️ **これは LP の中身であってユーザーの書き方ではない**（LSR は手元に無い＝測っていない）。
+  ⇒ Lily# が埋めるべき穴は**生成系（自作命令・markup・楽曲変換）だけ**。ユーザーが打つ `#` の
+  大多数＝**データリテラルと設定一行は、すでにネイティブ構文で置換済み**。
+- **⑹ ★★★ 値 site の全数調査＝`docs/VALUE_SITE_AUDIT.md`**（第166 で数え切り・下記）。
+  **最大の発見は `override` と part property の値が文字列のまま全工程を横断すること**——
+  `OverrideDeclarationSyntax.ValueToken`（`SyntaxNodes.Overrides.cs:41`）は生トークンで、
+  値は `Dictionary<string, Dictionary<string,string>>` に積まれ、
+  `GrobProperty.GetDouble`/`GetInt`（`:218`/`:233`）が**使う場所で初めて数に戻す**。
+  ⇒ **式は `Dictionary<string,string>` を通れない。式の層の本体はこの配管であって、
+  読み取り site の数ではない。**
+  数: **軸A（パーサがリテラルを要求）19 ／ 軸B（構文アクセサが変換）17 ／
+  軸C（下流が自前で再解釈）20**（変換 site は Core 全体 77 件中、文法内 39 件）。
+  ⚠️ **軸A の 19 は床**——`Values` 走査型（`Tempo`/`Metadata`/`PropertyAssignment`/`override`）は
+  数えていない。⚠️ **C > B が主眼**＝同じ値を 2 か所以上が別々に読んでいる（第164 の
+  「カットには表が 2 つある」と同型の形）。
+  **⇒ 第166 が数え切った: 軸A は 68・文法内は 43。**
+  ⚠️ **`DurationSyntax.Value`（`SyntaxNodes.cs:210`）は据え置き**——全音符が通るので式にすると
+  打鍵ごとに全音符分の評価。同 site のコメントが**「壊れた入力で throw すると Problems パネルが
+  空になった」実害**を記録している。
+- **⑺ 副産物 2 つ**: ① `GRAMMAR_STATUS.md` の「Multi-file projects（`include` across files）
+  未実装」は **stale**——`using "file.lys"` は `Parser\UsingExpander.cs` に実在（深さ優先・
+  フルパスで重複排除・循環は停止・読めないファイルは inert）。**文法ドキュメントを整理する便で
+  落とすこと**（本便では `GRAMMAR_STATUS.md` を触っていない）。
+  ② **ユーザーレベルの NuGet.config が、存在しない private feed（UiPath
+  `Autopilot for Everyone-Packages`）を見に行き、新規プロジェクトの restore が 37 秒かけて失敗する。**
+  LilySharp 本体はキャッシュ済みなので気づかないが、**新しくパッケージを足す日に必ず踏む**
+  （回避は当該プロジェクトに `NuGet.config` を置いて `<clear/>` ＋ nuget.org のみ）。
+- **⑻ 本便の終わりに git だけは裏取りした**（**build / suite / 台帳は依然として未実行**）:
+  **HEAD `c25743de`**（`docs/VALUE_SITE_AUDIT.md` の単独コミット）・**未 push 16**・
+  **未追跡は `audit/lp-regression/lp-vs-lilysharp.html` の 1 件のみ**（第156 開始時から。触っていない）。
+  **`docs/HANDOFF.md` と `docs/HANDOFF-ARCHIVE.md` は未コミットのまま。**
+  ⚠️ **`scratch/` は `.gitignore:81` で無視対象**——生データは「未追跡」ではなく
+  **リポジトリに入らない**（`scratch\scriptbench-165.txt` も、第163 の `fingbench-163.txt` も同じ）。
+- **⑼ ⚠️ ★★ 引継ぎの数が stale だった（§0 の罠の 5 例目）**——第164 の §1 は
+  「終了時 未 push 12」と書いていたが**実測 15**（本便のコミット前）。
+  **handoff commit 自身（`d9c2a90e`）と、その後に重ねた 2 便（`d6fc9af5`・`bdbef97d`）が
+  数えられていない**。第164 の ⑽ と ▶ ⒦ の**散文はその 2 便を記述している**ので、
+  **stale なのは数だけ**。⇒ ★ **handoff commit は自分自身を数えられない。**
+  **未 push 数を書いた後に便を重ねたら、その数は必ず古くなる**——
+  **書くなら「いつ数えたか」を添えること。**
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定）。
+
 
 ---
 

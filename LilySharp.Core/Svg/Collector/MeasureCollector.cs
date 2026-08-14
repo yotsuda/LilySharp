@@ -1013,7 +1013,7 @@ public sealed partial class MeasureCollector
     // _sectionResetClef, but a SET): the part-default values — global + this voice's
     // part-body overrides — snapshotted at collection start. Section-internal overrides
     // reset to this at each boundary, so they never leak into the next section.
-    private readonly Dictionary<(string Grob, string Prop), string> _sectionResetOverrides = new();
+    private readonly Dictionary<(string Grob, string Prop), LysValue> _sectionResetOverrides = new();
     // Grob properties changed by an IN-MUSIC override in the current section; each is
     // reset (to the part default, or reverted) at the next section boundary.
     private readonly HashSet<(string Grob, string Prop)> _sectionActiveGrobProps = new();
@@ -2681,7 +2681,10 @@ public sealed partial class MeasureCollector
                             texts.Add(vt.Text);
                     instrument = InstrumentDefaults.SplitInstrument(texts).Preset.ToLowerInvariant();
                 }
-                else if (propName == "octave" && int.TryParse(valueToken.Text, out var oct))
+                else if (propName == "octave" && prop.Value?.AsInt is int oct)
+                    // Read off the typed value instead of reparsing the first token —
+                    // the three branches of this loop used to interpret the same node
+                    // three different ways (docs/VALUE_SITE_AUDIT.md §1.1 A3).
                     octave = oct;
             }
 

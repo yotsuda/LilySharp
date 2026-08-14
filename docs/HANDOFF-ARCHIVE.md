@@ -18,6 +18,131 @@
 
 ---
 
+## 以下は第164セッションの経緯
+
+最終更新 第164セッション＝**⒡ の残りを実測で裁定し、そこに実在した拍子桁の欠陥
+（カット・kern・多桁）を点を起こしてから閉じた便**（`e8b57afa` 点／`0e03a3e3` 移植）。
+開始時の裏取りで suite **4558 passed / 0 failed / 4 skipped**・HEAD `5a448dcd`（引継ぎの
+`4c2f0f42` の次＝第163 の handoff commit 自身）・未 push 10・台帳 511 点で不動。
+終了時 suite **4569 passed / 0 failed / 4 skipped**（+11＝新 3 点＋網 8 例）・
+**台帳 514 点・ss 非ゼロ 97・総和 3.609963181**（開始 3.609962441 との差は新 3 点の残差だけ）・
+**snapshot 17 枚を承認の上で再ベース**・未 push 12。
+- **⑴ ★★ 引継ぎの ⒡「DynamicText と TimeSignature は 20 デザインを読んでいる」は反証**。
+  どちらも LP は **`font-size` を宣言しない**（`define-grobs.scm:1433` / `:3922-3934`）ので
+  20·magstep(0)=20pt ⇒ **design 20 が正解**——LP 自身の `ly:stencil-expr` も
+  `emmentaler-20.otf` と印字する。**⒡ が根拠にしていた
+  `staff.staff.dynamic-under-whole-note` の −0.000076 は ink 高さの Pango 量子化**で、
+  `GlyphMetrics.cs` の Pango quantum の remark が**既にそう名指していた**＝**⒧ の族**。
+  ⇒ **観測者を先に確かめよ、という ⒡ 自身の但し書きが当たった**。
+- **⑵ ★★★ 実在したのは光学サイズではなく**活字**だった**（同じ島・同じ手順）。`\number` は
+  `font-encoding fetaText` **だけ**を被せ `font-features` を宣言しない
+  （`define-markup-commands.scm:3872-3981`）⇒ **平文カット**。Lily# は `fattened.*` を
+  引いていた（`Extract-EmmentalerMetrics.py`）。⚠️ **10 桁のうち 8 桁は両カットで同値**なので
+  コーパスには見えなかった。動くのは **1（38→37 px）と 7（38→39 px）で符号が逆**。
+- **⑶ ★★ コーパスに 1/4 の本が 4 冊あっても見えなかった理由**＝**列幅は 2 行の max** で、
+  `1/4` は広い `4` が `1` を隠す。**乖離する桁を支配させる綴り**が要る＝`1/1` と `7/1`
+  （7 は他のどの 2 冪分母より狭いので分母は 1 しかない）。
+- **⑷ 第3の証人は 2 桁行**。`one+zero` は GPOS kern −0.1 を持ち、**snap の内側**に入れると
+  34+43=**77 px＝2.629034646**＝LP の dump と九桁一致（無 kern 80・fattened 78）。
+  ★ **陽性対照**: `11`（無 kern 37+37）と `16`（kern 付き 34+40）が**別経路で同じ 74 px**に着き、
+  LP も両方 74 と印字する。
+- **⑸ 罠を 1 つ回避した**: GPOS walker は **`kern` feature の lookup だけ**に絞ること——
+  `\number` は feature を要求しないので `tnum` 由来の lookup を拾えば偽物になる
+  （+0.1/+0.048 は等幅図形のベアリング補正に見える値）。Emmentaler の GPOS は `kern` 1 つ
+  だけなので**今日は無操作**（既存 8 対はバイト不変）だが、**フォント更新で静かに壊れない形**にした。
+- **⑹ 予約と描画は 3 綴りだった**——予約は実 advance の max、**描画は `digitW = 1.4` の固定値**、
+  さらに複合拍子は `LayoutBeats`（`10^(len-1)`）の代用値。`MeterGlyphRun` 1 本に畳み、
+  予約の経路を `int` から**印字される行**へ変えて `LayoutBeats` を退役させた。
+- **⑺ 踏んだ穴 2 つ**: ① **C グリフ分岐を string overload に移し忘れ**て 4/4・2/2 が digit 経路に
+  落ち、`line-start.time-to-first-note` 族が一斉に落ちた（**それで気づいた**）
+  ② **引用検査は「アドレスより後ろ」の名前しか数えず、判定は行単位**——折り返しで名前が次行に
+  落ちると効かない。**ハイフン名は 3 分節必要**（`font-features` は 2 で不可）。
+- **⑻ 網の穴も 1 つ閉じた**: `TimeSignaturePangoWidthTests` は **6 桁しか pin していなかった**——
+  コメント自身が「fattened が ASCII と一致するのは 4 だけ」と書いており、**どちらのカットでも
+  通る**テストだった。10 桁全部＋2 桁行 4 本に張り替え。
+- **⑼ 動いた出力は性格づけてある**: snapshot 17 枚の差分は **64 行すべてが `class="music"`
+  グリフの `x` のみ**（0.05〜0.13 ss・y も data-pos も構造も不動）、**4/4 と 2/2 の本は不動**。
+  コーパスは **13/82 冊**（`1` か `12` を持つ 4 冊＋digit 経路の拍子を持つ 9 冊＝描画が 1.4 を
+  やめた分）。
+- **⑽ ★★★ 第3便＝直前 commit の取りこぼしを閉じた**（`0e03a3e3` の半分）。
+  **カットには表が 2 つある**——`Extract-EmmentalerMetrics.py`（advance）と
+  `Extract-EmmentalerGlyphs.py`（**ペンが描くコードポイント**）。前者だけ平文へ移したので、
+  **予約は平文の幅・描画は fattened のグリフ**という不整合を自分で作っていた。
+  ⚠️ **台帳点はこれを捕まえない**——点が読むのは*位置*であって*どのグリフか*ではない。
+  ⇒ **カットを直す便は「幅の表」と「グリフの表」を両方数えること。**
+  ★ 裏取り 2 つ: LP の生 dump 全 8 冊に **`fattened` は 0 回**／2 つのカットは
+  **全 10 桁とも別の輪郭**（bbox はほぼ同じで**インク面積が 5〜14% 多い**＝fattened は太い）。
+  ⇒ **幅が動いたのは 1 と 7 だけだが、絵は 10 桁すべて動く**（snapshot 22 枚・コーパス 13/82）。
+  **差分は 71 行すべて `<text>` の中身だけ**で座標・font-size・data-pos・構造は不動。
+  ⚠️ **平文桁は ASCII U+0030-0039 に居る**（fattened は PUA）＝動的記号 `f`/`m`/`p` と同じ
+  addressing。**`.music` は `serif` を fallback に持つので、フォントが読めない環境では
+  拍子が普通の数字として静かに描かれる**（PUA なら豆腐で気づけた）——動的記号が既に同じ
+  性質なので新種ではないが、名前は付けておく。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定）。
+- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
+
+---
+
+## 以下は第163セッションの経緯
+
+最終更新 第163セッション＝**⒟⁶⑶「fingbeam の fingscripts の memo」を閉じた便**（`4c2f0f42`）。
+ユーザーがその場で 2 度窓を許可したので、**帰属計測（一時プローブ・revert 済み）→設計→実装→
+同一窓・同一 binary の ON/OFF/ON A/B** までを 1 便で。開始時の裏取りで suite
+**4554 passed / 0 failed / 4 skipped**・HEAD `6f350cff`（引継ぎの `1d0485f2` は stale＝
+第162 の 3 便が入っていた）・未 push 8・台帳不動。終了時 suite **4554 → 4558 passed /
+0 failed / 4 skipped（+4＝網）**・**snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・
+総和 3.609962441・count 106/非ゼロ 2）**・未 push 9。
+- **⑴ ★★ 帰属計測が引継ぎの照準を外していた**。第158 は「fingscripts」を**1 つの数**として、
+  第159 は **~33 ms** として記録しており、どちらも**島（`ComputeFingeringIslands`）の費用**
+  と読めた。一時プローブで割ると perf-fingbeam1k は **islands 28.05 ＋ walk 39.11 ms/打鍵**
+  （Release 床・prelim+final 合計）＝**大きいのは walk のほう**（`CalculateWithFingerings` の
+  fingering flush）。**aug（`AugmentSkylinesWithScripts`）は 3 冊とも 0.00**。
+  digit の無い 2 冊は項そのものが **plain 3.4 / v2bow 0.4 ms**＝**fingbeam 専用の島**は正しい。
+  ⇒ **「1 つの数」で引き継いだ段は、着手する便が必ず割り直す。**
+- **⑵ 単位は (staff, system)**。digit の答えは**その音符だけの関数**（島＝自分の頭・音価・
+  数字・X／flush＝自分の列に既に置かれた script と自分を覆うスラー）なので、walk の
+  `fingerings` 引数から単位ごと抜いても**残りの呼び出しはバイト同一**。
+- **⑶ ★★★ モデルは鍵に入れられない**——注釈 pass の `Measure`（と `Items` 配列）は
+  **打鍵ごとに作り直される**（**実測**: 網が hits 0 / misses 6 で落ち、6 単位すべてが
+  この節だけで decline・layout と beam は一致していた）。**これは ▶ ⒫ ⑵⑶ が梁検出の memo
+  について既に名指している壁と同じもの**。代わりに立つのが **`MeasureLayout` の instance**:
+  `SystemLayoutCache` は**ヒット時にだけ**同じ配列を返し、そのヒット判定はその system の
+  `MeasureContentKey` slice を要素ごとに比較する——そして content key は
+  **全譜の items を反射で畳んだ過敏な fold**（`Compute(MultiStaffScore)`）。
+  ⇒ **新しい網羅性の主張ではなく、per-system measure cache と全体再利用が既に立っている
+  同じ主張**。鍵の残りは生入力: 単位に触れる beam の**参照**（per-(staff, system) で
+  cache 済み＝identity が立つ）・voice 0 のスラーの**値**・staff offset の値・小節番号。
+- **⑷ script を持つ単位は memo しない**（**宣言したゲート・網で固定**）。script と digit が
+  同じ音符の 1 つの列に積まれるので、digit を再生するなら**それを読む script ごと**再生する
+  ことになり、articulation 出力の再組み立てと全 `SourceIndex` の付け替えが要る。
+  **script が「在る」だけで単位を降ろす**ことで、**呼び出しの articulation 側は文字通り無傷**
+  （全配列が入り全配列が同じ順・同じ stamp で出る）。⇒ **digit と script が同じ system に
+  同居する本は旧価格のまま**。**測った本にそれは 1 冊も無い**（そう書いた）。
+- **⑸ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
+  `scratch\fingbench-163.txt`・untracked）**: fingscripts 項の床（islands+walk・prelim+final）
+  **fingbeam1k 50.42 → 6.80 / 6.74 ms＝−43.7 ms/打鍵**。digit の無い 2 冊は walk の代わりに
+  partition を払って帯の中で動く（**plain 2.60 → 3.08 / 2.71**・**v2bow 0.27 → 0.46 / 0.40**）。
+  ⚠️ **総床の差は主張しない**（この窓の plain 総床は腕ごとに 148〜204 ms）——主張は同一 run 内の
+  帰属だけ（§7.9・第161 と同じ規律）。⚠️ **生データに Debug 混入行あり**（suite 実行時に
+  `LILYSHARP_EDIT_BENCH` が残っていた——**第161 と同じ踏み方**）。ファイル末尾の NOTE が正の
+  block を名指す。**残る 6.8 ms** は pass ごとの全書 fold（beamed-stem-tip 表・
+  beams-by-measure バケツ）＋編集単位自身の live 島と flush。
+- **⑹ 網 4 枚**（`IncrementalCompilerTests`）: 多 system の指番号本の編集が cache-free full と
+  一致＋両 pass の store で hits>0＋編集単位は decline／**数字だけを変える編集**（音高を変えない
+  ので小節の他は動かない）が decline して**出力も動く**＝**layout-identity 鍵の staleness
+  陽性対照**（鍵が無ければ古い数字を逐語再生するところ）／スラー付き指番号本が full と一致／
+  **全小節に script のある本は store が空のまま full と一致**＝⑷ のゲートを assert。
+- **⑺ 移植物はゼロ**（checklist 7.6 ⒟）——定数も幾何も LP 規則も足していない。2 つの engraver の
+  本体は無傷で、memo は**誰が呼ぶか**だけを決める。`FingeringEngraver` に internal overload を
+  1 本足したのは、既存 overload が**呼ぶたびに全書の梁を畳む**ので per-system 呼び出しが
+  それを system ごとに払ってしまうため。
+- **⑻ batch は構造的に不変**——`lysc`・`SvgGenerator`・session 外の全テストは
+  `systemCache == null` ⇒ memo が null ⇒ 旧来の全書 island と walk（snapshot 0 動が裏）。
+- **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
+  従来どおり）。
+
+---
+
 ## 以下は第162セッションの経緯
 
 最終更新 第162セッション＝**§2 の起票「加線が譜面の長さに対して二次で増える」を実測で

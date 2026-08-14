@@ -86,7 +86,7 @@ public class GrobOverrideTests
             "  section A { clef treble c4 d e f | } section B { g4 a b c' | } }\n" +
             "form main { A B }\nscore main { staff melody }");
         var ov = Assert.Single(score.GrobOverrides);
-        Assert.Equal("red", ov.Value);
+        Assert.Equal(new LysValue.Symbol("red"), ov.Value);
         Assert.Equal(0, ov.StaffIndex);    // melody's staff
         Assert.Equal(0, ov.MeasureIndex);  // part default, from the start
         Assert.Equal(0, ov.ItemIndex);
@@ -102,7 +102,7 @@ public class GrobOverrideTests
             "section A { override NoteHead.color = red  melody { c4 d e f | } bass { c2 g | } }\n" +
             "section B { melody { g4 a b c' | } bass { e2 c | } }\n" +
             "form main { A B }\nscore main { staff melody  staff bass }");
-        var reds = score.GrobOverrides.Where(o => o.Value == "red").ToList();
+        var reds = score.GrobOverrides.Where(o => o.Value.AsText == "red").ToList();
         Assert.Equal(2, reds.Count);
         Assert.Contains(reds, o => o.StaffIndex == 0);   // melody
         Assert.Contains(reds, o => o.StaffIndex == 1);   // bass
@@ -118,8 +118,8 @@ public class GrobOverrideTests
             "part m { clef treble }\n" +
             "section A { m { voice { override NoteHead.color = red c4 d e f | } { override NoteHead.color = blue c2 g | } } }\n" +
             "form main { A }\nscore main { staff m }");
-        Assert.Equal(1, Assert.Single(score.GrobOverrides.Where(o => o.Value == "red")).VoiceIndex);
-        Assert.Equal(2, Assert.Single(score.GrobOverrides.Where(o => o.Value == "blue")).VoiceIndex);
+        Assert.Equal(1, Assert.Single(score.GrobOverrides.Where(o => o.Value.AsText == "red")).VoiceIndex);
+        Assert.Equal(2, Assert.Single(score.GrobOverrides.Where(o => o.Value.AsText == "blue")).VoiceIndex);
     }
 
     [Fact]
@@ -196,8 +196,8 @@ public class GrobOverrideTests
     public void ForStaffVoice_SeesOnlyInScopeOverrides()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("NoteHead", "color", "red", 0, 0, false, StaffIndex: 0),   // staff 0 only
-            new GrobOverride("Stem", "color", "blue", 0, 0, false, StaffIndex: null));  // all staves
+            new GrobOverride("NoteHead", "color", new LysValue.Symbol("red"), 0, 0, false, StaffIndex: 0),   // staff 0 only
+            new GrobOverride("Stem", "color", new LysValue.Symbol("blue"), 0, 0, false, StaffIndex: null));  // all staves
         var reverts = ImmutableArray<GrobRevert>.Empty;
 
         var staff0 = GrobPropertyResolver.ForStaffVoice(overrides, reverts, staffIndex: 0, voiceIndex: 1);
@@ -316,7 +316,8 @@ public class GrobOverrideTests
         Assert.Single(score.GrobOverrides);
         Assert.Equal("Stem", score.GrobOverrides[0].GrobType);
         Assert.Equal("length", score.GrobOverrides[0].PropertyName);
-        Assert.Equal("10", score.GrobOverrides[0].Value);
+        // The value is TYPED at collection — an integer, not the text "10".
+        Assert.Equal(new LysValue.Int(10), score.GrobOverrides[0].Value);
         Assert.Equal(0, score.GrobOverrides[0].MeasureIndex);
         Assert.False(score.GrobOverrides[0].IsOnce);
     }
@@ -327,7 +328,7 @@ public class GrobOverrideTests
         // "- 5" (a space between the sign and the digits) must (a) round-trip verbatim —
         // the combined negative-number token keeps the interior whitespace in its text so
         // root.FullWidth == text.Length and positions don't drift — and (b) still resolve
-        // to the numeric value "-5" (the collector strips that interior whitespace).
+        // to the number -5 (LysValue.FromToken strips that interior whitespace).
         var source = "override Stem.length = - 5 c4 d e f";
         var tree = SyntaxTree.Parse(source);
 
@@ -335,7 +336,7 @@ public class GrobOverrideTests
 
         var score = new MeasureCollector().Collect(tree);
         Assert.Single(score.GrobOverrides);
-        Assert.Equal("-5", score.GrobOverrides[0].Value);
+        Assert.Equal(new LysValue.Int(-5), score.GrobOverrides[0].Value);
     }
 
     [Fact]
@@ -409,7 +410,7 @@ public class GrobOverrideTests
     public void Resolver_Override_GetDouble()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "length", "10", 0, 0));
+            new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 0));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -420,7 +421,7 @@ public class GrobOverrideTests
     public void Resolver_Override_GetDouble_NotYetActive()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "length", "10", 0, 2));
+            new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 2));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -434,7 +435,7 @@ public class GrobOverrideTests
     public void Resolver_Revert_RemovesOverride()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "length", "10", 0, 0));
+            new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 0));
         var reverts = ImmutableArray.Create(
             new GrobRevert("Stem", "length", 0, 2));
         var resolver = new GrobPropertyResolver(overrides, reverts);
@@ -450,7 +451,7 @@ public class GrobOverrideTests
     public void Resolver_OnceOverride_ClearsAfterOneAdvance()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "length", "10", 0, 0, IsOnce: true));
+            new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 0, IsOnce: true));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -465,7 +466,7 @@ public class GrobOverrideTests
     public void Resolver_IsOverridden()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "length", "10", 0, 0));
+            new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 0));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -478,7 +479,7 @@ public class GrobOverrideTests
     public void Resolver_GetString()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "direction", "up", 0, 0));
+            new GrobOverride("Stem", "direction", new LysValue.Symbol("up"), 0, 0));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -489,7 +490,7 @@ public class GrobOverrideTests
     public void Resolver_GetBool()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("NoteHead", "transparent", "true", 0, 0));
+            new GrobOverride("NoteHead", "transparent", new LysValue.Symbol("true"), 0, 0));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -500,7 +501,7 @@ public class GrobOverrideTests
     public void Resolver_GetInt()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("StaffSymbol", "linecount", "1", 0, 0));
+            new GrobOverride("StaffSymbol", "linecount", new LysValue.Int(1), 0, 0));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -511,8 +512,8 @@ public class GrobOverrideTests
     public void Resolver_MultipleOverrides_SameGrob()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "length", "10", 0, 0),
-            new GrobOverride("Stem", "thickness", "3", 0, 0));
+            new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 0),
+            new GrobOverride("Stem", "thickness", new LysValue.Int(3), 0, 0));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -524,8 +525,8 @@ public class GrobOverrideTests
     public void Resolver_Override_ReplacesPrevious()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("Stem", "length", "10", 0, 0),
-            new GrobOverride("Stem", "length", "7", 0, 2));
+            new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 0),
+            new GrobOverride("Stem", "length", new LysValue.Int(7), 0, 2));
         var resolver = new GrobPropertyResolver(overrides, ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);

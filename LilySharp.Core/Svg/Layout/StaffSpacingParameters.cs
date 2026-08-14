@@ -281,8 +281,11 @@ internal sealed record StaffSpacingParameters
             string spacingType = parts[0];
             string subProperty = parts[1];
 
-            if (!double.TryParse(ovr.Value, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out double value))
+            // The value arrives typed (LysValue), so this reads it instead of reparsing
+            // the token text — this method was the FIFTH reader of the override string
+            // and the only one that bypassed GrobPropertyResolver entirely
+            // (docs/VALUE_SITE_AUDIT.md §2). A non-numeric override is still ignored.
+            if (ovr.Value.AsDouble is not double value)
                 continue;
 
             if (spacingType == "staff-staff-spacing")

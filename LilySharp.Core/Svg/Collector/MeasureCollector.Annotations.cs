@@ -277,15 +277,12 @@ public sealed partial class MeasureCollector
     {
         string grobType = node.GrobName.Text;
         string propertyName = node.PropertyName.Text;
-        // A quoted value (e.g. color = "red") stores its CONTENT, not the quotes, so the
-        // resolver's GetString/ParseColor see "red" — matching the bare-identifier form.
-        // A combined negative number keeps any interior whitespace ("- 5") in its token
-        // text for round-tripping, so strip it here for the numeric reparse (GetInt /
-        // GetDouble). Identifiers and positive integers carry no interior whitespace, so
-        // stripping is a no-op for them.
-        string value = node.ValueToken.Kind == SyntaxKind.StringLiteral
-            ? node.ValueToken.Text.Trim('"')
-            : string.Concat(node.ValueToken.Text.Where(c => !char.IsWhiteSpace(c)));
+        // The token becomes a VALUE here — the one place that reads the spelling. Both
+        // normalisations that used to live in this method (a quoted value stores its
+        // CONTENT, and a folded negative number drops the interior whitespace it keeps
+        // for round-tripping) moved into LysValue.FromToken, because they are properties
+        // of the token rather than of any consumer. docs/VALUE_SITE_AUDIT.md §2.
+        var value = LysValue.FromToken(node.ValueToken.Kind, node.ValueToken.Text);
         _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce, staffIndex, _currentVoiceScope));
     }
 

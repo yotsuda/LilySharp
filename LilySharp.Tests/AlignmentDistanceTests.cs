@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
@@ -35,7 +36,7 @@ public class AlignmentDistanceTests
     public void ApplyOverrides_StaffStaffBasicDistance_Changes()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", "15", 0, 0));
+            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", new LysValue.Int(15), 0, 0));
 
         var result = StaffSpacingParameters.Default.ApplyOverrides(overrides);
 
@@ -50,7 +51,7 @@ public class AlignmentDistanceTests
     public void ApplyOverrides_StaffGroupStaffPadding_Changes()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("StaffGrouper", "staffgroup-staff-spacing.padding", "3.5", 0, 0));
+            new GrobOverride("StaffGrouper", "staffgroup-staff-spacing.padding", new LysValue.Real(3.5), 0, 0));
 
         var result = StaffSpacingParameters.Default.ApplyOverrides(overrides);
 
@@ -63,10 +64,10 @@ public class AlignmentDistanceTests
     public void ApplyOverrides_AllFourSubProperties()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", "12", 0, 0),
-            new GrobOverride("StaffGrouper", "staff-staff-spacing.minimum-distance", "10", 0, 0),
-            new GrobOverride("StaffGrouper", "staff-staff-spacing.padding", "2", 0, 0),
-            new GrobOverride("StaffGrouper", "staff-staff-spacing.stretchability", "100", 0, 0));
+            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", new LysValue.Int(12), 0, 0),
+            new GrobOverride("StaffGrouper", "staff-staff-spacing.minimum-distance", new LysValue.Int(10), 0, 0),
+            new GrobOverride("StaffGrouper", "staff-staff-spacing.padding", new LysValue.Int(2), 0, 0),
+            new GrobOverride("StaffGrouper", "staff-staff-spacing.stretchability", new LysValue.Int(100), 0, 0));
 
         var result = StaffSpacingParameters.Default.ApplyOverrides(overrides);
 
@@ -80,7 +81,7 @@ public class AlignmentDistanceTests
     public void ApplyOverrides_NoStaffGrouperOverrides_ReturnsIdentical()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("NoteHead", "color", "red", 0, 0));
+            new GrobOverride("NoteHead", "color", new LysValue.Symbol("red"), 0, 0));
 
         var result = StaffSpacingParameters.Default.ApplyOverrides(overrides);
 
@@ -99,7 +100,7 @@ public class AlignmentDistanceTests
     public void ApplyOverrides_InvalidPropertyName_Ignored()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("StaffGrouper", "unknown-spacing.basic-distance", "10", 0, 0));
+            new GrobOverride("StaffGrouper", "unknown-spacing.basic-distance", new LysValue.Int(10), 0, 0));
 
         var result = StaffSpacingParameters.Default.ApplyOverrides(overrides);
 
@@ -110,7 +111,7 @@ public class AlignmentDistanceTests
     public void ApplyOverrides_InvalidValue_Ignored()
     {
         var overrides = ImmutableArray.Create(
-            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", "not-a-number", 0, 0));
+            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", new LysValue.Symbol("not-a-number"), 0, 0));
 
         var result = StaffSpacingParameters.Default.ApplyOverrides(overrides);
 
@@ -122,8 +123,8 @@ public class AlignmentDistanceTests
     {
         // Override both staff-staff and staffgroup-staff
         var overrides = ImmutableArray.Create(
-            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", "6", 0, 0),
-            new GrobOverride("StaffGrouper", "staffgroup-staff-spacing.basic-distance", "14", 0, 0));
+            new GrobOverride("StaffGrouper", "staff-staff-spacing.basic-distance", new LysValue.Int(6), 0, 0),
+            new GrobOverride("StaffGrouper", "staffgroup-staff-spacing.basic-distance", new LysValue.Int(14), 0, 0));
 
         var result = StaffSpacingParameters.Default.ApplyOverrides(overrides);
 

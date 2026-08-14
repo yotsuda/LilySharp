@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Model;
 using Xunit;
 
@@ -43,7 +44,7 @@ public class GrobPropertyResolverTests
         // Voice-1 pass activates the override at measure 2; the voice-2 pass
         // then restarts at measure 0 — the override must NOT be active there
         // (it would render the override BEFORE its source position).
-        var r = Resolver(new[] { new GrobOverride("NoteHead", "color", "red", 2, 0) });
+        var r = Resolver(new[] { new GrobOverride("NoteHead", "color", new LysValue.Symbol("red"), 2, 0) });
 
         r.AdvanceTo(2, 0);
         Assert.Equal("red", r.GetString("NoteHead", "color")); // pass 1, at the override
@@ -62,8 +63,8 @@ public class GrobPropertyResolverTests
         // again, not default (the once must pop, not erase).
         var r = Resolver(new[]
         {
-            new GrobOverride("NoteHead", "color", "red", 0, 0),
-            new GrobOverride("NoteHead", "color", "blue", 0, 1, IsOnce: true),
+            new GrobOverride("NoteHead", "color", new LysValue.Symbol("red"), 0, 0),
+            new GrobOverride("NoteHead", "color", new LysValue.Symbol("blue"), 0, 1, IsOnce: true),
         });
 
         r.AdvanceTo(0, 0);
@@ -79,7 +80,7 @@ public class GrobPropertyResolverTests
     {
         var r = Resolver(new[]
         {
-            new GrobOverride("NoteHead", "color", "blue", 0, 1, IsOnce: true),
+            new GrobOverride("NoteHead", "color", new LysValue.Symbol("blue"), 0, 1, IsOnce: true),
         });
 
         r.AdvanceTo(0, 1);
@@ -94,7 +95,7 @@ public class GrobPropertyResolverTests
         // A consumer that advances only to selected item indices (the
         // collision columns) must still see an override recorded at an index
         // it skipped — overrides apply from their position ONWARD.
-        var r = Resolver(new[] { new GrobOverride("NoteColumn", "force-hshift", "0.5", 0, 1) });
+        var r = Resolver(new[] { new GrobOverride("NoteColumn", "force-hshift", new LysValue.Real(0.5), 0, 1) });
 
         r.AdvanceTo(0, 3); // never visits (0,1)
         Assert.Equal(0.5, r.GetDouble("NoteColumn", "force-hshift"));
@@ -107,7 +108,7 @@ public class GrobPropertyResolverTests
         // multi-staff re-advance — must still see the \once that applies there.
         var r = Resolver(new[]
         {
-            new GrobOverride("NoteHead", "color", "blue", 1, 0, IsOnce: true),
+            new GrobOverride("NoteHead", "color", new LysValue.Symbol("blue"), 1, 0, IsOnce: true),
         });
 
         r.AdvanceTo(1, 0);
@@ -120,7 +121,7 @@ public class GrobPropertyResolverTests
     public void Revert_RemovesFromItsPositionOnward_AndRewindReplays()
     {
         var r = Resolver(
-            new[] { new GrobOverride("Stem", "length", "10", 0, 0) },
+            new[] { new GrobOverride("Stem", "length", new LysValue.Int(10), 0, 0) },
             new[] { new GrobRevert("Stem", "length", 1, 0) });
 
         r.AdvanceTo(0, 0);
@@ -140,7 +141,7 @@ public class GrobPropertyResolverTests
         // applied only AT its position, so it must not be active at (0,3).
         var r = Resolver(new[]
         {
-            new GrobOverride("NoteHead", "color", "blue", 0, 1, IsOnce: true),
+            new GrobOverride("NoteHead", "color", new LysValue.Symbol("blue"), 0, 1, IsOnce: true),
         });
 
         r.AdvanceTo(0, 0);

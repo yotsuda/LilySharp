@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Syntax;
 using Xunit;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
@@ -1010,7 +1011,7 @@ public class NoteCollisionTests
         // LILYPOND-REF: lily/note-collision.cc:486-502
         // Verify the resolver correctly returns force-hshift values
         var resolver = new GrobPropertyResolver(
-            ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", "1.5", 0, 0)),
+            ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", new LysValue.Real(1.5), 0, 0)),
             ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);
@@ -1040,7 +1041,7 @@ public class NoteCollisionTests
         // LILYPOND-REF: lily/note-collision.cc:486-502
         // \once override should apply only to the next item, then be cleared
         var resolver = new GrobPropertyResolver(
-            ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", "1.5", 0, 0, IsOnce: true)),
+            ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", new LysValue.Real(1.5), 0, 0, IsOnce: true)),
             ImmutableArray<GrobRevert>.Empty);
 
         resolver.AdvanceTo(0, 0);

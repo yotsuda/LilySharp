@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using Xunit;
@@ -81,7 +82,7 @@ public class ScoreAssemblerTests
     private static ImmutableArray<CrossStaffItem> OneCrossStaff() =>
         ImmutableArray.Create(new CrossStaffItem(0, 0, 1, 0));
     private static ImmutableArray<GrobOverride> OneOverride() =>
-        ImmutableArray.Create(new GrobOverride("NoteHead", "color", "red", 0, 0));
+        ImmutableArray.Create(new GrobOverride("NoteHead", "color", new LysValue.Symbol("red"), 0, 0));
     private static ImmutableArray<GrobRevert> OneRevert() =>
         ImmutableArray.Create(new GrobRevert("NoteHead", "color", 0, 0));
 

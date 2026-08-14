@@ -52,16 +52,63 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
     }
     
     /// <summary>
-    /// Gets the first value token text, or null if none.
+    /// Gets the written value — ALL value tokens joined, with the surrounding quotes of
+    /// a quoted value removed — or null when the assignment has no value.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ This used to return only the FIRST token, which disagreed with the reader that
+    /// was actually used: <c>RenderSpecParser.GetPartProperty</c> joins every token,
+    /// because a hyphenated bare value (<c>instrument bass-guitar</c>) is word+minus+word
+    /// in the green tree. So the same node had two "values" — <c>bass</c> here and
+    /// <c>bass-guitar</c> there — and this one had NO consumers in the whole repository
+    /// (measured 2026-08-15, docs/VALUE_SITE_AUDIT.md §7 ①). The join is now written
+    /// once, here, and GetPartProperty reads it.
+    /// </remarks>
     public string? ValueText
     {
         get
         {
-            var firstValue = Values.FirstOrDefault();
-            if (firstValue is SyntaxTokenNode token)
-                return token.Text.Trim('"');
-            return firstValue?.ToString();
+            var sb = new System.Text.StringBuilder();
+            for (int i = 2; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode t)
+                    sb.Append(t.Text);
+            if (sb.Length == 0)
+                return null;
+            var text = sb.ToString();
+            return text.Length >= 2 && text[0] == '"' && text[^1] == '"'
+                ? text[1..^1]
+                : text;
+        }
+    }
+
+    /// <summary>
+    /// The assignment's value as a TYPE rather than as text, or null when it has none.
+    /// </summary>
+    /// <remarks>
+    /// The consumers of a part property each used to reinterpret the tokens their own
+    /// way — <c>octave</c> parsed the first token, <c>lines</c> parsed the join, and
+    /// <c>instrument</c> split the token list (docs/VALUE_SITE_AUDIT.md §1.1 A3). The
+    /// numeric ones now read this. <c>instrument</c> still works off the token list
+    /// because it splits a preset from a quoted label, which is two values, not one.
+    /// </remarks>
+    public LysValue? Value
+    {
+        get
+        {
+            if (ValueText is not { } text)
+                return null;
+            // A quoted value already lost its quotes above, so ask the token KIND rather
+            // than the text — and only when the quoted token is the whole value, since
+            // `instrument violin "1st Violin"` is a preset plus a label, i.e. two values.
+            var values = Values.ToList();
+            if (values.Count == 1 && values[0] is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral })
+                return new LysValue.Str(text);
+            return LysValue.FromToken(
+                long.TryParse(text, System.Globalization.NumberStyles.AllowLeadingSign,
+                    System.Globalization.CultureInfo.InvariantCulture, out _)
+                    ? SyntaxKind.IntegerLiteral
+                    : SyntaxKind.Identifier,
+                text);
         }
     }
 }

@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Model;
 
@@ -25,14 +26,18 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 /// <param name="GrobType">Grob type name (e.g., "Stem", "Beam", "NoteHead")</param>
 /// <param name="PropertyName">Property name (e.g., "length", "thickness", "direction")</param>
-/// <param name="Value">Override value as string (parsed at usage site)</param>
+/// <param name="Value">
+/// The overriding value, TYPED at collection. It used to be the token's text, reparsed
+/// at each use site; docs/VALUE_SITE_AUDIT.md §2 counted five such sites, one of which
+/// (StaffSpacingParameters) parsed it without going through this resolver at all.
+/// </param>
 /// <param name="MeasureIndex">Measure where the override appears</param>
 /// <param name="ItemIndex">Item index within the measure</param>
 /// <param name="IsOnce">Whether this is a \once override (applies to next item only)</param>
 public sealed record GrobOverride(
     string GrobType,
     string PropertyName,
-    string Value,
+    LysValue Value,
     int MeasureIndex,
     int ItemIndex,
     bool IsOnce = false,
@@ -78,12 +83,12 @@ public sealed record GrobRevert(
 public sealed class GrobPropertyResolver
 {
     // Active overrides: GrobType → PropertyName → value
-    private readonly Dictionary<string, Dictionary<string, string>> _activeOverrides = new();
+    private readonly Dictionary<string, Dictionary<string, LysValue>> _activeOverrides = new();
 
     // What each \once at the CURRENT position displaced; restored (popped) as
     // soon as the timeline moves past that position. Previous == null means
     // the property was not set before the \once.
-    private readonly List<(string GrobType, string PropertyName, string? Previous)> _oncePops = new();
+    private readonly List<(string GrobType, string PropertyName, LysValue? Previous)> _oncePops = new();
 
     private readonly ImmutableArray<GrobOverride> _overrides;
 
@@ -155,7 +160,7 @@ public sealed class GrobPropertyResolver
             {
                 if (!_activeOverrides.TryGetValue(ov.GrobType, out var dict))
                 {
-                    dict = new Dictionary<string, string>();
+                    dict = new Dictionary<string, LysValue>();
                     _activeOverrides[ov.GrobType] = dict;
                 }
                 if (ov.IsOnce)
@@ -209,62 +214,47 @@ public sealed class GrobPropertyResolver
         => m1 != m2 ? m1.CompareTo(m2) : i1.CompareTo(i2);
 
     /// <summary>
-    /// Gets an overridden double value for a grob property, or null if not overridden.
+    /// Gets the overriding VALUE for a grob property, or null if not overridden.
+    /// </summary>
+    /// <remarks>
+    /// The typed accessors below are readings OF this value, not four separate parses
+    /// of a string. A consumer that needs a case this class does not name (a spacing
+    /// sub-property, say) asks for the value and matches on it, rather than growing a
+    /// sixth reader that reparses the text — which is what
+    /// <c>StaffSpacingParameters.ApplyOverrides</c> had grown into.
+    /// </remarks>
+    public LysValue? GetValue(string grobType, string propertyName)
+        => _activeOverrides.TryGetValue(grobType, out var dict)
+           && dict.TryGetValue(propertyName, out var value)
+            ? value
+            : null;
+
+    /// <summary>
+    /// Gets an overridden double value for a grob property, or null if not overridden
+    /// (or overridden with something that is not a number).
     /// </summary>
     public double? GetDouble(string grobType, string propertyName)
-    {
-        if (_activeOverrides.TryGetValue(grobType, out var dict) &&
-            dict.TryGetValue(propertyName, out var value) &&
-            double.TryParse(value, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out double result))
-        {
-            return result;
-        }
-        return null;
-    }
+        => GetValue(grobType, propertyName)?.AsDouble;
 
     /// <summary>
-    /// Gets an overridden integer value for a grob property, or null if not overridden.
+    /// Gets an overridden integer value for a grob property, or null if not overridden
+    /// (or overridden with something that is not an integer).
     /// </summary>
     public int? GetInt(string grobType, string propertyName)
-    {
-        if (_activeOverrides.TryGetValue(grobType, out var dict) &&
-            dict.TryGetValue(propertyName, out var value) &&
-            int.TryParse(value, out int result))
-        {
-            return result;
-        }
-        return null;
-    }
+        => GetValue(grobType, propertyName)?.AsInt;
 
     /// <summary>
-    /// Gets an overridden string value for a grob property, or null if not overridden.
+    /// Gets an overridden value as the word it was written as, or null if not overridden.
     /// </summary>
     public string? GetString(string grobType, string propertyName)
-    {
-        if (_activeOverrides.TryGetValue(grobType, out var dict) &&
-            dict.TryGetValue(propertyName, out var value))
-        {
-            return value;
-        }
-        return null;
-    }
+        => GetValue(grobType, propertyName)?.AsText;
 
     /// <summary>
     /// Gets an overridden boolean value for a grob property, or null if not overridden.
     /// Recognizes: "true"/"1"/"yes" = true, "false"/"0"/"no" = false.
     /// </summary>
     public bool? GetBool(string grobType, string propertyName)
-    {
-        var s = GetString(grobType, propertyName);
-        if (s == null) return null;
-        return s.ToLowerInvariant() switch
-        {
-            "true" or "1" or "yes" => true,
-            "false" or "0" or "no" => false,
-            _ => null
-        };
-    }
+        => GetValue(grobType, propertyName)?.AsBool;
 
     /// <summary>
     /// Checks if a specific grob property is currently overridden.
