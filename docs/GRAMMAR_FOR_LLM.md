@@ -15,7 +15,7 @@ with `|`.
 ```
 title "Song"            // optional metadata
 composer "Composer"     // optional
-tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
+tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // (common time) glyph and 2/2 as cut-C, like LilyPond
 key c major             // optional (default c major); all church modes work:
@@ -349,12 +349,16 @@ score practice { staff melody }
 ## Override / revert (engraving properties)
 
 ```
-override Stem.length = 7        // value fits the property: int, -int, identifier (up/red), or "string"
+override Stem.length = 7          // value fits the property: number, identifier (up/red), or "string"
+override NoteColumn.force-hshift = 1.5   // fractional values are allowed, and negative ones (-0.5)
 c4 d e f |
 revert Stem.length
-once override Stem.length = 9    // 'once' applies to the next note only
+once override Stem.length = 9     // 'once' applies to the next note only
 c4 d e f |
 ```
+
+A decimal is a VALUE, not a duration: `c4.5` is an error (LYS0021), `c4.` is a dotted
+quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LYS0022.
 
 ## Rules and gotchas
 

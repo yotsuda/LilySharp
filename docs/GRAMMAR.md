@@ -35,8 +35,18 @@ Trivia         = { Whitespace | LineComment | BlockComment } ;
 ### Literals
 
 Integer        = Digit , { Digit } ;
+Decimal        = Digit , { Digit } , '.' , Digit , { Digit } ;
 Digit          = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
 String         = '"' , { StringChar } , '"' ;
+
+(* A Decimal REQUIRES a digit after the point, and that is what keeps it out of every
+   dot the grammar already spells: the augmentation dot (c4. / R2.*3 / partial 2. /
+   tempo 4. = 116) is followed by a space, a '*', an '=' or end-of-line, and the grob
+   property separator by a letter. So `4.` is Integer + '.', while `4.5` is one Decimal.
+   A leading point is not a number either: `.5` is '.' followed by Integer.
+   A Decimal is only accepted in a VALUE position (see OverrideValue and the part
+   properties) — a duration, a tuplet ratio, a volta number and a repeat count are whole
+   by construction, and writing `c4.5` is LYS0021 rather than a silent dotted quarter. *)
 
 ### Identifiers
 
@@ -149,11 +159,28 @@ PartialDecl    = 'partial' , DurationToken ;
                     A bare underfull first bar gets a warning suggesting this. *)
 OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
 
-TempoDecl      = 'tempo' , [ String ] , [ DurationBase , '=' ] , Integer ,
-                 [ ( 'swing' | 'shuffle' ) , [ Integer ] ] ;
-                 (* tempo 120 / tempo "Allegro" 120 / tempo "Andante" 4 = 96 —
-                    the string is tempo text, `duration =` picks the beat unit.
-                    'tempo 120 swing' draws a shuffle-feel equation; 'swing 16' = 16th swing *)
+TempoDecl      = 'tempo' , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
+                 [ FeelWord , [ Integer ] ] ;
+Marking        = String | Identifier ;      (* a bare word only in the FIRST position *)
+FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
+                 (* tempo 120 / tempo "Allegro" / tempo "Allegro" 120 /
+                    tempo "Andante" 4 = 96 / tempo "Lively" 4. = 116 /
+                    tempo Comodo 4 = 84 — a bare word is a marking only where a marking
+                    can start, so a trailing feel word is never swallowed by it.
+                    'tempo 120 swing' draws a shuffle-feel equation; 'swing 16' = 16th
+                    swing; a bare feel word means eighths. *)
+                 (* HOW THE RUN IS READ (one pass, LysValue's neighbour TempoValue):
+                    - bpm        = the LAST integer, stopping at a feel word, so the 16
+                                   of `swing 16` is not the tempo. Last, not first,
+                                   because `4 = 120` puts the beat unit first.
+                    - beat unit  = the last integer BEFORE the '=', a quarter if the '='
+                                   has none before it, and ABSENT with no '=' at all —
+                                   `tempo 140` is a speed, not a 140th-note beat.
+                    - beat dots  = the dots after that unit.
+                    - marking    = the bare word in the first position, else the string.
+                    Every one of those is pinned in TempoValueTests; changing one changes
+                    what existing scores mean. A Decimal anywhere in the run is LYS0022 —
+                    a metronome mark is whole and a beat unit is a note value. *)
 TimeDecl       = 'time' , Integer , '/' , Integer ;
 KeyDecl        = 'key' , PitchBase , [ Accidental-text ] , Mode ;
 
@@ -640,13 +667,21 @@ Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] ,
 
 OverrideDecl   = [ 'once' ] , 'override' , Grob , '.' , Property , '=' , OverrideValue
                | 'revert' , Grob , '.' , Property ;
-OverrideValue  = Integer | '-' Integer | Identifier | String ;
-                 (* the value form fits the property: a length/position is an
-                    integer, a direction/symbol an identifier (e.g. up, red), a
-                    colour a string ("red"). Stored as text and reparsed per property. *)
+OverrideValue  = Number | '-' Number | Identifier | String ;
+Number         = Integer | Decimal ;
+                 (* the value form fits the property: a length/position is a number,
+                    whole or fractional (LilyPond's own grob values are routinely
+                    fractional — padding 0.5, thickness 0.45); a direction/symbol is an
+                    identifier (up, red); a colour is a string ("red"). *)
+
+(* The value is carried as a TYPE, not as text: LysValue.Int / Real / Str / Symbol,
+   built once where the value is collected. A quoted value is therefore NOT a number —
+   `= "10"` is the string "10" and answers nothing to a consumer asking for a double. *)
 
 (* Example:
    override Stem.length = 7
+   override NoteColumn.force-hshift = 1.5     // fractional
+   override Stem.length = -3                  // negative
    c4 d e f |
    revert Stem.length
    once override Stem.length = 9     // applies to the next note only

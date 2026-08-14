@@ -189,6 +189,23 @@ public class DecimalLiteralTests
     }
 
     [Fact]
+    public void TheHyphenatedPropertyNameAndTheFractionalValueFoldInTheSameDeclaration()
+    {
+        // The example the ticket was argued from, and now the one the grammar doc shows:
+        // Lily#'s own tests had to build this value from C# because the grammar could not
+        // say it (NoteCollisionTests uses force-hshift 1.5 / 0.5). Two folds meet in one
+        // declaration — ParseGrobPropertyName rejoins `force` `-` `hshift`, and ScanNumber
+        // takes `1.5` whole — so it is worth one test that they do not interfere.
+        var score = new MeasureCollector().Collect(
+            SyntaxTree.Parse("override NoteColumn.force-hshift = 1.5 c4 d e f"));
+
+        var over = Assert.Single(score.GrobOverrides);
+        Assert.Equal("NoteColumn", over.GrobType);
+        Assert.Equal("force-hshift", over.PropertyName);
+        Assert.Equal(new LysValue.Real(1.5), over.Value);
+    }
+
+    [Fact]
     public void AWholeOverrideValueIsStillAnInt()
     {
         // The kinds stay apart on purpose: a whole number must not start arriving as
