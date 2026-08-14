@@ -1,6 +1,23 @@
 // Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
+// Parts of this file are ported from LilyPond, the GNU music typesetter.
+// The C# is a modified translation of the following, not a copy of it:
+//   lily/page-spacing.cc
+//     Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com>
+//   lily/include/constrained-breaking.hh
+//     Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com>
+//   lily/page-breaking.cc
+//     Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com>
+//   lily/page-layout-problem.cc
+//     Copyright (C) 2009--2026 Joe Neeman <joeneeman@gmail.com>
+//   lily/constrained-breaking.cc
+//     Copyright (C) 2006--2026 Joe Neeman <joeneeman@gmail.com>
+// LilyPond is free software under the GNU General Public License version 3 or
+// later; its notices are kept here as that licence requires. The full list is in
+// LILYPOND-ATTRIBUTION.md. Lily# is an independent project, not affiliated with
+// or endorsed by the LilyPond project.
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -582,8 +599,9 @@ internal sealed class PageBreaker
         if (systems.Count == 1)
             return new List<int> { 1 };
 
-        // LILYPOND-REF: lily/page-breaking.cc:1037 — cache_line_details ends by calling
-        // calc_line_heights, so every line's tallness is known before any page is priced.
+        // LILYPOND-REF: lily/page-breaking.cc:1044-1081 cache_line_details — it ends by
+        // calling calc_line_heights (:1079), so every line's tallness is known before any
+        // page is priced.
         // Doing it here rather than in the caller keeps that ordering, and means no caller
         // can hand the breaker details whose tallness was never computed.
         systems = CalcLineHeights(systems);
@@ -866,7 +884,7 @@ internal sealed class PageBreaker
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-spacing.cc:296-402 calc_subproblem()
-    /// LILYPOND-REF: lily/page-breaking.cc:1502-1529 finalize_spacing_result()
+    /// LILYPOND-REF: lily/page-breaking.cc:1547-1586 finalize_spacing_result()
     ///
     /// Demerits = force² + page_penalty + line_count_penalty + orphan_penalty
     /// For ragged pages: penalty based on unused space.

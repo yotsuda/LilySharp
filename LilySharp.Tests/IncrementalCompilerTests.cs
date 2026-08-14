@@ -355,7 +355,7 @@ public class IncrementalCompilerTests
         // A pedal bracket used to DISQUALIFY whole-layout reuse outright: ReuseSafe declined
         // any layout carrying one, under a comment asserting the array was "always empty
         // today (pedals render as text marks, never a bracket layout)". Staff.PedalStyle
-        // defaults to Bracket, so that was false for every `@ped` in the corpus — including
+        // defaults to Bracket, so that was false for every `@sustainOn` in the corpus — including
         // showcase/03-piano, the multi-staff fixture LilySharp.Benchmarks' warm-session
         // benchmark uses, which had been throwing "expected whole-layout reuse to fire".
         //
@@ -370,7 +370,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part lh { clef bass }
-            section Main { lh { <c e>2@ped <c g> | <f a>2@ped(off)@ped <d f> | } }
+            section Main { lh { <c e>2@sustainOn <c g> | <f a>2@sustainOff@sustainOn <d f> | } }
             form main { Main }
             score main "x" { staff lh }
             """;

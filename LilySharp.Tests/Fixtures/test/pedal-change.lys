@@ -10,7 +10,7 @@ part rh {
 }
 
 section Main {
-  rh { c'1@ped | d'1@ped(off)@ped | e'1@ped(off) | }
+  rh { c'1@sustainOn | d'1@sustainOff@sustainOn | e'1@sustainOff | }
 }
 
 form main { Main }

@@ -1,6 +1,15 @@
 // Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
+// Parts of this file are ported from LilyPond, the GNU music typesetter.
+// The C# is a modified translation of the following, not a copy of it:
+//   lily/simple-spacer.cc
+//     Copyright (C) 1999--2026 Han-Wen Nienhuys <hanwen@xs4all.nl>
+// LilyPond is free software under the GNU General Public License version 3 or
+// later; its notices are kept here as that licence requires. The full list is in
+// LILYPOND-ATTRIBUTION.md. Lily# is an independent project, not affiliated with
+// or endorsed by the LilyPond project.
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or

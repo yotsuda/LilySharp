@@ -37,11 +37,12 @@ Thumbs.db
 # Generated MIDI files
 *.mid
 
-# Emmentaler font (SIL OFL licensed)
+# Emmentaler font (from LilyPond; GPL-3.0-or-later / SIL OFL dual license,
+# redistributed under the GPL branch — see THIRD-PARTY-NOTICES.md)
 # Only woff2 files needed for web rendering
 fonts/*
 !fonts/emmentaler-*.woff2
-!fonts/LICENSE.OFL
+!fonts/Emmentaler-LICENSE.txt
 
 # Generated output files
 *.svg

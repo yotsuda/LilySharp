@@ -112,7 +112,7 @@ public class ChordTremoloPairTests
         // clamped to the head's inner edge ± gap/2 — and the stack is seeded from
         // the heads (no_visible_stem_positions), landing on hang-below-middle-line:
         // beam centres 9.26/10.13/11.01/11.88, LilyPond's page to three decimals.
-        // LILYPOND-REF: lily/stem.cc:1006-1018 Stem::print (is_valid_stem);
+        // LILYPOND-REF: lily/stem.cc:993-1010 is_valid_stem (Stem::print at :1013-1048);
         //   lily/beam-quanting.cc:485-510 no_visible_stem_positions;
         //   lily/beam.cc:637-654 calc_beam_segments (the Stem::is_invisible clamp).
         const string src = "time 4/4 repeat tremolo 32 { g''64 a }";

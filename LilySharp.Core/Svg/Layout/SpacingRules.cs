@@ -165,7 +165,7 @@ internal static class SpacingRules
     /// defect the ledger pair line-start.time-to-first-note.{standard,custom}-key opened
     /// was the reservation reading <c>Sharps</c> alone and dropping <c>Custom</c>.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142 — the group extent
+    /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142 calc_positioning_done — the group extent
     /// is the union of the engraved signatures' stencils; LilyPond has one key model
     /// (keyAlterations), so its reservation IS its drawing.</remarks>
     public static double KeySignatureInkWidth(KeySignature key)
@@ -213,7 +213,7 @@ internal static class SpacingRules
     /// break-align group's right edge (<see cref="WidestActiveKeyInk"/>), which is what a
     /// multi-staff system reserves: a union across staves is a width, not one staff's key.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242.</remarks>
+    /// <remarks>LILYPOND-REF: lily/break-alignment-interface.cc:141-142,242 calc_positioning_done.</remarks>
     public static double CalculatePrefixWidth(double clefWidth, double keyInkWidth,
         bool includeTimeSignature, int timeSigBeats = 4, int timeSigBeatType = 4)
     {
@@ -247,7 +247,7 @@ internal static class SpacingRules
     /// the group then keeps its own stencil offset inside it.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc:242 — the offset is
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:242 calc_positioning_done — the offset is
     /// <c>extents[LeftEdge][RIGHT] + distance - extents[next][LEFT]</c>, and :141-142 makes
     /// that <c>[LEFT]</c> the union across the system's staves. So the anchor is a property
     /// of the GROUP, not of each clef.
@@ -307,7 +307,7 @@ internal static class SpacingRules
     /// the tests, so a tab staff's contribution cannot be modelled twice.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc:145-146,155-156 — a break-align group
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:145-146,155-156 calc_positioning_done — a break-align group
     /// with no grobs is SKIPPED; it neither consumes a space-alist gap nor anchors its
     /// neighbour. So a system whose rows are all lyric / chord (ly/engraver-init.ly:632-649
     /// Lyrics, :703-725 ChordNames — neither consists a <c>Clef_engraver</c>) gets NO clef
@@ -411,7 +411,7 @@ internal static class SpacingRules
     /// stencil's X extent, which is the quantity the break-align group is the union of.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc:141-142 — the group extent unions
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:141-142 calc_positioning_done — the group extent unions
     /// the grobs' own extents, so a staff engraving at a reduced size contributes its
     /// SMALLER stencil. An ossia is set at magstep(-3) (NR "Ossia staves": fontSize -3 +
     /// StaffSymbol.staff-space), which scales the stencil though not the space-alist:
@@ -430,7 +430,7 @@ internal static class SpacingRules
     /// </summary>
     /// <remarks>
     /// <para>
-    /// LILYPOND-REF: lily/break-alignment-interface.cc:141-142 — a break-align group's
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:141-142 calc_positioning_done — a break-align group's
     /// extent is the UNION of its grobs' extents across the whole system; :242 — the next
     /// column offsets from that union's RIGHT. Every signature starts at the shared column
     /// left, so the union's right is the widest engraved ink.
@@ -603,7 +603,7 @@ internal static class SpacingRules
     /// with a time-signature change, given whether a courtesy KEY is already standing there.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:3922-3953 break-visibility — the TimeSignature
+    /// LILYPOND-REF: scm/define-grobs.scm:3922-3953 TimeSignature's break-align-anchor and break-visibility — the TimeSignature
     ///   grob's is <c>all-visible</c>, so a CHANGED meter prints on both
     ///   sides of the break. See SharedRenderer.GetSystemEndTimeChange for why only a
     ///   changed one does.
@@ -658,7 +658,7 @@ internal static class SpacingRules
     /// Gets the width of a change (mid-measure) clef glyph.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/clef.cc:29-52 — "_change" suffix glyphs are smaller variants.
+    /// LILYPOND-REF: lily/clef.cc:29-52 calc_glyph_name — "_change" suffix glyphs are smaller variants.
     /// </remarks>
     internal static double GetClefChangeWidth(ClefType clef) => clef switch
     {
@@ -682,7 +682,7 @@ internal static class SpacingRules
     /// One side of LilyPond's default <c>extra-spacing-width</c>, the amount every grob
     /// widens its spacing box by unless it declares its own.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/separation-item.cc:166-167 — <c>Interval (-0.1, 0.1)</c>.</remarks>
+    /// <remarks>LILYPOND-REF: lily/separation-item.cc:166-167 extra-spacing-width — its default <c>Interval (-0.1, 0.1)</c>.</remarks>
     internal const double DefaultExtraSpacingWidth = 0.1;
 
     /// <summary>
@@ -700,7 +700,7 @@ internal static class SpacingRules
     /// The padding the spacing spanner adds on top of a skyline distance to make a ROD.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 —
+    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 generate_springs —
     ///   <c>Real padding = from_scm&lt;double&gt; (get_property (prev, "padding"), 0.1);
     ///   set_column_rods (cols, padding);</c>, spent in lily/separation-item.cc:56
     ///   (<c>dist = padding + …distance (right)</c>).
@@ -718,7 +718,7 @@ internal static class SpacingRules
     /// 1.94 + padding 0.1, and 1.94 = bar ink 0.19 + bar esw 0.1 + accidental reach 1.45 +
     /// 0.2; the accidental is then placed at min_dist + 0.3 = 2.24 from the column origin,
     /// which is exactly the measured 23.185729 - 20.945729.
-    /// LILYPOND-REF: scm/define-grobs.scm:40 Accidental
+    /// LILYPOND-REF: scm/define-grobs.scm:40 Accidental's extra-spacing-width
     ///   <c>(extra-spacing-width . (-0.2 . 0.0))</c>; :62 AccidentalCautionary likewise.
     /// </remarks>
     internal const double AccidentalExtraSpacingWidthLeft = 0.2;
@@ -756,7 +756,7 @@ internal static class SpacingRules
     /// Staff_spacing wish on to <c>merge_springs</c>, so the value is corrected here and
     /// then merged there. This one moves <c>fixed</c> (and hence the inverse COMPRESS
     /// strength), <see cref="SpringHeadroom"/> moves the ideal.
-    /// LILYPOND-REF: lily/staff-spacing.cc:212-215 — "ensure that the 'fixed' distance
+    /// LILYPOND-REF: lily/staff-spacing.cc:212-215 get_spacing — "ensure that the 'fixed' distance
     ///   will leave a gap of at least 0.3 ss";
     ///   lily/spacing-spanner.cc:478-536 breakable_column_spacing.
     /// </remarks>
@@ -769,7 +769,7 @@ internal static class SpacingRules
     /// <remarks>
     /// Two different grobs declare a property of the same name with different values, and
     /// the bar-line → note optical correction reads StaffSpacing's.
-    /// LILYPOND-REF: scm/define-grobs.scm:3369 StaffSpacing
+    /// LILYPOND-REF: scm/define-grobs.scm:3369 StaffSpacing's stem-spacing-correction
     ///   <c>(stem-spacing-correction . 0.4)</c>; :2656 NoteSpacing has 0.5.
     /// </remarks>
     internal const double StaffSpacingStemCorrection = 0.4;
@@ -834,7 +834,7 @@ internal static class SpacingRules
         bool sameType = (keyChange.PreviousKey.IsSharps == keyChange.NewKey.IsSharps) ||
                         keyChange.PreviousKey.Sharps == 0 || keyChange.NewKey.Sharps == 0;
 
-        // LILYPOND-REF: lily/key-engraver.cc:67-125 — cancellation logic
+        // LILYPOND-REF: lily/key-engraver.cc:67-125 create_key — cancellation logic
         if (!sameType && prevCount > 0)
         {
             // Different type (sharps→flats or flats→sharps): cancel all previous
@@ -882,7 +882,7 @@ internal static class SpacingRules
     /// had been true before the base extent was converted to the left-edge basis but was
     /// stale afterwards — the frame it named was the opposite of the one it computed.
     ///
-    /// LILYPOND-REF: lily/separation-item.cc:163-164 boxes — the spacing box is
+    /// LILYPOND-REF: lily/separation-item.cc:163-164 boxes — pure_y_extent over the column's x extent; the spacing box is
     /// <c>il-&gt;extent (pc, X_AXIS)</c>, i.e. taken in the PAPER COLUMN's frame.
     ///
     /// LILYPOND-REF: lily/accidental-placement.cc
@@ -932,7 +932,7 @@ internal static class SpacingRules
         {
             // Within-chord seconds: a head reversed to the LEFT of the stem
             // (stem down) extends the column's left ink even without
-            // accidentals. LILYPOND-REF: lily/stem.cc:606-760.
+            // accidentals. LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
             double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
                 chord.Notes, chord.StemUp, noteValue);
             double minHeadOffset = headOffsets.Min();
@@ -2292,7 +2292,7 @@ internal static class SpacingRules
     /// the grace carries an accidental, which hangs left and declares a wider box.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:40 Accidental <c>(extra-spacing-width . (-0.2 . 0.0))</c>
+    /// LILYPOND-REF: scm/define-grobs.scm:40 Accidental's extra-spacing-width <c>(extra-spacing-width . (-0.2 . 0.0))</c>
     /// — see <see cref="AccidentalExtraSpacingWidthLeft"/>. MEASURED (book GCWA): an
     /// accidental on the SECOND grace of a pair pushes that gap from 1.417939 to 2.560895,
     /// which is 1.017939 + (1.042957 + 0.2) + 0.3.
@@ -2464,7 +2464,7 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/note-spacing.cc:162-197 same_direction_correction — the rule that
     ///   then reads the two stems, and which wants the head ranges more than one staff
     ///   position apart.
-    /// LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
+    /// LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
     ///   <c>((Voice Stem direction ,UP))</c>, why the stand-in's stem is forced up.
     /// <para>
     /// LilyPond's spring stops at the grace column — the run is columns of its own, so the
@@ -2482,7 +2482,7 @@ internal static class SpacingRules
     /// </para>
     /// <para>
     /// ⚠️ The stand-in's stem is forced UP, not derived from its pitch: a grace stem is up
-    /// whatever the note (scm/music-functions.scm:633-637 score-grace-settings, the same
+    /// whatever the note (scm/music-functions.scm:652-656 score-grace-settings, the same
     /// rule GraceNoteEngraver draws by). Letting the pitch decide would flip the correction's
     /// sign on any grace above the middle line.
     /// </para>
@@ -4890,7 +4890,7 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance —
     ///   <c>Real dist = padding + lines[LEFT][RIGHT].distance (right); … return
     ///   std::max (dist, 0.0);</c>
-    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 — the padding passed to
+    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 generate_springs — the padding passed to
     ///   set_column_rods is the last column's `padding`, defaulting to 0.1.
     /// </remarks>
     public static double SeparationRodDistance(MusicItem? prevItem, MusicItem? nextItem,
@@ -4927,7 +4927,7 @@ internal static class SpacingRules
     /// the same convention <see cref="CalculateLeftExtent"/> documents and LilyPond uses
     /// (dumping <c>ly:grob-relative-coordinate</c> for a PaperColumn and its NoteHead in
     /// 2.24.4 gives the same X). So a plain head reaches its FULL ink width to the right.
-    /// LILYPOND-REF: lily/separation-item.cc:163-164 boxes — the spacing box is
+    /// LILYPOND-REF: lily/separation-item.cc:163-164 boxes — pure_y_extent over the column's x extent; the spacing box is
     /// <c>il-&gt;extent (pc, X_AXIS)</c>, the grob's extent in its PAPER COLUMN's frame.
     /// LILYPOND-REF: lily/rest.cc Rest::width — the rest branch below uses the same frame.
     /// </remarks>

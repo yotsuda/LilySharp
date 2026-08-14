@@ -48,8 +48,14 @@ jobs:
           -p:Version=${GITHUB_REF_NAME#v}
           -o publish/${{ matrix.rid }}
       - name: Archive
+        # Everything THIRD-PARTY-NOTICES.md points at has to travel with the
+        # binary, or the notices name licenses the recipient never receives:
+        # the Apache-2.0 text (Six Labors), the upstream notices for the Skia
+        # and HarfBuzz natives, and the list of ported LilyPond files with
+        # their authors' copyright lines.
         run: |
-          cp LICENSE THIRD-PARTY-NOTICES.md publish/${{ matrix.rid }}/
+          cp LICENSE THIRD-PARTY-NOTICES.md THIRD-PARTY-NOTICES-SkiaSharp.txt \
+             LICENSE-Apache-2.0.txt LILYPOND-ATTRIBUTION.md publish/${{ matrix.rid }}/
           cd publish/${{ matrix.rid }}
           if [[ "${{ matrix.rid }}" == win-* ]]; then
             zip -r ../../lysc-${{ github.ref_name }}-${{ matrix.rid }}.zip .
@@ -84,9 +90,14 @@ jobs:
           -p:Version=${GITHUB_REF_NAME#v}
           -o editors/vscode/server
       - name: Bundle the license and third-party notices
+        # Same set as the CLI archives: the notices are only complete if the
+        # texts they refer to ship beside them.
         run: |
           cp LICENSE editors/vscode/LICENSE
           cp THIRD-PARTY-NOTICES.md editors/vscode/THIRD-PARTY-NOTICES.md
+          cp THIRD-PARTY-NOTICES-SkiaSharp.txt editors/vscode/THIRD-PARTY-NOTICES-SkiaSharp.txt
+          cp LICENSE-Apache-2.0.txt editors/vscode/LICENSE-Apache-2.0.txt
+          cp LILYPOND-ATTRIBUTION.md editors/vscode/LILYPOND-ATTRIBUTION.md
       - name: Sync extension version to tag
         working-directory: editors/vscode
         # v0.3.0 → 0.3.0; "|| true" tolerates an already-matching version.

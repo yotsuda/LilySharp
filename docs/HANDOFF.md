@@ -63,37 +63,37 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第161セッション＝**⒟⁶⑵「stackabove の per-system 増分化」を閉じた便**（`a3905c96`）。
-ユーザーがその場で窓を許可したので、帰属計測（stackabove 項の直接 probe・revert 済み）→実装→
-同一窓・同一 binary の ON/OFF/ON A/B までを 1 便で。上側 stacking pass は system 横断状態を
-持たない（全配置・全 seed が per-(system, staff) tracker 経由）ので、**per-system の
-「生入力の綴り」program** が前打鍵と一致した system は前回 output を再生し、不一致 system だけを
-filtered 配列で core に流す——program は 10 族の record 値（全部純値 record struct・実地検証済み）＋
-幾何（Indent・全 staff の (Idx, Y, IsHidden, Clef)・topStaff）＋ profile の**参照**
-（`ctx.InsideIdentityOf`＝StaffInside の格納 instance。`InsideOf` は COPY を配るので識別子は
-表の側）＋ silhouette 参照。measure→system 写像は partition 自身が fold する。store は
-prelim/final で**別**（共有すると打鍵ごとに 2 回上書きで永久 miss）・system index ごと上書き＝
-paging augment と同じ有界。suite **4464 → 4468 passed / 0 failed / 4 skipped（+4＝網）・
-snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
-未 push 2。
-- **⑴ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
-  `scratch\stackbench-161.txt`・untracked）**: stackabove 項の床（prelim+final 合計/打鍵）
-  **OFF 16.49/50.58/19.16 → ON 1.38→0.90／1.08→0.98／1.17→1.13 ms（plain/fingbeam/v2bow）＝
-  −15/−50/−18 ms/打鍵**。⚠️ **この窓は総床のドリフトが激しく（plain の総床が同日 194〜694 ms）
-  総床の差は主張しない**——主張は同一 run 内の帰属カウンタ差だけ（§7.9・「bench 前に一声」memo の
-  比率・カウンタ規律。窓はユーザー許可済み）。序盤の A 腕 probe は 34.3/88.6/22.0＝窓の負荷が
-  高い時間帯の値・絶対値は比べない。**stackBelow は 3 冊とも ≈0＝下側 pass は載せない**
-  （第160 ⑷ の型: 実測 ≈0 に投機 cache を張らない）。⚠️ 生データには Debug 混入行あり
-  （suite 実行時に env が残っていた）——ファイル末尾の NOTE が正の block を名指す。
-- **⑵ 網 4 枚**: `OutsideStaffStackMemoTests` 3 枚（同一入力 2 回目が全 system 再生＋liveness
-  カウンタ／値 1 つの編集がその system だけを decline＋memo 無しと深一致＝staleness 陽性対照／
-  **profile 差し替えが decline して答えが動く**＝参照鍵が load-bearing——鍵に無ければ stale YUp を
-  逐語再生するところ）＋`IncrementalCompilerTests.AboveStackMemo_ReplaysUnchangedSystems_AndMatchesFull`
-  （多 system 本の編集が cache-free full とバイト一致＋両 pass の store で hits>0）。
-- **⑶ 鍵は第160 ⑸① の家訓どおり「生入力の fold」**——解決値を作らず、record 値比較＋参照比較のみ
-  （O(総 grob 数)）。identity が取れない (system, staff)（`InsideOf` の fallback rebuild 枝）は
-  その system を毎回 live に落とす＝偽の一致は構造的に無い。**batch 経路（lysc・SvgGenerator）は
-  systemCache=null で memo が挿さらない**＝コーパス出力の不変は構造的（snapshot 0 動が裏）。
+最終更新 第162セッション＝**§2 の起票「加線が譜面の長さに対して二次で増える」を実測で
+反証し、記録から落とした便**（**コード変更なし・docs のみ**）。開始時の裏取りで suite
+**4554 passed / 0 failed / 4 skipped**（引継ぎの 4468 は stale＝第161 以降に 2 便
+`308dfe8a`・`1d0485f2` が入っていた。§1 はその 2 便を記録していない）・HEAD `1d0485f2`・
+**未 push 4**・台帳不動。
+- **⑴ 起票は誤り。加線は譜面長に対して線形**。起票の素材そのもの
+  （`c'8 d'8 e'8 f'8 g'8 a'8 b'8 c''8 |` の繰り返し・単一 staff）に **`octave absolute` を
+  1 行足すだけ**で **20 小節 5.2 MB / 55,387 `<line>` → 177 KB / 260 本**、
+  **300 小節「Insufficient memory」→ 786 KB・5.6 秒で完走**（Debug・`lysc svg`）。
+  1/5/20/60/300 小節で **17/65/260/780/3,900 本＝13 本/小節の直線**。
+- **⑵ 名指された発生源も無罪**——`SharedRenderer.Noteheads.cs` の
+  `for (int pos = 6; pos <= staffPosition; …)` の `staffPosition` に座標は混ざっていない。
+  出所は `lysc check --pitches` が直に言う: 起票の素材は **1 音ごとに 1 オクターブ上がる**
+  （`c'`→C5・`d'`→D6・`e'`→E7 … **3 小節目で C34**）。**Lily# は相対オクターブ**なので
+  `'` は「最寄りからの補正」＝上行音型に付けると**累積する**。SVG 側と突き合わせると**厳密に
+  一致する**: 第2小節頭の C6 は加線 pos +6/+8 の 2 本、小節末の C8 は pos +6..+22 の 9 本
+  ——**描画は与えられた音高に対して正しい**。⇒ 二次に見えたのは engine ではなく
+  **本が頁の外へ歩き去っていた**から。
+- **⑶ 陽性対照 2 本**（「線形なのは加線を*描いていない*からでは？」を潰す）:
+  **全音符に加線が付く本**＝`c8`×8 の反復（bare `c`＝C4 固定・`check --pitches` で確認）で
+  1/5/20/60/300 小節＝**21/85/340/1,020/5,100 本＝約 17 本/小節の直線**・300 小節 898 KB・9.5 秒。
+  register 安定な非加線本（`c8 d8 e8 f8 g8 f8 e8 d8`）も **10 本/小節の直線**・300 小節 701 KB・3.0 秒。
+- **⑷ ★★ 新種ではなく第135 の罠の再発（4 例目）**。`RULES.md` §5.3 の**先頭項が同じ現象・
+  同じ処方（`octave absolute`）・同じ判定法を逐語で書いている**（`perf-slur300` が staff
+  position 10493・加線 3,146,917 本・303 MB）。**書いてあっても踏んだ**ので、§5.3 に
+  **「合成本は `lysc check --pitches` を 1 回通してから起票する」**（30 秒で決着する最短の
+  弁別子・出力を数えるより更に手前）を足した。
+- **⑸ 連鎖して無効になる主張**: `1d0485f2` の commit message の「長い譜面でエディタが
+  もたつくのは主にこれ」は**根拠を失った**。同便の preview キャレットの位置インデックス化と
+  semanticTokens の二分探索化（1000 小節 1747→416 ms）は**別の実測があるので生きている**。
+  ⇒ **プレビューのもたつきをもう一度主張するなら、register の安定した本で測り直すところから。**
 - **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
   従来どおり）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
@@ -368,54 +368,39 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
 
 ---
 
-## 以下は第160セッションの経緯
+## 以下は第161セッションの経緯
 
-最終更新 第160セッション＝**⒭ の最後の残件「overlay の断片化」を閉じ（`9cf3560b`）、
-第2便＝ユーザーがその場で許可した窓の A/B が「効いていない」と出たので、割って 2 欠陥を
-直してから測り直した便**（`c468b019`・⑶⑸）。page-level overlay の drawer 群は system loop の
-*後*に drawer-major で走る＝連続単位は「1 drawer × 1 頁」。値段が付いていたのは
-**DrawFingerings だけ**（fingbeam 打鍵 render 床 37.7 ms の実体・他の頁 drawer は第151 実測で
-≈0）なので、それだけを `SvgSystemFragmentCache` の断片機構に載せた——編集が触らなかった頁は
-録画テキストを再生し、data-pos は system 断片と同じ anchor/slot 機構で窓写像。suite
-**4461 → 4464 passed / 0 failed / 4 skipped（+3＝網）・snapshot 0 動・コーパス rerender 0/82
-（2 code commit とも）・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
-未 push 33。
-- **⑴ 鍵は content key ではなく「描画入力そのものの値 fold」**。overlay drawer は model を
-  読まず layout の annotation 配列＋頁の幾何 map しか読まないので、`BuildFingeringPlan` が
-  per-item の描画入力（digit・x0・y・頁高）を**1 綴りで**解決し、**fold と live 描画が同じ
-  plan を消費**する＝鍵と emission が乖離しようがない（system 断片が要った model fold の
-  inventory がこちらには無い）。source offset は fold の外＝anchor/slot 層が運ぶ。
-  decline/staleness/pass ゲートは system 断片と共有（`PrepareRender`・generation）。
-- **⑵ 網 3 枚**（`IncrementalCompilerTests.OverlayFragments_*`）: 多頁 fingering 本の編集で
-  cache-free full と byte 一致＋他頁 replay の liveness／**Δ=0 の digit 編集（finger 2→4）＝
-  値 fold の隔離陽性対照**——offset が 1 つも動かないので anchor も slot も素通りし、fold だけ
-  が stale digit の再生を止める（full 一致がその証明）／中腹 trivia 挿入（Δ=+1）で全頁
-  replay＋data-pos 全 shift。
-- **⑶（第2便・ユーザー窓・EditKeystrokeBench・Release・床=n14 min・生データ
-  `scratch\editbench-160.txt`・untracked）最初の A/B は「効果ゼロ」と出た**——replay は
-  15/16 頁で発火しているのに（probe で確認）床が動かない。割ったら **2 欠陥**（⑸）。
-  修理後の同一窓・素 binary の A/B/A2: **fingbeam 打鍵床 ON 457.0/482.0 対 OFF 508.0＝
-  機構単独で −26〜51 ms**（fingering 無しの対照 2 冊のドリフト帯は 10〜16: plain
-  216.3/229.1/235.3・v2bow 387.9/403.9/394.0）。同窓の修理前 2 腕（fingbeam 564.5/559.3）
-  からは **−80〜−107**＝capture O(n) 化が system 断片側にも効いた分を含む（plain/v2bow も
-  −10〜29 落ちた）。probe の直接測定では **fingering overlay 項の床 72.7 → 6.4 ms/打鍵**
-  （fold 0.5／replay 2-3／live 3-4／capture 48→0.5-1.0）。⚠️ 本日の絶対値は第158窓の約 2 倍
-  （負荷の高い窓）＝§7.9 のとおり窓またぎの絶対値は比べない。
-- **⑸ 第2便が直した 2 欠陥（両方とも「測ってから直す」で確定）**:
-  ①**鍵が省く walk と同額だった**——第1版の value fold は per-item に x/y を解決しており、
-  drawer の実費は emission ではなく**その解決＋O(頁×fingerings) の filter 走査**だった
-  （第154 の家訓「memo の鍵は省く walk より安いこと」をそのまま踏んだ）。⇒ fingerings を
-  **render あたり 1 回**頁ごとに bucket 化（live 経路も同じ恩恵）し、鍵は**生の入力の fold**
-  （item 値＋各 system の Y/小節範囲/staff 表＋頁高。読みの inventory は
-  `FoldFingeringPage` の remarks）へ。解決は live 描画だけがやる。
-  ②★★ **`TrySplit` が hit ごとに両 token の IndexOf を現在位置から再走査**——data-alt の
-  無い断片では **hit×断片長の二次**（1500 hit の頁で capture 48 ms 対 描画 3 ms）。
-  **第151 から system 断片の capture にも居た**（1 打鍵 ~2 system しか capture しないので
-  見えなかった——修理で plain/v2bow の打鍵床も落ちたのがその分）。両 token の次出現を
-  lazy に持つ O(n) 化で解決。
-- **⑷ 他の overlay drawer は載せていない**（実測 ≈0 に投機 cache を張ると key/staleness の
-  面だけ増える）。載せる日は `OverlayDrawerId` に足して同じ型で——**「その drawer の描画入力を
-  1 綴りの plan に解決してから fold する」**が設計図。
+最終更新 第161セッション＝**⒟⁶⑵「stackabove の per-system 増分化」を閉じた便**（`a3905c96`）。
+ユーザーがその場で窓を許可したので、帰属計測（stackabove 項の直接 probe・revert 済み）→実装→
+同一窓・同一 binary の ON/OFF/ON A/B までを 1 便で。上側 stacking pass は system 横断状態を
+持たない（全配置・全 seed が per-(system, staff) tracker 経由）ので、**per-system の
+「生入力の綴り」program** が前打鍵と一致した system は前回 output を再生し、不一致 system だけを
+filtered 配列で core に流す——program は 10 族の record 値（全部純値 record struct・実地検証済み）＋
+幾何（Indent・全 staff の (Idx, Y, IsHidden, Clef)・topStaff）＋ profile の**参照**
+（`ctx.InsideIdentityOf`＝StaffInside の格納 instance。`InsideOf` は COPY を配るので識別子は
+表の側）＋ silhouette 参照。measure→system 写像は partition 自身が fold する。store は
+prelim/final で**別**（共有すると打鍵ごとに 2 回上書きで永久 miss）・system index ごと上書き＝
+paging augment と同じ有界。suite **4464 → 4468 passed / 0 failed / 4 skipped（+4＝網）・
+snapshot 0 動・台帳不動（511 点・ss 非ゼロ 94・総和 3.609962441・count 106/非ゼロ 2）**・
+未 push 2。
+- **⑴ 測定（同一窓・同一 binary ON/OFF/ON・Release・edit@0.50・床=n14 min・生データ
+  `scratch\stackbench-161.txt`・untracked）**: stackabove 項の床（prelim+final 合計/打鍵）
+  **OFF 16.49/50.58/19.16 → ON 1.38→0.90／1.08→0.98／1.17→1.13 ms（plain/fingbeam/v2bow）＝
+  −15/−50/−18 ms/打鍵**。⚠️ **この窓は総床のドリフトが激しく（plain の総床が同日 194〜694 ms）
+  総床の差は主張しない**——主張は同一 run 内の帰属カウンタ差だけ（§7.9・「bench 前に一声」memo の
+  比率・カウンタ規律。窓はユーザー許可済み）。序盤の A 腕 probe は 34.3/88.6/22.0＝窓の負荷が
+  高い時間帯の値・絶対値は比べない。**stackBelow は 3 冊とも ≈0＝下側 pass は載せない**
+  （第160 ⑷ の型: 実測 ≈0 に投機 cache を張らない）。⚠️ 生データには Debug 混入行あり
+  （suite 実行時に env が残っていた）——ファイル末尾の NOTE が正の block を名指す。
+- **⑵ 網 4 枚**: `OutsideStaffStackMemoTests` 3 枚（同一入力 2 回目が全 system 再生＋liveness
+  カウンタ／値 1 つの編集がその system だけを decline＋memo 無しと深一致＝staleness 陽性対照／
+  **profile 差し替えが decline して答えが動く**＝参照鍵が load-bearing——鍵に無ければ stale YUp を
+  逐語再生するところ）＋`IncrementalCompilerTests.AboveStackMemo_ReplaysUnchangedSystems_AndMatchesFull`
+  （多 system 本の編集が cache-free full とバイト一致＋両 pass の store で hits>0）。
+- **⑶ 鍵は第160 ⑸① の家訓どおり「生入力の fold」**——解決値を作らず、record 値比較＋参照比較のみ
+  （O(総 grob 数)）。identity が取れない (system, staff)（`InsideOf` の fallback rebuild 枝）は
+  その system を毎回 live に落とす＝偽の一致は構造的に無い。**batch 経路（lysc・SvgGenerator）は
+  systemCache=null で memo が挿さらない**＝コーパス出力の不変は構造的（snapshot 0 動が裏）。
 - **⒮⑴（行頭 prefix 調号 seed）は未着手のまま**（承認ゲート付き単独セッション指定・
   従来どおり）。
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
@@ -783,6 +768,38 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ブレーカーと配置で spec が食い違う（本数見積りにしか効かない）
 - **`LayoutEngine` の単一ページ経路が今も自前で積む**（force 0 なので鎖と一致するが二重実装）
 - **Y コーパスの拡張**（`page.top-margin` / `page.bottom-margin` / `page.last-page-gap` 等）
+- ★ **歌詞行が譜間の「中で」LP と別の位置に立つ**（2026-08-14・双子実測・**未着手**）。
+  ⚠️ **上の「force 0 のまま」とは別件**——あちらは*再配分*の話で、これは*静止位置*。
+  grandStaff の 2 譜の間に `staff upper with lyrics words` を置いた双子で、
+  **歌詞行なしなら両者 9.000 ss で完全一致**（＝計測の陽性対照）、歌詞行を入れると：
+
+  | | 上譜中心→歌詞ベースライン | 歌詞→下譜中心 | 譜間合計 |
+  |---|---|---|---|
+  | LilyPond 2.26.0 | **6.739** | **4.500** | 11.239 |
+  | Lily# | 5.650 | 6.050 | 11.700 |
+  | 差 | **−1.089**（近すぎ） | **+1.550**（遠すぎ） | +0.461 |
+
+  ⚠️ **正味の 0.461 は逆向きの 2 つの誤差の残差**なので、合計だけ見ると小さく見える。
+  効くのは `nonstaff-relatedstaff-spacing`（上）と `nonstaff-unrelatedstaff-spacing`（下）の
+  どちらを Lily# がどう読んでいるか。**⚠️ SpanBarStub 説は否定済**——
+  `span-bar-stub-engraver.cc` は未引用で Lily# に概念が無いが、stub は Lyrics 文脈に
+  純粋高さを**足す**ので、欠けているなら Lily# は*狭く*なるはず。実測は逆。
+  再現（`lysc svg` と `lilypond --svg` で `<line>` / `<text>` の y を読むだけ）:
+
+  ```
+  octave absolute
+  time 4/4
+  part upper { clef treble }
+  part lower { clef bass }
+  section Main {
+    upper { d'4 d' e' d' | b4 a b2 | }
+    lower { g,4 b, c a, | d4 d d2 | }
+    lyrics words { Praise God from whom | all bless- ings | }
+  }
+  form main { Main }
+  score main "out" { grandStaff { staff upper with lyrics words
+                                  staff lower } }
+  ```
 
 #### ★ 譜間ばね移植（`c309b751`+`8b7b2615`）で**字面から外れた 1 件と未移植 3 件**
 
@@ -898,6 +915,31 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `COORDINATE_AUDIT.md` §4.5 の島2 行。単独でやると差分が巨大なわりに何も守らない）
 
 ### G. 保守性の負債・未 commit のプローブ
+
+> ## ★ 引用の **OVERRUN 検査**（範囲が関数の外へはみ出す）は **C# に無い**（2026-08-14・**未移植**）
+>
+> 2026-08-14 に PowerShell の使い捨て検出器で回したところ、**8 件の実害**を出した:
+> `BeamScoringProblem` の 5 件（`set_minimum_dy` は実際 462-482 なのに `:470-489` 等、
+> **系統的に +3〜+6 ずれ**）、`stem.cc:1006-1018`（`is_valid_stem` 993-1010 と
+> `Stem::print` 1013-1048 を**跨いでいた**）ほか。全部直したので**いま回すと 0**。
+> ⚠️ **既存の `CitationRangesHoldTheirNamedSymbol` は原理的に見えない**——範囲の*始点*が
+> 正しい関数の中に落ちていれば通るため。
+>
+> **移すなら規則はこれ**（3 段の絞りは実測で決めた。素朴にやると偽陽性 309 件）:
+> 1. 正当なのは「**名前の定義が範囲に載っている**」か「**範囲が本体の内側**」のどちらか。
+>    本体の終わりは LP の作法どおり **列 0 の `}`** で取れる
+> 2. ⚠️ **CamelCase のクラス名を除く**（`Beam_scoring_problem` は自分のコンストラクタに
+>    一致してしまう）。LP の関数は**小文字始まり**なのでそこで切る → 131 件に落ちる
+> 3. ⚠️ **主語は住所直後の *最初* の記号だけ**。後続は散文が挙げた callee/近傍 → 44 件
+>
+> 残る OUTSIDE 36 件は**正当な「呼び出し箇所を指して被呼び出し関数を名指す」引用**で、
+> 散文自身がそう書いている。**defect 一覧ではないので、そのままラチェットにはできない。**
+>
+> ★ **una corda の積み順**（`MusicMarkEngraver.PedalFamilyRank`）は未実測の推測のまま。
+> 決めるには **3 種同時の双子 1 本**でよい:
+> `pf { c1@ped@sost@una.corda | c1@ped(off)@sost(off)@tre.corde | }`（`part` に `pedal text`）を
+> `lysc svg` と `lilypond --svg` で描いて `<text>` の y を読む。sustain / sostenuto の対は
+> **LP 2.26.0 で 2.443 離れ、sostenuto が譜に近い**と実測済（§D の隣に同じ手順）。
 
 > ## ★★ XML doc の警告 476 件が **Release だけで出て、誰も見ていない**（2026-08-11・第135セッションで起票・**未着手**）
 >

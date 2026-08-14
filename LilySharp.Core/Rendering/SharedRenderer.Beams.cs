@@ -337,8 +337,8 @@ internal static partial class SharedRenderer
                 // A whole-note display pair's stem has NO ink — the beam floats
                 // between the heads and only the invisible stem's X survives (used
                 // above as the beam frame).
-                // LILYPOND-REF: lily/stem.cc:1006-1018 Stem::print → is_valid_stem
-                //   returns false for an invisible stem, printing nothing.
+                // LILYPOND-REF: lily/stem.cc:993-1010 is_valid_stem returns false for an
+                //   invisible stem, so Stem::print (:1013-1048) prints nothing.
                 if (InvisibleStem(i))
                     continue;
                 bool up = MemberUp(i);

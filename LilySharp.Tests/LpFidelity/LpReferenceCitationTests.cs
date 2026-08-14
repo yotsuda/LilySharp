@@ -93,7 +93,42 @@ public sealed class LpReferenceCitationTests
     /// take them all; only the naming ratchet lets them past.
     /// </para>
     /// </remarks>
-    private const int UnnamedCitationBaseline = 742;
+    /// <remarks>
+    /// ⚠️⚠️ 742 → 710 ON 2026-08-14, AND NOTHING WAS PAID TO GET THERE. The 32 are the
+    /// trailing-underscore members <see cref="SymbolPattern"/> could not match — citations
+    /// that had named their subject all along, counted as naming nothing by an instrument
+    /// that could not spell <c>beam_thickness_</c>. Recording it as a baseline drop is the
+    /// same bookkeeping the 13 → 20 correction used in the other direction: a number that
+    /// moves because the instrument changed is not progress, and saying so is what keeps the
+    /// ratchet honest. The 710 left is the real backlog.
+    /// </remarks>
+    /// <remarks>
+    /// ⚠️ MEASURED 2026-08-14, and worth knowing before anyone tries to clear it: of the 742,
+    /// 160 named something that IS in the cited file but that this predicate cannot claim —
+    /// 89 bare CamelCase grob names (<c>TextSpanner</c>, <c>BassFigure</c>) and 71 two-part
+    /// hyphen names (<c>break-visibility</c>, <c>collapse-height</c>). Those are NOT
+    /// recoverable the way the 32 were: a bare CamelCase token cannot be told from a Lily#
+    /// class name, and a two-part hyphen token cannot be told from English, so widening for
+    /// them would buy recall by making the ratchet claim things it cannot check. They are
+    /// paid by editing the comment to name something checkable, not by relaxing this.
+    /// </remarks>
+    /// <remarks>
+    /// ★ 710 → 699 ON THE SAME DAY, AND THIS ELEVEN WAS PAID. All of them in
+    /// <c>BeamScoringProblem</c>, all named by reading the cited lines in the pinned tree, and
+    /// the reading was worth what the ratchet claims it is worth: two of the eleven turned out
+    /// to have the wrong range as well as no name — <c>:730-737</c> for a bowl check that
+    /// begins at :729, and <c>:738-743</c> for an average that ends at :738, three lines
+    /// before the range did. Neither was visible to any check here, because a citation that
+    /// names nothing cannot have its range judged.
+    /// </remarks>
+    /// <remarks>
+    /// ★ 699 → 681, the second batch, in <c>SpacingRules</c>. Reading them was again worth
+    /// more than the count: the names that were missing were mostly the ENCLOSING function
+    /// of a two-line address (<c>calc_positioning_done</c> for six separate citations into
+    /// <c>break-alignment-interface.cc</c>), which is exactly the thing a reader of the C#
+    /// wants and the thing nobody had had to write down.
+    /// </remarks>
+    private const int UnnamedCitationBaseline = 681;
 
     /// <summary>
     /// (symbol, LilyPond file) pairs a citation names that the file does not contain.
@@ -158,8 +193,21 @@ public sealed class LpReferenceCitationTests
     /// and every grob property live — is hyphenated. Taking only one of them would let half
     /// the corpus cite without naming, which is the very hole this class exists to close.
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ THE TRAILING <c>_</c> IS LILYPOND'S MEMBER SPELLING AND WAS INVISIBLE HERE. Without
+    /// the optional <c>_?</c> this pattern cannot match <c>beam_thickness_</c> at all: the
+    /// trailing underscore is a word character, so <c>\b</c> refuses to close after
+    /// <c>thickness</c>, and the alternation cannot consume a <c>_</c> with no letter behind
+    /// it. Every citation whose subject was a member — and in a port of
+    /// <c>Beam_scoring_problem</c> that is most of them — therefore counted as naming NOTHING.
+    /// MEASURED when it was fixed: 32 citations recovered, and ZERO of them named a
+    /// trailing-underscore token the cited file does not contain, so the widening bought
+    /// recall at no cost in precision. It is also safe by construction in the way
+    /// <see cref="LooksLikeLilyPondSymbol"/>'s other rules are: neither C# nor English spells
+    /// a word with a trailing underscore, so nothing but LilyPond can claim one.
+    /// </remarks>
     private static readonly Regex SymbolPattern = new(
-        @"\b[A-Za-z][A-Za-z0-9]*(?:[_-][A-Za-z0-9]+)+\b", RegexOptions.Compiled);
+        @"\b[A-Za-z][A-Za-z0-9]*(?:[_-][A-Za-z0-9]+)+_?\b", RegexOptions.Compiled);
 
     /// <summary>
     /// Decides whether a token is plausibly a LilyPond name rather than English or C#.
@@ -177,6 +225,8 @@ public sealed class LpReferenceCitationTests
     /// </remarks>
     private static bool LooksLikeLilyPondSymbol(string token)
     {
+        // LilyPond's members end in '_'; it is part of the name and not a segment.
+        token = token.TrimEnd('_');
         if (token.Length < 8)
             return false;
         var segments = token.Split('_', '-');
@@ -817,6 +867,396 @@ public sealed class LpReferenceCitationTests
             $"citations whose range left the definition they name rose to {stale.Count} from "
             + $"the baseline {StaleRangeBaseline}. Read the lines and correct the range — the "
             + "name is not the address. Do NOT raise the baseline.\n"
+            + string.Join("\n", stale));
+    }
+
+    // ------------------------------------------------------------------
+    // The same question for SCHEME, which every check above leaves out.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Citations into a <c>.scm</c> file whose range does not sit in the top-level form
+    /// they name. May only go DOWN.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHY THIS EXISTS. <see cref="CitationRangesHoldTheirNamedSymbol"/> judges C++ only, and
+    /// <see cref="IsVerifiableSymbol"/> claims only underscored names — between them, MEASURED
+    /// on this corpus, 561 citations that carry a line range into <c>.scm</c>/<c>.ly</c> had no
+    /// range check of any kind, and 328 more named a symbol nothing would ever verify. Scheme
+    /// is not a corner of this corpus: <c>define-grobs.scm</c> is where a grob's defaults live,
+    /// and a drifted address there is exactly as wrong as one into <c>beam.cc</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE RULE WAS MEASURED BEFORE IT WAS WRITTEN, and the first one failed. "The named
+    /// symbol is inside the cited range" sounds right for Scheme — a citation there points at
+    /// data rather than at six lines inside a function — and it holds for only 71% of the
+    /// named citations (75% at ±3, 91% at ±30). The misses were not defects: they were
+    /// citations into the MIDDLE of a big form, the same shape C++ has. So this asks the same
+    /// question the C++ check asks, in Scheme's units.
+    /// </para>
+    /// <para>
+    /// ⚠️ <see cref="IsVerifiableSymbol"/> IS DELIBERATELY NOT APPLIED HERE. It exists because
+    /// hyphenated three-part tokens are as often English as LilyPond, and the cost of a false
+    /// positive is a failing build over a correct citation. That precision is bought here by a
+    /// different device, the one the C++ check already uses: a name is claimed only if the
+    /// FILE contains it. "end-to-end" and "staff-affinity-aware" are not in
+    /// <c>define-grobs.scm</c>; <c>outside-staff-priority</c> is.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT THIS CANNOT SEE: <c>.ly</c> files, whose top-level shape is
+    /// <c>\context { }</c> rather than an s-expression and which want their own splitter
+    /// (92 ranged citations, still unchecked); and a range that drifted WITHIN its own form —
+    /// the same honest limit stated at the C++ check.
+    /// </para>
+    /// </remarks>
+    private const int SchemeStaleRangeBaseline = 0;
+
+    /// <summary>
+    /// Citations this check reports and a human has read and found CORRECT.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ THESE ARE DEFECTS IN THE INSTRUMENT, NOT IN THE COMMENTS, and they are listed rather
+    /// than silently tolerated because the instrument's blind spot has a shape worth naming:
+    /// <see cref="LooksLikeLilyPondSymbol"/> needs THREE hyphen-joined parts, so a two-part
+    /// Scheme name — <c>spanner-state</c>, <c>done?</c>, <c>voice-state</c> — is invisible to
+    /// it. When the subject of a citation is such a name, the only symbols left for this check
+    /// to claim are the INCIDENTAL ones the prose mentions, and it then reports a citation that
+    /// is exact.
+    /// </para>
+    /// <list type="bullet">
+    /// <item><c>part-combiner.scm:29-32</c> is precisely the <c>spanner-state</c> slot of
+    /// <c>&lt;Voice-state&gt;</c>, comment and all; the citation names it and adds that
+    /// <c>analyze-spanner-states</c> (:199) fills it.</item>
+    /// <item><c>part-combiner.scm:101-105</c> is precisely <c>done?</c>, whose body carries
+    /// the very line the comment quotes ("the last entry represents the end of the part");
+    /// <c>make-voice-states</c> (:149) is named as whose vector it walks.</item>
+    /// </list>
+    /// <para>
+    /// ⚠️ ASSERTED IN REVERSE, like <see cref="KnownUnverifiedSymbols"/>: an entry that stops
+    /// being reported must be REMOVED, so that a citation which really did rot cannot hide
+    /// behind an exemption written for a different reason.
+    /// </para>
+    /// </remarks>
+    private static readonly HashSet<string> SchemeCitationsReadAndFoundCorrect = new()
+    {
+        "scm/part-combiner.scm:29-32|analyze_spanner_states",
+        "scm/part-combiner.scm:101-105|make_voice_states",
+    };
+
+    /// <summary>
+    /// Splits a LilyPond Scheme file into its top-level forms.
+    /// </summary>
+    /// <remarks>
+    /// A top-level form starts at a <c>(</c> in column 0 and runs to the line before the next
+    /// one. No paren counting: the boundary question is answered by LilyPond's own layout, and
+    /// a depth scanner would have to know about strings, <c>;</c> comments and <c>#\(</c> char
+    /// literals to do no better. Trailing blank and comment lines fall to the form above,
+    /// which is why the caller asks for OVERLAP rather than for the form holding the first
+    /// line — a citation that starts one line early is not a citation about another form.
+    /// </remarks>
+    private static IReadOnlyList<LpDefinition> SchemeForms(string[] lines)
+    {
+        var starts = new List<int>();
+        for (int i = 0; i < lines.Length; i++)
+            if (lines[i].StartsWith('('))
+                starts.Add(i);
+
+        var forms = new List<LpDefinition>();
+        for (int s = 0; s < starts.Count; s++)
+        {
+            int from = starts[s];
+            int to = s + 1 < starts.Count ? starts[s + 1] - 1 : lines.Length - 1;
+            forms.Add(new LpDefinition(from + 1, to + 1,
+                string.Join('\n', lines[from..(to + 1)]).Replace('-', '_')));
+        }
+        return forms;
+    }
+
+    /// <summary>
+    /// Citations into a <c>.ly</c> file whose range does not sit in the top-level block they
+    /// name. May only go DOWN.
+    /// </summary>
+    /// <remarks>
+    /// The last of the three file types to get a range check. <c>engraver-init.ly</c> is where
+    /// a context says which engravers it <c>\consists</c> of, which is the answer to "does
+    /// LilyPond put this grob in this context at all" — 47 of the 92 ranged <c>.ly</c>
+    /// citations are into that one file.
+    /// </remarks>
+    private const int LyStaleRangeBaseline = 0;
+
+    /// <summary>
+    /// Splits a LilyPond <c>.ly</c> init file into its top-level blocks.
+    /// </summary>
+    /// <remarks>
+    /// A block starts at a column-0 line that is not blank, not a <c>%</c> comment and not the
+    /// <c>}</c> that CLOSES the block above — LilyPond writes both <c>\context {</c> and its
+    /// closing brace hard against the margin, and treating the brace as a start would make
+    /// every block's last line a one-line block of its own. It runs to the line before the
+    /// next start, so the closing brace and the blank lines after it fall to the block they
+    /// belong to. The same overlap rule as Scheme then applies at the call site.
+    /// <para>
+    /// ⚠️ STRINGS SPAN LINES AND CONTINUE AT COLUMN 0, and ignoring that cut the Voice context
+    /// off at its own <c>\description</c>: the block came out 357-361 instead of running to
+    /// the closing brace, so a citation naming <c>Script_engraver</c> — a <c>\consists</c>
+    /// line forty lines further down, plainly inside the same context — was reported as
+    /// having left it. Four correct citations, all reported, by a scanner that stopped at a
+    /// quote. That is the failure mode <see cref="StripCxxCode"/> is scarred by, in another
+    /// language.
+    /// </para>
+    /// </remarks>
+    private static IReadOnlyList<LpDefinition> LyBlocks(string[] lines)
+    {
+        var starts = new List<int>();
+        bool inString = false, inBlockComment = false;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i];
+
+            if (!inString && !inBlockComment
+                && line.Length > 0 && !char.IsWhiteSpace(line[0])
+                && line[0] is not ('%' or '}' or ')'))
+                starts.Add(i);
+
+            for (int k = 0; k < line.Length; k++)
+            {
+                if (inBlockComment)
+                {
+                    if (line[k] == '%' && k + 1 < line.Length && line[k + 1] == '}')
+                    {
+                        inBlockComment = false;
+                        k++;
+                    }
+                    continue;
+                }
+                if (inString)
+                {
+                    if (line[k] == '\\')
+                        k++;                        // an escaped quote does not close it
+                    else if (line[k] == '"')
+                        inString = false;
+                    continue;
+                }
+                if (line[k] == '"')
+                    inString = true;
+                else if (line[k] == '%' && k + 1 < line.Length && line[k + 1] == '{')
+                {
+                    inBlockComment = true;
+                    k++;
+                }
+                else if (line[k] == '%')
+                    break;                          // a line comment: nothing after it counts
+            }
+        }
+
+        var blocks = new List<LpDefinition>();
+        for (int s = 0; s < starts.Count; s++)
+        {
+            int from = starts[s];
+            int to = s + 1 < starts.Count ? starts[s + 1] - 1 : lines.Length - 1;
+            blocks.Add(new LpDefinition(from + 1, to + 1,
+                string.Join('\n', lines[from..(to + 1)]).Replace('-', '_')));
+        }
+        return blocks;
+    }
+
+    /// <summary>The .ly splitter must keep one context's body out of the next one's.</summary>
+    /// <remarks>
+    /// ⚠️ A POSITIVE CONTROL WITH A REAL NEGATIVE DIRECTION. The Voice context
+    /// <c>\consists Trill_spanner_engraver</c>; the Staff context above it does not, and a
+    /// splitter that ran the two together would report a clean result for a citation that had
+    /// wandered between them. Both lines were read in the pinned 2.26.0 tree.
+    /// </remarks>
+    [Fact]
+    public void TheLySplitterSeparatesTopLevelBlocks()
+    {
+        string? lp = LilyPondSource();
+        if (lp is null)
+        {
+            _out.WriteLine("NO LILYPOND TREE ON THIS MACHINE — the splitter is unexercised.");
+            return;
+        }
+
+        var blocks = LyBlocks(File.ReadAllLines(Path.Combine(lp, "ly", "engraver-init.ly")));
+
+        // :357 opens the Voice context; :359 is its \name.
+        var voice = blocks.Single(b => b.From <= 359 && 359 <= b.To);
+        Assert.Equal(357, voice.From);
+        Assert.Contains("Trill_spanner_engraver", voice.Text, StringComparison.Ordinal);
+
+        // The block before it is a different context and must not have been swallowed.
+        var previous = blocks.Last(b => b.To < voice.From);
+        Assert.DoesNotContain("Trill_spanner_engraver", previous.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LyCitationRangesHoldTheirNamedBlock()
+    {
+        string? lp = LilyPondSource();
+        if (lp is null)
+        {
+            _out.WriteLine("NO LILYPOND TREE ON THIS MACHINE — .ly ranges unchecked.");
+            return;
+        }
+
+        var blocksByFile = new Dictionary<string, IReadOnlyList<LpDefinition>>();
+        var bodyByFile = new Dictionary<string, string>();
+        var inScope = new List<Citation>();
+        var stale = new List<string>();
+
+        foreach (var c in AllCitations())
+        {
+            if (c.From == 0 || !c.LpPath.EndsWith(".ly"))
+                continue;
+
+            string path = Path.Combine(lp, c.LpPath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+                continue;
+            if (!blocksByFile.TryGetValue(c.LpPath, out var blocks))
+            {
+                var lines = File.ReadAllLines(path);
+                blocksByFile[c.LpPath] = blocks = LyBlocks(lines);
+                bodyByFile[c.LpPath] = string.Join('\n', lines).Replace('-', '_');
+            }
+
+            var named = c.OwnSymbols
+                .Select(s => s.Replace('-', '_'))
+                .Where(s => bodyByFile[c.LpPath].Contains(s, StringComparison.Ordinal))
+                .ToList();
+            if (named.Count == 0)
+                continue;
+
+            inScope.Add(c);
+            var landed = blocks.Where(b => b.From <= c.To && c.From <= b.To).ToList();
+            if (landed.Count == 0)
+                continue;
+            if (landed.Any(b => named.Any(s => b.Text.Contains(s, StringComparison.Ordinal))))
+                continue;
+
+            stale.Add($"  {c.SourceFile}:{c.SourceLine} -> {c.LpPath}:{c.From}-{c.To} "
+                      + $"names {string.Join(", ", named)}, but those lines are in "
+                      + string.Join(" + ", landed.Take(3).Select(b => $"{b.From}-{b.To}")));
+        }
+
+        _out.WriteLine(
+            $"{inScope.Count} citations give a .ly range and name something the file has; "
+            + $"{inScope.Count - stale.Count} land in a block that contains the name, "
+            + $"{stale.Count} do not.");
+
+        Assert.True(
+            stale.Count <= LyStaleRangeBaseline,
+            $".ly citations whose range left the block they name rose to {stale.Count} from "
+            + $"the baseline {LyStaleRangeBaseline}. Read the lines and correct the range. "
+            + "Do NOT raise the baseline.\n"
+            + string.Join("\n", stale));
+    }
+
+    /// <summary>The Scheme splitter must find the form a known line is in, and not another.</summary>
+    /// <remarks>
+    /// The positive control <see cref="TheBraceScannerReachesPastRawStrings"/> is for, in
+    /// Scheme's units. <c>auto-beam.scm</c> holds exactly two top-level definitions and each
+    /// name occurs exactly once in the file, so both directions are assertable without
+    /// depending on what a body happens to call.
+    /// </remarks>
+    [Fact]
+    public void TheSchemeSplitterSeparatesTopLevelForms()
+    {
+        string? lp = LilyPondSource();
+        if (lp is null)
+        {
+            _out.WriteLine("NO LILYPOND TREE ON THIS MACHINE — the splitter is unexercised.");
+            return;
+        }
+
+        var forms = SchemeForms(File.ReadAllLines(Path.Combine(lp, "scm", "auto-beam.scm")));
+
+        // :36 is default-auto-beam-check, :130 is extract-beam-exceptions.
+        var atCheck = forms.Single(f => f.From <= 82 && 82 <= f.To);
+        Assert.Equal(36, atCheck.From);
+        Assert.Contains("default_auto_beam_check", atCheck.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("extract_beam_exceptions", atCheck.Text, StringComparison.Ordinal);
+
+        var atExtract = forms.Single(f => f.From <= 140 && 140 <= f.To);
+        Assert.Equal(130, atExtract.From);
+        Assert.Contains("extract_beam_exceptions", atExtract.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("default_auto_beam_check", atExtract.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SchemeCitationRangesHoldTheirNamedForm()
+    {
+        string? lp = LilyPondSource();
+        if (lp is null)
+        {
+            _out.WriteLine("NO LILYPOND TREE ON THIS MACHINE — Scheme ranges unchecked.");
+            return;
+        }
+
+        var formsByFile = new Dictionary<string, IReadOnlyList<LpDefinition>>();
+        var bodyByFile = new Dictionary<string, string>();
+        var inScope = new List<Citation>();
+        var stale = new List<string>();
+        var reported = new HashSet<string>();
+
+        foreach (var c in AllCitations())
+        {
+            if (c.From == 0 || !c.LpPath.EndsWith(".scm"))
+                continue;
+
+            string path = Path.Combine(lp, c.LpPath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+                continue;
+            if (!formsByFile.TryGetValue(c.LpPath, out var forms))
+            {
+                var lines = File.ReadAllLines(path);
+                formsByFile[c.LpPath] = forms = SchemeForms(lines);
+                bodyByFile[c.LpPath] = string.Join('\n', lines).Replace('-', '_');
+            }
+
+            // A name the FILE does not have belongs to
+            // EveryNamedSymbolOccursInItsCitedFile, not here.
+            var named = c.OwnSymbols
+                .Select(s => s.Replace('-', '_'))
+                .Where(s => bodyByFile[c.LpPath].Contains(s, StringComparison.Ordinal))
+                .ToList();
+            if (named.Count == 0)
+                continue;
+
+            inScope.Add(c);
+            var landed = forms.Where(f => f.From <= c.To && c.From <= f.To).ToList();
+            if (landed.Count == 0)
+                continue;
+            if (landed.Any(f => named.Any(s => f.Text.Contains(s, StringComparison.Ordinal))))
+                continue;
+
+            string key = $"{c.LpPath}:{c.From}-{c.To}|{string.Join(",", named)}";
+            reported.Add(key);
+            if (SchemeCitationsReadAndFoundCorrect.Contains(key))
+                continue;
+
+            stale.Add($"  {c.SourceFile}:{c.SourceLine} -> {c.LpPath}:{c.From}-{c.To} "
+                      + $"names {string.Join(", ", named)}, but those lines are in "
+                      + string.Join(" + ", landed.Take(3).Select(f => $"{f.From}-{f.To}")));
+        }
+
+        var exempted = SchemeCitationsReadAndFoundCorrect.Where(k => !reported.Contains(k)).ToList();
+        Assert.True(exempted.Count == 0,
+            "these are no longer reported — remove them from "
+            + "SchemeCitationsReadAndFoundCorrect so a citation that really rots cannot hide "
+            + "behind an exemption written for something else:\n"
+            + string.Join("\n", exempted.Select(k => "  " + k)));
+
+        _out.WriteLine(
+            $"{inScope.Count} citations give a Scheme range and name something the file has; "
+            + $"{inScope.Count - stale.Count} land in a form that contains the name, "
+            + $"{stale.Count} do not.");
+
+        Assert.True(
+            stale.Count <= SchemeStaleRangeBaseline,
+            $"Scheme citations whose range left the form they name rose to {stale.Count} from "
+            + $"the baseline {SchemeStaleRangeBaseline}. Read the lines and correct the range. "
+            + "Do NOT raise the baseline.\n"
             + string.Join("\n", stale));
     }
 }

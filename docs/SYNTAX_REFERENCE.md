@@ -612,7 +612,7 @@ melody's opening rest bar).
 ### Rehearsal Marks
 
 ```
-c4@mark.A d e f |
+c4@mark("A") d e f |
 ```
 
 ### Navigation Marks
@@ -642,9 +642,9 @@ c4@loco d e f |        % End ottava
 ### Pedal Markings
 
 ```
-c4@ped d e f@ped.off |        % Sustain pedal
-c4@sost d@sost.off |          % Sostenuto pedal
-c4@una.corda d@tre.corde |    % Una corda pedal
+c4@sustainOn d e f@sustainOff |        % Sustain pedal
+c4@sostenutoOn d@sostenutoOff |        % Sostenuto pedal
+c4@unaCorda d@treCorde |               % Una corda pedal (tre corde IS the release)
 ```
 
 ### Trill Spanners
@@ -668,13 +668,13 @@ c4@glissando d |       % Glissando from C to D
 ## Figured Bass
 
 ```
-c4@fig.6 d@fig.6.4 e@fig.5.3 |
+c4@fig(6) d@fig(6 4) e@fig(5 3) |
 ```
 
 ## Chord Names
 
 ```
-c4@chord.C d@chord.Dm e@chord.Em f@chord.F |
+c4@chord(c) d@chord(d:m) e@chord(e:m) f@chord(f) |
 ```
 
 ## Comments

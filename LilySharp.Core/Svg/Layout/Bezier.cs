@@ -1,6 +1,15 @@
 // Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
+// Parts of this file are ported from LilyPond, the GNU music typesetter.
+// The C# is a modified translation of the following, not a copy of it:
+//   lily/bezier.cc
+//     Copyright (C) 1998--2026 Jan Nieuwenhuizen <janneke@gnu.org>
+// LilyPond is free software under the GNU General Public License version 3 or
+// later; its notices are kept here as that licence requires. The full list is in
+// LILYPOND-ATTRIBUTION.md. Lily# is an independent project, not affiliated with
+// or endorsed by the LilyPond project.
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -136,7 +145,7 @@ internal struct Bezier
     /// gracefully through quadratic/linear when leading coefficients vanish.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: flower/polynomial.cc:271-289 solve_cubic — Polynomial::solve
+    /// LILYPOND-REF: flower/polynomial.cc:270-286 solve_cubic — Polynomial::solve
     /// dispatches on the effective degree (solve_quadric / solve_linear too).
     /// LILYPOND-REF: lily/bezier.cc:201-208 — filter_solutions drops roots
     /// outside [0,1].

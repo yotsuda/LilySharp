@@ -14,6 +14,9 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>music;notation;engraving;lilypond;svg;pdf;score</PackageTags>
     <RepositoryType>git</RepositoryType>
+    <!-- Where the corresponding source of this package lives (GPL §6). -->
+    <RepositoryUrl>https://github.com/yotsuda/LilySharp</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/yotsuda/LilySharp</PackageProjectUrl>
   </PropertyGroup>
 
   <!-- Generate XML documentation only for Release builds (NuGet pack) -->
@@ -28,8 +31,13 @@
 
   <ItemGroup>
     <PackageReference Include="PdfSharpCore" Version="1.3.65" />
-    <PackageReference Include="Svg.Skia" Version="3.4.1" />
-    <!-- Svg.Skia pulls SkiaSharp with Win32/macOS natives only; Linux
+    <!-- Skia is referenced DIRECTLY, not through Svg.Skia. Svg.Skia's own
+         Svg.Custom is MS-PL: free software, but GPL-incompatible, so it may
+         not travel inside a Lily# binary. Nothing here needs it — every
+         output format renders from the layout model, and the SVG-string
+         rasterizer that did use it lived only in the test harness. -->
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <!-- SkiaSharp ships Win32/macOS natives with the managed package; Linux
          (CI) needs the native asset package explicitly or every Skia
          call dies with DllNotFoundException: libSkiaSharp. -->
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.9" />
@@ -52,10 +60,14 @@
     </Content>
   </ItemGroup>
 
-  <!-- Include LICENSE and README in the package -->
+  <!-- Include LICENSE and README in the package, plus the notices: this package
+       carries the Emmentaler and TeX Gyre fonts and code ported from LilyPond,
+       so the terms those come under have to travel with it. -->
   <ItemGroup>
     <None Include="..\LICENSE" Pack="true" PackagePath="" />
     <None Include="..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
+    <None Include="..\LILYPOND-ATTRIBUTION.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

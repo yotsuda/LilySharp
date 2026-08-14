@@ -859,8 +859,8 @@ private GreenNode?[] ParseArticulations()
                                 $"an articulation takes only one of '.up' / '.down'; remove the extra '.{extra.Text}'.");
                         }
                     }
-                    // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(Dm),
-                    // @mark("A"), @finger(3), @feather(right), @ped(off). The '.' is reserved
+                    // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(d:m),
+                    // @mark("A"), @finger(3), @feather(right). The '.' is reserved
                     // for .up/.down placement (handled above); EVERY annotation argument now
                     // goes in parentheses, separated by whitespace or commas. The arg tokens
                     // are kept on the green node (so the source span is exact) but excluded

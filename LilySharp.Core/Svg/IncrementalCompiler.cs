@@ -513,7 +513,7 @@ public sealed class IncrementalCompiler
     //
     // ⚠️ IT USED TO EXCLUDE ANY SCORE WITH A PEDAL BRACKET, under a comment asserting the
     // array was "always empty today (pedals render as text marks, never a bracket layout)".
-    // That was false: Staff.PedalStyle defaults to Bracket, so every `@ped` in the corpus
+    // That was false: Staff.PedalStyle defaults to Bracket, so every sustain pedal in the corpus
     // produced one. The cost was invisible because the only thing that measures it is
     // LilySharp.Benchmarks' IncrementalSessionBenchmark, which asserts reuse fires and had
     // been throwing on its multi-staff fixture (showcase/03-piano, a piano score with

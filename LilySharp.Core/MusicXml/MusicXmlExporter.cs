@@ -1989,7 +1989,7 @@ public sealed class MusicXmlExporter
         {
             if (artic is ArticulationSyntax articulation)
             {
-                // Single-word direction marks (@ped, @sost, @ottava, @loco)
+                // Single-word direction marks (@sustainOn, @sostenutoOn, @ottava, @loco)
                 // parse as name-only articulations, not compound marks.
                 if (articulation.Type == ArticulationType.None)
                     ProcessDirectionName(articulation.NameToken.Text.ToLowerInvariant());
@@ -2096,7 +2096,7 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>Direction-family compound marks attached to a note:
-    /// pedal (@ped / @ped.off / @sost / @sost.off), ottava lines
+    /// pedal (@sustainOn / @sustainOff / @sostenutoOn / @sostenutoOff), ottava lines
     /// (@ottava / @ottava.bassa / @loco) and chord symbols (@chord(...)).
     /// Everything else stays with its specialized consumer.</summary>
     private void ProcessDirectionMark(MusicMarkSyntax mark)
@@ -2108,14 +2108,14 @@ public sealed class MusicXmlExporter
         var name = rawName.ToLowerInvariant(); // chord TEXT keeps its case below
         switch (name)
         {
-            case "ped":
+            case "sustainon":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "start", Placement = "below" });
                 break;
-            case "ped.off":
-            case "sost.off":
+            case "sustainoff":
+            case "sostenutooff":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
                 break;
-            case "sost":
+            case "sostenutoon":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "sostenuto", Placement = "below" });
                 break;
             case "ottava":

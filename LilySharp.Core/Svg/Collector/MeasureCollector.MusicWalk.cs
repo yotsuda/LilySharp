@@ -895,10 +895,11 @@ public sealed partial class MeasureCollector
 
             case MusicMarkSyntax mark:
                 {
-                    // A note-attached compound mark (e.g. b@ped.off) is also surfaced
-                    // here as a statement node; CollectArticulations already created it
-                    // anchored to its host note. Skip this un-anchored duplicate so the
-                    // release ("*") stays at its note rather than snapping to the bar.
+                    // A note-attached compound mark (e.g. b@ottava(bassa)) is also
+                    // surfaced here as a statement node; CollectArticulations already
+                    // created it anchored to its host note. Skip this un-anchored
+                    // duplicate so the mark stays at its note rather than snapping to
+                    // the bar.
                     if (_musicMarks.Any(m => m.SourcePosition == mark.Position))
                         break;
                     var markType = MusicMarkItem.ParseMarkName(mark.MarkName);

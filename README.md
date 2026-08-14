@@ -4,7 +4,7 @@ A modern music notation compiler with real-time preview support.
 
 ## Overview
 
-Lily# is a new music notation language inspired by LilyPond, designed for:
+Lily# is a new music notation language, designed for:
 - **Explicit over implicit**: Clear, readable syntax
 - **Completion-friendly**: IDE-first design with full LSP support
 - **Single-pass incremental compilation**: Using Roslyn-style Red-Green tree pattern
@@ -268,13 +268,43 @@ The LSP server supports incremental text synchronization:
 - [ ] Multi-file projects
 - [ ] LilyPond → LilySharp conversion tool
 
+## Relationship to LilyPond
+
+Lily# is an independent project. It is **not** affiliated with, endorsed by, or a
+release of the LilyPond project, and its language is deliberately not LilyPond's.
+
+Its engraving engine, however, is in part a **port of LilyPond**, the GNU music
+typesetter: beam quanting, slur and tie scoring, skylines, springs, page breaking
+and other layout algorithms are modified translations of LilyPond's C++ and Scheme
+rather than independent implementations. Those files carry the copyright notices of
+the LilyPond files they were ported from, and
+[LILYPOND-ATTRIBUTION.md](LILYPOND-ATTRIBUTION.md) lists every one of them.
+
+Most `LILYPOND-REF` comments elsewhere in the source are citations rather than
+ports: they record where LilyPond decides something so that Lily#'s own code can be
+checked against it.
+
 ## License
 
-This program is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License v3.0](LICENSE) or later.
+Copyright (C) 2025-2026 Yoshifumi Tsuda &lt;ytsuda@gmail.com&gt;.
+
+This program is free software: you can redistribute it and/or modify it under the
+terms of the [GNU General Public License v3.0](LICENSE) or later. It contains
+modified code from LilyPond, which is under the same licence; the modifications are
+Lily#'s and are marked in the files that carry them.
+
+The per-file headers name the copyright holder without an address; this line is the
+one place the address is kept, so it stays correct if it ever changes.
+
+**Source for the binaries.** The CLI archives and the VS Code extension are built
+from this repository. The complete corresponding source for any released binary is
+the tagged commit it was built from, available at
+<https://github.com/yotsuda/LilySharp>.
 
 ## Acknowledgments
 
-- LilyPond for inspiration on music notation syntax
+- LilyPond — the engraving algorithms this engine ports, and the reference its
+  output is measured against
 - Roslyn for the Red-Green tree pattern
 - Emmentaler font (from LilyPond; GPL-3.0-or-later / SIL OFL dual license, redistributed here under the GPL) — music glyphs; see `LilySharp.Core/Fonts/Emmentaler-LICENSE.txt`
 - TeX Gyre Schola / TeX Gyre Heros fonts (GUST Font License, i.e. LPPL 1.3c) — all non-music text, and the metrics the engine spaces it by; the same faces LilyPond sets text in. See `LilySharp.Core/Fonts/TeXGyre-LICENSE.GUST.txt`

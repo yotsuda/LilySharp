@@ -1,6 +1,16 @@
 // Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
+// Parts of this file are ported from LilyPond, the GNU music typesetter.
+// The C# is a modified translation of the following, not a copy of it:
+//   lily/beam-quanting.cc
+//     Copyright (C) 1997--2026 Han-Wen Nienhuys <hanwen@xs4all.nl>;
+//     Jan Nieuwenhuizen <janneke@gnu.org>
+// LilyPond is free software under the GNU General Public License version 3 or
+// later; its notices are kept here as that licence requires. The full list is in
+// LILYPOND-ATTRIBUTION.md. Lily# is an independent project, not affiliated with
+// or endorsed by the LilyPond project.
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -159,11 +169,12 @@ internal sealed class BeamScoringProblem
     //   lily/staff-symbol-referencer.cc reads off the staff symbol.
     private readonly double _staffRadius;
 
-    // Staff-line gap scoring tuning. LILYPOND-REF: lily/beam-quanting.cc:1280-1322.
+    // Staff-line gap scoring tuning. LILYPOND-REF: lily/beam-quanting.cc:1280-1322
+    /// score_forbidden_quants — the fudge_factor leniency for borderline gap cases.
     private const double BeamGapFudgeFactor = 2.2;   // beam-edge inset when testing gaps
     private const double BeamGapFixedDemerit = 0.39; // baseline demerit for a line in the gap
 
-    // Max-slope damping factor. LILYPOND-REF: lily/beam-quanting.cc:766.
+    // Max-slope damping factor. LILYPOND-REF: lily/beam-quanting.cc:766 slope_damping.
     private const double BeamSlopeDampingFactor = 0.6;
 
     // Musical dy (least-squares slope * xSpan, used by scorers). Staff-spaces.
@@ -609,7 +620,7 @@ internal sealed class BeamScoringProblem
     /// Internally all Y are stored in staff-spaces (LilyPond's frame); the return
     /// value is converted to staff positions (half staff-spaces) for the caller.
     /// </summary>
-    // LILYPOND-REF: lily/beam-quanting.cc:1022-1114 Beam_scoring_problem::solve()
+    // LILYPOND-REF: lily/beam-quanting.cc:1018-1111 Beam_scoring_problem::solve()
     public (double leftY, double rightY) Solve()
     {
         // Phase 1: Calculate initial position via least-squares
@@ -619,22 +630,23 @@ internal sealed class BeamScoringProblem
         _musicalDy = _unquantedRightY - _unquantedLeftY;
 
         // Phase 2: Apply slope damping based on concaveness
-        // LILYPOND-REF: lily/beam-quanting.cc:748-779
+        // LILYPOND-REF: lily/beam-quanting.cc:744-775 slope_damping()
         ApplySlopeDamping();
 
         // Phase 3: Shift region to valid (avoid large collision objects)
-        // LILYPOND-REF: lily/beam-quanting.cc:781-894
+        // LILYPOND-REF: lily/beam-quanting.cc:777-890 shift_region_to_valid()
         ShiftRegionToValid();
 
         // Phase 4: Generate quantized candidates
-        // LILYPOND-REF: lily/beam-quanting.cc:896-958
+        // LILYPOND-REF: lily/beam-quanting.cc:892-954 generate_quants()
         var candidates = GenerateQuantCandidates();
 
         if (candidates.Count == 0)
             return AtOuterStems(_unquantedLeftY, _unquantedRightY);
 
         // Phase 5: Score using priority queue (lazy evaluation)
-        // LILYPOND-REF: lily/beam-quanting.cc:1050-1083
+        // LILYPOND-REF: lily/beam-quanting.cc:1050-1083 — the best-first queue inside
+        //   Beam_scoring_problem::solve: configurations are scored lazily, cheapest first.
         var best = BestFirstScorer.Solve(candidates, OneScorer);
 
         return AtOuterStems(best.LeftY, best.RightY);
@@ -664,7 +676,7 @@ internal sealed class BeamScoringProblem
     /// Calculates initial beam position based on stem ideal lengths.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:543-608 least_squares_positions()
+    /// LILYPOND-REF: lily/beam-quanting.cc:536-602 least_squares_positions()
     ///
     /// In staff-space units (LilyPond's native frame). The per-stem ideal beam Y
     /// comes straight from Stem_info (staff-spaces), then a least-squares fit runs
@@ -834,7 +846,7 @@ internal sealed class BeamScoringProblem
     /// beam positions), preserving sign, so damping never flattens a beam below
     /// it. Callers guard the near-zero case (a flat beam stays flat).
     /// </summary>
-    // LILYPOND-REF: lily/beam-quanting.cc:470-489 set_minimum_dy()
+    // LILYPOND-REF: lily/beam-quanting.cc:462-482 set_minimum_dy()
     private double MinimumDy(double dy)
     {
         // Staff-spaces — identical to the QuantSit/Inter/Hang base positions.
@@ -912,7 +924,7 @@ internal sealed class BeamScoringProblem
     /// Applies slope damping based on concaveness.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:748-779 slope_damping()
+    /// LILYPOND-REF: lily/beam-quanting.cc:744-775 slope_damping()
     /// </remarks>
     private void ApplySlopeDamping()
     {
@@ -927,7 +939,8 @@ internal sealed class BeamScoringProblem
         if (concaveness >= 10000 || damping >= 10000)
         {
             // Make beam horizontal
-            // LILYPOND-REF: lily/beam-quanting.cc:755-757
+            // LILYPOND-REF: lily/beam-quanting.cc:755-757 slope_damping — unquanted_y_[LEFT]
+            //   takes the RIGHT value and musical_dy_ goes to 0.
             _unquantedRightY = _unquantedLeftY;
             _musicalDy = 0;
             return;
@@ -935,7 +948,7 @@ internal sealed class BeamScoringProblem
 
         if (damping > 0 && (damping + concaveness) > 0)
         {
-            // LILYPOND-REF: lily/beam-quanting.cc:762-773 — all staff-spaces.
+            // LILYPOND-REF: lily/beam-quanting.cc:762-773 slope_damping — all staff-spaces.
             double dy = _unquantedRightY - _unquantedLeftY;
 
             // The geometric beam slope (ss/ss). Feeding tanh the true slope is
@@ -943,7 +956,7 @@ internal sealed class BeamScoringProblem
             // twice the slope (half-space dy over ss x_span) and over-damped.
             double slope = (_xSpan > 0.001) ? dy / _xSpan : 0;
 
-            // LILYPOND-REF: lily/beam-quanting.cc:766
+            // LILYPOND-REF: lily/beam-quanting.cc:766 slope_damping — the tanh line itself.
             slope = BeamSlopeDampingFactor * Math.Tanh(slope) / (damping + concaveness);
 
             double dampedDy = slope * _xSpan;
@@ -953,7 +966,8 @@ internal sealed class BeamScoringProblem
             if (Math.Abs(dampedDy) > 0.001)
                 dampedDy = MinimumDy(dampedDy);
 
-            // LILYPOND-REF: lily/beam-quanting.cc:772-773
+            // LILYPOND-REF: lily/beam-quanting.cc:772-773 slope_damping — the damped dy is
+            //   split evenly onto unquanted_y_'s two ends.
             _unquantedLeftY += (dy - dampedDy) / 2;
             _unquantedRightY -= (dy - dampedDy) / 2;
         }
@@ -963,21 +977,21 @@ internal sealed class BeamScoringProblem
     /// Calculates beam concaveness.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:694-746 calc_concaveness()
-    /// LILYPOND-REF: lily/beam-quanting.cc:624-669 is_concave_single_notes()
-    /// LILYPOND-REF: lily/beam-quanting.cc:671-692 calc_positions_concaveness()
+    /// LILYPOND-REF: lily/beam-quanting.cc:689-742 calc_concaveness()
+    /// LILYPOND-REF: lily/beam-quanting.cc:618-663 is_concave_single_notes()
+    /// LILYPOND-REF: lily/beam-quanting.cc:665-687 calc_positions_concaveness()
     /// </remarks>
     private double CalculateConcaveness()
     {
-        // LILYPOND-REF: lily/beam-quanting.cc:700-702 — knees and cross-staff
-        // beams are exempt from concaveness flattening.
+        // LILYPOND-REF: lily/beam-quanting.cc:696-697 — knees and cross-staff
+        // beams are exempt from concaveness flattening (is_knee_ || is_xstaff_).
         if (_isKnee || _group.IsCrossStaff)
             return 0;
 
         if (_headMin.Length <= 2)
             return 0;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:709-726 — for chords the close
+        // LILYPOND-REF: lily/beam-quanting.cc:709-725 calc_concaveness — for chords the close
         // head (beam side) and far head feed separate measures; single notes
         // have close == far.
         // ⚠️ Deliberately NOT BeamSideHead: LilyPond indexes these with the ONE
@@ -991,12 +1005,12 @@ internal sealed class BeamScoringProblem
             far[i] = _beamDir > 0 ? _headMin[i] : _headMax[i];
         }
 
-        // LILYPOND-REF: lily/beam-quanting.cc:730-737 — the bowl check runs on
+        // LILYPOND-REF: lily/beam-quanting.cc:729-739 is_concave_single_notes — the bowl check runs on
         // the close heads for UP beams, the far heads for DOWN beams.
         if (IsConcaveSingleNotes(_beamDir > 0 ? close : far, _beamDir))
             return 10000;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:738-743 — average of far and
+        // LILYPOND-REF: lily/beam-quanting.cc:736-738 calc_positions_concaveness — average of far and
         // close concaveness.
         return (CalcPositionsConcaveness(far, _beamDir)
                 + CalcPositionsConcaveness(close, _beamDir)) / 2;
@@ -1005,7 +1019,7 @@ internal sealed class BeamScoringProblem
     /// <summary>
     /// Determines whether notes form a concave pattern (bowl shape).
     /// </summary>
-    // LILYPOND-REF: lily/beam-quanting.cc:624-669
+    // LILYPOND-REF: lily/beam-quanting.cc:618-663
     private static bool IsConcaveSingleNotes(int[] positions, int beamDir)
     {
         int first = positions[0];
@@ -1056,7 +1070,7 @@ internal sealed class BeamScoringProblem
     /// <summary>
     /// Calculates numerical concaveness for a set of positions.
     /// </summary>
-    // LILYPOND-REF: lily/beam-quanting.cc:671-692
+    // LILYPOND-REF: lily/beam-quanting.cc:665-687
     private static double CalcPositionsConcaveness(int[] positions, int beamDir)
     {
         double dy = positions[^1] - positions[0];
@@ -1085,7 +1099,7 @@ internal sealed class BeamScoringProblem
     /// Shifts the beam position to avoid large collision objects.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:781-894 shift_region_to_valid()
+    /// LILYPOND-REF: lily/beam-quanting.cc:777-890 shift_region_to_valid()
     ///
     /// Ensures all stems can reach minimum length, and avoids
     /// overlapping with large objects like key/time signatures.
@@ -1155,7 +1169,7 @@ internal sealed class BeamScoringProblem
     /// Generates quantized beam position candidates.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:896-958 generate_quants()
+    /// LILYPOND-REF: lily/beam-quanting.cc:892-954 generate_quants()
     ///
     /// Uses the 4 base quant positions (<see cref="QuantStraddle"/>, <see cref="QuantSit"/>,
     /// <see cref="QuantInter"/>, <see cref="QuantHang"/>) so beams relate properly to staff lines.
@@ -1220,7 +1234,8 @@ internal sealed class BeamScoringProblem
                 unshiftedQuants.Add(i + bq);
         }
 
-        // LILYPOND-REF: lily/beam-quanting.cc:934-957
+        // LILYPOND-REF: lily/beam-quanting.cc:930-953 — the i x j loop over
+        //   unshifted_quants that builds every candidate configuration.
         var candidates = new List<BeamConfiguration>();
         for (int i = 0; i < unshiftedQuants.Count; i++)
         {
@@ -1287,7 +1302,7 @@ internal sealed class BeamScoringProblem
     /// <summary>
     /// Applies the next scorer to a configuration.
     /// </summary>
-    // LILYPOND-REF: lily/beam-quanting.cc:960-993 one_scorer()
+    // LILYPOND-REF: lily/beam-quanting.cc:956-989 one_scorer()
     private void OneScorer(BeamConfiguration config)
     {
         switch ((BeamScorer)config.NextScorerTodo)
@@ -1321,7 +1336,7 @@ internal sealed class BeamScoringProblem
     /// Penalizes deviation from ideal slope.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:1217-1235 score_slope_ideal()
+    /// LILYPOND-REF: lily/beam-quanting.cc:1213-1232 score_slope_ideal()
     ///
     /// Uses shrink_extra_weight: |x| * (x &lt; 0 ? 1.5 : 1.0), where x is
     /// |damped slope| − |candidate slope|, so a too-steep candidate (x &lt; 0)
@@ -1351,7 +1366,7 @@ internal sealed class BeamScoringProblem
     /// Penalizes slope direction opposing damped direction.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:1177-1203 score_slope_direction()
+    /// LILYPOND-REF: lily/beam-quanting.cc:1173-1200 score_slope_direction()
     /// </remarks>
     private void ScoreSlopeDirection(BeamConfiguration config)
     {
@@ -1385,7 +1400,7 @@ internal sealed class BeamScoringProblem
     /// Penalizes slope exceeding musical direction.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:1206-1213 score_slope_musical()
+    /// LILYPOND-REF: lily/beam-quanting.cc:1203-1210 score_slope_musical()
     /// </remarks>
     private void ScoreSlopeMusical(BeamConfiguration config)
     {
@@ -1430,7 +1445,7 @@ internal sealed class BeamScoringProblem
     /// Penalizes beams where secondary beams (16th+) sit on staff lines.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:1264-1369 score_forbidden_quants()
+    /// LILYPOND-REF: lily/beam-quanting.cc:1261-1367 score_forbidden_quants()
     ///
     /// For each beam end, checks whether the gap between adjacent beams
     /// contains a staff line. If so, adds a demerit.
@@ -1539,7 +1554,7 @@ internal sealed class BeamScoringProblem
     /// Penalizes stems that are too short or deviate from ideal length.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:1117-1174 score_stem_lengths()
+    /// LILYPOND-REF: lily/beam-quanting.cc:1113-1171 score_stem_lengths()
     ///
     /// Uses asymmetric penalty (shrink_extra_weight) and divides by
     /// stem count for scale-free measurement.

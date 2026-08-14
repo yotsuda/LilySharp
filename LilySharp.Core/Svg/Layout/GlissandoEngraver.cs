@@ -1,5 +1,23 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// Parts of this file are ported from LilyPond, the GNU music typesetter.
+// The C# is a modified translation of the following, not a copy of it:
+//   lily/line-spanner.cc
+//     Copyright (C) 2000--2026 Jan Nieuwenhuizen <janneke@gnu.org>
+//   scm/define-grobs.scm
+//     Copyright (C) 1998--2026 Han-Wen Nienhuys <hanwen@xs4all.nl>;
+//     Jan Nieuwenhuizen <janneke@gnu.org>
+//   lily/spanner.cc
+//     Copyright (C) 1996--2026 Han-Wen Nienhuys <hanwen@xs4all.nl>
+//   scm/scheme-engravers.scm
+//     Copyright (C) 2012--2026 David Nalesnik <david.nalesnik@gmail.com>;
+//     Thomas Morley <thomasmorley65@gmail.com>; Dan Eble <nine.fierce.ballads@gmail.com>;
+//     Jonas Hahnfeld <hahnjo@hahnjo.de>; Jean Abou Samra <jean@abou-samra.fr>
+// LilyPond is free software under the GNU General Public License version 3 or
+// later; its notices are kept here as that licence requires. The full list is in
+// LILYPOND-ATTRIBUTION.md. Lily# is an independent project, not affiliated with
+// or endorsed by the LilyPond project.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

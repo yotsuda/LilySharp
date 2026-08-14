@@ -35,9 +35,11 @@ namespace LilySharp.Core.Png;
 /// from the .otf file via <see cref="SKTypeface.FromFile"/>, sidestepping
 /// the WOFF/WOFF2 limitations that affect SVG-based rasterization.
 ///
-/// The legacy <see cref="ConvertSvgToPng"/> entry point (SVG string → PNG)
-/// is preserved as a public utility for callers that already have an SVG
-/// in hand.
+/// There is no longer an SVG-string entry point. The one that existed rendered
+/// through Svg.Skia, whose Svg.Custom dependency is MS-PL — a free but
+/// GPL-incompatible license, which no binary Lily# distributes may contain.
+/// Its only caller was the test-only visual-diff harness, which now carries
+/// that rasterizer itself (LilySharp.Tests/Svg/VisualDiffReport.cs).
 /// </remarks>
 public static class PngGenerator
 {
@@ -108,111 +110,4 @@ public static class PngGenerator
         return doc.GetPageBytes();
     }
 
-    /// <summary>
-    /// Converts an SVG string to PNG bytes using SkiaSharp's SVG rasterizer.
-    /// Kept for callers that already hold an SVG document; new code should
-    /// prefer <see cref="Generate"/> for the direct (no-roundtrip) path.
-    /// </summary>
-    public static byte[] ConvertSvgToPng(string svgString, PngRenderOptions? options = null, string? fontDirectory = null)
-    {
-        options ??= PngRenderOptions.Default;
-        fontDirectory ??= FontLocator.Find();
-
-        using var svg = new global::Svg.Skia.SKSvg();
-        var providers = RegisterMusicFonts(svg, fontDirectory);
-
-        try
-        {
-            svg.FromSvg(svgString);
-            if (svg.Picture == null)
-                throw new InvalidOperationException("Failed to parse SVG content");
-
-            var bounds = svg.Picture.CullRect;
-            int width = (int)Math.Ceiling(bounds.Width * options.Scale);
-            int height = (int)Math.Ceiling(bounds.Height * options.Scale);
-            if (width <= 0 || height <= 0)
-                throw new InvalidOperationException($"Invalid SVG dimensions: {bounds.Width}x{bounds.Height}");
-
-            using var surface = SKSurface.Create(new SKImageInfo(width, height,
-                SKColorType.Rgba8888, SKAlphaType.Premul));
-            var canvas = surface.Canvas;
-            canvas.Clear(SKColors.White);
-            canvas.Scale(options.Scale);
-            canvas.DrawPicture(svg.Picture);
-
-            using var image = surface.Snapshot();
-            using var data = image.Encode(SKEncodedImageFormat.Png, options.Quality);
-            return data.ToArray();
-        }
-        finally
-        {
-            foreach (var provider in providers)
-                provider.Dispose();
-        }
-    }
-
-    private static List<EmmentalerTypefaceProvider> RegisterMusicFonts(
-        global::Svg.Skia.SKSvg svg, string? fontDirectory)
-    {
-        var providers = new List<EmmentalerTypefaceProvider>();
-        if (fontDirectory == null) return providers;
-
-        RegisterFont(svg, fontDirectory, "emmentaler-20.otf", "Emmentaler", providers);
-        if (providers.Count == 0)
-            RegisterFont(svg, fontDirectory, "emmentaler-20.woff2", "Emmentaler", providers);
-
-        RegisterFont(svg, fontDirectory, "emmentaler-brace.otf", "Emmentaler-Brace", providers);
-        if (providers.Count < 2)
-            RegisterFont(svg, fontDirectory, "emmentaler-brace.woff", "Emmentaler-Brace", providers);
-        return providers;
-    }
-
-    private static void RegisterFont(global::Svg.Skia.SKSvg svg, string fontDir, string fileName,
-        string familyName, List<EmmentalerTypefaceProvider> providers)
-    {
-        var fontPath = Path.Combine(fontDir, fileName);
-        if (!File.Exists(fontPath)) return;
-
-        var fontBytes = File.ReadAllBytes(fontPath);
-        var skData = SKData.CreateCopy(fontBytes);
-        var typeface = SKTypeface.FromData(skData);
-        if (typeface == null) { skData.Dispose(); return; }
-
-        var provider = new EmmentalerTypefaceProvider(familyName, typeface);
-        svg.Settings.TypefaceProviders ??= new List<global::Svg.Skia.TypefaceProviders.ITypefaceProvider>();
-        svg.Settings.TypefaceProviders.Insert(0, provider);
-        providers.Add(provider);
-    }
-
-}
-
-/// <summary>Custom typeface provider for Svg.Skia (legacy SVG path only).</summary>
-internal sealed class EmmentalerTypefaceProvider : global::Svg.Skia.TypefaceProviders.ITypefaceProvider, IDisposable
-{
-    private readonly string _familyName;
-    private readonly SKTypeface _typeface;
-
-    public EmmentalerTypefaceProvider(string familyName, SKTypeface typeface)
-    {
-        _familyName = familyName;
-        _typeface = typeface;
-    }
-
-    public SKTypeface? FromFamilyName(string fontFamily, SKFontStyleWeight fontWeight,
-        SKFontStyleWidth fontWidth, SKFontStyleSlant fontStyle)
-    {
-        var families = fontFamily.Split(',', StringSplitOptions.TrimEntries);
-        foreach (var raw in families)
-        {
-            var name = raw.Trim('\'', '"');
-            if (string.Equals(name, _familyName, StringComparison.OrdinalIgnoreCase))
-                return _typeface;
-            if (_typeface.FamilyName != null &&
-                string.Equals(name, _typeface.FamilyName, StringComparison.OrdinalIgnoreCase))
-                return _typeface;
-        }
-        return null;
-    }
-
-    public void Dispose() => _typeface.Dispose();
 }

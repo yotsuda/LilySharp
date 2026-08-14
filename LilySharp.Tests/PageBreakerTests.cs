@@ -154,7 +154,8 @@ public class PageBreakerTests
         // Go through CalcLineHeights, as BreakIntoPages does — tallness is not a property
         // of a system on its own, it is how much the stack grows when the system is added
         // below its predecessor, so hand-built details have none.
-        // LILYPOND-REF: lily/page-breaking.cc:1037 (cache_line_details calls it).
+        // LILYPOND-REF: lily/page-breaking.cc:1044-1081 cache_line_details, which calls
+        //   calc_line_heights at :1079.
         var systems = PageBreaker.CalcLineHeights(new[]
         {
             CreateSystem(height: 20, staffHeight: 10, bottomExtent: 5),

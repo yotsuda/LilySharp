@@ -1,5 +1,5 @@
 // A pedal mark ("Ped.") attaches to the NOTE it is written on, not the measure
-// start. Here @ped is on beat 3 and @ped(off) on beat 3 of the next bar,
+// start. Here @sustainOn is on beat 3 and @sustainOff on beat 3 of the next bar,
 // so "Ped." and the release sit at those notes' columns (anchored via the music
 // mark's AnchorTiming, like the metronome mark). Verified against LilyPond.
 title "Pedal note anchor"
@@ -9,7 +9,7 @@ key c major
 part lh { clef bass }
 
 section Main {
-  lh { c4 d e@ped f | g4 a b@ped(off) c | }
+  lh { c4 d e@sustainOn f | g4 a b@sustainOff c | }
 }
 
 form main { Main }

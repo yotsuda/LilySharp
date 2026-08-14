@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using LilySharp.Lsp;
-using Microsoft.VisualStudio.LanguageServer.Protocol;
+using LilySharp.Lsp.Protocol;
 using Xunit;
-using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
+using LspRange = LilySharp.Lsp.Protocol.Range;
 
 namespace LilySharp.Tests;
 

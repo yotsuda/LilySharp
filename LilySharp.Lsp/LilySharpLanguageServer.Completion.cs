@@ -18,7 +18,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Editing;
-using Microsoft.VisualStudio.LanguageServer.Protocol;
+using LilySharp.Lsp.Protocol;
 using StreamJsonRpc;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
@@ -27,8 +27,8 @@ using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Music;
 using LilySharp.Core.Rendering;
 using SkiaSharp;
-using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
-using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
+using LspRange = LilySharp.Lsp.Protocol.Range;
+using LspDiagnosticSeverity = LilySharp.Lsp.Protocol.DiagnosticSeverity;
 using CoreDiagnosticSeverity = LilySharp.Core.Syntax.DiagnosticSeverity;
 using CoreDiagnostic = LilySharp.Core.Syntax.Diagnostic;
 
@@ -101,6 +101,13 @@ public sealed partial class LilySharpLanguageServer
         if (wordStart > 0 && doc.Text[wordStart - 1] == ':' && IsInsideChordsBlock(doc.Text, offset))
             return GetChordQualityCompletions();
 
+        // Inside an @name(…) argument the annotation's own vocabulary takes over,
+        // so the shapes/fingers/… are a SECOND list rather than dozens of
+        // '@notehead(diamond)'-style entries crowding the '@' list itself.
+        if (AnnotationArgumentName(doc.Text, offset) is { } annotation
+            && GetAnnotationArgumentCompletions(annotation) is { } arguments)
+            return arguments;
+
         // Inside a @chord(…) argument OR a chords { } block, offer the current key's
         // diatonic chords — one format for both (insert text is the chords{} form).
         if (IsInsideChordAnnotation(doc.Text, offset) || IsInsideChordsBlock(doc.Text, offset))
@@ -147,9 +154,13 @@ public sealed partial class LilySharpLanguageServer
             // The bare-@chord item is offered only when the group before the '@'
             // will actually auto-name; an unrecognizable one falls back to the
             // note form — @chord() with the caret inside the parens.
-            CompletionContext.AfterAt => GetArticulationCompletions(
+            CompletionContext.AfterAt => MatchAnywhere(
+                GetArticulationCompletions(
+                    AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
+                PartialAnnotationName(doc.Text, offset)),
+            CompletionContext.AfterArticulationPlacement => PlacementAndStillMatchingNames(
+                doc.Text, offset, position,
                 AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
-            CompletionContext.AfterArticulationPlacement => GetArticulationPlacementCompletions(doc.Text, offset, position),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
         };
@@ -2157,26 +2168,33 @@ public sealed partial class LilySharpLanguageServer
             last.Groups[1].Value, last.Groups[2].Value) ?? 0;
     }
 
-    /// <summary>True when <paramref name="offset"/> sits inside a <c>@chord(…)</c>
-    /// argument — scan back on the current line to the nearest unclosed '(' and
-    /// check its word is <c>chord</c> preceded by '@'.</summary>
-    internal static bool IsInsideChordAnnotation(string text, int offset)
+    /// <summary>
+    /// The annotation whose argument list the caret sits in — "chord" for
+    /// <c>@chord(|)</c>, "notehead" for <c>@notehead(|)</c> — or null when the
+    /// caret is not inside one. Scans back on the current line to the nearest
+    /// unclosed '(' and reads the word in front of it.
+    /// </summary>
+    internal static string? AnnotationArgumentName(string text, int offset)
     {
         for (int i = Math.Min(offset, text.Length) - 1; i >= 0; i--)
         {
             char c = text[i];
             if (c is ')' or '\n' or '\r')
-                return false; // past a close paren, or off the line — not inside
+                return null; // past a close paren, or off the line — not inside
             if (c != '(')
                 continue;
             int e = i - 1, s = i - 1;
             while (s >= 0 && char.IsLetter(text[s])) s--;
             string name = s + 1 <= e ? text[(s + 1)..(e + 1)] : "";
-            return name.Equals("chord", StringComparison.OrdinalIgnoreCase)
-                && s >= 0 && text[s] == '@';
+            return name.Length > 0 && s >= 0 && text[s] == '@' ? name : null;
         }
-        return false;
+        return null;
     }
+
+    /// <summary>True when <paramref name="offset"/> sits inside a <c>@chord(…)</c>
+    /// argument.</summary>
+    internal static bool IsInsideChordAnnotation(string text, int offset) =>
+        string.Equals(AnnotationArgumentName(text, offset), "chord", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The seven diatonic chords of the key in force at
     /// <paramref name="offset"/> (C major when none), each a chord-name symbol like
@@ -2472,6 +2490,53 @@ public sealed partial class LilySharpLanguageServer
     /// already typed ('@fermata.'), the bare words are offered; otherwise they carry
     /// the leading dot so '@fermata' → '@fermata.up'.
     /// </summary>
+    /// <summary>
+    /// True when the caret has already passed a placement dot — <c>@trill.</c>,
+    /// <c>@trill.d</c>. There the annotation name is settled and only up/down can
+    /// follow; before the dot (<c>@trill</c>) it is merely one possible
+    /// continuation among the names still matching.
+    /// </summary>
+    private static bool AfterPlacementDot(string text, int offset)
+    {
+        int j = Math.Min(offset, text.Length) - 1;
+        while (j >= 0 && char.IsLetter(text[j])) j--;
+        return j >= 0 && text[j] == '.';
+    }
+
+    /// <summary>
+    /// What to offer when the typed text happens to BE a complete annotation
+    /// name: the placement qualifiers AND every name the text still matches.
+    /// </summary>
+    /// <remarks>
+    /// Typing '@trill' used to replace the whole list with '.up'/'.down', so a
+    /// search that read "tril → 4 names" turned into "trill → 2 placements" and
+    /// then back into "trills → 2 names". A name being complete does not mean the
+    /// user has finished typing it: 'trill' is also a prefix of nothing, but a
+    /// substring of pralltriller, startTrillSpan and stopTrillSpan.
+    ///
+    /// The two kinds coexist because they edit different ranges: a placement item
+    /// carries an explicit empty TextEdit range at the caret (it appends '.up'),
+    /// while a name item has none and so replaces the typed word. That also keeps
+    /// both visible in the editor's own filtering — an empty range matches any
+    /// query.
+    /// </remarks>
+    internal static CompletionList PlacementAndStillMatchingNames(
+        string text, int offset, Position? position, bool afterChord)
+    {
+        var placement = GetArticulationPlacementCompletions(text, offset, position);
+        if (AfterPlacementDot(text, offset))
+            return placement;
+
+        var names = MatchAnywhere(
+            GetArticulationCompletions(afterChord), PartialAnnotationName(text, offset));
+
+        return new CompletionList
+        {
+            IsIncomplete = true,
+            Items = [.. placement.Items, .. names.Items],
+        };
+    }
+
     internal static CompletionList GetArticulationPlacementCompletions(
         string text, int offset, Position? position = null)
     {
@@ -2506,7 +2571,10 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList
         {
             IsIncomplete = false,
-            Items = new[] { Item("up", "0up"), Item("down", "1down") },
+            // '!' sorts before every digit, so when these are merged with the
+            // annotation names (groups "0".."8") the placement stays on top —
+            // it is the more specific continuation of what was just typed.
+            Items = new[] { Item("up", "!0up"), Item("down", "!1down") },
         };
     }
 
@@ -2588,6 +2656,120 @@ public sealed partial class LilySharpLanguageServer
         return LilySharp.Core.Music.ChordStructure.TryRecognize(rootStep, rootAlter, pcs, out _);
     }
 
+    /// <summary>
+    /// Words a user is likely to TYPE that do not appear in the annotation's own
+    /// name. Everything else is derived from the name itself (see
+    /// <see cref="WithSearchTerms"/>) — this table is only for the cases where no
+    /// slicing of the name can produce the word.
+    /// </summary>
+    private static readonly Dictionary<string, string> ExtraSearchTerms = new(StringComparer.Ordinal)
+    {
+        // The pedals are named after the EVENT (LilyPond's names); a user reaches
+        // for the printed marking or the instrument's word for it.
+        ["sustainOn"] = "pedal ped",
+        ["sustainOff"] = "pedal ped",
+        ["sostenutoOn"] = "pedal sost",
+        ["sostenutoOff"] = "pedal sost",
+        ["unaCorda"] = "pedal soft",
+        ["treCorde"] = "pedal soft release",
+        // All-lowercase names cannot be split into words, so the part a user is
+        // most likely to type has to be listed.
+        ["shortfermata"] = "fermata short",
+        ["longfermata"] = "fermata long",
+        ["invertedturn"] = "turn inverted",
+        ["pralltriller"] = "trill prall",
+        ["staccatissimo"] = "staccato wedge",
+        ["upbow"] = "bow up",
+        ["downbow"] = "bow down",
+        ["flageolet"] = "harmonic circle",
+        ["harmonic"] = "flageolet circle",
+        ["notehead"] = "head shape",
+        ["fig"] = "figured bass continuo",
+        ["snapPizz"] = "bartok pizzicato",
+        ["dead"] = "mute muted",
+        ["laissezVibrer"] = "lv tie",
+        ["repeatTie"] = "tie",
+        ["glissando"] = "gliss slide",
+        ["mark"] = "rehearsal",
+        ["text"] = "dolce expressive",
+        ["ottava"] = "8va octave",
+        ["quindicesima"] = "15ma octave",
+        ["loco"] = "octave end",
+    };
+
+    /// <summary>
+    /// The annotation name typed so far after the '@' — "ill" for
+    /// <c>c4@ill|</c>, "" right after the trigger. Letters and digits only, so a
+    /// preceding note or duration is not swept in.
+    /// </summary>
+    internal static string PartialAnnotationName(string text, int offset)
+    {
+        int end = Math.Min(offset, text.Length);
+        int start = end;
+        while (start > 0 && char.IsLetterOrDigit(text[start - 1]))
+            start--;
+        return start > 0 && text[start - 1] == '@' ? text[start..end] : "";
+    }
+
+    /// <summary>
+    /// Incremental search over the annotation list: an item survives if the typed
+    /// text appears ANYWHERE in its name or search terms, so "ill" finds
+    /// startTrillSpan and "corda" finds unaCorda.
+    /// </summary>
+    /// <remarks>
+    /// The editor cannot do this. Its suggest widget matches at word starts, and
+    /// there is no "match anywhere" switch, so a mid-word query would drop the
+    /// item however the server labelled it. Hence the server filters, and each
+    /// surviving item carries FilterText = the query itself so the client's own
+    /// matcher keeps everything returned; the list is marked incomplete so the
+    /// editor asks again on the next keystroke instead of re-filtering a cached
+    /// list. SortText still decides the order.
+    ///
+    /// The cost is the widget's matched-character highlight: with FilterText set
+    /// to the query it underlines the label's first characters rather than the
+    /// part that actually matched.
+    /// </remarks>
+    internal static CompletionList MatchAnywhere(CompletionList list, string query)
+    {
+        // Incomplete even with nothing typed yet: otherwise the editor caches this
+        // list and filters it ITSELF as the next characters arrive, which is
+        // exactly the word-start matching being replaced here — '@' then "ill"
+        // would silently drop everything.
+        if (string.IsNullOrEmpty(query))
+            return new CompletionList { IsIncomplete = true, Items = list.Items };
+
+        var kept = new List<CompletionItem>();
+        foreach (var item in list.Items)
+        {
+            var haystack = string.IsNullOrEmpty(item.FilterText) ? item.Label : item.FilterText;
+            if (haystack.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                item.FilterText = query;
+                kept.Add(item);
+            }
+        }
+
+        return new CompletionList { IsIncomplete = true, Items = [.. kept] };
+    }
+
+    /// <summary>
+    /// Widens what <see cref="MatchAnywhere"/> searches: the label plus the words
+    /// from <see cref="ExtraSearchTerms"/>. Nothing is derived from the label
+    /// itself — a substring search already reaches every part of it ("ill" finds
+    /// startTrillSpan), so only words that are NOT in the name need listing.
+    /// Applied to the whole list rather than to chosen items: no annotation is a
+    /// special case.
+    /// </summary>
+    private static CompletionList WithSearchTerms(CompletionList list)
+    {
+        foreach (var item in list.Items)
+        {
+            if (ExtraSearchTerms.TryGetValue(item.Label, out var extra))
+                item.FilterText = item.Label + " " + extra;
+        }
+        return list;
+    }
+
     internal static CompletionList GetArticulationCompletions(bool afterChord = false)
     {
         // Bare '@chord' on a chord auto-derives the symbol from its notes — no '(…)'.
@@ -2611,7 +2793,7 @@ public sealed partial class LilySharpLanguageServer
                 },
             };
 
-        return new CompletionList
+        return WithSearchTerms(new CompletionList
         {
             Items =
             [
@@ -2627,6 +2809,29 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "downbow", Kind = CompletionItemKind.Value, Detail = "Down-bow (frog, above)", SortText = "0downbow" },
                 new CompletionItem { Label = "harmonic", Kind = CompletionItemKind.Value, Detail = "Harmonic circle ○ (a.k.a. @flageolet)", SortText = "0harmonic" },
                 new CompletionItem { Label = "flageolet", Kind = CompletionItemKind.Value, Detail = "Harmonic circle ○ (a.k.a. @harmonic)", SortText = "0flageolet" },
+                new CompletionItem { Label = "shortfermata", Kind = CompletionItemKind.Value, Detail = "Short fermata (angular)", SortText = "0shortfermata" },
+                new CompletionItem { Label = "longfermata", Kind = CompletionItemKind.Value, Detail = "Long fermata (square)", SortText = "0longfermata" },
+                new CompletionItem { Label = "breath", Kind = CompletionItemKind.Value, Detail = "Breath mark after the note", SortText = "0breath" },
+                new CompletionItem { Label = "caesura", Kind = CompletionItemKind.Value, Detail = "Caesura (railroad tracks) after the note", SortText = "0caesura" },
+                new CompletionItem { Label = "stopped", Kind = CompletionItemKind.Value, Detail = "Stopped note + (brass hand-stop / left-hand pizz.)", SortText = "0stopped" },
+                new CompletionItem { Label = "thumb", Kind = CompletionItemKind.Value, Detail = "Thumb position (cello)", SortText = "0thumb" },
+                new CompletionItem { Label = "heel", Kind = CompletionItemKind.Value, Detail = "Organ pedal: heel", SortText = "0heel" },
+                new CompletionItem { Label = "toe", Kind = CompletionItemKind.Value, Detail = "Organ pedal: toe", SortText = "0toe" },
+                new CompletionItem { Label = "scoop", Kind = CompletionItemKind.Value, Detail = "Scoop (jazz articulation into the note)", SortText = "0scoop" },
+                new CompletionItem { Label = "plop", Kind = CompletionItemKind.Value, Detail = "Plop (jazz articulation into the note)", SortText = "0plop" },
+                new CompletionItem { Label = "fall", Kind = CompletionItemKind.Value, Detail = "Fall (jazz articulation off the note)", SortText = "0fall" },
+                new CompletionItem { Label = "doit", Kind = CompletionItemKind.Value, Detail = "Doit (jazz articulation off the note)", SortText = "0doit" },
+
+                // Fretted-instrument techniques. Each has a short spelling that
+                // reads better mid-passage, so both are offered.
+                new CompletionItem { Label = "hammerOn", Kind = CompletionItemKind.Value, Detail = "Hammer-on (a.k.a. @ho)", SortText = "0hammerOn" },
+                new CompletionItem { Label = "ho", Kind = CompletionItemKind.Value, Detail = "Hammer-on, short spelling of @hammerOn", SortText = "0ho" },
+                new CompletionItem { Label = "pullOff", Kind = CompletionItemKind.Value, Detail = "Pull-off (a.k.a. @po)", SortText = "0pullOff" },
+                new CompletionItem { Label = "po", Kind = CompletionItemKind.Value, Detail = "Pull-off, short spelling of @pullOff", SortText = "0po" },
+                new CompletionItem { Label = "tap", Kind = CompletionItemKind.Value, Detail = "Tapped note", SortText = "0tap" },
+                new CompletionItem { Label = "snapPizz", Kind = CompletionItemKind.Value, Detail = "Snap (Bartók) pizzicato", SortText = "0snapPizz" },
+                new CompletionItem { Label = "slide", Kind = CompletionItemKind.Value, Detail = "Slide to the next note", SortText = "0slide" },
+                new CompletionItem { Label = "dead", Kind = CompletionItemKind.Value, Detail = "Dead (muted) note — × notehead", SortText = "0dead" },
 
                 // Free expressive text
                 new CompletionItem
@@ -2643,6 +2848,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "prall", Kind = CompletionItemKind.Value, Detail = "Inverted mordent (pralltriller)", SortText = "1prall" },
                 new CompletionItem { Label = "turn", Kind = CompletionItemKind.Value, Detail = "Turn ornament", SortText = "1turn" },
                 new CompletionItem { Label = "invertedturn", Kind = CompletionItemKind.Value, Detail = "Inverted turn", SortText = "1invertedturn" },
+                new CompletionItem { Label = "pralltriller", Kind = CompletionItemKind.Value, Detail = "Prall-triller (trill with prall)", SortText = "1pralltriller" },
 
                 // Dynamics (@ prefix style)
                 new CompletionItem { Label = "p", Kind = CompletionItemKind.Value, Detail = "Piano (soft)", SortText = "2p" },
@@ -2651,10 +2857,22 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "ff", Kind = CompletionItemKind.Value, Detail = "Fortissimo", SortText = "2ff" },
                 new CompletionItem { Label = "mp", Kind = CompletionItemKind.Value, Detail = "Mezzo-piano", SortText = "2mp" },
                 new CompletionItem { Label = "mf", Kind = CompletionItemKind.Value, Detail = "Mezzo-forte", SortText = "2mf" },
+                new CompletionItem { Label = "ppp", Kind = CompletionItemKind.Value, Detail = "Pianississimo", SortText = "2ppp" },
+                new CompletionItem { Label = "pppp", Kind = CompletionItemKind.Value, Detail = "Pianissississimo", SortText = "2pppp" },
+                new CompletionItem { Label = "ppppp", Kind = CompletionItemKind.Value, Detail = "Five-p pianissimo", SortText = "2ppppp" },
+                new CompletionItem { Label = "fff", Kind = CompletionItemKind.Value, Detail = "Fortississimo", SortText = "2fff" },
+                new CompletionItem { Label = "ffff", Kind = CompletionItemKind.Value, Detail = "Fortissississimo", SortText = "2ffff" },
+                new CompletionItem { Label = "fffff", Kind = CompletionItemKind.Value, Detail = "Five-f fortissimo", SortText = "2fffff" },
                 new CompletionItem { Label = "sfz", Kind = CompletionItemKind.Value, Detail = "Sforzato accent dynamic", SortText = "2sfz" },
+                new CompletionItem { Label = "sf", Kind = CompletionItemKind.Value, Detail = "Sforzando accent dynamic", SortText = "2sf" },
+                new CompletionItem { Label = "sffz", Kind = CompletionItemKind.Value, Detail = "Heaviest sforzato accent dynamic", SortText = "2sffz" },
+                new CompletionItem { Label = "fz", Kind = CompletionItemKind.Value, Detail = "Forzando accent dynamic", SortText = "2fz" },
+                new CompletionItem { Label = "rf", Kind = CompletionItemKind.Value, Detail = "Rinforzando accent dynamic", SortText = "2rf" },
+                new CompletionItem { Label = "rfz", Kind = CompletionItemKind.Value, Detail = "Rinforzando accent dynamic (rfz)", SortText = "2rfz" },
                 new CompletionItem { Label = "fp", Kind = CompletionItemKind.Value, Detail = "Forte-piano accent dynamic", SortText = "2fp" },
                 new CompletionItem { Label = "cresc", Kind = CompletionItemKind.Value, Detail = "Crescendo hairpin", SortText = "2cresc" },
                 new CompletionItem { Label = "decresc", Kind = CompletionItemKind.Value, Detail = "Decrescendo hairpin", SortText = "2decresc" },
+                new CompletionItem { Label = "dim", Kind = CompletionItemKind.Value, Detail = "Diminuendo", SortText = "2dim" },
 
                 // Navigation signs (segno / coda / fine / D.S. / D.C. / to coda) are
                 // NOT offered here: they are standalone BARE landmarks, not note
@@ -2667,36 +2885,207 @@ public sealed partial class LilySharpLanguageServer
                 // Spanners and brackets
                 new CompletionItem { Label = "rit", Kind = CompletionItemKind.Value, Detail = "Ritardando text spanner", SortText = "4rit" },
                 new CompletionItem { Label = "accel", Kind = CompletionItemKind.Value, Detail = "Accelerando text spanner", SortText = "4accel" },
-                new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava (8va) bracket", SortText = "4ottava" },
-                new CompletionItem { Label = "loco", Kind = CompletionItemKind.Value, Detail = "End ottava bracket", SortText = "4loco" },
+                new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up (8va)", SortText = "4ottava" },
+                new CompletionItem { Label = "ottava(bassa)", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down (8vb)", SortText = "4ottava.bassa" },
+                new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma)", SortText = "4quindicesima" },
+                new CompletionItem { Label = "quindicesima(bassa)", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down (15mb)", SortText = "4quindicesima.bassa" },
+                new CompletionItem { Label = "loco", Kind = CompletionItemKind.Value, Detail = "End octave bracket", SortText = "4loco" },
+                // One word per end, as in LilyPond. (The '@trillSpan(start)'
+                // spelling was a second way to say the same thing; it is gone.)
                 new CompletionItem { Label = "startTrillSpan", Kind = CompletionItemKind.Value, Detail = "Start trill spanner", SortText = "4startTrillSpan" },
                 new CompletionItem { Label = "stopTrillSpan", Kind = CompletionItemKind.Value, Detail = "Stop trill spanner", SortText = "4stopTrillSpan" },
+                ArgumentStub("feather", "Feathered beam — offers right (accel.), left (rit.)", "4feather"),
 
                 // Pedal markings
-                new CompletionItem { Label = "ped", Kind = CompletionItemKind.Value, Detail = "Sustain pedal on", SortText = "5ped" },
-                new CompletionItem { Label = "ped(off)", Kind = CompletionItemKind.Value, Detail = "Sustain pedal off", SortText = "5ped.off" },
-                new CompletionItem { Label = "sost", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal on", SortText = "5sost" },
-                new CompletionItem { Label = "sost(off)", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal off", SortText = "5sost.off" },
-                new CompletionItem { Label = "una(corda)", Kind = CompletionItemKind.Value, Detail = "Una corda pedal on", SortText = "5una.corda" },
-                new CompletionItem { Label = "tre(corde)", Kind = CompletionItemKind.Value, Detail = "Una corda pedal off", SortText = "5tre.corde" },
+                // LilyPond's own names (ly/spanners-init.ly). One word each: the
+                // pedal event carries only START/STOP, so there is no argument.
+                new CompletionItem { Label = "sustainOn", Kind = CompletionItemKind.Value, Detail = "Sustain pedal down (Ped.)", SortText = "5sustainOn" },
+                new CompletionItem { Label = "sustainOff", Kind = CompletionItemKind.Value, Detail = "Sustain pedal up (*)", SortText = "5sustainOff" },
+                new CompletionItem { Label = "sostenutoOn", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal down (Sost. Ped.)", SortText = "5sostenutoOn" },
+                new CompletionItem { Label = "sostenutoOff", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal up", SortText = "5sostenutoOff" },
+                new CompletionItem { Label = "unaCorda", Kind = CompletionItemKind.Value, Detail = "Una corda (soft pedal down)", SortText = "5unaCorda" },
+                new CompletionItem { Label = "treCorde", Kind = CompletionItemKind.Value, Detail = "Tre corde — the una corda release", SortText = "5treCorde" },
 
                 // Notation marks
                 new CompletionItem { Label = "glissando", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6glissando" },
                 new CompletionItem { Label = "arpeggio", Kind = CompletionItemKind.Value, Detail = "Arpeggiate chord", SortText = "6arpeggio" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
                 new CompletionItem { Label = "editorial", Kind = CompletionItemKind.Value, Detail = "Editorial (suggestion) accidental above the note", SortText = "6editorial" },
+                new CompletionItem { Label = "cross", Kind = CompletionItemKind.Value, Detail = "Cross-staff note (moves to the other staff of the pair)", SortText = "6cross" },
+                new CompletionItem { Label = "laissezVibrer", Kind = CompletionItemKind.Value, Detail = "Laissez vibrer tie (hanging, no destination)", SortText = "6laissezVibrer" },
+                new CompletionItem { Label = "repeatTie", Kind = CompletionItemKind.Value, Detail = "Repeat tie (hanging tie into a repeat)", SortText = "6repeatTie" },
+                new CompletionItem { Label = "stemUp", Kind = CompletionItemKind.Value, Detail = "Force the stem up", SortText = "6stemUp" },
+                new CompletionItem { Label = "stemDown", Kind = CompletionItemKind.Value, Detail = "Force the stem down", SortText = "6stemDown" },
+
+                ArgumentStub("notehead", "Notehead shape — offers x, cross, diamond, triangle, slash, xcircle", "6notehead"),
+
+                ArgumentStub("finger", "Left-hand fingering — offers 0-5", "6finger"),
+                ArgumentStub("pluck", "Right-hand (plucking) finger — offers p, i, m, a", "6pluck"),
+                ArgumentStub("bend", "String bend — offers half, full", "6bend"),
+
+                // Guitar chord frame: one character per string, low to high —
+                // x = muted, o = open, digit = fret.
+                new CompletionItem { Label = "frame(x32010)", Kind = CompletionItemKind.Value, Detail = "Chord frame (x = muted, o = open, digit = fret)", SortText = "6frame" },
 
                 // Figured bass — parenthesised, figures space-separated: @fig(6 4).
-                new CompletionItem { Label = "fig(6)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6", SortText = "7fig" },
-                new CompletionItem { Label = "fig(6 4)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6/4", SortText = "7fig" },
-                new CompletionItem { Label = "fig(5 3)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 5/3", SortText = "7fig" },
+                ArgumentStub("fig", "Figured bass — offers 6, 6 4, 7, 6 5, 4 3, … (space-separated)", "7fig"),
 
                 // Chord name — on a note the '(…)' form (offers the key's diatonic
                 // chords); on a chord the bare auto-derive form. Built above.
                 chordItem
             ]
-        };
+        });
     }
+
+    /// <summary>
+    /// An '@' entry whose argument comes from a second list: it inserts
+    /// <c>name()</c> with the caret between the parens and asks the editor to
+    /// suggest again, so a family's members (six notehead shapes, six
+    /// fingerings, …) never crowd the annotation list itself.
+    /// </summary>
+    private static CompletionItem ArgumentStub(string name, string detail, string sortText) => new()
+    {
+        Label = name,
+        Kind = CompletionItemKind.Value,
+        Detail = detail,
+        InsertText = $"{name}($0)",
+        InsertTextFormat = InsertTextFormat.Snippet,
+        SortText = sortText,
+        Command = new Command
+        {
+            Title = $"Suggest {name} arguments",
+            CommandIdentifier = "editor.action.triggerSuggest",
+        },
+    };
+
+    /// <summary>
+    /// The argument vocabulary of an <c>@name(…)</c> annotation, or null when the
+    /// annotation takes free-form text (<c>@text</c>, <c>@mark</c>, <c>@frame</c>)
+    /// or has its own key-dependent list (<c>@chord</c>, handled separately).
+    /// This is the second half of the two-step completion: the '@' list offers the
+    /// bare name, and the argument is picked from here.
+    /// </summary>
+    internal static CompletionList? GetAnnotationArgumentCompletions(string annotation) =>
+        annotation.ToLowerInvariant() switch
+        {
+            "notehead" => GetNoteheadCompletions(),
+            "finger" => GetFingerCompletions(),
+            "pluck" => GetPluckCompletions(),
+            "bend" => GetBendCompletions(),
+            "feather" => GetFeatherCompletions(),
+            "fig" => GetFiguredBassCompletions(),
+            _ => null
+        };
+
+    /// <summary>One argument item; the list order is the order given.</summary>
+    private static CompletionItem Argument(string label, string detail, int rank) => new()
+    {
+        Label = label,
+        Kind = CompletionItemKind.Value,
+        Detail = detail,
+        SortText = $"{rank}{label}",
+    };
+
+    /// <summary>
+    /// The notehead shapes, offered inside <c>@notehead(…)</c>. Sorted with the
+    /// two percussion/rhythm shapes first, since those are what a user reaches
+    /// for most; the rest follow in the order the collector documents them.
+    /// </summary>
+    internal static CompletionList GetNoteheadCompletions() => new()
+    {
+        Items =
+        [
+            Argument("x", "× notehead (dead/muted, percussion)", 0),
+            Argument("cross", "Cross notehead", 1),
+            Argument("diamond", "Diamond notehead ◇ (harmonic)", 2),
+            Argument("triangle", "Triangle notehead", 3),
+            Argument("slash", "Slash notehead (rhythm notation)", 4),
+            Argument("xcircle", "Circled-× notehead", 5),
+        ]
+    };
+
+    /// <summary>
+    /// Left-hand fingering, inside <c>@finger(…)</c>. Any non-negative number
+    /// parses; 0-5 (open string / thumb through little finger) is the range a
+    /// score actually uses, so it is what the list offers.
+    /// </summary>
+    internal static CompletionList GetFingerCompletions() => new()
+    {
+        Items =
+        [
+            Argument("0", "Open string (or no finger)", 0),
+            Argument("1", "Index finger (piano: thumb)", 1),
+            Argument("2", "Middle finger", 2),
+            Argument("3", "Ring finger", 3),
+            Argument("4", "Little finger", 4),
+            Argument("5", "Fifth finger (piano)", 5),
+        ]
+    };
+
+    /// <summary>
+    /// Right-hand (plucking) fingering, inside <c>@pluck(…)</c> — the Spanish
+    /// guitar names.
+    /// </summary>
+    internal static CompletionList GetPluckCompletions() => new()
+    {
+        Items =
+        [
+            Argument("p", "Thumb (pulgar)", 0),
+            Argument("i", "Index (índice)", 1),
+            Argument("m", "Middle (medio)", 2),
+            Argument("a", "Ring (anular)", 3),
+        ]
+    };
+
+    /// <summary>String bend amounts, inside <c>@bend(…)</c>.</summary>
+    internal static CompletionList GetBendCompletions() => new()
+    {
+        Items =
+        [
+            Argument("half", "Bend up a semitone", 0),
+            Argument("full", "Bend up a whole tone", 1),
+        ]
+    };
+
+    /// <summary>
+    /// Figured bass, inside <c>@fig(…)</c>. The figures are space-separated and
+    /// stack top to bottom, so the vocabulary is not a fixed set — what is
+    /// offered is the continuo shorthand a score actually uses, most frequent
+    /// first, plus the two non-numeric atoms (bare accidental, held line).
+    /// Alterations are written after their figure: 6 s = 6♯, 4 f = 4♭, 7 n = 7♮.
+    /// </summary>
+    internal static CompletionList GetFiguredBassCompletions() => new()
+    {
+        Items =
+        [
+            Argument("6", "First inversion (6/3)", 0),
+            Argument("6 4", "Second inversion", 1),
+            Argument("7", "Seventh chord", 2),
+            Argument("6 5", "Seventh, first inversion", 3),
+            Argument("4 3", "Seventh, second inversion", 4),
+            Argument("4 2", "Seventh, third inversion", 5),
+            Argument("5 3", "Root position, written out", 6),
+            Argument("9", "Ninth (9-8 suspension)", 7),
+            Argument("4", "Fourth (4-3 suspension)", 8),
+            Argument("2", "Second", 9),
+            Argument("6 s", "6♯ — an alteration follows its figure (s/f/n)", 10),
+            Argument("#", "Bare sharp — raises the third above the bass", 11),
+            Argument("_", "Held figure — continuation line from the previous bass note", 12),
+        ]
+    };
+
+    /// <summary>
+    /// Feathered-beam directions, inside <c>@feather(…)</c>. The beam opens
+    /// toward the side named, so right = getting faster.
+    /// </summary>
+    internal static CompletionList GetFeatherCompletions() => new()
+    {
+        Items =
+        [
+            Argument("right", "Opening right — accelerando", 0),
+            Argument("left", "Opening left — ritardando", 1),
+        ]
+    };
 
     private static CompletionList GetDynamicCompletions()
     {

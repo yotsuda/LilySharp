@@ -16,7 +16,7 @@
 
 using System.Linq;
 using LilySharp.Lsp;
-using Microsoft.VisualStudio.LanguageServer.Protocol;
+using LilySharp.Lsp.Protocol;
 using Xunit;
 
 namespace LilySharp.Tests;

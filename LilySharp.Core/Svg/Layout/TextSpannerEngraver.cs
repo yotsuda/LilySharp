@@ -63,7 +63,7 @@ public readonly record struct TextSpannerLayout(
 /// <remarks>
 /// LILYPOND-REF: lily/line-spanner.cc:526-648 Line_spanner::print()
 /// LILYPOND-REF: scm/define-grobs.scm:3835-3864 TextSpanner grob defaults
-/// LILYPOND-REF: lily/axis-group-interface.cc:864-989 skyline_spacing()
+/// LILYPOND-REF: lily/axis-group-interface.cc:859-985 skyline_spacing()
 ///
 /// TextSpanner (outside-staff-priority = 350) is placed BELOW
 /// DynamicLineSpanner (outside-staff-priority = 250).

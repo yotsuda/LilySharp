@@ -2544,7 +2544,7 @@ internal sealed class ElementCoordinator
                 double headCenterY = staffMiddleDown - note.StaffPosition / 2.0;
 
                 // Grace stems are forced UP whatever the pitch
-                // (scm/music-functions.scm:633-637 score-grace-settings), so the
+                // (scm/music-functions.scm:652-656 score-grace-settings), so the
                 // stem participates only under an UP slur.
                 double stemY = double.NaN;
                 double obstacleX = hx + font.NoteheadBlackAdvance / 2.0;

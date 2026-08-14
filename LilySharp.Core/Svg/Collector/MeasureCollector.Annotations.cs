@@ -470,17 +470,12 @@ public sealed partial class MeasureCollector
             }
             else if (articulation is MusicMarkSyntax markSyntax)
             {
-                // Handle compound mark syntax: @trillSpan.start / @trillSpan.stop
+                // Compound mark syntax. The trill spanner is NOT here: it is
+                // @startTrillSpan / @stopTrillSpan, one word each, exactly as in
+                // LilyPond — the '@trillSpan(start)' spelling was a second way to
+                // say the same thing and was dropped.
                 var markName = markSyntax.MarkName.ToLowerInvariant();
-                if (markName == "trillspan.start")
-                {
-                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex, 0));
-                }
-                else if (markName == "trillspan.stop")
-                {
-                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, _currentVoiceIndex, 0));
-                }
-                else if (markName.StartsWith("pluck.") && markName.Length == 7
+                if (markName.StartsWith("pluck.") && markName.Length == 7
                          && markName[6] is 'p' or 'i' or 'm' or 'a')
                 {
                     // p-i-m-a right-hand fingering, printed BELOW the note.
@@ -548,9 +543,11 @@ public sealed partial class MeasureCollector
                 else if (MusicMarkItem.ParseMarkName(markSyntax.MarkName) is { } compoundMark
                          && (IsNoteAnchoredPedalMark(compoundMark) || IsOttavaMark(compoundMark)))
                 {
-                    // A compound PEDAL mark (e.g. @ped.off) or a compound OTTAVA mark
-                    // (the down forms @ottava(bassa) / @quindicesima(bassa)) written ON
-                    // a note. Like @ped and the plain @ottava above, anchor it to the
+                    // A compound OTTAVA mark (the down forms @ottava(bassa) /
+                    // @quindicesima(bassa)) written ON a note. The pedals reach this
+                    // predicate too, but they are plain one-word names now
+                    // (@sustainOff), so they arrive through the articulation path
+                    // above. Like the plain @ottava, anchor it to the
                     // host note's column via itemIndex/anchorTiming and — crucially —
                     // carry _currentStaffIndex so the bracket and its octave
                     // transposition land on the AUTHORING staff. Without this the
@@ -596,9 +593,10 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// True for the pedal music marks that anchor to the host note's column
-    /// (the engage/release marks). Compound pedal marks like @ped.off arrive as
-    /// MusicMarkSyntax note articulations and need this anchoring; other compound
-    /// marks (rehearsal, etc.) are handled at the statement level instead.
+    /// (the engage/release marks, @sustainOn … @treCorde). They are plain
+    /// one-word names, so they arrive as ordinary note articulations and need this
+    /// anchoring; compound marks (rehearsal, etc.) are handled at the statement
+    /// level instead.
     /// </summary>
     private static bool IsNoteAnchoredPedalMark(MusicMarkType type) =>
         type is MusicMarkType.SustainOn or MusicMarkType.SustainOff

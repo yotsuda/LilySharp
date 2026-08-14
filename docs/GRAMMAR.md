@@ -621,7 +621,8 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
                      @ottava(…) @quindicesima(…) … @loco ,   [labels: 8va/15ma; @…(bassa) = down]
-                     @startTrillSpan … @stopTrillSpan , @ped … @ped(off) , @sost … @sost(off) , @una(corda) … @tre(corde) *)
+                     @startTrillSpan … @stopTrillSpan ,
+                     @sustainOn … @sustainOff , @sostenutoOn … @sostenutoOff , @unaCorda … @treCorde *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 

@@ -10,7 +10,7 @@ part pno { clef bass }
 section A {
   voc { c'4 d' e' f' | }
   lyrics words { la la la la | }
-  pno { c4 d@ped e f@ped(off) | }
+  pno { c4 d@sustainOn e f@sustainOff | }
 }
 form main { A }
 score main "pedal-below-lyrics" { staff voc with lyrics words  staff pno }

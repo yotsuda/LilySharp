@@ -415,9 +415,58 @@ internal static class MusicMarkEngraver
             bool IsPedal(MusicMarkType t) =>
                 t is MusicMarkType.SustainOn or MusicMarkType.SostenutoOn
                   or MusicMarkType.UnaCordaOn || IsPedalRelease(t);
-            bool groupHasPedalChange =
-                belowMarks.Any(e => IsPedalRelease(e.Mark.Type))
-                && belowMarks.Any(e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type));
+            // ⚠️ A PEDAL FAMILY, NOT "PEDALS". Sustain, sostenuto and una corda are three
+            // SEPARATE grobs in LilyPond — a PianoPedalLineSpanner each, all three declared
+            // (outside-staff-priority . 1000) — so the outside-staff pass stacks them
+            // instead of letting them share a baseline. Only a release and the engage that
+            // follows it belong on one line, and that is the "* Ped." case below.
+            // LILYPOND-REF: scm/define-grobs.scm:3211-3216 SostenutoPedalLineSpanner's outside-staff-priority
+            // LILYPOND-REF: scm/define-grobs.scm:3593-3598 SustainPedalLineSpanner's outside-staff-priority
+            // LILYPOND-REF: scm/define-grobs.scm:4169-4174 UnaCordaPedalLineSpanner's outside-staff-priority
+            //   — all three declare 1000, so priority does not order them; being three grobs does.
+            // ⚠️ MEASURED in LilyPond 2.26.0 rather than assumed, because equal priority
+            //   does not say which lands nearer the staff: on
+            //   `c1\sustainOn\sostenutoOn`, "Sost. Ped." prints 2.442 NEARER the staff than
+            //   "Ped.". Una corda is NOT measured — no fixture reaches three at once — so it
+            //   is ranked outermost, which is a guess and is marked as one.
+            static int PedalFamilyRank(MusicMarkType t) => t switch
+            {
+                MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => 0,
+                MusicMarkType.SustainOn or MusicMarkType.SustainOff => 1,
+                _ => 2,
+            };
+
+            // The row each pedal family occupies in this group, stacked outward.
+            var pedalRowYUp = new Dictionary<int, double>();
+            {
+                double rowYUp = belowBaseUp - Padding;
+                double prevHalf = 0;
+                bool firstRow = true;
+                foreach (var rank in belowMarks
+                    .Where(e => IsPedal(e.Mark.Type)
+                                && (keepMarkText == null || keepMarkText(e.Mark)))
+                    .Select(e => PedalFamilyRank(e.Mark.Type))
+                    .Distinct()
+                    .OrderBy(r => r))
+                {
+                    double half = belowMarks
+                        .Where(e => IsPedal(e.Mark.Type) && PedalFamilyRank(e.Mark.Type) == rank)
+                        .Max(e => GetMarkHalfExtent(e.Mark.Type));
+                    if (!firstRow)
+                        rowYUp -= prevHalf + StackGap + half;
+                    pedalRowYUp[rank] = rowYUp;
+                    prevHalf = half;
+                    firstRow = false;
+                }
+            }
+
+            // The side-by-side "* Ped." shift is a WITHIN-FAMILY affair: a sostenuto release
+            // beside a sustain engage is two rows, not two words on one line.
+            bool GroupHasPedalChange(MusicMarkType t) =>
+                belowMarks.Any(e => IsPedalRelease(e.Mark.Type)
+                                    && PedalFamilyRank(e.Mark.Type) == PedalFamilyRank(t))
+                && belowMarks.Any(e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type)
+                                       && PedalFamilyRank(e.Mark.Type) == PedalFamilyRank(t));
 
             double stackBottomYUp = belowBaseUp;
             bool firstStacked = true;
@@ -433,9 +482,12 @@ internal static class MusicMarkEngraver
                 double yUp;
                 if (IsPedal(mark.Type))
                 {
-                    // All pedal text shares the pedal baseline (Padding below it = −Padding Y-up).
-                    yUp = belowBaseUp - Padding;
-                    if (groupHasPedalChange && IsPedalRelease(mark.Type))
+                    // One baseline per pedal FAMILY (see PedalFamilyRank); the innermost is
+                    // the plain pedal baseline, Padding below it = −Padding Y-up.
+                    yUp = pedalRowYUp.TryGetValue(PedalFamilyRank(mark.Type), out double rowYUp)
+                        ? rowYUp
+                        : belowBaseUp - Padding;
+                    if (GroupHasPedalChange(mark.Type) && IsPedalRelease(mark.Type))
                     {
                         // "*" just left of the new "Ped." — both centered
                         // texts, so clear half of each measured width + gap.

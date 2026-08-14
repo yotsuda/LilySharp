@@ -1,5 +1,8 @@
 # Lily# VS Code Extension
 
+**Version 0.3.0** — the bundled language server and the `lysc` compiler carry the
+same number. See the [changelog](CHANGELOG.md) for what is in this release.
+
 Language support for Lily# music notation files (`.lys`).
 
 ## Features
@@ -151,3 +154,12 @@ Emmentaler music font (GPL/OFL dual license) and MIT-licensed libraries;
 see [LICENSE](https://github.com/yotsuda/LilySharp/blob/master/LICENSE) and
 [THIRD-PARTY-NOTICES](https://github.com/yotsuda/LilySharp/blob/master/THIRD-PARTY-NOTICES.md)
 in the repository.
+
+**Corresponding source.** This extension and the language server it bundles are
+built from <https://github.com/yotsuda/LilySharp>; the complete corresponding
+source for a published version is the tagged commit it was built from.
+
+**LilyPond.** Lily# is an independent project, not affiliated with or endorsed by
+the LilyPond project. Parts of its engraving engine are ported from LilyPond (GPL
+v3 or later) and carry its copyright notices; the full list is in
+[LILYPOND-ATTRIBUTION](https://github.com/yotsuda/LilySharp/blob/master/LILYPOND-ATTRIBUTION.md).

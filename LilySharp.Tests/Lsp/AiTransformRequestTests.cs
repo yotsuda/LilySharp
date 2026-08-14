@@ -17,7 +17,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Microsoft.VisualStudio.LanguageServer.Protocol;
+using LilySharp.Lsp.Protocol;
 using LilySharp.Lsp;
 using Xunit;
 

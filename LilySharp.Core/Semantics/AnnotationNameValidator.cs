@@ -55,6 +55,14 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         };
 
     /// <summary>
+    /// The names above, for tooling: the editor's '@' completion has to offer
+    /// every annotation the collector consumes, and a test pins that against
+    /// this set (plus ArticulationRegistry and the dynamics table). Adding a
+    /// name here without adding a completion item fails that test.
+    /// </summary>
+    internal static IReadOnlyCollection<string> PlainFeatureNames => ExtraPlainNames;
+
+    /// <summary>
     /// Mark names accepted by <see cref="MusicMarkItem.ParseMarkName"/> plus the
     /// compound families — used only to power "did you mean" suggestions
     /// (validity itself is checked against the real parsers).
@@ -66,19 +74,50 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
         "pppp", "ppppp", "ffff", "fffff",
         "trill", "mordent", "prall", "turn", "invertedturn", "pralltriller",
-        "starttrillspan", "stoptrillspan", "courtesy", "editorial", "glissando",
+        "startTrillSpan", "stopTrillSpan", "courtesy", "editorial", "glissando",
+        // ⚠️ The navigation marks (segno, coda, fine, ds, dc, to coda) are NOT
+        // here: they are bare landmarks, and writing one with an '@' has its own
+        // diagnostic ("A navigation mark is bare, not '@'"). Suggesting '@segno'
+        // would send the reader from one error straight into another.
         // ⚠️ "cue" is NOT here: a cue is a REGION (`cue { … }`), not a note annotation —
         // LilyPond's cue is the CueVoice context and nothing attaches to a note. An `@cue`
         // now falls through to the ordinary unknown-annotation diagnostic, which is the
         // intended message. See docs/cue-context-design.md §5.
         "cross", "arpeggio", "laissezvibrer", "repeattie",
-        "segno", "coda", "fine", "rit", "accel", "cresc", "decresc", "dim",
-        "ottava", "ottava.bassa", "loco", "ped", "ped.off",
-        "sost", "sost.off", "una.corda", "tre.corde", "to.coda",
+        "rit", "accel", "cresc", "decresc", "dim",
+        // Spelled as they should be READ: the matcher lowercases both sides, so
+        // camelCase here only affects what the "did you mean" hint shows.
+        "ottava", "ottava.bassa", "loco",
+        "sustainOn", "sustainOff", "sostenutoOn", "sostenutoOff",
+        "unaCorda", "treCorde",
         "mark.A", "finger.1", "feather.right", "feather.left",
         "notehead.x", "notehead.diamond", "notehead.slash",
-        "trillspan.start", "trillspan.stop", "fig.6", "chord.C",
+        "fig.6", "chord.c",
     ];
+
+    /// <summary>The candidates above, for the test that pins every one of them to
+    /// a spelling a user can actually type.</summary>
+    internal static IReadOnlyList<string> SuggestionNames => SuggestionCandidates;
+
+    /// <summary>
+    /// A mark name as it must be TYPED. Internally a compound annotation is one
+    /// dotted string — "sost.off", "notehead.x", "fig.6.4" — because that is the
+    /// collector's lookup key, but it is NOT source syntax: the source puts the
+    /// argument in parentheses, and stacked figures are separated by spaces.
+    /// Diagnostics have to speak the typeable form; printed raw, "did you mean
+    /// '@sost.off'?" sends the reader straight into "Undefined variable or
+    /// phrase: 'off'".
+    /// </summary>
+    internal static string SourceSpelling(string markName)
+    {
+        int dot = markName.IndexOf('.');
+        if (dot < 0)
+            return markName;
+
+        var name = markName.Substring(0, dot);
+        var arguments = markName.Substring(dot + 1).Replace('.', ' ');
+        return $"{name}({arguments})";
+    }
 
     /// <summary>
     /// Validates all <c>@name</c> annotations in a syntax tree.
@@ -168,8 +207,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             return true;
 
         var lower = name.ToLowerInvariant();
-        if (lower is "trillspan.start" or "trillspan.stop")
-            return true;
         // @text("…") — free expressive text (the compound name carries the
         // string payload, e.g. text."dolce" or text."dolce".up).
         if (lower.StartsWith("text.", StringComparison.Ordinal))
@@ -283,10 +320,12 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
 
     private void WarnUnknown(SyntaxNode node, string name)
     {
-        var message = $"Unknown annotation '@{name}' — it is ignored.";
+        // Both the name and the suggestion are shown as they are TYPED, not as the
+        // collector keys them: the reader has to be able to copy what they read.
+        var message = $"Unknown annotation '@{SourceSpelling(name)}' — it is ignored.";
         var suggestion = FindSuggestion(name);
         if (suggestion != null)
-            message += $" Did you mean '@{suggestion}'?";
+            message += $" Did you mean '@{SourceSpelling(suggestion)}'?";
 
         _diagnostics.Warning(
             node.Span,

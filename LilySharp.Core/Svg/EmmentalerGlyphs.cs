@@ -18,7 +18,8 @@ namespace LilySharp.Core.Svg;
 
 /// <summary>
 /// Emmentaler font glyph code points for music notation symbols.
-/// Based on LilyPond's Emmentaler font (SIL OFL licensed).
+/// Based on LilyPond's Emmentaler font, which is dual-licensed GPL-3.0-or-later
+/// or SIL OFL; Lily# redistributes it under the GPL branch (THIRD-PARTY-NOTICES.md).
 /// </summary>
 /// <remarks>
 /// The code points themselves live in <c>EmmentalerGlyphs.Generated.cs</c>, resolved

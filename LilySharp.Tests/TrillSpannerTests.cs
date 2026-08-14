@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
@@ -147,10 +148,15 @@ score main ""test"" { staff melody }
         Assert.True(lineCount > 5, $"Expected multiple wavy-line segments, got {lineCount}.");
     }
 
+    /// <summary>
+    /// The spanner has ONE spelling, LilyPond's: @startTrillSpan /
+    /// @stopTrillSpan. '@trillSpan(start)' was a second way to say the same
+    /// thing — and an argument on an event that has none in LilyPond either — so
+    /// it is gone rather than silently accepted.
+    /// </summary>
     [Fact]
-    public void TrillSpanner_CompoundSyntax_Detected()
+    public void TrillSpanner_CompoundSyntax_IsNoLongerAccepted()
     {
-        // Test @trillSpan(start) / @trillSpan(stop) compound syntax
         var source = @"
 part melody { clef treble }
 phrase m { c'4@trillSpan(start) d e f@trillSpan(stop) | g4 a b c' | }
@@ -161,12 +167,12 @@ score main ""test"" { staff melody }
         var tree = SyntaxTree.Parse(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
 
-        _output.WriteLine($"TrillSpanners count: {singleScore.TrillSpanners.Length}");
-        Assert.Single(singleScore.TrillSpanners);
+        Assert.Empty(singleScore.TrillSpanners);
 
-        var spanner = singleScore.TrillSpanners[0];
-        Assert.Equal(0, spanner.StartMeasureIndex);
-        Assert.Equal(0, spanner.EndMeasureIndex);
+        var validator = new AnnotationNameValidator();
+        validator.Validate(tree);
+        Assert.Equal(2, validator.Diagnostics
+            .Count(d => d.Code == DiagnosticCodes.UnknownAnnotation));
     }
 
     [Fact]

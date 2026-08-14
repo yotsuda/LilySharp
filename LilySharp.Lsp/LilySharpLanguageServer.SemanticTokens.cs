@@ -18,15 +18,15 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Editing;
-using Microsoft.VisualStudio.LanguageServer.Protocol;
+using LilySharp.Lsp.Protocol;
 using StreamJsonRpc;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Music;
-using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
-using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
+using LspRange = LilySharp.Lsp.Protocol.Range;
+using LspDiagnosticSeverity = LilySharp.Lsp.Protocol.DiagnosticSeverity;
 using CoreDiagnosticSeverity = LilySharp.Core.Syntax.DiagnosticSeverity;
 using CoreDiagnostic = LilySharp.Core.Syntax.Diagnostic;
 
@@ -207,11 +207,80 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
+    /// <summary>
+    /// Line start offsets of a document, built once per text instance.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="GetLineAndCharacter"/> used to walk from offset 0 on every call,
+    /// and its callers ask once PER TOKEN — so semantic tokens, the outline and
+    /// folding all cost O(text × tokens). MEASURED on a generated score, one bar
+    /// per line: textDocument/semanticTokens/full took 18 ms at 50 bars, 73 ms at
+    /// 200, 498 ms at 500 and 1747 ms at 1000 — the shape of a quadratic, and
+    /// enough to make a long score feel stuck after every edit.
+    ///
+    /// The table is keyed by the text INSTANCE, which the document manager
+    /// replaces on every change, so a stale index cannot be handed out and the
+    /// entry dies with the version that owned it.
+    /// </remarks>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<string, int[]> LineStartsCache = new();
+
+    private static int[] LineStartsOf(string text) =>
+        LineStartsCache.GetValue(text, static t =>
+        {
+            var starts = new List<int> { 0 };
+            for (int i = 0; i < t.Length; i++)
+            {
+                if (t[i] == '\n')
+                {
+                    starts.Add(i + 1);
+                }
+                else if (t[i] == '\r')
+                {
+                    // CRLF is ONE break; a lone '\r' breaks too.
+                    if (i + 1 < t.Length && t[i + 1] == '\n') i++;
+                    starts.Add(i + 1);
+                }
+            }
+            return [.. starts];
+        });
+
+    /// <summary>Index of the line containing <paramref name="position"/>: the last
+    /// line start at or before it.</summary>
+    private static int LineOf(int[] lineStarts, int position)
+    {
+        int lo = 0, hi = lineStarts.Length - 1;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) / 2;
+            if (lineStarts[mid] <= position) lo = mid; else hi = mid - 1;
+        }
+        return lo;
+    }
+
     internal static (int line, int character) GetLineAndCharacter(string text, int position)
     {
         // A malformed/synthetic node can report a position outside the document; clamp it
         // so the character is never negative (VS Code rejects a Position with a negative
         // character, and one bad symbol range aborts the WHOLE documentSymbol response).
+        position = System.Math.Clamp(position, 0, text.Length);
+
+        var lineStarts = LineStartsOf(text);
+
+        // A position sitting exactly ON the '\n' of a CRLF is INSIDE the break.
+        // The scan-from-zero version had already counted the line at the '\r' and
+        // reported column 0 — the line the break OPENS, which starts one char on.
+        if (position > 0 && position < text.Length
+            && text[position - 1] == '\r' && text[position] == '\n')
+            return (LineOf(lineStarts, position + 1), 0);
+
+        int line = LineOf(lineStarts, position);
+        return (line, System.Math.Max(0, position - lineStarts[line]));
+    }
+
+    /// <summary>The scan-from-zero original, kept as the reference the fast path
+    /// is tested against (see GetLineAndCharacterTests).</summary>
+    internal static (int line, int character) GetLineAndCharacterByScan(string text, int position)
+    {
         position = System.Math.Clamp(position, 0, text.Length);
 
         int line = 0;

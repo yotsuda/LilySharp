@@ -1,3 +1,19 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -36,6 +52,18 @@ function armPanelReady(uri: string) {
     let resolve!: () => void;
     const promise = new Promise<void>(r => { resolve = r; });
     panelReady.set(uri, { promise, resolve });
+}
+
+// The preview the user is acting on: a context-menu command fires while its own
+// webview holds focus, so the ACTIVE panel is the one that must receive it. With
+// several previews open, posting to any other would act on the wrong score.
+function postToActivePreview(type: string) {
+    for (const panel of previewPanels.values()) {
+        if (panel.active) {
+            panel.webview.postMessage({ type });
+            return;
+        }
+    }
 }
 
 // Re-key a live preview from oldUri to newUri (an untitled score saved to a file):
@@ -330,7 +358,18 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.playNoteAtCursor', () =>
             playAtCursor(context, 'note')),
         vscode.commands.registerCommand('lilysharp.playMeasureAtCursor', () =>
-            playAtCursor(context, 'measure'))
+            playAtCursor(context, 'measure')),
+        // Preview context menu (menus/webview/context). Each one is a thin relay:
+        // the state these act on — the right-clicked note, the zoom, the synth —
+        // all lives in the webview, so the command only names the action.
+        vscode.commands.registerCommand('lilysharp.previewPlayFromHere', () =>
+            postToActivePreview('ctxPlayFromHere')),
+        vscode.commands.registerCommand('lilysharp.previewStop', () =>
+            postToActivePreview('ctxStop')),
+        vscode.commands.registerCommand('lilysharp.previewFitWidth', () =>
+            postToActivePreview('ctxFitWidth')),
+        vscode.commands.registerCommand('lilysharp.previewResetZoom', () =>
+            postToActivePreview('ctxResetZoom'))
     );
 
     // AI collaborative editing: select → prompt → validate → decide-on-score → apply.
@@ -1418,7 +1457,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             border: 1px solid #ccc;
             border-radius: 4px;
             background: white;
-            min-width: 150px;
+            /* No min-width: the width is measured from the selected score name
+               and set inline (fitSelectToSelection). A floor here would win over
+               that inline width and put the empty gap back. */
         }
         .toolbar button {
             padding: 4px 12px;
@@ -1592,7 +1633,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .ai-fab:hover { background: #7e4fd0; }
     </style>
 </head>
-<body>
+<!-- The preview is a rendered score, not an editable text buffer, so VS Code's
+     default webview context menu (Copy / Cut / Paste) has nothing to act on:
+     Cut and Paste can never apply, and Copy only ever picked up stray SVG text.
+     preventDefaultContextMenuItems drops those built-in entries, leaving only
+     what this extension contributes under menus/webview/context. lysNote and
+     lysPlaying are the when-clause keys those items gate on; the contextmenu
+     handler below refreshes them for each click. -->
+<body data-vscode-context='{"preventDefaultContextMenuItems": true, "lysNote": false, "lysPlaying": false}'>
     <div class="toolbar">
         <label for="renderSelect">Score:</label>
         <select id="renderSelect">
@@ -1602,9 +1650,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
-        <span class="sep"></span>
-        <button id="fitPageBtn" type="button" title="Fit whole page">⊡ Page</button>
-        <button id="fitWidthBtn" type="button" title="Fit width">⬌ Width</button>
         <span class="sep"></span>
         <button id="firstPageBtn" type="button" title="First page">⏮</button>
         <button id="prevPageBtn" type="button" title="Previous page">◀</button>
@@ -1687,7 +1732,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let pages = [{ top: 0, height: 0 }];
         let svgWidthPx = 0;   // the SVG's natural width in px (width attribute)
         let pxPerSpace = 10;  // px per staff-space (width / viewBox width)
-        let fitMode = null;   // 'page' | 'width' | null = manual zoom
+        // 'width' = keep the score fitted to the pane; null = manual zoom.
+        // Fit-to-width is the state a freshly opened preview starts in, so the
+        // first render (and every resize after it) fits without being asked.
+        let fitMode = 'width';
         const mainContent = document.querySelector('.main-content');
         const pageInfo = document.getElementById('pageInfo');
 
@@ -1755,16 +1803,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return { w: mainContent.clientWidth - 44, h: mainContent.clientHeight - 44 };
         }
 
-        function fitPage() {
-            fitMode = 'page';
-            const a = availSize();
-            const maxPageHpx = Math.max.apply(null, pages.map(p => p.height)) * pxPerSpace;
-            if (svgWidthPx > 0 && maxPageHpx > 0) {
-                scale = Math.min(a.w / svgWidthPx, a.h / maxPageHpx);
-            }
-            updateZoom();
-        }
-
         function fitWidth() {
             fitMode = 'width';
             const a = availSize();
@@ -1788,6 +1826,43 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             } else {
                 el.setAttribute(name, orig);
             }
+        }
+
+        // ---- source-position index -------------------------------------------
+        // Every source offset the rendered score carries, sorted. Built once per
+        // SVG and reused by the caret handlers, which run on every cursor
+        // movement: reading data-pos off each drawn element there cost the whole
+        // document per keystroke, and with the preview open a long score visibly
+        // lagged behind the caret. A barline can also carry a data-alt list (the
+        // other written bars that collapse onto it), and those offsets count too.
+        let posSorted = [];        // ascending, unique
+        let posIndexBuilt = false;
+
+        function invalidateSourcePositions() {
+            posIndexBuilt = false;
+            posSorted = [];
+        }
+
+        function sourcePositions() {
+            if (posIndexBuilt) return posSorted;
+            const seen = new Set();
+            const svg = svgContainer.querySelector('svg');
+            if (svg) {
+                for (const el of svg.querySelectorAll('[data-pos]')) {
+                    const primary = parseInt(el.getAttribute('data-pos'), 10);
+                    if (Number.isFinite(primary)) seen.add(primary);
+                    const alt = el.getAttribute('data-alt');
+                    if (alt) {
+                        for (const a of alt.split(' ')) {
+                            const n = parseInt(a, 10);
+                            if (Number.isFinite(n)) seen.add(n);
+                        }
+                    }
+                }
+            }
+            posSorted = Array.from(seen).sort((a, b) => a - b);
+            posIndexBuilt = true;
+            return posSorted;
         }
 
         function clearHighlights() {
@@ -1823,27 +1898,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // lies within the caret's own token (data-pos >= tokenStart). The tokenStart
             // guard is what rejects the nearest PRECEDING note when the caret sits on a
             // barline / keyword / gap — that token holds no note, so nothing highlights.
-            const elements = document.querySelectorAll('[data-pos]');
-            let nearestPos = -1;
-            let nearestDist = Infinity;
+            //
+            // Answered from the source-position index, not by reading the attributes
+            // of every drawn element: this runs on EVERY cursor movement, and the
+            // scan is what made a long score feel stuck whenever the preview was open.
+            sourcePositions();
             const floor = (typeof tokenStart === 'number' && tokenStart >= 0) ? tokenStart : 0;
-            elements.forEach(el => {
-                // A barline can carry several source offsets (its data-pos plus a
-                // data-alt list of the other written bars that collapse onto it); a
-                // caret on ANY of them resolves to it.
-                const positions = [parseInt(el.getAttribute('data-pos'), 10)];
-                const alt = el.getAttribute('data-alt');
-                if (alt) for (const a of alt.split(' ')) positions.push(parseInt(a, 10));
-                for (const pos of positions) {
-                    if (pos <= cursorPos && pos >= floor) {
-                        const dist = cursorPos - pos;
-                        if (dist < nearestDist) {
-                            nearestDist = dist;
-                            nearestPos = pos;
-                        }
-                    }
-                }
-            });
+            let lo = 0, hi = posSorted.length - 1, nearestPos = -1;
+            while (lo <= hi) {
+                const mid = (lo + hi) >> 1;
+                if (posSorted[mid] <= cursorPos) { nearestPos = posSorted[mid]; lo = mid + 1; }
+                else { hi = mid - 1; }
+            }
+            // The greatest position at or before the caret is the nearest one; if even
+            // that lies before the caret's own token, no note belongs to this caret.
+            if (nearestPos < floor) { nearestPos = -1; }
+            const nearestDist = nearestPos >= 0 ? cursorPos - nearestPos : Infinity;
 
             // Highlight ALL elements with that data-pos
             if (nearestPos >= 0 && nearestDist < HIGHLIGHT_THRESHOLD) {
@@ -1858,18 +1928,21 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // (an editor selection, possibly several ranges for a multi-cursor select).
         function highlightRange(ranges) {
             clearHighlights();
-            const positions = new Set();
-            document.querySelectorAll('[data-pos]').forEach(el => {
-                const pos = parseInt(el.getAttribute('data-pos'), 10);
+            // Over the index's distinct positions rather than every drawn element:
+            // a chord's heads, dots and accidentals all carry the same offset, so
+            // the element list is several times longer than the answer needs.
+            sourcePositions();
+            const positions = [];
+            for (const pos of posSorted) {
                 for (let i = 0; i < ranges.length; i++) {
                     if (pos >= ranges[i][0] && pos < ranges[i][1]) {
-                        positions.add(pos);
+                        positions.push(pos);
                         break;
                     }
                 }
-            });
-            if (positions.size > 0) {
-                highlightPositions(Array.from(positions));
+            }
+            if (positions.length > 0) {
+                highlightPositions(positions);
             }
             lastResolvedPos = -1;   // a range has no single resolved note
         }
@@ -2004,7 +2077,66 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
                 renderSelect.appendChild(option);
             });
+            fitSelectToSelection();
         }
+
+        // The select is sized to its CONTENT. Left to itself a native <select>
+        // reserves room for its widest option, so one long score name leaves a
+        // wide empty gap next to every short one.
+        //
+        // The width is measured by an off-screen twin rather than computed from
+        // the text: a select's box is text + padding + border + the dropdown
+        // arrow Chromium draws itself, and only Chromium knows what that arrow
+        // costs. The twin carries the same class (so the same font and padding)
+        // and is left at its auto width, which IS the width that fits its
+        // options exactly. Absolutely positioned, so it never disturbs the
+        // toolbar it has to live in to inherit those styles.
+        const selectSizer = document.createElement('select');
+        selectSizer.setAttribute('aria-hidden', 'true');
+        selectSizer.tabIndex = -1;
+        selectSizer.style.cssText =
+            'position:absolute;visibility:hidden;pointer-events:none;top:0;left:0;width:auto;';
+        document.querySelector('.toolbar').appendChild(selectSizer);
+
+        // Width the twin settles on once it holds exactly these option labels.
+        function widthFor(labels) {
+            selectSizer.innerHTML = '';
+            for (const label of labels) {
+                const o = document.createElement('option');
+                o.textContent = label;
+                selectSizer.appendChild(o);
+            }
+            return selectSizer.offsetWidth;
+        }
+
+        function fitSelectToSelection() {
+            const opt = renderSelect.options[renderSelect.selectedIndex];
+            renderSelect.style.width = widthFor([opt ? opt.textContent : '']) + 'px';
+        }
+
+        // The native popup takes its width from the element, so the list would be
+        // clipped to the (short) closed width. Widening just before it opens —
+        // mousedown and the keyboard open keys both precede the popup — gives the
+        // list room for the longest name; it shrinks back on close.
+        function fitSelectToWidest() {
+            const labels = Array.from(renderSelect.options).map(o => o.textContent);
+            renderSelect.style.width = widthFor(labels) + 'px';
+        }
+
+        renderSelect.addEventListener('mousedown', fitSelectToWidest);
+        renderSelect.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                fitSelectToSelection();   // closed without choosing
+            } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                fitSelectToWidest();
+            }
+        });
+        // change = a choice was made, blur = the popup went away with the focus.
+        renderSelect.addEventListener('change', fitSelectToSelection);
+        renderSelect.addEventListener('blur', fitSelectToSelection);
+        // Fit the placeholder too: the first score list only arrives with the
+        // first render, and until then the box would sit at its auto width.
+        fitSelectToSelection();
 
         renderSelect.addEventListener('change', () => {
             vscode.postMessage({ type: 'selectRender', renderName: renderSelect.value });
@@ -2305,16 +2437,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         });
         document.getElementById('stopBtn').addEventListener('click', stopPlayback);
 
-        document.getElementById('fitPageBtn').addEventListener('click', fitPage);
-        document.getElementById('fitWidthBtn').addEventListener('click', fitWidth);
         document.getElementById('firstPageBtn').addEventListener('click', () => gotoPage(0));
         document.getElementById('prevPageBtn').addEventListener('click', () => gotoPage(currentPageIndex() - 1));
         document.getElementById('nextPageBtn').addEventListener('click', () => gotoPage(currentPageIndex() + 1));
         document.getElementById('lastPageBtn').addEventListener('click', () => gotoPage(pages.length - 1));
         mainContent.addEventListener('scroll', updatePageInfo);
         window.addEventListener('resize', () => {
-            if (fitMode === 'page') fitPage();
-            else if (fitMode === 'width') fitWidth();
+            if (fitMode === 'width') fitWidth();
         });
 
         window.addEventListener('message', event => {
@@ -2329,6 +2458,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // showing the last score while the server (re)starts.
                         if (!hasPreview) {
                             svgContainer.innerHTML = '<div class="loading">Waiting for language server...</div>';
+                            invalidateSourcePositions();
                         }
                     } else if (message.svg) {
                         // A score arrived — it is CURRENT, so never dimmed. It may
@@ -2341,14 +2471,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         }
                         svgContainer.classList.remove('stale');
                         svgContainer.innerHTML = message.svg;
+                        invalidateSourcePositions();
                         // The score changed: the cached note list is stale, so the
                         // next audition / Play refetches fresh events.
                         playbackNotes = null;
                         collectPages();
-                        // Keep the chosen fit across re-renders; otherwise
+                        // Keep the fit across re-renders (this is also what fits
+                        // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
-                        if (fitMode === 'page') fitPage();
-                        else if (fitMode === 'width') fitWidth();
+                        if (fitMode === 'width') fitWidth();
                         else updateZoom();
                         if (lastHighlightRanges) {
                             highlightRange(lastHighlightRanges);
@@ -2366,6 +2497,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         } else {
                             hideErrorBanner();
                             svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
+                            invalidateSourcePositions();
                         }
                     }
                     break;
@@ -2383,6 +2515,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     }
                     break;
                 }
+                // Context-menu actions. Play reuses the Play button's path
+                // exactly (fetch the events, then start at pendingStartPos), so
+                // the right-clicked note resolves to an onset the same way a
+                // highlighted note does.
+                case 'ctxPlayFromHere':
+                    if (ctxNotePos >= 0) {
+                        pendingStartPos = ctxNotePos;
+                        setPlayUi(true);
+                        vscode.postMessage({ type: 'requestPlayback' });
+                    }
+                    break;
+                case 'ctxStop':
+                    stopPlayback();
+                    break;
+                case 'ctxFitWidth':
+                    fitWidth();
+                    break;
+                case 'ctxResetZoom':
+                    fitMode = null; // back to manual zoom, at 1:1
+                    scale = 1;
+                    updateZoom();
+                    break;
                 case 'playbackData':
                     if (message.error || !message.notes) {
                         setPlayUi(false);
@@ -2503,6 +2657,26 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 clearHighlights();
             }
         });
+
+        // Right-click: publish what the menu needs to know about THIS click —
+        // whether it landed on a note (data-pos, same test the click handler
+        // uses) and whether playback is running. VS Code reads
+        // data-vscode-context off the element chain in its own contextmenu
+        // listener, so this one runs in the CAPTURE phase to get there first.
+        let ctxNotePos = -1;
+        document.addEventListener('contextmenu', (e) => {
+            const t = e.target;
+            ctxNotePos = (t && t.hasAttribute && t.hasAttribute('data-pos'))
+                ? parseInt(t.getAttribute('data-pos'), 10)
+                : -1;
+            document.body.dataset.vscodeContext = JSON.stringify({
+                preventDefaultContextMenuItems: true,
+                lysNote: ctxNotePos >= 0,
+                // The Stop button's enabled state is the playback flag that also
+                // covers the optimistic window between Play and the first events.
+                lysPlaying: !document.getElementById('stopBtn').disabled
+            });
+        }, true);
 
         // M3 keyboard: Ctrl/Cmd+I submits the score selection; Escape clears it.
         window.addEventListener('keydown', (e) => {

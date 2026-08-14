@@ -147,7 +147,7 @@ internal static partial class SharedRenderer
 
                 // Stems (forced UP) plus the connecting beam, or a flag for a lone
                 // grace note. Without this the small heads float free of any stem.
-                // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
+                // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
                 //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
                 //   stems are forced up regardless of pitch, and the auto-slur bows down.
                 // The beam's own height comes from the QUANTER, in the layout stage
@@ -281,7 +281,7 @@ internal static partial class SharedRenderer
     /// scaled by the grace scale; stems are forced UP per score-grace-settings.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings — grace
+    /// LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings — grace
     ///   stems are forced UP (so a stem-up beam stacks its secondary beams toward
     ///   the heads, i.e. downward on the page).
     /// LILYPOND-REF: lily/beam.cc secondary beams translated by beam-thickness +

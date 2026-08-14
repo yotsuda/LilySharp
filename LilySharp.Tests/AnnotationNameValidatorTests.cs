@@ -63,6 +63,60 @@ public class AnnotationNameValidatorTests
         Assert.Contains("Did you mean '@glissando'?", warning.Message);
     }
 
+    /// <summary>
+    /// A suggestion the reader cannot type is worse than no suggestion. A
+    /// compound annotation is keyed internally as one dotted string
+    /// ("notehead.x"), but the source spells the argument in parentheses — so
+    /// '@notehed(x)' used to answer "did you mean '@notehead.x'?", and following
+    /// that advice produced "Undefined variable or phrase: 'x'".
+    /// </summary>
+    [Fact]
+    public void CompoundSuggestion_IsSpelledTheWayItIsTyped()
+    {
+        var diags = Validate("c4@notehed(x) d |");
+        var warning = Assert.Single(diags, d => d.Code == DiagnosticCodes.UnknownAnnotation);
+
+        Assert.Contains("Did you mean '@notehead(x)'?", warning.Message);
+        Assert.Contains("'@notehed(x)'", warning.Message);   // and so is the name reported
+        Assert.DoesNotContain("notehead.x", warning.Message);
+    }
+
+    /// <summary>
+    /// Every suggestion the validator can make must be a spelling that actually
+    /// compiles on a note. This is what caught the whole dotted-name family
+    /// (@ped.off, @notehead.x, @fig.6, @chord.C, @to.coda …) being unusable.
+    /// </summary>
+    [Fact]
+    public void EverySuggestionCandidate_CompilesAsWritten()
+    {
+        var failures = new List<string>();
+        foreach (var candidate in AnnotationNameValidator.SuggestionNames)
+        {
+            var spelling = AnnotationNameValidator.SourceSpelling(candidate);
+            // MusicSource wraps the music in the part/section/score a real file
+            // needs; a bare "c4@… d |" would fail as top-level music for every
+            // candidate and prove nothing.
+            var tree = MusicSource.Parse($"c4@{spelling} d |");
+
+            var problems = tree.Diagnostics
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .Select(d => d.Message)
+                .ToList();
+
+            var validator = new AnnotationNameValidator();
+            validator.Validate(tree);
+            problems.AddRange(validator.Diagnostics
+                .Where(d => d.Code == DiagnosticCodes.UnknownAnnotation)
+                .Select(d => d.Message));
+
+            if (problems.Count > 0)
+                failures.Add($"@{spelling} -> {string.Join("; ", problems)}");
+        }
+        Assert.True(failures.Count == 0,
+            "The validator can suggest annotations that do not compile as written:\n"
+            + string.Join("\n", failures));
+    }
+
     [Fact]
     public void NothingClose_NoSuggestion()
     {
@@ -94,8 +148,8 @@ public class AnnotationNameValidatorTests
     [InlineData("c4@mark(\"A\") d@mark(\"12\") e f |")]
     [InlineData("c4@rit d@accel e@cresc f@dim |")]
     [InlineData("c4@ottava d@ottava(bassa) e@loco f |")]
-    [InlineData("c4@ped d@ped(off) e@sost f@tre(corde) |")]
-    [InlineData("c4@sost(off) d@una(corda) e f |")]
+    [InlineData("c4@sustainOn d@sustainOff e@sostenutoOn f@treCorde |")]
+    [InlineData("c4@sostenutoOff d@unaCorda e f |")]
     [InlineData("c4@ds(al fine) d e f |")]
     // Feature annotations
     [InlineData("c4@glissando d e f |")]

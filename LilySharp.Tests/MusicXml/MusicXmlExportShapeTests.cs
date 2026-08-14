@@ -333,7 +333,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             part pno { clef treble }
             section A { pno {
-              |: c'4@ped@chord(d:m7) d'@cresc e' f'@ped(off) | g'1@f :|
+              |: c'4@sustainOn@chord(d:m7) d'@cresc e' f'@sustainOff | g'1@f :|
               a'4@ottava b' a'@loco g' | c'1@chord(g:7/b) |
             } }
             form main { A }

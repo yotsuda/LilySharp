@@ -16,9 +16,44 @@
 
 using System.Text;
 using LilySharp.Core.Png;
+using LilySharp.Core.Rendering;
 using SkiaSharp;
 
 namespace LilySharp.Tests.Svg;
+
+/// <summary>
+/// Feeds the bundled Emmentaler to Svg.Skia: the baseline SVGs name the music
+/// font by family, and it is not installed on the machine. Test-only, like the
+/// rasterizer that uses it — see <see cref="VisualDiffReport"/>.
+/// </summary>
+internal sealed class EmmentalerTypefaceProvider : global::Svg.Skia.TypefaceProviders.ITypefaceProvider, IDisposable
+{
+    private readonly string _familyName;
+    private readonly SKTypeface _typeface;
+
+    public EmmentalerTypefaceProvider(string familyName, SKTypeface typeface)
+    {
+        _familyName = familyName;
+        _typeface = typeface;
+    }
+
+    public SKTypeface? FromFamilyName(string fontFamily, SKFontStyleWeight fontWeight,
+        SKFontStyleWidth fontWidth, SKFontStyleSlant fontStyle)
+    {
+        foreach (var raw in fontFamily.Split(',', StringSplitOptions.TrimEntries))
+        {
+            var name = raw.Trim('\'', '"');
+            if (string.Equals(name, _familyName, StringComparison.OrdinalIgnoreCase))
+                return _typeface;
+            if (_typeface.FamilyName != null &&
+                string.Equals(name, _typeface.FamilyName, StringComparison.OrdinalIgnoreCase))
+                return _typeface;
+        }
+        return null;
+    }
+
+    public void Dispose() => _typeface.Dispose();
+}
 
 /// <summary>
 /// The human half of the visual regression net. The byte-identical snapshot
@@ -90,8 +125,8 @@ internal static class VisualDiffReport
             // Scale 2 (192 DPI): sub-pixel geometry shifts in staff-space units
             // land on visibly distinct pixels.
             var png = new PngRenderOptions { Scale = 2.0f };
-            var basePng = PngGenerator.ConvertSvgToPng(baselineSvg, png);
-            var actPng = PngGenerator.ConvertSvgToPng(actualSvg, png);
+            var basePng = RasterizeSvg(baselineSvg, png);
+            var actPng = RasterizeSvg(actualSvg, png);
             File.WriteAllBytes(Path.Combine(dir, fileBase + ".baseline.png"), basePng);
             File.WriteAllBytes(Path.Combine(dir, fileBase + ".actual.png"), actPng);
 
@@ -104,6 +139,80 @@ internal static class VisualDiffReport
             File.WriteAllText(report, BuildHtml());
             return report;
         }
+    }
+
+    /// <summary>
+    /// SVG string → PNG bytes, for the two SVGs this report compares.
+    /// </summary>
+    /// <remarks>
+    /// This rasterizer lives HERE, not in LilySharp.Core, for a licensing
+    /// reason: Svg.Skia depends on Svg.Custom, which is MS-PL — free software,
+    /// but incompatible with the GPL, so it must not end up inside anything
+    /// Lily# distributes. The test assembly is never distributed (the release
+    /// artifacts are lysc and the VSIX), and it is the only thing that needs to
+    /// rasterize an SVG it did not lay out itself: the baselines come from
+    /// LilyPond as SVG. Everything Lily# ships renders from the layout model
+    /// through Skia directly (PngGenerator.Generate).
+    /// </remarks>
+    private static byte[] RasterizeSvg(string svgString, PngRenderOptions options)
+    {
+        var fontDirectory = FontLocator.Find();
+
+        using var svg = new global::Svg.Skia.SKSvg();
+        var providers = new List<EmmentalerTypefaceProvider>();
+        try
+        {
+            if (fontDirectory != null)
+            {
+                if (!RegisterFont(svg, fontDirectory, "emmentaler-20.otf", "Emmentaler", providers))
+                    RegisterFont(svg, fontDirectory, "emmentaler-20.woff2", "Emmentaler", providers);
+                if (!RegisterFont(svg, fontDirectory, "emmentaler-brace.otf", "Emmentaler-Brace", providers))
+                    RegisterFont(svg, fontDirectory, "emmentaler-brace.woff", "Emmentaler-Brace", providers);
+            }
+
+            svg.FromSvg(svgString);
+            if (svg.Picture == null)
+                throw new InvalidOperationException("Failed to parse SVG content");
+
+            var bounds = svg.Picture.CullRect;
+            int width = (int)Math.Ceiling(bounds.Width * options.Scale);
+            int height = (int)Math.Ceiling(bounds.Height * options.Scale);
+            if (width <= 0 || height <= 0)
+                throw new InvalidOperationException($"Invalid SVG dimensions: {bounds.Width}x{bounds.Height}");
+
+            using var surface = SKSurface.Create(new SKImageInfo(width, height,
+                SKColorType.Rgba8888, SKAlphaType.Premul));
+            var canvas = surface.Canvas;
+            canvas.Clear(SKColors.White);
+            canvas.Scale(options.Scale);
+            canvas.DrawPicture(svg.Picture);
+
+            using var image = surface.Snapshot();
+            using var data = image.Encode(SKEncodedImageFormat.Png, options.Quality);
+            return data.ToArray();
+        }
+        finally
+        {
+            foreach (var provider in providers)
+                provider.Dispose();
+        }
+    }
+
+    private static bool RegisterFont(global::Svg.Skia.SKSvg svg, string fontDir, string fileName,
+        string familyName, List<EmmentalerTypefaceProvider> providers)
+    {
+        var fontPath = Path.Combine(fontDir, fileName);
+        if (!File.Exists(fontPath)) return false;
+
+        var skData = SKData.CreateCopy(File.ReadAllBytes(fontPath));
+        var typeface = SKTypeface.FromData(skData);
+        if (typeface == null) { skData.Dispose(); return false; }
+
+        var provider = new EmmentalerTypefaceProvider(familyName, typeface);
+        svg.Settings.TypefaceProviders ??= new List<global::Svg.Skia.TypefaceProviders.ITypefaceProvider>();
+        svg.Settings.TypefaceProviders.Insert(0, provider);
+        providers.Add(provider);
+        return true;
     }
 
     // Pixel-exact comparison (both PNGs come from the same Skia in the same

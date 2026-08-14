@@ -18,15 +18,15 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Editing;
-using Microsoft.VisualStudio.LanguageServer.Protocol;
+using LilySharp.Lsp.Protocol;
 using StreamJsonRpc;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Music;
-using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
-using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
+using LspRange = LilySharp.Lsp.Protocol.Range;
+using LspDiagnosticSeverity = LilySharp.Lsp.Protocol.DiagnosticSeverity;
 using CoreDiagnosticSeverity = LilySharp.Core.Syntax.DiagnosticSeverity;
 using CoreDiagnostic = LilySharp.Core.Syntax.Diagnostic;
 

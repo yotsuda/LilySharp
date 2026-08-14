@@ -326,9 +326,12 @@ form main { A segno  B to coda  C ds al coda  coda D }
 
 In-note marks: `c4@mark("A")` (rehearsal mark), `@segno @coda @fine @dc @ds`,
 text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
-trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`, pedals `@ped` ... `@ped(off)`,
-`@ped`/`@ped.off`, `@sost`/`@sost.off` (release = `.off`), `@una.corda`/`@tre.corde` (the traditional pair; tre corde IS the release, like an
-argument). (`@ds al fine` etc. is the navigation form used inside `form main { }`.)
+trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
+pedals `@sustainOn`/`@sustainOff`, `@sostenutoOn`/`@sostenutoOff`, `@unaCorda`/`@treCorde` — one word each,
+LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).
+An annotation's argument always goes in PARENTHESES — a dot after the name is the placement qualifier
+instead (`@fermata.up`), so `@notehead.x` does not work either.
+(`@ds al fine` etc. is the navigation form used inside `form main { }`.)
 
 ## Multiple forms (excerpts)
 

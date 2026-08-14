@@ -269,7 +269,7 @@ internal static class GraceNoteEngraver
                 new NoteItem(notes[i].StaffPosition, notes[i].BaseDuration, 0,
                              notes[i].Accidental, notes[i].NeedsLedger, grace.SourcePosition),
                 counts[i], left, right, notes[i].StaffPosition, i,
-                // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
+                // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
                 //   ((Voice Stem direction ,UP)): a grace stem is forced up whatever the pitch.
                 memberStemUp: true));
         }

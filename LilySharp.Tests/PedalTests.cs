@@ -37,13 +37,17 @@ public class PedalTests
 
     // --- MusicMarkType pedal entries ---
 
+    // LilyPond's own names (ly/spanners-init.ly), one word each — case-insensitive
+    // like every other annotation name.
     [Theory]
-    [InlineData("ped", MusicMarkType.SustainOn)]
-    [InlineData("ped.off", MusicMarkType.SustainOff)]
-    [InlineData("sost", MusicMarkType.SostenutoOn)]
-    [InlineData("sost.off", MusicMarkType.SostenutoOff)]
-    [InlineData("una.corda", MusicMarkType.UnaCordaOn)]
-    [InlineData("tre.corde", MusicMarkType.UnaCordaOff)]
+    [InlineData("sustainOn", MusicMarkType.SustainOn)]
+    [InlineData("sustainOff", MusicMarkType.SustainOff)]
+    [InlineData("sostenutoOn", MusicMarkType.SostenutoOn)]
+    [InlineData("sostenutoOff", MusicMarkType.SostenutoOff)]
+    [InlineData("unaCorda", MusicMarkType.UnaCordaOn)]
+    [InlineData("treCorde", MusicMarkType.UnaCordaOff)]
+    [InlineData("sustainon", MusicMarkType.SustainOn)]
+    [InlineData("UNACORDA", MusicMarkType.UnaCordaOn)]
     public void ParseMarkName_PedalMarks(string name, MusicMarkType expected)
     {
         var result = MusicMarkItem.ParseMarkName(name);
@@ -51,16 +55,25 @@ public class PedalTests
         Assert.Equal(expected, result.Value);
     }
 
-    // ONE spelling per pedal (grammar audit B-5): the removed alias and
-    // noun-continuation spellings are rejected, not silently mapped.
+    // ONE spelling per pedal (grammar audit B-5), and it is LilyPond's. The
+    // short forms and the argument spellings are rejected, not silently mapped:
+    // a pedal event carries only START/STOP, so there was never an argument to
+    // put a state in ('@ped(off)'), and the noun-continuation spellings
+    // ('@una(corda)') used the same parentheses for something else entirely.
     [Theory]
+    [InlineData("ped")]
+    [InlineData("ped.off")]
+    [InlineData("sost")]
+    [InlineData("sost.off")]
+    [InlineData("una.corda")]
+    [InlineData("tre.corde")]
     [InlineData("sustain")]
     [InlineData("sustain.off")]
-    [InlineData("sost.ped")]
-    [InlineData("sost.ped.off")]
     [InlineData("sostenuto")]
     [InlineData("sostenuto.off")]
-    public void ParseMarkName_RemovedPedalSpellings_AreUnknown(string name)
+    [InlineData("trillspan.start")]
+    [InlineData("trillspan.stop")]
+    public void ParseMarkName_RemovedSpellings_AreUnknown(string name)
     {
         Assert.Null(MusicMarkItem.ParseMarkName(name));
     }

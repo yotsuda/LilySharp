@@ -37,10 +37,10 @@ phrase lhAccomp {
 }
 
 phrase lhPedal {
-  <c e>2@ped <c g> |
-  <f a>2@ped(off)@ped <d f> |
-  <c e>2@ped(off)@ped <c g> |
-  <c e g>2.@ped(off) r4 |
+  <c e>2@sustainOn <c g> |
+  <f a>2@sustainOff@sustainOn <d f> |
+  <c e>2@sustainOff@sustainOn <c g> |
+  <c e g>2.@sustainOff r4 |
 }
 
 section Main {

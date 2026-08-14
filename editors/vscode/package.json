@@ -2,7 +2,7 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support and live score preview for Lily#, a LilyPond-inspired music notation language",
-  "version": "0.3.0-dev.14",
+  "version": "0.3.0",
   "publisher": "ytsuda",
   "license": "GPL-3.0-or-later",
   "repository": {
@@ -226,6 +226,26 @@
         "command": "lilysharp.playMeasureAtCursor",
         "category": "Lily#",
         "title": "Play Current Measure"
+      },
+      {
+        "command": "lilysharp.previewPlayFromHere",
+        "category": "Lily#",
+        "title": "Play from Here"
+      },
+      {
+        "command": "lilysharp.previewStop",
+        "category": "Lily#",
+        "title": "Stop Playback"
+      },
+      {
+        "command": "lilysharp.previewFitWidth",
+        "category": "Lily#",
+        "title": "Fit Width"
+      },
+      {
+        "command": "lilysharp.previewResetZoom",
+        "category": "Lily#",
+        "title": "Reset Zoom (100%)"
       }
     ],
     "menus": {
@@ -273,6 +293,44 @@
         {
           "command": "lilysharp.playMeasureAtCursor",
           "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.previewPlayFromHere",
+          "when": "activeWebviewPanelId == 'lilysharpPreview'"
+        },
+        {
+          "command": "lilysharp.previewStop",
+          "when": "activeWebviewPanelId == 'lilysharpPreview'"
+        },
+        {
+          "command": "lilysharp.previewFitWidth",
+          "when": "activeWebviewPanelId == 'lilysharpPreview'"
+        },
+        {
+          "command": "lilysharp.previewResetZoom",
+          "when": "activeWebviewPanelId == 'lilysharpPreview'"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "lilysharp.previewPlayFromHere",
+          "when": "webviewId == 'lilysharpPreview' && lysNote",
+          "group": "1_playback@1"
+        },
+        {
+          "command": "lilysharp.previewStop",
+          "when": "webviewId == 'lilysharpPreview' && lysPlaying",
+          "group": "1_playback@2"
+        },
+        {
+          "command": "lilysharp.previewFitWidth",
+          "when": "webviewId == 'lilysharpPreview'",
+          "group": "2_zoom@1"
+        },
+        {
+          "command": "lilysharp.previewResetZoom",
+          "when": "webviewId == 'lilysharpPreview'",
+          "group": "2_zoom@2"
         }
       ],
       "explorer/context": [

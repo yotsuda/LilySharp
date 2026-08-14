@@ -273,15 +273,20 @@ public sealed record MusicMarkItem
             "quindicesima" or "15ma" => MusicMarkType.QuindicesUp,
             "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
             "loco" => MusicMarkType.Loco,
-            // ONE spelling per pedal (pre-release grammar audit B-5):
-            // engage = name, release = name.off. Una corda keeps its
-            // traditional pair (tre corde IS the release, not an "off").
-            "ped" => MusicMarkType.SustainOn,
-            "ped.off" => MusicMarkType.SustainOff,
-            "sost" => MusicMarkType.SostenutoOn,
-            "sost.off" => MusicMarkType.SostenutoOff,
-            "una.corda" => MusicMarkType.UnaCordaOn,
-            "tre.corde" => MusicMarkType.UnaCordaOff,
+            // The pedals carry LilyPond's own names (ly/spanners-init.ly:
+            // sustainOn/sustainOff, sostenutoOn/sostenutoOff, unaCorda/treCorde).
+            // Each is ONE word: the event has no argument in LilyPond either —
+            // it is a span event carrying only START/STOP, and how the pedal is
+            // PRINTED is a context property (pedalSustainStyle), not an argument.
+            // The earlier '@ped' / '@ped(off)' spellings put a state in an
+            // argument slot that does not exist, so they are gone (audit B-5 kept
+            // one spelling per pedal; this keeps LilyPond's).
+            "sustainon" => MusicMarkType.SustainOn,
+            "sustainoff" => MusicMarkType.SustainOff,
+            "sostenutoon" => MusicMarkType.SostenutoOn,
+            "sostenutooff" => MusicMarkType.SostenutoOff,
+            "unacorda" => MusicMarkType.UnaCordaOn,
+            "trecorde" => MusicMarkType.UnaCordaOff,
             _ => null
         };
     }

@@ -72,24 +72,26 @@ static int Run(string[] args)
 
 static void ShowHelp()
 {
+    Console.WriteLine($"Lily# {VersionString()} - Music notation compiler");
     Console.WriteLine("""
-        Lily# - Music notation compiler
 
         Usage: lysc <command> [options] <input> [output]
                lysc [options]
 
         Commands:
-          svg     Convert to SVG (sheet music)
-          pdf     Convert to PDF (sheet music)
-          png     Convert to PNG (raster image)
-          midi    Convert to MIDI (audio)
-          xml     Convert to MusicXML
-          ly      Convert to LilyPond (.ly) source
-          import  Import MusicXML (.xml/.musicxml/.mxl) to a Lily# source file
-          vsqx    Convert to VOCALOID sequence (vocal part + lyrics)
+          svg        Convert to SVG (sheet music)
+          pdf        Convert to PDF (sheet music)
+          png        Convert to PNG (raster image)
+          midi       Convert to MIDI (audio)
+          vsqx       Convert to VOCALOID sequence (vocal part + lyrics)
+
+          xml        Convert to MusicXML
+          ly         Convert to LilyPond (.ly) source
+          import     Import MusicXML (.xml/.musicxml/.mxl) to a Lily# source file
+
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
-          check   Check syntax without output
-          layout  Print a text summary of the layout (system/line breaks, bars per system)
+          check      Check syntax without output
+          layout     Print a text summary of the layout (system/line breaks, bars per system)
 
         Global Options:
           -h, --help       Show this help
@@ -110,12 +112,39 @@ static void ShowHelp()
         """);
 }
 
+// --version says who owns the program and under what terms, in the shape the GNU
+// tools use. Nothing in the GPL forces a CLI to print this, but it is how a user
+// who only ever receives a binary learns they may redistribute it and that it
+// comes with no warranty.
 static void ShowVersion()
 {
-    var version = Assembly.GetExecutingAssembly()
+    Console.WriteLine($"""
+        lysc {VersionString()}
+        Copyright (C) 2025-2026 Yoshifumi Tsuda
+        License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+        This is free software: you are free to change and redistribute it.
+        There is NO WARRANTY, to the extent permitted by law.
+
+        Contains code ported from LilyPond (GPLv3+), and bundles third-party
+        components under GPL-compatible licenses; see THIRD-PARTY-NOTICES.md.
+        Source: <https://github.com/yotsuda/LilySharp>
+        """);
+}
+
+// The version comes from <Version> in Directory.Build.props, which every project
+// inherits, so lysc, the language server and the packages always report the same
+// number. The build stamps the informational version with a "+<commit sha>"
+// suffix; that is build provenance, not the version a user reports in a bug, so
+// it is cut here. (The language server still reports the stamped string over
+// lilysharp/version, where it exists precisely to identify a deployed build.)
+static string VersionString()
+{
+    var informational = Assembly.GetExecutingAssembly()
         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
         ?.InformationalVersion ?? "unknown";
-    Console.WriteLine($"lysc {version}");
+
+    var plus = informational.IndexOf('+');
+    return plus < 0 ? informational : informational[..plus];
 }
 
 static int UnknownCommand(string command)

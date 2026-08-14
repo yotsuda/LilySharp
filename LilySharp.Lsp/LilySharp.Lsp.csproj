@@ -10,7 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.LanguageServer.Protocol" Version="17.2.8" />
+    <!-- The LSP wire types are Lily#'s own (Protocol/LspTypes.cs). The obvious
+         package for them, Microsoft.VisualStudio.LanguageServer.Protocol, is NOT
+         open source: its license is the "Microsoft Visual Studio Add-ons and
+         Extensions" EULA, which forbids sharing or publishing the software or
+         combining it with an application for others to use. That cannot be
+         reconciled with shipping it inside a GPL program, and 17.2.8 (2022) is
+         its last version, so there was nothing to upgrade to. Only the
+         transport is a package now, and StreamJsonRpc is MIT. -->
     <PackageReference Include="StreamJsonRpc" Version="2.22.23" />
   </ItemGroup>
 

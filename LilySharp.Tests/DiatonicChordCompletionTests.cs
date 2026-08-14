@@ -28,7 +28,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class DiatonicChordCompletionTests
 {
-    private static Microsoft.VisualStudio.LanguageServer.Protocol.CompletionItem[] Items(string text)
+    private static LilySharp.Lsp.Protocol.CompletionItem[] Items(string text)
     {
         int offset = text.IndexOf("()") + 1;   // caret between the parens
         Assert.True(LilySharpLanguageServer.IsInsideChordAnnotation(text, offset));

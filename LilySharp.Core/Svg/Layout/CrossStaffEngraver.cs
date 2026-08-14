@@ -47,7 +47,7 @@ public readonly record struct CrossStaffLayout(
 /// <remarks>
 /// LILYPOND-REF: lily/beam.cc:1496-1507 - Beam::is_cross_staff
 /// LILYPOND-REF: lily/stem.cc:1278-1283 - Stem::is_cross_staff
-/// LILYPOND-REF: scm/music-functions.scm:2508-2519 - Span_stem_engraver
+/// LILYPOND-REF: scm/music-functions.scm:2527-2542 - Span_stem_engraver
 ///
 /// In a grand staff context, @cross annotation moves a note to the "other" staff:
 /// - Staff 0 (treble) notes with @cross → rendered on staff 1 (bass)
