@@ -416,6 +416,15 @@ public static class DiagnosticCodes
     /// part).</summary>
     public const string ScoreSettingInPartHeader = "LYS1026";
 
+    /// <summary>Semantic: an <c>override</c> / <c>revert</c> names a grob property the engine
+    /// does not read (<c>override Beam.thickness = 9</c>), or mis-cases one it does
+    /// (<c>stem.direction</c>). The grammar accepts any <c>Grob.property</c>, so such a line
+    /// used to engrave byte-for-byte identically to writing nothing, silently. The supported
+    /// vocabulary is <see cref="Svg.Model.SupportedGrobOverrides"/> — a list of what is
+    /// IMPLEMENTED, which grows; each addition turns this diagnostic off for one more
+    /// spelling, so a file rejected today compiles unchanged the day its property lands.</summary>
+    public const string OverridePropertyUnsupported = "LYS1029";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 

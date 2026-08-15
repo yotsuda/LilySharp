@@ -82,6 +82,7 @@ public static class SemanticValidation
         new DuplicateCellValidator(),       // a (section × part) cell filled twice
         new DuplicateTrackSectionValidator(),// a chords/lyrics track names a section twice
         new RevertContextValidator(),       // a revert/once outside a music stream
+        new OverrideVocabularyValidator(),  // an override/revert naming a property the engine never reads
         new PartialScopeValidator(),        // a partial (pickup) outside a section
         new LoneVoiceValidator(),           // a span with a single (transparent) voice block
         new CueRegionValidator(),           // a nested cue, or a voice span inside a cue

@@ -59,6 +59,56 @@ public sealed record GrobRevert(
     int? VoiceIndex = null);
 
 /// <summary>
+/// The grob properties an <c>override</c> / <c>revert</c> actually reaches — the whole
+/// vocabulary the engine reads, and the single home of that list.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The GRAMMAR accepts any <c>Grob.property = value</c>: the value is typed at collection
+/// (<see cref="LysValue"/>, docs/VALUE_SITE_AUDIT.md §2) but the NAME is not checked
+/// anywhere. Until this list existed, writing a property the engine does not read —
+/// <c>Beam.thickness</c>, <c>Stem.direction</c>, or the mis-cased <c>stem.direction</c> —
+/// engraved byte-for-byte identically to writing nothing at all, and said nothing.
+/// MEASURED before this list was added: eight spellings, all "No errors found", all
+/// producing an SVG identical to the no-override control.
+/// </para>
+/// <para>
+/// ⚠️ This is a list of what is IMPLEMENTED, not of what is spellable. It is expected to
+/// GROW, and growing it only ever turns a diagnostic OFF: a file rejected today because
+/// its property is unimplemented compiles unchanged the day it lands. That asymmetry is
+/// why the unimplemented case is an error rather than silence — silence could never be
+/// tightened afterwards, while an error can always be relaxed.
+/// </para>
+/// <para>
+/// The five call sites that read these (SharedRenderer.Noteheads.cs ×4,
+/// ElementCoordinator.cs ×1) pass the pair as their lookup KEY, so they are readings of
+/// this list rather than second spellings of it. Adding a property means adding its
+/// reader AND its row here, in one commit.
+/// </para>
+/// </remarks>
+public static class SupportedGrobOverrides
+{
+    private static readonly HashSet<(string Grob, string Property)> Pairs = new()
+    {
+        // \hideNotes' two inked members — the pair audit/lp-regression/lys/complex-once.lys
+        // mirrors (ly/property-init.ly). Read by SharedRenderer.Noteheads.
+        ("NoteHead", "transparent"),
+        ("Stem", "transparent"),
+        // Manual collision resolution. Read by ElementCoordinator.
+        ("NoteColumn", "force-hshift"),
+    };
+
+    /// <summary>True if the engine reads this grob property. Case-SENSITIVE, like every
+    /// other name in the language (grob names are PascalCase, properties are lisp-case).</summary>
+    public static bool Contains(string grobType, string propertyName)
+        => Pairs.Contains((grobType, propertyName));
+
+    /// <summary>The supported pairs as <c>Grob.property</c>, ordered, for diagnostics.</summary>
+    public static IEnumerable<string> Spellings
+        => Pairs.Select(p => $"{p.Grob}.{p.Property}").OrderBy(s => s, StringComparer.Ordinal);
+}
+
+/// <summary>
 /// Resolves grob property values at a given point in the score,
 /// combining default values with user overrides.
 /// LILYPOND-REF: lily/grob-property.cc - property resolution chain
