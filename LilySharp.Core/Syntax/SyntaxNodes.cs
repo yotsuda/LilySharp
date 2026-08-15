@@ -272,46 +272,67 @@ public sealed class DrummapDeclarationSyntax : SyntaxNode
 
     /// <summary>The entries: (drum name, key → value). Keys: position
     /// (leading minus supported), notehead, midi, mark.</summary>
-    public IEnumerable<(string Name, Dictionary<string, string> Settings)> Entries
+    /// <remarks>
+    /// ⚠️ Each part carries the SPAN it was written at, so the reader
+    /// (<c>DrumOverrides.Build</c>) and the validator (<c>DrummapValidator</c>) can both
+    /// work from this one walk. They need the same entries for opposite purposes — one
+    /// applies what it understands, the other reports what it does not — and a validator
+    /// that re-walked the tokens itself would be the second spelling of one question that
+    /// HANDOFF §5.2.1② names.
+    /// </remarks>
+    public IEnumerable<(string Name, TextSpan NameSpan, Dictionary<string, DrummapValue> Settings)> Entries
     {
         get
         {
             // Token stream: name colon (key value)* … next name colon …
-            var tokens = new List<string>();
+            var tokens = new List<SyntaxTokenNode>();
             for (int i = 2; i < SlotCount - 1; i++)
                 if (GetChild(i) is SyntaxTokenNode t)
-                    tokens.Add(t.Text);
+                    tokens.Add(t);
 
             string? name = null;
-            Dictionary<string, string>? settings = null;
+            TextSpan nameSpan = default;
+            Dictionary<string, DrummapValue>? settings = null;
             for (int i = 0; i < tokens.Count; i++)
             {
-                if (i + 1 < tokens.Count && tokens[i + 1] == ":")
+                if (i + 1 < tokens.Count && tokens[i + 1].Text == ":")
                 {
                     if (name != null && settings != null)
-                        yield return (name, settings);
-                    name = tokens[i];
-                    settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        yield return (name, nameSpan, settings);
+                    name = tokens[i].Text;
+                    nameSpan = tokens[i].Span;
+                    settings = new Dictionary<string, DrummapValue>(StringComparer.OrdinalIgnoreCase);
                     i++; // skip the colon
                     continue;
                 }
                 if (settings == null || i + 1 >= tokens.Count)
                     continue;
-                string key = tokens[i].ToLowerInvariant();
-                string value = tokens[i + 1];
+                string key = tokens[i].Text.ToLowerInvariant();
+                string value = tokens[i + 1].Text;
+                var valueSpan = tokens[i + 1].Span;
                 if (value == "-" && i + 2 < tokens.Count)
                 {
-                    value = "-" + tokens[i + 2];
+                    value = "-" + tokens[i + 2].Text;
+                    valueSpan = new TextSpan(valueSpan.Start, tokens[i + 2].Span.End - valueSpan.Start);
                     i++;
                 }
-                settings[key] = value;
+                settings[key] = new DrummapValue(value, tokens[i].Span, valueSpan);
                 i++;
             }
             if (name != null && settings != null)
-                yield return (name, settings);
+                yield return (name, nameSpan, settings);
         }
     }
 }
+
+/// <summary>
+/// One <c>key value</c> setting inside a <c>drummap { }</c> entry: what was written for
+/// the value, and where the key and the value each stand in the source.
+/// </summary>
+/// <param name="Text">The value as written — a leading '-' is already joined on.</param>
+/// <param name="KeySpan">Where the key word stands (what to underline for an unknown key).</param>
+/// <param name="ValueSpan">Where the value stands (for an out-of-range or unknown value).</param>
+public readonly record struct DrummapValue(string Text, TextSpan KeySpan, TextSpan ValueSpan);
 
 /// <summary>
 /// Error-recovery node for a nested <c>voice { }</c> (LYS0010): a neutral

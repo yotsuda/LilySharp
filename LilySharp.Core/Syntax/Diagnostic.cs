@@ -312,6 +312,25 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string UnclaimedDot = "LYS0023";
 
+    /// <summary>Warning: part of a <c>drummap { }</c> entry is ignored — an unknown drum
+    /// name, an unknown setting, or a value outside its range or vocabulary.</summary>
+    /// <remarks>
+    /// <para>
+    /// One code for the whole block, like <see cref="UnknownAnnotation"/>: what varies is
+    /// which part was dropped, and that belongs in the message and the span rather than in
+    /// four codes a reader would have to tell apart.
+    /// </para>
+    /// <para>
+    /// ⚠️ This exists because the alternative was SILENCE, and total silence: a drummap in
+    /// which the drum name, the setting key, the range and the value word were ALL wrong
+    /// rendered byte-for-byte as if the block were absent and reported "No errors found"
+    /// (measured 2026-08-15, data-pos aside). Nothing accepted or refused changed when this
+    /// was added — see <c>DrummapValidator</c>, whose remarks also record the two shapes it
+    /// still cannot see and why.
+    /// </para>
+    /// </remarks>
+    public const string DrummapEntryIgnored = "LYS0024";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

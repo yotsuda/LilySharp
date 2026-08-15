@@ -63,6 +63,7 @@ public static class SemanticValidation
         new MeasureValidator(),             // measure fullness / cross-part length / empty `| |` placeholders
         new DurationValidator(),            // invalid note values (5, 3, 6, …)
         new AnnotationNameValidator(),      // unknown @annotation names
+        new DrummapValidator(),             // drummap { } parts that are silently ignored
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
