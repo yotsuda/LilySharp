@@ -143,4 +143,42 @@ internal static class SyntaxFacts
     /// are resolved downstream as hairpins/text spanners.
     /// </summary>
     public static bool IsDynamicSpannerName(string text) => text is "cresc" or "decresc" or "dim";
+
+    /// <summary>
+    /// The annotations that read a parenthesised ARGUMENT — the closed vocabulary,
+    /// one entry per family the collector actually consumes. Everything else that
+    /// is a KNOWN annotation leaves the '(' alone, so it opens a slur.
+    /// </summary>
+    /// <remarks>
+    /// Without a vocabulary the parser read '(' as an argument list after ANY
+    /// identifier, because the name is resolved downstream, not here: so
+    /// <c>c4@staccato (d4 e4 f4)</c> ate the whole slur group — three notes
+    /// vanished from the bar and the only word about it was "Unknown annotation
+    /// '@staccato(d 4 e 4 f 4)'". No book in the corpus writes that, so this is a
+    /// trap rather than a live defect, but it is one a reader falls into by
+    /// writing perfectly ordinary music.
+    /// </remarks>
+    private static readonly HashSet<string> ArgumentTakingAnnotations =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "fig", "chord", "finger", "bend", "notehead", "frame", "text",
+            "mark", "feather", "pluck", "arpeggio",
+            // Also plain marks on their own (@ottava, @ds): they are in the list so
+            // the argument form keeps parsing, since the rule below would otherwise
+            // hand their '(' to the slur.
+            "ottava", "quindicesima", "ds", "dc", "to",
+        };
+
+    /// <summary>
+    /// Whether <c>@name(</c> opens an argument list rather than a slur. Three
+    /// classes: an argument-taking name reads the argument; a name known to take
+    /// none (an articulation, a plain feature name, a bare mark) leaves the '('
+    /// to the music, where it opens a slur; an UNKNOWN name reads the argument
+    /// too — a typo like <c>@notehed(x)</c> is one mistake, and reading its
+    /// argument keeps it one ("did you mean '@notehead(x)'?") instead of
+    /// cascading into "Undefined variable or phrase: 'x'".
+    /// </summary>
+    public static bool AnnotationReadsAParenthesisedArgument(string name)
+        => ArgumentTakingAnnotations.Contains(name)
+            || !Semantics.AnnotationNameValidator.IsKnownPlainName(name);
 }

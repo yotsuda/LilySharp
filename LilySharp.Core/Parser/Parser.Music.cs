@@ -897,7 +897,9 @@ private GreenNode?[] ParseArticulations()
                     // from MusicMarkSyntax.MarkName, which still yields "name.arg.arg" so the
                     // downstream collectors (figured bass / chord / fingering / mark) are
                     // unchanged.
-                    else if (Current.Kind == SyntaxKind.Identifier && Peek(1)?.Kind == SyntaxKind.OpenParen)
+                    else if (Current.Kind == SyntaxKind.Identifier
+                             && Peek(1)?.Kind == SyntaxKind.OpenParen
+                             && SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text))
                     {
                         var name = Advance();
                         var parts = new List<SyntaxToken> { at, name, Advance() /* ( */ };
