@@ -23,11 +23,19 @@ namespace LilySharp.Tests;
 /// <summary>
 /// rest-avoid-note.ly: rests avoid notes, each moved in the direction of the
 /// stems in its voice — the voiced starting position plus the collision
-/// translate — and rests of same-direction voices may overlap each other.
-/// Every pin below is LilyPond's own printed position from the paper-aligned
-/// twin (audit\lpreg\restavoid, digit-for-digit).
+/// translate — and rests of same-direction voices may overlap each other,
+/// unless the writer places one by hand at a pitch.
+/// Every pin below is LilyPond's own printed position, digit for digit, from the
+/// twin <c>lysc ly</c> writes from that test's own source.
 /// LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal;
 /// LILYPOND-REF: lily/rest-collision.cc:211-290 calc_positioning_done.
+/// <para>
+/// ⚠️ THE TWO TESTS ARE DIFFERENT MUSIC, not one music measured twice. The corpus
+/// book (and audit\lpreg\restavoid) carries the book's OWN two pitched rests again,
+/// which is the second test; the first keeps the all-plain reading the corpus used
+/// while Lily# had no spelling for a pitched rest, because that reading is the one
+/// where the collision has to answer for all four rests.
+/// </para>
 /// </summary>
 [Trait("Category", "Unit")]
 public class RestAvoidNoteTests

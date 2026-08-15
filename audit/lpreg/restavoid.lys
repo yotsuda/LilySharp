@@ -1,8 +1,14 @@
 // lilypond-src/input/regression/rest-avoid-note.ly の Lily# 訳。
-// CLAIM: 休符は音符を避ける。各休符は自分の voice の符尾方向へ動く。
-// 両側置換: pitched rest (a4\rest / f2\rest) は綴りなし → plain rest に置換
-// (LP 側 twin も同置換 = 変位規則の核だけ踏む)。
-// 声部: LP \\ 4声 = voice{}{}{}{} (奇数分岐=up・偶数分岐=down)。
+// CLAIM: 休符は音符を避け、自 voice の符尾方向へ動く。同方向 voice の休符同士は
+// 重なってよい (警告つき・pitched rest なら抑止)。
+// 綴り: LP の a4\rest / f2\rest = Lily# の a,4@rest / f'2@rest (第179で入った
+// 音高付き休符)。⚠️ **第113〜178 はこの 2 つを plain rest に両側置換していた**——
+// 綴りが無かったから。置換版は LP も同じ絵を描く (twin で実測・LP は
+// "too many colliding rests" を 2 回出す) ので欠陥ではなかったが、
+// **書いた人が衝突を上書きするこの本の主張そのものは測れていなかった**。
+// 修理 (第42号): voiced-position 基底 + 跨ぎ音符の head-only 参加 +
+// StemTipPositionOf の描画同綴り化。LP 照合 6/6 休符桁一致 (第179 で pitched 版も 6/6)。
+// 観測者: RestAvoidNoteTests (plain 版と pitched 版の 2 本)。
 octave absolute
 time 4/4
 
@@ -12,8 +18,8 @@ section Main {
   v {
     voice
     { g'8 g' g' r8 r2 | }
-    { r4 c r2 | }
-    { c'4 c' r2 | }
+    { a,4@rest c r2 | }
+    { c'4 c' f'2@rest | }
     { r2 g | }
   }
 }

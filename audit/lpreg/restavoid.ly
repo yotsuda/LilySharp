@@ -1,14 +1,11 @@
-\version "2.24.0"
-% rest-avoid-note.ly の比較用 twin。
-% 主張: 休符は音符を避け、自 voice の符尾方向へ動く。
-% 両側置換: pitched rest (a4\rest / f2\rest) → plain rest (Lily# に綴りなし)。
-\paper { indent = 0 }
+\version "2.26.0"
+
+v = \fixed c' {
+  \time 4/4
+  << { g'8 g' g' r8 r2 | } \\ { a,4\rest c r2 | } \\ { c'4 c' f'2\rest | } \\ { r2 g | } >>
+}
+
 \score {
-  \new Staff <<
-    \relative { g''8 g g r r2 } \\
-    \relative { r4 c' r2 } \\
-    \relative { c''4 c r2 } \\
-    \relative { r2 g' }
-  >>
-  \layout { ragged-right = ##t }
+    \new Staff { \v }
+  \layout { indent = 0\mm }
 }
