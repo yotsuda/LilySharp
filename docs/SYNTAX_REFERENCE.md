@@ -655,13 +655,21 @@ c4@mark("A") d e f |
 
 ### Navigation Marks
 
+A navigation mark is **bare** — it is a landmark in the music, not a note modifier, so it
+takes no `@` (writing `c4@segno` is LYS1022). Place it at a barline boundary; mid-measure
+it engraves but warns (LYS4003).
+
 ```
-c4@segno d e f |
-c4@coda d e f |
-c4@fine
-c4@dc
-c4@ds.al.fine
+segno c4 d e f |
+c4 d e f | to coda
+c4 d e f | fine
+c4 d e f | dc
+c4 d e f | ds al fine
+coda c4 d e f | ds al coda
 ```
+
+The same words are how a `form` names the route: `form main { A segno B to coda C ds al
+coda coda D }`.
 
 ### Text Spanners
 

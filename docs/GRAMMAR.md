@@ -480,7 +480,12 @@ PartRef        = Identifier ;
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | InlineVolta | PhraseRef
-               | Slur | Tie | Beam | Tuplet | Grace | MidMusicCommand ;
+               | Slur | Tie | Beam | Tuplet | Grace | MidMusicCommand | NavMark ;
+
+(* NavMark (see §6) is the SAME bare token in a section's music as in a form — it is a
+   landmark, never a note modifier, so it takes no '@' (c4@segno is LYS1022 and
+   `segno c4` is the spelling). Written mid-measure it engraves but warns (LYS4003);
+   put it at a barline boundary. *)
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the
@@ -658,7 +663,7 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Cue/effects:   @cue (small cue note) , @cross / @dead (x notehead) ,
                     @fall @doit (jazz bends) , @breath @caesura
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
-   - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
+   - Spanners:       @rit @accel
                      @ottava(…) @quindicesima(…) … @loco ,   [labels: 8va/15ma; @…(bassa) = down]
                      @startTrillSpan … @stopTrillSpan ,
                      @sustainOn … @sustainOff , @sostenutoOn … @sostenutoOff , @unaCorda … @treCorde *)

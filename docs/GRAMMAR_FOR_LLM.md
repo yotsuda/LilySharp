@@ -326,14 +326,18 @@ of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc 
 form main { A segno  B to coda  C ds al coda  coda D }
 ```
 
-In-note marks: `c4@mark("A")` (rehearsal mark), `@segno @coda @fine @dc @ds`,
+The same bare words are also written in a section's music, at a barline boundary
+(`segno c4 d e f |`, `c4 d e f | ds al fine`) — they are landmarks, never note
+modifiers, so `c4@segno` is an error (LYS1022) and mid-measure warns (LYS4003).
+
+In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
 pedals `@sustainOn`/`@sustainOff`, `@sostenutoOn`/`@sostenutoOff`, `@unaCorda`/`@treCorde` — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).
 An annotation's argument always goes in PARENTHESES — a dot after the name is the placement qualifier
 instead (`@fermata.up`), so `@notehead.x` does not work either.
-(`@ds al fine` etc. is the navigation form used inside `form main { }`.)
+(The navigation marks above are the bare form — `ds al fine`, no `@` — in a form and in music alike.)
 
 ## Multiple forms (excerpts)
 
