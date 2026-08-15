@@ -44,9 +44,22 @@ namespace LilySharp.Tests;
 /// <item>TUTORIAL.md's only multi-staff example — the first thing a reader copies —
 ///   used the removed <c>clef:</c> form and <c>staff treble { rightHand }</c>.</item>
 /// </list>
-/// ⚠️ <b>GRAMMAR.md is still unobserved and cannot be added here:</b> it has ZERO plain
-/// fenced blocks (measured). Its examples live inside EBNF <c>(* … *)</c> comments, so
-/// reaching them needs a different extractor, not another entry in the list below.
+/// ⚠️ The line that used to stand here — "GRAMMAR.md is still unobserved and CANNOT be added:
+/// it has ZERO plain fenced blocks" — was half wrong and is gone. That file HAS one fenced
+/// example, tagged <c>lilysharp</c>, which the plain-fence rule was skipping on its info
+/// string alone; its other examples live in EBNF <c>(* Example…: … *)</c> comments. Both
+/// shapes are read now and GRAMMAR.md is in the Theory below. What that found the same day:
+/// a <c>ScoreDecl</c> production the compiler refuses, an <c>override Stem.length</c> that
+/// LYS1029 had already outlawed elsewhere, and a voice example mixing prose into code.
+/// <para>
+/// ⚠️ What is STILL unobserved: the LISTS — the <c>(* … *)</c> catalogues and bullet runs
+/// that enumerate spellings rather than demonstrate one. The <c>@segno</c> family lived
+/// there. Nothing here can reach them, because a document distinguishes a spelling it
+/// RECOMMENDS from one it names as invalid in prose only, and a regex that guessed between
+/// the two is the checker RULES §5.2.1⑦ forbids. They were measured directly instead
+/// (2026-08-15: 94 spellings, 13 rejected, all 13 meta-syntax or explicitly-invalid lines);
+/// making them observable wants syntax for a list, which is a design decision.
+/// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
 public class DocExamplesParseTests

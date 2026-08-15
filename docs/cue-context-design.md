@@ -221,8 +221,13 @@ cue.accidental.width    LP 0.692956577  （原寸 1.100000・比 0.629961 = mags
 ## 8. まだ決めていないこと
 
 1. **`cue { }` の中に `voice { } { }` を許すか。** §4 では保守的に禁止した。
-2. **`\cueClef` 相当をいつ足すか。** cue は普通「引用元の楽器の clef」を伴う。
-   構文の余地は空けてある（`cue treble8 { … }` のように第 1 引数を足せる形）。**今は足さない。**
+2. ~~**`\cueClef` 相当をいつ足すか。**~~ — **入っている**（2026-08-15 実測で判明。
+   この行のほうが stale だった）。**`cue <clef> { … }` は 5 つの ClefName 全部を受ける**
+   （`treble` `bass` `alto` `tenor` `treble_8`——`ParseCueExpression` が
+   `SyntaxFacts.IsClefKeyword`）。**双子は `\cueClef` と `\cueClefUnset` を対で出す**
+   （`EmitCue`。両方出す理由は §4 の D-NOUNSET）。**綴りは `cue treble8` ではなく
+   `cue treble_8`**（この行が書いていた `treble8` は存在しない）。
+   ⚠️ **仕様書 3 冊はこの形をどこにも書いていなかった**ので同じ便で足した。
 3. **MusicXML の `<cue/>` は音符単位。** 連続する cue 音符を範囲にまとめる処理が要る。
    ⚠️ ただし**現在の import は cue 音符をそのまま捨てている**
    （`MusicXmlImport/MusicXmlReader.cs` `ReadNote` が `"cue note dropped."`）ので、

@@ -364,6 +364,34 @@ tuplet 3/2 {
 }
 ```
 
+## Cue Notes
+
+A cue quotes another instrument in small type. It is a **region**, not a mark on a note —
+there is no `@cue` — because that is what it is in LilyPond too: `cue { … }` becomes a
+`CueVoice` context, whose size is a property of the context and not of any note in it.
+
+```
+c4 d cue { e4 f } g4 |      // The two notes inside are cue-sized
+c4 d cue bass { e4 f } g4 | // Read in the quoted instrument's clef
+```
+
+Naming a clef writes it before the region and restores the staff's own clef after it, so
+the following notes are unaffected. Any clef name works: `treble`, `bass`, `alto`, `tenor`,
+`treble_8`.
+
+A cue is a **voice of its own**, which decides what may cross its edge:
+
+```
+c4 cue { e4( f) } g4 |      // A slur closing inside the cue
+c4( cue { e4 f } g4) |      // A slur passing OVER the cue - both ends outside it
+```
+
+A slur or a tie with one end inside the cue and the other outside is rejected (**LYS4012**).
+LilyPond cannot engrave such a span at all — it drops it, in one direction without even a
+warning — so close the span inside the region, or move the note it reaches for out of it.
+Two other shapes are closed while the feature is young: a `cue` nested in a `cue`
+(**LYS4013**) and a `voice { … } voice { … }` span inside one (**LYS4014**).
+
 ## Repeats
 
 ### Volta Repeats

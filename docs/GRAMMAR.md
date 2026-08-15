@@ -686,10 +686,22 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
 Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] , MusicBlock ;
                  (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
                     use the symbolic |: … :| form, NOT a 'repeat' keyword *)
-Cue            = 'cue' , MusicBlock ;
+Cue            = 'cue' , [ ClefName ] , MusicBlock ;
                  (* Small cue notes. A cue is a REGION, not a note annotation — it maps
                     onto LilyPond's CueVoice context, whose size is a context property,
-                    so there is no '@cue': write 'c4 d cue { e4 f } g4 |'. *)
+                    so there is no '@cue': write 'c4 d cue { e4 f } g4 |'.
+                    The optional ClefName is the clef the QUOTED instrument reads in —
+                    LilyPond's \cueClef / \cueClefUnset, which the twin emits as a pair.
+                    Its notes are written in that clef and the staff's own clef returns
+                    after the region. *)
+                 (* ⚠️ A slur or tie may not cross the region's edge: a cue is a voice of
+                    its own, so LilyPond drops such a span entirely (LYS4012). Close it
+                    inside the cue, or keep both ends outside — a slur passing OVER a whole
+                    cue is fine. *)
+
+(* Example: c4 d cue { e4 f } g4 | *)
+
+(* Example: c4 d cue bass { e4 f } g4 | *)
 
 ================================================================================
 ## 9. Override / Revert (engraving properties)

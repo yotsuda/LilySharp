@@ -196,7 +196,10 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Effects: `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
 - Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
-  `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context)
+  `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted
+  instrument's clef to read the cue in it: `c4 d cue bass { e4 f } g4 |` — the staff's own
+  clef returns after the region. A slur or tie may NOT cross the region's edge (LYS4012):
+  a cue is a voice of its own, so close the span inside the cue or keep both ends outside.
 - Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
 - Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
   above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
