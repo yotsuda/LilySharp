@@ -1,0 +1,17 @@
+// slur-rest-direction fig4 単独（観測者テストの下見用・LP probe slurrest-dbg.ly の第1小節）
+octave absolute
+clef bass
+time 2/4
+
+part melody
+
+section A {
+  melody {
+    c,16( r c) r |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

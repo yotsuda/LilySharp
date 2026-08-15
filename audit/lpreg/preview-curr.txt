@@ -1,0 +1,6 @@
+perf-plain1k.lys	keystroke floor 199.0 ms	median 257.3 ms	contentkey floor 6.570 ms	median 6.894 ms	svg C1824A1927B69B4A
+perf-comb300.lys	keystroke floor 77.3 ms	median 104.6 ms	contentkey floor 1.563 ms	median 2.123 ms	svg 278200920E99FF45
+perf-plain1k.lys	keystroke floor 188.4 ms	median 229.0 ms	contentkey floor 7.444 ms	median 8.200 ms	svg C1824A1927B69B4A
+perf-comb300.lys	keystroke floor 106.2 ms	median 138.3 ms	contentkey floor 1.239 ms	median 1.401 ms	svg 278200920E99FF45
+perf-plain1k.lys	keystroke floor 201.5 ms	median 226.4 ms	contentkey floor 7.056 ms	median 7.193 ms	svg C1824A1927B69B4A
+perf-comb300.lys	keystroke floor 93.6 ms	median 105.4 ms	contentkey floor 1.111 ms	median 1.764 ms	svg 278200920E99FF45

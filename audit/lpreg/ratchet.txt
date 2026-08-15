@@ -1,0 +1,45 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  LilySharp.Core -> C:\MyProj\LilySharp\LilySharp.Core\bin\Debug\net9.0\LilySharp.Core.dll
+  LilySharp.Cli -> C:\MyProj\LilySharp\LilySharp.Cli\bin\Debug\net9.0\lysc.dll
+  LilySharp.Lsp -> C:\MyProj\LilySharp\LilySharp.Lsp\bin\Debug\net9.0\lilysharp-lsp.dll
+  LilySharp.Tests -> C:\MyProj\LilySharp\LilySharp.Tests\bin\Debug\net9.0\LilySharp.Tests.dll
+Test run for C:\MyProj\LilySharp\LilySharp.Tests\bin\Debug\net9.0\LilySharp.Tests.dll (.NETCoreApp,Version=v9.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.73]     LilySharp.Tests.LpFidelity.LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow [FAIL]
+  Failed LilySharp.Tests.LpFidelity.LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow [1 s]
+  Error Message:
+   citations with a line range but no symbol rose to 748 from the baseline 742. Name what is at the lines you cited — reading them to find the name is the check. Do NOT raise the baseline.
+  LilySharp.Tests\StaffSkylineFrameTests.cs:350 -> lily/page-layout-problem.cc:948
+  LilySharp.Tests\StemCalculatorTests.cs:62 -> lily/stem.cc:519
+  LilySharp.Tests\StemCalculatorTests.cs:62 -> scm/define-grobs.scm:3448
+  LilySharp.Tests\StemCalculatorTests.cs:82 -> lily/stem.cc:521
+  LilySharp.Tests\StemDirectionAnnotationTests.cs:80 -> scm/music-functions.scm:1042
+  LilySharp.Tests\StrictNoteSpacingTests.cs:50 -> lily/note-spacing.cc:229
+  LilySharp.Tests\SystemSpacingTests.cs:32 -> scm/define-grobs.scm:3042
+  LilySharp.Tests\SystemSpacingTests.cs:38 -> scm/define-grobs.scm:3046
+  LilySharp.Tests\SystemSpacingTests.cs:44 -> scm/define-grobs.scm:4237
+  LilySharp.Tests\SystemSpacingTests.cs:56 -> lily/page-layout-problem.cc:1350
+  LilySharp.Tests\SystemSpacingTests.cs:116 -> ly/engraver-init.ly:649
+  LilySharp.Tests\SystemSpacingTests.cs:134 -> ly/engraver-init.ly:657
+  LilySharp.Tests\SystemStartDelimiterTests.cs:184 -> lily/system-start-delimiter.cc:127
+  LilySharp.Tests\TabAccidentalRemovalTests.cs:32 -> ly/engraver-init.ly:1189
+  LilySharp.Tests\TextSpannerTests.cs:171 -> scm/define-grobs.scm:3513
+  LilySharp.Tests\TieFormattingProblemTests.cs:172 -> lily/misc.cc:48
+  LilySharp.Tests\TieFormattingProblemTests.cs:188 -> lily/misc.cc:60
+  LilySharp.Tests\TieFormattingProblemTests.cs:201 -> lily/tie-formatting-problem.cc:795
+  LilySharp.Tests\TieVariantTests.cs:114 -> lily/tie-formatting-problem.cc:1026
+  LilySharp.Tests\TimeSignaturePangoWidthTests.cs:67 -> scm/time-signature-settings.scm:954
+  Stack Trace:
+     at LilySharp.Tests.LpFidelity.LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow() in C:\MyProj\LilySharp\LilySharp.Tests\LpFidelity\LpReferenceCitationTests.cs:line 326
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Standard Output Messages:
+ 2298 citations carry a line range; 1550 name a symbol, 748 do not.
+
+
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 1 s - LilySharp.Tests.dll (net9.0)

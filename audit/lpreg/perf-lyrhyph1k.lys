@@ -1,0 +1,2009 @@
+octave absolute
+time 4/4
+part v { }
+lyrics w { section Main {
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+    la -- la -- la -- la -- |
+} }
+section Main {
+  v {
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+    c4 d e f |
+  }
+}
+form main { ~Main }
+score main { staff ~v with lyrics w }

@@ -1,0 +1,44 @@
+GNU LilyPond 2.26.0 (running Guile 3.0)
+`pcombine-lp.ly' を処理しています
+構文解析中...
+楽曲を解釈中...
+グラフィカルオブジェクトの前処理中...
+理想的なページ数を見つけています...
+楽譜を 1 ページにしています...
+描画しています...NH pos=-6 x=17.12082677165354 ink note=0
+TEXT "a2" x=17.12082677165354 y=2.583009642593504 series=bold shape=() size=()
+NH pos=0 x=17.12082677165354 NOINK note=0
+STEM dir=1 x=18.36002677165354 ink
+NH pos=-5 x=20.123071770788155 ink note=1
+NH pos=0 x=20.123071770788155 NOINK note=1
+STEM dir=1 x=21.362271770788155 ink
+NH pos=-4 x=23.12531676992277 ink note=2
+NH pos=0 x=23.12531676992277 NOINK note=2
+STEM dir=1 x=24.36451676992277 ink
+NH pos=-3 x=26.12756176905738 ink note=3
+NH pos=0 x=26.12756176905738 NOINK note=3
+STEM dir=1 x=27.36676176905738 ink
+NH pos=-2 x=30.456506768191993 ink note=4
+TEXT "Solo" x=30.456506768191993 y=3.033009642593504 series=bold shape=() size=()
+STEM dir=1 x=31.768906768191993 ink
+NH pos=-2 x=34.731951767326606 ink note=4
+STEM dir=1 x=36.0443517673266 ink
+NH pos=-9 x=40.29318248074693 ink note=4
+TEXT "Solo II" x=40.29318248074693 y=2.583009642593504 series=bold shape=() size=()
+STEM dir=1 x=41.605582480746925 ink
+NH pos=-9 x=44.56862747988154 ink note=4
+STEM dir=1 x=45.88102747988154 ink
+NH pos=-6 x=50.07692962187329 ink note=0
+NH pos=-9 x=50.07692962187329 ink note=4
+STEM dir=1 x=51.31612962187329 ink
+NH pos=-4 x=53.07917462100791 ink note=2
+NH pos=-9 x=53.07917462100791 ink note=4
+STEM dir=1 x=54.318374621007905 ink
+NH pos=-2 x=56.08141962014251 ink note=4
+NH pos=-9 x=56.08141962014251 ink note=4
+STEM dir=1 x=57.32061962014251 ink
+NH pos=-4 x=59.08366461927713 ink note=2
+NH pos=-9 x=59.08366461927713 ink note=4
+STEM dir=1 x=60.32286461927713 ink
+
+成功: コンパイルが成功しました

@@ -1,0 +1,20 @@
+// glissando-cross-staff.ly の Lily# 訳 (twin)。
+// CLAIM: cross staff の glissando が端点に正しく届く。
+// LP 原本: PianoStaff。right 譜の voice が e'''2\gliss → \change Staff left で
+// a,,2\gliss → \change Staff right で b''8。left 譜は \clef bass + s1 s8。
+// Lily# に \change Staff は無い → @cross (grand staff 内で隣譜へ移す per-note 注釈)。
+// 音高 (Lily# 絶対 c = LP c'): LP e'''=E6=e''・LP a,,=A1=a,,,・LP b''=B5=b'。
+octave absolute
+time 4/4
+
+part rh { clef treble }
+part lh { clef bass }
+
+section Main {
+  rh { e''2@glissando a,,,2@cross@glissando | b'8 }
+  lh { s1 | s8 }
+}
+
+form main { ~Main }
+
+score main { grandStaff { staff rh staff lh } }

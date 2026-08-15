@@ -1,0 +1,29 @@
+// ⒪ ledger probe VTSID — a VOICE-2 tie drooping DOWN out of each system, the voice-2
+// version of ledger book TSID and the tie side of the same prelim asymmetry VSSD reads
+// (prelim ties/slurs are laid on the primary voice only; the final pass on every voice).
+// TID design, not SSD's: a tie is flat (height-limit 1.0 / ratio 0.333), so the HEADS are
+// put past the floor (e,, at -9: 9 + 0.545 + 2.05 + 1 = 12.595 > 12) and the residual
+// reads the whole tie droop on top of them. HANDOFF §1 ⒪.
+octave absolute
+time 12/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+  }
+}
+
+form main { ~Main }
+
+score main "VTSID" {
+  staff melody
+}

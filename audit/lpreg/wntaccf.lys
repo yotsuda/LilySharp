@@ -1,0 +1,17 @@
+// whole-note-tremolo-accidentals.ly score6 twin — 和音 8分 (4/1)。
+octave absolute
+time 4/1
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 16 { c8 <es es'>8 } |
+    repeat tremolo 16 { a8 <f cis'>8 } |
+    repeat tremolo 16 { a8 <disis ges'>8 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

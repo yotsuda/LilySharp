@@ -1,0 +1,15 @@
+// 切り分け probe2: 単発 tremolo の4形。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 4 { c16 } c4:16 <c e g>4:16 repeat tremolo 4 { <c e g>16 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

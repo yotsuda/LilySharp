@@ -1,0 +1,2018 @@
+// perf: 999 bars, 2 voices, rests every bar (rest-collision heavy side; rest Y moved by design)
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    voice
+    {
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    g1 |
+    }
+    {
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    r8 d4 d8 r8 d4 d8 |
+    }
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }
+

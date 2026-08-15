@@ -1,0 +1,13 @@
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    g'1
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

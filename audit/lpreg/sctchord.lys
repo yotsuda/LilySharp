@@ -1,0 +1,18 @@
+// scripttie twin の bar1-2 (plain タイ accent = octave anchor 兼対照) +
+// bar9-10 (和音) だけの probe。両エンジンとも 1 system に収まる形なので
+// タイが broken piece にならず、和音 member script の積みを直接照合できる。
+// 綴りは双子 scripttie.lys の line9/line13 と同一。
+
+part melody
+
+section A {
+  melody {
+    r2. c''4@accent~ | c@accent r2. |
+    r2. <g@tenuto c@accent>4@tenuto~ | <g@tenuto c>4@accent~ <g c@tenuto@portato>4@accent r2 |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

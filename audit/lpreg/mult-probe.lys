@@ -1,0 +1,20 @@
+// Does the `*N` multiplier already work on a SPACER? (§2D(3) assumes it does not.)
+// v2 writes three empty bars as s1*3; the control writes them out as s1 | s1 | s1.
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    voice {
+      c1 | d1 | e1 | f1 |
+    } {
+      s1*3 | c1 |
+    }
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

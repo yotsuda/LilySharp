@@ -1,0 +1,23 @@
+// glissando-accidental.ly の Lily# 訳 (下見 twin)。
+// CLAIM: gliss 線は目標の臨時記号の手前で止まる。和音 gliss は同 X 終端・
+// 同傾き (交差しない)。
+// 綴り: 原本 \relative を絶対に展開 (LP c'=C4 相対簿記→絶対。Lily# c=C4=LP c')。
+// LP: a'(A4) cis''(C#5) as'(Ab4) / <f,a,>(F3A3)... 全部 whole note。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    a1@glissando | cis'1@glissando | as1 |
+    <f, a,>1@glissando | <f' a'>1@glissando |
+    <fis, a,>1@glissando | <fis' a'>1@glissando |
+    <fis, ais,>1@glissando | <fis' ais'>1@glissando |
+    <f, ais,>1@glissando | <f' ais'>1 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

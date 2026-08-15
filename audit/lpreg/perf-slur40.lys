@@ -1,0 +1,59 @@
+// ⚠️ `octave absolute` is LOAD-BEARING, not decoration (session 135, measured).
+// This book repeats ONE bar of music. In relative octave every repetition starts from
+// the previous bar's last pitch, so the music WALKS OFF THE PAGE: perf-slur300 reached
+// staff position 10493 by bar 300 and drew 3,146,917 ledger lines = 303 MB of SVG,
+// which is where every "seconds per keystroke" number these books ever produced came
+// from. Pinned, the same 300 bars are 408 KB and render in 11.8 ms.
+octave absolute
+time 4/4
+part melody
+
+section A {
+  melody {
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+    c'4( e'4) g'4( b'4) |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

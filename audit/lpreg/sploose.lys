@@ -1,0 +1,15 @@
+// lilypond-src/input/regression/spacing-loose-polyphony.ly の Lily# 訳。
+// CLAIM: loose column（ここでは小節中の treble clef）は多譜の polyphony で
+// 正しく space される。
+// 音高: LP \relative 無引数 g'=G4→g a=A4→a / fis,=F#2→fis,, cis(C#3)→cis,
+//       g''(G4)→g fis(F#3)→fis,。
+octave absolute
+
+part rh { clef treble }
+part lh { clef bass }
+section S {
+  rh { tuplet 3/2 { g4 a2 } | }
+  lh { fis,,8 cis, clef treble g8 fis, | }
+}
+form main { S }
+score main "spacing-loose-polyphony" { grandStaff { staff rh staff lh } }

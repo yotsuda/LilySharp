@@ -1,0 +1,15 @@
+// 陽性対照: percent の代わりに休符なら removeEmpty は system 2 で譜を消す。
+// (harakiri-percent.lys の n2 だけ r1 に置換)
+octave absolute
+
+part n1 { removeEmpty true }
+part n2 { removeEmpty true }
+
+section Main {
+  n1 { c'1 | c' | break c' | c' | }
+  n2 { c1 | c | r1 | r1 | }
+}
+
+form main { ~Main }
+
+score main { staff ~n1 staff ~n2 }

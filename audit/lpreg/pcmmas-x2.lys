@@ -1,0 +1,16 @@
+// Isolation 2: the book's first staff alone, so the second combinedStaff cannot be
+// blamed for anything the first one does.
+octave absolute
+time 4/4
+
+part sa1 { clef treble }
+part sa2 { clef treble }
+
+section A {
+  sa1 { r2 r2 | R1 | }
+  sa2 { R1*2 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { sa1 sa2 } }

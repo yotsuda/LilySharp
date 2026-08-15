@@ -1,0 +1,26 @@
+// lilypond-src/input/regression/slur-height-capping.ly の Lily# 訳。
+// CLAIM: slur の整形（fit_factor）は端近く（close-to-edge-length 2.5 内）の物を
+// 無視する＝この本の slur は素の弓のまま（"flat"）。ただし scoring には端の物も
+// 参加する。
+// 音高 (octave absolute・Lily# 絶対 c = LP c'): LP \relative（無引数＝f 基準）の
+// 展開 = C3 D4 A3 D4 C3 D4 A3 D4 | C3 Des4 As3 Des4 C3 Des4 As3 Des4。
+// LP 実測（slurhcap.svg・staff 相対）: slur1 = start −3.5450 / end −4.5450・
+// C1 −5.3800 / C2 −6.1152。slur2 = start −4.0450 / end −4.5450・C1 −5.8264 /
+// C2 −6.1967。
+octave absolute
+clef bass
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    c,8( d a, d c, d a, d) |
+    c,8( des as, des c, des as, des) |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

@@ -1,0 +1,21 @@
+GNU LilyPond 2.26.0 (running Guile 3.0)
+Processing `pcmmas.ly'
+Parsing...
+Interpreting music...
+Preprocessing graphical objects...
+Finding the ideal number of pages...
+Fitting music on 1 page...
+Drawing systems...STAFF sy=-3.7759999999999994
+STAFF sy=-12.776
+MMREST x=17.381089998269225 y=-3.7759999999999994 bars=1 ink
+MMREST x=17.381089998269225 y=-12.776 bars=1 ink
+REST x=8.584999999999999 y=-3.7759999999999994 dur=1 dir=() ink src=12:21
+REST x=8.584999999999999 y=-12.776 dur=1 dir=() ink src=18:21
+STEM dir=-1 x=9.334999999999999 ink
+STEM dir=-1 x=9.334999999999999 ink
+REST x=12.983044999134611 y=-3.7759999999999994 dur=1 dir=() ink src=12:24
+REST x=12.983044999134611 y=-12.776 dur=1 dir=() ink src=18:24
+STEM dir=-1 x=13.733044999134611 ink
+STEM dir=-1 x=13.733044999134611 ink
+
+Success: compilation successfully completed

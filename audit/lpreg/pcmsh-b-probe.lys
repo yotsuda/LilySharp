@@ -1,0 +1,24 @@
+// Twin of scratch/lpreg/pcmsh-b.ly = score 2 of input/regression/part-combine-mmrest-shared.ly.
+//
+// Part one interrupts its own multi-measure rests with an ORDINARY whole rest carrying a
+// text at bar 8, against part two's ongoing R1*16.
+//
+// LP measured (pcmsh-b.log): 8 | r1(+"r") | 7 | 8 | 4 — five engraved silences, boundaries
+// at 0/8/9/16/24, which is the UNION of both parts' written starts:
+//   part 1 starts at 0, 8, 9, 24     part 2 starts at 0, 16, 24
+// The ordinary rest is printed as an ordinary rest (LilyPond prefers a normal rest over a
+// multi-measure rest) and sits at +1.0 staff spaces, hanging from the fourth line.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { R1*8 | r1@text("r").up | R1*15 | R1*4 | }
+  vtwo { R1*16 | R1*8 | R1*4 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

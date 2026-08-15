@@ -1,0 +1,27 @@
+// ⒪ ledger probe VTSIC — VTSID with ONLY the tie removed (the identity control).
+// The heads themselves bind past the floor (12.595 > 12), so both engines must read
+// exactly 12.595000 — which is also the check that voice-2 NOTEHEADS do join the paging
+// skylines (only the bows are claimed missing). HANDOFF §1 ⒪ / §5.0.
+octave absolute
+time 12/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+  }
+}
+
+form main { ~Main }
+
+score main "VTSIC" {
+  staff melody
+}

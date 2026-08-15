@@ -1,0 +1,14 @@
+// 陽性対照: voice{} を外した素の C6。符尾が down になるなら
+// twin の up は voice{} 第1分岐 (=\voiceOne) の効果だと言える。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v { c''4 grace { d''8 } c''4 }
+}
+
+form main { ~Main }
+
+score main { staff v }

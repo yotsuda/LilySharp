@@ -1,0 +1,15 @@
+// tuplet-bracket-avoid-scripts.ly twin — tuplet bracket は既定で script を避ける。
+// 綴り: LP 無引数 \relative a'=A4 → Lily# 絶対 a。^\espressivo → @accent.up 両側置換
+// (espressivo 綴りなし・accent は OSP 無宣言 = LP avoid-scripts 項に参加する script)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { tuplet 3/2 { a8@accent.up r8 a8@accent.up } | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

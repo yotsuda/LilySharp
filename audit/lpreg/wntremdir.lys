@@ -1,0 +1,18 @@
+// whole-note-tremolo-direction.ly twin — 第3線始まりの全音符 tremolo の向きは
+// beamed 対応物と同じ。綴り: LP 無引数\relative (基準 f=F3): b'=B4 a=A4 c=C5
+// → Lily# 絶対 b / a / c'。
+octave absolute
+time 3/2
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 16 { b32 a32 } repeat tremolo 8 { b32 a32 } |
+    repeat tremolo 16 { b32 c'32 } repeat tremolo 8 { b32 c'32 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

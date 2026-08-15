@@ -1,0 +1,37 @@
+GNU LilyPond 2.26.0 (running Guile 3.0)
+`C:/MyProj/lilypond-src/input/regression/part-combine-global.ly' を処理しています
+構文解析中...
+楽曲を解釈中...
+グラフィカルオブジェクトの前処理中...
+理想的なページ数を見つけています...
+楽譜を 1 ページにしています...
+描画しています...NH pos=-1 x=17.02556220472441 ink note=5
+NH pos=-3 x=17.02556220472441 ink note=3
+STEM dir=1 x=18.26476220472441 ink
+STEM dir=-1 x=17.09056220472441 ink
+NH pos=-1 x=19.52976220472441 ink note=5
+NH pos=-3 x=19.52976220472441 ink note=3
+STEM dir=1 x=20.76896220472441 ink
+STEM dir=-1 x=19.59476220472441 ink
+NH pos=-1 x=22.03396220472441 ink note=5
+NH pos=-3 x=22.03396220472441 ink note=3
+STEM dir=1 x=23.27316220472441 ink
+STEM dir=-1 x=22.098962204724412 ink
+NH pos=-1 x=24.53816220472441 ink note=5
+NH pos=-3 x=24.53816220472441 ink note=3
+STEM dir=1 x=25.77736220472441 ink
+STEM dir=-1 x=24.603162204724413 ink
+NH pos=-1 x=28.20379077615298 ink note=5
+NH pos=-3 x=28.20379077615298 ink note=3
+STEM dir=1 x=29.442990776152982 ink
+NH pos=-1 x=30.707990776152982 ink note=5
+NH pos=-3 x=30.707990776152982 ink note=3
+STEM dir=1 x=31.947190776152983 ink
+NH pos=-1 x=33.21219077615298 ink note=5
+NH pos=-3 x=33.21219077615298 ink note=3
+STEM dir=1 x=34.45139077615298 ink
+NH pos=-1 x=35.716390776152984 ink note=5
+NH pos=-3 x=35.716390776152984 ink note=3
+STEM dir=1 x=36.95559077615298 ink
+
+成功: コンパイルが成功しました

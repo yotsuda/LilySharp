@@ -1,0 +1,8 @@
+// repeatTie 枝の probe: tab では \repeatTie の音は括弧付きフレット(LP handle-ties)。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m { c'2 c'2@repeatTie | }
+}
+form main { A }
+score main { tab m as numbers }

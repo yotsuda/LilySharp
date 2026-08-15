@@ -1,0 +1,34 @@
+// CONTROL for the twin pcsm-probe.lys, and the cheapest way to see whether the combiner
+// reads a part's WHOLE moment or only its first voice.
+//
+// The book's bars 4 and 5 are << R1 s1 s4 >> against << s4 s1 R1 >> — the SAME three silences
+// in the opposite order. LilyPond's answer cannot depend on the order, because
+// scm/part-combiner.scm:76-86 silence-events filters the rests out of the moment's event list
+// FIRST and only falls back to the skips when there are none. That filter is the whole of the
+// texidoc's second half ("when rests and skips are present in the same part, the skips are
+// ignored").
+//
+// So: this file is the twin with the two branch orders made IDENTICAL (rest first in both).
+// If Lily# prints LilyPond's answer here and not in the twin, the order matters to Lily# and
+// therefore only ONE branch of the span is reaching the combiner.
+//   LP for bar 4: ONE mmrest, dir=(), 0.0 ss      bar 5: ONE rest, dir=(), +1.0 ss
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone {
+    voice { R1 } { s1 } { s4 } |
+    voice { r1 } { s2 } { s4 } |
+  }
+  vtwo {
+    voice { R1 } { s1 } { s4 } |
+    voice { r1 } { s2 } { s4 } |
+  }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

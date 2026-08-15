@@ -1,0 +1,9 @@
+// lilypond-src/input/regression/trill-spanner-terminated-implicitly.ly の Lily# 訳。
+// CLAIM: @stopTrillSpan を書かなければ trill spanner は score 末尾まで走る。
+octave absolute
+part m { }
+section A {
+  m { c'1@startTrillSpan | }
+}
+form main { A }
+score main { staff m }

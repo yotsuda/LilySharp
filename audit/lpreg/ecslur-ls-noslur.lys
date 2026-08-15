@@ -1,0 +1,16 @@
+// Does the EMPTY chord advance time? Same bar as ecslur-ls-c, plus a bare <>.
+// The walk's own comment says <> "advances NO time", so this must be exactly 4/4.
+octave absolute
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    r4 e8 g <> c'4 r4 |
+  }
+}
+
+form main { ~A }
+
+score main { staff melody }

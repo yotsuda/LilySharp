@@ -1,0 +1,24 @@
+// stems-clash-between-staves.ly の Lily# 訳 (twin)。
+// CLAIM: 隣接する 2 譜の縦間隔は、互いに近づく stem が clash しない
+// だけ広く取られる (上譜 voice2 <c a,> の down stem が譜下へ・下譜
+// <a b> の up stem が譜上へ伸びて gap で向き合う)。
+// LP の indent=10cm は水平の器材のみ=省略 (主張は縦)。
+// 音高 (Lily# c = LP c'): d'=D4→d・<c' a>=<C4 A3>→<c a,>・
+//       <a' b'>=<A4 B4>→<a b>。時価なし=4分既定。
+octave absolute
+time 4/4
+
+part up { clef treble }
+part lo { clef treble }
+
+section Main {
+  up {
+    voice { d4 }
+    { <c a,>4 }
+  }
+  lo { <a b>4 }
+}
+
+form main { ~Main }
+
+score main { staff up staff lo }

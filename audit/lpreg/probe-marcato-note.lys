@@ -1,0 +1,11 @@
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v { c'4@marcato.up c'4@staccato r2 | }
+}
+
+form main { ~Main }
+
+score main { staff v }

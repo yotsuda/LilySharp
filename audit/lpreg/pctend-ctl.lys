@@ -1,0 +1,15 @@
+// Control for pctend-probe.lys: part one's music ALONE, on a plain staff.
+// Its only job is to say whether the rest -> first-note gap that differs by 0.30 in the
+// twin is a combiner effect or a plain note-spacing effect.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+
+section A {
+  vone { r2 tuplet 3/2 { g8[ g g] } tuplet 3/2 { g[ g g] } | g1 | }
+}
+
+form main { ~A }
+
+score main { staff vone }

@@ -1,0 +1,20 @@
+// Twin of scratch/lpreg/pcmsh-c.ly = score 3 of input/regression/part-combine-mmrest-shared.ly.
+//
+// The same music as pcmsh-b-probe with the two parts exchanged and the text pointing down.
+// LP engraves the two books IDENTICALLY apart from that text direction (pcmsh-b.log against
+// pcmsh-c.log differ only in the TXT record's y and dir), so this pair is a near-identity:
+// the rests must land in the same places in both, and any other difference is a defect.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { R1*16 | R1*8 | R1*4 | }
+  vtwo { R1*8 | r1@text("r").down | R1*15 | R1*4 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

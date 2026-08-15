@@ -1,0 +1,23 @@
+// Twin of the SECOND \score of mmr1.ly. Does a multi-measure rest take the voice direction
+// the way an ordinary rest does?
+// LilyPond puts MultiMeasureRest in direction-polyphonic-grobs (scm/music-functions.scm:617-634),
+// so \voiceOne/\voiceTwo stamp it, and lily/rest.cc:76 turns that direction into
+// `voiced-position` (4). MEASURED (scratch/lpreg/mmr1.log), as DRAWN INK in staff spaces:
+//   voice one  R1  +1.375 .. +2.000   r1  +1.375 .. +2.000   (identical)
+//   voice two  R1  -2.625 .. -2.000   r1  -2.625 .. -2.000   (identical)
+// So the second bar here is the control: whatever the first bar does, the second must do.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+
+section A {
+  vone {
+    voice { R1 } { R1 } |
+    voice { r1 } { r1 } |
+  }
+}
+
+form main { ~A }
+
+score main { staff vone }

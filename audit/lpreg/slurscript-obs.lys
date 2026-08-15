@@ -1,0 +1,15 @@
+// 観測者テスト用の値取り (ArticulationPlacementTests.Scripts_RideOffASlur...)
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

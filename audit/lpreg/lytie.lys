@@ -1,0 +1,9 @@
+// lyric-tie.ly twin — 音節内のチルダはタイ記号 (‿) に変換される。
+// LP は素の \lyrics ブロック = staff 無しの歌詞行 → Lily# は lyrics row。
+time 4/4
+
+lyrics w { section Main { wa~o~a | } }
+
+form main { ~Main }
+
+score main { lyrics w }

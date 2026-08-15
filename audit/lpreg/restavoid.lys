@@ -1,0 +1,23 @@
+// lilypond-src/input/regression/rest-avoid-note.ly の Lily# 訳。
+// CLAIM: 休符は音符を避ける。各休符は自分の voice の符尾方向へ動く。
+// 両側置換: pitched rest (a4\rest / f2\rest) は綴りなし → plain rest に置換
+// (LP 側 twin も同置換 = 変位規則の核だけ踏む)。
+// 声部: LP \\ 4声 = voice{}{}{}{} (奇数分岐=up・偶数分岐=down)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    voice
+    { g'8 g' g' r8 r2 | }
+    { r4 c r2 | }
+    { c'4 c' r2 | }
+    { r2 g | }
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

@@ -1,0 +1,17 @@
+// lilypond-src/input/regression/tabstaff-choirstaff-brace.ly の Lily# 訳probe。
+// CLAIM: ChoirStaff 内の TabStaff に余計な bracket が付かない
+// (StaffGroup 版と ChoirStaff 版が同じ見た目)。
+// LP: music = c''1 → Lily# c'(treble_8 同綴り)。2 score は縦連結(--combined相当)不可
+// なので 1 score ずつ…まず両グループが書けるかの probe。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m { c'1 | }
+}
+form main { A }
+score main {
+//  staffGroup {
+  staff m
+  tab m as numbers
+  //} 
+}

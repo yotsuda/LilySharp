@@ -1,0 +1,21 @@
+// lilypond-src/input/regression/slur-dot-distance.ly の Lily# 訳・第2 score
+// (付点側)。CLAIM: 付点音符の slur は、衝突しない限り無付点と同じ head 距離。
+// 枠: \cadenzaOn 両側落とし。line2 = 4×付点4分 + (8+付点8) + (付点8+8) =
+// 12/8 + 10/16 = 34/16 = 17/8 の 1 小節。
+// 綴り: 先頭 G5 = Lily# g''(相対 anchor は LP c')。LP の sticky 時価
+// (g4.( f) の f は 4.) は明示で写す。
+
+time 17/8
+
+part melody
+
+section A {
+  melody {
+    g''4.( f4.) g4.( a4.) g8( c8.) c8.( g8)
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

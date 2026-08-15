@@ -1,0 +1,6 @@
+perf136-plain250.lys	pitch-gate-held	floor 499.9 ms	median 536.5 ms	all [667.0, 611.9, 536.5, 499.9, 531.7]	skippedBreak [False,True,True,False,True]	reusedLayout [False,False,False,False,False]	svg 594856BF84590AA8
+perf136-plain250.lys	accidental-gate-moved	floor 470.5 ms	median 527.2 ms	all [645.4, 527.2, 522.3, 470.5, 539.7]	skippedBreak [False,False,False,False,False]	reusedLayout [False,False,False,False,False]	svg 874BE8EA2BB11BC4
+perf136-plain500.lys	pitch-gate-held	floor 926.3 ms	median 1017.0 ms	all [1039.8, 930.9, 1017.0, 1319.1, 926.3]	skippedBreak [False,True,True,False,True]	reusedLayout [False,False,False,False,False]	svg 4AA7779A4EF8CDEA
+perf136-plain500.lys	accidental-gate-moved	floor 952.2 ms	median 962.8 ms	all [972.7, 962.8, 956.3, 976.5, 952.2]	skippedBreak [False,False,False,False,False]	reusedLayout [False,False,False,False,False]	svg B162E8014A805E89
+perf-plain1k.lys	pitch-gate-held	floor 1956.5 ms	median 2365.6 ms	all [2365.6, 2749.0, 2868.1, 2268.6, 1956.5]	skippedBreak [False,True,True,False,True]	reusedLayout [False,False,False,False,False]	svg 7CC24025BC25BDD9
+perf-plain1k.lys	accidental-gate-moved	floor 2040.5 ms	median 2129.0 ms	all [2095.1, 2170.2, 2040.5, 2129.0, 3111.5]	skippedBreak [False,False,False,False,False]	reusedLayout [False,False,False,False,False]	svg C0993A88AE4CC535

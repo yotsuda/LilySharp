@@ -1,0 +1,17 @@
+// whole-note-tremolo-accidentals.ly score2 twin — 和音側 (32分)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 16 { c32 <es es'>32 } |
+    repeat tremolo 16 { a32 <f cis'>32 } |
+    repeat tremolo 16 { a32 <disis ges'>32 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

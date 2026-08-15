@@ -1,0 +1,42 @@
+// A grand staff where BOTH staves rest the same bars: the run collapses, and EVERY
+// staff prints its own multi-measure rest with its own count above it.
+//
+// In LilyPond the multi-measure-rest engraver lives in the Staff context, so a run
+// (which only forms when every staff rests) yields one Multi_measure_rest per staff.
+// Verified on 2.24.4 with a PianoStaff resting R1*4 in both staves: two church rests,
+// two "4"s, and the interior bar lines gone on both staves.
+//
+// Lily# emitted only ONE symbol — placed on the top staff — while suppressing the
+// per-bar rest glyphs across ALL staves, so every staff below the first came out blank.
+// This is the pair to test/multi-measure-rest-grandstaff, which locks in the OPPOSITE
+// case: when only one staff rests, nothing merges and the bar lines stay.
+//
+// LILYPOND-REF: lily/multi-measure-rest-engraver.cc (Staff context), lily/multi-measure-rest.cc.
+title "Multi-Measure Rest (grand staff, both staves rest)"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody
+part lh { clef bass }
+
+section Main {
+  melody {
+    c4 d e f |
+    R1*4 |
+    g4 a b c |
+  }
+  lh {
+    c2 c |
+    R1*4 |
+    c2 c |
+  }
+}
+
+form main { Main }
+
+score main "mmr-grandstaff-both-rest" {
+  staff melody
+  staff lh
+}

@@ -1,0 +1,14 @@
+// Is a TEXT SCRIPT on a rest spellable? Scores 2 and 3 of
+// input/regression/part-combine-mmrest-shared.ly need `r1^"r"`.
+octave absolute
+time 4/4
+
+part solo { clef treble }
+
+section A {
+  solo { c4 d e f | r1@text("r") | c4 d e f | R1@text("R") | c4 d e f | }
+}
+
+form main { ~A }
+
+score main { staff solo }

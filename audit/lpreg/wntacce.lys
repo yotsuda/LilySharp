@@ -1,0 +1,18 @@
+// whole-note-tremolo-accidentals.ly score5 twin — 8分 (longa 対・4/1)。
+octave absolute
+time 4/1
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 16 { c8 es8 } |
+    repeat tremolo 16 { a8 cis'8 } |
+    repeat tremolo 16 { a8 gisis8 } |
+    voice { repeat tremolo 16 { a'8 bes'8 } | } { repeat tremolo 16 { f8 des8 } | }
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

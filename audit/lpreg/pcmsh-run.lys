@@ -1,0 +1,14 @@
+// The Lily# side of scratch/lpreg/pcmsh-run.ly: one part, three written multi-measure
+// rests in a row, no combining and no second voice.
+octave absolute
+time 4/4
+
+part solo { clef treble }
+
+section A {
+  solo { R1*8 | R1*16 | R1*4 | }
+}
+
+form main { ~A }
+
+score main { staff solo }

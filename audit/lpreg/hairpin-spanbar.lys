@@ -1,0 +1,19 @@
+// hairpin-span-bar.ly の Lily# 訳 (score 1 のみの twin)。
+// CLAIM: hairpin は SpanBar と衝突しない (手前で止まる)。SpanBar が無い行
+// (下譜 hara-kiri) では行末まで伸びる。
+// 置換: \! → @f。score 2/3 は ^\< 上側 hairpin = Lily# 意図的非対応で書けない。
+// 音高 (Lily# 絶対 c = LP c'): LP a'=A4=a。
+octave absolute
+time 4/4
+
+part top { clef treble }
+part bot { clef treble removeEmpty true }
+
+section Main {
+  top { a4@cresc a a a | break a a a a | break a a a a@f | }
+  bot { a4 a a a | s1 | a4 a a a | }
+}
+
+form main { ~Main }
+
+score main { grandStaff { staff top staff bot } }

@@ -1,0 +1,15 @@
+// tuplet-number-alignment.ly score1 twin — beamed tuplet 番号の縦揃え (8分)。
+// 2 score 本は a/b 分割 (score 間の頁鎖 = 第120起票の別件)。
+// 綴り: LP \relative c''' → 絶対 (Lily# = LP−1oct): B5=b' C6=c'' D6=d'' E6=e'' F6=f'' G6=g''。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { tuplet 3/2 { b'8 c''8 d''8 } tuplet 3/2 { e''8 f''8 g''8 } r2 | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

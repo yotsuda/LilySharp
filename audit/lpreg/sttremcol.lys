@@ -1,0 +1,21 @@
+// stem-tremolo-note-collision.ly の Lily# 訳 (twin)。
+// CLAIM: tremolo (斜線) は同譜の他声部の音符をできるだけ避ける
+// (避けられなければ警告)。
+// 音高 (Lily# 絶対 c = LP c'): LP b'=B4→b・f'=F4→f・grace a=A3→a,・
+//       <b g'>=<B3 G4>→<b, g>。\repeat tremolo 32 <b g'>32 = 総時価1全音
+//       = <b, g>1:32。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    voice { b4 f2. }
+    { grace { a,8 } <b, g>1:32 }
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

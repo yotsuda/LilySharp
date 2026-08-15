@@ -1,0 +1,15 @@
+// condensedStaff: two parts on one staff.
+octave absolute
+time 4/4
+
+part fl1 { clef treble }
+part fl2 { clef treble }
+
+section A {
+  fl1 { c'4 d' e' f' | g'2 g' | }
+  fl2 { e4 f g a | b2 b | }
+}
+
+form main { ~A }
+
+score main { condensedStaff { fl1 fl2 } }

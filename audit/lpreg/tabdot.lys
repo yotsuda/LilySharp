@@ -1,0 +1,13 @@
+// lilypond-src/input/regression/tablature-dot-placement.ly の Lily# 訳。
+// CLAIM: full notation の tab では、付点が 2 桁フレット数字（f'\3 = G弦 fret 10）を
+// 避けた X に置かれる。
+// LP は \relative（無引数=先頭 f' が絶対）——絶対展開:
+//   <f' a' c''>4. <f' g' d''>4. <f' a' d''>4
+// treble_8 部は LP と同じ綴り（README 比較器の罠の節: 移調が octave 差を相殺）。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m { <f'\3 a' c''>4. <f'\3 g' d''>4. <f'\3 a' d''>4 | }
+}
+form main { A }
+score main { staff m tab m }

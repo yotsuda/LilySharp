@@ -1,0 +1,16 @@
+// lyric-melisma-melisma.ly twin — melisma に当たる音節 (looong) は左揃え。
+// 綴り: LP relative c'=C4 → Lily# 絶対 c。両側置換: \melisma → slur。
+octave absolute
+time 4/4
+
+part v { }
+
+lyrics w { section Main { ha ha looong __ ~ ~ ho | } }
+
+section Main {
+  v { c4 c c16( d e f) g4 | }
+}
+
+form main { ~Main }
+
+score main { staff ~v with lyrics w }

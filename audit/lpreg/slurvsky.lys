@@ -1,0 +1,23 @@
+// lilypond-src/input/regression/slur-vertical-skylines.ly の Lily# 訳。
+// CLAIM: slur は outside-staff-priority の十分高い grob を押し上げ過ぎない
+// （^"rit" の TextScript・trill span・\f が slur の v-skyline の上に pointwise に載る）。
+// 音高: LP \relative 無引数 → f'=F4 c''=C5 f''=F5 c'''=C6 f'''=F6 / g'=G4 g=G3。
+octave absolute
+
+part melody
+
+section A {
+  melody {
+    f8@text("rit").up( c'8 f' c'' f'') r8 r4 |
+    c''2( c'2 |
+    g1)~@startTrillSpan |
+    g1@stopTrillSpan |
+    g1(@f |
+    g,1) |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

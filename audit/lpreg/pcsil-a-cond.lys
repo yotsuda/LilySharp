@@ -1,0 +1,17 @@
+// Control for pcsil-a-probe: the SAME music on a condensed staff — two voices sharing one
+// staff, with no combining at all. LilyPond's own control is scratch/lpreg/pcsil-ctl.ly
+// (\voiceOne / \voiceTwo), which prints every rest, at +2 / -2 in every column.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { r4 r2 r8 r8 | r1 | }
+  vtwo { r8 r8 r2 r4 | r1 | }
+}
+
+form main { ~A }
+
+score main { condensedStaff { vone vtwo } }

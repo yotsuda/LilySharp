@@ -1,0 +1,24 @@
+// hara-kiri-percent-repeat.ly twin — percent repeat を持つ譜 (staff/tab/drum/
+// rhythmic) は removeEmpty でも消されない。break 後の第2系が本丸: percent 小節
+// しか持たない 4 譜が生き残ること。
+// 綴り: Lily# c = LP c' (octave absolute)。RhythmicStaff は Lily# に無い →
+// lines 1 + b (中央線上) で対にする (LP 側は音高無視で線上に置くため視覚同値)。
+octave absolute
+
+part n1 { removeEmpty true }
+part n2 { removeEmpty true }
+part tb { removeEmpty true }
+part dr { clef percussion removeEmpty true }
+part rs { lines 1 removeEmpty true }
+
+section Main {
+  n1 { c'1 | c' | break c' | c' | }
+  n2 { repeat percent 4 { c1 | } }
+  tb { repeat percent 4 { c,1 | } }
+  dr { repeat percent 4 { hh1 | } }
+  rs { repeat percent 4 { b1 | } }
+}
+
+form main { ~Main }
+
+score main { staff ~n1 staff ~n2 tab tb staff ~dr staff ~rs }

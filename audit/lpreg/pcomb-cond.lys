@@ -1,0 +1,20 @@
+// The music of pcombine-{lp,ctl}.ly, written the only way Lily# can write it today:
+// condensedStaff = two parts on one staff, NOT combined. This is the "before" of the
+// part combiner, and its counts are the falsifier for the port:
+//   LP \partCombine  = 16 stems / 18 noteheads+rests / 4 texts   (pcombine-lp.svg)
+//   LP << \\ >>      = 24 stems / 24 glyphs         / 1 text     (pcombine-ctl.svg)
+// bar 1 = unison, bar 2 = voice 2 silent, bar 3 = voice 1 silent, bar 4 = apart.
+octave absolute
+time 4/4
+
+part fl1 { clef treble }
+part fl2 { clef treble }
+
+section A {
+  fl1 { c4 d e f | g2 g | R1 | c4 e g e | }
+  fl2 { c4 d e f | R1 | g,2 g, | g,4 g, g, g, | }
+}
+
+form main { ~A }
+
+score main { condensedStaff { fl1 fl2 } }

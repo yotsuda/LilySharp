@@ -1,0 +1,14 @@
+// lilypond-src/input/regression/stem-pure-height-beamed.ly の Lily# 訳。
+// CLAIM: beamed stem の pure height が正しく、外側衝突を起こさない
+// （\stemUp 強制で A3 と G#5/Bb5 を跨ぐ極端な梁）。
+// 音高: LP 絶対 gis''=G#5→gis' / a=A3→a, / bes''=Bb5→bes'。
+// LP の bes''! (強制臨時記号) は綴りなし＝`!` を両側落とし
+// (2 個目以降の ♭ は両エンジンとも courtesy 無しで不印字・主張の核は梁の高さ)。
+octave absolute
+
+part m { }
+section A {
+  m { gis'8@stemUp a,@stemUp bes'@stemUp a,@stemUp bes'@stemUp a,@stemUp bes'@stemUp a,@stemUp | }
+}
+form main { A }
+score main { staff m }

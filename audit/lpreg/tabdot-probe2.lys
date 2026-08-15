@@ -1,0 +1,8 @@
+// 陽性対照2: \2 強制で f' が弦2 fret6 に動けば StringNumber は消費されている。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m { f'4.\2 f'4. f'4 | }
+}
+form main { A }
+score main { tab m }

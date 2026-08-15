@@ -1,0 +1,14 @@
+// lilypond-src/input/regression/staff-tabstaff-spacing.ly の Lily# 訳。
+// CLAIM: Staff を含む score と TabStaff を含む score の間の縦間隔は一致する
+// （3 score の間隔が全部等しい）。
+// 音高: LP 絶対 c'=C4 → Lily# 絶対 c。小節: c'4 d' e' f' | g'1。
+octave absolute
+
+part m { }
+section A {
+  m { c4 d e f | g1 | }
+}
+form main { A }
+score main "Title 1" { staff m }
+score main "Title 2" { tab m }
+score main "Title 3" { staff m }

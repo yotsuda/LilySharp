@@ -1,0 +1,18 @@
+// Frame-aligned twin of chord-tremolo-whole.ly.
+// Relative anchor c = LP c'; LP \relative c''' { g64 a } = g'' a'',
+// so from c the g needs '' and the a follows one step up bare.
+// time 4/4 matches LP's implicit C time signature.
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    repeat tremolo 32 { g''64 a }
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

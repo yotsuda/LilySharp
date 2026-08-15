@@ -1,0 +1,18 @@
+// whole-note-tremolo-accidentals.ly score3 twin — 16分 (breve 対・4/2)。
+octave absolute
+time 4/2
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 16 { c16 es16 } |
+    repeat tremolo 16 { a16 cis'16 } |
+    repeat tremolo 16 { a16 gisis16 } |
+    voice { repeat tremolo 16 { a'16 bes'16 } | } { repeat tremolo 16 { f16 des16 } | }
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

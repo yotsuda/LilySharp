@@ -1,0 +1,20 @@
+// hairpin-clef.ly の Lily# 訳 (twin)。
+// CLAIM: 折返し後 (行頭 treble clef の後) の broken hairpin がずれた高さに
+// 刷られない。
+// 置換 (両側): 終端 \! → \f/@f (綴り無し)・^\< → 既定の下側 hairpin
+// (Lily# の hairpin は常に下=意図した設計。LYS0002 で .up は拒否される)。
+// 音高 (Lily# 絶対 c = LP c'): LP c''=C5=c'。明示 break。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    c'4@cresc c' c' c' | break c' c' c' c'@f |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

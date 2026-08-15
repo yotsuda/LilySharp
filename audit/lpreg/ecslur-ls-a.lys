@@ -1,0 +1,16 @@
+// Lily# twin of ecslur-a.ly: the ')' is written on the EMPTY chord <>.
+// octave absolute — Lily# c = LP c'.
+octave absolute
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    r4 e8( g <>) c'4 r4 |
+  }
+}
+
+form main { ~A }
+
+score main { staff melody }

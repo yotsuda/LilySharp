@@ -1,0 +1,14 @@
+octave absolute
+part melody
+
+section A {
+  melody {
+    c'2@f c'2 |
+    c'1 @decresc <>@pp |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

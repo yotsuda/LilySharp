@@ -1,0 +1,12 @@
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { c1@mark("A") | c1 @mark("B") | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

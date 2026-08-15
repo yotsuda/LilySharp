@@ -1,0 +1,31 @@
+// Twin of input/regression/part-combine-mmrest-after-apart-silence.ly.
+// texidoc: "Normal rests are preferred over multi-measure rests. A multi-measure rest
+// beginning in one part in the middle of a multi-measure rest in the other part appears
+// as expected."
+//
+// The book is its own control: the two staves are the SAME pair of parts in the opposite
+// order, so whatever the rule is, it has to come out identical on both.
+//
+// What LP does with it (measured, scratch/lpreg/pcmmas.log):
+//   bar 1  r2 vs R1*2 -> silence1/2: the ORDINARY rests are engraved, in the shared voice
+//                        (dir unset, position 0), and the multi-measure rest goes to null
+//   bar 2  R1 vs (still inside R1*2) -> one MultiMeasureRest, measure-count 1, position 0
+//   both staves identical, ink for ink.
+octave absolute
+time 4/4
+
+part sa1 { clef treble }
+part sa2 { clef treble }
+part sb1 { clef treble }
+part sb2 { clef treble }
+
+section A {
+  sa1 { r2 r2 | R1 | }
+  sa2 { R1*2 | }
+  sb1 { R1*2 | }
+  sb2 { r2 r2 | R1 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { sa1 sa2 } combinedStaff { sb1 sb2 } }

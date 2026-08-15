@@ -1,0 +1,30 @@
+GNU LilyPond 2.26.0 (running Guile 3.0)
+Processing `pcsil-ctl.ly'
+Parsing...
+Interpreting music...
+Preprocessing graphical objects...
+Finding the ideal number of pages...
+Fitting music on 1 page...
+Drawing systems...STAFF sy=-3.7759999999999994
+REST x=8.584999999999999 y=-1.7759999999999994 dur=2 dir=1 ink src=10:27
+REST x=8.584999999999999 y=-5.776 dur=3 dir=-1 ink src=11:27
+STEM dir=1 x=9.059999999999999 ink
+STEM dir=-1 x=9.084999999999999 ink
+REST x=10.784999999999998 y=-5.776 dur=3 dir=-1 ink src=11:30
+STEM dir=-1 x=11.284999999999998 ink
+REST x=12.984999999999998 y=-1.7759999999999994 dur=1 dir=1 ink src=10:33
+REST x=12.984999999999998 y=-5.776 dur=1 dir=-1 ink src=11:33
+STEM dir=1 x=13.734999999999998 ink
+STEM dir=-1 x=13.734999999999998 ink
+REST x=18.084999999999997 y=-1.7759999999999994 dur=3 dir=1 ink src=10:36
+REST x=18.084999999999997 y=-5.776 dur=2 dir=-1 ink src=11:36
+STEM dir=1 x=18.584999999999997 ink
+STEM dir=-1 x=18.56 ink
+REST x=20.284999999999997 y=-1.7759999999999994 dur=3 dir=1 ink src=10:39
+STEM dir=1 x=20.784999999999997 ink
+REST x=24.574999999999996 y=-1.7759999999999994 dur=0 dir=1 ink src=10:44
+REST x=24.574999999999996 y=-5.776 dur=0 dir=-1 ink src=11:44
+STEM dir=1 x=25.324999999999996 ink
+STEM dir=-1 x=25.324999999999996 ink
+
+Success: compilation successfully completed

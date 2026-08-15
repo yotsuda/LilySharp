@@ -1,0 +1,14 @@
+// probe: in-music repeat volta の綴りが在るか（repeat-volta-body 2 冊と同ゲートの確認）。
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    grace { f8 } repeat volta 2 { b1 | }
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

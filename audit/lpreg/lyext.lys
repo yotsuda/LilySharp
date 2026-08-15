@@ -1,0 +1,17 @@
+// lyric-extender-completion.ly twin — 音符が歌詞より多くても extender が正しい所で
+// 終わること (Ah __ + g1( c) d = melisma 2 音 + 余り 1 音)。
+// 綴り: LP relative g'/c,/d = G4/C4/D4 = Lily# g/c/d (octave absolute)。
+octave absolute
+time 4/4
+
+part v { }
+
+lyrics w { section Main { Ah __ | | | } }
+
+section Main {
+  v { g1( | c) | d | }
+}
+
+form main { ~Main }
+
+score main { staff ~v with lyrics w }

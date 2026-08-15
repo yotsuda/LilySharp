@@ -1,0 +1,14 @@
+// Isolation 1: does `R1*2` span TWO bars on an ordinary staff?
+// (`p` is a reserved word in Lily# — LYS0002 — so the part is called `pa`.)
+octave absolute
+time 4/4
+
+part pa { clef treble }
+
+section A {
+  pa { R1*2 | c1 | }
+}
+
+form main { ~A }
+
+score main { staff pa }

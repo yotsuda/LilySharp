@@ -1,0 +1,13 @@
+// 対照: partial 無しの行頭 grace (grace-partial の −0.2 の切り分け)。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v { grace { b,8 } b,4 b,2. | b,1 | }
+}
+
+form main { ~Main }
+
+score main { staff v }

@@ -1,0 +1,10 @@
+// lilypond-src/input/regression/trill-spanner-to-barline.ly の Lily# 訳。
+// CLAIM: 小節頭の音で終わる trill spanner は直前の小節線までしか伸びない。
+// LP の裸 "1" = 直前音の繰返し → c'1 に展開。
+octave absolute
+part m { }
+section A {
+  m { c'1@startTrillSpan | c'1@stopTrillSpan | }
+}
+form main { A }
+score main { staff m }

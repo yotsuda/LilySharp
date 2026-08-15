@@ -1,0 +1,30 @@
+// ⒪ ledger probe VSSD — a VOICE-2 slur drooping DOWN out of each system, the voice-2
+// version of ledger book SSD. Prelim lays ties/slurs on the PRIMARY VOICE ONLY
+// (LayoutEngine.RunPreliminaryAnnotationPass builds staffScore from staff.PrimaryVoice;
+// the final pass uses staffSpannerScore = every voice), so a voice-2 slur that is the
+// deepest ink of a system never joins the spacing extents. HANDOFF §1 ⒪.
+// Same measurement discipline as SSD: floor 12, heads at -8 must NOT beat it
+// (8.545 + 2.05 + 1 = 11.595 < 12), the slur must (LP ≈ 13.1 on SSD's span).
+octave absolute
+time 12/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+  }
+}
+
+form main { ~Main }
+
+score main "VSSD" {
+  staff melody
+}

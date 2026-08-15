@@ -1,0 +1,17 @@
+// lilypond-src/input/regression/repeat-volta-initial-grace.ly の Lily# 訳。
+// CLAIM: 冒頭 grace 音符 + volta repeat の開始リピート線が期待位置に出る。
+// 綴り: LP \repeat volta 2 = Lily# 記号形 |: … :|。LP absolute f'8/b'1 = F4/B4。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    grace { f8 } |: b1 :|
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

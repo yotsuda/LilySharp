@@ -1,0 +1,15 @@
+// lilypond-src/input/regression/tablature.ly の Lily# 訳。
+// CLAIM: 弦番号は「和音内の音符付き」(note articulation)と「和音の外」
+// (chord articulation)の両方で書ける。
+// 原書は時価なし=4分既定。5和音なので小節2は短い(pickup 警告のみ)。
+octave absolute
+key e major
+part m { clef treble_8 tuning guitar }
+section A {
+  m {
+    <e\5 dis'\4>4 <e dis'>4 <e dis'\4>4 <e dis'>4\5\4 |
+    <e dis'\4>4\5 |
+  }
+}
+form main { A }
+score main { staff m tab m as numbers }

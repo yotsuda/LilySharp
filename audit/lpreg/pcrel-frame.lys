@@ -1,0 +1,18 @@
+// Frame inspection for input/regression/part-combine-relative.ly (session 129, not a twin).
+// The book's claim is about SCOPE: an outer \relative is ignored by \partCombine, an inner one
+// is not. Question asked here: can Lily# put an octave mode INSIDE one part's music, so that
+// the "inner" half of the claim can be written at all?
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { octave relative e'2 f | }
+  vtwo { octave relative c'2 d | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

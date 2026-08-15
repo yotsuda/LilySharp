@@ -1,0 +1,16 @@
+// fermata-outside-staff-priority.ly の Lily# 訳・score 1 (trill SPANNER)。
+// LP: \ottava #1 g''2->\fermata\startTrillSpan \ottava #0 r\stopTrillSpan
+// 主張: trill spanner (priority 50) < fermata (75) < ottava (400)。
+
+part melody
+
+section A {
+  melody {
+    g''2@ottava@accent@fermata@startTrillSpan r2@loco@stopTrillSpan |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

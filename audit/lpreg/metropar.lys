@@ -1,0 +1,19 @@
+// metronome-parenthesized.ly twin — 空テキストの tempo は括弧付き表示。
+// 綴り: LP relative c''=C5 → Lily# 絶対 c'。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    tempo 4 = 60
+    c'1 |
+    tempo "" 4 = 80
+    c'1 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

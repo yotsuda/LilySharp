@@ -1,0 +1,15 @@
+// tuplet-no-stems.ly probe — LP は \remove Stem_engraver の crash 回帰。
+// Lily# の最近傍 = tab as numbers (stem/beam/tuplet番号を抑制する唯一の表面)。
+// no-crash 核だけ確認する probe。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { tuplet 3/2 { f8 g8 a8 } r4 r2 | }
+}
+
+form main { ~Main }
+
+score main { tab v as numbers }

@@ -1,0 +1,37 @@
+session 145 — collect.walk をもう 1 段割った（一時計器 CollectClock145・EditKeystrokeBench と同じ
+プロトコル: warmup 2 / n=14 交互編集 / 段ごとの床 = n14 min。Release・warm プロセス。
+gateMoved True / reusedLayout False の regime ⑶。計器・一時ベンチは commit していない）。
+
+段の定義:
+  walk     = CollectMeasures 全体（単一譜経路）
+  ps       = ProcessSection 全体
+  secover  = section 直下 override 探索ループ（旧: section.DescendantNodes() 全走査）
+  discover = part block 探索ループ（DescendantNodes 走査分のみ・ProcessMusicContainer は除外）
+  canon    = GetCanonicalSectionBars（spacer 埋めの正典小節数）
+  gather   = ProcessMusicContainer の flat list 構築（DescendantNodes + IsInsideProcessedContainer）
+  process  = processNodes（ProcessMusicNode の逐次処理）
+  peek     = 1 ノード先読み（PeekMarkers + PeekPastAttachedMarks）
+  nscan    = 音符/和音の付随スキャン（HasGliss/feather/courtesy/notehead/arpBracket 等）
+  ncreate  = CreateNoteItem / CreateChordItem
+  ncoll    = Collect{Dynamics,Articulations,FiguredBass,ChordNames,CrossStaff}
+
+== 修理前（HEAD 5ca6ba45 + 計器のみ）==
+perf-plain1k.lys	keystroke 387.2	walk 27.8	ps 27.6	secover 1.0	discover 0.0	canon 1.5	gather 2.1	process 19.7	peek 0.5	nscan 1.5	ncreate 4.2	ncoll 2.1	[secoverN 43009 discoverN 4 gatherN 43004 canonCalls 1 notes 8000]
+perf-fingbeam1k.lys	keystroke 911.9	walk 286.5	ps 286.3	secover 4.2	discover 0.0	canon 6.0	gather 14.1	process 261.0	peek 6.1	nscan 2.2	ncreate 60.9	ncoll 129.0	[secoverN 234009 discoverN 4 gatherN 234004 canonCalls 1 notes 8000]
+perf-v2bow1k.lys	keystroke 385.7	walk 7.0	ps 6.9	secover 0.9	discover 0.0	canon 0.9	gather 1.4	process 3.5	peek 0.0	nscan 1.1	ncreate 3.2	ncoll 1.0	[secoverN 36518 discoverN 4 gatherN 36513 canonCalls 1 notes 6000]
+
+（同条件の別走・process 分割前: plain walk 22.5 / fingbeam 327.8 / v2bow 8.6 — 走間ドリフト ±15% 程度）
+
+== 修理後（secover=ChildNodes / discovery=ChildNodes / canon=ChildNodes+collect内memo）==
+perf-plain1k.lys	keystroke 342.1	walk 23.3	ps 23.2	secover 0.0	discover 0.0	canon 0.1	gather 2.3	process 20.2	peek 0.4	nscan 1.8	ncreate 4.6	ncoll 1.5	[secoverN 5 discoverN 4 gatherN 43004 canonCalls 1 notes 8000]
+perf-fingbeam1k.lys	keystroke 929.3	walk 301.6	ps 301.5	secover 0.0	discover 0.0	canon 0.2	gather 13.9	process 287.1	peek 6.8	nscan 2.7	ncreate 59.2	ncoll 136.9	[secoverN 5 discoverN 4 gatherN 234004 canonCalls 1 notes 8000]
+perf-v2bow1k.lys	keystroke 379.7	walk 5.5	ps 5.5	secover 0.0	discover 0.0	canon 0.0	gather 1.0	process 4.4	peek 0.0	nscan 1.1	ncreate 3.1	ncoll 1.1	[secoverN 5 discoverN 4 gatherN 36513 canonCalls 1 notes 6000]
+
+主張は「段の床」と「回数」（secoverN 234009→5）。keystroke の A/B は ~10ms/930ms ＝ ドリフト以下で
+分解能が無いので主張しない。
+
+結論: walk の支配項は per-item の意味処理そのもの（fingbeam: ncoll 129〜137 + ncreate 59〜61 +
+残差 ~60（dispatch/builder/AddDuration）＝ process ~261〜287 of walk ~287〜328）。
+冗長な全書走査は上の 3 site で最後（gather の DescendantNodes は flat list 構築＝本務）。
+⇒ 走査の枝刈りでは walk は落ちない。残る手は per-measure/per-part の collect memo（HANDOFF §1 の
+設計メモ）だけ。

@@ -1,0 +1,13 @@
+// 下見 probe: grace 内の ~ (grace→本音タイ) が書けるか。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v { acciaccatura { c16~ } c1 | }
+}
+
+form main { ~Main }
+
+score main { staff v }

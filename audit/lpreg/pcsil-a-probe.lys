@@ -1,0 +1,26 @@
+// Twin of score 1 of input/regression/part-combine-silence.ly.
+// texidoc: "Rests must begin and end simultaneously to be merged into the shared voice."
+// LP writes the two parts as \relative f' { ... }, but there is not a single pitch in
+// this score, so the octave frame carries nothing and the twin needs no reference.
+//
+// What LP does with it (measured, scratch/lpreg/pcsil-a.log):
+//   moment 0   r4 vs r8   -> apart-silence, BOTH printed (y 0.0 / -2.0)
+//   moment 1/8            -> part 2 alone   (y -2.0)
+//   moment 1/4 r2 vs r2   -> unisilence, ONE rest at y 0.0   <- the claim
+//   moment 3/4 r8 vs r4   -> apart-silence, BOTH printed (y 0.0 / -2.0)
+//   moment 7/8            -> part 1 alone   (y +2.0)
+//   bar 2      r1 vs r1   -> unisilence, ONE rest at y +1.0 (hangs from the 4th line)
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { r4 r2 r8 r8 | r1 | }
+  vtwo { r8 r8 r2 r4 | r1 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

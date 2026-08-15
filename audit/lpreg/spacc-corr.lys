@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/spacing-correction-accidentals.ly の Lily# 訳。
+// CLAIM: 右列に臨時記号があっても optical spacing correction は掛かる。
+// ただし stem の向きが違う対だけ（note-spacing.cc stem_dir_correction）。
+// 音高: LP \relative 無引数 c'=C4 → c / cis''(C#6) → cis'' / cis,,(C#4) → cis。
+octave absolute
+time 2/4
+
+part melody
+
+section A {
+  melody {
+    c8 cis'' cis'' cis |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

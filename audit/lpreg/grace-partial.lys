@@ -1,0 +1,17 @@
+// grace-partial.ly の Lily# 訳 (twin)。
+// CLAIM: \partial (pickup) と \grace が組み合わせられる (pickup 音の前に
+// grace が刷られ、小節構造は 1/4 pickup + 4/4 full bar のまま)。
+// 音高 (Lily# 絶対 c = LP c'): LP b(B3)=b,。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  partial 4
+  v { grace { b,8 } b,4 | b,1 | }
+}
+
+form main { ~Main }
+
+score main { staff v }

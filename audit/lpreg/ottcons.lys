@@ -1,0 +1,14 @@
+// ottava-consecutive.ly twin — 連続 ottava (間に loco なし) は結合されない。
+// 綴り: LP 絶対 c (C3) = Lily# c,。@ottava 開始→次小節で @ottava(bassa) 直接切替。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { c,1@ottava | c,1@ottava(bassa) | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

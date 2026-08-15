@@ -1,0 +1,29 @@
+// Positive control for pcrel-probe.lys. The twin cannot tell a working `octave relative` from
+// a no-op: after F4 the relative reading of `e f` and the absolute reading of `e f` are the
+// SAME two pitches, which is exactly why the book's three measures are identical. So the switch
+// needs a spelling the two modes DISAGREE about — and finding one took two wrong guesses, both
+// of the same kind, so the rule is written here: RELATIVE AND ABSOLUTE AGREE WHENEVER THE
+// NEAREST SAME-NAMED NOTE IS THE ONE THE ABSOLUTE OCTAVE BLOCK ALREADY NAMES, i.e. for every
+// step of a fourth or less inside c..b. `b` after F4 is B4 either way (a fourth up); `c` after
+// F4 is C4 either way (a fourth down).
+//
+// The discriminator here is the LOWER part, and it is the only assertion this file carries:
+//   vtwo, after D4: relative `a` = A3 (a fourth down)  ->  -4.0 ss
+//                   absolute `a` = A4                  ->  -0.5 ss
+// MEASURED: this file renders the second measure at -4.00 / -3.00 ss, so the switch is in
+// effect. The upper part (`c` after F4 = C4 = -3.00 ss) is along for the ride and proves
+// nothing; it is kept so the measure is a two-voice column like the twin's.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { e2 f | octave relative c2 c | }
+  vtwo { c2 d | octave relative a2 a | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

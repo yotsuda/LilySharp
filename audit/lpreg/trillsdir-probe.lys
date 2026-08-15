@@ -1,0 +1,9 @@
+// trill-spanner-direction の probe: @startTrillSpan.down が受理されるか、
+// 出力の trill 線は動くか(engraver は常時 UP のはず)。
+octave absolute
+part m { }
+section A {
+  m { g4@startTrillSpan g4@stopTrillSpan g4@startTrillSpan.down g4@stopTrillSpan | }
+}
+form main { A }
+score main { staff m }

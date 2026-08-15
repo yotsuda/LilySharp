@@ -1,0 +1,16 @@
+// lyrics-pass-under-bar.ly twin — 長い歌詞は小節線の下を通ってよい。
+// 綴り: 無引数 \relative の c''' = C6 = Lily# 絶対 c''。
+octave absolute
+time 4/4
+
+part v { }
+
+lyrics w { section Main { foo bar | foooooooo bar | } }
+
+section Main {
+  v { c''2 c | c c | }
+}
+
+form main { ~Main }
+
+score main { staff ~v with lyrics w }

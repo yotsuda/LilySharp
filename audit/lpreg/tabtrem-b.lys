@@ -1,0 +1,14 @@
+// lilypond-src/input/regression/tablature-tremolo.ly 第2 score の Lily# 訳。
+// CLAIM: \tabFullNotation(Lily# は full 既定=裸の tab)では tremolo 印が出る。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m {
+    <c e g c' e'>4:16
+    repeat tremolo 4 { c'16 }
+    repeat tremolo 2 { c16 d16 }
+    repeat tremolo 4 { <c d>16 } |
+  }
+}
+form main { A }
+score main { tab m }

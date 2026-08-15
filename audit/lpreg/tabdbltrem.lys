@@ -1,0 +1,11 @@
+// lilypond-src/input/regression/tablature-double-stem-tremolo.ly の Lily# 訳。
+// CLAIM: TabVoice の二重符幹(半音符)に付く tremolo 斜線は二重符幹の中心に乗る。
+// LP: \new TabVoice \relative c' { \tabFullNotation a2:32 } → a = A3(G弦 fret 2)。
+// treble_8 部は LP と同綴り。半小節は pickup 警告のみ。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m { a2:32 | }
+}
+form main { A }
+score main { tab m }

@@ -1,0 +1,22 @@
+// Multi-voice augmentation-dot force-down. When two voices collide and the
+// DOWN voice has a dotted note sitting ON a staff line, its dot is forced into
+// the space BELOW the line (instead of the default space above) to clear the up
+// voice. Here the down voice's dotted b (B4, the treble middle line) collides
+// with the up voice's un-dotted c' a second above, so the down dot is pushed
+// below the line.
+// WARNING: forcing DOWN off the staff line is Lily#'s OWN rule. LilyPond's dot-direction
+// rule (note-collision.cc:375-398) fires only when the shift is positive and sets UP /
+// CENTER / the up chord's direction. This book therefore watches Lily#'s behaviour, not
+// LilyPond's; see HANDOFF 2 A. The :411-448 this line used to cite holds no dot code at all.
+octave absolute
+time 2/4
+part m { clef treble }
+section Main {
+  m {
+    voice { c'4 c'4 }
+    { b4. b8 }
+  }
+}
+form main { Main }
+score main "dot-force-down" { staff m }
+

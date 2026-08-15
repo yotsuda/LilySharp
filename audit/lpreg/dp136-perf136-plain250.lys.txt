@@ -1,0 +1,350 @@
+STAGE	-	compile.collect	359.9
+STAGE	-	compile.contentkey	68.9
+STAGE	-	compile.springs	335.0
+STAGE	-	compile.gate	1.1
+NOTE	-	skip=False reuse=False eligible=True
+STAGE	-	layout.prologue	1.1
+STAGE	-	layout.break	13.3
+NOTE	-	break precomputedLineSizes=False systems=50
+STAGE	-	layout.firstsystem	266.7
+STAGE	-	layout.persystem	2033.1
+STAGE	-	layout.extents	1.9
+STAGE	-	layout.prelimannotation	536.5
+STAGE	-	pages.calclineheights	1.0
+NOTE	-	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	-	pages.dp	10.1
+STAGE	-	layout.pages	114.3
+STAGE	-	layout.loosechain	2.4
+STAGE	-	layout.spanners	124.7
+STAGE	-	layout.annotationctx	6.3
+STAGE	-	layout.annotationpass	8.7
+STAGE	-	layout.voicecollisions	12.0
+STAGE	-	layout.finalize	12.0
+STAGE	-	compile.layout	3174.3
+STAGE	-	compile.render	108.1
+STAGE	-	compile.collect	36.8
+STAGE	-	compile.contentkey	7.2
+STAGE	-	compile.springs	56.2
+STAGE	-	compile.gate	6.6
+NOTE	-	skip=True reuse=True eligible=True
+STAGE	-	compile.layout	1.5
+STAGE	-	compile.render	44.4
+STAGE	pitch-gate-held.warm	compile.collect	38.6
+STAGE	pitch-gate-held.warm	compile.contentkey	7.5
+STAGE	pitch-gate-held.warm	compile.springs	47.2
+STAGE	pitch-gate-held.warm	compile.gate	0.1
+NOTE	pitch-gate-held.warm	skip=True reuse=False eligible=True
+STAGE	pitch-gate-held.warm	layout.prologue	0.3
+STAGE	pitch-gate-held.warm	layout.break	0.6
+NOTE	pitch-gate-held.warm	break precomputedLineSizes=True systems=50
+STAGE	pitch-gate-held.warm	layout.firstsystem	18.5
+STAGE	pitch-gate-held.warm	layout.persystem	11.6
+STAGE	pitch-gate-held.warm	layout.extents	0.0
+STAGE	pitch-gate-held.warm	layout.prelimannotation	135.1
+STAGE	pitch-gate-held.warm	pages.calclineheights	0.0
+NOTE	pitch-gate-held.warm	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	pitch-gate-held.warm	pages.dp	4.7
+STAGE	pitch-gate-held.warm	layout.pages	82.2
+STAGE	pitch-gate-held.warm	layout.loosechain	0.1
+STAGE	pitch-gate-held.warm	layout.spanners	133.9
+STAGE	pitch-gate-held.warm	layout.annotationctx	7.5
+STAGE	pitch-gate-held.warm	layout.annotationpass	7.3
+STAGE	pitch-gate-held.warm	layout.voicecollisions	0.1
+STAGE	pitch-gate-held.warm	layout.finalize	0.0
+STAGE	pitch-gate-held.warm	compile.layout	427.9
+STAGE	pitch-gate-held.warm	compile.render	38.2
+STAGE	pitch-gate-held.0	compile.collect	40.3
+STAGE	pitch-gate-held.0	compile.contentkey	5.3
+STAGE	pitch-gate-held.0	compile.springs	56.2
+STAGE	pitch-gate-held.0	compile.gate	0.0
+NOTE	pitch-gate-held.0	skip=False reuse=False eligible=True
+STAGE	pitch-gate-held.0	layout.prologue	0.4
+STAGE	pitch-gate-held.0	layout.break	11.1
+NOTE	pitch-gate-held.0	break precomputedLineSizes=False systems=50
+STAGE	pitch-gate-held.0	layout.firstsystem	19.5
+STAGE	pitch-gate-held.0	layout.persystem	7.9
+STAGE	pitch-gate-held.0	layout.extents	0.0
+STAGE	pitch-gate-held.0	layout.prelimannotation	143.4
+STAGE	pitch-gate-held.0	pages.calclineheights	0.0
+NOTE	pitch-gate-held.0	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	pitch-gate-held.0	pages.dp	12.0
+STAGE	pitch-gate-held.0	layout.pages	76.1
+STAGE	pitch-gate-held.0	layout.loosechain	0.0
+STAGE	pitch-gate-held.0	layout.spanners	178.1
+STAGE	pitch-gate-held.0	layout.annotationctx	5.1
+STAGE	pitch-gate-held.0	layout.annotationpass	6.5
+STAGE	pitch-gate-held.0	layout.voicecollisions	0.0
+STAGE	pitch-gate-held.0	layout.finalize	0.0
+STAGE	pitch-gate-held.0	compile.layout	480.3
+STAGE	pitch-gate-held.0	compile.render	31.2
+STAGE	pitch-gate-held.1	compile.collect	44.3
+STAGE	pitch-gate-held.1	compile.contentkey	5.5
+STAGE	pitch-gate-held.1	compile.springs	58.4
+STAGE	pitch-gate-held.1	compile.gate	0.1
+NOTE	pitch-gate-held.1	skip=True reuse=False eligible=True
+STAGE	pitch-gate-held.1	layout.prologue	0.3
+STAGE	pitch-gate-held.1	layout.break	0.1
+NOTE	pitch-gate-held.1	break precomputedLineSizes=True systems=50
+STAGE	pitch-gate-held.1	layout.firstsystem	17.1
+STAGE	pitch-gate-held.1	layout.persystem	8.4
+STAGE	pitch-gate-held.1	layout.extents	0.0
+STAGE	pitch-gate-held.1	layout.prelimannotation	195.2
+STAGE	pitch-gate-held.1	pages.calclineheights	0.0
+NOTE	pitch-gate-held.1	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	pitch-gate-held.1	pages.dp	5.0
+STAGE	pitch-gate-held.1	layout.pages	54.2
+STAGE	pitch-gate-held.1	layout.loosechain	0.0
+STAGE	pitch-gate-held.1	layout.spanners	126.3
+STAGE	pitch-gate-held.1	layout.annotationctx	5.9
+STAGE	pitch-gate-held.1	layout.annotationpass	10.5
+STAGE	pitch-gate-held.1	layout.voicecollisions	0.0
+STAGE	pitch-gate-held.1	layout.finalize	0.0
+STAGE	pitch-gate-held.1	compile.layout	444.8
+STAGE	pitch-gate-held.1	compile.render	28.9
+STAGE	pitch-gate-held.2	compile.collect	50.8
+STAGE	pitch-gate-held.2	compile.contentkey	5.8
+STAGE	pitch-gate-held.2	compile.springs	60.7
+STAGE	pitch-gate-held.2	compile.gate	0.1
+NOTE	pitch-gate-held.2	skip=True reuse=False eligible=True
+STAGE	pitch-gate-held.2	layout.prologue	0.3
+STAGE	pitch-gate-held.2	layout.break	0.0
+NOTE	pitch-gate-held.2	break precomputedLineSizes=True systems=50
+STAGE	pitch-gate-held.2	layout.firstsystem	22.3
+STAGE	pitch-gate-held.2	layout.persystem	20.9
+STAGE	pitch-gate-held.2	layout.extents	0.0
+STAGE	pitch-gate-held.2	layout.prelimannotation	176.6
+STAGE	pitch-gate-held.2	pages.calclineheights	0.0
+NOTE	pitch-gate-held.2	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	pitch-gate-held.2	pages.dp	6.4
+STAGE	pitch-gate-held.2	layout.pages	53.2
+STAGE	pitch-gate-held.2	layout.loosechain	0.0
+STAGE	pitch-gate-held.2	layout.spanners	107.0
+STAGE	pitch-gate-held.2	layout.annotationctx	7.3
+STAGE	pitch-gate-held.2	layout.annotationpass	5.5
+STAGE	pitch-gate-held.2	layout.voicecollisions	0.0
+STAGE	pitch-gate-held.2	layout.finalize	0.0
+STAGE	pitch-gate-held.2	compile.layout	418.7
+STAGE	pitch-gate-held.2	compile.render	26.5
+STAGE	pitch-gate-held.3	compile.collect	44.0
+STAGE	pitch-gate-held.3	compile.contentkey	5.2
+STAGE	pitch-gate-held.3	compile.springs	54.5
+STAGE	pitch-gate-held.3	compile.gate	0.0
+NOTE	pitch-gate-held.3	skip=False reuse=False eligible=True
+STAGE	pitch-gate-held.3	layout.prologue	0.5
+STAGE	pitch-gate-held.3	layout.break	4.9
+NOTE	pitch-gate-held.3	break precomputedLineSizes=False systems=50
+STAGE	pitch-gate-held.3	layout.firstsystem	12.1
+STAGE	pitch-gate-held.3	layout.persystem	1.1
+STAGE	pitch-gate-held.3	layout.extents	0.0
+STAGE	pitch-gate-held.3	layout.prelimannotation	136.5
+STAGE	pitch-gate-held.3	pages.calclineheights	0.0
+NOTE	pitch-gate-held.3	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	pitch-gate-held.3	pages.dp	4.5
+STAGE	pitch-gate-held.3	layout.pages	53.6
+STAGE	pitch-gate-held.3	layout.loosechain	0.0
+STAGE	pitch-gate-held.3	layout.spanners	102.6
+STAGE	pitch-gate-held.3	layout.annotationctx	5.2
+STAGE	pitch-gate-held.3	layout.annotationpass	7.1
+STAGE	pitch-gate-held.3	layout.voicecollisions	0.0
+STAGE	pitch-gate-held.3	layout.finalize	0.0
+STAGE	pitch-gate-held.3	compile.layout	345.3
+STAGE	pitch-gate-held.3	compile.render	22.4
+STAGE	pitch-gate-held.4	compile.collect	42.2
+STAGE	pitch-gate-held.4	compile.contentkey	5.2
+STAGE	pitch-gate-held.4	compile.springs	61.2
+STAGE	pitch-gate-held.4	compile.gate	0.1
+NOTE	pitch-gate-held.4	skip=True reuse=False eligible=True
+STAGE	pitch-gate-held.4	layout.prologue	0.4
+STAGE	pitch-gate-held.4	layout.break	0.1
+NOTE	pitch-gate-held.4	break precomputedLineSizes=True systems=50
+STAGE	pitch-gate-held.4	layout.firstsystem	9.5
+STAGE	pitch-gate-held.4	layout.persystem	1.2
+STAGE	pitch-gate-held.4	layout.extents	0.0
+STAGE	pitch-gate-held.4	layout.prelimannotation	174.1
+STAGE	pitch-gate-held.4	pages.calclineheights	0.0
+NOTE	pitch-gate-held.4	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	pitch-gate-held.4	pages.dp	5.5
+STAGE	pitch-gate-held.4	layout.pages	47.2
+STAGE	pitch-gate-held.4	layout.loosechain	0.0
+STAGE	pitch-gate-held.4	layout.spanners	119.8
+STAGE	pitch-gate-held.4	layout.annotationctx	7.9
+STAGE	pitch-gate-held.4	layout.annotationpass	5.8
+STAGE	pitch-gate-held.4	layout.voicecollisions	0.0
+STAGE	pitch-gate-held.4	layout.finalize	0.0
+STAGE	pitch-gate-held.4	compile.layout	393.1
+STAGE	pitch-gate-held.4	compile.render	32.1
+STAGE	-	compile.collect	82.1
+STAGE	-	compile.contentkey	11.6
+STAGE	-	compile.springs	103.7
+STAGE	-	compile.gate	0.0
+NOTE	-	skip=False reuse=False eligible=True
+STAGE	-	layout.prologue	0.5
+STAGE	-	layout.break	11.0
+NOTE	-	break precomputedLineSizes=False systems=50
+STAGE	-	layout.firstsystem	23.9
+STAGE	-	layout.persystem	1039.6
+STAGE	-	layout.extents	0.0
+STAGE	-	layout.prelimannotation	131.4
+STAGE	-	pages.calclineheights	0.0
+NOTE	-	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	-	pages.dp	5.9
+STAGE	-	layout.pages	65.8
+STAGE	-	layout.loosechain	0.0
+STAGE	-	layout.spanners	116.5
+STAGE	-	layout.annotationctx	4.6
+STAGE	-	layout.annotationpass	5.3
+STAGE	-	layout.voicecollisions	0.0
+STAGE	-	layout.finalize	0.0
+STAGE	-	compile.layout	1427.5
+STAGE	-	compile.render	30.9
+STAGE	-	compile.collect	53.1
+STAGE	-	compile.contentkey	9.5
+STAGE	-	compile.springs	76.2
+STAGE	-	compile.gate	0.1
+NOTE	-	skip=True reuse=True eligible=True
+STAGE	-	compile.layout	1.6
+STAGE	-	compile.render	40.4
+STAGE	accidental-gate-moved.warm	compile.collect	68.4
+STAGE	accidental-gate-moved.warm	compile.contentkey	9.1
+STAGE	accidental-gate-moved.warm	compile.springs	75.0
+STAGE	accidental-gate-moved.warm	compile.gate	0.0
+NOTE	accidental-gate-moved.warm	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.warm	layout.prologue	0.5
+STAGE	accidental-gate-moved.warm	layout.break	6.7
+NOTE	accidental-gate-moved.warm	break precomputedLineSizes=False systems=50
+STAGE	accidental-gate-moved.warm	layout.firstsystem	32.6
+STAGE	accidental-gate-moved.warm	layout.persystem	10.4
+STAGE	accidental-gate-moved.warm	layout.extents	0.0
+STAGE	accidental-gate-moved.warm	layout.prelimannotation	142.7
+STAGE	accidental-gate-moved.warm	pages.calclineheights	0.0
+NOTE	accidental-gate-moved.warm	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	accidental-gate-moved.warm	pages.dp	4.8
+STAGE	accidental-gate-moved.warm	layout.pages	51.5
+STAGE	accidental-gate-moved.warm	layout.loosechain	0.0
+STAGE	accidental-gate-moved.warm	layout.spanners	116.7
+STAGE	accidental-gate-moved.warm	layout.annotationctx	7.2
+STAGE	accidental-gate-moved.warm	layout.annotationpass	7.8
+STAGE	accidental-gate-moved.warm	layout.voicecollisions	0.0
+STAGE	accidental-gate-moved.warm	layout.finalize	0.0
+STAGE	accidental-gate-moved.warm	compile.layout	409.9
+STAGE	accidental-gate-moved.warm	compile.render	38.7
+STAGE	accidental-gate-moved.0	compile.collect	57.8
+STAGE	accidental-gate-moved.0	compile.contentkey	8.9
+STAGE	accidental-gate-moved.0	compile.springs	66.2
+STAGE	accidental-gate-moved.0	compile.gate	0.0
+NOTE	accidental-gate-moved.0	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.0	layout.prologue	0.4
+STAGE	accidental-gate-moved.0	layout.break	6.9
+NOTE	accidental-gate-moved.0	break precomputedLineSizes=False systems=50
+STAGE	accidental-gate-moved.0	layout.firstsystem	23.5
+STAGE	accidental-gate-moved.0	layout.persystem	8.7
+STAGE	accidental-gate-moved.0	layout.extents	0.0
+STAGE	accidental-gate-moved.0	layout.prelimannotation	134.5
+STAGE	accidental-gate-moved.0	pages.calclineheights	0.0
+NOTE	accidental-gate-moved.0	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	accidental-gate-moved.0	pages.dp	6.4
+STAGE	accidental-gate-moved.0	layout.pages	51.7
+STAGE	accidental-gate-moved.0	layout.loosechain	0.0
+STAGE	accidental-gate-moved.0	layout.spanners	113.7
+STAGE	accidental-gate-moved.0	layout.annotationctx	4.7
+STAGE	accidental-gate-moved.0	layout.annotationpass	5.9
+STAGE	accidental-gate-moved.0	layout.voicecollisions	0.0
+STAGE	accidental-gate-moved.0	layout.finalize	0.0
+STAGE	accidental-gate-moved.0	compile.layout	375.7
+STAGE	accidental-gate-moved.0	compile.render	24.6
+STAGE	accidental-gate-moved.1	compile.collect	45.0
+STAGE	accidental-gate-moved.1	compile.contentkey	5.1
+STAGE	accidental-gate-moved.1	compile.springs	52.7
+STAGE	accidental-gate-moved.1	compile.gate	0.0
+NOTE	accidental-gate-moved.1	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.1	layout.prologue	0.3
+STAGE	accidental-gate-moved.1	layout.break	4.7
+NOTE	accidental-gate-moved.1	break precomputedLineSizes=False systems=50
+STAGE	accidental-gate-moved.1	layout.firstsystem	23.2
+STAGE	accidental-gate-moved.1	layout.persystem	8.6
+STAGE	accidental-gate-moved.1	layout.extents	0.0
+STAGE	accidental-gate-moved.1	layout.prelimannotation	121.9
+STAGE	accidental-gate-moved.1	pages.calclineheights	0.0
+NOTE	accidental-gate-moved.1	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	accidental-gate-moved.1	pages.dp	6.2
+STAGE	accidental-gate-moved.1	layout.pages	53.2
+STAGE	accidental-gate-moved.1	layout.loosechain	0.0
+STAGE	accidental-gate-moved.1	layout.spanners	99.0
+STAGE	accidental-gate-moved.1	layout.annotationctx	9.3
+STAGE	accidental-gate-moved.1	layout.annotationpass	8.5
+STAGE	accidental-gate-moved.1	layout.voicecollisions	0.0
+STAGE	accidental-gate-moved.1	layout.finalize	0.2
+STAGE	accidental-gate-moved.1	compile.layout	363.7
+STAGE	accidental-gate-moved.1	compile.render	34.8
+STAGE	accidental-gate-moved.2	compile.collect	68.0
+STAGE	accidental-gate-moved.2	compile.contentkey	5.8
+STAGE	accidental-gate-moved.2	compile.springs	58.9
+STAGE	accidental-gate-moved.2	compile.gate	0.0
+NOTE	accidental-gate-moved.2	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.2	layout.prologue	0.6
+STAGE	accidental-gate-moved.2	layout.break	9.2
+NOTE	accidental-gate-moved.2	break precomputedLineSizes=False systems=50
+STAGE	accidental-gate-moved.2	layout.firstsystem	23.6
+STAGE	accidental-gate-moved.2	layout.persystem	11.5
+STAGE	accidental-gate-moved.2	layout.extents	0.0
+STAGE	accidental-gate-moved.2	layout.prelimannotation	151.1
+STAGE	accidental-gate-moved.2	pages.calclineheights	0.0
+NOTE	accidental-gate-moved.2	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	accidental-gate-moved.2	pages.dp	5.3
+STAGE	accidental-gate-moved.2	layout.pages	59.1
+STAGE	accidental-gate-moved.2	layout.loosechain	0.0
+STAGE	accidental-gate-moved.2	layout.spanners	106.8
+STAGE	accidental-gate-moved.2	layout.annotationctx	5.9
+STAGE	accidental-gate-moved.2	layout.annotationpass	5.5
+STAGE	accidental-gate-moved.2	layout.voicecollisions	0.0
+STAGE	accidental-gate-moved.2	layout.finalize	0.0
+STAGE	accidental-gate-moved.2	compile.layout	403.6
+STAGE	accidental-gate-moved.2	compile.render	34.4
+STAGE	accidental-gate-moved.3	compile.collect	43.9
+STAGE	accidental-gate-moved.3	compile.contentkey	5.4
+STAGE	accidental-gate-moved.3	compile.springs	52.0
+STAGE	accidental-gate-moved.3	compile.gate	0.0
+NOTE	accidental-gate-moved.3	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.3	layout.prologue	0.3
+STAGE	accidental-gate-moved.3	layout.break	4.7
+NOTE	accidental-gate-moved.3	break precomputedLineSizes=False systems=50
+STAGE	accidental-gate-moved.3	layout.firstsystem	21.4
+STAGE	accidental-gate-moved.3	layout.persystem	8.5
+STAGE	accidental-gate-moved.3	layout.extents	0.0
+STAGE	accidental-gate-moved.3	layout.prelimannotation	139.1
+STAGE	accidental-gate-moved.3	pages.calclineheights	0.0
+NOTE	accidental-gate-moved.3	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	accidental-gate-moved.3	pages.dp	6.1
+STAGE	accidental-gate-moved.3	layout.pages	51.2
+STAGE	accidental-gate-moved.3	layout.loosechain	0.0
+STAGE	accidental-gate-moved.3	layout.spanners	121.4
+STAGE	accidental-gate-moved.3	layout.annotationctx	4.9
+STAGE	accidental-gate-moved.3	layout.annotationpass	5.7
+STAGE	accidental-gate-moved.3	layout.voicecollisions	0.0
+STAGE	accidental-gate-moved.3	layout.finalize	0.0
+STAGE	accidental-gate-moved.3	compile.layout	384.6
+STAGE	accidental-gate-moved.3	compile.render	36.1
+STAGE	accidental-gate-moved.4	compile.collect	39.9
+STAGE	accidental-gate-moved.4	compile.contentkey	7.4
+STAGE	accidental-gate-moved.4	compile.springs	54.3
+STAGE	accidental-gate-moved.4	compile.gate	0.0
+NOTE	accidental-gate-moved.4	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.4	layout.prologue	0.4
+STAGE	accidental-gate-moved.4	layout.break	4.5
+NOTE	accidental-gate-moved.4	break precomputedLineSizes=False systems=50
+STAGE	accidental-gate-moved.4	layout.firstsystem	10.8
+STAGE	accidental-gate-moved.4	layout.persystem	1.2
+STAGE	accidental-gate-moved.4	layout.extents	0.0
+STAGE	accidental-gate-moved.4	layout.prelimannotation	141.1
+STAGE	accidental-gate-moved.4	pages.calclineheights	0.0
+NOTE	accidental-gate-moved.4	pagedp n=50 pairs=1275 pLoop=63750 pLoopDead=43523 penalties=1275 appends=22100
+STAGE	accidental-gate-moved.4	pages.dp	7.6
+STAGE	accidental-gate-moved.4	layout.pages	53.2
+STAGE	accidental-gate-moved.4	layout.loosechain	0.0
+STAGE	accidental-gate-moved.4	layout.spanners	95.5
+STAGE	accidental-gate-moved.4	layout.annotationctx	4.7
+STAGE	accidental-gate-moved.4	layout.annotationpass	6.6
+STAGE	accidental-gate-moved.4	layout.voicecollisions	0.0
+STAGE	accidental-gate-moved.4	layout.finalize	0.0
+STAGE	accidental-gate-moved.4	compile.layout	342.1
+STAGE	accidental-gate-moved.4	compile.render	21.2

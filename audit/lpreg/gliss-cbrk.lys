@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/glissando-chord-linebreak.ly の Lily# 訳 (作業 twin)。
+// CLAIM: 和音間の glissando が改行を妨げない (2 段になり・警告無し・gliss は刷られる)。
+// 綴り: 原本 \relative c'' を絶対展開 (LP <c'' e''>=C5E5 → Lily# <c' e'>・d''=D5→d')。
+// 変数 \theNotes は手展開。明示 break (break.lys と同綴り)。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    <c' e'>4 <c' e'>4 <c' e'>4@glissando d'4 | break
+    <c' e'>4 <c' e'>4 <c' e'>4@glissando d'4 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

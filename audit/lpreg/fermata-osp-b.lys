@@ -1,0 +1,16 @@
+// fermata-outside-staff-priority.ly の Lily# 訳・score 2 (trill SCRIPT)。
+// LP: \ottava #1 g''2->\fermata\trill \ottava #0 r
+// 主張: trill script (priority 無し=seed) の上に fermata、その上に ottava。
+
+part melody
+
+section A {
+  melody {
+    g''2@ottava@accent@fermata@trill r2@loco |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

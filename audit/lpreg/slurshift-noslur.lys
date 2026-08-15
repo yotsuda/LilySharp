@@ -1,0 +1,15 @@
+// slurshift の slur 無し対照
+octave absolute
+
+part melody
+
+section A {
+  melody {
+    c'2 tuplet 3/2 { g4 e c } |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

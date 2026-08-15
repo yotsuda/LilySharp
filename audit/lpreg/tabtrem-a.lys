@@ -1,0 +1,15 @@
+// lilypond-src/input/regression/tablature-tremolo.ly 第1 score の Lily# 訳。
+// CLAIM: 既定(数字のみ)の tab に tremolo 印は出ない。梁の太さは Staff と同一。
+// \stemUp は per-note @stemUp。treble_8 部は LP と同綴り。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m {
+    <c e g c' e'>4:16
+    repeat tremolo 4 { c'16@stemUp }
+    repeat tremolo 2 { c16@stemUp d16@stemUp }
+    repeat tremolo 4 { <c@stemUp d>16 } |
+  }
+}
+form main { A }
+score main { staff m tab m as numbers }

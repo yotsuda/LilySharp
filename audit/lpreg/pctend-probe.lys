@@ -1,0 +1,29 @@
+// Twin of input/regression/part-combine-tuplet-end.ly.
+// texidoc: "End tuplets events are sent to the starting context, so even after a switch,
+// a tuplet ends correctly."
+//
+// The switch this book is about: bar 1 is part one alone (part two writes R1) = Solo,
+// bar 2 has both parts on the same g1 = a2. The SECOND tuplet ends exactly at that
+// boundary, so if the end event went to the context the combiner switched TO, the
+// tuplet would never close.
+// What LP engraves (measured, scratch/lpreg/pctend.log): TWO tuplets, each a beamed
+// triplet with an EMPTY bracket extent (bracket-visibility = if-no-beam) and a number
+// "3" over the middle stem, and nothing of either tuplet reaching bar 2.
+//
+// LP `g'` under a bare \relative (reference f = F3) is G4 = Lily# `g`.
+// The manual beams are kept: a [ ] is a beam EVENT in LilyPond and so enters the
+// combiner's span state (same reason as pcglobal-probe.lys).
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { r2 tuplet 3/2 { g8[ g g] } tuplet 3/2 { g[ g g] } | g1 | }
+  vtwo { R1 | g1 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

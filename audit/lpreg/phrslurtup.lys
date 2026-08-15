@@ -1,0 +1,15 @@
+// phrasing-slur-tuplet.ly twin — slur は tuplet 番号と衝突しない。
+// 綴り: LP relative c''=C5 → Lily# 絶対 c'。phrasing slur → plain slur 両側置換。
+// \voiceOne = voice { } { } span の第1分岐 (第2分岐は全 spacer)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { voice { tuplet 3/2 { c'8( b c' } a2.) | } { s1 | } }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

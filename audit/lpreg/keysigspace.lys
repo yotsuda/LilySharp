@@ -1,0 +1,22 @@
+// key-signature-space.ly twin — key signature の横スペース (初期 4♭・中間 5♯)。
+// 綴り: Lily# f = LP f'。\voiceOne = per-note @stemUp (Lily# の voice span は
+// 2 声用・単声の向き強制は per-note)。\bar "||" = ||。R1 = 全休符。
+octave absolute
+time 4/4
+key f minor
+
+part vone { }
+part vtwo { }
+
+section Main {
+  vone {
+    f4@stemUp f@stemUp f@stemUp f@stemUp |
+    key b major
+    e'8@stemUp e'@stemUp e'4@stemUp e'2@stemUp |
+  }
+  vtwo { R1 || R1 | }
+}
+
+form main { ~Main }
+
+score main { staff ~vone staff ~vtwo }

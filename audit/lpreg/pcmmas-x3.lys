@@ -1,0 +1,14 @@
+// Isolation 3: the same R1*2, but NOT at the start of the section — the shape the known
+// -good fixtures use (test/mmr-grandstaff-both-rest.lys writes `c4 d e f | R1*4 | …`).
+octave absolute
+time 4/4
+
+part pa { clef treble }
+
+section A {
+  pa { c4 d e f | R1*2 | c1 | }
+}
+
+form main { ~A }
+
+score main { staff pa }

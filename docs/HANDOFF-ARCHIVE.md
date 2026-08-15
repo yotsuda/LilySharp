@@ -689,7 +689,7 @@ staff-local 枠。⇒ **`RunPreliminaryAnnotationPass` が `placed.StaffSpanners
   （66/12/18）のちょうど半分**＝final 側は 2026-08-04 の room carry で救済済みで、これが
   prelim 側の返済。**ms は第2便（⑷）で取った。**
 - **⑷（第2便・ユーザーが窓を許可・計器は第143型 StageClock を組み直し全 revert 済み・
-  生データ `scratch\stagebench-159.txt`・Release・edit@0.50・床=n14 min・A/B同一窓・
+  生データ `audit\perf\stagebench-159.txt`・Release・edit@0.50・床=n14 min・A/B同一窓・
   対照B=prelim に空表＝修正前挙動の再現）**:
   **annpass prelim 側床 22.8→14.3/16.7・62.1→39.8/38.8・19.3→7.5/7.3
   （plain/fingbeam/v2bow・B→A/A2）＝実体は pann.stackabove 14.7→5.5／36.0→14.9／
@@ -758,7 +758,7 @@ staff-local 枠。⇒ **`RunPreliminaryAnnotationPass` が `placed.StaffSpanners
 - **⑶（第3便・ユーザーの静かな窓で実施・計器は revert 済み＝commit 無し）打鍵と cold の
   段内訳を取り直した**（第149 の StageClock の形＝同じ配線図・EditKeystrokeBench プロトコル・
   warmup 2 / n=14 交互 / 床=各段の n14 min・編集位置 3 点・Release。生データ＝逐語で
-  `scratch\stagebench-158.txt`・untracked）。**第149 の表は予告どおり大きく stale だった**——
+  `audit\perf\stagebench-158.txt`・untracked）。**第149 の表は予告どおり大きく stale だった**——
   打鍵床（edit@0.50）plain 348.8→**105.0**・fingbeam 679.3→**235.2**・v2bow 369.2→**163.5**
   （⚠️ 別日比較は §7.9 の注意つき＝主張は「今日の中の順位」だけ）。**新順位は▶の★★に反映**。
   要点: **打鍵首位は annpass に交代・旧首位 collect は 7〜29 ms に陥落**（splice＋green 化＋
@@ -767,7 +767,7 @@ staff-local 枠。⇒ **`RunPreliminaryAnnotationPass` が `placed.StaffSpanners
   （char 13301）に落ちた＝実質 2 点。⚠️ Release ビルドは既存の CS1570（XML doc）警告族を
   出す（私の変更由来ではない——未編集の SpacingRules 等にも出る・Debug では非表示）。
   **第2切片＝annpass の内訳も同じ窓で割った**（`pann.*`/`fann.*` の副段・生データ
-  `scratch\stagebench-158b.txt`・打鍵床は第1切片と整合＝plain 109.5/fingbeam 234.8/
+  `audit\perf\stagebench-158b.txt`・打鍵床は第1切片と整合＝plain 109.5/fingbeam 234.8/
   v2bow 164.3）: **支配項は全冊で `OutsideStaffStacker.StackAboveStaff`**（prelim+final の床
   plain 14.5+3.8 / fingbeam 35.9+13.6 / v2bow 16.4+5.5 ms）、**第2項は fingbeam だけの
   fingscripts**（`ComputeFingeringIslands`＋`CalculateWithFingerings`＋script skyline・
@@ -1365,7 +1365,7 @@ commit していない）**——第147〜148 の引き継ぎ指示どおり打�
   配線図そのまま・**compile.spec（FindFirst）だけ今回から別行**＝全冊 0.0〜0.1 ms で第144 の
   修理を確認）＋ EditKeystrokeBench と同じプロトコルの一時ベンチ（warmup 2・n=14 交互編集・
   段ごとの床＝各段の n14 min）を**編集位置 3 点（本文長の 10%/50%/90%）**で。Release・
-  warm プロセス。生データは `scratch\stagebench-149.txt`（untracked・逐語・ラベルの読み方も冒頭に）。
+  warm プロセス。生データは `audit\perf\stagebench-149.txt`（untracked・逐語・ラベルの読み方も冒頭に）。
   ⚠️ 段の床は交互 2 面（編集側／復帰側＝identity）込みの min なので **collect の床は「安い側」**。
   編集位置依存は弱かった（plain collect 39.1〜49.9 / fingbeam 157.9〜168.5 ms）＝**collect の
   残りは窓幅ではなく splice の採用コピー＋score assembly 側に居る**（内訳は未分割——
@@ -1577,7 +1577,7 @@ suite 4398 passed / 0 failed / 4 skipped（+3＝網）・snapshot 0 動**。
 （Release 打鍵床・fingbeam1k: walk ~287〜328 のうち process ~261〜287＝**ncoll**
 （CollectDynamics/Articulations/FiguredBass/ChordNames/CrossStaff）**129〜137**・
 **ncreate**（CreateChordItem）**59〜61**・dispatch/builder 残差 ~60・gather（flat list 構築）~14。
-plain walk ~23〜28 / v2bow ~6〜9 ms。生データ `scratch\stagebench-145.txt`・計器は commit していない）。
+plain walk ~23〜28 / v2bow ~6〜9 ms。生データ `audit\perf\stagebench-145.txt`・計器は commit していない）。
 **冗長な全書走査は残り 3 site だけで、全部この便で修理した**（出力同一・証明 3 点セット実施・
 commit message に記録）: ⑴ ProcessSection の section 直下 override 探索——
 `child.Parent == section` フィルタ＝直接子検査そのものなので `ChildNodes` 化は恒等
@@ -1595,7 +1595,7 @@ commit message に記録）: ⑴ ProcessSection の section 直下 override 探�
 - **計器の配線（第144 の CollectClock に足した下位段・commit していない）**: walk＝CollectMeasures /
   ps＝ProcessSection / secover・discover・canon＝ProcessSection の 3 走査 / gather＝
   ProcessMusicContainer の flat list 構築 / process＝processNodes / peek＝PeekPastAttachedMarks /
-  nscan・ncreate・ncoll＝Note/Chord ケースの 3 分割（定義の逐語は `scratch\stagebench-145.txt` 冒頭）。
+  nscan・ncreate・ncoll＝Note/Chord ケースの 3 分割（定義の逐語は `audit\perf\stagebench-145.txt` 冒頭）。
 - ★★★ **設計メモの訂正（⒭ collector 本体の memo。第144 メモ ⑴ の鍵は半分不成立と実測——
   第146 の checkpoint/resume 装置はこの訂正版に基づく）**:
   ⑴ **green 参照同一性は鍵の本体にならない**。採用はトップレベル項目単位のみ
@@ -1707,7 +1707,7 @@ count 点 106 / 非ゼロ 2（全部不動・§0 の数え方で再測）**・**
 - **形**: 第136/141/142 と同じ StageClock 型の一時計器（`IncrementalCompiler` の compile.* ＋
   `LayoutEngine.Layout` の layout.* ＋ prelim 下位段）＋ `EditKeystrokeBench` と同じ編集
   プロトコルの一時ベンチ（warmup 2・n=14 交互編集・**段ごとの床**＝各段の n14 min）。
-  **Release・warm プロセス**。生データは `scratch\stagebench-143b.txt`（untracked・逐語）。
+  **Release・warm プロセス**。生データは `audit\perf\stagebench-143b.txt`（untracked・逐語）。
   ⚠️ ★ **cold は JIT を先に捨てないと測れない**（実測: 使い捨て compiler で全パイプラインを
   一度温めないと、プロセス最初の 1 冊の cold に JIT が ~4.3 秒混ざる——plain1k cold が
   温め無し 6218.5 → 温め後 1883.6 ms）。「cold」＝**warm プロセスで新しい文書の初回 layout**
@@ -3232,7 +3232,7 @@ BAR 無しで読むと**全部の MMR を 1 小節後ろに置く**。
 **未 push あり・push はしていない**（ユーザー判断待ち）。
 
 ★★★ **第1便 = 汎用欠陥**（`89816a10`）。LP の MMR は **`\compressMMRests` が N 小節イベントを
-圧縮するだけ**で、別々に書かれた休符を**結合しない**。実測（`scratch\lpreg\pcmsh-r1.log` を再読して裏取り）:
+圧縮するだけ**で、別々に書かれた休符を**結合しない**。実測（`audit\lpreg\pcmsh-r1.log` を再読して裏取り）:
 **`R1 | R1 | R1` = 3 本（bars=1・MMNUM 無し）／`R1*3` = 1 本（bars=3・MMNUM "3"）**。
 Lily# は前者を 1 本に畳んでいた。root = `OpensNewRun` が**先頭の clef/key/time 変化しか見ておらず**、
 モデルにも印が無い（`MusicWalk` が**同一コピーを N 個**置く）。
@@ -3349,7 +3349,7 @@ skip した 8 冊は、第126 で `combinedStaff` が入った時点で**札が 
 （`SlotEntry`・`Materialise`・`SpacerDurations` 新設）。LP は 5 つの文脈が共通の時計で走るので
 この段が要らない——**Lily# の声部は時価の列なので、沈黙を書き下す必要がある**、が移植の理屈。
 
-★★ **照合 = LP の grob dump と 1 対 1**（`scratch\lpreg\pcsil-{a,b,c}.ly` 対 `pcsil-*-probe.lys`・
+★★ **照合 = LP の grob dump と 1 対 1**（`audit\lpreg\pcsil-{a,b,c}.ly` 対 `pcsil-*-probe.lys`・
 どちらも譜中心線からの staff space）:
 - **score 1 = 6 列・休符 8 個・位置全一致**（`+2/-2 / -2 / 0 / +2/-2 / +2 / +1`）。
   **merge 2 つ**（`r2` 対 `r2`・`r1` 対 `r1`）と**非 merge 2 つ**（`r4` 対 `r8`・`r8` 対 `r4`）が
@@ -3472,7 +3472,7 @@ root = `MultiMeasureRestEngraver.FindRuns` の run 境界が**和音記号**と*
   追加は**アイテム 1 個につき型判定 1 回**、`R…*N` のときだけ `N-1` 回の append。
 
 ★★★ **第6便 = perf 監査 round 28（ユーザー問「プレビューの更新を劣化させないか」）= 実退行なし・
-数えた段階で違反 1 を発見して修正**（`scratch\lpreg\perf-ab28.ps1`・base = `2222418d` worktree
+数えた段階で違反 1 を発見して修正**（`audit\lpreg\perf-ab28.ps1`・base = `2222418d` worktree
 `C:\MyProj\LilySharp-perfbase-2222` 残置・median-of-5 両順）。
 ★ **まず数えた**（§5.3）——3 つの変更の届く範囲は違う:
 ⑴ `PartCombiner`（onset＋`Materialise`）は **`PartCombiner.Combine` の中だけ**＝`combinedStaff` の無い楽譜には
@@ -3537,7 +3537,7 @@ probe 残置（第127）: `pcsil-{a,b,c}.ly`（LP・3 score を 1 冊ずつ）�
 
 ★★★ **前セッションの見積もりの数が 3 つとも違っていた（実測で訂正）**。引継ぎは
 「stem 24→16・glyph 24→18・text 1→4」と書いていたが、**probe を grob 単位で dump したら
-stem 12・inked head 16・text 3**（`scratch\lpreg\pcdump.ily` → `pcdump.log`）。
+stem 12・inked head 16・text 3**（`audit\lpreg\pcdump.ily` → `pcdump.log`）。
 出所は **SVG の要素を数えた**こと（LP の `<rect>` には小節線が・`<path>` には clef と
 時値記号が混じる）。⇒ ★★ **家訓の新例**: **engine の出力を「要素の数」で比べるなら、
 その要素が何かを 1 回 dump して確かめる**（§5.3 の「推論せず測る」の計数版）。
@@ -3553,7 +3553,7 @@ stem 12・inked head 16・text 3**（`scratch\lpreg\pcdump.ily` → `pcdump.log`
 守っていた**（`Analyze_DifferentNotes_ReturnsApart` が 6 度で apart を要求）。
 **テストごと差し替えた**（§5.4 の「テストを実測に合わせる」）。
 
-★★ **照合＝ LP の dump と 1 対 1**（`scratch\lpreg\pcomb-probe.lys` 対 `pcombine-lp.ly`）:
+★★ **照合＝ LP の dump と 1 対 1**（`audit\lpreg\pcomb-probe.lys` 対 `pcombine-lp.ly`）:
 **符頭 16 個の staff-position が全一致**（`-6 -5 -4 -3 / -2 -2 / -9 -9 / (-9,-6)(-9,-4)(-9,-2)(-9,-4)`）・
 **符尾 12 本・全て UP**（LP も dir=1 が 12 本）・**ラベル 3 個が同じ順**。
 観測者 `CombinedStaffTests`（12 本・y から staff-position へ 1 回の換算で比較＝snapshot ではない）。
@@ -3596,7 +3596,7 @@ renderer 他 8 か所が読む `VoiceDefaults.GetDefaultStemUpAt` は**小節粒
 **1 小節の中で apart と chords が混ざる**と非 apart 側も強制されうる。probe は小節境界で
 切り替わるので**今のコーパスでは binding しない**。閉じるのは §2A（予約と描画の統一）の側。
 
-★★ **perf 監査 round 27**（`scratch\lpreg\perf-ab27.ps1`・base = `875d7324` worktree
+★★ **perf 監査 round 27**（`audit\lpreg\perf-ab27.ps1`・base = `875d7324` worktree
 `C:\MyProj\LilySharp-perfbase-8753` 残置・median-of-5 両順）。
 **まず数えた**（§5.3「性能は回数で測る」）——combinedStaff を**使わない**楽譜に足したものは:
 ⑴ `MeasureContentKey.AddStaffIdentity` に `IsDefaultOrEmpty` 判定 1 個（早期 return）。
@@ -3637,7 +3637,7 @@ per-render**（`SvgGenerator.cs:149`）。**per-item のものはゼロ。**
 ★★★ **起票 = `~` を `]` の後ろに書くと Lily# は黙ってタイを落とす**（この便の副産物・**未修正**）。
 LP は post-event の順序を問わないので `f8[ f]~` と書く（`part-combine-global.ly` の字面が
 まさにそれ）。Lily# は **`f8[ f~]` しか受けず、`f8[ f]~` では診断も出ずタイが消える**
-（probe `scratch\lpreg\tiebeam-order.lys`＝2 パートに両綴りを並べた対・**曲線は 1 本しか出ない**）。
+（probe `audit\lpreg\tiebeam-order.lys`＝2 パートに両綴りを並べた対・**曲線は 1 本しか出ない**）。
 ⚠️ **最初この綴りで双子を書いて「移植が chords に畳んでいる」と誤読しかけた**——
 §5.0 の「対の両側が同じ音楽か」の新例で、**今回は engine ではなく*綴りの受理範囲*が対を壊した**。
 ⇒ **選択肢は 2 つ**: ⑴ `]` の後ろの post-event を受ける（LP と同じ）⑵ 受けないなら**診断を出す**。
@@ -3720,7 +3720,7 @@ grep 済＝製品側の合成パースは 2 箇所のみ（他方は `ChordHarmo
 第1便でこれを「起票」と書いたのは不正確。**新規は時価の方**。
 - **⑷ スラー残差を返済**: `<>` 上のスラー印は捨てられていた → 空和音の moment を占める
   アイテムまで持ち越す（`TakeEmptyChordSlurs`）。⚠️ **終端は「`)` が字面で続く音符」では
-  なく次の音符**。**LP オラクルで確定**（2.26.0・`scratch\lpreg\ecslur-{a,b,c}.ly`）:
+  なく次の音符**。**LP オラクルで確定**（2.26.0・`audit\lpreg\ecslur-{a,b,c}.ly`）:
   `r4 e'8( g' <>) c''4` と `r4 e'8( g' c''4)` が**同一曲線**（両方 1.2883→6.1207）・
   `g'` で閉じる形は別物（0.7803→3.5345）。**Lily# もこの恒等を byte 一致で再現**（a≡c）。
 - **⑸ 新規欠陥 = 計量側が `<>` に時価を課していた**（台帳未記録）。正しい 4/4 の
@@ -3745,7 +3745,7 @@ grep 済＝製品側の合成パースは 2 箇所のみ（他方は `ChordHarmo
   `SharedRenderer.Marks.cs:950 DrawPartCombine` の描画・`PartCombineTests` 約20本。
   `LayoutOptions.EnablePartCombine`（既定 false）は**宣言1・読み1・`true` を書く箇所ゼロ**
   ＝ .lys から到達不能・**配線経路を通るテストもゼロ**。
-- **無いもの＝ LP の仕事の本体**: **声部の合体**。LP 実測（`scratch\lpreg\pcombine-{lp,ctl}.ly`・
+- **無いもの＝ LP の仕事の本体**: **声部の合体**。LP 実測（`audit\lpreg\pcombine-{lp,ctl}.ly`・
   同じ音楽を `\partCombine` と `<< \\ >>` で）= **stem 24→16・glyph 24→18・text 1→4**。
   つまり unison 小節は符頭も符尾も 1 つに畳まれ、solo 小節は相手の休符ごと消える。
   Lily# は**二声のまま描いた上にラベルだけ載る**ことになる。
@@ -3772,7 +3772,7 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
 - **照合**: 同じ音楽を「1 パート＋`voice{}{}`」で書いた対照と比べ、**Y は 52 個全一致・
   stem 12 本一致**（＝声部割り当てと符尾方向は正しい）。
 - ⚠️ **開示 = 水平に残差**。第1小節は完全一致、**第2小節から 0.08 → 0.11 で頭打ち**
-  （probe `scratch\lpreg\cond3-{probe,ctl}.lys`）。Y が完全一致なので**小節ばね側**で
+  （probe `audit\lpreg\cond3-{probe,ctl}.lys`）。Y が完全一致なので**小節ばね側**で
   あって声部割り当てではない。**テストでピン済**（`HorizontalSpacingStillDriftsFromTheTwoVoiceSpelling`）。
   ⇒ **起票: 同じ音楽が「1 パート 2 声」と「2 パート condensed」で違う幅になる。**
 - 診断 3 種: **LYS6003**（2 未満＝`grandStaff` の先例が「黙って spec を消して
@@ -3785,7 +3785,7 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
 ★★ **前提が 1 つ崩れた（実測・設計に影響）**: 「声部の並び順が符尾方向を決めるので LP の
 `\partCombineUp`/`Down` に相当する綴りは要らない」は**段②では偽**。LP で
 `<< \partCombineUp \a \b \\ \c >>` から `Up` を外すと**出力が 80 行変わる**
-（`scratch\lpreg\pc3-{up,plain}.ly`）＝合体した組の内部方向が外側スロットの方向を
+（`audit\lpreg\pc3-{up,plain}.ly`）＝合体した組の内部方向が外側スロットの方向を
 上書きしない。⇒ **段② の実装は「スロット方向を能動的に強制する」段が要る**。
 利用者が向きを書く必要は無い（`condensedStaff` 内の位置から導ける）が、**自動では効かない**。
 
@@ -3793,7 +3793,7 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
 ツール穴 1 を自分で出した**:
 - ⚠️⚠️ **私の第2便が LP と食い違っていた**。`<>4`（時価つき空和音）で **`MeasureDurations` は
   既定を据え置く**実装にし、テストでもそう主張していた。**LP 実測で誤り**
-  （`scratch\lpreg\ecdur-p{1,2,3}.ly`・bar check 読み）: **⑴裸 `<>` は何も変えない
+  （`audit\lpreg\ecdur-p{1,2,3}.ly`・bar check 読み）: **⑴裸 `<>` は何も変えない
   ⑵`<>4` も時間は取らない ⑶`<>4` は走行既定を 4 分に更新する**。修正済み（計量側・collect 側の
   両方）。テストは 3 本に分割して LP の 3 事実を別々にピン。
 - ★★★ **出所 = texidoc からの推測**。「occupy no time, and leave the current duration
@@ -3819,7 +3819,7 @@ N パートを **1 段** に載せる score レベルの容器。中身は**裸�
   実測した恒等（a≡c）だけ＝**あの probe を捨てるな**と comment に書いた。
 
 ★★ **第6便 = perf 監査 round 26（ユーザー問「プレビュー更新を劣化させないか」）= 実退行なし**
-（`scratch\lpreg\perf-ab26.ps1`・base = `0bda152b` worktree
+（`audit\lpreg\perf-ab26.ps1`・base = `0bda152b` worktree
 `C:\MyProj\LilySharp-perfbase-0bda152b` 残置・median-of-5 両順）:
 
 | 入力 | base-first | curr-first | hash |
@@ -4173,7 +4173,7 @@ skip 2 + exact 第40 + fixed 第59号**・`83d599d2`・第10便 **自己監査
   実行＝\N の無い普通の和音でも割当。同じ関数の数行上に「Plain loop, not LINQ」の
   家訓コメントが既にあった——**lazy な plain loop（無ければ null のまま＝割当ゼロ）
   に書換**。
-- **A/B round 23**（scratch\lpreg\perf-ab23.ps1・base = b9646b54 worktree
+- **A/B round 23**（audit\lpreg\perf-ab23.ps1・base = b9646b54 worktree
   C:\MyProj\LilySharp-perfbase-b964・残置・median-of-3 両順）:
   chordsemi1k（和音 collect の重い側）**−10.7/−9.3% = 両順 curr が速い＝退行なし**・
   tab300（新設・密 tab: tremolo switch+tie 分岐+行頭 scan の重い側・4分+小節内タイ
@@ -4228,7 +4228,7 @@ skip 2 + exact 第40 + fixed 第59号**・`83d599d2`・第10便 **自己監査
 tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp は tab 未消費）。
 
 ★★★ **第7便 fixed 第58号 tablature.ly**:
-- twin = scratch\lpreg\tabnum{,-lp,-probe,-probe2}。**修理 2 枚**:
+- twin = audit\lpreg\tabnum{,-lp,-probe,-probe2}。**修理 2 枚**:
   ⑴ **Pitch/ChordSyntax.Articulations の型フィルタが StringNumberAnnotationSyntax
   を silent 落とし**——parser は付け、collector は OfType で聞くのに、列挙が
   返さない（和音内 \4 が丸ごと無効。tabdot 本は和音の玉突きで偶然一致していた＝
@@ -4245,7 +4245,7 @@ tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp �
   和音 \N を踏んでいなかった＝silent drop の傍証）。
 
 ★★★ **第5便 fixed 第57号 tablature-tie-behaviour.ly**:
-- 縮約 twin = scratch\lpreg\tabtie-probe{,2,-lp}（f2~f4 e / c'1~ break c'2~ c'2・
+- 縮約 twin = audit\lpreg\tabtie-probe{,2,-lp}（f2~f4 e / c'1~ break c'2~ c'2・
   @repeatTie）。**旧 LS は行跨ぎタイの先も完全非表示**（= LP の
   \hideSplitTiedTabNotes 相当が既定・LP 既定の括弧表示が丸ごと無い。probe で
   2行目が空になって発覚）。
@@ -4265,7 +4265,7 @@ tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp �
   c' の選弦 LP=弦2/f1 vs LS=弦3/f5（固有選弦＝数字自体が違う・批准済）。
 
 ★★ **第3便 fixed 第56号 tablature-grace-notes.ly**:
-- twin = scratch\lpreg\tabgrace.{lys,svg,-lp.ly,-lp.svg}。**枠 2 つ**: ⑴ 原書
+- twin = audit\lpreg\tabgrace.{lys,svg,-lp.ly,-lp.svg}。**枠 2 つ**: ⑴ 原書
   TabStaff は \tabFullNotation 無し＝**数字のみ既定**（LP 出力に tab stem ゼロで発覚）
   → Lily# は full 既定なので **`tab m as numbers` で揃える**（as numbers の初 LP 照合）
   ⑵ \grace \parenthesize は綴りなし＝両側 plain grace 落とし。
@@ -4282,7 +4282,7 @@ tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp �
   （TabNoteHead）はシンボル資格なし**＝同範囲の tab-note-head::print を名指す。
 
 ★★★ **第2便 fixed 第55号 tablature-double-stem-tremolo.ly**:
-- twin = scratch\lpreg\tabdbltrem.{lys,svg,-lp.ly,-lp.svg}（`a2:32` 単体 TabVoice・
+- twin = audit\lpreg\tabdbltrem.{lys,svg,-lp.ly,-lp.svg}（`a2:32` 単体 TabVoice・
   treble_8 部の同綴りで LP a = Lily# a・半小節は pickup 警告のみ）。
   **LP 実測: 二重符幹中心 17.69（2本 0.5 間隔）＝斜線3本の中心X・梯子 0.81・
   最下斜線中心 15.38 = stem端 16.19 − 0.81**。
@@ -4306,7 +4306,7 @@ tab は尊重する・LS の tab 方向は弦基準の固有機能**（@stemUp �
   A/B 省略。
 
 ★ **第1便 tablature-dot-placement.ly = exact**:
-- twin = scratch\lpreg\tabdot.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（\tabFullNotation =
+- twin = audit\lpreg\tabdot.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（\tabFullNotation =
   Lily# は full 既定なので裸の `tab`・treble_8 部は LP と同綴り＝README の罠の節どおり・
   LP 無引数 \relative は先頭 f' が絶対）。
 - **付点の法則が LP と同一（既実装・LILYPOND-REF 済）**: 和音の tab 付点は単一 X 列 =
@@ -4383,7 +4383,7 @@ system-separator-markup が器材そのもの・tablature-chord-repetition-finge
   （ラチェット緑・全緑 4223 で確認）。
 
 ★★★ **第3便 fixed 第54号 stems-clash-between-staves.ly = LP exact**:
-- twin = scratch\lpreg\stclash.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（LP の indent=10cm は
+- twin = audit\lpreg\stclash.{lys,svg,-lp.ly,-lp.svg,-gen.ly}（LP の indent=10cm は
   水平の器材のみ＝省略・時価なしは 4分既定）。**LP = refpoint 距離 10.833 =
   down-stem 6.5 + up-stem 3.333 + staff-staff padding 1.0**。LS 旧 9.55 =
   向き合う stem 端が 0.28 **重なり** = claim 不成立。
@@ -4404,7 +4404,7 @@ system-separator-markup が器材そのもの・tablature-chord-repetition-finge
 - 手順の学び: 9.55 の算術分解（6.5+2.05+1.0）から「下譜 up-stem 不在」と読んだが、
   実体は**上譜の down-stem の X が 1.304 左**＝頭の算術で仮説を立てたら**建物を
   dump して住所まで確かめる**（env ゲート一時 dump→撤去）。
-- ★★ **第4便 perf round 22**（scratch\lpreg\perf-ab22.ps1・base = ca46fc07 worktree
+- ★★ **第4便 perf round 22**（audit\lpreg\perf-ab22.ps1・base = ca46fc07 worktree
   C:\MyProj\LilySharp-perfbase-ca46・残置）: 初回 restpoly1k **+46.5/+10.0 = 両順正 =
   容疑**→数えたら **ComputeVoiceOffsets は全 run で 1 回**（CWT 完璧）＝残る per-item
   コストは空 dict への TryGetValue のみ→**guard（空 dict→null・shift 無し多声譜は
@@ -4508,7 +4508,7 @@ calc_beam 枝 port（下見の open を同セッションで回収）**・`da0ad
   X drift に含まれる）。
 
 ★★★ **第4便 fixed 第53号 stem-pure-height-beamed.ly = 全列 LP exact**:
-- twin = scratch\lpreg\stempure.{lys,svg,-gen.ly,-lp.svg,-lp.log}（\stemUp で
+- twin = audit\lpreg\stempure.{lys,svg,-gen.ly,-lp.svg,-lp.log}（\stemUp で
   A3↔G#5/Bb5 の 2 oct 跨ぎ梁・`!` 強制臨時記号は綴りなし＝両側落とし）。乖離は
   第3列（♭付き Bb5）から一様 −0.67 = **♭が A3 の上向き beamed stem（pure height で
   −6 まで）を避ける項の欠落**——「beamed branch NOT PORTED」と⚠️明記済の札を
@@ -4532,14 +4532,14 @@ calc_beam 枝 port（下見の open を同セッションで回収）**・`da0ad
   notes / beaming / multivoice 族 / timesig 族 / tempo 族 / tab-tuplet-number /
   drum-groove / beamlets-over-rests / fermata-note-spacing / beam-under-staves /
   dot-cross-voice-spacing / showcase 06）。**台帳は全緑 = LP ピン保持**。
-- **perf round 20**（scratch\lpreg\perf-ab20.ps1・base = 87c4c62f worktree 共用）:
+- **perf round 20**（audit\lpreg\perf-ab20.ps1・base = 87c4c62f worktree 共用）:
   slurbeam300（bake+帯拡大の重い側）**−14.9/−2.6%**・plain1k **−9.3/−36.0%**＝
   全部 curr 側が速いか同等＝退行なし（この日の機械はノイズ大・base 側 6.2s〜28.8s）・
   **plain1k hash MATCH**（無 beam 本は出力不変も証明）。
 
 ★★ **第2便 staff-tabstaff-spacing.ly（claim: Staff score と TabStaff score の
 score 間縦間隔は一致）= open・root 釘付け**:
-- twin = scratch\lpreg\sptab.{lys,svg,-lp.ly,-lp.svg,-lp.log}（3 score:
+- twin = audit\lpreg\sptab.{lys,svg,-lp.ly,-lp.svg,-lp.log}（3 score:
   Staff/TabStaff/Staff・piece title は両側落とし）。**LP = score 間 refpoint 距離
   14.0/14.0 = score-system-spacing の basic-distance・ink ギャップ 8.25/8.25 一致 =
   claim 成立**（1頁 = ragged-last-bottom 既定 #t = 自然高さ・ばねは ideal）。
@@ -4594,7 +4594,7 @@ score 間縦間隔は一致）= open・root 釘付け**:
   に開示） ⑵ **loose 連鎖 clique 未対応**（連続 loose 列は各自が右隣から独立に吊るされる・
   LP は clique 歩き・corpus 未踏） ⑶ item spring 系（ChangeColumnItemSpring = 幅見積）は
   loose 非対応＝loose 本の見積が実 layout よりやや広い。
-- **perf round 19**（scratch\lpreg\perf-ab19.ps1・base = 87c4c62f worktree
+- **perf round 19**（audit\lpreg\perf-ab19.ps1・base = 87c4c62f worktree
   C:\MyProj\LilySharp-perfbase-87c4・残置）: hairpingrand1k（多譜=staff-index+
   hang-gate の重い側）**−1.7/−18.1% = 退行なし**・plain1k **+12.0/−18.8 = 符号跨ぎ =
   drift**・**両冊 hash MATCH**（多譜 homophonic と単譜密は出力不変も証明）。
@@ -4643,7 +4643,7 @@ staff-change-autobeam = \change Staff・staff-highlight 族 3 冊 = \staffHighli
 round 18（ユーザー問「プレビューを落とす実装は?」）＝実退行なし**・この handoff と
 同 commit）。
 
-★★ **第9便 perf round 18**（機材 = scratch\lpreg\perf-ab18.ps1・base = ae2afd25
+★★ **第9便 perf round 18**（機材 = audit\lpreg\perf-ab18.ps1・base = ae2afd25
 worktree C:\MyProj\LilySharp-perfbase-ae2a（残置）・既存 perf 本 2 冊）:
 - **restpoly1k（2 声 rest = voiced rest 焼込+skyline 腕の重い側）: +1.8/−12.8% =
   符号跨ぎ = drift・hash MATCH**（voiced 箱はこの本では bind しない＝出力不変も証明）。
@@ -4700,7 +4700,7 @@ standard_breakable_column_spacing の spring・scale = 隣接列間の余地か�
 （not loose 側）は⑴の gate が守る。
 
 ★★ **第6便 spacing-loose-polyphony.ly（state=open・次の focused session 候補）**:
-- twin = scratch\lpreg\sploose.{lys,-gen.ly,svg,-lp.svg}（grandStaff 2 譜・下譜
+- twin = audit\lpreg\sploose.{lys,-gen.ly,svg,-lp.svg}（grandStaff 2 譜・下譜
   fis,,8 cis, clef treble g8 fis,・上譜 tuplet 3/2 { g4 a2 }）。**前 3 列は両譜
   exact**（頭 9.45/12.81・♯ 8.00/11.36 まで一致）・A4 列 LS 14.01 vs LP 14.06。
 - **乖離 = 小節中 clef 列から先が平行 +2.10**: clef LS 15.61 vs LP 14.26（+1.35）・
@@ -4767,7 +4767,7 @@ optical correction は効く——stem 向きが違う対のみ）= fixed 第51�
 
 ★★ **第1便 slur-vertical-skylines.ly（claim: slur は outside-staff-priority の
 十分高い grob を押し上げ過ぎない——^"rit" TextScript 450・trill span 50・\f 250）**:
-- **claim は核ごと成立**（twin = scratch\lpreg\slurvsky.{lys,-gen.ly}・LP 側は
+- **claim は核ごと成立**（twin = audit\lpreg\slurvsky.{lys,-gen.ly}・LP 側は
   `lysc ly` の出力 + ^"rit" 手復元＝exporter の **@text drop 穴**を再確認・warning は
   出る）: slur 3 本の端点・小節線列・音列・stem すべて LP と 2 桁一致。
   tr **−2.55**・波 **−3.15**・f **+5.81**（LP 5.842）＝全部五線近傍で、slur 頂点
@@ -4800,7 +4800,7 @@ slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の�
 census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）＋
 C:\MyProj\LilySharp-perfbase-0c63（第118 残置）。
-probe 残置: **scratch\lpreg\slurvsky.{lys,svg,-gen.ly,-lp.svg,-lp.log}＋
+probe 残置: **audit\lpreg\slurvsky.{lys,svg,-gen.ly,-lp.svg,-lp.log}＋
 extract-slurvsky-lp.ps1・spacc-rest.*・spacc-stretch.*・spacc-corr{,-noacc}.*・
 sploose.*（第6便 open の照合材）
 （第119 の双子・観測者の照合材）**＋第118 以前の
@@ -4821,7 +4821,7 @@ LP exact = fixed 第48号**・`9181a932`・第6便 **自己監査（ユーザー
 （ユーザー問「プレビューを落とす実装は?」）＝机上検出 2 件を修理→A/B で
 残 +8-10% は「LP と同じ仕事の形」判定**・この handoff と同 commit）。
 
-★★ **第7便 perf round 17**（機材 = scratch\lpreg\perf-ab17.ps1・base = 0c63deac
+★★ **第7便 perf round 17**（機材 = audit\lpreg\perf-ab17.ps1・base = 0c63deac
 worktree C:\MyProj\LilySharp-perfbase-0c63（残置）・perf-{slurtuplet300,
 tuplet300,slurtupletsep300}.lys 新造・対照 = 既存 slurbeam300）:
 - **机上検出→修理⑴**: CalculateSlope の **MemberBeam 二重呼び**（stem 読みと
@@ -4912,7 +4912,7 @@ TPS/TNB と同じ番号 half-ink スライバ族「do NOT fit here」・台帳 w
   （「line range but no symbol」の基線 742 を超えない）。
 
 ★★★ **第2便 slur-shift-region.ly（state=open）= 乖離は独立に 2 つ**（双子
-scratch\lpreg\slurshift{,-noslur}.{ly,lys,svg} 残置・slur 有無で両エンジンとも
+audit\lpreg\slurshift{,-noslur}.{ly,lys,svg} 残置・slur 有無で両エンジンとも
 bracket 不変を確認済）:
 - **⑴ bracket 傾き規則**: LP calc_position_and_height の no-beam 枝は音勾配で
   傾けない——graphical_dy = **bound 列 extent ∪ (staff ink 2.05 + staff-padding
@@ -4929,7 +4929,7 @@ bracket 不変を確認済）:
   **LP 恒等は +0.046261 で反証**（束縛 g' が span 中腹に来て slope 越しに高く着地）
   ——**この非対称の再現が port の検算器**。LS は両冊 **8.730000000 九桁恒等**
   （5.6+線半厚 0.08+2.05+1・鏡像対称な自前式）＝residual +1.552/+1.506。
-  ★★ **束縛 x は第3便で六桁分解済**（scratch\lpreg\tbs-x.{ly,err} 残置・
+  ★★ **束縛 x は第3便で六桁分解済**（audit\lpreg\tbs-x.{ly,err} 残置・
   after-line-breaking で relx/stem extent を印字）: **点の x = 列 refpoint（頭
   左端）− x0（左 bound stem の左面）＝左 bound 列は負（−1.1742）**・staff 点
   y=2.3 が x=0 と x=span に立つ・offset = max(y_i − dy·x_i/span) + 1.1。
@@ -5007,7 +5007,7 @@ slur-flag / slur-nice は文法宿題（slur 向き強制の綴りなし）の�
 第5便観測者+1 込み・全スイート確認済）・snapshot 第118 は **8 枚**（第4便の
 bracket 平坦化・census 済）・Core (Debug) 0 warning・
 base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
-probe 残置: **scratch\lpreg\slurrest-fig4.lys（fig4 単独・観測者の下見材）・
+probe 残置: **audit\lpreg\slurrest-fig4.lys（fig4 単独・観測者の下見材）・
 slurshift{,-noslur}.{ly,lys,svg}（第2便の双子・port ⑵の照合材）**＋
 第117 以前の slurgrace/slurhcap/slurrest*（-dbg 含む）/mvslur/mls/slurflag/perf-*
 一式（下の第117 の節参照）。
@@ -5027,7 +5027,7 @@ port ＝ 全 4 行の全 rest slur が exact・残差は fig4 の 1 点だけ**�
 **perf 監査 round 16（ユーザー問「プレビューを落とす実装は?」）＝実退行 2 件検出
 → キャッシュ 2 つで返済・残 1 件は分解して起票**・この handoff と同 commit）。
 
-★★★ **第9便 perf round 16**（機材 = scratch\lpreg\perf-ab16.ps1・base = 27dacde7
+★★★ **第9便 perf round 16**（機材 = audit\lpreg\perf-ab16.ps1・base = 27dacde7
 worktree（撤去済）・**round 15 が測っていなかった重い側 3 つ**を新造:
 perf-{slurgrace300,slurbeam300,slurrest300}.lys 残置）:
 - **実退行⑴ = slurgrace300 +36/+47%（両順）**: 被覆 grace の GraceColumns（ばね）
@@ -5094,13 +5094,13 @@ perf-{slurgrace300,slurbeam300,slurrest300}.lys 残置）:
   として acknowledge し、no-stem 枝 (:117-122) が列 extent = rest ink を読む**。
   修理 = rest obstacle（head_=stem_=ink・origin = 全休符のみ 1ss 上・
   X = ink 中心）。⚠️ PureBeamShift 未読（beam 下の rest を slur が跨ぐ本は未踏）。
-- **照合（scratch\lpreg\slurrest.ly 原本 + 行別双子 slurrest-{s,e,q,h}.lys）**:
+- **照合（audit\lpreg\slurrest.ly 原本 + 行別双子 slurrest-{s,e,q,h}.lys）**:
   **向き = 4 行×5 図オール一致**（fig1 DOWN・fig2-4 UP・fig5 DOWN = 既定）＝
   **本の claim の核は成立**。Y は fig1-3 exact（例: h 行 1.54/−4.05/−4.05→−0.55 =
   LP 1.545/−4.045/−4.045→−0.545）・**half 行 fig5（全 rest）= 0.50/0.50 = LP 0.5
   exact**（半休符 ink は middle 上＝base が bind）。
 - **第7便 = 残差⑵の解決（debug-slur-scoring が決めた）**: probe
-  scratch\lpreg\slurrest-dbg.{ly,svg}（`\paper { debug-slur-scoring = ##t }`——
+  audit\lpreg\slurrest-dbg.{ly,svg}（`\paper { debug-slur-scoring = ##t }`——
   **勝者 candidate の demerit 内訳と idx を annotate する**。§6 に無い計器・
   今回初使用）で **全 rest slur の勝者 = idx0 TOTAL=0.00 が 2.55 に居る**＝
   scored climb でなく **base 自体が 2.55**。⇒ rest bound は LP では note-column
@@ -5126,7 +5126,7 @@ perf-{slurgrace300,slurbeam300,slurrest300}.lys 残置）:
 ★★ **第4便 slur-height-capping.ly = exact**（コード変更 0 = 第45号+第46号の機構が
 そのまま当たった追試。claim: 整形は端近くの物を無視＝素の弓のまま・scoring には参加）:
 - 枠: \relative **無引数は f 基準**（c' でない——最初の c は C3）。bass clef・
-  C3↔D4 のジグザグ 8 音 slur ×2。双子 scratch\lpreg\slurhcap.{ly,lys} 残置・
+  C3↔D4 のジグザグ 8 音 slur ×2。双子 audit\lpreg\slurhcap.{ly,lys} 残置・
   頭 position 検分済（+0.5/−3.5/−2.0 が両側一致）。
 - **slur1 = 4 点完全一致**: −3.55/−5.38/−6.12/−4.55 = LP −3.5450/−5.3800/
   −6.1152/−4.5450・X offset 2.26/15.33/span 17.78 = LP 2.2585/15.3293/17.7794。
@@ -5169,7 +5169,7 @@ l_edge/r_edge が列 index でなく grob index になり壊れる）:
   （双子の grace は単独 8 分＝flag） ⑷ LS 単独 grace stem tip −3.98 vs LP −4.2
   （renderer の固定長 regime。今回は 4 点一致に響かなかったが LP は
   length-fraction 0.8 の実 stem）。
-- **LP 照合（scratch\lpreg\slurgrace twin・staff 相対）= 外側 slur 4 点完全一致**:
+- **LP 照合（audit\lpreg\slurgrace twin・staff 相対）= 外側 slur 4 点完全一致**:
   両端 −3.54 = LP −3.5450・C1/C2 −5.02 = LP −5.0225・X span 10.34 = 10.3449・
   indent 1.82 = 1.819。修理前 LS = −1.54/−3.04（base のまま・avoid の fit で
   曲線だけ持ち上がる歪な弓）。grace slur 自体（SharedRenderer.GraceNotes の別
@@ -5178,7 +5178,7 @@ l_edge/r_edge が列 index でなく grob index になり壊れる）:
 返済**——**stem 配管だけだと multivoice-spanners が LP から逃げる**のが出土品:
 - voice2 の下向き slur `g'( e')`（stem down = 両端 slurward）で、新設の stem 項が
   base 候補に /5=6 を課金し、edges（両端 /5 で 6 歩 4.0）の方が安くなって端が
-  3ss 下へ逃げた。**LP 実測（scratch\lpreg\mvslur-probe.ly）= base に留まる**——
+  3ss 下へ逃げた。**LP 実測（audit\lpreg\mvslur-probe.ly）= base に留まる**——
   :738-760 が attachment X を stem 面+0.3 へ動かすので端列 x_（stem 中心）が
   範囲外になり base が無課金になるから。
 - port = 候補ごとに: 候補 Y が stem Y 幅（0.25 widen）内 → X = stem 面 ∓(半厚+0.3)
@@ -5188,7 +5188,7 @@ l_edge/r_edge が列 index でなく grob index になり壊れる）:
   配管（ResolveSlurEdge が beamed=OuterEdge・unbeamed=OutwardTip の正席を読む）。
 - **照合**: multivoice = LP probe と端 Y 完全一致（−1.455/−0.455）・X span 2.15 =
   LP 2.147（control は Δ0.055 = curve gen の既知系）。**multi-line-spanners は
-  双子（scratch\lpreg\mls）で Y 全点一致に改善**: piece1 +0.80/−1.55 =
+  双子（audit\lpreg\mls）で Y 全点一致に改善**: piece1 +0.80/−1.55 =
   LP +0.805/−1.545・C1 −3.10 = −3.088・C2 −5.27 = −5.258・piece2 −2.20/−0.55 =
   LP −2.195/−0.545。**旧 snapshot は +1.68/−1.67 と 0.9 ずれていた＝この本は
   前から LP とずれていて今回の port が直した**（X は spacing regime の既知 drift
@@ -5201,7 +5201,7 @@ l_edge/r_edge が列 index でなく grob index になり壊れる）:
   + span / VoiceTwoSlur_AttachesToItsSlurwardStems_AndStaysAtBase = LP 2 点 +
   span）・引用ラチェット: `get_encompass_infos`（LP に無い綴りだった旧コメント）が
   KnownUnverifiedSymbols から出た。
-★ **第3便 perf A/B round 15**（機材 = scratch\lpreg\perf-ab15.ps1・base = 27dacde7
+★ **第3便 perf A/B round 15**（機材 = audit\lpreg\perf-ab15.ps1・base = 27dacde7
 worktree（撤去済）・Release・交互×両順・中央値 of 3）: **slur300 = −4.0%/+5.9%・
 grace200 = −5.2%/+2.6%・対照 scriptsym1k = +7.1%/−3.0% ＝ 3 つとも符号跨ぎ =
 drift・scriptsym1k の SVG hash base/curr 完全一致**（slur 無し本は挙動不変）。
@@ -5230,7 +5230,7 @@ port 済**＝文法が入ったら追試になる。
 テスト **4211 passed / 0 failed / 4 skipped**（観測者 +4 込み・全スイート確認済）・
 snapshot 第117 は 4 枚（全部 slur path・第1-2便で census 済・第6-7便は 0 枚）・
 Core (Debug) 0 warning・base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
-probe 残置: scratch\lpreg\slurgrace.{ly,lys}・slurhcap.{ly,lys}・
+probe 残置: audit\lpreg\slurgrace.{ly,lys}・slurhcap.{ly,lys}・
 slurrest.{ly,svg}+slurrest-{s,e,q,h}.lys+**slurrest-dbg.{ly,svg}
 （debug-slur-scoring 計器・fig4 分解の再現材）**・mvslur-probe.{ly,svg}・
 mls.{ly,lys→svg}・perf-ab15.ps1・**perf-ab16.ps1 +
@@ -5303,13 +5303,13 @@ perf-{slurgrace300,slurbeam300,slurrest300}.lys（第9便の重い側・grace �
   読み・beamed = BeamLayout・grace 列も）→ ScoreEncompass の stem 枝と EndYFor /
   avoid offsets が自動で食う。grace slur 自体の Δ（始点 Y 0.31・終点 X 0.74）は
   別実装（SharedRenderer.GraceNotes）の regime = 別勘定。
-- twin 残置 scratch\lpreg\slurgrace.{ly,lys}。**focused session で着手のこと**
+- twin 残置 audit\lpreg\slurgrace.{ly,lys}。**focused session で着手のこと**
   （scriptstack1 の 'inside script 棚とも地続き）。
 
 ★★ **第4便 slur-dot-distance.ly = exact**（付点 slur の head 距離は無付点と同じ・
 コード変更 0 = **第45号の再建がそのまま当たった初の追試**）:
 - 枠: \cadenzaOn×2 score → 両側落とし+行ごと拍子合わせの双子 2 対
-  （line1 = 6/4・line2 = **17/8**・scratch\lpreg\slurdist-{a,b}.{ly,lys} 残置）。
+  （line1 = 6/4・line2 = **17/8**・audit\lpreg\slurdist-{a,b}.{ly,lys} 残置）。
 - **無付点側 = slur 4 本×4 点（両端+control）が全部 0.01 以内で完全一致**。
   付点側 = Y 全点 ≤0.06 一致（付点 slur の開始 −3.54 = 無付点と同値 = 主張の核）・
   X は全体 −1.13 drift（17/8 前置幅+dot 列幅 = 既起票 spacing regime。slur 幅自体は
@@ -5349,7 +5349,7 @@ perf-{slurgrace300,slurbeam300,slurrest300}.lys（第9便の重い側・grace �
 - **呼び出し側の欠陥 1 個**: obstacles/extras の X 窓が頭中心 shift **後**の
   segStartX で建ち**左端音柱ごと窓から漏れていた**（左 bound の dot が主張の核なのに
   extras が空）→ shift 前の窓で建てる。
-- **LP 照合（scratch\lpreg\slurdot twin・staff 相対）**: **両端+control 4 点全部
+- **LP 照合（audit\lpreg\slurdot twin・staff 相対）**: **両端+control 4 点全部
   桁一致**——start (9.51,−6.545)=(9.51,−6.54)・C1 (11.08,−6.638)=(11.13,−6.64)・
   C2 (13.36,−4.799)=(13.41,−4.80)・end (13.67,−3.195)=(13.67,−3.19)。残差 =
   control X の 0.05 のみ。
@@ -5368,7 +5368,7 @@ perf-{slurgrace300,slurbeam300,slurrest300}.lys（第9便の重い側・grace �
   一致しない**（`_` は word 文字で \b が立たない）——`slur_head_x_extent_.` で 3 回
   落ちた。名指しは trailing `_` を落として書く。
 
-★ **第3便 perf A/B round 14**: 機材 = scratch\lpreg\perf-ab14.ps1・base = 6e80a05c
+★ **第3便 perf A/B round 14**: 機材 = audit\lpreg\perf-ab14.ps1・base = 6e80a05c
 worktree（撤去済）・Release・交互×両順・中央値 of 5。**重い側 slur300**（毎小節
 slur×2・300 小節）= **−0.2%/+6.6% = 符号跨ぎ = drift**。**対照 scriptsym1k**（slur
 無し 999 小節）= −6.5%/+1.3%・**SVG hash base/curr 完全一致**（挙動不変+仕事同一）。
@@ -5389,7 +5389,7 @@ slur×2・300 小節）= **−0.2%/+6.6% = 符号跨ぎ = drift**。**対照 scr
 slur 向き強制の綴りなし**（LP の `^(`/`_(` 対応物ゼロ・@stemUp はある）= 文法宿題。
 強制なしの核は測定済: **slur 4 点が LP と 0.01 以内完全一致**（素の b8( c) は slur が
 flag の下を通り主張が発火しない＝両側落としでは claim が消える）。probe 残置
-scratch\lpreg\slurflag.{ly,lys}。文法が入れば fixed 候補 = stem attach X 規則
+audit\lpreg\slurflag.{ly,lys}。文法が入れば fixed 候補 = stem attach X 規則
 （第45号開示⑴）の測定本。
 
 plain 322 / 処理済 **257**（fixed **45**・exact **33**・skip 163・open 16・
@@ -5409,7 +5409,7 @@ slur）。**新機構で残差の出所が数字で読めるようになった**
 テスト **4207 passed / 0 failed / 4 skipped**（観測者 +1 込み・全スイート確認済）・
 lp-geometry 台帳 481 点不変・Core (Debug) 0 warning・snapshot 第116 は 13 枚
 （全部 slur path・census 済）・base worktree = C:\MyProj\LilySharp-base
-（cc19cccc・残置）。probe 残置: scratch\lpreg\slurdot.{ly,lys}・perf-slur*.lys・
+（cc19cccc・残置）。probe 残置: audit\lpreg\slurdot.{ly,lys}・perf-slur*.lys・
 perf-sd*.lys・perf-{nodot-slur,dot-noslur}.lys（超線形起票の再現材）。
 
 ## 以下は第115セッションの経緯
@@ -5460,7 +5460,7 @@ perf-sd*.lys・perf-{nodot-slur,dot-noslur}.lys（超線形起票の再現材）
   **8/8 点一致**（下側 stack・c' stem-up・両順とも）——tenuto+accent = −3.83/−4.51
   （LP −3.82/−4.51）・staccato+tenuto = −3.95/−4.43（LP −3.94/−4.43）・X 格子完全一致。
   第43号の priority 表 + stable sort がこの本の主張そのもの。
-- twin 残置: scratch\lpreg\slurav.{ly,lys}・tenpri.{ly,lys}。
+- twin 残置: audit\lpreg\slurav.{ly,lys}・tenpri.{ly,lys}。
 
 ★★★ **第3便 script avoid-slur port**（第114起票「scriptstack1 の e'' slur 起点 stack が
 剛体 +0.73」の返済 = 第44号と同棚の slur 側）:
@@ -5494,9 +5494,9 @@ perf-sd*.lys・perf-{nodot-slur,dot-noslur}.lys（超線形起票の再現材）
   slurred stack 3 点 + inside 不動 + 無 slur 対照）・**snapshot 0 枚**（全スイート
   バイト不変）・引用ラチェット 1 回鳴いた（slur-padding = ハイフン 2 節は名指し不可 =
   第42号の学びと同型→範囲を捨て住所だけに）。
-- probe 残置: scratch\lpreg\slurscript-obs.lys（観測者の値取り）。
+- probe 残置: audit\lpreg\slurscript-obs.lys（観測者の値取り）。
 
-★ **第4便 perf A/B round 13**: 機材 = scratch\lpreg\perf-ab13.ps1・base = f2ada471
+★ **第4便 perf A/B round 13**: 機材 = audit\lpreg\perf-ab13.ps1・base = f2ada471
 worktree（撤去済）。**重い側 slurscript1k**（毎小節 slur×4 accent）: −5.4%/+7.3% =
 **符号反転 = drift ＝劣化なし**。**対照 scriptsym1k**（slur 無し）: **hash 完全一致**・
 時間は +4.4/+10.3・再測 +1.1/+9.0——**本日の機械は hash 同一の仕事が −35%〜+10% に
@@ -5518,7 +5518,7 @@ script 1 本あたり null check 1 個で、この量の説明にならない）
 - ★★ **第2の欠陥 = 和音メンバ script は tie 支持を受けない**: メンバ script は
   **New_fingering_engraver 製**（new-fingering-engraver.cc:144-157 add_script =
   head/stem/flag/和音 head のみ・**tie acknowledger 無し**）。micro-probe
-  （scratch\lpreg\sctten{,2}.ly）が釘付け: `<g-- c>~` のメンバ tenuto は**どちらの頭に
+  （audit\lpreg\sctten{,2}.ly）が釘付け: `<g-- c>~` のメンバ tenuto は**どちらの頭に
   付けても両 bound で −4.83 のまま**・同じ和音の chord-level tenuto は −5.35 へ lift＝
   **エンジン別の split であって tie 向きの filter ではない**。→ collector で
   IsChordMember を立てて gate（editorial/pluck/frame も Script 外なので対象外）。
@@ -5537,11 +5537,11 @@ script 1 本あたり null check 1 個で、この量の説明にならない）
 - 観測者 +1（ArticulationPlacementTests.Scripts_AvoidTies_ButChordMemberScriptsDoNot =
   LP 数字 10 点ピン）・**snapshot 0 枚**（全スイート バイト不変＝corpus fixture に
   タイ×script の対が無い）・台帳 481 点不変。
-- probe 残置: scratch\lpreg\sctchord.{ly,lys}（和音照合・両側 1 system）・sctten.ly／
+- probe 残置: audit\lpreg\sctchord.{ly,lys}（和音照合・両側 1 system）・sctten.ly／
   sctten2.ly（メンバ gate の micro-probe）・scripttie-extract{,-lp}.ps1（SVG から
   script Y を system 割り当て付きで抜く読み器）。
 
-★ **第2便 perf A/B round 12（先回り実測）**: 機材 = scratch\lpreg\perf-ab12.ps1・
+★ **第2便 perf A/B round 12（先回り実測）**: 機材 = audit\lpreg\perf-ab12.ps1・
 base = 2c143080 worktree（撤去済）・Release・交互×両順・中央値 of 5・999 小節 2 冊。
 - **重い側 tiescript1k**（毎音 tie+accent = 毎 script が両 bound を読む）: −13.5%/−12.6%・
   再測 −5.7%/−35.4% = **4 バッチ全て curr が非劣化**。ただし出力構造は同一
@@ -5634,7 +5634,7 @@ base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 - 引用ラチェットの学び: **後節が大文字始まりの語は不適格**（parent-alignment-X は「X」で
   落ちる・grob::always-Y-extent-from-stencil も「Y」で落ちる）——+6 で 1 回落ちた。
 
-★ **第2便 perf A/B round 11（先回り実測）**: 機材 = scratch\lpreg\perf-ab11.ps1・
+★ **第2便 perf A/B round 11（先回り実測）**: 機材 = audit\lpreg\perf-ab11.ps1・
 base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 of 5・999 小節 2 冊。
 - **対照 scriptsym1k**（accent+staccato・mover/finger 無し = 既定コスト側・hash 必須）:
   1 回目 +17.6/+7.4 = 両順正 = 容疑 → **guard（mover 無しは lastOnKey 簿記 skip）→再測
@@ -5655,7 +5655,7 @@ base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 o
 - **LP 機構 = script-engraver.cc:204-222 acknowledge_tie / acknowledge_end_tie**——tie の
   開始/終端 moment の script に **Tie が side-position support として入る**（=「Scripts avoid
   ties」の実体。修理形: ArticulationEngraver の支持に tie profile を配線）。
-- **twin = scratch\lpreg\scripttie.{ly,lys}（両側レンダ済）**。枠: \break 両側落とし・裸時価
+- **twin = audit\lpreg\scripttie.{ly,lys}（両側レンダ済）**。枠: \break 両側落とし・裸時価
   リピート（`4->`）は両側音名明示・`-_`=@portato・和音メンバは `<g@tenuto c@accent>`。
 - **実測（C6=pos8・頭 −4.0・staff 相対 Y-down）**: 無タイ accent = **両エンジン −5.17 完全一致**
   （基線は正しい）。LP はタイ開始側 **−5.43**（+0.26）・終端側 **−5.76〜−5.79**（+0.59〜0.62）
@@ -5678,7 +5678,7 @@ base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 o
 この handoff と同 commit）。
 
 ★★ **第9便 perf A/B round 10（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
-- **機材**: scratch\lpreg\perf-ab10.ps1（+10b）・base = 8a1e92db worktree（撤去済）・Release・
+- **機材**: audit\lpreg\perf-ab10.ps1（+10b）・base = 8a1e92db worktree（撤去済）・Release・
   交互×両順・中央値 of 5・999 小節 2 冊（**chordsemi1k** = tie 無し 4 和音/小節 =
   AddSemiTies/SemiTiesOf の既定コスト側・**hash 必須**／**restpoly1k** = 2 声 rest 毎小節 =
   第42号 collision 走査 + StemCalculator 読みの熱側。rest Y 設計変更なので hash 無し）。
@@ -5716,11 +5716,11 @@ base = b0b4e12b worktree（撤去済）・Release・交互×両順・中央値 o
 ★ **第7便 script-skip = skip（probe 付き・コード変更 0）**: 本の枠が書けない
 （\after music function 綴りなし + \new Dynamics コンテキスト対応物なし + 多 score 頁組み）。
 **部分表面 probe 済＝主張の核は LS で成立**: `s4@accent@marcato` で 2 つの script が
-skip の列に描画・stack（scratch\lpreg\scriptskip-probe.lys）。
+skip の列に描画・stack（audit\lpreg\scriptskip-probe.lys）。
 ⚠️ **次の 2 冊（script-stack-order1・script-tie-collision）は第107 blockB 起票の本命修理**
 （ArticulationEngraver の箱 stack 撤去 → script-column support 連鎖・fermata 族は既存 0.46
 pass が仕上げ）＝**focused session で着手すること**。下見 probe =
-scratch\lpreg\fermata-dot-b-probe.ly（第107 第2便で root 釘付け済・§1 第107 の記録参照）。
+audit\lpreg\fermata-dot-b-probe.ly（第107 第2便で root 釘付け済・§1 第107 の記録参照）。
 stack-order1 は 8 種の script 積み順の統合本＝修理の直接 e2e・tie-collision は
 script-vs-tie の skyline 参加（多重 script の snapshot が動く見込み＝要素 census 前提）。
 
@@ -5777,7 +5777,7 @@ pos −7 の譜外 half-space・g2 が切れた 4 つ目だけ既定 −4 へ復
   bar の後ろにしか立てない。§2A break-align/prefix-width と同棚に起票。
 - **副 defect 起票**: grace×in-music repeat（`|:..:|`）の組で**末尾に幽霊空小節 +1**
   （対照 4 本: grace 無し/repeat 無しでは出ない・grace の位置不問・後続音楽有りでも常に末尾・
-  機構未特定）。probe = scratch\lpreg\voltagrace-ctl{1..4}。
+  機構未特定）。probe = audit\lpreg\voltagrace-ctl{1..4}。
 - **枠の学び**: `\repeat volta` の Lily# 訳は**記号形 `|: … :|`**（パーサ診断 LYS0006 が案内）。
   第112第11便の repeat-volta-body 2 冊の skip 理由「in-music repeat 綴りなし」は不正確
   （記号形は在る）——ただし skip 自体は他根拠で立つ（台帳 notes 訂正済）。
@@ -5844,7 +5844,7 @@ base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 劣化なし・対照 hash 一致**・この handoff と同 commit）。
 
 ★★ **第13便 perf A/B round 9（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
-- **機材**: scratch\lpreg\perf-ab9.ps1・base = 502660d2 worktree（撤去済）・Release・
+- **機材**: audit\lpreg\perf-ab9.ps1・base = 502660d2 worktree（撤去済）・Release・
   交互×両順・中央値 of 5・999 小節 2 冊（**lyrmel1k** = hyphen + __ ~ extender 毎小節 =
   AppendDashes・collector marker 書換・melisma edges・HeldEndInkRight の systems 走査 =
   今セッションの熱側全部。設計変更ありなので hash 無し／**lyrplain1k** = plain 中央揃え歌詞 =
@@ -5890,7 +5890,7 @@ base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
   sub-beat body は「measure が短い」警告 = beat repeat（slash/二重%）未実装・measure % は
   第32号済）・repeat-volta-body 2 冊（in-music \repeat volta 綴りなし）。
 - **起票候補（未確認）**: probe で `c1 @mark("B")`（スペース挟みの注釈）が無警告で消えた
-  疑い（scratch\lpreg\markprobe.lys・A は描画・B が出ない）。silent-drop 系の鉱脈——次に検分。
+  疑い（audit\lpreg\markprobe.lys・A は描画・B が出ない）。silent-drop 系の鉱脈——次に検分。
 - **仕掛かり**: repeat-tie-chords = **起票済「repeatTie 和音 silent drop」の本**（第34号 lv
   member fan の鏡映修理・次の fix 候補筆頭）・repeat-tremolo-chord-rep（probe コンパイル通過
   `repeat tremolo 4 { q16 }`・bare `q16` body は brace 必須 = LP 照合が残り）。
@@ -5968,7 +5968,7 @@ base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
   zero-advance で中点。LS は ‿ の font advance 1.24@2.47 ＝語が約 1ss 太る + 字形 Schola。
   port は歌詞テキストの合成 model（text run + feta 挿入 + 幅推定連動）。
 - **観測者 +2**（LyricTieTests: 変換 + face に ‿ 実在 = 基線下の弧・font 差し替えの番犬）。
-  snapshot 0 枚。twin scratch\lpreg\lytie.*（素の \lyrics ブロック → LS は lyrics row）。
+  snapshot 0 枚。twin audit\lpreg\lytie.*（素の \lyrics ブロック → LS は lyrics row）。
 
 ★★★ **第2便 fixed 第39号 = lyric-melisma-melisma.ly**（melisma 音節は左揃え）:
 - **両側置換**: \melisma/\melismaEnd → slur（Lily# に手動 melisma 綴りなし。LP は slur でも
@@ -6043,7 +6043,7 @@ lyric-extender-right-margin.ly**・`201951cd`・第7便 **lyric-hyphen-grace.ly 
   `Notes.Any(...)`（rod 経路で ImmutableArray の enumerator を毎回 box）→ 素の loop
   ⑵ ItemFactory の per-member lv 検出 LINQ（採集 walk＝プレビュー増分再コンパイルでも
   毎和音走る）→ 素の loop。
-- **機材**: scratch\lpreg\perf-ab8.ps1・base=965f4b39 worktree（撤去済）・Release・
+- **機材**: audit\lpreg\perf-ab8.ps1・base=965f4b39 worktree（撤去済）・Release・
   交互×両順・中央値 of 5・999 小節 2 冊（chordsec1k=吊り2度和音×4/小節＝lv 検出・
   AddSemiTies・main-extent の既定コスト側・**hash 必須**／lyrhyph1k=hyphen 歌詞＝歌詞
   centring+hyphen 経路・第37号で跨ぎ Y が設計変更なので hash 無し）。
@@ -6074,7 +6074,7 @@ lyric-extender-right-margin.ly**・`201951cd`・第7便 **lyric-hyphen-grace.ly 
   既存近似定数は再調整せず札のみ）。
 
 ★★★ **第7便 = lyric-hyphen-grace.ly 下見（修理は次セッションの本命・LyricHyphen print
-regime 丸ごと）**: twin レンダ済（scratch\lpreg\lyhygrace.{ly,lys}・LP svg も残置）。
+regime 丸ごと）**: twin レンダ済（audit\lpreg\lyhygrace.{ly,lys}・LP svg も残置）。
 **乖離 3 系統を実測**（詳細数値は status.json notes）:
 - ⑴ **行頭 stub**: LP は既定で行頭側 piece を刷らない（lyric-hyphen.cc:45-49
   kill-zero-spanned-time——grace 付き行頭が本の主張）が、**LS は全 broken hyphen で行頭に
@@ -6150,14 +6150,14 @@ tied f~f が break を跨ぐ）:
   ⑶ **多譜の R1 が MMR 中央寄せされず音符列 X に描かれる**（LS 12.71/40.31 vs LP 小節中央
   18.49/45.79。単譜は中央寄せが動く）。
 - **起票（新欠陥）**: 単譜 `R1 || R1` で**第2小節が幅ゼロに潰れ、終止線が複縦線の左に
-  重なる**（probe scratch\lpreg\r1probe.lys。フル休符小節の compact spring 疑い）。
+  重なる**（probe audit\lpreg\r1probe.lys。フル休符小節の compact spring 疑い）。
 
 ★★★ **第2便 fixed 第33号 = input-order-alignment.ly**（+ skip 2: horizontal-bracket-tweak =
 Horizontal_bracket_engraver も \tweak も無い false plain・include-identifier = include の
 変数間接が無い（using はリテラル+トップレベル合成のみ））:
 - **主張（吊り2度和音の lyrics/dynamics/text/articulation の X は入力順に依らず main
   notehead 基準）**: 入力順不変は両エンジン成立（両譜全要素同 X）。**LP dump
-  （scratch\lpreg\inporder-dump.ly・after-line-breaking の system 相対 X extent）で規則照合**:
+  （audit\lpreg\inporder-dump.ly・after-line-breaking の system 相対 X extent）で規則照合**:
   f 中心 20.0020 vs main head 中心 20.0019・Script 中心 40.4336=40.4336・LyricText 中心
   9.7861=9.7861・**TextScript は ink 左 29.5290 = 列原点ぴったり**（self/parent-align 共に
   #f = offset 0）。
@@ -6181,7 +6181,7 @@ Horizontal_bracket_engraver も \tweak も無い false plain・include-identifie
 - **主張（percent repeat の譜は RemoveEmptyStaves でも消えない）= exact**: 両系×5譜
   （Staff×2・Tab・Drum・Rhythmic 代用）生存・段内 Y グリッド（譜間 5.0/3.25/3.25/7.0）は
   **LP 桁一致**。生存機構は unfold 済み NoteItem 経由（LP の percent-repeat-interface ∈
-  keepAliveInterfaces に構造的に相当）。**陽性対照** scratch\lpreg\harakiri-percent-ctrl.lys
+  keepAliveInterfaces に構造的に相当）。**陽性対照** audit\lpreg\harakiri-percent-ctrl.lys
   （percent→r1 に変えると system 2 の譜が実際に消える＝主張は空でない）。
 - **修理 = 比較が出した tab 上の %**: DrawPercentRepeats が ⑴ 5線前提の StaffHeight 定数で
   中心化（tab は top+2.0 に刷っていた・正は top+3.75）⑵ staff-space 非スケールだった。
@@ -6227,7 +6227,7 @@ lv-meterchange・census 各便）**・base worktree = C:\MyProj\LilySharp-base
 concurrent max 未移植の札+起票⑷・`72600f80`・第6便 perf A/B round 7＝drift 内・下記⑥）。
 
 ★★ **⑥（第6便）perf A/B round 7（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
-- **機材**: scratch\lpreg\perf-ab7.ps1・base=c1ef0db6 worktree（撤去済）・Release・
+- **機材**: audit\lpreg\perf-ab7.ps1・base=c1ef0db6 worktree（撤去済）・Release・
   交互×両順・中央値 of 5・999 小節 2 冊（hairpingrand1k=両譜 3 小節 hairpin×333＝
   新コードの熱側・hairpinsingle1k=単譜対照＝判定は走り常に false・hash 必須）。
 - **結果**: 熱側 −5.1%/+8.6%・対照 −10.5%/+5.0%＝**両冊とも順序で符号反転＝純 drift**
@@ -6255,7 +6255,7 @@ hara-kiri-percent-repeat.ly——固定で書くと腐る）。第107 起票の 
 
 ★★ **起票（今セッション・修理せず）**:
 - ⑴ **grace{} 内の `~` は無警告 silent drop**（grace→本音 tie 未配線。素の grace{c16~} c1 で
-  曲線ゼロ・acciaccatura で見える曲線は自動 slur の方。probe scratch\lpreg\grace-tie-probe.lys）。
+  曲線ゼロ・acciaccatura で見える曲線は自動 slur の方。probe audit\lpreg\grace-tie-probe.lys）。
   silent drop 系の鉱脈。grace-slashed-no-slur の notes 参照。
 - ⑵ **行頭（prefix 直後）の leading grace の前間隔が LP より 0.1955 狭い**（time 以降の全要素が
   一定 −0.1955。partial と直交 = 対照 grace-partial-ctrl で証明。grace-partial の notes 参照）。
@@ -6295,7 +6295,7 @@ frontier は **glissando-cross-staff.ly の評価**（下記④——cross-staff
 その先は §0 どおり status.json）。第107 起票の §2A workstream は棚のまま。
 
 ★★ **⑥（第6便）perf A/B（ユーザー問「劣化は無いか・プレビュー速度」・実測）**:
-- **機材**: scratch\lpreg\perf-ab6.ps1・base=a9c7b576 worktree（撤去済）・Release・
+- **機材**: audit\lpreg\perf-ab6.ps1・base=a9c7b576 worktree（撤去済）・Release・
   交互×両順・中央値 of 5・1000 小節 4 冊（plain1k=対照+switch 化の全曲オーバーヘッド・
   styled1k=styled 経路・glissnote1k=等仕事 gliss・glisschord1k=新機能 fan+臨時記号）。
 - **結果**: gliss 2 冊は**順序で符号反転**（−9.1/+9.0・+18.9/−5.6）＝純 drift。
@@ -6375,7 +6375,7 @@ frontier は **glissando-cross-staff.ly の評価**（下記④——cross-staff
   predefined-guitar-fretboards.ly が Scheme 満載（\addChordShape #…481 行）+
   FretBoards コンテキスト自体が無い（@frame.xxx は per-note 注釈のみ）。
 - **下見: glissando-accidental.ly**（主張: gliss 線は目標の臨時記号手前で止まる・
-  和音 gliss は同 X 終端・同傾き）: twin scratch\lpreg\gliss-acc.lys（**\relative を
+  和音 gliss は同 X 終端・同傾き）: twin audit\lpreg\gliss-acc.lys（**\relative を
   絶対展開**して簿記回避・11 小節 whole）。**Lily# 実測 = 斜め線 2 本のみ＝和音起点の
   @glissando が無警告 silent drop**（GlissandoDetector.cs:41 が `item is not NoteItem`
   で和音を素通り・8 本消える。chords 族と同じ読者ゼロ鉱脈）。既知開示: 和音終点は
@@ -6391,7 +6391,7 @@ frontier は **glissando-cross-staff.ly の評価**（下記④——cross-staff
 - **枠**: \aikenHeads（f=fa・e=mi）は Lily# に形が無い→**両側 triangle 置換**
   （henze→short/long 両側置換と同型。noteheads.s2triangle＝Lily# @notehead(triangle)
   の同一グリフ）。3 つの `<< \\ >>` は連続束＝多声 1 スパン融合+s spacer・s8 で 4/4 完結。
-  twin scratch\lpreg\flagstem.{ly,lys}・確定 lys は audit\lp-regression\lys。
+  twin audit\lpreg\flagstem.{ly,lys}・確定 lys は audit\lp-regression\lys。
 - **根 = styled head の符尾接続が手書き規則だった**（StemAttachYOffset の
   Triangle→0.5・Cross/Slash→±0.5、X は down=定数 0.065）。LP は **font の LILC
   attachment（up）/attachment-down（down）**を読む（open-type-font.cc:334-369
@@ -6453,7 +6453,7 @@ empty-figures open（行 grid exact・乖離 4 件命名）**・`449ff094`・第
   extender コードは grep で不在確認）⑶ modifier 綴り（`\\`・`/`・`\+`・`\!`・`++`——
   Lily# は s/f/n/# のみ）⑷ Staff 内 figures+`\bassFigureStaffAlignmentDown`。
   **continuo 器材の追加は要ユーザー判断**（dynamics-alignment 族ゲートと同じ棚）。
-- **empty-figures = open（主張 exact）**: twin scratch\lpreg\figbass-empty.{ly,lys}
+- **empty-figures = open（主張 exact）**: twin audit\lpreg\figbass-empty.{ly,lys}
   （**octave absolute** で音高簿記を回避・24 音 check --pitches 一致）。**3 行 grid が
   両側で桁まで一致**（頁 Y 18.98/20.48/21.98・行間 1.5・全 6 列）——`<_ 6 4>` の上段保持・
   `<9 _ 6>` の中段保持も再現。**乖離 4 件**: ⑴ Lily# の `_` は **en dash「–」を印字**
@@ -6488,7 +6488,7 @@ empty-figures open（行 grid exact・乖離 4 件命名）**・`449ff094`・第
 ★★ **②（第2便）fermata-outside-staff-priority.ly = open（序列 exact・残差起票）**:
 - **主張**: trill（script も spanner も）は fermata の下・fermata は ottava の下＝
   priority 50 < 75 < 400 の序列。**両 score とも序列は再現**。
-- **twin**: scratch\lpreg\fermata-osp.ly（LP・2 score 1 頁）+ fermata-osp-{a,b}.lys。
+- **twin**: audit\lpreg\fermata-osp.ly（LP・2 score 1 頁）+ fermata-osp-{a,b}.lys。
   ⚠️ 前提確認済: Lily# の `@ottava` も LP 同様**書面を 1 オクターブ下げる**（g''→g' 描画・
   符尾 up・accent は下側）＝枠一致。
 - **score 1（spanner）は 4 点 exact**: accent −2.67/−2.670・tr 3.00/3.000・wave 3.60/3.600・
@@ -6517,7 +6517,7 @@ empty-figures open（行 grid exact・乖離 4 件命名）**・`449ff094`・第
   ⑵ **OutsideStaffStacker.SeedAboveTrackers の flat box→輪郭**（ScriptSkylines・下側枝と
   同型に）: flat 台地が staff profile の輪郭に max-merge で勝ち、pointwise 項 0.135 を
   食べていた。profile がある所では inert・無い harness 経路で load-bearing（下側と同じ文）。
-- **照合（twin scratch\lpreg\fermata-dot-b.{ly,lys}・origin Y-up）**: LS 4.95／4.90／4.87 vs
+- **照合（twin audit\lpreg\fermata-dot-b.{ly,lys}・origin Y-up）**: LS 4.95／4.90／4.87 vs
   LP fermata 4.9496／short 4.897／long 4.877 ＝ **3 レベル再現**・accent 4.16 不変（LP 4.167）。
   block A 再確認: 4.26／4.19／4.02・dot 行 3.5 不変。
 - **観測者 +1**: ArticulationPlacementTests.FermataFamily_OverAnAccent_ClearsTheAccentOutlinePointwise
@@ -6532,7 +6532,7 @@ empty-figures open（行 grid exact・乖離 4 件命名）**・`449ff094`・第
   `[Console]::OutputEncoding = UTF8` にしてから読む。
 - **引用ラチェットの再演**: `:168-171` を範囲だけで書いて +1 で落ちた→同じ行に
   Side_position_interface::add_support を名指しして通過（第107 の学びどおり）。
-- **perf（先回り A/B・scratch\lpreg\perf-ab5.ps1・Release・交互×両順・中央値）**: 重い側=
+- **perf（先回り A/B・audit\lpreg\perf-ab5.ps1・Release・交互×両順・中央値）**: 重い側=
   scripts1k（accent+staccato 密・全部五線上に突出・1000 小節＝seed 4000×2 pass+連鎖 1000）
   **+1.5％／+5.7%**、**対照 noscripts1k（素の音）が +4.2%／+2.1%**＝対照が同幅で揺れる
   機械なので drift 内・劣化シグナル無し。対照 book の SVG hash は base/curr 一致。
@@ -6580,7 +6580,7 @@ perf A/B（drift 内・boost 罠発見）・第4便 **§2A に「skyline 参加�
 - **観測者 +1**（SkylineStaffSpacingTests.InsideStaffSkyline_CarriesTheDrawnDot…＝
   dotted/plain 摂動対+低音の down 側）。**snapshot 0 枚・台帳 481 点不変・全スイート緑**。
 - **perf（第3便・ユーザー問で A/B 実測）**: 重い側=dots-poly1k（多声 dotted 2000 moment・
-  Release・base a26b4670・scratch\lpreg\perf-ab4.ps1）。**中央値 Δ ＝ +0.6／+3.2／−0.9%
+  Release・base a26b4670・audit\lpreg\perf-ab4.ps1）。**中央値 Δ ＝ +0.6／+3.2／−0.9%
   （3 round・両方向）・対照 hairpin1k（dotted 無し）が +3.8%**＝機械 drift の中。
   **A/B の SVG は両 book とも hash 一致**（同じ仕事の計測・かつこの 2 頁では dot seed は
   出力を 1 バイトも動かさない）。⚠️ この機械の新しい罠: **バッチ先頭の 1 走だけ
@@ -6589,10 +6589,10 @@ perf A/B（drift 内・boost 罠発見）・第4便 **§2A に「skyline 参加�
   worktree は撤去済。追加仕事の桁: dotted item×seed 建て直し回数ぶんの
   Resolve+箱 merge（batch 済）＝2000 dotted 和音の頁で数千個の小 alloc/layout。
 - ★★ **block B（accent 対）実測+root 特定済=open（修理は次便）**: twin
-  scratch\lpreg\fermata-dot-b.{ly,lys}（両側レンダ済）。accent 4.167/4.16 exact。
+  audit\lpreg\fermata-dot-b.{ly,lys}（両側レンダ済）。accent 4.167/4.16 exact。
   **accent 上の fermata 族が LS +0.16..0.18 高い**（LP fermata 4.9496／short 4.897／
   long 4.877＝3 レベル vs LS 5.12／5.06／5.06）。
-  - **LP の束縛は tweak 摂動で証明済**（scratch\lpreg\fermata-dot-b-probe.ly）:
+  - **LP の束縛は tweak 摂動で証明済**（audit\lpreg\fermata-dot-b-probe.ly）:
     `outside-staff-padding #0`→4.8896（**−0.06=0.46−0.40 動く＝pass が束縛**）・
     `padding #0`→不動・`outside-staff-priority ##f`→4.8896（=engraver 答）。
     ⇒ LP 最終値=**accent 輪郭との pointwise 距離+0.46**（d_LP=0.325）。engraver 側は
@@ -6656,7 +6656,7 @@ dashed+text）ので文法が入れば族再開可・`\easyHeadsOn` は対応物
   ⑴ 群 support skyline の再構築（Calculate と二重）⑵ BuildLines の O(lines×dynamics)
   走査。**最悪形＝hairpin1k（1000 小節・全 hairpin が群化）で base b6d6dfb4 比
   −6.9%（4768→4439ms）・dots1k −0.9%＝両方 drift 内、劣化なし**（Release・
-  交互 min-of-5・scratch\lpreg\perf-ab3.ps1。分散大きめ 4.4〜5.4s——min 比較が頼り）。
+  交互 min-of-5・audit\lpreg\perf-ab3.ps1。分散大きめ 4.4〜5.4s——min 比較が頼り）。
   群 pass が per-member Place を置き換えた分の相殺もある。二重 support は
   「劣化が出たら (SourceIndex, system) キーの cache で消せる」形（未実施＝測って
   ゼロだったので発明しない）。perf worktree は撤去済。
@@ -6701,7 +6701,7 @@ dashed+text）ので文法が入れば族再開可・`\easyHeadsOn` は対応物
   BuildLines の連鎖と分断）・HairpinTests の MinimumLength テストは no-stretch
   観測者に書換・**OutsideStaffSeedTests の tie 本は終端を @f→@pp に**（群 quiet が
   深くなり f では tie が効かなくなった——**LP 実測で f 本は tie 有無同 Y・pp 本は
-  0.187 動く**＝本が分離しなくなっただけ。scratch\lpreg\dyngroup-{tie,notie}*）。
+  0.187 動く**＝本が分離しなくなっただけ。audit\lpreg\dyngroup-{tie,notie}*）。
 - **snapshot 6 枚**（01-expressions・03-piano・test/dynamics・multi-staff-hairpins・
   multi-line-spanners・text-annotation）＝**全差分が dynamic <text> と hairpin arm
   <line> の 0.1〜0.9ss 下方移動（群の線への着座）＋頁高の帰結のみ**を git diff の
@@ -6753,7 +6753,7 @@ dynamics-rest-positioning.ly——rest 上の dynamic は第104⑤の rest regim
   stack して台帳 hairpin.page.quiet が Height+outside-staff-padding=1.1266 動く
   （**台帳が欠陥を釘付けた**。導入時に一度踏んで bisect で特定）⑷ 破断左＝
   折れ列右端+1.0（実測 4.365。ReattachSpanX は共有なので hairpin 側で加算）。
-- **照合**: 本の 8 片全部+陽性対照 3 ケース（scratch\lpreg\probe-hairpin-bounds 対）が
+- **照合**: 本の 8 片全部+陽性対照 3 ケース（audit\lpreg\probe-hairpin-bounds 対）が
   LP X と 2 桁一致。観測者: HairpinTests 再ピン+TextBounds_PadOffTheDynamicInk 新設・
   台帳 hairpin.page.quiet（bisect の要）。**snapshot 6 枚＝hairpin 線のみの動きで承認**
   （01-expressions は頁 1.5ss 短縮＝stub 解消の改善向き・03-piano の初回不一致行も
@@ -6761,7 +6761,7 @@ dynamics-rest-positioning.ly——rest 上の dynamic は第104⑤の rest regim
 - **枠の学び**: ⑴ 明示 break の本は **Lily# が全行 justify**——LP twin は ragged-right を
   **書かずに**揃える（README の ragged-right 規約はこの形の本には逆）⑵ 多ページ SVG は
   ページ座標が重なる——**scratch の野良 repro で Y を読まない**（bisect を 2 度誤誘導した。
-  台帳/harness をオラクルにする）。抽出器: scratch\lpreg\extract-hairpin-{lp,ls}.ps1。
+  台帳/harness をオラクルにする）。抽出器: audit\lpreg\extract-hairpin-{lp,ls}.ps1。
 - ⚠️ 起票（残・別 regime）: ⑴ sys3 の spanner Y Δ0.073（hairpin と終端 \p を同一
   DynamicLineSpanner に乗せる項）⑵ 隣接 hairpin 同座（back-to-back）の
   e.center∓pad/3（hairpin.cc:258-259・踏む対なし）。
@@ -6771,7 +6771,7 @@ dynamics-rest-positioning.ly——rest 上の dynamic は第104⑤の rest regim
   多声 dotted 2000 moment は両ラウンド劣化なし（−4〜−8%＝ノイズ。dot pass は多声
   column 限定×2 pass・単声 staff は Voices.Length<2 で素通り）。手順: perf worktree
   （965cd92f・Release・Test-Path 確認）→ 100 小節では起動ノイズに沈む→**1000 小節で
-  描画支配にして交互実行 min 比較**（scratch\lpreg\perf-ab2.ps1）。worktree は撤去済。
+  描画支配にして交互実行 min 比較**（audit\lpreg\perf-ab2.ps1）。worktree は撤去済。
   自己監査（同ユーザー問・`1fc64078`）: 未開示 2 件をコメントへ（dot 縦行の per-item
   据置 vs LP 単一 Dot_configuration・hairpin 左 bound の flip 頭 extent）+case3 の
   同フレーム照合を実測で closure（終端−符頭 = LP −0.944 / LS −0.94）。
@@ -6889,7 +6889,7 @@ frontier の pending 先頭は **dots.ly**（付点法則の統合本・下見�
   flag は define-grobs.scm:1631 inherit-parent-property＝Stem から継承・hasFlag は
   透明でも立てたまま＝tremolo の座は不動。StemTremolo は継承宣言なし＝ink を残す）。
 - **照合**: 符頭5・符尾5・clef・拍子・小節線・譜長の X が LP と 2 桁一致（LP頁x−
-  譜線開始 8.5358＝Lily# x）・符尾 tip Y exact。LP 実測プローブ scratch\lpreg\
+  譜線開始 8.5358＝Lily# x）・符尾 tip Y exact。LP 実測プローブ audit\lpreg\
   probe-hide-ink.ly: **\hideNotes は flag も beam も消す**・no-ledgers も効く。
 - **観測者**: GrobOverrideTests +2（StemTransparent_HidesStemAndFlag_KeepsSpacing＝
   spacing 不変と flag 継承・OnceOverrides_StackOnTheSameNote＝once×2 が同一音に積める）。
@@ -7168,7 +7168,7 @@ auto @chord だけ LP 綴りにするかは**要ユーザー判断**。
   `@notehead.diamond` はパース不能。validator 一覧の dot 表記は MarkName の内部表現）。
   乖離 3 件: ⑴ harmonic の付点抑制なし（LP `\harmonic` は付点を隠す・枠差）
   ⑵ ★★★ **衝突シフト 1.377 vs LP 1.300——第4便の dump で機構確定: advance/ink では
-  なく style-blind**。LP 実測（scratch\lpreg\dump-nc.ily＝NoteColumn の system 相対 X・
+  なく style-blind**。LP 実測（audit\lpreg\dump-nc.ily＝NoteColumn の system 相対 X・
   positioning は translate なので property でなく座標を読む）: up 列 shift 0.000・
   down 列 **+1.3000＝ダイヤ頭の ink 幅そのもの**（fis 頭 extent 0..1.2999・e 頭 0..1.3774）。
   正規化式 `(upRight−downLeft)/wid × wid` の網の中で **Lily# は upRight を
@@ -7197,7 +7197,7 @@ worktree・交互 5 周・ベンチは測定後に両ツリーから削除）**:
 
 ★ **起票（未修正・別 regime）**: ⑴ **slur 端点 X**——Lily# は main 符頭中心から**両端 0.30
 内側**、LP は**両端 +0.07**（スラー全体が右へ 0.07・長さ=頭中心間隔）。**単音の対
-scratch\lpreg\probe-slur-tie-x.{ly,lys} でも同値**＝unison 固有でなく一般 regime
+audit\lpreg\probe-slur-tie-x.{ly,lys} でも同値**＝unison 固有でなく一般 regime
 （Y 端点は両者完全一致 −1.04ss）。slur.cc の attachment 読みの port が要る。
 ⑵ **未知 clef 名は診断なしで Treble にフォールバック**（ParseClefType の `_ =>`＝
 silent-swallow 族の匂い）。⑶ key/time/tempo の bare-music file-default 綻び（③参照）。
@@ -7236,7 +7236,7 @@ base worktree = C:\MyProj\LilySharp-base（cc19cccc・残置）。
 automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本だけ）。
 
 ★★★ **①（第2便）script-Y 族の中身（commit `7863afb0`・snapshot 5 枚再ベース込み）**:
-- **probe**: scratch\lpreg\probe-script-y.{ly,lys,svg}——9 script（marcato↑×4・↓×2・accent・
+- **probe**: audit\lpreg\probe-script-y.{ly,lys,svg}——9 script（marcato↑×4・↓×2・accent・
   staccato・trill）を両測。乖離は **marcato↑（五線内に置ける 2 例）と trill だけ**だった。
 - **marcato Δ0.70 = LILYSHARP 独自の偽ガード**（ArticulationEngraver.QuantizedYPosition 末尾に
   あった「高さ>1.0ss の quantized glyph は五線外へ」）。コメントは「LP の結果を直接再現」と
@@ -7303,7 +7303,7 @@ automatic-polyphony-tabstaff と breathing-sign-accidentals の 2 本だけ）�
 （start score に +Σy×1e-9）で再現。札はコードに有り。LP 側は straddle 系 config が Fl=NaN
 （0/0）になることも観測。飛び道具＝`\layout { debug-beam-scoring = ##t }`+`inspect-quants`
 （score card が SVG の tspan に出る・**空 card=demerit 0 の証明**・inspect は最近傍 config に
-snap。scratch\lpreg\probe-whole-quants*.ly の型）。
+snap。audit\lpreg\probe-whole-quants*.ly の型）。
 
 ⚠️ **相対の罠をまた踏んだ（3 回目）**: 手書き twin——Lily# の裸 music は相対（anchor c=LP c'）。
 **LP `\relative c''' {g64 a}` の g は c から下4度の G→`g''64 a` が要る**（`g'` と書いて 1 オクターブ
@@ -7419,7 +7419,7 @@ stroke 0.08 の既知系統差）。観測者 = `ChordTremoloPairTests` 5 本目
   get_gaps を書いて落ちた→REF を 2 行に分ける）。
 
 ★★★ **⓪′（第4便）frontier の本命 = tremolo 梁の gap 機構の port**（下見済・twin/LP対照/
-実測は scratch\lpreg\chord-tremolo*.{ly,svg} と status notes に全部ある）:
+実測は audit\lpreg\chord-tremolo*.{ly,svg} と status notes に全部ある）:
 - **LP 実体（読解済・全部字面で書ける）**: `Chord_tremolo_engraver::acknowledge_stem`
   （chord-tremolo-engraver.cc:117-140）が flags=log2(tremolo_type)−2・
   **gap_count=min(flags, log2(repeat_count)+1)** を計算し、**`Stem::duration_log != 1`
@@ -7501,7 +7501,7 @@ stroke 0.08 の既知系統差）。観測者 = `ChordTremoloPairTests` 5 本目
 - **和音メンバ @courtesy を新配線**（`<f@courtesy …>`＝LP の f?・accidental.cc:145-146）
   ——accidentals 本の対に必要だった。従来は Note 専用（CreateChordItem は素通し）。
 
-★★ **② corpus 5 本＝全部 exact**（照合は scratch\lpreg\compare-chord-repetition.ps1・
+★★ **② corpus 5 本＝全部 exact**（照合は audit\lpreg\compare-chord-repetition.ps1・
 LP 対照は同 dir の *.ly＝verbatim+paper）:
 - **本体**: 18 符頭 Y 完全一致・staccatissimo Y15.97 一致・beam polygon 3=3・q に
   指番号/強弱/text 無し（両者）。枠差=指番号の置き方（LP は和音上に積む/Lily# は符頭横）。
@@ -7567,7 +7567,7 @@ breathing-sign-accidentals・chord-tremolo・chord-tremolo-whole。数えたら 
 
 ★★★ **① 処理 7 本の内訳**:
 - **chord-name-entry.ly = exact**（10 本目）——\chordmode 27 suffix の実現音を
-  `\displayLilyMusic` で dump（`scratch\lpreg\chord-name-entry-dump.ly`・harness 専用の
+  `\displayLilyMusic` で dump（`audit\lpreg\chord-name-entry-dump.ly`・harness 専用の
   手筋として今後も使える）→ 音塊を手展開した twin で **28/28 小節の符頭段位置+
   臨時記号(♭19/♯4/𝄫1)完全一致**。suffix 網羅照合: **14/28 が registry と一致**
   （単体 `LpEntryRealization_MatchesLilyPond` が dump を釘付け）、残 14 は語彙外
@@ -7590,7 +7590,7 @@ breathing-sign-accidentals・chord-tremolo・chord-tremolo-whole。数えたら 
 - **skip 3**: languages/languages2（**false plain**——include が override 満載＋言語切替
   文法なし）・spanbar（q・\improvisationOn・span-bar stub の 3 重欠落）。
 
-★★ **② 比較器の新しい道具**（scratch\lpreg\ に置いた・再利用可）:
+★★ **② 比較器の新しい道具**（audit\lpreg\ に置いた・再利用可）:
 - **LP SVG の `<a href="textedit://…:line:col">` が grob→ソース位置の台帳**。幾何
   クラスタリング不要で小節/和音単位のグループ化が正確に出る（`lp-extract2.ps1` の型）。
 - Lily# 側は `data-pos` → .lys 行 map で同じことができる（`ls-extract.ps1`）。
@@ -7724,7 +7724,7 @@ nested tuplet の corpus 本が来たら踏まれる——beam-subdivide 系は 
   `ArticulationEngraver:135-138` が**音符右端からの固定オフセット**。⚠️ 注意 2 つ:
   ⑴ 数字は anchor 差で ink 差ではない（エンジン間で bearing が違う）、⑵ 原本 2・6 小節の
   強制ナチュラル e!/g! は LYS4009 で書けず**両側から落として枠を揃えた**
-  （`scratch\lpreg\breathing-sign-accidentals-noforce.ly`。exporter twin は @breath を落とす
+  （`audit\lpreg\breathing-sign-accidentals-noforce.ly`。exporter twin は @breath を落とす
   ——第98便⑸——ので使えない）。）
 
 ★★★ **frontier = breathing-sign-tight-spacing.ly＝同じ breathing-sign 族が連続**。

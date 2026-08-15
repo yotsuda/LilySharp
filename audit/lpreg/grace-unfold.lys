@@ -1,0 +1,28 @@
+// grace-unfold-repeat.ly の Lily# 訳 (twin)。
+// CLAIM: (unfold repeat で入れた) 各小節頭の grace の手前で改行が起きる =
+// 行頭に来た grace は次の行の頭に付く (前の行末に残らない)。
+// \repeat unfold 10 は入力糖衣なので 10 小節書き下しで写す (描画は同一)。
+// 音高 (Lily# 絶対 c = LP c'): LP \relative c' の d8=D4=d・c4=C4=c・d e f。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+    grace { d8 } c4 d e f |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

@@ -1,0 +1,26 @@
+// ⒪ ledger probe VSSC — VSSD with ONLY the slur parens removed (the identity control).
+// Heads at -8 stay under the floor (11.595 < 12), so both engines must read exactly
+// 12.000000: the pair's frame check. HANDOFF §1 ⒪ / §5.0 (the pair, not the point).
+octave absolute
+time 12/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+    break
+    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+  }
+}
+
+form main { ~Main }
+
+score main "VSSC" {
+  staff melody
+}

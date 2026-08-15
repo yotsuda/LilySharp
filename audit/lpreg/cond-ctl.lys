@@ -1,0 +1,16 @@
+// Control: the same two lines written as an ordinary two-voice span in ONE part.
+// condensedStaff must produce the same engraving.
+octave absolute
+time 4/4
+
+part fl { clef treble }
+
+section A {
+  fl {
+    voice { c'4 d' e' f' | g'2 g' | } { e4 f g a | b2 b | }
+  }
+}
+
+form main { ~A }
+
+score main { staff fl }

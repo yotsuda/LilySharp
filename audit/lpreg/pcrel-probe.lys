@@ -1,0 +1,29 @@
+// Twin of input/regression/part-combine-relative.ly (measures 1 and 3 of the book).
+// texidoc: "\partCombine needs to be given pitches in their final octaves, so if \relative is
+// used it must be applied inside \partCombine.  The pitches in \partCombine are unaffected by
+// an outer \relative ... The expected output of this test is three identical measures."
+//
+// ⚠️ THE BOOK'S MIDDLE MEASURE IS OUT OF FRAME, and not because of a missing spelling: in
+// LilyPond \relative is a WRAPPER around music, so there is an inside and an outside of it and
+// the book's point is that the combiner ignores the outside. Lily#'s `octave` is a switch in
+// the stream — every part is relative unless something switches it — so there is no outside for
+// anything to ignore. What CAN be written is the other half, which is also what the reader
+// sees: the absolute spelling and the relative spelling must print the same two measures.
+//
+// LP absolute `e'` = E4 = Lily# `e` (bare); LP's bare \relative anchors on f (F3), which is why
+// the book writes `e'2 f` there and this twin does not: Lily#'s relative anchor is C4, so `e`
+// already means E4. Both measures are E4/F4 over C4/D4 — LilyPond's pos -4/-6 then -3/-5.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { e2 f | octave relative e2 f | }
+  vtwo { c2 d | octave relative c2 d | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

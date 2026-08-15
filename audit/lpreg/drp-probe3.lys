@@ -1,0 +1,6 @@
+octave absolute
+part m { clef treble }
+section S { m { g2 r2@p | } }
+form main { S }
+score main "o" { staff m }
+

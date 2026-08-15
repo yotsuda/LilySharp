@@ -1,0 +1,18 @@
+// volta-bracket-vertical-skylines.ly twin — volta 括弧は下の物体に垂直フィットする。
+// 綴り: LP a''''=A7 → Lily# a'''・d''''=D7 → d'''。\repeat volta 3+\alternative(3枝)
+// → インライン・ボルタ |: … [1.…] :| [2.…] :| [3.…]。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    |: r2 a'''4 r4 | [1. r2 d'''4 r4 | ] :| [2. r2 d'''4 r4 | ] :| [3. r2 d'''4 r4 | ]
+    |: r2 a'''4 r4 | [1. r2 a'''4 r4 | ] :| [2. r2 a'''4 r4 | ] :| [3. r2 a'''4 r4 | ]
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

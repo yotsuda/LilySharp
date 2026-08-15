@@ -1,0 +1,21 @@
+// hairpin bound X の陽性対照 (dynamics-broken-hairpin 便)。3ケース:
+// 1) 素の音開始+小節頭終端 = 符頭左端 / to-barline(前小節線右端-1.0)
+// 2) @p 同座の開始 = 文字右端+1.0
+// 3) 小節中の @f 終端 = 文字左端-1.0
+
+part melody
+
+section A {
+  melody {
+    c4 @cresc d e f | g1@f |
+    break
+    c,4@p @cresc d e f | g1@f |
+    break
+    c,2 @cresc c@f |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

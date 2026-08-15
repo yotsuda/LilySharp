@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/slur-grace.ly の Lily# 訳。
+// CLAIM: appoggiatura/acciaccatura は既定と別の slur を使う = 外側 slur の
+// 中に nested slur が警告なしで立つ。
+// 音高 (octave absolute・Lily# 絶対 c = LP c'): LP \relative の c''=C5=c'・
+// grace e=E5=e'・d=D5・e=E5・f=F5。
+octave absolute
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    c'4( acciaccatura { e'8 } d'4 e'4 f'4) |
+    c'4( appoggiatura { e'8 } d'4 e'4 f'4) |
+    c'4 appoggiatura { e'8 } d'4 e'4 f'4 |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

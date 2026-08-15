@@ -1,0 +1,16 @@
+// 1000 bars = 250 ADJACENT written R1*4. The heavy side of "a written rest opens a run":
+// before the change this was ONE run of 1000; now it is 250 runs of 4, so the output
+// DIFFERS BY DESIGN and the hash must not match. Charges the run walk and 250 MMR layouts.
+octave absolute
+time 4/4
+
+part solo { clef treble }
+
+section A {
+  solo { R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | R1*4 | }
+}
+
+form main { ~A }
+
+score main { staff solo }
+

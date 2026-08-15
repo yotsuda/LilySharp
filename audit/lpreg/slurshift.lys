@@ -1,0 +1,18 @@
+// lilypond-src/input/regression/slur-shift-region.ly の Lily# 訳。
+// CLAIM: slur の shift region は extra encompass 要素（tuplet 番号）を
+// 収めるため自動で高くなる（additional_ys :290-326 の発火本）。
+// 音高: LP \relative 無引数 = f 基準 → c''=C5 g=G4 e=E4 c=C4。
+octave absolute
+
+part melody
+
+section A {
+  melody {
+    c'2( tuplet 3/2 { g4 e c) } |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

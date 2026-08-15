@@ -1,0 +1,16 @@
+// Twin of the first \score of mmr1.ly: where does a ONE-BAR multi-measure rest sit when
+// nothing else is going on? LilyPond: 0.0 ss (centre line) -- lily/multi-measure-rest.cc:254-264
+// takes the ordinary semibreve rest's position and subtracts 2 staff positions.
+// An ordinary r1 in the same place is +1.0 ss, so the two are NOT the same height.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+
+section A {
+  vone { R1 | g1 | }
+}
+
+form main { ~A }
+
+score main { staff vone }

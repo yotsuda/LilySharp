@@ -1,0 +1,283 @@
+session 149 — 打鍵の段内訳の取り直し（第148 §1 の引き継ぎ指示）。一時計器 StageClock149
+（第143 と同じ配線: compile.spec/collect/keys/springs/layout/render・layout.break/firstsys/persys/
+prelim/pages/spanners/finalann・prelim.beams/ties/slurs/annpass/enrich/augment）＋
+EditKeystrokeBench と同じプロトコル（warmup 2 / n=14 交互編集 / 段ごとの床 = 各段の n14 min）を
+編集位置 3 点（本文長の 10%/50%/90% から token 探索）で。Release・warm プロセス。
+cold = 使い捨て compiler で全パイプラインを一度温めて JIT を捨ててからの、新しい session の初回 layout。
+計器・一時ベンチ・一時検証テストは commit していない（revert 済み・エンジン差分ゼロ）。
+
+ラベルの読み方（第147-148 の引き継ぎ指示「編集位置と splice の有無を書く」）:
+  edit@F(char N)  = 本文長×F から探した token の位置 N での 1 トークン編集
+  resume(...)×K   = その状態だった round 数。交互編集なので 2 面が 7×7 で出る:
+                    編集側 = prefix 採用 + suffix splice（例 adopted 500 / spliced 499）
+                    復帰側 = baseline と同一テキスト = 全量 prefix 採用（adopted 1000）
+  段の床は 2 面込みの min（collect の床は「安い側」＝復帰側に寄る）
+
+新規の発見（HANDOFF §1 第149 に詳細）:
+  1. perf-v2bow1k は splice している（毎打鍵 splicedMeasures 1000）——第148 の
+     「構造的に splice 不能」は HEAD では偽。編集 token e4( は第2声部ブロック内で、
+     primary walk は編集バイトを採用しない。TempVerify_V2bowSplice_MatchesFullRecompile が
+     4 round 全てでフル再コンパイルとバイト一致を確認（下に逐語）。
+  2. voice 0 側の編集（TempProbe_V2bowVoice0Edit・g'4→a'4 @char 6611）は編集側が decline
+     ＝毎打鍵ライブ full walk（collect 51.6〜81.3 ms 対 splice 時 26.9〜30.5 ms）。
+     復帰側は identity splice。バイト一致は両側確認。
+
+==== 生データ（逐語） ====
+[Release] perf-plain1k.lys cold total 1843.9 ms | layout.other 0.8 | prelim.other 0.1
+  compile.layout         1198.1 ms
+  layout.persys           703.0 ms
+  layout.prelim           335.7 ms
+  prelim.beams            287.0 ms
+  compile.collect         230.1 ms
+  compile.render          203.6 ms
+  compile.springs         153.0 ms
+  layout.pages             61.7 ms
+  compile.keys             58.1 ms
+  prelim.annpass           46.7 ms
+  layout.firstsys          38.0 ms
+  layout.break             31.7 ms
+  layout.finalann          19.9 ms
+  layout.spanners           7.2 ms
+  prelim.augment            0.9 ms
+  prelim.ties               0.5 ms
+  prelim.slurs              0.4 ms
+  prelim.enrich             0.2 ms
+  compile.spec              0.1 ms
+[Release] perf-plain1k.lys edit@0.10(char 3125, gateMoved True, reusedLayout False) floor 349.9 ms | median 394.0 ms | resume(walks 1, adopted 98, splicedWalks 1, splicedMeasures 901)×7 / resume(walks 1, adopted 1000, splicedWalks 0, splicedMeasures 0)×7 | layout.other 11.5 | prelim.other 0.4
+  compile.layout          108.4 ms
+  compile.springs          79.7 ms
+  compile.render           75.6 ms
+  compile.collect          47.9 ms
+  layout.prelim            31.5 ms
+  prelim.annpass           30.3 ms
+  layout.break             26.4 ms
+  layout.pages             21.2 ms
+  compile.keys             10.3 ms
+  layout.finalann           8.0 ms
+  layout.firstsys           6.7 ms
+  layout.persys             2.7 ms
+  layout.spanners           0.5 ms
+  prelim.beams              0.3 ms
+  prelim.ties               0.2 ms
+  prelim.slurs              0.1 ms
+  prelim.augment            0.1 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+[Release] perf-plain1k.lys edit@0.50(char 15587, gateMoved True, reusedLayout False) floor 348.8 ms | median 371.6 ms | resume(walks 1, adopted 500, splicedWalks 1, splicedMeasures 499)×7 / resume(walks 1, adopted 1000, splicedWalks 0, splicedMeasures 0)×7 | layout.other 9.8 | prelim.other 0.5
+  compile.layout          107.5 ms
+  compile.springs          78.6 ms
+  compile.render           74.5 ms
+  compile.collect          49.9 ms
+  layout.prelim            31.8 ms
+  prelim.annpass           30.3 ms
+  layout.break             24.7 ms
+  layout.pages             23.6 ms
+  compile.keys              8.7 ms
+  layout.finalann           7.8 ms
+  layout.firstsys           6.8 ms
+  layout.persys             2.7 ms
+  prelim.beams              0.5 ms
+  layout.spanners           0.4 ms
+  prelim.ties               0.2 ms
+  prelim.slurs              0.2 ms
+  prelim.augment            0.1 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+[Release] perf-plain1k.lys edit@0.90(char 28018, gateMoved True, reusedLayout False) floor 350.6 ms | median 371.5 ms | resume(walks 1, adopted 901, splicedWalks 1, splicedMeasures 98)×7 / resume(walks 1, adopted 1000, splicedWalks 0, splicedMeasures 0)×7 | layout.other 5.0 | prelim.other 0.4
+  compile.layout          106.2 ms
+  compile.render           79.6 ms
+  compile.springs          70.7 ms
+  compile.collect          39.1 ms
+  layout.prelim            31.5 ms
+  prelim.annpass           30.1 ms
+  layout.break             29.2 ms
+  layout.pages             23.0 ms
+  compile.keys              8.5 ms
+  layout.finalann           7.7 ms
+  layout.firstsys           6.7 ms
+  layout.persys             2.7 ms
+  prelim.beams              0.5 ms
+  layout.spanners           0.4 ms
+  prelim.ties               0.2 ms
+  prelim.slurs              0.1 ms
+  prelim.augment            0.1 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+[Release] perf-fingbeam1k.lys cold total 2245.9 ms | layout.other 0.4 | prelim.other 0.0
+  compile.layout         1461.3 ms
+  layout.persys           877.4 ms
+  compile.collect         456.4 ms
+  layout.prelim           397.8 ms
+  prelim.beams            281.3 ms
+  compile.render          176.0 ms
+  compile.springs         134.9 ms
+  prelim.annpass          115.2 ms
+  layout.pages             56.8 ms
+  layout.finalann          52.0 ms
+  layout.firstsys          46.0 ms
+  layout.break             30.4 ms
+  compile.keys             17.2 ms
+  prelim.augment            0.8 ms
+  layout.spanners           0.5 ms
+  prelim.ties               0.2 ms
+  prelim.enrich             0.1 ms
+  prelim.slurs              0.1 ms
+  compile.spec              0.0 ms
+[Release] perf-fingbeam1k.lys edit@0.10(char 31962, gateMoved True, reusedLayout False) floor 718.8 ms | median 746.4 ms | resume(walks 1, adopted 99, splicedWalks 1, splicedMeasures 900)×7 / resume(walks 1, adopted 1000, splicedWalks 0, splicedMeasures 0)×7 | layout.other 13.2 | prelim.other 0.2
+  compile.layout          217.6 ms
+  compile.collect         168.5 ms
+  compile.render          163.6 ms
+  compile.springs         127.5 ms
+  layout.prelim            89.6 ms
+  prelim.annpass           88.6 ms
+  layout.finalann          48.6 ms
+  layout.pages             28.5 ms
+  layout.break             25.4 ms
+  compile.keys             11.3 ms
+  layout.firstsys           8.8 ms
+  layout.persys             3.1 ms
+  prelim.beams              0.4 ms
+  layout.spanners           0.3 ms
+  prelim.augment            0.1 ms
+  prelim.ties               0.1 ms
+  prelim.slurs              0.1 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+[Release] perf-fingbeam1k.lys edit@0.50(char 159718, gateMoved True, reusedLayout False) floor 679.3 ms | median 714.6 ms | resume(walks 1, adopted 499, splicedWalks 1, splicedMeasures 500)×7 / resume(walks 1, adopted 1000, splicedWalks 0, splicedMeasures 0)×7 | layout.other 15.6 | prelim.other 0.1
+  compile.layout          212.8 ms
+  compile.collect         157.9 ms
+  compile.render          149.3 ms
+  compile.springs         115.3 ms
+  layout.prelim            89.8 ms
+  prelim.annpass           89.0 ms
+  layout.finalann          45.9 ms
+  layout.pages             25.9 ms
+  layout.break             24.3 ms
+  compile.keys             11.7 ms
+  layout.firstsys           8.6 ms
+  layout.persys             2.3 ms
+  prelim.beams              0.4 ms
+  layout.spanners           0.3 ms
+  prelim.augment            0.1 ms
+  prelim.ties               0.1 ms
+  prelim.slurs              0.1 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+[Release] perf-fingbeam1k.lys edit@0.90(char 287481, gateMoved True, reusedLayout False) floor 704.9 ms | median 715.0 ms | resume(walks 1, adopted 900, splicedWalks 1, splicedMeasures 99)×7 / resume(walks 1, adopted 1000, splicedWalks 0, splicedMeasures 0)×7 | layout.other 11.9 | prelim.other 0.2
+  compile.layout          210.1 ms
+  compile.collect         166.2 ms
+  compile.render          156.3 ms
+  compile.springs         120.5 ms
+  layout.prelim            89.4 ms
+  prelim.annpass           88.4 ms
+  layout.finalann          46.9 ms
+  layout.pages             26.0 ms
+  layout.break             24.3 ms
+  compile.keys             11.9 ms
+  layout.firstsys           8.5 ms
+  layout.persys             2.7 ms
+  prelim.beams              0.4 ms
+  layout.spanners           0.3 ms
+  prelim.augment            0.1 ms
+  prelim.ties               0.1 ms
+  prelim.slurs              0.1 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+[Release] perf-v2bow1k.lys cold total 891.8 ms | layout.other 22.7 | prelim.other 0.0
+  compile.layout          660.2 ms
+  layout.prelim           277.6 ms
+  prelim.augment          197.0 ms
+  layout.persys           168.1 ms
+  layout.pages             98.8 ms
+  compile.collect          89.9 ms
+  compile.springs          87.1 ms
+  layout.break             75.0 ms
+  compile.render           47.8 ms
+  prelim.slurs             42.9 ms
+  prelim.annpass           28.0 ms
+  layout.finalann          13.0 ms
+  prelim.ties               9.5 ms
+  compile.keys              6.7 ms
+  layout.firstsys           4.9 ms
+  layout.spanners           0.2 ms
+  prelim.enrich             0.2 ms
+  compile.spec              0.0 ms
+  prelim.beams              0.0 ms
+[Release] perf-v2bow1k.lys edit@0.10(char 13301, gateMoved True, reusedLayout False) floor 365.5 ms | median 405.6 ms | resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000)×14 | layout.other 8.1 | prelim.other 1.9
+  compile.layout          197.6 ms
+  layout.prelim            74.0 ms
+  compile.springs          57.7 ms
+  layout.break             54.6 ms
+  layout.pages             50.0 ms
+  prelim.slurs             39.6 ms
+  compile.render           33.9 ms
+  compile.collect          30.5 ms
+  prelim.annpass           26.4 ms
+  layout.finalann           8.2 ms
+  compile.keys              6.6 ms
+  prelim.ties               4.2 ms
+  prelim.augment            1.7 ms
+  layout.persys             1.3 ms
+  layout.firstsys           1.2 ms
+  layout.spanners           0.2 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+  prelim.beams              0.0 ms
+[Release] perf-v2bow1k.lys edit@0.50(char 13301, gateMoved True, reusedLayout False) floor 369.2 ms | median 400.0 ms | resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000)×14 | layout.other 19.2 | prelim.other 2.4
+  compile.layout          205.3 ms
+  layout.prelim            70.3 ms
+  compile.springs          57.1 ms
+  layout.break             55.2 ms
+  layout.pages             48.0 ms
+  compile.render           41.2 ms
+  prelim.slurs             37.1 ms
+  compile.collect          26.9 ms
+  prelim.annpass           25.8 ms
+  layout.finalann          10.4 ms
+  compile.keys              6.7 ms
+  prelim.ties               3.2 ms
+  prelim.augment            1.7 ms
+  layout.firstsys           1.0 ms
+  layout.persys             0.9 ms
+  layout.spanners           0.2 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+  prelim.beams              0.0 ms
+[Release] perf-v2bow1k.lys edit@0.90(char 23753, gateMoved True, reusedLayout False) floor 359.2 ms | median 416.2 ms | resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000)×14 | layout.other 16.1 | prelim.other 2.1
+  compile.layout          204.7 ms
+  layout.prelim            76.2 ms
+  compile.springs          57.1 ms
+  layout.break             52.2 ms
+  layout.pages             48.3 ms
+  compile.render           42.8 ms
+  prelim.slurs             41.5 ms
+  compile.collect          29.1 ms
+  prelim.annpass           26.6 ms
+  layout.finalann           9.2 ms
+  compile.keys              6.6 ms
+  prelim.ties               4.3 ms
+  prelim.augment            1.6 ms
+  layout.persys             1.3 ms
+  layout.firstsys           1.3 ms
+  layout.spanners           0.2 ms
+  prelim.enrich             0.1 ms
+  compile.spec              0.0 ms
+  prelim.beams              0.0 ms
+TempVerify_V2bowSplice_MatchesFullRecompile:
+  round 0 (edited): byteIdentical True | resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000)
+  round 1 (base): byteIdentical True | resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000)
+  round 2 (edited): byteIdentical True | resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000)
+  round 3 (base): byteIdentical True | resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000)
+  everSpliced True
+TempProbe_V2bowVoice0Edit (char 6611, g'4->a'4):
+  round 0 byteIdentical True
+  round 1 byteIdentical True
+  round 2 (edited): resume(walks 0, adopted 0, splicedWalks 0, splicedMeasures 0) total 457.0 collect 69.1
+  round 3 (base): resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000) total 443.9 collect 58.6
+  round 4 (edited): resume(walks 0, adopted 0, splicedWalks 0, splicedMeasures 0) total 398.0 collect 51.6
+  round 5 (base): resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000) total 318.9 collect 38.9
+  round 6 (edited): resume(walks 0, adopted 0, splicedWalks 0, splicedMeasures 0) total 438.7 collect 81.3
+  round 7 (base): resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000) total 327.1 collect 57.7
+  round 8 (edited): resume(walks 0, adopted 0, splicedWalks 0, splicedMeasures 0) total 371.7 collect 58.7
+  round 9 (base): resume(walks 0, adopted 0, splicedWalks 1, splicedMeasures 1000) total 367.0 collect 35.2
+  floor 318.9 ms | collect floor 35.2 ms

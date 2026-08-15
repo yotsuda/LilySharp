@@ -1,0 +1,21 @@
+// lilypond-src/input/regression/repeat-tie-chords.ly の Lily# 訳。
+// CLAIM: \repeatTie は和音の個々の音にも効く (member 単位 + ^/_ 向き強制 + 和音レベル)。
+// 綴り: LP \relative 無引数の <d' g> = D4+G4 = Lily# <d g> (octave absolute)。
+// -\repeatTie = @repeatTie・^ = .up・_ = .down・<d g>\repeatTie = 和音レベル。
+// laissez-vibrer-chords.lys (第34号) の鏡映。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    <d@repeatTie g>1 |
+    <d@repeatTie.up g@repeatTie.down>1 |
+    <d g>@repeatTie |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

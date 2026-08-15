@@ -1,0 +1,17 @@
+// Control probe: slur/tie X attachment on plain notes (pair of
+// audit\lpreg\probe-slur-tie-x.ly).
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    f'4( e) f~f
+    e,4( f) e~e
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

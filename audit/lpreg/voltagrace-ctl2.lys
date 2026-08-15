@@ -1,0 +1,15 @@
+// 対照 probe2: repeat 無しの grace { f8 } b1 — 幽霊小節が repeat 側かの切り分け。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    grace { f8 } b1
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

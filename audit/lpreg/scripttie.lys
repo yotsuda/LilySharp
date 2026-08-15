@@ -1,0 +1,28 @@
+// lilypond-src/input/regression/script-tie-collision.ly の Lily# 訳。
+// CLAIM: scripts はタイを避ける (LP 機構 = script-engraver.cc:204-222
+// acknowledge_tie / acknowledge_end_tie: tie の開始/終端 moment の script に
+// Tie が side-position support として入る)。
+// 枠合わせ: \break は両側で落とす (行割りは per-note 主張に中立)。
+// LP の裸時価リピート (4->) は両側で音名明示。綴り: LP 無引数 \relative 基準 F3 の
+// c'''=C6 = Lily# の c''。-_ = @portato。和音メンバ script は <g@tenuto c@accent>。
+
+part melody
+
+section A {
+  melody {
+    r2. c''4@accent~ | c@accent r2. |
+    r2. c4@accent | c@accent r2. |
+    r2. c4@accent~ | c r2. |
+    r2. c4~ | c4@accent r2. |
+    r2. <g@tenuto c@accent>4@tenuto~ | <g@tenuto c>4@accent~ <g c@tenuto@portato>4@accent r2 |
+    r2. c4~ | c4@accent~ c4@accent r2 |
+    r2. c4@accent~ | c4~ c4@accent r2 |
+    r2. c4@accent~ | c4@accent~ c4 r2 |
+    r2. c4@accent |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

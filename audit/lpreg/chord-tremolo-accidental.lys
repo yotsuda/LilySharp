@@ -1,0 +1,24 @@
+// Frame-aligned twin of chord-tremolo-accidental.ly (relative spelling;
+// anchor c = LP c', so LP's absolute c''/d''/dis''... become these marks).
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    repeat tremolo 16 { c'32 d }
+    repeat tremolo 16 { c32 <dis> }
+    repeat tremolo 16 { c32 <dis fis> }
+    repeat tremolo 8 { c32 d }
+    repeat tremolo 8 { c32 <dis> }
+    repeat tremolo 8 { c32 <dis fis> }
+    repeat tremolo 4 { c32 d }
+    repeat tremolo 4 { c32 <dis> }
+    repeat tremolo 16 { b'32 <cis> }
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

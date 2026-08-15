@@ -1,0 +1,18 @@
+// Frame inspection for input/regression/part-combine-silence-mixed.ly (session 129, not a twin).
+// The book stacks kinds of silence inside ONE part: << R1 s1 s4 >>. Question asked here: what
+// does Lily# have for simultaneous music inside a part, and does a `voice { } { }` span mean
+// the same thing (LilyPond's << >> there is simultaneous music in ONE Voice context, not two).
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { R1@text("R") | voice { R1 } { s1 } | }
+  vtwo { r1@text("r") | R1 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

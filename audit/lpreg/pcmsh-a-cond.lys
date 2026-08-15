@@ -1,0 +1,19 @@
+// Control for pcmsh-a-probe: the same two parts CONDENSED (no combining at all), and a
+// single part writing the 28 bars as one run. If all three print one 28-bar rest, the
+// single symbol is the multi-measure-rest run collapsing, not the part combiner.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+part solo { clef treble }
+
+section A {
+  vone { R1*8 | R1*16 | R1*4 | }
+  vtwo { R1*16 | R1*8 | R1*4 | }
+  solo { R1*28 | }
+}
+
+form main { ~A }
+
+score main { condensedStaff { vone vtwo } staff solo }

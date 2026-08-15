@@ -1,0 +1,14 @@
+// probe: does the chords track accept slash bass and added (/+) bass?
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v { <e f a c'>4 <f, a c' e'>4 <g, f a c' e'>2 | }
+  chords { f4:maj7/e f4:maj7/f f2:maj7/g | }
+}
+
+form main { ~Main }
+
+score main { staff v }

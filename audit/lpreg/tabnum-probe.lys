@@ -1,0 +1,8 @@
+// tablature.ly の綴り probe: 和音レベルの弦番号 <e dis'>\5\4 が書けるか。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m { <e dis'>4\5\4 <e dis'\4>4\5 r2 | }
+}
+form main { A }
+score main { tab m as numbers }

@@ -1,0 +1,547 @@
+STAGE	-	prelim.beams	1.5	n=1
+STAGE	-	prelim.ties	0.7	n=1
+STAGE	-	prelim.slurs	0.2	n=1
+STAGE	-	prelim.annotationpass	265.0
+STAGE	-	prelim.enrich	9.2
+STAGE	-	layout.prelimannotation	298.2
+STAGE	-	layout.pages	2.4
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	8.2	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	5.6	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	27.9
+STAGE	-	prelim.beams	1.2	n=1
+STAGE	-	prelim.ties	1.0	n=1
+STAGE	-	prelim.slurs	0.6	n=1
+STAGE	-	prelim.annotationpass	265.2
+STAGE	-	prelim.enrich	7.1
+STAGE	-	layout.prelimannotation	308.7
+STAGE	-	layout.pages	2.8
+STAGE	-	span.beams	0.1	n=1
+STAGE	-	span.restshifts	10.2	n=1
+STAGE	-	span.ties	0.3	n=1
+STAGE	-	span.slurs	0.3	n=1
+STAGE	-	span.glissandos	22.4	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	49.7
+STAGE	-	prelim.beams	3.2	n=2
+STAGE	-	prelim.ties	0.7	n=2
+STAGE	-	prelim.slurs	0.2	n=2
+STAGE	-	prelim.annotationpass	356.4
+STAGE	-	prelim.enrich	9.8
+STAGE	-	layout.prelimannotation	393.0
+STAGE	-	layout.pages	2.6
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 34.114000602,-2.359295117 / 34.114000602,-2.359295117 R 40.262712627,-0.400704883 / 40.262712627,-0.400704883
+STAGE	-	span.beams	2.2	n=2
+STAGE	-	span.restshifts	13.8	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.1	n=2
+STAGE	-	span.glissandos	6.2	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=1 prelimMissing=0 beams=2
+STAGE	-	layout.spanners	38.3
+STAGE	-	prelim.beams	0.9	n=1
+STAGE	-	prelim.ties	0.8	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	317.4
+STAGE	-	prelim.enrich	6.3
+STAGE	-	layout.prelimannotation	345.7
+STAGE	-	layout.pages	3.6
+STAGE	-	span.beams	0.1	n=1
+STAGE	-	span.restshifts	8.6	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	5.3	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	27.5
+STAGE	-	prelim.beams	7.4	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	165.6
+STAGE	-	prelim.enrich	5.3
+STAGE	-	layout.prelimannotation	201.8
+STAGE	-	layout.pages	2.2
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.085597631,2.021304577 / 8.085597631,2.021304577 R 12.898197631,3.598695423 / 12.898197631,3.598695423
+STAGE	-	span.beams	9.5	n=1
+STAGE	-	span.restshifts	11.2	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	4.7	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=8
+STAGE	-	layout.spanners	38.7
+STAGE	-	prelim.beams	2.0	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	220.2
+STAGE	-	prelim.enrich	5.9
+STAGE	-	layout.prelimannotation	245.4
+STAGE	-	layout.pages	2.3
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 50.907766635,5.620000000 / 50.907766635,5.620000000 R 55.116166635,5.620000000 / 55.116166635,5.620000000
+STAGE	-	span.beams	1.3	n=1
+STAGE	-	span.restshifts	11.5	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	5.0	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=2
+STAGE	-	layout.spanners	29.8
+STAGE	-	prelim.beams	0.8	n=1
+STAGE	-	prelim.ties	0.7	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	227.9
+STAGE	-	prelim.enrich	7.3
+STAGE	-	layout.prelimannotation	256.0
+STAGE	-	layout.pages	2.6
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	9.5	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	5.8	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	32.1
+STAGE	-	prelim.beams	0.7	n=2
+STAGE	-	prelim.ties	0.4	n=2
+STAGE	-	prelim.slurs	0.1	n=2
+STAGE	-	prelim.annotationpass	131.7
+STAGE	-	prelim.enrich	4.3
+STAGE	-	layout.prelimannotation	149.7
+STAGE	-	layout.pages	1.7
+STAGE	-	span.beams	0.1	n=2
+STAGE	-	span.restshifts	4.3	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.0	n=2
+STAGE	-	span.glissandos	3.5	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	17.0
+STAGE	-	prelim.beams	6.6	n=2
+STAGE	-	prelim.ties	2.6	n=2
+STAGE	-	prelim.slurs	1.8	n=2
+STAGE	-	prelim.annotationpass	191.9
+STAGE	-	prelim.enrich	4.1
+STAGE	-	layout.prelimannotation	233.5
+STAGE	-	layout.pages	13.3
+NOTE	-	beamcheck staff=0 i=0 sys 2/2 L 62.022045462,-5.620000000 / 62.022045462,-5.620000000 R 77.155658612,-5.620000000 / 77.155658612,-5.620000000
+STAGE	-	span.beams	6.2	n=2
+STAGE	-	span.restshifts	6.2	n=2
+STAGE	-	span.ties	1.3	n=2
+STAGE	-	span.slurs	0.9	n=2
+STAGE	-	span.glissandos	12.0	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=1 prelimMissing=0 beams=10
+STAGE	-	layout.spanners	36.9
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	127.5
+STAGE	-	prelim.enrich	4.3
+STAGE	-	layout.prelimannotation	146.8
+STAGE	-	layout.pages	1.8
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	4.5	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.4	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	18.7
+STAGE	-	prelim.beams	0.6	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	117.3
+STAGE	-	prelim.enrich	4.4
+STAGE	-	layout.prelimannotation	137.0
+STAGE	-	layout.pages	1.7
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	5.9	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	4.0	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	19.7
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	66.4
+STAGE	-	prelim.enrich	3.8
+STAGE	-	layout.prelimannotation	83.7
+STAGE	-	layout.pages	1.6
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.0	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.9	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	19.9
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	139.3
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	158.9
+STAGE	-	layout.pages	1.7
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.0	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.6	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	20.8
+STAGE	-	prelim.beams	0.6	n=2
+STAGE	-	prelim.ties	0.4	n=2
+STAGE	-	prelim.slurs	0.1	n=2
+STAGE	-	prelim.annotationpass	114.3
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	133.7
+STAGE	-	layout.pages	1.6
+STAGE	-	span.beams	0.0	n=2
+STAGE	-	span.restshifts	5.8	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.0	n=2
+STAGE	-	span.glissandos	3.8	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	19.7
+STAGE	-	prelim.beams	0.7	n=2
+STAGE	-	prelim.ties	0.4	n=2
+STAGE	-	prelim.slurs	0.1	n=2
+STAGE	-	prelim.annotationpass	120.5
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	139.4
+STAGE	-	layout.pages	1.6
+STAGE	-	span.beams	0.0	n=2
+STAGE	-	span.restshifts	5.7	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.0	n=2
+STAGE	-	span.glissandos	3.5	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	19.3
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	131.4
+STAGE	-	prelim.enrich	4.7
+STAGE	-	layout.prelimannotation	152.4
+STAGE	-	layout.pages	1.8
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.8	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	4.1	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	20.8
+STAGE	-	prelim.beams	0.7	n=2
+STAGE	-	prelim.ties	0.4	n=2
+STAGE	-	prelim.slurs	0.1	n=2
+STAGE	-	prelim.annotationpass	108.4
+STAGE	-	prelim.enrich	5.0
+STAGE	-	layout.prelimannotation	128.5
+STAGE	-	layout.pages	1.7
+STAGE	-	span.beams	0.0	n=2
+STAGE	-	span.restshifts	5.9	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.0	n=2
+STAGE	-	span.glissandos	4.1	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	19.8
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	132.4
+STAGE	-	prelim.enrich	4.3
+STAGE	-	layout.prelimannotation	153.9
+STAGE	-	layout.pages	1.7
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.0	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.7	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	19.2
+STAGE	-	prelim.beams	1.5	n=1
+STAGE	-	prelim.ties	0.9	n=1
+STAGE	-	prelim.slurs	0.2	n=1
+STAGE	-	prelim.annotationpass	65.6
+STAGE	-	prelim.enrich	4.0
+STAGE	-	layout.prelimannotation	85.5
+STAGE	-	layout.pages	1.7
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 10.920562205,5.620000000 / 10.920562205,5.620000000 R 15.928962205,5.620000000 / 15.928962205,5.620000000
+STAGE	-	span.beams	0.6	n=1
+STAGE	-	span.restshifts	8.4	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.8	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=1
+STAGE	-	layout.spanners	22.4
+STAGE	-	prelim.beams	0.9	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	231.7
+STAGE	-	prelim.enrich	6.2
+STAGE	-	layout.prelimannotation	256.9
+STAGE	-	layout.pages	2.3
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	7.9	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	5.8	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	27.0
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	188.5
+STAGE	-	prelim.enrich	4.5
+STAGE	-	layout.prelimannotation	209.5
+STAGE	-	layout.pages	1.8
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.1	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.8	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	20.9
+STAGE	-	prelim.beams	1.7	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	67.0
+STAGE	-	prelim.enrich	3.8
+STAGE	-	layout.prelimannotation	86.6
+STAGE	-	layout.pages	1.8
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.585000000,3.620000000 / 8.585000000,3.620000000 R 11.089200000,3.620000000 / 11.089200000,3.620000000
+STAGE	-	span.beams	1.1	n=1
+STAGE	-	span.restshifts	8.7	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	4.0	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=4
+STAGE	-	layout.spanners	23.6
+STAGE	-	prelim.beams	10.4	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	115.7
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	144.7
+STAGE	-	layout.pages	1.7
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.585000000,11.620000000 / 8.585000000,11.620000000 R 12.993400000,11.620000000 / 12.993400000,11.620000000
+STAGE	-	span.beams	5.0	n=1
+STAGE	-	span.restshifts	5.7	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.7	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=4
+STAGE	-	layout.spanners	22.5
+STAGE	-	prelim.beams	12.7	n=1
+STAGE	-	prelim.ties	0.6	n=1
+STAGE	-	prelim.slurs	0.2	n=1
+STAGE	-	prelim.annotationpass	71.1
+STAGE	-	prelim.enrich	4.4
+STAGE	-	layout.prelimannotation	102.7
+STAGE	-	layout.pages	1.9
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 9.024200000,-2.000000000 / 9.024200000,-2.000000000 R 19.765271930,-2.000000000 / 19.765271930,-2.000000000
+STAGE	-	span.beams	10.0	n=1
+STAGE	-	span.restshifts	19.7	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	4.4	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=4
+STAGE	-	layout.spanners	44.7
+STAGE	-	prelim.beams	1.4	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	69.9
+STAGE	-	prelim.enrich	4.0
+STAGE	-	layout.prelimannotation	89.0
+STAGE	-	layout.pages	1.7
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 12.289200000,0.000000000 / 12.289200000,0.000000000 R 14.793400000,0.000000000 / 14.793400000,0.000000000
+STAGE	-	span.beams	0.6	n=1
+STAGE	-	span.restshifts	5.2	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.6	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=1
+STAGE	-	layout.spanners	17.4
+STAGE	-	prelim.beams	2.6	n=2
+STAGE	-	prelim.ties	0.6	n=2
+STAGE	-	prelim.slurs	0.1	n=2
+STAGE	-	prelim.annotationpass	121.9
+STAGE	-	prelim.enrich	4.3
+STAGE	-	layout.prelimannotation	143.7
+STAGE	-	layout.pages	1.7
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.703400000,-13.620000000 / 8.703400000,-13.620000000 R 16.873800000,-13.620000000 / 16.873800000,-13.620000000
+STAGE	-	span.beams	1.8	n=2
+STAGE	-	span.restshifts	5.4	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.0	n=2
+STAGE	-	span.glissandos	3.7	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=1 prelimMissing=0 beams=2
+STAGE	-	layout.spanners	18.7
+STAGE	-	prelim.beams	1.3	n=1
+STAGE	-	prelim.ties	0.6	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	111.8
+STAGE	-	prelim.enrich	4.3
+STAGE	-	layout.prelimannotation	131.0
+STAGE	-	layout.pages	1.9
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.585000000,0.000000000 / 8.585000000,0.000000000 R 15.847600000,0.000000000 / 15.847600000,0.000000000
+STAGE	-	span.beams	0.7	n=1
+STAGE	-	span.restshifts	10.3	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.6	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=2
+STAGE	-	layout.spanners	24.7
+STAGE	-	prelim.beams	5.1	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	169.2
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	192.5
+STAGE	-	layout.pages	1.7
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 25.146862213,-4.358757467 / 25.146862213,-4.358757467 R 31.136659765,-2.401242533 / 31.136659765,-2.401242533
+STAGE	-	span.beams	4.8	n=1
+STAGE	-	span.restshifts	8.5	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.7	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=10
+STAGE	-	layout.spanners	26.2
+STAGE	-	prelim.beams	5.5	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	150.9
+STAGE	-	prelim.enrich	5.3
+STAGE	-	layout.prelimannotation	179.5
+STAGE	-	layout.pages	2.0
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.349717667,-4.359300976 / 8.349717667,-4.359300976 R 15.693500173,-2.020699024 / 15.693500173,-2.020699024
+STAGE	-	span.beams	4.9	n=1
+STAGE	-	span.restshifts	14.6	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	5.2	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=6
+STAGE	-	layout.spanners	40.8
+STAGE	-	prelim.beams	3.0	n=1
+STAGE	-	prelim.ties	0.7	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	72.1
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	94.8
+STAGE	-	layout.pages	1.6
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.318061786,1.620000000 / 8.318061786,1.620000000 R 19.322795896,1.620000000 / 19.322795896,1.620000000
+STAGE	-	span.beams	2.3	n=1
+STAGE	-	span.restshifts	16.5	n=1
+STAGE	-	span.ties	0.2	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	4.3	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=6
+STAGE	-	layout.spanners	33.2
+STAGE	-	prelim.beams	2.0	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	119.7
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	140.3
+STAGE	-	layout.pages	1.7
+NOTE	-	beamcheck staff=0 i=0 sys 0/0 L 8.585000000,-0.374554860 / 8.585000000,-0.374554860 R 12.991155001,-0.005445140 / 12.991155001,-0.005445140
+STAGE	-	span.beams	1.4	n=1
+STAGE	-	span.restshifts	8.2	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.6	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=1 prelimMissing=0 beams=3
+STAGE	-	layout.spanners	22.0
+STAGE	-	prelim.beams	0.7	n=2
+STAGE	-	prelim.ties	0.5	n=2
+STAGE	-	prelim.slurs	0.1	n=2
+STAGE	-	prelim.annotationpass	103.8
+STAGE	-	prelim.enrich	4.3
+STAGE	-	layout.prelimannotation	123.1
+STAGE	-	layout.pages	2.0
+STAGE	-	span.beams	0.0	n=2
+STAGE	-	span.restshifts	6.0	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.0	n=2
+STAGE	-	span.glissandos	3.9	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	20.1
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	177.2
+STAGE	-	prelim.enrich	4.3
+STAGE	-	layout.prelimannotation	196.5
+STAGE	-	layout.pages	5.9
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	5.9	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.5	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	20.1
+STAGE	-	prelim.beams	0.6	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	165.2
+STAGE	-	prelim.enrich	4.4
+STAGE	-	layout.prelimannotation	185.5
+STAGE	-	layout.pages	1.7
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	5.9	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.5	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	18.3
+STAGE	-	prelim.beams	0.8	n=2
+STAGE	-	prelim.ties	0.5	n=2
+STAGE	-	prelim.slurs	0.1	n=2
+STAGE	-	prelim.annotationpass	137.8
+STAGE	-	prelim.enrich	4.7
+STAGE	-	layout.prelimannotation	159.7
+STAGE	-	layout.pages	2.5
+STAGE	-	span.beams	0.0	n=2
+STAGE	-	span.restshifts	6.6	n=2
+STAGE	-	span.ties	0.0	n=2
+STAGE	-	span.slurs	0.0	n=2
+STAGE	-	span.glissandos	4.4	n=2
+NOTE	-	beamcheck-summary compared=2 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	23.5
+STAGE	-	prelim.beams	1.1	n=1
+STAGE	-	prelim.ties	0.6	n=1
+STAGE	-	prelim.slurs	0.2	n=1
+STAGE	-	prelim.annotationpass	170.0
+STAGE	-	prelim.enrich	6.4
+STAGE	-	layout.prelimannotation	198.5
+STAGE	-	layout.pages	2.5
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.7	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	5.6	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	25.0
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.5	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	124.5
+STAGE	-	prelim.enrich	4.7
+STAGE	-	layout.prelimannotation	145.3
+STAGE	-	layout.pages	1.8
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.2	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	4.2	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	20.2
+STAGE	-	prelim.beams	0.7	n=1
+STAGE	-	prelim.ties	0.4	n=1
+STAGE	-	prelim.slurs	0.1	n=1
+STAGE	-	prelim.annotationpass	106.6
+STAGE	-	prelim.enrich	4.1
+STAGE	-	layout.prelimannotation	126.2
+STAGE	-	layout.pages	1.7
+STAGE	-	span.beams	0.0	n=1
+STAGE	-	span.restshifts	6.1	n=1
+STAGE	-	span.ties	0.0	n=1
+STAGE	-	span.slurs	0.0	n=1
+STAGE	-	span.glissandos	3.7	n=1
+NOTE	-	beamcheck-summary compared=1 mismatched=0 prelimMissing=0 beams=0
+STAGE	-	layout.spanners	20.3

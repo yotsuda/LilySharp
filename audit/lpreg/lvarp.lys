@@ -1,0 +1,17 @@
+// laissez-vibrer-arpeggio.ly twin — l.v. tie が次和音の arpeggio と衝突しないこと。
+// 綴り: Lily# c = LP c'。LP <e'> = Lily# <e>・LP <f f'> = <f, f>。既定4分。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    <e>4@laissezVibrer <f, f>4@arpeggio <e>4@laissezVibrer <g, f>4@arpeggio |
+    <e>4@laissezVibrer <a, f>4@arpeggio <e>4@laissezVibrer <b, f>4@arpeggio |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

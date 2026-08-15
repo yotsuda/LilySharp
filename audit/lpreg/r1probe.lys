@@ -1,0 +1,7 @@
+// R1 中央寄せの現状確認 probe (単譜 vs 多譜)
+octave absolute
+time 4/4
+part solo { }
+section Main { solo { R1 || R1 | } }
+form main { ~Main }
+score main { staff ~solo }

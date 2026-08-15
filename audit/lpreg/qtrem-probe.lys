@@ -1,0 +1,18 @@
+// 切り分け probe: 明示和音 vs q の単独 tremolo・pair tremolo。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    <c e g>1 |
+    repeat tremolo 4 { <c e g>16 }
+    repeat tremolo 4 { q16 }
+    repeat tremolo 4 { c16 <c e g>16 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

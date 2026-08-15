@@ -1,0 +1,19 @@
+// hairpin-key-signature.ly の Lily# 訳 (twin)。
+// CLAIM: 折返し後 (行頭の調号の後) の broken hairpin がずれた高さに刷られない。
+// 置換 (両側・hairpin-clef と同じ): \! → @f・^\< → 既定の下側 hairpin。
+// 音高: LP c''=C5=c' (A major の cis ではなく c natural のまま=原本どおり)。
+octave absolute
+time 4/4
+key a major
+
+part v { clef treble }
+
+section Main {
+  v {
+    c'4@cresc c' c' c' | break c' c' c' c'@f |
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

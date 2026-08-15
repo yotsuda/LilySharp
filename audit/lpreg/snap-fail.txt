@@ -1,0 +1,26 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  LilySharp.Core -> C:\MyProj\LilySharp\LilySharp.Core\bin\Debug\net9.0\LilySharp.Core.dll
+  LilySharp.Cli -> C:\MyProj\LilySharp\LilySharp.Cli\bin\Debug\net9.0\lysc.dll
+  LilySharp.Lsp -> C:\MyProj\LilySharp\LilySharp.Lsp\bin\Debug\net9.0\lilysharp-lsp.dll
+  LilySharp.Tests -> C:\MyProj\LilySharp\LilySharp.Tests\bin\Debug\net9.0\LilySharp.Tests.dll
+Test run for C:\MyProj\LilySharp\LilySharp.Tests\bin\Debug\net9.0\LilySharp.Tests.dll (.NETCoreApp,Version=v9.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:10.01]     LilySharp.Tests.Svg.SvgSnapshotTests.TestSample_MatchesSnapshot(sampleName: "test/drum-groove") [FAIL]
+  Failed LilySharp.Tests.Svg.SvgSnapshotTests.TestSample_MatchesSnapshot(sampleName: "test/drum-groove") [1 s]
+  Error Message:
+   SVG snapshot mismatch for 'test/drum-groove' at line 25, col 13.
+Visual diff report (open in a browser): C:\MyProj\LilySharp\artifacts\visual-diff\report.html
+Approve THIS fixture: pwsh tools/Approve-Snapshots.ps1 -Name test/drum-groove
+Approve ALL: set LILYSHARP_UPDATE_SNAPSHOTS=1 and re-run.
+Baseline: C:\MyProj\LilySharp\LilySharp.Tests\Snapshots\test__drum-groove.svg
+  Stack Trace:
+     at LilySharp.Tests.Svg.SvgSnapshotTests.AssertSnapshotMatch(String sampleName) in C:\MyProj\LilySharp\LilySharp.Tests\Svg\SvgSnapshotTests.cs:line 783
+   at LilySharp.Tests.Svg.SvgSnapshotTests.TestSample_MatchesSnapshot(String sampleName) in C:\MyProj\LilySharp\LilySharp.Tests\Svg\SvgSnapshotTests.cs:line 699
+   at InvokeStub_SvgSnapshotTests.TestSample_MatchesSnapshot(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+
+Failed!  - Failed:     1, Passed:   214, Skipped:     0, Total:   215, Duration: 9 s - LilySharp.Tests.dll (net9.0)

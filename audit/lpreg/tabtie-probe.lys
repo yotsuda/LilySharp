@@ -1,0 +1,15 @@
+// tablature-tie-behaviour の核 probe:
+// m1: f2~f4 e4 = タイ先フレット非表示(通常)。m2-3: c1~ break c2~ c2 =
+// 行跨ぎタイの先は LP では括弧付きフレット表示。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m {
+    f2~ f4 e4 |
+    c'1~ |
+    break
+    c'2~ c'2 |
+  }
+}
+form main { A }
+score main { tab m as numbers }

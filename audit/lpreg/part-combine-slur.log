@@ -1,0 +1,24 @@
+GNU LilyPond 2.26.0 (running Guile 3.0)
+`C:/MyProj/lilypond-src/input/regression/part-combine-slur.ly' を処理しています
+構文解析中...
+楽曲を解釈中...
+グラフィカルオブジェクトの前処理中...
+理想的なページ数を見つけています...
+楽譜を 1 ページにしています...
+描画しています...
+プログラミングエラー: cyclic dependency: calculation-in-progress encountered for CombineTextScript.Y-offset
+継続中, 成功を祈る
+NH pos=-6 x=17.12082677165354 ink note=0
+TEXT "a2" x=17.12082677165354 y=2.583009642593504 series=bold shape=() size=()
+NH pos=0 x=17.12082677165354 NOINK note=0
+STEM dir=1 x=18.36002677165354 ink
+NH pos=-5 x=20.123071770788155 ink note=1
+NH pos=0 x=20.123071770788155 NOINK note=1
+STEM dir=1 x=21.362271770788155 ink
+NH pos=-5 x=23.12531676992277 ink note=1
+NH pos=0 x=23.12531676992277 NOINK note=1
+STEM dir=1 x=24.36451676992277 ink
+NH pos=-3 x=26.37756176905738 ink note=3
+NH pos=0 x=26.37756176905738 NOINK note=3
+STEM dir=1 x=27.61676176905738 ink
+成功: コンパイルが成功しました

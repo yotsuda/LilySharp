@@ -1,0 +1,25 @@
+// lyric-hyphen-grace.ly twin — 行頭 grace の下に hyphen を刷らないこと。
+// 綴り: Lily# f = LP f'・g = LP g'。\appoggiatura = appoggiatura { }。
+// 歌詞: slur melisma (m2 の第1音) は ~ で音を消費 (線なし)。
+octave absolute
+time 4/4
+
+part one { }
+part two { }
+
+lyrics wa { section Main { bla -- bla -- | ~ bla -- | bla -- bla -- | bla -- bla | } }
+lyrics wb { section Main { bla -- bla -- | bla -- bla -- | bla -- bla -- | bla -- bla | } }
+
+section Main {
+  one {
+    appoggiatura { f8 } g2 g2( | break
+    appoggiatura { f8 } g2) appoggiatura { f8 } g2 | break
+    appoggiatura { f8 } g2 g2 | break
+    g2 g2 |
+  }
+  two { g2 g2 | g2 g2 | g2 g2 | g2 g2 | }
+}
+
+form main { ~Main }
+
+score main { staff ~one with lyrics wa staff ~two with lyrics wb }

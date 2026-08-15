@@ -1,0 +1,20 @@
+// lilypond-src/input/regression/fermata-dot-position.ly の Lily# 訳 (block 2 = accent 対)。
+// 枠合わせは block A (audit\lp-regression\lys\fermata-dot-position.lys) と同じ:
+// henze/veryshort/verylong -> short/long 置換 (両側)。block 2 は \time 無し =
+// 4/4 で 4 分× 8 = 2 小節 (Lily# は | 明示)。
+// 綴り: LP \relative c''' の a=A5=Lily# a''。LP `a4->\fermata` = accent+fermata 同座。
+tempo 4 = 60
+
+part melody
+
+section A {
+  melody {
+    a''4@accent a@accent@fermata a@accent@shortfermata a@accent@longfermata |
+    a4@accent@shortfermata a@accent@longfermata a@accent@shortfermata a@accent@longfermata |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

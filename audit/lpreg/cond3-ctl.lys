@@ -1,0 +1,15 @@
+// Control for cond3-probe: the same music as one part's two-voice span.
+octave absolute
+time 4/4
+
+part fl { clef treble }
+
+section A {
+  fl {
+    voice { c'4 d' e' f' | g'2 g' | c'4 d' e' f' | } { e4 f g a | b2 b | e4 f g a | }
+  }
+}
+
+form main { ~A }
+
+score main { staff fl }

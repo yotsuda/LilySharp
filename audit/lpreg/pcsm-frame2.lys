@@ -1,0 +1,19 @@
+// Frame inspection 2 for part-combine-silence-mixed (session 129). One question only:
+// does a part that a `combinedStaff` combines accept a `voice { } { }` span inside it?
+// That is the receptacle Lily# uses for LilyPond's same-Voice simultaneous music (see
+// Fixtures/test/beam-skip.lys, which says so in as many words), and measures 4 and 5 of the
+// book are << R1 s1 s4 >> — simultaneous silences INSIDE one combined part.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { R1@text("R").up | voice { R1 } { s1 } | }
+  vtwo { r1@text("r").down | voice { s4 s2 s4 } { R1 } | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

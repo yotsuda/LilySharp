@@ -1,0 +1,13 @@
+time 4/4
+part melody
+
+section A {
+  melody {
+    fis2.@notehead(diamond) r4
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

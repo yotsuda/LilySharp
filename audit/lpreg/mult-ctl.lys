@@ -1,0 +1,19 @@
+// Control for mult-probe: the same music with the spacers written out.
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v {
+    voice {
+      c1 | d1 | e1 | f1 |
+    } {
+      s1 | s1 | s1 | c1 |
+    }
+  }
+}
+
+form main { ~Main }
+
+score main { staff v }

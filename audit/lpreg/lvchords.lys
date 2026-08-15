@@ -1,0 +1,18 @@
+// laissez-vibrer-chords.ly twin — l.v. が和音メンバー単位で効く + ^/_ 向き強制。
+// 綴り: LP \relative 無引数の <d' g> = D4+G4 = Lily# <d g> (octave absolute)。
+// -\laissezVibrer = @laissezVibrer・^= .up・_= .down。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    <d@laissezVibrer g>1 |
+    <d@laissezVibrer.up g@laissezVibrer.down>1 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

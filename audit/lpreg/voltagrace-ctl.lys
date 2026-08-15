@@ -1,0 +1,15 @@
+// 対照 probe: grace 無しの |: b1 :| — 末尾空小節が grace と無関係かの切り分け。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    |: b1 :|
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

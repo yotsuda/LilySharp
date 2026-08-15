@@ -1,0 +1,13 @@
+// 下見 probe 2: 素の grace{} + ~ (自動 slur が無いので曲線が出れば tie)。
+octave absolute
+time 4/4
+
+part v { clef treble }
+
+section Main {
+  v { grace { c16~ } c1 | }
+}
+
+form main { ~Main }
+
+score main { staff v }

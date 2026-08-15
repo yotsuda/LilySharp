@@ -1,0 +1,21 @@
+// lilypond-src/input/regression/slur-rest-direction.ly の Lily# 訳（1/4・16分）。
+// CLAIM: rest は slur の向きを変えない（既定 down）。LP calc_direction =
+// 既定 DOWN・encompass に stem DOWN の音柱があれば UP・rest 列は不参加。
+// LP 実測向き: fig1(C3,C3) DOWN・fig2(C4,C4) UP・fig3(C4,C3) UP・
+// fig4(C3,C4) UP・fig5(全rest) DOWN。音高: LP \relative c の c = C3 = ls c,。
+octave absolute
+clef bass
+time 2/4
+
+part melody
+
+section A {
+  melody {
+    c,16( r c,) r c( r c) r | c( r c,) r c,( r c) r | r( r r) r r4 |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

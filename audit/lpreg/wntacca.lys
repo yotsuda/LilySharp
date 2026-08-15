@@ -1,0 +1,21 @@
+// whole-note-tremolo-accidentals.ly score1 twin — 全音符 tremolo は臨時記号と衝突しない (32分)。
+// 6 score 本は a..f 分割。綴り (Lily# = LP−1oct): LP c' es'→c es / a' cis''→a cis' /
+// a' gisis'→a gisis / poly: a'' bes''→a' bes' 対 f' d'!→f des (d'! は `!` 綴りなし=
+// **両側 des 置換**: 実臨時記号で「tremolo が臨時記号を避ける」主張を保存)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 16 { c32 es32 } |
+    repeat tremolo 16 { a32 cis'32 } |
+    repeat tremolo 16 { a32 gisis32 } |
+    voice { repeat tremolo 16 { a'32 bes'32 } | } { repeat tremolo 16 { f32 des32 } | }
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

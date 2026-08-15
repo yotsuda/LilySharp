@@ -1,0 +1,22 @@
+// lilypond-src/input/regression/script-stack-order1.ly の Lily# 訳 (score 2)。
+// CLAIM: script の縦積み順は「技巧度の低いものが音符の近く」= articulation <
+// flageolet < fingering < (RH fingering < string number <) fermata < bowing < text。
+// score 1 (弦番号 \3\5 vs 運指) は標準譜の string number 綴りが無く両側省略。
+// 綴り: LP 無引数 \relative 基準 F3 の e''=E5 = Lily# の e'。^"div." = @text(..).up。
+// LP script-priority: staccato -100 / tenuto -50 / accent 0 / flageolet 50 /
+// finger 100 / fermata 175 / bow 180 / text 200 (scm/script.scm, define-grobs.scm)。
+
+part melody
+
+section A {
+  melody {
+    e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
+    r4 a@staccato@tenuto@upbow f''@staccato@tenuto@finger(3)@upbow e'@flageolet@fermata@upbow |
+    e,@tenuto@finger(0)@downbow@text("div.").up |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

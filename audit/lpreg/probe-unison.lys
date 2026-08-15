@@ -1,0 +1,15 @@
+// Does Lily# accept unison/second chords, and where do marks anchor?
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    e'4@marcato <e e>@marcato@p <c e e>@marcato@f <a, d e>@marcato
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

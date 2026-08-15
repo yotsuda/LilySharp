@@ -1,0 +1,46 @@
+// Twin of input/regression/part-combine-silence-mixed.ly (staff 1 of the book).
+// texidoc: "Different kinds of silence are not merged into the shared voice even if they begin
+// and end simultaneously; however, when rests and skips are present in the same part, the skips
+// are ignored."
+//
+// The book is all silence, so `\relative f'` never reaches anything -- no octave conversion is
+// needed for this twin (the usual `c'` -> `c` rule has nothing to act on).
+//
+// LP's `<< R1 s1 s4 >>` inside a \partCombine argument is SIMULTANEOUS MUSIC IN ONE Voice
+// context, not two voices; Lily#'s receptacle for that is the `voice { } { }` span
+// (Fixtures/test/beam-skip.lys says so in as many words, and pcsm-frame2.lys confirmed a
+// combined part accepts one).
+//
+// What LP engraves (measured, scratch/lpreg/pcsm.log; y in staff spaces above the centre line):
+//   bar 1  R1^"R" vs r1_"r"   -> ONE rest, dir=(), +1.0 ss, label "r" ONLY ("R" goes with its event)
+//   bar 2  s1^"s" vs R1_"R"   -> ONE mmrest, -3.0 ss (voice two), label "R"; the skip's "s" prints
+//   bar 3  r1^"r" vs s1_"s"   -> ONE rest, dir=+1, +2.0 ss (voice one), labels "r" (up) and "s" (down)
+//   bar 4  <<R1 s1 s4>> vs <<s4 s1 R1>> -> ONE mmrest, dir=(), 0.0 ss (skips ignored -> unisilence)
+//   bar 5  <<r1 s2 s4>> vs <<s4 s2 r1>> -> ONE rest, dir=(), +1.0 ss (same)
+// Columns: 8.585 | bar 14.183 | bar 22.073 | 24.163 | bar 29.761 | bar 37.651 | 38.741 | bar 44.339
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone {
+    R1@text("R").up |
+    s1@text("s").up |
+    r1@text("r").up |
+    voice { R1 } { s1 } { s4 } |
+    voice { r1 } { s2 } { s4 } |
+  }
+  vtwo {
+    r1@text("r").down |
+    R1@text("R").down |
+    s1@text("s").down |
+    voice { s4 } { s1 } { R1 } |
+    voice { s4 } { s2 } { r1 } |
+  }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

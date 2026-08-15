@@ -1,0 +1,26 @@
+GNU LilyPond 2.26.0 (running Guile 3.0)
+Processing `pcsil-a.ly'
+Parsing...
+Interpreting music...
+Preprocessing graphical objects...
+Finding the ideal number of pages...
+Fitting music on 1 page...
+Drawing systems...
+Converting to PNG...
+REST x=8.584999999999999 y=0.0 dur=2 ink src=11:19
+REST x=8.584999999999999 y=-2.0 dur=3 ink src=12:19
+STEM dir=1 x=9.059999999999999 ink
+STEM dir=-1 x=9.084999999999999 ink
+REST x=10.784999999999998 y=-2.0 dur=3 ink src=12:22
+STEM dir=-1 x=11.284999999999998 ink
+REST x=13.184999999999999 y=0.0 dur=1 ink src=11:25
+STEM dir=-1 x=13.934999999999999 ink
+REST x=17.985 y=0.0 dur=3 ink src=11:28
+REST x=17.985 y=-2.0 dur=2 ink src=12:28
+STEM dir=1 x=18.485 ink
+STEM dir=-1 x=18.46 ink
+REST x=20.185 y=2.0 dur=3 ink src=11:31
+STEM dir=1 x=20.685 ink
+REST x=24.474999999999998 y=1.0 dur=0 ink src=11:36
+STEM dir=-1 x=25.224999999999998 ink
+Success: compilation successfully completed

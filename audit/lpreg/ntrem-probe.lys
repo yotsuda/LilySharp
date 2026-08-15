@@ -1,0 +1,9 @@
+// 通常譜 stemmed tremolo の陽性対照 (LP: a4:32 e''8:32)。
+// LP a=A3 → Lily# a, / LP e''=E5 → Lily# e'。
+octave absolute
+part m { }
+section A {
+  m { a,4:32 e'8:32 | }
+}
+form main { A }
+score main { staff m }

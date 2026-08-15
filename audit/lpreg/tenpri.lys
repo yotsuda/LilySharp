@@ -1,0 +1,17 @@
+// lilypond-src/input/regression/tenuto-priority.ly の Lily# 訳。
+// CLAIM: \tenuto を含む複合 articulation は書いた順に依らず正しく積まれる
+// (script-priority: staccato -100 < tenuto -50 < accent 0)。
+// 綴り: 相対 anchor は LP c' 基準 — bare c = LP c'。裸時価は 4。
+
+part melody
+
+section A {
+  melody {
+    c4@tenuto@accent c@accent@tenuto c@staccato@tenuto c@tenuto@staccato
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

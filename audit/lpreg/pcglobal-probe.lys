@@ -1,0 +1,26 @@
+// Twin of input/regression/part-combine-global.ly.
+// texidoc: "The analysis of the part combiner is non-local: in the following example,
+// the decision for using separate voices in the 1st measure is made on the 2nd note,
+// but influences the 1st note. In the 2nd measure, the pattern without the tie, leads
+// to combined voices."
+// LP `a'` = A4 = Lily# `a`; LP `f'` = F4 = Lily# `f`. The manual beams are kept, because
+// a manual [ ] is a beam EVENT in LilyPond and so enters the combiner's span state —
+// an auto-beamed twin would be asking a different question.
+octave absolute
+time 2/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { a8[ a] a8[ a] | a8[ a] a8[ a] | }
+  // ⚠️ LilyPond writes `f'8[ f]~` — post-events in any order. Lily# takes the tie only
+  // BEFORE the beam bracket (`f~]`), and drops it silently otherwise: measured with
+  // scratch/lpreg/tiebeam-order.lys, where the `]~` staff prints no tie and no warning.
+  // The two spellings mean the same thing, so this twin says it the way Lily# hears it.
+  vtwo { f8[ f~] f8[ f] | f8[ f] f8[ f] | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

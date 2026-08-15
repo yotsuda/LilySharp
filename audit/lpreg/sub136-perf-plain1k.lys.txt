@@ -1,0 +1,198 @@
+NOTE	-	skip=False reuse=False eligible=True
+STAGE	-	prelim.beams	367.9	n=1
+STAGE	-	prelim.ties	0.6	n=1
+STAGE	-	prelim.slurs	0.7	n=1
+STAGE	-	prelim.annotationpass	296.3
+STAGE	-	prelim.enrich	4.2
+STAGE	-	layout.prelimannotation	687.2
+STAGE	-	layout.pages	151.6
+STAGE	-	span.beams	366.8	n=1
+STAGE	-	span.restshifts	6.7	n=1
+STAGE	-	span.ties	0.4	n=1
+STAGE	-	span.slurs	0.4	n=1
+STAGE	-	span.glissandos	3.8	n=1
+STAGE	-	layout.spanners	390.9
+NOTE	-	skip=True reuse=True eligible=True
+NOTE	pitch.warm	skip=True reuse=False eligible=True
+STAGE	pitch.warm	prelim.beams	354.8	n=1
+STAGE	pitch.warm	prelim.ties	0.4	n=1
+STAGE	pitch.warm	prelim.slurs	0.4	n=1
+STAGE	pitch.warm	prelim.annotationpass	106.2
+STAGE	pitch.warm	prelim.enrich	0.1
+STAGE	pitch.warm	layout.prelimannotation	472.0
+STAGE	pitch.warm	layout.pages	146.8
+STAGE	pitch.warm	span.beams	377.5	n=1
+STAGE	pitch.warm	span.restshifts	0.3	n=1
+STAGE	pitch.warm	span.ties	0.4	n=1
+STAGE	pitch.warm	span.slurs	0.5	n=1
+STAGE	pitch.warm	span.glissandos	0.4	n=1
+STAGE	pitch.warm	layout.spanners	385.3
+NOTE	pitch.0	skip=False reuse=False eligible=True
+STAGE	pitch.0	prelim.beams	357.5	n=1
+STAGE	pitch.0	prelim.ties	0.4	n=1
+STAGE	pitch.0	prelim.slurs	0.5	n=1
+STAGE	pitch.0	prelim.annotationpass	88.0
+STAGE	pitch.0	prelim.enrich	0.2
+STAGE	pitch.0	layout.prelimannotation	457.1
+STAGE	pitch.0	layout.pages	146.4
+STAGE	pitch.0	span.beams	380.9	n=1
+STAGE	pitch.0	span.restshifts	0.3	n=1
+STAGE	pitch.0	span.ties	0.6	n=1
+STAGE	pitch.0	span.slurs	0.6	n=1
+STAGE	pitch.0	span.glissandos	0.5	n=1
+STAGE	pitch.0	layout.spanners	388.4
+NOTE	pitch.1	skip=True reuse=False eligible=True
+STAGE	pitch.1	prelim.beams	360.7	n=1
+STAGE	pitch.1	prelim.ties	0.5	n=1
+STAGE	pitch.1	prelim.slurs	0.6	n=1
+STAGE	pitch.1	prelim.annotationpass	81.5
+STAGE	pitch.1	prelim.enrich	0.1
+STAGE	pitch.1	layout.prelimannotation	451.7
+STAGE	pitch.1	layout.pages	137.7
+STAGE	pitch.1	span.beams	421.0	n=1
+STAGE	pitch.1	span.restshifts	0.2	n=1
+STAGE	pitch.1	span.ties	0.5	n=1
+STAGE	pitch.1	span.slurs	0.7	n=1
+STAGE	pitch.1	span.glissandos	0.6	n=1
+STAGE	pitch.1	layout.spanners	427.0
+NOTE	pitch.2	skip=True reuse=False eligible=True
+STAGE	pitch.2	prelim.beams	480.9	n=1
+STAGE	pitch.2	prelim.ties	0.7	n=1
+STAGE	pitch.2	prelim.slurs	0.8	n=1
+STAGE	pitch.2	prelim.annotationpass	142.8
+STAGE	pitch.2	prelim.enrich	0.3
+STAGE	pitch.2	layout.prelimannotation	635.4
+STAGE	pitch.2	layout.pages	222.8
+STAGE	pitch.2	span.beams	580.7	n=1
+STAGE	pitch.2	span.restshifts	0.3	n=1
+STAGE	pitch.2	span.ties	0.7	n=1
+STAGE	pitch.2	span.slurs	0.8	n=1
+STAGE	pitch.2	span.glissandos	0.7	n=1
+STAGE	pitch.2	layout.spanners	590.3
+NOTE	pitch.3	skip=False reuse=False eligible=True
+STAGE	pitch.3	prelim.beams	587.5	n=1
+STAGE	pitch.3	prelim.ties	0.8	n=1
+STAGE	pitch.3	prelim.slurs	0.8	n=1
+STAGE	pitch.3	prelim.annotationpass	151.9
+STAGE	pitch.3	prelim.enrich	0.3
+STAGE	pitch.3	layout.prelimannotation	751.0
+STAGE	pitch.3	layout.pages	229.8
+STAGE	pitch.3	span.beams	639.0	n=1
+STAGE	pitch.3	span.restshifts	0.2	n=1
+STAGE	pitch.3	span.ties	0.6	n=1
+STAGE	pitch.3	span.slurs	0.6	n=1
+STAGE	pitch.3	span.glissandos	0.5	n=1
+STAGE	pitch.3	layout.spanners	647.8
+NOTE	pitch.4	skip=True reuse=False eligible=True
+STAGE	pitch.4	prelim.beams	423.0	n=1
+STAGE	pitch.4	prelim.ties	0.5	n=1
+STAGE	pitch.4	prelim.slurs	0.5	n=1
+STAGE	pitch.4	prelim.annotationpass	102.3
+STAGE	pitch.4	prelim.enrich	0.2
+STAGE	pitch.4	layout.prelimannotation	533.5
+STAGE	pitch.4	layout.pages	152.2
+STAGE	pitch.4	span.beams	392.1	n=1
+STAGE	pitch.4	span.restshifts	0.2	n=1
+STAGE	pitch.4	span.ties	0.6	n=1
+STAGE	pitch.4	span.slurs	0.5	n=1
+STAGE	pitch.4	span.glissandos	0.4	n=1
+STAGE	pitch.4	layout.spanners	399.8
+NOTE	-	skip=False reuse=False eligible=True
+STAGE	-	prelim.beams	720.2	n=1
+STAGE	-	prelim.ties	1.1	n=1
+STAGE	-	prelim.slurs	1.2	n=1
+STAGE	-	prelim.annotationpass	223.4
+STAGE	-	prelim.enrich	0.2
+STAGE	-	layout.prelimannotation	958.5
+STAGE	-	layout.pages	227.7
+STAGE	-	span.beams	492.9	n=1
+STAGE	-	span.restshifts	0.2	n=1
+STAGE	-	span.ties	0.5	n=1
+STAGE	-	span.slurs	0.5	n=1
+STAGE	-	span.glissandos	0.6	n=1
+STAGE	-	layout.spanners	502.3
+NOTE	-	skip=True reuse=True eligible=True
+NOTE	accidental-gate-moved.warm	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.warm	prelim.beams	404.2	n=1
+STAGE	accidental-gate-moved.warm	prelim.ties	0.5	n=1
+STAGE	accidental-gate-moved.warm	prelim.slurs	0.6	n=1
+STAGE	accidental-gate-moved.warm	prelim.annotationpass	94.8
+STAGE	accidental-gate-moved.warm	prelim.enrich	0.1
+STAGE	accidental-gate-moved.warm	layout.prelimannotation	510.0
+STAGE	accidental-gate-moved.warm	layout.pages	189.3
+STAGE	accidental-gate-moved.warm	span.beams	392.3	n=1
+STAGE	accidental-gate-moved.warm	span.restshifts	0.2	n=1
+STAGE	accidental-gate-moved.warm	span.ties	0.5	n=1
+STAGE	accidental-gate-moved.warm	span.slurs	0.5	n=1
+STAGE	accidental-gate-moved.warm	span.glissandos	0.4	n=1
+STAGE	accidental-gate-moved.warm	layout.spanners	400.2
+NOTE	accidental-gate-moved.0	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.0	prelim.beams	364.1	n=1
+STAGE	accidental-gate-moved.0	prelim.ties	0.4	n=1
+STAGE	accidental-gate-moved.0	prelim.slurs	0.4	n=1
+STAGE	accidental-gate-moved.0	prelim.annotationpass	126.9
+STAGE	accidental-gate-moved.0	prelim.enrich	0.2
+STAGE	accidental-gate-moved.0	layout.prelimannotation	503.1
+STAGE	accidental-gate-moved.0	layout.pages	194.1
+STAGE	accidental-gate-moved.0	span.beams	448.7	n=1
+STAGE	accidental-gate-moved.0	span.restshifts	0.3	n=1
+STAGE	accidental-gate-moved.0	span.ties	0.5	n=1
+STAGE	accidental-gate-moved.0	span.slurs	0.5	n=1
+STAGE	accidental-gate-moved.0	span.glissandos	0.4	n=1
+STAGE	accidental-gate-moved.0	layout.spanners	457.6
+NOTE	accidental-gate-moved.1	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.1	prelim.beams	435.1	n=1
+STAGE	accidental-gate-moved.1	prelim.ties	0.5	n=1
+STAGE	accidental-gate-moved.1	prelim.slurs	0.6	n=1
+STAGE	accidental-gate-moved.1	prelim.annotationpass	101.4
+STAGE	accidental-gate-moved.1	prelim.enrich	0.2
+STAGE	accidental-gate-moved.1	layout.prelimannotation	545.6
+STAGE	accidental-gate-moved.1	layout.pages	148.4
+STAGE	accidental-gate-moved.1	span.beams	406.4	n=1
+STAGE	accidental-gate-moved.1	span.restshifts	0.2	n=1
+STAGE	accidental-gate-moved.1	span.ties	0.5	n=1
+STAGE	accidental-gate-moved.1	span.slurs	0.6	n=1
+STAGE	accidental-gate-moved.1	span.glissandos	0.5	n=1
+STAGE	accidental-gate-moved.1	layout.spanners	415.5
+NOTE	accidental-gate-moved.2	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.2	prelim.beams	449.3	n=1
+STAGE	accidental-gate-moved.2	prelim.ties	0.5	n=1
+STAGE	accidental-gate-moved.2	prelim.slurs	0.5	n=1
+STAGE	accidental-gate-moved.2	prelim.annotationpass	94.6
+STAGE	accidental-gate-moved.2	prelim.enrich	0.1
+STAGE	accidental-gate-moved.2	layout.prelimannotation	555.5
+STAGE	accidental-gate-moved.2	layout.pages	159.8
+STAGE	accidental-gate-moved.2	span.beams	431.8	n=1
+STAGE	accidental-gate-moved.2	span.restshifts	0.2	n=1
+STAGE	accidental-gate-moved.2	span.ties	0.5	n=1
+STAGE	accidental-gate-moved.2	span.slurs	0.5	n=1
+STAGE	accidental-gate-moved.2	span.glissandos	0.4	n=1
+STAGE	accidental-gate-moved.2	layout.spanners	440.7
+NOTE	accidental-gate-moved.3	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.3	prelim.beams	373.2	n=1
+STAGE	accidental-gate-moved.3	prelim.ties	0.6	n=1
+STAGE	accidental-gate-moved.3	prelim.slurs	0.6	n=1
+STAGE	accidental-gate-moved.3	prelim.annotationpass	118.6
+STAGE	accidental-gate-moved.3	prelim.enrich	0.1
+STAGE	accidental-gate-moved.3	layout.prelimannotation	501.7
+STAGE	accidental-gate-moved.3	layout.pages	153.0
+STAGE	accidental-gate-moved.3	span.beams	421.9	n=1
+STAGE	accidental-gate-moved.3	span.restshifts	0.2	n=1
+STAGE	accidental-gate-moved.3	span.ties	0.4	n=1
+STAGE	accidental-gate-moved.3	span.slurs	0.4	n=1
+STAGE	accidental-gate-moved.3	span.glissandos	0.4	n=1
+STAGE	accidental-gate-moved.3	layout.spanners	430.1
+NOTE	accidental-gate-moved.4	skip=False reuse=False eligible=True
+STAGE	accidental-gate-moved.4	prelim.beams	375.2	n=1
+STAGE	accidental-gate-moved.4	prelim.ties	0.6	n=1
+STAGE	accidental-gate-moved.4	prelim.slurs	0.5	n=1
+STAGE	accidental-gate-moved.4	prelim.annotationpass	84.2
+STAGE	accidental-gate-moved.4	prelim.enrich	0.2
+STAGE	accidental-gate-moved.4	layout.prelimannotation	468.9
+STAGE	accidental-gate-moved.4	layout.pages	164.8
+STAGE	accidental-gate-moved.4	span.beams	385.5	n=1
+STAGE	accidental-gate-moved.4	span.restshifts	0.2	n=1
+STAGE	accidental-gate-moved.4	span.ties	0.4	n=1
+STAGE	accidental-gate-moved.4	span.slurs	0.4	n=1
+STAGE	accidental-gate-moved.4	span.glissandos	0.4	n=1
+STAGE	accidental-gate-moved.4	layout.spanners	392.4

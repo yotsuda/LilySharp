@@ -1,0 +1,16 @@
+// 監査 probe: 全音符和音の単独 tremolo (stemless 枝・第41号で観測者ゼロのまま追加した枝)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    repeat tremolo 32 { <c e>32 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }
+

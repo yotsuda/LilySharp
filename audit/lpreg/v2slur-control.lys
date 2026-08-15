@@ -1,0 +1,28 @@
+// ⒪ exploration — does a VOICE-2 slur's protrusion below the staff ever move the
+// system gap? Prelim lays ties/slurs on the PRIMARY VOICE ONLY (staffScore), the
+// final pass on every voice — so a voice-2 slur that is the lowest ink of system 1
+// never joins the spacing extents (HANDOFF §1 ⒪, named by session 136's 3rd delivery).
+title "Voice2 Slur Spacing Probe"
+composer "probe"
+tempo 100
+time 4/4
+key c major
+octave absolute
+
+part m { clef treble }
+
+section Main {
+  m {
+    g4 a b c' | d'4 c' b a | g4 a b c' | d'4 c' b a |
+    voice { g'4 a' b' c'' | b'2 a'2 | } { e4 c g, c, | g,2 c,2 | }
+    g4 a b c' | d'4 c' b a | g4 a b c' | d'4 c' b a |
+    g4 a b c' | d'4 c' b a | g4 a b c' | d'4 c' b a |
+  }
+}
+
+form main { Main }
+
+score main "voice2-slur-probe" {
+  staff m
+}
+

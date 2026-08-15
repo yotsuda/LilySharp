@@ -1,0 +1,20 @@
+// lilypond-src/input/regression/tablature-grace-notes.ly の Lily# 訳。
+// CLAIM: grace 音のフレット数字は小さい。
+// LP \relative(無引数)は先頭 c が絶対 C3・全部オクターブ3 = 素の小文字と同綴り。
+// \grace \parenthesize e8 は \parenthesize 綴りなし(両側 plain grace に落とし・
+// 括弧は claim(数字サイズ)の外)。treble_8 部は LP と同綴り。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m {
+    c4 d e f |
+    grace { e8 } c4 d e f |
+    grace { e8 } c4 d e f |
+    appoggiatura { e8 } c4 d e f |
+    acciaccatura { e8 } c4 d e f |
+  }
+}
+form main { A }
+// 原書の TabStaff は \tabFullNotation 無し=数字のみ既定(LP)。Lily# は full 既定
+// なので as numbers で枠を揃える。
+score main { staff m tab m as numbers }

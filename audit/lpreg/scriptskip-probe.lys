@@ -1,0 +1,14 @@
+// probe: spacer rest への script (`s^>^^` の Lily# 面)。
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    s4@accent@marcato c4 c c |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

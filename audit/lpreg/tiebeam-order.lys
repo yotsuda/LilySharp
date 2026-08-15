@@ -1,0 +1,16 @@
+// Does a tie mark survive after a beam-close bracket? `f8[ f]~ f8[ f]` is LilyPond's own
+// spelling in part-combine-global.ly, where `]` and `~` are both post-events of one note.
+octave absolute
+time 2/4
+
+part pa { clef treble }
+part pb { clef treble }
+
+section A {
+  pa { f8[ f]~ f8[ f] | }
+  pb { f8[ f~] f8[ f] | }
+}
+
+form main { ~A }
+
+score main { staff pa  staff pb }

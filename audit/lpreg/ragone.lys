@@ -1,0 +1,13 @@
+// ragged-right-one-line.ly twin — 1行 score は既定で ragged (右へ伸ばさない)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { a, b, c d | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

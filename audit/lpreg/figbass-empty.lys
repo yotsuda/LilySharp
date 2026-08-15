@@ -1,0 +1,22 @@
+// figured-bass-empty-figures.ly の Lily# 訳。
+// 主張: 空の bass figure も場所を取る (held slot が行を保持し下の figure が下段に座る)。
+// ⚠️ 最終 chord の LP `<8 _- 5>` は「空 figure に flat」— Lily# の `_` は変化記号を
+// 取れない (ParseFigures) ので @fig(8 _ 5) と書き flat を落とす = 綴りゲート 1 点。
+// octave absolute (Lily# の c = LP の c'): LP g, = G2 = g,, など。
+octave absolute
+clef bass
+
+part melody
+
+section A {
+  melody {
+    <g,, e, g, c>2@fig(_ 6 4) <g,, d, f, b,>2@fig(7 5 3) |
+    <c, f, g, c>2@fig(5 4)~ <c, e, g, c>2@fig(_ 3) |
+    <c,, a,, e, d>2@fig(9 _ 6) <c,, g,, es, c>2@fig(8 _ 5) |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

@@ -1,0 +1,17 @@
+// Isolation 4, decisive: does `R1*2` COUNT as two bars of the section?
+// If it does, both parts are 3 bars and there is no LYS2007; if it counts as one, the
+// alignment warning fires and names the number it counted.
+octave absolute
+time 4/4
+
+part pa { clef treble }
+part pb { clef treble }
+
+section A {
+  pa { R1*2 | c1 | }
+  pb { c1 | c1 | c1 | }
+}
+
+form main { ~A }
+
+score main { staff pa staff pb }

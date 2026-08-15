@@ -1,0 +1,19 @@
+// Twin of input/regression/part-combine-slur.ly.
+// texidoc: "\partCombine handles slurs without errors."
+// Both parts are the SAME music, slur and tie included, so the two span states never
+// diverge and every moment is a unison: one voice, one "a2".
+// LP `c'` = C4 = Lily# `c`.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { c4( d~ d f) | }
+  vtwo { c4( d~ d f) | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

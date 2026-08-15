@@ -1,0 +1,17 @@
+// spacc-corr の対照: 4 音目の臨時記号を抜く（cis→c）。乖離が残れば knee 算術・
+// 消えれば臨時記号連動（esh/conditional 予約）の切り分け。
+octave absolute
+time 2/4
+
+part melody
+
+section A {
+  melody {
+    c8 cis'' cis'' c |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

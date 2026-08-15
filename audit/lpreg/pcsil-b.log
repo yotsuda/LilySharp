@@ -1,0 +1,32 @@
+GNU LilyPond 2.26.0 (running Guile 3.0)
+Processing `pcsil-b.ly'
+Parsing...
+Interpreting music...
+Preprocessing graphical objects...
+Finding the ideal number of pages...
+Fitting music on 1 page...
+Drawing systems...STAFF sy=-6.035117013718012
+REST x=8.584999999999999 y=-4.035117013718012 dur=2 dir=1 ink src=10:16
+REST x=8.584999999999999 y=-8.035117013718011 dur=3 dir=-1 ink src=11:16
+STEM dir=1 x=9.059999999999999 ink
+STEM dir=-1 x=9.084999999999999 ink
+NH pos=-5 x=10.985 y=-8.535117013718011 ink note=1 src=11:19
+TEXT "Solo II" x=10.985 y=2.584376708599901 series=bold shape=() size=()
+STEM dir=1 x=12.2242 ink
+NH pos=-3 x=13.385 y=-7.535117013718012 ink note=3 src=11:22
+TEXT "a2" x=13.385 y=2.5639707477239173 series=bold shape=() size=()
+NH pos=0 x=13.385 y=-6.035117013718012 NOINK note=3 src=10:21
+STEM dir=1 x=14.6974 ink
+REST x=20.385855000865387 y=-4.035117013718012 dur=3 dir=1 ink src=10:28
+REST x=20.385855000865387 y=-8.035117013718011 dur=2 dir=-1 ink src=11:28
+STEM dir=1 x=20.885855000865387 ink
+STEM dir=-1 x=20.86085500086539 ink
+NH pos=-3 x=22.785855000865386 y=-7.535117013718012 ink note=3 src=10:31
+TEXT "Solo" x=22.785855000865386 y=2.584376708599901 series=bold shape=() size=()
+STEM dir=1 x=24.025055000865386 ink
+NH pos=-4 x=25.185855000865384 y=-8.035117013718011 ink note=2 src=10:33
+TEXT "a2" x=25.185855000865384 y=2.5639707477239173 series=bold shape=() size=()
+NH pos=0 x=25.185855000865384 y=-6.035117013718012 NOINK note=2 src=11:33
+STEM dir=1 x=26.498255000865385 ink
+
+Success: compilation successfully completed

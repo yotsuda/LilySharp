@@ -1,0 +1,25 @@
+// Twin of score 1 of input/regression/part-combine-mmrest-shared.ly.
+// texidoc: "Multi-measure rests do not have to begin and end simultaneously to be combined."
+//
+// The two parts write THREE runs each and disagree about where they end:
+//   part 1   8 | 16 | 4
+//   part 2  16 |  8 | 4
+// What LP engraves (measured, scratch/lpreg/pcmsh-a.log) is FOUR multi-measure rests —
+// 8, 8, 8, 4 — one per segment between the boundaries EITHER part sets (0, 8, 16, 24).
+// The 16-bar rest of part 1 is cut at bar 16, where the shared voice switches to part 2.
+// LilyPond needs \compressMMRests for this; Lily# collapses a run of whole-bar rests on
+// its own, so the twin says nothing about compression.
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { R1*8 | R1*16 | R1*4 | }
+  vtwo { R1*16 | R1*8 | R1*4 | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

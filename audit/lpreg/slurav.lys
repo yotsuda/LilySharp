@@ -1,0 +1,18 @@
+// lilypond-src/input/regression/slur-avoid.ly の Lily# 訳。
+// CLAIM: slur は avoid object をよく扱う (= slur 終端の fermata ('around) が
+// bow から降りる。lily/slur.cc outside_slur_callback)。
+// 綴り: Lily# の相対 anchor は LP c' 基準 — a' が LP a'・そこから b' が LP b''
+// (相対で最近傍 b' + 1 octave)。8分+4分の 2 音のみ (LP に \time 無し)。
+
+part melody
+
+section A {
+  melody {
+    a'8( b'4@fermata)
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

@@ -1,0 +1,17 @@
+// slur-rest-direction.ly の Lily# 訳（3/4・4分）。詳細は slurrest-s.lys。
+octave absolute
+clef bass
+time 4/4
+
+part melody
+
+section A {
+  melody {
+    c,4( r c,) r | c( r c) r | c( r c,) r | c,( r c) r | r( r r) r |
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

@@ -1,0 +1,22 @@
+// Twin of score 3 of input/regression/part-combine-silence.ly.
+// Same book as pcsil-a-probe: a multi-measure rest against an ordinary rest.
+//
+// What LP does with it (measured, scratch/lpreg/pcsil-c.log): NO multi-measure rest
+// is printed at all. r4-vs-R1 is synced apart-silence, and the rest-with-mmrest branch
+// picks the ORDINARY rest (silence1 / silence2), so the mmrest goes to the null voice.
+//   bar 1: r4 (part 1, y 0.0) then f2. "Solo"
+//   bar 2: r4 (part 2, y 0.0) then d2. "Solo II"
+octave absolute
+time 4/4
+
+part vone { clef treble }
+part vtwo { clef treble }
+
+section A {
+  vone { r4 f2. | R1 | }
+  vtwo { R1 | r4 d2. | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { vone vtwo } }

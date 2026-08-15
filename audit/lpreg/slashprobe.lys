@@ -1,0 +1,12 @@
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

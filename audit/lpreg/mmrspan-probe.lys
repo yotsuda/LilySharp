@@ -1,0 +1,15 @@
+// multi-measure-rest-text-spanned.ly の probe — 綴れる核心のみ:
+// slur が R1 をまたぎ、R1 に fermata が乗る (crash 回帰 + script on MMR)。
+// score1 の \tuplet+R1*3/2 (duration scaling) と score3 の in-music volta は綴りなし。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { f1( | R1@fermata | e'1) | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

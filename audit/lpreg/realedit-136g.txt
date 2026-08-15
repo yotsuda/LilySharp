@@ -1,0 +1,4 @@
+perf136-plain250.lys	pitch	floor 424.3 ms	median 540.1 ms	all [635.6, 695.4, 540.1, 452.4, 424.3]	skippedBreak [False,True,True,False,True]	svg 594856BF84590AA8
+perf136-plain250.lys	accidental-gate-moved	floor 458.5 ms	median 530.6 ms	all [458.5, 523.2, 530.6, 631.7, 701.6]	skippedBreak [False,False,False,False,False]	svg 874BE8EA2BB11BC4
+perf-plain1k.lys	pitch	floor 1521.7 ms	median 1808.2 ms	all [1807.0, 1808.2, 1820.9, 2037.9, 1521.7]	skippedBreak [False,True,True,False,True]	svg 7CC24025BC25BDD9
+perf-plain1k.lys	accidental-gate-moved	floor 1647.4 ms	median 1703.1 ms	all [1672.9, 1647.4, 1711.9, 1724.4, 1703.1]	skippedBreak [False,False,False,False,False]	svg C0993A88AE4CC535

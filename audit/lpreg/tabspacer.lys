@@ -1,0 +1,14 @@
+// lilypond-src/input/regression/tablature-new-line-spacer.ly の Lily# 訳。
+// CLAIM: 行頭の spacer (s2) がエラーにならない(crash 回帰本)。
+// 原書 TabStaff は素(数字のみ既定)→ as numbers。b = LP b = B3(treble_8 同綴り)。
+octave absolute
+part m { clef treble_8 tuning guitar }
+section A {
+  m {
+    b1 |
+    break
+    s2 b |
+  }
+}
+form main { A }
+score main { tab m as numbers }

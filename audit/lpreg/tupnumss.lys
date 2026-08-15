@@ -1,0 +1,19 @@
+// tuplet-number-slur-script.ly twin — slur+script があっても tuplet 番号位置が正しい。
+// 綴り: LP \relative c' の e=E4 → Lily# 絶対 e。->=@accent(向き自動)。
+// LP の R1 は両側 r1 置換(第1小節は claim の枠外・R1/r1 の位置差は off-claim)。
+// 明示 break → LP twin は ragged-right 無し(README 規約の逆)。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    r1 | break
+    tuplet 3/2 { e8(@accent e8 e8) } r4 r2 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

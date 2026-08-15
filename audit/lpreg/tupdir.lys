@@ -1,0 +1,23 @@
+// tuplet-bracket-direction.ly twin — bracket 向き = stem 向き多数決・同数は UP。
+// 綴り: LP \relative c'' を絶対展開 (Lily# c = LP c')。
+// LP側音高: C5 / A4 / C6+F4 / F3+C5 / A4A4C5 / C5C5A4 / A4x3 / C5x3。
+// (相対解決: c'→C6の後の f,, は「上4度F6」基準で −2oct = F4。F3 と誤訳して
+//  t4 の tiebreak が逆に出た——枠の再犯4回目・頭 position で毎回検分の家訓どおり)
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v {
+    tuplet 3/2 { r4 r4 r4 } tuplet 3/2 { r4 c'4 r4 } |
+    tuplet 3/2 { r4 a4 r4 } tuplet 3/2 { c''4 f4 r4 } |
+    tuplet 3/2 { f,4 c'4 r4 } tuplet 3/2 { a4 a4 c'4 } |
+    tuplet 3/2 { c'4 c'4 a4 } tuplet 3/2 { a4 a4 a4 } |
+    tuplet 3/2 { c'4 c'4 c'4 } r2 |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

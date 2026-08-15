@@ -1,0 +1,19 @@
+// lilypond-src/input/regression/slur-flag.ly の Lily# 訳。
+// CLAIM: slur は flag の extent を考慮する (= B4 の 8分 flag が slur の
+// encompass/base に入る)。
+// 枠: 原本の \stemUp \slurUp は両側落とし——素でも B4 は stem up + flag・
+// C5 は stem down で slur は UP (calc_direction: any stem down → up) なので
+// 主張 (slur 起点の flag) は生きる。綴り: 相対 anchor LP c' → b' = B4。
+
+part melody
+
+section A {
+  melody {
+    b'8( c8)
+  }
+}
+
+// ~A hides the section label, so the engraved result is unchanged.
+form main { ~A }
+
+score main { staff melody }

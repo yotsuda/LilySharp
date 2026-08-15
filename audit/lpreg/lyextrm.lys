@@ -1,0 +1,17 @@
+// lyric-extender-right-margin.ly twin — extender が右余白へはみ出ないこと
+// (f~f が break を跨ぐ melisma・長い音節 effffffffffff)。
+// 綴り: LP relative c' = C4 = Lily# c。
+octave absolute
+time 4/4
+
+part v { }
+
+lyrics w { section Main { c d e effffffffffff __ | e d c | } }
+
+section Main {
+  v { c4 d e f~ | break f4 e d c | }
+}
+
+form main { ~Main }
+
+score main { staff ~v with lyrics w }

@@ -1,0 +1,20 @@
+// tuplet-rest.ly twin — tuplet は休符を含んでよい (drawn bracket over rests)。
+// 綴り: LP 無引数\relative の基準は **f (F3)**——c,=C2・c'''=C5 (LP符頭Y実測で確定。
+// c'基準と誤読して一周した)。絶対展開 (Lily# = LP−1oct): C2=c,, C5=c' E5=e' G4=g。
+octave absolute
+time 2/4
+
+part v { }
+
+section Main {
+  v {
+    tuplet 3/2 { r4 c,,4 c'4 } | tuplet 3/2 { r4 c'4 c'4 } |
+    tuplet 3/2 { r4 c'4 r4 } | tuplet 3/2 { r4 r4 r4 } |
+    tuplet 3/2 { r4 c'4 e'4 } | tuplet 3/2 { c'4 r4 e'4 } |
+    tuplet 3/2 { r4 c'4 g4 } | tuplet 3/2 { c'4 r4 g4 } |
+  }
+}
+
+form main { ~Main }
+
+score main { staff ~v }

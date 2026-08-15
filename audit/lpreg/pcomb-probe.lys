@@ -1,0 +1,20 @@
+// The Lily# twin of scratch/lpreg/pcombine-lp.ly (\partCombine \one \two).
+// LP's own answer, dumped from that file (pcdump.log):
+//   bar 1  unisono   4 heads, 4 stems dir=UP, "a2" on the first
+//   bar 2  solo1     2 heads (g'), "Solo"        — part two's R1 is NOT engraved
+//   bar 3  solo2     2 heads (g),  "Solo II"     — part one's R1 is NOT engraved
+//   bar 4  chords    4 TWO-NOTE chords, 4 stems, no text (chord-range is a ninth)
+octave absolute
+time 4/4
+
+part fl1 { clef treble }
+part fl2 { clef treble }
+
+section A {
+  fl1 { c4 d e f | g2 g | R1 | c4 e g e | }
+  fl2 { c4 d e f | R1 | g,2 g, | g,4 g, g, g, | }
+}
+
+form main { ~A }
+
+score main { combinedStaff { fl1 fl2 } }
