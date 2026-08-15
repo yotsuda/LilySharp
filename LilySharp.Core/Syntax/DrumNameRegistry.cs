@@ -164,20 +164,20 @@ public static class DrumOverrides
         Dictionary<string, DrumInfo>? map = null;
         foreach (var dm in drummaps)
         {
-            foreach (var (name, s) in dm.Entries)
+            foreach (var (name, _, s) in dm.Entries)
             {
                 if (!DrumNameRegistry.TryGet(name, out var info))
                     continue; // unknown names are ignored (override-only scope)
                 map ??= new Dictionary<string, DrumInfo>(StringComparer.Ordinal);
                 if (map.TryGetValue(info.FullName, out var cur))
                     info = cur;
-                if (s.TryGetValue("position", out var p) && int.TryParse(p, out int pos)
+                if (s.TryGetValue("position", out var p) && int.TryParse(p.Text, out int pos)
                     && pos is >= -9 and <= 9)
                     info = info with { StaffPosition = pos };
                 if (s.TryGetValue("notehead", out var nh))
                     info = info with
                     {
-                        Notehead = nh.ToLowerInvariant() switch
+                        Notehead = nh.Text.ToLowerInvariant() switch
                         {
                             "x" or "cross" => NoteheadStyle.Cross,
                             "diamond" => NoteheadStyle.Diamond,
@@ -188,13 +188,15 @@ public static class DrumOverrides
                             _ => info.Notehead,
                         },
                     };
-                if (s.TryGetValue("midi", out var m) && int.TryParse(m, out int gm)
+                if (s.TryGetValue("midi", out var m) && int.TryParse(m.Text, out int gm)
                     && gm is >= 0 and <= 127)
                     info = info with { GmKey = gm };
                 if (s.TryGetValue("mark", out var mk))
                     info = info with
                     {
-                        Mark = mk.ToLowerInvariant() is "stopped" or "open" ? mk.ToLowerInvariant() : null,
+                        Mark = mk.Text.ToLowerInvariant() is "stopped" or "open"
+                            ? mk.Text.ToLowerInvariant()
+                            : null,
                     };
                 map[info.FullName] = info;
             }

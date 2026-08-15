@@ -1187,6 +1187,23 @@ public sealed class LilyPondExporter
         for (; i < items.Count; i++)
         {
             var it = items[i];
+
+            // Once the ':|' has been seen the scan keeps running ONLY to pick up trailing
+            // '[2. …]' endings. Anything else ends this repeat — in particular a second
+            // '|:', which starts the NEXT repeat and must not be read as nesting. This
+            // test has to come before the nesting arm below: while it sat after it,
+            // '|: A :| |: B :|' re-entered as depth++ and emitted one repeat with an
+            // empty '\repeat volta 2 { }' inside it, leaving B outside every repeat and
+            // closed by a bare '\bar ":|."' — the page, MIDI and MusicXML all read the
+            // same source as two repeats (measured 2026-08-15: 8 repeat dots / 16 noteOn /
+            // two forward+backward pairs), so the twin was alone in disagreeing.
+            if (closed)
+            {
+                if (it is InlineVoltaSyntax trailing) { alternatives.Add(trailing); continue; }
+                if (it is BreakSyntax) { /* absorb a break right after :| */ continue; }
+                break;
+            }
+
             if (it is BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatStartBar } && alternatives.Count == 0)
             {
                 depth++; common.Add(it); continue;
@@ -1196,19 +1213,17 @@ public sealed class LilyPondExporter
                 if (depth > 0) { depth--; common.Add(it); continue; }
                 repeatCount = rb.HasExplicitRepeatCount ? rb.RepeatCount : repeatCount;
                 closed = true;
-                // Endings can follow the :| ([2. …]); keep scanning for them.
+                // ':|:' both closes this repeat and opens the next one, so hand the token
+                // back to the caller (EmitMusicStream opens a repeat on RepeatBothBar too)
+                // instead of consuming it. A ':|' only closes, so keep scanning for the
+                // trailing endings that may follow it.
+                if (rb.BarToken.Kind == SyntaxKind.RepeatBothBar) break;
                 continue;
             }
             if (it is InlineVoltaSyntax v)
             {
                 alternatives.Add(v);
                 continue;
-            }
-            if (closed)
-            {
-                // Past :| with no more endings — the repeat is done.
-                if (it is BreakSyntax) { /* absorb a break right after :| */ continue; }
-                break;
             }
             common.Add(it);
         }
@@ -1256,7 +1271,7 @@ public sealed class LilyPondExporter
         KeySignatureSyntax k => EmitKey(k),
         TimeSignatureSyntax ts => EmitTime(ts),
         TempoDeclarationSyntax t => EmitTempo(t),
-        ClefDeclarationSyntax cl => "\\clef " + cl.ClefName.Text,
+        ClefDeclarationSyntax cl => "\\clef " + LyClefName(cl.ClefName.Text),
         PartialDeclarationSyntax p => EmitPartial(p),
         TupletExpressionSyntax tup => EmitTuplet(tup),
         ParallelExpressionSyntax par => EmitParallel(par),
@@ -1770,16 +1785,39 @@ public sealed class LilyPondExporter
         return string.Join(" ", parts);
     }
 
-    // `@mark("Intro")` → a rehearsal mark. MarkName joins the tokens with '.',
-    // so the label is what follows "mark." with the quotes stripped.
+    /// <summary><c>@mark("Intro")</c> → LilyPond's boxed rehearsal mark.</summary>
+    /// <remarks>
+    /// <para>
+    /// The label is read from the annotation's argument by
+    /// <see cref="Semantics.AnnotationValues.Rehearsal"/>, not sliced out of the dotted
+    /// name here — this was the FOURTH copy of that slice, and it stripped its quotes
+    /// with <c>Trim('"')</c> where the collector strips one balanced pair
+    /// (docs/VALUE_SITE_AUDIT.md §9.5.3 ⑵).
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>A behaviour change, declared</b> — the same shape as <c>@finger("3")</c>
+    /// and <c>@frame(zzz)</c> before it: the twin wrote the label UNQUOTED, and
+    /// <c>\box</c> takes ONE markup argument, so a label with a space said different
+    /// music than Lily# draws. Measured on LilyPond 2.26.0: <c>\box a b</c> boxes only
+    /// <c>a</c> and prints <c>b</c> outside the box (box width 1.9331), while
+    /// <c>\box "a b"</c> boxes the whole label (4.0159) — which is what Lily# draws.
+    /// Quoting is a no-op for every label a book writes: <c>\box A</c> and
+    /// <c>\box "A"</c> render byte-identical SVG, as do <c>\box D.S.</c> and
+    /// <c>\box "D.S."</c> (both measured on 2.26.0), and the two <c>@mark(</c> sites in
+    /// the corpus and fixtures are <c>@mark("A")</c> and <c>@mark("B")</c>.
+    /// </para>
+    /// LILYPOND-REF: ly/music-functions-init.ly:1159-1171 mark = define-music-function (label)
+    ///   — the label of <c>\mark</c>, which becomes a RehearsalMarkEvent (or an
+    ///   AdHocMarkEvent when it is a markup rather than a number).
+    /// LILYPOND-REF: scm/define-markup-commands.scm:1049-1053 — define-markup-command
+    ///   (box layout props arg) declares <c>(markup?)</c>: ONE markup, which is why an
+    ///   unquoted two-word label boxes only its first word.
+    /// </remarks>
     private string EmitMark(MusicMarkSyntax mk)
     {
+        if (Semantics.AnnotationValues.Rehearsal(mk, out _) is { } label)
+            return $"\\mark \\markup {{ \\box \"{Escape(label)}\" }}";
         string name = mk.MarkName;
-        if (name.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
-        {
-            string label = name.Substring("mark.".Length).Trim('"');
-            return $"\\mark \\markup {{ \\box {label} }}";
-        }
         if (NonArpeggiato(mk) is { } na)
             return na;
         if (Fingering(mk) is { } fg)
@@ -1889,19 +1927,36 @@ public sealed class LilyPondExporter
     private static string EmitDuration(DurationSyntax? d)
         => d == null ? "" : d.NumberToken.Text + new string('.', d.DotCount);
 
-    private string EmitBarline(BarlineSyntax b) => b.BarToken.Kind switch
+    private string EmitBarline(BarlineSyntax b)
     {
-        SyntaxKind.Bar => "|",
-        SyntaxKind.DoubleBar => "\\bar \"||\"",
-        SyntaxKind.FinalBar => "\\bar \"|.\"",
-        SyntaxKind.DashedBar => "\\bar \"!\"",
-        // Repeat barlines are consumed by EmitInlineRepeat; a stray one is a
-        // best-effort fallback.
-        SyntaxKind.RepeatStartBar => "\\bar \".|:\"",
-        SyntaxKind.RepeatEndBar => "\\bar \":|.\"",
-        SyntaxKind.RepeatBothBar => "\\bar \":|.|:\"",
-        _ => "|",
-    };
+        // A ':|' that EmitInlineRepeat did not consume is a ONE-SIDED end-repeat, and in
+        // Lily# that means "repeat from the beginning of the piece" — which `\bar ":|."`
+        // does NOT say. LilyPond's `\bar` is a glyph; only `\repeat volta` repeats. So the
+        // twin draws the right barline and plays the music once, and that is a twin that
+        // COMPILES AND IS DIFFERENT MUSIC — the defect class this exporter's warning channel
+        // exists for (see the remark on Fingering_BecomesAnAttachedPostEvent). Say so rather
+        // than let it pass: wrapping the whole preceding stream in `\repeat volta 2 { … }`
+        // is the fix, and it is a restructure of the emitted file, not a token swap.
+        if (b.BarToken.Kind == SyntaxKind.RepeatEndBar)
+            _warnings.Add(
+                "a one-sided ':|' repeats from the beginning of the piece in Lily#, but "
+                + "LilyPond's \\bar \":|.\" only DRAWS the barline — the twin engraves the "
+                + "same page and plays the music once");
+
+        return b.BarToken.Kind switch
+        {
+            SyntaxKind.Bar => "|",
+            SyntaxKind.DoubleBar => "\\bar \"||\"",
+            SyntaxKind.FinalBar => "\\bar \"|.\"",
+            SyntaxKind.DashedBar => "\\bar \"!\"",
+            // Repeat barlines are consumed by EmitInlineRepeat; a stray one is a
+            // best-effort fallback.
+            SyntaxKind.RepeatStartBar => "\\bar \".|:\"",
+            SyntaxKind.RepeatEndBar => "\\bar \":|.\"",
+            SyntaxKind.RepeatBothBar => "\\bar \":|.|:\"",
+            _ => "|",
+        };
+    }
 
     /// <summary>
     /// A key signature — and the running key a scale-degree chord stacks in, advanced here
@@ -2093,9 +2148,42 @@ public sealed class LilyPondExporter
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         string region = $"\\new CueVoice {{ {body} }}";
         return cue.ClefKeyword is { } clef
-            ? $"\\cueClef {clef.Text} {region} \\cueClefUnset"
+            ? $"\\cueClef {LyClefName(clef.Text)} {region} \\cueClefUnset"
             : region;
     }
+
+    /// <summary>
+    /// A clef name as LilyPond's <c>\clef</c> / <c>\cueClef</c> take it: a QUOTED string.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The quotes are not decoration. MEASURED on LilyPond 2.26.0, 2026-08-15: written
+    /// bare, <c>\clef treble_8</c> is read as <c>\clef treble</c> followed by <c>_8</c> — a
+    /// fingering — so LilyPond reports "Unattached FingeringEvent", engraves an ORDINARY
+    /// treble clef and prints a stray glyph under the staff. The three books differ:
+    /// bare 5643 bytes, quoted 6442 (the real octave-down clef), plain treble 5161. The twin
+    /// was writing the bare form at all four sites, so the 6 tracked books that use
+    /// <c>treble_8</c> had twins that engraved a DIFFERENT CLEF — the exact "compile to other
+    /// music" failure the twin exists to rule out, and it was invisible because the four
+    /// clef names that are purely alphabetic do lex correctly bare.
+    /// <para>
+    /// The octave modifier is part of the NAME, not a separate token: make-clef-set matches
+    /// the whole string against <c>^(.*)([_^])([^0-9a-zA-Z]*)([1-9][0-9]*)([^0-9a-zA-Z]*)$</c>
+    /// and splits it itself. So the name has to REACH it in one piece — written bare,
+    /// LilyPond's reader has already split it, and make-clef-set is handed "treble".
+    /// </para>
+    /// <para>
+    /// Quoting unconditionally rather than only when the name has an underscore: quoted is
+    /// LilyPond's documented spelling and is correct for every name (MEASURED — treble, bass,
+    /// alto, tenor and treble_8 all pass, in both \clef and \cueClef), so nothing here has to
+    /// reason about LilyPond's reader. ONE home for the rule, because four spellings of it is
+    /// how this survived in three of them.
+    /// </para>
+    /// LILYPOND-REF: scm/parser-clef.scm:178-190 make-clef-set — takes clef-name as a string
+    ///   and parses the octave modifier out of it.
+    /// LILYPOND-REF: ly/music-functions-init.ly:535-538 make-cue-clef-set — cueClef declares
+    ///   its argument (type) (string?) and hands it straight to it.
+    /// </remarks>
+    private static string LyClefName(string name) => "\"" + name + "\"";
 
     private string EmitRepeat(RepeatExpressionSyntax rep)
     {
@@ -2417,7 +2505,7 @@ public sealed class LilyPondExporter
         // the glyph stays hidden, but the notes still have to be READ in that clef.
         string? clef = OssiaClef(ossia)
                        ?? PartClefWord(parts.FirstOrDefault(p => p.Name.Text == partName));
-        if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
+        if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
         sb.Append('\\').Append(varName).Append(" }\n");
         return sb.ToString();
     }
@@ -2573,7 +2661,7 @@ public sealed class LilyPondExporter
             if (InstrumentNameClause(partName) is { } staffName)
                 sb.Append(" \\with { ").Append(staffName).Append(" }");
             sb.Append(" { ");
-            if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
+            if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
             sb.Append('\\').Append(varName).Append(" }\n");
         }
         return sb.ToString();

@@ -77,11 +77,59 @@ public class CollectTailShifterTests
         [typeof(NavigationMarkPlacementWarning)] = new[] { "SourcePosition" },
         [typeof(TieTargetWarning)] = new[] { "SourcePosition" },
         [typeof(UnpairedSlurWarning)] = new[] { "SourcePosition" },
+        [typeof(UnpairedBeamWarning)] = new[] { "SourcePosition" },
+        [typeof(CueSpanBoundaryWarning)] = new[] { "SourcePosition" },
         [typeof(ChordNameItem)] = new[] { "SourcePosition" },
         // The trill-spanner event tuple is covered by hand in ShiftSideEntry
         // (ValueTuple fields are not reflectable by name); its shape change
         // would break the tuple pattern there at compile time.
     };
+
+    /// <summary>
+    /// Every element type of <c>CumulativeSideTables()</c> must be accounted for by the
+    /// shifter — either as a <see cref="MusicItem"/> (which rides the base's
+    /// SourcePosition) or by name in <see cref="Shifted"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The inventory above is HAND-WRITTEN, so it can only validate the types it already
+    /// lists: it is structurally blind to a table that was added and never wired. That is
+    /// not hypothetical — <c>UnpairedBeamWarning</c> was added to CumulativeSideTables and
+    /// NOT to ShiftSideEntry, whose <c>default:</c> throws, so any checkpoint/resume
+    /// carrying one would have died. The whole suite stayed green because nothing drives an
+    /// unpaired beam through an incremental edit.
+    ///
+    /// This test closes that hole from the other side: the list of types comes from the
+    /// COLLECTOR at runtime (an empty <c>List&lt;T&gt;</c> still reports its T), so a new
+    /// side table fails here the moment it is added, whatever it holds.
+    /// </remarks>
+    [Fact]
+    public void EveryCumulativeSideTableTypeIsAccountedFor()
+    {
+        var elementTypes = new MeasureCollector().CumulativeSideTables()
+            .Select(t => t.GetType())
+            .Where(t => t.IsGenericType)
+            .Select(t => t.GetGenericArguments()[0])
+            .Distinct()
+            .ToList();
+
+        Assert.NotEmpty(elementTypes);
+
+        var missing = elementTypes
+            .Where(t => !typeof(MusicItem).IsAssignableFrom(t))
+            .Where(t => !Shifted.ContainsKey(t))
+            // The trill-spanner event is a ValueTuple, shifted by hand in ShiftSideEntry
+            // (Item4 = the source position). It cannot join the inventory above, which
+            // reflects fields BY NAME, so it is named here instead of silently skipped.
+            .Where(t => !(t.IsGenericType
+                          && t.GetGenericTypeDefinition() == typeof(ValueTuple<,,,,,,>)))
+            .Select(t => t.Name)
+            .ToList();
+
+        Assert.True(missing.Count == 0,
+            "these cumulative side-table element types are not accounted for by "
+            + "CollectTailShifter.ShiftSideEntry (whose default: throws) nor listed in the "
+            + "inventory above: " + string.Join(", ", missing));
+    }
 
     [Fact]
     public void ShifterInventory_CoversEveryPositionField()

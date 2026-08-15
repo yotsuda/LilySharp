@@ -320,9 +320,9 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 (* Example (each voice { } is a simultaneous voice; NOT the LilyPond '<< \\ >>' form):
    section Main { piano { voice { c'2 d } { e2 f } } }
    // Named voices bind their own lyrics — the name goes before each block:
-   //   voice sop { … } alt { … }   +   lyrics sop { … }  lyrics alt { … }
+   //   voice sop { … } alt { … }   +   lyrics sop { … }  lyrics alt { … } *)
 
-   The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
+(* The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
    the staff's barlines, and music written after the span continues in the bar it left
    off in. The other voices sound alongside it, starting from the instant the span opened
    (mid-bar spans included), and add no bars of their own. The bar check counts them the
@@ -376,8 +376,13 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
    basename. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
-ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } , '}' ;
-                 (* at least one ScoreItem is required: a score with an empty body
+ScoreDecl      = 'score' , Identifier , [ String ] , '{' , { ScoreItem } , '}' ;
+                 (* The Identifier NAMES THE FORM this score renders and is REQUIRED —
+                    'score "out" { … }' is refused with "A 'score' must name the form it
+                    renders". The optional String is the output basename.
+                    A score body holds ScoreItems and nothing else: a form is declared at
+                    the top level and referred to by that name, never written inside the
+                    braces. At least one ScoreItem is required — a score with an empty body
                     engraves a page with no music, so it is an error (LYS6002). *)
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
@@ -450,7 +455,7 @@ PartRef        = Identifier ;
      grandStaff { staff rightHand  staff leftHand }
    }
 
-   score main "practice" { form main { Intro } staff melody }
+   score practice { staff melody }     // a second form, rendered to practice.svg
 *)
 
 ### 7.1 Lead sheets (chords and/or lyrics, no staff)
@@ -480,7 +485,12 @@ PartRef        = Identifier ;
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | InlineVolta | PhraseRef
-               | Slur | Tie | Beam | Tuplet | Grace | MidMusicCommand ;
+               | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand | NavMark ;
+
+(* NavMark (see §6) is the SAME bare token in a section's music as in a form — it is a
+   landmark, never a note modifier, so it takes no '@' (c4@segno is LYS1022 and
+   `segno c4` is the spelling). Written mid-measure it engraves but warns (LYS4003);
+   put it at a barline boundary. *)
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the
@@ -545,7 +555,7 @@ ChordNote      = PitchToken , { Annotation } ;
    C5 G4 E4 C4. Each member's own marks are local; marks after '>>' shift the whole group
    and propagate. Members may be pitches, scale degrees, chords or rests.
    Annotations after '>>': a dynamic (@f) applies to the whole group and a chord name
-   (@chord / @Am7) labels it; any other annotation on the group or a bare member is not
+   (@chord / @chord(a:m7)) labels it; any other annotation on the group or a bare member is not
    applied yet and warns (LYS4008) — nothing is dropped silently. A nested chord member
    keeps its own annotation handling ('<< <c e>@arpeggio g >>' is fine).
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
@@ -557,6 +567,18 @@ Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , { "'" | ',' } , [ Dur
 
 Barline        = '|' | '||' | '|.' | '|:' | '!' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
+
+(* ONE-SIDED REPEAT BARLINES. The two halves are not symmetric:
+     - ':|' with no '|:' open REPEATS FROM THE BEGINNING OF THE PIECE. Not an error.
+     - '|:' that no ':|' closes IS AN ERROR (LYS4017) — where it ends is undefined.
+   The pair MAY CROSS LAYERS: a '|:' in a section's music can be closed by a ':|' the
+   form writes, because a section is not a piece of music on its own. So the pairing
+   is decided on the LAID-OUT score (the collector's expanded measure stream), never
+   on one layer alone — no scan of a section's text could be right about it.
+   The mirror does NOT work: a '|:' in a form opens a FormRepeatBlock (below), and
+   that block must close in the form.
+   A repeat barline belongs to the SCORE, not to one part: written in one part it is
+   drawn on every staff. *)
 
 (* '!' is the DASHED barline (LilyPond's \bar "!"), and like every other barline it
    CLOSES THE BAR it follows. Write it spaced ('c4 d e f ! g4 …'). Glued to a note
@@ -638,15 +660,19 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Arpeggio:      <c e g>4@arpeggio
    - Glissando:     c4@glissando d
    - Figured bass:  c4@fig(6) , d4@fig(6 4)
-   - Chord name:    c4@chord(C) , d4@chord(Dm)
+   - Chord name:    c4@chord(c) , d4@chord(d:m)   (* Lily# pitch spelling, lower case:
+                    the quality follows a ':' (a:m7, g:7). '@chord(C)' / '@chord(Dm)' are
+                    LilyPond's spelling and are NOT recognised — LYS1008 warns and the
+                    symbol is not engraved. A bare '@chord' derives it from the notes. *)
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark("A")   (label is a quoted string)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)
    - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
-   - Cue/effects:   @cue (small cue note) , @cross / @dead (x notehead) ,
+   - Effects:       @cross / @dead (x notehead) ,
                     @fall @doit (jazz bends) , @breath @caesura
+                    (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
-   - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
+   - Spanners:       @rit @accel
                      @ottava(…) @quindicesima(…) … @loco ,   [labels: 8va/15ma; @…(bassa) = down]
                      @startTrillSpan … @stopTrillSpan ,
                      @sustainOn … @sustainOff , @sostenutoOn … @sostenutoOff , @unaCorda … @treCorde *)
@@ -660,6 +686,22 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
 Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] , MusicBlock ;
                  (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
                     use the symbolic |: … :| form, NOT a 'repeat' keyword *)
+Cue            = 'cue' , [ ClefName ] , MusicBlock ;
+                 (* Small cue notes. A cue is a REGION, not a note annotation — it maps
+                    onto LilyPond's CueVoice context, whose size is a context property,
+                    so there is no '@cue': write 'c4 d cue { e4 f } g4 |'.
+                    The optional ClefName is the clef the QUOTED instrument reads in —
+                    LilyPond's \cueClef / \cueClefUnset, which the twin emits as a pair.
+                    Its notes are written in that clef and the staff's own clef returns
+                    after the region. *)
+                 (* ⚠️ A slur or tie may not cross the region's edge: a cue is a voice of
+                    its own, so LilyPond drops such a span entirely (LYS4012). Close it
+                    inside the cue, or keep both ends outside — a slur passing OVER a whole
+                    cue is fine. *)
+
+(* Example: c4 d cue { e4 f } g4 | *)
+
+(* Example: c4 d cue bass { e4 f } g4 | *)
 
 ================================================================================
 ## 9. Override / Revert (engraving properties)
@@ -678,13 +720,19 @@ Number         = Integer | Decimal ;
    built once where the value is collected. A quoted value is therefore NOT a number —
    `= "10"` is the string "10" and answers nothing to a consumer asking for a double. *)
 
+(* The SYNTAX above accepts any Grob.property, but the consumed vocabulary is three pairs —
+   NoteHead.transparent, Stem.transparent, NoteColumn.force-hshift. Anything else is refused
+   (LYS1029, "not supported in this version") rather than silently doing nothing, so the
+   examples below are limited to the three; the list grows, and each addition removes one
+   error. *)
+
 (* Example:
-   override Stem.length = 7
-   override NoteColumn.force-hshift = 1.5     // fractional
-   override Stem.length = -3                  // negative
+   override NoteHead.transparent = true
+   override NoteColumn.force-hshift = 1.5      // fractional
+   override NoteColumn.force-hshift = -3       // negative
    c4 d e f |
-   revert Stem.length
-   once override Stem.length = 9     // applies to the next note only
+   revert NoteHead.transparent
+   once override Stem.transparent = true       // applies to the next note only
 *)
 
 ================================================================================

@@ -415,11 +415,32 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
     /// halves and how its runs differ from MarkName's per-token split. The two coexist
     /// while the consumers move over one family at a time (VALUE_SITE_AUDIT §9.5).
     /// </remarks>
-    public ImmutableArray<MarkArgument> Arguments
+    public ImmutableArray<MarkArgument> Arguments => MarkArgument.FromTokens(ArgumentTokens);
+
+    /// <summary>
+    /// The tokens written between '(' and ')', in source order, with the brackets
+    /// themselves removed and nothing else. Empty when there is no argument list.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The raw material both readings are made of: <see cref="Arguments"/> groups these
+    /// into runs of adjacent tokens, and <see cref="MarkName"/> joins them with '.'. A
+    /// SUB-LANGUAGE wants neither grouping — it wants the tokens, because tokens are what
+    /// it is written in (VALUE_SITE_AUDIT §9.2). The figured bass reads them here, which
+    /// is the last argument that was being read out of the dotted name.
+    /// </para>
+    /// <para>
+    /// ⚠️ EVERY interior token, including the ',' that separates arguments and any '.'
+    /// written inside the brackets. <see cref="MarkName"/> drops both, and that dropped
+    /// dot is precisely the one family whose spelling changes when a reader moves here
+    /// (§9.5.3 ⑴ — the same artefact <c>@chord(b.es:7)</c> had).
+    /// </para>
+    /// </remarks>
+    public ImmutableArray<SyntaxTokenNode> ArgumentTokens
     {
         get
         {
-            List<SyntaxTokenNode>? interior = null;
+            ImmutableArray<SyntaxTokenNode>.Builder? interior = null;
             bool open = false;
             for (int i = 0; i < SlotCount; i++)
             {
@@ -428,7 +449,7 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
                 if (token.Kind == SyntaxKind.OpenParen)
                 {
                     open = true;
-                    interior = [];
+                    interior = ImmutableArray.CreateBuilder<SyntaxTokenNode>();
                 }
                 else if (token.Kind == SyntaxKind.CloseParen)
                 {
@@ -439,7 +460,7 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
                     interior!.Add(token);
                 }
             }
-            return interior is null ? [] : MarkArgument.FromTokens(interior);
+            return interior is null ? [] : interior.ToImmutable();
         }
     }
 

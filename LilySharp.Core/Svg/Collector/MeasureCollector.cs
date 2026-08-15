@@ -84,8 +84,25 @@ public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText
 /// </summary>
 public record TieTargetWarning(
     int SourcePosition,
-    bool IntoRest     // true = the tie runs into a rest; false = a pitch mismatch
+    TieTargetProblem Problem
 );
+
+/// <summary>
+/// Why a tie could not bind. Three states, not two booleans: a bool pair would have a
+/// fourth combination that cannot happen.
+/// </summary>
+public enum TieTargetProblem
+{
+    /// <summary>The following note/chord repeats none of the tied pitches.</summary>
+    PitchMismatch,
+    /// <summary>The following timed item is an audible rest.</summary>
+    IntoRest,
+    /// <summary>Nothing follows at all — the tie is the last thing in its voice, so the
+    /// renderer draws nothing. MEASURED: `c4 d4 e4 f4~ |` engraves byte-for-byte as the
+    /// same bar without the tie, while `f4@laissezVibrer` draws the hanging tie the
+    /// writer probably meant.</summary>
+    NoTarget,
+}
 
 /// <summary>
 /// A slur mark that pairs with nothing, so no slur is drawn: a <c>(</c> that is never
@@ -99,6 +116,86 @@ public record TieTargetWarning(
 public record UnpairedSlurWarning(
     int SourcePosition,
     bool IsOpen       // true = an unclosed '('; false = a ')' with nothing open
+);
+
+/// <summary>Which kind of span crossed a cue boundary — the two whose engravers LilyPond
+/// keeps in the Voice context, so a cue region (a Voice of its own) cuts both.</summary>
+public enum CueSpanKind
+{
+    /// <summary>A slur, paired by <see cref="SlurPairingScanner"/>'s stack.</summary>
+    Slur,
+    /// <summary>A tie, bound to the next timed item by <see cref="TieTargetScanner"/>.</summary>
+    Tie,
+}
+
+/// <summary>
+/// A slur or tie with one end inside a <c>cue { … }</c> region and the other outside it.
+/// LilyPond cannot engrave such a span at all, so what Lily# draws for it is ink LilyPond
+/// will never make. <see cref="SourcePosition"/> points at the item the span STARTS on,
+/// which is the end the writer usually has to move.
+/// </summary>
+/// <remarks>
+/// Recorded by the same two scanners that already decide the pairing — the crossing test is
+/// one <c>IsCue</c> comparison on a pair those scanners have in hand — so this can never
+/// disagree with what gets drawn, for the reason <see cref="UnpairedSlurWarning"/> gives.
+/// <para>
+/// ⚠️ NARROWER THAN LilyPond'S CONDITION, and by the same cause as the note in
+/// <c>SpacingRules.CrossesVoiceBoundary</c>:
+///   departs from: two ADJACENT cue regions. <c>cue { … } cue { … }</c> is TWO CueVoice
+///     contexts (probe cue-span.ly C-TWO), so a span running from one into the next crosses a
+///     voice boundary and LilyPond refuses it — MEASURED 2026-08-15, the slur form warns
+///     "unterminated slur" / "cannot end slur" and the tie form is dropped in silence
+///     (byte-identical SVG). Here both ends answer <c>IsCue</c> true and nothing is reported.
+///   goes away when: a cue item can say WHICH region it belongs to — i.e. when the cue flag
+///     stops being derived and starts being stamped. That single change closes this AND the
+///     spacing departure, which is why neither is worth a private workaround.
+///   observed by: NOTHING. No fixture, sample or corpus book writes two cue blocks back to
+///     back (grep 2026-08-03, re-checked 2026-08-10 and again 2026-08-15 — only 4 books on
+///     disk write a cue region at all).
+/// </para>
+/// <para>
+/// A span that passes OVER a whole cue region (<c>c4( cue { e f } g4)</c>) is NOT a crossing
+/// and is not reported: both ends are in the enclosing Voice, and MEASURED, LilyPond pairs it
+/// without a word.
+/// </para>
+/// </remarks>
+public record CueSpanBoundaryWarning(
+    int SourcePosition,
+    CueSpanKind Kind,
+    bool StartsInsideCue   // true = the span begins in the cue and ends outside it
+);
+
+/// <summary>
+/// A manual beam bracket that pairs with nothing: a <c>[</c> never closed (including one
+/// left open when its voice ends — <see cref="BeamDetector"/> matches per voice) or a
+/// <c>]</c> read with none open. Unlike an unpaired slur, which loses its curve outright,
+/// an unpaired bracket loses only the GROUPING the writer asked for: the bracket is
+/// discarded and the notes fall back to automatic beaming. MEASURED — <c>c8[ d8 e8 f8 g8</c>
+/// engraves byte-for-byte as the same notes with no bracket at all, while the closed
+/// <c>c8[ d8 e8 f8 g8]</c> engraves a five-note beam that automatic beaming never produces.
+/// So the beam that appears is not the one that was written, and nothing said so.
+/// </summary>
+public record UnpairedBeamWarning(
+    int SourcePosition,
+    bool IsOpen       // true = an unclosed '['; false = a ']' with nothing open
+);
+
+/// <summary>
+/// A <c>|:</c> that no <c>:|</c> ever closes — a repeat whose end nobody wrote.
+/// </summary>
+/// <remarks>
+/// There is no <c>IsOpen</c> half here, unlike the slur and beam warnings: the OTHER
+/// one-sided case has a meaning rather than a defect. A <c>:|</c> with nothing open repeats
+/// from the beginning of the piece, which is the ordinary reading of the sign.
+/// <para>
+/// ⚠️ The position is a MEASURE boundary offset, not the offset of a token in the written
+/// text — and it cannot be otherwise. The pairing is only decidable after score expansion
+/// (a section's <c>|:</c> may be closed by a <c>:|</c> the form writes), so what is scanned
+/// is the expanded measure stream, where the two layers have already become siblings.
+/// </para>
+/// </remarks>
+public record UnpairedRepeatWarning(
+    int SourcePosition
 );
 
 /// <summary>
@@ -933,6 +1030,28 @@ public sealed partial class MeasureCollector
     /// <summary>Slur marks — a <c>(</c> never closed or a <c>)</c> with none open — that
     /// draw no slur. Populated as a side effect of Collect.</summary>
     public IReadOnlyList<UnpairedSlurWarning> UnpairedSlurWarnings => _unpairedSlurWarnings.ToList();
+    // Slurs and ties with one end inside a cue region and the other outside it — a span
+    // LilyPond cannot make. Recorded by the SAME two scanners that pair them (one IsCue
+    // comparison on the pair each already holds); surfaced by CueSpanBoundaryValidator.
+    private readonly List<CueSpanBoundaryWarning> _cueSpanBoundaryWarnings = new();
+    /// <summary>Slurs and ties that cross a <c>cue { … }</c> boundary. Populated as a side
+    /// effect of Collect.</summary>
+    public IReadOnlyList<CueSpanBoundaryWarning> CueSpanBoundaryWarnings => _cueSpanBoundaryWarnings.ToList();
+    // Manual beam brackets that pair with nothing, so BeamDetector discards them and the
+    // notes fall back to automatic beaming.
+    // Scanned per finished voice by BeamPairingScanner; surfaced by BeamPairingValidator.
+    private readonly List<UnpairedBeamWarning> _unpairedBeamWarnings = new();
+    /// <summary>Manual beam brackets — a <c>[</c> never closed or a <c>]</c> with none
+    /// open — whose grouping is discarded. Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<UnpairedBeamWarning> UnpairedBeamWarnings => _unpairedBeamWarnings.ToList();
+    // Repeat bars ('|:') that no ':|' ever closes. Scanned per finished voice by
+    // RepeatPairingScanner; surfaced by RepeatPairingValidator. Scanned HERE rather than on
+    // the written text because the pairing crosses layers (a section's '|:' may be closed
+    // by a ':|' the form writes) and is only decidable on the expanded measure stream.
+    private readonly List<UnpairedRepeatWarning> _unpairedRepeatWarnings = new();
+    /// <summary>Repeat bars — a <c>|:</c> that no <c>:|</c> closes — whose span has no end.
+    /// Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<UnpairedRepeatWarning> UnpairedRepeatWarnings => _unpairedRepeatWarnings.ToList();
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names (inline c:m marks, chordnames {} streams, chords-name rows) —
@@ -1247,8 +1366,12 @@ public sealed partial class MeasureCollector
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
         // Tie sanity scan runs BEFORE the ottava display transposition (it compares
         // written staff positions; an 8va span must not fake a pitch change).
-        TieTargetScanner.Scan(voice, _tieTargetWarnings);
-        SlurPairingScanner.Scan(voice, _unpairedSlurWarnings);
+        TieTargetScanner.Scan(voice, _tieTargetWarnings, _cueSpanBoundaryWarnings);
+        SlurPairingScanner.Scan(voice, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
+        BeamPairingScanner.Scan(voice, _unpairedBeamWarnings);
+        // One voice IS the score here, so this voice already carries the score-level
+        // barlines. (The multi-staff path scans after SynchronizeBarlines instead.)
+        RepeatPairingScanner.Scan(voice, _unpairedRepeatWarnings);
 
         // Ottava DISPLAY transposition: notes under an 8va draw an octave lower
         // (etc.) while sounding at their written pitch. Single-staff score, so
@@ -1600,6 +1723,14 @@ public sealed partial class MeasureCollector
             foreach (var v in HarvestOmittedStructure(tree, renderSpec))
                 flatVoices["omit:" + v.Name] = v;
         SynchronizeBarlines(flatVoices);
+        // The repeat-bar pairing is a SCORE-level fact, so it is read here — after the sync
+        // that gives every voice the score's barlines, and including the omitted parts fed
+        // in above — from ONE voice, not once per staff.
+        foreach (var anyVoice in flatVoices.Values)
+        {
+            RepeatPairingScanner.Scan(anyVoice, _unpairedRepeatWarnings);
+            break;
+        }
         foreach (var key in staffVoices.Keys.ToArray())
             staffVoices[key] = staffVoices[key]
                 .Select(v => _tabResolver.ResolveVoiceTabTies(flatVoices[v.Name])).ToImmutableArray();
@@ -2203,8 +2334,9 @@ public sealed partial class MeasureCollector
         // Tie sanity scan per voice, BEFORE the ottava display transposition.
         foreach (var v in voices)
         {
-            TieTargetScanner.Scan(v, _tieTargetWarnings);
-            SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+            TieTargetScanner.Scan(v, _tieTargetWarnings, _cueSpanBoundaryWarnings);
+            SlurPairingScanner.Scan(v, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
+            BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
         }
 
         // Ottava DISPLAY transposition (single staff → staff 0). See OttavaTransposer.
@@ -2355,8 +2487,9 @@ public sealed partial class MeasureCollector
         // Tie sanity scan per staff voice, BEFORE any display-only transform.
         foreach (var v in voices)
         {
-            TieTargetScanner.Scan(v, _tieTargetWarnings);
-            SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+            TieTargetScanner.Scan(v, _tieTargetWarnings, _cueSpanBoundaryWarnings);
+            SlurPairingScanner.Scan(v, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
+            BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
         }
         return ResolveStaffColumns(voices.ToImmutable());
     }
@@ -2452,6 +2585,9 @@ public sealed partial class MeasureCollector
         _fingeringByPosition.Clear();
         _tieTargetWarnings.Clear();
         _unpairedSlurWarnings.Clear();
+        _unpairedBeamWarnings.Clear();
+        _unpairedRepeatWarnings.Clear();
+        _cueSpanBoundaryWarnings.Clear();
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
@@ -3450,13 +3586,22 @@ public sealed partial class MeasureCollector
     /// <c>_fingeringByPosition</c> (position-keyed; an item only ever reads its
     /// OWN position, so prefix entries have no reader in the resumed tail), and
     /// the collaborators that run strictly post-walk (lyrics, tab).</summary>
-    private IList[] CumulativeSideTables() => new IList[]
+    internal IList[] CumulativeSideTables() => new IList[]
     {
         _dynamics, _articulations, _graceNotes, _musicMarks, _customTexts,
         _voltaBrackets, _tupletBrackets, _arpeggios, _figuredBasses,
         _percentRepeats, _crossStaffItems, _grobOverrides, _grobReverts,
         _trillSpannerEvents, _pitchTrace, _navPlacementWarnings,
-        _tieTargetWarnings, _unpairedSlurWarnings, _chordNameCollector.ItemsList,
+        _tieTargetWarnings, _unpairedSlurWarnings, _unpairedBeamWarnings,
+        _cueSpanBoundaryWarnings,
+        _chordNameCollector.ItemsList,
+        // ⚠️ _unpairedRepeatWarnings IS DELIBERATELY ABSENT, and the omission is the kind
+        // this list exists to make impossible — so it is written down. Every other entry
+        // ACCUMULATES during the walk, which is why a resumed walk has to adopt and shift
+        // it. RepeatPairingScanner runs strictly AFTER the walk, over the finished
+        // measures, and CLEARS its sink before filling it, so a resumed walk recomputes it
+        // from the measures it ends up with. Nothing to adopt, nothing to shift. Adding it
+        // here without a CollectTailShifter arm would throw on the `default:`.
     };
 
     /// <summary>
@@ -4144,6 +4289,17 @@ public sealed partial class MeasureCollector
                         break;
                     if (brk.IsNoBreak) builder.SetNoBreak();
                     else builder.SetBreak();
+                    break;
+
+                // A ':|' written in the form itself, outside any '|: … :|' block. It is
+                // the same BarlineSyntax the music stream carries, and it goes into the
+                // SAME flattened stream that ProcessRepeatBlock puts a block's own bars
+                // into — so the form's repeat bars and a section's repeat bars are
+                // siblings by the time anything reads them. The block's own bars are raw
+                // tokens inside FormRepeatBlockSyntax, not BarlineSyntax, so this arm
+                // cannot double-count them; the guard is for a nested form only.
+                case BarlineSyntax formBar when !IsInsideRepeatBlock(formBar):
+                    processNodes([new GreenSite(formBar)]);
                     break;
             }
         }

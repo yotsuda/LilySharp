@@ -1044,9 +1044,17 @@ private GreenNode?[] ParseArticulations()
     private bool IsArticulationName()
     {
         // Articulation/ornament names are plain identifiers after '@'; the specific
-        // name is resolved by ArticulationRegistry, not by the lexer. A few mark
-        // names (coda/segno/fine) lex as structure keywords but are equally valid
-        // as in-music marks (e.g. g1@coda).
+        // name is resolved by ArticulationRegistry, not by the lexer.
+        //
+        // ⚠️ The coda/segno/fine arms are UNREACHABLE from the single call site: the
+        // navigation-mark branch in ParseArticulations consumes those keywords first and
+        // reports LYS1022 ("a navigation mark is bare"). This comment used to claim the
+        // opposite — "equally valid as in-music marks (e.g. g1@coda)" — and measurement
+        // (2026-08-15) says otherwise: g1@coda and r2@coda are BOTH LYS1022, and the
+        // canonical spec was teaching the '@' form on the strength of claims like this
+        // one. The arms are kept rather than deleted because "unreachable" is a claim
+        // about every caller and this predicate could gain one; removing them is a
+        // separate job with its own approval.
         return Current.Kind is SyntaxKind.Identifier
             or SyntaxKind.CodaKeyword
             or SyntaxKind.SegnoKeyword

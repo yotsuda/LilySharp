@@ -65,155 +65,106 @@ public class FiguredBassTests
         Assert.Equal("7\u266E", figure.DisplayText);  // 7♮
     }
 
-    // --- ParseFigures ---
+    // --- the @fig(…) spelling ---
+    //
+    // These read the WRITTEN annotation, not an internal name. They used to pass the
+    // dotted "fig.6.s" that MarkName produced, which is the string round trip
+    // VALUE_SITE_AUDIT §9.5.3 ⑴ removed; a net that states the internal spelling cannot
+    // notice when the written one stops parsing (and one of these comments already
+    // described "@fig(#6)" by its dotted name rather than by what the user types).
 
-    [Fact]
-    public void ParseFigures_SingleDigit()
-    {
-        var result = FiguredBassItem.ParseFigures("fig.6");
-        Assert.NotNull(result);
-        Assert.Single(result!.Value);
-        Assert.Equal(6, result.Value[0].Number);
-        Assert.Equal(0, result.Value[0].Alteration);
-    }
+    private static MusicMarkSyntax Mark(string music)
+        => Assert.Single(SyntaxTree.Parse("melody { " + music + " }")
+            .GetRoot().DescendantNodes().OfType<MusicMarkSyntax>());
 
-    [Fact]
-    public void ParseFigures_TwoDigits()
-    {
-        var result = FiguredBassItem.ParseFigures("fig.6.4");
-        Assert.NotNull(result);
-        Assert.Equal(2, result!.Value.Length);
-        Assert.Equal(6, result.Value[0].Number);
-        Assert.Equal(4, result.Value[1].Number);
-    }
+    /// <summary>The figures of a written <c>@fig(<paramref name="argument"/>)</c>.</summary>
+    private static ImmutableArray<FiguredBassFigure>? Figures(string argument)
+        => LilySharp.Core.Semantics.AnnotationValues.Figures(Mark("c4@fig(" + argument + ") |"));
 
-    [Fact]
-    public void ParseFigures_ThreeDigits()
-    {
-        var result = FiguredBassItem.ParseFigures("fig.6.4.3");
-        Assert.NotNull(result);
-        Assert.Equal(3, result!.Value.Length);
-        Assert.Equal(6, result.Value[0].Number);
-        Assert.Equal(4, result.Value[1].Number);
-        Assert.Equal(3, result.Value[2].Number);
-    }
+    /// <summary>The figures as "number/alteration", or "held", for compact assertions.</summary>
+    private static string[] Shape(ImmutableArray<FiguredBassFigure>? figures)
+        => figures!.Value.Select(f => f.Held ? "held" : $"{f.Number}/{f.Alteration}").ToArray();
 
-    [Fact]
-    public void ParseFigures_WithSharp()
-    {
-        var result = FiguredBassItem.ParseFigures("fig.6.s");
-        Assert.NotNull(result);
-        Assert.Single(result!.Value);
-        Assert.Equal(6, result.Value[0].Number);
-        Assert.Equal(1, result.Value[0].Alteration);
-    }
+    [Theory]
+    // The four spellings every book on disk writes (13 @fig( sites, measured).
+    [InlineData("6", new[] { "6/0" })]
+    [InlineData("7", new[] { "7/0" })]
+    [InlineData("5 3", new[] { "5/0", "3/0" })]
+    [InlineData("6 4", new[] { "6/0", "4/0" })]
+    [InlineData("6 4 3", new[] { "6/0", "4/0", "3/0" })]
+    // Alterations, written as their own token — the form the MusicXML importer emits.
+    [InlineData("6 s", new[] { "6/1" })]
+    [InlineData("4 f", new[] { "4/-1" })]
+    [InlineData("7 n", new[] { "7/2" })]
+    [InlineData("6 S", new[] { "6/1" })]
+    [InlineData("7 6 s 4 f", new[] { "7/0", "6/1", "4/-1" })]
+    // A '#' before its figure sharpens it; alone it is the bare raised third.
+    [InlineData("#6", new[] { "6/1" })]
+    [InlineData("# 6", new[] { "6/1" })]
+    [InlineData("#", new[] { "0/1" })]
+    [InlineData("#6 4", new[] { "6/1", "4/0" })]
+    // '_' is a held / continuation slot.
+    [InlineData("_", new[] { "held" })]
+    [InlineData("7 _", new[] { "7/0", "held" })]
+    // ⚠️ The spelling is whitespace-INSENSITIVE because the TOKEN boundary separates,
+    // not the space. These are the same figures as their spaced forms above, and this
+    // is the property that made reading the argument RUNS impossible without a second
+    // copy of the lexer (§9.5.3 ⑴).
+    [InlineData("6s", new[] { "6/1" })]
+    [InlineData("6_", new[] { "6/0", "held" })]
+    [InlineData("6#6", new[] { "6/0", "6/1" })]
+    [InlineData("7 6s 4f", new[] { "7/0", "6/1", "4/-1" })]
+    // ',' separates arguments and says nothing about the figures.
+    [InlineData("6,4", new[] { "6/0", "4/0" })]
+    public void AWrittenFigure_StacksTheseFigures(string argument, string[] expected)
+        => Assert.Equal(expected, Shape(Figures(argument)));
 
-    [Fact]
-    public void ParseFigures_WithFlat()
-    {
-        var result = FiguredBassItem.ParseFigures("fig.4.f");
-        Assert.NotNull(result);
-        Assert.Single(result!.Value);
-        Assert.Equal(4, result.Value[0].Number);
-        Assert.Equal(-1, result.Value[0].Alteration);
-    }
+    [Theory]
+    [InlineData("x")]        // no such alteration
+    [InlineData("6 x")]
+    [InlineData("s")]        // an alteration with no figure to attach to
+    [InlineData("10")]       // a figure is one digit
+    [InlineData("-1")]
+    [InlineData("\"6\"")]    // a string is not a figure
+    [InlineData("")]         // @fig() writes no figures
+    public void AnUnwritableFigure_NamesNoFigures(string argument)
+        => Assert.Null(Figures(argument));
 
-    [Fact]
-    public void ParseFigures_WithNatural()
-    {
-        var result = FiguredBassItem.ParseFigures("fig.7.n");
-        Assert.NotNull(result);
-        Assert.Single(result!.Value);
-        Assert.Equal(7, result.Value[0].Number);
-        Assert.Equal(2, result.Value[0].Alteration);
-    }
+    /// <summary>
+    /// ⚠️ THE ONE SPELLING THIS COMMIT CHANGES, stated so it cannot drift back. A '.'
+    /// written inside the brackets used to VANISH — MarkName dropped every Dot token
+    /// before the parser split the name on '.', so "6.4" arrived as the two parts "6"
+    /// and "4" and printed 6 over 4, and ".6", "6." and "6.s" printed as though the dot
+    /// had not been typed. A dot is a token here, so it names no figure. This is the
+    /// same artefact, and the same decision, as <c>@chord(b.es:7)</c> (§9.5.3 ⑴); no
+    /// book writes one, and nothing ever documented the swallowing.
+    /// </summary>
+    [Theory]
+    [InlineData("6.4")]      // was 6 over 4
+    [InlineData("6.s")]      // was 6♯
+    [InlineData(".6")]       // was 6
+    [InlineData("6.")]       // was 6
+    public void ADotWrittenInsideTheParentheses_NamesNoFigures(string argument)
+        => Assert.Null(Figures(argument));
 
-    [Fact]
-    public void ParseFigures_MixedAlterations()
-    {
-        var result = FiguredBassItem.ParseFigures("fig.7.6.s.4.f");
-        Assert.NotNull(result);
-        Assert.Equal(3, result!.Value.Length);
-        Assert.Equal(7, result.Value[0].Number);
-        Assert.Equal(0, result.Value[0].Alteration);
-        Assert.Equal(6, result.Value[1].Number);
-        Assert.Equal(1, result.Value[1].Alteration);
-        Assert.Equal(4, result.Value[2].Number);
-        Assert.Equal(-1, result.Value[2].Alteration);
-    }
+    [Theory]
+    [InlineData("c4@segno |")]
+    [InlineData("c4@coda |")]
+    [InlineData("c4@mark(\"A\") |")]
+    [InlineData("c4@finger(3) |")]
+    public void AnnotationsThatAreNotFiguredBass_NameNoFigures(string music)
+        => Assert.Null(LilySharp.Core.Semantics.AnnotationValues.Figures(Mark(music)));
 
-    [Fact]
-    public void ParseFigures_SharpPrefix()
-    {
-        // @fig(#6) → MarkName "fig.#.6"; the '#' sharpens the following figure.
-        var result = FiguredBassItem.ParseFigures("fig.#.6");
-        Assert.NotNull(result);
-        Assert.Single(result!.Value);
-        Assert.Equal(6, result.Value[0].Number);
-        Assert.Equal(1, result.Value[0].Alteration);
-    }
-
-    [Fact]
-    public void ParseFigures_StandaloneSharp()
-    {
-        // @fig(#) → a bare sharp (raised third), number 0.
-        var result = FiguredBassItem.ParseFigures("fig.#");
-        Assert.NotNull(result);
-        Assert.Single(result!.Value);
-        Assert.Equal(0, result.Value[0].Number);
-        Assert.Equal(1, result.Value[0].Alteration);
-    }
-
-    [Fact]
-    public void ParseFigures_SharpPrefix_ThenPlainFigure()
-    {
-        // @fig(#6 4) → 6♯ over a plain 4.
-        var result = FiguredBassItem.ParseFigures("fig.#.6.4");
-        Assert.NotNull(result);
-        Assert.Equal(2, result!.Value.Length);
-        Assert.Equal(6, result.Value[0].Number);
-        Assert.Equal(1, result.Value[0].Alteration);
-        Assert.Equal(4, result.Value[1].Number);
-        Assert.Equal(0, result.Value[1].Alteration);
-    }
-
-    [Fact]
-    public void ParseFigures_HeldFigure()
-    {
-        // @fig(7 _) → a 7 over a held/continuation slot.
-        var result = FiguredBassItem.ParseFigures("fig.7._");
-        Assert.NotNull(result);
-        Assert.Equal(2, result!.Value.Length);
-        Assert.Equal(7, result.Value[0].Number);
-        Assert.False(result.Value[0].Held);
-        Assert.Equal(0, result.Value[1].Number);
-        Assert.True(result.Value[1].Held);
-    }
-
-    [Fact]
-    public void ParseFigures_StandaloneHeld()
-    {
-        // @fig(_) → a lone held figure line.
-        var result = FiguredBassItem.ParseFigures("fig._");
-        Assert.NotNull(result);
-        Assert.Single(result!.Value);
-        Assert.True(result.Value[0].Held);
-    }
-
-    [Fact]
-    public void ParseFigures_NotFiguredBass_ReturnsNull()
-    {
-        Assert.Null(FiguredBassItem.ParseFigures("segno"));
-        Assert.Null(FiguredBassItem.ParseFigures("coda"));
-        Assert.Null(FiguredBassItem.ParseFigures("mark.A"));
-    }
-
-    [Fact]
-    public void ParseFigures_InvalidFig_ReturnsNull()
-    {
-        Assert.Null(FiguredBassItem.ParseFigures("fig."));
-        Assert.Null(FiguredBassItem.ParseFigures("fig.x"));
-    }
+    /// <summary>
+    /// The name gate is case-INSENSITIVE, which is what the string form asked
+    /// (<c>StartsWith("fig.", OrdinalIgnoreCase)</c>) and therefore what books may rely on.
+    /// </summary>
+    [Theory]
+    [InlineData("Fig")]
+    [InlineData("FIG")]
+    public void TheNameIsCaseInsensitive(string name)
+        => Assert.Equal(["6/0"], Shape(
+            LilySharp.Core.Semantics.AnnotationValues.Figures(Mark("c4@" + name + "(6) |"))));
 
     // --- FiguredBassEngraver ---
 

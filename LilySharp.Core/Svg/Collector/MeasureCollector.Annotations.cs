@@ -35,16 +35,18 @@ public sealed partial class MeasureCollector
     /// <para>LILYPOND-REF: lily/figured-bass-engraver.cc - listen_bass_figure</para>
     /// <para>
     /// Written <c>@fig(6)</c> (single), <c>@fig(3 5)</c> (two figures), <c>@fig(6 s)</c>
-    /// (with sharp). The parser normalises that argument run into the INTERNAL mark name
-    /// <c>fig.6</c> / <c>fig.3.5</c> / <c>fig.6.s</c>, which is what
-    /// <c>FiguredBassItem.ParseFigures</c> reads.
+    /// (with sharp). One question, asked once:
+    /// <see cref="Semantics.AnnotationValues.Figures"/> answers null both for "not a
+    /// figured bass" and for "spells no figures", which is the only distinction this
+    /// caller ever made.
     /// </para>
     /// <para>
-    /// ⚠️ The dotted form is the internal NAME, not the syntax. This remark used to say
-    /// "Syntax: @fig.6 … @fig.6.4" and that spelling does not parse — measured
-    /// 2026-08-15, `c4@fig.6` reports LYS0016 and produces no figure. A session read
-    /// this line, believed it, and wrote a corpus claim on top of it (HANDOFF ▶ ⒯⑸).
-    /// If you write a spelling in a remark, parse it first.
+    /// ⚠️ There is no dotted spelling. This remark used to say "Syntax: @fig.6 …
+    /// @fig.6.4"; that was the INTERNAL name the reader used to be handed, and as a
+    /// spelling it does not parse — measured 2026-08-15, <c>c4@fig.6</c> reports LYS0016
+    /// and produces no figure. A session read this line, believed it, and wrote a corpus
+    /// claim on top of it (HANDOFF ▶ ⒯⑸). If you write a spelling in a remark, parse it
+    /// first. The internal name is gone from this path as of §9.5.3 ⑴.
     /// </para>
     /// </remarks>
     private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex)
@@ -55,7 +57,7 @@ public sealed partial class MeasureCollector
         {
             if (child is MusicMarkSyntax markSyntax)
             {
-                var figures = FiguredBassItem.ParseFigures(markSyntax.MarkName);
+                var figures = Semantics.AnnotationValues.Figures(markSyntax);
                 if (figures != null)
                 {
                     _figuredBasses.Add(new FiguredBassItem(
@@ -469,22 +471,21 @@ public sealed partial class MeasureCollector
                     }
                     else
                     {
-                        // Check if this articulation is a MusicMark (cresc, rit, mark.A, ottava, ped, etc.)
+                        // Check if this articulation is a MusicMark (cresc, rit, ottava,
+                        // ped, etc.). A rehearsal mark cannot arrive here: this is an
+                        // ARTICULATION, whose name is one token, while @mark("A") writes
+                        // an argument and is a MusicMarkSyntax. (Measured: 341
+                        // articulation names across the 299 corpus and fixture books, not
+                        // one of them contains a '.'.) Until the label moved to its
+                        // argument this arm carried a copy of the rehearsal reading that
+                        // no book could reach.
                         var markType = MusicMarkItem.ParseMarkName(nameText);
                         if (markType != null)
                         {
-                            if (markType.Value == MusicMarkType.Rehearsal)
-                            {
-                                string text = MusicMarkItem.ParseRehearsalText(nameText);
-                                _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
-                            }
-                            else
-                            {
-                                // Anchor to the host note's column so note-attached
-                                // marks (e.g. pedal "Ped.") sit at the note, not the
-                                // measure start.
-                                _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
-                            }
+                            // Anchor to the host note's column so note-attached
+                            // marks (e.g. pedal "Ped.") sit at the note, not the
+                            // measure start.
+                            _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
                         }
                     }
                 }

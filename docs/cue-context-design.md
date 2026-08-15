@@ -1,7 +1,18 @@
 # `cue { … }` — 設計
 
 **状態**: **形は決定**（`@cue` を廃し `cue { … }` にする・ユーザー判断）。
-**細目 4 点が未決**（§8）。**実装は未着手。**（2026-08-02・第72セッション）
+**細目 4 点が未決**（§8）。~~実装は未着手。~~（2026-08-02・第72セッション）
+⚠️ **「実装は未着手」は stale**（2026-08-15・第175セッション実測）——**入っている**:
+`CueExpressionSyntax` 10 site・lexer の `cue` キーワード・fixture 3 本と snapshot 3 枚
+（`cue-notes` / `cue-accidentals` / `cue-region-measure`）・exporter の `CueVoice` 11 site。
+**§4 の禁止 2 つも入っている**（**LYS4013** `NestedCueBlock`・**LYS4014** `VoiceInsideCue`）。
+⇒ ~~**残っているのは LYS4012 `SpanCrossesCueBoundary` だけ**~~ — **2026-08-15・第176セッションで入れた**
+（`CueSpanBoundaryValidator`。**§4 の「跨がせない」は全部実装済み＝この設計に未実装は無い**）。
+⚠️ **実装したとき §1.2 の表が 1 行足りないことが分かった**——**cue から*出る*タイを LP は
+無警告で捨てる**（表は「入る」向きしか測っていない）。**下の §1.2 を実測で埋めた。**
+★ **仕様書 2 冊は 2026-08-15 まで `@cue` を教え続けていた**——**この決定の 100 便あと**まで。
+`AnnotationNameValidator.cs:82` は最初から「cue は REGION であって注釈ではない」と
+書いてあり、**間違っていたのは文書のほう**だった。
 **根拠**: `audit/lp-geometry/probes/cue-span.ly`（この文書の「MEASURED」は全部そこ）。
 
 ---
@@ -52,9 +63,17 @@ MEASURED（`cue-span.ly` の B 群）——**4 つのうち 3 つは音符単位
 | 事象 | 境界を跨ぐか | 実測 |
 |---|---|---|
 | **連桁** | ✗ | `c''8 d'' \new CueVoice { e''8 f'' }` は Beam **2 本**。同じ 4 つを 1 声部で書くと **1 本** |
-| **タイ** | ✗ | `warning: unterminated tie`、Tie grob 無し |
-| **スラー** | ✗ | `warning: cannot end slur` / `unterminated slur`、Slur grob 無し |
+| **タイ（外→中）** | ✗ | `warning: unterminated tie`、Tie grob 無し |
+| **タイ（中→外）** | ✗ | ⚠️ ★★★ **警告が 1 つも出ない**。`c4 \new CueVoice { e4 f~ } f4` は `~` 無しの同じ小節と **SVG バイト同一**（SHA `A036D115…`・2026-08-15 実測）＝**黙って捨てる** |
+| **スラー** | ✗ | `warning: cannot end slur` / `unterminated slur`、Slur grob 無し（**どちら向きも**） |
+| **隣の cue へ** | ✗ | `cue { … } cue { … }` の間も同じ（スラーは警告 2 本・タイは無警告でバイト同一 `B53141B8…`）。⚠️ **両端とも「cue の中」なので真偽値のフラグでは見分けられない**——`CueSpanBoundaryWarning` の remarks 参照 |
+| **cue の上を通る** | ○ **通る** | `c4( \new CueVoice { e4 f } g4)` は**無警告で対になる**。両端が外側の声部だから＝**跨いでいるのは端ではない** |
 | **臨時記号の状態** | ○ 共有 | `cis''2 \new CueVoice { cis''2 }` は Accidental **1 つだけ**（`Accidental_engraver` は Staff 側） |
+
+⚠️ ★★★ **「中→外のタイ」の行がこの表の骨**。**LP も Lily# も何も言わない**ので、
+書いた人が受け取る唯一の信号は **Lily# が描いた曲線**——**LP が決して作らないインク**だった。
+**LYS4012 はこの沈黙を破るために在る**（他の cue 診断は*消えたインク*を報せるが、これだけは
+*在るインク*を報せる）。
 
 音符単位の印では、連桁・タイ・スラーが「囲いを跨ぐつもりだったのか」を Lily# が推測するしかなく、
 その推測が LilyPond と一致する保証がない。範囲なら書いた人が決める。
@@ -132,6 +151,15 @@ cue-expression := "cue" music-block
 
 - タイ／スラーが囲いの内外を跨ぐ → 既存 `LYS4010 UnpairedSlur` と同族。**新コード LYS4012**
   （`SpanCrossesCueBoundary`）を立て、「囲いの中で閉じるか、囲いの外に出すか」を促す。
+  ✔ **2026-08-15 実装**。**規則は再実装していない**——`SlurPairingScanner` のスタックと
+  `TieTargetScanner` の結び先判定に**相乗り**する（対が手元にある所で `IsCue` を 1 回比べるだけ）
+  ので、**描かれる結果と食い違う診断は原理的に出せない**。⚠️ **警告ではなくエラー**：未リリースで
+  **締める向きだけが後から不可能になる**（`エラー → 警告 → 描く` は誰も壊さない）。
+  `lysc` は best-effort なので**ページは今までどおり出る**——severity が決めるのは*何を言うか*だけ。
+  ⚠️ **隣接 cue の間を跨ぐ 1 形だけは捕まらない**（両端とも `IsCue` 真）。**原因は 1 つで、
+  `SpacingRules.CrossesVoiceBoundary` が既に同じ原因で LP と食い違うと書いてある**——
+  **cue のフラグを「導出」から「刻印」に変えると 2 つ同時に閉じる**。観測者は今のところ
+  **どちらも 0**（両方 back-to-back の cue を書く本がディスクに 1 冊も無い）。
 - 連桁は Lily# が自動で決めるので「跨ごうとする」入力が存在しない。
   **実装側の仕事**として「自動連桁が `cue` 境界を跨がない」ことを保証する（診断は不要）。
 
@@ -193,8 +221,13 @@ cue.accidental.width    LP 0.692956577  （原寸 1.100000・比 0.629961 = mags
 ## 8. まだ決めていないこと
 
 1. **`cue { }` の中に `voice { } { }` を許すか。** §4 では保守的に禁止した。
-2. **`\cueClef` 相当をいつ足すか。** cue は普通「引用元の楽器の clef」を伴う。
-   構文の余地は空けてある（`cue treble8 { … }` のように第 1 引数を足せる形）。**今は足さない。**
+2. ~~**`\cueClef` 相当をいつ足すか。**~~ — **入っている**（2026-08-15 実測で判明。
+   この行のほうが stale だった）。**`cue <clef> { … }` は 5 つの ClefName 全部を受ける**
+   （`treble` `bass` `alto` `tenor` `treble_8`——`ParseCueExpression` が
+   `SyntaxFacts.IsClefKeyword`）。**双子は `\cueClef` と `\cueClefUnset` を対で出す**
+   （`EmitCue`。両方出す理由は §4 の D-NOUNSET）。**綴りは `cue treble8` ではなく
+   `cue treble_8`**（この行が書いていた `treble8` は存在しない）。
+   ⚠️ **仕様書 3 冊はこの形をどこにも書いていなかった**ので同じ便で足した。
 3. **MusicXML の `<cue/>` は音符単位。** 連続する cue 音符を範囲にまとめる処理が要る。
    ⚠️ ただし**現在の import は cue 音符をそのまま捨てている**
    （`MusicXmlImport/MusicXmlReader.cs` `ReadNote` が `"cue note dropped."`）ので、

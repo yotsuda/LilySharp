@@ -128,7 +128,34 @@ public class LilyPondExporterTests
         Assert.Contains("\\tempo 4 = 120", ly);
         Assert.Contains("\\key g \\major", ly);
         Assert.Contains("\\time 3/4", ly);
-        Assert.Contains("\\clef bass", ly);
+        // QUOTED. LilyPond's \clef takes a string and parses the octave modifier out of it
+        // (scm/parser-clef.scm make-clef-set), so `\clef treble_8` written bare is read as
+        // `\clef treble` plus a stray `_8` fingering. These expectations used to spell the
+        // bare form, which is why the twin shipped the wrong clef for six books.
+        Assert.Contains("\\clef \"bass\"", ly);
+    }
+
+    /// <summary>
+    /// The clef name reaches LilyPond as ONE string, which is the whole of why it is quoted.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FOUR PLAIN CLEF WORDS CANNOT SEE THIS DEFECT — they are purely alphabetic and
+    /// lex correctly bare, which is how the twin shipped `\clef treble_8` for six books.
+    /// MEASURED on LilyPond 2.26.0, 2026-08-15: bare, that is read as `\clef treble` plus a
+    /// stray `_8` fingering ("warning: Unattached FingeringEvent"), and the three books differ
+    /// — bare 5643 bytes, quoted 6442 (the real octave-down clef), plain treble 5161. So the
+    /// octave-transposing clef is the case to assert, not `bass`.
+    /// </remarks>
+    [Fact]
+    public void OctaveTransposingClef_ReachesTheTwinAsOneQuotedString()
+    {
+        var ly = Export("""
+            part m { clef treble_8 section S { c d e } }
+            form main { ~S }
+            score main { staff m }
+            """);
+        Assert.Contains("\\clef \"treble_8\"", ly);
+        Assert.DoesNotContain("\\clef treble_8", ly);
     }
 
     [Fact]
@@ -295,6 +322,44 @@ public class LilyPondExporterTests
         Assert.Contains("\\alternative {", ly);
     }
 
+    /// <summary>
+    /// Two repeats in a row are two repeats, not one nested in another. The scan keeps
+    /// reading past the closing <c>:|</c> to pick up trailing <c>[2. …]</c> endings, so
+    /// the ONLY thing that may follow a closed repeat is an ending — a second <c>|:</c>
+    /// starts a new repeat and must end the scan.
+    ///
+    /// The page, MIDI and MusicXML all already read it that way (measured 2026-08-15 on
+    /// <c>|: 4 notes :| |: 4 notes :|</c>: 8 repeat dots / 16 noteOn / two
+    /// forward+backward pairs); the twin was alone in disagreeing, and 6 books in the
+    /// author's own library are spelled this way.
+    /// </summary>
+    [Fact]
+    public void TwoRepeatsInARow_AreTwoRepeats_NotOneInsideTheOther()
+    {
+        var ly = Export(Score("|: c,4 d,4 :| |: e,4 f,4 :|"));
+        Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
+        // The second body must be INSIDE its repeat, not left after it as loose music
+        // closed by a bare barline.
+        Assert.DoesNotContain("\\bar \":|.\"", ly);
+        // …and the second repeat must not be emitted empty.
+        Assert.DoesNotContain("e,4", ly[..ly.LastIndexOf("\\repeat volta 2 {", StringComparison.Ordinal)]);
+    }
+
+    /// <summary>
+    /// The same rule for the fused divider: <c>:|:</c> ends one repeat and opens the next,
+    /// so it must reach the caller rather than be swallowed as a plain close. This is the
+    /// music-stream twin of <see cref="ABackToBackRepeatDivider_BecomesTwoRepeats"/>, which
+    /// covers the form level; before the fix the music-stream form emitted one repeat and
+    /// left the second body loose behind a bare <c>\bar ":|."</c>.
+    /// </summary>
+    [Fact]
+    public void ABackToBackDividerInTheMusicStream_BecomesTwoRepeats()
+    {
+        var ly = Export(Score("|: c,4 d,4 :|: e,4 f,4 :|"));
+        Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
+        Assert.DoesNotContain("\\bar \":|.\"", ly);
+    }
+
     [Fact]
     public void RepeatPercent_PassesThrough()
     {
@@ -302,11 +367,17 @@ public class LilyPondExporterTests
         Assert.Contains("\\repeat percent 4 {", ly);
     }
 
+    /// <summary>
+    /// The label is QUOTED, because <c>\box</c> takes one markup: an unquoted two-word
+    /// label boxes only its first word, which is not what Lily# draws. The one-word case
+    /// pinned here renders identically either way on 2.26.0; the rule and the measurement
+    /// are stated on <c>RehearsalMarkTests.TheTwinQuotesTheLabel</c>.
+    /// </summary>
     [Fact]
     public void Mark_BecomesBoxedRehearsalMark()
     {
         var ly = Export(Score("c,4@mark(\"Intro\") d,4"));
-        Assert.Contains("\\mark \\markup { \\box Intro }", ly);
+        Assert.Contains("\\mark \\markup { \\box \"Intro\" }", ly);
     }
 
     /// <summary>
@@ -407,7 +478,7 @@ public class LilyPondExporterTests
         // ⚠️ NOT ANCHORED ON `\new Staff {`: a staff header may now carry a
         // `\with { instrumentName = … }` between the context and its music, which is
         // InstrumentName_ReachesTheTwin's business, not this test's.
-        Assert.Contains("{ \\clef bass", ly);
+        Assert.Contains("{ \\clef \"bass\"", ly);
         Assert.Contains("\\new TabStaff", ly);
         Assert.Contains("stringTunings = #bass-four-string-tuning", ly);
     }
@@ -464,9 +535,9 @@ public class LilyPondExporterTests
         // bass = bass clef, octave 3; flute = treble clef, octave 5 (NOT the treble
         // default of 4 — the preset's own octave, which is why the bundle is read whole).
         Assert.Contains("bs = \\relative c {", ly);
-        Assert.Contains("{ \\clef bass \\bs }", ly);
+        Assert.Contains("{ \\clef \"bass\" \\bs }", ly);
         Assert.Contains("fl = \\relative c'' {", ly);
-        Assert.Contains("{ \\clef treble \\fl }", ly);
+        Assert.Contains("{ \\clef \"treble\" \\fl }", ly);
     }
 
     /// <summary>A hyphenated preset (<c>electric-bass</c>) is read whole.</summary>
@@ -483,7 +554,7 @@ public class LilyPondExporterTests
             form main { ~S }
             score main { staff bs }
             """);
-        Assert.Contains("{ \\clef bass \\bs }", ly);
+        Assert.Contains("{ \\clef \"bass\" \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
     }
 
@@ -507,7 +578,7 @@ public class LilyPondExporterTests
             form main { ~S }
             score main { staff bs }
             """);
-        Assert.Contains("{ \\clef treble \\bs }", ly);
+        Assert.Contains("{ \\clef \"treble\" \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
     }
 
@@ -626,7 +697,7 @@ public class LilyPondExporterTests
         if (declaresClef)
             // Not anchored on `\new Staff {` — see Score_EmitsStaffAndTabWithBassTuning: the
         // header may carry a `\with { instrumentName = … }` now, which is another test's job.
-        Assert.Contains($"{{ \\clef {InstrumentDefaults.ClefWord(tab.Staff.Clef)} ", ly);
+        Assert.Contains($"{{ \\clef \"{InstrumentDefaults.ClefWord(tab.Staff.Clef)}\" ", ly);
         else
             Assert.DoesNotContain("\\clef", ly);
     }

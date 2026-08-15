@@ -15,9 +15,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
+using LilySharp.Core.LilyPond;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Syntax;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -34,62 +37,115 @@ public class RehearsalMarkTests
         Assert.Equal("Rehearsal", type.ToString());
     }
 
-    // --- ParseMarkName ---
+    // --- the label is read from the ARGUMENT (VALUE_SITE_AUDIT §9.5.3 ⑵) ---
 
+    private static MusicMarkSyntax Mark(string music)
+        => Assert.Single(SyntaxTree.Parse("melody { " + music + " }")
+            .GetRoot().DescendantNodes().OfType<MusicMarkSyntax>());
+
+    /// <summary>
+    /// The label is the annotation's argument, printed as written — case and symbols
+    /// preserved, the quotes being delimiters rather than text. The name gate is
+    /// case-INSENSITIVE, which is what the string form's
+    /// <c>MarkName.ToLowerInvariant().StartsWith("mark.")</c> did.
+    /// </summary>
     [Theory]
-    [InlineData("mark.A", MusicMarkType.Rehearsal)]
-    [InlineData("mark.B", MusicMarkType.Rehearsal)]
-    [InlineData("mark.1", MusicMarkType.Rehearsal)]
-    [InlineData("Mark.C", MusicMarkType.Rehearsal)]
-    [InlineData("MARK.Z", MusicMarkType.Rehearsal)]
-    public void ParseMarkName_RehearsalMark_ReturnsRehearsal(string name, MusicMarkType expected)
+    [InlineData("c4@mark(\"A\") |", "A")]
+    [InlineData("c4@mark(\"Solo\") |", "Solo")]
+    [InlineData("c4@mark(\"abc\") |", "abc")]      // case preserved — no forced upper-casing
+    [InlineData("c4@mark(\"D.S.\") |", "D.S.")]    // symbols preserved
+    [InlineData("c4@mark(\"a b\") |", "a b")]      // a space INSIDE the quotes is label text
+    [InlineData("c4@mark(\"\") |", "")]
+    [InlineData("c4@mark(A) |", "A")]              // unquoted: LYS1009, but the same label
+    [InlineData("c4@mark(1) |", "1")]
+    [InlineData("c4@Mark(\"C\") |", "C")]
+    [InlineData("c4@MARK(\"z\") |", "z")]
+    public void ARehearsalLabel_IsItsArgument(string music, string expected)
+        => Assert.Equal(expected, AnnotationValues.Rehearsal(Mark(music), out _));
+
+    /// <summary>
+    /// ⚠️ The declared behaviour change. MarkName joined the argument's tokens with '.',
+    /// so a label written as more than one token printed dots nobody typed. Reading the
+    /// runs prints what was written. No book writes either spelling (measured: the two
+    /// <c>@mark(</c> sites in the corpus and fixtures are both <c>@mark("X")</c>).
+    /// </summary>
+    [Theory]
+    [InlineData("c4@mark(-1) |", "-1")]     // MarkName spelled this "-.1"
+    [InlineData("c4@mark(A B) |", "A B")]   // MarkName spelled this "A.B"
+    public void ARehearsalLabelInSeveralRuns_PrintsWhatWasWritten(string music, string expected)
+        => Assert.Equal(expected, AnnotationValues.Rehearsal(Mark(music), out _));
+
+    /// <summary>
+    /// An empty argument list is not an empty label: <c>@mark()</c> spelled MarkName as
+    /// just "mark", which the old <c>Length > 5</c> test refused, and it stays refused.
+    /// </summary>
+    [Fact]
+    public void AMarkWithNoArgumentAtAll_IsNotARehearsalMark()
+        => Assert.Null(AnnotationValues.Rehearsal(Mark("c4@mark() |"), out _));
+
+    /// <summary>
+    /// Quoted-ness is answered by the same read, so the diagnostic and the label can no
+    /// longer disagree about where the label starts.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@mark(\"A\") |", true)]
+    [InlineData("c4@mark(\"\") |", true)]
+    [InlineData("c4@mark(A) |", false)]
+    [InlineData("c4@mark(1) |", false)]
+    public void OnlyAQuotedLabel_SatisfiesTheDiagnostic(string music, bool expected)
     {
-        var result = MusicMarkItem.ParseMarkName(name);
-        Assert.NotNull(result);
-        Assert.Equal(expected, result.Value);
+        AnnotationValues.Rehearsal(Mark(music), out var quoted);
+        Assert.Equal(expected, quoted);
     }
 
+    // --- ParseMarkName is now a table of NAMES only ---
+
+    /// <summary>
+    /// ★ Positive control for the split: the dotted-name table no longer answers the
+    /// rehearsal mark, because a rehearsal mark is an argument and not a name. Nothing
+    /// in a source file reaches it with these strings — <c>@mark.A</c> has been LYS0023
+    /// ("this '.' belongs to nothing") since 2026-08-14 and builds no mark node at all.
+    /// </summary>
     [Theory]
-    [InlineData("mark.")]  // No character after "mark."
-    [InlineData("mark")]   // No dot
-    public void ParseMarkName_InvalidRehearsal_ReturnsNull(string name)
-    {
-        var result = MusicMarkItem.ParseMarkName(name);
-        Assert.Null(result);
-    }
+    [InlineData("mark.A")]
+    [InlineData("mark.1")]
+    [InlineData("MARK.Z")]
+    [InlineData("mark.")]
+    [InlineData("mark")]
+    public void TheNameTable_DoesNotAnswerRehearsal(string name)
+        => Assert.Null(MusicMarkItem.ParseMarkName(name));
 
     [Theory]
     [InlineData("segno", MusicMarkType.Segno)]
     [InlineData("coda", MusicMarkType.Coda)]
     [InlineData("fine", MusicMarkType.Fine)]
-    public void ParseMarkName_OtherMarks_StillWork(string name, MusicMarkType expected)
-    {
-        var result = MusicMarkItem.ParseMarkName(name);
-        Assert.NotNull(result);
-        Assert.Equal(expected, result.Value);
-    }
+    [InlineData("ds.al.fine", MusicMarkType.DalSegnoAlFine)]
+    [InlineData("ottava.bassa", MusicMarkType.OttavaDown)]
+    public void TheNameTable_StillAnswersTheDottedNames(string name, MusicMarkType expected)
+        => Assert.Equal(expected, MusicMarkItem.ParseMarkName(name));
 
-    // --- ParseRehearsalText ---
+    // --- the twin says what Lily# draws ---
 
+    /// <summary>
+    /// ⚠️ The second declared change, and the reason it is in this file rather than with
+    /// the other exporter tests: the exporter's own <c>mark.</c> slice was the FOURTH
+    /// copy of this label, so it moved with the island. <c>\box</c> takes ONE markup
+    /// (scm/define-markup-commands.scm:1049), so the unquoted label the twin used to
+    /// write boxed only the first word of <c>@mark("a b")</c> — measured on LilyPond
+    /// 2.26.0: box width 1.9331 unquoted against 4.0159 quoted, the latter being what
+    /// Lily# draws. Quoting changes nothing for a one-word label (<c>\box A</c> and
+    /// <c>\box "A"</c> render byte-identical SVG on 2.26.0).
+    /// </summary>
     [Theory]
-    [InlineData("mark.A", "A")]
-    [InlineData("mark.B", "B")]
-    [InlineData("mark.1", "1")]
-    [InlineData("mark.abc", "abc")]           // case preserved — no forced upper-casing
-    [InlineData("MARK.z", "z")]               // case preserved
-    [InlineData("mark.\"Solo\"", "Solo")]     // quoted free-text label kept as written
-    [InlineData("mark.\"D.S.\"", "D.S.")]     // quoted: symbols and case preserved
-    public void ParseRehearsalText_ExtractsText(string name, string expected)
+    [InlineData("@mark(\"A\")", "\\mark \\markup { \\box \"A\" }")]
+    [InlineData("@mark(\"a b\")", "\\mark \\markup { \\box \"a b\" }")]
+    [InlineData("@mark(\"D.S.\")", "\\mark \\markup { \\box \"D.S.\" }")]
+    public void TheTwinQuotesTheLabel(string annotation, string expected)
     {
-        var result = MusicMarkItem.ParseRehearsalText(name);
-        Assert.Equal(expected, result);
-    }
-
-    [Fact]
-    public void ParseRehearsalText_ShortString_ReturnsAsIs()
-    {
-        var result = MusicMarkItem.ParseRehearsalText("foo");
-        Assert.Equal("foo", result);
+        var tree = SyntaxTree.Parse(
+            "part melody\nsection A { melody { c4" + annotation + " d4 e4 f4 | } }\n"
+            + "form main { ~A }\nscore main { staff melody }\n");
+        Assert.Contains(expected, new LilyPondExporter().Export(tree));
     }
 
     // --- MusicMarkItem constructors ---

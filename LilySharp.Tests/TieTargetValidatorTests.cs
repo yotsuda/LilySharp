@@ -48,7 +48,10 @@ public class TieTargetValidatorTests
     [InlineData("<c e g>4~ c2.")]           // chord into a matching single note
     [InlineData("c4~ <c e>2.")]             // note into a chord that contains it
     [InlineData("c4~ time 3/4 c2.")]        // a mid-music change is transparent to the tie
-    [InlineData("c2.~")]                    // dangling at the end: out of scope, stays quiet
+    // `c2.~` used to sit here as "dangling at the end: out of scope, stays quiet". It is
+    // not out of scope — the tie is dropped and nothing said so. See DanglingTie_Warns.
+    [InlineData("c1@laissezVibrer")]        // the spelling for a tie that hangs into silence
+    [InlineData("c1@repeatTie")]            // ...and for one resuming from a repeat
     public void MatchingTieTarget_NoWarning(string music) =>
         Assert.Equal(0, WarningCount(music));
 
@@ -63,6 +66,35 @@ public class TieTargetValidatorTests
 
     [Fact]
     public void TieIntoRest_Warns() => Assert.Equal(1, WarningCount("c4~ r4 c2"));
+
+    [Theory]
+    [InlineData("c2.~")]                    // the tie is the last thing in the voice
+    [InlineData("c4 d4 e4 f4~")]            // ...after other notes
+    [InlineData("<c e g>2.~")]              // a chord's tie, likewise
+    public void DanglingTie_Warns(string music) =>
+        // MEASURED: `c4 d4 e4 f4~ |` engraves byte-for-byte as the same bar with no tie at
+        // all (1956 bytes either way), while `f4@laissezVibrer` draws the hanging tie
+        // (2147). The mark is lost outright, so "nothing to compare" was true of the
+        // comparison and false of the loss.
+        Assert.Equal(1, WarningCount(music));
+
+    [Fact]
+    public void ADanglingTieIsPointedAtTheHangingTieSpelling()
+    {
+        // The complaint can name what was probably meant, because Lily# already spells it.
+        var source = "part m { section A { c2.~ } } form main { A } score main { staff m }";
+        var validator = new TieTargetValidator();
+        validator.Validate(SyntaxTree.Parse(source));
+        var d = Assert.Single(validator.Diagnostics.Where(x => x.Message.Contains("nothing after it")));
+        Assert.Contains("@laissezVibrer", d.Message);
+        Assert.Contains("no tie is drawn", d.Message);
+    }
+
+    [Fact]
+    public void ATieDoesNotCarryIntoAnotherVoice() =>
+        // The scan is per voice, like the slur's and the beam's: a tie left open when a
+        // voice ends never binds to the next voice's first note, however well it matches.
+        Assert.Equal(2, WarningCount("voice { c4 d4 e4 c4~ } { c4 d4 e4 c4~ }"));
 
     [Fact]
     public void TieIntoSpacer_StaysQuiet() =>

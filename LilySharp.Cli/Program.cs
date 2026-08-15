@@ -997,17 +997,37 @@ static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree) LoadAndParse(strin
 }
 
 // The shared skeleton behind every file-output command: load+parse, surface
-// diagnostics (abort on error), validate an optional --score name, run the
-// format-specific body, and turn any exception into "Error: <message>" / exit 1.
+// diagnostics, validate an optional --score name, run the format-specific body, and
+// turn any exception into "Error: <message>" / exit 1.
 // scoreName == null skips score validation (formats without a --score option).
+//
+// BEST EFFORT, deliberately: an error is REPORTED and sets the exit code, but it does
+// not stop the render. Severity and "may this produce output" are different questions,
+// and most diagnostics answer only the first — an unsupported `override` (LYS1029), a
+// stray token in a part header (LYS0025), a duplicate property (LYS7003) all leave a
+// score that engraves perfectly. Refusing to write anything for those meant a reader
+// porting a LilyPond file could not see one page until every unsupported line was gone.
+// The parser recovers by dropping the tokens it cannot place, so what DID parse is what
+// gets drawn. This is the policy the LSP preview has always had (GetSvg: "a tree with
+// parse errors still renders ... the error text rides along for the preview's banner"),
+// and the two now agree.
+//
+// What still stops: a render that THROWS (the catch below — no file is written), and a
+// --score naming something the file does not define (nothing to draw).
+// The exit code is unchanged, so scripts and CI still fail on an error.
 static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree, int> body)
 {
     try
     {
         var (_, tree) = LoadAndParse(inputPath);
-        if (ReportDiagnostics(tree)) return 1;
+        bool hasErrors = ReportDiagnostics(tree);
         if (!ValidateScoreName(tree, scoreName)) return 1;
-        return body(tree);
+        int result = body(tree);
+        if (hasErrors && result == 0)
+            Console.Error.WriteLine(
+                "  (written anyway, from the part of the file that parsed - fix the errors "
+                + "above before trusting it)");
+        return hasErrors ? 1 : result;
     }
     catch (Exception ex)
     {

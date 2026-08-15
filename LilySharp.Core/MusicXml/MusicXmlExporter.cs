@@ -347,6 +347,17 @@ public sealed class MusicXmlExporter
                 case NavigationMarkSyntax nav:
                     ApplyNavMark(nav.MarkType);
                     break;
+                // A ':|' written in the form itself, outside any '|: … :|' block. It caps
+                // the section just played, on every part — the barline is a score-level
+                // object (MeasureCollector.SynchronizeBarlines), so it is not one part's.
+                // A backward repeat with no matching forward one is MusicXML's own spelling
+                // for "repeat from the beginning", which is the reading this grammar gives
+                // a one-sided ':|', so nothing extra has to be written to say it.
+                case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }:
+                    foreach (var p in Document.Parts)
+                        if (p.Measures.Count > 0)
+                            p.Measures[^1].RepeatBackward = true;
+                    break;
             }
         }
     }
@@ -2124,6 +2135,19 @@ public sealed class MusicXmlExporter
             return;
         }
 
+        // Figured bass is read from the annotation too, and for the same reason: it is a
+        // sub-language, so it parses the argument TOKENS (§9.5.3 ⑴). This used to sit in
+        // the default arm of the dotted-name switch below, which is now left with the
+        // marks that really are named by a dotted name.
+        if (_currentMeasure != null
+            && LilySharp.Core.Semantics.AnnotationValues.Figures(mark) is { } figures
+            && BuildFiguredBass(figures) is { } figuredBass)
+        {
+            // <figured-bass> sits before its bass note, like <harmony>.
+            _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
+            return;
+        }
+
         ProcessDirectionName(mark.MarkName);
     }
 
@@ -2153,15 +2177,6 @@ public sealed class MusicXmlExporter
                 break;
             case "loco":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "stop" });
-                break;
-            default:
-                if (name.StartsWith("fig.", StringComparison.Ordinal)
-                    && LilySharp.Core.Svg.Model.FiguredBassItem.ParseFigures(rawName) is { } figures
-                    && BuildFiguredBass(figures) is { } figuredBass)
-                {
-                    // <figured-bass> sits before its bass note, like <harmony>.
-                    _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
-                }
                 break;
         }
     }

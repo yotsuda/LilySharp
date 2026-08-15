@@ -63,6 +63,7 @@ public static class SemanticValidation
         new MeasureValidator(),             // measure fullness / cross-part length / empty `| |` placeholders
         new DurationValidator(),            // invalid note values (5, 3, 6, …)
         new AnnotationNameValidator(),      // unknown @annotation names
+        new DrummapValidator(),             // drummap { } parts that are silently ignored
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
@@ -73,6 +74,8 @@ public static class SemanticValidation
         new TieTargetValidator(),           // a tie whose next note is not the tied pitch
         new ChordRepetitionValidator(),     // a `q` with no chord before it to repeat
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
+        new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
+        new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new EmptyScoreValidator(),          // a score block with no staff to engrave
@@ -81,12 +84,15 @@ public static class SemanticValidation
         new DuplicateCellValidator(),       // a (section × part) cell filled twice
         new DuplicateTrackSectionValidator(),// a chords/lyrics track names a section twice
         new RevertContextValidator(),       // a revert/once outside a music stream
+        new OverrideVocabularyValidator(),  // an override/revert naming a property the engine never reads
         new PartialScopeValidator(),        // a partial (pickup) outside a section
         new LoneVoiceValidator(),           // a span with a single (transparent) voice block
         new CueRegionValidator(),           // a nested cue, or a voice span inside a cue
+        new CueSpanBoundaryValidator(),     // a slur/tie with one end inside a cue
         new SectionMusicNeedsPartValidator(), // loose music in a part-major top-level section
         new ScoreSettingInPartHeaderValidator(), // tempo/time as a part header property
         new DuplicateGlobalSettingValidator(), // a top-level tempo/time/key/title/… written twice
+        new DuplicatePartPropertyValidator(),  // one part header setting the same property twice
         new FontEmbedWarningValidator(),    // an embedded font with a restricted/unverified license
     };
 

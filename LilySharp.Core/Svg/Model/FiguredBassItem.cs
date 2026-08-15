@@ -111,24 +111,54 @@ public sealed record FiguredBassItem
     }
 
     /// <summary>
-    /// Parses a figured bass annotation string (e.g., "fig.6.4", "fig.7.6.s.4.f").
-    /// Returns null if the string is not a valid figured bass annotation.
+    /// Parses the argument of a <c>@fig(…)</c> annotation into its stacked figures, or
+    /// returns null when those tokens spell no figure group Lily# can draw.
     /// </summary>
     /// <remarks>
-    /// Syntax (dot-separated):
-    /// - "fig.N" where N is a digit (1-9)
-    /// - "fig.N.M" for two stacked figures
-    /// - "fig.N.M.L" for three stacked figures
-    /// - Alteration after figure: "fig.6.s" (sharp), "fig.4.f" (flat), "fig.7.n" (natural)
-    /// - Mixed: "fig.7.6.s.4.f" = 7, 6♯, 4♭
+    /// <para>
+    /// Written <c>@fig(6)</c> (single), <c>@fig(5 3)</c> (two stacked), <c>@fig(6 s)</c>
+    /// (6♯; <c>f</c> flat, <c>n</c> natural), <c>@fig(#)</c> (a bare sharp — the raised
+    /// third), <c>@fig(_)</c> (a held / continuation figure). A figure is a digit 0-9,
+    /// where 0 is the empty placeholder.
+    /// </para>
+    /// <para>
+    /// ★ A SUB-LANGUAGE, so it parses TOKENS (VALUE_SITE_AUDIT §9.2, §9.5.3 ⑴). It used
+    /// to take the dotted <see cref="MusicMarkSyntax.MarkName"/> and split it back on
+    /// '.', which is the string round trip <c>@chord</c> and <c>@mark</c> have already
+    /// left; it was the last argument still being read out of that name. Tokens are the
+    /// right unit and not merely a tidier one: the spelling is whitespace-INSENSITIVE
+    /// because the token boundary is the separator, so <c>@fig(6#6)</c> means the same as
+    /// <c>@fig(6 # 6)</c> and <c>@fig(6_)</c> the same as <c>@fig(6 _)</c> — measured, and
+    /// unchanged here. Reading the argument RUNS instead would have needed a second copy
+    /// of the lexer to recover those boundaries (<c>6s6</c> splits because <c>s</c> is a
+    /// pitch token, while <c>6S0</c> does not), which is the defect §5.2.1② names.
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>A behaviour change, declared and chosen</b> — the same one <c>@chord</c>'s
+    /// swallowed dot was: MarkName DROPS a '.' written inside the brackets, so
+    /// <c>@fig(6.4)</c> printed 6 over 4, and <c>@fig(.6)</c>, <c>@fig(6.)</c> and
+    /// <c>@fig(6.s)</c> all printed as though the dot had not been typed. A dot is a
+    /// token here, so those now name no figure and are reported as unknown annotations.
+    /// Measured over 3,825 generated spellings: 3,326 read identically, and every one of
+    /// the 499 that differ contains a written '.', all in the direction "was accepted,
+    /// now unknown" — nothing that was refused became accepted, and nothing that was
+    /// accepted draws different figures. No book writes a dot inside <c>@fig(</c>: all
+    /// 308 .lys on disk contain 13 <c>@fig(</c> sites spelling only <c>6</c>, <c>7</c>,
+    /// <c>5 3</c> and <c>6 4</c>, and the MusicXML importer writes the spaced forms
+    /// (<see cref="MusicXmlImport.LysWriter"/>). The net is
+    /// <c>FiguredBassTests.ADotWrittenInsideTheParentheses_…</c>.
+    /// </para>
+    /// <para>
+    /// LILYSHARP-OWN: the <c>@fig(…)</c> SPELLING is Lily#'s, not a port — LilyPond writes
+    /// figures in its own <c>\figuremode</c> language. What the figures MEAN is LilyPond's
+    /// and is cited on <see cref="FiguredBassFigure"/> and on this type. Nothing observes
+    /// the spelling but this reader and the importer that writes it.
+    /// </para>
     /// </remarks>
-    public static ImmutableArray<FiguredBassFigure>? ParseFigures(string markName)
+    public static ImmutableArray<FiguredBassFigure>? ParseFigures(
+        ImmutableArray<Syntax.SyntaxTokenNode> argumentTokens)
     {
-        if (!markName.StartsWith("fig.", StringComparison.OrdinalIgnoreCase))
-            return null;
-
-        var parts = markName.Substring(4).Split('.');
-        if (parts.Length == 0 || parts.All(string.IsNullOrEmpty))
+        if (argumentTokens.IsDefaultOrEmpty)
             return null;
 
         var figures = ImmutableArray.CreateBuilder<FiguredBassFigure>();
@@ -136,8 +166,14 @@ public sealed record FiguredBassItem
         int currentAlteration = 0;
         int pendingAlteration = 0; // a leading '#' seen BEFORE its figure number
 
-        foreach (var part in parts)
+        foreach (var token in argumentTokens)
         {
+            // ',' separates arguments and says nothing about the figures, exactly as it
+            // said nothing to MarkName (which left it out of the dotted string).
+            if (token.Kind == Syntax.SyntaxKind.Comma)
+                continue;
+
+            var part = token.Text;
             if (string.IsNullOrEmpty(part))
                 return null;
 

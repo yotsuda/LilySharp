@@ -32,7 +32,7 @@ namespace LilySharp.Benchmarks;
 /// Run: dotnet run -c Release -- --filter '*RenderPipeline*'
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
+[SimpleJob(RuntimeMoniker.Net10_0)]
 public class RenderPipelineBenchmark
 {
     private string _grammarTourSource = null!;

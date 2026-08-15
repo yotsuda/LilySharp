@@ -225,12 +225,6 @@ public sealed record MusicMarkItem
     }
 
     /// <summary>
-    /// Parses a mark name string into a MusicMarkType.
-    /// Returns null if the name is not recognized.
-    /// For rehearsal marks (@mark.A, @mark.1), returns Rehearsal.
-    /// Use ParseRehearsalText to get the display text for rehearsal marks.
-    /// </summary>
-    /// <summary>
     /// Marks whose visuals are produced by a SPANNER engraver (text
     /// spanners, ottava brackets): their MusicMarkLayout entries are not
     /// drawn by DrawMusicMarks and must not occupy outside-staff space.
@@ -242,16 +236,20 @@ public sealed record MusicMarkItem
              or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
              or MusicMarkType.Loco;
 
-    /// <summary>Parses a mark name (e.g. <c>segno</c>, <c>ds.al.fine</c>, <c>mark.A</c>)
-    /// into a <see cref="MusicMarkType"/>, or null if unrecognized.</summary>
+    /// <summary>Parses a mark NAME (e.g. <c>segno</c>, <c>ds.al.fine</c>,
+    /// <c>ottava.bassa</c>) into a <see cref="MusicMarkType"/>, or null if
+    /// unrecognized.</summary>
+    /// <remarks>
+    /// A table of names, nothing else. The rehearsal mark used to be answered here too,
+    /// by testing the dotted string for a <c>"mark."</c> prefix — but <c>@mark("A")</c>
+    /// writes an ARGUMENT, not a compound name, and its label is read from that argument
+    /// by <see cref="Semantics.AnnotationValues.Rehearsal"/>
+    /// (docs/VALUE_SITE_AUDIT.md §9.5.3 ⑵). Everything left below is a name a reader
+    /// types whole, so this takes a string and asks nothing about arguments.
+    /// </remarks>
     public static MusicMarkType? ParseMarkName(string name)
     {
-        // Check for rehearsal marks: @mark.A, @mark.B, @mark.1, etc.
-        var lower = name.ToLowerInvariant();
-        if (lower.StartsWith("mark.") && name.Length > 5)
-            return MusicMarkType.Rehearsal;
-
-        return lower switch
+        return name.ToLowerInvariant() switch
         {
             "segno" => MusicMarkType.Segno,
             "coda" => MusicMarkType.Coda,
@@ -289,25 +287,6 @@ public sealed record MusicMarkItem
             "trecorde" => MusicMarkType.UnaCordaOff,
             _ => null
         };
-    }
-
-    /// <summary>
-    /// Extracts the rehearsal mark display text from a mark name.
-    /// For example: "mark.A" returns "A", "mark.1" returns "1".
-    /// </summary>
-    public static string ParseRehearsalText(string name)
-    {
-        if (name.Length > 5 && name.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
-        {
-            var label = name.Substring(5);
-            // @mark("A") — strip the surrounding quotes so the box shows A, not "A".
-            if (label.Length >= 2 && label[0] == '"' && label[^1] == '"')
-                label = label.Substring(1, label.Length - 2);
-            // Render the label exactly as written — @mark("Solo") is "Solo", not
-            // "SOLO" (a free-text label, like @text and LilyPond's \mark "…").
-            return label;
-        }
-        return name;
     }
 
     private static string GetMarkText(MusicMarkType type) => type switch

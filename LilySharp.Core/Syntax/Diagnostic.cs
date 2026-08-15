@@ -312,6 +312,43 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string UnclaimedDot = "LYS0023";
 
+    /// <summary>Warning: part of a <c>drummap { }</c> entry is ignored — an unknown drum
+    /// name, an unknown setting, or a value outside its range or vocabulary.</summary>
+    /// <remarks>
+    /// <para>
+    /// One code for the whole block, like <see cref="UnknownAnnotation"/>: what varies is
+    /// which part was dropped, and that belongs in the message and the span rather than in
+    /// four codes a reader would have to tell apart.
+    /// </para>
+    /// <para>
+    /// ⚠️ This exists because the alternative was SILENCE, and total silence: a drummap in
+    /// which the drum name, the setting key, the range and the value word were ALL wrong
+    /// rendered byte-for-byte as if the block were absent and reported "No errors found"
+    /// (measured 2026-08-15, data-pos aside). Nothing accepted or refused changed when this
+    /// was added — see <c>DrummapValidator</c>, whose remarks also record the two shapes it
+    /// still cannot see and why.
+    /// </para>
+    /// </remarks>
+    public const string DrummapEntryIgnored = "LYS0024";
+
+    /// <summary>Parser error: a token in a PART HEADER that the header cannot place — not a
+    /// property name, a <c>key</c>, an inner <c>section</c>, or a grob directive. The header
+    /// loop used to drop such a token silently (<c>else Advance()</c>), which is how
+    /// <c>part m { bass }</c> came to mean exactly <c>part m { }</c> — MEASURED byte-identical
+    /// output and "No errors found" — and a bare clef word reads so much like a clef that the
+    /// silence was the whole trap. Distinct from <see cref="UnknownSymbolCase"/> (a name in
+    /// property POSITION that is not a known property) and from
+    /// <see cref="PartPropertyMissingValue"/> (a known name with no value).</summary>
+    public const string PartHeaderStrayToken = "LYS0025";
+
+    /// <summary>Parser error: a part-header property with no value (<c>part m { clef }</c>).
+    /// The value used to be consumed unconditionally, so the property ate the closing brace
+    /// and everything below was parsed INSIDE the part — surfacing as a complaint about a
+    /// line far away (<c>Undefined variable or phrase: 'm'</c>), or, with another part after
+    /// it, as <c>Unknown clef '}'</c>: the brace itself reported as a clef name. A value is
+    /// no longer taken from a brace or from end-of-file.</summary>
+    public const string PartPropertyMissingValue = "LYS0026";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
@@ -397,6 +434,15 @@ public static class DiagnosticCodes
     /// part).</summary>
     public const string ScoreSettingInPartHeader = "LYS1026";
 
+    /// <summary>Semantic: an <c>override</c> / <c>revert</c> names a grob property the engine
+    /// does not read (<c>override Beam.thickness = 9</c>), or mis-cases one it does
+    /// (<c>stem.direction</c>). The grammar accepts any <c>Grob.property</c>, so such a line
+    /// used to engrave byte-for-byte identically to writing nothing, silently. The supported
+    /// vocabulary is <see cref="Svg.Model.SupportedGrobOverrides"/> — a list of what is
+    /// IMPLEMENTED, which grows; each addition turns this diagnostic off for one more
+    /// spelling, so a file rejected today compiles unchanged the day its property lands.</summary>
+    public const string OverridePropertyUnsupported = "LYS1029";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 
@@ -477,12 +523,53 @@ public static class DiagnosticCodes
     /// (LilyPond's Slur_engraver lives in the Voice context), so one left open when the
     /// voice ends is unpaired too.</summary>
     public const string UnpairedSlur = "LYS4010";
+
+    /// <summary>Music warning: a manual beam bracket that pairs with nothing — a <c>[</c>
+    /// never closed, or a <c>]</c> with none open. Unlike an unpaired slur, the score is not
+    /// left bare: BeamDetector discards the bracket and the notes fall back to AUTOMATIC
+    /// beaming, so the engraved grouping is simply not the written one. MEASURED on a bar
+    /// where the two differ (<c>c8[ d8 e8 f8 g8] a8 b8 c8</c> in 4/4 — five beamed, which
+    /// automatic beaming never produces): dropping either bracket makes the output
+    /// byte-identical to the same notes with no bracket at all.</summary>
+    public const string UnpairedBeam = "LYS4016";
+
+    /// <summary>Error: a <c>|:</c> that no <c>:|</c> ever closes — a repeat whose end
+    /// nobody wrote. The four walks disagree about what that means and always have
+    /// (MEASURED 2026-08-15 on a lone <c>|:</c> in section music: the page draws a
+    /// start-repeat bar; MIDI is byte-identical to no repeat at all; the LilyPond twin wraps
+    /// everything to the end of the stream in <c>\repeat volta 2</c> and so plays it twice),
+    /// and nothing said so. The OTHER half is not an error: a <c>:|</c> with no <c>|:</c>
+    /// open means "repeat from the beginning of the piece", which is the ordinary reading of
+    /// the sign.
+    /// <para>
+    /// ⚠️ Only decidable AFTER score expansion, which is why it is raised from the collected
+    /// measures and not from the text: a section is not a piece of music on its own, so a
+    /// <c>|:</c> written in a section may be closed by a <c>:|</c> the <c>form</c> writes.
+    /// Books in the wild are spelled that way.
+    /// </para></summary>
+    public const string UnpairedRepeat = "LYS4017";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning
     /// "polyphonic from here" gets a single-voice score with nothing said. A NAMED lone
     /// voice is exempt: its name is what a <c>lyrics NAME { … }</c> block binds to.</summary>
     public const string LoneVoiceBlock = "LYS4011";
+    /// <summary>Error: a slur or a tie with ONE end inside a <c>cue { … }</c> and the other
+    /// outside it. LilyPond cannot spell this at all — a cue is a Voice context of its own, and
+    /// both the Slur_engraver and the Tie_engraver live in the Voice — so the span it engraves
+    /// is not the one that was written. MEASURED on LilyPond 2.26.0 against the four spellings
+    /// (probe scratch/cue-span-probe): a slur crossing either way is dropped with
+    /// "cannot end slur" / "unterminated slur"; a tie INTO a cue is dropped with
+    /// "unterminated tie"; and a tie OUT of a cue is dropped WITHOUT A WORD — that book
+    /// engraves byte-for-byte as the same bar with no tie written at all.
+    /// <para>
+    /// ⚠️ An error rather than a warning because Lily# is pre-release and this is the only
+    /// direction that closes later: a spelling accepted today cannot be rejected after books
+    /// exist, while `error → warning → drawn` costs nobody anything. Lily# DRAWS the curve
+    /// (the renderer pairs across the boundary), so this is not a report of ink that went
+    /// missing — it is a report of ink LilyPond will never make.
+    /// </para></summary>
+    public const string SpanCrossesCueBoundary = "LYS4012";
     /// <summary>Error: a <c>cue { … }</c> inside another <c>cue { … }</c>. LilyPond's cue is
     /// a CONTEXT with one <c>fontSize</c>, so a second one nested inside the first says
     /// nothing the outer one has not already said. Forbidden while the shape is young —
@@ -562,6 +649,15 @@ public static class DiagnosticCodes
     public const string DuplicateCell = "LYS7001";
     /// <summary>Structure error: a chords/lyrics track names the same section twice.</summary>
     public const string DuplicateTrackSection = "LYS7002";
+
+    /// <summary>Structure error: one part header sets the same property twice
+    /// (<c>part m { clef bass clef treble }</c>). Each property holds ONE value, and which
+    /// of the two won was not even consistent between properties — MEASURED:
+    /// <c>clef bass clef treble</c> engraved as treble (the LAST), while
+    /// <c>lines 5 lines 3</c> engraved as five lines (the FIRST, byte-identical to
+    /// <c>lines 5</c> alone). Rather than freeze either accident as the rule, the
+    /// duplicate is refused: no book on disk writes one, so nothing has to choose.</summary>
+    public const string DuplicatePartProperty = "LYS7003";
 
     // Font warnings (LYS8xxx)
     // (LYS6xxx is already taken by the render/score-declaration band above.)

@@ -72,9 +72,16 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
         var name = prop.NameToken.Text;
         if (!PropertyNames.Contains(name))
         {
+            // `key` is not in PropertyNames because it never reaches here: a part-header key
+            // is parsed as a KeySignature, not a PropertyAssignment (Parser.Declarations —
+            // a key is legitimately per-part, e.g. a transposing instrument). It belongs in
+            // the LIST all the same. Leaving it out told a reader who wrote `Key c major`
+            // that the language has no per-part key, which is false — measured:
+            // `part m { key fis major }` engraves byte-identically to a top-level
+            // `key fis major`.
             Error(prop.NameToken,
                 $"Unknown part property '{name}'. Property names are case-sensitive; known: " +
-                $"{string.Join(", ", PropertyNames.OrderBy(s => s, StringComparer.Ordinal))}.");
+                $"{string.Join(", ", PropertyNames.Append("key").OrderBy(s => s, StringComparer.Ordinal))}.");
             return; // a property we do not understand — do not also flag its value
         }
 

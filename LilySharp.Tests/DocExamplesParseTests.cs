@@ -18,18 +18,49 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using LilySharp.Core.Syntax;
 using Xunit;
 
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Guards against doc-vs-code drift: every fenced code example in the LLM-facing
-/// language spec must actually parse with NO errors. This is the regression net for
-/// the exact failure found while writing the spec — SYNTAX_REFERENCE.md shipped three
-/// examples the parser rejects. A frozen public grammar spec that claims forms the
-/// parser refuses is worse than none, so this test keeps the spec honest.
+/// Guards against doc-vs-code drift: every fenced code example in the language
+/// documentation must actually COMPILE, not merely parse. A public grammar spec that
+/// claims forms the compiler refuses is worse than none, so this test keeps the docs
+/// honest.
 /// </summary>
+/// <remarks>
+/// ⚠️ For a long time this read ONE file — GRAMMAR_FOR_LLM.md — while SYNTAX_REFERENCE.md
+/// (the canonical spec) and TUTORIAL.md had zero observers, and both had drifted. What
+/// the day this net was widened (2026-08-15) found in the two unwatched files:
+/// <list type="bullet">
+/// <item>SYNTAX_REFERENCE.md wrote every example's comment with LilyPond's <c>%</c>,
+///   which is not a Lily# token at all (LYS0018) — 33 of its 57 blocks.</item>
+/// <item>its "Navigation Marks" block taught <c>c4@segno</c> and friends, all five
+///   LYS1022 — and the engine engraves them anyway, so no output ever looked wrong.</item>
+/// <item>its parallel-voices block held two <c>voice</c> spans in one block, i.e. the
+///   LYS0019 that the paragraph beneath it explains.</item>
+/// <item>TUTORIAL.md's only multi-staff example — the first thing a reader copies —
+///   used the removed <c>clef:</c> form and <c>staff treble { rightHand }</c>.</item>
+/// </list>
+/// ⚠️ The line that used to stand here — "GRAMMAR.md is still unobserved and CANNOT be added:
+/// it has ZERO plain fenced blocks" — was half wrong and is gone. That file HAS one fenced
+/// example, tagged <c>lilysharp</c>, which the plain-fence rule was skipping on its info
+/// string alone; its other examples live in EBNF <c>(* Example…: … *)</c> comments. Both
+/// shapes are read now and GRAMMAR.md is in the Theory below. What that found the same day:
+/// a <c>ScoreDecl</c> production the compiler refuses, an <c>override Stem.length</c> that
+/// LYS1029 had already outlawed elsewhere, and a voice example mixing prose into code.
+/// <para>
+/// ⚠️ What is STILL unobserved: the LISTS — the <c>(* … *)</c> catalogues and bullet runs
+/// that enumerate spellings rather than demonstrate one. The <c>@segno</c> family lived
+/// there. Nothing here can reach them, because a document distinguishes a spelling it
+/// RECOMMENDS from one it names as invalid in prose only, and a regex that guessed between
+/// the two is the checker RULES §5.2.1⑦ forbids. They were measured directly instead
+/// (2026-08-15: 94 spellings, 13 rejected, all 13 meta-syntax or explicitly-invalid lines);
+/// making them observable wants syntax for a list, which is a design decision.
+/// </para>
+/// </remarks>
 [Trait("Category", "Unit")]
 public class DocExamplesParseTests
 {
@@ -46,29 +77,73 @@ public class DocExamplesParseTests
         throw new FileNotFoundException($"Cannot find {relative} walking up from {AppContext.BaseDirectory}");
     }
 
-    /// <summary>Extracts the contents of every PLAIN ```-fenced block (no info string)
-    /// in a markdown file. Blocks with a language tag (e.g. ```text) are NOT Lily# code
-    /// and are skipped — that is how a non-code listing (the reserved-word table) opts out.</summary>
-    private static IEnumerable<(int Index, string Code)> FencedBlocks(string markdown)
+    /// <summary>
+    /// Every Lily# example a markdown file offers, in the two shapes the docs actually use.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Both shapes are OPT-IN by their own syntax, never by a heuristic that decides
+    /// whether a run of text "looks like code" — a checker that guesses is the kind
+    /// RULES §5.2.1⑦ forbids, and here it would be reading prose out of GRAMMAR.md.
+    /// </remarks>
+    private static IEnumerable<(int Index, string Code)> Examples(string markdown)
+    {
+        int blockIndex = 0;
+        foreach (var code in FencedBlocks(markdown))
+            yield return (blockIndex++, code);
+        foreach (var code in EbnfExampleBlocks(markdown))
+            yield return (blockIndex++, code);
+    }
+
+    /// <summary>Contents of every ```-fenced block that claims to be Lily# — either PLAIN
+    /// (no info string) or tagged <c>lilysharp</c> / <c>lys</c>. Any other language tag
+    /// (```text, ```bash) is NOT Lily# and is skipped — that is how a non-code listing
+    /// (the reserved-word table, a shell transcript) opts out.</summary>
+    /// <remarks>
+    /// ⚠️ The tagged spelling is not decoration: GRAMMAR.md's ONLY fenced example is
+    /// ```lilysharp, so before 2026-08-15 the "plain fence" rule alone read zero of that
+    /// file — which was misreported as "GRAMMAR.md has no fenced examples".
+    /// </remarks>
+    private static IEnumerable<string> FencedBlocks(string markdown)
     {
         var lines = markdown.Replace("\r\n", "\n").Split('\n');
-        int i = 0, blockIndex = 0;
+        int i = 0;
         while (i < lines.Length)
         {
             var trimmed = lines[i].TrimStart();
             if (trimmed.StartsWith("```"))
             {
-                bool isPlain = trimmed.TrimEnd() == "```"; // no language/info string
+                var tag = trimmed.TrimEnd()[3..].Trim();
+                bool isLilySharp = tag.Length == 0 || tag is "lilysharp" or "lys";
                 var body = new List<string>();
                 i++;
                 while (i < lines.Length && !lines[i].TrimStart().StartsWith("```"))
                     body.Add(lines[i++]);
                 i++; // closing fence
-                if (isPlain)
-                    yield return (blockIndex++, string.Join("\n", body));
+                if (isLilySharp)
+                    yield return string.Join("\n", body);
             }
             else i++;
         }
+    }
+
+    /// <summary>
+    /// Contents of every <c>(* Example…: … *)</c> block — how GRAMMAR.md illustrates the
+    /// production it has just stated, since its EBNF is plain markdown rather than a fence.
+    /// The header line (<c>Example:</c>, <c>Examples:</c>, or <c>Example (why this one):</c>)
+    /// is dropped; everything up to <c>*)</c> is the code.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The rule is "an Example block is code, ALL of it" — deliberately, so that no
+    /// heuristic has to tell code from prose. The one block that mixed the two (the
+    /// parallel-voices example, three paragraphs of specification under two lines of
+    /// code) was split rather than guessed at, which is what made the rule true before it
+    /// was enforced. Keep it true: prose belongs in a comment of its own.
+    /// </remarks>
+    private static IEnumerable<string> EbnfExampleBlocks(string markdown)
+    {
+        var text = markdown.Replace("\r\n", "\n");
+        foreach (Match m in Regex.Matches(text, @"\(\*\s*Examples?\b[^:]*:(.*?)\*\)", RegexOptions.Singleline))
+            yield return m.Groups[1].Value;
     }
 
     /// <summary>
@@ -83,21 +158,31 @@ public class DocExamplesParseTests
     /// or a diagnostic that survives the wrapping — is still a failure, so the test keeps its
     /// original teeth: it cannot be satisfied by a block that is merely broken in a new way.
     /// </summary>
-    [Fact]
-    public void GrammarForLlm_AllExamplesParse()
+    [Theory]
+    [InlineData("docs/GRAMMAR_FOR_LLM.md")]
+    [InlineData("docs/SYNTAX_REFERENCE.md")]
+    [InlineData("docs/TUTORIAL.md")]
+    [InlineData("docs/GRAMMAR.md")]
+    public void DocExamples_AllCompile(string relative)
     {
-        var path = RepoFile("docs/GRAMMAR_FOR_LLM.md");
+        var path = RepoFile(relative);
         var md = File.ReadAllText(path);
 
         var failures = new List<string>();
-        foreach (var (index, code) in FencedBlocks(md))
+        foreach (var (index, code) in Examples(md))
         {
             if (string.IsNullOrWhiteSpace(code))
                 continue;
 
             var tree = SyntaxTree.Parse(code);
             if (!tree.HasErrors)
+            {
+                var semantic = SemanticErrors(tree);
+                if (semantic == null)
+                    continue;
+                failures.Add($"block #{index} (SEMANTIC):\n{code}\n  -> {semantic}");
                 continue;
+            }
 
             bool isFragment = tree.Diagnostics
                 .Where(d => d.Severity == DiagnosticSeverity.Error)
@@ -106,7 +191,13 @@ public class DocExamplesParseTests
             {
                 var wrapped = SyntaxTree.Parse(MusicSource.Wrap(code));
                 if (!wrapped.HasErrors)
+                {
+                    var semantic = SemanticErrors(wrapped);
+                    if (semantic == null)
+                        continue;
+                    failures.Add($"block #{index} (as a section body, SEMANTIC):\n{code}\n  -> {semantic}");
                     continue;
+                }
                 var wrappedMsgs = string.Join(" | ", wrapped.Diagnostics.Select(d => d.Message));
                 failures.Add($"block #{index} (as a section body):\n{code}\n  -> {wrappedMsgs}");
                 continue;
@@ -117,7 +208,63 @@ public class DocExamplesParseTests
         }
 
         Assert.True(failures.Count == 0,
-            "GRAMMAR_FOR_LLM.md has code examples the parser rejects:\n\n" +
+            $"{relative} has code examples Lily# rejects:\n\n" +
             string.Join("\n\n", failures));
     }
+
+    /// <summary>
+    /// The semantic errors of an example that already PARSES, or null when there are none.
+    /// </summary>
+    /// <remarks>
+    /// Parsing was never the whole bar. The spec's only <c>override</c> example wrote
+    /// <c>Stem.length</c>, which parses perfectly and which the engine does not read — once
+    /// LYS1029 gave that a voice, the canonical spec was teaching three lines the compiler
+    /// refuses, and this test stayed green throughout because it stopped at the parser.
+    /// A spec that claims forms the compiler rejects is the exact failure this file exists
+    /// to prevent, so the bar is now "compiles", not "parses".
+    ///
+    /// ⚠️ ERRORS only. Warnings are deliberately allowed: an illustration of two notes has
+    /// no reason to fill a 4/4 bar, and demanding it would push padding rests into examples
+    /// whose whole job is to show one idea.
+    /// </remarks>
+    private static string? SemanticErrors(SyntaxTree tree)
+    {
+        var errors = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Where(d => !FragmentCodes.Contains(d.Code))
+            .ToList();
+        return errors.Count == 0 ? null : string.Join(" | ", errors.Select(d => d.Message));
+    }
+
+    /// <summary>
+    /// Errors that mean "this example is an EXCERPT", not "this example is wrong. An
+    /// illustration of the form syntax names sections it does not define, and one of a
+    /// grand staff names parts declared elsewhere — spelling those out in full would bury
+    /// what each example teaches, which is the same reason the parse side accepts a bare
+    /// section body.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Kept as a NAMED, closed list rather than "ignore semantic errors": with it, the
+    /// net still catches the two defects it was added for — the spec's first example wrote
+    /// <c>partial</c> at the top level, which LYS1024 refuses and whose comment ("once for
+    /// every part") is the very misconception that error corrects, and its only
+    /// <c>override</c> example wrote <c>Stem.length</c>, which LYS1029 refuses. Both parsed
+    /// perfectly, which is why this file stayed green while the spec drifted.
+    ///
+    /// ★ What the line costs, measured when the net was widened (2026-08-15) by removing
+    /// this set and re-running: GRAMMAR_FOR_LLM.md 6 blocks fail, SYNTAX_REFERENCE.md 8,
+    /// TUTORIAL.md 0. All 14 are genuine excerpts — a <c>form</c> naming sections defined
+    /// elsewhere, a <c>score</c> naming parts declared elsewhere — so the exclusions buy
+    /// exactly what they were meant to and nothing else. Anyone tempted to widen this set
+    /// further should count first: that is how the 2026-08-15 pass knew the '@segno' block
+    /// was a real defect rather than one more excerpt.
+    /// </remarks>
+    private static readonly HashSet<string> FragmentCodes = new()
+    {
+        DiagnosticCodes.UndefinedSection,
+        DiagnosticCodes.UndefinedPart,
+        DiagnosticCodes.UndefinedVariable,
+        DiagnosticCodes.UndefinedPhrase,
+        DiagnosticCodes.UnknownFormReference,
+    };
 }

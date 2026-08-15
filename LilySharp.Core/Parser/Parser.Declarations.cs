@@ -74,9 +74,25 @@ internal sealed partial class Parser
 
             var prop = ParsePartProperty();
             if (prop != null)
+            {
                 properties.Add(prop);
-            else
-                Advance();
+                continue;
+            }
+
+            // A token the header cannot place. This used to be a bare `Advance()`, and the
+            // silence was the trap: `part m { bass }` engraved byte-for-byte as `part m { }`
+            // and said "No errors found", even though a bare clef word is exactly what a
+            // reader would try. (`bass` lexes as BassKeyword, not ClefKeyword, so it never
+            // reached ParsePartProperty at all — it fell straight to this line.)
+            // Still consumed afterwards, so one stray token does not cascade into the rest
+            // of the header.
+            var strayspan = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(strayspan, DiagnosticCodes.PartHeaderStrayToken,
+                $"'{Current.Text}' is not a part property. A part header holds properties "
+                + "written bare (e.g. 'clef bass', 'instrument \"Violin\"'), a 'key', "
+                + "'override'/'revert', or an inner 'section'. "
+                + "A clef needs its keyword: write 'clef bass', not 'bass'.");
+            Advance();
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
@@ -153,6 +169,27 @@ internal sealed partial class Parser
             var propName = Advance();
             // Bare canonical form ('clef treble'); a stray ':' is flagged and skipped.
             var colon = ConsumeRejectedColon();
+
+            // The value used to be taken unconditionally, which meant a property with none
+            // ate whatever followed — including the closing brace. `part m { clef }` then
+            // parsed the whole rest of the file INSIDE the part and complained about a line
+            // far below ("Undefined variable or phrase: 'm'"); with another part after it,
+            // the brace itself was reported as a clef name ("Unknown clef '}'"). Neither
+            // named the missing value, and neither pointed at this line.
+            if (Check(SyntaxKind.CloseBrace) || Check(SyntaxKind.EndOfFile))
+            {
+                var missingSpan = new TextSpan(_textPosition, Current.FullWidth);
+                _diagnostics.Error(missingSpan, DiagnosticCodes.PartPropertyMissingValue,
+                    $"'{propName.Text}' has no value. Part properties are written bare, "
+                    + $"name then value — e.g. '{propName.Text} …'.");
+                // Return the property with a zero-width missing value rather than consuming
+                // the brace, so the header still closes here and the file below parses as
+                // written. Same shape as Expect()'s synthetic token: no trivia, or the
+                // root.FullWidth == text.Length invariant breaks.
+                return new PropertyAssignmentGreen(propName, colon,
+                    [new SyntaxToken(SyntaxKind.Identifier, "", null, null)]);
+            }
+
             var value = Advance(); // identifier, string, number, or pitch
             // A transpose target may carry octave marks (transpose d' / c,);
             // harmless for the other properties, which never have trailing marks.

@@ -159,7 +159,13 @@ public class MarkArgumentTests
     /// (§9.5 ⑵) start from a measured fact rather than an assumption: a leading '#'
     /// is written against its figure, so it is ONE argument here, while MarkName
     /// splits it into two dotted parts ("fig.#.6") and the figured-bass parser binds
-    /// them back together. A reader moved onto arguments has to parse "#6" itself.
+    /// them back together.
+    /// <para>
+    /// ★ This is the measurement that decided how the figured bass moved (§9.5.3 ⑴).
+    /// A reader on the RUNS would have had to re-split "#6" itself — and re-splitting is
+    /// re-lexing, because "6s6" divides while "6S0" does not ('s' is a pitch token). So
+    /// it reads the argument TOKENS instead, which are the parts MarkName was joining.
+    /// </para>
     /// </summary>
     [Theory]
     [InlineData("c4@fig(#6) |", "#6", "fig.#.6")]

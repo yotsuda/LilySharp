@@ -160,7 +160,7 @@ score main "out" { staff melody }
 
 ### Requirements
 
-- .NET 9 SDK
+- .NET 10 SDK
 - Node.js (for VS Code extension)
 
 ### Build

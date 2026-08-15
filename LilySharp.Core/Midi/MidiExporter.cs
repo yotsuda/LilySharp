@@ -621,6 +621,15 @@ public sealed class MidiExporter
     /// </remarks>
     private void PlayForm(FormDeclarationSyntax structure, MidiTrack track, MidiTrack conductorTrack)
     {
+        // The state a from-the-beginning repeat has to put back, captured before anything
+        // plays. The same three things PlayRepeatBlock / ProcessRepeatSpan already restore
+        // per pass, plus the per-part pitch lanes, which those two do not touch because a
+        // '|: … :|' body never rewinds past its own start.
+        var pieceOrdinals = new Dictionary<int, int>(_sourceOrdinals);
+        var piecePitchLanes = new Dictionary<string, (int, int, Fraction)>(_partPitchLanes);
+        var pieceDuration = _defaultDuration;
+        int pieceVelocity = _velocity;
+
         for (int i = 0; i < structure.SlotCount; i++)
         {
             var child = structure.GetChild(i);
@@ -635,6 +644,58 @@ public sealed class MidiExporter
                     break;
                 case FormRepeatBlockSyntax repeatBlock:
                     PlayRepeatBlock(repeatBlock, track, conductorTrack);
+                    break;
+                // A ':|' written in the form outside any '|: … :|' block: it has no '|:' to
+                // pair with, so it repeats FROM THE BEGINNING OF THE PIECE (user decision,
+                // 2026-08-15) — the ordinary reading of a one-sided end-repeat, and the one
+                // MusicXML already spells (a backward repeat with no forward one). Replay
+                // everything before it, once.
+                case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }:
+                    RepeatFromTheBeginning(structure, i, track, conductorTrack,
+                        pieceOrdinals, piecePitchLanes, pieceDuration, pieceVelocity);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Replays form items <c>[0, upTo)</c> — the piece from its beginning up to the
+    /// one-sided <c>:|</c> — restoring the state the piece started from so the second pass
+    /// sounds like the first.
+    /// </summary>
+    private void RepeatFromTheBeginning(FormDeclarationSyntax structure, int upTo,
+        MidiTrack track, MidiTrack conductorTrack,
+        Dictionary<int, int> pieceOrdinals,
+        Dictionary<string, (int, int, Fraction)> piecePitchLanes,
+        Fraction pieceDuration, int pieceVelocity)
+    {
+        // The replayed music is ENGRAVED once, so its printed copies are the ones already
+        // laid out — the ordinals restart from the snapshot, exactly as a '|: … :|' second
+        // pass does (see PlayRepeatBlock).
+        _sourceOrdinals = new Dictionary<int, int>(pieceOrdinals);
+        _partPitchLanes.Clear();
+        foreach (var kv in piecePitchLanes)
+            _partPitchLanes[kv.Key] = kv.Value;
+        _defaultDuration = pieceDuration;
+        _velocity = pieceVelocity;
+
+        for (int j = 0; j < upTo; j++)
+        {
+            switch (structure.GetChild(j))
+            {
+                case SectionReferenceSyntax r:
+                    PlaySectionByName(r.SectionName, track, conductorTrack);
+                    break;
+                case { Kind: SyntaxKind.SilentSectionReference } s
+                    when SilentSectionName(s) is { } name:
+                    PlaySectionByName(name, track, conductorTrack);
+                    break;
+                case FormRepeatBlockSyntax rb:
+                    PlayRepeatBlock(rb, track, conductorTrack);
+                    break;
+                // A second one-sided ':|' inside the replayed stretch does NOT rewind again:
+                // that would not terminate. One rewind per written ':|' is what the sign says.
+                case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }:
                     break;
             }
         }
@@ -812,6 +873,19 @@ public sealed class MidiExporter
                     continue;
                 }
             }
+            // ⚠️ A ':|' reached HERE is NOT necessarily one-sided, and THIS WALK CANNOT TELL.
+            // It sees one SECTION's music, and a '|:' opened in another section pairs with a
+            // ':|' in this one — the collector's flattened measure stream is where that
+            // becomes visible, which is exactly why LYS4017 is decided there and not here.
+            // MEASURED, and it is why this arm does nothing: a first version treated it as
+            // one-sided and rewound the piece, which changed 3 correctly written books in the
+            // author's library (ABC, Automatic, Beat It — each spelling '|:' in one section
+            // and '] :|' in a later one) by replaying the whole song.
+            // Only the FORM-level ':|' gets the from-the-beginning meaning, where PlayForm
+            // sees the whole piece and the parser guarantees a form repeat block closes at
+            // form level. A one-sided ':|' written inside section music is therefore still
+            // not played — measured 2026-08-15: ZERO of the 133 books on disk that contain a
+            // repeat barline spell one.
             ProcessNode(items[i], track, conductorTrack);
         }
     }

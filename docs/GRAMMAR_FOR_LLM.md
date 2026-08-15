@@ -21,7 +21,7 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
-partial 8               // optional: the pickup length, once for every part
+                        // (a pickup is 'partial', but it belongs to a SECTION — see below)
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -30,6 +30,8 @@ part leftHand  { clef bass }    // part names are identifiers, NOT reserved word
 phrase motif { c4 d e f | }     // optional reusable music, referenced as $motif
 
 section Main {                  // a section binds music to each part by name
+  partial 8                     // optional pickup: shortens THIS section's opening bar
+                                // for every part at once (top level rejects it)
   rightHand { $motif g2 g | }
   leftHand  { c2 c | g2 g | }
 }
@@ -173,7 +175,7 @@ Attach with `@`. One note may take several: `c4@staccato@p`. Two suffixes:
 `.up` / `.down` forces an articulation/dynamic above / below the note (default is
 automatic, opposite the stem): `c4@staccato.up`, `d4@accent.down`, `@f.up`.
 An annotation that takes a VALUE puts it in parentheses (space- or comma-separated):
-`@chord(Dm)`, `@fig(6 4)`, `@mark("A")`, `@finger(3)`.
+`@chord(d:m)`, `@fig(6 4)`, `@mark("A")`, `@finger(3)`.
 
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
@@ -186,11 +188,18 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Arpeggio: `<c e g>4@arpeggio`
 - Glissando: `c4@glissando d` (line from this note to the next)
 - Figured bass: `c4@fig(6)` , `d4@fig(6 4)`
-- Chord names: `c4@chord(C)` , `d4@chord(Dm)`
+- Chord names: `c4@chord(c)` , `d4@chord(d:m)` , `e4@chord(a:m7)` — Lily# pitch spelling,
+  LOWER case, quality after a `:`. LilyPond's `@chord(C)` / `@chord(Dm)` are not recognised
+  (LYS1008 warns, no symbol is engraved). A bare `@chord` derives it from the notes.
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
-- Cue/effects: `@cue` (small cue note), `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
+- Effects: `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
+- Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
+  `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted
+  instrument's clef to read the cue in it: `c4 d cue bass { e4 f } g4 |` — the staff's own
+  clef returns after the region. A slur or tie may NOT cross the region's edge (LYS4012):
+  a cue is a voice of its own, so close the span inside the cue or keep both ends outside.
 - Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
 - Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
   above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
@@ -324,14 +333,18 @@ of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc 
 form main { A segno  B to coda  C ds al coda  coda D }
 ```
 
-In-note marks: `c4@mark("A")` (rehearsal mark), `@segno @coda @fine @dc @ds`,
+The same bare words are also written in a section's music, at a barline boundary
+(`segno c4 d e f |`, `c4 d e f | ds al fine`) — they are landmarks, never note
+modifiers, so `c4@segno` is an error (LYS1022) and mid-measure warns (LYS4003).
+
+In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
 pedals `@sustainOn`/`@sustainOff`, `@sostenutoOn`/`@sostenutoOff`, `@unaCorda`/`@treCorde` — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).
 An annotation's argument always goes in PARENTHESES — a dot after the name is the placement qualifier
 instead (`@fermata.up`), so `@notehead.x` does not work either.
-(`@ds al fine` etc. is the navigation form used inside `form main { }`.)
+(The navigation marks above are the bare form — `ds al fine`, no `@` — in a form and in music alike.)
 
 ## Multiple forms (excerpts)
 
@@ -348,12 +361,17 @@ score practice { staff melody }
 
 ## Override / revert (engraving properties)
 
+⚠️ The vocabulary is THREE properties — `NoteHead.transparent`, `Stem.transparent`,
+`NoteColumn.force-hshift`. The syntax accepts any `Grob.property`, but anything outside
+that list is refused (LYS1029, "not supported in this version") rather than silently
+doing nothing. The list grows; each addition removes one error.
+
 ```
-override Stem.length = 7          // value fits the property: number, identifier (up/red), or "string"
+override NoteHead.transparent = true     // value fits the property: number, identifier (true/up/red), or "string"
 override NoteColumn.force-hshift = 1.5   // fractional values are allowed, and negative ones (-0.5)
 c4 d e f |
-revert Stem.length
-once override Stem.length = 9     // 'once' applies to the next note only
+revert NoteHead.transparent
+once override Stem.transparent = true    // 'once' applies to the next note only
 c4 d e f |
 ```
 

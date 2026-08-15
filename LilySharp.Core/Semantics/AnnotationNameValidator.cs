@@ -153,7 +153,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 var name = mark.MarkName;
                 if (!IsKnownCompoundName(mark))
                     WarnUnknown(mark, name);
-                else if (IsBareRehearsalMarkLabel(name))
+                else if (AnnotationValues.Rehearsal(mark, out var labelIsQuoted) is not null
+                         && !labelIsQuoted)
                     _diagnostics.Error(
                         mark.Span,
                         DiagnosticCodes.MarkLabelNotQuoted,
@@ -206,10 +207,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// "does anything consume this?", which can only be answered by knowing what the
     /// consumers accept — so every family was spelled here a second time, and the
     /// audit counted it as the tenth restatement of the same ten readings
-    /// (VALUE_SITE_AUDIT §9.3). Every family that has moved now ASKS its one reader;
-    /// what is left below is the figured bass, which is a sub-language whose runs and
-    /// dotted parts divide at different places (§9.5.1), and the dotted NAMES, which
-    /// are not arguments at all.
+    /// (VALUE_SITE_AUDIT §9.3). Every family now ASKS its one reader, the figured bass
+    /// included (§9.5.3 ⑴ — it reads the argument tokens, being a sub-language). What is
+    /// left below is the dotted NAMES, which are not arguments at all.
     /// </remarks>
     public static bool IsKnownCompoundName(MusicMarkSyntax mark)
     {
@@ -221,32 +221,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.IsArpeggioBracket(mark)
             || AnnotationValues.Frame(mark) is not null
-            || AnnotationValues.Chord(mark, out _) is not null)
+            || AnnotationValues.Chord(mark, out _) is not null
+            || AnnotationValues.Rehearsal(mark, out _) is not null
+            || AnnotationValues.Figures(mark) is not null)
             return true;
 
-        var name = mark.MarkName;
-        if (MusicMarkItem.ParseMarkName(name) != null)
-            return true;
-
-        if (FiguredBassItem.ParseFigures(name) != null)
-            return true;
-
-        return false;
+        // What remains of the dotted name: the compound NAMES (@ds.al.fine, @ottava.bassa).
+        return MusicMarkItem.ParseMarkName(mark.MarkName) != null;
     }
 
-    /// <summary>
-    /// A rehearsal mark label must be a quoted string — <c>@mark("A")</c>, not a
-    /// bare <c>@mark(A)</c>. The mark is free text (letters, words, "D.S.", spaces),
-    /// so it is quoted like <c>@text("…")</c>. MarkName is <c>mark.&lt;label&gt;</c>;
-    /// the label is quoted iff it starts and ends with a double quote.
-    /// </summary>
-    private static bool IsBareRehearsalMarkLabel(string markName)
-    {
-        if (markName.Length <= 5 || !markName.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
-            return false;
-        var label = markName.Substring(5);
-        return !(label.Length >= 2 && label[0] == '"' && label[^1] == '"');
-    }
 
     /// <summary>
     /// Whether a bare <c>@chord</c> can auto-name this chord. Only pure named-pitch
@@ -317,7 +300,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     {
         // Both the name and the suggestion are shown as they are TYPED, not as the
         // collector keys them: the reader has to be able to copy what they read.
-        var message = $"Unknown annotation '@{SourceSpelling(name)}' — it is ignored.";
+        //
+        // ⚠️ The annotation itself is quoted from the SOURCE, not rebuilt from the
+        // dotted name. SourceSpelling is a reconstruction and cannot be faithful: it
+        // turns every '.' into a ' ', so it reported '@fig(6.4)' as '@fig(6 4)' — and
+        // '@fig(6 4)' is VALID, i.e. the message named a working spelling as the broken
+        // one. (It mis-punctuated dotted NAMES the same way: '@ds.al.fien' came out as
+        // '@ds(al fien)'.) A candidate has no source text, so the suggestion below is
+        // still rendered from its internal name, which is what that reconstruction is for.
+        var message = $"Unknown annotation '{Written(node, name)}' — it is ignored.";
         var suggestion = FindSuggestion(name);
         if (suggestion != null)
             message += $" Did you mean '@{SourceSpelling(suggestion)}'?";
@@ -326,6 +317,26 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             node.Span,
             DiagnosticCodes.UnknownAnnotation,
             message);
+    }
+
+    /// <summary>
+    /// The annotation exactly as it was written.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+    /// on the node's text INCLUDING its leading trivia (<c>ToFullString</c> is what this
+    /// repo has for a node's source): whitespace trims away and an annotation then starts
+    /// at its '@', but a comment written between the note and the '@' would not, and
+    /// quoting that would be worse than reconstructing. It falls back to the internal
+    /// name there, i.e. to the behaviour every message had before. That fallback is
+    /// unexercised rather than unreachable: an annotation only carries leading trivia
+    /// when it is written apart from its note, and across the 80-book corpus and 219
+    /// fixtures not one line begins with '@' (measured 2026-08-15).
+    /// </remarks>
+    private static string Written(SyntaxNode node, string name)
+    {
+        var source = node.ToFullString().Trim();
+        return source.StartsWith('@') ? source : $"@{SourceSpelling(name)}";
     }
 
     /// <summary>
