@@ -1,7 +1,15 @@
 # `cue { … }` — 設計
 
 **状態**: **形は決定**（`@cue` を廃し `cue { … }` にする・ユーザー判断）。
-**細目 4 点が未決**（§8）。**実装は未着手。**（2026-08-02・第72セッション）
+**細目 4 点が未決**（§8）。~~実装は未着手。~~（2026-08-02・第72セッション）
+⚠️ **「実装は未着手」は stale**（2026-08-15・第175セッション実測）——**入っている**:
+`CueExpressionSyntax` 10 site・lexer の `cue` キーワード・fixture 3 本と snapshot 3 枚
+（`cue-notes` / `cue-accidentals` / `cue-region-measure`）・exporter の `CueVoice` 11 site。
+**§4 の禁止 2 つも入っている**（**LYS4013** `NestedCueBlock`・**LYS4014** `VoiceInsideCue`）。
+⇒ **残っているのは LYS4012 `SpanCrossesCueBoundary` だけ**（Core に 0 site）。
+★ **仕様書 2 冊は 2026-08-15 まで `@cue` を教え続けていた**——**この決定の 100 便あと**まで。
+`AnnotationNameValidator.cs:82` は最初から「cue は REGION であって注釈ではない」と
+書いてあり、**間違っていたのは文書のほう**だった。
 **根拠**: `audit/lp-geometry/probes/cue-span.ly`（この文書の「MEASURED」は全部そこ）。
 
 ---
