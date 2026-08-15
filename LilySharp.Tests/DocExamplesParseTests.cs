@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -63,29 +64,73 @@ public class DocExamplesParseTests
         throw new FileNotFoundException($"Cannot find {relative} walking up from {AppContext.BaseDirectory}");
     }
 
-    /// <summary>Extracts the contents of every PLAIN ```-fenced block (no info string)
-    /// in a markdown file. Blocks with a language tag (e.g. ```text) are NOT Lily# code
-    /// and are skipped — that is how a non-code listing (the reserved-word table) opts out.</summary>
-    private static IEnumerable<(int Index, string Code)> FencedBlocks(string markdown)
+    /// <summary>
+    /// Every Lily# example a markdown file offers, in the two shapes the docs actually use.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Both shapes are OPT-IN by their own syntax, never by a heuristic that decides
+    /// whether a run of text "looks like code" — a checker that guesses is the kind
+    /// RULES §5.2.1⑦ forbids, and here it would be reading prose out of GRAMMAR.md.
+    /// </remarks>
+    private static IEnumerable<(int Index, string Code)> Examples(string markdown)
+    {
+        int blockIndex = 0;
+        foreach (var code in FencedBlocks(markdown))
+            yield return (blockIndex++, code);
+        foreach (var code in EbnfExampleBlocks(markdown))
+            yield return (blockIndex++, code);
+    }
+
+    /// <summary>Contents of every ```-fenced block that claims to be Lily# — either PLAIN
+    /// (no info string) or tagged <c>lilysharp</c> / <c>lys</c>. Any other language tag
+    /// (```text, ```bash) is NOT Lily# and is skipped — that is how a non-code listing
+    /// (the reserved-word table, a shell transcript) opts out.</summary>
+    /// <remarks>
+    /// ⚠️ The tagged spelling is not decoration: GRAMMAR.md's ONLY fenced example is
+    /// ```lilysharp, so before 2026-08-15 the "plain fence" rule alone read zero of that
+    /// file — which was misreported as "GRAMMAR.md has no fenced examples".
+    /// </remarks>
+    private static IEnumerable<string> FencedBlocks(string markdown)
     {
         var lines = markdown.Replace("\r\n", "\n").Split('\n');
-        int i = 0, blockIndex = 0;
+        int i = 0;
         while (i < lines.Length)
         {
             var trimmed = lines[i].TrimStart();
             if (trimmed.StartsWith("```"))
             {
-                bool isPlain = trimmed.TrimEnd() == "```"; // no language/info string
+                var tag = trimmed.TrimEnd()[3..].Trim();
+                bool isLilySharp = tag.Length == 0 || tag is "lilysharp" or "lys";
                 var body = new List<string>();
                 i++;
                 while (i < lines.Length && !lines[i].TrimStart().StartsWith("```"))
                     body.Add(lines[i++]);
                 i++; // closing fence
-                if (isPlain)
-                    yield return (blockIndex++, string.Join("\n", body));
+                if (isLilySharp)
+                    yield return string.Join("\n", body);
             }
             else i++;
         }
+    }
+
+    /// <summary>
+    /// Contents of every <c>(* Example…: … *)</c> block — how GRAMMAR.md illustrates the
+    /// production it has just stated, since its EBNF is plain markdown rather than a fence.
+    /// The header line (<c>Example:</c>, <c>Examples:</c>, or <c>Example (why this one):</c>)
+    /// is dropped; everything up to <c>*)</c> is the code.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The rule is "an Example block is code, ALL of it" — deliberately, so that no
+    /// heuristic has to tell code from prose. The one block that mixed the two (the
+    /// parallel-voices example, three paragraphs of specification under two lines of
+    /// code) was split rather than guessed at, which is what made the rule true before it
+    /// was enforced. Keep it true: prose belongs in a comment of its own.
+    /// </remarks>
+    private static IEnumerable<string> EbnfExampleBlocks(string markdown)
+    {
+        var text = markdown.Replace("\r\n", "\n");
+        foreach (Match m in Regex.Matches(text, @"\(\*\s*Examples?\b[^:]*:(.*?)\*\)", RegexOptions.Singleline))
+            yield return m.Groups[1].Value;
     }
 
     /// <summary>
@@ -104,13 +149,14 @@ public class DocExamplesParseTests
     [InlineData("docs/GRAMMAR_FOR_LLM.md")]
     [InlineData("docs/SYNTAX_REFERENCE.md")]
     [InlineData("docs/TUTORIAL.md")]
+    [InlineData("docs/GRAMMAR.md")]
     public void DocExamples_AllCompile(string relative)
     {
         var path = RepoFile(relative);
         var md = File.ReadAllText(path);
 
         var failures = new List<string>();
-        foreach (var (index, code) in FencedBlocks(md))
+        foreach (var (index, code) in Examples(md))
         {
             if (string.IsNullOrWhiteSpace(code))
                 continue;

@@ -320,9 +320,9 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 (* Example (each voice { } is a simultaneous voice; NOT the LilyPond '<< \\ >>' form):
    section Main { piano { voice { c'2 d } { e2 f } } }
    // Named voices bind their own lyrics — the name goes before each block:
-   //   voice sop { … } alt { … }   +   lyrics sop { … }  lyrics alt { … }
+   //   voice sop { … } alt { … }   +   lyrics sop { … }  lyrics alt { … } *)
 
-   The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
+(* The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
    the staff's barlines, and music written after the span continues in the bar it left
    off in. The other voices sound alongside it, starting from the instant the span opened
    (mid-bar spans included), and add no bars of their own. The bar check counts them the
@@ -376,8 +376,13 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
    basename. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
-ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } , '}' ;
-                 (* at least one ScoreItem is required: a score with an empty body
+ScoreDecl      = 'score' , Identifier , [ String ] , '{' , { ScoreItem } , '}' ;
+                 (* The Identifier NAMES THE FORM this score renders and is REQUIRED —
+                    'score "out" { … }' is refused with "A 'score' must name the form it
+                    renders". The optional String is the output basename.
+                    A score body holds ScoreItems and nothing else: a form is declared at
+                    the top level and referred to by that name, never written inside the
+                    braces. At least one ScoreItem is required — a score with an empty body
                     engraves a page with no music, so it is an error (LYS6002). *)
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
@@ -450,7 +455,7 @@ PartRef        = Identifier ;
      grandStaff { staff rightHand  staff leftHand }
    }
 
-   score main "practice" { form main { Intro } staff melody }
+   score practice { staff melody }     // a second form, rendered to practice.svg
 *)
 
 ### 7.1 Lead sheets (chords and/or lyrics, no staff)
@@ -695,13 +700,19 @@ Number         = Integer | Decimal ;
    built once where the value is collected. A quoted value is therefore NOT a number —
    `= "10"` is the string "10" and answers nothing to a consumer asking for a double. *)
 
+(* The SYNTAX above accepts any Grob.property, but the consumed vocabulary is three pairs —
+   NoteHead.transparent, Stem.transparent, NoteColumn.force-hshift. Anything else is refused
+   (LYS1029, "not supported in this version") rather than silently doing nothing, so the
+   examples below are limited to the three; the list grows, and each addition removes one
+   error. *)
+
 (* Example:
-   override Stem.length = 7
-   override NoteColumn.force-hshift = 1.5     // fractional
-   override Stem.length = -3                  // negative
+   override NoteHead.transparent = true
+   override NoteColumn.force-hshift = 1.5      // fractional
+   override NoteColumn.force-hshift = -3       // negative
    c4 d e f |
-   revert Stem.length
-   once override Stem.length = 9     // applies to the next note only
+   revert NoteHead.transparent
+   once override Stem.transparent = true       // applies to the next note only
 *)
 
 ================================================================================
