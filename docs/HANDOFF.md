@@ -155,7 +155,18 @@ suite **4919 passed / 0 failed / 4 skipped**＝**引継ぎの数は全部合っ�
   バーを "compiles" に上げたのは**そのファイルだけ**で、**`SYNTAX_REFERENCE.md`（正典）と
   `GRAMMAR.md` の例には観測者が 0 本**。**この便が足した例は手で `check` に通した**——
   **網ではない**（§2F に起票）。
-- **⑿ 未追跡 0・未 push は「開始時 18 ＋ この便のぶん」**（第171 の 2 便＋第172 の 4 便＋
+- **⑿ ★ perf（RULES §7 ⑼）＝走査を 1 本足したので回数で測った**。`RepeatPairingScanner` は
+  **measures を 1 周するだけ**（measure ごとに enum 2 つを読む）で、**同じ呼び出し位置に
+  既に居る `SlurPairingScanner` は measures × items** を回る＝**足したほうが厳密に安い**。
+  ⚠️ **collector は打鍵経路**なので免除ではない——**時間ではなく回数で測るのが
+  この機械の作法**（§7 ⑼「5〜15ms 級を時間で判定できない」）。
+  ⚠️ **validator 側（`SemanticValidation`）は `check` からしか呼ばれない**ので打鍵床に乗らない
+  （第172 ⑹ の実測が今も有効）。
+- **⒀ ★ §7.5 の監査＝Core への `+` 394 行に REF/OWN が 0 本**。**それが正しい**——
+  **LP 由来の式も数値も 1 つも足していない**（足した `const` は `LYS4017` の診断コード文字列 1 個で、
+  `LpProvenanceTests` の見る `EngravingDefaults`/`LayoutOptions`/`VerticalSpacingParameters` の
+  数値定数ではない）。**この便は §7.6 ⒟＝「既存の家を指し直した／発明を足していない」。**
+- **⒁ 未追跡 0・未 push は「開始時 18 ＋ この便のぶん」**（第171 の 2 便＋第172 の 4 便＋
   第173 の 12 便が 18 の中身）。⚠️ **終了時の実数はここに書かない**（上の理由）——
   **`git rev-list --count origin/master..master` が言う。**
   ★ **次の一手はこのセッションでは着手していない**——**残った §2F ⑹ はリリースブロッカーでは
