@@ -1271,7 +1271,7 @@ public sealed class LilyPondExporter
         KeySignatureSyntax k => EmitKey(k),
         TimeSignatureSyntax ts => EmitTime(ts),
         TempoDeclarationSyntax t => EmitTempo(t),
-        ClefDeclarationSyntax cl => "\\clef " + cl.ClefName.Text,
+        ClefDeclarationSyntax cl => "\\clef " + LyClefName(cl.ClefName.Text),
         PartialDeclarationSyntax p => EmitPartial(p),
         TupletExpressionSyntax tup => EmitTuplet(tup),
         ParallelExpressionSyntax par => EmitParallel(par),
@@ -2148,9 +2148,42 @@ public sealed class LilyPondExporter
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         string region = $"\\new CueVoice {{ {body} }}";
         return cue.ClefKeyword is { } clef
-            ? $"\\cueClef {clef.Text} {region} \\cueClefUnset"
+            ? $"\\cueClef {LyClefName(clef.Text)} {region} \\cueClefUnset"
             : region;
     }
+
+    /// <summary>
+    /// A clef name as LilyPond's <c>\clef</c> / <c>\cueClef</c> take it: a QUOTED string.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The quotes are not decoration. MEASURED on LilyPond 2.26.0, 2026-08-15: written
+    /// bare, <c>\clef treble_8</c> is read as <c>\clef treble</c> followed by <c>_8</c> — a
+    /// fingering — so LilyPond reports "Unattached FingeringEvent", engraves an ORDINARY
+    /// treble clef and prints a stray glyph under the staff. The three books differ:
+    /// bare 5643 bytes, quoted 6442 (the real octave-down clef), plain treble 5161. The twin
+    /// was writing the bare form at all four sites, so the 6 tracked books that use
+    /// <c>treble_8</c> had twins that engraved a DIFFERENT CLEF — the exact "compile to other
+    /// music" failure the twin exists to rule out, and it was invisible because the four
+    /// clef names that are purely alphabetic do lex correctly bare.
+    /// <para>
+    /// The octave modifier is part of the NAME, not a separate token: make-clef-set matches
+    /// the whole string against <c>^(.*)([_^])([^0-9a-zA-Z]*)([1-9][0-9]*)([^0-9a-zA-Z]*)$</c>
+    /// and splits it itself. So the name has to REACH it in one piece — written bare,
+    /// LilyPond's reader has already split it, and make-clef-set is handed "treble".
+    /// </para>
+    /// <para>
+    /// Quoting unconditionally rather than only when the name has an underscore: quoted is
+    /// LilyPond's documented spelling and is correct for every name (MEASURED — treble, bass,
+    /// alto, tenor and treble_8 all pass, in both \clef and \cueClef), so nothing here has to
+    /// reason about LilyPond's reader. ONE home for the rule, because four spellings of it is
+    /// how this survived in three of them.
+    /// </para>
+    /// LILYPOND-REF: scm/parser-clef.scm:178-190 make-clef-set — takes clef-name as a string
+    ///   and parses the octave modifier out of it.
+    /// LILYPOND-REF: ly/music-functions-init.ly:535-538 make-cue-clef-set — cueClef declares
+    ///   its argument (type) (string?) and hands it straight to it.
+    /// </remarks>
+    private static string LyClefName(string name) => "\"" + name + "\"";
 
     private string EmitRepeat(RepeatExpressionSyntax rep)
     {
@@ -2472,7 +2505,7 @@ public sealed class LilyPondExporter
         // the glyph stays hidden, but the notes still have to be READ in that clef.
         string? clef = OssiaClef(ossia)
                        ?? PartClefWord(parts.FirstOrDefault(p => p.Name.Text == partName));
-        if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
+        if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
         sb.Append('\\').Append(varName).Append(" }\n");
         return sb.ToString();
     }
@@ -2628,7 +2661,7 @@ public sealed class LilyPondExporter
             if (InstrumentNameClause(partName) is { } staffName)
                 sb.Append(" \\with { ").Append(staffName).Append(" }");
             sb.Append(" { ");
-            if (clef != null) sb.Append("\\clef ").Append(clef).Append(' ');
+            if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
             sb.Append('\\').Append(varName).Append(" }\n");
         }
         return sb.ToString();

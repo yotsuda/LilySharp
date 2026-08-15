@@ -128,7 +128,34 @@ public class LilyPondExporterTests
         Assert.Contains("\\tempo 4 = 120", ly);
         Assert.Contains("\\key g \\major", ly);
         Assert.Contains("\\time 3/4", ly);
-        Assert.Contains("\\clef bass", ly);
+        // QUOTED. LilyPond's \clef takes a string and parses the octave modifier out of it
+        // (scm/parser-clef.scm make-clef-set), so `\clef treble_8` written bare is read as
+        // `\clef treble` plus a stray `_8` fingering. These expectations used to spell the
+        // bare form, which is why the twin shipped the wrong clef for six books.
+        Assert.Contains("\\clef \"bass\"", ly);
+    }
+
+    /// <summary>
+    /// The clef name reaches LilyPond as ONE string, which is the whole of why it is quoted.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FOUR PLAIN CLEF WORDS CANNOT SEE THIS DEFECT — they are purely alphabetic and
+    /// lex correctly bare, which is how the twin shipped `\clef treble_8` for six books.
+    /// MEASURED on LilyPond 2.26.0, 2026-08-15: bare, that is read as `\clef treble` plus a
+    /// stray `_8` fingering ("warning: Unattached FingeringEvent"), and the three books differ
+    /// — bare 5643 bytes, quoted 6442 (the real octave-down clef), plain treble 5161. So the
+    /// octave-transposing clef is the case to assert, not `bass`.
+    /// </remarks>
+    [Fact]
+    public void OctaveTransposingClef_ReachesTheTwinAsOneQuotedString()
+    {
+        var ly = Export("""
+            part m { clef treble_8 section S { c d e } }
+            form main { ~S }
+            score main { staff m }
+            """);
+        Assert.Contains("\\clef \"treble_8\"", ly);
+        Assert.DoesNotContain("\\clef treble_8", ly);
     }
 
     [Fact]
@@ -451,7 +478,7 @@ public class LilyPondExporterTests
         // ⚠️ NOT ANCHORED ON `\new Staff {`: a staff header may now carry a
         // `\with { instrumentName = … }` between the context and its music, which is
         // InstrumentName_ReachesTheTwin's business, not this test's.
-        Assert.Contains("{ \\clef bass", ly);
+        Assert.Contains("{ \\clef \"bass\"", ly);
         Assert.Contains("\\new TabStaff", ly);
         Assert.Contains("stringTunings = #bass-four-string-tuning", ly);
     }
@@ -508,9 +535,9 @@ public class LilyPondExporterTests
         // bass = bass clef, octave 3; flute = treble clef, octave 5 (NOT the treble
         // default of 4 — the preset's own octave, which is why the bundle is read whole).
         Assert.Contains("bs = \\relative c {", ly);
-        Assert.Contains("{ \\clef bass \\bs }", ly);
+        Assert.Contains("{ \\clef \"bass\" \\bs }", ly);
         Assert.Contains("fl = \\relative c'' {", ly);
-        Assert.Contains("{ \\clef treble \\fl }", ly);
+        Assert.Contains("{ \\clef \"treble\" \\fl }", ly);
     }
 
     /// <summary>A hyphenated preset (<c>electric-bass</c>) is read whole.</summary>
@@ -527,7 +554,7 @@ public class LilyPondExporterTests
             form main { ~S }
             score main { staff bs }
             """);
-        Assert.Contains("{ \\clef bass \\bs }", ly);
+        Assert.Contains("{ \\clef \"bass\" \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
     }
 
@@ -551,7 +578,7 @@ public class LilyPondExporterTests
             form main { ~S }
             score main { staff bs }
             """);
-        Assert.Contains("{ \\clef treble \\bs }", ly);
+        Assert.Contains("{ \\clef \"treble\" \\bs }", ly);
         Assert.Contains("bs = \\relative c {", ly);
     }
 
@@ -670,7 +697,7 @@ public class LilyPondExporterTests
         if (declaresClef)
             // Not anchored on `\new Staff {` — see Score_EmitsStaffAndTabWithBassTuning: the
         // header may carry a `\with { instrumentName = … }` now, which is another test's job.
-        Assert.Contains($"{{ \\clef {InstrumentDefaults.ClefWord(tab.Staff.Clef)} ", ly);
+        Assert.Contains($"{{ \\clef \"{InstrumentDefaults.ClefWord(tab.Staff.Clef)}\" ", ly);
         else
             Assert.DoesNotContain("\\clef", ly);
     }

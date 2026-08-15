@@ -110,7 +110,9 @@ public class CueRegionTests
     public void ExporterEmitsBothCueClefs()
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Doc("c'2 cue bass { e2 } |")));
-        Assert.Contains("\\cueClef bass", ly);
+        // QUOTED — \cueClef is declared (type) (string?) and the octave modifier of a name
+        // like treble_8 is parsed OUT OF THE STRING, so a bare name arrives already split.
+        Assert.Contains("\\cueClef \"bass\"", ly);
         Assert.Contains("\\cueClefUnset", ly);
     }
 
