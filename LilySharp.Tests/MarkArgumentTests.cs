@@ -161,12 +161,15 @@ public class MarkArgumentTests
     /// splits it into two dotted parts ("fig.#.6") and the figured-bass parser binds
     /// them back together. A reader moved onto arguments has to parse "#6" itself.
     /// </summary>
-    [Fact]
-    public void ASharpBindsToItsFigure_AsOneRunButTwoDottedParts()
+    [Theory]
+    [InlineData("c4@fig(#6) |", "#6", "fig.#.6")]
+    [InlineData("c4@fig(6s) |", "6s", "fig.6.s")]
+    public void AFigureWrittenWithoutASpace_IsOneRunButTwoDottedParts(
+        string music, string run, string markName)
     {
-        var mark = Mark("c4@fig(#6) |");
-        Assert.Equal("#6", Assert.Single(mark.Arguments).Text);
-        Assert.Equal("fig.#.6", mark.MarkName);
+        var mark = Mark(music);
+        Assert.Equal(run, Assert.Single(mark.Arguments).Text);
+        Assert.Equal(markName, mark.MarkName);
     }
 
     /// <summary>

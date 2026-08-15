@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Linq;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -110,6 +111,31 @@ public static class AnnotationValues
            ("x" or "cross" or "diamond" or "triangle" or "slash" or "xcircle") and var style
             ? style
             : null;
+
+    /// <summary>
+    /// The free text of <c>@text("…")</c> — the string's CONTENT, without its quotes —
+    /// or null when the annotation is not one or carries no string.
+    /// </summary>
+    /// <remarks>
+    /// The FIRST string argument, which is what the hand-walk this replaces took (it
+    /// scanned the node's slots for the first StringLiteral). An unquoted argument is
+    /// not free text and yields null, so <c>@text(dolce)</c> draws nothing — unchanged.
+    /// The side is not read here: a trailing <c>.up</c> / <c>.down</c> is a qualifier on
+    /// the annotation, and <see cref="MusicMarkSyntax.ForcedAbove"/> answers it.
+    /// LILYPOND-REF: TextScript (LP's <c>c^"text"</c> / <c>c_"text"</c>).
+    /// </remarks>
+    public static string? Text(MusicMarkSyntax mark)
+        => Named(mark, "text")
+            ? mark.Arguments.Select(a => a.Value).OfType<LysValue.Str>().FirstOrDefault()?.V
+            : null;
+
+    /// <summary>
+    /// Whether this is a <c>@text(…)</c> annotation that WROTE an argument, whatever it
+    /// says. This is what "is it consumed?" means for the family — the string form asked
+    /// it as <c>StartsWith("text.")</c>, which an empty <c>@text()</c> fails.
+    /// </summary>
+    public static bool IsTextAnnotation(MusicMarkSyntax mark)
+        => Named(mark, "text") && mark.Arguments.Length > 0;
 
     private static bool Named(MusicMarkSyntax mark, string name)
         => string.Equals(mark.Name, name, StringComparison.OrdinalIgnoreCase);

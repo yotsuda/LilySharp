@@ -214,7 +214,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         if (AnnotationValues.Finger(mark) is not null
             || AnnotationValues.Pluck(mark) is not null
             || AnnotationValues.Bend(mark) is not null
-            || AnnotationValues.Notehead(mark) is not null)
+            || AnnotationValues.Notehead(mark) is not null
+            || AnnotationValues.IsTextAnnotation(mark))
             return true;
 
         var name = mark.MarkName;
@@ -222,10 +223,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             return true;
 
         var lower = name.ToLowerInvariant();
-        // @text("…") — free expressive text (the compound name carries the
-        // string payload, e.g. text."dolce" or text."dolce".up).
-        if (lower.StartsWith("text.", StringComparison.Ordinal))
-            return true;
         if (lower is "feather.right" or "feather.left" or "feather.accel" or "feather.rit")
             return true;
         if (lower.StartsWith("frame.", StringComparison.Ordinal)

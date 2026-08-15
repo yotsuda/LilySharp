@@ -122,6 +122,35 @@ public class AnnotationValuesTests
         Assert.Contains("c,1-3", ExportedTwin("c,1@finger(3)"));
     }
 
+    [Theory]
+    [InlineData("c4@text(\"dolce\") |", "dolce")]
+    [InlineData("c4@text(\"sul D\") |", "sul D")]
+    [InlineData("c4@text(\"\") |", "")]
+    [InlineData("c4@text(\"dolce\").up |", "dolce")]   // the qualifier is not the payload
+    public void ATextArgument_IsItsStringContent(string music, string text)
+        => Assert.Equal(text, AnnotationValues.Text(Mark(music)));
+
+    /// <summary>
+    /// An unquoted argument is not free text — it draws nothing, as before. The
+    /// hand-walk this replaces scanned for a StringLiteral and found none.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@text(dolce) |")]
+    [InlineData("c4@text() |")]
+    public void AnUnquotedTextArgument_IsNoFreeText(string music)
+        => Assert.Null(AnnotationValues.Text(Mark(music)));
+
+    /// <summary>
+    /// The side is read off the qualifier, not off "the last token happened to be
+    /// 'up'" — so a text whose CONTENT is "up" is still placed below.
+    /// </summary>
+    [Fact]
+    public void ATextReadingUp_IsNotAPlacement()
+    {
+        Assert.Equal("up", AnnotationValues.Text(Mark("c4@text(\"up\") |")));
+        Assert.Null(Mark("c4@text(\"up\") |").ForcedAbove);
+    }
+
     /// <summary>
     /// The validator asks the same reader, so "is this consumed?" and "what does it
     /// mean?" cannot drift apart again for these four (§9.3's tenth restatement).
