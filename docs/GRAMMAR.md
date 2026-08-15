@@ -485,7 +485,7 @@ PartRef        = Identifier ;
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | InlineVolta | PhraseRef
-               | Slur | Tie | Beam | Tuplet | Grace | MidMusicCommand | NavMark ;
+               | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand | NavMark ;
 
 (* NavMark (see §6) is the SAME bare token in a section's music as in a form — it is a
    landmark, never a note modifier, so it takes no '@' (c4@segno is LYS1022 and
@@ -555,7 +555,7 @@ ChordNote      = PitchToken , { Annotation } ;
    C5 G4 E4 C4. Each member's own marks are local; marks after '>>' shift the whole group
    and propagate. Members may be pitches, scale degrees, chords or rests.
    Annotations after '>>': a dynamic (@f) applies to the whole group and a chord name
-   (@chord / @Am7) labels it; any other annotation on the group or a bare member is not
+   (@chord / @chord(a:m7)) labels it; any other annotation on the group or a bare member is not
    applied yet and warns (LYS4008) — nothing is dropped silently. A nested chord member
    keeps its own annotation handling ('<< <c e>@arpeggio g >>' is fine).
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
@@ -660,13 +660,17 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Arpeggio:      <c e g>4@arpeggio
    - Glissando:     c4@glissando d
    - Figured bass:  c4@fig(6) , d4@fig(6 4)
-   - Chord name:    c4@chord(C) , d4@chord(Dm)
+   - Chord name:    c4@chord(c) , d4@chord(d:m)   (* Lily# pitch spelling, lower case:
+                    the quality follows a ':' (a:m7, g:7). '@chord(C)' / '@chord(Dm)' are
+                    LilyPond's spelling and are NOT recognised — LYS1008 warns and the
+                    symbol is not engraved. A bare '@chord' derives it from the notes. *)
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark("A")   (label is a quoted string)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)
    - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
-   - Cue/effects:   @cue (small cue note) , @cross / @dead (x notehead) ,
+   - Effects:       @cross / @dead (x notehead) ,
                     @fall @doit (jazz bends) , @breath @caesura
+                    (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Spanners:       @rit @accel
                      @ottava(…) @quindicesima(…) … @loco ,   [labels: 8va/15ma; @…(bassa) = down]
@@ -682,6 +686,10 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
 Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] , MusicBlock ;
                  (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
                     use the symbolic |: … :| form, NOT a 'repeat' keyword *)
+Cue            = 'cue' , MusicBlock ;
+                 (* Small cue notes. A cue is a REGION, not a note annotation — it maps
+                    onto LilyPond's CueVoice context, whose size is a context property,
+                    so there is no '@cue': write 'c4 d cue { e4 f } g4 |'. *)
 
 ================================================================================
 ## 9. Override / Revert (engraving properties)

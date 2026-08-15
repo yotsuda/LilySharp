@@ -175,7 +175,7 @@ Attach with `@`. One note may take several: `c4@staccato@p`. Two suffixes:
 `.up` / `.down` forces an articulation/dynamic above / below the note (default is
 automatic, opposite the stem): `c4@staccato.up`, `d4@accent.down`, `@f.up`.
 An annotation that takes a VALUE puts it in parentheses (space- or comma-separated):
-`@chord(Dm)`, `@fig(6 4)`, `@mark("A")`, `@finger(3)`.
+`@chord(d:m)`, `@fig(6 4)`, `@mark("A")`, `@finger(3)`.
 
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
@@ -188,11 +188,15 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Arpeggio: `<c e g>4@arpeggio`
 - Glissando: `c4@glissando d` (line from this note to the next)
 - Figured bass: `c4@fig(6)` , `d4@fig(6 4)`
-- Chord names: `c4@chord(C)` , `d4@chord(Dm)`
+- Chord names: `c4@chord(c)` , `d4@chord(d:m)` , `e4@chord(a:m7)` — Lily# pitch spelling,
+  LOWER case, quality after a `:`. LilyPond's `@chord(C)` / `@chord(Dm)` are not recognised
+  (LYS1008 warns, no symbol is engraved). A bare `@chord` derives it from the notes.
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
-- Cue/effects: `@cue` (small cue note), `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
+- Effects: `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
+- Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
+  `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context)
 - Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
 - Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
   above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
