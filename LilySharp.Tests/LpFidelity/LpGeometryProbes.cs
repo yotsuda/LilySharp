@@ -5847,6 +5847,65 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// TWO ADJACENT cue regions — the book that reads the edge BETWEEN two regions, which
+    /// nothing in this corpus had ever read.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe voice-boundary-spacing.ly section F, scores VB-TWO / VB-ONE): the
+    /// same four heads, the same durations, the same register, differing only in whether ONE
+    /// <c>\new CueVoice</c> or TWO enclose the last three. MEASURED 2026-08-15 —
+    /// <list type="bullet">
+    /// <item>VB-ONE steps 2.898044999134612 / 2.513393907138008 / 2.513393907138011</item>
+    /// <item>VB-TWO steps 2.898044999134612 / 2.513393907138008 / 2.898044999134611</item>
+    /// </list>
+    /// The third step LOSES the head-width refinement of lily/note-spacing.cc:77 when the two
+    /// notes are in different regions: <c>cue { … } cue { … }</c> is two CueVoice contexts and a
+    /// <c>Note_spacing</c> wish belongs to ONE voice — the mechanism section A named for the
+    /// step INTO a cue, now read at an edge where both sides are cued. The two numbers are
+    /// section A's two ideals exactly, which is what says this book measures the boundary and
+    /// not something that merely sits near it.
+    /// <para>
+    /// ⚠️ The leading full-size note is not decoration: a cue block that is the staff's FIRST
+    /// music swallows what follows it (probe section B), and both books would then measure
+    /// something else. <see cref="CUE2ONE"/> shares everything except the second <c>cue</c>
+    /// keyword, so any difference between the two IS the region edge.
+    /// </para>
+    /// </remarks>
+    private static readonly string CUE2 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g'4 cue { g'4 g' } cue { g' } | }
+        }
+
+        form main { ~Main }
+
+        score main "CUE2" { staff m }
+        """;
+
+    /// <summary>The same four quarters with the last three in ONE cue region — the control for
+    /// <see cref="CUE2"/>, differing from it by one <c>cue</c> keyword and nothing else.</summary>
+    private static readonly string CUE2ONE = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section Main {
+          m { g'4 cue { g'4 g' g' } | }
+        }
+
+        form main { ~Main }
+
+        score main "CUE2ONE" { staff m }
+        """;
+
+    /// <summary>
     /// A cue ACCIDENTAL, read inside its own column where no spring can hide it.
     /// </summary>
     /// <remarks>
@@ -10103,6 +10162,15 @@ internal static class LpGeometryProbes
         new("cue.accidental.to-notehead", CUEA,
             g => g.AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalSharp)),
         new("cue.grace.column.to-main", CUEG, g => g.NoteheadAnchorStep(1)),
+
+        // …and the edge BETWEEN two cue regions, which none of the points above can see: every
+        // one of them reads a step with a cue on exactly one side, and this one has a cue on
+        // both. The pair is one-variable (CUE2 differs from CUE2ONE by the second `cue`
+        // keyword), so the two residuals answer different questions: the control says the
+        // ordinary cue→cue spring inside a region is right, and the edge says whether Lily#
+        // knows the region ended. MEASURED before either was opened — see CUE2's remarks.
+        new("cue.column.region-edge", CUE2, g => g.NoteheadAnchorStep(2)),
+        new("cue.column.region-edge-control", CUE2ONE, g => g.NoteheadAnchorStep(2)),
 
         // …and the CLOSING side of a cue measure, which none of the five above can see. Every
         // point in the block above is a step between two note columns; the head-width term of

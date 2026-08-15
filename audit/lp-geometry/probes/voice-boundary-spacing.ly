@@ -348,6 +348,44 @@ stemsweepB =
 %     went EXACT.
 
 % ---------------------------------------------------------------------------------------
+% F. ARE TWO ADJACENT CUE REGIONS TWO VOICES FOR SPACING TOO? (2026-08-15, session 178)
+%
+% WHY THIS EXISTS. SpacingRules.CrossesVoiceBoundary has carried a "departs from" note since
+% 2026-08-03 saying that `cue { … } cue { … }` is two CueVoice contexts and that Lily# refines
+% the pair across their shared edge because both sides only answer a per-note IsCue. That note
+% was ARGUED from section A's mechanism, not measured: no book in this corpus reads a gap
+% between two adjacent regions, and the diagnostic half of the same gap (LYS4012) was measured
+% on warnings and SVG bytes, which say nothing about a spring.
+%
+% THE PAIR IS IDENTITY BY CONSTRUCTION: the same four heads, the same durations, the same
+% register; the only difference is whether ONE `\new CueVoice` or TWO enclose the last three.
+% So whatever LilyPond does differently at the third step is the boundary and nothing else.
+%
+% ⚠️ The leading full-size g'' is not decoration — section B: a cue block that is the staff's
+% FIRST music swallows what follows it, and both books would then measure something else.
+%
+% THE PREDICTION, written before the run (two branches, and they pick different WORK):
+%   H1  the shared edge IS a voice boundary, as the port's note assumes. Then VB-TWO's third
+%       step is the raw duration ideal 2.898044999134612 — the number VB-CUE's main->cue and
+%       VB-OUT's cue->Voice steps both read — while VB-ONE's third step keeps the refinement at
+%       2.513393907138009. They differ by 0.384651091996603.
+%       ⇒ WORK: teach SpacingRules the region edge (NoteItem.BeginsCueRegion, stamped this
+%         session for LYS4012), i.e. the departure closes with machinery already in hand.
+%   H0  LilyPond keeps one wish across the two blocks. Then BOTH read 2.513393907138009, the
+%       note is wrong about LilyPond rather than about Lily#, and the correct move is to DELETE
+%       the departure — the engine's current behaviour would already be right.
+%   ⚠️ Any third number means merge_springs is in play (two voices alive across the column, the
+%     configuration section C left unexplained at 3.631965335709437) and NEITHER branch may be
+%     read off this book: the pair would not be measuring what it claims to.
+%
+% INSTRUMENT CHECK IN THE SAME RUN (§5.0: a new reading's first disagreement belongs to the
+% instrument until proved otherwise). VB-ONE's first two steps must reproduce section A's
+% established numbers exactly — main->cue 2.898044999134612 and cue->cue 2.513393907138009 —
+% and every older score in this file is re-measured by the same run.
+\score { \sweep "VB-ONE" { \time 4/4 g''4 \new CueVoice { g''4 g'' g''4 } } }
+\score { \sweep "VB-TWO" { \time 4/4 g''4 \new CueVoice { g''4 g'' } \new CueVoice { g''4 } } }
+
+% ---------------------------------------------------------------------------------------
 % WHAT THIS FILE FOUND (2026-08-03, session 83)
 %
 % A. THE STEP INTO A CUE IS NOT A CUE QUANTITY. It is what a spring measures when
