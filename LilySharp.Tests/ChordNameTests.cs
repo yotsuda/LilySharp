@@ -148,6 +148,32 @@ public class ChordNameTests
         => Assert.Equal("", Chord(music));
 
     /// <summary>
+    /// ★ The equivalence the collector now relies on (VALUE_SITE_AUDIT §9.5.3 ⑶): asking
+    /// the reader "does this name nothing itself?" answers exactly what comparing the
+    /// dotted MarkName to "chord" answered. Not self-evident — the two could part
+    /// company on a spelling whose dotted NAME has parts but whose argument list is
+    /// empty — so every such spelling is pinned here. <c>@chord.c</c> is the legacy
+    /// dotted form (its '.c' stays outside the node, where it is LYS0023 since 第170第1
+    /// 便) and <c>@chord.up</c> is the shape that could have disagreed: it parses to no
+    /// music mark at all.
+    /// </summary>
+    [Theory]
+    [InlineData("<c e g>4@chord |")]
+    [InlineData("<c e g>4@chord() |")]
+    [InlineData("<c e g>4@chord.c |")]
+    public void ABareChord_IsTheSameQuestionAskedOfTheNameOrOfTheReader(string music)
+    {
+        var mark = Mark(music);
+        Assert.Equal("chord", mark.MarkName);          // what the collector used to ask
+        Assert.Equal("", Chord(music));                // what it asks now
+    }
+
+    [Fact]
+    public void APlacementQualifierOnChord_ParsesToNoMarkAtAll()
+        => Assert.Empty(SyntaxTree.Parse("melody { c4@chord.up }")
+            .GetRoot().DescendantNodes().OfType<MusicMarkSyntax>());
+
+    /// <summary>
     /// ⚠️ A behaviour change, declared (VALUE_SITE_AUDIT §9.5.3 ⑴). A '.' WRITTEN
     /// inside the parentheses used to vanish: MarkName joined the tokens with dots and
     /// the chord parser then removed every dot, so <c>@chord(b.es:7)</c> printed B♭7

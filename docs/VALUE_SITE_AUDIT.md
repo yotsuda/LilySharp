@@ -567,14 +567,13 @@ rejoin to the written text」**と、**自分で連結を取り消している�
 
 ⇒ 第167 ⑸（tempo の 2 つの読みの食い違い）と同じ型で、**3 例目・4 例目**。
 
-**`MarkName` の code read は 18 → 10 → 9（第170第2便）・7 ファイル → 5**（実測・数え方は
-`Select-String '\.MarkName'` から `///` `//` `*` 始まりの行を除く）。**残りの内訳**:
+**`MarkName` の code read は 18 → 10 → 9（第170第2便）→ 8（第170第5便）・7 ファイル → 5**
+（実測・数え方は `Select-String '\.MarkName'` から `///` `//` `*` 始まりの行を除く）。**残りの内訳**:
 
 | 残っている読み | site | 何の家族か |
 |---|---|---|
 | `FiguredBassItem.ParseFigures` | 1 | **部分言語**（§9.5.1）＝**残る唯一の引数** |
-| `== "chord"`（裸 `@chord` の判定） | 1 | **引数の読みではなく*名前*の判定**。`Name=="chord" && Arguments.Length==0` と等価だが、**`@chord.c` が `MarkName=="chord"` に落ちる**ので置換は実測してから（§9.5.3 ⑶） |
-| `MusicMarkItem.ParseMarkName` 系／`ProcessDirectionName`／`mark.` ラベル | 5 | **点つきの「名前」であって引数ではない**（`@ds.al.fine`）。ただし **`@mark("A")` のラベルはここに混ざっている値** |
+| `MusicMarkItem.ParseMarkName` 系／`ProcessDirectionName`／`mark.` ラベル | 6 | **点つきの「名前」であって引数ではない**（`@ds.al.fine`）。ただし **`@mark("A")` のラベルはここに混ざっている値** |
 | `WarnUnknown` の診断文 | 1 | 表示用（最後まで残る） |
 
 ⇒ ★★ **`MarkName` に残っている「引数」は `@fig` ただ 1 つ**。あとは点つき名前と表示用。
@@ -615,11 +614,13 @@ rejoin to the written text」**と、**自分で連結を取り消している�
    移すならそこを割ってから。**値としては `@text` と同型**（文字列 1 個）。
    ⚠️ **この島（`ParseMarkName` ＝点つき名前の分配器）は一度も測っていない。**
    **満額の便で「読み手を全部数える」ところから。**
-3. **裸 `@chord` の判定を `MarkName` から外す**（1 site・**先に実測**）。
-   `Name=="chord" && Arguments.Length==0` は**ほとんど**等価だが、
-   ⚠️ **`@chord.c`（括弧なしの点つき綴り）も `MarkName=="chord"` に落ちる**——
-   **点は mark のパーサに食われず、第170第1便から LYS0023 になる**（実測）。
-   置換するなら**その綴りが裸扱いのままでよいか**を決めてから。
+~~3. 裸 `@chord` の判定を `MarkName` から外す（1 site・先に実測）~~ —
+   **第170第5便で外した**。**collector は `AnnotationValues.Chord` に 1 回だけ訊く**
+   （null＝chord でない／`""`＝自分では名乗らない＝裸／それ以外＝記号）。
+   ★ **等価は自明でないので測って網にした**（`ABareChord_IsTheSameQuestionAskedOf…`）:
+   **`@chord.c`（括弧なしの点つき綴り）も `MarkName=="chord"` に落ちる**が、
+   **そこでも引数は 0 個**なので一致する。**唯一ずれ得た `@chord.up` は
+   mark ノードすら作らない**（実測）。⇒ **`MarkName` 読みは 8 site。**
 4. **`MarkName` 自体をいつ消すか**——上が済むと残るのは点つき名前の家族だけなので、
    **そのとき `MarkName` は「点つき*名前*を綴る」1 用途に狭まる**。名前もそう変えること。
 

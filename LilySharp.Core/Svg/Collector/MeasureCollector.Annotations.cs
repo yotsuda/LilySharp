@@ -70,11 +70,29 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Collects chord name annotations (@chord.TEXT) from a note or chord's articulations.
+    /// Collects the chord symbols written on a note or chord — <c>@chord(c:m7)</c>, and
+    /// the bare <c>@chord</c> that derives its symbol from the notes it sits on.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// One question, asked once: <see cref="Semantics.AnnotationValues.Chord"/> answers
+    /// null for "not a chord annotation", the empty string for "a chord annotation that
+    /// names nothing itself" (bare <c>@chord</c>, and the <c>@chord()</c> the completion
+    /// leaves behind), and the symbol otherwise. This used to be two questions asked of
+    /// two different things — the dotted <see cref="MusicMarkSyntax.MarkName"/> compared
+    /// against "chord" for the bare case, and the reader for the rest
+    /// (VALUE_SITE_AUDIT §9.5.3 ⑶).
+    /// </para>
+    /// <para>
+    /// ⚠️ The two forms are equivalent for every spelling that parses, which is not
+    /// self-evident and was measured: <c>MarkName == "chord"</c> also holds for the
+    /// legacy dotted <c>@chord.c</c> (the parser leaves the '.c' outside the node, where
+    /// it is now LYS0023), and it is exactly there that "no argument" has to agree —
+    /// it does, because that spelling reaches the node with no argument at all.
+    /// <c>@chord.up</c>, the one shape that could have disagreed, parses to no music
+    /// mark whatsoever. The net is <c>ChordNameTests.ABareChord_…</c>.
+    /// </para>
     /// LILYPOND-REF: scm/scheme-engravers.scm:1513 - Current_chord_text_engraver
-    /// Syntax: @chord.Cm7, @chord.Bb7, @chord.Am
     /// </remarks>
     private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex)
     {
@@ -85,13 +103,17 @@ public sealed partial class MeasureCollector
             if (child is not MusicMarkSyntax markSyntax)
                 continue;
 
+            var chordText = Semantics.AnnotationValues.Chord(markSyntax, out var structure);
+            if (chordText is null)
+                continue;
+
             // Bare '@chord' auto-derives the symbol from the notes it's on. On a
             // chord (or a << >> arpeggio — a broken chord names the same way) we
-            // recognize it; on a single note there is nothing to derive (the
-            // @chord() completion state), so it shows nothing.
-            if (markSyntax.MarkName == "chord")
+            // recognize it; on a single note there is nothing to derive, so it
+            // shows nothing.
+            if (chordText.Length == 0)
             {
-                ChordStructure? derived = node switch
+                structure = node switch
                 {
                     ChordSyntax autoChord when TryNameChord(autoChord, out var s) => s,
                     ArpeggioSyntax arp when TryNameArpeggio(arp, out var s) => s,
@@ -100,16 +122,13 @@ public sealed partial class MeasureCollector
                         && TryNameChord(orig, out var s) => s,
                     _ => null,
                 };
-                if (derived != null)
-                    _chordNameCollector.AddInline(derived.DisplayName, measureIndex, itemIndex,
-                        markSyntax.Position, _currentStaffIndex, derived);
-                continue;
+                if (structure == null)
+                    continue;
+                chordText = structure.DisplayName;
             }
 
-            var chordText = Semantics.AnnotationValues.Chord(markSyntax, out var structure);
-            if (chordText != null)
-                _chordNameCollector.AddInline(
-                    chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, structure);
+            _chordNameCollector.AddInline(
+                chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, structure);
         }
     }
 
