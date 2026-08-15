@@ -1717,6 +1717,16 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   `code --install-extension`）。これも script が言うようにした。
 - **dotnet の増分ビルドが腐る** → 前後比較では `--no-incremental` でビルドして
   `dotnet run --no-build`。なお `dotnet test` は `--no-incremental` を受け付けない
+- ★ ⚠️ **`PublishReadyToRun` の R2R 中間物が腐ると、publish は古い依存を配りながら
+  deps.json では新しい版を名乗る**。crossgen2 の出力は
+  `<proj>/obj/<cfg>/<tfm>/<rid>/R2R/*.dll` にキャッシュされ、**PackageReference の版だけを
+  上げても再生成されない**。2026-08-15 実測：ImageSharp を 2.1.11 に上げた直後の publish が
+  `lysc.deps.json` に `SixLabors.ImageSharp/2.1.11` と書きながら、**実体は R2R 済みの
+  1.0.4（asmver 1.0.0.0・11 MB）**を配っていた。`bin/` 側は 2.1.11 で正しかったので、
+  **bin を見ても気付けない**。⚠️ **脆弱性対応の publish は deps.json ではなく
+  「配られた DLL の asmver」で確認すること**
+  （`[Reflection.AssemblyName]::GetAssemblyName(...)`）。⇒ **release 前は `obj/**/R2R` を消すか
+  clean publish**。CI は毎回新規 checkout なので踏まない——**踏むのはローカルで作った archive**。
 - **LilyPond は Guile デッドロックする** → `cmd /c "... < NUL"` でデタッチ必須。
   終了コード 1 でもダンプは出ている
 - ★ **`Measure-LilyPondPageGeometry.ps1` は 20 分以上かかる**（2026-07-27 実測・**book は 62 冊**
