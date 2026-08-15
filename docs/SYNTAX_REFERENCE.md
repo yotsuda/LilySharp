@@ -576,14 +576,18 @@ score practice        { staff melody }   % → practice.svg
 
 ## Override/Revert
 
-Modify engraving properties:
+Modify engraving properties. The vocabulary is three properties —
+`NoteHead.transparent`, `Stem.transparent`, `NoteColumn.force-hshift`. The syntax accepts
+any `Grob.property`, but anything outside that list is refused (LYS1029, "not supported in
+this version") rather than silently doing nothing; the list grows, and each addition
+removes one error.
 
 ```
-override Stem.length = 7
+override NoteHead.transparent = true
 c4 d e f |
-revert Stem.length
+revert NoteHead.transparent
 
-once override Stem.length = 9
+once override Stem.transparent = true
 c4 d e f |        % 'once' applies to the next note only
 ```
 

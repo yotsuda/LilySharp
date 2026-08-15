@@ -35,7 +35,9 @@ All ✅ implemented:
 - **Render targets** — staff, grandStaff, tab, ossia, per-staff attachments
   (`staff X with chords NAME` above / `staff X with lyrics NAME` below, repeatable to
   stack verses), and **staff-less lead sheets** (`chords name` / `lyrics name` rows drawn
-  as a barline grid); `tempo … swing`; `override`/`revert`.
+  as a barline grid); `tempo … swing`; `override`/`revert` (**three properties** —
+  `NoteHead.transparent`, `Stem.transparent`, `NoteColumn.force-hshift`; anything else is
+  refused by LYS1029 rather than silently ignored, and the list grows).
 - **Output** — SVG / PDF / PNG engraving, MIDI, MusicXML (partial — see gaps).
 
 ## Known gaps (not implemented)
@@ -45,6 +47,10 @@ All ✅ implemented:
 - **MusicXML export: lyrics and tuplet numbers** — parsed but not emitted; the rest of
   MusicXML (notes, ties, slurs, grace, dynamics, articulations, ornaments, multi-part)
   is exported.
-- **Multi-file projects** (`include` across files) and a **LilyPond → Lily# converter**.
+- A **LilyPond → Lily# converter**.
+  (⚠️ **Multi-file projects used to be listed here and that was wrong**: `using "other.lys"`
+  is implemented — `Parser/UsingExpander.cs`, depth-first, de-duplicated by full path,
+  cycles stop, an unreadable file is inert. Verified 2026-08-15 by declaring a part in one
+  file and rendering it from another.)
 - The long tail of specialist notation (early music, microtonal/maqam, fretboard
   diagrams, chord grids, clusters, ambitus, …) is intentionally out of scope.

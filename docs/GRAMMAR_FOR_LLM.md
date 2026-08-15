@@ -21,7 +21,7 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
-partial 8               // optional: the pickup length, once for every part
+                        // (a pickup is 'partial', but it belongs to a SECTION — see below)
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -30,6 +30,8 @@ part leftHand  { clef bass }    // part names are identifiers, NOT reserved word
 phrase motif { c4 d e f | }     // optional reusable music, referenced as $motif
 
 section Main {                  // a section binds music to each part by name
+  partial 8                     // optional pickup: shortens THIS section's opening bar
+                                // for every part at once (top level rejects it)
   rightHand { $motif g2 g | }
   leftHand  { c2 c | g2 g | }
 }
@@ -348,12 +350,17 @@ score practice { staff melody }
 
 ## Override / revert (engraving properties)
 
+⚠️ The vocabulary is THREE properties — `NoteHead.transparent`, `Stem.transparent`,
+`NoteColumn.force-hshift`. The syntax accepts any `Grob.property`, but anything outside
+that list is refused (LYS1029, "not supported in this version") rather than silently
+doing nothing. The list grows; each addition removes one error.
+
 ```
-override Stem.length = 7          // value fits the property: number, identifier (up/red), or "string"
+override NoteHead.transparent = true     // value fits the property: number, identifier (true/up/red), or "string"
 override NoteColumn.force-hshift = 1.5   // fractional values are allowed, and negative ones (-0.5)
 c4 d e f |
-revert Stem.length
-once override Stem.length = 9     // 'once' applies to the next note only
+revert NoteHead.transparent
+once override Stem.transparent = true    // 'once' applies to the next note only
 c4 d e f |
 ```
 

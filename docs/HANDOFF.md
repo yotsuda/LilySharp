@@ -1069,15 +1069,48 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⇒ ★ **落とすなら必ず `Warnings` に出す**。**`<>` や空の part 変数を黙って書かない。**
   ⇒ ★ **塞いだら双子 199 本の before/after を全数比較する**（第62セッション ② の手順。
      1 回目で本物の退行を捕まえている）
-- ★ **fixture 5 本が今の文法で parse しない**（`test/beamed-rest`・`test/cue-notes`・
-  `test/dot-force-down`・`test/multi-movement`・`showcase/grammar-2026-06-09`）。
-  `p`/`chords` の予約語化・`name = …` 宣言の撤去・`time`/`tempo` の score レベル化で置き去りに
-  なったもの。**snapshot リストには載っていないので誰も落ちない**⇒ **直すか消すかを決める**
+- ★★★ ⚠️ **片側だけの繰り返し縦線＝意味が未定・4 本の展開が既に食い違っている**（2026-08-15 実測・
+  **ユーザー判断でリリース前に着手すると決定。ただし着手はこのセッションではない**）。
+  **⑴ 仕様書は対の形しか定義していない**（`SYNTAX_REFERENCE.md:380`「`|: … :|` simply repeats the
+  body」・`GRAMMAR.md:558` の EBNF では `|:` は単なる Barline の選択肢）。片側だけの意味はどこにも無い。
+  **⑵ 実測（音楽ストリーム・MIDI は noteOn を数える）**: 対の `|: c4 d4 e4 f4 :|` は
+  **noteOn 4→8 で展開される**（2 回書いたのとバイト数一致）。**`|:` 単独**＝SVG は開始反復線を描く・
+  MIDI 不変・**twin は `\repeat volta 2 { … }` で以降を包む**＝**3 出力が違うことを言う**。
+  **`:|` 単独**＝3 出力とも「縦線だけ」で一致（無言だが矛盾はしていない）。
+  **⑶ ★★★ 判定は score 展開後でしかできない**（ユーザー指摘）。**section 単体は Lily# では意味を成さず**、
+  必ず `score {}`→`form` で並べて初めて曲になる。だから **section の中の `:|` 単独を見て
+  「書き間違いか」は原理的に判断できない**——form が前に `|:` を置くかもしれない。
+  ⇒ **slur/beam のような声部内ローカル走査（`SlurPairingScanner`/`BeamPairingScanner`）は使えない。**
+  ⚠️ **実例**: `Addicted To Love.lys` は `form main { Intro |: A1 A2 [1. B1 :| [2. B2 C1 C2 Solo :| }`
+  で、**section A1 と Solo の音楽もそれぞれ `|:` で始まる**＝**層をまたいで並ぶ**。
+  ⚠️ **この本の twin に出る `\repeat volta` 3 個を「うち 2 個は偽」と書いた第一報は根拠不足・撤回済み**
+  （score 時の対応を追っていなかった）。
+  **⑷ ★★★ 展開の歩きが 4 本ある**（＝この島の本体。§2C ⑵「同じ量の 2 つ目の綴り」の 4 重版）:
+  `MidiExporter`（12 site・自前の `FindMatchingRepeatEnd`/`ProcessRepeatSpan`）・
+  `MeasureCollector.Form`（`ProcessRepeatBlock`）・`LilyPondExporter`（18 site）・
+  `MusicXmlExporter`（1 site）。⚠️ **`LilyPondExporter.cs:1004` は自分で
+  「Mirrors MeasureCollector.ProcessRepeatBlock」と書いている**＝2 つ目の綴りだと自白している。
+  **⑵ の食い違いの出所はここ。**
+  ⇒ ★ **着手の第一歩は「4 本に同じ判断を書く」か「先に 1 本へ畳む」かの設計判断**で、意味論の実装より先。
+  ★ **取っ掛かり**: `MidiExporter.ProcessRepeatSpan(items, start, end)` は本体を **`start + 1`** から
+  取るので、**`start = -1` がそのまま「先頭から」**になる（volta 選択・`:|*N`・音高レーンの保存復元は不変）。
+  ⚠️ **意味を入れると MIDI 出力が変わる**＝コーパス証明とユーザー承認が要る。
+- ★ ~~**fixture 5 本が今の文法で parse しない**~~ — **2026-08-15 実測で 5 本中 3 本は parse する**
+  （`test/beamed-rest`・`test/cue-notes`・`test/dot-force-down` は「No errors found」）。
+  **落ちるのは 2 本だけ**: `test/multi-movement`（旧 `name = …` 宣言）と
+  `showcase/grammar-2026-06-09`（トップレベル音楽＝LYS0020）。
+  **snapshot リストには載っていないので誰も落ちない**⇒ **直すか消すかを決める**
   （未リリースなので後方互換は考えない・§3）
 - MusicXML インポート — ほぼ完遂、**実ファイル検証が残**
 - AI 協調編集 M1–5 — **実機 E2E 未検証**
 - 文法改善 5 件は完了。**0.3.0 リリースは GO 待ち**
-- `override` の消費側は 4 つだけ（文法側は元から開いている）。⚠️ **値に小数リテラルが書けない**。
+- ★ **`override` の消費語彙は 3 対**（2026-08-15 に engine 内の resolver 参照を全数抽出して確定）＝
+  `NoteHead.transparent`・`Stem.transparent`（`SharedRenderer.Noteheads`・計 4 site）と
+  `NoteColumn.force-hshift`（`ElementCoordinator`）。**「4 つ」は stale**。
+  ~~文法側は元から開いている~~ — **LYS1029 で閉じた**（`a0126cd4`・`SupportedGrobOverrides` が唯一の家。
+  未対応の綴りは「not supported in this version」でエラー・実装を増やすと診断が 1 つ消える）。
+  ⚠️ ~~**値に小数リテラルが書けない**~~ — **書ける**（第167 で `DecimalLiteral`。実測：`= 5.5` / `= -3.5` /
+  `= "red"` / `= true` すべて通る）。
   ⚠️ **page 系（`paper-height`/`top-system-spacing`/`systems-per-page`）を `override` に載せない**——
   LP ではそれらは `\paper` 変数であって grob プロパティではない（コーパスはハーネス引数で解決済み）
 - **chords 行 / lyrics 行が `PartReferenceFinder` に無い**（2026-07-26 実コードで再確認）— 

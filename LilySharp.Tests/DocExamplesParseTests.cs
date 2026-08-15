@@ -97,7 +97,13 @@ public class DocExamplesParseTests
 
             var tree = SyntaxTree.Parse(code);
             if (!tree.HasErrors)
+            {
+                var semantic = SemanticErrors(tree);
+                if (semantic == null)
+                    continue;
+                failures.Add($"block #{index} (SEMANTIC):\n{code}\n  -> {semantic}");
                 continue;
+            }
 
             bool isFragment = tree.Diagnostics
                 .Where(d => d.Severity == DiagnosticSeverity.Error)
@@ -106,7 +112,13 @@ public class DocExamplesParseTests
             {
                 var wrapped = SyntaxTree.Parse(MusicSource.Wrap(code));
                 if (!wrapped.HasErrors)
+                {
+                    var semantic = SemanticErrors(wrapped);
+                    if (semantic == null)
+                        continue;
+                    failures.Add($"block #{index} (as a section body, SEMANTIC):\n{code}\n  -> {semantic}");
                     continue;
+                }
                 var wrappedMsgs = string.Join(" | ", wrapped.Diagnostics.Select(d => d.Message));
                 failures.Add($"block #{index} (as a section body):\n{code}\n  -> {wrappedMsgs}");
                 continue;
@@ -117,7 +129,55 @@ public class DocExamplesParseTests
         }
 
         Assert.True(failures.Count == 0,
-            "GRAMMAR_FOR_LLM.md has code examples the parser rejects:\n\n" +
+            "GRAMMAR_FOR_LLM.md has code examples Lily# rejects:\n\n" +
             string.Join("\n\n", failures));
     }
+
+    /// <summary>
+    /// The semantic errors of an example that already PARSES, or null when there are none.
+    /// </summary>
+    /// <remarks>
+    /// Parsing was never the whole bar. The spec's only <c>override</c> example wrote
+    /// <c>Stem.length</c>, which parses perfectly and which the engine does not read — once
+    /// LYS1029 gave that a voice, the canonical spec was teaching three lines the compiler
+    /// refuses, and this test stayed green throughout because it stopped at the parser.
+    /// A spec that claims forms the compiler rejects is the exact failure this file exists
+    /// to prevent, so the bar is now "compiles", not "parses".
+    ///
+    /// ⚠️ ERRORS only. Warnings are deliberately allowed: an illustration of two notes has
+    /// no reason to fill a 4/4 bar, and demanding it would push padding rests into examples
+    /// whose whole job is to show one idea.
+    /// </remarks>
+    private static string? SemanticErrors(SyntaxTree tree)
+    {
+        var errors = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Where(d => !FragmentCodes.Contains(d.Code))
+            .ToList();
+        return errors.Count == 0 ? null : string.Join(" | ", errors.Select(d => d.Message));
+    }
+
+    /// <summary>
+    /// Errors that mean "this example is an EXCERPT", not "this example is wrong. An
+    /// illustration of the form syntax names sections it does not define, and one of a
+    /// grand staff names parts declared elsewhere — spelling those out in full would bury
+    /// what each example teaches, which is the same reason the parse side accepts a bare
+    /// section body.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Kept as a NAMED, closed list rather than "ignore semantic errors": with it, the
+    /// net still catches the two defects it was added for — the spec's first example wrote
+    /// <c>partial</c> at the top level, which LYS1024 refuses and whose comment ("once for
+    /// every part") is the very misconception that error corrects, and its only
+    /// <c>override</c> example wrote <c>Stem.length</c>, which LYS1029 refuses. Both parsed
+    /// perfectly, which is why this file stayed green while the spec drifted.
+    /// </remarks>
+    private static readonly HashSet<string> FragmentCodes = new()
+    {
+        DiagnosticCodes.UndefinedSection,
+        DiagnosticCodes.UndefinedPart,
+        DiagnosticCodes.UndefinedVariable,
+        DiagnosticCodes.UndefinedPhrase,
+        DiagnosticCodes.UnknownFormReference,
+    };
 }
