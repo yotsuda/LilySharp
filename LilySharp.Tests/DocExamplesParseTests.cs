@@ -24,12 +24,29 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Guards against doc-vs-code drift: every fenced code example in the LLM-facing
-/// language spec must actually parse with NO errors. This is the regression net for
-/// the exact failure found while writing the spec — SYNTAX_REFERENCE.md shipped three
-/// examples the parser rejects. A frozen public grammar spec that claims forms the
-/// parser refuses is worse than none, so this test keeps the spec honest.
+/// Guards against doc-vs-code drift: every fenced code example in the language
+/// documentation must actually COMPILE, not merely parse. A public grammar spec that
+/// claims forms the compiler refuses is worse than none, so this test keeps the docs
+/// honest.
 /// </summary>
+/// <remarks>
+/// ⚠️ For a long time this read ONE file — GRAMMAR_FOR_LLM.md — while SYNTAX_REFERENCE.md
+/// (the canonical spec) and TUTORIAL.md had zero observers, and both had drifted. What
+/// the day this net was widened (2026-08-15) found in the two unwatched files:
+/// <list type="bullet">
+/// <item>SYNTAX_REFERENCE.md wrote every example's comment with LilyPond's <c>%</c>,
+///   which is not a Lily# token at all (LYS0018) — 33 of its 57 blocks.</item>
+/// <item>its "Navigation Marks" block taught <c>c4@segno</c> and friends, all five
+///   LYS1022 — and the engine engraves them anyway, so no output ever looked wrong.</item>
+/// <item>its parallel-voices block held two <c>voice</c> spans in one block, i.e. the
+///   LYS0019 that the paragraph beneath it explains.</item>
+/// <item>TUTORIAL.md's only multi-staff example — the first thing a reader copies —
+///   used the removed <c>clef:</c> form and <c>staff treble { rightHand }</c>.</item>
+/// </list>
+/// ⚠️ <b>GRAMMAR.md is still unobserved and cannot be added here:</b> it has ZERO plain
+/// fenced blocks (measured). Its examples live inside EBNF <c>(* … *)</c> comments, so
+/// reaching them needs a different extractor, not another entry in the list below.
+/// </remarks>
 [Trait("Category", "Unit")]
 public class DocExamplesParseTests
 {
@@ -83,10 +100,13 @@ public class DocExamplesParseTests
     /// or a diagnostic that survives the wrapping — is still a failure, so the test keeps its
     /// original teeth: it cannot be satisfied by a block that is merely broken in a new way.
     /// </summary>
-    [Fact]
-    public void GrammarForLlm_AllExamplesParse()
+    [Theory]
+    [InlineData("docs/GRAMMAR_FOR_LLM.md")]
+    [InlineData("docs/SYNTAX_REFERENCE.md")]
+    [InlineData("docs/TUTORIAL.md")]
+    public void DocExamples_AllCompile(string relative)
     {
-        var path = RepoFile("docs/GRAMMAR_FOR_LLM.md");
+        var path = RepoFile(relative);
         var md = File.ReadAllText(path);
 
         var failures = new List<string>();
@@ -129,7 +149,7 @@ public class DocExamplesParseTests
         }
 
         Assert.True(failures.Count == 0,
-            "GRAMMAR_FOR_LLM.md has code examples Lily# rejects:\n\n" +
+            $"{relative} has code examples Lily# rejects:\n\n" +
             string.Join("\n\n", failures));
     }
 
@@ -171,6 +191,14 @@ public class DocExamplesParseTests
     /// every part") is the very misconception that error corrects, and its only
     /// <c>override</c> example wrote <c>Stem.length</c>, which LYS1029 refuses. Both parsed
     /// perfectly, which is why this file stayed green while the spec drifted.
+    ///
+    /// ★ What the line costs, measured when the net was widened (2026-08-15) by removing
+    /// this set and re-running: GRAMMAR_FOR_LLM.md 6 blocks fail, SYNTAX_REFERENCE.md 8,
+    /// TUTORIAL.md 0. All 14 are genuine excerpts — a <c>form</c> naming sections defined
+    /// elsewhere, a <c>score</c> naming parts declared elsewhere — so the exclusions buy
+    /// exactly what they were meant to and nothing else. Anyone tempted to widen this set
+    /// further should count first: that is how the 2026-08-15 pass knew the '@segno' block
+    /// was a real defect rather than one more excerpt.
     /// </remarks>
     private static readonly HashSet<string> FragmentCodes = new()
     {
