@@ -160,9 +160,19 @@ public sealed record BeamGroup
 /// next to the rest is length-capped against that x.</param>
 /// <param name="MeasureIndex">The rest's measure; <c>-1</c> = the group's own
 /// (<see cref="BeamGroup.MeasureIndex"/>), like <see cref="BeamMember.MeasureIndex"/>.</param>
+/// <param name="PrePositioned">True for a rest written at a pitch (<c>a4@rest</c>),
+/// which the beam does NOT push: LilyPond's callback returns the chained offset
+/// untouched the moment it sees a numeric <c>staff-position</c>, before it has looked
+/// at the beam at all. Carried on the stem rather than looked up again because this is
+/// where the push is decided.
+/// ⚠️ The PURE estimate has no such guard in LilyPond — and so none here either. That
+/// asymmetry is LilyPond's: spacing may price a pitched rest under a beam a little
+/// away from where it prints.
+/// LILYPOND-REF: lily/beam.cc:1336-1338 Beam::rest_collision_callback — the guard;
+/// LILYPOND-REF: lily/beam.cc:1421-1494 Beam::pure_rest_collision_callback — without it.</param>
 public sealed record BeamRestStem(
     int ItemIndex, int BeforeMember, int CountLeft, int CountRight,
-    int NoteValue = 4, int MeasureIndex = -1);
+    int NoteValue = 4, int MeasureIndex = -1, bool PrePositioned = false);
 
 /// <summary>
 /// Represents a single member of a beam group.

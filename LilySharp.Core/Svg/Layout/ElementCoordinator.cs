@@ -993,6 +993,15 @@ internal sealed class ElementCoordinator
             for (int r = 0; r < group.RestStems.Length; r++)
             {
                 var rest = group.RestStems[r];
+
+                // A rest written at a pitch is not pushed by the beam either — the
+                // callback answers with the chained offset the moment it finds a
+                // numeric staff-position, before it reads the beam. That is the whole
+                // claim of LilyPond's rest-pitched-beam.ly.
+                // LILYPOND-REF: lily/beam.cc:1336-1338 Beam::rest_collision_callback.
+                if (rest.PrePositioned)
+                    continue;
+
                 int measureIndex = rest.MeasureIndex >= 0 ? rest.MeasureIndex : group.MeasureIndex;
 
                 // LILYPOND-REF: beam.cc:1373-1374 the beam Y is read at the rest's own

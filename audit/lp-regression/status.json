@@ -6710,9 +6710,9 @@
     },
     "rest-pitched-beam.ly": {
       "category": "plain",
-      "state": "skip",
+      "state": "fixed",
       "claim": "Pitched rests under beams",
-      "notes": "skip(第113第6便)。pitched rest(a\\rest)の綴りなし=主張の核(pitched restはbeam rest-collisionシフトを受けず書いた音高に留まる)が書けない。plain rest置換では既済のbeamed-rest機構(d46e624a)の再テストになり本の主張でない。文法宿題=第42号notesと同項(rest-avoid-note.lyのa4\\rest/f2\\restと同じ穴・pitched rest綴りが入れば両方再訪)"
+      "notes": "fixed(第179)。skip の理由だった綴りが入った=`a4@rest`(LP の a4\\rest。文法宿題は第42号notesと同項で、rest-avoid-note.ly と両方ここで再訪)。移植したのは beam 側の門: **beam.cc:1336-1338 が staff-position を数値で見つけた瞬間に chained offset を返す**=梁は音高付き休符を押さない。Lily# 側の門は BeamRestStem.PrePositioned で、**セットする site は 2 つ(BeamDetector:551 自動・:803 手動)** ⚠️ **1 つだけ直して緑になった**(この本の音楽は押しに届かないから)＝§5.2.1② の実例。⚠️⚠️ **この本自身は枝を踏まない**(実測: `a8[ a\\rest b]` は梁が高く、plain rest を置いても LP は動かさない)。**枝を押さえているのは RestPitchedBeamTests の第2 [Fact]**=梁が実際に押す音楽(g' の下向き梁・d の上向き梁)に plain と pitched を並べた対で、**毒(門を外す)で pitched が +3/−1 へ動くのを確認**。両側追加: LP の本は 5/8 で閉じないので `r4 r8` で 4/4 を埋めた(twin も同じ=lysc ly が書く)。LP照合: **4/4 桁一致**(pitched 2 つが staff-position −1・埋めの 2 つが中央線・X も一致)。観測者+1(RestPitchedBeamTests)"
     },
     "rest-polyphonic.ly": {
       "category": "scheme",

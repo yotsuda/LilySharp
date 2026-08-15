@@ -551,7 +551,8 @@ internal sealed class BeamDetector
                 restStems.Add(new BeamRestStem(
                     itemIdx, BeforeMember: members.Count, beamlets[i].Left, beamlets[i].Right,
                     NoteValue: (int)restItem.BaseDuration.Denominator,
-                    MeasureIndex: mi));
+                    MeasureIndex: mi,
+                    PrePositioned: restItem.StaffPosition is not null));
                 continue;
             }
 
@@ -801,7 +802,8 @@ internal sealed class BeamDetector
             {
                 restStems.Add(new BeamRestStem(
                     itemIndex, BeforeMember: members.Count, beamlets[i].Left, beamlets[i].Right,
-                    NoteValue: (int)restItem.BaseDuration.Denominator));
+                    NoteValue: (int)restItem.BaseDuration.Denominator,
+                    PrePositioned: restItem.StaffPosition is not null));
                 continue;
             }
 

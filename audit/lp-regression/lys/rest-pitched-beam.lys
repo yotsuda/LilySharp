@@ -1,0 +1,20 @@
+// lilypond-src/input/regression/rest-pitched-beam.ly の Lily# 訳。
+// CLAIM: 音高付き休符は梁の下でも押されない — 書いた音高に留まる。
+// 綴り: LP `a\rest a8[ a\rest b]` の \relative c' = Lily# の a (octave absolute)。
+// \rest = @rest (第179で入った音高付き休符。それまでこの本は綴りが無く skip だった)。
+// 両側追加: LP の本は 5/8 で小節を閉じない。ここは `r4 r8` で 4/4 を埋める
+// (LP twin も lysc ly が同じものを書くので両側同じ) ＝ 対照にもなっている:
+// 埋めの 2 つは音高なしなので、同じ小節で押される側と押されない側が並ぶ。
+// 観測者: RestPitchedBeamTests。twin は lysc ly がこの本から書く。
+octave absolute
+time 4/4
+
+part v { }
+
+section Main {
+  v { a4@rest a8[ a8@rest b8] r4 r8 | }
+}
+
+form main { ~Main }
+
+score main { staff ~v }
