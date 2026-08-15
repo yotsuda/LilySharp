@@ -70,7 +70,9 @@ bundles, or in both.
 | Microsoft.NET.StringTools | © Microsoft Corporation | MIT |
 | System.IO.Pipelines | © Microsoft Corporation | MIT |
 | Nerdbank.Streams | © Andrew Arnott | MIT |
+| Nerdbank.MessagePack | © Andrew Arnott | MIT |
 | MessagePack, MessagePack.Annotations | © Yoshifumi Kawai and contributors | MIT |
+| PolyType | © Eirik Tsarpalis | MIT |
 | Newtonsoft.Json | © James Newton-King 2008 | MIT |
 
 The self-contained builds (every `lysc` archive, and the platform-specific
