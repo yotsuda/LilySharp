@@ -67,6 +67,87 @@ public class DurationAdjacencyTests
         Assert.False(Has(source, DiagnosticCodes.DetachedDuration), source);
     }
 
+    // ===== A dot with no number in front of it (LYS0023) =====
+
+    /// <summary>
+    /// The other half of the adjacency rule: a duration is a NUMBER lengthened by
+    /// dots, so a dot that no number claimed is not a duration.
+    /// LILYPOND-REF: lily/parser.yy steno_duration — UNSIGNED dots. MEASURED on
+    /// 2.26.0: <c>c'4 g'.</c> is <c>syntax error, unexpected '.'</c> and the file is
+    /// refused, so any reading Lily# invented here would be a divergence from the
+    /// twin it exports to.
+    /// </summary>
+    [Theory]
+    [InlineData("{ c4 g. a4 }")]
+    [InlineData("{ c4. g. }")]      // after a DOTTED note, where the reading is ambiguous
+    [InlineData("{ g. }")]
+    [InlineData("{ <c e g>4 <d f a>. }")]
+    public void ADotWithNoNumber_IsADurationError(string source)
+        => Assert.True(Has(source, DiagnosticCodes.BareDurationDot), source);
+
+    /// <summary>One mistake, written twice, is reported once.</summary>
+    [Fact]
+    public void ARunOfBareDots_IsReportedOnce()
+        => Assert.Equal(1, SyntaxTree.Parse("{ c4 g.. a4 }").Diagnostics
+            .Count(d => d.Code == DiagnosticCodes.BareDurationDot));
+
+    /// <summary>
+    /// ★ The body of the fix, not the diagnostic: the dot STAYS in the tree. It used
+    /// to reach no rule, so the music loop's skip recovery dropped it and the book
+    /// spelled itself back out as <c>c4 ga4</c> — a different piece of music, and
+    /// every node after it standing one character early (HANDOFF §1 第168 ⑴).
+    /// </summary>
+    [Theory]
+    [InlineData("{ c4 g. a4 }")]
+    [InlineData("{ c4 g.. a4 }")]
+    [InlineData("{ c4. g. a4 }")]
+    public void ABareDot_StaysInTheTree(string source)
+        => Assert.Equal(source, SyntaxTree.Parse(source).GetRoot().ToFullString());
+
+    /// <summary>
+    /// ★ Positive control for the case above: the dot is kept by the NEW rule, not by
+    /// the tree keeping everything anyway. A stray token with no rule of its own —
+    /// here a bare <c>?</c> — is still dropped by the same skip recovery, so the
+    /// round trip above is a statement about the dot.
+    /// </summary>
+    [Fact]
+    public void AStrayTokenWithNoRule_IsStillDropped()
+        => Assert.NotEqual("{ c4 g? a4 }",
+            SyntaxTree.Parse("{ c4 g? a4 }").GetRoot().ToFullString());
+
+    /// <summary>
+    /// The spellings that DO carry dots keep working, and — the point that makes the
+    /// diagnostic's advice true — a note with no duration inherits the previous one
+    /// WITH its dots, so nothing needs a bare dot to be sayable.
+    /// </summary>
+    [Theory]
+    [InlineData("{ c4 g4. a4 }")]
+    [InlineData("{ c4. g a4 }")]           // inheritance carries the dot
+    [InlineData("{ r2. R1*4 }")]
+    [InlineData("{ c4@staccato.up d4 }")]  // a dotted PLACEMENT qualifier is not a duration
+    [InlineData("{ c4@ds.al.fine d4 }")]   // nor is a dotted annotation name
+    [InlineData("{ c4@text(\"a\").down }")]
+    [InlineData("{ c4 ds al fine d4 }")]   // the bare navigation mark takes no dots at all
+    public void DotsThatBelongToSomething_StayClean(string source)
+        => Assert.False(Has(source, DiagnosticCodes.BareDurationDot), source);
+
+    /// <summary>
+    /// The measured claim the diagnostic's text makes: <c>c4. g</c> is two DOTTED
+    /// quarters. If inheritance ever stopped carrying the dots, the advice "you do
+    /// not need a bare dot" would become false, and this net says so.
+    /// </summary>
+    [Fact]
+    public void ANoteWithNoDuration_InheritsTheDotsToo()
+    {
+        var notes = new MeasureCollector()
+            .Collect(SyntaxTree.Parse("{ c4. g a4 }")).Voice.Measures
+            .SelectMany(m => m.Items).OfType<NoteItem>().ToArray();
+        Assert.Equal(1, notes[0].Dots);
+        Assert.Equal(1, notes[1].Dots);                                  // inherited
+        Assert.Equal(notes[0].BaseDuration, notes[1].BaseDuration);
+        Assert.Equal(0, notes[2].Dots);                                  // written a4
+    }
+
     [Fact]
     public void GluedMemberDuration_IsSwallowed_NotReadAsADegree()
     {

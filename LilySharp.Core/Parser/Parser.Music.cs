@@ -162,6 +162,11 @@ internal sealed partial class Parser
             // durations are whole. Reported rather than skipped: `c4.5` used to lex as
             // a dotted quarter plus a stray `5` that this loop dropped in silence.
             SyntaxKind.DecimalLiteral => ReportFractionalDuration(),
+
+            // A dot that no duration claimed (`c4 g.`). ParseOptionalDuration takes
+            // dots only after a glued number, so this one reached no rule at all and
+            // the loop below skipped it — silently, and out of the tree.
+            SyntaxKind.Dot => ReportBareDurationDot(),
             _ => null
         };
     }
@@ -201,6 +206,43 @@ internal sealed partial class Parser
             + "number is a value, and belongs in a value position such as an "
             + "override (override Stem.length = 3.5).");
         return null;
+    }
+
+    /// <summary>Reports an augmentation dot with no number in front of it (LYS0023)
+    /// and yields the dot itself, so the token stays in the tree.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ It RETURNS the token where its two neighbours above return null. Those
+    /// report a token whose text the tree can lose without losing a character —
+    /// dropping a spaced <c>4</c> leaves the notes standing where they stood. A dot
+    /// is glued to the note before it, so dropping it JOINS that note to the next
+    /// one: <c>c4 g. a4</c> spelled itself back out of the tree as <c>c4 ga4</c>.
+    /// The music-item list is the only place a stray token can stand, so it stands
+    /// there, contributing its width and nothing else (the collector reads items by
+    /// type, and a token is not a note). That keeps the round trip exact and every
+    /// following node's position honest — HANDOFF §1 第168 ⑴ measured what the other
+    /// answer costs: SVG data-pos, the LSP's jump targets, and the editor that
+    /// writes .lys back out of the tree all move one character early.
+    /// </para>
+    /// <para>
+    /// One report per RUN of dots — <c>g..</c> is one mistake written twice, and the
+    /// second dot is reported only if the first was not (i.e. the previous token is
+    /// not itself a dot). The span is the dot's INK, not its FullWidth: a trailing
+    /// space belongs to the token but not to the mistake.
+    /// </para>
+    /// </remarks>
+    private GreenNode ReportBareDurationDot()
+    {
+        if (_position == 0 || _tokens[_position - 1].Kind != SyntaxKind.Dot)
+        {
+            var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length);
+            _diagnostics.Error(span, DiagnosticCodes.BareDurationDot,
+                "A duration dot needs a number in front of it - write g4. for a dotted "
+                + "quarter. A dot on its own is not a duration, and it is not needed: a "
+                + "note with no duration inherits the previous one WITH its dots, so "
+                + "'c4. g' is two dotted quarters.");
+        }
+        return Advance();
     }
 
     // ========== Notes and Pitches ==========

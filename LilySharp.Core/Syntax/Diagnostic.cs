@@ -273,6 +273,36 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string FractionalTempoValue = "LYS0022";
 
+    /// <summary>Parse error: an augmentation dot with no number in front of it
+    /// (<c>c4 g.</c>). A duration is a NUMBER lengthened by dots; a dot on its own
+    /// is not a duration, and it is not needed either — the duration a note inherits
+    /// already carries the dots of the one it inherits from.</summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: <c>lily/parser.yy</c> — <c>steno_duration</c> is
+    /// <c>UNSIGNED dots</c> or <c>DURATION_IDENTIFIER dots</c>, so a bare '.' cannot
+    /// begin one. MEASURED on 2.26.0: <c>\new Staff { c'4 g'. a'4 }</c> fails with
+    /// <c>syntax error, unexpected '.'</c> and the file is refused outright.
+    /// </para>
+    /// <para>
+    /// This exists because the alternative was SILENCE — and worse silence than
+    /// <see cref="FractionalDuration"/>'s. The lone dot reached no rule, so the music
+    /// loop's skip recovery dropped it from the TREE: <c>c4 g. a4</c> spelled itself
+    /// back out as <c>c4 ga4</c>, which is not the same music, and every node after
+    /// the dot stood one character early (the shape HANDOFF §1 第168 ⑴ measured for
+    /// <c>@staccato.up</c>). The dot is therefore KEPT, and only its meaning is
+    /// refused. No book writes it: measured over the 80-book corpus and 219 fixtures
+    /// by spelling every book back out of its tree.
+    /// </para>
+    /// <para>
+    /// ⚠️ Reading it as "inherit the number, add a dot" was considered and rejected:
+    /// inheritance already carries the dots (<c>c4. g</c> is two dotted quarters,
+    /// measured), so after a dotted note <c>g.</c> would have two readings — 4. and
+    /// 4.. — with nothing to choose between them.
+    /// </para>
+    /// </remarks>
+    public const string BareDurationDot = "LYS0023";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
