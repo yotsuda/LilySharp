@@ -135,23 +135,21 @@ public enum CueSpanKind
 /// which is the end the writer usually has to move.
 /// </summary>
 /// <remarks>
-/// Recorded by the same two scanners that already decide the pairing — the crossing test is
-/// one <c>IsCue</c> comparison on a pair those scanners have in hand — so this can never
-/// disagree with what gets drawn, for the reason <see cref="UnpairedSlurWarning"/> gives.
+/// Recorded by the same two scanners that already decide the pairing — the crossing test is one
+/// comparison on a pair those scanners have in hand — so this can never disagree with what gets
+/// drawn, for the reason <see cref="UnpairedSlurWarning"/> gives.
 /// <para>
-/// ⚠️ NARROWER THAN LilyPond'S CONDITION, and by the same cause as the note in
-/// <c>SpacingRules.CrossesVoiceBoundary</c>:
-///   departs from: two ADJACENT cue regions. <c>cue { … } cue { … }</c> is TWO CueVoice
-///     contexts (probe cue-span.ly C-TWO), so a span running from one into the next crosses a
-///     voice boundary and LilyPond refuses it — MEASURED 2026-08-15, the slur form warns
-///     "unterminated slur" / "cannot end slur" and the tie form is dropped in silence
-///     (byte-identical SVG). Here both ends answer <c>IsCue</c> true and nothing is reported.
-///   goes away when: a cue item can say WHICH region it belongs to — i.e. when the cue flag
-///     stops being derived and starts being stamped. That single change closes this AND the
-///     spacing departure, which is why neither is worth a private workaround.
-///   observed by: NOTHING. No fixture, sample or corpus book writes two cue blocks back to
-///     back (grep 2026-08-03, re-checked 2026-08-10 and again 2026-08-15 — only 4 books on
-///     disk write a cue region at all).
+/// ⚠️ THE COMPARISON IS OF REGIONS, NOT OF A FLAG, and it has to be: <c>cue { … } cue { … }</c>
+/// is TWO CueVoice contexts (probe cue-span.ly C-TWO), so a span running from one into the next
+/// crosses a voice boundary and LilyPond refuses it exactly as it refuses one leaving a cue —
+/// MEASURED 2026-08-15, the slur form warns "unterminated slur" / "cannot end slur" and the tie
+/// form is dropped in silence (byte-identical SVG). Both ends answer <c>IsCue</c> true, so until
+/// the collector stamped the region's EDGE (<see cref="NoteItem.BeginsCueRegion"/>) that
+/// crossing was invisible here and Lily# drew the curve without a word.
+///   observed by: <c>CueRegionTests.SlurBetweenTwoAdjacentCuesIsRejected</c> and its tie twin.
+///     No fixture, sample or corpus book writes two cue blocks back to back (grep 2026-08-03,
+///     re-checked 2026-08-10 and twice on 2026-08-15 — of 888 <c>.lys</c> on disk only 10 write
+///     a cue region at all, 4 of them outside scratch/), so those two tests ARE the observer.
 /// </para>
 /// <para>
 /// A span that passes OVER a whole cue region (<c>c4( cue { e f } g4)</c>) is NOT a crossing
@@ -162,8 +160,22 @@ public enum CueSpanKind
 public record CueSpanBoundaryWarning(
     int SourcePosition,
     CueSpanKind Kind,
-    bool StartsInsideCue   // true = the span begins in the cue and ends outside it
+    CueSpanCrossing Crossing
 );
+
+/// <summary>Which voice boundary the span crossed — the three a cue region can put between
+/// two notes. All three are one condition to LilyPond (the ends are in different Voice
+/// contexts); they are told apart only so the diagnostic can name what was written.</summary>
+public enum CueSpanCrossing
+{
+    /// <summary>Begins outside a <c>cue { … }</c> and ends inside it.</summary>
+    IntoCue,
+    /// <summary>Begins inside a <c>cue { … }</c> and ends outside it.</summary>
+    OutOfCue,
+    /// <summary>Begins in one <c>cue { … }</c> and ends in the NEXT one — the crossing a
+    /// per-note cue flag cannot see, since both ends are cued.</summary>
+    BetweenCues,
+}
 
 /// <summary>
 /// A manual beam bracket that pairs with nothing: a <c>[</c> never closed (including one
@@ -1091,6 +1103,24 @@ public sealed partial class MeasureCollector
     /// See docs/cue-context-design.md.
     /// </summary>
     private int _cueDepth = 0;
+    /// <summary>
+    /// True between entering a <c>cue { … }</c> region and the first note or chord it emits —
+    /// the one item that gets <see cref="NoteItem.BeginsCueRegion"/>. Set on entry and cleared
+    /// BOTH by that item and on the way out, so outside a region it is always false and a
+    /// checkpoint never carries it (<see cref="WalkCarriesNothing"/> already refuses to stand
+    /// inside a region at all).
+    /// </summary>
+    private bool _cueRegionPending = false;
+
+    /// <summary>Reads and clears <see cref="_cueRegionPending"/>: true for the first note or
+    /// chord of a cue region, false for every later one.</summary>
+    private bool TakeCueRegionStart()
+    {
+        if (!_cueRegionPending)
+            return false;
+        _cueRegionPending = false;
+        return true;
+    }
     // Grace-note infos of the just-collected leading grace group, stamped onto the
     // main note/chord so the spacing can reserve space in front of its column.
     private ImmutableArray<GraceNoteInfo> _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;

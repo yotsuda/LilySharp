@@ -569,6 +569,8 @@ public sealed partial class MeasureCollector
                     if (HasCourtesyAnnotation(note))
                         _courtesySourcePositions.Add(note.Position);
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
+                    if (isCue && TakeCueRegionStart())
+                        noteItem = noteItem with { BeginsCueRegion = true };
                     if (ExtractNoteheadStyle(note) is var nhStyle && nhStyle != NoteheadStyle.Default)
                         noteItem = noteItem with { Notehead = nhStyle };
                     if (_tremoloPairShape is { } tpn)
@@ -742,6 +744,8 @@ public sealed partial class MeasureCollector
                         && Semantics.AnnotationValues.IsArpeggioBracket(am));
                     bool isCue = _cueDepth > 0;
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                    if (isCue && TakeCueRegionStart())
+                        chordItem = chordItem with { BeginsCueRegion = true };
                     if (_tremoloPairShape is { } tpc)
                     {
                         // Two-note tremolo with a chord body (`repeat tremolo N
@@ -811,6 +815,8 @@ public sealed partial class MeasureCollector
                         builder.AddItem(repItem);
                         break;
                     }
+                    if (isCue && TakeCueRegionStart())
+                        chordCopy = chordCopy with { BeginsCueRegion = true };
                     if (_tremoloPairShape is { } tpr)
                     {
                         // Two-note tremolo with a chord-repetition body (`repeat
@@ -1128,11 +1134,17 @@ public sealed partial class MeasureCollector
         }
 
         _cueDepth++;
+        // This region's first note or chord carries the edge stamp (NoteItem.BeginsCueRegion),
+        // which is what tells THIS region from the one that may sit right next to it.
+        _cueRegionPending = true;
         // The body items are reds already (a cue region is always live).
         var cueSites = new List<GreenSite>();
         foreach (var item in cue.Body.Items)
             cueSites.Add(new GreenSite(item));
         ProcessMusicNodeSequence(cueSites, builder);
+        // Cleared here too, for the region that emits no note or chord at all (`cue { r4 }`):
+        // the stamp belongs to this region, not to the next item that happens to be cued.
+        _cueRegionPending = false;
         _cueDepth--;
 
         if (outerClef is not null)

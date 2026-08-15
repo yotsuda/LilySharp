@@ -88,11 +88,20 @@ internal static class TieTargetScanner
                 else
                 {
                     // The tie binds. The only question left is whether it binds ACROSS a cue
-                    // boundary, which LilyPond cannot do.
+                    // boundary, which LilyPond cannot do. THE TARGET IS THE VERY NEXT NOTE, so
+                    // no region counting is needed here: two notes in a row are in different cue
+                    // regions exactly when the second one BEGINS one (a region's own second note
+                    // never carries that stamp). See NoteItem.BeginsCueRegion.
                     bool startsInCue = SlurPairingScanner.IsCueItem(item);
-                    if (startsInCue != SlurPairingScanner.IsCueItem(n.Item))
+                    bool endsInCue = SlurPairingScanner.IsCueItem(n.Item);
+                    bool betweenCues = startsInCue && endsInCue
+                        && SlurPairingScanner.BeginsCueRegion(n.Item);
+                    if (startsInCue != endsInCue || betweenCues)
                         cueSink.Add(new CueSpanBoundaryWarning(
-                            item.SourcePosition, CueSpanKind.Tie, startsInCue));
+                            item.SourcePosition, CueSpanKind.Tie,
+                            betweenCues ? CueSpanCrossing.BetweenCues
+                            : startsInCue ? CueSpanCrossing.OutOfCue
+                            : CueSpanCrossing.IntoCue));
                 }
             }
         }

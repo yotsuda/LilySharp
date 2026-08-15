@@ -225,6 +225,54 @@ public class CueRegionTests
     public void TieOutOfACueIsRejected() =>
         AssertCrossesCueBoundary("c'4 cue { e4 f~ } f4 |");
 
+    // ── The crossing a per-note cue flag cannot see: BETWEEN two adjacent regions ────────
+    //
+    // MEASURED on LilyPond 2.26.0, 2026-08-15 (scratch/cue-span-probe/cs5-between-cues.ly):
+    // `\new CueVoice { e4( f } \new CueVoice { g4 a) }` warns "unterminated slur" + "cannot end
+    // slur", and the tie form is dropped with NOT ONE WORD (byte-identical SVG). Both ends are
+    // cued, so the old boolean test was blind to it and Lily# drew the curve: the probes'
+    // engraving differs from the same music with the marks deleted (SHA 4F6761F0EE against
+    // 33DDE1196D for the slur, 850F9882D1 against FC6AA5CC20 for the tie) — ink LilyPond will
+    // never make, which is exactly what LYS4012 exists to report.
+    //
+    // ⚠️ These two ARE the observer. No fixture, sample or corpus book writes two cue blocks
+    // back to back (grep 2026-08-03, 08-10 and twice on 08-15).
+
+    [Fact]
+    public void SlurBetweenTwoAdjacentCuesIsRejected() =>
+        AssertCrossesCueBoundary("c'4 cue { e4( f } cue { g4) } |");
+
+    [Fact]
+    public void TieBetweenTwoAdjacentCuesIsRejected() =>
+        AssertCrossesCueBoundary("c'4 cue { e4 f~ } cue { f4 } |");
+
+    /// <summary>
+    /// The message names the crossing that was written, not just "a cue boundary": the fix for
+    /// this one is to close the span in its own region, and a writer told "starts outside a cue"
+    /// about music whose both ends are cued would go looking for the wrong thing.
+    /// </summary>
+    [Fact]
+    public void TheBetweenCuesMessageSaysTheSpanRunsIntoTheNextCue()
+    {
+        var d = Assert.Single(Check("c'4 cue { e4( f } cue { g4) } |")
+            .Where(x => x.Code == DiagnosticCodes.SpanCrossesCueBoundary).ToList());
+        Assert.Contains("ends in the NEXT one", d.Message);
+    }
+
+    /// <summary>
+    /// ⚠️ The control for the region counting: a cue region's SECOND note does not begin a
+    /// region, so a span closing there is not a crossing. Without this, stamping every cued note
+    /// as an edge would pass the two tests above and reject all the music in
+    /// <c>SpansThatCloseInTheirOwnRegionAreAccepted</c> — this pins the difference at the
+    /// three-note shape where a region has an inside to have.
+    /// </summary>
+    [Fact]
+    public void ASlurClosingLaterInTheSameCueIsAccepted()
+    {
+        Assert.Empty(Check("c'4 cue { e4( f g4) } |")
+            .Where(d => d.Code == DiagnosticCodes.SpanCrossesCueBoundary));
+    }
+
     /// <summary>
     /// The spellings LilyPond engraves without a word, so Lily# must not complain either:
     /// every span closing in the region it opened in.

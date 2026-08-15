@@ -64,9 +64,14 @@ internal sealed class CueSpanBoundaryValidator : ISharedCollectValidator
         {
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
             string span = w.Kind == CueSpanKind.Slur ? "slur" : "tie";
-            string direction = w.StartsInsideCue
-                ? "it starts inside a 'cue { … }' and ends outside it"
-                : "it starts outside a 'cue { … }' and ends inside it";
+            string direction = w.Crossing switch
+            {
+                CueSpanCrossing.OutOfCue => "it starts inside a 'cue { … }' and ends outside it",
+                CueSpanCrossing.BetweenCues =>
+                    "it starts in one 'cue { … }' and ends in the NEXT one, and two cue blocks "
+                    + "side by side are two voices",
+                _ => "it starts outside a 'cue { … }' and ends inside it",
+            };
             _diagnostics.Error(new TextSpan(w.SourcePosition, 1),
                 DiagnosticCodes.SpanCrossesCueBoundary,
                 $"a {span} cannot cross a cue boundary: {direction}. A cue is a voice of its "

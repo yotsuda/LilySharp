@@ -58,14 +58,24 @@ internal static class SlurPairingScanner
     /// second walk would be a second opinion about which <c>(</c> a <c>)</c> belongs to — the
     /// thing this class exists not to have. When the pop happens, both ends of the slur are in
     /// hand and the test is one comparison. See <see cref="CueSpanBoundaryWarning"/> for what
-    /// LilyPond does with such a slur (nothing: it drops it with a warning) and for the one
-    /// crossing a per-item cue flag cannot see.
+    /// LilyPond does with such a slur (nothing: it drops it with a warning).
+    /// <para>
+    /// The comparison is of REGION NUMBERS, not of a boolean: <c>cue { … } cue { … }</c> is two
+    /// CueVoice contexts and LilyPond refuses a slur running from one into the next just as it
+    /// refuses one leaving a cue (MEASURED — <see cref="NoteItem.BeginsCueRegion"/>). The number
+    /// is counted HERE, off the edge stamp the collector left, because this scan already visits
+    /// every note and chord of the voice in order — the identity costs one increment, and no
+    /// second walk exists to disagree with this one.
+    /// </para>
     /// </remarks>
     public static void Scan(Voice voice, List<UnpairedSlurWarning> sink,
         List<CueSpanBoundaryWarning> cueSink)
     {
-        // The '(' marks still looking for a ')' — position, and whether that note is cued.
-        var open = new Stack<(int Position, bool IsCue)>();
+        // The '(' marks still looking for a ')' — position, and WHICH cue region that note sits
+        // in (0 = not in one).
+        var open = new Stack<(int Position, int Region)>();
+        int regionsSeen = 0;
+        int region = 0;
         var measures = voice.Measures;
         for (int mi = 0; mi < measures.Length; mi++)
         {
@@ -74,17 +84,18 @@ internal static class SlurPairingScanner
             {
                 if (!TryGetSlurFlags(items[ii], out bool hasStart, out bool hasEnd))
                     continue;
-                bool isCue = IsCueItem(items[ii]);
+                region = RegionOf(items[ii], region, ref regionsSeen);
                 if (hasStart)
-                    open.Push((items[ii].SourcePosition, isCue));
+                    open.Push((items[ii].SourcePosition, region));
                 if (hasEnd)
                 {
                     if (open.Count > 0)
                     {
                         var start = open.Pop();
-                        if (start.IsCue != isCue)
+                        if (start.Region != region)
                             cueSink.Add(new CueSpanBoundaryWarning(
-                                start.Position, CueSpanKind.Slur, StartsInsideCue: start.IsCue));
+                                start.Position, CueSpanKind.Slur,
+                                CrossingOf(start.Region, region)));
                     }
                     else
                         sink.Add(new UnpairedSlurWarning(items[ii].SourcePosition, IsOpen: false));
@@ -95,11 +106,40 @@ internal static class SlurPairingScanner
         // Whatever is still open when the voice ends is dropped by the renderer. Reported
         // in the order the marks were WRITTEN (the stack pops innermost-first), so a
         // diagnostic list reads down the score rather than back up it.
-        var dangling = new List<(int Position, bool IsCue)>(open);
+        var dangling = new List<(int Position, int Region)>(open);
         dangling.Reverse();
         foreach (var (position, _) in dangling)
             sink.Add(new UnpairedSlurWarning(position, IsOpen: true));
     }
+
+    /// <summary>Which cue region an item sits in — 0 outside any, else a number counted from
+    /// the collector's edge stamps, fresh at every region the walk enters.</summary>
+    /// <remarks>
+    /// ⚠️ The last arm is for a cue item whose region's first note or chord this scan never saw
+    /// (a region opening on an item kind that carries no cue flag, e.g. a drum note): it is
+    /// still a region OTHER than the one just left, so counting it as new keeps the comparison
+    /// on the safe side — the alternative would silently merge two regions into one.
+    /// </remarks>
+    internal static int RegionOf(MusicItem item, int current, ref int regionsSeen) =>
+        !IsCueItem(item) ? 0
+        : BeginsCueRegion(item) ? ++regionsSeen
+        : current != 0 ? current
+        : ++regionsSeen;
+
+    /// <summary>Which of the three crossings a pair of region numbers is; the two ends are
+    /// known to differ.</summary>
+    internal static CueSpanCrossing CrossingOf(int startRegion, int endRegion) =>
+        startRegion == 0 ? CueSpanCrossing.IntoCue
+        : endRegion == 0 ? CueSpanCrossing.OutOfCue
+        : CueSpanCrossing.BetweenCues;
+
+    /// <summary>Whether an item is the first note or chord of its cue region.</summary>
+    internal static bool BeginsCueRegion(MusicItem item) => item switch
+    {
+        NoteItem n => n.BeginsCueRegion,
+        ChordItem c => c.BeginsCueRegion,
+        _ => false,
+    };
 
     /// <summary>Whether an item was written inside a <c>cue { … }</c>. Only the two kinds a
     /// slur pairs on can carry the flag; anything else is outside by construction.</summary>
