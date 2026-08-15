@@ -389,6 +389,10 @@ c4( cue { e4 f } g4) |      // A slur passing OVER the cue - both ends outside i
 A slur or a tie with one end inside the cue and the other outside is rejected (**LYS4012**).
 LilyPond cannot engrave such a span at all — it drops it, in one direction without even a
 warning — so close the span inside the region, or move the note it reaches for out of it.
+The same applies between **two cue regions written side by side** — `cue { … } cue { … }` is
+two voices, not one — so `c4 cue { e4( f } cue { g4) }` is rejected for the same reason, even
+though both ends of that slur are cue notes.
+
 Two other shapes are closed while the feature is young: a `cue` nested in a `cue`
 (**LYS4013**) and a `voice { … } voice { … }` span inside one (**LYS4014**).
 

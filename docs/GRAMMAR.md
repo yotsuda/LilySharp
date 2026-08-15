@@ -697,7 +697,8 @@ Cue            = 'cue' , [ ClefName ] , MusicBlock ;
                  (* ⚠️ A slur or tie may not cross the region's edge: a cue is a voice of
                     its own, so LilyPond drops such a span entirely (LYS4012). Close it
                     inside the cue, or keep both ends outside — a slur passing OVER a whole
-                    cue is fine. *)
+                    cue is fine. Two cue blocks written side by side are two voices, so a
+                    span may not run from one into the next either, both ends being cued. *)
 
 (* Example: c4 d cue { e4 f } g4 | *)
 
