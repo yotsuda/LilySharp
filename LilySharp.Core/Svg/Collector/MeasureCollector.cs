@@ -4739,16 +4739,22 @@ public sealed partial class MeasureCollector
         _ => Enumerable.Empty<SyntaxNode>()
     };
 
-    /// <summary>Notehead style from a <c>@notehead.x</c>-family compound mark
-    /// on the note/chord, or Default. LILYPOND-REF: NoteHead style property.</summary>
+    /// <summary>Notehead style from a <c>@notehead(style)</c> annotation on the
+    /// note/chord, or Default. LILYPOND-REF: NoteHead style property.</summary>
+    /// <remarks>
+    /// The FIRST notehead annotation decides, whether or not it names a style Lily#
+    /// draws — the string form returned Default from inside its match arm, so a second
+    /// annotation behind an unrecognised one never got a turn, and that is kept.
+    /// </remarks>
     private static NoteheadStyle ExtractNoteheadStyle(SyntaxNode node)
     {
         foreach (var art in ArticulationsOf(node))
         {
             if (art is MusicMarkSyntax mark
-                && mark.MarkName.StartsWith("notehead.", StringComparison.OrdinalIgnoreCase))
+                && mark.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
+                && mark.HasArgumentList)
             {
-                return mark.MarkName[9..].ToLowerInvariant() switch
+                return Semantics.AnnotationValues.Notehead(mark) switch
                 {
                     "x" or "cross" => NoteheadStyle.Cross,
                     "diamond" => NoteheadStyle.Diamond,
@@ -4760,15 +4766,6 @@ public sealed partial class MeasureCollector
             }
         }
         return NoteheadStyle.Default;
-    }
-
-    /// <summary>The finger number from a <c>@finger.N</c> compound mark, or null.</summary>
-    /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — finger event handling.</remarks>
-    private static int? ParseFingerMark(MusicMarkSyntax mark)
-    {
-        var name = mark.MarkName.ToLowerInvariant();
-        return name.StartsWith("finger.") && int.TryParse(name.AsSpan(7), out int finger) && finger >= 0
-            ? finger : null;
     }
 
     private static bool HasNamedArticulation(SyntaxNode node, string lowerName)
@@ -4808,7 +4805,8 @@ public sealed partial class MeasureCollector
     private static int? ExtractPitchFingering(PitchSyntax pitch)
     {
         foreach (var art in pitch.Articulations)
-            if (art is MusicMarkSyntax markSyntax && ParseFingerMark(markSyntax) is { } finger)
+            if (art is MusicMarkSyntax markSyntax
+                && Semantics.AnnotationValues.Finger(markSyntax) is { } finger)
                 return finger;
         return null;
     }
@@ -4824,7 +4822,8 @@ public sealed partial class MeasureCollector
     private static int? ExtractFingering(SyntaxNode node)
     {
         foreach (var art in ArticulationsOf(node))
-            if (art is MusicMarkSyntax markSyntax && ParseFingerMark(markSyntax) is { } finger)
+            if (art is MusicMarkSyntax markSyntax
+                && Semantics.AnnotationValues.Finger(markSyntax) is { } finger)
                 return finger;
         return null;
     }

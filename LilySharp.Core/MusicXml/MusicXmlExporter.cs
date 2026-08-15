@@ -1312,8 +1312,9 @@ public sealed class MusicXmlExporter
     {
         foreach (var art in articulations)
             if (art is MusicMarkSyntax mark
-                && mark.MarkName.StartsWith("notehead.", StringComparison.OrdinalIgnoreCase))
-                return mark.MarkName[9..].ToLowerInvariant() switch
+                && mark.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
+                && mark.HasArgumentList)
+                return Semantics.AnnotationValues.Notehead(mark) switch
                 {
                     "x" or "cross" => "x",
                     "diamond" => "diamond",

@@ -484,14 +484,13 @@ public sealed partial class MeasureCollector
                 // LilyPond — the '@trillSpan(start)' spelling was a second way to
                 // say the same thing and was dropped.
                 var markName = markSyntax.MarkName.ToLowerInvariant();
-                if (markName.StartsWith("pluck.") && markName.Length == 7
-                         && markName[6] is 'p' or 'i' or 'm' or 'a')
+                if (Semantics.AnnotationValues.Pluck(markSyntax) is { } pluckLetter)
                 {
                     // p-i-m-a right-hand fingering, printed BELOW the note.
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.Pluck, measureIndex, itemIndex, false,
                         markSyntax.Position, _currentStaffIndex)
-                    { PluckLetter = markName[6..], VoiceIndex = _currentVoiceIndex });
+                    { PluckLetter = pluckLetter, VoiceIndex = _currentVoiceIndex });
                 }
                 else if (markName.StartsWith("frame."))
                 {
@@ -505,34 +504,27 @@ public sealed partial class MeasureCollector
                             markSyntax.Position, _currentStaffIndex)
                         { FrameSpec = spec, VoiceIndex = _currentVoiceIndex });
                 }
-                else if (markName.StartsWith("bend."))
+                else if (Semantics.AnnotationValues.Bend(markSyntax) is { } semitones)
                 {
                     // @bend(full|half|N) — guitar bend-up, N in semitones.
-                    // LILYPOND-REF: MusicXML <bend><bend-alter> semantics.
-                    int? semis = markName[5..] switch
-                    {
-                        "half" => 1,
-                        "full" => 2,
-                        var s when int.TryParse(s, out int n) && n is > 0 and <= 12 => n,
-                        _ => null,
-                    };
-                    if (semis is { } sv)
-                        _articulations.Add(new ArticulationItem(
-                            ArticulationType.Bend, measureIndex, itemIndex, true,
-                            markSyntax.Position, _currentStaffIndex)
-                        { BendSemitones = sv, VoiceIndex = _currentVoiceIndex });
+                    _articulations.Add(new ArticulationItem(
+                        ArticulationType.Bend, measureIndex, itemIndex, true,
+                        markSyntax.Position, _currentStaffIndex)
+                    { BendSemitones = semitones, VoiceIndex = _currentVoiceIndex });
                 }
-                else if (markName.StartsWith("notehead."))
+                else if (markSyntax.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
+                         && markSyntax.HasArgumentList)
                 {
                     // Consumed by ExtractNoteheadStyle at item creation — not a
-                    // printed mark.
+                    // printed mark. The STYLE is not read here, so this arm asks only
+                    // what was written: an unrecognised one draws an ordinary head
+                    // (and the validator has already warned about it).
                 }
-                else if (markName.StartsWith("finger."))
+                else if (Semantics.AnnotationValues.Finger(markSyntax) is { } finger)
                 {
                     // LILYPOND-REF: lily/fingering-engraver.cc — finger event attaches to
                     // the host note. Keyed by the note's source position.
-                    if (ParseFingerMark(markSyntax) is { } finger)
-                        _fingeringByPosition[node.Position] = finger;
+                    _fingeringByPosition[node.Position] = finger;
                 }
                 else if (markName == "text" || markName.StartsWith("text."))
                 {

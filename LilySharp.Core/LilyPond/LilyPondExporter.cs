@@ -1822,7 +1822,7 @@ public sealed class LilyPondExporter
 
     /// <summary>
     /// <c>@finger(2)</c> as LilyPond's fingering post-event <c>-2</c>, or null for any other
-    /// mark. <c>MarkName</c> joins the tokens with '.', so the digit follows "finger.".
+    /// mark.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/parser.yy:3461-3467 fingering — an UNSIGNED after a direction sign becomes a FingeringEvent carrying `digit`
@@ -1850,14 +1850,8 @@ public sealed class LilyPondExporter
     /// twin state something the fixture did not.
     /// </remarks>
     private static string? Fingering(MusicMarkSyntax mk)
-    {
-        const string prefix = "finger.";
-        string name = mk.MarkName;
-        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            return null;
-        string digits = name.Substring(prefix.Length).Trim('"');
-        // The SAME set MeasureCollector.ParseFingerMark reads, so anything Lily# engraves
-        // reaches the twin: any non-negative integer.
+        // The SAME set the collector reads, so anything Lily# engraves reaches the twin:
+        // any non-negative integer.
         // ⚠️ THIS GATE SAID 1-5 FOR ONE COMMIT, and that was a narrowing with nothing behind
         // it — it would have dropped @finger(6) from the twin while Lily# drew it, which is
         // the very defect this method exists to close, just over a smaller range. MEASURED
@@ -1865,10 +1859,13 @@ public sealed class LilyPondExporter
         // LilyPond engraves `-0`, `-5`, `-6` AND `-12` as fingerings reading 0/5/6/12, so
         // its grammar's UNSIGNED really does take them all and there is nothing to protect
         // against here.
-        return int.TryParse(digits, out int finger) && finger >= 0
+        // ⚠️ "The SAME set" was an ASPIRATION until 2026-08-15: this read used to slice the
+        // dotted MarkName and Trim('"') it, so it alone accepted `@finger("3")` and emitted
+        // a `-3` for a fingering Lily# does not draw. Both now read the argument through
+        // Semantics.AnnotationValues.Finger, which is where that set lives.
+        => Semantics.AnnotationValues.Finger(mk) is { } finger
             ? "-" + finger.ToString(System.Globalization.CultureInfo.InvariantCulture)
             : null;
-    }
 
     private string EmitAttachment(SyntaxNode a) => a switch
     {

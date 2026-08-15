@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax.InternalSyntax;
@@ -369,6 +370,99 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
                 }
             }
             return string.Join(".", parts);
+        }
+    }
+
+    /// <summary>
+    /// The annotation's NAME on its own — the word after the '@', with no arguments,
+    /// no dotted name parts and no placement qualifier ("fig", "chord", "ds").
+    /// </summary>
+    public string Name
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode token && token.Kind != SyntaxKind.At)
+                    return token.Text;
+            return "";
+        }
+    }
+
+    /// <summary>
+    /// Whether the annotation was written with a parenthesised argument list. This is
+    /// what tells bare <c>@chord</c> (derive the symbol from the notes) from
+    /// <c>@chord(c:m7)</c>, and it stays true for an empty <c>@text()</c>.
+    /// </summary>
+    public bool HasArgumentList
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenParen })
+                    return true;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The arguments written between '(' and ')', each carrying both the value it
+    /// denotes and the text that was written for it. Empty when there is no argument
+    /// list.
+    /// </summary>
+    /// <remarks>
+    /// This is the typed reading of the same run <see cref="MarkName"/> flattens into a
+    /// dotted string; see <see cref="MarkArgument"/> for why an argument needs both
+    /// halves and how its runs differ from MarkName's per-token split. The two coexist
+    /// while the consumers move over one family at a time (VALUE_SITE_AUDIT §9.5).
+    /// </remarks>
+    public ImmutableArray<MarkArgument> Arguments
+    {
+        get
+        {
+            List<SyntaxTokenNode>? interior = null;
+            bool open = false;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode token)
+                    continue;
+                if (token.Kind == SyntaxKind.OpenParen)
+                {
+                    open = true;
+                    interior = [];
+                }
+                else if (token.Kind == SyntaxKind.CloseParen)
+                {
+                    open = false;
+                }
+                else if (open)
+                {
+                    interior!.Add(token);
+                }
+            }
+            return interior is null ? [] : MarkArgument.FromTokens(interior);
+        }
+    }
+
+    /// <summary>
+    /// The side forced by a trailing '.up' / '.down' qualifier, or null when none was
+    /// written. Only <c>@text(…)</c> takes one; the parser refuses it elsewhere so the
+    /// other families' dotted names cannot be corrupted by it.
+    /// </summary>
+    public bool? ForcedAbove
+    {
+        get
+        {
+            bool afterClose = false;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode token)
+                    continue;
+                if (token.Kind == SyntaxKind.CloseParen)
+                    afterClose = true;
+                else if (afterClose && token.Kind == SyntaxKind.Identifier)
+                    return token.Text switch { "up" => true, "down" => false, _ => null };
+            }
+            return null;
         }
     }
 }

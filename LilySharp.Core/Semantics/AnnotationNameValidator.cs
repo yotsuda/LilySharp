@@ -151,7 +151,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             case MusicMarkSyntax mark:
             {
                 var name = mark.MarkName;
-                if (!IsKnownCompoundName(name))
+                if (!IsKnownCompoundName(mark))
                     WarnUnknown(mark, name);
                 else if (IsBareRehearsalMarkLabel(name))
                     _diagnostics.Error(
@@ -197,12 +197,27 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         || ExtraPlainNames.Contains(name);
 
     /// <summary>
-    /// True iff a compound (dotted) annotation name is consumed somewhere:
-    /// a music mark (incl. <c>mark.*</c> rehearsal marks), a trill-spanner
-    /// event, fingering, feathered beams, figured bass, or a chord name.
+    /// True iff a compound annotation is consumed somewhere: a music mark (incl.
+    /// <c>mark.*</c> rehearsal marks), a trill-spanner event, fingering, feathered
+    /// beams, figured bass, or a chord name.
     /// </summary>
-    public static bool IsKnownCompoundName(string name)
+    /// <remarks>
+    /// ⚠️ This method is the reason <see cref="AnnotationValues"/> exists: it answers
+    /// "does anything consume this?", which can only be answered by knowing what the
+    /// consumers accept — so every family was spelled here a second time, and the
+    /// audit counted it as the tenth restatement of the same ten readings
+    /// (VALUE_SITE_AUDIT §9.3). The four value families now ASK their one reader.
+    /// The rest still slice the dotted name and move with their families (§9.5 ⑵).
+    /// </remarks>
+    public static bool IsKnownCompoundName(MusicMarkSyntax mark)
     {
+        if (AnnotationValues.Finger(mark) is not null
+            || AnnotationValues.Pluck(mark) is not null
+            || AnnotationValues.Bend(mark) is not null
+            || AnnotationValues.Notehead(mark) is not null)
+            return true;
+
+        var name = mark.MarkName;
         if (MusicMarkItem.ParseMarkName(name) != null)
             return true;
 
@@ -213,23 +228,11 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             return true;
         if (lower is "feather.right" or "feather.left" or "feather.accel" or "feather.rit")
             return true;
-        if (lower.StartsWith("finger.", StringComparison.Ordinal)
-            && int.TryParse(lower.AsSpan(7), out int finger) && finger >= 0)
-            return true;
-        if (lower is "notehead.x" or "notehead.cross" or "notehead.diamond"
-            or "notehead.triangle" or "notehead.slash" or "notehead.xcircle")
-            return true;
         if (lower.StartsWith("frame.", StringComparison.Ordinal)
             && lower.Length is >= 10 and <= 14
             && lower.AsSpan(6).ToString().All(ch => ch is 'x' or 'o' or (>= '0' and <= '9')))
             return true;
-        if (lower is "pluck.p" or "pluck.i" or "pluck.m" or "pluck.a")
-            return true;
         if (lower == "arpeggio.bracket")
-            return true;
-        if (lower is "bend.half" or "bend.full"
-            || (lower.StartsWith("bend.", StringComparison.Ordinal)
-                && int.TryParse(lower.AsSpan(5), out int bend) && bend is > 0 and <= 12))
             return true;
         if (FiguredBassItem.ParseFigures(name) != null)
             return true;
