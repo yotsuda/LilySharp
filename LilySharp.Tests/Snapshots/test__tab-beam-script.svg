@@ -59,16 +59,16 @@
   <line x1="30.52" y1="16.41" x2="30.52" y2="13.53" stroke="#000000" stroke-width="0.130"/>
   <line x1="33.02" y1="15.91" x2="33.02" y2="13.20" stroke="#000000" stroke-width="0.130"/>
   <line x1="35.53" y1="15.41" x2="35.53" y2="12.88" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="18.13,20.57 25.77,19.82 25.77,20.30 18.13,21.05"/>
-  <line x1="18.20" y1="24.02" x2="18.20" y2="20.80" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.70" y1="24.02" x2="20.70" y2="20.56" stroke="#000000" stroke-width="0.130"/>
-  <line x1="23.20" y1="24.02" x2="23.20" y2="20.31" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.71" y1="22.52" x2="25.71" y2="20.06" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="27.95,20.57 35.59,19.82 35.59,20.30 27.95,21.05"/>
-  <line x1="28.01" y1="24.02" x2="28.01" y2="20.80" stroke="#000000" stroke-width="0.130"/>
-  <line x1="30.52" y1="24.02" x2="30.52" y2="20.56" stroke="#000000" stroke-width="0.130"/>
-  <line x1="33.02" y1="24.02" x2="33.02" y2="20.31" stroke="#000000" stroke-width="0.130"/>
-  <line x1="35.53" y1="22.52" x2="35.53" y2="20.06" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="17.54,20.57 25.19,19.82 25.19,20.30 17.54,21.05"/>
+  <line x1="17.61" y1="24.02" x2="17.61" y2="20.80" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.11" y1="24.02" x2="20.11" y2="20.56" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.62" y1="24.02" x2="22.62" y2="20.31" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.12" y1="22.52" x2="25.12" y2="20.06" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="27.36,20.57 35.01,19.82 35.01,20.30 27.36,21.05"/>
+  <line x1="27.43" y1="24.02" x2="27.43" y2="20.80" stroke="#000000" stroke-width="0.130"/>
+  <line x1="29.93" y1="24.02" x2="29.93" y2="20.56" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.44" y1="24.02" x2="32.44" y2="20.31" stroke="#000000" stroke-width="0.130"/>
+  <line x1="34.94" y1="22.52" x2="34.94" y2="20.06" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.62" y="11.47" font-size="4.00" data-pos="383"></text>
   <text class="music" x="25.12" y="11.41" font-size="4.00" data-pos="393"></text>
   <text class="music" x="22.62" y="19.13" font-size="4.00" data-pos="383"></text>

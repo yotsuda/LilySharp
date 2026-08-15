@@ -44,7 +44,7 @@
   <rect x="78.52" y="20.04" width="0.19" height="4.50" data-pos="1104"/>
   <rect x="102.24" y="20.04" width="0.19" height="4.50" data-pos="1104"/>
   <text x="9.07" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="985">5</text>
-  <line x1="9.66" y1="23.25" x2="9.66" y2="18.75" stroke="#000000" stroke-width="0.130"/>
+  <line x1="9.07" y1="23.25" x2="9.07" y2="18.75" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="11.78" y="22.18" font-size="4.00" data-pos="996"></text>
   <text x="13.99" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="999">3</text>
   <text x="16.38" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1005">5</text>
@@ -54,7 +54,7 @@
   <text x="26.40" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1024">3</text>
   <text x="29.25" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1028">5</text>
   <text x="32.79" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1059">5</text>
-  <line x1="33.38" y1="23.25" x2="33.38" y2="18.75" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.79" y1="23.25" x2="32.79" y2="18.75" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="35.50" y="22.18" font-size="4.00" data-pos="1066"></text>
   <text x="37.71" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1069">3</text>
   <text x="40.10" y="25.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="1075">5</text>
@@ -107,30 +107,30 @@
   <polygon points="50.64,12.05 53.63,11.86 53.63,12.34 50.64,12.53"/>
   <line x1="50.71" y1="15.14" x2="50.71" y2="12.29" stroke="#000000" stroke-width="0.130"/>
   <line x1="53.56" y1="14.64" x2="53.56" y2="12.10" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="14.52,20.05 17.03,20.05 17.03,20.53 14.52,20.53"/>
-  <polygon points="14.52,19.24 17.03,19.24 17.03,19.72 14.52,19.72"/>
-  <line x1="14.58" y1="23.25" x2="14.58" y2="19.48" stroke="#000000" stroke-width="0.130"/>
-  <line x1="16.96" y1="23.25" x2="16.96" y2="19.48" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="19.38,18.36 21.89,18.75 21.89,19.23 19.38,18.84"/>
-  <polygon points="19.38,17.55 24.20,18.30 24.20,18.78 19.38,18.03"/>
-  <line x1="19.45" y1="21.75" x2="19.45" y2="17.80" stroke="#000000" stroke-width="0.130"/>
-  <line x1="21.83" y1="21.75" x2="21.83" y2="18.17" stroke="#000000" stroke-width="0.130"/>
-  <line x1="24.14" y1="23.25" x2="24.14" y2="18.53" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="26.92,19.80 29.91,19.80 29.91,20.28 26.92,20.28"/>
-  <line x1="26.99" y1="23.25" x2="26.99" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="29.84" y1="23.25" x2="29.84" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="38.24,20.05 40.75,20.05 40.75,20.53 38.24,20.53"/>
-  <polygon points="38.24,19.24 40.75,19.24 40.75,19.72 38.24,19.72"/>
-  <line x1="38.30" y1="23.25" x2="38.30" y2="19.48" stroke="#000000" stroke-width="0.130"/>
-  <line x1="40.68" y1="23.25" x2="40.68" y2="19.48" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="43.10,18.36 45.62,18.75 45.62,19.23 43.10,18.84"/>
-  <polygon points="43.10,17.55 47.92,18.30 47.92,18.78 43.10,18.03"/>
-  <line x1="43.17" y1="21.75" x2="43.17" y2="17.80" stroke="#000000" stroke-width="0.130"/>
-  <line x1="45.55" y1="21.75" x2="45.55" y2="18.17" stroke="#000000" stroke-width="0.130"/>
-  <line x1="47.86" y1="23.25" x2="47.86" y2="18.53" stroke="#000000" stroke-width="0.130"/>
-  <polygon points="50.64,19.80 53.63,19.80 53.63,20.28 50.64,20.28"/>
-  <line x1="50.71" y1="23.25" x2="50.71" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="53.56" y1="23.25" x2="53.56" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="13.93,20.05 16.44,20.05 16.44,20.53 13.93,20.53"/>
+  <polygon points="13.93,19.24 16.44,19.24 16.44,19.72 13.93,19.72"/>
+  <line x1="13.99" y1="23.25" x2="13.99" y2="19.48" stroke="#000000" stroke-width="0.130"/>
+  <line x1="16.38" y1="23.25" x2="16.38" y2="19.48" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="18.79,18.36 21.31,18.75 21.31,19.23 18.79,18.84"/>
+  <polygon points="18.79,17.55 23.61,18.30 23.61,18.78 18.79,18.03"/>
+  <line x1="18.86" y1="21.75" x2="18.86" y2="17.80" stroke="#000000" stroke-width="0.130"/>
+  <line x1="21.24" y1="21.75" x2="21.24" y2="18.17" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.55" y1="23.25" x2="23.55" y2="18.53" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="26.34,19.80 29.32,19.80 29.32,20.28 26.34,20.28"/>
+  <line x1="26.40" y1="23.25" x2="26.40" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="29.25" y1="23.25" x2="29.25" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="37.65,20.05 40.16,20.05 40.16,20.53 37.65,20.53"/>
+  <polygon points="37.65,19.24 40.16,19.24 40.16,19.72 37.65,19.72"/>
+  <line x1="37.71" y1="23.25" x2="37.71" y2="19.48" stroke="#000000" stroke-width="0.130"/>
+  <line x1="40.10" y1="23.25" x2="40.10" y2="19.48" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="42.51,18.36 45.03,18.75 45.03,19.23 42.51,18.84"/>
+  <polygon points="42.51,17.55 47.34,18.30 47.34,18.78 42.51,18.03"/>
+  <line x1="42.58" y1="21.75" x2="42.58" y2="17.80" stroke="#000000" stroke-width="0.130"/>
+  <line x1="44.96" y1="21.75" x2="44.96" y2="18.17" stroke="#000000" stroke-width="0.130"/>
+  <line x1="47.27" y1="23.25" x2="47.27" y2="18.53" stroke="#000000" stroke-width="0.130"/>
+  <polygon points="50.06,19.80 53.04,19.80 53.04,20.28 50.06,20.28"/>
+  <line x1="50.12" y1="23.25" x2="50.12" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="52.97" y1="23.25" x2="52.97" y2="20.04" stroke="#000000" stroke-width="0.130"/>
   <line x1="65.85" y1="14.29" x2="67.85" y2="12.29" stroke="#000000" stroke-width="0.480" data-pos="1036"/>
   <circle cx="66.35" cy="12.79" r="0.25" data-pos="1036"/>
   <circle cx="67.35" cy="13.79" r="0.25" data-pos="1036"/>

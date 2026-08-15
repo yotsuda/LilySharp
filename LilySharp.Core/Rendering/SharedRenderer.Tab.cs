@@ -338,11 +338,9 @@ internal static partial class SharedRenderer
         double stringSpace = EngravingDefaults.TabStringSpace(
             Tunings.GetStringCount(staff.Tuning ?? TuningType.Guitar));
         double stemLength = TabConstants.UnbeamedStemLength(stringSpace);
-        // The companion NOTATION stem's x, head shape and all — a tab half note has to move
-        // with the notation half note it stands under or the pair stops sharing one vertical,
-        // which is the whole reason this reads a notehead offset a fret digit does not have.
-        double stemX = LayoutUtilities.StemX(columnX, stemUp, noteValue,
-            LayoutUtilities.NoteheadStyleOf(item));
+        // The axis the digits are placed around — see TabStemX for why it is not the
+        // companion notation stem's x any more.
+        double stemX = TabStemX(columnX);
         // TabStemHeadY works in device coordinates; round-trip through it, then lift
         // both stem ends to the page Y-up frame.
         double nearYDev = TabStemHeadY(item, stemUp, pageHeight - staffY, staff);
@@ -651,6 +649,73 @@ internal static partial class SharedRenderer
                     staffY - (str - 1) * stringSpace, stringSpace, chord.SourcePosition, gc);
         }
     }
+
+    /// <summary>
+    /// The x a tab stem stands at: the AXIS the fret digits are placed around — the note
+    /// column's digit centre. A chord's zigzag straddles it, exactly as a notation
+    /// chord's staggered noteheads straddle their stem.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE STEM IS WHAT SAYS THE DIGITS ARE ONE EVENT. A chord's fret numbers are
+    /// scattered over several string lines and, at this digit size, over two columns as
+    /// well; the only mark tying them into a single sounding is the stem they share. A
+    /// stem that leaves from the axis they are placed around is read as belonging to all
+    /// of them. One that leaves from an edge, or from one column, is read as belonging to
+    /// what it touches — and the chord stops looking simultaneous (user, 2026-08-16).
+    /// <para>
+    /// It used to be the companion NOTATION staff's stem x instead — the note column's
+    /// notehead EDGE, half a black notehead from the digit centre, and on the left or the
+    /// right according to the stem's direction. Two things were wrong with that.
+    /// </para>
+    /// <para>
+    /// ⚠️ ⑴ IT DID NOT BUY WHAT IT WAS FOR. The reason written down for it was that the
+    /// tab stem should stand on the same vertical as the notation stem in a two-staff
+    /// score. That only holds when both staves choose the SAME stem direction, and a tab
+    /// stem's direction comes from the strings while the notation stem's comes from the
+    /// pitch. MEASURED where they differ (one voice, low note, guitar): notation stem
+    /// 9.66, tab stem 8.48 — 1.18 apart, where centring would have left 0.59.
+    /// USER DECISION (2026-08-16): give the alignment up. The large fret digits stay
+    /// (they are what makes a tab readable on a stand), and so does the zigzag they force.
+    /// </para>
+    /// <para>
+    /// ⚠️ ⑵ ON A CHORD IT CAME FROM A DIFFERENT DIGIT THAN THE Y DID. <c>TabStemHeadY</c>
+    /// takes the y from the digit at the END of the stack in the stem's direction; the x
+    /// took no digit at all. When the digits zigzag into two columns those can be
+    /// different columns, and then the stem hangs off empty space. MEASURED on
+    /// <c>&lt;e a d' g'&gt;</c> (guitar): digits at 5.50 / 7.41 / 5.50 / 7.41, stem x
+    /// 5.87, y taken from the bottom digit — which is in the 7.41 column, 1.54 away.
+    /// </para>
+    /// <para>
+    /// The axis is the answer to both, and it is the notation convention rather than a new
+    /// idea: a second in a chord shifts one head to the other side of the stem, and the
+    /// stem stays on the boundary the two columns share. MEASURED in Lily# itself
+    /// (<c>&lt;c d&gt;</c>): heads at 8.59 and 9.82, stem at 9.82 — the shared edge, not
+    /// either head's centre. The tab digits sit <c>±(widest digit/2 + 0.1)</c> from the
+    /// axis, so the stem passes between them with that 0.1 to spare on each side.
+    /// </para>
+    /// <para>
+    /// AND IT IS LILYPOND'S RULE, not a new idea — the attachment is written there as a
+    /// literal zero: <c>Note_head::calc_tab_stem_attachment</c> answers
+    /// <c>Offset (0.0, dir * 1.35)</c>, so a tab stem stands on its head's X CENTRE and
+    /// only the Y depends on the direction. (Measured before that line was read, which is
+    /// what sent me to it: 2.26.0 puts the stem at 9.214093543307087 = head origin 8.62 +
+    /// ink centre 0.594, identical for <c>dir=1</c> and <c>dir=-1</c>.)
+    /// LILYPOND-REF: lily/note-head.cc:221-234 Note_head::calc_tab_stem_attachment;
+    /// LILYPOND-REF: scm/define-grobs.scm:3741 ly:note-head::calc-tab-stem-attachment
+    /// — TabNoteHead reaches the callback above through that property, not a literal pair.
+    /// </para>
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+    /// share one. LilyPond never faces the question — its digits are small enough to
+    /// stack on a single x — while Lily# writes them large enough to read from a stand
+    /// and must zigzag them into two columns (HANDOFF §3, 2026-07-24). The axis the
+    /// zigzag is built around is this quantity, and it is the one LilyPond's zero means:
+    /// the x the heads are placed about. It goes away if the digits ever stop needing
+    /// two columns. Observed by TabStemAxisTests.
+    /// </para>
+    /// </remarks>
+    internal static double TabStemX(double columnX) =>
+        columnX + EngravingDefaults.TabHeadCenterOffset;
 
     /// <summary>
     /// Horizontal offset for each chord note (notes ordered top string → bottom) so

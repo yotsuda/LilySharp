@@ -123,10 +123,11 @@ internal static partial class SharedRenderer
             bool MemberUp(int i) => tabDirGeom.HasValue ? tabDir
                 : grp.IsKnee ? grp.Members[i].MemberStemUp : grp.StemUp;
 
-            // Both notation and tab stems attach at the notehead edge (from the
-            // note column). On a tab staff the fret digit is centred a
-            // TabHeadCenterOffset to the RIGHT of the column, so this edge x lands
-            // on the digit and, crucially, matches the companion notation stem's x.
+            // A NOTATION stem attaches at the notehead edge (from the note column); a TAB
+            // stem stands on the axis the fret digits are placed around, which a chord's
+            // zigzag straddles — SharedRenderer.TabStemX carries the whole argument and
+            // the measurements. The two staves' stems therefore no longer share a vertical
+            // (user decision, 2026-08-16); what a tab stem shares now is its own digits.
             // The one house, shared with the QUANTER: BeamScoringProblem measures a covered
             // grob's x against the beam's stems, and that is only the same frame if the two
             // spell this offset the same way. See LayoutUtilities.StemAttachX.
@@ -147,7 +148,9 @@ internal static partial class SharedRenderer
                 _ => NoteheadStyle.Default,
             };
             double StemAttachX(int i) =>
-                InvisibleStem(i)
+                tabDirGeom.HasValue
+                    ? TabStemX(beam.MemberXPositions[i])
+                : InvisibleStem(i)
                     ? LayoutUtilities.InvisibleStemX(beam.MemberXPositions[i],
                         GlyphMetrics.NoteValueOf(grp.Members[i].Item))
                     : LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i),
