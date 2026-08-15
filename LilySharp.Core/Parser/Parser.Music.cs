@@ -168,6 +168,12 @@ internal sealed partial class Parser
             // owns them, so this one reached nothing at all and the loop below skipped
             // it — silently, and out of the tree.
             SyntaxKind.Dot => ReportUnclaimedDot(),
+
+            // A '\N' that reached here belongs to no note — it was written where no
+            // note precedes it, or after something this parser does not yet let a
+            // post-event follow. Either way the tab would have printed a string
+            // nobody asked for, so it is reported rather than dropped.
+            SyntaxKind.StringNumber => ReportStrayStringNumber(),
             _ => null
         };
     }
@@ -251,6 +257,33 @@ internal sealed partial class Parser
                 + "annotation takes its argument in parentheses - write @finger(3) and "
                 + "@chord(c), not @finger.3 and @chord.c.");
         }
+        return Advance();
+    }
+
+    /// <summary>Reports a <c>\N</c> string number that reached the music sequence
+    /// instead of a note (LYS0024) and yields the token, so it stays in the tree.</summary>
+    /// <remarks>
+    /// A string number belongs to a note and nothing else, so one standing alone in the
+    /// sequence was silently dropped — and a dropped <c>\2</c> does not look dropped: the
+    /// tab prints the string the automatic chooser picked, which is a real fret number on
+    /// a real string and simply not the one that was written. That is how `g')\2` shipped
+    /// as an open first string where LilyPond puts the fifth fret of the second (measured,
+    /// 2026-08-16). The ordering itself is fixed in <see cref="IsPostEventStart"/>; this is
+    /// the net under it, for whatever shape slips past next.
+    /// <para>
+    /// ⚠️ It RETURNS the token, like <see cref="ReportUnclaimedDot"/> and for the same
+    /// reason: dropping it would shorten every following node's position and break the
+    /// round trip.
+    /// </para>
+    /// </remarks>
+    private GreenNode ReportStrayStringNumber()
+    {
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length);
+        _diagnostics.Error(span, DiagnosticCodes.StrayStringNumber,
+            $"'{Current.Text}' belongs to a note. A string number is written on the note it "
+            + "plays - g'\\2 - and may follow that note's slur, tie or beam marks (g'(\\2, "
+            + "g')\\2). Standing on its own it plays nothing, and the tab would print the "
+            + "string the chooser picked instead.");
         return Advance();
     }
 
@@ -370,9 +403,8 @@ internal sealed partial class Parser
 
     /// <summary>
     /// True when the upcoming run of post-event markers (<c>( ) ~ [ ]</c>) is
-    /// followed by an <c>@</c>-articulation that must attach to the current
-    /// note. A bare marker run (no trailing <c>@</c>) takes the normal
-    /// sequence-item path untouched.
+    /// followed by a post-event that must attach to the current note. A bare
+    /// marker run takes the normal sequence-item path untouched.
     /// </summary>
     private bool PendingMarkerRunHasArticulation()
     {
@@ -381,8 +413,30 @@ internal sealed partial class Parser
         int k = 1;
         while (IsPostEventMarkerKind(Peek(k).Kind))
             k++;
-        return Peek(k).Kind == SyntaxKind.At;
+        return IsPostEventStart(Peek(k).Kind);
     }
+
+    /// <summary>
+    /// The tokens <see cref="ParseArticulations"/> takes as a post-event on the note
+    /// it follows: an <c>@</c> annotation and a tab string number.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS HAS TO NAME EVERY SHAPE ParseArticulations CONSUMES, and it did not.
+    /// It asked only about <c>@</c>, so `g'\2` written after a slur close — `g')\2`,
+    /// which is how LilyPond's own `g'\rest`-style ordering reads and what a writer
+    /// naturally types — left the marker run on the sequence path, ParseArticulations
+    /// never ran again, and the string number reached ParseMusicItem as a stray and
+    /// was dropped WITHOUT A WORD. On a bass tab that is the difference between the
+    /// second string at the fifth fret and the first string open: the reader sees a
+    /// fret number that is playable, correct-looking and not what was written.
+    /// (Measured on LilyPond 2.26.0: `g'\2` there is 5 on the second string.)
+    /// The stray is now also reported — see <see cref="ReportStrayStringNumber"/> —
+    /// so the next shape that slips past this predicate says so instead of vanishing.
+    /// LILYPOND-REF: lily/parser.yy post_events — the list is unordered, so a string
+    /// number after a slur close is the same event as one before it.
+    /// </remarks>
+    private static bool IsPostEventStart(SyntaxKind kind) =>
+        kind is SyntaxKind.At or SyntaxKind.StringNumber;
 
     private static bool IsPostEventMarkerKind(SyntaxKind kind) => kind
         is SyntaxKind.OpenParen or SyntaxKind.CloseParen

@@ -349,6 +349,32 @@ public static class DiagnosticCodes
     /// no longer taken from a brace or from end-of-file.</summary>
     public const string PartPropertyMissingValue = "LYS0026";
 
+    /// <summary>Parser error: a <c>\N</c> tab string number standing in the music sequence
+    /// instead of on a note.</summary>
+    /// <remarks>
+    /// <para>
+    /// A string number is a post-event: it names the string the note before it is played
+    /// on. One that reaches the sequence belongs to nothing, and the music-item loop used
+    /// to drop it — which on a tab staff is the worst kind of silence, because the page
+    /// still shows a fret. The automatic chooser simply answers instead, and its answer is
+    /// a real fret on a real string, so nothing looks wrong: <c>c( g')\2</c> printed the
+    /// first string open where LilyPond prints the fifth fret of the second (measured on
+    /// 2.26.0, 2026-08-16, on the twin of the reader's own file).
+    /// </para>
+    /// <para>
+    /// ⚠️ That spelling is no longer a stray — a post-event may follow the note's slur, tie
+    /// and beam marks, which is what LilyPond's unordered <c>post_events</c> means and what
+    /// <c>Parser.IsPostEventStart</c> now says. This code is the net UNDER that fix: it
+    /// catches a string number written where no note precedes it at all, and any shape that
+    /// slips past the ordering rule next time.
+    /// </para>
+    /// <para>
+    /// ⚠️ The token is KEPT in the tree (like <see cref="UnclaimedDot"/>): dropping it would
+    /// move every following node one character early and break the round trip.
+    /// </para>
+    /// </remarks>
+    public const string StrayStringNumber = "LYS0027";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

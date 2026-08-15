@@ -16,6 +16,7 @@
 
 using System.Globalization;
 using System.Text.RegularExpressions;
+using LilySharp.Core.Syntax;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -71,5 +72,82 @@ public class TabStringNumberEntryTests
         double row13 = digits.Where(d => d.Text == "13").Select(d => d.Y).Distinct().Single();
         double row7 = digits.Where(d => d.Text == "7").Select(d => d.Y).Distinct().Single();
         Assert.Equal(1.5, row7 - row13, 2);
+    }
+
+    /// <summary>
+    /// A string number may follow the note's slur, tie and beam marks — <c>g')\2</c> is
+    /// the same event as <c>g'\2)</c>, because LilyPond's post-events are an unordered
+    /// list. Both spellings must fret the note on the string that was written.
+    /// LILYPOND-REF: lily/parser.yy post_events.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ONE WRITTEN AFTER THE PAREN USED TO BE DROPPED IN SILENCE, and on a tab
+    /// staff that is the worst place for silence: the page still prints a fret, because
+    /// the automatic chooser answers instead, and its answer is a real fret on a real
+    /// string. In the book this came from (a bass, `c( g')\2`), the reader saw an OPEN
+    /// FIRST STRING where LilyPond prints the fifth fret of the second — measured on
+    /// 2.26.0 through the twin of that book, 2026-08-16.
+    /// <para>The two spellings are compared to each other rather than to one pinned
+    /// row: what the fix is about is that the ORDER stops mattering. The fret text is
+    /// pinned as well, since an ignored string number changes it (5 → 0) and that is
+    /// what a reader would see.</para>
+    /// </remarks>
+    [Theory]
+    [InlineData("c8 c c c( g'\\2) g g4")]   // string number BEFORE the slur close
+    [InlineData("c8 c c c( g')\\2 g g4")]   // …and after it — the reported spelling
+    public void AStringNumberAfterASlurClose_StillPlacesTheNote(string music)
+    {
+        var svg = LiveRender.SvgFromRenderSpec($$"""
+            part melody {
+              instrument bass
+              section A { {{music}} }
+            }
+            form main { A }
+            score main { tab melody }
+            """);
+
+        var digits = new List<(double X, double Y, string Text)>();
+        foreach (Match m in Regex.Matches(svg,
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(\\d+)</text>"))
+            digits.Add((
+                double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
+                double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
+                m.Groups[3].Value));
+
+        Assert.Equal(7, digits.Count);
+        var ordered = digits.OrderBy(d => d.X).ToList();
+        var g = ordered[4];                                 // the note that carries \2
+        Assert.Equal("5", g.Text);                          // 5th fret, not the open string
+        // …one tab space ABOVE the C's row: those are on the A string (3), this is on
+        // the D string (2), which is what \2 asked for.
+        double cRow = ordered.Take(4).Select(d => d.Y).Distinct().Single();
+        Assert.Equal(1.5, cRow - g.Y, 2);
+    }
+
+    /// <summary>
+    /// A <c>\N</c> that belongs to no note is refused rather than dropped: on a tab staff
+    /// a dropped string number is invisible, because the chooser prints a fret anyway.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ It has to be written where NO note precedes it. Whitespace does not end a note's
+    /// post-events — <c>c8 \2</c> is the string number of that <c>c8</c>, exactly as in
+    /// LilyPond — so only a leading one is a stray.
+    /// </remarks>
+    [Fact]
+    public void AStringNumberOnItsOwn_IsReported()
+    {
+        var tree = SyntaxTree.Parse("""
+            part melody {
+              instrument bass
+              section A { \2 c8 c c c }
+            }
+            form main { A }
+            score main { tab melody }
+            """);
+
+        var error = Assert.Single(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.StrayStringNumber);
+        Assert.Equal(DiagnosticSeverity.Error, error.Severity);
+        Assert.Contains("belongs to a note", error.Message);
     }
 }
