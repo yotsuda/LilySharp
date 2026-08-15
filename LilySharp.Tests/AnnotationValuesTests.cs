@@ -170,6 +170,54 @@ public class AnnotationValuesTests
         => Assert.Equal(isBracket, AnnotationValues.IsArpeggioBracket(Mark(music)));
 
     /// <summary>
+    /// ★ The family the argument node was shaped for. The spec is a POSITION STRING,
+    /// one character per string, so its leading zero is the sixth string — it is read
+    /// from the argument's text, never from the <c>Int(32010)</c> its value would be.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@frame(032010) |", "032010")]
+    [InlineData("c4@frame(x32010) |", "x32010")]
+    [InlineData("c4@frame(X32010) |", "x32010")]
+    [InlineData("c4@frame(xx0232) |", "xx0232")]
+    public void AFrameArgument_IsItsPositionString(string music, string spec)
+        => Assert.Equal(spec, AnnotationValues.Frame(Mark(music)));
+
+    [Theory]
+    [InlineData("c4@frame(032) |")]          // too few strings
+    [InlineData("c4@frame(032010789) |")]    // too many
+    [InlineData("c4@frame(zzzz) |")]         // not fret / open / muted
+    public void SomethingElse_IsNoFrame(string music)
+        => Assert.Null(AnnotationValues.Frame(Mark(music)));
+
+    /// <summary>
+    /// ★ The declared behaviour change, the same shape as the fingering one. The
+    /// MusicXML exporter had no gate at all, so a spec Lily# refuses to draw was
+    /// written into the chord diagram anyway. The control is the valid spec beside it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ TWO things this probe had to be told, both found by the control failing
+    /// rather than by reading the code: the chord symbol is not decoration (MusicXML's
+    /// &lt;frame&gt; is a &lt;harmony&gt; CHILD, so with no chord symbol the spec
+    /// reaches no element at all), and the spec is not written as a string (BuildFrame
+    /// decomposes it into &lt;frame-note&gt; children, so "032010" never appears).
+    /// Asserting on the element is the only honest form.
+    /// </remarks>
+    [Fact]
+    public void AFrameSpecLilySharpRefuses_NoLongerReachesTheXml()
+    {
+        Assert.DoesNotContain("<frame>", Xml("c4@chord(c)@frame(zzzz) |"));
+        Assert.Contains("<frame>", Xml("c4@chord(c)@frame(032010) |"));
+    }
+
+    private static string Xml(string music) =>
+        new LilySharp.Core.MusicXml.MusicXmlExporter()
+            .Export(SyntaxTree.Parse($$"""
+            part gtr { clef treble section S { {{music}} } }
+            form main { ~S }
+            score main { staff gtr }
+            """)).ToXml().ToString();
+
+    /// <summary>
     /// The validator asks the same reader, so "is this consumed?" and "what does it
     /// mean?" cannot drift apart again for these families (§9.3's tenth restatement).
     /// </summary>
@@ -181,6 +229,7 @@ public class AnnotationValuesTests
     [InlineData("c4@text(\"dolce\") |")]
     [InlineData("c4@feather(right) |")]
     [InlineData("c4@arpeggio(bracket) |")]
+    [InlineData("c4@frame(032010) |")]
     public void AValueFamilyAnnotation_IsNotWarnedAsUnknown(string music)
     {
         var tree = SyntaxTree.Parse("melody { " + music + " }");
@@ -197,6 +246,7 @@ public class AnnotationValuesTests
     [InlineData("c4@notehead(square) |")]
     [InlineData("c4@feather(sideways) |")]
     [InlineData("c4@arpeggio(arrow) |")]
+    [InlineData("c4@frame(zzzz) |")]
     public void AnArgumentNoConsumerAccepts_IsStillWarned(string music)
     {
         var tree = SyntaxTree.Parse("melody { " + music + " }");

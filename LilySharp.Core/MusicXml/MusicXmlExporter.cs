@@ -1980,11 +1980,13 @@ public sealed class MusicXmlExporter
     {
         // Pre-scan the frame spec so a chord symbol on the same note can
         // embed it, whichever order the marks were written in.
+        // ⚠️ This read used to take whatever followed "frame." with NO gate, so a spec
+        // Lily# refuses to draw still reached the XML. It asks the one reader now.
         _noteFrameSpec = null;
         foreach (var artic in articulations)
             if (artic is MusicMarkSyntax fm
-                && fm.MarkName.StartsWith("frame.", StringComparison.OrdinalIgnoreCase))
-                _noteFrameSpec = fm.MarkName[6..].ToLowerInvariant();
+                && Semantics.AnnotationValues.Frame(fm) is { } spec)
+                _noteFrameSpec = spec;
 
         foreach (var artic in articulations)
         {

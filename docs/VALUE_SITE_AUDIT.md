@@ -542,39 +542,53 @@ rejoin to the written text」**と、**自分で連結を取り消している�
 
 ### 9.5.2 移した家族と、残っている `MarkName` 読み手（第169 実測）
 
-**移した 7 家族**——読み手は全部 `Semantics.AnnotationValues` の 1 コピーになった:
+**移した 8 家族**——読み手は全部 `Semantics.AnnotationValues` の 1 コピーになった:
 `@finger(N)`／`@pluck(p|i|m|a)`／`@bend(half|full|N)`／`@notehead(style)`／`@text("…")`／
-`@feather(right|left|accel|rit)`／`@arpeggio(bracket)`。
+`@feather(right|left|accel|rit)`／`@arpeggio(bracket)`／**`@frame(032010)`**。
+
+★★ **`@frame` は引数ノードが*そのために*設計された家族**（§9.2）＝**`Text` から読み、
+`Value`（`Int(32010)`）からは決して読まない**。網 `AFrameArgument_IsItsPositionString`。
 
 ★ **§9.3 の「10 個目」＝`AnnotationNameValidator.IsKnownCompoundName` は
 この 7 家族ぶん畳めた**（⑶ の答）。**同時に `string` overload を消した**——
 **呼び手が 1 つも無かった**（監査の「他の 9 つの再実装」は、*呼ばれてすらいない*コピーを
 1 つ抱えていた）。**残る腕は frame / fig / chord ＋ `ParseMarkName` の点つき名前だけ。**
 
-⚠️ ★★ **振る舞いが 1 つ変わった（宣言済・網つき）**: `@finger("3")` は
-**collector が拒否し LilyPond exporter は受理して `-3` を書いていた**
-（＝**Lily# が描かないものを双子が言う**）。**exporter 側の comment 自身が
-「the SAME set … reads」と書いていた**ので、**collector の規則に揃えて comment を真にした**。
-**コーパス実害 0**（引数が引用符つきの本は 1 冊も無い）。第167 ⑸（tempo）と同じ型。
+⚠️ ★★ **振る舞いが 2 つ変わった（どちらも宣言済・網つき・コーパス実害 0）。同じ型**——
+**「コピーの 1 つが、自分が export している当のものより広い集合を受理していた」**:
+- `@finger("3")`: **collector が拒否し LilyPond exporter は受理して `-3` を書いていた**。
+  **exporter 側の comment 自身が「the SAME set … reads」と書いていた**ので、
+  **collector の規則に揃えて comment を真にした**。
+- `@frame(zzz)`: **MusicXML exporter には gate が 1 つも無かった**（`frame.` の後を
+  そのまま採用）。**Lily# は描かず validator は unknown と言うのに XML には出ていた。**
 
-**`MarkName` の code read は 18 → 13・7 ファイル → 5**（実測・数え方は
+⇒ 第167 ⑸（tempo の 2 つの読みの食い違い）と同じ型で、**3 例目・4 例目**。
+
+**`MarkName` の code read は 18 → 10・7 ファイル → 5**（実測・数え方は
 `Select-String '\.MarkName'` から `///` `//` `*` 始まりの行を除く）。**残りの内訳**:
 
 | 残っている読み | site | 何の家族か |
 |---|---|---|
-| `frame.` の slice | 3（MusicXmlExporter 2・collector 1） | **位置文字列**（§9.2） |
 | `FiguredBassItem.ParseFigures` | 1 | **部分言語**（§9.5.1） |
 | `== "chord"` ／ `ParseChordName` | 2 | **部分言語**（§9.3） |
 | `MusicMarkItem.ParseMarkName` 系／`ProcessDirectionName`／`mark.` ラベル | 6 | **点つきの「名前」であって引数ではない**（`@ds.al.fine`）。ただし **`@mark("A")` のラベルはここに混ざっている値** |
 | `WarnUnknown` の診断文 | 1 | 表示用（最後まで残る） |
 
+⇒ ★★ **`MarkName` に残っているのは「部分言語 2 つ」と「点つき名前」だけ**になった。
+
 ### 9.5.3 残っている作業（次便へ）
 
-1. **`@mark("A")` のラベル**——**点つき名前の家族と同じ `ParseMarkName` に絡んでいる**ので、
+~~2. `@frame`~~ — **第169第5便で移した**（上の 8 家族目）。
+
+1. ⚠️⚠️ **`@fig` と `@chord`＝ユーザー決定が要る**（§9.5.1）。**小さなパーサを書く**＝
+   **受理される綴りが変わりうる**ので、**無断で着手しないこと**（§5 の家訓）。
+   ★ ただし **`@chord` は半分ただ**——`Arguments[0].Text` が既に `"c:m7"` なので、
+   **§9.3 の 3 往復のうち「点で連結して split+join で戻す」2 ホップは、
+   受理する綴りを 1 文字も変えずに消せる**（`ChordStructure.TryParseChordEntry` の
+   入力が同じ文字列になるかを**先に測ること**）。`@fig` にはこの逃げ道が無い。
+2. **`@mark("A")` のラベル**——**点つき名前の家族と同じ `ParseMarkName` に絡んでいる**ので、
    移すならそこを割ってから。**値としては `@text` と同型**（文字列 1 個）。
-2. **`@frame`** — 字が意味。**引数ノードは既にそれを保持している**（`Text`）ので、
-   移すのは機械的。⚠️ **書く本は 0 冊なので網が唯一の番人**（§9.2）。
-3. **`@fig` と `@chord`** — §9.5.1 の部分言語。**小さなパーサを書く便**。
-   `@chord` は `Arguments[0].Text` が既に `"c:m7"` なので**3 往復のうち 2 つは無料で消える**。
-4. **`MarkName` 自体をいつ消すか**——上の 3 つが済むと残るのは点つき名前の家族だけなので、
+   ⚠️ **この島（`ParseMarkName` ＝点つき名前の分配器）は一度も測っていない。**
+   **満額の便で「読み手を全部数える」ところから。**
+3. **`MarkName` 自体をいつ消すか**——上の 2 つが済むと残るのは点つき名前の家族だけなので、
    **そのとき `MarkName` は「点つき*名前*を綴る」1 用途に狭まる**。名前もそう変えること。

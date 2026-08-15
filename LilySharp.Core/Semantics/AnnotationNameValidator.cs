@@ -217,7 +217,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Notehead(mark) is not null
             || AnnotationValues.IsTextAnnotation(mark)
             || AnnotationValues.Feather(mark) != 0
-            || AnnotationValues.IsArpeggioBracket(mark))
+            || AnnotationValues.IsArpeggioBracket(mark)
+            || AnnotationValues.Frame(mark) is not null)
             return true;
 
         var name = mark.MarkName;
@@ -225,10 +226,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             return true;
 
         var lower = name.ToLowerInvariant();
-        if (lower.StartsWith("frame.", StringComparison.Ordinal)
-            && lower.Length is >= 10 and <= 14
-            && lower.AsSpan(6).ToString().All(ch => ch is 'x' or 'o' or (>= '0' and <= '9')))
-            return true;
         if (FiguredBassItem.ParseFigures(name) != null)
             return true;
         if (ChordNameItem.ParseChordName(name) != null)

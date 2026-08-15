@@ -172,6 +172,37 @@ public static class AnnotationValues
         => Named(mark, "arpeggio")
            && string.Equals(Sole(mark)?.Text, "bracket", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// The fret-diagram position string of <c>@frame(032010)</c> in lower case, or null.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ★ This is the family the argument node was SHAPED for (VALUE_SITE_AUDIT §9.2).
+    /// The spec is a POSITION STRING — one character per string, low to high, a digit for
+    /// the fret, <c>o</c> for open, <c>x</c> for muted — so <c>032010</c> is six strings
+    /// beginning with an open sixth. It is read from <see cref="MarkArgument.Text"/> and
+    /// never from its <see cref="MarkArgument.Value"/>, which is <c>Int(32010)</c> and has
+    /// dropped the leading zero, i.e. turned a six-string shape into a five-string one.
+    /// The net that states this is <c>MarkArgumentTests.AFretPositionArgument_…</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>A behaviour change, declared</b> — the same shape as <see cref="Finger"/>'s.
+    /// The MusicXML exporter had NO gate: it took whatever followed "frame." and wrote it
+    /// into the chord diagram, so <c>@frame(zzz)</c> reached the XML while Lily# drew
+    /// nothing and the validator called it unknown. Three copies, one of them accepting a
+    /// strictly larger set than the thing it was exporting. One reader, so one answer.
+    /// No book writes <c>@frame(</c> at all (measured over the 80-book corpus and 219
+    /// fixtures), so the nets here are the only guard this family has ever had.
+    /// </para>
+    /// LILYPOND-REF: MusicXML &lt;frame&gt;; LilyPond's <c>\fret-diagram</c>.
+    /// </remarks>
+    public static string? Frame(MusicMarkSyntax mark)
+        => Named(mark, "frame") && Sole(mark)?.Text.ToLowerInvariant() is { } spec
+           && spec.Length is >= 4 and <= 8
+           && spec.All(ch => ch is 'x' or 'o' or (>= '0' and <= '9'))
+            ? spec
+            : null;
+
     private static bool Named(MusicMarkSyntax mark, string name)
         => string.Equals(mark.Name, name, StringComparison.OrdinalIgnoreCase);
 

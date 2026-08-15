@@ -476,7 +476,6 @@ public sealed partial class MeasureCollector
                 // @startTrillSpan / @stopTrillSpan, one word each, exactly as in
                 // LilyPond — the '@trillSpan(start)' spelling was a second way to
                 // say the same thing and was dropped.
-                var markName = markSyntax.MarkName.ToLowerInvariant();
                 if (Semantics.AnnotationValues.Pluck(markSyntax) is { } pluckLetter)
                 {
                     // p-i-m-a right-hand fingering, printed BELOW the note.
@@ -485,17 +484,13 @@ public sealed partial class MeasureCollector
                         markSyntax.Position, _currentStaffIndex)
                     { PluckLetter = pluckLetter, VoiceIndex = _currentVoiceIndex });
                 }
-                else if (markName.StartsWith("frame."))
+                else if (Semantics.AnnotationValues.Frame(markSyntax) is { } spec)
                 {
                     // @frame(x32010) — chord diagram above the note.
-                    // LILYPOND-REF: MusicXML <frame>; LP \fret-diagram.
-                    var spec = markName[6..];
-                    if (spec.Length is >= 4 and <= 8
-                        && spec.All(ch => ch is 'x' or 'o' or (>= '0' and <= '9')))
-                        _articulations.Add(new ArticulationItem(
-                            ArticulationType.FretFrame, measureIndex, itemIndex, true,
-                            markSyntax.Position, _currentStaffIndex)
-                        { FrameSpec = spec, VoiceIndex = _currentVoiceIndex });
+                    _articulations.Add(new ArticulationItem(
+                        ArticulationType.FretFrame, measureIndex, itemIndex, true,
+                        markSyntax.Position, _currentStaffIndex)
+                    { FrameSpec = spec, VoiceIndex = _currentVoiceIndex });
                 }
                 else if (Semantics.AnnotationValues.Bend(markSyntax) is { } semitones)
                 {
