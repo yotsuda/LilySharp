@@ -1776,6 +1776,17 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   （`Test-Path` と `Get-ChildItem -Recurse -Filter` で足りる）。
   ⚠️ **そして perf の本は勘で作り直さない**——組成を外すと数が静かに無意味になる
   （第135 の漂うオクターブ＝3 セッション分の誤誘導）。**再構成は生成器を書く島。**
+  ★★ **2026-08-15・第177 追記＝この 2 例目は「本が無い」ではなく「push していない」だった。**
+  移設先 `audit\lpreg` を作った commit が**ローカルに 1 つ座ったまま**で、第176 の機械には
+  届いていなかった（origin のその時点の `audit/lpreg` は **0 ファイル**＝実測）。push した今は
+  **`audit\lpreg\perf-*.lys` 54 冊**が clone に来る（ベンチが名指す 10 冊は**全部在る**＝実測）。
+  ⇒ **宛先も直した**: `PreviewUpdateBench` / `EditKeystrokeBench` / `CollectResumeTests` /
+  `CollectEditResumeTests` の 4 箇所を、絶対 `C:\…\scratch\lpreg` から
+  **`FindRepoRoot()` ＋ `audit\lpreg`** へ（機械のドライブ名に依存しない形）。
+  ⚠️⚠️ ★ **resume テスト 2 本は「在れば測る」の skip が*どの機械でも*発火していた＝空手形**
+  （直したら初めて本当に走った・10 本緑 32 秒）。⇒ **`File.Exists` で skip する検査は、
+  「skip しなかった回数」を数えないと在ることの証明にならない。**
+  ⚠️ **組成が正しいかは別問題**——上の「勘で作り直さない」はそのまま生きている。
   ⚠️ **冊数は 82 ではなく 80**（§5.1 の本文は第171 時点で stale。数え直しは
   `Get-ChildItem audit\lp-regression\lys -Filter *.lys`）。
 - ★ **TFM は net10.0**（全 5 projects）、`global.json` は SDK **10.0.203** +

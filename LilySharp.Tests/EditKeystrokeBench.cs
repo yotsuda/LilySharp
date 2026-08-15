@@ -65,7 +65,9 @@ public class EditKeystrokeBench
         if (string.IsNullOrEmpty(outPath))
             return;
 
-        var path = Path.Combine(@"C:\MyProj\LilySharp\scratch\lpreg", book);
+        // ⚠️ audit\lpreg, through the repo root — see the note in PreviewUpdateBench: the old
+        // absolute scratch\lpreg address made every book MISSING on a fresh clone.
+        var path = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "lpreg", book);
         if (!File.Exists(path))
         {
             File.AppendAllText(outPath, $"{book}\tMISSING\n");

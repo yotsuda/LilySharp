@@ -133,7 +133,11 @@ public class PreviewUpdateBench
         if (string.IsNullOrEmpty(outPath))
             return;
 
-        var path = Path.Combine(@"C:\MyProj\LilySharp\scratch\lpreg", book);
+        // ⚠️ The books live in audit\lpreg, IN the repository. They used to be addressed as
+        // an absolute C:\…\scratch\lpreg, and scratch\ is gitignored — so on the machine the
+        // work moved to, session 176 spent a user-granted quiet window discovering that every
+        // book reported MISSING. Address them through the repo root, never through a drive.
+        var path = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "lpreg", book);
         if (!File.Exists(path))
         {
             File.AppendAllText(outPath, $"{book}\tMISSING\n");

@@ -90,9 +90,11 @@ public class CollectResumeTests
     [Fact]
     public void ResumedCollect_MatchesFullCollect_OnPerfBooks()
     {
-        // The books the memo is being built for (scratch/lpreg — skip when absent,
+        // The books the memo is being built for (audit/lpreg — skip when absent,
         // e.g. on a checkout without the perf corpus).
-        var dir = Path.Combine(FindRepoRoot(), "scratch", "lpreg");
+        // ⚠️ This used to read scratch/lpreg, which is gitignored: the skip fired EVERYWHERE,
+        // so the assertions below never ran anywhere. Moved with the books (session 177).
+        var dir = Path.Combine(FindRepoRoot(), "audit", "lpreg");
         var failures = new List<string>();
         int resumes = 0;
         foreach (var name in new[] { "perf-plain1k.lys", "perf-fingbeam1k.lys", "perf-v2bow1k.lys" })

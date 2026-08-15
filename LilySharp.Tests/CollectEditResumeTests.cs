@@ -111,7 +111,9 @@ public class CollectEditResumeTests
         // ⚠️ This book used to be excluded here under the claim "nothing is
         // adoptable" — measured false for the splice half in session 149, which
         // caught the splice firing on every keystroke with zero observers.
-        var dir = Path.Combine(CollectResumeTests.FindRepoRoot(), "scratch", "lpreg");
+        // ⚠️ audit/lpreg, not scratch/lpreg: the old address is gitignored, so the
+        // File.Exists skip below fired on every machine (session 177).
+        var dir = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "lpreg");
         var books = new (string Book, string Find, string Replace, bool ExpectPrefix)[]
         {
             ("perf-plain1k.lys", "g8", "a8", true),
