@@ -328,16 +328,9 @@ public sealed partial class MeasureCollector
             return 0;
 
         foreach (var child in note.Articulations)
-        {
-            if (child is MusicMarkSyntax markSyntax)
-            {
-                var name = markSyntax.MarkName.ToLowerInvariant();
-                if (name == "feather.right" || name == "feather.accel")
-                    return 1;
-                if (name == "feather.left" || name == "feather.rit")
-                    return -1;
-            }
-        }
+            if (child is MusicMarkSyntax markSyntax
+                && Semantics.AnnotationValues.Feather(markSyntax) is not 0 and var direction)
+                return direction;
         return 0;
     }
 

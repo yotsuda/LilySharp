@@ -215,7 +215,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Pluck(mark) is not null
             || AnnotationValues.Bend(mark) is not null
             || AnnotationValues.Notehead(mark) is not null
-            || AnnotationValues.IsTextAnnotation(mark))
+            || AnnotationValues.IsTextAnnotation(mark)
+            || AnnotationValues.Feather(mark) != 0
+            || AnnotationValues.IsArpeggioBracket(mark))
             return true;
 
         var name = mark.MarkName;
@@ -223,13 +225,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             return true;
 
         var lower = name.ToLowerInvariant();
-        if (lower is "feather.right" or "feather.left" or "feather.accel" or "feather.rit")
-            return true;
         if (lower.StartsWith("frame.", StringComparison.Ordinal)
             && lower.Length is >= 10 and <= 14
             && lower.AsSpan(6).ToString().All(ch => ch is 'x' or 'o' or (>= '0' and <= '9')))
-            return true;
-        if (lower == "arpeggio.bracket")
             return true;
         if (FiguredBassItem.ParseFigures(name) != null)
             return true;

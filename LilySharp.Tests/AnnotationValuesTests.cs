@@ -151,15 +151,36 @@ public class AnnotationValuesTests
         Assert.Null(Mark("c4@text(\"up\") |").ForcedAbove);
     }
 
+    [Theory]
+    [InlineData("c4@feather(right) |", 1)]
+    [InlineData("c4@feather(accel) |", 1)]
+    [InlineData("c4@feather(left) |", -1)]
+    [InlineData("c4@feather(rit) |", -1)]
+    [InlineData("c4@feather(sideways) |", 0)]
+    [InlineData("c4@finger(3) |", 0)]
+    public void AFeatherArgument_IsItsGrowDirection(string music, int direction)
+        => Assert.Equal(direction, AnnotationValues.Feather(Mark(music)));
+
+    [Theory]
+    [InlineData("c4@arpeggio(bracket) |", true)]
+    [InlineData("c4@arpeggio(BRACKET) |", true)]
+    [InlineData("c4@arpeggio(arrow) |", false)]
+    [InlineData("c4@notehead(x) |", false)]
+    public void AnArpeggioBracket_IsRecognisedByItsArgument(string music, bool isBracket)
+        => Assert.Equal(isBracket, AnnotationValues.IsArpeggioBracket(Mark(music)));
+
     /// <summary>
     /// The validator asks the same reader, so "is this consumed?" and "what does it
-    /// mean?" cannot drift apart again for these four (§9.3's tenth restatement).
+    /// mean?" cannot drift apart again for these families (§9.3's tenth restatement).
     /// </summary>
     [Theory]
     [InlineData("c4@finger(3) |")]
     [InlineData("c4@pluck(a) |")]
     [InlineData("c4@bend(half) |")]
     [InlineData("c4@notehead(diamond) |")]
+    [InlineData("c4@text(\"dolce\") |")]
+    [InlineData("c4@feather(right) |")]
+    [InlineData("c4@arpeggio(bracket) |")]
     public void AValueFamilyAnnotation_IsNotWarnedAsUnknown(string music)
     {
         var tree = SyntaxTree.Parse("melody { " + music + " }");
@@ -174,6 +195,8 @@ public class AnnotationValuesTests
     [InlineData("c4@pluck(z) |")]
     [InlineData("c4@bend(13) |")]
     [InlineData("c4@notehead(square) |")]
+    [InlineData("c4@feather(sideways) |")]
+    [InlineData("c4@arpeggio(arrow) |")]
     public void AnArgumentNoConsumerAccepts_IsStillWarned(string music)
     {
         var tree = SyntaxTree.Parse("melody { " + music + " }");

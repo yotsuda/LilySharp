@@ -1816,9 +1816,7 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private static string? NonArpeggiato(MusicMarkSyntax mk)
-        => mk.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase)
-            ? "\\nonArpeggiato"
-            : null;
+        => Semantics.AnnotationValues.IsArpeggioBracket(mk) ? "\\nonArpeggiato" : null;
 
     /// <summary>
     /// <c>@finger(2)</c> as LilyPond's fingering post-event <c>-2</c>, or null for any other

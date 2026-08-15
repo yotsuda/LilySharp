@@ -137,6 +137,41 @@ public static class AnnotationValues
     public static bool IsTextAnnotation(MusicMarkSyntax mark)
         => Named(mark, "text") && mark.Arguments.Length > 0;
 
+    /// <summary>
+    /// The beam's grow direction from <c>@feather(right|accel)</c> (+1, accelerando) or
+    /// <c>@feather(left|rit)</c> (−1, ritardando); 0 for anything else.
+    /// </summary>
+    /// <remarks>
+    /// The LilyPond addresses for the grow-direction property — where it is declared and
+    /// where it reaches stem length — are on <c>MeasureCollector.GetFeatherDirection</c>,
+    /// which calls this. They are NOT repeated here: a citation copied to a second place
+    /// is one more thing to keep true, and this one was already wrong once in the copying
+    /// (a draft of this remark put <c>set_stem_lengths</c> at beam.cc:1597, which is the
+    /// property list in <c>ADD_INTERFACE (Beam, …)</c>, not a function).
+    /// </remarks>
+    public static int Feather(MusicMarkSyntax mark)
+        => Named(mark, "feather")
+            ? Sole(mark)?.Text.ToLowerInvariant() switch
+            {
+                "right" or "accel" => 1,
+                "left" or "rit" => -1,
+                _ => 0,
+            }
+            : 0;
+
+    /// <summary>
+    /// Whether this is <c>@arpeggio(bracket)</c> — the non-arpeggiated chord bracket.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT LilyPond's <c>\arpeggioBracket</c>, which is a pair of overrides; the twin
+    /// writes <c>\nonArpeggiato</c>, whose engraver makes the ChordBracket grob this
+    /// means. The full argument, with its addresses, is on
+    /// <c>LilyPondExporter.NonArpeggiato</c>; they are not repeated here.
+    /// </remarks>
+    public static bool IsArpeggioBracket(MusicMarkSyntax mark)
+        => Named(mark, "arpeggio")
+           && string.Equals(Sole(mark)?.Text, "bracket", StringComparison.OrdinalIgnoreCase);
+
     private static bool Named(MusicMarkSyntax mark, string name)
         => string.Equals(mark.Name, name, StringComparison.OrdinalIgnoreCase);
 

@@ -1756,7 +1756,7 @@ public sealed class MusicXmlExporter
                     && na.NameToken.Text.Equals("arpeggio", StringComparison.OrdinalIgnoreCase));
                 bool hasBracket = chord.Articulations.Any(a2 =>
                     a2 is MusicMarkSyntax mm
-                    && mm.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
+                    && Semantics.AnnotationValues.IsArpeggioBracket(mm));
                 if (hasArp)
                     _chordArpeggio = "arpeggiate";
                 else if (hasBracket)

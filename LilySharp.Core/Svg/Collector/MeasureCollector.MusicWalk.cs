@@ -739,7 +739,7 @@ public sealed partial class MeasureCollector
                     // no room reserved for it.
                     bool arpBracket = chord.Articulations.Any(art =>
                         art is MusicMarkSyntax { } am
-                        && am.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
+                        && Semantics.AnnotationValues.IsArpeggioBracket(am));
                     bool isCue = _cueDepth > 0;
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
                     if (_tremoloPairShape is { } tpc)
@@ -801,7 +801,7 @@ public sealed partial class MeasureCollector
                     bool hasArpeggio = HasArpeggioArticulation(rep);
                     bool arpBracket = rep.Articulations.Any(art =>
                         art is MusicMarkSyntax { } am
-                        && am.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
+                        && Semantics.AnnotationValues.IsArpeggioBracket(am));
                     bool isCue = _cueDepth > 0;
                     var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
                     if (repItem is not ChordItem chordCopy)
