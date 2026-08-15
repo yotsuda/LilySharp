@@ -1927,19 +1927,36 @@ public sealed class LilyPondExporter
     private static string EmitDuration(DurationSyntax? d)
         => d == null ? "" : d.NumberToken.Text + new string('.', d.DotCount);
 
-    private string EmitBarline(BarlineSyntax b) => b.BarToken.Kind switch
+    private string EmitBarline(BarlineSyntax b)
     {
-        SyntaxKind.Bar => "|",
-        SyntaxKind.DoubleBar => "\\bar \"||\"",
-        SyntaxKind.FinalBar => "\\bar \"|.\"",
-        SyntaxKind.DashedBar => "\\bar \"!\"",
-        // Repeat barlines are consumed by EmitInlineRepeat; a stray one is a
-        // best-effort fallback.
-        SyntaxKind.RepeatStartBar => "\\bar \".|:\"",
-        SyntaxKind.RepeatEndBar => "\\bar \":|.\"",
-        SyntaxKind.RepeatBothBar => "\\bar \":|.|:\"",
-        _ => "|",
-    };
+        // A ':|' that EmitInlineRepeat did not consume is a ONE-SIDED end-repeat, and in
+        // Lily# that means "repeat from the beginning of the piece" — which `\bar ":|."`
+        // does NOT say. LilyPond's `\bar` is a glyph; only `\repeat volta` repeats. So the
+        // twin draws the right barline and plays the music once, and that is a twin that
+        // COMPILES AND IS DIFFERENT MUSIC — the defect class this exporter's warning channel
+        // exists for (see the remark on Fingering_BecomesAnAttachedPostEvent). Say so rather
+        // than let it pass: wrapping the whole preceding stream in `\repeat volta 2 { … }`
+        // is the fix, and it is a restructure of the emitted file, not a token swap.
+        if (b.BarToken.Kind == SyntaxKind.RepeatEndBar)
+            _warnings.Add(
+                "a one-sided ':|' repeats from the beginning of the piece in Lily#, but "
+                + "LilyPond's \\bar \":|.\" only DRAWS the barline — the twin engraves the "
+                + "same page and plays the music once");
+
+        return b.BarToken.Kind switch
+        {
+            SyntaxKind.Bar => "|",
+            SyntaxKind.DoubleBar => "\\bar \"||\"",
+            SyntaxKind.FinalBar => "\\bar \"|.\"",
+            SyntaxKind.DashedBar => "\\bar \"!\"",
+            // Repeat barlines are consumed by EmitInlineRepeat; a stray one is a
+            // best-effort fallback.
+            SyntaxKind.RepeatStartBar => "\\bar \".|:\"",
+            SyntaxKind.RepeatEndBar => "\\bar \":|.\"",
+            SyntaxKind.RepeatBothBar => "\\bar \":|.|:\"",
+            _ => "|",
+        };
+    }
 
     /// <summary>
     /// A key signature — and the running key a scale-degree chord stacks in, advanced here

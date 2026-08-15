@@ -82,14 +82,26 @@ public sealed class FormRepeatBarlineTests
 
     private static string Src(string form) => TwoSections + form + "\nscore main { staff m }";
 
-    /// <summary>The twin writes the barline instead of losing it.</summary>
+    /// <summary>The twin writes the barline instead of losing it — and says what it cannot
+    /// carry.</summary>
+    /// <remarks>
+    /// LilyPond's <c>\bar ":|."</c> is a GLYPH; only <c>\repeat volta</c> repeats. So the
+    /// twin engraves the same page and plays the music once, which is a twin that compiles
+    /// and is different music. The exporter's rule for anything it drops is to warn, so it
+    /// warns.
+    /// </remarks>
     [Fact]
-    public void AFormLevelRepeatEnd_ReachesTheTwin()
+    public void AFormLevelRepeatEnd_ReachesTheTwin_WhichSaysItCannotPlayIt()
     {
-        var with = new LilyPondExporter().Export(SyntaxTree.Parse(Src("form main { A B :| }")));
-        var without = new LilyPondExporter().Export(SyntaxTree.Parse(Src("form main { A B }")));
+        var exporter = new LilyPondExporter();
+        var with = exporter.Export(SyntaxTree.Parse(Src("form main { A B :| }")));
         Assert.Contains("\\bar \":|.\"", with);
+        Assert.Contains(exporter.Warnings, w => w.Contains("one-sided ':|'"));
+
+        var plain = new LilyPondExporter();
+        var without = plain.Export(SyntaxTree.Parse(Src("form main { A B }")));
         Assert.DoesNotContain("\\bar \":|.\"", without);
+        Assert.DoesNotContain(plain.Warnings, w => w.Contains("one-sided ':|'"));
     }
 
     /// <summary>
@@ -113,19 +125,69 @@ public sealed class FormRepeatBarlineTests
     }
 
     /// <summary>
-    /// ⚠️ MIDI does NOT yet play it. This states today's answer so that the便 which gives a
-    /// one-sided <c>:|</c> its meaning ("repeat from the beginning of the piece") has a
-    /// falsifier to move: the test that has to CHANGE is the proof the semantics landed.
-    /// Pinning it is the point — a silent walk and a walk that deliberately plays once are
-    /// indistinguishable until one of them is written down.
+    /// It is PLAYED, from the beginning of the piece.
+    /// </summary>
+    /// <remarks>
+    /// This test is the falsifier the previous便 planted as
+    /// <c>AFormLevelRepeatEnd_IsNotYetPlayed</c> — it asserted that MIDI ignored the bar,
+    /// so moving it is what proves the semantics landed rather than that a silent walk
+    /// stayed silent.
+    /// </remarks>
+    [Fact]
+    public void AFormLevelRepeatEnd_PlaysThePieceFromTheBeginning()
+    {
+        Assert.Equal(new[] { 60, 62 }, Pitches(Src("form main { A B }")));
+        Assert.Equal(new[] { 60, 62, 60, 62 }, Pitches(Src("form main { A B :| }")));
+    }
+
+    /// <summary>
+    /// It rewinds to the START of the piece, not to the previous section — so a repeat
+    /// after three sections replays all three.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Written as a THREE-section score on purpose. With two sections "from the
+    /// beginning" and "from the previous section boundary" happen to differ only in one
+    /// section, and with one section they agree outright — a case that cannot tell two
+    /// candidate rules apart is not measuring the rule.
+    /// </remarks>
+    [Fact]
+    public void ItRewindsToTheStartOfThePiece_NotToTheLastSection()
+    {
+        const string three =
+            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n";
+        Assert.Equal(new[] { 60, 62, 64 },
+            Pitches(three + "form main { A B C }\nscore main { staff m }"));
+        Assert.Equal(new[] { 60, 62, 64, 60, 62, 64 },
+            Pitches(three + "form main { A B C :| }\nscore main { staff m }"));
+    }
+
+    /// <summary>
+    /// The rewind happens WHERE THE BAR IS, not at the end of the form: a <c>:|</c> after
+    /// two of three sections replays those two and then plays the third.
     /// </summary>
     [Fact]
-    public void AFormLevelRepeatEnd_IsNotYetPlayed()
+    public void ItReplaysOnlyWhatComesBeforeTheBar()
     {
-        var with = Pitches(Src("form main { A B :| }"));
-        var without = Pitches(Src("form main { A B }"));
-        Assert.Equal(without, with);
-        Assert.Equal(new[] { 60, 62 }, with);
+        Assert.Equal(new[] { 60, 62, 60, 62, 64 },
+            Pitches(
+                "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
+                + "form main { A B :| C }\nscore main { staff m }"));
+    }
+
+    /// <summary>
+    /// One rewind per written <c>:|</c>. A second one-sided <c>:|</c> inside the stretch
+    /// being replayed must not rewind again — that does not terminate.
+    /// </summary>
+    [Fact]
+    public void TwoOneSidedEnds_RewindOnceEach_AndDoNotRunAway()
+    {
+        // A B | rewind(A B) | C | rewind(A B C)  — the second ':|' replays what is WRITTEN
+        // before it, not what was PLAYED before it, so the first rewind is not replayed a
+        // second time. Written-order is the reading that terminates.
+        var pitches = Pitches(
+            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
+            + "form main { A B :| C :| }\nscore main { staff m }");
+        Assert.Equal(new[] { 60, 62, /*rewind*/ 60, 62, /**/ 64, /*rewind*/ 60, 62, 64 }, pitches);
     }
 
     private static int[] Pitches(string src) =>
