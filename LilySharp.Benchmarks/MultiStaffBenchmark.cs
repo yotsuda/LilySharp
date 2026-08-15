@@ -27,7 +27,7 @@ namespace LilySharp.Benchmarks;
 /// Run: dotnet run -c Release -- --filter '*MultiStaff*'
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
+[SimpleJob(RuntimeMoniker.Net10_0)]
 public class MultiStaffBenchmark
 {
     private string _pianoSource = null!;

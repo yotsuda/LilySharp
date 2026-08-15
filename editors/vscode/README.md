@@ -41,7 +41,7 @@ None. The language server is **self-contained** — each platform's build bundle
 own .NET runtime, so nothing needs to be installed. Just install the extension and open
 a `.lys` file.
 
-(Building from source needs the .NET 9 SDK and Node.js 18+.)
+(Building from source needs the .NET 10 SDK and Node.js 18+.)
 
 ## Installation
 

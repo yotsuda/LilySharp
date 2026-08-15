@@ -48,7 +48,7 @@ namespace LilySharp.Benchmarks;
 /// Run: dotnet run -c Release -- --filter '*IncrementalEdit*'
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
+[SimpleJob(RuntimeMoniker.Net10_0)]
 public class IncrementalEditBenchmark
 {
     private const string Fixture = "showcase/grammar-tour";

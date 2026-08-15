@@ -1697,13 +1697,16 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   `audit/scripts/` へ出すかどうかを決めること（出すと「1 島 / 1 関心」の外の commit になる）。
   ⚠️ **冊数は 82 ではなく 80**（§5.1 の本文は第171 時点で stale。数え直しは
   `Get-ChildItem audit\lp-regression\lys -Filter *.lys`）。
-- ★ ⚠️ **`global.json` は SDK **9.0.308** をピン止めしている**。VS 2026 だけを入れた機械には
-  SDK 10 しか無く、**`dotnet build` は「A compatible .NET SDK was not found」で止まる**
-  （ランタイム 9 は別に入っているので、SDK さえ入れれば動く）。
-  ⇒ **SDK 9.0.308 を入れる**（`winget install --id Microsoft.DotNet.SDK.9 --version 9.0.308`）。
-  ⚠️ **`global.json` を rollForward に書き換えて回避しない**——▶ の打鍵の順位は全部
-  Release 実測の ms なので、**コンパイラ世代を変えると床が動いて順位を取り直すことになる**
-  （§5.3 の「regime を混ぜない」）。**net10 へ上げるなら TFM ごと専用の便で。**
+- ★ **TFM は net10.0**（全 5 projects）、`global.json` は SDK **10.0.203** +
+  `rollForward: latestFeature`。上の「net10 へ上げるなら TFM ごと専用の便で」を実行した便が
+  これ——SDK ピンだけを動かさず、**5 つの csproj・CI/release workflow・BenchmarkDotNet の
+  `RuntimeMoniker` を同じ commit で** net10 に揃えてある。
+  ⇒ 必要なのは **SDK 10.0.203 以上**（`winget install --id Microsoft.DotNet.SDK.10`）。
+  `rollForward: latestFeature` にしたので、10.0 の後続 feature band が入った機械でも
+  「A compatible .NET SDK was not found」で止まらない。
+  ⚠️ **▶ の打鍵の順位は net9 の Release 実測 ms**。**コンパイラ／ランタイム世代が変わったので
+  床は動いている**——順位を根拠に何かを決める前に **net10 で取り直すこと**
+  （§5.3 の「regime を混ぜない」）。混在した数字を並べない。
 - **dotnet の増分ビルドが腐る** → 前後比較では `--no-incremental` でビルドして
   `dotnet run --no-build`。なお `dotnet test` は `--no-incremental` を受け付けない
 - **LilyPond は Guile デッドロックする** → `cmd /c "... < NUL"` でデタッチ必須。
