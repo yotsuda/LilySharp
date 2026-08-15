@@ -31,8 +31,9 @@ namespace LilySharp.Core.Svg.Collector;
 /// Runs per voice on the collected measures BEFORE display-only transforms (the
 /// ottava transposer moves staff positions), comparing both staff position and
 /// sounding pitch so a same-position accidental change (<c>c~ cis</c>) is caught
-/// too. A tie start with nothing after it, and a tie into an invisible spacer
-/// (<c>s</c> — an absent parallel voice's padding), are left alone.
+/// too. A tie into an invisible spacer (<c>s</c> — an absent parallel voice's padding)
+/// is left alone; a tie with NOTHING after it is reported, because the renderer draws no
+/// tie for it either and the mark is simply lost.
 /// </remarks>
 internal static class TieTargetScanner
 {
@@ -50,15 +51,26 @@ internal static class TieTargetScanner
                 var next = NoteScan.FindNext(measures, mi, ii,
                     x => x is NoteItem or ChordItem or RestItem);
                 if (next is not { } n)
-                    continue; // dangling at the very end — nothing to compare
+                {
+                    // Nothing follows: the tie is the last thing in its voice. This used to
+                    // `continue` — "nothing to compare" — which was true of the COMPARISON
+                    // and false of the loss: TieDetector draws nothing, so the mark vanishes
+                    // in silence. MEASURED: `c4 d4 e4 f4~ |` engraves byte-for-byte as the
+                    // same bar with no tie at all, while `f4@laissezVibrer` draws the hanging
+                    // tie the writer probably meant. The span points at the TIED NOTE, there
+                    // being no following item to point at (the other two cases point at the
+                    // item that fails to receive the tie).
+                    sink.Add(new TieTargetWarning(item.SourcePosition, TieTargetProblem.NoTarget));
+                    continue;
+                }
                 if (n.Item is RestItem rest)
                 {
                     if (!rest.IsSpacer)
-                        sink.Add(new TieTargetWarning(rest.SourcePosition, IntoRest: true));
+                        sink.Add(new TieTargetWarning(rest.SourcePosition, TieTargetProblem.IntoRest));
                 }
                 else if (!AnyPitchMatches(item, n.Item))
                 {
-                    sink.Add(new TieTargetWarning(n.Item.SourcePosition, IntoRest: false));
+                    sink.Add(new TieTargetWarning(n.Item.SourcePosition, TieTargetProblem.PitchMismatch));
                 }
             }
         }

@@ -84,8 +84,25 @@ public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText
 /// </summary>
 public record TieTargetWarning(
     int SourcePosition,
-    bool IntoRest     // true = the tie runs into a rest; false = a pitch mismatch
+    TieTargetProblem Problem
 );
+
+/// <summary>
+/// Why a tie could not bind. Three states, not two booleans: a bool pair would have a
+/// fourth combination that cannot happen.
+/// </summary>
+public enum TieTargetProblem
+{
+    /// <summary>The following note/chord repeats none of the tied pitches.</summary>
+    PitchMismatch,
+    /// <summary>The following timed item is an audible rest.</summary>
+    IntoRest,
+    /// <summary>Nothing follows at all — the tie is the last thing in its voice, so the
+    /// renderer draws nothing. MEASURED: `c4 d4 e4 f4~ |` engraves byte-for-byte as the
+    /// same bar without the tie, while `f4@laissezVibrer` draws the hanging tie the
+    /// writer probably meant.</summary>
+    NoTarget,
+}
 
 /// <summary>
 /// A slur mark that pairs with nothing, so no slur is drawn: a <c>(</c> that is never
