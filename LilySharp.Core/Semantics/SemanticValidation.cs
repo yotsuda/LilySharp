@@ -74,6 +74,7 @@ public static class SemanticValidation
         new TieTargetValidator(),           // a tie whose next note is not the tied pitch
         new ChordRepetitionValidator(),     // a `q` with no chord before it to repeat
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
+        new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new EmptyScoreValidator(),          // a score block with no staff to engrave

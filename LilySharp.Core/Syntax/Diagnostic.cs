@@ -523,6 +523,15 @@ public static class DiagnosticCodes
     /// (LilyPond's Slur_engraver lives in the Voice context), so one left open when the
     /// voice ends is unpaired too.</summary>
     public const string UnpairedSlur = "LYS4010";
+
+    /// <summary>Music warning: a manual beam bracket that pairs with nothing — a <c>[</c>
+    /// never closed, or a <c>]</c> with none open. Unlike an unpaired slur, the score is not
+    /// left bare: BeamDetector discards the bracket and the notes fall back to AUTOMATIC
+    /// beaming, so the engraved grouping is simply not the written one. MEASURED on a bar
+    /// where the two differ (<c>c8[ d8 e8 f8 g8] a8 b8 c8</c> in 4/4 — five beamed, which
+    /// automatic beaming never produces): dropping either bracket makes the output
+    /// byte-identical to the same notes with no bracket at all.</summary>
+    public const string UnpairedBeam = "LYS4016";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

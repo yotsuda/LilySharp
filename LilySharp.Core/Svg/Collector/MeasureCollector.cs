@@ -102,6 +102,21 @@ public record UnpairedSlurWarning(
 );
 
 /// <summary>
+/// A manual beam bracket that pairs with nothing: a <c>[</c> never closed (including one
+/// left open when its voice ends — <see cref="BeamDetector"/> matches per voice) or a
+/// <c>]</c> read with none open. Unlike an unpaired slur, which loses its curve outright,
+/// an unpaired bracket loses only the GROUPING the writer asked for: the bracket is
+/// discarded and the notes fall back to automatic beaming. MEASURED — <c>c8[ d8 e8 f8 g8</c>
+/// engraves byte-for-byte as the same notes with no bracket at all, while the closed
+/// <c>c8[ d8 e8 f8 g8]</c> engraves a five-note beam that automatic beaming never produces.
+/// So the beam that appears is not the one that was written, and nothing said so.
+/// </summary>
+public record UnpairedBeamWarning(
+    int SourcePosition,
+    bool IsOpen       // true = an unclosed '['; false = a ']' with nothing open
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
@@ -933,6 +948,13 @@ public sealed partial class MeasureCollector
     /// <summary>Slur marks — a <c>(</c> never closed or a <c>)</c> with none open — that
     /// draw no slur. Populated as a side effect of Collect.</summary>
     public IReadOnlyList<UnpairedSlurWarning> UnpairedSlurWarnings => _unpairedSlurWarnings.ToList();
+    // Manual beam brackets that pair with nothing, so BeamDetector discards them and the
+    // notes fall back to automatic beaming.
+    // Scanned per finished voice by BeamPairingScanner; surfaced by BeamPairingValidator.
+    private readonly List<UnpairedBeamWarning> _unpairedBeamWarnings = new();
+    /// <summary>Manual beam brackets — a <c>[</c> never closed or a <c>]</c> with none
+    /// open — whose grouping is discarded. Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<UnpairedBeamWarning> UnpairedBeamWarnings => _unpairedBeamWarnings.ToList();
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names (inline c:m marks, chordnames {} streams, chords-name rows) —
@@ -1249,6 +1271,7 @@ public sealed partial class MeasureCollector
         // written staff positions; an 8va span must not fake a pitch change).
         TieTargetScanner.Scan(voice, _tieTargetWarnings);
         SlurPairingScanner.Scan(voice, _unpairedSlurWarnings);
+        BeamPairingScanner.Scan(voice, _unpairedBeamWarnings);
 
         // Ottava DISPLAY transposition: notes under an 8va draw an octave lower
         // (etc.) while sounding at their written pitch. Single-staff score, so
@@ -2205,6 +2228,7 @@ public sealed partial class MeasureCollector
         {
             TieTargetScanner.Scan(v, _tieTargetWarnings);
             SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+            BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
         }
 
         // Ottava DISPLAY transposition (single staff → staff 0). See OttavaTransposer.
@@ -2357,6 +2381,7 @@ public sealed partial class MeasureCollector
         {
             TieTargetScanner.Scan(v, _tieTargetWarnings);
             SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+            BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
         }
         return ResolveStaffColumns(voices.ToImmutable());
     }
@@ -2452,6 +2477,7 @@ public sealed partial class MeasureCollector
         _fingeringByPosition.Clear();
         _tieTargetWarnings.Clear();
         _unpairedSlurWarnings.Clear();
+        _unpairedBeamWarnings.Clear();
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
@@ -3456,7 +3482,8 @@ public sealed partial class MeasureCollector
         _voltaBrackets, _tupletBrackets, _arpeggios, _figuredBasses,
         _percentRepeats, _crossStaffItems, _grobOverrides, _grobReverts,
         _trillSpannerEvents, _pitchTrace, _navPlacementWarnings,
-        _tieTargetWarnings, _unpairedSlurWarnings, _chordNameCollector.ItemsList,
+        _tieTargetWarnings, _unpairedSlurWarnings, _unpairedBeamWarnings,
+        _chordNameCollector.ItemsList,
     };
 
     /// <summary>
