@@ -447,6 +447,9 @@ whole group).
 
 ```
 voice { c'2 d } { e2 f }
+```
+
+```
 voice sop { c'2 d } alt { e2 f }     // named — binds lyrics sop / lyrics alt
 ```
 

@@ -83,8 +83,8 @@ title "Simple Piano"
 tempo 120
 time 4/4
 
-part rightHand { clef: treble }
-part leftHand { clef: bass }
+part rightHand { clef treble }
+part leftHand { clef bass }
 
 section Main {
   rightHand { e'4 d' c' d' | e' e' e'2 | }
@@ -93,8 +93,8 @@ section Main {
 
 score main {
   grandStaff {
-    staff treble { rightHand }
-    staff bass { leftHand }
+    staff rightHand
+    staff leftHand
   }
 }
 
