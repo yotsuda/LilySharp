@@ -1797,6 +1797,14 @@ cmd /d /s /c "C:\bin\lilypond-2.26.0\bin\lilypond.exe -dno-point-and-click out.l
 # ⚠️ Lily# 側の同じ量は snapshot の <polygon> から: position = 中央線Y − (上端Y + 0.24)
 #    （0.24 ＝ beam 厚 0.48 の半分。LP の positions は中心線）
 # ⚠️ log に `bar check failed` が出たらその双子は使わない（LP の `|` は小節チェック＝罠17）
+# ★★★ ⚠️ 双子は「再生」の比較には使えない — LP の MIDI は `\repeat volta` を展開しない
+#    （2026-08-15・第174 実測: 反復なし／1 重／2 重の 3 つが 179 バイトで*バイト同一*。
+#     展開させるには `\unfoldRepeats` が要る）。⇒ **繰り返しの意味論を双子で測ると
+#     必ず「差が無い」と出る**——それは一致ではなく、その装置が動いていないだけ
+#     （§5.3 の「0 は『速い』ではなく『測れていない』の顔をして出る」の*再生*版）。
+#    ⚠️ **ページのほうは動く**: 同じ 3 つのうち「反復なし」だけ SVG が違い、1 重と 2 重は
+#     一致する（内側の span が外側の本体とちょうど同じなら縦線が重なるため）。
+#     ⇒ **双子で測ってよいのは彫版だけ。繰り返し回数は Lily# の MIDI でしか測れない。**
 # ⚠️ ~~part に `instrument` があったらその双子も使わない~~ ← **2026-08-01 に閉じた（ゲート ⑹）**。
 #    exporter は preset を**束ごと**展開する（clef・相対アンカー・stringTunings・\transpose）。
 #    ⚠️ **exporter の tab tuning 既定も bass → guitar に直った**（ページと同じ源）ので、
