@@ -134,6 +134,24 @@ public record UnpairedBeamWarning(
 );
 
 /// <summary>
+/// A <c>|:</c> that no <c>:|</c> ever closes — a repeat whose end nobody wrote.
+/// </summary>
+/// <remarks>
+/// There is no <c>IsOpen</c> half here, unlike the slur and beam warnings: the OTHER
+/// one-sided case has a meaning rather than a defect. A <c>:|</c> with nothing open repeats
+/// from the beginning of the piece, which is the ordinary reading of the sign.
+/// <para>
+/// ⚠️ The position is a MEASURE boundary offset, not the offset of a token in the written
+/// text — and it cannot be otherwise. The pairing is only decidable after score expansion
+/// (a section's <c>|:</c> may be closed by a <c>:|</c> the form writes), so what is scanned
+/// is the expanded measure stream, where the two layers have already become siblings.
+/// </para>
+/// </remarks>
+public record UnpairedRepeatWarning(
+    int SourcePosition
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
@@ -972,6 +990,14 @@ public sealed partial class MeasureCollector
     /// <summary>Manual beam brackets — a <c>[</c> never closed or a <c>]</c> with none
     /// open — whose grouping is discarded. Populated as a side effect of Collect.</summary>
     public IReadOnlyList<UnpairedBeamWarning> UnpairedBeamWarnings => _unpairedBeamWarnings.ToList();
+    // Repeat bars ('|:') that no ':|' ever closes. Scanned per finished voice by
+    // RepeatPairingScanner; surfaced by RepeatPairingValidator. Scanned HERE rather than on
+    // the written text because the pairing crosses layers (a section's '|:' may be closed
+    // by a ':|' the form writes) and is only decidable on the expanded measure stream.
+    private readonly List<UnpairedRepeatWarning> _unpairedRepeatWarnings = new();
+    /// <summary>Repeat bars — a <c>|:</c> that no <c>:|</c> closes — whose span has no end.
+    /// Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<UnpairedRepeatWarning> UnpairedRepeatWarnings => _unpairedRepeatWarnings.ToList();
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names (inline c:m marks, chordnames {} streams, chords-name rows) —
@@ -1289,6 +1315,9 @@ public sealed partial class MeasureCollector
         TieTargetScanner.Scan(voice, _tieTargetWarnings);
         SlurPairingScanner.Scan(voice, _unpairedSlurWarnings);
         BeamPairingScanner.Scan(voice, _unpairedBeamWarnings);
+        // One voice IS the score here, so this voice already carries the score-level
+        // barlines. (The multi-staff path scans after SynchronizeBarlines instead.)
+        RepeatPairingScanner.Scan(voice, _unpairedRepeatWarnings);
 
         // Ottava DISPLAY transposition: notes under an 8va draw an octave lower
         // (etc.) while sounding at their written pitch. Single-staff score, so
@@ -1640,6 +1669,14 @@ public sealed partial class MeasureCollector
             foreach (var v in HarvestOmittedStructure(tree, renderSpec))
                 flatVoices["omit:" + v.Name] = v;
         SynchronizeBarlines(flatVoices);
+        // The repeat-bar pairing is a SCORE-level fact, so it is read here — after the sync
+        // that gives every voice the score's barlines, and including the omitted parts fed
+        // in above — from ONE voice, not once per staff.
+        foreach (var anyVoice in flatVoices.Values)
+        {
+            RepeatPairingScanner.Scan(anyVoice, _unpairedRepeatWarnings);
+            break;
+        }
         foreach (var key in staffVoices.Keys.ToArray())
             staffVoices[key] = staffVoices[key]
                 .Select(v => _tabResolver.ResolveVoiceTabTies(flatVoices[v.Name])).ToImmutableArray();
@@ -2495,6 +2532,7 @@ public sealed partial class MeasureCollector
         _tieTargetWarnings.Clear();
         _unpairedSlurWarnings.Clear();
         _unpairedBeamWarnings.Clear();
+        _unpairedRepeatWarnings.Clear();
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
@@ -3501,6 +3539,13 @@ public sealed partial class MeasureCollector
         _trillSpannerEvents, _pitchTrace, _navPlacementWarnings,
         _tieTargetWarnings, _unpairedSlurWarnings, _unpairedBeamWarnings,
         _chordNameCollector.ItemsList,
+        // ⚠️ _unpairedRepeatWarnings IS DELIBERATELY ABSENT, and the omission is the kind
+        // this list exists to make impossible — so it is written down. Every other entry
+        // ACCUMULATES during the walk, which is why a resumed walk has to adopt and shift
+        // it. RepeatPairingScanner runs strictly AFTER the walk, over the finished
+        // measures, and CLEARS its sink before filling it, so a resumed walk recomputes it
+        // from the measures it ends up with. Nothing to adopt, nothing to shift. Adding it
+        // here without a CollectTailShifter arm would throw on the `default:`.
     };
 
     /// <summary>

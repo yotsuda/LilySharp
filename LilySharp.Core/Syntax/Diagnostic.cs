@@ -532,6 +532,22 @@ public static class DiagnosticCodes
     /// automatic beaming never produces): dropping either bracket makes the output
     /// byte-identical to the same notes with no bracket at all.</summary>
     public const string UnpairedBeam = "LYS4016";
+
+    /// <summary>Error: a <c>|:</c> that no <c>:|</c> ever closes — a repeat whose end
+    /// nobody wrote. The four walks disagree about what that means and always have
+    /// (MEASURED 2026-08-15 on a lone <c>|:</c> in section music: the page draws a
+    /// start-repeat bar; MIDI is byte-identical to no repeat at all; the LilyPond twin wraps
+    /// everything to the end of the stream in <c>\repeat volta 2</c> and so plays it twice),
+    /// and nothing said so. The OTHER half is not an error: a <c>:|</c> with no <c>|:</c>
+    /// open means "repeat from the beginning of the piece", which is the ordinary reading of
+    /// the sign.
+    /// <para>
+    /// ⚠️ Only decidable AFTER score expansion, which is why it is raised from the collected
+    /// measures and not from the text: a section is not a piece of music on its own, so a
+    /// <c>|:</c> written in a section may be closed by a <c>:|</c> the <c>form</c> writes.
+    /// Books in the wild are spelled that way.
+    /// </para></summary>
+    public const string UnpairedRepeat = "LYS4017";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

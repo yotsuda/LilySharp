@@ -75,6 +75,7 @@ public static class SemanticValidation
         new ChordRepetitionValidator(),     // a `q` with no chord before it to repeat
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
         new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
+        new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new EmptyScoreValidator(),          // a score block with no staff to engrave
