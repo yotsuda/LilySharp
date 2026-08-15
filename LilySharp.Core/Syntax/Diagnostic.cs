@@ -554,6 +554,22 @@ public static class DiagnosticCodes
     /// "polyphonic from here" gets a single-voice score with nothing said. A NAMED lone
     /// voice is exempt: its name is what a <c>lyrics NAME { … }</c> block binds to.</summary>
     public const string LoneVoiceBlock = "LYS4011";
+    /// <summary>Error: a slur or a tie with ONE end inside a <c>cue { … }</c> and the other
+    /// outside it. LilyPond cannot spell this at all — a cue is a Voice context of its own, and
+    /// both the Slur_engraver and the Tie_engraver live in the Voice — so the span it engraves
+    /// is not the one that was written. MEASURED on LilyPond 2.26.0 against the four spellings
+    /// (probe scratch/cue-span-probe): a slur crossing either way is dropped with
+    /// "cannot end slur" / "unterminated slur"; a tie INTO a cue is dropped with
+    /// "unterminated tie"; and a tie OUT of a cue is dropped WITHOUT A WORD — that book
+    /// engraves byte-for-byte as the same bar with no tie written at all.
+    /// <para>
+    /// ⚠️ An error rather than a warning because Lily# is pre-release and this is the only
+    /// direction that closes later: a spelling accepted today cannot be rejected after books
+    /// exist, while `error → warning → drawn` costs nobody anything. Lily# DRAWS the curve
+    /// (the renderer pairs across the boundary), so this is not a report of ink that went
+    /// missing — it is a report of ink LilyPond will never make.
+    /// </para></summary>
+    public const string SpanCrossesCueBoundary = "LYS4012";
     /// <summary>Error: a <c>cue { … }</c> inside another <c>cue { … }</c>. LilyPond's cue is
     /// a CONTEXT with one <c>fontSize</c>, so a second one nested inside the first says
     /// nothing the outer one has not already said. Forbidden while the shape is young —

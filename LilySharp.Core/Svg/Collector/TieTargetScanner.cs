@@ -37,7 +37,20 @@ namespace LilySharp.Core.Svg.Collector;
 /// </remarks>
 internal static class TieTargetScanner
 {
-    public static void Scan(Voice voice, List<TieTargetWarning> sink)
+    /// <summary>Scans one voice for ties whose target cannot receive them
+    /// (<paramref name="sink"/>) and, on the ties that DO bind, for the one whose two notes sit
+    /// on opposite sides of a cue boundary (<paramref name="cueSink"/>).</summary>
+    /// <remarks>
+    /// The cue test rides on the binding this scan already computes, for the reason
+    /// <see cref="SlurPairingScanner"/> gives: a second walk would be a second opinion about
+    /// which note a tie reaches. It is asked only of a tie that FOUND its note — a tie with no
+    /// target, or one whose target is a rest or another pitch, is already reported as the
+    /// larger problem (LYS4007) and adding a second complaint about the same mark would only
+    /// bury it. See <see cref="CueSpanBoundaryWarning"/> for what LilyPond does with a crossing
+    /// tie: it drops it, and in the outward direction WITHOUT A WARNING.
+    /// </remarks>
+    public static void Scan(Voice voice, List<TieTargetWarning> sink,
+        List<CueSpanBoundaryWarning> cueSink)
     {
         var measures = voice.Measures;
         for (int mi = 0; mi < measures.Length; mi++)
@@ -71,6 +84,15 @@ internal static class TieTargetScanner
                 else if (!AnyPitchMatches(item, n.Item))
                 {
                     sink.Add(new TieTargetWarning(n.Item.SourcePosition, TieTargetProblem.PitchMismatch));
+                }
+                else
+                {
+                    // The tie binds. The only question left is whether it binds ACROSS a cue
+                    // boundary, which LilyPond cannot do.
+                    bool startsInCue = SlurPairingScanner.IsCueItem(item);
+                    if (startsInCue != SlurPairingScanner.IsCueItem(n.Item))
+                        cueSink.Add(new CueSpanBoundaryWarning(
+                            item.SourcePosition, CueSpanKind.Tie, startsInCue));
                 }
             }
         }

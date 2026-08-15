@@ -182,6 +182,8 @@ internal static class CollectTailShifter
                 return w.TryShift(e.SourcePosition, out int p15) ? e with { SourcePosition = p15 } : null;
             case UnpairedBeamWarning e:
                 return w.TryShift(e.SourcePosition, out int p18) ? e with { SourcePosition = p18 } : null;
+            case CueSpanBoundaryWarning e:
+                return w.TryShift(e.SourcePosition, out int p19) ? e with { SourcePosition = p19 } : null;
             // Position-free entries pass through by value (records/structs are
             // immutable; sharing the instance with the recording is safe).
             case GrobOverride or GrobRevert:

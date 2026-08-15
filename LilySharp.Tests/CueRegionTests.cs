@@ -176,6 +176,90 @@ public class CueRegionTests
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.VoiceInsideCue);
     }
 
+    // ── LYS4012: a slur or tie with one end inside the region and the other outside ──────
+    //
+    // MEASURED on LilyPond 2.26.0, 2026-08-15 (probes in scratch/cue-span-probe, twins from
+    // `lysc ly` rather than hand-written). LilyPond refuses ALL FOUR crossings, and Lily#
+    // accepted all four with "No errors found" while drawing the curve:
+    //
+    //   slur into a cue    "cannot end slur" + "unterminated slur", no Slur grob
+    //   slur out of a cue  the same pair
+    //   tie into a cue     "unterminated tie", no Tie grob
+    //   tie out of a cue   NOT ONE WORD — and no tie: that book engraves byte-for-byte
+    //                      (SHA A036D1151272) as the same bar with no `~` written at all
+    //
+    // The last row is why this is worth a code of its own. Neither tool was saying anything,
+    // so the only signal a writer got was the curve Lily# drew, which LilyPond will never make.
+
+    private static IReadOnlyList<Diagnostic> Check(string music) =>
+        SemanticValidation.Run(SyntaxTree.Parse(Doc(music)));
+
+    private static void AssertCrossesCueBoundary(string music)
+    {
+        var d = Assert.Single(Check(music)
+            .Where(x => x.Code == DiagnosticCodes.SpanCrossesCueBoundary).ToList());
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+    }
+
+    // ⚠️ Octaves are RELATIVE after the first note, and a tie needs the SAME pitch at both
+    // ends: written `c'4 e'~ cue { e'4 … }` the second e' is an octave above the first, the
+    // tie does not bind, and these tests went green for the wrong reason (they reported a
+    // LYS4007 pitch mismatch instead). Keep the `'` on the anchor note only.
+
+    [Fact]
+    public void SlurIntoACueIsRejected() =>
+        AssertCrossesCueBoundary("c'4( d cue { e4) f } |");
+
+    [Fact]
+    public void SlurOutOfACueIsRejected() =>
+        AssertCrossesCueBoundary("c'4 cue { e4( f } g4) |");
+
+    [Fact]
+    public void TieIntoACueIsRejected() =>
+        AssertCrossesCueBoundary("c'4 e~ cue { e4 f } |");
+
+    /// <summary>The one LilyPond drops in silence — see the table above.</summary>
+    [Fact]
+    public void TieOutOfACueIsRejected() =>
+        AssertCrossesCueBoundary("c'4 cue { e4 f~ } f4 |");
+
+    /// <summary>
+    /// The spellings LilyPond engraves without a word, so Lily# must not complain either:
+    /// every span closing in the region it opened in.
+    /// </summary>
+    [Fact]
+    public void SpansThatCloseInTheirOwnRegionAreAccepted()
+    {
+        Assert.Empty(Check("c'4( d) cue { e4( f) } |\nc'4 cue { e4 g~ g4 } |")
+            .Where(d => d.Code == DiagnosticCodes.SpanCrossesCueBoundary));
+    }
+
+    /// <summary>
+    /// ⚠️ A slur PASSING OVER a whole cue region is not a crossing: both of its ends are in
+    /// the enclosing voice. MEASURED — LilyPond pairs
+    /// <c>c4( \new CueVoice { e4 f } g4)</c> without a warning, so a rule that looked at
+    /// "is there a cue anywhere between the ends" instead of at the ends themselves would
+    /// reject music LilyPond accepts.
+    /// </summary>
+    [Fact]
+    public void ASlurPassingOverAWholeCueIsAccepted()
+    {
+        Assert.Empty(Check("c'4( cue { e4 f } g4) |")
+            .Where(d => d.Code == DiagnosticCodes.SpanCrossesCueBoundary));
+    }
+
+    /// <summary>
+    /// A tie that fails to bind at all is reported ONCE, as the larger problem (LYS4007), and
+    /// does not also collect a boundary complaint about the mark it never made.
+    /// </summary>
+    [Fact]
+    public void ATieThatMissesItsTargetIsNotAlsoCalledACrossing()
+    {
+        var diags = Check("c'4 e~ cue { g4 f } |");
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.TieTargetMismatch);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SpanCrossesCueBoundary);
+    }
+
     /// <summary>
     /// <c>@cue</c> is gone, and it fails at the PARSER rather than in a semantic pass: once
     /// <c>cue</c> is a keyword, <c>@cue</c> is an '@' with no annotation name after it.

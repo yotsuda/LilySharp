@@ -88,6 +88,7 @@ public static class SemanticValidation
         new PartialScopeValidator(),        // a partial (pickup) outside a section
         new LoneVoiceValidator(),           // a span with a single (transparent) voice block
         new CueRegionValidator(),           // a nested cue, or a voice span inside a cue
+        new CueSpanBoundaryValidator(),     // a slur/tie with one end inside a cue
         new SectionMusicNeedsPartValidator(), // loose music in a part-major top-level section
         new ScoreSettingInPartHeaderValidator(), // tempo/time as a part header property
         new DuplicateGlobalSettingValidator(), // a top-level tempo/time/key/title/… written twice

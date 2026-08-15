@@ -78,6 +78,7 @@ public class CollectTailShifterTests
         [typeof(TieTargetWarning)] = new[] { "SourcePosition" },
         [typeof(UnpairedSlurWarning)] = new[] { "SourcePosition" },
         [typeof(UnpairedBeamWarning)] = new[] { "SourcePosition" },
+        [typeof(CueSpanBoundaryWarning)] = new[] { "SourcePosition" },
         [typeof(ChordNameItem)] = new[] { "SourcePosition" },
         // The trill-spanner event tuple is covered by hand in ShiftSideEntry
         // (ValueTuple fields are not reflectable by name); its shape change

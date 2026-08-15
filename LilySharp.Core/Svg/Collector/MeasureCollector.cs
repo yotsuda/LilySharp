@@ -118,6 +118,53 @@ public record UnpairedSlurWarning(
     bool IsOpen       // true = an unclosed '('; false = a ')' with nothing open
 );
 
+/// <summary>Which kind of span crossed a cue boundary — the two whose engravers LilyPond
+/// keeps in the Voice context, so a cue region (a Voice of its own) cuts both.</summary>
+public enum CueSpanKind
+{
+    /// <summary>A slur, paired by <see cref="SlurPairingScanner"/>'s stack.</summary>
+    Slur,
+    /// <summary>A tie, bound to the next timed item by <see cref="TieTargetScanner"/>.</summary>
+    Tie,
+}
+
+/// <summary>
+/// A slur or tie with one end inside a <c>cue { … }</c> region and the other outside it.
+/// LilyPond cannot engrave such a span at all, so what Lily# draws for it is ink LilyPond
+/// will never make. <see cref="SourcePosition"/> points at the item the span STARTS on,
+/// which is the end the writer usually has to move.
+/// </summary>
+/// <remarks>
+/// Recorded by the same two scanners that already decide the pairing — the crossing test is
+/// one <c>IsCue</c> comparison on a pair those scanners have in hand — so this can never
+/// disagree with what gets drawn, for the reason <see cref="UnpairedSlurWarning"/> gives.
+/// <para>
+/// ⚠️ NARROWER THAN LilyPond'S CONDITION, and by the same cause as the note in
+/// <c>SpacingRules.CrossesVoiceBoundary</c>:
+///   departs from: two ADJACENT cue regions. <c>cue { … } cue { … }</c> is TWO CueVoice
+///     contexts (probe cue-span.ly C-TWO), so a span running from one into the next crosses a
+///     voice boundary and LilyPond refuses it — MEASURED 2026-08-15, the slur form warns
+///     "unterminated slur" / "cannot end slur" and the tie form is dropped in silence
+///     (byte-identical SVG). Here both ends answer <c>IsCue</c> true and nothing is reported.
+///   goes away when: a cue item can say WHICH region it belongs to — i.e. when the cue flag
+///     stops being derived and starts being stamped. That single change closes this AND the
+///     spacing departure, which is why neither is worth a private workaround.
+///   observed by: NOTHING. No fixture, sample or corpus book writes two cue blocks back to
+///     back (grep 2026-08-03, re-checked 2026-08-10 and again 2026-08-15 — only 4 books on
+///     disk write a cue region at all).
+/// </para>
+/// <para>
+/// A span that passes OVER a whole cue region (<c>c4( cue { e f } g4)</c>) is NOT a crossing
+/// and is not reported: both ends are in the enclosing Voice, and MEASURED, LilyPond pairs it
+/// without a word.
+/// </para>
+/// </remarks>
+public record CueSpanBoundaryWarning(
+    int SourcePosition,
+    CueSpanKind Kind,
+    bool StartsInsideCue   // true = the span begins in the cue and ends outside it
+);
+
 /// <summary>
 /// A manual beam bracket that pairs with nothing: a <c>[</c> never closed (including one
 /// left open when its voice ends — <see cref="BeamDetector"/> matches per voice) or a
@@ -983,6 +1030,13 @@ public sealed partial class MeasureCollector
     /// <summary>Slur marks — a <c>(</c> never closed or a <c>)</c> with none open — that
     /// draw no slur. Populated as a side effect of Collect.</summary>
     public IReadOnlyList<UnpairedSlurWarning> UnpairedSlurWarnings => _unpairedSlurWarnings.ToList();
+    // Slurs and ties with one end inside a cue region and the other outside it — a span
+    // LilyPond cannot make. Recorded by the SAME two scanners that pair them (one IsCue
+    // comparison on the pair each already holds); surfaced by CueSpanBoundaryValidator.
+    private readonly List<CueSpanBoundaryWarning> _cueSpanBoundaryWarnings = new();
+    /// <summary>Slurs and ties that cross a <c>cue { … }</c> boundary. Populated as a side
+    /// effect of Collect.</summary>
+    public IReadOnlyList<CueSpanBoundaryWarning> CueSpanBoundaryWarnings => _cueSpanBoundaryWarnings.ToList();
     // Manual beam brackets that pair with nothing, so BeamDetector discards them and the
     // notes fall back to automatic beaming.
     // Scanned per finished voice by BeamPairingScanner; surfaced by BeamPairingValidator.
@@ -1312,8 +1366,8 @@ public sealed partial class MeasureCollector
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
         // Tie sanity scan runs BEFORE the ottava display transposition (it compares
         // written staff positions; an 8va span must not fake a pitch change).
-        TieTargetScanner.Scan(voice, _tieTargetWarnings);
-        SlurPairingScanner.Scan(voice, _unpairedSlurWarnings);
+        TieTargetScanner.Scan(voice, _tieTargetWarnings, _cueSpanBoundaryWarnings);
+        SlurPairingScanner.Scan(voice, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
         BeamPairingScanner.Scan(voice, _unpairedBeamWarnings);
         // One voice IS the score here, so this voice already carries the score-level
         // barlines. (The multi-staff path scans after SynchronizeBarlines instead.)
@@ -2280,8 +2334,8 @@ public sealed partial class MeasureCollector
         // Tie sanity scan per voice, BEFORE the ottava display transposition.
         foreach (var v in voices)
         {
-            TieTargetScanner.Scan(v, _tieTargetWarnings);
-            SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+            TieTargetScanner.Scan(v, _tieTargetWarnings, _cueSpanBoundaryWarnings);
+            SlurPairingScanner.Scan(v, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
             BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
         }
 
@@ -2433,8 +2487,8 @@ public sealed partial class MeasureCollector
         // Tie sanity scan per staff voice, BEFORE any display-only transform.
         foreach (var v in voices)
         {
-            TieTargetScanner.Scan(v, _tieTargetWarnings);
-            SlurPairingScanner.Scan(v, _unpairedSlurWarnings);
+            TieTargetScanner.Scan(v, _tieTargetWarnings, _cueSpanBoundaryWarnings);
+            SlurPairingScanner.Scan(v, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
             BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
         }
         return ResolveStaffColumns(voices.ToImmutable());
@@ -2533,6 +2587,7 @@ public sealed partial class MeasureCollector
         _unpairedSlurWarnings.Clear();
         _unpairedBeamWarnings.Clear();
         _unpairedRepeatWarnings.Clear();
+        _cueSpanBoundaryWarnings.Clear();
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
         // on the same collector would carry a stale part-major cell map and lyric-row
@@ -3538,6 +3593,7 @@ public sealed partial class MeasureCollector
         _percentRepeats, _crossStaffItems, _grobOverrides, _grobReverts,
         _trillSpannerEvents, _pitchTrace, _navPlacementWarnings,
         _tieTargetWarnings, _unpairedSlurWarnings, _unpairedBeamWarnings,
+        _cueSpanBoundaryWarnings,
         _chordNameCollector.ItemsList,
         // ⚠️ _unpairedRepeatWarnings IS DELIBERATELY ABSENT, and the omission is the kind
         // this list exists to make impossible — so it is written down. Every other entry

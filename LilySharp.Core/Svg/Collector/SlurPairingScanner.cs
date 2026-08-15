@@ -50,10 +50,22 @@ namespace LilySharp.Core.Svg.Collector;
 /// </remarks>
 internal static class SlurPairingScanner
 {
-    public static void Scan(Voice voice, List<UnpairedSlurWarning> sink)
+    /// <summary>Scans one voice for slur marks that pair with nothing (<paramref name="sink"/>)
+    /// and, on the pairs that DO form, for the one that spans a cue boundary
+    /// (<paramref name="cueSink"/>).</summary>
+    /// <remarks>
+    /// The cue test rides on THIS stack rather than getting a scanner of its own, because a
+    /// second walk would be a second opinion about which <c>(</c> a <c>)</c> belongs to — the
+    /// thing this class exists not to have. When the pop happens, both ends of the slur are in
+    /// hand and the test is one comparison. See <see cref="CueSpanBoundaryWarning"/> for what
+    /// LilyPond does with such a slur (nothing: it drops it with a warning) and for the one
+    /// crossing a per-item cue flag cannot see.
+    /// </remarks>
+    public static void Scan(Voice voice, List<UnpairedSlurWarning> sink,
+        List<CueSpanBoundaryWarning> cueSink)
     {
-        // Source positions of the '(' marks still looking for a ')'.
-        var open = new Stack<int>();
+        // The '(' marks still looking for a ')' — position, and whether that note is cued.
+        var open = new Stack<(int Position, bool IsCue)>();
         var measures = voice.Measures;
         for (int mi = 0; mi < measures.Length; mi++)
         {
@@ -62,12 +74,18 @@ internal static class SlurPairingScanner
             {
                 if (!TryGetSlurFlags(items[ii], out bool hasStart, out bool hasEnd))
                     continue;
+                bool isCue = IsCueItem(items[ii]);
                 if (hasStart)
-                    open.Push(items[ii].SourcePosition);
+                    open.Push((items[ii].SourcePosition, isCue));
                 if (hasEnd)
                 {
                     if (open.Count > 0)
-                        open.Pop();
+                    {
+                        var start = open.Pop();
+                        if (start.IsCue != isCue)
+                            cueSink.Add(new CueSpanBoundaryWarning(
+                                start.Position, CueSpanKind.Slur, StartsInsideCue: start.IsCue));
+                    }
                     else
                         sink.Add(new UnpairedSlurWarning(items[ii].SourcePosition, IsOpen: false));
                 }
@@ -77,11 +95,20 @@ internal static class SlurPairingScanner
         // Whatever is still open when the voice ends is dropped by the renderer. Reported
         // in the order the marks were WRITTEN (the stack pops innermost-first), so a
         // diagnostic list reads down the score rather than back up it.
-        var dangling = new List<int>(open);
+        var dangling = new List<(int Position, bool IsCue)>(open);
         dangling.Reverse();
-        foreach (int position in dangling)
+        foreach (var (position, _) in dangling)
             sink.Add(new UnpairedSlurWarning(position, IsOpen: true));
     }
+
+    /// <summary>Whether an item was written inside a <c>cue { … }</c>. Only the two kinds a
+    /// slur pairs on can carry the flag; anything else is outside by construction.</summary>
+    internal static bool IsCueItem(MusicItem item) => item switch
+    {
+        NoteItem n => n.IsCue,
+        ChordItem c => c.IsCue,
+        _ => false,
+    };
 
     /// <summary>Slurs attach to a note OR a chord — the same two item kinds
     /// <see cref="SlurDetector.DetectSlurs"/> pairs.</summary>
