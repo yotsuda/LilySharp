@@ -21,6 +21,7 @@ plain でも文法ギャップ（例: 強制臨時記号 `f'!` — Lily# では 
 2. `.lys` に翻訳して `lys/<name>.lys` に置く。⚠️ **octave absolute の綴りは LP の
    1 アポストロフィ下**（Lily# `c'` = LP `c''`。LpGeometryProbes.cs FSF8 の remarks 参照）。
 3. 両方レンダリング（lysc svg／lilypond --svg。LP は `cmd /d /s /c "… < NUL"` で起動）。
+   **コマンドの正確な形と別マシンでの復元は `../lpreg/REGENERATE.md`**。
 4. **texidoc の主張と gap 構造**を SVG 座標（両者とも staff space 単位）で比較。
    ピクセル比較はしない（visual-diff は 1x ラスタ）。
 5. 一致 → state=exact。乖離 → **LP の該当ロジックを字面移植**して修正

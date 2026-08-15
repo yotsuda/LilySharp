@@ -16,7 +16,8 @@
 
 移設時点で **522 枚・2.1 GB** あったので**持ってきていない**（`.gitignore` の `*.svg` が
 そもそも弾く）。**これらはここのスクリプト自身の出力**なので、必要になったら
-作り直す——`audit\scripts\Run-LilyPond.ps1`（LP 側）と `lysc svg`（Lily# 側）。
+作り直す——**手順は [REGENERATE.md](REGENERATE.md)**（LP 側の起動形・`-dno-point-and-click`・
+命名の地図・どの 130 枚が作り直せないか）。
 再生成すると `.svg` はこのフォルダに落ち、`*.svg` の ignore がそのまま効く。
 ⚠️ **旧 PC の `scratch\lpreg\*.svg` は消していない**（そちらは stale なので参照しないこと）。
 
