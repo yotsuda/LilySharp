@@ -64,6 +64,24 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                     $"Undefined part: '{reference.Text}'. Define it with a section body "
                     + $"('{reference.Text} {{ … }}' in a section) or a header "
                     + $"('part {reference.Text} {{ … }}').");
+
+        // The score's ROW targets name their own tracks, not the staff parts above: a
+        // `chords NAME` row is declared by a named `chords NAME { … }` block and a
+        // `lyrics NAME` row by a named `lyrics NAME { … }` block. Checked against those
+        // sets rather than folded into _definedParts, because folding them would make
+        // `staff prog` legal on a chord track — the empty staff this diagnostic exists to
+        // catch. Until this was written the row targets were checked by NOTHING: a typo in
+        // `chords progg` passed `lysc check` clean and silently drew no row.
+        var rows = PartReferenceFinder.Rows(root);
+        foreach (var (token, isChordRow) in rows.References)
+        {
+            string keyword = isChordRow ? "chords" : "lyrics";
+            if ((isChordRow ? rows.ChordTracks : rows.LyricTracks).Contains(token.Text))
+                continue;
+            _diagnostics.Error(token.Span, DiagnosticCodes.UndefinedPart,
+                $"Undefined {keyword} part: '{token.Text}'. Define it with a named block "
+                + $"('{keyword} {token.Text} {{ … }}').");
+        }
     }
 
     private void CollectDefinitions(SyntaxNode node)

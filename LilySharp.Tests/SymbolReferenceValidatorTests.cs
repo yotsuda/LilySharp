@@ -215,4 +215,81 @@ $undefined2
                        + "form main { A }\nscore main { grandStaff { staff rh staff lh } }");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("lh"));
     }
+
+    // ── row render targets: `chords NAME` / `lyrics NAME` ──
+
+    /// <summary>
+    /// A score's ROW targets were checked by nothing: a typo in <c>chords progg</c> passed
+    /// `lysc check` clean and silently drew no row at all — the same silence
+    /// <c>staff melody2</c> used to have.
+    /// </summary>
+    /// <remarks>
+    /// This is a TIGHTENING, which is why it lands before 0.3.0: after a release, a spelling
+    /// that is accepted today cannot be taken back. MEASURED over every .lys in the tree
+    /// (897 books) before and after — see the commit message.
+    /// </remarks>
+    private const string RowSheet = """
+        time 4/4
+        section Main {
+          chords prog { c1 | g1 | }
+          lyrics words { la la | la la | }
+        }
+        form main { Main }
+        score main "x" {
+        """;
+
+    [Theory]
+    [InlineData("chords progg  lyrics words", "progg")]
+    [InlineData("chords prog  lyrics wordz", "wordz")]
+    public void Validate_RowNamesUndefinedTrack_ReportsError(string scoreBody, string bad)
+    {
+        var undef = Refs(RowSheet + scoreBody + " }")
+            .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains(bad, undef[0].Message);
+    }
+
+    [Fact]
+    public void Validate_RowNamesDefinedTrack_NoError()
+        => Assert.DoesNotContain(Refs(RowSheet + "chords prog  lyrics words }"),
+            d => d.Code == DiagnosticCodes.UndefinedPart);
+
+    /// <summary>
+    /// And the two namespaces stay apart. A chord track is not a part a STAFF can render —
+    /// folding the row names into the part set would have made this legal, and an empty
+    /// staff is precisely what LYS1007 exists to catch.
+    /// </summary>
+    [Theory]
+    [InlineData("staff prog", "prog")]     // a chord track is not a staff part…
+    [InlineData("chords words", "words")]  // …and a lyric track is not a chord track
+    [InlineData("lyrics prog", "prog")]    // …nor the other way round
+    public void Validate_RowTracksAreNotStaffParts(string scoreBody, string bad)
+    {
+        var undef = Refs(RowSheet + scoreBody + " }")
+            .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains(bad, undef[0].Message);
+    }
+
+    /// <summary>
+    /// An UNNAMED <c>chords { … }</c> block attaches to the staff written beside it rather
+    /// than standing as a row, so it declares no name — and must not be read as declaring
+    /// one. Slot 1 of an unnamed block holds the opening brace, which is what a naive
+    /// reading would have collected.
+    /// </summary>
+    [Fact]
+    public void Validate_UnnamedChordBlockDeclaresNoRowName()
+    {
+        var undef = Refs("""
+            time 4/4
+            section Main {
+              m { c4 d e f | }
+              chords { c1 | }
+            }
+            form main { Main }
+            score main "x" { staff m  chords m }
+            """).Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains("'m'", undef[0].Message);
+    }
 }

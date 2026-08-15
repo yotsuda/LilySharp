@@ -195,6 +195,79 @@ public class PartReferenceFinderTests
         Assert.Null(PartReferenceFinder.PartNameTokenAt(root, src.LastIndexOf("bass")));
     }
 
+    // ── row render targets: a SEPARATE namespace, resolved separately ──
+
+    private const string RowSheet = """
+        section Main {
+          chords prog { c1 | g1 | }
+          lyrics words { la la | la la | }
+        }
+        form main { Main }
+        score main "x" { chords prog as roman  lyrics words }
+        """;
+
+    /// <summary>
+    /// A score's <c>chords NAME</c> / <c>lyrics NAME</c> rows are reference tokens, tagged
+    /// with which track they name — and the display selector after a chord row is not one.
+    /// </summary>
+    [Fact]
+    public void RowRenderTargetsAreCollectedAndTagged()
+    {
+        var rows = PartReferenceFinder.Rows(Root(RowSheet)).References;
+
+        Assert.Collection(rows,
+            r => { Assert.Equal("prog", r.Token.Text); Assert.True(r.IsChordRow); },
+            r => { Assert.Equal("words", r.Token.Text); Assert.False(r.IsChordRow); });
+    }
+
+    /// <summary>The names those rows can resolve to come from the NAMED blocks, per kind.</summary>
+    [Fact]
+    public void RowTrackNamesComeFromTheirOwnNamedBlocks()
+    {
+        var rows = PartReferenceFinder.Rows(Root(RowSheet));
+        Assert.Equal(new[] { "prog" }, rows.ChordTracks.OrderBy(s => s));
+        Assert.Equal(new[] { "words" }, rows.LyricTracks.OrderBy(s => s));
+    }
+
+    /// <summary>
+    /// An UNNAMED <c>chords { … }</c> / <c>lyrics { … }</c> attaches to a co-written staff
+    /// rather than standing as a row, so it declares no name — and slot 1 of an unnamed
+    /// block is the opening BRACE, which a naive reading would have collected as a track
+    /// called "{".
+    /// </summary>
+    [Fact]
+    public void UnnamedChordOrLyricBlockDeclaresNoTrack()
+    {
+        var rows = PartReferenceFinder.Rows(Root("""
+            section Main {
+              m { c4 d e f | }
+              chords { c1 | }
+              lyrics { la la la la | }
+            }
+            form main { Main }
+            score main "x" { staff m }
+            """));
+        Assert.Empty(rows.ChordTracks);
+        Assert.Empty(rows.LyricTracks);
+    }
+
+    /// <summary>
+    /// And the row family stays OUT of the part-rename set, which is not an oversight: the
+    /// language server resolves chord and lyric track names itself, and more completely —
+    /// block, row and <c>with chords|lyrics</c> clause
+    /// (LilySharpLanguageServer.Navigation.ChordNameTokens / LyricsNameTokens). Claiming
+    /// those tokens here took the caret away from that resolver and answered with a smaller
+    /// set; three LSP tests said so.
+    /// </summary>
+    [Fact]
+    public void RowTrackNamesAreNotPartNames()
+    {
+        var root = Root(RowSheet);
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "prog"));
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "words"));
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "roman"));
+    }
+
     [Fact]
     public void CaretOnDeclarationResolvesToTheName()
     {
