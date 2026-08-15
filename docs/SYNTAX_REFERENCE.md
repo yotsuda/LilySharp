@@ -383,6 +383,37 @@ Endings accept ranges and lists: `[1-2. … ]`, `[1,3. … ]`. Without endings, 
 > rejects them with a hint to use the symbolic form above. The `repeat` keyword
 > survives only for `unfold` / `percent` / `tremolo` (see below).
 
+#### One-sided repeat barlines
+
+The two halves are **not** symmetric.
+
+- A `:|` with no `|:` open **repeats from the beginning of the piece** — the
+  ordinary reading of a one-sided end-repeat. It is not an error.
+- A `|:` that no `:|` ever closes **is an error** (LYS4017): where the repeat ends
+  is undefined.
+
+The pair may be written **across layers**: a `|:` in a section's music can be
+closed by a `:|` the `form` writes, because a section is not a piece of music on
+its own — it becomes one when a `form` lays it out. So the pairing is judged on the
+laid-out score, not on either layer alone:
+
+```
+part m { section A { |: c4 d e f | } section B { g4 a b c | } }
+form main { A B :| }          // fine: the ':|' closes section A's '|:'
+```
+
+The one direction that will not work is the mirror: a `|:` written in a `form`
+opens a repeat block, and that block must close in the `form`.
+
+A repeat barline belongs to the **score**, not to one part: written in one part it
+is drawn on every staff of the score.
+
+> ⚠️ Two gaps, both narrow, both stated so nothing looks decided that is not: a
+> one-sided `:|` written *inside section music* is drawn and reported correctly but
+> is not yet played back in MIDI, and the LilyPond twin cannot express "repeat from
+> the beginning" at all (`\bar ":|."` only draws the barline) — `lysc ly` warns
+> when it emits one.
+
 ### Percent Repeats
 
 Use the percent repeat syntax to repeat the previous measure:

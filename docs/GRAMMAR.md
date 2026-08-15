@@ -558,6 +558,18 @@ Arpeggio       = '<<' , ArpMember , { ArpMember } , '>>' , { "'" | ',' } , [ Dur
 Barline        = '|' | '||' | '|.' | '|:' | '!' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
 
+(* ONE-SIDED REPEAT BARLINES. The two halves are not symmetric:
+     - ':|' with no '|:' open REPEATS FROM THE BEGINNING OF THE PIECE. Not an error.
+     - '|:' that no ':|' closes IS AN ERROR (LYS4017) — where it ends is undefined.
+   The pair MAY CROSS LAYERS: a '|:' in a section's music can be closed by a ':|' the
+   form writes, because a section is not a piece of music on its own. So the pairing
+   is decided on the LAID-OUT score (the collector's expanded measure stream), never
+   on one layer alone — no scan of a section's text could be right about it.
+   The mirror does NOT work: a '|:' in a form opens a FormRepeatBlock (below), and
+   that block must close in the form.
+   A repeat barline belongs to the SCORE, not to one part: written in one part it is
+   drawn on every staff. *)
+
 (* '!' is the DASHED barline (LilyPond's \bar "!"), and like every other barline it
    CLOSES THE BAR it follows. Write it spaced ('c4 d e f ! g4 …'). Glued to a note
    ('cis!') it is still the dashed barline, but LilyPond spells the FORCED ACCIDENTAL
