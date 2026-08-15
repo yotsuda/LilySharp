@@ -2124,6 +2124,19 @@ public sealed class MusicXmlExporter
             return;
         }
 
+        // Figured bass is read from the annotation too, and for the same reason: it is a
+        // sub-language, so it parses the argument TOKENS (§9.5.3 ⑴). This used to sit in
+        // the default arm of the dotted-name switch below, which is now left with the
+        // marks that really are named by a dotted name.
+        if (_currentMeasure != null
+            && LilySharp.Core.Semantics.AnnotationValues.Figures(mark) is { } figures
+            && BuildFiguredBass(figures) is { } figuredBass)
+        {
+            // <figured-bass> sits before its bass note, like <harmony>.
+            _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
+            return;
+        }
+
         ProcessDirectionName(mark.MarkName);
     }
 
@@ -2153,15 +2166,6 @@ public sealed class MusicXmlExporter
                 break;
             case "loco":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "stop" });
-                break;
-            default:
-                if (name.StartsWith("fig.", StringComparison.Ordinal)
-                    && LilySharp.Core.Svg.Model.FiguredBassItem.ParseFigures(rawName) is { } figures
-                    && BuildFiguredBass(figures) is { } figuredBass)
-                {
-                    // <figured-bass> sits before its bass note, like <harmony>.
-                    _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
-                }
                 break;
         }
     }

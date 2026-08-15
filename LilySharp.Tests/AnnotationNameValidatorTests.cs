@@ -82,6 +82,30 @@ public class AnnotationNameValidatorTests
     }
 
     /// <summary>
+    /// ⚠️ The annotation is QUOTED from the source, not rebuilt from its internal name.
+    /// The reconstruction turns every '.' into a ' ', so a written dot came back as a
+    /// space: '@fig(6.4)' was reported as '@fig(6 4)' — and '@fig(6 4)' is a VALID
+    /// spelling, so the message named a working annotation as the broken one. Nothing
+    /// observed this until the figured bass began refusing a written dot
+    /// (VALUE_SITE_AUDIT §9.5.3 ⑴), which is what made the misreport reachable.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@fig(6.4) d |", "'@fig(6.4)'", "@fig(6 4)")]
+    [InlineData("c4@fig(6.s) d |", "'@fig(6.s)'", "@fig(6 s)")]
+    public void TheUnknownAnnotation_IsQuotedFromTheSource(
+        string source, string written, string reconstruction)
+    {
+        var diags = Validate(source);
+        var warning = Assert.Single(diags, d => d.Code == DiagnosticCodes.UnknownAnnotation);
+
+        Assert.Contains(written, warning.Message);
+        // ⚠️ And the reconstruction — a spelling that WORKS — must not be named as the
+        // unknown one. It may still appear as the suggestion, so only the report is checked.
+        var report = warning.Message[..warning.Message.IndexOf("— it is ignored", StringComparison.Ordinal)];
+        Assert.DoesNotContain(reconstruction, report);
+    }
+
+    /// <summary>
     /// Every suggestion the validator can make must be a spelling that actually
     /// compiles on a note. This is what caught the whole dotted-name family
     /// (@ped.off, @notehead.x, @fig.6, @chord.C, @to.coda …) being unusable.

@@ -33,9 +33,10 @@ namespace LilySharp.Core.Semantics;
 /// text because its value has dropped a leading zero, and <c>@chord</c>'s sub-language,
 /// read from the text because it denotes no single value at all. Last, <c>@mark</c>'s
 /// rehearsal label, which is free text like <c>@text</c>'s but was sliced out of the
-/// dotted name in four separate places. Only <c>@fig</c> is
-/// left, and it is left deliberately — its runs and its dotted parts do not divide at
-/// the same places, so moving it would change which spellings are accepted (§9.5.1).
+/// dotted name in four separate places. Last of all the figured bass, which is neither
+/// a value nor a run: its runs and its dotted parts do not divide at the same places
+/// (§9.5.1), so it reads the argument TOKENS — see <see cref="Figures"/>. With it the
+/// dotted name stopped carrying arguments altogether.
 /// </para>
 /// <para>
 /// Each is read HERE and only here. Before this type, every one of them was spelled
@@ -344,6 +345,34 @@ public static class AnnotationValues
         }
         return null;
     }
+
+    /// <summary>
+    /// The stacked figures of <c>@fig(6 4)</c>, or null when the annotation is not one
+    /// or spells no figure group Lily# can draw.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ★ The last argument to leave <see cref="MusicMarkSyntax.MarkName"/>, and the only
+    /// one that could not be read as a value or as a run: figured bass is a SUB-LANGUAGE
+    /// written in tokens, so it is handed the tokens
+    /// (<see cref="MusicMarkSyntax.ArgumentTokens"/>) and parses them itself. The grammar
+    /// and the one spelling that changed are on
+    /// <see cref="Svg.Model.FiguredBassItem.ParseFigures"/>.
+    /// </para>
+    /// <para>
+    /// ⚠️ The name gate is case-INSENSITIVE, like <see cref="Rehearsal"/>'s and unlike
+    /// <see cref="Chord"/>'s: the string form asked
+    /// <c>StartsWith("fig.", OrdinalIgnoreCase)</c>, so <c>@Fig(6)</c> is figured bass
+    /// today and stays so. Its second condition — that something followed "fig." — is
+    /// the emptiness check inside the parser, so a bare <c>@fig</c> and an empty
+    /// <c>@fig()</c> name no figures, as before.
+    /// </para>
+    /// </remarks>
+    public static System.Collections.Immutable.ImmutableArray<Svg.Model.FiguredBassFigure>?
+        Figures(MusicMarkSyntax mark)
+        => Named(mark, "fig")
+            ? Svg.Model.FiguredBassItem.ParseFigures(mark.ArgumentTokens)
+            : null;
 
     private static bool Named(MusicMarkSyntax mark, string name)
         => string.Equals(mark.Name, name, StringComparison.OrdinalIgnoreCase);
