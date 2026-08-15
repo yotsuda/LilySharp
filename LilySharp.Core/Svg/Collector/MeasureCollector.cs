@@ -4189,6 +4189,17 @@ public sealed partial class MeasureCollector
                     if (brk.IsNoBreak) builder.SetNoBreak();
                     else builder.SetBreak();
                     break;
+
+                // A ':|' written in the form itself, outside any '|: … :|' block. It is
+                // the same BarlineSyntax the music stream carries, and it goes into the
+                // SAME flattened stream that ProcessRepeatBlock puts a block's own bars
+                // into — so the form's repeat bars and a section's repeat bars are
+                // siblings by the time anything reads them. The block's own bars are raw
+                // tokens inside FormRepeatBlockSyntax, not BarlineSyntax, so this arm
+                // cannot double-count them; the guard is for a nested form only.
+                case BarlineSyntax formBar when !IsInsideRepeatBlock(formBar):
+                    processNodes([new GreenSite(formBar)]);
+                    break;
             }
         }
     }

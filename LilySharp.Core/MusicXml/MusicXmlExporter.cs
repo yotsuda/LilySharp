@@ -347,6 +347,17 @@ public sealed class MusicXmlExporter
                 case NavigationMarkSyntax nav:
                     ApplyNavMark(nav.MarkType);
                     break;
+                // A ':|' written in the form itself, outside any '|: … :|' block. It caps
+                // the section just played, on every part — the barline is a score-level
+                // object (MeasureCollector.SynchronizeBarlines), so it is not one part's.
+                // A backward repeat with no matching forward one is MusicXML's own spelling
+                // for "repeat from the beginning", which is the reading this grammar gives
+                // a one-sided ':|', so nothing extra has to be written to say it.
+                case BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }:
+                    foreach (var p in Document.Parts)
+                        if (p.Measures.Count > 0)
+                            p.Measures[^1].RepeatBackward = true;
+                    break;
             }
         }
     }

@@ -66,6 +66,16 @@ internal sealed partial class Parser
             SyntaxKind.At => ParseMusicMark(),
             SyntaxKind.Underscore => ParseCustomText(),
             SyntaxKind.RepeatStartBar => ParseFormRepeatBlock(),
+            // A ':|' HERE is not the close of a '|: … :|' block — that one is consumed by
+            // ParseFormRepeatBlock's Expect. This is a repeat barline written in the form
+            // itself, and it needs a node before anything can give it meaning: without this
+            // arm ParseFormItem returned null and ParseList's shared `else Advance()` — the
+            // same guard whose part-header twin was LYS0025 — dropped it. Measured
+            // 2026-08-15 on `form main { … Solo :| }`: the MIDI hash, the SVG hash, the
+            // MusicXML repeat count and the LilyPond twin were all byte-identical to not
+            // writing it, with no diagnostic. It is the same BarlineSyntax the music stream
+            // uses, so ':|*N' comes along for free.
+            SyntaxKind.RepeatEndBar => ParseBarline(),
             SyntaxKind.OpenBracket => ParseVoltaBracket(),
             // `break` / `nobreak` between sections force / forbid a system break at
             // that point in the played sequence (a layout directive, so no '@').
