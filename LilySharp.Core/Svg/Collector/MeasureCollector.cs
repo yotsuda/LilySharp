@@ -3476,7 +3476,7 @@ public sealed partial class MeasureCollector
     /// <c>_fingeringByPosition</c> (position-keyed; an item only ever reads its
     /// OWN position, so prefix entries have no reader in the resumed tail), and
     /// the collaborators that run strictly post-walk (lyrics, tab).</summary>
-    private IList[] CumulativeSideTables() => new IList[]
+    internal IList[] CumulativeSideTables() => new IList[]
     {
         _dynamics, _articulations, _graceNotes, _musicMarks, _customTexts,
         _voltaBrackets, _tupletBrackets, _arpeggios, _figuredBasses,
