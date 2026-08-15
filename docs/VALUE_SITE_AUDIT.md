@@ -486,7 +486,7 @@ rejoin to the written text」**と、**自分で連結を取り消している�
 **引数に型が付く便は、この 10 個目を消せるかを同時に見ること。**
 
 ⇒ **第169 で 7 家族ぶん畳んだ＝§9.5.2**（`AnnotationValues` が 1 コピー）。
-**この節の「30+ site」「9 ファイル」は第168 の数**で、**現在は 9 site・5 ファイル**
+**この節の「30+ site」「9 ファイル」は第168 の数**で、**現在は 7 site・5 ファイル**
 （数え方も §9.5.2）。
 ⇒ ★★★ **`@chord` の 3 往復は第170第2便で 1 往復になった**（`8f4b6a81`・§9.5.3 ⑴ の測定つき）。
 `AnnotationValues.Chord` が **引数の Text を `ChordStructure.TryParseChordEntry` へ直接渡す**ので、
@@ -543,11 +543,12 @@ rejoin to the written text」**と、**自分で連結を取り消している�
 ＝受理される綴りが変わりうる**。⇒ ★★ **`@fig` は `@chord` / `@frame` と同じ「部分言語」の組**。
 **無断で綴りを変えない**（§5 の家訓）＝**移すなら小さなパーサを書く便を別に立てること。**
 
-### 9.5.2 移した家族と、残っている `MarkName` 読み手（第169 実測）
+### 9.5.2 移した家族と、残っている `MarkName` 読み手（第169 実測・第171 更新）
 
-**移した 8 家族**——読み手は全部 `Semantics.AnnotationValues` の 1 コピーになった:
+**移した 10 家族**——読み手は全部 `Semantics.AnnotationValues` の 1 コピーになった:
 `@finger(N)`／`@pluck(p|i|m|a)`／`@bend(half|full|N)`／`@notehead(style)`／`@text("…")`／
-`@feather(right|left|accel|rit)`／`@arpeggio(bracket)`／**`@frame(032010)`**。
+`@feather(right|left|accel|rit)`／`@arpeggio(bracket)`／**`@frame(032010)`**／
+**`@chord(c:m7)`**（第170第2便）／**`@mark("A")`**（第171第1便）。
 
 ★★ **`@frame` は引数ノードが*そのために*設計された家族**（§9.2）＝**`Text` から読み、
 `Value`（`Int(32010)`）からは決して読まない**。網 `AFrameArgument_IsItsPositionString`。
@@ -567,16 +568,18 @@ rejoin to the written text」**と、**自分で連結を取り消している�
 
 ⇒ 第167 ⑸（tempo の 2 つの読みの食い違い）と同じ型で、**3 例目・4 例目**。
 
-**`MarkName` の code read は 18 → 10 → 9（第170第2便）→ 8（第170第5便）・7 ファイル → 5**
+**`MarkName` の code read は 18 → 10 → 9（第170第2便）→ 8（第170第5便）→ 7（第171第1便）・
+7 ファイル → 5**
 （実測・数え方は `Select-String '\.MarkName'` から `///` `//` `*` 始まりの行を除く）。**残りの内訳**:
 
 | 残っている読み | site | 何の家族か |
 |---|---|---|
 | `FiguredBassItem.ParseFigures` | 1 | **部分言語**（§9.5.1）＝**残る唯一の引数** |
-| `MusicMarkItem.ParseMarkName` 系／`ProcessDirectionName`／`mark.` ラベル | 6 | **点つきの「名前」であって引数ではない**（`@ds.al.fine`）。ただし **`@mark("A")` のラベルはここに混ざっている値** |
+| `MusicMarkItem.ParseMarkName` 系（collector 2・validator 1）／`ProcessDirectionName`／`EmitMark` の落ち先 | 5 | **点つきの「名前」であって引数ではない**（`@ds.al.fine`・`@ottava.bassa`） |
 | `WarnUnknown` の診断文 | 1 | 表示用（最後まで残る） |
 
 ⇒ ★★ **`MarkName` に残っている「引数」は `@fig` ただ 1 つ**。あとは点つき名前と表示用。
+**`@mark("A")` のラベルは第171第1便でここから出た**（§9.5.3 ⑵）。
 
 ### 9.5.3 残っている作業（次便へ）
 
@@ -610,10 +613,40 @@ rejoin to the written text」**と、**自分で連結を取り消している�
    **受理される綴りが変わりうる**ので、**無断で着手しないこと**（§5 の家訓）。
    `@chord` にあった「run の Text がそのまま入力」という逃げ道が **`@fig` には無い**
    （`#6`・`6s` は run 1 つ・点 2 部）。
-2. **`@mark("A")` のラベル**——**点つき名前の家族と同じ `ParseMarkName` に絡んでいる**ので、
-   移すならそこを割ってから。**値としては `@text` と同型**（文字列 1 個）。
-   ⚠️ **この島（`ParseMarkName` ＝点つき名前の分配器）は一度も測っていない。**
-   **満額の便で「読み手を全部数える」ところから。**
+~~2. **`@mark("A")` のラベル**~~ — **第171第1便で移した**（`31eab6ad`）。
+   **島を数えたら綴りは 4 つあった**（引継ぎは「`ParseMarkName` に絡んでいる」＝2 つと読んでいた）:
+   ⑴ `ParseMarkName` の `"mark."` 前置＋`Length > 5` の**ゲート** ⑵ `ParseRehearsalText` の
+   substring＋引用符剥がしの**ラベル** ⑶ `AnnotationNameValidator.IsBareRehearsalMarkLabel` の
+   **引用符判定** ⑷ ★ **`LilyPondExporter.EmitMark` が自前で切っていた 4 つ目**——
+   しかも **`Trim('"')`**（collector は釣り合った 1 対だけ剥がす）＝**剥がし方まで違った**。
+   ⇒ **`AnnotationValues.Rehearsal(mark, out quoted)` が 1 回で全部答える。**
+   `ParseMarkName` は**点つき「名前」の表**になり、引数について何も言わなくなった。
+   - **実測**（コーパス 80＋フィクスチャ 219＝299 冊）: **`@mark(` は 2 site・1 綴り**
+     （`@mark("A")` と `@mark("B")`・どちらも showcase）。**コーパスには 1 つも無い。**
+   - ★ **gate は case-INSENSITIVE**＝`@Mark("A")`・`@MARK("A")` は今日も rehearsal
+     （旧 gate は `MarkName.ToLowerInvariant().StartsWith("mark.")`）。**`@chord` の逆**なので、
+     `AnnotationValues.Named`（OrdinalIgnoreCase）が**ここでは正しい**。
+   - **`@mark()`（引数 0 個）は「空のラベル」ではなく unknown annotation**＝旧 `Length > 5`。
+     引数側では `Arguments.Length > 0`（`IsTextAnnotation` と同じ gate）。
+   - ⚠️ ★★ **振る舞い 1＝ラベルは「書いたとおり」になった**（宣言・ユーザー決定・網つき）。
+     `MarkName` がトークンを点で連結するので、**打っていない点が印字されていた**:
+     **`@mark(-1)` は `-.1`・`@mark(A B)` は `A.B`・`@mark("A" "B")` は `A"."B`**。
+     run で読むと `-1` / `A B` / `A" "B`。**`@chord(b.es:7)` の飲み込まれた点と同じ artefact。**
+   - ⚠️⚠️ ★★★ **振る舞い 2＝双子が引用符を付けるようになった**（第169 の `@finger("3")`・
+     `@frame(zzz)` と**同じ型の 5 例目**＝「コピーの 1 つが、export している当のものと
+     違うことを言っていた」）。**`\box` は markup を 1 つしか取らない**
+     （`scm/define-markup-commands.scm:1049`）ので、**引用符なしの `\box a b` は
+     `a` だけを箱に入れて `b` を箱の外に出す**——**LP 2.26.0 実測: 箱幅 1.9331 対
+     `\box "a b"` の 4.0159**、後者が Lily# の描くもの。
+     ★ **引用符は既存の綴りを 1 冊も動かさない**——**`\box A` と `\box "A"`・
+     `\box D.S.` と `\box "D.S."` は SVG がバイト一致**（2.26.0 実測）。
+   - ★ **`MeasureCollector.Annotations` の Rehearsal 腕は移さず消した**——
+     **articulation の名前は 1 トークンなので `.` を含めない**
+     （実測: 299 冊・**341 個の articulation 名に `.` は 0**）＝**どの本からも届かない腕**だった。
+   - ⚠️ **MusicXML は rehearsal を 1 つも export していない**——これはコピーではなく**不在**
+     （§5.3 の「片方に無い量は grep しても不一致として出ない」型）。**触っていない。**
+   - **出力同一の証明**（RULES §5.1）: **コーパス 80/80 の SVG ハッシュ不動**・
+     **台帳 514 点残差不動**・**suite 4788 passed / 0 failed / 4 skipped・snapshot 0 動**。
 ~~3. 裸 `@chord` の判定を `MarkName` から外す（1 site・先に実測）~~ —
    **第170第5便で外した**。**collector は `AnnotationValues.Chord` に 1 回だけ訊く**
    （null＝chord でない／`""`＝自分では名乗らない＝裸／それ以外＝記号）。
@@ -621,7 +654,7 @@ rejoin to the written text」**と、**自分で連結を取り消している�
    **`@chord.c`（括弧なしの点つき綴り）も `MarkName=="chord"` に落ちる**が、
    **そこでも引数は 0 個**なので一致する。**唯一ずれ得た `@chord.up` は
    mark ノードすら作らない**（実測）。⇒ **`MarkName` 読みは 8 site。**
-4. **`MarkName` 自体をいつ消すか**——上が済むと残るのは点つき名前の家族だけなので、
+4. **`MarkName` 自体をいつ消すか**——**残るのは `@fig` 1 つと点つき名前の家族だけ**なので、
    **そのとき `MarkName` は「点つき*名前*を綴る」1 用途に狭まる**。名前もそう変えること。
 
 ### 9.6 ⒯ の外で見つかった欠陥＝**数字なしの点**（第170第1便・`e947ef65`）

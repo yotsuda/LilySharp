@@ -26,7 +26,8 @@ git log --oneline -8
 git rev-list --count origin/master..master     # 未 push 数
 git status --short
 dotnet build LilySharp.Core\LilySharp.Core.csproj --no-incremental -v q
-dotnet test  LilySharp.Tests\LilySharp.Tests.csproj -v q 2>&1 | Select-String 'Passed!|Failed!'
+# ⚠️ 成否行はロケール依存。ja-JP の機械では Passed! は 1 度も出ない（RULES §5.5）
+dotnet test  LilySharp.Tests\LilySharp.Tests.csproj -v q 2>&1 | Select-String '成功!|失敗!|Passed!|Failed!'
 ```
 
 ⚠️ **このドキュメントも memory もコード内コメントも、書いた時点のスナップショット。**
@@ -62,6 +63,56 @@ $c = $e | Where-Object { $_.Value.unit -eq 'count' }
 ---
 
 ## 1. 現在地 ← **毎セッション書き換える**
+
+最終更新 第171セッション＝**開発機が変わった便**（**別 PC**・ユーザー申告）。
+**2 便＝⑴ `@mark("A")` のラベルを引数へ（監査 §9.5.3 ⑵）⑵ 文書。**
+開始時の裏取りは**全項目を走らせた**——**台帳 514 点・ss 非ゼロ 97・総和 3.609963181・
+count 点 106/うち非ゼロ 2**・HEAD `5431c058`（＝引継ぎの終了時 HEAD）＝**数は全部合っていた**
+（3 回連続）。⚠️ **合っていなかったのは環境のほう**（下の ⑷）。
+終了時 **HEAD ＝ 第2便**（この §1 の更新を同じ commit に。親は `31eab6ad`）・
+**未 push 2**・suite **4788 passed / 0 failed / 4 skipped**（+12＝新しい網ちょうど）・
+**台帳 514 点で不動**（ss 非ゼロ 97・総和 3.609963181）・**snapshot 0 動**・
+**コーパス 80/80 の SVG ハッシュ不動**（＝RULES §5.1 の証明 3 点）。
+- **⑴ ★★★ 第1便＝`@mark("A")` のラベルが引数から読まれるようになった**（`31eab6ad`・監査 §9.5.3 ⑵）。
+  ⚠️ ★★ **引継ぎは「`ParseMarkName` に絡んでいる」＝2 綴りと読んでいたが、実測したら 4 つあった**:
+  ⑴ `ParseMarkName` の `"mark."` 前置＋`Length > 5` ⑵ `ParseRehearsalText` の substring
+  ⑶ validator の `IsBareRehearsalMarkLabel` の引用符判定 ⑷ ★ **`LilyPondExporter.EmitMark` の
+  4 つ目**——しかも **`Trim('"')`**（collector は釣り合った 1 対だけ）＝**剥がし方まで違った**。
+  ⇒ **`AnnotationValues.Rehearsal(mark, out quoted)` が 1 回で答える。`ParseMarkName` は
+  点つき「名前」の表になった。`MarkName` の code read は 8 → 7。**
+  ★ **`@chord` で効いた型をそのまま使った**——**綴りの battery を先に全数で測り**、
+  **外れた系統だけをユーザー決定で落とした**（実測: 299 冊で `@mark(` は **2 site・1 綴り**
+  `@mark("A")`／`@mark("B")`・**コーパスには 0**）。
+  ⚠️ **gate は case-INSENSITIVE**（`@Mark("A")` も rehearsal）＝**`@chord` の逆**。
+- **⑵ ★★ 振る舞い 2 件（どちらも宣言・網つき・コーパス実害 0）**。
+  ⑴ **ラベルは「書いたとおり」になった**（**ユーザー決定**）——`MarkName` がトークンを
+  点で連結するので**打っていない点が印字されていた**（`@mark(-1)`→`-.1`・`@mark(A B)`→`A.B`）。
+  ⑵ ⚠️⚠️ ★★★ **双子が引用符を付けるようになった**＝第169 の `@finger("3")`／`@frame(zzz)` と
+  **同じ型の 5 例目**。**`\box` は markup を 1 つしか取らない**ので **`\box a b` は `a` だけを
+  箱に入れて `b` を外に出す**——**LP 2.26.0 実測で箱幅 1.9331 対 `\box "a b"` の 4.0159**。
+  ★ **引用符は既存の綴りを 1 冊も動かさない**（`\box A` ≡ `\box "A"`・`\box D.S.` ≡ `\box "D.S."`
+  ＝**SVG バイト一致**・2.26.0 実測）。**測ってから入れたので「たぶん同じ」が 1 つも無い。**
+- **⑶ ★ 消した腕が 1 つ**: `MeasureCollector.Annotations` の Rehearsal 腕は**移さず消した**——
+  **articulation の名前は 1 トークンなので `.` を含めない**（実測: 299 冊・**341 個の
+  articulation 名に `.` は 0**）＝**どの本からも届かない腕**だった。
+  ⚠️ **MusicXML は rehearsal を 1 つも export していない**——コピーではなく**不在**。触っていない。
+- **⑷ ★★★ この PC で踏んだ環境の罠 3 つ（RULES §5.5 に出した）**。
+  ⚠️⚠️ **`dotnet test` の成否行はロケール依存で、ja-JP では `Passed!` が 1 度も出ない**
+  （「成功!」）＝**§0 と §6 の `Select-String 'Passed!|Failed!'` は黙って空を返す**。
+  **「テストを走らせたつもり」がそのまま通る**——§5.3 の「0 は『速い』ではなく『測れていない』の
+  顔をして出る」の*合否*版。**両対応のパターンに直した。**
+  ⚠️ **`scratch/` は git 管理外なので、機械を移すと道具ごと消える**——**§5.1 の証明 ⑴ に要る
+  `scratch/lpreport/rerender-ls.ps1` がこの PC に無かった**ので**作り直し、§5.4 どおり
+  毒を入れて赤（`MOVED 1 / 80`）を見てから使った**。⚠️ **冊数は 82 ではなく 80。**
+  ⚠️ **`global.json` は SDK 9.0.308 をピン止め**——この PC には 8/10 しか無く build が止まった。
+  **SDK 9.0.308 を入れて解決**（リポジトリは 1 バイトも動かしていない）。
+  ★ **net10 へ上げるのは別便**（▶ の順位が全部 Release 実測 ms なので床が動く＝§5.3）。
+- **⑸ 未追跡・未 push**: **未追跡 0**（引継ぎの `lp-vs-lilysharp.html` は**この PC には無い**）。
+  **第170 の 13 便は push 済み**で開始時 未 push 0 だった。
+
+---
+
+## 以下は第170セッションの経緯
 
 最終更新 第170セッション＝**▶ ⒯⒟ の `@chord` を閉じ、その途中でユーザーが起票した
 「数字なしの点」を先に直した便**（5 便。第1便＝LYS0023、第2便＝`@chord`、
@@ -119,64 +170,6 @@ HEAD `8b0684ec`・未 push 8・未追跡 1＝**引継ぎの数は git も含め�
   **唯一ずれ得た `@chord.up` は mark ノードすら作らない**。
   ⚠️ **この便を今やったのは測定が手元にあったから**——次便に送ると §0 の家訓どおり
   測り直すので、**同じ測定を 2 度払う**ことになる。
-- **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
-
----
-
-## 以下は第169セッションの経緯
-
-最終更新 第169セッション＝**▶ ⒯⒟ の本体＝引数ノードを入れ、8 家族をそこへ移した便**（5 便。
-第4便が文書、第5便が `@frame`）。
-開始時の裏取りは**全項目を走らせた**——build 通過・suite **4643 passed / 0 failed / 4 skipped**・
-**台帳 514 点・ss 非ゼロ 97・総和 3.609963181・count 点 106/うち非ゼロ 2**・
-HEAD `3d477c0f`・未 push 3・未追跡 1＝**引継ぎの数は git も含めて全部合っていた**（初めて）。
-終了時 **HEAD ＝ 第5便**（`@frame` ＋この §1 の更新を同じ commit に入れた。親は文書便 `f46a6f11`）・
-**未 push 8**・suite **4740 passed / 0 failed / 4 skipped**（+97＝新しい網ちょうど）・
-**台帳 514 点で不動**（ss 非ゼロ 97・総和 3.609963181）・**snapshot 0 動**。
-- **⑴ ★★★ 第1便＝引数ノードが入った**（`e8680b94`）。`MarkArgument`（`Text` と `Value?`）と
-  `MusicMarkSyntax.Name` / `HasArgumentList` / `Arguments` / `ForcedAbove`。
-  ★★ **引数の切り方は「トークン」ではなく「隣接した run」**——`@chord(c:m7)` は
-  **`Text = "c:m7"` の 1 引数**（`MarkName` は `chord.c.:.m7` に割ってから
-  `ChordNameItem` が split+join で戻していた＝§9.3 の 3 往復）。
-  **区切りは空白と `,` だけで、空白を含む引数はコーパス全数で `@fig(5 3)` 族だけ**（実測）。
-  **`@frame(032010)` は `Text` に先頭 0 が残り `Value` は `Int(32010)`** ＝ 設計制約どおり。
-  同便で **finger / pluck / bend / notehead** を `Semantics.AnnotationValues` の 1 コピーへ。
-  ⚠️ ★★ **振る舞い 1 件（宣言済・網つき）**: `@finger("3")` は**collector が拒否・
-  LilyPond exporter は受理して `-3` を書いていた**＝**Lily# が描かないものを双子が言う**。
-  **exporter の comment 自身が「the SAME set … reads」と書いていた**ので
-  **collector の規則に揃えて comment を真にした**（コーパス実害 0・第167 ⑸ と同じ型）。
-  ⚠️ ★★ **`IsKnownCompoundName` の `string` overload は呼び手が 1 つも無かった**——
-  監査が「他の 9 つの再実装」と呼んだものは、*呼ばれてすらいないコピー*を抱えていた。**消した。**
-- **⑵ ★★★ 第2便＝`@text` を移し、`@fig` の分類が実測でひっくり返った**（`51e84777`）。
-  `ExtractTextAnnotation`（node の slot を手で歩く 7 つ目）が消え、**side は
-  「最後のトークンが up」ではなく qualifier から読む**ので **`@text("up")` が下のまま**になった（網）。
-  ⚠️⚠️ ★★★ **`@fig` は「値として読める家族」ではない**——**実測**: `@fig(#6)` も `@fig(6s)` も
-  **run は 1 つ**なのに **`MarkName` は 2 部**（`fig.#.6` / `fig.6.s`）。**`#` と suffix は
-  空白なしで数に貼りつく**ので **run の切れ目と点の切れ目が一致しない**。
-  ⇒ **`@fig` は `@chord` / `@frame` と同じ部分言語の組**（監査 §9.5.1）。**移すなら
-  小さなパーサを書く便を別に立てる＝受理される綴りが動きうるので無断で触らない。**
-- **⑶ ★★ 第3便＝`@feather` と `@arpeggio(bracket)` も移した**（`8b7c7fd6`）。
-  ⚠️ ★ **LILYPOND-REF を 2 つ書いて、2 つとも引き写しで壊した**——
-  `beam.cc:1597` を `set_stem_lengths` と名指したが**実物は `ADD_INTERFACE` の
-  プロパティ表**（LP 実ソースで確認）。**引用を 2 か所目に写すと真にし続ける対象が増える**
-  ので、**両方とも呼び手の remark を指すだけにして住所は 1 か所に残した**。
-  ⚠️ **番人は `CitationsThatNameNothing_DoNotGrow`（ラチェット）**——
-  **2 部のハイフン名（`grow-direction`）は symbol として認めない**ので、
-  住所を書くなら **`Foo::bar_baz` 形の名前を実際に読んで**添えること。
-- **⑷ 第4便＝文書の返済**（`f46a6f11`）。監査 §9.5 を書き換え、**第167 の経緯を ARCHIVE へ**
-  （§7 チェックリスト 3.5＝§1 に残すのは直近 2 便）。
-- **⑸ ★★★ 第5便＝`@frame` も移した＝8 家族目**（この commit）。**引数ノードが*そのために*
-  設計された家族**——**`Text` から読み `Value`（`Int(32010)`）からは決して読まない**。
-  ⚠️ ★★ **振る舞い 2 件目（宣言済・網つき・実害 0）**: **MusicXML exporter には gate が
-  1 つも無かった**——`frame.` の後をそのまま採用するので、**Lily# が描かず validator が
-  unknown と言う `@frame(zzz)` が XML に出ていた**。⑴ の `@finger("3")` と**同じ型**＝
-  **「コピーの 1 つが、自分が export している当のものより広い集合を受理していた」**。
-  ⇒ **`MarkName` の code read は 18 → 10・7 ファイル → 5。残るのは
-  `@fig` / `@chord` の 2 部分言語と点つき名前の家族だけ**（監査 §9.5.2）。
-  ⚠️ ★★ **この便の網は 2 回とも「陽性対照が先に落ちて」直った**——
-  XML の frame は ⑴ **`<harmony>` の子なので `@chord` が同居しないと出ない** ⑵ **文字列では
-  なく `<frame-note>` に分解される**（"032010" は XML に現れない）。
-  **どちらもコードを読んで気づいたのではなく、対照が落ちて分かった。**
 - **未追跡 1 件**: `audit/lp-regression/lp-vs-lilysharp.html`（第156 開始時から。触っていない）。
 
 ---
@@ -297,9 +290,14 @@ articulation 追加は ⑵ に落ちる＝`WidthPreservingContentEdit_SkipsLineB
         **第169 の実測で `@fig` は部分言語だった**（`@fig(#6)`・`@fig(6s)` は
         **run 1 つ／点 2 部**＝切れ目が一致しない・監査 §9.5.1）。
         ~~⇒ ★ 残るのは `@fig` / `@chord` の 2 部分言語＋`@mark("A")` のラベル＋点つき名前~~
-        — **`@chord` は第170第2便で閉じた**（`8f4b6a81`・§1 ⑶）。**残るのは
-        `@fig` の 1 部分言語＋`@mark("A")` のラベル＋点つき名前の家族**（`ParseMarkName`）。
-        **着手順は監査 §9.5.3。**
+        — **`@chord` は第170第2便で閉じた**（`8f4b6a81`）・**`@mark("A")` は第171第1便で
+        閉じた**（`31eab6ad`・§1 ⑴⑵）。⇒ **残るのは `@fig` の 1 部分言語と、
+        点つき「名前」の家族だけ**（`ParseMarkName`＝もう引数について何も言わない表）。
+        **`MarkName` の code read は 7 site・5 ファイル。着手順は監査 §9.5.3。**
+        ★ **`@mark` の収穫は「島を数えたら綴りが 2 でなく 4 だった」**——
+        **4 つ目は exporter が自前で切っていたもので、引用符の剥がし方まで違った**。
+        ⇒ ★★ **移す前に「同じ問いを何か所が綴っているか」を grep で数えること**
+        （§5.2.1② を*引数の島*に当てる形）。**引継ぎの見積りは 2 つとも低かった。**
         ⚠️⚠️ **`@fig` はユーザー決定が要る**（受理される綴りが動きうる）——
         **`@chord` にあった「run の Text がそのまま入力」という逃げ道が `@fig` には無い。**
         ★ **`@chord` で効いた型**: **綴りを変えずに消せる**という仮説を**先に全数で測り**、

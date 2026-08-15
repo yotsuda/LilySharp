@@ -1634,6 +1634,33 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 
 ### 5.5 環境の落とし穴
 
+- ★★★ ⚠️⚠️ **`dotnet test` の成否行はロケール依存。日本語 Windows では `Passed!` が
+  1 度も出ない**（2026-08-15・第171セッション・**開始時の裏取りで踏んだ**）。ja-JP の
+  コンソールは **「成功!   -失敗:     0、合格:  4788、スキップ:     4」** と出すので、
+  §0 と §6 が書いていた `Select-String 'Passed!|Failed!'` は**何も返さない**——
+  **エラーも出さず、ただ空**。⇒ ★★ **「テストを走らせたつもり」がそのまま通る**
+  （§5.3 の「**0 は『速い』ではなく『測れていない』の顔をして出てくる**」の、
+  *合否*版）。⇒ **両方を書く**: `Select-String '成功!|失敗!|Passed!|Failed!|\[FAIL\]'`。
+  ⚠️ **ロケールを英語に固定して回避しない**——次の人の機械がどちらかは分からない。
+  **パターンのほうを両対応にする。**
+- ★★ ⚠️ **`scratch/` は `.gitignore` されているので、機械を移すと道具ごと消える**
+  （2026-08-15・第171セッション。**§5.1 の証明 ⑴ が走らせられなかった**）。
+  「LP 回帰コーパスの SVG ハッシュ全一致」を出す `scratch/lpreport/rerender-ls.ps1` は
+  **リポジトリに 1 バイトも無く**、2 台目の PC には来なかった。**作り直した**（同じ場所・
+  `-Compare` で baseline と突き合わせ、`audit/lp-regression/lys` を `lysc svg` で回して
+  SHA256 を取る）。⚠️ **作り直したら §5.4 どおり毒を入れて赤を見ること**——
+  第171 は**コーパス 1 冊の中身を別の本に差し替えて `MOVED 1 / 80` を確認**してから使った。
+  ⇒ ★ **証明の道具が管理外にあるのは債務**。次にこの穴を踏んだ人が、
+  `audit/scripts/` へ出すかどうかを決めること（出すと「1 島 / 1 関心」の外の commit になる）。
+  ⚠️ **冊数は 82 ではなく 80**（§5.1 の本文は第171 時点で stale。数え直しは
+  `Get-ChildItem audit\lp-regression\lys -Filter *.lys`）。
+- ★ ⚠️ **`global.json` は SDK **9.0.308** をピン止めしている**。VS 2026 だけを入れた機械には
+  SDK 10 しか無く、**`dotnet build` は「A compatible .NET SDK was not found」で止まる**
+  （ランタイム 9 は別に入っているので、SDK さえ入れれば動く）。
+  ⇒ **SDK 9.0.308 を入れる**（`winget install --id Microsoft.DotNet.SDK.9 --version 9.0.308`）。
+  ⚠️ **`global.json` を rollForward に書き換えて回避しない**——▶ の打鍵の順位は全部
+  Release 実測の ms なので、**コンパイラ世代を変えると床が動いて順位を取り直すことになる**
+  （§5.3 の「regime を混ぜない」）。**net10 へ上げるなら TFM ごと専用の便で。**
 - **dotnet の増分ビルドが腐る** → 前後比較では `--no-incremental` でビルドして
   `dotnet run --no-build`。なお `dotnet test` は `--no-incremental` を受け付けない
 - **LilyPond は Guile デッドロックする** → `cmd /c "... < NUL"` でデタッチ必須。
@@ -1660,7 +1687,14 @@ dotnet build LilySharp.Core\LilySharp.Core.csproj --no-incremental -v m   # 0 wa
 dotnet build LilySharp.Tests\LilySharp.Tests.csproj --no-incremental -v q
 
 # 全テスト
-dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build -v q 2>&1 | Select-String 'Passed!|Failed!|\[FAIL\]'
+# ⚠️ 成否行はロケール依存（§5.5）。ja-JP は「成功!/失敗!」で Passed! は 1 度も出ない
+dotnet test LilySharp.Tests\LilySharp.Tests.csproj --no-build -v q 2>&1 `
+  | Select-String '成功!|失敗!|Passed!|Failed!|\[FAIL\]'
+
+# 出力同一の証明 ⑴（RULES §5.1）: LP 回帰コーパス 80 冊の SVG ハッシュ
+# ⚠️ scratch/ は git 管理外。無ければ作り直す（§5.5）。毒を入れて赤を見てから使うこと
+.\scratch\lpreport\rerender-ls.ps1              # 変更前に baseline を取る
+.\scratch\lpreport\rerender-ls.ps1 -Compare     # 変更後（「絵が動いた本 0 / 80」を期待）
 
 # LP 忠実度スコア
 # ⚠️ これは台帳の記録値を印字するだけで Lily# を測っていない（§5.3）。
