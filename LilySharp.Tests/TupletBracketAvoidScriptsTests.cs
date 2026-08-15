@@ -33,7 +33,7 @@ namespace LilySharp.Tests;
 /// <remarks>
 /// LILYPOND-REF: lily/tuplet-bracket.cc:682-706 calc_position_and_height
 ///   (the avoid-scripts block, gated on the default avoid-scripts #t).
-/// LP oracle (tuplet-bracket-avoid-scripts.ly twin, scratch/lpreg/tupavsc*):
+/// LP oracle (tuplet-bracket-avoid-scripts.ly twin, audit/lpreg/tupavsc*):
 /// for <c>\tuplet 3/2 { a'8^\accent r a'^\accent }</c> LilyPond puts the flat
 /// bracket 5.14 staff spaces above the middle line — accent ink top 4.04 + 1.10 —
 /// while stem tips reach only 3.00 (stem-driven placement would give 4.10).

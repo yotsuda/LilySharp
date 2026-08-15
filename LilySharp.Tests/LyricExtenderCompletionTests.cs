@@ -36,7 +36,7 @@ public class LyricExtenderCompletionTests
     {
         // "Ah __" against g1( c) d — the slur melisma covers g..c, the d has no
         // lyric. LP pins the extender's right end to the c whole note's ink
-        // right (measured 18.70 on the twin, scratch\lpreg\lyext).
+        // right (measured 18.70 on the twin, audit\lpreg\lyext).
         var svg = LiveRender.SvgFromRenderSpec("""
             octave absolute
             time 4/4

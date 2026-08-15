@@ -5,7 +5,7 @@
 // laissez-vibrer-chords.lys (第34号) の鏡映 (Repeat_tie_engraver は
 // Laissez_vibrer_engraver の派生 = 機構完全共有)。
 // 修理前は和音の repeatTie が丸ごと無警告 silent drop (member fan なし)。
-// 観測者: RepeatTieChordTests。twin scratch\lpreg\rtchords.{ly,lys}。
+// 観測者: RepeatTieChordTests。twin audit\lpreg\rtchords.{ly,lys}。
 octave absolute
 time 4/4
 

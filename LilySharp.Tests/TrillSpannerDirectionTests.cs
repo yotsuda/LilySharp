@@ -39,7 +39,7 @@ public class TrillSpannerDirectionTests
         // stop — bare (voice default DOWN), .up, .down, bare. LP 2.26.0 draws the "tr"
         // glyphs at rel +9.6, −2.55, +9.6, +11.564 (the fourth stacks BELOW the third's
         // wave, which its glyph overlaps in X — the below-staff collision pass).
-        // Pinned against the LP twin (scratch\lpreg\trillsdir-lp.{ly,svg}).
+        // Pinned against the LP twin (audit\lpreg\trillsdir-lp.{ly,svg}).
         // Before the port: all four UP, and the chained starts lost the first three
         // spanners entirely (the pending start was overwritten, not ended).
         string svg = Render(

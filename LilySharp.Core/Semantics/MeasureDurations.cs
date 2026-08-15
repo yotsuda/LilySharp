@@ -61,7 +61,7 @@ internal static class MeasureDurations
             // without a written duration. A duration written on it still SETS the running
             // default for what follows, exactly as one written on any other chord does.
             // ★ MEASURED against LilyPond 2.26.0, three bar-checks
-            // (scratch/lpreg/ecdur-p{1,2,3}.ly):
+            // (audit/lpreg/ecdur-p{1,2,3}.ly):
             //   p1  e'8 g' <>   c''×6            = 4/4 exactly  -> bare <> changes nothing
             //   p3  e'8 g' <>4  c''8×6           = 4/4 exactly  -> <>4 consumes no time
             //   p2  e'8 g' <>4  c''×6 (inherited)= 7/4          -> <>4 DID set the default

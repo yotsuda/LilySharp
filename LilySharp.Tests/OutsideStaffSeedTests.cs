@@ -256,7 +256,7 @@ public class OutsideStaffSeedTests
     /// ⚠️ THE TERMINATOR IS pp, NOT f, since the DynamicLineSpanner grouping (2026-08-07):
     /// the terminating text rides the hairpin's line, so its descender is in the group's own
     /// quiet outline. With f the quiet line is already deep enough to clear this tie —
-    /// MEASURED IN LILYPOND on the twin pair (scratch\lpreg\dyngroup-{tie,notie}.ly): the
+    /// MEASURED IN LILYPOND on the twin pair (audit\lpreg\dyngroup-{tie,notie}.ly): the
     /// f book's dynamics sit at identical Y with the tie and without it (20.2316 both),
     /// while the pp book moves 0.187 for the tie (8.000 vs 7.813 below the middle line).
     /// A book that does not separate cannot observe the seed; pp still does.

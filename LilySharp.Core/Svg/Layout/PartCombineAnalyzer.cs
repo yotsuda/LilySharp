@@ -56,7 +56,7 @@ internal static class PartCombineAnalyzer
     /// engraver acknowledged —
     /// LILYPOND-REF: lily/part-combine-engraver.cc:102-112 acknowledge_note_head —
     /// which is why the X here is the ITEM's, not the measure's.
-    /// MEASURED (scratch/lpreg/pcombine-lp.ly, dumped): each label's X equals its moment's
+    /// MEASURED (audit/lpreg/pcombine-lp.ly, dumped): each label's X equals its moment's
     /// first note head's X to the printed digit.
     /// </remarks>
     public static ImmutableArray<PartCombineLayout> Calculate(

@@ -5,7 +5,7 @@
 // 声部: LP \\ 4声 = voice{}{}{}{} (奇数分岐=up・偶数分岐=down)。
 // 修理 (第42号): voiced-position 基底 + 跨ぎ音符の head-only 参加 +
 // StemTipPositionOf の描画同綴り化。LP 照合 6/6 休符桁一致。
-// 観測者: RestAvoidNoteTests。twin scratch\lpreg\restavoid.{ly,lys}。
+// 観測者: RestAvoidNoteTests。twin audit\lpreg\restavoid.{ly,lys}。
 octave absolute
 time 4/4
 

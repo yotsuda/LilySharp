@@ -450,7 +450,7 @@ public sealed partial class MeasureCollector
     /// <c>&lt;&gt;</c> occupies no time, so its moment IS the following note's moment, and a
     /// slur mark on it binds to the note column that lands there — the FOLLOWING note, not
     /// the preceding one the <c>)</c> visually trails.
-    /// ★ MEASURED against LilyPond 2.26.0 (scratch/lpreg/ecslur-{a,b,c}.ly): the slur of
+    /// ★ MEASURED against LilyPond 2.26.0 (audit/lpreg/ecslur-{a,b,c}.ly): the slur of
     /// <c>r4 e'8( g' &lt;&gt;) c''4</c> and of <c>r4 e'8( g' c''4)</c> are the SAME curve
     /// (both 1.2883 → 6.1207), while closing on <c>g'</c> gives a different one
     /// (0.7803 → 3.5345). ⚠️ Do not "fix" this to end on the visually preceding note.
@@ -668,7 +668,7 @@ public sealed partial class MeasureCollector
                         // MultiMeasureRestEngraver.FindRuns cannot tell `R1*3` from
                         // `R1 | R1 | R1`, so it merged the latter into one three-bar rest.
                         // LilyPond engraves three one-bar rests there (one spanner per
-                        // written event) — measured on 2.26.0, scratch/lpreg/pcmsh-r1.log.
+                        // written event) — measured on 2.26.0, audit/lpreg/pcmsh-r1.log.
                         // The interior copies are all identical, so clone ONCE and reuse:
                         // cloning inside the loop would allocate N-1 records per written
                         // rest (99 of them for `R1*100`) to no purpose.

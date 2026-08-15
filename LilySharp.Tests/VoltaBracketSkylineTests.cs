@@ -34,7 +34,7 @@ namespace LilySharp.Tests;
 /// LILYPOND-REF: lily/volta-engraver.cc:371-374 make_spanner — a bracket with
 ///   no open spanner makes one; lily/volta-engraver.cc:493-499 add_support —
 ///   the chain's last end closes the spanner.
-/// LP oracle (scratch/lpreg/voltasky twins): the chain over D7 notes sits at
+/// LP oracle (audit/lpreg/voltasky twins): the chain over D7 notes sits at
 /// 7.085 above the staff top, the chain over A7 notes at 9.085 — a 2.0 split in
 /// ONE system (Lily# stacker: 7.070 / 9.070).
 /// </remarks>

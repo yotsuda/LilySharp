@@ -3587,7 +3587,7 @@ internal static class SpacingRules
     /// through five contexts, so its shared→solo step is a voice change in the middle of a
     /// measure with no cue anywhere. The condition below is LilyPond's own instead — DOES ANY
     /// CONTEXT OCCUPY BOTH COLUMNS — of which the cue reading is the two-context case.
-    /// MEASURED, scratch/lpreg/pctend.log dumps every wish of
+    /// MEASURED, audit/lpreg/pctend.log dumps every wish of
     /// input/regression/part-combine-tuplet-end.ly: the shared voice's wish at the half rest
     /// carries right-items (31.403, 29.313) — the note it engraves next and the bar line — and
     /// NOT the solo note at 14.087 that follows it, so that pair alone loses the refinement and

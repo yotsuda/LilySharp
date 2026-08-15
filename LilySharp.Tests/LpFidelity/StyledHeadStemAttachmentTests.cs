@@ -32,7 +32,7 @@ namespace LilySharp.Tests.LpFidelity;
 /// correct begin points of merged noteheads"), twinned with \aikenHeads replaced by
 /// 'triangle on both sides (audit/lp-regression/lys/flag-stem-begin-position.lys).
 /// Every number below is LilyPond 2.26.0's own drawn stem from that twin
-/// (scratch/lpreg/flagstem-lp.svg): down-stem begin middle+2.1828 on f (centre 1.5 +
+/// (audit/lpreg/flagstem-lp.svg): down-stem begin middle+2.1828 on f (centre 1.5 +
 /// 0.6828), up-stem begin middle+1.3738 (1.5 − 0.1262), and the two stems of one merged
 /// column stand 1.0342 apart (= (1.3828 − 0.065) − (0.2186 + 0.065)).
 /// LILYPOND-REF: lily/stem.cc:934-963 internal_calc_stem_begin_position — begin = head

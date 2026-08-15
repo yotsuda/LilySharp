@@ -344,7 +344,7 @@ public sealed record RenderSpec(
                 // (ElementCoordinator, ItemSkylineFactory): both parts' rests kept direction
                 // 0 and were drawn on the centre line ON TOP OF EACH OTHER. Measured against
                 // LilyPond's own \voiceOne/\voiceTwo control, which puts them at ±4:
-                // scratch/lpreg/pcsil-a-cond.lys vs pcsil-ctl.ly.
+                // audit/lpreg/pcsil-a-cond.lys vs pcsil-ctl.ly.
                 // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — the
                 // direction the voice number sets goes to every direction-polyphonic grob,
                 // and Rest is one of them, which is why the rests and not the stems broke.

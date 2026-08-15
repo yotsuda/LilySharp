@@ -44,7 +44,7 @@ public class KneeSpringFloorTests
         // share no Y, so the skyline minimum is 0 and LilyPond draws the ideal.
         // The accidental on the last note must NOT change any of it (the claim):
         // its ♯ tucks under the high left head at the same X either way.
-        // Pinned against the LP twin (scratch\lpreg\spacc-corr.{lys,-gen.ly}).
+        // Pinned against the LP twin (audit\lpreg\spacc-corr.{lys,-gen.ly}).
         // LILYPOND-REF: lily/spring.cc:101-129 merge_springs —
         //   avg_distance = max (min_distance + 0.3, avg_distance);
         // LILYPOND-REF: lily/note-spacing.cc:111-113 — set_ideal_distance

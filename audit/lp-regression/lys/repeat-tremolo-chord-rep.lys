@@ -5,7 +5,7 @@
 // `repeat tremolo 4 { q16 }` (m2/m3 は LP でも同じ音楽)。
 // 修理前: 和音の単発 tremolo 斜線が綴りに関わらず silent drop
 // (DrawChord が DrawTremolo 未呼出) + pair 内の q が素の 16分+旗で出た。
-// 観測者: RepeatTremoloChordRepTests。twin scratch\lpreg\qtrem.{ly,lys}。
+// 観測者: RepeatTremoloChordRepTests。twin audit\lpreg\qtrem.{ly,lys}。
 octave absolute
 time 4/4
 

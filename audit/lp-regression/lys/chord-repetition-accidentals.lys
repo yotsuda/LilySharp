@@ -2,7 +2,7 @@
 // CLAIM: q は注意喚起(courtesy)臨時記号を複製しない——原和音の (♮) は q に出ない。
 // ⚠️ 枠合わせ: 原本 1 小節目の強制臨時記号 f! は Lily# に綴りが無い(LYS4009・! は
 // 点線小節線)ので、f! 小節を両側から落とし f? 小節だけを対にする
-// (scratch\lpreg\chord-repetition-accidentals-noforce.ly・breathing-sign-accidentals
+// (audit\lpreg\chord-repetition-accidentals-noforce.ly・breathing-sign-accidentals
 // と同じ枠揃え)。f? = @courtesy(括弧付き・accidental.cc:147-148)。
 // 綴り: LP 和音 = F4 A4 D5 F5 → Lily# 裸 <f a d f'>(anchor F4 積み・2 つ目の f は
 // +1 オクターブ指定が要る)。

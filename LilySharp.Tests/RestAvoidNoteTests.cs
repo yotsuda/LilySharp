@@ -25,7 +25,7 @@ namespace LilySharp.Tests;
 /// stems in its voice — the voiced starting position plus the collision
 /// translate — and rests of same-direction voices may overlap each other.
 /// Every pin below is LilyPond's own printed position from the paper-aligned
-/// twin (scratch\lpreg\restavoid, digit-for-digit).
+/// twin (audit\lpreg\restavoid, digit-for-digit).
 /// LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal;
 /// LILYPOND-REF: lily/rest-collision.cc:211-290 calc_positioning_done.
 /// </summary>

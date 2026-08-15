@@ -32,7 +32,7 @@ namespace LilySharp.Tests;
 /// <remarks>
 /// LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir.
 /// LP oracle: the nine tuplets of tuplet-bracket-direction.ly render
-/// UP DOWN UP DOWN UP UP DOWN UP DOWN (scratch/lpreg/tupdir* twins, hooks read
+/// UP DOWN UP DOWN UP UP DOWN UP DOWN (audit/lpreg/tupdir* twins, hooks read
 /// from the SVG). The fourth (C6 + F4, one stem each way) is the tiebreak's
 /// pinned case: bare "equal → UP" put it above.
 /// </remarks>
@@ -42,7 +42,7 @@ public class TupletBracketDirectionTests
     /// <summary>
     /// An ALL-REST tuplet's bracket still runs the offset pass: the staff edge
     /// (ink 2.3) is the only encompass, plus padding 1.1 — LP puts it 3.400
-    /// above the middle line (tuplet-rest.ly t4, twin scratch/lpreg/tuprest*).
+    /// above the middle line (tuplet-rest.ly t4, twin audit/lpreg/tuprest*).
     /// The old fallback parked it at the fixed 4.5.
     /// </summary>
     [Fact]

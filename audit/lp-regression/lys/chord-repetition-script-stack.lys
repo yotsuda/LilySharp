@@ -5,7 +5,7 @@
 // ⚠️ 枠の差: LP 原本の和音レベル指番号 -1-2-3 は Lily# で書けない——和音レベル
 // @finger は描画されずに黙って落ちる(_fingeringByPosition は読者ゼロ・起票済)。
 // 積み順の観測は script(@staccato)+@text の 2 要素に狭めて行う(LP 側の対も -. に
-// 揃えた・scratch\lpreg\chord-repetition-script-stack.ly)。
+// 揃えた・audit\lpreg\chord-repetition-script-stack.ly)。
 // _"q" = @text("q").down(italic/upright の既知の枠差)。
 time 4/4
 

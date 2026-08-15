@@ -31,7 +31,7 @@ namespace LilySharp.Tests;
 /// </summary>
 /// <remarks>
 /// Every expected number was read off LilyPond 2.26.0's own grob dump of this book
-/// (<c>scratch/lpreg/pctend.ly</c> with <c>pcdump.ily</c>, log <c>pctend.log</c>) and its
+/// (<c>audit/lpreg/pctend.ly</c> with <c>pcdump.ily</c>, log <c>pctend.log</c>) and its
 /// no-combiner control (<c>pctend-ctl.ly</c>), never off this renderer.
 /// <para>
 /// The switch the book is about: bar 1 is part one alone against part two's <c>R1</c> (Solo),
@@ -132,7 +132,7 @@ public class PartCombineTupletEndTests
         //   LilyPond, no combiner                    = 5.801955   (= the same + 1.5 - 1.2,
         //                                              the half rest's right edge traded for
         //                                              spacing-increment)
-        // MEASURED: scratch/lpreg/pctend.log WISH records against pctend-ctl.log.
+        // MEASURED: audit/lpreg/pctend.log WISH records against pctend-ctl.log.
         var xs = ColumnXs(Svg(Book("combinedStaff { vone vtwo }")));
 
         Assert.Equal(5.501955, xs[1] - xs[0], GapTolerance);

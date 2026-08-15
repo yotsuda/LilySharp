@@ -11,7 +11,7 @@
 // (Fixtures/test/beam-skip.lys says so in as many words, and pcsm-frame2.lys confirmed a
 // combined part accepts one).
 //
-// What LP engraves (measured, scratch/lpreg/pcsm.log; y in staff spaces above the centre line):
+// What LP engraves (measured, audit/lpreg/pcsm.log; y in staff spaces above the centre line):
 //   bar 1  R1^"R" vs r1_"r"   -> ONE rest, dir=(), +1.0 ss, label "r" ONLY ("R" goes with its event)
 //   bar 2  s1^"s" vs R1_"R"   -> ONE mmrest, -3.0 ss (voice two), label "R"; the skip's "s" prints
 //   bar 3  r1^"r" vs s1_"s"   -> ONE rest, dir=+1, +2.0 ss (voice one), labels "r" (up) and "s" (down)

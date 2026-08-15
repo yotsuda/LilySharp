@@ -3,7 +3,7 @@
 // 綴り: LP \relative 無引数の <d' g> = D4+G4 = Lily# <d g> (octave absolute)。
 // -\laissezVibrer = @laissezVibrer・^ = .up・_ = .down。
 // 修理前は和音の l.v. が丸ごと無警告 silent drop (TieVariantEngraver が NoteItem 限定)。
-// 観測者: LaissezVibrerChordTests。twin scratch\lpreg\lvchords.{ly,lys}。
+// 観測者: LaissezVibrerChordTests。twin audit\lpreg\lvchords.{ly,lys}。
 octave absolute
 time 4/4
 

@@ -163,7 +163,7 @@ internal static class MeasureModel
             // the collector, which expands the run and lays out N bars — so a part resting
             // `R1*2` against a part writing three bars was reported as two bars long and
             // "padded with rests to align" (LYS2007) while the layout padded nothing.
-            // ★ MEASURED, both halves in one run: scratch/lpreg/pcmmas-x4.lys warns that
+            // ★ MEASURED, both halves in one run: audit/lpreg/pcmmas-x4.lys warns that
             // part `pa` spans 2 bars, and the page it draws has three.
             // LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST — one event carrying
             // an optional duration, whose `*N` factor is what makes it last N bars.

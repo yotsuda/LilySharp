@@ -444,7 +444,7 @@ internal static class TupletBracketEngraver
                         //   case, so the bracket's own position IS the beam-relative one.
                         // Keeping a second formula here made the two disagree by the
                         // bracket thickness.
-                        // MEASURED on the LP twins scratch/lpreg/tupnum{a,b}-lp.svg, which
+                        // MEASURED on the LP twins audit/lpreg/tupnum{a,b}-lp.svg, which
                         // differ only in 8ths vs 16ths: LilyPond puts the number at the
                         // SAME y=15.3153 in both — bracket hidden in (a), drawn in (b) —
                         // and its beam ink edge is 13.4756 in both, so the offset is

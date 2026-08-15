@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// it is DRAWN — SkylineBuilder.AddStaffToSkylines), and skyline distance counts a
 /// zero-width touch (SkylineBuilding.DistanceResolved, skyline.cc:628-645).
 /// LILYPOND-REF: lily/align-interface.cc:228-238 internal_get_minimum_translations.
-/// Pinned against the LP twin scratch\lpreg\stclash.{lys,-lp.ly,-lp.svg}
+/// Pinned against the LP twin audit\lpreg\stclash.{lys,-lp.ly,-lp.svg}
 /// (stems-clash-between-staves.ly).
 /// </summary>
 [Trait("Category", "Unit")]

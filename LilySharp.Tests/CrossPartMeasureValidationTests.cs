@@ -249,7 +249,7 @@ public class CrossPartMeasureValidationTests
         // bar made this pass report the part as short and say "the shorter part is padded
         // with rests to align" — while the collector expanded the run and the page came
         // out three bars, padded by nothing.
-        // ★ MEASURED, both halves in one run: scratch/lpreg/pcmmas-x4.lys warned that its
+        // ★ MEASURED, both halves in one run: audit/lpreg/pcmmas-x4.lys warned that its
         // part spanned 2 bars and drew 3.
         var diags = Validate("""
             section B {

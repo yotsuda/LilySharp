@@ -2,7 +2,7 @@
 // CLAIM: inversion (/bass) は和音メンバーを最下段に落とし、added bass (/+bass) は
 // 全和音の下に音を追加する。上=computed chord names・下=entered name ラベル。
 // 実現音(音塊)は LP \displayLilyMusic dump の手展開
-// (scratch\lpreg\chord-names-bass-dump.ly)——computed name は両形式とも同一
+// (audit\lpreg\chord-names-bass-dump.ly)——computed name は両形式とも同一
 // (LP: F△/E・Lily#: Fmaj7/E=plain text 既知の枠差)。/+bass の chords 入力は
 // この本の翻訳で追加した文法(SlashAndAddedBass_ParseAsOneEntryEach が観測者)。
 // 綴り: LP 絶対 c' = Lily# c。_"…" → @text("…").down(italic vs upright 既知)。

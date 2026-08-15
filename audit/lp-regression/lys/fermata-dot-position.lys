@@ -3,7 +3,7 @@
 // 枠合わせ: henze/veryshort/verylong の 4 種は Lily# に綴りが無いので両側とも
 // short/long に置換 (被覆は 8 種中 3 glyph・記録済)。両側 \time 12/8 =
 // 付点 4 分が小節を割らない (Lily# は | 明示)。block 2 (accent 対) は
-// scratch\lpreg\fermata-dot-b.{ly,lys} の対で測る。
+// audit\lpreg\fermata-dot-b.{ly,lys} の対で測る。
 // 綴り: LP \relative c''' の a=A5=Lily# a''。
 
 time 12/8

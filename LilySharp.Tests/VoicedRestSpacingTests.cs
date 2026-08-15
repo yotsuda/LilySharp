@@ -42,7 +42,7 @@ public class VoicedRestSpacingTests
         // pure-chain-offset-callback passes the previous offset through) —
         // before the port the rest entered as a phantom notehead on the MIDDLE
         // line, the flat's Y never met it, and the flat ran 1.01 into the rest.
-        // Pinned against the LP twin (scratch\lpreg\spacc-rest.{lys,-gen.ly}).
+        // Pinned against the LP twin (audit\lpreg\spacc-rest.{lys,-gen.ly}).
         // LILYPOND-REF: lily/rest-collision.cc:76-84 add_column —
         //   Lily::pure_chain_offset_callback;
         // LILYPOND-REF: scm/output-lib.scm:1273-1278 pure-chain-offset-callback.
@@ -67,7 +67,7 @@ public class VoicedRestSpacingTests
         // The voiced position is the SPAN's, not the measure's: LilyPond forces a rest
         // inside << { } \\ { } >> (a spacer partner included — the context alone sets
         // Rest.direction), and leaves the music after the span unforced. Pinned against
-        // LP 2.26.0 (scratch\lpreg\vrest-probe.{ly,-lp.svg}): the span's r4 at rel −2.0,
+        // LP 2.26.0 (audit\lpreg\vrest-probe.{ly,-lp.svg}): the span's r4 at rel −2.0,
         // the trailing r2 ON the middle line. Before the stamp was scoped to the span's
         // reach, the measure-granular voice default voiced the trailing rest too
         // (collision-harmonic-no-dots.ly's r4 sat at −2.0 where LP has the middle), and

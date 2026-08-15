@@ -97,7 +97,7 @@ public class TupletNumberTests
     /// ⚠️ THIS TEST USED TO RE-DERIVE "beam outer edge + padding 1.1" and compare against
     /// it. That model omits LilyPond's quantize step, and the engraver kept a SECOND
     /// spelling of the number's Y to satisfy it — the two then disagreed by up to the
-    /// bracket thickness. MEASURED on the LP twins scratch/lpreg/tupnum{a,b}-lp.svg (same
+    /// bracket thickness. MEASURED on the LP twins audit/lpreg/tupnum{a,b}-lp.svg (same
     /// music in 8ths and 16ths, bracket hidden in one and drawn in the other): LilyPond
     /// puts the number at y=15.3153 in BOTH. The absolute is pinned by the ledger point
     /// staff.staff.beamed-tuplet-number (LilyPond 8.017717); what is pinned HERE is that

@@ -31,7 +31,7 @@ namespace LilySharp.Tests;
 /// <c>combinedStaff { partA partB }</c> — two parts on one staff, MERGED where they agree.
 /// </summary>
 /// <remarks>
-/// The music here is the music of <c>scratch/lpreg/pcombine-lp.ly</c>, four bars built to hit
+/// The music here is the music of <c>audit/lpreg/pcombine-lp.ly</c>, four bars built to hit
 /// each configuration once, and the expected counts are LilyPond's own, dumped grob by grob
 /// from that file:
 /// <code>
@@ -246,7 +246,7 @@ public class CombinedStaffTests
     // ("Multi-measure rests do not have to begin and end simultaneously to be combined").
     // The two parts write three runs each and disagree about where they end, and what
     // LilyPond engraves is FOUR rests — 8, 8, 8, 4 — one per segment between the
-    // boundaries EITHER part sets. Measured on 2.26.0, scratch/lpreg/pcmsh-a.log:
+    // boundaries EITHER part sets. Measured on 2.26.0, audit/lpreg/pcmsh-a.log:
     //   MMREST x=0.0 bars=8 | x=21.285 bars=8 | x=35.475 bars=8 | x=49.665 bars=4
     // so part one's SIXTEEN-bar rest is cut at bar 16, where part two begins its own.
     // LILYPOND-REF: scm/part-combiner.scm:535-552 analyze-unsynced-silence.
@@ -294,7 +294,7 @@ public class CombinedStaffTests
 
     // Scores 2 and 3 of the same regression file: part one interrupts its own rests with an
     // ORDINARY whole rest carrying a text, against part two's ongoing R1*16. Measured on
-    // 2.26.0 (scratch/lpreg/pcmsh-b.log and pcmsh-c.log) — five engraved silences,
+    // 2.26.0 (audit/lpreg/pcmsh-b.log and pcmsh-c.log) — five engraved silences,
     //   MMREST bars=8 | REST dur=0 +"r" | MMREST bars=7 | MMREST bars=8 | MMREST bars=4
     // breaking at 0 / 8 / 9 / 16 / 24, which is again the union of both parts' written
     // starts (part one at 0, 8, 9, 24; part two at 0, 16, 24). The ordinary rest is printed

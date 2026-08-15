@@ -3,7 +3,7 @@
 // LP writes the two parts as \relative f' { ... }, but there is not a single pitch in
 // this score, so the octave frame carries nothing and the twin needs no reference.
 //
-// What LP does with it (measured, scratch/lpreg/pcsil-a.log):
+// What LP does with it (measured, audit/lpreg/pcsil-a.log):
 //   moment 0   r4 vs r8   -> apart-silence, BOTH printed (y 0.0 / -2.0)
 //   moment 1/8            -> part 2 alone   (y -2.0)
 //   moment 1/4 r2 vs r2   -> unisilence, ONE rest at y 0.0   <- the claim

@@ -1168,7 +1168,7 @@ internal static class ArticulationEngraver
     /// <remarks>
     /// LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie /
     ///   acknowledge_end_tie; lily/new-fingering-engraver.cc:144-157 add_script.
-    /// Measured (scratch/lpreg/sctten.ly + sctten2.ly): a member tenuto on EITHER
+    /// Measured (audit/lpreg/sctten.ly + sctten2.ly): a member tenuto on EITHER
     /// head of a tied chord stays at the island answer (−4.83) at both tie bounds —
     /// its own head's tie included — while the chord-level tenuto on the same music
     /// lifts to −5.35. The split is per-engraver, not per-tie-direction.
@@ -2205,7 +2205,7 @@ internal static class ArticulationEngraver
         // ⚠️ A tall quantized script STAYS at its quantized in-staff position — an
         // earlier guard here re-seated any quantized glyph taller than 1.0 ss outside
         // the staff, claiming to "reproduce LP's result directly". MEASURED FALSE
-        // (scratch/lpreg/probe-script-y.{ly,svg}): LilyPond's own page puts a forced-up
+        // (audit/lpreg/probe-script-y.{ly,svg}): LilyPond's own page puts a forced-up
         // marcato over c'' (and over c', via its stem tip) at staff POSITION 3 — origin
         // 1.5 ss above the middle, INSIDE the staff, the chevron straddling the top
         // line — 0.70 below where the guard seated it. With the guard gone all four

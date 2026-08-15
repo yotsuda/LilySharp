@@ -130,7 +130,7 @@ public class CondensedStaffTests
         // ⚠️ KNOWN RESIDUAL, pinned so it cannot grow unnoticed. The same music spelled as
         // two condensed parts spaces the FIRST bar identically to the one-part two-voice
         // span, then drifts: measured 0.08 at bar 2's first note, rising to 0.11 and
-        // levelling off (scratch/lpreg/cond3-{probe,ctl}.lys). Vertical placement is exact,
+        // levelling off (audit/lpreg/cond3-{probe,ctl}.lys). Vertical placement is exact,
         // so this is the measure spring, not the voice assignment.
         var condensed = GlyphXs(Svg(TwoParts("condensedStaff { fl1 fl2 }")));
         var control = GlyphXs(Svg(TwoVoiceControl));
@@ -281,7 +281,7 @@ public class CondensedStaffTests
     public void RestsSitAtLilyPondsVoicedPositions()
     {
         // …and the control itself is LilyPond's. Measured from LilyPond 2.26.0's grob dump
-        // of the same music written \voiceOne / \voiceTwo (scratch/lpreg/pcsil-ctl.ly),
+        // of the same music written \voiceOne / \voiceTwo (audit/lpreg/pcsil-ctl.ly),
         // in staff spaces above the centre line, column by column:
         //   r4/r8   +2 -2      r8      -2      r2/r2   +2 -2
         //   r8/r4   +2 -2      r8      +2      r1/r1   +2 -2

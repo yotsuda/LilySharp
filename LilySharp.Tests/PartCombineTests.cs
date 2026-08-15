@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 /// <remarks>
 /// <para>
 /// Every claim here is LilyPond's, either read off scm/part-combiner.scm or measured from
-/// its output. The measured ones come from <c>scratch/lpreg/pcombine-lp.ly</c>, four bars
+/// its output. The measured ones come from <c>audit/lpreg/pcombine-lp.ly</c>, four bars
 /// chosen to hit unisono, solo1, solo2 and chords, dumped grob by grob.
 /// </para>
 /// <para>

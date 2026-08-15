@@ -272,11 +272,11 @@ score main ""test"" { staff melody }
         // there is ONE bar moment: the small change clef hangs back into the last
         // measure's closing gap, and no extra measure bar appears beside the final
         // barline. MEASURED on the paper-aligned pair
-        // scratch/lpreg/clef-change-at-end-nofinal.{ly,svg} (LilyPond 2.26.0, NO \bar):
+        // audit/lpreg/clef-change-at-end-nofinal.{ly,svg} (LilyPond 2.26.0, NO \bar):
         //   note left → change-clef left: 20.334 − 17.121 = 3.213
         //   clef left → thin bar left:    23.181 − 20.334 = 2.847
         //     (= change-clef width + Clef.space-alist staff-bar extra-space 0.7)
-        // ⚠️ THE PAIR WAS RE-CUT. It used to be scratch/lpreg/clef-change-at-end.ly, which
+        // ⚠️ THE PAIR WAS RE-CUT. It used to be audit/lpreg/clef-change-at-end.ly, which
         //   wrote `\bar "|."` on the LilyPond side for the stated reason "matches Lily#'s
         //   always-final-barline design". That design is gone (MeasureCollector
         //   .FinalizeMeasures), so the twin that matches is the one where NEITHER side
@@ -339,7 +339,7 @@ score main ""test"" { staff melody }
     /// that one measures the bar's PLACE, this one measures that the bar is the one written.
     /// </para>
     /// <para>
-    /// LilyPond twin: scratch/lpreg/clef-change-at-end.ly, which is this exact music with
+    /// LilyPond twin: audit/lpreg/clef-change-at-end.ly, which is this exact music with
     /// <c>\bar "|."</c> — thin bar left 23.181, thick left 23.671, so the two pieces sit
     /// 0.490 apart (0.19 + kern 0.3). The note→clef→bar distances are the sibling's.
     /// </para>
@@ -372,7 +372,7 @@ score main ""test"" { staff melody }
         // clef-unchanged.ly: a `clef` command whose resolved clef equals the one
         // already in force engraves NOTHING — only the system-start clef appears,
         // and the redundant command takes no space either. MEASURED on the
-        // paper-aligned pair scratch/lpreg/clef-unchanged.{ly,svg} (LP 2.26.0):
+        // paper-aligned pair audit/lpreg/clef-unchanged.{ly,svg} (LP 2.26.0):
         // whole-note heads sit 8.150 apart in both bars, with or without the
         // redundant `\clef "treble"` between them.
         // LILYPOND-REF: lily/clef-engraver.cc:139-166 inspect_clef_properties

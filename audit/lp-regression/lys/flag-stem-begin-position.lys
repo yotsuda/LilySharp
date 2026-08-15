@@ -3,7 +3,7 @@
 // 4 分・8 分対の 3 モーメント、全部 2 声 unison merge)。
 // 枠: 原本の \aikenHeads (f=fa・e=mi) は Lily# に形が無い → 両側とも
 // triangle (noteheads.s2triangle = @notehead(triangle) と同一グリフ) に置換
-// (henze→short/long 両側置換と同型)。LP twin = scratch/lpreg/flagstem.ly。
+// (henze→short/long 両側置換と同型)。LP twin = audit/lpreg/flagstem.ly。
 // 綴り: octave absolute (Lily# の f = LP の f')。原本の 3 つの << \\ >> は
 // 連続束 = 多声 1 スパン融合 + s spacer でタイミング保存。s8 で 4/4 完結。
 // 照合 (fixed 第29号): 符尾始点 down 2.1828/2.68・up 1.3738/1.87・

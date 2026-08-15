@@ -115,7 +115,7 @@ public class MultiMeasureRestLayoutTests
         // ONE written rest event is ONE Multi_measure_rest. \compressMMRests compresses an
         // N-measure event; it does not fuse rests that were written separately. This test
         // used to assert the opposite (one three-bar run) — replaced by the measurement.
-        // LilyPond 2.26.0, scratch/lpreg/pcmsh-r1.log:
+        // LilyPond 2.26.0, audit/lpreg/pcmsh-r1.log:
         //   \compressMMRests { R1 | R1 | R1 }  ->  3 grobs, bars=1 each, NO MMNUM
         // LILYPOND-REF: lily/multi-measure-rest-engraver.cc process_music — one spanner
         // per written event; LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST.
@@ -131,7 +131,7 @@ public class MultiMeasureRestLayoutTests
     {
         // The identity pair: both spellings are three bars of silence, so any rule that
         // grouped by "every staff rests here" makes them identical. LilyPond does not —
-        // measured on 2.26.0 (scratch/lpreg/pcmsh-r1.log): R1*3 is ONE grob with bars=3
+        // measured on 2.26.0 (audit/lpreg/pcmsh-r1.log): R1*3 is ONE grob with bars=3
         // and MMNUM "3"; R1|R1|R1 is THREE grobs with bars=1 and no MMNUM. The engine's
         // difference between the two IS the ported rule, so this pair is what fails if
         // the written-event mark ever stops reaching FindRuns.

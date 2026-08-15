@@ -351,7 +351,7 @@ internal static class MultiMeasureRestEngraver
         // A NEW WRITTEN REST does the same, and for the same reason: LilyPond builds one
         // Multi_measure_rest spanner per written event, so `\compressMMRests` compresses
         // an N-measure event but never fuses separately written rests. Measured on 2.26.0
-        // (scratch/lpreg/pcmsh-r1.log): `R1 | R1 | R1` gives three grobs with bars=1 and NO
+        // (audit/lpreg/pcmsh-r1.log): `R1 | R1 | R1` gives three grobs with bars=1 and NO
         // count printed, `R1*3` gives one grob with bars=3 and MMNUM "3". Without this the
         // run grouping saw only "every staff rests here" and merged the three into one.
         bool OpensNewRun(int m)

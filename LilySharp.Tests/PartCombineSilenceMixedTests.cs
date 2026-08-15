@@ -31,14 +31,14 @@ namespace LilySharp.Tests;
 /// </summary>
 /// <remarks>
 /// Every number here was read off LilyPond 2.26.0's own grob dump of the book
-/// (<c>scratch/lpreg/pcsm.ly</c> with <c>pcdump.ily</c>, log <c>scratch/lpreg/pcsm.log</c>),
+/// (<c>audit/lpreg/pcsm.ly</c> with <c>pcdump.ily</c>, log <c>audit/lpreg/pcsm.log</c>),
 /// never off this renderer.
 /// <para>
 /// ⚠️ POSITIONS ARE COMPARED AS DRAWN INK, not as LilyPond's <c>y=</c>. A multi-measure rest
 /// and an ordinary semibreve rest in the same voice report positions 1.0 staff space apart and
 /// DRAW IN THE SAME PLACE: lily/multi-measure-rest.cc:254-264 Multi_measure_rest::print takes
 /// the ordinary rest's position and subtracts 2, then :284-292 picks the hanging glyph variant,
-/// and the two cancel. Measured on 2.26.0 (scratch/lpreg/mmr1.log): neutral R1 y=0.0 with ink
+/// and the two cancel. Measured on 2.26.0 (audit/lpreg/mmr1.log): neutral R1 y=0.0 with ink
 /// +0.375..+1.0, neutral r1 y=+1.0 with the same ink. Reading y= alone reports a defect that is
 /// not there — this file's first draft did.
 /// </para>

@@ -1099,7 +1099,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript, outside-staff-priority
         // 475: it declares (font-series . bold) and NO font-shape or font-size entry, so the
         // label is upright text at the default size, not italic. MEASURED
-        // (scratch/lpreg/pcombine-lp.ly, dumped): series=bold shape=() size=().
+        // (audit/lpreg/pcombine-lp.ly, dumped): series=bold shape=() size=().
         double size = LilySharp.Core.Svg.EngravingDefaults.CombineTextFontSize;
         foreach (var pc in layout.PartCombineLayouts)
         {

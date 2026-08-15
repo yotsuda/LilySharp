@@ -3087,7 +3087,7 @@ internal sealed class ElementCoordinator
                 // A REST bound is not a note-column bound to LP: the fallback
                 // loop reads the FIRST/LAST encompassed column's Y extent — the
                 // rest's own ink — plus dir·0.5. MEASURED (debug-slur-scoring,
-                // scratch\lpreg\slurrest-dbg): the all-rest 16th slur's WINNING
+                // audit\lpreg\slurrest-dbg): the all-rest 16th slur's WINNING
                 // candidate is idx=0 TOTAL=0.00 sitting at 2.55 = the r16 ink
                 // bottom 2.05 + 0.5 — the base itself, not a scored climb; the
                 // half-rest row's 0.5 = its ink bottom 0 + 0.5, same rule.

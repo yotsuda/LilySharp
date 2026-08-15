@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 /// </summary>
 /// <remarks>
 /// Every expected number below was read off LilyPond 2.26.0's own grob dump of that book
-/// (<c>scratch/lpreg/pcsil-{a,b,c}.ly</c> with <c>pcdump.ily</c>), not off this renderer.
+/// (<c>audit/lpreg/pcsil-{a,b,c}.ly</c> with <c>pcdump.ily</c>), not off this renderer.
 /// <para>
 /// ⚠️ Read the rest's POSITION, never its <c>Y-offset</c>. Rest_collision chains
 /// <c>force_shift_callback_rest</c> onto a rest's Y offset, and that callback applies the
@@ -128,7 +128,7 @@ public class PartCombineSilenceTests
     public void TheColumnsSitWhereLilyPondPutsThem()
     {
         // Score 1's six columns, from LilyPond's own dump of the book
-        // (scratch/lpreg/pcsil-a.ly, REST records). This used to be the book's X residual: the
+        // (audit/lpreg/pcsil-a.ly, REST records). This used to be the book's X residual: the
         // columns matched LilyPond's \voiceOne / \voiceTwo CONTROL to 0.005 while LilyPond's
         // own \partCombine output sat 0.10-0.20 away (measured then: 12.99 / 18.09 / 20.29 /
         // 24.57 against the numbers below). The whole of it was the left-head refinement of
@@ -206,7 +206,7 @@ public class PartCombineSilenceTests
         // staff, no combining — keeps BOTH half rests, so the single rest in the combined
         // score is the combiner's doing and not something the renderer would have done anyway.
         // ⚠️ Counts only. A condensed staff draws both of them ON THE CENTRE LINE, one on top
-        // of the other, where LilyPond's \voiceOne / \voiceTwo control (scratch/lpreg/
+        // of the other, where LilyPond's \voiceOne / \voiceTwo control (audit/lpreg/
         // pcsil-ctl.ly) puts them at +2 / -2: nothing stamps a voice direction on the rests of
         // a staff whose voices came from separate parts. That is a condensedStaff defect,
         // filed in HANDOFF §1, and asserting the broken y here would nail it in place.

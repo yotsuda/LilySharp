@@ -3,7 +3,7 @@
 // suffix が各和音の下に印字される。
 // ⚠️ 枠の差: Lily# に \chordmode-in-voice(suffix→音塊の実現)は無い——和音入力は
 // Lily# 独自レイヤ(度数和音・@chord)。ここでは LP の実現音
-// (\displayLilyMusic で dump・scratch\lpreg\chord-name-entry-dump.ly)を
+// (\displayLilyMusic で dump・audit\lpreg\chord-name-entry-dump.ly)を
 // 音塊として手展開し、エングレービング(積み・臨時記号綴り・ラベル配置)を比較する。
 // entry 文法そのものの観測者は ChordQualityRegistry の単体照合(suffix 14/28 対応)。
 // 綴り: LP 絶対 c' = Lily# c。_"…" → @text("…").down(Lily# @text は italic・

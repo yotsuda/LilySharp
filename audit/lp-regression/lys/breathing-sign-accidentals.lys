@@ -3,7 +3,7 @@
 // 綴り: LP \relative c''(f2=f'')→ Lily# f'。和音は昇順の絶対表記。
 // ⚠️ 文法ギャップ: 原本 2・6 小節目の強制臨時記号 e!/g!（強制ナチュラル）は Lily# で
 // 書けない（`!` は点線小節線・LYS4009）。ナチュラル対 breath の衝突は本書では観測不能。
-// 枠を揃えるため LP 側 twin も `!` を落として比較する（scratch/lpreg の -noforce 対）。
+// 枠を揃えるため LP 側 twin も `!` を落として比較する（audit/lpreg の -noforce 対）。
 // exporter twin（lysc ly）は @breath を落とす（第98便⑸ SplitAttachments に置き場が無い）
 // ので、この本の LP 対は手書き。
 octave absolute

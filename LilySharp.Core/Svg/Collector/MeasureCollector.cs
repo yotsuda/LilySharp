@@ -2000,7 +2000,7 @@ public sealed partial class MeasureCollector
     /// staff's business, not the part's, and running it per part left the rests of a
     /// condensed staff with no direction at all — both parts' whole rests landed on the
     /// centre line, one on top of the other, where LilyPond's <c>\voiceOne</c>/<c>\voiceTwo</c>
-    /// control puts them at ±4 (measured: scratch/lpreg/pcsil-a-cond.lys against pcsil-ctl.ly).
+    /// control puts them at ±4 (measured: audit/lpreg/pcsil-a-cond.lys against pcsil-ctl.ly).
     /// The stems were right on their own, because the renderer re-derives THOSE from the
     /// voice index; it is the rests that read the stamp.
     /// ⚠️ NOT for a <c>combinedStaff</c>: the combiner has already decided each item's

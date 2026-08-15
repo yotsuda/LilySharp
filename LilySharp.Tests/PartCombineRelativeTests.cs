@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// by an outer <c>\relative</c> ... The expected output of this test is three identical measures."
 /// </summary>
 /// <remarks>
-/// Expected numbers are LilyPond 2.26.0's own grob dump of the book (scratch/lpreg/pcrel.ly,
+/// Expected numbers are LilyPond 2.26.0's own grob dump of the book (audit/lpreg/pcrel.ly,
 /// log pcrel.log) and of the two-measure control that gives the twin a matching frame
 /// (pcrel-ctl.ly): all three measures are E4/F4 over C4/D4, staff-position -4/-6 then -3/-5,
 /// with columns at 8.585 / 12.860 and the next measure 9.891 further on.

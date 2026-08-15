@@ -989,7 +989,7 @@ internal static class EngravingDefaults
     /// LILYPOND-REF: scm/define-grobs.scm:1077-1094 CombineTextScript, outside-staff-priority 475 —
     /// it declares <c>font-series . bold</c> and NO <c>font-size</c>, so like <c>TextScript</c> it is set
     /// at the paper's own text size — see <see cref="TextScriptFontSize"/>, which carries the
-    /// address. MEASURED (scratch/lpreg/pcombine-lp.ly, grob dump): <c>series=bold shape=()
+    /// address. MEASURED (audit/lpreg/pcombine-lp.ly, grob dump): <c>series=bold shape=()
     /// size=()</c>, i.e. bold, upright, unscaled.
     /// <para>
     /// ⚠️ IT WAS <c>FontSize * 0.65</c> = 2.6 AND ITALIC in the renderer — the same shape of

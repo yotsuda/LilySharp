@@ -16,7 +16,7 @@ section A {
   vone { a8[ a] a8[ a] | a8[ a] a8[ a] | }
   // ⚠️ LilyPond writes `f'8[ f]~` — post-events in any order. Lily# takes the tie only
   // BEFORE the beam bracket (`f~]`), and drops it silently otherwise: measured with
-  // scratch/lpreg/tiebeam-order.lys, where the `]~` staff prints no tie and no warning.
+  // audit/lpreg/tiebeam-order.lys, where the `]~` staff prints no tie and no warning.
   // The two spellings mean the same thing, so this twin says it the way Lily# hears it.
   vtwo { f8[ f~] f8[ f] | f8[ f] f8[ f] | }
 }

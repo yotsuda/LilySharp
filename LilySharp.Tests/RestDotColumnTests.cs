@@ -41,7 +41,7 @@ public class RestDotColumnTests
         // and rides the rest's unpure push (+4 → +14) to land at +13, LP's rel −6.5.
         // Solo it would have gone UP (+15, rel −7.5), which is what the old fixed
         // "one position above the origin" rule drew.
-        // Pinned against the LP twin (scratch\lpreg\dot-column-vertical-positioning.{ly,svg}).
+        // Pinned against the LP twin (audit\lpreg\dot-column-vertical-positioning.{ly,svg}).
         string svg = Render("time 4/4\n\nvoice { f'8. e16 } { s8. s16 } { r8. a'16 } |\n");
         double middle = MiddleLineY(svg);
 

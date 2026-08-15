@@ -42,7 +42,7 @@ public class BeamedPureStemSpacingTests
         // unbeamed band the two never meet in Y and the flat packed 0.67 too close
         // (gap 1.35 where LilyPond draws 2.02). LilyPond's `!` forced accidentals are
         // dropped on both sides (no Lily# spelling); the claim stands without them.
-        // Pinned against the LP twin (scratch\lpreg\stempure.{lys,-gen.ly}).
+        // Pinned against the LP twin (audit\lpreg\stempure.{lys,-gen.ly}).
         string svg = Render(
             "octave absolute\n\n" +
             "part m { }\n" +

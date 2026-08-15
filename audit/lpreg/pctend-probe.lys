@@ -6,7 +6,7 @@
 // bar 2 has both parts on the same g1 = a2. The SECOND tuplet ends exactly at that
 // boundary, so if the end event went to the context the combiner switched TO, the
 // tuplet would never close.
-// What LP engraves (measured, scratch/lpreg/pctend.log): TWO tuplets, each a beamed
+// What LP engraves (measured, audit/lpreg/pctend.log): TWO tuplets, each a beamed
 // triplet with an EMPTY bracket extent (bracket-visibility = if-no-beam) and a number
 // "3" over the middle stem, and nothing of either tuplet reaching bar 2.
 //

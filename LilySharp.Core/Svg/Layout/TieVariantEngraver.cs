@@ -106,7 +106,7 @@ internal static class TieVariantEngraver
         // details' note-head gap (0.2) off the head's INK edge, the free end
         // OpenReach (1.5) out less the same gap.
         // (Verified against 2.26 SVG: a whole-note chord's l.v. spans
-        // headRight+0.2 .. headRight+1.3 to the digit — scratch\lpreg\lvchords;
+        // headRight+0.2 .. headRight+1.3 to the digit — audit\lpreg\lvchords;
         // the repeat-tie mirror spans headLeft−1.3 .. headLeft−0.2 — rtchords.)
         // LILYPOND-REF: lily/laissez-vibrer-engraver.cc acknowledge_note_head — head-direction LEFT (tie RIGHT of head)
         // LILYPOND-REF: lily/repeat-tie-engraver.cc make_my_tie — head-direction RIGHT (tie LEFT of head)

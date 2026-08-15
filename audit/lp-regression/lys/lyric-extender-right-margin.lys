@@ -5,7 +5,7 @@
 // 修理 (第37号): 跨ぎ extender の第2 segment が第1系の Y に描かれていた →
 // 次音節の系の基線で解決 (LyricHyphenLayout.NextLyricIndex/SecondSegmentY)。
 // hyphen の跨ぎ側 dash も同じ病気を同時に修理。
-// twin scratch\lpreg\lyextrm.{ly,lys}。
+// twin audit\lpreg\lyextrm.{ly,lys}。
 octave absolute
 time 4/4
 

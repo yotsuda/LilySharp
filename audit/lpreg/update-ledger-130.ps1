@@ -12,7 +12,7 @@ function Set-RegStatus([string]$name, [string]$state, [string]$claim, [string]$n
 Set-RegStatus 'part-combine-silence-mixed.ly' 'open' `
   'Different kinds of silence are not merged into the shared voice even if they begin and end simultaneously; however, when rests and skips are present in the same part, the skips are ignored' @'
 open(第130第1便・第112 skip→綴りゲート解除で再測。**skip→open**＝主張の後半は移植して一致・前半に 2 件の一般欠陥が残る)。
-双子=scratch/lpreg/pcsm.ly(staff1・逐語) 対 pcsm-probe.lys、対照=pcsm-order-probe.lys(枝順を揃えた版)。
+双子=audit/lpreg/pcsm.ly(staff1・逐語) 対 pcsm-probe.lys、対照=pcsm-order-probe.lys(枝順を揃えた版)。
 LP 実測(pcsm.log・y は STAFF sy を引いた ss、**位置ではなく描画インクで比較**):
  小節1 R1^"R" 対 r1_"r" → 休符1つ dir=() +1.0(part2 の r1)・ラベルは **"r" だけ**("R" は event ごと Null へ)
  小節2 s1^"s" 対 R1_"R" → MMR 1つ **voice two・ink -2.625..-2.000**＋"R"、skip の "s" は出る

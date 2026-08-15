@@ -1,4 +1,4 @@
-// The Lily# twin of scratch/lpreg/pcombine-lp.ly (\partCombine \one \two).
+// The Lily# twin of audit/lpreg/pcombine-lp.ly (\partCombine \one \two).
 // LP's own answer, dumped from that file (pcdump.log):
 //   bar 1  unisono   4 heads, 4 stems dir=UP, "a2" on the first
 //   bar 2  solo1     2 heads (g'), "Solo"        — part two's R1 is NOT engraved

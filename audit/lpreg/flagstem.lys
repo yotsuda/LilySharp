@@ -2,7 +2,7 @@
 // CLAIM: merge された符頭に符尾が正しい始点で届く (flag 付き 8 分・tremolo 付き
 // 4 分・8 分対の 3 モーメント、全部 2 声 unison merge)。
 // 枠: 原本の \aikenHeads (f=fa・e=mi) は Lily# に形が無い → 両側とも
-// triangle (noteheads.s2triangle) に置換。LP twin = scratch/lpreg/flagstem.ly。
+// triangle (noteheads.s2triangle) に置換。LP twin = audit/lpreg/flagstem.ly。
 // 綴り: octave absolute (Lily# の f = LP の f')。3 つの << \\ >> は連続束 =
 // 多声 1 スパン融合 + s spacer でタイミング保存。s8 で 4/4 完結。
 octave absolute

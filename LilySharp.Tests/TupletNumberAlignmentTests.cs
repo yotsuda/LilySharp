@@ -25,7 +25,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Tuplet numbers of flat beams vertically align with similar looking beams
 /// (tuplet-number-alignment.ly). Two pins from the LP twins
-/// (scratch/lpreg/tupnum{a,b}*): a number centres on ITS OWN tuplet's stems even
+/// (audit/lpreg/tupnum{a,b}*): a number centres on ITS OWN tuplet's stems even
 /// when one auto-beam covers several tuplets, and a beamed stem ends at the
 /// PRIMARY beam line — secondary beams stack toward the heads — so the number of
 /// a 16th-beamed tuplet sits at the same height as an 8th-beamed one (LP draws
@@ -60,7 +60,7 @@ public class TupletNumberAlignmentTests
         // here ONE beam covers BOTH tuplets, so neither tuplet's bounds are the beam's.
         // LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility, whose
         //   equally_long is lily/tuplet-bracket.cc:88-98 equal_bounds.
-        // MEASURED on this test's own LP twin scratch/lpreg/tupnumb-lp.svg: 8 bracket
+        // MEASURED on this test's own LP twin audit/lpreg/tupnumb-lp.svg: 8 bracket
         // lines = 4 per tuplet (two 0.7 edge hooks, and the horizontal run broken around
         // the number). Its 8th-note sibling tupnuma-lp.svg, where each beam DOES match its
         // tuplet, has 0.
@@ -77,7 +77,7 @@ public class TupletNumberAlignmentTests
     /// tuplet-number-slur-script.ly: the number position is correct when slurs
     /// and scripts are present. With up stems the slur and the accent both sit
     /// BELOW the notes while the number rides the beam above — so neither may
-    /// move it. LP twin (scratch/lpreg/tupnumss*): LP number centre 26.69 =
+    /// move it. LP twin (audit/lpreg/tupnumss*): LP number centre 26.69 =
     /// outer stem midpoint 26.73 (±0.04); slur start 3.045 below the middle
     /// line, accent 4.001 below — all matched by Lily# after the head-anchor
     /// attach fix (the number sat half a head left of the stems).

@@ -11,7 +11,7 @@ function Set-RegStatus([string]$name, [string]$state, [string]$claim, [string]$n
 
 Set-RegStatus 'part-combine-tuplet-end.ly' 'fixed' `
   'End tuplet events are sent to the starting context, so even after a switch, a tuplet ends correctly' @'
-fixed(第129第1便・第112 skip→綴りゲート解除で再測)。双子=scratch/lpreg/pctend.ly 対 pctend-probe.lys
+fixed(第129第1便・第112 skip→綴りゲート解除で再測)。双子=audit/lpreg/pctend.ly 対 pctend-probe.lys
 ＋対照 pctend-ctl.{ly,lys}(同じ音楽を合体器なしで=part1単独)。
 ★主張は engrave として成立(コード変更前から): LP=**三連符2つ・どちらも閉じる**。
 TupletBracket は2つとも **x extent が空**(beamed=bracket-visibility if-no-beam)で番号だけ・
@@ -47,7 +47,7 @@ perf round30(base a70a0fd8・両順 median-of-5＋床): plain1k/comb300/combmmr 
 
 Set-RegStatus 'part-combine-silence.ly' 'open' $null @'
 open(第127・skip→再測／第129 第1便で **X 残差は閉じた**・残るのは重なりの1点)。
-3score=双子3対(scratch/lpreg/pcsil-{a,b,c}{.ly,-probe.lys}・LP対照pcsil-ctl.ly=同じ音楽の\voiceOne/\voiceTwo)。
+3score=双子3対(audit/lpreg/pcsil-{a,b,c}{.ly,-probe.lys}・LP対照pcsil-ctl.ly=同じ音楽の\voiceOne/\voiceTwo)。
 **修理1枚(第127)=Nullに落とした要素が時間を食っていなかった**: LPのNullVoiceは他の文脈と同じ時計で走る
 (音楽は在り、engraveだけ誰もしない)。移植は要素ごと捨てていたので、以降がその時価ぶん前に詰まっていた
 (score1: 合体したr2の後のpart2 r4が3/4列でなく1/4列)。修理=PartCombinerのslotを(onset,item)で持ち、

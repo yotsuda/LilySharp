@@ -79,7 +79,7 @@ public class EmptyChordTests
     {
         // ⚠️ The texidoc sentence above is about the BARE <>, which is all that book writes.
         // A duration written on one still SETS the default for what follows — measured in
-        // LilyPond 2.26.0 with three bar-checks (scratch/lpreg/ecdur-p{1,2,3}.ly): with the
+        // LilyPond 2.26.0 with three bar-checks (audit/lpreg/ecdur-p{1,2,3}.ly): with the
         // following notes inheriting, `e'8 g' <>4 c''×6` reaches 7/4, not 4/4.
         // So after `<>4` the two c's are QUARTERS, and this bar is 1/4 + 1/8 + 1/8 + 0 +
         // 1/4 + 1/4 = 1, exactly 4/4.
@@ -113,7 +113,7 @@ public class EmptyChordTests
     [Fact]
     public void SlurClosedOnAnEmptyChord_EndsOnTheNoteAtThatMoment()
     {
-        // ★ MEASURED against LilyPond 2.26.0 (scratch/lpreg/ecslur-{a,b,c}.ly). <> occupies
+        // ★ MEASURED against LilyPond 2.26.0 (audit/lpreg/ecslur-{a,b,c}.ly). <> occupies
         // no time, so its moment IS the following note's, and LP ends the slur there:
         //   (a) r4 e'8( g' <>) c''4  and  (c) r4 e'8( g' c''4)  draw the SAME curve
         //       (both 1.2883 -> 6.1207), while

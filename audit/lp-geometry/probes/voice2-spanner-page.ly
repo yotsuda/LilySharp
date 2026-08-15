@@ -23,7 +23,7 @@
 %% (single page, so every gap is the spring's own natural length — the SSD/TSID regime),
 %% ragged-right = ##f and indent 0 so all four systems are spacing-identical. Voice one holds
 %% three middle-line whole notes per bar (inside the staff, no stems); voice two carries the
-%% probe's ink. Music bodies are `lysc ly` output from scratch/lpreg/{vssd,vssc,vtsid,vtsic}.lys
+%% probe's ink. Music bodies are `lysc ly` output from audit/lpreg/{vssd,vssc,vtsid,vtsic}.lys
 %% — generated, not written (HANDOFF: the octave trap); only the variable names are edited.
 %% Ledger reads the INTERIOR gap (systems 1 -> 2): the first system carries the meter and the
 %% last the final bar line, and a bow's arc is span-dependent (the SSD carve-out).

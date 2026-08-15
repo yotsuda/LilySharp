@@ -6,7 +6,7 @@
 // staff-positions -5 / -3 / -4 in the LP grob dump, not guessed from the spelling).
 // Lily# `d` = D4, so the twin says d / f / e.
 //
-// What LP does with it (measured, scratch/lpreg/pcsil-b.log):
+// What LP does with it (measured, audit/lpreg/pcsil-b.log):
 //   bar 1: r4 vs r8 -> apart-silence, both printed; then part 2 solo (Solo II);
 //          then f vs f -> a2, and it is PART TWO that carries the ink — the solo
 //          promoted it, so the shared voice is fed from part 2 and part 1 goes null.

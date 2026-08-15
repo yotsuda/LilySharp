@@ -6,7 +6,7 @@
 // The book is its own control: the two staves are the SAME pair of parts in the opposite
 // order, so whatever the rule is, it has to come out identical on both.
 //
-// What LP does with it (measured, scratch/lpreg/pcmmas.log):
+// What LP does with it (measured, audit/lpreg/pcmmas.log):
 //   bar 1  r2 vs R1*2 -> silence1/2: the ORDINARY rests are engraved, in the shared voice
 //                        (dir unset, position 0), and the multi-measure rest goes to null
 //   bar 2  R1 vs (still inside R1*2) -> one MultiMeasureRest, measure-count 1, position 0

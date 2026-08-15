@@ -1,4 +1,4 @@
-// Twin of scratch/lpreg/pcmsh-c.ly = score 3 of input/regression/part-combine-mmrest-shared.ly.
+// Twin of audit/lpreg/pcmsh-c.ly = score 3 of input/regression/part-combine-mmrest-shared.ly.
 //
 // The same music as pcmsh-b-probe with the two parts exchanged and the text pointing down.
 // LP engraves the two books IDENTICALLY apart from that text direction (pcmsh-b.log against

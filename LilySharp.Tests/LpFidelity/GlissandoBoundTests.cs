@@ -31,7 +31,7 @@ namespace LilySharp.Tests.LpFidelity;
 /// The book is lilypond-src/input/regression/glissando-accidental.ly ("Glissandi stop
 /// before hitting accidentals. Chord glissandi stop at the same horizontal position
 /// and have the same slope"), twinned at audit/lp-regression/lys. Every literal below
-/// is LilyPond 2.26.0's own drawn line from that twin (scratch/lpreg/gliss-acc-lp.svg).
+/// is LilyPond 2.26.0's own drawn line from that twin (audit/lpreg/gliss-acc-lp.svg).
 /// LILYPOND-REF: scm/define-grobs.scm:1695-1702 Glissando bound-details — right attach-dir LEFT + end-on-accidental, left attach-dir RIGHT
 /// LILYPOND-REF: lily/line-spanner.cc:177-202 calc_bound_info — end-on-accidental rereads x from the AccidentalPlacement extent
 /// LILYPOND-REF: lily/line-spanner.cc:599 Line_spanner::print — padding is consumed along dz.direction ()

@@ -167,7 +167,7 @@ internal static class PartCombiner
     /// <summary>
     /// The default <c>chord-range</c>: notes up to and including a ninth apart may be
     /// combined into one chord. ⚠️ This is why most two-part writing comes out as ONE voice
-    /// of chords rather than two voices — measured on <c>scratch/lpreg/pcombine-lp.ly</c>,
+    /// of chords rather than two voices — measured on <c>audit/lpreg/pcombine-lp.ly</c>,
     /// whose fourth bar (a fourth to a seventh apart, same rhythm) LilyPond engraves as four
     /// two-note chords with four stems, not as eight notes with eight.
     /// </summary>
@@ -305,7 +305,7 @@ internal static class PartCombiner
     /// <remarks>
     /// LilyPond changes which rest is printed at every moment a part BEGINS a multi-measure
     /// rest against the other's ongoing one, so the printed rests break at the UNION of both
-    /// parts' written starts. Measured on 2.26.0 (scratch/lpreg/pcmsh-a.log): part one
+    /// parts' written starts. Measured on 2.26.0 (audit/lpreg/pcmsh-a.log): part one
     /// writing 8|16|4 against part two writing 16|8|4 engraves FOUR rests — 8, 8, 8, 4 —
     /// breaking at 0/8/16/24, so part one's 16-bar rest is CUT at 16 where part two begins.
     /// LILYPOND-REF: scm/part-combiner.scm:535-552 analyze-unsynced-silence — print the rest
@@ -1594,7 +1594,7 @@ internal static class PartCombiner
     /// routing leaves on an item, and it is not enough to answer this: <c>shared</c> and
     /// <c>solo</c> both carry no voice settings, so they are indistinguishable by direction,
     /// and they are exactly the pair whose boundary horizontal spacing has to see (measured:
-    /// scratch/lpreg/pctend.log, where the shared voice's wish at the half rest reaches
+    /// audit/lpreg/pctend.log, where the shared voice's wish at the half rest reaches
     /// straight past the whole solo run to the note it engraves next).
     /// </remarks>
     private static MusicItem InContext(MusicItem item, PartCombineVoiceId target) =>

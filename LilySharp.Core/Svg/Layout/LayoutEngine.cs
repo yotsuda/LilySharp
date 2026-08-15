@@ -613,7 +613,7 @@ internal sealed class LayoutEngine
     /// Score they hand it the same way (all voices, this staff's tuplets); they differ only in
     /// which system array they get, and paging does not touch a system's internal geometry.
     /// MEASURED (session 136) before this was carried: 14,350 beams over 468 layouts of every
-    /// .lys in the tree — Fixtures, samples and scratch/lpreg, 564 staves — compared
+    /// .lys in the tree — Fixtures, samples and audit/lpreg, 564 staves — compared
     /// element-wise (LeftX/LeftY/RightX/RightY/member X positions/system/staff), 0 mismatches,
     /// with a poisoned control run proving the comparison reports when it should.
     /// The second layout cost 385.5 ms of a 2.1 s keystroke on perf-plain1k.

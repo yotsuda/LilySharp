@@ -128,7 +128,7 @@ public class ArticulationPlacementTests
         // POSITION 3, inside the staff, the chevron straddling the top line. Over
         // g'/e'/c' (up stems) the support is the stem tip: 5.4 (past the +5 span
         // gate, unquantized), 5 (rounded 4 = a line, pushed one further), 3.
-        // MEASURED against scratch/lpreg/probe-script-y.{ly,svg} — all four exact.
+        // MEASURED against audit/lpreg/probe-script-y.{ly,svg} — all four exact.
         // LILYPOND-REF: scm/script.scm marcato (quantize-position . #t);
         //   lily/side-position-interface.cc:409-432 quantize_position.
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
@@ -149,7 +149,7 @@ public class ArticulationPlacementTests
     public void FermataFamily_OverAnAccent_ClearsTheAccentOutlinePointwise()
     {
         // fermata-dot-position.ly block B (the accent pairs), measured against the
-        // LilyPond twin scratch/lpreg/fermata-dot-b.{ly,lys}: the accent keeps the
+        // LilyPond twin audit/lpreg/fermata-dot-b.{ly,lys}: the accent keeps the
         // engraver answer (LP 4.167) and each fermata-family glyph clears the ACCENT'S
         // OUTLINE pointwise — engraver floor from the script-column support chain
         // (pointwise + own padding 0.40), finished by the outside-staff pass
@@ -182,7 +182,7 @@ public class ArticulationPlacementTests
     public void ScriptStack_OrdersByScriptPriority_FingeringAndBumpedBowIncluded()
     {
         // script-stack-order1.ly (the stacking-ladder book), measured against the
-        // LilyPond twin scratch\lpreg\scriptstack1.{ly,lys}. Three regimes pinned:
+        // LilyPond twin audit\lpreg\scriptstack1.{ly,lys}. Three regimes pinned:
         // (1) the FINGERING enters the note's script column at priority 100+position
         //     — over f'' it sits BETWEEN the tenuto and the bow (LP staccato −2.94 /
         //     tenuto −3.42 / finger −4.00 / upbow −5.33), and over e, between the
@@ -255,8 +255,8 @@ public class ArticulationPlacementTests
         // supports are the head, stem/flag and chord heads, with NO tie acknowledger
         // — so it keeps the island answer (4.83) at BOTH tie bounds while the
         // chord-level script on the same chord lifts (measured
-        // scratch/lpreg/sctten.ly and sctten2.ly: the split holds on either head).
-        // All values pinned against LP on scratch/lpreg/sctchord.{ly,lys}.
+        // audit/lpreg/sctten.ly and sctten2.ly: the split holds on either head).
+        // All values pinned against LP on audit/lpreg/sctchord.{ly,lys}.
         // LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie
         // LILYPOND-REF: lily/new-fingering-engraver.cc:144-157 add_script
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
@@ -298,7 +298,7 @@ public class ArticulationPlacementTests
         // instead (ElementCoordinator.BuildSlurExtraObjects).
         // ★ THE TWO HALVES MEET HERE, AND THIS BOOK IS WHERE THE SECOND ONE WAS
         // PREDICTED FROM. Until 2026-08-10 the lifted stack read 0.12 LOW against
-        // the LP twin (scratch/lpreg/scriptstack1.{ly,lys}) — 3.28 / 4.14 / 5.47
+        // the LP twin (audit/lpreg/scriptstack1.{ly,lys}) — 3.28 / 4.14 / 5.47
         // against LP's 3.40 / 4.26 / 5.58 — and this remark named the cause: LP's
         // slur END sits one 0.5-grid step higher because its 'inside staccato is in
         // the bow's OWN extra encompass, which Lily# had not ported. Porting that

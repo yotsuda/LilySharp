@@ -186,7 +186,7 @@ public class PercentRepeatTests
         // 2.0 / 0.48; and the Y-offset-less grob's stencil is align_to'd CENTER
         // on the staff's own middle — 3.75 below a six-string tab's top line,
         // not the 5-line frame's 2.0. Pinned against LilyPond 2.26 SVG output
-        // (scratch\lpreg\harakiri-percent.ly: tab slash run 3, horizontal edge
+        // (audit\lpreg\harakiri-percent.ly: tab slash run 3, horizontal edge
         // 1.0182 = 0.72·√2, centre on the tab middle to the digit).
         var svg = LiveRender.SvgFromRenderSpec("""
             octave absolute

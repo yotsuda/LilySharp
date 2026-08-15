@@ -2,7 +2,7 @@
 // If the combined staff renders part1's written boundaries verbatim, this flips from
 // 8|16|4 to 16|8|4 — which names the combiner, not the run grouping, as what drops
 // the other part's boundary. LP is symmetric here (8|8|8|4 either way, since the
-// boundaries are the union 0/8/16/24 — scratch/lpreg/pcmsh-a.log).
+// boundaries are the union 0/8/16/24 — audit/lpreg/pcmsh-a.log).
 octave absolute
 time 4/4
 

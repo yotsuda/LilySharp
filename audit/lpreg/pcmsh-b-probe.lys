@@ -1,4 +1,4 @@
-// Twin of scratch/lpreg/pcmsh-b.ly = score 2 of input/regression/part-combine-mmrest-shared.ly.
+// Twin of audit/lpreg/pcmsh-b.ly = score 2 of input/regression/part-combine-mmrest-shared.ly.
 //
 // Part one interrupts its own multi-measure rests with an ORDINARY whole rest carrying a
 // text at bar 8, against part two's ongoing R1*16.

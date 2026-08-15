@@ -37,7 +37,7 @@ public class TabPolyphonyTests
         // LP 2.26.0 prints SEVEN digits — frets 1,1,3,0,1,1 on the upper strings and the
         // g,1 as fret 3 on the LOWEST string, sharing the t=0 column with voice one's c'.
         // Before Staff.CreateTab carried all voices, the tab dropped voice two entirely.
-        // Pinned against the LP twin (scratch\lpreg\apts-lp.{ly,svg}).
+        // Pinned against the LP twin (audit\lpreg\apts-lp.{ly,svg}).
         string svg = Render(
             "octave absolute\n\npart gt { clef treble_8 tuning guitar }\n\n"
             + "section Main {\n  gt {\n    c'1 |\n"

@@ -99,7 +99,7 @@ public sealed record ArticulationItem
     /// LILYPOND-REF: lily/new-fingering-engraver.cc:109-110 acknowledge_rhythmic_head
     ///   (script-event inside a note event → add_script) and :144-157 add_script;
     ///   lily/script-engraver.cc:204-222 acknowledge_tie / acknowledge_end_tie.
-    /// Measured (scratch/lpreg/sctten.ly, sctten2.ly): a member tenuto on either head
+    /// Measured (audit/lpreg/sctten.ly, sctten2.ly): a member tenuto on either head
     /// of a tied chord stays at the island answer (−4.83) at BOTH tie bounds while
     /// the chord-level tenuto on the same chord lifts over the bow to −5.35.
     /// </remarks>

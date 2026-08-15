@@ -11,7 +11,7 @@ function Set-RegStatus([string]$name, [string]$state, [string]$claim, [string]$n
 
 Set-RegStatus 'part-combine-relative.ly' 'exact' `
   'The pitches in \partCombine are unaffected by an outer \relative; the expected output is three identical measures' @'
-exact(第129第2便・コード変更0・第112 skip→綴りゲート解除で再測)。双子=scratch/lpreg/pcrel.ly(逐語3小節)
+exact(第129第2便・コード変更0・第112 skip→綴りゲート解除で再測)。双子=audit/lpreg/pcrel.ly(逐語3小節)
 ＋pcrel-ctl.ly(第2小節を抜いた2小節=双子と枠を揃えるため。spacing は score 全体の性質なので
 2小節の頁と3小節の頁は列で比べられない)対 pcrel-probe.lys。
 LP 実測: **3小節とも完全同一**(pos -4/-6 → -3/-5 = E4/C4 → F4/D4・列 8.585/12.860 で以降 9.891 ごと・

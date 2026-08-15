@@ -186,7 +186,7 @@ score main ""test"" { staff melody }
         // to-barline port Lily# ran the wave to the stop column (5 elements).
         // The tr glyph and wave heights and the f dynamic are the book's CLAIM
         // (priorities 50/250 sit pointwise, not at the slur's apex) — all
-        // pinned against the LP twin (scratch\lpreg\slurvsky.{lys,-gen.ly}).
+        // pinned against the LP twin (audit\lpreg\slurvsky.{lys,-gen.ly}).
         // LILYPOND-REF: lily/bar-engraver.cc:580-588 acknowledge_end_spanner
         // LILYPOND-REF: scm/define-grobs.scm TrillSpanner — (to-barline . #t)
         string svg = Render(

@@ -5,7 +5,7 @@
 // = LP は LaissezVibrerTie が列の ordinary element で separation box に入る。
 // 照合: tie 終端→arpeggio ink 左のクリアランス LS 0.50 vs LP 0.35 (Δ0.15)・
 // 対の間隔 LS 4.40 vs LP 4.25 (+0.15 = note-spacing drift 級)。衝突なし。
-// twin scratch\lpreg\lvarp.{ly,lys}。
+// twin audit\lpreg\lvarp.{ly,lys}。
 octave absolute
 time 4/4
 

@@ -65,7 +65,7 @@ public class SlurScoringTests
     {
         // slur-dot-collision.ly ("Slurs avoid dots"): E6 dotted 16th slurred to
         // E4 32nd. Two regimes in one book, both pinned against the LP twin
-        // (scratch/lpreg/slurdot.{ly,lys}):
+        // (audit/lpreg/slurdot.{ly,lys}):
         //  - The attachment grid climbs to the OTHER side's base
         //    (get_y_attachment_range), and steep candidates are scored, not
         //    dropped — the old skip-and-fallback shipped a head-to-head dive to
@@ -122,7 +122,7 @@ public class SlurScoringTests
         // get_point(dir). Without the stem the ends sat at -1.545/-3.045 (the
         // bases) with a lumpy fitted curve; LP parks both ends at -3.545 with
         // the plain bow. Pinned against the LP twin
-        // (scratch/lpreg/slurgrace.{ly,lys}): all four curve Ys and the span.
+        // (audit/lpreg/slurgrace.{ly,lys}): all four curve Ys and the span.
         // LILYPOND-REF: lily/slur-scoring.cc:111-161 get_encompass_info —
         //   stem_ = stem extent on the slur's side; x_ moves to the stem.
         // LILYPOND-REF: lily/slur-configuration.cc:283-302 — get_point(dir) in
@@ -155,7 +155,7 @@ public class SlurScoringTests
         // no stem penalty and the slur stays hugging the heads. Before that
         // rule was ported, plumbing the stems alone made the base pay the /5
         // stem term and the slur fled 3ss below the tips — away from LP.
-        // Pinned against scratch/lpreg/mvslur-probe.ly: LP start -1.4550,
+        // Pinned against audit/lpreg/mvslur-probe.ly: LP start -1.4550,
         // end -0.4550, X span 2.5772-0.4300 = 2.147.
         // LILYPOND-REF: lily/slur-scoring.cc:738-760 enumerate_attachments.
         string svg = Render(
@@ -201,7 +201,7 @@ public class SlurScoringTests
         // direction (default down), and a rest is a legal slur BOUND — the
         // all-rest figure r2( r r) used to be dropped on the floor entirely
         // (the rest's slur flags never reached the RestItem).
-        // Pinned against the LP twin (scratch/lpreg/slurrest-h.{ly,lys}):
+        // Pinned against the LP twin (audit/lpreg/slurrest-h.{ly,lys}):
         //  fig1 C3( r C3)   -> DOWN (below middle), LP start/end +1.545
         //  fig2 C4( r C4)   -> UP,   LP -4.045
         //  fig3 C4( r C3)   -> UP,   LP -4.045 .. -0.545
@@ -240,7 +240,7 @@ public class SlurScoringTests
         // The 16th row of slur-rest-direction.ly separates the two spellings the
         // half row cannot: a rest bound's base is the REST'S INK edge + 0.5 (the
         // r16 glyph reaches 2.05 below the middle -> 2.55), not middle + 0.5.
-        // MEASURED with debug-slur-scoring (scratch/lpreg/slurrest-dbg.ly): the
+        // MEASURED with debug-slur-scoring (audit/lpreg/slurrest-dbg.ly): the
         // winning candidate is idx=0 TOTAL=0.00 AT 2.55 — the base itself.
         // LILYPOND-REF: lily/slur-scoring.cc:587-619 get_base_attachments, the
         //   no-note-column loop: y = robust_relative_extent(col, Y)[dir] +
@@ -266,8 +266,8 @@ public class SlurScoringTests
         // slope charge (≈1.86) sends the winner one grid up, where only the
         // L-edge term (LP 0.0708, LS 0.0713) remains. Before the flag unite the
         // base pair scored a clean 0.00 and never climbed.
-        // Pinned against LP (scratch/lpreg/slurrest-dbg.ly fig4; the 16th and
-        // 8th rows of scratch/lpreg/slurrest.ly climb, quarter/half stay).
+        // Pinned against LP (audit/lpreg/slurrest-dbg.ly fig4; the 16th and
+        // 8th rows of audit/lpreg/slurrest.ly climb, quarter/half stay).
         // LILYPOND-REF: lily/slur-scoring.cc:188-203 get_bound_info —
         //   s.unite (flag->extent (common_[ax], ax)).
         // LILYPOND-REF: lily/slur-scoring.cc:738-760 enumerate_attachments.
@@ -311,7 +311,7 @@ public class SlurScoringTests
         // extends the attachment range so the grid can climb over it — the
         // right end climbs 11 grid steps, far past EndYFor's unextended bound
         // (Y-up ≈1.5, device -1.545). Pinned against the LP twin
-        // (scratch/lpreg/slurshift.{ly,lys}); needs BOTH session-118 ports: the
+        // (audit/lpreg/slurshift.{ly,lys}); needs BOTH session-118 ports: the
         // bracket's staff-edge-united positions (the number's box hangs off the
         // bracket midpoint) and the number joining the slur's extra set.
         // LILYPOND-REF: lily/slur-scoring.cc:290-326 additional_ys.

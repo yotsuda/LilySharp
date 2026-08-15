@@ -4,7 +4,7 @@
 // 綴り: LP \relative c' の d e = D4 E4 → Lily# 裸 d e。^"Markup" =
 // @text("Markup").up。\f=@f・\sfz=@sfz・\trill=@trill・-.=@staccato・->=@accent。
 // ⚠️ 枠合わせ: LP 原本 2 小節目後半の hairpin (d32\> e\!) は Lily# に終端 \! の
-// 綴りが無く、両側とも素の d32 e に落とした(scratch\lpreg\
+// 綴りが無く、両側とも素の d32 e に落とした(audit\lpreg\
 // chord-tremolo-articulations.ly)。\barNumberCheck は検査コマンドで ink 無し・落とした。
 // Lily# の body 数えは Body.Items 直(mark は音符ノードの中)なので、LP が踏んだ
 // 「イベント 3 つ」型の数え間違いは構造的に起きない——観測は小節の充足で行う。

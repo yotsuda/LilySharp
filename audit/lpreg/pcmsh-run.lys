@@ -1,4 +1,4 @@
-// The Lily# side of scratch/lpreg/pcmsh-run.ly: one part, three written multi-measure
+// The Lily# side of audit/lpreg/pcmsh-run.ly: one part, three written multi-measure
 // rests in a row, no combining and no second voice.
 octave absolute
 time 4/4

@@ -3,7 +3,7 @@
 // \RemoveEmptyStaves でも消されない (LP: percent-repeat-interface ∈
 // keepAliveInterfaces)。break 後の第2系が本丸: percent 小節しか持たない 4 譜が
 // 生き残ること。Lily# は percent を unfold+マーカーで持つので生存は NoteItem 経由
-// (HaraKiri.IsStaffEmpty) = 構造的に同値。陽性対照 scratch\lpreg\
+// (HaraKiri.IsStaffEmpty) = 構造的に同値。陽性対照 audit\lpreg\
 // harakiri-percent-ctrl.lys (percent→r1 で system 2 の譜が実際に消える)。
 // 綴り: Lily# c = LP c' (octave absolute)。RhythmicStaff は Lily# に無い →
 // lines 1 + b (中央線上) で対にする (LP は音高無視で線上、視覚同値。LP 側は

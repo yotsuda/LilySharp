@@ -40,7 +40,7 @@ public class LooseChangeColumnTests
         // mid-measure while the upper staff's tuplet puts a column (the A4 half note
         // at t = 1/6) BETWEEN the clef's own-staff neighbors (t = 1/8 and t = 1/4).
         // Three port pieces meet here, pinned against the LP twin
-        // (scratch\lpreg\sploose.{lys,-gen.ly,svg,-lp.svg}):
+        // (audit\lpreg\sploose.{lys,-gen.ly,svg,-lp.svg}):
         //  - the clef column is pruned, so the two cross-staff pairs price BARE
         //    (springs.empty hemiola branch: raw duration ideals 0.80/1.60, min 0);
         //  - the pruned column's room comes back as a rod over its neighbors, whose
