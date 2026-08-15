@@ -67,7 +67,7 @@ public class RestAvoidNoteTests
             "<text class=\"music\" x=\"[-\\d.]+\" y=\"([-\\d.]+)\"[^>]*>(.)</text>"))
         {
             string cp = ((int)m.Groups[2].Value[0]).ToString("X4");
-            if (cp is "E001" or "E008" or "E00B")
+            if (cp is "E001" or "E003" or "E008" or "E00B")
                 rests.Add((cp, Math.Round(
                     double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) - middleY, 2)));
         }
@@ -79,10 +79,16 @@ public class RestAvoidNoteTests
         // −2.0 (same direction — the claim allows it); and the second down
         // voice's r2 at +5.5 — an odd position, legal outside the staff where
         // the collision moves by half spaces.
+        // ⚠️ That last one is E003 (rests.1o), not E001: it is the only rest here
+        // that misses every staff line, so it prints the cut of the glyph with a
+        // ledger line through it. LilyPond's own page for this twin does the same
+        // (measured: `expr=(named-glyph … rests.1o)` for that grob and rests.1 for
+        // the other three half rests).
+        // LILYPOND-REF: lily/rest.cc:166-185 Rest::glyph_name.
         var expected = new[]
         {
             ("E008", 3.0), ("E00B", -3.0),
-            ("E001", 2.0), ("E001", -2.0), ("E001", -2.0), ("E001", 5.5),
+            ("E001", 2.0), ("E001", -2.0), ("E001", -2.0), ("E003", 5.5),
         };
         Assert.Equal(
             expected.OrderBy(e => e.Item1).ThenBy(e => e.Item2),

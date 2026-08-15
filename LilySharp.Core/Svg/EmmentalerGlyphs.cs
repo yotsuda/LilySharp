@@ -66,15 +66,64 @@ internal static partial class EmmentalerGlyphs
         _ => TimeSig0
     };
 
-    // LILYPOND-REF: lily/rest.cc Rest::glyph_name — "rests." + duration-log.
-    /// <summary>Gets the rest glyph for a given note value.</summary>
-    public static char GetRest(int noteValue) => noteValue switch
+    /// <summary>Gets the rest glyph for a note value at a staff position.</summary>
+    /// <param name="noteValue">1 = whole, 2 = half, 0 = breve, 4/8/… shorter.</param>
+    /// <param name="staffPosition">Where the rest's ORIGIN was drawn, in staff
+    /// positions about the middle line (LilyPond's <c>get_position</c> — the whole
+    /// rest's +2 already applied, since it is the origin that hangs from that line).</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/rest.cc:166-227 Rest::glyph_name — "rests." + duration-log,
+    /// plus an "o" suffix for the LEDGERED cut of the glyph. A breve, whole or half
+    /// rest OFF a staff line carries its own ledger line inside the glyph (there is no
+    /// LedgerLineSpanner for rests), so the half rest LilyPond pushes to an odd position
+    /// out of the staff prints as <c>rests.1o</c>, not <c>rests.1</c>.
+    /// LILYPOND-REF: lily/staff-symbol.cc:372-396 Staff_symbol::on_line — with
+    /// <c>allow_ledger</c> false (that is what <c>on_staff_line</c> passes), only the
+    /// REAL lines count, so every position outside the staff is off-line and ledgers.
+    /// <para>⚠️ The ledger changes the INK only. LilyPond keeps it out of the X extent
+    /// on purpose (rest.cc:281-289 asks for the unledgered stencil there, because the
+    /// Y position that decides it is not known until after line breaking), and the Y
+    /// extent it reports is the bare bar's either way (measured: an <c>rests.1o</c> at
+    /// position −11 reports <c>(0 . 0.625)</c>, the same as <c>rests.1</c>). So spacing,
+    /// skylines and the dot column all keep reading the unledgered box.</para>
+    /// </remarks>
+    public static char GetRest(int noteValue, double staffPosition)
     {
-        0 => RestDoubleWhole,
-        1 => RestWhole, 2 => RestHalf, 4 => RestQuarter, 8 => Rest8th,
-        16 => Rest16th, 32 => Rest32nd, 64 => Rest64th, 128 => Rest128th,
-        _ => RestQuarter
-    };
+        // LILYPOND-REF: lily/rest.cc:173-174 — int (get_position (me) + offset).
+        // C++ truncates toward zero; so does this cast.
+        int pos = (int) staffPosition;
+        return noteValue switch
+        {
+            0 => IsLedgered(0, pos) ? RestDoubleWholeLedgered : RestDoubleWhole,
+            1 => IsLedgered(1, pos) ? RestWholeLedgered : RestWhole,
+            2 => IsLedgered(2, pos) ? RestHalfLedgered : RestHalf,
+            4 => RestQuarter, 8 => Rest8th,
+            16 => Rest16th, 32 => Rest32nd, 64 => Rest64th, 128 => Rest128th,
+            _ => RestQuarter
+        };
+    }
+
+    /// <summary>
+    /// Whether a rest of this note value at this staff position prints the cut of its
+    /// glyph that carries a ledger line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/rest.cc:170-185 Rest::glyph_name is_ledgered — a half rest
+    /// needs a ledger if it is not LYING on a staff line, a whole rest if it is not
+    /// HANGING from one, a breve if neither (its own line, or the one two positions
+    /// above it, being a staff line spares it).
+    /// <para>The staff's <c>line-positions</c> are {−4, −2, 0, 2, 4}: the five lines of
+    /// the notation staff, which is the only staff symbol Lily# engraves in positions.
+    /// LILYPOND-REF: scm/define-grobs.scm StaffSymbol — line-count 5.</para>
+    /// </remarks>
+    private static bool IsLedgered(int noteValue, int pos) =>
+        !OnStaffLine(pos)
+        && !(noteValue == 0 && OnStaffLine(pos + 2));
+
+    /// <summary>Whether a staff position is one of the five staff lines.</summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol.cc:372-382 Staff_symbol::on_line —
+    /// the position equals one of <c>line-positions</c>.</remarks>
+    private static bool OnStaffLine(int pos) => pos % 2 == 0 && pos >= -4 && pos <= 4;
 
     /// <summary>Notehead glyph for a style + note value; whole-note variants
     /// serve breve too (styled breves are not in the font).</summary>

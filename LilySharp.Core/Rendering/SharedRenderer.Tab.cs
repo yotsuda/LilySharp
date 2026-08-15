@@ -290,16 +290,24 @@ internal static partial class SharedRenderer
                     double lowerCentralLineY = staffY - (stringCount / 2) * stringSpace;
                     // dotOffset null: a tab rest keeps the solo default — the dot column
                     // is a notation-staff device and no tab book has bound one.
+                    // Position 0 is what these three calls pass for the ledger question,
+                    // and it is the true answer rather than a stand-in: the ledgered cut
+                    // of a rest glyph is for one that lands OFF a staff line, and the two
+                    // that could take it are seated ON a tab line right here by
+                    // construction (the half on the lower central line, the whole hanging
+                    // from the upper). Shorter rests never carry a ledger at any position.
+                    // LILYPOND-REF: lily/rest.cc:170-185 Rest::glyph_name is_ledgered.
+                    const double onATabLine = 0.0;
                     if (restValue == 2)      // half: DrawRest origin (its bottom) at staffY−2
-                        DrawRest(rest, itemX, lowerCentralLineY + 2.0, null, gc);
+                        DrawRest(rest, itemX, lowerCentralLineY + 2.0, null, gc, onATabLine);
                     else if (restValue == 1) // whole: DrawRest origin (its top) at staffY−1
-                        DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, null, gc);
+                        DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, null, gc, onATabLine);
                     else
                     {
                         var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
                         double tabMiddle = staffY - (stringCount - 1) * stringSpace / 2.0;
                         double restOriginY = tabMiddle - (restBBox.Top + restBBox.Bottom) / 2.0;
-                        DrawRest(rest, itemX, restOriginY + 2.0, null, gc);
+                        DrawRest(rest, itemX, restOriginY + 2.0, null, gc, onATabLine);
                     }
                     break;
             }

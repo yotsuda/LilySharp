@@ -108,11 +108,20 @@ internal static partial class SharedRenderer
                         // in staff positions (up-positive); staffY is Y-up, so add
                         // half a staff-space per position to move the whole rest
                         // (glyph + dots) together. LILYPOND-REF: lily/beam.cc:1331.
-                        double restShiftY =
-                            layout.GetRestShift(ml.MeasureIndex, voiceNumber - 1, itemIdx) * 0.5;
-                        DrawRest(rest, itemX, staffY + restShiftY,
+                        double restShift =
+                            layout.GetRestShift(ml.MeasureIndex, voiceNumber - 1, itemIdx);
+                        // The position the rest's ORIGIN ends up at, which is what
+                        // decides its ledger: the neutral letter DrawRest draws
+                        // unshifted (a whole rest hangs from +2, everything else sits
+                        // on the middle line) plus the shift the voiced position and
+                        // the collisions asked for.
+                        // LILYPOND-REF: lily/rest.cc:166-185 Rest::glyph_name — the
+                        // ledgered cut is chosen from get_position.
+                        double restPosition = restShift
+                            + (GlyphMetrics.NoteValueOf(rest.BaseDuration) == 1 ? 2 : 0);
+                        DrawRest(rest, itemX, staffY + restShift * 0.5,
                             layout.GetRestDotOffset(ml.MeasureIndex, voiceNumber - 1, itemIdx),
-                            gc);
+                            gc, restPosition);
                     }
                     break;
                 case ChordItem chord:
@@ -1051,10 +1060,10 @@ internal static partial class SharedRenderer
     }
 
     private static void DrawRest(RestItem rest, double x, double staffY, int? dotOffset,
-        IDrawingContext gc)
+        IDrawingContext gc, double staffPosition)
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-        char glyph = EmmentalerGlyphs.GetRest(noteValue);
+        char glyph = EmmentalerGlyphs.GetRest(noteValue, staffPosition);
         // staffY is the top-line Y-up; rest origins sit below it (device down =
         // smaller Y-up).
         // LILYPOND-REF: lily/rest.cc Rest::staff_position_internal — the semibreve

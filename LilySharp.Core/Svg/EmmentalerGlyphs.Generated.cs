@@ -99,10 +99,16 @@ internal static partial class EmmentalerGlyphs
     public const char RestLonga = '\uE005';
     /// <summary>rests.M1</summary>
     public const char RestDoubleWhole = '\uE006';
+    /// <summary>rests.M1o (breve off a staff line: ledger in the glyph)</summary>
+    public const char RestDoubleWholeLedgered = '\uE007';
     /// <summary>rests.0</summary>
     public const char RestWhole = '\uE000';
+    /// <summary>rests.0o (whole off a staff line: ledger in the glyph)</summary>
+    public const char RestWholeLedgered = '\uE002';
     /// <summary>rests.1</summary>
     public const char RestHalf = '\uE001';
+    /// <summary>rests.1o (half off a staff line: ledger in the glyph)</summary>
+    public const char RestHalfLedgered = '\uE003';
     /// <summary>rests.2</summary>
     public const char RestQuarter = '\uE008';
     /// <summary>rests.3</summary>

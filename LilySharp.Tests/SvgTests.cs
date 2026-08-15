@@ -109,11 +109,62 @@ public class SvgTests
     [Fact]
     public void EmmentalerGlyphs_GetRest()
     {
-        Assert.Equal(EmmentalerGlyphs.RestWhole, EmmentalerGlyphs.GetRest(1));  // Whole
-        Assert.Equal(EmmentalerGlyphs.RestHalf, EmmentalerGlyphs.GetRest(2));  // Half
-        Assert.Equal(EmmentalerGlyphs.RestQuarter, EmmentalerGlyphs.GetRest(4));  // Quarter
-        Assert.Equal(EmmentalerGlyphs.Rest8th, EmmentalerGlyphs.GetRest(8));  // Eighth
-        Assert.Equal(EmmentalerGlyphs.Rest16th, EmmentalerGlyphs.GetRest(16)); // 16th
+        // At the position each rest is drawn at when nothing moves it: a whole rest
+        // hangs from +2 and everything else sits on the middle line — staff lines both.
+        Assert.Equal(EmmentalerGlyphs.RestWhole, EmmentalerGlyphs.GetRest(1, 2));  // Whole
+        Assert.Equal(EmmentalerGlyphs.RestHalf, EmmentalerGlyphs.GetRest(2, 0));  // Half
+        Assert.Equal(EmmentalerGlyphs.RestQuarter, EmmentalerGlyphs.GetRest(4, 0));  // Quarter
+        Assert.Equal(EmmentalerGlyphs.Rest8th, EmmentalerGlyphs.GetRest(8, 0));  // Eighth
+        Assert.Equal(EmmentalerGlyphs.Rest16th, EmmentalerGlyphs.GetRest(16, 0)); // 16th
+    }
+
+    /// <summary>
+    /// A breve, whole or half rest that does not land on a staff line prints the cut of
+    /// its glyph that carries a ledger line; shorter rests have no such cut at all.
+    /// LILYPOND-REF: lily/rest.cc:166-185 Rest::glyph_name;
+    /// LILYPOND-REF: lily/staff-symbol.cc:372-396 Staff_symbol::on_line.
+    /// </summary>
+    /// <remarks>
+    /// The rule is asserted by MOVING the rest, not by pinning one position: every even
+    /// position from −4 to 4 is a staff line and prints the bare glyph, and everything
+    /// else prints the ledgered one. An implementation that answers with the bare glyph
+    /// everywhere — the one this replaced — passes the case above and fails here.
+    /// </remarks>
+    [Theory]
+    // Half rests (note value 2): on the five lines, then off them.
+    [InlineData(2, -4, false)] [InlineData(2, -2, false)] [InlineData(2, 0, false)]
+    [InlineData(2, 2, false)] [InlineData(2, 4, false)]
+    [InlineData(2, -11, true)]  // rest-avoid-note.ly's lower voice, out under the staff
+    [InlineData(2, -6, true)] [InlineData(2, 6, true)] [InlineData(2, 1, true)]
+    // Whole rests (1): the line they hang from decides.
+    [InlineData(1, 2, false)] [InlineData(1, -4, false)] [InlineData(1, 5, true)]
+    [InlineData(1, -6, true)]
+    // Breves (0) are spared by EITHER their own line or the one two positions up.
+    [InlineData(0, 0, false)] [InlineData(0, -6, false)] [InlineData(0, -8, true)]
+    [InlineData(0, 7, true)]
+    // Quarter and shorter have no ledgered cut, wherever they land.
+    [InlineData(4, -11, false)] [InlineData(8, 7, false)] [InlineData(16, -9, false)]
+    public void EmmentalerGlyphs_GetRest_LedgersARestThatMissesEveryStaffLine(
+        int noteValue, int staffPosition, bool ledgered)
+    {
+        char bare = noteValue switch
+        {
+            0 => EmmentalerGlyphs.RestDoubleWhole,
+            1 => EmmentalerGlyphs.RestWhole,
+            2 => EmmentalerGlyphs.RestHalf,
+            4 => EmmentalerGlyphs.RestQuarter,
+            8 => EmmentalerGlyphs.Rest8th,
+            _ => EmmentalerGlyphs.Rest16th,
+        };
+        char expected = ledgered
+            ? noteValue switch
+            {
+                0 => EmmentalerGlyphs.RestDoubleWholeLedgered,
+                1 => EmmentalerGlyphs.RestWholeLedgered,
+                _ => EmmentalerGlyphs.RestHalfLedgered,
+            }
+            : bare;
+        Assert.Equal(expected, EmmentalerGlyphs.GetRest(noteValue, staffPosition));
     }
 
     [Fact]
