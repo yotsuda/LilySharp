@@ -6,7 +6,7 @@
 // moves right (negative shift), and the voice-props direction stands.
 // LILYPOND-REF: scm/music-functions.scm:616-631 direction-polyphonic-grobs — Dots
 // LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — set_property direction
-// MEASURED (scratch/lpreg/dot-force-down-twin.ly, LilyPond 2.26.0): the dot prints
+// MEASURED (audit/lpreg/dot-force-down-twin.ly, LilyPond 2.26.0): the dot prints
 // half a space BELOW the middle line, and the b head +1.30 right of the c' head.
 // An earlier header here declared "forced down off the staff line" a Lily#-own
 // rule; the OUTCOME was right for this book, the mechanism was not. The part was
