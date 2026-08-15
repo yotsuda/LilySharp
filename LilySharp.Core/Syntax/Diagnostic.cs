@@ -331,6 +331,24 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string DrummapEntryIgnored = "LYS0024";
 
+    /// <summary>Parser error: a token in a PART HEADER that the header cannot place — not a
+    /// property name, a <c>key</c>, an inner <c>section</c>, or a grob directive. The header
+    /// loop used to drop such a token silently (<c>else Advance()</c>), which is how
+    /// <c>part m { bass }</c> came to mean exactly <c>part m { }</c> — MEASURED byte-identical
+    /// output and "No errors found" — and a bare clef word reads so much like a clef that the
+    /// silence was the whole trap. Distinct from <see cref="UnknownSymbolCase"/> (a name in
+    /// property POSITION that is not a known property) and from
+    /// <see cref="PartPropertyMissingValue"/> (a known name with no value).</summary>
+    public const string PartHeaderStrayToken = "LYS0025";
+
+    /// <summary>Parser error: a part-header property with no value (<c>part m { clef }</c>).
+    /// The value used to be consumed unconditionally, so the property ate the closing brace
+    /// and everything below was parsed INSIDE the part — surfacing as a complaint about a
+    /// line far away (<c>Undefined variable or phrase: 'm'</c>), or, with another part after
+    /// it, as <c>Unknown clef '}'</c>: the brace itself reported as a clef name. A value is
+    /// no longer taken from a brace or from end-of-file.</summary>
+    public const string PartPropertyMissingValue = "LYS0026";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
@@ -590,6 +608,15 @@ public static class DiagnosticCodes
     public const string DuplicateCell = "LYS7001";
     /// <summary>Structure error: a chords/lyrics track names the same section twice.</summary>
     public const string DuplicateTrackSection = "LYS7002";
+
+    /// <summary>Structure error: one part header sets the same property twice
+    /// (<c>part m { clef bass clef treble }</c>). Each property holds ONE value, and which
+    /// of the two won was not even consistent between properties — MEASURED:
+    /// <c>clef bass clef treble</c> engraved as treble (the LAST), while
+    /// <c>lines 5 lines 3</c> engraved as five lines (the FIRST, byte-identical to
+    /// <c>lines 5</c> alone). Rather than freeze either accident as the rule, the
+    /// duplicate is refused: no book on disk writes one, so nothing has to choose.</summary>
+    public const string DuplicatePartProperty = "LYS7003";
 
     // Font warnings (LYS8xxx)
     // (LYS6xxx is already taken by the render/score-declaration band above.)
