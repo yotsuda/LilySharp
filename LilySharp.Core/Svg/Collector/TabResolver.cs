@@ -257,6 +257,22 @@ internal sealed class TabResolver
     /// closest to the previous note's keeps the hand in position. Tuning-dependent, so
     /// it runs per tab staff after the score is assembled.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE BAR-LONG REUSE IS A DECISION, NOT AN OVERSIGHT, and it is the one place a
+    /// reader is most likely to mistake for a bug — so it is written down here, where
+    /// the "fix" would be made. It applies to an EXPLICIT string too: after
+    /// <c>c( g'\2) g g4</c> on a bass, all three g's print the fifth fret of the second
+    /// string. LilyPond puts the two unmarked ones back on the open first string
+    /// (measured on 2.26.0, 2026-08-16, on the twin of that book) — its chooser takes
+    /// the first string from the top with a playable fret and remembers nothing.
+    /// <para>
+    /// USER DECISION (2026-08-16, session 179): keep the reuse. One pitch keeps one
+    /// fingering through a bar, which is what a player reads; the difference from
+    /// LilyPond is accepted, as it already is for the hand-position model this resolver
+    /// is built on (<see cref="Tunings.CalculateFret"/> — LILYSHARP-OWN and deliberately
+    /// not LilyPond's).
+    /// </para>
+    /// </remarks>
     public Voice ResolveTabStrings(Voice voice, TuningType tuning, ClefType clef = ClefType.Treble,
         int transposition = 0)
     {
