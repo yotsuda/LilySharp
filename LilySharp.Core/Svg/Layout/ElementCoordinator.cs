@@ -2114,7 +2114,16 @@ internal sealed class ElementCoordinator
             // shallow curve hugging the number — so offset by the VISIBLE
             // glyph half-height plus a hair, not the full erase-box height.
             double clearance = 0.36 * TabConstants.FretFontSize + 0.1; // ~0.54 sp at font 2.6
-            bool stemUp = tie.StartNote.StemUp;
+            // ⚠️ THE TAB'S OWN STEM DIRECTION, not the note's notation one. They are two
+            // different quantities: a tab stem points by the STRINGS the item sits on
+            // (TabStaffGeometry.StringStemUp of its mean string — what DrawTabMeasure and
+            // the tab beam quanter both read), a notation stem by the PITCH. Reading the
+            // notation flag here made this rule break its own promise: MEASURED on
+            // test/tab-tie, whose `d` sits on the bass clef's middle line, so its notation
+            // stem points DOWN while the tab stem points UP — and the tie came out ABOVE
+            // the digits, on the same side as the drawn stem. LilyPond puts both of that
+            // book's ties below (dir=-1 for each, measured on the twin).
+            bool stemUp = geom.StringStemUp(geom.MeanString(tieItem ?? (MusicItem) tie.StartNote));
             y = digitY + (stemUp ? clearance : -clearance);
             // Curve opposite the stem (constructor-set property, no `with`). On a tab
             // this IS a decision and is IMPOSED — a Lily#-own feature (the tie belongs
