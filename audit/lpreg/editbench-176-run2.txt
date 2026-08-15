@@ -1,0 +1,3 @@
+perf-plain1k.lys	edit floor 61.4 ms	median 82.6 ms	gateMoved True	reusedLayout False
+perf-fingbeam1k.lys	edit floor 73.3 ms	median 93.8 ms	gateMoved True	reusedLayout False
+perf-v2bow1k.lys	edit floor 64.8 ms	median 97.2 ms	gateMoved True	reusedLayout False

@@ -1,0 +1,9 @@
+perf-plain1k.lys	keystroke floor 25.6 ms	median 28.3 ms	contentkey floor 3.559 ms	median 3.665 ms	pos [-6..1]	svg C205BFD983223133
+perf-comb300.lys	keystroke floor 5.6 ms	median 7.5 ms	contentkey floor 0.351 ms	median 0.679 ms	pos [-8..-3]	svg AAB4A25F4881F38E
+perf-fingstack1k.lys	keystroke floor 18.1 ms	median 21.0 ms	contentkey floor 2.237 ms	median 2.276 ms	pos [4..4]	svg 88B3CDB660A92EB0
+perf-slurinside1k.lys	keystroke floor 9.0 ms	median 12.9 ms	contentkey floor 1.433 ms	median 1.495 ms	pos [8..8]	svg 0890A8818E422DF1
+perf-slurscript1k.lys	keystroke floor 9.6 ms	median 12.0 ms	contentkey floor 1.442 ms	median 1.491 ms	pos [8..8]	svg F3333A0F47B0A5D4
+perf-fingbeam1k.lys	keystroke floor 29.2 ms	median 53.5 ms	contentkey floor 2.642 ms	median 2.689 ms	pos [-6..-2]	svg 6320239E212E2A5E
+perf-fingslur300.lys	keystroke floor 2.1 ms	median 2.5 ms	contentkey floor 0.414 ms	median 0.432 ms	pos [5..5]	svg 99E9EC7995281664
+perf-slur300.lys	keystroke floor 1.9 ms	median 2.0 ms	contentkey floor 0.328 ms	median 0.344 ms	pos [1..7]	svg 2D71C6393D12F14A
+perf-figbass100.lys	keystroke floor 0.4 ms	median 0.5 ms	contentkey floor 0.075 ms	median 0.080 ms	pos [-6..-6]	svg F2A3E5897DEE719C
