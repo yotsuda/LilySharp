@@ -67,7 +67,7 @@ public class DurationAdjacencyTests
         Assert.False(Has(source, DiagnosticCodes.DetachedDuration), source);
     }
 
-    // ===== A dot with no number in front of it (LYS0023) =====
+    // ===== A '.' that no rule claimed (LYS0023) =====
 
     /// <summary>
     /// The other half of the adjacency rule: a duration is a NUMBER lengthened by
@@ -83,13 +83,29 @@ public class DurationAdjacencyTests
     [InlineData("{ g. }")]
     [InlineData("{ <c e g>4 <d f a>. }")]
     public void ADotWithNoNumber_IsADurationError(string source)
-        => Assert.True(Has(source, DiagnosticCodes.BareDurationDot), source);
+        => Assert.True(Has(source, DiagnosticCodes.UnclaimedDot), source);
+
+    /// <summary>
+    /// The SECOND cause, and the commoner one on disk: the legacy dotted spelling of
+    /// an annotation whose argument now goes in parentheses. Its dot reaches no rule
+    /// either — the mark parser takes only the dots it owns — so it used to disappear
+    /// with the rest of the spelling, leaving a file that compiled and drew the wrong
+    /// thing. Both causes are in the message for this reason.
+    /// </summary>
+    [Theory]
+    [InlineData("{ c4@finger.3 }")]
+    [InlineData("{ c4@chord.C }")]
+    [InlineData("{ c4@mark.A }")]
+    [InlineData("{ c4@bend.half }")]
+    [InlineData("{ c4@notehead.x }")]
+    public void TheLegacyDottedAnnotationSpelling_IsAnUnclaimedDot(string source)
+        => Assert.True(Has(source, DiagnosticCodes.UnclaimedDot), source);
 
     /// <summary>One mistake, written twice, is reported once.</summary>
     [Fact]
     public void ARunOfBareDots_IsReportedOnce()
         => Assert.Equal(1, SyntaxTree.Parse("{ c4 g.. a4 }").Diagnostics
-            .Count(d => d.Code == DiagnosticCodes.BareDurationDot));
+            .Count(d => d.Code == DiagnosticCodes.UnclaimedDot));
 
     /// <summary>
     /// ★ The body of the fix, not the diagnostic: the dot STAYS in the tree. It used
@@ -129,7 +145,7 @@ public class DurationAdjacencyTests
     [InlineData("{ c4@text(\"a\").down }")]
     [InlineData("{ c4 ds al fine d4 }")]   // the bare navigation mark takes no dots at all
     public void DotsThatBelongToSomething_StayClean(string source)
-        => Assert.False(Has(source, DiagnosticCodes.BareDurationDot), source);
+        => Assert.False(Has(source, DiagnosticCodes.UnclaimedDot), source);
 
     /// <summary>
     /// The measured claim the diagnostic's text makes: <c>c4. g</c> is two DOTTED

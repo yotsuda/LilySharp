@@ -163,10 +163,11 @@ internal sealed partial class Parser
             // a dotted quarter plus a stray `5` that this loop dropped in silence.
             SyntaxKind.DecimalLiteral => ReportFractionalDuration(),
 
-            // A dot that no duration claimed (`c4 g.`). ParseOptionalDuration takes
-            // dots only after a glued number, so this one reached no rule at all and
-            // the loop below skipped it — silently, and out of the tree.
-            SyntaxKind.Dot => ReportBareDurationDot(),
+            // A dot no rule claimed — a duration's dots are taken only after a glued
+            // number (ParseOptionalDuration) and an annotation's only by the mark that
+            // owns them, so this one reached nothing at all and the loop below skipped
+            // it — silently, and out of the tree.
+            SyntaxKind.Dot => ReportUnclaimedDot(),
             _ => null
         };
     }
@@ -208,8 +209,8 @@ internal sealed partial class Parser
         return null;
     }
 
-    /// <summary>Reports an augmentation dot with no number in front of it (LYS0023)
-    /// and yields the dot itself, so the token stays in the tree.</summary>
+    /// <summary>Reports a '.' that no rule claimed (LYS0023) and yields the dot itself,
+    /// so the token stays in the tree.</summary>
     /// <remarks>
     /// <para>
     /// ⚠️ It RETURNS the token where its two neighbours above return null. Those
@@ -230,17 +231,25 @@ internal sealed partial class Parser
     /// not itself a dot). The span is the dot's INK, not its FullWidth: a trailing
     /// space belongs to the token but not to the mistake.
     /// </para>
+    /// <para>
+    /// ⚠️ The message names BOTH causes because both were measured on disk, and the
+    /// second is the commoner one: of the 23 files that raise this, every one is in
+    /// the legacy dotted spelling of an annotation (<c>@finger.3</c>, <c>@chord.C</c>,
+    /// <c>@mark.A</c>) rather than a mis-written duration. A diagnostic that named only
+    /// the duration would send most of its readers the wrong way.
+    /// </para>
     /// </remarks>
-    private GreenNode ReportBareDurationDot()
+    private GreenNode ReportUnclaimedDot()
     {
         if (_position == 0 || _tokens[_position - 1].Kind != SyntaxKind.Dot)
         {
             var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length);
-            _diagnostics.Error(span, DiagnosticCodes.BareDurationDot,
-                "A duration dot needs a number in front of it - write g4. for a dotted "
-                + "quarter. A dot on its own is not a duration, and it is not needed: a "
-                + "note with no duration inherits the previous one WITH its dots, so "
-                + "'c4. g' is two dotted quarters.");
+            _diagnostics.Error(span, DiagnosticCodes.UnclaimedDot,
+                "This '.' belongs to nothing. A duration dot needs a number in front of "
+                + "it - write g4., not g. (a note with no duration already inherits the "
+                + "previous one WITH its dots, so 'c4. g' is two dotted quarters). An "
+                + "annotation takes its argument in parentheses - write @finger(3) and "
+                + "@chord(c), not @finger.3 and @chord.c.");
         }
         return Advance();
     }

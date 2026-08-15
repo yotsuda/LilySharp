@@ -273,13 +273,14 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string FractionalTempoValue = "LYS0022";
 
-    /// <summary>Parse error: an augmentation dot with no number in front of it
-    /// (<c>c4 g.</c>). A duration is a NUMBER lengthened by dots; a dot on its own
-    /// is not a duration, and it is not needed either — the duration a note inherits
-    /// already carries the dots of the one it inherits from.</summary>
+    /// <summary>Parse error: a '.' in a music stream that belongs to nothing — no rule
+    /// claimed it. It has TWO causes, both measured, and the message names both: an
+    /// augmentation dot with no number in front of it (<c>c4 g.</c>), and the legacy
+    /// dotted spelling of an annotation that now takes parentheses
+    /// (<c>@finger.3</c> for <c>@finger(3)</c>).</summary>
     /// <remarks>
     /// <para>
-    /// LILYPOND-REF: <c>lily/parser.yy</c> — <c>steno_duration</c> is
+    /// The duration half: LILYPOND-REF <c>lily/parser.yy</c> — <c>steno_duration</c> is
     /// <c>UNSIGNED dots</c> or <c>DURATION_IDENTIFIER dots</c>, so a bare '.' cannot
     /// begin one. MEASURED on 2.26.0: <c>\new Staff { c'4 g'. a'4 }</c> fails with
     /// <c>syntax error, unexpected '.'</c> and the file is refused outright.
@@ -291,17 +292,25 @@ public static class DiagnosticCodes
     /// back out as <c>c4 ga4</c>, which is not the same music, and every node after
     /// the dot stood one character early (the shape HANDOFF §1 第168 ⑴ measured for
     /// <c>@staccato.up</c>). The dot is therefore KEPT, and only its meaning is
-    /// refused. No book writes it: measured over the 80-book corpus and 219 fixtures
-    /// by spelling every book back out of its tree.
+    /// refused. No book writes either form: measured over the 80-book corpus and 219
+    /// fixtures, first by spelling every book back out of its tree and then by counting
+    /// this diagnostic across all 1,443 .lys files on disk — the 23 that raise it are
+    /// stale <c>scratch/</c> and <c>output/</c> artefacts in the legacy dotted spelling,
+    /// 12 of which the parser already refused for other reasons.
     /// </para>
     /// <para>
-    /// ⚠️ Reading it as "inherit the number, add a dot" was considered and rejected:
-    /// inheritance already carries the dots (<c>c4. g</c> is two dotted quarters,
-    /// measured), so after a dotted note <c>g.</c> would have two readings — 4. and
-    /// 4.. — with nothing to choose between them.
+    /// ⚠️ Reading a bare dot as "inherit the number, add a dot" was considered and
+    /// rejected: inheritance already carries the dots (<c>c4. g</c> is two dotted
+    /// quarters, measured), so after a dotted note <c>g.</c> would have two readings —
+    /// 4. and 4.. — with nothing to choose between them.
+    /// </para>
+    /// <para>
+    /// ⚠️ The dots that DO belong to something never reach here: a placement qualifier
+    /// (<c>@staccato.up</c>), a dotted navigation mark (<c>@ds.al.fine</c>) and a
+    /// duration's own dots (<c>c4.</c>) are all consumed by the rule that owns them.
     /// </para>
     /// </remarks>
-    public const string BareDurationDot = "LYS0023";
+    public const string UnclaimedDot = "LYS0023";
 
     // Semantic errors (LYS1xxx)
 
