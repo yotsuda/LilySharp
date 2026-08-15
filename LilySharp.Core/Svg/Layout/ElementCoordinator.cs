@@ -1925,16 +1925,22 @@ internal sealed class ElementCoordinator
             // or a chord's upper tie recedes past a head that is there.
             var tiedPositions = ordered.Select(t => t.StaffPosition).Distinct().ToList();
 
+            // A TAB column's directions come from the STRING LINES, so they are decided here,
+            // once for the column, and handed to every segment's specifications.
+            bool[]? tabCurveUp = staff is { IsTab: true }
+                ? TabColumnCurveUp(score, staff, ordered)
+                : null;
+
             var solved = new TieLayout[ordered.Count, segments.Length];
 
             for (int s = 0; s < segments.Length; s++)
             {
                 var specs = new List<TieSpecification>(ordered.Count);
-                foreach (var tie in ordered)
+                for (int i = 0; i < ordered.Count; i++)
                 {
                     specs.Add(BuildTieSpecification(
-                        score, systems, staff, staffIndex, tie, segments[s],
-                        startMeasure, endMeasure, tiedPositions));
+                        score, systems, staff, staffIndex, ordered[i], segments[s],
+                        startMeasure, endMeasure, tiedPositions, tabCurveUp?[i]));
                 }
 
                 var layouts = new TieFormattingProblem(specs).Solve();
@@ -1967,6 +1973,75 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// Which way each tie of a TAB column curves, by LilyPond's own column rule run on the
+    /// tab's own staff positions — the string lines the fret digits sit on.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT IS THE TAB'S QUANTITY, TAKEN FROM THE TAB. A tie's <c>StaffPosition</c> is the
+    /// NOTATED pitch's, and on a tab that is a different question with a different answer:
+    /// which string a note is played on is the fret allocation's decision, not the pitch's,
+    /// and a written string number can put a higher pitch on a lower string. This is the
+    /// fourth quantity in a row that a tab was taking from the notation spelling (the string
+    /// number after a slur close, the stem x, the single tie's side — HANDOFF §1, 第179),
+    /// which is why the column is re-sorted here rather than trusting <c>ordered</c>.
+    /// <para>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:1025-1084 set_ties_config_standard_directions
+    ///   — the rule itself, reached through
+    ///   <see cref="TieFormattingProblem.StandardDirections"/> so there is one copy of it.
+    /// </para>
+    /// <para>
+    /// MEASURED on 2.26.0 (test/tab-chord-tie's twin, dumping every Tie's <c>direction</c>):
+    /// the TabStaff's three ties of <c>&lt;c' e' g'&gt;</c> come out −1, +1, +1 at TabNoteHead
+    /// staff-positions 1, 3, 5 — the bottom string below its digit, the two above it above
+    /// theirs — which is what this rule answers for those positions. The notation staff of
+    /// the same book reports the same −1, +1, +1 at positions 8, 10, 12, and Lily# already
+    /// agreed there; only the tab did not.
+    /// </para>
+    /// <para>
+    /// ⚠️ A SINGLE TAB TIE IS PROVABLY UNCHANGED BY THIS, which is why it replaces the old
+    /// rule outright instead of sitting beside it. The old rule was "opposite the tab stem",
+    /// and a tab stem points up exactly when its mean string is BELOW the middle of the
+    /// fretboard (<c>string &gt; (StringCount+1)/2</c>); the position here is
+    /// <c>StringCount+1−2·string</c>, whose sign is positive exactly when
+    /// <c>string &lt; (StringCount+1)/2</c>. For a column of one this rule takes
+    /// <c>sign(position)</c>, falling back to <c>neutral-direction</c> = UP when it is zero —
+    /// and zero happens only on the middle string of an odd tuning, where the old rule's
+    /// strict <c>&gt;</c> also answered UP. The two agree on every string of every tuning.
+    /// USER DECISION (2026-08-16): for CHORDS, defer to LilyPond's spread.
+    /// </para>
+    /// </remarks>
+    private static bool[] TabColumnCurveUp(Score score, Model.Staff staff, List<TieItem> ordered)
+    {
+        // staffY is irrelevant to a string number and a staff position; this geometry is
+        // asked for neither of the two things it needs a page position for.
+        var geom = new TabStaffGeometry(
+            staff.Tuning ?? TuningType.Guitar, 0, staff.TabSourceClef, staff.Transposition);
+
+        var byPosition = new (int Index, int Position)[ordered.Count];
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var tie = ordered[i];
+            var item = ItemAt(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex);
+            int stringNum = item is ChordItem chord
+                ? geom.ChordNoteDigitColumn(chord, tie.StaffPosition).StringNum
+                : geom.NoteDigitColumn(tie.StartNote.Midi, tie.StartNote.StringNumber).StringNum;
+            byPosition[i] = (i, geom.StaffPositionOfString(stringNum));
+        }
+
+        // Bottom -> top on the TAB, which is the order the rule's front()/back() mean.
+        Array.Sort(byPosition, (a, b) => a.Position.CompareTo(b.Position));
+        var dirs = TieFormattingProblem.StandardDirections(
+            byPosition.Select(p => p.Position).ToArray(),
+            new bool?[ordered.Count],
+            TieDetails.Default.NeutralDirectionUp);
+
+        var result = new bool[ordered.Count];
+        for (int k = 0; k < byPosition.Length; k++)
+            result[byPosition[k].Index] = dirs[k] > 0;
+        return result;
+    }
+
+    /// <summary>
     /// Everything one tie's two bounds hand the scorer, for one system segment of it.
     /// </summary>
     /// <remarks>
@@ -1985,41 +2060,34 @@ internal sealed class ElementCoordinator
         SpannerBreakSegment segment,
         MeasureLayout startMeasure,
         MeasureLayout endMeasure,
-        List<int> tiedPositions)
+        List<int> tiedPositions,
+        bool? tabCurveUp = null)
     {
         int startDots = tie.StartNote.Dots;
 
         var segSystem = systems[segment.SystemIndex];
+
+        // The item X is the LEFT edge of an undisplaced head; the seconds displacement is
+        // per head and belongs to the outline, not to the column. Hoisted out of the two
+        // branches because the TAB anchors below are measured from these, not from the
+        // notation offsets the branches build.
+        double startColumnX = startMeasure.X
+            + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure);
+        double endColumnX = endMeasure.X
+            + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure);
 
         double segStartX;
         TieColumnParts? startColumn = null;
         TieColumnParts? endColumn = null;
         if (segment.IsFirst)
         {
-            // The item X is the LEFT edge of an undisplaced head; the seconds
-            // displacement is per head and belongs to the outline, not to the column.
-            double startColumnX = startMeasure.X
-                + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure);
             startColumn = BuildTieColumn(
                 score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex,
                 startColumnX, tiedPositions, isLeftBound: true);
 
-            // The fallback anchor, used only when there is no column to read — on a
-            // TAB, where the bound is a fret digit. It is this tie's own head's inner
-            // edge, past its dots, which is where the tab rule below hangs the bow.
-            // ⚠️ LILYSHARP-OWN, AND IT IS A SECOND SPELLING OF "WHERE THE DOTS END".
-            //   BuildTieColumn boxes the dots at DotGap + n*(width + DotGap) off the
-            //   column's rightmost head, which is where they are DRAWN; this says
-            //   2*n*width off this head. The two disagree, and only this one is left.
-            //   departs from: nothing in LilyPond — a tab digit is not a Note_head, so
-            //     LilyPond's tie has no such anchor at all (it builds the outline from
-            //     the TabNoteHead like any other head).
-            //   goes away when: the tab tie stops being a Lily#-own placement, i.e.
-            //     when a fret digit carries a column the outline can be built from.
-            //     That is the same decision named in the tab branch below.
-            //   observed by: NOTHING. No ledger point reads a tab tie's width, and
-            //     test/tab-tie holds the drawing only. A DOTTED tab tie is not in the
-            //     corpus at all, which is why the disagreement is currently unreachable.
+            // The fallback anchor, used only when there is no column to read. On a NOTATION
+            // staff that is a piece broken at a system edge; a TAB bound overwrites both of
+            // these below, from the fret digit the bow actually leaves.
             double startBase = startColumnX
                 + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
             int noteValue = tie.StartNote.BaseDuration.Numerator != 1
@@ -2039,8 +2107,6 @@ internal sealed class ElementCoordinator
         double segEndX;
         if (segment.IsLast)
         {
-            double endColumnX = endMeasure.X
-                + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure);
             endColumn = BuildTieColumn(
                 score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex,
                 endColumnX, tiedPositions, isLeftBound: false);
@@ -2067,11 +2133,6 @@ internal sealed class ElementCoordinator
         var tieForProblem = tie;
         if (staff is { IsTab: true })
         {
-            // The fret digits sit a TabHeadCenterOffset right of their note
-            // columns (see EngravingDefaults), so shift the tie's note-end
-            // attachments to match — otherwise the tie detaches to the left.
-            if (segment.IsFirst) segStartX += EngravingDefaults.TabHeadCenterOffset;
-            if (segment.IsLast) segEndX += EngravingDefaults.TabHeadCenterOffset;
             // A fret digit is not a note column: it has no chord outline to read, so the
             // tie hangs off the fixed anchors above and the whole Y-dependent
             // attachment (TieChordOutline) does not apply.
@@ -2079,26 +2140,26 @@ internal sealed class ElementCoordinator
             endColumn = null;
             // LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
             // (tie-formatting-problem.cc:665-683) scores 0 for BOTH ends here and the
-            // attachment is whatever the digit rule above chose.
+            // attachment is whatever the digit rule below chose.
             //   departs from: :670, `spec.note_head_drul_[d]->extent (…)`. LilyPond
             //     builds that from a TabNoteHead like any other head, so it HAS the
-            //     term; this engine's tab tie is anchored to a fret digit's edge by a
-            //     rule of its own (see just above), and there is no box for the
-            //     penalty to measure against that would mean the same thing.
-            //   goes away when: the tab tie stops being a Lily#-own placement — i.e.
-            //     when a tab digit carries a head extent the scorer can read. That is
-            //     a decision, not a defect: HANDOFF 3 records that Lily# chooses a
-            //     tab tie's SIDE from the string, which LilyPond is not asked about.
+            //     term; this engine composes the digit's edge instead (axis + zigzag
+            //     column + half a digit, below), and there is no grob box for the
+            //     penalty to measure against.
+            //   goes away when: a fret digit carries a head extent the outline can be
+            //     built from — at which point the tab tie stops needing any of this
+            //     branch and goes through the scored search like every other tie.
             //   observed by: NOTHING. There is no ledger point on a tab tie's width,
             //     and there cannot be one until the tab fixtures pin their strings
-            //     (HANDOFF 1's "tab の残り 3 冊"). test/tab-tie holds the drawing only.
+            //     (docs/HANDOFF.md's "tab の残り 3 冊"). test/tab-tie and
+            //     test/tab-chord-tie hold the drawing only; TabChordTieTests pins the
+            //     x arithmetic directly.
             // On a tab the tie connects two fret digits on ONE string, so it
             // belongs on that string's line — NOT at the notation pitch height.
-            // It curves OPPOSITE the stem: below the digits when the stem
-            // points up, above when it points down (matching the tab stem,
-            // which uses note.StemUp).
             var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
-            // A chord's per-string ties must each hug their OWN string.
+            // A chord's per-string ties must each hug their OWN string, AND HANG OFF THEIR
+            // OWN DIGIT. Both answers come from one call so they cannot disagree about which
+            // note they are talking about.
             // LILYPOND-REF: lily/tab-note-heads-engraver.cc:106-123 — each
             // TabNoteHead's staff-position is the STRING LINE its
             // noteToFretFunction (exclusive chord allocation) assigned, and
@@ -2107,30 +2168,64 @@ internal sealed class ElementCoordinator
             // synthesized start note carries no MIDI) — not a per-note
             // auto-fret, which hands several notes the same string.
             var tieItem = ItemAt(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex);
-            double digitY = tieItem is ChordItem tieChord
-                ? geom.ChordNoteDigitY(tieChord, tie.StaffPosition)
-                : geom.DigitY(tie.StartNote.Midi, tie.StartNote.StringNumber);
+            var endItem = ItemAt(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex);
+            var startDigit = tieItem is ChordItem tieChord
+                ? geom.ChordNoteDigitColumn(tieChord, tie.StaffPosition)
+                : geom.NoteDigitColumn(tie.StartNote.Midi, tie.StartNote.StringNumber);
+            var endDigit = endItem is ChordItem endChord
+                ? geom.ChordNoteDigitColumn(endChord, tie.StaffPosition)
+                : geom.NoteDigitColumn(tie.EndNote.Midi, tie.EndNote.StringNumber);
+            double digitY = geom.StringY(startDigit.StringNum);
+
+            // ⚠️ THE BOW HANGS BETWEEN TWO DIGITS, AND ON A CHORD THOSE ARE NOT AT THE NOTE
+            // COLUMN'S X. Lily#'s fret digits are large enough that a chord has to zigzag
+            // them into two columns (TabChordColumns), so a chord's three ties leave from
+            // three different x's — while the anchors above are the NOTATION chord's head
+            // displacement (GetChordHeadXOffset), which is a different question with a
+            // different answer. MEASURED on test/tab-chord-tie before this: all three ties
+            // came out over the identical span 10.95 … 13.45, while the digits they belong
+            // to sat at 8.42 / 10.33 / 8.42 and 12.70 / 14.60 / 12.70 — so the middle
+            // string's bow STARTED INSIDE its own digit and the outer two started 1.67 past
+            // theirs.
+            // ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
+            //   TabNoteHeads of that chord report the SAME X-offset (8.82, then 12.951), so
+            //   there is no zigzag there to port and no second x for a tie to choose between.
+            //   departs from: nothing — lily/tie-formatting-problem.cc builds the attachment
+            //     from the head's own extent, which is exactly what this does; the extent is
+            //     just one Lily# has to compose (axis + column + half a digit) rather than
+            //     read off a grob.
+            //   goes away when: a fret digit carries a head extent the outline can be built
+            //     from, which is the same decision named below.
+            //   observed by: TabChordTieTests, and the test/tab-chord-tie snapshot.
+            double startAxis = startColumnX + EngravingDefaults.TabHeadCenterOffset;
+            double endAxis = endColumnX + EngravingDefaults.TabHeadCenterOffset;
+            if (segment.IsFirst)
+            {
+                // Past this digit's right ink edge, then past its dots. The dot spacing is
+                // the renderer's own (DrawTabAugmentationDots starts one dot-width past the
+                // digit edge and steps 2 per dot), so this is no longer a second spelling of
+                // where they end — it is the same arithmetic.
+                segStartX = startAxis + startDigit.Dx + startDigit.HalfWidth
+                          + 2 * startDots * GlyphMetrics.AugmentationDot.Width;
+            }
+            if (segment.IsLast)
+                segEndX = endAxis + endDigit.Dx - endDigit.HalfWidth;
             // LilyPond hangs the tab tie right at the digit's edge — a small,
             // shallow curve hugging the number — so offset by the VISIBLE
             // glyph half-height plus a hair, not the full erase-box height.
             double clearance = 0.36 * TabConstants.FretFontSize + 0.1; // ~0.54 sp at font 2.6
-            // ⚠️ THE TAB'S OWN STEM DIRECTION, not the note's notation one. They are two
-            // different quantities: a tab stem points by the STRINGS the item sits on
-            // (TabStaffGeometry.StringStemUp of its mean string — what DrawTabMeasure and
-            // the tab beam quanter both read), a notation stem by the PITCH. Reading the
-            // notation flag here made this rule break its own promise: MEASURED on
-            // test/tab-tie, whose `d` sits on the bass clef's middle line, so its notation
-            // stem points DOWN while the tab stem points UP — and the tie came out ABOVE
-            // the digits, on the same side as the drawn stem. LilyPond puts both of that
-            // book's ties below (dir=-1 for each, measured on the twin).
-            bool stemUp = geom.StringStemUp(geom.MeanString(tieItem ?? (MusicItem) tie.StartNote));
-            y = digitY + (stemUp ? clearance : -clearance);
-            // Curve opposite the stem (constructor-set property, no `with`). On a tab
-            // this IS a decision and is IMPOSED — a Lily#-own feature (the tie belongs
-            // to a string line, not to a pitch), so it does not go through the scored
-            // search the notation staff's ties now use.
+            // Which SIDE of its digit this bow hangs on was decided for the whole column, by
+            // LilyPond's own rule run on the string lines (TabColumnCurveUp). Passed in
+            // rather than recomputed because the rule reads the column, not the tie.
+            // ⚠️ IT ARRIVES AS AN IMPOSED DIRECTION, and on a tab that is still right: a fret
+            // digit has no head extent for the scored direction search to weigh (see the
+            // note above), so there is nothing for the search to overturn it WITH. On the
+            // notation staff the same rule only SEEDS a configuration.
+            bool curveUp = tabCurveUp ?? !geom.StringStemUp(
+                geom.MeanString(tieItem ?? (MusicItem) tie.StartNote));
+            y = digitY + (curveUp ? -clearance : clearance);
             tieForProblem = new TieItem(
-                tie.StartNote, tie.EndNote, tie.StaffPosition, forcedCurveUp: !stemUp,
+                tie.StartNote, tie.EndNote, tie.StaffPosition, forcedCurveUp: curveUp,
                 tie.StartMeasureIndex, tie.EndMeasureIndex, tie.StartItemIndex, tie.EndItemIndex);
         }
         else

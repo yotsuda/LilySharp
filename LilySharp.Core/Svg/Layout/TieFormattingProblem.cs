@@ -542,9 +542,36 @@ internal sealed class TieFormattingProblem
     private int[] SetTiesConfigStandardDirections()
     {
         int n = _specs.Count;
+        var positions = new int[n];
+        var manual = new bool?[n];
+        for (int i = 0; i < n; i++)
+        {
+            positions[i] = _specs[i].Position;
+            manual[i] = _specs[i].ManualDir;
+        }
+        return StandardDirections(positions, manual, _details.NeutralDirectionUp);
+    }
+
+    /// <summary>
+    /// The rule itself, over a column's staff <paramref name="positions"/> (BOTTOM to TOP)
+    /// and whatever directions are already imposed — separated from the specifications so a
+    /// caller that is not building this problem can ask the same question.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE TAB IS THAT CALLER, and the whole reason this is a static. A tab tie column is
+    /// ordered and directed by the STRING LINES
+    /// (<see cref="TabStaffGeometry.StaffPositionOfString"/>), not by the notated pitches its
+    /// specifications carry, so it cannot hand this problem its own positions — but the rule
+    /// it wants is exactly this one, and writing it twice is the "same quantity, second
+    /// spelling" this repo keeps paying for (docs/RULES.md §5.2.1②).
+    /// </remarks>
+    internal static int[] StandardDirections(
+        IReadOnlyList<int> positions, IReadOnlyList<bool?> manual, bool neutralUp)
+    {
+        int n = positions.Count;
         var dirs = new int?[n];
         for (int i = 0; i < n; i++)
-            if (_specs[i].ManualDir is { } m)
+            if (manual[i] is { } m)
                 dirs[i] = m ? +1 : -1;
 
         if (n == 0)
@@ -554,11 +581,11 @@ internal sealed class TieFormattingProblem
         {
             if (n == 1)
             {
-                int bySign = Math.Sign(_specs[0].Position);
+                int bySign = Math.Sign(positions[0]);
                 if (bySign != 0)
                     dirs[0] = bySign;
             }
-            dirs[0] ??= n > 1 ? -1 : (_details.NeutralDirectionUp ? +1 : -1);
+            dirs[0] ??= n > 1 ? -1 : (neutralUp ? +1 : -1);
         }
 
         dirs[n - 1] ??= +1;
@@ -566,7 +593,7 @@ internal sealed class TieFormattingProblem
         // Seconds: adjacent ties within one staff position split outward.
         for (int i = 1; i < n; i++)
         {
-            if (Math.Abs(_specs[i].Position - _specs[i - 1].Position) <= 1)
+            if (Math.Abs(positions[i] - positions[i - 1]) <= 1)
             {
                 dirs[i - 1] ??= -1;
                 dirs[i] ??= +1;
@@ -577,7 +604,7 @@ internal sealed class TieFormattingProblem
         var result = new int[n];
         for (int i = 0; i < n; i++)
         {
-            int d = dirs[i] ?? Math.Sign(_specs[i].Position);
+            int d = dirs[i] ?? Math.Sign(positions[i]);
             result[i] = d != 0 ? d : -1;
         }
         return result;

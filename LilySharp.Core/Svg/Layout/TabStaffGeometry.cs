@@ -422,15 +422,80 @@ internal readonly struct TabStaffGeometry
     /// carries no MIDI, only its staff position — and returns that string's line.
     /// </summary>
     public double ChordNoteDigitY(ChordItem chord, int staffPosition)
+        => StringY(ChordNoteDigitColumn(chord, staffPosition).StringNum);
+
+    /// <summary>
+    /// Everything about WHERE one chord note's fret digit is drawn: the string it was
+    /// allocated, the zigzag column offset from the note column's digit axis, and half the
+    /// digit's drawn width. The three answers come from ONE run of the exclusive allocation,
+    /// so a reader of the x cannot disagree with a reader of the y about which note it is.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ORDER MATTERS AND IT IS THE RENDERER'S. <see cref="TabChordColumns.Offsets"/>
+    /// is indexed by the notes sorted TOP STRING FIRST, which is how <c>DrawTabChord</c>
+    /// calls it; resolving the offset against any other order hands a digit its neighbour's
+    /// column. Matched by STAFF POSITION, like <see cref="ChordNoteDigitY"/> — a chord tie's
+    /// synthesized start note carries no MIDI, only its staff position.
+    /// <para>
+    /// A note whose staff position is not in the chord, or whose allocation failed, answers
+    /// string 1 with a zero-width digit at the axis — the same fallback
+    /// <see cref="ChordNoteDigitY"/> has always had (it returned <see cref="StaffY"/>, which
+    /// is string 1's line).
+    /// </para>
+    /// </remarks>
+    public (int StringNum, double Dx, double HalfWidth) ChordNoteDigitColumn(
+        ChordItem chord, int staffPosition)
     {
         int shift = _octaveShift;
         var alloc = Tunings.CalculateChordFrets(
             chord.Notes.Select(n => (n.Midi + shift, n.StringNumber)).ToList(), _tuning);
+        var ordered = alloc
+            .Select(p => (str: p.stringNum, fret: p.fret))
+            .OrderBy(p => p.str)
+            .ToList();
         for (int i = 0; i < chord.Notes.Length; i++)
-            if (chord.Notes[i].StaffPosition == staffPosition && alloc[i].stringNum >= 1)
-                return StringY(alloc[i].stringNum);
-        return StaffY;
+        {
+            if (chord.Notes[i].StaffPosition != staffPosition || alloc[i].stringNum < 1)
+                continue;
+            int k = ordered.FindIndex(p => p.str == alloc[i].stringNum);
+            if (k < 0)
+                break;
+            return (alloc[i].stringNum,
+                    TabChordColumns.Offsets(ordered)[k],
+                    TabChordColumns.FretWidth(ordered[k].fret) / 2);
+        }
+        return (1, 0, 0);
     }
+
+    /// <summary>
+    /// Where ONE note's (not a chord's) fret digit is drawn — the same three answers
+    /// <see cref="ChordNoteDigitColumn"/> gives, for an item that has no zigzag to be in.
+    /// </summary>
+    public (int StringNum, double Dx, double HalfWidth) NoteDigitColumn(
+        int writtenMidi, int? preferredString)
+    {
+        var (stringNum, fret) = Fret(writtenMidi, preferredString);
+        return (stringNum, 0, TabChordColumns.FretWidth(fret) / 2);
+    }
+
+    /// <summary>
+    /// The staff position LilyPond gives a fret digit on this string — the quantity its own
+    /// tie column is ordered and directed by, and the tab's answer to "how high is this".
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/translation-functions.scm:971-982 tablature-position-on-lines —
+    ///   <c>(- (* 2 string-nr) string-count 1)</c>, negated because <c>stringOneTopmost</c>
+    ///   defaults to true (scm/define-context-properties.scm), which is also Lily#'s
+    ///   convention (string 1 is <see cref="StaffY"/>, the top line).
+    /// LILYPOND-REF: lily/tab-note-heads-engraver.cc:99-122 Tab_note_heads_engraver::process_music
+    ///   — the engraver calls that through <c>tabStaffLineLayoutFunction</c> and writes the
+    ///   answer to the TabNoteHead's <c>staff-position</c>.
+    /// <para>
+    /// MEASURED on 2.26.0 with the test/tab-chord-tie twin: <c>&lt;c' e' g'&gt;</c> on a
+    /// six-string guitar reports TabNoteHead staff-positions 5, 3, 1 for strings 1, 2, 3.
+    /// </para>
+    /// </remarks>
+    public int StaffPositionOfString(int stringNum) => StringCount + 1 - 2 * stringNum;
 
     /// <summary>
     /// The string a stem meets on this item: the TOP digit (smallest string number)
