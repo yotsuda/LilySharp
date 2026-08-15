@@ -1707,6 +1707,14 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   ⚠️ **▶ の打鍵の順位は net9 の Release 実測 ms**。**コンパイラ／ランタイム世代が変わったので
   床は動いている**——順位を根拠に何かを決める前に **net10 で取り直すこと**
   （§5.3 の「regime を混ぜない」）。混在した数字を並べない。
+- ★ **`editors/vscode/node_modules` はリポジトリに無い**（`editors/vscode/.gitignore`）。
+  **新しい機械では `npm ci` を一度やるまで tsc も esbuild も存在しない**——`Deploy-Lsp.ps1` は
+  `MODULE_NOT_FOUND: esbuild` を**「compile 失敗」として報告していた**ので、src/ に無い型エラーを
+  探しに行くことになる。⇒ **`Deploy-Lsp.ps1` が node_modules 不在を検出して `npm ci` するように直した**
+  （2026-08-15）。.NET 側は `dotnet build` が restore を兼ねるので同じ穴は無い。
+  ⚠️ **`Deploy-Lsp.ps1` はインストール済み拡張へ「コピー」するだけで、拡張を作れない**。
+  拡張が 1 つも入っていない機械では**先に `pwsh tools/Package-And-Install.ps1`**（VSIX を作って
+  `code --install-extension`）。これも script が言うようにした。
 - **dotnet の増分ビルドが腐る** → 前後比較では `--no-incremental` でビルドして
   `dotnet run --no-build`。なお `dotnet test` は `--no-incremental` を受け付けない
 - **LilyPond は Guile デッドロックする** → `cmd /c "... < NUL"` でデタッチ必須。

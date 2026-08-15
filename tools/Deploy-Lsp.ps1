@@ -21,12 +21,32 @@ $repoServer = Join-Path $repoRoot 'editors\vscode\server'
 
 # Compile the extension TypeScript so the out/ copy below carries the latest
 # client changes (this script also deploys out/ and syntaxes/, not just the server).
-Write-Host "Compiling extension TypeScript..."
-Push-Location (Join-Path $repoRoot 'editors\vscode')
-npm run compile
-$compileExit = $LASTEXITCODE
-Pop-Location
-if ($compileExit -ne 0) { throw "tsc compile failed ($compileExit)" }
+#
+# The compiler is a devDependency (esbuild), and editors/vscode/.gitignore keeps
+# node_modules/ out of the repo, so a checkout that has never run `npm ci` there has
+# no compiler at all. Without the bootstrap below `npm run compile` dies with
+# MODULE_NOT_FOUND: esbuild and the throw reported it as a COMPILE failure -- which
+# sends the next reader looking for a type error in src/ that does not exist. The
+# .NET side never had this hole (dotnet restores on build); only the npm side did.
+$repoExtSrc = Join-Path $repoRoot 'editors\vscode'
+Push-Location $repoExtSrc
+try {
+    if (-not (Test-Path (Join-Path $repoExtSrc 'node_modules'))) {
+        if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+            throw 'node_modules is missing and npm was not found on PATH. Install Node.js (18+), then re-run.'
+        }
+        Write-Host "node_modules missing - installing extension dev dependencies..."
+        # ci for the pinned tree when the lockfile is there; install is the fallback.
+        if (Test-Path (Join-Path $repoExtSrc 'package-lock.json')) { npm ci } else { npm install }
+        if ($LASTEXITCODE -ne 0) { throw "npm install failed ($LASTEXITCODE)" }
+    }
+
+    Write-Host "Compiling extension TypeScript..."
+    npm run compile
+    $compileExit = $LASTEXITCODE
+}
+finally { Pop-Location }
+if ($compileExit -ne 0) { throw "esbuild compile failed ($compileExit)" }
 
 Write-Host "Publishing LilySharp.Lsp ($Configuration)..."
 # Clean first: a prior SELF-CONTAINED publish leaves coreclr + the bundled runtime,
@@ -39,10 +59,27 @@ dotnet publish (Join-Path $repoRoot 'LilySharp.Lsp') -c $Configuration -o $repoS
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
 
 # Newest installed lilysharp extension (there may be several versions).
-$extDir = Get-ChildItem "$env:USERPROFILE\.vscode\extensions" -Directory -Filter 'ytsuda.lilysharp-*' |
+# The root is not always ~\.vscode\extensions: VSCODE_EXTENSIONS overrides it and
+# Insiders keeps its own. It may also not exist AT ALL on a machine where VS Code
+# has never installed an extension -- and Get-ChildItem on a missing path throws
+# under $ErrorActionPreference='Stop', turning "nothing to deploy to" into a crash
+# on the line AFTER the publish that did succeed.
+$extRoots = @(
+    $env:VSCODE_EXTENSIONS
+    (Join-Path $env:USERPROFILE '.vscode\extensions')
+    (Join-Path $env:USERPROFILE '.vscode-insiders\extensions')
+) | Where-Object { $_ -and (Test-Path $_) }
+
+$extDir = $extRoots |
+    ForEach-Object { Get-ChildItem $_ -Directory -Filter 'ytsuda.lilysharp-*' -ErrorAction SilentlyContinue } |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $extDir) {
     Write-Host 'No installed lilysharp extension found - repo publish only.' -ForegroundColor Yellow
+    if ($extRoots) { Write-Host "  looked in: $($extRoots -join '; ')" -ForegroundColor DarkGray }
+    else { Write-Host '  no VS Code extensions folder exists on this machine.' -ForegroundColor DarkGray }
+    # Deploy-Lsp copies INTO an installed extension; it cannot create one. The VSIX
+    # route is the other script, and it is what a fresh machine needs first.
+    Write-Host '  install it once with: pwsh tools/Package-And-Install.ps1' -ForegroundColor DarkGray
     return
 }
 $dest = Join-Path $extDir.FullName 'server'
