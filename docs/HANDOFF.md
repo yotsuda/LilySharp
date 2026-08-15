@@ -1474,13 +1474,22 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `= "red"` / `= true` すべて通る）。
   ⚠️ **page 系（`paper-height`/`top-system-spacing`/`systems-per-page`）を `override` に載せない**——
   LP ではそれらは `\paper` 変数であって grob プロパティではない（コーパスはハーネス引数で解決済み）
-- **chords 行 / lyrics 行が `PartReferenceFinder` に無い**（2026-07-26 実コードで再確認）— 
+- ★★ **chords 行 / lyrics 行が `PartReferenceFinder` に無い**（2026-07-26 実コードで再確認。
+  **2026-08-15・第178 終わりにもう一度確認＝まだそのまま**）— 
   `AllPartNameTokens`/`ReferenceTokens` の switch は `PartDeclaration`・`PartBlock`・
   `MidiPartRender`・`StaffRender`・`OssiaRender`・`TabRender` だけで、
   **`ChordRowRenderSyntax` と `LyricsRowRenderSyntax` が無い**⇒ その part 参照は検証も改名も
   されない。⚠️ `staff … with chords NAME` の NAME は**意図的に除外**（別種の名前）なので
   そちらと混同しないこと。足すと「未定義の chord/lyrics part を参照するスコアを新たに弾く」
   挙動変更になる＝**要判断**
+  ⚠️ ★★★ **これが「締める向き」なのは実測で確かめた**（2026-08-15・第178）——
+  **`ReferenceTokens` の消費者は `SymbolReferenceValidator.cs:61` ただ 1 つ**なので、
+  **editor だけの穴ではなく診断が変わる**（`AllPartNameTokens` の側は改名・出現箇所＝editor だけ）。
+  ⇒ ★★★ **cue の島が閉じたいま、§2F で「リリース後は不可能」な向きはこれだけ**
+  （他の 3 つ＝一覧の構文・parse しない fixture 2 本・繰り返し縦線の ⑹ は全部広げる向き）。
+  ⚠️ **同じ島の別の顔が上にある**——**exporter が chords/lyrics 行を双子に出せない**（穴の値段は
+  **譜を持たない本 5 冊**・第176 実測）。**塞ぐなら双子 199 本の before/after 全数比較**が要る（§2F 上段）
+  ＝**この 2 つは 1 便ではなく 1 セッションの形。着手前にユーザーの判断が要る。**
 - ~~**対応の取れないスラーが無警告で消える**~~ — **完了**（**LYS4010**・ユーザー判断で master 直）。
   ペアリング規則は**レンダラのものを読む**（`SlurPairingScanner` が collector の副作用として記録し
   `SlurPairingValidator` が出す＝タイ LYS4007 と同じ形）。描かれる結果と食い違う警告を出さないため、
