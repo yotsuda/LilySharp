@@ -55,6 +55,31 @@ public class AnnotationNameValidatorTests
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.UnknownAnnotation);
     }
 
+    /// <summary>
+    /// <c>@rest</c> prints a note as a rest at that note's pitch, so it has a pitch to
+    /// read only on a note. Anywhere else it would be dropped without a word — which is
+    /// the failure this validator exists to give a voice to.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/rest-engraver.cc:62-80 process_music — the pitch of
+    /// the rest EVENT is what becomes staff-position; there is no pitch on a rest or a
+    /// chord to read.</remarks>
+    [Theory]
+    [InlineData("r4@rest d |")]        // already a rest: no pitch to sit at
+    [InlineData("<c e>4@rest d |")]    // a chord has several, and LilyPond takes none
+    public void RestAnnotation_OffANote_IsAnError(string source)
+    {
+        var diags = Validate(source);
+        var error = Assert.Single(diags, d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Equal(DiagnosticSeverity.Error, error.Severity);
+        Assert.Contains("belongs on a note", error.Message);
+    }
+
+    [Fact]
+    public void RestAnnotation_OnANote_IsAccepted()
+    {
+        Assert.Empty(Validate("a4@rest c |"));
+    }
+
     [Fact]
     public void TypoNearKnownName_SuggestsIt()
     {

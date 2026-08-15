@@ -507,6 +507,17 @@ Note           = PitchToken , [ DurationToken ] , { Annotation } ;
 Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
                  (* r = plain rest, s = invisible spacer, R = full-measure rest *)
 
+(* A PITCHED rest is a Note carrying the '@rest' annotation: it prints as a rest, at
+   the height the written pitch would have had. The pitch is a POSITION and nothing
+   else — it does not sound, prints no accidental, and does not enter the measure's
+   accidental memory. Everywhere else a rest finds its own height (the middle line,
+   or the voiced position inside a voice span, moved clear of the notes sounding with
+   it); '@rest' replaces that whole calculation, and no collision moves it afterwards.
+   '@rest' on anything but a note is an error — there is no pitch there to read.
+   Example: two voices whose rests would collide, each rest placed by hand:
+
+     voice { g'8 g' g' r8 r2 | } { a,4@rest c r2 | } *)
+
 (* ADJACENCY RULE: a DurationToken (number + dots) is GLUED to what it lengthens —
    c4, r2., <c e g>4, << c e g >>2 — never spaced. A spaced number is a detached
    duration (LYS0016: 'c 4' is the note c and a meaningless 4), and a glued number

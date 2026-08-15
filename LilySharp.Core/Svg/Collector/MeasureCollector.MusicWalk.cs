@@ -562,6 +562,31 @@ public sealed partial class MeasureCollector
                         CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
                         _pendingGrace = null;
                     }
+                    // `a4@rest` is a REST written at a pitch — LilyPond's `a4\rest`.
+                    // It leaves the walk here rather than further down because it is
+                    // not a note at all: nothing note-shaped (dynamics, figured bass,
+                    // chord names, cross-staff) attaches to it, and the accidental,
+                    // MIDI and ledger work in CreateNoteItem would all be wrong for it.
+                    // The slur flags DO come along — a rest is a legal slur bound
+                    // (the RestSyntax arm below says why).
+                    // LILYPOND-REF: lily/rest-engraver.cc:62-80 process_music.
+                    if (HasNamedArticulation(note, "rest"))
+                    {
+                        int prMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                        int prItemIndex = builder.CurrentItemCount;
+                        Fraction prAnchorTiming = builder.CurrentDuration;
+                        var pitchedRest = CreatePitchedRestItem(note);
+                        builder.AddItem(pitchedRest with
+                        {
+                            HasSlurStart = hasSlurStartAfter,
+                            HasSlurEnd = hasSlurEndAfter,
+                        });
+                        // Post-events ride a pitched rest exactly as they ride `r4`.
+                        CollectArticulations(note, prMeasureIndex, prItemIndex,
+                            stemUp: false, anchorTiming: prAnchorTiming);
+                        break;
+                    }
+
                     bool hasGliss = HasGlissandoArticulation(note);
                     int featherDir = GetFeatherDirection(note);
                     bool isCue = _cueDepth > 0;

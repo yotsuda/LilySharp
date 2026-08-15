@@ -1128,10 +1128,43 @@ internal sealed class ElementCoordinator
     /// </remarks>
     public ImmutableDictionary<RestShiftKey, double> CalculateRestNoteCollisions(Staff staff)
     {
-        if (staff.Voices.Length < 2)
-            return ImmutableDictionary<RestShiftKey, double>.Empty;
-
         var shifts = new Dictionary<RestShiftKey, double>();
+
+        // A PITCHED rest (`a4@rest`) is placed by what was written, and no partner and
+        // no polyphony are needed to know where: it is the first arm of
+        // staff_position_internal, and Rest_collision then computes no translation for
+        // it at all. So it is answered here, before the collision walk, and a staff that
+        // holds nothing else still leaves with the placement it was told.
+        // (Cheap on purpose — an index walk with no timeline and no allocation, since
+        // every single-voice staff in the book now passes through it.)
+        // LILYPOND-REF: lily/rest.cc:53-74 staff_position_internal — position_override;
+        // LILYPOND-REF: lily/rest-collision.cc:228-233 calc_positioning_done — "Do not
+        // compute a translation for pre-positioned rests".
+        for (int v = 0; v < staff.Voices.Length; v++)
+        {
+            var measures = staff.Voices[v].Measures;
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var items = measures[m].Items;
+                for (int i = 0; i < items.Length; i++)
+                {
+                    if (items[i] is not RestItem { StaffPosition: not null } pitched)
+                        continue;
+                    int pitchedValue = GlyphMetrics.NoteValueOf(pitched.BaseDuration);
+                    // The renderer draws the neutral letter unshifted, so the shift is
+                    // the distance from it — and both the +2 a semibreve gets from its
+                    // written position and the +2 in the neutral letter cancel, leaving
+                    // the written position itself for every duration.
+                    shifts[new RestShiftKey(m, v, i)] =
+                        RestStaffPosition(pitched, pitched.VoiceDirection, pitchedValue)
+                        - (pitchedValue == 1 ? 2.0 : 0.0);
+                }
+            }
+        }
+
+        if (staff.Voices.Length < 2)
+            return shifts.ToImmutableDictionary();
+
         int measureCount = staff.Voices.Min(v => v.Measures.Length);
 
         for (int m = 0; m < measureCount; m++)
@@ -1160,6 +1193,11 @@ internal sealed class ElementCoordinator
                     if (item is not RestItem rest || rest.IsSpacer || rest.IsMultiMeasure)
                         continue;
 
+                    // Pre-positioned rests were placed above and take no translation.
+                    // LILYPOND-REF: lily/rest-collision.cc:228-233 calc_positioning_done.
+                    if (rest.StaffPosition is not null)
+                        continue;
+
                     // The rest's direction is the one the collector STAMPED on it
                     // (ResolveVoiceStemDirections — make-voice-props-set reaches Rest),
                     // scoped to the span's actual reach; zero means the rest is outside
@@ -1183,7 +1221,7 @@ internal sealed class ElementCoordinator
                     // NEUTRAL letter (middle; whole hangs at +2), so the emitted shift
                     // carries the base displacement too.
                     int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                    double basePos = VoicedRestPosition(dir, restValue);
+                    double basePos = RestStaffPosition(rest, dir, restValue);
                     double defaultPos = restValue == 1 ? 2.0 : 0.0;
 
                     // The rest's own ink, in staff POSITIONS about the middle line, at
@@ -1274,7 +1312,26 @@ internal sealed class ElementCoordinator
     /// unpitched arm); LILYPOND-REF: scm/define-grobs.scm Rest — voiced-position 4.</remarks>
     // internal: ItemSkylineFactory prices a voiced rest's separation box at this same
     // position (the PURE side of the offset chain — the collision push below is unpure).
-    internal static double VoicedRestPosition(int dir, int restValue)
+    /// <summary>
+    /// Where a rest STARTS, before any collision moves it: the pitch it was written at
+    /// when it was written at one (<c>a4@rest</c>), and otherwise the voiced position
+    /// below.
+    /// </summary>
+    /// <remarks>
+    /// The two arms are <c>staff_position_internal</c>'s own, in its order: a numeric
+    /// <c>staff-position</c> is taken verbatim — no voiced position, no aligning to a
+    /// line ("trust the client on good positioning") — except that a semibreve still
+    /// hangs one line above whatever it was given, the same +2 the unpitched arm ends
+    /// with. Every reader of a rest's pure position comes through here, so a pitched
+    /// rest is placed once and the spacing, the dot column and the print all see it.
+    /// LILYPOND-REF: lily/rest.cc:53-74 staff_position_internal — position_override.
+    /// </remarks>
+    internal static double RestStaffPosition(RestItem rest, int dir, int restValue) =>
+        rest.StaffPosition is { } written
+            ? (restValue == 1 ? written + 2.0 : written)
+            : VoicedRestPosition(dir, restValue);
+
+    private static double VoicedRestPosition(int dir, int restValue)
     {
         const double VoicedPosition = 4.0;
         double pos = dir * VoicedPosition;
@@ -1428,9 +1485,9 @@ internal sealed class ElementCoordinator
                             // every span → the neutral origin), the same slot
                             // ItemSkylineFactory prices — not a re-derived voice default.
                             int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                            int pure = rest.VoiceDirection == 0
+                            int pure = rest.VoiceDirection == 0 && rest.StaffPosition is null
                                 ? (restValue == 1 ? 2 : 0)
-                                : (int) VoicedRestPosition(rest.VoiceDirection, restValue);
+                                : (int) RestStaffPosition(rest, rest.VoiceDirection, restValue);
                             restSlots.Add((positions.Count, v, i, pure));
                             positions.Add(pure);
                             dirs.Add(0);   // a rest's dot declares no direction (dp.dir_

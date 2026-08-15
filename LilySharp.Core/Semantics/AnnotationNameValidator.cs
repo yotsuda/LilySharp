@@ -49,6 +49,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             "arpeggio",
             "laissezvibrer", "repeattie",
             "dead",
+            "rest",
             "stemup", "stemdown",
             "ho", "hammeron", "po", "pulloff", "tap", "snappizz", "slide", "stopped",
             "thumb", "heel", "toe", "scoop", "plop",
@@ -140,6 +141,16 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 var name = art.NameToken.Text;
                 if (!IsKnownPlainName(name))
                     WarnUnknown(art, name);
+                // '@rest' makes a NOTE print as a rest at that pitch, so it has a pitch
+                // to read only on a note. Written anywhere else it would be silently
+                // dropped — the failure this whole validator exists to give a voice to.
+                else if (name.Equals("rest", StringComparison.OrdinalIgnoreCase)
+                         && art.Parent is not NoteSyntax)
+                    _diagnostics.Error(
+                        art.Span,
+                        DiagnosticCodes.UnknownAnnotation,
+                        "'@rest' prints a NOTE as a rest at that note's pitch, so it belongs "
+                        + "on a note (a4@rest). For an ordinary rest write 'r'.");
                 else if (OnArpeggioGroupOrMember(art))
                     WarnArpeggioUnsupported(art, name);
                 break;

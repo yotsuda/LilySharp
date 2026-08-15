@@ -177,6 +177,42 @@ public sealed partial class MeasureCollector
         };
     }
 
+    /// <summary>
+    /// <c>a4@rest</c> — a rest that takes its vertical place from a written pitch
+    /// instead of from its voice and the collisions around it.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond writes this <c>a4\rest</c>, and it is a REST EVENT that happens to
+    /// carry a pitch, not a note: <c>Rest_engraver</c> reads the pitch only to set the
+    /// grob's <c>staff-position</c>. So this is deliberately NOT <see cref="CreateNoteItem"/>
+    /// with the head swapped — the pitch here must not print an accidental, must not
+    /// enter the measure's accidental memory (no note head sounds, so LilyPond's
+    /// Accidental_engraver never hears it), must not sound in MIDI, and must not take a
+    /// ledger line. What it MUST still do is exactly what the note it replaces would:
+    /// move the relative-octave frame on, and carry the duration to the next item.
+    /// LILYPOND-REF: lily/rest-engraver.cc:62-80 process_music — the pitch becomes
+    /// staff-position and nothing else;
+    /// LILYPOND-REF: lily/parser.yy — the <c>\rest</c> post-event makes the event a rest.
+    /// </remarks>
+    private RestItem CreatePitchedRestItem(NoteSyntax note)
+    {
+        var rp = CalculateStaffPosition(note.Pitch);
+        _octave.CurrentOctave = rp.RelativeOctave;
+
+        int noteValue = note.Duration?.Value ?? (int) _defaultDuration.Denominator;
+        int dots = note.Duration?.DotCount ?? _defaultDots;
+        if (note.Duration != null)
+        {
+            _defaultDuration = Fraction.FromNoteValue(noteValue);
+            _defaultDots = dots;
+        }
+
+        return new RestItem(Fraction.FromNoteValue(noteValue), dots, note.Position)
+        {
+            StaffPosition = rp.StaffPosition,
+        };
+    }
+
     private RestItem CreateRestItem(RestSyntax rest, (int Value, int Dots)? forcedDuration = null)
     {
         // An arpeggio member has no written duration — the group forces the

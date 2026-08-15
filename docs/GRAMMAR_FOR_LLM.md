@@ -132,10 +132,17 @@ fis8        // F# eighth
 r4          // quarter rest
 s4          // invisible spacer rest
 R1          // full-measure rest
+a,4@rest    // quarter rest printed where the note a, would sit (a PITCHED rest)
 <c e g>4    // chord (shared duration after '>'), C major triad as a quarter
 <c 3 5>4    // the same triad by scale degrees (root + 3rd + 5th of the key)
 <1 3 5>2    // degrees only: anchored on the key TONIC (C E G in C major)
 ```
+
+A rest normally places itself: the middle line, the voiced position inside a
+`voice { } { }` span, and clear of the notes sounding with it. `@rest` on a NOTE
+overrides that — the rest sits where that pitch would and nothing moves it again,
+which is how two voices' colliding rests get pulled apart. The pitch never sounds and
+prints no accidental. On anything but a note (`r4@rest`, `<c e>4@rest`) it is an error.
 
 A duration is GLUED to what it lengthens — `c4`, `<c e g>4` — never spaced
 (`c 4` is an error, LYS0016), and never on a chord/arpeggio member

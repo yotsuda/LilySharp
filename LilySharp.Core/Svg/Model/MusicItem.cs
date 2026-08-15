@@ -562,6 +562,28 @@ public sealed record RestItem : MusicItem
     public int VoiceDirection { get; init; }
 
     /// <summary>
+    /// Where a PITCHED rest (<c>a4@rest</c>) was told to sit, in staff positions about
+    /// the middle line — the position a notehead of that pitch would take. Null for an
+    /// ordinary <c>r</c>, which takes its position from its voice and the collisions.
+    /// </summary>
+    /// <remarks>
+    /// This is LilyPond's <c>staff-position</c> PROPERTY, and its being a number is what
+    /// LilyPond itself tests: <c>Rest_engraver</c> sets it from the event's pitch, and
+    /// two readers branch on it. <c>staff_position_internal</c> takes it verbatim (no
+    /// voiced position, no aligning to a line — "trust the client on good positioning";
+    /// a semibreve still hangs a line above it), and <c>Rest_collision</c> computes no
+    /// translation for it and does not count it toward "too many colliding rests".
+    /// Writing the pitch is therefore how a writer overrules the collision, which is
+    /// exactly what LilyPond's own rest-avoid-note.ly does with its two pitched rests.
+    /// LILYPOND-REF: lily/rest-engraver.cc:62-80 process_music — staff-position from
+    /// the event's pitch plus middleCPosition;
+    /// LILYPOND-REF: lily/rest.cc:53-74 staff_position_internal — position_override;
+    /// LILYPOND-REF: lily/rest-collision.cc:228-233 calc_positioning_done — pre-positioned
+    /// rests are skipped.
+    /// </remarks>
+    public int? StaffPosition { get; init; }
+
+    /// <summary>
     /// True when a slur OPENS on this rest (LilyPond <c>r16(</c>). A rest is a
     /// legal slur bound: LilyPond's rests live inside NoteColumn grobs, so the
     /// Slur_engraver binds to them like any column ("slur-rest-direction.ly").

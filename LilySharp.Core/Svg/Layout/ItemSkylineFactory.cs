@@ -218,7 +218,8 @@ internal static class ItemSkylineFactory
                 restY - restBox.Top, restY - restBox.Bottom,
                 noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));
         }
-        else if (item is RestItem { VoiceDirection: not 0 } voicedRest)
+        else if (item is RestItem voicedRest
+                 && (voicedRest.VoiceDirection != 0 || voicedRest.StaffPosition is not null))
         {
             // A VOICED rest (inside a voice { } { } span) enters at its PURE voiced
             // position — rest.cc's staff_position_internal, dir × 4 with the per-duration
@@ -232,10 +233,14 @@ internal static class ItemSkylineFactory
             //   shift is chained with Lily::pure_chain_offset_callback;
             // LILYPOND-REF: scm/output-lib.scm:1273-1278 pure-chain-offset-callback —
             //   "simply pass the previous calculated offset value".
+            // A PITCHED rest (`a4@rest`) enters the same way and for the same reason:
+            // its pure position is the pitch it was written at, and the collision that
+            // is chained past this box never moves it. It is admitted by the branch
+            // above even when no voice { } span stamped it a direction.
             int restValue = GlyphMetrics.NoteValueOf(item);
             var restBox = GlyphMetrics.GetRestBBox(restValue);
             double restY = staffY
-                - ElementCoordinator.VoicedRestPosition(voicedRest.VoiceDirection, restValue)
+                - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, restValue)
                     / 2.0;
             parts.Add(ColumnPart.Ink(
                 restY - restBox.Top, restY - restBox.Bottom,

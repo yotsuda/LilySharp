@@ -121,6 +121,34 @@ bes2.      // Bb dotted half note
 | `r2` | Half rest |
 | `s4` | Spacer rest (invisible) |
 | `R1` | Full-measure rest |
+| `a4@rest` | Quarter rest placed where the note `a` would sit |
+
+A rest normally finds its own height: on the middle line alone, up or down inside a
+`voice { } { }` span, and out of the way of whatever the other voices are playing at
+that moment. **Writing a pitch with `@rest` decides that height instead** — the rest
+sits where that note would, and nothing moves it afterwards. Use it when two voices'
+rests would otherwise land on top of each other, which is the one case the automatic
+placement leaves alone:
+
+```
+octave absolute
+part v { }
+section Main {
+  v {
+    voice
+    { g'8 g' g' r8 r2 | }
+    { a,4@rest c r2 | }    // this rest sits at a — clear of the other voice's
+    { c'4 c' f'2@rest | }  // and this one at f, on a staff line
+    { r2 g | }
+  }
+}
+form main { ~Main }
+score main { staff ~v }
+```
+
+The pitch is only a height: it never sounds, never prints an accidental, and never
+takes a ledger line of its own (a whole or half rest that lands off a staff line
+carries a short one inside its own glyph, as it does anywhere else).
 
 ### Chords
 

@@ -1713,6 +1713,14 @@ public sealed class LilyPondExporter
                 case ArticulationSyntax art when IsDeadNote(art):
                     prefix.Append("\\deadNote ");
                     break;
+                // `a4@rest` is LilyPond's own `a4\rest` — a post-event, so it goes in the
+                // suffix right where the reader expects it. Without this the twin wrote
+                // the NOTE, which is not the same music: LilyPond would engrave a head
+                // where the book prints a rest.
+                // LILYPOND-REF: ly/music-functions-init.ly — \rest as a post-event.
+                case ArticulationSyntax art when IsPitchedRest(art):
+                    suffix.Append("\\rest");
+                    break;
                 case ArticulationSyntax art when StemDirectionOverride(art) is { } up:
                     prefix.Append(up ? "\\once \\override Stem.direction = #UP "
                                      : "\\once \\override Stem.direction = #DOWN ");
@@ -1727,6 +1735,9 @@ public sealed class LilyPondExporter
 
     private static bool IsDeadNote(ArticulationSyntax a)
         => a.NameToken.Text.Equals("dead", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPitchedRest(ArticulationSyntax a)
+        => a.NameToken.Text.Equals("rest", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// <c>@stemUp</c> / <c>@stemDown</c> as a nullable direction, or null for anything else.

@@ -44,6 +44,20 @@ public class LilyPondExporterTests
         score main { {{render}} }
         """;
 
+    /// <summary>
+    /// <c>a4@rest</c> is LilyPond's own <c>a4\rest</c> and the twin has to write it as
+    /// one. Dropped — which is what an unmapped annotation does — the twin says
+    /// <c>a4</c>, and LilyPond engraves a NOTE where the book prints a rest: the twin
+    /// would no longer be the same music, and every measurement taken through it would
+    /// be measuring a different page.
+    /// </summary>
+    [Fact]
+    public void PitchedRest_IsExportedAsLilyPondsRestPostEvent()
+    {
+        var ly = Export(Score("a,4@rest c,4"));
+        Assert.Contains("a,4\\rest", ly);
+    }
+
     [Fact]
     public void AbsoluteOctave_WrapsInFixed_AndCopiesMarksVerbatim()
     {
