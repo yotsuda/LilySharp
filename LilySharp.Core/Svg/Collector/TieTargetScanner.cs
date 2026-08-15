@@ -95,7 +95,7 @@ internal static class TieTargetScanner
                     bool startsInCue = SlurPairingScanner.IsCueItem(item);
                     bool endsInCue = SlurPairingScanner.IsCueItem(n.Item);
                     bool betweenCues = startsInCue && endsInCue
-                        && SlurPairingScanner.BeginsCueRegion(n.Item);
+                        && n.Item.BeginsCueRegion;
                     if (startsInCue != endsInCue || betweenCues)
                         cueSink.Add(new CueSpanBoundaryWarning(
                             item.SourcePosition, CueSpanKind.Tie,

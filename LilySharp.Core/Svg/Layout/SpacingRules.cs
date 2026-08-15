@@ -3645,17 +3645,29 @@ internal static class SpacingRules
     ///     head-width term and not some other quantity that happens to sit nearby.
     /// </para>
     /// <para>
-    /// ⚠️ ONE PLACE WHERE THIS PREDICATE IS STILL NARROWER THAN LilyPond'S CONDITION, because
-    /// <see cref="NoteItem.IsCue"/> is a per-note flag and not a region identity:
-    ///   departs from: :352-358 for ADJACENT cue regions. <c>cue { … } cue { … }</c> is two
-    ///     CueVoice contexts in LilyPond (probe cue-span.ly C-TWO shows both are made), so their
-    ///     shared edge IS a voice boundary; here both sides answer
-    ///     <see cref="VoiceContextId.Cue"/> and the pair is refined.
-    ///   goes away when: a cue item can say WHICH region it belongs to, the way a combined
-    ///     item now says which context it was routed into — i.e. when
-    ///     <see cref="VoiceContextId.Cue"/> stops being derived and starts being stamped.
-    ///   observed by: NOTHING. No fixture or sample writes two cue blocks back to back
-    ///     (grep, 2026-08-03; re-checked 2026-08-10).
+    /// ⚠️ ADJACENT CUE REGIONS ARE A BOUNDARY TOO, and that is MEASURED rather than argued
+    /// (2026-08-15; this note used to be a "departs from" saying the opposite was shipped).
+    /// <c>cue { … } cue { … }</c> is two CueVoice contexts, and probe
+    /// voice-boundary-spacing.ly section F reads the step across their shared edge as the RAW
+    /// duration ideal 2.898044999134611 where the same music in ONE region reads the refined
+    /// 2.513393907138011 — the two books differing by one <c>cue</c> keyword and nothing else.
+    /// Observed by <c>cue.column.region-edge</c> against <c>cue.column.region-edge-control</c>;
+    /// before the port the two drew an IDENTICAL column list.
+    /// Since a region has no id, the edge is read off the stamp the collector leaves on the
+    /// region's first note (<see cref="MusicItem.BeginsCueRegion"/>) — the same stamp LYS4012
+    /// reads, so a boundary the diagnostic names is a boundary the spacing sees.
+    ///   departs from: nothing measured. The remaining approximation is TWO CUE REGIONS ALIVE
+    ///     AT ONCE in different voices, where a continuing (non-edge) cue item in the right
+    ///     column need not belong to a region that occupies the left one. The rule below asks
+    ///     that EVERY cue item in the right column begin a region, so that configuration keeps
+    ///     the refinement — the pre-port behaviour — rather than losing it on an argument no
+    ///     book has tested.
+    ///   goes away when: a cue item carries a region id rather than an edge flag; see
+    ///     <see cref="NoteItem.BeginsCueRegion"/> for why it carries the edge today (the
+    ///     collect resume's suffix splice adopts tails numbered by another walk).
+    ///   observed by: NOTHING, and no book can observe it — nothing on disk writes two cue
+    ///     regions at all in one measure, let alone simultaneously (grep 2026-08-03,
+    ///     re-checked 2026-08-10 and twice on 2026-08-15).
     /// <para>
     /// ⚠️ The SECOND departure this note used to carry — simultaneous voices disagreeing about
     /// being cued, where the old loop gave up and refined — is gone, and not because it was
@@ -3687,7 +3699,39 @@ internal static class SpacingRules
         // column between them the pair would not be adjacent and would not be spaced as one.
         // So, for the pairs this is ever asked about, "some context occupies both columns" and
         // "some wish spans the pair" are the same statement.
-        return (left & right) == 0;
+        int shared = left & right;
+        if (shared == 0)
+            return true;
+        // A context OTHER than a cue on both sides settles it: that voice occupies both columns
+        // and its wish spans the pair.
+        if ((shared & ~(1 << (int)VoiceContextId.Cue)) != 0)
+            return false;
+        // Only the cue context is shared — and a cue REGION is a context of its own, so this is
+        // the one case the mask cannot answer. The pair straddles two regions exactly when no
+        // region reaches back over it, i.e. when every cued item in the RIGHT column is the
+        // first of its region. MEASURED: probe voice-boundary-spacing.ly section F.
+        return EveryCuedItemBeginsItsRegion(rightItems);
+    }
+
+    /// <summary>Whether every cued item in a column is the FIRST of its region — so no region
+    /// in this column was already open in the column before it.</summary>
+    /// <remarks>
+    /// The same filter <see cref="ContextMask"/> uses, because the question is about the items
+    /// LilyPond makes a wish for; false for a column with no cued item at all, which cannot
+    /// reach this call (the shared cue bit says both columns have one).
+    /// </remarks>
+    private static bool EveryCuedItemBeginsItsRegion(IEnumerable<MusicItem> items)
+    {
+        bool anyCue = false;
+        foreach (var item in items)
+        {
+            if (item is not (NoteItem or ChordItem) || ContextOf(item) != VoiceContextId.Cue)
+                continue;
+            if (!item.BeginsCueRegion)
+                return false;
+            anyCue = true;
+        }
+        return anyCue;
     }
 
     internal static Spring ApplyLeftHeadWidth(

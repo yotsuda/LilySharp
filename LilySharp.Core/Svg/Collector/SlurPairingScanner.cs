@@ -122,7 +122,7 @@ internal static class SlurPairingScanner
     /// </remarks>
     internal static int RegionOf(MusicItem item, int current, ref int regionsSeen) =>
         !IsCueItem(item) ? 0
-        : BeginsCueRegion(item) ? ++regionsSeen
+        : item.BeginsCueRegion ? ++regionsSeen
         : current != 0 ? current
         : ++regionsSeen;
 
@@ -132,14 +132,6 @@ internal static class SlurPairingScanner
         startRegion == 0 ? CueSpanCrossing.IntoCue
         : endRegion == 0 ? CueSpanCrossing.OutOfCue
         : CueSpanCrossing.BetweenCues;
-
-    /// <summary>Whether an item is the first note or chord of its cue region.</summary>
-    internal static bool BeginsCueRegion(MusicItem item) => item switch
-    {
-        NoteItem n => n.BeginsCueRegion,
-        ChordItem c => c.BeginsCueRegion,
-        _ => false,
-    };
 
     /// <summary>Whether an item was written inside a <c>cue { … }</c>. Only the two kinds a
     /// slur pairs on can carry the flag; anything else is outside by construction.</summary>

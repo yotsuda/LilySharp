@@ -100,6 +100,42 @@ public abstract record MusicItem
     /// </summary>
     public VoiceContextId VoiceContext { get; init; }
 
+    /// <summary>
+    /// Whether this item is the FIRST note or chord of its <c>cue { … }</c> region — the stamp
+    /// that tells two ADJACENT regions apart, which a per-note cue flag alone cannot.
+    /// </summary>
+    /// <remarks>
+    /// <c>cue { … } cue { … }</c> is two <c>CueVoice</c> contexts in LilyPond, and it refuses
+    /// BOTH things that straddle their shared edge: a slur or tie across it (MEASURED
+    /// 2026-08-15, scratch/cue-span-probe/cs5-between-cues.ly — the slur form warns
+    /// "unterminated slur" / "cannot end slur", the tie form is dropped IN SILENCE) and the
+    /// spring refinement across it (MEASURED, probe voice-boundary-spacing.ly section F — the
+    /// step reads the raw duration ideal, ledger <c>cue.column.region-edge</c>). Both ends
+    /// answer <c>IsCue</c> true, so that edge is invisible to the flag and had to be stamped.
+    /// <para>
+    /// ⚠️ ON THE BASE, though only a note or chord ever carries it, for the reason
+    /// <see cref="VoiceContext"/> is: the readers hold <c>MusicItem</c>, and one property is one
+    /// house — the diagnostic (LYS4012) and horizontal spacing
+    /// (<c>SpacingRules.CrossesVoiceBoundary</c>) must give the same answer about one edge.
+    /// A rest inside a region does not carry it, and cannot: <c>RestItem</c> has no cue flag at
+    /// all (a known gap, named on test/cue-region-measure).
+    /// </para>
+    /// <para>
+    /// ⚠️ A FLAG ON THE EDGE, NOT AN ID FOR THE REGION, and that is the point: an ordinal would
+    /// have to survive the collect resume's suffix splice, whose adopted tail carries the numbers
+    /// of the walk that recorded it — a second delta to renumber and to get wrong. This flag is a
+    /// function of the item's own place in its own region, so an adopted tail is already right (a
+    /// region never straddles a splice: <c>MeasureCollector.WalkCarriesNothing</c> demands
+    /// <c>_cueDepth == 0</c> at every checkpoint), and it is position-independent, so
+    /// <c>MeasureContentKey</c> keeps folding it while an edit shifts the text under it.
+    /// Consumers that need the region IDENTITY derive it where they ALREADY walk:
+    /// <c>SlurPairingScanner</c> counts regions as it scans; a tie's target is the very next
+    /// note, so "the target begins a region" IS "the target is in another region"; and spacing
+    /// asks only whether a region reaches back over the column pair.
+    /// </para>
+    /// </remarks>
+    public bool BeginsCueRegion { get; init; }
+
     /// <summary>Source position in the syntax tree for click-to-source mapping.
     /// <c>init</c> (and declared on the base, not per subtype) so the collect
     /// resume's suffix splice can re-home an adopted item across an edit with a
@@ -131,6 +167,7 @@ public abstract record MusicItem
             => preferTop ? c.Notes.Max(n => n.StaffPosition) : c.Notes.Min(n => n.StaffPosition),
         _ => null
     };
+
 }
 
 /// <summary>
@@ -246,30 +283,6 @@ public sealed record NoteItem : MusicItem
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue { get; }
 
-    /// <summary>
-    /// Whether this note is the FIRST note or chord of its <c>cue { … }</c> region — the stamp
-    /// that tells two ADJACENT regions apart, which <see cref="IsCue"/> alone cannot.
-    /// </summary>
-    /// <remarks>
-    /// <c>cue { … } cue { … }</c> is two <c>CueVoice</c> contexts in LilyPond, so a span running
-    /// from one into the next crosses a voice boundary and LilyPond refuses it — MEASURED
-    /// 2026-08-15, scratch/cue-span-probe/cs5-between-cues.ly: the slur form warns "unterminated
-    /// slur" / "cannot end slur", and the tie form is dropped IN SILENCE (byte-identical SVG).
-    /// Both ends answer <see cref="IsCue"/> true, so that boundary is invisible to the flag.
-    /// <para>
-    /// ⚠️ A FLAG ON THE EDGE, NOT AN ID FOR THE REGION, and that is the point: an ordinal would
-    /// have to survive the collect resume's suffix splice, whose adopted tail carries the numbers
-    /// of the walk that recorded it — a second delta to renumber and to get wrong. This flag is a
-    /// function of the item's own place in its own region, so an adopted tail is already right (a
-    /// region never straddles a splice: <c>MeasureCollector.WalkCarriesNothing</c> demands
-    /// <c>_cueDepth == 0</c> at every checkpoint), and it is position-independent, so
-    /// <c>MeasureContentKey</c> keeps folding it while an edit shifts the text under it.
-    /// Consumers that need the identity derive it where they ALREADY walk: <c>SlurPairingScanner</c>
-    /// counts regions as it scans, and a tie's target is the very next note, so "the target begins
-    /// a region" IS "the target is in another region".
-    /// </para>
-    /// </remarks>
-    public bool BeginsCueRegion { get; init; }
     /// <summary>
     /// Editorial (suggestion) accidental kind ("sharp", "flat", "natural", ...)
     /// shown as a small accidental ABOVE the note (musica ficta), or null.
@@ -717,10 +730,6 @@ public sealed record ChordItem : MusicItem
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue { get; }
 
-    /// <summary>Whether this chord is the FIRST note or chord of its <c>cue { … }</c> region;
-    /// see <see cref="NoteItem.BeginsCueRegion"/> for what it is for and why it is an edge flag
-    /// rather than a region number.</summary>
-    public bool BeginsCueRegion { get; init; }
 
     /// <summary>Tuplet time scale; see <see cref="NoteItem.TimeScale"/>.</summary>
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
