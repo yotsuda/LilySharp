@@ -295,6 +295,44 @@ public class LilyPondExporterTests
         Assert.Contains("\\alternative {", ly);
     }
 
+    /// <summary>
+    /// Two repeats in a row are two repeats, not one nested in another. The scan keeps
+    /// reading past the closing <c>:|</c> to pick up trailing <c>[2. …]</c> endings, so
+    /// the ONLY thing that may follow a closed repeat is an ending — a second <c>|:</c>
+    /// starts a new repeat and must end the scan.
+    ///
+    /// The page, MIDI and MusicXML all already read it that way (measured 2026-08-15 on
+    /// <c>|: 4 notes :| |: 4 notes :|</c>: 8 repeat dots / 16 noteOn / two
+    /// forward+backward pairs); the twin was alone in disagreeing, and 6 books in the
+    /// author's own library are spelled this way.
+    /// </summary>
+    [Fact]
+    public void TwoRepeatsInARow_AreTwoRepeats_NotOneInsideTheOther()
+    {
+        var ly = Export(Score("|: c,4 d,4 :| |: e,4 f,4 :|"));
+        Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
+        // The second body must be INSIDE its repeat, not left after it as loose music
+        // closed by a bare barline.
+        Assert.DoesNotContain("\\bar \":|.\"", ly);
+        // …and the second repeat must not be emitted empty.
+        Assert.DoesNotContain("e,4", ly[..ly.LastIndexOf("\\repeat volta 2 {", StringComparison.Ordinal)]);
+    }
+
+    /// <summary>
+    /// The same rule for the fused divider: <c>:|:</c> ends one repeat and opens the next,
+    /// so it must reach the caller rather than be swallowed as a plain close. This is the
+    /// music-stream twin of <see cref="ABackToBackRepeatDivider_BecomesTwoRepeats"/>, which
+    /// covers the form level; before the fix the music-stream form emitted one repeat and
+    /// left the second body loose behind a bare <c>\bar ":|."</c>.
+    /// </summary>
+    [Fact]
+    public void ABackToBackDividerInTheMusicStream_BecomesTwoRepeats()
+    {
+        var ly = Export(Score("|: c,4 d,4 :|: e,4 f,4 :|"));
+        Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
+        Assert.DoesNotContain("\\bar \":|.\"", ly);
+    }
+
     [Fact]
     public void RepeatPercent_PassesThrough()
     {

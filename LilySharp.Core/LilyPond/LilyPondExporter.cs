@@ -1187,6 +1187,23 @@ public sealed class LilyPondExporter
         for (; i < items.Count; i++)
         {
             var it = items[i];
+
+            // Once the ':|' has been seen the scan keeps running ONLY to pick up trailing
+            // '[2. …]' endings. Anything else ends this repeat — in particular a second
+            // '|:', which starts the NEXT repeat and must not be read as nesting. This
+            // test has to come before the nesting arm below: while it sat after it,
+            // '|: A :| |: B :|' re-entered as depth++ and emitted one repeat with an
+            // empty '\repeat volta 2 { }' inside it, leaving B outside every repeat and
+            // closed by a bare '\bar ":|."' — the page, MIDI and MusicXML all read the
+            // same source as two repeats (measured 2026-08-15: 8 repeat dots / 16 noteOn /
+            // two forward+backward pairs), so the twin was alone in disagreeing.
+            if (closed)
+            {
+                if (it is InlineVoltaSyntax trailing) { alternatives.Add(trailing); continue; }
+                if (it is BreakSyntax) { /* absorb a break right after :| */ continue; }
+                break;
+            }
+
             if (it is BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatStartBar } && alternatives.Count == 0)
             {
                 depth++; common.Add(it); continue;
@@ -1196,19 +1213,17 @@ public sealed class LilyPondExporter
                 if (depth > 0) { depth--; common.Add(it); continue; }
                 repeatCount = rb.HasExplicitRepeatCount ? rb.RepeatCount : repeatCount;
                 closed = true;
-                // Endings can follow the :| ([2. …]); keep scanning for them.
+                // ':|:' both closes this repeat and opens the next one, so hand the token
+                // back to the caller (EmitMusicStream opens a repeat on RepeatBothBar too)
+                // instead of consuming it. A ':|' only closes, so keep scanning for the
+                // trailing endings that may follow it.
+                if (rb.BarToken.Kind == SyntaxKind.RepeatBothBar) break;
                 continue;
             }
             if (it is InlineVoltaSyntax v)
             {
                 alternatives.Add(v);
                 continue;
-            }
-            if (closed)
-            {
-                // Past :| with no more endings — the repeat is done.
-                if (it is BreakSyntax) { /* absorb a break right after :| */ continue; }
-                break;
             }
             common.Add(it);
         }
