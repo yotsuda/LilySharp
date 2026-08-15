@@ -302,11 +302,17 @@ public class LilyPondExporterTests
         Assert.Contains("\\repeat percent 4 {", ly);
     }
 
+    /// <summary>
+    /// The label is QUOTED, because <c>\box</c> takes one markup: an unquoted two-word
+    /// label boxes only its first word, which is not what Lily# draws. The one-word case
+    /// pinned here renders identically either way on 2.26.0; the rule and the measurement
+    /// are stated on <c>RehearsalMarkTests.TheTwinQuotesTheLabel</c>.
+    /// </summary>
     [Fact]
     public void Mark_BecomesBoxedRehearsalMark()
     {
         var ly = Export(Score("c,4@mark(\"Intro\") d,4"));
-        Assert.Contains("\\mark \\markup { \\box Intro }", ly);
+        Assert.Contains("\\mark \\markup { \\box \"Intro\" }", ly);
     }
 
     /// <summary>

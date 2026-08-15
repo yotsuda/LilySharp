@@ -153,7 +153,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 var name = mark.MarkName;
                 if (!IsKnownCompoundName(mark))
                     WarnUnknown(mark, name);
-                else if (IsBareRehearsalMarkLabel(name))
+                else if (AnnotationValues.Rehearsal(mark, out var labelIsQuoted) is not null
+                         && !labelIsQuoted)
                     _diagnostics.Error(
                         mark.Span,
                         DiagnosticCodes.MarkLabelNotQuoted,
@@ -221,7 +222,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.IsArpeggioBracket(mark)
             || AnnotationValues.Frame(mark) is not null
-            || AnnotationValues.Chord(mark, out _) is not null)
+            || AnnotationValues.Chord(mark, out _) is not null
+            || AnnotationValues.Rehearsal(mark, out _) is not null)
             return true;
 
         var name = mark.MarkName;
@@ -234,19 +236,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         return false;
     }
 
-    /// <summary>
-    /// A rehearsal mark label must be a quoted string — <c>@mark("A")</c>, not a
-    /// bare <c>@mark(A)</c>. The mark is free text (letters, words, "D.S.", spaces),
-    /// so it is quoted like <c>@text("…")</c>. MarkName is <c>mark.&lt;label&gt;</c>;
-    /// the label is quoted iff it starts and ends with a double quote.
-    /// </summary>
-    private static bool IsBareRehearsalMarkLabel(string markName)
-    {
-        if (markName.Length <= 5 || !markName.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
-            return false;
-        var label = markName.Substring(5);
-        return !(label.Length >= 2 && label[0] == '"' && label[^1] == '"');
-    }
 
     /// <summary>
     /// Whether a bare <c>@chord</c> can auto-name this chord. Only pure named-pitch

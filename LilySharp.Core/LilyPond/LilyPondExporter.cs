@@ -1770,16 +1770,39 @@ public sealed class LilyPondExporter
         return string.Join(" ", parts);
     }
 
-    // `@mark("Intro")` → a rehearsal mark. MarkName joins the tokens with '.',
-    // so the label is what follows "mark." with the quotes stripped.
+    /// <summary><c>@mark("Intro")</c> → LilyPond's boxed rehearsal mark.</summary>
+    /// <remarks>
+    /// <para>
+    /// The label is read from the annotation's argument by
+    /// <see cref="Semantics.AnnotationValues.Rehearsal"/>, not sliced out of the dotted
+    /// name here — this was the FOURTH copy of that slice, and it stripped its quotes
+    /// with <c>Trim('"')</c> where the collector strips one balanced pair
+    /// (docs/VALUE_SITE_AUDIT.md §9.5.3 ⑵).
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>A behaviour change, declared</b> — the same shape as <c>@finger("3")</c>
+    /// and <c>@frame(zzz)</c> before it: the twin wrote the label UNQUOTED, and
+    /// <c>\box</c> takes ONE markup argument, so a label with a space said different
+    /// music than Lily# draws. Measured on LilyPond 2.26.0: <c>\box a b</c> boxes only
+    /// <c>a</c> and prints <c>b</c> outside the box (box width 1.9331), while
+    /// <c>\box "a b"</c> boxes the whole label (4.0159) — which is what Lily# draws.
+    /// Quoting is a no-op for every label a book writes: <c>\box A</c> and
+    /// <c>\box "A"</c> render byte-identical SVG, as do <c>\box D.S.</c> and
+    /// <c>\box "D.S."</c> (both measured on 2.26.0), and the two <c>@mark(</c> sites in
+    /// the corpus and fixtures are <c>@mark("A")</c> and <c>@mark("B")</c>.
+    /// </para>
+    /// LILYPOND-REF: ly/music-functions-init.ly:1159-1171 mark = define-music-function (label)
+    ///   — the label of <c>\mark</c>, which becomes a RehearsalMarkEvent (or an
+    ///   AdHocMarkEvent when it is a markup rather than a number).
+    /// LILYPOND-REF: scm/define-markup-commands.scm:1049-1053 — define-markup-command
+    ///   (box layout props arg) declares <c>(markup?)</c>: ONE markup, which is why an
+    ///   unquoted two-word label boxes only its first word.
+    /// </remarks>
     private string EmitMark(MusicMarkSyntax mk)
     {
+        if (Semantics.AnnotationValues.Rehearsal(mk, out _) is { } label)
+            return $"\\mark \\markup {{ \\box \"{Escape(label)}\" }}";
         string name = mk.MarkName;
-        if (name.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
-        {
-            string label = name.Substring("mark.".Length).Trim('"');
-            return $"\\mark \\markup {{ \\box {label} }}";
-        }
         if (NonArpeggiato(mk) is { } na)
             return na;
         if (Fingering(mk) is { } fg)

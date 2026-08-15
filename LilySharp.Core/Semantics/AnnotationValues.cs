@@ -31,7 +31,9 @@ namespace LilySharp.Core.Semantics;
 /// is lost by reading them as one (<c>docs/VALUE_SITE_AUDIT.md</c> §9.5). Then the two
 /// whose SPELLING is their meaning: <c>@frame</c>'s fret position string, read from the
 /// text because its value has dropped a leading zero, and <c>@chord</c>'s sub-language,
-/// read from the text because it denotes no single value at all. Only <c>@fig</c> is
+/// read from the text because it denotes no single value at all. Last, <c>@mark</c>'s
+/// rehearsal label, which is free text like <c>@text</c>'s but was sliced out of the
+/// dotted name in four separate places. Only <c>@fig</c> is
 /// left, and it is left deliberately — its runs and its dotted parts do not divide at
 /// the same places, so moving it would change which spellings are accepted (§9.5.1).
 /// </para>
@@ -139,6 +141,64 @@ public static class AnnotationValues
     /// </summary>
     public static bool IsTextAnnotation(MusicMarkSyntax mark)
         => Named(mark, "text") && mark.Arguments.Length > 0;
+
+    /// <summary>
+    /// The printed label of a rehearsal mark — <c>@mark("A")</c> → <c>A</c> — or null
+    /// when the annotation is not one. <paramref name="quoted"/> reports whether the
+    /// label was written as a quoted string, which is the only spelling the language
+    /// accepts without a diagnostic (LYS1009).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A LABEL, not a name — free text like <see cref="Text"/>, printed in a box. It was
+    /// nevertheless read out of the dotted <see cref="MusicMarkSyntax.MarkName"/> by
+    /// FOUR separate slices: the gate and the label in <c>MusicMarkItem</c>, the
+    /// quoted-ness test in <see cref="AnnotationNameValidator"/>, and a fourth slice in
+    /// the LilyPond exporter with its own quote-stripping. That is the tenth-restatement
+    /// shape of VALUE_SITE_AUDIT §9.3, and here it had reached four copies of one
+    /// question, so the answer is given once, here.
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>A behaviour change, declared and chosen</b> (§9.5.3 ⑵, the same shape as
+    /// <see cref="Chord"/>'s swallowed dot): <c>MarkName</c> joins the tokens of the
+    /// argument with '.', so a label written with more than one token came out spelled
+    /// with dots that were never typed — <c>@mark(-1)</c> printed <c>-.1</c>,
+    /// <c>@mark(A B)</c> printed <c>A.B</c>, and <c>@mark("A" "B")</c> printed
+    /// <c>A"."B</c>. Reading the runs prints what was WRITTEN. Every book writes a
+    /// single quoted label (measured: the 80-book corpus and 219 fixtures contain two
+    /// <c>@mark(</c> sites, both <c>@mark("X")</c>), so this converges an artefact of
+    /// the round trip rather than changing any book. Runs are rejoined with a single
+    /// space, which is what separated them — a ',' separator would also come back as a
+    /// space, and no book writes one.
+    /// </para>
+    /// <para>
+    /// ⚠️ The name gate is case-INSENSITIVE — the opposite of <see cref="Chord"/>'s.
+    /// The string form asked <c>MarkName.ToLowerInvariant().StartsWith("mark.")</c>, so
+    /// <c>@Mark("A")</c> and <c>@MARK("A")</c> are rehearsal marks today (measured) and
+    /// must stay so. Its second condition, <c>Length > 5</c>, is what rejects a mark
+    /// with no argument at all: <c>@mark()</c> spells <c>MarkName</c> as just
+    /// <c>"mark"</c>, and is an unknown annotation rather than an empty label. That is
+    /// <c>Arguments.Length > 0</c> here, the same gate <see cref="IsTextAnnotation"/> uses.
+    /// </para>
+    /// LILYPOND-REF: lily/mark-engraver.cc:168-188 get_property (ctx, "currentRehearsalMarkEvent")
+    ///   — the label travels on that event and is engraved into a "RehearsalMark" grob.
+    /// </remarks>
+    public static string? Rehearsal(MusicMarkSyntax mark, out bool quoted)
+    {
+        quoted = false;
+        if (!Named(mark, "mark") || mark.Arguments.Length == 0)
+            return null;
+
+        var written = mark.Arguments.Length == 1
+            ? mark.Arguments[0].Text
+            : string.Join(" ", mark.Arguments.Select(a => a.Text));
+
+        // Quoted iff it opens and closes with a double quote, which is the test the
+        // validator applied to the dotted tail; the quotes are the label's delimiters
+        // and are not printed.
+        quoted = written.Length >= 2 && written[0] == '"' && written[^1] == '"';
+        return quoted ? written[1..^1] : written;
+    }
 
     /// <summary>
     /// The beam's grow direction from <c>@feather(right|accel)</c> (+1, accelerando) or

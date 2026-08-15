@@ -902,18 +902,16 @@ public sealed partial class MeasureCollector
                     // the bar.
                     if (_musicMarks.Any(m => m.SourcePosition == mark.Position))
                         break;
-                    var markType = MusicMarkItem.ParseMarkName(mark.MarkName);
-                    if (markType != null)
+                    // The rehearsal LABEL comes from the argument (@mark("A")), the other
+                    // marks from their NAME (@segno, @ottava.bassa) — two questions, and
+                    // each is asked of the thing that answers it.
+                    if (Semantics.AnnotationValues.Rehearsal(mark, out _) is { } label)
                     {
-                        if (markType.Value == MusicMarkType.Rehearsal)
-                        {
-                            string text = MusicMarkItem.ParseRehearsalText(mark.MarkName);
-                            _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, builder.CurrentMeasureIndex, mark.Position));
-                        }
-                        else
-                        {
-                            _musicMarks.Add(new MusicMarkItem(markType.Value, builder.CurrentMeasureIndex, mark.Position));
-                        }
+                        _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, builder.CurrentMeasureIndex, mark.Position));
+                    }
+                    else if (MusicMarkItem.ParseMarkName(mark.MarkName) is { } markType)
+                    {
+                        _musicMarks.Add(new MusicMarkItem(markType, builder.CurrentMeasureIndex, mark.Position));
                     }
                 }
                 break;
