@@ -2103,12 +2103,34 @@ public sealed class MusicXmlExporter
     /// (@ottava / @ottava.bassa / @loco) and chord symbols (@chord(...)).
     /// Everything else stays with its specialized consumer.</summary>
     private void ProcessDirectionMark(MusicMarkSyntax mark)
-        => ProcessDirectionName(mark.MarkName);
+    {
+        // The chord symbol is read from the ANNOTATION, not from its dotted name:
+        // its argument is a sub-language whose written text the argument node already
+        // holds (VALUE_SITE_AUDIT §9.5.3 ⑴). A bare '@chord' names nothing HERE — the
+        // symbol it derives from its notes is the collector's, not the exporter's —
+        // and the empty string it answers with keeps it out of the <harmony> below,
+        // exactly as `StartsWith("chord.")` did.
+        if (_currentMeasure != null
+            && LilySharp.Core.Semantics.AnnotationValues.Chord(mark, out _) is { Length: > 0 } chordText)
+        {
+            if (BuildHarmony(chordText) is { } harmony)
+            {
+                // A @frame on the same note nests inside the harmony (MusicXML
+                // <frame> is a harmony child).
+                if (_noteFrameSpec is { } fspec && BuildFrame(fspec) is { } frameEl)
+                    harmony.Add(frameEl);
+                _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
+            }
+            return;
+        }
+
+        ProcessDirectionName(mark.MarkName);
+    }
 
     private void ProcessDirectionName(string rawName)
     {
         if (_currentMeasure == null) return;
-        var name = rawName.ToLowerInvariant(); // chord TEXT keeps its case below
+        var name = rawName.ToLowerInvariant();
         switch (name)
         {
             case "sustainon":
@@ -2133,20 +2155,7 @@ public sealed class MusicXmlExporter
                 _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "stop" });
                 break;
             default:
-                if (name.StartsWith("chord.", StringComparison.Ordinal)
-                    && LilySharp.Core.Svg.Model.ChordNameItem.ParseChordName(rawName) is { } chordText)
-                {
-                    var harmony = BuildHarmony(chordText);
-                    if (harmony != null)
-                    {
-                        // A @frame on the same note nests inside the harmony
-                        // (MusicXML <frame> is a harmony child).
-                        if (_noteFrameSpec is { } fspec && BuildFrame(fspec) is { } frameEl)
-                            harmony.Add(frameEl);
-                        _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
-                    }
-                }
-                else if (name.StartsWith("fig.", StringComparison.Ordinal)
+                if (name.StartsWith("fig.", StringComparison.Ordinal)
                     && LilySharp.Core.Svg.Model.FiguredBassItem.ParseFigures(rawName) is { } figures
                     && BuildFiguredBass(figures) is { } figuredBass)
                 {

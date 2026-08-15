@@ -118,60 +118,9 @@ public sealed record ChordNameItem
         IsChordRow = isChordRow;
     }
 
-    /// <summary>
-    /// Parses a chord name annotation into its display symbol, or null if it is not
-    /// a valid chord. A bare argument is a chord in the shared <c>chords { }</c>
-    /// entry form — a Lily# root pitch, optional <c>:</c>quality, optional <c>/</c>
-    /// bass (<c>c</c>, <c>c:m7</c>, <c>cis:m7</c>, <c>g:7/b</c>) — rendered as the
-    /// canonical symbol (<c>C</c>, <c>Cm7</c>, <c>C♯m7</c>, <c>G7/B</c>). A quoted
-    /// argument (<c>@chord("N.C.")</c>) is free display text, shown verbatim.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/chord-ignatzek-names.scm - root + quality → printed name.
-    /// </remarks>
-    public static string? ParseChordName(string markName)
-        => ParseChordName(markName, out _);
-
-    /// <summary>As <see cref="ParseChordName(string)"/>, also returning the resolved
-    /// <see cref="LilySharp.Core.Music.ChordStructure"/> (null for the empty/quoted
-    /// forms) so an inline <c>@chord</c> can render a Roman-numeral degree too.</summary>
-    public static string? ParseChordName(string markName, out LilySharp.Core.Music.ChordStructure? structure)
-    {
-        structure = null;
-
-        // '@chord()' with no argument yet (e.g. just after the completion inserted
-        // the parentheses) is a recognized, empty chord — not an unknown annotation.
-        if (markName == "chord")
-            return "";
-
-        if (!markName.StartsWith("chord.", StringComparison.Ordinal))
-            return null;
-
-        var rest = markName.Substring(6);
-        if (string.IsNullOrEmpty(rest))
-            return null;
-
-        // Quoted free-text escape: @chord("N.C.") — display literally (dots kept).
-        if (rest[0] == '"')
-        {
-            int close = rest.LastIndexOf('"');
-            return close >= 1 ? rest.Substring(1, close - 1) : null;
-        }
-
-        // Parts were joined with dots by MusicMarkSyntax.MarkName; rejoin to the
-        // written text (e.g. "C.m7" → "Cm7", "c.:.m7" → "c:m7", "F./.A" → "F/A").
-        var rawText = string.Join("", rest.Split('.'));
-        if (string.IsNullOrEmpty(rawText))
-            return null;
-
-        // A real chord entry (the chords{} form) is rendered as its canonical symbol;
-        // anything else is rejected (→ unknown-annotation warning), steering @chord
-        // to valid, playable chords. Free display text goes in quotes (above).
-        if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(rawText, out var parsed))
-        {
-            structure = parsed;
-            return parsed.DisplayName;
-        }
-        return null;
-    }
+    // The @chord ANNOTATION is read by AnnotationValues.Chord, from its argument.
+    // It used to be read here, from the dotted MarkName, by splitting on '.' and
+    // rejoining with "" — this file's own remark said it was "rejoining to the
+    // written text", which is what an argument's Text already is
+    // (docs/VALUE_SITE_AUDIT.md §9.3, §9.5.3 ⑴).
 }

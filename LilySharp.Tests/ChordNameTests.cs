@@ -28,94 +28,76 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class ChordNameTests
 {
-    // --- ParseChordName ---
+    // --- The @chord annotation, read from its argument ---
+    //
+    // ⚠️ These parse the SPELLING; they used to hand the reader a dotted MarkName
+    // ("chord.c.:.m7") directly, which asserts about a string rather than about
+    // anything anyone can write — and one of them ("chord.") named a MarkName no
+    // source produces at all. VALUE_SITE_AUDIT §7 (第167) is where that habit cost a
+    // session: a remark's claimed spelling had never once parsed.
+
+    private static MusicMarkSyntax Mark(string music)
+        => SyntaxTree.Parse("melody { " + music + " }")
+            .GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().First();
+
+    private static string? Chord(string music)
+        => LilySharp.Core.Semantics.AnnotationValues.Chord(Mark(music), out _);
 
     [Fact]
     public void ParseChordName_SimpleChord()
     {
         // @chord(c) — a Lily# root pitch, major triad.
-        var result = ChordNameItem.ParseChordName("chord.c");
-        Assert.NotNull(result);
-        Assert.Equal("C", result);
+        Assert.Equal("C", Chord("c4@chord(c) |"));
     }
 
     [Fact]
     public void ParseChordName_MinorSeventh()
     {
-        // @chord(c:m7) → MarkName "chord.c.:.m7"
-        var result = ChordNameItem.ParseChordName("chord.c.:.m7");
-        Assert.NotNull(result);
-        Assert.Equal("Cm7", result);
+        // The sub-language: 'c' arrives as a PITCH token, ':' and 'm7' as their own,
+        // and the three are ONE argument because they were written adjacent.
+        Assert.Equal("Cm7", Chord("c4@chord(c:m7) |"));
     }
 
     [Fact]
     public void ParseChordName_FlatRoot()
     {
         // @chord(bes:7) — the flat root spells B-flat in the symbol.
-        var result = ChordNameItem.ParseChordName("chord.bes.:.7");
-        Assert.NotNull(result);
-        Assert.Equal("B\u266D7", result);  // B♭7
+        Assert.Equal("B\u266D7", Chord("c4@chord(bes:7) |"));  // B♭7
     }
 
     [Fact]
     public void ParseChordName_FlatRoot_Eb()
     {
-        // @chord(ees:maj7)
-        var result = ChordNameItem.ParseChordName("chord.ees.:.maj7");
-        Assert.NotNull(result);
-        Assert.Equal("E\u266Dmaj7", result);  // E♭maj7
+        Assert.Equal("E\u266Dmaj7", Chord("c4@chord(ees:maj7) |"));  // E♭maj7
     }
 
     [Fact]
     public void ParseChordName_NaturalB()
     {
         // @chord(b) — B natural major, not B-flat.
-        var result = ChordNameItem.ParseChordName("chord.b");
-        Assert.NotNull(result);
-        Assert.Equal("B", result);
+        Assert.Equal("B", Chord("c4@chord(b) |"));
     }
 
-    [Fact]
-    public void ParseChordName_SuspendedFourth()
-    {
-        var result = ChordNameItem.ParseChordName("chord.c.:.sus4");
-        Assert.NotNull(result);
-        Assert.Equal("Csus4", result);
-    }
-
-    [Fact]
-    public void ParseChordName_Diminished()
-    {
-        var result = ChordNameItem.ParseChordName("chord.c.:.dim");
-        Assert.NotNull(result);
-        Assert.Equal("Cdim", result);
-    }
-
-    [Fact]
-    public void ParseChordName_Augmented()
-    {
-        var result = ChordNameItem.ParseChordName("chord.c.:.aug");
-        Assert.NotNull(result);
-        Assert.Equal("Caug", result);
-    }
+    [Theory]
+    [InlineData("c4@chord(c:sus4) |", "Csus4")]
+    [InlineData("c4@chord(c:dim) |", "Cdim")]
+    [InlineData("c4@chord(c:aug) |", "Caug")]
+    public void ParseChordName_Qualities(string music, string symbol)
+        => Assert.Equal(symbol, Chord(music));
 
     [Fact]
     public void ParseChordName_MultiPartJoined()
     {
-        // Tokenized as separate parts: @chord(g:7/b) → MarkName "chord.g.:.7./.b",
-        // rejoined without dots to the entry "g:7/b".
-        var result = ChordNameItem.ParseChordName("chord.g.:.7./.b");
-        Assert.NotNull(result);
-        Assert.Equal("G7/B", result);  // slash bass
+        // Several tokens, ONE run: the argument's text is the written "g:7/b", with
+        // no reassembly. (MarkName spells the same thing "chord.g.:.7./.b".)
+        Assert.Equal("G7/B", Chord("c4@chord(g:7/b) |"));  // slash bass
     }
 
     [Fact]
     public void ParseChordName_SharpRoot()
     {
-        // @chord(cis:m7) → MarkName "chord.cis.:.m7"; the sharp root spells C-sharp.
-        var result = ChordNameItem.ParseChordName("chord.cis.:.m7");
-        Assert.NotNull(result);
-        Assert.Equal("C♯m7", result);  // C-sharp m7
+        // The sharp root spells C-sharp.
+        Assert.Equal("C♯m7", Chord("c4@chord(cis:m7) |"));  // C-sharp m7
     }
 
     [Fact]
@@ -124,33 +106,74 @@ public class ChordNameTests
         // An altered chord outside the diatonic vocabulary (e.g. "7#9") is no longer
         // a valid bare chord; it goes in the quoted free-text escape and prints as
         // written (@chord("G7#9")).
-        Assert.Null(ChordNameItem.ParseChordName("chord.G7.#.9"));  // bare 7#9: rejected
-        Assert.Equal("G7#9", ChordNameItem.ParseChordName("chord.\"G7#9\""));  // quoted: verbatim
+        Assert.Null(Chord("c4@chord(G7#9) |"));                 // bare 7#9: rejected
+        Assert.Equal("G7#9", Chord("c4@chord(\"G7#9\") |"));    // quoted: verbatim
     }
+
+    /// <summary>
+    /// The quoted escape prints what is inside the quotes, DOTS INCLUDED — the one
+    /// spelling the old reader had to catch before it removed the dots of the joined
+    /// MarkName, or "N.C." would have printed as "NC".
+    /// </summary>
+    [Fact]
+    public void ParseChordName_QuotedFreeText_KeepsItsDots()
+        => Assert.Equal("N.C.", Chord("c4@chord(\"N.C.\") |"));
 
     [Fact]
     public void ParseChordName_SharpRootWithFlatTension()
     {
         // @chord(fis:m7b5) resolves to the half-diminished quality; the canonical
         // symbol spells both accidentals (root sharp, the b5 as flat).
-        var result = ChordNameItem.ParseChordName("chord.fis.:.m7b5");
-        Assert.NotNull(result);
-        Assert.Equal("F♯m7♭5", result);  // half-diminished
+        Assert.Equal("F♯m7♭5", Chord("c4@chord(fis:m7b5) |"));  // half-diminished
     }
 
-    [Fact]
-    public void ParseChordName_NotChord_ReturnsNull()
-    {
-        Assert.Null(ChordNameItem.ParseChordName("segno"));
-        Assert.Null(ChordNameItem.ParseChordName("fig.6"));
-        Assert.Null(ChordNameItem.ParseChordName("mark.A"));
-    }
+    [Theory]
+    [InlineData("c4@segno |")]
+    [InlineData("c4@fig(6) |")]
+    [InlineData("c4@mark(\"A\") |")]
+    [InlineData("c4@Chord(c) |")]   // the name gate is case-SENSITIVE, as it always was
+    public void ParseChordName_NotChord_ReturnsNull(string music)
+        => Assert.Null(Chord(music));
 
-    [Fact]
-    public void ParseChordName_Empty_ReturnsNull()
-    {
-        Assert.Null(ChordNameItem.ParseChordName("chord."));
-    }
+    /// <summary>
+    /// A bare <c>@chord</c> derives its symbol from the notes it sits on, and
+    /// <c>@chord()</c> is what the completion leaves behind. Neither names a chord
+    /// here, and neither is an UNKNOWN annotation — which is what the empty string,
+    /// as against null, says.
+    /// </summary>
+    [Theory]
+    [InlineData("<c e g>4@chord |")]
+    [InlineData("<c e g>4@chord() |")]
+    public void ParseChordName_NoArgument_IsEmptyNotNull(string music)
+        => Assert.Equal("", Chord(music));
+
+    /// <summary>
+    /// ⚠️ A behaviour change, declared (VALUE_SITE_AUDIT §9.5.3 ⑴). A '.' WRITTEN
+    /// inside the parentheses used to vanish: MarkName joined the tokens with dots and
+    /// the chord parser then removed every dot, so <c>@chord(b.es:7)</c> printed B♭7
+    /// and <c>@chord(.c:m7)</c> printed Cm7. The run keeps what was written, so these
+    /// name no chord and are reported unknown. No book writes one — measured by
+    /// spelling all 299 books back out of their trees — and nothing ever documented
+    /// the swallowing; it was an artefact of the round trip this reading removes.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@chord(b.es:7) |")]
+    [InlineData("c4@chord(c:m.7) |")]
+    [InlineData("c4@chord(.c:m7) |")]
+    public void ADotWrittenInsideTheParentheses_IsNoLongerSwallowed(string music)
+        => Assert.Null(Chord(music));
+
+    /// <summary>
+    /// ★ Positive control for the change above, and the measurement that decided the
+    /// reader's shape: an argument written with a SPACE is still accepted, because ALL
+    /// the runs are joined and not just the first. (Every <c>@chord(</c> in the corpus
+    /// is a single run, so the spaced form is unexercised, not impossible.)
+    /// </summary>
+    [Theory]
+    [InlineData("c4@chord(c :m7) |", "Cm7")]
+    [InlineData("c4@chord(c, m7) |", null)]   // as before: "cm7" is no chord entry
+    public void ArgumentsWrittenApart_AreJoined(string music, string? symbol)
+        => Assert.Equal(symbol, Chord(music));
 
     // --- ChordNameEngraver ---
 

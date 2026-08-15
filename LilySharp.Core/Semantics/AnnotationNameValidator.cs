@@ -178,7 +178,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         "@chord can't name this arpeggio — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(c:maj7).");
                 else if (OnArpeggioGroupOrMember(mark)
-                         && name != "chord" && ChordNameItem.ParseChordName(name) == null)
+                         && name != "chord" && AnnotationValues.Chord(mark, out _) == null)
                     // Chord names work on the group; everything else is unwired.
                     WarnArpeggioUnsupported(mark, name);
                 break;
@@ -206,8 +206,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// "does anything consume this?", which can only be answered by knowing what the
     /// consumers accept — so every family was spelled here a second time, and the
     /// audit counted it as the tenth restatement of the same ten readings
-    /// (VALUE_SITE_AUDIT §9.3). The four value families now ASK their one reader.
-    /// The rest still slice the dotted name and move with their families (§9.5 ⑵).
+    /// (VALUE_SITE_AUDIT §9.3). Every family that has moved now ASKS its one reader;
+    /// what is left below is the figured bass, which is a sub-language whose runs and
+    /// dotted parts divide at different places (§9.5.1), and the dotted NAMES, which
+    /// are not arguments at all.
     /// </remarks>
     public static bool IsKnownCompoundName(MusicMarkSyntax mark)
     {
@@ -218,17 +220,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.IsTextAnnotation(mark)
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.IsArpeggioBracket(mark)
-            || AnnotationValues.Frame(mark) is not null)
+            || AnnotationValues.Frame(mark) is not null
+            || AnnotationValues.Chord(mark, out _) is not null)
             return true;
 
         var name = mark.MarkName;
         if (MusicMarkItem.ParseMarkName(name) != null)
             return true;
 
-        var lower = name.ToLowerInvariant();
         if (FiguredBassItem.ParseFigures(name) != null)
-            return true;
-        if (ChordNameItem.ParseChordName(name) != null)
             return true;
 
         return false;

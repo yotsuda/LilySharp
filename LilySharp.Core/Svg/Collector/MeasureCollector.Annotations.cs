@@ -106,7 +106,7 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
-            var chordText = ChordNameItem.ParseChordName(markSyntax.MarkName, out var structure);
+            var chordText = Semantics.AnnotationValues.Chord(markSyntax, out var structure);
             if (chordText != null)
                 _chordNameCollector.AddInline(
                     chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, structure);

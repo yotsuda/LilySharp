@@ -25,12 +25,15 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// <para>
-/// These four families — <c>@finger(N)</c>, <c>@pluck(p|i|m|a)</c>,
-/// <c>@bend(half|full|N)</c>, <c>@notehead(style)</c> — are the ones
-/// <c>docs/VALUE_SITE_AUDIT.md</c> §9.5 ⑵ names as the first to move, because their
-/// argument IS a value: nothing is lost by reading it as one. (The families whose
-/// spelling is their meaning — <c>@frame</c>'s position string — and the sub-language
-/// one — <c>@chord</c> — are deliberately last.)
+/// The families whose argument IS a value moved first — <c>@finger(N)</c>,
+/// <c>@pluck(p|i|m|a)</c>, <c>@bend(half|full|N)</c>, <c>@notehead(style)</c>,
+/// <c>@text("…")</c>, <c>@feather(…)</c>, <c>@arpeggio(bracket)</c> — because nothing
+/// is lost by reading them as one (<c>docs/VALUE_SITE_AUDIT.md</c> §9.5). Then the two
+/// whose SPELLING is their meaning: <c>@frame</c>'s fret position string, read from the
+/// text because its value has dropped a leading zero, and <c>@chord</c>'s sub-language,
+/// read from the text because it denotes no single value at all. Only <c>@fig</c> is
+/// left, and it is left deliberately — its runs and its dotted parts do not divide at
+/// the same places, so moving it would change which spellings are accepted (§9.5.1).
 /// </para>
 /// <para>
 /// Each is read HERE and only here. Before this type, every one of them was spelled
@@ -202,6 +205,85 @@ public static class AnnotationValues
            && spec.All(ch => ch is 'x' or 'o' or (>= '0' and <= '9'))
             ? spec
             : null;
+
+    /// <summary>
+    /// The chord symbol of <c>@chord(c:m7)</c> as it should print (<c>Cm7</c>), the
+    /// empty string for a bare <c>@chord</c> (which derives its symbol from the notes),
+    /// or null when this is not a chord annotation or names no chord Lily# can write.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ★ A SUB-LANGUAGE, not a value (VALUE_SITE_AUDIT §9.2): the argument borrows the
+    /// music grammar, so <c>c:m7</c> arrives as the tokens <c>c</c> <c>:</c> <c>m7</c>
+    /// and denotes no single <see cref="LysValue"/>. It is therefore read from
+    /// <see cref="MarkArgument.Text"/> — which, arguments being RUNS of adjacent tokens,
+    /// is already the written <c>"c:m7"</c>. That is the whole point of this reader:
+    /// the dotted <see cref="MusicMarkSyntax.MarkName"/> spelled the same value
+    /// <c>chord.c.:.m7</c> and the chord parser split it on '.' and rejoined it with ""
+    /// to get the written text back — the second and third of the three round trips
+    /// §9.3 counted, now gone.
+    /// </para>
+    /// <para>
+    /// ⚠️ ALL the arguments, joined, not the first one. <c>@chord(c :m7)</c> — written
+    /// with a space — is two runs and names Cm7 today, and reading only the first would
+    /// quietly stop accepting it. (Measured: across the 80-book corpus and 219 fixtures
+    /// every one of the 14 written <c>@chord(…)</c> arguments is a single run, so the
+    /// spaced form is unexercised, not impossible.)
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>A behaviour change, declared and chosen</b>: a '.' WRITTEN inside the
+    /// parentheses used to disappear, because MarkName joined the tokens with dots and
+    /// the parser then removed every dot — so <c>@chord(b.es:7)</c> printed B♭7 and
+    /// <c>@chord(.c:m7)</c> printed Cm7. Reading the run keeps what was written, so
+    /// those now name no chord and are reported as unknown annotations. No book writes
+    /// a dot inside <c>@chord(</c> (measured by spelling all 299 books back out of their
+    /// trees), and nothing ever documented the swallowing; it was an artefact of the
+    /// round trip this reader removes.
+    /// </para>
+    /// <para>
+    /// ⚠️ The name gate is case-SENSITIVE, unlike <see cref="Named"/>: the string form
+    /// asked <c>StartsWith("chord.", Ordinal)</c>, so <c>@Chord(c)</c> names no chord
+    /// today and must keep naming none.
+    /// </para>
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm — root + quality → printed name.
+    /// </remarks>
+    public static string? Chord(MusicMarkSyntax mark, out Music.ChordStructure? structure)
+    {
+        structure = null;
+        if (!string.Equals(mark.Name, "chord", StringComparison.Ordinal))
+            return null;
+
+        // No argument at all: a bare '@chord' derives its symbol from the notes it sits
+        // on, and '@chord()' is the state the completion leaves behind. Both are known
+        // annotations that name nothing here, which is what the empty string says.
+        var written = mark.Arguments.Length switch
+        {
+            0 => "",
+            1 => mark.Arguments[0].Text,
+            _ => string.Concat(mark.Arguments.Select(a => a.Text)),
+        };
+        if (written.Length == 0)
+            return "";
+
+        // Quoted free text — @chord("N.C.") — prints verbatim, dots and all. Read from
+        // the TEXT (which keeps the quotes) rather than the value, so that an unbalanced
+        // quote is refused here exactly as it was before.
+        if (written[0] == '"')
+        {
+            int close = written.LastIndexOf('"');
+            return close >= 1 ? written.Substring(1, close - 1) : null;
+        }
+
+        // A real chord entry (the chords{} form) prints as its canonical symbol;
+        // anything else is refused (→ unknown-annotation warning), which steers @chord
+        // to chords that can also be played. Free display text goes in quotes, above.
+        if (Music.ChordStructure.TryParseChordEntry(written, out var parsed))
+        {
+            structure = parsed;
+            return parsed.DisplayName;
+        }
+        return null;
+    }
 
     private static bool Named(MusicMarkSyntax mark, string name)
         => string.Equals(mark.Name, name, StringComparison.OrdinalIgnoreCase);
