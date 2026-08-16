@@ -14,13 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Editing;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// Validates the <c>form</c> / <c>score</c> binding: every <c>form</c> is named
-/// (<c>form Main { ... }</c>), form names are unique (case-sensitive), and every
+/// (<c>form Main { ... }</c>), form names are unique (case-sensitive), every <c>form</c>
+/// names at least one section (LYS6007), and every
 /// <c>score</c> references an existing form by name (<c>score Main { ... }</c>).
 /// A form is the piece's arrangement — the order sections play in, with repeats
 /// and navigation. The reserved form name <c>main</c> writes to the input file's
@@ -51,6 +53,18 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
             if (!declared.Add(name))
                 _diagnostics.Error(form.Name!.Span, DiagnosticCodes.DuplicateFormName,
                     $"Duplicate form name '{name}'. Each form name must be unique.");
+
+            // A form that names no section arranges nothing, and the page that comes out of
+            // it is not blank — there is no page at all (LYS6007's remark has the bytes).
+            // "Names a section" is asked of SectionReferenceFinder rather than re-listed
+            // here: it already knows all three spellings, and this validator would be the
+            // fourth place to keep in step.
+            if (SectionReferenceFinder.AllSectionNameTokens(form).Count == 0)
+                _diagnostics.Error(form.BodySpan ?? form.FormKeyword.Span,
+                    DiagnosticCodes.EmptyForm,
+                    $"Form '{name}' has nothing to arrange — it names no section. "
+                    + "Add a section reference, e.g. 'form " + name + " { A }' "
+                    + "('~A' plays it without printing a rehearsal label).");
         }
 
         // Every score must reference a form that exists.

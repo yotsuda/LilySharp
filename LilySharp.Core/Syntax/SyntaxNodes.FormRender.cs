@@ -86,6 +86,35 @@ public sealed partial class PartBlockSyntax : SyntaxNode
 }
 
 /// <summary>
+/// The <c>{</c> … <c>}</c> span of a declaration whose body is a brace pair standing among
+/// its DIRECT children. Nested braces belong to CHILD nodes, so scanning the direct children
+/// can only ever find this declaration's own pair.
+/// </summary>
+/// <remarks>
+/// One house for both askers — <see cref="FormDeclarationSyntax.BodySpan"/> and
+/// <see cref="RenderDeclarationSyntax.BodySpan"/> ask the same question of the same shape of
+/// node, and a second copy of the loop would be a second spelling of it (HANDOFF §5.2.1②).
+/// The loop starts at slot 1 because slot 0 is always the keyword.
+/// </remarks>
+internal static class DeclarationBody
+{
+    /// <summary>Null when either brace is missing — a malformed header the parser
+    /// already reported, so the caller falls back to the keyword's span.</summary>
+    public static TextSpan? BraceSpan(SyntaxNode node)
+    {
+        SyntaxTokenNode? open = null, close = null;
+        for (int i = 1; i < node.SlotCount; i++)
+        {
+            if (node.GetChild(i) is not SyntaxTokenNode t) continue;
+            if (t.Kind == SyntaxKind.OpenBrace && open == null) open = t;
+            else if (t.Kind == SyntaxKind.CloseBrace) close = t;
+        }
+        if (open == null || close == null) return null;
+        return new TextSpan(open.Span.Start, close.Span.End - open.Span.Start);
+    }
+}
+
+/// <summary>
 /// Represents a form declaration: <c>form Name { ... }</c> (the surface keyword
 /// is <c>form</c>; the node kind stays "Structure" internally).
 /// </summary>
@@ -106,6 +135,12 @@ public sealed partial class FormDeclarationSyntax : SyntaxNode
 
     /// <summary>The form's name text, or empty when absent.</summary>
     public string NameText => Name?.Text ?? "";
+
+    /// <summary>
+    /// The form body's own <c>{</c> … <c>}</c> span — what LYS6007 underlines, for the same
+    /// reason LYS6002 underlines the score's: the body is what has to change.
+    /// </summary>
+    public TextSpan? BodySpan => DeclarationBody.BraceSpan(this);
 }
 
 /// <summary>
@@ -574,21 +609,7 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     /// children can only ever find this score's pair. Null when either brace is missing
     /// (a malformed header the parser already reported).
     /// </summary>
-    public TextSpan? BodySpan
-    {
-        get
-        {
-            SyntaxTokenNode? open = null, close = null;
-            for (int i = 1; i < SlotCount; i++)
-            {
-                if (GetChild(i) is not SyntaxTokenNode t) continue;
-                if (t.Kind == SyntaxKind.OpenBrace && open == null) open = t;
-                else if (t.Kind == SyntaxKind.CloseBrace) close = t;
-            }
-            if (open == null || close == null) return null;
-            return new TextSpan(open.Span.Start, close.Span.End - open.Span.Start);
-        }
-    }
+    public TextSpan? BodySpan => DeclarationBody.BraceSpan(this);
 
     /// <summary>
     /// The optional per-score <c>transpose &lt;pitch&gt;</c> (a property node before the

@@ -787,6 +787,47 @@ public static class DiagnosticCodes
     /// part name.</summary>
     public const string CombinedStaffBadMember = "LYS6006";
 
+    /// <summary>Render error: a <c>form</c> names no section, so the piece it arranges has
+    /// nothing in it. The same failure as <see cref="EmptyScore"/> reached through the OTHER
+    /// container: a book engraves what its form sequences, and a form that sequences nothing
+    /// engraves nothing.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ The outcome is WORSE than LYS6002's blank page, which is why it needed its own
+    /// arm rather than being left to the score check. MEASURED 2026-08-16: with no section
+    /// reference anywhere in the form, <c>SvgDocumentContext.Assemble</c> takes its
+    /// <c>_pages.Count == 0</c> arm and returns the empty string, so <c>lysc svg</c> writes a
+    /// ZERO-BYTE file while printing "Created: … Font embedded: Yes" and exiting 0, and
+    /// <c>lysc check</c> said "No errors found."
+    /// </para>
+    /// <para>
+    /// ⚠️ THE REACH, subtracted rather than guessed (HANDOFF §5.0 — "wider than it was" is not
+    /// "all of them"). Every form item GRAMMAR §StructureItem allows was enumerated and put
+    /// through the engraver, alone and beside a real reference: <b>46 shapes, 16 of which
+    /// engrave zero bytes, 15 of them caught here</b> (an empty body; a body holding only
+    /// barlines <c>| || |. ! :|</c>, only navigation marks <c>segno fine coda dc ds</c>, only
+    /// <c>break</c>/<c>nobreak</c>, only <c>@mark("X")</c>, or only <c>_"text"</c>).
+    /// <b>ONE shape is still silent and is filed in HANDOFF §2F: <c>form main { [1. A] }</c></b>
+    /// — a volta ending that no repeat opens. It NAMES a section, so this check is right to
+    /// stay quiet; the engraver drops it anyway (measured: <c>form main { A [1. B] }</c> is
+    /// byte-identical to <c>form main { A }</c>), which is a different claim about a
+    /// different family and needs its own rule.
+    /// </para>
+    /// <para>
+    /// Its own code rather than a reuse of <see cref="EmptyScore"/>, following the reasoning
+    /// recorded on <see cref="CondensedStaffNeedsTwoParts"/>: LYS6002's message says "its body
+    /// declares no staff", which names neither this container nor the way out. A form is not
+    /// fixed by adding a staff — it is fixed by naming a section.
+    /// </para>
+    /// <para>
+    /// ⚠️ "Names a section" counts ALL THREE spellings of a form's section reference — plain
+    /// <c>A</c>, silent <c>~A</c>, and a volta alternative <c>[1. A]</c> — by asking
+    /// <c>SectionReferenceFinder</c>, which is where that list already lives. A fourth copy of
+    /// it here would drift the day a spelling is added (HANDOFF §5.2.1②).
+    /// </para>
+    /// </remarks>
+    public const string EmptyForm = "LYS6007";
+
     // Structure / section-part grid errors (LYS7xxx)
 
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>
