@@ -71,6 +71,51 @@ public class AnnotationRoundTripTests
     }
 
     /// <summary>
+    /// A lyric hyphen is a WIDTH, not just a mark. ParseLyricSyllable glues a
+    /// trailing '-' onto the word so "Hap-" stays one syllable carrying its own
+    /// connector — but it used to glue a DETACHED one too, and the glued token
+    /// keeps only the word's leading trivia and the hyphen's trailing trivia, so
+    /// the space in <c>la -- la</c> belonged to neither and left the tree. Two
+    /// characters short is not a cosmetic loss: a green width is what every later
+    /// position is summed from, so the whole file after the lyrics block slid.
+    /// Nothing downstream could see it — LyricSyllableReader.Classify folds
+    /// <c>la-</c>+<c>-</c> and <c>la</c>+<c>--</c> onto the same Hyphen connector
+    /// on the same syllable, so the engraving was right the whole time.
+    /// </summary>
+    [Theory]
+    [InlineData("lyrics L { la -- la }")]    // the shape three corpus books write
+    [InlineData("lyrics L { la -- }")]       // hyphen last in the block
+    [InlineData("lyrics L { la - la }")]     // detached SINGLE hyphen
+    [InlineData("lyrics L { la - - la }")]   // detached PAIR — '--' must not fuse
+    [InlineData("lyrics L { la--la }")]      // glued: already right, must stay right
+    [InlineData("lyrics L { la- la }")]      // word continuation: ditto
+    [InlineData("lyrics L { Hap- py }")]     // ditto — the reason the glue exists
+    [InlineData("lyrics L { la __ la }")]    // control: extender, never broken
+    [InlineData("lyrics L { la _ la }")]     // control: skip, never broken
+    [InlineData("lyrics L { va~ga la }")]    // control: elision, never broken
+    public void ALyricHyphen_KeepsTheSpaceBesideIt(string source)
+        => Assert.Equal(source, SyntaxTree.Parse(source).GetRoot().ToFullString());
+
+    /// <summary>
+    /// The price of that dropped space, stated as the quantity it corrupts: the
+    /// note written after a lyrics block must stand where it says it stands. The
+    /// control writes the same music with the hyphens glued — a spelling that
+    /// never lost a character — because without it a test that pins a position
+    /// passes just as well when NOTHING maps correctly.
+    /// </summary>
+    [Theory]
+    [InlineData("part v\nsection A { lyrics L { la -- la -- } v { c4 d e f | } }\n")]
+    [InlineData("part v\nsection A { lyrics L { la--la-- } v { c4 d e f | } }\n")] // control
+    public void TheNoteAfterALyricsBlock_StandsWhereItSaysItStands(string source)
+    {
+        var root = SyntaxTree.Parse(source).GetRoot();
+        Assert.Equal(source.Length, root.FullWidth);
+
+        var note = root.DescendantNodes<NoteSyntax>().First();
+        Assert.Equal(source.IndexOf("c4", StringComparison.Ordinal), note.Position);
+    }
+
+    /// <summary>
     /// The hole itself, measured: every book in the corpus and the fixtures must
     /// spell itself back out of its own tree. The named books below are the ones
     /// that do NOT, each for a reason that lives in a different island; they are
@@ -80,16 +125,20 @@ public class AnnotationRoundTripTests
     [Fact]
     public void EveryBook_SpellsItselfBackOutOfItsTree()
     {
-        // Known-broken, one island each:
-        //   annotation vs slur/tie ORDER — the mark is re-emitted before the
-        //   '(' / ')~' it was written after (empty-chord, script-stack-order1,
-        //   slur-vertical-skylines, feature-tour).
+        // Known-broken. ALL of these are ONE island: a post-event written AFTER a
+        // slur/tie/beam mark ('g4(@cresc', 'g1)~@startTrillSpan', "f,)\3") is hoisted
+        // onto the note, and ParsePostEvents replays the mark behind it — so the tree
+        // spells the mark and the post-event in the opposite order. No width is lost
+        // (628→628 on all four of the books that used to be listed here), but the two
+        // reordered nodes DO stand in the wrong place: measured 2026-08-16, a hairpin
+        // written 'g4(@cresc' reports data-pos 36 for a '@' standing at 37, and the two
+        // spellings 'g4(@cresc'/'g4@cresc(' engrave to a BYTE-IDENTICAL SVG. So the
+        // engraving is right and only the source map is wrong.
         // ⚠️ volta-labels came OFF this list on 2026-08-16: "the '|' before a '[1. …]'
         // label is not stored" was the last island where a token no form rule claimed was
         // consumed by a bare Advance(). ParseFormItem now parses every barline as the
         // BarlineSyntax it is (LYS0031 warns for the ones nothing engraves yet), and the
         // three containers around it report and keep what they cannot place (LYS0030).
-        // The four that remain are ONE island, and it is not this one.
         var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "empty-chord.lys", "script-stack-order1.lys", "slur-vertical-skylines.lys",

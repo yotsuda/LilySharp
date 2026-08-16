@@ -436,10 +436,17 @@ internal sealed partial class Parser
     ///
     /// Handles:
     /// - Identifier: syllable text (e.g., "Hap", "py")
-    /// - Identifier + Minus: word continuation (e.g., "Hap-")
-    /// - Minus Minus: syllable break marker (--)
+    /// - Identifier + Minus, GLUED: word continuation (e.g., "Hap-")
+    /// - Minus Minus, GLUED: syllable break marker (--)
     /// - Tilde: melisma (~)
     /// - Underscore: extender (_)
+    ///
+    /// ⚠️ "GLUED" is load-bearing, not decoration. Both of those arms build a NEW
+    /// token out of two, keeping only the pair's outer trivia — so whatever sat
+    /// between them is not stored anywhere, and a green width is what every later
+    /// position is summed from. Taking a DETACHED hyphen is how `la -- la` came
+    /// back out of the tree as `la-- la`. A detached '-' is simply the next
+    /// syllable's connector; LyricSyllableReader.Classify reads it the same way.
     /// </remarks>
     private LyricSyllableGreen? ParseLyricSyllable()
     {
@@ -460,7 +467,14 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.Minus))
         {
             var first = Advance();
-            if (Check(SyntaxKind.Minus))
+            // The two hyphens fuse into ONE "--" token only when they are ADJACENT.
+            // The fused token carries the pair's OUTER trivia, so fusing a detached
+            // pair ("- -") would silently swallow the space between them — the very
+            // width this arm's comment promises to keep. A detached second '-' is
+            // just the next syllable's connector, and Classify reads two Hyphen
+            // markers exactly as it reads one.
+            if (Check(SyntaxKind.Minus)
+                && first.TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0)
             {
                 var second = Advance(); // consume second minus
                 // Return as special marker token, preserving the outer trivia of
@@ -522,7 +536,22 @@ internal sealed partial class Parser
 
         // Trailing hyphen (word continuation, e.g. "Hap-"). Keep the first token's
         // leading trivia and the hyphen's trailing trivia so the tree round-trips.
-        if (Check(SyntaxKind.Minus))
+        //
+        // ⚠️ ONLY when the hyphen is GLUED to the word. This branch used to take any
+        // following '-', and the glued token keeps only the word's LEADING trivia and
+        // the hyphen's TRAILING trivia — so on `la -- la` the space between the word
+        // and the mark went into neither and left the tree. The syllable came back
+        // out as `la--`, the block was two characters short, and a green width is
+        // what every later position is summed from: measured 2026-08-16, the first
+        // note of `section A { lyrics L { la -- la -- } v { c4 d e f | } }` stands at
+        // 49 and its SVG data-pos said 47. A DETACHED '-' / '--' is the connector
+        // spelling and belongs to the next syllable, where the Minus arm above stores
+        // both characters with their trivia. Nothing downstream can tell the two
+        // apart — LyricSyllableReader.Classify folds `la-`+`-` and `la`+`--` onto the
+        // same Hyphen connector on the same syllable — which is why only the tree's
+        // own text, and no engraving, ever showed this.
+        if (Check(SyntaxKind.Minus)
+            && prev.TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0)
         {
             var hyphen = Advance();
             return new LyricSyllableGreen(

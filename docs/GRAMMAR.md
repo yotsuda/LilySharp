@@ -299,7 +299,14 @@ PartBlock      = Identifier , MusicBlock ;
    sheets). *)
 LyricsBlock    = 'lyrics' , Identifier , '{' , { LyricMeasure } , '}' ;
 LyricMeasure   = { LyricSyllable } , '|' ;
-LyricSyllable  = LyricText | '~' | '_' ;          (* '-' suffix joins one word's syllables *)
+LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
+                 (* MEASURED 2026-08-16 — and the spacing is part of the rule, because
+                    the two arms that fuse tokens keep only the pair's OUTER trivia:
+                      GLUED to the word   "Hap- py"   continues that word (one syllable);
+                      DETACHED  "la -- la" / "la - la" is a separate connector syllable.
+                    Both spellings put the same hyphen on the same syllable — Classify
+                    folds them — so the difference is only which node holds the text.
+                    '~' GLUED on both sides ("va~ga") is an elision, otherwise a melisma. *)
 
 ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordEntry | Barline } , '}' ;
                  (* WITH a name: an independent chord part for a score row (lead sheet).
