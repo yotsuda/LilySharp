@@ -37,12 +37,26 @@ using LilySharp.Core.Syntax;
 /// <para>
 /// ⚠️ READ THE CONTROL BEFORE THE CLAIM. Always price a book the change cannot reach
 /// (perf-plain1k for anything script- or annotation-shaped) in the same run: a change that
-/// moves the control has not been measured, it has been mismeasured.
+/// moves the control has not been measured, it has been mismeasured. And say whether the
+/// change could reach that book at all — one it CAN reach is not a control.
+/// </para>
+/// <para>
+/// ⚠️ "DETERMINISTIC" IS TRUE AFTER WARM-UP, NOT FROM THE FIRST RENDER — measured, session
+/// 191: three keystrokes of perf-v2bow1k in ONE process and one build read 156.8 / 153.1 /
+/// 152.9 MB, so a single measurement of the first book in a process is a few MB high (the
+/// JIT of paths that book is the first to reach). perf-plain1k reads 95.1 / 95.1 either way,
+/// which is what makes the spread easy to mistake for a real regression in a book that has
+/// it. Hence <see cref="Repeats"/>: the FLOOR of several is reported, the same shape
+/// EditKeystrokeBench uses for time.
 /// </para>
 /// </remarks>
 internal static class Alloc
 {
     private static long Bytes => GC.GetAllocatedBytesForCurrentThread();
+
+    /// <summary>How many times each measurement is taken; the floor is reported. Three is
+    /// enough — the spread is a warm-up step, not noise, so the 2nd and 3rd agree.</summary>
+    private const int Repeats = 3;
 
     public static void Run(string root, string[] books, SvgRenderOptions options)
     {
@@ -58,9 +72,13 @@ internal static class Alloc
             // Full render. The first one is thrown away: the glyph-outline and text-profile
             // caches are process-wide, so a cold first render prices the font, not the book.
             SvgGenerator.Generate(SyntaxTree.Parse(text), options);
-            long a0 = Bytes;
-            SvgGenerator.Generate(SyntaxTree.Parse(text), options);
-            double fullMb = (Bytes - a0) / 1048576.0;
+            double fullMb = double.MaxValue;
+            for (int r = 0; r < Repeats; r++)
+            {
+                long a0 = Bytes;
+                SvgGenerator.Generate(SyntaxTree.Parse(text), options);
+                fullMb = Math.Min(fullMb, (Bytes - a0) / 1048576.0);
+            }
 
             // One keystroke, in EditKeystrokeBench's shape: parse outside the measurement,
             // alternate the edited and base text so the timed render is a genuine
@@ -71,12 +89,15 @@ internal static class Alloc
             {
                 var compiler = new IncrementalCompiler(SyntaxTree.Parse(text), options);
                 compiler.RenderIncremental(SyntaxTree.Parse(text));
-                compiler.RenderIncremental(SyntaxTree.Parse(edited));
-                compiler.RenderIncremental(SyntaxTree.Parse(text));
-                var tree = SyntaxTree.Parse(edited);
-                long k0 = Bytes;
-                compiler.RenderIncremental(tree);
-                keyMb = (Bytes - k0) / 1048576.0;
+                keyMb = double.MaxValue;
+                for (int r = 0; r < Repeats; r++)
+                {
+                    compiler.RenderIncremental(SyntaxTree.Parse(text));
+                    var tree = SyntaxTree.Parse(edited);
+                    long k0 = Bytes;
+                    compiler.RenderIncremental(tree);
+                    keyMb = Math.Min(keyMb, (Bytes - k0) / 1048576.0);
+                }
             }
             Console.WriteLine($"{b,-24}{fullMb,10:F1}{keyMb,15:F1}   {find ?? "(no anchor — full only)"}");
         }
