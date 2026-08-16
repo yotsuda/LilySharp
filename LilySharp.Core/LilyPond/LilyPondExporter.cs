@@ -259,6 +259,13 @@ public sealed class LilyPondExporter
                 _anchorOctave = part != null
                     ? AnchorOctaveOf(part)
                     : InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
+                // The RELATIVE anchor above and the ABSOLUTE one here answer different
+                // questions and resolve differently: the relative one follows the clef and
+                // the instrument preset, the absolute one is middle C unless the part states
+                // an `octave N`. Same split the collector makes in GetPartDefaults, and
+                // reading them off one value is how the twin came to be an octave out.
+                _absoluteBaseOctave = InstrumentDefaults.AbsoluteBaseOctave(
+                    part != null ? ExplicitPartOctave(part) : null);
                 var music = OrderedMusic(name, part, form, sections);
                 if (IsDrumPart(name, music))
                 {
@@ -494,7 +501,7 @@ public sealed class LilyPondExporter
             if (_octaveAbsolute)
                 return v.OctaveOffset == 0
                     ? inner
-                    : $"\\fixed {AnchorPitch(AbsoluteBaseOctave + v.OctaveOffset)} {{ {inner} }}";
+                    : $"\\fixed {AnchorPitch(_absoluteBaseOctave + v.OctaveOffset)} {{ {inner} }}";
 
             return $"\\relative {ReferencePitch(v.OctaveOffset)} {{ {inner} }}";
         }
@@ -549,17 +556,20 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private static int AnchorOctaveOf(PartDeclarationSyntax part)
-    {
-        string? octave = PartProperty(part, "octave");
-        string? clef = PartProperty(part, "clef");
-        return InstrumentDefaults.AnchorOctave(
-            octave != null && int.TryParse(octave, out int explicitOctave)
-                ? explicitOctave
-                : null,
+        => InstrumentDefaults.AnchorOctave(
+            ExplicitPartOctave(part),
             InstrumentPresetOf(part),
-            clef != null ? MeasureCollector.ParseClefType(clef.ToLowerInvariant())
-                         : ClefType.Treble);
-    }
+            PartProperty(part, "clef") is { } clef
+                ? MeasureCollector.ParseClefType(clef.ToLowerInvariant())
+                : ClefType.Treble);
+
+    /// <summary>The part's own <c>octave N</c> property, or null when it states none — the
+    /// one input both anchors take from the part, read once so the relative anchor and
+    /// <see cref="_absoluteBaseOctave"/> cannot disagree about what the part said.</summary>
+    private static int? ExplicitPartOctave(PartDeclarationSyntax part)
+        => PartProperty(part, "octave") is { } octave && int.TryParse(octave, out int n)
+            ? n
+            : null;
 
     // ---- Header ------------------------------------------------------------
 
@@ -636,7 +646,7 @@ public sealed class LilyPondExporter
         string wrapper = _drumMode
             ? "\\drummode"
             : _octaveAbsolute
-            ? "\\fixed " + AnchorPitch(AbsoluteBaseOctave)
+            ? "\\fixed " + AnchorPitch(_absoluteBaseOctave)
             : "\\relative " + AnchorPitch(_anchorOctave);
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
 
@@ -1425,6 +1435,20 @@ public sealed class LilyPondExporter
     /// </summary>
     private void CarryFrameInto(LilyPondExporter buf)
     {
+        // The ABSOLUTE anchor belongs with the two relative frames below — it is what a pitch
+        // resolves against in the other octave mode. All six nested-exporter sites set
+        // _octaveAbsolute and _anchorOctave in their initializers and then call this, so it
+        // rides here rather than being copied six times.
+        // ⚠️ LILYSHARP-OWN: correct by construction, NOT observed, and the reason is worth
+        // keeping. A degree chord's two uses of this value CANCEL — the anchor is
+        // base + rootOffset and the written mark is octave − base — so no nesting of one can
+        // see it. The use that does not cancel is the nested \fixed a marked phrase reference
+        // emits, and a nested body cannot emit one at all: this method does not carry
+        // _phrases, so a reference inside a tuplet / grace / cue / repeat exports as an EMPTY
+        // body (measured 2026-08-16 — 0 of 300 books write one; filed in HANDOFF §2F).
+        // Poisoning this line therefore leaves the suite green. It stays because the
+        // alternative is a value that goes silently wrong the day that hole is closed.
+        buf._absoluteBaseOctave = _absoluteBaseOctave;
         buf._drumMode = _drumMode;
         buf._lysStep = _lysStep;
         buf._lysOctave = _lysOctave;
@@ -1532,7 +1556,7 @@ public sealed class LilyPondExporter
         {
             anchorStep = RelativeOctave.StepIndex(root.PitchName[0]);
             anchorOctave = _octaveAbsolute
-                ? AbsoluteBaseOctave + root.OctaveOffset + off
+                ? _absoluteBaseOctave + root.OctaveOffset + off
                 : RelativeOctave.Resolve(_lysStep, _lysOctave, anchorStep, 0) + off;
         }
         else if (hasDegrees)
@@ -1542,7 +1566,7 @@ public sealed class LilyPondExporter
             // own fallback.
             anchorStep = _tonic.Valid ? _tonic.Step : 0;
             anchorOctave = _octaveAbsolute
-                ? AbsoluteBaseOctave + off
+                ? _absoluteBaseOctave + off
                 : RelativeOctave.Resolve(_lysStep, _lysOctave, anchorStep, 0) + off;
         }
 
@@ -1638,7 +1662,7 @@ public sealed class LilyPondExporter
                 anchorStep, anchorOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keySharps);
             int written = _octaveAbsolute
-                ? octave - AbsoluteBaseOctave
+                ? octave - _absoluteBaseOctave
                 : octave - RelativeOctave.Resolve(chainStep, chainOctave, step, 0);
             sb.Append(SpellPitch(step, alteration)).Append(OctaveMarks(written));
             if (first) { firstStep = step; firstOctave = octave; }
@@ -1682,13 +1706,27 @@ public sealed class LilyPondExporter
     /// wraps every absolute part in, i.e. the octave of middle C.
     /// </summary>
     /// <remarks>
-    /// ⚠️ Lily#'s own absolute anchor is the part's <c>octave N</c> when it states one
-    /// (OctaveContext.OctaveBase), and this exporter writes <c>\fixed c'</c> regardless — an
-    /// existing gate, not a new one (see the class remarks). Resolving degrees against the
-    /// wrapper that was actually written keeps them consistent with the verbatim pitches
-    /// beside them instead of correct on their own.
+    /// Read off the part exactly as the collector reads it
+    /// (<c>InstrumentDefaults.AbsoluteBaseOctave</c> = the explicit <c>octave N</c> property,
+    /// or 4 — LilyPond's fixed <c>c'</c> — when the part declares none). The CLEF's default is
+    /// deliberately not used: absolute octave is middle C whatever the clef, which is what
+    /// <c>OctaveContext.OctaveBase</c> says too.
+    /// <para>
+    /// ⚠️ This was <c>const int = 4</c> until 2026-08-16, and its remark called the mismatch
+    /// "an existing gate, not a new one". It was not a gate — no entry in the gate list
+    /// excluded those books, so they were compared against LilyPond as different music:
+    /// <c>test/octave-base.lys</c> declares <c>octave 3</c>, its own header says bare
+    /// <c>c</c> is C3, the page draws C3, and the twin said <c>\fixed c'</c> = C4. A whole
+    /// octave, in the one direction nothing was watching.
+    /// </para>
+    /// <para>
+    /// It has to be ONE value for the whole part: the body's pitches are written VERBATIM
+    /// (see <c>EmitPitch</c>), so the wrapper is the only thing that decides what they
+    /// sound, and the degree spellings below measure their marks from the same anchor. Move
+    /// one without the others and the twin becomes wrong in a way that looks right.
+    /// </para>
     /// </remarks>
-    private const int AbsoluteBaseOctave = 4;
+    private int _absoluteBaseOctave = 4;
 
     // A note's attachments split into those that must precede the note (a
     // rehearsal \mark, a \deadNote prefix, a forced stem direction) and those

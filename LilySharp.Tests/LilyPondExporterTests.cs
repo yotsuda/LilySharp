@@ -959,6 +959,115 @@ public class LilyPondExporterTests
         Assert.Equal(anchor.Match(rel).Groups[1].Value, anchor.Match(abs).Groups[1].Value);
     }
 
+    // ---- `part X { octave N }` under `octave absolute` ------------------------------
+    //
+    // The twin writes a part's pitches VERBATIM (EmitPitch copies the source token and its
+    // marks), so the ONE thing that decides what they sound is the wrapper. Lily#'s
+    // absolute anchor is the part's own `octave N` when it declares one
+    // (InstrumentDefaults.AbsoluteBaseOctave = explicitOctave ?? 4), and this exporter
+    // wrote `\fixed c'` regardless — so `test/octave-base.lys`, whose header says bare c is
+    // C3, exported a twin that says C4. A whole octave of different music, in a book that
+    // no gate excludes from the LilyPond comparison.
+
+    private static string AbsolutePart(int? partOctave) => $$"""
+        octave absolute
+        part low { clef bass{{(partOctave is { } n ? $" octave {n}" : "")}} }
+        section S { low { c4 d e f | } }
+        form main { ~S }
+        score main { staff low }
+        """;
+
+    /// <summary>The octave a twin's <c>\fixed</c> wrapper anchors on, read back out of the
+    /// emitted text: <c>c</c> = 3, <c>c'</c> = 4 (LilyPondExporter.AnchorPitch inverted).</summary>
+    private static int TwinAnchorOctave(string ly)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(ly, @"\\fixed c('*|,*) \{");
+        Assert.True(m.Success, "no \\fixed wrapper in:\n" + ly);
+        string marks = m.Groups[1].Value;
+        return 3 + (marks.StartsWith(",") ? -marks.Length : marks.Length);
+    }
+
+    [Theory]
+    [InlineData(2, "\\fixed c,")]
+    [InlineData(3, "\\fixed c")]
+    [InlineData(5, "\\fixed c''")]
+    [InlineData(null, "\\fixed c'")]   // no `octave` property → the C4 default
+    public void AnAbsolutePartsOctaveProperty_MovesTheTwinsWrapper(int? partOctave, string wrapper)
+    {
+        // Named spellings, not just the default one: `c` and `c,` are the cases that carry
+        // no apostrophe at all, and a wrapper builder that assumed one would still pass on
+        // `c''` alone (RULES §5.0 — "N spellings, one broken").
+        Assert.Contains(wrapper + " {", Export(AbsolutePart(partOctave)));
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(null)]
+    public void TheTwinsAnchor_IsTheOctaveThePageResolves(int? partOctave)
+    {
+        // The property that matters, stated once: the twin's wrapper and the page have to
+        // name the same octave, because the body between them is verbatim. Written against
+        // the shipped report (ResolvedPitches, what `check --pitches` prints) rather than a
+        // hand-copied list, so it cannot drift from the page.
+        string src = AbsolutePart(partOctave);
+        var trace = LilySharp.Core.Semantics.ResolvedPitches.ForFile(SyntaxTree.Parse(src));
+        Assert.NotNull(trace);
+        int pageOctave = int.Parse(trace![0].Pitch[^1].ToString());   // the bare `c`
+
+        Assert.Equal(pageOctave, TwinAnchorOctave(Export(src)));
+    }
+
+    [Theory]
+    [InlineData("<c 3 5>2 <c 3 5>2")]                       // plain stream
+    [InlineData("\\3/2 { <c 3 5>4 <c 3 5> <c 3 5> } r2")]   // inside a tuplet
+    [InlineData("[ <c 3 5>8 ] <c 3 5>8 r4 r2")]             // inside a beam group
+    public void ADegreeChord_MeasuresItsMarksFromTheSameAnchor_NestedOrNot(string music)
+    {
+        // A degree chord writes its members as marks measured FROM the wrapper's anchor, so
+        // moving the anchor per part must move both together or the chord stops naming the
+        // notes beside it.
+        // ⚠️ What this does NOT show is anything about NESTING, though it is written across
+        // three nestings. Poisoning CarryFrameInto's carry of the absolute base leaves the
+        // whole suite green, and the reason is algebra, not a missing case: the anchor is
+        // base + rootOffset and the written mark is octave − base, so the value CANCELS for
+        // every degree chord however deeply nested. The three rows are kept because they
+        // pin that cancellation — a rewrite that made the two uses disagree would break here
+        // — but the nesting claim belongs to the comment in CarryFrameInto, which says
+        // plainly that it has no observer.
+        string src = $$"""
+            octave absolute
+            part low { clef bass octave 3 }
+            section S { low { {{music}} } }
+            form main { ~S }
+            score main { staff low }
+            """;
+        string ly = Export(src);
+
+        // `octave 3` makes bare c = C3, which LilyPond writes bare inside `\fixed c`. A
+        // nested body that lost the anchor would spell the same sounding chord as <c, e, g,>.
+        Assert.Contains("\\fixed c {", ly);
+        Assert.Contains("<c e g>", ly);
+        Assert.DoesNotContain("<c, e, g,>", ly);
+    }
+
+    [Fact]
+    public void TheOctaveBaseFixture_ExportsTheOctaveItsHeaderClaims()
+    {
+        // The corpus book that carries this case, tied to the claim its own header makes
+        // ("`octave 3` puts bare notes in the heart of the bass staff (C3..C4)"). A model
+        // test and a corpus book naming the same case have to name the same notes.
+        string path = System.IO.Path.Combine(CollectResumeTests.FindRepoRoot(),
+            "LilySharp.Tests", "Fixtures", "test", "octave-base.lys");
+        string src = System.IO.File.ReadAllText(path);
+
+        var trace = LilySharp.Core.Semantics.ResolvedPitches.ForFile(SyntaxTree.Parse(src));
+        Assert.Equal("C3", trace![0].Pitch);
+        Assert.Equal(3, TwinAnchorOctave(Export(src)));
+    }
+
     [Fact]
     public void ASelfReferencingPhrase_StopsAndSaysSo_InsteadOfRecursingForever()
     {
