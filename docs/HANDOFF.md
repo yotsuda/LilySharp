@@ -82,7 +82,7 @@ $st = git status --porcelain
 開始時の裏取りは**全項目を走らせた**——**台帳 516 点・ss 非ゼロ 98・総和 3.609965521・
 count 点 106/うち非ゼロ 2**・HEAD `dc21a4c5`（実装の最後 `3b379a48`）・
 **未 push 24・未追跡 0・作業ツリー項目 0**・suite **5193 passed / 0 failed / 4 skipped**
-＝**引継ぎの数は全部合っていた**（**20 回連続**）。
+＝**引継ぎの数は全部合っていた**（**18 回連続**）。
 終了時 **実装の最後は `688763c6`**・**未 push は
 `git rev-list --count origin/master..master` が言う**・**未追跡 0・作業ツリー項目 0**・
 suite **5208 passed / 0 failed / 4 skipped**（+15＝新しい網ちょうど）・
