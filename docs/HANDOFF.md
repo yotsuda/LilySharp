@@ -208,6 +208,14 @@ suite **5073 passed / 0 failed / 4 skipped**（+11＝新しい網ちょうど）
   **§5.4 の空集合の罠の 2 例目**（1 例目は第182 ⑼）＝**1 行が唯一の観測者。**
   **⑶＝和音を下げる→赤／`SeedStaffSymbol` を止める→赤**（後者が本命）。
   **⑷＝fixture を旧綴りに戻す→赤／`%` を裸に戻す→論理網が赤・旧綴りの本は不動**。
+- **⑺′ ★★ 便の外で 1 つ掃いた＝「Guards X」と名乗る fixture 21 冊の体系的な検算**（コード変更ゼロ）。
+  **今日見つけた 2 冊は音名の掃きで*偶然*出たもの**で、**「この本は X を守る」を体系的に問うたことは
+  一度も無かった**。⇒ **21 冊のうち 8 冊を確かめ、8 冊とも正直だった**（`<X>Item.StaffIndex` の
+  7 冊は毒 1 つで 7 冊とも動く）。**新しい嘘つきは 0。**
+  ⚠️⚠️ ★★★ **`fingering-*` 2 冊は「不動」だが容疑者ではない**——**3 つの site を毒して
+  3 つとも 0 冊**＝**毒のほうが死んでいた**。**動く本を 1 冊も見せられない毒は、結論に使えない。**
+  **この便で陽性対照が結論を救ったのは 3 度目**（⑺ の空集合・⑸ の「偽陽性」・これ）。
+  ⇒ **手順は RULES §5.4 に、残り 13 冊の一覧は §2F に置いた。**
 - **⑻ ★ §7.5 の監査**＝**第1便 Core +99 行・REF 0 / OWN 0・数値定数 0**（**正しい**——
   `using` は Lily# 独自で、**LP の `\include` は字句のテキスト取り込みで、ファイルが無ければ止まる**
   ＝対応物が無い。第182 ⑽ と同じ理由）。**第2便は annotation のみ・第3〜5便は Core を 1 行も触っていない。**
@@ -1698,6 +1706,21 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⚠️ **`HasUsings` は root の子だけを見る綴りのまま**（打鍵経路）。**directive は root の子より深くならない**
   はもう偽なので、**それを守っていた網を `EveryUsingHasUsingsSkips_IsReported`
   （root-children の問いが取りこぼすものは全部 error になっている）へ書き直した。**
+- ⚠️ ★ **新規＝「Guards X」と名乗る fixture 21 冊のうち、確かめたのは 8 冊**（第183・**残り 13 冊は未測定**）。
+  **手順は RULES §5.4**（X を 1 行毒して 1 回ビルドし、**名乗る本だけ**を描いてハッシュ比較）。
+  ★ **済み 8 冊＝全部「ちゃんと観測している」**: **`<X>Item.StaffIndex` routing を名乗る 7 冊**
+  （arpeggio / articulations / dynamics / figbass-chordname / grace / trillspan / tuplet の各 `-lower-staff`）は
+  **`MeasureCollector.cs:1583` の `_currentStaffIndex` を 0 に固定する毒 1 つで 7 冊とも動いた**
+  ＋ **`grandstaff-high-bass`**（この便で観測者にした）。
+  ⚠️⚠️ **`fingering-lower-staff` と `fingering-articulation` は*未測定*で、容疑者ではない**——
+  **運指は `NoteItem` に乗るので上の毒が届かず、専用の毒を 3 site 試して 3 つとも 0 冊だった**
+  （`FingeringEngraver.Calculate` の `staffIndex` は beam tip の索きにしか効かない／
+  `LayoutEngine.FingeringStaffScores` はこれらの本では通らない＝`splittable` が偽で
+  `wholeIslands` の枝へ行くと見える）。⇒ **続きは「運指がどの譜に置かれるかを決める行」を
+  先に特定すること**。**動く本を 1 冊見せるまで、どの結論も出せない**（§5.4）。
+  ⚠️ **残る 11 冊は別の機構を名乗る**（clef・調号の取り消し・多声部の符尾・volta ラベル・
+  `SkylineBuilder.AddDynamicsToSkyline`・`ArticulationEngraver` の per-note sort ほか）
+  ＝**上の毒が届かないので「不動」は何も言っていない。1 機構 1 毒で続ける。**
 - ⚠️ ★★★ **新規＝`octave absolute` の本では、trailing の octave 記号 `'` `,` が診断ゼロで死んでいる**
   （第183 実測・**未修理・要決定**）。**和音の `<c e g>'` と phrase 参照の `theme'` の両方**——
   **相対モードでは C5 E5 G5 / C5 D5 E5 F5 と動くのに、`octave absolute` では
