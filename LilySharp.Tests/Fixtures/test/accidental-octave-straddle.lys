@@ -1,13 +1,27 @@
-// Accidentals an octave apart straddling the middle line must be grouped into
-// DIFFERENT octaves (so they are not overstruck). This exercises the floored
-// octave division in AccidentalPlacement: with C# truncating division, staff
-// positions 3 (E5) and -4 (E4) both mapped to octave 0 and wrongly overstruck.
+// Accidentals of the same note name an octave apart share ONE column, whatever the
+// octave — E#4 with E#5, C#4 with C#5. AccidentalPlacement reads the note name off
+// the staff position with a FLOORED modulo, ((p % 7) + 7) % 7; C#'s own `%` truncates
+// towards zero, so positions on OPPOSITE SIDES of the middle line would come out as
+// two different note names and each pair would be split into two columns.
 // LILYPOND-REF: lily/accidental-placement.cc acc_less / set_ape_skylines.
+//
+// ⚠️ THE POSITIONS HAVE TO STRADDLE ZERO, and until 2026-08-16 they did not. The
+// header named "staff positions 3 (E5) and -4 (E4)" while the music wrote
+// <eis' eis'' cis' cis''> = positions 3 and 10, 1 and 8 — all non-negative, where
+// truncating and floored agree. Measured: replacing the floored modulo with a bare
+// `%` left this book's SVG BYTE-IDENTICAL. It is now 3/-4 (E) and 1/-6 (C), and the
+// same poison splits it into three columns and pushes one accidental out to x 10.14.
+//
+// Verified on the twin against LilyPond 2.26.0: LP puts the four sharps in TWO
+// columns, x 7.885 and 9.169, and Lily# draws them at 7.89 and 9.17 (its SVG rounds
+// to two places). ⚠️ LP gives those same two columns for the OLD spelling as well —
+// it works from pitches and cannot see this defect at all, so LP agreement is not
+// what makes a book here useful. Straddling zero is.
 title "Accidental octave straddle"
 octave absolute
 part m { clef treble }
 section Main {
-  m { <eis' eis'' cis' cis''>1 | }
+  m { <eis eis' cis cis'>1 | }
 }
 form main { Main }
 score main "accidental-octave-straddle" { staff m }
