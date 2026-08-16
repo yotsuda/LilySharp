@@ -139,19 +139,40 @@ public class AnnotationRoundTripTests
         // consumed by a bare Advance(). ParseFormItem now parses every barline as the
         // BarlineSyntax it is (LYS0031 warns for the ones nothing engraves yet), and the
         // three containers around it report and keep what they cannot place (LYS0030).
+        // ⚠️ Closing that island is NOT a one-liner, and it needs a decision before
+        // any code: a census of every consumer (2026-08-16) found 17 production
+        // sites, of which 12 are live and EVERY live one reads the marker as a
+        // SEQUENCE item, with the order load-bearing (MusicWalk.PeekMarkers scans
+        // the run AFTER the note; TieTargetScanner binds the immediately-following
+        // item; SlurPairingScanner is a stack in item order). Six further sites that
+        // read markers out of note.Articulations are DEAD — 0 books of 1021 put one
+        // there — and would wake up. editors/vscode/src/smartTyping.ts encodes the
+        // same ordering contract a second time. §2F ⑺ carries the address.
+        // ⚠️ The seven audit\lpreg books below joined this list on 2026-08-16 with
+        // the widened reach. NOTHING regressed: they were already broken, by the one
+        // island above, and no test had ever read that directory.
         var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "empty-chord.lys", "script-stack-order1.lys", "slur-vertical-skylines.lys",
             "feature-tour.lys",
+            "obs-probe.lys", "perf-slurinside1k.lys", "perf-slurscript1k.lys",
+            "scriptstack1.lys", "slurscript-obs.lys", "slurvsky.lys", "tupnumss.lys",
         };
 
         var root = CollectResumeTests.FindRepoRoot();
         var broken = new List<string>();
         int books = 0;
+        // ⚠️ A checker's REACH is part of its claim. This one calls itself "every
+        // book" and read 300 of the repository's 566 tracked .lys until 2026-08-16:
+        // audit\lpreg (257) and samples (6) were outside it, and that is exactly
+        // where the lyric-hyphen island had been sitting — a dropped width, the
+        // family this file exists to catch, invisible because nothing looked.
         foreach (var dir in new[]
         {
             Path.Combine(root, "audit", "lp-regression", "lys"),
+            Path.Combine(root, "audit", "lpreg"),
             Path.Combine(root, "LilySharp.Tests", "Fixtures"),
+            Path.Combine(root, "samples"),
         })
         {
             if (!Directory.Exists(dir))
@@ -165,7 +186,7 @@ public class AnnotationRoundTripTests
             }
         }
 
-        Assert.True(books > 250, $"only {books} books found — the corpus paths moved");
+        Assert.True(books > 500, $"only {books} books found — the corpus paths moved");
         var news = broken.Where(b => !known.Contains(b)).ToList();
         Assert.True(news.Count == 0, "these books stopped spelling themselves back: " + string.Join(", ", news));
         var fixedUp = known.Where(k => !broken.Contains(k, StringComparer.OrdinalIgnoreCase)).ToList();
