@@ -246,6 +246,9 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
   (a bare `1. ...` ending is rejected); the closing `]` is optional — write it to draw
   the right cap (closed ending), omit it to leave the ending open. Section-level endings
   in a `form main { }` repeat use the same `[N. Section]` form.
+- An ending needs a repeat to be an ending OF. Write `form main { [1. A] }` and no bracket
+  is drawn: it engraves as the plain reference `A`, and LYS6008 warns that the `1.` prints
+  nothing. Put the ending inside the repeat — `form main { |: A [1. B] :| [2. C] }`.
 
 ```
 |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]

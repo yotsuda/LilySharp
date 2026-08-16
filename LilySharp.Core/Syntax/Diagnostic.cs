@@ -816,11 +816,11 @@ public static class DiagnosticCodes
     /// engrave zero bytes, 15 of them caught here</b> (an empty body; a body holding only
     /// barlines <c>| || |. ! :|</c>, only navigation marks <c>segno fine coda dc ds</c>, only
     /// <c>break</c>/<c>nobreak</c>, only <c>@mark("X")</c>, or only <c>_"text"</c>).
-    /// <b>ONE shape is still silent and is filed in HANDOFF §2F: <c>form main { [1. A] }</c></b>
-    /// — a volta ending that no repeat opens. It NAMES a section, so this check is right to
-    /// stay quiet; the engraver drops it anyway (measured: <c>form main { A [1. B] }</c> is
-    /// byte-identical to <c>form main { A }</c>), which is a different claim about a
-    /// different family and needs its own rule.
+    /// <b>The sixteenth shape — <c>form main { [1. A] }</c>, a volta ending that no repeat
+    /// opens — is no longer one of them.</b> It NAMES a section, so this check was right to
+    /// stay quiet; what was wrong was the ENGRAVER dropping it, and that half is now fixed
+    /// (the ending engraves as its plain section, so the body is no longer zero bytes).
+    /// The surviving half of that claim is <see cref="VoltaEndingWithoutRepeat"/>.
     /// </para>
     /// <para>
     /// Its own code rather than a reuse of <see cref="EmptyScore"/>, following the reasoning
@@ -836,6 +836,52 @@ public static class DiagnosticCodes
     /// </para>
     /// </remarks>
     public const string EmptyForm = "LYS6007";
+
+    /// <summary>Render WARNING: a volta ending that no repeat block opened —
+    /// <c>form main { A [1. B] }</c>. It engraves as its plain section, so the number the
+    /// author wrote prints nothing at all.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ A WARNING, not an error, and the two halves of that decision come from different
+    /// places. What it DOES is LilyPond's, MEASURED on 2.26.0 (2026-08-16) rather than
+    /// reasoned about: <c>\alternative { \volta 1 { … } }</c> with no <c>\repeat volta</c> in
+    /// front of it renders BYTE-IDENTICALLY to writing the music plainly — no bracket, no
+    /// number — while the same book with the <c>\repeat</c> restored hashes differently.
+    /// LP itself says nothing; breaking that silence is the Lily# half (user decision,
+    /// 2026-08-16), on the same reasoning as <see cref="UsingFileUnreadable"/>: a construct
+    /// that draws nothing is worth a word even when the output is right.
+    /// </para>
+    /// <para>
+    /// ⚠️ Measure the shape you are actually asking about. An alternative written with no
+    /// volta NUMBER (<c>\alternative { { … } }</c>) does draw a warning out of LP — "missing
+    /// volta specification on alternative element" — but that is about the missing number,
+    /// not the missing repeat. Reading only that shape gives the opposite answer to the
+    /// question this code exists for.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE PREDICATE is the engraver's — a <c>FormAlternativeSyntax</c> with no
+    /// <c>FormRepeatBlockSyntax</c> ancestor — and NOT "the form has no repeat block", which
+    /// is what the ticket proposed. The weaker rule misses <c>|: A :| B [1. B]</c>, which has
+    /// a repeat block and whose ending was dropped just the same, because the ending is a
+    /// child of the FORM (measured on the tree: ink and MIDI byte-identical to
+    /// <c>|: A :| B B</c>). The legitimate <c>|: A [1. D] :| [2. O]</c> is never accused:
+    /// the ending after the <c>:|</c> fills ParseFormRepeatBlock's finalAlternative slot, so
+    /// BOTH endings are children of the repeat block (measured, not assumed).
+    /// </para>
+    /// <para>
+    /// ⚠️ Its own code rather than a reuse of <see cref="EmptyForm"/>: LYS6007 says the form
+    /// names no section, and this form does name one. It is also not the same severity — the
+    /// page LYS6007 describes does not exist, while this one is correct and merely less than
+    /// what the author appears to have asked for.
+    /// </para>
+    /// <para>
+    /// Written by <b>0 of 1025</b> books in the tree when this was added (counted by walking
+    /// every <c>.lys</c> and applying the predicate above; the same walk found 1019 form
+    /// declarations and 16 alternatives, and a positive control of 4 hand-written books was
+    /// picked up 4/4 — so the zero is a zero and not a blind instrument).
+    /// </para>
+    /// </remarks>
+    public const string VoltaEndingWithoutRepeat = "LYS6008";
 
     // Structure / section-part grid errors (LYS7xxx)
 

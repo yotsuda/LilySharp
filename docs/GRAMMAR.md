@@ -386,7 +386,15 @@ StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ;
 (* A repeat volta ending inside a |: … :| repeat, referencing a section:
    form main { |: A [1. D] :| [2. O] }
    The '[' is REQUIRED; the closing ']' is OPTIONAL — present draws the right cap
-   (closed ending), absent leaves it open. *)
+   (closed ending), absent leaves it open.
+
+   An ending that NO repeat opens — form main { A [1. B] } — is accepted and engraves as
+   the plain reference B: no bracket, no number, played once. That is LilyPond's answer
+   (measured, 2.26.0: an \alternative with no \repeat in front renders byte-identically to
+   the bare music), and it is warned about (LYS6008) because the number prints nothing.
+   ⚠️ "Opened by a repeat" is about the TREE, not the text: in |: A [1. D] :| [2. O] the
+   ending after the ':|' belongs to the repeat block, while in |: A :| B [1. B] the ending
+   does not — that second one warns even though the form has a repeat in it. *)
 StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , [ '~' ] , Identifier , [ ']' ] ;
 
 NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'

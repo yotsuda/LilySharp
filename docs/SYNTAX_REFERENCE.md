@@ -439,6 +439,13 @@ present, the highest volta number); give it explicitly with `|: … :|*N`.
 Endings accept ranges and lists: `[1-2. … ]`, `[1,3. … ]`. Without endings, a bare
 `|: … :|` simply repeats the body (twice by default, or `|: … :|*N` times).
 
+An ending needs a repeat to be an ending *of*. In a `form`, an ending that no repeat
+opens — `form main { A [1. B] }` — draws no bracket and no number: it engraves as the
+plain reference `B`, played once, and **LYS6008** warns that the `1.` prints nothing.
+This is LilyPond's behaviour for the same shape. Note that it is the *tree* that
+decides, not the reading order: in `|: A [1. D] :| [2. O]` the ending written after the
+`:|` still belongs to that repeat, while in `|: A :| B [1. B]` it does not.
+
 > Note: `repeat volta` / `alternative` are **not** Lily# constructs — the parser
 > rejects them with a hint to use the symbolic form above. The `repeat` keyword
 > survives only for `unfold` / `percent` / `tremolo` (see below).
