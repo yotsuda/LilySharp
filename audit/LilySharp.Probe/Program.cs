@@ -36,6 +36,10 @@
 //                 missed. (HANDOFF RULES §5.4.)
 //   census      — WHAT THE CORPUS ACTUALLY CONTAINS, per book, from the COLLECTED model
 //                 rather than from grepping the source spelling.
+//   alloc       — WHAT A RENDER AND A KEYSTROKE COST, in allocated bytes. Deterministic
+//                 where time is not (a same-code time control swings 16% here), so it is
+//                 the only instrument a before/after can actually be read off. Rebuilt in
+//                 scratch\ by sessions 190 AND 191 before it was given a home. See Alloc.cs.
 //
 // Usage (from the repo root):
 //   dotnet run --project audit/LilySharp.Probe -c Release -- sweep base
@@ -43,6 +47,7 @@
 //   dotnet run --project audit/LilySharp.Probe -c Release -- sweep poisoned
 //   dotnet run --project audit/LilySharp.Probe -c Release -- cmp base poisoned some-fixture
 //   dotnet run --project audit/LilySharp.Probe -c Release -- census [top-n]
+//   dotnet run --project audit/LilySharp.Probe -c Release -- alloc <book>... [control-book]
 //
 // `sweep <label> [listfile]` defaults to the fixture tree; pass a file of repo-relative
 // paths (e.g. from `git ls-files "*.lys"`) to widen it. Widen before calling a branch dead:
@@ -63,6 +68,11 @@ if (args.Length >= 3 && args[0] == "cmp")
 {
     return Sweep.Compare(root, args[1], args[2], args.Skip(3).ToArray()) ? 0 : 1;
 }
+if (args.Length >= 2 && args[0] == "alloc")
+{
+    Alloc.Run(root, args.Skip(1).ToArray(), options);
+    return 0;
+}
 if (args.Length >= 1 && args[0] == "census")
 {
     Census.Run(root, args.Length > 1 && int.TryParse(args[1], out int n) ? n : 20);
@@ -75,6 +85,8 @@ Console.Error.WriteLine("""
       sweep <label> [listfile]   render every book and record a hash per book
       cmp <a> <b> [book...]      what moved between two sweeps; names the claimants you list
       census [top-n]             per-book counts from the collected model
+      alloc <book>...            MB allocated by a full render and by one keystroke
+                                 (books under audit/lpreg; always include a control)
 
     Sweeps are written to audit/probe-out/<label>.csv (git-ignored).
     """);
