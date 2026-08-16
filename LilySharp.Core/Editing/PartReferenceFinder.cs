@@ -79,7 +79,7 @@ public static class PartReferenceFinder
                 // and answered with a SMALLER set: the `with` clauses dropped out of rename
                 // and find-references, and go-to-definition on a chord row stopped jumping
                 // to its block (three LSP tests said so). What the validator needs is a
-                // different question anyway — see RowReferenceTokens.
+                // different question anyway — see Tracks.
             }
         }
         return tokens;
@@ -92,8 +92,8 @@ public static class PartReferenceFinder
     /// undefined-part error — see <c>SymbolReferenceValidator</c>.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE ROW FAMILY IS NOT IN HERE, AND THAT IS THE POINT — see
-    /// <see cref="RowReferenceTokens"/>. A <c>chords NAME</c> row names a chord track,
+    /// ⚠️ THE TRACK FAMILY IS NOT IN HERE, AND THAT IS THE POINT — see
+    /// <see cref="Tracks"/>. A <c>chords NAME</c> row names a chord track,
     /// which a <c>part NAME { … }</c> header does not declare and a staff cannot render;
     /// folding the two lists together would make <c>staff prog</c> legal on a chord track,
     /// which is exactly the empty staff LYS1007 exists to catch.
@@ -126,41 +126,43 @@ public static class PartReferenceFinder
     }
 
     /// <summary>
-    /// A score's ROW render targets and the tracks they can resolve to: <c>chords NAME</c>
-    /// and <c>lyrics NAME</c> references, each tagged with which of the two namespaces it
-    /// names, plus the declared names of each namespace.
+    /// Every place a score names a chord or lyric TRACK, and the tracks those names can
+    /// resolve to: the row targets <c>chords NAME</c> / <c>lyrics NAME</c> and the staff
+    /// attachments <c>with chords NAME</c> / <c>with lyrics NAME</c>, each tagged with which
+    /// of the two namespaces it names, plus the declared names of each namespace.
     /// </summary>
-    /// <param name="References">The row targets, in document order, tagged
-    /// <c>IsChordRow</c>.</param>
+    /// <param name="References">The track references, in document order, tagged
+    /// <c>IsChord</c>.</param>
     /// <param name="ChordTracks">Names declared by <c>chords NAME { … }</c>.</param>
     /// <param name="LyricTracks">Names declared by <c>lyrics NAME { … }</c>.</param>
-    public readonly record struct RowReferences(
-        IReadOnlyList<(SyntaxTokenNode Token, bool IsChordRow)> References,
+    public readonly record struct TrackReferences(
+        IReadOnlyList<(SyntaxTokenNode Token, bool IsChord)> References,
         HashSet<string> ChordTracks,
         HashSet<string> LyricTracks);
 
     /// <summary>
-    /// The score's ROW render targets — <c>chords NAME</c> and <c>lyrics NAME</c> — each
-    /// tagged with which track it names, because the two are separate namespaces and a
-    /// reference must be checked against its own.
+    /// The score's chord- and lyric-TRACK references — the rows <c>chords NAME</c> /
+    /// <c>lyrics NAME</c> and the staff attachments <c>with chords NAME</c> /
+    /// <c>with lyrics NAME</c> — each tagged with which track it names, because the two are
+    /// separate namespaces and a reference must be checked against its own.
     /// </summary>
     /// <remarks>
-    /// A chord row's name is declared by a NAMED <c>chords NAME { … }</c> block and a lyric
-    /// row's by a named <c>lyrics NAME { … }</c> block; neither is a
+    /// A chord track's name is declared by a NAMED <c>chords NAME { … }</c> block and a lyric
+    /// track's by a named <c>lyrics NAME { … }</c> block; neither is a
     /// <c>part NAME { … }</c> header or a section-body part block, which is why they need
     /// their own list rather than a place in <see cref="ReferenceTokens"/>.
     /// <para>
-    /// ⚠️ <c>staff NAME with chords C</c> and <c>staff NAME with lyrics L</c> name the same
-    /// two namespaces and are NOT collected here: those tails are cut off by
-    /// <see cref="StaffPartToken"/> and have never been validated. Adding them is the same
-    /// shape of change as this one and is deliberately not made here — see
-    /// docs/HANDOFF.md.
+    /// ⚠️ A ROW AND AN ATTACHMENT ARE ONE QUESTION, not two: measured, a
+    /// <c>with lyrics NAME</c> whose name has no named block draws nothing and resolves to
+    /// nothing else — not to a same-named voice either (an unnamed <c>lyrics { … }</c> beside
+    /// <c>voice sop</c> plus <c>with lyrics sop</c> renders BYTE-IDENTICALLY to the bare
+    /// staff). Same namespace, same declaration set, so the same list.
     /// </para>
     /// <para>
     /// ⚠️ NOT A SECOND SPELLING OF THE LANGUAGE SERVER'S <c>ChordNameTokens</c>, which asks
     /// a different question: it wants EVERY occurrence of a chord-track name (block, row and
     /// <c>with</c> clause) so a rename can rewrite them all, while this wants only the ones
-    /// a score has to be able to RESOLVE. The two share the row shape and nothing else.
+    /// a score has to be able to RESOLVE — the declaring block is not one of those.
     /// </para>
     /// <para>
     /// ⚠️ THE DECLARATIONS COME BACK IN THE SAME CALL, on purpose: they are found in the
@@ -172,7 +174,7 @@ public static class PartReferenceFinder
     /// question that has one answer.
     /// </para>
     /// </remarks>
-    public static RowReferences Rows(SyntaxNode root)
+    public static TrackReferences Tracks(SyntaxNode root)
     {
         var refs = new List<(SyntaxTokenNode, bool)>();
         var chords = new HashSet<string>();
@@ -181,12 +183,18 @@ public static class PartReferenceFinder
             switch (node)
             {
                 case ChordRowRenderSyntax:
-                    if (RowPartToken(node) is { } ct)
+                    if (RowTargetToken(node) is { } ct)
                         refs.Add((ct, true));
                     break;
                 case LyricsRowRenderSyntax:
-                    if (RowPartToken(node) is { } lt)
+                    if (RowTargetToken(node) is { } lt)
                         refs.Add((lt, false));
+                    break;
+                // A grand staff's staves ARE StaffRenderSyntax nodes, so they arrive here
+                // through the same case rather than needing one of their own.
+                case StaffRenderSyntax:
+                case TabRenderSyntax:
+                    CollectAttachedTracks(node, refs);
                     break;
                 case ChordPartBlockSyntax c when c.PartName is { Length: > 0 } cn:
                     chords.Add(cn);
@@ -195,7 +203,49 @@ public static class PartReferenceFinder
                     lyrics.Add(ln);
                     break;
             }
-        return new RowReferences(refs, chords, lyrics);
+        return new TrackReferences(refs, chords, lyrics);
+    }
+
+    /// <summary>
+    /// The track names a <c>staff</c> or <c>tab</c> render item ATTACHES:
+    /// <c>with chords NAME [as …]</c> and <c>with lyrics NAME</c>, repeatable and in any
+    /// order — the tails that <see cref="StaffPartToken"/> and <see cref="TabPartToken"/>
+    /// cut off because they are not the part name.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors RenderSpecParser.ParseStaff's clause scan, which is what decides whether a
+    /// name is actually READ: a <c>with</c> in the last two slots has no name after it and
+    /// attaches nothing, so it is not a reference here either. The scan starts at slot 1
+    /// because both parsers require a target before the first <c>with</c>
+    /// (<c>firstWith &gt;= 1</c> there).
+    /// <para>
+    /// ⚠️ A ZERO-WIDTH TOKEN IS NOT A REFERENCE — same rule, same reason as
+    /// <see cref="RowTargetToken"/>: a missing name already reports "'with chords' needs a
+    /// name" from the parser, and "Undefined chords part: ''" under it would say less.
+    /// </para>
+    /// <para>
+    /// ⚠️ Reading the raw token run rather than RenderSpecParser's edited copy is safe
+    /// because the two edits it makes first — dropping a leading <c>~</c> and the display
+    /// string — both remove tokens that the parser only ever emits BEFORE the first
+    /// <c>with</c>, so no [with][kind][name] triple shifts. The attachment name itself is
+    /// never a string: ExpectAttachmentName takes a part-name token or none.
+    /// </para>
+    /// </remarks>
+    private static void CollectAttachedTracks(
+        SyntaxNode node, List<(SyntaxTokenNode, bool)> refs)
+    {
+        var toks = TargetTokens(node);
+        for (int i = 1; i + 2 < toks.Count; i++)
+        {
+            if (toks[i].Kind != SyntaxKind.WithKeyword)
+                continue;
+            bool isChord = toks[i + 1].Kind == SyntaxKind.ChordsKeyword;
+            if (!isChord && toks[i + 1].Kind != SyntaxKind.LyricsKeyword)
+                continue;
+            if (toks[i + 2].Text.Length > 0)
+                refs.Add((toks[i + 2], isChord));
+            i += 2; // the name; the loop's ++ steps past it
+        }
     }
 
     /// <summary>
@@ -220,9 +270,9 @@ public static class PartReferenceFinder
     /// <summary>
     /// The part token in a <c>staff</c> render item: skip a leading <c>~</c>
     /// (label suppression) and the per-score display string, cut off the
-    /// <c>with chords …</c> tail (a different, chord-part name), then take the
-    /// first token that is not a clef keyword. LILYPOND-REF is n/a — this mirrors
-    /// RenderSpecParser.ParseStaff.
+    /// <c>with chords …</c> tail (a different, chord-part name — collected by
+    /// <see cref="CollectAttachedTracks"/>), then take the first token that is not a clef
+    /// keyword. LILYPOND-REF is n/a — this mirrors RenderSpecParser.ParseStaff.
     /// </summary>
     private static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
     {
@@ -285,12 +335,12 @@ public static class PartReferenceFinder
     /// a reference (LilySharpLanguageServer.Navigation).
     /// </summary>
     /// <remarks>
-    /// ⚠️ NOT THE SAME NAME AS <c>staff … with chords NAME</c>, which
-    /// <see cref="StaffPartToken"/> deliberately cuts off. That one names a chord row
-    /// ATTACHED to a staff and is resolved elsewhere; this one is a row of its own, and
-    /// MeasureCollector matches it against the same <c>voiceName</c> a <c>staff</c> target
-    /// does (`renderSpec.Items.OfType&lt;ChordRowSpec&gt;().Any(c =&gt; c.PartName ==
-    /// voiceName)`). Same namespace, so the same check.
+    /// The row is a track of its own, and MeasureCollector matches it against the same
+    /// <c>voiceName</c> a <c>staff</c> target does (`renderSpec.Items.OfType&lt;ChordRowSpec&gt;()
+    /// .Any(c =&gt; c.PartName == voiceName)`). The attachment form
+    /// <c>staff … with chords NAME</c> names the SAME namespace and is collected by
+    /// <see cref="CollectAttachedTracks"/> — from the tail <see cref="StaffPartToken"/> cuts
+    /// off, because there the name is not the part.
     /// <para>
     /// ⚠️ A ZERO-WIDTH TOKEN IS NOT A REFERENCE. When the name fails to parse the slot holds
     /// a missing token whose text is empty; reporting it would put "Undefined part: ''"
@@ -298,7 +348,7 @@ public static class PartReferenceFinder
     /// language server skips it.
     /// </para>
     /// </remarks>
-    private static SyntaxTokenNode? RowPartToken(SyntaxNode node)
+    private static SyntaxTokenNode? RowTargetToken(SyntaxNode node)
         => node.GetChild(1) is SyntaxTokenNode t && t.Text.Length > 0 ? t : null;
 
 

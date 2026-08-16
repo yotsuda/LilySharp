@@ -292,4 +292,89 @@ $undefined2
         Assert.Single(undef);
         Assert.Contains("'m'", undef[0].Message);
     }
+
+    // ── staff/tab ATTACHMENTS: `with chords NAME` / `with lyrics NAME` ──
+
+    /// <summary>
+    /// The attachment form names the same two track namespaces as a row, and had the same
+    /// silence: `staff m with chords progg` passed `lysc check` clean and drew no chord line
+    /// — MEASURED, the typo's SVG is byte-identical to the same score with the clause
+    /// deleted, for all three spellings (`with chords`, `with lyrics`, `tab … with chords`).
+    /// </summary>
+    /// <remarks>
+    /// A TIGHTENING, which is why it lands before 0.3.0: a spelling accepted at release
+    /// cannot be taken back afterwards. Measured over every .lys in the tree before and
+    /// after — see the commit message.
+    /// </remarks>
+    private const string AttachSheet = """
+        time 4/4
+        part m { clef treble }
+        section Main {
+          m { c4 d e f | }
+          chords prog { c1 | }
+          lyrics words { la la la la | }
+        }
+        form main { Main }
+        score main "x" {
+        """;
+
+    [Theory]
+    [InlineData("staff m with chords progg", "progg")]
+    [InlineData("staff m with lyrics wordz", "wordz")]
+    // The tab form spells the same attachment and was equally unchecked.
+    [InlineData("tab m with chords progg", "progg")]
+    // A stack of verses: the SECOND one is the typo, so a scan that stops at the first
+    // `with` would pass this.
+    [InlineData("staff m with lyrics words with lyrics wordz", "wordz")]
+    // Any order, and past a chord-display selector — the `as both` must not be read as the
+    // name of the clause after it.
+    [InlineData("staff m with chords prog as both with lyrics wordz", "wordz")]
+    // Inside a grand staff, whose staves are the same node kind.
+    [InlineData("grandStaff { staff m with chords progg  staff m }", "progg")]
+    public void Validate_AttachmentNamesUndefinedTrack_ReportsError(string scoreBody, string bad)
+    {
+        var undef = Refs(AttachSheet + scoreBody + " }")
+            .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains(bad, undef[0].Message);
+    }
+
+    [Theory]
+    [InlineData("staff m with chords prog")]
+    [InlineData("staff m with lyrics words")]
+    [InlineData("tab m with chords prog")]
+    [InlineData("staff m with chords prog as roman with lyrics words")]
+    [InlineData("staff m with lyrics words with chords prog")]
+    // A suppressed label and a per-score display name both sit BEFORE the first `with`, so
+    // neither shifts the clause — the reason the raw token run can be read positionally.
+    [InlineData("staff ~m with chords prog")]
+    [InlineData("staff m \"Melody\" with lyrics words")]
+    [InlineData("staff treble m with chords prog")]
+    public void Validate_AttachmentNamesDefinedTrack_NoError(string scoreBody)
+        => Assert.DoesNotContain(Refs(AttachSheet + scoreBody + " }"),
+            d => d.Code == DiagnosticCodes.UndefinedPart);
+
+    /// <summary>The two namespaces stay apart in the attachment form as well.</summary>
+    [Theory]
+    [InlineData("staff m with chords words", "words")]
+    [InlineData("staff m with lyrics prog", "prog")]
+    [InlineData("staff m with chords m", "m")]  // …and a staff part is not a chord track
+    public void Validate_AttachedTracksKeepTheirNamespaces(string scoreBody, string bad)
+    {
+        var undef = Refs(AttachSheet + scoreBody + " }")
+            .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains(bad, undef[0].Message);
+    }
+
+    /// <summary>
+    /// A `with chords` with NO name already reports "'with chords' needs a name" from the
+    /// parser and attaches nothing. Adding "Undefined chords part: ''" under it would say
+    /// less than the message already there, so the zero-width token is not a reference —
+    /// the same rule the row targets follow.
+    /// </summary>
+    [Fact]
+    public void Validate_AttachmentWithNoName_ReportsNoUndefinedTrack()
+        => Assert.DoesNotContain(Refs(AttachSheet + "staff m with chords }"),
+            d => d.Code == DiagnosticCodes.UndefinedPart);
 }

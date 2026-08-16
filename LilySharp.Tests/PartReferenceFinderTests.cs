@@ -213,18 +213,18 @@ public class PartReferenceFinderTests
     [Fact]
     public void RowRenderTargetsAreCollectedAndTagged()
     {
-        var rows = PartReferenceFinder.Rows(Root(RowSheet)).References;
+        var rows = PartReferenceFinder.Tracks(Root(RowSheet)).References;
 
         Assert.Collection(rows,
-            r => { Assert.Equal("prog", r.Token.Text); Assert.True(r.IsChordRow); },
-            r => { Assert.Equal("words", r.Token.Text); Assert.False(r.IsChordRow); });
+            r => { Assert.Equal("prog", r.Token.Text); Assert.True(r.IsChord); },
+            r => { Assert.Equal("words", r.Token.Text); Assert.False(r.IsChord); });
     }
 
     /// <summary>The names those rows can resolve to come from the NAMED blocks, per kind.</summary>
     [Fact]
     public void RowTrackNamesComeFromTheirOwnNamedBlocks()
     {
-        var rows = PartReferenceFinder.Rows(Root(RowSheet));
+        var rows = PartReferenceFinder.Tracks(Root(RowSheet));
         Assert.Equal(new[] { "prog" }, rows.ChordTracks.OrderBy(s => s));
         Assert.Equal(new[] { "words" }, rows.LyricTracks.OrderBy(s => s));
     }
@@ -238,7 +238,7 @@ public class PartReferenceFinderTests
     [Fact]
     public void UnnamedChordOrLyricBlockDeclaresNoTrack()
     {
-        var rows = PartReferenceFinder.Rows(Root("""
+        var rows = PartReferenceFinder.Tracks(Root("""
             section Main {
               m { c4 d e f | }
               chords { c1 | }
@@ -266,6 +266,72 @@ public class PartReferenceFinderTests
         Assert.Empty(PartReferenceFinder.Occurrences(root, "prog"));
         Assert.Empty(PartReferenceFinder.Occurrences(root, "words"));
         Assert.Empty(PartReferenceFinder.Occurrences(root, "roman"));
+    }
+
+    // ── staff/tab attachments: the same two namespaces, from the tail the part
+    //    selection cuts off ──
+
+    private const string AttachSheet = """
+        part m { clef treble }
+        section Main {
+          m { c4 d e f | }
+          chords prog { c1 | }
+          lyrics words { la la la la | }
+        }
+        form main { Main }
+        score main "x" {
+          staff ~m "Melody" with chords prog as roman with lyrics words
+          tab m with chords prog
+        }
+        """;
+
+    /// <summary>
+    /// <c>with chords NAME</c> / <c>with lyrics NAME</c> are track references too, tagged
+    /// by namespace — and nothing else in the clause is: not the display selector after a
+    /// chord attachment, not the per-score display string, not the part.
+    /// </summary>
+    [Fact]
+    public void AttachedTracksAreCollectedAndTagged()
+    {
+        var refs = PartReferenceFinder.Tracks(Root(AttachSheet)).References;
+
+        Assert.Collection(refs,
+            r => { Assert.Equal("prog", r.Token.Text); Assert.True(r.IsChord); },
+            r => { Assert.Equal("words", r.Token.Text); Assert.False(r.IsChord); },
+            r => { Assert.Equal("prog", r.Token.Text); Assert.True(r.IsChord); });
+    }
+
+    /// <summary>
+    /// And they stay OUT of the part-rename set for the same reason the rows do — the
+    /// language server resolves those names itself, and more completely.
+    /// </summary>
+    [Fact]
+    public void AttachedTrackNamesAreNotPartNames()
+    {
+        var root = Root(AttachSheet);
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "prog"));
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "words"));
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "roman"));
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "Melody"));
+        // header, section block, staff render, tab render — and nothing from the tails.
+        Assert.Equal(4, PartReferenceFinder.Occurrences(root, "m").Count);
+    }
+
+    /// <summary>
+    /// A <c>with</c> whose name is missing attaches nothing (RenderSpecParser needs the name
+    /// slot to exist), so it is not a reference — the zero-width token would only produce
+    /// "Undefined chords part: ''" under the parser's own "needs a name".
+    /// </summary>
+    [Fact]
+    public void AttachmentWithNoNameIsNotAReference()
+    {
+        var refs = PartReferenceFinder.Tracks(Root("""
+            part m { clef treble }
+            section Main { m { c4 } }
+            form main { Main }
+            score main "x" { staff m with chords }
+            """)).References;
+        Assert.Empty(refs);
     }
 
     [Fact]

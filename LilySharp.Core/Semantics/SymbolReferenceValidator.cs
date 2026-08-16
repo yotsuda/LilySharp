@@ -65,18 +65,20 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                     + $"('{reference.Text} {{ … }}' in a section) or a header "
                     + $"('part {reference.Text} {{ … }}').");
 
-        // The score's ROW targets name their own tracks, not the staff parts above: a
-        // `chords NAME` row is declared by a named `chords NAME { … }` block and a
-        // `lyrics NAME` row by a named `lyrics NAME { … }` block. Checked against those
-        // sets rather than folded into _definedParts, because folding them would make
-        // `staff prog` legal on a chord track — the empty staff this diagnostic exists to
-        // catch. Until this was written the row targets were checked by NOTHING: a typo in
-        // `chords progg` passed `lysc check` clean and silently drew no row.
-        var rows = PartReferenceFinder.Rows(root);
-        foreach (var (token, isChordRow) in rows.References)
+        // The score's TRACK references name their own tracks, not the staff parts above: a
+        // `chords NAME` row — or a `staff X with chords NAME` attachment — is declared by a
+        // named `chords NAME { … }` block, and the two lyric spellings by a named
+        // `lyrics NAME { … }` block. Checked against those sets rather than folded into
+        // _definedParts, because folding them would make `staff prog` legal on a chord track
+        // — the empty staff this diagnostic exists to catch. Until this was written the
+        // track references were checked by NOTHING: a typo in `chords progg`, or in
+        // `with chords progg`, passed `lysc check` clean and silently drew no row (measured:
+        // the typo's SVG is byte-identical to the same score with the clause deleted).
+        var tracks = PartReferenceFinder.Tracks(root);
+        foreach (var (token, isChord) in tracks.References)
         {
-            string keyword = isChordRow ? "chords" : "lyrics";
-            if ((isChordRow ? rows.ChordTracks : rows.LyricTracks).Contains(token.Text))
+            string keyword = isChord ? "chords" : "lyrics";
+            if ((isChord ? tracks.ChordTracks : tracks.LyricTracks).Contains(token.Text))
                 continue;
             _diagnostics.Error(token.Span, DiagnosticCodes.UndefinedPart,
                 $"Undefined {keyword} part: '{token.Text}'. Define it with a named block "
