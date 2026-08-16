@@ -1125,10 +1125,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⚠️ **`HasUsings` は root の子だけを見る綴りのまま**（打鍵経路）。**directive は root の子より深くならない**
   はもう偽なので、**それを守っていた網を `EveryUsingHasUsingsSkips_IsReported`
   （root-children の問いが取りこぼすものは全部 error になっている）へ書き直した。**
-- ⚠️ ★ **「Guards X」と名乗る fixture の監査＝第190 で 10 冊足した。残りは 6 冊**（起票は第183）。
+- ✅✅ ★★★ **「Guards X」と名乗る fixture の監査は第190 で閉じた（16 冊測って未測定 0）**（起票は第183）。
   ⚠️ ★ **まず数え方**（§0）: 「21 冊」は再現しない。**`Fixtures\**\*.lys` で `guard(s)` を
-  語境界で grep すると 27 冊**（うち **3 冊は「✔ VERIFIED TO GUARD」を自分で名乗る既済**、
-  第183 が 8 冊、**第190 が 10 冊**、**残り 6 冊が未測定**）。
+  語境界で grep すると 27 冊**（**3 冊は「✔ VERIFIED TO GUARD」を自分で名乗る既済**、
+  第183 が 8 冊、**第190 が 16 冊**＝**27/27 が測定済み**）。
   **手順は RULES §5.4**（X を 1 行毒して 1 回ビルドし、**全 fixture** を描いてハッシュ比較）。
   ⚠️⚠️ ★★ **読む数は 2 つ**——**名乗る本が動いたか**と**何冊でも動いたか**。
   **0 冊なら「その fixture は盲目」ではなく「毒が外れた」**（この便で 3 回起きた）。
@@ -1166,9 +1166,25 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   **`Score.IsMultiVoice` のほうは本番の読み手が 0**（`MultiVoiceRenderingTests` の 2 本だけ）。
   ⇒ **`multivoice-voice2-tuplet` の「梁」の半分は観測済みだが、「括弧の向き」の半分は
   この入力では説明できない**。**次に触るなら、括弧を下に置いている行を先に特定すること。**
-  ★ **残る 6 冊は全部 `voice { } { }` 族**＝`two-voice-polyphony`・`voice-tuplet`・
+  ✅✅ **残る 6 冊（`voice { } { }` 族）も同じ便で閉じた**＝`two-voice-polyphony`・`voice-tuplet`・
   `voice-dynamics`・`voice-dynamics-mid`・`voice-grandstaff`・`voice-mixed`。
-  **`IsMultiVoice` の毒はこの 6 冊のどれも動かさなかった**ので、**各自の綴りに毒を当て直すこと。**
+  **`VoiceDefaults.GetDefaultStemUp` を全声部 null にすると 31 冊が動き、6 冊とも入る。**
+  ⇒ ★★★ **この島の骨＝多声部の符尾方向は 2 軒ある**（§2A の顔）。
+  **⒜ `GetDefaultStemUp`**＝**collector が `MeasureCollector.cs:2061` で item へ*書き戻す***（`StemUpOverride`）／
+  **⒝ `GetDefaultStemUpAt`**＝**span で narrow して*生で読む*約 10 の消費者**
+  （renderer・BeamDetector・Skyline・Dynamic・Trill・ElementCoordinator・Articulation…）。
+  ⚠️⚠️ **⒝ だけ毒すと 7 冊動くが、この 6 冊は 1 冊も動かない**——**書き戻しの方から描いているから**。
+  ⇒ ★★ **「毒が届かない」は「その fixture が盲目」ではなく「軒を間違えた」ことがある。**
+  **同じ量に軒が 2 つあるなら、毒は*規則*に当てる（両軒の上流）。**
+  ⚠️ **`voice-dynamics-mid` の「小節オフセット」の主張だけは、この毒では*分離できていない***
+  （span の第2声部が生きて置かれることまでしか言えない）。**専用の毒がまだ 1 本要る。**
+  ⚠️⚠️ ★★★ **計器が 1 度嘘をついた——原因は改行**。掃きが `.lys` を*生読み*していたので、
+  **CRLF で書き戻した 10 冊が無関係な毒で「動いた」ことになった**（`SvgSnapshotTests:721` は
+  **わざと LF 正規化して読む**——data-pos をプラットフォーム非依存にするため。同じことを掃きも
+  しなければならない）。**`.gitattributes` は `*.lys text eol=lf`**。
+  ⇒ ★★ **`.lys` を書くツールは必ず LF で書き、読むときは `.Replace("\r\n","\n")`。**
+  **suite は緑のままだったので、赤で気づく道は無かった**——**気づいたのは、動くはずのない
+  単声部の本が「動いた」と出たから**（＝掃きの結果を*説明できるか*で読む）。
   ★ **第183 の済み 8 冊**（据え置き）: **`<X>Item.StaffIndex` routing を名乗る 7 冊**
   （arpeggio / articulations / dynamics / figbass-chordname / grace / trillspan / tuplet の各 `-lower-staff`）は
   **`MeasureCollector.cs:1583` の `_currentStaffIndex` を 0 に固定する毒 1 つで 7 冊とも動いた**
