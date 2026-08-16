@@ -48,11 +48,20 @@ namespace LilySharp.Core.Semantics;
 /// (`test/section-octave-reset`: 13 written, 26 drawn under the old reading).
 /// </para>
 /// <para>
-/// ⚠️ A position that two scores read differently keeps the FIRST score's reading. No
-/// book in the tree has one — the only construct that could is a per-score
-/// <c>transpose</c>, and that construct is under its own suspicion (HANDOFF §2F:
-/// score-level <c>transpose d</c> moves c by a major third where the part-level spelling
-/// moves it by a second), so there is nothing yet to report about it truthfully.
+/// ⚠️ A position that two scores read differently keeps the FIRST score's reading, and
+/// says nothing about the disagreement. No book in the tree has one (measured over the
+/// same 300); the only construct that can make one is a per-score <c>transpose</c>.
+/// </para>
+/// <para>
+/// ⚠️ That construct WORKS now, so the case is writable — this paragraph used to say it
+/// was "under its own suspicion" and that there was therefore nothing to report
+/// truthfully, which <c>de4acbd0</c> ended in the same session (a score's own
+/// <c>transpose</c> was being counted as the file's default, so the declaring score got
+/// it twice and its neighbour got it once unasked). Measured: two scores over one form,
+/// one with <c>transpose d</c>, draw different pages (135,854 vs 135,903 bytes, distinct
+/// hashes) while this report answers C4 for the written <c>c</c> and warns about nothing.
+/// Whether to warn — and in what words — is the open question, not whether the situation
+/// exists.
 /// </para>
 /// <para>
 /// ⚠️ A part that NO score renders is absent from this list. The validators still check
@@ -74,8 +83,16 @@ public static class ResolvedPitches
         int collected = 0;
 
         // A scoreless file gets one pass with no spec — the same fall-through
-        // SemanticValidation.TryCollect(tree) takes.
-        foreach (var spec in specs.Count > 0 ? specs : [null])
+        // SemanticValidation.TryCollect(tree) takes. Written as an assignment rather than
+        // `specs.Count > 0 ? specs : [null]`, because a conditional takes its natural type
+        // from the non-empty arm and then converts `[null]` against RenderSpec, NOT
+        // RenderSpec? (CS8625). Assigning gives the collection expression the declared type
+        // directly; the covariant conversion means the spec'd path enumerates the list
+        // itself, with no copy.
+        IEnumerable<RenderSpec?> passes = specs;
+        if (specs.Count == 0)
+            passes = [null];
+        foreach (var spec in passes)
         {
             var collector = SemanticValidation.TryCollect(tree, spec);
             if (collector == null)
