@@ -11,7 +11,7 @@
 //   7 拡張       多小節休符(R1*N) / 運指(@finger(N)) / ハーフタイ / 和音タイ
 //   8 反復       インライン・ボルタ(|: … [1.…] :| [2.…]) / 反復回数(:|*N)
 //   9 多声部     1 段に 2 声部 (voice { } { })
-//  10 構造       part / phrase / section / structure / render
+//  10 構造       part / phrase / section / form / score
 //
 //  ※ オクターブは相対式（各音は直前の音の最も近い同名音）。' で 1 oct 上、
 //    , で 1 oct 下に補正する。上行音階の後は , で戻すと五線内に収まる。
@@ -25,7 +25,11 @@ tempo 96
 time 4/4
 key g major
 
-// --- パート定義（G1: ヘッダ属性はすべてコロン形式 attr: value）---------------
+// --- パート定義（G1: ヘッダ属性はすべて裸で書く。コロン形式は無い）-----------
+// ⚠️ この行は 2026-08-16 まで「すべてコロン形式 attr: value」と書いていた。実測：
+//    `part m { clef: treble }` は error「Attributes are written bare (e.g. 'clef treble');
+//    the ':' form has been removed.」で、真下の 2 つの part 宣言自身が裸で書いている。
+//    正典も同じ（SYNTAX_REFERENCE.md「Header attributes are written bare (no colon)」）。
 part rh {
   clef treble
 }
@@ -33,7 +37,12 @@ part lh {
   clef bass
 }
 
-// --- フレーズ（G2: 名前付き楽譜は phrase のみ。参照は $名前）-----------------
+// --- フレーズ（G2: 名前付き楽譜は phrase のみ。参照は $名前 か 裸の名前）-----
+// ⚠️ 「参照は $名前」だけだと、この本の section が嘘になる——下の A〜D は裸で書いている。
+//    実測（2026-08-16・8 綴り × 両オクターブモード）：$theme と theme は完全に同じで、
+//    `'` `,` も `(3)` も同じに効く。⚠️ 正典 3 冊はどれを教えるかで食い違っている
+//    （GRAMMAR.md の production は裸・SYNTAX_REFERENCE.md と GRAMMAR_FOR_LLM.md は $）
+//    ＝どちらを正典にするかは決定なので HANDOFF §2F。ここは「両方通る」とだけ言う。
 
 // 1 基本記譜：ピッチ / オクターブ / 付点 / 休符 / 和音
 phrase p_basics {
@@ -117,7 +126,9 @@ phrase p_voices {
 // 伴奏（バス声部）— 各セクションで使い回す
 phrase p_bass { g2 c | g4 a b c | g2~ g4 r | d2 g | }
 
-// --- 構造（section → structure → render）------------------------------------
+// --- 構造（section → form → score）-------------------------------------------
+// ⚠️ 旧名 structure / render は削除済み。実測：どちらも error になる（この本自身は
+//    下で form / score と書いている＝見出しだけが古いままだった）。
 section A {
   rh { p_basics p_accidentals p_expression }
   lh { p_bass p_bass p_bass }
@@ -142,6 +153,13 @@ score main "grammar-tour" {
   staff lh
 }
 
-// 歌詞(lyrics)は単一譜のときに描画される。構文例は samples/test/lyrics.lys:
-//   section Main { melody { c4 d e f | g2 g | } lyrics { Twin- kle twin- kle | star~ | } }
-// （- で音節区切り、~ でメリスマ。グランドスタッフでの歌詞は現状未対応）
+// 歌詞(lyrics)。⚠️ この 3 行は 2026-08-16 まで 3 つとも偽だった——書いてあった例は
+// いま error（無名 lyrics）・指していたパスは存在せず・「グランドスタッフでは未対応」は
+// 実測で覆った。現行の綴りは LilySharp.Tests/Fixtures/test/lyrics.lys:
+//   section Main { melody { c4 d e f | g2 g | } lyrics words { Twin- kle twin- kle | star~ | } }
+//   score main { staff melody with lyrics words }
+// （- で音節区切り、~ でメリスマ。トラックは名前付きで、score の `with lyrics NAME` が結ぶ）
+// ⚠️ 無名の `lyrics { … }` を section に書くと error：「an unnamed 'lyrics { ... }' block has
+//    no way to be attached」——参照する術が無いため。
+// ⚠️ グランドスタッフでも描かれる（実測：grandStaff { staff rh with lyrics w  staff lh } で
+//    4 音節すべてが出る。with lyrics を外すと 0）。

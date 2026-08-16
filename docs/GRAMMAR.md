@@ -553,7 +553,16 @@ ChordNote      = PitchToken , { Annotation } ;
      same close-position chord but the next bare c stays C4. (A deliberate Lily#
      divergence from LilyPond's per-member relative chain.) In 'octave absolute' mode
      every member is a fixed pitch — no stacking, no frame — and the trailing marks
-     still shift the whole group. *)
+     are INTENDED to still shift the whole group.
+     ⚠️ They do not, as of 2026-08-16, and nothing says so: measured with
+     'octave absolute', <c e g>' and <c e g>, both resolve to C4 E4 G4, the same as the
+     unmarked chord, with no diagnostic. In relative mode the same two give C5 E5 G5 and
+     C3 E3 G3. The mark is parsed and then dropped. The same silence covers a phrase
+     reference's trailing marks (see PhraseRef), while the GLUED '(N)' interval on a
+     phrase reference DOES apply in absolute mode — so it is the octave shift
+     specifically, not the suffix, that is lost. No book in the tree writes either
+     spelling under 'octave absolute' (0 of the 319 that declare it), which is why this
+     sentence is the only observer it has ever had. Filed in HANDOFF §2F. *)
 
 (* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
    in SEQUENCE and EQUALLY SUBDIVIDE the group's total, so a bare number is always a scale
@@ -619,9 +628,20 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    ']' is OPTIONAL — present draws the right cap (closed ending), absent leaves it open. *)
 InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , [ ']' ] ;
 Beam           = '[' | ']' ;
-PhraseRef      = Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
-                 (* A movable phrase: it lands in the AMBIENT key at the reference
-                    site; trailing marks shift whole octaves (Chorus' / Chorus,). A
+PhraseRef      = [ '$' ] , Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
+                 (* ⚠️ The '$' is OPTIONAL and the two spellings are the same thing —
+                    measured 2026-08-16 over eight forms in both octave modes ($theme,
+                    theme, theme', theme'(3), … all identical). This production named
+                    only the bare form while SYNTAX_REFERENCE.md and GRAMMAR_FOR_LLM.md
+                    teach '$name' and every example here writes '$'. Both compile, so
+                    DocExamplesParseTests cannot see three documents disagreeing; WHICH
+                    one to teach is a decision, filed in HANDOFF §2F. This line says what
+                    the parser accepts, which is not the same question.
+                    A movable phrase: it lands in the AMBIENT key at the reference
+                    site; trailing marks shift whole octaves (Chorus' / Chorus,).
+                    ⚠️ Trailing marks are DROPPED in 'octave absolute' — measured, no
+                    diagnostic, same silence as a chord's (see Chord above); the '(N)'
+                    below still applies there. A
                     GLUED '(N)' after at least one mark is a DIATONIC interval:
                     Melody'(3) plays the phrase a third UP in the ambient key (the
                     third's quality follows the scale), Motif,(2) a second down —
