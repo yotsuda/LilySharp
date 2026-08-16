@@ -366,12 +366,30 @@ internal sealed class VerticalSkyline
     /// resolving all buildings at once equals merging them one at a time — the
     /// property the batch path relies on.
     /// </summary>
+    /// <param name="allBuildings">⚠️ MUST BE THE CALLER'S OWN LIST, never
+    /// <see cref="_buildings"/> itself: this rebuilds in place, so it clears
+    /// <see cref="_buildings"/> before the walk and uses it as the result buffer. Both
+    /// call sites hand over a fresh <c>new List&lt;SkylineBuilding&gt;(_buildings)</c>,
+    /// which is what makes that sound — and what saves a whole second full-size list plus
+    /// its copy-back on EVERY merge. MEASURED (session 191, Release, keystroke allocation):
+    /// merging is the hot allocator of a script-dense page and the buffer was the larger
+    /// half of it.</param>
     private void RebuildKeepingHighest(List<SkylineBuilding> allBuildings)
     {
+        // The contract in the param remark, said by the machine rather than by prose: a
+        // third caller that handed over _buildings itself would have this method clear the
+        // very list it is walking, and the damage — a silently truncated skyline — is the
+        // kind that comes out as spacing, not as a throw.
+        System.Diagnostics.Debug.Assert(
+            !ReferenceEquals(allBuildings, _buildings),
+            "RebuildKeepingHighest rebuilds into _buildings; its input must be a separate list");
+
         allBuildings.Sort((a, b) => a.Start.CompareTo(b.Start));
 
-        // Rebuild skyline keeping highest at each point
-        var result = new List<SkylineBuilding>();
+        // Rebuild skyline keeping highest at each point, straight into this skyline's own
+        // list — allBuildings already holds everything that was in it.
+        var result = _buildings;
+        result.Clear();
 
         foreach (var building in allBuildings)
         {
@@ -402,9 +420,6 @@ internal sealed class VerticalSkyline
                 MergeOverlapping(result, building);
             }
         }
-
-        _buildings.Clear();
-        _buildings.AddRange(result);
     }
 
     /// <summary>
