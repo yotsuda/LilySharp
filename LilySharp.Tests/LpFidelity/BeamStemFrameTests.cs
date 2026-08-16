@@ -119,15 +119,23 @@ public class BeamStemFrameTests
     }
 
     /// <summary>
-    /// The SAME two books but for the other voice's second beat: one where the down-stem
-    /// beam's first note shares its column with an up-stem note, one where it stands alone.
-    /// The middle-line <c>bes8.</c> is the note under test in both.
+    /// Two books differing in ONE note: a beamed <c>f8.</c> whose column the other voice
+    /// crosses into, and the same music with that other note replaced by a rest. The
+    /// <c>f8.</c> — the page's lowest notehead in both — is the note under test.
     /// </summary>
+    /// <remarks>
+    /// The beam is in the UP voice on purpose. LilyPond pins the LEFTMOST group
+    /// (note-collision.cc:441,462-463), which for one opposite pair is the down group, so
+    /// the up voice is the one a collision moves and therefore the only one whose beamed
+    /// stem can be left behind. A down-stem beam is reachable too — the negative-shift
+    /// branch (note-collision.cc:202-211, a fuller-dotted down head) makes the UP group the
+    /// pin instead — and is NOT covered here; stated rather than left to be assumed.
+    /// </remarks>
     private const string CollidedBeamSrc = """
         time 2/4
 
         part melody {
-          section A { voice { ges' f } { aes' bes8. aes16 } }
+          section A { voice { ges' f8. ges16 } { aes' bes4 } }
         }
 
         form main { ~A }
@@ -139,7 +147,7 @@ public class BeamStemFrameTests
         time 2/4
 
         part melody {
-          section A { voice { ges' r } { aes' bes8. aes16 } }
+          section A { voice { ges' f8. ges16 } { aes' r } }
         }
 
         form main { ~A }
@@ -162,12 +170,21 @@ public class BeamStemFrameTests
     /// from the measure layout alone.
     /// </para>
     /// <para>
-    /// MEASURED (LilyPond 2.26.0, twin of this book): LilyPond draws the dotted eighth's head
-    /// at 24.0881 and its stem at 24.1531 — 0.0650 apart, its attachment, collision or no
-    /// collision (the twin of <see cref="LoneBeamSrc"/> puts BOTH at the identical x, so the
-    /// down column is the one LilyPond does not move). Lily# drew head 14.77 / stem 15.10 —
-    /// 0.33 apart, the stem left standing on the 0.26 the head had moved off, which put it
-    /// inside the OTHER voice's notehead.
+    /// MEASURED (LilyPond 2.26.0, twins of the book this was first reported on —
+    /// <c>voice { ges' f } { aes' bes8. aes16 }</c>, the mirror of these two with the beam in
+    /// the DOWN voice): LilyPond drew that beamed head at 24.0881 and its stem at 24.1531,
+    /// 0.065000 apart, and the same twin with the other voice's note replaced by a rest put
+    /// BOTH at the identical x. Lily# drew head 14.77 / stem 15.10 — 0.325840 apart, the stem
+    /// left standing on the 0.260840 the head had moved off, which put it inside the other
+    /// voice's notehead.
+    /// </para>
+    /// <para>
+    /// ⚠️ THAT BOOK NO LONGER REACHES THIS BRANCH, which is why these two are spelt with the
+    /// beam in the up voice. It was the DOWN voice that moved only because the pin was
+    /// inverted for a crossing (NoteCollision's <c>left_most</c>, the workaround this defect
+    /// had grown); with the pin back to LilyPond's, the down group is the one that stays and
+    /// a down-stem beam in a two-voice column is never displaced at all. Keeping the original
+    /// book here would have left a point whose positive control cannot fire.
     /// </para>
     /// <para>
     /// Stated as an identity so it needs no attachment constant and survives a font change:
@@ -191,42 +208,47 @@ public class BeamStemFrameTests
     [Fact]
     public void ACollidedBeamsStem_StandsOnItsOwnShiftedHead_NotOnTheColumnItLeft()
     {
-        var (collidedHead, collidedStem, collidedDump) = MiddleLineHeadAndStem(CollidedBeamSrc);
-        var (loneHead, loneStem, loneDump) = MiddleLineHeadAndStem(LoneBeamSrc);
+        var (collidedHead, collidedStem, collidedDump) = BeamedNoteHeadAndStem(CollidedBeamSrc);
+        var (loneHead, loneStem, _) = BeamedNoteHeadAndStem(LoneBeamSrc);
 
         // Positive control FIRST: without a real shift the identity below is vacuous.
+        // MEASURED: 0.260840 = 2 x 0.1 x 1.304200 — note-collision.cc:335 (either head
+        // dotted, and this one is) times the down head's width at :447.
         Assert.True(
             Math.Abs(collidedHead - loneHead) > 0.2,
-            $"the colliding book drew the middle-line head at x={collidedHead:F6} and the "
-            + $"lone book at x={loneHead:F6} — the note-collision shift this point is about "
-            + "did not happen, so its identity would hold for an empty reason.\n"
+            $"the colliding book drew the beamed head at x={collidedHead:F6} and the lone "
+            + $"book at x={loneHead:F6} — the note-collision shift this point is about did "
+            + "not happen, so its identity would hold for an empty reason.\n"
             + collidedDump);
 
         Assert.Equal(loneStem - loneHead, collidedStem - collidedHead, 9);
     }
 
     /// <summary>
-    /// The one middle-line notehead of these books and the down stem hanging from it, plus the
-    /// drawn-geometry dump for a failure message.
+    /// The beamed note under test — the page's LOWEST notehead in both books, which is the
+    /// <c>f8.</c> — and the up stem rising from it, plus the drawn geometry for a failure
+    /// message.
     /// </summary>
-    private static (double HeadX, double StemX, string Dump) MiddleLineHeadAndStem(string src)
+    private static (double HeadX, double StemX, string Dump) BeamedNoteHeadAndStem(string src)
     {
         var page = RenderedGeometry.Render(src);
-        double middle = page.StaffRefpoints()[0];
 
+        // Selecting by pitch, not by index: the two books hold a different NUMBER of heads
+        // (one has a rest where the other has a note), so no index means the same note in
+        // both. The f8. is the lowest note either book has, and by more than a step.
         var head = page.Glyphs
-            .Where(g => g.Glyph == EmmentalerGlyphs.NoteheadBlack
-                        && Math.Abs(g.Y - middle) < 1e-6)
-            .Single();
+            .Where(g => g.Glyph == EmmentalerGlyphs.NoteheadBlack)
+            .OrderByDescending(g => g.Y)
+            .First();
 
-        // The down stem hanging from it: a vertical stroke of the beam's own thickness whose
-        // UPPER end is at the head (the attachment is a fraction of a staff space below the
-        // head's centre) and whose lower end is further down the page.
+        // The up stem rising from it: a vertical stroke of the beam's own thickness whose
+        // LOWER end is at the head (the attachment is a fraction of a staff space above the
+        // head's centre) and whose upper end is further up the page.
         var stem = page.Lines
             .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
                         && Math.Abs(l.StrokeWidth - EngravingDefaults.StemThickness) < 1e-9
-                        && Math.Abs(Math.Min(l.Y1, l.Y2) - head.Y) < 0.6
-                        && Math.Max(l.Y1, l.Y2) > head.Y)
+                        && Math.Abs(Math.Max(l.Y1, l.Y2) - head.Y) < 0.6
+                        && Math.Min(l.Y1, l.Y2) < head.Y)
             .Select(l => l.X1)
             .Single();
 

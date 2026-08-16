@@ -198,6 +198,9 @@ public class NoteCollisionTests
         // shift is -1 × 0.5, scaled by extent_up[RIGHT] / extent_down.length() (:343-345)
         // because it is the DOWN group that moves. Book XVF: heads 1.377400 apart = the UP
         // (half) head's ink, and CalculateVoiceOffsets pins the up group at the column.
+        // ⚠️ The pin is the LEFTMOST group, not "the down group" — here the up group's offset
+        // is the NEGATIVE one, so left_most is IT and the down group is what moves right.
+        // The opposite-signed case is Crossing_PinsDownVoice_ShiftsUpVoiceRight_TheWayLeftMostDoes.
         var collision = new NoteCollision();
         var ups = new[] { 4 };
         var downs = new[] { 4 };
@@ -358,12 +361,23 @@ public class NoteCollisionTests
     }
 
     [Fact]
-    public void Crossing_PinsUpVoice_ShiftsDownVoiceLeft()
+    public void Crossing_PinsDownVoice_ShiftsUpVoiceRight_TheWayLeftMostDoes()
     {
-        // The consumer pins the up-stem (frequently beamed) voice at the column
-        // slot and moves the DOWN-stem voice LEFT, so a beamed upper voice keeps
-        // its column-X position. Separation = 2*0.17*width, matching LilyPond's
-        // (which shifts the upper voice right by the same amount).
+        // LILYPOND-REF: lily/note-collision.cc:441,462-463 — left_most starts at 0.0 and
+        // only a NEGATIVE amount moves it, with no branch on collision type. The down
+        // group's amount is the negative one, so the DOWN voice is the one that stays and
+        // the up voice comes right to meet it, by twice the shift.
+        //
+        // MEASURED (LilyPond 2.26.0, twin of scratch/ベースタブLy/collision.lys and the same
+        // book with the up voice's note replaced by a rest): the down head is drawn at
+        // x=24.0881 in BOTH, so the collision does not move it; the up head appears at
+        // 24.3489, i.e. 0.2608 = 2 x 0.1 x 1.3042 to its right.
+        //
+        // ⚠️ THIS TEST USED TO ASSERT THE OPPOSITE, and said so: the up voice was pinned
+        // and the down voice moved left. That was not a reading of LilyPond — it kept the
+        // (frequently beamed) upper voice on its column X because the beam frame did not
+        // carry the collision shift, so a shifted beamed voice drew a skewed beam. The
+        // frame carries it now, so the workaround is gone and this asserts the port.
         var collision = new NoteCollision();
         double w = EngravingDefaults.NoteheadWholeWidth;
 
@@ -377,8 +391,11 @@ public class NoteCollisionTests
         double up = offsets.First(o => o.VoiceId == 1).XOffset;
         double down = offsets.First(o => o.VoiceId == 2).XOffset;
 
-        Assert.Equal(0.0, up, 3);                 // up-stem voice pinned at slot
-        Assert.Equal(-2 * 0.17 * w, down, 2);     // down-stem voice shifts LEFT
+        Assert.Equal(2 * 0.17 * w, up, 2);   // up-stem voice comes RIGHT
+        Assert.Equal(0.0, down, 3);          // down-stem voice is the pin
+        // The separation is the half this change does NOT touch: it was right before and
+        // must be right after, or the pin has been confused with the shift.
+        Assert.Equal(2 * 0.17 * w, up - down, 2);
     }
 
     // --- LILYPOND-REF head wipe conformance tests (I-2) ---

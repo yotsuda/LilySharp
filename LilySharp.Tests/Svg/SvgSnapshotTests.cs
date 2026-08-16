@@ -186,8 +186,9 @@ public class SvgSnapshotTests
         // ledger holds the three heights against LilyPond (beam.quant.over-stem.*);
         // this holds the drawing, and is the only corpus book with the lift in it.
         yield return new object[] { "test/beam-over-stem" };
-        // Crossing voices: the lower (stem-down) voice sits above the upper voice,
-        // so its heads shift LEFT to clear the upper voice's stems (meshing shift).
+        // Crossing voices: the lower (stem-down) voice sits above the upper voice, so the
+        // upper voice's heads move RIGHT to clear its stems (meshing shift). The down group
+        // keeps the column — it is the LEFTMOST, and note-collision.cc:441 pins that.
         yield return new object[] { "test/multivoice-crossing-collision" };
         // Two voices on ONE column pack their accidentals into ONE accidental column,
         // and those accidentals do not ride the collision shift — the ONLY corpus book

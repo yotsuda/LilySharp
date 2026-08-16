@@ -755,10 +755,22 @@ internal sealed class NoteCollision
     /// dotted first up voice; no corpus book reaches it).
     /// </para>
     /// <para>
-    /// ⚠️ KEPT DIVERGENCE: a voice CROSSING (CollisionType.Meshing) pins the
-    /// RIGHTMOST group where LilyPond pins the leftmost — the separation is LP's, but
-    /// the (frequently beamed) upper voice keeps its column X so its beam, drawn at
-    /// column X and not per note, is not skewed.
+    /// The pin is <c>left_most</c> and has NO branch on collision type: LilyPond starts it
+    /// at 0.0 and only a NEGATIVE amount moves it (:441, :462-463), so the leftmost group
+    /// stays put and everything else comes right to meet it. For the one opposite pair that
+    /// is the down group standing still while the up group moves right by twice the shift.
+    /// MEASURED (LilyPond 2.26.0): the same book with and without the up voice's note draws
+    /// the down head at x=24.0881 in BOTH, so it is the up voice that LilyPond moves.
+    /// </para>
+    /// <para>
+    /// ⚠️ A voice CROSSING (<see cref="CollisionType.Meshing"/>) used to be pinned the other
+    /// way round here — the RIGHTMOST group — and the reason given was that the frequently
+    /// beamed upper voice then kept its column X "so its beam, drawn at column X and not per
+    /// note, is not skewed". That was a workaround for a defect, not a divergence with a
+    /// reason of its own: the beam frame did not carry the collision shift at all, so the
+    /// pin was being chosen to keep the shift away from the beam. The frame carries it now
+    /// (<c>ElementCoordinator.LayoutBeams</c>), and a beam in EITHER voice follows its own
+    /// heads, so the pin no longer has anything to protect and goes back to LilyPond's.
     /// </para>
     /// </remarks>
     public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, DotAdjustment Dot)> CalculateVoiceOffsets(
@@ -898,10 +910,8 @@ internal sealed class NoteCollision
 
         // :440-468 — translate by amount − left_most, where left_most starts 0.0 and
         // only amounts BELOW it move it: an all-positive set keeps the slot in place.
-        // KEPT DIVERGENCE (see remarks): a voice crossing pins the rightmost group.
-        double pin = collision.Type == CollisionType.Meshing
-            ? raw.Max(r => r.Offset)
-            : Math.Min(0.0, raw.Min(r => r.Offset));
+        // No branch on collision type; see the remarks for the one this replaced.
+        double pin = Math.Min(0.0, raw.Min(r => r.Offset));
         foreach (var r in raw)
             offsets.Add((r.VoiceId, r.ItemIndex, (r.Offset - pin) * wid, r.Hide, r.Dot));
 
