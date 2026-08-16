@@ -75,12 +75,14 @@ internal static partial class SharedRenderer
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc,
         bool resolveDataPos = false, SvgSystemFragmentCache? fragments = null)
     {
-        // F3/B: a layout freshly built from THIS score already bakes the correct
-        // data-pos, so resolution is a no-op there and we skip it (it rebuilds every
-        // annotation array — measurable allocation on annotation-heavy scores). Only a
-        // REUSED (cached, whole-layout) layout carries stale offsets from the pre-edit
-        // score; the IncrementalCompiler reuse path passes resolveDataPos=true to
-        // re-derive each annotation's source offset from the live score.
+        // F3/B: a layout built from THIS score by a caller with NO SESSION behind it
+        // already bakes the correct data-pos, so resolution is a no-op there and the full
+        // path (SvgGenerator.Generate) skips it. A session's layout is a different animal:
+        // IncrementalCompiler passes true on EVERY render, because LayoutEngine builds
+        // through the per-system memo and can splice in annotation layouts computed at an
+        // earlier edit (the load-bearing remark is at IncrementalCompiler's call site).
+        // ⚠️ THE OLD WORDING HERE — "only a REUSED (cached, whole-layout) layout carries
+        // stale offsets" — was this defect's cover story, not a description of the code.
         if (resolveDataPos)
             layout = ResolveDataPos(layout, score);
         // ⒭ per-system SVG fragment memo (HANDOFF §1 ▶): SVG-document sessions only —

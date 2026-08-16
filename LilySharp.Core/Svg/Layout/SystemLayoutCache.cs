@@ -41,8 +41,20 @@ namespace LilySharp.Core.Svg.Layout;
 /// layouts stamp an absolute <see cref="MeasureLayout.MeasureIndex"/>. Lookups
 /// VERIFY the key exactly (a hash bucket holds a short list, compared element-wise),
 /// so a hash collision degrades to a recompute, never a wrong reuse. Because the
-/// stored value is exactly what a fresh computation would produce, output stays
+/// stored value is exactly what a fresh computation would produce, GEOMETRY stays
 /// byte-identical — proven by the IncrementalCompiler incremental==full harness.
+/// </para>
+/// <para>
+/// ⚠️ NOT SOURCE OFFSETS. <see cref="MeasureContentKey"/> is blind to where the text sits
+/// — it must be, or a trivia insertion would move every key and the memo would never hit —
+/// so an entry served here carries the <c>data-pos</c> of the edit that COMPUTED it, not of
+/// the edit being rendered. That is sound only because the renderer re-derives every
+/// annotation's source offset on every session render
+/// (<c>SharedRenderer.ResolveDataPos</c>, unconditional on the IncrementalCompiler path).
+/// ★ The claim above is about geometry ALONE; session 190 is what happens when it is read
+/// as a claim about the output: three chained keystrokes on a fingered book froze the
+/// carried-over system's data-pos while the picture stayed byte-identical, and every net
+/// in the suite edited only ONCE, so none of them could see it.
 /// </para>
 /// <para>
 /// The dictionaries persist across edits (that is what enables reuse); the

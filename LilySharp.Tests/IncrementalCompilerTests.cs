@@ -1303,6 +1303,73 @@ public class IncrementalCompilerTests
             $"expected every page's overlay to replay: replayed {replayed} / drawn {drawn}");
     }
 
+    // --- chained keystrokes: the data-pos basis of a CARRIED-OVER system (session 190) ---
+    // Every net above edits ONCE from a warm session, and that shape is structurally blind
+    // to this: the per-system layout memo (SystemLayoutCache, incl. its FingScriptMemo)
+    // hands back a system computed at an EARLIER edit, and the annotation layouts inside it
+    // carry THAT edit's source offsets. MeasureContentKey is blind to source offsets BY
+    // DESIGN — a trivia insertion must not move content — so an equal key certifies the
+    // GEOMETRY and says nothing about data-pos. After one edit a carried-over system is one
+    // edit behind and the render still agrees; by the THIRD keystroke it is two behind and
+    // its data-pos freezes, drifting further with every later keystroke while the picture
+    // stays byte-identical. That is why the renderer must re-derive data-pos on every
+    // session render, not only when the WHOLE layout was reused (SharedRenderer.RenderTo).
+
+    /// <summary>The chained-keystroke fixture: fingered BEAMED eighths, so twelve bars
+    /// already fill enough systems for one to survive two keystrokes without being
+    /// redrawn.</summary>
+    /// <remarks>
+    /// ⚠️ MEASURED, NOT ASSUMED (session 190). Crossing beamed/unbeamed × chord/single ×
+    /// 12..160 bars: fingerings are NECESSARY (no unfingered shape ever diverges), and the
+    /// system count is what decides — beamed shapes diverge from 12 bars, quarter-note
+    /// CHORDS only at 160, and quarter-note SINGLE notes never did up to 160. That last row
+    /// is exactly <see cref="FingeredBook"/>, which is why reusing it here left this net
+    /// green while the defect was live: a fixture chosen by resemblance is not a fixture.
+    /// </remarks>
+    private static string BeamedFingeredBook(int bars = 12) =>
+        "time 4/4\nkey c major\npart melody { clef treble }\n"
+        + "section Main { melody { "
+        + string.Join(" ", Enumerable.Repeat(
+            "c8@finger(1) d8@finger(2) e8@finger(3) f8@finger(4) "
+            + "g8@finger(5) a8@finger(4) b8@finger(3) c'8@finger(2) |", bars))
+        + " } }\n";
+
+    /// <summary>Three single-character insertions, sent one at a time exactly as an editor
+    /// sends them: every one must still render byte-identical to a full recompile. The
+    /// liveness asserts pin that the chain actually reaches the regime — a keystroke that
+    /// re-runs layout (so the whole-layout-reuse path is NOT what is being tested) while the
+    /// fingering memo is serving carried-over units.</summary>
+    [Fact]
+    public void ChainedKeystrokes_KeepDataPosEqualToFull_WhenSystemsAreCarriedOver()
+    {
+        string source = BeamedFingeredBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        string before = Norm(session.Render());
+        var fing = session.SystemCache!.FinalFingScripts;
+        int hits0 = fing.Hits;
+
+        int at = source.IndexOf('|', source.Length / 2);
+        Assert.True(at > 0, "fixture must have a bar line past the middle");
+
+        string live = source;
+        bool everReranLayout = false;
+        string incremental = "";
+        foreach (var (offset, ch) in new[] { (0, " "), (1, "g"), (2, "4") })
+        {
+            incremental = Norm(session.Edit(new TextChange(new TextSpan(at + offset, 0), ch)));
+            live = live[..(at + offset)] + ch + live[(at + offset)..];
+            Assert.Equal(Full(live), incremental);
+            everReranLayout |= !session.LastEditReusedLayout;
+        }
+
+        Assert.NotEqual(before, incremental); // the offsets moved; a verbatim replay would not
+        Assert.True(everReranLayout,
+            "no keystroke re-ran layout, so the whole-layout-reuse path answered every one "
+            + "and the carried-over-system regime was never entered");
+        Assert.True(fing.Hits > hits0,
+            $"the fingering memo never served a carried-over unit (hits {fing.Hits}, misses {fing.Misses})");
+    }
+
     // --- ⒟⁶⑵ above-staff stacking memo (AboveStackMemo, session 161) -------------
     // A bar number stands on every system, so every keystroke used to rebuild every
     // system's tracker (a copy of its whole inside-staff profile) and re-place every

@@ -392,9 +392,34 @@ public sealed class IncrementalCompiler
             _fragments?.BeginPass(default, windowValid: false, 0, 0, 0);
         }
 
-        // Only a reused layout carries stale (pre-edit) data-pos that the renderer must
-        // re-derive from the live score; a freshly laid-out layout already has it right.
-        return SvgGenerator.RenderToSvg(score, layout, _options, resolveDataPos: reuse,
+        // EVERY session render re-derives data-pos, not only the whole-layout-reuse one.
+        // ⚠️ THIS USED TO PASS `reuse`, under "a freshly laid-out layout already has it
+        // right". That was false: the layout above is not built from this score alone — it
+        // is built THROUGH cacheForEdit, so LayoutEngine can splice in a system (and its
+        // annotation layouts, incl. the FingScriptMemo's fingerings) computed at an EARLIER
+        // edit, carrying that edit's source offsets. MeasureContentKey cannot catch it: it
+        // is blind to source offsets BY DESIGN — a trivia insertion must not move content —
+        // so an equal key certifies the GEOMETRY and says nothing about data-pos.
+        // MEASURED (session 190): after three chained keystrokes on a fingered book the
+        // carried-over system's data-pos froze and drifted further with every later
+        // keystroke, while the picture stayed byte-identical
+        // (ChainedKeystrokes_KeepDataPosEqualToFull_WhenSystemsAreCarriedOver).
+        // LILYPOND-REF (shape, NOT a port — LP has no render session, so there is no step to
+        // move): `point-and-click.cc:30-36` builds every textedit:// target by reading the
+        // origin off the LIVE Stream_event at output time. LP never stores a source position
+        // in a layout object, which is why it cannot have this defect. Deriving at render
+        // time instead of baking is the same discipline, restored here.
+        // ★ Unconditional is the point, not laziness: a per-memo "did anything carry over"
+        // flag would have to be raised in every memo inside SystemLayoutCache, and the next
+        // memo added would silently reopen this. Correctness here does not depend on how
+        // many memos exist.
+        // ⚠️ The comment it replaced claimed the resolution costs "measurable allocation on
+        // annotation-heavy scores". MEASURED on the heaviest book in the corpus
+        // (perf-fingbeam1k: 1000 bars, 3000 fingerings): a one-note keystroke ran
+        // 75.4/78.5/80.8 ms before and 74.9/81.8/84.0 ms after — inside the run-to-run
+        // spread of the unpatched build. The full path (SvgGenerator.Generate) is untouched
+        // and still skips it: a layout it built has no session behind it.
+        return SvgGenerator.RenderToSvg(score, layout, _options, resolveDataPos: true,
             fragments);
     }
 
