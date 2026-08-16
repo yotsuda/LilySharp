@@ -325,13 +325,24 @@ public sealed partial class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
-        // Semantic diagnostics — every validator via the shared registry (same set
-        // the CLI's `check` runs, so the two can never drift). Defensive: a validator
-        // that throws on a broken tree must NOT blank the Problems panel — the parser
-        // diagnostics (which usually explain the breakage) still publish.
+        // Include resolution + semantic diagnostics — every validator via the shared
+        // registry (same set the CLI's `check` runs, so the two can never drift), over the
+        // tree with `using` directives RESOLVED.
+        //
+        // ⚠️ It used to run over doc.Tree, the unexpanded one, while the preview and the
+        // exports expanded. So a piece split across files was told by the Problems panel
+        // that the parts it declares elsewhere were undefined — errors on a correct file,
+        // beside a preview that drew it perfectly. And LYS0028, the warning that names a
+        // `using` resolving to nothing, could never have reached the panel at all, because
+        // nothing on this path resolved a `using`.
+        //
+        // Defensive: a validator that throws on a broken tree must NOT blank the Problems
+        // panel — the parser diagnostics (which usually explain the breakage) still publish.
         try
         {
-            foreach (var d in LilySharp.Core.Semantics.SemanticValidation.Run(doc.Tree))
+            foreach (var d in DocumentDiagnostics(doc.Text, doc.Tree,
+                         doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
+                         p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null))
             {
                 diagnostics.Add(ConvertDiagnostic(d, doc.Text));
             }

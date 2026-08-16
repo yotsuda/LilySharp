@@ -41,8 +41,22 @@ namespace LilySharp.Core.Parser;
 public static class UsingExpander
 {
     /// <summary>True if the text contains at least one <c>using</c> directive.</summary>
-    public static bool HasUsings(string text)
-        => SyntaxTree.Parse(text).GetRoot().DescendantNodes().OfType<UsingDirectiveSyntax>().Any();
+    public static bool HasUsings(string text) => HasUsings(SyntaxTree.Parse(text));
+
+    /// <summary>True if an ALREADY-PARSED tree contains at least one <c>using</c> directive.</summary>
+    /// <remarks>
+    /// The overload exists so a caller holding the tree does not pay for a second full
+    /// parse. That caller is the LSP, and it is on the keystroke path: the preview asked
+    /// <c>HasUsings(doc.Text)</c> on every refresh, and the Problems panel now asks too —
+    /// which would have made a whole extra parse of the document per keystroke.
+    /// The text pre-check is sound rather than clever: the directive's keyword token IS
+    /// the word, so a source without it cannot hold one, and the walk is skipped for every
+    /// book that does not (which today is all of them — 0 of 919 in the tree write
+    /// <c>using</c>).
+    /// </remarks>
+    public static bool HasUsings(SyntaxTree tree)
+        => tree.Text.Contains("using", StringComparison.Ordinal)
+           && tree.GetRoot().DescendantNodes().OfType<UsingDirectiveSyntax>().Any();
 
     /// <summary>
     /// Expand includes starting from <paramref name="mainText"/> (the in-memory

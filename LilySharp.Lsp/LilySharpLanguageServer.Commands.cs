@@ -140,18 +140,58 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     /// <summary>
     /// The document's tree with <c>using "..."</c> directives resolved (files read
-    /// relative to the document), or the plain tree when there are no includes. The
-    /// document's own text stays the prefix, so its positions are preserved.
+    /// relative to the document), or the plain tree when there are no includes, plus the
+    /// warnings from resolving them. The document's own text stays the prefix, so its
+    /// positions are preserved.
     /// </summary>
-    private static SyntaxTree ExpandUsings(Document doc, Uri uri)
+    /// <remarks>
+    /// ONE house, taking its inputs rather than reading the disk itself, so the preview,
+    /// the exports and the Problems panel all read the SAME expansion and cannot disagree
+    /// about what the piece is. They did disagree: the panel validated the unexpanded tree
+    /// while everything else expanded, so a file with includes was told its parts were
+    /// undefined by the very server that was drawing them.
+    /// </remarks>
+    internal static (SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> UsingDiagnostics) ExpandUsings(
+        string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile)
     {
-        if (!LilySharp.Core.Parser.UsingExpander.HasUsings(doc.Text))
-            return doc.Tree;
+        // Ask the tree we were handed, not the text: parsing it again here would be a whole
+        // extra parse per keystroke, since both the preview and the Problems panel land here.
+        if (!LilySharp.Core.Parser.UsingExpander.HasUsings(unexpanded))
+            return (unexpanded, []);
 
-        var basePath = uri.IsFile ? uri.LocalPath : string.Empty;
-        var expanded = LilySharp.Core.Parser.UsingExpander.Expand(doc.Text, basePath,
+        var expanded = LilySharp.Core.Parser.UsingExpander.Expand(text, basePath, readFile,
+            out var usingDiagnostics);
+        return (SyntaxTree.Parse(expanded), usingDiagnostics);
+    }
+
+    private static (SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> UsingDiagnostics) ExpandUsings(
+        Document doc, Uri uri)
+        => ExpandUsings(doc.Text, doc.Tree, uri.IsFile ? uri.LocalPath : string.Empty,
             p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null);
-        return SyntaxTree.Parse(expanded);
+
+    /// <summary>
+    /// Every diagnostic that belongs to THIS document: the include-resolution warnings and
+    /// the semantic validators run over the expanded tree, keeping only what lands inside
+    /// the document's own text.
+    /// </summary>
+    /// <remarks>
+    /// The filter is the price of validating the expansion. An included file's text is
+    /// appended AFTER the document's, so a diagnostic about that file's content carries an
+    /// offset past the end of this document and would squiggle nothing (or the wrong
+    /// thing). It is not lost work — it is another file's diagnostic, and it belongs in
+    /// that file's panel, which is a separate piece of plumbing (the LSP has one document
+    /// per URI and publishes per URI).
+    /// ⚠️ With no includes the expansion is the identity and the filter passes everything,
+    /// so the overwhelmingly common path is unchanged.
+    /// </remarks>
+    internal static IReadOnlyList<CoreDiagnostic> DocumentDiagnostics(
+        string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile)
+    {
+        var (tree, usingDiagnostics) = ExpandUsings(text, unexpanded, basePath, readFile);
+
+        var result = new List<CoreDiagnostic>(usingDiagnostics);
+        result.AddRange(SemanticValidation.Run(tree).Where(d => d.Span.Start < text.Length));
+        return result;
     }
 
     [JsonRpcMethod("lilysharp/svg", UseSingleObjectParameterDeserialization = true)]
@@ -170,7 +210,7 @@ public sealed partial class LilySharpLanguageServer
         // Resolve `using "..."` directives so the preview shows the whole piece.
         // The main file is the prefix of the combined source, so its positions
         // (data-pos editor<->preview sync) are unchanged.
-        var tree = ExpandUsings(doc, @params.TextDocument.Uri);
+        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
 
         // Extract render definitions
         var renders = ExtractRenderInfo(tree);
@@ -273,7 +313,7 @@ public sealed partial class LilySharpLanguageServer
         if (doc == null)
             return new ExportResponse { Success = false, Error = "Document not found" };
 
-        var tree = ExpandUsings(doc, @params.TextDocument.Uri);
+        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
         if (tree.HasErrors)
         {
             var errors = string.Join("\n", tree.Diagnostics
@@ -372,7 +412,7 @@ public sealed partial class LilySharpLanguageServer
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
             return new PlaybackResponse { Error = "Document not found" };
-        var tree = ExpandUsings(doc, @params.TextDocument.Uri);
+        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
         if (tree.HasErrors)
             return new PlaybackResponse { Error = "Score has errors" };
         try
