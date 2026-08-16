@@ -24,4 +24,4 @@ score main "voice-dynamics-mid" {
 // source offset after it, so the whole book's data-pos moves and its snapshot has to be
 // re-based -- a diff that proves nothing and hides the next real one. Below the music,
 // nothing moves (measured: suite green with these notes, 10 snapshots red without).
-// ✔ VERIFIED TO GUARD, not assumed to (session 190): VoiceDefaults.GetDefaultStemUp returning null moved this book (31 of 219 moved). ⚠️ That poison does not isolate the MEASURE-OFFSET claim in the header, only that the span's second voice is live and placed; a poison aimed at the extra-voice measure offset itself is still owed.
+// ✔ VERIFIED TO GUARD, not assumed to (session 190): VoiceDefaults.GetDefaultStemUp returning null moved this book (31 of 219 moved). AND the header's own MEASURE-OFFSET claim is isolated too: forcing MeasureCollector's _metadataMeasureOffset to 0 -- the exact regression named above, the sub-voice's per-note metadata falling back to measure 0 -- moved 3 of 219 fixtures, this one among them (with above-dynamics and voice-dynamics-multistaff).
