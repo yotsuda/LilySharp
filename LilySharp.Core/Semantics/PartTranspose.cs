@@ -33,9 +33,8 @@ public static class PartTranspose
     {
         // Part declarations are top-level only (Parser.ParseTopLevelItem), so the
         // root's direct children are the whole search space (SyntaxNode.ChildNodes).
-        // ReadScoreDefault below is left on the descendant walk deliberately: its
-        // "not inside a part" filter can match a transpose property nested deeper
-        // (e.g. a render block's), and narrowing it would change what it finds.
+        // ReadScoreDefault stays on the descendant walk, but no longer counts a
+        // render block's own transpose as the file's default — see there.
         foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
             if (partDecl.Name.Text == partName)
             {
@@ -68,6 +67,24 @@ public static class PartTranspose
     /// declaration can compute the default once and combine it themselves
     /// (own ?? default) rather than re-scanning the tree per part.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ A <c>score … transpose d { … }</c> is NOT this. It looks like it to a walk
+    /// filtered only on "not inside a part", and being counted here made one construct
+    /// give three answers (measured 2026-08-16, 第182):
+    /// <list type="bullet">
+    /// <item>the score that declares it got the interval TWICE — once from here as the
+    /// file default, once from its own <c>RenderSpec.ScoreTranspose</c>, which the
+    /// collector composes. `transpose d` moved c to E4, a major third, where the
+    /// part-header spelling moves it to D4;</item>
+    /// <item>and every OTHER score in the file got it once, unasked: in a book whose
+    /// first score declares no transpose at all, that score engraved in D major.</item>
+    /// </list>
+    /// Both fall out of one line, so one guard removes both. With it, the three
+    /// spellings of <c>transpose</c> — part header, top level, per score — finally
+    /// agree that <c>d</c> means a major second, which is what
+    /// <c>test/transpose-score.lys</c> and <c>test/transpose-down.lys</c> already
+    /// document against LilyPond's <c>\transpose c d</c>.
+    /// </remarks>
     public static (int step, int alt, int oct)? ReadScoreDefault(SyntaxNode root)
     {
         // Green finder, not DescendantNodes().OfType<…>(): this reader runs per
@@ -79,7 +96,8 @@ public static class PartTranspose
         // is unchanged.
         foreach (var prop in root.GreenSites(
                      static g => (g.Kind == SyntaxKind.PropertyAssignment, Descend: true)))
-            if (prop is PropertyAssignmentSyntax pa && IsTranspose(pa) && !IsInsidePart(pa))
+            if (prop is PropertyAssignmentSyntax pa && IsTranspose(pa)
+                && !IsInsidePart(pa) && !IsInsideRender(pa))
                 return Parse(pa);
         return null;
     }
@@ -88,6 +106,9 @@ public static class PartTranspose
         => string.Equals(prop.NameToken.Text, "transpose", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsInsidePart(SyntaxNode node) => node.IsInside<PartDeclarationSyntax>();
+
+    /// <summary>A per-score <c>transpose</c> belongs to that score, not to the file.</summary>
+    private static bool IsInsideRender(SyntaxNode node) => node.IsInside<RenderDeclarationSyntax>();
 
     // Children are: name, [optional colon], value, [octave marks...]. The colon
     // is now optional, so locate the value/marks by skipping the name and colon
