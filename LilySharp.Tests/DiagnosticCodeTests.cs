@@ -15,8 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -79,5 +82,113 @@ public class DiagnosticCodeTests
                     && code[3..].All(char.IsAsciiDigit),
                 $"{name} = \"{code}\" is not a LYSnnnn code.");
         }
+    }
+
+    /// <summary>
+    /// A declared code that nothing emits is a rule the language does not have. LYS1015
+    /// <c>MultipleFormDeclarations</c> was one — it says a file may hold one form, which
+    /// stopped being true (<c>test/multi-movement.lys</c> declares three) — and it sat
+    /// undetected because nothing looks at the SET of codes; every existing net looks at one
+    /// code at a time, and a code nobody names is a code nobody's test mentions either.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A NAMED LIST rather than a count, for the reason recorded on
+    /// <c>LpReferenceCitationTests</c>'s ratchet: with a count, an old entry can stay open
+    /// while a new one is added and the total never moves. Give a code an emitter and its
+    /// name must leave this list, or the test fails — that is the ratchet.
+    /// </para>
+    /// <para>
+    /// MEASURED 2026-08-16 over LilySharp.Core / .Lsp / .Cli (352 files): 96 codes declared,
+    /// 89 named by a caller, 7 named by nobody — and none of the 7 is emitted through its
+    /// string literal either (0 occurrences of "LYS0001", "LYS0005", … outside the
+    /// declaration). HANDOFF §2F carried this as "LYS1015 has no emitter"; that was the
+    /// count of a targeted grep, not of the family.
+    /// </para>
+    /// <para>
+    /// ⚠️ TESTS ARE NOT SCANNED on purpose: a code a test names but no validator raises still
+    /// has no emitter, and counting the test would hide exactly the case this exists to find.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void CodesThatNothingEmits_DoNotGrow()
+    {
+        // Retiring one of these means DELETING the constant (codes are retired, never
+        // reused — see the class remarks) and removing its name from this list.
+        string[] known =
+        [
+            "UnexpectedToken",          // LYS0001
+            "InvalidNumber",            // LYS0005
+            "DuplicateVariable",        // LYS1002
+            "InvalidPitch",             // LYS1003
+            "UndefinedPhrase",          // LYS1006 — folded into UndefinedVariable's message
+            "MultipleFormDeclarations", // LYS1015 — a rule the language no longer has
+            "NoTimeSignature",          // LYS2003
+        ];
+
+        var emitted = EmittedCodeNames();
+
+        // §5.4's empty-set trap, both halves: if the scan found no sources, or matched no
+        // callers, "nothing is unemitted" would be vacuously true and this test would guard
+        // an empty comparison for as long as the layout stayed broken.
+        Assert.True(AllCodes().Length >= 60, $"only {AllCodes().Length} codes were reflected.");
+        Assert.True(emitted.Count >= 60, $"only {emitted.Count} codes were seen being named.");
+
+        var unemitted = AllCodes().Select(c => c.Name).Where(n => !emitted.Contains(n))
+            .OrderBy(n => n, StringComparer.Ordinal).ToArray();
+
+        Assert.Equal(known.OrderBy(n => n, StringComparer.Ordinal).ToArray(), unemitted);
+    }
+
+    /// <summary>
+    /// The names of <see cref="DiagnosticCodes"/> members that the PRODUCT sources name —
+    /// read from source, because the fact wanted is "does any code path reach this", which
+    /// reflection over a compiled assembly cannot answer for a <c>const string</c> (the
+    /// compiler inlines it and the field vanishes from the call sites).
+    /// </summary>
+    private static HashSet<string> EmittedCodeNames()
+    {
+        var root = RepoRoot();
+        var sources = new[] { "LilySharp.Core", "LilySharp.Lsp", "LilySharp.Cli" }
+            .Select(p => Path.Combine(root, p))
+            .Where(Directory.Exists)
+            .SelectMany(d => Directory.EnumerateFiles(d, "*.cs", SearchOption.AllDirectories))
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
+                        && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                        // The declaring file names every code once, by definition.
+                        && Path.GetFileName(f) != "Diagnostic.cs");
+
+        var named = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var file in sources)
+            foreach (var line in File.ReadAllLines(file))
+                foreach (Match m in Regex.Matches(StripComment(line), @"DiagnosticCodes\.(\w+)"))
+                    named.Add(m.Groups[1].Value);
+        return named;
+    }
+
+    /// <summary>
+    /// The code part of a line. A remark that MENTIONS a code (this file is full of them)
+    /// must not count as raising it — that error runs the wrong way for a ratchet, marking a
+    /// dead code alive and hiding exactly what the scan is for.
+    /// </summary>
+    /// <remarks>
+    /// A <c>//</c> inside a string literal truncates the line early, which can only LOSE a
+    /// reference — and a lost reference fails this test loudly rather than passing it
+    /// quietly, so the imprecision falls on the safe side. Block comments are not handled;
+    /// none of these sources puts code after one on the same line.
+    /// </remarks>
+    private static string StripComment(string line)
+    {
+        int slashes = line.IndexOf("//", StringComparison.Ordinal);
+        return slashes < 0 ? line : line[..slashes];
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "LilySharp.Core")))
+            dir = dir.Parent;
+        return dir?.FullName
+               ?? throw new InvalidOperationException("could not find the repository root.");
     }
 }
