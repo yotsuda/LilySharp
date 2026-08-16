@@ -158,6 +158,47 @@ public class DocExamplesParseTests
     /// or a diagnostic that survives the wrapping — is still a failure, so the test keeps its
     /// original teeth: it cannot be satisfied by a block that is merely broken in a new way.
     /// </summary>
+    /// <summary>
+    /// A fragment placed where it belongs: whatever precedes the music stays at the FILE
+    /// level, and the music goes in the part cell.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ This used to hand the whole block to <see cref="MusicSource.Wrap"/> as music, and
+    /// the two shapes that breaks are both in the docs. TUTORIAL block #1 opens with
+    /// <c>title</c> / <c>composer</c> / <c>tempo</c> before its notes, and block #9 IS a
+    /// <c>{ … }</c> music block. Neither is a note stream, and both "compiled" only because
+    /// the parser DROPPED what it could not place in a music block — so the green was the
+    /// silent drop, not the example. Both surfaced the moment that silence got a name
+    /// (LYS0030, 2026-08-16).
+    /// </para>
+    /// <para>
+    /// The split point is not a heuristic: <c>Parser.ReportTopLevelMusic</c> fires ONCE per
+    /// file, at the first music item, so that diagnostic's span start IS the boundary
+    /// between the example's file-level declarations and its music.
+    /// </para>
+    /// </remarks>
+    private static string WrapFragment(string code, SyntaxTree tree)
+    {
+        int at = tree.Diagnostics
+            .Where(d => d.Code == DiagnosticCodes.TopLevelMusic)
+            .Select(d => d.Span.Start)
+            .DefaultIfEmpty(0)
+            .First();
+        string defaults = code[..at].TrimEnd();
+        string music = code[at..];
+
+        // A fragment that IS a music block needs no second pair of braces — it becomes the
+        // part cell's own block, which is what `melody { … }` already is.
+        return music.TrimStart().StartsWith('{')
+            ? (defaults.Length > 0 ? defaults + "\n" : "")
+                + "part melody\n"
+                + "section A { melody " + music + " }\n"
+                + "form main { ~A }\n"
+                + "score main { staff melody }\n"
+            : MusicSource.Wrap(music, defaults);
+    }
+
     [Theory]
     [InlineData("docs/GRAMMAR_FOR_LLM.md")]
     [InlineData("docs/SYNTAX_REFERENCE.md")]
@@ -189,7 +230,7 @@ public class DocExamplesParseTests
                 .All(d => d.Code == DiagnosticCodes.TopLevelMusic);
             if (isFragment)
             {
-                var wrapped = SyntaxTree.Parse(MusicSource.Wrap(code));
+                var wrapped = SyntaxTree.Parse(WrapFragment(code, tree));
                 if (!wrapped.HasErrors)
                 {
                     var semantic = SemanticErrors(wrapped);

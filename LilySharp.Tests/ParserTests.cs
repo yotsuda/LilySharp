@@ -980,10 +980,31 @@ $theme");
     }
 
     [Fact]
-    public void Backslash_OnTablature_IsNotFlaggedAsLilypondReflex()
+    public void NoSpellingOfLilySharpTakesALeadingBackslash()
     {
-        // \tabStaff / \tuning are genuine Lily# backslash syntax, not LP reflexes.
+        // ⚠️ This was `Backslash_OnTablature_IsNotFlaggedAsLilypondReflex`, and its comment
+        // read "\tabStaff / \tuning are genuine Lily# backslash syntax, not LP reflexes."
+        // MEASURED 2026-08-16 on the build BEFORE this changed: that source already failed
+        // with "Undefined variable or phrase: 'tabStaff'" — there is no such spelling, and
+        // NO book in the tree writes either word. The test was green because it asserted
+        // only the ABSENCE of one code, never that the example was accepted; the language
+        // has no backslash syntax at all, which is why the hint is now unconditional.
         var tree = SyntaxTree.Parse(@"\tabStaff \tuning guitar { e4 a d' }");
+
+        Assert.Equal(2, tree.Diagnostics.Count(
+            d => d.Code == DiagnosticCodes.LilypondBackslashCommand));
+        // …and both backslashes stay in the tree, so the words after them keep their place.
+        Assert.Equal(@"\tabStaff \tuning guitar { e4 a d' }", tree.GetRoot().ToFullString());
+    }
+
+    [Fact]
+    public void ATabStringNumberIsNotALilypondReflex()
+    {
+        // The positive control the test above needed and never had: `\2` on a note is a
+        // STRING NUMBER, lexed as its own token, so it must not reach the backslash arm.
+        // Without this, making the hint unconditional would have flagged every tab in the
+        // repository and nothing here would have said so.
+        var tree = SyntaxTree.Parse(MusicSource.Wrap(@"c4 g'\2 a4 |"));
         Assert.DoesNotContain(tree.Diagnostics,
             d => d.Code == DiagnosticCodes.LilypondBackslashCommand);
     }

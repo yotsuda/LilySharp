@@ -270,8 +270,19 @@ internal sealed partial class Parser
                 members.Add(member);
             else
             {
-                WarnIfClefNameUsedAsStaff();
-                Advance(); // Skip unexpected token
+                // A token the file level cannot place: reported and KEPT, like the three
+                // brace-delimited containers and the music block (LYS0030). This was a bare
+                // `Advance()` until 2026-08-16, and the file level is where the loss was
+                // widest — every position in the whole document after the token moved.
+                // WarnIfClefNameUsedAsStaff names one shape of this mistake far better than
+                // the general message can, so when it speaks the general one stays quiet.
+                if (WarnIfClefNameUsedAsStaff())
+                    members.Add(Advance());
+                else
+                    members.Add(ReportStrayItem("a file",
+                        "A file holds declarations — 'part', 'phrase', 'section', 'form', "
+                        + "'score', 'using' — and the file-wide defaults 'title', 'composer', "
+                        + "'clef', 'key', 'time', 'tempo', 'octave'."));
             }
         }
 
@@ -289,7 +300,10 @@ internal sealed partial class Parser
     /// Runs only on the skip path, so a legitimate <c>clef treble</c> (consumed
     /// by ParseClefDeclaration) never reaches here.
     /// </summary>
-    private void WarnIfClefNameUsedAsStaff()
+    /// <returns>Whether it recognised the shape and spoke. The caller uses this to stay
+    /// quiet with its own general message (LYS0030): naming the grand staff is strictly
+    /// more use to this reader than saying the file cannot place a clef word.</returns>
+    private bool WarnIfClefNameUsedAsStaff()
     {
         if (SyntaxFacts.IsClefKeyword(Current.Kind)
             && Peek(1)?.Kind == SyntaxKind.OpenBrace)
@@ -300,7 +314,9 @@ internal sealed partial class Parser
                 $"'{name}' is not a staff here. For multiple staves, put each part on its own " +
                 $"staff in a grand staff -- score \"...\" {{ grandStaff {{ staff ... staff ... }} }} -- " +
                 $"and set a part's clef with 'clef {name}'.");
+            return true;
         }
+        return false;
     }
 
     /// <summary>
@@ -485,7 +501,7 @@ internal sealed partial class Parser
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
-            SyntaxKind.Backslash => ParseLilypondBackslashCommand(topLevel: true),
+            SyntaxKind.Backslash => ParseLilypondBackslashCommand(),
             _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
         };

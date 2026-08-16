@@ -45,9 +45,9 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class StrayItemTokenTests
 {
-    // One book, four holes: the stray goes into the section body, the form body, the score
-    // body, or nowhere (the control). Everything else is identical so a width comparison
-    // against the control means what it says.
+    // One book, five holes: the stray goes into the section body, the music block, the form
+    // body, the score body, the file level — or nowhere (the control). Everything else is
+    // identical so a width comparison against the control means what it says.
     private const string Control =
         "part melody\n"
         + "section A { melody { c4 d e f | } }\n"
@@ -57,8 +57,10 @@ public class StrayItemTokenTests
     private static string WithStray(string container, string token) => container switch
     {
         "section" => Control.Replace("section A { melody", $"section A {{ {token} melody"),
+        "music block" => Control.Replace("{ c4 d e f", $"{{ {token} c4 d e f"),
         "form" => Control.Replace("form main { A", $"form main {{ {token} A"),
         "score" => Control.Replace("{ staff melody", $"{{ {token} staff melody"),
+        "file" => $"{token} " + Control,
         _ => Control,
     };
 
@@ -78,6 +80,10 @@ public class StrayItemTokenTests
     [InlineData("form", "42")]
     [InlineData("score", "\"oops\"")]
     [InlineData("score", "42")]
+    [InlineData("music block", "\"oops\"")]
+    [InlineData("music block", ",")]     // an octave mark written after the duration: `b8,`
+    [InlineData("file", "\"oops\"")]
+    [InlineData("file", "}")]            // one closing brace too many
     public void AStrayItemToken_IsReported(string container, string token)
     {
         var d = Assert.Single(Strays(WithStray(container, token)));
@@ -110,6 +116,10 @@ public class StrayItemTokenTests
     [InlineData("form", "42")]
     [InlineData("score", "\"oops\"")]
     [InlineData("score", "42")]
+    [InlineData("music block", "\"oops\"")]
+    [InlineData("music block", ",")]
+    [InlineData("file", "\"oops\"")]
+    [InlineData("file", "}")]
     public void AStrayItemToken_KeepsItsWidth(string container, string token)
     {
         string src = WithStray(container, token);
@@ -208,6 +218,48 @@ public class StrayItemTokenTests
         Assert.Empty(Strays(src));
         var form = Assert.Single(root.DescendantNodes().OfType<FormDeclarationSyntax>());
         Assert.Contains(form.ChildNodes().OfType<BarlineSyntax>(), b => b.BarToken.Text == "||");
+    }
+
+    // ---- the reports that already spoke, and dropped the width anyway ------------------
+
+    /// <summary>
+    /// Reporting and KEEPING are separate repairs, and four codes had only the first
+    /// (RULES §5.0). Each of these named the mistake correctly — the report is raised
+    /// BEFORE the token is consumed, so its own span is right — and then took the token's
+    /// width off every node after it. The width is what the round trip measures.
+    /// </summary>
+    [Theory]
+    // LYS0016: a duration separated from what it lengthens. Measured: two characters.
+    [InlineData("part melody\nsection A { melody { c4 4 d e f | } }\n")]
+    // LYS0021: a decimal where a duration was meant. Measured: four characters.
+    [InlineData("part melody\nsection A { melody { c4.5 d e f | } }\n")]
+    // LYS0025: a token a part header cannot place. Measured (第183): fourteen.
+    [InlineData("part melody { bass }\nsection A { melody { c4 d e f | } }\n")]
+    // LYS0009: a LilyPond backslash. Measured: one.
+    [InlineData("part melody\nsection A { melody { \\foo c4 d e f | } }\n")]
+    // …and the two that were ALREADY right, as the controls that say the family is one
+    // family: a bare dot (LYS0023) and a stray string number (LYS0027).
+    [InlineData("part melody\nsection A { melody { c4 . d e f | } }\n")]
+    [InlineData("part melody\nsection A { melody { \\2 c4 d e f | } }\n")]
+    public void AReportedTokenIsKeptToo(string src)
+    {
+        var tree = SyntaxTree.Parse(src);
+        Assert.Contains(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal(src, tree.GetRoot().ToFullString());
+    }
+
+    [Fact]
+    public void ANavigationMarkAtTheTopLevelIsMusic_NotAStray()
+    {
+        // `segno` and its family are music items, and GRAMMAR.md says so — but
+        // IsMusicItemStart did not list them, so at the top level they were neither music
+        // (LYS0020) nor placed: they fell out of the switch and were dropped in silence.
+        // The list is now in step with ParseMusicItem, which its own remark demanded.
+        var tree = SyntaxTree.Parse("segno c4 d e f |\n");
+
+        Assert.Equal("segno c4 d e f |\n", tree.GetRoot().ToFullString());
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.TopLevelMusic);
+        Assert.Empty(Strays("segno c4 d e f |\n"));
     }
 
     [Fact]

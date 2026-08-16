@@ -111,12 +111,30 @@ internal sealed class IncrementalReuseMap
         return map.Count > 0 ? new IncrementalReuseMap(map) : null;
     }
 
+    /// <summary>Whether any diagnostic belongs to the item spanning
+    /// <paramref name="start"/>..<paramref name="end"/> — such an item must be re-parsed,
+    /// so its diagnostics are produced again rather than lost with the reuse.</summary>
+    /// <remarks>
+    /// ⚠️ A ZERO-WIDTH span needs its own arm and did not have one until 2026-08-16. The
+    /// overlap test is strict on both sides, so a diagnostic with <c>Start == End</c> sitting
+    /// exactly ON a boundary satisfies neither half — and an empty span is what
+    /// <c>Expect</c> produces when the token it wanted is missing, which at end of file puts
+    /// it exactly at the last item's end. The item was then REUSED and its diagnostic
+    /// vanished from the incremental parse: <c>WithChange_RandomizedEdits_MatchFullParse</c>
+    /// caught it as 17 diagnostics against 16, the missing one being
+    /// "Expected integer measure-count after '*', found 'EndOfFile'". The bug is as old as
+    /// the test above it; it surfaced when unplaceable tokens became members (LYS0030) and
+    /// moved where item boundaries fall. Touching either end counts, which can exclude the
+    /// neighbouring item too — the safe direction, since the cost is one item re-parsed.
+    /// </remarks>
     private static bool HasDiagnosticIn(
         IReadOnlyList<Diagnostic> diagnostics, int start, int end)
     {
         foreach (var d in diagnostics)
         {
             if (d.Span.Start < end && d.Span.End > start)
+                return true;
+            if (d.Span.Start == d.Span.End && d.Span.Start >= start && d.Span.Start <= end)
                 return true;
         }
         return false;

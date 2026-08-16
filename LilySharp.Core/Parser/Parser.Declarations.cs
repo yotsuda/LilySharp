@@ -95,15 +95,21 @@ internal sealed partial class Parser
             // and said "No errors found", even though a bare clef word is exactly what a
             // reader would try. (`bass` lexes as BassKeyword, not ClefKeyword, so it never
             // reached ParsePartProperty at all — it fell straight to this line.)
-            // Still consumed afterwards, so one stray token does not cascade into the rest
-            // of the header.
+            // ⚠️ It is REPORTED AND KEPT since 2026-08-16. Reporting came first, in 2026-08,
+            // and for months this spoke while still dropping the token's WIDTH — the noisy
+            // spelling corrupting positions exactly like the silent ones (§1 第183 measured
+            // 14 characters for a `using` written here, WHILE this error was raised).
+            // Kept in the property list, where it contributes width and nothing else:
+            // PartDeclarationSyntax reads its display name and brace by INDEX before the
+            // body and its properties by TYPE inside it, so a token among them is invisible
+            // to both. Still consumed, so one stray does not cascade into the rest.
             var strayspan = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(strayspan, DiagnosticCodes.PartHeaderStrayToken,
                 $"'{Current.Text}' is not a part property. A part header holds properties "
                 + "written bare (e.g. 'clef bass', 'instrument \"Violin\"'), a 'key', "
                 + "'override'/'revert', or an inner 'section'. "
                 + "A clef needs its keyword: write 'clef bass', not 'bass'.");
-            Advance();
+            properties.Add(Advance());
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);

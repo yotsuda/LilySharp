@@ -75,7 +75,14 @@ public class IncrementalParsingTests
     {
         // The music rides in the minimal document, so the edited span is located
         // rather than hard-coded: replace the first note of the block with itself.
-        var source = MusicSource.Wrap("$relative c' { c d e f }");
+        //
+        // ⚠️ This wrote `$relative c' { c d e f }` until 2026-08-16 — a LilyPond shape
+        // with a `$` in front of it — and asserted the document had NO errors. It had
+        // none only because the nested `{` was a token no music-item rule claimed and the
+        // sequence loop dropped it in silence; the assertion was reading that silence.
+        // The edit this test is about has nothing to do with the shape of the music, so
+        // the music is now something the language actually spells.
+        var source = MusicSource.Wrap("c d e f |");
         var tree = SyntaxTree.Parse(source);
         int firstNote = source.IndexOf("c d e f", System.StringComparison.Ordinal);
         var newTree = tree.WithChange(TextChange.Replace(new TextSpan(firstNote, 1), "c"));

@@ -246,16 +246,34 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// A leading backslash before a well-known LilyPond command (a reflex for
-    /// users coming from LilyPond) gets a hint pointing at the Lily# form, then
-    /// recovers by parsing the now-bare command. Backslashes that ARE valid
-    /// Lily# (\tabStaff, \tuning) or unrecognized ones are left untouched (return
-    /// null without consuming, so the caller skips the '\' as before).
+    /// A leading backslash — a reflex for readers coming from LilyPond, where every
+    /// command carries one and Lily# carries none. Reported (LYS0009, with the Lily# form
+    /// named where there is one to name) and the <c>\</c> is KEPT as an inert token; the
+    /// word after it is left for the next turn of the caller's loop, which parses it as
+    /// whatever it is.
     /// </summary>
-    private GreenNode? ParseLilypondBackslashCommand(bool topLevel)
+    /// <remarks>
+    /// <para>
+    /// ⚠️ The <c>\</c> used to be swallowed on every path, and swallowing it moved every
+    /// later node one character early. Measured 2026-08-16 on
+    /// <c>melody { \foo c4 d e f | }</c>: <c>c4</c> reported at 37 where the source has it
+    /// at 38. The recovery is now one shape instead of three — consume the <c>\</c>, keep
+    /// it, and let the loop handle the word — which also fixed <c>\nobreak</c>, whose
+    /// keyword the old structural branch dropped even though <c>nobreak</c> is a real
+    /// Lily# spelling that the very next dispatch would have parsed.
+    /// </para>
+    /// <para>
+    /// ⚠️ The old doc claimed "backslashes that ARE valid Lily# (\tabStaff, \tuning)" were
+    /// deliberately left alone. Measured 2026-08-16: they are not valid — <c>\tabStaff</c>
+    /// reports "Undefined variable or phrase: 'tabStaff'" — and NO book in the tree writes
+    /// either spelling. An unrecognised <c>\word</c> now gets the general hint rather than
+    /// nothing, because a leading backslash is wrong in Lily# whatever follows it.
+    /// </para>
+    /// </remarks>
+    private GreenNode ParseLilypondBackslashCommand()
     {
         string word = Peek(1).Text;
-        string? hint = word switch
+        string hint = word switch
         {
             "new" => "Lily# has no '\\new'; declare 'part name { … }' and lay it out with "
                 + "'staff { … }' / 'voice { … }'.",
@@ -265,28 +283,21 @@ internal sealed partial class Parser
             "noBreak" or "nobreak" => "Lily# writes '\\noBreak' as 'nobreak' (no backslash).",
             "tempo" or "clef" or "key" or "time" or "transpose" or "octave" or "break"
                 => $"Lily# commands take no leading backslash — write '{word} …', not '\\{word} …'.",
-            _ => null
+            // A phrase reference is the commonest thing a LilyPond habit puts a backslash
+            // on, and it is written bare (or with '$'), so that is what the general hint
+            // says. It is right for any word: nothing in Lily# takes a leading backslash.
+            _ => $"Lily# has no leading backslash — write '{word}', not '\\{word}' "
+                + "(a phrase reference is bare, or '$name').",
         };
-        if (hint == null)
-            return null;
 
         int startPos = _textPosition;
-        Advance(); // consume the leading '\'
+        var backslash = Advance();
         var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
         _diagnostics.Error(span, DiagnosticCodes.LilypondBackslashCommand, hint);
-
-        // A bare directive (\tempo 120 → tempo 120) parses straight away once the
-        // backslash is gone — re-dispatch it. The structural commands (\new /
-        // \relative / \addlyrics) have no one-token form, so drop their keyword
-        // and let the rest fall through to the caller's recovery without a
-        // misleading secondary "use $new" warning.
-        bool bareDirective = word is "tempo" or "clef" or "key"
-            or "time" or "transpose" or "octave";
-        if (bareDirective)
-            return topLevel ? ParseTopLevelItem() : ParseMusicItem();
-
-        Advance(); // drop the structural command keyword
-        return null;
+        // No `topLevel` switch any more: the word after the backslash is parsed by whichever
+        // loop called this, at its own level, on its next turn — which is exactly what the
+        // old `topLevel ? ParseTopLevelItem() : ParseMusicItem()` re-dispatch was for.
+        return backslash;
     }
 
     // ========== Key, Clef, Tuplet ==========

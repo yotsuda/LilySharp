@@ -245,18 +245,18 @@ public class DecimalLiteralTests
             d => d.Code == DiagnosticCodes.FractionalDuration));
         Assert.Contains("4.5", error.Message);
 
-        // The rest of the stream survives — the recovery skips the one token, it does
+        // The rest of the stream survives — the recovery reports the one token, it does
         // not abandon the bar.
-        Assert.Equal("{ cd8 }", tree.ToFullString());
-
-        // ⚠️ Yes, the token is DROPPED from the tree, so this input does not round-trip.
-        // That is the sequence loop's skip recovery, not something this change chose:
-        // a detached duration (LYS0016) has always behaved the same way. Pinned as a
-        // PAIR so the two cannot drift apart — if someone makes error recovery keep its
-        // tokens, both sides of this move together.
-        // (The surviving space differs only because the trivia goes with the token
-        // that carried it: `4.5 ` held the space, `c ` holds it in the other spelling.)
-        Assert.Equal("{ c d8 }", SyntaxTree.Parse("{ c 4 d8 }").ToFullString());
+        //
+        // ⚠️ This asserted `{ cd8 }` until 2026-08-16, because the token was DROPPED from
+        // the tree and the input did not round-trip. The comment here said so, and said
+        // why it was pinned as a PAIR with LYS0016: "if someone makes error recovery keep
+        // its tokens, both sides of this move together." That is what happened — both
+        // reports now return the token — so both sides moved, together, exactly here.
+        // What the drop actually cost was measured first: every later node's position
+        // slid by the token's width (four characters for `4.5 `, two for `4 `).
+        Assert.Equal("{ c4.5 d8 }", tree.ToFullString());
+        Assert.Equal("{ c 4 d8 }", SyntaxTree.Parse("{ c 4 d8 }").ToFullString());
     }
 
     // ---------- incremental lexing ----------

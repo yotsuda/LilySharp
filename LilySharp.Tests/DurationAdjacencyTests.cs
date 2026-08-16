@@ -121,15 +121,26 @@ public class DurationAdjacencyTests
         => Assert.Equal(source, SyntaxTree.Parse(source).GetRoot().ToFullString());
 
     /// <summary>
-    /// ★ Positive control for the case above: the dot is kept by the NEW rule, not by
-    /// the tree keeping everything anyway. A stray token with no rule of its own —
-    /// here a bare <c>?</c> — is still dropped by the same skip recovery, so the
-    /// round trip above is a statement about the dot.
+    /// ★ This was the positive control for the case above, and it asserted the OPPOSITE:
+    /// "a stray token with no rule of its own — here a bare <c>?</c> — is STILL DROPPED by
+    /// the same skip recovery, so the round trip above is a statement about the dot."
     /// </summary>
+    /// <remarks>
+    /// ⚠️ That control pinned the defect it was standing next to. On 2026-08-16 the drop
+    /// became a report-and-keep everywhere (LYS0030 and its siblings), so a stray token is
+    /// no longer the thing the dot is being contrasted WITH — the round trip is now a
+    /// parser invariant and the dot is one instance of it. The control that survives the
+    /// change is the one the dot always needed: the token is kept AND the mistake is named,
+    /// so a reader is not left to notice a silent nothing.
+    /// </remarks>
     [Fact]
-    public void AStrayTokenWithNoRule_IsStillDropped()
-        => Assert.NotEqual("{ c4 g? a4 }",
-            SyntaxTree.Parse("{ c4 g? a4 }").GetRoot().ToFullString());
+    public void AStrayTokenWithNoRule_IsReportedAndKept()
+    {
+        const string src = "{ c4 g? a4 }";
+        var tree = SyntaxTree.Parse(src);
+        Assert.Equal(src, tree.GetRoot().ToFullString());
+        Assert.Contains(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+    }
 
     /// <summary>
     /// The spellings that DO carry dots keep working, and — the point that makes the

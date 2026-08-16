@@ -70,6 +70,15 @@ internal sealed partial class Parser
             SyntaxKind.CueKeyword => true, // cue region: cue { } / cue <clef> { }
             SyntaxKind.LyricsKeyword => true,
             SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword => true,
+            // Navigation marks. ParseMusicItem has handled these since they became bare
+            // tokens, and GRAMMAR.md says they are "the SAME bare token in a section's music
+            // as in a form" — but this predicate never listed them, so `segno c4 d e f` at
+            // the top level was NOT top-level music: the mark fell out of the item switch
+            // and was dropped in silence, and only the notes after it raised LYS0020. The
+            // gap was invisible until the drop got a name (LYS0030, 2026-08-16); the remark
+            // on IsTopLevelMusicStart already said these two must be kept in step.
+            SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+                or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword => true,
             SyntaxKind.Identifier => true, // Variable reference
             _ => false
         };
@@ -101,9 +110,11 @@ internal sealed partial class Parser
                 ? ParseRemovedParallelExpression()
                 : ParseArpeggio(),
 
-            // A leading backslash on a known LilyPond command (\tempo, \new, …) —
-            // a habit from LilyPond — gets a hint pointing at the Lily# form.
-            SyntaxKind.Backslash => ParseLilypondBackslashCommand(topLevel: false),
+            // A leading backslash — a habit from LilyPond, where every command carries one
+            // and Lily# carries none. Reported with the Lily# form named, and the '\' kept
+            // so the word after it keeps its place; the word itself is parsed on this
+            // loop's next turn.
+            SyntaxKind.Backslash => ParseLilypondBackslashCommand(),
 
             SyntaxKind.Tilde => ParseTie(),
 
@@ -178,7 +189,15 @@ internal sealed partial class Parser
             // post-event follow. Either way the tab would have printed a string
             // nobody asked for, so it is reported rather than dropped.
             SyntaxKind.StringNumber => ReportStrayStringNumber(),
-            _ => null
+            // Anything else: reported and KEPT (LYS0030), the same repair the three
+            // brace-delimited containers around this one got. Measured 2026-08-16 on
+            // `melody { "oops" c4 d e f | }`: `No errors found.`, and an SVG byte-identical
+            // to the same book WITHOUT the token — data-pos included, which is to say every
+            // later note reported the offset it has when the token is DELETED.
+            _ => ReportStrayItem("a music block",
+                    "A music block holds notes, rests, chords, barlines and the directives "
+                    + "that act from a point in the music (key, clef, time, tempo, octave, "
+                    + "override/revert/once, grace, tuplet, repeat, cue, voice).")
         };
     }
 
@@ -196,19 +215,35 @@ internal sealed partial class Parser
     }
 
     /// <summary>Reports a spaced number where a glued duration was probably meant
-    /// (LYS0016) and yields no music item — the caller's loop skips the token.</summary>
-    private GreenNode? ReportDetachedDuration()
+    /// (LYS0016) and yields the number, so the token stays in the tree.</summary>
+    /// <remarks>
+    /// ⚠️ It RETURNS the token as of 2026-08-16. It used to yield null and let the
+    /// caller's loop drop it, on the reasoning that "dropping a spaced 4 leaves the notes
+    /// standing where they stood" — which is true of the ENGRAVING and false of the
+    /// POSITIONS. Measured on <c>melody { c4 4 d e f | }</c>: the report itself landed
+    /// correctly on the stray (it is raised before the token is consumed), and then every
+    /// later node slid two characters left — <c>d</c> reported at 36 where the source has
+    /// it at 38, which is the offset that book has with the <c>4</c> DELETED. Reporting
+    /// and KEEPING are separate repairs (RULES §5.0) and this had only the first.
+    /// </remarks>
+    private GreenNode ReportDetachedDuration()
     {
         var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
         _diagnostics.Error(span, DiagnosticCodes.DetachedDuration,
             "A duration must be GLUED to what it lengthens - write c4 or <c e g>4; "
             + "separated by a space, this number means nothing.");
-        return null;
+        return Advance();
     }
 
-    /// <summary>Reports a decimal where a duration was meant (LYS0021) and yields no
-    /// music item — the caller's loop skips the token.</summary>
-    private GreenNode? ReportFractionalDuration()
+    /// <summary>Reports a decimal where a duration was meant (LYS0021) and yields the
+    /// number, so the token stays in the tree.</summary>
+    /// <remarks>
+    /// ⚠️ It RETURNS the token as of 2026-08-16, for the reason spelled out on
+    /// <see cref="ReportDetachedDuration"/>. Measured on <c>melody { c4.5 d e f | }</c>:
+    /// the four characters of <c>4.5</c> and its space came off every later node's
+    /// position.
+    /// </remarks>
+    private GreenNode ReportFractionalDuration()
     {
         var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
         _diagnostics.Error(span, DiagnosticCodes.FractionalDuration,
@@ -216,7 +251,7 @@ internal sealed partial class Parser
             + "(c4, c8), lengthened by dots (c4. is a dotted quarter). A decimal "
             + "number is a value, and belongs in a value position such as an "
             + "override (override Stem.length = 3.5).");
-        return null;
+        return Advance();
     }
 
     /// <summary>Reports a '.' that no rule claimed (LYS0023) and yields the dot itself,
