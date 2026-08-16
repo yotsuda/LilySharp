@@ -84,6 +84,26 @@ internal static class TabConstants
     /// the string line around the digit instead of painting a box over it.
     /// </para>
     /// <para>
+    /// ⚠️⚠️ AND THIS IS WHY LILYPOND'S <c>TabNoteHead (whiteout . #t)</c> IS NOT PORTED, which
+    /// is worth writing down here because a reader who finds that property will come looking
+    /// at this constant. MEASURED on 2.26.0 (the test/tab-chord-tie twin, measuring
+    /// <c>tab-note-head::print</c>'s stencil): LilyPond's digit is Y −0.590 … +0.590, i.e.
+    /// 1.180 TALL — it fits inside the same 1.5 gap with 0.16 to spare either side, so its
+    /// white box never reaches a neighbouring line. Lily#'s is 2.166, <b>1.44 times the
+    /// gap</b>: the identical device would blank 0.333 of each neighbouring string line.
+    /// LilyPond can afford an occluder because its digits are small; that premise is exactly
+    /// what Lily# gave up (ratified, docs/HANDOFF.md §3).
+    /// <para>
+    /// The second fault is the one that removed the box here in the first place: an occluder
+    /// SPENDS A COLOUR. It was the only opaque light element in the document, so a viewer
+    /// that themes a page by inverting it — VS Code's dark mode — turned the box black and
+    /// sat every fret number in a hole. A gap spends none.
+    /// </para>
+    /// ⇒ On a tab, overlaps are resolved by REMOVING ink, never by covering it. If the tie
+    /// that crosses a neighbouring digit is ever worth fixing, the fix is to cut the TIE the
+    /// way the string line is cut — not to paint a box.
+    /// </para>
+    /// <para>
     /// ⚠️ A dead note's <c>×</c> is a DIFFERENT shape (ink 0.436 of the size, centred lower),
     /// which is why the renderer asks the face per glyph for the BASELINE
     /// (<see cref="FretBaselineDrop"/>) instead of sharing one number. This height stays a
