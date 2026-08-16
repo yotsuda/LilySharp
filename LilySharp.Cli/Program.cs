@@ -821,8 +821,8 @@ static int ExecuteCheck(string inputPath, bool showPitches = false)
 {
     try
     {
-        var (source, tree) = LoadAndParse(inputPath);
-        var allDiagnostics = CollectDiagnostics(tree);
+        var (source, tree, usingDiagnostics) = LoadAndParse(inputPath);
+        var allDiagnostics = CollectDiagnostics(tree, usingDiagnostics);
 
         if (showPitches)
             PrintResolvedPitches(source, tree);
@@ -904,11 +904,16 @@ static string ReadPitchToken(string source, int pos)
 /// Combines syntax-tree diagnostics with semantic-validator diagnostics
 /// (e.g. undefined variable / phrase / section references).
 /// </summary>
-static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(SyntaxTree tree)
+static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(
+    SyntaxTree tree, IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> usingDiagnostics)
 {
+    // Include resolution first: `using "x.lys"` naming a file that cannot be read is the
+    // CAUSE of the undefined-part and undefined-section errors the validators are about to
+    // report, and reading it first puts it above them.
+    var combined = new List<LilySharp.Core.Syntax.Diagnostic>(usingDiagnostics);
     // Parser diagnostics plus every semantic validator (single shared registry, so
     // the CLI and the LSP can never diverge on which validators run).
-    var combined = new List<LilySharp.Core.Syntax.Diagnostic>(tree.Diagnostics);
+    combined.AddRange(tree.Diagnostics);
     combined.AddRange(LilySharp.Core.Semantics.SemanticValidation.Run(tree));
     return combined;
 }
@@ -919,9 +924,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
 /// so a semantic error — an undefined variable, a measure overflow — can't be silently
 /// dropped for one format while it blocks another. Warnings are surfaced but don't abort.
 /// </summary>
-static bool ReportDiagnostics(SyntaxTree tree)
+static bool ReportDiagnostics(
+    SyntaxTree tree, IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> usingDiagnostics)
 {
-    var all = CollectDiagnostics(tree);
+    var all = CollectDiagnostics(tree, usingDiagnostics);
     if (all.Count == 0)
         return false;
 
@@ -987,13 +993,22 @@ static int RunLayout(string[] args)
 // Read a .lys file and parse it, first resolving any `using "..."` directives
 // (relative to the file) into one combined source. The main file is the prefix, so
 // its diagnostic positions are unchanged.
-static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree) LoadAndParse(string inputPath)
+// Usings are returned alongside the tree rather than stashed, because they cannot come
+// from a semantic validator: deciding whether `using "x.lys"` resolves needs the base
+// path and the file reader, and a SyntaxTree carries neither.
+static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree,
+        IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> UsingDiagnostics)
+    LoadAndParse(string inputPath)
 {
     var source = File.ReadAllText(inputPath);
+    IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> usingDiagnostics = [];
     if (LilySharp.Core.Parser.UsingExpander.HasUsings(source))
+    {
         source = LilySharp.Core.Parser.UsingExpander.Expand(source, inputPath,
-            p => File.Exists(p) ? File.ReadAllText(p) : null);
-    return (source, LilySharp.Core.Syntax.SyntaxTree.Parse(source));
+            p => File.Exists(p) ? File.ReadAllText(p) : null,
+            out usingDiagnostics);
+    }
+    return (source, LilySharp.Core.Syntax.SyntaxTree.Parse(source), usingDiagnostics);
 }
 
 // The shared skeleton behind every file-output command: load+parse, surface
@@ -1019,8 +1034,8 @@ static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree
 {
     try
     {
-        var (_, tree) = LoadAndParse(inputPath);
-        bool hasErrors = ReportDiagnostics(tree);
+        var (_, tree, usingDiagnostics) = LoadAndParse(inputPath);
+        bool hasErrors = ReportDiagnostics(tree, usingDiagnostics);
         if (!ValidateScoreName(tree, scoreName)) return 1;
         int result = body(tree);
         if (hasErrors && result == 0)

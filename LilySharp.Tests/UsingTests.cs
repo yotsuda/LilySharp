@@ -35,6 +35,16 @@ public sealed class UsingTests
         => UsingExpander.Expand(main, "C:/proj/main.lys",
             p => files.TryGetValue(Path.GetFileName(p), out var t) ? t : null);
 
+    // Same, but keeping the include-resolution diagnostics.
+    private static (string Text, IReadOnlyList<Diagnostic> Diagnostics) ExpandWithDiagnostics(
+        string main, Dictionary<string, string> files)
+    {
+        var text = UsingExpander.Expand(main, "C:/proj/main.lys",
+            p => files.TryGetValue(Path.GetFileName(p), out var t) ? t : null,
+            out var diagnostics);
+        return (text, diagnostics);
+    }
+
     [Fact]
     public void Parses_UsingDirective()
     {
@@ -86,6 +96,105 @@ public sealed class UsingTests
     {
         var expanded = Expand("title \"x\"\nusing \"nope.lys\"\n", new());
         Assert.Contains("title \"x\"", expanded);
+    }
+
+    // ---- LYS0028: a `using` that resolves to nothing is reported ------------------
+    //
+    // Skipping is the DESIGN (a missing include must never abort the render, because the
+    // LSP preview resolves includes from disk on every keystroke). Skipping in SILENCE
+    // was not: measured 2026-08-16, a book whose only difference was a misspelt include
+    // passed `lysc check` as "No errors found." and drew — with data-pos masked —
+    // character-for-character what the same book draws with the `using` line deleted.
+
+    [Fact]
+    public void MissingFile_IsReported()
+    {
+        var (_, diagnostics) = ExpandWithDiagnostics("title \"x\"\nusing \"nope.lys\"\n", new());
+
+        var d = Assert.Single(diagnostics);
+        Assert.Equal(DiagnosticCodes.UsingFileUnreadable, d.Code);
+        Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+        // Name the path the author wrote, not the resolved absolute one: that is the text
+        // they have to look at to see the typo.
+        Assert.Contains("nope.lys", d.Message);
+    }
+
+    [Fact]
+    public void MissingFile_IsReportedAtItsOwnPathToken()
+    {
+        // The whole point is to point at the line that IS wrong. Before this, the only
+        // diagnostics a misspelt include produced were "Undefined section" / "Undefined
+        // part" against lines that were CORRECT.
+        const string main = "title \"x\"\nusing \"nope.lys\"\nscore { staff p }\n";
+        var (_, diagnostics) = ExpandWithDiagnostics(main, new());
+
+        var d = Assert.Single(diagnostics);
+        Assert.Equal(main.IndexOf("\"nope.lys\""), d.Span.Start);
+        Assert.Equal("\"nope.lys\"".Length, d.Span.Length);
+    }
+
+    [Fact]
+    public void EmptyPath_IsReported()
+    {
+        // No state of the file system can make `using ""` right, so it is the same
+        // silence with a different cause — and gets the same name rather than a second.
+        var (_, diagnostics) = ExpandWithDiagnostics("using \"\"\ntitle \"x\"\n", new());
+
+        var d = Assert.Single(diagnostics);
+        Assert.Equal(DiagnosticCodes.UsingFileUnreadable, d.Code);
+        Assert.Contains("empty path", d.Message);
+    }
+
+    [Fact]
+    public void ResolvedInclude_ReportsNothing()
+    {
+        var (_, diagnostics) = ExpandWithDiagnostics("using \"a.lys\"\n",
+            new() { ["a.lys"] = "part p { clef treble }" });
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void AlreadyIncludedFile_ReportsNothing()
+    {
+        // The diamond: c.lys resolves twice and is appended once. It RESOLVED — the
+        // dedupe is the feature, not a failure, and must stay quiet or every shared
+        // include in a real piece would warn.
+        var (_, diagnostics) = ExpandWithDiagnostics("using \"a.lys\"\nusing \"b.lys\"\n", new()
+        {
+            ["a.lys"] = "using \"c.lys\"\npart a { clef treble }",
+            ["b.lys"] = "using \"c.lys\"\npart b { clef bass }",
+            ["c.lys"] = "part c { clef alto }",
+        });
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Cycle_ReportsNothing()
+    {
+        var (_, diagnostics) = ExpandWithDiagnostics("using \"a.lys\"\n", new()
+        {
+            ["a.lys"] = "using \"b.lys\"\npart a { clef treble }",
+            ["b.lys"] = "using \"a.lys\"\npart b { clef bass }",
+        });
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void MissingFile_InsideAnInclude_IsReportedToo()
+    {
+        // The walk is depth-first, so a broken include inside a working one must not be
+        // swallowed by the level above it.
+        var (_, diagnostics) = ExpandWithDiagnostics("using \"a.lys\"\n", new()
+        {
+            ["a.lys"] = "using \"gone.lys\"\npart a { clef treble }",
+        });
+
+        var d = Assert.Single(diagnostics);
+        Assert.Equal(DiagnosticCodes.UsingFileUnreadable, d.Code);
+        Assert.Contains("gone.lys", d.Message);
     }
 
     [Fact]

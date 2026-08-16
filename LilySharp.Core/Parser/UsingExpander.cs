@@ -33,7 +33,10 @@ namespace LilySharp.Core.Parser;
 /// in the file the user is editing is preserved exactly (editor &lt;-&gt; preview
 /// sync). Each included file's text is appended once, depth-first, deduplicated by
 /// full path; using cycles terminate. A path that cannot be read is skipped (its
-/// directive simply stays inert), so a missing using never aborts the render.
+/// directive simply stays inert), so a missing using never aborts the render — but
+/// it no longer does so in silence: the skip is REPORTED as
+/// <see cref="DiagnosticCodes.UsingFileUnreadable"/>, whose remarks carry the
+/// measurement that made the case for naming it.
 /// </remarks>
 public static class UsingExpander
 {
@@ -47,15 +50,37 @@ public static class UsingExpander
     /// the text of an included file, or null if it cannot be read.
     /// </summary>
     public static string Expand(string mainText, string mainPath, Func<string, string?> readFile)
+        => Expand(mainText, mainPath, readFile, out _);
+
+    /// <summary>
+    /// Expand includes and also report the directives that resolved to nothing.
+    /// </summary>
+    /// <param name="diagnostics">
+    /// One warning per <c>using</c> whose file could not be read (or whose path is empty).
+    /// A directive whose file was already included is NOT reported — it resolved, and the
+    /// dedupe is the point.
+    /// </param>
+    /// <remarks>
+    /// Spans are in COMBINED-source coordinates, which is what every caller parses and
+    /// what its diagnostics are already measured against. For the file the reader is
+    /// editing that is the same as its own coordinates (it is the prefix); for a directive
+    /// inside an INCLUDED file the span points into the appended region, exactly as a
+    /// syntax error in that file already does. Attributing those to their own file is a
+    /// property of the whole include design, not of this warning.
+    /// </remarks>
+    public static string Expand(string mainText, string mainPath, Func<string, string?> readFile,
+        out IReadOnlyList<Diagnostic> diagnostics)
     {
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var sb = new StringBuilder();
-        Walk(mainPath, mainText, visited, sb, readFile);
+        var bag = new DiagnosticBag();
+        Walk(mainPath, mainText, visited, sb, readFile, bag);
+        diagnostics = bag.ToList();
         return sb.ToString();
     }
 
     private static void Walk(string path, string? text, HashSet<string> visited,
-        StringBuilder sb, Func<string, string?> readFile)
+        StringBuilder sb, Func<string, string?> readFile, DiagnosticBag bag)
     {
         if (text == null)
             return;
@@ -66,22 +91,49 @@ public static class UsingExpander
         if (!visited.Add(full))
             return; // already included (dedupe / cycle break)
 
+        // Where this text lands in the combined source, so a directive's span inside it
+        // can be reported against the string the caller will parse.
+        int baseOffset = sb.Length;
         sb.Append(text);
         if (text.Length > 0 && text[^1] != '\n')
             sb.Append('\n');
 
         var dir = Path.GetDirectoryName(full) ?? string.Empty;
-        foreach (var usingPath in FindUsingPaths(text))
+        foreach (var (usingPath, span) in FindUsings(text))
         {
+            var combined = new TextSpan(baseOffset + span.Start, span.Length);
+
+            // An empty path names nothing at all, and no state of the file system can make
+            // it right — it is the same silence with a different cause, so it gets the same
+            // name rather than a second one.
+            if (usingPath.Length == 0)
+            {
+                bag.Warning(combined, DiagnosticCodes.UsingFileUnreadable,
+                    "a `using` with an empty path includes nothing — name the file to include.");
+                continue;
+            }
+
             var resolved = Path.IsPathRooted(usingPath) ? usingPath : Path.Combine(dir, usingPath);
-            Walk(resolved, readFile(resolved), visited, sb, readFile);
+
+            // Read here rather than inside Walk, so "unreadable" and "already included"
+            // stay distinguishable: both make Walk return at once, and only the first is
+            // a mistake.
+            var included = readFile(resolved);
+            if (included == null)
+            {
+                bag.Warning(combined, DiagnosticCodes.UsingFileUnreadable,
+                    $"cannot read \"{usingPath}\" — this `using` is ignored, so every part, "
+                    + "section and setting it declares is absent.");
+                continue;
+            }
+
+            Walk(resolved, included, visited, sb, readFile, bag);
         }
     }
 
-    private static IEnumerable<string> FindUsingPaths(string text)
+    private static IEnumerable<(string Path, TextSpan Span)> FindUsings(string text)
         => SyntaxTree.Parse(text).GetRoot().DescendantNodes()
             .OfType<UsingDirectiveSyntax>()
-            .Select(d => d.Path)
-            .Where(p => p.Length > 0)
+            .Select(d => (d.Path, d.PathToken.Span))
             .ToList();
 }

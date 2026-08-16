@@ -375,6 +375,41 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string StrayStringNumber = "LYS0027";
 
+    /// <summary>Warning: a <c>using "file.lys"</c> naming a file that cannot be read, or
+    /// naming nothing at all (<c>using ""</c>). The directive contributes no text.</summary>
+    /// <remarks>
+    /// <para>
+    /// This was the last spelling in the grammar that names something which may not exist
+    /// and reported NOTHING when it did not. Measured 2026-08-16: a book whose only
+    /// difference from its twin was <c>using "meta.lys"</c> misspelt as <c>using
+    /// "metaa.lys"</c> passed <c>lysc check</c> as <c>No errors found.</c>, and its SVG —
+    /// with <c>data-pos</c> masked, since the line's own length shifts those — was
+    /// CHARACTER-IDENTICAL to the same book with the <c>using</c> line deleted. The title
+    /// and tempo the included file carried were simply absent.
+    /// </para>
+    /// <para>
+    /// ⚠️ The two halves of the failure are not equally visible, which is why the silent
+    /// half needed a name. When the missing file declared something the score REFERENCES,
+    /// the reader does get errors — but they point at the wrong lines: the misspelt include
+    /// produced <c>Undefined section: 'A'</c> and <c>Undefined part: 'shared'</c> against
+    /// the two lines that were CORRECT, and said nothing about the one line that was wrong.
+    /// When it declared only unreferenced things (a title, a tempo, an override), there was
+    /// no diagnostic at all.
+    /// </para>
+    /// <para>
+    /// ⚠️ A WARNING, not an error, deliberately: <see cref="Parser.UsingExpander"/> declares
+    /// that "a missing using never aborts the render", and the LSP preview resolves includes
+    /// from disk on every keystroke — a sibling that is momentarily unsaved or not yet
+    /// created must not blank the preview. The warning removes the silence without touching
+    /// that contract, and <c>UsingTests.MissingFile_IsSkipped</c> stays green.
+    /// </para>
+    /// <para>
+    /// ⚠️ A <c>using</c> whose file was ALREADY included (the diamond / cycle cases) is not
+    /// this: it resolved, it is simply deduplicated, and it must stay quiet.
+    /// </para>
+    /// </remarks>
+    public const string UsingFileUnreadable = "LYS0028";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
