@@ -268,6 +268,48 @@ public class PartReferenceFinderTests
         Assert.Empty(PartReferenceFinder.Occurrences(root, "roman"));
     }
 
+    /// <summary>
+    /// The BARE members of <c>condensedStaff</c> / <c>combinedStaff</c> are part references
+    /// too, so a rename reaches them — it did not, and neither did the undefined-part check.
+    /// Nothing else resolved them: unlike the chord/lyric rows, the language server has no
+    /// resolver of its own for these, so collecting them here takes no caret away.
+    /// </summary>
+    [Fact]
+    public void BareMembersOfCondensedAndCombinedStaffAreReferences()
+    {
+        var root = Root("""
+            part fl1 { clef treble }
+            part fl2 { clef treble }
+            section A { fl1 { c4 } fl2 { e4 } }
+            score main "s" { condensedStaff { fl1 fl2 }  combinedStaff { fl1 fl2 } }
+            """);
+
+        // header + section block + condensed member + combined member.
+        Assert.Equal(4, PartReferenceFinder.Occurrences(root, "fl1").Count);
+        Assert.Equal(4, PartReferenceFinder.Occurrences(root, "fl2").Count);
+    }
+
+    /// <summary>
+    /// A member the container rejected is KEPT in the tree for its width
+    /// (ParseBarePartNameMembers) and is not a part name: the selection is positive, so
+    /// <c>staff</c> is not handed back as one — it would otherwise be renamed, and reported
+    /// as an undefined part under the "cannot contain" error that already explains it.
+    /// </summary>
+    [Fact]
+    public void RejectedBareMemberIsNotAPartReference()
+    {
+        var src = """
+            part fl1 { clef treble }
+            section A { fl1 { c4 } }
+            score main "s" { condensedStaff { staff fl1 } }
+            """;
+        var root = Root(src);
+
+        Assert.Empty(PartReferenceFinder.Occurrences(root, "staff"));
+        Assert.Null(PartReferenceFinder.PartNameTokenAt(root, src.LastIndexOf("staff")));
+        Assert.Equal(3, PartReferenceFinder.Occurrences(root, "fl1").Count);
+    }
+
     // ── staff/tab attachments: the same two namespaces, from the tail the part
     //    selection cuts off ──
 

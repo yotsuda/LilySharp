@@ -713,10 +713,11 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
     /// <summary>The <c>condensedStaff</c> keyword token.</summary>
     public SyntaxTokenNode CondensedStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>The part names to condense, in source order — which is also VOICE order,
-    /// so the first part gets voice 1 (stems up) exactly as the first block of a
-    /// <c>voice { … } { … }</c> span does.</summary>
-    public IEnumerable<string> PartNames
+    /// <summary>The part-name TOKENS to condense, in source order — which is also VOICE
+    /// order, so the first part gets voice 1 (stems up) exactly as the first block of a
+    /// <c>voice { … } { … }</c> span does. Tokens rather than text, because a reference that
+    /// names no part has to be reported ON its own name (SymbolReferenceValidator).</summary>
+    public IEnumerable<SyntaxTokenNode> PartNameTokens
     {
         get
         {
@@ -724,29 +725,20 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
             // a missing brace (error recovery) cannot shift the names.
             // ⚠️ Positively a PART NAME, not merely "not a brace": a member the container
             // rejected is KEPT in the tree so its width survives (ParseBarePartNameMembers),
-            // and a `not` test would hand that rejected token back as a part name.
+            // and a `not` test would hand that rejected token back as a part name — which
+            // would then be reported a SECOND time as an undefined part, under the
+            // "cannot contain" error that already says what is wrong.
             for (int i = 0; i < SlotCount; i++)
             {
                 if (GetChild(i) is SyntaxTokenNode t && SyntaxFacts.IsPartNameKind(t.Kind))
-                    yield return t.Text;
-            }
-        }
-    }
-
-    /// <summary>The part-name tokens, for diagnostics that need a span.</summary>
-    public IEnumerable<SyntaxTokenNode> PartNameTokens
-    {
-        get
-        {
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is SyntaxTokenNode t
-                    && t.Kind is not (SyntaxKind.CondensedStaffKeyword
-                        or SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
                     yield return t;
             }
         }
     }
+
+    /// <summary>The same names as text. ONE loop, so the token span and the string can
+    /// never come from different members.</summary>
+    public IEnumerable<string> PartNames => PartNameTokens.Select(t => t.Text);
 }
 
 /// <summary>
@@ -768,9 +760,11 @@ public sealed partial class CombinedStaffRenderSyntax : SyntaxNode
     /// <summary>The <c>combinedStaff</c> keyword token.</summary>
     public SyntaxTokenNode CombinedStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>The two part names, in source order: the first is the part whose stems go
-    /// UP where the two are engraved apart, and the one "Solo" refers to.</summary>
-    public IEnumerable<string> PartNames
+    /// <summary>The two part-name TOKENS, in source order: the first is the part whose stems
+    /// go UP where the two are engraved apart, and the one "Solo" refers to. Tokens rather
+    /// than text, for the same reason as <see cref="CondensedStaffRenderSyntax.PartNameTokens"/>
+    /// — an undefined one is reported on its own name.</summary>
+    public IEnumerable<SyntaxTokenNode> PartNameTokens
     {
         get
         {
@@ -780,10 +774,14 @@ public sealed partial class CombinedStaffRenderSyntax : SyntaxNode
             for (int i = 0; i < SlotCount; i++)
             {
                 if (GetChild(i) is SyntaxTokenNode t && SyntaxFacts.IsPartNameKind(t.Kind))
-                    yield return t.Text;
+                    yield return t;
             }
         }
     }
+
+    /// <summary>The same names as text. ONE loop, so the token span and the string can
+    /// never come from different members.</summary>
+    public IEnumerable<string> PartNames => PartNameTokens.Select(t => t.Text);
 }
 
 /// <summary>

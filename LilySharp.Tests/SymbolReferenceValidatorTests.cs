@@ -216,6 +216,66 @@ $undefined2
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("lh"));
     }
 
+    // ── the bare members of `condensedStaff { … }` / `combinedStaff { … }` ──
+
+    /// <summary>
+    /// A misspelt member named no part and nothing said so: `condensedStaff { fl1 fl22 }`
+    /// passed `lysc check` clean and simply dropped that voice (measured — its SVG differs
+    /// from the correctly-spelt one). The same silence <c>staff melody2</c> had before
+    /// LYS1007, in the two render items whose members are BARE part names.
+    /// </summary>
+    private const string BareMemberSheet = """
+        part fl1 { clef treble }
+        part fl2 { clef treble }
+        section Main {
+          fl1 { c4 d e f | }
+          fl2 { e4 f g a | }
+        }
+        form main { Main }
+        score main "x" {
+        """;
+
+    [Theory]
+    [InlineData("condensedStaff { fl1 fl22 }", "fl22")]
+    [InlineData("combinedStaff { fl1 fl22 }", "fl22")]
+    // The FIRST member too — a scan that only looked at the last would pass this.
+    [InlineData("condensedStaff { fl11 fl2 }", "fl11")]
+    // A combined staff may sit inside a condensed one.
+    [InlineData("condensedStaff { fl1 fl2 }  combinedStaff { fl1 fl22 }", "fl22")]
+    public void Validate_BareMemberNamesUndefinedPart_ReportsError(string scoreBody, string bad)
+    {
+        var undef = Refs(BareMemberSheet + scoreBody + " }")
+            .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Single(undef);
+        Assert.Contains(bad, undef[0].Message);
+    }
+
+    [Theory]
+    [InlineData("condensedStaff { fl1 fl2 }")]
+    [InlineData("combinedStaff { fl1 fl2 }")]
+    [InlineData("condensedStaff { fl1 fl2 fl1 }")]
+    public void Validate_BareMembersNameDefinedParts_NoError(string scoreBody)
+        => Assert.DoesNotContain(Refs(BareMemberSheet + scoreBody + " }"),
+            d => d.Code == DiagnosticCodes.UndefinedPart);
+
+    /// <summary>
+    /// A member the container REJECTED is kept in the tree so its width survives
+    /// (ParseBarePartNameMembers), and must not then be reported a second time as an
+    /// undefined part: <c>condensedStaff { staff fl1 }</c> already says "cannot contain
+    /// 'staff'", which is the message the author needs. The selection is positive — a token
+    /// has to BE a part name, not merely fail to be a brace.
+    /// </summary>
+    [Fact]
+    public void Validate_RejectedBareMemberIsNotAlsoAnUndefinedPart()
+    {
+        var source = BareMemberSheet + "condensedStaff { staff fl1 staff fl2 } }";
+        // The rejection is the PARSER's, so read it off the tree — the point of the test is
+        // that the message is already there and this validator must not add a second one.
+        Assert.Equal(2, SyntaxTree.Parse(source).Diagnostics
+            .Count(d => d.Code == DiagnosticCodes.CondensedStaffBadMember));
+        Assert.DoesNotContain(Refs(source), d => d.Code == DiagnosticCodes.UndefinedPart);
+    }
+
     // ── row render targets: `chords NAME` / `lyrics NAME` ──
 
     /// <summary>

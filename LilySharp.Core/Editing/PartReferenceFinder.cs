@@ -24,8 +24,8 @@ namespace LilySharp.Core.Editing;
 /// Resolves every occurrence of a <c>part</c> name in a document: its declaration
 /// (<c>part NAME { … }</c>) and each place that references it — section-body part
 /// blocks (<c>NAME { … }</c>), score render targets (<c>staff [clef] NAME</c>,
-/// <c>ossia NAME</c>, <c>tab NAME</c>, <c>chords NAME</c>, <c>lyrics NAME</c>,
-/// grand-staff staves) and midi part renders.
+/// <c>ossia NAME</c>, <c>tab NAME</c>, grand-staff staves, and the bare members of
+/// <c>condensedStaff { … }</c> / <c>combinedStaff { … }</c>) and midi part renders.
 /// Powers the editor's "rename a part" refactor, so a part can be renamed
 /// everywhere from any single occurrence.
 /// </summary>
@@ -70,6 +70,15 @@ public static class PartReferenceFinder
                 case TabRenderSyntax tab:
                     if (TabPartToken(tab) is { } tt)
                         tokens.Add(tt);
+                    break;
+                // `condensedStaff { a b … }` / `combinedStaff { a b }` hold BARE part names
+                // — no clef, no display name, no tail to cut off — so the node's own
+                // accessor is the selection, and it is the same one RenderSpecParser reads.
+                case CondensedStaffRenderSyntax condensed:
+                    tokens.AddRange(condensed.PartNameTokens);
+                    break;
+                case CombinedStaffRenderSyntax combined:
+                    tokens.AddRange(combined.PartNameTokens);
                     break;
                 // ⚠️ THE ROW FAMILY IS DELIBERATELY ABSENT. `chords NAME` / `lyrics NAME`
                 // name their own tracks, and the language server ALREADY resolves those in
@@ -119,6 +128,12 @@ public static class PartReferenceFinder
                 case TabRenderSyntax tab:
                     if (TabPartToken(tab) is { } tt)
                         tokens.Add(tt);
+                    break;
+                case CondensedStaffRenderSyntax condensed:
+                    tokens.AddRange(condensed.PartNameTokens);
+                    break;
+                case CombinedStaffRenderSyntax combined:
+                    tokens.AddRange(combined.PartNameTokens);
                     break;
             }
         }

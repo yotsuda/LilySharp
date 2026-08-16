@@ -55,9 +55,12 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         foreach (var node in nodes)
             ValidateReferences(node);
 
-        // A score's staff/ossia/tab render targets must name a defined part — a `part
+        // A score's staff/ossia/tab render targets — and the bare members of a
+        // `condensedStaff { … }` / `combinedStaff { … }` — must name a defined part: a `part
         // NAME { … }` header OR a section-body part block `NAME { … }`. `score { staff
-        // melody2 }` with no such part is an error (it otherwise rendered an empty staff).
+        // melody2 }` with no such part is an error (it otherwise rendered an empty staff),
+        // and `condensedStaff { fl1 fl22 }` silently dropped the misspelt part's voice while
+        // reporting nothing (measured: its SVG differs from the correctly-spelt one).
         foreach (var reference in PartReferenceFinder.ReferenceTokens(root))
             if (!_definedParts.Contains(reference.Text))
                 _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,
