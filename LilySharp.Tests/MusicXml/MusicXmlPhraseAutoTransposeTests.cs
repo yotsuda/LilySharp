@@ -72,4 +72,50 @@ public sealed class MusicXmlPhraseAutoTransposeTests
             """);
         Assert.Equal(new[] { ("C", 4), ("D", 4), ("E", 4), ("C", 4) }, pitches);
     }
+
+    // A reference's TRAILING MARKS are the other half of "movable": they move the frame
+    // the body is read in. Relative mode moves the running frame, absolute mode the
+    // anchor (_octaveAnchor here, OctaveBase in the collector). Until 2026-08-16 this
+    // walker did the relative half only, silently — as did the collector and the MIDI
+    // exporter; only the LilyPond twin said anything.
+
+    private static string Book(string reference, bool absolute) => $$"""
+        {{(absolute ? "octave absolute" : "")}}
+        key c major
+        phrase Lick { c d e c }
+        section A { m { {{reference}} } }
+        form main { A }
+        score main { staff m }
+        """;
+
+    [Theory]
+    [InlineData("Lick", 4)]
+    [InlineData("Lick'", 5)]
+    [InlineData("Lick,", 3)]
+    public void AnAbsoluteReferencesMarks_MoveTheExportedOctave(string reference, int octave)
+    {
+        var pitches = Pitches(Book(reference, absolute: true));
+        Assert.NotEmpty(pitches);
+        Assert.All(pitches, p => Assert.Equal(octave, p.octave));
+    }
+
+    [Theory]
+    [InlineData("Lick")]
+    [InlineData("Lick'")]
+    [InlineData("Lick,")]
+    public void TheTwoOctaveModes_ExportTheSameReference(string reference)
+    {
+        Assert.Equal(Pitches(Book(reference, absolute: false)), Pitches(Book(reference, absolute: true)));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AReferencesMarkMovesTheExport_InBothModes(bool absolute)
+    {
+        // Positive control for the pair above: two modes that both ignored the mark would
+        // agree with each other, which is all that test can see on its own.
+        Assert.NotEqual(Pitches(Book("Lick", absolute)), Pitches(Book("Lick'", absolute)));
+        Assert.NotEqual(Pitches(Book("Lick", absolute)), Pitches(Book("Lick,", absolute)));
+    }
 }

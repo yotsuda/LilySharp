@@ -1187,6 +1187,10 @@ public sealed partial class MeasureCollector
     // the phrase's own frame at entry), handed to the relative chain at exit —
     // the chord rule; null = pitchless body. Pushed/popped alongside the above.
     private readonly Stack<(char Name, int Octave)?> _phraseAnchorSaves = new();
+    // Saved absolute-mode anchors (OctaveBase). A reference's trailing marks move
+    // the frame the body resolves in; in ABSOLUTE mode the frame IS OctaveBase, so
+    // that is what moves. Pushed/popped alongside the above.
+    private readonly Stack<int> _phraseAbsoluteBaseSaves = new();
 
     // Piece-level metadata (title/composer/tempo/time/key/clef + header source
     // positions) grouped into one owner. See MetadataState.
@@ -2694,12 +2698,21 @@ public sealed partial class MeasureCollector
     /// it. The phrase shift composes UNDER any part/score transpose (the written
     /// pitch moves home→ambient first, then the instrument transpose applies).
     /// </summary>
-    private void EnterPhraseTranspose(int diatonicSteps = 0, int? anchorStep = null)
+    private void EnterPhraseTranspose(int diatonicSteps = 0, int? anchorStep = null,
+        int octaveOffset = 0)
     {
         var saved = _octave.GetTranspose();
         _phraseTransposeSaves.Push(saved);
         if (PhraseTransposeTarget() is { } phrase)
             _octave.SetTranspose(ComposeTranspose(phrase, saved));
+        // The reference's trailing marks (Chorus' / Chorus,) move the frame the body
+        // resolves in. EnterDefaultFrame has already moved the RELATIVE frame; in
+        // absolute mode there is no running frame, and the thing that plays its part —
+        // the anchor bare c resolves against — is OctaveBase. Moving it here is what
+        // makes `octave absolute` honour the marks, and nested references compose
+        // additively because each pushes the base it found.
+        _phraseAbsoluteBaseSaves.Push(_octave.OctaveBase);
+        _octave.OctaveBase += octaveOffset;
         // The reference's interval argument (Melody'(3)) shifts the body's pitches
         // by scale steps; nested references compose additively.
         _phraseDiatonicSaves.Push(_octave.DiatonicShiftSteps);
@@ -2736,6 +2749,8 @@ public sealed partial class MeasureCollector
     {
         if (_phraseTransposeSaves.Count > 0)
             _octave.SetTranspose(_phraseTransposeSaves.Pop());
+        if (_phraseAbsoluteBaseSaves.Count > 0)
+            _octave.OctaveBase = _phraseAbsoluteBaseSaves.Pop();
         if (_phraseDiatonicSaves.Count > 0)
         {
             int restored = _phraseDiatonicSaves.Pop();
@@ -3346,6 +3361,7 @@ public sealed partial class MeasureCollector
         _phraseTransposeSaves.Clear();
         _phraseDiatonicSaves.Clear();
         _phraseAnchorSaves.Clear();
+        _phraseAbsoluteBaseSaves.Clear();
         _octave.DiatonicShiftSteps = 0;
 
         var builder = new MeasureBuilder(TimeSignatureFraction);
@@ -3504,7 +3520,7 @@ public sealed partial class MeasureCollector
                     if (site.Node is RelativeResetMarker reset)
                     {
                         EnterDefaultFrame(reset.OctaveOffset);
-                        EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
+                        EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep, reset.OctaveOffset);
                         builder.ResetMeasureBoundary();
                         continue;
                     }

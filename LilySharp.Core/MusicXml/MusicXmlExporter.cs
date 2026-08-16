@@ -1040,6 +1040,11 @@ public sealed class MusicXmlExporter
                     int savedDiatonic = _diatonicShiftSteps;
                     _currentTranspose = PitchTransposer.Compose(PhraseTransposeTarget(), savedTranspose);
                     _diatonicShiftSteps += varRef.DiatonicShiftSteps;
+                    // The same marks in ABSOLUTE mode: there is no running frame to
+                    // move, so the shift lands on the absolute anchor instead — the
+                    // collector's OctaveBase, this walker's _octaveAnchor.
+                    int savedAnchor = _octaveAnchor;
+                    _octaveAnchor += varRef.OctaveOffset;
                     // The phrase's outgoing ANCHOR — its first note's bare
                     // letter resolved in the fresh frame above, the ambient
                     // tonic for a degree-opened body — captured before the
@@ -1051,6 +1056,7 @@ public sealed class MusicXmlExporter
                     ProcessNode(varBody);
                     _currentTranspose = savedTranspose;
                     _diatonicShiftSteps = savedDiatonic;
+                    _octaveAnchor = savedAnchor;
                     // Frame hand-off at the phrase's ANCHOR (matches the
                     // collector's ExitPhraseTranspose): the reference is ONE
                     // item, the chord rule — its interior never leaks, and its

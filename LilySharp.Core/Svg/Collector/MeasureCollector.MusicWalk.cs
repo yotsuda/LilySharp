@@ -72,7 +72,7 @@ public sealed partial class MeasureCollector
                 if (site.Node is RelativeResetMarker reset)
                 {
                     EnterDefaultFrame(reset.OctaveOffset);
-                    EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep);
+                    EnterPhraseTranspose(reset.DiatonicSteps, reset.AnchorStep, reset.OctaveOffset);
                     // A phrase reference is ONE item; its boundary re-arms the confirmable
                     // boundary like a section start, so a barline at the edge of the phrase
                     // body does not pair with an adjacent outer barline into an empty measure
@@ -194,9 +194,15 @@ public sealed partial class MeasureCollector
     /// (<see cref="RelativeResetMarker"/>) boundary. <paramref name="octaveOffset"/>
     /// carries the reference's trailing marks (<c>Chorus'</c> / <c>Chorus,</c>),
     /// shifting the fresh frame so the movable phrase lands an octave up or down.
-    /// The shift only bites in relative mode; absolute pitches (octave absolute)
-    /// anchor to a fixed C and ignore the running frame, so they carry their own
-    /// octaves and are unaffected by a reference mark.</summary>
+    /// This moves the RELATIVE frame only. Absolute pitches ignore the running frame,
+    /// so their half of the same shift lands on <c>OctaveBase</c> — the anchor a bare
+    /// <c>c</c> resolves against — applied by the paired
+    /// <c>EnterPhraseTranspose</c>, which owns the save/restore.
+    /// ⚠️ Until 2026-08-16 the absolute half did not exist, and this remark declared its
+    /// absence deliberate while GRAMMAR.md's PhraseRef called the same silence a defect.
+    /// Nothing observed the disagreement: no book in the tree writes the spelling, and
+    /// only the LilyPond twin exporter said anything (it warned "the body is exported
+    /// UNSHIFTED").</summary>
     private void EnterDefaultFrame(int octaveOffset = 0)
     {
         _octave.ResetToInitial();

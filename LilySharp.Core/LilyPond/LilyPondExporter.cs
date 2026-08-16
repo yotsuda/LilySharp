@@ -475,16 +475,26 @@ public sealed class LilyPondExporter
             if (inner.Length == 0)
                 return "";
 
-            // In absolute mode there is no frame to reset: the body's own octave marks are
-            // already absolute, so the reference is pure inlining.
+            // In absolute mode there is no relative frame to reset, so an UNMARKED
+            // reference is pure inlining. A marked one moves the ANCHOR the body's bare
+            // letters are measured from — the collector's OctaveBase — and LilyPond spells
+            // exactly that with a nested \fixed, off the same AbsoluteBaseOctave the part
+            // wrapper uses. Nesting is what makes it a SHIFT rather than a re-anchor, so a
+            // doubly-referenced phrase composes the way the collector's stack does.
+            // ⚠️ Off that constant, so this inherits its documented gate rather than
+            // opening a second one: the constant is 4 while Lily#'s absolute anchor honours
+            // a part's `octave N`, and every absolute spelling in this file is written
+            // against the wrapper actually emitted. A book with both would be a whole
+            // octave out HERE TOO, and consistently so — which is the point of reusing it.
+            // ⚠️ This branch used to warn "the body is exported UNSHIFTED" and emit the
+            // body unmoved, and it was the ONLY one of the four outputs that said anything:
+            // the page, the MIDI and the MusicXML all dropped the marks in silence. It was
+            // right about what happened and wrong about what should — see
+            // MeasureCollector.EnterDefaultFrame.
             if (_octaveAbsolute)
-            {
-                if (v.OctaveOffset != 0)
-                    _warnings.Add(
-                        $"phrase reference '{name}' shifts the octave frame, which an "
-                        + "absolute-octave file has none of — the body is exported UNSHIFTED");
-                return inner;
-            }
+                return v.OctaveOffset == 0
+                    ? inner
+                    : $"\\fixed {AnchorPitch(AbsoluteBaseOctave + v.OctaveOffset)} {{ {inner} }}";
 
             return $"\\relative {ReferencePitch(v.OctaveOffset)} {{ {inner} }}";
         }
@@ -626,7 +636,7 @@ public sealed class LilyPondExporter
         string wrapper = _drumMode
             ? "\\drummode"
             : _octaveAbsolute
-            ? "\\fixed c'"
+            ? "\\fixed " + AnchorPitch(AbsoluteBaseOctave)
             : "\\relative " + AnchorPitch(_anchorOctave);
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
 

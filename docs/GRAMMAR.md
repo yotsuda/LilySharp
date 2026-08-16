@@ -557,7 +557,7 @@ ChordNote      = PitchToken , { Annotation } ;
      too. Read off the page: noteheads at y 13.85/12.85/11.85 and 20.85/19.85/18.85
      against treble staff lines 12.35…16.35, and each absolute book's SVG is identical
      to its relative twin's (data-pos masked).
-     ⚠️ This paragraph said the opposite between 2026-08-16 and 2026-08-17 — "they do
+     ⚠️ This paragraph said the opposite between 2026-08-16 and 2026-08-16 — "they do
      not … measured … the mark is parsed and then dropped" — and the word "measured"
      was true of the instrument, not of the engine: the reading came from
      'lysc check --pitches', which answered C4 E4 G4 for all three spellings while the
@@ -644,10 +644,20 @@ PhraseRef      = [ '$' ] , Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] 
                     the parser accepts, which is not the same question.
                     A movable phrase: it lands in the AMBIENT key at the reference
                     site; trailing marks shift whole octaves (Chorus' / Chorus,).
-                    ⚠️ Trailing marks are DROPPED in 'octave absolute' — the page does
-                    not move, so this one is real and not a misread report (a chord's
-                    marks DO shift there; see Chord above); the '(N)' below still applies.
-                    Filed in HANDOFF §2F. A
+                    The marks shift in BOTH octave modes: relative moves the running
+                    frame, absolute moves the anchor a bare 'c' is measured from, and the
+                    two spellings resolve identically (measured over plain / ' / , — same
+                    page, same MIDI, same MusicXML, same reported pitches; the LilyPond
+                    twin writes '\fixed c''' where the relative one writes
+                    '\relative c''', and LilyPond 2.26.0 renders those two byte-identically).
+                    ⚠️ Absolute mode DROPPED them until 2026-08-16, in silence in three of
+                    the four outputs — only the LilyPond twin said anything, warning that
+                    the body was "exported UNSHIFTED". This paragraph and
+                    GRAMMAR_FOR_LLM.md both taught the shift the whole time; the
+                    implementation and one code comment (MeasureCollector.EnterDefaultFrame,
+                    which declared the absence deliberate) disagreed with them, and no book
+                    in the tree writes the spelling, so nothing ever brought the two
+                    together. A
                     GLUED '(N)' after at least one mark is a DIATONIC interval:
                     Melody'(3) plays the phrase a third UP in the ambient key (the
                     third's quality follows the scale), Motif,(2) a second down —

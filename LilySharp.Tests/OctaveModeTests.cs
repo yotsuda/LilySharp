@@ -94,4 +94,66 @@ score main ""t"" { staff melody }
         Assert.Equal("C5", trace[2]);
         Assert.Equal("C7", trace[3]);
     }
+
+    // ---- a phrase reference's trailing marks, in ABSOLUTE mode ----------------------
+
+    // A reference's ' / , move the frame its body is read in. Relative mode moves the
+    // running frame; absolute mode has none, so the same shift moves OctaveBase — the
+    // anchor a bare `c` is measured from. Until 2026-08-16 the absolute half was simply
+    // missing: `theme'`, `theme,` and `theme` drew the same page, and only the LilyPond
+    // twin said so (it warned that the body was exported UNSHIFTED).
+
+    private static string PhraseBook(string reference, bool absolute) => $@"
+{(absolute ? "octave absolute" : "")}
+part melody {{ clef treble }}
+phrase theme {{ c4 d e f }}
+section A {{ melody {{ {reference} | }} }}
+form main {{ A }}
+score main ""t"" {{ staff melody }}
+";
+
+    [Theory]
+    [InlineData("theme",  new[] { "C4", "D4", "E4", "F4" })]
+    [InlineData("theme'", new[] { "C5", "D5", "E5", "F5" })]
+    [InlineData("theme,", new[] { "C3", "D3", "E3", "F3" })]
+    public void AnAbsolutePhraseReference_TakesItsTrailingMarks(string reference, string[] pitches)
+    {
+        Assert.Equal(pitches, Trace(PhraseBook(reference, absolute: true)));
+    }
+
+    [Theory]
+    [InlineData("theme")]
+    [InlineData("theme'")]
+    [InlineData("theme,")]
+    public void TheTwoOctaveModes_ReadAReferenceTheSameWay(string reference)
+    {
+        // The identity pair. Confirmed outside the suite against LilyPond 2.26.0: the two
+        // twins this produces (`\relative c''` and `\fixed c''`) render to byte-identical
+        // SVGs, and the three spellings render to three different ones.
+        Assert.Equal(Trace(PhraseBook(reference, absolute: false)),
+                     Trace(PhraseBook(reference, absolute: true)));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AReferencesMarkMovesItsBody_InBothModes(bool absolute)
+    {
+        // The positive control for the pair above: two modes that BOTH ignored the mark
+        // would agree, and agreeing is what that test checks. So the mark has to move
+        // something in each mode on its own.
+        Assert.NotEqual(Trace(PhraseBook("theme", absolute)), Trace(PhraseBook("theme'", absolute)));
+        Assert.NotEqual(Trace(PhraseBook("theme", absolute)), Trace(PhraseBook("theme,", absolute)));
+    }
+
+    [Fact]
+    public void AReferencesMarkDoesNotLeakPastIt_InAbsoluteMode()
+    {
+        // The shift is scoped to the body: OctaveBase is pushed at the reference and
+        // popped at its end marker, so the bare `c` AFTER the reference is C4 again. Two
+        // references in a row each start from the unshifted anchor rather than compounding.
+        Assert.Equal(
+            new[] { "C5", "D5", "E5", "F5", "C4", "C3", "D3", "E3", "F3" },
+            Trace(PhraseBook("theme' c4 theme,", absolute: true)));
+    }
 }

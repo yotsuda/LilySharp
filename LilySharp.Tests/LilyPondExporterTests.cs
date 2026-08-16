@@ -919,6 +919,46 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("\\relative", ly);
     }
 
+    [Theory]
+    [InlineData("A'", "\\fixed c'' { c'4 }")]
+    [InlineData("A,", "\\fixed c { c'4 }")]
+    public void AMarkedReference_MovesTheAnchor_WithANestedFixed(string reference, string expected)
+    {
+        // The test above is the UNMARKED case, and it was the whole story until
+        // 2026-08-16: a MARKED reference in an absolute file emitted the body unmoved and
+        // warned "the body is exported UNSHIFTED". It was the only one of the four outputs
+        // to say anything — the page, the MIDI and the MusicXML dropped the marks in
+        // silence — and it was right about the behaviour and wrong about the rule.
+        // \fixed nests, so this SHIFTS the anchor rather than re-anchoring, which is what
+        // makes a doubly-referenced phrase compose the way the collector's stack does.
+        var exporter = new LilyPondExporter();
+        string ly = exporter.Export(SyntaxTree.Parse(PhraseScore("phrase A { c'4 }", reference)));
+
+        Assert.Contains(expected, ly);
+        // Two now: the file's own wrapper, and the reference's.
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(ly, @"\\fixed").Count);
+        Assert.DoesNotContain(exporter.Warnings, w => w.Contains("UNSHIFTED"));
+    }
+
+    [Fact]
+    public void TheMarkedTwins_NameTheSameOctave_InBothModes()
+    {
+        // Measured outside the suite with LilyPond 2.26.0 rather than argued from the
+        // twin's text (RULES §5.0: the twin's spelling is not LilyPond's answer). The two
+        // twins of a marked reference — `\fixed c'' { … }` and `\relative c'' { … }` —
+        // render to byte-identical SVGs, and the plain / ' / , spellings render to three
+        // different ones. What is pinned here is the pairing that measurement rests on:
+        // whatever octave the relative twin names, the absolute twin names the same.
+        string abs = new LilyPondExporter().Export(SyntaxTree.Parse(
+            PhraseScore("phrase A { c4 d e f }", "A'")));
+        string rel = new LilyPondExporter().Export(SyntaxTree.Parse(
+            PhraseScore("phrase A { c4 d e f }", "A'", headers: "")));
+
+        var anchor = new System.Text.RegularExpressions.Regex(@"\\(?:fixed|relative) (c[',]*) \{ c4");
+        Assert.Equal("c''", anchor.Match(abs).Groups[1].Value);
+        Assert.Equal(anchor.Match(rel).Groups[1].Value, anchor.Match(abs).Groups[1].Value);
+    }
+
     [Fact]
     public void ASelfReferencingPhrase_StopsAndSaysSo_InsteadOfRecursingForever()
     {

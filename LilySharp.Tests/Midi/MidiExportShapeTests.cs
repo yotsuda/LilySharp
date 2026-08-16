@@ -113,4 +113,54 @@ public class MidiExportShapeTests
         Assert.Equal(new[] { 36, 42 }, notes.Select(n => n.Pitch).OrderBy(p => p));
         Assert.Equal(notes[0].StartTick, notes[1].StartTick);
     }
+
+    // A phrase reference's trailing marks move the frame its body sounds in. Relative
+    // mode moves the running frame; absolute mode has none, so the shift lands on the
+    // absolute anchor (_partAbsoluteBase here, OctaveBase in the collector). Until
+    // 2026-08-16 this walker did the relative half only, and in silence — as did the
+    // page and the MusicXML; only the LilyPond twin warned.
+
+    private static string PhraseBook(string reference, bool absolute) => $$"""
+        {{(absolute ? "octave absolute" : "")}}
+        part m { clef treble }
+        phrase Lick { c4 d e f }
+        section A { m { {{reference}} | } }
+        form main { A }
+        score main { staff m }
+        """;
+
+    [Theory]
+    [InlineData("Lick", new[] { 60, 62, 64, 65 })]
+    [InlineData("Lick'", new[] { 72, 74, 76, 77 })]
+    [InlineData("Lick,", new[] { 48, 50, 52, 53 })]
+    public void AnAbsoluteReferencesMarks_MoveWhatSounds(string reference, int[] pitches)
+    {
+        Assert.Equal(pitches, ExportNotes(PhraseBook(reference, absolute: true)).Select(n => n.Pitch));
+    }
+
+    [Theory]
+    [InlineData("Lick")]
+    [InlineData("Lick'")]
+    [InlineData("Lick,")]
+    public void TheTwoOctaveModes_PlayTheSameReference(string reference)
+    {
+        Assert.Equal(
+            ExportNotes(PhraseBook(reference, absolute: false)).Select(n => n.Pitch),
+            ExportNotes(PhraseBook(reference, absolute: true)).Select(n => n.Pitch));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AReferencesMarkMovesWhatSounds_InBothModes(bool absolute)
+    {
+        // Positive control for the pair above, which on its own is satisfied by two modes
+        // that both ignore the mark.
+        Assert.NotEqual(
+            ExportNotes(PhraseBook("Lick", absolute)).Select(n => n.Pitch),
+            ExportNotes(PhraseBook("Lick'", absolute)).Select(n => n.Pitch));
+        Assert.NotEqual(
+            ExportNotes(PhraseBook("Lick", absolute)).Select(n => n.Pitch),
+            ExportNotes(PhraseBook("Lick,", absolute)).Select(n => n.Pitch));
+    }
 }
