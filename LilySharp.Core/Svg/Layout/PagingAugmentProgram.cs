@@ -117,10 +117,62 @@ internal sealed class PagingAugmentProgram
     /// augmented pair. The baseline instances are only read (merged FROM), never mutated —
     /// an empty program hands them back untouched, exactly as the family loops left an
     /// unannotated system's originals in place.</summary>
+    /// <remarks>
+    /// ⚠️ THE COPY IS PER SIDE, NOT PER STEP, AND THAT IS NOT THE BATCHING THE CLASS REMARK
+    /// FORBIDS. Each step used to open with <c>new VerticalSkyline(); merge(cur.side)</c>,
+    /// so a system with N scripts copied its whole running silhouette N times — quadratic in
+    /// the steps, and MEASURED (session 191, Release, keystroke allocation, which is
+    /// deterministic where time is not) as the single biggest term in a script-dense
+    /// keystroke: 1908 MB of perf-fingstack1k's 3305 MB, 708 MB of perf-scripts1k's 1118 MB.
+    /// <para>
+    /// Hoisting it changes NO merge and NO association. <c>Merge(VerticalSkyline)</c> into an
+    /// EMPTY skyline is <c>_buildings.AddRange(other._buildings)</c> — a copy with no
+    /// arithmetic in it (VerticalSkyline.cs, the <c>IsEmpty</c> branch) — so the old step k
+    /// computed <c>(∅ ⊕ side_{k-1}) ⊕ ink_k</c> where the inner term is side_{k-1}'s
+    /// buildings verbatim. Merging <c>ink_k</c> into the copy in place applies
+    /// <c>MergeInternal</c> to the same building lists in the same order: byte-identical by
+    /// construction, and the property is CHECKED, not argued (566-book SVG A/B, 0 moved).
+    /// This is why the session-141 finding does not bite — that one reassociated the merges
+    /// themselves (seeding a batch instead of a sequence) and moved 4,878 ULPs; this one
+    /// removes a copy BETWEEN merges and leaves the sequence alone.
+    /// </para>
+    /// <para>
+    /// The baseline stays unmutated because the copy happens on the FIRST write to a side:
+    /// a program that only ever touches UP hands the caller's DOWN instance straight back,
+    /// exactly as the per-step spelling did — which is what
+    /// <c>SystemLayoutCache.GetOrComputePagingAugment</c>'s reference-equality key rests on.
+    /// </para>
+    /// </remarks>
     public (VerticalSkyline up, VerticalSkyline down) Execute(
         (VerticalSkyline up, VerticalSkyline down) baseline)
     {
         var cur = baseline;
+        bool ownUp = false, ownDown = false;
+
+        // The first write to a side copies it; every later step merges into that copy.
+        VerticalSkyline Up()
+        {
+            if (!ownUp)
+            {
+                var up = new VerticalSkyline(VerticalDirection.Up);
+                up.Merge(cur.up);
+                cur = (up, cur.down);
+                ownUp = true;
+            }
+            return cur.up;
+        }
+        VerticalSkyline Down()
+        {
+            if (!ownDown)
+            {
+                var down = new VerticalSkyline(VerticalDirection.Down);
+                down.Merge(cur.down);
+                cur = (cur.up, down);
+                ownDown = true;
+            }
+            return cur.down;
+        }
+
         int a = 0, t = 0, sc = 0, tg = 0;
         foreach (var kind in _kinds)
         {
@@ -131,10 +183,7 @@ internal sealed class PagingAugmentProgram
                     double anchorY = _args[a];
                     a += ScriptArgs;
                     t++;
-                    var up = new VerticalSkyline(VerticalDirection.Up);
-                    up.Merge(cur.up);
-                    ArticulationEngraver.MergeScriptProfile(up, _scripts[sc++], anchorY);
-                    cur = (up, cur.down);
+                    ArticulationEngraver.MergeScriptProfile(Up(), _scripts[sc++], anchorY);
                     break;
                 }
                 case Kind.ScriptDown:
@@ -142,10 +191,7 @@ internal sealed class PagingAugmentProgram
                     double anchorY = _args[a];
                     a += ScriptArgs;
                     t++;
-                    var down = new VerticalSkyline(VerticalDirection.Down);
-                    down.Merge(cur.down);
-                    ArticulationEngraver.MergeScriptProfile(down, _scripts[sc++], anchorY);
-                    cur = (cur.up, down);
+                    ArticulationEngraver.MergeScriptProfile(Down(), _scripts[sc++], anchorY);
                     break;
                 }
                 case Kind.TupletGroup:
@@ -153,22 +199,15 @@ internal sealed class PagingAugmentProgram
                     var group = _tupletGroups[tg++];
                     a += 1 + group.Length * TupletArgsPerItem;
                     t += group.Length;
-                    var up = new VerticalSkyline(VerticalDirection.Up);
-                    up.Merge(cur.up);
-                    var down = new VerticalSkyline(VerticalDirection.Down);
-                    down.Merge(cur.down);
                     SkylineBuilder.AddTupletBracketsToSkyline(
-                        group, staffTopUp: 0, StaffSize.FullSize, up, down);
-                    cur = (up, down);
+                        group, staffTopUp: 0, StaffSize.FullSize, Up(), Down());
                     break;
                 }
                 case Kind.BowGroup:
                 {
                     int count = (int)_args[a++];
-                    var up = new VerticalSkyline(VerticalDirection.Up);
-                    up.Merge(cur.up);
-                    var down = new VerticalSkyline(VerticalDirection.Down);
-                    down.Merge(cur.down);
+                    var up = Up();
+                    var down = Down();
                     for (int i = 0; i < count; i++, a += BowArgsPerItem)
                     {
                         SkylineBuilder.SeedBowInk(
@@ -177,46 +216,34 @@ internal sealed class PagingAugmentProgram
                             _args[a + 6], _args[a + 7],
                             staffTopUp: 0, StaffSize.FullSize, up, down);
                     }
-                    cur = (up, down);
                     break;
                 }
                 case Kind.FiguredBassBox:
                 {
-                    var down = new VerticalSkyline(VerticalDirection.Down);
-                    down.Merge(cur.down);
-                    down.Merge(VerticalSkyline.FromBox(
+                    Down().Merge(VerticalSkyline.FromBox(
                         _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
                         VerticalDirection.Down));
                     a += BoxArgs;
-                    cur = (cur.up, down);
                     break;
                 }
                 case Kind.VoltaBox:
                 case Kind.BarNumberBox:
                 {
-                    var up = new VerticalSkyline(VerticalDirection.Up);
-                    up.Merge(cur.up);
-                    up.Merge(VerticalSkyline.FromBox(
+                    Up().Merge(VerticalSkyline.FromBox(
                         _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
                         VerticalDirection.Up));
                     a += BoxArgs;
-                    cur = (up, cur.down);
                     break;
                 }
                 case Kind.MarkBox:
                 {
-                    var up = new VerticalSkyline(VerticalDirection.Up);
-                    up.Merge(cur.up);
-                    up.Merge(VerticalSkyline.FromBox(
+                    Up().Merge(VerticalSkyline.FromBox(
                         _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
                         VerticalDirection.Up));
-                    var down = new VerticalSkyline(VerticalDirection.Down);
-                    down.Merge(cur.down);
-                    down.Merge(VerticalSkyline.FromBox(
+                    Down().Merge(VerticalSkyline.FromBox(
                         _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
                         VerticalDirection.Down));
                     a += BoxArgs;
-                    cur = (up, down);
                     break;
                 }
                 default:
