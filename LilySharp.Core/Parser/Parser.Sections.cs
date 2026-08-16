@@ -55,6 +55,10 @@ internal sealed partial class Parser
 
         return Current.Kind switch
         {
+            // A `using` includes a whole FILE, so only the file level can hold one. Reported
+            // and PARSED — falling through to ParseList's `else Advance()` dropped the
+            // directive's width and slid every source offset after it (LYS0029).
+            SyntaxKind.UsingKeyword => ParseMisplacedUsing("a section"),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),

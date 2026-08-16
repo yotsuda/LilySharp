@@ -130,6 +130,10 @@ internal sealed partial class Parser
             SyntaxKind.CueKeyword => ParseCueExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            // A `using` includes a whole FILE; a music stream is the furthest place from the
+            // file level it can be written. Reported and kept — ParseMusicBlock's `Advance()`
+            // dropped its width and slid every later note's source offset (LYS0029).
+            SyntaxKind.UsingKeyword => ParseMisplacedUsing("a music block"),
             SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword => ParseBreak(),
             // Navigation marks are standalone landmarks — bare (not '@'), the same
             // token in a section's music (at a note) and in a form (at a boundary).

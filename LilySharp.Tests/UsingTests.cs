@@ -64,8 +64,6 @@ public sealed class UsingTests
 
     [Theory]
     [InlineData("using \"a.lys\"\ntime 4/4\n")]
-    [InlineData("time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n\nform main { ~A }\n")]
-    [InlineData("time 4/4\n\npart m { clef treble }\n\nsection A { m { c4 d e f | } }\n\nform main { ~A }\n\nscore main { using \"n.lys\" staff m }\n")]
     [InlineData("time 4/4\npart m { clef treble }\n")]
     public void HasUsings_AgreesWithAWholeTreeScan(string source)
     {
@@ -75,20 +73,88 @@ public sealed class UsingTests
             UsingExpander.HasUsings(tree));
     }
 
-    [Fact]
-    public void AUsingCanOnlyBeATopLevelItem()
-    {
-        // Why the children are the whole search space: `Parser.ParseTopLevelItem` is the
-        // only arm that reaches `ParseUsingDirective`, so writing one inside a section or
-        // a score produces NO directive node at all — measured, not assumed. If that ever
-        // changes, this test fails before HasUsings starts missing things.
-        const string inSection =
-            "time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n";
-        Assert.Empty(SyntaxTree.Parse(inSection).GetRoot()
-            .DescendantNodes().OfType<UsingDirectiveSyntax>());
+    // ---- LYS0029: a `using` outside the top level -------------------------------------
+    //
+    // FIVE spellings put one where only the file level can hold it, and all five used to
+    // consume it with a bare `Advance()` — which drops the tokens' WIDTH from the green
+    // tree. A node's position is the running sum of the widths before it, so every source
+    // offset after the directive slid left. Measured 2026-08-16 on the section spelling:
+    // the tree spelled itself back 16 characters short, every data-pos in the SVG pointed
+    // 16 early (52/55/57/59/61 — the offsets that book has with the line DELETED — for
+    // notes truly at 68/71/73/75/77), and `check --pitches` read the directive's own
+    // letters as the music (g, n, lys, s where the file says c d e f).
+    //
+    // ⚠️ Four were silent; the part header already reported LYS0025 and dropped the width
+    // anyway. Reporting and keeping are different repairs.
 
-        Assert.Single(SyntaxTree.Parse("using \"a.lys\"\n").GetRoot()
-            .DescendantNodes().OfType<UsingDirectiveSyntax>());
+    public static TheoryData<string> MisplacedUsings() => new()
+    {
+        "time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n",
+        "time 4/4\n\npart m { clef treble }\n\nsection A { m { c4 d e f | } }\n\nform main { ~A }\n\nscore main { using \"n.lys\" staff m }\n",
+        "form main { using \"n.lys\" ~A }\n",
+        "part m { clef treble using \"n.lys\" }\n",
+        "section A {\n  m { c4 using \"n.lys\" d e f | }\n}\n",
+    };
+
+    [Theory]
+    [MemberData(nameof(MisplacedUsings))]
+    public void AMisplacedUsing_KeepsItsWidth(string source)
+        => Assert.Equal(source, SyntaxTree.Parse(source).GetRoot().ToFullString());
+
+    /// <summary>
+    /// The invariant that keeps <see cref="UsingExpander.HasUsings"/>'s root-children-only
+    /// spelling honest now that a directive CAN appear deeper: everything that spelling
+    /// misses is reported and never expanded.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(MisplacedUsings))]
+    public void EveryUsingHasUsingsSkips_IsReported(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var root = tree.GetRoot();
+        var missed = root.DescendantNodes().OfType<UsingDirectiveSyntax>()
+            .Except(root.ChildNodes().OfType<UsingDirectiveSyntax>())
+            .ToList();
+
+        // ⚠️ Positive control. Without it this passes on a source that hides no directive
+        // at all — an "every X is Y" claim is true of the empty set (RULES §5.4).
+        Assert.NotEmpty(missed);
+
+        // Skipped by the keystroke-path question, so never expanded...
+        Assert.False(UsingExpander.HasUsings(tree));
+        // ...and therefore each one has to say so.
+        foreach (var m in missed)
+        {
+            int end = m.Position + m.ToFullString().Length;
+            Assert.Contains(tree.Diagnostics, d =>
+                d.Code == DiagnosticCodes.UsingMustBeTopLevel
+                && d.Span.Start >= m.Position && d.Span.Start < end);
+        }
+    }
+
+    /// <summary>
+    /// The quantity the drop corrupted, stated directly: every node stands where it says
+    /// it stands. This fails one character at a time and never at the node that lost the
+    /// token, which is why the defect outlived a green suite. The control (same book, the
+    /// directive moved to the top level) says the mapping is right to begin with.
+    /// </summary>
+    [Theory]
+    [InlineData("time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n")]
+    [InlineData("time 4/4\n\nusing \"n.lys\"\n\npart m { clef treble }\n\nsection A {\n  m { c4 d e f | }\n}\n")]
+    public void AMisplacedUsing_DoesNotSlideTheNodesAfterIt(string source)
+    {
+        var root = SyntaxTree.Parse(source).GetRoot();
+        Assert.Equal(source.Length, root.FullWidth);
+
+        foreach (var node in root.DescendantNodes())
+        {
+            var text = node.ToFullString();
+            Assert.True(
+                node.Position + text.Length <= source.Length
+                && source.AsSpan(node.Position, text.Length).SequenceEqual(text),
+                $"{node.Kind} at {node.Position} spells [{text}] but the source there is "
+                + $"[{source.Substring(node.Position, Math.Min(text.Length, source.Length - node.Position))}]");
+        }
     }
 
     [Fact]

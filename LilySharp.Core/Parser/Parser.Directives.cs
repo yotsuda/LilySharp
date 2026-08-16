@@ -476,6 +476,38 @@ internal sealed partial class Parser
         return new UsingDirectiveGreen(keyword, path);
     }
 
+    /// <summary>
+    /// A <c>using</c> written somewhere only the FILE level can hold one — inside a section,
+    /// a score, a form, a part header or a music block. Reported as
+    /// <see cref="DiagnosticCodes.UsingMustBeTopLevel"/>, then parsed as the directive it is
+    /// so its tokens stay in the tree.
+    /// </summary>
+    /// <param name="container">
+    /// Where it was written, named the way the reader wrote it ("a section", "a score", …);
+    /// it goes into the message so the error says which brace to move it out of.
+    /// </param>
+    /// <remarks>
+    /// ⚠️ Parsing it — rather than reporting and consuming with <c>Advance()</c> — is half the
+    /// repair, and the half that has no diagnostic of its own. A dropped token takes its WIDTH
+    /// out of the green tree, and a node's position is the running sum of the widths before it,
+    /// so every source offset after the directive slides left: measured, a <c>using</c> inside
+    /// a section moved every <c>data-pos</c> in the rest of the file 16 characters early and
+    /// made <c>check --pitches</c> read the directive's own letters as the music. The part
+    /// header already reported (LYS0025) and still did this. See
+    /// <see cref="DiagnosticCodes.UsingMustBeTopLevel"/> for the measurements.
+    /// </remarks>
+    private UsingDirectiveGreen ParseMisplacedUsing(string container)
+    {
+        // Span the keyword's INK (its leading trivia belongs to the line above it).
+        _diagnostics.Error(
+            new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+            DiagnosticCodes.UsingMustBeTopLevel,
+            $"a 'using' cannot go inside {container} — it includes a whole FILE, so it belongs "
+            + "at the top level, beside the parts and sections it brings in. Written here it "
+            + "does nothing at all.");
+        return ParseUsingDirective();
+    }
+
     private PhraseDeclarationGreen ParsePhraseDeclaration()
     {
         var keyword = Expect(SyntaxKind.PhraseKeyword);

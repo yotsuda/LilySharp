@@ -83,6 +83,8 @@ internal sealed partial class Parser
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
                 or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
                 => ParseNavigationMark(),
+            // Same guard as the ':|' arm above, for `using` (LYS0029).
+            SyntaxKind.UsingKeyword => ParseMisplacedUsing("a form"),
             _ => null
         };
     }
@@ -515,6 +517,9 @@ internal sealed partial class Parser
             // an unrecognised token here falls to ParseList's Advance(), which drops
             // the token's width and shifts every following source offset.
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
+            // The same drop this comment names, for the one keyword that reads most like it
+            // belongs here: `using` includes a FILE, not a staff (LYS0029).
+            SyntaxKind.UsingKeyword => ParseMisplacedUsing("a score"),
             _ when IsPartNameStart() => ParseMidiPartRender(),
             _ => null
         };

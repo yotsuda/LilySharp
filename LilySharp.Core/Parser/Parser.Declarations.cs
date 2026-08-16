@@ -72,6 +72,17 @@ internal sealed partial class Parser
             // dropping its width and shifting every following note's source offset.
             if (Check(SyntaxKind.KeyKeyword)) { properties.Add(ParseKeySignature()); continue; }
 
+            // A `using` here already spoke — as the generic stray token below — and STILL lost
+            // its width to that `Advance()`, so the loud spelling corrupted source positions
+            // exactly like the four silent ones. Its own name (LYS0029) says which brace to
+            // move it out of, keeps its tokens, and stops the quoted path cascading into a
+            // second stray-token error about a string that was never the mistake.
+            if (Check(SyntaxKind.UsingKeyword))
+            {
+                properties.Add(ParseMisplacedUsing("a part header"));
+                continue;
+            }
+
             var prop = ParsePartProperty();
             if (prop != null)
             {

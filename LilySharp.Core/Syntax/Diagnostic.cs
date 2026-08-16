@@ -410,6 +410,49 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string UsingFileUnreadable = "LYS0028";
 
+    /// <summary>Parser error: a <c>using "file.lys"</c> written anywhere but the top level —
+    /// inside a section, a score, a form, a part header or a music block. It includes a whole
+    /// FILE, so only the file level can hold one; nested, it can never do anything.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ The silence was only half of it, and the louder half was the one nobody looked at.
+    /// The tokens were consumed with a bare <c>Advance()</c>, which drops their WIDTH from the
+    /// green tree — and a node's position is the running sum of the green widths before it, so
+    /// EVERY source position after the directive slid left by the length of what was dropped.
+    /// Measured 2026-08-16 on <c>section A { using "n.lys" &lt;notes&gt; }</c>: the tree spelled
+    /// itself back 16 characters short, every <c>data-pos</c> in the SVG pointed 16 characters
+    /// early (52/55/57/59/61 — the offsets the same book has with the line DELETED — against
+    /// notes truly at 68/71/73/75/77), and <c>check --pitches</c> named the <c>using</c> line
+    /// itself as the music, reporting <c>g</c>, <c>n</c>, <c>lys</c>, <c>s</c> where the file
+    /// says <c>c d e f</c>. That report is the instrument RULES §5.3 判定法⑶ tells every
+    /// session to run over a synthesized book before filing anything.
+    /// </para>
+    /// <para>
+    /// ⚠️ FIVE spellings, and the one that already spoke was assumed to be fine. A part header
+    /// reported <see cref="PartHeaderStrayToken"/> — and dropped the width anyway, so the noisy
+    /// case corrupted positions exactly like the four silent ones (section body 16, score body
+    /// 14, form body 14, part header 14, music block 14). Reporting and keeping are different
+    /// repairs; this code does both, and folds the part header's cascading second error (about
+    /// the quoted path) into one message.
+    /// </para>
+    /// <para>
+    /// ⚠️ An ERROR, not a warning like <see cref="UsingFileUnreadable"/>. That one is a warning
+    /// because the skip is DECLARED design (<c>UsingExpander</c>: "a missing using never aborts
+    /// the render", pinned by <c>UsingTests.MissingFile_IsSkipped</c>) — a file that is briefly
+    /// unsaved must not blank the preview. No such contract covers a misplaced one: no state of
+    /// the file system can make it mean anything.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>UsingExpander.HasUsings</c> still reads the ROOT'S CHILDREN ONLY, and must: it is
+    /// asked on every keystroke, and the directives it looks for are the ones
+    /// <c>UsingExpander.FindUsings</c> resolves — also root children. A nested directive now
+    /// exists as a node but is never expanded, which is what this error says. The invariant
+    /// that keeps the cheap spelling honest is stated as a test:
+    /// <c>UsingTests.EveryUsingHasUsingsSkips_IsReported</c>.
+    /// </para>
+    /// </remarks>
+    public const string UsingMustBeTopLevel = "LYS0029";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
