@@ -84,7 +84,9 @@ $st = git status --porcelain
 count 点 106/うち非ゼロ 2**・HEAD `837eed1b`（実装の最後 `8aca063c`）・
 **未 push 5・未追跡 0・作業ツリー項目 0**・suite **5239 passed / 0 failed / 4 skipped**
 ＝**引継ぎの数は全部合っていた**（**20 回連続**）。
-終了時 **実装の最後は `24db4966`**（HEAD `4b47ae6d` は snapshot 1 枚の削除）・**未 push は
+終了時 **実装の最後は `24db4966`**（**そのあとは Core を 1 行も触らない 3 便**＝
+snapshot 1 枚の削除・引継ぎ・RULES への汎化。**HEAD の値はここに書かない**——
+§0 の「開始時に実コードで再確認する」に自分で掛かるため）・**未 push は
 `git rev-list --count origin/master..master` が言う**・**未追跡 0・作業ツリー項目 0**・
 suite **5240 passed / 0 failed / 4 skipped**（+1＝新しい網ちょうど）・
 **台帳 516 点で不動**（ss 非ゼロ 98・総和 3.609965521・count 106/2）・
