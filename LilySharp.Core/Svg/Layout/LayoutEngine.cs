@@ -2021,11 +2021,75 @@ internal sealed class LayoutEngine
         AppendScriptSteps(articulations, systems, measureToSystem,
             s => builders[s] ??= new PagingAugmentProgram.Builder());
 
-        var augmented = systemSkylines.ToArray();
-        for (int s = 0; s < augmented.Length; s++)
-            if (builders[s] is { } builder)
-                augmented[s] = builder.Build().Execute(augmented[s]);
-        return augmented;
+        return new LazyScriptAugmentedSkylines(systemSkylines, builders);
+    }
+
+    /// <summary>
+    /// The script-augmented per-system skylines, each system's merge run on FIRST ACCESS —
+    /// the same values <see cref="AugmentSkylinesWithScripts"/> always returned, priced per
+    /// system that somebody actually reads.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ MEASURED, and it is why this is a list and not an eager array. The three consumers
+    /// are the rows that drop below the staff (lyrics, figured bass, chord names), and a
+    /// score can carry a thousand staccati with none of them — a piano piece, and every
+    /// synthetic script book in audit/lpreg. On those the whole augment was built and then
+    /// read by nobody: 840.5 MB of perf-fingstack1k's 2191.7 MB keystroke and 299.7 MB of
+    /// perf-scripts1k's 698.1 MB (session 191, Release, allocation — deterministic where
+    /// time is not).
+    /// <para>
+    /// ⚠️ A LIST AND NOT A GUARD AT THE CALL SITE, deliberately. A guard would have to name
+    /// the consumers ("if there are no lyrics and no figures and no chord names, skip"), and
+    /// the fourth consumer to arrive would silently get UN-augmented skylines — a lyric row
+    /// engraved over a marcato, with nothing red. Demand-driven, a new consumer is correct by
+    /// construction: reading the list is what builds it.
+    /// </para>
+    /// <para>
+    /// Identity is preserved both ways: a system with no script steps hands back the caller's
+    /// own instance (as the eager array did), and a system that is read twice gets the same
+    /// augmented instance rather than a second merge.
+    /// </para>
+    /// </remarks>
+    private sealed class LazyScriptAugmentedSkylines
+        : IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>
+    {
+        private readonly IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> _base;
+        private readonly PagingAugmentProgram.Builder?[] _builders;
+        private readonly (VerticalSkyline up, VerticalSkyline down)?[] _done;
+
+        public LazyScriptAugmentedSkylines(
+            IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> baseline,
+            PagingAugmentProgram.Builder?[] builders)
+        {
+            _base = baseline;
+            _builders = builders;
+            _done = new (VerticalSkyline up, VerticalSkyline down)?[baseline.Count];
+        }
+
+        public int Count => _base.Count;
+
+        public (VerticalSkyline up, VerticalSkyline down) this[int index]
+        {
+            get
+            {
+                if (_done[index] is { } cached)
+                    return cached;
+                var value = _builders[index] is { } b
+                    ? b.Build().Execute(_base[index])
+                    : _base[index];
+                _done[index] = value;
+                return value;
+            }
+        }
+
+        public IEnumerator<(VerticalSkyline up, VerticalSkyline down)> GetEnumerator()
+        {
+            for (int i = 0; i < Count; i++)
+                yield return this[i];
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+            => GetEnumerator();
     }
 
     /// <summary>

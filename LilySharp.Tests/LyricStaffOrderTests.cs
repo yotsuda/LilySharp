@@ -447,4 +447,47 @@ public class LyricStaffOrderTests
             + $"lower staff's fermata (ink top {markInkTop:F6}): the mark is above the "
             + "syllable's baseline, so the two overlap");
     }
+
+    /// <summary>
+    /// The ONE-STAFF half of the same rule, which travels by a different road: a script under
+    /// the staff joins the SYSTEM silhouette (<c>LayoutEngine.AugmentSkylinesWithScripts</c>)
+    /// and the line drops below that.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN BECAUSE THE ROAD ACQUIRED A WAY TO BE SILENT (session 191). The augment is
+    /// now built on DEMAND — the consumer that indexes it is what runs the merge — which
+    /// removes it entirely from the many books that carry scripts and no row below the staff.
+    /// A consumer that stops indexing it therefore stops getting it, and until this test the
+    /// only thing that would have noticed on this road was ONE snapshot
+    /// (<c>test/lyrics-below-marcato</c>, whose byte-identity a rebase can approve away). The
+    /// sibling test above covers the MULTI-staff road, which is a different mechanism —
+    /// <c>LyricBaseline_RespondsToADynamicUnderItsOwnStaff</c>'s remark says so and gives the
+    /// one-staff numbers it measured: baseline 7.864960 → 9.119960.
+    /// <para>
+    /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4): what is asserted is that the baseline RESPONDS
+    /// to the mark, plus the positive control that the mark is actually engraved. Pinning
+    /// either number would need re-approval every time the marcato's own placement moves.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void OnOneStaff_TheLyricBaselineDropsBelowAScriptUnderTheStaff()
+    {
+        // The fixture's own shape (test/lyrics-below-marcato): a LOW note so the mark hangs
+        // under the staff rather than over it, and one staff so the multi-staff road is not
+        // the one being measured.
+        const string tail =
+            "lyrics w { section A { la le li lo } }\n" +
+            "form main { A }\n" +
+            "score main { staff melody with lyrics w }\n";
+        var (plainLyrics, _) = LayoutOf(
+            "part melody { clef treble\n  section A { c4 c g' g } }\n" + tail);
+        var (markedLyrics, _) = LayoutOf(
+            "part melody { clef treble\n  section A { c4@marcato c g' g } }\n" + tail);
+
+        Assert.NotEmpty(plainLyrics);
+        Assert.NotEmpty(markedLyrics);
+        Assert.True(markedLyrics[0] > plainLyrics[0] + 0.1,
+            "the one-staff line must drop below the marcato under its own staff: "
+            + $"plain {plainLyrics[0]:F6}, with the mark {markedLyrics[0]:F6}");
+    }
 }
