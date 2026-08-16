@@ -213,6 +213,50 @@ internal sealed class ElementCoordinator
     /// every layout call, and the per-system beam memo partitions it by system and hands each
     /// partition back through here, so detection and layout cannot diverge. Null detects
     /// internally, exactly as before (no production caller passes null any more).</param>
+    /// <summary>
+    /// Moves a beam voice's item X table onto the x its heads are DRAWN at, when a
+    /// multi-voice column shifted them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: lily/note-collision.cc:467-468 <c>done[i]-&gt;translate_axis (amounts[i] -
+    /// left_most, X_AXIS)</c> — LilyPond moves the whole <c>Note_column</c>, and
+    /// <c>Note_column::get_stem</c> is a member of that column, so a LilyPond stem cannot be
+    /// left behind by its head and no separate step exists to port. Lily# resolves the shift
+    /// at render time instead (<c>SharedRenderer.EnumerateStaffItems</c>), which the UNBEAMED
+    /// stem rides for free because it is drawn from that already-shifted x — the beamed one is
+    /// drawn from <c>BeamLayout.MemberXPositions</c>, so the shift has to reach the table
+    /// those are built from.
+    /// </para>
+    /// <para>
+    /// It is applied HERE, to the table, and not at the draw site, because the table is also
+    /// the quanter's frame: <c>BeamScoringProblem</c> measures covered grobs against
+    /// <c>StemXOf</c> and <see cref="CollectBeamCollisions"/> books them, both off these same
+    /// positions. Shifting only what is drawn would score the beam in one frame and draw it in
+    /// another — and the shift is per NOTE, not per beam, so it does not cancel out of the
+    /// quanter's stem-to-stem distances the way a whole-group translation would.
+    /// </para>
+    /// <para>
+    /// Empty for every single-voice book (the overwhelming majority), which is answered
+    /// without a lookup; the per-item probe runs only where a staff actually has shifts.
+    /// </para>
+    /// </remarks>
+    private static void ApplyVoiceCollisionShifts(
+        List<double> itemXPositions,
+        ImmutableDictionary<VoiceItemKey, double> voiceShifts,
+        int measureIndex, int voiceIndex)
+    {
+        if (voiceShifts.IsEmpty)
+            return;
+
+        // VoiceId is 1-based, as VoiceCollector stamps it and as the renderer and the skyline
+        // seed both read it back (SkylineBuilder's `vi + 1`).
+        for (int i = 0; i < itemXPositions.Count; i++)
+            if (voiceShifts.TryGetValue(
+                    new VoiceItemKey(measureIndex, voiceIndex + 1, i), out double shift))
+                itemXPositions[i] += shift;
+    }
+
     public ImmutableArray<BeamLayout> LayoutBeams(
         Score score, ImmutableArray<SystemLayout> systems, int staffIndex,
         ImmutableArray<BeamGroup>? precomputedGroups = null)
@@ -224,6 +268,7 @@ internal sealed class ElementCoordinator
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
         var beamLayouts = new List<BeamLayout>();
+        var voiceShifts = SpacingRules.VoiceCollisionShiftsOf(score.Voices);
 
         foreach (var group in beamGroups)
         {
@@ -261,6 +306,9 @@ internal sealed class ElementCoordinator
                     itemXPositions.Add(measureLayout.X + itemLayout.X);
                 }
             }
+
+            ApplyVoiceCollisionShifts(itemXPositions, voiceShifts, group.MeasureIndex,
+                group.VoiceIndex);
 
             // The X table must cover the beam voice's whole item stream. On the
             // non-column path it is built from the PRIMARY voice's layout items,
@@ -389,6 +437,11 @@ internal sealed class ElementCoordinator
         Dictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
         int staffIndex, int systemIndex)
     {
+        // The same collision shifts the single-measure path adds to its table — see
+        // ApplyVoiceCollisionShifts. A beam that crosses a bar line has members in two
+        // measures, and each asks its own measure for its shift.
+        var voiceShifts = SpacingRules.VoiceCollisionShiftsOf(score.Voices);
+
         // Resolves an item's X via its OWN measure layout; null when the measure or the
         // item fell outside this system's map.
         double? ResolveX(int measureIdx, int itemIdx)
@@ -399,15 +452,22 @@ internal sealed class ElementCoordinator
             if (itemIdx >= measureLayout.Items.Length)
                 return null;
 
+            double shift = voiceShifts.IsEmpty
+                ? 0.0
+                : voiceShifts.TryGetValue(
+                      new VoiceItemKey(measureIdx, group.VoiceIndex + 1, itemIdx), out double s)
+                    ? s
+                    : 0.0;
+
             var measure = score.Voices[group.VoiceIndex].Measures[measureIdx];
             if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
             {
                 Fraction t = Fraction.Zero;
                 for (int k = 0; k < itemIdx; k++)
                     t += GetItemDuration(measure.Items[k]);
-                return measureLayout.X + measureLayout.GetXForTiming(t);
+                return measureLayout.X + measureLayout.GetXForTiming(t) + shift;
             }
-            return measureLayout.X + measureLayout.Items[itemIdx].X;
+            return measureLayout.X + measureLayout.Items[itemIdx].X + shift;
         }
 
         var memberXs = new List<double>(group.Members.Length);
