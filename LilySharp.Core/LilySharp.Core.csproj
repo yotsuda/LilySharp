@@ -27,6 +27,10 @@
   <ItemGroup>
     <InternalsVisibleTo Include="LilySharp.Tests" />
     <InternalsVisibleTo Include="LilySharp.Benchmarks" />
+    <!-- audit/LilySharp.Probe: the corpus measurements (poison sweeps, per-book census).
+         It reads CollectScore, which is internal because it is the collect phase's own
+         entry point rather than a supported API. -->
+    <InternalsVisibleTo Include="LilySharp.Probe" />
   </ItemGroup>
 
   <ItemGroup>

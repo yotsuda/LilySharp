@@ -84,3 +84,7 @@ scratch/
 work_progress.md
 .claude/
 __pycache__/
+
+# audit/LilySharp.Probe writes sweep results here; they are measurements of one run,
+# not repository state.
+audit/probe-out/

@@ -92,9 +92,13 @@ suite **5240 passed / 0 failed / 4 skipped**）が、**「N 回連続で合っ�
 **⑵ §2F 残債の返済**／**⑶ perf の外れ値は「まず射程を測る」**／
 **⑷ script profile の perf 項の優先度を上げる**（§2 の頭へ移した）。
 ★★ **環境＝pwsh の MCP コンソールは 1 本（`Cumin`）で通せた。**
-★ **この便の道具は `scratch\p190-incbench`**（⚠️ **git 管理外＝次便には来ない**）＝
-`census`（全 `.lys` を collect して数える・約 17 秒）／`sweep`＋`cmp`（毒→全数 SVG ハッシュ→差分・
-1 サイクル約 20 秒）／`datapos`（同一プロセス内の対で A/B）／`diff`／`shrink`／`variants`。
+★★ **この便の道具のうち 2 つは repo に入れた**（ユーザー決定）＝**`audit/LilySharp.Probe`**
+（solution の 6 番目・`census` と `sweep`/`cmp`・使い方と値段は §2 の頭）。**残りは捨てた**——
+`datapos`（Core の一時スイッチが要る）・`diff`／`shrink`／`variants`（data-pos 欠陥に固有で、
+閉じたので射程ごと消えた）。⚠️ **入れた理由は「便利だから」ではない**——**`scratch\` の計器は
+毎便作り直され、そのたびに同じ計器のミスが出る**（この便だけで 2 つ：共通集合が空の比較が
+「0 冊動いた」と印字した／`.lys` の生読みが CRLF を「動いた」に変えた）。
+**solution に入れると毎ビルドでコンパイルされるので、API が動いたらその場で赤くなる。**
 
 > ## ★★★ この便の骨＝**嘘をついたものが 5 つ、どれも緑のまま。赤で気づく道は 1 つも無かった**
 > **⑴ 札**: `fingering-articulation` の「articulation を運指の外へ押す後処理を守る」は**向きごと逆**。
@@ -484,11 +488,23 @@ count 点 106/うち非ゼロ 2**・HEAD `d23f7b0a`（実装の最後 `688763c6`
 > 5000 script 1118 MB とほぼ同じ）＝**タイと script が相互作用する**（:996 の tie 枝も
 > `ScriptSkylines` を呼ぶ）。**予測式 script×0.15MB は下限**として使うこと。
 >
-> ⚠️ **計器は `scratch\p190-incbench`（git 管理外＝次便には来ない）**。要るのは 2 本で、
-> どちらも作り直せる: **`-- census`**（全 `.lys` を collect して script 数を数える・約 17 秒）と
-> **`-- sweep <label> [listfile]` / `-- cmp <a> <b>`**（毒→全数 SVG ハッシュ→差分・1 サイクル約 20 秒。
-> ⚠️ **`.lys` は LF 正規化して読むこと**＝`SvgSnapshotTests:721` と同じ。生読みすると
-> CRLF の作業ツリーで data-pos がずれ、無関係な毒で「動いた」本が出る）。
+> ★★ **計器は repo に在る**＝**`audit/LilySharp.Probe`**（第190 で solution に入れた・**6 番目の project**）:
+> ```
+> dotnet run --project audit/LilySharp.Probe -c Release -- census [top-n]
+> dotnet run --project audit/LilySharp.Probe -c Release -- sweep <label> [listfile]
+> dotnet run --project audit/LilySharp.Probe -c Release -- cmp <a> <b> [book...]
+> ```
+> **`census`**＝全 `.lys` を collect して本ごとに数える（約 17 秒。**モデルから数える**——
+> `@staccato` を grep すると*綴り*を数えることになり、10 回参照される phrase は engine には
+> 10 回効いて grep には 1 回しか見えない）。
+> **`sweep` / `cmp`**＝毒→全数 SVG ハッシュ→差分（fixture 219 冊で 1 サイクル約 20 秒。
+> `listfile` に `git ls-files "*.lys"` を渡せば 566 冊へ広がる）。出力は
+> `audit/probe-out/`（git 管理外＝1 回の測定であってリポジトリの状態ではない）。
+> ⚠️ **`cmp` は共通集合が空なら exit 1 で「1 冊も比べていない」と言う**（「0 冊動いた」と
+> 区別が付かないので）。**毒が 0 冊なら「fixture が盲目」ではなく「毒が engine に届いていない」。**
+> ⚠️ **ビルド費用は測ってある**: solution の full が **3.81〜4.01 秒**（5 project のとき 3.63〜4.03）・
+> **noop は 0.90 秒で不変**＝実質ゼロ。**打鍵の*時間*はここに入れていない**——
+> `EditKeystrokeBench` / `PreviewUpdateBench` が既に持っており、**同じ量の 3 軒目**を作らないため。
 
 > ⚠️ **`keep-inside-line` は入った**（`efb3ddfb`・`622e88b4`）。全列・左右両方の rod が
 > `SpringSolver.ApplyRods`（＝`Simple_spacer::add_rod` の移植）へ流れている。
