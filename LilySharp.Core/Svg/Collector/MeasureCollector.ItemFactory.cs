@@ -292,7 +292,8 @@ public sealed partial class MeasureCollector
         // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
         // chord uniformly. Applying it to the root's resolved octave (and, for an
         // omitted root, to the tonic anchor) flows through firstOctave into every
-        // stacked/degree member; absolute-mode members are shifted individually.
+        // stacked/degree member; absolute-mode members each fold it into their own
+        // octave, since absolute mode has no anchor to carry it.
         // extraOctave is the enclosing arpeggio's group-level shift when this chord is
         // the arpeggio's root (`<< <c e> g >>,`); 0 otherwise.
         int chordOctave = chord.ChordOctaveOffset + extraOctave;
@@ -318,7 +319,7 @@ public sealed partial class MeasureCollector
                 rootStepForStack = GetPitchIndex(firstPitchName);
                 if (_octave.OctaveAbsolute)
                 {
-                    rp = ShiftOctave(CalculateStaffPosition(pitch), chordOctave);
+                    rp = CalculateStaffPosition(pitch, chordOctave);
                     firstOctave = rp.RelativeOctave;
                 }
                 else
@@ -333,7 +334,7 @@ public sealed partial class MeasureCollector
             {
                 // Absolute mode: every member is a fixed pitch (offset from the C
                 // anchor), already order-independent; no stacking.
-                rp = ShiftOctave(CalculateStaffPosition(pitch), chordOctave);
+                rp = CalculateStaffPosition(pitch, chordOctave);
             }
             else
             {
@@ -631,17 +632,6 @@ public sealed partial class MeasureCollector
     private readonly record struct ResolvedPitch(
         int StaffPosition, int RelativeOctave, int DisplayStep, int DisplayAlteration, int DisplayOctave);
 
-    /// <summary>Shift a resolved pitch by whole octaves (7 staff positions each) —
-    /// used for chord-level octave marks after the closing <c>&gt;</c>. The spelling
-    /// (step/alteration) is unchanged; only the register moves.</summary>
-    private static ResolvedPitch ShiftOctave(ResolvedPitch rp, int octaves) =>
-        octaves == 0 ? rp : rp with
-        {
-            StaffPosition = rp.StaffPosition + octaves * 7,
-            RelativeOctave = rp.RelativeOctave + octaves,
-            DisplayOctave = rp.DisplayOctave + octaves,
-        };
-
     /// <summary>One entry in the resolved-pitch trace: the source position of the
     /// written pitch and its resolved absolute spelling (e.g. "C6").</summary>
     public readonly record struct PitchTraceEntry(int Position, string Pitch);
@@ -661,7 +651,19 @@ public sealed partial class MeasureCollector
         return result;
     }
 
-    private ResolvedPitch CalculateStaffPosition(PitchSyntax pitch)
+    /// <param name="groupOctaves">
+    /// The enclosing GROUP's octave marks — the ones after a chord's <c>&gt;</c> or an
+    /// arpeggio's <c>&gt;&gt;</c>, which move every member alike. Folded into the octave
+    /// BEFORE resolution rather than applied to the returned pitch, because
+    /// <see cref="ResolveAbsolutePitch"/> writes the <c>--pitches</c> trace entry as it
+    /// resolves: a shift applied afterwards moved the drawn note and left the report
+    /// naming the unshifted one. Relative mode never had the bug because it adds the same
+    /// shift into the chord's ANCHOR, before resolving. The fold is exact — the diatonic
+    /// shift and the part transpose are both octave-equivariant (adding 7 to
+    /// <c>DiatonicShift</c>'s index leaves its step and alteration alone; adding 12
+    /// semitones to <c>PitchTransposer</c>'s target leaves its spelling alone).
+    /// </param>
+    private ResolvedPitch CalculateStaffPosition(PitchSyntax pitch, int groupOctaves = 0)
     {
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
         int step = GetPitchIndex(pitchName);
@@ -672,7 +674,7 @@ public sealed partial class MeasureCollector
         // The relative chain runs on the ORIGINAL pitches; transpose is applied
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
-        int actualOctave = _octave.Resolve(step, pitch.OctaveOffset, pitchName);
+        int actualOctave = _octave.Resolve(step, pitch.OctaveOffset, pitchName) + groupOctaves;
         return ResolveAbsolutePitch(step, pitch.AccidentalOffset, actualOctave, pitch.Position);
     }
 

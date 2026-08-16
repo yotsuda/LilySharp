@@ -246,4 +246,102 @@ public sealed class PitchTraceTests
 
         Assert.Equal(new[] { "C4", "D4", "E4", "F4" }, WholeFile(tabbed));
     }
+
+    // ---- group octave marks under `octave absolute` ----------------------------------
+
+    // The marks AFTER a closing '>' / '>>' move the WHOLE group an octave each. In
+    // ABSOLUTE mode the drawn page has always done this correctly; the trace did not,
+    // because the shift was applied to the ResolvedPitch that ResolveAbsolutePitch had
+    // ALREADY recorded. So these tests state the property that matters and cannot be
+    // satisfied by agreeing with a wrong page: the note the report NAMES must be the
+    // note the collector PLACES, read off the same walk.
+
+    private static string Book(string body, bool absolute) =>
+        (absolute ? "octave absolute\n" : "")
+        + "time 4/4\npart m { clef treble }\n"
+        + $"section A {{ m {{ {body} }} }}\n"
+        + "form main { A }\nscore main { staff m }";
+
+    /// <summary>The drawn staff positions of the first group in the book, and the pitches
+    /// the trace reports for it — the page and the report, from one collect.</summary>
+    private static (int[] Drawn, string[] Reported) DrawnAndReported(string body, bool absolute)
+    {
+        var collector = new MeasureCollector();
+        var score = collector.Collect(SyntaxTree.Parse(Book(body, absolute)), "m");
+        var items = score.Voice.Measures.SelectMany(m => m.Items).ToList();
+        var chord = items.OfType<LilySharp.Core.Svg.Model.ChordItem>().FirstOrDefault();
+        int[] drawn = chord != null
+            ? chord.Notes.Select(n => n.StaffPosition).ToArray()
+            : items.OfType<LilySharp.Core.Svg.Model.NoteItem>().Select(n => n.StaffPosition).ToArray();
+        return (drawn, collector.PitchTrace.Select(e => e.Pitch).ToArray());
+    }
+
+    // Treble staff positions, 0 = middle line (B4): C4 = −6, C5 = 1, C3 = −13.
+    // Read off the drawing before being written here — noteheads at y 17.35/16.35/15.35
+    // (plain), 13.85/12.85/11.85 (with '), 20.85/19.85/18.85 (with ,) against staff lines
+    // 12.35…16.35, one staff space apart.
+    [Theory]
+    [InlineData("<c e g>2",  new[] { -6, -4, -2 }, new[] { "C4", "E4", "G4" })]
+    [InlineData("<c e g>'2", new[] {  1,  3,  5 }, new[] { "C5", "E5", "G5" })]
+    [InlineData("<c e g>,2", new[] { -13, -11, -9 }, new[] { "C3", "E3", "G3" })]
+    public void AnAbsoluteChordsGroupMark_IsReportedWhereItIsDrawn(
+        string body, int[] drawn, string[] reported)
+    {
+        var actual = DrawnAndReported(body, absolute: true);
+        Assert.Equal(drawn, actual.Drawn);
+        Assert.Equal(reported, actual.Reported);
+    }
+
+    [Theory]
+    [InlineData("<< c e g >>'4 r2.", new[] {  1,  3,  5 }, new[] { "C5", "E5", "G5" })]
+    [InlineData("<< c e g >>,4 r2.", new[] { -13, -11, -9 }, new[] { "C3", "E3", "G3" })]
+    public void AnAbsoluteArpeggiosGroupMark_IsReportedWhereItIsDrawn(
+        string body, int[] drawn, string[] reported)
+    {
+        // The arpeggio's ROOT took the ShiftOctave path while its stacked members got the
+        // shift through the anchor, so the report used to name a chord that is not the
+        // page and cannot be written at all: C4 E5 G5 for `<< c e g >>'`.
+        var actual = DrawnAndReported(body, absolute: true);
+        Assert.Equal(drawn, actual.Drawn);
+        Assert.Equal(reported, actual.Reported);
+    }
+
+    [Theory]
+    [InlineData("<c e g>2")]
+    [InlineData("<c e g>'2")]
+    [InlineData("<c e g>,2")]
+    [InlineData("<< c e g >>'4 r2.")]
+    [InlineData("<< c e g >>,4 r2.")]
+    public void TheTwoOctaveModes_DrawAndReportTheSameGroup(string body)
+    {
+        // The two spellings are byte-identical as pages (measured: data-pos masked, the
+        // absolute book hashes to its relative twin for all three chord spellings). A
+        // report that describes the page therefore cannot tell them apart either.
+        var relative = DrawnAndReported(body, absolute: false);
+        var absolute = DrawnAndReported(body, absolute: true);
+
+        // Element-wise: a ValueTuple holding arrays compares them by REFERENCE, so
+        // asserting the tuples would fail on equal contents (and, worse, could pass on
+        // nothing if both sides were ever the same array).
+        Assert.Equal(relative.Drawn, absolute.Drawn);
+        Assert.Equal(relative.Reported, absolute.Reported);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheGroupMarkMovesTheGroup_InBothModes(bool absolute)
+    {
+        // The positive control for the pair above, and the reason it is not vacuous: if
+        // the mark were dropped in BOTH modes the two would agree on a wrong answer. It
+        // has to actually move something, in the page AND in the report.
+        var plain  = DrawnAndReported("<c e g>2", absolute);
+        var up     = DrawnAndReported("<c e g>'2", absolute);
+        var down   = DrawnAndReported("<c e g>,2", absolute);
+
+        Assert.Equal(plain.Drawn.Select(p => p + 7), up.Drawn);
+        Assert.Equal(plain.Drawn.Select(p => p - 7), down.Drawn);
+        Assert.NotEqual(plain.Reported, up.Reported);
+        Assert.NotEqual(plain.Reported, down.Reported);
+    }
 }

@@ -553,16 +553,21 @@ ChordNote      = PitchToken , { Annotation } ;
      same close-position chord but the next bare c stays C4. (A deliberate Lily#
      divergence from LilyPond's per-member relative chain.) In 'octave absolute' mode
      every member is a fixed pitch — no stacking, no frame — and the trailing marks
-     are INTENDED to still shift the whole group.
-     ⚠️ They do not, as of 2026-08-16, and nothing says so: measured with
-     'octave absolute', <c e g>' and <c e g>, both resolve to C4 E4 G4, the same as the
-     unmarked chord, with no diagnostic. In relative mode the same two give C5 E5 G5 and
-     C3 E3 G3. The mark is parsed and then dropped. The same silence covers a phrase
-     reference's trailing marks (see PhraseRef), while the GLUED '(N)' interval on a
-     phrase reference DOES apply in absolute mode — so it is the octave shift
-     specifically, not the suffix, that is lost. No book in the tree writes either
-     spelling under 'octave absolute' (0 of the 319 that declare it), which is why this
-     sentence is the only observer it has ever had. Filed in HANDOFF §2F. *)
+     STILL shift the whole group, so <c e g>' is C5 E5 G5 and <c e g>, is C3 E3 G3 there
+     too. Read off the page: noteheads at y 13.85/12.85/11.85 and 20.85/19.85/18.85
+     against treble staff lines 12.35…16.35, and each absolute book's SVG is identical
+     to its relative twin's (data-pos masked).
+     ⚠️ This paragraph said the opposite between 2026-08-16 and 2026-08-17 — "they do
+     not … measured … the mark is parsed and then dropped" — and the word "measured"
+     was true of the instrument, not of the engine: the reading came from
+     'lysc check --pitches', which answered C4 E4 G4 for all three spellings while the
+     page drew three different chords. The trace entry was written by
+     ResolveAbsolutePitch as it resolved, and absolute mode applied the group shift to
+     the value that call had already returned, so the drawn note moved and the reported
+     one did not. Fixed by folding the shift into the octave BEFORE resolution, which is
+     what relative mode had always done (it adds the same shift into the chord's anchor).
+     ⇒ A claim about the engine that was measured only through a report is a claim about
+     the report. The page is the arbiter, and reading it costs one hash. *)
 
 (* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
    in SEQUENCE and EQUALLY SUBDIVIDE the group's total, so a bare number is always a scale
@@ -639,9 +644,10 @@ PhraseRef      = [ '$' ] , Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] 
                     the parser accepts, which is not the same question.
                     A movable phrase: it lands in the AMBIENT key at the reference
                     site; trailing marks shift whole octaves (Chorus' / Chorus,).
-                    ⚠️ Trailing marks are DROPPED in 'octave absolute' — measured, no
-                    diagnostic, same silence as a chord's (see Chord above); the '(N)'
-                    below still applies there. A
+                    ⚠️ Trailing marks are DROPPED in 'octave absolute' — the page does
+                    not move, so this one is real and not a misread report (a chord's
+                    marks DO shift there; see Chord above); the '(N)' below still applies.
+                    Filed in HANDOFF §2F. A
                     GLUED '(N)' after at least one mark is a DIATONIC interval:
                     Melody'(3) plays the phrase a third UP in the ambient key (the
                     third's quality follows the scale), Motif,(2) a second down —

@@ -382,7 +382,7 @@ public sealed partial class MeasureCollector
         ResolvedPitch rp;
         if (_octave.OctaveAbsolute)
         {
-            rp = ShiftOctave(CalculateStaffPosition(pitch), octaveShift);
+            rp = CalculateStaffPosition(pitch, octaveShift);
             _octave.CurrentOctave = rp.RelativeOctave;
         }
         else
