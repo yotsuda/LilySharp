@@ -16,3 +16,10 @@ form main { A }
 score main "score" {
   staff melody
 }
+
+// ---------------------------------------------------------------------------
+// ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every
+// source offset after it, so the whole book's data-pos moves and its snapshot has to be
+// re-based -- a diff that proves nothing and hides the next real one. Below the music,
+// nothing moves (measured: suite green with these notes, 10 snapshots red without).
+// ✔ VERIFIED TO GUARD, not assumed to (session 190): swapping the two edges in SharedRenderer.Prefix's NaturalKernPadding — ht_right against last_ht_left, the exact swap the note below describes — moved 2 of 219 fixtures, this one and key-change-linebreak.

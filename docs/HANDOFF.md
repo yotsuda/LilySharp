@@ -1125,21 +1125,60 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   ⚠️ **`HasUsings` は root の子だけを見る綴りのまま**（打鍵経路）。**directive は root の子より深くならない**
   はもう偽なので、**それを守っていた網を `EveryUsingHasUsingsSkips_IsReported`
   （root-children の問いが取りこぼすものは全部 error になっている）へ書き直した。**
-- ⚠️ ★ **新規＝「Guards X」と名乗る fixture 21 冊のうち、確かめたのは 8 冊**（第183・**残り 13 冊は未測定**）。
-  **手順は RULES §5.4**（X を 1 行毒して 1 回ビルドし、**名乗る本だけ**を描いてハッシュ比較）。
-  ★ **済み 8 冊＝全部「ちゃんと観測している」**: **`<X>Item.StaffIndex` routing を名乗る 7 冊**
+- ⚠️ ★ **「Guards X」と名乗る fixture の監査＝第190 で 10 冊足した。残りは 6 冊**（起票は第183）。
+  ⚠️ ★ **まず数え方**（§0）: 「21 冊」は再現しない。**`Fixtures\**\*.lys` で `guard(s)` を
+  語境界で grep すると 27 冊**（うち **3 冊は「✔ VERIFIED TO GUARD」を自分で名乗る既済**、
+  第183 が 8 冊、**第190 が 10 冊**、**残り 6 冊が未測定**）。
+  **手順は RULES §5.4**（X を 1 行毒して 1 回ビルドし、**全 fixture** を描いてハッシュ比較）。
+  ⚠️⚠️ ★★ **読む数は 2 つ**——**名乗る本が動いたか**と**何冊でも動いたか**。
+  **0 冊なら「その fixture は盲目」ではなく「毒が外れた」**（この便で 3 回起きた）。
+  ★ **道具は `scratch\p190-incbench`**（⚠️ git 管理外）: `-- sweep <label> [listfile]` が
+  全 fixture 219 冊（listfile を渡せば git 管理下 566 冊）を**プロセス内で**描いて
+  ハッシュ CSV に出し、`-- cmp <a> <b> <claimant...>` が差分と名乗り本の判定を印字する。
+  **1 サイクル（毒→ビルド→掃き→比較→revert）が約 20 秒**。
+  ⚠️ **`cmp` は共通集合が空なら「0 冊動いた」ではなく「1 冊も比べていない」と言う**
+  ——**掃きの命名を変えて base を取り直さなかったとき、静かに「0 動いた」と印字した**ので締めた。
+  ★ **第190 の 10 冊＝全部「観測している」**（毒／動いた冊数）:
+  **`alto-tenor-clefs`・`clef-positions`**（`basePosition` の alto/tenor case を落とす・5 冊）／
+  **`keysig-cancel-naturals`**（`NaturalKernPadding` の 2 辺を入れ替える・2 冊）／
+  **`mixed-meters`・`multivoice-voice2-tuplet`**（`AutoBeamCheck.EndsBeam` の
+  beamExceptions 参照を飛ばす・34 冊）／**`voice-dynamics-multistaff`**
+  （`AddDynamicsToSkyline` を即 return・4 冊）／**`script-stacking`**（`OrderByScriptPriority` の
+  `ThenBy` から優先度を落とす・**1 冊＝唯一の観測者**）／**`volta-labels`**
+  （`alt.DisplayLabel` を落とす・**1 冊＝唯一の観測者**）／
+  **`fingering-lower-staff`・`fingering-articulation`**（`FingeringEngraver.Calculate` を空に・5 冊）。
+  ⇒ ★★★ **収穫は `fingering-articulation` の札が*向きごと*嘘だったこと。**
+  札は「articulation を運指の外へ押す LayoutEngine の後処理を守る」と書いていたが、
+  **コードは逆向き**——**運指は自分の音符の script が*全部*置かれたあとに flush され**
+  （`FlushFingerings` の最後の `int.MaxValue` 呼び）、**その flush が*数字*を script の外へ持ち上げる**。
+  **札が名指す 2 site を毒しても 219 冊で 0 冊**、**数字の clearance（`move := 0`）を毒すと
+  ちょうどこの 1 冊**。⇒ **札は本文に残したまま、訂正をファイル末尾に置いた**（下の ⚠️）。
+  ⚠️⚠️ ★★★ **札はファイルの*末尾*に書くこと。** **音楽より上のコメントは以降の source offset を
+  全部動かす**ので、**10 冊の header に 1 行入れた時点で snapshot が 10 枚赤になった**
+  （実測）。**末尾なら 1 つも動かない**（同じ掃きで suite 緑）。
+  ⇒ ★ **`fingering-articulation` の header の嘘を消すには snapshot 1 枚の再ベースが要る＝ユーザー決定**。
+  ⚠️ ★★ **早い flush（script より先に運指を column へ入れる枝）は死んでいない、fixture が居ないだけ**
+  ——**219 冊で 0・566 冊で 5 冊**（`audit/lpreg/{obs-probe,perf-fingstack1k,scriptstack1,slurscript-obs}`・
+  `audit/lp-regression/lys/script-stack-order1`）。**「fixture で 0」を「死んでいる」と読みかけて、
+  射程を広げて訂正した**（§5.4）。
+  ⚠️⚠️ ★★ **別の所見＝`Staff.IsMultiVoice` は生きた消費者 3 つ（`TupletForceStemUp` ×2・
+  `forceStemUp`）を持ちながら、`false` に固定しても*566 冊で 0 冊*動かない**。
+  **`Score.IsMultiVoice` のほうは本番の読み手が 0**（`MultiVoiceRenderingTests` の 2 本だけ）。
+  ⇒ **`multivoice-voice2-tuplet` の「梁」の半分は観測済みだが、「括弧の向き」の半分は
+  この入力では説明できない**。**次に触るなら、括弧を下に置いている行を先に特定すること。**
+  ★ **残る 6 冊は全部 `voice { } { }` 族**＝`two-voice-polyphony`・`voice-tuplet`・
+  `voice-dynamics`・`voice-dynamics-mid`・`voice-grandstaff`・`voice-mixed`。
+  **`IsMultiVoice` の毒はこの 6 冊のどれも動かさなかった**ので、**各自の綴りに毒を当て直すこと。**
+  ★ **第183 の済み 8 冊**（据え置き）: **`<X>Item.StaffIndex` routing を名乗る 7 冊**
   （arpeggio / articulations / dynamics / figbass-chordname / grace / trillspan / tuplet の各 `-lower-staff`）は
   **`MeasureCollector.cs:1583` の `_currentStaffIndex` を 0 に固定する毒 1 つで 7 冊とも動いた**
-  ＋ **`grandstaff-high-bass`**（この便で観測者にした）。
-  ⚠️⚠️ **`fingering-lower-staff` と `fingering-articulation` は*未測定*で、容疑者ではない**——
-  **運指は `NoteItem` に乗るので上の毒が届かず、専用の毒を 3 site 試して 3 つとも 0 冊だった**
-  （`FingeringEngraver.Calculate` の `staffIndex` は beam tip の索きにしか効かない／
-  `LayoutEngine.FingeringStaffScores` はこれらの本では通らない＝`splittable` が偽で
-  `wholeIslands` の枝へ行くと見える）。⇒ **続きは「運指がどの譜に置かれるかを決める行」を
-  先に特定すること**。**動く本を 1 冊見せるまで、どの結論も出せない**（§5.4）。
-  ⚠️ **残る 11 冊は別の機構を名乗る**（clef・調号の取り消し・多声部の符尾・volta ラベル・
-  `SkylineBuilder.AddDynamicsToSkyline`・`ArticulationEngraver` の per-note sort ほか）
-  ＝**上の毒が届かないので「不動」は何も言っていない。1 機構 1 毒で続ける。**
+  ＋ **`grandstaff-high-bass`**（第183 で観測者にした）。
+  ⚠️⚠️ **運指 2 冊の*譜ルーティング*の主張は第190 でも未測定のまま**——第183 が専用の毒を
+  3 site 試して 3 つとも 0 冊（`FingeringEngraver.Calculate` の `staffIndex` は beam tip の
+  索きにしか効かない／`LayoutEngine.FingeringStaffScores` はこれらの本では通らない＝
+  `splittable` が偽で `wholeIslands` の枝へ行く）。**第190 が効かせた毒は運指を丸ごと消す形**なので、
+  **譜どうしを区別できない**。⇒ **続きは「運指がどの譜に置かれるかを決める行」を先に特定すること**。
+  **動く本を 1 冊見せるまで、どの結論も出せない**（§5.4）。
 - ✅✅ ★★★ **`octave absolute` の trailing octave 記号は第184 で閉じた——ただし起票の半分は
   *嘘*で、その嘘は計器から来ていた**（`d3cbeced`＋第2便・**ユーザー決定＝動かす**）。
   **第183 の起票は「和音の `<c e g>'` も phrase 参照の `theme'` も診断ゼロで死んでいる（実測）」**

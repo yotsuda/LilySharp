@@ -19,3 +19,10 @@ section S {
 }
 form main { S }
 score main "multivoice-voice2-tuplet" { staff mel }
+
+// ---------------------------------------------------------------------------
+// ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every
+// source offset after it, so the whole book's data-pos moves and its snapshot has to be
+// re-based -- a diff that proves nothing and hides the next real one. Below the music,
+// nothing moves (measured: suite green with these notes, 10 snapshots red without).
+// ✔ VERIFIED TO GUARD, not assumed to (session 190) — the BEAMING half: skipping the beamExceptions lookup in AutoBeamCheck.EndsBeam moves this book. ⚠️ The BRACKET-SIDE half is still unmeasured: Staff.IsMultiVoice (the "multi-voice => bracket up" input, 3 live call sites) forced to false moves 0 of 566 git-tracked books, so whatever puts the bracket below here, it is not that.

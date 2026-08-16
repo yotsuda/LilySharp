@@ -19,3 +19,10 @@ form main { A |: B | [1. B "first"] :| [2. B "second"] | A "A2" }
 score main "volta-labels" {
   staff mel
 }
+
+// ---------------------------------------------------------------------------
+// ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every
+// source offset after it, so the whole book's data-pos moves and its snapshot has to be
+// re-based -- a diff that proves nothing and hides the next real one. Below the music,
+// nothing moves (measured: suite green with these notes, 10 snapshots red without).
+// ✔ VERIFIED TO GUARD, not assumed to (session 190): dropping alt.DisplayLabel in MeasureCollector.Form (falling back to the section name — the exact regression named below) moved exactly 1 of 219 fixtures. ⚠️ IT IS THE SOLE OBSERVER.

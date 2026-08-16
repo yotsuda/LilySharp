@@ -21,3 +21,25 @@ form main { Main }
 score main "fingering-articulation" {
   staff melody
 }
+
+// ---------------------------------------------------------------------------
+// ⚠️ THIS NOTE IS AT THE FILE END ON PURPOSE. A comment ABOVE the music shifts every
+// source offset after it, so the whole book's data-pos moves and its snapshot has to be
+// re-based -- a diff that proves nothing and hides the next real one. Below the music,
+// nothing moves (measured: suite green with these notes, 10 snapshots red without).
+//
+// ✔ VERIFIED TO GUARD, not assumed to (session 190) -- BUT THE HEADER'S "Guards the
+// LayoutEngine post-pass that shifts articulations past a shared-side fingering" IS
+// POINTING THE WRONG WAY, and is left standing above only because deleting it would
+// shift this book's offsets and re-base its snapshot (a user's call, not this note's).
+// MEASURED: the code does the opposite direction. Every fingering flushes AFTER all of
+// its note's scripts are placed (ArticulationEngraver's final FlushFingerings at
+// int.MaxValue), and that flush lifts the DIGIT clear of the scripts already there --
+// nothing ever shifts an articulation past a fingering. Poisoning the two sites the
+// header names (the early flush; adding the digit to supportScripts) moved 0 of 219
+// fixtures. Poisoning the digit's own clearance (move := 0) moved exactly this book.
+// ⚠️ AND IT IS THE ONLY OBSERVER: of the 566 git-tracked .lys this is the one book that
+// reaches that flush with a non-empty support chain. Delete it and the lift is unwatched.
+// ⚠️ The EARLY flush is not dead, only unwatched HERE: 5 tracked books reach it
+// (audit/lpreg/{obs-probe,perf-fingstack1k,scriptstack1,slurscript-obs},
+// audit/lp-regression/lys/script-stack-order1) and none of them is a fixture.
