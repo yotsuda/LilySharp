@@ -496,4 +496,59 @@ public class SkylineStaffSpacingTests
         Assert.Equal(-2.5 + GlyphMetrics.AugmentationDot.Bottom,
             lowDotted.Down.Height(probeX), 9);
     }
+
+    /// <summary>
+    /// <c>test/grandstaff-high-bass</c> is the corpus book for the staff symbol's own seed,
+    /// and until 2026-08-16 it did not read it. Its header claimed a lower-staff C4-E4-G4
+    /// "reaching the upper staff's pitch range with several ledger lines"; the music said
+    /// <c>&lt;c e g&gt;</c> = C3-E3-G3, and the claimed spelling would have measured nothing
+    /// either — at a grand staff's gap, a bass staff's G4 still sits below the upper staff's
+    /// bottom line, so both spellings sat on the floor.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ Measured, bottom line of the upper staff to top line of the lower: C3-E3-G3 5.000
+    /// and C4-E4-G4 5.000 in Lily# and in LilyPond 2.26.0 alike; C5-E5-G5 opens it to 8.090
+    /// (LilyPond 8.095, the 0.005 being the SVG's two-decimal rounding). With
+    /// <see cref="SkylineBuilder"/>'s staff-symbol seed disabled, ONLY the C5 spelling's
+    /// picture moves — its snapshot was byte-identical either way before this.
+    /// </para>
+    /// <para>
+    /// ⚠️ A PAIR, not a pinned number, and the pair's own floor is asserted rather than
+    /// assumed: an octave down must leave the gap EXACTLY where two octaves down leaves it
+    /// (both on the floor), and the fixture's spelling must clear it. A single "the gap is
+    /// wide" assertion passes just as well on a book where nothing is binding — which is
+    /// precisely how this fixture spent its life (RULES §5.0 trap 7).
+    /// </para>
+    /// <para>
+    /// ⚠️ Reads the fixture from disk on purpose. The claim is about THAT BOOK, so lowering
+    /// its chord has to fail here and not merely rebase a snapshot.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TheHighBassFixture_LiftsTheStavesOffTheirFloor()
+    {
+        var path = Path.Combine(CollectResumeTests.FindRepoRoot(),
+            "LilySharp.Tests", "Fixtures", "test", "grandstaff-high-bass.lys");
+        var asWritten = File.ReadAllText(path);
+
+        const string high = "<c'' e'' g''>";
+        Assert.Contains(high, asWritten);   // the pair below is built by replacing this
+
+        string oneOctaveDown = asWritten.Replace(high, "<c' e' g'>");
+        string twoOctavesDown = asWritten.Replace(high, "<c e g>");
+
+        double open = LpFidelity.RenderedGeometry.Render(asWritten).StaffGapAt(0);
+        double floor1 = LpFidelity.RenderedGeometry.Render(oneOctaveDown).StaffGapAt(0);
+        double floor2 = LpFidelity.RenderedGeometry.Render(twoOctavesDown).StaffGapAt(0);
+
+        // The regime: both lower spellings are on the floor, so they cannot differ.
+        Assert.Equal(floor2, floor1, 9);
+
+        // ...and the fixture's own chord is the one that binds.
+        Assert.True(open > floor1 + 1.0,
+            "the fixture's chord must hold the staves apart: it reads "
+            + $"{open:F6} against the floor {floor1:F6}. If this fails because the chord was "
+            + "lowered, the book has stopped guarding SeedStaffSymbol — see its header.");
+    }
 }

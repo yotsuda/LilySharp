@@ -1,9 +1,26 @@
-// A high lower-staff chord (C4-E4-G4, reaching the upper staff's pitch range
-// with several ledger lines) must widen the inter-staff gap so the chord and its
-// ledgers clear the UPPER staff's lines, not just its notes. LilyPond's per-staff
-// spacing skyline includes the staff symbol, so a neighbour's notes clear the
-// staff lines themselves. Verified against LilyPond. Guards
-// SkylineBuilder.SeedStaffSymbol.
+// A high lower-staff chord (C5-E5-G5, on ledger lines that reach the UPPER staff's
+// bottom line) must widen the inter-staff gap so the chord and its ledgers clear
+// those LINES, not just the upper staff's notes. LilyPond's per-staff spacing skyline
+// includes the staff symbol, so a neighbour's notes clear the staff lines themselves.
+// Guards SkylineBuilder.SeedStaffSymbol.
+//
+// Measured 2026-08-16 (bottom line of the upper staff -> top line of the lower):
+//   chord      Lily#    LilyPond 2.26.0
+//   C3-E3-G3   5.000    5.000     <- the FLOOR: nothing about skylines is measured
+//   C4-E4-G4   5.000    5.000     <- still the floor
+//   C5-E5-G5   8.090    8.095     <- opens; the 0.005 is the SVG's 2-decimal rounding
+// and with SeedStaffSymbol disabled, ONLY the C5 spelling's picture moves.
+//
+// ⚠️ Do not "correct" this chord downwards. It read <c e g> (C3-E3-G3) until 2026-08-16
+// while this header claimed C4-E4-G4, so the book defended nothing for as long as it
+// existed — and the claimed C4-E4-G4 would ALSO have defended nothing, because a bass
+// staff's G4 still sits below the upper staff's bottom line at this gap. Reaching the
+// upper staff's PITCH RANGE and reaching its LINES are different things; only the second
+// makes the seed binding.
+//
+// ⚠️ The upper staff climbs an octave between the bars (c'1 | c'1 in relative octaves is
+// C5 then C6). Left as written: measured, the gap is identical for every lower-chord
+// spelling above, so nothing here reads it.
 title "Inter-staff: high bass chord"
 time 4/4
 key c major
@@ -13,7 +30,7 @@ part lh { clef bass }
 
 section Main {
   rh { c'1 | c'1 | }
-  lh { c4 d e f | <c e g>1 | }
+  lh { c4 d e f | <c'' e'' g''>1 | }
 }
 
 form main { Main }
