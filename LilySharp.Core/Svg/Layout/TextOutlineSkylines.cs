@@ -100,9 +100,22 @@ internal static class TextOutlineSkylines
     // ⚠️ The HORIZON PADDING is in the key, and the padding happens INSIDE the cached
     // factory: a grob that declares skyline-horizontal-padding (three scripts do) would
     // otherwise pay pad + merge + resolve on every placement, and a script-dense page places
-    // one per note per pass. Padding commutes with the placement (both are monotone shifts),
-    // so padding the profile once per (glyph, size, design, pad) is the same skyline.
-    private static readonly ConcurrentDictionary<(char Glyph, double Size, int Design, double Pad),
+    // one per note per pass.
+    // ⚠️ TWO PADDINGS, IN SEQUENCE. Pad is the grob's own declaration; ExtraPad is the
+    // CONSUMER's, which LilyPond spends inside Skyline::distance by padding a copy of the
+    // moving grob. Both are folded in here — see ArticulationEngraver.ScriptSkylines's
+    // extraPad remark for why that is a decision about ORDER and not a bit-preserving
+    // optimisation, and for the four observers that were checked before taking it.
+    // ⚠️ NOT ONE PAD OF THEIR SUM: Skyline::padded is not additive (each pass extends flat
+    // and then slopes at 45° from what it already has), so the sequence is kept.
+    // ⚠️ PADDING GROB-LOCAL IS ALSO WHERE LILYPOND PADS — LILYPOND-REF:
+    // lily/stencil-integral.cc:881-893 Grob::vertical_skylines_from_stencil pads the
+    // STENCIL's skyline, i.e. before the grob is placed. Doing it here makes the
+    // decomposition a function of the glyph alone; done after placement it was a function of
+    // WHERE the glyph sat, because the resolve's epsilons are absolute (measured: one
+    // fermata at x = 0/0.5/1/17.5/100/1000 resolved to 35/37/37/33/39/33 buildings).
+    private static readonly ConcurrentDictionary<
+        (char Glyph, double Size, int Design, double Pad, double ExtraPad),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> MusicProfileCache = new();
 
     /// <summary>
@@ -135,27 +148,33 @@ internal static class TextOutlineSkylines
     /// </param>
     public static (VerticalSkyline Up, VerticalSkyline Down) PlaceMusicGlyph(
         char glyph, double fontSize, double x, double y, int design = 0,
-        double horizonPadding = 0.0)
+        double horizonPadding = 0.0, double extraPad = 0.0)
     {
-        var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding);
+        var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding, extraPad);
         return (PlaceResolved(VerticalDirection.Up, up, x, y),
                 PlaceResolved(VerticalDirection.Down, down, x, y));
     }
 
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedMusicGlyph(
-        char glyph, double fontSize, int design, double horizonPadding = 0.0)
+        char glyph, double fontSize, int design, double horizonPadding = 0.0,
+        double extraPad = 0.0)
     {
         if (design == 0)
             design = Rendering.EmmentalerFaces.DefaultDesign;
-        return MusicProfileCache.GetOrAdd((glyph, fontSize, design, horizonPadding), static key =>
+        return MusicProfileCache.GetOrAdd(
+            (glyph, fontSize, design, horizonPadding, extraPad), static key =>
         {
             var path = TextFontMetrics.MusicGlyphPath(key.Glyph, key.Design);
             if (path == null || path.IsEmpty)
                 return (Array.Empty<SkylineBuilding>(), Array.Empty<SkylineBuilding>());
             var (upQuads, downQuads) = FlattenPath(path, key.Size / 1000.0);
             return (
-                Pad(VerticalDirection.Up, Resolve(VerticalDirection.Up, upQuads), key.Pad),
-                Pad(VerticalDirection.Down, Resolve(VerticalDirection.Down, downQuads), key.Pad));
+                Pad(VerticalDirection.Up,
+                    Pad(VerticalDirection.Up, Resolve(VerticalDirection.Up, upQuads), key.Pad),
+                    key.ExtraPad),
+                Pad(VerticalDirection.Down,
+                    Pad(VerticalDirection.Down, Resolve(VerticalDirection.Down, downQuads), key.Pad),
+                    key.ExtraPad));
         });
     }
 

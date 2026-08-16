@@ -993,16 +993,15 @@ internal static class ArticulationEngraver
                 && tiesAtBound.TryGetValue((effArt.StaffIndex, effArt.VoiceIndex,
                     effArt.MeasureIndex, effArt.ItemIndex), out var boundTies))
             {
-                var (tieMyUp, tieMyDown) = ScriptSkylines(layout, yUp);
+                var tiePair = ScriptSkylines(layout, yUp, extraPad: ScriptHorizonPadding);
+                var tiePadded = effArt.IsAbove ? tiePair.Down : tiePair.Up;
                 double closestTie = double.NegativeInfinity;
                 foreach (var t in boundTies)
                 {
                     if (t.CurveUp != effArt.IsAbove)
                         continue;
                     var bowSky = TieSupportSkyline(t, staffOffset, effArt.IsAbove);
-                    closestTie = Math.Max(closestTie, effArt.IsAbove
-                        ? tieMyDown.Distance(bowSky, ScriptHorizonPadding)
-                        : tieMyUp.Distance(bowSky, ScriptHorizonPadding));
+                    closestTie = Math.Max(closestTie, tiePadded.Distance(bowSky));
                 }
                 double tieMove = Math.Max(0.0, closestTie + PaddingFor(effArt.Type));
                 if (tieMove > 0)
@@ -1056,15 +1055,18 @@ internal static class ArticulationEngraver
             else if (supportScripts.TryGetValue(stackKey, out var supports))
             {
                 var (myUp, myDown) = ScriptSkylines(layout, yUp);
+                // Padding ONE side of the distance is LP's own equivalence (its
+                // distance(other, hpad) comment: padding other = doubling hpad), and the
+                // side it pads is THIS one — which does not depend on the support, so the
+                // padded copy is built ONCE here rather than inside every distance call.
+                var foldedPair = ScriptSkylines(layout, yUp, extraPad: ScriptHorizonPadding);
+                var myPadded = effArt.IsAbove ? foldedPair.Down : foldedPair.Up;
                 double closest = double.NegativeInfinity;
                 foreach (var s in supports)
                 {
-                    // Padding ONE side of the distance is LP's own equivalence (its
-                    // distance(other, hpad) comment: padding other = doubling hpad).
                     var (sUp, sDown) = ScriptSkylines(s, s.YUp);
-                    closest = Math.Max(closest, effArt.IsAbove
-                        ? myDown.Distance(sUp, ScriptHorizonPadding)
-                        : myUp.Distance(sDown, ScriptHorizonPadding));
+                    closest = Math.Max(closest,
+                        myPadded.Distance(effArt.IsAbove ? sUp : sDown));
                 }
                 double move = Math.Max(0.0, closest + PaddingFor(effArt.Type));
                 if (move > 0)
@@ -1579,19 +1581,50 @@ internal static class ArticulationEngraver
     /// ⚠️ The optical DESIGN is still the one this grob's own font-size step selects: an
     /// ossia is <c>fontSize = #-3</c> in LilyPond and would select the 14, which is a
     /// separate island — the box spelling this replaced scaled the 20 the same way.</param>
+    /// <param name="extraPad">
+    /// The CONSUMER's horizon padding — the one LilyPond spends inside
+    /// <c>Skyline::distance(other, horizon_padding)</c> by building a padded copy of the
+    /// moving grob. Ask for it here and call the unpadded <c>Distance(other)</c>.
+    /// <para>
+    /// ⚠️ THIS IS A CHOICE OF ORDER, NOT AN OPTIMISATION THAT PRESERVES BITS, and it was made
+    /// deliberately (user decision, 2026-08-17). Padding grob-local and placing afterwards is
+    /// the same skyline as placing and then padding in exact arithmetic, but NOT the same
+    /// decomposition: the resolve's epsilons are ABSOLUTE, so how many buildings survive
+    /// depends on where the glyph sits. MEASURED — one fermata, one padding, placed at
+    /// x = 0 / 0.5 / 1 / 17.5 / 100 / 1000 came out as 35 / 37 / 37 / 33 / 39 / 33 buildings
+    /// under the old order. Padding grob-local removes that: the decomposition is now a
+    /// function of the glyph alone, which is also where LilyPond pads
+    /// (<c>Grob::vertical_skylines_from_stencil</c> pads the STENCIL's skyline).
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT WAS CHECKED BEFORE TAKING IT (the corpus alone could not decide this — every
+    /// one of these was byte-identical either way): 566-book SVG A/B 0 moved, the whole suite
+    /// green with snapshots unmoved, and the 516-point LP geometry ledger unchanged to its
+    /// full 9 decimals. The difference lives below every observer the repo has.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT PAID FOR ITSELF: the padded copy inside the distance call was 875.8 MB of
+    /// perf-fingstack1k's 1362.0 MB keystroke — 64% of it, 28.7 KB per call — because
+    /// <c>Skyline::padded</c> is a full merge of three buildings per building and a script
+    /// paid it once per support. Folded into the profile cache it is paid once per
+    /// (glyph, size, design, pad, extraPad) for the whole session.
+    /// </para>
+    /// </param>
     internal static (VerticalSkyline Up, VerticalSkyline Down) ScriptSkylines(
-        in ArticulationLayout a, double anchorY, double magnification = 1.0)
+        in ArticulationLayout a, double anchorY, double magnification = 1.0,
+        double extraPad = 0.0)
     {
         if (a.Glyph.Length == 1)
         {
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
                 a.Glyph[0], WalkSize(a, magnification), a.X, anchorY,
                 EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded,
-                a.SkylineHorizontalPadding);
+                a.SkylineHorizontalPadding, extraPad);
             if (!up.IsEmpty || !down.IsEmpty)
                 return (up, down);
         }
-        return FallbackBoxSkylines(a, anchorY, magnification);
+        var (bUp, bDown) = FallbackBoxSkylines(a, anchorY, magnification);
+        return extraPad > 0.0 ? (bUp.Padded(extraPad), bDown.Padded(extraPad)) : (bUp, bDown);
     }
 
     /// <summary>
