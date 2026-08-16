@@ -119,11 +119,30 @@ public static class SemanticValidation
     }
 
     /// <summary>
-    /// Runs a single-staff <see cref="MeasureCollector.Collect"/>, swallowing collector
-    /// failures (a malformed score surfaces its real error through the parser / other
-    /// validators). Returns null on failure.
+    /// Collects the score the way the RENDER path does, swallowing collector failures (a
+    /// malformed score surfaces its real error through the parser / other validators).
+    /// Returns null on failure.
     /// </summary>
-    internal static MeasureCollector? TryCollect(SyntaxTree tree)
+    /// <remarks>
+    /// Public because it has a second consumer outside this assembly: the CLI's
+    /// <c>check --pitches</c>. That reporter used to build its own bare
+    /// <c>new MeasureCollector().Collect(tree)</c>, which is a DIFFERENT collect — no
+    /// RenderSpec — and the difference was visible: with no spec the relative-octave
+    /// chain runs once through the tree in source order, so the SECOND part block in a
+    /// section inherits the first one's chain instead of starting at its own clef's
+    /// anchor. Measured 2026-08-16 on `test/grandstaff-high-bass`: swapping the two part
+    /// blocks moved the bass part's first note from C6 to C4 in that report while the
+    /// rendered SVG stayed character-identical (data-pos masked) — the picture is
+    /// order-independent, the report was not. One house, so they cannot disagree again.
+    /// </remarks>
+    public static MeasureCollector? TryCollect(SyntaxTree tree)
+        => TryCollect(tree, RenderSpecParser.FindFirst(tree));
+
+    /// <summary>
+    /// The same collect against a NAMED score, for callers that must cover more than the
+    /// first one. Pass null to collect with no spec (what a scoreless file gets).
+    /// </summary>
+    public static MeasureCollector? TryCollect(SyntaxTree tree, RenderSpec? renderSpec)
     {
         try
         {
@@ -131,7 +150,6 @@ public static class SemanticValidation
             // so a validator reading back the collector's recorded warnings sees exactly
             // what renders. A scoreless file has no RenderSpec and falls through to the
             // single-staff collect with no attach — nothing is auto-attached.
-            var renderSpec = RenderSpecParser.FindFirst(tree);
             var collector = new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose };
             Svg.SvgGenerator.CollectScore(collector, tree, renderSpec);
             return collector;

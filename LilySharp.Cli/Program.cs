@@ -863,20 +863,41 @@ static int ExecuteCheck(string inputPath, bool showPitches = false)
 /// </summary>
 static void PrintResolvedPitches(string source, SyntaxTree tree)
 {
-    IReadOnlyList<LilySharp.Core.Svg.Collector.MeasureCollector.PitchTraceEntry> trace;
-    try
+    // The SAME collect the validators run, because this report is only worth reading if
+    // it resolves pitches the way the page will. It used to build its own bare
+    // `new MeasureCollector().Collect(tree)` — no RenderSpec — and that is a different
+    // answer, not a cheaper one: with no spec the relative-octave chain runs once through
+    // the tree in source order, so a section's SECOND part block inherited the first
+    // one's chain instead of starting at its own clef's anchor.
+    //
+    // ⚠️ It reported the bass part of `test/grandstaff-high-bass` starting at C6.
+    // Swapping the two part blocks moved that to C4 while the rendered SVG stayed
+    // character-identical (data-pos masked): the picture does not depend on the order,
+    // the report did. That matters more than one wrong line, because RULES §5.3 判定法⑶
+    // tells every session to run THIS command over a synthesized book before filing
+    // anything about it.
+    // EVERY score, not just the first, folded onto the WRITTEN position. Both halves of
+    // that were measured over 300 books before being written:
+    //   · first-score-only loses coverage — `test/cue-notes` reports 26 notes when all
+    //     its scores are walked and 8 when only the first is
+    //   · folding on position is what stops a tab book counting twice: `tab X` and
+    //     `staff X` render the same written note, so without the fold every tab fixture
+    //     doubled (e.g. tab-percent-repeat 0 -> 64 vs 0 -> 32)
+    // A score that will not collect is skipped rather than fatal; the message below only
+    // appears when NONE of them collected.
+    var trace = LilySharp.Core.Semantics.ResolvedPitches.ForFile(tree);
+    if (trace == null)
     {
-        var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-        collector.Collect(tree);
-        trace = collector.PitchTrace;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"(could not resolve pitches: {ex.Message})");
+        Console.WriteLine("(could not resolve pitches: no score collected — "
+            + "fix the errors above first)");
         return;
     }
 
-    Console.WriteLine($"Resolved pitches ({trace.Count}):");
+    // ⚠️ Name the scope. The answer is what the SCORES draw, so a part no score renders
+    // is not in this list — a reader who wrote more notes than they see here has to be
+    // told why rather than left to wonder. `ResolvedPitches` carries the rest of the
+    // reasoning, and the measurements behind it.
+    Console.WriteLine($"Resolved pitches ({trace.Count}) — as the scores render them:");
     foreach (var e in trace)
     {
         // The token's span starts at its leading trivia (indent/newline); advance
