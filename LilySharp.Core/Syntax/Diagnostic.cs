@@ -161,20 +161,39 @@ public sealed class DiagnosticBag
 /// <summary>
 /// Standard diagnostic codes for LilySharp.
 /// </summary>
+/// <remarks>
+/// <para>
+/// ⚠️ RETIRED NUMBERS — never reused, and listed here rather than at eight scattered
+/// deletion sites so the next author picking a number sees them all at once:
+/// </para>
+/// <para>
+/// <c>LYS0001</c> UnexpectedToken · <c>LYS0005</c> InvalidNumber · <c>LYS0013</c> the
+/// removed <c>version</c> directive · <c>LYS1002</c> DuplicateVariable · <c>LYS1003</c>
+/// InvalidPitch · <c>LYS1006</c> UndefinedPhrase · <c>LYS1015</c> MultipleFormDeclarations
+/// · <c>LYS2003</c> NoTimeSignature.
+/// </para>
+/// <para>
+/// All but LYS0013 were retired together on 2026-08-16, when the question was first asked
+/// of the SET rather than one code at a time: 96 declared, 89 named by a caller, seven
+/// named by nobody — no symbol reference, no string-literal reference, no test, no doc.
+/// A code nothing raises is a rule the language does not have; the two most telling were
+/// LYS1015, which says a file holds one form (<c>test/multi-movement.lys</c> declares
+/// three), and LYS1006, whose subject IS validated but folded into
+/// <see cref="UndefinedVariable"/>'s message ("Undefined variable or phrase").
+/// <c>DiagnosticCodeTests.CodesThatNothingEmits_DoNotGrow</c> is the machine that keeps
+/// the list from refilling.
+/// </para>
+/// </remarks>
 public static class DiagnosticCodes
 {
     // Parser errors (LYS0xxx)
 
-    /// <summary>Parser error: an unexpected token was encountered.</summary>
-    public const string UnexpectedToken = "LYS0001";
     /// <summary>Parser error: an expected token was missing.</summary>
     public const string ExpectedToken = "LYS0002";
     /// <summary>Parser error: a string literal was not terminated.</summary>
     public const string UnterminatedString = "LYS0003";
     /// <summary>Parser error: a comment was not terminated.</summary>
     public const string UnterminatedComment = "LYS0004";
-    /// <summary>Parser error: an invalid numeric literal was encountered.</summary>
-    public const string InvalidNumber = "LYS0005";
     /// <summary>Parser error: the removed repeat-volta syntax was used.</summary>
     public const string RepeatVoltaRemoved = "LYS0006";
     /// <summary>Parser error: a legacy declaration form was used.</summary>
@@ -231,8 +250,8 @@ public static class DiagnosticCodes
     /// ⚠️ Was LYS0014, which <see cref="KeyModeAssumedMajor"/> already held — this and the
     /// three above had been appended UNDER the LYS7xxx heading, where the next free number
     /// in this band is not in view. That is the whole mechanism of the collision, so they
-    /// are back in the band they number. LYS0013 is RETIRED (it was the removed
-    /// <c>version</c> directive) and is deliberately not reused.
+    /// are back in the band they number. LYS0013 is retired — it, and the seven retired
+    /// with it, are listed once on <see cref="DiagnosticCodes"/> itself.
     /// </remarks>
     public const string UnexpectedCharacter = "LYS0018";
 
@@ -497,16 +516,10 @@ public static class DiagnosticCodes
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
     public const string UndefinedVariable = "LYS1001";
-    /// <summary>Semantic error: a variable was declared more than once.</summary>
-    public const string DuplicateVariable = "LYS1002";
-    /// <summary>Semantic error: an invalid pitch was specified.</summary>
-    public const string InvalidPitch = "LYS1003";
     /// <summary>Semantic error: an invalid duration was specified.</summary>
     public const string InvalidDuration = "LYS1004";
     /// <summary>Semantic error: reference to an undefined section.</summary>
     public const string UndefinedSection = "LYS1005";
-    /// <summary>Semantic error: reference to an undefined phrase.</summary>
-    public const string UndefinedPhrase = "LYS1006";
     /// <summary>Semantic error: a phrase/variable reference cycle — a phrase references
     /// itself, directly or through a chain (x -> y -> x, or x -> y -> z -> x). It can
     /// never expand to a finite piece, so it is reported rather than silently truncated.</summary>
@@ -528,8 +541,6 @@ public static class DiagnosticCodes
     /// <summary>Semantic error: a rehearsal mark label was not quoted
     /// (<c>@mark(A)</c> instead of <c>@mark("A")</c>).</summary>
     public const string MarkLabelNotQuoted = "LYS1009";
-    /// <summary>Semantic error: multiple structure declarations were found.</summary>
-    public const string MultipleFormDeclarations = "LYS1015";
     /// <summary>Semantic error: a <c>form</c> was declared without a name.</summary>
     public const string UnnamedForm = "LYS1016";
     /// <summary>Semantic error: two forms share the same name.</summary>
@@ -615,8 +626,6 @@ public static class DiagnosticCodes
     public const string MeasureIncomplete = "LYS2001";
     /// <summary>Measure error: a measure has more beats than the time signature allows.</summary>
     public const string MeasureOverflow = "LYS2002";
-    /// <summary>Measure error: no time signature is in effect.</summary>
-    public const string NoTimeSignature = "LYS2003";
     /// <summary>Measure error: a measure's total duration does not match the time signature.</summary>
     public const string MeasureDurationMismatch = "LYS2004";
     /// <summary>Measure error: conflicting time signatures were declared.</summary>

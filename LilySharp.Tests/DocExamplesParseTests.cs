@@ -304,8 +304,13 @@ public class DocExamplesParseTests
     {
         DiagnosticCodes.UndefinedSection,
         DiagnosticCodes.UndefinedPart,
+        // ⚠️ UndefinedPhrase (LYS1006) used to sit here and excluded NOTHING: no validator
+        // ever raised it, because an undefined phrase comes out of SymbolReferenceValidator
+        // as UndefinedVariable above ("Undefined variable or phrase"). The code was retired
+        // 2026-08-16 when the question was asked of the whole set of codes rather than one
+        // at a time. A dead entry in an exclusion set is worse than none: it reads as
+        // coverage the set does not have, against the very counting the remark above asks for.
         DiagnosticCodes.UndefinedVariable,
-        DiagnosticCodes.UndefinedPhrase,
         DiagnosticCodes.UnknownFormReference,
     };
 }

@@ -100,10 +100,11 @@ public class DiagnosticCodeTests
     /// </para>
     /// <para>
     /// MEASURED 2026-08-16 over LilySharp.Core / .Lsp / .Cli (352 files): 96 codes declared,
-    /// 89 named by a caller, 7 named by nobody — and none of the 7 is emitted through its
+    /// 89 named by a caller, 7 named by nobody — and none of the 7 was emitted through its
     /// string literal either (0 occurrences of "LYS0001", "LYS0005", … outside the
     /// declaration). HANDOFF §2F carried this as "LYS1015 has no emitter"; that was the
-    /// count of a targeted grep, not of the family.
+    /// count of a targeted grep, not of the family. All seven were retired (user decision,
+    /// same day), which is why the list below is empty rather than seven names long.
     /// </para>
     /// <para>
     /// ⚠️ TESTS ARE NOT SCANNED on purpose: a code a test names but no validator raises still
@@ -113,18 +114,12 @@ public class DiagnosticCodeTests
     [Fact]
     public void CodesThatNothingEmits_DoNotGrow()
     {
-        // Retiring one of these means DELETING the constant (codes are retired, never
-        // reused — see the class remarks) and removing its name from this list.
-        string[] known =
-        [
-            "UnexpectedToken",          // LYS0001
-            "InvalidNumber",            // LYS0005
-            "DuplicateVariable",        // LYS1002
-            "InvalidPitch",             // LYS1003
-            "UndefinedPhrase",          // LYS1006 — folded into UndefinedVariable's message
-            "MultipleFormDeclarations", // LYS1015 — a rule the language no longer has
-            "NoTimeSignature",          // LYS2003
-        ];
+        // Empty, and meant to stay empty. The seven that were here on 2026-08-16 were
+        // retired the same day (their numbers are listed on DiagnosticCodes itself);
+        // retiring one means DELETING the constant, because codes are retired and never
+        // reused — see this class's remarks. Adding a name here is admitting a rule the
+        // language does not have, so it wants a reason beside it.
+        string[] known = [];
 
         var emitted = EmittedCodeNames();
 
