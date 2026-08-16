@@ -421,14 +421,15 @@ These are keywords and cannot be used as bare identifiers, EXCEPT the four clef-
 part is fine). Keywords:
 
 ```text
-section structure include tab ossia transpose octave instrument
-score part staff grandStaff voice phrase repeat volta alternative break partial
+section form using tab ossia transpose octave instrument percussion drummap
+score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
+voice phrase repeat volta alternative break nobreak partial cue embedded font
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
-treble bass alto tenor treble_8
+treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
 tuplet grace acciaccatura appoggiatura lyrics chords tuning
 override revert once with
-segno fine coda dc ds al to
+segno fine coda dc ds al to tocoda
 ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from text)
 ```
 

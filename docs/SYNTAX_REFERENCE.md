@@ -800,15 +800,20 @@ be declared and referenced).
 
 | Group | Words |
 |-------|-------|
-| Structure | `section` `form` `include` `tab` `ossia` `transpose` `octave` `instrument` |
-| Score / layout | `score` `part` `staff` `grandStaff` `voice` `phrase` `repeat` `volta` `alternative` `let` `use` `break` `partial` |
+| Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `instrument` `percussion` `drummap` |
+| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `nobreak` `partial` `embedded` `font` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
-| Clef names | `treble` `bass` `alto` `tenor` `treble_8` |
-| Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `lyrics` `chordnames` `chords` `tabStaff` `tuning` |
-| Overrides | `override` `revert` `once` |
-| Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` |
+| Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
+| Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `cue` `lyrics` `chords` `tuning` |
+| Overrides | `override` `revert` `once` `with` |
+| Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` `tocoda` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
+
+⚠️ Measured word by word against `Lexer.GetKeywordKind` on 2026-08-16, by asking whether
+each can name a part. Five words this table listed are **not** reserved and name a part
+fine — `include`, `let`, `use`, `chordnames`, `tabStaff` — and the sixteen added above are.
+`structure` and `render` left the language when they became `form` and `score`.
 
 Notes:
 

@@ -86,17 +86,19 @@ DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 ### Keywords
 
 Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
-        | 'part' | 'phrase' | 'section' | 'structure' | 'score'
-        | 'staff' | 'grandStaff' | 'tab' | 'ossia' | 'voice'
-        | 'lyrics' | 'chords' | 'tuning' | 'instrument'
-        | 'transpose' | 'octave' | 'using' | 'use' | 'let' | 'break' | 'partial'
-        | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura'
-        | 'repeat' | 'volta' | 'alternative'
+        | 'part' | 'phrase' | 'section' | 'form' | 'score'
+        | 'staff' | 'grandStaff' | 'staffGroup' | 'choirStaff'
+        | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
+        | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
+        | 'transpose' | 'octave' | 'using' | 'break' | 'nobreak' | 'partial'
+        | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
+        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'font'
         | 'override' | 'revert' | 'once' | 'with'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
-        | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8'
-        | 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to'
+        | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' | 'bass_8'
+        | 'soprano' | 'mezzosoprano' | 'baritone'
+        | 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to' | 'tocoda'
         | 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'ff' | 'fff'
         ;
 
@@ -107,7 +109,14 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
    (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
    (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
    NOT reserved. 'volta'/'alternative' are reserved only to reject the removed
-   LilyPond-style forms; 'using' is reserved for multi-file support. *)
+   LilyPond-style forms; 'using' is reserved for multi-file support.
+
+   ⚠️ This list is one table in the implementation (Lexer.GetKeywordKind) and was
+   MEASURED against it on 2026-08-16, word by word, by asking whether each can name a
+   part: 'structure', 'use' and 'let' were listed here and are NOT reserved (they name
+   a part fine — 'structure' has not been a keyword since it was renamed to 'form'),
+   and sixteen words that ARE reserved were missing. The words a-g reach that table
+   only through the '@name' path, which is why 'f' is in it and not here. *)
 
 ### Operators & Punctuation
 
@@ -340,15 +349,32 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 (* Song form: print/playback order of sections. Optional — omitting it plays sections
    in declaration order. Only section references and navigation marks (no inline music). *)
 
-StructureDecl  = 'structure' , '{' , { StructureItem } , '}' ;
+(* ⚠️ The keyword is 'form'. It was 'structure' once, and this production still said so
+   until 2026-08-16 — a production is not an Example, so DocExamplesParseTests never read
+   it, and 'structure' now parses as an ordinary identifier (measured: "Undefined variable
+   or phrase: 'structure'"). The NAME is required; omitting it is LYS1016. The whole item
+   list below was measured the same day by putting each spelling in a form and running
+   `lysc check`. *)
 
-StructureItem  = SectionRef                        (* Identifier — shows the section label *)
-               | '~' , Identifier                  (* same section, no label *)
-               | String                            (* custom label for the preceding/section *)
-               | NavMark                            (* segno / coda / fine / dc / ds / to coda *)
-               | '_' , String                       (* custom text directive *)
+StructureDecl  = 'form' , Identifier , '{' , { StructureItem } , '}' ;
+
+StructureItem  = SectionRef                        (* Identifier [ String ] — the string is
+                                                      this occurrence's display label *)
+               | '~' , Identifier , [ String ]     (* same section, label hidden (LYS0012) *)
+               | NavMark                            (* segno / coda / fine / dc / ds / to coda —
+                                                      BARE; the '@' form is rejected (LYS1022) *)
+               | '_' , String                       (* custom text — the string is GLUED:
+                                                      _"text" is taken, _ "text" is not *)
+               | StructureRepeat                    (* |: … :| *)
                | StructureVolta                     (* a repeat volta ending *)
+               | Barline                            (* '||' '|.' '!' ':|' ':|:' engrave; a plain
+                                                      '|' is kept as an inert divider *)
+               | ( 'break' | 'nobreak' )            (* force / forbid a system break here *)
                ;
+
+(* A repeat block. The endings go BETWEEN the barlines — |: … [1. D] :| [2. O] — and the
+   play count rides on the closing bar the way the music stream spells it. *)
+StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ;
 
 (* A repeat volta ending inside a |: … :| repeat, referencing a section:
    form main { |: A [1. D] :| [2. O] }
@@ -827,8 +853,9 @@ MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).
 |--------------------|----------------------------------------------------------|
 | No section         | File must contain at least one `section` block           |
 | No score           | File must contain at least one `score` block             |
-| Multiple structure | At most one top-level `structure` block                  |
-| Inline music       | `{ }` music in `structure` (not allowed — section refs only) |
+| Unnamed form       | `form` written without a name (LYS1016) — `form main { … }` |
+| Duplicate form     | Two `form`s share a name (LYS1017). SEVERAL forms are fine — one score each |
+| Inline music       | `{ }` music in a `form` (not allowed — section refs only) |
 | Undefined ref      | Section / phrase / part referenced but not defined       |
 | Forward reference  | Phrase used before its definition                        |
 | Missing fine/segno/coda | `dc al fine` without `fine`, `ds` without `segno`, `to coda` without `coda` |
@@ -837,7 +864,7 @@ MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).
 
 | Warning            | Description                                               |
 |--------------------|-----------------------------------------------------------|
-| Unused section     | Section defined but not in structure                      |
+| Unused section     | Section defined but named by no form                      |
 | Unused phrase      | Phrase defined but never referenced                       |
 | Incomplete measure | Measure duration doesn't match the time signature         |
 | Excess lyrics      | More lyric syllables than notes in a bar (extras dropped) |
