@@ -84,12 +84,13 @@ X をしていなかったのを 4 件見つけた便**（**実装 5 便**）。
 count 点 106/うち非ゼロ 2**・HEAD `9d1ad561`（実装の最後 `d921add1`）・
 **未 push 39・未追跡 0**・suite **5062 passed / 0 failed / 4 skipped**
 ＝**引継ぎの数は全部合っていた**（**14 回連続**）。
-終了時 **実装の最後は `23d7b600`**・**未 push は
+終了時 **実装の最後は `8aa76b5a`**・**未 push は
 `git rev-list --count origin/master..master` が言う**・**未追跡 0**・
 suite **5073 passed / 0 failed / 4 skipped**（+11＝新しい網ちょうど）・
 **台帳 516 点で不動**（ss 非ゼロ 98・総和 3.609965521・count 106/2）・
-**コーパス 0/81**（第1便で取得。**残る 3 便は構造で言える**——**第3・第4便は
-`git diff -- LilySharp.Core` が空**、**第2便が触った `ResolvedPitches.ForFile` の生産側の
+**コーパス 0/81**（第1便で取得。**残る 4 便は構造で言える**——**第3〜第5便は
+`git diff -- LilySharp.Core` が空**〈第5便は加えて、触った本の data-pos を伏せた SVG が
+前後で同一 `2A59D6B01CC3`〉、**第2便が触った `ResolvedPitches.ForFile` の生産側の
 呼び手は `Program.cs` の `--pitches` 1 つだけ**〈実測・描画経路は 1 か所も読まない〉。
 **ハッシュではなく構成**）・
 **snapshot 2 枚**（`test/grandstaff-high-bass`・`test/accidental-octave-straddle`
