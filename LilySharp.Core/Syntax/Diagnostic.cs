@@ -843,10 +843,14 @@ public static class DiagnosticCodes
     /// <remarks>
     /// <para>
     /// ⚠️ A WARNING, not an error, and the two halves of that decision come from different
-    /// places. What it DOES is LilyPond's, MEASURED on 2.26.0 (2026-08-16) rather than
-    /// reasoned about: <c>\alternative { \volta 1 { … } }</c> with no <c>\repeat volta</c> in
-    /// front of it renders BYTE-IDENTICALLY to writing the music plainly — no bracket, no
-    /// number — while the same book with the <c>\repeat</c> restored hashes differently.
+    /// places. What it DOES is LilyPond's, and it is in LP's source, not merely in its
+    /// output:
+    /// LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze defaults repeat-count to 1
+    /// when no enclosing repeat has set it, so an alternative outside a repeat plays exactly
+    /// once and nothing spans a second pass. CONFIRMED on 2.26.0 (2026-08-16):
+    /// <c>\alternative { \volta 1 { … } }</c> with no <c>\repeat volta</c> in front of it
+    /// renders BYTE-IDENTICALLY to writing the music plainly — no bracket, no number — while
+    /// the same book with the <c>\repeat</c> restored hashes differently.
     /// LP itself says nothing; breaking that silence is the Lily# half (user decision,
     /// 2026-08-16), on the same reasoning as <see cref="UsingFileUnreadable"/>: a construct
     /// that draws nothing is worth a word even when the output is right.

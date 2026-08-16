@@ -4263,11 +4263,14 @@ public sealed partial class MeasureCollector
 
                 // A volta ending that NO repeat block opened — `form main { A [1. B] }`.
                 // It is its section and nothing more: there is no repeat for the ending to
-                // be an ending OF, so no bracket and no number are engraved. That rule is
-                // LilyPond's, measured on 2.26.0 rather than reasoned about: an
-                // `\alternative { \volta 1 { … } }` with no `\repeat volta` in front of it
-                // renders BYTE-IDENTICALLY to writing the music plainly (and says nothing),
-                // while the same book with the `\repeat` restored hashes differently.
+                // be an ending OF, so no bracket and no number are engraved.
+                // LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze reads repeat-count, defaulting it to 1
+                // when no enclosing repeat has set it, so every alternative plays exactly
+                // once and nothing spans a second pass. Confirmed on 2.26.0 rather than
+                // inferred: an `\alternative { \volta 1 { … } }` with no `\repeat volta` in
+                // front of it renders BYTE-IDENTICALLY to writing the music plainly (and
+                // says nothing), while the same book with the `\repeat` restored hashes
+                // differently.
                 // LilyPondExporter and MusicXmlExporter already read it this way — this arm
                 // and MidiExporter.PlayForm are the two walks that were still dropping the
                 // section on the floor, so the same file was two different pieces of music

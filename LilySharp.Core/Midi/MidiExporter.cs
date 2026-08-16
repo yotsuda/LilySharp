@@ -653,8 +653,11 @@ public sealed class MidiExporter
                     break;
                 // A volta ending no repeat block opened — `form main { A [1. B] }`. There is
                 // nothing for it to be an alternative TO, so it sounds as its plain section,
-                // once. LilyPond agrees (measured, 2.26.0: a `\volta 1` alternative with no
-                // `\repeat` in front renders byte-identically to the bare music), and both
+                // once.
+                // LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze defaults repeat-count to 1
+                // with no enclosing repeat, which is exactly "played once". Confirmed on
+                // 2.26.0 (a `\volta 1` alternative with no `\repeat` in front renders
+                // byte-identically to the bare music), and both
                 // MusicXmlExporter and LilyPondExporter already read it this way; MIDI and
                 // the page were the two walks that dropped it. Saying so to the author is
                 // the other half of the repair and lives in FormDeclarationValidator.
