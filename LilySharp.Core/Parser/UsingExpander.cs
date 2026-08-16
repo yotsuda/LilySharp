@@ -45,18 +45,25 @@ public static class UsingExpander
 
     /// <summary>True if an ALREADY-PARSED tree contains at least one <c>using</c> directive.</summary>
     /// <remarks>
+    /// <para>
     /// The overload exists so a caller holding the tree does not pay for a second full
-    /// parse. That caller is the LSP, and it is on the keystroke path: the preview asked
-    /// <c>HasUsings(doc.Text)</c> on every refresh, and the Problems panel now asks too —
-    /// which would have made a whole extra parse of the document per keystroke.
-    /// The text pre-check is sound rather than clever: the directive's keyword token IS
-    /// the word, so a source without it cannot hold one, and the walk is skipped for every
-    /// book that does not (which today is all of them — 0 of 919 in the tree write
-    /// <c>using</c>).
+    /// parse. That caller is the LSP, and it is ON THE KEYSTROKE PATH: the preview asks
+    /// this on every refresh, and the Problems panel asks too.
+    /// </para>
+    /// <para>
+    /// ⚠️ So it must not walk the tree. A <c>using</c> is reachable only from
+    /// <c>Parser.ParseTopLevelItem</c> (<c>Parser.cs</c>'s <c>UsingKeyword =>
+    /// ParseUsingDirective()</c> arm), so a directive is always a DIRECT CHILD of the
+    /// compilation unit and the root's children are the whole search space — the same
+    /// argument <see cref="Semantics.PartTranspose.Read(SyntaxNode, string)"/> makes about
+    /// part declarations. <c>DescendantNodes().OfType&lt;T&gt;()</c> would materialize a
+    /// red wrapper for EVERY descendant just to type-test it, which the tree's own remark
+    /// prices at ~13 ms (plain1k) / ~76 ms (fingbeam1k) per enumeration — per keystroke,
+    /// for a question whose answer lives in the first twenty nodes.
+    /// </para>
     /// </remarks>
     public static bool HasUsings(SyntaxTree tree)
-        => tree.Text.Contains("using", StringComparison.Ordinal)
-           && tree.GetRoot().DescendantNodes().OfType<UsingDirectiveSyntax>().Any();
+        => tree.GetRoot().ChildNodes().OfType<UsingDirectiveSyntax>().Any();
 
     /// <summary>
     /// Expand includes starting from <paramref name="mainText"/> (the in-memory
@@ -145,8 +152,11 @@ public static class UsingExpander
         }
     }
 
+    // Direct children only, for the same reason HasUsings gives: the parser can only
+    // place a `using` at the top level, so this is the whole search space and the two
+    // readers of that fact stay spelt the same way.
     private static IEnumerable<(string Path, TextSpan Span)> FindUsings(string text)
-        => SyntaxTree.Parse(text).GetRoot().DescendantNodes()
+        => SyntaxTree.Parse(text).GetRoot().ChildNodes()
             .OfType<UsingDirectiveSyntax>()
             .Select(d => (d.Path, d.PathToken.Span))
             .ToList();

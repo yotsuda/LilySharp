@@ -52,6 +52,45 @@ public sealed class UsingTests
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 
+    // ---- HasUsings looks at the root's children only, and may ----------------------
+    //
+    // It is asked on every keystroke — by the preview and, since 49aadc2c, by the
+    // Problems panel — so it must not walk the tree. `DescendantNodes().OfType<T>()`
+    // materializes a red wrapper for EVERY descendant just to type-test it: measured
+    // 43,043 of them for `perf-plain1k` and 234,030 for `perf-fingbeam1k`, against 7 and
+    // 5 root children. (234k is the very number RULES §1 session 153 records having
+    // removed from the keystroke path.) These tests hold the claim that makes the cheap
+    // spelling legal.
+
+    [Theory]
+    [InlineData("using \"a.lys\"\ntime 4/4\n")]
+    [InlineData("time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n\nform main { ~A }\n")]
+    [InlineData("time 4/4\n\npart m { clef treble }\n\nsection A { m { c4 d e f | } }\n\nform main { ~A }\n\nscore main { using \"n.lys\" staff m }\n")]
+    [InlineData("time 4/4\npart m { clef treble }\n")]
+    public void HasUsings_AgreesWithAWholeTreeScan(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(
+            tree.GetRoot().DescendantNodes().OfType<UsingDirectiveSyntax>().Any(),
+            UsingExpander.HasUsings(tree));
+    }
+
+    [Fact]
+    public void AUsingCanOnlyBeATopLevelItem()
+    {
+        // Why the children are the whole search space: `Parser.ParseTopLevelItem` is the
+        // only arm that reaches `ParseUsingDirective`, so writing one inside a section or
+        // a score produces NO directive node at all — measured, not assumed. If that ever
+        // changes, this test fails before HasUsings starts missing things.
+        const string inSection =
+            "time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n";
+        Assert.Empty(SyntaxTree.Parse(inSection).GetRoot()
+            .DescendantNodes().OfType<UsingDirectiveSyntax>());
+
+        Assert.Single(SyntaxTree.Parse("using \"a.lys\"\n").GetRoot()
+            .DescendantNodes().OfType<UsingDirectiveSyntax>());
+    }
+
     [Fact]
     public void MainText_StaysThePrefix()
     {
