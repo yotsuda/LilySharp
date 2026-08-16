@@ -25,7 +25,14 @@ cd C:\MyProj\LilySharp
 git log --oneline -8
 git rev-list --count origin/master..master     # 未 push 数
 git status --short
-dotnet build LilySharp.Core\LilySharp.Core.csproj --no-incremental -v q
+# ⚠️ project 単体ではなく **solution** を建てる（約 4 秒）。**Core だけ建てても
+#    `LilySharp.Cli\bin` の Core.dll は更新されない**ので、そのあと `lysc` を打つと
+#    旧 Core を抱く（2026-08-17 実測・RULES §5.5。`--no-incremental` でも防げない）。
+# ⚠️ その `--no-incremental` はここでは「増分の腐り対策」ではなく **0 警告を*確かめる*ため**——
+#    **無変更の増分ビルドは何もコンパイルしないので警告 0 を*自明に*報告する。**
+dotnet build LilySharp.slnx --no-incremental -v q 2>&1 |
+  Select-String 'エラー|error|LilySharp\.Core.*warning'   # Core は 0 警告が期待値
+#    （solution 全体には Tests の analyzer 警告が 22 行在る。Core の行だけ見ること）
 # ⚠️ 成否行はロケール依存。ja-JP の機械では Passed! は 1 度も出ない（RULES §5.5）
 dotnet test  LilySharp.Tests\LilySharp.Tests.csproj -v q 2>&1 | Select-String '成功!|失敗!|Passed!|Failed!'
 ```

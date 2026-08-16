@@ -2322,9 +2322,13 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 ## 6. コマンド集
 
 ```powershell
-# ビルド（--no-incremental 必須）
-dotnet build LilySharp.Core\LilySharp.Core.csproj --no-incremental -v m   # 0 warn/err 期待
-dotnet build LilySharp.Tests\LilySharp.Tests.csproj --no-incremental -v q
+# ビルド（solution ごと。--no-incremental は「腐り対策」ではなく 0 警告を*確かめる*ため
+#          ——無変更の増分ビルドは何もコンパイルせず警告 0 を自明に報告する）
+# ⚠️ project 単体で建てないこと: Core だけ建てても LilySharp.Cli\bin の Core.dll は
+#    更新されず、そのあと lysc を打つと旧 Core を抱く（上の §5.5 の項）。
+dotnet build LilySharp.slnx --no-incremental -v q 2>&1 |
+  Select-String 'エラー|error|LilySharp\.Core.*warning'   # Core は 0 警告が期待値
+#    （solution 全体には Tests の analyzer 警告が在る。Core の行だけ見る）
 
 # 全テスト
 # ⚠️ 成否行はロケール依存（§5.5）。ja-JP は「成功!/失敗!」で Passed! は 1 度も出ない
