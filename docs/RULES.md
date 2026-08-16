@@ -2274,8 +2274,25 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   ⚠️ **`Deploy-Lsp.ps1` はインストール済み拡張へ「コピー」するだけで、拡張を作れない**。
   拡張が 1 つも入っていない機械では**先に `pwsh tools/Package-And-Install.ps1`**（VSIX を作って
   `code --install-extension`）。これも script が言うようにした。
-- **dotnet の増分ビルドが腐る** → 前後比較では `--no-incremental` でビルドして
-  `dotnet run --no-build`。なお `dotnet test` は `--no-incremental` を受け付けない
+- ⚠️⚠️ ★★ **「dotnet の増分ビルドが腐る」は測ると再現しなかった**（2026-08-17・第190）。
+  この行はずっと「前後比較では `--no-incremental`」と言ってきたが、**その `--no-incremental` は
+  記録されている症状を防げない**。実測 3 つ:
+  - ★★★ **`dotnet build LilySharp.Core ...` は `--no-incremental` を付けても
+    `LilySharp.Cli\bin` の `LilySharp.Core.dll` を更新しない。** ⇒ **ARCHIVE の
+    「`lysc.exe` が旧 Core を抱いたまま」は増分の腐りではなく、*別 project を建てていない*だけ**
+    （実測: Core を編集して Core だけ建てると `Cli\bin` は旧ハッシュのまま／
+    `dotnet build Cli`（**増分**）で正しく伝播する）。**直し方は `--no-incremental` ではなく
+    `dotnet build LilySharp.slnx`。**
+  - ★★ **ビルドは決定的**——**同じソースなら DLL がバイト同一**（full 2 回で同一ハッシュ、
+    コメントを足して戻した*増分*ビルドも同じハッシュ）。⇒ **増分を疑うなら
+    `--no-incremental` で建て直すより、`Get-FileHash` で full と突き合わせる方が強い**
+    （増分が誤ってスキップしたなら必ずハッシュが食い違う）。
+  - ★ **値段**: solution の full は **3.6〜4.0 秒**、1 ファイル編集後の増分は **2.1 秒**、
+    無変更は **0.9 秒**（Debug・ノード温）。⇒ **`--no-incremental` の保険料は約 2 秒**なので
+    **付けても実害は無い**が、**それで守れているつもりにならないこと**。
+  ⚠️ **`dotnet test` は `--no-incremental` を受け付けない**（これは変わらず）。
+  ⚠️ **`Content` / `None` の削除も追随する**（`IncrementalClean` が bin から消す。実測）ので、
+  **「bin に幽霊が残る」も再現しない。**
 - ★ ⚠️ **`PublishReadyToRun` の R2R 中間物が腐ると、publish は古い依存を配りながら
   deps.json では新しい版を名乗る**。crossgen2 の出力は
   `<proj>/obj/<cfg>/<tfm>/<rid>/R2R/*.dll` にキャッシュされ、**PackageReference の版だけを
