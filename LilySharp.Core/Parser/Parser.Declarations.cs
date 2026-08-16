@@ -166,6 +166,18 @@ internal sealed partial class Parser
     /// Same shape and same fix as <see cref="SkipStrayChordToken"/>,
     /// <see cref="ReportUnclaimedDot"/> and <see cref="ReportStrayStringNumber"/>;
     /// <c>ToFullString() == source</c> is the detector for all of them.
+    /// <para>
+    /// ⚠️ Keeping it is also FASTER on the keystroke path, which nobody had measured.
+    /// <see cref="IncrementalReuseMap"/> locates reusable items by accumulating
+    /// <c>item.FullWidth</c>, so a dropped token put every later item's key out by its
+    /// width and the lookup missed. Measured base-build against HEAD-build over 240
+    /// simulated keystrokes, counting reference-equal green members (the count is
+    /// deterministic — asserted identical across five runs): with one unplaceable token
+    /// in another section, reuse went <b>4.00 → 5.00</b> members per keystroke; on clean
+    /// books, where typing itself makes a transient stray, <b>4.67 → 5.00</b>
+    /// (<c>perf-plain1k</c>, <c>perf-slur1k</c>) and <b>2.67 → 3.00</b>
+    /// (<c>perf-fingbeam1k</c>). No configuration reused LESS.
+    /// </para>
     /// </remarks>
     private SyntaxToken ReportStrayItem(string container, string vocabulary)
     {

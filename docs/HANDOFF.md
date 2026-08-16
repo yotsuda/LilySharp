@@ -183,11 +183,34 @@ Read/Grep ツールだけで待つ**規律が今回も効いた（第183 と同�
   **分類は ⒟**——**既存の家（`ReportUnclaimedDot` の「返す」形）を 6 か所へ指し直しただけ**。
   **LP に対応物が無い**: LP の parser は yacc で、置けないトークンは硬い構文エラー。
   `form`/`score` の本体は Lily# 固有で、**LP には増分再パースが無いので再利用マップも無い**。
-- **⑹ ★ perf（RULES §7 ⑼）＝計算を足していない**。6 か所の報告が**既に消費したトークンを
-  捨てずに返す**だけ・`ParseLilypondBackslashCommand` は**短くなった**（再 dispatch を削除）・
-  `IsMusicItemStart` は jump table にラベル 6 個・`HasDiagnosticIn` は**増分経路だけ**で
-  診断×item あたり比較 1 つ増（しかも**間違う寸前だった item を余計に再パースする側**にしか倒れない）。
-  **新しい走査も確保も memo も無し。打鍵経路の `HasUsings` は不動。**
+- **⑹ ★★★ perf（RULES §7 ⑼）＝計算を足していないどころか、打鍵経路が*速くなった*。
+  そして速くなった理由は「あの沈黙は perf バグでもあった」**（**ユーザーの問いで測った**）。
+  **構造**: 6 か所の報告は**既に消費したトークンを捨てずに返す**だけ・
+  `ParseLilypondBackslashCommand` は**短くなった**（再 dispatch を削除）・
+  `IsMusicItemStart` は jump table にラベル 6 個（しかも**標準の本では音符ごとに呼ばれない**——
+  `section A { v { … } }` は `Identifier => ParsePartBlock()` で先に捌けるので、
+  呼ばれるのは top-level item ごと＝1 冊 6 回程度）・新しい走査も確保も memo も無し。
+  ★★★ **打鍵経路は `DocumentManager` が「一打鍵＝一編集＝`WithChange`」で通す**ので、
+  そこに乗るのは `IncrementalReuseMap` だけ。**時間ではなく回数で A/B した**
+  （§7 ⑼「この機械は 5〜15ms を時間で判定できない」・**worktree の base ビルド対 HEAD**・
+  240 打鍵・**再利用された green member を参照等価で数える**・**5 run で同一を assert**）:
+  ```
+                          base   HEAD
+  perf-fingbeam1k         2.67 → 3.00
+  perf-plain1k            4.67 → 5.00
+  perf-slur1k             4.67 → 5.00
+  迷子 1 つ（別 section） 4.00 → 5.00   ← +25%
+  迷子 30 個              4.00 → 5.00
+  対照（迷子なし）        5.67 → 6.00
+  truncated（最悪ケース） 4.83 → 5.00   ← 零幅の腕を払ってもなお速い
+  ```
+  ⇒ ★★★ **決着は base の 2 行**——**同じ本で迷子ありが 4.00・迷子なしが 5.67、
+  しかも診断はどちらも 0**。**説明は幅の算術しかない**: `IncrementalReuseMap.Create` は
+  **`oldPos += item.FullWidth` で member の位置を積む**ので、**落ちたトークンの幅が
+  どの member にも入らず、以降の鍵が全部ずれて `TryGet` が空振りしていた**。
+  ⚠️ **「HEAD が遅くなる場合」を作ろうとして作れなかった**——零幅の腕は member を 1 つ余計に
+  除外するが、**幅の回復がそれを上回る**（`truncated` が実測）。**時間は両側とも噛み合わず
+  （±25% の揺れ）、§7 ⑼ の警告どおり何も言わない。回数だけが言う。**
 - **⑺ ★★★ §2F に残っているのは 9 つ**——**⑴ 一覧に構文を与えるか（決定であって作業ではない）
   ⑵ 繰り返し縦線の ⑹（MIDI の片側 `:|`）⑶ `lyrics` の voice 束縛（要決定）
   ⑷ `lysc ly` が transpose を落とす件（exporter の島・それだけで 1 セッションの形）

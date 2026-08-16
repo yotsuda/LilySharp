@@ -38,6 +38,23 @@ namespace LilySharp.Core.Parser;
 /// Items before the damage keep their position; items after it shift by the
 /// edit's length delta. Reuse is opportunistic: if the parser never lands
 /// exactly on a mapped position, it simply parses normally.
+/// <para>
+/// ⚠️ THIS IS ON THE KEYSTROKE PATH — <c>DocumentManager</c> routes one edit per
+/// keystroke through <c>SyntaxTree.WithChange</c>, so whatever happens here is paid per
+/// character typed.
+/// </para>
+/// <para>
+/// ⚠️ And its arithmetic is only as good as the tree's widths. <c>oldPos</c> accumulates
+/// <c>item.FullWidth</c>, so a token the parser DROPPED — one no item rule could place,
+/// which is what happened before LYS0030 (2026-08-16) — left every later item's computed
+/// start short by that much, the keys stopped matching the parser's real
+/// <c>_textPosition</c>, and the lookup simply missed. Measured on <c>perf-plain1k</c>
+/// split into two sections with the caret in the second: one unplaceable token in the
+/// FIRST section made the old build reuse <b>4.00</b> members per keystroke against
+/// <b>5.67</b> for the identical book without it — and BOTH had zero diagnostics, so
+/// nothing but the width arithmetic can account for the difference. The silence was a
+/// keystroke-path cost as well as a correctness one, and no one had measured it.
+/// </para>
 /// </remarks>
 internal sealed class IncrementalReuseMap
 {
