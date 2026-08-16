@@ -167,10 +167,15 @@ public class AnnotationRoundTripTests
         // audit\lpreg (257) and samples (6) were outside it, and that is exactly
         // where the lyric-hyphen island had been sitting — a dropped width, the
         // family this file exists to catch, invisible because nothing looked.
+        // ⚠️ The check is one subtraction — this list against
+        // `git ls-files '*.lys'` — and the first widening still left three behind
+        // (audit\lilypond-ref\cases\*\case.lys). Redo the subtraction when a corpus
+        // directory is added; "wider than it was" is not the same as "all of them".
         foreach (var dir in new[]
         {
             Path.Combine(root, "audit", "lp-regression", "lys"),
             Path.Combine(root, "audit", "lpreg"),
+            Path.Combine(root, "audit", "lilypond-ref"),
             Path.Combine(root, "LilySharp.Tests", "Fixtures"),
             Path.Combine(root, "samples"),
         })
@@ -186,7 +191,9 @@ public class AnnotationRoundTripTests
             }
         }
 
-        Assert.True(books > 500, $"only {books} books found — the corpus paths moved");
+        // The floor is the tracked count as of 2026-08-16 (566). Raise it with the
+        // corpus; a sweep that silently shrinks reads as "still passing".
+        Assert.True(books >= 566, $"only {books} books found — the corpus paths moved");
         var news = broken.Where(b => !known.Contains(b)).ToList();
         Assert.True(news.Count == 0, "these books stopped spelling themselves back: " + string.Join(", ", news));
         var fixedUp = known.Where(k => !broken.Contains(k, StringComparer.OrdinalIgnoreCase)).ToList();
