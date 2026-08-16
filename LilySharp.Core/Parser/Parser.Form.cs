@@ -76,6 +76,12 @@ internal sealed partial class Parser
             // writing it, with no diagnostic. It is the same BarlineSyntax the music stream
             // uses, so ':|*N' comes along for free.
             SyntaxKind.RepeatEndBar => ParseBarline(),
+            // Every OTHER barline, for the same reason as the ':|' arm above: it needs a
+            // node before anything can give it meaning, and a bare Advance() dropped its
+            // width. A plain '|' is kept as an inert divider, the rest as engraved
+            // barlines — see ParseFormBarline for the measurement behind the split
+            // (user decision 2026-08-16).
+            _ when SyntaxFacts.IsBarlineKind(Current.Kind) => ParseFormBarline(),
             SyntaxKind.OpenBracket => ParseVoltaBracket(),
             // `break` / `nobreak` between sections force / forbid a system break at
             // that point in the played sequence (a layout directive, so no '@').
@@ -85,9 +91,52 @@ internal sealed partial class Parser
                 => ParseNavigationMark(),
             // Same guard as the ':|' arm above, for `using` (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a form"),
-            _ => null
+            // Anything else: reported and KEPT (LYS0030) — the general case of the two
+            // arms above, which were added one silent spelling at a time. Measured
+            // 2026-08-16 on `form main { A section B }`: the `section` keyword was dropped
+            // in silence, and the (correct) `Undefined section: 'B'` was then reported at
+            // column 15, ON that keyword, with `B` standing at column 23.
+            _ => ReportStrayItem("a form",
+                    "A form body holds section references (bare names, '~name' to hide a "
+                    + "label), repeat blocks ('|: … :|'), volta endings ('[1. … ]'), "
+                    + "navigation marks (segno, fine, ds al coda), '@' marks, '_' texts and "
+                    + "break/nobreak.")
         };
     }
+
+    /// <summary>A barline standing in a <c>form</c> body. Every one of them is KEPT — a
+    /// bare <c>Advance()</c> dropped the width and slid every later source offset — but
+    /// they are kept as two different things, because they mean two different things.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ A plain <c>|</c> is kept as the RAW TOKEN, not as a <see cref="BarlineSyntax"/>:
+    /// it contributes its width and nothing else, exactly like the tokens
+    /// <see cref="ReportStrayItem"/> keeps. Sections already abut, so a <c>|</c> between
+    /// form items asks for nothing the page does not already do — and made into a barline
+    /// NODE it asks for something the author did not write. Measured 2026-08-16:
+    /// <c>form main { A | B }</c> engraved THREE bars where <c>form main { A B }</c>
+    /// engraves two, because section A's music already closes with <c>|</c> and the
+    /// language's own rule is that "an empty measure is always an explicit <c>| |</c> pair"
+    /// (MeasureCollector.Form ProcessSectionPrologue). Both books in the tree that write
+    /// this spell it as a divider before a <c>[1. …]</c> ending, which is not an empty bar.
+    /// </para>
+    /// <para>
+    /// ⚠️ Every OTHER barline IS a request for a glyph, and parsing it as the ordinary
+    /// <see cref="BarlineSyntax"/> the music stream uses grants it. Measured on
+    /// <c>scratch/…/blogger.lys</c>, whose form writes <c>… to coda || D …</c>: the page
+    /// gained exactly ONE element — the single <c>&lt;rect x="59.82"&gt;</c> became the pair
+    /// <c>x="59.51"</c> / <c>x="60.00"</c>, 0.49 apart, which is a double barline — with
+    /// every other difference being the respacing that one glyph causes, and the bar count
+    /// and MIDI unchanged. Before this it was dropped, and <c>A || B</c> engraved
+    /// byte-identically to <c>A B</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ The <c>|:</c> and <c>:|</c> arms above are reached first and keep their own
+    /// meanings; this is the rest of the family, which had none.
+    /// </para>
+    /// </remarks>
+    private GreenNode ParseFormBarline() =>
+        Current.Text == "|" ? Advance() : ParseBarline();
 
     /// <summary>
     /// Parse silent section reference: ~SectionName or ~SectionName "label".
@@ -521,7 +570,13 @@ internal sealed partial class Parser
             // belongs here: `using` includes a FILE, not a staff (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a score"),
             _ when IsPartNameStart() => ParseMidiPartRender(),
-            _ => null
+            // Anything else: reported and KEPT (LYS0030) — the drop the comment four lines
+            // above already named, now neither silent nor width-losing.
+            _ => ReportStrayItem("a score",
+                    "A score body holds render items — 'staff NAME', 'tab NAME', "
+                    + "'grandStaff { … }', 'condensedStaff { … }', 'combinedStaff { … }', "
+                    + "'ossia { … }', 'chords NAME', 'lyrics NAME' — and its own "
+                    + "'title'/'composer'.")
         };
     }
 

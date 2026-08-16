@@ -84,7 +84,14 @@ internal sealed partial class Parser
             // annotation). This keeps it in the tree so SectionMusicNeedsPartValidator can report
             // it in a part-major file (it belongs to no part).
             _ when IsMusicItemStart() => ParseMusicItem(),
-            _ => null
+            // Anything else: reported and KEPT (LYS0030). This arm used to be `null`, and
+            // ParseList's shared `else Advance()` then dropped the token's width — measured
+            // 2026-08-16 on `section A { "oops" melody { … } }`: `No errors found.` and an
+            // SVG byte-identical to the same book WITHOUT the token, data-pos included.
+            _ => ReportStrayItem("a section",
+                    "A section body holds per-part cells ('melody { … }'), its own directives "
+                    + "(key, time, tempo, partial, override), a named 'lyrics NAME { … }' or "
+                    + "'chords NAME { … }' track, or bare music for a single-part piece.")
         };
     }
 

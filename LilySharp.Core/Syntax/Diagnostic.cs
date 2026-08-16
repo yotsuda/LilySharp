@@ -453,6 +453,46 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string UsingMustBeTopLevel = "LYS0029";
 
+    /// <summary>Parser error: a token that the container it stands in has no item rule for —
+    /// something written directly inside a <c>section</c> body, a <c>form</c> body, a
+    /// <c>score</c> body or a music block that is none of the things that container holds.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ Until 2026-08-16 all four containers consumed such a token with a bare
+    /// <c>Advance()</c> and said NOTHING. Measured on four probe books that differ from a
+    /// control only by an inserted <c>"oops"</c> (7 characters): <c>lysc check</c> answered
+    /// <c>No errors found.</c> for every one, and all five SVGs — <c>data-pos</c> INCLUDED —
+    /// were byte-identical to the control. That equality is the defect stated twice: the
+    /// token contributed nothing, and every source offset after it pointed 7 characters
+    /// early, at the offsets the book has with the token DELETED.
+    /// </para>
+    /// <para>
+    /// ⚠️ The width is the half that reaches a reader who never mistypes. A node's position
+    /// is the running sum of the green widths before it, so a dropped token slides
+    /// <c>data-pos</c>, the LSP's jump targets, <c>check --pitches</c>' line numbers and the
+    /// editor's write-back. It also corrupts OTHER diagnostics: measured on
+    /// <c>form main { A section B }</c>, the (correct) <c>Undefined section: 'B'</c> was
+    /// reported at column 15 — on the dropped <c>section</c> keyword — where <c>B</c> stands
+    /// at column 23.
+    /// </para>
+    /// <para>
+    /// ⚠️ Reported AND kept, like <see cref="UnclaimedDot"/>,
+    /// <see cref="StrayStringNumber"/> and <see cref="ChordBlockBadMember"/>: the token
+    /// stands in the item list contributing its width and nothing else. Every consumer of
+    /// these item lists selects POSITIVELY by node type (counted 2026-08-16 across the 35
+    /// files that name the three declaration nodes), and all three containers already hold
+    /// token children — the keyword, the name and the braces — so one more token child is
+    /// structurally indistinguishable from what they already skip.
+    /// </para>
+    /// <para>
+    /// ⚠️ An ERROR, not a warning (user decision, 2026-08-16), on the same ground as
+    /// <see cref="UsingMustBeTopLevel"/>: <see cref="UsingFileUnreadable"/> is a warning
+    /// because its silence was DECLARED design and pinned by a test, and no such contract
+    /// covers a token that no rule of the language can place.
+    /// </para>
+    /// </remarks>
+    public const string StrayItemToken = "LYS0030";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

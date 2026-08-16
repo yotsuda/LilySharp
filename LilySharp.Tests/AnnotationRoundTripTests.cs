@@ -84,12 +84,16 @@ public class AnnotationRoundTripTests
         //   annotation vs slur/tie ORDER — the mark is re-emitted before the
         //   '(' / ')~' it was written after (empty-chord, script-stack-order1,
         //   slur-vertical-skylines, feature-tour).
-        //   volta labels — the '|' before a '[1. …]' label is not stored
-        //   (volta-labels).
+        // ⚠️ volta-labels came OFF this list on 2026-08-16: "the '|' before a '[1. …]'
+        // label is not stored" was the last island where a token no form rule claimed was
+        // consumed by a bare Advance(). ParseFormItem now parses every barline as the
+        // BarlineSyntax it is (LYS0031 warns for the ones nothing engraves yet), and the
+        // three containers around it report and keep what they cannot place (LYS0030).
+        // The four that remain are ONE island, and it is not this one.
         var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "empty-chord.lys", "script-stack-order1.lys", "slur-vertical-skylines.lys",
-            "feature-tour.lys", "volta-labels.lys",
+            "feature-tour.lys",
         };
 
         var root = CollectResumeTests.FindRepoRoot();

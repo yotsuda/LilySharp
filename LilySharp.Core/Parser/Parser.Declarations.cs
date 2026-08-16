@@ -141,10 +141,51 @@ internal sealed partial class Parser
 
     // Legacy part inside score: part Name "display" { staff... }
     /// <summary>
+    /// A token the container it stands in has no item rule for: REPORTED (LYS0030), and
+    /// then kept in the tree.
+    /// </summary>
+    /// <param name="container">What the container is, named the way a reader would name
+    /// it ("a section", "a form", "a score") — it goes into the message.</param>
+    /// <param name="vocabulary">One sentence listing what that container DOES hold.</param>
+    /// <remarks>
+    /// ⚠️ KEEPING IT IS HALF THE REPAIR, and the half a reader who never mistypes still
+    /// pays for. A bare <c>Advance()</c> — what all three <see cref="ParseList"/> callers
+    /// and <c>ParseMusicBlock</c> did until 2026-08-16 — drops the token's WIDTH, and a
+    /// node's position is the running sum of the green widths before it, so every source
+    /// offset after the token slides. Measured: four books differing from a control only by
+    /// an inserted <c>"oops"</c> rendered SVGs byte-identical to it, <c>data-pos</c>
+    /// included, while <c>lysc check</c> said <c>No errors found.</c> — and on
+    /// <c>form main { A section B }</c> the resulting <c>Undefined section: 'B'</c> pointed
+    /// at column 15, the dropped <c>section</c> keyword, with <c>B</c> at column 23.
+    /// Same shape and same fix as <see cref="SkipStrayChordToken"/>,
+    /// <see cref="ReportUnclaimedDot"/> and <see cref="ReportStrayStringNumber"/>;
+    /// <c>ToFullString() == source</c> is the detector for all of them.
+    /// </remarks>
+    private SyntaxToken ReportStrayItem(string container, string vocabulary)
+    {
+        string text = Current.Text;
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
+                                Math.Max(1, text.Length));
+        _diagnostics.Error(span, DiagnosticCodes.StrayItemToken,
+            $"'{text}' is not something {container} can hold. {vocabulary}");
+        return Advance();
+    }
+
+    /// <summary>
     /// Parses items with <paramref name="parseItem"/> until <paramref name="close"/>
     /// or EOF. A null result skips one token (the single infinite-loop guard shared
     /// by every brace-delimited list).
     /// </summary>
+    /// <remarks>
+    /// ⚠️ The <c>Advance()</c> below is a LOOP GUARD, not a recovery rule. All three item
+    /// rules this list is given (<c>ParseSectionItem</c>, <c>ParseFormItem</c>,
+    /// <c>ParseRenderItem</c>) now end in <see cref="ReportStrayItem"/>, so a token the
+    /// container cannot place no longer arrives here at all. What still can is a token a
+    /// rule reported and deliberately declined to keep — the music-item reports reached
+    /// through <c>ParseSectionItem</c>'s music arm — and a rule that consumed nothing;
+    /// dropping one token is the only thing that keeps this from spinning. It is kept for
+    /// that reason, not because a token may be dropped in silence.
+    /// </remarks>
     private List<GreenNode?> ParseList(SyntaxKind close, System.Func<GreenNode?> parseItem)
     {
         var items = new List<GreenNode?>();
