@@ -1,6 +1,16 @@
 // =============================================================================
 // Lily# Grammar Showcase — changes committed 2026-06-09
-// Each section demonstrates a grammar feature shipped today.
+// Each section demonstrates a grammar feature shipped that day.
+//
+// ⚠️ Rewritten 2026-08-16 (第182) to the grammar as it now stands. It had stopped
+//    parsing, and a book titled "Grammar Showcase" that the grammar rejects is
+//    worse than no book: it teaches spellings that are errors. Three of its
+//    claims had expired and are corrected in place rather than deleted, so the
+//    file still says what changed and no longer lies about how to write it:
+//      · time/tempo in a part header — now LYS7011: they are shared by every
+//        part, so they belong at the top level or in a section header
+//      · bare music at the top level — now LYS0020: notes live inside a part
+//      · `repeat tremolo 4 { c16 }` filled a quarter of a 4/4 bar
 // =============================================================================
 
 title "Grammar Showcase (2026-06-09)"
@@ -12,13 +22,13 @@ time 4/4
 key c major
 
 // -----------------------------------------------------------------------------
-// G1 — part/staff headers: every attribute is colon-form, including time:/tempo:
-//      (contrast with the top-level command form above).
+// G1 — part headers carry what belongs to ONE part: its clef, its instrument
+//      name, its transposition. `time` and `tempo` are NOT among them: they are
+//      properties of the piece, shared by every part, and writing them here is
+//      an error that names the two places they can go.
 // -----------------------------------------------------------------------------
 part melody {
   clef treble
-  time 4/4
-  tempo 120
   instrument "Violin"
 }
 
@@ -37,28 +47,36 @@ phrase tr {
 }
 
 // -----------------------------------------------------------------------------
-// Main music
+// Main music — inside a part inside a section, which is where notes live.
 // -----------------------------------------------------------------------------
-{
-  // Reuse phrases by reference:
-  intro
+section A {
+  melody {
+    // Reuse phrases by reference:
+    intro
 
-  // G3 — articulations resolve from `@name` text via a registry:
-  c4@staccato d@staccato e@accent f@accent |
-  g@tenuto a@tenuto b@marcato c@marcato |
+    // G3 — articulations resolve from `@name` text via a registry:
+    c4@staccato d@staccato e@accent f@accent |
+    g@tenuto a@tenuto b@marcato c@marcato |
 
-  // G3 — ornaments:
-  c4@trill d,@trill e@mordent f@turn |
+    // G3 — ornaments:
+    c4@trill d,@trill e@mordent f@turn |
 
-  // Task 15 — inline volta repeat: body once, with first/second-time endings.
-  |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]
+    // Task 15 — inline volta repeat: body once, with first/second-time endings.
+    |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]
 
-  // Task 15 — explicit repeat count on the closing barline (:|*N):
-  |: c,'8 d e f g f e c :|*3
+    // Task 15 — explicit repeat count on the closing barline (:|*N):
+    |: c,'8 d e f g f e c :|*3
 
-  // G3 — `repeat tremolo` now parses (the keyword used to be rejected):
-  repeat tremolo 4 { c16 }
+    // G3 — `repeat tremolo` now parses (the keyword used to be rejected).
+    // 16 sixteenths fill the 4/4 bar; the original wrote 4 and filled a quarter
+    // of it, which the measure check now says out loud.
+    repeat tremolo 16 { c16 } |
 
-  // Reference the phrase whose name is a former keyword:
-  tr
+    // Reference the phrase whose name is a former keyword:
+    tr
+  }
 }
+
+form main { ~A }
+
+score main { staff melody }

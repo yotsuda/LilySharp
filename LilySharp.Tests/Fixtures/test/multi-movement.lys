@@ -1,5 +1,13 @@
 // Multi-movement example: Sonatina in C
-// Each movement uses separate variables for its music content
+//
+// One file, three movements, three output files. Each movement is a SECTION of
+// music, each has its own FORM naming that section, and each score renders one
+// form — so `form` is what separates the movements, not a variable per movement.
+//
+// ⚠️ This book is the tree's only one with more than one `form`, which is the
+// arrangement the form/score binding exists for: form names are unique and each
+// score names the form it renders, so a form other than `main` becomes the
+// output file name unless a "basename" overrides it (all three do here).
 
 title "Sonatina in C"
 composer "Example"
@@ -7,40 +15,50 @@ tempo 120
 time 4/4
 key c major
 
+part rh { clef treble }
+part lh { clef bass }
+
 // Movement I: Allegro
-rh_allegro = { c'4 e g e | f a g e | d f e c | d2 g | c,4 e g c | b4 g e c | d2 g2 | c1 | }
-lh_allegro = { c2 e | f a | g c | g g | c, e | g c | g g | c1 | }
+section Allegro {
+  rh { c'4 e g e | f a g e | d f e c | d2 g | c,4 e g c | b4 g e c | d2 g2 | c1 | }
+  lh { c2 e | f a | g c | g g | c, e | g c | g g | c1 | }
+}
 
 // Movement II: Andante
-rh_andante = { e4 d c d | e e e2 | d4 d d2 | e4 g g2 | e4 d c d | e e e2 | d4 d e d | c1 | }
-lh_andante = { c'2 g | c g | g g | c g | c g | c g | g g | c1 | }
+section Andante {
+  rh { e'4 d c d | e e e2 | d4 d d2 | e4 g g2 | e4 d c d | e e e2 | d4 d e d | c1 | }
+  lh { c'2 g | c g | g g | c g | c g | c g | g g | c1 | }
+}
 
 // Movement III: Rondo
-rh_rondo = { c8 d' e f g4 g | a8 g f e d4 d | e,8 d c d e4 g | c2 r2 | }
-lh_rondo = { c2 e | f d | c e | c r | }
+section Rondo {
+  rh { c'8 d' e f g4 g | a8 g f e d4 d | e,8 d c d e4 g | c2 r2 | }
+  lh { c2 e | f d | c e | c r | }
+}
 
-// The staves reference movement variables directly, so no section arrangement
-// is needed; every score binds to this (empty) form.
-form main { }
+// One form per movement. `~` hides the rehearsal label, so a movement does not
+// engrave a section mark it never had.
+form movement1 { ~Allegro }
+form movement2 { ~Andante }
+form movement3 { ~Rondo }
 
-// Each render block = one movement, referencing different variables
-score main "movement1-allegro" {
+score movement1 "movement1-allegro" {
   grandStaff {
-    staff treble rh_allegro
-    staff bass lh_allegro
+    staff rh
+    staff lh
   }
 }
 
-score main "movement2-andante" {
+score movement2 "movement2-andante" {
   grandStaff {
-    staff treble rh_andante
-    staff bass lh_andante
+    staff rh
+    staff lh
   }
 }
 
-score main "movement3-rondo" {
+score movement3 "movement3-rondo" {
   grandStaff {
-    staff treble rh_rondo
-    staff bass lh_rondo
+    staff rh
+    staff lh
   }
 }
