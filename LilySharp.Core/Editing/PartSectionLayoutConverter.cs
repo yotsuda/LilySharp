@@ -152,11 +152,11 @@ public static class PartSectionLayoutConverter
                         if (child is SectionDeclarationSyntax inner) // part-major cell
                         {
                             AddSection(inner.SectionName);
-                            cells[(part.Name.Text, inner.SectionName)] = BetweenBraces(inner.ToFullString());
+                            cells[(part.Name.Text, inner.SectionName)] = BetweenBraces(Verbatim(source, inner));
                         }
                         else
                         {
-                            attrs.Add(child.ToFullString().Trim());
+                            attrs.Add(Verbatim(source, child).Trim());
                         }
                     }
                     parts.Add((part.Name.Text, string.Join(" ", attrs.Where(a => a.Length > 0))));
@@ -168,7 +168,7 @@ public static class PartSectionLayoutConverter
                     foreach (var cs in topChords.Sections)
                     {
                         AddSection(cs.SectionName);
-                        chordCells[(topChords.PartName, cs.SectionName)] = BetweenBraces(cs.ToFullString());
+                        chordCells[(topChords.PartName, cs.SectionName)] = BetweenBraces(Verbatim(source, cs));
                     }
                     break;
 
@@ -180,7 +180,7 @@ public static class PartSectionLayoutConverter
                     foreach (var ls in topLyrics.Sections)
                     {
                         AddSection(ls.SectionName);
-                        lyricCells[(topLyrics.VoiceName, ord, ls.SectionName)] = BetweenBraces(ls.ToFullString());
+                        lyricCells[(topLyrics.VoiceName, ord, ls.SectionName)] = BetweenBraces(Verbatim(source, ls));
                     }
                     break;
                 }
@@ -189,7 +189,7 @@ public static class PartSectionLayoutConverter
                 // section's directives stated once, parallel to the parts.
                 case SectionDeclarationSyntax header when IsSectionHeader(header):
                     AddSection(header.SectionName);
-                    sectionHeaders[header.SectionName] = SectionDirectiveText(header);
+                    sectionHeaders[header.SectionName] = SectionDirectiveText(source, header);
                     break;
 
                 case SectionDeclarationSyntax section
@@ -197,16 +197,16 @@ public static class PartSectionLayoutConverter
                     AddSection(section.SectionName);
                     // Section-level directives (`key g major`) fold out to a standalone
                     // header in part-major.
-                    var directives = SectionDirectiveText(section);
+                    var directives = SectionDirectiveText(source, section);
                     if (directives.Length > 0)
                         sectionHeaders[section.SectionName] = directives;
                     foreach (var pb in DirectChildrenOfType<PartBlockSyntax>(section))
-                        cells[(pb.Name, section.SectionName)] = BetweenBraces(pb.ToFullString());
+                        cells[(pb.Name, section.SectionName)] = BetweenBraces(Verbatim(source, pb));
                     // In-section chord tracks become part-major chord tracks and back.
                     foreach (var cb in DirectChildrenOfType<ChordPartBlockSyntax>(section))
                     {
                         AddChordPart(cb.PartName);
-                        chordCells[(cb.PartName, section.SectionName)] = BetweenBraces(cb.ToFullString());
+                        chordCells[(cb.PartName, section.SectionName)] = BetweenBraces(Verbatim(source, cb));
                     }
                     // In-section lyric verses: the Nth same-named block per section is
                     // the Nth verse of that track (so stacked verses stay distinct).
@@ -219,7 +219,7 @@ public static class PartSectionLayoutConverter
                         int ord = lyricOrd.GetValueOrDefault(key);
                         lyricOrd[key] = ord + 1;
                         AddLyricTrack((lb.VoiceName, ord));
-                        lyricCells[(lb.VoiceName, ord, section.SectionName)] = BetweenBraces(lb.ToFullString());
+                        lyricCells[(lb.VoiceName, ord, section.SectionName)] = BetweenBraces(Verbatim(source, lb));
                     }
                     break;
             }
@@ -382,7 +382,7 @@ public static class PartSectionLayoutConverter
                 }
                 continue; // absorbed into the regenerated block
             }
-            sb.Append(member.ToFullString());
+            sb.Append(Verbatim(source, member));
         }
         if (!emitted) sb.Append(structuralBody);
         return sb.ToString();
@@ -427,9 +427,32 @@ public static class PartSectionLayoutConverter
 
     /// <summary>The section's directive children joined verbatim (the header text folded
     /// into / split out of a section), empty when it carries none.</summary>
-    private static string SectionDirectiveText(SectionDeclarationSyntax s)
+    private static string SectionDirectiveText(string source, SectionDeclarationSyntax s)
         => string.Join(" ", DirectChildren(s).Where(IsSectionDirective)
-            .Select(d => d.ToFullString().Trim()).Where(t => t.Length > 0));
+            .Select(d => Verbatim(source, d).Trim()).Where(t => t.Length > 0));
+
+    /// <summary>
+    /// A node's own characters, taken from the SOURCE rather than re-spelled out of
+    /// the tree.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Not a micro-optimisation — the difference between handing the user their
+    /// file back and handing them a rewrite of it. <c>ToFullString()</c> concatenates
+    /// a node's green children IN TREE ORDER, and the tree does not always hold them
+    /// in the order they were typed: a post-event written after a slur/tie/beam mark
+    /// is hoisted onto the note and the mark is replayed behind it, so
+    /// <c>c,,1~@mark("A") c,,</c> comes back out as <c>c,,1@mark("A") ~c,,</c> — the
+    /// tie now reads as belonging to the NEXT note. This converter overwrites the
+    /// document in place, so it re-spelled that tie in every book written that way:
+    /// measured 2026-08-16, ~40 real files in the author's own library.
+    /// The reorder loses no width (verified over 1025 books: root.FullWidth equals
+    /// the source length and every node's span is in range), so the SLICE at
+    /// (Position, FullWidth) is exactly what was typed even where ToFullString() is
+    /// not. §2F ⑺ tracks making the tree itself faithful; until then, a writer that
+    /// means "verbatim" has to say which of the two it means.
+    /// </remarks>
+    private static string Verbatim(string source, SyntaxNode node)
+        => source.Substring(node.Position, node.FullWidth);
 
     /// <summary>The inner content between a node's first <c>{</c> and last <c>}</c>,
     /// trimmed — preserves the music verbatim (including any inner comments).</summary>

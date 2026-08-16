@@ -68,6 +68,43 @@ public class PartSectionLayoutConverterTests
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
     }
 
+    /// <summary>
+    /// The converter overwrites the user's document in place, so a music cell has to
+    /// come back as the characters that were TYPED — not as the tree's re-spelling of
+    /// them. Those differ: a post-event written after a slur/tie/beam mark is hoisted
+    /// onto the note and the mark replayed behind it, so <c>c,,1~@mark("A") c,,</c>
+    /// spells itself back out of its own tree as <c>c,,1@mark("A") ~c,,</c> — the tie
+    /// moved across the mark and now reads as belonging to the NEXT note. Measured
+    /// 2026-08-16: the converter did exactly that to ~40 real files. The engraving is
+    /// unaffected (both spellings render byte-identically), which is why only a text
+    /// test can see it. §2F ⑺ tracks making the tree itself faithful; this pins the
+    /// writer meanwhile.
+    /// </summary>
+    [Theory]
+    [InlineData("c,,1~@mark(\"A\") c,, |")]   // tie then mark — the author's own idiom
+    [InlineData("g4(@cresc a b c |")]         // slur open then hairpin
+    [InlineData("g4( a b c)@f |")]            // slur close then dynamic
+    [InlineData("c8[@accent d e f] g4 |")]    // beam open then articulation
+    [InlineData("c4 d e f |")]                // control: nothing to reorder
+    public void AMusicCell_ComesBackAsTheCharactersThatWereTyped(string music)
+    {
+        var sm = $"part bass\nsection A {{ bass {{ {music} }} }}\nform main {{ ~A }}\n"
+                 + "score main { staff bass }\n";
+
+        // The premise, stated so a failure says which half broke: the tree really does
+        // re-spell these (except the control), so passing cannot be an accident of the
+        // fixture being uninteresting.
+        var respelled = SyntaxTree.Parse(sm).GetRoot().ToFullString();
+        if (music != "c4 d e f |")
+            Assert.NotEqual(sm, respelled);
+
+        var pm = PartSectionLayoutConverter.Convert(sm);
+        Assert.NotNull(pm);
+        _output.WriteLine(pm);
+        Assert.Contains(music, pm);
+        Assert.False(SyntaxTree.Parse(pm!).HasErrors);
+    }
+
     [Fact]
     public void Convert_RoundTrips_BackToSectionMajor()
     {
