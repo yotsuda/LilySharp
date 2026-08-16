@@ -4261,6 +4261,36 @@ public sealed partial class MeasureCollector
                     ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
 
+                // A volta ending that NO repeat block opened — `form main { A [1. B] }`.
+                // It is its section and nothing more: there is no repeat for the ending to
+                // be an ending OF, so no bracket and no number are engraved. That rule is
+                // LilyPond's, measured on 2.26.0 rather than reasoned about: an
+                // `\alternative { \volta 1 { … } }` with no `\repeat volta` in front of it
+                // renders BYTE-IDENTICALLY to writing the music plainly (and says nothing),
+                // while the same book with the `\repeat` restored hashes differently.
+                // LilyPondExporter and MusicXmlExporter already read it this way — this arm
+                // and MidiExporter.PlayForm are the two walks that were still dropping the
+                // section on the floor, so the same file was two different pieces of music
+                // depending on which output you asked for. Telling the author that the
+                // number they wrote prints nothing is the OTHER half of this repair, and
+                // lives in the validator (see FormDeclarationValidator).
+                case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt)
+                        && _sectionState.Sections.TryGetValue(alt.SectionName.Text, out var altSection):
+                    // Resume: same skip as the plain reference arm above, for the same reason
+                    // — this IS a plain reference as far as the page is concerned.
+                    if (_resumePending == null && !_suffixSpliced)
+                    {
+                        RecordSectionStart(alt.SectionName.Text, builder.CurrentMeasureIndex);
+                        // `[1. ~B]` hides the label exactly as `~B` does; otherwise the label
+                        // rule is the plain reference's, which is what LilyPondExporter:959
+                        // already writes for this shape (alt.DisplayLabel ?? the name).
+                        builder.SectionLabel = alt.IsSilent
+                            ? null : alt.DisplayLabel ?? alt.SectionName.Text;
+                        builder.SectionLabelPosition = SectionDeclPos(alt.SectionName.Text);
+                    }
+                    ProcessSection(altSection, processNodes, builder);
+                    break;
+
                 // Navigation marks in the structure (segno / coda / fine / to coda /
                 // D.C. / D.S. al fine|coda) — engraved like the inline @-marks, at the
                 // boundary of the section just played.

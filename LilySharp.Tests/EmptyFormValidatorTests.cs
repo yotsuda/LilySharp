@@ -107,20 +107,23 @@ public class EmptyFormValidatorTests
         => Assert.Equal(2, Validate(Preamble + "form main { }\nform other { }\n").Length);
 
     /// <summary>
-    /// ⚠️ The KNOWN edge of this check, written down so it cannot drift unnoticed. Of the 46
-    /// form-body shapes enumerated from GRAMMAR §StructureItem, 16 engrave zero bytes and 15
-    /// are caught above; this is the sixteenth. A volta ending that no repeat opens DOES name
-    /// a section, so staying quiet here is right — and the engraver drops it anyway. That is a
-    /// different claim about a different family (filed in HANDOFF §2F), and when it is closed
-    /// this test has to change, which is the reason for writing it as a test and not a note.
+    /// ⚠️ This was the KNOWN edge of this check: of the 46 form-body shapes enumerated from
+    /// GRAMMAR §StructureItem, 16 engraved zero bytes, 15 were caught above, and this was the
+    /// sixteenth — a volta ending that no repeat opens, which DOES name a section (so LYS6007
+    /// rightly stays quiet) but which the engraver dropped anyway. The note said "when that is
+    /// closed this test has to change, which is the reason for writing it as a test and not a
+    /// note", and it did exactly that: it was the one red in the suite when the ending started
+    /// engraving. The half that survives is the half this check owns.
     /// </summary>
+    /// <remarks>
+    /// The other half — that a repeat-less ending IS its plain section, in all four outputs —
+    /// now lives in <see cref="FormVoltaWithoutRepeatTests"/>. The zero-byte assertion is gone
+    /// because the page is no longer zero bytes; asserting it is non-empty here as well would
+    /// put a second home under a claim that already has one.
+    /// </remarks>
     [Fact]
-    public void AVoltaEndingNoRepeatOpens_IsNotThisChecksBusiness_AndStillEngravesNothing()
-    {
-        const string src = Preamble + "form main { [1. A] }\n";
-        Assert.Empty(Validate(src));
-        Assert.Equal("", SvgGenerator.Generate(SyntaxTree.Parse(src)));
-    }
+    public void AVoltaEndingNoRepeatOpens_NamesASection_SoThisCheckStaysQuiet()
+        => Assert.Empty(Validate(Preamble + "form main { [1. A] }\n"));
 
     /// <summary>
     /// A form that names a section which does not exist is a DIFFERENT defect — LYS1005 says

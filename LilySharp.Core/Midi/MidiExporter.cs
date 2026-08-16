@@ -651,6 +651,16 @@ public sealed class MidiExporter
                 case FormRepeatBlockSyntax repeatBlock:
                     PlayRepeatBlock(repeatBlock, track, conductorTrack);
                     break;
+                // A volta ending no repeat block opened — `form main { A [1. B] }`. There is
+                // nothing for it to be an alternative TO, so it sounds as its plain section,
+                // once. LilyPond agrees (measured, 2.26.0: a `\volta 1` alternative with no
+                // `\repeat` in front renders byte-identically to the bare music), and both
+                // MusicXmlExporter and LilyPondExporter already read it this way; MIDI and
+                // the page were the two walks that dropped it. Saying so to the author is
+                // the other half of the repair and lives in FormDeclarationValidator.
+                case FormAlternativeSyntax alt when !alt.IsInside<FormRepeatBlockSyntax>():
+                    PlaySectionByName(alt.SectionName.Text, track, conductorTrack);
+                    break;
                 // A ':|' written in the form outside any '|: … :|' block: it has no '|:' to
                 // pair with, so it repeats FROM THE BEGINNING OF THE PIECE (user decision,
                 // 2026-08-15) — the ordinary reading of a one-sided end-repeat, and the one
@@ -698,6 +708,13 @@ public sealed class MidiExporter
                     break;
                 case FormRepeatBlockSyntax rb:
                     PlayRepeatBlock(rb, track, conductorTrack);
+                    break;
+                // Same reading as PlayForm's arm: a repeat-less ending is its plain section.
+                // The replayed stretch has to sound like the first pass, so the two switches
+                // must carry the SAME set of arms — a shape handled in one and not the other
+                // would make `A [1. B] :|` play B once and then not at all.
+                case FormAlternativeSyntax alt when !alt.IsInside<FormRepeatBlockSyntax>():
+                    PlaySectionByName(alt.SectionName.Text, track, conductorTrack);
                     break;
                 // A second one-sided ':|' inside the replayed stretch does NOT rewind again:
                 // that would not terminate. One rewind per written ':|' is what the sign says.
