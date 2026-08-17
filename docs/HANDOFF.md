@@ -206,7 +206,10 @@ suite **5294 passed / 0 failed / 4 skipped**（+8＝新しい網ちょうど）�
 - **⑸ ★ 残っている差の一覧**（**閉じていないものを数え方ごと**・`scratch\p195\pitches-after4.csv`）:
   **soundingRests 0 冊**・**midiOnly 9 冊**（全部 part-combine）・**silentHeads 29 冊**（ほぼタイ）・
   **pitchDiffers 44 冊**・**xmlDiffers 64 冊**。
-  ⇒ **後ろ 2 つは 1 つの島**＝**移調 clef の実音オクターブ**（§2F に起票）。
+  ⇒ ⚠️⚠️ ★★★ **「後ろ 2 つは 1 つの島」と最初に書いたが、*その日のうちに数えて外れた***——
+  **合併 70 冊のうち 25 冊は移調 clef を 1 文字も書いていない**（数え方は §2F ⒜ の末尾）。
+  **島は少なくとも 3 つ**（§2F ⒜⒟⒠）。**⇒ この項こそ §0 ★「数を引き継ぐときは数え方も書く」の当日版で、
+  書いた本人が同じセッションで踏んだ。**
 - **⑹ ★ §7.5 の監査**＝**3 便合計で Core +85 行（うち*コード 21*）・削除 −4・REF +0/−0・OWN +0/−0**
   （⚠️ **`git --no-pager diff --no-color e4affb5b HEAD -- LilySharp.Core` で数えた**＝**セッションの頭から**）。
   **彫版の定数は 0 個。分類は 3 便とも ⒟**（**枠は collector が既に snapshot している。
@@ -216,10 +219,15 @@ suite **5294 passed / 0 failed / 4 skipped**（+8＝新しい網ちょうど）�
   （だから互いを grep しても一致に見える）。
 - **⑺ ★★ §2 の頭（perf）は 1 バイトも触っていない。**
   **地図と次の島は第193 の §1 ⑷ のまま**（ARCHIVE ではなく §2 の頭に要約が在る）。
-- **⑻ ⚠️ 次に触るならここ**（**どれも計器が名指した所で、どれも決定が要る**・詳細は §2F）:
-  **⒜ 移調 clef の実音オクターブを MusicXML が持たない**（64 冊）／
-  **⒝ `repeat unfold` の相対の意味（ページ 対 LP）**／
-  **⒞ 2 つ目以降の score は MIDI・MusicXML・双子に出ない**（**LP は score ごとに .mid を書く＝実測**）。
+- **⑻ ⚠️ 次に触るならここ**（**どれも計器が名指した所**・詳細は §2F）:
+  **⒜ 移調 clef の実音オクターブを MusicXML が持たない**（**要決定**）／
+  **⒝ `repeat unfold` の相対の意味（ページ 対 LP）**（**要決定**）／
+  **⒞ 2 つ目以降の score は MIDI・MusicXML・双子に出ない**（**LP は score ごとに .mid を書く＝実測**・**要決定**）／
+  **⒟ 小節途中の `clef` がページの相対枠だけを付け替える**（**1 対 3・要決定**）／
+  **⒠ 残り 22 冊は未分類**（**決定不要。ただし分類が先**）。
+  ⇒ ★★★ **次便の最初の仕事は ⒠ の分類**——**⒜⒝⒞⒟ は全部ユーザー決定待ちで、
+  決定を待たずに動かせるのは ⒠ だけ**。**そして分類しないまま ⒠ の一部を直すと、
+  第194 の骨（「起票の述語が小さい半分を名指すと、それに合わせた修理が出てくる」）を踏む。**
 
 ---
 
@@ -948,7 +956,9 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > **全数に広げるなら LP を 566 回まわす便が要る。**
 > ★ **現状**（第195 終了時・`scratch\p195\pitches-after4.csv`）:
 > **soundingRests 0 冊・midiOnly 9 冊・silentHeads 29 冊・pitchDiffers 44 冊・xmlDiffers 64 冊。**
-> **後ろ 2 つは下の ⒜ の 1 島。**
+> ⚠️⚠️ ★★★ **後ろ 2 つを「1 つの島」と書きかけて、数えたら違った**——
+> **合併 70 冊のうち 45 冊は移調 clef／移調 instrument を書いており、25 冊は書いていない**（下の ⒜ 末尾に数え方）。
+> **⇒ 島は少なくとも 3 つ（⒜⒟⒠）で、⒠ の中身はまだ分類されていない。**
 
 - ⚠️ ★★★ **⒜ 移調 clef の実音オクターブを MusicXML が持たない**（2026-08-17・第195 実測・
   **未修理**・**要ユーザー決定＝MusicXML の規約についての判断だから**）。
@@ -957,9 +967,18 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
     **MIDI はそれを鳴らす**（`treble_8` の書かれた C5 は C4 を鳴らす）が、
     **MusicXML は `<clef-octave-change>-1` だけを書き `<transpose>` を書かない。**
   - **実測**: `test/treble8`（guitar / tenor / treble_8 の 3 part）で **XML 24 音・MIDI 24 音が
-    全部 1 オクターブ違う**。**射程は 64 冊**（`xmlDiffers>0`＝タブ・guitar・tenor・treble_8 の族。
-    最大は `audit/lpreg/perf-tab300` の 900 音）。**`pitchDiffers` 44 冊も同じ島の別の顔**
-    （`check --pitches` は*書かれた*音高を答え、MIDI は鳴る音高）。
+    全部 1 オクターブ違う**（最大は `audit/lpreg/perf-tab300` の 900 音）。
+  - ⚠️⚠️ ★★★ **射程は「xmlDiffers 64 ＋ pitchDiffers 44」*ではない*。数え方ごと残す**——
+    **合併すると 70 冊**で、**そのうち移調 clef／移調 instrument を 1 つでも書く本は 45 冊、
+    書かない本が 25 冊**（＝**この島の外**）。**数え方**:
+    ```powershell
+    $a = Import-Csv audit\probe-out\pitches.csv
+    $sus = $a | Where-Object { [int]$_.pitchDiffers -gt 0 -or ([int]$_.xmlDiffers -gt 0 -and $_.xmlComparable -eq 'True') }
+    $rx = 'treble_8|treble\^8|bass_8|\btab\b|instrument\s+(guitar|acoustic-guitar|electric-guitar|bass|bass-guitar|electric-bass|bass5|5-string-bass|bass6|6-string-bass|contrabass|double-bass|tenor|voice-tenor|piccolo|ukulele|uke)'
+    $sus | Where-Object { [IO.File]::ReadAllText((Join-Path (Get-Location) ($_.book -replace '/','\'))) -notmatch $rx }
+    ```
+    ⇒ ★★★ **「後ろ 2 つは 1 つの島」は起票した本人が同じセッションで反証した**
+    （§0 ★ の当日版）。**残り 25 冊の内訳は下の ⒟ と ⒠。**
   - ⚠️⚠️ **決定が要る理由は、これが*外部仕様*についての問いだから**——
     **MusicXML の `<pitch>` は「書かれた音高」で、`<transpose>` が written→sounding を与える**
     のが規約であり、**`<clef-octave-change>` は印刷のための属性**、というのが一般的な読み。
@@ -1004,6 +1023,36 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
     ⑵ `--score` と `--all` を midi/xml/ly にも足す／⑶ 落としたことを警告する**、の選択。
   - ⚠️ **§2F の既存の規則「落とすなら必ず `Warnings` に出す」から見ると、⑶ は最低限**
     （どの案を採っても要る）。
+- ⚠️ ★★★ **⒟ 小節の途中の `clef` がページの相対枠だけを付け替える**（2026-08-17・第195 実測・
+  **未修理**・**要ユーザー決定＝どちらが規則かの問いだから**）。
+  - **実測**（`test/clef-change`＝`g4 a clef bass c,4 d | e4 f g a |`）:
+    **ページ C3 D3 E3 F3 G3 A3** ／ **MIDI 72 74 76 77 79 81（C5 D5 E5 F5 G5 A5）** ／
+    **MusicXML 同上** ／ **双子は `\clef "bass" c,4` と*そのまま*書く**＝
+    **LP の相対鎖は clef を見ないので C5**。⇒ **1 対 3 で、少数派がページ。**
+  - **家は 1 行**: `MeasureCollector.MusicWalk` の `ClefDeclarationSyntax` の枝
+    （`_octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(...)`）。
+    **その注記は「*変わらない* clef は枠を付け替えてはいけない」と書いており、
+    裏返せば「変わる clef は付け替える」が意図**と読める。
+    ⚠️ **しかし `LILYPOND-REF` はその行の*上*にある「不変 clef は grob を作らない」の住所で、
+    付け替えそのものには REF も OWN も無い**（LP に対応物が無い＝本来 `LILYSHARP-OWN` の側）。
+  - ⇒ ★★★ **決定は「ページの付け替えが規則か」**。**規則なら 3 出力がそれを実装する**
+    （双子は補正した綴りを書くしかない）。**規則でないならページを直す＝ snapshot が動く。**
+    ⚠️ **どちらの向きでも先に文書に無いことを確かめてある**（`GRAMMAR.md`／`SYNTAX_REFERENCE.md`／
+    `GRAMMAR_FOR_LLM.md` を `clef` × `octave|anchor|relative` で grep して **0 件**）。
+  - **射程**: **`pitchDiffers` の中の 3 冊**（`test/clef-change`・`test/mmr-clef-change-bound`・
+    `audit/lp-regression/lys/cue-clef-manually`）。**数え直すこと**——第195 は
+    ⒜ の残り 25 冊のうち*目視で*この 3 冊を当てただけで、全数の述語では数えていない。
+- ⚠️⚠️ ★★★ **⒠ 残り 22 冊は未分類**（2026-08-17・第195・**分類そのものが次便の最初の仕事**）。
+  ⚠️ **少なくとも 1 つは別の島**——**`test/keysig-treble` で
+  ページと MIDI が phrase の自動移調を掛け、MusicXML が掛けていない**（実測：
+  `key d major` の section で `d4 e fis g` が**ページ E4 F#4 G#4 A4・MIDI 64 66 68 69・
+  XML D4 E4 F#4 G4**）。**`MusicXmlPhraseAutoTransposeTests` は在るので「未実装」ではなく
+  「この形で効いていない」**——⚠️ **同じ本の第2 phrase では XML が `G3` から始まって
+  `C5` へ跳ぶ**ので、**自動移調とオクターブアンカーが絡んでいる可能性がある。**
+  ⇒ ★★ **着手の順序**: **⑴ 25 冊を原因で分類する**（第195 は 3 冊しか当てていない）
+  **⑵ 分類してから直す**。**第194 の骨「起票の述語が小さい半分を名指すと、それに合わせた修理が出てくる」
+  がそのまま当てはまる形。**
+  ⚠️ **一覧は `audit/probe-out/pitches.csv` から上の 1 行で作り直せる**（`scratch/` は git 管理外）。
 
 - ★ **`font "NAME"` を指定すると、予約と描画が別の face になる**（2026-07-27・▶0 の
   P1 を設計中に実コードで発見。**まだ台帳点も対も無い**）。`TextFontDrawingContext` は
