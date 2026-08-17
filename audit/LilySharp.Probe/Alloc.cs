@@ -49,6 +49,19 @@ using LilySharp.Core.Syntax;
 /// it. Hence <see cref="Repeats"/>: the FLOOR of several is reported, the same shape
 /// EditKeystrokeBench uses for time.
 /// </para>
+/// <para>
+/// ⚠️⚠️ AND THE FLOOR IS STILL NOT DETERMINISTIC FOR EVERY BOOK — measured, session 192,
+/// which nearly wrote up a 3.7 MB regression that was not there. perf-v2bow1k's reported
+/// floor over five runs of ONE binary: 87.4 / 83.9 / 85.3 / 83.9 / 83.7 MB, and the
+/// previous commit's binary over three: 85.4 / 85.4 / 83.8. perf-plain1k in the same runs:
+/// 54.1 / 54.1 / 54.1, exactly. So the spread is a property of the BOOK, roughly 4% on
+/// v2bow1k and nil on plain1k — <see cref="Repeats"/> flattens the warm-up step WITHIN a
+/// process and does nothing about whatever varies BETWEEN them (a weakly-held cache the GC
+/// drops at a different point is the shape that would do this: it can only ever cost
+/// allocation, never save it, which matches a floor that is sometimes high and never low).
+/// ⇒ READ A SINGLE v2bow1k NUMBER AS AN UPPER BOUND. To claim it moved, run both binaries
+/// several times and compare the minima — and say in the claim that you did.
+/// </para>
 /// </remarks>
 internal static class Alloc
 {
