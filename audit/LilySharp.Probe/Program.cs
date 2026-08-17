@@ -73,6 +73,11 @@ if (args.Length >= 2 && args[0] == "alloc")
     Alloc.Run(root, args.Skip(1).ToArray(), options);
     return 0;
 }
+if (args.Length >= 1 && args[0] == "pitches")
+{
+    return Outputs.Run(root, args.Length >= 2 && args[1].Length > 0 ? args[1] : null,
+        args.Length >= 3 ? args[2] : null);
+}
 if (args.Length >= 1 && args[0] == "census")
 {
     Census.Run(root, args.Length > 1 && int.TryParse(args[1], out int n) ? n : 20);
@@ -84,6 +89,7 @@ Console.Error.WriteLine("""
 
       sweep <label> [listfile]   render every book and record a hash per book
       cmp <a> <b> [book...]      what moved between two sweeps; names the claimants you list
+      pitches [listfile] [only]  where a book's page, MIDI and MusicXML disagree
       census [top-n]             per-book counts from the collected model
       alloc <book>...            MB allocated by a full render and by one keystroke
                                  (books under audit/lpreg; always include a control)

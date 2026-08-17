@@ -1102,6 +1102,16 @@ public sealed class MusicXmlExporter
     /// &lt;backup&gt; cursor rewind, tagged with its voice number — the
     /// MusicXML shape importers expect (the walk used to serialize voices
     /// SEQUENTIALLY, doubling the measure count).
+    /// <para>
+    /// ⚠️ IT REOPENS THE STREAM ON THE WAY OUT. Closing a measure here is right — the
+    /// block is bar-aligned and every voice must merge into the SAME bars — but
+    /// <see cref="FlushCurrentMeasure"/> also nulls the cursor, and every emitter in this
+    /// file opens with <c>if (_currentMeasure == null) return;</c>. So until 2026-08-17 the
+    /// music written AFTER a <c>voice { } { }</c> block was dropped in silence: measured on
+    /// <c>test/multi-voice</c>, the page drew 3 bars and the MIDI sounded 14 notes while the
+    /// MusicXML carried 2 bars and 8. The same book was a different piece depending on which
+    /// output was asked.
+    /// </para>
     /// </summary>
     private void ProcessParallelVoices(ParallelExpressionSyntax parallel)
     {
@@ -1112,6 +1122,14 @@ public sealed class MusicXmlExporter
             foreach (var v in voices) ProcessNode(v);
             return;
         }
+
+        // The frame the span OPENS in. Every voice reads from it, and so does the music
+        // after the span: simultaneous music does not move the relative frame. That rule is
+        // the collector's, stated where it is enforced (MeasureCollector.MusicWalk, the
+        // ParallelExpressionSyntax case: "the frame at the span's OPENING is what every
+        // voice reads from, and what the music after the span reads from"), and this walk
+        // is a second reader of it — not a second rule.
+        int spanOctave = _currentOctave, spanStep = _currentStep;
 
         int startMeasure = _currentPart.Measures.Count;
         ProcessNode(voices[0]);
@@ -1132,8 +1150,16 @@ public sealed class MusicXmlExporter
             _currentPart = temp;
             _currentMeasure = null;
             StartNewMeasure(); // scratch stream needs an open measure for its notes
-            _currentOctave = 4;
-            _currentStep = 0;
+            // ⚠️ THE SPAN'S FRAME, not the part's default C4. Resetting here made every
+            // sub-voice read its first bare letter from middle C, so `c'2 c' | voice { … }
+            // { b, c, }` put the second voice an octave below the page's answer — and the
+            // page's answer is the one the twin and the MIDI both give (measured
+            // 2026-08-17: page/MIDI/LilyPond all read B3 C3 where this wrote B2 C2).
+            _currentOctave = spanOctave;
+            _currentStep = spanStep;
+            // The DURATION default does reset — the collector resets it too
+            // (BuildExtraVoiceTracks: `_defaultDuration = Fraction.Quarter`), so this line
+            // agrees with the page and only the octave above was a second rule.
             _defaultDuration = Fraction.Quarter;
             _tieToNextNote = false;
             ProcessNode(voices[v]);
@@ -1170,6 +1196,16 @@ public sealed class MusicXmlExporter
                 }
             }
         }
+
+        // Hand the stream back OPEN, so whatever is written after the block still has a
+        // measure to land in (see the remark above). An empty one costs nothing: a measure
+        // with no notes is never added by FlushCurrentMeasure, and a following barline
+        // reuses it rather than emitting a blank bar.
+        StartNewMeasure();
+        // ... and in the frame the span opened in, which is where the page reads the next
+        // note from. Leaving voice 1's end here read `d` two octaves off in the probe.
+        _currentOctave = spanOctave;
+        _currentStep = spanStep;
     }
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig)
