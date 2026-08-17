@@ -70,6 +70,9 @@ internal sealed class PngDocumentContext : IDocumentContext
         _options = options ?? new PngDocumentOptions();
     }
 
+    /// <inheritdoc/>
+    public TextFontPlan Fonts { get; set; } = TextFontPlan.Default;
+
     public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
     {
         if (_currentPage != null)
@@ -84,7 +87,7 @@ internal sealed class PngDocumentContext : IDocumentContext
         var bg = _options.Background;
         _pageCanvas.Clear(new SKColor(bg.R, bg.G, bg.B, bg.A));
         _currentPage = new PngDrawingContext(_pageCanvas, _options.PixelsPerSpace,
-            _options.FontDirectory);
+            _options.FontDirectory, Fonts);
         return _currentPage;
     }
 

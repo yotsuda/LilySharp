@@ -915,4 +915,19 @@ public static class DiagnosticCodes
     /// <summary>Font warning: a font requested for embedding is not installed on this
     /// system, so it cannot be embedded.</summary>
     public const string FontNotFound = "LYS8003";
+
+    /// <summary>Font error: a <c>font { }</c> entry names a key that is not a text role,
+    /// a role group, or a generic family. Refused rather than ignored — a binding nobody
+    /// reads looks exactly like one that works.</summary>
+    public const string UnknownFontRole = "LYS8004";
+
+    /// <summary>Font warning: one <c>font { }</c> block binds the same key twice. The
+    /// LAST one takes effect, like every other repeated setting in the language; the
+    /// earlier one is named so it is not silently dropped.</summary>
+    public const string DuplicateFontBinding = "LYS8005";
+
+    /// <summary>Font error: a <c>font { }</c> entry names a key but no face — the value
+    /// must be one or more quoted names, or a generic family (<c>serif</c> /
+    /// <c>sans</c>).</summary>
+    public const string FontBindingMissingValue = "LYS8006";
 }

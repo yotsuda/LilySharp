@@ -51,7 +51,7 @@ public enum LineCap
 /// about it (docs/COORDINATE_AUDIT.md §3.G, §4.4). An implementor of this interface is a
 /// BACKEND and therefore lives after the flip; a caller of it is a renderer and lives
 /// before it. Anything that both implements and calls — a decorator like
-/// <c>TextFontDrawingContext</c> — stays in whichever frame it was handed and must not
+/// <c>UnscaledXDrawingContext</c> — stays in whichever frame it was handed and must not
 /// convert.
 ///
 /// X is unaffected: origin at the left edge, growing rightward, in both frames.
@@ -153,9 +153,30 @@ public interface IDrawingContext
         => DrawGlyph(glyph, x, y, fontSize, fill);
 
     /// <summary>Draws plain (non-music) text such as titles, dynamics, lyrics.</summary>
+    /// <param name="text">The string to draw.</param>
+    /// <param name="x">Anchor X in staff-spaces.</param>
+    /// <param name="y">Baseline (or <paramref name="verticalAnchor"/>) Y in staff-spaces.</param>
+    /// <param name="fontSize">Font size in staff-spaces.</param>
+    /// <param name="role">WHAT this string is — a title, a lyric, a fret number. The
+    /// backend turns it into a face through the score's
+    /// <see cref="TextFontPlan"/>.</param>
+    /// <param name="style">Weight and slant, which the engraving decides and a
+    /// <c>font</c> directive does not.</param>
+    /// <param name="anchor">Horizontal alignment about <paramref name="x"/>.</param>
+    /// <param name="fill">Ink colour; null is the renderer default.</param>
+    /// <param name="verticalAnchor">Vertical alignment about <paramref name="y"/>.</param>
+    /// <remarks>
+    /// ⚠️ A ROLE, NOT A FAMILY — changed 2026-08-18. Every caller but one passed the
+    /// literal <c>"serif"</c>, so the page could say which of two bundled faces it wanted
+    /// and could not say what the string WAS; a <c>font { }</c> directive that gives
+    /// lyrics one face and chord symbols another had nothing to bind to, and a decorator
+    /// that rewrote families after the fact could not tell a fret number from a title
+    /// (it restyled both). The face is now decided in one place —
+    /// <see cref="TextFontPlan.Resolve"/> — and this parameter is the question it answers.
+    /// </remarks>
     void DrawText(
         string text, double x, double y, double fontSize,
-        string fontFamily, FontStyle style = FontStyle.Regular,
+        TextRole role, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline);
 

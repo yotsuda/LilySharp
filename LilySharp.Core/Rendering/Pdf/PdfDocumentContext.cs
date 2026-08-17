@@ -48,12 +48,6 @@ internal sealed class PdfDocumentOptions
 
     /// <summary>Optional font directory override.</summary>
     public string? FontDirectory { get; init; }
-
-    /// <summary>The document's configured text font (<c>font "X"</c>), or null.</summary>
-    public string? TextFontFamily { get; init; }
-
-    /// <summary>Whether to subset-embed <see cref="TextFontFamily"/> (<c>embedded</c>).</summary>
-    public bool EmbedTextFont { get; init; }
 }
 
 /// <summary>
@@ -80,11 +74,28 @@ internal sealed class PdfDocumentContext : IDocumentContext
     {
         _options = options ?? new PdfDocumentOptions();
         _resolver = EnsureFontResolver(_options.FontDirectory);
-        // Per-document text font + embed intent (font "X" [embedded]). The resolver
-        // is a process global set once, but this target is mutable and refreshed per
-        // document.
-        _resolver.SetTextFont(_options.TextFontFamily, _options.EmbedTextFont);
+        _resolver.SetTextFonts(TextFontPlan.Default);
         _document = new PdfDocument();
+    }
+
+    private TextFontPlan _fonts = TextFontPlan.Default;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Setting this ALSO configures the font resolver, which is a process global that
+    /// this document re-points at its own faces. That coupling is why the plan is a
+    /// property with a body rather than an auto-property: a caller that set the plan and
+    /// then drew would otherwise get pages laid out for its faces and embedded with the
+    /// previous document's.
+    /// </remarks>
+    public TextFontPlan Fonts
+    {
+        get => _fonts;
+        set
+        {
+            _fonts = value;
+            _resolver.SetTextFonts(value);
+        }
     }
 
     public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
@@ -110,7 +121,8 @@ internal sealed class PdfDocumentContext : IDocumentContext
         }
 
         _currentGfx = XGraphics.FromPdfPage(page);
-        _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace, originPt, _resolver);
+        _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace, originPt,
+            _resolver, _fonts);
         return _currentPage;
     }
 

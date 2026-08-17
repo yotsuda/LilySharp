@@ -69,10 +69,10 @@ internal static partial class SharedRenderer
             double cy = syUp + c.YUp;
             using (gc.Source(c.SourcePosition))
             {
-                gc.DrawText(c.ChordText, c.X, cy, size, "sans-serif",
+                gc.DrawText(c.ChordText, c.X, cy, size, TextRole.ChordName,
                     style, TextAnchor.Start, Color.Black);
                 if (c.AboveLine != null)
-                    gc.DrawText(c.AboveLine, c.X, cy + stackLineHeight, size, "sans-serif",
+                    gc.DrawText(c.AboveLine, c.X, cy + stackLineHeight, size, TextRole.ChordName,
                         style, TextAnchor.Start, Color.Black);
             }
         }
@@ -157,7 +157,7 @@ internal static partial class SharedRenderer
                         if (piece.IsGlyph)
                             gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
                         else
-                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, "serif",
+                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, TextRole.FiguredBass,
                                 FontStyle.Regular, TextAnchor.Start, Color.Black);
                     }
                 }
@@ -256,7 +256,7 @@ internal static partial class SharedRenderer
                 continue; // other page
             // Page Y-up: this measure's system top plus the stored offset.
             double y = syUp + bn.YUp;
-            gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
+            gc.DrawText(bn.Text, bn.X, y, fontSize, TextRole.BarNumber,
                 FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
                 Color.Black);
         }
@@ -282,7 +282,7 @@ internal static partial class SharedRenderer
             if (!sysTopYUp.TryGetValue(sn.MeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift the system top and add the stored offset, like DrawLyrics.
             double y = syUp + sn.YUp;
-            gc.DrawText(sn.Text, sn.X, y, fontSize, "serif",
+            gc.DrawText(sn.Text, sn.X, y, fontSize, TextRole.Stanza,
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
         }
     }
@@ -453,7 +453,7 @@ internal static partial class SharedRenderer
                         if (piece.IsGlyph)
                             gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
                         else
-                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, "serif",
+                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, TextRole.Fingering,
                                 FontStyle.Regular, TextAnchor.Start, Color.Black);
                     }
             }
@@ -537,7 +537,7 @@ internal static partial class SharedRenderer
                 gc.DrawLine(s1, brkY, midX - halfGap, brkY, Color.Black, 0.07);
                 gc.DrawLine(midX + halfGap, brkY, s2, brkY, Color.Black, 0.07);
                 gc.DrawLine(s2, brkY, s2, brkY - hook, Color.Black, 0.07);
-                gc.DrawText("3", midX, brkY - 0.35, threeSize, "serif",
+                gc.DrawText("3", midX, brkY - 0.35, threeSize, TextRole.Tempo,
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
             return s2 + ns * 0.35;
@@ -545,7 +545,7 @@ internal static partial class SharedRenderer
 
         double x = DrawPair(startX, dotted: false, withThree: false);
         x += 0.35;
-        gc.DrawText("=", x, baselineY, eqSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+        gc.DrawText("=", x, baselineY, eqSize, TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
         x += TextFontMetrics.SerifBold("=", eqSize) + 0.45;
         DrawPair(x, dotted: true, withThree: true);
     }
@@ -585,14 +585,14 @@ internal static partial class SharedRenderer
             if (m.TempoText != null)
             {
                 gc.DrawText(m.TempoText, x, absY, em,
-                    "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
+                    TextRole.Tempo, FontStyle.Bold, TextAnchor.Start, Color.Black);
                 if (!hasMetronome)
                     return;
                 x += TextFontMetrics.SerifBold(m.TempoText, em);
                 // The concat's " (" — one run; its leading space carried as the
                 // single-run offset so no backend collapses it.
                 gc.DrawText("(", x + MetronomeMarkGeometry.LeadingSpaceAdvance("("), absY, em,
-                    "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+                    TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
                 x += TextFontMetrics.Serif(" (", em);
             }
             // Beat-unit note: whole (1) = stemless whole head; 2 = hollow
@@ -636,7 +636,7 @@ internal static partial class SharedRenderer
                 + MetronomeMarkGeometry.NoteRight(m.TempoBeatUnit, m.TempoDots)
                 + MetronomeMarkGeometry.LeadingSpaceAdvance(equation);
             gc.DrawText(equation, eqX, absY,
-                em, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+                em, TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
                 double textEnd = eqX + TextFontMetrics.Serif(equation, em);
@@ -655,7 +655,7 @@ internal static partial class SharedRenderer
             // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
             gc.DrawRectangle(m.X - boxW / 2, absY + boxH / 2, boxW, boxH,
                 fill: Color.White, stroke: Color.Black, strokeWidth: EngravingDefaults.LineThickness);
-            gc.DrawText(m.Text, m.X, absY - fs / 2 + pad, fs, "serif",
+            gc.DrawText(m.Text, m.X, absY - fs / 2 + pad, fs, TextRole.Mark,
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
@@ -663,7 +663,7 @@ internal static partial class SharedRenderer
         {
             bool italic = m.MarkType is MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
                 or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
-            gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
+            gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, TextRole.Pedal,
                 italic ? FontStyle.BoldItalic : FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
@@ -677,7 +677,7 @@ internal static partial class SharedRenderer
             double textW = TextFontMetrics.SerifBold(prefix, ts);
             double glyphW = gs * 0.42;   // approx advance of scripts.coda
             double left = m.X - (textW + glyphW) / 2;
-            gc.DrawText(prefix, left, absY, ts, "serif",
+            gc.DrawText(prefix, left, absY, ts, TextRole.Navigation,
                 FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
             // The coda glyph's baseline sits low; lift it (up = larger Y-up) so its
             // centre aligns with the cap height of "To".
@@ -685,7 +685,7 @@ internal static partial class SharedRenderer
             return;
         }
         // Default text marks (D.S./D.C./Fine/etc.)
-        gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
+        gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, TextRole.Navigation,
             FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
     }
 
@@ -718,7 +718,7 @@ internal static partial class SharedRenderer
             // textscript.x.pen-to-notehead-left). A centred draw here reads half an
             // advance off that entry.
             using (gc.Source(t.SourcePosition))
-                gc.DrawText(t.Text, t.X, y, EngravingDefaults.TextScriptFontSize, "serif",
+                gc.DrawText(t.Text, t.X, y, EngravingDefaults.TextScriptFontSize, TextRole.Text,
                     FontStyle.Italic, TextAnchor.Start, Color.Black);
         }
     }
@@ -747,7 +747,7 @@ internal static partial class SharedRenderer
             using (gc.Source(s.SourcePosition))
             {
                 gc.DrawText(s.Text, s.StartX, absY,
-                    os.Size(textSize, s.StaffIndex), "serif",
+                    os.Size(textSize, s.StaffIndex), TextRole.Text,
                     FontStyle.Italic, TextAnchor.Start, Color.Black);
                 if (s.Style != TextSpannerStyle.None && s.LineStartX < s.EndX)
                 {
@@ -1106,7 +1106,7 @@ internal static partial class SharedRenderer
             if (!sysTopYUp.TryGetValue(pc.MeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: system top plus the stored offset.
             double y = syUp + pc.YUp;
-            gc.DrawText(pc.Text, pc.X, y, size, "serif",
+            gc.DrawText(pc.Text, pc.X, y, size, TextRole.PartCombine,
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
         }
     }

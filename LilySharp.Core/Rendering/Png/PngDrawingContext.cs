@@ -33,11 +33,17 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// <see cref="IDrawingContext.MusicFace"/>.</summary>
     private int _musicDesign = EmmentalerFaces.DefaultDesign;
 
-    public PngDrawingContext(SKCanvas canvas, double pixelsPerSpace, string? fontDirectory)
+    /// <summary>Which face each text role is drawn in — the score's <c>font</c>
+    /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
+    private readonly TextFontPlan _plan;
+
+    public PngDrawingContext(SKCanvas canvas, double pixelsPerSpace, string? fontDirectory,
+        TextFontPlan? plan = null)
     {
         _canvas = canvas;
         _scale = pixelsPerSpace;
         _fonts = new FontCache(fontDirectory);
+        _plan = plan ?? TextFontPlan.Default;
     }
 
     private float X(double s) => (float)(s * _scale);
@@ -171,10 +177,19 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     }
 
     public void DrawText(string text, double x, double y, double fontSize,
-        string fontFamily, FontStyle style = FontStyle.Regular,
+        TextRole role, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
+        // One face per run, so a chain names its preferences and Skia takes the first it
+        // has. The BUNDLED case keeps the generic word the cache already understands —
+        // that path loads the bundled file rather than asking the system font manager,
+        // which is the whole reason TextFontMetrics can promise the same page on any box.
+        var face = _plan.Resolve(role);
+        bool sans = face.Family == TextFontFamily.Sans;
+        string fontFamily = face.IsBundled
+            ? (sans ? "sans-serif" : "serif")
+            : FirstAvailable(face.Names, sans);
         var font = _fonts.GetFont(fontFamily, T(fontSize), style);
 
         // Glyph fallback: the mapped system face (e.g. Times New Roman for
@@ -187,9 +202,10 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         // The one face the RESERVATION knows — a run still on it is drawn shaped, at the
         // positions layout paid for; a run that fell through to a system fallback is a face
         // TextFontMetrics never opened, so its glyph ids and its widths are its own.
-        SKTypeface? reserved = TextFontMetrics.IsGenericTextFamily(fontFamily, out bool sans)
-            ? TextFontMetrics.Typeface(sans, style)
-            : null;
+        // ⚠️ A BOUND face is in that second category too: the layout reserved against the
+        // bundled family whatever the score named, which is HANDOFF §2F's open gap and
+        // not something this line can close.
+        SKTypeface? reserved = face.IsBundled ? TextFontMetrics.Typeface(sans, style) : null;
 
         using var paint = new SKPaint
         {
@@ -324,6 +340,42 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
             _canvas.Scale((float)transform.ScaleX, (float)transform.ScaleY);
         }
         return new ScopeAction(() => _canvas.RestoreToCount(saveCount));
+    }
+
+    /// <summary>
+    /// The first name in a bound chain this machine can actually resolve.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A CHAIN IS A PREFERENCE ORDER, and this backend can hold ONE face per run — so
+    /// unlike SVG, which hands the whole list to a viewer that walks it per glyph, the
+    /// choice happens here. Per-CHARACTER fallback still happens afterwards
+    /// (<c>SegmentByTypeface</c>), so naming a Latin face and a CJK one does the right
+    /// thing either way; the chain decides which face the run STARTS on.
+    /// When nothing in the chain resolves, the generic falls back to the bundled face
+    /// rather than to whatever the system offers, because that is at least the face the
+    /// layout measured.
+    /// </remarks>
+    private static string FirstAvailable(
+        System.Collections.Immutable.ImmutableArray<string> names, bool sans)
+    {
+        foreach (var name in names)
+        {
+            // A BUNDLED music face is not a system font and must not be probed as one —
+            // the system-start brace arrives here as "Emmentaler-Brace" and the cache
+            // loads it from disk. Probing would fail and silently draw a serif "{".
+            if (EmmentalerFaces.TryParseFamily(name, out _) ||
+                string.Equals(name, TextFontPlan.BraceFaceName, StringComparison.OrdinalIgnoreCase))
+                return name;
+            using var probe = SKTypeface.FromFamilyName(name);
+            // FromFamilyName never returns null on a stock box — it substitutes — so the
+            // name has to be compared back to know whether it was really found.
+            if (probe != null &&
+                string.Equals(probe.FamilyName, name, StringComparison.OrdinalIgnoreCase))
+                return name;
+        }
+        // Nothing in the chain resolved. Fall back to the BUNDLED face rather than to
+        // whatever the system offers: it is at least the face the layout measured.
+        return sans ? "sans-serif" : "serif";
     }
 
     /// <summary>

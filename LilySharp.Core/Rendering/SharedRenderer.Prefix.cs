@@ -353,7 +353,7 @@ internal static partial class SharedRenderer
         // G clef's upper hook symmetrically.
         double centerY = above ? staffY + 3.2 : staffY - 5.6;
         double size = FontSize * 0.80 * scale;     // digit ~2 ss tall, matching LP
-        gc.DrawText("8", centerX, centerY, size, "serif",
+        gc.DrawText("8", centerX, centerY, size, TextRole.ClefOctave,
             FontStyle.Italic, TextAnchor.Middle, Color.Black, VerticalAnchor.Middle);
     }
 
@@ -434,7 +434,7 @@ internal static partial class SharedRenderer
                 // own advance, which is the serif face's at the run's em.
                 gc.DrawText(p.Ch.ToString(), nx + p.X + p.Advance / 2,
                     staffY - 1 - digitHalfHeight + 0.55,
-                    2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                    2.4, TextRole.Meter, FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
         }
         double dnx = x + (total - denWidth) / 2;

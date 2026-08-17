@@ -104,7 +104,7 @@ internal static partial class SharedRenderer
                     continue;
                 gc.DrawText(st.InstrumentName, NameX(st.InstrumentName),
                     systemYUp - StaffHeight / 2.0,
-                    actualFontSize, "serif", FontStyle.Regular,
+                    actualFontSize, TextRole.Instrument, FontStyle.Regular,
                     TextAnchor.End, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
                 break;
@@ -138,7 +138,7 @@ internal static partial class SharedRenderer
                     double centerY = systemYUp + (gs.BraceTop + gs.BraceBottom) / 2.0;
                     gc.DrawText(onlyNamed.InstrumentName!, NameX(onlyNamed.InstrumentName!),
                         centerY,
-                        actualFontSize, "serif", FontStyle.Regular,
+                        actualFontSize, TextRole.Instrument, FontStyle.Regular,
                         TextAnchor.End, fill: null,
                         verticalAnchor: VerticalAnchor.Middle);
                     continue;
@@ -154,7 +154,7 @@ internal static partial class SharedRenderer
                 double centerY = staffY - staffLayout.Height / 2.0;
                 gc.DrawText(staffLayout.InstrumentName, NameX(staffLayout.InstrumentName),
                     centerY,
-                    actualFontSize, "serif", FontStyle.Regular,
+                    actualFontSize, TextRole.Instrument, FontStyle.Regular,
                     TextAnchor.End, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
             }
@@ -786,7 +786,7 @@ internal static partial class SharedRenderer
 
         int glyphIndex = BraceLadder.NearestIndex(height);
         char braceChar = (char)(BraceGlyphStart + glyphIndex);
-        gc.DrawText(braceChar.ToString(), x, yMid, FontSize, "Emmentaler-Brace",
+        gc.DrawText(braceChar.ToString(), x, yMid, FontSize, TextRole.SystemBrace,
             FontStyle.Regular, TextAnchor.End, Color.Black);
     }
 

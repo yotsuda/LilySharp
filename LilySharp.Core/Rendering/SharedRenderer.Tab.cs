@@ -620,7 +620,7 @@ internal static partial class SharedRenderer
             gc.DrawText(fretText, x,
                 noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(
                     fretText, TabFretFontSize),
-                TabFretFontSize, "serif",
+                TabFretFontSize, TextRole.TabFret,
                 FontStyle.Bold, TextAnchor.Middle, Color.Black);
             if (parenthesized)
                 DrawTabFretParens(x, noteY, bgWidth, gc);

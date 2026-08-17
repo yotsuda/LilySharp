@@ -56,8 +56,7 @@ internal sealed record ScoreContent(
     string? TempoText,
     int TempoBeatUnit,
     int TempoDots,
-    string? TextFont,
-    bool EmbedFont);
+    Rendering.TextFontPlan Fonts);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -107,8 +106,7 @@ internal static class ScoreAssembler
             TempoText = c.TempoText,
             TempoBeatUnit = c.TempoBeatUnit,
             TempoDots = c.TempoDots,
-            TextFont = c.TextFont,
-            EmbedFont = c.EmbedFont,
+            Fonts = c.Fonts,
         };
 
     /// <summary>Single-voice convenience overload.</summary>
@@ -150,7 +148,6 @@ internal static class ScoreAssembler
             TempoText = c.TempoText,
             TempoBeatUnit = c.TempoBeatUnit,
             TempoDots = c.TempoDots,
-            TextFont = c.TextFont,
-            EmbedFont = c.EmbedFont,
+            Fonts = c.Fonts,
         };
 }

@@ -23,6 +23,23 @@ namespace LilySharp.Core.Rendering;
 public interface IDocumentContext : IDisposable
 {
     /// <summary>
+    /// Which face each <see cref="TextRole"/> is drawn in — the score's <c>font</c>
+    /// directive, resolved.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ SET BEFORE THE FIRST <see cref="BeginPage"/>, by <c>SharedRenderer.RenderTo</c>,
+    /// which is the one caller holding both the score and the document. It lives on the
+    /// DOCUMENT rather than travelling with each draw call because a face is a property of
+    /// the whole score, and because the page contexts are built here — a backend that
+    /// took it per call would be handed the same plan 37 times a page.
+    /// <para>
+    /// The default is <see cref="TextFontPlan.Default"/>, so a backend driven straight
+    /// from a test (there are several) draws the bundled faces without arranging anything.
+    /// </para>
+    /// </remarks>
+    TextFontPlan Fonts { get; set; }
+
+    /// <summary>
     /// Begins a new page of the given dimensions (in staff-spaces) and
     /// returns the page's drawing context. Backends that produce a
     /// single-page SVG may treat additional pages as separate documents

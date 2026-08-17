@@ -27,12 +27,11 @@ internal sealed class MetadataState
     public string? Title;
     public string? Composer;
 
-    // Text font-family for all non-music text (title/composer/lyrics/dynamics/etc.),
-    // set by the top-level `font "NAME" [embedded]` header directive. Null = renderer
-    // default (generic serif/sans). EmbedFont is collected but unused this phase
-    // (font embedding is a later phase); the name is applied as a plain reference.
-    public string? TextFont;
-    public bool EmbedFont;
+    // Which face each kind of non-music text is drawn in, from the top-level
+    // `font "NAME" [embedded]` or `font { … }` directive. Never null: a score without
+    // one gets TextFontPlan.Default, so no reader has to spell the "nothing was asked
+    // for" case a second way.
+    public Rendering.TextFontPlan Fonts = Rendering.TextFontPlan.Default;
 
     // Source offsets of the header grobs (0 = none), emitted as data-pos so the
     // preview can click-to-jump to the title/composer/time/key/clef declarations.
@@ -78,8 +77,7 @@ internal sealed class MetadataState
     {
         Title = other.Title;
         Composer = other.Composer;
-        TextFont = other.TextFont;
-        EmbedFont = other.EmbedFont;
+        Fonts = other.Fonts;
         TitlePosition = other.TitlePosition;
         ComposerPosition = other.ComposerPosition;
         TimePosition = other.TimePosition;

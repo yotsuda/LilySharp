@@ -190,6 +190,8 @@ public sealed class SharedRendererBeamTests
         private DrawingTransform _current = new(0, 0, 1, 1);
         private readonly Stack<DrawingTransform> _stack = new();
 
+        public TextFontPlan Fonts { get; set; } = TextFontPlan.Default;
+
         public IDrawingContext BeginPage(double widthSpaces, double heightSpaces) => this;
         public void EndPage() { }
         public void Dispose() { }
@@ -231,7 +233,7 @@ public sealed class SharedRendererBeamTests
             Color? fill = null, double strokeWidth = 0) { }
 
         public void DrawText(string text, double x, double y, double fontSize,
-            string fontFamily, FontStyle style = FontStyle.Regular,
+            TextRole role, FontStyle style = FontStyle.Regular,
             TextAnchor anchor = TextAnchor.Start, Color? fill = null,
             VerticalAnchor verticalAnchor = VerticalAnchor.Baseline) { }
 

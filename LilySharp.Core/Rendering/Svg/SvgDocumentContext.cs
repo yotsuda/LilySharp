@@ -89,6 +89,9 @@ internal sealed class SvgDocumentContext : IDocumentContext
     /// recorded them does not run.</summary>
     internal HashSet<int> UsedDesigns => _usedDesigns;
 
+    /// <inheritdoc/>
+    public TextFontPlan Fonts { get; set; } = TextFontPlan.Default;
+
     public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
     {
         if (_currentPage != null)
@@ -98,7 +101,7 @@ internal sealed class SvgDocumentContext : IDocumentContext
         _currentContent = new StringBuilder();
         _currentWidth = widthSpaces;
         _currentHeight = heightSpaces;
-        _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive, _usedDesigns);
+        _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive, _usedDesigns, Fonts);
         return _currentPage;
     }
 

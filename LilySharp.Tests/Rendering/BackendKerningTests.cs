@@ -103,7 +103,7 @@ public sealed class BackendKerningTests
                 AutoSizePages = true,
             });
         var gc = doc.BeginPage(PageWidth, PageHeight);
-        gc.DrawText(text, 1.0, 5.0, Em, "serif");
+        gc.DrawText(text, 1.0, 5.0, Em, TextRole.Title);
         doc.EndPage();
         doc.Dispose();
 
@@ -182,7 +182,7 @@ public sealed class BackendKerningTests
         const double PageWidth = 40, PageHeight = 8;
         using var doc = new PngDocumentContext(new PngDocumentOptions { PixelsPerSpace = PixelsPerSpace });
         var gc = doc.BeginPage(PageWidth, PageHeight);
-        gc.DrawText(text, 1.0, 5.0, Em, "serif");
+        gc.DrawText(text, 1.0, 5.0, Em, TextRole.Title);
         doc.EndPage();
         doc.Dispose();
 

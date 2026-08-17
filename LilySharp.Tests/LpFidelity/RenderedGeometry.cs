@@ -585,7 +585,7 @@ internal sealed class RenderedGeometry
     /// all serif, and matching on the STRING cannot work when the string is a number.
     /// </remarks>
     public IReadOnlyList<DrawnText> BarNumbers =>
-        Texts.Where(t => t.FontFamily != "sans-serif"
+        Texts.Where(t => t.Role != TextRole.ChordName
                          && Math.Abs(t.FontSize - LilySharp.Core.Svg.Layout.BarNumberEngraver.FontSize) < 1e-9)
              .OrderBy(t => t.Y)
              .ToList();
@@ -646,7 +646,7 @@ internal sealed class RenderedGeometry
     /// fail loudly in the count guard, not depend on a 0.2 size gap.
     /// </remarks>
     public IReadOnlyList<DrawnText> CustomTexts =>
-        Texts.Where(t => t.FontFamily != "sans-serif"
+        Texts.Where(t => t.Role != TextRole.ChordName
                          && Math.Abs(t.FontSize
                                      - LilySharp.Core.Svg.EngravingDefaults.TextScriptFontSize) < 1e-9)
              .OrderBy(t => t.Y)
@@ -911,7 +911,7 @@ internal sealed class RenderedGeometry
     public double TempoEquationBaselineAboveStaff(int page = 0)
     {
         var eq = Texts
-            .Where(t => t.FontFamily != "sans-serif"
+            .Where(t => t.Role != TextRole.ChordName
                         && t.Text.StartsWith("= ", StringComparison.Ordinal))
             .ToList();
         if (eq.Count != 1)
@@ -1038,7 +1038,7 @@ internal sealed class RenderedGeometry
     /// </remarks>
     private DrawnText SoleSerifText(string what, int page)
     {
-        var texts = Texts.Where(t => t.FontFamily != "sans-serif").ToList();
+        var texts = Texts.Where(t => t.Role != TextRole.ChordName).ToList();
         if (texts.Count != 1)
         {
             throw new InvalidOperationException(
@@ -2239,7 +2239,7 @@ internal sealed class RenderedGeometry
     /// </para>
     /// </remarks>
     public IReadOnlyList<DrawnText> ChordSymbols =>
-        Texts.Where(t => t.FontFamily == "sans-serif").ToList();
+        Texts.Where(t => t.Role == TextRole.ChordName).ToList();
 
     /// <summary>
     /// Lyric syllables, left to right — the serif text runs at the lyric size.
@@ -2259,7 +2259,7 @@ internal sealed class RenderedGeometry
     /// </para>
     /// </remarks>
     public IReadOnlyList<DrawnText> LyricSyllables =>
-        Texts.Where(t => t.FontFamily != "sans-serif"
+        Texts.Where(t => t.Role != TextRole.ChordName
                          && Math.Abs(t.FontSize - LilySharp.Core.Svg.EngravingDefaults.LyricTextFontSize) < 1e-9)
              .ToList();
 
@@ -3245,7 +3245,7 @@ internal sealed class RenderedGeometry
                 + "not measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
         var hits = _pages[page].Texts
-            .Where(t => t.Text == label && t.FontFamily != "sans-serif")
+            .Where(t => t.Text == label && t.Role != TextRole.ChordName)
             .ToList();
         if (hits.Count != 1)
         {
@@ -3491,7 +3491,7 @@ internal sealed class RenderedGeometry
             .Concat(Barlines.Select(b => (b.X, Label: $"barline w={b.Width:F3}")))
             // Texts too — a staff-less probe draws NO glyph and no bar line worth the name, so
             // without them a failure there would print an empty dump.
-            .Concat(Texts.Select(t => (t.X, Label: $"text \"{t.Text}\" {t.FontFamily} {t.Anchor}")))
+            .Concat(Texts.Select(t => (t.X, Label: $"text \"{t.Text}\" {t.Role} {t.Anchor}")))
             .OrderBy(e => e.X);
         return string.Join("\n", events.Select(e => $"    x={e.X,10:F6}  {e.Label}"));
     }

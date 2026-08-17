@@ -338,9 +338,23 @@ internal sealed partial class Parser
         return new MetadataDeclarationGreen(keyword, [.. valueTokens]);
     }
 
+    /// <summary>
+    /// <c>font "NAME" [embedded]</c>, or the block form <c>font { KEY VALUE… }</c>.
+    /// </summary>
+    /// <remarks>
+    /// The block's tokens are kept FLAT, like every other declaration in this file: the
+    /// entries are read back by <c>FontDeclarationSyntax.Entries</c> rather than shaped
+    /// here, so a role vocabulary that grows does not grow the green tree. The parser's
+    /// only job is to find the block's extent and to refuse a value that is neither a
+    /// quoted name nor a bare word.
+    /// </remarks>
     private FontDeclarationGreen ParseFontDeclaration()
     {
         var keyword = Advance(); // font
+
+        if (Check(SyntaxKind.OpenBrace))
+            return ParseFontBlock(keyword);
+
         var tokens = new List<GreenNode?>();
 
         // The font name is a quoted string — mirror ParseMetadataDeclaration's
@@ -370,6 +384,61 @@ internal sealed partial class Parser
         }
 
         return new FontDeclarationGreen(keyword, [.. tokens]);
+    }
+
+    // font { serif "Georgia"  lyricText "Charis SIL" "Noto Serif CJK JP"  embedded }
+    //
+    // House style, the same as a part header: bare KEY, bare VALUEs, no colons and no
+    // commas, entries separated by nothing but whitespace. That is also why an entry's
+    // extent is found by looking for the NEXT key rather than by a terminator — there
+    // isn't one, and inventing a ';' here would be a second punctuation convention in a
+    // language that has none.
+    private FontDeclarationGreen ParseFontBlock(SyntaxToken keyword)
+    {
+        var tokens = new List<GreenNode?> { Advance() }; // {
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            // A key is any word: role names like `text` and `mark` lex as identifiers,
+            // while `title`, `lyrics`, `chords`, `tempo`, `instrument`, `tuplet` and
+            // `volta` are already KEYWORDS of the language. Matching by token kind would
+            // therefore need the keyword list mirrored here — a second home for it — so
+            // the key is matched by its TEXT, in FontDeclarationSyntax, against the one
+            // vocabulary in TextRoles.
+            if (Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current))
+            {
+                tokens.Add(Advance());
+                continue;
+            }
+            // Anything else inside the block is refused where it stands, and skipped, so
+            // one stray token does not swallow the rest of the score.
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.FontBindingMissingValue,
+                "A 'font { }' entry is a key followed by quoted face names or a generic " +
+                "family, e.g. lyricText \"Charis SIL\" — '" + Current.Text + "' is neither.");
+            tokens.Add(Advance());
+        }
+        if (Check(SyntaxKind.CloseBrace))
+            tokens.Add(Advance());
+        else
+            _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
+                "This 'font {' has no closing '}'.");
+        return new FontDeclarationGreen(keyword, [.. tokens]);
+    }
+
+    // A token that reads as a bare WORD, judged by its text rather than by its kind:
+    // several role keys (title / lyrics / chords / tempo / instrument / tuplet / volta)
+    // are already keywords of the language, and `sans-serif` carries a hyphen. Asking
+    // the lexer's classification instead would mean mirroring the keyword list here — a
+    // second home for it — and the key is validated against TextRoles anyway.
+    private static bool IsWordLikeToken(SyntaxToken token)
+    {
+        string t = token.Text;
+        if (string.IsNullOrEmpty(t) || !char.IsLetter(t[0]))
+            return false;
+        foreach (char c in t)
+            if (!char.IsLetterOrDigit(c) && c != '-' && c != '_')
+                return false;
+        return true;
     }
 
     // 'time 4/4' is written bare everywhere — as a music-stream command and as a

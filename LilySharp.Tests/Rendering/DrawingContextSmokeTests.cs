@@ -55,7 +55,7 @@ public sealed class DrawingContextSmokeTests
             fill: Color.Black);
 
         // Title
-        gc.DrawText("Sample", 15, 2, 1.2, "Serif", FontStyle.Bold, TextAnchor.Middle);
+        gc.DrawText("Sample", 15, 2, 1.2, TextRole.Title, FontStyle.Bold, TextAnchor.Middle);
 
         // Source-position scope (SVG: data-pos=42, PDF: ignored)
         using (gc.Source(42))

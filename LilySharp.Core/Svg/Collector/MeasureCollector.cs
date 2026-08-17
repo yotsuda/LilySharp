@@ -1311,8 +1311,7 @@ public sealed partial class MeasureCollector
         _meta.TempoText,
         _meta.TempoBeatUnit,
         _meta.TempoDots,
-        _meta.TextFont,
-        _meta.EmbedFont);
+        _meta.Fonts);
 
     /// <summary>
     /// Collects a Score from a syntax tree.
@@ -2969,11 +2968,12 @@ public sealed partial class MeasureCollector
                     break;
 
                 case FontDeclarationSyntax font:
-                    // `font "NAME" [embedded]` sets the text font-family for all
-                    // non-music text; the embedded flag is collected but unused this
-                    // phase (font embedding is deferred to a later phase).
-                    _meta.TextFont = font.FontName;
-                    _meta.EmbedFont = font.Embedded;
+                    // `font "NAME" [embedded]` or `font { role "FACE" … }` binds a face
+                    // per kind of text. The reading is shared with the validator
+                    // (FontPlanReader) so the two cannot disagree about what is legal;
+                    // the problems it reports are that validator's job, not the
+                    // collector's, and an entry it refused is simply absent from the plan.
+                    _meta.Fonts = Semantics.FontPlanReader.Read(font, out _);
                     break;
 
                 case TempoDeclarationSyntax tempoDecl:
@@ -4178,8 +4178,7 @@ public sealed partial class MeasureCollector
 
         return _meta.Title == rec.Title
             && _meta.Composer == rec.Composer
-            && _meta.TextFont == rec.TextFont
-            && _meta.EmbedFont == rec.EmbedFont
+            && _meta.Fonts.Equals(rec.Fonts)
             && _meta.Tempo == rec.Tempo
             && _meta.TempoText == rec.TempoText
             && _meta.TempoBeatUnit == rec.TempoBeatUnit

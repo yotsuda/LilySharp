@@ -38,13 +38,18 @@ internal sealed class PdfDrawingContext : IDrawingContext
     /// <see cref="IDrawingContext.MusicFace"/>.</summary>
     private int _musicDesign = EmmentalerFaces.DefaultDesign;
 
+    /// <summary>Which face each text role is drawn in — the score's <c>font</c>
+    /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
+    private readonly TextFontPlan _plan;
+
     public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0,
-        EmmentalerFontResolver? fontResolver = null)
+        EmmentalerFontResolver? fontResolver = null, TextFontPlan? plan = null)
     {
         _gfx = gfx;
         _scale = pointsPerSpace;
         _originPt = originPt;
         _fontResolver = fontResolver;
+        _plan = plan ?? TextFontPlan.Default;
     }
 
     // Positions are offset by the page margin; sizes (T) are not.
@@ -188,10 +193,19 @@ internal sealed class PdfDrawingContext : IDrawingContext
     }
 
     public void DrawText(string text, double x, double y, double fontSize,
-        string fontFamily, FontStyle style = FontStyle.Regular,
+        TextRole role, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
+        // One face per run: PdfSharpCore's XFont is a single family, and the resolver
+        // answers for whichever of the chain's names it was configured with. The FIRST
+        // is asked for — a per-CHARACTER fallback still runs below for anything it
+        // cannot draw, which is the same mechanism a CJK title already relies on.
+        var face = _plan.Resolve(role);
+        bool sans = face.Family == TextFontFamily.Sans;
+        string fontFamily = face.IsBundled
+            ? (sans ? "sans-serif" : "serif")
+            : face.Names[0];
         var pdfStyle = ((style & FontStyle.Bold) != 0, (style & FontStyle.Italic) != 0) switch
         {
             (true, true) => XFontStyle.BoldItalic,
@@ -212,9 +226,9 @@ internal sealed class PdfDrawingContext : IDrawingContext
         var brush = new XSolidBrush(ToXColor(fill));
 
         // A face the RESERVATION opened is drawn at the positions it reserved (see
-        // DrawShaped). Anything else — an embedded `font "X"`, a fallback — keeps
+        // DrawShaped). Anything else — a bound `font "X"`, a fallback — keeps
         // PdfSharpCore's own layout, because the engine did not measure that file either.
-        if (TextFontMetrics.IsGenericTextFamily(fontFamily, out bool sans))
+        if (face.IsBundled)
         {
             double width = TextFontMetrics.Advance(text, fontSize, sans, style);
             double left = anchor switch

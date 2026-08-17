@@ -35,13 +35,27 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     private readonly string? _fontDirectory;
     private readonly IFontResolver? _fallback;
 
-    // The document's configured text font (`font "X"`) and, when it asked to EMBED
-    // (`font "X" embedded`) and the licence allows, that font's bytes loaded from the
-    // system via SkiaSharp. Set per-document by PdfDocumentContext. When _embedBytes
-    // is null the configured font is NOT embedded — it resolves to the bundled serif
-    // instead, so a non-`embedded` document never silently embeds a system font.
-    private string? _textFamily;
-    private byte[]? _embedBytes;
+    // The document's configured text faces — every name a `font` directive bound, and,
+    // when it asked to EMBED and the licence allows, that face's bytes loaded from the
+    // system via SkiaSharp. Set per-document by PdfDocumentContext.
+    // ⚠️ A SET, NOT ONE NAME, since 2026-08-18: `font { }` binds a face per text role, so
+    // one document can carry several. When Bytes is null the face is NOT embedded — it
+    // resolves to the bundled face of its family instead, so a non-`embedded` document
+    // never silently embeds a system font.
+    private readonly Dictionary<string, ConfiguredTextFace> _textFaces =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>A face a <c>font</c> directive named: its program when embedding, and the
+    /// bundled family it stands in for when not.</summary>
+    /// <remarks>
+    /// <paramref name="Sans"/> comes from the ROLE the name was bound to — chord symbols
+    /// are the only sans role — and decides the stand-in, so a non-embedded
+    /// <c>chordName "Georgia"</c> falls back to the Heros the layout measured rather than
+    /// to Schola. ⚠️ ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer; the
+    /// alternative is to key faces by (name, family), which would embed the same program
+    /// twice to record a distinction that only shows when the face is absent.
+    /// </remarks>
+    private readonly record struct ConfiguredTextFace(byte[]? Bytes, bool Sans);
 
     // Per-codepoint SYSTEM fallback faces, keyed by the face name below. The bundled text
     // faces are Latin-only, so a CJK title has no glyph in them and PdfSharpCore would emit
@@ -68,8 +82,8 @@ internal sealed class EmmentalerFontResolver : IFontResolver
 
     /// <summary>The face name a registered fallback family answers to. Style is IN the name:
     /// the matcher returns a different face per weight/slant and they are different font
-    /// programs, unlike the single <c>LysEmbed#</c> face whose emphasis PdfSharpCore
-    /// synthesises.</summary>
+    /// programs, unlike a <c>LysEmbed:…#</c> face whose emphasis PdfSharpCore
+    /// synthesises from one program.</summary>
     internal static string FallbackFaceName(string family, bool isBold, bool isItalic)
         => $"LysFallback:{family}:{(isBold ? 'b' : '-')}{(isItalic ? 'i' : '-')}#";
 
@@ -90,24 +104,49 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     }
 
     /// <summary>
-    /// Sets (or clears) the document's text font and whether to embed it. When
-    /// <paramref name="embed"/> is true and the font's licence permits embedding —
-    /// Free, or Gray (an explicit <c>embedded</c> honours a gray font, having already
-    /// warned) — its bytes are loaded for subset-embedding; a Forbidden/not-installed
-    /// font is not embedded. When embed is false the font is a reference only (it maps
-    /// to the bundled serif in PDF, so nothing proprietary is embedded without asking).
+    /// Sets (or clears) the document's configured text faces and whether to embed them.
     /// </summary>
-    public void SetTextFont(string? family, bool embed)
+    /// <param name="plan">The score's <c>font</c> directive, resolved.</param>
+    /// <remarks>
+    /// When <c>plan.Embed</c> is true and a face's licence permits embedding — Free, or
+    /// Gray (an explicit <c>embedded</c> honours a gray font, having already warned) —
+    /// its bytes are loaded for subset-embedding; a Forbidden or not-installed face is
+    /// not embedded. Without <c>embedded</c> a face is a REFERENCE only and maps to the
+    /// bundled stand-in, so nothing proprietary is embedded without asking.
+    /// </remarks>
+    public void SetTextFonts(TextFontPlan plan)
     {
-        _textFamily = string.IsNullOrEmpty(family) ? null : family;
-        _embedBytes = null;
-        if (_textFamily == null || !embed)
-            return;
-        var cls = FontEmbedInfo.Classify(_textFamily);
-        if (cls is FontEmbedInfo.FontEmbedClass.Forbidden or FontEmbedInfo.FontEmbedClass.NotFound)
-            return;
-        _embedBytes = FontEmbedInfo.TryGetFontBytes(_textFamily);
+        _textFaces.Clear();
+        foreach (var role in TextRoles.All)
+        {
+            var face = plan.Resolve(role);
+            if (face.IsBundled)
+                continue;
+            bool sans = face.Family == TextFontFamily.Sans;
+            foreach (var name in face.Names)
+            {
+                if (_textFaces.ContainsKey(name))
+                    continue;   // first role bound to this name decides the stand-in
+                byte[]? bytes = null;
+                if (plan.Embed)
+                {
+                    var cls = FontEmbedInfo.Classify(name);
+                    if (cls is not (FontEmbedInfo.FontEmbedClass.Forbidden
+                                    or FontEmbedInfo.FontEmbedClass.NotFound))
+                        bytes = FontEmbedInfo.TryGetFontBytes(name);
+                }
+                _textFaces[name] = new ConfiguredTextFace(bytes, sans);
+            }
+        }
     }
+
+    /// <summary>The face name an embedded configured face answers to.</summary>
+    /// <remarks>
+    /// ⚠️ WAS THE BARE <c>LysEmbed#</c> until 2026-08-18, when one document could carry
+    /// only one configured face. A block form binds several, and a single face name for
+    /// all of them would serve the first face's program for every one of them.
+    /// </remarks>
+    internal static string EmbeddedFaceName(string family) => $"LysEmbed:{family}#";
 
     // The bundled TeX Gyre Schola (GUST Font License / LPPL 1.3c) face for a weight/slant
     // — the PDF stand-in for the CSS-generic "serif" and for any non-embedded text font.
@@ -159,14 +198,15 @@ internal sealed class EmmentalerFontResolver : IFontResolver
             return SerifFace(isBold, isItalic);
         if (name is "sans" or "sans-serif")
             return SansFace(isBold, isItalic);
-        // The document's configured text font (`font "X"`, which the renderer maps
-        // every generic family onto). With `embedded` and a permitted licence we
-        // serve X's own bytes so PdfSharpCore subsets and embeds them (a portable
-        // PDF; bold/italic reuse the one face and PdfSharpCore synthesises emphasis).
-        // WITHOUT embedding, X resolves to the bundled serif — so a plain reference
-        // never silently embeds a system (possibly proprietary) font.
-        if (_textFamily != null && string.Equals(familyName, _textFamily, StringComparison.OrdinalIgnoreCase))
-            return _embedBytes != null ? new FontResolverInfo("LysEmbed#") : SerifFace(isBold, isItalic);
+        // A face the document's `font` directive named. With `embedded` and a permitted
+        // licence we serve its own bytes so PdfSharpCore subsets and embeds them (a
+        // portable PDF; bold/italic reuse the one face and PdfSharpCore synthesises
+        // emphasis). WITHOUT embedding it resolves to the bundled face of its family —
+        // so a plain reference never silently embeds a system (possibly proprietary) font.
+        if (_textFaces.TryGetValue(familyName, out var configured))
+            return configured.Bytes != null
+                ? new FontResolverInfo(EmbeddedFaceName(familyName))
+                : configured.Sans ? SansFace(isBold, isItalic) : SerifFace(isBold, isItalic);
         // A system face the renderer resolved for characters no bundled face covers.
         var fallbackFace = FallbackFaceName(familyName, isBold, isItalic);
         if (_fallbackFaces.TryGetValue(fallbackFace, out var fb))
@@ -176,9 +216,15 @@ internal sealed class EmmentalerFontResolver : IFontResolver
 
     public byte[] GetFont(string faceName)
     {
-        if (faceName == "LysEmbed#")
-            return _embedBytes ?? throw new InvalidOperationException(
-                "Embed font requested but its bytes were not loaded.");
+        if (faceName.StartsWith("LysEmbed:", StringComparison.Ordinal)
+            && faceName.EndsWith("#", StringComparison.Ordinal))
+        {
+            string family = faceName["LysEmbed:".Length..^1];
+            if (_textFaces.TryGetValue(family, out var cfg) && cfg.Bytes != null)
+                return cfg.Bytes;
+            throw new InvalidOperationException(
+                $"Embed font '{family}' requested but its bytes were not loaded.");
+        }
 
         if (_fallbackFaces.TryGetValue(faceName, out var fallback))
             return fallback.Bytes;

@@ -60,10 +60,9 @@ public static class PdfGenerator
             PointsPerSpace = options.StaffSpacePt,
             AutoSizePages = true,
             FontDirectory = options.FontDirectory,
-            // `font "X" [embedded]`: use X as the text font; subset-embed it (portable
-            // PDF) only when `embedded`, else it resolves to the bundled serif.
-            TextFontFamily = multiScore.TextFont,
-            EmbedTextFont = multiScore.EmbedFont,
+            // The `font` directive travels ON THE SCORE and reaches the document through
+            // SharedRenderer.RenderTo (IDocumentContext.Fonts), which is also what
+            // configures the resolver's embed set — so there is nothing to copy here.
         };
         using var doc = new PdfDocumentContext(docOptions);
         SharedRenderer.RenderTo(multiScore, layout, doc);

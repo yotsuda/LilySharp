@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
@@ -72,8 +73,7 @@ public class ScoreAssemblerTests
             TempoText: "Allegro",
             TempoBeatUnit: 2,
             TempoDots: 1,
-            TextFont: "Comic Sans MS",
-            EmbedFont: false);
+            Fonts: new TextFontPlan.Builder().Everything(["Comic Sans MS"]).Build());
 
     private static ImmutableArray<ChordNameItem> OneChord() =>
         ImmutableArray.Create(new ChordNameItem("C", 0, 0, 0));

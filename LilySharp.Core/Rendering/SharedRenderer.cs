@@ -89,6 +89,13 @@ internal static partial class SharedRenderer
         // every other backend (PDF/PNG, the recording contexts) draws live, unchanged.
         // The memo short-circuits the per-system loop below; the loop body stays the
         // one implementation (§2A: a replay is a recorded PREVIOUS run of it).
+        // The score's `font` directive, handed to the document BEFORE the first page: it is
+        // what every DrawText's TextRole resolves against, and the backends build their
+        // page contexts from it. One assignment, in the one place holding both the score
+        // and the document. ⚠️ Before 2026-08-18 this was a DECORATOR that rewrote generic
+        // families on their way out, which could not tell a title from a tab fret number
+        // and restyled both; see IDrawingContext.DrawText.
+        doc.Fonts = score.Fonts;
         var fragHost = fragments != null ? doc as SvgDocumentContext : null;
         if (fragHost != null)
             fragments!.PrepareRender(score, layout);
@@ -119,11 +126,6 @@ internal static partial class SharedRenderer
             // context. Every primitive Y handed to `gc` below is page Y-up
             // (page-bottom origin) and the decorator maps it to device.
             IDrawingContext gc = new YFlipDrawingContext(doc.BeginPage(page.Width, page.Height), page.Height);
-            // `font "NAME"` header directive: remap every generic text family to the
-            // configured face for the header AND the body (music glyphs pass through).
-            // Wrap before DrawHeader and the margin group so both are covered.
-            if (!string.IsNullOrEmpty(score.TextFont))
-                gc = new TextFontDrawingContext(gc, score.TextFont!);
             // LILYPOND-REF: lily/page-layout-problem.cc:434 — header at MarginTop;
             // SystemLayout.Y already includes MarginTop, so apply MarginLeft only.
             // The title/composer header belongs to the FIRST page only (later
@@ -211,7 +213,7 @@ internal static partial class SharedRenderer
         {
             double centerX = page.Width / 2;
             using (SourceScope(gc, score.Header.Title))
-                gc.DrawText(title, centerX, page.Height - y, TitleFontSize, "serif",
+                gc.DrawText(title, centerX, page.Height - y, TitleFontSize, TextRole.Title,
                     FontStyle.Bold, TextAnchor.Middle);
             y += TitleFontSize;
         }
@@ -219,7 +221,7 @@ internal static partial class SharedRenderer
         {
             double rightX = page.Width - options.MarginLeft;
             using (SourceScope(gc, score.Header.Composer))
-                gc.DrawText(composer, rightX, page.Height - y, ComposerFontSize, "serif",
+                gc.DrawText(composer, rightX, page.Height - y, ComposerFontSize, TextRole.Composer,
                     FontStyle.Italic, TextAnchor.End);
         }
     }

@@ -62,7 +62,7 @@ internal static partial class SharedRenderer
             // keep LP's bold-italic DynamicText face.
             var style = d.IsExpressiveText ? FontStyle.Italic : FontStyle.BoldItalic;
             using (gc.Source(d.SourcePosition))
-                gc.DrawText(text, d.X, y, size, "serif",
+                gc.DrawText(text, d.X, y, size, TextRole.Dynamics,
                     style, TextAnchor.Middle, Color.Black);
         }
     }
@@ -130,7 +130,7 @@ internal static partial class SharedRenderer
             if (a.Glyph.StartsWith("tabtech:", StringComparison.Ordinal))
             {
                 using (gc.Source(a.SourcePosition))
-                    gc.DrawText(a.Glyph[8..], a.X, y, 1.5, "serif",
+                    gc.DrawText(a.Glyph[8..], a.X, y, 1.5, TextRole.TabTechnique,
                         FontStyle.Italic, TextAnchor.Middle, Color.Black);
                 continue;
             }
@@ -251,7 +251,7 @@ internal static partial class SharedRenderer
 
         if (baseFret > 1)
             gc.DrawText($"{baseFret}fr", left + width + 0.35, top - dy * 0.5, 1.1,
-                "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+                TextRole.FretFrame, FontStyle.Regular, TextAnchor.Start, Color.Black);
 
         for (int s = 0; s < strings; s++)
         {
@@ -310,7 +310,7 @@ internal static partial class SharedRenderer
             2 => "full",
             _ => (semitones % 2 == 0) ? (semitones / 2).ToString() : $"{semitones / 2}½",
         };
-        gc.DrawText(label, topX, topY + 0.35, 1.6, "serif", FontStyle.Italic,
+        gc.DrawText(label, topX, topY + 0.35, 1.6, TextRole.Bend, FontStyle.Italic,
             TextAnchor.Middle, Color.Black);
     }
 
@@ -342,10 +342,10 @@ internal static partial class SharedRenderer
             // scope a real offset.
             if (l.Item.SourcePosition > 0)
                 using (gc.Source(l.Item.SourcePosition))
-                    gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, "serif",
+                    gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, TextRole.LyricText,
                         FontStyle.Regular, TextAnchor.Middle, Color.Black);
             else
-                gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, "serif",
+                gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, TextRole.LyricText,
                     FontStyle.Regular, TextAnchor.Middle, Color.Black);
             // Hyphen dashes / extender lines: DrawLyricHyphens (LyricHyphen
             // layouts) — the single source, matching LP's grobs.
@@ -429,7 +429,7 @@ internal static partial class SharedRenderer
                         OttavaBracketEngraver.LabelInkCentre(
                             b.Text, EngravingDefaults.OttavaBracketFontSize),
                         b.StaffIndex),
-                    textFontSize, "serif",
+                    textFontSize, TextRole.Ottava,
                     FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
 
                 double lineStartX = OttavaBracketEngraver.LineStartX(
@@ -498,7 +498,7 @@ internal static partial class SharedRenderer
                         v.VoltaText, FontSize * 0.6, sans: false, FontStyle.Bold);
                     double textY = absY - 0.3 - vInk.Top;
                     gc.DrawText(v.VoltaText, v.StartX + 0.5, textY,
-                        FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
+                        FontSize * 0.6, TextRole.Volta, FontStyle.Bold, TextAnchor.Start, Color.Black);
                 }
             }
         }
@@ -571,7 +571,7 @@ internal static partial class SharedRenderer
                 // bold-upright; it is now LilyPond's size and face, and SkylineBuilder
                 // reserves exactly this ink.
                 gc.DrawText(b.NumberText, midX, midY,
-                    os.Size(TupletBracketEngraver.NumberFontSize, b.StaffIndex), "serif",
+                    os.Size(TupletBracketEngraver.NumberFontSize, b.StaffIndex), TextRole.Tuplet,
                     TupletBracketEngraver.NumberFontStyle, TextAnchor.Middle, Color.Black,
                     VerticalAnchor.Middle);
             }

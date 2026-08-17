@@ -87,10 +87,10 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
 
     public void DrawText(
         string text, double x, double y, double fontSize,
-        string fontFamily, FontStyle style = FontStyle.Regular,
+        TextRole role, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
-        => _inner.DrawText(text, X(x), y, fontSize, fontFamily, style, anchor, fill, verticalAnchor);
+        => _inner.DrawText(text, X(x), y, fontSize, role, style, anchor, fill, verticalAnchor);
 
     public IDisposable Source(int sourcePosition) => _inner.Source(sourcePosition);
 

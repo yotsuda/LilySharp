@@ -227,7 +227,12 @@ internal sealed class SvgSystemFragmentCache
         _enabled = !_keys.IsDefault
             && score.GrobOverrides.IsDefaultOrEmpty
             && score.GrobReverts.IsDefaultOrEmpty
-            && string.IsNullOrEmpty(score.TextFont);
+            // A bound face changes the font-family attributes in the emitted bytes, and a
+            // fragment recorded under one plan is not replayable under another. Declining
+            // the whole memo is the same conservative answer `font "NAME"` already got —
+            // keying fragments by the plan's signature would let it stay on, and is worth
+            // doing only once a score that binds faces is also a score being edited live.
+            && score.Fonts.IsDefault;
         if (!_enabled)
             return;
         foreach (var (_, st, _) in score.EnumerateStaves())

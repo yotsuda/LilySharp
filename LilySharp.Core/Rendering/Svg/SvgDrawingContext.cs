@@ -45,12 +45,17 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// the document's used-design set (the @font-face side channel).</summary>
     internal HashSet<int>? DesignLog { get; set; }
 
+    /// <summary>Which face each text role is drawn in — the score's <c>font</c>
+    /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
+    private readonly TextFontPlan _fonts;
+
     public SvgDrawingContext(StringBuilder sb, bool interactive = false,
-        HashSet<int>? usedDesigns = null)
+        HashSet<int>? usedDesigns = null, TextFontPlan? fonts = null)
     {
         _sb = sb;
         _interactive = interactive;
         _usedDesigns = usedDesigns;
+        _fonts = fonts ?? TextFontPlan.Default;
     }
 
     /// <summary>A fill attribute for a glyph/shape whose default is black. SVG's initial
@@ -225,17 +230,18 @@ internal sealed class SvgDrawingContext : IDrawingContext
     }
 
     public void DrawText(string text, double x, double y, double fontSize,
-        string fontFamily, FontStyle style = FontStyle.Regular,
+        TextRole role, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
         var attrs = new StringBuilder(128);
         attrs.AppendFormat(Inv, " x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"", x, y, fontSize);
-        // The document root sets font-family="serif" (SvgDocumentContext.WriteHeader),
-        // so serif text inherits it — emit the attribute only for a DIFFERENT family
-        // (a custom `font "NAME"`); an element attribute still overrides the inherited one.
-        if (fontFamily != "serif")
-            attrs.AppendFormat(Inv, " font-family=\"{0}\"", EscapeAttr(fontFamily));
+        string? family = FamilyAttributeFor(role);
+        // The document root names the bundled serif (SvgDocumentContext.WriteHeader), so a
+        // role that resolves to it inherits and emits nothing — an element attribute
+        // still overrides the inherited one where a role was bound to something else.
+        if (family != null)
+            attrs.AppendFormat(Inv, " font-family=\"{0}\"", EscapeAttr(family));
         if ((style & FontStyle.Bold) != 0)
             attrs.Append(" font-weight=\"bold\"");
         if ((style & FontStyle.Italic) != 0)
@@ -249,6 +255,30 @@ internal sealed class SvgDrawingContext : IDrawingContext
         attrs.Append(FillAttr(fill));
         attrs.Append(SourceAttr());
         _sb.AppendLine($"  <text{attrs}>{EscapeText(text)}</text>");
+    }
+
+    /// <summary>
+    /// The <c>font-family</c> this role needs on its own element, or null when the root's
+    /// inherited family already says it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A BUNDLED ROLE KEEPS THE CSS GENERIC IT HAS ALWAYS EMITTED — <c>sans-serif</c>
+    /// for the sans family, nothing at all for serif — rather than the bundled face's own
+    /// name. That is deliberately NOT the same string
+    /// <see cref="TextFontPlan.ResolvedFace.FamilyAttribute"/> gives, and the difference
+    /// is a known gap rather than an oversight: the layout reserves chord symbols against
+    /// the bundled TeX Gyre Heros, while <c>sans-serif</c> resolves to whatever sans the
+    /// viewer has, so the SVG draws a face the spacing did not measure. Naming the
+    /// bundled face here would close that — and would move every snapshot holding a chord
+    /// symbol, which is a decision about output and not about this directive. Left as it
+    /// stands so that adding <c>font { }</c> changes nothing a score did not ask for.
+    /// </remarks>
+    private string? FamilyAttributeFor(TextRole role)
+    {
+        var face = _fonts.Resolve(role);
+        if (!face.IsBundled)
+            return face.FamilyAttribute;
+        return face.Family == TextFontFamily.Sans ? "sans-serif" : null;
     }
 
     public IDisposable Source(int sourcePosition)

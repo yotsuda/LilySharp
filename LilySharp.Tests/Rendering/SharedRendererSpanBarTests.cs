@@ -139,6 +139,8 @@ public sealed class SharedRendererSpanBarTests
     {
         public List<(double X, double Y, double W, double H)> Rects { get; } = new();
 
+        public TextFontPlan Fonts { get; set; } = TextFontPlan.Default;
+
         public IDrawingContext BeginPage(double w, double h) => this;
         public void EndPage() { }
         public void Dispose() { }
@@ -160,7 +162,7 @@ public sealed class SharedRendererSpanBarTests
         public void DrawClosedBezier((double X, double Y) p0, (double X, double Y) c1,
             (double X, double Y) c2, (double X, double Y) p1, (double X, double Y) c2Back,
             (double X, double Y) c1Back, Color? fill = null, double strokeWidth = 0) { }
-        public void DrawText(string text, double x, double y, double fontSize, string fontFamily,
+        public void DrawText(string text, double x, double y, double fontSize, TextRole role,
             FontStyle style = FontStyle.Regular, TextAnchor anchor = TextAnchor.Start,
             Color? fill = null, VerticalAnchor verticalAnchor = VerticalAnchor.Baseline) { }
         public IDisposable Source(int sourcePosition) => NullScope.Instance;

@@ -222,7 +222,7 @@ internal static partial class SharedRenderer
                 // disagree about where the digit is).
                 gc.DrawText(d.Text, d.CenterX,
                     noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(d.Text, fontSize),
-                    fontSize, "serif",
+                    fontSize, TextRole.TabFret,
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
         }

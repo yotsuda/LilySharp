@@ -68,7 +68,7 @@ internal readonly record struct DrawnBezier(
 /// placement and is the next thing to port.
 /// </summary>
 internal readonly record struct DrawnText(
-    string Text, double X, double Y, double FontSize, string FontFamily, TextAnchor Anchor);
+    string Text, double X, double Y, double FontSize, TextRole Role, TextAnchor Anchor);
 
 /// <summary>
 /// An <see cref="IDocumentContext"/> that records what was drawn instead of writing a file,
@@ -102,7 +102,9 @@ internal sealed class RecordingDocumentContext : IDocumentContext
     /// <summary>The first page — the only one most probes need.</summary>
     public RecordingDrawingContext Page => _pages[0];
 
-    public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
+    public TextFontPlan Fonts { get; set; } = TextFontPlan.Default;
+
+        public IDrawingContext BeginPage(double widthSpaces, double heightSpaces)
     {
         var page = new RecordingDrawingContext(widthSpaces, heightSpaces);
         _pages.Add(page);
@@ -209,10 +211,10 @@ internal sealed class RecordingDrawingContext : IDrawingContext
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => _glyphs.Add(new DrawnGlyph(glyph, Tx(x), Ty(y), Sy(fontSize)));
 
-    public void DrawText(string text, double x, double y, double fontSize, string fontFamily,
+    public void DrawText(string text, double x, double y, double fontSize, TextRole role,
                          FontStyle style = FontStyle.Regular, TextAnchor anchor = TextAnchor.Start,
                          Color? fill = null, VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
-        => _texts.Add(new DrawnText(text, Tx(x), Ty(y), Sy(fontSize), fontFamily, anchor));
+        => _texts.Add(new DrawnText(text, Tx(x), Ty(y), Sy(fontSize), role, anchor));
 
     public IDisposable Source(int sourcePosition) => NullScope.Instance;
 

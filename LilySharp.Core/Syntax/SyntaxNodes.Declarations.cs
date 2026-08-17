@@ -359,8 +359,14 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Font directive: font "NAME" [embedded]
+/// Font directive — <c>font "NAME" [embedded]</c>, or the block form
+/// <c>font { KEY VALUE… }</c> that binds a face per text role.
 /// </summary>
+/// <remarks>
+/// The green node holds the block's tokens FLAT (the parser only found the extent), so
+/// the entries are read back here. That keeps a growing role vocabulary out of the
+/// syntax tree: adding a role adds a word to <c>TextRoles</c> and nothing else.
+/// </remarks>
 public sealed class FontDeclarationSyntax : SyntaxNode
 {
     internal FontDeclarationSyntax(FontDeclarationGreen green, SyntaxNode? parent, int position)
@@ -371,9 +377,19 @@ public sealed class FontDeclarationSyntax : SyntaxNode
     /// <summary>The <c>font</c> keyword token.</summary>
     public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
 
+    /// <summary>True when this directive is written as <c>font { … }</c>.</summary>
+    public bool IsBlock =>
+        SlotCount > 1 && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+
     /// <summary>
-    /// The font name — the quoted string literal's unquoted value, or null if absent.
+    /// The font name — the first quoted string literal's unquoted value, or null if
+    /// absent.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ In the BLOCK form this is the first name of the first entry and means very
+    /// little; a reader that wants every face the directive asks for wants
+    /// <see cref="NamedFaces"/>, which is what the embed check uses.
+    /// </remarks>
     public string? FontName
     {
         get
@@ -388,7 +404,8 @@ public sealed class FontDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// True iff the trailing <c>embedded</c> keyword token is present.
+    /// True iff the <c>embedded</c> keyword is present — trailing on the one-liner, or as
+    /// a bare entry in the block.
     /// </summary>
     public bool Embedded
     {
@@ -400,6 +417,99 @@ public sealed class FontDeclarationSyntax : SyntaxNode
                     return true;
             }
             return false;
+        }
+    }
+
+    /// <summary>Every face name this directive asks for, in source order, deduplicated.</summary>
+    public IReadOnlyList<string> NamedFaces()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<string>();
+        for (int i = 1; i < SlotCount; i++)
+        {
+            if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } token)
+            {
+                string name = token.Text.Trim('"');
+                if (name.Length > 0 && seen.Add(name))
+                    result.Add(name);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// One <c>KEY VALUE…</c> entry of the block form.
+    /// </summary>
+    /// <param name="Key">The key as written — a role, a group, or a generic family.</param>
+    /// <param name="KeyToken">The key's token, for a diagnostic's span.</param>
+    /// <param name="Names">Quoted face names, in preference order; empty for a redirect.</param>
+    /// <param name="Family">The generic family this entry redirects to, when it does.</param>
+    public readonly record struct Entry(
+        string Key,
+        SyntaxTokenNode KeyToken,
+        IReadOnlyList<string> Names,
+        Rendering.TextFontFamily? Family);
+
+    /// <summary>
+    /// The block's entries. Empty for the one-liner form.
+    /// </summary>
+    /// <remarks>
+    /// An entry runs from its key to the next KEY — there is no separator in this
+    /// language — so a bare word is read as a value only when it is a generic family and
+    /// as a key otherwise. That is why <c>sans</c> and <c>serif</c> are the only bare
+    /// words a value may be: any other bare word would be indistinguishable from the
+    /// next entry's key, and a grammar where <c>lyrics Georgia</c> silently binds nothing
+    /// is worse than one that refuses the unquoted name.
+    /// </remarks>
+    public IReadOnlyList<Entry> Entries
+    {
+        get
+        {
+            if (!IsBlock)
+                return [];
+            var entries = new List<Entry>();
+            SyntaxTokenNode? keyToken = null;
+            var names = new List<string>();
+            Rendering.TextFontFamily? redirect = null;
+
+            void Flush()
+            {
+                if (keyToken != null)
+                    entries.Add(new Entry(keyToken.Text, keyToken, [.. names], redirect));
+                keyToken = null;
+                names.Clear();
+                redirect = null;
+            }
+
+            for (int i = 2; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode token)
+                    continue;
+                switch (token.Kind)
+                {
+                    case SyntaxKind.CloseBrace:
+                        continue;
+                    case SyntaxKind.StringLiteral:
+                        names.Add(token.Text.Trim('"'));
+                        continue;
+                    case SyntaxKind.EmbeddedKeyword:
+                        // Read by Embedded; it ends the entry it trails.
+                        Flush();
+                        continue;
+                }
+                // A bare word: a family word CONTINUES the open entry, anything else
+                // starts a new one.
+                if (keyToken != null && names.Count == 0 && redirect == null &&
+                    Rendering.TextRoles.TryParseFamily(token.Text, out var fam))
+                {
+                    redirect = fam;
+                    continue;
+                }
+                Flush();
+                keyToken = token;
+            }
+            Flush();
+            return entries;
         }
     }
 }

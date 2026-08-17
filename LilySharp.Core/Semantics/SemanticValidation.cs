@@ -94,6 +94,7 @@ public static class SemanticValidation
         new DuplicateGlobalSettingValidator(), // a top-level tempo/time/key/title/… written twice
         new DuplicatePartPropertyValidator(),  // one part header setting the same property twice
         new FontEmbedWarningValidator(),    // an embedded font with a restricted/unverified license
+        new FontBindingValidator(),         // a font { } entry naming no such role, or one twice
     };
 
     /// <summary>

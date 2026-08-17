@@ -41,46 +41,51 @@ internal sealed class FontEmbedWarningValidator : ISemanticValidator
         {
             if (!font.Embedded)
                 continue;
-            var name = font.FontName;
-            if (string.IsNullOrEmpty(name))
-                continue;
+            // EVERY name the directive asks for, not just the first: a block binds a face
+            // per role, and a PDF embeds all of them. Checking `FontName` alone would
+            // clear a block whose second face is the restricted one.
+            foreach (var name in font.NamedFaces())
+                CheckOne(font, name);
+        }
+    }
 
-            FontEmbedInfo.FontEmbedClass cls;
-            try
-            {
-                cls = FontEmbedInfo.Classify(name);
-            }
-            catch
-            {
-                // SkiaSharp can throw on an odd platform / broken font; a font warning is
-                // advisory, so skip rather than crash the whole validation pass.
-                continue;
-            }
+    private void CheckOne(FontDeclarationSyntax font, string name)
+    {
+        FontEmbedInfo.FontEmbedClass cls;
+        try
+        {
+            cls = FontEmbedInfo.Classify(name);
+        }
+        catch
+        {
+            // SkiaSharp can throw on an odd platform / broken font; a font warning is
+            // advisory, so skip rather than crash the whole validation pass.
+            return;
+        }
 
-            // ASCII punctuation only: these strings reach legacy-codepage consoles
-            // through the CLI.
-            switch (cls)
-            {
-                case FontEmbedInfo.FontEmbedClass.NotFound:
-                    _diagnostics.Warning(font.Span, DiagnosticCodes.FontNotFound,
-                        $"the font '{name}' is not installed on this system, so it cannot " +
-                        "be embedded in the PDF");
-                    break;
-                case FontEmbedInfo.FontEmbedClass.Forbidden:
-                    _diagnostics.Warning(font.Span, DiagnosticCodes.FontEmbedForbidden,
-                        $"the font '{name}' does not permit embedding (its fsType is " +
-                        "restricted); it will not be embedded");
-                    break;
-                case FontEmbedInfo.FontEmbedClass.Gray:
-                    _diagnostics.Warning(font.Span, DiagnosticCodes.FontEmbedLicenseUnclear,
-                        $"embedding the font '{name}' may be restricted by its license - " +
-                        "verify the font's license (only clearly-free fonts such as " +
-                        "OFL/Apache are auto-cleared)");
-                    break;
-                case FontEmbedInfo.FontEmbedClass.Free:
-                default:
-                    break; // clearly embeddable — no diagnostic
-            }
+        // ASCII punctuation only: these strings reach legacy-codepage consoles
+        // through the CLI.
+        switch (cls)
+        {
+            case FontEmbedInfo.FontEmbedClass.NotFound:
+                _diagnostics.Warning(font.Span, DiagnosticCodes.FontNotFound,
+                    $"the font '{name}' is not installed on this system, so it cannot " +
+                    "be embedded in the PDF");
+                break;
+            case FontEmbedInfo.FontEmbedClass.Forbidden:
+                _diagnostics.Warning(font.Span, DiagnosticCodes.FontEmbedForbidden,
+                    $"the font '{name}' does not permit embedding (its fsType is " +
+                    "restricted); it will not be embedded");
+                break;
+            case FontEmbedInfo.FontEmbedClass.Gray:
+                _diagnostics.Warning(font.Span, DiagnosticCodes.FontEmbedLicenseUnclear,
+                    $"embedding the font '{name}' may be restricted by its license - " +
+                    "verify the font's license (only clearly-free fonts such as " +
+                    "OFL/Apache are auto-cleared)");
+                break;
+            case FontEmbedInfo.FontEmbedClass.Free:
+            default:
+                break; // clearly embeddable — no diagnostic
         }
     }
 }

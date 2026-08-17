@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Rendering.Pdf;
 using Xunit;
 
@@ -57,7 +58,7 @@ public class EmmentalerFontResolverTests
         // font "X" (no `embedded`) must NOT embed a system font — it maps to the
         // bundled serif so nothing proprietary is embedded without asking.
         var r = new EmmentalerFontResolver();
-        r.SetTextFont(BogusFont, embed: false);
+        r.SetTextFonts(new TextFontPlan.Builder().Everything([BogusFont]).Build());
         Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
     }
 
@@ -65,9 +66,39 @@ public class EmmentalerFontResolverTests
     public void ConfiguredFont_EmbedButNotInstalled_FallsBackToSerif()
     {
         // `embedded` on a font this machine doesn't have: nothing to embed, so it
-        // still resolves to the bundled serif (never "LysEmbed#").
+        // still resolves to the bundled serif (never a LysEmbed face).
         var r = new EmmentalerFontResolver();
-        r.SetTextFont(BogusFont, embed: true);
+        r.SetTextFonts(new TextFontPlan.Builder().Everything([BogusFont]).Embed().Build());
         Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+    }
+
+    [Fact]
+    public void ASansRoleBoundToAnAbsentFace_StandsInWithTheSansTheLayoutMeasured()
+    {
+        // The stand-in follows the ROLE's family, not a fixed serif: chord symbols are
+        // reserved against the bundled Heros, so falling back to Schola would draw a
+        // face 9% off the boxes the spacing built. Before `font { }` there was one
+        // configured face and it always stood in as serif, which was right only because
+        // `font "X"` bound every role at once.
+        var r = new EmmentalerFontResolver();
+        r.SetTextFonts(new TextFontPlan.Builder()
+            .Role(TextRole.ChordName, [BogusFont])
+            .Build());
+        Assert.Equal("Heros#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+    }
+
+    [Fact]
+    public void TwoRolesBoundToTwoAbsentFaces_EachResolvesToItsOwn()
+    {
+        // One document, several configured faces — the shape `font { }` introduced.
+        // A single-face resolver answered the FIRST name for every one of them.
+        const string Other = "NoSuchFontFace-Second";
+        var r = new EmmentalerFontResolver();
+        r.SetTextFonts(new TextFontPlan.Builder()
+            .Role(TextRole.LyricText, [BogusFont])
+            .Role(TextRole.ChordName, [Other])
+            .Build());
+        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+        Assert.Equal("Heros#", r.ResolveTypeface(Other, false, false)?.FaceName);
     }
 }
