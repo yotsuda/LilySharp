@@ -174,6 +174,51 @@ public sealed record RenderSpec(
     public string ResolveOutputStem(string inputStem) =>
         string.IsNullOrEmpty(OutputFile) ? inputStem : $"{inputStem}-{OutputFile}";
 
+    /// <summary>
+    /// The parts this score ENGRAVES, in score order, without repeats — the answer to
+    /// "whose music is this score showing".
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Staff-like items only. A chord row and a lyrics row name a part too, but they
+    /// draw text beside the music rather than the music, so they are not one of the
+    /// registers a piece of unattributed music could be read in.
+    /// <para>
+    /// ⚠️ DISTINCT, and that is the point of the property rather than an optimisation:
+    /// <c>score main { staff bl  tab bl }</c> shows ONE part on two staves, and a caller
+    /// asking "does this score name a single part" has to get yes. The first caller is
+    /// <c>MidiExporter</c>, which uses it to attribute a bare <c>section</c> — music no
+    /// <c>part { }</c> block claims — to the part the score gives it to.
+    /// </para>
+    /// </remarks>
+    public ImmutableArray<string> EngravedPartNames
+    {
+        get
+        {
+            var names = ImmutableArray.CreateBuilder<string>();
+            void Add(string? n)
+            {
+                if (!string.IsNullOrEmpty(n) && !names.Contains(n!)) names.Add(n!);
+            }
+            foreach (var item in Items)
+                switch (item)
+                {
+                    case SingleStaffSpec s: Add(s.Staff.VoiceName); break;
+                    case TabStaffSpec t: Add(t.Staff.VoiceName); break;
+                    case OssiaStaffSpec o: Add(o.Staff.VoiceName); break;
+                    case GrandStaffRenderSpec g:
+                        foreach (var s in g.GrandStaff.Staves) Add(s.VoiceName);
+                        break;
+                    case CondensedStaffSpec c:
+                        foreach (var n in c.PartNames) Add(n);
+                        break;
+                    case CombinedStaffSpec cb:
+                        foreach (var n in cb.PartNames) Add(n);
+                        break;
+                }
+            return names.ToImmutable();
+        }
+    }
+
     /// <summary>Whether this render contains a grand staff.</summary>
     public bool HasGrandStaff => Items.Any(i => i is GrandStaffRenderSpec);
 

@@ -16,6 +16,7 @@
 
 using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Midi;
@@ -245,6 +246,42 @@ public sealed class MidiExporter
     /// </remarks>
     public FormDeclarationSyntax? Form { get; init; }
 
+    /// <summary>
+    /// The <c>score</c> being written, or null to resolve it from the tree (the one whose
+    /// form is being played, else the first).
+    /// </summary>
+    /// <remarks>
+    /// Read for ONE thing: which part a BARE section belongs to (see
+    /// <see cref="_bareSectionOwner"/>). Everything else this export does is still read
+    /// from the music itself, so a file with no <c>score</c> at all plays exactly as before.
+    /// </remarks>
+    public RenderSpec? Score { get; init; }
+
+    /// <summary>
+    /// The part a section that declares no <c>partName { }</c> block belongs to: the one
+    /// part the score engraves, or null when the score names none or several.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WHY THE SCORE IS THE ONE WHO KNOWS. <c>section A { c4 … }</c> written outside any
+    /// part block is music no block claims, and the only statement in the file that says
+    /// whose it is is <c>score main { staff bl }</c>. The page has always read it that way
+    /// (RenderSpecParser → GetPartDefaults); this export did not read <c>score</c> at all,
+    /// so a bare section got no part header, no anchor, no sounding shift and no
+    /// section-boundary reset. MEASURED 2026-08-17 on
+    /// <c>part bl { clef bass } section A { c'4 d e f } section B { g'4 f e d }</c>: the
+    /// page and the MusicXML read C5 D5 E5 F5 / G4 F4 E4 D4, the MIDI played G6 for that
+    /// second <c>g'</c>. Put the same music inside <c>bl { }</c> blocks and the difference
+    /// is gone — which is the pair that says this is attribution and nothing else.
+    /// <para>
+    /// ⚠️ ONLY WHEN THE SCORE NAMES EXACTLY ONE PART. Two parts means the page draws the
+    /// same music twice, in two registers, and one MIDI line cannot be both; that case is
+    /// left as it was and warned about. It has NO instance in the corpus — 23 of the 566
+    /// books write bare sections, 19 of them declare a non-default part, and not one gives
+    /// a bare section to more than one part (measured 2026-08-17, HANDOFF §2F ⒢).
+    /// </para>
+    /// </remarks>
+    private string? _bareSectionOwner;
+
     /// <summary>Initializes a new <see cref="MidiExporter"/> with the given timing resolution.</summary>
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
@@ -292,6 +329,7 @@ public sealed class MidiExporter
         _keySharps = _homeKeySharps;
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
+        _bareSectionOwner = ResolveBareSectionOwner(tree);
         _partPitchLanes.Clear();
         _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
@@ -584,6 +622,87 @@ public sealed class MidiExporter
     private bool IsPrimaryForm(FormDeclarationSyntax form)
         => ReferenceEquals(form, Form ?? ScoreForms.Primary(_root!));
 
+    /// <summary>
+    /// The single part the score being written engraves, or null when it names none or
+    /// several — see <see cref="_bareSectionOwner"/> for what it is for.
+    /// </summary>
+    /// <remarks>
+    /// The score is <see cref="Score"/> when the caller named one; otherwise the one whose
+    /// form is the form being played (so <c>lysc midi --score movement2</c> attributes by
+    /// movement 2's staves), else the first. A file with no <c>score</c> block yields null
+    /// and nothing changes.
+    /// </remarks>
+    private string? ResolveBareSectionOwner(SyntaxTree tree)
+    {
+        var spec = Score;
+        if (spec == null)
+        {
+            var all = RenderSpecParser.FindAll(tree);
+            var played = Form ?? ScoreForms.Primary(_root!);
+            spec = all.FirstOrDefault(s => played != null && ReferenceEquals(s.Form, played))
+                   ?? all.FirstOrDefault();
+        }
+        // ⚠️ `?? default` would be a DEFAULT ImmutableArray, whose Length throws — and a
+        // file with no `score` block at all is the ordinary case that hits it (4 books of
+        // the 566 crashed here before this line read the way it does now).
+        if (spec == null) return null;
+        var parts = spec.EngravedPartNames;
+        return parts.Length == 1 ? parts[0] : null;
+    }
+
+    /// <summary>
+    /// Plays <paramref name="body"/> as the music of <paramref name="partName"/>: its
+    /// octave anchors, its clef, its timbre and its written→sounding shift, restored after.
+    /// </summary>
+    /// <remarks>
+    /// The two callers are the two ways a section can belong to a part without a
+    /// <c>partName { }</c> block around its music: PART-MAJOR (the section is written
+    /// inside <c>part X { … }</c>) and BARE (no block anywhere, the <c>score</c> says
+    /// whose it is — see <see cref="_bareSectionOwner"/>). One house, because they arm the
+    /// same six things and the part-major one had already grown a comment explaining that
+    /// it must arm the sounding shift "too".
+    /// <para>
+    /// ⚠️ The part's pitch/duration lane is restored on entry and saved on exit, so
+    /// concurrently played parts (one <c>PlaySection</c> call each, same structure
+    /// reference) keep independent relative-octave chains WITHIN a section instead of
+    /// inheriting the previous part's last note.
+    /// </para>
+    /// </remarks>
+    private void PlayInPart(string partName, Action body)
+    {
+        var (anchor, absBase) = PartOctaveAnchors(partName);
+        var pitch = _partPitchLanes.TryGetValue(partName, out var saved)
+            ? saved
+            : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
+        _currentNoteName = pitch.NoteName;
+        _currentOctave = pitch.Octave;
+        _defaultDuration = pitch.Dur;
+        _partOctaveAnchor = anchor;
+        _partAbsoluteBase = absBase;
+        _currentClef = Header(partName).Clef;  // a mid-music `clef` is a change FROM this
+        _currentTimbre = PartTimbre(partName);
+        // Music without a PartBlockSyntax around it never passes the arming in ProcessNode,
+        // so the instrument's sounding shift is armed here — otherwise a bass or guitar
+        // sounded at written pitch.
+        _currentTransposeSemitones = PartSoundingShift(partName);
+        body();
+        _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
+        (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+        _currentTimbre = 0;
+        _currentTransposeSemitones = 0;
+        _diatonicShiftSteps = 0;
+    }
+
+    /// <summary>True when the section declares at least one <c>partName { }</c> block —
+    /// i.e. its music says for itself whose it is.</summary>
+    private static bool SectionHasPartBlock(SectionDeclarationSyntax section)
+    {
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is PartBlockSyntax)
+                return true;
+        return false;
+    }
+
     /// <summary>The first <c>key</c> that is a DIRECT child of the section, or null.</summary>
     private static KeySignatureSyntax? FirstDirectKey(SectionDeclarationSyntax section)
     {
@@ -648,34 +767,18 @@ public sealed class MidiExporter
         {
             if (p is PartDeclarationSyntax owner)
             {
-                // Restore this part's own pitch/duration lane so concurrently
-                // played parts (one PlaySection call each, same structure
-                // reference) keep independent relative-octave chains WITHIN this
-                // section instead of inheriting the previous part's last note.
-                string pname = owner.Name.Text;
-                var (anchor, absBase) = PartOctaveAnchors(pname);
-                var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
-                    ? saved
-                    : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
-                _currentNoteName = pitch.NoteName;
-                _currentOctave = pitch.Octave;
-                _defaultDuration = pitch.Dur;
-                _partOctaveAnchor = anchor;
-                _partAbsoluteBase = absBase;
-                _currentClef = Header(pname).Clef; // a mid-music `clef` is a change FROM this
-                _currentTimbre = PartTimbre(pname);
-                // Part-major music plays inside its own part declaration (no
-                // PartBlockSyntax), so arm the instrument's sounding shift here too —
-                // otherwise a bass/guitar section-in-part sounded at written pitch.
-                _currentTransposeSemitones = PartSoundingShift(pname);
-                ProcessChildren(section, track, conductorTrack);
-                _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
-                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
-                _currentTimbre = 0;
-                _currentTransposeSemitones = 0;
-                _diatonicShiftSteps = 0;
+                PlayInPart(owner.Name.Text, () => ProcessChildren(section, track, conductorTrack));
                 return;
             }
+        }
+
+        // A section that declares no part block at all is music the SCORE attributes, not
+        // the music (see _bareSectionOwner). Played inside that part exactly as a
+        // part-major section is played inside the part that contains it.
+        if (_bareSectionOwner is { } bareOwner && !SectionHasPartBlock(section))
+        {
+            PlayInPart(bareOwner, () => ProcessChildren(section, track, conductorTrack));
+            return;
         }
 
         int sectionStart = _currentTick;
