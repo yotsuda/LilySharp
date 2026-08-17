@@ -461,12 +461,7 @@ public sealed class LilyPondExporter
                     + "pitches re-derived — the body is exported UNSHIFTED");
 
             var buf = new LilyPondExporter
-            {
-                _octaveAbsolute = _octaveAbsolute,
-                _anchorOctave = _anchorOctave,
-                _phrases = _phrases,
-                _activePhrases = _activePhrases,
-            };
+            { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
             CarryFrameInto(buf);
             // Both sides open a FRESH frame for the body — LilyPond the nested \relative
             // written below, Lily# its EnterDefaultFrame — at the part's anchor moved by the
@@ -1429,25 +1424,38 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
-    /// Hands a nested body's exporter the state a pitch resolves against — the two octave
-    /// frames and the running key — so a body emitted into a temporary buffer sees what the
-    /// stream around it sees.
+    /// Hands a nested body's exporter the state a body is emitted against — the two octave
+    /// frames, the running key, and the phrase table — so a body written into a temporary
+    /// buffer sees what the stream around it sees.
     /// </summary>
     private void CarryFrameInto(LilyPondExporter buf)
     {
+        // The phrase table and the set of references currently being expanded. ONE home for
+        // this, because two of the six nested-exporter sites used to set them for themselves
+        // and the other four therefore did not have them: a reference inside a tuplet, a
+        // grace, a cue or a repeat resolved against an EMPTY table and exported as nothing,
+        // under a warning that called the phrase "referenced but not declared" while the
+        // file declared it. MEASURED 2026-08-17: samples/canon-in-d.lys, whose header
+        // advertises a ground "written ONCE and cycled 13 times", emitted
+        // `\repeat unfold 13 {  }` — 53 bars of continuo on the page against 1 in the twin,
+        // so every LilyPond comparison taken through that book compared different music. The
+        // hole had been recorded here as unobservable on the strength of "0 of 300 books";
+        // the tree has 566 and the one book that writes the spelling was in the other 266.
+        // ⚠️ _activePhrases is SHARED, not copied: recursion has to be caught through a
+        // container as well (`phrase A { tuplet 3/2 { A } }`), and a copy would let the inner
+        // reference open the phrase again and expand forever.
+        buf._phrases = _phrases;
+        buf._activePhrases = _activePhrases;
         // The ABSOLUTE anchor belongs with the two relative frames below — it is what a pitch
         // resolves against in the other octave mode. All six nested-exporter sites set
         // _octaveAbsolute and _anchorOctave in their initializers and then call this, so it
         // rides here rather than being copied six times.
-        // ⚠️ LILYSHARP-OWN: correct by construction, NOT observed, and the reason is worth
-        // keeping. A degree chord's two uses of this value CANCEL — the anchor is
-        // base + rootOffset and the written mark is octave − base — so no nesting of one can
-        // see it. The use that does not cancel is the nested \fixed a marked phrase reference
-        // emits, and a nested body cannot emit one at all: this method does not carry
-        // _phrases, so a reference inside a tuplet / grace / cue / repeat exports as an EMPTY
-        // body (measured 2026-08-16 — 0 of 300 books write one; filed in HANDOFF §2F).
-        // Poisoning this line therefore leaves the suite green. It stays because the
-        // alternative is a value that goes silently wrong the day that hole is closed.
+        // ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+        // CANCEL — the anchor is base + rootOffset and the written mark is octave − base — so
+        // no nesting of one can see it. The use that does NOT cancel is the nested \fixed a
+        // marked phrase reference emits, which is exactly what a nested body can now do; the
+        // observer is AMarkedReference_MovesTheAnchor_WithANestedFixed reached through a
+        // container, and the value stops being unobserved with the line above.
         buf._absoluteBaseOctave = _absoluteBaseOctave;
         buf._drumMode = _drumMode;
         buf._lysStep = _lysStep;
@@ -2119,12 +2127,7 @@ public sealed class LilyPondExporter
         foreach (var (_, block) in par.NamedVoices)
         {
             var buf = new LilyPondExporter
-            {
-                _octaveAbsolute = _octaveAbsolute,
-                _anchorOctave = _anchorOctave,
-                _phrases = _phrases,
-                _activePhrases = _activePhrases,
-            };
+            { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
             CarryFrameInto(buf);
             buf._lysStep = spanStep;
             buf._lysOctave = spanOctave;

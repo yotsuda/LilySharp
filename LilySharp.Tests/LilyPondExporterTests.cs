@@ -1079,6 +1079,142 @@ public class LilyPondExporterTests
         Assert.Contains(exporter.Warnings, w => w.Contains("refers to itself"));
     }
 
+    // ---- Phrase references inside a nesting container ----------------------
+    //
+    // A nested body is emitted by a SECOND exporter writing into a temporary buffer, and
+    // there are six such sites: a phrase reference, a tuplet, a voice span, a grace, a cue
+    // and a repeat. CarryFrameInto hands that buffer the state a pitch resolves against —
+    // and until 2026-08-17 it did not hand it the phrase TABLE, which only the reference
+    // and the voice span set for themselves. So a reference inside the other four resolved
+    // against an EMPTY table and exported as nothing, under a warning that said the phrase
+    // was "referenced but not declared" when the file declares it three lines up.
+    //
+    // ⚠️ The four are enumerated rather than sampled. Every one of them is a separate call
+    // site, and a representative example is exactly what a fix at one site would satisfy.
+
+    [Theory]
+    [InlineData("tuplet 3/2 { A } r2", "\\tuplet 3/2 { c'4 d' }")]
+    [InlineData("grace { A } c'2.", "\\grace { c'4 d' }")]
+    [InlineData("cue { A } r2", "\\new CueVoice { c'4 d' }")]
+    [InlineData("repeat unfold 2 { A }", "\\repeat unfold 2 { c'4 d' }")]
+    // A MARKED reference through a container: the nested \fixed it writes is measured off
+    // _absoluteBaseOctave, which CarryFrameInto hands down and which nothing observed while
+    // a nested body could not emit one at all.
+    [InlineData("tuplet 3/2 { A' } r2", "\\tuplet 3/2 { \\fixed c'' { c'4 d' } }")]
+    public void APhraseReferenceInsideANestingContainer_ExpandsLikeABareOne(
+        string body, string expected)
+    {
+        var exporter = new LilyPondExporter();
+        string ly = exporter.Export(SyntaxTree.Parse(
+            PhraseScore("phrase A { c'4 d' }", body)));
+
+        Assert.Contains(expected, ly);
+        Assert.DoesNotContain(exporter.Warnings, w => w.Contains("not declared"));
+    }
+
+    /// <summary>
+    /// The other half of that claim: the warning has to keep firing when it is TRUE. A
+    /// nested reference to a name nothing declares is still nothing to export, and saying
+    /// so is the difference between a fixed lie and a deleted diagnostic.
+    /// </summary>
+    [Fact]
+    public void AnUndeclaredNameInsideAContainer_IsStillReported()
+    {
+        var exporter = new LilyPondExporter();
+        exporter.Export(SyntaxTree.Parse(PhraseScore("phrase A { c'4 }", "tuplet 3/2 { Z } r2")));
+
+        Assert.Contains(exporter.Warnings,
+            w => w.Contains("'Z'") && w.Contains("referenced but not declared"));
+    }
+
+    /// <summary>
+    /// Recursion has to be caught THROUGH a container too, which is why the nested exporter
+    /// shares the active-reference set rather than copying it: a copy would let the inner
+    /// reference open the phrase a second time and expand forever.
+    /// </summary>
+    [Fact]
+    public void APhraseThatReferencesItselfThroughAContainer_StopsAndSaysSo()
+    {
+        var exporter = new LilyPondExporter();
+        string ly = exporter.Export(SyntaxTree.Parse(
+            PhraseScore("phrase A { c'4 tuplet 3/2 { A } }", "A")));
+
+        Assert.Contains("c'4", ly);
+        Assert.Contains(exporter.Warnings, w => w.Contains("refers to itself"));
+    }
+
+    /// <summary>
+    /// The invariant behind all of the above, asserted over every tracked book rather than
+    /// over a spelling: this warning must never name a phrase the file declares. Stated that
+    /// way it does not depend on knowing which containers exist, so a seventh nesting site
+    /// added tomorrow is covered the day it is written.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The reach is the claim (RULES §5.0). The hole this catches was measured as "0 of
+    /// 300 books" on 2026-08-16 and filed as unobservable; the tree has 566 tracked books,
+    /// and the one that writes the spelling — <c>samples/canon-in-d.lys</c>, whose own
+    /// header advertises "the 4-bar ground is written ONCE and cycled 13 times" — sat in the
+    /// 266 nobody had swept. Its twin read <c>\repeat unfold 13 {  }</c>: the page engraves
+    /// 53 bars of continuo and the twin engraves 1, so every LilyPond comparison ever taken
+    /// through that book compared a different piece of music.
+    /// </remarks>
+    [Fact]
+    public void TheNotDeclaredWarning_NeverNamesAPhraseTheBookDeclares()
+    {
+        var root = CollectResumeTests.FindRepoRoot();
+        var liars = new List<string>();
+        int books = 0, references = 0;
+
+        foreach (var dir in new[]
+        {
+            System.IO.Path.Combine(root, "audit", "lp-regression", "lys"),
+            System.IO.Path.Combine(root, "audit", "lpreg"),
+            System.IO.Path.Combine(root, "audit", "lilypond-ref"),
+            System.IO.Path.Combine(root, "LilySharp.Tests", "Fixtures"),
+            System.IO.Path.Combine(root, "samples"),
+        })
+        {
+            if (!System.IO.Directory.Exists(dir))
+                continue;
+            foreach (var file in System.IO.Directory.EnumerateFiles(
+                dir, "*.lys", System.IO.SearchOption.AllDirectories))
+            {
+                books++;
+                var tree = SyntaxTree.Parse(System.IO.File.ReadAllText(file));
+                // The same two declaration shapes CollectPhrases indexes.
+                var declared = new HashSet<string>(System.StringComparer.Ordinal);
+                foreach (var node in tree.GetRoot().DescendantNodes<SyntaxNode>())
+                {
+                    if (node is PhraseDeclarationSyntax p) declared.Add(p.Name.Text);
+                    else if (node is VariableDeclarationSyntax v) declared.Add(v.Name.Text);
+                }
+                if (declared.Count == 0)
+                    continue;
+                references++;
+
+                var exporter = new LilyPondExporter();
+                exporter.Export(tree);
+                foreach (var name in declared)
+                {
+                    if (exporter.Warnings.Any(w =>
+                        w.Contains($"phrase '{name}' is referenced but not declared")))
+                        liars.Add($"{System.IO.Path.GetFileName(file)}: '{name}'");
+                }
+            }
+        }
+
+        // Floors, so a moved corpus path reads as a failure rather than as a pass. The
+        // second one is the positive control: a run that exported nothing with a phrase in
+        // it could not have observed the warning at all. ⚠️ Both numbers are MEASURED and
+        // the counting is stated, because a floor invented from memory is the same bug in
+        // the test that this test exists to catch: 566 is `git ls-files "*.lys"` on
+        // 2026-08-17, and 58 is how many of those declare a `phrase` or a variable.
+        Assert.True(books >= 566, $"only {books} books found — the corpus paths moved");
+        Assert.True(references >= 58, $"only {references} books declare a phrase");
+        Assert.True(liars.Count == 0,
+            "the twin called a DECLARED phrase undeclared: " + string.Join(", ", liars));
+    }
+
     // ---- Scale-degree chords ------------------------------------------------
     //
     // LilyPond has no spelling for a degree at all, so a degree member cannot be copied
