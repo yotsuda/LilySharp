@@ -155,6 +155,29 @@ internal static class TextOutlineSkylines
                 PlaceResolved(VerticalDirection.Down, down, x, y));
     }
 
+    /// <summary>
+    /// One DIRECTION of <see cref="PlaceMusicGlyph"/>'s pair — null when the bundled music
+    /// font cannot be located (the caller keeps the glyph's designed box), which is the same
+    /// signal the pair's empties carry.
+    /// </summary>
+    /// <remarks>
+    /// The two directions are resolved independently from the same cached entry and neither
+    /// reads the other, so taking one is the same skyline as taking both and dropping one —
+    /// it just does not allocate the drop. Every consumer of the pair uses one side.
+    /// </remarks>
+    public static VerticalSkyline? PlaceMusicGlyphSide(
+        char glyph, double fontSize, double x, double y, VerticalDirection direction,
+        int design = 0, double horizonPadding = 0.0, double extraPad = 0.0)
+    {
+        var (up, down) = ResolvedMusicGlyph(glyph, fontSize, design, horizonPadding, extraPad);
+        var side = direction == VerticalDirection.Up ? up : down;
+        // The pair's caller treats "both empty" as "no font"; one empty side on its own is a
+        // real answer only when the other is too, so fall back on exactly that condition.
+        if (up.Length == 0 && down.Length == 0)
+            return null;
+        return PlaceResolved(direction, side, x, y);
+    }
+
     private static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedMusicGlyph(
         char glyph, double fontSize, int design, double horizonPadding = 0.0,
         double extraPad = 0.0)

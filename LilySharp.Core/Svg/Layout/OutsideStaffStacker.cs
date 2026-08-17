@@ -303,7 +303,7 @@ internal static class OutsideStaffStacker
                 // object): widening the old ±0.6 box to ±3.0 moved neither DSK nor DSM. It is
                 // load-bearing where no staff profile is supplied, and it must not be a
                 // second spelling there either.
-                var (_, seedDown) = ArticulationEngraver.ScriptSkylines(a, aYup);
+                var seedDown = ArticulationEngraver.ScriptSkyline(a, aYup, VerticalDirection.Down);
                 Track(sysIdx, a.StaffIndex).MergeSupport(down: seedDown);
             }
         }
@@ -1262,7 +1262,7 @@ internal static class OutsideStaffStacker
                 // there either.
                 // LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines —
                 //   a priority-less script's own profile is what goes into it.
-                var (seedUp, _) = ArticulationEngraver.ScriptSkylines(a, relY);
+                var seedUp = ArticulationEngraver.ScriptSkyline(a, relY, VerticalDirection.Up);
                 trackers(sysIdx, a.StaffIndex).MergeSupport(up: seedUp);
             }
         }

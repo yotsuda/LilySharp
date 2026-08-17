@@ -512,11 +512,11 @@ internal static class ArticulationEngraver
                 var synth = FingeringScriptLayout(fg);
                 if (supportScripts.TryGetValue(key, out var sup) && sup.Count > 0)
                 {
-                    var (_, myDown) = ScriptSkylines(synth, fg.YUp);
+                    var myDown = ScriptSkyline(synth, fg.YUp, VerticalDirection.Down);
                     double closest = double.NegativeInfinity;
                     foreach (var s in sup)
                     {
-                        var (sUp, _) = ScriptSkylines(s, s.YUp);
+                        var sUp = ScriptSkyline(s, s.YUp, VerticalDirection.Up);
                         closest = Math.Max(closest, myDown.Distance(sUp, 0.0));
                     }
                     double move = Math.Max(0.0, closest + FingeringPadding);
@@ -993,8 +993,9 @@ internal static class ArticulationEngraver
                 && tiesAtBound.TryGetValue((effArt.StaffIndex, effArt.VoiceIndex,
                     effArt.MeasureIndex, effArt.ItemIndex), out var boundTies))
             {
-                var tiePair = ScriptSkylines(layout, yUp, extraPad: ScriptHorizonPadding);
-                var tiePadded = effArt.IsAbove ? tiePair.Down : tiePair.Up;
+                var tiePadded = ScriptSkyline(
+                    layout, yUp, effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up,
+                    extraPad: ScriptHorizonPadding);
                 double closestTie = double.NegativeInfinity;
                 foreach (var t in boundTies)
                 {
@@ -1054,19 +1055,19 @@ internal static class ArticulationEngraver
             }
             else if (supportScripts.TryGetValue(stackKey, out var supports))
             {
-                var (myUp, myDown) = ScriptSkylines(layout, yUp);
                 // Padding ONE side of the distance is LP's own equivalence (its
                 // distance(other, hpad) comment: padding other = doubling hpad), and the
                 // side it pads is THIS one — which does not depend on the support, so the
                 // padded copy is built ONCE here rather than inside every distance call.
-                var foldedPair = ScriptSkylines(layout, yUp, extraPad: ScriptHorizonPadding);
-                var myPadded = effArt.IsAbove ? foldedPair.Down : foldedPair.Up;
+                var myPadded = ScriptSkyline(
+                    layout, yUp, effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up,
+                    extraPad: ScriptHorizonPadding);
                 double closest = double.NegativeInfinity;
                 foreach (var s in supports)
                 {
-                    var (sUp, sDown) = ScriptSkylines(s, s.YUp);
-                    closest = Math.Max(closest,
-                        myPadded.Distance(effArt.IsAbove ? sUp : sDown));
+                    var theirs = ScriptSkyline(s, s.YUp,
+                        effArt.IsAbove ? VerticalDirection.Up : VerticalDirection.Down);
+                    closest = Math.Max(closest, myPadded.Distance(theirs));
                 }
                 double move = Math.Max(0.0, closest + PaddingFor(effArt.Type));
                 if (move > 0)
@@ -1610,6 +1611,36 @@ internal static class ArticulationEngraver
     /// (glyph, size, design, pad, extraPad) for the whole session.
     /// </para>
     /// </param>
+    /// <summary>
+    /// ONE side of <see cref="ScriptSkylines"/>'s pair — the side the caller is about to
+    /// measure with.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ MEASURED, and it is why this exists: every consumer of the pair uses exactly one of
+    /// its two skylines (a script is measured against what is on its own side), so half of
+    /// every placement was allocated and dropped. Placing one side is the same skyline as
+    /// placing both and taking one — the two directions are resolved independently, from
+    /// separate cached profiles, and neither reads the other.
+    /// </remarks>
+    internal static VerticalSkyline ScriptSkyline(
+        in ArticulationLayout a, double anchorY, VerticalDirection direction,
+        double magnification = 1.0, double extraPad = 0.0)
+    {
+        bool up = direction == VerticalDirection.Up;
+        if (a.Glyph.Length == 1)
+        {
+            var placed = TextOutlineSkylines.PlaceMusicGlyphSide(
+                a.Glyph[0], WalkSize(a, magnification), a.X, anchorY, direction,
+                EmmentalerDesignSize.ForFontSizeStep(a.FontSizeStep).Rounded,
+                a.SkylineHorizontalPadding, extraPad);
+            if (placed != null)
+                return placed;
+        }
+        var (bUp, bDown) = FallbackBoxSkylines(a, anchorY, magnification);
+        var box = up ? bUp : bDown;
+        return extraPad > 0.0 ? box.Padded(extraPad) : box;
+    }
+
     internal static (VerticalSkyline Up, VerticalSkyline Down) ScriptSkylines(
         in ArticulationLayout a, double anchorY, double magnification = 1.0,
         double extraPad = 0.0)
