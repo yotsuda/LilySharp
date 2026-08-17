@@ -19,9 +19,26 @@
     <PackageProjectUrl>https://github.com/yotsuda/LilySharp</PackageProjectUrl>
   </PropertyGroup>
 
-  <!-- Generate XML documentation only for Release builds (NuGet pack) -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+  <!-- XML documentation is generated in EVERY configuration, not just the Release one
+       NuGet pack goes through. It used to be Release-only, and the consequence was that
+       the compiler's own report on doc integrity — a cref whose target a rename or a
+       namespace change had taken away, a doc comment left attached to the wrong method
+       by a later insertion, an unclosed <para> that drops the whole block from the XML —
+       was only produced by a configuration nobody built. 283 such warnings accumulated
+       across 62 voyages before anyone read them (HANDOFF §2G, opened session 135,
+       cleared session 199).
+
+       CS1573 (a <param> written for some parameters and not others) and CS1591 (a public
+       member with no doc at all) are suppressed. They are SHORTFALL, not breakage: the
+       doc that exists is correct and complete-as-far-as-it-goes, and there were 178 + 6
+       of them on 2026-08-18. Everything else is left ON deliberately, so that the
+       session-start build is a ratchet: a newly broken cref now fails the SAME build
+       that reports "Core: 0 warnings", instead of waiting for someone to build Release.
+       Re-measure before removing a code from this list; do not add one to quiet a
+       defect. -->
+  <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1573;CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
