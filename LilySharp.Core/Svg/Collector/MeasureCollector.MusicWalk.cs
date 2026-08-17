@@ -576,7 +576,10 @@ public sealed partial class MeasureCollector
                     // The slur flags DO come along — a rest is a legal slur bound
                     // (the RestSyntax arm below says why).
                     // LILYPOND-REF: lily/rest-engraver.cc:62-80 process_music.
-                    if (HasNamedArticulation(note, "rest"))
+                    // The spelling is read from one house (Semantics.PitchedRest), because
+                    // the MIDI and MusicXML exporters walk this same syntax and had no
+                    // reader for it at all — they emitted a sounding note here.
+                    if (Semantics.PitchedRest.Is(note))
                     {
                         int prMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                         int prItemIndex = builder.CurrentItemCount;

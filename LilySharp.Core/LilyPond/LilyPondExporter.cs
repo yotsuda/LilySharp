@@ -1872,8 +1872,14 @@ public sealed class LilyPondExporter
     private static bool IsDeadNote(ArticulationSyntax a)
         => a.NameToken.Text.Equals("dead", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsPitchedRest(ArticulationSyntax a)
-        => a.NameToken.Text.Equals("rest", StringComparison.OrdinalIgnoreCase);
+    // One house for the spelling (Semantics.PitchedRest), because there are four readers of
+    // it and two of them did not have one: MusicXML exported a sounding note and MIDI played
+    // it. This was the only output that got it right.
+    // ⚠️ Moving here TIGHTENS this reader — it used to match any articulation spelled "rest"
+    // and now requires ArticulationType.None, which is what the collector has always
+    // required. That is a move toward agreement rather than a change of behaviour, and it is
+    // measured: the twin of all 566 tracked books is byte-identical across it.
+    private static bool IsPitchedRest(ArticulationSyntax a) => Semantics.PitchedRest.IsMarker(a);
 
     /// <summary>
     /// <c>@stemUp</c> / <c>@stemDown</c> as a nullable direction, or null for anything else.

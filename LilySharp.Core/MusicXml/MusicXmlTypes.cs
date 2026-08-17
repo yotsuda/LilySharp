@@ -381,6 +381,15 @@ internal sealed class MusicXmlNote
     /// <summary>Drum note: serialize &lt;unpitched&gt; with Step/Octave as the
     /// DISPLAY position instead of &lt;pitch&gt;.</summary>
     public bool IsUnpitched { get; set; }
+    /// <summary>A rest whose vertical place comes from a written pitch (<c>a4@rest</c>):
+    /// serialize Step/Octave as display-step/display-octave INSIDE the &lt;rest&gt;.</summary>
+    /// <remarks>
+    /// The same shape as <see cref="IsUnpitched"/> one element over, and MusicXML's own way
+    /// of saying what LilyPond says with <c>a4\rest</c> — the pitch places the glyph and
+    /// sounds nothing. Without it the exporter wrote a &lt;pitch&gt;: a note where the page
+    /// prints a rest.
+    /// </remarks>
+    public bool RestHasDisplayPitch { get; set; }
     /// <summary>A &lt;backup&gt; pseudo-entry (multi-voice): rewinds the measure
     /// cursor by <see cref="Duration"/> before the next voice's notes.</summary>
     public bool IsBackup { get; set; }
@@ -452,7 +461,11 @@ internal sealed class MusicXmlNote
 
         if (IsRest)
         {
-            note.Add(new XElement("rest"));
+            note.Add(RestHasDisplayPitch
+                ? new XElement("rest",
+                    new XElement("display-step", Step),
+                    new XElement("display-octave", Octave))
+                : new XElement("rest"));
         }
         else if (IsUnpitched)
         {

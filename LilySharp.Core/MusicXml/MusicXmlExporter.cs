@@ -1395,6 +1395,19 @@ public sealed class MusicXmlExporter
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
 
+        // `a4@rest` is a REST placed by a written pitch. It leaves here rather than earlier
+        // because the four lines above are what it must still do: resolve the relative
+        // octave (moving the frame on), apply the part's transpose — the page moves the rest
+        // with it, MEASURED — and carry the duration. What follows is note work, and all of
+        // it is wrong for a rest: until 2026-08-17 this method ran the lot and emitted
+        // <pitch>, so `a'4@rest` was a SOUNDING NOTE in the MusicXML of a page that draws a
+        // rest.
+        if (Semantics.PitchedRest.Is(note))
+        {
+            EmitPitchedRest(step, alter, targetOctave, durationTicks, type, dots, duration);
+            return;
+        }
+
         // Emit pending dynamic as direction before the note
         EmitPendingDynamic();
 
@@ -1934,6 +1947,38 @@ public sealed class MusicXmlExporter
         _lastEmittedNotes.Clear();
         _lastEmittedNotes.AddRange(_chordMembers);
         _chordMembers.Clear();
+        MaybeClosePickup(duration);
+    }
+
+    /// <summary>
+    /// The rest half of <see cref="ProcessNote"/>, for <c>a4@rest</c>: the resolved pitch
+    /// becomes display-step / display-octave inside the <c>&lt;rest&gt;</c>.
+    /// </summary>
+    /// <remarks>
+    /// The state it clears is <see cref="ProcessRest"/>'s, for <see cref="ProcessRest"/>'s
+    /// reason — a rest breaks a hammer-on/pull-off pair and cannot be tied, so a following
+    /// <c>~</c> must not tie the note before it.
+    /// </remarks>
+    private void EmitPitchedRest(string step, int alter, int octave,
+        int durationTicks, string? type, int dots, Fraction duration)
+    {
+        if (_currentMeasure == null) return;
+        _lastPitchedNote = null;
+        _lastEmittedNotes.Clear();
+
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
+        _currentMeasure.Notes.Add(new MusicXmlNote
+        {
+            IsRest = true,
+            RestHasDisplayPitch = true,
+            Step = step,
+            Octave = octave,
+            Duration = durationTicks,
+            Type = type,
+            Dots = dots,
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal,
+        });
         MaybeClosePickup(duration);
     }
 

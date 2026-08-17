@@ -1229,6 +1229,20 @@ public sealed class MidiExporter
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this note
 
+        // `a4@rest` is a REST that takes its staff position from a written pitch, so it is
+        // SILENT — MeasureCollector.CreatePitchedRestItem's remark says "must not sound in
+        // MIDI", and until 2026-08-17 it did: the probe `a'4@rest c'4 r4 g'4@rest` played 3
+        // note-ons against the control's 1. It leaves here rather than earlier because the
+        // two lines above are exactly what it must still do — move the relative-octave frame
+        // on (CalculateRelativeMidiPitch) and carry the duration to the next item — which is
+        // the whole of what the note it replaces contributes.
+        if (Semantics.PitchedRest.Is(note))
+        {
+            _tiePending = false; // like any rest: a tie cannot span it
+            _currentTick += durationTicks;
+            return;
+        }
+
         // Process articulations and dynamics
         int velocity = _velocity;
         int durationPercent = 100;
