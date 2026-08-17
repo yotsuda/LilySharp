@@ -1057,14 +1057,29 @@ internal sealed class BeamDetector
             foreach (var b in measureBrackets)
             {
                 // LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
-                // items is another stream's — the stem-direction probe (MeasureCollector
-                // .ResolveBeamStemDirections) hands over the whole collector's bracket
-                // list, a situation LilyPond never sees. The index-set representation this
-                // replaced was naturally tolerant of foreign keys — out-of-range ones just
-                // never matched — so keep that tolerance rather than crash on them.
-                // (An IN-range foreign bracket can still collide by index; that hole is
-                // inherited from the sets, unobserved, and closes only when the probe
-                // filters by staff/voice.)
+                // items is another stream's, a situation LilyPond never sees. The index-set
+                // representation this replaced was naturally tolerant of foreign keys —
+                // out-of-range ones just never matched — so keep that tolerance rather than
+                // crash on them.
+                //
+                // ⚠️ THE CALLERS NOW SCOPE, AND THIS GUARD IS STILL LIVE. Session 193 gave
+                // every caller that hands over a single stream the same scoping rule
+                // (TupletBracketItem.AddressedTo, by staff AND voice), which closed the case
+                // this remark used to describe — the stem-direction probe handing over the
+                // whole collector's list. MEASURED over the 566-book tree WITH that scoping
+                // in place: 2882 brackets kept, 2 dropped, both in audit/lpreg/pctend-probe.lys.
+                //
+                // ⚠️⚠️ AND THOSE 2 NAME THE AXIS (StaffIndex, VoiceIndex) CANNOT CUT. A
+                // condensedStaff yields ONE BINDING PER PART sharing ONE staff index
+                // (RenderSpec.GetVoiceBindings' SharesStaffWithPrevious, consumed by
+                // MeasureCollector's `_currentStaffIndex = sharesStaff ? … - 1 : …++`) and
+                // collects each part with VoiceIndex 0 — so two condensed parts are
+                // INDISTINGUISHABLE to the scoping rule, and each is probed with the other's
+                // brackets. In this book they are caught only because the second part's bar
+                // is a lone R1, one item long; a condensed part with longer bars would take
+                // the other's bracket IN RANGE and silently, which is the same defect one
+                // axis further out. Closing it needs a per-stream discriminator the model
+                // does not have, so it is written up in HANDOFF §2 rather than patched here.
                 if (b.StartNoteIndex < 0 || b.EndNoteIndex < b.StartNoteIndex
                     || b.EndNoteIndex >= measure.Items.Length)
                     continue;
