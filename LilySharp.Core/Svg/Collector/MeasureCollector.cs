@@ -2173,6 +2173,22 @@ public sealed partial class MeasureCollector
             voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura), _tupletBrackets.ToImmutableArray(),
             memo: BeamMemo);
 
+        // ⚠️ ONE REBUILD PER MEASURE, NOT ONE PER STAMP. Every bake below used to write
+        // through measure.Items.SetItem(...) and new Measure(...), so a measure with eight
+        // beamed notes was rebuilt eight times — a fresh item array and a fresh Measure per
+        // stamp — and then again for the pure-tip pass. MEASURED (session 191, keystroke
+        // allocation): this method was 5.8 MB of perf-plain1k's 8.5 MB collect, and plain1k
+        // is beamed eighths where perf-fingstack1k (unbeamed quarters) pays 0.
+        // The stamps now land in a per-measure working array and each touched measure is
+        // rebuilt once, after every group has had its say.
+        // ⚠️ READS MUST SEE THE STAMPS ALREADY MADE — the pure-tip pass reads the directions
+        // the first pass wrote — which is why reads go through ItemAt rather than through
+        // measures, and why the commit happens after the loop and not inside it.
+        var work = new MusicItem[]?[measures.Count];
+        MusicItem[] Work(int mi) => work[mi] ??= measures[mi].Items.ToArray();
+        int ItemCount(int mi) => work[mi]?.Length ?? measures[mi].Items.Length;
+        MusicItem ItemAt(int mi, int i) => work[mi] is { } w ? w[i] : measures[mi].Items[i];
+
         foreach (var group in groups)
         {
             // One identity per BeamGroup, stamped on every member — the stand-in for the
@@ -2184,11 +2200,10 @@ public sealed partial class MeasureCollector
                 int mi = member.MeasureIndex >= 0 ? member.MeasureIndex : group.MeasureIndex;
                 if (mi < 0 || mi >= measures.Count)
                     continue;
-                var measure = measures[mi];
-                if (member.ItemIndex < 0 || member.ItemIndex >= measure.Items.Length)
+                if (member.ItemIndex < 0 || member.ItemIndex >= ItemCount(mi))
                     continue;
 
-                MusicItem? updated = measure.Items[member.ItemIndex] switch
+                MusicItem? updated = ItemAt(mi, member.ItemIndex) switch
                 {
                     NoteItem n => n with { StemUpOverride = member.MemberStemUp, BeamId = beamId },
                     ChordItem c => c with { StemUpOverride = member.MemberStemUp, BeamId = beamId },
@@ -2197,17 +2212,7 @@ public sealed partial class MeasureCollector
                 if (updated == null)
                     continue;
 
-                measures[mi] = new Measure(
-                    measure.Items.SetItem(member.ItemIndex, updated),
-                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
-                    measure.SourceStart, measure.SourceEnd,
-                    hasBreakAfter: measure.HasBreakAfter,
-                    lineBreakPermission: measure.LineBreakPermission,
-                    breakPenalty: measure.BreakPenalty,
-                    pageBreakPermission: measure.PageBreakPermission,
-                    pageTurnPermission: measure.PageTurnPermission,
-                    sectionLabelPosition: measure.SectionLabelPosition,
-                    isPickup: measure.IsPickup);
+                Work(mi)[member.ItemIndex] = updated;
             }
 
             // Bake the PURE beamed stem tip on every member: the extreme of the group's
@@ -2229,11 +2234,11 @@ public sealed partial class MeasureCollector
             {
                 int mi = member.MeasureIndex >= 0 ? member.MeasureIndex : group.MeasureIndex;
                 if (mi < 0 || mi >= measures.Count
-                    || member.ItemIndex < 0 || member.ItemIndex >= measures[mi].Items.Length)
+                    || member.ItemIndex < 0 || member.ItemIndex >= ItemCount(mi))
                     continue;
                 // The items were just stamped with their resolved directions, and their
                 // PureBeamedStemTip is still unset, so this reads the UNBEAMED band.
-                if (Layout.SpacingRules.StemSpacingInfo(measures[mi].Items[member.ItemIndex])
+                if (Layout.SpacingRules.StemSpacingInfo(ItemAt(mi, member.ItemIndex))
                     is not { } info)
                     continue;
                 if (info.StemUp)
@@ -2247,8 +2252,7 @@ public sealed partial class MeasureCollector
                 double tip = stemUp ? upTip : downTip;
                 if (double.IsInfinity(tip))
                     continue;
-                var measure = measures[mi];
-                MusicItem? withTip = measure.Items[itemIndex] switch
+                MusicItem? withTip = ItemAt(mi, itemIndex) switch
                 {
                     NoteItem n => n with { PureBeamedStemTip = tip },
                     ChordItem c => c with { PureBeamedStemTip = tip },
@@ -2256,19 +2260,8 @@ public sealed partial class MeasureCollector
                 };
                 if (withTip == null)
                     continue;
-                measures[mi] = new Measure(
-                    measure.Items.SetItem(itemIndex, withTip),
-                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
-                    measure.SourceStart, measure.SourceEnd,
-                    hasBreakAfter: measure.HasBreakAfter,
-                    lineBreakPermission: measure.LineBreakPermission,
-                    breakPenalty: measure.BreakPenalty,
-                    pageBreakPermission: measure.PageBreakPermission,
-                    pageTurnPermission: measure.PageTurnPermission,
-                    sectionLabelPosition: measure.SectionLabelPosition,
-                    isPickup: measure.IsPickup);
+                Work(mi)[itemIndex] = withTip;
             }
-
             // Bake the PURE beam-push estimate into every rest this manual beam runs
             // over, so horizontal spacing sees the rest roughly where the beam will
             // put it — spacing runs before any beam is quanted; the print later uses
@@ -2280,9 +2273,8 @@ public sealed partial class MeasureCollector
                 int mi = restStem.MeasureIndex >= 0 ? restStem.MeasureIndex : group.MeasureIndex;
                 if (mi < 0 || mi >= measures.Count)
                     continue;
-                var measure = measures[mi];
-                if (restStem.ItemIndex < 0 || restStem.ItemIndex >= measure.Items.Length
-                    || measure.Items[restStem.ItemIndex] is not RestItem restItem)
+                if (restStem.ItemIndex < 0 || restStem.ItemIndex >= ItemCount(mi)
+                    || ItemAt(mi, restStem.ItemIndex) is not RestItem restItem)
                     continue;
 
                 // beam.cc:1443-1469 left/right are the nearest stems WITH HEADS — other
@@ -2311,19 +2303,28 @@ public sealed partial class MeasureCollector
                 if (shiftSs == 0.0)
                     continue;
 
-                measures[mi] = new Measure(
-                    measure.Items.SetItem(restStem.ItemIndex,
-                        restItem with { PureBeamShift = shiftSs * 2.0 }),
-                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
-                    measure.SourceStart, measure.SourceEnd,
-                    hasBreakAfter: measure.HasBreakAfter,
-                    lineBreakPermission: measure.LineBreakPermission,
-                    breakPenalty: measure.BreakPenalty,
-                    pageBreakPermission: measure.PageBreakPermission,
-                    pageTurnPermission: measure.PageTurnPermission,
-                    sectionLabelPosition: measure.SectionLabelPosition,
-                    isPickup: measure.IsPickup);
+                Work(mi)[restStem.ItemIndex] = restItem with { PureBeamShift = shiftSs * 2.0 };
             }
+        }
+
+        // Commit: every measure a stamp landed in is rebuilt exactly once, with the whole
+        // set of stamps it accumulated. Untouched measures keep their original instance.
+        for (int mi = 0; mi < work.Length; mi++)
+        {
+            if (work[mi] is not { } items)
+                continue;
+            var m = measures[mi];
+            measures[mi] = new Measure(
+                ImmutableArray.Create(items),
+                m.StartBarline, m.EndBarline, m.SectionLabel,
+                m.SourceStart, m.SourceEnd,
+                hasBreakAfter: m.HasBreakAfter,
+                lineBreakPermission: m.LineBreakPermission,
+                breakPenalty: m.BreakPenalty,
+                pageBreakPermission: m.PageBreakPermission,
+                pageTurnPermission: m.PageTurnPermission,
+                sectionLabelPosition: m.SectionLabelPosition,
+                isPickup: m.IsPickup);
         }
     }
 
