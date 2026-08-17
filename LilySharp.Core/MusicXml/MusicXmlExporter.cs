@@ -181,6 +181,16 @@ public sealed class MusicXmlExporter
         }
     }
 
+    /// <summary>
+    /// The <c>form</c> to write, or null for the default (<see cref="ScoreForms.Primary"/>).
+    /// </summary>
+    /// <remarks>
+    /// One document carries one arrangement, the way one <c>.mid</c> does, so a file with
+    /// several movements takes one export per movement (<c>lysc xml --score</c> /
+    /// <c>--all</c>).
+    /// </remarks>
+    public FormDeclarationSyntax? Form { get; init; }
+
     /// <summary>Exports the tree to a MusicXML file at <paramref name="path"/> and
     /// returns a summary (part / measure counts). The intermediate document model is
     /// an implementation detail.</summary>
@@ -279,9 +289,8 @@ public sealed class MusicXmlExporter
     private void ProcessSections(SyntaxNode root)
     {
         var sectionDecls = root.DescendantNodes().OfType<SectionDeclarationSyntax>().ToList();
-        // Export the PRIMARY form (`main`, else the first declared).
-        var forms = root.DescendantNodes().OfType<FormDeclarationSyntax>().ToList();
-        var structure = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
+        // The form the caller asked for, else the primary one (`main`, else the first).
+        var structure = Form ?? LilySharp.Core.Semantics.ScoreForms.Primary(root);
 
         if (structure == null)
         {

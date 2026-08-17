@@ -234,6 +234,17 @@ public sealed class MidiExporter
     private int _homeKeySharps;
     private int _keySharps;
 
+    /// <summary>
+    /// The <c>form</c> to play, or null for the default (<see cref="ScoreForms.Primary"/>).
+    /// </summary>
+    /// <remarks>
+    /// One <c>.mid</c> carries one arrangement, so a file with several movements needs one
+    /// export per movement — which is what <c>lysc midi --score</c> / <c>--all</c> ask for.
+    /// LilyPond answers the same way: two <c>\score</c> blocks with <c>\midi { }</c> write
+    /// two files, <c>ts.mid</c> and <c>ts-1.mid</c> (2.26.0, measured).
+    /// </remarks>
+    public FormDeclarationSyntax? Form { get; init; }
+
     /// <summary>Initializes a new <see cref="MidiExporter"/> with the given timing resolution.</summary>
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
@@ -568,14 +579,10 @@ public sealed class MidiExporter
         }
     }
 
-    /// <summary>True when <paramref name="form"/> is the PRIMARY form to play: the
-    /// one named <c>main</c> (case-sensitive), or the first declared if none is.</summary>
+    /// <summary>True when <paramref name="form"/> is the one to play: <see cref="Form"/>
+    /// when the caller named one, else the primary (<see cref="ScoreForms.Primary"/>).</summary>
     private bool IsPrimaryForm(FormDeclarationSyntax form)
-    {
-        var forms = _root!.DescendantNodes().OfType<FormDeclarationSyntax>().ToList();
-        var primary = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
-        return ReferenceEquals(form, primary);
-    }
+        => ReferenceEquals(form, Form ?? ScoreForms.Primary(_root!));
 
     /// <summary>The first <c>key</c> that is a DIRECT child of the section, or null.</summary>
     private static KeySignatureSyntax? FirstDirectKey(SectionDeclarationSyntax section)

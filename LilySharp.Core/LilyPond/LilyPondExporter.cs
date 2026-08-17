@@ -222,6 +222,18 @@ public sealed class LilyPondExporter
     /// because they are deprecated or out of scope). Not fatal.</summary>
     public IReadOnlyList<string> Warnings => _warnings;
 
+    /// <summary>
+    /// The <c>form</c> this twin renders, or null for the default
+    /// (<see cref="LilySharp.Core.Semantics.ScoreForms.Primary"/>).
+    /// </summary>
+    /// <remarks>
+    /// The twin writes one <c>\score</c>, so a file with several movements takes one export
+    /// per movement (<c>lysc ly --score</c> / <c>--all</c>). LilyPond can hold several
+    /// <c>\score</c> blocks in one file; Lily# writes one file per score instead, which is
+    /// what <c>lysc svg --all</c> already does and keeps the twin comparable score for score.
+    /// </remarks>
+    public FormDeclarationSyntax? Form { get; init; }
+
     /// <summary>Exports the tree and returns the complete <c>.ly</c> text.</summary>
     public string Export(SyntaxTree tree)
     {
@@ -3030,12 +3042,11 @@ public sealed class LilyPondExporter
 
     // ---- Helpers -----------------------------------------------------------
 
-    private static FormDeclarationSyntax? PrimaryForm(CompilationUnitSyntax root)
-    {
-        var forms = root.DescendantNodes<FormDeclarationSyntax>().ToList();
-        return forms.FirstOrDefault(f => f.NameText.Equals("main", StringComparison.OrdinalIgnoreCase))
-               ?? forms.FirstOrDefault();
-    }
+    // The form this twin writes: the caller's choice, else the primary one. ⚠️ The reading
+    // itself moved to ScoreForms — this used to match `main` case-INSENSITIVELY while the
+    // MIDI and MusicXML exporters matched it exactly, which is two answers to one question.
+    private FormDeclarationSyntax? PrimaryForm(CompilationUnitSyntax root)
+        => Form ?? LilySharp.Core.Semantics.ScoreForms.Primary(root);
 
     // The music items directly inside a container (section/part/block): every
     // non-token child (notes, rests, barlines, breaks, key/time/tempo, …).

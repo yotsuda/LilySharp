@@ -497,10 +497,7 @@ static int RunMidi(string[] args)
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseIoOnly(args, ".mid");
-    if (error != null) return OptionError(error, "midi");
-
-    return ExecuteMidi(inputPath!, outputPath!);
+    return RunFormOutput(args, "midi", ".mid", WriteMidi);
 }
 
 static void ShowMidiHelp()
@@ -516,31 +513,40 @@ static void ShowMidiHelp()
 
         Options:
           -o, --output <file>    Output file path
+          --score <name>         Write the named score's form (default: the first)
+          --all                  Write every score to its own .mid file
           -h, --help             Show this help
+
+        A .mid holds ONE arrangement, so a file of several movements needs one
+        file each — which is what LilyPond does too (two \score blocks with
+        \midi { } write ts.mid and ts-1.mid). Without --score or --all the first
+        form is written and the rest are named in a warning.
 
         Examples:
           lysc midi score.lys
           lysc midi score.lys audio.mid
           lysc midi -o audio.mid score.lys
+          lysc midi --score movement2 multi-movement.lys
+          lysc midi --all multi-movement.lys
         """);
 }
 
-static int ExecuteMidi(string inputPath, string outputPath) =>
-    RunOutputCommand(inputPath, null, tree =>
-    {
-        var exporter = new MidiExporter();
-        var midi = exporter.Export(tree);
-        midi.Save(outputPath);
-        Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine($"  Tracks: {midi.Tracks.Count}");
-        Console.WriteLine($"  Notes: {midi.Tracks.Skip(1).Sum(t => t.Notes.Count)}");
-        // Surfaced the way `lysc ly` surfaces the LilyPond exporter's: MIDI has 128 keys,
-        // and a note the file writes outside them is the one thing this format loses that
-        // the page and the MusicXML keep.
-        foreach (var w in exporter.Warnings)
-            Console.WriteLine($"  warning: {w}");
-        return 0;
-    });
+static int WriteMidi(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
+                     string outputPath)
+{
+    var exporter = new MidiExporter { Form = form };
+    var midi = exporter.Export(tree);
+    midi.Save(outputPath);
+    Console.WriteLine($"Created: {outputPath}");
+    Console.WriteLine($"  Tracks: {midi.Tracks.Count}");
+    Console.WriteLine($"  Notes: {midi.Tracks.Skip(1).Sum(t => t.Notes.Count)}");
+    // Surfaced the way `lysc ly` surfaces the LilyPond exporter's: MIDI has 128 keys,
+    // and a note the file writes outside them is the one thing this format loses that
+    // the page and the MusicXML keep.
+    foreach (var w in exporter.Warnings)
+        Console.WriteLine($"  warning: {w}");
+    return 0;
+}
 
 // ============ VSQX Command ============
 
@@ -582,10 +588,7 @@ static int RunXml(string[] args)
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseIoOnly(args, ".xml");
-    if (error != null) return OptionError(error, "xml");
-
-    return ExecuteXml(inputPath!, outputPath!);
+    return RunFormOutput(args, "xml", ".xml", WriteXml);
 }
 
 static void ShowXmlHelp()
@@ -601,24 +604,32 @@ static void ShowXmlHelp()
 
         Options:
           -o, --output <file>    Output file path
+          --score <name>         Write the named score's form (default: the first)
+          --all                  Write every score to its own .xml file
           -h, --help             Show this help
+
+        One document holds ONE arrangement, so a file of several movements needs
+        one file each. Without --score or --all the first form is written and the
+        rest are named in a warning.
 
         Examples:
           lysc xml score.lys
           lysc xml score.lys export.xml
           lysc xml -o export.xml score.lys
+          lysc xml --score movement2 multi-movement.lys
+          lysc xml --all multi-movement.lys
         """);
 }
 
-static int ExecuteXml(string inputPath, string outputPath) =>
-    RunOutputCommand(inputPath, null, tree =>
-    {
-        var (parts, measures) = new MusicXmlExporter().ExportToFile(tree, outputPath);
-        Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine($"  Parts: {parts}");
-        Console.WriteLine($"  Measures: {measures}");
-        return 0;
-    });
+static int WriteXml(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
+                    string outputPath)
+{
+    var (parts, measures) = new MusicXmlExporter { Form = form }.ExportToFile(tree, outputPath);
+    Console.WriteLine($"Created: {outputPath}");
+    Console.WriteLine($"  Parts: {parts}");
+    Console.WriteLine($"  Measures: {measures}");
+    return 0;
+}
 
 // ============ LilyPond Command ============
 
@@ -630,10 +641,7 @@ static int RunLy(string[] args)
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseIoOnly(args, ".ly");
-    if (error != null) return OptionError(error, "ly");
-
-    return ExecuteLy(inputPath!, outputPath!);
+    return RunFormOutput(args, "ly", ".ly", WriteLy);
 }
 
 static void ShowLyHelp()
@@ -649,30 +657,38 @@ static void ShowLyHelp()
 
         Options:
           -o, --output <file>    Output file path
+          --score <name>         Write the named score's form (default: the first)
+          --all                  Write every score to its own .ly file
           -h, --help             Show this help
 
         The octave marks you wrote in the .lys are preserved verbatim: an
         `octave absolute` source is wrapped in \fixed c', a relative one in
         \relative c', so the pitches stay identical in real LilyPond.
 
+        The twin writes one \score, so a file of several movements needs one .ly
+        each. Without --score or --all the first form is written and the rest are
+        named in a warning.
+
         Examples:
           lysc ly score.lys
           lysc ly score.lys export.ly
           lysc ly -o export.ly score.lys
+          lysc ly --score movement2 multi-movement.lys
+          lysc ly --all multi-movement.lys
         """);
 }
 
-static int ExecuteLy(string inputPath, string outputPath) =>
-    RunOutputCommand(inputPath, null, tree =>
-    {
-        var exporter = new LilySharp.Core.LilyPond.LilyPondExporter();
-        var ly = exporter.Export(tree);
-        File.WriteAllText(outputPath, ly);
-        Console.WriteLine($"Created: {outputPath}");
-        foreach (var w in exporter.Warnings)
-            Console.WriteLine($"  warning: {w}");
-        return 0;
-    });
+static int WriteLy(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
+                   string outputPath)
+{
+    var exporter = new LilySharp.Core.LilyPond.LilyPondExporter { Form = form };
+    var ly = exporter.Export(tree);
+    File.WriteAllText(outputPath, ly);
+    Console.WriteLine($"Created: {outputPath}");
+    foreach (var w in exporter.Warnings)
+        Console.WriteLine($"  warning: {w}");
+    return 0;
+}
 
 // ============ Import Command ============
 
@@ -1075,6 +1091,89 @@ static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree
         Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
         return 1;
     }
+}
+
+// ============ One form per file: the shape `midi`, `xml` and `ly` share ============
+//
+// A .mid, a .musicxml and a .ly each carry ONE arrangement, while a .lys may declare
+// several (`form movement1 … form movement2 …`, each named by its own `score`). The page
+// has had three doors to them since long before — `--score NAME`, `--all`, `--combined` —
+// and these three had none: they wrote the primary form and said nothing about the rest.
+// Decided 2026-08-17 (HANDOFF §3): warn, and give them `--score` / `--all` too.
+//
+// ⚠️ `--combined` is deliberately NOT here. Stacking movements onto one page is a
+// LAYOUT (LilyPond's \book); a .mid holding three movements back to back is a different
+// PIECE. LilyPond agrees by construction: two \score blocks with \midi { } write ts.mid
+// and ts-1.mid, two files (2.26.0, measured 2026-08-17).
+//
+// ⚠️ The selector is a SCORE name and the unit written is its FORM, because that is what
+// `--score` already means for svg/pdf/png — one word, one meaning. Two scores naming one
+// form therefore write the same music to two names under `--all`, exactly as svg does.
+static int RunFormOutput(
+    string[] args, string verb, string defaultExt,
+    Func<SyntaxTree, LilySharp.Core.Syntax.FormDeclarationSyntax?, string, int> write)
+{
+    var r = new CliParser(maxPositionals: 2)
+        .Value("output", "-o requires a file path", "-o", "--output")
+        .Value("score", "--score requires a score name", "--score")
+        .Flag("all", "--all")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, verb);
+    if (r.Has("all") && r.Get("score") != null)
+        return OptionError("--all and --score are mutually exclusive.", verb);
+
+    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, defaultExt);
+    if (ioError != null) return OptionError(ioError, verb);
+
+    if (r.Has("all"))
+        return RunOutputCommand(inputPath!, null, tree =>
+        {
+            var specs = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
+            // A file with no `score` block has exactly one thing to write, and the
+            // requested output path is where it goes.
+            if (specs.Count == 0)
+                return write(tree, null, outputPath!);
+
+            string stem = Path.GetFileNameWithoutExtension(inputPath!);
+            string dir = Path.GetDirectoryName(inputPath!) ?? ".";
+            Console.WriteLine($"Writing {specs.Count} score(s):");
+            foreach (var spec in specs)
+            {
+                // The same naming rule `svg --all` uses: the main score keeps the input
+                // stem, every other appends its own name (RenderSpec.ResolveOutputStem).
+                int rc = write(tree, spec.Form,
+                    Path.Combine(dir, spec.ResolveOutputStem(stem) + defaultExt));
+                if (rc != 0) return rc;
+            }
+            return 0;
+        });
+
+    string? scoreName = r.Get("score");
+    return RunOutputCommand(inputPath!, scoreName, tree =>
+    {
+        var form = scoreName == null
+            ? null
+            : LilySharp.Core.Svg.Collector.RenderSpecParser.FindByName(tree, scoreName)?.Form;
+        int rc = write(tree, form, outputPath!);
+        if (rc == 0) WarnFormsLeftOut(tree, form);
+        return rc;
+    });
+}
+
+// ⚠️ "If you drop something, say so in Warnings" (HANDOFF §2F). One file is one form, so
+// a book of movements loses the others — in silence until 2026-08-17, when `lysc midi`
+// on the tree's one three-movement book wrote 40 notes and reported nothing.
+static void WarnFormsLeftOut(
+    SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? written)
+{
+    var forms = LilySharp.Core.Semantics.ScoreForms.All(tree.GetRoot());
+    if (forms.Count <= 1) return;
+    var chosen = written ?? LilySharp.Core.Semantics.ScoreForms.Primary(tree.GetRoot());
+    var left = forms.Where(f => !ReferenceEquals(f, chosen)).Select(f => f.NameText).ToList();
+    if (left.Count == 0) return;
+    Console.WriteLine($"  warning: this file declares {forms.Count} forms and one file holds "
+        + $"one — wrote '{chosen?.NameText}', left out {string.Join(", ", left)} "
+        + "(--score <name> picks one, --all writes them all)");
 }
 
 // The input/output pair for the format commands whose only option is -o/--output.
