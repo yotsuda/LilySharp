@@ -61,24 +61,30 @@ public class MusicXmlRoundTripTests
     /// MusicXML asks for — and the two ways a part can sound an octave low stay apart.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE OCTAVE MUST BE CARRIED ONCE. MusicXML has two elements for it and they mean
-    /// different things: <c>clef-octave-change</c> is NOTATION (a treble clef with an 8
-    /// under it) and <c>transpose</c> is the INSTRUMENT (what the written pitch sounds). A
-    /// guitar's 8vb comes from its <c>treble_8</c> clef, so it must NOT also get a
-    /// <c>transpose</c> — a reader honouring both, as the spec asks, would drop it two
-    /// octaves. A bass's comes from the instrument, so it must.
+    /// ⚠️ THE TWO ELEMENTS ANSWER DIFFERENT QUESTIONS, so a guitar carries BOTH.
+    /// <c>clef-octave-change</c> is NOTATION — where the written pitch is drawn (a treble
+    /// clef with an 8 under it) — and <c>transpose</c> is what that written pitch SOUNDS.
+    /// A reader playing the document has nothing but <c>transpose</c> to read, so an octave
+    /// left out of it is an octave the piece sounds wrong in every other program; this is
+    /// also how every publisher writes a guitar. Until 2026-08-17 Lily# wrote only the
+    /// instrument's own share and 20 books of the corpus sounded an octave high (decided,
+    /// HANDOFF §3).
     /// <para>
-    /// Both directions are checked because the pair has to agree: the importer reads
-    /// <c>transpose</c> back into <c>transposition</c>, and re-exporting the imported source
-    /// has to produce the same attributes. Exporting a shift nobody reads back would look
-    /// right in a diff and lose the octave on the way home.
+    /// Both directions are checked because the pair has to agree: the importer subtracts the
+    /// share the clef WORD it writes already carries (<c>clef treble_8</c>), and re-exporting
+    /// the imported source has to produce the same attributes. Move one half alone and a
+    /// guitar shifts an octave one way or two the other.
     /// </para>
     /// </remarks>
     [Theory]
-    // instrument, expected written pitch, expected clef-octave-change, expected transpose
+    // header, expected written pitch, expected clef-octave-change, expected transpose
     [InlineData("instrument bass", "C3", null, -1)]      // the 8vb is the INSTRUMENT's
-    [InlineData("instrument guitar", "C4", -1, null)]    // …and here it is the CLEF's
-    [InlineData("clef treble_8", "C4", -1, null)]
+    [InlineData("instrument guitar", "C4", -1, -1)]      // …and here the CLEF shows it too
+    [InlineData("clef treble_8", "C4", -1, -1)]
+    [InlineData("instrument piccolo", "C5", null, 1)]    // the other direction
+    // Both sources at once — the case the import subtraction has to get exactly right,
+    // because the clef word carries one octave of the two and the property the other.
+    [InlineData("instrument bass clef bass_8", "C3", -1, -2)]
     [InlineData("clef bass", "C3", null, null)]
     [InlineData("clef treble", "C4", null, null)]
     public void TransposingPart_DeclaresItsShiftOnceAndSurvivesRoundTrip(
@@ -109,6 +115,70 @@ public class MusicXmlRoundTripTests
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (reimported, _) = new MusicXmlImporter().Import(xml);
         Assert.Equal(exported, Attributes(reimported));
+    }
+
+    /// <summary>
+    /// A guitar part as OTHER programs publish it — an octave clef and a <c>transpose</c>
+    /// stating the same octave — imports as <c>clef treble_8</c> and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FALSIFIER IS A DOCUMENT LILY# DID NOT WRITE, which is why the round-trip
+    /// theory above cannot stand in for it: while the exporter left <c>transpose</c> off a
+    /// guitar, its own loop was green and this one dropped the part two octaves
+    /// (<c>clef treble_8 transposition 8vb</c>). The control is the second part: an octave
+    /// no clef word carries has to survive AS the property.
+    /// </remarks>
+    [Fact]
+    public void PublishedTransposingPart_DoesNotCountItsOctaveTwice()
+    {
+        const string xml = """
+            <score-partwise version="4.0">
+              <part-list>
+                <score-part id="P1"><part-name>Guitar</part-name></score-part>
+                <score-part id="P2"><part-name>Bass</part-name></score-part>
+              </part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes>
+                    <divisions>1</divisions>
+                    <clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>
+                    <transpose><diatonic>0</diatonic><chromatic>0</chromatic><octave-change>-1</octave-change></transpose>
+                  </attributes>
+                  <note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+                </measure>
+              </part>
+              <part id="P2">
+                <measure number="1">
+                  <attributes>
+                    <divisions>1</divisions>
+                    <clef><sign>F</sign><line>4</line></clef>
+                    <transpose><diatonic>0</diatonic><chromatic>0</chromatic><octave-change>-1</octave-change></transpose>
+                  </attributes>
+                  <note><pitch><step>C</step><octave>3</octave></pitch><duration>1</duration><type>quarter</type></note>
+                </measure>
+              </part>
+            </score-partwise>
+            """;
+
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+
+        // The clef word already says the guitar's octave, so the property must not repeat it.
+        Assert.Contains("clef treble_8", lys);
+        Assert.DoesNotContain("clef treble_8 transposition", lys);
+        // …and the bass's octave, which no clef word carries, must still be stated.
+        Assert.Contains("clef bass transposition 8vb", lys);
+
+        // The proof is what it SOUNDS: both parts are written C and both sound an octave
+        // below it. Asked of the re-export rather than of the header, so the two halves of
+        // the reading have to agree.
+        var doc = XDocument.Parse(
+            new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString());
+        Assert.Equal(
+            new[] { -1, -1 },
+            doc.Descendants().Where(e => e.Name.LocalName == "transpose")
+               .Select(t => int.Parse(t.Elements()
+                   .First(e => e.Name.LocalName == "octave-change").Value))
+               .ToArray());
     }
 
     [Fact]

@@ -1486,10 +1486,16 @@ public sealed class MusicXmlExporter
         _partAnchorOctave = header.AnchorOctave;
         _octaveAnchor = header.AbsoluteBaseOctave;
 
-        // ⚠️ Only the INSTRUMENT's share goes in <transpose>. The octave a transposing CLEF
-        // carries is already spelled by <clef-octave-change>, and an importer that honours
-        // both would apply it twice — a guitar would come back two octaves down.
-        _partTransposeSemitones = header.TranspositionSemitones;
+        // ⚠️ THE WHOLE written→sounding distance goes in <transpose>, the clef's octave
+        // included. MusicXML's <pitch> is the WRITTEN pitch and <transpose> is what turns it
+        // into the sounding one; <clef-octave-change> is notation — it says where the written
+        // pitch is DRAWN — so a reader that plays the document has nothing else to read.
+        // Until 2026-08-17 only the instrument's share went here, and a guitar part sounded
+        // an octave high in every program but this one (44 books; decided, HANDOFF §3).
+        // ⚠️ The importer subtracts the clef's share again on the way back in, because the
+        // clef WORD it writes carries it (`clef treble_8`). Both halves move together or a
+        // guitar drops two octaves — MusicXmlReader.ReadPart.
+        _partTransposeSemitones = header.SoundingShiftSemitones;
     }
 
     private void ProcessClef(ClefDeclarationSyntax clef)

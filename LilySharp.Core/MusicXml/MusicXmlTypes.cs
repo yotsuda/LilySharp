@@ -221,14 +221,20 @@ internal sealed class MusicXmlAttributes
     public int? ClefOctaveChange { get; set; }
 
     /// <summary>
-    /// The INSTRUMENT's written→sounding shift in semitones (&lt;transpose&gt;), or null when
-    /// the part sounds as it prints.
+    /// The part's WHOLE written→sounding shift in semitones (&lt;transpose&gt;) — the
+    /// instrument's own plus the octave its clef carries — or null when the part sounds as
+    /// it prints.
     /// </summary>
     /// <remarks>
-    /// ⚠️ NOT the same octave as <see cref="ClefOctaveChange"/>, and the two must not both
-    /// carry it: an octave CLEF is notation (it says where the written pitch is drawn) while
-    /// this is the instrument (it says what that written pitch sounds). A reader that honours
-    /// both — which is what the spec asks of it — would otherwise drop a guitar two octaves.
+    /// ⚠️ This DOES include the octave <see cref="ClefOctaveChange"/> shows, and that is not
+    /// a double count: the two elements answer different questions. An octave clef is
+    /// notation — it says where the written pitch is DRAWN — while this says what that
+    /// written pitch SOUNDS, and a reader has nothing else to read for the second question.
+    /// It is how every octave-transposing instrument is published (a guitar carries
+    /// <c>clef-octave-change</c> −1 AND <c>transpose</c> −12). ⚠️ An importer must therefore
+    /// subtract the clef's share when the clef NAME it chooses already carries it, which is
+    /// what <c>MusicXmlReader.ReadPart</c> does; honouring both as though they stacked drops
+    /// a guitar two octaves.
     /// </remarks>
     public int? TransposeSemitones { get; set; }
 

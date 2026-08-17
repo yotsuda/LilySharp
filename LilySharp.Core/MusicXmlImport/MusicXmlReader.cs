@@ -235,32 +235,54 @@ internal static class MusicXmlReader
         }
 
         part.Clef = clefSet ?? "treble";
-        part.TranspositionSemitones = transposeSet;
+        part.TranspositionSemitones = TranspositionBeyondClef(transposeSet, part.Clef);
 
         // A part whose voices span more than one staff (a piano grand staff) splits
         // into one Lily# part per staff, grouped into a grandStaff by the score.
         var staves = voiceStaff.Values.Distinct().OrderBy(s => s).ToList();
         if (staves.Count <= 1)
             return new List<ImportPart> { part };
-        return SplitByStaff(part, staves, voiceStaff, staffClefs);
+        return SplitByStaff(part, staves, voiceStaff, staffClefs, transposeSet);
     }
+
+    /// <summary>
+    /// What the part's <c>transposition</c> property must state, given the document's whole
+    /// <c>&lt;transpose&gt;</c> and the clef word being written for it: the remainder, since
+    /// an octave clef word (<c>treble_8</c>) already carries its own share.
+    /// </summary>
+    /// <remarks>
+    /// The two halves of the round trip are this and
+    /// <c>MusicXmlExporter.ApplyPartHeader</c>, which writes clef octave + instrument as one
+    /// number. Change either alone and a guitar moves an octave in one direction or two in
+    /// the other. Null in, null out — a part with no <c>&lt;transpose&gt;</c> states nothing.
+    /// </remarks>
+    private static int? TranspositionBeyondClef(int? transposeTotal, string clefWord)
+        => transposeTotal is { } total
+            ? total - Tablature.Tunings.ClefOctaveShift(PartHeaderDefaults.ParseClefWord(clefWord))
+            : null;
 
     /// <summary>Splits a multi-staff part into one part per staff (grouped as a grand
     /// staff), each keeping only the voices that sit on it, with its own clef.</summary>
     private static List<ImportPart> SplitByStaff(
         ImportPart part, List<int> staves,
-        Dictionary<int, int> voiceStaff, Dictionary<int, string> staffClefs)
+        Dictionary<int, int> voiceStaff, Dictionary<int, string> staffClefs,
+        int? transposeTotal)
     {
         var result = new List<ImportPart>();
         foreach (int staff in staves)
         {
+            string staffClef = staffClefs.TryGetValue(staff, out var clef) ? clef
+                             : staff == staves[0] ? "treble" : "bass";
             var sub = new ImportPart
             {
                 Id = $"{part.Id}s{staff}",
                 Name = StaffPartName(part.Name, staff, staves),
                 StaffGroup = part.Id,
-                Clef = staffClefs.TryGetValue(staff, out var clef) ? clef
-                     : staff == staves[0] ? "treble" : "bass",
+                Clef = staffClef,
+                // ⚠️ <transpose> is the PART's, so every staff of a split part keeps it —
+                // the split used to drop it and a transposing grand staff came back at
+                // written pitch. Each staff subtracts its OWN clef's share.
+                TranspositionSemitones = TranspositionBeyondClef(transposeTotal, staffClef),
             };
             foreach (var measure in part.Measures)
             {
@@ -336,10 +358,12 @@ internal static class MusicXmlReader
             clefSet ??= name;           // first clef becomes the part header clef
         }
 
-        // <transpose> is the INSTRUMENT's written→sounding shift, which Lily# spells as the
-        // part's `transposition`. ⚠️ It is NOT the octave a transposing CLEF carries — that
-        // one is <clef-octave-change> and is already in the clef name above. Adding them
-        // together here would drop a guitar two octaves on the way back in.
+        // <transpose> is the part's WHOLE written→sounding shift — the instrument's own AND
+        // the octave a transposing clef carries, which is how every publisher writes a guitar
+        // (<clef-octave-change> −1 and <transpose> −12 on the same part). ⚠️ It is kept RAW
+        // here and the clef's share is subtracted once at the end of ReadPart, because the
+        // clef WORD written out already carries it: taking this at face value spelled
+        // `clef treble_8 transposition 8vb` and dropped a guitar two octaves.
         var transEl = Local(el, "transpose");
         if (transEl != null && transposeSet == null)
         {

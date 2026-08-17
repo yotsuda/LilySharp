@@ -68,9 +68,23 @@ internal static class LysWriter
               .Append(" { clef ").Append(part.Clef);
             // <transpose> comes back as `transposition`, the same knob that produced it.
             // Only whole octaves reach here (the reader warns about anything else), and the
-            // clef's own octave is already in the clef word — see ImportPart.
-            if (part.TranspositionSemitones is { } semis && semis % 12 == 0 && semis != 0)
-                sb.Append(" transposition ").Append(semis < 0 ? "8vb" : "8va");
+            // clef's own octave has already been subtracted — see ImportPart.
+            // ⚠️ TWO octaves are spelled `15mb`, not `8vb`: this used to write 8vb for any
+            // multiple of 12 and quietly halved a doubly-transposing part on the way in.
+            // Three or more has no marker at all, and is said out loud rather than rounded.
+            if (part.TranspositionSemitones is { } semis && semis != 0)
+            {
+                string? marker = semis switch
+                {
+                    -12 => "8vb", 12 => "8va", -24 => "15mb", 24 => "15ma", _ => null,
+                };
+                if (marker != null)
+                    sb.Append(" transposition ").Append(marker);
+                else
+                    report.Warn($"a part transposing {semis} semitones beyond its clef is "
+                        + "imported at written pitch — Lily#'s `transposition` states one or "
+                        + "two octaves.");
+            }
             sb.Append(" }\n");
         }
         sb.Append('\n');

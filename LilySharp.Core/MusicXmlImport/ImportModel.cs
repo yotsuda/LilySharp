@@ -47,13 +47,16 @@ internal sealed class ImportPart
     public string Clef { get; set; } = "treble";
 
     /// <summary>
-    /// The part's <c>&lt;transpose&gt;</c> in semitones — the INSTRUMENT's written→sounding
-    /// shift, which Lily# spells <c>transposition</c>. Null when it sounds as it prints.
+    /// What the part's Lily# <c>transposition</c> must state: its written→sounding shift in
+    /// semitones MINUS the octave <see cref="Clef"/> already carries. Null when the document
+    /// gave no <c>&lt;transpose&gt;</c>; zero when the clef accounts for all of it.
     /// </summary>
     /// <remarks>
-    /// ⚠️ Separate from the octave a transposing CLEF carries: that one arrives inside
-    /// <see cref="Clef"/> as <c>treble_8</c>. Folding the two together would double the
-    /// octave every time a guitar part came back in.
+    /// ⚠️ NOT the document's <c>&lt;transpose&gt;</c> verbatim. That element states the WHOLE
+    /// distance (a published guitar part carries <c>clef-octave-change</c> −1 and
+    /// <c>transpose</c> −12), while <c>clef treble_8</c> states one octave of it by itself —
+    /// so writing both out unchanged drops a guitar two octaves. The subtraction happens once,
+    /// in <c>MusicXmlReader.TranspositionBeyondClef</c>.
     /// </remarks>
     public int? TranspositionSemitones { get; set; }
     /// <summary>When several parts came from splitting one multi-staff MusicXML part
