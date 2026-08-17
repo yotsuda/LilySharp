@@ -1667,6 +1667,62 @@ public class LilyPondExporterTests
         Assert.Contains(exporter.Warnings, w => w.Contains("not exported"));
     }
 
+    /// <summary>
+    /// A section boundary reopens Lily#'s relative frame at the part's anchor, and
+    /// LilyPond's <c>\relative</c> chain does not — so the twin writes the difference into
+    /// the first note of the next section.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ VERIFIED IN LILYPOND 2.26.0, not inferred from the spelling (RULES §5.1). The page
+    /// prints C4 D4 E4 F4 G4 G4 / C4 B3 A3 G3 C4 for `test/custom-text`; dumping NoteHead
+    /// pitches from its twin gives 0 2 4 5 7 7 / 0 −1 −3 −5 0 semitones from middle C with
+    /// this compensation in place, and 0 2 4 5 7 7 / 12 11 9 7 12 without it — a twin an
+    /// octave above the bar the boundary opens.
+    /// <para>
+    /// ⚠️ 5348 nets were green over it. The rule has three other spellings — the collector
+    /// resets (OctaveContext.ResetForSection), the MIDI and the MusicXML reset — and this is
+    /// the fourth site, the one that has to COMPENSATE rather than reset, like a mid-bar
+    /// clef (EmitClef). Two books of the 566 change: `test/custom-text` and
+    /// `test/section-meter-resets-to-global`.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ASectionBoundaryReopensTheFrame_AndTheTwinSpellsTheDifference()
+    {
+        string ly = Export("""
+            time 4/4
+            part melody { clef treble }
+            section A { c'4 d e f | }
+            section B { g'4 f e d | }
+            form main { A B }
+            score main { staff melody }
+            """);
+
+        // Section A opens the wrapper's frame: `c'` is C5 and the line runs up to F5.
+        Assert.Contains("c'4 d e f", ly);
+        // Section B reopens at the part's anchor, where `g'` is G4 — below the F5 LilyPond
+        // is standing on, so the twin writes a comma the source never had.
+        Assert.Contains("g,4 f e d", ly);
+        Assert.DoesNotContain("g'4 f e d", ly);
+    }
+
+    /// <summary>The control: one section is no boundary, and the same notes are written
+    /// exactly as the source spells them.</summary>
+    [Fact]
+    public void OneSectionWritesTheSourceSpellingUnchanged()
+    {
+        string ly = Export("""
+            time 4/4
+            part melody { clef treble }
+            section A { c'4 d e f | g'4 f e d | }
+            form main { A }
+            score main { staff melody }
+            """);
+
+        Assert.Contains("c'4 d e f", ly);
+        Assert.Contains("g'4 f e d", ly);
+    }
+
     private static int Occurrences(string haystack, string needle)
     {
         int n = 0;

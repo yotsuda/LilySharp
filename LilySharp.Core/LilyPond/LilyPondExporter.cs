@@ -1931,6 +1931,22 @@ public sealed class LilyPondExporter
     /// </summary>
     private string EmitSectionPlay(SectionPlayGreen sp)
     {
+        // ⚠️ A SECTION BOUNDARY REOPENS LILY#'s FRAME at the part's anchor
+        // (OctaveContext.ResetForSection: CurrentOctave = InitialOctave, LastPitchName = 'c')
+        // and LilyPond's `\relative` chain knows nothing about it — so only the LILY# side
+        // moves here and the next pitch writes the difference into its own marks. Exactly
+        // the shape EmitClef uses for a mid-bar clef, and the third spelling of one rule:
+        // the collector resets, the MIDI and the MusicXML reset, and the twin compensates.
+        // MEASURED 2026-08-17 on `section A { c'4 d e f } section B { g'4 f e d }`: the page
+        // prints G4 to open B, and the twin handed LilyPond a `g'` that reads G6 — the twin
+        // was a different piece from the bar the boundary opens, on every book with two
+        // sections and a frame-moving first note.
+        if (!_octaveAbsolute)
+        {
+            _lysStep = 0;
+            _lysOctave = _anchorOctave;
+        }
+
         var parts = new List<string>(2);
         if (!sp.HasHeaderKey && (_keySharps != _homeKeySharps || _tonic != _homeTonic))
         {
