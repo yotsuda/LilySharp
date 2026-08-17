@@ -5199,10 +5199,28 @@ public sealed partial class MeasureCollector
         }
         else
         {
-            // For volta/unfold (and non-printable tremolo shapes): unfold the
-            // body count times.
+            // `unfold` (and a tremolo whose total will not print as one note): the body is
+            // drawn count times.
+            // ⚠️ EVERY COPY IS THE SAME MUSIC, so each pass re-opens the relative frame
+            // where the repeat OPENED it rather than continuing from what the last copy
+            // left. `repeat unfold N` means "play this N times" (decided 2026-08-17,
+            // HANDOFF §3) and that is the reading LilyPond gives it too — \relative
+            // resolves the chain once and copies the RESULT, so its copies are identical.
+            // Without this `repeat unfold 4 { g''8 a }` printed four pairs a rising octave
+            // apart (SVG notehead y = 28.7 / 21.7 / 14.7 / 7.7, measured), because `''`
+            // counts from the nearest g and the nearest g was the previous copy's.
+            // ⚠️ The duration default is part of the frame for the same reason: the second
+            // copy of `{ c4 d }` is two quarters, not whatever the last note left behind.
+            var frame = new OctaveSnapshot(_octave.CurrentOctave, _octave.LastPitchName);
+            var (frameDuration, frameDots) = (_defaultDuration, _defaultDots);
             for (int i = 0; i < count; i++)
             {
+                if (i > 0)
+                {
+                    _octave.CurrentOctave = frame.Octave;
+                    _octave.LastPitchName = frame.PitchName;
+                    (_defaultDuration, _defaultDots) = (frameDuration, frameDots);
+                }
                 ProcessBodyOnce();
             }
         }

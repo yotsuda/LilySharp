@@ -1733,20 +1733,21 @@ public sealed class MidiExporter
         // the MIDI range, where the page, the MusicXML and LilyPond all have thirty-two G5-A5
         // pairs. The duration default rides along because it carries the same way: the second
         // iteration of `{ c4 d }` must be two quarters, not whatever the last note left.
-        // ⚠️ `unfold` is deliberately NOT included. It prints every copy, and the page's own
-        // copies climb with it, so the two agree; whether they SHOULD (LilyPond resolves the
-        // relative chain once and copies the result, so its unfolded copies are identical) is
-        // a question about the grammar, filed in HANDOFF §2F rather than decided here.
-        var frame = engravedOnce
-            ? (_currentOctave, _currentNoteName, _defaultDuration)
-            : ((int, int, Fraction)?)null;
+        // ⚠️ `unfold` RESTARTS THE FRAME TOO, though it is engraved in full — the two facts
+        // are separate. It prints N copies of one piece of music, and "play this N times"
+        // is what the word was decided to mean (2026-08-17, HANDOFF §3); it is also
+        // LilyPond's reading, which resolves the relative chain once and copies the RESULT.
+        // Until then the page climbed and the MIDI climbed with it, so the two agreed on
+        // the wrong piece: `repeat unfold 4 { g''8 a }` sounded four pairs an octave apart
+        // and ran off the top of the range.
+        var frame = (_currentOctave, _currentNoteName, _defaultDuration);
 
         for (int i = 0; i < repeatCount; i++)
         {
             if (i > 0 && ordSnapshot != null)
                 _sourceOrdinals = new Dictionary<int, int>(ordSnapshot);
-            if (i > 0 && frame is var (oct, name, dur))
-                (_currentOctave, _currentNoteName, _defaultDuration) = (oct, name, dur);
+            if (i > 0)
+                (_currentOctave, _currentNoteName, _defaultDuration) = frame;
             ProcessNode(repeat.Body, track, conductorTrack);
 
             if (alternatives != null && alternatives.Count > 0)

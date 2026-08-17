@@ -1105,9 +1105,9 @@ public sealed class MusicXmlExporter
                     // this file has no ceiling to hide it: MEASURED 2026-08-17 on
                     // `repeat tremolo 32 { g''64 a }`, whose page is one G5-A5 pair, the
                     // export ran G5 A5 G7 A7 G9 ... up to OCTAVE 67.
-                    // ⚠️ `unfold` prints every copy and the page's copies climb with it, so
-                    // the two agree here; whether they should is a grammar question (HANDOFF §2F).
-                    bool engravedOnce = repeat.RepeatType.Text is "percent" or "tremolo";
+                    // ⚠️ `unfold` re-enters its own frame TOO, though it is written out in
+                    // full: N copies of one piece of music is what "play this N times" means
+                    // (decided 2026-08-17, HANDOFF §3), and it is LilyPond's reading as well.
                     var frame = (_currentOctave, _currentStep, _defaultDuration);
                     if (oneMeasurePercent)
                     {
@@ -1142,7 +1142,7 @@ public sealed class MusicXmlExporter
                     }
                     for (int rep = 0; rep < repCount; rep++)
                     {
-                        if (rep > 0 && engravedOnce)
+                        if (rep > 0)
                             (_currentOctave, _currentStep, _defaultDuration) = frame;
                         ProcessNode(repeat.Body);
                     }
