@@ -89,6 +89,12 @@ public sealed class MusicXmlExporter
     // told from a repeat. Until 2026-08-17 nothing here was written twice: the opening
     // measure carried an <attributes> and every later key, time and clef change was
     // dropped, which is how a 3/4 bar came out declared 4/4.
+    // ⚠️ THIS IS A SECOND SPELLING of what the measures already hold (RULES §7.7), kept
+    // deliberately: the document's own copy is spread over the part's measures, and
+    // finding the last one that stated a key means walking back through them on every
+    // change. It goes away the day a measure can carry its attributes as a delta of the
+    // one before it. Observed by MusicXmlAttributeChangeTests, whose last case fails if
+    // this record is ever ahead of or behind what the measures say.
     private (int Fifths, string? Mode, string? Custom)? _writtenKey;
     private (int Beats, string? BeatsText, int BeatType, bool Senza)? _writtenTime;
     private (string Sign, int Line, int? OctaveChange)? _writtenClef;
