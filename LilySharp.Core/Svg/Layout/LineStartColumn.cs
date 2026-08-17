@@ -276,9 +276,13 @@ internal static class LineStartColumn
     /// its clef, and the key and meter it ENGRAVES, at the shared break-align columns.
     /// </summary>
     /// <remarks>
-    /// A tab staff engraves neither key nor meter: LilyPond removes its <c>Key_engraver</c>
-    /// (ly/engraver-init.ly:1214) and gives its TimeSignature no stencil — dumped as an EMPTY
-    /// extent, which is why the probe harness reports skipping <c>TKC TABTIME</c>. Its TAB
+    /// A tab staff engraves no KEY in either mode: ly/engraver-init.ly:1214 is \remove
+    /// Key_engraver in the TabStaff context, and <c>tabFullNotation</c> has nothing to revert
+    /// because a removed engraver is not an override. Its
+    /// METER is the mode's to decide — blanked stencil bare, reverted under
+    /// <c>\tabFullNotation</c>, which is Lily#'s default <c>tab</c>
+    /// (<see cref="SpacingRules.ContributesToTimeColumnWidth"/>). The probe harness reports
+    /// skipping <c>TKC TABTIME</c> because that probe's twin is a BARE TabStaff. Its TAB
     /// clef IS an ordinary Clef grob in the shared group, and a wide one.
     /// <para>
     /// The key ink is the one THIS staff engraves (<see cref="SpacingRules.ActiveKeyInkForStaff"/>),
@@ -312,8 +316,14 @@ internal static class LineStartColumn
             grobs.Add(new PrefatoryGrob(BreakAlignSymbol.KeySignature,
                 columns.KeyX, columns.KeyX + keyInkWidth, 0.0, KeySignatureEswRight));
 
+        // ⚠️ THE METER'S OWN PREDICATE, NOT THE KEY'S. This read ContributesToKeyColumnWidth,
+        // which is the right answer for a tab staff only while a tab staff engraves neither.
+        // It engraves no key in either mode but a meter under \tabFullNotation, so borrowing
+        // the key's predicate blanked the meter of every full-notation tab book: the staff
+        // ended its prefix on the TAB clef and wished off the clef's minimum-fixed-space 5.0
+        // where LilyPond wishes off the meter's semi-shrink-space 2.0.
         if (columns.HasTime && timeInkWidth > 0.0
-            && SpacingRules.ContributesToKeyColumnWidth(staff))
+            && SpacingRules.ContributesToTimeColumnWidth(staff))
             grobs.Add(new PrefatoryGrob(BreakAlignSymbol.TimeSignature,
                 columns.TimeX, columns.TimeX + timeInkWidth, 0.0, TimeSignatureEswRight));
 
@@ -422,12 +432,15 @@ internal static class LineStartColumn
     /// fall back to <c>standard_breakable_column_spacing</c>.
     /// <para>
     /// The staves differ in WHICH grob is extremal and how wide its ink is, so they differ
-    /// in the space-alist entry consulted and in the distance it yields. On a notation+tab
-    /// system the notation staff ends on its TimeSignature (semi-shrink-space 2.0) while
-    /// the tab staff ends on its TAB clef (minimum-fixed-space 5.0) — its meter has no
-    /// stencil and is skipped for having an empty extent — and the two ideals are averaged.
-    /// Taking the notation staff's wish alone put the first note 0.4 too far right on both
-    /// halves of the ledger pair <c>line-start.time-to-first-note.tab-{concert,keyed}</c>.
+    /// in the space-alist entry consulted and in the distance it yields. On a system pairing
+    /// a notation staff with a NUMBERS-ONLY tab the notation staff ends on its TimeSignature
+    /// (semi-shrink-space 2.0) while the tab ends on its TAB clef (minimum-fixed-space 5.0)
+    /// — its meter's stencil is blanked, so the grob is skipped for having an empty extent —
+    /// and the two ideals are averaged. Taking the notation staff's wish alone put the first
+    /// note 0.4 too far right on both halves of the ledger pair
+    /// <c>line-start.time-to-first-note.tab-{concert,keyed}</c>, whose twins are bare
+    /// TabStaves. A FULL-NOTATION tab ends on its meter like its neighbour and the two
+    /// wishes coincide.
     /// </para>
     /// <para>
     /// <c>min_dist</c> is a property of the column PAIR, not of a staff

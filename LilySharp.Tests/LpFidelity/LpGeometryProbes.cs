@@ -8296,11 +8296,35 @@ internal static class LpGeometryProbes
     private static readonly string TKT = TabKeyScore("key fis major  ", "TKT");
 
     /// <summary>
+    /// TKC's system with the tab staff in FULL NOTATION — Lily#'s default <c>tab</c>, whose
+    /// twin carries <c>\tabFullNotation</c> and therefore engraves a meter.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score TKF — TKC's two staves with
+    /// <c>\tabFullNotation</c> prepended to the TabStaff's music, and nothing else changed.
+    /// The two scores are the pair: same notes, same keys, differing only in the one
+    /// <c>\override</c> that separates Lily#'s two tab modes.</remarks>
+    private static readonly string TKF = TabKeyScore("", "TKF", tabNumbersOnly: false);
+
+    /// <summary>
     /// A notation staff over a tab staff of the SAME music, the tab part optionally opening
     /// with its own key. Both staves play the same pitches (a key never transposes), so the
     /// two scores this builds differ in nothing an engraver draws.
     /// </summary>
-    private static string TabKeyScore(string tabKey, string name) => $$"""
+    /// <remarks>
+    /// ⚠️ <c>as numbers</c> BECAUSE THE TWIN IS A BARE <c>\new TabStaff</c>. The probe's
+    /// LilyPond side (probes/barline-spacing.ly, scores TKC/TKT) writes no
+    /// <c>\tabFullNotation</c>, so ITS tab staff has the blanked
+    /// <c>TimeSignature.stencil</c> — which is what makes the tab's last prefatory grob the
+    /// TAB clef and gives this pair its 3.300000 instead of a single staff's 3.700000. Lily#
+    /// spelled that side as a default <c>tab</c>, i.e. as full notation, and the two agreed
+    /// only while Lily# blanked the tab meter in BOTH modes. Now that it does not
+    /// (SpacingRules.ContributesToTimeColumnWidth), the fixture has to say which LilyPond
+    /// configuration it is a twin OF. Written the other way — <c>tab gt</c> against a twin
+    /// carrying <c>\tabFullNotation</c> — the point would measure a different regime: both
+    /// staves would end their prefix on the meter and the merge_springs average would have
+    /// nothing to average.
+    /// </remarks>
+    private static string TabKeyScore(string tabKey, string name, bool tabNumbersOnly = true) => $$"""
         octave absolute
         time 4/4
         key c major
@@ -8317,7 +8341,7 @@ internal static class LpGeometryProbes
 
         score main "{{name}}" {
           staff pn
-          tab gt
+          tab gt{{(tabNumbersOnly ? " as numbers" : "")}}
         }
         """;
 
@@ -10332,6 +10356,13 @@ internal static class LpGeometryProbes
         // control's 4.085000. Lily# printed them EQUAL while LilyPond differs, the
         // cross-check that the defect was MaxClefWidth's staff set.
         new("line-start.clef-to-time.tab", TKC, g => g.ClefToTimeSignatureOnFirstSystem()),
+        // The SAME system with the tab staff in full notation — Lily#'s default `tab`, i.e.
+        // \tabFullNotation, which reverts the blanked TimeSignature.stencil the TKC twin
+        // keeps. The CONTROL of that pair: the meter COLUMN must not move (the Clef group's
+        // extent is what places it, and the TAB clef is unchanged), only the first-note
+        // spring below. So this is an identity with line-start.clef-to-time.tab by
+        // construction, and a residual on one and not the other says the column moved.
+        new("line-start.clef-to-time.tab-full", TKF, g => g.ClefToTimeSignatureOnFirstSystem()),
         // Tab VERTICAL geometry, which the corpus had no point for at all. LilyPond gives
         // every TabStaff staff-space 1.5 whatever its string count; Lily# tapers it, so the
         // six-string half is short while the four-string CONTROL lands on 1.5 by accident.
@@ -10433,6 +10464,14 @@ internal static class LpGeometryProbes
             g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.tab-concert", TKC, g => g.TimeSignatureToFirstNotehead()),
         new("line-start.time-to-first-note.tab-keyed", TKT, g => g.TimeSignatureToFirstNotehead()),
+        // The half of Lily#'s tab the corpus had never measured. TKC/TKT are twins of a BARE
+        // TabStaff — `tab … as numbers` — whose TimeSignature LilyPond blanks; a DEFAULT
+        // `tab` is \tabFullNotation and engraves one. With a stencil the tab's extremal
+        // prefatory grob is its meter, so it takes the notation staff's own
+        // (first-note . (semi-shrink-space . 2.0)) entry, merge_springs has nothing to
+        // average, and this leaves TKC's 3.300000 for the two-ordinary-staves 3.700000 —
+        // predicted in the probe before the dump and measured there exactly.
+        new("line-start.time-to-first-note.tab-full", TKF, g => g.TimeSignatureToFirstNotehead()),
         // --- a system with NO STAFF (staffless-system.ly) ---
         // Every one of these is a DIFFERENCE of two chord-symbol anchors, because the two
         // engravers do not agree on what a chord symbol's anchor IS (Lily# the ink centre,

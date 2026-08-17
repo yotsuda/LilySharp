@@ -934,9 +934,10 @@ internal sealed class MultiStaffLayouter
                 : measureSpring0.MinDistance;
 
         // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves
-        // do NOT agree: a tab staff ends its prefix on the TAB clef (minimum-fixed-space 5.0)
-        // where its notation neighbour ends on the meter (semi-shrink-space 2.0), and
-        // merge_springs averages the two ideals.
+        // need NOT agree: a NUMBERS-ONLY tab staff ends its prefix on the TAB clef
+        // (minimum-fixed-space 5.0) where its notation neighbour ends on the meter
+        // (semi-shrink-space 2.0), and merge_springs averages the two ideals. A full-notation
+        // tab engraves the meter too and wishes the same as its neighbour.
         return LineStartColumn.LineStartSpring(
             score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score),
             prefix.HasTime
@@ -983,10 +984,12 @@ internal sealed class MultiStaffLayouter
         double activeKeyInk = SpacingRules.WidestActiveKeyInk(score, startMeasureIndex);
 
         // A meter change that OPENS a continuation system is drawn in the prefix (clef, key,
-        // THEN time); the first system carries the initial meter. A tab prefix draws no
-        // meter, so an all-tab score hoists none.
+        // THEN time); the first system carries the initial meter. A score no row of which
+        // engraves a meter stencil — chords/lyrics only, or nothing but `tab … as numbers`
+        // staves — hoists none.
         TimeSignatureChangeItem? leadingTimeChange = null;
-        if (!score.AllStavesTab && !isFirstSystem && startMeasureIndex < primaryVoice.Measures.Length)
+        if (SpacingRules.AnyStaffEngravesTime(score)
+            && !isFirstSystem && startMeasureIndex < primaryVoice.Measures.Length)
             foreach (var item in primaryVoice.Measures[startMeasureIndex].Items)
             {
                 if (item is TimeSignatureChangeItem tc) { leadingTimeChange = tc; break; }
@@ -1006,9 +1009,9 @@ internal sealed class MultiStaffLayouter
                 if (item.Duration > Fraction.Zero) break;
             }
 
-        // …and no meter is booked when NO row engraves one (a chords / lyrics-only system):
-        // SpacingRules.AnyStaffEngravesTime.
-        bool prefixHasTime = !score.AllStavesTab && SpacingRules.AnyStaffEngravesTime(score)
+        // …and no meter is booked when NO row engraves one (a chords / lyrics-only system, or
+        // an all-`as numbers` tab score): SpacingRules.AnyStaffEngravesTime.
+        bool prefixHasTime = SpacingRules.AnyStaffEngravesTime(score)
                              && (isFirstSystem || leadingTimeChange != null);
         // The break-align GROUP's width places the shared meter column; each staff's own clef
         // ink inside that group is what its own first-note wish is measured from.

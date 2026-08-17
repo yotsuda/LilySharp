@@ -24,11 +24,20 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A tab staff prints neither a key signature nor a time signature, so an ALL-TAB score
-/// must not reserve either at the system head — there is no notation staff to align
-/// against, and the reclaimed space lets the notes sit close to the compact "TAB" clef.
-/// A score with any notation staff keeps both (and the tab aligns to it), unchanged.
+/// A tab staff prints no KEY signature in either mode, so an ALL-TAB score must not reserve
+/// one at the system head — there is no notation staff to align against, and the reclaimed
+/// space lets the notes sit close to the compact "TAB" clef. A score with any notation staff
+/// keeps it (and the tab aligns to it), unchanged.
 /// </summary>
+/// <remarks>
+/// ⚠️ THE METER IS NOT THE KEY'S TWIN HERE, THOUGH IT READ LIKE IT FOR A LONG TIME.
+/// ly/engraver-init.ly:1214 is \remove Key_engraver in the TabStaff context and nothing puts
+/// it back, while ly/engraver-init.ly:1219-1220, five lines below that \remove Key_engraver,
+/// only BLANKS the meter's stencil — and the revert is at ly/property-init.ly:825-826, first
+/// in tabFullNotation, above its no-stem-extend one. Lily#'s default
+/// <c>tab</c> IS full notation, so it carries a meter and its prefix widens with one;
+/// <c>tab … as numbers</c> is the bare TabStaff and reclaims that width like the key's.
+/// </remarks>
 [Trait("Category", "Unit")]
 public class TabOnlyKeyPrefixTests
 {
@@ -80,12 +89,26 @@ public class TabOnlyKeyPrefixTests
     }
 
     [Fact]
-    public void AllTabPrefix_IsIndependentOfTheMeter()
+    public void AllTabPrefix_CarriesTheMeter_BecauseTheDefaultTabIsFullNotation()
     {
-        // Tab draws no time signature either, so its width is reclaimed too — the prefix
-        // is the same whatever the meter (a notation staff would widen 4/4 vs 3/4).
-        Assert.Equal(PrefixWidth(Src("c major", "tab bass bl", "4/4")),
-                     PrefixWidth(Src("c major", "tab bass bl", "3/4")));
+        // The falsifier for the half of this pair that changed: a full-notation tab staff
+        // engraves the meter, so its prefix is NOT independent of it. 4/4 takes the single
+        // C glyph and 3/4 a stacked pair of digits, so the two widths differ — and both are
+        // wider than the meterless prefix the numbers-only twin below keeps.
+        double m44 = PrefixWidth(Src("c major", "tab bass bl", "4/4"));
+        double m34 = PrefixWidth(Src("c major", "tab bass bl", "3/4"));
+        Assert.NotEqual(m44, m34);
+        Assert.True(m44 > PrefixWidth(Src("c major", "tab bass bl as numbers", "4/4")));
+    }
+
+    [Fact]
+    public void AllNumbersOnlyTabPrefix_IsIndependentOfTheMeter()
+    {
+        // `as numbers` IS the bare TabStaff, whose TimeSignature stencil is blanked — so
+        // here the width really is reclaimed and the prefix is the same whatever the meter
+        // (a notation staff would widen 4/4 vs 3/4).
+        Assert.Equal(PrefixWidth(Src("c major", "tab bass bl as numbers", "4/4")),
+                     PrefixWidth(Src("c major", "tab bass bl as numbers", "3/4")));
     }
 
     [Fact]

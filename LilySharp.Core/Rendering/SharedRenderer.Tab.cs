@@ -42,9 +42,10 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/tab-note-heads-engraver.cc — fret numbers as note heads
     /// LILYPOND-REF: scm/translation-functions.scm determine-frets
     /// </remarks>
-    private static void DrawTabStaff(Staff staff, ScoreLayout layout, SystemLayout system,
-        int staffIndex,
-        double staffY, double staffRight, double systemStartX, double clefGroupInkLeft,
+    private static void DrawTabStaff(MultiStaffScore score, Staff staff, ScoreLayout layout,
+        SystemLayout system, int staffIndex,
+        double staffY, double staffRight, double courtesyStaffRight,
+        double systemStartX, double sharedTimeX, bool isFirstSystem, double clefGroupInkLeft,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems,
         HashSet<int> percentCovered, IDrawingContext gc, double pageHeight)
     {
@@ -90,6 +91,47 @@ internal static partial class SharedRenderer
         gc.DrawGlyph(EmmentalerGlyphs.TabClef,
             systemStartX + EngravingDefaults.ClefGlyphXOffset - clefGroupInkLeft,
             tabCenterY, FontSize);
+
+        // The METER, at the SHARED break-align column (sharedTimeX) like every other staff's.
+        // LilyPond's TabStaff keeps the Time_signature_engraver and only BLANKS its grob:
+        // ly/engraver-init.ly:1219-1220 sits five lines under that block's \remove Key_engraver
+        // and reads `\override TimeSignature.stencil = ##f`, and the matching revert is at
+        // ly/property-init.ly:825-826, three lines above tabFullNotation's no-stem-extend one.
+        // Lily#'s default `tab` IS full notation — it draws
+        // stems, beams, flags, dots and rests, and LilyPondExporter writes \tabFullNotation
+        // into the twin for it — so it prints the meter, and only `tab … as numbers` (the
+        // bare TabStaff) does not. SpacingRules.ContributesToTimeColumnWidth is the ONE house
+        // for that question: the reservation reads it too, so the column booked and the glyph
+        // drawn cannot come apart.
+        //
+        // ⚠️ THE STENCIL IS NOT SCALED BY THE TAB'S staff-space, and it hangs off the tab's
+        // OWN vertical centre. MEASURED on LilyPond (the same two bars as a 4-string bass tab
+        // and as a notation staff): the digit pair stands 2.000000 apart on BOTH, though the
+        // tab's staff-space is 1.5; the numerator's baseline sits ON the staff centre and the
+        // denominator's 2.000000 below it; the 4/4 C glyph sits on the centre. Those are
+        // DrawTimeSignature's own offsets with "middle line" read as the tab centre, so it is
+        // handed a SYNTHETIC staffY that puts its middle line there — the device the tab rests
+        // already use, rather than a second copy of the placement rule.
+        bool engravesMeter = SpacingRules.ContributesToTimeColumnWidth(staff);
+        double meterStaffY = tabCenterY + StaffMiddleLineDrop;
+        if (engravesMeter)
+        {
+            if (isFirstSystem)
+            {
+                if (!score.TimeSignature.SenzaMisura)
+                    using (SourceScope(gc, score.Header.Time))
+                        DrawTimeSignature(score.TimeSignature, sharedTimeX, meterStaffY, gc);
+            }
+            else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange
+                     && !startTimeChange.NewTime.SenzaMisura)
+            {
+                // A meter change at the line break is part of the prefix, exactly as on a
+                // notation staff (SharedRenderer.DrawSystem) — no source scope there either,
+                // the change owns its own position through the measure item it also has.
+                DrawTimeSignature(startTimeChange.NewTime, sharedTimeX, meterStaffY, gc);
+            }
+        }
+
         bool lineStart = true;
         foreach (var ml in system.Measures)
         {
@@ -144,6 +186,22 @@ internal static partial class SharedRenderer
             }
         }
 
+        // Mid-piece meter changes. Read off the SAME item walk the notation staff uses
+        // (EnumerateStaffItems) rather than the fret loop above: a change's X is a break
+        // alignment inside the boundary column — after the bar line by the bar line's own
+        // space-alist entry, or hung back from the musical column by the gap the layouter
+        // reserved — and none of that is the note column the digits sit on. That walk also
+        // owns the skip for the copy the system-start prefix has already drawn, so the tab
+        // cannot double-print a meter change that opens a continuation line.
+        // The PRIMARY voice alone: the meter belongs to the staff, and a change stored in
+        // every voice would otherwise be overprinted once per voice.
+        if (engravesMeter)
+            foreach (var (item, _, _, itemX, _) in
+                     EnumerateStaffItems(primaryVoice, 1, system, layout))
+                if (item is TimeSignatureChangeItem timeChange
+                    && !timeChange.NewTime.SenzaMisura)
+                    DrawTimeSignatureChange(timeChange, itemX, meterStaffY, gc);
+
         // ⚠️ GRACE DIGITS ARE DRAWN IN A LATER PASS (SharedRenderer.cs, DrawGraceNotes), so
         // their bites have to be booked here or the line would run straight through them.
         // The spans come from TabGraceDigits — the same producer that pass draws from — so
@@ -158,12 +216,34 @@ internal static partial class SharedRenderer
                 digitGaps.Add((d.StringNum - 1, d.CenterX - d.Width / 2, d.CenterX + d.Width / 2));
         }
 
+        // End-of-line courtesy meter: when the NEXT line opens with a meter change, the
+        // TimeSignature's break-visibility is all-visible, so the changed meter prints on
+        // BOTH sides of the break (scm/define-grobs.scm:3922-3953 break-align-anchor-alignment
+        // … break-visibility, the TimeSignature grob's own block) — on a full-notation tab
+        // exactly as on a notation staff. It stands off the final BAR LINE's own space-alist
+        // entry rather than a courtesy key's: a tab staff has no Key_engraver in either mode,
+        // so nothing is ever in front of it here. The string lines then run over the suffix
+        // the layout reserved for it, which is why the right edge is picked here and not at
+        // the top — an unextended tab would stop its lines short under the glyph.
+        double lineRight = staffRight;
+        if (engravesMeter && system.Measures.Length > 0
+            && GetSystemEndTimeChange(staff, system) is { } eolTimeChange)
+        {
+            var lastMl = system.Measures[^1];
+            using (gc.Source(eolTimeChange.SourcePosition))
+                DrawTimeSignature(eolTimeChange.NewTime,
+                    lastMl.X + lastMl.Width + SpacingRules.BreakAlignGap(
+                        BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
+                    meterStaffY, gc);
+            lineRight = courtesyStaffRight;
+        }
+
         // LAST, so every digit above has booked its bite out of the line it sits on.
         // One line per string, spaced stringSpace apart, starting at the system indent
         // (systemStartX) like the notation staff — not the page margin, or on the first
         // (indented) system they overrun to the left.
         for (int i = 0; i < stringCount; i++)
-            DrawTabStringLine(systemStartX, staffRight, staffY - i * stringSpace, i, digitGaps, gc);
+            DrawTabStringLine(systemStartX, lineRight, staffY - i * stringSpace, i, digitGaps, gc);
     }
 
     /// <summary>

@@ -551,7 +551,7 @@ internal sealed class LayoutEngine
                 // the score key's. TabOnlyKeyPrefixTests asserts the same value directly.
                 PrefixWidth: SpacingRules.CalculatePrefixWidth(SpacingRules.MaxClefWidth(score),
                     SpacingRules.WidestActiveKeyInk(score, firstMeasureIndex),
-                    isFirstSystem && !score.AllStavesTab,
+                    isFirstSystem && SpacingRules.AnyStaffEngravesTime(score),
                     score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText),
                 Measures: measureLayouts, StaffGroups: sysStaffGroups,
                 Indent: sysIndent,

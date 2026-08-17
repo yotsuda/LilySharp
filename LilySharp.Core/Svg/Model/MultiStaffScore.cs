@@ -148,6 +148,15 @@ public sealed record MultiStaffScore
     /// <summary>True when EVERY rendered staff is a tab staff — no notation staff draws a
     /// key signature. An all-tab score reclaims the reserved key-signature prefix width
     /// (there is no notation staff to align against), so its notes spread into it.</summary>
+    /// <remarks>
+    /// ⚠️ THE KEY QUESTION ONLY. It used to gate the METER too, which was the same answer
+    /// while a tab staff engraved neither; it is not. ly/property-init.ly:825-826 is the first
+    /// revert in tabFullNotation, above its no-stem-extend one, and it undoes the blanking at
+    /// ly/engraver-init.ly:1219-1220, five lines under that block's \remove Key_engraver —
+    /// which itself has no revert anywhere. The meter
+    /// asks <c>SpacingRules.AnyStaffEngravesTime</c>, which reads
+    /// <see cref="Staff.TabNumbersOnly"/> per staff.
+    /// </remarks>
     public bool AllStavesTab => StaffGroups.Length > 0
         && StaffGroups.All(g => g.Staves.Length > 0 && g.Staves.All(s => s.IsTab));
 

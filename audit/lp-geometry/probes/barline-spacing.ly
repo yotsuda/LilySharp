@@ -394,6 +394,38 @@ lay =
   } { \key fis \major c4 d e f | g2 e }
 >> \lay "TKT" }
 
+%% TKF — THE SAME SYSTEM UNDER \tabFullNotation, which is the OTHER end of the switch TKC
+%%   sits on and the configuration Lily#'s default `tab` actually is. TKC/TKT are twins of
+%%   `tab … as numbers`: a bare TabStaff, whose TimeSignature LilyPond blanks
+%%   (\override TimeSignature.stencil = ##f, engraver-init.ly:1219-1220). \tabFullNotation
+%%   REVERTS exactly that as its first line (property-init.ly:825-826) — and LilyPondExporter
+%%   writes \tabFullNotation into the twin of every default `tab`, because Lily#'s default
+%%   draws the stems, beams, flags, dots and rests that the bare TabStaff also blanks. So a
+%%   corpus that measured only TKC measured only one half of Lily#'s tab.
+%%
+%%   The KEY is NOT symmetric and must stay out of it: \tabFullNotation has no \revert for a
+%%   Key_engraver that was \remove'd, so the tab engraves no signature here either. This score
+%%   therefore isolates the METER and nothing else against TKC.
+%%
+%%   Ledger quantities (two, because the pair is what makes the claim falsifiable):
+%%     line-start.clef-to-time.tab-full        TABCLEF ink right -> TABTIME anchor
+%%     line-start.time-to-first-note.tab-full  TIME anchor -> first HEAD on the NOTATION staff
+%%
+%%   PREDICTED BEFORE THE DUMP, from TKC's own model above: with a stencil the tab staff's
+%%   last prefatory grob becomes its TimeSignature, so it takes the SAME
+%%   (first-note . (semi-shrink-space . 2.0)) entry as the notation staff — the two wishes
+%%   coincide, merge_springs has nothing to average, and the distance must leave TKC's
+%%   averaged 3.300000 for the two-ordinary-staves 3.700000. A dump that still says 3.3 would
+%%   refute "the meter is the extremal grob"; one that says something else again would refute
+%%   the per-staff averaging model TM3/TM4 pinned.
+\score { <<
+  \new Staff { \key c \major \time 4/4 c'4 d' e' f' | g'2 e' }
+  \new TabStaff \with {
+    \override Clef.after-line-breaking = #(gd "TKF" "TABCLEF")
+    \override TimeSignature.after-line-breaking = #(gd "TKF" "TABTIME")
+  } { \tabFullNotation \key c \major c4 d e f | g2 e }
+>> \lay "TKF" }
+
 %% TM3 / TM4 — NOT ledger points. The model check behind TKC/TKT's residual: is the
 %%   line-start distance really the per-staff AVERAGE (merge_springs, spring.cc:104),
 %%   and is the weight really one wish per STAFF? Adding notation staves to the

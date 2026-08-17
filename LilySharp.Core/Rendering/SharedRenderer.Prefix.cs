@@ -359,6 +359,20 @@ internal static partial class SharedRenderer
 
     // ---------- Time signature ----------
 
+    /// <summary>
+    /// How far below a staff's TOP line its MIDDLE line sits — the frame
+    /// <see cref="DrawTimeSignature"/> hangs the meter from, given a top-line
+    /// <c>staffY</c>.
+    /// </summary>
+    /// <remarks>
+    /// Derived, not measured: half the five-line staff's own height. It is named because a
+    /// TAB staff has no middle line of its own, so <c>DrawTabStaff</c> INVERTS this to hand
+    /// the meter a synthetic <c>staffY</c> whose middle line is the tab's vertical centre.
+    /// One expression read in both directions beats a 2 spelled twice — and the two spellings
+    /// would have to move together if the staff ever stopped being four spaces tall.
+    /// </remarks>
+    internal const double StaffMiddleLineDrop = StaffHeight / 2;
+
     private static double DrawTimeSignature(TimeSignature ts, double x, double staffY, IDrawingContext gc)
     {
         // Senza misura: unmeasured music prints NO signature.
@@ -372,12 +386,12 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/time-signature-settings.scm:954-964,981-982.
         if (ts.Beats == 4 && ts.BeatType == 4)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY - 2, FontSize);
+            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY - StaffMiddleLineDrop, FontSize);
             return x + GlyphMetrics.TimeSigCommon.Width;
         }
         if (ts.Beats == 2 && ts.BeatType == 2)
         {
-            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY - 2, FontSize);
+            gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY - StaffMiddleLineDrop, FontSize);
             return x + GlyphMetrics.TimeSigCutCommon.Width;
         }
         // Stack numerator over denominator, each centered on the staff like

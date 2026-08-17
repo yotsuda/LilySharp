@@ -48,7 +48,7 @@ internal sealed class SystemBreaker
     internal static double GateFirstPrefixWidth(MultiStaffScore score, double maxClefWidth) =>
         SpacingRules.CalculatePrefixWidth(
             maxClefWidth, SpacingRules.WidestActiveKeyInk(score, 0),
-            includeTimeSignature: !score.AllStavesTab,
+            includeTimeSignature: SpacingRules.AnyStaffEngravesTime(score),
             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
 
     /// <summary>The same for a CONTINUATION line, which carries clef and key but no meter.</summary>

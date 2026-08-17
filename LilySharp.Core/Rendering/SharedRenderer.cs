@@ -345,8 +345,11 @@ internal static partial class SharedRenderer
 
         // An end-of-line courtesy key signature — and the courtesy meter after it — sit ON
         // the staff after the final barline, so the staff lines extend over the reserved
-        // suffix (tab staves keep the unextended width; they print no signatures).
+        // suffix. A tab staff prints no courtesy KEY (it has no Key_engraver in either mode)
+        // but does print the courtesy METER when it engraves one, so its string lines extend
+        // over that alone — measured off the bar line, not off a key that is not there.
         double notationStaffRight = staffRight;
+        double tabStaffRight = staffRight;
         if (system.Measures.Length > 0)
         {
             var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
@@ -354,8 +357,12 @@ internal static partial class SharedRenderer
                 notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
                     key.PreviousKey.Sharps, key.NewKey.Sharps);
             if (GetSystemEndTimeChange(score.PrimaryContentStaff, system) is { } eolMeter)
+            {
                 notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
                     eolMeter, afterCourtesyKey: eolCourtesy is not null);
+                tabStaffRight += SpacingRules.TimeCourtesySuffixWidth(
+                    eolMeter, afterCourtesyKey: false);
+            }
         }
 
         // Left-edge system bar + span bars through grand-staff gaps.
@@ -487,8 +494,8 @@ internal static partial class SharedRenderer
                     foreach (var prItem in score.PercentRepeats)
                         if (prItem.StaffIndex == globalIdx)
                             tabPercentCovered.Add(prItem.MeasureIndex);
-                    DrawTabStaff(staff, layout, system, globalIdx, localStaffY, staffRight,
-                        systemStartX,
+                    DrawTabStaff(score, staff, layout, system, globalIdx, localStaffY,
+                        staffRight, tabStaffRight, systemStartX, sharedTimeX, isFirstSystem,
                         clefGroupInkLeft, beamedItems, tabPercentCovered, sgc, pageHeight);
                     continue;
                 }

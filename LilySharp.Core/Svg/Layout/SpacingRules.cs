@@ -370,7 +370,7 @@ internal static class SpacingRules
         !staff.IsTab && !staff.IsTextRow;
 
     /// <summary>
-    /// Whether this staff ENGRAVES a time signature — the same question
+    /// Whether this staff engraves a time signature with a STENCIL — the same question
     /// <see cref="ContributesToKeyColumnWidth"/> asks for the key column, for the meter one.
     /// </summary>
     /// <remarks>
@@ -378,25 +378,52 @@ internal static class SpacingRules
     /// and neither Lyrics (:632-649) nor ChordNames (:703-725) does. So a lyric / chord row
     /// has no TimeSignature grob at all and books nothing.
     /// <para>
-    /// A TAB staff is NOT excluded here: its TimeSignature grob exists and sits in the shared
-    /// meter column, it merely has no stencil (dumped as an EMPTY extent — the probe harness
-    /// reports skipping <c>TKC TABTIME</c>). An all-tab score's meter is dropped by the
-    /// separate <c>AllStavesTab</c> gate at the call sites, which is where that (Lily#-side)
-    /// modelling of the missing stencil already lives.
+    /// ⚠️ A TAB STAFF ANSWERS BOTH WAYS, AND THE SWITCH IS THE ONE LILY#'S TWIN ALREADY
+    /// THROWS. LilyPond's TabStaff keeps the Time_signature_engraver — the grob exists and
+    /// sits in the shared meter column — and only BLANKS it:
+    /// ly/engraver-init.ly:1219-1220 sits five lines under that block's \remove Key_engraver
+    /// and reads <c>\override TimeSignature.stencil = ##f</c> — BLANKED, not un-engraved; the
+    /// matching revert is ly/property-init.ly:825-826, above tabFullNotation's no-stem-extend
+    /// one. Lily#'s default <c>tab</c> IS full notation: it draws
+    /// stems, flags, dots, rests, beams and tuplet brackets, and LilyPondExporter writes
+    /// <c>\tabFullNotation</c> into the twin for it. Only <c>tab … as numbers</c> is the
+    /// bare TabStaff. So the meter's stencil follows <see cref="Staff.TabNumbersOnly"/>.
+    /// </para>
+    /// <para>
+    /// MEASURED (LilyPond, same music as two twins — the falsifier pair
+    /// <c>TabFullNotationEngravesTheMeter</c>): with <c>\tabFullNotation</c> the tab staff
+    /// draws the initial 4/4 at clef + 4.320000 and the mid-piece 2/4 in its own column;
+    /// bare, it draws neither and its first fret digit sits 3.4548 further left. Lily# used
+    /// to reserve that 3.4548 in BOTH modes and draw the glyph in neither.
+    /// </para>
+    /// <para>
+    /// The key column is NOT symmetric with this: <c>\tabFullNotation</c> has no
+    /// <c>\revert</c> for a Key_engraver that was <c>\remove</c>d, so a tab staff engraves no
+    /// signature in either mode (<see cref="ContributesToKeyColumnWidth"/>).
     /// </para>
     /// </remarks>
-    public static bool ContributesToTimeColumnWidth(Staff staff) => !staff.IsTextRow;
+    public static bool ContributesToTimeColumnWidth(Staff staff) =>
+        !staff.IsTextRow && !(staff.IsTab && staff.TabNumbersOnly);
 
     /// <summary>
-    /// Whether ANY staff in the score engraves a time signature. False for a system built
-    /// only of chord / lyric rows, which is what stops the prefix booking a meter column no
-    /// row draws.
+    /// Whether ANY staff in the score engraves a time signature stencil. False for a system
+    /// built only of chord / lyric rows, and for one built only of <c>tab … as numbers</c>
+    /// staves — which is what stops the prefix booking a meter column no row draws.
     /// </summary>
     /// <remarks>
     /// MEASURED (audit/lp-geometry/probes/staffless-system.ly, scores CO and CO3): the same
     /// chords under 4/4 and under 3/4 put their first chord name on 0.500000 in both, to 15
     /// digits — LilyPond books no meter width because no context engraves one, while Lily#
     /// booked <c>GetTimeSigWidth(beats, beatType)</c>, which differs between the two.
+    /// <para>
+    /// ⚠️ THIS IS THE WHOLE GATE NOW. The all-tab case used to be a SECOND spelling — a
+    /// <c>!score.AllStavesTab</c> guard sat in front of every call — from the days when a
+    /// tab staff never engraved a meter. That guard answered the numbers-only question with
+    /// the tab question and so blanked the meter of a full-notation tab book too; the two
+    /// have been folded into <see cref="ContributesToTimeColumnWidth"/>, which is also what
+    /// the drawing walk asks. <c>MultiStaffScore.AllStavesTab</c> now serves the KEY column
+    /// alone, where a tab staff really does answer one way in both modes.
+    /// </para>
     /// </remarks>
     public static bool AnyStaffEngravesTime(MultiStaffScore score)
     {
