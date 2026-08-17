@@ -1453,6 +1453,32 @@ internal sealed class LayoutEngine
         double skylineY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, headerHeight, perSystemExtents[0].upExtent,
             pageAnchor.HalfFirst, pageAnchor.ToFirst, _options.VerticalSpacing.TopSystem);
+
+        // ⚠️ THE SINGLE-PAGE STACK IS THROWN AWAY WHEN THE SCORE OVERFLOWS (the check below
+        // hands the whole thing to OptimalPages), and it is not cheap to build: the loop
+        // measures each adjacent pair with a horizon padding, and padding a SYSTEM skyline
+        // copies the whole silhouette. So decide the overflow FIRST, from a bound that needs
+        // no skyline at all.
+        // The bound is sound because every increment the loop adds is
+        // max(BasicDistance, max(MinimumDistance, …)) — never less than
+        // max(BasicDistance, MinimumDistance) whatever the skylines say. If even that
+        // minimal stacking does not fit, no skyline reading can make it fit.
+        // ⚠️ ONE-SIDED ON PURPOSE: exceeding the bound proves overflow, but not exceeding it
+        // proves nothing, so the loop still runs and the real check below still decides.
+        // MEASURED (session 191, Release, keystroke allocation): the discarded loop was
+        // 249 MB of perf-scripts1k's 337 MB keystroke and 285 MB of perf-fingstack1k's 525 MB
+        // — every multi-page book paid for a single-page layout it could never use.
+        if (_options.PageHeight > 0 && systems.Length > 1)
+        {
+            var floorSpec = _options.VerticalSpacing.SystemSystem;
+            double floorGap = Math.Max(floorSpec.BasicDistance, floorSpec.MinimumDistance);
+            double floorHeight = skylineY + (systems.Length - 1) * floorGap
+                + SysHeight(systems.Length - 1)
+                + perSystemExtents[systems.Length - 1].downExtent + _options.MarginBottom;
+            if (floorHeight > _options.PageHeight)
+                return OptimalPages();
+        }
+
         var updatedSystems = new List<SystemLayout>();
         for (int i = 0; i < systems.Length; i++)
         {
