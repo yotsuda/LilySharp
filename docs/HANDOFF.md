@@ -116,7 +116,7 @@ Copy-Item audit\probe-out\pitches.csv scratch\pNNN\<label>.csv -Force   # ← �
 **snapshot 217 枚**・suite **5294 passed / 0 failed / 4 skipped**
 ＝**引継ぎの数は全部合っていた**（**26 回連続**）。
 ★★ **未 push は 3 便続けて両端が繋がった**——**第195 の終了時 22 と開始時 22 が一致**（間で push は無い）。
- 終了時 **未追跡 0・作業ツリー項目 0・未 push 34**（★ **この引継ぎ commit まで含む数**——
+ 終了時 **未追跡 0・作業ツリー項目 0・未 push 35**（★ **この引継ぎ commit まで含む数**——
 ⚠️⚠️ **一度 29 と書いて外している**。**第194・第195 と 3 便連続で同じ所を踏んだ**＝
 **§0 ★ の注意書きを読んでも防げていない。**
 ⇒ ★★★ **手順に落とす**: **引継ぎ commit を作る*前*に `git rev-list --count origin/master..master` を打ち、
@@ -980,10 +980,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > ⚠️ **双子（LP）はまだこの計器に入っていない**——**1 冊ずつなら
 > `scratch\p195\Compare-Pitches.ps1`**（`lysc ly` → LP → NoteHead dump → ページと多重集合で比較）。
 > **全数に広げるなら LP を 566 回まわす便が要る。**
-> ★ **現状**（第196 終了時・`scratch\p196\p196-after-section.csv`）:
-> **soundingRests 0 冊・midiOnly 9 冊・silentHeads 35 冊・pitchDiffers 43 冊・xmlDiffers 42 冊。**
-> ★★ **合併 49 冊のうち 44 冊は移調 clef／移調 instrument を書く**（下の ⒜ 末尾に数え方）。
-> **島の外は 5 冊で、内訳は ⒟ が 3 冊・MIDI の天井が 2 冊**（**天井は第196 で警告が出るようにした＝
+> ★ **現状**（第196 終了時）:
+> **soundingRests 0 冊・midiOnly 9 冊・silentHeads 35 冊・pitchDiffers 40 冊・xmlDiffers 42 冊。**
+> ⚠️ **この数は引継ぎに書いてあるだけ**——`audit/probe-out/` も `scratch/` も**git 管理外**なので、
+> **CSV へのパスを根拠として引かないこと**（第196 は 1 度そう書いて、翌行で古くなった）。
+> **取り直しは 8 秒**: `dotnet run --project audit/LilySharp.Probe -c Release -- pitches audit\probe-out\all566.txt`。
+> ★★ **合併 46 冊のうち 44 冊は移調 clef／移調 instrument を書く**（下の ⒜ 末尾に数え方）。
+> **島の外は 2 冊だけで、どちらも MIDI の天井**（**第196 で警告が出るようにした＝
 > 差そのものは MIDI の 128 鍵という外部制約なので消えない**）。
 > ⇒ ★★★ **第195 が残した「未分類 25 冊」は第196 で 5 族に割れ、決定の要らない 4 族はすべて閉じた**
 > （§1 の表）。**残っているのは決定待ちの ⒜⒝⒞⒟ と、決定の要らない ⒡ の 1 件だけ。**
@@ -997,8 +1000,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   - **実測**: `test/treble8`（guitar / tenor / treble_8 の 3 part）で **XML 24 音・MIDI 24 音が
     全部 1 オクターブ違う**（最大は `audit/lpreg/perf-tab300` の 900 音）。
   - ⚠️⚠️ ★★★ **射程は「xmlDiffers ＋ pitchDiffers」*ではない*。数え方ごと残す**——
-    **第196 終了時で合併 49 冊**、**そのうち移調 clef／移調 instrument を 1 つでも書く本は 44 冊、
-    書かない本が 5 冊**（＝**この島の外**・**⒟ が 3 冊と MIDI の天井が 2 冊**）。**数え方**:
+    **第196 終了時で合併 46 冊**、**そのうち移調 clef／移調 instrument を 1 つでも書く本は 44 冊、
+    書かない本が 2 冊**（＝**この島の外**・**どちらも MIDI の天井**）。**数え方**:
     ```powershell
     $a = Import-Csv audit\probe-out\pitches.csv
     $sus = $a | Where-Object { [int]$_.pitchDiffers -gt 0 -or ([int]$_.xmlDiffers -gt 0 -and $_.xmlComparable -eq 'True') }
