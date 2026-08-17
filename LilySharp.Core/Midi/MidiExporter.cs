@@ -107,9 +107,54 @@ public sealed class MidiExporter
 
     // Tie handling: a tie (~) merges the next same-pitch note into the previous
     // one (one sustained note) instead of re-articulating it.
+    // ⚠️ The previous ONSET, not the previous NOTE. A chord is one onset with several
+    // notes, so `<c e>2 ~ <c e>2` has to extend BOTH of them; while this was a single
+    // index a chord could neither be tied from nor tied into, and every tied chord
+    // re-articulated in the MIDI while the page drew the tie and the MusicXML wrote
+    // the second chord as a tie-stop (measured 2026-08-17 on 8 of 566 books).
     private bool _tiePending;
-    private int _lastNoteIndex = -1;
+    private readonly List<int> _lastOnset = new();
     private MidiTrack? _lastNoteTrack;
+
+    /// <summary>The notes a tie arriving at this onset may extend — the previous
+    /// onset's, when a tie is pending on the same track, and nothing otherwise. The
+    /// caller consumes each index it uses, so a chord that sounds one pitch twice
+    /// cannot extend one note twice.</summary>
+    private List<int> OpenTieTargets(MidiTrack track)
+        => _tiePending && _lastNoteTrack == track ? new List<int>(_lastOnset) : new List<int>();
+
+    /// <summary>Extend the tied-from note of <paramref name="midiPitch"/> and return its
+    /// index, or -1 when nothing ties into it. A tie joins noteheads of the SAME pitch —
+    /// `&lt;c e&gt;~ &lt;c g&gt;` sustains the c and articulates the g — so an unmatched
+    /// member starts its own note rather than silently borrowing a neighbour's.</summary>
+    /// <remarks>The extension is the full written <paramref name="durationTicks"/>, not an
+    /// articulation-shortened length: a staccato note that is tied-FROM gains full length
+    /// on the merge. Rare (tie-over-staccato); kept deliberately, matching the intent of a
+    /// sustained tied note.</remarks>
+    private int ExtendTied(MidiTrack track, List<int> targets, int midiPitch, int durationTicks)
+    {
+        for (int k = 0; k < targets.Count; k++)
+        {
+            int i = targets[k];
+            if (i < 0 || i >= track.Notes.Count || track.Notes[i].Pitch != midiPitch) continue;
+            track.Notes[i] = track.Notes[i] with
+            {
+                DurationTicks = track.Notes[i].DurationTicks + durationTicks,
+            };
+            targets.RemoveAt(k);
+            return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Record what this onset sounded, so the next tie knows what to extend.</summary>
+    private void CloseOnset(MidiTrack track, List<int> indices, bool startsTie)
+    {
+        _lastOnset.Clear();
+        _lastOnset.AddRange(indices);
+        _lastNoteTrack = track;
+        _tiePending = startsTie;
+    }
 
     // Sounding-pitch transpose for the part currently being played. A part option
     // transpose: shifts every note by the interval's semitones (no respelling).
@@ -1270,30 +1315,22 @@ public sealed class MidiExporter
 
         bool startsTie = note.Articulations.OfType<TieSyntax>().Any();
 
-        // If the previous note tied into this one (same pitch on the same track),
+        // If the previous onset tied into this one (same pitch on the same track),
         // extend that note instead of emitting a new note-on/off pair.
-        if (_tiePending && _lastNoteTrack == track
-            && _lastNoteIndex >= 0 && _lastNoteIndex < track.Notes.Count
-            && track.Notes[_lastNoteIndex].Pitch == midiPitch)
+        var targets = OpenTieTargets(track);
+        int tiedInto = ExtendTied(track, targets, midiPitch, durationTicks);
+        if (tiedInto >= 0)
         {
-            var prev = track.Notes[_lastNoteIndex];
-            // The tie extends prev by the full written durationTicks, not the
-            // articulation-shortened actualDuration — so a staccato note that is
-            // tied-FROM gains full length on the merge. Rare (tie-over-staccato);
-            // kept deliberately, matching a sustained tied note's intent.
-            track.Notes[_lastNoteIndex] = prev with { DurationTicks = prev.DurationTicks + durationTicks };
+            CloseOnset(track, [tiedInto], startsTie); // continue a tie chain (c~ c~ c)
             _currentTick += durationTicks;
-            _tiePending = startsTie; // continue a tie chain (c~ c~ c)
             return;
         }
 
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position,
             QuarterBend: note.Pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre));
-        _lastNoteIndex = track.Notes.Count - 1;
-        _lastNoteTrack = track;
+        CloseOnset(track, [track.Notes.Count - 1], startsTie);
         _currentTick += durationTicks;
-        _tiePending = startsTie;
     }
 
     /// <summary>Drum note → GM percussion: channel 10 (0-based 9), pitch =
@@ -1326,8 +1363,7 @@ public sealed class MidiExporter
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
             drum.Position, SourceOrdinal: NextOrdinal(drum.Position), Timbre: 9));
-        _lastNoteIndex = track.Notes.Count - 1;
-        _lastNoteTrack = track;
+        CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
         _currentTick += durationTicks;
     }
 
@@ -1348,12 +1384,14 @@ public sealed class MidiExporter
 
     private void ProcessChord(ChordSyntax chord, MidiTrack track, int extraOctave = 0)
     {
-        // A chord breaks any pending tie chain. Chords are not currently tie
-        // targets, and leaving stale _tiePending/_lastNoteIndex from the
-        // previous note would let a later same-pitch note wrongly merge across
-        // the chord.
-        _tiePending = false;
-        _lastNoteIndex = -1;
+        // A chord is ONE onset: a tie arriving here extends every member the previous
+        // onset also sounded, and a member it did not sound articulates. The other two
+        // outputs already state the same rule from their own side — the MusicXML
+        // exporter's "Ties apply to EVERY member of the chord", and the collector's
+        // HasTieAfter, which draws one tie per head.
+        var tieTargets = OpenTieTargets(track);
+        bool startsTie = chord.Articulations.OfType<TieSyntax>().Any();
+        var onset = new List<int>();
         var resolved = new List<(int MidiPitch, int QuarterBend, bool IsDrum)>();
 
         int startTick = _currentTick;
@@ -1423,9 +1461,16 @@ public sealed class MidiExporter
                 int octave = firstOctave + (step >= firstNoteName ? 0 : 1) + pitch.OctaveOffset;
                 midiPitch = WrittenToMidi(step, pitch.AccidentalOffset, octave);
             }
-            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
-                QuarterBend: pitch.QuarterOffset,
-                SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+            int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
+            if (tiedInto >= 0)
+                onset.Add(tiedInto);
+            else
+            {
+                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
+                    QuarterBend: pitch.QuarterOffset,
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+                onset.Add(track.Notes.Count - 1);
+            }
             resolved.Add((midiPitch, pitch.QuarterOffset, false));
         }
 
@@ -1448,12 +1493,21 @@ public sealed class MidiExporter
                 firstNoteName, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keySharps);
             int midiPitch = WrittenToMidi(step, alter, octave);
-            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
-                SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+            int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
+            if (tiedInto >= 0)
+                onset.Add(tiedInto);
+            else
+            {
+                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
+                onset.Add(track.Notes.Count - 1);
+            }
             resolved.Add((midiPitch, 0, false));
         }
 
-        // Drum chord members: GM percussion alongside any pitched members.
+        // Drum chord members: GM percussion alongside any pitched members. They are
+        // deliberately left OUT of the onset: drums do not tie (ProcessDrumNote), so a
+        // tie must not find one and sustain a cymbal.
         foreach (var drum in chord.DrumNames)
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
@@ -1462,6 +1516,7 @@ public sealed class MidiExporter
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;
+        CloseOnset(track, onset, startsTie);
 
         // Next note is relative to the chord's first pitch.
         _currentNoteName = firstNoteName;
@@ -1478,9 +1533,13 @@ public sealed class MidiExporter
     /// <remarks>LILYPOND-REF: scm/music-functions.scm:854-946 copy-repeat-chord + expand-repeat-chords!</remarks>
     private void ProcessChordRepetition(ChordRepetitionSyntax rep, MidiTrack track)
     {
-        // Same tie-chain break as a written chord.
-        _tiePending = false;
-        _lastNoteIndex = -1;
+        // A q is an onset like the chord it copies, so it ties like one — `<c e>2~ q`
+        // sustains, `q~ q` chains. The MusicXML exporter already reads `rep.Articulations`
+        // for the same tie; leaving this walk out would have kept the third spelling of
+        // one rule broken after the first two were fixed.
+        var tieTargets = OpenTieTargets(track);
+        bool startsTie = rep.Articulations.OfType<TieSyntax>().Any();
+        var onset = new List<int>();
 
         int startTick = _currentTick;
         var duration = rep.Duration is { } rd ? GetDuration(rd) : _defaultDuration;
@@ -1492,12 +1551,21 @@ public sealed class MidiExporter
         {
             int ordinal = NextOrdinal(rep.Position);
             foreach (var n in notes)
-                track.Notes.Add(n.IsDrum
-                    ? new MidiNote(9, n.MidiPitch, _velocity, startTick, durationTicks, rep.Position,
-                        SourceOrdinal: ordinal, Timbre: 9)
-                    : new MidiNote(track.Channel, n.MidiPitch, _velocity, startTick, durationTicks, rep.Position,
-                        QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
+            {
+                if (n.IsDrum)
+                {
+                    track.Notes.Add(new MidiNote(9, n.MidiPitch, _velocity, startTick, durationTicks,
+                        rep.Position, SourceOrdinal: ordinal, Timbre: 9));
+                    continue;
+                }
+                int tiedInto = ExtendTied(track, tieTargets, n.MidiPitch, durationTicks);
+                if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
+                track.Notes.Add(new MidiNote(track.Channel, n.MidiPitch, _velocity, startTick, durationTicks,
+                    rep.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
+                onset.Add(track.Notes.Count - 1);
+            }
         }
+        CloseOnset(track, onset, startsTie);
 
         _currentTick = startTick + durationTicks;
     }
