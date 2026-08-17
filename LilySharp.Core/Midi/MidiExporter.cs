@@ -81,9 +81,16 @@ public sealed class MidiExporter
     // computed once; a part's own transpose overrides it.
     private (int step, int alt, int oct)? _scoreTransposeDefault;
 
-    // Per-PART relative-pitch state, carried across sections and repeat
-    // passes — matching the collector, which streams one part's blocks
-    // sequentially through the whole piece.
+    // Per-PART relative-pitch state WITHIN one section, so a part whose music is split
+    // over more than one block picks its own chain up again instead of inheriting the
+    // block that ran before it.
+    // ⚠️ IT DOES NOT CROSS A SECTION BOUNDARY. It used to, under a comment saying that
+    // matched the collector; it did not. `test/section-octave-reset` states the rule the
+    // page and the MusicXML both follow — "octave resets to default at section
+    // boundaries" — and "default" is the PART's own anchor, so a bass part reopens at
+    // octave 3 (measured 2026-08-17: page C3, MIDI C4). The note VALUE rides the same
+    // lane and had the same defect: `section A { c2 d }` then four bare letters played
+    // four HALF notes against the page's four quarters.
     private readonly Dictionary<string, (int NoteName, int Octave, Fraction Dur)> _partPitchLanes = new();
 
     // Printed-copy ordinal per source position: the k-th onset of a source
@@ -575,8 +582,7 @@ public sealed class MidiExporter
     /// <summary>
     /// Plays one section: its part blocks run SIMULTANEOUSLY (each from the
     /// section's start tick; the section ends with the longest part), and each
-    /// part's relative-pitch state persists across sections/repeat passes via
-    /// _partPitchLanes — the collector streams a part the same way.
+    /// part reopens the octave frame and the note value the section starts at.
     /// </summary>
     private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack)
     {
@@ -585,6 +591,11 @@ public sealed class MidiExporter
         // modulation cannot leak out).
         _ambientTonic = _homeTonic;
         _keySharps = _homeKeySharps;
+        // ... and so do the two running defaults a bare letter reads. The lanes below
+        // hold a part's chain BETWEEN its blocks inside this section, not across the
+        // boundary into it — that is the whole of what "self-contained" means for pitch,
+        // and it is the rule `test/section-octave-reset` names.
+        _partPitchLanes.Clear();
 
         // A section's own header key — stated beside the part blocks (section-major) or
         // in a standalone part-major header — is not walked with the part cell's music,
@@ -605,8 +616,8 @@ public sealed class MidiExporter
             {
                 // Restore this part's own pitch/duration lane so concurrently
                 // played parts (one PlaySection call each, same structure
-                // reference) keep independent relative-octave chains across their
-                // sections instead of inheriting the previous part's last note.
+                // reference) keep independent relative-octave chains WITHIN this
+                // section instead of inheriting the previous part's last note.
                 string pname = owner.Name.Text;
                 var (anchor, absBase) = PartOctaveAnchors(pname);
                 var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
