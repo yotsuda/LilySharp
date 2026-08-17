@@ -456,8 +456,24 @@ public readonly record struct MeasureContentKey(long Hash)
     // COMPILED getters rather than Reflection.GetValue, ~30x faster, which matters
     // because Compute runs on every edit (a wholesale GetValue version cost ~3.5ms per
     // edit on a 41-measure multi-staff score — enough to cancel the reuse it enables).
-    private static readonly ConcurrentDictionary<Type, Func<object, object?>[]> ItemGetters = new();
-    private static readonly ConcurrentDictionary<Type, Func<object, object?>[]> SideGetters = new();
+    // ⚠️ AND THE COMPILED GETTER RETURNED object?, WHICH BOXED EVERY VALUE-TYPED PROPERTY —
+    // one allocation per property per item per measure per keystroke. MEASURED (session 192,
+    // perf-plain1k): AddIntrinsic cost 7.32 MB of a 54.1 MB keystroke, 7.3 KB per measure to
+    // fold eight notes. So a property whose type can be hashed WITHOUT the box gets a
+    // Func<object,int> that calls the value's own GetHashCode directly; everything AddValue
+    // has to look at as an object (strings, sequences, ChordNoteInfo, reference types, and
+    // any struct that does not override GetHashCode) keeps the old path.
+    // ⚠️ THE FOLDED BITS DO NOT MOVE. Add<T> folds (uint)value.GetHashCode(), and the boxed
+    // path folded (uint)box.GetHashCode() — the same call on the same value — so the direct
+    // path hands hc.Add(int) exactly the number the box would have produced (Int32.GetHashCode
+    // is the identity). Enums go through their UNDERLYING type, which is what Enum.GetHashCode
+    // returns anyway; a struct is taken only when GetHashCode is declared on the struct
+    // ITSELF, so no case falls through to ValueType.GetHashCode (which would box regardless).
+    private readonly record struct PropertyFold(
+        Func<object, int>? Direct, Func<object, object?>? Boxed);
+
+    private static readonly ConcurrentDictionary<Type, PropertyFold[]> ItemGetters = new();
+    private static readonly ConcurrentDictionary<Type, PropertyFold[]> SideGetters = new();
     private static readonly ConcurrentDictionary<(Type, string), Func<object, int>?> IntGetters = new();
 
     // A property getter (or element enumeration) that throws must not crash key
@@ -484,9 +500,15 @@ public readonly record struct MeasureContentKey(long Hash)
     {
         var hc = new Hash64();
         hc.Add(item.GetType());                       // discriminate kinds
-        foreach (var get in Getters(item.GetType(), excluded))
+        foreach (var fold in Getters(item.GetType(), excluded))
         {
-            try { AddValue(ref hc, get(item)); }
+            try
+            {
+                if (fold.Direct is { } direct)
+                    hc.Add(direct(item));
+                else
+                    AddValue(ref hc, fold.Boxed!(item));
+            }
             catch (Exception ex) when (IsPoisonable(ex))
             {
                 hc.Add(Interlocked.Increment(ref _getterPoison));
@@ -495,7 +517,7 @@ public readonly record struct MeasureContentKey(long Hash)
         return hc.ToHashCode();
     }
 
-    private static Func<object, object?>[] Getters(Type type, HashSet<string> excluded)
+    private static PropertyFold[] Getters(Type type, HashSet<string> excluded)
     {
         var cache = ReferenceEquals(excluded, ItemExclusions) ? ItemGetters : SideGetters;
         return cache.GetOrAdd(type, t =>
@@ -504,8 +526,85 @@ public readonly record struct MeasureContentKey(long Hash)
                             && p.GetIndexParameters().Length == 0
                             && !excluded.Contains(p.Name))
                 .OrderBy(p => p.Name, StringComparer.Ordinal)
-                .Select(CompileGetter)
+                .Select(CompileFold)
                 .ToArray());
+    }
+
+    /// <summary>
+    /// Every property this type folds WITHOUT boxing, and whether the number it folds is the
+    /// number the boxed path would have folded. The equation the no-box path rests on, at the
+    /// level the equation is stated — a corpus A/B cannot see a hash that changed but stayed
+    /// equally discriminating, and that is exactly the failure that would go unnoticed until
+    /// a book collided (HANDOFF RULES §5.3).
+    /// </summary>
+    /// <returns>One entry per property taken directly: its name and whether the two folds
+    /// agree on this item.</returns>
+    internal static IReadOnlyList<(string Property, bool Agrees)> DirectFoldReport(object item)
+    {
+        var report = new List<(string, bool)>();
+        foreach (var p in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                     .Where(p => p.CanRead
+                                 && p.GetIndexParameters().Length == 0
+                                 && !ItemExclusions.Contains(p.Name))
+                     .OrderBy(p => p.Name, StringComparer.Ordinal))
+        {
+            if (CompileDirectHash(p) is not { } direct) continue;
+            object? boxed = CompileGetter(p)(item);
+            // What AddValue folds for these types: hc.Add(0) for a null (a Nullable with no
+            // value), otherwise hc.Add(object) — which is (uint)value.GetHashCode().
+            int viaBox = boxed is null ? 0 : boxed.GetHashCode();
+            report.Add((p.Name, direct(item) == viaBox));
+        }
+        return report;
+    }
+
+    /// <summary>Whether this type's property would be folded through the boxing path —
+    /// asserted by the net for the three types <see cref="AddValue"/> reads specially.</summary>
+    internal static bool FoldsThroughTheObjectPath(Type declaring, string property)
+    {
+        var p = declaring.GetProperty(property, BindingFlags.Public | BindingFlags.Instance);
+        return p != null && CompileDirectHash(p) == null;
+    }
+
+    private static PropertyFold CompileFold(PropertyInfo p) =>
+        CompileDirectHash(p) is { } direct
+            ? new PropertyFold(direct, null)
+            : new PropertyFold(null, CompileGetter(p));
+
+    /// <summary>
+    /// <c>o =&gt; ((TDeclaring)o).Prop.GetHashCode()</c> with no box, or null when the
+    /// property's type is one <see cref="AddValue"/> must see as an object.
+    /// </summary>
+    /// <remarks>
+    /// The three exclusions are the three cases <see cref="AddValue"/> treats specially, and
+    /// they are exclusions of MEANING, not of speed: a string is folded char by char, an
+    /// <see cref="IEnumerable"/> element by element, and a <c>ChordNoteInfo</c> with its
+    /// source position normalised away — taking any of them by GetHashCode would change what
+    /// the key sees, and for ChordNoteInfo it would make the key POSITION-DEPENDENT.
+    /// </remarks>
+    private static Func<object, int>? CompileDirectHash(PropertyInfo p)
+    {
+        var t = p.PropertyType;
+        if (!t.IsValueType
+            || typeof(IEnumerable).IsAssignableFrom(t)
+            || t == typeof(ChordNoteInfo)
+            || Nullable.GetUnderlyingType(t) == typeof(ChordNoteInfo))
+            return null;
+
+        var o = Expression.Parameter(typeof(object), "o");
+        Expression value = Expression.Property(Expression.Convert(o, p.DeclaringType!), p);
+        // An enum's own GetHashCode is Enum's, which would box; it returns the underlying
+        // value's hash, so read that instead and the folded number is the same.
+        if (t.IsEnum)
+            value = Expression.Convert(value, Enum.GetUnderlyingType(t));
+
+        var hash = value.Type.GetMethod(nameof(GetHashCode), Type.EmptyTypes);
+        // Declared on the type itself = a non-virtual call on the value. Anything inherited
+        // (ValueType.GetHashCode) would box on the way in, so leave it to the object path.
+        if (hash == null || hash.DeclaringType != value.Type)
+            return null;
+
+        return Expression.Lambda<Func<object, int>>(Expression.Call(value, hash), o).Compile();
     }
 
     // o => (object)((TDeclaring)o).Prop
