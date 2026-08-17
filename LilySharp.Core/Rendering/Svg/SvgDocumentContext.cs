@@ -132,17 +132,35 @@ internal sealed class SvgDocumentContext : IDocumentContext
         if (_pages.Count == 0)
             return "";
 
-        var sb = new StringBuilder();
+        // ⚠️ THE PAGE BODIES ARE COPIED ONCE, INTO THE RESULT, and on a long score that is
+        // the whole cost of this method. The bodies are already built (EndPage keeps each
+        // page's builder), so appending them to ANOTHER StringBuilder and calling ToString
+        // pays for the document twice: once in the second builder's chunks and once in the
+        // string. MEASURED (session 191, keystroke allocation): Assemble was 7.2 MB of
+        // perf-plain1k's 66.3 MB keystroke for a 3.76 MB document — two copies where one is
+        // the floor this method's string return imposes. Writing straight into the result
+        // pays that floor and nothing else.
+        // ⚠️ EVERY PIECE MUST MATCH WHAT THE BUILDER WROTE, CHARACTER FOR CHARACTER,
+        // including AppendLine's Environment.NewLine. The 566-book SVG A/B is what checks
+        // that, and it is not optional for a change of this shape.
+        string nl = Environment.NewLine;
+
+        // The document as a flat list of pieces, in emission order. A piece is either a
+        // literal (the header, the wrappers) or one page's body, and the list is the whole
+        // spelling of the document's shape — there is no second code path to keep in step.
+        var pieces = new List<Piece>(_pages.Count * 3 + 2);
 
         // Single page: emit exactly as a one-page document (no <g> wrapper) so the
         // output is byte-identical to the common case.
         if (_pages.Count == 1)
         {
-            var (content, w, h) = _pages[0];
-            WriteHeader(sb, w, h);
-            sb.Append(content);
-            sb.AppendLine("</svg>");
-            return sb.ToString();
+            var (body, w, h) = _pages[0];
+            var head1 = new StringBuilder(512);
+            WriteHeader(head1, w, h);
+            pieces.Add(Piece.Of(head1));
+            pieces.Add(Piece.Of(body));
+            pieces.Add(Piece.Of("</svg>" + nl));
+            return Compose(pieces);
         }
 
         double totalHeight = 0, maxWidth = 0;
@@ -152,21 +170,57 @@ internal sealed class SvgDocumentContext : IDocumentContext
             if (w > maxWidth) maxWidth = w;
         }
 
-        WriteHeader(sb, maxWidth, totalHeight);
+        var head = new StringBuilder(512);
+        WriteHeader(head, maxWidth, totalHeight);
+        pieces.Add(Piece.Of(head));
+
         double yOffset = 0;
-        foreach (var (content, _, h) in _pages)
+        foreach (var (body, _, h) in _pages)
         {
             // class/data attributes let a viewer (the VS Code preview toolbar)
             // find the page boundaries for fit-page zoom and page navigation.
-            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+            pieces.Add(Piece.Of(string.Format(CultureInfo.InvariantCulture,
                 "<g class=\"page\" data-page-top=\"{0:F2}\" data-page-height=\"{1:F2}\" transform=\"translate(0, {0:F2})\">",
-                yOffset, h));
-            sb.Append(content);
-            sb.AppendLine("</g>");
+                yOffset, h) + nl));
+            pieces.Add(Piece.Of(body));
+            pieces.Add(Piece.Of("</g>" + nl));
             yOffset += h;
         }
-        sb.AppendLine("</svg>");
-        return sb.ToString();
+        pieces.Add(Piece.Of("</svg>" + nl));
+        return Compose(pieces);
+    }
+
+    /// <summary>One span of the finished document: a literal, or a page body still in its
+    /// builder. Exactly one of the two is set.</summary>
+    private readonly struct Piece
+    {
+        private readonly string? _text;
+        private readonly StringBuilder? _body;
+        private Piece(string? text, StringBuilder? body) { _text = text; _body = body; }
+        public static Piece Of(string text) => new(text, null);
+        public static Piece Of(StringBuilder body) => new(null, body);
+        public int Length => _text?.Length ?? _body!.Length;
+        public void CopyTo(Span<char> at)
+        {
+            if (_text != null) _text.AsSpan().CopyTo(at);
+            else _body!.CopyTo(0, at, _body.Length);
+        }
+    }
+
+    /// <summary>Joins the pieces, allocating exactly the result and nothing else.</summary>
+    private static string Compose(List<Piece> pieces)
+    {
+        int total = 0;
+        foreach (var p in pieces) total += p.Length;
+        return string.Create(total, pieces, static (span, ps) =>
+        {
+            int at = 0;
+            foreach (var p in ps)
+            {
+                p.CopyTo(span[at..]);
+                at += p.Length;
+            }
+        });
     }
 
     private void WriteHeader(StringBuilder sb, double widthSpaces, double heightSpaces)
