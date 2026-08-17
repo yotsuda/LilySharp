@@ -2163,6 +2163,28 @@ public sealed partial class MeasureCollector
     /// LILYPOND-REF: lily/beam.cc:894-982 consider_auto_knees — per-member
     /// directions for kneed beams (BeamMember.MemberStemUp).
     /// </remarks>
+    /// <summary>
+    /// The brackets addressed to the stream <see cref="ResolveBeamStemDirections"/> is about
+    /// to probe — the ones this collector stamped with the staff and voice it is collecting
+    /// RIGHT NOW.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE COLLECTOR COLLECTS EVERY STAFF (the voice-binding loop bumps
+    /// <c>_currentStaffIndex</c>), and <c>_tupletBrackets</c> is never cleared, so by the time
+    /// staff N is probed the list also holds staves 0..N−1's brackets — and, inside a
+    /// <c>&lt;&lt; \\ &gt;&gt;</c> span, the sibling voices'. Handed unfiltered, the detector reads
+    /// every one of them as an index into THIS stream's items:
+    /// <c>BeamDetector.BuildTupletSpans</c> drops only the out-of-range ones and says so, and
+    /// says the in-range collision "closes only when the probe filters by staff/voice". This
+    /// is that filter, spelt once in <see cref="TupletBracketItem.AddressedTo"/> — the
+    /// annotation quantity's caller (<c>LayoutEngine.DetectionScoreFor</c>) has the same
+    /// problem and calls the same home. The list is empty in the overwhelming majority of
+    /// books, so the common path allocates nothing.
+    /// </remarks>
+    private ImmutableArray<TupletBracketItem> ProbeTupletBrackets()
+        => TupletBracketItem.AddressedTo(
+            _tupletBrackets, _currentStaffIndex, _currentVoiceIndex);
+
     private void ResolveBeamStemDirections(List<Measure> measures)
     {
         if (measures.Count == 0)
@@ -2170,7 +2192,8 @@ public sealed partial class MeasureCollector
 
         var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
         var groups = new BeamDetector().DetectBeamGroups(
-            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura), _tupletBrackets.ToImmutableArray(),
+            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
+            ProbeTupletBrackets(),
             memo: BeamMemo);
 
         // ⚠️ ONE REBUILD PER MEASURE, NOT ONE PER STAMP. Every bake below used to write

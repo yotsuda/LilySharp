@@ -658,7 +658,7 @@ internal sealed class LayoutEngine
         List<List<MultiStaffLayouter.StaffInsideSpanners>> staffSpanners,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> staffInside)
     {
-        var prelimStaff = score.PrimaryContentStaff;
+        var (prelimStaff, prelimStaffIndex) = score.PrimaryContentStaffWithIndex();
         var prelimScore = new Score(
             prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
@@ -755,7 +755,18 @@ internal sealed class LayoutEngine
         // session 192: 2.61 MB of a 56.7 MB perf-plain1k keystroke). The two remain separate
         // QUANTITIES — MultiStaffLayouter.BeamGroupsOf compares the inputs rather than
         // assuming when they agree, and on a multi-voice or multi-staff score they do not.
-        var annotationBeamGroups = layouter.BeamGroupsOf(prelimScore);
+        // ⚠️ DETECTED ON ITS OWN STREAM'S TUPLETS, NOT THE SCORE'S. prelimScore carries the
+        // WHOLE score's bracket list because the annotation pass DRAWS every bracket from it;
+        // the beam detector, handed one voice, reads that list as if every bracket addressed
+        // THAT voice's items — BuildTupletSpans' own remark says an in-range foreign bracket
+        // still collides by index and that the hole "closes only when the probe filters by
+        // staff/voice". MEASURED (session 193, ForeignTupletBracketTests): a triplet opening
+        // at index 2 of the LOWER staff turns the upper staff's thirty-second beamlet round
+        // (left/right 2/3 against 3/2), because the foreign span's start lands on that stem's
+        // moment and flag_directions skips a stem at a span boundary.
+        var annotationDetectionScore = DetectionScoreFor(
+            prelimScore, prelimStaff, score, prelimStaffIndex);
+        var annotationBeamGroups = layouter.BeamGroupsOf(annotationDetectionScore);
         var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = prelimScore,
@@ -4939,6 +4950,40 @@ internal sealed class LayoutEngine
         ImmutableArray<TupletBracketItem> all, int staffIndex)
         => all.IsDefaultOrEmpty ? all
             : all.Where(t => t.StaffIndex == staffIndex).ToImmutableArray();
+
+    /// <summary>
+    /// <paramref name="voiceScore"/> if its bracket list already addresses nothing but its own
+    /// stream, otherwise the same music with the list narrowed to that stream — the input the
+    /// beam detector must be given when the score it is handed holds ONE voice out of several.
+    /// </summary>
+    /// <remarks>
+    /// The annotation quantity is the primary content staff's PRIMARY VOICE, and the score it
+    /// travels in carries the WHOLE score's bracket list because the annotation pass DRAWS
+    /// every bracket from it. The detector cannot tell those two apart — see
+    /// <see cref="TupletBracketItem.AddressedTo"/>, where the scoping rule and its measurement
+    /// live — so the detection input is built here instead of reusing the drawing one.
+    /// <para>
+    /// Returns the caller's own instance whenever the filter drops nothing, which is every
+    /// single-staff book and every book without tuplets: that keeps the detection input
+    /// identical to the staff quantity's on those books, so the two go on sharing one
+    /// detection through <see cref="MultiStaffLayouter.BeamGroupsOf"/>'s input-keyed memo
+    /// (session 192) instead of paying for a second walk of the same music.
+    /// </para>
+    /// </remarks>
+    internal static Score DetectionScoreFor(
+        Score voiceScore, Staff staff, MultiStaffScore score, int staffIndex)
+    {
+        var all = score.TupletBrackets;
+        if (all.IsDefaultOrEmpty)
+            return voiceScore;
+        var own = TupletBracketItem.AddressedTo(all, staffIndex, voiceIndex: 0);
+        if (own.Length == all.Length)
+            return voiceScore;
+        return new Score(
+            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+            tupletBrackets: own);
+    }
 
     /// <summary>
     /// The score a staff's ties and slurs are laid out on: every voice of a polyphonic

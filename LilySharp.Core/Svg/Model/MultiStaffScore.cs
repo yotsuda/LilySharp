@@ -287,22 +287,32 @@ public sealed record MultiStaffScore
     /// unchanged; it only differs when a chord row precedes the music in the score
     /// order, where it keeps the measure structure driven by the real staff.
     /// </summary>
-    public Staff PrimaryContentStaff
+    public Staff PrimaryContentStaff => PrimaryContentStaffWithIndex().Staff;
+
+    /// <summary>
+    /// <see cref="PrimaryContentStaff"/> together with its GLOBAL staff index — the index
+    /// <see cref="EnumerateStaves"/> hands out, and the one every per-staff table
+    /// (dynamics, tuplet brackets, articulations) is keyed by.
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME ON PURPOSE (HANDOFF §5.2.1②): a caller that needs the index used to have to
+    /// re-derive it, and a second spelling of "which staff is the primary one" would drift
+    /// from this one silently — the caller would then filter a per-staff table by the WRONG
+    /// staff and get a plausible answer for the wrong music.
+    /// </remarks>
+    public (Staff Staff, int Index) PrimaryContentStaffWithIndex()
     {
-        get
-        {
-            // Skip ossias too: an ossia stacks ABOVE the staff it decorates, so
-            // it can be the FIRST staff — but its stream is mostly rests and it
-            // carries no break marks, so letting it drive line breaking (or the
-            // measure count) would ignore the real music's `break`s.
-            foreach (var (_, staff, _) in EnumerateStaves())
-                if (!staff.IsTextRow && !staff.IsOssia && staff.PrimaryVoice.Measures.Length > 0)
-                    return staff;
-            foreach (var (_, staff, _) in EnumerateStaves())
-                if (!staff.IsTextRow && staff.PrimaryVoice.Measures.Length > 0)
-                    return staff;
-            return StaffGroups[0].PrimaryStaff;
-        }
+        // Skip ossias too: an ossia stacks ABOVE the staff it decorates, so
+        // it can be the FIRST staff — but its stream is mostly rests and it
+        // carries no break marks, so letting it drive line breaking (or the
+        // measure count) would ignore the real music's `break`s.
+        foreach (var (_, staff, index) in EnumerateStaves())
+            if (!staff.IsTextRow && !staff.IsOssia && staff.PrimaryVoice.Measures.Length > 0)
+                return (staff, index);
+        foreach (var (_, staff, index) in EnumerateStaves())
+            if (!staff.IsTextRow && staff.PrimaryVoice.Measures.Length > 0)
+                return (staff, index);
+        return (StaffGroups[0].PrimaryStaff, 0);
     }
 
     /// <summary>Number of measures (from the first content staff).</summary>

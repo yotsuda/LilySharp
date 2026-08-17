@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 
@@ -51,6 +52,46 @@ public sealed record TupletBracketItem(
     int VoiceIndex = 0
 )
 {
+    /// <summary>
+    /// The brackets in <paramref name="all"/> that address ONE note stream — the voice
+    /// <paramref name="voiceIndex"/> of staff <paramref name="staffIndex"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME, BECAUSE A BRACKET'S INDICES ARE ONLY MEANINGFUL IN ITS OWN STREAM.
+    /// <see cref="StartNoteIndex"/>/<see cref="EndNoteIndex"/> are positions in a measure's
+    /// item array, and every stream has its own item array — so handed a foreign bracket the
+    /// beam detector resolves it against the WRONG notes and gets a plausible answer for
+    /// music that is not there. It cannot defend itself: <c>BeamDetector.BuildTupletSpans</c>
+    /// drops only the OUT-OF-RANGE ones (and its remark says the in-range collision "closes
+    /// only when the probe filters by staff/voice"). Every caller that hands the detector a
+    /// SINGLE stream must therefore scope the list first, and this is where that is spelt —
+    /// the two callers are <c>MeasureCollector.ProbeTupletBrackets</c> (the collect-time
+    /// stem-direction probe, whose collector walks every staff into one list) and
+    /// <c>LayoutEngine.DetectionScoreFor</c> (the annotation quantity, which takes the
+    /// primary staff's primary voice against the whole score's list).
+    /// <para>
+    /// MEASURED (session 193): with the list unscoped, a triplet opening at index 2 of the
+    /// LOWER staff turns the UPPER staff's thirty-second beamlet round — left/right 2/3
+    /// where the staff's own list gives 3/2 — because the foreign span's start lands on that
+    /// stem's moment and <c>flag_directions</c> skips a stem standing at a span boundary.
+    /// The corpus does not observe it: blanking either caller's list entirely moved 0 of 566
+    /// books, while blanking the DRAWN path's list (which was already scoped) moved 2, so the
+    /// sweep sees the mechanism and simply has no book that writes the shape.
+    /// <c>ForeignTupletBracketTests</c> is the instrument instead.
+    /// </para>
+    /// </remarks>
+    internal static ImmutableArray<TupletBracketItem> AddressedTo(
+        IReadOnlyList<TupletBracketItem> all, int staffIndex, int voiceIndex)
+    {
+        if (all.Count == 0)
+            return ImmutableArray<TupletBracketItem>.Empty;
+        var own = ImmutableArray.CreateBuilder<TupletBracketItem>(all.Count);
+        foreach (var t in all)
+            if (t.StaffIndex == staffIndex && t.VoiceIndex == voiceIndex)
+                own.Add(t);
+        return own.ToImmutable();
+    }
+
     /// <summary>
     /// Gets the display text for the tuplet number (e.g., "3" for triplets).
     /// </summary>
