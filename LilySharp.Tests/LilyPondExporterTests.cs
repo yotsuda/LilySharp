@@ -1215,6 +1215,105 @@ public class LilyPondExporterTests
             "the twin called a DECLARED phrase undeclared: " + string.Join(", ", liars));
     }
 
+    // ---- transpose ----------------------------------------------------------
+    //
+    // Lily#'s `transpose X` is LilyPond's `\transpose c X`, and until 2026-08-17 the twin
+    // wrote neither it nor its effect: the four books that use it exported with the WRITTEN
+    // pitches and the WRITTEN key, so a transposing book's twin was a different piece and
+    // every measurement taken through it measured a different page. Nothing warned.
+    //
+    // MEASURED on LilyPond 2.26.0 rather than argued from the twin's text: with the wrapper,
+    // LilyPond reads exactly the pitches `lysc check --pitches` resolves for the page in all
+    // four books plus the two spellings no book uses, and the KeySignature grob's
+    // alteration-alist moves with them (() -> ((0 . 1/2) (3 . 1/2)) for test/transpose, C
+    // major to D major). Without it, all four differ.
+
+    private static string TransposeScore(string partM, string top, string scoreOpts) => $$"""
+        time 4/4
+        key c major
+        {{top}}
+        part m { clef treble{{partM}} }
+        part n { clef bass }
+        section S { m { c'4 d e f | } n { c4 d e f | } }
+        form main { S }
+        score main "t"{{scoreOpts}} { staff m staff n }
+        """;
+
+    [Theory]
+    // the part's own option — and ONLY that part's variable
+    [InlineData(" transpose d", "", "", "m = \\transpose c d \\relative", "n = \\relative")]
+    // a bare top-level transpose is the file default: every part takes it
+    [InlineData("", "transpose d", "", "m = \\transpose c d \\relative", "n = \\transpose c d \\relative")]
+    // a per-score transpose belongs to that score, and reaches every part in it
+    [InlineData("", "", " transpose e", "m = \\transpose c e \\relative", "n = \\transpose c e \\relative")]
+    // composed: the part's is the INNER one (c->d then c->ees is c->f), and the part that
+    // states nothing of its own takes the score's alone
+    [InlineData(" transpose d", "", " transpose ees", "m = \\transpose c f \\relative", "n = \\transpose c ees \\relative")]
+    // control: no transpose anywhere writes no wrapper at all
+    [InlineData("", "", "", "m = \\relative", "n = \\relative")]
+    public void TheThreeSpellingsOfTranspose_ReachTheTwinAndComposeAsThePageComposesThem(
+        string partM, string top, string scoreOpts, string expectedM, string expectedN)
+    {
+        var ly = Export(TransposeScore(partM, top, scoreOpts));
+
+        Assert.Contains(expectedM, ly);
+        Assert.Contains(expectedN, ly);
+    }
+
+    /// <summary>
+    /// The target is written, not computed: both languages measure the interval from a bare
+    /// <c>c</c>, so an octave mark carries over as itself and <c>transpose bes,</c> is
+    /// <c>\transpose c bes,</c> — down a major second, not up a minor seventh.
+    /// </summary>
+    [Fact]
+    public void ATransposeTargetKeepsItsOctaveMarks()
+        => Assert.Contains("m = \\transpose c bes, \\relative",
+            Export(TransposeScore(" transpose bes,", "", "")));
+
+    /// <summary>
+    /// The wrapper goes OUTSIDE the octave frame, in both octave modes. LilyPond resolves the
+    /// relative octaves of the written pitches and then shifts the result, which is the order
+    /// Lily# uses (the collector transposes what the octave context has already resolved);
+    /// inside the frame it would be shifting the anchor instead of the music.
+    /// </summary>
+    [Theory]
+    [InlineData("", "\\transpose c d \\relative")]
+    [InlineData("octave absolute\n", "\\transpose c d \\fixed")]
+    public void TheTransposeWrapsTheOctaveFrame_RatherThanSittingInsideIt(
+        string headers, string expected)
+        => Assert.Contains(expected, Export(headers + TransposeScore(" transpose d", "", "")));
+
+    /// <summary>
+    /// The four books in the tree that write <c>transpose</c>, each asserted against the
+    /// interval its own header names. Their headers say "Verified against LilyPond
+    /// \transpose c d" / "\transpose c bes," — a claim that was true of the page and, until
+    /// this was written, unobservable in the twin those very words are about.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The list is exhaustive by measurement, not by memory: `git ls-files "*.lys"` grepped
+    /// for a `transpose` word gives these four of 566 on 2026-08-17 (the standing note in this
+    /// file said "one fixture", and §2F said three).
+    /// </remarks>
+    [Theory]
+    [InlineData("transpose.lys", new[] { "melody = \\transpose c d \\relative" })]
+    [InlineData("transpose-down.lys", new[] { "melody = \\transpose c bes, \\relative" })]
+    // only the part that declares it; `lower` states nothing and there is no file default
+    [InlineData("transpose-multistaff.lys",
+        new[] { "upper = \\transpose c d \\relative", "lower = \\relative" })]
+    // a bare top-level transpose: both staves
+    [InlineData("transpose-score.lys",
+        new[] { "upper = \\transpose c d \\relative", "lower = \\transpose c d \\relative" })]
+    public void TheTransposingBooksInTheTree_SayInTheirTwinsWhatTheirHeadersClaim(
+        string book, string[] expected)
+    {
+        string path = System.IO.Path.Combine(CollectResumeTests.FindRepoRoot(),
+            "LilySharp.Tests", "Fixtures", "test", book);
+        var ly = Export(System.IO.File.ReadAllText(path));
+
+        foreach (string e in expected)
+            Assert.Contains(e, ly);
+    }
+
     // ---- Scale-degree chords ------------------------------------------------
     //
     // LilyPond has no spelling for a degree at all, so a degree member cannot be copied

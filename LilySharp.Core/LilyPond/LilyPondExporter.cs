@@ -118,10 +118,14 @@ public sealed class LilyPondExporter
     /// <see cref="SectionHeaderMusic"/> already emits a section's own key where the collector
     /// applies it. A custom/atonal key has no tonic (<c>Valid</c> false), and the collector
     /// falls back to C there, so this does the same.
-    /// ⚠️ It is the written key, NOT the sounding one: a part-level <c>transpose</c> property
-    /// moves the key AND the pitches (MeasureCollector's PartTranspose.Read), and this
-    /// exporter writes neither — a standing gate of its own, with one fixture in it
-    /// (<c>test/transpose-score</c>). ⚠️ It is NOT the <c>instrument</c> gate, which is
+    /// ⚠️ It is the written key, NOT the sounding one, and it is RIGHT to be: a
+    /// <c>transpose</c> moves the key and the pitches together, and the twin says so by
+    /// wrapping the whole variable in <c>\transpose c X</c> (see <see cref="TransposeTarget"/>)
+    /// rather than by writing moved keys and moved pitches itself. LilyPond moves both inside
+    /// the wrapper, so everything here stays the source's own spelling — which is what a
+    /// transpiler owes its reader. ⚠️ This used to read "this exporter writes neither — a
+    /// standing gate of its own, with one fixture in it"; the gate closed on 2026-08-17 and
+    /// the fixtures were four, not one. ⚠️ It is NOT the <c>instrument</c> gate, which is also
     /// closed: see <see cref="PartClefWord"/>.
     /// </remarks>
     private int _keySharps;
@@ -280,6 +284,7 @@ public sealed class LilyPondExporter
                             + "drum table, so any remapped position, notehead or MIDI key differs");
                 }
                 _drumMode = _drumParts.Contains(name);
+                _partTranspose = EffectiveTranspose(root, name, render);
                 EmitPartVariable(varName, music, root);
                 _drumMode = false;
             }
@@ -289,11 +294,38 @@ public sealed class LilyPondExporter
             // No part at all — neither declared nor named by a score: treat the whole
             // file's music stream as one voice.
             partVars["music"] = "music";
+            _partTranspose = EffectiveTranspose(root, "music", render);
             EmitPartVariable("music", TopLevelMusic(root), root);
         }
 
         EmitScore(render, parts, partVars);
         return _sb.ToString();
+    }
+
+    /// <summary>
+    /// What a part is transposed by, asked of the readers the page asks: the part's own
+    /// <c>transpose</c> option or the file-level default
+    /// (<see cref="Semantics.PartTranspose.Read(SyntaxNode, string)"/>), composed under the
+    /// exported score's own <c>transpose</c> the way the collector composes it
+    /// (MeasureCollector.ComposeTranspose — the part's is the INNER one).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ "The exported score" is the FIRST one, which is what this transpiler writes; a file
+    /// whose second score transposes differently has never been visible in its twin, and that
+    /// is a property of exporting one score rather than of this line.
+    /// ⚠️ Read through the same three houses rather than re-derived, because the three
+    /// spellings of <c>transpose</c> disagreeing is a defect this repository has already had:
+    /// a render block's own transpose used to be counted as the file default as well, so one
+    /// construct gave three answers (PartTranspose.ReadScoreDefault's remarks).
+    /// </remarks>
+    private static (int step, int alt, int oct)? EffectiveTranspose(
+        CompilationUnitSyntax root, string partName, RenderDeclarationSyntax? render)
+    {
+        var scoreTranspose = render?.Transpose is { } t
+            ? Semantics.PartTranspose.ReadProperty(t)
+            : null;
+        return Semantics.PitchTransposer.Compose(
+            Semantics.PartTranspose.Read(root, partName), scoreTranspose);
     }
 
     /// <summary>
@@ -632,6 +664,14 @@ public sealed class LilyPondExporter
         return drums;
     }
 
+    /// <summary>
+    /// The effective <c>transpose</c> for the part being written: its own option, else the
+    /// file-level default, composed under the exported score's own — the same question the
+    /// collector asks (MeasureCollector's PartTranspose.Read composed with ScoreTranspose),
+    /// asked of the same readers so there is no second spelling of the rule.
+    /// </summary>
+    private (int step, int alt, int oct)? _partTranspose;
+
     private void EmitPartVariable(string varName, List<SyntaxNode> music, CompilationUnitSyntax root)
     {
         // ⚠️ The two modes anchor DIFFERENTLY on purpose. Absolute octave is middle C
@@ -643,6 +683,12 @@ public sealed class LilyPondExporter
             : _octaveAbsolute
             ? "\\fixed " + AnchorPitch(_absoluteBaseOctave)
             : "\\relative " + AnchorPitch(_anchorOctave);
+        // A transpose wraps the frame rather than sitting inside it: LilyPond resolves the
+        // relative octaves of the WRITTEN pitches and shifts the result, which is the order
+        // Lily# uses too (the collector transposes what the octave context has resolved).
+        // ⚠️ It goes on the variable, not the \score, because it is per PART.
+        if (TransposeTarget() is { } target)
+            wrapper = "\\transpose c " + target + " " + wrapper;
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
 
         // Each part starts from Lily#'s own default duration, as the collector does
@@ -666,6 +712,40 @@ public sealed class LilyPondExporter
         EmitMusicStream(music, indent: "  ");
         _sb.Append("}\n\n");
     }
+
+    /// <summary>
+    /// <see cref="_partTranspose"/> written the way LilyPond's <c>\transpose</c> takes it:
+    /// the target of an interval FROM <c>c</c>, which is how Lily# spells it too. Null when
+    /// the part is not transposed.
+    /// </summary>
+    /// <remarks>
+    /// Both languages anchor the target on a bare <c>c</c>, so the octave marks carry over
+    /// unchanged and nothing here does interval arithmetic: <c>transpose bes,</c> is
+    /// <c>\transpose c bes,</c>, down a major second on both sides. (The usual "Lily#'s
+    /// <c>c'</c> is LilyPond's <c>c''</c>" does not apply — that is about where a written
+    /// pitch LANDS, and this is a difference between two pitches.)
+    /// <para>
+    /// MEASURED on LilyPond 2.26.0, 2026-08-17, because "the twin drops transpose" had been
+    /// filed with the spelling left open (wrap, or write the sounding pitches?). Wrapping
+    /// test/transpose's twin in <c>\transpose c d</c> makes LilyPond read exactly the ten
+    /// pitches <c>lysc check --pitches</c> resolves for the page — D5 E5 F#5 G5 A5 B5 C#6 D7
+    /// D#8 E9 — and moves the key signature with them: the KeySignature grob's
+    /// alteration-alist goes from <c>()</c> to <c>((0 . 1/2) (3 . 1/2))</c>, C major to D
+    /// major, which is what test/transpose's own header claims. So the spelling was not a
+    /// decision; it was LilyPond's, and one command asked it.
+    /// </para>
+    /// ⚠️ Wrapping a <c>\drummode</c> body is a no-op rather than a hazard — MEASURED, the
+    /// same drum book with and without the wrapper renders to a byte-identical SVG — so drum
+    /// parts need no special case, and neither engine moves a drum name.
+    /// LILYPOND-REF: ly/music-functions-init.ly:2437-2441 transpose, a define-music-function
+    ///   taking (from to music) that wraps it in TransposedMusic via ly:music-transpose with
+    ///   the interval (- to from) — which is why writing <c>c</c> on the left makes the target
+    ///   the whole interval, the same way Lily#'s own target is measured from c.
+    /// </remarks>
+    private string? TransposeTarget()
+        => _partTranspose is { } t
+            ? SpellPitch(t.step, t.alt) + OctaveMarks(t.oct)
+            : null;
 
     private void EmitScoreSettings(CompilationUnitSyntax root)
     {
