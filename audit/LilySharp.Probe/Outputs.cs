@@ -63,6 +63,19 @@ using LilySharp.Core.Syntax;
 /// HANDOFF §2F, and the reason `midi-only` is reported rather than assumed to be a defect).
 /// </para>
 /// <para>
+/// ⚠️ THE MUSICXML SIDE HAS A REACH, and the reach is asked of the OUTPUTS, not of the
+/// ordinal. The MusicXML carries no source offsets, so it can only be compared as a
+/// multiset of sounding keys — which is sound exactly while the MIDI sounds no copy the
+/// document does not write. `|: … :|` is that case: the page prints one copy, the MIDI
+/// sounds two, and the document writes one plus `&lt;repeat direction="backward"/&gt;`.
+/// A phrase played twice is NOT that case, however similar it looks: all three write two.
+/// To rebuild the pair that decides it — the first must be in reach, the second out —
+/// <code>
+/// phrase P { c'4 d' e' f' | }   section A { v { P P } }        // in reach, 0 differences
+/// section A { v { |: c'4 d' e' f' :| } }                       // out of reach
+/// </code>
+/// </para>
+/// <para>
 /// ⚠️ WHAT IS NOT A DEFECT, measured rather than assumed, and left in the output for the
 /// reader to subtract: a tie's second note is engraved and does NOT re-articulate in MIDI
 /// (`silent-head`), and a chord sounds under the CHORD's position while the trace spells
@@ -86,7 +99,7 @@ internal static class Outputs
         int MidiPitches,      // ... and in the MIDI, on the books where that is comparable
         int XmlDiffers,       // entries by which the two multisets differ
         string XmlSample,
-        bool XmlComparable,   // no source position sounds twice => no unfolding to correct for
+        bool XmlComparable,   // the MIDI sounds no copy the document does not write
         string Note);
 
     public static int Run(string root, string listFile, string only)
@@ -111,10 +124,15 @@ internal static class Outputs
         var csv = Path.Combine(outDir, "pitches.csv");
         File.WriteAllLines(csv, new[]
         {
-            "book,positions,silentHeads,soundingRests,midiOnly,graces,pitchDiffers,xmlPitches,midiPitches,xmlDiffers,xmlComparable,note"
+            "book,positions,silentHeads,soundingRests,midiOnly,graces,pitchDiffers,xmlPitches,midiPitches,xmlDiffers,xmlComparable,pitchSample,xmlSample,note"
         }.Concat(rows.Select(r =>
+            // The two samples are in the CSV and not only in the report because the report
+            // prints 25 rows per heading: session 196 had to re-run the sweep on hand-made
+            // sublists to see the first disagreement of the books ranked 26th and lower,
+            // which is the one thing that says WHICH family a row belongs to.
             $"{r.Name},{r.Positions},{r.SilentHeads},{r.SoundingRests},{r.MidiOnly},{r.Graces},{r.PitchDiffers}," +
-            $"{r.XmlPitches},{r.MidiPitches},{r.XmlDiffers},{r.XmlComparable},{r.Note.Replace(',', ';')}")));
+            $"{r.XmlPitches},{r.MidiPitches},{r.XmlDiffers},{r.XmlComparable}," +
+            $"{r.PitchSample.Replace(',', ';')},{r.XmlSample.Replace(',', ';')},{r.Note.Replace(',', ';')}")));
 
         int read = rows.Count(r => r.Note.Length == 0);
         Console.WriteLine($"{books.Length} books, {read} read, {rows.Count - read} could not be read");
@@ -132,7 +150,7 @@ internal static class Outputs
         Report("SILENT HEADS — engraved, sounds nothing (a tie's second note lives here)",
             rows.Where(r => r.SilentHeads > 0).OrderByDescending(r => r.SilentHeads),
             r => $"{r.SilentHeads,5} of {r.Positions,5}");
-        Report("MUSICXML vs MIDI — different sounding notes, on books with no unfolding",
+        Report("MUSICXML vs MIDI — different sounding notes, on books the two both write out",
             rows.Where(r => r.XmlComparable && r.XmlDiffers > 0)
                 .OrderByDescending(r => r.XmlDiffers),
             r => $"{r.XmlDiffers,5} differ (xml {r.XmlPitches} midi {r.MidiPitches}) {r.XmlSample}");
@@ -140,8 +158,8 @@ internal static class Outputs
         Console.WriteLine($"grace positions subtracted (no page offset to join to): "
             + $"{rows.Sum(r => r.Graces)} in {rows.Count(r => r.Graces > 0)} books");
         int comparable = rows.Count(r => r.XmlComparable && r.Note.Length == 0);
-        Console.WriteLine($"MusicXML/MIDI reach: {comparable} of {read} books sound no position twice"
-            + " (the rest expand a repeat or a phrase, which only the MIDI unfolds)");
+        Console.WriteLine($"MusicXML/MIDI reach: {comparable} of {read} books sound no copy the"
+            + " document does not write (the rest repeat material the page engraves once)");
         Console.WriteLine($"-> {Path.GetRelativePath(root, csv).Replace('\\', '/')}");
         return 0;
     }
@@ -219,12 +237,13 @@ internal static class Outputs
             // spelling.
             var percussion = new HashSet<int>();
             var midiKeys = new List<int>();
-            int maxOrdinal = 0;
+            // ⚠️ ONSETS, not distinct pitches: `sounded` is a SET, so it cannot tell one
+            // sounding of a position from three. The reach test below needs the count.
+            var onsets = new Dictionary<int, int>();
             var midi = new MidiExporter().Export(tree);
             foreach (var t in midi.Tracks)
                 foreach (var n in t.Notes)
                 {
-                    maxOrdinal = Math.Max(maxOrdinal, n.SourceOrdinal);
                     if (n.Channel == 9)
                     {
                         if (n.SourcePos >= 0) percussion.Add(n.SourcePos);
@@ -232,6 +251,7 @@ internal static class Outputs
                     }
                     midiKeys.Add(n.Pitch);
                     if (n.SourcePos < 0) continue;
+                    Bump(onsets, n.SourcePos, 1);
                     if (!sounded.TryGetValue(n.SourcePos, out var set))
                         sounded[n.SourcePos] = set = new HashSet<int>();
                     set.Add(n.Pitch);
@@ -316,9 +336,27 @@ internal static class Outputs
                 if (xmlSample.Length == 0) xmlSample = "only in " + what;
             }
 
+            // ⚠️ THE REACH TEST IS "DID THE MIDI SOUND A COPY NOBODY WROTE", and it is asked
+            // of the two sides themselves. It used to be `SourceOrdinal == 0 everywhere`,
+            // which is a DIFFERENT question and was wrong in BOTH directions (measured
+            // 2026-08-17, session 196, falsifiers rebuildable from the remarks above):
+            //   * `phrase P { … }` played twice carries ordinals 0 and 1, so the old test
+            //     called it out of reach — but the page prints it twice, the MIDI sounds it
+            //     twice AND the MusicXML writes it twice, so the multisets are comparable
+            //     and 12 of 566 books were being skipped for nothing.
+            //   * `|: … :|` carries ordinal 0 on BOTH passes on purpose (MidiExporter
+            //     restores the snapshot, because the second pass is the same PRINTED copy),
+            //     so the old test called it in reach — and then reported the whole second
+            //     pass as a difference on 10 books, when the MusicXML says the same thing
+            //     with `<repeat direction="backward"/>` and any player unfolds it.
+            // The honest predicate compares the two counts the two sides actually produce:
+            // a position the page engraves N heads at may sound N times, never more.
+            bool xmlComparable = !heads.Any(h =>
+                onsets.TryGetValue(h.Key, out int played) && played > h.Value);
+
             return new Reading(name, heads.Count, silent, soundingRests, midiOnly, graces,
                 pitchDiffers, sample, xs.Count, ms.Count, xmlDiffers, xmlSample,
-                maxOrdinal == 0, "");
+                xmlComparable, "");
         }
         catch (Exception ex)
         {
