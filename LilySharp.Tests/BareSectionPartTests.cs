@@ -16,6 +16,7 @@
 
 using System.Linq;
 using LilySharp.Core.Midi;
+using LilySharp.Core.MusicXml;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -158,5 +159,48 @@ public class BareSectionPartTests
         int[] played = Play(Bare("clef bass tuning bass", "score main { staff bl  tab bl }"));
 
         Assert.Equal(48, played[0]);
+    }
+
+    /// <summary>
+    /// The MusicXML reads the score the same way, and had the same hole in a different
+    /// half: it reset the frame at each section but emitted a bare section under the name
+    /// "Part 1", which no declaration answers — so it kept the default anchor and no
+    /// transposition whatever the part it is drawn on says.
+    /// </summary>
+    [Theory]
+    [InlineData("clef bass", "C4")]                    // the clef's own register
+    [InlineData("clef treble", "C5")]                  // …and the control that is not it
+    [InlineData("clef bass tuning bass", "C4")]        // written pitch: the shift is <transpose>
+    public void TheMusicXmlAttributesABareSectionTheSameWay(string header, string firstPitch)
+    {
+        static (string Pitch, string Part) Read(string lys)
+        {
+            var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(lys));
+            var first = doc.Parts.SelectMany(p => p.Measures).SelectMany(m => m.Notes)
+                .First(n => n.Step != null);
+            return (first.Step + first.Octave!.Value.ToString(), doc.Parts[0].Name);
+        }
+
+        var bare = Read(Bare(header));
+        Assert.Equal(firstPitch, bare.Pitch);
+        // Same music inside `bl { }` blocks — the control that says this is attribution.
+        Assert.Equal(Read(Blocked(header)), bare);
+        // …and the document now says whose part it is, rather than inventing "Part 1".
+        Assert.Equal("bl", bare.Part);
+    }
+
+    /// <summary>A transposing part states its shift once, in <c>&lt;transpose&gt;</c>, so
+    /// the written pitch above is the same with and without the tuning — the sounding one
+    /// is not.</summary>
+    [Fact]
+    public void TheBareSectionsTranspositionReachesTheDocument()
+    {
+        var doc = new MusicXmlExporter().Export(
+            SyntaxTree.Parse(Bare("clef bass tuning bass")));
+
+        var transpose = doc.Parts.SelectMany(p => p.Measures)
+            .Select(m => m.Attributes?.TransposeSemitones)
+            .FirstOrDefault(t => t != null);
+        Assert.Equal(-12, transpose);
     }
 }

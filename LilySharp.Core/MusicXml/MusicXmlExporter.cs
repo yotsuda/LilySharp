@@ -16,6 +16,7 @@
 
 using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.MusicXml;
@@ -191,6 +192,43 @@ public sealed class MusicXmlExporter
     /// </remarks>
     public FormDeclarationSyntax? Form { get; init; }
 
+    /// <summary>
+    /// The <c>score</c> being written, or null to resolve it from the tree (the one whose
+    /// form is being written, else the first).
+    /// </summary>
+    public RenderSpec? Score { get; init; }
+
+    /// <summary>
+    /// The part a section that declares no <c>partName { }</c> block belongs to: the one
+    /// part the score engraves, or null when the score names none or several.
+    /// </summary>
+    /// <remarks>
+    /// The same reading the MIDI takes, and for the same reason — a bare section is music no
+    /// block claims, and <c>score main { staff bl }</c> is the only statement of whose it is.
+    /// ⚠️ Only when the score names exactly ONE part: two parts means the page draws the same
+    /// music in two registers and a single stream cannot be both.
+    /// </remarks>
+    private string? _bareSectionOwner;
+
+    /// <summary>The single part the score being written engraves, or null when it names
+    /// none or several.</summary>
+    private string? ResolveBareSectionOwner(SyntaxTree tree)
+    {
+        var spec = Score;
+        if (spec == null)
+        {
+            var all = RenderSpecParser.FindAll(tree);
+            var played = Form ?? LilySharp.Core.Semantics.ScoreForms.Primary(tree.GetRoot());
+            spec = all.FirstOrDefault(s => played != null && ReferenceEquals(s.Form, played))
+                   ?? all.FirstOrDefault();
+        }
+        // ⚠️ Not `?? default`: a default ImmutableArray throws on Length, and a file with no
+        // `score` block at all is the ordinary case that reaches here.
+        if (spec == null) return null;
+        var parts = spec.EngravedPartNames;
+        return parts.Length == 1 ? parts[0] : null;
+    }
+
     /// <summary>Exports the tree to a MusicXML file at <paramref name="path"/> and
     /// returns a summary (part / measure counts). The intermediate document model is
     /// an implementation detail.</summary>
@@ -207,6 +245,7 @@ public sealed class MusicXmlExporter
 
         var root = tree.GetRoot();
         _root = root;
+        _bareSectionOwner = ResolveBareSectionOwner(tree);
         _homeTonic = ScoreHomeKey.Read(root);
         _ambientTonic = _homeTonic;
 
@@ -636,8 +675,17 @@ public sealed class MusicXmlExporter
     /// part's name (and clef/transpose), exactly like the section-major
     /// <c>section A { m { … } }</c> form. Without this the inline notes hit
     /// <see cref="ProcessNode"/>'s skip-declarations case and the part exported EMPTY.</summary>
+    /// <remarks>
+    /// ⚠️ A section inside NO part declaration is a BARE section, and the name it is emitted
+    /// under decides which header it reads. It used to fall straight to "Part 1" — a name no
+    /// declaration answers — so the music came out at the default anchor with no sounding
+    /// shift, whatever the part it is drawn on says. The score is what says whose it is
+    /// (see <see cref="_bareSectionOwner"/>); "Part 1" remains for a file that names nobody.
+    /// </remarks>
     private void EmitPartMajorSection(SectionDeclarationSyntax section)
-        => EmitPartMusic(EnclosingPartName(section) ?? "Part 1", DirectChildren(section));
+        => EmitPartMusic(
+            EnclosingPartName(section) ?? _bareSectionOwner ?? "Part 1",
+            DirectChildren(section));
 
     /// <summary>The non-token child nodes of a container, in order.</summary>
     private static IEnumerable<SyntaxNode> DirectChildren(SyntaxNode node)
