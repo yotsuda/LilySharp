@@ -1045,7 +1045,16 @@ public sealed class MusicXmlExporter
                     // $phrase means the same pitches at every call site
                     // (matches MeasureCollector's RelativeResetMarker). Trailing
                     // marks (Chorus' / Chorus,) shift that frame up or down.
-                    _currentOctave = 4 + varRef.OctaveOffset;
+                    // ⚠️ FRESH IS THE PART'S ANCHOR, NOT MIDDLE C — the same octave
+                    // EmitPartMusic arms above, and what the collector's ResetToInitial
+                    // means by "initial" (OctaveContext.InitialOctave is the voice's armed
+                    // octave, which the clef sets). A literal 4 here put every phrase in a
+                    // bass part an octave above its own page: MEASURED 2026-08-17 on a
+                    // `part lh { clef bass }` whose music is one phrase — page and MIDI read
+                    // C3 E3 C3 G3, this wrote C4 E4 C4 G4. The MIDI walk had it right all
+                    // along (_partOctaveAnchor + varRef.OctaveOffset), which is why the
+                    // disagreement needed two outputs side by side to see.
+                    _currentOctave = _partAnchorOctave + varRef.OctaveOffset;
                     _currentStep = 0;
                     _defaultDuration = Fraction.Quarter;
                     // Auto-transpose the movable phrase from the home key to the
@@ -1083,7 +1092,7 @@ public sealed class MusicXmlExporter
                     if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
-                            0, 4 + varRef.OctaveOffset, astep, 0);
+                            0, _partAnchorOctave + varRef.OctaveOffset, astep, 0);
                         if (varRef.DiatonicShiftSteps != 0)
                             (astep, _, oct) = LilySharp.Core.Music.DiatonicShift.Apply(
                                 astep, 0, oct, varRef.DiatonicShiftSteps, _keyFifths);
