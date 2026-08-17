@@ -22,6 +22,8 @@ key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
                         // (a pickup is 'partial', but it belongs to a SECTION — see below)
+font "Georgia"          // optional; the whole document's text. Add 'embedded' to subset
+                        // it into the PDF. Per-role form: font { … } — see below
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -411,6 +413,38 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   instrument-preset / tuning names, key modes) are written in their canonical (lowercase)
   case. `Treble` is a different, unknown symbol from `treble` and is an error — not a
   silent fallback.
+## Text fonts (`font { … }`)
+
+A face per kind of text. Keys are a generic family, a group, or a single role; the
+NARROWER spelling wins in either source order.
+
+```
+font {
+  serif     "Georgia"                         // everything serif unless overridden
+  sans      "Verdana"                         // chord symbols are the one sans role
+  lyricText "Charis SIL" "Noto Serif CJK JP"  // several names = a fallback chain
+  title     "Cormorant"                       // one role
+  marks     "Georgia"                         // a whole group
+  tempo     "Playfair Display"                // ...beats the group above
+  chordName serif                             // point a role at the other bundled family
+  embedded                                    // subset the named faces into the PDF
+}
+```
+
+Groups → roles: `header` → `title composer instrument` · `lyrics` → `lyricText stanza` ·
+`chords` → `chordName fretFrame figuredBass` · `marks` → `tempo mark pedal navigation text
+dynamics partCombine` · `numbers` → `barNumber fingering tuplet volta ottava bend
+tabTechnique` · `notation` → `clefOctave meter tabFret`.
+
+Rules worth knowing before emitting one:
+- `font "NAME"` (one-liner) binds `serif` and `sans` — but NOT `notation`. The `treble_8`
+  octave digit, a compound meter's `+` and tab fret numbers follow a face only when
+  `notation` or the role itself is named.
+- A named face is DRAWN, not MEASURED: spacing always uses the bundled TeX Gyre face of
+  the role's family, so a face with very different metrics will look loose or tight.
+- No weight/slant/size here — those belong to the engraving.
+- `mono` is not a key. Unknown keys are an error; a key bound twice is a warning (last wins).
+
 - Comments: `// line` and `/* block */`.
 - `@name` is the canonical annotation prefix. `\name` annotations are rejected (use `@`);
   backslash is reserved for tablature only (`\3` string numbers, `\tuning`). Lily# is NOT

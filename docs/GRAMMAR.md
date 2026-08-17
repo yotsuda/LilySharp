@@ -134,6 +134,7 @@ Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
 File           = { TopLevelItem } ;
 
 TopLevelItem   = MetadataDecl                     (* title, composer *)
+               | FontDecl                         (* text fonts, per role *)
                | GlobalSetting                    (* tempo, time, key *)
                | PartDecl                         (* part definitions *)
                | PhraseDecl                       (* reusable music fragments *)
@@ -202,6 +203,72 @@ Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
    tempo 120
    time 4/4
    key c major
+*)
+
+### 2.4 Text Fonts
+
+FontDecl       = 'font' , ( String , [ 'embedded' ] | FontBlock ) ;
+FontBlock      = '{' , { FontEntry } , '}' ;
+FontEntry      = FontKey , ( String , { String } | GenericFamily )
+               | 'embedded' ;
+FontKey        = GenericFamily | RoleGroup | Role ;
+GenericFamily  = 'serif' | 'sans' | 'sans-serif' ;
+RoleGroup      = 'header' | 'lyrics' | 'chords' | 'marks' | 'numbers' | 'notation' ;
+Role           = 'title' | 'composer' | 'instrument'          (* header  *)
+               | 'lyricText' | 'stanza'                       (* lyrics  *)
+               | 'chordName' | 'fretFrame' | 'figuredBass'    (* chords  *)
+               | 'tempo' | 'mark' | 'pedal' | 'navigation'
+               | 'text' | 'dynamics' | 'partCombine'          (* marks   *)
+               | 'barNumber' | 'fingering' | 'tuplet' | 'volta'
+               | 'ottava' | 'bend' | 'tabTechnique'           (* numbers *)
+               | 'clefOctave' | 'meter' | 'tabFret' ;         (* notation *)
+
+(* WHICH FACE A STRING IS DRAWN IN is decided in this order, first hit winning:
+     1. the role's own binding          font { lyricText "Charis SIL" }
+     2. its group's binding             font { lyrics    "Charis SIL" }
+     3. the generic family it belongs to    font { serif "Georgia" }
+     4. the bundled face                (TeX Gyre Schola / Heros)
+   The NARROWER spelling wins wherever both are written, in either source order, so
+   `marks "Georgia"  tempo "Playfair Display"` needs no special case. Case-insensitive:
+   `lyrictext` binds `lyricText`.
+
+   `font "NAME" [embedded]` is the whole-document shorthand and means step 3 for BOTH
+   generic families — unchanged from before the block form existed, with one exception
+   below.
+
+   ⚠️ NOTATION IS OUTSIDE STEPS 3 AND 4. The octave digit under `treble_8`, a compound
+   meter's '+', and tab fret numbers are notation that happens to be drawn as text, so
+   `font "NAME"` and a `serif`/`sans` binding do NOT restyle them; they follow a face only
+   when `notation` or the leaf itself is named. `font "NAME"` reached all three before
+   2026-08-18.
+
+   SEVERAL NAMES ARE A FALLBACK CHAIN, most preferred first — a Latin face for the words
+   and a CJK face for the syllables it has no glyph for. SVG hands the whole list to the
+   viewer; PNG and PDF take the first name that resolves on this machine.
+
+   A ROLE MAY POINT AT A GENERIC FAMILY instead of naming a face (`chordName serif`),
+   which also moves what the LAYOUT measures it against — the only way to do that, since
+   both sides are faces this engine ships. A generic family itself takes only quoted
+   names: `serif sans` would be a re-classification, not a face choice, and is refused.
+
+   `mono` is NOT a key: no text in this engine is monospace, and a binding that reaches
+   nothing looks exactly like one that works.
+
+   ⚠️ WHAT A BOUND FACE DOES NOT CHANGE: the layout still reserves space using the bundled
+   face of the role's family, because measuring a system font by name would make the same
+   .lys lay out differently on different machines. A named face is therefore DRAWN but not
+   MEASURED, and the two disagree by −2.05 to +3.61 staff spaces on ordinary strings
+   (measured 2026-08-18 at 2.2 ss). Weight and slant are the engraving's, not the score's:
+   there is no way to ask for italic here. *)
+
+(* Example:
+   font {
+     serif     "Georgia"
+     lyricText "Charis SIL" "Noto Serif CJK JP"
+     chordName serif
+     title     "Cormorant"
+     embedded
+   }
 *)
 
 ================================================================================

@@ -369,6 +369,63 @@ title "Sonata in C"
 composer "W.A. Mozart"
 ```
 
+## Text Fonts
+
+The whole document in one face:
+
+```
+font "Georgia"
+font "Georgia" embedded     // also subset-embed it in the PDF
+```
+
+Or a face per kind of text:
+
+```
+font {
+  serif     "Georgia"                       // everything serif, unless overridden below
+  sans      "Verdana"                       // chord symbols are the engine's one sans
+
+  lyricText "Charis SIL" "Noto Serif CJK JP"  // a fallback chain, most preferred first
+  title     "Cormorant"
+  chordName serif                           // point a role at the OTHER bundled family
+  marks     "Georgia"                       // a whole group at once
+  tempo     "Playfair Display"              // ...and one member of it, overriding the group
+
+  embedded
+}
+```
+
+**The narrower spelling wins**, in either source order: `role` beats `group` beats
+`serif`/`sans` beats the bundled face. So the `marks`/`tempo` pair above needs no
+special case.
+
+The keys, by group:
+
+| Group | Roles it covers |
+|---|---|
+| `header` | `title` `composer` `instrument` |
+| `lyrics` | `lyricText` `stanza` |
+| `chords` | `chordName` `fretFrame` `figuredBass` |
+| `marks` | `tempo` `mark` `pedal` `navigation` `text` `dynamics` `partCombine` |
+| `numbers` | `barNumber` `fingering` `tuplet` `volta` `ottava` `bend` `tabTechnique` |
+| `notation` | `clefOctave` `meter` `tabFret` |
+
+⚠️ **`notation` is not reached by `font "NAME"`** or by a `serif`/`sans` binding. The
+octave digit under a `treble_8` clef, a compound meter's `+`, and tab fret numbers are
+notation that happens to be drawn as text — restyling them changes the notation rather
+than the words — so they follow a face only when you name `notation` or the role itself.
+
+⚠️ **A named face is drawn, not measured.** The layout reserves space using the bundled
+face of the role's family whatever you name, because measuring a system font by name
+would make the same `.lys` lay out differently on different machines. On ordinary strings
+the drawn width runs −2.05 to +3.61 staff spaces from the reserved one, so a face far from
+the bundled metrics will look loose or tight. Weight and slant belong to the engraving and
+cannot be set here.
+
+Unknown keys are an error (a binding that reaches nothing looks exactly like one that
+works), a key bound twice in one block is a warning and the last wins, and `mono` is not a
+key because no text in this engine is monospace.
+
 ## Grace Notes
 
 ```
@@ -816,6 +873,12 @@ be declared and referenced).
 | Overrides | `override` `revert` `once` `with` |
 | Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` `tocoda` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
+
+⚠️ The `font { }` keys (`serif` `header` `lyricText` `chordName` `barNumber` …) are **not**
+reserved words — they are read inside that block only, against the role vocabulary, so
+they stay free as part / section / phrase names. Several of them (`title`, `lyrics`,
+`chords`, `tempo`, `instrument`, `tuplet`, `volta`) are reserved for other reasons and
+appear above.
 
 ⚠️ Measured word by word against `Lexer.GetKeywordKind` on 2026-08-16, by asking whether
 each can name a part. Five words this table listed are **not** reserved and name a part
