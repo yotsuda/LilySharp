@@ -612,6 +612,31 @@ public sealed class LilyPondExporter
 
     // ---- Header ------------------------------------------------------------
 
+    /// <summary>
+    /// The twin's <c>\version</c> and <c>\header</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE <c>font</c> DIRECTIVE IS DELIBERATELY NOT WRITTEN, decided 2026-08-18 when
+    /// the per-role form landed. It has a LilyPond counterpart —
+    /// <c>#(define fonts (make-pango-font-tree …))</c> in <c>\paper</c>, plus
+    /// <c>font-name</c> per grob — so this is a knowing omission and not one of the
+    /// exporter's silent-drop holes.
+    /// <para>
+    /// The twin exists to be measured against: every LP-fidelity probe compares Lily#'s
+    /// geometry with what LilyPond does with the same music. Writing a font tree would
+    /// change the widths LilyPond itself computes, so the twin would stop being a control
+    /// — and it would change them for a directive that, on the Lily# side, does not move
+    /// the layout at all (the reservation stays on the bundled face; see TextFontPlan).
+    /// Emitting it would therefore introduce a difference that exists only in the
+    /// comparison.
+    /// </para>
+    /// <para>
+    /// ⚠️ What that costs, stated so it is not rediscovered as a defect: a twin rendered
+    /// for a score with a <c>font</c> directive shows LilyPond's default text face rather
+    /// than the score's. Nothing measures typeface identity, so no probe is blind because
+    /// of it — but a human comparing the two side by side will see different letterforms.
+    /// </para>
+    /// </remarks>
     private void EmitHeader(CompilationUnitSyntax root)
     {
         _sb.Append("\\version \"").Append(LilyPondVersion).Append("\"\n\n");

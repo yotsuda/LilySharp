@@ -61,12 +61,27 @@ public class FontEmbedClassificationTests
     }
 
     [Fact]
-    public void NonEmbeddedFont_ProducesNoFontDiagnostic()
+    public void NonEmbeddedMissingFont_WarnsNotFoundToo()
     {
+        // ⚠️ THIS CASE ASSERTED THE OPPOSITE until 2026-08-18, and the rule it froze was
+        // the defect: the same fact, found by the same code, was reported through the
+        // `embedded` spelling and accepted in silence through the plain one. A misspelt
+        // face is not less wrong for being un-embedded — it just fails later, on the
+        // page, in a substitute face. (Decided by the user; HANDOFF §2F.)
+        var v = new FontEmbedWarningValidator();
+        v.Validate(SyntaxTree.Parse(Doc($"font \"{BogusFont}\"")));
+        Assert.Contains(v.Diagnostics, d => d.Code == DiagnosticCodes.FontNotFound);
+    }
+
+    [Fact]
+    public void NonEmbeddedFont_IsStillNotLicenceChecked()
+    {
+        // The LICENCE half of this validator is still gated on `embedded`, and stays so:
+        // nothing is embedded, so no licence can be breached. Only the "is this face here
+        // at all" question outlives the flag.
         var v = new FontEmbedWarningValidator();
         v.Validate(SyntaxTree.Parse(Doc($"font \"{BogusFont}\"")));
         Assert.DoesNotContain(v.Diagnostics, d =>
-            d.Code == DiagnosticCodes.FontNotFound ||
             d.Code == DiagnosticCodes.FontEmbedForbidden ||
             d.Code == DiagnosticCodes.FontEmbedLicenseUnclear);
     }

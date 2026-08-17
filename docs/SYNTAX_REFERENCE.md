@@ -426,6 +426,10 @@ Unknown keys are an error (a binding that reaches nothing looks exactly like one
 works), a key bound twice in one block is a warning and the last wins, and `mono` is not a
 key because no text in this engine is monospace.
 
+A face this machine does not have is a **warning**, with or without `embedded` — whether a
+font is installed is a property of the machine and not of the source, so a score that is
+right on your box must not fail to compile on a runner that has no fonts.
+
 ## Grace Notes
 
 ```

@@ -252,7 +252,13 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    names: `serif sans` would be a re-classification, not a face choice, and is refused.
 
    `mono` is NOT a key: no text in this engine is monospace, and a binding that reaches
-   nothing looks exactly like one that works.
+   nothing looks exactly like one that works. An unknown key is an ERROR for the same
+   reason; a key bound twice in one block is a warning and the last one wins.
+
+   A NAMED FACE THIS MACHINE DOES NOT HAVE is a WARNING, with or without `embedded` —
+   whether a font is installed is a property of the machine and not of the source, so an
+   error would let a runner's contents fail an author's score. (Until 2026-08-18 only the
+   `embedded` spelling was checked, so `font "NoSuchFontFace"` was accepted in silence.)
 
    ⚠️ WHAT A BOUND FACE DOES NOT CHANGE: the layout still reserves space using the bundled
    face of the role's family, because measuring a system font by name would make the same

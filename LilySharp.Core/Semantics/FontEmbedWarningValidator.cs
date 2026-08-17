@@ -21,13 +21,28 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Warns when a <c>font "NAME" embedded</c> directive names a font whose embedding is
-/// legally unclear or technically disallowed. The actual PDF embedding is a separate
-/// step; this only surfaces the risk up front: a font can forbid embedding outright
-/// (fsType), can be present but under an unverified license (gray), or can be missing
-/// from this system entirely. A plain <c>font "NAME"</c> (no <c>embedded</c>) is not
-/// checked — nothing is embedded, so nothing can be restricted.
+/// Warns when a <c>font</c> directive names a face this system does not have, or — with
+/// <c>embedded</c> — one whose embedding is legally unclear or technically disallowed.
 /// </summary>
+/// <remarks>
+/// The actual PDF embedding is a separate step; this surfaces the risk up front. A font
+/// can be missing from this system entirely, can forbid embedding outright (fsType), or
+/// can be present under an unverified licence (gray). The last two only matter under
+/// <c>embedded</c> — without it nothing is embedded, so nothing can be restricted.
+/// <para>
+/// ⚠️ THE MISSING-FACE WARNING IS NOT GATED ON <c>embedded</c>, decided 2026-08-18 (user).
+/// It used to be, which meant <c>font "NoSuchFontFace" embedded</c> was reported and the
+/// plain <c>font "NoSuchFontFace"</c> was accepted in silence — the same fact, detected by
+/// the same code, reported through one spelling and not the other. A misspelt face is not
+/// less wrong for being un-embedded; it just fails later, on the page, in a substitute.
+/// </para>
+/// <para>
+/// ⚠️ A WARNING AND NOT AN ERROR, same decision: whether a font is installed is a property
+/// of the MACHINE, not of the source. A score that is right on the author's box would
+/// otherwise fail to compile on a CI runner that has no fonts, and the file would be
+/// blamed for the runner's contents.
+/// </para>
+/// </remarks>
 internal sealed class FontEmbedWarningValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
@@ -39,8 +54,6 @@ internal sealed class FontEmbedWarningValidator : ISemanticValidator
         var root = tree.GetRoot();
         foreach (var font in root.DescendantNodes().OfType<FontDeclarationSyntax>())
         {
-            if (!font.Embedded)
-                continue;
             // EVERY name the directive asks for, not just the first: a block binds a face
             // per role, and a PDF embeds all of them. Checking `FontName` alone would
             // clear a block whose second face is the restricted one.
@@ -65,13 +78,20 @@ internal sealed class FontEmbedWarningValidator : ISemanticValidator
 
         // ASCII punctuation only: these strings reach legacy-codepage consoles
         // through the CLI.
+        if (cls == FontEmbedInfo.FontEmbedClass.NotFound)
+        {
+            _diagnostics.Warning(font.Span, DiagnosticCodes.FontNotFound,
+                font.Embedded
+                    ? $"the font '{name}' is not installed on this system, so it cannot " +
+                      "be embedded in the PDF"
+                    : $"the font '{name}' is not installed on this system, so this text " +
+                      "will be drawn in a substitute face");
+            return;
+        }
+        if (!font.Embedded)
+            return;   // nothing is embedded, so no licence can be breached
         switch (cls)
         {
-            case FontEmbedInfo.FontEmbedClass.NotFound:
-                _diagnostics.Warning(font.Span, DiagnosticCodes.FontNotFound,
-                    $"the font '{name}' is not installed on this system, so it cannot " +
-                    "be embedded in the PDF");
-                break;
             case FontEmbedInfo.FontEmbedClass.Forbidden:
                 _diagnostics.Warning(font.Span, DiagnosticCodes.FontEmbedForbidden,
                     $"the font '{name}' does not permit embedding (its fsType is " +

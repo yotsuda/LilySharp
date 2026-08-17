@@ -380,4 +380,31 @@ public class FontDirectiveTests
             .Where(x => x.Code == DiagnosticCodes.FontNotFound).ToList();
         Assert.Equal(2, notFound.Count);
     }
+
+    [Fact]
+    public void AFaceThisMachineDoesNotHaveIsReportedWithOrWithoutEmbedded()
+    {
+        // The same fact, found by the same code, used to be reported through ONE spelling
+        // and accepted in silence through the other: `embedded` warned, plain did not.
+        // A misspelt face is not less wrong for being un-embedded — it just fails later,
+        // on the page, in a substitute. (Decided 2026-08-18, user.)
+        foreach (var src in new[] { "font \"ZzNoSuchFont\"\n", "font \"ZzNoSuchFont\" embedded\n" })
+        {
+            var d = Assert.Single(Check(src + Book), x => x.Code == DiagnosticCodes.FontNotFound);
+            // A WARNING: whether a font is installed is a property of the machine, not of
+            // the source, so a CI runner without fonts must not fail an author's score.
+            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+        }
+    }
+
+    [Fact]
+    public void ABundledOrUnnamedFaceIsNeverReportedMissing()
+    {
+        // The check runs over NAMED faces only. A score that binds nothing, and one that
+        // only points a role at a generic family, name no face at all — so neither can
+        // trip a "not installed" warning about the faces this engine ships.
+        Assert.DoesNotContain(Check(Book), x => x.Code == DiagnosticCodes.FontNotFound);
+        Assert.DoesNotContain(Check("font { chordName serif }\n" + Book),
+            x => x.Code == DiagnosticCodes.FontNotFound);
+    }
 }
