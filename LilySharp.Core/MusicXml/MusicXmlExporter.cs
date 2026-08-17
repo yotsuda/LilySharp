@@ -92,6 +92,10 @@ public sealed class MusicXmlExporter
     private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
     private readonly List<MusicXmlNote> _chordMembers = new(); // members of the chord being written
     private readonly List<MusicXmlNote> _lastEmittedNotes = new(); // last note (1) or chord (N) — a following '~' node ties all of them
+    // The notes carrying a tie-start that nothing has ended yet. Kept as the NOTES and
+    // not as a flag, because the pair is decided at the NEXT onset: a start is written
+    // before its continuation is known, so an unmatched one has to be taken back.
+    private readonly List<MusicXmlNote> _tieOpen = new();
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -614,6 +618,10 @@ public sealed class MusicXmlExporter
         _ambientTonic = _homeTonic; // each voice starts at the score's home key
         _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
         _tieToNextNote = false;
+        // Forget the open starts WITHOUT retracting them: a tie left hanging at a part
+        // boundary is a separate question from an unmatched member, and this line only
+        // stops the next part's first onset from being paired against another part's note.
+        _tieOpen.Clear();
         _defaultDuration = Fraction.Quarter;
         _pendingDynamic = null;
 
@@ -916,10 +924,9 @@ public sealed class MusicXmlExporter
                 // tie start (a chord ties all its members), and flag the next
                 // note/chord so it emits the matching tie-stop.
                 if (_lastEmittedNotes.Count > 0)
-                    foreach (var n in _lastEmittedNotes) n.TieStart = true;
+                    OpenTies(_lastEmittedNotes);
                 else if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
-                    _currentMeasure.Notes[^1].TieStart = true;
-                _tieToNextNote = true;
+                    OpenTies([_currentMeasure.Notes[^1]]);
                 break;
 
             case SlurSyntax slur:
@@ -1171,6 +1178,7 @@ public sealed class MusicXmlExporter
             var savedStep = _currentStep;
             var savedDefault = _defaultDuration;
             var savedTie = _tieToNextNote;
+            var savedTieOpen = _tieOpen.ToList(); // the open starts belong to the OUTER stream
 
             var temp = new MusicXmlPart { Name = "voice-temp" };
             _currentPart = temp;
@@ -1188,6 +1196,7 @@ public sealed class MusicXmlExporter
             // agrees with the page and only the octave above was a second rule.
             _defaultDuration = Fraction.Quarter;
             _tieToNextNote = false;
+            _tieOpen.Clear();
             ProcessNode(voices[v]);
             FlushCurrentMeasure();
 
@@ -1198,6 +1207,8 @@ public sealed class MusicXmlExporter
             _currentStep = savedStep;
             _defaultDuration = savedDefault;
             _tieToNextNote = savedTie;
+            _tieOpen.Clear();
+            _tieOpen.AddRange(savedTieOpen);
 
             for (int i = 0; i < temp.Measures.Count && startMeasure + i < endMeasure; i++)
             {
@@ -1500,8 +1511,8 @@ public sealed class MusicXmlExporter
 
         // Tie pairing: a preceding '~' ends on this note (tie-stop); a '~' on
         // this note (sibling or articulation) starts a tie to the next note.
-        if (_tieToNextNote) { xmlNote.TieStop = true; _tieToNextNote = false; }
-        if (note.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
+        CloseTies([xmlNote]);
+        if (note.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
 
         // Glissando / slide lines pair start (this note) with stop (next).
         if (_pendingLineStop is { } lineKind)
@@ -1923,9 +1934,8 @@ public sealed class MusicXmlExporter
         // Ties apply to EVERY member of the chord: <c e g>~ <c e g> ties all
         // voices, so tagging only the first note (the old behavior) dropped the
         // rest. Pair the stop from a preceding tie across all members too.
-        if (_tieToNextNote) { foreach (var m in _chordMembers) m.TieStop = true; _tieToNextNote = false; }
-        if (chord.Articulations.OfType<TieSyntax>().Any())
-        { foreach (var m in _chordMembers) m.TieStart = true; _tieToNextNote = true; }
+        CloseTies(_chordMembers);
+        if (chord.Articulations.OfType<TieSyntax>().Any()) OpenTies(_chordMembers);
 
         // Remember this chord's members so a following standalone '~' node ties
         // all of them (a chord tie), not just the last member.
@@ -2002,14 +2012,53 @@ public sealed class MusicXmlExporter
             _chordMembers.Add(xmlNote);
         }
 
-        if (_tieToNextNote) { foreach (var m in _chordMembers) m.TieStop = true; _tieToNextNote = false; }
-        if (rep.Articulations.OfType<TieSyntax>().Any())
-        { foreach (var m in _chordMembers) m.TieStart = true; _tieToNextNote = true; }
+        CloseTies(_chordMembers);
+        if (rep.Articulations.OfType<TieSyntax>().Any()) OpenTies(_chordMembers);
 
         _lastEmittedNotes.Clear();
         _lastEmittedNotes.AddRange(_chordMembers);
         _chordMembers.Clear();
         MaybeClosePickup(duration);
+    }
+
+    /// <summary>Written pitch identity — what a tie joins. Two notes are the same notehead
+    /// when the step, the accidental and the octave agree; an unpitched member (a drum in a
+    /// chord) is never the same as anything, so it cannot be tied.</summary>
+    private static bool SameNotehead(MusicXmlNote a, MusicXmlNote b)
+        => a.Step != null && b.Step != null && a.Step == b.Step && a.Octave == b.Octave
+           && (int)System.Math.Round(a.Alter ?? 0) == (int)System.Math.Round(b.Alter ?? 0);
+
+    /// <summary>Start a tie on every member of the onset just written.</summary>
+    private void OpenTies(IReadOnlyList<MusicXmlNote> from)
+    {
+        foreach (var n in from) { n.TieStart = true; _tieOpen.Add(n); }
+        _tieToNextNote = true;
+    }
+
+    /// <summary>End the open ties on the onset now arriving, PAIRED BY PITCH.</summary>
+    /// <remarks>
+    /// ⚠️ A tie joins two noteheads of the same pitch, so `&lt;c f g c&gt;~ &lt;c e g c&gt;`
+    /// sustains the c, g and c, ENDS the f and ATTACKS the e — the corpus states the rule in
+    /// `test/feature-tour` (「一部不一致なら共通分のみ」) and the MIDI walk plays it. Marking
+    /// every arriving member as a stop instead wrote `&lt;tie type="stop"/&gt;` on a note with
+    /// no start to stop, which is not a MusicXML document any importer can read as intended.
+    /// ⚠️ THE START IS RETRACTED, not just left unmatched: it was written one onset ago, when
+    /// what followed was still unknown, and a start with no stop is the same broken pair seen
+    /// from the other end.
+    /// </remarks>
+    private void CloseTies(IReadOnlyList<MusicXmlNote> arriving)
+    {
+        if (!_tieToNextNote) return;
+        _tieToNextNote = false;
+        foreach (var m in arriving)
+        {
+            int k = _tieOpen.FindIndex(n => SameNotehead(n, m));
+            if (k < 0) continue;
+            m.TieStop = true;
+            _tieOpen.RemoveAt(k);
+        }
+        foreach (var n in _tieOpen) n.TieStart = false; // nothing continued it
+        _tieOpen.Clear();
     }
 
     /// <summary>
