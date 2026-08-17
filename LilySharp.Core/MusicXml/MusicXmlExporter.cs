@@ -953,6 +953,17 @@ public sealed class MusicXmlExporter
                         && repeat.Body.Items.Count(i => i is BarlineSyntax) == 1
                         && repeat.Body.Items.LastOrDefault() is BarlineSyntax
                         && _currentPart != null;
+                    // A percent sign and a tremolo are ENGRAVED ONCE, so every pass has to
+                    // be that one copy — which means re-entering the body in the frame it
+                    // opened in, not the one the previous pass left. Without it a body that
+                    // moves the frame climbs, and unlike the MIDI (which clamps at key 127)
+                    // this file has no ceiling to hide it: MEASURED 2026-08-17 on
+                    // `repeat tremolo 32 { g''64 a }`, whose page is one G5-A5 pair, the
+                    // export ran G5 A5 G7 A7 G9 ... up to OCTAVE 67.
+                    // ⚠️ `unfold` prints every copy and the page's copies climb with it, so
+                    // the two agree here; whether they should is a grammar question (HANDOFF §2F).
+                    bool engravedOnce = repeat.RepeatType.Text is "percent" or "tremolo";
+                    var frame = (_currentOctave, _currentStep, _defaultDuration);
                     if (oneMeasurePercent)
                     {
                         // Repeated measures carry their REAL notes under the
@@ -963,6 +974,8 @@ public sealed class MusicXmlExporter
                             // The body ends with its own barline, which flushes
                             // the measure and opens the next (flushing HERE
                             // nulls the open measure and drops later passes).
+                            if (rep > 0)
+                                (_currentOctave, _currentStep, _defaultDuration) = frame;
                             ProcessNode(repeat.Body);
                             if (rep == 1 && _currentPart!.Measures.Count > 0)
                             {
@@ -983,7 +996,11 @@ public sealed class MusicXmlExporter
                         break;
                     }
                     for (int rep = 0; rep < repCount; rep++)
+                    {
+                        if (rep > 0 && engravedOnce)
+                            (_currentOctave, _currentStep, _defaultDuration) = frame;
                         ProcessNode(repeat.Body);
+                    }
                 }
                 break;
 

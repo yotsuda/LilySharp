@@ -1532,10 +1532,29 @@ public sealed class MidiExporter
         bool engravedOnce = repType is "percent" or "tremolo";
         var ordSnapshot = engravedOnce ? new Dictionary<int, int>(_sourceOrdinals) : null;
 
+        // ⚠️ AND SO IS THE PITCH FRAME, for the same reason and it is the same fact: the
+        // page draws ONE copy, so every iteration has to sound that copy. Without this the
+        // walk re-entered the body with the frame the previous iteration left, and a body
+        // that moves the frame climbed. MEASURED 2026-08-17 on audit/lpreg/chord-tremolo-whole
+        // (`repeat tremolo 32 { g''64 a }`, a page of one G5-A5 pair): the MIDI played
+        // 79 81 103 105 and then 127 sixty times — a rising figure pinned against the top of
+        // the MIDI range, where the page, the MusicXML and LilyPond all have thirty-two G5-A5
+        // pairs. The duration default rides along because it carries the same way: the second
+        // iteration of `{ c4 d }` must be two quarters, not whatever the last note left.
+        // ⚠️ `unfold` is deliberately NOT included. It prints every copy, and the page's own
+        // copies climb with it, so the two agree; whether they SHOULD (LilyPond resolves the
+        // relative chain once and copies the result, so its unfolded copies are identical) is
+        // a question about the grammar, filed in HANDOFF §2F rather than decided here.
+        var frame = engravedOnce
+            ? (_currentOctave, _currentNoteName, _defaultDuration)
+            : ((int, int, Fraction)?)null;
+
         for (int i = 0; i < repeatCount; i++)
         {
             if (i > 0 && ordSnapshot != null)
                 _sourceOrdinals = new Dictionary<int, int>(ordSnapshot);
+            if (i > 0 && frame is var (oct, name, dur))
+                (_currentOctave, _currentNoteName, _defaultDuration) = (oct, name, dur);
             ProcessNode(repeat.Body, track, conductorTrack);
 
             if (alternatives != null && alternatives.Count > 0)
