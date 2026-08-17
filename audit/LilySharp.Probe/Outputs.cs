@@ -81,6 +81,29 @@ using LilySharp.Core.Syntax;
 /// (`silent-head`), and a chord sounds under the CHORD's position while the trace spells
 /// each member at its own (so chord positions are compared as events, never as pitches).
 /// </para>
+/// <para>
+/// ⚠️⚠️ A TRANSPOSING PART PRINTS ONE PITCH AND SOUNDS ANOTHER, and until 2026-08-17 this
+/// instrument compared the two and called every note of it a difference. `part gtr {
+/// instrument guitar }` prints C4 under a `treble_8` clef and sounds C3, which is what all
+/// three outputs are FOR; the probe read C4 off the page, 48 off the MIDI, and reported 24
+/// of 24 positions on `test/treble8` (44 of the 46 suspect books were this). Both written
+/// sides are now shifted into sounding before the comparison, and the two sides ask
+/// DIFFERENT sources for the shift on purpose:
+/// <list type="bullet">
+/// <item>The MusicXML side reads the DOCUMENT's own <c>&lt;transpose&gt;</c>
+///   (<see cref="MusicXmlAttributes.TransposeSemitones"/>) — written + transpose = sounding
+///   is the spec's own equation, so this side is asked of the output, never of the source.
+///   ⚠️ <c>&lt;clef-octave-change&gt;</c> is NOT added: it is notation (where the pitch is
+///   drawn), and honouring both drops a guitar two octaves.</item>
+/// <item>The PAGE side has no such element to read — an engraved staff carries the octave
+///   clef as a glyph and the instrument's share only in its NAME — so it reads the PART
+///   HEADER (<see cref="PartHeaderDefaults.SoundingShiftSemitones"/>), attributed by the
+///   span of the music each part owns. ⚠️ THIS ONE IS CIRCULAR and the reader must know it:
+///   the MIDI exporter resolves the same header, so a defect IN THAT READING moves both
+///   sides together and stays green here. What survives is everything else — the pitch the
+///   page spelt, the octave it opened in, the notes it dropped.</item>
+/// </list>
+/// </para>
 /// </remarks>
 internal static class Outputs
 {
@@ -93,6 +116,7 @@ internal static class Outputs
         int SoundingRests,    // page draws a REST there, MIDI sounds a note
         int MidiOnly,         // MIDI sounds a position the page engraves nothing at
         int Graces,           // ... of which are inside a grace group: NOT comparable
+        int SharedPhrases,    // engraved positions in a phrase two parts transpose differently
         int PitchDiffers,     // single note whose trace spelling is not what MIDI plays
         string PitchSample,   // first such disagreement, for the reader
         int XmlPitches,       // sounding pitches in the MusicXML (multiset size)
@@ -124,13 +148,14 @@ internal static class Outputs
         var csv = Path.Combine(outDir, "pitches.csv");
         File.WriteAllLines(csv, new[]
         {
-            "book,positions,silentHeads,soundingRests,midiOnly,graces,pitchDiffers,xmlPitches,midiPitches,xmlDiffers,xmlComparable,pitchSample,xmlSample,note"
+            "book,positions,silentHeads,soundingRests,midiOnly,graces,sharedPhrases,pitchDiffers,xmlPitches,midiPitches,xmlDiffers,xmlComparable,pitchSample,xmlSample,note"
         }.Concat(rows.Select(r =>
             // The two samples are in the CSV and not only in the report because the report
             // prints 25 rows per heading: session 196 had to re-run the sweep on hand-made
             // sublists to see the first disagreement of the books ranked 26th and lower,
             // which is the one thing that says WHICH family a row belongs to.
-            $"{r.Name},{r.Positions},{r.SilentHeads},{r.SoundingRests},{r.MidiOnly},{r.Graces},{r.PitchDiffers}," +
+            $"{r.Name},{r.Positions},{r.SilentHeads},{r.SoundingRests},{r.MidiOnly},{r.Graces}," +
+            $"{r.SharedPhrases},{r.PitchDiffers}," +
             $"{r.XmlPitches},{r.MidiPitches},{r.XmlDiffers},{r.XmlComparable}," +
             $"{r.PitchSample.Replace(',', ';')},{r.XmlSample.Replace(',', ';')},{r.Note.Replace(',', ';')}")));
 
@@ -157,6 +182,9 @@ internal static class Outputs
 
         Console.WriteLine($"grace positions subtracted (no page offset to join to): "
             + $"{rows.Sum(r => r.Graces)} in {rows.Count(r => r.Graces > 0)} books");
+        Console.WriteLine($"phrase positions subtracted (two parts play them at two "
+            + $"transpositions): {rows.Sum(r => r.SharedPhrases)} in "
+            + $"{rows.Count(r => r.SharedPhrases > 0)} books");
         int comparable = rows.Count(r => r.XmlComparable && r.Note.Length == 0);
         Console.WriteLine($"MusicXML/MIDI reach: {comparable} of {read} books sound no copy the"
             + " document does not write (the rest repeat material the page engraves once)");
@@ -178,7 +206,7 @@ internal static class Outputs
     private static Reading Read(string root, string path)
     {
         string name = Path.GetRelativePath(root, path).Replace('\\', '/');
-        Reading Fail(string why) => new(name, 0, 0, 0, 0, 0, 0, "", 0, 0, 0, "", false, why);
+        Reading Fail(string why) => new(name, 0, 0, 0, 0, 0, 0, 0, "", 0, 0, 0, "", false, why);
         try
         {
             // LF-canonical for Sweep's reason: a source offset past a newline is the join
@@ -190,6 +218,101 @@ internal static class Outputs
             var rests = new HashSet<int>();
             var chords = new HashSet<int>();          // pitch is not comparable at these
             var trace = new Dictionary<int, string>();
+
+            // --- the written→sounding shift, per source span ------------------------------
+            // ⚠️ NOT read off the collected Staff: `Staff.Transposition` is filled in for TAB
+            // staves only (CreateTab takes it; Create does not), so a plain `instrument bass`
+            // staff reports 0 while its MIDI plays −12, and a book with both `staff m` and
+            // `tab m` answered differently depending on which staff was walked last.
+            // The shift belongs to the PART, so it is taken from the part header — the same
+            // reading MidiExporter takes (PartSoundingShift) — and attributed by the span of
+            // the music that part owns: a `PartBlockSyntax` inside a section, or the part
+            // DECLARATION itself when the section is written inside it (part-major).
+            // ⚠️ Music in a bare top-level section that only a `score` assigns to a part is
+            // inside NEITHER span, and gets 0 — which is what the MIDI does with it too.
+            var partSpans = new List<(int Start, int End, int Shift)>();
+            // Phrase bodies two parts play at two different transpositions: no single answer,
+            // so their positions are subtracted from the pitch comparison and reported.
+            var sharedPhrases = new List<(int Start, int End)>();
+            {
+                var decls = tree.GetRoot().DescendantNodes<PartDeclarationSyntax>().ToArray();
+                int ShiftOf(string partName) => PartHeaderDefaults
+                    .Read(Array.Find(decls, d => d.Name.Text == partName))
+                    .SoundingShiftSemitones;
+                foreach (var d in decls)
+                    partSpans.Add((d.FullSpan.Start, d.FullSpan.Start + d.FullSpan.Length,
+                        ShiftOf(d.Name.Text)));
+                foreach (var pb in tree.GetRoot().DescendantNodes<PartBlockSyntax>())
+                    partSpans.Add((pb.FullSpan.Start, pb.FullSpan.Start + pb.FullSpan.Length,
+                        ShiftOf(pb.Name)));
+
+                // ⚠️ A PHRASE BODY IS WRITTEN OUTSIDE EVERY PART. `phrase gtrLine { c4 … }`
+                // at top level sounds inside whatever part references it, so its notes are
+                // at source positions no part span contains — and `test/instrument-defaults`
+                // reported all 13 notes of its guitar and tenor phrases as disagreements for
+                // that reason alone. The body therefore inherits the shift of the parts that
+                // REFERENCE it, propagated through nested references to a fixed point.
+                // ⚠️ One phrase can be played by two parts at two transpositions, and then
+                // its positions carry no single answer: those are counted and skipped rather
+                // than compared against one of the two (see `sharedPhrases`).
+                var phrases = new Dictionary<string, PhraseDeclarationSyntax>();
+                foreach (var ph in tree.GetRoot().DescendantNodes<PhraseDeclarationSyntax>())
+                    phrases[ph.Name.Text] = ph;
+                var phraseShifts = new Dictionary<string, HashSet<int>>();
+                void Refer(SyntaxNode scope, int shift)
+                {
+                    foreach (var vr in scope.DescendantNodes<VariableReferenceSyntax>())
+                        if (phrases.ContainsKey(vr.Name.Text))
+                        {
+                            if (!phraseShifts.TryGetValue(vr.Name.Text, out var set))
+                                phraseShifts[vr.Name.Text] = set = new HashSet<int>();
+                            set.Add(shift);
+                        }
+                }
+                foreach (var d in decls)
+                    Refer(d, ShiftOf(d.Name.Text));
+                foreach (var pb in tree.GetRoot().DescendantNodes<PartBlockSyntax>())
+                    Refer(pb, ShiftOf(pb.Name));
+                for (bool changed = true; changed;)
+                {
+                    changed = false;
+                    foreach (var (pname, shifts) in phraseShifts.ToArray())
+                        foreach (var vr in phrases[pname].Body.DescendantNodes<VariableReferenceSyntax>())
+                            if (phrases.ContainsKey(vr.Name.Text))
+                            {
+                                if (!phraseShifts.TryGetValue(vr.Name.Text, out var inner))
+                                    phraseShifts[vr.Name.Text] = inner = new HashSet<int>();
+                                foreach (int s in shifts)
+                                    changed |= inner.Add(s);
+                            }
+                }
+                foreach (var (pname, shifts) in phraseShifts)
+                {
+                    var body = phrases[pname].Body;
+                    if (shifts.Count == 1)
+                        partSpans.Add((body.FullSpan.Start,
+                            body.FullSpan.Start + body.FullSpan.Length, shifts.Single()));
+                    else
+                        sharedPhrases.Add((body.FullSpan.Start,
+                            body.FullSpan.Start + body.FullSpan.Length));
+                }
+            }
+            // The SMALLEST containing span wins, so a part block written inside a part
+            // declaration answers for itself rather than for its container.
+            int ShiftAt(int pos)
+            {
+                int best = 0, width = int.MaxValue;
+                foreach (var (start, end, shift) in partSpans)
+                    if (pos >= start && pos < end && end - start < width)
+                        (best, width) = (shift, end - start);
+                return best;
+            }
+            bool SharedPhrase(int pos)
+            {
+                foreach (var (start, end) in sharedPhrases)
+                    if (pos >= start && pos < end) return true;
+                return false;
+            }
             IEnumerable<RenderSpec> passes = RenderSpecParser.FindAll(tree);
             if (!passes.Any())
                 passes = new RenderSpec[] { null };
@@ -276,7 +399,14 @@ internal static class Outputs
             var xmlKeys = new List<int>();
             var doc = new MusicXmlExporter().Export(tree);
             foreach (var part in doc.Parts)
+            {
+                // written + <transpose> = sounding, which is the spec's equation and the
+                // whole reason the element exists. Carried forward measure by measure
+                // because the exporter writes it once, in the part's opening attributes.
+                int transpose = 0;
                 foreach (var m in part.Measures)
+                {
+                    if (m.Attributes?.TransposeSemitones is { } semis) transpose = semis;
                     foreach (var n in m.Notes)
                     {
                         // ⚠️ A tie's second note is WRITTEN in MusicXML and is not a second
@@ -287,20 +417,31 @@ internal static class Outputs
                             continue;
                         int st = "CDEFGAB".IndexOf(n.Step[0]);
                         if (st < 0 || n.Octave is not int oct) continue;
-                        xmlKeys.Add(RelativeOctave.StepToMidi(st, (int)Math.Round(n.Alter ?? 0), oct));
+                        xmlKeys.Add(
+                            RelativeOctave.StepToMidi(st, (int)Math.Round(n.Alter ?? 0), oct)
+                            + transpose);
                     }
+                }
+            }
 
             // --- the differences ----------------------------------------------------------
             int silent = 0, soundingRests = 0, midiOnly = 0, graces = 0, pitchDiffers = 0;
+            int shared = 0;
             string sample = "";
             foreach (var (pos, count) in heads)
             {
                 if (count > 0 && !sounded.ContainsKey(pos) && !percussion.Contains(pos)) silent++;
                 if (chords.Contains(pos) || percussion.Contains(pos)) continue;
+                if (SharedPhrase(pos)) { shared++; continue; }
                 if (sounded.TryGetValue(pos, out var played) && trace.TryGetValue(pos, out var spelt))
                 {
-                    int want = PitchToMidi(spelt);
-                    if (want >= 0 && !played.Contains(want))
+                    // The trace spells what the page PRINTS. What sounds is that plus the
+                    // part's shift (see the transposing-part remark on the class).
+                    // ⚠️ The -1 that means "spelling not understood" is tested BEFORE the
+                    // shift is added: a +12 part would otherwise turn it into the key 11.
+                    int written = PitchToMidi(spelt);
+                    int want = written + ShiftAt(pos);
+                    if (written >= 0 && !played.Contains(want))
                     {
                         pitchDiffers++;
                         if (sample.Length == 0)
@@ -355,7 +496,7 @@ internal static class Outputs
                 onsets.TryGetValue(h.Key, out int played) && played > h.Value);
 
             return new Reading(name, heads.Count, silent, soundingRests, midiOnly, graces,
-                pitchDiffers, sample, xs.Count, ms.Count, xmlDiffers, xmlSample,
+                shared, pitchDiffers, sample, xs.Count, ms.Count, xmlDiffers, xmlSample,
                 xmlComparable, "");
         }
         catch (Exception ex)
