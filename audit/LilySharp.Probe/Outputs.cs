@@ -296,6 +296,30 @@ internal static class Outputs
                         sharedPhrases.Add((body.FullSpan.Start,
                             body.FullSpan.Start + body.FullSpan.Length));
                 }
+
+                // ⚠️ A BARE SECTION IS ATTRIBUTED BY THE SCORE, not by the music. Music
+                // written in `section A { c4 … }` with no `partName { }` block around it is
+                // claimed by nothing except `score main { staff bl }` — which is how the
+                // page reads it, and (since 2026-08-17) the MIDI too. Without this the
+                // instrument compared the page's C3 against a MIDI that correctly sounds C2
+                // for a bass, and reported the fix as a difference.
+                // ⚠️ Only when the score names exactly ONE part: two parts means the page
+                // draws the same music in two registers and there is no single answer.
+                var specs = RenderSpecParser.FindAll(tree);
+                var sole = specs.Count > 0 ? specs[0].EngravedPartNames : default;
+                if (specs.Count > 0 && !sole.IsDefaultOrEmpty && sole.Length == 1)
+                {
+                    int bareShift = ShiftOf(sole[0]);
+                    foreach (var sec in tree.GetRoot().DescendantNodes<SectionDeclarationSyntax>())
+                    {
+                        bool hasBlock = false;
+                        for (int i = 0; i < sec.SlotCount; i++)
+                            if (sec.GetChild(i) is PartBlockSyntax) { hasBlock = true; break; }
+                        if (!hasBlock)
+                            partSpans.Add((sec.FullSpan.Start,
+                                sec.FullSpan.Start + sec.FullSpan.Length, bareShift));
+                    }
+                }
             }
             // The SMALLEST containing span wins, so a part block written inside a part
             // declaration answers for itself rather than for its container.
