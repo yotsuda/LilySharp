@@ -2189,39 +2189,28 @@ public sealed partial class MeasureCollector
         int ItemCount(int mi) => work[mi]?.Length ?? measures[mi].Items.Length;
         MusicItem ItemAt(int mi, int i) => work[mi] is { } w ? w[i] : measures[mi].Items[i];
 
+        // ⚠️ ONE REBUILD PER NOTE, NOT ONE PER STAMP — the same rule as the measures above,
+        // one level down. The direction/BeamId stamp and the pure-tip stamp used to be two
+        // passes each writing a fresh item, so every beamed note was built TWICE (MEASURED,
+        // session 192: 1.43 MB + 1.57 MB of a 47.7 MB perf-plain1k keystroke). The tip needs
+        // the band at the direction the group is about to give the stem, and that is the ONLY
+        // thing the first pass's item was for — so the band is read with the direction passed
+        // EXPLICITLY (StemSpacingInfo's stemUpOverride) and both stamps land in one `with`.
+        // Reused across groups so the band list is one allocation, not one per beam.
+        var memberBands = new List<(int Mi, int ItemIndex, bool StemUp, bool HasBand)>();
         foreach (var group in groups)
         {
             // One identity per BeamGroup, stamped on every member — the stand-in for the
             // Beam grob pointer two stems are compared through. Running across calls so
             // the voices of one staff never collide.
             int beamId = _nextBeamId++;
-            foreach (var member in group.Members)
-            {
-                int mi = member.MeasureIndex >= 0 ? member.MeasureIndex : group.MeasureIndex;
-                if (mi < 0 || mi >= measures.Count)
-                    continue;
-                if (member.ItemIndex < 0 || member.ItemIndex >= ItemCount(mi))
-                    continue;
 
-                MusicItem? updated = ItemAt(mi, member.ItemIndex) switch
-                {
-                    NoteItem n => n with { StemUpOverride = member.MemberStemUp, BeamId = beamId },
-                    ChordItem c => c with { StemUpOverride = member.MemberStemUp, BeamId = beamId },
-                    _ => null,
-                };
-                if (updated == null)
-                    continue;
-
-                Work(mi)[member.ItemIndex] = updated;
-            }
-
-            // Bake the PURE beamed stem tip on every member: the extreme of the group's
-            // same-direction members' UNBEAMED stem tips. Spacing runs before any beam
-            // is quanted, so LilyPond prices a beamed stem by its PURE height — the
-            // calc_beam branch unites the same-direction members' unbeamed heights and
-            // clips the non-stem side back to the stem's own, so the whole result is
-            // the own head-side end plus this one shared tip. LilyPond caches the
-            // answer per stem; this bake is that cache.
+            // The PURE beamed stem tip: the extreme of the group's same-direction members'
+            // UNBEAMED stem tips. Spacing runs before any beam is quanted, so LilyPond
+            // prices a beamed stem by its PURE height — the calc_beam branch unites the
+            // same-direction members' unbeamed heights and clips the non-stem side back to
+            // the stem's own, so the whole result is the own head-side end plus this one
+            // shared tip. LilyPond caches the answer per stem; this bake is that cache.
             // The cross-staff coords term (:421-436) is identically zero here: a Lily#
             // beam group never spans staves, so every member's pure Y refpoint is the
             // same and the per-member adjustment vanishes.
@@ -2229,38 +2218,55 @@ public sealed partial class MeasureCollector
             //   the calc_beam branch; :443 iv.intersect (overshoot).
             // LILYPOND-REF: lily/stem.cc:449-458 Stem::cache_pure_height.
             double upTip = double.NegativeInfinity, downTip = double.PositiveInfinity;
-            var memberBands = new List<(int Mi, int ItemIndex, bool StemUp)>();
+            memberBands.Clear();
             foreach (var member in group.Members)
             {
                 int mi = member.MeasureIndex >= 0 ? member.MeasureIndex : group.MeasureIndex;
                 if (mi < 0 || mi >= measures.Count
                     || member.ItemIndex < 0 || member.ItemIndex >= ItemCount(mi))
                     continue;
-                // The items were just stamped with their resolved directions, and their
-                // PureBeamedStemTip is still unset, so this reads the UNBEAMED band.
-                if (Layout.SpacingRules.StemSpacingInfo(ItemAt(mi, member.ItemIndex))
-                    is not { } info)
+                // The direction is the one about to be stamped, and PureBeamedStemTip is
+                // still unset, so this reads the UNBEAMED band — the same two facts the
+                // two-pass shape arranged by stamping first.
+                // A stemless member (a whole note) has no band; it still takes the group's
+                // direction and BeamId below, which is what the unconditional first pass
+                // gave it before the tip pass filtered it out.
+                if (Layout.SpacingRules.StemSpacingInfo(
+                        ItemAt(mi, member.ItemIndex), member.MemberStemUp) is not { } info)
+                {
+                    memberBands.Add((mi, member.ItemIndex, member.MemberStemUp, false));
                     continue;
+                }
                 if (info.StemUp)
                     upTip = Math.Max(upTip, info.StemMax);
                 else
                     downTip = Math.Min(downTip, info.StemMin);
-                memberBands.Add((mi, member.ItemIndex, info.StemUp));
+                memberBands.Add((mi, member.ItemIndex, info.StemUp, true));
             }
-            foreach (var (mi, itemIndex, stemUp) in memberBands)
+
+            foreach (var (mi, itemIndex, stemUp, hasBand) in memberBands)
             {
                 double tip = stemUp ? upTip : downTip;
-                if (double.IsInfinity(tip))
-                    continue;
-                MusicItem? withTip = ItemAt(mi, itemIndex) switch
+                double? bakedTip = hasBand && !double.IsInfinity(tip) ? tip : null;
+
+                MusicItem? updated = ItemAt(mi, itemIndex) switch
                 {
-                    NoteItem n => n with { PureBeamedStemTip = tip },
-                    ChordItem c => c with { PureBeamedStemTip = tip },
+                    NoteItem n => n with
+                    {
+                        StemUpOverride = stemUp, BeamId = beamId,
+                        PureBeamedStemTip = bakedTip ?? n.PureBeamedStemTip,
+                    },
+                    ChordItem c => c with
+                    {
+                        StemUpOverride = stemUp, BeamId = beamId,
+                        PureBeamedStemTip = bakedTip ?? c.PureBeamedStemTip,
+                    },
                     _ => null,
                 };
-                if (withTip == null)
+                if (updated == null)
                     continue;
-                Work(mi)[itemIndex] = withTip;
+
+                Work(mi)[itemIndex] = updated;
             }
             // Bake the PURE beam-push estimate into every rest this manual beam runs
             // over, so horizontal spacing sees the rest roughly where the beam will

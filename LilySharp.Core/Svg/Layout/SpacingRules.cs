@@ -1518,14 +1518,23 @@ internal static class SpacingRules
     /// </para>
     /// </para>
     /// </summary>
+    /// <param name="stemUpOverride">The direction to read the band at, instead of the item's
+    /// own. ⚠️ FOR ONE CALLER AND ONE REASON: the collect-phase beam bake
+    /// (<c>MeasureCollector.ResolveBeamStemDirections</c>) knows the direction it is ABOUT to
+    /// stamp, and asking this house for the band at that direction is the only thing it needed
+    /// the stamped item for. Passing the direction instead of materialising the stamp is what
+    /// lets the bake build each note ONCE (MEASURED, session 192: the two-pass shape cost
+    /// 3.00 MB of a 47.7 MB perf-plain1k keystroke, an extra NoteItem per beamed note).
+    /// Null — every other caller — reads the item's own <c>StemUp</c>, unchanged.</param>
     internal static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
                     int? BeamId)?
-        StemSpacingInfo(MusicItem? item)
+        StemSpacingInfo(MusicItem? item, bool? stemUpOverride = null)
     {
         switch (item)
         {
             case NoteItem n:
             {
+                bool stemUp = stemUpOverride ?? n.StemUp;
                 int noteValue = n.BaseDuration.Denominator;
                 if (n.BaseDuration.Numerator != 1) noteValue = 1;
                 if (noteValue < 2)
@@ -1533,8 +1542,8 @@ internal static class SpacingRules
                 // The stem's y-extent runs from where it MEETS THE HEAD (not the head
                 // centre) to the tip; the head-side end sits a stem-attachment offset
                 // off centre. LILYPOND-REF: lily/stem.cc:934-963.
-                double beginPos = StemBeginPosition(n.StaffPosition, n.StemUp, noteValue, n.IsCue);
-                double endPos = StemEndPosition(n.StaffPosition, n.StemUp, noteValue, n.StaffPosition, n.IsCue);
+                double beginPos = StemBeginPosition(n.StaffPosition, stemUp, noteValue, n.IsCue);
+                double endPos = StemEndPosition(n.StaffPosition, stemUp, noteValue, n.StaffPosition, n.IsCue);
                 // A beamed stem's band is the PURE beamed one: the tip carries the beam
                 // group's united reach (baked at collect time), the head side stays this
                 // stem's own — the overshoot clip in one number. Every reader of this
@@ -1548,29 +1557,30 @@ internal static class SpacingRules
                 //   the same pure_y_extent, intersected with the bar's band.
                 if (n.PureBeamedStemTip is { } beamedTip)
                     endPos = beamedTip;
-                return (n.StemUp,
+                return (stemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     n.StaffPosition, n.StaffPosition, n.BeamId);
             }
             case ChordItem c when c.Notes.Length > 0:
             {
+                bool stemUp = stemUpOverride ?? c.StemUp;
                 int noteValue = c.BaseDuration.Denominator;
                 if (c.BaseDuration.Numerator != 1) noteValue = 1;
                 if (noteValue < 2)
                     return null;
                 int minPos = c.Notes.Min(x => x.StaffPosition);
                 int maxPos = c.Notes.Max(x => x.StaffPosition);
-                int tipPos = c.StemUp ? maxPos : minPos;
+                int tipPos = stemUp ? maxPos : minPos;
                 // Head-side end: the reference head is the one the stem starts from
                 // (lowest for an up stem, highest for a down stem), offset by the
                 // stem attachment. LILYPOND-REF: lily/stem.cc:934-963.
-                double beginPos = StemBeginPosition(c.StemUp ? minPos : maxPos, c.StemUp, noteValue, c.IsCue);
-                double endPos = StemEndPosition(tipPos, c.StemUp, noteValue, tipPos, c.IsCue);
+                double beginPos = StemBeginPosition(stemUp ? minPos : maxPos, stemUp, noteValue, c.IsCue);
+                double endPos = StemEndPosition(tipPos, stemUp, noteValue, tipPos, c.IsCue);
                 // The PURE beamed tip, exactly as in the NoteItem arm above.
                 // LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height.
                 if (c.PureBeamedStemTip is { } beamedTip)
                     endPos = beamedTip;
-                return (c.StemUp,
+                return (stemUp,
                     Math.Min(beginPos, endPos), Math.Max(beginPos, endPos),
                     minPos, maxPos, c.BeamId);
             }
