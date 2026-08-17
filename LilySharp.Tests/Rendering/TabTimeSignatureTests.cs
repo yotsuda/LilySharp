@@ -73,9 +73,10 @@ public sealed class TabTimeSignatureTests
 {
     // `c1 | time 2/4 c2` on a bass tab: one initial meter and one mid-piece change, the
     // smallest book that reaches both sites. The score block chooses the mode.
-    // ⚠️ The meter is TOP-LEVEL, not in the part header: a `time` written there is a score
-    // setting in a part block (ScoreSettingInPartHeaderValidator) and does not take, so the
-    // book would silently stay in 4/4 and a test asking for 3/4 would measure the C glyph.
+    // ⚠️ The meter is TOP-LEVEL, not in the part header: `time` there is a score setting in a
+    // part block and ScoreSettingInPartHeaderValidator rejects it outright (LYS1026), so a
+    // fixture written that way fails this file's own HasErrors guard rather than quietly
+    // measuring 4/4 — which is how the 3/4 cases here were first written and caught.
     private static string Src(string scoreBlock, string meter = "4/4", string music = "c1 | time 2/4 c2") => $$"""
         time {{meter}}
         part melody {
