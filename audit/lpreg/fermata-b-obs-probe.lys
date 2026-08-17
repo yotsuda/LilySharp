@@ -1,9 +1,13 @@
 time 4/4
 part melody
 
+// ⚠️ ONE `''`, ON THE FIRST NOTE ONLY. In relative mode each `'` counts from the NEAREST
+// a, so `a'' a'' a'' a''` is not four A5s — it is A5 A7 A9 A11, two octaves a note, and the
+// last one ran off the top of the MIDI range. This book is about the four fermata glyphs on
+// ONE pitch; the pitch was written by habit and nobody looked at it until 2026-08-17.
 section A {
   melody {
-    a''4@accent a''4@accent@fermata a''4@accent@shortfermata a''4@accent@longfermata
+    a''4@accent a4@accent@fermata a4@accent@shortfermata a4@accent@longfermata
   }
 }
 

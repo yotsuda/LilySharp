@@ -2,14 +2,20 @@
 // PREVIOUS section changed to mid-way. Section A opens 3/4 (its own pickup) then
 // switches to 4/4; section B, stating no time, must reset to the score 4/4 - the
 // 3/4 must not leak in. A2 replays A, so its 3/4 pickup returns.
+//
+// ⚠️ ONE `'` PER SECTION, ON ITS FIRST NOTE. This book's claim is about the METER, and
+// its pitches were written by habit: every note carried a `'`, and in relative mode each
+// one counts from the NEAREST letter, so the line climbed to octave 12 and nine of its
+// notes ran off the top of the MIDI range. Nothing in the suite looked at the pitch of a
+// book that never claimed one (2026-08-17).
 title "Section meter resets to score"
 time 4/4
 key c major
 
 part melody { clef treble }
 
-section A { time 3/4 c'4 d' e' | time 4/4 f'4 e' d' c' | d'2 e' | }
-section B { g'4 f' e' d' | c'1 | }
+section A { time 3/4 c'4 d e | time 4/4 f4 e d c | d2 e | }
+section B { g'4 f e d | c1 | }
 
 form main { A B A "A2" }
 
