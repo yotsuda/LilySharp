@@ -540,77 +540,63 @@ internal sealed class BeamDetector
         }
         var beamlets = BeamletCounts(moments, options, tupletSpans);
 
-        var members = new List<BeamMember>(allEntries.Count);
-        var restStems = new List<BeamRestStem>();
+        // The stems, gathered before any member exists — the same one-construction shape
+        // CreateBeamGroup uses, and for the same reason (see <see cref="StemCandidate"/>).
+        var stems = new StemCandidate[allEntries.Count];
+        int stemCount = 0;
+        List<BeamRestStem>? restStems = null;
         for (int i = 0; i < allEntries.Count; i++)
         {
             var (item, itemIdx, _, mi) = allEntries[i];
 
             if (item is RestItem restItem)
             {
-                restStems.Add(new BeamRestStem(
-                    itemIdx, BeforeMember: members.Count, beamlets[i].Left, beamlets[i].Right,
+                (restStems ??= new List<BeamRestStem>()).Add(new BeamRestStem(
+                    itemIdx, BeforeMember: stemCount, beamlets[i].Left, beamlets[i].Right,
                     NoteValue: (int)restItem.BaseDuration.Denominator,
                     MeasureIndex: mi,
                     PrePositioned: restItem.StaffPosition is not null));
                 continue;
             }
 
-            int beamCount = GetBeamCount(item);
-            int staffPosition = GetStaffPosition(item);
-
             var headRange = GetHeadRange(item);
-            members.Add(new BeamMember(
-                item, beamCount, beamlets[i].Left, beamlets[i].Right,
-                staffPosition, itemIdx,
-                memberStemUp: staffPosition < 0,
-                measureIndex: mi,
-                headPositionMin: headRange.Min,
-                headPositionMax: headRange.Max));
-
+            stems[stemCount++] = new StemCandidate(
+                item, itemIdx, mi, GetBeamCount(item),
+                beamlets[i].Left, beamlets[i].Right, GetStaffPosition(item),
+                headRange.Min, headRange.Max);
         }
-
-        // clip-edges on the outer VISIBLE stems, as in CreateBeamGroup.
-        // LILYPOND-REF: lily/beam.cc:1264-1268 Beam::set_beaming.
-        BeamMember ClipEdge(BeamMember m, bool left) => new(
-            m.Item, m.BeamCount,
-            left ? 0 : m.BeamCountLeft,
-            left ? m.BeamCountRight : 0,
-            m.StaffPosition, m.ItemIndex,
-            memberStemUp: m.MemberStemUp,
-            targetStaffIndex: m.TargetStaffIndex,
-            measureIndex: m.MeasureIndex,
-            headPositionMin: m.HeadPositionMin,
-            headPositionMax: m.HeadPositionMax);
-        members[0] = ClipEdge(members[0], left: true);
-        members[^1] = ClipEdge(members[^1], left: false);
-        restStems.RemoveAll(r => r.BeforeMember <= 0 || r.BeforeMember >= members.Count);
+        var visible = new ReadOnlySpan<StemCandidate>(stems, 0, stemCount);
 
         // A polyphonic voice forces its direction; otherwise the farthest head decides.
         // The beam is asked where it STARTS — one beam has one direction.
-        bool stemUp = forceStemUpAt?.Invoke(startMeasure) ?? DefaultBeamStemUp(members);
-        for (int i = 0; i < members.Count; i++)
+        bool stemUp = forceStemUpAt?.Invoke(startMeasure) ?? DefaultBeamStemUp(visible);
+
+        var members = ImmutableArray.CreateBuilder<BeamMember>(stemCount);
+        for (int i = 0; i < stemCount; i++)
         {
-            var m = members[i];
-            members[i] = new BeamMember(
-                m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
-                m.StaffPosition, m.ItemIndex,
+            var c = visible[i];
+            // clip-edges on the outer VISIBLE stems, as in CreateBeamGroup.
+            // LILYPOND-REF: lily/beam.cc:1264-1268 Beam::set_beaming.
+            members.Add(new BeamMember(
+                c.Item, c.BeamCount,
+                i == 0 ? 0 : c.BeamletLeft,
+                i == stemCount - 1 ? 0 : c.BeamletRight,
+                c.StaffPosition, c.ItemIndex,
                 // A stem the writer turned keeps its own side (beam.cc:946-956).
-                memberStemUp: ForcedStemUpOf(m) ?? stemUp,
-                targetStaffIndex: m.TargetStaffIndex,
-                measureIndex: m.MeasureIndex,
-                headPositionMin: m.HeadPositionMin,
-                headPositionMax: m.HeadPositionMax);
+                memberStemUp: ForcedStemUpOf(c.Item) ?? stemUp,
+                measureIndex: c.MeasureIndex,
+                headPositionMin: c.HeadMin,
+                headPositionMax: c.HeadMax));
         }
 
         beamGroups.Add(new BeamGroup(
-            members.ToImmutableArray(),
+            members.MoveToImmutable(),
             measureIndex: startMeasure,
             startIndex: allEntries[0].Index,
             stemUp,
             growDirection: 0,
             voiceIndex: voiceIndex,
-            restStems: restStems.ToImmutableArray()));
+            restStems: RestStemsStandingIn(restStems, stemCount)));
     }
 
     /// <summary>
@@ -784,14 +770,14 @@ internal sealed class BeamDetector
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null)
     {
-        var members = new List<BeamMember>();
-        var restStems = new List<BeamRestStem>();
-
         var moments = new (MusicItem Item, Fraction Moment, int Measure, int Index)[group.Count];
         for (int i = 0; i < group.Count; i++)
             moments[i] = (group[i].item, group[i].startPos, measureIndex, group[i].index);
         var beamlets = BeamletCounts(moments, beamOptions, tupletSpans);
 
+        var stems = new StemCandidate[group.Count];
+        int stemCount = 0;
+        List<BeamRestStem>? restStems = null;
         for (int i = 0; i < group.Count; i++)
         {
             var (item, itemIndex, _) = group[i];
@@ -800,57 +786,25 @@ internal sealed class BeamDetector
             // stem — just its clamped counts standing in the segment walk.
             if (item is RestItem restItem)
             {
-                restStems.Add(new BeamRestStem(
-                    itemIndex, BeforeMember: members.Count, beamlets[i].Left, beamlets[i].Right,
+                (restStems ??= new List<BeamRestStem>()).Add(new BeamRestStem(
+                    itemIndex, BeforeMember: stemCount, beamlets[i].Left, beamlets[i].Right,
                     NoteValue: (int)restItem.BaseDuration.Denominator,
                     PrePositioned: restItem.StaffPosition is not null));
                 continue;
             }
 
-            int beamCount = GetBeamCount(item);
-            int staffPosition = GetStaffPosition(item);
-
             var headRange = GetHeadRange(item);
-            members.Add(new BeamMember(
-                item,
-                beamCount,
-                beamlets[i].Left,
-                beamlets[i].Right,
-                staffPosition,
-                itemIndex,
-                memberStemUp: staffPosition < 0, // Temporary: per-member direction based on position
-                headPositionMin: headRange.Min,
-                headPositionMax: headRange.Max));
+            stems[stemCount++] = new StemCandidate(
+                item, itemIndex, MeasureIndex: -1, GetBeamCount(item),
+                beamlets[i].Left, beamlets[i].Right, GetStaffPosition(item),
+                headRange.Min, headRange.Max);
         }
-
-        // clip-edges (default #t): the OUTER side of an outer stem carries nothing, and
-        // LilyPond zeroes it after the pattern has been beamified rather than in it. Its
-        // INNER side keeps the stem's own count — the pattern only ever reduces interior
-        // stems, so an outer one is never chipped down to its neighbour's count. The outer
-        // STEMS are the outer visible members (a rest has no stem to clip), which is why
-        // this runs after the split above rather than on the i==0 / i==last entries.
-        // LILYPOND-REF: lily/beam.cc:1264-1268 Beam::set_beaming.
-        BeamMember ClipEdge(BeamMember m, bool left) => new(
-            m.Item, m.BeamCount,
-            left ? 0 : m.BeamCountLeft,
-            left ? m.BeamCountRight : 0,
-            m.StaffPosition, m.ItemIndex,
-            memberStemUp: m.MemberStemUp,
-            targetStaffIndex: m.TargetStaffIndex,
-            measureIndex: m.MeasureIndex,
-            headPositionMin: m.HeadPositionMin,
-            headPositionMax: m.HeadPositionMax);
-        members[0] = ClipEdge(members[0], left: true);
-        members[^1] = ClipEdge(members[^1], left: false);
-
-        // A rest can only STAND IN a beam, between two visible stems; one drifting outside
-        // (a degenerate bracket whose edge note was not beamable) has nothing to hang from.
-        restStems.RemoveAll(r => r.BeforeMember <= 0 || r.BeforeMember >= members.Count);
+        var visible = new ReadOnlySpan<StemCandidate>(stems, 0, stemCount);
 
         // A polyphonic voice forces its direction (voice 1 up / voice 2 down);
         // otherwise the head farthest from the middle line decides (LP get_default_dir).
         bool? forcedStemUp = forceStemUpAt?.Invoke(measureIndex);
-        bool stemUp = forcedStemUp ?? DefaultBeamStemUp(members);
+        bool stemUp = forcedStemUp ?? DefaultBeamStemUp(visible);
 
         // Check if first note has feathered beam direction
         // LILYPOND-REF: beam.cc:1039-1082 grow-direction
@@ -862,34 +816,63 @@ internal sealed class BeamDetector
         // LILYPOND-REF: define-grobs.scm:476 auto-knee-gap = 5.5
         // A forced-direction (polyphonic) voice never knees — every stem stays on
         // the voice's side, so auto-knee only runs in a neutral single voice.
-        double? kneeGapCenter = forcedStemUp is null ? AutoKneeGapCenter(members) : null;
+        double? kneeGapCenter = forcedStemUp is null ? AutoKneeGapCenter(visible) : null;
 
-        for (int i = 0; i < members.Count; i++)
+        var members = ImmutableArray.CreateBuilder<BeamMember>(stemCount);
+        for (int i = 0; i < stemCount; i++)
         {
-            var m = members[i];
+            var c = visible[i];
             // Knee: each stem points INTO the gap — UP when its head sits
             // below the gap center, DOWN above (beam.cc:1047-1049). Without a
             // knee, every member takes the group direction — EXCEPT one the writer
             // turned, which keeps its own side: LilyPond stamps the group's direction
             // only onto stems that do not already carry one.
             // LILYPOND-REF: lily/beam.cc:946-956 Beam::set_stem_directions.
-            bool memberUp = ForcedStemUpOf(m) ?? (kneeGapCenter is { } gapCenter
-                ? (m.HeadPositionMin + m.HeadPositionMax) / 2.0 < gapCenter
+            bool memberUp = ForcedStemUpOf(c.Item) ?? (kneeGapCenter is { } gapCenter
+                ? (c.HeadMin + c.HeadMax) / 2.0 < gapCenter
                 : stemUp);
-            members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
-                m.StaffPosition, m.ItemIndex, memberUp,
-                headPositionMin: m.HeadPositionMin,
-                headPositionMax: m.HeadPositionMax);
+            // clip-edges (default #t): the OUTER side of an outer stem carries nothing, and
+            // LilyPond zeroes it after the pattern has been beamified rather than in it. Its
+            // INNER side keeps the stem's own count — the pattern only ever reduces interior
+            // stems, so an outer one is never chipped down to its neighbour's count. The outer
+            // STEMS are the outer VISIBLE stems (a rest has no stem to clip), which is why
+            // this indexes the candidates rather than the group.
+            // LILYPOND-REF: lily/beam.cc:1264-1268 Beam::set_beaming.
+            members.Add(new BeamMember(
+                c.Item, c.BeamCount,
+                i == 0 ? 0 : c.BeamletLeft,
+                i == stemCount - 1 ? 0 : c.BeamletRight,
+                c.StaffPosition, c.ItemIndex,
+                memberStemUp: memberUp,
+                measureIndex: c.MeasureIndex,
+                headPositionMin: c.HeadMin,
+                headPositionMax: c.HeadMax));
         }
 
         return new BeamGroup(
-            members.ToImmutableArray(),
+            members.MoveToImmutable(),
             measureIndex,
             group[0].index,
             stemUp,
             growDirection,
             voiceIndex,
-            restStems.ToImmutableArray());
+            // A rest can only STAND IN a beam, between two visible stems; one drifting outside
+            // (a degenerate bracket whose edge note was not beamable) has nothing to hang from.
+            RestStemsStandingIn(restStems, stemCount));
+    }
+
+    /// <summary>The rest stems that stand BETWEEN two visible stems — the rest hang from
+    /// nothing outside them. Empty (and allocation-free) for the overwhelmingly common beam
+    /// that runs over no rest at all.</summary>
+    private static ImmutableArray<BeamRestStem> RestStemsStandingIn(
+        List<BeamRestStem>? restStems, int stemCount)
+    {
+        if (restStems is null) return ImmutableArray<BeamRestStem>.Empty;
+        var kept = ImmutableArray.CreateBuilder<BeamRestStem>(restStems.Count);
+        foreach (var r in restStems)
+            if (r.BeforeMember > 0 && r.BeforeMember < stemCount)
+                kept.Add(r);
+        return kept.Count == kept.Capacity ? kept.MoveToImmutable() : kept.ToImmutable();
     }
 
     /// <summary>
@@ -1124,20 +1107,34 @@ internal sealed class BeamDetector
     /// Returns the gap center (staff positions) or null for no knee.
     /// </summary>
     /// <remarks>LILYPOND-REF: beam.cc:968-1056 consider_auto_knees</remarks>
-    private static double? AutoKneeGapCenter(List<BeamMember> members)
+    private static double? AutoKneeGapCenter(ReadOnlySpan<StemCandidate> members)
     {
-        if (members.Count < 2) return null;
+        if (members.Length < 2) return null;
 
-        // Head extents in staff positions, widened by 1 like head_extents.widen(1).
-        var intervals = members
-            .Select(m => (Lo: m.HeadPositionMin - 1.0, Hi: m.HeadPositionMax + 1.0))
-            .OrderBy(iv => iv.Lo)
-            .ToList();
+        // Head extents in staff positions, widened by 1 like head_extents.widen(1), in
+        // ascending Lo. ⚠️ ONE ARRAY AND A STABLE INSERTION SORT, not Select/OrderBy/ToList:
+        // this runs once per beam group, and the LINQ chain's iterators, sort buffers and
+        // List were 2.29 MB of a 60.2 MB perf-plain1k keystroke (session 192, measured) —
+        // 600 bytes to order four intervals. Insertion sort keeps OrderBy's STABLE order, so
+        // intervals sharing a Lo stay in member order and the walk below sees the same
+        // sequence it always has.
+        var intervals = new (double Lo, double Hi)[members.Length];
+        for (int i = 0; i < members.Length; i++)
+        {
+            var iv = (Lo: members[i].HeadMin - 1.0, Hi: members[i].HeadMax + 1.0);
+            int j = i - 1;
+            while (j >= 0 && intervals[j].Lo > iv.Lo)
+            {
+                intervals[j + 1] = intervals[j];
+                j--;
+            }
+            intervals[j + 1] = iv;
+        }
 
         // Walk the sorted union; track the largest interior gap.
         double maxGapLen = 0, gapCenter = 0;
         double coveredHi = intervals[0].Hi;
-        for (int i = 1; i < intervals.Count; i++)
+        for (int i = 1; i < intervals.Length; i++)
         {
             if (intervals[i].Lo > coveredHi)
             {
@@ -1154,7 +1151,9 @@ internal sealed class BeamDetector
         // threshold = auto-knee-gap + height_of_beams (staff spaces → ×2 positions).
         // LILYPOND-REF: beam.cc:1033-1040 — height_of_beams reads get_beam_translation,
         // which narrows to (3·ss + line − thickness)/3 from FOUR beams up (:129-145).
-        int beamCount = members.Max(m => m.BeamCount);
+        int beamCount = members[0].BeamCount;
+        for (int i = 1; i < members.Length; i++)
+            if (members[i].BeamCount > beamCount) beamCount = members[i].BeamCount;
         double heightOfBeams = EngravingDefaults.BeamThickness / 2.0
             + (beamCount - 1) * EngravingDefaults.BeamTranslationOf(
                 EngravingDefaults.BeamThickness, 1.0, beamCount);
@@ -1278,13 +1277,18 @@ internal sealed class BeamDetector
     /// (Was previously the arithmetic MEAN of positions, which flips whole beams that
     /// straddle the line with an outlier, e.g. [+1,+1,+1,-2]: LP=up, mean=down.)
     /// </summary>
-    private static bool DefaultBeamStemUp(IReadOnlyList<BeamMember> members)
+    /// <remarks>⚠️ TAKES A SPAN OF <see cref="StemCandidate"/>, NOT the built members: the
+    /// rule is asked BEFORE the members exist, which is what lets each one be built once
+    /// (see <see cref="StemCandidate"/>). Walking a List through IReadOnlyList also boxed
+    /// its struct enumerator once per loop — three loops per beam group, 0.31 MB of a
+    /// perf-plain1k keystroke (session 192, measured).</remarks>
+    private static bool DefaultBeamStemUp(ReadOnlySpan<StemCandidate> members)
     {
         int extremeUp = 0, extremeDown = 0;
         foreach (var m in members)
         {
-            if (m.HeadPositionMax > 0) extremeUp = Math.Max(extremeUp, m.HeadPositionMax);
-            if (m.HeadPositionMin < 0) extremeDown = Math.Min(extremeDown, m.HeadPositionMin);
+            if (m.HeadMax > 0) extremeUp = Math.Max(extremeUp, m.HeadMax);
+            if (m.HeadMin < 0) extremeDown = Math.Min(extremeDown, m.HeadMin);
         }
 
         // ⚠️ A STEM THE WRITER TURNED (@stemUp / @stemDown) TURNS THE RULE OFF. LilyPond
@@ -1296,7 +1300,7 @@ internal sealed class BeamDetector
         bool forceDir = false;
         foreach (var m in members)
         {
-            if (ForcedStemUpOf(m) is not null) { forceDir = true; break; }
+            if (ForcedStemUpOf(m.Item) is not null) { forceDir = true; break; }
         }
 
         // The farther extreme wins.
@@ -1330,18 +1334,18 @@ internal sealed class BeamDetector
         int upVotes = 0, downVotes = 0, totalUp = 0, totalDown = 0;
         foreach (var m in members)
         {
-            int mUp = Math.Max(0, m.HeadPositionMax);
-            int mDown = Math.Min(0, m.HeadPositionMin);
-            bool voteUp = ForcedStemUpOf(m) ?? !(Math.Abs(mUp) >= -mDown);
+            int mUp = Math.Max(0, m.HeadMax);
+            int mDown = Math.Min(0, m.HeadMin);
+            bool voteUp = ForcedStemUpOf(m.Item) ?? !(Math.Abs(mUp) >= -mDown);
             if (!voteUp)
             {
                 downVotes++;
-                totalDown += Math.Max(m.HeadPositionMax, 0);
+                totalDown += Math.Max(m.HeadMax, 0);
             }
             else
             {
                 upVotes++;
-                totalUp += Math.Max(-m.HeadPositionMin, 0);
+                totalUp += Math.Max(-m.HeadMin, 0);
             }
         }
         if (upVotes != downVotes) return upVotes > downVotes;
@@ -1368,6 +1372,24 @@ internal sealed class BeamDetector
     }
 
     /// <summary>
+    /// One stem's beaming inputs, gathered BEFORE any <see cref="BeamMember"/> exists.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS TYPE IS WHY THE MEMBERS ARE BUILT ONCE. The direction rules
+    /// (<see cref="DefaultBeamStemUp"/> and <see cref="AutoKneeGapCenter"/>) read only these
+    /// fields, but neither can answer until every stem of the beam is known — so both
+    /// builders used to construct a <see cref="BeamMember"/> per stem, clip the two outer
+    /// ones into two MORE, and then rewrite EVERY member again with the direction the rules
+    /// had just returned: ten objects for a four-stem beam. MEASURED (session 192, one
+    /// perf-plain1k keystroke): 1.40 MB in the rewrite and about as much again in the first
+    /// construction and the clip, out of 60.2 MB. Gathering the inputs here first lets each
+    /// member be constructed once, already clipped and already pointed.
+    /// </remarks>
+    private readonly record struct StemCandidate(
+        MusicItem Item, int ItemIndex, int MeasureIndex, int BeamCount,
+        int BeamletLeft, int BeamletRight, int StaffPosition, int HeadMin, int HeadMax);
+
+    /// <summary>
     /// The stem direction the writer asked for on this member (<c>@stemUp</c> /
     /// <c>@stemDown</c>), or null when nothing did.
     /// </summary>
@@ -1378,7 +1400,7 @@ internal sealed class BeamDetector
     /// LILYPOND-REF: lily/beam.cc:898-903 — <c>get_property_data (s, "direction")</c>, the
     /// property nothing has written yet, against the <c>default-direction</c> callback.
     /// </remarks>
-    private static bool? ForcedStemUpOf(BeamMember m) => m.Item switch
+    private static bool? ForcedStemUpOf(MusicItem item) => item switch
     {
         NoteItem n => n.ForcedStemUp,
         ChordItem c => c.ForcedStemUp,
