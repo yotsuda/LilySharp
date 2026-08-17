@@ -147,7 +147,7 @@ public static class FontEmbedInfo
     /// <remarks>
     /// ⚠️ A face inside a COLLECTION (.ttc — Yu Gothic, Meiryo and MS Gothic all ship that
     /// way on Japanese Windows) streams as the WHOLE collection, with the face's index in it
-    /// as <see cref="SKTypeface.OpenStream"/>'s out parameter. An embedder wants one font
+    /// as <see cref="SKTypeface.OpenStream(out int)"/>'s out parameter. An embedder wants one font
     /// program and has nowhere to put an index, so the face is lifted out here
     /// (<see cref="SfntExtractor"/>) and the caller never sees a container.
     /// </remarks>

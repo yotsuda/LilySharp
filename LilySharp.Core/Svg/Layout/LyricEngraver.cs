@@ -500,6 +500,7 @@ internal sealed class LyricEngraver
     /// <c>lyrics.two-staff.two-verse.staff-to-lyric</c>, where the port took the block from
     /// its force-0 5.500000 to its alignment floor 4.009200 against LilyPond's 3.737890 —
     /// the two lyric faces, and nothing else, left over.
+    /// </para>
     /// <para>
     /// A block BETWEEN two staves of one system (<c>staff … with lyrics</c> on a non-last
     /// group) is solved too, and closes differently: on the next spaceable staff of the same
@@ -511,18 +512,21 @@ internal sealed class LyricEngraver
     /// under the staff spring's ideal and the chain is compressed but not critically
     /// (4.027851), with two the floor rises past it and every spring sits on its minimum
     /// (3.737890 + 2.800000 into 11.073064).
+    /// </para>
     /// <para>
     /// ★ A CHORDS ROW LEADING THE NEXT SYSTEM IS IN THIS CHAIN since 2026-07-27
     /// (page-layout-problem.cc:948-990), which is what
     /// <c>lyrics.chord-row.between-systems.staff-to-lyric</c> measures: the room does not
     /// grow for it, so the extra occupant compresses the solve and the lyric line above is
     /// pulled closer to its staff (4.610861 against 5.500000 without).
+    /// </para>
     /// <para>
     /// ★ AN INDEPENDENT LYRICS ROW BELOW THE SYSTEM IS IN THIS CHAIN SINCE 2026-07-28, verse
     /// by verse and in the same run as the note-bound block above it — which is what
     /// <c>lyrics.row.two-verse.verse-step</c> measures. LilyPond has one model for a Lyrics
     /// context and does not ask whether it was <c>\lyricsto</c> anything, so book LYRRV now
     /// reads book LYRV digit for digit: that identity, not the step alone, is the port's test.
+    /// </para>
     /// <para>
     /// What still runs at force 0, i.e. exactly where it was: a system carrying an OSSIA; a
     /// text row standing between two spaceable staves, which belongs to
@@ -531,8 +535,6 @@ internal sealed class LyricEngraver
     /// there; and a LEADING lyrics row, which wants one leading line PER VERSE
     /// (<c>LayoutEngine.RowSkylinesOf</c>). All of them decline for the same reason: the room
     /// would be somebody else's.
-    /// </para>
-    /// </para>
     /// </para>
     /// </remarks>
     private List<LyricLayout> DistributeLooseLines(
@@ -948,7 +950,8 @@ internal sealed class LyricEngraver
     /// the room a function of itself.
     /// </para>
     /// <para>
-    /// ⚠️ IT GOES THROUGH <see cref="CalculateSyllableLayout"/> AND
+    /// ⚠️ IT GOES THROUGH <c>CalculateSyllableLayout</c> (either overload — the list one
+    /// delegates to the single-measure one) AND
     /// <see cref="ResolveOverlaps"/> rather than re-deriving X, so the ink the room is
     /// measured from is the ink that gets drawn. A second X model here would be
     /// HANDOFF 5.2.1② one more time, in the place that just cost this island a session.
@@ -989,7 +992,7 @@ internal sealed class LyricEngraver
     /// consumers, which is the shape HANDOFF 5.2.1② asks for.
     /// </para>
     /// <para>
-    /// ⚠️ ONE X MODEL. It goes through the same <see cref="CalculateSyllableLayout"/> and
+    /// ⚠️ ONE X MODEL. It goes through the same <c>CalculateSyllableLayout</c> and
     /// <see cref="ResolveOverlaps"/> as every other reading of syllable ink, for the reason
     /// spelled out on <see cref="NoteBoundBlockSkylines"/>: a second X model here would be
     /// HANDOFF 5.2.1② in the place that has already cost this island a session.

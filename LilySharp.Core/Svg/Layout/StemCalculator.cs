@@ -110,29 +110,6 @@ public readonly record struct StemInfo(
 public static class StemCalculator
 {
     /// <summary>
-    /// Calculates the stem end Y position for an unbeamed note.
-    /// </summary>
-    /// <remarks>
-    /// COORDINATE SYSTEM: the body computes in LilyPond's native frame — Y-up,
-    /// measured in staff-spaces from the staff middle line (position 0), exactly
-    /// like <c>lily/stem.cc</c>. Inputs are device coordinates (Y-down, the
-    /// shared layout/render space), converted to the up frame on entry and
-    /// reflected back to device Y on return via <c>staffMiddleDown - up</c>. This
-    /// mirrors LilyPond, which reasons in Y-up and flips to device Y only at
-    /// stencil/output time, so the formulae below read sign-for-sign against
-    /// <c>stem.cc</c> (stem-up ADDS length, as in <c>stem.cc:588</c>).
-    /// </remarks>
-    /// <param name="stemAttachY">Device Y where stem attaches to notehead.</param>
-    /// <param name="stemUp">True if stem points up.</param>
-    /// <param name="staffTopDown">Device Y of the top staff line.</param>
-    /// <param name="durationLog">Duration log (2=quarter, 3=eighth, 4=16th...).</param>
-    /// <param name="staffPosition">Staff position of the note (half-spaces from middle line, positive=up).</param>
-    /// <param name="details">Stem details parameters.</param>
-    /// <returns>Stem end Y position in device coordinates (staff spaces, Y-down).</returns>
-    /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc:480-596 internal_calc_stem_end_position
-    /// </remarks>
-    /// <summary>
     /// The stem's LENGTH in staff spaces: <c>details.lengths</c> picked by duration, less the
     /// unnatural-direction shortening, times <c>length-fraction</c>. This is LilyPond's
     /// <c>length</c> local in <c>Stem::calc_length</c> — BEFORE the middle-line extension and
@@ -205,6 +182,29 @@ public static class StemCalculator
         return length;
     }
 
+    /// <summary>
+    /// Calculates the stem end Y position for an unbeamed note.
+    /// </summary>
+    /// <remarks>
+    /// COORDINATE SYSTEM: the body computes in LilyPond's native frame — Y-up,
+    /// measured in staff-spaces from the staff middle line (position 0), exactly
+    /// like <c>lily/stem.cc</c>. Inputs are device coordinates (Y-down, the
+    /// shared layout/render space), converted to the up frame on entry and
+    /// reflected back to device Y on return via <c>staffMiddleDown - up</c>. This
+    /// mirrors LilyPond, which reasons in Y-up and flips to device Y only at
+    /// stencil/output time, so the formulae below read sign-for-sign against
+    /// <c>stem.cc</c> (stem-up ADDS length, as in <c>stem.cc:588</c>).
+    /// <para>
+    /// LILYPOND-REF: lily/stem.cc:480-596 internal_calc_stem_end_position.
+    /// </para>
+    /// </remarks>
+    /// <param name="stemAttachY">Device Y where stem attaches to notehead.</param>
+    /// <param name="stemUp">True if stem points up.</param>
+    /// <param name="staffTopDown">Device Y of the top staff line.</param>
+    /// <param name="durationLog">Duration log (2=quarter, 3=eighth, 4=16th...).</param>
+    /// <param name="staffPosition">Staff position of the note (half-spaces from middle line, positive=up).</param>
+    /// <param name="details">Stem details parameters.</param>
+    /// <returns>Stem end Y position in device coordinates (staff spaces, Y-down).</returns>
     public static double CalculateStemEndY(
         double stemAttachY,
         bool stemUp,

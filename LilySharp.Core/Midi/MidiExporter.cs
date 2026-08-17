@@ -181,7 +181,7 @@ public sealed class MidiExporter
     /// <remarks>
     /// ⚠️ THE RESULT IS NOT CLAMPED — <see cref="SoundKey"/> does that, once, where the note
     /// is emitted. It used to clamp here, and three callers then added a chord or arpeggio
-    /// octave to the CLAMPED value and clamped again: `<c e g>,` on a chord already over the
+    /// octave to the CLAMPED value and clamped again: <c>&lt;c e g&gt;,</c> on a chord already over the
     /// ceiling came out an octave below where the arithmetic says, because the shift was
     /// applied to 127 rather than to the pitch. Keeping the range out of the arithmetic also
     /// gives the warning something true to say about how far outside a note fell.

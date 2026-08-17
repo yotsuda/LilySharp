@@ -311,7 +311,7 @@ internal static class TabBeamMath
 /// place — a stretched notation staff rather than a tab one — and was replaced by hand-fitted
 /// arithmetic (<c>88f98480</c>) whose flat groups sat 0.297 past LilyPond's.
 /// <para>
-/// ⚠️ Directions come from the STRINGS (<paramref name="stemUp"/>), not the notated pitch, so
+/// ⚠️ Directions come from the STRINGS (<c>Compute</c>'s <c>stemUp</c>), not the notated pitch, so
 /// the group handed to the quanter is re-stemmed. A tab beam is never kneed.
 /// </para>
 /// </remarks>

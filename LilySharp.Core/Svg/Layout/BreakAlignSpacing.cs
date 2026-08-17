@@ -426,7 +426,8 @@ internal static class BreakAlignSpacing
     /// (0 = line start, before the system indent). A column is present only if its
     /// <c>Has*</c> flag is set; an absent column's X is 0.
     /// <see cref="PrefixColumns.Right"/> is where the prefix ink ends (the first-note spring
-    /// starts here, see <see cref="FirstNoteSpring"/>).
+    /// starts here — <see cref="SpaceAlistDistances"/>, read per staff by
+    /// <see cref="LineStartColumn"/>).
     /// </remarks>
     public readonly record struct PrefixColumns(
         double ClefX, double KeyX, double TimeX, double Right, bool HasKey, bool HasTime);
@@ -440,7 +441,7 @@ internal static class BreakAlignSpacing
     /// column's offset = the previous column's GROUP right extent + the space-alist distance
     /// (<c>extents[idx][RIGHT] + distance - extents[next][LEFT]</c>, with the clef/key/time
     /// stencils starting at 0 so <c>[LEFT] = 0</c>). The extents are GROUP extents — the union
-    /// across the system's staves — so the caller passes the WIDEST clef (<see cref="clefWidth"/>)
+    /// across the system's staves — so the caller passes the WIDEST clef (<paramref name="clefWidth"/>)
     /// and the WIDEST key's INK width (<paramref name="keyInkWidth"/>, from
     /// <see cref="SpacingRules.KeySignatureInkWidth"/> — the SAME model the draw walk uses, so
     /// a custom (non-traditional) signature reserves exactly what it draws): the whole point of

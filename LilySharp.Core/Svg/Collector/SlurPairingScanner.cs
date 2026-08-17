@@ -62,7 +62,7 @@ internal static class SlurPairingScanner
     /// <para>
     /// The comparison is of REGION NUMBERS, not of a boolean: <c>cue { … } cue { … }</c> is two
     /// CueVoice contexts and LilyPond refuses a slur running from one into the next just as it
-    /// refuses one leaving a cue (MEASURED — <see cref="NoteItem.BeginsCueRegion"/>). The number
+    /// refuses one leaving a cue (MEASURED — <see cref="MusicItem.BeginsCueRegion"/>). The number
     /// is counted HERE, off the edge stamp the collector left, because this scan already visits
     /// every note and chord of the voice in order — the identity costs one increment, and no
     /// second walk exists to disagree with this one.

@@ -71,7 +71,8 @@ internal static class LayoutUtilities
     /// </remarks>
     /// <param name="noteValue">
     /// The head's own note value (1=whole, 2=half, else black), as
-    /// <see cref="GlyphMetrics.NoteValueOf"/> reads it. A BEAM member is not always a black
+    /// <see cref="GlyphMetrics.NoteValueOf(LilySharp.Core.Semantics.Fraction)"/> reads it.
+    /// A BEAM member is not always a black
     /// head: a two-note tremolo pair beams HALVES (<c>BeamDetector.IsBeamable</c>).
     /// </param>
     /// <param name="headScale">

@@ -400,30 +400,44 @@ internal sealed class LayoutEngine
     }
 
     /// <summary>What the per-system pass produces, index-aligned by system.</summary>
+    /// <remarks>
+    /// ⚠️ The per-member docs are <c>&lt;param&gt;</c> tags HERE and not <c>///</c> blocks on the
+    /// positional parameters below: C# does not emit documentation for a record's positional
+    /// parameters from their own comments (CS1587), so four of these accounts were being
+    /// dropped from the XML entirely until 2026-08-18.
+    /// </remarks>
+    /// <param name="Systems">The placed <see cref="SystemLayout"/>s, in system order.</param>
+    /// <param name="Extents">Per system, its protrusion above and below its own frame —
+    /// <see cref="LayoutUtilities.CalculateUpExtent"/> of the up skyline and
+    /// <see cref="LayoutUtilities.CalculateDownExtent"/> of the down one.</param>
+    /// <param name="Skylines">Per system, the WHOLE-system up/down pair
+    /// <see cref="SkylineBuilder.BuildSystemSkylines"/> returned — the silhouette paging
+    /// springs against, as opposed to the per-staff tables below.</param>
+    /// <param name="Heights">Per system, the height it was laid out at.</param>
+    /// <param name="LyricBands">Per system, its loose lyric block's ALIGNMENT MINIMUM below the
+    /// last spaceable staff's bottom line — the note-bound verses AND the independent rows
+    /// standing under them; see <see cref="LyricReservationBelowSystem"/>. Produced here
+    /// because only this pass has the system's own staff skylines.</param>
+    /// <param name="StaffSkylines">Per system, the per-staff UP/DOWN skylines that system was
+    /// placed and sprung against, indexed by global staff index. Carried out of the pass rather
+    /// than rebuilt because a note-bound lyric line is DRAWN against the same
+    /// silhouette — see <see cref="AnnotationLayoutContext.StaffSkylines"/>.</param>
+    /// <param name="StaffSpanners">Per system, the inside-staff spanners each staff's skyline was
+    /// built from, indexed by global staff index. Carried for the consumers that must rebuild
+    /// a profile of their own — see
+    /// <see cref="MultiStaffLayouter.StaffInsideSpanners"/>.</param>
+    /// <param name="StaffInside">Per system, each staff's INSIDE-staff skyline — the one LilyPond
+    /// builds once per VerticalAxisGroup and every consumer of a staff's silhouette reads. Every
+    /// site that used to rebuild its own subset takes this instead; see
+    /// <see cref="SkylineBuilder.BuildInsideStaffSkylines"/>.</param>
     private readonly record struct SystemPlacements(
         List<SystemLayout> Systems,
         List<(double upExtent, double downExtent)> Extents,
         List<(VerticalSkyline up, VerticalSkyline down)> Skylines,
         List<double> Heights,
-        /// <summary>Per system, its loose lyric block's ALIGNMENT MINIMUM below the last
-        /// spaceable staff's bottom line — the note-bound verses AND the independent rows
-        /// standing under them; see <see cref="LyricReservationBelowSystem"/>. Produced here
-        /// because only this pass has the system's own staff skylines.</summary>
         List<double> LyricBands,
-        /// <summary>Per system, the per-staff UP/DOWN skylines that system was placed and
-        /// sprung against, indexed by global staff index. Carried out of the pass rather
-        /// than rebuilt because a note-bound lyric line is DRAWN against the same
-        /// silhouette — see <see cref="AnnotationLayoutContext.StaffSkylines"/>.</summary>
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines,
-        /// <summary>Per system, the inside-staff spanners each staff's skyline was built
-        /// from, indexed by global staff index. Carried for the consumers that must rebuild
-        /// a profile of their own — see
-        /// <see cref="MultiStaffLayouter.StaffInsideSpanners"/>.</summary>
         List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners,
-        /// <summary>Per system, each staff's INSIDE-staff skyline — the one LilyPond builds
-        /// once per VerticalAxisGroup and every consumer of a staff's silhouette reads. Every
-        /// site that used to rebuild its own subset takes this instead; see
-        /// <see cref="SkylineBuilder.BuildInsideStaffSkylines"/>.</summary>
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside);
 
     /// <summary>
@@ -588,22 +602,6 @@ internal sealed class LayoutEngine
 
 
     /// <summary>
-    /// The PRELIMINARY annotation pass: lays the annotations out against provisional system
-    /// positions purely so their real protrusions can join the spacing extents and skylines
-    /// BEFORE the page Y is fixed, and returns the skylines paging should use.
-    /// </summary>
-    /// <remarks>
-    /// Extracted verbatim from <c>Layout</c>'s body, where it already stood in a block of
-    /// its own. ⚠️ It MUTATES <paramref name="perSystemExtents"/> — that is the point of the
-    /// pass, and it is why the caller must run it before <c>CreatePages</c>.
-    /// <para>
-    /// ⚠️ The annotations computed here are THROWN AWAY; the final pass recomputes them
-    /// against the paged systems. Only their extents survive, which is why a divergence
-    /// between the two passes is invisible in the drawing and shows up as spacing — see the
-    /// per-staff lookup comment inside, which records one that did exactly that.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// What the preliminary pass produces: the skylines paging spaces against, and the beams
     /// it laid out on the way — which are the SAME beams the final spanner pass needs.
     /// </summary>
@@ -648,6 +646,22 @@ internal sealed class LayoutEngine
         Dictionary<int, ImmutableArray<TieLayout>> TiesByStaff,
         Dictionary<int, ImmutableArray<SlurLayout>> SlursByStaff);
 
+    /// <summary>
+    /// The PRELIMINARY annotation pass: lays the annotations out against provisional system
+    /// positions purely so their real protrusions can join the spacing extents and skylines
+    /// BEFORE the page Y is fixed, and returns the skylines paging should use.
+    /// </summary>
+    /// <remarks>
+    /// Extracted verbatim from <c>Layout</c>'s body, where it already stood in a block of
+    /// its own. ⚠️ It MUTATES <paramref name="perSystemExtents"/> — that is the point of the
+    /// pass, and it is why the caller must run it before <c>CreatePages</c>.
+    /// <para>
+    /// ⚠️ The annotations computed here are THROWN AWAY; the final pass recomputes them
+    /// against the paged systems. Only their extents survive, which is why a divergence
+    /// between the two passes is invisible in the drawing and shows up as spacing — see the
+    /// per-staff lookup comment inside, which records one that did exactly that.
+    /// </para>
+    /// </remarks>
     private PreliminaryPass RunPreliminaryAnnotationPass(
         MultiStaffScore score, MultiStaffLayouter layouter,
         ImmutableArray<SystemLayout> prelimSystems,
@@ -1750,8 +1764,9 @@ internal sealed class LayoutEngine
             down[s] = Math.Max(down[s], bottomRel - bottoms[s]);
         }
 
-        /// <summary>The up half alone — for a grob whose DOWN reservation is somebody
-        /// else's (a note-bound lyric line, whose depth is its alignment minimum).</summary>
+        // The up half alone — for a grob whose DOWN reservation is somebody else's
+        // (a note-bound lyric line, whose depth is its alignment minimum).
+        // (`//` and not `///`: a local function carries no XML documentation — CS1587.)
         void AddUpOnly(int measureIndex, double topRel)
         {
             if (!measureToSystem.TryGetValue(measureIndex, out int s))
@@ -2555,7 +2570,9 @@ internal sealed class LayoutEngine
     /// runs between reference points, while Lily# stacks systems by their ORIGIN (the first
     /// element's top line). This is that conversion, and it is one function because it was
     /// three: <c>_options.StaffHeight / 2.0</c> stood in for it in
-    /// <see cref="Layout"/>, in <see cref="CreatePages"/> and in <c>PageLayouter</c>, and which
+    /// <see cref="Layout(LilySharp.Core.Svg.Model.MultiStaffScore,
+    /// System.Collections.Generic.IReadOnlyList{int}, SystemLayoutCache, MeasureSpringData[])"/>,
+    /// in <see cref="CreatePages"/> and in <c>PageLayouter</c>, and which
     /// of the three was live depended on the paper regime (HANDOFF 5.2.1 (2)).
     /// <para>
     /// ⚠️ A NOMINAL HALF STAFF IS NOT THIS QUANTITY. A staff's refpoint is the middle of its
@@ -2692,6 +2709,7 @@ internal sealed class LayoutEngine
     /// <see cref="BuildTrailingRowStaves"/> and <see cref="SystemAlignment"/>. What still
     /// bails is a row this port does not place: one BETWEEN two spaceable staves, or a CHORDS
     /// row below one. Both are <see cref="SystemAlignment.UnmodelledRow"/>.
+    /// </para>
     /// <para>
     /// ⚠️ STILL NULL WHEN THE ROOM HOLDS SOMETHING THIS CHAIN DOES NOT MODEL, and that is
     /// the room being unknown rather than an exclusion (§5.2). The case left at force 0 is a

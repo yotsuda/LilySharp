@@ -129,7 +129,7 @@ internal sealed class Skyline
     /// is empty (no constraint).
     /// <para>
     /// NOTE — this flat skyline's <c>Distance</c> convention is the INVERSE of
-    /// <see cref="VerticalSkyline.Distance"/> / <see cref="HorizontalSkyline.Distance"/>,
+    /// <c>VerticalSkyline.Distance</c> / <c>HorizontalSkyline.Distance</c> (both overloads of each),
     /// which return the LilyPond internal (sign*coordinate) penetration MAXIMISED
     /// over overlaps and <see cref="double.NegativeInfinity"/> when empty. Do not
     /// mix the two contracts: this one is a raw signed gap (min, +∞-empty); those

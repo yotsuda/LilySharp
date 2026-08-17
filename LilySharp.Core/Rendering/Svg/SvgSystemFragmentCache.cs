@@ -69,7 +69,7 @@ internal enum OverlayDrawerId
 /// <item>GEOMETRY reads — system.Y/Width/PrefixWidth/Indent/SystemIndex, every
 /// measure's X/Width/Items/Columns/LooseChangeHangs, the staff-group table (staff Ys,
 /// heights, hidden flags, delimiter box) and the page height (the Y-flip bakes it into
-/// every emitted Y) — are folded by VALUE into <see cref="GeometryHash"/>. A 64-bit
+/// every emitted Y) — are folded by VALUE into <see cref="Entry.GeometryHash"/>. A 64-bit
 /// FNV fold decides equality, the same bound <see cref="MeasureContentKey"/> already
 /// accepts for reuse (~2⁻⁶⁴ per differing leaf).</item>
 /// <item>PER-ITEM LAYOUT answers (VoiceOffsets / HeadWipes / DotAdjustments /

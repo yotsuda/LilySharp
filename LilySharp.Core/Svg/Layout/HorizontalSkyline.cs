@@ -185,7 +185,7 @@ internal sealed class HorizontalSkyline
     /// <remarks>
     /// Deliberately keeps the building LIST (concatenation), not the envelope.
     /// This is sound for every query this class offers: a building shadowed by
-    /// a taller one can never win a max — <see cref="Distance"/> takes the max
+    /// a taller one can never win a max — <c>Distance</c> (both overloads) takes the max
     /// of building-pair sums and <see cref="X"/> takes the max over covering
     /// buildings, so both already compute envelope values. (LilyPond's
     /// internal_merge_skyline canonicalizes because its representation must

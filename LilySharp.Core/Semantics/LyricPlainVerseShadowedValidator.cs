@@ -28,12 +28,12 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// Whether the plain line is reached depends on how many times the section is written out
-/// in the form, which <see cref="MeasureCollector"/> only counts with a voice bound — the
+/// in the form, which <see cref="Svg.Collector.MeasureCollector"/> only counts with a voice bound — the
 /// shared no-voice collect skips part-major music and UNDER-counts occurrences, which
 /// would turn a genuinely-used plain line into a false positive. So, like
 /// <see cref="NavigationPlacementValidator"/>, this collects the primary part itself and
 /// reads back the placements recorded as a side effect
-/// (<see cref="MeasureCollector.LyricShadowedPlainWarnings"/>).
+/// (<see cref="Svg.Collector.MeasureCollector.LyricShadowedPlainWarnings"/>).
 /// </remarks>
 internal sealed class LyricPlainVerseShadowedValidator : ISemanticValidator
 {

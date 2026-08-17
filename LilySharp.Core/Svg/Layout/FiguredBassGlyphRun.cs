@@ -44,6 +44,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// 2.000). ⚠️ THAT IS FALSIFIED: all eight designs are bundled and extracted now, and their
 /// <c>fattened.fixedwidth</c> digits share one cap — 2.000000, with 2.004000 for the four and
 /// 2.016000 for the one — in every table. The designs differ in WIDTH, not in height.
+/// </para>
 /// <para>
 /// WHAT THE RESIDUAL ACTUALLY IS, measured 2026-08-03: LilyPond's per-digit ink at font-size
 /// −5 is 2.000117 design-ss for 6/7/8, 2.004157 for 4 AND FOR 5, and 2.023843 for 1 — while

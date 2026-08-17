@@ -159,7 +159,7 @@ internal static class SpacingRules
     /// <summary>
     /// The ink width of a key signature — the sum of its accidentals' advances, 0 for an
     /// empty (C major) signature. This is the ONE key-width model: the break-align
-    /// reservation (<see cref="CalculatePrefixWidth"/> → SolvePrefixColumns, the
+    /// reservation (<c>CalculatePrefixWidth</c>, any overload → SolvePrefixColumns, the
     /// KeySignature group extent RIGHT) and the drawn prefix (SharedRenderer) both read
     /// it, so a custom (non-traditional) signature reserves exactly what it draws — the
     /// defect the ledger pair line-start.time-to-first-note.{standard,custom}-key opened
@@ -271,7 +271,8 @@ internal static class SpacingRules
     /// (ly/engraver-init.ly TabStaff <c>clefGlyph = "clefs.tab"</c>) — which is what makes
     /// a notation+tab score's meter and first note sit 0.235 further right than the same
     /// music without the tab staff (probes TKC 7.720000 against SKC 7.485000).
-    /// <see cref="SharedRenderer"/>'s tab renderer draws <c>clefs.tab</c> unscaled at this
+    /// <see cref="LilySharp.Core.Rendering.SharedRenderer"/>'s tab renderer draws
+    /// <c>clefs.tab</c> unscaled at this
     /// same anchor, so the width booked here is the width drawn.
     /// </remarks>
     public static (double Left, double Right) ClefGroupExtent(MultiStaffScore score)
@@ -342,7 +343,8 @@ internal static class SpacingRules
     public static (double Left, double Right) TabClefStencil
         => (GlyphMetrics.ClefTab.Left, GlyphMetrics.ClefTab.Right);
 
-    /// <summary>The Clef break-align group's left ink edge — <see cref="ClefGroupExtent"/>'s
+    /// <summary>The Clef break-align group's left ink edge —
+    /// <see cref="ClefGroupExtent(Model.MultiStaffScore)"/>'s
     /// <c>Left</c>, which is what the drawn clef is offset by.</summary>
     public static double ClefGroupInkLeft(MultiStaffScore score) => ClefGroupExtent(score).Left;
 
@@ -1543,7 +1545,6 @@ internal static class SpacingRules
     /// <see cref="BeamScoringProblem"/> takes a <c>lengthFraction</c> that only the grace and
     /// tab callers pass. This method's <c>BeamId</c> hands beamed columns to that path.
     /// </para>
-    /// </para>
     /// </summary>
     /// <param name="stemUpOverride">The direction to read the band at, instead of the item's
     /// own. ⚠️ FOR ONE CALLER AND ONE REASON: the collect-phase beam bake
@@ -1913,7 +1914,7 @@ internal static class SpacingRules
     /// scm/define-grobs.scm) and the bar line spans the staff, so every box on one column
     /// overlaps every box on the other in Y. The distance therefore equals the horizontal
     /// reach difference; it is still expressed as boxes + a real
-    /// <see cref="HorizontalSkyline.Distance"/> so the mechanism — and any future
+    /// <c>HorizontalSkyline.Distance</c> so the mechanism — and any future
     /// non-overlapping case — is exactly LilyPond's. For the same reason the box Y is set
     /// to the staff extent (the exact esh magnitude never changes which pairs overlap).
     ///
@@ -1974,7 +1975,7 @@ internal static class SpacingRules
     ///   length += 2 * bound-padding;
     ///   rod.distance_ = max (Paper_column::minimum_distance (li, ri) + length, minlen);
     /// </code>
-    /// <paramref name="length"/> enters as the symbol width (set_spacing_rods passes
+    /// The local <c>length</c> enters as the symbol width (set_spacing_rods passes
     /// <c>symbol_stencil (me, 0.0)</c>). MultiMeasureRest leaves <c>minimum-length</c>
     /// unset, so LilyPond's <c>minlen</c> is 0 and the max() is inert; it is kept here
     /// to match the source line for line.
@@ -2473,7 +2474,8 @@ internal static class SpacingRules
     /// </summary>
     /// <remarks>
     /// ⚠️ ONE HOME for the rule, because Lily# builds springs in two places and they must
-    /// agree — the column system (<see cref="AdjustSpringForGraceNotes"/>) and the drawn
+    /// agree — the column system (<see cref="AdjustSpringForGraceNotes(Spring,
+    /// ImmutableArray{Model.GraceNoteInfo}, GraceSpacingParameters, Model.MusicItem)"/>) and the drawn
     /// timing-column system (MeasureLayouter). The 0.8 was added to the first alone at
     /// first and the ledger did not move a hair, because the drawn output comes from the
     /// second (HANDOFF §2 A's "two places computing one quantity", in its spring form).
@@ -2630,12 +2632,19 @@ internal static class SpacingRules
     /// The whole space-alist entry a change grob offers the following note: the distance and
     /// which of <c>Staff_spacing</c>'s arms consumes it.
     /// </summary>
-    /// <param name="SplitsFixed">semi-shrink-space, which puts HALF the distance into
+    /// <returns>
+    /// <c>Distance</c>, plus the two flags that say which arm consumes it.
+    /// <para>
+    /// <c>SplitsFixed</c> is semi-shrink-space, which puts HALF the distance into
     /// <c>fixed</c> before the ideal (staff-spacing.cc:193-198). extra-space and shrink-space
     /// leave <c>fixed</c> alone, so they differ from it under compression even though all
-    /// three put the ideal at <c>last_ext[RIGHT] + distance</c>.</param>
-    /// <param name="Stretchable">shrink-space and semi-shrink-space clear
-    /// <c>is_stretchable</c> (:191, :197); extra-space does not.</param>
+    /// three put the ideal at <c>last_ext[RIGHT] + distance</c>.
+    /// </para>
+    /// <para>
+    /// <c>Stretchable</c>: shrink-space and semi-shrink-space clear
+    /// <c>is_stretchable</c> (:191, :197); extra-space does not.
+    /// </para>
+    /// </returns>
     private static (double Distance, bool SplitsFixed, bool Stretchable)
         ChangeItemSpaceDef(MusicItem item) => item switch
         {
@@ -3710,7 +3719,7 @@ internal static class SpacingRules
     ///     the refinement — the pre-port behaviour — rather than losing it on an argument no
     ///     book has tested.
     ///   goes away when: a cue item carries a region id rather than an edge flag; see
-    ///     <see cref="NoteItem.BeginsCueRegion"/> for why it carries the edge today (the
+    ///     <see cref="Model.MusicItem.BeginsCueRegion"/> for why it carries the edge today (the
     ///     collect resume's suffix splice adopts tails numbered by another walk).
     ///   observed by: NOTHING, and no book can observe it — nothing on disk writes two cue
     ///     regions at all in one measure, let alone simultaneously (grep 2026-08-03,
@@ -4237,7 +4246,7 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/self-alignment-interface.cc:117-141 <c>aligned_on_parent</c> —
     /// <c>he = Paper_column::get_interface_extent (him, note-column-interface, a)</c>, and when
     /// that is empty on X it falls back to the column's <c>X-alignment-extent</c>
-    /// (<see cref="EngravingDefaults.PaperColumnXAlignmentExtent"/>). The extent is unioned over
+    /// (<see cref="EngravingDefaults.PaperColumnXAlignmentExtentWidth"/>). The extent is unioned over
     /// EVERY note column on the paper column — a paper column is shared by all staves and
     /// voices — which is the same walk <see cref="MusicalInkOverhangsPerColumn"/> makes.
     /// <para>

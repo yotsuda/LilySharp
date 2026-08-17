@@ -1883,7 +1883,7 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// One system's staff skylines are the input to both its placement and its page springs
     /// (<see cref="StaffSprings(MultiStaffScore, ImmutableArray{StaffGroupLayout},
-    /// List{ValueTuple{VerticalSkyline, VerticalSkyline}})"/>), and building them is the
+    /// List{ValueTuple{VerticalSkyline, VerticalSkyline}}, LooseLinesBetween?)"/>), and building them is the
     /// expensive part of laying a system out — measured 2026-07-27 at roughly 5.6 ms per
     /// build on a fifty-system score, which is most of that system's layout cost. Letting
     /// the caller build once and hand the same list to both is worth an explicit overload:
@@ -2769,7 +2769,10 @@ internal sealed class MultiStaffLayouter
     /// (<c>StaffOffsetInSystemDown</c> of the sole staff is 0), and every returned
     /// <c>*YUp</c> is measured from the staff's top line, exactly the per-staff skyline's
     /// own origin — the same frame <see cref="StaffTupletBracketLayouts"/> produces. This
-    /// reuses <see cref="ElementCoordinator.LayoutSlurs"/> whole rather than a second copy
+    /// reuses <see cref="ElementCoordinator.LayoutSlurs(ImmutableArray{Model.SlurItem},
+    /// Model.Score, ImmutableArray{SystemLayout}, int, Model.Staff, ImmutableArray{Model.GraceNoteItem},
+    /// ImmutableArray{Model.BeamLayout}, System.Func{ImmutableArray{InsideSlurScript}})"/>
+    /// whole rather than a second copy
     /// of its scoring. Slur geometry is independent of inter-staff spacing (it is fixed by
     /// note X and pitch), so computing it before the spacing is decided is sound.
     /// <para>
@@ -2838,7 +2841,9 @@ internal sealed class MultiStaffLayouter
     /// <summary>
     /// This staff's own ties, laid out in the staff's own frame so the skyline can reserve
     /// their bows — the tie analogue of <see cref="StaffSlurLayouts"/>. Same trivial
-    /// one-staff-at-offset-0 system, reusing <see cref="ElementCoordinator.LayoutTies"/>
+    /// one-staff-at-offset-0 system, reusing
+    /// <see cref="ElementCoordinator.LayoutTies(ImmutableArray{Model.TieItem}, Model.Score,
+    /// ImmutableArray{SystemLayout}, int, Model.Staff)"/>
     /// whole; tie geometry is fixed by note X and pitch, so it is sound to compute before
     /// the inter-staff spacing is decided.
     /// </summary>

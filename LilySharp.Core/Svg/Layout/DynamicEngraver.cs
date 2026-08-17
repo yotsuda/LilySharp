@@ -416,7 +416,7 @@ internal static class DynamicEngraver
     /// </summary>
     /// <remarks>
     /// ⚠️ IT USED TO BE BOUNDED, and that was a workaround rather than a model choice:
-    /// <see cref="VerticalSkyline.Merge"/> dropped an unbounded building's tails, so a
+    /// <see cref="VerticalSkyline.Merge(VerticalSkyline)"/> dropped an unbounded building's tails, so a
     /// note-column box punched the floor out from under the rest of a span (MEASURED
     /// 2026-07-31: a wedge whose distance should have been 2.7666 to a −2.05 floor came
     /// back 1.0849). The merge carries them now — LilyPond's own invariant, kept there by

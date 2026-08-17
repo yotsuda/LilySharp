@@ -32,7 +32,8 @@ namespace LilySharp.Core.Rendering;
 /// THE OUTLINE, NOT <c>MeasureText</c>. <c>SKPaint.MeasureText(s, ref SKRect)</c> quantises
 /// its rectangle in FONT UNITS — measured, it returns the same 0.718750 for a digit at
 /// TextSize 1000 and at TextSize 1000000 — which is 0.027 staff spaces of granularity,
-/// coarser than the residuals this engine is chasing. <see cref="SKPaint.GetTextPath"/>
+/// coarser than the residuals this engine is chasing.
+/// <see cref="SKPaint.GetTextPath(string, float, float)"/>
 /// carries no quantisation and reproduces LilyPond's own number for the tuplet digit to
 /// 0.000042 staff spaces.
 /// </para>

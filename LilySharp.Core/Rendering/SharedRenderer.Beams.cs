@@ -474,7 +474,7 @@ internal static partial class SharedRenderer
     /// The united X extent LENGTH of one item's drawn accidentals (0 when it has
     /// none) — the amount a whole-display tremolo pair's right beam gap grows by.
     /// Offsets are the packed staff-column ones the drawn accidentals ride
-    /// (<see cref="Svg.Collector.StaffAccidentalColumns"/>); the union's length is
+    /// (<see cref="LilySharp.Core.Svg.Collector.StaffAccidentalColumns"/>); the union's length is
     /// frame-invariant, so no column x is needed.
     /// </summary>
     /// <remarks>

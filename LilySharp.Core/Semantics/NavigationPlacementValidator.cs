@@ -28,8 +28,9 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// Whether a mark landed at a boundary depends on the exact measure fill, which
-/// <see cref="MeasureCollector"/> already tracks. This reads back the placements it
-/// recorded as a side effect (<see cref="MeasureCollector.NavigationPlacementWarnings"/>).
+/// <see cref="Svg.Collector.MeasureCollector"/> already tracks. This reads back the placements it
+/// recorded as a side effect
+/// (<see cref="Svg.Collector.MeasureCollector.NavigationPlacementWarnings"/>).
 /// </remarks>
 internal sealed class NavigationPlacementValidator : ISemanticValidator
 {

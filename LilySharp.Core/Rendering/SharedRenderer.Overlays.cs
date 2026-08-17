@@ -591,7 +591,7 @@ internal static partial class SharedRenderer
     ///   the element along the line rather than stroking a curve.
     /// ⚠️ Until 2026-07-30 this stroked a parabolic polyline with an amplitude of its own,
     ///   so the drawn line and the reserved one were two models. They are one now: the
-    ///   element positions come from <see cref="Svg.Layout.TrillWaveOutline"/>, the same
+    ///   element positions come from <see cref="LilySharp.Core.Svg.Layout.TrillWaveOutline"/>, the same
     ///   house the engraver's aligned_side and the outside-staff pass read.
     /// </remarks>
     private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysTopYUp,

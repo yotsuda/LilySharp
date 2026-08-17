@@ -487,7 +487,7 @@ internal static partial class SharedRenderer
     /// <paramref name="voiceX"/> — the multi-voice collision shift. Everything the note
     /// column owns rides that shift; its ACCIDENTAL does not, and subtracts it back off to
     /// reach the staff column it was packed against
-    /// (<see cref="Svg.Collector.StaffAccidentalColumns"/>).
+    /// (<see cref="LilySharp.Core.Svg.Collector.StaffAccidentalColumns"/>).
     /// </summary>
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,

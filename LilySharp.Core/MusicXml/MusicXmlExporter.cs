@@ -932,9 +932,9 @@ public sealed class MusicXmlExporter
     /// ⚠️ A measure carries ONE attributes slot and renders it at the bar's head, so a change
     /// seen after notes have been written would sound a bar early. Such a change is held
     /// (<see cref="_attributesDirty"/>) and written by the next <see cref="StartNewMeasure"/>
-    /// instead — which is where a `time` or `key` at a bar line belongs anyway.
+    /// instead — which is where a <c>time</c> or <c>key</c> at a bar line belongs anyway.
     /// ⚠️ Divisions are NOT repeated: the change block says only what changed, and a reader
-    /// that saw `<divisions>` once keeps it.
+    /// that saw <c>&lt;divisions&gt;</c> once keeps it.
     /// </remarks>
     private void SyncAttributes()
     {

@@ -84,7 +84,8 @@ internal sealed class PageLayouter
     /// 41.7 ms over 184 pairs on perf-plain1k — while the page-break DP itself cost
     /// 0.8–6.7 ms.
     /// <para>
-    /// Keyed on the UP side via a <see cref="ConditionalWeakTable{TKey,TValue}"/> (the
+    /// Keyed on the UP side via a
+    /// <see cref="System.Runtime.CompilerServices.ConditionalWeakTable{TKey,TValue}"/> (the
     /// same static-CWT shape as <c>MultiStaffLayouter.StaffBeamGroupsOf</c>): one entry
     /// per up-skyline, holding the down-instance it was measured against. A given up
     /// skyline faces one predecessor per layout, so one slot suffices; a re-pairing

@@ -321,7 +321,7 @@ internal sealed class VerticalSkyline
 
     private bool _deferResolve;
 
-    /// <summary>Start deferring overlap resolution; every <see cref="Merge"/> just
+    /// <summary>Start deferring overlap resolution; every <c>Merge</c> (both overloads) just
     /// appends until <see cref="EndBatch"/>. The skyline must NOT be read between
     /// Begin/End (callers only merge boxes in during construction).</summary>
     public void BeginBatch() => _deferResolve = true;
@@ -644,7 +644,8 @@ internal sealed class VerticalSkyline
     /// ONE X number here carries two units at once — a position in the system's staff-spaces
     /// and a box width in the glyph's — so scaling X would move the positions too. The
     /// consequence, named rather than hidden: an ossia's glyph boxes are 1/0.7071 too WIDE in
-    /// the skyline, which costs horizontal overlap in <see cref="Distance"/> and nothing else.
+    /// the skyline, which costs horizontal overlap in <c>Distance</c> (either overload) and
+    /// nothing else.
     /// <see cref="Height"/>-based assertion
     /// <c>StaffSkylineFrameTests.AnOssiaStaffReservesItsOwnSize_InXAsWellAsY</c> pins it and
     /// is skipped until every width-bearing seed separates the two units in one move.

@@ -387,6 +387,7 @@ internal static partial class GlyphMetrics
     /// <c>\number</c> sets font-encoding fetaText (scm/define-markup-commands.scm:3980-3981)
     /// — so the digit goes through Pango over the FreeType outline, exactly as DynamicText
     /// does, and its advance is hinted to a whole device pixel.
+    /// </para>
     /// <para>
     /// Pango scales a logical width (an integer count of device pixels × PANGO_SCALE) by
     /// <c>scale_ = INCH_TO_BP / (PANGO_SCALE · PANGO_RESOLUTION · output_scale)</c>

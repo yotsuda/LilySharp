@@ -220,7 +220,8 @@ internal sealed class AccidentalPlacement
     /// <summary>
     /// The accidental glyph's (LEFT, RIGHT) outline skyline pair, freshly cloned so the
     /// caller may mutate it, read from <paramref name="font"/>'s design and magnified by the
-    /// same font's magnification — the box (<see cref="GlyphMetrics.GetAccidentalBBox"/>) and
+    /// same font's magnification — the box
+    /// (<see cref="GlyphMetrics.GetAccidentalBBox(GlyphMetrics.DesignMetrics, string?)"/>) and
     /// this outline are two readings of ONE face and must never come from two. A courtesy
     /// accidental's stencil
     /// embeds the real leftparen/rightparen glyphs at its LILC edges (padding 0), and the

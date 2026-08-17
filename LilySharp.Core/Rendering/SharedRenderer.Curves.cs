@@ -304,14 +304,20 @@ internal static partial class SharedRenderer
         }
 
         /// <summary>
-        /// The ossia affine (<see cref="Y"/>) expressed in the Y-up frame: the
-        /// conjugate of <see cref="Y"/> under the output flip, an affine of the
-        /// same shape but contracting toward the staff top's <em>Y-up</em>
-        /// position. For a page-Y-up input <paramref name="yUp"/> this yields the
-        /// Y-up value that flips (<c>H − ·</c>) to what <see cref="Y"/> produced
-        /// for the corresponding device input, so bow/page-anchored grobs draw
-        /// natively under <see cref="YFlipDrawingContext"/>. Identity off-ossia.
+        /// The ossia affine in the Y-up frame: <paramref name="yUp"/> contracted about
+        /// the staff's TOP Y-up position by <see cref="OssiaScale"/>, the same edge the
+        /// ossia staff's own lines contract about. Identity off-ossia and when the
+        /// measure has no system on this page, so bow/page-anchored grobs draw natively
+        /// under <see cref="YFlipDrawingContext"/> with no trip through device Y.
         /// </summary>
+        /// <remarks>
+        /// ⚠️ The <c>Up</c> in the name is a leftover contrast. This was written as the
+        /// CONJUGATE, under the output flip (<c>H − ·</c>), of a device-frame sibling
+        /// <c>Y</c> that contracted about the same staff top in device coordinates — two
+        /// affines that had to agree. <c>Y</c> was removed as dead code by the Y-up
+        /// unification (2026-07-20, <c>1bf18bdb</c>), so there is no second frame left
+        /// for this one to be the conjugate OF: it is simply THE ossia affine now.
+        /// </remarks>
         public double YUp(double yUp, int staffIndex, int measureIndex)
         {
             if (!Contains(staffIndex) || !_systems.TryGetValue(measureIndex, out var system))

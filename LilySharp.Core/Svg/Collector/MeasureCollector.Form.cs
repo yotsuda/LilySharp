@@ -598,7 +598,8 @@ public sealed partial class MeasureCollector
     /// second of a <c>| |</c> pair is an empty measure; a TYPED barline on an empty
     /// span is a decoration. A trailing partial bar (music after the last barline)
     /// counts. (Chords/lyrics tracks keep their own slot-style counting — see
-    /// <see cref="ChordNameCollector.CountBars"/> — their barlines ARE the structure.)
+    /// <see cref="ChordNameCollector.CountBars(LilySharp.Core.Syntax.ChordPartBlockSyntax)"/>
+    /// — their barlines ARE the structure.)
     /// A <c>&lt;&lt; \\ &gt;&gt;</c> polyphonic span counts as ONLY its first voice's
     /// bars: the main stream advances by that voice while the others overlay the same
     /// measures, so counting every voice's barlines would multiply the bar count.

@@ -198,22 +198,6 @@ internal sealed class ElementCoordinator
         => _beamDetector.DetectBeamGroups(score);
 
     /// <summary>
-    /// Detects beam groups and calculates their layouts.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/beam.cc — beam grobs (single-measure and multi-measure).
-    /// Multi-measure beams (BeamMember.MeasureIndex != group.MeasureIndex for any
-    /// member) are handled via <see cref="LayoutCrossMeasureBeamPieces"/>: each
-    /// member's X position is resolved against its OWN measure's layout, and
-    /// cross-system spans are split into broken pieces per system.
-    /// </remarks>
-    /// <param name="precomputedGroups">The detection result to lay out, when the caller has
-    /// already run <see cref="DetectBeamGroups"/> on <paramref name="score"/> — the per-staff
-    /// detection memo (<c>MultiStaffLayouter.StaffBeamGroupsOf</c>) hands its one detection to
-    /// every layout call, and the per-system beam memo partitions it by system and hands each
-    /// partition back through here, so detection and layout cannot diverge. Null detects
-    /// internally, exactly as before (no production caller passes null any more).</param>
-    /// <summary>
     /// Moves a beam voice's item X table onto the x its heads are DRAWN at, when a
     /// multi-voice column shifted them.
     /// </summary>
@@ -257,6 +241,22 @@ internal sealed class ElementCoordinator
                 itemXPositions[i] += shift;
     }
 
+    /// <summary>
+    /// Detects beam groups and calculates their layouts.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc — beam grobs (single-measure and multi-measure).
+    /// Multi-measure beams (BeamMember.MeasureIndex != group.MeasureIndex for any
+    /// member) are handled via <see cref="LayoutCrossMeasureBeamPieces"/>: each
+    /// member's X position is resolved against its OWN measure's layout, and
+    /// cross-system spans are split into broken pieces per system.
+    /// </remarks>
+    /// <param name="precomputedGroups">The detection result to lay out, when the caller has
+    /// already run <see cref="DetectBeamGroups"/> on <paramref name="score"/> — the per-staff
+    /// detection memo (<c>MultiStaffLayouter.StaffBeamGroupsOf</c>) hands its one detection to
+    /// every layout call, and the per-system beam memo partitions it by system and hands each
+    /// partition back through here, so detection and layout cannot diverge. Null detects
+    /// internally, exactly as before (no production caller passes null any more).</param>
     public ImmutableArray<BeamLayout> LayoutBeams(
         Score score, ImmutableArray<SystemLayout> systems, int staffIndex,
         ImmutableArray<BeamGroup>? precomputedGroups = null)
@@ -916,7 +916,8 @@ internal sealed class ElementCoordinator
     ///   <c>for (d : {LEFT, RIGHT}) add_collision (b[X_AXIS][d], b[Y_AXIS], width_factor)</c>.
     ///   TWO entries per grob, at its two x edges, each carrying the WHOLE y extent.
     /// <para>
-    /// ⚠️ The box is the grob's EXTENT (the LILC box, <see cref="GlyphMetrics.GetAccidentalBBox"/>),
+    /// ⚠️ The box is the grob's EXTENT (the LILC box,
+    /// <see cref="GlyphMetrics.GetAccidentalBBox(string?)"/>),
     /// NOT the outline box a skyline is built from — LilyPond reads <c>extent</c> here. The two
     /// differ, and picking by habit is the defect <see cref="GlyphMetrics"/> warns about.
     /// </para>
@@ -1370,18 +1371,6 @@ internal sealed class ElementCoordinator
     private const double RestCollisionMinimumDistance = 0.75;
 
     /// <summary>
-    /// The staff position a voiced rest STARTS at, for the standard five-line staff:
-    /// <c>dir × voiced-position</c> (4); a quarter or shorter takes it as-is; a half
-    /// aligns down to the nearest line at or below; a whole first drops one line in a
-    /// lower voice, then hangs from the next line above (the top line when there is
-    /// none). The proper-side check against the neutral letter is the tail of the
-    /// same function.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal (the
-    /// unpitched arm); LILYPOND-REF: scm/define-grobs.scm Rest — voiced-position 4.</remarks>
-    // internal: ItemSkylineFactory prices a voiced rest's separation box at this same
-    // position (the PURE side of the offset chain — the collision push below is unpure).
-    /// <summary>
     /// Where a rest STARTS, before any collision moves it: the pitch it was written at
     /// when it was written at one (<c>a4@rest</c>), and otherwise the voiced position
     /// below.
@@ -1400,6 +1389,21 @@ internal sealed class ElementCoordinator
             ? (restValue == 1 ? written + 2.0 : written)
             : VoicedRestPosition(dir, restValue);
 
+    /// <summary>
+    /// The staff position a voiced rest STARTS at, for the standard five-line staff:
+    /// <c>dir × voiced-position</c> (4); a quarter or shorter takes it as-is; a half
+    /// aligns down to the nearest line at or below; a whole first drops one line in a
+    /// lower voice, then hangs from the next line above (the top line when there is
+    /// none). The proper-side check against the neutral letter is the tail of the
+    /// same function.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal (the
+    /// unpitched arm); LILYPOND-REF: scm/define-grobs.scm Rest — voiced-position 4.
+    /// <para>
+    /// <see cref="ItemSkylineFactory"/> prices a voiced rest's separation box at this same
+    /// position (the PURE side of the offset chain — the collision push is unpure).
+    /// </para>
+    /// </remarks>
     private static double VoicedRestPosition(int dir, int restValue)
     {
         const double VoicedPosition = 4.0;
@@ -2574,7 +2578,8 @@ internal sealed class ElementCoordinator
     ///   attached to any note after the start (the start note's own graces sound
     ///   before the slur opens and stay out).
     /// The stem reads are the canonical houses: a beamed stem ends on
-    /// <see cref="BeamGroup.OuterEdgeStaffSpaceAtX"/> (= LP's stem extent, which
+    /// <see cref="Model.BeamLayout.OuterEdgeStaffSpaceAtX(double, bool)"/>
+    /// (= LP's stem extent, which
     /// includes the half-thickness beam_end_corrective, stem.cc:142), an
     /// unbeamed one on <see cref="NoteColumnLayout.OutwardTipDeviceY"/>; a grace
     /// stem on the renderer's own recipe (SharedRenderer.GraceNotes — fixed
@@ -2702,7 +2707,7 @@ internal sealed class ElementCoordinator
 
     /// <summary>
     /// One grace group's slur-obstacle geometry, resolved ONCE per
-    /// <see cref="LayoutSlurs"/> pass and cached by group index: the column
+    /// <c>LayoutSlurs</c> pass (either overload) and cached by group index: the column
     /// springs (<see cref="SpacingRules.GraceColumns"/>) and the beam quant
     /// (<see cref="GraceNoteEngraver.QuantGraceBeam"/>) are the expensive
     /// parts, and re-solving them for every covering slur segment cost +36%

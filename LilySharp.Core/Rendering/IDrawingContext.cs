@@ -201,7 +201,7 @@ public interface IDrawingContext
 
     /// <summary>
     /// In interactive SVG, draws a transparent click target over the given
-    /// rectangle, carrying the current <see cref="Source"/> position — used to
+    /// rectangle, carrying the current <see cref="Source(int)"/> position — used to
     /// give thin ink (a barline) a comfortably clickable area. Static backends
     /// (exported SVG, PDF, PNG) draw nothing.
     /// </summary>

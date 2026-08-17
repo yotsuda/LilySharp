@@ -120,8 +120,9 @@ internal static class TextOutlineSkylines
 
     /// <summary>
     /// One music-font (Emmentaler) glyph's outline skylines at
-    /// <paramref name="fontSize"/> (staff spaces, 4.0 = the nominal staff), the glyph
-    /// origin placed at (<paramref name="x"/>, <paramref name="y"/>). The SAME walk as
+    /// <paramref name="fontSize"/> (staff spaces, 4.0 = the nominal staff), in the GLYPH's
+    /// own frame — its origin at 0, unplaced; <see cref="PlaceMusicGlyph"/> is the overload
+    /// that puts it somewhere. The SAME walk as
     /// the text overload — LilyPond's named-glyph skyline runs the same freetype
     /// flattening over the glyph outline, and the flattening happens at the
     /// TRANSFORMED size, which is why the size is in the cache key.

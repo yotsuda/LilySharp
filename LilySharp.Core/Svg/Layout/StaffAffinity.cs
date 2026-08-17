@@ -61,8 +61,9 @@ internal static class StaffAffinity
     public const double LargeStretch = 10e5;
 
     /// <summary>
-    /// The spacing spec connecting <paramref name="before"/> (the upper element) to
-    /// <paramref name="after"/> (the lower one) — <c>Page_layout_problem::get_spacing_spec</c>,
+    /// The spacing spec connecting the UPPER element (<paramref name="beforeAffinity"/> /
+    /// <paramref name="beforeSpecs"/>) to the LOWER one (<paramref name="afterAffinity"/> /
+    /// <paramref name="afterSpecs"/>) — <c>Page_layout_problem::get_spacing_spec</c>,
     /// branch for branch.
     /// </summary>
     /// <remarks>

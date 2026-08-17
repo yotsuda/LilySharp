@@ -144,7 +144,7 @@ public enum CueSpanKind
 /// crosses a voice boundary and LilyPond refuses it exactly as it refuses one leaving a cue —
 /// MEASURED 2026-08-15, the slur form warns "unterminated slur" / "cannot end slur" and the tie
 /// form is dropped in silence (byte-identical SVG). Both ends answer <c>IsCue</c> true, so until
-/// the collector stamped the region's EDGE (<see cref="NoteItem.BeginsCueRegion"/>) that
+/// the collector stamped the region's EDGE (<see cref="MusicItem.BeginsCueRegion"/>) that
 /// crossing was invisible here and Lily# drew the curve without a word.
 ///   observed by: <c>CueRegionTests.SlurBetweenTwoAdjacentCuesIsRejected</c> and its tie twin.
 ///     No fixture, sample or corpus book writes two cue blocks back to back (grep 2026-08-03,
@@ -1105,7 +1105,7 @@ public sealed partial class MeasureCollector
     private int _cueDepth = 0;
     /// <summary>
     /// True between entering a <c>cue { … }</c> region and the first note or chord it emits —
-    /// the one item that gets <see cref="NoteItem.BeginsCueRegion"/>. Set on entry and cleared
+    /// the one item that gets <see cref="MusicItem.BeginsCueRegion"/>. Set on entry and cleared
     /// BOTH by that item and on the way out, so outside a region it is always false and a
     /// checkpoint never carries it (<see cref="WalkCarriesNothing"/> already refuses to stand
     /// inside a region at all).
@@ -2824,7 +2824,7 @@ public sealed partial class MeasureCollector
     }
 
     /// <remarks>
-    /// ⚠️ <paramref name="octave"/> AND <paramref name="explicitOctave"/> ARE NOT THE SAME
+    /// ⚠️ The RETURNED <c>octave</c> AND <c>explicitOctave</c> ARE NOT THE SAME
     /// QUANTITY and the caller must not use one for the other. <c>octave</c> is the RELATIVE
     /// mode's anchor and folds in the instrument preset (explicit &gt; preset &gt; clef, the
     /// chain InstrumentDefaults.AnchorOctave spells); <c>explicitOctave</c> is only what the

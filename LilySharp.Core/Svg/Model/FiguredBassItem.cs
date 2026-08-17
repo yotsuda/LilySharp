@@ -123,7 +123,7 @@ public sealed record FiguredBassItem
     /// </para>
     /// <para>
     /// ★ A SUB-LANGUAGE, so it parses TOKENS (VALUE_SITE_AUDIT §9.2, §9.5.3 ⑴). It used
-    /// to take the dotted <see cref="MusicMarkSyntax.MarkName"/> and split it back on
+    /// to take the dotted <see cref="LilySharp.Core.Syntax.MusicMarkSyntax.MarkName"/> and split it back on
     /// '.', which is the string round trip <c>@chord</c> and <c>@mark</c> have already
     /// left; it was the last argument still being read out of that name. Tokens are the
     /// right unit and not merely a tidier one: the spelling is whitespace-INSENSITIVE

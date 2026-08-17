@@ -25,7 +25,7 @@ namespace LilySharp.Core.Rendering;
 /// ⚠️ WITHOUT THIS THERE IS NO CJK IN THE PDF ON WINDOWS. The per-codepoint fallback the
 /// renderers resolve for Japanese text lands on Yu Gothic UI on a stock Japanese Windows,
 /// and Yu Gothic, Meiryo and MS Gothic all ship as <c>.ttc</c> COLLECTIONS — several faces
-/// sharing one file, which <see cref="SkiaSharp.SKTypeface.OpenStream"/> hands back whole
+/// sharing one file, which <see cref="SkiaSharp.SKTypeface.OpenStream(out int)"/> hands back whole
 /// (14.7 MB, face index 1, measured 2026-08-11). A PDF embedder wants a single font program
 /// and has no index to pass, so the collection has to be split before it can be embedded.
 /// <para>

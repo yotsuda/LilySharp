@@ -217,7 +217,8 @@ internal static class LineStartColumn
     /// </remarks>
     /// <param name="columns">The break-align table this line start is drawn on
     /// (<see cref="BreakAlignSpacing.SolvePrefixColumns"/>) — ONE table for every staff.</param>
-    /// <param name="clefGroupLeft"><see cref="SpacingRules.ClefGroupExtent"/>'s Left: each
+    /// <param name="clefGroupLeft">
+    /// <see cref="SpacingRules.ClefGroupExtent(LilySharp.Core.Svg.Model.MultiStaffScore)"/>'s Left: each
     /// clef keeps its own stencil offset inside the group, whose ink-left lands on the
     /// column.</param>
     /// <param name="timeInkWidth">The TimeSignature's ink width, 0 when the prefix has
@@ -396,10 +397,11 @@ internal static class LineStartColumn
     /// together.
     /// </para>
     /// </remarks>
-    /// <param name="ideal">The space-alist ideal (<see cref="BreakAlignSpacing.FirstNoteSpring"/>'s
-    /// <c>Ideal</c>).</param>
-    /// <param name="fixed_">The space-alist FIXED distance (that same helper's <c>Min</c>,
-    /// which is LilyPond's <c>fixed</c> and not its <c>min_dist</c>).</param>
+    /// <param name="ideal">The space-alist ideal
+    /// (<see cref="BreakAlignSpacing.SpaceAlistDistances"/>'s <c>Ideal</c>).</param>
+    /// <param name="fixed_">The space-alist FIXED distance (that same helper's <c>Fixed</c>,
+    /// which is LilyPond's <c>fixed</c> and not its <c>min_dist</c>) — <see cref="WishFrom"/>
+    /// passes it already raised to the caller's floor.</param>
     /// <param name="stretchability">
     /// <c>is_stretchable ? ideal - fixed : 0</c> (staff-spacing.cc:200). Zero for all three
     /// line-start entries: Clef's <c>minimum-fixed-space</c> leaves ideal == fixed, and

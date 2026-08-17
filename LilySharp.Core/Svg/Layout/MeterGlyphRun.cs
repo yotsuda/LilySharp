@@ -56,7 +56,8 @@ namespace LilySharp.Core.Svg.Layout;
 /// </para>
 /// <para>
 /// ⚠️ ONE HOME, for the reason the fingering and the figured bass each have one: the
-/// reservation (<see cref="GlyphMetrics.GetTimeSigWidth"/>, which
+/// reservation (<see cref="GlyphMetrics.GetTimeSigWidth(string, string)"/> — the PRINTED
+/// spelling and not a beat count, which is why the additive "3+2" row measures right — which
 /// <see cref="BreakAlignSpacing"/> and <see cref="SpacingRules"/> book the prefix column
 /// from) and the drawing (<c>SharedRenderer.DrawTimeSignature</c>) must read one run. Before
 /// session 164 there were THREE spellings: the reservation took the max of two per-digit

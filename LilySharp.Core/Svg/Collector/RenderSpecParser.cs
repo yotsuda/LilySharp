@@ -583,7 +583,6 @@ public static class RenderSpecParser
     }
 
     /// <summary>
-    /// <summary>
     /// The inline display name of the part named <paramref name="partName"/>
     /// (<c>part melody "Violin I"</c>), or null. This is the part's default printed
     /// label — a score's <c>staff X "…"</c> overrides it per-score.

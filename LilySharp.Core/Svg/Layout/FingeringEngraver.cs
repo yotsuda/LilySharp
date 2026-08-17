@@ -187,7 +187,8 @@ internal static class FingeringEngraver
     }
 
     /// <summary>
-    /// <see cref="Calculate(Score, ImmutableArray{SystemLayout}, int)"/> for a caller that
+    /// <see cref="Calculate(Score, ImmutableArray{SystemLayout}, int, ImmutableArray{BeamLayout})"/>
+    /// for a caller that
     /// holds ONE system's measure layouts rather than the placed systems — the shape the
     /// per-staff skyline pass runs in.
     /// </summary>

@@ -44,7 +44,8 @@ internal readonly record struct TieOutlineHead(int Position, double XLeft, doubl
 /// </param>
 /// <param name="CentreX">
 /// The stem's own X ORIGIN, which is the head's edge inset by half the stem thickness —
-/// <see cref="LayoutUtilities.StemX"/>. LilyPond adds this as a POINT and widens it by
+/// <see cref="LayoutUtilities.StemX(double, bool, int, Model.NoteheadStyle, double)"/>.
+/// LilyPond adds this as a POINT and widens it by
 /// staff_space/20, so the box is 0.1 wide and NOT the stem's own 0.13.
 /// </param>
 /// <param name="TipY">The stem's far end (staff spaces from the middle line, up-positive).</param>
