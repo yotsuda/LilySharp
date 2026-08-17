@@ -1851,8 +1851,18 @@ internal static class SpacingRules
     /// it in moves every measure and is a separate step. Adding the clef's allowance
     /// leaves every clef-less boundary untouched.
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ THE CLEF-LESS BOUNDARY IS ANSWERED WITHOUT BUILDING THE COLUMN, and
+    /// <see cref="BoundaryColumn.OpensWithClefChange"/> carries the proof that 0 is the
+    /// column's own answer there rather than an approximation of it. It matters because of
+    /// how often this is asked: <c>MeasureContentKey.Compute</c> asks it once per measure
+    /// per staff on every keystroke, and a 1000-bar book with no clef change anywhere was
+    /// building 1000 columns — a candidate list, a placement list, a placed list and an
+    /// immutable builder each — to read one nullable that was going to be 0.
+    /// MEASURED (session 193): 0.93 MB of a 46.1 MB perf-plain1k keystroke.
+    /// </remarks>
     internal static double BoundaryClefAllowance(BarlineType barline, Measure? nextMeasure)
-        => nextMeasure == null
+        => nextMeasure == null || !BoundaryColumn.OpensWithClefChange(nextMeasure.Items)
             ? 0
             : BoundaryColumn.Build(barline, nextMeasure.Items).BarLineLeft ?? 0;
 

@@ -156,6 +156,46 @@ internal sealed class BoundaryColumn
     }
 
     /// <summary>
+    /// Whether these leading items would put ANYTHING to the left of this column's bar
+    /// line — i.e. whether they open with a clef change.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ AN EXACT SHORT-CUT, NOT AN APPROXIMATION, and the break-align ORDER is the whole
+    /// reason: the clef is the ONLY grob this column places before the staff bar. With no
+    /// clef the bar line is the first PRESENT grob, so
+    /// <see cref="BreakAlignSpacing.SolveColumns"/> puts it at <c>startLeft</c> — 0 for a
+    /// boundary column — and <see cref="BarLineLeft"/> is 0; and when the bar line draws
+    /// nothing it is skipped as empty, <see cref="BarLineLeft"/> is null, and the callers'
+    /// <c>?? 0</c> gives 0 again. Either way the answer is exactly 0 and the column need
+    /// not be built at all.
+    /// <para>
+    /// The scan mirrors <see cref="Build"/>'s: a key or time change is stepped over rather
+    /// than stopped at (it rides the spring AFTER the bar line), and only a SOUNDING item
+    /// ends the leading run. <c>BoundaryColumnTests</c> holds the two spellings together —
+    /// they must agree for every shape, which is the only thing making this a short-cut
+    /// rather than a second model.
+    /// </para>
+    /// <para>
+    /// MEASURED (session 193): <c>SpacingRules.BoundaryClefAllowance</c> is asked this once
+    /// per measure per staff per keystroke and answered it by building the whole column —
+    /// 0.93 MB of a 46.1 MB perf-plain1k keystroke, in a book with not one clef change.
+    /// </para>
+    /// </remarks>
+    public static bool OpensWithClefChange(ImmutableArray<MusicItem> leadingItems)
+    {
+        foreach (var item in leadingItems)
+        {
+            if (item is ClefChangeItem)
+                return true;
+            if (item is KeySignatureChangeItem or TimeSignatureChangeItem)
+                continue;
+            if (item.Duration > Fraction.Zero)
+                break; // reached the music
+        }
+        return false;
+    }
+
+    /// <summary>
     /// The bar line's column-internal LEFT edge — how far the column's origin sits to
     /// the LEFT of the bar line. Zero unless a clef change precedes it.
     /// </summary>

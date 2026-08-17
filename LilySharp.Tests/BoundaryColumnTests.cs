@@ -161,4 +161,64 @@ public class BoundaryColumnTests
 
         Assert.DoesNotContain(col.Grobs, g => g.Symbol == BreakAlignSymbol.KeySignature);
     }
+
+    /// <summary>
+    /// <see cref="BoundaryColumn.OpensWithClefChange"/> is a SHORT-CUT past building the
+    /// column, so the only thing that keeps it from being a second model of the boundary is
+    /// that the two agree — everywhere, not just on the shape the short-cut was written for.
+    /// This holds them together.
+    /// </summary>
+    /// <remarks>
+    /// The equation is "the short-cut is false exactly where the column's own answer is 0",
+    /// asserted across every leading shape this column can see and every bar line — including
+    /// <see cref="BarlineType.None"/>, where the column answers null rather than 0 and the
+    /// callers' <c>?? 0</c> is what makes the two meet.
+    /// ⚠️ The clef rows are what make this net non-vacuous: without one it would pass for a
+    /// short-cut that always said false.
+    /// </remarks>
+    [Fact]
+    public void TheClefLessShortCut_AgreesWithTheColumnItBuildsPast()
+    {
+        MusicItem[][] shapes =
+        {
+            System.Array.Empty<MusicItem>(),
+            new MusicItem[] { Key() },
+            new MusicItem[] { Time() },
+            new MusicItem[] { Key(), Time() },
+            new MusicItem[] { Rest() },
+            new MusicItem[] { Rest(), Clef() },          // after the music — a later column
+            new MusicItem[] { Clef() },
+            new MusicItem[] { Clef(), Key() },
+            new MusicItem[] { Key(), Clef() },           // key first, clef still on this column
+            new MusicItem[] { Clef(), Key(), Time(), Rest() },
+        };
+        var barlines = new[]
+        {
+            BarlineType.Single, BarlineType.None, BarlineType.Double, BarlineType.Final,
+        };
+
+        int nonZero = 0;
+        foreach (var shape in shapes)
+        {
+            var items = System.Collections.Immutable.ImmutableArray.Create(shape);
+            bool shortCut = BoundaryColumn.OpensWithClefChange(items);
+            foreach (var barline in barlines)
+            {
+                double built = BoundaryColumn.Build(barline, shape).BarLineLeft ?? 0;
+                if (built != 0) nonZero++;
+
+                // ⑴ The claim the caller makes: what it answers IS the column's answer.
+                Assert.Equal(built,
+                    SpacingRules.BoundaryClefAllowance(barline, MeasureOf(shape)), 12);
+
+                // ⑵ ...and the short-cut only ever skips a column that answers 0. It is
+                // allowed to be conservative the other way (a clef against a bar line that
+                // draws nothing builds the column and still gets 0), which is why this is
+                // one implication and not an equivalence.
+                if (!shortCut)
+                    Assert.Equal(0.0, built, 12);
+            }
+        }
+        Assert.True(nonZero > 0, "no shape reserved anything — the net is vacuous");
+    }
 }
