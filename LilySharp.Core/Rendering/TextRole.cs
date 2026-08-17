@@ -31,10 +31,24 @@ namespace LilySharp.Core.Rendering;
 /// The leaves are the engraving objects the renderer actually distinguishes, one per
 /// <c>SharedRenderer</c> draw site, and they are grouped by
 /// <see cref="TextRoles.GroupOf"/> so a score can say <c>marks "Georgia"</c> without
-/// naming five of them. LilyPond binds the same way: a font tree for the broad families
-/// (<c>make-pango-font-tree</c>) and <c>font-name</c> per grob for the narrow ones.
+/// naming five of them.
+/// </para>
+/// <para>
+/// LilyPond binds the SAME TWO LAYERS. The broad one is
+/// <c>\paper { property-defaults.fonts.serif = "DejaVu Serif" … }</c> — three generic
+/// families set by name; the narrow one is <c>font-name</c> per grob. So the GROUPS here
+/// are the only invention, and they are a shorthand that resolves to leaves rather than a
+/// third thing.
+/// ⚠️ VERIFIED AGAINST THE 2.26 TREE ON 2026-08-18, and the first spelling written here was
+/// WRONG: it cited <c>make-pango-font-tree</c>, which 2.26 keeps only as a
+/// <c>@funindex</c> in the translated manuals. It had been written from memory of an older
+/// LilyPond — HANDOFF §0's rule about hearsay, arriving on the day it was quoted.
+/// ⚠️ LilyPond's third family is <c>typewriter</c>; this engine draws no monospace text and
+/// so has no such key (<see cref="TextRoles.TryParseFamily"/> refuses <c>mono</c>).
 /// </para>
 /// </remarks>
+// LILYPOND-REF: input/regression/font-family-override.ly:20-24 property-defaults.fonts
+// LILYPOND-REF: input/regression/font-name.ly:30-33 TimeSignature MultiMeasureRestText
 public enum TextRole
 {
     // ---- header: page and system labels -------------------------------------------
@@ -229,6 +243,13 @@ public static class TextRoles
     /// Before this rule, <c>font "Comic Sans"</c> reached all three. They are still
     /// bindable — by naming <c>notation</c> or the leaf itself — because a score that
     /// really wants its tab numbers in another face should be able to say so, out loud.
+    /// <para>
+    /// LILYPOND-REF: input/regression/dead-notes.ly:55 TabNoteHead — LilyPond agrees on
+    ///   both halves: its BROAD setting (property-defaults.fonts) does not touch a fret
+    ///   number, and the way to change one is to name the grob,
+    ///   <c>\override TabNoteHead.font-name = "DejaVu Sans Mono"</c>. Read on 2026-08-18
+    ///   AFTER the rule was decided, so this is confirmation and not the source of it.
+    /// </para>
     /// </remarks>
     public static bool IsNotation(TextRole role) => GroupOf(role) == TextRoleGroup.Notation;
 

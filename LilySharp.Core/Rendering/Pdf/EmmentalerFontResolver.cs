@@ -51,9 +51,19 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     /// <paramref name="Sans"/> comes from the ROLE the name was bound to — chord symbols
     /// are the only sans role — and decides the stand-in, so a non-embedded
     /// <c>chordName "Georgia"</c> falls back to the Heros the layout measured rather than
-    /// to Schola. ⚠️ ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer; the
-    /// alternative is to key faces by (name, family), which would embed the same program
-    /// twice to record a distinction that only shows when the face is absent.
+    /// to Schola.
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer.
+    /// LilyPond has no counterpart because it has no such collision — there, a grob names
+    /// its own font and nothing has to reconcile two roles that named the same one.
+    /// The fold GOES AWAY by keying faces on (name, family) instead of name, which costs
+    /// embedding the same program twice to record a distinction that only shows when the
+    /// face is ABSENT and the two roles then want different stand-ins.
+    /// Observed by <c>EmmentalerFontResolverTests
+    /// .OneNameBoundToBothFamilies_KeepsTheFirstRolesStandIn</c> — written because this
+    /// remark first said "nothing observes it", which is a sentence to fix rather than to
+    /// record.
+    /// </para>
     /// </remarks>
     private readonly record struct ConfiguredTextFace(byte[]? Bytes, bool Sans);
 

@@ -88,6 +88,24 @@ public class EmmentalerFontResolverTests
     }
 
     [Fact]
+    public void OneNameBoundToBothFamilies_KeepsTheFirstRolesStandIn()
+    {
+        // A deliberate fold, and this is its only observer: the resolver holds ONE
+        // stand-in per face NAME, so a name bound to both a serif and a sans role keeps
+        // whichever role was declared first (the roles are walked in TextRole order, so
+        // LyricText precedes ChordName). Keying faces on (name, family) instead would
+        // record the distinction — at the cost of embedding one program twice, to serve a
+        // difference that only shows when the face is ABSENT. Change the fold and this
+        // case says so out loud.
+        var r = new EmmentalerFontResolver();
+        r.SetTextFonts(new TextFontPlan.Builder()
+            .Role(TextRole.LyricText, [BogusFont])
+            .Role(TextRole.ChordName, [BogusFont])
+            .Build());
+        Assert.Equal("Schola#", r.ResolveTypeface(BogusFont, false, false)?.FaceName);
+    }
+
+    [Fact]
     public void TwoRolesBoundToTwoAbsentFaces_EachResolvesToItsOwn()
     {
         // One document, several configured faces — the shape `font { }` introduced.
