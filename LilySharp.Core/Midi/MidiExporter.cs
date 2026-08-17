@@ -168,16 +168,51 @@ public sealed class MidiExporter
     private int _diatonicShiftSteps;
 
     /// <summary>Written pitch → MIDI key: the phrase-scoped diatonic shift (modal,
-    /// in the written key), then the chromatic transpose, then the clamp. The ONE
-    /// funnel every pitched emission uses, so the shift cannot miss a path.</summary>
+    /// in the written key), then the chromatic transpose. The ONE funnel every pitched
+    /// emission uses, so the shift cannot miss a path.</summary>
+    /// <remarks>
+    /// ⚠️ THE RESULT IS NOT CLAMPED — <see cref="SoundKey"/> does that, once, where the note
+    /// is emitted. It used to clamp here, and three callers then added a chord or arpeggio
+    /// octave to the CLAMPED value and clamped again: `<c e g>,` on a chord already over the
+    /// ceiling came out an octave below where the arithmetic says, because the shift was
+    /// applied to 127 rather than to the pitch. Keeping the range out of the arithmetic also
+    /// gives the warning something true to say about how far outside a note fell.
+    /// </remarks>
     private int WrittenToMidi(int step, int alter, int octave)
     {
         if (_diatonicShiftSteps != 0)
             (step, alter, octave) = LilySharp.Core.Music.DiatonicShift.Apply(
                 step, alter, octave, _diatonicShiftSteps, _keySharps);
-        return Math.Clamp(
-            RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones, 0, 127);
+        return RelativeOctave.StepToMidi(step, alter, octave) + _currentTransposeSemitones;
     }
+
+    /// <summary>The written key a note actually SOUNDS at: MIDI has 128 keys, so anything
+    /// outside 0-127 is pinned to the edge — and said so, because the page and the MusicXML
+    /// keep the octave the source wrote and only this output silently loses it.</summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE ONLY PLACE THE RANGE IS APPLIED. A book that runs off the top does it
+    /// by its own spelling — `a'' a'' a''` in relative mode climbs two octaves a note — and
+    /// the result was a run of identical 127s that no output, log or net mentioned
+    /// (measured 2026-08-17: `audit/lpreg/fermata-b-obs-probe` pins 2 of 4 notes, and
+    /// `test/section-meter-resets-to-global` 9 of 14, both in silence).
+    /// </remarks>
+    private int SoundKey(int writtenKey, int position)
+    {
+        if (writtenKey is >= 0 and <= 127) return writtenKey;
+        _outOfRange.Add((position, writtenKey));
+        return Math.Clamp(writtenKey, 0, 127);
+    }
+
+    // Every note this export could not sound where it was written: (source offset, the key
+    // the arithmetic asked for). Reported rather than dropped — HANDOFF §2F, "if you drop
+    // something, say so in Warnings".
+    private readonly List<(int Position, int Key)> _outOfRange = new();
+
+    /// <summary>One line per pitch this export had to pin to the edge of the MIDI range.</summary>
+    public IReadOnlyList<string> Warnings => _outOfRange
+        .Select(o => $"pitch out of MIDI range at offset {o.Position}: key {o.Key} "
+            + $"sounds as {Math.Clamp(o.Key, 0, 127)} (the page and the MusicXML keep the written octave)")
+        .ToList();
 
     // Phrase auto-transpose (movable motif): a phrase written in the score's home
     // key sounds in whatever key is in effect where it is referenced. _ambientTonic
@@ -1224,7 +1259,7 @@ public sealed class MidiExporter
         int midiPitch;
         if (_octaveAbsolute)
         {
-            midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + octaveShift * 12, 0, 127);
+            midiPitch = CalculateRelativeMidiPitch(pitch) + octaveShift * 12;
             _currentOctave += octaveShift; // so the anchor octave carries the group shift
         }
         else
@@ -1236,8 +1271,8 @@ public sealed class MidiExporter
             _currentOctave = anchor;
         }
         int ticks = FractionToTicks(_defaultDuration);
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, ticks,
-            pitch.Position, QuarterBend: pitch.QuarterOffset,
+        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.Position), _velocity,
+            _currentTick, ticks, pitch.Position, QuarterBend: pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(pitch.Position), Timbre: _currentTimbre));
         _currentTick += ticks;
     }
@@ -1251,8 +1286,9 @@ public sealed class MidiExporter
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
         int midiPitch = WrittenToMidi(step, alter, octave);
         int ticks = FractionToTicks(_defaultDuration);
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, ticks,
-            degree.Position, SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre));
+        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, degree.Position), _velocity,
+            _currentTick, ticks, degree.Position,
+            SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre));
         _currentTick += ticks;
     }
 
@@ -1314,6 +1350,10 @@ public sealed class MidiExporter
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
 
         bool startsTie = note.Articulations.OfType<TieSyntax>().Any();
+        // ⚠️ Pinned to the range BEFORE the tie is matched: the notes already in the track
+        // hold sounding keys, so comparing a written 134 against a stored 127 would refuse
+        // to merge a tie the page draws.
+        midiPitch = SoundKey(midiPitch, note.Position);
 
         // If the previous onset tied into this one (same pitch on the same track),
         // extend that note instead of emitting a new note-on/off pair.
@@ -1326,7 +1366,8 @@ public sealed class MidiExporter
             return;
         }
 
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position,
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity,
+            _currentTick, actualDuration, note.Position,
             QuarterBend: note.Pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre));
         CloseOnset(track, [track.Notes.Count - 1], startsTie);
@@ -1432,7 +1473,7 @@ public sealed class MidiExporter
             {
                 if (_octaveAbsolute)
                 {
-                    midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + chordShift, 0, 127); // advances state
+                    midiPitch = CalculateRelativeMidiPitch(pitch) + chordShift; // advances state
                     firstOctave = _currentOctave + chordOctave;
                 }
                 else
@@ -1453,7 +1494,7 @@ public sealed class MidiExporter
             else if (_octaveAbsolute)
             {
                 // Absolute mode: each member is a fixed pitch, no stacking.
-                midiPitch = System.Math.Clamp(CalculateRelativeMidiPitch(pitch) + chordShift, 0, 127);
+                midiPitch = CalculateRelativeMidiPitch(pitch) + chordShift;
             }
             else
             {
@@ -1461,6 +1502,7 @@ public sealed class MidiExporter
                 int octave = firstOctave + (step >= firstNoteName ? 0 : 1) + pitch.OctaveOffset;
                 midiPitch = WrittenToMidi(step, pitch.AccidentalOffset, octave);
             }
+            midiPitch = SoundKey(midiPitch, chord.Position);
             int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
             if (tiedInto >= 0)
                 onset.Add(tiedInto);
@@ -1492,7 +1534,7 @@ public sealed class MidiExporter
             var (step, alter, octave) = ChordDegrees.Resolve(
                 firstNoteName, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keySharps);
-            int midiPitch = WrittenToMidi(step, alter, octave);
+            int midiPitch = SoundKey(WrittenToMidi(step, alter, octave), chord.Position);
             int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
             if (tiedInto >= 0)
                 onset.Add(tiedInto);
@@ -1696,7 +1738,7 @@ public sealed class MidiExporter
                 {
                     if (note.Duration != null) written = note.Duration.ToFraction();
                     int g = GraceTicks(written);
-                    int midiPitch = CalculateRelativeMidiPitch(note.Pitch);
+                    int midiPitch = SoundKey(CalculateRelativeMidiPitch(note.Pitch), note.Position);
                     track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, g,
                         note.Position, QuarterBend: note.Pitch.QuarterOffset,
                         SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre));
@@ -1716,7 +1758,7 @@ public sealed class MidiExporter
                     int firstNoteName = _currentNoteName, firstOctave = _currentOctave;
                     foreach (var pitch in chord.Pitches)
                     {
-                        int mp = CalculateRelativeMidiPitch(pitch);
+                        int mp = SoundKey(CalculateRelativeMidiPitch(pitch), chord.Position);
                         if (isFirst) { firstNoteName = _currentNoteName; firstOctave = _currentOctave; isFirst = false; }
                         track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
                             chord.Position, QuarterBend: pitch.QuarterOffset,

@@ -534,6 +534,11 @@ static int ExecuteMidi(string inputPath, string outputPath) =>
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Tracks: {midi.Tracks.Count}");
         Console.WriteLine($"  Notes: {midi.Tracks.Skip(1).Sum(t => t.Notes.Count)}");
+        // Surfaced the way `lysc ly` surfaces the LilyPond exporter's: MIDI has 128 keys,
+        // and a note the file writes outside them is the one thing this format loses that
+        // the page and the MusicXML keep.
+        foreach (var w in exporter.Warnings)
+            Console.WriteLine($"  warning: {w}");
         return 0;
     });
 
