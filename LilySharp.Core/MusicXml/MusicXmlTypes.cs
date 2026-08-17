@@ -196,7 +196,10 @@ internal sealed class MusicXmlMeasure
 /// </summary>
 internal sealed class MusicXmlAttributes
 {
-    public int Divisions { get; set; } = 1;
+    /// <summary>Ticks per quarter. Null on a mid-piece CHANGE block, which says only what
+    /// changed — a reader that saw &lt;divisions&gt; once keeps it, and repeating it invites
+    /// the two copies to disagree.</summary>
+    public int? Divisions { get; set; } = 1;
     public int? KeyFifths { get; set; }
     public string? KeyMode { get; set; }
     /// <summary>Non-traditional key: encoded (step, alter) pairs
@@ -232,7 +235,7 @@ internal sealed class MusicXmlAttributes
     public XElement ToXml()
     {
         var attrs = new XElement("attributes",
-            new XElement("divisions", Divisions));
+            Divisions is { } div ? new XElement("divisions", div) : null);
 
         if (KeyCustom != null)
         {

@@ -84,6 +84,20 @@ public sealed class MusicXmlExporter
     private string _clefSign = "G";
     private int _clefLine = 2;
     private int? _clefOctaveChange; // ±1 for the _8 / ^8 clefs
+
+    // What the document has already SAID about key / time / clef, so a change can be
+    // told from a repeat. Until 2026-08-17 nothing here was written twice: the opening
+    // measure carried an <attributes> and every later key, time and clef change was
+    // dropped, which is how a 3/4 bar came out declared 4/4.
+    private (int Fifths, string? Mode, string? Custom)? _writtenKey;
+    private (int Beats, string? BeatsText, int BeatType, bool Senza)? _writtenTime;
+    private (string Sign, int Line, int? OctaveChange)? _writtenClef;
+    // The score's own signature, captured after the metadata pass.
+    private (int Fifths, string Mode, string? Custom)? _homeKey;
+    // A change seen after the bar had started. The measure carries ONE attributes slot,
+    // rendered at its head, so writing it here would move the change a bar early; it
+    // waits for the next measure instead.
+    private bool _attributesDirty;
     private bool _timeSenzaMisura;  // time none
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
     private string? _noteFrameSpec; // @frame(...) on the note being written
@@ -196,6 +210,10 @@ public sealed class MusicXmlExporter
             // Multi-section mode: collect metadata first, then process sections
             CollectMetadata(root);
             _ambientTonic = _homeTonic; // CollectMetadata walked every key; re-arm
+            // The score's own signature, now that the pass takes only the top-level ones.
+            // A section reverts to it before stating a key of its own, the way its
+            // auto-transpose baseline reverts to _homeTonic just above.
+            _homeKey = (_keyFifths, _keyMode, _keyCustomXml);
             ProcessSections(root);
         }
 
@@ -211,17 +229,25 @@ public sealed class MusicXmlExporter
                 case MetadataDeclarationSyntax metadata:
                     ProcessMetadata(metadata);
                     break;
+                // ⚠️ ONLY THE TOP-LEVEL ONES. This pass runs to the end of the file before a
+                // single note is written, so an unguarded case left the document's opening
+                // <attributes> holding the LAST value in the source rather than the first:
+                // `test/keysig-treble` (D major, then G, then F) opened in F, and
+                // `test/section-meter-resets-to-global` declared 4/4 over a 3/4 bar.
+                // A key / time / clef inside a section, phrase or part block is a CHANGE,
+                // written from its own position by the walk (SyncAttributes) — the same
+                // split the collector makes, and for the same reason.
                 case TimeSignatureSyntax timeSig:
-                    ProcessTimeSignature(timeSig);
+                    if (!IsInsideMusicContent(timeSig)) ProcessTimeSignature(timeSig);
                     break;
                 case TempoDeclarationSyntax tempo:
-                    ProcessTempo(tempo);
+                    if (!IsInsideMusicContent(tempo)) ProcessTempo(tempo);
                     break;
                 case KeySignatureSyntax key:
-                    ProcessKeySignature(key);
+                    if (!IsInsideMusicContent(key)) ProcessKeySignature(key);
                     break;
                 case ClefDeclarationSyntax clef:
-                    ProcessClef(clef);
+                    if (!IsInsideMusicContent(clef)) ProcessClef(clef);
                     break;
                 case OctaveDirectiveSyntax octaveDir:
                     // Top-level `octave absolute/relative` sets the file default.
@@ -270,11 +296,24 @@ public sealed class MusicXmlExporter
         WalkForm(structure, byName);
     }
 
+    // The section's OWN key, if it states one beside its part blocks
+    // (`section A { key d major  melody { … } }`). ⚠️ It sits outside every part block, so
+    // the per-part music walk never reaches it — the collector says the same thing in the
+    // same words (MeasureCollector.Form.cs, "NOT reached by the per-part music walk") and
+    // applies it from there. Until 2026-08-17 this exporter did not, so a section key
+    // changed neither the signature nor the phrase auto-transpose baseline: measured on
+    // `test/keysig-treble`, whose three sections all came out in one key.
+    private KeySignatureSyntax? _sectionKey;
+
     private void EmitSection(SectionDeclarationSyntax section)
     {
         // A section is self-contained: its phrase auto-transpose baseline reverts
         // to the score's home key (a mid-section modulation cannot leak out).
         _ambientTonic = _homeTonic;
+        _sectionKey = null;
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is KeySignatureSyntax sk)
+                _sectionKey = sk;
 
         // Each section may contain part blocks
         var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
@@ -616,6 +655,14 @@ public sealed class MusicXmlExporter
         _currentOctave = _partAnchorOctave;
         _currentStep = 0;
         _ambientTonic = _homeTonic; // each voice starts at the score's home key
+        // ... and so does its SIGNATURE, before the section states one of its own. Both
+        // halves of "a section is self-contained" have to be here: reverting the baseline
+        // and not the fifths would let one section's key print over the next one's.
+        // ⚠️ No measure is open across this point — the change belongs to the bar
+        // StartNewMeasure is about to open, not to whatever the previous part left behind.
+        _currentMeasure = null;
+        if (_homeKey is { } hk) (_keyFifths, _keyMode, _keyCustomXml) = hk;
+        if (_sectionKey is { } sk) ProcessKeySignature(sk);
         _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
         _tieToNextNote = false;
         // Forget the open starts WITHOUT retracting them: a tie left hanging at a part
@@ -763,6 +810,14 @@ public sealed class MusicXmlExporter
         }
     }
 
+    /// <summary>The key signature as the DOCUMENT must spell it: the written fifths plus
+    /// whatever the part's instrument transpose adds. One house, so the opening attributes
+    /// and a later change cannot disagree about it.</summary>
+    private int EffectiveKeyFifths()
+        => _currentTranspose is { } trk
+            ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
+            : _keyFifths;
+
     private void StartNewMeasure(bool addAttributes = false)
     {
         _currentMeasure = new MusicXmlMeasure { Number = _measureNumber++ };
@@ -776,9 +831,7 @@ public sealed class MusicXmlExporter
                 TimeBeatsText = _timeNumeratorText,
                 TimeSenzaMisura = _timeSenzaMisura,
                 TimeBeatType = _timeDenominator,
-                KeyFifths = _currentTranspose is { } trk
-                    ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
-                    : _keyFifths,
+                KeyFifths = EffectiveKeyFifths(),
                 KeyCustom = _keyCustomXml,
                 KeyMode = _keyMode,
                 ClefSign = _clefSign,
@@ -790,7 +843,74 @@ public sealed class MusicXmlExporter
             };
 
             _currentMeasure.Direction = new MusicXmlDirection { Tempo = _tempo };
+            RecordWrittenAttributes();
+            _attributesDirty = false;
         }
+        else if (_attributesDirty)
+        {
+            SyncAttributes();
+        }
+    }
+
+    /// <summary>Remember what the measure just written says, so the next change is a change.</summary>
+    private void RecordWrittenAttributes()
+    {
+        _writtenKey = (EffectiveKeyFifths(), _keyMode, _keyCustomXml);
+        _writtenTime = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
+        _writtenClef = (_clefSign, _clefLine, _clefOctaveChange);
+    }
+
+    /// <summary>Write an <c>&lt;attributes&gt;</c> for whatever the walk has changed since
+    /// the document last said it — a key change, a meter change, a clef change.</summary>
+    /// <remarks>
+    /// ⚠️ A measure carries ONE attributes slot and renders it at the bar's head, so a change
+    /// seen after notes have been written would sound a bar early. Such a change is held
+    /// (<see cref="_attributesDirty"/>) and written by the next <see cref="StartNewMeasure"/>
+    /// instead — which is where a `time` or `key` at a bar line belongs anyway.
+    /// ⚠️ Divisions are NOT repeated: the change block says only what changed, and a reader
+    /// that saw `<divisions>` once keeps it.
+    /// </remarks>
+    private void SyncAttributes()
+    {
+        if (_currentMeasure == null || _currentPart == null) return;
+        if (_currentMeasure.Notes.Count > 0) { _attributesDirty = true; return; }
+
+        var key = (EffectiveKeyFifths(), _keyMode, _keyCustomXml);
+        var time = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
+        var clef = (_clefSign, _clefLine, _clefOctaveChange);
+        bool keyChanged = _writtenKey is null || !_writtenKey.Value.Equals(key);
+        bool timeChanged = _writtenTime is null || !_writtenTime.Value.Equals(time);
+        bool clefChanged = _writtenClef is null || !_writtenClef.Value.Equals(clef);
+        _attributesDirty = false;
+        if (!keyChanged && !timeChanged && !clefChanged) return;
+
+        // Merge into this measure's own attributes when it already has one (the part's
+        // opening bar, whose section states a key of its own): two <attributes> in one
+        // measure would be a reader's coin toss.
+        var attrs = _currentMeasure.Attributes;
+        if (attrs == null)
+            _currentMeasure.Attributes = attrs = new MusicXmlAttributes { Divisions = null };
+
+        if (keyChanged)
+        {
+            attrs.KeyFifths = key.Item1;
+            attrs.KeyMode = _keyMode;
+            attrs.KeyCustom = _keyCustomXml;
+        }
+        if (timeChanged)
+        {
+            attrs.TimeBeats = _timeNumerator;
+            attrs.TimeBeatsText = _timeNumeratorText;
+            attrs.TimeBeatType = _timeDenominator;
+            attrs.TimeSenzaMisura = _timeSenzaMisura;
+        }
+        if (clefChanged)
+        {
+            attrs.ClefSign = _clefSign;
+            attrs.ClefLine = _clefLine > 0 ? _clefLine : null;
+            attrs.ClefOctaveChange = _clefOctaveChange;
+        }
+        RecordWrittenAttributes();
     }
 
     private void ProcessNode(SyntaxNode node)
@@ -1248,10 +1368,14 @@ public sealed class MusicXmlExporter
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig)
     {
         _timeSenzaMisura = timeSig.IsSenzaMisura;
-        if (_timeSenzaMisura) return;
-        _timeNumerator = timeSig.Beats;
-        _timeNumeratorText = timeSig.BeatsText;
-        _timeDenominator = timeSig.BeatType;
+        if (!_timeSenzaMisura)
+        {
+            _timeNumerator = timeSig.Beats;
+            _timeNumeratorText = timeSig.BeatsText;
+            _timeDenominator = timeSig.BeatType;
+        }
+        _attributesDirty = true;
+        SyncAttributes();
     }
 
     private void ProcessTempo(TempoDeclarationSyntax tempo)
@@ -1283,6 +1407,8 @@ public sealed class MusicXmlExporter
         {
             _keyCustomXml = LilySharp.Core.Svg.Model.KeySignature.EncodeCustom(key.CustomAlterations);
             _keyFifths = 0;
+            _attributesDirty = true;
+            SyncAttributes();
             return;
         }
         _keyCustomXml = null;
@@ -1297,6 +1423,8 @@ public sealed class MusicXmlExporter
 
         // Advance the phrase auto-transpose baseline to this key's (written) tonic.
         _ambientTonic = KeyTonic.Of(key);
+        _attributesDirty = true;
+        SyncAttributes();
     }
 
     /// <summary>
@@ -1335,6 +1463,11 @@ public sealed class MusicXmlExporter
     private void ProcessClef(ClefDeclarationSyntax clef)
     {
         SetClef(clef.ClefName?.Text.ToLower());
+        // ⚠️ Only the IN-MUSIC clef syncs. A header clef reaches the document through the
+        // part's opening attributes, and syncing there would write a change on the bar a
+        // second part happens to be starting.
+        _attributesDirty = true;
+        SyncAttributes();
     }
 
     private void SetClef(string? clefName)
