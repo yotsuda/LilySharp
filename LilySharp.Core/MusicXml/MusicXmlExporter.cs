@@ -84,6 +84,9 @@ public sealed class MusicXmlExporter
     private string _clefSign = "G";
     private int _clefLine = 2;
     private int? _clefOctaveChange; // ±1 for the _8 / ^8 clefs
+    // The clef the walk reads in, as a TYPE — the sign/line pair above cannot tell
+    // `treble` from `treble_8`, and the frame rule turns on exactly that difference.
+    private LilySharp.Core.Svg.Model.ClefType _currentClefType = LilySharp.Core.Svg.Model.ClefType.Treble;
 
     // What the document has already SAID about key / time / clef, so a change can be
     // told from a repeat. Until 2026-08-17 nothing here was written twice: the opening
@@ -1238,6 +1241,26 @@ public sealed class MusicXmlExporter
 
             case PhraseDeclarationSyntax:
             case VariableDeclarationSyntax:
+                // Skip declarations — a phrase is written where it is REFERENCED.
+                break;
+
+            case CueExpressionSyntax cue:
+            {
+                // `cue bass { … }` reads its body in the cue clef and hands the staff's own
+                // clef back at the end. BOTH EDGES ARE UNCONDITIONAL, unlike a `clef`
+                // declaration — the collector resets whether or not the cue clef differs
+                // (MeasureCollector.MusicWalk.ProcessCueRegion), and the page is the rule.
+                // `audit/lp-regression/lys/cue-clef-manually` writes the compensation into
+                // its own margin, so its four cue notes were exported an octave high here.
+                var outerClef = _currentClefType;
+                if (cue.ClefKeyword is { } cueClef)
+                    SetFrameToClef(LilySharp.Core.Svg.Collector.MeasureCollector.ParseClefType(
+                        cueClef.Text.ToLowerInvariant()));
+                ProcessNode(cue.Body);
+                if (cue.ClefKeyword != null) SetFrameToClef(outerClef);
+                break;
+            }
+
             case PartDeclarationSyntax:
             case SectionDeclarationSyntax:
             case FormDeclarationSyntax:
@@ -1456,6 +1479,9 @@ public sealed class MusicXmlExporter
 
         if (header.ClefWord != null)
             SetClef(header.ClefWord);
+        // A mid-music `clef` is a change FROM this one, and an unchanged clef changes
+        // nothing — so the walk has to know what the part is already reading in.
+        _currentClefType = header.Clef;
 
         _partAnchorOctave = header.AnchorOctave;
         _octaveAnchor = header.AbsoluteBaseOctave;
@@ -1468,12 +1494,32 @@ public sealed class MusicXmlExporter
 
     private void ProcessClef(ClefDeclarationSyntax clef)
     {
-        SetClef(clef.ClefName?.Text.ToLower());
+        var word = clef.ClefName?.Text.ToLower();
+        var next = LilySharp.Core.Svg.Collector.MeasureCollector.ParseClefType(word ?? "");
+        bool changed = next != _currentClefType;
+        SetClef(word);
+        // ⚠️ A CHANGED clef reopens the relative frame at its own octave — the OCTAVE only,
+        // not the note name — so `clef bass c,4` is a low C without extra commas. That is
+        // Lily#'s rule rather than LilyPond's (whose `\relative` never looks at a clef),
+        // and it is the page's: `MeasureCollector.MusicWalk`'s clef branch does exactly
+        // this. Until 2026-08-17 only the page did, so `g4 a clef bass c,4 d` printed
+        // C3 D3 and exported C5 D5. Decided 2026-08-17, HANDOFF §3.
+        // ⚠️ An UNCHANGED clef changes nothing — it engraves no grob (LilyPond makes one
+        // only when glyph/position/transposition differ) and must not reset the frame.
+        if (changed) SetFrameToClef(next);
         // ⚠️ Only the IN-MUSIC clef syncs. A header clef reaches the document through the
         // part's opening attributes, and syncing there would write a change on the bar a
         // second part happens to be starting.
         _attributesDirty = true;
         SyncAttributes();
+    }
+
+    /// <summary>Reopen the relative frame in <paramref name="clef"/> — the octave only, so
+    /// the frame keeps reading from the letter it last saw.</summary>
+    private void SetFrameToClef(LilySharp.Core.Svg.Model.ClefType clef)
+    {
+        _currentClefType = clef;
+        _currentOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaultOctave(clef);
     }
 
     private void SetClef(string? clefName)

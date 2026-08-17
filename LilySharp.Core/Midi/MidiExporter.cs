@@ -309,9 +309,11 @@ public sealed class MidiExporter
 
             case PartDeclarationSyntax part:
                 (_partOctaveAnchor, _partAbsoluteBase) = PartOctaveAnchors(part.Name.Text);
+                _currentClef = Header(part.Name.Text).Clef;
                 _currentTimbre = PartTimbre(part.Name.Text);
                 ProcessChildren(part, track, conductorTrack);
                 (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+                _currentClef = Svg.Model.ClefType.Treble;
                 _currentTimbre = 0;
                 break;
 
@@ -357,6 +359,31 @@ public sealed class MidiExporter
                 // in source order, so a file-level directive precedes the notes.
                 _octaveAbsolute = octaveDir.IsAbsolute;
                 break;
+
+            case ClefDeclarationSyntax clefDecl:
+                ApplyClefChange(clefDecl.ClefName.Text);
+                break;
+
+            case CueExpressionSyntax cue:
+            {
+                // `cue bass { … }` reads its body in the cue clef and hands the staff's own
+                // clef back at the end — both edges move the frame, and the collector does
+                // exactly this (MeasureCollector.MusicWalk.ProcessCueRegion). The fixture
+                // that measures it says so in its own margin: `cue-clef-manually` writes
+                // "cue の bass clef は相対 anchor を octave 3 に引く" and compensates with a
+                // leading c'. This walk did not, so those four cue notes sounded an octave
+                // above the page.
+                // ⚠️ BOTH EDGES ARE UNCONDITIONAL, unlike a `clef` declaration: the collector
+                // resets on the way in and on the way out whether or not the cue clef differs
+                // from the staff's, and the page is the rule here.
+                var outer = _currentClef;
+                if (cue.ClefKeyword is { } cueClef)
+                    SetFrameToClef(Svg.Collector.MeasureCollector.ParseClefType(
+                        cueClef.Text.ToLowerInvariant()));
+                ProcessNode(cue.Body, track, conductorTrack);
+                if (cue.ClefKeyword != null) SetFrameToClef(outer);
+                break;
+            }
 
             case MusicBlockSyntax block:
                 ProcessSequence(block.Items.ToList(), track, conductorTrack);
@@ -628,6 +655,7 @@ public sealed class MidiExporter
                 _defaultDuration = pitch.Dur;
                 _partOctaveAnchor = anchor;
                 _partAbsoluteBase = absBase;
+                _currentClef = Header(pname).Clef; // a mid-music `clef` is a change FROM this
                 _currentTimbre = PartTimbre(pname);
                 // Part-major music plays inside its own part declaration (no
                 // PartBlockSyntax), so arm the instrument's sounding shift here too —
@@ -664,6 +692,7 @@ public sealed class MidiExporter
                 _defaultDuration = pitch.Dur;
                 _partOctaveAnchor = anchor;
                 _partAbsoluteBase = absBase;
+                _currentClef = Header(pname).Clef; // a mid-music `clef` is a change FROM this
                 _currentTimbre = PartTimbre(pname);
                 ProcessNode(sectionPart, track, conductorTrack);
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
@@ -949,6 +978,41 @@ public sealed class MidiExporter
     {
         var header = Header(partName);
         return (header.AnchorOctave, header.AbsoluteBaseOctave);
+    }
+
+    // The clef the walk is reading in, so an UNCHANGED `clef` can be told from a change.
+    private LilySharp.Core.Svg.Model.ClefType _currentClef = LilySharp.Core.Svg.Model.ClefType.Treble;
+
+    /// <summary>A mid-music <c>clef</c>: the relative frame reopens at the new clef's own
+    /// octave, so `clef bass c,4` is a low C without extra commas.</summary>
+    /// <remarks>
+    /// ⚠️ THE OCTAVE ONLY, not the note name — the frame keeps reading from the letter it
+    /// last saw, and only the register it counts from moves. That is what
+    /// <c>MeasureCollector.MusicWalk</c>'s clef branch does, and this walk exists so the
+    /// two agree: until 2026-08-17 the page re-anchored and the MIDI did not, so
+    /// `g4 a clef bass c,4 d` printed C3 D3 and played C5 D5 (measured, `test/clef-change`).
+    /// ⚠️ AN UNCHANGED CLEF CHANGES NOTHING. LilyPond makes a Clef grob only when the
+    /// resolved glyph/position/transposition differ, so a redundant `clef treble` must not
+    /// reset the frame either — the collector's branch says the same and cites
+    /// lily/clef-engraver.cc:139-166 inspect_clef_properties for it.
+    /// ⚠️ This is a DELIBERATE divergence from LilyPond, whose `\relative` never looks at a
+    /// clef. It is Lily#'s rule because a part header's clef already sets the anchor
+    /// (PartHeaderDefaults.AnchorOctave), and one word means one thing; the LilyPond twin
+    /// therefore cannot spell it and writes corrected octave marks instead, the way it
+    /// already does for `transpose`. Decided 2026-08-17, HANDOFF §3.
+    /// </remarks>
+    private void ApplyClefChange(string? clefWord)
+    {
+        var next = Svg.Collector.MeasureCollector.ParseClefType((clefWord ?? "").ToLowerInvariant());
+        if (next == _currentClef) return;
+        SetFrameToClef(next);
+    }
+
+    /// <summary>Reopen the relative frame in <paramref name="clef"/> — the octave only.</summary>
+    private void SetFrameToClef(LilySharp.Core.Svg.Model.ClefType clef)
+    {
+        _currentClef = clef;
+        _currentOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaultOctave(clef);
     }
 
     /// <summary>What this part's header says about pitch, read once per lookup.</summary>

@@ -1366,7 +1366,7 @@ public sealed class LilyPondExporter
         KeySignatureSyntax k => EmitKey(k),
         TimeSignatureSyntax ts => EmitTime(ts),
         TempoDeclarationSyntax t => EmitTempo(t),
-        ClefDeclarationSyntax cl => "\\clef " + LyClefName(cl.ClefName.Text),
+        ClefDeclarationSyntax cl => EmitClef(cl),
         PartialDeclarationSyntax p => EmitPartial(p),
         TupletExpressionSyntax tup => EmitTuplet(tup),
         ParallelExpressionSyntax par => EmitParallel(par),
@@ -2270,6 +2270,37 @@ public sealed class LilyPondExporter
         return $"{kw} {{ {body} }}";
     }
 
+    // The clef the twin is reading in, so an UNCHANGED `clef` can be told from a change.
+    private ClefType _lysClef = ClefType.Treble;
+
+    /// <summary>A mid-music <c>clef</c>: written across unchanged, and the LILY# frame — not
+    /// LilyPond's — reopened at the clef's own octave.</summary>
+    /// <remarks>
+    /// ⚠️ THE TWO FRAMES PART COMPANY HERE, deliberately. Lily# reads the notes after a clef
+    /// change in that clef's register (`clef bass c,4` is a low C); LilyPond's <c>\relative</c>
+    /// never looks at a clef and would carry on from the last note. Moving <see
+    /// cref="_lysOctave"/> alone is exactly what makes <see cref="EmitMusicPitch"/> write the
+    /// difference out as octave marks — the same machinery that already corrects a degree
+    /// chord — so the twin sounds the page's music while LilyPond does nothing unusual.
+    /// ⚠️ An UNCHANGED clef changes nothing: it engraves no grob and must not move the frame
+    /// either (MeasureCollector.MusicWalk's clef branch, citing
+    /// lily/clef-engraver.cc:139-166 inspect_clef_properties).
+    /// Decided 2026-08-17, HANDOFF §3; measured on `test/clef-change`, whose twin used to
+    /// hand LilyPond C5 D5 where the page prints C3 D3.
+    /// </remarks>
+    private string EmitClef(ClefDeclarationSyntax cl)
+    {
+        string text = "\\clef " + LyClefName(cl.ClefName.Text);
+        var next = Svg.Collector.MeasureCollector.ParseClefType(cl.ClefName.Text.ToLowerInvariant());
+        if (next != _lysClef && !_octaveAbsolute)
+        {
+            _lysClef = next;
+            _lysOctave = InstrumentDefaults.GetDefaultOctave(next);
+        }
+        else _lysClef = next;
+        return text;
+    }
+
     /// <summary>
     /// Emits a cue region as LilyPond's own <c>\new CueVoice { … }</c>, with
     /// <c>\cueClef</c> / <c>\cueClefUnset</c> around it when the region names a clef.
@@ -2288,10 +2319,24 @@ public sealed class LilyPondExporter
         var buf = new LilyPondExporter
         { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
         CarryFrameInto(buf);
+        // ⚠️ A cue clef reopens the LILY# frame at both edges, unconditionally — the page
+        // does it whether or not the cue clef differs from the staff's
+        // (MeasureCollector.MusicWalk.ProcessCueRegion). LilyPond's \cueClef does not touch
+        // its own \relative chain, so only buf._lysOctave moves and EmitMusicPitch writes
+        // the difference out. `audit/lp-regression/lys/cue-clef-manually` documents the rule
+        // in its own margin and compensates for it by hand.
+        if (cue.ClefKeyword is { } cueClefTok && !_octaveAbsolute)
+        {
+            buf._lysClef = Svg.Collector.MeasureCollector.ParseClefType(
+                cueClefTok.Text.ToLowerInvariant());
+            buf._lysOctave = InstrumentDefaults.GetDefaultOctave(buf._lysClef);
+        }
         buf.EmitMusicStream(MusicItems(cue.Body).ToList(), "");
         // The body is written once and read once by the relative pass on both sides, so its
         // frame carries out like a tuplet's or a repeat's.
         CarryFrameBack(buf);
+        if (cue.ClefKeyword != null && !_octaveAbsolute)
+            _lysOctave = InstrumentDefaults.GetDefaultOctave(_lysClef); // the staff's own clef is back
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         string region = $"\\new CueVoice {{ {body} }}";
