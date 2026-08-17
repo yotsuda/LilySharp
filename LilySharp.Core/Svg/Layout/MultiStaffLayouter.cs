@@ -2946,6 +2946,112 @@ internal sealed class MultiStaffLayouter
         int StaffIndex, TimeSignature TimeSignature,
         ImmutableArray<TupletBracketItem> ScoreTuplets, ImmutableArray<BeamGroup> Groups);
 
+    private sealed record BeamDetectionEntry(
+        ImmutableArray<Voice> Voices, TimeSignature TimeSignature,
+        ImmutableArray<TupletBracketItem> Tuplets, ImmutableArray<BeamGroup> Groups);
+
+    /// <summary>Detections keyed on their own INPUT, so two callers asking for the same
+    /// three things detect once between them — see <see cref="BeamGroupsOf"/>.</summary>
+    /// <remarks>
+    /// ⚠️ A LIST PER VOICE, NOT ONE SLOT. The staff quantity and the annotation quantity
+    /// share a first voice on every single-voice score, so a one-slot table would have them
+    /// evict each other and miss every time — the shape <c>_pagingAugments</c> is on record
+    /// for. The list holds one entry per distinct input; in practice that is two, and it is
+    /// capped so a score that somehow keeps producing new ones cannot grow it without bound.
+    /// </remarks>
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        Voice, List<BeamDetectionEntry>> _beamGroupsByInput = new();
+
+    /// <summary>How many distinct detection inputs are remembered per voice.</summary>
+    private const int BeamDetectionEntriesPerVoice = 4;
+
+    /// <summary>
+    /// The beam groups of one DETECTION INPUT, detected once however many callers ask.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE KEY IS THE DETECTOR'S WHOLE INPUT AND NOTHING ELSE. <see cref="BeamDetector"/>
+    /// holds no instance state and its <c>Score</c> entry reads exactly three things —
+    /// <c>Voices</c>, <c>TimeSignature</c>, <c>TupletBrackets</c> — so two Scores agreeing on
+    /// those three MUST detect the same groups whatever else differs (clef, tempo, title,
+    /// header: all of them serve the LAYOUT, as <see cref="StaffBeamScoreOf"/>'s remarks
+    /// already record). That is why this memo can be keyed on the inputs rather than on any
+    /// one caller's notion of which score it is holding.
+    /// <para>
+    /// WHAT IT FOLDS (session 192): the STAFF quantity (<see cref="StaffBeamGroupsOf"/>) and
+    /// the ANNOTATION quantity (<c>LayoutEngine.RunPreliminaryAnnotationPass</c>'s
+    /// prelimScore) are separate homes BY CONSTRUCTION — the staff quantity takes every voice
+    /// of its staff and only its own staff's tuplets, the annotation quantity takes the
+    /// primary content staff's PRIMARY voice against the WHOLE score's tuplet list — and on a
+    /// multi-voice or multi-staff score they genuinely differ. On a single-voice, single-staff
+    /// score they are the same three inputs, and each was detecting them from scratch:
+    /// MEASURED on a perf-plain1k keystroke, 2.61 MB apiece of 56.7 MB. This does not merge
+    /// the two homes (a merge would have to reason about WHEN they coincide, and get it
+    /// wrong silently); it compares the inputs and lets the answer be shared when they are
+    /// in fact the same.
+    /// </para>
+    /// <para>
+    /// SOUNDNESS: voices by REFERENCE (a ConditionalWeakTable keys that way too, so an entry
+    /// dies with the music that made it — the argument <see cref="StaffBeamGroupsOf"/> makes
+    /// for the Staff instance); the meter by value; the tuplet list by CONTENT, because the
+    /// staff quantity's list is a fresh filtered array every time and identity would never
+    /// match. Getting the key wrong returns the wrong beams silently, which is why the
+    /// comparison is spelt out rather than inferred — and why
+    /// <c>BeamDetectionInputMemoTests</c> asserts both directions: same inputs share, and a
+    /// list differing by one tuplet does not.
+    /// </para>
+    /// </remarks>
+    internal ImmutableArray<BeamGroup> BeamGroupsOf(Score detectionScore)
+    {
+        var voices = detectionScore.Voices;
+        var tuplets = detectionScore.TupletBrackets;
+        if (voices.IsDefaultOrEmpty)
+            return _elementCoordinator.DetectBeamGroups(detectionScore);
+
+        if (_beamGroupsByInput.TryGetValue(voices[0], out var entries))
+        {
+            foreach (var e in entries)
+                if (e.TimeSignature == detectionScore.TimeSignature
+                    && SameVoices(e.Voices, voices)
+                    && SameTuplets(e.Tuplets, tuplets))
+                    return e.Groups;
+        }
+        else
+        {
+            entries = new List<BeamDetectionEntry>(2);
+            _beamGroupsByInput.Add(voices[0], entries);
+        }
+
+        var groups = _elementCoordinator.DetectBeamGroups(detectionScore);
+        if (entries.Count == BeamDetectionEntriesPerVoice)
+            entries.RemoveAt(0);
+        entries.Add(new BeamDetectionEntry(
+            voices, detectionScore.TimeSignature, tuplets, groups));
+        return groups;
+    }
+
+    /// <summary>Voices compared by REFERENCE: two content-equal voices are different music
+    /// as far as this memo is concerned, which only ever costs a miss.</summary>
+    private static bool SameVoices(ImmutableArray<Voice> a, ImmutableArray<Voice> b)
+    {
+        if (a.Length != b.Length) return false;
+        for (int i = 0; i < a.Length; i++)
+            if (!ReferenceEquals(a[i], b[i])) return false;
+        return true;
+    }
+
+    /// <summary>Tuplet lists compared by CONTENT, in order: the staff quantity builds its
+    /// list by filtering the score's on every call, so identity would never match even when
+    /// the two lists hold the same brackets.</summary>
+    private static bool SameTuplets(
+        ImmutableArray<TupletBracketItem> a, ImmutableArray<TupletBracketItem> b)
+    {
+        if (a.IsDefaultOrEmpty) return b.IsDefaultOrEmpty;
+        if (b.IsDefaultOrEmpty || a.Length != b.Length) return false;
+        for (int i = 0; i < a.Length; i++)
+            if (!Equals(a[i], b[i])) return false;
+        return true;
+    }
+
     /// <summary>One staff's detected beam groups, computed once per staff and read by every
     /// consumer of the staff quantity — see <see cref="StaffBeamGroupsOf"/>.</summary>
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
@@ -3005,8 +3111,11 @@ internal sealed class MultiStaffLayouter
             && hit.TimeSignature == score.TimeSignature
             && hit.ScoreTuplets == score.TupletBrackets)
             return hit.Groups;
-        var groups = _elementCoordinator.DetectBeamGroups(
-            StaffBeamScoreOf(score, staff, staffIndex));
+        // Through the input-keyed memo, so the annotation quantity — the same three inputs
+        // on a single-voice, single-staff score — shares this detection instead of running
+        // its own (see BeamGroupsOf). This table stays because it answers WITHOUT building
+        // the per-staff Score and its filtered tuplet list, which the input key needs.
+        var groups = BeamGroupsOf(StaffBeamScoreOf(score, staff, staffIndex));
         _staffBeamGroups.AddOrUpdate(staff, new StaffBeamGroupsEntry(
             staffIndex, score.TimeSignature, score.TupletBrackets, groups));
         return groups;

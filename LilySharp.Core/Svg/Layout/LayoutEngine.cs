@@ -748,7 +748,14 @@ internal sealed class LayoutEngine
 
         // Detected ONCE for both annotation contexts — the final context carries this
         // value instead of re-detecting on primaryScore (see the carry site in Layout).
-        var annotationBeamGroups = _elementCoordinator.DetectBeamGroups(prelimScore);
+        // ⚠️ AND ONCE WITH THE STAFF QUANTITY WHEN THE TWO ARE THE SAME THREE INPUTS, which
+        // is what routing through the layouter's input-keyed memo buys: on a single-voice,
+        // single-staff score prelimScore's voice, meter and tuplet list are the primary
+        // staff's, and this detection was a second full walk of the same music (MEASURED
+        // session 192: 2.61 MB of a 56.7 MB perf-plain1k keystroke). The two remain separate
+        // QUANTITIES — MultiStaffLayouter.BeamGroupsOf compares the inputs rather than
+        // assuming when they agree, and on a multi-voice or multi-staff score they do not.
+        var annotationBeamGroups = layouter.BeamGroupsOf(prelimScore);
         var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = prelimScore,
