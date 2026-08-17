@@ -15,7 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Toolchains.InProcess.Emit;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -55,10 +57,29 @@ namespace LilySharp.Benchmarks;
 /// Run: <c>dotnet run -c Release --project LilySharp.Benchmarks -- --filter '*LineBreakDp*'</c>
 /// </para>
 /// </remarks>
-[SimpleJob(RuntimeMoniker.Net10_0)]
+[Config(typeof(Config))]
 [MemoryDiagnoser]
 public class LineBreakDpBenchmark
 {
+    /// <summary>
+    /// ⚠️ IN-PROCESS ON PURPOSE, AND IT IS THE MACHINE, NOT THE BENCHMARK. BenchmarkDotNet's
+    /// default toolchain compiles a job assembly and launches it; on this machine the
+    /// application-control policy BLOCKS loading it —
+    /// <c>System.IO.FileLoadException … 0x800711C7</c> — and every benchmark reports NA with
+    /// BenchmarkDotNet's own guess ("might be caused by antivirus software") as the only
+    /// clue. The in-process emit toolchain runs the benchmark in the host process and never
+    /// writes an assembly to load, so it is unaffected.
+    /// <para>
+    /// ⚠️ The sibling benchmarks in this project still use <c>[SimpleJob]</c> and will hit
+    /// the same wall on a machine with this policy. They were not changed here because none
+    /// of them was run for this work — but that is where to start if one reports NA.
+    /// </para>
+    /// </summary>
+    private sealed class Config : ManualConfig
+    {
+        public Config() => AddJob(Job.Default.WithToolchain(InProcessEmitToolchain.Instance));
+    }
+
     /// <summary>Bar counts, so the DP's shape is visible rather than assumed: the state
     /// table is (break index × line count), so both the allocation and the walk are
     /// quadratic, and a run that does not show ~4× per doubling is measuring something
