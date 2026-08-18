@@ -381,6 +381,16 @@ public class DocKeywordListTests
                      TerminalsOf("TuningName"));
         Assert.Equal(InstrumentDefaults.TranspositionMarkers.OrderBy(n => n, StringComparer.Ordinal),
                      TerminalsOf("TranspositionMarker"));
+        // ★ And the two value lists the document used to spell out inline. They were pulled
+        // into named productions on 2026-08-19 for exactly this: while `removeEmpty`'s three
+        // words and `pedal`'s three sat inside PartProperty as a bare alternation, nothing
+        // could hold them to Core — which is how the `octave` alternative next to them came
+        // to read `( 'absolute' | 'relative' | Integer )`, naming two words that belong to
+        // the OctaveDecl directive and that a part header simply ignored.
+        Assert.Equal(SymbolCaseValidator.RemoveEmptyValueVocabulary.OrderBy(n => n, StringComparer.Ordinal),
+                     TerminalsOf("RemoveEmptyValue"));
+        Assert.Equal(SymbolCaseValidator.PedalValueVocabulary.OrderBy(n => n, StringComparer.Ordinal),
+                     TerminalsOf("PedalStyleName"));
 
         // ⚠️ ClefName is the OTHER vocabulary, and the document is only honest while the two
         // differ: five words for `clef` in music and for `staff`/`ossia` in a score. Merging them

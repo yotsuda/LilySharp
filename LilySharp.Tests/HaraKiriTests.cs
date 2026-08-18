@@ -542,12 +542,15 @@ public class HaraKiriTests
             .ToArray();
         Assert.Equal(SymbolCaseValidator.RemoveEmptyValueVocabulary.Count, readings.Distinct().Count());
 
-        // ⚠️ And the edge of the hole the list sits beside, so the count above is not mistaken
-        // for a closed door: NOTHING validates this value. An unknown word is silently the
-        // default rather than an error, and `TRUE` is silently `true` because the reader
-        // lower-cases — which makes removeEmpty the one part-header property that really is
-        // case-insensitive, and it is case-insensitive precisely because nobody checks it.
-        // Closing that would refuse books that compile today, so it is a decision; HANDOFF §2F.
+        // ⚠️ And the edge the list sits beside, so the count above is not mistaken for the
+        // whole story: THIS READER still takes anything. An unknown word is silently the
+        // default here, and `TRUE` is silently `true` because the reader lower-cases — which
+        // is why, when the hole was closed on 2026-08-19, it was closed in the VALIDATOR
+        // (SymbolCaseValidator refuses both spellings, Ordinal, like every other symbol in a
+        // part header) and not by tightening these comparisons. A book that reaches this
+        // reader has already been checked; what these two lines pin is that the reader's
+        // leniency is UNCHANGED, so the refusal above it is the only thing anyone has to
+        // reason about. See SymbolCaseValidatorTests for the door itself.
         Assert.Equal((false, false), StaffFlagsOf(Book("part m { removeEmpty banana }")));
         Assert.Equal((true, false), StaffFlagsOf(Book("part m { removeEmpty TRUE }")));
     }

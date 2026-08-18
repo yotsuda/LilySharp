@@ -665,7 +665,12 @@ public sealed partial class LilySharpLanguageServer
 
         // `octave |` → only its two modes (a bare number re-anchor is typed,
         // not completed).
-        if (prevWord == "octave")
+        // ⚠️ NOT inside a part header. There `octave` is a different production that takes a
+        // number, and since 2026-08-19 SymbolCaseValidator refuses the two mode words in that
+        // position — so offering them there is offering an error. They were legal-looking for
+        // a long time because GRAMMAR.md listed them as part-property alternatives; a part
+        // header ignored them outright (measured, MIDI byte-identical to no octave at all).
+        if (prevWord == "octave" && !IsInsidePartBlock(text, offset))
             return CompletionContext.AfterOctave;
 
         // Value positions after the metadata/meter keywords: only their own

@@ -29,7 +29,19 @@ public readonly record struct DrawingTransform(
     double ScaleY = 1)
 {
     /// <summary>The identity transform (no translation or scaling).</summary>
-    public static DrawingTransform Identity => new();
+    /// <remarks>
+    /// ⚠️ The arguments are spelled out, and they have to be. `new()` on a record STRUCT is
+    /// the parameterless constructor, which zero-initialises every field instead of running
+    /// the primary constructor — so the `ScaleX = 1, ScaleY = 1` defaults above do NOT apply
+    /// to it. Written as `new()` (until 2026-08-19) this property was the transform that
+    /// collapses every coordinate to zero, and `Identity.IsIdentity` was itself false.
+    /// It caught two independent authors, who both worked around it by hand-writing
+    /// `new(0, 0, 1, 1)` in a recording context rather than by fixing it here; both now read
+    /// this property, and <c>DrawingTransformTests</c> holds it to <see cref="IsIdentity"/>.
+    /// ⚠️ <c>default(DrawingTransform)</c> is still the degenerate one — that is what a struct
+    /// is, and it cannot be fixed without storing the scales biased by one. Use this property.
+    /// </remarks>
+    public static DrawingTransform Identity => new(0, 0, 1, 1);
 
     /// <summary>Creates a pure translation by the given offsets.</summary>
     public static DrawingTransform Translate(double x, double y) => new(x, y);

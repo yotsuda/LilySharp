@@ -72,10 +72,15 @@ public class KeyCompletionTests
 
     [Theory]
     [InlineData("octave ")]                 // top level
-    [InlineData("part m { octave ")]        // part header
     [InlineData("section A { m { octave ")] // mid-music
     public void AfterOctave_OffersOnlyTheOctaveModes(string text)
     {
+        // ⚠️ A part header used to be a third row here. It was removed on 2026-08-19, not
+        // because the editor changed its mind but because the language was measured: a part
+        // header's `octave` is a DIFFERENT production that takes a number, and the two mode
+        // words written there did nothing at all (MIDI byte-identical to no octave property,
+        // against a control that differs). GRAMMAR.md, this row and the completion context
+        // were three spellings of one belief that nothing had ever checked.
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterOctave, ContextOf(text));
         var labels = LilySharpLanguageServer.GetOctaveCompletions().Items
             .Select(i => i.Label).ToArray();

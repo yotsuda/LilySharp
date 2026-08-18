@@ -184,10 +184,11 @@ public sealed class SharedRendererBeamTests
         public List<RecordedLine> Lines { get; } = new();
         public List<RecordedGlyph> Glyphs { get; } = new();
 
-        // NOTE: DrawingTransform.Identity is `new()`, which for a record struct
-        // zero-initializes ALL fields (ScaleX/ScaleY = 0, not 1) — it does not
-        // apply the primary-constructor defaults. Spell out the true identity.
-        private DrawingTransform _current = new(0, 0, 1, 1);
+        // Seeded from DrawingTransform.Identity, a real identity since 2026-08-19. Before
+        // that the property was `new()` — the record struct's parameterless constructor,
+        // which zeroes ScaleX/ScaleY instead of taking the primary constructor's defaults —
+        // so this line hand-wrote the identity to dodge it. See DrawingTransform.Identity.
+        private DrawingTransform _current = DrawingTransform.Identity;
         private readonly Stack<DrawingTransform> _stack = new();
 
         public TextFontPlan Fonts { get; set; } = TextFontPlan.Default;

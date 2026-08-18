@@ -320,10 +320,10 @@ PartProperty   = 'clef'          , PartClefName
                | 'transpose'     , PitchToken
                | 'transposition' , TranspositionMarker
                | 'tuning'        , TuningName
-               | 'octave'        , ( 'absolute' | 'relative' | Integer )
-               | 'removeEmpty'   , ( 'true' | 'all' | 'false' )
-               | 'lines'         , Integer
-               | 'pedal'         , ( 'bracket' | 'text' | 'mixed' ) ;
+               | 'octave'        , Integer
+               | 'removeEmpty'   , RemoveEmptyValue
+               | 'lines'         , Integer            (* 1..5 — see StaffSpec.MaxLines *)
+               | 'pedal'         , PedalStyleName ;
                (* 'key' is per-part too, but the parser takes it as a KeySignature rather
                   than a PartProperty, so it is not an alternative here. *)
 
@@ -336,7 +336,25 @@ PartClefName   = ClefName
 TuningName     = 'standard' | 'guitar' | 'bass' | 'bass5' | 'bass6'
                | 'ukulele' | 'uke' ;
 
-TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;   (* case-insensitive *)
+RemoveEmptyValue = 'true' | 'all' | 'false' ;
+
+PedalStyleName = 'bracket' | 'text' | 'mixed' ;
+
+TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
+
+(* ⚠️ Every one of these value words is case-SENSITIVE, `removeEmpty` included. It was the
+   one exception until 2026-08-19 — and it was an exception because nobody checked it at
+   all: `removeEmpty banana` compiled and was read as off, and so did `lines banana` (five
+   lines), `octave banana`, `transpose banana` and `transposition banana` (no shift). The
+   value each of those five names was silently the default. They are refused now.
+   ⚠️ The document is a SECOND reader of these lists, so RemoveEmptyValue, PedalStyleName,
+   TuningName, PartClefName and TranspositionMarker are all held to LilySharp.Core by
+   DocKeywordListTests. The `octave` line above is why: it read
+   `( 'absolute' | 'relative' | Integer )` for a long time, and the two words are the
+   OctaveDecl directive's, not this property's. Written in a part header they parsed as a
+   value no reader could read and changed nothing at all (measured 2026-08-19 against a
+   control that proves the instrument can see `octave`). Nothing bound that alternation
+   to anything, so nothing said so. *)
 
 (* ⚠️ ClefName and PartClefName are two vocabularies and were one production until
    2026-08-19, when the difference was measured in both directions. A PART HEADER takes

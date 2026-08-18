@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Syntax.InternalSyntax;
 
@@ -403,6 +404,17 @@ internal sealed class Lexer
     // Length of an ottava suffix (va/vb/ma/mb) sitting immediately after the digits
     // and NOT followed by another letter — else 0. Only the octave/double-octave
     // numbers 8 and 15 take it, so an ordinary duration/tuplet number is untouched.
+    //
+    // ★ The comparison ignores case, and that is about DIAGNOSTICS rather than about
+    // what the language accepts. `transposition 8VB` is refused either way; before
+    // 2026-08-19 it was refused by the LEXER, which split it into `8` and `VB` and then
+    // said three things, none of which mentioned the value the writer got wrong:
+    // "'VB' has no value", "Unknown part property 'VB'", and nothing at all about 8VB.
+    // Taken whole, it reaches SymbolCaseValidator and gets the one sentence every other
+    // wrong-case symbol in a part header gets — "Unknown transposition '8VB'… one of:
+    // 8va, 8vb, 15ma, 15mb". Measured the same day: the corpus of 567 tracked books has
+    // ZERO digit-then-non-lower-case-ottava-suffix adjacencies, so no book lexes
+    // differently because of this.
     private int GluedOttavaSuffixLength(int numStart)
     {
         string num = _text[numStart.._position];
@@ -412,7 +424,8 @@ internal sealed class Lexer
         {
             int end = _position + suffix.Length;
             if (end <= _text.Length
-                && _text.AsSpan(_position, suffix.Length).SequenceEqual(suffix)
+                && _text.AsSpan(_position, suffix.Length)
+                    .Equals(suffix, StringComparison.OrdinalIgnoreCase)
                 && (end == _text.Length || !char.IsLetter(_text[end])))
                 return suffix.Length;
         }

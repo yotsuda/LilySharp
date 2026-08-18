@@ -39,9 +39,9 @@ public class ValueContextCompletionTests
     [InlineData("composer ", "AfterTitleText")]
     [InlineData("section A { m { time ", "AfterTime")]
     [InlineData("part m { tempo ", "AfterTempo")]
-    // `octave ` at global scope (and in a part header) offers only its two modes.
+    // `octave ` at global scope offers only its two modes. NOT in a part header — see
+    // OctaveModes_AreNotOfferedInsideAPartHeader below, which is where that row went.
     [InlineData("octave ", "AfterOctave")]
-    [InlineData("part m { octave ", "AfterOctave")]
     // `override ` — and `once override `, whose previous word is also `override` —
     // offers the grob properties (at global scope and mid-music).
     [InlineData("override ", "AfterOverride")]
@@ -237,6 +237,25 @@ public class ValueContextCompletionTests
             .Select(i => i.Label).ToArray();
         Assert.Equal(new[] { "absolute", "relative" }, modes);
     }
+
+    [Fact]
+    public void OctaveModes_AreNotOfferedInsideAPartHeader()
+    {
+        // ★ `octave` is two productions. At the top level (and in a section) it is the mode
+        // directive and the two words are the whole vocabulary; in a PART HEADER it takes a
+        // number, and since 2026-08-19 the mode words are an error there. An editor that
+        // still offered them would be completing straight into a red squiggle — which it did,
+        // because this context test only ever asked what follows the word `octave`, never
+        // where the word is.
+        const string inPart = "part vln { octave ";
+        const string atTop = "octave ";
+
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterOctave,
+            LilySharpLanguageServer.GetCompletionContext(atTop, atTop.Length));
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterOctave,
+            LilySharpLanguageServer.GetCompletionContext(inPart, inPart.Length));
+    }
+
 
     [Fact]
     public void TitleContext_OffersOnlyTheQuotePair()

@@ -128,13 +128,13 @@ internal sealed class RecordingDrawingContext : IDrawingContext
 
     // Cumulative transform: a point p maps to (TranslateX + ScaleX * p.X, ...).
     //
-    // NOT DrawingTransform.Identity. That property is `new()`, which on a record struct
-    // zero-initialises every field rather than applying the primary constructor's defaults,
-    // so its ScaleX/ScaleY are 0 and DrawingTransform.Identity.IsIdentity is itself false.
-    // Seeding the accumulator with it collapses every recorded coordinate to 0. The same
-    // trap is called out in SharedRendererBeamTests' recording context — it has now caught
-    // two independent authors, so spell the true identity out.
-    private DrawingTransform _current = new(0, 0, 1, 1);
+    // Seeded from DrawingTransform.Identity, which is a real identity since 2026-08-19.
+    // It was not before — the property was `new()`, which on a record struct zero-initialises
+    // every field instead of applying the primary constructor's defaults, so seeding an
+    // accumulator with it collapsed every recorded coordinate to 0. This context and
+    // SharedRendererBeamTests' both hand-wrote `new(0, 0, 1, 1)` to dodge that, which made
+    // two more spellings of one quantity; the property was fixed instead and they read it.
+    private DrawingTransform _current = DrawingTransform.Identity;
     private readonly Stack<DrawingTransform> _stack = new();
 
     public RecordingDrawingContext(double widthSpaces, double heightSpaces)

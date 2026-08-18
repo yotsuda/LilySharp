@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 
@@ -60,15 +61,30 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> InstrumentPresets =
         new(InstrumentDefaults.KnownInstruments, StringComparer.Ordinal);
 
+    /// <summary>The ottava markers <c>transposition</c> takes, read from their one home.</summary>
+    private static readonly HashSet<string> TranspositionMarkers =
+        new(InstrumentDefaults.TranspositionMarkers, StringComparer.Ordinal);
+
     /// <summary>
-    /// The values <c>removeEmpty</c> takes. ⚠️ Listed but NOT enforced: an unknown word here
-    /// is read as <c>false</c> by <c>RenderSpecParser</c> rather than refused, so
-    /// <c>removeEmpty banana</c> compiles today (measured 2026-08-19, as does
-    /// <c>lines banana</c>). Turning that into a diagnostic would refuse books that compile
-    /// now, so it is a decision and not a tidy-up — it is written up in HANDOFF §2F. The list
-    /// is here because it is a vocabulary of this header and the vocabulary has one home;
-    /// <c>EditorColouringTests</c> reads it, so it cannot rot unnoticed.
+    /// The values <c>removeEmpty</c> takes — and, since 2026-08-19, the values it ACCEPTS.
     /// </summary>
+    /// <remarks>
+    /// Until then the list was written down but not enforced: <c>RenderSpecParser</c> compares
+    /// against <c>"true" or "all"</c>, so any other word was read as <c>false</c> rather than
+    /// refused and <c>removeEmpty banana</c> compiled. That was one of FIVE part properties
+    /// whose value nobody checked (with <c>lines</c>, <c>octave</c>, <c>transpose</c> and
+    /// <c>transposition</c>) while <c>clef</c>, <c>tuning</c>, <c>pedal</c> and
+    /// <c>instrument</c> refused an unknown word — two weights inside one header. Enforcing
+    /// it refuses books that compiled before, so it was a decision rather than a tidy-up:
+    /// taken 2026-08-19, before 0.3.0 was tagged, when it costs nobody a migration
+    /// (measured the same day: 0 of the 567 tracked books write a value outside the list).
+    /// <c>false</c> is in the list and means what leaving the property out means.
+    /// <c>HaraKiriTests</c> holds the list to what <c>RenderSpecParser</c> reads, and
+    /// <c>EditorColouringTests</c> reads it too, so it cannot rot unnoticed.
+    /// ⚠️ The reader's <c>ToLowerInvariant</c> can no longer fire for a bad case, exactly as
+    /// with <c>pedal</c>: this validator refuses <c>removeEmpty TRUE</c> first, by the Ordinal
+    /// rule every other symbol in this header already obeyed.
+    /// </remarks>
     private static readonly HashSet<string> RemoveEmptyValues = new(StringComparer.Ordinal)
     {
         "true", "all", "false",
@@ -163,21 +179,79 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                         $"Unknown instrument preset '{preset}'. Presets are case-sensitive; " +
                         "use a known preset (e.g. violin, cello, piano-right) or a quoted \"…\" name.");
                 break;
+            case "removeEmpty":
+                CheckValue(valueTokens, RemoveEmptyValues, "removeEmpty", "values");
+                break;
+            case "lines":
+                CheckWholeNumber(valueTokens, "lines",
+                    StaffSpec.MinLines, StaffSpec.MaxLines, "a staff-line count",
+                    $"a whole number from {StaffSpec.MinLines} to {StaffSpec.MaxLines}");
+                break;
+            case "octave":
+                // No bound: an octave number is read as written (PartHeaderDefaults),
+                // so the only thing that can be wrong about it is not being a number.
+                CheckWholeNumber(valueTokens, "octave", int.MinValue, int.MaxValue,
+                    "an octave number", "a whole number, e.g. 'octave 3'");
+                break;
+            case "transpose":
+                // Ask the READER whether it can read this, rather than spelling the
+                // pitch-target grammar a second time here. It also carries the octave
+                // marks (`transpose bes,`), which the joined token text would not.
+                if (PartTranspose.ReadProperty(prop) is null)
+                    Error(valueTokens[0],
+                        $"'{Joined(valueTokens)}' is not a transpose target. transpose takes a "
+                        + "pitch — a letter a–g with an optional is/isis/es/eses and "
+                        + "octave marks (e.g. 'transpose d', 'transpose bes,').");
+                break;
+            case "transposition":
+                // NOT "ask the reader" here, and the difference is the whole point:
+                // ParseTranspositionSemitones lowers its argument, so asking IT would
+                // ACCEPT `transposition 8VB` — measured 2026-08-19, when a first draft of
+                // this branch did exactly that and let the one spelling this session set out
+                // to refuse sail straight through. The published marker list is the
+                // vocabulary (InstrumentPresetTests holds it to that switch), and Ordinal is
+                // the rule every other symbol in this header obeys.
+                CheckValue(valueTokens, TranspositionMarkers, "transposition", "markers");
+                break;
         }
     }
 
-    private void CheckValue(List<SyntaxTokenNode> tokens, HashSet<string> known, string kind)
+    /// <summary>
+    /// Refuses a value that is not a whole number, or is one outside
+    /// <paramref name="min"/>..<paramref name="max"/>. The bounds are passed in from
+    /// whoever READS the property so this does not become a second spelling of them.
+    /// </summary>
+    /// <param name="isNot">What the written value FAILS to be ("a staff-line count").</param>
+    /// <param name="takes">What the property accepts instead ("a whole number from 1 to 5").</param>
+    private void CheckWholeNumber(
+        List<SyntaxTokenNode> tokens, string property, int min, int max,
+        string isNot, string takes)
+    {
+        string text = Joined(tokens);
+        if (int.TryParse(text, out int n) && n >= min && n <= max)
+            return;
+        Error(tokens[0], $"'{text}' is not {isNot}. '{property}' takes {takes}.");
+    }
+
+    /// <param name="noun">What the listed words ARE — clefs have names, removeEmpty has
+    /// values. Only the wording differs; the rule is one rule.</param>
+    private void CheckValue(
+        List<SyntaxTokenNode> tokens, HashSet<string> known, string kind, string noun = "names")
     {
         // A hyphenated value is word+minus+word in the tree, so join the tokens.
-        var text = string.Concat(tokens.Select(t => t.Text));
+        var text = Joined(tokens);
         if (IsQuoted(text)) return; // a quoted value is free-text, not a symbol
         if (!known.Contains(text))
             Error(tokens[0],
-                $"Unknown {kind} '{text}'. {kind} names are case-sensitive; known: " +
+                $"Unknown {kind} '{text}'. {kind} {noun} are case-sensitive; known: " +
                 $"{string.Join(", ", known.OrderBy(s => s, StringComparer.Ordinal))}.");
     }
 
     private static bool IsQuoted(string t) => t.Length >= 2 && t[0] == '"' && t[^1] == '"';
+
+    /// <summary>A hyphenated or mark-carrying value is several tokens in the tree.</summary>
+    private static string Joined(List<SyntaxTokenNode> tokens)
+        => string.Concat(tokens.Select(t => t.Text));
 
     private static IEnumerable<SyntaxTokenNode> ValueTokens(PropertyAssignmentSyntax prop)
     {

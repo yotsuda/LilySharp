@@ -34,6 +34,9 @@ public sealed record StaffSpec(
     // removeEmpty all — LP RemoveAllEmptyStaves).
     bool RemoveFirst = false,
     // Staff line count (part property lines N; 5 default).
+    // The range a written `lines N` may take is MinLines..MaxLines below —
+    // RenderSpecParser reads against it and SymbolCaseValidator refuses against
+    // it, so the bound is stated once and neither can drift from the other.
     int Lines = 5,
     // A named chord part whose symbols align above this staff
     // (staff NAME with chords CHORDPART); the same part can also feed
@@ -49,7 +52,30 @@ public sealed record StaffSpec(
     ImmutableArray<string> WithLyrics = default,
     // How piano pedal marks render (part property `pedal`: bracket | text | mixed).
     PedalStyle PedalStyle = PedalStyle.Bracket
-);
+)
+{
+    /// <summary>Fewest staff lines a written <c>lines N</c> may ask for.</summary>
+    public const int MinLines = 1;
+
+    /// <summary>Most staff lines a written <c>lines N</c> may ask for.</summary>
+    /// <remarks>
+    /// The bound has ONE home because it has two readers that must agree:
+    /// <c>RenderSpecParser</c> falls back to five for anything outside it, and
+    /// <c>SymbolCaseValidator</c> refuses to compile a book that writes something
+    /// outside it. Until 2026-08-19 only the first existed, so <c>lines 9</c>
+    /// compiled and silently drew five lines.
+    /// LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
+    /// StaffSymbol's line-count property), but the RANGE is not. LilyPond bounds
+    /// line-count at neither end — Staff_symbol::calc_line_positions just walks
+    /// line_count values (lily/staff-symbol.cc:111-114) — so a six-line staff is a
+    /// grob property away there and a compile error here. It departs from LilyPond
+    /// the moment a book needs one; nothing but a tab staff has ever asked, and a
+    /// tab staff takes its count from its tuning rather than from this property.
+    /// Observed by LinesTheValidatorAccepts_AreExactlyTheOnesTheRendererUses, which
+    /// compares the two readers over 0..7 rather than against this number.
+    /// </remarks>
+    public const int MaxLines = 5;
+}
 
 /// <summary>
 /// Specification for a bracketed/braced staff group. The group Type distinguishes

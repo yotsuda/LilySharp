@@ -258,11 +258,19 @@ public static class InstrumentDefaults
     /// <remarks>
     /// ⚠️ The <c>ToLowerInvariant</c> above cannot fire, and reading it as case-insensitivity
     /// is wrong — measured 2026-08-19, after a first draft of this comment claimed exactly that.
-    /// <c>transposition 8VB</c> is REFUSED, but by the LEXER rather than by any case rule: it
-    /// splits into <c>8</c> and <c>VB</c>, and <c>VB</c> is then read as the next property name
-    /// (<c>Unknown part property 'VB'</c>, which is a confusing thing to say about a value).
-    /// The control is <c>8vb</c>, which lexes whole and compiles. So the only spellings that
-    /// ever reach the switch are already lower-case, and the editor colours those.
+    /// <c>transposition 8VB</c> is REFUSED; only the REFUSER moved later that same day.
+    /// It used to be the LEXER, which split <c>8VB</c> into <c>8</c> and <c>VB</c> and then
+    /// said three things about the property name and none about the value. The lexer now takes
+    /// the suffix whole whatever its case, so a wrong-case marker reaches
+    /// <c>SymbolCaseValidator</c> and is refused there by the Ordinal rule every other symbol
+    /// in a part header already obeyed — one sentence, naming the value and listing the four
+    /// markers.
+    /// ⚠️⚠️ Which is why the validator asks <see cref="TranspositionMarkers"/> and NOT this
+    /// method. Asking this method would ACCEPT <c>8VB</c>, because of the lowering right
+    /// above — measured 2026-08-19, when the validator's first draft did ask it and the
+    /// spelling sailed through. The lowering therefore still cannot fire for a book that
+    /// compiles, and it is kept only so that deleting it does not read as a claim that case
+    /// was never meant to matter here. It matters: markers are lower-case.
     /// </remarks>
     public static readonly IReadOnlyList<string> TranspositionMarkers =
         ["8va", "8vb", "15ma", "15mb"];

@@ -412,7 +412,7 @@ public static class RenderSpecParser
         // The value arrives typed, so the staff-line count is READ rather than
         // reparsed out of the joined token text (docs/VALUE_SITE_AUDIT.md §2).
         int lines = GetPartPropertyValue(staff, voiceName, "lines")?.AsInt is int ln
-            && ln is >= 1 and <= 5 ? ln : 5;
+            && ln >= StaffSpec.MinLines && ln <= StaffSpec.MaxLines ? ln : StaffSpec.MaxLines;
         // Piano pedal style (part property `pedal bracket|text|mixed`; default Bracket).
         var pedalStyle = Staff.ParsePedalStyle(
             GetPartProperty(staff, voiceName, "pedal")?.ToLowerInvariant());
