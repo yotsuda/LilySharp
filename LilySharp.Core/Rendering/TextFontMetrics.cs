@@ -139,6 +139,26 @@ public static class TextFontMetrics
     /// like <c>Typeface</c> for the renderers). Cached and shared: callers must
     /// not mutate or dispose the returned path.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ BUILT FROM THE FONT'S TABLES, NOT FROM A RASTERISER — see
+    /// <see cref="HarfBuzzOutline"/> for the measurement that forced it: the same call to
+    /// <c>SKPaint.GetTextPath</c> returns the design's own integers on Windows and a
+    /// 1/512-quantised copy on Linux, and that difference alone is 51 of the 53 tests this
+    /// suite fails on Linux. Reading the outline through HarfBuzz makes the path the same
+    /// on both, ON WINDOWS' NUMBERS (measured: identical command stream, and its extremes
+    /// are what Skia-on-Windows was already returning).
+    /// <para>
+    /// ⚠️ THE GLYPHS ARE PLACED BY THE SHAPER, which <c>GetTextPath</c> did not do:
+    /// it laid them out on the face's plain advances with no GPOS, while
+    /// <see cref="Advance(string, double, bool, FontStyle)"/> has counted kerning since
+    /// 2026-08-02. That was a SECOND MODEL of the same quantity — the reserved width and the
+    /// reserved outline disagreeing about where the second glyph starts — and it is gone
+    /// rather than reproduced.
+    /// ⚠️ The pen is the raw per-em advance, NOT the Pango-pixel-snapped one
+    /// (<see cref="Run"/>): the snap belongs to the width LilyPond quantises, and an outline
+    /// is not quantised (see <see cref="Measure"/>).
+    /// </para>
+    /// </remarks>
     internal static SKPath OutlinePath(string text, bool sans, FontStyle style)
         => OutlinePath(text, TextFace.Bundled(sans, style));
 
@@ -146,9 +166,19 @@ public static class TextFontMetrics
     internal static SKPath OutlinePath(string text, TextFace face)
         => Paths.GetOrAdd((face, text), static key =>
         {
-            var typeface = Face(key.Face);
-            using var paint = new SKPaint { Typeface = typeface, TextSize = 1000f };
-            return paint.GetTextPath(key.Text, 0, 0);
+            var (font, upem) = ShapingFont(key.Face);
+            float scale = 1000f / upem;
+            var path = new SKPath();
+            double penPerEm = 0;
+            foreach (var g in ShapedAdvancesPerEm(key.Text, key.Face))
+            {
+                lock (font)
+                    HarfBuzzOutline.Append(
+                        path, font.Handle, g.GlyphId,
+                        (float)((penPerEm + g.XOffsetPerEm) * 1000.0), scale);
+                penPerEm += g.PerEm;
+            }
+            return path;
         });
 
     /// <summary>Advance width of <paramref name="text"/> in staff spaces.</summary>
@@ -572,14 +602,27 @@ public static class TextFontMetrics
     // ⚠️ ONE FACE PER DESIGN. Emmentaler is optically sized, so a grob at another font-size
     // walks ANOTHER FILE's outline, not this one scaled (EmmentalerFaces / GlyphMetrics.
     // AtFontSize). Cached per design because a score asks for a handful and asks per glyph.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, SKTypeface?>
+    // ⚠️ AN hb_font_t RATHER THAN AN SKTypeface, for the reason on HarfBuzzOutline: the
+    // music face diverges between the platforms exactly as the text faces do (MEASURED
+    // 2026-08-19 — emmentaler-20 U+E0A4 reads top -782 on Windows and -781.982421875 on
+    // Linux through Skia, and the identical -782 on both through HarfBuzz).
+    private static readonly ConcurrentDictionary<int, (HarfBuzzSharp.Font Font, uint UnitsPerEm)?>
         MusicFaces = new();
 
-    private static SKTypeface? MusicFace(int design) =>
+    private static (HarfBuzzSharp.Font Font, uint UnitsPerEm)? MusicFace(int design) =>
         MusicFaces.GetOrAdd(design, static d =>
         {
-            var path = FontLocator.ResolveFile(EmmentalerFaces.OtfFile(d));
-            return path != null ? SKTypeface.FromFile(path) : null;
+            var file = FontLocator.ResolveFile(EmmentalerFaces.OtfFile(d));
+            if (file == null)
+                return null;
+            var blob = HarfBuzzSharp.Blob.FromFile(file);
+            blob.MakeImmutable();
+            var face = new HarfBuzzSharp.Face(blob, 0);
+            uint upem = (uint)face.UnitsPerEm;
+            var font = new HarfBuzzSharp.Font(face);
+            font.SetScale((int)upem, (int)upem);
+            font.SetFunctionsOpenType();
+            return (font, upem);
         });
 
     /// <summary>
@@ -588,13 +631,24 @@ public static class TextFontMetrics
     /// cannot be located. <paramref name="design"/> is the Emmentaler design to walk —
     /// the score's own unless the grob states another <c>font-size</c>.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ A GLYPH THE FACE DOES NOT HAVE draws as glyph 0, which is what the Skia call this
+    /// replaced did with an unmapped code point — the caller's <c>IsEmpty</c> check is the
+    /// same check it always was.
+    /// </remarks>
     internal static SKPath? MusicGlyphPath(char glyph, int design)
     {
         var face = MusicFace(design);
         if (face == null)
             return null;
-        using var paint = new SKPaint { Typeface = face, TextSize = 1000f };
-        return paint.GetTextPath(glyph.ToString(), 0, 0);
+        var (font, upem) = face.Value;
+        var path = new SKPath();
+        lock (font)
+        {
+            font.TryGetNominalGlyph(glyph, out uint gid);
+            HarfBuzzOutline.Append(path, font.Handle, gid, 0f, 1000f / upem);
+        }
+        return path;
     }
 
     /// <summary>

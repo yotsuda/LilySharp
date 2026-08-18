@@ -152,4 +152,73 @@ public class TextFontMetricsTests
     [InlineData("A", 1.536448818898)]
     public void ItalicAdvances_AreLilyPondsOwnWidths(string text, double lilyPond)
         => Assert.Equal(lilyPond, TextFontMetrics.Advance(text, 2.2, sans: false, FontStyle.Italic), 9);
+
+    /// <summary>
+    /// A bundled face's ink extent is the DESIGN'S OWN COORDINATE, a whole font unit — not
+    /// a rasteriser's rendering of it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE OBSERVER THAT WAS MISSING FOR 214 SESSIONS. Until 2026-08-19 the ink
+    /// came from <c>SKPaint.GetTextPath</c>, and that call is not the same function on two
+    /// machines: Windows hands back the design's integers, Linux (SkiaSharp's FreeType
+    /// build) hands back the same outline quantised to 1/512 of a unit. The suite was green
+    /// on Windows and 53 red on Linux the whole time, and NOTHING in it asked this question
+    /// — the ledger and the snapshots only saw the consequence, one platform at a time.
+    /// <para>
+    /// So the assertion is INTEGRALITY rather than a number: it is the property that makes
+    /// the two platforms agree, it holds for every glyph of every bundled face, and it goes
+    /// red on whichever machine stops reading the font's tables. The one pinned pair below
+    /// is the separate question of WHICH face — a font swap moves that, integrality not.
+    /// </para>
+    /// ⚠️ Asked at font size 1000 because the bundled faces are 1000 units per em, so the
+    /// returned staff-space number IS the font unit and no scaling hides the quantisation.
+    /// </remarks>
+    [Theory]
+    [InlineData("3", false, FontStyle.Bold)]
+    [InlineData("2", false, FontStyle.Bold)]
+    [InlineData("g", false, FontStyle.Regular)]
+    [InlineData("H", false, FontStyle.Regular)]
+    [InlineData("n", false, FontStyle.Italic)]
+    [InlineData("A", true, FontStyle.Bold)]
+    [InlineData("dolce", false, FontStyle.Italic)]
+    public void Ink_IsTheDesignsOwnFontUnits_NotARasterisersRenderingOfThem(
+        string text, bool sans, FontStyle style)
+    {
+        var (bottom, top) = TextFontMetrics.Ink(text, 1000.0, sans, style);
+        Assert.Equal(Math.Round(bottom), bottom, 6);
+        Assert.Equal(Math.Round(top), top, 6);
+    }
+
+    /// <summary>The bundled bold serif digit, so a font swap is caught as well as a
+    /// rasteriser creeping back in.</summary>
+    [Fact]
+    public void Ink_OfTheBoldSerifDigit_IsTeXGyreScholasOwnNumbers()
+    {
+        var (bottom, top) = TextFontMetrics.Ink("3", 1000.0, sans: false, FontStyle.Bold);
+        Assert.Equal(-14.0, bottom, 6);
+        Assert.Equal(708.0, top, 6);
+    }
+
+    /// <summary>The music face is read the same way, and had the same exposure.</summary>
+    /// <remarks>
+    /// MEASURED 2026-08-19: emmentaler-20's U+E0A4 reads top <c>-782</c> through Skia on
+    /// Windows and <c>-781.982421875</c> on Linux, and the identical <c>-782</c> on both
+    /// through the font's tables. The skyline walk over a music glyph reads this path, so
+    /// leaving it on the rasteriser would have kept 18 of the 53 Linux failures alive.
+    /// </remarks>
+    [Theory]
+    [InlineData('')]
+    [InlineData('')]
+    [InlineData('')]
+    public void MusicGlyphOutline_IsTheDesignsOwnFontUnits(char glyph)
+    {
+        var path = TextFontMetrics.MusicGlyphPath(glyph, EmmentalerFaces.DefaultDesign);
+        Assert.NotNull(path);
+        Assert.False(path!.IsEmpty);
+        var bounds = path.Bounds;
+        Assert.Equal(Math.Round(bounds.Top), bounds.Top, 3);
+        Assert.Equal(Math.Round(bounds.Bottom), bounds.Bottom, 3);
+        Assert.Equal(Math.Round(bounds.Left), bounds.Left, 3);
+        Assert.Equal(Math.Round(bounds.Right), bounds.Right, 3);
+    }
 }
