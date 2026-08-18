@@ -511,6 +511,7 @@ internal static partial class SharedRenderer
         const double stemW = 0.09;
         const double beamW = EngravingDefaults.BeamThickness * (ns / FontSize);
         const double eqSize = 1.8;           // the feel equation's own "=" size
+        const FontStyle EqStyle = FontStyle.Regular;  // one home: drawn AND stepped past
         const double threeSize = 1.0;
 
         // Draws one beamed eighth pair at px; returns the x just past it.
@@ -547,10 +548,13 @@ internal static partial class SharedRenderer
 
         double x = DrawPair(startX, dotted: false, withThree: false);
         x += 0.35;
-        gc.DrawText("=", x, baselineY, eqSize, TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
-        // ⚠️ Same mismatch as the To-Coda prefix: the "=" is DRAWN Regular on the line above
-        // and has always been MEASURED Bold. Preserved, not fixed — see that site.
-        x += fonts.Advance("=", eqSize, TextRole.Tempo, FontStyle.Bold) + 0.45;
+        gc.DrawText("=", x, baselineY, eqSize, TextRole.Tempo, EqStyle, TextAnchor.Start, Color.Black);
+        // The step past the "=" measures the "=" that was drawn. It measured Bold against a
+        // Regular draw until 2026-08-18; ⚠️ the page did NOT move, and that is a fact about
+        // this face rather than a licence to leave such a pair alone — TeX Gyre Schola gives
+        // "=" the SAME advance bold and regular (1.092585827 at this 1.8 em, to fifteen
+        // digits), so the drift had nothing to show. A face where they differ would have.
+        x += fonts.Advance("=", eqSize, TextRole.Tempo, EqStyle) + 0.45;
         DrawPair(x, dotted: true, withThree: true);
     }
 
@@ -666,37 +670,50 @@ internal static partial class SharedRenderer
         }
         if (IsPedalMark(m.MarkType))
         {
-            bool italic = m.MarkType is MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
-                or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
-            gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, TextRole.Pedal,
-                italic ? FontStyle.BoldItalic : FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            // The SUSTAIN pedal's word is not a word: LilyPond sets it in the MUSIC font
+            // (lily/sustain-pedal.cc:47-76), and MusicMarkEngraver.SustainPedalStencil is
+            // the one home that reproduces that run — the same call every reservation
+            // makes, so the drawn glyphs and the reserved box cannot drift. The sostenuto
+            // and una corda words ARE text in LilyPond and keep the text path.
+            if (MusicMarkEngraver.IsGlyphPedal(m.MarkType))
+            {
+                var (pedalGlyphs, pedalWidth, _) =
+                    MusicMarkEngraver.SustainPedalStencil(m.Text);
+                double pedalLeft = m.X - pedalWidth / 2;   // the mark's anchor is its centre
+                foreach (var g in pedalGlyphs)
+                    gc.DrawGlyph(g.Glyph, pedalLeft + g.X, absY, FontSize, Color.Black);
+                return;
+            }
+            gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainTextFontSize, TextRole.Pedal,
+                MusicMarkEngraver.TextStyleOf(m.MarkType), TextAnchor.Middle, Color.Black);
             return;
         }
         if (m.MarkType == MusicMarkType.ToCoda)
         {
             // "To" followed by the coda SIGN (not the word "Coda"), centered as a
             // group. LILYPOND-REF: the al-coda text is set with the coda glyph.
-            double ts = FontSize * 0.7;
+            double ts = MusicMarkEngraver.PlainTextFontSize;
             double gs = FontSize * 0.8;
             const string prefix = "To ";
-            // ⚠️ MEASURED Bold, DRAWN BoldItalic on the line below — a reserve-versus-draw
-            // mismatch that predates the role port and is NOT fixed here, because fixing it
-            // moves the page and this commit is plumbing (HANDOFF RULES §5.1, one island per
-            // commit). The style is spelled out rather than left implicit so the next reader
-            // sees the pair. Found 2026-08-18 while giving the layout the score's faces.
-            double textW = fonts.Advance(prefix, ts, TextRole.Navigation, FontStyle.Bold);
+            // The centring measures what the next line draws — one style, read from the one
+            // home. It measured Bold against a BoldItalic draw until 2026-08-18, which put
+            // the pair 0.068286614 staff spaces left of centre (the "To " advance differs by
+            // 0.136573228 between the two faces at this size).
+            var style = MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda);
+            double textW = fonts.Advance(prefix, ts, TextRole.Navigation, style);
             double glyphW = gs * 0.42;   // approx advance of scripts.coda
             double left = m.X - (textW + glyphW) / 2;
             gc.DrawText(prefix, left, absY, ts, TextRole.Navigation,
-                FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
+                style, TextAnchor.Start, Color.Black);
             // The coda glyph's baseline sits low; lift it (up = larger Y-up) so its
             // centre aligns with the cap height of "To".
             gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW, absY + gs * 0.30, gs, Color.Black);
             return;
         }
-        // Default text marks (D.S./D.C./Fine/etc.)
-        gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, TextRole.Navigation,
-            FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
+        // Default text marks (D.S./D.C./Fine/etc.) — size and style from the one home the
+        // reservations read, so the box and the ink cannot drift apart again.
+        gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainTextFontSize, TextRole.Navigation,
+            MusicMarkEngraver.TextStyleOf(m.MarkType), TextAnchor.Middle, Color.Black);
     }
 
     private static bool IsHandledBySpannerEngraver(MusicMarkType type) =>

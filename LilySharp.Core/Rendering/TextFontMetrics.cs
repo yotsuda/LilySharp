@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -369,11 +369,41 @@ public static class TextFontMetrics
     // LILYPOND-REF: lily/font-config.cc:43-78 make_font_config — the datadir's
     //   00-lilypond-fonts.conf is pushed ahead of FcConfigFilename's default conf.
     private static string? BundledPathForName(string name, FontStyle style)
-    {
-        bool? sans = string.Equals(name, SerifFamily, StringComparison.OrdinalIgnoreCase) ? false
-            : string.Equals(name, SansFamily, StringComparison.OrdinalIgnoreCase) ? true
+        => TryBundledFamily(TextFace.Named(name, false, style), out bool sans)
+            ? FontLocator.ResolveFile(FileName(sans, style))
             : null;
-        return sans is bool s ? FontLocator.ResolveFile(FileName(s, style)) : null;
+
+    /// <summary>
+    /// Does <paramref name="face"/> come out of the BUNDLE, and if so from which family's
+    /// file?
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ANSWER IS ABOUT THE NAME, NOT THE BINDING. <c>font { sans "TeX Gyre Schola" }</c>
+    /// measures the SERIF file, because a name refers to a face and not to the slot it was
+    /// written in; <paramref name="sans"/> is the family of the FILE, which is why it can
+    /// disagree with <see cref="TextFace.Sans"/> (that one is the fallback family).
+    /// <para>
+    /// It exists so a backend can ask the question rather than re-derive it. The PDF resolver
+    /// derived it from the BINDING and so served <c>font { sans "TeX Gyre Schola" }</c> with
+    /// TeX Gyre Heros while the layout had reserved TeX Gyre Schola — a whole face apart, and
+    /// the reason this is one function and not two spellings.
+    /// </para>
+    /// <para>
+    /// ⚠️ NO SECOND ADDRESS. The rule that makes this worth asking — the bundle is consulted
+    /// before the machine — is LilyPond's, and its citation lives on
+    /// <see cref="BundledPathForName"/>, the one caller that acts on the ordering. This
+    /// method only says which family a name belongs to.
+    /// </para>
+    /// </remarks>
+    internal static bool TryBundledFamily(TextFace face, out bool sans)
+    {
+        if (face.IsBundled) { sans = face.Sans; return true; }
+        if (string.Equals(face.Name, SerifFamily, StringComparison.OrdinalIgnoreCase))
+        { sans = false; return true; }
+        if (string.Equals(face.Name, SansFamily, StringComparison.OrdinalIgnoreCase))
+        { sans = true; return true; }
+        sans = face.Sans;
+        return false;
     }
 
     /// <summary>

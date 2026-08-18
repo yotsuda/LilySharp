@@ -218,6 +218,17 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("ArticDownBowAboveGlyph", "scripts.udownbow", "Down-bow above (frog)", "mf/feta-scripts.mf — scripts.udownbow"),
     GlyphSpec("ArticDownBowBelowGlyph", "scripts.ddownbow", "Down-bow below (frog)", "mf/feta-scripts.mf — scripts.ddownbow"),
     GlyphSpec("ArticFlageoletGlyph", "scripts.flageolet", "Flageolet / harmonic circle",    "mf/feta-scripts.mf — scripts.flageolet"),
+    # --- Piano pedal word (a GLYPH path, not a text one) ---
+    # lily/sustain-pedal.cc:47-76 Sustain_pedal::print calls
+    # Font_interface::get_default_font(e)->find_by_name("pedal.Ped") and pastes the
+    # results with Stencil::add_at_edge (X_AXIS, RIGHT, m, 0) -- so the boxes it
+    # juxtaposes are get_indexed_char_dimensions' LILC bboxes, exactly as for any other
+    # named glyph, and "lilc" is the right source here. MEASURED against real LilyPond
+    # (audit/lp-geometry/probes/jump-mark-em.ly book PSU, 2026-08-18): 3.192000000 +
+    # 0.280000000 = 3.472000000 for "Ped." and 1.555600000 for "*", both to nine digits.
+    GlyphSpec("PedalPed",  "pedal.Ped", "The Ped ligature of the sustain pedal's word",   "mf/feta-pedals.mf:320 fet_beginchar (\"pedal Ped\", \"Ped\")"),
+    GlyphSpec("PedalDot",  "pedal..",   "The full stop that follows Ped",                 "mf/feta-pedals.mf:120 fet_beginchar (\"pedal dot\", \".\")"),
+    GlyphSpec("PedalStar", "pedal.*",   "The sustain pedal's release star",               "mf/feta-pedals.mf:41 fet_beginchar (\"pedal asterisk\", \"*\")"),
     # --- Dynamic letters (fetaText encoding) ---
     # A DynamicText grob is TEXT, not a glyph lookup: scm/define-grobs.scm:1438 gives it
     # (font-encoding . fetaText) and :1445 (stencil . ly:text-interface::print), so its

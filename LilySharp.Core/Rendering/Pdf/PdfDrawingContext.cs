@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -42,6 +42,13 @@ internal sealed class PdfDrawingContext : IDrawingContext
     /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
     private readonly TextFontPlan _plan;
 
+    /// <summary>
+    /// The SAME resolution the layout reserved through — role and style in, the font PROGRAM
+    /// out. See the note on <c>PngDrawingContext</c>'s copy for why it is built here rather
+    /// than handed in.
+    /// </summary>
+    private readonly ScoreTextMetrics _metrics;
+
     public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0,
         EmmentalerFontResolver? fontResolver = null, TextFontPlan? plan = null)
     {
@@ -50,6 +57,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
         _originPt = originPt;
         _fontResolver = fontResolver;
         _plan = plan ?? TextFontPlan.Default;
+        _metrics = new ScoreTextMetrics(_plan);
     }
 
     // Positions are offset by the page margin; sizes (T) are not.
@@ -197,15 +205,50 @@ internal sealed class PdfDrawingContext : IDrawingContext
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
-        // One face per run: PdfSharpCore's XFont is a single family, and the resolver
-        // answers for whichever of the chain's names it was configured with. The FIRST
-        // is asked for — a per-CHARACTER fallback still runs below for anything it
-        // cannot draw, which is the same mechanism a CJK title already relies on.
-        var face = _plan.Resolve(role);
-        bool sans = face.Family == TextFontFamily.Sans;
-        string fontFamily = face.IsBundled
-            ? (sans ? "sans-serif" : "serif")
-            : face.Names[0];
+        // WHICH FILE, not which name in the chain. The reservation resolved this role and
+        // style to one font PROGRAM (ScoreTextMetrics.Face, taking the first face this
+        // machine can read); this asks for whatever PdfSharpCore serves that same program
+        // from. It used to ask for Names[0] unconditionally, so a chain whose first name is
+        // absent drew the stand-in while the layout had reserved for the second.
+        // A per-CHARACTER fallback still runs below for anything the face cannot draw, which
+        // is the same mechanism a CJK title already relies on.
+        var face = role == TextRole.SystemBrace
+            ? TextFace.Named(TextFontPlan.BraceFaceName, false, style)
+            : _metrics.Face(role, style);
+        // Can the ink on the page be the face that was measured?
+        //   * a BUNDLED file — either nothing was named, or the name IS one of the two
+        //     families this engine ships, in which case asking for the generic gets exactly
+        //     the file TextFontMetrics opened (TryBundledFamily, which answers about the NAME
+        //     and so crosses families when the binding does);
+        //   * a named face whose own program is embedded — `embedded`, licence permitting.
+        // Anything else is served by the bundled STAND-IN: the glyphs are not the measured
+        // ones, so they keep PdfSharpCore's own layout. Shaping them at the measured
+        // positions would be worse, not better.
+        // LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
+        //   departs from: lily/font-select.cc:193-217 select_font, which hands `font-name`
+        //     to find_pango_font and gets the FILE back — so LilyPond's page is always drawn
+        //     from the program its widths came from, and the question this branch answers
+        //     does not arise there. What creates it here is that a PDF must either carry a
+        //     font program or reference one by name, and Lily# will not embed a face the
+        //     author did not ask for with `embedded` (a licence decision, not a typesetting
+        //     one). When it does not, the page necessarily carries a face nobody measured.
+        //   direction: the ink is then laid out by the viewer from the stand-in's own
+        //     widths, so it fills its box the way any unshaped run does — never placed at
+        //     positions belonging to a different face, which is the failure this avoids.
+        //   goes away when: `embedded` is written, or the named face is one of the bundled
+        //     families (both take the shaped branch above), or Lily# grows a way to embed by
+        //     default that the licence work already begun in FontEmbedInfo would permit.
+        //   observed by: nothing, and it cannot be — the case needs a third-party face this
+        //     machine happens to have installed, which is exactly what the bundle-first rule
+        //     keeps out of the suite. BackendKerningTests says so where it would have gone.
+        bool bundledSans = false;
+        bool bundled = role != TextRole.SystemBrace
+            && TextFontMetrics.TryBundledFamily(face, out bundledSans);
+        bool drawsMeasuredProgram = bundled
+            || (!face.IsBundled && _fontResolver?.EmbedsOwnProgram(face.Name!) == true);
+        string fontFamily = bundled
+            ? (bundledSans ? "sans-serif" : "serif")
+            : face.Name!;
         var pdfStyle = ((style & FontStyle.Bold) != 0, (style & FontStyle.Italic) != 0) switch
         {
             (true, true) => XFontStyle.BoldItalic,
@@ -225,26 +268,18 @@ internal sealed class PdfDrawingContext : IDrawingContext
         };
         var brush = new XSolidBrush(ToXColor(fill));
 
-        // A BUNDLED face is drawn at the positions the reservation computed (DrawShaped).
-        // A bound `font "X"` keeps PdfSharpCore's own layout, and the reason CHANGED on
-        // 2026-08-18: it used to be that the engine never measured that file either
-        // (HANDOFF §2F's gap, now closed — ScoreTextMetrics measures it). What is left is
-        // this backend's: WITHOUT `embedded` a named face is served by the bundled
-        // stand-in (EmmentalerFontResolver), so the glyphs on the page are not the ones the
-        // box was measured from and shaping them at those positions would be worse, not
-        // better. WITH `embedded` the real program is there and the shaped path is
-        // reachable — that is the next step, and it needs the resolved TextFace threaded to
-        // the drawing side.
-        if (face.IsBundled)
+        // The measured face is drawn at the positions the reservation computed (DrawShaped);
+        // the stand-in keeps PdfSharpCore's own layout, for the reason above.
+        if (drawsMeasuredProgram)
         {
-            double width = TextFontMetrics.Advance(text, fontSize, sans, style);
+            double width = TextFontMetrics.Advance(text, fontSize, face);
             double left = anchor switch
             {
                 TextAnchor.Middle => x - width / 2,
                 TextAnchor.End => x - width,
                 _ => x,
             };
-            DrawShaped(text, left, drawY, fontSize, sans, style, font, brush);
+            DrawShaped(text, left, drawY, fontSize, face, font, brush);
             return;
         }
 
@@ -294,9 +329,9 @@ internal sealed class PdfDrawingContext : IDrawingContext
     /// </para>
     /// </remarks>
     private void DrawShaped(string text, double left, double baselineY, double fontSize,
-        bool sans, FontStyle style, XFont font, XBrush brush)
+        TextFace face, XFont font, XBrush brush)
     {
-        var glyphs = TextFontMetrics.ShapeRun(text, fontSize, sans, style);
+        var glyphs = TextFontMetrics.ShapeRun(text, fontSize, face);
         for (int i = 0; i < glyphs.Count; i++)
         {
             // The source characters this glyph stands for: from its cluster to the next one's.
@@ -308,7 +343,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
             // PDF is BLANK — a Japanese title left no ink at all. ShapeRun reports the source
             // code point for exactly this: draw it in a face that has the glyph.
             var fallback = glyphs[i].MissingCodepoint is int cp
-                ? FallbackFont(cp, fontSize, style)
+                ? FallbackFont(cp, fontSize, face.Style)
                 : default;
             var clusterFont = fallback.Font ?? font;
             double px = X(left + glyphs[i].X);

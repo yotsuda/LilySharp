@@ -323,6 +323,17 @@ public sealed record MusicMarkItem
         _ => type.ToString()
     };
 
+    /// <summary>
+    /// Where a mark of <paramref name="type"/> anchors, WITHOUT an instance.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Position"/> is set from this at construction and never from anything else,
+    /// so the two answers cannot differ — which is what lets a caller holding only a placed
+    /// <c>MusicMarkLayout</c> (which carries no Position) price the same extent as one
+    /// holding the item. <c>MusicMarkEngraver.MarkXExtent</c> is that caller.
+    /// </remarks>
+    internal static MusicMarkPosition PositionOf(MusicMarkType type) => GetMarkPosition(type);
+
     private static MusicMarkPosition GetMarkPosition(MusicMarkType type) => type switch
     {
         MusicMarkType.Segno => MusicMarkPosition.Beginning,

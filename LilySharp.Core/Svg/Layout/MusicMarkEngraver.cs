@@ -82,9 +82,12 @@ internal static class MusicMarkEngraver
     /// half the pair. That is the same reserve-versus-draw split this engine keeps finding,
     /// arriving through a mapping rather than through a measurement.
     /// <para>
-    /// ⚠️ THE STYLE IS NOT HERE. Weight and slant are the engraving's decision (a sostenuto
-    /// word is italic, a sustain word is not) and a <c>font</c> directive does not touch
-    /// them — <c>IDrawingContext.DrawText</c> splits the two parameters for the same reason.
+    /// ⚠️ THE STYLE IS NOT IN THIS MAPPING. Weight and slant are the engraving's decision (a
+    /// sostenuto word is italic, a sustain word is not) and a <c>font</c> directive does not
+    /// touch them — <c>IDrawingContext.DrawText</c> splits the two parameters for the same
+    /// reason. It has its own one home beside this one, <see cref="TextStyleOf"/>: separate
+    /// because a binding reaches the role and never the style, not because either may be
+    /// spelled twice.
     /// </para>
     /// </remarks>
     internal static TextRole TextRoleOf(MusicMarkType type) => type switch
@@ -96,6 +99,224 @@ internal static class MusicMarkEngraver
             or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => TextRole.Pedal,
         // D.S. / D.C. / Fine / To Coda / segno / coda — the navigation family.
         _ => TextRole.Navigation,
+    };
+
+    /// <summary>
+    /// The em a plain-text music mark (D.S./Fine/pedal words/…) is set at.
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME for the same reason <see cref="TextRoleOf"/> is one: the draw and every
+    /// reservation must price the same stencil. LilyPond has no "estimated" width — a mark's
+    /// X extent IS its markup stencil's — so a reservation at another size is not an
+    /// approximation of the drawn box, it is a box around a string nobody draws.
+    /// <para>
+    /// ⚠️ MEASURED, 2026-08-18: this was spelled three times at three sizes. The draw and the
+    /// outside-staff stacker used 2.8 (the renderer's 4.0 staff-space font size × the 0.7
+    /// plain-text factor); <c>MarkXExtent</c> used 2.2, the boxed SectionLabel size next to
+    /// it in the same switch; the inter-system skyline box in <c>LayoutEngine</c> used 2.4,
+    /// the boxed Rehearsal size next to IT. Both strays priced the neighbouring case, and
+    /// both under-reserved: "Fine" by 1.263302362 and 0.819439370 staff spaces, "D.S. al
+    /// Coda" by 4.233770079 and 2.868037795 — always short, i.e. always toward a collision
+    /// the overlap tests could not see.
+    /// </para>
+    /// </remarks>
+    // LILYPOND-REF: scm/define-grobs.scm:1898-1926 JumpScript, outside-staff-priority 1350
+    //   — font-shape italic, and NO font-size anywhere in the block.
+    // LILYPOND-REF: scm/define-grobs.scm:3190-3208 SostenutoPedal piano-pedal-script-interface
+    //   — the same declaration: font-shape italic, no font-size, no font-series.
+    // LILYPOND-REF: scm/define-grobs.scm:4148-4166 UnaCordaPedal piano-pedal-script-interface
+    //   — the same again.
+    // A grob that names no font-size is set at the paper's own text-font-size, which is what
+    // EngravingDefaults.TextScriptFontSize already carries. READ, NOT RESPELLED: one home
+    // and this is the second grob family to move into it (§5.2.1⑤ — a copy is how the same
+    // quantity grows a second spelling, which is the defect session 203 spent its day on).
+    //
+    // ⚠️ IT USED TO BE 4.0 * 0.7 = 2.8, THE RENDERER'S OWN FONT SIZE TIMES A GUESS. That was
+    // tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
+    // one of which was "it disappears when a session prices the mark's em against LilyPond
+    // and opens a ledger point". Session 204 did: audit/lp-geometry/probes/jump-mark-em.ly
+    // measures the real JumpScript at 4.506916535433071 ss for "Fine", drawn in C059-Italic
+    // at a stencil em of 3.865234375 mm = 2.2 ss × 1.757299018 mm/ss — the drawing's own
+    // account of its size, not an inference from a width. Four ledger points observe it now
+    // (mark.jump.width.fine / .ds-al-coda, mark.pedal.width.sostenuto / .sustain).
+    internal static readonly double PlainTextFontSize = EngravingDefaults.TextScriptFontSize;
+
+    /// <summary>
+    /// Weight and slant the engraving gives a plain-text mark: italic for the jump scripts
+    /// and the pedals that carry a string, upright bold for the sustain pedal alone.
+    /// </summary>
+    /// <remarks>
+    /// The style is the ENGRAVING's decision and no <c>font</c> directive may touch it (see
+    /// <see cref="TextRoleOf"/>), which is exactly why it needs a home of its own rather
+    /// than none: three sites spelled it and one of them — the reservation the overlap tests
+    /// read — said Bold for strings drawn BoldItalic.
+    /// <para>
+    /// LILYPOND-REF: scm/define-grobs.scm:1898-1926 JumpScript, outside-staff-priority 1350
+    /// — <c>font-shape italic</c> and no <c>font-series</c> in the block at all.
+    /// LILYPOND-REF: scm/define-grobs.scm:3190-3208 SostenutoPedal piano-pedal-script-interface
+    /// — the same <c>font-shape italic</c>, no series.
+    /// Italic, and NOT bold.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT USED TO ANSWER <c>BoldItalic</c>, and session 203 tagged that LILYSHARP-OWN
+    /// rather than porting it, because moving the slant in the same commit as the
+    /// reservation would have moved the page for two reasons at once. MEASURED FIRST
+    /// (session 204, audit/lp-geometry/probes/jump-mark-em.ly), per string rather than as a
+    /// ratio: LilyPond's own weight costs +0.512149606 ss on "Fine", +1.058442520 on "D.S.
+    /// al Coda" and +0.785296063 on "Sost. Ped." — three strings, three ratios (1.114 /
+    /// 1.082 / 1.079), so the term is a face TABLE and no string's may be borrowed for
+    /// another's. With this and <see cref="PlainTextFontSize"/> both read from LilyPond,
+    /// <c>mark.jump.width.fine</c> and <c>mark.jump.width.ds-al-coda</c> are 0.000000000 and
+    /// <c>mark.pedal.width.sostenuto</c> is one device pixel.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SUSTAIN ARM IS NOT THE SAME QUESTION, and the same probe is why: LilyPond
+    /// does not set "Ped." in a text face at all. <c>lily/sustain-pedal.cc:47-76</c>
+    /// <c>Sustain_pedal::print</c> pastes the music font's <c>pedal.Ped</c> and
+    /// <c>pedal..</c> glyphs edge to edge, the file's own comment saying "we have no
+    /// kerning". So this arm's upright bold agrees with nothing in LilyPond rather than
+    /// disagreeing with something, and it is LEFT ALONE here:
+    /// <c>mark.pedal.width.sustain</c> records that the em change moves it by 1.365732283
+    /// and leaves 1.478779528 standing, which is what setting the word in a text face costs
+    /// at all. Closing that is a MECHANISM port (Emmentaler's pedal glyphs), not a style one.
+    /// </para>
+    /// </remarks>
+    internal static FontStyle TextStyleOf(MusicMarkType type)
+        => type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+            ? FontStyle.Bold
+            : FontStyle.Italic;
+
+    /// <summary>
+    /// How wide a plain (unboxed, non-symbol) mark's word is drawn — the text families'
+    /// advance, or the sustain pedal's glyph run.
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME for the same reason <see cref="PlainTextFontSize"/> is one, and it exists
+    /// because the family is no longer answered by a single call: since 2026-08-18 the
+    /// sustain pedal's word is a run of MUSIC glyphs and everything else is text, so a site
+    /// that asks <c>TextFontMetrics.Advance</c> directly is asking about a string nobody
+    /// sets. Callers: <c>MarkXExtent</c> and the pedal-change nudge below.
+    /// </remarks>
+    internal static double PlainMarkWidth(ScoreTextMetrics fonts, MusicMarkType type, string text)
+        => IsGlyphPedal(type)
+            ? SustainPedalExtent(text).Width
+            : fonts.Advance(text, PlainTextFontSize, TextRoleOf(type), TextStyleOf(type));
+
+    /// <summary>
+    /// Whether this mark's word is set in the MUSIC font rather than in a text face —
+    /// true for the sustain pedal alone.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3573-3591 SustainPedal, piano-pedal-interface —
+    /// the one pedal grob whose stencil is <c>ly:sustain-pedal::print</c> rather than
+    /// <c>ly:text-interface::print</c>.
+    /// LILYPOND-REF: scm/define-grobs.scm:3190-3208 SostenutoPedal, piano-pedal-script-interface
+    /// — text, which is why <see cref="TextStyleOf"/> still answers for it.
+    /// LILYPOND-REF: scm/define-grobs.scm:4148-4166 UnaCordaPedal, piano-pedal-script-interface
+    /// — text likewise, and this predicate answers for neither.
+    /// </remarks>
+    internal static bool IsGlyphPedal(MusicMarkType type)
+        => type is MusicMarkType.SustainOn or MusicMarkType.SustainOff;
+
+    /// <summary>One glyph of a sustain-pedal word, and its LEFT edge in staff spaces from
+    /// the word's own origin.</summary>
+    internal readonly record struct PedalGlyphPlacement(char Glyph, double X);
+
+    /// <summary>
+    /// The stencil LilyPond builds for a sustain-pedal word: the glyphs, the total width
+    /// and the ink top. ONE HOME for the draw and every reservation, like
+    /// <see cref="PlainTextFontSize"/> is for the family that IS text.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: lily/sustain-pedal.cc:47-76 Sustain_pedal::print — it walks the
+    /// string, takes <c>pedal.Ped</c> for a literal "Ped" and <c>pedal.&lt;char&gt;</c> for
+    /// every other character, and pastes each with
+    /// <c>Stencil::add_at_edge (X_AXIS, RIGHT, m, 0)</c>: zero padding, EXTENT to extent.
+    /// A name the font does not have yields an empty stencil and is skipped, which is why
+    /// the space in "Sost. Ped." would cost nothing there (that string is a TEXT grob and
+    /// never reaches this code).
+    /// </para>
+    /// <para>
+    /// The extents are LilyPond's own LILC boxes (lily/open-type-font.cc:372-409
+    /// get_indexed_char_dimensions), which is what <c>GlyphMetrics</c> carries. MEASURED
+    /// against real LilyPond (audit/lp-geometry/probes/jump-mark-em.ly book PSU,
+    /// 2026-08-18): "Ped." is 3.192000000 + 0.280000000 = 3.472000000 staff spaces and "*"
+    /// is 1.555600000, both to nine digits, and ledger point
+    /// <c>mark.pedal.width.sustain</c> is what holds them.
+    /// </para>
+    /// <para>
+    /// ⚠️ Lily# drew this word as an upright bold SERIF STRING until 2026-08-18. That was
+    /// not a size error and porting the em did not fix it: at LilyPond's own em the string
+    /// was still 1.478779528 staff spaces too wide, because a text face and a music font
+    /// have no arithmetic in common. The gap is the whole reason this method exists.
+    /// </para>
+    /// </remarks>
+    internal static (ImmutableArray<PedalGlyphPlacement> Glyphs, double Width, double Top)
+        SustainPedalStencil(string text)
+    {
+        var glyphs = ImmutableArray.CreateBuilder<PedalGlyphPlacement>(text.Length);
+        var (width, top) = WalkSustainPedal(text, glyphs);
+        return (glyphs.ToImmutable(), width, top);
+    }
+
+    /// <summary>
+    /// The same stencil's WIDTH and ink top, without building the glyph list.
+    /// </summary>
+    /// <remarks>
+    /// Every reservation wants only these two numbers and the draw is the one caller that
+    /// wants the glyphs, so the reservations do not pay for a list they will throw away.
+    /// ⚠️ Not a second spelling of the mapping — both go through the same private walk.
+    /// </remarks>
+    internal static (double Width, double Top) SustainPedalExtent(string text)
+        => WalkSustainPedal(text, into: null);
+
+    /// <summary>The walk itself: LilyPond's loop, with the glyph list optional.</summary>
+    private static (double Width, double Top) WalkSustainPedal(
+        string text, ImmutableArray<PedalGlyphPlacement>.Builder? into)
+    {
+        double x = 0.0, top = 0.0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char glyph;
+            if (i + 3 <= text.Length && text.AsSpan(i, 3) is "Ped")
+            {
+                glyph = EmmentalerGlyphs.PedalPed;
+                i += 2;   // with the loop's own i++ this is LilyPond's `i += 2`
+            }
+            else if (text[i] == '.') glyph = EmmentalerGlyphs.PedalDot;
+            else if (text[i] == '*') glyph = EmmentalerGlyphs.PedalStar;
+            // find_by_name gave an empty stencil; LilyPond skips it and so do we.
+            else continue;
+
+            var box = PedalGlyphBox(glyph);
+            into?.Add(new PedalGlyphPlacement(glyph, x));
+            x += box.Width;
+            top = Math.Max(top, box.Top);
+        }
+        return (x, top);
+    }
+
+    /// <summary>
+    /// The LILC box of one sustain-pedal glyph — the extent LilyPond juxtaposes it by.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="SustainPedalStencil"/> so that a reader who has a DRAWN
+    /// glyph rather than a string can price it: the LP-fidelity observer measures the run
+    /// off the page (first glyph's origin to the last one's right edge) and needs the last
+    /// glyph's own width to close it. One table, three consumers — the builder, the
+    /// observer, and anything that later asks how tall the word is.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">The glyph is not one of the three the
+    /// sustain pedal is built from. Loud rather than a zero box: a silent 0 here would be a
+    /// mark that reserves nothing.</exception>
+    internal static GlyphMetrics.BBox PedalGlyphBox(char glyph) => glyph switch
+    {
+        EmmentalerGlyphs.PedalPed => GlyphMetrics.PedalPed,
+        EmmentalerGlyphs.PedalDot => GlyphMetrics.PedalDot,
+        EmmentalerGlyphs.PedalStar => GlyphMetrics.PedalStar,
+        _ => throw new ArgumentOutOfRangeException(nameof(glyph), glyph,
+            "not a sustain-pedal glyph"),
     };
 
     /// <summary>
@@ -520,10 +741,23 @@ internal static class MusicMarkEngraver
                     {
                         // "*" just left of the new "Ped." — both centered
                         // texts, so clear half of each measured width + gap.
+                        // The word that follows is the ENGAGE mark of this release's OWN
+                        // family, FOUND in the group rather than spelled. It was spelled
+                        // "Ped." here whatever the family until 2026-08-18 — so a sostenuto
+                        // change cleared the sustain word's width — and the glyph port made
+                        // that wrong in KIND rather than in degree: "Sost. Ped." is text and
+                        // "Ped." is now a run of music glyphs, so the wrong string had also
+                        // become the wrong mechanism. GroupHasPedalChange has already
+                        // established that this engage exists, which is what makes First safe.
+                        // ⚠️ Both halves go through PlainMarkWidth, not TextFontMetrics: only
+                        // that home knows which of the two a given pedal's word is.
+                        var follower = belowMarks.First(
+                            e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type)
+                                 && PedalFamilyRank(e.Mark.Type) == PedalFamilyRank(mark.Type));
                         double pedHalf =
-                            fonts.Advance("Ped.", 2.8, TextRole.Pedal, FontStyle.Bold) / 2;
+                            PlainMarkWidth(fonts, follower.Mark.Type, follower.Mark.Text) / 2;
                         double starHalf =
-                            fonts.Advance(mark.Text, 2.8, TextRole.Pedal, FontStyle.Bold) / 2;
+                            PlainMarkWidth(fonts, mark.Type, mark.Text) / 2;
                         x -= pedHalf + starHalf + 0.4;
                     }
                 }
@@ -813,24 +1047,52 @@ internal static class MusicMarkEngraver
     /// boxed labels and symbols are centred. Widths use the same faces the
     /// renderer draws with.
     /// </summary>
-    private static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
+    // internal, not private: no book in the tracked corpus reaches the plain-text arm — a
+    // 100-staff-space poison in it moved 0 of 567 (2026-08-18) because nothing pairs a
+    // navigation/pedal mark with the inline chord symbols or lyrics the two overlap tests
+    // compare against. The observer therefore has to call it (MusicMarkSpanTests).
+    internal static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
         MusicMarkItem mark, double x)
+        => MarkXExtent(fonts, mark.Type, mark.Text, mark.TempoText, mark.TempoBeatUnit,
+            mark.TempoDots, mark.SwingSubdivision, x);
+
+    /// <summary>
+    /// The same extent read off a PLACED mark rather than a collected one.
+    /// </summary>
+    /// <remarks>
+    /// Two adapters onto one body, not two spellings. <c>LayoutEngine</c>'s inter-system
+    /// silhouette walks <see cref="MusicMarkLayout"/> while the two overlap tests walk
+    /// <see cref="MusicMarkItem"/>, and until 2026-08-18 that type difference was the whole
+    /// reason the silhouette priced its own box — which is how three of its four arms were
+    /// still spelling the neighbouring case's numbers after this method had been made the
+    /// one home (§5.2.1⑤: the second spelling of a quantity is where the ports stop
+    /// arriving). ⚠️ A record type is not a reason for a second model; an adapter is what a
+    /// record type deserves.
+    /// </remarks>
+    internal static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
+        MusicMarkLayout mark, double x)
+        => MarkXExtent(fonts, mark.MarkType, mark.Text, mark.TempoText, mark.TempoBeatUnit,
+            mark.TempoDots, mark.SwingSubdivision, x);
+
+    private static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
+        MusicMarkType type, string text, string? tempoText, int tempoBeatUnit, int tempoDots,
+        int swingSubdivision, double x)
     {
-        switch (mark.Type)
+        switch (type)
         {
             case MusicMarkType.Tempo:
             {
                 // Left-anchored, priced by the ONE geometry home the draw uses.
-                double w = MetronomeMarkGeometry.Ink(fonts, mark.Text, mark.TempoText,
-                    mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision).Width;
+                double w = MetronomeMarkGeometry.Ink(fonts, text, tempoText,
+                    tempoBeatUnit, tempoDots, swingSubdivision).Width;
                 return (x, x + w);
             }
             case MusicMarkType.Rehearsal:
             case MusicMarkType.SectionLabel:
             {
-                double fs = mark.Type == MusicMarkType.Rehearsal ? 2.4 : 2.2;
+                double fs = type == MusicMarkType.Rehearsal ? 2.4 : 2.2;
                 double half =
-                    fonts.Advance(mark.Text, fs, TextRole.Mark, FontStyle.Bold) / 2 + 0.2;
+                    fonts.Advance(text, fs, TextRole.Mark, FontStyle.Bold) / 2 + 0.2;
                 return (x - half, x + half);
             }
             case MusicMarkType.Segno:
@@ -838,9 +1100,16 @@ internal static class MusicMarkEngraver
                 return (x - 1.2, x + 1.2);
             default:
             {
-                double w = fonts.Advance(
-                    mark.Text, 2.2, TextRoleOf(mark.Type), FontStyle.Bold);
-                return mark.Position == MusicMarkPosition.End
+                // Plain text marks: the string's own advance at the size and style the draw
+                // uses — see PlainTextFontSize/TextStyleOf for what this arm used to say and
+                // what it cost. The SUSTAIN pedal is not one of them: its word is a run of
+                // music glyphs (see SustainPedalStencil), and pricing it as text is what
+                // ledger point mark.pedal.width.sustain measured at 1.478779528 too wide.
+                // Both overlap tests that read this extent (against inline chord symbols,
+                // against lyrics) ask whether two grobs share horizontal ink, which is a
+                // question about the DRAWN box either way.
+                double w = PlainMarkWidth(fonts, type, text);
+                return MusicMarkItem.PositionOf(type) == MusicMarkPosition.End
                     ? (x - w, x)
                     : (x - w / 2, x + w / 2);
             }

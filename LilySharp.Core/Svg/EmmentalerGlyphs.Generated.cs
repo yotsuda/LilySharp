@@ -301,6 +301,12 @@ internal static partial class EmmentalerGlyphs
     public const char PedalToeUp = '\uE061';
     /// <summary>scripts.dpedaltoe</summary>
     public const char PedalToeDown = '\uE062';
+    /// <summary>pedal.Ped (the Ped ligature; 'Ped.' is this plus PedalDot)</summary>
+    public const char PedalPed = '\uE09D';
+    /// <summary>pedal.. (the full stop that follows Ped)</summary>
+    public const char PedalDot = '\uE099';
+    /// <summary>pedal.* (the release star)</summary>
+    public const char PedalStar = '\uE097';
     /// <summary>scripts.thumb (cello thumb position)</summary>
     public const char ArticThumb = '\uE047';
     /// <summary>scripts.snappizzicato (Bartók pizzicato — ring with rising stem)</summary>

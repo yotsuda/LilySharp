@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -37,6 +37,19 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// directive, resolved. The document hands its own down at <c>BeginPage</c>.</summary>
     private readonly TextFontPlan _plan;
 
+    /// <summary>
+    /// The SAME resolution the layout reserved through — role and style in, the font PROGRAM
+    /// out.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Built from the plan rather than handed in, and that is safe because
+    /// <see cref="ScoreTextMetrics.Face"/> is a pure function of the plan: two instances of
+    /// the same plan answer identically, and the cache inside is a speed-up, not the answer.
+    /// Sharing the layout's instance would be an extra parameter on every backend for no
+    /// difference in what gets drawn.
+    /// </remarks>
+    private readonly ScoreTextMetrics _metrics;
+
     public PngDrawingContext(SKCanvas canvas, double pixelsPerSpace, string? fontDirectory,
         TextFontPlan? plan = null)
     {
@@ -44,6 +57,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         _scale = pixelsPerSpace;
         _fonts = new FontCache(fontDirectory);
         _plan = plan ?? TextFontPlan.Default;
+        _metrics = new ScoreTextMetrics(_plan);
     }
 
     private float X(double s) => (float)(s * _scale);
@@ -181,37 +195,41 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
         VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
-        // One face per run, so a chain names its preferences and Skia takes the first it
-        // has. The BUNDLED case keeps the generic word the cache already understands —
-        // that path loads the bundled file rather than asking the system font manager,
-        // which is the whole reason TextFontMetrics can promise the same page on any box.
-        var face = _plan.Resolve(role);
-        bool sans = face.Family == TextFontFamily.Sans;
-        string fontFamily = face.IsBundled
-            ? (sans ? "sans-serif" : "serif")
-            : FirstAvailable(face.Names, sans);
-        var font = _fonts.GetFont(fontFamily, T(fontSize), style);
+        // WHICH FILE, not which family name. The reservation resolved a role and a style to
+        // one font PROGRAM (ScoreTextMetrics.Face, walking the score's chain and taking the
+        // first face this machine can read); this asks it the same question and draws from
+        // the answer. It used to ask Skia for a FAMILY NAME instead — a second lookup that
+        // could land on another file, which is why a bound face had to be drawn unshaped.
+        // ⚠️ THE BRACE IS NOT A TEXT FACE. TextRole.SystemBrace names an Emmentaler file that
+        // TextFontMetrics does not measure and cannot open, so asking it would fall back to
+        // the bundled serif and silently draw a serif "{". No score can bind it either —
+        // TextFontPlan.Resolve answers that role before any binding is consulted.
+        SKFont font;
+        TextFace? measured;
+        if (role == TextRole.SystemBrace)
+        {
+            measured = null;
+            font = _fonts.GetFont(TextFontPlan.BraceFaceName, T(fontSize), style);
+        }
+        else
+        {
+            var face = _metrics.Face(role, style);
+            measured = face;
+            font = _fonts.GetFont(face, T(fontSize));
+        }
 
-        // Glyph fallback: the mapped system face (e.g. Times New Roman for
-        // "serif") has no CJK coverage, so Japanese titles/section labels
-        // rendered as tofu. Split the text into typeface runs, resolving
-        // missing codepoints via SKFontManager.MatchCharacter — the same
+        // Glyph fallback: the reserved face (bundled or named) has no CJK coverage, so
+        // Japanese titles/section labels rendered as tofu. Split the text into typeface
+        // runs, resolving missing codepoints via SKFontManager.MatchCharacter — the same
         // per-character fallback SVG consumers get from the OS font stack.
-        var runs = _fonts.SegmentByTypeface(text, font.Typeface ?? SKTypeface.Default, style);
+        var baseTypeface = font.Typeface ?? SKTypeface.Default;
+        var runs = _fonts.SegmentByTypeface(text, baseTypeface, style);
 
         // The one face the RESERVATION knows — a run still on it is drawn shaped, at the
         // positions layout paid for; a run that fell through to a system fallback is a face
-        // TextFontMetrics never opened, so its glyph ids and its widths are its own.
-        // ⚠️ A BOUND face still takes the unshaped path here, and the reason CHANGED on
-        // 2026-08-18: it used to be that the layout never measured a named face at all
-        // (HANDOFF §2F's gap, now closed — ScoreTextMetrics). What is left is narrower and
-        // is this backend's own: the shaped path needs the glyph IDs of the very file the
-        // reservation opened, and this context resolves its drawing typeface through Skia
-        // by family name, which is a second lookup that may not land on the same file. So
-        // the bound case draws unshaped at the face's own widths, i.e. the reservation and
-        // the ink can differ by the shaping (kerns, ligatures) and not by the face.
-        // Closing it means threading the resolved TextFace to the drawing side too.
-        SKTypeface? reserved = face.IsBundled ? TextFontMetrics.Typeface(sans, style) : null;
+        // TextFontMetrics never opened, so its glyph ids and its widths are its own. Null
+        // for the brace, which no reservation measures.
+        SKTypeface? reserved = measured is null ? null : baseTypeface;
 
         using var paint = new SKPaint
         {
@@ -227,7 +245,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         {
             float width = 0;
             foreach (var (segment, typeface) in runs)
-                width += RunWidth(segment, typeface, reserved, sans, fontSize, style, paint);
+                width += RunWidth(segment, typeface, reserved, measured, fontSize, paint);
             if (anchor == TextAnchor.Middle) tx -= width / 2f;
             else /* End */ tx -= width;
         }
@@ -251,11 +269,11 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         {
             paint.Typeface = typeface;
             using var runFont = new SKFont(typeface, T(fontSize)) { Edging = SKFontEdging.SubpixelAntialias };
-            if (ReferenceEquals(typeface, reserved))
-                DrawShaped(segment, cx, ty, fontSize, sans, style, runFont, paint);
+            if (ReferenceEquals(typeface, reserved) && measured is TextFace shaped)
+                DrawShaped(segment, cx, ty, fontSize, shaped, runFont, paint);
             else
                 _canvas.DrawText(segment, cx, ty, runFont, paint);
-            cx += RunWidth(segment, typeface, reserved, sans, fontSize, style, paint);
+            cx += RunWidth(segment, typeface, reserved, measured, fontSize, paint);
         }
     }
 
@@ -281,16 +299,17 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// computation the reservation is the total of — not a second one that agrees.
     /// </para>
     /// <para>
-    /// ⚠️ ONLY FOR THE BUNDLED FACES. The glyph ids are that face's own, and the fallback
-    /// typeface a CJK run lands on is a different file where they would mean other glyphs.
-    /// Those runs keep the unshaped path (and the reservation keeps deciding their width by
-    /// <c>MissingGlyphAdvance</c>, which is a divergence of its own and not this one).
+    /// ⚠️ ONLY FOR THE RESERVED FACE — bundled or named, whichever one the layout opened.
+    /// The glyph ids are that file's own, and the fallback typeface a CJK run lands on is a
+    /// different file where they would mean other glyphs. Those runs keep the unshaped path
+    /// (and the reservation keeps deciding their width by <c>MissingGlyphAdvance</c>, which
+    /// is a divergence of its own and not this one).
     /// </para>
     /// </remarks>
     private void DrawShaped(string segment, float originX, float baselineY, double fontSize,
-        bool sans, FontStyle style, SKFont runFont, SKPaint paint)
+        TextFace face, SKFont runFont, SKPaint paint)
     {
-        var glyphs = TextFontMetrics.ShapeRun(segment, fontSize, sans, style);
+        var glyphs = TextFontMetrics.ShapeRun(segment, fontSize, face);
         if (glyphs.Count == 0)
             return;
 
@@ -311,11 +330,11 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// How far the pen moves over one run — the reserved width for a bundled face, and the
     /// face's own measure for a fallback the reservation never saw.
     /// </summary>
-    private float RunWidth(string segment, SKTypeface typeface, SKTypeface? reserved, bool sans,
-        double fontSize, FontStyle style, SKPaint paint)
+    private float RunWidth(string segment, SKTypeface typeface, SKTypeface? reserved,
+        TextFace? measured, double fontSize, SKPaint paint)
     {
-        if (ReferenceEquals(typeface, reserved))
-            return T(TextFontMetrics.Advance(segment, fontSize, sans, style));
+        if (ReferenceEquals(typeface, reserved) && measured is TextFace face)
+            return T(TextFontMetrics.Advance(segment, fontSize, face));
         // SKPaint.MeasureText takes a string overload where SKFont.MeasureText wants glyph ids.
         var previous = paint.Typeface;
         paint.Typeface = typeface;
@@ -349,46 +368,19 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     }
 
     /// <summary>
-    /// The first name in a bound chain this machine can actually resolve.
+    /// Caches SKTypeface and SKFont instances. Text is addressed by
+    /// <see cref="TextFace"/> — the file the reservation opened — and music by FAMILY NAME,
+    /// which is how an Emmentaler design and the brace are named.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A CHAIN IS A PREFERENCE ORDER, and this backend can hold ONE face per run — so
-    /// unlike SVG, which hands the whole list to a viewer that walks it per glyph, the
-    /// choice happens here. Per-CHARACTER fallback still happens afterwards
-    /// (<c>SegmentByTypeface</c>), so naming a Latin face and a CJK one does the right
-    /// thing either way; the chain decides which face the run STARTS on.
-    /// When nothing in the chain resolves, the generic falls back to the bundled face
-    /// rather than to whatever the system offers, because that is at least the face the
-    /// layout measured.
+    /// ⚠️ THE TWO KEYS ARE NOT INTERCHANGEABLE and the family-name door is the lossy one: it
+    /// ends at <see cref="TryLoadSystem"/>, which substitutes. Nothing routes text through it
+    /// today — that was <c>FirstAvailable</c>, a second walk of the score's face chain, and
+    /// it is gone because the reservation's walk (<see cref="ScoreTextMetrics.Face"/>) is the
+    /// one that decides. <see cref="TryLoadBundledText"/> stays ahead of the system lookup so
+    /// that a generic family arriving here in future lands on the file the layout measured
+    /// rather than on Times New Roman.
     /// </remarks>
-    private static string FirstAvailable(
-        System.Collections.Immutable.ImmutableArray<string> names, bool sans)
-    {
-        foreach (var name in names)
-        {
-            // A BUNDLED music face is not a system font and must not be probed as one —
-            // the system-start brace arrives here as "Emmentaler-Brace" and the cache
-            // loads it from disk. Probing would fail and silently draw a serif "{".
-            if (EmmentalerFaces.TryParseFamily(name, out _) ||
-                string.Equals(name, TextFontPlan.BraceFaceName, StringComparison.OrdinalIgnoreCase))
-                return name;
-            using var probe = SKTypeface.FromFamilyName(name);
-            // FromFamilyName never returns null on a stock box — it substitutes — so the
-            // name has to be compared back to know whether it was really found.
-            if (probe != null &&
-                string.Equals(probe.FamilyName, name, StringComparison.OrdinalIgnoreCase))
-                return name;
-        }
-        // Nothing in the chain resolved. Fall back to the BUNDLED face rather than to
-        // whatever the system offers: it is at least the face the layout measured.
-        return sans ? "sans-serif" : "serif";
-    }
-
-    /// <summary>
-    /// Caches SKTypeface and SKFont instances per family/style. Loads the
-    /// Emmentaler music fonts from disk; falls back to system typefaces for
-    /// generic families like "serif" and "sans-serif".
-    /// </summary>
     private sealed class FontCache : IDisposable
     {
         private readonly string? _fontDirectory;
@@ -398,10 +390,34 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         /// but NOT disposed with this page's own handles.</summary>
         private readonly HashSet<SKTypeface> _borrowed = new();
         private readonly Dictionary<string, SKFont> _fonts = new();
+        private readonly Dictionary<(TextFace Face, float PixelSize), SKFont> _faceFonts = new();
 
         public FontCache(string? fontDirectory)
         {
             _fontDirectory = fontDirectory;
+        }
+
+        /// <summary>
+        /// An SKFont over the very file <see cref="TextFontMetrics"/> measured from.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ THE TYPEFACE IS BORROWED, never owned. TextFontMetrics caches one instance per
+        /// face and measures with it, so it is deliberately NOT put in <c>_typefaces</c>:
+        /// there is then nothing for <see cref="Dispose"/> to skip, and no way for this
+        /// page's teardown to leave the shared cache holding a dead handle. Only the SKFont
+        /// built over it belongs to this page.
+        /// </remarks>
+        public SKFont GetFont(TextFace face, float pixelSize)
+        {
+            var key = (face, pixelSize);
+            if (_faceFonts.TryGetValue(key, out var cached))
+                return cached;
+            var made = new SKFont(TextFontMetrics.Typeface(face), pixelSize)
+            {
+                Edging = SKFontEdging.SubpixelAntialias,
+            };
+            _faceFonts[key] = made;
+            return made;
         }
 
         public SKFont GetFont(string family, float pixelSize, FontStyle style)
@@ -547,6 +563,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         public void Dispose()
         {
             foreach (var f in _fonts.Values) f.Dispose();
+            foreach (var f in _faceFonts.Values) f.Dispose();
             foreach (var t in _typefaces.Values)
                 if (!_borrowed.Contains(t)) t.Dispose();
         }

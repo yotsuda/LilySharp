@@ -2367,6 +2367,21 @@ internal sealed class LayoutEngine
         // a label above system 2 print through system 1's figured bass. The
         // box is added to BOTH sides — merging on the side the mark does not
         // protrude toward is a no-op, so no direction bookkeeping is needed.
+        // LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+        // inter-system distance reads it, so a label whose ink only just clears the system
+        // below still keeps a hair of air; LilyPond gets the same effect from measuring
+        // outlines pointwise with outside-staff-padding, which this X-aware box stands in
+        // for. It departs from lily/axis-group-interface.cc:45
+        // default_outside_staff_padding_ = 0.46 in being applied HORIZONTALLY to a box
+        // rather than as a clearance between two skylines, and it disappears when this
+        // silhouette carries outlines instead of boxes. NOTHING OBSERVES IT TODAY: no
+        // ledger point reads an inter-system distance driven by a mark box.
+        // ⚠️ It was spelled twice as a literal 0.4 in the loop below before 2026-08-18, and
+        // naming it is what made the tempo arm's second defect visible — a margin is added
+        // to an EXTENT, and the tempo's extent is left-anchored, so "half width plus 0.4"
+        // could never have been the same sentence for both.
+        const double MarkSilhouetteMargin = 0.4;
+
         void AddMarkBox(int measureIndex, double x0, double x1, double top, double bottom)
         {
             if (!measureToSystem.TryGetValue(measureIndex, out int s))
@@ -2379,23 +2394,50 @@ internal sealed class LayoutEngine
             {
                 if (MusicMarkItem.IsSpannerHandled(m.MarkType))
                     continue;
-                // Same vertical envelope Enrich uses; width from the real text
-                // (boxed labels get the box padding, symbols a 2 ss square).
-                double halfW = m.IsSymbol
-                    ? 1.0
-                    : fonts.Advance(m.Text, 2.4, MusicMarkEngraver.TextRoleOf(m.MarkType),
-                          Rendering.FontStyle.Bold) / 2 + 0.4;
+                // Same vertical envelope Enrich uses; the WIDTH is the mark's own extent,
+                // read from the one home — MusicMarkEngraver.MarkXExtent, which answers per
+                // TYPE: the metronome mark's laid-out ink (left-anchored), a boxed label's
+                // string at its own boxed size and weight plus LilyPond's markup box
+                // padding, a segno/coda glyph's square, and a plain-text mark's advance at
+                // the size and style the draw uses.
+                //
+                // ⚠️⚠️ ★ THIS SITE USED TO SPELL ALL FOUR ITSELF, and only one of the four
+                // was right (2026-08-18, session 204). Session 203 collapsed the PLAIN-TEXT
+                // arm into the one home and left the sentence around it — "the size and
+                // style come from the one home" — which reads as if the whole site had
+                // moved. It had not:
+                //   * a TEMPO was priced as the advance of its text at the plain-text em,
+                //     and then CENTRED on an anchor the draw treats as a left edge;
+                //   * a boxed SECTION LABEL or REHEARSAL mark, drawn 2.2/2.4 BOLD inside a
+                //     box, was priced at the plain-text 2.8 BOLD ITALIC;
+                //   * a segno/coda glyph got a hand-written 1.0 half-width beside the 1.2
+                //     the same glyph is given everywhere else.
+                // FOUND by porting the plain-text em: eighteen books moved and thirteen of
+                // them carry no plain-text mark at all — they carry `form main { Intro A1
+                // … }`, i.e. section labels, riding a constant that has nothing to do with
+                // them. HANDOFF §7.6: a comment claiming N spellings were unified does not
+                // make the site exhaustive; count the arms.
+                var (mx0, mx1) = MusicMarkEngraver.MarkXExtent(fonts, m, m.X);
+                // The margin is the SILHOUETTE's, not the ink's, so it is added here and not
+                // in the one home — and symbols keep going without it, exactly as before.
+                double margin = m.IsSymbol ? 0.0 : MarkSilhouetteMargin;
                 // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
                 double mY = m.YUp - 2.0;
-                AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, mY + 2.1, mY - 0.7);
+                AddMarkBox(m.MeasureIndex, mx0 - margin, mx1 + margin, mY + 2.1, mY - 0.7);
             }
         }
         if (!customTexts.IsDefaultOrEmpty)
         {
             foreach (var ct in customTexts)
             {
+                // ⚠️ The size and style are the ones DrawCustomTexts draws with (and the
+                // outside-staff stacker already reserved with): TextScript's own em, italic.
+                // This site said 2.0 Bold, which over-reserved a short "rit." by 0.102429921
+                // and a "molto espressivo" by 1.024299213 staff spaces — the harmless
+                // direction, but still a box around a string nobody draws.
                 double halfW =
-                    fonts.Advance(ct.Text, 2.0, TextRole.Text, Rendering.FontStyle.Bold) / 2 + 0.2;
+                    fonts.Advance(ct.Text, EngravingDefaults.TextScriptFontSize, TextRole.Text,
+                        Rendering.FontStyle.Italic) / 2 + 0.2;
                 // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
                 double ctY = ct.YUp - 2.0;
                 AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY + 1.8, ctY - 0.6);

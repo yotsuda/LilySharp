@@ -1926,13 +1926,17 @@ internal static class OutsideStaffStacker
             // pair like every other stencil-skylined text grob; boxed labels ARE drawn
             // boxes and segno/coda are glyphs with no baked outline — those keep their
             // box extents (named, not hidden).
-            if (!m.IsSymbol && m.MarkType is not (MusicMarkType.Rehearsal
-                or MusicMarkType.SectionLabel or MusicMarkType.Tempo))
+            // ⚠️ THE SUSTAIN PEDAL MOVED TO THE BOX SIDE OF THAT LINE on 2026-08-18: its
+            // word is a run of MUSIC glyphs (MusicMarkEngraver.SustainPedalStencil), so
+            // asking TextOutlineSkylines for the outline of "Ped." would trace a serif
+            // string nobody draws. It falls through to MusicMarkExtents, which prices the
+            // glyphs' own LILC boxes — the boxes LilyPond juxtaposes them by.
+            if (!m.IsSymbol && !MusicMarkEngraver.IsGlyphPedal(m.MarkType)
+                && m.MarkType is not (MusicMarkType.Rehearsal
+                    or MusicMarkType.SectionLabel or MusicMarkType.Tempo))
             {
-                double fs = 4.0 * 0.7; // renderer FontSize * plain-text factor
-                var style = m.MarkType is MusicMarkType.SustainOn or MusicMarkType.SustainOff
-                    ? FontStyle.Bold
-                    : FontStyle.BoldItalic;
+                double fs = MusicMarkEngraver.PlainTextFontSize;
+                var style = MusicMarkEngraver.TextStyleOf(m.MarkType);
                 var role = MusicMarkEngraver.TextRoleOf(m.MarkType);
                 double halfW = fonts.Advance(m.Text, fs, role, style) / 2;
                 var (mUp, mDown) = TextOutlineSkylines.Place(
@@ -2006,21 +2010,33 @@ internal static class OutsideStaffStacker
             }
             default:
             {
-                // Plain text marks (D.S./Fine/pedal/…), baseline anchor at 0.7 x 4sp.
+                // THE SUSTAIN PEDAL, whose word is a run of MUSIC glyphs and not a string
+                // at all (lily/sustain-pedal.cc:47-76). This arm IS hit from the stacker —
+                // PlaceMusicMarks sends it here rather than to the outline pair, because a
+                // text outline of "Ped." traces a face nobody draws. The glyphs' own LILC
+                // boxes are what LilyPond juxtaposes them by, so the box description IS the
+                // stencil here rather than an approximation of it, and the ink sits ON the
+                // baseline (every pedal glyph's bbox bottom is 0).
+                if (MusicMarkEngraver.IsGlyphPedal(m.MarkType))
+                {
+                    var (pedalWidth, pedalTop) =
+                        MusicMarkEngraver.SustainPedalExtent(m.Text);
+                    return (-pedalWidth / 2, pedalWidth / 2, pedalTop, 0.0);
+                }
+                // Plain text marks (D.S./Fine/sostenuto/una corda/…), baseline anchor at
+                // 0.7 x 4sp.
                 // ⚠️ PlaceMusicMarks routes these through their OUTLINE pair before
                 // reaching this method, so this arm is not hit from the stacker any
                 // more; it stays as the box description of the same geometry (the
                 // sizes/styles here and there must not drift apart).
-                // Both extents are the string's own metrics at the style the draw picks
-                // (DrawSingleMusicMark: BoldItalic, except the sustain-pedal words,
-                // which stay upright Bold): ink about the baseline vertically, the
-                // advance horizontally — LilyPond has no "estimated" widths, a mark's
-                // X extent is its markup stencil's. (To-Coda still prices its text
-                // only; the coda glyph beside it stays an unreserved approximation.)
-                double fs = fontSize * 0.7;
-                var style = m.MarkType is MusicMarkType.SustainOn or MusicMarkType.SustainOff
-                    ? FontStyle.Bold
-                    : FontStyle.BoldItalic;
+                // Both extents are the string's own metrics at the size and style the draw
+                // picks, read from the one home (MusicMarkEngraver.PlainTextFontSize /
+                // TextStyleOf): ink about the baseline vertically, the advance horizontally
+                // — LilyPond has no "estimated" widths, a mark's X extent is its markup
+                // stencil's. (To-Coda still prices its text only; the coda glyph beside it
+                // stays an unreserved approximation.)
+                double fs = MusicMarkEngraver.PlainTextFontSize;
+                var style = MusicMarkEngraver.TextStyleOf(m.MarkType);
                 var role = MusicMarkEngraver.TextRoleOf(m.MarkType);
                 double halfW = fonts.Advance(m.Text, fs, role, style) / 2;
                 var ink = fonts.Ink(m.Text, fs, role, style);

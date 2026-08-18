@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -149,6 +149,20 @@ internal sealed class EmmentalerFontResolver : IFontResolver
             }
         }
     }
+
+    /// <summary>
+    /// Will a page drawn in <paramref name="family"/> carry that face's OWN font program?
+    /// </summary>
+    /// <remarks>
+    /// True only when <c>embedded</c> was written and the licence permitted the bytes to be
+    /// loaded. It is the question the drawing side has to ask before placing glyphs at the
+    /// positions the layout reserved: with the real program the ink IS the face that was
+    /// measured, and shaping it is right; without it the page carries the bundled STAND-IN,
+    /// whose glyphs are not the measured ones, and putting them at the measured positions
+    /// would be worse than letting the viewer lay the string out.
+    /// </remarks>
+    internal bool EmbedsOwnProgram(string family)
+        => _textFaces.TryGetValue(family, out var configured) && configured.Bytes != null;
 
     /// <summary>The face name an embedded configured face answers to.</summary>
     /// <remarks>

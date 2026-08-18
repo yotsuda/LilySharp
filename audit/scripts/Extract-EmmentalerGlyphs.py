@@ -266,6 +266,14 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("PedalHeelDown", "scripts.dpedalheel", ""),
     ("PedalToeUp", "scripts.upedaltoe", "V"),
     ("PedalToeDown", "scripts.dpedaltoe", ""),
+    # The PIANO pedal's word, which is not a word. lily/sustain-pedal.cc:47-76
+    # Sustain_pedal::print walks pedalSustainStrings and pastes THESE glyphs edge to
+    # edge with zero padding -- the file's own comment says "we have no kerning".
+    # Lily# drew a bold serif string in their place until 2026-08-18; ledger point
+    # mark.pedal.width.sustain measured that gap at 1.478779528 staff spaces.
+    ("PedalPed", "pedal.Ped", "the Ped ligature; 'Ped.' is this plus PedalDot"),
+    ("PedalDot", "pedal..", "the full stop that follows Ped"),
+    ("PedalStar", "pedal.*", "the release star"),
     # CORRECTED. This drew scripts.snappizzicato -- a different articulation entirely --
     # while its comment said thumb. scripts.thumb is its own glyph in the font.
     ("ArticThumb", "scripts.thumb", "cello thumb position"),

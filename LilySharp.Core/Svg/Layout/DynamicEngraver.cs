@@ -645,17 +645,31 @@ internal static class DynamicEngraver
     // reports its true (wide) extent.
     private const double DynamicFontSize = 2.0;
 
-    // ⚠️ MEASURED UPRIGHT, DRAWN SLANTED — a reserve-versus-draw mismatch older than the
-    // role port and NOT fixed here (fixing it moves the page; see the To-Coda prefix's
-    // note in SharedRenderer.Marks.cs). DrawDynamics uses Italic for expressive text and
-    // BoldItalic for a dynamic level; these two spell the upright pair the width has
-    // always been taken from. The styles are written out rather than left implicit so the
-    // pair is visible to the next reader.
-    private static double LabelHalfWidth(
+    /// <summary>
+    /// Weight and slant a dynamic label is set at: plain italic for free expressive text,
+    /// LilyPond's bold-italic DynamicText face for a dynamic level.
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME, read by <c>SharedRenderer.DrawDynamics</c> as well as by the reservation
+    /// below — a label's reserved half-width has to be half of what is drawn.
+    /// <para>
+    /// ⚠️ It was measured UPRIGHT and drawn SLANTED until 2026-08-18. MEASURED at the
+    /// 2.0 em: "pp" and "sfz" reserved 0.068286614 staff spaces too much, "mf"
+    /// 0.034143307, "cresc." 0.170716535 — and "dim." 0.136573228 too LITTLE, i.e. the
+    /// sign was not even constant, so no single fudge could have stood in for it.
+    /// </para>
+    /// </remarks>
+    internal static Rendering.FontStyle LabelStyle(bool expressive)
+        => expressive ? Rendering.FontStyle.Italic : Rendering.FontStyle.BoldItalic;
+
+
+    // internal, not private: MarkReserveVersusDrawTests calls it to state that the reserved
+    // half-width is half of the DRAWN advance. Nothing else outside this type uses it.
+    internal static double LabelHalfWidth(
         Rendering.ScoreTextMetrics fonts, string text, bool expressive)
     {
         double w = fonts.Advance(text, DynamicFontSize, Rendering.TextRole.Dynamics,
-            expressive ? Rendering.FontStyle.Regular : Rendering.FontStyle.Bold);
+            LabelStyle(expressive));
         return w / 2.0;
     }
 

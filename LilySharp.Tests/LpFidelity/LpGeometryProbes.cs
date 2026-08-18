@@ -1849,6 +1849,108 @@ internal static class LpGeometryProbes
     private static readonly string T8V = TextWidthScore("T8V", "8va");
 
     /// <summary>
+    /// HOW WIDE A PLAIN-TEXT MUSIC MARK IS — the mirrors of jump-mark-em.ly's books
+    /// JMF / JMJ / PSO / PSU. The mark family's own em and face, against LilyPond's.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// HANDOFF §1 ⑷ ⒞'s island, opened as the ledger before the port, in the order
+    /// §5.2.1③ asks for. <c>MusicMarkEngraver.PlainTextFontSize</c> is 2.8 ss (4.0 × 0.7)
+    /// and <c>TextStyleOf</c> answers <c>BoldItalic</c>; both carry a LILYSHARP-OWN tag
+    /// saying neither is LilyPond's, and until this family existed nothing measured either
+    /// — the tags named a suspicion and the corpus held no point.
+    /// </para>
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/jump-mark-em.ly, 2026-08-18), and the pairs are
+    /// what make the reading a decomposition rather than one number:
+    /// </para>
+    /// <list type="number">
+    /// <item>THE EM IS 2.2 ss, NOT 2.8. A <c>JumpScript</c> declares no <c>font-size</c>
+    /// (scm/define-grobs.scm:1898-1926), so it is set at the paper's own
+    /// <c>text-font-size</c> = 11 pt × factor over a 5 pt staff space (scm/paper.scm:68-88
+    /// layout-set-absolute-staff-size-in-module) — and the stencil says so outright: book
+    /// JMJ's expression is <c>(glyph-string … "C059-Italic" 3.865234375 …)</c>, the em in
+    /// MILLIMETRES, and 2.2 × 1.757299018 mm/ss = 3.8660578.</item>
+    /// <item>THE FACE IS ITALIC, NOT BOLD ITALIC. Same declaration, no
+    /// <c>font-series</c> — and JMJ ("D.S. al Coda" as a JumpScript, 12.906170078740160)
+    /// equals TIJ (the same string as <c>^\markup \italic</c>, 12.906170078740157) to
+    /// fifteen digits, while TBJ (<c>\bold \italic</c>) is 13.964612598425195. The pair
+    /// separates the weight from the size instead of leaving a total to be attributed.</item>
+    /// <item>THE SOSTENUTO PEDAL IS THE SAME REGIME: PSO "Sost. Ped." 9.901559055118110
+    /// equals its italic control TIS exactly (SostenutoPedal declares font-shape italic and
+    /// nothing else, scm/define-grobs.scm:3190-3208).</item>
+    /// <item>THE SUSTAIN PEDAL IS NOT — and this is the reading that keeps its residual
+    /// from being called a size error. <c>lily/sustain-pedal.cc:47-76</c>
+    /// <c>Sustain_pedal::print</c> pastes MUSIC-FONT glyphs (<c>pedal.Ped</c>,
+    /// <c>pedal..</c>) edge to edge with zero padding; the file's own comment says "we have
+    /// no kerning" and "FIXME. Need to use markup." Its 3.472000000 is not a multiple of
+    /// the 0.034143307086614 pixel every text reading in this corpus lands on (101.69 of
+    /// them), because it lives on Emmentaler's grid and not on Pango's. Lily# draws it as
+    /// an upright bold serif STRING.</item>
+    /// </list>
+    /// <para>
+    /// ⚠️ ONE MORE THING THE PROBE MEASURED, not ported here and named so it is not
+    /// rediscovered as a width bug: LilyPond does not PRINT "Fine" at the written end of
+    /// the music at all. <c>lily/jump-engraver.cc:228-237</c> suicides the grob unless
+    /// <c>finalFineTextVisibility</c> is set, and it defaults to <c>#f</c> — the final bar
+    /// line already says it. Book JMF sets the property so the string can be measured; book
+    /// JMN is the same book at the default and prints no grob row at all. That is a
+    /// VISIBILITY rule, not a geometry one, so it belongs to a different island than this
+    /// family (HANDOFF §5.3: a zero arrives wearing the face of "not measured" — here the
+    /// zero was real and had a source line).
+    /// </para>
+    /// <para>
+    /// ⚠️ The marks are engraved at the end of a section, as the fixtures spell them, and
+    /// every section is referenced as <c>~Name</c> so no section LABEL is drawn: the
+    /// reading filters on role and em, and a label would be a second serif run. The count
+    /// guard in <see cref="RenderedGeometry.SoleMusicMarkReservedWidth"/> is what says so.
+    /// </para>
+    /// </remarks>
+    /// <param name="pedal">The part's <c>pedal</c> style, or <c>""</c> for the navigation
+    /// books which have none. ⚠️ IT IS A PARAMETER BECAUSE THE TWO SIDES' DEFAULTS DIFFER,
+    /// and each pedal book names LILYPOND's: <c>pedalSustainStyle</c> is <c>'text</c> and
+    /// <c>pedalSostenutoStyle</c> is <c>'mixed</c> (ly/engraver-init.ly:895,904), while
+    /// Lily#'s <c>Staff.PedalStyle</c> defaults to <c>Bracket</c> for both — so a book that
+    /// took the Lily# default would draw a BRACKET and no string at all, and the pair would
+    /// be measuring nothing. MEASURED that way first, 2026-08-18: the count guard said
+    /// "found 0", which is the loud failure it is there for.</param>
+    private static string MarkWidthScore(string name, string marks, string pedal = "") => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble {{pedal}} }
+
+        section A {
+          melody { c'4 c' c' c' | {{marks}} c'1 | }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff melody
+        }
+        """;
+
+    /// <summary>"Fine" — the JumpScript LilyPond will only print when asked (book JMF).</summary>
+    private static readonly string MKF = MarkWidthScore("MKF", "fine");
+
+    /// <summary>"D.S. al Coda" — the longest string in the family, and the one the stray
+    /// 2.2 reservation was short on by 4.233770079 ss (book JMJ).</summary>
+    private static readonly string MKJ = MarkWidthScore("MKJ", "ds al coda");
+
+    /// <summary>"Sost. Ped." — the pedal that IS text on both sides (book PSO), at
+    /// LilyPond's own sostenuto default <c>'mixed</c> (leading string, then a bracket).</summary>
+    private static readonly string MKO =
+        MarkWidthScore("MKO", "c'4@sostenutoOn c' c' c'@sostenutoOff |", "pedal mixed");
+
+    /// <summary>"Ped." — the pedal that is a GLYPH STRING in LilyPond and a bold serif word
+    /// in Lily# (book PSU), at LilyPond's own sustain default <c>'text</c>. The entry that
+    /// names a mechanism gap, not a size.</summary>
+    private static readonly string MKP =
+        MarkWidthScore("MKP", "c'4@sustainOn c' c' c'@sustainOff |", "pedal text");
+
+    /// <summary>
     /// THE NUMBER OF A FULLY BEAMED TUPLET as staff-to-staff binding ink — the mirrors of
     /// tuplet-number-beamed.ly's books TNB / TNC.
     /// </summary>
@@ -9397,6 +9499,41 @@ internal static class LpGeometryProbes
         new("text.width.av", TAV, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
         new("text.width.va", TK3, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
         new("text.width.8va", T8V, g => g.SoleCustomTextReservedWidth(), RaggedBottomPaper),
+
+        // --- HOW WIDE A PLAIN-TEXT MUSIC MARK IS (books JMF/JMJ/PSO/PSU) ---
+        // HANDOFF §1 ⑷ ⒞'s island, priced against LilyPond BEFORE the port (§5.2.1③).
+        // The em and the face are ONE HOME each since 2026-08-18, and this family is what
+        // observes them: MusicMarkEngraver.PlainTextFontSize says 2.8 ss where LilyPond's
+        // JumpScript is set at the paper's 2.2, and TextStyleOf says BoldItalic where the
+        // grob declares font-shape italic and NO font-series. Both readings come from those
+        // homes (RenderedGeometry.SoleMusicMarkReservedWidth), so a port moves the residual
+        // rather than leaving a baseline nobody can fire.
+        //   * the two navigation strings are the SIZE + WEIGHT term, in two lengths: a size
+        //     error scales with the string and a per-glyph one does not, and the .ly file's
+        //     italic/bold controls (TIF/TBF, TIJ/TBJ) already split the two on LilyPond's
+        //     side, so nothing here is attributed by subtraction.
+        //   * sostenuto is the same regime through a different grob — if it ever stops
+        //     agreeing with the jump scripts, the two spellings have drifted apart again.
+        //   * SUSTAIN IS NOT THE SAME REGIME and its entry says so: LilyPond pastes
+        //     Emmentaler's pedal.Ped and pedal.. glyphs (lily/sustain-pedal.cc:47-76) and
+        //     Lily# draws a bold serif word. Porting the em alone must NOT close it, and an
+        //     entry that stayed silent about that is how the next session would try.
+        new("mark.jump.width.fine", MKF,
+            g => g.SoleMusicMarkReservedWidth(LilySharp.Core.Svg.Model.MusicMarkType.Fine),
+            RaggedBottomPaper),
+        new("mark.jump.width.ds-al-coda", MKJ,
+            g => g.SoleMusicMarkReservedWidth(LilySharp.Core.Svg.Model.MusicMarkType.DalSegnoAlCoda),
+            RaggedBottomPaper),
+        new("mark.pedal.width.sostenuto", MKO,
+            g => g.SoleMusicMarkReservedWidth(LilySharp.Core.Svg.Model.MusicMarkType.SostenutoOn),
+            RaggedBottomPaper),
+        new("mark.pedal.width.sustain", MKP,
+            // "Ped." by name: the `pedal text` style draws the release star at the same role
+            // and the same em, and LilyPond engraves two SustainPedal grobs for the same
+            // reason (its second one is the pedal.* glyph, 1.555600000 ss).
+            g => g.SoleMusicMarkReservedWidth(
+                LilySharp.Core.Svg.Model.MusicMarkType.SustainOn, "Ped."),
+            RaggedBottomPaper),
 
         // --- the FULLY BEAMED tuplet's number as staff-staff binding ink (TNB/TNC) ---
         // The first points that reach SkylineBuilder's !ShowBracket skip. See

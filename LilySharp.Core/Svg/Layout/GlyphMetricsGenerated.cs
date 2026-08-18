@@ -596,6 +596,33 @@ internal static partial class GlyphMetrics
     /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
     public const double ArticFlageoletGlyphAdvance = 0.400000;
 
+    /// <summary>The Ped ligature of the sustain pedal's word — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-pedals.mf:320 fet_beginchar ("pedal Ped", "Ped") (pedal.Ped = U+E09D in this build)</remarks>
+    public static readonly BBox PedalPed = new(0.000000, 0.000000, 3.192000, 2.000000);
+    /// <summary>The Ped ligature of the sustain pedal's word — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox PedalPedOutline = new(-0.004000, 0.000000, 3.200000, 2.000000);
+    /// <summary>The Ped ligature of the sustain pedal's word — advance width (next-glyph horizontal feed).</summary>
+    public const double PedalPedAdvance = 3.192000;
+
+    /// <summary>The full stop that follows Ped — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-pedals.mf:120 fet_beginchar ("pedal dot", ".") (pedal.. = U+E099 in this build)</remarks>
+    public static readonly BBox PedalDot = new(0.000000, 0.000000, 0.280000, 0.280000);
+    /// <summary>The full stop that follows Ped — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox PedalDotOutline = new(0.000000, 0.000000, 0.280000, 0.280000);
+    /// <summary>The full stop that follows Ped — advance width (next-glyph horizontal feed).</summary>
+    public const double PedalDotAdvance = 0.280000;
+
+    /// <summary>The sustain pedal's release star — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-pedals.mf:41 fet_beginchar ("pedal asterisk", "*") (pedal.* = U+E097 in this build)</remarks>
+    public static readonly BBox PedalStar = new(0.000000, 0.000000, 1.555600, 1.555600);
+    /// <summary>The sustain pedal's release star — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000);
+    /// <summary>The sustain pedal's release star — advance width (next-glyph horizontal feed).</summary>
+    public const double PedalStarAdvance = 1.552000;
+
     /// <summary>Common-time (C) signature — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-timesignatures.mf — timesig.C44 (timesig.C44 = U+E095 in this build)</remarks>
     public static readonly BBox TimeSigCommon = new(0.000000, -1.000000, 1.700000, 1.000000);
@@ -1489,6 +1516,24 @@ internal static partial class GlyphMetrics
         public BBox ArticFlageoletGlyphOutline { get; init; }
         /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
         public double ArticFlageoletGlyphAdvance { get; init; }
+        /// <summary>The Ped ligature of the sustain pedal's word — BBox (LILC bbox).</summary>
+        public BBox PedalPed { get; init; }
+        /// <summary>The Ped ligature of the sustain pedal's word — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox PedalPedOutline { get; init; }
+        /// <summary>The Ped ligature of the sustain pedal's word — advance width (next-glyph horizontal feed).</summary>
+        public double PedalPedAdvance { get; init; }
+        /// <summary>The full stop that follows Ped — BBox (LILC bbox).</summary>
+        public BBox PedalDot { get; init; }
+        /// <summary>The full stop that follows Ped — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox PedalDotOutline { get; init; }
+        /// <summary>The full stop that follows Ped — advance width (next-glyph horizontal feed).</summary>
+        public double PedalDotAdvance { get; init; }
+        /// <summary>The sustain pedal's release star — BBox (LILC bbox).</summary>
+        public BBox PedalStar { get; init; }
+        /// <summary>The sustain pedal's release star — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox PedalStarOutline { get; init; }
+        /// <summary>The sustain pedal's release star — advance width (next-glyph horizontal feed).</summary>
+        public double PedalStarAdvance { get; init; }
         /// <summary>Common-time (C) signature — BBox (LILC bbox).</summary>
         public BBox TimeSigCommon { get; init; }
         /// <summary>Common-time (C) signature — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2068,6 +2113,21 @@ internal static partial class GlyphMetrics
             ArticFlageoletGlyphOutline = new(ArticFlageoletGlyphOutline.Left * magnification, ArticFlageoletGlyphOutline.Bottom * magnification,
                 ArticFlageoletGlyphOutline.Right * magnification, ArticFlageoletGlyphOutline.Top * magnification),
             ArticFlageoletGlyphAdvance = ArticFlageoletGlyphAdvance * magnification,
+            PedalPed = new(PedalPed.Left * magnification, PedalPed.Bottom * magnification,
+                PedalPed.Right * magnification, PedalPed.Top * magnification),
+            PedalPedOutline = new(PedalPedOutline.Left * magnification, PedalPedOutline.Bottom * magnification,
+                PedalPedOutline.Right * magnification, PedalPedOutline.Top * magnification),
+            PedalPedAdvance = PedalPedAdvance * magnification,
+            PedalDot = new(PedalDot.Left * magnification, PedalDot.Bottom * magnification,
+                PedalDot.Right * magnification, PedalDot.Top * magnification),
+            PedalDotOutline = new(PedalDotOutline.Left * magnification, PedalDotOutline.Bottom * magnification,
+                PedalDotOutline.Right * magnification, PedalDotOutline.Top * magnification),
+            PedalDotAdvance = PedalDotAdvance * magnification,
+            PedalStar = new(PedalStar.Left * magnification, PedalStar.Bottom * magnification,
+                PedalStar.Right * magnification, PedalStar.Top * magnification),
+            PedalStarOutline = new(PedalStarOutline.Left * magnification, PedalStarOutline.Bottom * magnification,
+                PedalStarOutline.Right * magnification, PedalStarOutline.Top * magnification),
+            PedalStarAdvance = PedalStarAdvance * magnification,
             TimeSigCommon = new(TimeSigCommon.Left * magnification, TimeSigCommon.Bottom * magnification,
                 TimeSigCommon.Right * magnification, TimeSigCommon.Top * magnification),
             TimeSigCommonOutline = new(TimeSigCommonOutline.Left * magnification, TimeSigCommonOutline.Bottom * magnification,
@@ -2451,6 +2511,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.399999, -0.399999, 0.399999, 0.399999),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        PedalPed = new(0.000000, 0.000000, 3.192145, 1.999993),
+        PedalPedOutline = new(-0.056000, 0.000000, 3.200000, 2.000000),
+        PedalPedAdvance = 3.188000,
+        PedalDot = new(0.000000, 0.000000, 0.351870, 0.351870),
+        PedalDotOutline = new(0.000000, 0.000000, 0.352000, 0.352000),
+        PedalDotAdvance = 0.348000,
+        PedalStar = new(0.000000, 0.000000, 1.555431, 1.555431),
+        PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000),
+        PedalStarAdvance = 1.552000,
         TimeSigCommon = new(0.000000, -0.999996, 1.648479, 0.999996),
         TimeSigCommonOutline = new(0.000000, -1.076000, 1.696000, 1.076000),
         TimeSigCommonAdvance = 1.648000,
@@ -2769,6 +2838,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.399999, -0.399999, 0.399999, 0.399999),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        PedalPed = new(0.000000, 0.000000, 3.192053, 1.999994),
+        PedalPedOutline = new(-0.044000, 0.000000, 3.200000, 2.000000),
+        PedalPedAdvance = 3.192000,
+        PedalDot = new(0.000000, 0.000000, 0.333967, 0.333967),
+        PedalDotOutline = new(0.000000, 0.000000, 0.336000, 0.336000),
+        PedalDotAdvance = 0.332000,
+        PedalStar = new(0.000000, 0.000000, 1.555551, 1.555551),
+        PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000),
+        PedalStarAdvance = 1.552000,
         TimeSigCommon = new(0.000000, -0.999997, 1.661265, 0.999997),
         TimeSigCommonOutline = new(0.000000, -1.068000, 1.704000, 1.068000),
         TimeSigCommonAdvance = 1.660000,
@@ -3087,6 +3165,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        PedalPed = new(0.000000, 0.000000, 3.192079, 2.000000),
+        PedalPedOutline = new(-0.032000, 0.000000, 3.200000, 2.000000),
+        PedalPedAdvance = 3.188000,
+        PedalDot = new(0.000000, 0.000000, 0.318246, 0.318246),
+        PedalDotOutline = new(0.000000, 0.000000, 0.320000, 0.320000),
+        PedalDotAdvance = 0.316000,
+        PedalStar = new(0.000000, 0.000000, 1.555587, 1.555587),
+        PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000),
+        PedalStarAdvance = 1.552000,
         TimeSigCommon = new(0.000000, -1.000000, 1.672702, 1.000000),
         TimeSigCommonOutline = new(0.000000, -1.064000, 1.712000, 1.064000),
         TimeSigCommonAdvance = 1.672000,
@@ -3405,6 +3492,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        PedalPed = new(0.000000, 0.000000, 3.191934, 2.000000),
+        PedalPedOutline = new(-0.020000, 0.000000, 3.200000, 2.000000),
+        PedalPedAdvance = 3.188000,
+        PedalDot = new(0.000000, 0.000000, 0.303970, 0.303970),
+        PedalDotOutline = new(0.000000, 0.000000, 0.304000, 0.304000),
+        PedalDotAdvance = 0.300000,
+        PedalStar = new(0.000000, 0.000000, 1.555640, 1.555640),
+        PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000),
+        PedalStarAdvance = 1.552000,
         TimeSigCommon = new(0.000000, -0.999874, 1.682924, 0.999874),
         TimeSigCommonOutline = new(0.000000, -1.060000, 1.720000, 1.060000),
         TimeSigCommonAdvance = 1.680000,
@@ -3723,6 +3819,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        PedalPed = new(0.000000, 0.000000, 3.191919, 2.000000),
+        PedalPedOutline = new(-0.012000, 0.000000, 3.200000, 2.000000),
+        PedalPedAdvance = 3.188000,
+        PedalDot = new(0.000000, 0.000000, 0.291358, 0.291358),
+        PedalDotOutline = new(0.000000, 0.000000, 0.292000, 0.292000),
+        PedalDotAdvance = 0.288000,
+        PedalStar = new(0.000000, 0.000000, 1.555556, 1.555556),
+        PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000),
+        PedalStarAdvance = 1.552000,
         TimeSigCommon = new(0.000000, -1.000000, 1.692031, 1.000000),
         TimeSigCommonOutline = new(0.000000, -1.056000, 1.728000, 1.056000),
         TimeSigCommonAdvance = 1.688000,
@@ -4043,6 +4148,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = ArticFlageoletGlyph,
         ArticFlageoletGlyphOutline = ArticFlageoletGlyphOutline,
         ArticFlageoletGlyphAdvance = ArticFlageoletGlyphAdvance,
+        PedalPed = PedalPed,
+        PedalPedOutline = PedalPedOutline,
+        PedalPedAdvance = PedalPedAdvance,
+        PedalDot = PedalDot,
+        PedalDotOutline = PedalDotOutline,
+        PedalDotAdvance = PedalDotAdvance,
+        PedalStar = PedalStar,
+        PedalStarOutline = PedalStarOutline,
+        PedalStarAdvance = PedalStarAdvance,
         TimeSigCommon = TimeSigCommon,
         TimeSigCommonOutline = TimeSigCommonOutline,
         TimeSigCommonAdvance = TimeSigCommonAdvance,
@@ -4361,6 +4475,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        PedalPed = new(0.000000, 0.000000, 3.191982, 2.000000),
+        PedalPedOutline = new(0.004000, -0.004000, 3.200000, 2.000000),
+        PedalPedAdvance = 3.188000,
+        PedalDot = new(0.000000, 0.000000, 0.269933, 0.269933),
+        PedalDotOutline = new(0.000000, 0.000000, 0.268000, 0.268000),
+        PedalDotAdvance = 0.268000,
+        PedalStar = new(0.000000, 0.000000, 1.555635, 1.555635),
+        PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000),
+        PedalStarAdvance = 1.552000,
         TimeSigCommon = new(0.000000, -0.999911, 1.707082, 0.999911),
         TimeSigCommonOutline = new(0.000000, -1.048000, 1.736000, 1.048000),
         TimeSigCommonAdvance = 1.704000,
@@ -4679,6 +4802,15 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.400000,
+        PedalPed = new(0.000000, 0.000000, 3.192063, 2.000000),
+        PedalPedOutline = new(0.008000, -0.004000, 3.200000, 2.000000),
+        PedalPedAdvance = 3.188000,
+        PedalDot = new(0.000000, 0.000000, 0.261111, 0.261111),
+        PedalDotOutline = new(0.000000, 0.000000, 0.260000, 0.260000),
+        PedalDotAdvance = 0.260000,
+        PedalStar = new(0.000000, 0.000000, 1.555556, 1.555556),
+        PedalStarOutline = new(0.000000, 0.000000, 1.556000, 1.556000),
+        PedalStarAdvance = 1.552000,
         TimeSigCommon = new(0.000000, -1.000000, 1.713492, 1.000000),
         TimeSigCommonOutline = new(0.000000, -1.044000, 1.740000, 1.044000),
         TimeSigCommonAdvance = 1.712000,

@@ -172,8 +172,14 @@ public class DynamicPlacementTests
         var f = above.Single(d => !d.IsExpressiveText);
         var txt = above.Single(d => d.IsExpressiveText);
         double column = f.X - GlyphMetrics.GetNoteheadBBox(4).CenterX;
+        // ⚠️ The half-advance is read at the style the label is SET at, from the engraver's
+        // own one home — this line spelled the upright serif until 2026-08-18 and so was
+        // pinning a reservation that did not match the italic draw (the claim here is the
+        // ALIGNMENT, and it was silently carrying a claim about the face as well).
         Assert.Equal(column,
-            txt.X - LilySharp.Core.Rendering.TextFontMetrics.Serif("cresc", 2.0) / 2.0, 3);
+            txt.X - ScoreTextMetrics.Bundled.Advance(
+                "cresc", 2.0, LilySharp.Core.Rendering.TextRole.Dynamics,
+                DynamicEngraver.LabelStyle(expressive: true)) / 2.0, 3);
         Assert.True(above[1].YUp - above[0].YUp >= 1.5,
             $"stacked above-staff grobs must be separated (got {above[0].YUp} and {above[1].YUp})");
     }

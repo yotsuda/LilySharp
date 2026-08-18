@@ -58,9 +58,9 @@ internal static partial class SharedRenderer
             double midYup = os.StaffMiddleYUp(d.StaffIndex, d.MeasureIndex, StaffHeight);
             double y = os.YUp(midYup + d.YUp, d.StaffIndex, d.MeasureIndex);
             double size = os.Size(fontSize, d.StaffIndex);
-            // Free expressive text (@text) prints plain italic; dynamic levels
-            // keep LP's bold-italic DynamicText face.
-            var style = d.IsExpressiveText ? FontStyle.Italic : FontStyle.BoldItalic;
+            // Free expressive text (@text) prints plain italic; dynamic levels keep LP's
+            // bold-italic DynamicText face — from the one home the reservation reads.
+            var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(d.IsExpressiveText);
             using (gc.Source(d.SourcePosition))
                 gc.DrawText(text, d.X, y, size, TextRole.Dynamics,
                     style, TextAnchor.Middle, Color.Black);

@@ -762,6 +762,133 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// How wide the sole PLAIN-TEXT MUSIC MARK of <paramref name="type"/> is — the
+    /// navigation/pedal counterpart of <see cref="SoleCustomTextReservedWidth"/>, and the
+    /// Lily# side of <c>audit/lp-geometry/probes/jump-mark-em.ly</c>. LilyPond's
+    /// counterpart is the <c>JumpScript</c> / <c>SostenutoPedal</c> grob's X-extent, which
+    /// is the shaped ADVANCE (lily/pango-font.cc:351-362 <c>pango_item_string_stencil</c>),
+    /// i.e. the same quantity in the same units.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// EVERY term comes from the engraver's ONE HOME, on purpose: the em from the DRAWN
+    /// text (<c>SharedRenderer.Marks</c> draws at
+    /// <c>MusicMarkEngraver.PlainTextFontSize</c>), the style from
+    /// <c>MusicMarkEngraver.TextStyleOf</c>, the role from
+    /// <c>MusicMarkEngraver.TextRoleOf</c>. A reading that spelled 2.8 or
+    /// <c>BoldItalic</c> here would still say 2.8 and BoldItalic on the day somebody ports
+    /// the size or the slant, and the ledger entries it feeds would sit at their baselines
+    /// straight through the port — a net that cannot fire (HANDOFF §5.2.1⑥). Written this
+    /// way the residual moves the moment either home moves, which is why the entry is
+    /// opened BEFORE the port rather than after it.
+    /// </para>
+    /// <para>
+    /// ⚠️ The filter is role AND em, never the string: a section label, a title and a
+    /// lyric are serif too, and <see cref="DrawnText"/> records no style. The count guard
+    /// then fails LOUDLY rather than measuring the wrong run — the probes carry no title
+    /// and reference their sections as <c>~Name</c> for the same reason the text-script
+    /// books do.
+    /// </para>
+    /// <para>
+    /// ⚠️ No <c>page</c> parameter, unlike its neighbours: <see cref="Texts"/> reads the
+    /// one recorded page this type holds, so a page argument would be a dead one that
+    /// <c>grep</c> reads as live (HANDOFF §5.2.1⑥ again — the other half of the same rule).
+    /// </para>
+    /// </remarks>
+    /// <param name="type">The mark whose em, style and role the reading is taken at — all
+    /// three from <c>MusicMarkEngraver</c>, none of them spelled here.</param>
+    /// <param name="text">The string to select when the role alone leaves more than one run
+    /// standing. A sustain pedal in <c>pedal text</c> style draws BOTH its engage word and
+    /// its release star at the same role and the same em, and LilyPond engraves two
+    /// <c>SustainPedal</c> grobs for the same reason — so the pair has to name which of them
+    /// it prices. ⚠️ A STRING is safe to spell here and a size or a style would not be: this
+    /// argument cannot make the entry sit still through a port of either (the two that can
+    /// are read from their homes above), and if the drawn word ever changes the count guard
+    /// fails loudly rather than measuring the other run.</param>
+    public double SoleMusicMarkReservedWidth(
+        LilySharp.Core.Svg.Model.MusicMarkType type, string? text = null)
+    {
+        // THE SUSTAIN PEDAL IS NOT DRAWN AS TEXT (lily/sustain-pedal.cc:47-76 is a glyph
+        // run, and Lily# ports it), so the reading follows the mechanism rather than the
+        // family: find the drawn glyph run and measure it from the first glyph's origin to
+        // the last one's right edge. ⚠️ It is measured off the PAGE, not asked of
+        // SustainPedalStencil — a reading that asked the builder for its own answer would
+        // be an identity, and this entry's whole job is to price the drawn word against
+        // LilyPond's.
+        if (MusicMarkEngraver.IsGlyphPedal(type))
+            return SoleSustainPedalDrawnWidth(text);
+
+        var role = MusicMarkEngraver.TextRoleOf(type);
+        var marks = Texts
+            .Where(t => t.Role == role
+                        && Math.Abs(t.FontSize - MusicMarkEngraver.PlainTextFontSize) < 1e-9
+                        && (text is null || t.Text == text))
+            .ToList();
+        if (marks.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"expected exactly ONE plain-text mark of role {role} at em "
+                + $"{MusicMarkEngraver.PlainTextFontSize}"
+                + (text is null ? "" : $" reading \"{text}\"")
+                + $", found {marks.Count} — the probe "
+                + "is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var mark = marks[0];
+        return LilySharp.Core.Rendering.TextFontMetrics.Advance(
+            mark.Text, mark.FontSize, sans: false, MusicMarkEngraver.TextStyleOf(type));
+    }
+
+    /// <summary>
+    /// The drawn width of the sustain pedal's glyph word — first glyph's origin to the last
+    /// glyph's right edge, both read off the page.
+    /// </summary>
+    /// <remarks>
+    /// The run is selected by GLYPH, which is what the mechanism gives: the three pedal
+    /// glyphs appear nowhere else on a page, so no size or role filter is needed and none
+    /// is invented. <paramref name="word"/> picks WHICH run when a book draws both the
+    /// engage word and the release star (LilyPond engraves two SustainPedal grobs for the
+    /// same reason); it is a string of the source, not of the drawing, so it is turned into
+    /// the glyph sequence by the same one home the renderer uses.
+    /// </remarks>
+    private double SoleSustainPedalDrawnWidth(string? word)
+    {
+        var wanted = word is null
+            ? null
+            : MusicMarkEngraver.SustainPedalStencil(word).Glyphs.Select(g => g.Glyph).ToList();
+        var pedalGlyphs = Glyphs
+            .Where(g => g.Glyph is EmmentalerGlyphs.PedalPed or EmmentalerGlyphs.PedalDot
+                                or EmmentalerGlyphs.PedalStar)
+            .ToList();
+        // Split the drawn glyphs into runs: a new run starts wherever the next glyph does
+        // not sit exactly on the previous one's right edge, which is how LilyPond's
+        // add_at_edge builds one and how the renderer lays it out.
+        var runs = new List<List<DrawnGlyph>>();
+        foreach (var g in pedalGlyphs)
+        {
+            if (runs.Count > 0)
+            {
+                var prev = runs[^1][^1];
+                double edge = prev.X + MusicMarkEngraver.PedalGlyphBox(prev.Glyph).Width;
+                if (Math.Abs(g.X - edge) < 1e-6) { runs[^1].Add(g); continue; }
+            }
+            runs.Add(new List<DrawnGlyph> { g });
+        }
+        var matching = wanted is null
+            ? runs
+            : runs.Where(r => r.Select(g => g.Glyph).SequenceEqual(wanted)).ToList();
+        if (matching.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"expected exactly ONE drawn sustain-pedal word"
+                + (word is null ? "" : $" spelling \"{word}\"")
+                + $", found {matching.Count} among {runs.Count} pedal glyph run(s) — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        var run = matching[0];
+        return run[^1].X + MusicMarkEngraver.PedalGlyphBox(run[^1].Glyph).Width - run[0].X;
+    }
+
+    /// <summary>
     /// The ottava bracket's dashed LINE above the first staff, measured from that staff's
     /// refpoint (middle line) — the mirror of the OttavaBracket grob's relative
     /// coordinate: <c>lily/ottava-bracket.cc</c> print puts the line at the stencil's own
