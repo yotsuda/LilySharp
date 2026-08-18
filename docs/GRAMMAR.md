@@ -108,8 +108,16 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
    above (p, pp, mp, …) cannot be identifiers. 'swing'/'shuffle' are NOT reserved
    (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
    (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
-   NOT reserved. 'volta'/'alternative' are reserved only to reject the removed
-   LilyPond-style forms; 'using' is reserved for multi-file support.
+   NOT reserved. 'alternative' is reserved only to reject the removed LilyPond-style
+   form; 'using' is reserved for multi-file support.
+
+   ⚠️ 'volta' was in that sentence too, and stopped belonging there when the fonts
+   block landed: 'repeat volta 2 { … }' is removed (LYS0006) but
+   'fonts { volta "TeX Gyre Schola" }' binds the volta-bracket face and compiles.
+   The word has a DEAD spelling and a LIVE one, which is why the editor's grammar no
+   longer paints it — or anything — as an error: a per-line regular expression cannot
+   tell the two apart, and only a diagnostic knows where a word stands
+   (EditorColouringTests, 2026-08-18).
 
    ⚠️ This list is one table in the implementation (Lexer.GetKeywordKind) and was
    MEASURED against it on 2026-08-16, word by word, by asking whether each can name a
@@ -307,14 +315,36 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
 
 PartDecl       = 'part' , Identifier , [ String ] , [ PartBody ] ;  (* String = display name *)
 PartBody       = '{' , { PartProperty } , '}' ;
-PartProperty   = 'clef'        , ClefName
-               | 'instrument'  , ( Identifier , [ String ] | String )
-               | 'transpose'   , PitchToken
-               | 'tuning'      , Identifier
-               | 'octave'      , ( 'absolute' | 'relative' | Integer )
-               | 'removeEmpty' , ( 'true' | 'all' | 'false' ) ;
+PartProperty   = 'clef'          , PartClefName
+               | 'instrument'    , ( Identifier , [ String ] | String )
+               | 'transpose'     , PitchToken
+               | 'transposition' , TranspositionMarker
+               | 'tuning'        , TuningName
+               | 'octave'        , ( 'absolute' | 'relative' | Integer )
+               | 'removeEmpty'   , ( 'true' | 'all' | 'false' )
+               | 'lines'         , Integer
+               | 'pedal'         , ( 'bracket' | 'text' | 'mixed' ) ;
+               (* 'key' is per-part too, but the parser takes it as a KeySignature rather
+                  than a PartProperty, so it is not an alternative here. *)
 
 ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
+
+PartClefName   = ClefName
+               | 'treble^8' | 'bass_8'
+               | 'soprano' | 'mezzosoprano' | 'baritone' | 'percussion' ;
+
+TuningName     = 'standard' | 'guitar' | 'bass' | 'bass5' | 'bass6'
+               | 'ukulele' | 'uke' ;
+
+TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;   (* case-insensitive *)
+
+(* ⚠️ ClefName and PartClefName are two vocabularies and were one production until
+   2026-08-19, when the difference was measured in both directions. A PART HEADER takes
+   all eleven; `clef` INSIDE MUSIC, and `staff`/`ossia` in a score, take the five of
+   ClefName and refuse the other six ("Expected clef name (treble, treble_8, alto,
+   tenor, bass)"). Writing the eleven as ClefName told a reader that `staff percussion X`
+   is legal, and writing the five told the editor to leave `clef treble^8` uncoloured in
+   the one place it is legal — both happened. *)
 
 (* Display name: an optional quoted string right after the part name is the part's
    default printed label (the staff-left name), shared by every score that renders
@@ -335,6 +365,15 @@ ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
    rests. 'true' keeps the FIRST system (LilyPond \RemoveEmptyStaves);
    'all' hides the first system too (\RemoveAllEmptyStaves). A system stays
    visible if ANY voice of the staff plays. Default: never hide. *)
+
+(* transposition: the part's written->sounding shift, BEYOND whatever octave the clef
+   word already carries. 'transpose' moves the written pitches; 'transposition' states
+   that the written pitches sound elsewhere. *)
+
+(* lines: the staff's line count (1 for a one-line percussion staff). *)
+
+(* pedal: how a sustain span is drawn - the 'Ped.' text, a bracket, or 'mixed'
+   (text at the start, bracket for the hold). *)
 
 (* Examples:
 

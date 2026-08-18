@@ -20,6 +20,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Parser;
+using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -311,6 +313,82 @@ public class DocKeywordListTests
         string block = Regex.Match(Doc("docs/GRAMMAR.md"), @"^ScoreItem\s*=(.*?);",
             RegexOptions.Singleline | RegexOptions.Multiline).Groups[1].Value;
         Assert.Matches(@"\|\s*PartRef\b", Strip(block));
+    }
+
+    /// <summary>Every quoted terminal a named production publishes, resolving a non-terminal
+    /// on its right-hand side one level (<c>PartClefName = ClefName | 'treble^8' | …</c>).</summary>
+    private static string[] TerminalsOf(string production)
+    {
+        string doc = Doc("docs/GRAMMAR.md");
+        string body = Strip(Body(doc, production));
+        var found = Regex.Matches(body, @"'([^']+)'").Select(m => m.Groups[1].Value).ToList();
+        foreach (Match nonTerminal in Regex.Matches(body, @"\b([A-Z][A-Za-z0-9]*)\b"))
+        {
+            found.AddRange(Regex.Matches(Strip(Body(doc, nonTerminal.Groups[1].Value)), @"'([^']+)'")
+                .Select(m => m.Groups[1].Value));
+        }
+        return [.. found.Distinct(StringComparer.Ordinal).OrderBy(w => w, StringComparer.Ordinal)];
+    }
+
+    /// <summary>The word that OPENS each alternative of a production — the property names of
+    /// <c>PartProperty</c>, without the value vocabularies its alternatives go on to name.</summary>
+    private static string[] LeadingTerminalsOf(string production)
+    {
+        // ⚠️ A parenthesised value list carries its own `|`, and splitting the production on
+        // that character alone reads the values as property names — the first draft returned
+        // `all` and `false` from `'removeEmpty' , ( 'true' | 'all' | 'false' )`. Drop the
+        // groups first; `Strip` has already taken the (* … *) commentary out.
+        string body = Regex.Replace(
+            Strip(Body(Doc("docs/GRAMMAR.md"), production)), @"\([^()]*\)", " ");
+
+        var found = new List<string>();
+        foreach (string alternative in body.Split('|'))
+        {
+            var terminal = Regex.Match(alternative, @"'([^']+)'");
+            if (terminal.Success) found.Add(terminal.Groups[1].Value);
+        }
+        return [.. found.Distinct(StringComparer.Ordinal).OrderBy(w => w, StringComparer.Ordinal)];
+    }
+
+    private static string Body(string doc, string production)
+    {
+        string body = Regex.Match(doc, $@"^{production}\s*=(.*?);",
+            RegexOptions.Singleline | RegexOptions.Multiline).Groups[1].Value;
+        Assert.False(string.IsNullOrWhiteSpace(body),
+            $"the {production} production did not extract — the document's shape moved, and an "
+            + "empty list would make every assertion below vacuously true");
+        return body;
+    }
+
+    [Fact]
+    public void ThePartHeaderProductions_NameTheLanguagesVocabulary()
+    {
+        // ★ The part header's vocabularies live in LilySharp.Core (SymbolCaseValidator, and
+        // InstrumentDefaults for the transposition markers). This document is a SECOND reader of
+        // them, and until 2026-08-19 it had drifted in four places at once: `transposition`,
+        // `lines` and `pedal` were missing from PartProperty entirely, and ClefName printed five
+        // clef names where the header takes eleven — one production standing in two positions,
+        // which is how the editor came to leave `clef treble^8` plain in the one place it is
+        // legal. The drift is only visible from a check like this one, because a document that
+        // simply omits an alternative reads perfectly well.
+        Assert.Equal(
+            SymbolCaseValidator.PropertyNameVocabulary.Where(n => n != "key").OrderBy(n => n, StringComparer.Ordinal),
+            LeadingTerminalsOf("PartProperty"));
+
+        Assert.Equal(SymbolCaseValidator.ClefValueVocabulary.OrderBy(n => n, StringComparer.Ordinal),
+                     TerminalsOf("PartClefName"));
+        Assert.Equal(SymbolCaseValidator.TuningValueVocabulary.OrderBy(n => n, StringComparer.Ordinal),
+                     TerminalsOf("TuningName"));
+        Assert.Equal(InstrumentDefaults.TranspositionMarkers.OrderBy(n => n, StringComparer.Ordinal),
+                     TerminalsOf("TranspositionMarker"));
+
+        // ⚠️ ClefName is the OTHER vocabulary, and the document is only honest while the two
+        // differ: five words for `clef` in music and for `staff`/`ossia` in a score. Merging them
+        // back into one production is the mistake this pair exists to make loud.
+        string[] inMusic = TerminalsOf("ClefName");
+        Assert.Equal(5, inMusic.Length);
+        Assert.Empty(inMusic.Except(SymbolCaseValidator.ClefValueVocabulary, StringComparer.Ordinal));
+        Assert.NotEqual(inMusic.Length, SymbolCaseValidator.ClefValueVocabulary.Count);
     }
 
     [Fact]

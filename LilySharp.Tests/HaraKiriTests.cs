@@ -19,7 +19,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 using LilySharp.Tests.LpFidelity;
 using Xunit;
 
@@ -505,5 +507,48 @@ public class HaraKiriTests
 
         Assert.True(groups[1].Staves[0].IsHidden);
         Assert.Equal(options.StaffHeight, MultiStaffLayouter.SystemHeightOf(groups), 9);
+    }
+
+    private static (bool RemoveEmpty, bool RemoveFirst) StaffFlagsOf(string source)
+    {
+        var spec = RenderSpecParser.FindFirst(SyntaxTree.Parse(source))!;
+        var staff = spec.Items.OfType<SingleStaffSpec>().Single().Staff;
+        return (staff.RemoveEmpty, staff.RemoveFirst);
+    }
+
+    private static string Book(string header) =>
+        header + NL + "section A { m { c'1 } }" + NL
+        + "form main { A }" + NL + "score main { staff m }" + NL;
+
+    private static string NL => Environment.NewLine;
+
+    [Fact]
+    public void TheRemoveEmptyVocabulary_IsWhatRenderSpecParserReads()
+    {
+        // ★ SymbolCaseValidator.RemoveEmptyValueVocabulary was published on 2026-08-19 so the
+        // editor could colour these three words, and publishing it made a SECOND SPELLING of a
+        // vocabulary RenderSpecParser already held as `removeEmpty is "true" or "all"`. Two
+        // spellings of one quantity means one drifts (RULES §7.7); the transposition markers got
+        // a check for exactly this reason and this list did not. Found by running the closing
+        // checklist, not by a red test.
+        //
+        // ⚠️ The mapping itself is NOT re-asserted here — RemoveEmptyPartProperty_MapsToStaffFlags
+        // above already holds it, and a copy of those three lines would be a third spelling. What
+        // is new is the direction that theory cannot see: it names its own words, so a word ADDED
+        // to the published list without the reader learning it stays green there. Measured: adding
+        // `none` to the list leaves that theory passing and turns this red.
+        var readings = SymbolCaseValidator.RemoveEmptyValueVocabulary
+            .Select(v => StaffFlagsOf(Book($"part m {{ removeEmpty {v} }}")))
+            .ToArray();
+        Assert.Equal(SymbolCaseValidator.RemoveEmptyValueVocabulary.Count, readings.Distinct().Count());
+
+        // ⚠️ And the edge of the hole the list sits beside, so the count above is not mistaken
+        // for a closed door: NOTHING validates this value. An unknown word is silently the
+        // default rather than an error, and `TRUE` is silently `true` because the reader
+        // lower-cases — which makes removeEmpty the one part-header property that really is
+        // case-insensitive, and it is case-insensitive precisely because nobody checks it.
+        // Closing that would refuse books that compile today, so it is a decision; HANDOFF §2F.
+        Assert.Equal((false, false), StaffFlagsOf(Book("part m { removeEmpty banana }")));
+        Assert.Equal((true, false), StaffFlagsOf(Book("part m { removeEmpty TRUE }")));
     }
 }

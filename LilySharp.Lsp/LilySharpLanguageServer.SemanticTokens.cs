@@ -65,16 +65,16 @@ public sealed partial class LilySharpLanguageServer
         return new SemanticTokens { Data = tokens.ToArray() };
     }
 
-    private record SemanticToken(int Line, int Character, int Length, int TokenType);
+    internal record SemanticToken(int Line, int Character, int Length, int TokenType);
 
-    private IEnumerable<SemanticToken> CollectSemanticTokens(SyntaxNode root, string text)
+    internal static IEnumerable<SemanticToken> CollectSemanticTokens(SyntaxNode root, string text)
     {
         var tokens = new List<SemanticToken>();
         CollectTokensRecursive(root, text, tokens);
         return tokens.OrderBy(t => t.Line).ThenBy(t => t.Character);
     }
 
-    private void CollectTokensRecursive(SyntaxNode node, string text, List<SemanticToken> tokens)
+    private static void CollectTokensRecursive(SyntaxNode node, string text, List<SemanticToken> tokens)
     {
         // Token types: 0=keyword, 1=variable, 2=number, 3=string, 4=comment, 5=operator, 6=pitch, 7=articulation, 8=dynamic
 
@@ -84,8 +84,18 @@ public sealed partial class LilySharpLanguageServer
             int? tokenType = kind switch
             {
                 // Keywords
+                //
+                // ⚠️ VoltaKeyword sits beside AlternativeKeyword because they are one pair in
+                // the parser, and until 2026-08-18 only one of them was here — so the two
+                // colourers said different things about the same word. The TextMate grammar
+                // painted `volta` and `alternative` as errors while this list painted
+                // `alternative` a keyword, and a semantic token LAYERS OVER the grammar: the
+                // word with the entry came out a keyword, the word without it came out red.
+                // The grammar no longer says anything is wrong (see its `keywords` comment),
+                // and `volta` is a live spelling — `fonts { volta "TeX Gyre Schola" }` binds
+                // the volta-bracket face — so both belong here, saying the same thing.
                 SyntaxKind.RepeatKeyword or
-                SyntaxKind.AlternativeKeyword or
+                SyntaxKind.VoltaKeyword or SyntaxKind.AlternativeKeyword or
                 SyntaxKind.ScoreKeyword or SyntaxKind.PartKeyword or SyntaxKind.StaffKeyword or
                 SyntaxKind.VoiceKeyword or SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword or
                 SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword or
@@ -187,6 +197,32 @@ public sealed partial class LilySharpLanguageServer
                 var (line, character) = GetLineAndCharacter(text, markNode.Span.Start);
                 tokens.Add(new SemanticToken(line, character,
                     markName.Span.End - markNode.Span.Start, 7));
+            }
+        }
+        else if (node is TempoDeclarationSyntax tempoNode)
+        {
+            // ★ `swing` / `shuffle`, the feel words, for the same reason `tremolo` / `unfold`
+            // are handled below: they lex as identifiers, so `tempo` was coloured and the word
+            // that changes what it MEANS was not. They are deliberately not reserved —
+            // TempoValue says so — because a part and a marking may still be called that.
+            //
+            // ⚠️ Which is exactly why the editor's TextMate grammar cannot hold them, and the
+            // three ways tried on 2026-08-18 each failed differently: a bare alternation paints
+            // `part swing { … }`; a rule spanning the whole value run swallows the colours of
+            // the marking and the numbers inside it; a begin/end to end of line eats the music
+            // in `section A { tempo 120  m { c'4 } }`. Position is the missing information, and
+            // here the tree has it.
+            //
+            // ⚠️ The reading is TempoValue's own, not a second copy of it: the feel-word arm
+            // of that switch precedes the marking arm, so a bare `tempo swing` is the feel word
+            // and never a marking spelled that way. Asking IsFeelWord the same question keeps
+            // the colour and the meaning from parting company.
+            foreach (var value in tempoNode.Values.OfType<SyntaxTokenNode>())
+            {
+                if (value.Kind != SyntaxKind.Identifier || !TempoValue.IsFeelWord(value.Text))
+                    continue;
+                var (fline, fchar) = GetLineAndCharacter(text, value.Span.Start);
+                tokens.Add(new SemanticToken(fline, fchar, value.Width, 0));
             }
         }
         else if (node is RepeatExpressionSyntax repNode)

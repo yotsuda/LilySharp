@@ -8,9 +8,12 @@
         { "include": "#section-declaration" },
         { "include": "#phrase-declaration" },
         { "include": "#lyrics-block" },
+        { "include": "#fonts-block" },
+        { "include": "#part-body" },
         { "include": "#variable-reference" },
         { "include": "#instrument-value" },
-        { "include": "#legacy-keywords" },
+        { "include": "#directive-value" },
+        { "include": "#tab-tuning" },
         { "include": "#keywords" },
         { "include": "#inline-volta" },
         { "include": "#structures" },
@@ -146,6 +149,114 @@
                 }
             ]
         },
+        "fonts-block": {
+            "comment": "`fonts { serif \"Georgia\"  barNumber sans }`. ⚠️ The KEYS are a vocabulary of their own (LilySharp.Core TextRole.AllKeySpellings) and are NOT reserved words — `part barNumber { … }` compiles — so nothing outside this block may colour them, and only a rule that knows it is INSIDE one can. That is what begin/end is for: it carries CONTEXT, which is a claim about what a word IS. (It is not licence to claim a word is WRONG; see the #keywords comment.) A key the parser knows and this list omits comes out plain, which is what `serif`/`sans`/`barNumber` did until 2026-08-18 while `tempo` next to them was coloured — by the keyword rule, for an unrelated reason. EditorColouringTests holds this list to TextRole.AllKeySpellings in both directions.",
+            "begin": "\\b(fonts)\\s*(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.other.lilysharp" },
+                "2": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#comments" },
+                { "include": "#strings" },
+                {
+                    "comment": "A key POINTED AT a generic family instead of a face name: `marks sans`, `serif sans`. Read before the bare-key rule so the second word is seen as the value it is. ⚠️ `sans-serif` precedes `sans` in both lists — TextMate takes the first alternative that matches, and \\b succeeds before the hyphen, so the shorter spelling would colour `sans` and leave `-serif` plain (the same trap #instrument-value was written for).",
+                    "match": "\\b(serif|sans-serif|sans|header|lyrics|chords|marks|numbers|notation|title|composer|instrument|lyricText|stanza|chordName|fretFrame|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombine|barNumber|fingering|tuplet|volta|ottava|bend|tabTechnique|clefOctave|meter|tabFret)\\s+(sans-serif|serif|sans)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.font-key.lilysharp" },
+                        "2": { "name": "support.constant.font-family.lilysharp" }
+                    }
+                },
+                {
+                    "name": "keyword.other.font-key.lilysharp",
+                    "match": "\\b(sans-serif|serif|sans|header|lyrics|chords|marks|numbers|notation|title|composer|instrument|lyricText|stanza|chordName|fretFrame|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombine|barNumber|fingering|tuplet|volta|ottava|bend|tabTechnique|clefOctave|meter|tabFret)\\b"
+                },
+                {
+                    "comment": "The one entry that is a bare word rather than a key/value pair, and the one word here that IS reserved.",
+                    "name": "keyword.other.lilysharp",
+                    "match": "\\bembedded\\b"
+                }
+            ]
+        },
+        "part-body": {
+            "comment": "`part vln1 \"Violin I\" { clef treble^8  tuning standard  removeEmpty all }`. ⚠️ These are the part header's OWN vocabulary (LilySharp.Core SymbolCaseValidator) and almost none of them is a reserved word — `part lines { … }`, `part bracket { … }` and `part standard { … }` all compile (measured 2026-08-19) — so nothing outside this block may colour them and only a rule that knows it is INSIDE one can. Same device as #fonts-block and for the same reason: begin/end carries CONTEXT, which is a claim about what a word IS, not licence to claim a word is WRONG. ⚠️ The vocabulary is the PART BODY's, not the language's everywhere: a body takes all eleven clef names while `clef` in music and `staff` in a score take five and refuse the other six (measured). Each value is read WITH the key it belongs to, so `tuning treble` does not come out looking like a tuning — wrongness is the diagnostics'. EditorColouringTests holds every list here to its Core set in both directions.",
+            "begin": "\\b(part)\\s+(?:[A-Za-z_][A-Za-z0-9_]*)\\s*(?:\"[^\"]*\"\\s*)?(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.control.lilysharp" },
+                "2": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#comments" },
+                { "include": "#strings" },
+                {
+                    "comment": "⚠️ Longest spelling first, in every list below: TextMate takes the first alternative that matches and \\b succeeds before `_` is not true — but it DOES succeed before `^`, so a bare `treble` would colour the head of `treble^8` and leave `^8` plain. `treble_8`/`bass_8` are the same trap with the boundary inside the word.",
+                    "match": "\\b(clef)\\s+(treble\\^8|treble_8|bass_8|treble|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.clef.lilysharp" }
+                    }
+                },
+                {
+                    "match": "\\b(tuning)\\s+(standard|guitar|bass5|bass6|bass|ukulele|uke)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.tuning.lilysharp" }
+                    }
+                },
+                {
+                    "comment": "⚠️ `15ma`/`15mb` before `8va`/`8vb` is not a prefix question here — they share no head — but the list is written longest-first like the others so the file has one habit. The marker is a value, not a keyword: `part transposition { … }` compiles.",
+                    "match": "\\b(transposition)\\s+(15ma|15mb|8va|8vb)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.transposition.lilysharp" }
+                    }
+                },
+                {
+                    "match": "\\b(pedal)\\s+(bracket|text|mixed)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.pedal-style.lilysharp" }
+                    }
+                },
+                {
+                    "match": "\\b(removeEmpty)\\s+(true|all|false)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.remove-empty.lilysharp" }
+                    }
+                },
+                { "include": "#directive-value" },
+                { "include": "#instrument-value" },
+                {
+                    "comment": "The bare key, read AFTER every key/value pair above so the pair wins and the value is scoped as the value it is. `transposition` precedes `transpose`, which is a prefix of it.",
+                    "name": "keyword.other.lilysharp",
+                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|removeEmpty|lines|pedal|key)\\b"
+                },
+                { "include": "#keywords" },
+                { "include": "#pitches" },
+                { "include": "#numbers" }
+            ]
+        },
+        "tab-tuning": {
+            "comment": "`score main { tab guitar melody }`. The ONE position a tuning name reaches outside a part body (measured 2026-08-19: all seven are accepted after `tab`, and `staff`/`ossia` take clef names, not tunings). Without this the vocabulary would be coloured in the header and plain in the score — the same half-coloured shape the user reported for `fonts { }`.",
+            "patterns": [
+                {
+                    "match": "\\b(tab)\\s+(standard|guitar|bass5|bass6|bass|ukulele|uke)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.control.lilysharp" },
+                        "2": { "name": "support.constant.tuning.lilysharp" }
+                    }
+                }
+            ]
+        },
         "variable-reference": {
             "patterns": [
                 {
@@ -169,24 +280,40 @@
                 }
             ]
         },
-        "legacy-keywords": {
+        "directive-value": {
+            "comment": "A directive and the ONE word that is its value: `octave relative`, `repeat unfold 2`. ⚠️ The value words are NOT reserved — `part relative { … }` and `part unfold { … }` both compile (measured 2026-08-18) — so colouring them from a bare alternation paints a writer's own part name as a keyword. Same device as #instrument-value, and it has to be included BEFORE #keywords so the two-word form is read first.",
             "patterns": [
                 {
-                    "comment": "Removed LilyPond constructs: the parser rejects bare 'volta'/'alternative' (use the '|: … :| [1. …] [2. …]' form). Highlight as errors.",
-                    "name": "invalid.illegal.removed-keyword.lilysharp",
-                    "match": "\\b(volta|alternative)\\b"
+                    "match": "\\b(octave)\\s+(absolute|relative)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.octave-mode.lilysharp" }
+                    }
+                },
+                {
+                    "match": "\\b(repeat)\\s+(percent|unfold|tremolo)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.control.lilysharp" },
+                        "2": { "name": "support.constant.repeat-kind.lilysharp" }
+                    }
                 }
             ]
         },
         "keywords": {
+            "comment": "⚠️ THIS FILE MAY SAY WHAT A WORD IS, AND MAY NOT SAY THAT IT IS WRONG. A rule here sees one line and no position, so it cannot tell a dead spelling from a live one: `repeat volta 2` is removed (LYS0006) while `fonts { volta \"TeX Gyre Schola\" }` is accepted, and one regex holds nothing that separates them. Errors travel as diagnostics, which are anchored to a span — user decision 2026-08-18, ratcheted by EditorColouringTests.TheGrammarCallsNothingInvalid. ⚠️ The words below are held to Lexer.GetKeywordKind by that same file: a reserved word a writer can type and no pattern here matches is a word the editor leaves plain (23 of them were, until 2026-08-18). A spelling that is NOT reserved is equally a defect. The '_8' clefs and 'tocoda' are written before their shorter twins so the longer spelling is read whole.",
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|grandStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|relative|absolute|repeat|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords)\\b"
+                    "match": "\\b(score|part|staff|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|repeat|grace|cue|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords|with)\\b"
+                },
+                {
+                    "comment": "Navigation marks, written bare in a form block: 'A dc al fine', 'to coda', and the run-together 'tocoda'.",
+                    "name": "keyword.control.navigation.lilysharp",
+                    "match": "\\b(segno|tocoda|coda|fine|dc|ds|al|to)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|channel|tuning|break|treble|bass|alto|tenor|percent|unfold|tremolo)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|tuning|nobreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

@@ -251,6 +251,23 @@ public static class InstrumentDefaults
     };
 
     /// <summary>
+    /// The markers <c>transposition</c> takes, beside the switch that reads them so the two
+    /// cannot drift — <c>InstrumentDefaultsTests</c> holds the pair together, and the editor's
+    /// grammar reads this list rather than keeping a fourth copy.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The <c>ToLowerInvariant</c> above cannot fire, and reading it as case-insensitivity
+    /// is wrong — measured 2026-08-19, after a first draft of this comment claimed exactly that.
+    /// <c>transposition 8VB</c> is REFUSED, but by the LEXER rather than by any case rule: it
+    /// splits into <c>8</c> and <c>VB</c>, and <c>VB</c> is then read as the next property name
+    /// (<c>Unknown part property 'VB'</c>, which is a confusing thing to say about a value).
+    /// The control is <c>8vb</c>, which lexes whole and compiles. So the only spellings that
+    /// ever reach the switch are already lower-case, and the editor colours those.
+    /// </remarks>
+    public static readonly IReadOnlyList<string> TranspositionMarkers =
+        ["8va", "8vb", "15ma", "15mb"];
+
+    /// <summary>
     /// The instrument-name presets a part's <c>instrument</c> accepts, ordered by
     /// family (strings, piano, guitar/fretted, woodwinds, brass, voice). The single
     /// source of truth for <see cref="IsKnownInstrument"/> AND the editor's

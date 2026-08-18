@@ -83,4 +83,30 @@ public sealed class InstrumentPresetTests
     {
         Assert.Equal(expected, InstrumentDefaults.GetTuning(instrument));
     }
+
+    [Fact]
+    public void TranspositionMarkers_AreExactlyWhatTheSwitchReads()
+    {
+        // ★ The published list and the switch beside it are two spellings of one vocabulary, and
+        // a list that nobody checks drifts. Published 2026-08-19 so the editor's grammar could
+        // colour these — `transposition 8vb` was plain, key and value both — and this is what
+        // stops the grammar from being taught a marker the language does not read.
+        foreach (string marker in InstrumentDefaults.TranspositionMarkers)
+        {
+            Assert.True(InstrumentDefaults.ParseTranspositionSemitones(marker) is not null,
+                $"`{marker}` is published as a transposition marker and the parser returns null "
+                + "for it, so a book that writes it is silently untransposed");
+        }
+
+        // ⚠️ And the other direction, as far as a switch permits: a marker the list omits would
+        // be readable and uncoloured, which is exactly the half-coloured state this closed. These
+        // four are the whole switch; a fifth arriving without a line here is the drift.
+        Assert.Equal(4, InstrumentDefaults.TranspositionMarkers.Count);
+        Assert.Null(InstrumentDefaults.ParseTranspositionSemitones("8vc"));
+
+        // ⚠️ Case-insensitive, alone among the part-header vocabularies — recorded because the
+        // grammar deliberately colours the lower-case spellings only.
+        Assert.Equal(InstrumentDefaults.ParseTranspositionSemitones("8vb"),
+                     InstrumentDefaults.ParseTranspositionSemitones("8VB"));
+    }
 }

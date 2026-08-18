@@ -60,6 +60,60 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> InstrumentPresets =
         new(InstrumentDefaults.KnownInstruments, StringComparer.Ordinal);
 
+    /// <summary>
+    /// The values <c>removeEmpty</c> takes. ⚠️ Listed but NOT enforced: an unknown word here
+    /// is read as <c>false</c> by <c>RenderSpecParser</c> rather than refused, so
+    /// <c>removeEmpty banana</c> compiles today (measured 2026-08-19, as does
+    /// <c>lines banana</c>). Turning that into a diagnostic would refuse books that compile
+    /// now, so it is a decision and not a tidy-up — it is written up in HANDOFF §2F. The list
+    /// is here because it is a vocabulary of this header and the vocabulary has one home;
+    /// <c>EditorColouringTests</c> reads it, so it cannot rot unnoticed.
+    /// </summary>
+    private static readonly HashSet<string> RemoveEmptyValues = new(StringComparer.Ordinal)
+    {
+        "true", "all", "false",
+    };
+
+    // ★ The part header's vocabulary, published so that it has exactly ONE home and every
+    // other reader is the SECOND one. Before 2026-08-19 the editor's TextMate grammar held its
+    // own copy of a PART of this — whichever words happened to be reserved for unrelated
+    // reasons — and the rest were plain: `clef treble` coloured, `clef treble^8` not; `pedal
+    // text` half-coloured because `text` is a fonts key; all seven tuning names plain but for
+    // `bass`, which is a clef. That is what the user reported about `fonts { }`, in five more
+    // vocabularies. A grammar that reads these cannot drift from them silently, because
+    // EditorColouringTests holds it to them in both directions.
+    //
+    // ⚠️ These are the PART BODY's vocabularies and not the language's everywhere. Measured
+    // 2026-08-19: a part body takes all eleven clef names, while `clef` in music and `staff` in
+    // a score take five (treble treble_8 alto tenor bass) and refuse the other six. One
+    // production, two positions — GRAMMAR.md's `ClefName` names the second.
+
+    /// <summary>Every name a part header property can be spelled with.</summary>
+    /// <remarks>Includes <c>key</c>, which never reaches <see cref="Check"/> because the parser
+    /// takes it as a KeySignature rather than a PropertyAssignment — it belongs to the
+    /// vocabulary all the same, and leaving it out told a reader the language has no per-part
+    /// key, which is false.</remarks>
+    internal static IReadOnlyCollection<string> PropertyNameVocabulary { get; } =
+        [.. PropertyNames.Append("key").OrderBy(s => s, StringComparer.Ordinal)];
+
+    /// <summary>Every clef name a PART BODY takes — eleven, not the five of <c>ClefName</c>.</summary>
+    internal static IReadOnlyCollection<string> ClefValueVocabulary { get; } =
+        [.. ClefValues.OrderBy(s => s, StringComparer.Ordinal)];
+
+    /// <summary>Every pedal style.</summary>
+    internal static IReadOnlyCollection<string> PedalValueVocabulary { get; } =
+        [.. PedalValues.OrderBy(s => s, StringComparer.Ordinal)];
+
+    /// <summary>Every tuning name — also the vocabulary of <c>tab NAME</c> in a score
+    /// (measured 2026-08-19: all seven are accepted in both positions).</summary>
+    internal static IReadOnlyCollection<string> TuningValueVocabulary { get; } =
+        [.. TuningValues.OrderBy(s => s, StringComparer.Ordinal)];
+
+    /// <summary>Every value <c>removeEmpty</c> documents. See <see cref="RemoveEmptyValues"/>
+    /// for why it is not enforced.</summary>
+    internal static IReadOnlyCollection<string> RemoveEmptyValueVocabulary { get; } =
+        [.. RemoveEmptyValues.OrderBy(s => s, StringComparer.Ordinal)];
+
     public void Validate(SyntaxTree tree)
     {
         foreach (var part in tree.GetRoot().DescendantNodes().OfType<PartDeclarationSyntax>())
@@ -81,7 +135,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
             // `key fis major`.
             Error(prop.NameToken,
                 $"Unknown part property '{name}'. Property names are case-sensitive; known: " +
-                $"{string.Join(", ", PropertyNames.Append("key").OrderBy(s => s, StringComparer.Ordinal))}.");
+                $"{string.Join(", ", PropertyNameVocabulary)}.");
             return; // a property we do not understand — do not also flag its value
         }
 
