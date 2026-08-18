@@ -175,13 +175,14 @@ public enum TextRoleGroup
     Notation,
 }
 
-/// <summary>Which of the two bundled text faces a role is MEASURED against.</summary>
+/// <summary>Which of the two bundled text faces a role FALLS BACK to.</summary>
 /// <remarks>
-/// ⚠️ This is the reservation's family and not necessarily the drawn one. A score that
-/// binds a role to a face this engine does not bundle still reserves with the bundled
-/// face of this family — <see cref="TextFontMetrics"/> refuses a system fallback on
-/// purpose, because measuring by name would make the same <c>.lys</c> lay out differently
-/// on different machines.
+/// ⚠️ THIS IS THE FALLBACK, not "the face". A score that binds a role to a face this
+/// machine has is measured and drawn in THAT file
+/// (<see cref="ScoreTextMetrics.Face"/>); this family is where the role lands when it
+/// binds nothing, or when the face it binds is not installed here. The note that stood
+/// here said the reservation always used it — true until 2026-08-18, when the layout
+/// learned to ask by role.
 /// </remarks>
 public enum TextFontFamily
 {

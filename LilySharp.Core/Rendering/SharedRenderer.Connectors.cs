@@ -92,7 +92,8 @@ internal static partial class SharedRenderer
         // point of the change: the pair this replaced sized the indent from an estimate and
         // drew from these.
         double NameX(string name) => InstrumentNameRightEdge(
-            TextFontMetrics.Serif(name, actualFontSize), system.Indent, totalLeft);
+            score.TextMetrics.Advance(name, actualFontSize, TextRole.Instrument),
+            system.Indent, totalLeft);
 
         // Single-staff scores carry no StaffGroup layouts — the one staff sits
         // at the system Y with the standard staff height.

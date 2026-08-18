@@ -76,6 +76,14 @@ internal static class FetaTextRun
     /// falls back to text: the pen moves by whatever the shaper says, and the fallback is a
     /// Lily#-own branch that no LilyPond reading covers either way.
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ THE TEXT BRANCH BELOW TAKES THE BUNDLED FACE, not the score's. It is the
+    /// FALLBACK inside a feta run — the character the music font has no glyph for — and the
+    /// run's three consumers (fingering, figured bass, meter) each reach it through their
+    /// own <c>static</c> wrapper, so binding it means threading a score through all three.
+    /// Left named and counted rather than half-done, 2026-08-18. The same note stands on
+    /// <c>InkTop</c> and <c>InkBottom</c>.
+    /// </remarks>
     internal static ImmutableArray<Piece> Pieces(
         string text, GlyphLookup lookup, double em, KernLookup? kern = null)
     {

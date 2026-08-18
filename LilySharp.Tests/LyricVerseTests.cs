@@ -18,6 +18,7 @@ using System.Linq;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -314,7 +315,7 @@ score main ""x"" { staff melody with lyrics melody }
 
         // The line key: these syllables are note-bound and share the block below the system,
         // which is the -1 the chain uses for it.
-        var byVerse = LilySharp.Core.Svg.Layout.LyricEngraver.BuildVerseUpSkylines(
+        var byVerse = LilySharp.Core.Svg.Layout.LyricEngraver.BuildVerseUpSkylines(ScoreTextMetrics.Bundled, 
             new[] { Syllable("no", 1), Syllable("hi", 2) },
             new Dictionary<int, int> { [0] = 0 },
             _ => -1);

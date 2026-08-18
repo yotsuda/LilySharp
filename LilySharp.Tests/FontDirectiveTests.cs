@@ -36,9 +36,12 @@ namespace LilySharp.Tests;
 /// <c>font-family</c> attributes because that is where the answer becomes observable to
 /// a reader.
 /// <para>
-/// ⚠️ The RESERVATION is not asserted here, and that is not an oversight: the layout
-/// measures the bundled family whatever face a score names, so a bound face has no
-/// number to be checked against. HANDOFF §2F holds that gap, with its measurement.
+/// ⚠️ THE RESERVATION IS ASSERTED HERE TOO, since 2026-08-18. It was not, and the note
+/// that stood here said why: "the layout measures the bundled family whatever face a
+/// score names, so a bound face has no number to be checked against." That stopped being
+/// true when the layout learned to ask by ROLE, and a note whose reason lives outside
+/// itself goes stale the day the outside changes (HANDOFF RULES §5.1). The two cases at
+/// the end of this file are the observers.
 /// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
@@ -406,5 +409,93 @@ public class FontDirectiveTests
         Assert.DoesNotContain(Check(Book), x => x.Code == DiagnosticCodes.FontNotFound);
         Assert.DoesNotContain(Check("font { chordName serif }\n" + Book),
             x => x.Code == DiagnosticCodes.FontNotFound);
+    }
+
+    // ================================================================================
+    // The RESERVATION follows the binding — the half that was open until 2026-08-18
+    // ================================================================================
+
+    /// <summary>
+    /// The bundled SANS, named as a face on a role whose family is SERIF. Deterministic on
+    /// every machine (the file ships), and it separates "the name decided the metrics" from
+    /// "the role's family happened to agree" — which naming Georgia could not do.
+    /// </summary>
+    private const string BoundTitle = "font { title \"TeX Gyre Heros\" }\n";
+
+    /// <summary>The same face bound to the role whose width the SPACING reads.</summary>
+    private const string BoundLyrics = "font { lyricText \"TeX Gyre Heros\" }\n";
+
+    private const string TitleText = "T";
+
+    private static LilySharp.Core.Svg.Model.MultiStaffScore Collect(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        return SvgGenerator.CollectScore(
+            tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
+    }
+
+    [Fact]
+    public void ANamedFaceIsMEASURED_NotOnlyDrawn()
+    {
+        const double size = 2.2;
+        var bound = Collect(BoundTitle + Book).TextMetrics;
+        var plain = Collect(Book).TextMetrics;
+
+        // Bound: the NAMED file. Unbound: the role's own bundled family, which is serif.
+        Assert.Equal(
+            TextFontMetrics.Advance(TitleText, size, TextFace.Bundled(sans: true)),
+            bound.Advance(TitleText, size, TextRole.Title), 12);
+        Assert.Equal(
+            TextFontMetrics.Advance(TitleText, size, TextFace.Bundled(sans: false)),
+            plain.Advance(TitleText, size, TextRole.Title), 12);
+
+        // ...and the binding reaches ONLY the role it names.
+        Assert.Equal(plain.Face(TextRole.Composer), bound.Face(TextRole.Composer));
+    }
+
+    /// <summary>
+    /// And the PAGE moves — not only the <c>font-family</c> attribute on the title.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE CASE THAT MATTERS, because the attribute alone was already emitted
+    /// before the reservation followed: a page that named Georgia and spaced for Schola
+    /// passed every earlier test in this file. So everything that is NOT geometry is
+    /// stripped before comparing, and the claim is that what is left still differs.
+    /// <para>
+    /// ⚠️ <c>data-pos</c> IS STRIPPED TOO, and it is the whole reason this case is written
+    /// the way it is. The first spelling stripped only <c>font-family</c> and was GREEN
+    /// UNDER THE POISON — what it had been reading was the source offset, which moves for
+    /// every element the moment the bound book carries one extra line. The poison is what
+    /// said so (HANDOFF RULES §5.4: read WHICH case went red, not how many).
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT BINDS <c>lyricText</c> RATHER THAN <c>title</c>, which is the second thing
+    /// the poison exposed. MEASURED on this book, 2026-08-18, geometry-only: binding
+    /// <c>lyricText</c> moves the page; binding <c>title</c>, <c>chordName</c> or
+    /// <c>barNumber</c> does NOT. A title is drawn centred and its width is reserved by
+    /// nobody; a chord symbol's width sits under <c>SymbolWidth</c>'s 2.0 floor for a name
+    /// this short; the book prints no bar number. So "a bound face is measured" is
+    /// observable on the page only where the width feeds the SPACING, and this case names
+    /// the role where it does.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ANamedFaceMovesThePage_NotOnlyTheFontFamilyAttribute()
+    {
+        // Everything that is not geometry: the face the reader is told to use, and the
+        // source offsets, which differ because the two books are not the same length.
+        static string GeometryOnly(string svg) => Regex.Replace(
+            svg, " (font-family=\"[^\"]*\"|data-pos=\"[^\"]*\"|data-alt=\"[^\"]*\")", "");
+
+        string bound = Svg(BoundLyrics + Book);
+        string plain = Svg(Book);
+
+        // The page holds the syllables this case is about — an empty comparison would pass.
+        Assert.Contains(">la<", plain, StringComparison.Ordinal);
+        // The attribute IS emitted, so a failure below cannot be "the binding did nothing".
+        Assert.Contains("TeX Gyre Heros", bound, StringComparison.Ordinal);
+
+        Assert.NotEqual(GeometryOnly(plain), GeometryOnly(bound));
     }
 }

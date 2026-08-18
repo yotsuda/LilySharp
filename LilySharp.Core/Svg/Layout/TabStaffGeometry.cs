@@ -111,6 +111,19 @@ internal static class TabConstants
     /// "how tall is a fret number".
     /// </para>
     /// </remarks>
+    /// <remarks>
+    /// ⚠️ THE BUNDLED FACE, NOT THE SCORE'S — and here that is nearly always the same
+    /// thing. <see cref="Rendering.TextRole.TabFret"/> is NOTATION
+    /// (<c>TextRoles.IsNotation</c>): a broad <c>font "Georgia"</c> or <c>font { serif … }</c>
+    /// does not reach it, by decision, because a fret number is not prose. Only a score
+    /// that names <c>notation</c> or <c>tabFret</c> outright binds it, and this and its two
+    /// neighbours below still take the bundled face when it does.
+    /// <para>
+    /// The reason is this member: it is a <c>static readonly</c> initialised by the TYPE,
+    /// which cannot be handed a score. Closing it means turning three shared quantities
+    /// into per-score calls, and it is left named and counted rather than half-done.
+    /// </para>
+    /// </remarks>
     public static readonly double FretDigitHeight =
         Rendering.TextFontMetrics.InkHeight("0", FretFontSize, sans: false,
             style: Rendering.FontStyle.Bold);

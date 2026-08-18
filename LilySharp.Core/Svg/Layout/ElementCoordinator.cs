@@ -2841,6 +2841,7 @@ internal sealed class ElementCoordinator
     /// one position off the drawn one.
     /// </remarks>
     private static IReadOnlyList<SlurExtraObject> BuildSlurExtraObjects(
+        Rendering.ScoreTextMetrics fonts,
         Voice voice, SystemLayout segSystem, SlurItem slur,
         double staffMiddleDown, double segStartX, double segEndX,
         ImmutableArray<TupletBracketLayout> tupletNumbers = default,
@@ -2967,12 +2968,12 @@ internal sealed class ElementCoordinator
                 if (t.NumberX < segStartX - eps || t.NumberX > segEndX + eps)
                     continue;
 
-                double halfW = Rendering.TextFontMetrics.Advance(
+                double halfW = fonts.Advance(
                     t.NumberText, TupletBracketEngraver.NumberFontSize,
-                    sans: false, TupletBracketEngraver.NumberFontStyle) / 2.0;
-                double halfH = Rendering.TextFontMetrics.InkHeight(
+                    Rendering.TextRole.Tuplet, TupletBracketEngraver.NumberFontStyle) / 2.0;
+                double halfH = fonts.InkHeight(
                     t.NumberText, TupletBracketEngraver.NumberFontSize,
-                    sans: false, TupletBracketEngraver.NumberFontStyle) / 2.0;
+                    Rendering.TextRole.Tuplet, TupletBracketEngraver.NumberFontStyle) / 2.0;
                 // NumberYUp is staff-spaces above this staff's TOP line (the
                 // layout ran with no staff offset); page device Y down.
                 double cy = staffMiddleDown - 2.0 - t.NumberYUp;
@@ -3374,7 +3375,7 @@ internal sealed class ElementCoordinator
                     graceByMeasure, graceGeomCache);
 
                 var extraObjects = BuildSlurExtraObjects(
-                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
+                    score.TextMetrics, score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
                     tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts);
 
                 // A slur avoids only other slurs whose SPAN OVERLAPS IT IN TIME. LilyPond

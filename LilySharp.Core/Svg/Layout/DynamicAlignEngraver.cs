@@ -92,6 +92,7 @@ internal static class DynamicAlignEngraver
     public static (ImmutableArray<DynamicLayout> Dynamics, ImmutableArray<HairpinLayout> Hairpins,
                    ImmutableArray<AlignedLineGroup> Groups)
         AlignLines(
+            Rendering.ScoreTextMetrics fonts,
             ImmutableArray<HairpinItem> hairpinItems,
             ImmutableArray<DynamicItem> dynamics,
             ImmutableArray<DynamicLayout> dynamicLayouts,
@@ -197,7 +198,7 @@ internal static class DynamicAlignEngraver
                     if (!measureToSystem.TryGetValue(d.MeasureIndex, out int ds) || ds != sysIdx)
                         continue;
                     sysTexts.Add(di);
-                    Fold(DynamicEngraver.LabelSkylines(d.Text, d.IsExpressiveText, d.X,
+                    Fold(DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText, d.X,
                         -DynamicEngraver.TextOffsetInSpanner));
                 }
                 var sysWedges = new List<(int LayoutIdx, int HairpinItemIdx)>();

@@ -265,12 +265,22 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    error would let a runner's contents fail an author's score. (Until 2026-08-18 only the
    `embedded` spelling was checked, so `font "NoSuchFontFace"` was accepted in silence.)
 
-   ⚠️ WHAT A BOUND FACE DOES NOT CHANGE: the layout still reserves space using the bundled
-   face of the role's family, because measuring a system font by name would make the same
-   .lys lay out differently on different machines. A named face is therefore DRAWN but not
-   MEASURED, and the two disagree by −2.05 to +3.61 staff spaces on ordinary strings
-   (measured 2026-08-18 at 2.2 ss). Weight and slant are the engraving's, not the score's:
-   there is no way to ask for italic here. *)
+   A BOUND FACE IS MEASURED, not only drawn — since 2026-08-18. The layout reserves space
+   with the same file the string is drawn in, so a title in a wide face gets a wide box.
+   Before that the reservation always used the bundled face and the two disagreed by −2.05
+   to +3.61 staff spaces on ordinary strings (measured 2026-08-18 at 2.2 ss).
+
+   ⚠️ THIS MAKES THE PAGE DEPEND ON THE MACHINE, for a score that names a face: where the
+   face is not installed the reservation falls back to the bundled one, and the page is
+   spaced differently. That is LilyPond's own exposure and for the same reason — a
+   `font-name` there goes to fontconfig — and it is why a missing face WARNS rather than
+   passing in silence. A score that names no face is unaffected: the bundled files ship.
+
+   ⚠️ `embedded` DOES ONE THING: it subsets the named faces into an exported PDF. It is not
+   a switch on how anything is measured or drawn.
+
+   Weight and slant are the engraving's, not the score's: there is no way to ask for
+   italic here. *)
 
 (* Example:
    font {

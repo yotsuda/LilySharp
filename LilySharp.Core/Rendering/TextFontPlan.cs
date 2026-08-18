@@ -37,15 +37,15 @@ namespace LilySharp.Core.Rendering;
 /// what lets a score say <c>marks "Georgia"</c> and then <c>tempo "Playfair Display"</c>
 /// without the second being a special case.
 /// <para>
-/// ⚠️ RESOLVING IS NOT MEASURING. <see cref="ResolvedFace.Family"/> is the BUNDLED family
-/// the reservation is computed from, and it follows a <c>chords serif</c> style redirect
-/// because both sides of that redirect are faces this engine ships and can measure. It
-/// does NOT follow a face NAME: <see cref="TextFontMetrics"/> refuses a system-font
-/// fallback on purpose (measuring by name would make one <c>.lys</c> lay out differently
-/// on different machines), so a named face is drawn but reserved for with the bundled
-/// family. That gap is real and measured — 2026-08-18, a 16-character tempo mark at 2.2 ss
-/// runs from −2.05 to +3.61 staff spaces off depending on the face — and it is HANDOFF
-/// §2F's open item, not something this type hides.
+/// ⚠️ RESOLVING IS NOT MEASURING, and this type still does only the first half.
+/// <see cref="ResolvedFace.Family"/> is the family a role FALLS BACK to — the bundled file
+/// used when nothing is bound, and the target of a <c>chords serif</c> style redirect. It
+/// deliberately says nothing about which file a NAMED face resolves to, because that
+/// answer depends on the machine: <see cref="ScoreTextMetrics.Face"/> walks the chain and
+/// asks <see cref="TextFontMetrics.CanMeasure"/>, and the reservation follows the face it
+/// gets. The gap this note used to record — a 16-character tempo mark at 2.2 ss running
+/// −2.05 to +3.61 staff spaces off depending on the face, measured 2026-08-18 — was closed
+/// the same day by giving the layout the roles.
 /// </para>
 /// </remarks>
 public sealed class TextFontPlan

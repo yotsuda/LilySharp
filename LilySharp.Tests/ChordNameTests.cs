@@ -22,6 +22,7 @@ using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -206,7 +207,7 @@ public class ChordNameTests
     [Fact]
     public void ChordNameEngraver_Calculate_EmptyInput()
     {
-        var result = ChordNameEngraver.Calculate(
+        var result = ChordNameEngraver.Calculate(ScoreTextMetrics.Bundled, 
             ImmutableArray<ChordNameItem>.Empty,
             ImmutableArray<SystemLayout>.Empty,
             ImmutableArray<MeasureLayout>.Empty);
@@ -223,7 +224,7 @@ public class ChordNameTests
         var measureLayout = new MeasureLayout(0, 5.0, 10.0, ImmutableArray.Create(itemLayout));
         var systemLayout = new SystemLayout(0, 20.0, 50.0, 5.0, ImmutableArray.Create(measureLayout));
 
-        var result = ChordNameEngraver.Calculate(
+        var result = ChordNameEngraver.Calculate(ScoreTextMetrics.Bundled, 
             chordNames,
             ImmutableArray.Create(systemLayout),
             ImmutableArray.Create(measureLayout));
@@ -244,7 +245,7 @@ public class ChordNameTests
         var measureLayout = new MeasureLayout(0, 0, 10.0, ImmutableArray.Create(itemLayout));
         var systemLayout = new SystemLayout(0, 20.0, 50.0, 5.0, ImmutableArray.Create(measureLayout));
 
-        var result = ChordNameEngraver.Calculate(
+        var result = ChordNameEngraver.Calculate(ScoreTextMetrics.Bundled, 
             chordNames,
             ImmutableArray.Create(systemLayout),
             ImmutableArray.Create(measureLayout));

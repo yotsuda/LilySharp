@@ -45,6 +45,7 @@ internal static class LyricSpacing
     /// returned unchanged — lyrics are only engraved on single-voice staves.
     /// </remarks>
     public static ImmutableArray<Spring> ApplyLyricSpacing(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         Measure measure,
         IReadOnlyList<Fraction> columnTimings,
@@ -68,7 +69,7 @@ internal static class LyricSpacing
         // syllables to crowd. Reserve by timing column instead.
         if (measure.Items.Length == 0 || springs.Length != measure.Items.Length + 1)
             return ReserveLyricWidthByColumn(
-                springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges);
+                fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges);
 
         var lyricsByItem = new Dictionary<int, List<LyricItem>>();
         foreach (var lyric in lyrics)
@@ -96,20 +97,20 @@ internal static class LyricSpacing
         // Leading extent: the first syllable clears the start barline.
         int firstItem = lyricItems[0];
         BumpSpanMin(result, 0, firstItem,
-            GetLyricLeftExtent(lyricsByItem[firstItem], Edge(firstItem)) + GlyphMetrics.MinItemGap);
+            GetLyricLeftExtent(fonts, lyricsByItem[firstItem], Edge(firstItem)) + GlyphMetrics.MinItemGap);
 
         // Between consecutive syllables (across any held/silent items in between).
         for (int p = 0; p + 1 < lyricItems.Count; p++)
         {
             int a = lyricItems[p], b = lyricItems[p + 1];
             BumpSpanMin(result, a + 1, b,
-                CalculateLyricDistance(lyricsByItem[a], lyricsByItem[b], Edge(a), Edge(b)));
+                CalculateLyricDistance(fonts, lyricsByItem[a], lyricsByItem[b], Edge(a), Edge(b)));
         }
 
         // Trailing extent: the last syllable clears the end barline.
         int lastItem = lyricItems[^1];
         BumpSpanMin(result, lastItem + 1, measure.Items.Length,
-            GetLyricRightExtent(lyricsByItem[lastItem], Edge(lastItem)) + GlyphMetrics.MinItemGap);
+            GetLyricRightExtent(fonts, lyricsByItem[lastItem], Edge(lastItem)) + GlyphMetrics.MinItemGap);
 
         return result.ToImmutable();
     }
@@ -129,13 +130,14 @@ internal static class LyricSpacing
     /// column springs the spacing-spanner solves.
     /// </remarks>
     public static ImmutableArray<Spring> ApplyLeadSheetLyricSpacing(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
         => ReserveLyricWidthByColumn(
-            springs, columnTimings, measureIndex, lyrics, ly => ly.IsLyricsRow,
+            fonts, springs, columnTimings, measureIndex, lyrics, ly => ly.IsLyricsRow,
             parentAlignmentEdges);
 
     /// <summary>
@@ -164,6 +166,7 @@ internal static class LyricSpacing
     /// (a chord-only column, or a bar's leading time/clef change).
     /// </summary>
     private static ImmutableArray<Spring> ReserveLyricWidthByColumn(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
@@ -201,20 +204,20 @@ internal static class LyricSpacing
         // Leading extent: the first syllable clears the start barline.
         int firstCol = lyricCols[0];
         BumpSpanMin(result, 0, firstCol,
-            GetLyricLeftExtent(lyricsByCol[firstCol], Edge(firstCol)) + GlyphMetrics.MinItemGap);
+            GetLyricLeftExtent(fonts, lyricsByCol[firstCol], Edge(firstCol)) + GlyphMetrics.MinItemGap);
 
         // Between consecutive syllables (across any note/chord-only columns in between).
         for (int p = 0; p + 1 < lyricCols.Count; p++)
         {
             int a = lyricCols[p], b = lyricCols[p + 1];
             BumpSpanMin(result, a + 1, b,
-                CalculateLyricDistance(lyricsByCol[a], lyricsByCol[b], Edge(a), Edge(b)));
+                CalculateLyricDistance(fonts, lyricsByCol[a], lyricsByCol[b], Edge(a), Edge(b)));
         }
 
         // Trailing extent: the last syllable clears the end barline.
         int lastCol = lyricCols[^1];
         BumpSpanMin(result, lastCol + 1, cols,
-            GetLyricRightExtent(lyricsByCol[lastCol], Edge(lastCol)) + GlyphMetrics.MinItemGap);
+            GetLyricRightExtent(fonts, lyricsByCol[lastCol], Edge(lastCol)) + GlyphMetrics.MinItemGap);
 
         return result.ToImmutable();
     }
@@ -258,6 +261,7 @@ internal static class LyricSpacing
     /// <see cref="GlyphMetrics.MinItemGap"/>.
     /// </remarks>
     internal static (double[] Left, double[] Right) InkReachPerColumn(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         Measure measure,
         IReadOnlyList<Fraction> columnTimings,
@@ -305,8 +309,8 @@ internal static class LyricSpacing
             if (perColumn[c] is not { Count: > 0 })
                 continue;
             var edge = AlignmentEdge(parentAlignmentEdges, c);
-            leftReach[c] = GetLyricLeftExtent(perColumn[c], edge);
-            rightReach[c] = GetLyricRightExtent(perColumn[c], edge);
+            leftReach[c] = GetLyricLeftExtent(fonts, perColumn[c], edge);
+            rightReach[c] = GetLyricRightExtent(fonts, perColumn[c], edge);
         }
         return (leftReach, rightReach);
     }
@@ -321,14 +325,15 @@ internal static class LyricSpacing
     /// where each extent is half the lyric text width (centered under note).
     /// </remarks>
     internal static double CalculateLyricDistance(
+        Rendering.ScoreTextMetrics fonts,
         List<LyricItem>? prevLyrics, List<LyricItem>? nextLyrics,
         (double Left, double Centre) prevAlignmentEdge, (double Left, double Centre) nextAlignmentEdge)
     {
         if (prevLyrics == null && nextLyrics == null)
             return 0;
 
-        double prevRight = GetLyricRightExtent(prevLyrics, prevAlignmentEdge);
-        double nextLeft = GetLyricLeftExtent(nextLyrics, nextAlignmentEdge);
+        double prevRight = GetLyricRightExtent(fonts, prevLyrics, prevAlignmentEdge);
+        double nextLeft = GetLyricLeftExtent(fonts, nextLyrics, nextAlignmentEdge);
 
         // Minimum INK gap between syllables: a word-space at the lyric font
         // (~0.31 em at 3.2 ss), which is also what LP's lyric spacing yields
@@ -354,7 +359,7 @@ internal static class LyricSpacing
     /// a defaulted 0 would be a model of Lily#'s own making leaking back in.
     /// </remarks>
     internal static double GetLyricRightExtent(
-        List<LyricItem>? lyrics, (double Left, double Centre) alignmentEdge)
+        Rendering.ScoreTextMetrics fonts, List<LyricItem>? lyrics, (double Left, double Centre) alignmentEdge)
     {
         if (lyrics == null || lyrics.Count == 0)
             return 0;
@@ -363,7 +368,7 @@ internal static class LyricSpacing
         double maxExtent = 0;
         foreach (var lyric in lyrics)
         {
-            double width = EstimateLyricTextWidth(lyric.Text);
+            double width = EstimateLyricTextWidth(fonts, lyric.Text);
             maxExtent = Math.Max(maxExtent, lyric.MelismaAlignLeft
                 ? alignmentEdge.Left + width
                 : width / 2 + alignmentEdge.Centre);
@@ -381,7 +386,7 @@ internal static class LyricSpacing
     /// <see cref="GetLyricRightExtent"/>.
     /// </remarks>
     internal static double GetLyricLeftExtent(
-        List<LyricItem>? lyrics, (double Left, double Centre) alignmentEdge)
+        Rendering.ScoreTextMetrics fonts, List<LyricItem>? lyrics, (double Left, double Centre) alignmentEdge)
     {
         if (lyrics == null || lyrics.Count == 0)
             return 0;
@@ -390,7 +395,7 @@ internal static class LyricSpacing
         double maxExtent = 0;
         foreach (var lyric in lyrics)
         {
-            double width = EstimateLyricTextWidth(lyric.Text);
+            double width = EstimateLyricTextWidth(fonts, lyric.Text);
             maxExtent = Math.Max(maxExtent, lyric.MelismaAlignLeft
                 ? -alignmentEdge.Left
                 : width / 2 - alignmentEdge.Centre);
@@ -403,6 +408,6 @@ internal static class LyricSpacing
     // this used to be a crude 3-bucket table that under-measured capitals
     // ("Up" by ~0.7 ss), so the springs reserved too little and wide syllables
     // overlapped their neighbours in lyric rows.
-    private static double EstimateLyricTextWidth(string text)
-        => Rendering.TextFontMetrics.Serif(text, 3.2);
+    private static double EstimateLyricTextWidth(Rendering.ScoreTextMetrics fonts, string text)
+        => fonts.Advance(text, 3.2, Rendering.TextRole.LyricText);
 }

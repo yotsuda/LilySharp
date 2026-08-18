@@ -16,6 +16,7 @@
 
 using LilySharp.Core.Svg.Layout;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -79,8 +80,8 @@ public class DynamicSupportPointwiseTests
         var support = SupportDown(withStem: true);
         double xLabel = HeadAdvance / 2.0;   // centred on the head, LilyPond's anchor
 
-        var myF = DynamicEngraver.LabelSkylines("f", expressive: false, xLabel, -0.6);
-        var myFff = DynamicEngraver.LabelSkylines("fff", expressive: false, xLabel, -0.6);
+        var myF = DynamicEngraver.LabelSkylines(ScoreTextMetrics.Bundled, "f", expressive: false, xLabel, -0.6);
+        var myFff = DynamicEngraver.LabelSkylines(ScoreTextMetrics.Bundled, "fff", expressive: false, xLabel, -0.6);
 
         Assert.True(GlyphMetrics.TryGetDynamicInk("f", out _, out double fTop));
         double headBound = (fTop - 0.6) - HeadBottom;   // the f's peak against the head box
@@ -112,7 +113,7 @@ public class DynamicSupportPointwiseTests
         double xLabel = HeadAdvance / 2.0;
         // The quiet side-position landing: label top at head bottom − 0.6.
         double quietBaseline = HeadBottom - 0.6 - fTop;
-        var my = DynamicEngraver.LabelSkylines("f", expressive: false, xLabel, quietBaseline);
+        var my = DynamicEngraver.LabelSkylines(ScoreTextMetrics.Bundled, "f", expressive: false, xLabel, quietBaseline);
 
         // Thin stem only: no move (the f's left tail sits below the sliver, pointwise).
         Assert.Equal(0.0,

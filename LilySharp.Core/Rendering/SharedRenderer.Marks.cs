@@ -471,7 +471,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/mark-engraver.cc:90-140 Mark types
     /// LILYPOND-REF: scm/define-grobs.scm SegnoMark:3083, CodaMark:1001
     /// </remarks>
-    private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
+    private static void DrawMusicMarks(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.MusicMarkLayouts.IsDefaultOrEmpty) return;
@@ -484,7 +485,7 @@ internal static partial class SharedRenderer
             // not run through the ossia affine), so no ossia affine is applied here.
             double yUp = os.StaffMiddleYUp(m.StaffIndex, m.MeasureIndex, StaffHeight) + m.YUp;
             using (gc.Source(m.SourcePosition))
-                DrawSingleMusicMark(m, yUp, gc);
+                DrawSingleMusicMark(fonts, m, yUp, gc);
         }
     }
 
@@ -494,7 +495,8 @@ internal static partial class SharedRenderer
     /// picks the note value — 8 = eighths (single beam), 16 = sixteenths (double beam).
     /// Hand-built from the same notehead/stem/beam primitives the metronome mark uses.
     /// </summary>
-    private static void DrawSwingEquation(IDrawingContext gc, double startX, double baselineY, int subdivision)
+    private static void DrawSwingEquation(ScoreTextMetrics fonts, IDrawingContext gc,
+        double startX, double baselineY, int subdivision)
     {
         int beams = subdivision >= 16 ? 2 : 1;
         const double beamGap = 0.3;          // spacing between the two beams of a 16th
@@ -546,7 +548,9 @@ internal static partial class SharedRenderer
         double x = DrawPair(startX, dotted: false, withThree: false);
         x += 0.35;
         gc.DrawText("=", x, baselineY, eqSize, TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
-        x += TextFontMetrics.SerifBold("=", eqSize) + 0.45;
+        // ⚠️ Same mismatch as the To-Coda prefix: the "=" is DRAWN Regular on the line above
+        // and has always been MEASURED Bold. Preserved, not fixed — see that site.
+        x += fonts.Advance("=", eqSize, TextRole.Tempo, FontStyle.Bold) + 0.45;
         DrawPair(x, dotted: true, withThree: true);
     }
 
@@ -554,7 +558,8 @@ internal static partial class SharedRenderer
     // positive), matching LilyPond's native sign convention: offsets that move a
     // sub-element visually UP the page ADD, device-downward offsets SUBTRACT. The
     // page context is Y-up, so every coordinate is emitted directly.
-    private static void DrawSingleMusicMark(MusicMarkLayout m, double absY, IDrawingContext gc)
+    private static void DrawSingleMusicMark(ScoreTextMetrics fonts, MusicMarkLayout m,
+        double absY, IDrawingContext gc)
     {
         if (m.IsSymbol)
         {
@@ -588,12 +593,12 @@ internal static partial class SharedRenderer
                     TextRole.Tempo, FontStyle.Bold, TextAnchor.Start, Color.Black);
                 if (!hasMetronome)
                     return;
-                x += TextFontMetrics.SerifBold(m.TempoText, em);
+                x += fonts.Advance(m.TempoText, em, TextRole.Tempo, FontStyle.Bold);
                 // The concat's " (" — one run; its leading space carried as the
                 // single-run offset so no backend collapses it.
-                gc.DrawText("(", x + MetronomeMarkGeometry.LeadingSpaceAdvance("("), absY, em,
+                gc.DrawText("(", x + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, "("), absY, em,
                     TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
-                x += TextFontMetrics.Serif(" (", em);
+                x += fonts.Advance(" (", em, TextRole.Tempo);
             }
             // Beat-unit note: whole (1) = stemless whole head; 2 = hollow
             // half with stem; 4+ = black head, stem, flags from the 8th up.
@@ -634,14 +639,14 @@ internal static partial class SharedRenderer
                 m.Text, m.TempoText != null);
             double eqX = x
                 + MetronomeMarkGeometry.NoteRight(m.TempoBeatUnit, m.TempoDots)
-                + MetronomeMarkGeometry.LeadingSpaceAdvance(equation);
+                + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, equation);
             gc.DrawText(equation, eqX, absY,
                 em, TextRole.Tempo, FontStyle.Regular, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
-                double textEnd = eqX + TextFontMetrics.Serif(equation, em);
+                double textEnd = eqX + fonts.Advance(equation, em, TextRole.Tempo);
                 // DrawSwingEquation draws in the page Y-up frame; hand it the Y-up baseline.
-                DrawSwingEquation(gc, textEnd + 0.8, absY, m.SwingSubdivision);
+                DrawSwingEquation(fonts, gc, textEnd + 0.8, absY, m.SwingSubdivision);
             }
             return;
         }
@@ -649,7 +654,7 @@ internal static partial class SharedRenderer
         {
             double fs = m.MarkType == MusicMarkType.Rehearsal ? FontSize * 0.6 : FontSize * 0.55;
             const double pad = 0.2;
-            double textWidth = TextFontMetrics.SerifBold(m.Text, fs);
+            double textWidth = fonts.Advance(m.Text, fs, TextRole.Mark, FontStyle.Bold);
             double boxW = textWidth + pad * 2;
             double boxH = fs + pad * 2;
             // DrawRectangle's y is the visual-top edge (Y-up): anchor + half the box.
@@ -674,7 +679,12 @@ internal static partial class SharedRenderer
             double ts = FontSize * 0.7;
             double gs = FontSize * 0.8;
             const string prefix = "To ";
-            double textW = TextFontMetrics.SerifBold(prefix, ts);
+            // ⚠️ MEASURED Bold, DRAWN BoldItalic on the line below — a reserve-versus-draw
+            // mismatch that predates the role port and is NOT fixed here, because fixing it
+            // moves the page and this commit is plumbing (HANDOFF RULES §5.1, one island per
+            // commit). The style is spelled out rather than left implicit so the next reader
+            // sees the pair. Found 2026-08-18 while giving the layout the score's faces.
+            double textW = fonts.Advance(prefix, ts, TextRole.Navigation, FontStyle.Bold);
             double glyphW = gs * 0.42;   // approx advance of scripts.coda
             double left = m.X - (textW + glyphW) / 2;
             gc.DrawText(prefix, left, absY, ts, TextRole.Navigation,

@@ -146,6 +146,7 @@ internal static class OutsideStaffStacker
                     ImmutableArray<ArticulationLayout> Articulations,
                     ImmutableArray<TrillSpannerLayout> Trills)
         StackBelowStaff(
+            ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
             ImmutableArray<DynamicLayout> dynamics,
             ImmutableArray<HairpinLayout> hairpins,
@@ -426,7 +427,7 @@ internal static class OutsideStaffStacker
                 {
                     var dyn = dynB![di];
                     Fold(DynamicEngraver.LabelSkylines(
-                        dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp - off - 2.0));
+                        fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp - off - 2.0));
                 }
                 foreach (int hi in g.HairpinIndices)
                 {
@@ -489,7 +490,7 @@ internal static class OutsideStaffStacker
                 // LILYPOND-REF: lily/axis-group-interface.cc:648-676,:747-749 avoid_outside_staff_collisions
                 //   — padding = outside-staff-padding.
                 var (myUp, myDown) = DynamicEngraver.LabelSkylines(
-                    dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup);
+                    fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup);
                 double move = tracker.Place(myUp, myDown, OutsideStaffPadding);
                 if (move != 0)
                     dynBuilder[i] = dyn with { YUp = dynYup + move + off + 2.0 };
@@ -633,6 +634,7 @@ internal static class OutsideStaffStacker
                    ImmutableArray<TextSpannerLayout> TextSpanners,
                    ImmutableArray<ArticulationLayout> Articulations)
         StackAboveStaff(
+            ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
             IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
             ImmutableArray<TupletBracketLayout> tupletBrackets,
@@ -650,10 +652,10 @@ internal static class OutsideStaffStacker
             Func<int, int, (object Up, object Down)?>? profileIdentity = null)
     {
         if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty)
-            return StackAboveStaffCore(systems, systemSkylines, tupletBrackets, trills,
+            return StackAboveStaffCore(fonts, systems, systemSkylines, tupletBrackets, trills,
                 barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
                 aboveDynamics, textSpanners, staffProfile);
-        return StackAboveStaffMemoized(systems, systemSkylines, tupletBrackets, trills,
+        return StackAboveStaffMemoized(fonts, systems, systemSkylines, tupletBrackets, trills,
             barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
             aboveDynamics, textSpanners, staffProfile, memo, profileIdentity);
     }
@@ -685,6 +687,7 @@ internal static class OutsideStaffStacker
                    ImmutableArray<TextSpannerLayout> TextSpanners,
                    ImmutableArray<ArticulationLayout> Articulations)
         StackAboveStaffMemoized(
+            ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
             IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
             ImmutableArray<TupletBracketLayout> tupletBrackets,
@@ -782,7 +785,7 @@ internal static class OutsideStaffStacker
 
         // 4. Stack the live systems (byte-identical to stacking them in the full call:
         // a system's grobs are all-in or all-out, and only same-system grobs interact).
-        var core = StackAboveStaffCore(systems, systemSkylines, liveTuplets, liveTrills,
+        var core = StackAboveStaffCore(fonts, systems, systemSkylines, liveTuplets, liveTrills,
             liveBarNumbers, liveOttavas, liveCustomTexts, liveVoltas, liveMarks, liveArtics,
             liveDynamics, liveTextSpanners, staffProfile);
 
@@ -948,6 +951,7 @@ internal static class OutsideStaffStacker
                    ImmutableArray<TextSpannerLayout> TextSpanners,
                    ImmutableArray<ArticulationLayout> Articulations)
         StackAboveStaffCore(
+            ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
             IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
             ImmutableArray<TupletBracketLayout> tupletBrackets,
@@ -973,20 +977,20 @@ internal static class OutsideStaffStacker
 
         var topStaff = TopStaffBySystem(systems);
         var trackers = AboveTrackers(systems, systemSkylines, staffProfile, topStaff);
-        SeedAboveTrackers(systems, trackers, articulations, tupletBrackets, measureToSystem);
+        SeedAboveTrackers(fonts, systems, trackers, articulations, tupletBrackets, measureToSystem);
 
         // Movable outside-staff grobs, placed in ascending outside-staff-priority
         // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
         var adjTrills = PlaceTrills(trills, trackers, measureToSystem);
         var adjArticulations = PlaceArticulations(
             articulations, trackers, measureToSystem, systems);
-        var adjBarNumbers = PlaceBarNumbers(barNumbers, trackers, measureToSystem, topStaff);
-        var adjDynamics = PlaceAboveDynamics(aboveDynamics, trackers, measureToSystem, systems);
-        var adjTextSpanners = PlaceTextSpanners(textSpanners, trackers, measureToSystem, systems);
-        var adjOttavas = PlaceOttavas(ottavas, trackers, measureToSystem);
-        var adjCustomTexts = PlaceCustomTexts(customTexts, trackers, measureToSystem, systems);
-        var adjVoltas = PlaceVoltas(voltas, trackers, measureToSystem, topStaff);
-        var adjMarks = PlaceMusicMarks(musicMarks, trackers, measureToSystem, systems);
+        var adjBarNumbers = PlaceBarNumbers(fonts, barNumbers, trackers, measureToSystem, topStaff);
+        var adjDynamics = PlaceAboveDynamics(fonts, aboveDynamics, trackers, measureToSystem, systems);
+        var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
+        var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
+        var adjCustomTexts = PlaceCustomTexts(fonts, customTexts, trackers, measureToSystem, systems);
+        var adjVoltas = PlaceVoltas(fonts, voltas, trackers, measureToSystem, topStaff);
+        var adjMarks = PlaceMusicMarks(fonts, musicMarks, trackers, measureToSystem, systems);
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks,
             adjDynamics, adjTextSpanners, adjArticulations);
@@ -1219,6 +1223,7 @@ internal static class OutsideStaffStacker
     /// their beams in this model), each into ITS OWN staff's tracker.
     /// </summary>
     private static void SeedAboveTrackers(
+        ScoreTextMetrics fonts,
         ImmutableArray<SystemLayout> systems,
         Func<int, int, OutsideStaffSkylines> trackers,
         ImmutableArray<ArticulationLayout> articulations,
@@ -1293,10 +1298,12 @@ internal static class OutsideStaffStacker
                 if (!string.IsNullOrEmpty(tb.NumberText))
                 {
                     double fs = TupletBracketEngraver.NumberFontSize;
-                    double halfW = TextFontMetrics.Advance(
-                        tb.NumberText, fs, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
-                    double halfH = TextFontMetrics.InkHeight(
-                        tb.NumberText, fs, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
+                    double halfW = fonts.Advance(
+                        tb.NumberText, fs, TextRole.Tuplet,
+                        TupletBracketEngraver.NumberFontStyle) / 2;
+                    double halfH = fonts.InkHeight(
+                        tb.NumberText, fs, TextRole.Tuplet,
+                        TupletBracketEngraver.NumberFontStyle) / 2;
                     trackers(sysIdx, tb.StaffIndex).MergeSupport(up: VerticalSkyline.FromBox(
                         tb.NumberX - halfW, tb.NumberX + halfW,
                         tb.NumberYUp + halfH, tb.NumberYUp + halfH, VerticalDirection.Up));
@@ -1445,6 +1452,7 @@ internal static class OutsideStaffStacker
     //   the Score context (its \name is at :729), not in Staff, so there is one BarNumber per
     //   system and its side support is the topmost staff.
     private static ImmutableArray<BarNumberLayout> PlaceBarNumbers(
+        ScoreTextMetrics fonts,
         ImmutableArray<BarNumberLayout> barNumbers, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, int[] topStaff)
     {
@@ -1474,11 +1482,13 @@ internal static class OutsideStaffStacker
             // BarNumber's vertical-skylines come from its stencil like every text grob
             // (grob::always-vertical-skylines-from-stencil), so the pair replaces the
             // ink box the interval tracker held.
-            double width = TextFontMetrics.SerifBold(bn.Text, BarNumberEngraver.FontSize);
+            double width = fonts.Advance(
+                bn.Text, BarNumberEngraver.FontSize, TextRole.BarNumber, FontStyle.Bold);
             double originX = bn.RightAligned ? bn.X - width : bn.X;
             // System-relative Y-up: bn.YUp is Y-up from the system top, entering directly.
             var (bnUp, bnDown) = TextOutlineSkylines.Place(
-                bn.Text, BarNumberEngraver.FontSize, sans: false, FontStyle.Bold,
+                bn.Text, BarNumberEngraver.FontSize,
+                fonts.Face(TextRole.BarNumber, FontStyle.Bold),
                 originX, bn.YUp);
             double move = trackers(sysIdx, topStaff[sysIdx])
                 .Place(bnUp, bnDown, OutsideStaffPadding);
@@ -1493,6 +1503,7 @@ internal static class OutsideStaffStacker
     // stack outward from the staff and push higher-priority above-staff grobs (ottava,
     // marks, …) clear of them. Text ascends UP from its baseline anchor.
     private static ImmutableArray<DynamicLayout> PlaceAboveDynamics(
+        ScoreTextMetrics fonts,
         ImmutableArray<DynamicLayout> aboveDynamics, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
@@ -1511,7 +1522,7 @@ internal static class OutsideStaffStacker
             // LILYPOND-REF: scm/define-grobs.scm:1446 DynamicText Grob::vertical_skylines_from_stencil.
             double midUp = LayoutUtilities.StaffOffsetInSystemUp(systems[sysIdx], dyn.StaffIndex) - 2.0;
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
-                dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp);
+                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp);
             double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
             b[i] = dyn with { YUp = dyn.YUp + move };
         }
@@ -1523,6 +1534,7 @@ internal static class OutsideStaffStacker
     //   (outside-staff-priority . 350). Placed above the staff, clearing the
     //   up-skyline, instead of below where it hit low notes.
     private static ImmutableArray<TextSpannerLayout> PlaceTextSpanners(
+        ScoreTextMetrics fonts,
         ImmutableArray<TextSpannerLayout> textSpanners, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
@@ -1563,7 +1575,7 @@ internal static class OutsideStaffStacker
             double top = lineHalf, bottom = lineHalf;
             if (!string.IsNullOrEmpty(ts.Text))
             {
-                var ink = TextFontMetrics.Ink(ts.Text, 4.0 * 0.5, sans: false, FontStyle.Italic);
+                var ink = fonts.Ink(ts.Text, 4.0 * 0.5, TextRole.Text, FontStyle.Italic);
                 top = Math.Max(top, ink.Top);
                 bottom = Math.Max(bottom, -ink.Bottom);
             }
@@ -1577,6 +1589,7 @@ internal static class OutsideStaffStacker
 
     // ---- 400: OttavaBracket (above-staff only) ----
     private static ImmutableArray<OttavaBracketLayout> PlaceOttavas(
+        ScoreTextMetrics fonts,
         ImmutableArray<OttavaBracketLayout> ottavas, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem)
     {
@@ -1606,9 +1619,9 @@ internal static class OutsideStaffStacker
             // notehead's left edge, under the label's sloped outline) — the mover's half of
             // ledger ottava.support.staff-to-line's residual.
             var (myUp, myDown) = OttavaBracketEngraver.Skylines(
-                o.Text, o.StartX,
+                fonts, o.Text, o.StartX,
                 OttavaBracketEngraver.LineStartX(
-                    o.Text, o.StartX, EngravingDefaults.OttavaBracketFontSize),
+                    fonts, o.Text, o.StartX, EngravingDefaults.OttavaBracketFontSize),
                 o.EndX, o.EdgeHeight, o.IsAbove, o.YUp);
             double move = trackers(sysIdx, o.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
             b[i] = o with { YUp = o.YUp + move };
@@ -1618,6 +1631,7 @@ internal static class OutsideStaffStacker
 
     // ---- 450: TextScript (^"...") ----
     private static ImmutableArray<CustomTextLayout> PlaceCustomTexts(
+        ScoreTextMetrics fonts,
         ImmutableArray<CustomTextLayout> customTexts, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
@@ -1650,7 +1664,7 @@ internal static class OutsideStaffStacker
                 + (2.0 + EngravingDefaults.StaffLineThickness / 2.0) + TextScriptStaffPadding;
             double anchor = Math.Max(ct.YUp + midUp, staffPaddingFloor);
             var (ctUp, ctDown) = TextOutlineSkylines.Place(
-                ct.Text, ctFs, sans: false, FontStyle.Italic, ct.X, anchor);
+                ct.Text, ctFs, fonts.Face(TextRole.Text, FontStyle.Italic), ct.X, anchor);
             double move = trackers(sysIdx, ct.StaffIndex).Place(ctUp, ctDown, OutsideStaffPadding,
                 OutsideStaffHorizontalPadding);
             b[i] = ct with { YUp = anchor + move - midUp };
@@ -1670,6 +1684,7 @@ internal static class OutsideStaffStacker
     // LILYPOND-REF: ly/engraver-init.ly:767 \consists Volta_engraver — in the Score context
     //   (its \name is at :729), the same place the bar number's engraver lives.
     private static ImmutableArray<VoltaBracketLayout> PlaceVoltas(
+        ScoreTextMetrics fonts,
         ImmutableArray<VoltaBracketLayout> voltas, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, int[] topStaff)
     {
@@ -1750,11 +1765,11 @@ internal static class OutsideStaffStacker
                             anchor0 - VoltaBracketEngraver.GetEdgeHeight());
                     if (hasText)
                     {
-                        double w = TextFontMetrics.Advance(
-                            v.VoltaText, 0.6 * 4.0, sans: false, FontStyle.Bold);
+                        double w = fonts.Advance(
+                            v.VoltaText, 0.6 * 4.0, TextRole.Volta, FontStyle.Bold);
                         AddBox(v.StartX + 0.5, v.StartX + 0.5 + w,      // the number
-                            anchor0 - 0.3 - TextFontMetrics.InkHeight(
-                                v.VoltaText, 0.6 * 4.0, sans: false, FontStyle.Bold));
+                            anchor0 - 0.3 - fonts.InkHeight(
+                                v.VoltaText, 0.6 * 4.0, TextRole.Volta, FontStyle.Bold));
                     }
                 }
 
@@ -1770,6 +1785,7 @@ internal static class OutsideStaffStacker
 
     // ---- 1500: MusicMark (rehearsal/section labels) ----
     private static ImmutableArray<MusicMarkLayout> PlaceMusicMarks(
+        ScoreTextMetrics fonts,
         ImmutableArray<MusicMarkLayout> musicMarks, Func<int, int, OutsideStaffSkylines> trackers,
         Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
@@ -1834,18 +1850,18 @@ internal static class OutsideStaffStacker
                 if (m.TempoText != null)
                 {
                     var (mtUp, mtDown) = TextOutlineSkylines.Place(
-                        m.TempoText, em, sans: false, FontStyle.Bold, tx, anchor);
+                        m.TempoText, em, fonts.Face(TextRole.Tempo, FontStyle.Bold), tx, anchor);
                     tUp.Merge(mtUp);
                     tDown.Merge(mtDown);
-                    tx += TextFontMetrics.SerifBold(m.TempoText, em);
+                    tx += fonts.Advance(m.TempoText, em, TextRole.Tempo, FontStyle.Bold);
                     if (hasMetronome)
                     {
                         var (pUp, pDown) = TextOutlineSkylines.Place(
-                            "(", em, sans: false, FontStyle.Regular,
-                            tx + MetronomeMarkGeometry.LeadingSpaceAdvance("("), anchor);
+                            "(", em, fonts.Face(TextRole.Tempo),
+                            tx + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, "("), anchor);
                         tUp.Merge(pUp);
                         tDown.Merge(pDown);
-                        tx += TextFontMetrics.Serif(" (", em);
+                        tx += fonts.Advance(" (", em, TextRole.Tempo);
                     }
                 }
                 if (hasMetronome)
@@ -1883,9 +1899,9 @@ internal static class OutsideStaffStacker
                     string eq = MetronomeMarkGeometry.EquationText(
                         m.Text, m.TempoText != null);
                     double eqX = tx + noteRight
-                        + MetronomeMarkGeometry.LeadingSpaceAdvance(eq);
+                        + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, eq);
                     var (eUp, eDown) = TextOutlineSkylines.Place(
-                        eq, em, sans: false, FontStyle.Regular, eqX, anchor);
+                        eq, em, fonts.Face(TextRole.Tempo), eqX, anchor);
                     tUp.Merge(eUp);
                     tDown.Merge(eDown);
                     if (m.SwingSubdivision != 0)
@@ -1893,7 +1909,7 @@ internal static class OutsideStaffStacker
                         // The swing feel-equation keeps its named box estimate — a
                         // Lily#-own device; the label lives at
                         // MetronomeMarkGeometry.SwingEquationReach.
-                        double sw0 = eqX + TextFontMetrics.Serif(eq, em);
+                        double sw0 = eqX + fonts.Advance(eq, em, TextRole.Tempo);
                         double sw1 = sw0 + MetronomeMarkGeometry.SwingEquationReach;
                         tUp.Merge(VerticalSkyline.FromBox(sw0, sw1,
                             anchor - 0.5, anchor + 2.0, VerticalDirection.Up));
@@ -1917,15 +1933,16 @@ internal static class OutsideStaffStacker
                 var style = m.MarkType is MusicMarkType.SustainOn or MusicMarkType.SustainOff
                     ? FontStyle.Bold
                     : FontStyle.BoldItalic;
-                double halfW = TextFontMetrics.Advance(m.Text, fs, sans: false, style) / 2;
+                var role = MusicMarkEngraver.TextRoleOf(m.MarkType);
+                double halfW = fonts.Advance(m.Text, fs, role, style) / 2;
                 var (mUp, mDown) = TextOutlineSkylines.Place(
-                    m.Text, fs, sans: false, style, m.X - halfW, m.YUp + midUp);
+                    m.Text, fs, fonts.Face(role, style), m.X - halfW, m.YUp + midUp);
                 double mMove = trackers(sysIdx, m.StaffIndex).Place(mUp, mDown, OutsideStaffPadding,
                     OutsideStaffHorizontalPadding);
                 b[i] = m with { YUp = m.YUp + mMove };
                 continue;
             }
-            var (x0, x1, top, bottom) = MusicMarkExtents(m);
+            var (x0, x1, top, bottom) = MusicMarkExtents(fonts, m);
             // The whole mark family declares the horizontal 0.2 (see the constant).
             double newRel = Place(trackers(sysIdx, m.StaffIndex), m.X + x0, m.X + x1,
                 m.YUp + midUp, topOffset: top, bottomOffset: bottom,
@@ -1944,7 +1961,8 @@ internal static class OutsideStaffStacker
     /// feel-equation drawn to its right (otherwise a beam/fermata sitting under
     /// the swing symbol is invisible to the stacker and the mark prints on it).
     /// </summary>
-    private static (double X0, double X1, double Top, double Bottom) MusicMarkExtents(MusicMarkLayout m)
+    private static (double X0, double X1, double Top, double Bottom) MusicMarkExtents(
+        ScoreTextMetrics fonts, MusicMarkLayout m)
     {
         const double fontSize = 4.0; // renderer FontSize
 
@@ -1969,7 +1987,8 @@ internal static class OutsideStaffStacker
                     ? fontSize * 0.6
                     : fontSize * 0.55;
                 const double pad = 0.2;
-                double halfW = (TextFontMetrics.SerifBold(m.Text, fs) + 2 * pad) / 2;
+                double halfW =
+                    (fonts.Advance(m.Text, fs, TextRole.Mark, FontStyle.Bold) + 2 * pad) / 2;
                 double halfH = (fs + 2 * pad) / 2;
                 return (-halfW, halfW, halfH, halfH);
             }
@@ -1981,7 +2000,7 @@ internal static class OutsideStaffStacker
                 // with the tempo port). ⚠️ PlaceMusicMarks routes Tempo through its
                 // piecewise stencil pair before reaching this method; this arm stays as
                 // the box description of the same ink.
-                var ink = MetronomeMarkGeometry.Ink(m.Text, m.TempoText,
+                var ink = MetronomeMarkGeometry.Ink(fonts, m.Text, m.TempoText,
                     m.TempoBeatUnit, m.TempoDots, m.SwingSubdivision);
                 return (0.0, ink.Width, ink.Top, -ink.Bottom);
             }
@@ -2002,8 +2021,9 @@ internal static class OutsideStaffStacker
                 var style = m.MarkType is MusicMarkType.SustainOn or MusicMarkType.SustainOff
                     ? FontStyle.Bold
                     : FontStyle.BoldItalic;
-                double halfW = TextFontMetrics.Advance(m.Text, fs, sans: false, style) / 2;
-                var ink = TextFontMetrics.Ink(m.Text, fs, sans: false, style);
+                var role = MusicMarkEngraver.TextRoleOf(m.MarkType);
+                double halfW = fonts.Advance(m.Text, fs, role, style) / 2;
+                var ink = fonts.Ink(m.Text, fs, role, style);
                 return (-halfW, halfW, ink.Top, -ink.Bottom);
             }
         }

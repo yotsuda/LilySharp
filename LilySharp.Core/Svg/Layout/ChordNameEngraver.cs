@@ -129,6 +129,7 @@ internal static class ChordNameEngraver
     /// ly/engraver-init.ly:721-722 ChordNames staff-affinity=DOWN, relatedstaff padding=0.5.
     /// </remarks>
     public static ImmutableArray<ChordNameLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
@@ -192,7 +193,7 @@ internal static class ChordNameEngraver
             var cur = prepared[i];
             if (cur.sysIdx != prev.sysIdx || cur.chord.StaffIndex != prev.chord.StaffIndex)
                 continue;
-            double shifted = ClearOfPrevious(prev.chord, prev.x, cur.chord, cur.x);
+            double shifted = ClearOfPrevious(fonts, prev.chord, prev.x, cur.chord, cur.x);
             if (shifted != cur.x)
                 prepared[i] = (cur.chord, shifted, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
         }
@@ -231,7 +232,7 @@ internal static class ChordNameEngraver
             // The symbol's footprint (see SymbolWidth): the text runs RIGHT from its
             // column. Measured, not guessed — a wide "Gm7♭5" reaches over the NEXT beat's
             // tall chord, which a narrow per-character estimate missed.
-            double peak = up.MaxProtrusionInRange(p.x, p.x + SymbolWidth(p.chord));
+            double peak = up.MaxProtrusionInRange(p.x, p.x + SymbolWidth(fonts, p.chord));
             var key = (p.sysIdx, p.chord.StaffIndex);
             if (!linePeak.TryGetValue(key, out var cur) || peak > cur)
                 linePeak[key] = peak;
@@ -334,10 +335,10 @@ internal static class ChordNameEngraver
     /// sites measured SansBold at a stale literal 2.6; the
     /// <c>chord.symbol-width.minor-pair-gap</c> point caught the +0.262120 on "Am".
     /// </remarks>
-    internal static double SymbolInkWidth(string text) =>
-        Rendering.TextFontMetrics.Advance(
+    internal static double SymbolInkWidth(Rendering.ScoreTextMetrics fonts, string text) =>
+        fonts.Advance(
             text, EngravingDefaults.ChordNameFontSize,
-            sans: true, EngravingDefaults.ChordNameFontStyle);
+            Rendering.TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
 
     /// <summary>
     /// The reserved width of a chord symbol — its ink (<see cref="SymbolInkWidth"/>) under
@@ -353,8 +354,8 @@ internal static class ChordNameEngraver
     /// because removing it moves output for a reason unrelated to the anchor; it belongs
     /// with the other named inventions in docs/HANDOFF.md section 2H.
     /// </remarks>
-    private static double SymbolWidth(ChordNameItem c) =>
-        Math.Max(2.0, SymbolInkWidth(DisplayText(c).Text));
+    private static double SymbolWidth(Rendering.ScoreTextMetrics fonts, ChordNameItem c) =>
+        Math.Max(2.0, SymbolInkWidth(fonts, DisplayText(c).Text));
 
     /// <summary>
     /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
@@ -362,12 +363,13 @@ internal static class ChordNameEngraver
     /// box lies between them.
     /// </summary>
     private static double ClearOfPrevious(
+        Rendering.ScoreTextMetrics fonts,
         ChordNameItem prev, double prevX, ChordNameItem cur, double curX)
     {
         // Inline @chord symbols (UseTiming false) stay anchored to their note.
         if (!cur.UseTiming || !prev.UseTiming)
             return curX;
-        double minX = prevX + SymbolWidth(prev) + SymbolGap;
+        double minX = prevX + SymbolWidth(fonts, prev) + SymbolGap;
         return curX < minX ? minX : curX;
     }
 
@@ -383,7 +385,7 @@ internal static class ChordNameEngraver
     /// group's skyline is built from its members' stencils.
     /// <para>
     /// ⚠️ THE FRAME IS THE ROW'S TEXT BASELINE, which is where LilyPond's ChordNames
-    /// VerticalAxisGroup has its reference point — <see cref="Rendering.TextFontMetrics.Ink"/>
+    /// VerticalAxisGroup has its reference point — <c>Rendering.TextFontMetrics.Ink</c>
     /// is baseline-relative and nothing is added to it here. Lily#'s <c>StaffLayout.Y</c> for
     /// the same row is the BAND TOP, <see cref="ChordRowTextBaseline"/> above this origin;
     /// that band is Lily#'s own model of where the row sits (HANDOFF 3) and this is the LP
@@ -403,6 +405,7 @@ internal static class ChordNameEngraver
     /// </para>
     /// </remarks>
     internal static (VerticalSkyline Up, VerticalSkyline Down) RowSkylines(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
@@ -432,15 +435,15 @@ internal static class ChordNameEngraver
         // The same order and the same clearance the drawn row gets — one line, one staff.
         placed.Sort((a, b) => a.X.CompareTo(b.X));
         for (int i = 1; i < placed.Count; i++)
-            placed[i] = (ClearOfPrevious(placed[i - 1].Chord, placed[i - 1].X,
+            placed[i] = (ClearOfPrevious(fonts, placed[i - 1].Chord, placed[i - 1].X,
                                          placed[i].Chord, placed[i].X), placed[i].Chord);
 
         foreach (var (x, chord) in placed)
         {
-            var (bottom, top) = Rendering.TextFontMetrics.Ink(
+            var (bottom, top) = fonts.Ink(
                 DisplayText(chord).Text, ChordFontSize,
-                sans: true, EngravingDefaults.ChordNameFontStyle);
-            double right = x + SymbolWidth(chord);
+                Rendering.TextRole.ChordName, EngravingDefaults.ChordNameFontStyle);
+            double right = x + SymbolWidth(fonts, chord);
             up.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Up));
             down.Merge(VerticalSkyline.FromBox(x, right, bottom, top, VerticalDirection.Down));
         }

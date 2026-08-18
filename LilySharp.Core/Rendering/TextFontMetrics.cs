@@ -126,23 +126,27 @@ public static class TextFontMetrics
         => Math.Round(widthStaffSpaces / PangoPixelStaffSpaces, MidpointRounding.AwayFromZero)
            * PangoPixelStaffSpaces;
 
-    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style), SKTypeface> Faces = new();
-    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text),
+    private static readonly ConcurrentDictionary<TextFace, SKTypeface> Faces = new();
+    private static readonly ConcurrentDictionary<(TextFace Face, string Text),
         (double Bottom, double Top)>
         Cache = new();
-    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text), SKPath> Paths = new();
+    private static readonly ConcurrentDictionary<(TextFace Face, string Text), SKPath> Paths = new();
 
     /// <summary>
     /// The string's glyph outlines as ONE path at 1000 units/em, baseline origin, in
     /// Skia's Y-DOWN frame — the same path <see cref="Measure"/> takes its ink box from,
     /// exposed so the outline-skyline builder reads the identical geometry (one producer,
-    /// like <see cref="Typeface"/> for the renderers). Cached and shared: callers must
+    /// like <c>Typeface</c> for the renderers). Cached and shared: callers must
     /// not mutate or dispose the returned path.
     /// </summary>
     internal static SKPath OutlinePath(string text, bool sans, FontStyle style)
-        => Paths.GetOrAdd((sans, style, text), static key =>
+        => OutlinePath(text, TextFace.Bundled(sans, style));
+
+    /// <inheritdoc cref="OutlinePath(string, bool, FontStyle)"/>
+    internal static SKPath OutlinePath(string text, TextFace face)
+        => Paths.GetOrAdd((face, text), static key =>
         {
-            var typeface = Face(key.Sans, key.Style);
+            var typeface = Face(key.Face);
             using var paint = new SKPaint { Typeface = typeface, TextSize = 1000f };
             return paint.GetTextPath(key.Text, 0, 0);
         });
@@ -176,7 +180,11 @@ public static class TextFontMetrics
     /// </remarks>
     public static double Advance(string text, double fontSize, bool sans = false,
         FontStyle style = FontStyle.Regular)
-        => string.IsNullOrEmpty(text) ? 0 : Run(text, fontSize, sans, style).Total;
+        => Advance(text, fontSize, TextFace.Bundled(sans, style));
+
+    /// <inheritdoc cref="Advance(string, double, bool, FontStyle)"/>
+    public static double Advance(string text, double fontSize, TextFace face)
+        => string.IsNullOrEmpty(text) ? 0 : Run(text, fontSize, face).Total;
 
     /// <summary>
     /// One glyph of a shaped run: the face's OWN glyph id, and the pen position it sits at,
@@ -198,7 +206,7 @@ public static class TextFontMetrics
 
     /// <summary>
     /// The glyphs a backend must draw, at the positions it must draw them, for its ink to be
-    /// the width <see cref="Advance"/> reserved.
+    /// the width <c>Advance</c> reserved.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/pango-font.cc:407-435 Pango_font::pango_item_string_stencil — one
@@ -206,7 +214,7 @@ public static class TextFontMetrics
     ///   and lily/pango-font.cc:494-503 Pango_font::pango_item_string_stencil wraps the list as
     ///   the stencil's <c>glyph-string</c>. A LilyPond page is glyphs at positions; this is the
     ///   same list, which is why a backend can draw from it without laying anything out itself.
-    /// ⚠️ THIS AND <see cref="Advance"/> ARE ONE COMPUTATION, deliberately — the advance is
+    /// ⚠️ THIS AND <c>Advance</c> ARE ONE COMPUTATION, deliberately — the advance is
     /// this run's total. They were two before 2026-08-03, and the two disagreed: layout
     /// reserved the shaped width while the PNG and PDF backends drew the string unshaped, so a
     /// title's ink ran 3.16 staff spaces past the box it was given. That is the
@@ -215,16 +223,20 @@ public static class TextFontMetrics
     /// </remarks>
     public static IReadOnlyList<ShapedGlyph> ShapeRun(string text, double fontSize,
         bool sans = false, FontStyle style = FontStyle.Regular)
-        => string.IsNullOrEmpty(text) ? [] : Run(text, fontSize, sans, style).Glyphs;
+        => ShapeRun(text, fontSize, TextFace.Bundled(sans, style));
+
+    /// <inheritdoc cref="ShapeRun(string, double, bool, FontStyle)"/>
+    public static IReadOnlyList<ShapedGlyph> ShapeRun(string text, double fontSize, TextFace face)
+        => string.IsNullOrEmpty(text) ? [] : Run(text, fontSize, face).Glyphs;
 
     private static (ShapedGlyph[] Glyphs, double Total) Run(
-        string text, double fontSize, bool sans, FontStyle style)
-        => RunCache.GetOrAdd((sans, style, text, fontSize), static key =>
+        string text, double fontSize, TextFace face)
+        => RunCache.GetOrAdd((face, text, fontSize), static key =>
         {
             var glyphs = new List<ShapedGlyph>();
             double pen = 0;
             foreach (var (glyphId, perEm, xOffsetPerEm, missingCodepoint, cluster)
-                     in ShapedAdvancesPerEm(key.Text, key.Sans, key.Style))
+                     in ShapedAdvancesPerEm(key.Text, key.Face))
             {
                 double advance = missingCodepoint is int cp ? MissingGlyphAdvance(cp) : perEm;
                 glyphs.Add(new ShapedGlyph(glyphId, pen + xOffsetPerEm * key.FontSize,
@@ -263,9 +275,9 @@ public static class TextFontMetrics
     /// </remarks>
     private static IEnumerable<(ushort GlyphId, double PerEm, double XOffsetPerEm,
                                 int? MissingCodepoint, int Cluster)>
-        ShapedAdvancesPerEm(string text, bool sans, FontStyle style)
+        ShapedAdvancesPerEm(string text, TextFace face)
     {
-        var (font, upem) = ShapingFont(sans, style);
+        var (font, upem) = ShapingFont(face);
         using var buffer = new HarfBuzzSharp.Buffer();
         buffer.AddUtf16(text);
         buffer.GuessSegmentProperties();
@@ -292,34 +304,154 @@ public static class TextFontMetrics
     // paths already use (FontLocator), and shared: building a Face parses the tables.
     // ⚠️ hb_font_t is not thread-safe for shaping, hence the lock above; the engine measures
     // from parallel layout passes.
-    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style),
+    private static readonly ConcurrentDictionary<TextFace,
         (HarfBuzzSharp.Font Font, uint UnitsPerEm)> ShapingFonts = new();
 
-    private static (HarfBuzzSharp.Font Font, uint UnitsPerEm) ShapingFont(bool sans, FontStyle style)
-        => ShapingFonts.GetOrAdd((sans, style), static key =>
+    private static (HarfBuzzSharp.Font Font, uint UnitsPerEm) ShapingFont(TextFace face)
+        => ShapingFonts.GetOrAdd(face, static key =>
         {
-            var file = FileName(key.Sans, key.Style);
-            var path = FontLocator.ResolveFile(file)
-                ?? throw new InvalidOperationException(
-                    $"Bundled text font '{file}' was not found. Text metrics come from the " +
-                    "bundled faces only — falling back to a system font would make the same " +
-                    "score lay out differently on different machines.");
-            var blob = HarfBuzzSharp.Blob.FromFile(path);
+            var blob = ShapingBlob(key);
             blob.MakeImmutable();
-            var face = new HarfBuzzSharp.Face(blob, 0);
-            uint upem = (uint)face.UnitsPerEm;
-            var font = new HarfBuzzSharp.Font(face);
+            var hbFace = new HarfBuzzSharp.Face(blob, 0);
+            uint upem = (uint)hbFace.UnitsPerEm;
+            var font = new HarfBuzzSharp.Font(hbFace);
             font.SetScale((int)upem, (int)upem);
             font.SetFunctionsOpenType();
             return (font, upem);
         });
+
+    // The shaper wants a font PROGRAM. A bundled face is a file on disk; a named one is
+    // whatever the machine handed back, streamed out of the typeface (and lifted out of a
+    // .ttc, which is how Yu Gothic / Meiryo / MS Gothic ship on Japanese Windows —
+    // FontEmbedInfo.TryGetFontBytes(SKTypeface) is the same lift the PDF embedder needs).
+    private static HarfBuzzSharp.Blob ShapingBlob(TextFace face)
+    {
+        if (face.IsBundled)
+            return HarfBuzzSharp.Blob.FromFile(BundledPath(face));
+        var bundled = BundledPathForName(face.Name!, face.Style);
+        if (bundled != null)
+            return HarfBuzzSharp.Blob.FromFile(bundled);
+        var typeface = SystemFace(face.Name!, face.Style)
+            ?? throw Unmeasurable(face);
+        var bytes = FontEmbedInfo.TryGetFontBytes(typeface)
+            ?? throw Unmeasurable(face);
+        using var stream = new MemoryStream(bytes);
+        return HarfBuzzSharp.Blob.FromStream(stream);
+    }
+
+    private static string BundledPath(TextFace face)
+    {
+        var file = FileName(face.Sans, face.Style);
+        return FontLocator.ResolveFile(file)
+            ?? throw new InvalidOperationException(
+                $"Bundled text font '{file}' was not found. The engine cannot measure text " +
+                "without the faces it ships.");
+    }
+
+    /// <summary>
+    /// The bundled file a NAME refers to, when the name is one of the families this engine
+    /// ships — otherwise null.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE BUNDLE IS CONSULTED BEFORE THE MACHINE, and that ordering is LilyPond's own
+    /// rather than a Lily# preference: LilyPond builds its Fontconfig configuration by
+    /// loading its OWN <c>00-lilypond-fonts.conf</c> first, the system default second, and
+    /// its <c>99-lilypond-fonts.conf</c> last.
+    /// <para>
+    /// It is load-bearing twice over. It keeps <c>font { serif "TeX Gyre Schola" }</c>
+    /// measuring the same file the default does — writing the bundled family's own name
+    /// must not become a way to get a DIFFERENT Schola that happens to be installed. And
+    /// because the bundled faces are present on every machine by construction, it is what
+    /// makes a named-face test deterministic anywhere, which a test naming Georgia could
+    /// never be.
+    /// </para>
+    /// </remarks>
+    // LILYPOND-REF: lily/font-config.cc:43-78 make_font_config — the datadir's
+    //   00-lilypond-fonts.conf is pushed ahead of FcConfigFilename's default conf.
+    private static string? BundledPathForName(string name, FontStyle style)
+    {
+        bool? sans = string.Equals(name, SerifFamily, StringComparison.OrdinalIgnoreCase) ? false
+            : string.Equals(name, SansFamily, StringComparison.OrdinalIgnoreCase) ? true
+            : null;
+        return sans is bool s ? FontLocator.ResolveFile(FileName(s, style)) : null;
+    }
+
+    /// <summary>
+    /// The machine's face for <paramref name="name"/> at <paramref name="style"/>, or null
+    /// when this machine does not have it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ SKIA NEVER RETURNS NULL for an unknown family — it hands back a default face, and
+    /// taking that would be the silent substitution this whole class exists to refuse. The
+    /// resolved family name is compared against the request, exactly as
+    /// <c>FontEmbedInfo.ClassifyUncached</c> does; a mismatch is "not here", not "close
+    /// enough".
+    /// <para>
+    /// LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
+    /// Fontconfig, whose whole purpose is to always answer with SOMETHING (family
+    /// substitution is the feature, not a fallback). Departing from
+    /// <c>lily/font-select.cc:193-217 select_font</c> here is deliberate: a substituted
+    /// face measured as if it were the requested one is a wrong page with no complaint
+    /// attached, and this engine would rather say the face is missing. What that buys is
+    /// the difference between "your title is in the wrong font" and "your title is in the
+    /// wrong font AND spaced for a third one".
+    /// </para>
+    /// <para>
+    /// ⚠️ WHEN IT GOES AWAY: never, unless Lily# grows a way for a score to declare the
+    /// FILE it means (then a face is either present as declared or absent, and there is
+    /// nothing to substitute). OBSERVED BY
+    /// <c>TextFaceMetricsTests.MeasuringAFaceThisMachineDoesNotHave_Throws_RatherThanSubstituting</c>
+    /// and <c>…CanMeasure_IsFalseForAFaceThisMachineDoesNotHave</c>.
+    /// </para>
+    /// </remarks>
+    private static SKTypeface? SystemFace(string name, FontStyle style)
+    {
+        var skStyle = style switch
+        {
+            FontStyle.BoldItalic => SKFontStyle.BoldItalic,
+            FontStyle.Bold => SKFontStyle.Bold,
+            FontStyle.Italic => SKFontStyle.Italic,
+            _ => SKFontStyle.Normal,
+        };
+        var typeface = SKTypeface.FromFamilyName(name, skStyle);
+        return typeface != null
+               && typeface.FamilyName.Equals(name, StringComparison.OrdinalIgnoreCase)
+            ? typeface
+            : null;
+    }
+
+    private static InvalidOperationException Unmeasurable(TextFace face) =>
+        new($"Text face '{face.Name}' is not available on this machine, so its metrics "
+            + "cannot be read. Ask CanMeasure first and decide the fallback out loud — "
+            + "substituting silently is what makes one score lay out differently in two "
+            + "places with nothing said about it.");
+
+    /// <summary>
+    /// Can this machine measure <paramref name="face"/>? Always true for a bundled face.
+    /// </summary>
+    /// <remarks>
+    /// The question exists because the answer is a property of the MACHINE, and every
+    /// caller that lets a score name a face has to have an answer for "no" that it can say
+    /// out loud. LilyPond has the same exposure — <c>font-name</c> goes to fontconfig
+    /// (LILYPOND-REF: lily/font-select.cc:193-217 select_font) — and reports a missing
+    /// family through Pango rather than pretending; <c>DiagnosticCodes.FontNotFound</c> is
+    /// this engine's version of saying so.
+    /// </remarks>
+    public static bool CanMeasure(TextFace face)
+    {
+        if (face.IsBundled)
+            return true;
+        if (BundledPathForName(face.Name!, face.Style) != null)
+            return true;
+        return SystemFace(face.Name!, face.Style) != null;
+    }
 
     // Keyed by SIZE as well as string, because the snap makes the advance non-linear in the
     // size — one string at two sizes is two different pixel counts, not one number scaled.
     // Holds the glyphs beside the total so the measuring and the drawing paths cannot drift:
     // asking for either shapes the run once.
     private static readonly ConcurrentDictionary<
-        (bool Sans, FontStyle Style, string Text, double FontSize),
+        (TextFace Face, string Text, double FontSize),
         (ShapedGlyph[] Glyphs, double Total)> RunCache = new();
 
     // The three faces the engine RESERVES for, named so a call site reads as the face it
@@ -345,16 +477,24 @@ public static class TextFontMetrics
     /// </summary>
     public static (double Bottom, double Top) Ink(string text, double fontSize,
         bool sans = false, FontStyle style = FontStyle.Regular)
+        => Ink(text, fontSize, TextFace.Bundled(sans, style));
+
+    /// <inheritdoc cref="Ink(string, double, bool, FontStyle)"/>
+    public static (double Bottom, double Top) Ink(string text, double fontSize, TextFace face)
     {
-        var m = Measure(text, sans, style);
+        var m = Measure(text, face);
         return (m.Bottom * fontSize, m.Top * fontSize);
     }
 
     /// <summary>Ink height (<c>Top - Bottom</c>) of <paramref name="text"/> in staff spaces.</summary>
     public static double InkHeight(string text, double fontSize, bool sans = false,
         FontStyle style = FontStyle.Regular)
+        => InkHeight(text, fontSize, TextFace.Bundled(sans, style));
+
+    /// <inheritdoc cref="InkHeight(string, double, bool, FontStyle)"/>
+    public static double InkHeight(string text, double fontSize, TextFace face)
     {
-        var (bottom, top) = Ink(text, fontSize, sans, style);
+        var (bottom, top) = Ink(text, fontSize, face);
         return top - bottom;
     }
 
@@ -372,20 +512,20 @@ public static class TextFontMetrics
 
     /// <summary>Per-em INK of one string, cached.</summary>
     /// <remarks>
-    /// Per em and NOT quantised, unlike <see cref="Advance"/>: the ink is what the outline
+    /// Per em and NOT quantised, unlike <c>Advance</c>: the ink is what the outline
     /// gives, and LilyPond takes a text stencil's Y from Pango's INK rectangle. That
     /// rectangle is quantised too, by the same PANGO_RESOLUTION — the ledger's
     /// <c>-0.000076</c> on DynamicText's height is that — but a height wants the whole
     /// quantised OUTLINE rather than one snap, so it stays open and named rather than
     /// half-ported here (GetTimeSigDigitWidth's remark makes the same split).
     /// </remarks>
-    private static (double Bottom, double Top) Measure(string text, bool sans, FontStyle style)
+    private static (double Bottom, double Top) Measure(string text, TextFace face)
     {
         if (string.IsNullOrEmpty(text))
             return (0, 0);
-        return Cache.GetOrAdd((sans, style, text), static key =>
+        return Cache.GetOrAdd((face, text), static key =>
         {
-            var path = OutlinePath(key.Text, key.Sans, key.Style);
+            var path = OutlinePath(key.Text, key.Face);
             if (path.IsEmpty)
                 return (0, 0);
             var b = path.Bounds;
@@ -414,7 +554,7 @@ public static class TextFontMetrics
 
     /// <summary>
     /// Outline path of one Emmentaler glyph at 1000 units/em (the same frame
-    /// <see cref="OutlinePath"/> serves for text), or null when the bundled music font
+    /// <c>OutlinePath</c> serves for text), or null when the bundled music font
     /// cannot be located. <paramref name="design"/> is the Emmentaler design to walk —
     /// the score's own unless the grob states another <c>font-size</c>.
     /// </summary>
@@ -437,7 +577,11 @@ public static class TextFontMetrics
     /// thickness drifted from <c>EngravingDefaults</c>: whenever drawing and spacing read
     /// the same quantity from different code, one of them eventually moves.
     /// </remarks>
-    internal static SKTypeface Typeface(bool sans, FontStyle style) => Face(sans, style);
+    internal static SKTypeface Typeface(bool sans, FontStyle style)
+        => Face(TextFace.Bundled(sans, style));
+
+    /// <inheritdoc cref="Typeface(bool, FontStyle)"/>
+    internal static SKTypeface Typeface(TextFace face) => Face(face);
 
     /// <summary>Is <paramref name="family"/> one of the generic families the engine asks
     /// for by name, and which of the two bundled faces does it mean?</summary>
@@ -453,7 +597,7 @@ public static class TextFontMetrics
 
     /// <summary>
     /// Width, per em, of a character the bundled face cannot draw — what
-    /// <see cref="Advance"/> spends for it before the pixel snap.
+    /// <c>Advance</c> spends for it before the pixel snap.
     /// </summary>
     /// <remarks>
     /// ⚠️ WITHOUT THIS, CJK COLLAPSES. TeX Gyre Schola is a Latin face (LilyPond's own
@@ -484,17 +628,18 @@ public static class TextFontMetrics
         _ => 0.5,                          // median, as the table this replaced used
     };
 
-    private static SKTypeface Face(bool sans, FontStyle style)
-        => Faces.GetOrAdd((sans, style), static key =>
+    private static SKTypeface Face(TextFace face)
+        => Faces.GetOrAdd(face, static key =>
         {
-            var file = FileName(key.Sans, key.Style);
-            var path = FontLocator.ResolveFile(file)
-                ?? throw new InvalidOperationException(
-                    $"Bundled text font '{file}' was not found. Text metrics come from the " +
-                    "bundled faces only — falling back to a system font would make the same " +
-                    "score lay out differently on different machines.");
-            return SKTypeface.FromFile(path)
-                ?? throw new InvalidOperationException($"Bundled text font '{path}' failed to load.");
+            // The bundle first, the machine second — see BundledPathForName.
+            var path = key.IsBundled ? BundledPath(key) : BundledPathForName(key.Name!, key.Style);
+            if (path != null)
+            {
+                return SKTypeface.FromFile(path)
+                    ?? throw new InvalidOperationException(
+                        $"Bundled text font '{path}' failed to load.");
+            }
+            return SystemFace(key.Name!, key.Style) ?? throw Unmeasurable(key);
         });
 
     private static string FileName(bool sans, FontStyle style)

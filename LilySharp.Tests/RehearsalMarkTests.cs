@@ -22,6 +22,7 @@ using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -221,7 +222,7 @@ public class RehearsalMarkTests
         var marks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.Rehearsal, "A", 0, 42));
 
-        var result = MusicMarkEngraver.Calculate(null, marks, systems, ml);
+        var result = MusicMarkEngraver.Calculate(ScoreTextMetrics.Bundled, null, marks, systems, ml);
 
         Assert.Single(result);
         Assert.Equal(MusicMarkType.Rehearsal, result[0].MarkType);
@@ -238,7 +239,7 @@ public class RehearsalMarkTests
         var marks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.Rehearsal, "B", 1, 0));
 
-        var result = MusicMarkEngraver.Calculate(null, marks, systems, ml);
+        var result = MusicMarkEngraver.Calculate(ScoreTextMetrics.Bundled, null, marks, systems, ml);
 
         Assert.Single(result);
         // Rehearsal marks are at beginning, so X should be near start of measure 1
@@ -255,7 +256,7 @@ public class RehearsalMarkTests
         var marks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.Rehearsal, "C", 0, 0));
 
-        var result = MusicMarkEngraver.Calculate(null, marks, systems, ml);
+        var result = MusicMarkEngraver.Calculate(ScoreTextMetrics.Bundled, null, marks, systems, ml);
 
         Assert.Single(result);
         // Y-up (frame B): above the staff top line means YUp > 2 (top line = +2).
@@ -271,7 +272,7 @@ public class RehearsalMarkTests
             new MusicMarkItem(MusicMarkType.Rehearsal, "A", 0, 10),
             new MusicMarkItem(MusicMarkType.Rehearsal, "B", 2, 20));
 
-        var result = MusicMarkEngraver.Calculate(null, marks, systems, ml);
+        var result = MusicMarkEngraver.Calculate(ScoreTextMetrics.Bundled, null, marks, systems, ml);
 
         Assert.Equal(2, result.Length);
         Assert.Equal("A", result[0].Text);
@@ -292,15 +293,15 @@ public class RehearsalMarkTests
 
         // An inline top-staff chord (negative Y) at the mark's own column, so
         // its ink certainly overlaps the mark horizontally.
-        double markX = MusicMarkEngraver.Calculate(null, mark, systems, ml)[0].X;
+        double markX = MusicMarkEngraver.Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml)[0].X;
         ChordNameLayout Chord(string? above) =>
             // YUp = +3.0: the chord sits 3 ss ABOVE the system top (old device Y = -3.0).
             new ChordNameLayout(0, markX, 3.0, "Cmaj7", 0, AboveLine: above);
 
         double oneRowY = MusicMarkEngraver
-            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord(null)))[0].YUp;
+            .Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord(null)))[0].YUp;
         double twoRowY = MusicMarkEngraver
-            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord("Imaj7")))[0].YUp;
+            .Calculate(ScoreTextMetrics.Bundled, null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord("Imaj7")))[0].YUp;
 
         // Y-up (frame B): the stacked degree row lifts the mark higher (larger YUp)
         // by the row height, so it clears the top line instead of overprinting it.

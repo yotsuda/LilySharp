@@ -34,9 +34,18 @@ internal sealed class SkylineBuilder
 {
     private readonly double _staffHeight;
 
-    public SkylineBuilder(double staffHeight)
+    /// <summary>
+    /// The faces this score's text is measured against — a FIELD because a builder is
+    /// built per score and every text quantity it reserves has to come from the same
+    /// answer. Defaults to the bundled faces so a builder made without one (tests,
+    /// geometry probes) behaves exactly as it did before scores could name a face.
+    /// </summary>
+    private readonly Rendering.ScoreTextMetrics _fonts;
+
+    public SkylineBuilder(double staffHeight, Rendering.ScoreTextMetrics? fonts = null)
     {
         _staffHeight = staffHeight;
+        _fonts = fonts ?? Rendering.ScoreTextMetrics.Bundled;
     }
 
     /// <summary>
@@ -947,7 +956,7 @@ internal sealed class SkylineBuilder
         // it here before, and the consequence was visible rather than theoretical: a
         // bracket over notes reaching towards the neighbour was drawn straight across that
         // neighbour's staff lines.
-        AddTupletBracketsToSkyline(tupletBrackets, staffTopUp, size, upSkyline, downSkyline);
+        AddTupletBracketsToSkyline(_fonts, tupletBrackets, staffTopUp, size, upSkyline, downSkyline);
 
         // A slur is an ordinary inside-staff grob in LilyPond too (no
         // outside-staff-priority), so it joins the staff's vertical skyline like the
@@ -1171,6 +1180,7 @@ internal sealed class SkylineBuilder
     // StartX/EndX, DrawnStartX/DrawnEndX, StartYUp/EndYUp, NumberText, NumberX, NumberYUp).
     // Reading a new layout field here without adding it to that key makes the paging memo stale.
     internal static void AddTupletBracketsToSkyline(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<TupletBracketLayout> tupletBrackets, double staffTopUp, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
@@ -1224,10 +1234,12 @@ internal sealed class SkylineBuilder
                 // ...at THIS staff's size, which is what a font size is: LilyPond's
                 // fontSize applies to the number as to every other glyph in the context.
                 double fontSize = size.Span(TupletBracketEngraver.NumberFontSize);
-                double halfW = Rendering.TextFontMetrics.Advance(
-                    b.NumberText, fontSize, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
-                double halfH = Rendering.TextFontMetrics.InkHeight(
-                    b.NumberText, fontSize, sans: false, TupletBracketEngraver.NumberFontStyle) / 2;
+                double halfW = fonts.Advance(
+                    b.NumberText, fontSize, Rendering.TextRole.Tuplet,
+                    TupletBracketEngraver.NumberFontStyle) / 2;
+                double halfH = fonts.InkHeight(
+                    b.NumberText, fontSize, Rendering.TextRole.Tuplet,
+                    TupletBracketEngraver.NumberFontStyle) / 2;
                 double midYUp = size.Span(b.NumberYUp) + staffTopUp;
                 sky.Merge(VerticalSkyline.FromBox(
                     b.NumberX - halfW, b.NumberX + halfW,
@@ -1586,7 +1598,7 @@ internal sealed class SkylineBuilder
 
             int mi = dyn.MeasureIndex, ii = dyn.ItemIndex;
             int dynStaff = dyn.StaffIndex;
-            double baselineUp = DynamicEngraver.PointwiseBaselineY(dyn.IsAbove, voices,
+            double baselineUp = DynamicEngraver.PointwiseBaselineY(_fonts, dyn.IsAbove, voices,
                 dyn.VoiceIndex, mi, ii, xColumn, xLabel, dyn.Text, dyn.IsExpressiveText,
                 vi => beamMembers.TryGetValue((dynStaff, vi, mi, ii), out var b) ? b : null);
 
@@ -1623,7 +1635,7 @@ internal sealed class SkylineBuilder
                 // no measured regime yet, so it keeps the former box reservation.
                 if (size.Span(1.0) == 1.0)
                 {
-                    var my = DynamicEngraver.LabelSkylines(
+                    var my = DynamicEngraver.LabelSkylines(_fonts, 
                         dyn.Text, dyn.IsExpressiveText, xLabel, baselineUp + staffMiddleUp);
                     double move = DynamicEngraver.BelowCollisionMove(
                         downSkyline, my.Up, OutsideStaffPadding);

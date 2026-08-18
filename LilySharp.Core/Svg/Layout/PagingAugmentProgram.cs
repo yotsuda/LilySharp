@@ -199,7 +199,7 @@ internal sealed class PagingAugmentProgram
                     var group = _tupletGroups[tg++];
                     a += 1 + group.Length * TupletArgsPerItem;
                     t += group.Length;
-                    SkylineBuilder.AddTupletBracketsToSkyline(
+                    SkylineBuilder.AddTupletBracketsToSkyline(Rendering.ScoreTextMetrics.Bundled, 
                         group, staffTopUp: 0, StaffSize.FullSize, Up(), Down());
                     break;
                 }

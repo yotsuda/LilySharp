@@ -168,11 +168,21 @@ internal sealed class LyricEngraver
     /// </remarks>
     public Dictionary<(int System, int StaffIndex), double> SolvedRowBaselines { get; } = new();
 
+    /// <summary>
+    /// The faces this score's syllables are measured against — a FIELD because an engraver
+    /// is built per score and every syllable it reserves must come from the same answer.
+    /// Bundled when none is given, which is what a score with no <c>font</c> directive
+    /// asks for anyway.
+    /// </summary>
+    private readonly Rendering.ScoreTextMetrics _fonts;
+
     public LyricEngraver(
         LyricParameters? parameters = null,
         Func<int, Fraction, (double Left, double Centre)>? parentAlignmentEdge = null,
-        double? systemPadding = null)
+        double? systemPadding = null,
+        Rendering.ScoreTextMetrics? fonts = null)
     {
+        _fonts = fonts ?? Rendering.ScoreTextMetrics.Bundled;
         _params = parameters ?? LyricParameters.Default;
         _parentAlignmentEdge = parentAlignmentEdge
             ?? ((_, _) => (0.0, EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2));
@@ -260,9 +270,9 @@ internal sealed class LyricEngraver
     /// for a face Lily# does not carry; both extents take it as a floor.
     /// </para>
     /// </remarks>
-    private static double LyricUpExtent(string text)
+    private static double LyricUpExtent(Rendering.ScoreTextMetrics fonts, string text)
     {
-        double outline = Rendering.TextFontMetrics.Ink(text, LyricFontSize).Top;
+        double outline = fonts.Ink(text, LyricFontSize, Rendering.TextRole.LyricText).Top;
         foreach (char c in text)
             if (IsFullHeightGlyph(c))
                 return Math.Max(outline, LyricFontSize * CjkAscenderEm);
@@ -290,9 +300,9 @@ internal sealed class LyricEngraver
     /// from the up-extent it is the complement of.
     /// </para>
     /// </remarks>
-    private static double LyricDownExtent(string text)
+    private static double LyricDownExtent(Rendering.ScoreTextMetrics fonts, string text)
     {
-        double outline = -Rendering.TextFontMetrics.Ink(text, LyricFontSize).Bottom;
+        double outline = -fonts.Ink(text, LyricFontSize, Rendering.TextRole.LyricText).Bottom;
         foreach (char c in text)
             if (IsFullHeightGlyph(c))
                 return Math.Max(outline, LyricFontSize * (1.0 - CjkAscenderEm));
@@ -592,8 +602,8 @@ internal sealed class LyricEngraver
         // the verse alone: a row and a note-bound block can stand under the SAME anchor
         // (`staff X with lyrics a` + `lyrics b`), and keying by verse would have their verse 1
         // read each other's ink.
-        var up = BuildVerseUpSkylines(layouts, measureToSystem, LineKeyOf);
-        var down = BuildVerseDownSkylines(layouts, measureToSystem, LineKeyOf);
+        var up = BuildVerseUpSkylines(_fonts, layouts, measureToSystem, LineKeyOf);
+        var down = BuildVerseDownSkylines(_fonts, layouts, measureToSystem, LineKeyOf);
 
         var newY = new Dictionary<(int Family, int System, int Line, int Verse), double>();
 
@@ -800,7 +810,7 @@ internal sealed class LyricEngraver
                         foreach (var lay in layouts)
                             if (LineKeyOf(lay.Item) == last.Line && lay.Item.VerseNumber == last.Verse
                                 && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s) && s == system)
-                                descent = Math.Max(descent, LyricDownExtent(lay.Item.Text));
+                                descent = Math.Max(descent, LyricDownExtent(_fonts, lay.Item.Text));
                         gaps.Add(new LooseLineSpacer.Gap(LooseLineSpacer.NullNeighbour, descent));
                     }
                     else if (chainEnd.Lines.IsDefaultOrEmpty)
@@ -1091,7 +1101,9 @@ internal sealed class LyricEngraver
         var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
         foreach (var (_, st, idx) in score.EnumerateStaves())
             measuresByStaff[idx] = st.PrimaryVoice.Measures;
-        return new LyricEngraver(parentAlignmentEdge: ParentAlignmentEdge(measuresByStaff, null));
+        return new LyricEngraver(
+            parentAlignmentEdge: ParentAlignmentEdge(measuresByStaff, null),
+            fonts: score.TextMetrics);
     }
 
     /// <summary>
@@ -1197,8 +1209,8 @@ internal sealed class LyricEngraver
             var down = new VerticalSkyline(VerticalDirection.Down);
             foreach (var lay in laid)
             {
-                up.Merge(SyllableUpBox(lay));
-                down.Merge(SyllableDownBox(lay));
+                up.Merge(SyllableUpBox(_fonts, lay));
+                down.Merge(SyllableDownBox(_fonts, lay));
             }
             result.Add((up, down));
         }
@@ -1214,11 +1226,11 @@ internal sealed class LyricEngraver
     /// as a low note. LilyPond builds the LyricText skyline from the grob's true stencil
     /// bounding box; the em-fraction extents stand in for that here.
     /// </remarks>
-    internal static VerticalSkyline SyllableUpBox(LyricLayout lay)
+    internal static VerticalSkyline SyllableUpBox(Rendering.ScoreTextMetrics fonts, LyricLayout lay)
     {
         double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
         return VerticalSkyline.FromBox(
-            lay.X - halfW, lay.X + halfW, 0, LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
+            lay.X - halfW, lay.X + halfW, 0, LyricUpExtent(fonts, lay.Item.Text), VerticalDirection.Up);
     }
 
     /// <summary>
@@ -1240,7 +1252,7 @@ internal sealed class LyricEngraver
     /// </para>
     /// </remarks>
     internal static Dictionary<(int System, int Line, int Verse), VerticalSkyline> BuildVerseUpSkylines(
-        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
+        Rendering.ScoreTextMetrics fonts, IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
         Func<LyricItem, int> lineKeyOf)
     {
         var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
@@ -1248,7 +1260,7 @@ internal sealed class LyricEngraver
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
             var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            var box = SyllableUpBox(lay);
+            var box = SyllableUpBox(fonts, lay);
             if (result.TryGetValue(key, out var sky)) sky.Merge(box);
             else result[key] = box;
         }
@@ -1259,11 +1271,11 @@ internal sealed class LyricEngraver
     /// The DOWN-skyline box of one syllable, self-relative to its own baseline: anchor at
     /// y = 0, ink bottom at <see cref="LyricDownExtent"/> below it.
     /// </summary>
-    internal static VerticalSkyline SyllableDownBox(LyricLayout lay)
+    internal static VerticalSkyline SyllableDownBox(Rendering.ScoreTextMetrics fonts, LyricLayout lay)
     {
         double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
         return VerticalSkyline.FromBox(
-            lay.X - halfW, lay.X + halfW, -LyricDownExtent(lay.Item.Text), 0,
+            lay.X - halfW, lay.X + halfW, -LyricDownExtent(fonts, lay.Item.Text), 0,
             VerticalDirection.Down);
     }
 
@@ -1272,7 +1284,7 @@ internal sealed class LyricEngraver
     /// clear. The mirror of <see cref="BuildVerseUpSkylines"/>.
     /// </summary>
     internal static Dictionary<(int System, int Line, int Verse), VerticalSkyline> BuildVerseDownSkylines(
-        IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
+        Rendering.ScoreTextMetrics fonts, IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
         Func<LyricItem, int> lineKeyOf)
     {
         var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
@@ -1280,7 +1292,7 @@ internal sealed class LyricEngraver
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
             var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            var box = SyllableDownBox(lay);
+            var box = SyllableDownBox(fonts, lay);
             if (result.TryGetValue(key, out var sky)) sky.Merge(box);
             else result[key] = box;
         }
@@ -1442,5 +1454,5 @@ internal sealed class LyricEngraver
     /// Width classes are grouped by similar advance widths in standard serif fonts.
     /// </remarks>
     private double EstimateTextWidth(string text)
-        => Rendering.TextFontMetrics.Serif(text, LyricFontSize);
+        => _fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
 }

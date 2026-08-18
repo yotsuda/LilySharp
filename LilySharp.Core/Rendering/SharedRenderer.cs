@@ -164,8 +164,8 @@ internal static partial class SharedRenderer
                 DrawArticulations(layout, measureToSystemTopYUp, os, gc);
                 DrawLyrics(layout, measureToSystemTopYUp, gc);
                 DrawHairpins(layout, measureToSystemTopYUp, os, gc);
-                DrawOttavaBrackets(layout, measureToSystemTopYUp, os, gc);
-                DrawVoltaBrackets(layout, measureToSystemTopYUp, gc);
+                DrawOttavaBrackets(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
+                DrawVoltaBrackets(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawTupletBrackets(layout, measureToSystemTopYUp, os, gc);
                 DrawTrillSpanners(layout, measureToSystemTopYUp, os, gc);
                 DrawGlissandos(layout, measureToSystemTopYUp, os, gc);
@@ -178,7 +178,7 @@ internal static partial class SharedRenderer
                 DrawStanzaNumbers(layout, measureToSystemTopYUp, gc);
                 DrawFingerings(fingeringsByPage?[pageIndex], os, gc,
                     fragHost, fragments, pageIndex, page);
-                DrawMusicMarks(layout, measureToSystemTopYUp, os, gc);
+                DrawMusicMarks(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawCustomTexts(layout, measureToSystemTopYUp, os, gc);
                 DrawTextSpanners(layout, measureToSystemTopYUp, os, gc);
                 DrawPedalBrackets(layout, measureToSystemTopYUp, gc);

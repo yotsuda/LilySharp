@@ -81,6 +81,7 @@ internal static class BarNumberEngraver
     /// Collision handling lives in OutsideStaffStacker.StackAboveStaff.
     /// </summary>
     public static ImmutableArray<BarNumberLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<SystemLayout> systems,
         int period = 0,
         bool numberFirstMeasure = false,
@@ -177,8 +178,8 @@ internal static class BarNumberEngraver
                 // A constant here would be right for one numeral and wrong for the next.
                 const double padding = 1.0;
                 string text = displayedNumber.ToString();
-                double overshoot = -Rendering.TextFontMetrics.Ink(
-                    text, FontSize, sans: false, Rendering.FontStyle.Bold).Bottom;
+                double overshoot = -fonts.Ink(
+                    text, FontSize, Rendering.TextRole.BarNumber, Rendering.FontStyle.Bold).Bottom;
                 double yUp = EngravingDefaults.StaffLineThickness / 2 + padding + overshoot;
 
                 builder.Add(new BarNumberLayout(

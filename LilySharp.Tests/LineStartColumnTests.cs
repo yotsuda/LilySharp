@@ -20,6 +20,7 @@ using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -434,14 +435,14 @@ public class LineStartColumnTests
             new ChordNameItem("Bbmaj7", 0, 1, 0, useTiming: true,
                 timing: new Fraction(1, 2), isChordRow: true));
 
-        var reach = SpacingRules.ChordInkRightReachPerColumn(
+        var reach = SpacingRules.ChordInkRightReachPerColumn(ScoreTextMetrics.Bundled, 
             timings, measureIndex: 0, chords, includeAttached: false);
 
         Assert.Equal(2, reach.Length);
         // ALL of what the renderer draws — the one width home the engraver, the spacing
         // rules and the renderer share (regular series at LilyPond's ChordName em).
-        Assert.Equal(ChordNameEngraver.SymbolInkWidth("C"), reach[0], 6);
-        Assert.Equal(ChordNameEngraver.SymbolInkWidth("Bbmaj7"), reach[1], 6);
+        Assert.Equal(ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "C"), reach[0], 6);
+        Assert.Equal(ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "Bbmaj7"), reach[1], 6);
         // The SECOND column's reach is real and larger — the wide symbol is not on the
         // first column, so a first-column-only rod would never have seen it.
         Assert.True(reach[1] > reach[0]);
@@ -449,7 +450,7 @@ public class LineStartColumnTests
         // A symbol in a DIFFERENT measure contributes nothing to this one.
         Assert.Equal(
             new double[] { 0.0, 0.0 },
-            SpacingRules.ChordInkRightReachPerColumn(
+            SpacingRules.ChordInkRightReachPerColumn(ScoreTextMetrics.Bundled, 
                 timings, measureIndex: 1, chords, includeAttached: false));
     }
 

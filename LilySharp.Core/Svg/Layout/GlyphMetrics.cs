@@ -415,7 +415,7 @@ internal static partial class GlyphMetrics
     /// <remarks>Pango rounds a logical width to a whole device pixel; the width in staff
     /// spaces is therefore an integer multiple of <see cref="PangoQuantumStaffSpaces"/>.
     /// ⚠️ ONE glyph here, so snapping the total and snapping per glyph are the same thing —
-    /// <see cref="Rendering.TextFontMetrics.Advance"/> must snap PER GLYPH, and does.</remarks>
+    /// <c>Rendering.TextFontMetrics.Advance</c> must snap PER GLYPH, and does.</remarks>
     private static double PangoQuantise(double widthStaffSpaces) =>
         Rendering.TextFontMetrics.QuantiseToPangoPixel(widthStaffSpaces);
 

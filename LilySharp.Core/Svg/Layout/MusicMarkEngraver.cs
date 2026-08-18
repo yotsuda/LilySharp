@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -70,6 +71,32 @@ internal static class MusicMarkEngraver
 {
     // LILYPOND-REF: define-grobs.scm:3665 padding = 0.5
     private const double Padding = 0.5;
+
+    /// <summary>
+    /// WHAT a music mark's text is, typographically — the <see cref="TextRole"/> both the
+    /// drawing and the reservation ask the score's <c>font</c> directive about.
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME, and it has to be: the layout reserves a mark's box and the renderer draws
+    /// it, and if the two named different roles a score could bind one of them and move only
+    /// half the pair. That is the same reserve-versus-draw split this engine keeps finding,
+    /// arriving through a mapping rather than through a measurement.
+    /// <para>
+    /// ⚠️ THE STYLE IS NOT HERE. Weight and slant are the engraving's decision (a sostenuto
+    /// word is italic, a sustain word is not) and a <c>font</c> directive does not touch
+    /// them — <c>IDrawingContext.DrawText</c> splits the two parameters for the same reason.
+    /// </para>
+    /// </remarks>
+    internal static TextRole TextRoleOf(MusicMarkType type) => type switch
+    {
+        MusicMarkType.Rehearsal or MusicMarkType.SectionLabel => TextRole.Mark,
+        MusicMarkType.Tempo => TextRole.Tempo,
+        MusicMarkType.SustainOn or MusicMarkType.SustainOff
+            or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+            or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => TextRole.Pedal,
+        // D.S. / D.C. / Fine / To Coda / segno / coda — the navigation family.
+        _ => TextRole.Navigation,
+    };
 
     /// <summary>
     /// Baseline for below-staff marks (pedal text etc.): the system's last
@@ -151,6 +178,7 @@ internal static class MusicMarkEngraver
     }
 
     public static ImmutableArray<MusicMarkLayout> Calculate(
+        ScoreTextMetrics fonts,
         Score? score,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<SystemLayout> systems,
@@ -192,7 +220,8 @@ internal static class MusicMarkEngraver
                 continue;
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
-            double x = CalculateXPosition(mark, measureLayout, systems, prefixTimeSignatureX);
+            double x = CalculateXPosition(
+                fonts, mark, measureLayout, systems, prefixTimeSignatureX);
             markEntries.Add((mark, x, si));
         }
 
@@ -308,14 +337,14 @@ internal static class MusicMarkEngraver
             {
                 foreach (var e in aboveMarks)
                 {
-                    var (mx0, mx1) = MarkXExtent(e.Mark, e.X);
+                    var (mx0, mx1) = MarkXExtent(fonts, e.Mark, e.X);
                     foreach (var cn in chordNames)
                     {
                         // Only inline chords ABOVE the top staff (mark-frame Y-up > 2.0,
                         // i.e. cn.YUp > 0) share the marks' band.
                         if (cn.YUp <= 0 || !SameSystem(cn.MeasureIndex, e.Mark.MeasureIndex))
                             continue;
-                        double chHalf = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
+                        double chHalf = ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText) / 2 + 0.3;
                         if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
                             continue; // no horizontal ink overlap
                         double chordTopUp = (2.0 + cn.YUp) + ChordAscent(cn);
@@ -354,7 +383,7 @@ internal static class MusicMarkEngraver
                     // which only ever lifts it. Its ink is BASELINE-anchored, not a
                     // centered box, so the chord ceiling constrains its ink bottom
                     // (baseline + Ink.Bottom), not a half-extent.
-                    var tInk = MetronomeMarkGeometry.Ink(mark.Text, mark.TempoText,
+                    var tInk = MetronomeMarkGeometry.Ink(fonts, mark.Text, mark.TempoText,
                         mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
                     yUp = MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom);
                     if (!double.IsNegativeInfinity(markCeilingUp))
@@ -491,8 +520,10 @@ internal static class MusicMarkEngraver
                     {
                         // "*" just left of the new "Ped." — both centered
                         // texts, so clear half of each measured width + gap.
-                        double pedHalf = Rendering.TextFontMetrics.SerifBold("Ped.", 2.8) / 2;
-                        double starHalf = Rendering.TextFontMetrics.SerifBold(mark.Text, 2.8) / 2;
+                        double pedHalf =
+                            fonts.Advance("Ped.", 2.8, TextRole.Pedal, FontStyle.Bold) / 2;
+                        double starHalf =
+                            fonts.Advance(mark.Text, 2.8, TextRole.Pedal, FontStyle.Bold) / 2;
                         x -= pedHalf + starHalf + 0.4;
                     }
                 }
@@ -523,7 +554,7 @@ internal static class MusicMarkEngraver
                 // the 3.2 ss lyric face, as in the spacing extents).
                 if (!lyrics.IsDefaultOrEmpty && !IsPedal(mark.Type))
                 {
-                    var (mx0, mx1) = MarkXExtent(mark, x);
+                    var (mx0, mx1) = MarkXExtent(fonts, mark, x);
                     foreach (var ly in lyrics)
                     {
                         if (!SameSystem(ly.Item.MeasureIndex, mark.MeasureIndex))
@@ -782,14 +813,15 @@ internal static class MusicMarkEngraver
     /// boxed labels and symbols are centred. Widths use the same faces the
     /// renderer draws with.
     /// </summary>
-    private static (double x0, double x1) MarkXExtent(MusicMarkItem mark, double x)
+    private static (double x0, double x1) MarkXExtent(ScoreTextMetrics fonts,
+        MusicMarkItem mark, double x)
     {
         switch (mark.Type)
         {
             case MusicMarkType.Tempo:
             {
                 // Left-anchored, priced by the ONE geometry home the draw uses.
-                double w = MetronomeMarkGeometry.Ink(mark.Text, mark.TempoText,
+                double w = MetronomeMarkGeometry.Ink(fonts, mark.Text, mark.TempoText,
                     mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision).Width;
                 return (x, x + w);
             }
@@ -797,7 +829,8 @@ internal static class MusicMarkEngraver
             case MusicMarkType.SectionLabel:
             {
                 double fs = mark.Type == MusicMarkType.Rehearsal ? 2.4 : 2.2;
-                double half = Rendering.TextFontMetrics.SerifBold(mark.Text, fs) / 2 + 0.2;
+                double half =
+                    fonts.Advance(mark.Text, fs, TextRole.Mark, FontStyle.Bold) / 2 + 0.2;
                 return (x - half, x + half);
             }
             case MusicMarkType.Segno:
@@ -805,7 +838,8 @@ internal static class MusicMarkEngraver
                 return (x - 1.2, x + 1.2);
             default:
             {
-                double w = Rendering.TextFontMetrics.SerifBold(mark.Text, 2.2);
+                double w = fonts.Advance(
+                    mark.Text, 2.2, TextRoleOf(mark.Type), FontStyle.Bold);
                 return mark.Position == MusicMarkPosition.End
                     ? (x - w, x)
                     : (x - w / 2, x + w / 2);
@@ -850,6 +884,7 @@ internal static class MusicMarkEngraver
     ///   break-align-symbols (staff-bar key-signature clef).
     /// </remarks>
     private static double CalculateXPosition(
+        ScoreTextMetrics fonts,
         MusicMarkItem mark, MeasureLayout measureLayout,
         ImmutableArray<SystemLayout> systems,
         Func<int, double>? prefixTimeSignatureX = null)
@@ -951,7 +986,8 @@ internal static class MusicMarkEngraver
         {
             // LEFT edge on the anchor: returned X is the box center.
             double fs = mark.Type == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
-            double boxWidth = Rendering.TextFontMetrics.SerifBold(mark.Text, fs) + 0.4;
+            double boxWidth =
+                fonts.Advance(mark.Text, fs, TextRole.Mark, FontStyle.Bold) + 0.4;
             return anchor + boxWidth / 2;
         }
 

@@ -87,6 +87,30 @@ public sealed record MultiStaffScore
     /// </summary>
     public Rendering.TextFontPlan Fonts { get; init; } = Rendering.TextFontPlan.Default;
 
+    /// <summary>
+    /// The text measurements this score's <see cref="Fonts"/> imply — what the LAYOUT asks,
+    /// in the same words the drawing asks (<c>role</c> and <c>style</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE LAYOUT USED NOT TO HAVE THIS AT ALL, and that is why a named face was drawn
+    /// but not measured: <see cref="Fonts"/> reached the DRAWING context only
+    /// (<c>SharedRenderer</c> sets <c>doc.Fonts</c>), while every measurement in
+    /// <c>Svg/Layout</c> went to a static keyed by family alone. Hanging the metrics on the
+    /// score is what lets the two agree, because the layout already carries the score
+    /// everywhere it measures.
+    /// <para>
+    /// Built once per score and shared: <see cref="Rendering.ScoreTextMetrics"/> caches its
+    /// (role, style) resolutions, and rebuilding it per call would ask the font manager per
+    /// drawn string.
+    /// </para>
+    /// </remarks>
+    public Rendering.ScoreTextMetrics TextMetrics =>
+        _textMetrics ??= Fonts.IsDefault
+            ? Rendering.ScoreTextMetrics.Bundled
+            : new Rendering.ScoreTextMetrics(Fonts);
+
+    private Rendering.ScoreTextMetrics? _textMetrics;
+
     /// <summary>Lyrics in the score.</summary>
     public ImmutableArray<LyricItem> Lyrics { get; }
 

@@ -20,6 +20,7 @@ using System.Collections.Immutable;
 using Xunit;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -100,7 +101,7 @@ public class OutsideStaffStackMemoTests
              ImmutableArray<TupletBracketLayout> Tuplets) inputs,
             ProfileSource profiles, AboveStackMemo? memo)
     {
-        var (_, bn, _, texts, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
+        var (_, bn, _, texts, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(ScoreTextMetrics.Bundled, 
             systems, systemSkylines: null,
             inputs.Tuplets,
             ImmutableArray<TrillSpannerLayout>.Empty,

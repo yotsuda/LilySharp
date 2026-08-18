@@ -1181,9 +1181,9 @@ internal sealed class MultiStaffLayouter
             var alignmentEdges = SpacingRules.ParentAlignmentEdgesPerColumn(
                 allMeasures, allTimings);
             var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
-                springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet,
+                score.TextMetrics, springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet,
                 alignmentEdges);
-            var chordWidth = SpacingRules.ChordInkRightReachPerColumn(
+            var chordWidth = SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics, 
                 allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
             var leftOverhangs = new double[allTimings.Count];
             var rightOverhangs = new double[allTimings.Count];
@@ -1538,10 +1538,10 @@ internal sealed class MultiStaffLayouter
                 // The union timing columns don't match the syllable count on a lead sheet
                 // (chords and lyrics subdivide the bar differently), so reserve by column.
                 ? LyricSpacing.ApplyLeadSheetLyricSpacing(
-                    springs, allTimings, measureIndex, score.Lyrics,
+                    score.TextMetrics, springs, allTimings, measureIndex, score.Lyrics,
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings))
                 : LyricSpacing.ApplyLyricSpacing(
-                    springs, primaryMeasure, allTimings, measureIndex, score.Lyrics,
+                    score.TextMetrics, springs, primaryMeasure, allTimings, measureIndex, score.Lyrics,
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings));
         }
         if (score.IsLeadSheet)
@@ -1554,7 +1554,7 @@ internal sealed class MultiStaffLayouter
             // Chord symbols reserve their widths on the row columns, and a
             // grid bar never collapses below a readable cell (else a long
             // chords-only chart packs onto one line and never wraps).
-            springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, measureIndex, score.ChordNames);
+            springs = SpacingRules.ApplyChordRowSpacing(score.TextMetrics, springs, allTimings, measureIndex, score.ChordNames);
             springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
         }
         else if (!score.ChordNames.IsDefaultOrEmpty)
@@ -1567,7 +1567,7 @@ internal sealed class MultiStaffLayouter
             // symbols. LILYPOND-REF: scm/define-grobs.scm ChordName
             // extra-spacing-width.
             springs = SpacingRules.ApplyChordRowSpacing(
-                springs, allTimings, measureIndex, score.ChordNames, includeAttached: true);
+                score.TextMetrics, springs, allTimings, measureIndex, score.ChordNames, includeAttached: true);
         }
 
         // Tab fret digits (a Lily# enlargement of LilyPond's tiny numbers) are
@@ -2379,7 +2379,7 @@ internal sealed class MultiStaffLayouter
                     var rowInk = staff.IsLyricsTextRow
                         ? LyricRowInk(score, measureLayouts, thisStaff)
                         : ChordNameEngraver.RowSkylines(
-                            score.ChordNames, measureLayouts, thisStaff,
+                            score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
                             staff.PrimaryVoice.Measures);
                     sky.Up.Merge(rowInk.Up);
                     sky.Down.Merge(rowInk.Down);

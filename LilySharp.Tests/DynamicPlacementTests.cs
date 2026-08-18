@@ -22,6 +22,7 @@ using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -140,7 +141,7 @@ public class DynamicPlacementTests
         // being Pango's quantisation of the outline. Pointwise (2026-07-29) the binding
         // is still the f's own DEEPEST outline point against the flat staff extent, so
         // the number is the scalar chain's — the pointwise machinery must reproduce it.
-        double aboveBaseline = DynamicEngraver.PointwiseBaselineY(above: true,
+        double aboveBaseline = DynamicEngraver.PointwiseBaselineY(ScoreTextMetrics.Bundled, above: true,
             ImmutableArray<Voice>.Empty, voiceIndex: 0, 0, 0, xColumn: 0.0, xLabel: 0.65,
             "f", expressive: false, beamOf: null);
         Assert.Equal(3.342, aboveBaseline, 3);

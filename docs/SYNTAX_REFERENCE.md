@@ -415,12 +415,21 @@ octave digit under a `treble_8` clef, a compound meter's `+`, and tab fret numbe
 notation that happens to be drawn as text — restyling them changes the notation rather
 than the words — so they follow a face only when you name `notation` or the role itself.
 
-⚠️ **A named face is drawn, not measured.** The layout reserves space using the bundled
-face of the role's family whatever you name, because measuring a system font by name
-would make the same `.lys` lay out differently on different machines. On ordinary strings
-the drawn width runs −2.05 to +3.61 staff spaces from the reserved one, so a face far from
-the bundled metrics will look loose or tight. Weight and slant belong to the engraving and
-cannot be set here.
+**A named face is measured, not only drawn** (since 2026-08-18). The layout reserves space
+with the same file the string is drawn in, so a title in a wide face gets a wide box.
+Before this the reservation always used the bundled face, and on ordinary strings the drawn
+width ran −2.05 to +3.61 staff spaces from the reserved one.
+
+⚠️ **So a score that names a face lays out differently on a machine that does not have it**
+— there the reservation falls back to the bundled face. LilyPond has the same exposure for
+the same reason (its `font-name` goes to fontconfig), and it is why a missing face warns
+rather than passing quietly. A score that names nothing is unaffected: the bundled faces
+ship with the engine.
+
+⚠️ **`embedded` does one thing**: it subsets the named faces into an exported PDF. It does
+not change how anything is measured or drawn.
+
+Weight and slant belong to the engraving and cannot be set here.
 
 Unknown keys are an error (a binding that reaches nothing looks exactly like one that
 works), a key bound twice in one block is a warning and the last wins, and `mono` is not a

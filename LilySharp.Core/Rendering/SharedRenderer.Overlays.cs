@@ -401,7 +401,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm OttavaBracket grob
     /// LILYPOND-REF: lily/ottava-bracket.cc — Ottava_bracket
     /// </remarks>
-    private static void DrawOttavaBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
+    private static void DrawOttavaBrackets(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.OttavaBracketLayouts.IsDefaultOrEmpty) return;
@@ -427,13 +428,13 @@ internal static partial class SharedRenderer
                 gc.DrawText(b.Text, b.StartX,
                     absY - os.Size(
                         OttavaBracketEngraver.LabelInkCentre(
-                            b.Text, EngravingDefaults.OttavaBracketFontSize),
+                            fonts, b.Text, EngravingDefaults.OttavaBracketFontSize),
                         b.StaffIndex),
                     textFontSize, TextRole.Ottava,
                     FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
 
                 double lineStartX = OttavaBracketEngraver.LineStartX(
-                    b.Text, b.StartX, textFontSize);
+                    fonts, b.Text, b.StartX, textFontSize);
                 if (lineStartX < b.EndX)
                 {
                     double dashOn = b.DashPeriod * b.DashFraction;
@@ -462,7 +463,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/volta-bracket.cc:1-170 Volta_bracket_interface
     /// LILYPOND-REF: scm/define-grobs.scm:4292-4317 VoltaBracket grob
     /// </remarks>
-    private static void DrawVoltaBrackets(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
+    private static void DrawVoltaBrackets(ScoreTextMetrics fonts, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.VoltaBracketLayouts.IsDefaultOrEmpty) return;
         const double thickness = 0.13;
@@ -494,8 +496,8 @@ internal static partial class SharedRenderer
                     // quarter staff-space of air over a digit's cap and drew the number
                     // deeper than OutsideStaffStacker.VoltaBottom reserves (0.3 + the
                     // string's own InkHeight, which THIS geometry makes exact).
-                    var vInk = TextFontMetrics.Ink(
-                        v.VoltaText, FontSize * 0.6, sans: false, FontStyle.Bold);
+                    var vInk = fonts.Ink(
+                        v.VoltaText, FontSize * 0.6, TextRole.Volta, FontStyle.Bold);
                     double textY = absY - 0.3 - vInk.Top;
                     gc.DrawText(v.VoltaText, v.StartX + 0.5, textY,
                         FontSize * 0.6, TextRole.Volta, FontStyle.Bold, TextAnchor.Start, Color.Black);

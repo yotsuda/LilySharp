@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using Xunit;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -56,7 +57,7 @@ public class OutsideStaffStackerTests
                 YUp: -5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
-        var (_, adjHairpins, _, _) = OutsideStaffStacker.StackBelowStaff(
+        var (_, adjHairpins, _, _) = OutsideStaffStacker.StackBelowStaff(ScoreTextMetrics.Bundled, 
             systems, dynamics, hairpins);
 
         // Hairpin should be pushed below the dynamic's bottom extent (down = smaller
@@ -84,7 +85,7 @@ public class OutsideStaffStackerTests
                 YUp: -5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
-        var (_, adjHairpins, _, _) = OutsideStaffStacker.StackBelowStaff(
+        var (_, adjHairpins, _, _) = OutsideStaffStacker.StackBelowStaff(ScoreTextMetrics.Bundled, 
             systems, dynamics, hairpins);
 
         // No X overlap, so hairpin Y should stay at StaffBottom + padding + halfHeight
@@ -104,7 +105,7 @@ public class OutsideStaffStackerTests
             .Select(t => new CustomTextLayout(MeasureIndex: 0, X: 20, YUp: -4.0, Text: t,
                 SourcePosition: 0))
             .ToImmutableArray();
-        var (_, _, _, adjTexts, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
+        var (_, _, _, adjTexts, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(ScoreTextMetrics.Bundled, 
             systems, systemSkylines: null,
             ImmutableArray<TupletBracketLayout>.Empty,
             ImmutableArray<TrillSpannerLayout>.Empty,
@@ -179,7 +180,7 @@ public class OutsideStaffStackerTests
         var systems = CreateSingleSystem();
         var emptyDyn = ImmutableArray<DynamicLayout>.Empty;
         var emptyHp = ImmutableArray<HairpinLayout>.Empty;
-        var (d, h, _, _) = OutsideStaffStacker.StackBelowStaff(systems, emptyDyn, emptyHp);
+        var (d, h, _, _) = OutsideStaffStacker.StackBelowStaff(ScoreTextMetrics.Bundled, systems, emptyDyn, emptyHp);
 
         Assert.True(d.IsEmpty);
         Assert.True(h.IsEmpty);
@@ -208,7 +209,7 @@ public class OutsideStaffStackerTests
                 YUp: -5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
-        var (_, adjHairpins, _, _) = OutsideStaffStacker.StackBelowStaff(
+        var (_, adjHairpins, _, _) = OutsideStaffStacker.StackBelowStaff(ScoreTextMetrics.Bundled, 
             systems, dynamics, hairpins);
 
         // Hairpin in system 1 should NOT be affected by dynamic in system 0

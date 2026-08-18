@@ -165,9 +165,9 @@ internal static class MetronomeMarkGeometry
     /// one stencil in LilyPond's concat and its extent is one measurement, while the
     /// draw must carry the space as an offset (SVG collapses a drawn leading space).
     /// </summary>
-    public static double LeadingSpaceAdvance(string rest)
-        => TextFontMetrics.Serif(" " + rest, EngravingDefaults.MetronomeMarkFontSize)
-           - TextFontMetrics.Serif(rest, EngravingDefaults.MetronomeMarkFontSize);
+    public static double LeadingSpaceAdvance(ScoreTextMetrics fonts, string rest)
+        => fonts.Advance(" " + rest, EngravingDefaults.MetronomeMarkFontSize, TextRole.Tempo)
+           - fonts.Advance(rest, EngravingDefaults.MetronomeMarkFontSize, TextRole.Tempo);
 
     /// <summary>Reach of the swing feel-equation drawn right of the count (lead gap +
     /// the drawn pairs). LILYSHARP-OWN: the shuffle equation is Lily#'s own device with
@@ -180,6 +180,7 @@ internal static class MetronomeMarkGeometry
     /// left-to-right concat: [bold text " ("] note " = N" [")"] [swing].
     /// </summary>
     public static (double Width, double Top, double Bottom) Ink(
+        ScoreTextMetrics fonts,
         string count, string? tempoText, int beatUnit, int dots, int swingSubdivision)
     {
         double em = EngravingDefaults.MetronomeMarkFontSize;
@@ -187,16 +188,16 @@ internal static class MetronomeMarkGeometry
         bool hasMetronome = count.Length > 0;
         if (tempoText != null)
         {
-            var tInk = TextFontMetrics.Ink(tempoText, em, sans: false, FontStyle.Bold);
+            var tInk = fonts.Ink(tempoText, em, TextRole.Tempo, FontStyle.Bold);
             top = Math.Max(top, tInk.Top);
             bottom = Math.Min(bottom, tInk.Bottom);
-            x += TextFontMetrics.SerifBold(tempoText, em);
+            x += fonts.Advance(tempoText, em, TextRole.Tempo, FontStyle.Bold);
             if (!hasMetronome)
                 return (x, top, bottom);
-            var pInk = TextFontMetrics.Ink("(", em);
+            var pInk = fonts.Ink("(", em, TextRole.Tempo);
             top = Math.Max(top, pInk.Top);
             bottom = Math.Min(bottom, pInk.Bottom);
-            x += TextFontMetrics.Serif(" (", em);
+            x += fonts.Advance(" (", em, TextRole.Tempo);
         }
         // The note: bottom ON the baseline (DOWN-aligned), top at its stem/head.
         top = Math.Max(top, NoteTop(beatUnit));
@@ -204,10 +205,10 @@ internal static class MetronomeMarkGeometry
         // " = N" — ONE text run whose leading space is the concat's separator, so its
         // advance is one measurement of the whole string, as one stencil's extent is.
         string eq = EquationText(count, tempoText != null);
-        var eqInk = TextFontMetrics.Ink(eq, em);
+        var eqInk = fonts.Ink(eq, em, TextRole.Tempo);
         top = Math.Max(top, eqInk.Top);
         bottom = Math.Min(bottom, eqInk.Bottom);
-        x += TextFontMetrics.Serif(" " + eq, em);
+        x += fonts.Advance(" " + eq, em, TextRole.Tempo);
         if (swingSubdivision != 0)
             x += SwingEquationReach;
         return (x, top, bottom);

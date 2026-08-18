@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
@@ -30,7 +31,24 @@ internal sealed class LayoutEngine
 {
     private readonly LayoutOptions _options;
     private readonly ElementCoordinator _elementCoordinator;
-    private readonly SkylineBuilder _skylineBuilder;
+
+    /// <summary>
+    /// The skyline builder for the score being laid out.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT READONLY, and the reason is the score's <c>font</c> directive: the builder
+    /// reserves text ink (dynamic labels, tuplet numbers) and so has to know the faces,
+    /// which the CONSTRUCTOR cannot — it is handed options and no score. It is therefore
+    /// re-seated at the top of <see cref="Layout(MultiStaffScore, IReadOnlyList{int},
+    /// SystemLayoutCache, MeasureSpringData[])"/>.
+    /// <para>
+    /// SAFE because an engine lays out ONE score: every production construction is
+    /// <c>new LayoutEngine().Layout(…)</c> — SvgGenerator, PngGenerator (twice),
+    /// PdfGenerator, IncrementalCompiler, LayoutReport, checked 2026-08-18. An engine
+    /// reused across two scores would be the case this breaks, and there is none.
+    /// </para>
+    /// </remarks>
+    private SkylineBuilder _skylineBuilder;
     private readonly MeasureLayouter _measureLayouter = new();
     private readonly PageLayouter _pageLayouter;
     private readonly SystemBreaker _systemBreaker;
@@ -61,6 +79,10 @@ internal sealed class LayoutEngine
     public ScoreLayout Layout(MultiStaffScore score, IReadOnlyList<int>? precomputedLineSizes = null,
         SystemLayoutCache? systemCache = null, MeasureSpringData[]? precomputedSprings = null)
     {
+        // The faces this score reserves against — see the field's remark for why the
+        // builder cannot be given them in the constructor.
+        _skylineBuilder = new SkylineBuilder(_options.StaffHeight, score.TextMetrics);
+
         double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
@@ -219,7 +241,7 @@ internal sealed class LayoutEngine
         }
         var inlineChordNames = score.ChordNames
             .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
-        AugmentExtentsWithLooseLines(perSystemExtents,
+        AugmentExtentsWithLooseLines(score.TextMetrics, perSystemExtents,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
             inlineChordNames, perSystemBands, placed.LyricBands);
 
@@ -287,6 +309,7 @@ internal sealed class LayoutEngine
         var annotationContext = new AnnotationLayoutContext
         {
             Score = primaryScore,
+            Fonts = score.TextMetrics,
             Systems = systemsArray,
             Dynamics = score.Dynamics,
             Articulations = score.Articulations,
@@ -784,6 +807,7 @@ internal sealed class LayoutEngine
         var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = prelimScore,
+            Fonts = score.TextMetrics,
             Systems = prelimSystems,
             Dynamics = score.Dynamics,
             Articulations = score.Articulations,
@@ -837,10 +861,11 @@ internal sealed class LayoutEngine
             // would be overwritten twice per keystroke and never hit.
             FingScriptMemo = systemCache?.PreliminaryFingScripts,
         });
-        EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
+        EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
         return new PreliminaryPass(
             AugmentSkylinesForPaging(
+                score.TextMetrics,
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
@@ -1626,6 +1651,7 @@ internal sealed class LayoutEngine
     /// </para>
     /// </remarks>
     private static (double upExtent, double bandUp) EstimateAboveStaffExtents(
+        ScoreTextMetrics fonts,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         int startMeasure, int endMeasure,
@@ -1677,7 +1703,7 @@ internal sealed class LayoutEngine
                 // LILYPOND-REF: scm/define-grobs.scm:2346 MetronomeMark outside-staff-priority
                 if (mark.Type == MusicMarkType.Tempo)
                 {
-                    var tInk = MetronomeMarkGeometry.Ink(mark.Text, mark.TempoText,
+                    var tInk = MetronomeMarkGeometry.Ink(fonts, mark.Text, mark.TempoText,
                         mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
                     upExtent = Math.Max(upExtent,
                         MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom)
@@ -1728,6 +1754,7 @@ internal sealed class LayoutEngine
     /// (slurs, brackets, scripts included), not just note skylines.
     /// </remarks>
     private static void EnrichExtentsWithAnnotationProtrusions(
+        ScoreTextMetrics fonts,
         List<(double upExtent, double downExtent)> perSystemExtents,
         ImmutableArray<SystemLayout> systems,
         AnnotationLayouts ann,
@@ -1950,8 +1977,8 @@ internal sealed class LayoutEngine
             double spTop = lineHalf, spBottom = lineHalf;
             if (!string.IsNullOrEmpty(sp.Text))
             {
-                var ink = Rendering.TextFontMetrics.Ink(
-                    sp.Text, 4.0 * 0.5, sans: false, Rendering.FontStyle.Italic);
+                var ink = fonts.Ink(
+                    sp.Text, 4.0 * 0.5, TextRole.Text, Rendering.FontStyle.Italic);
                 spTop = Math.Max(spTop, ink.Top);
                 spBottom = Math.Max(spBottom, -ink.Bottom);
             }
@@ -1976,9 +2003,9 @@ internal sealed class LayoutEngine
             // i.e. 1.229225 — against the 1.3 this used to reserve. Closing it took
             // system.clef-floor.floor-bound-distance to exact and lyrics.*.system-gap from
             // +0.207200 to +0.143468.
-            double capTop = Rendering.TextFontMetrics.Ink(
+            double capTop = fonts.Ink(
                 bn.Text, BarNumberEngraver.FontSize,
-                sans: false, Rendering.FontStyle.Bold).Top;
+                TextRole.BarNumber, Rendering.FontStyle.Bold).Top;
             up[s] = Math.Max(up[s], -(rel - capTop));
         }
 
@@ -2175,6 +2202,7 @@ internal sealed class LayoutEngine
     /// v2bow1k keystroke, ~all of it in unchanged systems' bow re-seeding.
     /// </remarks>
     private static List<(VerticalSkyline up, VerticalSkyline down)>? AugmentSkylinesForPaging(
+        ScoreTextMetrics fonts,
         List<(VerticalSkyline up, VerticalSkyline down)>? skylines,
         ImmutableArray<ArticulationLayout> articulations,
         ImmutableArray<FiguredBassLayout> figuredBasses,
@@ -2355,7 +2383,8 @@ internal sealed class LayoutEngine
                 // (boxed labels get the box padding, symbols a 2 ss square).
                 double halfW = m.IsSymbol
                     ? 1.0
-                    : Rendering.TextFontMetrics.SerifBold(m.Text, 2.4) / 2 + 0.4;
+                    : fonts.Advance(m.Text, 2.4, MusicMarkEngraver.TextRoleOf(m.MarkType),
+                          Rendering.FontStyle.Bold) / 2 + 0.4;
                 // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
                 double mY = m.YUp - 2.0;
                 AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, mY + 2.1, mY - 0.7);
@@ -2365,7 +2394,8 @@ internal sealed class LayoutEngine
         {
             foreach (var ct in customTexts)
             {
-                double halfW = Rendering.TextFontMetrics.SerifBold(ct.Text, 2.0) / 2 + 0.2;
+                double halfW =
+                    fonts.Advance(ct.Text, 2.0, TextRole.Text, Rendering.FontStyle.Bold) / 2 + 0.2;
                 // YUp is Y-up; the skyline is Y-up too. Translate to the top staff's frame.
                 double ctY = ct.YUp - 2.0;
                 AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ctY + 1.8, ctY - 0.6);
@@ -2380,7 +2410,7 @@ internal sealed class LayoutEngine
         {
             foreach (var cn in chordNames)
             {
-                double halfW = ChordNameEngraver.SymbolInkWidth(cn.ChordText) / 2 + 0.3;
+                double halfW = ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText) / 2 + 0.3;
                 double cnY = cn.YUp; // cn.YUp is Y-up from the system top (skyline frame)
                 AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + 1.9, cnY - 0.3);
             }
@@ -2401,12 +2431,13 @@ internal sealed class LayoutEngine
                     continue;
                 // bn.YUp is Y-up from the system top; the skyline is Y-up too.
                 double rel = bn.YUp;
-                double w = Rendering.TextFontMetrics.SerifBold(
-                    bn.Text, BarNumberEngraver.FontSize);
-                double x0 = bn.RightAligned ? bn.X - w : bn.X;
-                double capTop = Rendering.TextFontMetrics.Ink(
+                double w = fonts.Advance(
                     bn.Text, BarNumberEngraver.FontSize,
-                    sans: false, Rendering.FontStyle.Bold).Top;
+                    TextRole.BarNumber, Rendering.FontStyle.Bold);
+                double x0 = bn.RightAligned ? bn.X - w : bn.X;
+                double capTop = fonts.Ink(
+                    bn.Text, BarNumberEngraver.FontSize,
+                    TextRole.BarNumber, Rendering.FontStyle.Bold).Top;
                 BuilderAt(s).AddBarNumberBox(x0, x0 + w, rel, rel + capTop);
             }
         }
@@ -2431,6 +2462,7 @@ internal sealed class LayoutEngine
     }
 
     private static void AugmentExtentsWithLooseLines(
+        ScoreTextMetrics fonts,
         List<(double upExtent, double downExtent)> perSystemExtents,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
@@ -2443,7 +2475,7 @@ internal sealed class LayoutEngine
         {
             var (start, count) = systemMeasureRanges[i];
             var (looseUp, bandUp) = EstimateAboveStaffExtents(
-                musicMarks, voltaBrackets, start, start + count, chordNames);
+                fonts, musicMarks, voltaBrackets, start, start + count, chordNames);
 
             // The lyric block's reservation is the WALK's, computed per system by
             // LyricReservationBelowSystem where the staff skylines live — not an estimate
@@ -3127,7 +3159,8 @@ internal sealed class LayoutEngine
         => row.IsLyricsTextRow
             ? (new VerticalSkyline(VerticalDirection.Up), new VerticalSkyline(VerticalDirection.Down))
             : ChordNameEngraver.RowSkylines(
-                score.ChordNames, measures, staffIndex, row.PrimaryVoice.Measures);
+                score.TextMetrics, score.ChordNames, measures, staffIndex,
+                row.PrimaryVoice.Measures);
 
     /// <summary>Which context's <c>nonstaff-*</c> specs a line carries — see
     /// <c>MultiStaffLayouter.NonStaffSpecsOf</c>, whose rule this is.</summary>
@@ -3143,6 +3176,19 @@ internal sealed class LayoutEngine
     private sealed class AnnotationLayoutContext
     {
         public required Score? Score { get; init; }
+
+        /// <summary>
+        /// The faces this score's text is measured against — the whole-score answer, not
+        /// the primary staff's.
+        /// </summary>
+        /// <remarks>
+        /// It is its OWN member rather than <c>Score?.TextMetrics</c> because
+        /// <see cref="Score"/> is nullable here and a <c>?? bundled</c> would be a silent
+        /// choice made in the wrong place (HANDOFF RULES §7.7). The caller holds the
+        /// MultiStaffScore and knows the answer; this makes it say so.
+        /// </remarks>
+        public required Rendering.ScoreTextMetrics Fonts { get; init; }
+
         public required ImmutableArray<SystemLayout> Systems { get; init; }
         public required ImmutableArray<DynamicItem> Dynamics { get; init; }
         public required ImmutableArray<ArticulationItem> Articulations { get; init; }
@@ -3534,7 +3580,7 @@ internal sealed class LayoutEngine
         // LILYPOND-REF: lily/dynamic-align-engraver.cc:194-235 stop_translation_timestep.
         ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> dynamicLineGroups;
         (dynamicLayouts, hairpinLayouts, dynamicLineGroups) = DynamicAlignEngraver.AlignLines(
-            hairpinItems, dynamics, dynamicLayouts, hairpinLayouts, systems, ml, staffYAt,
+            ctx.Fonts, hairpinItems, dynamics, dynamicLayouts, hairpinLayouts, systems, ml, staffYAt,
             score != null && staffVoices.IsDefaultOrEmpty
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
             voicesByStaff, measuresByStaff, beamLayouts ?? default);
@@ -3551,7 +3597,7 @@ internal sealed class LayoutEngine
         // Staff-context engraver, so every voice counts), and a beamed support column's
         // stem ends at the quanted beam face — the same ingredients the trill reads.
         var ottavaLayouts = OttavaBracketEngraver.Calculate(
-            ottavaItems, systems, ml, staffYAt,
+            ctx.Fonts, ottavaItems, systems, ml, staffYAt,
             voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty);
 
         // Layout arpeggio markings
@@ -3815,7 +3861,7 @@ internal sealed class LayoutEngine
         // StackAboveStaff, which is handed the below pass's result so one array carries
         // both halves' moves.
         var (stackedDynamics, stackedHairpins, stackedArticulations, belowStackedTrills) =
-            OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
+            OutsideStaffStacker.StackBelowStaff(ctx.Fonts, systems, dynamicLayouts, hairpinLayouts,
                 articulationLayouts, applyStaffOffsets: staffYAt != null,
                 staffProfile: staffProfile, lineGroups: dynamicLineGroups,
                 trills: trillSpannerLayouts);
@@ -3853,14 +3899,14 @@ internal sealed class LayoutEngine
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
             staffByIndex: staffByIndex, scripts: tupletScripts);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
-            score, musicMarks, systems, ml, measures, default,
+            ctx.Fonts, score, musicMarks, systems, ml, measures, default,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
         int barNumberOffset = (!measures.IsDefaultOrEmpty && measures[0].IsPickup) ? -1 : 0;
-        var barNumberLayouts = BarNumberEngraver.Calculate(systems, numberOffset: barNumberOffset);
+        var barNumberLayouts = BarNumberEngraver.Calculate(ctx.Fonts, systems, numberOffset: barNumberOffset);
         // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.
@@ -3874,6 +3920,7 @@ internal sealed class LayoutEngine
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
              stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners,
              stackedArticulationsAbove) = OutsideStaffStacker.StackAboveStaff(
+            ctx.Fonts,
             systems, systemSkylines, tupletBracketLayouts,
             belowStackedTrills, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
@@ -4025,7 +4072,7 @@ internal sealed class LayoutEngine
             }
         }
 
-        return ChordNameEngraver.Calculate(
+        return ChordNameEngraver.Calculate(ctx.Fonts,
             cn, systems, ml, ctx.Measures,
             ctx.MeasuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
             chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline);
@@ -4141,7 +4188,8 @@ internal sealed class LayoutEngine
 
         var engraver = new LyricEngraver(
             parentAlignmentEdge: LyricEngraver.ParentAlignmentEdge(measuresByStaff, measures),
-            systemPadding: _options.VerticalSpacing.SystemSystem.Padding);
+            systemPadding: _options.VerticalSpacing.SystemSystem.Padding,
+            fonts: ctx.Fonts);
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
             ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,

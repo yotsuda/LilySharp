@@ -225,9 +225,16 @@ internal sealed class PdfDrawingContext : IDrawingContext
         };
         var brush = new XSolidBrush(ToXColor(fill));
 
-        // A face the RESERVATION opened is drawn at the positions it reserved (see
-        // DrawShaped). Anything else — a bound `font "X"`, a fallback — keeps
-        // PdfSharpCore's own layout, because the engine did not measure that file either.
+        // A BUNDLED face is drawn at the positions the reservation computed (DrawShaped).
+        // A bound `font "X"` keeps PdfSharpCore's own layout, and the reason CHANGED on
+        // 2026-08-18: it used to be that the engine never measured that file either
+        // (HANDOFF §2F's gap, now closed — ScoreTextMetrics measures it). What is left is
+        // this backend's: WITHOUT `embedded` a named face is served by the bundled
+        // stand-in (EmmentalerFontResolver), so the glyphs on the page are not the ones the
+        // box was measured from and shaping them at those positions would be worse, not
+        // better. WITH `embedded` the real program is there and the shaped path is
+        // reachable — that is the next step, and it needs the resolved TextFace threaded to
+        // the drawing side.
         if (face.IsBundled)
         {
             double width = TextFontMetrics.Advance(text, fontSize, sans, style);
@@ -260,7 +267,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
     ///   backend as a <c>glyph-string</c>. LilyPond's page is glyphs at positions.
     /// ⚠️ PdfSharpCore emits the whole string as one <c>Tj</c> with no positioning array, so a
     /// PDF viewer advances by the font's <c>/Widths</c> and nothing kerns. The engine reserves
-    /// the SHAPED width (<see cref="TextFontMetrics.Advance"/> — HarfBuzz, the way LilyPond
+    /// the SHAPED width (<c>TextFontMetrics.Advance</c> — HarfBuzz, the way LilyPond
     /// measures through Pango), so the ink and its box were different widths: measured
     /// 2026-08-03 at 3.16 staff spaces on a ten-letter title. Nothing caught it because the
     /// snapshot corpus holds no PDF at all.

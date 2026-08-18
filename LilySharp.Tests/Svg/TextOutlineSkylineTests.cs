@@ -52,7 +52,7 @@ public class TextOutlineSkylineTests
     [InlineData("mum")]
     public void ProfileExtremes_AreTheInkBox(string text)
     {
-        var (up, down) = TextOutlineSkylines.Place(text, Em, sans: false, Style, x: 0, yBaseline: 0);
+        var (up, down) = TextOutlineSkylines.Place(text, Em, ScoreTextMetrics.Bundled.Face(TextRole.Text, Style), x: 0, yBaseline: 0);
         var (inkBottom, inkTop) = TextFontMetrics.Ink(text, Em, sans: false, Style);
 
         _output.WriteLine($"{text}: up.Max={up.MaxHeight():F6} inkTop={inkTop:F6} " +
@@ -88,8 +88,8 @@ public class TextOutlineSkylineTests
     [Fact]
     public void PocoOverDolce_BindsBelowTheBoxArithmetic()
     {
-        var (_, pocoDown) = TextOutlineSkylines.Place("poco", Em, sans: false, Style, x: 0, yBaseline: 0);
-        var (dolceUp, _) = TextOutlineSkylines.Place("dolce", Em, sans: false, Style, x: 0, yBaseline: 0);
+        var (_, pocoDown) = TextOutlineSkylines.Place("poco", Em, ScoreTextMetrics.Bundled.Face(TextRole.Text, Style), x: 0, yBaseline: 0);
+        var (dolceUp, _) = TextOutlineSkylines.Place("dolce", Em, ScoreTextMetrics.Bundled.Face(TextRole.Text, Style), x: 0, yBaseline: 0);
 
         // Same baselines ⇒ the padded pointwise distance is the required baseline
         // separation for the outlines to just touch.
@@ -121,8 +121,8 @@ public class TextOutlineSkylineTests
     [Fact]
     public void PocoOverMum_TheBoxRegime_OutlineAgreesWithBoxArithmetic()
     {
-        var (_, pocoDown) = TextOutlineSkylines.Place("poco", Em, sans: false, Style, x: 0, yBaseline: 0);
-        var (mumUp, _) = TextOutlineSkylines.Place("mum", Em, sans: false, Style, x: 0, yBaseline: 0);
+        var (_, pocoDown) = TextOutlineSkylines.Place("poco", Em, ScoreTextMetrics.Bundled.Face(TextRole.Text, Style), x: 0, yBaseline: 0);
+        var (mumUp, _) = TextOutlineSkylines.Place("mum", Em, ScoreTextMetrics.Bundled.Face(TextRole.Text, Style), x: 0, yBaseline: 0);
 
         // The 0.2 padding's plateau is WHY the box regime is a box regime: unpadded,
         // the descender falls on the first m-arch's slope 0.0165 below the plateau
@@ -198,8 +198,8 @@ public class TextOutlineSkylineTests
     [Fact]
     public void Place_TranslatesHorizonAndBaseline()
     {
-        var (upAtOrigin, _) = TextOutlineSkylines.Place("poco", Em, sans: false, Style, x: 0, yBaseline: 0);
-        var (upPlaced, _) = TextOutlineSkylines.Place("poco", Em, sans: false, Style, x: 10, yBaseline: 3);
+        var (upAtOrigin, _) = TextOutlineSkylines.Place("poco", Em, ScoreTextMetrics.Bundled.Face(TextRole.Text, Style), x: 0, yBaseline: 0);
+        var (upPlaced, _) = TextOutlineSkylines.Place("poco", Em, ScoreTextMetrics.Bundled.Face(TextRole.Text, Style), x: 10, yBaseline: 3);
 
         Assert.Equal(upAtOrigin.MaxHeight() + 3, upPlaced.MaxHeight(), 9);
 

@@ -364,7 +364,7 @@ public class StaffSkylineFrameTests
         var chords = ImmutableArray.Create(new ChordNameItem(
             "C", measureIndex: 0, itemIndex: 0, sourcePosition: 0, staffIndex: 3,
             useTiming: true, isChordRow: true));
-        var (up, down) = ChordNameEngraver.RowSkylines(
+        var (up, down) = ChordNameEngraver.RowSkylines(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, 
             chords, Layouts(), staffIndex: 3, ImmutableArray<Measure>.Empty);
 
         // ⚠️ THE EM AND THE SERIES COME FROM THE ENGRAVING DEFAULTS, not literals: the em
@@ -380,7 +380,7 @@ public class StaffSkylineFrameTests
         Assert.Equal(bottom, down.MaxHeight(), 9);
 
         // ...and it is THIS row's ink: a symbol tagged to another staff is not in it.
-        var (otherUp, _) = ChordNameEngraver.RowSkylines(
+        var (otherUp, _) = ChordNameEngraver.RowSkylines(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, 
             chords, Layouts(), staffIndex: 4, ImmutableArray<Measure>.Empty);
         Assert.True(otherUp.IsEmpty);
     }

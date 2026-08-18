@@ -202,9 +202,15 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         // The one face the RESERVATION knows — a run still on it is drawn shaped, at the
         // positions layout paid for; a run that fell through to a system fallback is a face
         // TextFontMetrics never opened, so its glyph ids and its widths are its own.
-        // ⚠️ A BOUND face is in that second category too: the layout reserved against the
-        // bundled family whatever the score named, which is HANDOFF §2F's open gap and
-        // not something this line can close.
+        // ⚠️ A BOUND face still takes the unshaped path here, and the reason CHANGED on
+        // 2026-08-18: it used to be that the layout never measured a named face at all
+        // (HANDOFF §2F's gap, now closed — ScoreTextMetrics). What is left is narrower and
+        // is this backend's own: the shaped path needs the glyph IDs of the very file the
+        // reservation opened, and this context resolves its drawing typeface through Skia
+        // by family name, which is a second lookup that may not land on the same file. So
+        // the bound case draws unshaped at the face's own widths, i.e. the reservation and
+        // the ink can differ by the shaping (kerns, ligatures) and not by the face.
+        // Closing it means threading the resolved TextFace to the drawing side too.
         SKTypeface? reserved = face.IsBundled ? TextFontMetrics.Typeface(sans, style) : null;
 
         using var paint = new SKPaint
@@ -266,12 +272,12 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// ⚠️ <c>SKCanvas.DrawText(string, …)</c> maps code points to glyphs one at a time and
     /// steps by the face's raw advances: no pair kerning and no ligatures, because nothing in
     /// that path shapes. The engine RESERVES the shaped width
-    /// (<see cref="TextFontMetrics.Advance"/>, which is HarfBuzz through Pango's rules, the
+    /// (<c>TextFontMetrics.Advance</c>, which is HarfBuzz through Pango's rules, the
     /// way LilyPond measures), so drawing that way put the ink and its box at different
     /// widths — measured 2026-08-03 at 3.16 staff spaces on a ten-letter title, and invisible
     /// because the snapshot corpus holds no PNG at all.
     /// <para>
-    /// Positions come from <see cref="TextFontMetrics.ShapeRun"/>, which is the SAME
+    /// Positions come from <c>TextFontMetrics.ShapeRun</c>, which is the SAME
     /// computation the reservation is the total of — not a second one that agrees.
     /// </para>
     /// <para>

@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -202,7 +203,7 @@ public class OttavaBracketTests
         var brackets = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8va, 0, 3, 42));
 
-        var result = OttavaBracketEngraver.Calculate(brackets, systems, measures);
+        var result = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, brackets, systems, measures);
 
         Assert.Single(result);
         var layout = result[0];
@@ -220,7 +221,7 @@ public class OttavaBracketTests
         var brackets = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8vb, 0, 3, 0));
 
-        var result = OttavaBracketEngraver.Calculate(brackets, systems, measures);
+        var result = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, brackets, systems, measures);
 
         Assert.Single(result);
         Assert.False(result[0].IsAbove);
@@ -237,7 +238,7 @@ public class OttavaBracketTests
         var brackets = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8va, 0, 3, 0));
 
-        var result = OttavaBracketEngraver.Calculate(brackets, systems, measures);
+        var result = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, brackets, systems, measures);
 
         Assert.Equal(0.3, result[0].DashFraction);
     }
@@ -251,7 +252,7 @@ public class OttavaBracketTests
         var brackets = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8va, 0, 3, 0));
 
-        var result = OttavaBracketEngraver.Calculate(brackets, systems, measures);
+        var result = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, brackets, systems, measures);
 
         Assert.Equal(0.8, result[0].EdgeHeight);
     }
@@ -262,7 +263,7 @@ public class OttavaBracketTests
         var measures = CreateMeasureLayouts(2);
         var systems = CreateSingleSystem(2);
 
-        var result = OttavaBracketEngraver.Calculate(
+        var result = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, 
             ImmutableArray<OttavaBracketItem>.Empty, systems, measures);
 
         Assert.True(result.IsEmpty);
@@ -322,8 +323,8 @@ public class OttavaBracketTests
         var low = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8va, 0, 3, 0, StaffIndex: 1));
 
-        var topLayout = OttavaBracketEngraver.Calculate(top, systems, measures, staffYByIndex)[0];
-        var lowLayout = OttavaBracketEngraver.Calculate(low, systems, measures, staffYByIndex)[0];
+        var topLayout = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, top, systems, measures, staffYByIndex)[0];
+        var lowLayout = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, low, systems, measures, staffYByIndex)[0];
 
         Assert.Equal(1, lowLayout.StaffIndex);
         // Lower staff's 8va is 12 staff-spaces below the top staff's 8va.
@@ -342,7 +343,7 @@ public class OttavaBracketTests
         var low = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8vb, 0, 3, 0, StaffIndex: 1));
 
-        var lowLayout = OttavaBracketEngraver.Calculate(low, systems, measures, staffYByIndex)[0];
+        var lowLayout = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, low, systems, measures, staffYByIndex)[0];
 
         Assert.False(lowLayout.IsAbove);
         // Below-staff Y (staff bottom + padding) shifted down to the lower staff.
@@ -357,7 +358,7 @@ public class OttavaBracketTests
         var brackets = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8va, 10, 12, 0));
 
-        var result = OttavaBracketEngraver.Calculate(brackets, systems, measures);
+        var result = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, brackets, systems, measures);
 
         Assert.True(result.IsEmpty);
     }
@@ -381,8 +382,8 @@ public class OttavaBracketTests
         var late = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8va, 3, 3, 0, StaffIndex: 0));
 
-        var earlyLayout = OttavaBracketEngraver.Calculate(early, systems, measures, staffYAt)[0];
-        var lateLayout = OttavaBracketEngraver.Calculate(late, systems, measures, staffYAt)[0];
+        var earlyLayout = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, early, systems, measures, staffYAt)[0];
+        var lateLayout = OttavaBracketEngraver.Calculate(ScoreTextMetrics.Bundled, late, systems, measures, staffYAt)[0];
 
         // Same staff, but the later bracket's measure resolves to the +20 offset.
         // Y-up: a 20-ss-lower system has a 20-smaller Y-up.

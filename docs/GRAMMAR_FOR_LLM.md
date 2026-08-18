@@ -440,8 +440,13 @@ Rules worth knowing before emitting one:
 - `font "NAME"` (one-liner) binds `serif` and `sans` — but NOT `notation`. The `treble_8`
   octave digit, a compound meter's `+` and tab fret numbers follow a face only when
   `notation` or the role itself is named.
-- A named face is DRAWN, not MEASURED: spacing always uses the bundled TeX Gyre face of
-  the role's family, so a face with very different metrics will look loose or tight.
+- A named face is MEASURED as well as drawn (since 2026-08-18): the space reserved for a
+  string comes from the same file it is drawn in. ⚠️ On a machine that does not have the
+  face the reservation falls back to the bundled TeX Gyre face, so naming one makes the
+  page machine-dependent — LilyPond's `font-name` has the same exposure. A missing face
+  warns rather than passing quietly.
+- `embedded` only subsets the named faces into an exported PDF; it changes nothing about
+  measuring or drawing.
 - No weight/slant/size here — those belong to the engraving.
 - `mono` is not a key. Unknown keys are an error; a key bound twice is a warning (last wins).
 

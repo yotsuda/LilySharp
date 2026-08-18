@@ -191,7 +191,7 @@ internal static class DynamicEngraver
                 dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
             string labelText = dynamic.Text ?? string.Empty;
             double x = xColumn + (dynamic.IsExpressiveText
-                ? LabelHalfWidth(labelText, expressive: true)
+                ? LabelHalfWidth(score.TextMetrics, labelText, expressive: true)
                 : AnchorCentreOffset(
                     AnchorItem(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex)));
 
@@ -205,7 +205,7 @@ internal static class DynamicEngraver
             //   side-position-interface.cc:353-358 pointwise Skyline::distance to my_dim.
             int staffIdx = dynamic.StaffIndex;
             int mi = dynamic.MeasureIndex, ii = dynamic.ItemIndex;
-            double y = PointwiseBaselineY(dynamic.IsAbove, dynVoices, dynamic.VoiceIndex,
+            double y = PointwiseBaselineY(score.TextMetrics, dynamic.IsAbove, dynVoices, dynamic.VoiceIndex,
                 mi, ii, xColumn, x, dynamic.Text, dynamic.IsExpressiveText,
                 vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null);
 
@@ -331,14 +331,14 @@ internal static class DynamicEngraver
     /// </summary>
     /// <param name="xColumn">The note column's X (the drawn head starts here).</param>
     /// <param name="xLabel">The label's centre (column + the anchor's half advance).</param>
-    internal static double PointwiseBaselineY(bool above,
+    internal static double PointwiseBaselineY(Rendering.ScoreTextMetrics fonts, bool above,
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn, double xLabel, string? text, bool expressive,
         Func<int, (BeamLayout Beam, double MemberX, bool StemUp)?>? beamOf)
     {
         var support = ColumnSupportSkylines(
             voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
-        var my = LabelSkylines(text, expressive, xLabel, -TextOffsetInSpanner);
+        var my = LabelSkylines(fonts, text, expressive, xLabel, -TextOffsetInSpanner);
         // total_off positions the SPANNER; the text's baseline sits TextOffsetInSpanner
         // below it (define-grobs.scm:1450 DynamicText Y-offset, "center on an 'm'").
         return SpannerOffsetY(above ? 1.0 : -1.0, support, my) - TextOffsetInSpanner;
@@ -510,6 +510,7 @@ internal static class DynamicEngraver
     /// or the serif box for a label with no feta outline (free expressive text).
     /// </summary>
     internal static (VerticalSkyline Up, VerticalSkyline Down) LabelSkylines(
+        Rendering.ScoreTextMetrics fonts,
         string? text, bool expressive, double xCentre, double yBaseline)
     {
         if (!expressive && text is { Length: > 0 }
@@ -517,7 +518,7 @@ internal static class DynamicEngraver
             && DynamicOutline.Place(text, xCentre - w / 2.0, yBaseline) is { } outline)
             return outline;
         var (ascent, descent) = InkOf(text, expressive);
-        double half = LabelHalfWidth(text ?? "", expressive);
+        double half = LabelHalfWidth(fonts, text ?? "", expressive);
         return (VerticalSkyline.FromBox(xCentre - half, xCentre + half,
                     yBaseline - descent, yBaseline + ascent, VerticalDirection.Up),
                 VerticalSkyline.FromBox(xCentre - half, xCentre + half,
@@ -644,11 +645,17 @@ internal static class DynamicEngraver
     // reports its true (wide) extent.
     private const double DynamicFontSize = 2.0;
 
-    private static double LabelHalfWidth(string text, bool expressive)
+    // ⚠️ MEASURED UPRIGHT, DRAWN SLANTED — a reserve-versus-draw mismatch older than the
+    // role port and NOT fixed here (fixing it moves the page; see the To-Coda prefix's
+    // note in SharedRenderer.Marks.cs). DrawDynamics uses Italic for expressive text and
+    // BoldItalic for a dynamic level; these two spell the upright pair the width has
+    // always been taken from. The styles are written out rather than left implicit so the
+    // pair is visible to the next reader.
+    private static double LabelHalfWidth(
+        Rendering.ScoreTextMetrics fonts, string text, bool expressive)
     {
-        double w = expressive
-            ? LilySharp.Core.Rendering.TextFontMetrics.Serif(text, DynamicFontSize)
-            : LilySharp.Core.Rendering.TextFontMetrics.SerifBold(text, DynamicFontSize);
+        double w = fonts.Advance(text, DynamicFontSize, Rendering.TextRole.Dynamics,
+            expressive ? Rendering.FontStyle.Regular : Rendering.FontStyle.Bold);
         return w / 2.0;
     }
 

@@ -4058,6 +4058,7 @@ internal static class SpacingRules
     /// neighbour is — not <c>w/2 + 0.5</c> to each, which is what a centred symbol would owe.
     /// </remarks>
     public static ImmutableArray<Spring> ApplyChordRowSpacing(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
         int measureIndex,
@@ -4082,7 +4083,7 @@ internal static class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        ChordNameEngraver.SymbolInkWidth(cn.ChordText));
+                        ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText));
                     any = true;
                     break;
                 }
@@ -4162,6 +4163,7 @@ internal static class SpacingRules
     /// <see cref="ApplyChordRowSpacing"/>'s neighbour gaps.
     /// </remarks>
     internal static double[] ChordInkRightReachPerColumn(
+        Rendering.ScoreTextMetrics fonts,
         IReadOnlyList<Fraction> timings,
         int measureIndex,
         ImmutableArray<ChordNameItem> chordNames,
@@ -4181,7 +4183,7 @@ internal static class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        ChordNameEngraver.SymbolInkWidth(cn.ChordText));
+                        ChordNameEngraver.SymbolInkWidth(fonts, cn.ChordText));
                     break;
                 }
         }

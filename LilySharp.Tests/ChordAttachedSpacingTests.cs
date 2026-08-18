@@ -20,6 +20,7 @@ using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
+using LilySharp.Core.Rendering;
 
 namespace LilySharp.Tests;
 
@@ -56,7 +57,7 @@ public sealed class ChordAttachedSpacingTests
         // A wide symbol at timing 0; timing 1/4 has no symbol (a bare note).
         var chords = ImmutableArray.Create(Attached("Cmaj7", Fraction.Zero));
 
-        var result = SpacingRules.ApplyChordRowSpacing(
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled, 
             Springs(3), TwoColumns, measureIndex: 0, chords, includeAttached: true);
 
         // The interior spring between the symbol column and the bare note column
@@ -78,10 +79,10 @@ public sealed class ChordAttachedSpacingTests
     public void AttachedChord_OverAnAllRestBar_HoldsTheBarOpenOnTheRight()
     {
         var chords = ImmutableArray.Create(Attached("Cmaj7", Fraction.Zero));
-        double w = ChordNameEngraver.SymbolInkWidth("Cmaj7");
+        double w = ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "Cmaj7");
 
         // One column (the whole-bar rest) => two springs.
-        var result = SpacingRules.ApplyChordRowSpacing(
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled, 
             Springs(2), new List<Fraction> { Fraction.Zero },
             measureIndex: 0, chords, includeAttached: true);
 
@@ -105,10 +106,10 @@ public sealed class ChordAttachedSpacingTests
         var chords = ImmutableArray.Create(
             new ChordNameItem("Cmaj7", measureIndex: 0, itemIndex: 0, sourcePosition: 0,
                 useTiming: true, timing: Fraction.Zero, isChordRow: true));
-        double w = ChordNameEngraver.SymbolInkWidth("Cmaj7");
+        double w = ChordNameEngraver.SymbolInkWidth(ScoreTextMetrics.Bundled, "Cmaj7");
 
         // One column => two springs: bar line -> column, column -> bar line.
-        var result = SpacingRules.ApplyChordRowSpacing(
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled, 
             Springs(2, min: 0.0), new List<Fraction> { Fraction.Zero },
             measureIndex: 0, chords, includeAttached: false);
 
@@ -158,7 +159,7 @@ public sealed class ChordAttachedSpacingTests
             Attached("Cmaj7", Fraction.Zero),
             Attached("Gmaj7", new Fraction(1, 4)));
 
-        var result = SpacingRules.ApplyChordRowSpacing(
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled, 
             Springs(3), TwoColumns, measureIndex: 0, chords, includeAttached: true);
 
         Assert.True(result[1].MinDistance > 0.5,
@@ -174,7 +175,7 @@ public sealed class ChordAttachedSpacingTests
             new ChordNameItem("Cmaj7", measureIndex: 0, itemIndex: 0, sourcePosition: 0,
                 useTiming: true, timing: Fraction.Zero, isChordRow: true));
 
-        var result = SpacingRules.ApplyChordRowSpacing(
+        var result = SpacingRules.ApplyChordRowSpacing(ScoreTextMetrics.Bundled, 
             Springs(3), TwoColumns, measureIndex: 0, chords, includeAttached: false);
 
         Assert.True(result[1].MinDistance > 0.5,

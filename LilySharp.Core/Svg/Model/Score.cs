@@ -146,6 +146,18 @@ public sealed record Score
     /// </summary>
     public Rendering.TextFontPlan Fonts { get; init; } = Rendering.TextFontPlan.Default;
 
+    /// <summary>
+    /// The text measurements this score's <see cref="Fonts"/> imply — see
+    /// <see cref="MultiStaffScore.TextMetrics"/>, which is the same property on the shape
+    /// the layout usually holds. Both carry it because both are handed to engravers.
+    /// </summary>
+    public Rendering.ScoreTextMetrics TextMetrics =>
+        _textMetrics ??= Fonts.IsDefault
+            ? Rendering.ScoreTextMetrics.Bundled
+            : new Rendering.ScoreTextMetrics(Fonts);
+
+    private Rendering.ScoreTextMetrics? _textMetrics;
+
     /// <summary>Dynamic markings in the score.</summary>
     public ImmutableArray<DynamicItem> Dynamics { get; }
 

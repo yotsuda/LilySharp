@@ -36,7 +36,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LilyPond 2.104975 against the box arithmetic 2.525870).
 /// <para>
 /// The walk is LilyPond's own, over the same Skia path the ink box already comes from
-/// (<see cref="TextFontMetrics.OutlinePath"/> — one geometry for reservation and drawing):
+/// (<c>TextFontMetrics.OutlinePath</c> — one geometry for reservation and drawing):
 /// LILYPOND-REF: lily/freetype.cc:96-202 <c>Path_interpreter</c> /
 /// <c>ly_FT_add_outline_to_skyline</c> — cubics flatten into
 /// <c>max(2, |end-start|/0.2)</c> segments, the length measured between the TRANSFORMED
@@ -70,7 +70,7 @@ internal static class TextOutlineSkylines
     // so it runs once per (face, style, string, size) and every placement is a
     // shift/raise copy of the resolved buildings (a monotone transform, which
     // commutes with the resolve — byte-identical to resolving after placing).
-    private static readonly ConcurrentDictionary<(bool Sans, FontStyle Style, string Text, double Size),
+    private static readonly ConcurrentDictionary<(TextFace Face, string Text, double Size),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> ProfileCache = new();
 
     /// <summary>
@@ -78,13 +78,20 @@ internal static class TextOutlineSkylines
     /// <paramref name="yBaseline"/>) in the caller's Y-up frame. Fresh instances —
     /// safe for the caller to merge or raise.
     /// </summary>
+    /// <param name="face">
+    /// WHICH font program the outline comes from — the same one the string is measured and
+    /// drawn with. It is a face and not a family because a score may bind one, and a
+    /// profile taken from the bundled face for a string drawn in another is the
+    /// reserve-versus-draw split in its most invisible form: nothing is misaligned, the
+    /// neighbours are simply stacked against the wrong silhouette.
+    /// </param>
     public static (VerticalSkyline Up, VerticalSkyline Down) Place(
-        string text, double fontSize, bool sans, FontStyle style, double x, double yBaseline)
+        string text, double fontSize, TextFace face, double x, double yBaseline)
     {
-        var (up, down) = ProfileCache.GetOrAdd((sans, style, text, fontSize),
+        var (up, down) = ProfileCache.GetOrAdd((face, text, fontSize),
             static key =>
             {
-                var (upQuads, downQuads) = BuildQuads(key.Text, key.Size, key.Sans, key.Style);
+                var (upQuads, downQuads) = BuildQuads(key.Text, key.Size, key.Face);
                 return (
                     Resolve(VerticalDirection.Up, upQuads),
                     Resolve(VerticalDirection.Down, downQuads));
@@ -236,8 +243,8 @@ internal static class TextOutlineSkylines
     /// v = sky·y_up), baseline origin, staff spaces at <paramref name="fontSize"/>.
     /// </summary>
     private static (double[] Up, double[] Down) BuildQuads(
-        string text, double fontSize, bool sans, FontStyle style)
-        => FlattenPath(TextFontMetrics.OutlinePath(text, sans, style), fontSize / 1000.0);
+        string text, double fontSize, TextFace face)
+        => FlattenPath(TextFontMetrics.OutlinePath(text, face), fontSize / 1000.0);
 
     /// <summary>The walk itself, at path level (units/em·<paramref name="k"/> = staff
     /// spaces). Internal seam so a test can run the identical walk over another face —

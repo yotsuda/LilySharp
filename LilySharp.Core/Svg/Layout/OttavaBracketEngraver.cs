@@ -178,9 +178,10 @@ internal static class OttavaBracketEngraver
     /// (1.263302362). The 0.05 between them is the drawn dashed line's half thickness: the
     /// OTC dump read the LINE'S STENCIL, not <c>bracket_span_points[LEFT]</c>.
     /// </remarks>
-    internal static double LineStartX(string text, double startX, double fontSize)
+    internal static double LineStartX(ScoreTextMetrics fonts, string text, double startX,
+        double fontSize)
         => startX
-           + TextFontMetrics.Advance(text, fontSize, sans: false, FontStyle.BoldItalic)
+           + fonts.Advance(text, fontSize, TextRole.Ottava, FontStyle.BoldItalic)
            + LabelLineItalicCorrection;
 
     /// <summary>
@@ -204,6 +205,7 @@ internal static class OttavaBracketEngraver
     /// ledger ottava.support.staff-to-line.
     /// </remarks>
     internal static (VerticalSkyline Up, VerticalSkyline Down) Skylines(
+        ScoreTextMetrics fonts,
         string text, double startX, double lineStartX, double endX,
         double edgeHeight, bool isAbove, double lineY)
     {
@@ -211,8 +213,8 @@ internal static class OttavaBracketEngraver
         double half = EngravingDefaults.StaffLineThickness / 2.0;
         // The label's ink is CENTRED on the line, so its baseline sits that much below.
         var (up, down) = TextOutlineSkylines.Place(
-            text, fontSize, sans: false, FontStyle.BoldItalic,
-            startX, lineY - LabelInkCentre(text, fontSize));
+            text, fontSize, fonts.Face(TextRole.Ottava, FontStyle.BoldItalic),
+            startX, lineY - LabelInkCentre(fonts, text, fontSize));
         if (lineStartX < endX)
         {
             up.Merge(VerticalSkyline.FromBox(
@@ -241,9 +243,9 @@ internal static class OttavaBracketEngraver
     /// <remarks>MEASURED: ledger ottava.label.line-to-ink-centre — LilyPond's answer is 0
     /// by construction and Lily#'s was +0.621000054, the baseline sitting where the centre
     /// belongs.</remarks>
-    internal static double LabelInkCentre(string text, double fontSize)
+    internal static double LabelInkCentre(ScoreTextMetrics fonts, string text, double fontSize)
     {
-        var ink = TextFontMetrics.Ink(text, fontSize, sans: false, FontStyle.BoldItalic);
+        var ink = fonts.Ink(text, fontSize, TextRole.Ottava, FontStyle.BoldItalic);
         return (ink.Top + ink.Bottom) / 2.0;
     }
 
@@ -251,6 +253,7 @@ internal static class OttavaBracketEngraver
     /// Calculates layout for all ottava brackets.
     /// </summary>
     public static ImmutableArray<OttavaBracketLayout> Calculate(
+        ScoreTextMetrics fonts,
         ImmutableArray<OttavaBracketItem> ottavaBrackets,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
@@ -338,7 +341,7 @@ internal static class OttavaBracketEngraver
                 // measure X restarts in every system.
                 // LILYPOND-REF: lily/spanner.cc:36-144 Spanner::do_break_processing.
                 double lineMiddleFrame = AlignedSideLineY(
-                    segText, startX, endX, segEdgeHeight, isAbove,
+                    fonts, segText, startX, endX, segEdgeHeight, isAbove,
                     segment, ottavaVoices, measureLayouts, beamMembers, bracket.StaffIndex);
                 // aligned_side answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
@@ -406,6 +409,7 @@ internal static class OttavaBracketEngraver
     ///   cap/baseline, and the pre-2026-08-02 code already treated the floor that way.
     /// </remarks>
     private static double AlignedSideLineY(
+        ScoreTextMetrics fonts,
         string text, double startX, double endX, double edgeHeight, bool isAbove,
         in SpannerBreakSegment segment, ImmutableArray<Voice> voices,
         ImmutableArray<MeasureLayout> measureLayouts,
@@ -416,7 +420,9 @@ internal static class OttavaBracketEngraver
         double dir = isAbove ? 1.0 : -1.0;
         // :225-259 — my_dim, the grob's own profile about its line (Y = 0 here).
         var my = Skylines(
-            text, startX, LineStartX(text, startX, EngravingDefaults.OttavaBracketFontSize),
+            fonts,
+            text, startX,
+            LineStartX(fonts, text, startX, EngravingDefaults.OttavaBracketFontSize),
             endX, edgeHeight, isAbove, 0.0);
 
         // :265-330 — the spanned columns of THIS piece, every voice of the staff, floored
