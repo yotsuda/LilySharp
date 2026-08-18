@@ -112,6 +112,14 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     internal static IReadOnlyCollection<string> PropertyNameVocabulary { get; } =
         [.. PropertyNames.Append("key").OrderBy(s => s, StringComparer.Ordinal)];
 
+    /// <summary>The properties written as a <c>NAME value</c> PAIR — the vocabulary without
+    /// <c>key</c>, which the parser takes as a key SIGNATURE instead.</summary>
+    /// <remarks>The distinction only matters to a writer that INSERTS one of these (the
+    /// editor's completion), so it is published next to the vocabulary rather than left for
+    /// each such writer to subtract <c>key</c> for itself and explain why in a comment.</remarks>
+    internal static IReadOnlyCollection<string> ValuePairPropertyVocabulary { get; } =
+        [.. PropertyNames.OrderBy(s => s, StringComparer.Ordinal)];
+
     /// <summary>Every clef name a PART BODY takes — eleven, not the five of <c>ClefName</c>.</summary>
     internal static IReadOnlyCollection<string> ClefValueVocabulary { get; } =
         [.. ClefValues.OrderBy(s => s, StringComparer.Ordinal)];
@@ -125,8 +133,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     internal static IReadOnlyCollection<string> TuningValueVocabulary { get; } =
         [.. TuningValues.OrderBy(s => s, StringComparer.Ordinal)];
 
-    /// <summary>Every value <c>removeEmpty</c> documents. See <see cref="RemoveEmptyValues"/>
-    /// for why it is not enforced.</summary>
+    /// <summary>Every value <c>removeEmpty</c> ACCEPTS. See <see cref="RemoveEmptyValues"/> for
+    /// what it cost to make that true — it read "documents … not enforced" until 2026-08-19,
+    /// and the sentence outlived the enforcement by one session.</summary>
     internal static IReadOnlyCollection<string> RemoveEmptyValueVocabulary { get; } =
         [.. RemoveEmptyValues.OrderBy(s => s, StringComparer.Ordinal)];
 

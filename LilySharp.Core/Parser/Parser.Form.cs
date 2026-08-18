@@ -474,6 +474,23 @@ internal sealed partial class Parser
         kind is { } k && SyntaxFacts.IsPartNameKind(k);
 
     /// <summary>
+    /// The token after the <c>-</c> in a hyphenated part-header value (<c>instrument
+    /// bass-guitar</c>): any BARE WORD, whatever else that word is reserved for.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A separate predicate from <see cref="IsPartNameKind"/> on purpose. That one answers
+    /// "may this word name a part?" and was standing in for this question until 2026-08-19,
+    /// which made <c>voice-soprano</c> — a published preset that <c>GetInstrument</c> reads —
+    /// impossible to write, while <c>voice-alto</c>, <c>voice-tenor</c> and <c>voice-bass</c>
+    /// compiled because their tails are clef words and <c>soprano</c> is not.
+    /// The rule asks the token's TEXT rather than its kind: what makes a tail legal is being a
+    /// word, and no set of kinds says that without being re-checked every time a keyword is
+    /// added.
+    /// </remarks>
+    private static bool IsHyphenatedValueTail(SyntaxToken? token) =>
+        token is { } t && SyntaxFacts.IsBareWord(t.Text);
+
+    /// <summary>
     /// Expect a part name (Identifier or instrument keyword like bass).
     /// </summary>
     private SyntaxToken ExpectPartName()

@@ -74,11 +74,8 @@ public class PartPropertyCompletionTests
             Assert.DoesNotContain(note, labels);
     }
 
-    [Fact]
-    public void RemoveEmptyCompletions_AreExactlyTheAcceptedValues()
-    {
-        var labels = LilySharpLanguageServer.GetRemoveEmptyCompletions().Items
-            .Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "true", "all", "false" }, labels);
-    }
+    // RemoveEmptyCompletions_AreExactlyTheAcceptedValues lived here and asserted the literal
+    // { "true", "all", "false" } -- a fourth private copy of the very list it was guarding,
+    // so it would have stayed green through any drift between the editor and the compiler.
+    // It moved to CompletionVocabularyTests on 2026-08-19 and now reads the compiler's list.
 }

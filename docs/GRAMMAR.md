@@ -52,10 +52,16 @@ String         = '"' , { StringChar } , '"' ;
 
 Identifier     = IdentStart , { IdentCont } ;
 IdentStart     = UnicodeLetter | '_' ;          (* any Unicode letter, e.g. 動機 *)
-IdentCont      = IdentStart | Digit | '-' ;
+IdentCont      = IdentStart | Digit ;
 (* A name may CONTAIN or END with digits (melody2, foo2bar) but must not START
    with one: a leading digit is a duration (c4) or scale degree (<1 3 5>), so
    'phrase 2foo { }' is rejected with LYS0017 "a name cannot start with a digit". *)
+(* ⚠️ IdentCont listed '-' until 2026-08-19 and that was never true: the lexer scans
+   letters, digits and '_' and stops at a hyphen (Lexer.ScanWord). Measured the same day —
+   'part foo-bar { }' errors at every one of the four positions it is written in, so no
+   name in the language has ever contained a hyphen. The ONE place a '-' joins two words
+   is InstrumentPreset below, where the parser stitches them deliberately.
+   Held by IdentifierCannotContainAHyphen in DocKeywordListTests. *)
 
 ### Pitch Names
 
@@ -316,7 +322,7 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
 PartDecl       = 'part' , Identifier , [ String ] , [ PartBody ] ;  (* String = display name *)
 PartBody       = '{' , { PartProperty } , '}' ;
 PartProperty   = 'clef'          , PartClefName
-               | 'instrument'    , ( Identifier , [ String ] | String )
+               | 'instrument'    , ( InstrumentPreset , [ String ] | String )
                | 'transpose'     , PitchToken
                | 'transposition' , TranspositionMarker
                | 'tuning'        , TuningName
@@ -326,6 +332,15 @@ PartProperty   = 'clef'          , PartClefName
                | 'pedal'         , PedalStyleName ;
                (* 'key' is per-part too, but the parser takes it as a KeySignature rather
                   than a PartProperty, so it is not an alternative here. *)
+
+(* A preset is ONE word that may be spelled with hyphens (piano-right, voice-soprano).
+   The tail after each '-' is any BARE WORD, whatever else that word is reserved for:
+   until 2026-08-19 the parser gated it on "may this word name a part?", which admitted
+   an identifier and the four clef words bass/treble/alto/tenor — so voice-alto and
+   voice-tenor were writable and voice-soprano was not, for no reason anybody chose. *)
+InstrumentPreset = BareWord , { '-' , BareWord } ;
+BareWord         = ( UnicodeLetter | Digit | '_' ) , { UnicodeLetter | Digit | '_' } ;
+                   (* i.e. SyntaxFacts.IsBareWord — a KEYWORD qualifies, which is the point *)
 
 ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
 

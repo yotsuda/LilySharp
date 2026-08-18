@@ -267,9 +267,22 @@ internal sealed partial class Parser
             // keep consuming minus+word pairs — it used to truncate silently
             // to "bass". (Lyrics/chords never reach this header-only path, so
             // merging hyphens here is safe.)
+            // ⚠️ The gate was IsPartNameKind until 2026-08-19, and that was a BORROWED
+            // predicate: it answers "may this word name a part?", which admits an identifier
+            // and the four clef words that are legal part names (bass/treble/alto/tenor). The
+            // question here is a different one — "is this the second half of one hyphenated
+            // word?" — and the two coincided closely enough to look right. `voice-soprano` is
+            // where they parted: it is in KnownInstruments and GetInstrument reads it, yet it
+            // truncated to `voice` and errored, while its three siblings voice-alto /
+            // voice-tenor / voice-bass compiled for no better reason than that THEIR second
+            // halves happen to be clef words. Measured 2026-08-19: 0 of the 567 tracked books
+            // write voice-soprano, and a part header holds a hyphen at exactly one site in the
+            // whole corpus (`instrument electric-bass`), so widening this cannot change a book
+            // that compiles today — only spellings that are errors today. User decision, taken
+            // before 0.3.0 was tagged.
             var values = new List<GreenNode?> { value };
             while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma)
-                   || (Check(SyntaxKind.Minus) && IsPartNameKind(Peek(1)?.Kind)))
+                   || (Check(SyntaxKind.Minus) && IsHyphenatedValueTail(Peek(1))))
             {
                 if (Check(SyntaxKind.Minus))
                 {

@@ -126,7 +126,10 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.LyricsBlock => GetLyricsSectionCompletions(doc.Text, offset),
             CompletionContext.SectionBlock => GetSectionBlockCompletions(doc.Text, offset),
             CompletionContext.AfterSection => GetMissingSectionNameCompletions(doc.Text, offset),
-            CompletionContext.AfterClef => GetClefCompletions(),
+            // AfterClef stands in two positions and they take different vocabularies, so the
+            // position has to be asked for here — GetCompletionContext deliberately does not
+            // split the context itself (a `clef` is a `clef`; what differs is only the list).
+            CompletionContext.AfterClef => GetClefCompletions(IsInsidePartBlock(doc.Text, offset)),
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
             CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
             CompletionContext.AfterOctave => GetOctaveCompletions(),
@@ -868,26 +871,82 @@ public sealed partial class LilySharpLanguageServer
         return braceDepth > 0 ? CompletionContext.MusicBlock : CompletionContext.TopLevel;
     }
 
+    // Most-reached-for first, which is not alphabetical; SortText preserves it. A property the
+    // compiler grows and this array has not heard of sorts to the end rather than vanishing.
+    private static readonly string[] PartPropertyOrder =
+    {
+        "clef", "instrument", "tuning", "octave", "transpose",
+        "transposition", "lines", "pedal", "removeEmpty",
+    };
+
+    // Prose per property, and whether the editor has a VALUE list to enumerate for it.
+    // ⚠️ Values must be true only where a value context actually exists — AfterClef,
+    // AfterInstrument, AfterRemoveEmpty. It is false for `octave` because the part-header
+    // `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
+    // and false for `tuning`/`pedal`/`transposition`/`lines`, which have no value context at
+    // all. Setting it re-opens suggestions onto whatever list is general to the position,
+    // which is worse than not offering to help.
+    // ⚠️ Where a description NAMES a vocabulary it is joined from the compiler's list, not
+    // typed out. A description is the one place a wrong word costs nothing to write and is
+    // never noticed — `octave` advertised `absolute | relative` here for as long as those words
+    // did nothing, and went on advertising them for a day after they became an ERROR.
+    // A count is a copy of a list too, so `clef` states its two sizes from the two lists.
+    //
+    // ★★★ THE RULE these strings obey, and which CompletionVocabularyTests enforces:
+    // ANYTHING IN PARENTHESES OR BACKTICKS IS SOMETHING THE WRITER MAY TYPE, and is compiled
+    // to prove it. Ordinary prose is free — which is why `octave` mentions absolute/relative in
+    // running text and NOT in the parentheses where it used to offer them. The rule is worth
+    // the small awkwardness because it is the exact shape the old description broke.
+    private static readonly System.Collections.Generic.Dictionary<string, (string Detail, bool Values)>
+        PartPropertyDetails = new()
+        {
+            ["clef"] = ($"Clef — {LanguageVocabulary.PartClefNames.Count} names in a part header, "
+                        + $"{LanguageVocabulary.ClefNames.Count} inside music", true),
+            ["instrument"] = ("Instrument preset — sets the clef, octave and tuning defaults", true),
+            ["tuning"] = ($"Tab tuning ({string.Join("/", LanguageVocabulary.TuningNames)})", false),
+            ["octave"] = ("Base octave for this part — a whole number, e.g. `octave 3`. "
+                          + "The words absolute and relative belong to the TOP-LEVEL octave "
+                          + "directive and a part header refuses them", false),
+            ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", false),
+            ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
+            ["lines"] = ($"Staff-line count, {LanguageVocabulary.MinStaffLines} to {LanguageVocabulary.MaxStaffLines}", false),
+            ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
+            ["removeEmpty"] = ("Hara-kiri: hide this staff in rest-only systems "
+                               + $"({string.Join(" | ", LanguageVocabulary.RemoveEmptyValues)})", true),
+        };
+
     /// <summary>The property names a part { } header accepts (bare `name value`
     /// pairs plus inner sections), matching docs/GRAMMAR.md PartProperty.</summary>
     internal static CompletionList GetPartPropertyCompletions()
     {
-        // Values = the property takes a value LIST (clef → treble…, time → 4/4…) — or,
-        // for `section`, the document's not-yet-used section names: those items add a
-        // space and re-open suggestions so the list enumerates right after.
-        var props = new (string Label, string Detail, bool Values)[]
+        // ⚠️ The NAMES come from the compiler (LanguageVocabulary), not from this table. Until
+        // 2026-08-19 they came from the table and it had gone wrong in both directions at once:
+        // it listed six of the nine properties — `transposition`, `lines` and `pedal` were
+        // simply absent, so the editor denied that three properties of the language existed —
+        // and it described `octave` as taking `absolute | relative`, two words a part header has
+        // never read and has REFUSED since the day before (measured: `part p { octave relative }`
+        // is now an error). The list below supplies PROSE for a name; it cannot add or withhold
+        // one. A property the compiler grows and this table has not been told about is still
+        // offered, without a description.
+        //
+        // Values = the property takes a value LIST the editor can enumerate — so it is true only
+        // where a value context actually exists (AfterClef, AfterInstrument, AfterRemoveEmpty).
+        // ⚠️ Setting it for a property with no such context re-opens suggestions onto whatever
+        // the general list is, which is worse than not offering to help.
+        var props = new System.Collections.Generic.List<(string Label, string? Detail, bool Values)>();
+        foreach (string name in LanguageVocabulary.PartPropertiesTakingAValuePair
+                     .OrderBy(n => System.Array.IndexOf(PartPropertyOrder, n) is var i && i >= 0
+                         ? i : int.MaxValue))
         {
-            ("clef", "Clef (treble/bass/alto/tenor/treble_8)", true),
-            ("instrument", "Instrument preset (clef/octave/tuning defaults)", true),
-            ("tuning", "Tab tuning (guitar/bass/ukulele/…)", false),
-            ("octave", "Octave mode or absolute base (absolute | relative | N)", true),
-            ("transpose", "Transpose target pitch", false),
-            ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)", true),
-            // `time` / `tempo` are NOT part properties — they are score-level (every part shares
-            // one meter and tempo). They belong at the top level or in a section header, so they
-            // are offered there, not here (LYS1026 rejects them in a part header).
-            ("section", "Inner section (part-major form)", true),
-        };
+            var d = PartPropertyDetails.TryGetValue(name, out var found) ? found : (null, false);
+            props.Add((name, d.Item1, d.Item2));
+        }
+
+        // `time` / `tempo` are NOT part properties — they are score-level (every part shares
+        // one meter and tempo). They belong at the top level or in a section header, so they
+        // are offered there, not here (LYS1026 rejects them in a part header).
+        // `section` is not a property at all: it is the OTHER thing a part body holds.
+        props.Add(("section", "Inner section (part-major form)", true));
         return new CompletionList
         {
             Items = props.Select((p, i) => new CompletionItem
@@ -905,24 +964,44 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    /// <summary>The values valid right after the <c>removeEmpty</c> part
-    /// property. LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves
-    /// (keeps the first system) / RemoveAllEmptyStaves.</summary>
+    // Prose per value, in the order a reader wants them (the two hiding modes, then the
+    // default). As with ClefDetails, membership of this table decides NOTHING — the words
+    // come from the compiler.
+    private static readonly string[] RemoveEmptyOrder = { "true", "all", "false" };
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> RemoveEmptyDetails = new()
+    {
+        ["true"] = "Hide in rest-only systems; the FIRST system keeps the staff (LP RemoveEmptyStaves)",
+        ["all"] = "Hide in rest-only systems including the first (LP RemoveAllEmptyStaves)",
+        ["false"] = "Never hide (default)",
+    };
+
+    /// <summary>
+    /// The values valid right after the <c>removeEmpty</c> part property, READ FROM THE
+    /// COMPILER. LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves (keeps the first
+    /// system) / RemoveAllEmptyStaves.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This held its own copy of the three words until 2026-08-19, and the day before that
+    /// the compiler began REFUSING anything outside them. A private list was harmless while a
+    /// stray word merely fell back to <c>false</c>; the moment the value is enforced, the same
+    /// list one word out of date makes the editor propose text the compiler rejects. Nothing
+    /// had gone wrong yet — the fix is to the shape, not to a symptom.
+    /// ⚠️ The test that guarded this held its own fourth copy of the same three words, so it
+    /// would have gone green through the drift it existed to catch.
+    /// </remarks>
     internal static CompletionList GetRemoveEmptyCompletions()
     {
-        var values = new (string Label, string Detail)[]
-        {
-            ("true", "Hide in rest-only systems; the FIRST system keeps the staff (LP RemoveEmptyStaves)"),
-            ("all", "Hide in rest-only systems including the first (LP RemoveAllEmptyStaves)"),
-            ("false", "Never hide (default)"),
-        };
+        var ordered = LanguageVocabulary.RemoveEmptyValues.OrderBy(
+            n => System.Array.IndexOf(RemoveEmptyOrder, n) is var i && i >= 0 ? i : int.MaxValue);
+
         return new CompletionList
         {
-            Items = values.Select((v, i) => new CompletionItem
+            Items = ordered.Select((name, i) => new CompletionItem
             {
-                Label = v.Label,
+                Label = name,
                 Kind = CompletionItemKind.EnumMember,
-                Detail = v.Detail,
+                Detail = RemoveEmptyDetails.TryGetValue(name, out var d) ? d : null,
                 SortText = i.ToString(),
             }).ToArray()
         };
@@ -2326,28 +2405,66 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    // The clef names, high → low pitch. Completing the `clef` keyword re-opens
-    // suggestions (Command) so this list enumerates right after it.
-    private static readonly (string Label, string Detail)[] Clefs =
+    // What each clef IS. Prose only — WHICH of these may be offered is decided by the
+    // compiler's own vocabularies (LanguageVocabulary), never by this table's membership,
+    // because that is precisely what drifted: the table held the five a music block takes
+    // and was offered in the part header too, where eleven are legal.
+    // The order is high → low sounding pitch, which is the order a reader expects and is
+    // not alphabetical; SortText below preserves it against the client's own sorting.
+    private static readonly string[] ClefOrder =
     {
-        ("treble", "Treble (G) clef"),
-        ("treble_8", "Treble clef sounding an octave lower (guitar/tenor)"),
-        ("alto", "Alto (C) clef"),
-        ("tenor", "Tenor (C) clef"),
-        ("bass", "Bass (F) clef"),
+        "treble", "treble^8", "treble_8", "soprano", "mezzosoprano",
+        "alto", "tenor", "baritone", "bass", "bass_8", "percussion",
     };
 
-    internal static CompletionList GetClefCompletions()
+    private static readonly System.Collections.Generic.Dictionary<string, string> ClefDetails = new()
     {
+        ["treble"] = "Treble (G) clef",
+        ["treble^8"] = "Treble clef sounding an octave higher",
+        ["treble_8"] = "Treble clef sounding an octave lower (guitar/tenor)",
+        ["soprano"] = "Soprano (C) clef",
+        ["mezzosoprano"] = "Mezzo-soprano (C) clef",
+        ["alto"] = "Alto (C) clef",
+        ["tenor"] = "Tenor (C) clef",
+        ["baritone"] = "Baritone (C) clef",
+        ["bass"] = "Bass (F) clef",
+        ["bass_8"] = "Bass clef sounding an octave lower",
+        ["percussion"] = "Percussion clef (unpitched staff)",
+    };
+
+    /// <summary>
+    /// The clef names legal at the caret. ONE production standing in two positions: a part
+    /// header takes eleven, a <c>clef</c> directive inside music (and <c>staff</c>/<c>ossia</c>
+    /// in a score) takes five.
+    /// </summary>
+    /// <param name="inPartHeader">
+    /// True for the wider position. ⚠️ This argument is the whole fix: until 2026-08-19 there
+    /// was no argument, and the five-name list was offered in BOTH positions — so an editor
+    /// that never once suggested an illegal clef still hid six legal ones from every part
+    /// header in the language. Measured the same day: all eleven compile in a header, and the
+    /// six outside <c>ClefNames</c> are refused in music with "Expected clef name".
+    /// </param>
+    internal static CompletionList GetClefCompletions(bool inPartHeader = false)
+    {
+        var legal = inPartHeader
+            ? LanguageVocabulary.PartClefNames
+            : LanguageVocabulary.ClefNames;
+
+        // Ordered by ClefOrder, then anything the compiler grew that this file has not been
+        // told how to describe — such a word is still OFFERED (the compiler accepts it), just
+        // without prose. Dropping it is what turned a missing description into a missing clef.
+        var ordered = legal.OrderBy(
+            n => System.Array.IndexOf(ClefOrder, n) is var i && i >= 0 ? i : int.MaxValue);
+
         return new CompletionList
         {
             // SortText keeps the high→low order (VS Code otherwise sorts by label).
-            Items = Clefs.Select((c, i) => new CompletionItem
+            Items = ordered.Select((name, i) => new CompletionItem
             {
-                Label = c.Label,
+                Label = name,
                 Kind = CompletionItemKind.EnumMember,
-                Detail = c.Detail,
-                SortText = i.ToString(),
+                Detail = ClefDetails.TryGetValue(name, out var d) ? d : null,
+                SortText = i.ToString("D2"),
             }).ToArray()
         };
     }

@@ -376,8 +376,15 @@ internal sealed partial class Parser
         else
         {
             var span = new TextSpan(_textPosition, Current.FullWidth);
+            // The names come from SyntaxFacts, which DERIVES them from the very predicate
+            // tested three lines above. A message that lists what it does not gate is how
+            // these five words came to have four unconnected spellings — and the second
+            // clause is the part the old message left out, which is what a writer who just
+            // wrote a legal `clef percussion` in a part header needs to hear.
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                "Expected clef name (treble, treble_8, alto, tenor, bass)");
+                $"Expected clef name ({string.Join(", ", SyntaxFacts.ClefNameVocabulary)}). "
+                + $"A part header also takes {string.Join(", ", SyntaxFacts.PartOnlyClefNameVocabulary)}"
+                + "; a clef inside music does not.");
             // Missing token: zero-width to preserve round-trip (diagnostic above).
             clefName = new SyntaxToken(SyntaxKind.TrebleKeyword, "", null, null);
         }

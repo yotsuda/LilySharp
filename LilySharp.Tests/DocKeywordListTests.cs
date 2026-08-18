@@ -395,10 +395,48 @@ public class DocKeywordListTests
         // ⚠️ ClefName is the OTHER vocabulary, and the document is only honest while the two
         // differ: five words for `clef` in music and for `staff`/`ossia` in a score. Merging them
         // back into one production is the mistake this pair exists to make loud.
+        // ★ Tightened 2026-08-19: this asserted only "five words, all of them among the
+        // eleven", which the WRONG five would also have satisfied — the document could have
+        // named soprano instead of tenor and stayed green. SyntaxFacts.ClefNameVocabulary now
+        // DERIVES the five from the parser's own predicate, so the names can be checked.
         string[] inMusic = TerminalsOf("ClefName");
-        Assert.Equal(5, inMusic.Length);
-        Assert.Empty(inMusic.Except(SymbolCaseValidator.ClefValueVocabulary, StringComparer.Ordinal));
+        Assert.Equal(SyntaxFacts.ClefNameVocabulary.OrderBy(n => n, StringComparer.Ordinal),
+                     inMusic.OrderBy(n => n, StringComparer.Ordinal));
         Assert.NotEqual(inMusic.Length, SymbolCaseValidator.ClefValueVocabulary.Count);
+    }
+
+    /// <summary>
+    /// A name cannot contain a hyphen. GRAMMAR.md's <c>IdentCont</c> listed <c>'-'</c> until
+    /// 2026-08-19 and it had never been true — the lexer scans letters, digits and <c>_</c>
+    /// and stops at a hyphen, so <c>part foo-bar</c> is an error at every position it is
+    /// written in. The document said so for as long as nobody tried it.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the COMPILER rather than of the document, because a character class is not a
+    /// terminal list and <see cref="TerminalsOf"/> cannot reach it. The one hyphen the
+    /// language joins is <c>InstrumentPreset</c>, asserted here too so the pair stays a pair.
+    /// </remarks>
+    [Fact]
+    public void IdentifierCannotContainAHyphen()
+    {
+        static bool Compiles(string src)
+        {
+            var tree = SyntaxTree.Parse(src);
+            return !tree.Diagnostics.Concat(SemanticValidation.Run(tree))
+                .Any(d => d.Severity == DiagnosticSeverity.Error);
+        }
+
+        static string Doc(string name, string header) =>
+            $"part {name} {{ {header} }}\nsection A {{ {name} {{ c4 d e f }} }}\n"
+            + $"form main {{ A }}\nscore main {{ staff {name} }}";
+
+        // The control: the very same document with a digit instead of the hyphen compiles,
+        // so a red below is about the hyphen and not about the document (RULES §5.4).
+        Assert.True(Compiles(Doc("foo2bar", "clef treble")));
+        Assert.False(Compiles(Doc("foo-bar", "clef treble")));
+
+        // …and the one place a '-' DOES join two words.
+        Assert.True(Compiles(Doc("vln", "instrument voice-soprano")));
     }
 
     [Fact]

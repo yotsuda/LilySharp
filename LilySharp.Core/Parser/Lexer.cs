@@ -607,7 +607,11 @@ internal sealed class Lexer
         return true;
     }
 
-    private static SyntaxKind GetKeywordKind(string text)
+    /// <summary>The keyword a bare word spells, or <see cref="SyntaxKind.Identifier"/>.
+    /// Internal rather than private since 2026-08-19 so that
+    /// <see cref="Syntax.SyntaxFacts.ClefNameVocabulary"/> can DERIVE the clef words a music
+    /// block takes instead of writing them down a second time.</summary>
+    internal static SyntaxKind GetKeywordKind(string text)
     {
         return text switch
         {

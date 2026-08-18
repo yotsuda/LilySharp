@@ -165,11 +165,18 @@ public class LpProvenanceTests
     private const int UnsourcedBaseline = 0;
 
     /// <summary>Files whose numbers are engraving policy rather than local arithmetic.</summary>
+    /// <remarks>
+    /// Segments, not a literal path. Written with backslashes these three were a filename
+    /// containing '\' on Linux, so this test reported "did it move?" on both ubuntu legs of CI
+    /// — every push at least back to 2026-08-15, unnoticed because the Windows suite was green
+    /// (2026-08-19, session 212). Same family as the <c>lysc.exe</c> the CLI tests named:
+    /// a platform-shaped literal in a test that never runs on the other platform locally.
+    /// </remarks>
     private static readonly string[] DefaultsFiles =
     {
-        @"LilySharp.Core\Svg\EngravingDefaults.cs",
-        @"LilySharp.Core\Svg\Layout\LayoutOptions.cs",
-        @"LilySharp.Core\Svg\Layout\VerticalSpacingParameters.cs",
+        Path.Combine("LilySharp.Core", "Svg", "EngravingDefaults.cs"),
+        Path.Combine("LilySharp.Core", "Svg", "Layout", "LayoutOptions.cs"),
+        Path.Combine("LilySharp.Core", "Svg", "Layout", "VerticalSpacingParameters.cs"),
     };
 
     /// <summary>A declaration that fixes a NUMBER (not a type, string or bool).</summary>

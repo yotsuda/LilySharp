@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace LilySharp.Core.Syntax;
 
 /// <summary>
@@ -64,6 +68,34 @@ internal static class SyntaxFacts
         SyntaxKind.Treble8Keyword;
 
     /// <summary>
+    /// The same five clefs as WORDS — the part header's eleven filtered by
+    /// <see cref="IsClefKeyword"/>, so this can neither name a word the parser would reject
+    /// nor miss one it accepts.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Derived rather than written down, and deliberately so: until 2026-08-19 these five
+    /// words were spelled out at FOUR sites that nothing connected — this predicate, the
+    /// "Expected clef name (…)" message in <c>Parser.ParseClefDeclaration</c>, GRAMMAR.md's
+    /// <c>ClefName</c> production, and the editor's completion list. The editor's copy was the
+    /// one that went wrong, and it went wrong by being RIGHT in the other position: it offered
+    /// these five inside a part header, where eleven are legal.
+    /// <c>treble^8</c> drops out on its own — it is stitched from three tokens rather than
+    /// lexed as one keyword, so it never carries a clef kind.
+    /// </remarks>
+    public static IReadOnlyList<string> ClefNameVocabulary { get; } =
+        [.. Semantics.SymbolCaseValidator.ClefValueVocabulary
+            .Where(name => IsClefKeyword(Parser.Lexer.GetKeywordKind(name)))
+            .OrderBy(name => name, StringComparer.Ordinal)];
+
+    /// <summary>The six clef names a PART HEADER takes and a music block does not — the
+    /// complement of <see cref="ClefNameVocabulary"/>. Named so that a diagnostic can tell a
+    /// writer WHERE the word they used is legal without spelling the six a second time.</summary>
+    public static IReadOnlyList<string> PartOnlyClefNameVocabulary { get; } =
+        [.. Semantics.SymbolCaseValidator.ClefValueVocabulary
+            .Except(ClefNameVocabulary, StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)];
+
+    /// <summary>
     /// The token kinds that can spell a PART NAME: a plain identifier, or one of the four
     /// clef words, which are legal part names (<c>part bass { … }</c>).
     /// </summary>
@@ -77,6 +109,19 @@ internal static class SyntaxFacts
         SyntaxKind.Identifier or
         SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword or
         SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
+
+    /// <summary>
+    /// A bare word: letters, digits and <c>_</c>, nothing else and not empty. Quoted strings,
+    /// punctuation and synthetic zero-width tokens all fail it.
+    /// </summary>
+    /// <remarks>
+    /// Asked of a token's TEXT rather than its kind, because "is this a word?" is a property of
+    /// the spelling and a list of kinds answering it has to be revisited every time a keyword
+    /// is added — which is how the tail of a hyphenated part-header value came to admit four
+    /// clef words and refuse <c>soprano</c>.
+    /// </remarks>
+    public static bool IsBareWord(string? text) =>
+        !string.IsNullOrEmpty(text) && text.All(c => char.IsLetterOrDigit(c) || c == '_');
 
     /// <summary>
     /// The eight dynamic token KINDS the lexer emits, mapped to their level.

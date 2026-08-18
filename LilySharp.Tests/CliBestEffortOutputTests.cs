@@ -17,6 +17,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -28,9 +29,39 @@ namespace LilySharp.Tests;
 /// a stray token in a part header, a duplicate property all leave a score that engraves.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Driven as a PROCESS because that is where the policy lives: <c>RunOutputCommand</c> is a
-/// local function of a top-level program, so there is nothing to call. <c>lysc.exe</c> is in
+/// local function of a top-level program, so there is nothing to call. <c>lysc.dll</c> is in
 /// the test output directory already (LilySharp.Cli is a ProjectReference), fonts included.
+/// </para>
+/// <para>
+/// The process is started as <c>dotnet lysc.dll</c> and NOT as the <c>lysc</c> apphost. Both
+/// halves of the apphost were a liability, and each one had already cost a red suite
+/// (2026-08-19, session 212):
+/// </para>
+/// <list type="bullet">
+///   <item><description>
+///     Its NAME is per-platform. Hard-coding <c>lysc.exe</c> made these seven tests fail on
+///     BOTH ubuntu legs of CI — for every push at least back to 2026-08-15 — with
+///     "lysc.exe not beside the tests". Nobody was reading the CI gate, so the handoff kept
+///     saying the suite was green: it was, on Windows.
+///   </description></item>
+///   <item><description>
+///     Its CONTENT is per-commit. The SDK bakes <c>InformationalVersion</c>
+///     (<c>0.3.0+&lt;git sha&gt;</c>) into the apphost's Win32 version resource, so every
+///     commit hands Windows a binary it has never seen. With Smart App Control enforcing
+///     (<c>VerifiedAndReputablePolicyState = 1</c> — this dev machine), <c>Process.Start</c>
+///     then throws a Win32Exception saying the file was blocked by an application control
+///     policy, until the cloud reputation for that hash resolves. RULES records the same
+///     family blocking BenchmarkDotNet's generated assemblies and LilySharp.Probe; the answer
+///     there was also to stop producing the unknown binary, not to weaken the machine.
+///   </description></item>
+/// </list>
+/// <para>
+/// The managed dll is the same top-level program either way, so nothing asserted below is
+/// weakened — only the launcher changed. What is no longer covered is "the apphost starts",
+/// which no test covered on Linux anyway and which belongs to the release, not to this class.
+/// </para>
 /// </remarks>
 [Trait("Category", "Integration")]
 public class CliBestEffortOutputTests : IDisposable
@@ -50,6 +81,45 @@ public class CliBestEffortOutputTests : IDisposable
         "octave absolute\n" + parts + "\n"
         + "section Main { m { c4 d4 e4 f4 | } }\nform main { ~Main }\nscore main { staff m }\n";
 
+    /// <summary>
+    /// The muxer running THIS test, derived from the runtime that loaded it so that it cannot
+    /// disagree with the framework <c>lysc.dll</c> will resolve against.
+    /// </summary>
+    /// <remarks>
+    /// <c>DOTNET_HOST_PATH</c> names the same file here (measured, session 212), but MSBuild is
+    /// what sets it, so it is absent when the test dll is driven directly rather than by
+    /// <c>dotnet test</c>. <c>GetRuntimeDirectory()</c> is always
+    /// <c>&lt;root&gt;/shared/Microsoft.NETCore.App/&lt;version&gt;/</c> for a
+    /// framework-dependent run, which is what these tests are.
+    /// </remarks>
+    private static readonly string Muxer = Path.Combine(
+        Path.GetFullPath(Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..")),
+        OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+
+    /// <summary>Runs <c>lysc svg -n &lt;input&gt; &lt;output&gt;</c> to completion.</summary>
+    private static (int Exit, string Stderr) RunLysc(string input, string output)
+    {
+        string dll = Path.Combine(AppContext.BaseDirectory, "lysc.dll");
+        Assert.True(File.Exists(dll), $"lysc.dll not beside the tests: {dll}");
+        Assert.True(File.Exists(Muxer), $"no dotnet host where the runtime says one is: {Muxer}");
+
+        var psi = new ProcessStartInfo(Muxer)
+        {
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+        };
+        // ArgumentList, not Arguments: the temp paths are quoted for us, on both platforms.
+        // -n: no embedded font, so the run stays quick and the file small.
+        foreach (string arg in new[] { dll, "svg", "-n", input, output }) psi.ArgumentList.Add(arg);
+
+        using var p = Process.Start(psi)!;
+        string stderr = p.StandardError.ReadToEnd();
+        p.StandardOutput.ReadToEnd();
+        p.WaitForExit(60_000);
+        return (p.ExitCode, stderr);
+    }
+
     private (int Exit, string Stderr, bool Wrote) RunSvg(string parts)
     {
         string input = Path.Combine(_dir, "in.lys");
@@ -57,22 +127,8 @@ public class CliBestEffortOutputTests : IDisposable
         File.WriteAllText(input, Source(parts));
         if (File.Exists(output)) File.Delete(output);
 
-        string exe = Path.Combine(AppContext.BaseDirectory, "lysc.exe");
-        Assert.True(File.Exists(exe), $"lysc.exe not beside the tests: {exe}");
-
-        var psi = new ProcessStartInfo(exe)
-        {
-            // -n: no embedded font, so the run stays quick and the file small.
-            Arguments = $"svg -n \"{input}\" \"{output}\"",
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false,
-        };
-        using var p = Process.Start(psi)!;
-        string stderr = p.StandardError.ReadToEnd();
-        p.StandardOutput.ReadToEnd();
-        p.WaitForExit(60_000);
-        return (p.ExitCode, stderr, File.Exists(output) && new FileInfo(output).Length > 0);
+        var (exit, stderr) = RunLysc(input, output);
+        return (exit, stderr, File.Exists(output) && new FileInfo(output).Length > 0);
     }
 
     [Fact]
@@ -123,19 +179,9 @@ public class CliBestEffortOutputTests : IDisposable
             + "section Main { m { c8[ d8 e8 f8 g8 a8 b8 c8 | } }\nform main { ~Main }\n"
             + "score main { staff m }\n");
 
-        var psi = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "lysc.exe"))
-        {
-            Arguments = $"svg -n \"{input}\" \"{output}\"",
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false,
-        };
-        using var p = Process.Start(psi)!;
-        string stderr = p.StandardError.ReadToEnd();
-        p.StandardOutput.ReadToEnd();
-        p.WaitForExit(60_000);
+        var (exit, stderr) = RunLysc(input, output);
 
-        Assert.Equal(0, p.ExitCode);
+        Assert.Equal(0, exit);
         Assert.True(File.Exists(output));
         Assert.Contains("manual beam", stderr);
         Assert.DoesNotContain("written anyway", stderr);
