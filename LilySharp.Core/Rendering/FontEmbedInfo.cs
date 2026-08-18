@@ -46,6 +46,98 @@ public static class FontEmbedInfo
     // ASCII "OS/2" as a big-endian uint, the SkiaSharp table tag for the OS/2 table.
     private const uint Os2Tag = 0x4F532F32u;
 
+    /// <summary>What SHAPE of letter a family draws — the question a <c>serif</c> or
+    /// <c>sans</c> binding is asking, as distinct from whether the file may be embedded.
+    /// </summary>
+    public enum FaceShape
+    {
+        /// <summary>The font says nothing about its own class.</summary>
+        Unknown,
+        /// <summary>A serif family.</summary>
+        Serif,
+        /// <summary>A sans-serif family.</summary>
+        Sans,
+        /// <summary>Ornamental, script or symbolic — neither, and not prose.</summary>
+        Decorative,
+    }
+
+    /// <summary>
+    /// Reads a family's own classification out of its OS/2 table.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Two fields, in order of authority. <c>sFamilyClass</c> is an int16 at table offset 30
+    /// whose HIGH byte is the class id: 1-5 and 7 are the serif families (oldstyle,
+    /// transitional, modern, Clarendon, slab, freeform), 8 is sans serif, and 9/10/12 are
+    /// ornamental, script and symbolic. When it says nothing (0), PANOSE's
+    /// <c>bSerifStyle</c> — byte 1 of the 10 PANOSE bytes at offset 32 — answers instead:
+    /// 2-10 are serif treatments, 11-13 are the sans ones.
+    /// </para>
+    /// <para>
+    /// ⚠️ NEITHER FIELD IS RELIABLY FILLED IN, so <see cref="FaceShape.Unknown"/> is a real
+    /// answer and not an error. Measured on this machine 2026-08-18, over 232 installed
+    /// families: sFamilyClass answered for 183, PANOSE rescued 33 more, and 16 stayed
+    /// unknown — among them SimSun, a CJK serif, and the whole Sitka family. A caller that
+    /// HIDES the unknowns therefore hides real, wanted faces; the completion lists them in a
+    /// marked tail instead.
+    /// </para>
+    /// </remarks>
+    public static FaceShape ShapeOf(string family)
+    {
+        if (string.IsNullOrEmpty(family))
+            return FaceShape.Unknown;
+        if (ShapeCache.TryGetValue(family, out var cached))
+            return cached;
+
+        var shape = ShapeOfUncached(family);
+        ShapeCache[family] = shape;
+        return shape;
+    }
+
+    private static readonly Dictionary<string, FaceShape> ShapeCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static FaceShape ShapeOfUncached(string family)
+    {
+        byte[]? os2;
+        try
+        {
+            var typeface = SKTypeface.FromFamilyName(family);
+            if (typeface == null
+                || !typeface.FamilyName.Equals(family, StringComparison.OrdinalIgnoreCase))
+                return FaceShape.Unknown;
+            os2 = typeface.GetTableData(Os2Tag);
+        }
+        catch
+        {
+            // A face that fails to load or has no readable table is simply unclassified —
+            // a completion list must not throw because one installed font is odd.
+            return FaceShape.Unknown;
+        }
+        // PANOSE ends at offset 42, so a shorter table cannot answer the second question.
+        if (os2 == null || os2.Length < 42)
+            return FaceShape.Unknown;
+
+        return ShapeFromOs2(familyClass: os2[30], panoseSerifStyle: os2[33]);
+    }
+
+    /// <summary>The pure decision, split out so it can be tested without an installed font
+    /// (the same split <see cref="ClassifyFsTypeAndName"/> uses, and for the same reason:
+    /// which faces a machine has is not a property of the source).</summary>
+    internal static FaceShape ShapeFromOs2(byte familyClass, byte panoseSerifStyle) =>
+        familyClass switch
+        {
+            >= 1 and <= 5 or 7 => FaceShape.Serif,
+            8 => FaceShape.Sans,
+            9 or 10 or 12 => FaceShape.Decorative,
+            _ => panoseSerifStyle switch
+            {
+                >= 2 and <= 10 => FaceShape.Serif,
+                >= 11 and <= 13 => FaceShape.Sans,
+                _ => FaceShape.Unknown,
+            },
+        };
+
     private static readonly Dictionary<string, FontEmbedClass> Cache =
         new(StringComparer.OrdinalIgnoreCase);
 

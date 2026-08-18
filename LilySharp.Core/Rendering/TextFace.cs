@@ -23,7 +23,7 @@ namespace LilySharp.Core.Rendering;
 /// <remarks>
 /// This used to be the pair <c>(bool sans, FontStyle style)</c>, five caches and a dozen
 /// signatures wide, and that pair could only ever name one of the four bundled files. A
-/// score that wrote <c>font { title "Georgia" }</c> was therefore DRAWN in Georgia and
+/// score that wrote <c>fonts { title "Georgia" }</c> was therefore DRAWN in Georgia and
 /// RESERVED for in TeX Gyre Schola — measured 2026-08-18, a 16-character tempo mark at
 /// 2.2 staff spaces lands anywhere from 2.05 short to 3.61 long depending on the face.
 /// Adding <see cref="Name"/> is what lets the reservation follow the drawing.

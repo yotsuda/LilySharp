@@ -38,7 +38,7 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     // The document's configured text faces — every name a `font` directive bound, and,
     // when it asked to EMBED and the licence allows, that face's bytes loaded from the
     // system via SkiaSharp. Set per-document by PdfDocumentContext.
-    // ⚠️ A SET, NOT ONE NAME, since 2026-08-18: `font { }` binds a face per text role, so
+    // ⚠️ A SET, NOT ONE NAME, since 2026-08-18: `fonts { }` binds a face per text role, so
     // one document can carry several. When Bytes is null the face is NOT embedded — it
     // resolves to the bundled face of its family instead, so a non-`embedded` document
     // never silently embeds a system font.

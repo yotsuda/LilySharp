@@ -92,7 +92,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
         | 'transpose' | 'octave' | 'using' | 'break' | 'nobreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
-        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'font'
+        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts'
         | 'override' | 'revert' | 'once' | 'with'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
@@ -207,7 +207,7 @@ Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
 
 ### 2.4 Text Fonts
 
-FontDecl       = 'font' , ( String , [ 'embedded' ] | FontBlock ) ;
+FontDecl       = 'fonts' , FontBlock ;
 FontBlock      = '{' , { FontEntry } , '}' ;
 FontEntry      = FontKey , ( String , { String } | GenericFamily )
                | 'embedded' ;
@@ -224,23 +224,28 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
                | 'clefOctave' | 'meter' | 'tabFret' ;         (* notation *)
 
 (* WHICH FACE A STRING IS DRAWN IN is decided in this order, first hit winning:
-     1. the role's own binding          font { lyricText "Charis SIL" }
-     2. its group's binding             font { lyrics    "Charis SIL" }
-     3. the generic family it belongs to    font { serif "Georgia" }
+     1. the role's own binding          fonts { lyricText "Charis SIL" }
+     2. its group's binding             fonts { lyrics    "Charis SIL" }
+     3. the generic family it belongs to    fonts { serif "Georgia" }
      4. the bundled face                (TeX Gyre Schola / Heros)
    The NARROWER spelling wins wherever both are written, in either source order, so
    `marks "Georgia"  tempo "Playfair Display"` needs no special case. Case-insensitive:
    `lyrictext` binds `lyricText`.
 
-   `font "NAME" [embedded]` is the whole-document shorthand and means step 3 for BOTH
-   generic families — unchanged from before the block form existed, with one exception
-   below.
+   THE WHOLE DOCUMENT is step 3 for BOTH generic families — the two bound together:
+     fonts { serif "Georgia"  sans "Georgia" }
+
+   ⚠️ THE KEYWORD IS `fonts`, PLURAL, AND IT TAKES A BLOCK. The block is an alist of
+   family -> face, which is what LilyPond calls `fonts` too
+   (define-grob-properties.scm:395, paper-defaults-init.ly:169-178
+   property-defaults.fonts.serif). There is no `font` keyword — that word is free, and a
+   part may be named it. A bare value, `fonts "Georgia"`, is LYS8008, whose message quotes
+   the writer's own face name back inside the block to write instead.
 
    ⚠️ NOTATION IS OUTSIDE STEPS 3 AND 4. The octave digit under `treble_8`, a compound
-   meter's '+', and tab fret numbers are notation that happens to be drawn as text, so
-   `font "NAME"` and a `serif`/`sans` binding do NOT restyle them; they follow a face only
-   when `notation` or the leaf itself is named. `font "NAME"` reached all three before
-   2026-08-18.
+   meter's '+', and tab fret numbers are notation that happens to be drawn as text, so a
+   `serif`/`sans` binding does NOT restyle them; they follow a face only when `notation`
+   or the leaf itself is named.
 
    SEVERAL NAMES ARE A FALLBACK CHAIN, most preferred first — a Latin face for the words
    and a CJK face for the syllables it has no glyph for. SVG hands the whole list to the
@@ -262,8 +267,9 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
 
    A NAMED FACE THIS MACHINE DOES NOT HAVE is a WARNING, with or without `embedded` —
    whether a font is installed is a property of the machine and not of the source, so an
-   error would let a runner's contents fail an author's score. (Until 2026-08-18 only the
-   `embedded` spelling was checked, so `font "NoSuchFontFace"` was accepted in silence.)
+   error would let a runner's contents fail an author's score. (Until 2026-08-18 only a
+   directive that also said `embedded` was checked, so a face nobody had was accepted in
+   silence when it did not.)
 
    A BOUND FACE IS MEASURED, not only drawn — since 2026-08-18. The layout reserves space
    with the same file the string is drawn in, so a title in a wide face gets a wide box.
@@ -283,7 +289,7 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    italic here. *)
 
 (* Example:
-   font {
+   fonts {
      serif     "Georgia"
      lyricText "Charis SIL" "Noto Serif CJK JP"
      chordName serif
@@ -515,7 +521,9 @@ ScoreDecl      = 'score' , Identifier , [ String ] , '{' , { ScoreItem } , '}' ;
                     engraves a page with no music, so it is an error (LYS6002). *)
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
-               | 'grandStaff' , '{' , { StaffRender } , '}'
+               | 'grandStaff' , StaffGroupBody      (* a BRACE  — one instrument, two staves *)
+               | 'staffGroup' , StaffGroupBody      (* a BRACKET, bar lines drawn through *)
+               | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)
                | CondensedStaff                     (* several parts on ONE staff *)
                | CombinedStaff                      (* two parts on one staff, MERGED *)
                | 'tab' , [ TuningName ] , PartRef    (* tablature: tab partName, or
@@ -524,7 +532,30 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'ossia' , [ ClefName ] , PartRef       (* ossia partName — BARE, like staff *)
                | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
                | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
+               | ( 'title' | 'composer' ) , String   (* THIS score's own header — see below *)
+               | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
+
+StaffGroupBody = '{' , { StaffRender } , '}' ;
+                 (* Several staves engraved as ONE GROUP. All three take `staff` items and
+                    nothing else; they differ only in what is drawn down the left edge, and
+                    each is the LilyPond context of the same name (engraver-init.ly):
+
+                      grandStaff    a BRACE, and bar lines drawn through the gap between
+                                    the staves — the piano/harp reading of two staves as
+                                    one instrument (LilyPond `GrandStaff`)
+                      staffGroup    a BRACKET, bar lines drawn through — an orchestral
+                                    family, e.g. the woodwinds (LilyPond `StaffGroup`)
+                      choirStaff    a BRACKET, bar lines NOT drawn through: each staff
+                                    keeps its own, so singers read independent lines
+                                    (LilyPond `ChoirStaff`)
+
+                    ⚠️ The word order of `staffGroup` is deliberate and is NOT a slip for
+                    `groupStaff`. The other four `…Staff` items each PRODUCE a staff, or are
+                    the established name of one; a staff group produces a GROUP OF STAVES and
+                    says so. LilyPond spells its own contexts the same way, and for the same
+                    reason: of its seventeen staff contexts, `StaffGroup` is the only one that
+                    is not a musical term. *)
 
 CondensedStaff = 'condensedStaff' , '{' , PartRef , PartRef , { PartRef } , '}' ;
                  (* A CONDENSED score: the named parts, each of which would otherwise be its
@@ -575,6 +606,19 @@ StaffRender    = 'staff' , [ ClefName ] , PartRef , { 'with' ( 'chords' PartRef 
                     ('chords NAME'), so a progression is written once. *)
 PartRef        = Identifier ;
 
+(* THIS SCORE'S OWN HEADER: 'title' / 'composer' written inside a score restate the file's
+   metadata for that score alone — the same two words as the top-level MetadataDecl, in a
+   score body. A part-extract score can be headed with the part's name while the full score
+   keeps the work's title. *)
+
+(* A BARE PART NAME renders that part to MIDI ONLY: it is played and not engraved, which is
+   how a click track or a cue part is carried without appearing on the page. Because it puts
+   nothing on the page, a score of nothing but bare names has nothing to engrave and is the
+   empty-body error (LYS6002) — a bare name accompanies staves, it does not replace them.
+   ⚠️ Written after 'staff NAME' a bare word is read as that staff's DISPLAY NAME instead
+   ('staff flute piccolo' is ONE staff, labelled "piccolo"), so a MIDI-only part is written
+   before the staves, or after a braced group. *)
+
 (* A 'score' may carry its OWN 'form main { … }' to render a different arrangement
    (e.g. a practice excerpt); it overrides the top-level structure for that score only. *)
 
@@ -585,6 +629,17 @@ PartRef        = Identifier ;
    }
 
    score practice { staff melody }     // a second form, rendered to practice.svg
+
+   score choral "satb" {               // a bracket, each staff keeping its own bar lines
+     choirStaff { staff sop  staff alt  staff ten  staff bas }
+   }                                   // (not 'soprano': of the clef names, only
+                                       //  treble/bass/alto/tenor may also name a part)
+
+   score winds "winds" {               // a bracket with bar lines drawn through
+     staffGroup { staff flute  staff oboe  staff clarinet }
+     title "Woodwinds"                 // this score's own header
+     click                             // played, never engraved
+   }
 *)
 
 ### 7.1 Lead sheets (chords and/or lyrics, no staff)

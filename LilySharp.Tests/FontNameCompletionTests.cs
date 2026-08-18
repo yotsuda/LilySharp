@@ -22,10 +22,11 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Completing an installed, embeddable font family inside a <c>font "…"</c> string.
-/// Context detection and the item-building are covered without touching the real
-/// system font set: detection is text-only, and the item shape is exercised through
-/// the synthetic-list helper so the assertions are environment-independent.
+/// Completing an installed, embeddable font family — inside a <c>fonts { … }</c> binding,
+/// which is the only place a face name belongs. Context detection and the item-building
+/// are covered without touching the real system font set: detection is text-only, and the
+/// item shape is exercised through the synthetic-list helper so the assertions are
+/// environment-independent.
 /// </summary>
 [Trait("Category", "Unit")]
 public class FontNameCompletionTests
@@ -33,39 +34,42 @@ public class FontNameCompletionTests
     private static LilySharpLanguageServer.CompletionContext Ctx(string text)
         => LilySharpLanguageServer.GetCompletionContext(text, text.Length);
 
-    [Fact]
-    public void CursorInsideFontString_IsAfterFontName()
+    [Theory]
+    [InlineData("fonts \"")]
+    [InlineData("fonts \"Noto Se")]
+    [InlineData("font \"Noto Se")]
+    public void ABareStringAfterTheKeyword_OffersNoFace(string text)
     {
-        // The caret sits just inside the opening quote of a `font "…"` directive.
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterFontName,
-            Ctx("font \""));
+        // A face name belongs inside a BINDING, and a bare string after `fonts` is not one
+        // — it is the missing-block error (LYS8008). Completing a face into it would help
+        // the writer finish a spelling the parser refuses: the editor would be leading them
+        // into the error it is about to underline.
+        //
+        // ⚠️ The third case is `font`, which is not a keyword at all any more — so it is
+        // just a word, and the popup must not treat it as the directive it never was.
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterFontName, Ctx(text));
     }
 
     [Fact]
-    public void PartwayThroughAFontName_KeepsTheList()
+    public void AfterTheKeyword_NoBlockYet_IsAfterFontKeyword()
     {
-        // A partial family name (spaces and all) still resolves to the font context.
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterFontName,
-            Ctx("font \"Noto Se"));
-    }
-
-    [Fact]
-    public void AfterFontKeyword_NoQuotesYet_IsAfterFontKeyword()
-    {
-        // `font ` with the caret after it (no quotes typed): Ctrl+Space should complete
-        // the whole quoted name.
+        // `fonts ` with the caret after it: Ctrl+Space offers the block forms.
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterFontKeyword,
+            Ctx("fonts "));
+        // …and the singular is not the keyword, so it gets no directive context of its own.
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterFontKeyword,
             Ctx("font "));
     }
 
     [Fact]
-    public void AfterFontKeyword_InsertsEmptyQuotesAndRetriggers()
+    public void AfterTheKeyword_OffersOnlyBlocks()
     {
-        // At `font |` the single item inserts the empty pair with the caret between the
-        // quotes and re-triggers, so the font-name list shows inside the string.
-        var item = Assert.Single(LilySharpLanguageServer.GetFontQuoteInsertCompletion().Items);
-        Assert.Equal("\"$0\"", item.InsertText);
-        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
+        // The declaration takes a block and nothing else, so every item inserts one. An
+        // item that inserted a bare quote would complete straight to a diagnostic.
+        var items = LilySharpLanguageServer.GetFontDeclarationCompletions().Items;
+
+        Assert.DoesNotContain("\"…\"", items.Select(i => i.Label));
+        Assert.All(items, i => Assert.StartsWith("{", i.InsertText!, StringComparison.Ordinal));
     }
 
     [Fact]

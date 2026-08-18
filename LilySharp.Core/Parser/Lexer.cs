@@ -644,7 +644,15 @@ internal sealed class Lexer
             // Metadata keywords
             "title" => SyntaxKind.TitleKeyword,
             "composer" => SyntaxKind.ComposerKeyword,
-            "font" => SyntaxKind.FontKeyword,
+            // ⚠️ `fonts`, plural, and there is no `font`. The block is an alist of
+            // family -> face, which is what LilyPond calls `fonts` too
+            // (define-grob-properties.scm:395, paper-defaults-init.ly:169-178
+            // property-defaults.fonts.serif). The singular was a leftover of the one-line
+            // `font "NAME"`, which took ONE face; the word outlived the shape.
+            // ⚠️ `font` is not reserved at all — a part may be named it. Lily# has never
+            // been released (user decision 2026-08-18), so a spelling nobody can have
+            // written gets no migration path.
+            "fonts" => SyntaxKind.FontsKeyword,
             "embedded" => SyntaxKind.EmbeddedKeyword,
             "tempo" => SyntaxKind.TempoKeyword,
             "time" => SyntaxKind.TimeKeyword,

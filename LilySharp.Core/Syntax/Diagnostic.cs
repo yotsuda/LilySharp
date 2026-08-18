@@ -170,7 +170,14 @@ public sealed class DiagnosticBag
 /// <c>LYS0001</c> UnexpectedToken · <c>LYS0005</c> InvalidNumber · <c>LYS0013</c> the
 /// removed <c>version</c> directive · <c>LYS1002</c> DuplicateVariable · <c>LYS1003</c>
 /// InvalidPitch · <c>LYS1006</c> UndefinedPhrase · <c>LYS1015</c> MultipleFormDeclarations
-/// · <c>LYS2003</c> NoTimeSignature.
+/// · <c>LYS2003</c> NoTimeSignature · <c>LYS8007</c> FontOneLinerRemoved.
+/// </para>
+/// <para>
+/// LYS8007 lived for one day. It refused the one-line <c>font "NAME"</c> and told the
+/// writer the block to write instead — a migration path for a spelling that could not have
+/// reached anyone, since Lily# has never been released. The keyword was renamed to
+/// <c>fonts</c> the same day (user decision 2026-08-18) and <c>font</c> stopped being a
+/// keyword at all, which made the code unreachable as well as unnecessary.
 /// </para>
 /// <para>
 /// All but LYS0013 were retired together on 2026-08-16, when the question was first asked
@@ -916,18 +923,24 @@ public static class DiagnosticCodes
     /// system, so it cannot be embedded.</summary>
     public const string FontNotFound = "LYS8003";
 
-    /// <summary>Font error: a <c>font { }</c> entry names a key that is not a text role,
+    /// <summary>Font error: a <c>fonts { }</c> entry names a key that is not a text role,
     /// a role group, or a generic family. Refused rather than ignored — a binding nobody
     /// reads looks exactly like one that works.</summary>
     public const string UnknownFontRole = "LYS8004";
 
-    /// <summary>Font warning: one <c>font { }</c> block binds the same key twice. The
+    /// <summary>Font warning: one <c>fonts { }</c> block binds the same key twice. The
     /// LAST one takes effect, like every other repeated setting in the language; the
     /// earlier one is named so it is not silently dropped.</summary>
     public const string DuplicateFontBinding = "LYS8005";
 
-    /// <summary>Font error: a <c>font { }</c> entry names a key but no face — the value
+    /// <summary>Font error: a <c>fonts { }</c> entry names a key but no face — the value
     /// must be one or more quoted names, or a generic family (<c>serif</c> /
     /// <c>sans</c>).</summary>
     public const string FontBindingMissingValue = "LYS8006";
+
+    /// <summary>Font error: <c>fonts</c> written with a bare value instead of a block —
+    /// <c>fonts "Georgia"</c>. Every other metadata keyword takes a bare value, so this is
+    /// a plausible first guess and gets the block to write, with the writer's own face name
+    /// in it, rather than "Expected 'OpenBrace'".</summary>
+    public const string FontsNeedsABlock = "LYS8008";
 }

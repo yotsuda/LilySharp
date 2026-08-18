@@ -197,7 +197,7 @@ public sealed class BackendKerningTests
     /// ⚠️ THE TWO SIDES USED DIFFERENT RULES. <c>TextFontMetrics</c> resolves a NAME to the
     /// bundled file of that name — <c>TeX Gyre Schola</c> is the serif file whatever family it
     /// was bound under. The PDF resolver served a name it had no program for with the bundled
-    /// stand-in of the family it was BOUND under, so <c>font { sans "TeX Gyre Schola" }</c>
+    /// stand-in of the family it was BOUND under, so <c>fonts { sans "TeX Gyre Schola" }</c>
     /// reserved Schola and drew Heros: not a shaping difference but a different face, and the
     /// widest kind of divergence this file exists to catch.
     /// <para>

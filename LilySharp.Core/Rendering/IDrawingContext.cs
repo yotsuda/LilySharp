@@ -168,7 +168,7 @@ public interface IDrawingContext
     /// <remarks>
     /// ⚠️ A ROLE, NOT A FAMILY — changed 2026-08-18. Every caller but one passed the
     /// literal <c>"serif"</c>, so the page could say which of two bundled faces it wanted
-    /// and could not say what the string WAS; a <c>font { }</c> directive that gives
+    /// and could not say what the string WAS; a <c>fonts { }</c> directive that gives
     /// lyrics one face and chord symbols another had nothing to bind to, and a decorator
     /// that rewrote families after the fact could not tell a fret number from a title
     /// (it restyled both). The face is now decided in one place —

@@ -114,7 +114,7 @@ internal static class TabConstants
     /// <remarks>
     /// ⚠️ THE BUNDLED FACE, NOT THE SCORE'S — and here that is nearly always the same
     /// thing. <see cref="Rendering.TextRole.TabFret"/> is NOTATION
-    /// (<c>TextRoles.IsNotation</c>): a broad <c>font "Georgia"</c> or <c>font { serif … }</c>
+    /// (<c>TextRoles.IsNotation</c>): a broad <c>font "Georgia"</c> or <c>fonts { serif … }</c>
     /// does not reach it, by decision, because a fret number is not prose. Only a score
     /// that names <c>notation</c> or <c>tabFret</c> outright binds it, and this and its two
     /// neighbours below still take the bundled face when it does.

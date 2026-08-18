@@ -18,7 +18,7 @@ namespace LilySharp.Core.Rendering;
 
 /// <summary>
 /// WHAT a run of non-music text IS, as the engraver means it — the unit a
-/// <c>font { }</c> directive binds a face to, and the only thing
+/// <c>fonts { }</c> directive binds a face to, and the only thing
 /// <see cref="IDrawingContext.DrawText"/> is told about a string's typography.
 /// </summary>
 /// <remarks>
@@ -238,10 +238,10 @@ public static class TextRoles
     /// compound meter's «+», a tab fret number?
     /// </summary>
     /// <remarks>
-    /// ⚠️ THESE DO NOT FOLLOW THE BROAD BINDING, decided 2026-08-18. <c>font "NAME"</c>
-    /// and a <c>serif</c>/<c>sans</c> binding say what the score's PROSE is set in; a fret
+    /// ⚠️ THESE DO NOT FOLLOW THE BROAD BINDING, decided 2026-08-18. A <c>serif</c>/
+    /// <c>sans</c> binding says what the score's PROSE is set in; a fret
     /// number is not prose, and restyling it changes the notation rather than the words.
-    /// Before this rule, <c>font "Comic Sans"</c> reached all three. They are still
+    /// Before this rule, a broad binding reached all three. They are still
     /// bindable — by naming <c>notation</c> or the leaf itself — because a score that
     /// really wants its tab numbers in another face should be able to say so, out loud.
     /// <para>
@@ -261,7 +261,7 @@ public static class TextRoles
         => All.Where(r => GroupOf(r) == group);
 
     /// <summary>
-    /// The spelling a score writes for <paramref name="role"/> inside <c>font { }</c>.
+    /// The spelling a score writes for <paramref name="role"/> inside <c>fonts { }</c>.
     /// </summary>
     /// <remarks>
     /// camelCase, matching the language's own multi-word keywords (<c>grandStaff</c>,
@@ -316,7 +316,7 @@ public static class TextRoles
         family == TextFontFamily.Sans ? "sans" : "serif";
 
     /// <summary>
-    /// Reads a <c>font { }</c> key: a leaf role, a group, or a generic family.
+    /// Reads a <c>fonts { }</c> key: a leaf role, a group, or a generic family.
     /// </summary>
     /// <param name="word">The written key, e.g. <c>lyricText</c> / <c>marks</c> /
     /// <c>serif</c>.</param>

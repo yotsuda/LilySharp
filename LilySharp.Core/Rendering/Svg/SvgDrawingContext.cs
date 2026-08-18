@@ -271,7 +271,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// viewer has, so the SVG draws a face the spacing did not measure. Naming the
     /// bundled face here would close that — and would move every snapshot holding a chord
     /// symbol, which is a decision about output and not about this directive. Left as it
-    /// stands so that adding <c>font { }</c> changes nothing a score did not ask for.
+    /// stands so that adding <c>fonts { }</c> changes nothing a score did not ask for.
     /// </remarks>
     private string? FamilyAttributeFor(TextRole role)
     {

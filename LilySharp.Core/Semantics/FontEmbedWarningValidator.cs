@@ -64,6 +64,22 @@ internal sealed class FontEmbedWarningValidator : ISemanticValidator
 
     private void CheckOne(FontDeclarationSyntax font, string name)
     {
+        // ⚠️ A NAME THIS ENGINE SHIPS IS NEVER MISSING. The bundle is consulted before the
+        // machine (LilyPond's own order — TextFontMetrics.BundledPathForName), so
+        // `serif "TeX Gyre Schola"` draws and MEASURES the file in Fonts/ and not a
+        // substitute. Skia only enumerates INSTALLED families, so asking it about a bundled
+        // name answers NotFound — and the warning that followed was false in both halves:
+        // the face is present, and no substitution happens. Measured 2026-08-18: a book
+        // binding both bundled families has geometry identical, coordinate for coordinate,
+        // to one that binds nothing.
+        //
+        // ⚠️ It is asked of the ONE home that already answers "is this name bundled"
+        // (TextFontMetrics.TryBundledFamily, whose remarks say it exists so a caller can ask
+        // rather than re-derive) — not by comparing against SerifFamily/SansFamily here,
+        // which would be that question's third spelling.
+        if (TextFontMetrics.TryBundledFamily(TextFace.Named(name, sans: false, FontStyle.Regular), out _))
+            return;
+
         FontEmbedInfo.FontEmbedClass cls;
         try
         {

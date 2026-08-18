@@ -218,4 +218,57 @@ public class SystemStartDelimiterTests
         Assert.Equal(3, (int)SystemStartDelimiterType.LineBracket);
         Assert.Equal(4, (int)SystemStartDelimiterType.BarLine);
     }
+
+    /// <summary>The same book three times, one word different — the trio the grammar
+    /// documents now publish as a table, with an observer so the table cannot rot.</summary>
+    /// <remarks>
+    /// ⚠️ The tests above assert the delimiter TYPE on a hand-built model; nothing looked at
+    /// what the three keywords actually DRAW. GRAMMAR.md, SYNTAX_REFERENCE.md and
+    /// GRAMMAR_FOR_LLM.md now each print a table of the two differences (the left-edge sign,
+    /// and whether bar lines cross the gap), and a published table with no machine is how
+    /// <c>staffGroup</c> and <c>choirStaff</c> came to be reserved everywhere and explained
+    /// nowhere. Measured 2026-08-18: choirStaff's page is staffGroup's page MINUS exactly the
+    /// rects standing in the inter-staff gap, which is LilyPond's ChoirStaff — a StaffGroup
+    /// without the Span_bar_engraver.
+    /// LILYPOND-REF: ly/engraver-init.ly:468-557 Span_bar_engraver — the StaffGroup context,
+    ///   with GrandStaff and ChoirStaff derived from it.
+    /// </remarks>
+    [Fact]
+    public void TheThreeStaffGroups_DrawTheThreeThingsTheGrammarPublishes()
+    {
+        static string Render(string keyword) =>
+            LilySharp.Core.Svg.SvgGenerator.Generate(
+                LilySharp.Core.Syntax.SyntaxTree.Parse(
+                    "part rh { clef treble }\npart lh { clef bass }\n"
+                    + "section A { rh { c4 d e f | } lh { c4 d e f | } }\n"
+                    + "form main { A }\n"
+                    + $"score main {{ {keyword} {{ staff rh  staff lh }} }}"),
+                new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+
+        string brace = Render("grandStaff");
+        string bracket = Render("staffGroup");
+        string choir = Render("choirStaff");
+
+        // ⑴ No keyword is inert. Two that drew the same page would be indistinguishable from
+        //    one of them doing nothing — the state the documents could not have caught.
+        Assert.NotEqual(brace, bracket);
+        Assert.NotEqual(brace, choir);
+        Assert.NotEqual(bracket, choir);
+
+        // ⑵ The left-edge sign: grandStaff sets a glyph from the BRACE face; the other two
+        //    draw the bracket as a rule with serif tips and never touch that face.
+        Assert.Contains("Emmentaler-Brace", brace, StringComparison.Ordinal);
+        Assert.DoesNotContain("Emmentaler-Brace", bracket, StringComparison.Ordinal);
+        Assert.DoesNotContain("Emmentaler-Brace", choir, StringComparison.Ordinal);
+
+        // ⑶ Bar lines across the gap: present for grandStaff and staffGroup, absent for
+        //    choirStaff, whose staves each keep their own.
+        static int VerticalRects(string svg) =>
+            System.Text.RegularExpressions.Regex.Matches(svg, "<rect[^>]*height=").Count;
+
+        Assert.Equal(VerticalRects(brace), VerticalRects(bracket));
+        Assert.True(VerticalRects(choir) < VerticalRects(bracket),
+            $"choirStaff drew {VerticalRects(choir)} rects and staffGroup {VerticalRects(bracket)}: "
+            + "a ChoirStaff has no Span_bar_engraver, so the gap between its staves is empty");
+    }
 }

@@ -572,11 +572,16 @@ internal sealed partial class Parser
             _ when IsPartNameStart() => ParseMidiPartRender(),
             // Anything else: reported and KEPT (LYS0030) — the drop the comment four lines
             // above already named, now neither silent nor width-losing.
+            // ⚠️ This vocabulary is the ONE list a writer actually reads — it arrives at the
+            // moment of the mistake — so it has to name every branch above. It omitted the two
+            // staff groups and the bare-part-name item, and advertised braces `ossia` does not
+            // take, until DocKeywordListTests grew a machine for it.
             _ => ReportStrayItem("a score",
                     "A score body holds render items — 'staff NAME', 'tab NAME', "
-                    + "'grandStaff { … }', 'condensedStaff { … }', 'combinedStaff { … }', "
-                    + "'ossia { … }', 'chords NAME', 'lyrics NAME' — and its own "
-                    + "'title'/'composer'.")
+                    + "'grandStaff { … }', 'staffGroup { … }', 'choirStaff { … }', "
+                    + "'condensedStaff { … }', 'combinedStaff { … }', 'ossia NAME', "
+                    + "'chords NAME', 'lyrics NAME' — its own 'title'/'composer', and a "
+                    + "bare part name to render that part to MIDI only.")
         };
     }
 

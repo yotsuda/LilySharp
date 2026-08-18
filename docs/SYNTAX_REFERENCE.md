@@ -371,17 +371,25 @@ composer "W.A. Mozart"
 
 ## Text Fonts
 
-The whole document in one face:
+The whole document in one face — that is the two generic families, bound together:
 
 ```
-font "Georgia"
-font "Georgia" embedded     // also subset-embed it in the PDF
+fonts {
+  serif "Georgia"
+  sans  "Georgia"
+  embedded          // also subset-embed it in the PDF
+}
 ```
+
+⚠️ **`fonts` is plural, and takes a BLOCK.** There is no `font` keyword and no one-line
+form; a bare value (`fonts "Georgia"`) is an error that quotes your face name back inside
+the block to write instead. Completing `fonts` in the editor inserts the block pre-filled
+with the faces already in use, so accepting it changes nothing until you edit a face.
 
 Or a face per kind of text:
 
 ```
-font {
+fonts {
   serif     "Georgia"                       // everything serif, unless overridden below
   sans      "Verdana"                       // chord symbols are the engine's one sans
 
@@ -410,7 +418,7 @@ The keys, by group:
 | `numbers` | `barNumber` `fingering` `tuplet` `volta` `ottava` `bend` `tabTechnique` |
 | `notation` | `clefOctave` `meter` `tabFret` |
 
-⚠️ **`notation` is not reached by `font "NAME"`** or by a `serif`/`sans` binding. The
+⚠️ **`notation` is not reached by a `serif`/`sans` binding.** The
 octave digit under a `treble_8` clef, a compound meter's `+`, and tab fret numbers are
 notation that happens to be drawn as text — restyling them changes the notation rather
 than the words — so they follow a face only when you name `notation` or the role itself.
@@ -729,6 +737,58 @@ score main "out" {
 }
 ```
 
+### Staff groups — `grandStaff`, `staffGroup`, `choirStaff`
+
+Three ways to engrave several staves as one group. All three take `staff` items and
+nothing else, and they differ only in what is drawn down the left edge:
+
+| | left edge | bar lines | reads as |
+|---|---|---|---|
+| `grandStaff` | brace | drawn **through** the gap | one instrument on two staves (piano, harp) |
+| `staffGroup` | bracket | drawn **through** the gap | one family (the woodwinds) |
+| `choirStaff` | bracket | **not** drawn through — each staff keeps its own | independent lines (voices) |
+
+```
+score choral "satb" {
+  choirStaff { staff sop  staff alt  staff ten  staff bas }
+}
+
+score winds "winds" {
+  staffGroup { staff flute  staff oboe  staff clarinet }
+}
+```
+
+Each is the LilyPond context of the same name, so a `.ly` export of the three is
+`\new GrandStaff` / `\new StaffGroup` / `\new ChoirStaff`.
+
+⚠️ `staffGroup` reads in the other order on purpose, and is **not** a slip for
+`groupStaff`. The other four `…Staff` items in a score body each *produce* a staff
+(`condensedStaff` and `combinedStaff` put several parts on one) or are the established
+name of one; a staff group produces a **group of staves**, and says so. LilyPond spells
+its own contexts the same way for the same reason: of its seventeen staff contexts,
+`StaffGroup` is the only one that is not a musical term.
+
+### This score's own header, and parts that only play
+
+A `title` / `composer` inside a score restates the file's metadata for **that score
+alone** — a part extract can be headed with the part's name while the full score keeps
+the work's title. A **bare part name** renders that part to MIDI only: played, never
+engraved, which is how a click track or a cue part rides along without appearing on the
+page.
+
+```
+score winds "winds" {
+  staffGroup { staff flute  staff oboe }
+  title "Woodwinds"    // this score only
+  click                // played, never engraved
+}
+```
+
+⚠️ A bare word written *after* `staff NAME` is read as that staff's display name
+instead (`staff flute piccolo` is ONE staff, labelled "piccolo"), so a MIDI-only part
+goes before the staves or after a braced group. And a score of nothing but bare names
+has nothing to engrave, which is the empty-body error.
+
 ### Multiple forms (excerpts)
 
 Declare several named forms and bind each `score` to one by name — for example a
@@ -878,7 +938,7 @@ be declared and referenced).
 | Group | Words |
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `instrument` `percussion` `drummap` |
-| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `nobreak` `partial` `embedded` `font` |
+| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `nobreak` `partial` `embedded` `fonts` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
@@ -887,7 +947,7 @@ be declared and referenced).
 | Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` `tocoda` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
 
-⚠️ The `font { }` keys (`serif` `header` `lyricText` `chordName` `barNumber` …) are **not**
+⚠️ The `fonts { }` keys (`serif` `header` `lyricText` `chordName` `barNumber` …) are **not**
 reserved words — they are read inside that block only, against the role vocabulary, so
 they stay free as part / section / phrase names. Several of them (`title`, `lyrics`,
 `chords`, `tempo`, `instrument`, `tuplet`, `volta`) are reserved for other reasons and
@@ -904,5 +964,10 @@ Notes:
 - Articulation, ornament, dynamic-text and mark **names** (`staccato`, `tr`, `mordent`,
   `cresc`, `dim`, `segno`, …) are resolved from the `@name` text and are **not** reserved
   as identifiers — `tr`, `acc`, `ten`, `dim` etc. remain usable as your own names.
-- `grandStaff` and `tabStaff` also accept the all-lowercase spellings `grandstaff` /
-  `tabstaff`.
+- **Keyword spelling is exact, including case.** `Lexer.GetKeywordKind` matches whole
+  strings and the lexer has no case-folding path at all, so `grandstaff` is not a spelling
+  of `grandStaff` — it is an ordinary identifier, and names a part fine (measured). Written
+  where a keyword belongs it is refused exactly like any other unknown word.
+  ⚠️ This line used to claim the opposite for `grandstaff` and `tabstaff`. It also outlived
+  the measurement nine lines above, which had already found that `tabStaff` is not a keyword
+  in the first place.

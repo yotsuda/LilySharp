@@ -2995,7 +2995,7 @@ public sealed partial class MeasureCollector
                     break;
 
                 case FontDeclarationSyntax font:
-                    // `font "NAME" [embedded]` or `font { role "FACE" … }` binds a face
+                    // `fonts { role "FACE" … }` binds a face
                     // per kind of text. The reading is shared with the validator
                     // (FontPlanReader) so the two cannot disagree about what is legal;
                     // the problems it reports are that validator's job, not the

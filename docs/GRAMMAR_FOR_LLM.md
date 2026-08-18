@@ -22,8 +22,10 @@ key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
                         // (a pickup is 'partial', but it belongs to a SECTION — see below)
-font "Georgia"          // optional; the whole document's text. Add 'embedded' to subset
-                        // it into the PDF. Per-role form: font { … } — see below
+fonts {                  // optional; binds text faces. The two generic families together
+  serif "Georgia"       // are "the whole document's text"; bind roles separately below
+  sans  "Georgia"       // 'embedded' subsets every named face into the PDF
+}
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -62,6 +64,25 @@ score parts { staff flute1  staff flute2 }
 This is plain condensation: unisons are not merged into one notehead and no "a2"/"Solo" is
 printed.
 
+**Several staves as ONE GROUP** — `grandStaff`, `staffGroup` and `choirStaff` all take
+`staff` items and nothing else, and differ only in the left edge:
+
+| | left edge | bar lines between staves | pick it for |
+|---|---|---|---|
+| `grandStaff` | brace | drawn through | one instrument on two staves (piano, harp) |
+| `staffGroup` | bracket | drawn through | one family (the woodwinds) |
+| `choirStaff` | bracket | **not** drawn through | independent lines (voices) |
+
+```
+score choral "satb" { choirStaff { staff sop  staff alt  staff ten  staff bas } }
+score winds  "winds" { staffGroup { staff flute  staff oboe  staff clarinet } }
+```
+
+Each is the LilyPond context of the same name (`\new GrandStaff` / `\new StaffGroup` /
+`\new ChoirStaff`). ⚠️ `staffGroup` is in that order on purpose and is **not** a typo for
+`groupStaff`: the other `…Staff` items each produce a staff, while a staff group produces a
+group of staves.
+
 **Two parts COMBINED** — `combinedStaff { partA partB }` takes exactly two bare part names
 and merges them wherever they agree, the way an orchestral score condenses two players onto
 one staff:
@@ -79,6 +100,22 @@ score full { combinedStaff { flute1 flute2 } }
 ⚠️ The chord case is the usual outcome, not a corner: two parts a third or a sixth apart in
 the same rhythm become chords in one voice. Use `condensedStaff` when the two lines must stay
 visibly separate.
+
+**A score's own header, and parts that only play** — `title` / `composer` written inside a
+score restate the file's metadata for that score alone, and a **bare part name** renders
+that part to MIDI only (played, never engraved — a click track, a cue part):
+
+```
+score winds "winds" {
+  staffGroup { staff flute  staff oboe }
+  title "Woodwinds"    // this score only
+  click                // played, never engraved
+}
+```
+
+⚠️ A bare word written *after* `staff NAME` becomes that staff's display name instead
+(`staff flute piccolo` is ONE staff labelled "piccolo"), so put a MIDI-only part before the
+staves or after a braced group.
 
 A minimal single-staff document:
 
@@ -413,13 +450,13 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   instrument-preset / tuning names, key modes) are written in their canonical (lowercase)
   case. `Treble` is a different, unknown symbol from `treble` and is an error — not a
   silent fallback.
-## Text fonts (`font { … }`)
+## Text fonts (`fonts { … }`)
 
 A face per kind of text. Keys are a generic family, a group, or a single role; the
 NARROWER spelling wins in either source order.
 
 ```
-font {
+fonts {
   serif     "Georgia"                         // everything serif unless overridden
   sans      "Verdana"                         // chord symbols are the one sans role
   lyricText "Charis SIL" "Noto Serif CJK JP"  // several names = a fallback chain
@@ -437,9 +474,12 @@ dynamics partCombine` · `numbers` → `barNumber fingering tuplet volta ottava 
 tabTechnique` · `notation` → `clefOctave meter tabFret`.
 
 Rules worth knowing before emitting one:
-- `font "NAME"` (one-liner) binds `serif` and `sans` — but NOT `notation`. The `treble_8`
-  octave digit, a compound meter's `+` and tab fret numbers follow a face only when
-  `notation` or the role itself is named.
+- "The whole document" is `serif` and `sans` bound together — but NOT `notation`. The
+  `treble_8` octave digit, a compound meter's `+` and tab fret numbers follow a face only
+  when `notation` or the role itself is named.
+- ⚠️ **The keyword is `fonts`, plural, and it takes a BLOCK.** There is no `font` keyword
+  (that word is free — a part may be named it) and no one-line form: a bare value,
+  `fonts "Georgia"`, is an error naming the block to write instead.
 - A named face is MEASURED as well as drawn (since 2026-08-18): the space reserved for a
   string comes from the same file it is drawn in. ⚠️ On a machine that does not have the
   face the reservation falls back to the bundled TeX Gyre face, so naming one makes the
@@ -465,7 +505,7 @@ part is fine). Keywords:
 ```text
 section form using tab ossia transpose octave instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
-voice phrase repeat volta alternative break nobreak partial cue embedded font
+voice phrase repeat volta alternative break nobreak partial cue embedded fonts
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone

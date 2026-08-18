@@ -47,50 +47,76 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class FontDirectiveTests
 {
-    [Fact]
-    public void FontDirective_WithEmbedded_ParsesNameAndEmbeddedFlag()
-    {
-        var tree = SyntaxTree.Parse("font \"meiryo\" embedded");
+    // ================================================================================
+    // The keyword is `fonts`, and there is no `font`
+    //
+    // ⚠️ The block is an alist of family -> face, which is what LilyPond calls `fonts` too
+    // (define-grob-properties.scm:395 "(fonts ,symbol-key-alist? …)",
+    // paper-defaults-init.ly:169-178 property-defaults.fonts.serif). The singular was a
+    // leftover of the one-line `font "NAME"`, which took ONE face — the word outlived the
+    // shape it was named for.
+    //
+    // ⚠️ `font` is not reserved and carries no migration diagnostic: Lily# has never been
+    // released (user decision 2026-08-18), so no writer can have the old spelling and a
+    // migration path would be machinery serving nobody. The tests that stood here pinned
+    // that path; they are replaced by the two things that are true now.
+    // ================================================================================
 
-        var fonts = tree.GetRoot().DescendantNodes().OfType<FontDeclarationSyntax>().ToList();
-        Assert.Single(fonts);
-        Assert.Equal("meiryo", fonts[0].FontName);
-        Assert.True(fonts[0].Embedded);
-        Assert.False(tree.HasErrors);
+    [Fact]
+    public void FontIsNotAKeywordAtAll()
+    {
+        // Free, like any other word the language does not claim — a part may be named it.
+        Assert.False(SyntaxTree.Parse("part font { clef treble }").HasErrors);
+    }
+
+    [Theory]
+    [InlineData("fonts \"meiryo\" embedded")]
+    [InlineData("fonts \"Noto Serif CJK JP\"")]
+    public void FontsWithABareValue_IsAnsweredWithTheBlockToWrite(string source)
+    {
+        // Every other metadata keyword takes a bare value, so this is a plausible first
+        // guess and gets the block rather than "Expected 'OpenBrace'". The face name is the
+        // writer's own, so the fix is a copy rather than a reading.
+        var d = Assert.Single(SyntaxTree.Parse(source).Diagnostics,
+            x => x.Code == DiagnosticCodes.FontsNeedsABlock);
+        Assert.Contains("fonts { serif ", d.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void FontDirective_WithoutEmbedded_ParsesNameAndNoEmbeddedFlag()
+    public void ARefusedFontsDeclaration_KeepsEveryToken()
     {
-        var tree = SyntaxTree.Parse("font \"Noto Serif CJK JP\"");
+        // ⚠️ A refused declaration that DROPS its tokens slides every later data-pos, the
+        // LSP's jump targets and the columns of the diagnostics after it (RULES §5.1 —
+        // "report" and "keep" are different repairs, and the reported one is the one left
+        // unchecked). Both halves: the total width, and each node's own span.
+        const string src = "fonts \"meiryo\" embedded\nform main { A }\n";
+        var root = SyntaxTree.Parse(src).GetRoot();
 
-        var fonts = tree.GetRoot().DescendantNodes().OfType<FontDeclarationSyntax>().ToList();
-        Assert.Single(fonts);
-        Assert.Equal("Noto Serif CJK JP", fonts[0].FontName);
-        Assert.False(fonts[0].Embedded);
-        Assert.False(tree.HasErrors);
+        Assert.Equal(src, root.ToFullString());
+        foreach (var n in root.DescendantNodes())
+            Assert.Equal(n.ToFullString(), src.Substring(n.Position, n.FullWidth));
     }
 
     [Fact]
-    public void FontDirective_InFullDocumentHeader_ParsesClean()
+    public void ARefusedFontsDeclaration_BindsNothing()
     {
-        var source =
-            "font \"meiryo\" embedded\n" +
-            "time 4/4\n" +
-            "part m { clef treble section A { c4 d e f | } }\n" +
-            "form main { A }\n" +
-            "score main { staff m }";
-        var tree = SyntaxTree.Parse(source);
-
-        var fonts = tree.GetRoot().DescendantNodes().OfType<FontDeclarationSyntax>().ToList();
-        Assert.Single(fonts);
-        Assert.Equal("meiryo", fonts[0].FontName);
-        Assert.True(fonts[0].Embedded);
-        Assert.False(tree.HasErrors);
+        // Applying a guessed meaning anyway would engrave in the named face while the editor
+        // underlined the line as an error, and the writer would have no reason to believe
+        // the message. A refused directive is refused all the way through.
+        //
+        // ⚠️ Stated as `Assert.Empty(Families(...))` this fails for a reason that has
+        // nothing to do with the refusal: an UNBOUND document already emits `sans-serif`
+        // for the chord roles, whose default family is the bundled sans. The claim is not
+        // "no families" — it is "the same families as a book that never wrote the
+        // directive", so that is the pair.
+        Assert.Equal(Families(Svg(Book)), Families(Svg("fonts \"Georgia\"\n" + Book)));
+        // …and the control: a directive that IS accepted moves them.
+        Assert.NotEqual(Families(Svg(Book)),
+            Families(Svg("fonts { serif \"Georgia\"  sans \"Georgia\" }\n" + Book)));
     }
 
     // ================================================================================
-    // The block form: font { KEY VALUE… }
+    // The block form: fonts { KEY VALUE… }
     // ================================================================================
 
     private static string Svg(string source) =>
@@ -245,9 +271,11 @@ public class FontDirectiveTests
         """;
 
     [Fact]
-    public void APlainFontDirectiveLeavesTabFretNumbersInTheBundledFace()
+    public void ABroadBindingLeavesTabFretNumbersInTheBundledFace()
     {
-        string svg = Svg("font \"Georgia\"\n" + TabBook);
+        // The notation exclusion is a property of the generic families, not of the spelling
+        // that binds them — so it is written the way a score writes it now.
+        string svg = Svg("fonts { serif \"Georgia\"  sans \"Georgia\" }\n" + TabBook);
         // There really are fret digits on this page to have been left alone.
         Assert.Contains(">8</text>", svg, StringComparison.Ordinal);
         // The bundled face emits no attribute, so every attribute present is the title's.
@@ -264,7 +292,7 @@ public class FontDirectiveTests
     public void NamingNotationPutsTheFretDigitsInThatFace()
     {
         string svg = Regex.Replace(
-            Svg("font { serif \"Georgia\"  notation \"Georgia\" }\n" + TabBook), "\\s+", " ");
+            Svg("fonts { serif \"Georgia\"  notation \"Georgia\" }\n" + TabBook), "\\s+", " ");
         Assert.Matches("<text[^>]*font-family=\"Georgia\"[^>]*>8</text>", svg);
     }
 
@@ -274,7 +302,7 @@ public class FontDirectiveTests
     public void EachRoleReachesThePageInTheFaceItWasBoundTo()
     {
         string svg = Svg("""
-            font {
+            fonts {
               serif  "Georgia"
               lyricText "Charis SIL"
               title  "Cormorant"
@@ -291,17 +319,23 @@ public class FontDirectiveTests
     {
         // What a chain is FOR: a Latin face for the words and a CJK face for the
         // syllables it has no glyph for, walked per glyph by the viewer.
-        string svg = Svg("font { lyricText \"Charis SIL\" \"Noto Serif CJK JP\" }\n" + Book);
+        string svg = Svg("fonts { lyricText \"Charis SIL\" \"Noto Serif CJK JP\" }\n" + Book);
         Assert.Contains("font-family=\"Charis SIL, Noto Serif CJK JP\"", svg,
             StringComparison.Ordinal);
     }
 
     [Fact]
-    public void TheOneLinerStillMeansEveryGenericFamily()
+    public void BindingBothGenericFamilies_ReachesEveryRoleButNotation()
     {
-        // `font "NAME"` is not deprecated and its meaning is unchanged (bar notation):
-        // BOTH bundled families, so chord symbols move with the prose.
-        var families = Families(Svg("font \"Georgia\"\n" + Book));
+        // "The whole document's text" is the two generic families bound together, so chord
+        // symbols — the one role whose default family is sans — move with the prose.
+        //
+        // ⚠️ This test used to write the one-liner `font "Georgia"` and was named
+        // TheOneLinerStillMeansEveryGenericFamily. Its comment said "`font "NAME"` is not
+        // deprecated", which was true on the day it was written and stopped being true on
+        // 2026-08-18. The CLAIM survives the spelling: what it observed was never the
+        // sugar, it was that both families move at once.
+        var families = Families(Svg("fonts { serif \"Georgia\"  sans \"Georgia\" }\n" + Book));
         Assert.NotEmpty(families);
         Assert.All(families, f => Assert.Equal("Georgia", f));
     }
@@ -319,7 +353,7 @@ public class FontDirectiveTests
     {
         // Refused rather than ignored: a binding that reaches nothing looks exactly like
         // one that works — the page simply comes out in the bundled face.
-        var err = Assert.Single(Check("font { lyrix \"Charis SIL\" }\n" + Book),
+        var err = Assert.Single(Check("fonts { lyrix \"Charis SIL\" }\n" + Book),
             x => x.Code == DiagnosticCodes.UnknownFontRole);
         // The message names the whole vocabulary, so the fix is one read.
         Assert.Contains("lyricText", err.Message, StringComparison.Ordinal);
@@ -328,41 +362,41 @@ public class FontDirectiveTests
     [Fact]
     public void AKeyBoundTwiceInOneBlockIsAWarningAndTheLastOneWins()
     {
-        Assert.Single(Check("font { lyricText \"A\"  lyricText \"B\" }\n" + Book),
+        Assert.Single(Check("fonts { lyricText \"A\"  lyricText \"B\" }\n" + Book),
             x => x.Code == DiagnosticCodes.DuplicateFontBinding);
-        string svg = Svg("font { lyricText \"A\"  lyricText \"B\" }\n" + Book);
+        string svg = Svg("fonts { lyricText \"A\"  lyricText \"B\" }\n" + Book);
         Assert.Contains("font-family=\"B\"", svg, StringComparison.Ordinal);
         Assert.DoesNotContain("font-family=\"A\"", svg, StringComparison.Ordinal);
     }
 
     [Fact]
     public void AKeyWithNoFaceIsRefused()
-        => Assert.Single(Check("font { lyricText }\n" + Book),
+        => Assert.Single(Check("fonts { lyricText }\n" + Book),
             x => x.Code == DiagnosticCodes.FontBindingMissingValue);
 
     [Fact]
     public void MonoIsNotAKey_BecauseNoRoleWouldReadIt()
         // Better to be told the word does not exist than to write a binding that reaches
         // nothing: this engine draws no monospace text.
-        => Assert.Single(Check("font { mono \"Consolas\" }\n" + Book),
+        => Assert.Single(Check("fonts { mono \"Consolas\" }\n" + Book),
             x => x.Code == DiagnosticCodes.UnknownFontRole);
 
     [Fact]
     public void ARefusedEntryDoesNotTakeTheRestOfTheBlockWithIt()
     {
         // One bad key must not cost the score the bindings it spelled correctly.
-        string svg = Svg("font { lyrix \"X\"  title \"Cormorant\" }\n" + Book);
+        string svg = Svg("fonts { lyrix \"X\"  title \"Cormorant\" }\n" + Book);
         Assert.Contains("font-family=\"Cormorant\"", svg, StringComparison.Ordinal);
     }
 
     [Fact]
     public void TheRoleVocabularyReservesNoWords()
     {
-        // A key is read inside `font { }` only, against the role vocabulary — never by the
+        // A key is read inside `fonts { }` only, against the role vocabulary — never by the
         // lexer — so adding twenty-four role names must not cost a score twenty-four
         // identifiers. `serif`, `header` and `chordName` are ordinary names everywhere else.
         var d = Check("""
-            font { serif "Georgia" }
+            fonts { serif "Georgia" }
             part serif { clef treble }
             part header { clef bass }
             phrase chordName { c'4 d e f | }
@@ -379,7 +413,7 @@ public class FontDirectiveTests
         // The embed check read FontName — the FIRST name — which cleared a block whose
         // SECOND face was the restricted one.
         var notFound = Check(
-            "font { title \"ZzNoSuchFontA\"  lyricText \"ZzNoSuchFontB\" embedded }\n" + Book)
+            "fonts { title \"ZzNoSuchFontA\"  lyricText \"ZzNoSuchFontB\" embedded }\n" + Book)
             .Where(x => x.Code == DiagnosticCodes.FontNotFound).ToList();
         Assert.Equal(2, notFound.Count);
     }
@@ -391,7 +425,7 @@ public class FontDirectiveTests
         // and accepted in silence through the other: `embedded` warned, plain did not.
         // A misspelt face is not less wrong for being un-embedded — it just fails later,
         // on the page, in a substitute. (Decided 2026-08-18, user.)
-        foreach (var src in new[] { "font \"ZzNoSuchFont\"\n", "font \"ZzNoSuchFont\" embedded\n" })
+        foreach (var src in new[] { "fonts { serif \"ZzNoSuchFont\" }\n", "fonts { serif \"ZzNoSuchFont\"  embedded }\n" })
         {
             var d = Assert.Single(Check(src + Book), x => x.Code == DiagnosticCodes.FontNotFound);
             // A WARNING: whether a font is installed is a property of the machine, not of
@@ -403,11 +437,33 @@ public class FontDirectiveTests
     [Fact]
     public void ABundledOrUnnamedFaceIsNeverReportedMissing()
     {
-        // The check runs over NAMED faces only. A score that binds nothing, and one that
-        // only points a role at a generic family, name no face at all — so neither can
-        // trip a "not installed" warning about the faces this engine ships.
+        // A score that binds nothing, and one that only points a role at a generic family,
+        // name no face at all — so neither can trip a "not installed" warning.
         Assert.DoesNotContain(Check(Book), x => x.Code == DiagnosticCodes.FontNotFound);
-        Assert.DoesNotContain(Check("font { chordName serif }\n" + Book),
+        Assert.DoesNotContain(Check("fonts { chordName serif }\n" + Book),
+            x => x.Code == DiagnosticCodes.FontNotFound);
+
+        // ⚠️ THE "BUNDLED" HALF OF THIS NAME WAS NOT OBSERVED BY ANYTHING until 2026-08-18.
+        // The two cases above name no face, so they could never have caught the defect the
+        // name promises to catch: writing the bundled family's OWN name warned that it "is
+        // not installed on this system, so this text will be drawn in a substitute face" —
+        // false in both halves, since the bundle is consulted before the machine and the
+        // geometry is identical to binding nothing (measured). Skia enumerates INSTALLED
+        // families only, and nothing asked whether the name was one this engine ships.
+        //
+        // The editor made it visible: completing `font` pre-fills these two names, so every
+        // writer who accepted the completion got two warnings about the faces they were
+        // already using.
+        foreach (string face in new[] { TextFontMetrics.SerifFamily, TextFontMetrics.SansFamily })
+        {
+            Assert.DoesNotContain(Check($"fonts {{ serif \"{face}\" }}\n" + Book),
+                x => x.Code == DiagnosticCodes.FontNotFound);
+            Assert.DoesNotContain(Check($"fonts {{ serif \"{face}\"  embedded }}\n" + Book),
+                x => x.Code == DiagnosticCodes.FontNotFound);
+        }
+
+        // …and the check is still awake: a face nobody has is still reported.
+        Assert.Contains(Check("fonts { serif \"ZzNoSuchFont\" }\n" + Book),
             x => x.Code == DiagnosticCodes.FontNotFound);
     }
 
@@ -420,10 +476,10 @@ public class FontDirectiveTests
     /// every machine (the file ships), and it separates "the name decided the metrics" from
     /// "the role's family happened to agree" — which naming Georgia could not do.
     /// </summary>
-    private const string BoundTitle = "font { title \"TeX Gyre Heros\" }\n";
+    private const string BoundTitle = "fonts { title \"TeX Gyre Heros\" }\n";
 
     /// <summary>The same face bound to the role whose width the SPACING reads.</summary>
-    private const string BoundLyrics = "font { lyricText \"TeX Gyre Heros\" }\n";
+    private const string BoundLyrics = "fonts { lyricText \"TeX Gyre Heros\" }\n";
 
     private const string TitleText = "T";
 

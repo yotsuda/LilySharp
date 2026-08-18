@@ -387,7 +387,7 @@ internal sealed class MetadataDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Font directive: font "NAME" [embedded]
+/// Font directive: fonts { KEY VALUE… }
 /// </summary>
 internal sealed class FontDeclarationGreen : GreenSyntaxNode
 {

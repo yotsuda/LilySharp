@@ -137,8 +137,16 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterTime => GetTimeCompletions(),
             CompletionContext.AfterPartial => GetPartialCompletions(),
             CompletionContext.AfterTitleText => GetTitleTextCompletions(WordBeforeCursor(doc.Text, offset)),
-            CompletionContext.AfterFontName => GetFontNameCompletions(),
-            CompletionContext.AfterFontKeyword => GetFontQuoteInsertCompletion(),
+            // The key that OWNS the string decides which faces fit in it: `serif "…"` and
+            // `sans "…"` name a shape, every other key may name any face.
+            CompletionContext.AfterFontName =>
+                GetFontNameCompletions(KeywordBeforeCurrentString(doc.Text, offset)),
+            CompletionContext.AfterFontKeyword => GetFontDeclarationCompletions(),
+            CompletionContext.FontBlock => GetFontBlockCompletions(),
+            // The key the caret sits after decides which values fit: a generic family takes
+            // only quoted names, a role or group may also redirect to a family.
+            CompletionContext.AfterFontRoleKey =>
+                GetFontRoleValueCompletions(WordBeforeCursor(doc.Text, offset)),
             CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
             CompletionContext.StaffGroupBlock => GetStaffGroupBlockCompletions(),
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
@@ -202,6 +210,17 @@ public sealed partial class LilySharpLanguageServer
         var frames = ScanOpenBlocks(text, offset, ReadFrame);
         return frames.Count > 0 ? frames[^1].Name : null;
     }
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits inside a <c>fonts { … }</c> block.
+    /// </summary>
+    /// <remarks>
+    /// The block is UNNAMED, so its introducing keyword is the frame's
+    /// <see cref="BlockFrame.Name"/> — the word immediately before the <c>{</c>. A font
+    /// block never nests, so the innermost frame is the whole test.
+    /// </remarks>
+    internal static bool IsInsideFontBlock(string text, int offset)
+        => InnermostOpenBlock(text, offset) == "fonts";
 
     /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>part &lt;name&gt; { … }</c>
@@ -292,7 +311,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// When <paramref name="offset"/> sits inside a <c>"…"</c> string, the bare keyword
     /// that INTRODUCES that string — the word immediately before its opening quote
-    /// (e.g. "font" in <c>font "Noto|"</c>, "title" in <c>title "My Song|"</c>). Empty
+    /// (e.g. "serif" in <c>fonts { serif "Noto|" }</c>, "title" in <c>title "My Song|"</c>). Empty
     /// when not in a string or when no bare word precedes the quote. Lets a value
     /// completion key off the directive that owns the string the caret is in, so the
     /// caret is served whether it sits just before the quote (<c>font |</c>) or already
@@ -554,6 +573,8 @@ public sealed partial class LilySharpLanguageServer
         AfterTitleText,
         AfterFontName,
         AfterFontKeyword,
+        FontBlock,
+        AfterFontRoleKey,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -658,9 +679,8 @@ public sealed partial class LilySharpLanguageServer
                 case "time": return CompletionContext.AfterTime;
                 case "partial": return CompletionContext.AfterPartial;
                 case "title" or "composer": return CompletionContext.AfterTitleText;
-                // `font |` with no quotes yet: offer the font names already wrapped in
-                // "…" so Ctrl+Space here completes to `font "Family"`.
-                case "font": return CompletionContext.AfterFontKeyword;
+                // `fonts |` with no block yet: offer the block forms.
+                case "fonts": return CompletionContext.AfterFontKeyword;
                 // `override |` (and `once override |`, whose previous word is also
                 // `override`): offer the grob properties that actually affect the
                 // rendered output as `Grob.property = value` fill-ins.
@@ -676,14 +696,41 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterOverrideValue;
         }
 
+        // Inside `fonts { … }` the body binds text ROLES to faces, so it is intercepted
+        // before every fallthrough below.
+        //
+        // ⚠️ Without this the block reached the MusicBlock fallthrough at the end of this
+        // method — the '{' is a brace like any other — and the popup offered PITCHES AND
+        // ARTICULATIONS at every caret a writer reaches while filling one in. Measured
+        // 2026-08-18, all twelve carets from `fonts {` to `fonts { serif "Georgia"  sans "|`.
+        // The one-liner had two dedicated contexts and the block had none, which is most of
+        // why the block read as the harder form to write.
+        if (IsInsideFontBlock(text, offset))
+        {
+            // A quoted value: the same 188-face list the one-liner's string offers. The
+            // owning keyword here is the ROLE KEY (`serif`), not `font`, so the switch
+            // below could never have reached it.
+            if (IsInsideStringLiteral(text, offset))
+                return CompletionContext.AfterFontName;
+            // `fonts { serif |` — a bound key takes quoted faces, and a role or group may
+            // also be redirected to a generic family (`chordName serif`).
+            if (TextRoles.TryParseKey(prevWord, out _, out _, out _))
+                return CompletionContext.AfterFontRoleKey;
+            // Anywhere else in the block a KEY is what belongs.
+            return CompletionContext.FontBlock;
+        }
+
         // Inside a "…" string value, the directive that OWNS the string decides the
-        // completion. `font "Noto|"` offers the installed, embeddable font families;
-        // a `title`/`composer` string keeps its snippet (so the caret is served whether
-        // it sits just before the opening quote or already inside it). Every other
+        // completion. A `title`/`composer` string keeps its snippet (so the caret is served
+        // whether it sits just before the opening quote or already inside it). Every other
         // string falls through unchanged.
+        //
+        // ⚠️ `font "Noto|"` used to be served here with the face list. It is not any more:
+        // a bare string after `font` is the REMOVED one-liner (LYS8007), and completing a
+        // face into it would help the writer finish a spelling the parser refuses. The face
+        // list now has exactly one home — inside `fonts { … }`, handled above.
         switch (KeywordBeforeCurrentString(text, offset))
         {
-            case "font": return CompletionContext.AfterFontName;
             case "title" or "composer": return CompletionContext.AfterTitleText;
         }
 
@@ -1042,37 +1089,322 @@ public sealed partial class LilySharpLanguageServer
     private static CompletionList? _fontNameCompletions;
 
     /// <summary>
-    /// Installed font families that may be embedded into an exported PDF, annotated by
-    /// license class and CJK coverage. Offered INSIDE a <c>font "…"</c> string (the bare
-    /// family name is inserted). At <c>font |</c> before the quotes, see
-    /// <see cref="GetFontQuoteInsertCompletion"/> instead.
+    /// The faces a binding may name: the two this engine BUNDLES, then the installed
+    /// families that may be embedded into an exported PDF, annotated by license class and
+    /// CJK coverage. Offered inside a <c>fonts { … "…" }</c> string.
     /// </summary>
-    internal static CompletionList GetFontNameCompletions()
-        => _fontNameCompletions ??= BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts());
+    /// <param name="ownerKey">
+    /// The key the string belongs to. <c>serif</c> and <c>sans</c> ask for a SHAPE, so the
+    /// list is narrowed to it; every other key (a role or a group) may legitimately name any
+    /// face, and gets the whole list.
+    /// </param>
+    internal static CompletionList GetFontNameCompletions(string ownerKey = "")
+        => ownerKey switch
+        {
+            "serif" => _serifFaceCompletions ??= FacesOfShape(FontEmbedInfo.FaceShape.Serif),
+            "sans" => _sansFaceCompletions ??= FacesOfShape(FontEmbedInfo.FaceShape.Sans),
+            _ => _fontNameCompletions ??= new CompletionList
+            {
+                Items = [.. BundledFaceCompletions(),
+                         .. BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts()).Items],
+            },
+        };
+
+    private static CompletionList? _serifFaceCompletions;
+    private static CompletionList? _sansFaceCompletions;
 
     /// <summary>
-    /// At <c>font |</c> (the keyword typed, no quotes yet): a single item that inserts
-    /// the empty pair <c>"…"</c> with the caret between them and re-triggers suggestions,
-    /// so completion lands inside the string with the font-name list showing — mirroring
-    /// completing the <c>font</c> keyword itself.
+    /// The faces that draw letters of one shape: the bundled face for that family, then the
+    /// installed families the font itself classifies that way, then — in a marked tail — the
+    /// ones that classify as nothing at all.
     /// </summary>
-    internal static CompletionList GetFontQuoteInsertCompletion()
+    /// <remarks>
+    /// <para>
+    /// ⚠️ THE UNCLASSIFIED ARE KEPT, DELIBERATELY. <see cref="FontEmbedInfo.ShapeOf"/> reads
+    /// the font's own OS/2 classification, and a font is free to fill in neither field:
+    /// measured 2026-08-18 over 232 installed families, 16 answered nothing — among them
+    /// SimSun, a CJK SERIF, and the whole Sitka family. Hiding them would make a real and
+    /// wanted face unreachable from the binding that wants it, which is worse than a longer
+    /// list; they sort last and say why.
+    /// </para>
+    /// <para>
+    /// Ornamental, script and symbolic families ARE dropped here. They are neither shape,
+    /// and a <c>serif</c>/<c>sans</c> binding is a statement about the document's prose. A
+    /// score that wants a script face for one role still names it under that role's key,
+    /// where the whole list is offered.
+    /// </para>
+    /// </remarks>
+    private static CompletionList FacesOfShape(FontEmbedInfo.FaceShape want)
+    {
+        var items = new List<CompletionItem>
+        {
+            want == FontEmbedInfo.FaceShape.Sans
+                ? BundledFace(TextFontMetrics.SansFamily, "sans")
+                : BundledFace(TextFontMetrics.SerifFamily, "serif"),
+        };
+
+        foreach (var item in BuildFontNameCompletions(EnumerateInstalledEmbeddableFonts()).Items)
+        {
+            var shape = FontEmbedInfo.ShapeOf(item.Label!);
+            if (shape == want)
+                items.Add(Retiered(item, "0", item.Detail));
+            else if (shape == FontEmbedInfo.FaceShape.Unknown)
+                items.Add(Retiered(item, "9", item.Detail + " - unclassified, may not be "
+                                                          + (want == FontEmbedInfo.FaceShape.Sans ? "sans" : "serif")));
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>The same item, moved into a tier. Sorting is by the WHOLE key, so the tier
+    /// goes in front of the sort text the licence/CJK ranking already built.</summary>
+    private static CompletionItem Retiered(CompletionItem item, string tier, string? detail) => new()
+    {
+        Label = item.Label,
+        Kind = item.Kind,
+        Detail = detail,
+        SortText = tier + item.SortText,
+    };
+
+    /// <summary>The two faces this engine ships, which no enumeration of INSTALLED families
+    /// can contain.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ They were the only faces missing from this list, and they are the only two present
+    /// on every machine by construction. Skia enumerates installed families, a bundled face
+    /// is shipped rather than installed, and <see cref="BuildFontNameCompletions"/> drops
+    /// anything that classifies as <c>NotFound</c> — so the popup offered every face except
+    /// the two the completion itself pre-fills a block with.
+    /// </para>
+    /// <para>
+    /// ⚠️ This is the THIRD consumer of one question — "is this face available?". The
+    /// metrics path answers it correctly (bundle before machine), the missing-face warning
+    /// answered it wrongly until f7e18024, and this list answered it wrongly until now. One
+    /// question, three readers, fixed one at a time because nothing looked at the set.
+    /// </para>
+    /// <para>
+    /// They sort ahead of the installed families ("!" precedes every digit ordinally): a
+    /// bundled face is the one choice that cannot make the page depend on the machine.
+    /// </para>
+    /// </remarks>
+    private static CompletionItem[] BundledFaceCompletions() =>
+    [
+        BundledFace(TextFontMetrics.SerifFamily, "serif"),
+        BundledFace(TextFontMetrics.SansFamily, "sans"),
+    ];
+
+    private static CompletionItem BundledFace(string family, string role) => new()
+    {
+        Label = family,
+        Kind = CompletionItemKind.Value,
+        Detail = $"bundled with Lily# - the default {role} face, present on every machine",
+        SortText = "!" + role,
+    };
+
+    /// <summary>
+    /// The body a <c>font</c> declaration is completed with, as an LSP snippet: the two
+    /// generic families, each pre-filled with the face that role already uses.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ★ THE DEFAULTS ARE THE FACES THE DOCUMENT IS ALREADY IN, so accepting the completion
+    /// and changing nothing does not move the page. Measured 2026-08-18: a book with
+    /// <c>fonts { serif "TeX Gyre Schola"  sans "TeX Gyre Heros" }</c> and the same book with
+    /// no <c>font</c> at all have IDENTICAL geometry — every coordinate, every extent — and
+    /// differ only in carrying the <c>font-family</c> attribute explicitly, which the
+    /// default omits because the document root already names it. Controls: swapping the two
+    /// families, or binding <c>serif</c> alone, does move the page, so the comparison sees a
+    /// real binding.
+    /// </para>
+    /// <para>
+    /// ⚠️ The names come from <see cref="TextFontMetrics.SerifFamily"/> and
+    /// <see cref="TextFontMetrics.SansFamily"/> rather than being typed here. They are one
+    /// quantity, and the editor spelling it a second time is how a popup starts offering a
+    /// face the engine stopped bundling.
+    /// </para>
+    /// <para>
+    /// ⚠️ TWO placeholders, not one mirrored placeholder. An earlier draft wrote
+    /// <c>${1:face}</c> into both so a single face could be typed once — but the two
+    /// families have DIFFERENT defaults, and a mirror cannot carry two. A writer who wants
+    /// one face everywhere types it in the first field and tabs to the second; a writer who
+    /// wants to change only the prose face edits the first and leaves the second alone,
+    /// which the mirror made impossible.
+    /// </para>
+    /// </remarks>
+    private static string FontBlockSnippet(string tail)
+        => "{\n  serif \"${1:" + TextFontMetrics.SerifFamily + "}\""
+         + "\n  sans  \"${2:" + TextFontMetrics.SansFamily + "}\"" + tail + "\n}";
+
+    /// <summary>
+    /// At <c>font |</c> (the keyword typed, nothing after it): the block forms. There is no
+    /// quoted item — the one-line <c>font "NAME"</c> was removed 2026-08-18, and an editor
+    /// must not complete toward a spelling the parser refuses.
+    /// </summary>
+    internal static CompletionList GetFontDeclarationCompletions()
         => new()
         {
             Items =
             [
                 new CompletionItem
                 {
-                    Label = "\"…\"",
-                    FilterText = "font",
+                    Label = "{ … }",
+                    FilterText = "fonts",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "\"$0\"",
-                    Detail = "Pick an installed, embeddable font",
-                    Command = new Command { Title = "Suggest font name", CommandIdentifier = "editor.action.triggerSuggest" },
-                }
+                    InsertText = FontBlockSnippet("$0"),
+                    Preselect = true,
+                    SortText = "0",
+                    Detail = "Bind the whole document's text (pre-filled with the faces in use)",
+                },
+                // An empty block, for a writer who wants to bind roles rather than the
+                // document — the caret lands where a key goes and the key list opens.
+                new CompletionItem
+                {
+                    Label = "{ }",
+                    FilterText = "fonts",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "{\n  $0\n}",
+                    SortText = "1",
+                    Detail = "Bind faces per text role",
+                    Command = new Command { Title = "Suggest role key", CommandIdentifier = "editor.action.triggerSuggest" },
+                },
             ]
         };
+
+    /// <summary>
+    /// The keys a <c>fonts { }</c> body binds: the two generic families, the six role
+    /// groups, and every individual role.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The vocabulary is read from <see cref="TextRoles.AllKeySpellings"/> — the ONE home
+    /// the reader validates against — and never listed here. A hand-copied key list is the
+    /// shape of rot this repo has met repeatedly, most recently in the score-item lists.
+    /// <para>
+    /// Each key inserts <c>key "…"</c> with the caret inside the quotes and re-triggers
+    /// suggestions, so the face list appears without a second keystroke — the same motion
+    /// the <c>font</c> keyword itself has.
+    /// </para>
+    /// </remarks>
+    private static CompletionList? _fontBlockCompletions;
+
+    internal static CompletionList GetFontBlockCompletions()
+        => _fontBlockCompletions ??= new CompletionList
+        {
+            Items =
+            [
+                .. TextRoles.AllKeySpellings().Select(key => new CompletionItem
+                {
+                    Label = key,
+                    Kind = CompletionItemKind.Property,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = key + " \"$0\"",
+                    Detail = FontKeyDetail(key),
+                    Command = new Command
+                    {
+                        Title = "Suggest font name",
+                        CommandIdentifier = "editor.action.triggerSuggest",
+                    },
+                }),
+                // `embedded` is an entry of the block too, not a key — it subsets every
+                // named face into an exported PDF.
+                new CompletionItem
+                {
+                    Label = "embedded",
+                    Kind = CompletionItemKind.Keyword,
+                    Detail = "Subset every named face into the exported PDF",
+                },
+            ],
+        };
+
+    /// <summary>One line of help per key, so the popup says what the key REACHES rather
+    /// than only repeating its spelling.</summary>
+    private static string FontKeyDetail(string key) => key switch
+    {
+        "serif" => "Generic family: everything except chord symbols falls back here",
+        "sans" => "Generic family: chord symbols fall back here",
+        "header" => "Group: title, composer, instrument names",
+        "lyrics" => "Group: lyric syllables and stanza numbers",
+        "chords" => "Group: chord symbols, diagrams, figured bass",
+        "marks" => "Group: tempo, rehearsal marks, pedal, navigation, free text, dynamics",
+        "numbers" => "Group: bar numbers, fingerings, tuplet / volta / ottava labels",
+        "notation" => "Group: text that is really notation — the treble_8 digit, a "
+                      + "compound meter's +, tab fret numbers. Reached ONLY when named",
+        _ => "Text role",
+    };
+
+    /// <summary>
+    /// After a key (<c>fonts { lyricText |</c>): the values THAT KEY takes.
+    /// </summary>
+    /// <param name="key">The key the caret sits after. A generic family narrows the list.</param>
+    /// <remarks>
+    /// <para>
+    /// A role or a group takes a quoted face, or a generic family to FOLLOW instead
+    /// (<c>chordName serif</c>). A GENERIC FAMILY takes only quoted names: pointing
+    /// <c>serif</c> at <c>sans</c> is a re-classification and no role reads it, which
+    /// <c>FontPlanReader</c> refuses with LYS8006 — "a generic family takes quoted face
+    /// names, not another family".
+    /// </para>
+    /// <para>
+    /// ⚠️ The list was flat until 2026-08-18 and offered the redirect after EVERY key, so
+    /// at <c>fonts { serif |</c> the popup proposed exactly the two words the reader was
+    /// about to refuse. The reader's own message even says the offer must not be made
+    /// there — it "must not offer the family form the other keys accept" — and the editor
+    /// made it anyway, because the value list did not know which key it was answering for.
+    /// </para>
+    /// <para>
+    /// The quoted item comes first and is preselected, so the common motion (name a face)
+    /// stays one keystroke; the redirect is a deliberate second choice.
+    /// </para>
+    /// </remarks>
+    private static CompletionList? _fontValuesForRole;
+    private static CompletionList? _fontValuesForFamily;
+
+    internal static CompletionList GetFontRoleValueCompletions(string key = "")
+    {
+        var quoted = new CompletionItem
+        {
+            Label = "\"…\"",
+            Kind = CompletionItemKind.Snippet,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = "\"$0\"",
+            Preselect = true,
+            SortText = "0",
+            Detail = "Pick a bundled or installed, embeddable font",
+            Command = new Command
+            {
+                Title = "Suggest font name",
+                CommandIdentifier = "editor.action.triggerSuggest",
+            },
+        };
+
+        // Is the key a generic family? Asked of TextRoles, the one home that decides it, so
+        // a family added there needs no second edit here.
+        bool isFamily = TextRoles.TryParseKey(key, out _, out _, out var family) && family != null;
+        if (isFamily)
+            return _fontValuesForFamily ??= new CompletionList { Items = [quoted] };
+
+        return _fontValuesForRole ??= new CompletionList
+        {
+            Items =
+            [
+                quoted,
+                new CompletionItem
+                {
+                    Label = "serif",
+                    Kind = CompletionItemKind.Value,
+                    SortText = "1",
+                    Detail = "Follow whatever the serif family is bound to",
+                },
+                new CompletionItem
+                {
+                    Label = "sans",
+                    Kind = CompletionItemKind.Value,
+                    SortText = "1",
+                    Detail = "Follow whatever the sans family is bound to",
+                },
+            ],
+        };
+    }
 
     /// <summary>
     /// Enumerates the installed font families and, for the embeddable ones (class
@@ -2069,7 +2401,14 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score main {\n\t$0\n}", Detail = "Printable score (visual layout)" },
                 new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"$0\"", Detail = "Title metadata" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
-                new CompletionItem { Label = "font", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "font \"$0\"", Detail = "Text font; add `embedded` to subset-embed it in the exported PDF", Command = new Command { Title = "Suggest font name", CommandIdentifier = "editor.action.triggerSuggest" } },
+                // ⚠️ This inserted `font "$0"` until 2026-08-18 — the removed one-liner —
+                // so completing the KEYWORD typed a diagnostic (LYS8007). It is the path a
+                // writer actually takes, and it survived the removal because the removal
+                // fixed the other three font contexts and not this one.
+                // ⚠️ The body comes from FontBlockSnippet, the ONE home: written out here as
+                // well, the two spellings drift and the keyword path is the one nobody looks
+                // at — which is exactly how it came to be wrong in the first place.
+                new CompletionItem { Label = "fonts", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "fonts " + FontBlockSnippet("$0"), Detail = "Text faces per role, pre-filled with the faces in use; add `embedded` to subset-embed them in the exported PDF" },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)", Command = new Command { Title = "Suggest tempo", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
@@ -2124,7 +2463,7 @@ public sealed partial class LilySharpLanguageServer
     /// (title/composer/font) and the piece-wide defaults (time/key/tempo/octave).
     /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "composer", "font", "tempo", "time", "key", "octave" };
+        new(StringComparer.Ordinal) { "title", "composer", "fonts", "tempo", "time", "key", "octave" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

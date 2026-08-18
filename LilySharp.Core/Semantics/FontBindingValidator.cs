@@ -20,7 +20,7 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Reports what is wrong inside a <c>font { }</c> block: a key that is not a role, a key
+/// Reports what is wrong inside a <c>fonts { }</c> block: a key that is not a role, a key
 /// bound twice, a key with no face.
 /// </summary>
 /// <remarks>

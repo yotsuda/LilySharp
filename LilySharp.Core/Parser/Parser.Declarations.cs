@@ -339,54 +339,61 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// <c>font "NAME" [embedded]</c>, or the block form <c>font { KEY VALUE… }</c>.
+    /// <c>fonts { KEY VALUE… }</c> — the only form.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The block's tokens are kept FLAT, like every other declaration in this file: the
     /// entries are read back by <c>FontDeclarationSyntax.Entries</c> rather than shaped
     /// here, so a role vocabulary that grows does not grow the green tree. The parser's
     /// only job is to find the block's extent and to refuse a value that is neither a
     /// quoted name nor a bare word.
+    /// </para>
+    /// <para>
+    /// ⚠️ A VALUE WITHOUT A BLOCK IS STILL WORTH A SENTENCE. <c>fonts "Georgia"</c> is a
+    /// plausible first guess — every other metadata keyword in the language takes a bare
+    /// value — so it is answered with the block to write rather than with
+    /// "Expected 'OpenBrace'", which describes the parser's predicament and not the
+    /// writer's mistake.
+    /// </para>
     /// </remarks>
     private FontDeclarationGreen ParseFontDeclaration()
     {
-        var keyword = Advance(); // font
+        var keyword = Advance(); // fonts
 
         if (Check(SyntaxKind.OpenBrace))
             return ParseFontBlock(keyword);
 
+        // The tokens are KEPT, not dropped: a declaration that loses them slides every
+        // later `data-pos`, the LSP's jump targets and the columns of the diagnostics that
+        // follow (RULES §5.1).
         var tokens = new List<GreenNode?>();
+        string? face = Check(SyntaxKind.StringLiteral) ? Current.Text.Trim('"') : null;
 
-        // The font name is a quoted string — mirror ParseMetadataDeclaration's
-        // handling (font "Noto Serif CJK JP"); a bare, unquoted value is rejected.
-        if (Check(SyntaxKind.StringLiteral))
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
+            Math.Max(1, Current.Text.Length));
+        _diagnostics.Error(span, DiagnosticCodes.FontsNeedsABlock,
+            face is { Length: > 0 }
+                // The writer's own face name, so the fix is a copy rather than a reading.
+                ? $"'fonts' binds a face per text role, so it takes a block: "
+                  + $"fonts {{ serif \"{face}\"  sans \"{face}\" }} for the whole document's "
+                  + "text, or one role at a time, e.g. lyricText \"Charis SIL\"."
+                : "'fonts' takes a block of role bindings: fonts { serif \"Georgia\" }.");
+
+        // Consume the stray value so one mistake does not cascade into the rest of the file.
+        while (Check(SyntaxKind.StringLiteral) ||
+               Check(SyntaxKind.IntegerLiteral) ||
+               Check(SyntaxKind.Identifier))
         {
             tokens.Add(Advance());
         }
-        else
-        {
-            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
-            _diagnostics.Error(span, DiagnosticCodes.MetadataValueMustBeQuoted,
-                $"The {keyword.Text} value must be a quoted string, e.g. {keyword.Text} \"…\".");
-            // Recover by consuming a loose run so the rest still parses.
-            while (Check(SyntaxKind.StringLiteral) ||
-                   Check(SyntaxKind.IntegerLiteral) ||
-                   Check(SyntaxKind.Identifier))
-            {
-                tokens.Add(Advance());
-            }
-        }
-
-        // Optional trailing 'embedded' keyword: font "meiryo" embedded.
         if (Check(SyntaxKind.EmbeddedKeyword))
-        {
             tokens.Add(Advance());
-        }
 
         return new FontDeclarationGreen(keyword, [.. tokens]);
     }
 
-    // font { serif "Georgia"  lyricText "Charis SIL" "Noto Serif CJK JP"  embedded }
+    // fonts { serif "Georgia"  lyricText "Charis SIL" "Noto Serif CJK JP"  embedded }
     //
     // House style, the same as a part header: bare KEY, bare VALUEs, no colons and no
     // commas, entries separated by nothing but whitespace. That is also why an entry's
@@ -413,7 +420,7 @@ internal sealed partial class Parser
             // one stray token does not swallow the rest of the score.
             var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.FontBindingMissingValue,
-                "A 'font { }' entry is a key followed by quoted face names or a generic " +
+                "A 'fonts { }' entry is a key followed by quoted face names or a generic " +
                 "family, e.g. lyricText \"Charis SIL\" — '" + Current.Text + "' is neither.");
             tokens.Add(Advance());
         }
@@ -421,7 +428,7 @@ internal sealed partial class Parser
             tokens.Add(Advance());
         else
             _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
-                "This 'font {' has no closing '}'.");
+                "This 'fonts {' has no closing '}'.");
         return new FontDeclarationGreen(keyword, [.. tokens]);
     }
 

@@ -482,7 +482,7 @@ internal sealed partial class Parser
             SyntaxKind.Dollar => ParseVariableReference(),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
-            SyntaxKind.FontKeyword => ParseFontDeclaration(),
+            SyntaxKind.FontsKeyword => ParseFontDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),

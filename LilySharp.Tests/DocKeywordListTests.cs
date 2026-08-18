@@ -26,9 +26,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The three documents that publish a list of RESERVED WORDS, against the one table that
-/// decides them (<c>Lexer.GetKeywordKind</c>). Both directions: nothing listed may be free,
-/// and nothing reserved may be missing.
+/// The published lists of what the language holds, against the code that decides it. Both
+/// directions, for both lists: the RESERVED WORDS the three documents print, against
+/// <c>Lexer.GetKeywordKind</c>; and the SCORE ITEMS GRAMMAR.md's <c>ScoreItem</c> production
+/// and the parser's own stray-item message print, against <c>Parser.ParseRenderItem</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -142,5 +143,191 @@ public class DocKeywordListTests
         Assert.Equal(SyntaxKind.Identifier, KindOf("chordnames"));   // was listed, is free
         Assert.NotEqual(SyntaxKind.Identifier, KindOf("form"));      // was missing, is reserved
         Assert.Equal(SyntaxKind.Identifier, KindOf("structure"));    // the rename, in one line
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────────
+    // The OTHER list these documents publish: what a `score { }` body may hold.
+    //
+    // ⚠️ The reserved-word checks above cannot see this one. `staffGroup` and `choirStaff`
+    // ARE reserved and ARE in all three word lists, so those tests were green while the
+    // ScoreItem production, the stray-item message and every worked example omitted them —
+    // for 62 sessions nothing in the product said what either keyword does. That is the
+    // second shape of doc rot this file's own remarks name ("productions that disagree with
+    // the parser"), and it had no machine until now.
+    // ───────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Every reserved word, asked one at a time whether <c>ParseRenderItem</c> gives it a
+    /// branch of its own. Machine-derived on purpose: a hand-written candidate list is the
+    /// thing that rotted, and <see cref="EveryReservedWord_IsInTheDoc"/> already proves the
+    /// table this reads covers every keyword kind (RULES §5.0 — enumerate, do not recall).
+    /// </summary>
+    /// <remarks>
+    /// Words that can NAME A PART are excluded: they are accepted inside a score, but by the
+    /// bare-part-name branch (a MIDI-only item), not by a branch of their own. That branch is
+    /// checked separately by <see cref="TheBarePartNameItem_IsInTheProduction"/> — keeping the
+    /// two apart is what makes "the parser accepts it" mean one thing here.
+    /// </remarks>
+    private static string[] KeywordScoreItems() =>
+        Listed("docs/SYNTAX_REFERENCE.md")
+            .Where(w => KindOf(w) != SyntaxKind.Identifier)
+            .Where(w => !SyntaxFacts.IsPartNameKind(KindOf(w)))
+            .Where(w => !IsStrayInsideAScore(w))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(w => w, StringComparer.Ordinal)
+            .ToArray();
+
+    private const string ScorePrefix = "score main { ";
+
+    /// <summary>
+    /// Does a score body refuse this word — is there an error ON THE WORD ITSELF?
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Read as "not LYS0030" this question answers wrongly, and the first draft did:
+    /// <c>using</c> has a branch in <c>ParseRenderItem</c> whose whole purpose is to REFUSE it
+    /// (LYS0029, "a 'using' cannot go inside a score"), so a stray-code test called it
+    /// accepted. Anchoring on the span separates the two: a word that reached a real branch
+    /// and merely lacks its ARGUMENTS reports on what is missing — <c>score main { staff }</c>
+    /// lands on the '}' — while a refused word is reported where it stands.
+    /// </remarks>
+    private static bool IsStrayInsideAScore(string word)
+    {
+        var span = new { Start = ScorePrefix.Length, End = ScorePrefix.Length + word.Length };
+        return SyntaxTree.Parse($"{ScorePrefix}{word} }}").Diagnostics
+            .Any(d => d.Severity == DiagnosticSeverity.Error
+                   && d.Span.Start < span.End && d.Span.Start + d.Span.Length > span.Start);
+    }
+
+    /// <summary>The spellings GRAMMAR.md's <c>ScoreItem</c> production publishes, resolved one
+    /// level: an alternative is either a quoted terminal or the name of another production,
+    /// and a named production contributes every terminal it quotes.</summary>
+    private static string[] ProductionSpellings()
+    {
+        string doc = Doc("docs/GRAMMAR.md");
+        string block = Regex.Match(doc, @"^ScoreItem\s*=(.*?);",
+            RegexOptions.Singleline | RegexOptions.Multiline).Groups[1].Value;
+        Assert.False(string.IsNullOrWhiteSpace(block),
+            "the ScoreItem production did not extract — the document's shape moved, and an "
+            + "empty list would make every assertion below vacuously true");
+
+        var found = new List<string>();
+        foreach (string alternative in Strip(block).Split('|'))
+        {
+            // The FIRST quoted terminal of the alternative is the word that opens the item.
+            // ⚠️ Every terminal would over-collect: StaffRender quotes 'with' in its tail,
+            // and a first draft published `with` as a score item because of it.
+            var terminal = Regex.Match(alternative, @"'([A-Za-z][A-Za-z0-9_]*)'");
+            if (terminal.Success) { found.Add(terminal.Groups[1].Value); continue; }
+
+            // An alternative that leads with a NON-TERMINAL names it instead; resolve one
+            // level and take that production's own opening terminal (StaffRender -> staff).
+            // A production with no terminal at all (PartRef = Identifier) adds nothing, which
+            // is right: the bare-name item has no keyword to publish.
+            string name = Regex.Match(alternative.Trim(), @"^([A-Za-z][A-Za-z0-9]*)").Groups[1].Value;
+            if (name.Length == 0) continue;
+            string body = Regex.Match(doc, $@"^{name}\s*=(.*?);",
+                RegexOptions.Singleline | RegexOptions.Multiline).Groups[1].Value;
+            var resolved = Regex.Match(Strip(body), @"'([A-Za-z][A-Za-z0-9_]*)'");
+            if (resolved.Success) found.Add(resolved.Groups[1].Value);
+        }
+        return found.Distinct(StringComparer.Ordinal).OrderBy(w => w, StringComparer.Ordinal).ToArray();
+    }
+
+    /// <summary>(* … *) is commentary, not grammar — a spelling quoted inside one is prose.</summary>
+    private static string Strip(string ebnf) =>
+        Regex.Replace(ebnf, @"\(\*.*?\*\)", " ", RegexOptions.Singleline);
+
+    /// <summary>The vocabulary the parser itself recites when it refuses an item — the ONE
+    /// list a writer actually reads, since it arrives at the moment of the mistake.</summary>
+    /// <remarks>
+    /// ⚠️ The trigger has to be a RESERVED word with no score branch. An invented name like
+    /// <c>zzz</c> does not work: it lexes as an Identifier, so the bare-part-name branch takes
+    /// it and no stray item is ever reported (the first draft asserted on a null).
+    /// </remarks>
+    private static string StrayItemVocabulary()
+    {
+        var d = SyntaxTree.Parse($"{ScorePrefix}voice }}").Diagnostics
+            .FirstOrDefault(x => x.Code == DiagnosticCodes.StrayItemToken);
+        Assert.NotNull(d);
+        return d!.Message;
+    }
+
+    [Fact]
+    public void ScoreItemProduction_NamesEveryItemTheParserAccepts()
+    {
+        string[] accepted = KeywordScoreItems();
+        Assert.True(accepted.Length > 8, $"only {accepted.Length} score items measured");
+
+        string[] published = ProductionSpellings();
+        string[] missing = accepted.Except(published, StringComparer.Ordinal).ToArray();
+
+        Assert.True(missing.Length == 0,
+            "docs/GRAMMAR.md ScoreItem does not publish these, and a score body takes them: "
+            + string.Join(", ", missing)
+            + $"\n  measured:  {string.Join(" ", accepted)}"
+            + $"\n  published: {string.Join(" ", published)}");
+    }
+
+    [Fact]
+    public void ScoreItemProduction_PublishesNothingTheParserRefuses()
+    {
+        string[] published = ProductionSpellings();
+        Assert.True(published.Length > 8, $"only {published.Length} spellings extracted");
+
+        string[] refused = published.Where(IsStrayInsideAScore).ToArray();
+        Assert.True(refused.Length == 0,
+            "docs/GRAMMAR.md ScoreItem publishes these, and a score body refuses them: "
+            + string.Join(", ", refused));
+    }
+
+    [Fact]
+    public void TheStrayItemMessage_NamesEveryItemTheParserAccepts()
+    {
+        string vocabulary = StrayItemVocabulary();
+        string[] missing = KeywordScoreItems()
+            .Where(w => !Regex.IsMatch(vocabulary, $@"'{Regex.Escape(w)}\b"))
+            .ToArray();
+
+        Assert.True(missing.Length == 0,
+            "the message a writer gets for a stray score item does not name these, and a "
+            + "score body takes them: " + string.Join(", ", missing)
+            + $"\n  message: {vocabulary}");
+    }
+
+    [Fact]
+    public void TheBarePartNameItem_IsInTheProduction()
+    {
+        // A bare part name renders that part to MIDI only, so a score of nothing but bare
+        // names has nothing to engrave — the item is real, and the production has to say so.
+        Assert.False(
+            SyntaxTree.Parse(
+                "part m { clef treble }\nsection A { m { c4 } }\nform main { A }\n"
+                + "score main { staff m\n  m }").HasErrors,
+            "a bare part name beside a staff is a score item and must parse");
+
+        // ⚠️ A bare `Contains("PartRef")` passes on the tab/ossia/chords alternatives, which
+        // all take a PartRef as an ARGUMENT — the claim here is that PartRef is an
+        // alternative in its own right, so match the alternative.
+        string block = Regex.Match(Doc("docs/GRAMMAR.md"), @"^ScoreItem\s*=(.*?);",
+            RegexOptions.Singleline | RegexOptions.Multiline).Groups[1].Value;
+        Assert.Matches(@"\|\s*PartRef\b", Strip(block));
+    }
+
+    [Fact]
+    public void TheScoreItemCheckCanFail()
+    {
+        // ★ Both directions are shown to bite, on the words that were actually wrong
+        // (RULES §5.4 — a ratchet written after the fix is green for free).
+        //
+        // ⑴ The parser really does give these two a branch: they were absent from the
+        //    production, the stray-item message and every example, and nothing was red.
+        Assert.False(IsStrayInsideAScore("staffGroup"));
+        Assert.False(IsStrayInsideAScore("choirStaff"));
+        // ⑵ …and the check can go the other way: a spelling no score body takes.
+        Assert.True(IsStrayInsideAScore("voice"));
+        Assert.True(IsStrayInsideAScore("section"));
+        // ⑶ The extractors are not vacuous — an empty set would pass every assertion above.
+        Assert.NotEmpty(ProductionSpellings());
+        Assert.NotEmpty(KeywordScoreItems());
     }
 }

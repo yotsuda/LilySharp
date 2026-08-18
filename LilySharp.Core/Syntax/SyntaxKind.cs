@@ -127,8 +127,8 @@ public enum SyntaxKind : ushort
     TitleKeyword,
     /// <summary>The <c>composer</c> keyword.</summary>
     ComposerKeyword,
-    /// <summary>The <c>font</c> keyword.</summary>
-    FontKeyword,
+    /// <summary>The <c>fonts</c> keyword — the block that binds a face per text role.</summary>
+    FontsKeyword,
     /// <summary>The <c>embedded</c> keyword.</summary>
     EmbeddedKeyword,
     /// <summary>The <c>tempo</c> keyword.</summary>

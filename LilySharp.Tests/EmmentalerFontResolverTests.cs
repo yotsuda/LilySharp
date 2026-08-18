@@ -77,7 +77,7 @@ public class EmmentalerFontResolverTests
     {
         // The stand-in follows the ROLE's family, not a fixed serif: chord symbols are
         // reserved against the bundled Heros, so falling back to Schola would draw a
-        // face 9% off the boxes the spacing built. Before `font { }` there was one
+        // face 9% off the boxes the spacing built. Before `fonts { }` there was one
         // configured face and it always stood in as serif, which was right only because
         // `font "X"` bound every role at once.
         var r = new EmmentalerFontResolver();
@@ -108,7 +108,7 @@ public class EmmentalerFontResolverTests
     [Fact]
     public void TwoRolesBoundToTwoAbsentFaces_EachResolvesToItsOwn()
     {
-        // One document, several configured faces — the shape `font { }` introduced.
+        // One document, several configured faces — the shape `fonts { }` introduced.
         // A single-face resolver answered the FIRST name for every one of them.
         const string Other = "NoSuchFontFace-Second";
         var r = new EmmentalerFontResolver();

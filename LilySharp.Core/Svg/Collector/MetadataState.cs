@@ -28,7 +28,7 @@ internal sealed class MetadataState
     public string? Composer;
 
     // Which face each kind of non-music text is drawn in, from the top-level
-    // `font "NAME" [embedded]` or `font { … }` directive. Never null: a score without
+    // `fonts { … }` directive. Never null: a score without
     // one gets TextFontPlan.Default, so no reader has to spell the "nothing was asked
     // for" case a second way.
     public Rendering.TextFontPlan Fonts = Rendering.TextFontPlan.Default;

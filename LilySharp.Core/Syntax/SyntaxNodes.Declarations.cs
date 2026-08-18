@@ -359,8 +359,9 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Font directive — <c>font "NAME" [embedded]</c>, or the block form
-/// <c>font { KEY VALUE… }</c> that binds a face per text role.
+/// Font directive — <c>fonts { KEY VALUE… }</c>, binding a face per text role.
+/// ⚠️ A node whose <c>IsBlock</c> is false is the REMOVED one-line form, kept in the tree
+/// (with its diagnostic) so no source position slides — it binds nothing.
 /// </summary>
 /// <remarks>
 /// The green node holds the block's tokens FLAT (the parser only found the extent), so
@@ -377,7 +378,7 @@ public sealed class FontDeclarationSyntax : SyntaxNode
     /// <summary>The <c>font</c> keyword token.</summary>
     public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>True when this directive is written as <c>font { … }</c>.</summary>
+    /// <summary>True when this directive is written as <c>fonts { … }</c>.</summary>
     public bool IsBlock =>
         SlotCount > 1 && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
 

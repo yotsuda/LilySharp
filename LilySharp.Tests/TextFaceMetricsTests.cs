@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 /// on: green here, red on a build agent, and worst of all green-for-the-wrong-reason on a
 /// machine where Skia substitutes silently. The bundled files are present by construction,
 /// so naming one is a named-face question with a deterministic answer everywhere — and it
-/// exercises exactly the branch a score's <c>font { }</c> directive will take.
+/// exercises exactly the branch a score's <c>fonts { }</c> directive will take.
 /// <para>
 /// The pair that carries the weight is <see cref="NamingAFace_DecidesTheFile_NotTheFallbackFamily"/>:
 /// the fallback family says SERIF and the name says the SANS file, so a reading that

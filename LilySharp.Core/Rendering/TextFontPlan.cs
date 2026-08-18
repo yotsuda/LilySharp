@@ -28,9 +28,9 @@ namespace LilySharp.Core.Rendering;
 /// <list type="number">
 /// <item>the leaf's own binding (<c>lyricText "Charis SIL"</c>),</item>
 /// <item>its group's binding (<c>lyrics "Charis SIL"</c>),</item>
-/// <item>the generic family it belongs to (<c>serif "Georgia"</c>, which
-/// <c>font "Georgia"</c> is sugar for), UNLESS the role is notation
-/// (<see cref="TextRoles.IsNotation"/>),</item>
+/// <item>the generic family it belongs to (<c>serif "Georgia"</c>) — binding BOTH
+/// families is how a score says "the whole document's text" — UNLESS the role is
+/// notation (<see cref="TextRoles.IsNotation"/>),</item>
 /// <item>the bundled face.</item>
 /// </list>
 /// The narrower spelling wins wherever both are written, in either source order, which is
@@ -285,13 +285,18 @@ public sealed class TextFontPlan
         }
 
         /// <summary>
-        /// The whole-document shorthand: <c>font "NAME"</c> binds BOTH generic families,
-        /// which is exactly what the retired <c>TextFontDrawingContext</c> did when it
-        /// swapped every generic family for one name.
+        /// Binds BOTH generic families to one chain — "the whole document's text", which a
+        /// score writes as <c>fonts { serif "NAME"  sans "NAME" }</c>.
         /// </summary>
         /// <remarks>
-        /// ⚠️ It reaches notation NO LONGER — see <see cref="TextRoles.IsNotation"/>. That
-        /// is the one behaviour this shorthand lost, deliberately, on 2026-08-18.
+        /// ⚠️ It does not reach notation — see <see cref="TextRoles.IsNotation"/>.
+        /// <para>
+        /// ⚠️ NO SOURCE SPELLING REACHES THIS ANY MORE. It served the one-line
+        /// <c>font "NAME"</c>, removed 2026-08-18; a block spells the same thing with two
+        /// entries and takes the ordinary <c>Family</c> path. It survives as the Builder's
+        /// own vocabulary — several tests build plans with it — so it is not dead code, but
+        /// it is no longer evidence that the language has a shorthand.
+        /// </para>
         /// </remarks>
         public Builder Everything(IEnumerable<string> names)
         {

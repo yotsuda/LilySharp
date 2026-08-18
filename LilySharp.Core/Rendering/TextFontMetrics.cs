@@ -358,7 +358,7 @@ public static class TextFontMetrics
     /// loading its OWN <c>00-lilypond-fonts.conf</c> first, the system default second, and
     /// its <c>99-lilypond-fonts.conf</c> last.
     /// <para>
-    /// It is load-bearing twice over. It keeps <c>font { serif "TeX Gyre Schola" }</c>
+    /// It is load-bearing twice over. It keeps <c>fonts { serif "TeX Gyre Schola" }</c>
     /// measuring the same file the default does — writing the bundled family's own name
     /// must not become a way to get a DIFFERENT Schola that happens to be installed. And
     /// because the bundled faces are present on every machine by construction, it is what
@@ -378,13 +378,13 @@ public static class TextFontMetrics
     /// file?
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE ANSWER IS ABOUT THE NAME, NOT THE BINDING. <c>font { sans "TeX Gyre Schola" }</c>
+    /// ⚠️ THE ANSWER IS ABOUT THE NAME, NOT THE BINDING. <c>fonts { sans "TeX Gyre Schola" }</c>
     /// measures the SERIF file, because a name refers to a face and not to the slot it was
     /// written in; <paramref name="sans"/> is the family of the FILE, which is why it can
     /// disagree with <see cref="TextFace.Sans"/> (that one is the fallback family).
     /// <para>
     /// It exists so a backend can ask the question rather than re-derive it. The PDF resolver
-    /// derived it from the BINDING and so served <c>font { sans "TeX Gyre Schola" }</c> with
+    /// derived it from the BINDING and so served <c>fonts { sans "TeX Gyre Schola" }</c> with
     /// TeX Gyre Heros while the layout had reserved TeX Gyre Schola — a whole face apart, and
     /// the reason this is one function and not two spellings.
     /// </para>

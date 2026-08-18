@@ -55,11 +55,14 @@ internal static class FontPlanReader
 
         if (!font.IsBlock)
         {
-            // font "NAME" [embedded] — the whole-document shorthand. One name only: the
-            // one-liner has no way to spell a chain, and inventing one here
-            // (font "A" "B") would be a second syntax for what the block already says.
-            if (font.FontName is { Length: > 0 } name)
-                builder.Everything([name]);
+            // The one-line `font "NAME"` was removed 2026-08-18; the parser reports it
+            // (LYS8007) and keeps its tokens so no source position slides. It binds
+            // NOTHING here.
+            //
+            // ⚠️ Applying the old meaning anyway would be worse than either choice: the
+            // score would engrave in the named face while the editor underlined the line
+            // as an error, and the writer would have no reason to believe the message.
+            // A refused directive has to be refused all the way through.
             problems = found;
             return builder.Build();
         }
