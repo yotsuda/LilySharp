@@ -368,4 +368,66 @@ public class PedalTests
         Assert.Equal(10, result[0].SourcePosition);
         Assert.Equal(20, result[1].SourcePosition);
     }
+
+    // --- WHICH PEDAL FAMILY LANDS NEAREST THE STAFF (session 206) ---
+
+    /// <summary>All three pedals struck together, printed as text.</summary>
+    private const string ThreePedalsAtOnce = """
+        part pf {
+          clef bass
+          pedal text
+          section A { c1@sustainOn@sostenutoOn@unaCorda | c1@sustainOff@sostenutoOff@treCorde }
+        }
+
+        form main { A }
+
+        score main { staff pf }
+        """;
+
+    /// <summary>
+    /// ⚠️ THREE SEPARATE GROBS, ALL AT outside-staff-priority 1000, so priority does not order
+    /// them — only measurement does. Until 2026-08-18 una corda was ranked OUTERMOST, which
+    /// <c>PedalFamilyRank</c>'s own comment called a guess and marked as one; LilyPond puts it
+    /// NEAREST, so on a three-pedal book every family sat one row wrong.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED: audit/lp-geometry/probes/pedal-three.ly. Distance from the staff's bottom
+    /// line to each row — una corda 2.777500, sostenuto 4.738700, sustain 7.181300.
+    /// <para>
+    /// ⚠️ THE SUSTAIN ROW IS GLYPHS, NOT TEXT, on both engines (LilyPond draws "Ped." with
+    /// Emmentaler, and Lily# ported that in session 204), which is why this reads it as a
+    /// MUSIC glyph while the other two are read as text. A probe that scanned text alone
+    /// reported two rows and missed the third in silence.
+    /// </para>
+    /// <para>
+    /// The ORDER is asserted, not the distances: LilyPond's rows step 1.961 then 2.443 (each
+    /// row's own ink) where Lily# uses one StackGap for both, and that step model is a
+    /// separate quantity with no ledger point yet.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TheThreePedalFamilies_StackInLilyPondsOrder()
+    {
+        string svg = LiveRender.SvgFromRenderSpec(ThreePedalsAtOnce);
+        double staffBottom = System.Text.RegularExpressions.Regex
+            .Matches(svg, @"<line x1=""0\.00"" y1=""([\d.]+)"" x2=""[\d.]+"" y2=""\1""")
+            .Select(m => double.Parse(m.Groups[1].Value)).Distinct().Max();
+
+        double RowOf(string pattern) => System.Text.RegularExpressions.Regex
+            .Matches(svg, pattern)
+            .Select(m => double.Parse(m.Groups[1].Value))
+            .Where(y => y > staffBottom).Min() - staffBottom;
+
+        double unaCorda = RowOf(@"<text x=""[\d.]+"" y=""([\d.]+)""[^>]*>una corda</text>");
+        double sostenuto = RowOf(@"<text x=""[\d.]+"" y=""([\d.]+)""[^>]*>Sost\. Ped\.</text>");
+        // The sustain word is a run of MUSIC glyphs — see the remarks.
+        double sustain = RowOf(@"<text class=""music"" x=""[\d.]+"" y=""([\d.]+)""");
+
+        Assert.True(unaCorda < sostenuto,
+            $"una corda must sit NEAREST the staff: it is at {unaCorda:F2} and sostenuto at "
+            + $"{sostenuto:F2}");
+        Assert.True(sostenuto < sustain,
+            $"sustain must sit OUTERMOST: sostenuto is at {sostenuto:F2} and sustain at "
+            + $"{sustain:F2}");
+    }
 }

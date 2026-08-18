@@ -2778,6 +2778,58 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Bar line <paramref name="barIndex"/>'s ink right edge → the END OF THE STAFF LINE it
+    /// stands on: everything a line spends after its last musical column, which on a line that
+    /// breaks into a key or meter change is the whole end-of-line courtesy group PLUS the gap
+    /// the group's last member owes to <c>right-edge</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ TWO DRAWN THINGS, NO METRICS TABLE. Both ends are ink the renderer put down — a bar
+    /// line's rect and a staff line's stroke — so the glyph widths inside the span enter
+    /// through each engine's own drawing rather than through the table being audited. That is
+    /// what lets this point see a wrong courtesy width as well as a wrong gap; which of the
+    /// two moved is then read off the neighbouring points, not off this one.
+    /// <para>
+    /// ⚠️ THE LILYPOND SIDE IS THE LINE EDGE, NOT THE STAFF SYMBOL. LilyPond's StaffSymbol
+    /// X-extent is inset by half the line thickness at both ends (0.05), so its right end is
+    /// 0.05 short of the line edge; Lily# draws its staff line to the edge. The LilyPond
+    /// values recorded for these points therefore add that 0.05 back, and
+    /// probes/courtesy-meter.ly says so where it prints them. That inset is a real ±0.05
+    /// difference between the engines and is NOT what these points are about.
+    /// </para>
+    /// <para>
+    /// The staff lines are chosen by the Y band the bar line's own stencil spans, so the
+    /// answer is about the system this bar line is on and not "whichever staff line was
+    /// longest on the page".
+    /// </para>
+    /// <para>
+    /// ⚠️ BUT <paramref name="barIndex"/> ITSELF IS PAGE-WIDE AND ORDERED BY X, not by system
+    /// (see <see cref="Barlines"/>). On a two-system book an inner bar line of the SECOND
+    /// system can sort ahead of the first system's break bar and steal index 0 — measured, and
+    /// it read 48.901495 against LilyPond's 7.749800 while both engines were drawing the right
+    /// thing. Every book that feeds this reading is therefore written with ONE measure each
+    /// side of the break, which is the shape the other courtesy twins already have.
+    /// </para>
+    /// </remarks>
+    public double BarlineRightToStaffLineEnd(int barIndex)
+    {
+        var bar = Barline(barIndex);
+        double right = bar.X + bar.Width;
+        var crossed = Lines
+            .Where(l => System.Math.Abs(l.Y1 - l.Y2) < 1e-9
+                     && l.Y1 >= bar.Y - 1e-6
+                     && l.Y1 <= bar.Y + bar.Height + 1e-6)
+            .ToList();
+        if (crossed.Count == 0)
+            throw new InvalidOperationException(
+                $"bar line #{barIndex} (x={bar.X:F6}, y={bar.Y:F6}..{bar.Y + bar.Height:F6}) "
+                + "crosses no horizontal line, so there is no staff line to measure its end "
+                + $"— the probe drew {Lines.Count} line(s) in all.\nDrawn geometry:\n"
+                + Describe());
+        return crossed.Max(l => System.Math.Max(l.X1, l.X2)) - right;
+    }
+
+    /// <summary>
     /// Fret digits on a tab staff, left to right. LilyPond grob: <c>TabNoteHead</c>.
     /// </summary>
     /// <remarks>

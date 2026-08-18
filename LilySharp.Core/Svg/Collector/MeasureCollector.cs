@@ -1092,6 +1092,22 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — finger-number event handling.</remarks>
     private readonly Dictionary<int, int> _fingeringByPosition = new();
+    /// <summary>
+    /// Maps a note-attached compound mark's source position (the <c>@mark("A")</c> of
+    /// <c>c1@mark("A")</c>) to the measure index its HOST NOTE begins in.
+    /// </summary>
+    /// <remarks>
+    /// Such a mark is surfaced twice: once as an articulation of its note (recorded here)
+    /// and once as a statement node in the music sequence, where the mark itself is built
+    /// because that is where the label is read. The statement node is reached AFTER the
+    /// host note has been added, so <c>builder.CurrentMeasureIndex</c> there answers
+    /// "where is the builder now", not "where was the mark written" — and a note that
+    /// fills its bar has already carried the builder across the barline. This records the
+    /// answer to the second question while the host note is still in hand.
+    /// It also carries <c>_metadataMeasureOffset</c>, which the statement node does not
+    /// apply — inside a <c>voice { … }</c> span the mark was shifted by that too.
+    /// </remarks>
+    private readonly Dictionary<int, int> _markHostMeasure = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     /// <summary>
@@ -2656,6 +2672,7 @@ public sealed partial class MeasureCollector
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
+        _markHostMeasure.Clear();
         _tieTargetWarnings.Clear();
         _unpairedSlurWarnings.Clear();
         _unpairedBeamWarnings.Clear();

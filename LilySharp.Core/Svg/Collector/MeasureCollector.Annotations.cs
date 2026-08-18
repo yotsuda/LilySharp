@@ -569,6 +569,16 @@ public sealed partial class MeasureCollector
                     _musicMarks.Add(new MusicMarkItem(
                         compoundMark, measureIndex, markSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
                 }
+                else
+                {
+                    // Everything still here is BUILT by the statement-level handler, which
+                    // reads the label — @mark("A") is the spelling a book can reach. That
+                    // handler runs after this note has been added, so it can no longer see
+                    // which measure the mark was written in; record it while the host note
+                    // still says so. The mark is still made in exactly one place: only the
+                    // measure travels. See _markHostMeasure.
+                    _markHostMeasure[markSyntax.Position] = measureIndex;
+                }
             }
         }
     }

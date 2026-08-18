@@ -260,4 +260,69 @@ public class DynamicPlacementTests
             "the dynamic must hang below the rest Rest_collision pushed out of the staff: "
             + $"printed rests {moved.Baseline:F6}, spacer control {spacer.Baseline:F6}");
     }
+
+    // --- AND THE NEXT SYSTEM HAS TO CLEAR IT (session 206) ---
+
+    /// <summary>
+    /// Two systems, the first carrying a below-staff annotation hung under a ledger-line note
+    /// so it reaches deep enough to be the binding grob between them.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE COLUMN MATTERS. A first draft hung the text on the LAST note of system 1, where
+    /// nothing on system 2 stands at that x, and the natural system gap swallowed it — the
+    /// probe read the same number before and after the fix and would have passed against the
+    /// defect. The note is the FIRST of the system, and low, for that reason.
+    /// </remarks>
+    private static string TwoSystemsWithBelowAnnotation(string annotation) => $$"""
+        part melody {
+          clef treble
+          section A { c,,1{{annotation}} | c1 | c1 | c1 | break }
+          section B { c1 | c1 }
+        }
+
+        form main { A B }
+
+        score main { staff melody }
+        """;
+
+    /// <summary>
+    /// ⚠️ A BELOW-STAFF DYNAMIC — and free <c>@text</c>, which rides the same pipeline — is
+    /// part of the system's silhouette, so the next system must clear it.
+    /// <c>EnrichExtentsWithAnnotationProtrusions</c> has counted these in the SCALAR extents
+    /// all along; the X-aware inter-system distance never saw them, and it wins wherever it
+    /// can prove room. The result was ink on ink: on the owner's book a "D.S. Time Straight"
+    /// under system 1 had its descender printed over by the white-filled box of a section
+    /// label above system 2 (ink bottom 22.39 against box top 22.18).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, before the fix: the gap read the SAME number with and without the text
+    /// (25.95 either way in the probe this is built from), while a ledger-line note under the
+    /// same column moved it 1.40 — so the instrument was watching, and the text was invisible
+    /// to it. After: +2.44.
+    /// <para>
+    /// LILYPOND-REF: lily/page-layout-problem.cc build_system_skyline — the system skyline
+    /// contains the DynamicText grob like any other outside-staff stencil.
+    /// </para>
+    /// <para>
+    /// Asserted as a RELATION (the gap must grow) rather than a pinned distance: what is
+    /// being fixed is that the grob is in the silhouette at all, and the distance it then
+    /// earns is the paging rule's, which this test is not about.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("@text(\"gggggggggggggggggggg\")")]   // free expressive text
+    [InlineData("@pp")]                                 // an ordinary dynamic, same pipeline
+    public void ABelowStaffDynamic_PushesTheNextSystemAway(string annotation)
+    {
+        double bare = LpFidelity.RenderedGeometry
+            .Render(TwoSystemsWithBelowAnnotation("")).StaffRefpointGap(5, 5);
+        double withIt = LpFidelity.RenderedGeometry
+            .Render(TwoSystemsWithBelowAnnotation(annotation)).StaffRefpointGap(5, 5);
+
+        Assert.True(withIt > bare + 0.5,
+            $"the next system must clear the below-staff annotation: without it the systems "
+            + $"are {bare:F6} apart, with it {withIt:F6} — the annotation bought nothing, so "
+            + "it is not in the silhouette");
+    }
 }
+

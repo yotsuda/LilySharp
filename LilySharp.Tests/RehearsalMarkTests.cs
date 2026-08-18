@@ -308,4 +308,65 @@ public class RehearsalMarkTests
         Assert.True(twoRowY > oneRowY + 2.0,
             $"two-row mark YUp ({twoRowY:F2}) should sit well above one-row ({oneRowY:F2})");
     }
+
+    // --- WHICH measure a mark belongs to (the COLLECTOR decides; every test above
+    //     hands the engraver a MeasureIndex already decided, which is why the
+    //     collector could hand it the wrong one for 200 sessions) ---
+
+    private static System.Collections.Generic.IEnumerable<MusicMarkItem> CollectedMarks(string music)
+        => new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .Collect(MusicSource.Parse(music)).MusicMarks
+            .Where(m => m.Type == MusicMarkType.Rehearsal);
+
+    /// <summary>
+    /// ⚠️ A mark is written ON a note, so it belongs to the bar THAT NOTE begins in.
+    /// The whole note is the case that used to fail: it fills its bar, so by the time
+    /// the mark's own node was walked the builder had already crossed the barline and
+    /// the mark was engraved one bar late. Every shorter duration hid the defect by
+    /// leaving the builder inside the same bar.
+    /// </summary>
+    [Theory]
+    [InlineData("c1@mark(\"Intro\") | g1 |")]        // fills the bar — the reported case
+    [InlineData("c2@mark(\"Intro\") c2 | g1 |")]     // half
+    [InlineData("c4@mark(\"Intro\") d4 e4 f4 | g1 |")]
+    [InlineData("c4 d4@mark(\"Intro\") e4 f4 | g1 |")]   // mid-bar: still bar 0
+    [InlineData("c2. c4@mark(\"Intro\") | g1 |")]        // last note OF the bar
+    public void AMarkOnANote_BelongsToTheBarThatNoteBeginsIn(string music)
+        => Assert.Equal(0, Assert.Single(CollectedMarks(music)).MeasureIndex);
+
+    /// <summary>
+    /// The same defect at the end of the piece did not print the mark one bar late —
+    /// it printed nothing at all, because the bar it was sent to never came. The
+    /// silence is the reason this is asserted on the RENDERED page and not only on
+    /// the index: a mark addressed to measure N+1 is dropped downstream, so an index
+    /// assertion alone would still pass a layout that quietly discards it.
+    /// </summary>
+    [Fact]
+    public void AMarkOnTheLastNote_IsPrintedAndNotDroppedForABarThatNeverCame()
+    {
+        Assert.Equal(1, Assert.Single(CollectedMarks("c1 | g1@mark(\"Coda\") |")).MeasureIndex);
+        Assert.Contains("Coda", LiveRender.Svg("c1 | g1@mark(\"Coda\") |"));
+    }
+
+    /// <summary>
+    /// The engraved page, not the model: the reported book was <c>c1@mark("Intro") | g'1</c>
+    /// and the box was drawn past the first barline. Ink left of that barline is the
+    /// whole claim, and it is read off the drawn SVG.
+    /// </summary>
+    [Fact]
+    public void AMarkOnABarFillingNote_IsDrawnBeforeTheFirstBarline()
+    {
+        string svg = LiveRender.Svg("c1@mark(\"Intro\") | g1 |");
+
+        double markX = System.Text.RegularExpressions.Regex
+            .Matches(svg, @"<text x=""([\d.]+)""[^>]*>Intro</text>")
+            .Select(m => double.Parse(m.Groups[1].Value)).Single();
+        double firstBarlineX = System.Text.RegularExpressions.Regex
+            .Matches(svg, @"<rect x=""([\d.]+)""[^>]*height=""4\.00""")
+            .Select(m => double.Parse(m.Groups[1].Value)).Min();
+
+        Assert.True(markX < firstBarlineX,
+            $"the mark ({markX:F2}) is drawn past the first barline ({firstBarlineX:F2}) — it is written on the note in bar 1");
+    }
 }
+

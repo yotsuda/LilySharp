@@ -540,7 +540,13 @@ internal static class SpacingRules
     /// the break: courtesy at the old line's end, real one in the new
     /// line's prefix.
     /// </remarks>
-    public static double KeyCourtesySuffixWidth(int prevSharps, int nextSharps)
+    /// <param name="meterFollows">
+    /// True when a courtesy METER stands after this key in the same end-of-line group. Then
+    /// the key is not the group's last member and does NOT pay the gap to the right edge —
+    /// the meter does, out of its own alist. Getting this wrong charges 0.5 twice or not at
+    /// all, and both look like a spacing bug rather than a double-count.
+    /// </param>
+    public static double KeyCourtesySuffixWidth(int prevSharps, int nextSharps, bool meterFollows)
     {
         int natCount = CancellationNaturalCount(prevSharps, nextSharps);
 
@@ -557,7 +563,24 @@ internal static class SpacingRules
                + Math.Max(0, natCount - 1) * 0.3
                + BreakAlignGap(BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
         if (nextSharps != 0)
-            w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0) + 0.4;
+            // ⚠️ A FIFTH BARE 0.4 STOOD HERE, trailing the signature, and it is the same shape
+            // as the fourth the note below describes: unnamed, uncited, and standing in for a
+            // space-alist entry — this one for `right-edge`, which is 0.5. No ledger point
+            // reached it because no point measured the line's right edge at all. It is gone;
+            // the gap is charged once, below, by whichever grob is actually last.
+            // The signature's own width needs no padding after it: LilyPond's A-major
+            // KeySignature measures 3.300030 = 3 x 1.100010, which is exactly this product
+            // (measured 2026-08-18, probes/courtesy-meter.ly score KEYONLY).
+            w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0);
+        // The group's last member owes a gap to `right-edge`, and which grob that is depends
+        // on what the change prints: a signature when the new key has accidentals, otherwise
+        // the bare cancellation. Both declare 0.5, so the ARITHMETIC does not care — reading
+        // the entry that is actually last is what keeps that a fact rather than a coincidence
+        // (the same reason KeyCourtesySuffixWidth opens its group off the right symbol above).
+        if (!meterFollows)
+            w += BreakAlignGap(
+                nextSharps != 0 ? BreakAlignSymbol.KeySignature : BreakAlignSymbol.KeyCancellation,
+                BreakAlignSymbol.RightEdge);
         return w;
     }
 
@@ -646,7 +669,12 @@ internal static class SpacingRules
                afterCourtesyKey ? BreakAlignSymbol.KeySignature : BreakAlignSymbol.StaffBar,
                BreakAlignSymbol.TimeSignature)
            + GlyphMetrics.GetTimeSigWidth(
-               change.NewTime.NumeratorText, change.NewTime.DenominatorText);
+               change.NewTime.NumeratorText, change.NewTime.DenominatorText)
+           // ⚠️ AND THE GAP TO THE EDGE ITSELF. A break-align group has a member to the RIGHT
+           // of its last grob — `right-edge` — and the meter declares 0.5 for it. Without this
+           // the staff line stopped at the meter's advance edge: 0.07 ss of white on the
+           // owner's book, which reads as the line running into the signature.
+           + BreakAlignGap(BreakAlignSymbol.TimeSignature, BreakAlignSymbol.RightEdge);
 
     /// <summary>
     /// Gets the width of a barline type.
@@ -2725,20 +2753,98 @@ internal static class SpacingRules
 
         double prefix = 0;
         MusicItem? last = null;
-        foreach (var item in firstItems)
+        for (int i = 0; i < firstItems.Count; i++)
         {
+            var item = firstItems[i];
             // ChangeItemHasInk for the same reason MeasureChangeColumn asks it: a blanked
             // meter has an empty extent, so break alignment steps over it and it neither
             // takes the bar line's space-alist entry nor offers one to the note after it.
             if (item is ClefChangeItem || !IsChangeItem(item) || !ChangeItemHasInk(item))
                 continue;
+            // ⚠️ ONE GROB PER KIND — see IsFirstChangeOfItsKind. This list is aggregated
+            // ACROSS STAVES, so a key change opening a measure of a grand staff arrives once
+            // per staff, and adding each in turn charged the measure one extra signature per
+            // extra staff.
+            if (!IsFirstChangeOfItsKind(firstItems, i))
+                continue;
             prefix += last == null
                 ? GetBarlineToItemSpace(item)
                 : BetweenChangeItemsSpace(last, item);
-            prefix += ChangeItemColumnWidth(item);
+            prefix += WidestChangeOfKind(firstItems, ChangeItemKind(item));
             last = item;
         }
         return last == null ? null : (prefix, last);
+    }
+
+    /// <summary>
+    /// Which break-align slot a change item occupies: 0 clef, 1 key, 2 meter.
+    /// </summary>
+    private static int ChangeItemKind(MusicItem item) => item switch
+    {
+        ClefChangeItem => 0,
+        KeySignatureChangeItem => 1,
+        TimeSignatureChangeItem => 2,
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(item), item?.GetType().Name, "not a change item"),
+    };
+
+    /// <summary>
+    /// Is the item at <paramref name="index"/> the FIRST inked grob of its break-align kind in
+    /// this column?
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A COLUMN'S ITEM LIST IS AGGREGATED ACROSS STAVES
+    /// (MeasureLayouter.BuildTimingToItemsMap), so the same key change arrives once per staff.
+    /// They are not grobs standing side by side — every staff draws its own signature at the
+    /// SAME x, and the column is one signature wide. Summing them cost one extra signature per
+    /// extra staff: measured on a 3-sharp change, 1.64 ss of bar-to-note on one staff, 4.94 on
+    /// two, 8.24 on three (+3.300030 each), which an owner read as space reserved for a time
+    /// signature that never appeared.
+    /// <para>
+    /// LILYPOND, MEASURED (audit/lp-geometry/probes/key-column-staves.ly, scores KS1/KS2/KS3):
+    /// one, two and three staves put the bar line, the KeySignature and the following note
+    /// head at the same x to twelve digits. The column does not widen with the staff count.
+    /// </para>
+    /// <para>
+    /// Order is the LIST's, not break-align's: the renderer sequences a SINGLE staff's items
+    /// through <see cref="MidMeasureChangeOffsetWithin"/>, so the sizing walk must keep the
+    /// same sequence or the space and the glyph part company. Only duplicates are dropped.
+    /// </para>
+    /// <para>
+    /// Linear scans rather than a table: a column holds at most a clef, a key and a meter per
+    /// staff, so this is a handful of comparisons and allocates nothing — the walks it serves
+    /// run once per measure per layout pass, and layout passes run per line-break trial.
+    /// </para>
+    /// </remarks>
+    private static bool IsFirstChangeOfItsKind(IReadOnlyList<MusicItem> columnItems, int index)
+    {
+        int kind = ChangeItemKind(columnItems[index]);
+        for (int i = 0; i < index; i++)
+        {
+            var other = columnItems[i];
+            if (IsChangeItem(other) && ChangeItemHasInk(other) && ChangeItemKind(other) == kind)
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The widest ink any staff contributes for <paramref name="kind"/> in this column — the
+    /// column is as wide as the widest staff's grob, which also covers staves whose signatures
+    /// differ from each other. See <see cref="IsFirstChangeOfItsKind"/>.
+    /// </summary>
+    private static double WidestChangeOfKind(IReadOnlyList<MusicItem> columnItems, int kind)
+    {
+        double widest = 0;
+        foreach (var item in columnItems)
+        {
+            if (!IsChangeItem(item) || !ChangeItemHasInk(item) || ChangeItemKind(item) != kind)
+                continue;
+            double w = ChangeItemColumnWidth(item);
+            if (w > widest)
+                widest = w;
+        }
+        return widest;
     }
 
     /// <summary>
@@ -2932,8 +3038,9 @@ internal static class SpacingRules
 
         double width = 0;
         MusicItem? first = null, last = null;
-        foreach (var item in columnItems)
+        for (int i = 0; i < columnItems.Count; i++)
         {
+            var item = columnItems[i];
             // The break-align walk steps over an empty extent (ChangeItemHasInk), so a
             // blanked meter is neither the first nor the last grob of the column and adds
             // neither its width nor a gap to its neighbour. When it is the ONLY change here,
@@ -2941,12 +3048,18 @@ internal static class SpacingRules
             // the two musical columns — which is what LilyPond draws.
             if (!IsChangeItem(item) || !ChangeItemHasInk(item))
                 continue;
+            // ⚠️ ONE GROB PER KIND, THE WIDEST — see IsFirstChangeOfItsKind. Same aggregation
+            // across staves as the measure-opening walk, and the same defect: here the surplus
+            // shows up as space BEFORE the change (the column is wider, so its origin sits
+            // further right), where at a measure opening it shows up after.
+            if (!IsFirstChangeOfItsKind(columnItems, i))
+                continue;
             if (first == null)
                 first = item;
             else
                 width += BetweenChangeItemsSpace(last!, item);
             last = item;
-            width += ChangeItemColumnWidth(item);
+            width += WidestChangeOfKind(columnItems, ChangeItemKind(item));
         }
         return (width, first, last);
     }

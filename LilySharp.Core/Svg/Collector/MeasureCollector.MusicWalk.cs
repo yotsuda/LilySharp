@@ -945,13 +945,29 @@ public sealed partial class MeasureCollector
                     // The rehearsal LABEL comes from the argument (@mark("A")), the other
                     // marks from their NAME (@segno, @ottava.bassa) — two questions, and
                     // each is asked of the thing that answers it.
+                    // WHICH measure the mark belongs to is a different question from
+                    // where the builder stands. A mark written ON a note (c1@mark("A"))
+                    // reaches this node only after that note has been added, so a note
+                    // that fills its bar has already carried the builder across the
+                    // barline: the mark was drawn one measure late, and one written on
+                    // the last note was dropped for a measure that never came.
+                    // CollectArticulations recorded the host note's measure for exactly
+                    // this. ⚠️ There is no such thing as a mark standing on its own here:
+                    // a bare '@mark("A")' between notes does not parse (LYS0030 — '@'
+                    // modifies a note), and even 'c1 @mark("A") g1' binds to the c1 across
+                    // the whitespace. The fallback is for a mark that never rode a note's
+                    // articulation list at all, where the builder's position is the only
+                    // answer there is.
+                    int markMeasure = _markHostMeasure.TryGetValue(mark.Position, out int hostMeasure)
+                        ? hostMeasure
+                        : builder.CurrentMeasureIndex;
                     if (Semantics.AnnotationValues.Rehearsal(mark, out _) is { } label)
                     {
-                        _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, builder.CurrentMeasureIndex, mark.Position));
+                        _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, markMeasure, mark.Position));
                     }
                     else if (MusicMarkItem.ParseMarkName(mark.MarkName) is { } markType)
                     {
-                        _musicMarks.Add(new MusicMarkItem(markType, builder.CurrentMeasureIndex, mark.Position));
+                        _musicMarks.Add(new MusicMarkItem(markType, markMeasure, mark.Position));
                     }
                 }
                 break;

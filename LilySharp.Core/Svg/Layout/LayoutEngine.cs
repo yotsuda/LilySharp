@@ -359,6 +359,7 @@ internal sealed class LayoutEngine
             TrailingRowStaves = trailingRowStaves,
             LastSpaceableStaffY = anchors.LastSpaceableStaffY,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, systemsArray),
+            LineStartBarlineX = BuildLineStartBarlineX(score, systemsArray),
             // The FINAL pass's above-stack memo — its own instance, because the
             // preliminary pass stacks different systems every keystroke and one shared
             // store would overwrite itself twice per keystroke and never hit.
@@ -854,6 +855,7 @@ internal sealed class LayoutEngine
             StaffSpanners = staffSpanners,
             StaffInside = staffInside,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
+            LineStartBarlineX = BuildLineStartBarlineX(score, prelimSystems),
             // The PRELIMINARY pass's own above-stack memo (see the final pass's site).
             AboveStackMemo = systemCache?.PreliminaryAboveStack,
             // ...and its own fingering memo, one store per pass for the same reason: the
@@ -869,6 +871,7 @@ internal sealed class LayoutEngine
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
+                prelimAnn.Dynamics,
                 prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
                 prelimTies.ToImmutableArray(), systemCache),
             prelimBeamsByStaff,
@@ -2211,6 +2214,7 @@ internal sealed class LayoutEngine
         ImmutableArray<MusicMarkLayout> musicMarks = default,
         ImmutableArray<CustomTextLayout> customTexts = default,
         ImmutableArray<ChordNameLayout> chordNames = default,
+        ImmutableArray<DynamicLayout> dynamics = default,
         ImmutableArray<BarNumberLayout> barNumbers = default,
         ImmutableArray<TupletBracketLayout> tupletBrackets = default,
         ImmutableArray<SlurLayout> slurs = default,
@@ -2457,6 +2461,38 @@ internal sealed class LayoutEngine
                 AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + 1.9, cnY - 0.3);
             }
         }
+        // Dynamics and free expressive text (@text) — the SAME shape as the chord names one
+        // line up, and found the same way: a below-staff "D.S. Time Straight" under system 1
+        // had its descender printed over by a section label's white-filled box above system 2
+        // (scratch/ベースタブLy/blogger.lys — the text's ink bottom 22.39 against the box top
+        // 22.18, so 0.21 ss inside it, and the box is drawn later so it ERASES the letters).
+        // EnrichExtentsWithAnnotationProtrusions has counted these in the scalar extents all
+        // along; the X-aware Distance() is what never saw them, and it wins wherever it can
+        // prove room. MEASURED before the fix: adding a wide below-staff @text — or a plain
+        // @pp — to a two-system book moved the next system by exactly nothing, while a
+        // ledger-line note under the same column moved it 1.40.
+        // Both houses are the ones the placement and the stacker read: the half-width is half
+        // the DRAWN advance (DynamicEngraver.LabelHalfWidth) and the vertical pair is the
+        // label's own font ink (InkOf — for @text that is the conservative fallback, since
+        // only the dynamic GLYPHS have measured ink).
+        // No silhouette margin here: unlike the mark box above, this one is the drawn ink and
+        // there is nothing to widen it for — the fallback descent is already deeper than the
+        // ink it stands in for.
+        // LILYPOND-REF: lily/page-layout-problem.cc build_system_skyline — the system skyline
+        //   contains the DynamicText grob like any other outside-staff stencil.
+        if (!dynamics.IsDefaultOrEmpty)
+        {
+            foreach (var d in dynamics)
+            {
+                double halfW = DynamicEngraver.LabelHalfWidth(fonts, d.Text, d.IsExpressiveText);
+                var (dAscent, dDescent) = DynamicEngraver.InkOf(d.Text, d.IsExpressiveText);
+                // d.YUp is Y-up above the staff middle; the skyline frame is the system top,
+                // i.e. 2.0 higher — the same translation the mark and custom-text arms make.
+                double dY = d.YUp - 2.0;
+                AddMarkBox(d.MeasureIndex, d.X - halfW, d.X + halfW, dY + dAscent, dY - dDescent);
+            }
+        }
+
         // Line-start bar numbers sit in the band above the staff start where
         // only the staff-symbol roof exists; without their ink in the UP
         // silhouette, Distance() lets the previous system's staff lines crowd
@@ -3451,6 +3487,13 @@ internal sealed class LayoutEngine
         /// <see cref="BuildPrefixTimeSignatureX"/>.</summary>
         public Func<int, double>? PrefixTimeSignatureX { get; init; }
 
+        /// <summary>
+        /// By MEASURE index: the absolute X of the bar line DRAWN at a system start, or NaN
+        /// when that measure does not open a system or opens one with no bar line. See
+        /// <see cref="BuildLineStartBarlineX"/>.
+        /// </summary>
+        public Func<int, double>? LineStartBarlineX { get; init; }
+
         /// <summary>Device-down from the system origin to the LAST SPACEABLE staff's top
         /// line — the staff a note-bound lyric block hangs from. 0 on a one-staff system,
         /// which is why that case is untouched by it.</summary>
@@ -3491,6 +3534,39 @@ internal sealed class LayoutEngine
     /// (<see cref="MultiStaffLayouter.SolveLineStartPrefix"/>), so the annotated,
     /// reserved and drawn meter columns cannot drift apart.
     /// </summary>
+    /// <summary>
+    /// By MEASURE index: where the bar line that OPENS a system is actually drawn, or NaN
+    /// when there is none. A mark that break-aligns on <c>staff-bar</c> needs this because at
+    /// a line start the bar line is not at the measure's X — the redrawn clef/key/time prefix
+    /// stands there and the stroke is nudged past it by
+    /// <see cref="Rendering.SharedRenderer.LineStartBarClearance"/>, which this reads from
+    /// that one home so the mark cannot land beside the stroke it is aligning to.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PREMISE THIS REPLACES was "at a line start the bar line is invisible, so the
+    /// anchor falls back to the prefix" — true of a system that simply continues, false of
+    /// one that opens with a repeat: a <c>|:</c> IS drawn there. The owner's book showed a
+    /// coda sign at the system's left edge (x 0.30) with the <c>|:</c> at 6.44.
+    /// LILYPOND-REF: scm/define-grobs.scm CodaMark declares
+    ///   <c>(break-align-symbols . (staff-bar key-signature clef))</c> — the staff bar FIRST,
+    ///   where SectionLabel declares <c>(left-edge staff-bar)</c> and so keeps the edge.
+    ///   SegnoMark repeats CodaMark's list.
+    /// </remarks>
+    private static Func<int, double> BuildLineStartBarlineX(
+        MultiStaffScore score, ImmutableArray<SystemLayout> systems)
+        => measureIndex =>
+        {
+            var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+            if (measureIndex < 0 || measureIndex >= measures.Length
+                || measures[measureIndex].StartBarline == BarlineType.None)
+                return double.NaN;
+            foreach (var sys in systems)
+                if (!sys.Measures.IsDefaultOrEmpty
+                    && sys.Measures[0].MeasureIndex == measureIndex)
+                    return sys.Measures[0].X + Rendering.SharedRenderer.LineStartBarClearance;
+            return double.NaN;
+        };
+
     private static Func<int, double> BuildPrefixTimeSignatureX(
         MultiStaffScore score, ImmutableArray<SystemLayout> systems)
         => sysIdx =>
@@ -3943,7 +4019,8 @@ internal sealed class LayoutEngine
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             ctx.Fonts, score, musicMarks, systems, ml, measures, default,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
-            prefixTimeSignatureX: ctx.PrefixTimeSignatureX);
+            prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
+            lineStartBarlineX: ctx.LineStartBarlineX);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
@@ -3973,7 +4050,10 @@ internal sealed class LayoutEngine
         stackedArticulations = stackedArticulationsAbove;
         // After stacking, sit a boundary "To Coda" on the adjacent section label's
         // line (the two straddle one barline) instead of stacking them apart.
-        stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
+        // musicMarkLayouts is the SAME list before the pass above moved anything, which is
+        // how the co-placement can tell a sign that was raised over something (a volta
+        // bracket at the end of a second ending) from one that simply sits at its default.
+        stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks, musicMarkLayouts);
         // (No tempo/label co-placement any more: the metronome mark and the section
         // label each break-align to their own anchor and the priority pass above
         // already stacked them pointwise, LilyPond's shape. The chart-pair device

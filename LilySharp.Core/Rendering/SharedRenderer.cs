@@ -58,7 +58,10 @@ internal static partial class SharedRenderer
     // opens a line, so a `|:` at a system start doesn't overprint the clef.
     // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist — clef /
     // key-signature / time-signature all reserve (extra-space . 1.15).
-    private const double LineStartBarClearance = 1.15;
+    // ⚠️ internal, not private: MusicMarkEngraver break-aligns a segno/coda that opens a
+    // line ON this bar line, so the mark and the stroke must read ONE number. Spelling it
+    // twice is exactly the shape §7.7 keeps naming.
+    internal const double LineStartBarClearance = 1.15;
     // Mirror of LyricEngraver's VerseSpacing (baseline step between stacked verses).
     private const double LyricVerseSpacing = 3.2;
     // Internal so LP-fidelity readers can identify a text run by the SAME size expression
@@ -355,10 +358,11 @@ internal static partial class SharedRenderer
         if (system.Measures.Length > 0)
         {
             var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
+            var eolTime = GetSystemEndTimeChange(score.PrimaryContentStaff, system);
             if (eolCourtesy is { } key)
                 notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
-                    key.PreviousKey.Sharps, key.NewKey.Sharps);
-            if (GetSystemEndTimeChange(score.PrimaryContentStaff, system) is { } eolMeter)
+                    key.PreviousKey.Sharps, key.NewKey.Sharps, meterFollows: eolTime is not null);
+            if (eolTime is { } eolMeter)
             {
                 notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
                     eolMeter, afterCourtesyKey: eolCourtesy is not null);

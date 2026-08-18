@@ -1079,7 +1079,7 @@ internal sealed class MultiStaffLayouter
             }
             if (leadKey is { } k)
                 availableWidth -= SpacingRules.KeyCourtesySuffixWidth(
-                    k.PreviousKey.Sharps, k.NewKey.Sharps);
+                    k.PreviousKey.Sharps, k.NewKey.Sharps, meterFollows: leadTime is not null);
             if (leadTime is { } t)
                 availableWidth -= SpacingRules.TimeCourtesySuffixWidth(
                     t, afterCourtesyKey: leadKey is not null);

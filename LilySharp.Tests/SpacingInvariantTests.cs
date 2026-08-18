@@ -686,4 +686,106 @@ public class SpacingInvariantTests
         // reach, so the floor leaves them exactly as the per-voice loop priced them.
         Assert.Equal(bare[2].MinDistance, reserved[2].MinDistance, precision: 9);
     }
+
+    // --- A CHANGE COLUMN IS ONE GROB PER KIND, NOT ONE PER STAFF (session 206) ---
+
+    /// <summary>
+    /// The same music and the same key change, on one / two / three staves.
+    /// </summary>
+    private static string KeyChangeOnStaves(int staffCount) => $$"""
+        time 4/4
+        section Main { melody { c4 c g' g | key a major g'4 g f f | } }
+        form main { Main }
+        score main "x" {{{StaffRows(staffCount)}}
+        """;
+
+    /// <summary>
+    /// The same music with the key change struck MID-measure instead of at the bar line, so
+    /// the change gets its own non-musical column rather than riding the measure's opening.
+    /// </summary>
+    private static string MidMeasureKeyChangeOnStaves(int staffCount) => $$"""
+        time 4/4
+        section Main { melody { c4 c key a major g'4 g | } }
+        form main { Main }
+        score main "x" {{{StaffRows(staffCount)}}
+        """;
+
+    /// <summary>
+    /// The body of the score block: a bare staff for one, a grand staff for more.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT a one-staff grandStaff for the baseline — that builds no staff group at all in
+    /// Lily# and the collector throws, which is how the first draft of these tests failed
+    /// against a fix that was already working.
+    /// </remarks>
+    private static string StaffRows(int staffCount) =>
+        staffCount == 1
+            ? " staff melody }"
+            : "\n  grandStaff {\n"
+              + string.Join("\n", Enumerable.Repeat("    staff melody", staffCount))
+              + "\n  }\n}";
+
+    private static double[] ColumnIdeals(string src, int measureIndex)
+    {
+        var (timings, allMeasures, primary, _) = Collect(src, measureIndex);
+        return new MeasureLayouter()
+            .CreateTimingSprings(primary, timings, 0.125, allMeasures)
+            .Select(s => s.IdealDistance)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// ⚠️ A COLUMN'S ITEM LIST IS AGGREGATED ACROSS STAVES, so a key change opening a measure
+    /// of a grand staff arrives in it once per staff. They are not grobs side by side: every
+    /// staff prints its own signature at the SAME x and the column is one signature wide.
+    /// Charging each of them made the column grow by one signature per extra staff —
+    /// bar-line-to-first-note 1.64 ss on one staff, 4.94 on two, 8.24 on three for a 3-sharp
+    /// change — which an owner's two-staff book showed as a blank after the change and read
+    /// as space reserved for a time signature that was never drawn (there is no meter change
+    /// in that book at all).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND, MEASURED: audit/lp-geometry/probes/key-column-staves.ly, scores KS1/KS2/KS3.
+    /// One, two and three staves put the bar line (14.645044999134612), the KeySignature
+    /// (15.835044999134611, ext 3.3) and the following note head (22.635044999134614) at the
+    /// same x to twelve digits, and the lower staves' own dumps confirm each really engraves
+    /// a signature there.
+    /// <para>
+    /// Asserted as staff-count INDEPENDENCE rather than a pinned number, because that is what
+    /// LilyPond's reading says: the quantity is whatever one signature costs, and it must not
+    /// know how many staves printed one.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void AKeyChangeOpeningAMeasure_CostsTheSameOnAnyNumberOfStaves(int staffCount)
+    {
+        double[] one = ColumnIdeals(KeyChangeOnStaves(1), measureIndex: 1);
+        double[] many = ColumnIdeals(KeyChangeOnStaves(staffCount), measureIndex: 1);
+
+        Assert.Equal(one.Length, many.Length);
+        for (int i = 0; i < one.Length; i++)
+            Assert.Equal(one[i], many[i], precision: 9);
+    }
+
+    /// <summary>
+    /// The same rule for a change that stands in its own MID-MEASURE column. The surplus
+    /// showed up on the other side there — the column being wider pushed its ORIGIN right, so
+    /// the space grew BEFORE the signature rather than after it — but it is one defect and
+    /// one fix (SpacingRules.IsFirstChangeOfItsKind).
+    /// </summary>
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void AMidMeasureKeyChange_CostsTheSameOnAnyNumberOfStaves(int staffCount)
+    {
+        double[] one = ColumnIdeals(MidMeasureKeyChangeOnStaves(1), measureIndex: 0);
+        double[] many = ColumnIdeals(MidMeasureKeyChangeOnStaves(staffCount), measureIndex: 0);
+
+        Assert.Equal(one.Length, many.Length);
+        for (int i = 0; i < one.Length; i++)
+            Assert.Equal(one[i], many[i], precision: 9);
+    }
 }
+

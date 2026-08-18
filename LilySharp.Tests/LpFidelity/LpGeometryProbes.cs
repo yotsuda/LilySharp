@@ -5866,6 +5866,83 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A mid-line key change on a GRAND STAFF: the column every staff prints its own signature
+    /// into.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe key-column-staves.ly, score KS2): <c>c'1 | \key a \major c'1 |</c>
+    /// on two staves of a PianoStaff — bar line ink right 14.835044999134612, first note head
+    /// 22.635044999134614, so <b>7.800000</b>.
+    /// <para>
+    /// ⚠️ THE POINT IS THAT THIS NUMBER IS THE ONE-STAFF NUMBER. KS1, KS2 and KS3 agree to
+    /// twelve digits: the column does not widen with the staff count, because every staff's
+    /// signature stands at the same x and the column is one signature wide. Lily# summed them
+    /// instead — one extra A-major signature (3.300030) per extra staff — and an owner read
+    /// the surplus on a two-staff book as space reserved for a time signature that was never
+    /// drawn. SpacingRules.IsFirstChangeOfItsKind is the fix; SpacingInvariantTests asserts
+    /// the independence directly, and this point pins the VALUE the independence is about.
+    /// </para>
+    /// </remarks>
+    private static readonly string KCGS = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section A { m { c'1 | } }
+        section B { key a major m { c'1 | } }
+
+        form main { A B }
+
+        score main "KCGS" {
+          grandStaff {
+            staff m
+            staff m
+          }
+        }
+        """;
+
+    /// <summary>
+    /// A CANCELLING key change at a line break with NO meter change, so the courtesy group is
+    /// cancellation → signature and the SIGNATURE is the member that stands last.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (probe courtesy-meter.ly, score KEYCANC):
+    /// <c>\key ees \major \time 4/4 c'1 | \break \key a \major c'1 | c'1 |</c> —
+    /// bar line ink right edge 26.393507, line edge 34.143307, so <b>7.749800</b>
+    /// = 1.0 + 2.449800 + 0.5 + 3.300000 + 0.5.
+    /// <para>
+    /// ⚠️ THE KEY PATH IS WHERE THE right-edge GAP HAD A STAND-IN. A bare <c>+ 0.4</c> trailed
+    /// the signature in <c>SpacingRules.KeyCourtesySuffixWidth</c> — the fifth unnamed 0.4 in
+    /// this group, and no point reached it because no point measured the line's right edge at
+    /// all. It is gone; the entry is charged once, by whichever grob is actually last.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THIS ONE OPENS NON-ZERO ON PURPOSE. A cancellation is exactly where the
+    /// reservation stops being exact: <c>SharedRenderer</c> chains the DRAWING off each
+    /// member's real ink while the reservation models the naturals as an UPPER BOUND on
+    /// LilyPond's kerning. The surplus has nowhere to go but after the group, so it lands
+    /// here. That is the reserve/draw gap SharedRenderer's own comment names — and says
+    /// nothing observes yet.
+    /// </para>
+    /// </remarks>
+    private static readonly string CMKO = """
+        octave absolute
+        time 4/4
+        key ees major
+
+        part m { clef treble }
+
+        section A { m { c1 | } }
+        section B { key a major m { c1 | } }
+
+        form main { A break B }
+
+        score main "CMKO" { staff m }
+        """;
+
+    /// <summary>
     /// <see cref="CMT"/>'s gap with BOTH glyphs changed — a DOUBLE bar line at the break and a
     /// NUMERAL meter (3/4) instead of the C that <c>\time 4/4</c> prints.
     /// </summary>
@@ -10415,6 +10492,32 @@ internal static class LpGeometryProbes
         // texture cannot tell a transcribed value from a coincidence of that book's widths.
         new("courtesy.meter.barline-to-meter.double-bar-numeral", CMT3,
             g => g.BarlineRightToNextGlyph(0)),
+
+        // ...and what comes AFTER the group, which nothing reached until 2026-08-18. A
+        // break-align group has one member more than the grobs in it — `right-edge` — and the
+        // grobs that can stand last declare 0.5 for it (TimeSignature :3951, KeySignature
+        // :1995, KeyCancellation :1946) while BarLine declares 0.0 (:302). Lily# charged
+        // nobody, so a line that broke into a meter change ended its staff at the signature's
+        // advance edge; an ordinary line was right only because BarLine's entry is 0.
+        // These read bar-ink-right → the END OF THE STAFF LINE, so the whole suffix is inside
+        // the span: a wrong gap and a wrong courtesy width both move it, and the neighbouring
+        // points above are what say which.
+        new("courtesy.meter.meter-to-line-end", CMT, g => g.BarlineRightToStaffLineEnd(0)),
+        // The second texture, for the same reason the barline-to-meter pair has one: a double
+        // bar and a numeral meter against a single bar and a C.
+        new("courtesy.meter.meter-to-line-end.double-bar-numeral", CMT3,
+            g => g.BarlineRightToStaffLineEnd(0)),
+        // The KEY-last case, which is the other half of the same fix — and the one that opens
+        // NON-ZERO. See the `why`: the residual is not the right-edge gap but the reserve-vs-
+        // draw slack this group has carried since 2026-08-03, now visible for the first time.
+        new("courtesy.key.key-to-line-end", CMKO, g => g.BarlineRightToStaffLineEnd(0)),
+
+        // A mid-line key change column on a GRAND STAFF. The column's item list is aggregated
+        // across staves, so the same change arrives once per staff; the width walks added each
+        // as though they stood side by side and the column grew by one signature per extra
+        // staff. LilyPond's KS1/KS2/KS3 agree to twelve digits — this pins the value that
+        // independence is about, and SpacingInvariantTests pins the independence itself.
+        new("mid-piece.key.column-width.two-staves", KCGS, g => g.BarlineRightToNextNotehead(0)),
 
         // A CUE region's own metric. EngravingDefaults.CueScale = 0.66 is declared
         // LILYSHARP-OWN and is an invented rounding; these are what it has to be replaced by.

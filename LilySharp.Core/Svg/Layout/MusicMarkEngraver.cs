@@ -419,7 +419,8 @@ internal static class MusicMarkEngraver
         // LILYPOND-REF: scm/define-grobs.scm:2337,2352,2360 MetronomeMark break-align-symbols
         //   (time-signature), self-alignment-X LEFT,
         //   X-offset self-alignment-interface::self-aligned-on-breakable.
-        Func<int, double>? prefixTimeSignatureX = null)
+        Func<int, double>? prefixTimeSignatureX = null,
+        Func<int, double>? lineStartBarlineX = null)
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
@@ -442,7 +443,7 @@ internal static class MusicMarkEngraver
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(
-                fonts, mark, measureLayout, systems, prefixTimeSignatureX);
+                fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX);
             markEntries.Add((mark, x, si));
         }
 
@@ -586,12 +587,42 @@ internal static class MusicMarkEngraver
             // stacking) died here: LilyPond has no such construction, and keeping it
             // meant re-deriving by hand the clearances the stacker had already solved
             // (the label was pulled down onto the line-start clef that way).
+            // ⚠️ THE GROUP KEY IS NOT THE COLUMN. Grouping by (measure, position, timing) was
+            // a PROXY for "these marks share an X", and it held only while every mark of an
+            // opening column was anchored alike. It stopped holding on 2026-08-18, when a
+            // segno/coda that opens a line began break-aligning on the bar line drawn there
+            // (CalculateXPosition) while a section label kept the left edge, as their
+            // break-align-symbols say they should — so the two now genuinely stand apart and
+            // stacking them made the label float: measured on the owner's book, the "E" box
+            // sat 4.96 ss above its staff where an unstacked label sits at 2.28.
+            // So the chain asks the X it is actually given. A mark stacks above the highest
+            // ALREADY-PLACED mark of this group whose ink it overlaps, and starts at the base
+            // when it overlaps none — which is what the pointwise outside-staff pass would do
+            // and what the grouping comment above always meant.
+            // LILYPOND-REF: lily/axis-group-interface.cc avoid_outside_staff_collisions —
+            //   outside-staff grobs are skylined pointwise, so two that do not meet in X do
+            //   not raise each other however close their moments are.
+            var placedAbove = new List<(double X0, double X1, double TopYUp)>();
             double stackTopYUp = baseAboveYUp;
             bool chainStarted = false;
             for (int i = 0; i < aboveMarks.Count; i++)
             {
                 var (mark, x, si) = aboveMarks[i];
                 double halfExtent = GetMarkHalfExtent(mark.Type);
+                var (chainX0, chainX1) = MarkXExtent(fonts, mark, x);
+                // The highest already-placed neighbour whose ink meets this one's, or the
+                // base when there is none. The 0.2 is the mark family's own
+                // outside-staff-horizontal-padding (scm/define-grobs.scm CodaMark and its
+                // siblings), the same gap the pointwise pass keeps.
+                double restUnderUp = double.NegativeInfinity;
+                foreach (var p in placedAbove)
+                    if (chainX0 <= p.X1 + 0.2 && chainX1 >= p.X0 - 0.2 && p.TopYUp > restUnderUp)
+                        restUnderUp = p.TopYUp;
+                bool overlapsPlaced = !double.IsNegativeInfinity(restUnderUp);
+                if (chainStarted && overlapsPlaced)
+                    stackTopYUp = restUnderUp;
+                else if (chainStarted)
+                    chainStarted = false;   // nothing under it: this one opens its own chain
 
                 double yUp;
                 if (mark.Type == MusicMarkType.Tempo)
@@ -620,10 +651,12 @@ internal static class MusicMarkEngraver
                 }
                 else
                 {
-                    // Subsequent marks: stack above previous
+                    // Subsequent marks: stack above the neighbour found above
                     yUp = stackTopYUp + StackGap + halfExtent;
                     stackTopYUp = yUp + halfExtent;
                 }
+
+                placedAbove.Add((chainX0, chainX1, yUp + halfExtent));
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
@@ -675,14 +708,28 @@ internal static class MusicMarkEngraver
             // LILYPOND-REF: scm/define-grobs.scm:4169-4174 UnaCordaPedalLineSpanner's outside-staff-priority
             //   — all three declare 1000, so priority does not order them; being three grobs does.
             // ⚠️ MEASURED in LilyPond 2.26.0 rather than assumed, because equal priority
-            //   does not say which lands nearer the staff: on
-            //   `c1\sustainOn\sostenutoOn`, "Sost. Ped." prints 2.442 NEARER the staff than
-            //   "Ped.". Una corda is NOT measured — no fixture reaches three at once — so it
-            //   is ranked outermost, which is a guess and is marked as one.
+            //   does not say which lands nearer the staff. ALL THREE ARE NOW MEASURED, on one
+            //   book that strikes them together — audit/lp-geometry/probes/pedal-three.ly,
+            //   distance from the staff's bottom line to each family's row:
+            //     una corda  2.777500      sostenuto  4.738700      sustain  7.181300
+            //   ⇒ UNA CORDA IS NEAREST THE STAFF and sustain is outermost.
+            // ⚠️ THE GUESS THIS REPLACES HAD IT AT THE OTHER END. Until 2026-08-18 una corda
+            //   was ranked outermost "which is a guess and is marked as one" (it was), so on a
+            //   three-pedal book every family sat one row wrong.
+            // ⚠️ THE INSTRUMENT REPRODUCED A NUMBER IT DID NOT KNOW: sustain − sostenuto comes
+            //   out 2.442600 against the 2.443 session 204 measured from the sustain/sostenuto
+            //   PAIR alone, which is what says this reading is of the engine and not of the
+            //   probe. ⚠️ And the sustain row is found as GLYPHS, not text: LilyPond draws
+            //   "Ped." with Emmentaler (lily/sustain-pedal.cc), so a probe scanning <tspan>
+            //   sees the other two and silently misses this one (HANDOFF §5.3).
+            // ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
+            //   — each row's own ink — where Lily# uses one StackGap for both (2.46 measured).
+            //   Only the ORDER is fixed here; the step model is a separate quantity and has no
+            //   ledger point yet.
             static int PedalFamilyRank(MusicMarkType t) => t switch
             {
-                MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => 0,
-                MusicMarkType.SustainOn or MusicMarkType.SustainOff => 1,
+                MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => 0,
+                MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => 1,
                 _ => 2,
             };
 
@@ -834,11 +881,23 @@ internal static class MusicMarkEngraver
     /// also means a label on the NEXT system (far X) is never matched. Run AFTER
     /// outside-staff stacking so the label's line is final.
     /// </summary>
+    /// <param name="unstacked">
+    /// The SAME marks as <paramref name="marks"/> before the outside-staff pass moved them,
+    /// positionally matched. It answers one question and only one: was this sign RAISED, i.e.
+    /// does something stand under its column? A sign that was raised must not be sunk back
+    /// into it (see the clamp below); a sign that was not raised may sink to the label's line
+    /// exactly as before, which is what keeps every other book's rehearsal line unmoved.
+    /// Pass <c>default</c> and the clamp is off — the pre-2026-08-18 behaviour.
+    /// </param>
     public static ImmutableArray<MusicMarkLayout> CoPlaceToCodaWithLabels(
-        ImmutableArray<MusicMarkLayout> marks)
+        ImmutableArray<MusicMarkLayout> marks,
+        ImmutableArray<MusicMarkLayout> unstacked)
     {
         if (marks.IsDefaultOrEmpty || !marks.Any(m => m.MarkType == MusicMarkType.ToCoda))
             return marks;
+        // Positional match or nothing: a length mismatch means the two arrays are not the
+        // same marks, and guessing which is which would be worse than not clamping.
+        bool canTellRaised = !unstacked.IsDefault && unstacked.Length == marks.Length;
 
         var result = marks.ToBuilder();
         var labelIdx = new List<int>();
@@ -872,11 +931,49 @@ internal static class MusicMarkEngraver
                 // sit the sign just to its left and LOW enough that its baseline
                 // meets the label box's bottom edge (the box extends half its
                 // height below the shared centre line).
-                var lab = result[bestJ] with { YUp = commonYUp };
-                result[bestJ] = lab;
+                var lab = result[bestJ];
                 double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
                 double boxHalf = (labelFs + 2 * 0.2) / 2; // box height = fs + 2*pad(0.2)
-                result[i] = tc with { YUp = commonYUp - boxHalf, X = lab.X - ToCodaLabelGap };
+                // ⚠️ ...ONLY WHEN THE SIGN IS WHAT RAISED IT. A label can also have been
+                // raised by something this co-placement knows nothing about — and the one
+                // that matters is the VOLTA BRACKET, because a boundary "To Coda" sits at
+                // the end of a second ending exactly where its bracket does. Dropping to
+                // commonYUp then puts BOTH inside the bracket, which is what an owner's book
+                // showed: the sign's ink through the bracket's closing hook.
+                // commonYUp is the smallest YUp of ANY label in the score, so it is the line
+                // of some label that had nothing over it — a number that is right only when
+                // this label had nothing over it either.
+                // ⇒ THE SHARED LINE IS THE OUTERMOST OF THE TWO, never the global minimum.
+                // The sign's own YUp arrives here already cleared of the bracket by the
+                // outside-staff pass, which is where LilyPond's answer lives:
+                // VoltaBracketSpanner is priority 600 and every member of the mark family is
+                // 1350-1500 (scm/define-grobs.scm: JumpScript 1350, Coda/SegnoMark 1400,
+                // SectionLabel 1450, RehearsalMark 1500), so in LilyPond a mark is ALWAYS
+                // outside the bracket and this device must not be the thing that puts it in.
+                // ⚠️ It is a clamp and not a re-placement: the sign moves to a new X here,
+                // and nothing re-asks the tracker what stands under THAT column. It is the
+                // same column to within ToCodaLabelGap in every book that reaches this, and
+                // making it exact means co-placing BEFORE the stacking pass rather than
+                // after — the shape CoPlaceTempoWithLabels was deleted in favour of.
+                // ⚠️⚠️ AND IT FIRES ONLY WHEN THE SIGN WAS ACTUALLY RAISED. Clamping on the
+                // placed YUp alone lifts the LABEL off the common rehearsal line in ordinary
+                // books too — measured: a to-coda beside a label with nothing above either of
+                // them moved the label 1.3 out, so labels in one score would no longer share
+                // a line. The stacker's own answer to "is something under this sign" is the
+                // only thing that separates the two cases, and it is whether it moved the
+                // sign at all.
+                double raisedFloor = canTellRaised && tc.YUp > unstacked[i].YUp + 1e-9
+                    ? tc.YUp
+                    : double.NegativeInfinity;
+                // ⚠️ STILL NOT COVERED, and said out loud rather than left to be rediscovered:
+                // the mirror case, where the LABEL was raised by something that is not this
+                // sign. It is dropped to commonYUp exactly as before, because "raised" and
+                // "raised BY THE SIGN" cannot be told apart from here for the label — the sign
+                // genuinely was beside it before this ran. Separating them means co-placing
+                // BEFORE the stacking pass, which is the same rewrite the X clamp above wants.
+                double sharedYUp = Math.Max(commonYUp, raisedFloor + boxHalf);
+                result[bestJ] = lab with { YUp = sharedYUp };
+                result[i] = tc with { YUp = sharedYUp - boxHalf, X = lab.X - ToCodaLabelGap };
             }
         }
         return result.ToImmutable();
@@ -1156,7 +1253,8 @@ internal static class MusicMarkEngraver
         ScoreTextMetrics fonts,
         MusicMarkItem mark, MeasureLayout measureLayout,
         ImmutableArray<SystemLayout> systems,
-        Func<int, double>? prefixTimeSignatureX = null)
+        Func<int, double>? prefixTimeSignatureX = null,
+        Func<int, double>? lineStartBarlineX = null)
     {
         if (mark.Position == MusicMarkPosition.End)
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
@@ -1263,7 +1361,31 @@ internal static class MusicMarkEngraver
         // Segno/Coda glyphs have a symmetric bbox (origin = horizontal centre), so
         // returning the barline anchor centres the sign on the barline.
         if (mark.Type is MusicMarkType.Segno or MusicMarkType.Coda)
+        {
+            // ⚠️ ...AND AT A LINE START THE BAR LINE IS NOT ALWAYS INVISIBLE. The fallback
+            // above reads "no bar line here, so align on the prefix", which is true of a
+            // system that merely continues and false of one that OPENS WITH A REPEAT: the
+            // `|:` is drawn, past the prefix, at LineStartBarClearance. The owner's book put
+            // this sign at the system's left edge (0.30) with the `|:` at 6.44.
+            // These two grobs break-align on the STAFF BAR first —
+            // LILYPOND-REF: scm/define-grobs.scm CodaMark and SegnoMark both declare
+            //   (break-align-symbols . (staff-bar key-signature clef)) — where SectionLabel
+            //   declares (left-edge staff-bar) and therefore keeps the edge above.
+            // ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+            // CodaMark's (break-visibility . begin-of-line-invisible) at :1007 prints a mark
+            // whose moment IS a break at the END OF THE PREVIOUS LINE instead — MEASURED,
+            // audit/lp-geometry/probes/coda-line-start.ly scores CB2/CB3: no CodaMark appears
+            // on the new line, and one appears at the old line's end (x 34.048, breakdir -1),
+            // while the SectionLabel control CB4 does appear on the new line at x 0.0. So
+            // there is no LilyPond number for THIS placement, only for the rule that decides
+            // it: whichever grob the sign break-aligns to. The owner chose to keep the sign
+            // on the new line (2026-08-18) and align it to that bar line; porting the
+            // visibility instead is the other option and is written up in the probe.
+            if (lineStartBarlineX?.Invoke(measureLayout.MeasureIndex) is { } barX
+                && !double.IsNaN(barX))
+                return barX;
             return anchor;
+        }
 
         return anchor + 0.5;
     }
