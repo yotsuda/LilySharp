@@ -8345,6 +8345,108 @@ internal static class LpGeometryProbes
         }
         """;
 
+    // --- a MID-PIECE meter change where no staff draws one (probes/tab-numbers-meter.ly) ---
+    //
+    // Session 198 shut the meter column at a LINE START for a score no row engraves a meter in
+    // (SpacingRules.AnyStaffEngravesTime). It left the mid-piece half open: the three pure
+    // functions that price a change column — SpacingRules.BarlineToFirstColumnSpring /
+    // BoundaryChangePrefix at a bar line, SpacingRules.MidMeasureChangeGaps inside one — walk
+    // an IReadOnlyList<MusicItem> and cannot see which staves the score is made of.
+    //
+    // ⚠️ THE OTHER HALF OF THE FILED DEFECT DOES NOT EXIST, and it was measured before it was
+    // ported. The report named TWO regimes: an all-`tab … as numbers` score AND a staff-LESS
+    // one (chord / lyric rows only). Rendered, a chords-only score is already exact — a mid-
+    // piece `time` is byte-identical across 2/4, 8/16 and 16/32 — because `chords` takes no
+    // `time` of its own, so the change item lives in a part the score never renders and the
+    // column list it would enter is never built. The regime is UNREACHABLE, not fixed, which
+    // is a different sentence and belongs in the notes rather than in a net.
+    // (Poison, so the sweep is known to reach: the same book rendered `staff melody` instead
+    // of `chords prog` DOES move between 2/4 and 16/32.)
+
+    /// <summary>
+    /// A score built ONLY of <c>tab … as numbers</c> — no staff engraves a meter stencil —
+    /// carrying a MID-PIECE meter change at a bar line. The narrow half of the identity twin.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: probe score TN in tab-numbers-meter.ly. Every bar opens on the same
+    /// pitch on purpose: LilyPond's <c>Staff_spacing::next_notes_correction</c>
+    /// (lily/staff-spacing.cc:95-110) prices the following note against the bar line's own Y
+    /// extent, so a bar opening on a different STRING reads a different gap for reasons that
+    /// have nothing to do with the meter. Writing it the obvious way cost a refuted
+    /// explanation; see the probe header.
+    /// </remarks>
+    private static readonly string MPTN = TabNumbersMeterScore("time 2/4 ", "MPTN");
+
+    /// <summary>
+    /// The IDENTITY twin: <c>time 16/32</c> in place of <c>time 2/4</c>. Same measure length,
+    /// so the bar grid, the note count and every duration are identical and LilyPond's two
+    /// renders are byte-identical — which makes any Lily# difference the size of a Lily#
+    /// defect by construction. Lily# books <c>GetTimeSigWidth(beats, beatType)</c>, which is
+    /// not the same for 2/4 and 16/32.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score TW.</remarks>
+    private static readonly string MPTW = TabNumbersMeterScore("time 16/32 ", "MPTW");
+
+    /// <summary>
+    /// The same music with the change INSIDE a bar rather than at a bar line — the half that
+    /// lives in <see cref="Svg.Layout.SpacingRules.MidMeasureChangeGaps"/> rather than in the
+    /// barline prefix. Narrow half.
+    /// </summary>
+    /// <remarks>LilyPond twin: probe score MN. The bar the change lands in runs long by
+    /// construction and both engravers say so; the pair is still an identity because both
+    /// halves run long by the same amount.</remarks>
+    private static readonly string MMTN = TabNumbersMidMeasureScore("time 2/4 ", "MMTN");
+
+    /// <summary>The identity twin of <see cref="MMTN"/>.</summary>
+    /// <remarks>LilyPond twin: probe score MW.</remarks>
+    private static readonly string MMTW = TabNumbersMidMeasureScore("time 16/32 ", "MMTW");
+
+    /// <summary>
+    /// Four bars on a lone numbers-only tab staff, the third opening with
+    /// <paramref name="change"/>. Two bars of 4/4, then two of whatever the change says —
+    /// which is a half note either way, so the two scores this builds differ in nothing an
+    /// engraver draws.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <c>as numbers</c> IS THE WHOLE POINT: a default Lily# <c>tab</c> is
+    /// <c>\tabFullNotation</c> and DOES engrave a meter (SpacingRules.ContributesToTimeColumnWidth),
+    /// which is the probe's own control rather than its subject.
+    /// <c>~Main</c> — the silent section reference — because a plain <c>{ Main }</c> engraves a
+    /// rehearsal mark, and a mark at the head of the line moves the first column.
+    /// </remarks>
+    private static string TabNumbersMeterScore(string change, string name) => $$"""
+        octave absolute
+        time 4/4
+
+        part gt { instrument guitar }
+
+        section Main {
+          gt { c4 e g e | c4 e g e | {{change}}c4 e | c4 e | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" { tab gt as numbers }
+        """;
+
+    /// <summary>
+    /// <see cref="TabNumbersMeterScore"/>'s music with the change moved INSIDE bar 2.
+    /// </summary>
+    private static string TabNumbersMidMeasureScore(string change, string name) => $$"""
+        octave absolute
+        time 4/4
+
+        part gt { instrument guitar }
+
+        section Main {
+          gt { c4 e g e | c4 e {{change}}g4 e | c4 e | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" { tab gt as numbers }
+        """;
+
     // --- a system with NO STAFF: chords only (probes/staffless-system.ly) ---
     // All four scores below carry the SAME progression, LilyPond's
     // `\chordmode { c2 a:m | f2 g:7 | c1 }`, so the first symbol is "C" in every one of them
@@ -10523,7 +10625,44 @@ internal static class LpGeometryProbes
             g => g.ChordSymbolAnchor(1) - g.ChordSymbolAnchor(0)),
         new("chord.symbol-width.half-spring-control", LCWH,
             g => g.ChordSymbolAnchor(1) - g.ChordSymbolAnchor(0)),
+        // --- a MID-PIECE meter change nobody draws (tab-numbers-meter.ly) ---
+        // TWO points, because they fail in different ways and neither implies the other.
+        //
+        // The IDENTITY holds the music and the bar grid fixed and varies only the meter's
+        // DIGITS (2/4 -> 16/32, the same half-note bar). LilyPond's two renders are
+        // byte-identical, so any Lily# difference is a Lily# defect measured in Lily#'s own
+        // units, with no LilyPond text metric in it. ⚠️ It is blind to a column of CONSTANT
+        // width — a reservation that did not depend on the digits would leave it exact.
+        new("mid-piece.tab-numbers.meter-identity", MPTW,
+            g => g.BarlineRightToNextFret(1) - BarlineToFretOf(MPTN, 1)),
+        // The PLAIN-BAR comparison is the one that catches that: inside ONE score, the gap
+        // after the bar that carries the change against the gap after the bar that carries
+        // nothing. LilyPond puts both on 0.945513437989928 — the meter costs nothing at all,
+        // not even the (first-note . (semi-shrink-space . 2.0)) distance a DRAWN one offers,
+        // which the probe pins a third way by reaching the same bar grid with
+        // `\set Timing.measureLength` and getting the same bytes.
+        new("mid-piece.tab-numbers.change-bar-vs-plain-bar", MPTN,
+            g => g.BarlineRightToNextFret(1) - g.BarlineRightToNextFret(0)),
+        // The same identity for the OTHER pricing function: a change INSIDE a bar is
+        // SpacingRules.MidMeasureChangeGaps, not the barline prefix, and the two are separate
+        // ports. The quantity is the STEP ACROSS the change — fret 5 to fret 6, the two
+        // musical columns the change column stands between.
+        // ⚠️ Written first as BarlineRightToNextFret(1) on both halves, which read 0.000000000
+        // and meant nothing: a bar line's gap to its own first note is local, so a column
+        // widening upstream of it does not move it. See RenderedGeometry.TabFretStep.
+        new("mid-measure.tab-numbers.meter-identity", MMTW,
+            g => g.TabFretStep(6) - FretStepOf(MMTN, 6)),
     };
+
+    /// <summary>Bar line <paramref name="barIndex"/>'s ink right → the next fret digit in a
+    /// SECOND score. Same construction as <see cref="ChordAnchorOf"/>: the quantity is a
+    /// difference between two scores, so the second render belongs to the point.</summary>
+    private static double BarlineToFretOf(string source, int barIndex) =>
+        RenderedGeometry.Render(source).BarlineRightToNextFret(barIndex);
+
+    /// <summary>The step into fret digit <paramref name="index"/> in a SECOND score.</summary>
+    private static double FretStepOf(string source, int index) =>
+        RenderedGeometry.Render(source).TabFretStep(index);
 
     /// <summary>The first chord symbol's anchor in a SECOND score, for the difference points
     /// above. Rendering twice is the point: the quantity is a difference between scores.</summary>

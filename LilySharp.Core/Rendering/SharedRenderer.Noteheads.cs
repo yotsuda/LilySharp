@@ -143,7 +143,14 @@ internal static partial class SharedRenderer
                     if (!IsSystemStartKeyChange(voice, system, ml.MeasureIndex, keyChange))
                         DrawKeySignatureChange(keyChange, itemX, staffY, clef, gc);
                     break;
-                case TimeSignatureChangeItem timeChange:
+                // A BLANKED meter is drawn nowhere — that is what blanked means
+                // (TimeSignatureChangeItem.Blanked, the port of LilyPond's
+                // \override TimeSignature.stencil = ##f). Unreachable as it stands, because
+                // an item is only blanked when NO staff of the score engraves a meter and
+                // this walk is a notation staff's; asserted here anyway so the model reads
+                // the same from whichever staff walks it, and so a future staff kind cannot
+                // draw ink the spacing model has already declined to reserve.
+                case TimeSignatureChangeItem { Blanked: false } timeChange:
                     DrawTimeSignatureChange(timeChange, itemX, staffY, gc);
                     break;
             }

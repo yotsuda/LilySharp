@@ -108,7 +108,11 @@ internal sealed class BoundaryColumn
             {
                 if (item is ClefChangeItem c) clef = c;
                 else if (item is KeySignatureChangeItem k) key = k;
-                else if (item is TimeSignatureChangeItem t) time = t;
+                // A BLANKED meter is stepped over rather than collected: its extent is empty,
+                // so break alignment gives it no offset and it widens the column by nothing
+                // (SpacingRules.ChangeItemHasInk). It is still not music, so the scan does not
+                // stop here either — the same shape OpensWithClefChange already has.
+                else if (item is TimeSignatureChangeItem t) { if (!t.Blanked) time = t; }
                 else if (item.Duration > Fraction.Zero) break; // reached the music
             }
         }

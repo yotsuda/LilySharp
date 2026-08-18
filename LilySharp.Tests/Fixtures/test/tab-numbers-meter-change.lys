@@ -1,0 +1,44 @@
+// A score built ONLY of `tab … as numbers` — the bare TabStaff, which draws no time
+// signature — carrying a MID-PIECE meter change at bar 3. It must reserve nothing for it:
+// LilyPond BLANKS the meter's stencil rather than removing the engraver
+// (ly/engraver-init.ly TabStaff, \override TimeSignature.stencil = ##f), so the grob has an
+// empty X extent and both walks that could charge for it step over it —
+// break-alignment-interface.cc calc_positioning_done and
+// spacing-interface.cc extremal_break_aligned_grob.
+//
+// ⚠️ WHAT THIS BOOK GUARDS, so a later reader can poison it: TimeSignatureChangeItem.Blanked
+// and SpacingRules.ChangeItemHasInk. Kill either and the fret digits from bar 3 on move
+// right — this book's SVG changes. (Verified by poisoning both, session 202.)
+//
+// ⚠️ WHY IT EXISTS AT ALL. The defect's scope is ZERO books: nothing in the 566 writes a
+// mid-piece meter on a numbers-only tab, which is why fixing it re-based no snapshot. But a
+// scope of zero also means nobody was watching, and the ledger points that closed it
+// (mid-piece.tab-numbers.*) are geometry probes carrying their own sources. This is the
+// corpus's own observer.
+//
+// ⚠️ THE MID-MEASURE HALF IS DELIBERATELY NOT HERE. A meter change INSIDE a bar leaves that
+// bar disagreeing with one of the two meters by construction — Lily# says so (LYS2001) and
+// LilyPond fails its bar check on the same music — so putting one in a corpus book would
+// add a permanent warning to the corpus to observe a rule its own diagnostics already
+// dispute. That half is observed by the ledger point mid-measure.tab-numbers.meter-identity
+// and by TabOnlyMeterColumnTests.ABlankedMeterInsideABar_IsNotAChangeColumn.
+//
+// The default `tab` is FULL notation and does engrave a meter — the control for this book is
+// test/timesig-change, which draws its changes on a notation staff.
+title "Numbers-only tab, mid-piece meter"
+octave absolute
+time 4/4
+
+part gt { instrument guitar }
+
+section Main {
+  gt {
+    c4 e g e | c4 e g e |
+    time 2/4 c4 e | c4 e |
+    time 3/8 c8 e g | c8 e g |
+  }
+}
+
+form main { Main }
+
+score main "tab-numbers-meter-change" { tab gt as numbers }

@@ -51,7 +51,14 @@ public readonly record struct HeaderPositions(
 public sealed record MultiStaffScore
 {
     /// <summary>Staff groups in this score.</summary>
-    public ImmutableArray<StaffGroup> StaffGroups { get; }
+    /// <remarks>
+    /// <c>init</c> rather than get-only so the collect phase's last step can hand back a score
+    /// whose measures have been rewritten — see <c>MeterStencil.Blank</c>, which cannot run
+    /// any earlier because the staves do not exist until the voices they are built from do.
+    /// Nothing else sets it; a layout or a renderer that wants a different staff set builds a
+    /// different score.
+    /// </remarks>
+    public ImmutableArray<StaffGroup> StaffGroups { get; init; }
 
     /// <summary>Time signature for the score.</summary>
     public TimeSignature TimeSignature { get; }

@@ -896,6 +896,38 @@ public sealed record TimeSignatureChangeItem : MusicItem
     /// <summary>The new time signature after the change.</summary>
     public TimeSignature NewTime { get; }
 
+    /// <summary>
+    /// Whether NO staff of the score this item belongs to gives a time signature a stencil,
+    /// so the grob stands in the non-musical column with an EMPTY X extent. A blanked change
+    /// still re-arms the measure length and still belongs to the non-musical column; what it
+    /// no longer does is put ink, width or a space-alist distance into it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:1214-1220 — the TabStaff block that \remove Key_engraver opens; a bare TabStaff carries
+    /// <c>\override TimeSignature.stencil = ##f</c>, so LilyPond BLANKS the grob rather than
+    /// removing the Time_signature_engraver. This flag is the port of that <c>##f</c>, and
+    /// the two walks that consult it are the port of the two places LilyPond skips an empty
+    /// extent: lily/break-alignment-interface.cc:144-156 calc_positioning_done (no offset,
+    /// no width) and lily/spacing-interface.cc:217-220 extremal_break_aligned_grob (never the
+    /// <c>last_grob</c> whose space-alist prices the following note). See
+    /// <see cref="Svg.Layout.SpacingRules.ChangeItemHasInk"/>.
+    /// <para>
+    /// ⚠️ SCORE-LEVEL, NOT STAFF-LEVEL, and the difference is the whole reason it lives on the
+    /// ITEM rather than being asked per staff at the drawing site. A paper column aggregates
+    /// every staff, so one notation staff engraving a meter gives the column its width however
+    /// many blanked tab staves stand beside it — the question the spacing model asks is
+    /// <see cref="Svg.Layout.SpacingRules.AnyStaffEngravesTime"/>, the OR over
+    /// <see cref="Svg.Layout.SpacingRules.ContributesToTimeColumnWidth"/>. The DRAWING walk
+    /// asks the per-staff one (SharedRenderer.Tab's <c>engravesMeter</c>) because each staff
+    /// draws its own; the two are not two spellings of one question.
+    /// </para>
+    /// <para>
+    /// Set once, by <c>MeterStencil.Blank</c> at the end of the collect phase — the staves do
+    /// not exist until the voices they are built from do, so no earlier point can answer.
+    /// </para>
+    /// </remarks>
+    public bool Blanked { get; init; }
+
     /// <summary>Always <c>Fraction.Zero</c> — the time-signature change occupies horizontal space but no time.</summary>
     public override Fraction Duration => Fraction.Zero;
 

@@ -2651,6 +2651,69 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Fret digits on a tab staff, left to right. LilyPond grob: <c>TabNoteHead</c>.
+    /// </summary>
+    /// <remarks>
+    /// Selected by ROLE, not by size or string: a fret digit and a bar number are both a
+    /// numeral in a sans face, and <see cref="TextRole.TabFret"/> is the one thing that tells
+    /// them apart — it is what <c>DrawTabFret</c> passes and what
+    /// <c>TextFontPlan.Resolve</c> keys on, so this filter cannot drift from the drawing walk
+    /// the way <see cref="LyricSyllables"/>' size filter once did.
+    /// </remarks>
+    public IReadOnlyList<DrawnText> TabFrets =>
+        Texts.Where(t => t.Role == TextRole.TabFret).ToList();
+
+    /// <summary>
+    /// Bar line <paramref name="barIndex"/>'s ink right edge → the next FRET DIGIT's anchor:
+    /// <see cref="BarlineRightToNextGlyph"/>'s quantity on a staff whose note heads are text
+    /// rather than Emmentaler glyphs.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin: <c>audit/lp-geometry/probes/tab-numbers-meter.ly</c>, which dumps BAR
+    /// (ink <c>(0 . 0.19)</c>) and the first TabNoteHead after it. Every ledger point built on
+    /// this is a DIFFERENCE of two such gaps, so the two engravers' fret-digit anchor
+    /// conventions cancel — the same construction every <c>staffless.*</c> point uses, and for
+    /// the same reason.
+    /// </remarks>
+    public double BarlineRightToNextFret(int barIndex)
+    {
+        double bar = BarlineRight(barIndex);
+        var frets = TabFrets;
+        foreach (var f in frets)
+            if (f.X > bar + 1e-9)
+                return f.X - bar;
+        throw new InvalidOperationException(
+            $"no fret digit is drawn to the right of bar line #{barIndex} (x={bar:F6}); "
+            + $"the probe drew {frets.Count} fret digit(s) in all.\nDrawn geometry:\n"
+            + Describe());
+    }
+
+    /// <summary>
+    /// The gap between fret digit <paramref name="index"/>-1 and fret digit
+    /// <paramref name="index"/>, left to right — the quantity a change column standing
+    /// BETWEEN two musical columns is spent on.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ This exists because <see cref="BarlineRightToNextFret"/> cannot see a MID-MEASURE
+    /// change at all: a bar line's gap to its own first note is local to that bar line, so a
+    /// column widening somewhere upstream leaves it untouched and the reading comes out 0 —
+    /// "not measurable" wearing the face of "exact" (HANDOFF 5.3). The pair that opened
+    /// mid-measure.tab-numbers.meter-identity read exactly 0.000000000 through the bar-line
+    /// accessor before it was moved onto this one.
+    /// </remarks>
+    public double TabFretStep(int index)
+    {
+        var frets = TabFrets;
+        if (index <= 0 || index >= frets.Count)
+        {
+            throw new InvalidOperationException(
+                $"wanted the step into fret digit #{index} but the probe drew {frets.Count} "
+                + "(and the step needs a digit on each side).\nDrawn geometry:\n" + Describe());
+        }
+        return frets[index].X - frets[index - 1].X;
+    }
+
+    /// <summary>
     /// The FLAG's draw origin minus its own NOTEHEAD's — where the flag is DRAWN, with the
     /// column's position divided out.
     /// </summary>

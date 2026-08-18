@@ -1521,8 +1521,18 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// Collects a <see cref="MultiStaffScore"/> from a syntax tree based on a render specification.
     /// </summary>
+    /// <remarks>
+    /// The blanking pass is the LAST thing the collect phase does, and it is here rather than
+    /// in <c>SvgGenerator.CollectScore</c> because this is the method callers actually reach
+    /// for: the existing nets for the line-start half of the same defect
+    /// (<c>TabOnlyKeyPrefixTests</c>) call it directly and would otherwise have measured a
+    /// model the render path never produces — the "one true path and a fallback" shape
+    /// HANDOFF 5.2.1② names as the worst one. <c>SvgGenerator</c> still applies it to the
+    /// SINGLE-staff wrap, which is assembled there and never passes through here.
+    /// See <see cref="MeterStencil"/>.
+    /// </remarks>
     public MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec)
-        => CollectMultiStaff(tree, renderSpec, harvestStructureMarks: true);
+        => MeterStencil.Blank(CollectMultiStaff(tree, renderSpec, harvestStructureMarks: true));
 
     // <paramref name="harvestStructureMarks"/> is false on the isolated recursion that harvests
     // unrendered parts' score-level marks, so that pass never re-enters the harvest.

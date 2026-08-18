@@ -151,6 +151,8 @@ public static class SvgGenerator
         // path takes no RenderSpec at all.
         collector.HeaderOverrides = renderSpec?.HeaderOverrides ?? default;
 
+        // CollectMultiStaff blanks its own result (MeterStencil, applied there so a caller
+        // that reaches for the collector directly gets the same model the render path does).
         if (renderSpec != null && renderSpec.IsMultiStaff)
             return collector.CollectMultiStaff(tree, renderSpec);
 
@@ -180,7 +182,11 @@ public static class SvgGenerator
             && renderSpec.Items[0] is SingleStaffSpec sls ? sls.Staff.Lines : 5;
         var pedalStyle = renderSpec is { Items.Length: 1 }
             && renderSpec.Items[0] is SingleStaffSpec pss ? pss.Staff.PedalStyle : PedalStyle.Bracket;
-        return MultiStaffScore.FromScore(score, instrumentName, staffLines, pedalStyle);
+        // BOTH returns go through MeterStencil.Blank, and the wrap path is not a formality:
+        // `score main { tab m as numbers }` is a ONE-staff score, so it comes out here rather
+        // than through CollectMultiStaff — and it is the very shape the blanking is for.
+        return Collector.MeterStencil.Blank(
+            MultiStaffScore.FromScore(score, instrumentName, staffLines, pedalStyle));
     }
 
     internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout,

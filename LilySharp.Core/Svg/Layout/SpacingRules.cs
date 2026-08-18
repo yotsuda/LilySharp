@@ -2603,6 +2603,40 @@ internal static class SpacingRules
         item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
 
     /// <summary>
+    /// Whether this change grob puts INK in the non-musical column — i.e. whether the column
+    /// walks may take its width, its break-align gap and its space-alist entry. False only for
+    /// a BLANKED meter (<see cref="TimeSignatureChangeItem.Blanked"/>), which is a grob with an
+    /// empty X extent.
+    /// </summary>
+    /// <remarks>
+    /// This is deliberately NOT folded into <see cref="IsChangeItem"/>. The two questions are
+    /// different and LilyPond answers them differently: a blanked TimeSignature IS still an
+    /// Item of the non-musical column — so it must keep failing
+    /// <see cref="IsMidMeasureChangeColumn"/>'s test for a MUSICAL item, or
+    /// MeasureLayouter.ItemStartingAt would hand a zero-duration grob to the skyline as the
+    /// note at that moment — while every walk that reads an EXTENT steps over it:
+    /// LILYPOND-REF: lily/break-alignment-interface.cc:144-156 calc_positioning_done — the
+    ///   alignment walk advances past each element whose extent <c>is_empty ()</c>, so a
+    ///   blanked grob is given no offset and widens the group by nothing.
+    /// LILYPOND-REF: lily/spacing-interface.cc:217-220 extremal_break_aligned_grob —
+    ///   <c>if (ext.is_empty ()) continue;</c>, so a blanked grob never becomes the
+    ///   <c>last_grob</c> whose <c>space-alist</c> prices the following note either.
+    /// <para>
+    /// MEASURED (audit/lp-geometry/probes/tab-numbers-meter.ly, ledger points
+    /// mid-piece.tab-numbers.* and mid-measure.tab-numbers.meter-identity): on a bare TabStaff
+    /// a mid-piece <c>\time 2/4</c> and a bar grid reached with <c>\set Timing.measureLength</c>
+    /// and NO meter command at all render byte-identical, and every bar of the probe puts its
+    /// first fret digit 0.945513437989928 from the bar line's ink right whether that bar
+    /// carries a change or not. The column is ABSENT, not zero-wide — which is why this
+    /// predicate removes the item from the walk instead of returning a width of 0: a
+    /// zero-width member would still spend its
+    /// (first-note . (semi-shrink-space . 2.0)) distance.
+    /// </para>
+    /// </remarks>
+    internal static bool ChangeItemHasInk(MusicItem item) =>
+        item is not TimeSignatureChangeItem { Blanked: true };
+
+    /// <summary>
     /// Whether this item stands in the non-musical change column rather than the musical
     /// one — i.e. whether <see cref="MidMeasureChangeGaps"/> owns its spacing.
     /// </summary>
@@ -2693,7 +2727,10 @@ internal static class SpacingRules
         MusicItem? last = null;
         foreach (var item in firstItems)
         {
-            if (item is ClefChangeItem || !IsChangeItem(item))
+            // ChangeItemHasInk for the same reason MeasureChangeColumn asks it: a blanked
+            // meter has an empty extent, so break alignment steps over it and it neither
+            // takes the bar line's space-alist entry nor offers one to the note after it.
+            if (item is ClefChangeItem || !IsChangeItem(item) || !ChangeItemHasInk(item))
                 continue;
             prefix += last == null
                 ? GetBarlineToItemSpace(item)
@@ -2836,9 +2873,17 @@ internal static class SpacingRules
     /// How far the next change grob in the same column sits from this one's origin: this
     /// glyph's own width plus the break-align gap to <paramref name="next"/>.
     /// </summary>
+    /// <remarks>
+    /// A BLANKED grob advances nothing and earns no gap on either side
+    /// (<see cref="ChangeItemHasInk"/>): break alignment steps over an empty extent, so the
+    /// gap runs from the previous PRESENT grob to the next PRESENT one.
+    /// </remarks>
     internal static double ChangeColumnGlyphAdvance(MusicItem change, MusicItem? next) =>
-        ChangeItemColumnWidth(change)
-        + (next != null ? BetweenChangeItemsSpace(change, next) : 0);
+        !ChangeItemHasInk(change)
+            ? 0
+            : ChangeItemColumnWidth(change)
+              + (next != null && ChangeItemHasInk(next)
+                  ? BetweenChangeItemsSpace(change, next) : 0);
 
     /// <summary>
     /// Where <paramref name="change"/> sits inside its change column, measured from the
@@ -2855,7 +2900,12 @@ internal static class SpacingRules
         MusicItem? previous = null;
         foreach (var item in columnItems)
         {
-            if (!IsChangeItem(item))
+            // Same skip as MeasureChangeColumn, so this walk and the one that sized the
+            // column place the same grobs at the same offsets. A blanked meter is drawn
+            // nowhere (SharedRenderer.Tab's engravesMeter), so the branch it would take
+            // below is unreachable in the render path; keeping the two walks identical is
+            // what stops a clef sharing its column from being offset by a phantom width.
+            if (!IsChangeItem(item) || !ChangeItemHasInk(item))
                 continue;
             if (previous != null)
                 offset += BetweenChangeItemsSpace(previous, item);
@@ -2884,7 +2934,12 @@ internal static class SpacingRules
         MusicItem? first = null, last = null;
         foreach (var item in columnItems)
         {
-            if (!IsChangeItem(item))
+            // The break-align walk steps over an empty extent (ChangeItemHasInk), so a
+            // blanked meter is neither the first nor the last grob of the column and adds
+            // neither its width nor a gap to its neighbour. When it is the ONLY change here,
+            // `first` stays null and the caller prices the pair as if nothing stood between
+            // the two musical columns — which is what LilyPond draws.
+            if (!IsChangeItem(item) || !ChangeItemHasInk(item))
                 continue;
             if (first == null)
                 first = item;
@@ -3301,12 +3356,20 @@ internal static class SpacingRules
             }
             else
             {
-                // Skyline reach: bar line → first item (max across all voices). A clef change
-                // opening the measure is NOT on this side of the bar line (break-align-orders
-                // puts clef before staff-bar), so it raises nothing here.
+                // Skyline reach: bar line → first MUSICAL item (max across all voices). No
+                // change grob belongs on this side of the bar line: a clef change is engraved
+                // BEFORE it (break-align-orders puts clef before staff-bar), and a key or time
+                // change stands in the boundary column, which is the branch above.
+                // ⚠️ This used to skip ClefChangeItem ALONE, and that was exact only because a
+                // key or time change here forced the other branch. A BLANKED meter does not
+                // (SpacingRules.ChangeItemHasInk removes it from BoundaryChangePrefix), so it
+                // arrived on this walk and was measured as if it were a note: +0.150000 on
+                // ledger point mid-piece.tab-numbers.change-bar-vs-plain-bar, which is what
+                // caught it. Asking IsChangeItem is a no-op for every book that reached here
+                // before — the only change item that could was the clef.
                 foreach (var item in firstItems)
                 {
-                    if (item is ClefChangeItem)
+                    if (IsChangeItem(item))
                         continue;
                     minDistance = Math.Max(minDistance,
                         CalculateSkylineDistance(null, item, staffY: 0));

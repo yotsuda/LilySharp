@@ -551,6 +551,13 @@ public class SvgSnapshotTests
         // drawn at each change point, measure length re-armed, validator follows
         // the new meter. Verified against LilyPond \time at matching bars.
         yield return new object[] { "test/timesig-change" };
+        // ...and the same changes on a staff that draws NONE of them: a score built only of
+        // `tab … as numbers` is LilyPond's bare TabStaff, whose TimeSignature stencil is
+        // BLANKED, so it reserves no column for a mid-piece meter either. The corpus's only
+        // observer of that rule — the defect's scope is zero books, so nothing else was
+        // watching (ledger mid-piece.tab-numbers.*). Poison TimeSignatureChangeItem.Blanked
+        // or SpacingRules.ChangeItemHasInk and this book's digits move right from bar 3 on.
+        yield return new object[] { "test/tab-numbers-meter-change" };
         // A meter change that lands at a system break: it must join the
         // system-start prefix (clef, key, time) instead of hanging far right of
         // the first note, and the key signature is reprinted at the system head.
