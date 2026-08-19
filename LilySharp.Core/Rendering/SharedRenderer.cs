@@ -359,9 +359,10 @@ internal static partial class SharedRenderer
         {
             var eolCourtesy = GetSystemEndKeyChange(score.PrimaryContentStaff, system);
             var eolTime = GetSystemEndTimeChange(score.PrimaryContentStaff, system);
-            if (eolCourtesy is { } key)
+            if (eolCourtesy is not null)
                 notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
-                    key.PreviousKey.Sharps, key.NewKey.Sharps, meterFollows: eolTime is not null);
+                    score, system.Measures[0].MeasureIndex,
+                    system.Measures[^1].MeasureIndex + 1, meterFollows: eolTime is not null);
             if (eolTime is { } eolMeter)
             {
                 notationStaffRight += SpacingRules.TimeCourtesySuffixWidth(
@@ -667,27 +668,24 @@ internal static partial class SharedRenderer
                     // SolveColumns is NOT called because it wants a WIDTH for each member, and
                     // the drawn key's real right edge is what extents[l][RIGHT] actually is:
                     // feeding it a modelled width would be a second spelling of that edge. The
-                    // reservation (SpacingRules.KeyCourtesySuffixWidth) does model it, as an
-                    // UPPER BOUND on the natural kerning, so the two sides do not agree to the
-                    // digit yet.
+                    // reservation (SpacingRules.KeyCourtesySuffixWidth) reads the SAME walk
+                    // (KeyChangeGeometry) since 2026-08-19, so reserved and drawn agree to the
+                    // digit — it was an upper bound on the kerning before that, and the slack
+                    // landed after the group (ledger courtesy.key.key-to-line-end, 0.150198).
                     //   departs from: nothing in the arithmetic; only in WHERE it lives.
-                    //   goes away when: the courtesy key's reserved width becomes the drawn
-                    //     width (one model, not a bound), after which this group can be handed
-                    //     to SolveColumns like the line-start prefix is.
-                    //   observed by: audit/lp-geometry courtesy.* — all EXACT, so the
-                    //     arithmetic is pinned; nothing yet observes the reserve/draw width gap.
+                    //   observed by: audit/lp-geometry courtesy.* — including the line-end
+                    //     spans, which see the whole suffix from the bar line's ink to the
+                    //     staff line's end.
                     if (GetSystemEndKeyChange(staff, system) is { } eolKeyChange)
                     {
                         // Which symbol OPENS the group decides which entry the bar line's alist
                         // is keyed by — a cancellation and a signature are different break-align
-                        // symbols even where BarLine happens to declare 1.0 for both.
-                        bool opensWithCancellation = SpacingRules.CancellationNaturalCount(
-                            eolKeyChange.PreviousKey.Sharps, eolKeyChange.NewKey.Sharps) > 0;
-                        double groupLeft = barlineRight + SpacingRules.BreakAlignGap(
-                            BreakAlignSymbol.StaffBar,
-                            opensWithCancellation
-                                ? BreakAlignSymbol.KeyCancellation
-                                : BreakAlignSymbol.KeySignature);
+                        // symbols even where BarLine happens to declare 1.0 for both. Read off
+                        // the drawn walk's first glyph, the same read the reservation does
+                        // (SpacingRules.KeyCourtesyOpeningGap), so the two sides cannot
+                        // disagree about the opener — custom keys included.
+                        double groupLeft = barlineRight + SpacingRules.KeyCourtesyOpeningGap(
+                            KeyChangeGeometry(eolKeyChange, clef).Glyphs);
                         // A meter after a key stands off the KEY's real right edge, which is
                         // what the draw returns — not off a width computed a second time.
                         meterX = DrawKeySignatureChange(eolKeyChange, groupLeft, localStaffY, clef, sgc)

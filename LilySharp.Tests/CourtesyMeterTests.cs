@@ -171,10 +171,10 @@ public sealed class CourtesyMeterTests
     /// surplus and this reading is what says so.
     /// </summary>
     /// <summary>
-    /// ⚠️ FROM C MAJOR, so the change prints a signature and NO cancellation. That matters:
-    /// with a cancellation the reservation is deliberately an upper bound and does not agree
-    /// with the drawn ink to the digit (see the pair below), so a book that cancels cannot
-    /// state this number.
+    /// ⚠️ FROM C MAJOR, so the change prints a signature and NO cancellation — the half of
+    /// the pair below that never depended on the kerning. Both halves read 0.5 now that the
+    /// reservation consumes the drawn walk; keeping both keeps the cancel-free case pinned
+    /// independently of the kerning arithmetic.
     /// </summary>
     [Fact]
     public void ACourtesyKeyWithNoMeter_LeavesTheSameGap()
@@ -238,24 +238,19 @@ public sealed class CourtesyMeterTests
     }
 
     /// <summary>
-    /// ⚠️ WHEN THE CHANGE CANCELS, THE MARGIN IS WIDER THAN LILYPOND'S 0.5 — measured
-    /// 0.650000 for E-flat → A major (three naturals, then three sharps).
+    /// ⚠️ A CANCELLING CHANGE READS THE SAME 0.5 AS A CANCEL-FREE ONE — E-flat → A major
+    /// (three naturals, then three sharps) — because the reservation and the draw consume
+    /// the SAME walk (<c>SharedRenderer.KeyChangeGeometry</c>), kerning included.
     /// </summary>
     /// <remarks>
-    /// THIS IS NOT THE right-edge GAP. It is the reserve-vs-draw slack that
-    /// <c>SharedRenderer</c> declares in this very group: the DRAWING chains each member off
-    /// the previous one's real drawn ink, while <c>SpacingRules.KeyCourtesySuffixWidth</c>
-    /// models the cancellation as an UPPER BOUND on LilyPond's natural kerning (0.3 per
-    /// overlapping pair). The bound is loose by 0.150000 here, and that surplus lands in the
-    /// only place left for it — after the group.
-    /// <para>
-    /// ⚠️ That comment ends "nothing yet observes the reserve/draw width gap." Something does
-    /// now, and this is it. It is written as an INEQUALITY plus the measured number rather
-    /// than as <c>Assert.Equal(0.65)</c> on purpose: 0.65 is the bound's slack on ONE key
-    /// pair and is not a rule, while "never tighter than LilyPond's gap" is. When the reserved
-    /// cancellation width becomes the drawn width — the fix that comment names — this reads
-    /// 0.5 and the guard below is what will say so.
-    /// </para>
+    /// This read 0.650000 until 2026-08-19: <c>SpacingRules.KeyCourtesySuffixWidth</c>
+    /// modelled the cancellation as an UPPER BOUND on LilyPond's natural kerning (0.3 per
+    /// pair, where the drawn walk kerns 0.3 / 0.15 / 0 by vertical overlap), and the bound's
+    /// slack landed in the only place left for it — after the group. Ledger
+    /// <c>courtesy.key.key-to-line-end</c> opened on exactly that 0.15 and closed EXACT with
+    /// the one-model fix. The inequality below is the rule ("never tighter than LilyPond's
+    /// gap"); the equality is what says the reserve no longer exceeds the draw — a
+    /// reintroduced bound reads wider than 0.5 here and this is the guard that says so.
     /// </remarks>
     [Fact]
     public void ACancellingKeyReservesAtLeastTheGap_AndTheSurplusIsTheKerningBound()
@@ -265,7 +260,7 @@ public sealed class CourtesyMeterTests
         Assert.True(margin >= 0.5 - 1e-6,
             $"the courtesy key's margin ({margin:F6}) is TIGHTER than LilyPond's 0.5 — the "
             + "right-edge entry is not being charged");
-        Assert.Equal(0.65, margin, 3);   // the bound's slack today; drop to 0.5 when it closes
+        Assert.Equal(0.5, margin, 3);
     }
 }
 

@@ -529,60 +529,106 @@ internal static class SpacingRules
     }
 
     /// <summary>
-    /// Width reserved at the END of a line for the courtesy cancellation +
-    /// new key signature when the NEXT line opens with a key change (drawn
-    /// after the line's final barline). Geometry mirrors
-    /// SharedRenderer.DrawKeySignatureChange.
+    /// Width reserved at the END of a line for the courtesy cancellation + new key signature
+    /// when the NEXT line opens with a key change (drawn after the line's final barline) —
+    /// the widest staff's group, mirroring <see cref="WidestActiveKeyInk"/> for the
+    /// line-start column: the break-align COLUMN is shared, the grob in it is each staff's
+    /// own (a transposed part carries its own key, a tab staff engraves none).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/key-engraver.cc + explicitKeySignatureVisibility
     /// (default all-visible) — a changed signature prints on BOTH sides of
     /// the break: courtesy at the old line's end, real one in the new
     /// line's prefix.
+    /// <para>
+    /// ⚠️ ONE MODEL WITH THE DRAW. The middle of the group is
+    /// <c>SharedRenderer.KeyChangeGeometry</c>'s width — the walk the drawer consumes glyph
+    /// by glyph — so the reserved width IS the drawn width, custom keys and clef-dependent
+    /// kerning included. Until 2026-08-19 the cancellation half was a hand-summed UPPER
+    /// BOUND on the natural kerning (0.3 per pair, where the drawn walk kerns 0.3 / 0.15 / 0
+    /// by vertical overlap), and the surplus had nowhere to go but after the group — ledger
+    /// <c>courtesy.key.key-to-line-end</c> opened 0.150198 on exactly that slack.
+    /// </para>
     /// </remarks>
+    /// <param name="startMeasureIndex">The line's first measure — where the clef the draw
+    /// will use is resolved (SharedRenderer.ResolveClefAt; the courtesy is drawn with the
+    /// system-START clef).</param>
+    /// <param name="nextMeasureIndex">The first measure of the NEXT line, whose leading
+    /// key change triggers the courtesy.</param>
     /// <param name="meterFollows">
     /// True when a courtesy METER stands after this key in the same end-of-line group. Then
     /// the key is not the group's last member and does NOT pay the gap to the right edge —
     /// the meter does, out of its own alist. Getting this wrong charges 0.5 twice or not at
     /// all, and both look like a spacing bug rather than a double-count.
     /// </param>
-    public static double KeyCourtesySuffixWidth(int prevSharps, int nextSharps, bool meterFollows)
+    public static double KeyCourtesySuffixWidth(
+        MultiStaffScore score, int startMeasureIndex, int nextMeasureIndex, bool meterFollows)
     {
-        int natCount = CancellationNaturalCount(prevSharps, nextSharps);
+        double widest = 0.0;
+        foreach (var staffGroup in score.StaffGroups)
+            foreach (var staff in staffGroup.Staves)
+                widest = Math.Max(widest, KeyCourtesySuffixWidthForStaff(
+                    staff, startMeasureIndex, nextMeasureIndex, meterFollows));
+        return widest;
+    }
 
-        // The bar line's gap to whichever grob OPENS the group — LilyPond keys the left grob's
-        // alist by the RIGHT grob's break-align-symbol, so a group that opens with the
-        // cancellation and one that opens with the signature read different entries (both 1.0
-        // as it happens, and reading the right one is what keeps that a fact rather than luck).
-        double w = BreakAlignGap(BreakAlignSymbol.StaffBar,
-            natCount > 0 ? BreakAlignSymbol.KeyCancellation : BreakAlignSymbol.KeySignature);
-        if (natCount > 0)
-            // Upper bound of the LP natural kerning (0.3 per overlapping pair), then the
-            // cancellation's own gap to the signature.
-            w += natCount * GlyphMetrics.AccidentalNatural.Width
-               + Math.Max(0, natCount - 1) * 0.3
-               + BreakAlignGap(BreakAlignSymbol.KeyCancellation, BreakAlignSymbol.KeySignature);
-        if (nextSharps != 0)
-            // ⚠️ A FIFTH BARE 0.4 STOOD HERE, trailing the signature, and it is the same shape
-            // as the fourth the note below describes: unnamed, uncited, and standing in for a
-            // space-alist entry — this one for `right-edge`, which is 0.5. No ledger point
-            // reached it because no point measured the line's right edge at all. It is gone;
-            // the gap is charged once, below, by whichever grob is actually last.
-            // The signature's own width needs no padding after it: LilyPond's A-major
-            // KeySignature measures 3.300030 = 3 x 1.100010, which is exactly this product
-            // (measured 2026-08-18, probes/courtesy-meter.ly score KEYONLY).
-            w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0);
+    /// <summary>
+    /// The per-staff half of <see cref="KeyCourtesySuffixWidth"/> — 0 for a staff that
+    /// engraves no key (<see cref="ContributesToKeyColumnWidth"/>) or whose next line opens
+    /// with no key change.
+    /// </summary>
+    private static double KeyCourtesySuffixWidthForStaff(
+        Staff staff, int startMeasureIndex, int nextMeasureIndex, bool meterFollows)
+    {
+        if (!ContributesToKeyColumnWidth(staff))
+            return 0.0;
+        var voice = staff.PrimaryVoice;
+        if (nextMeasureIndex >= voice.Measures.Length)
+            return 0.0;
+        // The staff's own leading key change — the same walk as
+        // SharedRenderer.GetSystemEndKeyChange, which decides what this staff DRAWS.
+        KeySignatureChangeItem? change = null;
+        foreach (var item in voice.Measures[nextMeasureIndex].Items)
+        {
+            if (item is KeySignatureChangeItem kc) { change = kc; break; }
+            if (item.Duration > Fraction.Zero) break;
+        }
+        if (change is null)
+            return 0.0;
+
+        var clef = Rendering.SharedRenderer.ResolveClefAt(staff, startMeasureIndex);
+        var (glyphs, ink) = Rendering.SharedRenderer.KeyChangeGeometry(change, clef);
+        if (glyphs.Count == 0)
+            return 0.0;
+        double w = KeyCourtesyOpeningGap(glyphs) + ink;
         // The group's last member owes a gap to `right-edge`, and which grob that is depends
         // on what the change prints: a signature when the new key has accidentals, otherwise
         // the bare cancellation. Both declare 0.5, so the ARITHMETIC does not care — reading
-        // the entry that is actually last is what keeps that a fact rather than a coincidence
-        // (the same reason KeyCourtesySuffixWidth opens its group off the right symbol above).
+        // the entry that is actually last is what keeps that a fact rather than a coincidence.
         if (!meterFollows)
             w += BreakAlignGap(
-                nextSharps != 0 ? BreakAlignSymbol.KeySignature : BreakAlignSymbol.KeyCancellation,
+                glyphs[^1].Kind != "natural"
+                    ? BreakAlignSymbol.KeySignature
+                    : BreakAlignSymbol.KeyCancellation,
                 BreakAlignSymbol.RightEdge);
         return w;
     }
+
+    /// <summary>
+    /// The bar line's gap to whichever grob OPENS the end-of-line courtesy key group —
+    /// LilyPond keys the left grob's alist by the RIGHT grob's break-align-symbol, so a group
+    /// that opens with the cancellation and one that opens with the signature read different
+    /// entries (both 1.0 as it happens, and reading the right one is what keeps that a fact
+    /// rather than luck). Which grob opens is read off the DRAWN walk's first glyph, so the
+    /// reservation and the draw cannot disagree about it — custom keys included, where the
+    /// standard-count test (<see cref="CancellationNaturalCount"/>) does not apply.
+    /// </summary>
+    public static double KeyCourtesyOpeningGap(
+        List<(string Kind, double Dx, int StaffPosition)> keyChangeGlyphs) =>
+        BreakAlignGap(BreakAlignSymbol.StaffBar,
+            keyChangeGlyphs.Count > 0 && keyChangeGlyphs[0].Kind == "natural"
+                ? BreakAlignSymbol.KeyCancellation
+                : BreakAlignSymbol.KeySignature);
 
     /// <summary>
     /// How many cancellation naturals a key change from <paramref name="prevSharps"/> to

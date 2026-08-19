@@ -45,9 +45,20 @@ internal static partial class SharedRenderer
     {
         if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
             return staff.Clef;
+        return ResolveClefAt(staff, system.Measures[0].MeasureIndex);
+    }
 
+    /// <summary>
+    /// The clef in effect at the head of a system whose first measure is
+    /// <paramref name="firstMeasureIndex"/> — the index form of <see cref="ResolveClef"/>, for
+    /// the layouter, which has no <c>SystemLayout</c> yet while it is computing one. ONE walk:
+    /// the end-of-line courtesy key reservation (SpacingRules.KeyCourtesySuffixWidthForStaff)
+    /// must read the SAME clef the draw passes to KeyChangeGeometry, or the reserved and drawn
+    /// cancellation kerns diverge by clef.
+    /// </summary>
+    internal static ClefType ResolveClefAt(Staff staff, int firstMeasureIndex)
+    {
         var voice = staff.PrimaryVoice;
-        int firstMeasureIndex = system.Measures[0].MeasureIndex;
         var activeClef = staff.Clef;
 
         // Apply clef changes accumulated in earlier measures.

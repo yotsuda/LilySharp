@@ -1077,9 +1077,9 @@ internal sealed class MultiStaffLayouter
                 if (lead.Duration > Fraction.Zero)
                     break;
             }
-            if (leadKey is { } k)
+            if (leadKey is not null)
                 availableWidth -= SpacingRules.KeyCourtesySuffixWidth(
-                    k.PreviousKey.Sharps, k.NewKey.Sharps, meterFollows: leadTime is not null);
+                    score, startMeasureIndex, endMeasureIndex, meterFollows: leadTime is not null);
             if (leadTime is { } t)
                 availableWidth -= SpacingRules.TimeCourtesySuffixWidth(
                     t, afterCourtesyKey: leadKey is not null);
