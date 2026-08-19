@@ -1582,14 +1582,32 @@ internal sealed class LayoutEngine
                         // side's full extent (the band spans every X, so the
                         // X-disjoint argument for preferring Distance() does not
                         // apply to it).
+                        // ⚠️ A BAND IS MEASURED FROM THE STAFF IT HANGS OFF (see
+                        // PageAnchorOffsets' remark), so the term that reaches it is
+                        // origin→that staff's OUTER LINE — NOT the system's body height,
+                        // which already contains a trailing lyrics ROW's drawn band and
+                        // counts it twice. Same frame mix PageLayouter's chain repaired
+                        // with HalfLast; this path kept the old spelling. MEASURED
+                        // (rowgap probe, one staff + a lyrics row, forced break):
+                        // origin step 19.836 against LilyPond 2.26.0's 12.000; with the
+                        // anchor frame it is the intended body + band + next-up floor.
+                        // Identical where no row leads/trails: there origin→outer line
+                        // IS the body height, so rowless books cannot move.
                         var annPrev = AnnBand(i);
                         var annNext = AnnBand(i + 1);
                         if (annPrev.down > 0)
-                            dist = Math.Max(dist, SysHeight(i) + annPrev.down
+                        {
+                            var aPrev = PageAnchorOffsets(systems[i].StaffGroups, lyricsRowStaves);
+                            dist = Math.Max(dist, aPrev.ToLast + aPrev.HalfLast + annPrev.down
                                 + perSystemExtents[i + 1].upExtent);
+                        }
                         if (annNext.up > 0)
+                        {
+                            var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups, lyricsRowStaves);
                             dist = Math.Max(dist, SysHeight(i)
-                                + perSystemExtents[i].downExtent + annNext.up);
+                                + perSystemExtents[i].downExtent + annNext.up
+                                - (aNext.ToFirst - aNext.HalfFirst));
+                        }
                         skylineDistance = dist;
                     }
                 }

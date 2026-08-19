@@ -202,6 +202,40 @@ public class LyricStaffOrderTests
             + $"latin gap {latin:F6}, cjk gap {cjk:F6}");
     }
 
+    [Fact]
+    public void SystemGap_ReadsARowsBandOnce_TheTwoSpellingsAgree()
+    {
+        // The same words under the same melody, spelled as an unbound ROW and as a
+        // `sings` verse: the page must hold the next system at the SAME distance,
+        // because the reservation both floors read is the same block — the anchor
+        // staff's bottom line plus the block's own ink (LyricReservationBelowSystem).
+        // The row spelling used to add the band on top of the system's BODY height,
+        // which already contains the row's drawn band — a frame mix that priced the
+        // gap 19.836 where the verse spelling (and the intended floor) says 14.571,
+        // against LilyPond 2.26.0's 12.000 on the machine-exported twin (the residual
+        // is the scalar band vs LilyPond's in-skyline X-aware distance — HANDOFF §2D).
+        // Notes stay inside the staff so the anchor's down skyline is flat and the
+        // walk cannot split the two spellings by X.
+        string body =
+            "part melody {\n"
+            + "  section A { e'4 f' g' f' | e' e' e'2 | }\n"
+            + "  section B { g'4 g' f' f' | e' e' e'2 | }\n"
+            + "}\n"
+            + "lyrics w{SINGS} {\n"
+            + "  section A { One two three four | five six se- ven | }\n"
+            + "  section B { Aa bb cc dd | ee ff gg | }\n"
+            + "}\n"
+            + "form main { A break B }\n"
+            + "score main {\n  staff melody\n  lyrics w\n}\n";
+
+        double row = SystemGapOf(body.Replace("{SINGS}", ""));
+        double sings = SystemGapOf(body.Replace("{SINGS}", " sings melody"));
+
+        Assert.True(row > 0 && sings > 0, "both spellings must break into two systems");
+        Assert.True(System.Math.Abs(row - sings) < 1e-6,
+            $"the two spellings must price the gap identically: row {row:F6}, sings {sings:F6}");
+    }
+
     /// <summary>
     /// Paper whose inter-system spring has almost no ideal left, so the SKYLINE FLOOR is what
     /// holds two systems apart.
