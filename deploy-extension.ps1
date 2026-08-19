@@ -20,6 +20,11 @@
 #
 # Kills VS Code to release DLL locks, then restarts it after install.
 
+#Requires -Version 7
+# Windows PowerShell 5.1 writes a BOM with 'Set-Content -Encoding UTF8' (Step 2),
+# and vsce then rejects package.json as invalid JSON -- after Step 1 has already
+# killed VS Code. Refuse to start at all under 5.1.
+
 param([switch]$Release)
 
 $ErrorActionPreference = "Stop"
