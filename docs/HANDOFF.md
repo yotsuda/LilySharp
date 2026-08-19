@@ -149,6 +149,45 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第220セッション＝**Marketplace 公開の下拵え（publisher を `yotsuda` に統一・8 プラットフォーム VSIX 実証・PAT 待ちで保留）＋ §2F ⒢ を両方閉じた便**（`2afd1b50`→`14b2ffcd`→`69ba0d20`＝台帳 4 点起票 → 歌詞床の `-1` family → ペダル括弧の再ホーム）。
+⚠️ **未解決の受信**: ユーザー報告「**小節番号の y 位置が高くなってしまった**」——本便の変更は無関係（sweep 569 冊で小節番号は 1 冊も動かず・HEAD は台帳 `barnumber.*.staff-to-baseline`＝LP 3.074446 に一致を再実測）。今朝の再配備で 13 commit 分（7/26 `2cefff77` の過剰予約 1.21 除去・8/18 `7b87cce1` の書体メトリクス）が初めてエディタに乗った差の可能性が高いが、**どの楽譜かをユーザーに確認中**（返答待ち。LP 比で高すぎる／重なるなら新欠陥）。
+
+★ **開始時裏取り**: リリース直後の続き便（§0 の全数はリリース便で実施済み・HEAD `d910bf07`）。この便の開始時 suite は Windows 5673/0/4 相当（変更前）。
+終了時 **未追跡 0・作業ツリー項目 0**・suite **Windows 5677/0/4（台帳 +4 点でテスト数も +4）・Linux（この機械の WSL）5677/0/4＝両 OS 完全緑**・snapshot **220 枚中 4 枚だけ動き再承認**（pedal-below-lyrics／pedal-change／pedal-note-anchor／03-piano）・追跡コーパス 569 冊・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① publisher 統一（`cc02c286`+`5c2ee91a`+`c6640c0f`・push 済み） | docs/スクリプト/package.json の `ytsuda`→`yotsuda`・.gitignore | 拡張 ID が `yotsuda.lilysharp` に（github と同綴り）。旧 ID はこの PC からアンインストール済み・新 VSIX を install 済み |
+| ② 台帳起票（`2afd1b50`） | probes/pedal-lyric-stack.ly＋4 点（PLC/PLB/PLT/PLD・LP 2.26.0 ローカル実測） | Lily# は 4 冊とも同じ 5.864960＝3 種のインクに盲目、残差が桁まで分解 |
+| ③ 歌詞床（`14b2ffcd`） | LyricEngraver の `-1` family が anchor 譜自身の Down を読む（系ごと・`LastSpaceableStaffOf` 1 軒） | dynamic 点 −1.668349→+0.024651・実コーパス 2 冊（amazing-grace/greensleeves・締まる向き）・snapshot 不動 |
+| ④ ペダル括弧（`69ba0d20`） | 族ごと系ごとに skyline 構築時に解いて seed（`SolveAndSeed`・解は `StaffSkylineSet.PedalLines` で draw へ） | PLB −1.800155→−0.000155・snapshot 4 枚のみ・LP 実測 5.295＝3.045+1.2+1.05 に桁一致 |
+
+- **Marketplace（保留・ユーザー PC 復帰待ち）**: publisher **`yotsuda` は登録済み・拡張 0 件**（`ytsuda` も本人のものだが github と綴りが揃う側を採用＝ユーザー決定）。`publish-marketplace.ps1` のドライランで **8 target 全 VSIX 成功**（win x64/arm64・linux x64/arm64/armhf/alpine・mac x64/arm64＝自己完結 44〜52 MB）。**残る 1 手はユーザーの PAT**: `https://dev.azure.com/ytsuda/_usersSettings/tokens` に**既存トークン `vsce-marketplace-publish`**（Marketplace Manage・Org=ytsuda・期限 2026/10/5）があるので **Regenerate → `npx @vscode/vsce login yotsuda`**（値は二度と表示されないため再生成が早い。元の開発機の `%USERPROFILE%\.vsce` コピーでも可）。login 後は `./publish-marketplace.ps1 -Publish` で 8 本公開 → Marketplace 検索確認。⚠️ **この回線は IPv6 経路で dev.azure.com/marketplace が TLS で死ぬ**（IPv4 は通る・実測）——ユーザーが IPv6 を無効化して回避中。vsce をスクリプト外で使うなら `NODE_OPTIONS=--dns-result-order=ipv4first`。
+- **⒢ の閉じ方は §2F の ✅ 項に**（台帳 4 点・スナップ 4 枚・残債 3 つ＝PLT text スタイル／dynamic +0.024651 box-vs-outline／系またぎ括弧×増分鍵）。
+- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（⒢ が抜けて 1 つ増えた）: ⒥ **ユーザーの小節番号報告の追跡**（上の ⚠️・返答待ち）／⒝ ペダル段間隔（テキスト行の step 1.961/2.443 未移植——PLT と同じ島）／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D）／小粒: twin の歌詞行・`lines` twin 未輸出。
+
+> ## ★★ 骨 1＝**シルエット読みは anchor の Y を打ち消していた——読みを変えるなら frame の相棒も変わる**
+> `-1` family を per-staff Down に切り替えた最初の一手は hara-kiri の本で**ちょうど system 間隔 1 本分**
+> 回帰した。旧式は `newY = −(anchorBase+…+position)` の anchorBase が gap[0] の引き算と相殺して
+> 「anchorBase が系ごとに間違っていても効かない」形だった——**per-staff にすると相殺が消える**。
+> 正しい形は LP と同じ「**その系の** last_spaceable_line」＝`LastSpaceableStaffOf`（1 軒・
+> BuildStaffAnchorTables も同じ関数を読む）。**打ち消しに守られていた誤りは、読みを直すと露出する。**
+
+> ## ★★ 骨 2＝**ペダルは族で 1 本——括弧ごとに解くと change の対が裂ける**
+> 最初の実装は括弧単位で解いて seed し、abutting な 2 本目が 1 本目の ink を避けて 1 段落ちた
+> （pedal-change で目視）。LP は族の全括弧を **1 つの SustainPedalLineSpanner** に入れる＝系ごと族ごとに
+> Y は 1 つ。**grob の単位はスパナの単位で、描画要素の単位ではない。**
+
+> ## ★ 骨 3＝**stale バイナリの絵で 2 回誤診しかけた**
+> `--no-build` は「最後に誰がどこを build したか」を知らない。pre/post 比較で 1 回（両方 post の絵）、
+> 修理後の検分で 1 回（修理前の絵）。**比較の絵を作る前に、その exe を作った build を同じ手で打つ。**
+
+---
+
+## 以下は第219セッションの経緯
+
 最終更新 第219セッション＝**v0.3.0 を出荷した便**——⓪ 拡張の再配備 → push 13 → CI 緑 → タグ `v0.3.0` → Release workflow 初実走が一発で全 job 緑・**GitHub Release v0.3.0 成立**（コード変更はスクリプト防御 1 行のみ）。
 ⚠️ **彫版・snapshot・台帳・alloc はこの便では動かしても測ってもいない**（Core は 1 行も触れていない）。**snapshot 枚数・台帳の値は第218 の記載のまま。**
 ユーザーの目的だった **0.3.0 は出た**。次はタグ後の残債（下の ⑸）。
@@ -179,53 +218,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > workflow の初実走（awk 抽出・両置き body_path・タグからの版導出）は「初回リリースが
 > 初回実走」の賭けだったが、第214 ⑶ が宿題 ⒜⒝ という 2 行を読み手に残していたので、
 > タグの前に確かめるべきものが列挙済みだった。**引継ぎに宿題を書く形式の勝ち。**
-
----
-
-## 以下は第218セッションの経緯
-
-最終更新 第218セッション＝**「私に見えているリリースブロッカー」委任の 3 便目——独立 lyrics 行の verse 消失（⑴）・行を挟んだ system 間隔の 2 倍化（⑵・「LP 双子で確認して」→着手/中止の委任）・percent 小節の R1 重ね描き（⑶・ユーザー名指し）・score 行の `sings`（⑷・ユーザー名指し＝文法拡張 1 件・補完つき）を直した便**（実装 4 commit・`988ddbc2`＋`b232d979`＋`b600e9e5`＋`98bbfddd`）。
-⚠️ **repo の ink**——⑴⑶⑷ は 0 冊・⑵ は **569 冊中ちょうど 2 冊**（lyric-extender の双子配置 2 つ＝同じ本）で、**その 2 冊は LP 双子の上に 6 桁で着地した**（mid-gap 12.000000 vs 12.000000・先頭 refpoint 11.690 vs 11.691）。**snapshot 220 枚は全便とも不変。**
-ユーザーの目的は **0.3.0**——タグはまだ。⓪ 拡張の再配備が先（下の ⑸）。
-
-★ **開始時裏取り（§0 通し）**: HEAD `3278b89d`・未 push 5・作業ツリー 0・Windows 5659/0/4・Core 0 警告＝引継ぎと全一致。**拡張は 21:05 にユーザー自身が再配備済み**・ユーザー楽譜 318 冊（第217 の 317 から +1＝当夜の Twinkle）。
-終了時 **未追跡 0・作業ツリー項目 0・未 push 13**（**この行を書く commit を含めて 13・commit の*あと*に数えた**）・
-suite **Windows 5673 / 0 / 4・Linux（この機械の WSL）5673 / 0 / 4**＝**両 OS 完全緑**（台帳の pin も全数この中）・
-**snapshot 220 枚**（不変）・**追跡コーパス 569 冊**・**Core 0 警告**・
-**alloc 162.6/45.2 で桁まで不動**（両便とも plain1k 3 回＋fingstack・§7.9）・ユーザー楽譜 318 冊 **check 0 赤・svg 彫版 0 失敗**（⑴ 後に全数）。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ⑴ 行経路の occurrence/volta 統合（`988ddbc2`） | Core 2 file・網 3 本 | **repo ink 0**（569 冊 cmp 0 移動・snapshot 220 不変）・**ユーザー楽譜に実差** |
-| ⑵ 単一ページ床の帯二重計上を除去（`b232d979`） | Core 1 file（`CreatePages` の床 2 項）・網 1 本 | **repo ink 2/569 冊＝LP に 6 桁で着地**・Twinkle 23.500→15.034（LP 12.225） |
-| ⑶ percent 小節の R1 抑制（`b600e9e5`） | Core 2 file・網 1 本 | **repo ink 0**（`repeat percent { R }` を書く追跡本なし）・r-repeat.lys 全休符 8→1 個＝LP 同形 |
-| ⑷ score 行の `sings`＋補完（`98bbfddd`） | Core 4 file・Lsp 1 file・docs 2・網 9 本 | **repo ink 0**（新綴り）・「Undefined part: sings」が消え row で束縛が綴れる |
-
-- **見えていたもの**: `lysc check` は 318 冊全緑。**直近 mtime の楽譜を彫版まで目視**したら Twinkle（21:17 編集＝依頼の 6 分前）で 2 つ——**`[~2.]` の 2 番が丸ごと消える**・**A2 リプライズが無歌詞**。最小再現 2 冊で二分し、**束縛経路（`sings`）は両方正しく、非束縛の独立行（`CollectRow`）だけの半読み**と確定。
-- **原因**: `CollectRow` は各 inner section を**初回 start にしか置かず**（`AllStarts` を見ない）、`[N.]` を **`FirstVerse` で 1 番に畳んでいた**（「row は 1 回置き」の旧設計コメントつき＝occurrence 機構より古い読み）。
-- **直し**: 括弧の読みを **`PlaceSectionOccurrences` 1 軒**に統合（§5.2.1②——同じ量を 2 軒で読んでいた）。束縛経路は `ProcessRun`・行経路は `PlaceRun` を callback で差すだけ。行の `PlaceRun` が `HideStanza` を運ぶ・`MeasureCollector` が `AllStarts` を `CollectRow` へ・flat in-section block も全 occurrence 化・verse 積みは start キー（先の section へ戻る block が verse 1 を上書きしなくなる）。網 3 本（row の reprise 復帰・`|: :|` 段積み・per-occurrence 不 bleed＝`LyricPartSectionsTests` の Row* 3 本）。
-- **⑵ の測り方と直し**（ユーザー指摘「五線の 1 行目と 2 行目の y 距離が長すぎる」）: 双子は `lysc ly`（**歌詞行は未輸出と警告する**ので旋律は機械輸出のまま・歌詞と改行だけ手で足す）・基準 exe は `C:\bin\lilypond-2.26.0`（RULES §5.5）。**歌詞なし対照は 12.200 vs 12.225（差 0.025）＝土台の鎖は健全**・譜下線→歌詞も 3.87 vs 3.76 でほぼ一致・**過剰は「歌詞帯の下→次 system」の 1 区間に局在**（15.63 vs 4.47）。原因は `CreatePages` 単一ページ床（§2D が「二重実装」と名指していた側）が **`SysHeight`（＝trailing 行の描画帯を既に含む本体高）に帯をもう一度足していた**——`PageLayouter` の鎖が `HalfLast` で直した frame 混同の残り（remark に 1.883400 の前例あり）。直しは**帯の項をアンカー譜の外側線から測る**（`ToLast+HalfLast`／上側は鏡像で `−(ToFirst−HalfFirst)`）＝**行が無い本では構造的に恒等**。ピンは `SystemGap_ReadsARowsBandOnce_TheTwoSpellingsAgree`（row 綴りと sings 綴りの同文歌詞が同じ間隔を出すこと＝修正前は 19.836 vs 14.571 に割れる）。
-- **⑶ percent の R1**（ユーザー名指し「2小節目以降にも R1 が描画される」）: LP 双子の正解は**1小節目だけ全休符・2〜8小節目は % のみ**（percent iterator は本体を 1 回しか演奏しない＝LP の MMR engraver は複製を見ない）。犯人は 2 段——**MMR 記号の放出側に percent フィルタが無い**＋**multi-staff 経路が注釈 engraver 用に組む合成 Score（`primaryScore`）が `PercentRepeats` を運んでいなかった**（chordNames は運んでいたのに）。直しは音符側と同じ「unfold は再生用・描画パスで抑制」の形＝ばね・列の畳みは不変で covered 小節の幅は変わらない。ピンは `PercentCoveredMeasures_DrawNoWholeRestUnderTheSign`（端から端まで render 経路で MMR 1 個＋% 7 個）。
-- **⑷ score 行の `sings`**（ユーザー名指し「不正な LYS1007」＝実体は Undefined part）: `ParseLyricsRowRender` が行名で止まり `sings` が次の render 項目（bare MIDI part 参照）へ落ちていた。行にも定義と同じ**文脈語 `sings`** を持たせ（行名の直後だけ・他所では普通の識別子）、**読みは 1 軒**——`LyricBindings.BindingOf` が定義 block と row の両方を読むので、fold・bound-row 収集・exporter は再導出なしに row の束縛を見る。LYS7004/7005 も同じ網（同一の再表明は無音）。補完は score/グループ内の `lyrics NAME ▮`→`sings`（AfterLyricsRowAttachName 族）・`sings ▮`→part/voice 名（既存 AfterSingsTarget を score 分岐に配線）。「score 行は定義の文脈にならない」という既存ピンは緑のまま＝行は自分の文脈を得た。GRAMMAR.md の ScoreItem/StaffGroupBody・GRAMMAR_FOR_LLM に反映（⚠️ GRAMMAR_FOR_LLM は CRLF——LF で書き戻して 1088 行 diff を作りかけた）。
-- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: **⓪ 拡張の再配備**（`deploy-extension.ps1`・VS Code を殺すのでユーザー在席時に。**21:05 の配備は本便の修理を含まない**——エディタのプレビューはまだ 2 番を落とし・間隔も旧値）→ push（未 push 11・`master` を先に）→ CI 緑 → タグ。CHANGELOG は第217 時点のまま 0.3.0 最上段。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
-  **タグ後の残債**: 第217 の列挙のまま——⒢ ペダル・強弱 vs 歌詞の優先順位スタック（§2F）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／**⒤ 歌詞帯のスカラー床が X 盲目**（§2D・第218 起票＝⑵ の残差 +2.5）／小粒: twin の歌詞行・`lines` twin 未輸出。
-
-> ## ★★★ 骨 1＝**「見えているもの」は check では出ない——彫版まで目視**
-> 3 便目の同文委任。`lysc check` 全 318 冊は 0 赤だったが、**黙って消える歌詞は赤にならない**。
-> **直近 mtime の楽譜（＝ユーザーがいま開いているもの）を彫版して見る**のが当たり筋だった。
-> Twinkle の mtime は依頼の 6 分前・`r-repeat.lys`（20:40）のような最小ファイルも
-> ユーザーが何かを確かめた足跡として読む。
-
-> ## ★★ 骨 2＝**双子経路の半読みは共有関数化で構造ごと閉じる**
-> 同じ `[N.]` 括弧を束縛経路と行経路が別々に読んでいて、行側だけ occurrence 機構より
-> 古かった。直しは「行側にも同じロジックを書く」ではなく **1 軒の読みに callback で
-> 置き方だけ差す**形——以後この 2 経路は乖離が*綴れない*（§5.2.1② の当日版）。
-
-> ## ★ 骨 3＝**sweep 0/569 は「repo にその形が無い」までしか言わない**
-> 追跡コーパスは unbound row ＋ reprise/volta を 1 冊も書いていない。毒が届く証拠は
-> 最小再現 2 冊と Twinkle の実差で見せた（第192 の骨 ⑴ と同じ運び）。
 
 ---
 
@@ -820,18 +812,24 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > 移すなら **`as` 修飾の複数連結**（`staff m as lines 1 as removeEmpty …` か 1 つの `as` に列挙か）の
 > 設計から——**判断だけで閉じる型ではなく設計資産が要る**（第215 骨 1 の区別）。着手はユーザー決定から。
 
-> # ▶ **⒢ ペダル・強弱 vs 歌詞の優先順位スタック（第215 の probe 観察・第216 再測＝実在・タグ後）**
-> **2 件とも現 HEAD で再現する**（scratch/p216/r216-{attach,row}.png・probe は ab2-*.lys）:
-> **⒜ ペダル括弧が音節を貫通する**（同一譜に @sustainOn＋歌詞＝括弧が歌詞の高さに引かれる）／
-> **⒝ `@f` が音節に重なる**（「ho」に f が乗る）。
-> **LP の答えは手書き対照（scratch/p216/lp-ctl.ly）で実測済み＝譜 → ペダル/強弱 → 歌詞**
-> の順に積み、**歌詞が下へ逃げる**。⚠️ この機械の WSL の LP は **2.27.2 系**なので、
-> 点数のピンを打つ前に 2.26.0 で取り直すこと。
-> **出所**: `PedalEngraver`・`DynamicEngraver` は歌詞を読まない（0 occurrence・第216 実測）。
-> nav だけが `MusicMarkEngraver.LyricClearance` の手縫いで避けている。
-> **閉じ方の入口**: 歌詞の skyline drop（`LyricEngraver.ApplySkylineDrop`）が読む譜下 profile に
-> ペダル・強弱の ink を入れる側が LP の形（LP はどちらも譜の VerticalAxisGroup 内の ink）。
-> 既存ピン `pedal-below-lyrics`（別譜のペダルは落ちない）を壊さないこと。
+> ## ✅ **⒢ ペダル・強弱 vs 歌詞の優先順位スタック＝⒜⒝ とも第220 で閉じた**（起票第215・再測第216。`2afd1b50`→`14b2ffcd`→`69ba0d20` の 3 commit）
+> **台帳に 4 点起票してから移植した**（audit/lp-geometry `lyrics.{pedal-bracket,pedal-text,dynamic}.staff-to-lyric`＋対照。
+> LP は **2.26.0 のローカル実機**で取り直し済み＝第216 の宿題どおり。probe は `probes/pedal-lyric-stack.ly`）:
+> **⒝ `@f`**＝`-1` family（最下譜・単譜の歌詞塊）が**システムシルエット**を読んでいて、per-staff Down に
+> 既在だった dynamics が見えなかった → **anchor 譜自身の Down を読む形に**（`LyricEngraver.LastSpaceableStaffOf`
+> ＝系ごと・hara-kiri 対応。譜なしシートはシルエットに fallback）。−1.668349 → **+0.024651**。
+> **⒜ 括弧**＝`PedalEngraver` が score 全体で 1 本の Y（systems[0] の底）を使い、どのスカイラインにも
+> ペダル ink が無かった → **族ごと・系ごとに 1 本**（LP の SustainPedalLineSpanner＝padding 1.2、pointwise、
+> フックは全高・線中央は半線幅）を **skyline 構築時に解いて seed**（`SolveAndSeed`）、解は
+> `StaffSkylineSet.PedalLines` で draw に渡る（1 計算 2 読者）。PLB −1.800155 → **−0.000155**（対照と同値の書体スライバ）。
+> LP 実測 5.295 ＝ 支え 3.045 + 1.2 + フック 1.05 と桁一致。snapshot 4 枚だけ動き再承認（pedal-below-lyrics は
+> 「別譜のペダルは落ちない」を保ったまま自譜に寄った）。射程: sweep 569 冊中、⒝ で 2 冊（歌詞床が締まる向き）＋⒜ で snapshot 4 冊のみ。
+> **残債 3 つ（この島の続き）**: ⑴ **PLT＝text スタイルの Ped./* 行は未移植**（−2.448155 のまま台帳に open。
+> MusicMarkEngraver の below-stack 再ホーム＋`LyricClearance` の pedal 免除の撤去とセット）／
+> ⑵ **dynamic の残差 +0.024651 は box-vs-outline の形状項**（台帳 why に分解済み・OPEN＝どちら側の輪郭かは未測定）／
+> ⑶ **系をまたぐ括弧 × 増分**: seed は中間小節にも ink を置くが、`MeasureContentKey` はペダル印を
+> **その小節にだけ** bucket する（BucketSingle）ので、**Off の小節を動かす編集で中間系の skyline cache が
+> stale になり得る**（未測定・毒 1 冊で確かめてから Volta と同じ BucketSpan にするか決める）。
 
 > ## ✅ **`with lyrics`/`with chords` の除去＝「score は帯の縦列」は第216 で完成した**（`6d6d1b92`→`5d7a8ef1` の 4 commit。**起票・決定は第215**）
 > **残る作業 4 つを全部閉じた**: ⑴ bound 行は譜の直後で fold（byte 恒等を機械証明してから構文を除去）

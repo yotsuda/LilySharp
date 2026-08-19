@@ -19,6 +19,53 @@
 ---
 
 
+## 以下は第218セッションの経緯
+
+最終更新 第218セッション＝**「私に見えているリリースブロッカー」委任の 3 便目——独立 lyrics 行の verse 消失（⑴）・行を挟んだ system 間隔の 2 倍化（⑵・「LP 双子で確認して」→着手/中止の委任）・percent 小節の R1 重ね描き（⑶・ユーザー名指し）・score 行の `sings`（⑷・ユーザー名指し＝文法拡張 1 件・補完つき）を直した便**（実装 4 commit・`988ddbc2`＋`b232d979`＋`b600e9e5`＋`98bbfddd`）。
+⚠️ **repo の ink**——⑴⑶⑷ は 0 冊・⑵ は **569 冊中ちょうど 2 冊**（lyric-extender の双子配置 2 つ＝同じ本）で、**その 2 冊は LP 双子の上に 6 桁で着地した**（mid-gap 12.000000 vs 12.000000・先頭 refpoint 11.690 vs 11.691）。**snapshot 220 枚は全便とも不変。**
+ユーザーの目的は **0.3.0**——タグはまだ。⓪ 拡張の再配備が先（下の ⑸）。
+
+★ **開始時裏取り（§0 通し）**: HEAD `3278b89d`・未 push 5・作業ツリー 0・Windows 5659/0/4・Core 0 警告＝引継ぎと全一致。**拡張は 21:05 にユーザー自身が再配備済み**・ユーザー楽譜 318 冊（第217 の 317 から +1＝当夜の Twinkle）。
+終了時 **未追跡 0・作業ツリー項目 0・未 push 13**（**この行を書く commit を含めて 13・commit の*あと*に数えた**）・
+suite **Windows 5673 / 0 / 4・Linux（この機械の WSL）5673 / 0 / 4**＝**両 OS 完全緑**（台帳の pin も全数この中）・
+**snapshot 220 枚**（不変）・**追跡コーパス 569 冊**・**Core 0 警告**・
+**alloc 162.6/45.2 で桁まで不動**（両便とも plain1k 3 回＋fingstack・§7.9）・ユーザー楽譜 318 冊 **check 0 赤・svg 彫版 0 失敗**（⑴ 後に全数）。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ⑴ 行経路の occurrence/volta 統合（`988ddbc2`） | Core 2 file・網 3 本 | **repo ink 0**（569 冊 cmp 0 移動・snapshot 220 不変）・**ユーザー楽譜に実差** |
+| ⑵ 単一ページ床の帯二重計上を除去（`b232d979`） | Core 1 file（`CreatePages` の床 2 項）・網 1 本 | **repo ink 2/569 冊＝LP に 6 桁で着地**・Twinkle 23.500→15.034（LP 12.225） |
+| ⑶ percent 小節の R1 抑制（`b600e9e5`） | Core 2 file・網 1 本 | **repo ink 0**（`repeat percent { R }` を書く追跡本なし）・r-repeat.lys 全休符 8→1 個＝LP 同形 |
+| ⑷ score 行の `sings`＋補完（`98bbfddd`） | Core 4 file・Lsp 1 file・docs 2・網 9 本 | **repo ink 0**（新綴り）・「Undefined part: sings」が消え row で束縛が綴れる |
+
+- **見えていたもの**: `lysc check` は 318 冊全緑。**直近 mtime の楽譜を彫版まで目視**したら Twinkle（21:17 編集＝依頼の 6 分前）で 2 つ——**`[~2.]` の 2 番が丸ごと消える**・**A2 リプライズが無歌詞**。最小再現 2 冊で二分し、**束縛経路（`sings`）は両方正しく、非束縛の独立行（`CollectRow`）だけの半読み**と確定。
+- **原因**: `CollectRow` は各 inner section を**初回 start にしか置かず**（`AllStarts` を見ない）、`[N.]` を **`FirstVerse` で 1 番に畳んでいた**（「row は 1 回置き」の旧設計コメントつき＝occurrence 機構より古い読み）。
+- **直し**: 括弧の読みを **`PlaceSectionOccurrences` 1 軒**に統合（§5.2.1②——同じ量を 2 軒で読んでいた）。束縛経路は `ProcessRun`・行経路は `PlaceRun` を callback で差すだけ。行の `PlaceRun` が `HideStanza` を運ぶ・`MeasureCollector` が `AllStarts` を `CollectRow` へ・flat in-section block も全 occurrence 化・verse 積みは start キー（先の section へ戻る block が verse 1 を上書きしなくなる）。網 3 本（row の reprise 復帰・`|: :|` 段積み・per-occurrence 不 bleed＝`LyricPartSectionsTests` の Row* 3 本）。
+- **⑵ の測り方と直し**（ユーザー指摘「五線の 1 行目と 2 行目の y 距離が長すぎる」）: 双子は `lysc ly`（**歌詞行は未輸出と警告する**ので旋律は機械輸出のまま・歌詞と改行だけ手で足す）・基準 exe は `C:\bin\lilypond-2.26.0`（RULES §5.5）。**歌詞なし対照は 12.200 vs 12.225（差 0.025）＝土台の鎖は健全**・譜下線→歌詞も 3.87 vs 3.76 でほぼ一致・**過剰は「歌詞帯の下→次 system」の 1 区間に局在**（15.63 vs 4.47）。原因は `CreatePages` 単一ページ床（§2D が「二重実装」と名指していた側）が **`SysHeight`（＝trailing 行の描画帯を既に含む本体高）に帯をもう一度足していた**——`PageLayouter` の鎖が `HalfLast` で直した frame 混同の残り（remark に 1.883400 の前例あり）。直しは**帯の項をアンカー譜の外側線から測る**（`ToLast+HalfLast`／上側は鏡像で `−(ToFirst−HalfFirst)`）＝**行が無い本では構造的に恒等**。ピンは `SystemGap_ReadsARowsBandOnce_TheTwoSpellingsAgree`（row 綴りと sings 綴りの同文歌詞が同じ間隔を出すこと＝修正前は 19.836 vs 14.571 に割れる）。
+- **⑶ percent の R1**（ユーザー名指し「2小節目以降にも R1 が描画される」）: LP 双子の正解は**1小節目だけ全休符・2〜8小節目は % のみ**（percent iterator は本体を 1 回しか演奏しない＝LP の MMR engraver は複製を見ない）。犯人は 2 段——**MMR 記号の放出側に percent フィルタが無い**＋**multi-staff 経路が注釈 engraver 用に組む合成 Score（`primaryScore`）が `PercentRepeats` を運んでいなかった**（chordNames は運んでいたのに）。直しは音符側と同じ「unfold は再生用・描画パスで抑制」の形＝ばね・列の畳みは不変で covered 小節の幅は変わらない。ピンは `PercentCoveredMeasures_DrawNoWholeRestUnderTheSign`（端から端まで render 経路で MMR 1 個＋% 7 個）。
+- **⑷ score 行の `sings`**（ユーザー名指し「不正な LYS1007」＝実体は Undefined part）: `ParseLyricsRowRender` が行名で止まり `sings` が次の render 項目（bare MIDI part 参照）へ落ちていた。行にも定義と同じ**文脈語 `sings`** を持たせ（行名の直後だけ・他所では普通の識別子）、**読みは 1 軒**——`LyricBindings.BindingOf` が定義 block と row の両方を読むので、fold・bound-row 収集・exporter は再導出なしに row の束縛を見る。LYS7004/7005 も同じ網（同一の再表明は無音）。補完は score/グループ内の `lyrics NAME ▮`→`sings`（AfterLyricsRowAttachName 族）・`sings ▮`→part/voice 名（既存 AfterSingsTarget を score 分岐に配線）。「score 行は定義の文脈にならない」という既存ピンは緑のまま＝行は自分の文脈を得た。GRAMMAR.md の ScoreItem/StaffGroupBody・GRAMMAR_FOR_LLM に反映（⚠️ GRAMMAR_FOR_LLM は CRLF——LF で書き戻して 1088 行 diff を作りかけた）。
+- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: **⓪ 拡張の再配備**（`deploy-extension.ps1`・VS Code を殺すのでユーザー在席時に。**21:05 の配備は本便の修理を含まない**——エディタのプレビューはまだ 2 番を落とし・間隔も旧値）→ push（未 push 11・`master` を先に）→ CI 緑 → タグ。CHANGELOG は第217 時点のまま 0.3.0 最上段。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
+  **タグ後の残債**: 第217 の列挙のまま——⒢ ペダル・強弱 vs 歌詞の優先順位スタック（§2F）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／**⒤ 歌詞帯のスカラー床が X 盲目**（§2D・第218 起票＝⑵ の残差 +2.5）／小粒: twin の歌詞行・`lines` twin 未輸出。
+
+> ## ★★★ 骨 1＝**「見えているもの」は check では出ない——彫版まで目視**
+> 3 便目の同文委任。`lysc check` 全 318 冊は 0 赤だったが、**黙って消える歌詞は赤にならない**。
+> **直近 mtime の楽譜（＝ユーザーがいま開いているもの）を彫版して見る**のが当たり筋だった。
+> Twinkle の mtime は依頼の 6 分前・`r-repeat.lys`（20:40）のような最小ファイルも
+> ユーザーが何かを確かめた足跡として読む。
+
+> ## ★★ 骨 2＝**双子経路の半読みは共有関数化で構造ごと閉じる**
+> 同じ `[N.]` 括弧を束縛経路と行経路が別々に読んでいて、行側だけ occurrence 機構より
+> 古かった。直しは「行側にも同じロジックを書く」ではなく **1 軒の読みに callback で
+> 置き方だけ差す**形——以後この 2 経路は乖離が*綴れない*（§5.2.1② の当日版）。
+
+> ## ★ 骨 3＝**sweep 0/569 は「repo にその形が無い」までしか言わない**
+> 追跡コーパスは unbound row ＋ reprise/volta を 1 冊も書いていない。毒が届く証拠は
+> 最小再現 2 冊と Twinkle の実差で見せた（第192 の骨 ⑴ と同じ運び）。
+
+---
+
 ## 以下は第217セッションの経緯
 
 最終更新 第217セッション＝**ユーザーの目に見えていたものを直し切った便**——楽譜 9 冊の修理 → `with` のキーワードごと退役（LYS0031 除去）→ `lines` の score 移行（`as lines N`）→ 新文法の補完（**実装 4 commit・ユーザー決定 3 件**）。
