@@ -86,38 +86,39 @@ Note: This requires `lilysharp.serverPath` to point to Debug build.
 
 ## Publishing to Marketplace
 
-### Prerequisites
+The Marketplace listing is `ytsuda.lilysharp`. It is published as **platform-specific,
+self-contained** VSIXs (one per VS Code target, each bundling its own .NET runtime),
+so users need nothing but VS Code. `publish-marketplace.ps1` does all of this.
 
-1. Install vsce:
+### Prerequisites (once per machine)
+
+1. A Personal Access Token for the `ytsuda` publisher:
+   - https://dev.azure.com/ -> User settings -> Personal access tokens -> New Token
+   - Organization: **All accessible organizations**, Scopes: **Marketplace -> Manage**
+2. Store it for vsce (kept in `~/.vsce`, never in the repo):
    ```bash
-   npm install -g @vscode/vsce
+   cd editors/vscode
+   npx @vscode/vsce login ytsuda
    ```
-
-2. Create Personal Access Token:
-   - Go to https://dev.azure.com/
-   - Create PAT with "Marketplace (Publish)" scope
-
-3. Login:
-   ```bash
-   vsce login lilysharp
-   ```
+   (or export it as `VSCE_PAT` for the session instead)
 
 ### Publish Steps
 
-```bash
+```powershell
 cd editors/vscode
 
-# 1. Update version in package.json
+# 1. Version must already match Directory.Build.props / CHANGELOG (the tag)
 
-# 2. Build and package
-npm run package    # Creates lilysharp-x.x.x.vsix
+# 2. Dry run: build all platform VSIXs into ./dist and install one locally
+./publish-marketplace.ps1
+code --install-extension dist/lilysharp-win32-x64.vsix
 
-# 3. Test locally (optional)
-code --install-extension lilysharp-x.x.x.vsix
-
-# 4. Publish
-npm run publish
+# 3. Publish every target
+./publish-marketplace.ps1 -Publish
 ```
+
+`npm run package` / `npm run publish` build a single *universal* VSIX from whatever
+is in `./server`; they are for local experiments, not for the Marketplace.
 
 ## Important Notes
 

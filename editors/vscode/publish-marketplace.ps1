@@ -21,7 +21,7 @@
 #   ./publish-marketplace.ps1 -Publish   # upload each target to the Marketplace
 #
 # Requires: dotnet SDK, npm deps installed, and (for -Publish) a vsce PAT for the
-# `lilysharp` publisher (VSCE_PAT env var or `vsce login`).
+# `ytsuda` publisher (VSCE_PAT env var or `npx @vscode/vsce login ytsuda`).
 param([switch]$Publish)
 
 $ErrorActionPreference = 'Stop'
