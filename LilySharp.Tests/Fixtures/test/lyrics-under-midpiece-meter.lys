@@ -9,7 +9,7 @@ key c major
 part melody { clef treble }
 
 section A { g4 a b | time 4/4 c' b a g | a b c'2 | }
-lyrics words { la la la | Twin- kle twin- kle | lit- tle star | }
+lyrics words sings melody { la la la | Twin- kle twin- kle | lit- tle star | }
 
 form main { A }
 

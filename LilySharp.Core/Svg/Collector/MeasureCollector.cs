@@ -1727,6 +1727,24 @@ public sealed partial class MeasureCollector
                         wrapBars = Math.Max(wrapBars, v.Measures.Length);
             foreach (var (name, idx) in pendingLyricsRows)
             {
+                // A track that SINGS a part places its syllables at that part's
+                // rhythm: the row is the lyric line of a melody the score does
+                // not engrave (the LilyPond shape is \lyricsto over a NullVoice
+                // - the moments join the spacing, the notes print nothing).
+                if (Music.LyricBindings.TargetOf(tree.GetRoot(), name) is { } sings)
+                {
+                    var melody = staffVoices.TryGetValue(sings, out var mv)
+                        && mv.Length > 0 && mv[0].Measures.Length > 0
+                        ? mv[0].Measures
+                        : CollectMelodyFor(tree, renderSpec, sings);
+                    if (!melody.IsDefaultOrEmpty)
+                    {
+                        _lyricsCollector.CollectBoundRow(tree.GetRoot(), name, idx,
+                            melody.ToList(), _sectionState.StartMeasure, _sectionState.AllStarts);
+                        staffVoices[name] = ImmutableArray.Create(new Voice(name, SpacerSkeleton(melody)));
+                        continue;
+                    }
+                }
                 var rowMeasures = _lyricsCollector.CollectRow(
                     tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType);
                 staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
@@ -2581,6 +2599,56 @@ public sealed partial class MeasureCollector
             BeamPairingScanner.Scan(v, _unpairedBeamWarnings);
         }
         return ResolveStaffColumns(voices.ToImmutable());
+    }
+
+    /// <summary>The measures of a part this score does NOT engrave, collected the
+    /// way a staff of it would be - a fresh sub-collector over a one-staff spec of
+    /// the SAME form, so bar indexing and section starts line up and none of this
+    /// collector's side collections (dynamics, articulations, marks) pick up the
+    /// melody's. Used by a melody-bound lyrics row.</summary>
+    private static ImmutableArray<Measure> CollectMelodyFor(SyntaxTree tree, RenderSpec renderSpec, string partName)
+    {
+        var (partClef, _, _, _, _, _) = GetPartDefaults(tree.GetRoot(), partName);
+        var spec = renderSpec with
+        {
+            Items = ImmutableArray.Create<RenderItemSpec>(
+                new SingleStaffSpec(new StaffSpec(ParseClefType(partClef ?? "treble"), partName))),
+        };
+        try
+        {
+            var sub = new MeasureCollector().CollectMultiStaff(tree, spec);
+            foreach (var group in sub.StaffGroups)
+                foreach (var st in group.Staves)
+                    if (st.Voices.Length > 0)
+                        return st.Voices[0].Measures;
+            return ImmutableArray<Measure>.Empty;
+        }
+        catch
+        {
+            // A malformed melody surfaces its real error through the validators;
+            // the row then falls back to the even-spread reading.
+            return ImmutableArray<Measure>.Empty;
+        }
+    }
+
+    /// <summary>The row skeleton of a melody-bound lyrics row: the melody's
+    /// measures with every item replaced by an invisible spacer of the same
+    /// length, 1:1 by item index so the syllable alignment's (measure, item)
+    /// coordinates and timings stay real columns. The row occupies the melody's
+    /// time without drawing its notes.</summary>
+    private static ImmutableArray<Measure> SpacerSkeleton(ImmutableArray<Measure> melody)
+    {
+        var result = ImmutableArray.CreateBuilder<Measure>(melody.Length);
+        foreach (var m in melody)
+        {
+            var items = ImmutableArray.CreateBuilder<MusicItem>(m.Items.Length);
+            foreach (var item in m.Items)
+                // Duration folds dots and the tuplet TimeScale, so a plain
+                // spacer of it occupies exactly the item's sounding time.
+                items.Add(new RestItem(item.Duration, 0, item.SourcePosition) { IsSpacer = true });
+            result.Add(m with { Items = items.MoveToImmutable() });
+        }
+        return result.MoveToImmutable();
     }
 
     /// <summary>An empty placeholder measure (no items) that mirrors the

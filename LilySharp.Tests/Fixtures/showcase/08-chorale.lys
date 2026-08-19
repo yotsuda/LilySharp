@@ -33,7 +33,7 @@ section Main {
     voice { g,4  b,  c   a,  | d   d   d2 | }
     { g,,4 g,, c,  d,  | g,, d,  g,,2 }
   }
-  lyrics words { Praise God from whom | all bless- ings | }
+  lyrics words sings upper { Praise God from whom | all bless- ings | }
 }
 
 form main { Main }

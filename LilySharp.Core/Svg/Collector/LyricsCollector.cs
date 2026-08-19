@@ -87,7 +87,8 @@ internal sealed class LyricsCollector
         IReadOnlyDictionary<string, int> sectionStartMeasure,
         IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null,
         IReadOnlyList<string>? onlyBlocks = null,
-        int staffIndex = 0)
+        int staffIndex = 0,
+        bool asRow = false)
     {
         var lyricsBlocks = root.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>().ToList();
         if (lyricsBlocks.Count == 0)
@@ -143,9 +144,12 @@ internal sealed class LyricsCollector
                 var lyrics = lyricCollector.Collect(syllableMeasures, aligned, out var overflow,
                     voiceId: voiceId, verseNumber, hideStanza: hideLabel,
                     baseMeasureIndex: Math.Max(0, startMeasure));
-                _lyrics.AddRange(staffIndex == 0
-                    ? lyrics
-                    : lyrics.Select(l => l with { StaffIndex = staffIndex }));
+                _lyrics.AddRange(lyrics.Select(l => asRow
+                    // A melody-BOUND ROW: the syllables carry the melody's note
+                    // timings but render on the row band (IsLyricsRow X-from-
+                    // timing path), grouped under the row's own staff index.
+                    ? l with { StaffIndex = staffIndex, VoiceId = staffIndex, IsLyricsRow = true }
+                    : staffIndex == 0 ? l : l with { StaffIndex = staffIndex }));
 
                 // A single block may auto-wrap into several stacked verses; the next
                 // block at this start begins after the highest verse this one produced.
@@ -331,6 +335,29 @@ internal sealed class LyricsCollector
     /// skeleton (spacer rests for width); the syllables go to <see cref="Lyrics"/>
     /// tagged with this row's staff index.
     /// </summary>
+    /// <summary>
+    /// Collects a melody-BOUND lyrics row: a track that <c>sings</c> a part the
+    /// score does not engrave. The syllables align to the melody's notes with the
+    /// SAME machinery a <c>with lyrics</c> attachment uses (melisma <c>~</c>,
+    /// skip <c>_</c>, verses, per-occurrence <c>[N.]</c> brackets), and land on
+    /// the row band at the melody's own timings — the caller supplies the row's
+    /// measure skeleton (one spacer per melody item) so those timings are real
+    /// columns the spacing solves.
+    /// </summary>
+    public void CollectBoundRow(
+        SyntaxNode root, string trackName, int staffIndex,
+        List<Measure> melody,
+        IReadOnlyDictionary<string, int> sectionStartMeasure,
+        IReadOnlyDictionary<string, List<int>>? sectionAllStarts)
+        => CollectNoteBound(root, melody,
+            lyricsRowNames: new HashSet<string>(),
+            voiceMeasuresByName: new Dictionary<string, (int Index, List<Measure> Measures)>
+            {
+                [trackName] = (staffIndex, melody),
+            },
+            sectionStartMeasure, sectionAllStarts,
+            onlyBlocks: new[] { trackName }, staffIndex: staffIndex, asRow: true);
+
     public ImmutableArray<Measure> CollectRow(
         SyntaxNode root, string partName, int staffIndex, int totalBars,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType)

@@ -211,7 +211,7 @@ public class MusicXmlRoundTripTests
                 e'4@chord(c) e' f' g' | a'4@chord(a:m) g' e' d' |
                 f'4@chord(f) a' g' f' | e'4@chord(g:7) d' c'2 |
               }
-              lyrics words { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
+              lyrics words sings melody { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
             }
 
             form main { A }
@@ -233,7 +233,7 @@ public class MusicXmlRoundTripTests
             part melody { clef treble }
             section A {
               melody { e'4@chord(c) e' f' g' | }
-              lyrics words { Mu- sic fills the | }
+              lyrics words sings melody { Mu- sic fills the | }
             }
             form main { A }
             score main { staff melody with lyrics words }
@@ -589,9 +589,9 @@ public class MusicXmlRoundTripTests
         int body = lys.IndexOf("section Body", System.StringComparison.Ordinal);
         int end1 = lys.IndexOf("section End1", System.StringComparison.Ordinal);
         int end2 = lys.IndexOf("section End2", System.StringComparison.Ordinal);
-        Assert.Contains("lyrics words { la |", lys[body..end1]);
-        Assert.Contains("lyrics words { one |", lys[end1..end2]);
-        Assert.Contains("lyrics words { two |", lys[end2..]);
+        Assert.Contains("lyrics words sings tune { la |", lys[body..end1]);
+        Assert.Contains("lyrics words sings tune { one |", lys[end1..end2]);
+        Assert.Contains("lyrics words sings tune { two |", lys[end2..]);
     }
 
     [Fact]

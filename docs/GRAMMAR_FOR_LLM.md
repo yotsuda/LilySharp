@@ -340,7 +340,15 @@ appoggiatura { c8 } d4       // unslashed grace
 voice { c'2 d } { e2 f }     // each voice { } is a simultaneous voice
 ```
 
-## Lyrics (a named track, attached to a staff)
+## Lyrics (a named track that SINGS a part)
+
+A lyric track binds to its melody at the definition: `lyrics NAME sings PART`.
+The score places it: `staff PART with lyrics NAME` under the engraved melody, or
+`lyrics NAME` as a score item = only the words, at the melody's rhythm, without
+engraving the melody. Multiple tracks may sing one part (two languages = two
+names). A track named after the part or one of its voices is bound by the name.
+Attaching an unbound track to a staff is an error (LYS6009); to a staff it does
+not sing, LYS6010.
 
 A `lyrics NAME { … }` track sits in a section next to the part it sings; the score
 attaches it under a staff with `staff X with lyrics NAME`. Syllables are separated by
@@ -353,7 +361,7 @@ leading `| |` skips the melody's opening rest bar).
 part melody
 section Main {
   melody { c4 d e f | g2 g | }
-  lyrics words { Hap- py birth- day | to you | }
+  lyrics words sings melody { Hap- py birth- day | to you | }
 }
 form main { Main }
 score main { staff melody with lyrics words }

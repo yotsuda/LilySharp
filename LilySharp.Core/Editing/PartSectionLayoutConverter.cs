@@ -123,6 +123,9 @@ public static class PartSectionLayoutConverter
         // Lyric tracks: (name, ordinal) — the ordinal separates several same-named
         // (usually nameless) verse blocks in one section — and (track, section) text.
         var lyricTracks = new List<(string? Name, int Ordinal)>();
+        // The `sings` binding is a property of the track NAME - carried whole
+        // through the conversion, or the round trip would silently unbind it.
+        var lyricSings = new Dictionary<string, string>(StringComparer.Ordinal);
         var lyricCells = new Dictionary<(string? Name, int Ordinal, string Section), string>();
         // section -> its own directive text (`key g major` …): a standalone part-major
         // header, or the directives folded into a section-major section.
@@ -177,6 +180,9 @@ public static class PartSectionLayoutConverter
                 {
                     int ord = lyricTracks.Count(t => t.Name == topLyrics.VoiceName);
                     AddLyricTrack((topLyrics.VoiceName, ord));
+                    if (topLyrics is { VoiceName: { } tn, SingsTarget: { } tt }
+                        && !lyricSings.ContainsKey(tn))
+                        lyricSings[tn] = tt;
                     foreach (var ls in topLyrics.Sections)
                     {
                         AddSection(ls.SectionName);
@@ -219,6 +225,9 @@ public static class PartSectionLayoutConverter
                         int ord = lyricOrd.GetValueOrDefault(key);
                         lyricOrd[key] = ord + 1;
                         AddLyricTrack((lb.VoiceName, ord));
+                        if (lb is { VoiceName: { } ln, SingsTarget: { } lt }
+                            && !lyricSings.ContainsKey(ln))
+                            lyricSings[ln] = lt;
                         lyricCells[(lb.VoiceName, ord, section.SectionName)] = BetweenBraces(Verbatim(source, lb));
                     }
                     break;
@@ -230,7 +239,7 @@ public static class PartSectionLayoutConverter
             if (!parts.Any(pt => pt.Name == p))
                 parts.Add((p, ""));
 
-        var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells);
+        var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells, lyricSings);
         var body = target == LayoutForm.PartMajor
             ? EmitPartMajor(parts, sectionOrder, cells, tracks, sectionHeaders)
             : EmitSectionMajor(parts, sectionOrder, cells, tracks, sectionHeaders);
@@ -244,7 +253,8 @@ public static class PartSectionLayoutConverter
         List<string?> ChordParts,
         Dictionary<(string? Name, string Section), string> ChordCells,
         List<(string? Name, int Ordinal)> LyricTracks,
-        Dictionary<(string? Name, int Ordinal, string Section), string> LyricCells);
+        Dictionary<(string? Name, int Ordinal, string Section), string> LyricCells,
+        Dictionary<string, string> LyricSings);
 
     /// <summary>Writes the <c>chords</c> keyword with its optional name.</summary>
     private static void AppendChordsKeyword(StringBuilder sb, string? name)
@@ -254,12 +264,18 @@ public static class PartSectionLayoutConverter
             sb.Append(' ').Append(name);
     }
 
-    /// <summary>Writes the <c>lyrics</c> keyword with its optional voice name.</summary>
-    private static void AppendLyricsKeyword(StringBuilder sb, string? name)
+    /// <summary>Writes the <c>lyrics</c> keyword with its optional voice name and
+    /// the track's <c>sings</c> binding (repeating it on every emitted block is the
+    /// legal spelling - later blocks may restate the binding identically).</summary>
+    private static void AppendLyricsKeyword(StringBuilder sb, string? name, TrackData tracks)
     {
         sb.Append("lyrics");
         if (name != null)
+        {
             sb.Append(' ').Append(name);
+            if (tracks.LyricSings.TryGetValue(name, out var sings))
+                sb.Append(" sings ").Append(sings);
+        }
     }
 
     private static string EmitPartMajor(
@@ -297,7 +313,7 @@ public static class PartSectionLayoutConverter
         // ... and each lyric verse-track likewise.
         foreach (var (lyricName, ordinal) in tracks.LyricTracks)
         {
-            AppendLyricsKeyword(sb, lyricName);
+            AppendLyricsKeyword(sb, lyricName, tracks);
             sb.Append(" {\n");
             foreach (var section in sectionOrder)
                 if (tracks.LyricCells.TryGetValue((lyricName, ordinal, section), out var text))
@@ -341,7 +357,7 @@ public static class PartSectionLayoutConverter
                 if (tracks.LyricCells.TryGetValue((lyricName, ordinal, section), out var text))
                 {
                     sb.Append("  ");
-                    AppendLyricsKeyword(sb, lyricName);
+                    AppendLyricsKeyword(sb, lyricName, tracks);
                     sb.Append(' ').Append(Braced(text)).Append('\n');
                 }
             sb.Append("}\n");

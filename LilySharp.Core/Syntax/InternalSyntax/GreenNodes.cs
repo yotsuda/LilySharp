@@ -1192,19 +1192,34 @@ internal sealed class BreakGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class LyricsBlockGreen : GreenSyntaxNode
 {
-    // `lyrics [name] { … }` — the optional name binds the lyrics to a same-named
-    // voice. When present it sits between the keyword and the brace.
+    // `lyrics [name] [sings part] { … }` — the optional name binds the lyrics to a
+    // same-named voice or part; the optional `sings part` pair binds the track to
+    // the named part's melody at the DEFINITION (the score only places it). The
+    // optional tokens sit between the keyword and the brace, present-or-absent as
+    // slots (the red side finds the brace by kind, not by index).
     public LyricsBlockGreen(
         SyntaxToken lyricsKeyword,
         SyntaxToken? name,
+        SyntaxToken? singsKeyword,
+        SyntaxToken? singsTarget,
         SyntaxToken openBrace,
         GreenNode?[] measures,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.LyricsBlock,
-            name != null
-                ? [lyricsKeyword, name, openBrace, .. measures, closeBrace]
-                : [lyricsKeyword, openBrace, .. measures, closeBrace])
+        : base(SyntaxKind.LyricsBlock, Slots(lyricsKeyword, name, singsKeyword, singsTarget, openBrace, measures, closeBrace))
     {
+    }
+
+    private static GreenNode?[] Slots(SyntaxToken kw, SyntaxToken? name, SyntaxToken? singsKw,
+        SyntaxToken? singsTarget, SyntaxToken open, GreenNode?[] measures, SyntaxToken close)
+    {
+        var head = new List<GreenNode?> { kw };
+        if (name != null) head.Add(name);
+        if (singsKw != null) head.Add(singsKw);
+        if (singsTarget != null) head.Add(singsTarget);
+        head.Add(open);
+        head.AddRange(measures);
+        head.Add(close);
+        return head.ToArray();
     }
 }
 

@@ -1,0 +1,29 @@
+// The `sings` binding end-to-end: a part sheet carrying the chorus WORDS at the
+// chorus melody's own rhythm, without engraving that melody. Two lyric tracks
+// bound to the same unengraved part (two languages) stack as two rows; the
+// syllables sit at the vocal's eighth-note onsets, not at even spreads and not
+// at the sax's quarters. The hyphen connectors ride along.
+title "Chorus words"
+time 4/4
+
+part sax { }
+part vocal { }
+
+section Chorus {
+  sax   { c4 d e f | g2 g | a4 g f e | c1 | }
+  vocal { g8 g a4 a8 a a4 | g2 f | e4 f g2 | c1 | }
+  lyrics ja sings vocal {
+    きら きら ひか る- よ ぞら | ほし よ | かがや け | よ |
+  }
+  lyrics en sings vocal {
+    Sing it loud and clear now | ev- ery | bo- dy sing | home |
+  }
+}
+
+form main { Chorus }
+
+score main "sings-chorus-row" {
+  staff sax
+  lyrics ja
+  lyrics en
+}

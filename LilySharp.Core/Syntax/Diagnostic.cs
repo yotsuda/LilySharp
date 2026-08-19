@@ -894,6 +894,17 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string VoltaEndingWithoutRepeat = "LYS6008";
 
+    /// <summary>Render error: <c>staff X with lyrics N</c> where the track N sings
+    /// nothing — no <c>sings</c> declaration and its name matches neither the part nor
+    /// one of its voices. Lyrics bind to their OWN melody at the definition
+    /// (<c>lyrics N sings X { … }</c>); the score only places them (user decision,
+    /// 2026-08-19 — attachment-decides-association closed before the first tag).</summary>
+    public const string LyricsAttachmentUnbound = "LYS6009";
+
+    /// <summary>Render error: <c>staff X with lyrics N</c> where N sings a DIFFERENT
+    /// part — the association is the track's, and placement cannot re-decide it.</summary>
+    public const string LyricsAttachmentWrongStaff = "LYS6010";
+
     // Structure / section-part grid errors (LYS7xxx)
 
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>
@@ -909,6 +920,14 @@ public static class DiagnosticCodes
     /// <c>lines 5</c> alone). Rather than freeze either accident as the rule, the
     /// duplicate is refused: no book on disk writes one, so nothing has to choose.</summary>
     public const string DuplicatePartProperty = "LYS7003";
+
+    /// <summary>Track error: <c>lyrics N sings T</c> where T names no declared part.</summary>
+    public const string SingsTargetUnknown = "LYS7004";
+
+    /// <summary>Track error: two blocks of the same lyrics track name different
+    /// <c>sings</c> targets — the binding is a property of the TRACK, stated once
+    /// (later same-name blocks may repeat it identically or omit it).</summary>
+    public const string SingsConflict = "LYS7005";
 
     // Font warnings (LYS8xxx)
     // (LYS6xxx is already taken by the render/score-declaration band above.)

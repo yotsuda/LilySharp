@@ -694,7 +694,9 @@ internal static class LysWriter
 
         foreach (int verse in verses)
         {
-            var sb = new StringBuilder("lyrics " + LyricTrackName(verse) + " { ");
+            // The track sings the part whose notes carried the syllables — the
+            // binding lives at the definition (LYS6009 refuses an unbound attach).
+            var sb = new StringBuilder("lyrics " + LyricTrackName(verse) + " sings " + part.SafeName + " { ");
             foreach (var measure in measures)
             {
                 foreach (var note in measure.PrimaryItems.OfType<ImportNote>())

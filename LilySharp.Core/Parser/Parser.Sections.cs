@@ -121,6 +121,15 @@ internal sealed partial class Parser
         var keyword = Expect(SyntaxKind.LyricsKeyword);
         // Optional voice-binding name: `lyrics sop { … }` aligns to voice 'sop'.
         var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
+        // Optional melody binding: `lyrics ja sings vocal { … }` — the track sings
+        // the named part. Contextual like `q`: 'sings' stays an ordinary identifier
+        // everywhere else, claimed only between a track name and its brace.
+        SyntaxToken? singsKeyword = null, singsTarget = null;
+        if (name != null && Check(SyntaxKind.Identifier) && Current.Text == "sings")
+        {
+            singsKeyword = Advance();
+            singsTarget = Check(SyntaxKind.Identifier) ? Advance() : null;
+        }
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = new List<GreenNode?>();
@@ -153,7 +162,7 @@ internal sealed partial class Parser
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
 
-        return new LyricsBlockGreen(keyword, name, openBrace, [.. items], closeBrace);
+        return new LyricsBlockGreen(keyword, name, singsKeyword, singsTarget, openBrace, [.. items], closeBrace);
     }
 
     /// <summary>A lyric track's inner section (part-major form): <c>section NAME {

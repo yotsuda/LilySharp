@@ -459,11 +459,22 @@ SectionSetting = KeyDecl | TempoDecl | TimeDecl | PartialDecl ;
 
 PartBlock      = Identifier , MusicBlock ;
 
-(* A lyrics track is written in a section next to the part it sings, and named so a score
-   can reference it: attach it under a staff with 'staff X with lyrics NAME' (aligned to
-   that part's notes), or place it as an independent 'lyrics NAME' ROW — see §7 (lead
-   sheets). *)
-LyricsBlock    = 'lyrics' , Identifier , '{' , { LyricMeasure } , '}' ;
+(* A lyrics track BINDS TO ITS OWN MELODY AT THE DEFINITION (user decision,
+   2026-08-19, closed before the first tag): 'lyrics ja sings vocal { ... }' says the
+   track ja sings the part vocal, and the SCORE only PLACES it —
+     - 'staff vocal with lyrics ja'  puts the syllables under the engraved melody;
+     - 'lyrics ja' as a score item   puts them on a ROW at the melody's rhythm
+       WITHOUT engraving the melody (a part sheet carrying the chorus words —
+       LilyPond's shape is \lyricsto over a NullVoice: the moments join the
+       spacing, the notes print nothing).
+   The binding is a property of the TRACK NAME, stated once; later same-name blocks
+   may repeat it identically or omit it (a different target is LYS7005; an unknown
+   one LYS7004). Attaching a track that sings NOTHING is LYS6009 unless its name
+   IS the binding — the part itself, or one of that part's voices ('voice sop { }'
+   + 'lyrics sop { }'); attaching one to a staff it does not sing is LYS6010:
+   placement cannot re-decide the association. A track with no 'sings' placed as a
+   ROW keeps the even-spread lead-sheet reading — see §7. *)
+LyricsBlock    = 'lyrics' , Identifier , [ 'sings' , PartRef ] , '{' , { LyricMeasure } , '}' ;
 LyricMeasure   = { LyricSyllable } , '|' ;
 LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                  (* MEASURED 2026-08-16 — and the spacing is part of the rule, because
@@ -480,11 +491,13 @@ ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordEntry | Barline } , '}
 ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Quality ] , [ '/' , PitchBase ] ;
                  (* c=C, a:m=Am, g:7=G7, g:m7.5-=Gm7b5, c/g=C over a G bass *)
 
-(* Example (the score attaches the named track under the staff):
+(* Example (the track sings its melody; the score attaches it under that staff —
+   or, as 'lyrics words' among the score items, shows ONLY the words at the
+   melody's rhythm, e.g. a horn part carrying the chorus lyrics):
    section Verse {
      key g major
      melody { c4 d e f | g2 g | }
-     lyrics words { Twin- kle twin- kle | lit- tle star | }
+     lyrics words sings melody { Twin- kle twin- kle | lit- tle star | }
    }
    form main { Verse }
    score main { staff melody with lyrics words }
@@ -1092,20 +1105,21 @@ phrase riff { c4 d e f | }
 
 section Verse {
   melody { $riff | g4@p a( b c') | }
-  lyrics words { Sing a song now | one two three four | }
+  lyrics words sings melody { Sing a song now | one two three four | }
 }
 
-// A staff-less lead sheet (chords + lyrics, no notes):
+// A staff-less lead sheet (chords + lyrics, no notes). Its lyric row is its
+// own track (no `sings`): with no melody to sing, the syllables spread evenly.
 section Sheet {
   chords prog  { c2 a:m |: f2 g:7 | c1 :| }
-  lyrics words { Twin- kle twin- kle | lit- tle | star | }
+  lyrics sheetWords { Twin- kle twin- kle | lit- tle | star | }
 }
 
 form main  { Verse }
 form sheet { Sheet }
 
 score main  "demo"  { staff melody with lyrics words }
-score sheet "sheet" { chords prog lyrics words }
+score sheet "sheet" { chords prog lyrics sheetWords }
 ```
 
 MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).

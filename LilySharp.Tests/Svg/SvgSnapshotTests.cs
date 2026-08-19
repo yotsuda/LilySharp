@@ -621,6 +621,9 @@ public class SvgSnapshotTests
         // Rhythm notation: slash notes (one-line + five-line staves), bare-duration
         // runs, a pitched kick inside a slash bar, the bass pump, open/dotted slashes.
         yield return new object[] { "test/rhythm-slashes" };
+        // The `sings` binding: two lyric tracks bound to an UNENGRAVED melody,
+        // stacked as rows at that melody's rhythm under another part's staff.
+        yield return new object[] { "test/sings-chorus-row" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).

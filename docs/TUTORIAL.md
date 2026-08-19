@@ -156,13 +156,16 @@ tuplet 5/4 { c16 d e f g } a4 b c' |
 ## Lyrics
 
 A `lyrics NAME { … }` track sits in the section beside the part it sings; the score
-attaches it under the staff with `staff X with lyrics NAME`.
+attaches it under the staff with `staff X with lyrics NAME`. The `sings` word is
+the binding: the words belong to that melody wherever the score places them —
+write `lyrics words` alone among the score items and you get ONLY the words, at
+the melody's rhythm, without the melody's staff (chorus words on a horn part).
 
 ```
 part melody
 section Verse {
   melody { c4 d e f | g2 g | }
-  lyrics words {
+  lyrics words sings melody {
     Hap- py birth- day |
     to you |
   }

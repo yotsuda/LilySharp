@@ -43,7 +43,33 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     public string? VoiceName =>
         HasName ? ((SyntaxTokenNode)GetChild(1)!).Text : null;
 
-    private int OpenBraceIndex => HasName ? 2 : 1;
+    /// <summary>The <c>sings</c> keyword token of a melody-bound track
+    /// (<c>lyrics ja sings vocal { … }</c>), or null when the block writes none.</summary>
+    public SyntaxTokenNode? SingsKeyword =>
+        HasName && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
+            && s.Text == "sings" ? s : null;
+
+    /// <summary>The part this track sings (<c>lyrics ja sings vocal</c> → "vocal"),
+    /// or null when this block declares no binding. The binding is a property of
+    /// the TRACK name — see <see cref="Music.LyricBindings"/> for the resolved
+    /// answer across all of a track's blocks.</summary>
+    public string? SingsTarget =>
+        SingsKeyword != null && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t2
+            ? t2.Text : null;
+
+    private int OpenBraceIndex
+    {
+        get
+        {
+            // The head is 1-4 tokens (`lyrics [name [sings part]] {`): find the
+            // brace by KIND so present-or-absent optional tokens never shift a
+            // reader off it.
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace })
+                    return i;
+            return HasName ? 2 : 1;
+        }
+    }
 
     /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;

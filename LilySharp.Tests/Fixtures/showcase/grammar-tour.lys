@@ -156,7 +156,7 @@ score main "grammar-tour" {
 // 歌詞(lyrics)。⚠️ この 3 行は 2026-08-16 まで 3 つとも偽だった——書いてあった例は
 // いま error（無名 lyrics）・指していたパスは存在せず・「グランドスタッフでは未対応」は
 // 実測で覆った。現行の綴りは LilySharp.Tests/Fixtures/test/lyrics.lys:
-//   section Main { melody { c4 d e f | g2 g | } lyrics words { Twin- kle twin- kle | star~ | } }
+//   section Main { melody { c4 d e f | g2 g | } lyrics words sings melody { Twin- kle twin- kle | star~ | } }
 //   score main { staff melody with lyrics words }
 // （- で音節区切り、~ でメリスマ。トラックは名前付きで、score の `with lyrics NAME` が結ぶ）
 // ⚠️ 無名の `lyrics { … }` を section に書くと error：「an unnamed 'lyrics { ... }' block has

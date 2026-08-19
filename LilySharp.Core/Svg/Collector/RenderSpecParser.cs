@@ -292,6 +292,10 @@ public static class RenderSpecParser
         return toks;
     }
 
+    /// <summary>One home for the staff-item token scan: the sings validator reads
+    /// the same (part, with-lyrics) answer the renderer does, never a re-spelling.</summary>
+    internal static StaffSpec? ParseStaffSpec(StaffRenderSyntax staff) => ParseStaff(staff);
+
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {
         // [~][clef?] part ["display"] [with chords chordPart]; braces skipped.

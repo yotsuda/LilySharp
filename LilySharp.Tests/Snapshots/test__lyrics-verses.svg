@@ -43,26 +43,26 @@
   <rect x="61.84" y="18.57" width="0.19" height="4.00" data-pos="210"/>
   <rect x="86.30" y="18.57" width="0.19" height="4.00" data-pos="221"/>
   <rect x="97.02" y="18.57" width="0.19" height="4.00" data-pos="226"/>
-  <text x="10.91" y="25.89" font-size="2.47" text-anchor="middle" data-pos="247">A</text>
-  <text x="19.85" y="25.89" font-size="2.47" text-anchor="middle" data-pos="250">ma</text>
-  <text x="27.97" y="25.89" font-size="2.47" text-anchor="middle" data-pos="254">zing</text>
-  <text x="37.01" y="25.89" font-size="2.47" text-anchor="middle" data-pos="259">grace</text>
-  <text x="45.89" y="25.89" font-size="2.47" text-anchor="middle" data-pos="267">how</text>
-  <text x="57.33" y="25.89" font-size="2.47" text-anchor="middle" data-pos="272">sweet</text>
-  <text x="64.82" y="25.89" font-size="2.47" text-anchor="middle" data-pos="280">the</text>
-  <text x="72.62" y="25.89" font-size="2.47" text-anchor="middle" data-pos="284">sound</text>
-  <text x="81.11" y="25.89" font-size="2.47" text-anchor="middle" data-pos="290">that</text>
-  <text x="91.56" y="25.89" font-size="2.47" text-anchor="middle" data-pos="297">saved</text>
-  <text x="10.91" y="28.69" font-size="2.47" text-anchor="middle" data-pos="325">Twas</text>
-  <text x="19.85" y="28.69" font-size="2.47" text-anchor="middle" data-pos="330">grace</text>
-  <text x="27.97" y="28.69" font-size="2.47" text-anchor="middle" data-pos="336">that</text>
-  <text x="37.01" y="28.69" font-size="2.47" text-anchor="middle" data-pos="341">taught</text>
-  <text x="45.31" y="28.69" font-size="2.47" text-anchor="middle" data-pos="350">my</text>
-  <text x="57.33" y="28.69" font-size="2.47" text-anchor="middle" data-pos="354">heart</text>
-  <text x="64.82" y="28.69" font-size="2.47" text-anchor="middle" data-pos="362">to</text>
-  <text x="72.62" y="28.69" font-size="2.47" text-anchor="middle" data-pos="365">fear</text>
-  <text x="81.11" y="28.69" font-size="2.47" text-anchor="middle" data-pos="370">and</text>
-  <text x="91.48" y="28.69" font-size="2.47" text-anchor="middle" data-pos="376">grace</text>
+  <text x="10.91" y="25.89" font-size="2.47" text-anchor="middle" data-pos="260">A</text>
+  <text x="19.85" y="25.89" font-size="2.47" text-anchor="middle" data-pos="263">ma</text>
+  <text x="27.97" y="25.89" font-size="2.47" text-anchor="middle" data-pos="267">zing</text>
+  <text x="37.01" y="25.89" font-size="2.47" text-anchor="middle" data-pos="272">grace</text>
+  <text x="45.89" y="25.89" font-size="2.47" text-anchor="middle" data-pos="280">how</text>
+  <text x="57.33" y="25.89" font-size="2.47" text-anchor="middle" data-pos="285">sweet</text>
+  <text x="64.82" y="25.89" font-size="2.47" text-anchor="middle" data-pos="293">the</text>
+  <text x="72.62" y="25.89" font-size="2.47" text-anchor="middle" data-pos="297">sound</text>
+  <text x="81.11" y="25.89" font-size="2.47" text-anchor="middle" data-pos="303">that</text>
+  <text x="91.56" y="25.89" font-size="2.47" text-anchor="middle" data-pos="310">saved</text>
+  <text x="10.91" y="28.69" font-size="2.47" text-anchor="middle" data-pos="351">Twas</text>
+  <text x="19.85" y="28.69" font-size="2.47" text-anchor="middle" data-pos="356">grace</text>
+  <text x="27.97" y="28.69" font-size="2.47" text-anchor="middle" data-pos="362">that</text>
+  <text x="37.01" y="28.69" font-size="2.47" text-anchor="middle" data-pos="367">taught</text>
+  <text x="45.31" y="28.69" font-size="2.47" text-anchor="middle" data-pos="376">my</text>
+  <text x="57.33" y="28.69" font-size="2.47" text-anchor="middle" data-pos="380">heart</text>
+  <text x="64.82" y="28.69" font-size="2.47" text-anchor="middle" data-pos="388">to</text>
+  <text x="72.62" y="28.69" font-size="2.47" text-anchor="middle" data-pos="391">fear</text>
+  <text x="81.11" y="28.69" font-size="2.47" text-anchor="middle" data-pos="396">and</text>
+  <text x="91.48" y="28.69" font-size="2.47" text-anchor="middle" data-pos="402">grace</text>
   <text x="2.58" y="25.89" font-size="2.40" font-weight="bold">1.</text>
   <text x="2.58" y="28.69" font-size="2.40" font-weight="bold">2.</text>
   <text class="music" x="4.88" y="17.20" font-size="3.56" data-pos="110"></text>
