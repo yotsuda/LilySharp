@@ -614,6 +614,25 @@ internal sealed class RenderedGeometry
     /// defect; the defect it was opened for is over a staff space.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// The FIRST bar number's INK BOTTOM above the staff reference point — the
+    /// font-free spelling of <see cref="FirstBarNumberBaselineAboveStaff"/>: LilyPond
+    /// puts this at staff ink 2.05 + BarNumber padding 1.0 = 3.050000 for EVERY digit,
+    /// so the two engines' line breaking is free to pick different numerals without the
+    /// entry acquiring an overshoot term.
+    /// </summary>
+    public double FirstBarNumberInkBottomAboveStaff(int page = 0)
+    {
+        var t = BarNumbers.Count > 0 ? BarNumbers[0]
+            : throw new InvalidOperationException(
+                $"page {page}: the probe drew no bar number.\nDrawn geometry:\n" + Describe());
+        var ink = LilySharp.Core.Rendering.TextFontMetrics.Ink(
+            t.Text, t.FontSize, sans: false, LilySharp.Core.Rendering.FontStyle.Bold);
+        // ink.Bottom is the digit's own overshoot BELOW the baseline (<= 0), so the ink
+        // bottom sits that much lower than the baseline the other reading returns.
+        return FirstBarNumberBaselineAboveStaff(page) + ink.Bottom;
+    }
+
     public double FirstBarNumberBaselineAboveStaff(int page = 0)
     {
         var numbers = BarNumbers;

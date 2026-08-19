@@ -1755,6 +1755,34 @@ internal static class LpGeometryProbes
     /// <summary>The melody inside the staff — the mirror of book BNL.</summary>
     private static readonly string BNL = BarNumberScore("BNL", "");
 
+    /// <summary>
+    /// A LEAD SHEET — a chords row leading the system — the mirror of book BNC
+    /// (barnumber-chord-row.ly). LilyPond re-parents a bar number onto the topmost
+    /// alignment element whose X intersects the number's own (move-to-extremal-staff);
+    /// a line-start number hangs into the left margin while the chords start at the
+    /// first note, so the number stays on the STAFF, tucked BELOW the chord row —
+    /// measured 2026-08-20 on 2.26.0: ink bottom 3.050000 over the staff refpoint,
+    /// the same 3.05 the plain books read, with the chords 5.045 above it.
+    /// ⚠️ Lily# <c>c'</c> is LilyPond <c>c''</c> (HANDOFF 5.5).
+    /// </summary>
+    private static readonly string BNC = $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        section Main {
+          melody { {{string.Concat(Enumerable.Repeat("c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | ", 3)).Trim()}} }
+          chords harm { {{string.Concat(Enumerable.Repeat("c1 | g1 | a1:m | f1 | ", 3)).Trim()}} }
+        }
+
+        form main { ~Main }
+
+        score main "BNC" {
+          chords harm
+          staff melody
+        }
+        """;
+
     /// <summary>The same music two octaves up — the mirror of book BNH.</summary>
     private static readonly string BNH = BarNumberScore("BNH", "''");
 
@@ -9603,6 +9631,15 @@ internal static class LpGeometryProbes
             g => g.FirstBarNumberBaselineAboveStaff(), RaggedBottomPaper),
         new("barnumber.high-melody.staff-to-baseline", BNH,
             g => g.FirstBarNumberBaselineAboveStaff(), RaggedBottomPaper),
+
+        // ...and the same number with a CHORDS ROW leading the system (book BNC), which is
+        // the shape the plain pair was structurally blind to: BarNumberLayout.YUp was
+        // anchored on the SYSTEM top, and with a leading row the system top is the band's
+        // top — the number rode 2.5 ss above where LilyPond leaves it (user report,
+        // session 220). Ink bottom rather than baseline so no digit overshoot enters:
+        // LilyPond's is 2.05 + padding 1.0 = 3.050000 for every numeral, chord row or not.
+        new("barnumber.chord-row.staff-to-ink-bottom", BNC,
+            g => g.FirstBarNumberInkBottomAboveStaff(), RaggedBottomPaper),
 
         // --- where a TEXT SCRIPT sits, per string (books TXD/TXP/TXS/TXL) ---
         // The first ledger points that reach OutsideStaffStacker's letter-class constants
