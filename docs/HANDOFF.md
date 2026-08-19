@@ -149,6 +149,47 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第218セッション＝**「私に見えているリリースブロッカー」委任の 3 便目——独立 lyrics 行の verse 消失を直した便**（実装 1 commit・`988ddbc2`）。
+⚠️ **repo の ink は 1 冊も動いていない**——追跡 569 冊 sweep/cmp 0 移動・**snapshot 220 枚不変**。動いたのは**ユーザー自身の楽譜**（scratch・当夜書かれた Twinkle）だけ＝委任の対象そのもの。
+ユーザーの目的は **0.3.0**——タグはまだ。⓪ 拡張の再配備が先（下の ⑸）。
+
+★ **開始時裏取り（§0 通し）**: HEAD `3278b89d`・未 push 5・作業ツリー 0・Windows 5659/0/4・Core 0 警告＝引継ぎと全一致。**拡張は 21:05 にユーザー自身が再配備済み**・ユーザー楽譜 318 冊（第217 の 317 から +1＝当夜の Twinkle）。
+終了時 **未追跡 0・作業ツリー項目 0・未 push 7**（**この行を書く commit を含めて 7・commit の*あと*に数えた**）・
+suite **Windows 5662 / 0 / 4・Linux（この機械の WSL）5662 / 0 / 4**＝**両 OS 完全緑**（台帳の pin も全数この中）・
+**snapshot 220 枚**（不変）・**追跡コーパス 569 冊**・**Core 0 警告**・
+**alloc 162.6/45.2 で桁まで不動**（plain1k 3 回＋fingstack 1 回・§7.9）・ユーザー楽譜 318 冊 **check 0 赤・svg 彫版 0 失敗**。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ⑴ 行経路の occurrence/volta 統合（`988ddbc2`） | Core 2 file・網 3 本 | **repo ink 0**（569 冊 cmp 0 移動・snapshot 220 不変）・**ユーザー楽譜に実差** |
+
+- **見えていたもの**: `lysc check` は 318 冊全緑。**直近 mtime の楽譜を彫版まで目視**したら Twinkle（21:17 編集＝依頼の 6 分前）で 2 つ——**`[~2.]` の 2 番が丸ごと消える**・**A2 リプライズが無歌詞**。最小再現 2 冊で二分し、**束縛経路（`sings`）は両方正しく、非束縛の独立行（`CollectRow`）だけの半読み**と確定。
+- **原因**: `CollectRow` は各 inner section を**初回 start にしか置かず**（`AllStarts` を見ない）、`[N.]` を **`FirstVerse` で 1 番に畳んでいた**（「row は 1 回置き」の旧設計コメントつき＝occurrence 機構より古い読み）。
+- **直し**: 括弧の読みを **`PlaceSectionOccurrences` 1 軒**に統合（§5.2.1②——同じ量を 2 軒で読んでいた）。束縛経路は `ProcessRun`・行経路は `PlaceRun` を callback で差すだけ。行の `PlaceRun` が `HideStanza` を運ぶ・`MeasureCollector` が `AllStarts` を `CollectRow` へ・flat in-section block も全 occurrence 化・verse 積みは start キー（先の section へ戻る block が verse 1 を上書きしなくなる）。網 3 本（row の reprise 復帰・`|: :|` 段積み・per-occurrence 不 bleed＝`LyricPartSectionsTests` の Row* 3 本）。
+- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: **⓪ 拡張の再配備**（`deploy-extension.ps1`・VS Code を殺すのでユーザー在席時に。**21:05 の配備は本便の修理を含まない**——エディタのプレビューはまだ 2 番を落とす）→ push（未 push 7・`master` を先に）→ CI 緑 → タグ。CHANGELOG は第217 時点のまま 0.3.0 最上段。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
+  **タグ後の残債**: 第217 の列挙のまま——⒢ ペダル・強弱 vs 歌詞の優先順位スタック（§2F）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出。
+
+> ## ★★★ 骨 1＝**「見えているもの」は check では出ない——彫版まで目視**
+> 3 便目の同文委任。`lysc check` 全 318 冊は 0 赤だったが、**黙って消える歌詞は赤にならない**。
+> **直近 mtime の楽譜（＝ユーザーがいま開いているもの）を彫版して見る**のが当たり筋だった。
+> Twinkle の mtime は依頼の 6 分前・`r-repeat.lys`（20:40）のような最小ファイルも
+> ユーザーが何かを確かめた足跡として読む。
+
+> ## ★★ 骨 2＝**双子経路の半読みは共有関数化で構造ごと閉じる**
+> 同じ `[N.]` 括弧を束縛経路と行経路が別々に読んでいて、行側だけ occurrence 機構より
+> 古かった。直しは「行側にも同じロジックを書く」ではなく **1 軒の読みに callback で
+> 置き方だけ差す**形——以後この 2 経路は乖離が*綴れない*（§5.2.1② の当日版）。
+
+> ## ★ 骨 3＝**sweep 0/569 は「repo にその形が無い」までしか言わない**
+> 追跡コーパスは unbound row ＋ reprise/volta を 1 冊も書いていない。毒が届く証拠は
+> 最小再現 2 冊と Twinkle の実差で見せた（第192 の骨 ⑴ と同じ運び）。
+
+---
+
+## 以下は第217セッションの経緯
+
 最終更新 第217セッション＝**ユーザーの目に見えていたものを直し切った便**——楽譜 9 冊の修理 → `with` のキーワードごと退役（LYS0031 除去）→ `lines` の score 移行（`as lines N`）→ 新文法の補完（**実装 4 commit・ユーザー決定 3 件**）。
 ⚠️ **彫版で動いた snapshot は 0 枚**——rhythm-slashes 1 枚を差し替えたが **data-pos のみ＝正規化 diff 空を機械確認**（枚数 220 不変）。**台帳 529 点・exact 454・総和 3.644109・count 110/112 は不動。**
 ユーザーの目的は **0.3.0**。この便は全てユーザーの名指し／委任で、文法・工具の磨きに使った——タグはまだ打っていない。
@@ -195,52 +236,6 @@ suite **Windows 5659 / 0 / 4・Linux（この機械の WSL）5659 / 0 / 4**＝**
 > DocKeywordListTests は生成規則の塊を**最初の `;` で切る**。注意書きは生成規則自体に残した。
 
 
----
-
-## 以下は第216セッションの経緯
-
-最終更新 第216セッション＝**`with lyrics`/`with chords` を除去し「score は帯の縦列」を完成させた便**（**実装 4 commit・ユーザー決定 1 件**）。
-⚠️ **歌詞の彫版は 1 冊も動いていない**——lyrics 系 snapshot 全数不変（**両綴りが生きているうちに fold の byte 恒等を機械で言わせてから、構文を消した**）。**動いたのは chords の 3 枚のみ**（`chordnames`・`chords-attached`・`tab-with-chords`＝実 ink・目視承認・記号 x 不変で ~0.1ss 下へ・マーク箱が先頭行の上へ）。**台帳 529 点・総和 3.644108828 は全便通して不動。**
-ユーザーの目的は **0.3.0** で、これが「文法を完全にしてから出す」の最後の島（§1 ⑸ ⓪ の名指し＝タグより先）。⑷ の未決 1 点だけ 1 問で閉じた（**ユーザー決定＝無名 `chords {}` は縦積みに畳む**・下の §3）。
-
-★ **開始時裏取り（§0 通し）**: HEAD `7e024304`・未 push 13・未追跡 0/作業ツリー 0・Windows 5629/0/4・Core 0 警告・CI 直近 2 本緑＝引継ぎと全一致。
-終了時 **未追跡 0・作業ツリー項目 0・未 push 18**（**この行を書く commit を含めて 18・commit の*あと*に数えた**）・
-suite **Windows 5641 / 0 / 4・Linux（この機械の WSL）5641 / 0 / 4**＝**両 OS 完全緑**・
-**台帳 529 点・ss 非ゼロ 99・総和 3.644108828・count 106/2**（不動）・**snapshot 220 枚**（枚数不変・3 枚差替え）・
-**追跡コーパス 569 冊**（`git ls-files '*.lys'`）・**Core 0 警告**・**alloc 162.6/45.2 で桁まで不動**（3 回・§7.9）。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ⑴ 隣接 fold（`6d6d1b92`） | Core 3 file・網 8 本 | **追跡本 0 冊**（569 冊 sweep/cmp 0 移動・ピン 3 本 byte 恒等） |
-| ⑵ グループ内の行（`228c6108`） | Core 5 file・網 4 本 | 彫版 0（コラール恒等） |
-| ⑶ 除去＋全面移行（`d2d8280b`） | 94 file | **snapshot 3 枚のみ**（chords 実 ink）・lyrics 全数不変 |
-| ⑷ ハラキリのピン（`5d7a8ef1`） | 網 1 本 | 彫版 0（fold の帰結を対照本つきで固定） |
-
-- **設計の家**: bound `lyrics` 行は**譜の直後なら fold して既存の attach 配管へ**（`RenderSpecParser.FoldAdjacentRows`／グループ内は `ParseGrandStaff`）。**chords 行は regime で家が割れる**——**先頭行（システムを開く）は row のまま＝loose-chain 移植の家**（`lyrics.chord-row.between-systems.*` が残差 font 量のみと実測済み）、**譜間の行は下の譜へ fold＝attached engraver の家**（帯配置は up-skyline を読まず、押し出された休符の上に刷った実測がある）。**新設の発明 0**（diff 563 行・REF 3・OWN 0＝削除と指し直しが主体）。
-- **除去の網の行き先（骨3）**: `with …` 節→ **LYS0031**（行の代替綴りをメッセージが名指す）・無名 `chords {}`→ **LYS0032**・**LYS6009/6010 は退役**（番号台帳に記録・トップレベルでは束縛が fold を決めるので誤添付が*綴れない*。生き残った拒否はグループ内の **LYS6012** のみ）。
-- **row 経路に強制された移植**: chord 行の r/R が **N.C.** を刷る（s は無音・`Current_chord_text_engraver`＝aligned 経路には在ったが row 経路に無かった。配置に依らない LP の主張）。
-- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: push（未 push 18・`master` を先に）→ CI 緑 → タグ。CHANGELOG は帯の縦列の 1 段落を追記済み・最上段=0.3.0・未署名行は残す（§3）。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
-  **タグ後の残債**: **⒢ ペダル・強弱 vs 歌詞の優先順位スタック**（§2F の新規項＝probe 観察 ⒜⒝・LP の答えは譜→ペダル/強弱→歌詞）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（§2F・別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出（従来から。**sings の LSP 補完は第217 で実装済み**——`lyrics NAME`→`sings`・`sings`→part/voice 名・グループ内 `staff NAME`→`as lines`）。
-
-> ## ★★★ 骨 1＝**「両綴りが生きているうちに恒等を機械で言わせ、それから構文を消す」**
-> fold（⑴⑵）が先・除去（⑶）が後という便の並びそのものが検算だった: 移行 diff の
-> lyrics 側は**構文だけが変わって ink が 1 枚も動かない**ことを snapshot 全数が言い、
-> chords 側の 3 枚だけが実差として残った。**移行と挙動変更を 1 commit に混ぜない。**
-
-> ## ★★★ 骨 2＝**同じ「fold」でも家は測定が指す——chords は row が LP 移植・lyrics は attach が家**
-> 第一案は chords も lyrics も一律に fold だった。**台帳 `lyrics.chord-row.between-systems.*` の
-> why（row を loose chain に入れた 2026-07-27 の移植・残差 font 量のみ）が、fold で
-> −0.002157 → +0.030400 と*退行の向きに*動いて 1 commit 以内に撤回させた。**
-> 逆に譜間の chords 行は row のままだと押し出された休符の上に刷る（実測）ので fold が正。
-> ⇒ **統一は綴りの話で、実装の家は regime ごとに「どちらが LP を測って建てた家か」で決める。**
-
-> ## ★★ 骨 3＝**probe 本の regime は綴りではなく束縛で運ぶ**
-> LpGeometryProbes の row/attach 対（LYRS/LYRC vs LYRR・coexist 対）は、綴りが 1 つに
-> なった今、**`sings` の有無だけが regime を分ける**。テンプレートに bound フラグを立てて
-> 各本の測っていた regime を保存した——**「同じ見た目の綴り」になっても台帳の 529 点は
-> 1 つも動いていない**のがその検算。
 
 ---
 
