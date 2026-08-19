@@ -2,3 +2,9 @@ node_modules/
 out/
 *.vsix
 server/
+dist/
+# Copied in from the repo root by publish-marketplace.ps1 / release.yml at package time.
+THIRD-PARTY-NOTICES.md
+THIRD-PARTY-NOTICES-SkiaSharp.txt
+LICENSE-Apache-2.0.txt
+LILYPOND-ATTRIBUTION.md
