@@ -172,7 +172,7 @@ suite **Windows 5641 / 0 / 4・Linux（この機械の WSL）5641 / 0 / 4**＝**
 - **除去の網の行き先（骨3）**: `with …` 節→ **LYS0031**（行の代替綴りをメッセージが名指す）・無名 `chords {}`→ **LYS0032**・**LYS6009/6010 は退役**（番号台帳に記録・トップレベルでは束縛が fold を決めるので誤添付が*綴れない*。生き残った拒否はグループ内の **LYS6012** のみ）。
 - **row 経路に強制された移植**: chord 行の r/R が **N.C.** を刷る（s は無音・`Current_chord_text_engraver`＝aligned 経路には在ったが row 経路に無かった。配置に依らない LP の主張）。
 - **⑸ ★★★ 次に触るならここ＝① v0.3.0**: push（未 push 18・`master` を先に）→ CI 緑 → タグ。CHANGELOG は帯の縦列の 1 段落を追記済み・最上段=0.3.0・未署名行は残す（§3）。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
-  **タグ後の残債**: **⒢ ペダル・強弱 vs 歌詞の優先順位スタック**（§2F の新規項＝probe 観察 ⒜⒝・LP の答えは譜→ペダル/強弱→歌詞）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／小粒: sings の LSP 補完・twin の歌詞行・`lines` twin 未輸出（従来から）。
+  **タグ後の残債**: **⒢ ペダル・強弱 vs 歌詞の優先順位スタック**（§2F の新規項＝probe 観察 ⒜⒝・LP の答えは譜→ペダル/強弱→歌詞）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（§2F・別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出（従来から。**sings の LSP 補完は第217 で実装済み**——`lyrics NAME`→`sings`・`sings`→part/voice 名・グループ内 `staff NAME`→`as lines`）。
 
 > ## ★★★ 骨 1＝**「両綴りが生きているうちに恒等を機械で言わせ、それから構文を消す」**
 > fold（⑴⑵）が先・除去（⑶）が後という便の並びそのものが検算だった: 移行 diff の

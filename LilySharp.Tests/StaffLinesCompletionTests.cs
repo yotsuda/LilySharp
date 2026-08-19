@@ -75,6 +75,28 @@ public class StaffLinesCompletionTests
         Assert.Equal(expected, labels);
     }
 
+    /// <summary>Inside a staff group the selector still applies (a member takes
+    /// it), but the continuations are the group's own NARROW list — never the
+    /// score-wide one, whose chords row a group refuses (LYS6011).</summary>
+    [Fact]
+    public void InsideAGroup_AfterStaffName_OffersTheSelectorAndGroupItems()
+    {
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterGroupStaffAttachName,
+            Ctx("score main { grandStaff { staff melody "));
+
+        var labels = LilySharpLanguageServer.GetGroupStaffAttachNameCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Contains("as lines", labels);
+        Assert.Contains("staff", labels);
+        Assert.Contains("lyrics", labels);
+        Assert.DoesNotContain("chords", labels);
+    }
+
+    [Fact]
+    public void InsideAGroup_AfterAs_StillReachesTheLinesSelector()
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterStaffLinesAs,
+            Ctx("score main { grandStaff { staff melody as "));
+
     [Fact]
     public void PartHeaderCompletions_NoLongerOfferLines()
         => Assert.DoesNotContain(LilySharpLanguageServer.GetPartPropertyCompletions().Items,
