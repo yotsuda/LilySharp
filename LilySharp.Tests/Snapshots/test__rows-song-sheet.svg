@@ -43,15 +43,15 @@
   <text x="83.92" y="30.82" font-size="2.47" text-anchor="middle" data-pos="672">in</text>
   <text x="90.57" y="30.82" font-size="2.47" text-anchor="middle" data-pos="675">the</text>
   <text x="98.26" y="30.82" font-size="2.47" text-anchor="middle" data-pos="679">sky</text>
-  <text x="3.15" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="478">C</text>
-  <text x="32.99" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="483">G</text>
-  <text x="54.24" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="488">Am</text>
-  <text x="81.73" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="495">F</text>
-  <text x="1.49" y="26.72" font-size="2.62" font-family="sans-serif" data-pos="500">C</text>
-  <text x="30.48" y="26.72" font-size="2.62" font-family="sans-serif" data-pos="505">G</text>
-  <text x="54.79" y="26.72" font-size="2.62" font-family="sans-serif" data-pos="510">F</text>
-  <text x="66.68" y="26.72" font-size="2.62" font-family="sans-serif" data-pos="513">G</text>
-  <text x="83.25" y="26.72" font-size="2.62" font-family="sans-serif" data-pos="518">C</text>
+  <text x="3.15" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="478">C</text>
+  <text x="32.99" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="483">G</text>
+  <text x="54.24" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="488">Am</text>
+  <text x="81.73" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="495">F</text>
+  <text x="1.49" y="26.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="500">C</text>
+  <text x="30.48" y="26.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="505">G</text>
+  <text x="54.79" y="26.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="510">F</text>
+  <text x="66.68" y="26.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="513">G</text>
+  <text x="83.25" y="26.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="518">C</text>
   <text x="0.00" y="24.04" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="447"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="447">Main</text>

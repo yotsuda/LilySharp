@@ -22,12 +22,12 @@
   <text x="53.60" y="18.82" font-size="2.47" text-anchor="middle" data-pos="550">der</text>
   <text x="63.46" y="18.82" font-size="2.47" text-anchor="middle" data-pos="554">what</text>
   <text x="70.77" y="18.82" font-size="2.47" text-anchor="middle" data-pos="561">you</text>
-  <text x="3.15" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="458">C</text>
-  <text x="16.15" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="461">G7</text>
-  <text x="27.09" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="467">Am</text>
-  <text x="46.00" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="476">F</text>
-  <text x="55.12" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="479">G7</text>
-  <text x="70.09" y="14.72" font-size="2.62" font-family="sans-serif" data-pos="485">C</text>
+  <text x="3.15" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="458">C</text>
+  <text x="16.15" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="461">G7</text>
+  <text x="27.09" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="467">Am</text>
+  <text x="46.00" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="476">F</text>
+  <text x="55.12" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="479">G7</text>
+  <text x="70.09" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="485">C</text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="427"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="427">Main</text>
   <line x1="7.90" y1="18.33" x2="8.56" y2="18.33" stroke="#000000" stroke-width="0.130"/>

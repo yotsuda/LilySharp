@@ -40,10 +40,10 @@
   <line x1="32.37" y1="11.97" x2="32.37" y2="18.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="20.83" y="13.32" width="0.19" height="4.00" data-pos="885"/>
   <rect x="36.41" y="13.32" width="0.19" height="4.00" data-pos="909"/>
-  <text x="8.59" y="9.36" font-size="2.62" font-family="sans-serif" data-pos="926">C</text>
-  <text x="14.59" y="9.36" font-size="2.62" font-family="sans-serif" data-pos="933">Am</text>
-  <text x="21.92" y="9.36" font-size="2.62" font-family="sans-serif" data-pos="940">F</text>
-  <text x="27.94" y="9.36" font-size="2.62" font-family="sans-serif" data-pos="943">Gm7♭5</text>
+  <text x="8.59" y="9.36" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="926">C</text>
+  <text x="14.59" y="9.36" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="933">Am</text>
+  <text x="21.92" y="9.36" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="940">F</text>
+  <text x="27.94" y="9.36" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="943">Gm7♭5</text>
   <rect x="0.30" y="8.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="838"/>
   <text x="3.40" y="10.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="838">Main</text>
   </g>

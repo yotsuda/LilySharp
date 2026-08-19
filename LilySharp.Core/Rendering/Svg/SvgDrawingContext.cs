@@ -262,23 +262,21 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// inherited family already says it.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A BUNDLED ROLE KEEPS THE CSS GENERIC IT HAS ALWAYS EMITTED — <c>sans-serif</c>
-    /// for the sans family, nothing at all for serif — rather than the bundled face's own
-    /// name. That is deliberately NOT the same string
-    /// <see cref="TextFontPlan.ResolvedFace.FamilyAttribute"/> gives, and the difference
-    /// is a known gap rather than an oversight: the layout reserves chord symbols against
-    /// the bundled TeX Gyre Heros, while <c>sans-serif</c> resolves to whatever sans the
-    /// viewer has, so the SVG draws a face the spacing did not measure. Naming the
-    /// bundled face here would close that — and would move every snapshot holding a chord
-    /// symbol, which is a decision about output and not about this directive. Left as it
-    /// stands so that adding <c>fonts { }</c> changes nothing a score did not ask for.
+    /// A BUNDLED SANS ROLE NAMES THE BUNDLED FACE, generic last — the same shape the
+    /// document root gives the serif (SvgDocumentContext.WriteHeader): the layout reserves
+    /// chord symbols against the bundled TeX Gyre Heros, so a viewer holding that font
+    /// draws exactly what was spaced for, and one without it degrades to its own sans —
+    /// which is all the bare <c>sans-serif</c> this used to emit ever said. The serif case
+    /// stays null because the root's inherited attribute already names it.
     /// </remarks>
     private string? FamilyAttributeFor(TextRole role)
     {
         var face = _fonts.Resolve(role);
         if (!face.IsBundled)
             return face.FamilyAttribute;
-        return face.Family == TextFontFamily.Sans ? "sans-serif" : null;
+        return face.Family == TextFontFamily.Sans
+            ? TextFontMetrics.SansFamily + ", sans-serif"
+            : null;
     }
 
     public IDisposable Source(int sourcePosition)
