@@ -547,6 +547,42 @@ internal sealed class LyricEngraver
     /// would be somebody else's.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// The staff a system's below-the-system lyric block hangs from: its DEEPEST spaceable,
+    /// non-hidden staff — per SYSTEM, because hara-kiri can hide a different staff on every
+    /// one. Null on a staffless sheet.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:943-944 — find_system_offsets records each
+    /// spaceable staff as <c>last_spaceable_line</c> as it walks THAT system, so the anchor
+    /// is a per-system fact. Lily# read it off system 0 for every system, and got away with
+    /// it only while the block was measured against the per-system SILHOUETTE — the anchor's
+    /// own Y cancelled out of that arithmetic. It stopped cancelling the moment the block
+    /// began reading the anchor staff's own profile (MEASURED:
+    /// lyrics.hara-kiri.shown-system.staff-to-lyric regressed by exactly one system gap).
+    /// ⚠️ ONE SPELLING: LayoutEngine.BuildStaffAnchorTables routes its system-0 anchor
+    /// through this same method — the predicate must not fork (HANDOFF 5.2.1②).
+    /// </remarks>
+    internal static (int StaffIndex, double DeviceDown)? LastSpaceableStaffOf(
+        SystemLayout system)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty) return null;
+        (int StaffIndex, double DeviceDown)? best = null;
+        foreach (var group in system.StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var st in group.Staves)
+            {
+                if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
+                    continue;
+                double down = -st.Y;
+                if (best == null || down > best.Value.DeviceDown)
+                    best = (st.StaffIndex, down);
+            }
+        }
+        return best;
+    }
+
     private List<LyricLayout> DistributeLooseLines(
         List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
@@ -673,16 +709,31 @@ internal sealed class LyricEngraver
                 // is. LILYPOND-REF: lily/align-interface.cc:272-273 — the walk measures each
                 // element against what has accumulated ABOVE it, and at the first loose line
                 // that is the anchor staff.
-                // ★ THE LEGACY BRANCH USED TO READ THE WHOLE SYSTEM'S SILHOUETTE, which is the
-                // same thing only while the anchor IS the bottom of the system. It stops being
-                // so the moment an independent row stands under it — MEASURED on book LYRRV,
-                // the staff's own bottom line drops out of the system's bottom profile and the
-                // floor came out 1.050000 short. The system skyline remains the FALLBACK for
-                // the case with no anchor to name (a staffless sheet).
-                var anchorDown = isUpperFamily
+                // ★ EVERY family with a staff to name reads that staff's own profile now —
+                // the one with its dynamics, slurs, ties and figured bass merged in — because
+                // that is the grob LilyPond measures (a staff's `vertical-skylines` is its
+                // VerticalAxisGroup's, outside-staff grobs included; align-interface.cc:71-87).
+                // The system silhouette carries only the edge staves' base ink plus scripts,
+                // so a sung staff's f was engraved over the syllable it should have pushed
+                // down: MEASURED, audit/lp-geometry lyrics.dynamic.staff-to-lyric read
+                // −1.668349 against the control's −0.000155, and the difference is LilyPond's
+                // f-glyph term to the digit. The silhouette remains the FALLBACK for the case
+                // with no anchor to name (a staffless sheet).
+                var sysAnchor = isUpperFamily || system >= systems.Length
+                    ? null : LastSpaceableStaffOf(systems[system]);
+                var perStaffAnchorDown = isUpperFamily
                     ? noteBoundStaffDownSkyline?.Invoke(system, familyKey)
-                    : systemSkylines != null && system < systemSkylines.Count
-                        ? systemSkylines[system].down : null;
+                    : sysAnchor is { } a
+                        ? noteBoundStaffDownSkyline?.Invoke(system, a.StaffIndex)
+                        : null;
+                var anchorDown = perStaffAnchorDown
+                    ?? (systemSkylines != null && system < systemSkylines.Count
+                        ? systemSkylines[system].down : (VerticalSkyline?)null);
+                // The anchor's Y is per-system with it: only the profile read keeps the two
+                // honest, because the silhouette arithmetic cancels anchorBase and the
+                // per-staff arithmetic does not.
+                double sysAnchorBase = !isUpperFamily && perStaffAnchorDown != null
+                    && sysAnchor is { } sa ? sa.DeviceDown : anchorBase;
 
                 // ⚠️ THE TWO SKYLINES ARE IN DIFFERENT FRAMES, and this is the conversion to
                 // the anchor's — the chain is solved between REFERENCE POINTS, so whatever
@@ -701,7 +752,8 @@ internal sealed class LyricEngraver
                 // fixed where it belongs — each edge staff seeds its OWN two lines
                 // (SkylineBuilder.SeedSystemStaffSymbol) — and the interim repair that merged
                 // the anchor's skyline in HERE is gone with it. One silhouette, one reader.
-                double skylineToAnchor = isUpperFamily ? 0 : anchorBase + anchorOffset;
+                double skylineToAnchor = perStaffAnchorDown != null || isUpperFamily
+                    ? 0 : sysAnchorBase + anchorOffset;
 
                 var gaps = new List<LooseLineSpacer.Gap>(elements.Count + 2);
 
@@ -885,7 +937,7 @@ internal sealed class LyricEngraver
                 {
                     // Y-up: a line below the anchor is negative.
                     newY[(familyKey, system, elements[i].Line, elements[i].Verse)] =
-                        -(anchorBase + anchorOffset + positions[i + 1]);
+                        -(sysAnchorBase + anchorOffset + positions[i + 1]);
                 }
 
                 // ...and THIS system's own rows travel with the solve: a row draws its own bar
@@ -896,7 +948,7 @@ internal sealed class LyricEngraver
                 // ends by translating every loose line to its solved position.
                 if (rowFirstElement.Count > 0 && system < systems.Length && !systems.IsDefaultOrEmpty)
                 {
-                    double rowAnchorPageY = systems[system].Y - (anchorBase + anchorOffset);
+                    double rowAnchorPageY = systems[system].Y - (sysAnchorBase + anchorOffset);
                     foreach (var (rowStaff, index) in rowFirstElement)
                         SolvedRowBaselines[(system, rowStaff)] =
                             rowAnchorPageY - positions[index + 1];
@@ -912,7 +964,7 @@ internal sealed class LyricEngraver
                     // The anchor staff's reference point in PAGE Y-up — the frame the
                     // published baselines are in, because the row belongs to a DIFFERENT
                     // system from the block that solved it and the two only meet on the page.
-                    double anchorPageY = systems[system].Y - (anchorBase + anchorOffset);
+                    double anchorPageY = systems[system].Y - (sysAnchorBase + anchorOffset);
                     for (int k = 0; k < solved.Lines.Length; k++)
                         SolvedRowBaselines[(system + 1, solved.Lines[k].StaffIndex)] =
                             anchorPageY - positions[firstLeadingPosition + k];

@@ -1975,8 +1975,8 @@
       "probe": "pedal-lyric-stack.ly",
       "score": "PLD",
       "lilypond": 7.533308661509536,
-      "residual": -1.668348696,
-      "why": "THE DYNAMIC TOO: control -0.000155 plus LilyPond's f-glyph term -1.668194 to the digit. DynamicText hangs inside the staff's group (PLD dump: rel -4.546 from the refpoint, ext (-0.692 . 1.896) -- the outline ink staff.staff.dynamic-under-whole-note already pinned), so the lyric floor grows by it; Lily# draws the f AT the lyric height, on the 'ho' (session 216). Same fix family as the two pedal entries."
+      "residual": 0.024651304,
+      "why": "CLOSED FROM -1.668349 TO +0.024651 when the below-the-system lyric block began reading its anchor staff's own down profile -- the one PlaceDynamicsOn had been writing the f into all along -- instead of the system silhouette (LyricEngraver.DistributeLooseLines, the -1 family). The drawn f did not move and matches LilyPond's refpoint (4.55 vs 4.546074, F2). WHAT THE REMAINING +0.024651 IS, by arithmetic: Lily#'s floor is exactly f-box-bottom 5.238076 + padding 0.5 + its own 'ho' ascender 1.819884 = 7.557960, i.e. the f reserved as a BOX against the syllable's box; LilyPond lands 0.024651 tighter with the same refpoints on both grobs. OPEN: which side's profile carries the shave -- LilyPond builds skylines from stencils, so at the 'h' ascender's X the f's OUTLINE bottom can sit 0.0247 above the glyph's global minimum (the descender curl is not under the 'h'), but that attribution is UNMEASURED; a probe printing the DynamicText skyline pointwise would decide it. Do NOT chase it with a constant: the number is X-dependent by construction."
     },
     "lyrics.natural.staff-to-lyric": {
       "probe": "page-vertical.ly",

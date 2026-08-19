@@ -1113,26 +1113,13 @@ internal sealed class LayoutEngine
         // the corpus, because every ossia book here puts the ossia ABOVE. That is a regime and
         // not a proof (HANDOFF 5.3) — the reason it moves with the rest is that one predicate
         // spelled several ways is one defect (HANDOFF 5.2.1②).
-        double lastSpaceableStaffY = 0;
-        if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
-        {
-            bool found = false;
-            foreach (var group in systemsArray[0].StaffGroups)
-            {
-                if (group.Staves.IsDefaultOrEmpty) continue;
-                foreach (var st in group.Staves)
-                {
-                    if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
-                        continue;
-                    double down = -st.Y;
-                    if (!found || down > lastSpaceableStaffY)
-                    {
-                        lastSpaceableStaffY = down;
-                        found = true;
-                    }
-                }
-            }
-        }
+        // One spelling with the per-system selection the lyric chain makes
+        // (LyricEngraver.LastSpaceableStaffOf) — hara-kiri can hide a different staff on
+        // every system, so the block's anchor is per-system there, and this table keeps
+        // only what its remaining readers want: system 0's anchor Y.
+        double lastSpaceableStaffY = systemsArray.Length > 0
+            ? LyricEngraver.LastSpaceableStaffOf(systemsArray[0])?.DeviceDown ?? 0
+            : 0;
 
         return new StaffAnchorTables(
             voicesByStaff, measuresByStaff, staffByIndex, staffYByIndex,
@@ -4296,10 +4283,14 @@ internal sealed class LayoutEngine
             return staffIndex >= 0 && staffIndex < perStaff.Count ? perStaff[staffIndex].Up : null;
         }
 
+        // Wired whenever any note-bound line exists: the upper families read their own
+        // staff's Down through it, and the block below the system reads its ANCHOR staff's
+        // — same list, same reason (the system silhouette knows nothing of dynamics, and a
+        // sung staff's f was engraved over the syllable it should have pushed down;
+        // audit/lp-geometry lyrics.dynamic.staff-to-lyric).
         Func<int, int, VerticalSkyline?>? noteBoundStaffDownSkyline = null;
         var nbAnchor = ctx.NoteBoundAnchorY;
-        if (nbAnchor is { Count: > 0 } && staffByIndex != null
-            && lyrics.Any(l => !l.IsLyricsRow && nbAnchor.ContainsKey(l.StaffIndex)))
+        if (staffByIndex != null && lyrics.Any(l => !l.IsLyricsRow))
             noteBoundStaffDownSkyline = StaffDownSkyline;
 
         // ...and the OTHER end of that block's chain: the next spaceable staff of the same

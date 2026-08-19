@@ -348,11 +348,15 @@ public class LyricStaffOrderTests
     /// one staff            n/a                       7.864960 → 9.119960   cleared
     /// two staves, upper    10.402001 → 10.402001     7.864960 → 7.864960   overprinted
     /// </code>
-    /// The one-staff case is cleared by a DIFFERENT path — <c>AugmentSkylinesWithScripts</c>
+    /// The one-staff case was then cleared by a DIFFERENT path — <c>AugmentSkylinesWithScripts</c>
     /// over the SYSTEM silhouette — which is also why the corpus never caught this: its only
-    /// script-versus-lyric book, <c>test/lyrics-below-marcato</c>, has one staff. Closing it
-    /// means putting the scripts into the per-staff skyline, which widens inter-staff gaps
-    /// wherever they occur and so is its own island with its own snapshot approval.
+    /// script-versus-lyric book, <c>test/lyrics-below-marcato</c>, has one staff.
+    /// ⚠️ BOTH HALVES HAVE SINCE CLOSED: the scripts went into the per-staff skyline
+    /// (SkylineBuilder.AddArticulationLayoutsToSkyline), and since 2026-08-20 the one-staff
+    /// lyric block reads that same per-staff profile — LyricEngraver.DistributeLooseLines'
+    /// below-the-system family reads its anchor staff's own Down instead of the silhouette,
+    /// which is what put the staff's DYNAMICS in front of it too (audit/lp-geometry
+    /// lyrics.dynamic.staff-to-lyric, −1.668349 → +0.024651). One profile, every family.
     /// </para>
     /// </remarks>
     [Fact]
@@ -494,9 +498,10 @@ public class LyricStaffOrderTests
     /// A consumer that stops indexing it therefore stops getting it, and until this test the
     /// only thing that would have noticed on this road was ONE snapshot
     /// (<c>test/lyrics-below-marcato</c>, whose byte-identity a rebase can approve away). The
-    /// sibling test above covers the MULTI-staff road, which is a different mechanism —
-    /// <c>LyricBaseline_RespondsToADynamicUnderItsOwnStaff</c>'s remark says so and gives the
-    /// one-staff numbers it measured: baseline 7.864960 → 9.119960.
+    /// sibling test above covers the MULTI-staff road. Since 2026-08-20 the two roads read
+    /// ONE profile — the anchor staff's own down-skyline — so this test now guards that the
+    /// below-the-system family kept it (the numbers it measured on the old road: baseline
+    /// 7.864960 → 9.119960).
     /// <para>
     /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4): what is asserted is that the baseline RESPONDS
     /// to the mark, plus the positive control that the mark is actually engraved. Pinning
