@@ -1551,6 +1551,14 @@ public sealed partial class LilySharpLanguageServer
         {
             if (cls is not (FontEmbedInfo.FontEmbedClass.Free or FontEmbedInfo.FontEmbedClass.Gray))
                 continue; // Forbidden (fsType blocks embedding) / NotFound — never offered
+            // A family the bundle shadows is never offered off the machine: the engine
+            // measures and draws these names from the bundled files no matter what is
+            // installed (TextFontMetrics consults the bundle before the machine), so the
+            // installed row would advertise a face the engine will silently not use — and
+            // on a machine that installs TeX Gyre the same name appeared twice, with the
+            // system row carrying the classification and the sort.
+            if (TextFontMetrics.IsBundledFamilyName(family))
+                continue;
             string detail = cls == FontEmbedInfo.FontEmbedClass.Free
                 ? "embeddable (OFL/libre)"
                 : "embeddable - license unverified";

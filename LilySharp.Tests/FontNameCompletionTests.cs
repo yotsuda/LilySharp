@@ -124,4 +124,31 @@ public class FontNameCompletionTests
         Assert.DoesNotContain("Ghost Font", labels);
         Assert.Contains("Liberation Serif", labels);
     }
+
+    [Fact]
+    public void BuildHelper_ExcludesInstalledFamiliesTheBundleShadows()
+    {
+        // ⚠️ THE RED ONLY SOME MACHINES CAN SEE, pinned with a synthetic list so EVERY
+        // machine can see it. A box that also INSTALLS TeX Gyre (this repo's WSL gets it as
+        // a LilyPond build dependency; GitHub's ubuntu-latest and this Windows do not, so
+        // both gates stayed green) enumerated the bundled names a second time from the
+        // system, and the system row carried the classification and the sort — the popup
+        // recommended "the machine's TeX Gyre Heros" while the engine, which consults the
+        // bundle before the machine for these names, would never use it. Same name, so the
+        // writer cannot tell. The shadowed rows are dropped; the bundled entries
+        // (BundledFaceCompletions, sort "!…") are the one spelling of these names offered.
+        var synthetic = new (string, FontEmbedInfo.FontEmbedClass, bool)[]
+        {
+            (TextFontMetrics.SerifFamily, FontEmbedInfo.FontEmbedClass.Free, false),
+            (TextFontMetrics.SansFamily, FontEmbedInfo.FontEmbedClass.Gray, false),
+            ("Liberation Serif", FontEmbedInfo.FontEmbedClass.Free, false),
+        };
+
+        var labels = LilySharpLanguageServer.BuildFontNameCompletions(synthetic)
+            .Items.Select(i => i.Label).ToArray();
+
+        Assert.DoesNotContain(TextFontMetrics.SerifFamily, labels);
+        Assert.DoesNotContain(TextFontMetrics.SansFamily, labels);
+        Assert.Contains("Liberation Serif", labels);
+    }
 }

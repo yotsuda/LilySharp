@@ -437,6 +437,23 @@ public static class TextFontMetrics
     }
 
     /// <summary>
+    /// Is <paramref name="name"/> a family this engine ships? A name that answers true is
+    /// ALWAYS measured and drawn from the bundle — the bundle is consulted before the
+    /// machine — so a same-named face INSTALLED on the machine is unreachable by the
+    /// engine, and no list of choices should present it as one.
+    /// </summary>
+    /// <remarks>
+    /// The public door to <see cref="TryBundledFamily"/> for the editor's face list, the
+    /// FOURTH reader of "is this face available?" (metrics, missing-face warning, the list's
+    /// bundled entries, and now the list's duplicates). On a machine that also installs
+    /// TeX Gyre — this repo's WSL has it as a LilyPond build dependency — the enumeration
+    /// used to yield the same name a second time, and the system row carried the
+    /// classification and the sort (HANDOFF §2F, 2026-08-19).
+    /// </remarks>
+    public static bool IsBundledFamilyName(string name)
+        => TryBundledFamily(TextFace.Named(name, false, FontStyle.Regular), out _);
+
+    /// <summary>
     /// The machine's face for <paramref name="name"/> at <paramref name="style"/>, or null
     /// when this machine does not have it.
     /// </summary>
