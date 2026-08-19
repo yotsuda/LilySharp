@@ -343,6 +343,8 @@ voice { c'2 d } { e2 f }     // each voice { } is a simultaneous voice
 ## Lyrics (a named track that SINGS a part)
 
 A lyric track binds to its melody at the definition: `lyrics NAME sings PART`.
+The score row may state (or repeat) the same binding: `lyrics NAME sings PART`
+among the score items - one property of the track name, spelled at either site.
 The score places its row by ORDER (score = a vertical stack of bands): a
 `lyrics NAME` row directly below the staff engraving PART is that staff's verse
 (a run of rows stacks as verses); anywhere else it shows only the words, at the

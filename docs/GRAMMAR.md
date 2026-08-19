@@ -629,12 +629,20 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
                | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
-               | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
+               | 'lyrics' , PartRef , [ 'sings' , PartRef ]
+                                                     (* lyrics ROW. The optional 'sings' states
+                                                        or repeats the track's melody binding
+                                                        on the row - the SAME property the
+                                                        definition spells, resolved together
+                                                        (a different target is LYS7005, an
+                                                        unknown one LYS7004). Unbound with no
+                                                        'sings' anywhere - the even-spread
+                                                        lead-sheet row. *)
                | ( 'title' | 'composer' ) , String   (* THIS score's own header — see below *)
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
 
-StaffGroupBody = '{' , { StaffRender | 'lyrics' PartRef } , '}' ;
+StaffGroupBody = '{' , { StaffRender | 'lyrics' PartRef [ 'sings' PartRef ] } , '}' ;
                  (* Several staves engraved as ONE GROUP. All three take `staff` items
                     with `lyrics NAME` rows between them — inside the braces as outside,
                     a bound row directly below the staff it sings is that staff's verse

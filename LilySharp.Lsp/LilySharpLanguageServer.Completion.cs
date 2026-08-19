@@ -162,6 +162,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
             CompletionContext.AfterStaffAttachName => GetStaffAttachNameCompletions(),
             CompletionContext.AfterGroupStaffAttachName => GetGroupStaffAttachNameCompletions(),
+            CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(),
+            CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(),
             CompletionContext.AfterStaffLinesAs => GetStaffLinesSelectorCompletions(),
             CompletionContext.AfterStaffLinesValue => GetStaffLinesValueCompletions(),
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
@@ -595,6 +597,8 @@ public sealed partial class LilySharpLanguageServer
         AfterChordAttachName,
         AfterStaffAttachName,
         AfterGroupStaffAttachName,
+        AfterLyricsRowAttachName,
+        AfterGroupLyricsRowAttachName,
         AfterStaffLinesAs,
         AfterStaffLinesValue,
         AfterChordDisplayAs,
@@ -816,6 +820,14 @@ public sealed partial class LilySharpLanguageServer
                 case "ossia": return CompletionContext.AfterStaffRef;
                 case "chords": return CompletionContext.AfterChordsRef;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
+                // `lyrics NAME sings ▮` on a score row — the binding target, the
+                // same list the definition's `sings` offers. Guarded by the word
+                // two back being `lyrics`, so a part that happens to be named
+                // sings placed as a bare MIDI item never reaches it.
+                case "sings":
+                    if (ThirdWordBeforeCursor(text, offset) == "lyrics")
+                        return CompletionContext.AfterSingsTarget;
+                    break;
                 case "lines":
                     // `staff m as lines |` — the selector's value slot. A
                     // `lines` that no `as` governs falls through to the
@@ -846,6 +858,11 @@ public sealed partial class LilySharpLanguageServer
                     // a chords row in here is LYS6011).
                     if (SecondWordBeforeCursor(text, offset) == "staff")
                         return CompletionContext.AfterGroupStaffAttachName;
+                    // `lyrics NAME ▮` inside the group: a verse row states its
+                    // binding here too (`sings PART`), then the group's own
+                    // narrow continuations.
+                    if (SecondWordBeforeCursor(text, offset) == "lyrics")
+                        return CompletionContext.AfterGroupLyricsRowAttachName;
                     return CompletionContext.StaffGroupBlock;
                 }
             }
@@ -854,6 +871,11 @@ public sealed partial class LilySharpLanguageServer
             // continuations, so a following render item is not blocked).
             if (SecondWordBeforeCursor(text, offset) == "chords")
                 return CompletionContext.AfterChordAttachName;
+            // `lyrics NAME |`: after the row's track name, offer the `sings`
+            // binding (plus the normal continuations) — the row states the same
+            // binding the definition does.
+            if (SecondWordBeforeCursor(text, offset) == "lyrics")
+                return CompletionContext.AfterLyricsRowAttachName;
             // `staff NAME |` / `ossia NAME |`: after the part name, offer the
             // `as lines N` selector (plus the normal continuations), the same
             // shape as the chords row's `as` above.
@@ -1871,6 +1893,54 @@ public sealed partial class LilySharpLanguageServer
                 },
             },
         };
+        foreach (var it in GetStaffGroupBlockCompletions().Items)
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>The <c>sings</c> keyword item a lyrics ROW offers after its track
+    /// name — the row spelling of the binding the definition states
+    /// (<c>lyrics verse sings melody</c>). Shared by the score-body and
+    /// group-body row contexts.</summary>
+    private static CompletionItem RowSingsItem() => new()
+    {
+        Label = "sings",
+        Kind = CompletionItemKind.Keyword,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = "sings $0",
+        Detail = "Bind this track to the part it sings - the same binding the definition states",
+        SortText = "0",
+        Command = new Command
+        {
+            Title = "Suggest part name",
+            CommandIdentifier = "editor.action.triggerSuggest",
+        },
+    };
+
+    /// <summary>After <c>lyrics NAME</c> on a SCORE row: the <c>sings</c>
+    /// binding, then the score's normal continuations — the lyrics-row sibling
+    /// of <see cref="GetStaffAttachNameCompletions"/>.</summary>
+    internal static CompletionList GetLyricsRowAttachNameCompletions()
+    {
+        var items = new System.Collections.Generic.List<CompletionItem> { RowSingsItem() };
+        foreach (var it in GetScoreBlockCompletions().Items)
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>After <c>lyrics NAME</c> INSIDE a staff group: the <c>sings</c>
+    /// binding, then the group's own narrow continuations (never the score-wide
+    /// list — LYS6011), the group-body sibling of
+    /// <see cref="GetLyricsRowAttachNameCompletions"/>.</summary>
+    internal static CompletionList GetGroupLyricsRowAttachNameCompletions()
+    {
+        var items = new System.Collections.Generic.List<CompletionItem> { RowSingsItem() };
         foreach (var it in GetStaffGroupBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");

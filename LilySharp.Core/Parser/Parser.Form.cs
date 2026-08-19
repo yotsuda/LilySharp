@@ -668,12 +668,23 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse lyrics-row render: <c>lyrics partName</c> (places a lyrics part as a row).
+    /// Parse lyrics-row render: <c>lyrics partName [sings partName]</c> (places a
+    /// lyrics part as a row; the optional <c>sings</c> states — or repeats — the
+    /// track's melody binding, the same one the definition spells).
     /// </summary>
     private LyricsRowRenderGreen ParseLyricsRowRender()
     {
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.LyricsKeyword) };
         tokens.Add(ExpectPartName());
+        // Contextual like the definition's (Parser.Sections): 'sings' is claimed only
+        // directly after a row's track name, and stays an ordinary identifier
+        // everywhere else. Without this branch the word fell through to the score's
+        // next render item and was reported as an undefined MIDI part.
+        if (Check(SyntaxKind.Identifier) && Current.Text == "sings")
+        {
+            tokens.Add(Advance());
+            tokens.Add(ExpectPartName());
+        }
         return new LyricsRowRenderGreen([.. tokens]);
     }
 

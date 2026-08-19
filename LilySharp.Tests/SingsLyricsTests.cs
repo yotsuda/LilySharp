@@ -169,6 +169,64 @@ public class SingsLyricsTests
         Assert.DoesNotContain(Validate(src), d => d.Code == DiagnosticCodes.SingsConflict);
     }
 
+    // ── the ROW spelling: the score row states the same track property ──
+
+    [Fact]
+    public void RowSpelledBinding_BindsLikeTheDefinitions()
+    {
+        // `score { … lyrics ja sings vocal }` — the parser used to hand `sings`
+        // to the next render item and report a bogus "Undefined part: 'sings'".
+        // Same rhythm claim as BoundRow_PlacesSyllablesAtTheMelodysRhythm: the
+        // row carries the VOCAL's onsets, not the even spread, so the binding
+        // resolved — through the row spelling alone.
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            section Chorus {
+              sax { c4 d e f | g2 g | }
+              vocal { g8 g a4 a8 a a4 | g2 f | }
+              lyrics ja { Sing it loud and clear now | ev- ery | }
+            }
+            form main { Chorus }
+            score main { staff sax  lyrics ja sings vocal }
+            """);
+        Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
+
+        var spec = RenderSpecParser.FindFirst(tree);
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var bar1 = score.Lyrics.Where(l => l.IsLyricsRow && l.MeasureIndex == 0)
+            .OrderBy(l => l.Timing).ToList();
+        Assert.Equal(
+            new[] { new Fraction(0, 1), new Fraction(1, 8), new Fraction(1, 4),
+                    new Fraction(1, 2), new Fraction(5, 8), new Fraction(3, 4) },
+            bar1.Select(l => l.Timing).ToArray());
+    }
+
+    [Fact]
+    public void RowSpelledBinding_GoesThroughTheSameNets()
+    {
+        // Unknown target on the row → LYS7004, same as the definition's.
+        Assert.Contains(Validate("""
+            section A { m { c4 d | } lyrics w { la la | } }
+            form main { A }
+            score main { staff m  lyrics w sings ghost }
+            """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
+
+        // A row naming a DIFFERENT target than the definition → LYS7005.
+        Assert.Contains(Validate("""
+            section A { m { c4 d | } v { e4 f | } lyrics w sings m { la la | } }
+            form main { A }
+            score main { staff m  lyrics w sings v }
+            """), d => d.Code == DiagnosticCodes.SingsConflict);
+
+        // A row repeating the definition's target identically is silent.
+        Assert.DoesNotContain(Validate("""
+            section A { m { c4 d | } lyrics w sings m { la la | } }
+            form main { A }
+            score main { staff m  lyrics w sings m }
+            """), d => d.Code is DiagnosticCodes.SingsConflict
+                             or DiagnosticCodes.SingsTargetUnknown);
+    }
+
     [Fact]
     public void TheLayoutConverter_CarriesTheBinding_BothWays()
     {

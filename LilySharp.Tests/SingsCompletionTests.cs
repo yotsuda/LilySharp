@@ -78,4 +78,33 @@ public class SingsCompletionTests
         Assert.Contains("bass", labels);
         Assert.Contains("sop", labels);
     }
+
+    // ── the ROW spelling: `score { … lyrics w sings m }` ──
+
+    [Theory]
+    [InlineData("score main { staff m  lyrics w ")]                  // after the row's name
+    [InlineData("score main { staff m  lyrics w si")]                // typing the keyword
+    public void AScoreRowAfterItsName_OffersTheBindingKeyword(string text)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsRowAttachName, Ctx(text));
+
+    [Fact]
+    public void AGroupRowAfterItsName_OffersTheBindingKeyword()
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterGroupLyricsRowAttachName,
+            Ctx("score main { grandStaff { staff m  lyrics w "));
+
+    [Theory]
+    [InlineData("score main { staff m  lyrics w sings ")]
+    [InlineData("score main { staff m  lyrics w sings vo")]          // typing the target
+    [InlineData("score main { grandStaff { staff m  lyrics w sings ")]
+    public void AScoreRowsSings_OffersTheBindingTargets(string text)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget, Ctx(text));
+
+    [Fact]
+    public void RowAttachCompletions_LeadWithSings()
+    {
+        Assert.Contains(LilySharpLanguageServer.GetLyricsRowAttachNameCompletions().Items,
+            i => i.Label == "sings");
+        Assert.Contains(LilySharpLanguageServer.GetGroupLyricsRowAttachNameCompletions().Items,
+            i => i.Label == "sings");
+    }
 }

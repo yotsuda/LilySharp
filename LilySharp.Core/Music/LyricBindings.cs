@@ -49,21 +49,34 @@ public static class LyricBindings
         return map.TryGetValue(trackName, out var target) ? target : null;
     }
 
-    /// <summary>Every block that declares a target DIFFERENT from its track's
-    /// first-declared one — the validator's input for LYS7005.</summary>
-    public static IEnumerable<(LyricsBlockSyntax Block, string Target, string First)> Conflicts(SyntaxNode root)
+    /// <summary>The track name and stated target of any node that can spell a
+    /// binding — a definition block (<c>lyrics ja sings vocal { … }</c>) or a
+    /// score row (<c>lyrics ja sings vocal</c>). Both are the SAME declaration
+    /// of the same track property; every walk below reads them through this so
+    /// the two spellings cannot resolve differently.</summary>
+    private static (string? Name, string? Target) BindingOf(SyntaxNode node) => node switch
+    {
+        LyricsBlockSyntax b => (b.VoiceName, b.SingsTarget),
+        LyricsRowRenderSyntax r => (r.PartName, r.SingsTarget),
+        _ => (null, null),
+    };
+
+    /// <summary>Every declaration that states a target DIFFERENT from its track's
+    /// first-declared one — the validator's input for LYS7005. The node is a
+    /// <see cref="LyricsBlockSyntax"/> or a <see cref="LyricsRowRenderSyntax"/>.</summary>
+    public static IEnumerable<(SyntaxNode Node, string Target, string First)> Conflicts(SyntaxNode root)
     {
         while (root.Parent != null)
             root = root.Parent;
         var first = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var block in root.DescendantNodes().OfType<LyricsBlockSyntax>())
+        foreach (var node in root.DescendantNodes())
         {
-            if (block.VoiceName is not { } name || block.SingsTarget is not { } target)
+            if (BindingOf(node) is not ({ } name, { } target))
                 continue;
             if (first.TryGetValue(name, out var t0))
             {
                 if (!string.Equals(t0, target, StringComparison.Ordinal))
-                    yield return (block, target, t0);
+                    yield return (node, target, t0);
             }
             else
             {
@@ -75,12 +88,9 @@ public static class LyricBindings
     private static Dictionary<string, string> BuildMap(SyntaxNode root)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var block in root.DescendantNodes().OfType<LyricsBlockSyntax>())
-        {
-            if (block.VoiceName is { } name && block.SingsTarget is { } target
-                && !map.ContainsKey(name))
+        foreach (var node in root.DescendantNodes())
+            if (BindingOf(node) is ({ } name, { } target) && !map.ContainsKey(name))
                 map[name] = target;
-        }
         return map;
     }
 

@@ -67,24 +67,38 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             }
         }
 
-        foreach (var block in root.DescendantNodes().OfType<LyricsBlockSyntax>())
+        // Both spellings of the declaration — the definition block and the score
+        // row (`lyrics verse sings melody`) — state the same track property, so
+        // both go through the same nets.
+        static (string? Name, string? Target, TextSpan Span)? SingsOf(SyntaxNode node) => node switch
         {
-            if (block.SingsTarget is not { } target)
+            LyricsBlockSyntax b => (b.VoiceName, b.SingsTarget, (b.SingsKeyword ?? b.LyricsKeyword).Span),
+            LyricsRowRenderSyntax r => (r.PartName, r.SingsTarget, (r.SingsKeyword ?? r.LyricsKeyword).Span),
+            _ => null,
+        };
+
+        foreach (var node in root.DescendantNodes())
+        {
+            if (SingsOf(node) is not ({ } name, { } target, var span))
                 continue;
             if (!partNames.Contains(target) && !voiceNames.Contains(target))
                 _diagnostics.Error(
-                    (block.SingsKeyword ?? block.LyricsKeyword).Span,
+                    span,
                     DiagnosticCodes.SingsTargetUnknown,
-                    $"'{block.VoiceName}' sings '{target}', but no part or voice of "
+                    $"'{name}' sings '{target}', but no part or voice of "
                     + "that name exists in this file.");
         }
 
-        foreach (var (block, target, first) in LyricBindings.Conflicts(root))
+        foreach (var (node, target, first) in LyricBindings.Conflicts(root))
+        {
+            if (SingsOf(node) is not ({ } name, _, var span))
+                continue;
             _diagnostics.Error(
-                (block.SingsKeyword ?? block.LyricsKeyword).Span,
+                span,
                 DiagnosticCodes.SingsConflict,
-                $"'{block.VoiceName}' already sings '{first}' - a track sings ONE part; "
+                $"'{name}' already sings '{first}' - a track sings ONE part; "
                 + "state the binding once (later blocks may repeat it identically or omit it).");
+        }
 
         // (The `with lyrics` attachment checks — LYS6009/LYS6010 — died with the
         // clause, LYS0031: a bound row folds only onto the staff it sings, so a
