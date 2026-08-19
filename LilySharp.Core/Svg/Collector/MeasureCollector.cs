@@ -1746,7 +1746,8 @@ public sealed partial class MeasureCollector
                     }
                 }
                 var rowMeasures = _lyricsCollector.CollectRow(
-                    tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType);
+                    tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType,
+                    _sectionState.AllStarts);
                 staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
             }
         }

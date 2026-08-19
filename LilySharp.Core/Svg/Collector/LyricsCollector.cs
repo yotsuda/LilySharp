@@ -185,45 +185,8 @@ internal sealed class LyricsCollector
             // `|: :|` repeat that prints once but is sung again, or extra stanzas —
             // stack as further verses at the last occurrence.
             void PlaceSection(IReadOnlyList<SyntaxNode> body, IReadOnlyList<int> starts, string sectionName)
-            {
-                if (starts.Count == 0) return;
-                var (voltas, plain) = SplitVoltas(body);
-                if (voltas == null)
-                {
-                    foreach (int start in starts)
-                        ProcessRun(body, start);
-                    return;
-                }
-
-                bool plainUsed = false;
-                for (int i = 1; i <= starts.Count; i++)
-                {
-                    var hit = voltas.FirstOrDefault(v => v.Spec.Occurrences.Contains(i));
-                    if (hit.Measures != null)
-                        ProcessRun(hit.Measures, starts[i - 1], hit.Spec.PrimaryNumber, hit.Spec.HideLabel);
-                    else if (plain is { Count: > 0 })
-                    {
-                        ProcessRun(plain, starts[i - 1]);
-                        plainUsed = true;
-                    }
-                }
-
-                // Extra stanzas — verses whose occurrences ALL lie past the written-out
-                // passes (a |: :| repeat printed once but sung again, or extra numbered
-                // stanzas) — stack at the last occurrence. Test every occurrence, not just
-                // the primary (label) number: a descending list like [3,1.] has primary 3
-                // but occurrence 1, which the per-occurrence loop already placed — stacking
-                // it here too would print it twice.
-                foreach (var v in voltas)
-                    if (v.Spec.Occurrences.All(o => o > starts.Count))
-                        ProcessRun(v.Measures, starts[^1], v.Spec.PrimaryNumber, v.Spec.HideLabel);
-
-                // A plain verse only fills an occurrence NO bracket covers. If every
-                // occurrence already has a numbered verse, the plain line is dead — it
-                // never renders. Silent for the user, so flag it rather than dropping it.
-                if (!plainUsed && plain is { Count: > 0 })
-                    _shadowedPlain.Add(new ShadowedPlainLyricWarning(plain[0].Span, sectionName));
-            }
+                => PlaceSectionOccurrences(body, starts, sectionName,
+                    (run, start, forcedVerse, hideLabel) => ProcessRun(run, start, forcedVerse, hideLabel));
 
             if (lyricsBlock.HasSections)
                 foreach (var section in lyricsBlock.Sections)
@@ -246,6 +209,53 @@ internal sealed class LyricsCollector
     /// the occurrence(s) it covers, the primary (label) number, and whether a leading
     /// <c>~</c> hides that number.</summary>
     private readonly record struct VoltaSpec(int PrimaryNumber, bool HideLabel, HashSet<int> Occurrences);
+
+    /// <summary>Places one section's verse body at its written-out occurrence(s) —
+    /// the ONE reading of `[N. …]` brackets, shared by the note-bound and row paths
+    /// so the two spellings cannot drift. No brackets → the same words repeat at
+    /// every occurrence. With brackets: occurrence i takes the verse whose selector
+    /// covers it (else the plain fallback line); verses whose occurrences ALL lie
+    /// past the written-out passes — a <c>|: :|</c> repeat printed once but sung
+    /// again, or extra numbered stanzas — stack at the last occurrence. Test every
+    /// occurrence, not just the primary (label) number: a descending list like
+    /// <c>[3,1.]</c> has primary 3 but occurrence 1, which the per-occurrence loop
+    /// already placed — stacking it here too would print it twice.
+    /// <paramref name="place"/> is (run, startMeasure, forcedVerse, hideLabel).</summary>
+    private void PlaceSectionOccurrences(IReadOnlyList<SyntaxNode> body, IReadOnlyList<int> starts,
+        string sectionName, Action<IReadOnlyList<SyntaxNode>, int, int?, bool> place)
+    {
+        if (starts.Count == 0) return;
+        var (voltas, plain) = SplitVoltas(body);
+        if (voltas == null)
+        {
+            foreach (int start in starts)
+                place(body, start, null, false);
+            return;
+        }
+
+        bool plainUsed = false;
+        for (int i = 1; i <= starts.Count; i++)
+        {
+            var hit = voltas.FirstOrDefault(v => v.Spec.Occurrences.Contains(i));
+            if (hit.Measures != null)
+                place(hit.Measures, starts[i - 1], hit.Spec.PrimaryNumber, hit.Spec.HideLabel);
+            else if (plain is { Count: > 0 })
+            {
+                place(plain, starts[i - 1], null, false);
+                plainUsed = true;
+            }
+        }
+
+        foreach (var v in voltas)
+            if (v.Spec.Occurrences.All(o => o > starts.Count))
+                place(v.Measures, starts[^1], v.Spec.PrimaryNumber, v.Spec.HideLabel);
+
+        // A plain verse only fills an occurrence NO bracket covers. If every
+        // occurrence already has a numbered verse, the plain line is dead — it
+        // never renders. Silent for the user, so flag it rather than dropping it.
+        if (!plainUsed && plain is { Count: > 0 })
+            _shadowedPlain.Add(new ShadowedPlainLyricWarning(plain[0].Span, sectionName));
+    }
 
     /// <summary>Splits a lyric-section body into its per-occurrence <c>[N. …]</c> verses
     /// (in source order) and the plain (unbracketed) measures, if any.</summary>
@@ -360,7 +370,8 @@ internal sealed class LyricsCollector
 
     public ImmutableArray<Measure> CollectRow(
         SyntaxNode root, string partName, int staffIndex, int totalBars,
-        IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType)
+        IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType,
+        IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null)
     {
         var blocks = root.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>()
             .Where(b => b.VoiceName == partName).ToList();
@@ -374,7 +385,8 @@ internal sealed class LyricsCollector
         // Spreads one run of lyric-measure nodes across the bars from absolute bar
         // `startMeasure`, wrapping every `wrapBars` bars into stacked verses counted
         // from `verseBase`. Returns the bar count (for the caller's verse bookkeeping).
-        int PlaceRun(IEnumerable<SyntaxNode> barNodes, int startMeasure, int wrapBars, int verseBase)
+        int PlaceRun(IEnumerable<SyntaxNode> barNodes, int startMeasure, int wrapBars, int verseBase,
+            bool hideStanza = false)
         {
             int j = 0; // run-local bar index
             bool atRunStart = true;
@@ -411,7 +423,8 @@ internal sealed class LyricsCollector
                             Text: text, MeasureIndex: mi, ItemIndex: k,
                             ConnectorType: conn, VoiceId: staffIndex, VerseNumber: v,
                             Timing: timing, SourcePosition: pos,
-                            StaffIndex: staffIndex, IsLyricsRow: true));
+                            StaffIndex: staffIndex, IsLyricsRow: true,
+                            HideStanza: hideStanza));
                         spacers.Add(new RestItem(slotDur, 0, pos) { IsSpacer = true });
                         timing += slotDur;
                     }
@@ -439,59 +452,70 @@ internal sealed class LyricsCollector
         static int VersesFrom(int bars, int wrapBars) =>
             wrapBars > 0 && bars > 0 ? (bars + wrapBars - 1) / wrapBars : 1;
 
-        int verse = 1;
-        int prevSectionStart = -1;
-        // Part-major sectioned tracks stack verses per named section start.
+        // Verses stack per section start; a `[N. …]` verse counts at its own number.
         var nextVerseBySection = new Dictionary<int, int>();
+
+        // One verse line at an absolute start: wrap within the section, count at the
+        // bracket's own number (else the start's next free verse), and remember where
+        // the next line at this start begins.
+        void PlaceVerse(IReadOnlyList<SyntaxNode> run, int start, int? forcedVerse, bool hideLabel)
+        {
+            int wrap = SectionWrap(start);
+            int vb = forcedVerse
+                ?? (nextVerseBySection.TryGetValue(start, out var v0) ? v0 : 1);
+            int bars = PlaceRun(run, start, wrap, vb, hideLabel);
+            int next = vb + VersesFrom(bars, wrap);
+            if (!nextVerseBySection.TryGetValue(start, out var cur) || next > cur)
+                nextVerseBySection[start] = next;
+        }
+
+        // Every written-out occurrence of a section, so a reprise's row carries its
+        // words too (fallback: the first start, same as the note-bound path).
+        List<int> StartsFor(string sectionName)
+        {
+            if (sectionAllStarts != null && sectionAllStarts.TryGetValue(sectionName, out var all) && all.Count > 0)
+                return all;
+            return new List<int> { sectionStartMeasure.GetValueOrDefault(sectionName, 0) };
+        }
+
         foreach (var block in blocks)
         {
             // Part-major track (`lyrics name { section A { .. } .. }`): each inner
             // section's verse spreads across THAT named section's bars — the `section
             // NAME { … }` wrapper is structure, not literal "section"/"NAME" syllables
-            // (which is what the flat reader below would otherwise emit).
+            // (which is what the flat reader below would otherwise emit). Occurrences
+            // and `[N. …]` verses read exactly as on the note-bound path.
             if (block.HasSections)
             {
                 foreach (var section in block.Sections)
-                {
-                    int start = sectionStartMeasure.GetValueOrDefault(section.SectionName, 0);
-                    int wrap = SectionWrap(start);
-                    int vb = nextVerseBySection.TryGetValue(start, out var v0) ? v0 : 1;
-                    // A row places once per section, so a per-occurrence `[N. …]` verse
-                    // can't spread across passes here — take the first (and flatten the
-                    // brackets so they never render as literal words).
-                    int bars = PlaceRun(FirstVerse(SectionLyricMeasures(section).ToList()), start, wrap, vb);
-                    nextVerseBySection[start] = vb + VersesFrom(bars, wrap);
-                }
+                    PlaceSectionOccurrences(SectionLyricMeasures(section).ToList(),
+                        StartsFor(section.SectionName), section.SectionName, PlaceVerse);
                 continue;
             }
 
-            int startMeasure = 0;
-            bool inSection = false;
+            string? enclosing = null;
             for (var n = block.Parent; n != null; n = n.Parent)
             {
                 if (n is SectionDeclarationSyntax section
-                    && sectionStartMeasure.TryGetValue(section.SectionName, out int s))
+                    && sectionStartMeasure.ContainsKey(section.SectionName))
                 {
-                    startMeasure = s;
-                    inSection = true;
+                    enclosing = section.SectionName;
                     break;
                 }
             }
 
-            int wrapBars = inSection ? SectionWrap(startMeasure) : totalBars;
-
-            // Verses stack within ONE section; a block in a new section restarts at
-            // verse 1, so its line sits directly under that section's staff rather than
-            // carrying over the previous section's verse offset.
-            if (startMeasure != prevSectionStart)
+            if (enclosing != null)
             {
-                verse = 1;
-                prevSectionStart = startMeasure;
+                PlaceSectionOccurrences(block.Syllables.ToList(), StartsFor(enclosing), enclosing, PlaceVerse);
+                continue;
             }
 
-            int barCount = PlaceRun(FirstVerse(block.Syllables.ToList()), startMeasure, wrapBars, verse);
-            // The block produced ceil(barCount / wrapBars) stacked verses.
-            verse += VersesFrom(barCount, wrapBars);
+            // Top level, no section to repeat under: take the first verse only (also
+            // flattens away any stray brackets so they never render as literal words)
+            // and wrap at the whole piece's length into stacked verses.
+            int vb0 = nextVerseBySection.TryGetValue(0, out var t0) ? t0 : 1;
+            int barCount = PlaceRun(FirstVerse(block.Syllables.ToList()), 0, totalBars, vb0);
+            nextVerseBySection[0] = vb0 + VersesFrom(barCount, totalBars);
         }
 
         if (maxIndex < 0)

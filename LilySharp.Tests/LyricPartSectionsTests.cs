@@ -285,6 +285,79 @@ public class LyricPartSectionsTests
         Assert.Contains("Do", atReprise);
     }
 
+    [Fact]
+    public void RowLyrics_RepeatUnderAWrittenOutReprise()
+    {
+        // An UNBOUND track placed as an independent ROW must carry its words at
+        // every written-out occurrence, like the note-bound path — the row reader
+        // used to place each section only at its first start, leaving the reprise
+        // silent.
+        var score = CollectScored("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 a' b' c'' | }
+            }
+            lyrics words {
+              section A { Do re mi fa | }
+              section B { sol la ti do | }
+            }
+            form main { A B A "A2" }
+            score main { staff melody  lyrics words }
+            """);
+        // A=bar0, B=bar1, A2=bar2.
+        Assert.Contains(score.Lyrics, l => l.IsLyricsRow && l.Text == "Do" && l.MeasureIndex == 0);
+        Assert.Contains(score.Lyrics, l => l.IsLyricsRow && l.Text == "Do" && l.MeasureIndex == 2);
+    }
+
+    [Fact]
+    public void RowVoltaLyrics_StackAsVersesUnderTheOneRepeatedSection()
+    {
+        // `[1.][2.]` under |: B :| on a ROW: verse 2 stacks at B's single printed
+        // pass instead of being dropped (the row reader used to flatten to the
+        // first verse), and `~` still hides the stanza number.
+        var score = CollectScored("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 d' e' f' | }
+              section B { g'4 a' b' c'' | }
+            }
+            lyrics words {
+              section A { la la la la | }
+              section B { [1. up up up up |] [~2. down down down down |] }
+            }
+            form main { A |: B :| }
+            score main { staff melody  lyrics words }
+            """);
+        var atB = score.Lyrics.Where(l => l.IsLyricsRow && l.MeasureIndex == 1).ToList();
+        Assert.Contains(atB, l => l.Text == "up" && l.VerseNumber == 1);
+        Assert.Contains(atB, l => l.Text == "down" && l.VerseNumber == 2);
+        Assert.All(atB.Where(l => l.Text == "down"), l => Assert.True(l.HideStanza));
+        Assert.All(atB.Where(l => l.Text == "up"), l => Assert.False(l.HideStanza));
+    }
+
+    [Fact]
+    public void RowVoltaLyrics_GiveEachRenditionItsOwnWords()
+    {
+        // Written-out occurrences on a ROW: each rendition takes the verse whose
+        // selector covers it, with no bleed between passes.
+        var score = CollectScored("""
+            time 4/4
+            key c major
+            part melody { clef treble section A { c'4 d' e' f' | } }
+            lyrics words { section A { [1. one one one one |] [2. two two two two |] } }
+            form main { A "1" A "2" }
+            score main { staff melody  lyrics words }
+            """);
+        var rows = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
+        Assert.Contains(rows, l => l.Text == "one" && l.MeasureIndex == 0);
+        Assert.Contains(rows, l => l.Text == "two" && l.MeasureIndex == 1);
+        Assert.DoesNotContain(rows, l => l.Text == "two" && l.MeasureIndex == 0);
+        Assert.DoesNotContain(rows, l => l.Text == "one" && l.MeasureIndex == 1);
+    }
+
     private static string LyricSignature(string src)
     {
         var score = CollectScored(src);
