@@ -258,4 +258,34 @@ public class PercentRepeatTests
         Assert.Single(score.PercentRepeats);
         Assert.Equal(2, score.PercentRepeats[0].MeasureIndex);
     }
+
+    [Fact]
+    public void PercentCoveredMeasures_DrawNoWholeRestUnderTheSign()
+    {
+        // `repeat percent 8 { R1 }`: LilyPond prints the rest ONCE — the covered
+        // measures show the % alone, because its percent iterator plays the body a
+        // single time and the MMR engraver never sees the copies
+        // (lily/percent-repeat-engraver.cc; measured on 2.26.0, the machine-exported
+        // twin draws bar 1 = whole rest, bars 2-8 = % only). Lily#'s unfold keeps
+        // the R for playback, so the SYMBOL pass must skip it: one whole-rest
+        // symbol at bar 0 and none under the seven signs. This pins BOTH halves of
+        // the repair — the engraver's percent filter AND the multi-staff path's
+        // synthetic annotation Score carrying PercentRepeats at all.
+        var tree = SyntaxTree.Parse("""
+            part melody {
+              section A { repeat percent 8 { R1 } }
+            }
+            form main { A }
+            score main { staff melody }
+            """);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var layout = new LayoutEngine().Layout(
+            LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec));
+
+        var mmr = Assert.Single(layout.MultiMeasureRestLayouts);
+        Assert.Equal(0, mmr.StartMeasureIndex);
+        Assert.Equal(1, mmr.MeasureCount);
+        Assert.Equal(7, layout.PercentRepeatLayouts.Length);
+    }
 }

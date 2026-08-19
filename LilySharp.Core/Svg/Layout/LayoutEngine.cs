@@ -295,6 +295,11 @@ internal sealed class LayoutEngine
             // The MMR engraver reads score.ChordNames to keep a chord-bearing
             // rest bar out of a compressed run (see MultiMeasureRestEngraver).
             chordNames: score.ChordNames,
+            // ...and score.PercentRepeats to keep the % measures' unfolded R out
+            // of the symbol pass (the % is the symbol there) — without this the
+            // synthetic score reported no repeats and every covered bar drew its
+            // whole rest under the sign.
+            percentRepeats: score.PercentRepeats,
             // The mark engraver reads Header.Tempo off THIS score to give the opening
             // metronome mark its data-pos, so the header offsets have to come along.
             header: score.Header)

@@ -137,6 +137,16 @@ internal static class MultiMeasureRestEngraver
         var voice = score.Voice;
         var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
 
+        // Measures a staff repeats under a % sign print ONLY the sign there:
+        // LilyPond's percent iterator plays the body once, so its MMR engraver
+        // never sees the repeated R at all; Lily#'s unfold keeps the R for
+        // playback, so the symbol pass must skip it — the same split the note
+        // renderer makes (SharedRenderer's percentCovered).
+        // LILYPOND-REF: lily/percent-repeat-engraver.cc.
+        HashSet<(int Staff, int Measure)>? percentCovered = null;
+        foreach (var pr in score.PercentRepeats)
+            (percentCovered ??= new()).Add((pr.StaffIndex, pr.MeasureIndex));
+
         foreach (var run in FindRuns(score, allStaffMeasures))
         {
             int runLast = run.StartMeasureIndex + run.Count - 1;
@@ -192,6 +202,21 @@ internal static class MultiMeasureRestEngraver
                 // blank. LILYPOND-REF: lily/multi-measure-rest-engraver.cc (Staff context).
                 foreach (int si in StaffIndicesIn(startSystem, staffIndex))
                 {
+                    // No symbol on a staff whose run is percent-covered (the % is the
+                    // symbol). Checked over the whole piece so a run that ever merged
+                    // a covered measure could not smuggle its rest back; other staves
+                    // of the same measures keep their own symbols (LilyPond prints
+                    // the % only on the staff that wrote the repeat).
+                    if (percentCovered != null)
+                    {
+                        int matchStaff = si < 0 ? 0 : si;
+                        bool covered = false;
+                        for (int m = runStart; m <= runEnd && !covered; m++)
+                            covered = percentCovered.Contains((matchStaff, m));
+                        if (covered)
+                            continue;
+                    }
+
                     // Within-system Y offset (device, down from the system top) of the
                     // staff middle, NOT an absolute page Y — so it is independent of where
                     // paging places the system. The draw resolves the system-top Y-up and
