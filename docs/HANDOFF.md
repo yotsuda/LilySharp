@@ -150,7 +150,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ## 1. 現在地 ← **毎セッション書き換える**
 
 最終更新 第220セッション＝**Marketplace 公開の下拵え（publisher を `yotsuda` に統一・8 プラットフォーム VSIX 実証・PAT 待ちで保留）＋ §2F ⒢ を両方閉じた便**（`2afd1b50`→`14b2ffcd`→`69ba0d20`＝台帳 4 点起票 → 歌詞床の `-1` family → ペダル括弧の再ホーム）。
-⚠️ **未解決の受信**: ユーザー報告「**小節番号の y 位置が高くなってしまった**」——本便の変更は無関係（sweep 569 冊で小節番号は 1 冊も動かず・HEAD は台帳 `barnumber.*.staff-to-baseline`＝LP 3.074446 に一致を再実測）。今朝の再配備で 13 commit 分（7/26 `2cefff77` の過剰予約 1.21 除去・8/18 `7b87cce1` の書体メトリクス）が初めてエディタに乗った差の可能性が高いが、**どの楽譜かをユーザーに確認中**（返答待ち。LP 比で高すぎる／重なるなら新欠陥）。
+✅ **ユーザー報告「小節番号の y 位置が高い」は同便で特定・修理**（`d7098514`→`fe43b73e`）: 素の本は LP 一致だったが、**リードシート（コード行が先頭）では帯 1 本分浮いていた**——`BarNumberLayout.YUp` が system 天辺基準で、行が先頭だと天辺＝帯の上端。LP は move-to-extremal-staff で X が交わる最上段要素に付け替え、行頭の番号は左マージンに垂れて行と X が交わらないので**譜に留まりコード行の下**（実測: インク底 2.05+padding 1.0＝3.050000 ちょうど・行があっても不動）。`BarNumberEngraver.AnchorStaff`（最上段の spaceable 譜・stacker の tracker 選択と 1 軒共有）に載せ替え、台帳 `barnumber.chord-row.staff-to-ink-bottom` **+5.945 → 0.000000**（両側 book 体項なし）。射程はリードシート 2 冊（amazing-grace/greensleeves・番号が帯 1 本分下がる）のみ・snapshot 不動。⚠️ **X 交差判定そのものは未移植**——period>0 の行中番号が行インクの真下に来る形だけが要る形で、probe から始めること（台帳 why・remark に記載）。
 
 ★ **開始時裏取り**: リリース直後の続き便（§0 の全数はリリース便で実施済み・HEAD `d910bf07`）。この便の開始時 suite は Windows 5673/0/4 相当（変更前）。
 終了時 **未追跡 0・作業ツリー項目 0**・suite **Windows 5677/0/4（台帳 +4 点でテスト数も +4）・Linux（この機械の WSL）5677/0/4＝両 OS 完全緑**・snapshot **220 枚中 4 枚だけ動き再承認**（pedal-below-lyrics／pedal-change／pedal-note-anchor／03-piano）・追跡コーパス 569 冊・Core 0 警告。
@@ -166,7 +166,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 - **Marketplace（保留・ユーザー PC 復帰待ち）**: publisher **`yotsuda` は登録済み・拡張 0 件**（`ytsuda` も本人のものだが github と綴りが揃う側を採用＝ユーザー決定）。`publish-marketplace.ps1` のドライランで **8 target 全 VSIX 成功**（win x64/arm64・linux x64/arm64/armhf/alpine・mac x64/arm64＝自己完結 44〜52 MB）。**残る 1 手はユーザーの PAT**: `https://dev.azure.com/ytsuda/_usersSettings/tokens` に**既存トークン `vsce-marketplace-publish`**（Marketplace Manage・Org=ytsuda・期限 2026/10/5）があるので **Regenerate → `npx @vscode/vsce login yotsuda`**（値は二度と表示されないため再生成が早い。元の開発機の `%USERPROFILE%\.vsce` コピーでも可）。login 後は `./publish-marketplace.ps1 -Publish` で 8 本公開 → Marketplace 検索確認。⚠️ **この回線は IPv6 経路で dev.azure.com/marketplace が TLS で死ぬ**（IPv4 は通る・実測）——ユーザーが IPv6 を無効化して回避中。vsce をスクリプト外で使うなら `NODE_OPTIONS=--dns-result-order=ipv4first`。
 - **⒢ の閉じ方は §2F の ✅ 項に**（台帳 4 点・スナップ 4 枚・残債 3 つ＝PLT text スタイル／dynamic +0.024651 box-vs-outline／系またぎ括弧×増分鍵）。
-- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（⒢ が抜けて 1 つ増えた）: ⒥ **ユーザーの小節番号報告の追跡**（上の ⚠️・返答待ち）／⒝ ペダル段間隔（テキスト行の step 1.961/2.443 未移植——PLT と同じ島）／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D）／小粒: twin の歌詞行・`lines` twin 未輸出。
+- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（⒢・小節番号とも同便で閉じた）: ⒝ ペダル段間隔（テキスト行の step 1.961/2.443 未移植——PLT と同じ島）／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D）／小粒: twin の歌詞行・`lines` twin 未輸出。
 
 > ## ★★ 骨 1＝**シルエット読みは anchor の Y を打ち消していた——読みを変えるなら frame の相棒も変わる**
 > `-1` family を per-staff Down に切り替えた最初の一手は hara-kiri の本で**ちょうど system 間隔 1 本分**
