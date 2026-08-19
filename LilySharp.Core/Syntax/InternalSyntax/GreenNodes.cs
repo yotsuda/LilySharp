@@ -1076,16 +1076,20 @@ internal sealed class LyricsRowRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Grand staff render: grandStaff { staff staff ... }
+/// Grand staff render: grandStaff { staff staff ... } — the members are
+/// <c>staff</c> items and, between them, bound <c>lyrics NAME</c> rows (score =
+/// a vertical stack of bands, inside a group as outside — a chorale's words
+/// between the sopranos and the altos). A bad member survives as its kept
+/// tokens, width-preserving (see Parser.ParseGrandStaffRender).
 /// </summary>
 internal sealed class GrandStaffRenderGreen : GreenSyntaxNode
 {
     public GrandStaffRenderGreen(
         SyntaxToken grandStaffKeyword,
         SyntaxToken openBrace,
-        StaffRenderGreen[] staves,
+        GreenNode[] members,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.GrandStaffRender, [grandStaffKeyword, openBrace, ..staves, closeBrace])
+        : base(SyntaxKind.GrandStaffRender, [grandStaffKeyword, openBrace, ..members, closeBrace])
     {
     }
 }

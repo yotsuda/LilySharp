@@ -691,20 +691,66 @@ internal sealed partial class Parser
     /// Parse a bracket/brace staff-group render: grandStaff / staffGroup /
     /// choirStaff { staff staff ... }. The leading keyword (already the current
     /// token) is kept on the green node so the collector can pick the group type.
+    /// A `lyrics NAME` row is a member too (score = a vertical stack of bands,
+    /// inside a group as outside): a bound row under the staff it sings folds
+    /// into that staff's verses (RenderSpecParser.FoldAdjacentRows), which is
+    /// how a chorale writes the words between the sopranos and the altos.
+    /// A row that sings no adjacent staff is LYS6012 (validator). Anything else
+    /// is LYS6011, reported at the member for the reason recorded on
+    /// ParseBarePartNameMembers, and its tokens are KEPT (width-preserving).
     /// </summary>
     private GrandStaffRenderGreen ParseGrandStaffRender()
     {
         var grandStaffKeyword = Advance(); // grandStaff | staffGroup | choirStaff
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var staves = new List<StaffRenderGreen>();
-        while (Check(SyntaxKind.StaffKeyword))
+        var members = new List<GreenNode>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
-            staves.Add(ParseStaffRender());
+            if (Check(SyntaxKind.StaffKeyword))
+            {
+                members.Add(ParseStaffRender());
+                continue;
+            }
+            if (Check(SyntaxKind.LyricsKeyword))
+            {
+                members.Add(ParseLyricsRowRender());
+                continue;
+            }
+
+            _diagnostics.Error(
+                new TextSpan(_textPosition, Current.FullWidth),
+                DiagnosticCodes.StaffGroupBadMember,
+                $"'{grandStaffKeyword.Text}' cannot contain '{Current.Text}' — a staff group "
+                + "holds 'staff NAME' items and, between them, 'lyrics NAME' rows. "
+                + "A chords row stands above the group, outside the braces.");
+
+            // Keep the offending tokens (the whole ITEM — its bare tokens, then a
+            // braced body if it has one) so the report is one per item, not one
+            // per token — and a bare Advance() would drop their width and shift
+            // every later source offset (see ParseBarePartNameMembers).
+            members.Add(Advance());
+            while (!Check(SyntaxKind.StaffKeyword) && !Check(SyntaxKind.LyricsKeyword)
+                && !Check(SyntaxKind.OpenBrace) && !Check(SyntaxKind.CloseBrace)
+                && !Check(SyntaxKind.EndOfFile))
+            {
+                members.Add(Advance());
+            }
+            if (Check(SyntaxKind.OpenBrace))
+            {
+                int depth = 0;
+                do
+                {
+                    if (Check(SyntaxKind.OpenBrace)) depth++;
+                    else if (Check(SyntaxKind.CloseBrace)) depth--;
+                    members.Add(Advance());
+                }
+                while (depth > 0 && !Check(SyntaxKind.EndOfFile));
+            }
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new GrandStaffRenderGreen(grandStaffKeyword, openBrace, [.. staves], closeBrace);
+        return new GrandStaffRenderGreen(grandStaffKeyword, openBrace, [.. members], closeBrace);
     }
 
     /// <summary>

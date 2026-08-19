@@ -905,6 +905,21 @@ public static class DiagnosticCodes
     /// part — the association is the track's, and placement cannot re-decide it.</summary>
     public const string LyricsAttachmentWrongStaff = "LYS6010";
 
+    /// <summary>Render error: a staff group (<c>grandStaff</c> / <c>staffGroup</c> /
+    /// <c>choirStaff</c>) contains something other than a <c>staff</c> item or a
+    /// <c>lyrics NAME</c> row. Reported at the member rather than left to the brace
+    /// mismatch, for the reason recorded on <see cref="CondensedStaffBadMember"/>:
+    /// "Expected 'CloseBrace'" describes the parser's predicament, not the writer's
+    /// mistake.</summary>
+    public const string StaffGroupBadMember = "LYS6011";
+
+    /// <summary>Render error: a <c>lyrics NAME</c> row inside a staff group that does
+    /// not sing the staff directly above it. Inside a group the row IS the staff
+    /// above's attached verse (score = a vertical stack of bands, inside the braces as
+    /// outside); a row belonging to no adjacent staff has no place a group can give
+    /// it.</summary>
+    public const string GroupRowNotBoundToStaffAbove = "LYS6012";
+
     // Structure / section-part grid errors (LYS7xxx)
 
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>

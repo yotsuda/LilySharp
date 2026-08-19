@@ -120,5 +120,36 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     + "and their melody are bound where the track is defined.");
             }
         }
+
+        // Rows inside a staff group: inside the braces a row IS the staff above's
+        // attached verse (score = a vertical stack of bands), so a row that sings
+        // no adjacent staff has no place a group can give it. The fold itself is
+        // RenderSpecParser.ParseGrandStaff; this is its refusal half.
+        foreach (var group in root.DescendantNodes().OfType<GrandStaffRenderSyntax>())
+        {
+            string? partAbove = null;
+            foreach (var member in group.ChildNodes())
+            {
+                switch (member)
+                {
+                    case StaffRenderSyntax st:
+                        partAbove = RenderSpecParser.ParseStaffSpec(st)?.VoiceName;
+                        break;
+                    case LyricsRowRenderSyntax row
+                        when partAbove == null
+                          || !RenderSpecParser.RowBindsToPart(root, row.PartName, partAbove):
+                        _diagnostics.Error(
+                            row.LyricsKeyword.Span,
+                            DiagnosticCodes.GroupRowNotBoundToStaffAbove,
+                            partAbove == null
+                                ? $"lyrics '{row.PartName}' stands before any staff in this group - "
+                                  + "inside a group a row is the verse of the staff directly above it."
+                                : $"lyrics '{row.PartName}' does not sing '{partAbove}', the staff "
+                                  + "directly above it - inside a group a row is that staff's verse; "
+                                  + "a row for another part goes outside the braces.");
+                        break;
+                }
+            }
+        }
     }
 }

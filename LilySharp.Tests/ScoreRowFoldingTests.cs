@@ -175,6 +175,71 @@ public class ScoreRowFoldingTests
         Assert.Equal(new[] { "words" }, group.Staves[1].WithLyrics);
     }
 
+    private const string ChoraleBody = """
+        time 4/4
+        part sop { clef treble }
+        part alt { clef treble }
+        section A {
+          sop { c'4 d' e' f' | }
+          alt { e4 f g a | }
+          lyrics words sings sop { la la la la | }
+        }
+        form main { A }
+        """;
+
+    /// <summary>Score = a vertical stack of bands INSIDE a group too: the chorale
+    /// writes its words between the staves, and the row folds into the staff
+    /// directly above it (⑵ of the with-clause removal plan).</summary>
+    [Fact]
+    public void BoundRowInsideAGroup_FoldsIntoTheStaffAbove()
+    {
+        var spec = SpecOf(ChoraleBody
+            + "score main { choirStaff { staff sop  lyrics words  staff alt } }");
+
+        var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec.Items)).GrandStaff;
+        Assert.Equal(2, group.StaffCount);
+        Assert.Equal(new[] { "words" }, group.Staves[0].WithLyrics);
+        Assert.Empty(group.Staves[1].WithLyrics);
+    }
+
+    [Fact]
+    public void RowInAGroupSingingNoAdjacentStaff_IsRefused()
+    {
+        var src = ChoraleBody.Replace("sings sop", "sings alt")
+            + "score main { choirStaff { staff sop  lyrics words  staff alt } }";
+        var diags = LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(src));
+
+        var d = Assert.Single(diags, d => d.Code == "LYS6012");
+        Assert.Contains("does not sing 'sop'", d.Message);
+    }
+
+    [Fact]
+    public void NonStaffNonRowMemberInAGroup_IsReportedAtTheMember()
+    {
+        var tree = SyntaxTree.Parse(ChoraleBody
+            + "score main { grandStaff { staff sop  tab alt } }");
+
+        var d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS6011");
+        Assert.Contains("cannot contain 'tab'", d.Message);
+    }
+
+    /// <summary>The chorale identity — the group fold renders the ink the old
+    /// in-group attachment clause rendered (the 08-chorale migration is a pure
+    /// respelling).</summary>
+    [Fact]
+    public void TheGroupRowSpelling_RendersTheInGroupAttachmentSpellingsInk()
+    {
+        string attach = Render(ChoraleBody
+            + "score main { choirStaff { staff sop with lyrics words  staff alt } }");
+        string rows = Render(ChoraleBody
+            + "score main { choirStaff { staff sop  lyrics words  staff alt } }");
+
+        Assert.Equal(attach, rows);
+
+        static string Render(string src) => System.Text.RegularExpressions.Regex.Replace(
+            SvgGenerator.Generate(SyntaxTree.Parse(src)), " data-pos=\"[0-9:]*\"", "");
+    }
+
     /// <summary>
     /// THE IDENTITY THAT MAKES THE FOLD THE WHOLE PORT: the row spelling and the
     /// attachment spelling of the same music render the same ink — only the

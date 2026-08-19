@@ -1870,8 +1870,15 @@ internal sealed class LayoutEngine
         // reading of LilyPond. To LilyPond a row is a loose line like any other and its
         // reservation is the same alignment minimum; Lily# places it as an independent
         // staff-like BAND instead (HANDOFF 3, a decided divergence), so it has no alignment
-        // minimum to prefer — the drawn extent is the only figure that exists for it. The
-        // day that decision is revisited, this branch goes with it.
+        // minimum to prefer — the drawn extent is the only figure that exists for it.
+        // ⚠️ THE REVISIT CAME (2026-08-19, "score = a vertical stack of bands") AND
+        // NARROWED THIS BRANCH INSTEAD OF REMOVING IT: a bound row standing directly
+        // below its own staff no longer reaches here — RenderSpecParser.FoldAdjacentRows
+        // turns it into the staff's attachment before layout, measured byte-identical
+        // to the old `with lyrics` clause. What still takes this branch is the
+        // STANDALONE row — the lead sheet, and the part sheet carrying another part's
+        // words — which LilyPond cannot spell without a staff to hang it on, so the
+        // band reading stays the intentional divergence for exactly that remit.
         // Its UP half is kept for every line — a first system whose top content is a
         // lyrics/chord row would otherwise graze the title ink. ⚠️ For a note-bound line the
         // up half is INERT (the line sits below the staff, so 2.11 - lyY is negative); it is

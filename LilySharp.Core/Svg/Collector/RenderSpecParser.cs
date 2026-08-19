@@ -91,7 +91,9 @@ public static class RenderSpecParser
                     items.Add(new ChordRowSpec(chordRow.PartName, ParseChordMode(chordRow.DisplayModeText)));
                     break;
 
-                case LyricsRowRenderSyntax lyricsRow:
+                // A row inside a group body belongs to the group (ParseGrandStaff
+                // folds it into the staff above), same guard as the staff case.
+                case LyricsRowRenderSyntax lyricsRow when !IsInsideGrandStaff(lyricsRow):
                     items.Add(new LyricsRowSpec(lyricsRow.PartName));
                     break;
 
@@ -231,7 +233,7 @@ public static class RenderSpecParser
     /// <c>sings</c> anywhere, the track's NAME being the part or one of its
     /// voices is the binding (<c>voice sop { } + lyrics sop { }</c>).
     /// </summary>
-    private static bool RowBindsToPart(SyntaxNode root, string track, string part)
+    internal static bool RowBindsToPart(SyntaxNode root, string track, string part)
     {
         var voices = Music.LyricBindings.VoicesOfPart(root, part);
         return Music.LyricBindings.TargetOf(root, track) is { } sings
@@ -380,11 +382,31 @@ public static class RenderSpecParser
     {
         var staves = new List<StaffSpec>();
 
-        foreach (var staff in grandStaff.Staves)
+        // Members in written order: `staff` items open staves, and a bound
+        // `lyrics NAME` row directly below the staff it sings folds into that
+        // staff's verses — the same fold FoldAdjacentRows applies outside the
+        // braces, which is how a chorale writes words between the staves.
+        // A row that sings no adjacent staff is dropped here and reported by the
+        // validator (LYS6012): a group has no independent band to give it.
+        foreach (var member in grandStaff.ChildNodes())
         {
-            var staffSpec = ParseStaff(staff);
-            if (staffSpec != null)
-                staves.Add(staffSpec);
+            switch (member)
+            {
+                case StaffRenderSyntax staff:
+                    var staffSpec = ParseStaff(staff);
+                    if (staffSpec != null)
+                        staves.Add(staffSpec);
+                    break;
+                case LyricsRowRenderSyntax row when staves.Count > 0
+                    && RowBindsToPart(grandStaff, row.PartName, staves[^1].VoiceName):
+                    staves[^1] = staves[^1] with
+                    {
+                        WithLyrics = (staves[^1].WithLyrics.IsDefault
+                            ? ImmutableArray<string>.Empty
+                            : staves[^1].WithLyrics).Add(row.PartName),
+                    };
+                    break;
+            }
         }
 
         if (staves.Count < 2)
@@ -827,7 +849,7 @@ public static class RenderSpecParser
         return new OssiaStaffSpec(new StaffSpec(clef, voiceName));
     }
 
-    private static bool IsInsideGrandStaff(StaffRenderSyntax staff)
+    private static bool IsInsideGrandStaff(SyntaxNode staff)
     {
         var parent = staff.Parent;
         while (parent != null)
