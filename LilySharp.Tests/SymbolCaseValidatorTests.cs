@@ -123,7 +123,6 @@ public class SymbolCaseValidatorTests
 
     [Theory]
     [InlineData("removeEmpty banana")]
-    [InlineData("lines banana")]
     [InlineData("octave banana")]
     [InlineData("transpose banana")]
     [InlineData("transposition banana")]
@@ -134,8 +133,6 @@ public class SymbolCaseValidatorTests
     [InlineData("removeEmpty true")]
     [InlineData("removeEmpty all")]
     [InlineData("removeEmpty false")]   // in the vocabulary; means what leaving it out means
-    [InlineData("lines 1")]
-    [InlineData("lines 5")]
     [InlineData("octave 3")]
     [InlineData("transpose d")]
     [InlineData("transpose cis")]
@@ -158,29 +155,96 @@ public class SymbolCaseValidatorTests
     }
 
     /// <summary>
-    /// The staff-line counts this validator ACCEPTS are exactly the ones the renderer
-    /// USES. Written as a comparison against the renderer rather than against the bound,
-    /// because the bound is a shared constant and asserting it against itself would prove
-    /// nothing: what can rot is the pair, not the number.
+    /// `lines` left the part header on 2026-08-19 (user decision): the staff-line
+    /// count is a property of the RENDERING, written `staff m as lines N` in the
+    /// score, so the same part can print five-lined in the full score and
+    /// one-lined in a lead sheet. The header spelling is the unknown-property
+    /// error, whose message lists what a header still takes.
     /// </summary>
     [Fact]
-    public void LinesTheValidatorAccepts_AreExactlyTheOnesTheRendererUses()
+    public void PartHeaderLines_MovedToTheScore_IsRefused()
+    {
+        Assert.True(HasSymbolError("lines 1"));
+    }
+
+    /// <summary>
+    /// The staff-line counts the PARSER accepts (`staff m as lines N`) are exactly
+    /// the ones the renderer USES. Written as a comparison against the renderer
+    /// rather than against the bound, because the bound is a shared constant and
+    /// asserting it against itself would prove nothing: what can rot is the pair,
+    /// not the number. (The pair moved from the part header to the score item with
+    /// the spelling, message and code intact.)
+    /// </summary>
+    [Fact]
+    public void LinesTheParserAccepts_AreExactlyTheOnesTheRendererUses()
     {
         for (int n = 0; n <= 7; n++)
         {
-            bool accepted = !HasSymbolError($"lines {n}");
-            int used = LinesTheRendererUses($"lines {n}");
+            bool accepted = !HasLinesSelectorError($"as lines {n}");
+            int used = LinesTheRendererUses($"as lines {n}");
             Assert.Equal(accepted, used == n);
         }
 
-        // …and the direction a numeric sweep cannot see: a value that is not a number
-        // at all also falls back to the default, so it must be refused too.
-        Assert.True(HasSymbolError("lines 2.5"));
+        // …and the direction a numeric sweep cannot see: a value that is not a
+        // whole number at all also falls back to the default, so it must be
+        // refused too.
+        Assert.True(HasLinesSelectorError("as lines 2.5"));
+        Assert.True(HasLinesSelectorError("as lines banana"));
     }
 
-    private static int LinesTheRendererUses(string header)
+    /// <summary>The selector composes with the rest of the render item: a display
+    /// name before it, a bound verse row folding after it inside a group, and an
+    /// ossia (allowed by the same decision — a lead sheet's second-pass rhythm on
+    /// a one-line ossia is the named use).</summary>
+    [Fact]
+    public void LinesSelector_ComposesWithDisplayNamesRowsAndOssia()
     {
-        var tree = SyntaxTree.Parse(Doc(header));
+        var tree = SyntaxTree.Parse(
+            "part vln { }\nsection A { vln { c4 d e f } }\nform main { A }\n"
+            + "score \"s\" { staff vln \"Violin I\" as lines 1 }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var staff = RenderSpecParser.FindFirst(tree)!
+            .Items.OfType<SingleStaffSpec>().Single().Staff;
+        Assert.Equal(1, staff.Lines);
+        Assert.Equal("Violin I", staff.InstrumentName);
+
+        tree = SyntaxTree.Parse(
+            "part vln { }\npart alt { }\nsection A { vln { c4 d e f } alt { e4 f g a } }\n"
+            + "form main { A }\nscore \"s\" { ossia alt as lines 1\n  staff vln }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var ossia = RenderSpecParser.FindFirst(tree)!.Items.OfType<OssiaStaffSpec>().Single();
+        Assert.Equal(1, ossia.Staff.Lines);
+        Assert.Equal("alt", ossia.Staff.VoiceName);
+
+        tree = SyntaxTree.Parse(
+            "part vln { }\npart vla { }\n"
+            + "section A { vln { c4 d e f } vla { e4 f g a } "
+            + "lyrics w sings vln { la la la la | } }\n"
+            + "form main { A }\n"
+            + "score \"s\" { grandStaff { staff vln as lines 1  lyrics w  staff vla } }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var grand = RenderSpecParser.FindFirst(tree)!
+            .Items.OfType<GrandStaffRenderSpec>().Single();
+        Assert.Collection(grand.GrandStaff.Staves,
+            top =>
+            {
+                Assert.Equal(1, top.Lines);
+                Assert.Equal(new[] { "w" }, top.WithLyrics);
+            },
+            bottom => Assert.Equal(5, bottom.Lines));
+    }
+
+    // The selector variants wrap the SCORE item instead of the part header.
+    private static string SelectorDoc(string selector) =>
+        $"part vln {{ }}\nsection A {{ vln {{ c4 d e f }} }}\nform main {{ A }}\nscore \"s\" {{ staff vln {selector} }}";
+
+    private static bool HasLinesSelectorError(string selector) =>
+        SyntaxTree.Parse(SelectorDoc(selector)).Diagnostics
+            .Any(d => d.Code == DiagnosticCodes.UnknownSymbolCase);
+
+    private static int LinesTheRendererUses(string selector)
+    {
+        var tree = SyntaxTree.Parse(SelectorDoc(selector));
         var spec = RenderSpecParser.FindFirst(tree)!;
         return spec.Items.OfType<SingleStaffSpec>().Single().Staff.Lines;
     }

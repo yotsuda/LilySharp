@@ -18,7 +18,7 @@ the product rather than a delta.
   lead sheets; volta repeats with inline endings; parallel voices; mid-piece key,
   time and clef changes; rhythm (comping) notation — `/` slash notes on the
   middle line, bare durations that repeat the previous note or chord
-  (`bes8 8 8 8`), and one-line rhythm staves via `lines 1`; lyric tracks bind
+  (`bes8 8 8 8`), and one-line rhythm staves via `staff … as lines 1`; lyric tracks bind
   to their own melody (`lyrics ja sings vocal`) and can print as words-only
   rows at that melody's rhythm — chorus words on an instrumental part. A
   score is a vertical stack of bands: a bound `lyrics` row directly below

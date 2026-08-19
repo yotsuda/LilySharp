@@ -135,7 +135,8 @@ bes2.      // Bb dotted half note
 `/` in note position is a pitchless note drawn as a **slash head on the middle
 staff line** — comping rhythm. Duration carry, stems and beams behave as on an
 ordinary note; playback is silent. Combine with a one-line staff
-(`part comp { lines 1 }`) for a rhythm chart:
+(`staff comp as lines 1` in the score — the line count is a property of the
+rendering, so the same part can keep five lines elsewhere) for a rhythm chart:
 
 ```
 /4 / / /              // four beat slashes

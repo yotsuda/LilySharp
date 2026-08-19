@@ -328,8 +328,12 @@ PartProperty   = 'clef'          , PartClefName
                | 'tuning'        , TuningName
                | 'octave'        , Integer
                | 'removeEmpty'   , RemoveEmptyValue
-               | 'lines'         , Integer            (* 1..5 — see StaffSpec.MaxLines *)
                | 'pedal'         , PedalStyleName ;
+               (* 'lines' left this list 2026-08-19 (user decision): the staff-line
+                  count is presentation, not music, so the SCORE item that renders
+                  the part carries it — 'staff m as lines 1' (StaffRender, §7). The
+                  same part can print five-lined in the full score and one-lined in
+                  a lead sheet, which one part-global number could not spell. *)
                (* 'key' is per-part too, but the parser takes it as a KeySignature rather
                   than a PartProperty, so it is not an alternative here. *)
 
@@ -402,8 +406,6 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
 (* transposition: the part's written->sounding shift, BEYOND whatever octave the clef
    word already carries. 'transpose' moves the written pitches; 'transposition' states
    that the written pitches sound elsewhere. *)
-
-(* lines: the staff's line count (1 for a one-line percussion staff). *)
 
 (* pedal: how a sustain span is drawn - the 'Ped.' text, a bracket, or 'mixed'
    (text at the start, bracket for the hold). *)
@@ -620,7 +622,12 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'tab' , [ TuningName ] , PartRef    (* tablature: tab partName, or
                                                         tab bass5 partName to override the
                                                         part header's own `tuning` *)
-               | 'ossia' , [ ClefName ] , PartRef       (* ossia partName — BARE, like staff *)
+               | 'ossia' , [ ClefName ] , PartRef , [ 'as' , 'lines' , Integer ]
+                                                     (* ossia partName — BARE, like staff,
+                                                        with the same line-count selector.
+                                                        ⚠️ keep semicolons out of comments
+                                                        inside this production — the doc
+                                                        tests cut the block at the first *)
                | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
                | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
                | ( 'title' | 'composer' ) , String   (* THIS score's own header — see below *)
@@ -693,7 +700,14 @@ CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
                       score full  { combinedStaff { fl1 fl2 } }
                       score parts { staff fl1  staff fl2 } *)
 
-StaffRender    = 'staff' , [ ClefName ] , PartRef ;
+StaffRender    = 'staff' , [ ClefName ] , PartRef , [ DisplayName ] ,
+                 [ 'as' , 'lines' , Integer ] ;
+                 (* 'as lines N' (1..5) is THIS staff's line count — presentation
+                    belongs to the rendering, so a lead sheet can write
+                    'staff melody as lines 1' while the full score keeps five.
+                    'as' and 'lines' are matched by text — 'as' also lexes as the
+                    Dutch A-flat, 'lines' is an ordinary word. Ossia takes the
+                    same selector. *)
                  (* A staff renders ONE part; everything that used to hang off it by
                     clause hangs by ORDER instead — score = a vertical stack of bands
                     (user decision, 2026-08-19, before the first tag). A bound
@@ -705,6 +719,9 @@ StaffRender    = 'staff' , [ ClefName ] , PartRef ;
                     The same chord part can also feed a lead-sheet row, so a
                     progression is written once. *)
 PartRef        = Identifier ;
+DisplayName    = String | Identifier ;
+                 (* 'staff flute "津田さん"' or a bare word: overrides the instrument
+                    label for THIS score only. *)
 
 (* THIS SCORE'S OWN HEADER: 'title' / 'composer' written inside a score restate the file's
    metadata for that score alone — the same two words as the top-level MetadataDecl, in a

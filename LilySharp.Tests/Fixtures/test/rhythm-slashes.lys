@@ -5,7 +5,7 @@
 title "Rhythm slashes"
 time 4/4
 
-part comp { lines 1 }
+part comp { }
 part gtr { }
 part bass { clef bass }
 
@@ -18,7 +18,7 @@ section Main {
 form main { Main }
 
 score main "rhythm-slashes" {
-  staff comp
+  staff comp as lines 1
   staff gtr
   staff bass
 }

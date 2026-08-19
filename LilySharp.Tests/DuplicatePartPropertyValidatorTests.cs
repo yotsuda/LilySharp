@@ -72,8 +72,8 @@ public class DuplicatePartPropertyValidatorTests
     [Fact]
     public void TheMessageNamesTheProperty()
     {
-        var d = Assert.Single(Errors("part m { lines 5 lines 3 }"));
-        Assert.Contains("'lines'", d.Message);
+        var d = Assert.Single(Errors("part m { octave 5 octave 3 }"));
+        Assert.Contains("'octave'", d.Message);
         Assert.Contains("twice", d.Message);
     }
 }

@@ -504,7 +504,10 @@ public sealed record RenderSpec(
                     var ossiaStaff = Staff.CreateOssia(
                         ossia.Staff.Clef,
                         FirstVoiceOrEmpty(ossia.Staff.VoiceName),
-                        ossia.Staff.InstrumentName);
+                        ossia.Staff.InstrumentName) with
+                    {
+                        Lines = ossia.Staff.Lines,
+                    };
                     yield return StaffGroup.CreateSingle(ossiaStaff);
                     break;
 

@@ -111,9 +111,9 @@ public class LysValueTests
     [Fact]
     public void ANumericPartPropertyIsReadAsANumberNotReparsedFromText()
     {
-        var tree = SyntaxTree.Parse("part perc { lines 3 }\nscore main { staff perc }");
+        var tree = SyntaxTree.Parse("part perc { octave 3 }\nscore main { staff perc }");
         Assert.Empty(tree.Diagnostics);
-        var prop = PartProperty(tree, "lines");
+        var prop = PartProperty(tree, "octave");
 
         Assert.Equal(new LysValue.Int(3), prop.Value);
         Assert.Equal(3, prop.Value!.AsInt);

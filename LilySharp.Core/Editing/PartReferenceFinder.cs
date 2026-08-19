@@ -231,8 +231,9 @@ public static class PartReferenceFinder
     /// <summary>
     /// The part token in a <c>staff</c> render item: skip a leading <c>~</c>
     /// (label suppression) and the per-score display string, then take the
-    /// first token that is not a clef keyword. LILYPOND-REF is n/a — this
-    /// mirrors RenderSpecParser.ParseStaff.
+    /// first token that is not a clef keyword (a trailing <c>as lines N</c>
+    /// selector sits after the part, so it cannot shadow it). LILYPOND-REF is
+    /// n/a — this mirrors RenderSpecParser.ParseStaff.
     /// </summary>
     private static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
     {
@@ -247,12 +248,14 @@ public static class PartReferenceFinder
         return partIdx < toks.Count ? toks[partIdx] : null;
     }
 
-    /// <summary>The part token for <c>ossia</c>: always the last target token
-    /// (RenderSpecParser.ParseOssia — <c>ossia [clef] part</c> takes the last slot, and an
-    /// ossia carries no <c>as</c> selector to strip).</summary>
+    /// <summary>The part token for <c>ossia</c>: cut the trailing <c>as lines N</c>
+    /// selector (the SAME cut RenderSpecParser.ParseOssia makes — one home,
+    /// <see cref="Svg.Collector.RenderSpecParser.CutLinesSelector"/>), then the
+    /// last target token (<c>ossia [clef] part</c> takes the last slot).</summary>
     private static SyntaxTokenNode? LastTargetToken(SyntaxNode node)
     {
         var toks = TargetTokens(node);
+        Svg.Collector.RenderSpecParser.CutLinesSelector(toks);
         return toks.Count > 0 ? toks[^1] : null;
     }
 

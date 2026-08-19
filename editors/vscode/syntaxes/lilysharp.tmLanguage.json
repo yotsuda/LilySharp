@@ -238,7 +238,7 @@
                 {
                     "comment": "The bare key, read AFTER every key/value pair above so the pair wins and the value is scoped as the value it is. `transposition` precedes `transpose`, which is a prefix of it.",
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|removeEmpty|lines|pedal|key)\\b"
+                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|removeEmpty|pedal|key)\\b"
                 },
                 { "include": "#keywords" },
                 { "include": "#pitches" },

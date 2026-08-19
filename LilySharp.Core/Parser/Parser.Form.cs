@@ -582,7 +582,7 @@ internal sealed partial class Parser
     /// </summary>
     private StaffRenderGreen ParseStaffRender()
     {
-        // staff [~] [clef] part ["display name"] [with chords chordPart]   (no braces)
+        // staff [~] [clef] part ["display name"] [as lines N]   (no braces)
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.StaffKeyword) };
 
         // `staff ~flute` suppresses the default instrument name label.
@@ -602,6 +602,7 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
             tokens.Add(Advance());
 
+        ConsumeLinesSelector(tokens);
         return new StaffRenderGreen([.. tokens]);
     }
 
@@ -630,6 +631,40 @@ internal sealed partial class Parser
             tokens.Add(Advance()); // as
             tokens.Add(Advance()); // roman | both | names
         }
+    }
+
+    /// <summary>
+    /// Consumes an optional <c>as lines N</c> staff-line selector on a staff or
+    /// ossia render item. The line count moved OFF the part header (user
+    /// decision, 2026-08-19): the count is presentation, so the SCORE item that
+    /// renders the part carries it — the same part can print five-lined in the
+    /// full score and one-lined in a lead sheet. Matched by TEXT like
+    /// <see cref="ConsumeAsSelector"/>: <c>as</c> also lexes as the Dutch
+    /// A-flat pitch, and <c>lines</c> is an ordinary word, not a keyword.
+    /// The range check keeps the part-header era's message word for word
+    /// (SymbolCaseValidator's CheckWholeNumber, retired with the property).
+    /// </summary>
+    private void ConsumeLinesSelector(List<SyntaxToken> tokens)
+    {
+        if (!string.Equals(Current.Text, "as", System.StringComparison.Ordinal)
+            || Peek(1) is not { } second
+            || !string.Equals(second.Text, "lines", System.StringComparison.Ordinal))
+            return;
+
+        tokens.Add(Advance()); // as
+        tokens.Add(Advance()); // lines
+
+        string valueText = Check(SyntaxKind.IntegerLiteral) ? Current.Text : "";
+        if (!(int.TryParse(valueText, out int n)
+            && n >= Semantics.LanguageVocabulary.MinStaffLines
+            && n <= Semantics.LanguageVocabulary.MaxStaffLines))
+            _diagnostics.Error(
+                new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                DiagnosticCodes.UnknownSymbolCase,
+                $"'{Current.Text}' is not a staff-line count. 'lines' takes a whole number " +
+                $"from {Semantics.LanguageVocabulary.MinStaffLines} to {Semantics.LanguageVocabulary.MaxStaffLines}.");
+        if (Check(SyntaxKind.IntegerLiteral))
+            tokens.Add(Advance()); // N
     }
 
     /// <summary>
@@ -816,17 +851,16 @@ internal sealed partial class Parser
     /// </summary>
     private OssiaRenderGreen ParseOssiaRender()
     {
-        var ossiaKeyword = Expect(SyntaxKind.OssiaKeyword);
+        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.OssiaKeyword) };
 
         // A clef keyword followed by a part name is an override; alone it IS
         // the part name (clef words are legal part names, as for staff).
         if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
-        {
-            var clef = Advance();
-            return new OssiaRenderGreen(ossiaKeyword, clef, ExpectPartName());
-        }
+            tokens.Add(Advance());
 
-        return new OssiaRenderGreen(ossiaKeyword, ExpectPartName());
+        tokens.Add(ExpectPartName());
+        ConsumeLinesSelector(tokens);
+        return new OssiaRenderGreen([.. tokens]);
     }
 
     /// <summary>

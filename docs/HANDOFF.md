@@ -828,6 +828,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 ### F. 言語・ツール側（X/Y とは独立・**一覧は伝聞。着手前に実コードで確認**）
 
+> ## ▶ **⒣ `removeEmpty`・`pedal` も「版面ものが part ヘッダに居る」同族＝別便で検討**（第217 起票・**ユーザー指示「別便で検討して」**）
+> `lines` を score 側 `as lines N` へ移した決定（§3 第217）の同族が 2 つ残る: **removeEmpty**
+> （LP では RemoveEmptyStaves＝context mod）と **pedal**（描画スタイル＝presentation）。
+> どちらも part 持ちだと「総譜では隠す・パート譜では隠さない」等の score ごとの使い分けが綴れない。
+> 移すなら **`as` 修飾の複数連結**（`staff m as lines 1 as removeEmpty …` か 1 つの `as` に列挙か）の
+> 設計から——**判断だけで閉じる型ではなく設計資産が要る**（第215 骨 1 の区別）。着手はユーザー決定から。
+
 > # ▶ **⒢ ペダル・強弱 vs 歌詞の優先順位スタック（第215 の probe 観察・第216 再測＝実在・タグ後）**
 > **2 件とも現 HEAD で再現する**（scratch/p216/r216-{attach,row}.png・probe は ab2-*.lys）:
 > **⒜ ペダル括弧が音節を貫通する**（同一譜に @sustainOn＋歌詞＝括弧が歌詞の高さに引かれる）／
@@ -2186,6 +2193,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 | 決定 | 根拠（要点） |
 |---|---|
+| ★★★ **`lines` は part ヘッダから score 項目へ＝`staff m as lines N`**（2026-08-19・第217・**ユーザー起案・決定**・✅ 同便実装） | ユーザー「part {} の中に lines を置けるのはいまひとつ」＋綴りもユーザー原案どおり。線数は LP でも `StaffSymbol.line-count`＝layout 側で、part 持ちだと総譜 5 線／リード譜 1 線の併記が綴れなかった。`as` は `chords … as roman`・`tab … as numbers` と同族の「この帯をどう刷るか」で、part 名直後の裸語＝表示ラベルとの曖昧を断つ。**ossia にも許可**（ユーザー決定＝リード譜の繰り返し 2 回目のリズム等）。part ヘッダの `lines` は既存 unknown-property 網が一覧ごと自動で正しく拒む（新 code 0）・値域チェックは parser が**同文・同 code**（UnknownSymbolCase）で継承・pair テストも score 側へ移設。移行は rhythm-slashes 1 冊＝snapshot 正規化恒等を機械確認。tab は対象外（線数＝弦数）。同族の removeEmpty/pedal は **⒣（§2F）に別便起票**（ユーザー指示）。⚠️ 学び 2 敗: GRAMMAR.md の生成規則内コメントに `;` を書くと DocKeywordListTests が塊をそこで切る——注意書きをブロックに残した |
 | ★★ **`with` はキーワードごと退役＝LYS0031 も除去し、補完にも出さない**（2026-08-19・第217・**ユーザー決定**・✅ 同便実装） | ユーザー指示「with は自動補完でリストされないようにして。LYS0031 のエラーコードは除去して」。移行は全書済み（追跡 569 冊＋ユーザー楽譜 9 冊＝同便前半）で網に獲物が残らないため、**LYS8007／`font` と同じ形でキーワードごと退役**——旧綴り `staff m with lyrics ja` は「表示名 "with"＋行」と読まれ fold する（`ScoreRowFoldingTests` がピン）・tab の旧綴りは generic 網（Undefined part: 'with'）。⚠️ **道連れの発見: tab の `with chords` は第216 の除去から漏れて*黙って通っていた***（`Parser.Form.cs` の分岐が残存・実測）——退役で一緒に消えた。退役番号は DiagnosticCodes 台帳・GRAMMAR.md・テスト remark の 3 箇所に同文（英語の歌詞・名前としての `with` は合法化）。**補完の `with` の出所は LSP ではなく VS Code の word-based suggestions**（LSP は `with` を一度も出していない・実査）＝`[lilysharp]` 既定で off（package.json）・tmLanguage の keyword 列からも削除。**要再配備**: deploy-extension.ps1 |
 | ★★★ **`with lyrics`/`with chords` は除去し、score は「帯の縦列」に統一する**（2026-08-19・第215・**ユーザー決定**・✅ **第216 実装＝`6d6d1b92`→`5d7a8ef1` の 4 commit**） | ユーザー起案「縦に積むだけで意図する楽譜を書けるはず」。関連は定義（`sings`）・位置は並び順・吸着は fold（隣接する bound 行＝その譜の verse）＝**LilyPond 自身のモデルに収束**（LP に `with lyrics` は無い）。構文破壊なので**初タグ前が唯一の無料期間**にやり切った。除去は LYS0031・経緯は §2F ✅ |
 | ★★★ **無名 `chords {}` は縦積みに畳む＝除去**（2026-08-19・第216・**ユーザー決定**・✅ 同便実装＝LYS0032） | 問いは「残すか畳むか」（第215 起票 ⑷）。技術評価を示して 1 問: 無名形の関連は「併記」という*推論*で、複数パート section では staff 0 固定のハードコード＝関連先がどこにも書かれていない。決定＝畳む。「名前を付けて score に置け」をエラーメッセージが綴る。既存 6 冊は命名＋行配置へ移行済み |

@@ -728,12 +728,12 @@ public class EditorColouringTests
         // ⑺ The part header — the three measurements the shape of it rests on.
         //    First: these words are the WRITER's. A bare alternation outside a context would
         //    paint a part name as the language's own, which is the `channel` defect again.
-        //    Sixteen of the twenty-two words this context colours are free identifiers;
+        //    Fifteen of the twenty-one words this context colours are free identifiers;
         //    only four clef names (soprano mezzosoprano baritone percussion) are reserved,
         //    and those four were already coloured, for that reason and not for this one.
         foreach (string free in new[]
                  {
-                     "transposition", "removeEmpty", "lines", "pedal",
+                     "transposition", "removeEmpty", "pedal",
                      "bracket", "text", "mixed",
                      "standard", "guitar", "bass5", "bass6", "ukulele", "uke",
                      "true", "all", "false",

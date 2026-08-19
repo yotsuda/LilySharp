@@ -1135,18 +1135,8 @@ internal sealed class CombinedStaffRenderGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class OssiaRenderGreen : GreenSyntaxNode
 {
-    public OssiaRenderGreen(
-        SyntaxToken ossiaKeyword,
-        SyntaxToken partName)
-        : base(SyntaxKind.OssiaRender, [ossiaKeyword, partName])
-    {
-    }
-
-    public OssiaRenderGreen(
-        SyntaxToken ossiaKeyword,
-        SyntaxToken clefName,
-        SyntaxToken partName)
-        : base(SyntaxKind.OssiaRender, [ossiaKeyword, clefName, partName])
+    public OssiaRenderGreen(params SyntaxToken[] tokens)
+        : base(SyntaxKind.OssiaRender, tokens)
     {
     }
 }

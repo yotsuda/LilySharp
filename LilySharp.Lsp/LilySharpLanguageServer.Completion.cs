@@ -157,6 +157,9 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
+            CompletionContext.AfterStaffAttachName => GetStaffAttachNameCompletions(),
+            CompletionContext.AfterStaffLinesAs => GetStaffLinesSelectorCompletions(),
+            CompletionContext.AfterStaffLinesValue => GetStaffLinesValueCompletions(),
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
             CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
@@ -584,6 +587,9 @@ public sealed partial class LilySharpLanguageServer
         AfterLyricsRef,
         AfterLyricsName,
         AfterChordAttachName,
+        AfterStaffAttachName,
+        AfterStaffLinesAs,
+        AfterStaffLinesValue,
         AfterChordDisplayAs,
         AfterTabDisplayAs,
         AfterInstrument,
@@ -803,6 +809,13 @@ public sealed partial class LilySharpLanguageServer
                 case "ossia": return CompletionContext.AfterStaffRef;
                 case "chords": return CompletionContext.AfterChordsRef;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
+                case "lines":
+                    // `staff m as lines |` — the selector's value slot. A
+                    // `lines` that no `as` governs falls through to the
+                    // general score list.
+                    if (SecondWordBeforeCursor(text, offset) == "as")
+                        return CompletionContext.AfterStaffLinesValue;
+                    break;
             }
             // What a staff GROUP's body accepts is narrower than the score's, and the
             // parser says so with its own diagnostics — so the popup must not offer the
@@ -826,6 +839,11 @@ public sealed partial class LilySharpLanguageServer
             // continuations, so a following render item is not blocked).
             if (SecondWordBeforeCursor(text, offset) == "chords")
                 return CompletionContext.AfterChordAttachName;
+            // `staff NAME |` / `ossia NAME |`: after the part name, offer the
+            // `as lines N` selector (plus the normal continuations), the same
+            // shape as the chords row's `as` above.
+            if (SecondWordBeforeCursor(text, offset) is "staff" or "ossia")
+                return CompletionContext.AfterStaffAttachName;
             return CompletionContext.ScoreBlock;
         }
 
@@ -872,14 +890,14 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "lines", "pedal", "removeEmpty",
+        "transposition", "pedal", "removeEmpty",
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
     // ⚠️ Values must be true only where a value context actually exists — AfterClef,
     // AfterInstrument, AfterRemoveEmpty. It is false for `octave` because the part-header
     // `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
-    // and false for `tuning`/`pedal`/`transposition`/`lines`, which have no value context at
+    // and false for `tuning`/`pedal`/`transposition`, which have no value context at
     // all. Setting it re-opens suggestions onto whatever list is general to the position,
     // which is worse than not offering to help.
     // ⚠️ Where a description NAMES a vocabulary it is joined from the compiler's list, not
@@ -905,7 +923,6 @@ public sealed partial class LilySharpLanguageServer
                           + "directive and a part header refuses them", false),
             ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", false),
             ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
-            ["lines"] = ($"Staff-line count, {LanguageVocabulary.MinStaffLines} to {LanguageVocabulary.MaxStaffLines}", false),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["removeEmpty"] = ("Hara-kiri: hide this staff in rest-only systems "
                                + $"({string.Join(" | ", LanguageVocabulary.RemoveEmptyValues)})", true),
@@ -1031,7 +1048,9 @@ public sealed partial class LilySharpLanguageServer
     /// <c>roman | both | names</c>. The word right before <c>as</c> is the target NAME
     /// in every case, so it can't disambiguate — scan the words before <c>as</c> for
     /// the nearest governing keyword. A <c>chords</c> seen first is the chord display;
-    /// a <c>tab</c> seen first is the tab style. Anything else keeps the chord default.
+    /// a <c>tab</c> seen first is the tab style; a <c>staff</c> or <c>ossia</c> seen
+    /// first is the staff-line selector (<c>as lines N</c>). Anything else keeps the
+    /// chord default.
     /// </summary>
     internal static CompletionContext AsSelectorContext(string text, int offset)
     {
@@ -1047,8 +1066,11 @@ public sealed partial class LilySharpLanguageServer
             while (i > 0 && IsWordChar(text[i - 1])) i--;
             if (end == i) break; // a non-word char (a brace or a quoted name) — give up
             string w = text.Substring(i, end - i);
-            if (w == "chords" || w == "staff") return CompletionContext.AfterChordDisplayAs;
+            if (w == "chords") return CompletionContext.AfterChordDisplayAs;
             if (w == "tab") return CompletionContext.AfterTabDisplayAs;
+            // `staff m as |` / `ossia m as |` — the one selector a staff takes
+            // is the line count (`as lines N`).
+            if (w == "staff" || w == "ossia") return CompletionContext.AfterStaffLinesAs;
         }
         return CompletionContext.AfterChordDisplayAs;
     }
@@ -1737,6 +1759,85 @@ public sealed partial class LilySharpLanguageServer
                 },
             },
         ]
+    };
+
+    /// <summary>After <c>staff NAME</c> / <c>ossia NAME</c>: the <c>as lines N</c>
+    /// staff-line selector, then the ordinary render-item continuations so a
+    /// following staff/chords/lyrics is not blocked — the same shape as
+    /// <see cref="GetChordAttachNameCompletions"/>. The count moved OFF the part
+    /// header (2026-08-19): it is a property of THIS rendering, so the same part
+    /// can print five-lined in the full score and one-lined in a lead sheet.
+    /// </summary>
+    internal static CompletionList GetStaffAttachNameCompletions()
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>
+        {
+            new CompletionItem
+            {
+                Label = "as lines",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "as lines $0",
+                Detail = "Staff-line count for this staff - 1 is a one-line rhythm staff",
+                SortText = "0",
+                Command = new Command
+                {
+                    Title = "Suggest line count",
+                    CommandIdentifier = "editor.action.triggerSuggest",
+                },
+            },
+        };
+        // The next render item can also start here; keep those, sorted after.
+        foreach (var it in GetScoreBlockCompletions().Items)
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>After <c>staff NAME as</c> / <c>ossia NAME as</c>: the one
+    /// selector a staff takes — <c>lines</c>. The value is enumerated by the
+    /// retrigger (<see cref="GetStaffLinesValueCompletions"/>).</summary>
+    internal static CompletionList GetStaffLinesSelectorCompletions() => new()
+    {
+        Items =
+        [
+            new CompletionItem
+            {
+                Label = "lines",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "lines $0",
+                Detail = "Staff-line count for this staff - 1 is a one-line rhythm staff",
+                SortText = "0",
+                Command = new Command
+                {
+                    Title = "Suggest line count",
+                    CommandIdentifier = "editor.action.triggerSuggest",
+                },
+            },
+        ]
+    };
+
+    /// <summary>The staff-line counts, offered in the value slot of
+    /// <c>as lines</c>. The range is the compiler's
+    /// (<see cref="LanguageVocabulary.MinStaffLines"/>), never restated.</summary>
+    internal static CompletionList GetStaffLinesValueCompletions() => new()
+    {
+        Items = System.Linq.Enumerable.Range(
+                LanguageVocabulary.MinStaffLines,
+                LanguageVocabulary.MaxStaffLines - LanguageVocabulary.MinStaffLines + 1)
+            .Select(n => new CompletionItem
+            {
+                Label = n.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Kind = CompletionItemKind.Value,
+                InsertText = n.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Detail = n == 1 ? "A one-line rhythm or percussion staff"
+                    : n == LanguageVocabulary.MaxStaffLines ? $"{n} lines - the default"
+                    : $"{n} lines",
+                SortText = n.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            }).ToArray()
     };
 
     /// <summary>After <c>chords NAME</c>: the chord DISPLAY

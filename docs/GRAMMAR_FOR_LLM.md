@@ -197,7 +197,7 @@ duration repeating the previous event (see Durations above).
 `/` in note position is a SLASH NOTE — rhythm (comping) notation: a pitchless
 note drawn as a slash head on the middle staff line, silent in playback, with
 ordinary duration/stem/beam behaviour. `/4 4 8 8 4` is a comping figure;
-combine with `part comp { lines 1 }` for a one-line rhythm staff. `time 4/4`,
+combine with `staff comp as lines 1` in the score for a one-line rhythm staff. `time 4/4`,
 `tuplet 3/2` and `c/g` keep their own `/`.
 
 Chord octaves — the ANCHOR model (one rule: a mark moves only what it is attached to):

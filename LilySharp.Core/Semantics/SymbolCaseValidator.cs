@@ -39,7 +39,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
-        "octave", "removeEmpty", "lines", "pedal",
+        "octave", "removeEmpty", "pedal",
     };
 
     private static readonly HashSet<string> PedalValues = new(StringComparer.Ordinal)
@@ -191,11 +191,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
             case "removeEmpty":
                 CheckValue(valueTokens, RemoveEmptyValues, "removeEmpty", "values");
                 break;
-            case "lines":
-                CheckWholeNumber(valueTokens, "lines",
-                    StaffSpec.MinLines, StaffSpec.MaxLines, "a staff-line count",
-                    $"a whole number from {StaffSpec.MinLines} to {StaffSpec.MaxLines}");
-                break;
+            // ("lines" left this list 2026-08-19: the staff-line count is a
+            // property of the RENDERING, written `staff m as lines N` in the
+            // score; the parser keeps this arm's message word for word.)
             case "octave":
                 // No bound: an octave number is read as written (PartHeaderDefaults),
                 // so the only thing that can be wrong about it is not being a number.

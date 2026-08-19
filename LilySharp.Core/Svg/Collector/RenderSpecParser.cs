@@ -459,6 +459,33 @@ public static class RenderSpecParser
         return new GrandStaffSpec([.. staves], type);
     }
 
+    /// <summary>
+    /// Cuts a trailing <c>as lines N</c> selector off a render item's target
+    /// tokens and returns the written staff-line count, or null when there is
+    /// no selector or its value is unreadable (the parser already reported
+    /// that; the render falls back to the five-line default). ONE HOME for the
+    /// cut: PartReferenceFinder and the LilyPond twin call this same method so
+    /// the part token stays the last remaining slot everywhere. Matched by
+    /// TEXT — <c>as</c> lexes as the Dutch A-flat pitch, <c>lines</c> as an
+    /// ordinary word.
+    /// </summary>
+    internal static int? CutLinesSelector(List<SyntaxTokenNode> toks)
+    {
+        for (int i = 0; i + 1 < toks.Count; i++)
+        {
+            if (!string.Equals(toks[i].Text, "as", System.StringComparison.Ordinal)
+                || !string.Equals(toks[i + 1].Text, "lines", System.StringComparison.Ordinal))
+                continue;
+            int? lines = i + 2 < toks.Count
+                && int.TryParse(toks[i + 2].Text, out int n)
+                && n >= StaffSpec.MinLines && n <= StaffSpec.MaxLines
+                ? n : null;
+            toks.RemoveRange(i, toks.Count - i);
+            return lines;
+        }
+        return null;
+    }
+
     /// <summary>The non-keyword, non-brace tokens of a render item, in order:
     /// either [part] or [modifier, part] (modifier = clef or tuning).</summary>
     private static List<SyntaxTokenNode> RenderTargetTokens(SyntaxNode node)
@@ -479,6 +506,10 @@ public static class RenderSpecParser
     {
         // [~][clef?] part ["display"] [with chords chordPart]; braces skipped.
         var toks = RenderTargetTokens(staff);
+        // `as lines N` — the staff-line count is a property of THIS rendering
+        // (the part header no longer carries one); cut it before the display
+        // name scan below so `as` cannot be read as a bare display name.
+        int? selectorLines = CutLinesSelector(toks);
         if (toks.Count == 0) return null;
 
         // `staff ~flute` = no instrument-name label for this staff.
@@ -545,10 +576,7 @@ public static class RenderSpecParser
         // LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves /
         // RemoveAllEmptyStaves set VerticalAxisGroup.remove-empty (+ remove-first).
         string? removeEmpty = GetPartProperty(staff, voiceName, "removeempty")?.ToLowerInvariant();
-        // The value arrives typed, so the staff-line count is READ rather than
-        // reparsed out of the joined token text (docs/VALUE_SITE_AUDIT.md §2).
-        int lines = GetPartPropertyValue(staff, voiceName, "lines")?.AsInt is int ln
-            && ln >= StaffSpec.MinLines && ln <= StaffSpec.MaxLines ? ln : StaffSpec.MaxLines;
+        int lines = selectorLines ?? StaffSpec.MaxLines;
         // Piano pedal style (part property `pedal bracket|text|mixed`; default Bracket).
         var pedalStyle = Staff.ParsePedalStyle(
             GetPartProperty(staff, voiceName, "pedal")?.ToLowerInvariant());
@@ -794,15 +822,19 @@ public static class RenderSpecParser
     /// </summary>
     private static OssiaStaffSpec? ParseOssia(OssiaRenderSyntax ossia)
     {
-        // ossia [clef] partName — slots: [kw, name] or [kw, clef, name]
-        // (the LAST slot is always the part name; a clef word alone is a name).
-        if (ossia.SlotCount < 2 || ossia.GetChild(ossia.SlotCount - 1) is not SyntaxTokenNode nameToken)
+        // ossia [clef] partName [as lines N] — after the selector cut, the LAST
+        // token is always the part name; a clef word alone is a name.
+        var toks = RenderTargetTokens(ossia);
+        int? ossiaLines = CutLinesSelector(toks);
+        if (toks.Count == 0)
             return null;
+        var nameToken = toks[^1];
         string voiceName = nameToken.Text;
 
         ClefType? explicitClef = null;
-        if (ossia.SlotCount >= 3 && ossia.GetChild(1) is SyntaxTokenNode clefToken)
+        if (toks.Count >= 2)
         {
+            var clefToken = toks[0];
             explicitClef = clefToken.Kind switch
             {
                 SyntaxKind.TrebleKeyword => ClefType.Treble,
@@ -810,18 +842,19 @@ public static class RenderSpecParser
                 SyntaxKind.AltoKeyword => ClefType.Alto,
                 SyntaxKind.TenorKeyword => ClefType.Tenor,
                 SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
-            SyntaxKind.Treble8UpKeyword => ClefType.Treble8Above,
-            SyntaxKind.SopranoKeyword => ClefType.Soprano,
-            SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
-            SyntaxKind.BaritoneKeyword => ClefType.Baritone,
-            SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
-            SyntaxKind.PercussionKeyword => ClefType.Percussion,
+                SyntaxKind.Treble8UpKeyword => ClefType.Treble8Above,
+                SyntaxKind.SopranoKeyword => ClefType.Soprano,
+                SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
+                SyntaxKind.BaritoneKeyword => ClefType.Baritone,
+                SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
+                SyntaxKind.PercussionKeyword => ClefType.Percussion,
                 _ => null,
             };
         }
 
         ClefType clef = explicitClef ?? GetPartClef(ossia, voiceName) ?? ClefType.Treble;
-        return new OssiaStaffSpec(new StaffSpec(clef, voiceName));
+        return new OssiaStaffSpec(new StaffSpec(clef, voiceName,
+            Lines: ossiaLines ?? StaffSpec.MaxLines));
     }
 
     private static bool IsInsideGrandStaff(SyntaxNode staff)
