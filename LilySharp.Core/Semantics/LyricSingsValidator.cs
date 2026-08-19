@@ -91,7 +91,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             if (RenderSpecParser.ParseStaffSpec(staff) is not { } spec
                 || spec.WithLyrics.IsDefaultOrEmpty)
                 continue;
-            var staffVoices = VoicesOfPart(root, spec.VoiceName);
+            var staffVoices = LyricBindings.VoicesOfPart(root, spec.VoiceName);
             foreach (var attached in spec.WithLyrics)
             {
                 string? sings = LyricBindings.TargetOf(root, attached);
@@ -120,27 +120,5 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     + "and their melody are bound where the track is defined.");
             }
         }
-    }
-
-    /// <summary>The named voices written inside part <paramref name="partName"/>'s
-    /// music (section cells and part-major inner sections alike).</summary>
-    private static HashSet<string> VoicesOfPart(SyntaxNode root, string partName)
-    {
-        var result = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var n in root.DescendantNodes())
-        {
-            SyntaxNode? body = n switch
-            {
-                PartBlockSyntax pb when pb.PartName.Text == partName => pb,
-                PartDeclarationSyntax pd when pd.Name.Text == partName => pd,
-                _ => null,
-            };
-            if (body == null) continue;
-            foreach (var par in body.DescendantNodes().OfType<ParallelExpressionSyntax>())
-                foreach (var (vn, _) in par.NamedVoices)
-                    if (vn is { Length: > 0 })
-                        result.Add(vn);
-        }
-        return result;
     }
 }

@@ -83,4 +83,47 @@ public static class LyricBindings
         }
         return map;
     }
+
+    private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, HashSet<string>>> VoiceMaps = new();
+
+    /// <summary>
+    /// The named voices written inside the named part's music (section cells and
+    /// part-major inner sections alike) — the other half of the binding rule: a
+    /// track binds to a part by <c>sings</c>, or by NAME to the part or one of
+    /// these voices (<c>voice sop { } + lyrics sop { }</c>). One walk per tree,
+    /// shared by the validator and the score-row folding in RenderSpecParser.
+    /// </summary>
+    public static IReadOnlySet<string> VoicesOfPart(SyntaxNode root, string partName)
+    {
+        while (root.Parent != null)
+            root = root.Parent;
+        var map = VoiceMaps.GetValue(root, BuildVoiceMap);
+        return map.TryGetValue(partName, out var voices) ? voices : EmptyVoices;
+    }
+
+    private static readonly HashSet<string> EmptyVoices = new(StringComparer.Ordinal);
+
+    private static Dictionary<string, HashSet<string>> BuildVoiceMap(SyntaxNode root)
+    {
+        var map = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var n in root.DescendantNodes())
+        {
+            string? part = n switch
+            {
+                PartBlockSyntax pb => pb.PartName.Text,
+                PartDeclarationSyntax pd => pd.Name.Text,
+                _ => null,
+            };
+            if (part == null) continue;
+            foreach (var par in n.DescendantNodes().OfType<ParallelExpressionSyntax>())
+                foreach (var (vn, _) in par.NamedVoices)
+                    if (vn is { Length: > 0 })
+                    {
+                        if (!map.TryGetValue(part, out var set))
+                            map[part] = set = new HashSet<string>(StringComparer.Ordinal);
+                        set.Add(vn);
+                    }
+        }
+        return map;
+    }
 }

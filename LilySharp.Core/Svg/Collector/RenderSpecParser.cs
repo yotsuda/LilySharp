@@ -103,6 +103,23 @@ public static class RenderSpecParser
             }
         }
 
+        // SCORE = A VERTICAL STACK OF BANDS (user decision, 2026-08-19, closed
+        // before the first tag): a row standing NEXT TO the staff it belongs to IS
+        // that staff's attachment. The association is written at the definition
+        // (`sings`, or the name-is-binding voice rule); the score only orders the
+        // bands; adjacency + affinity decide the gluing — a bound `lyrics` row
+        // directly BELOW its staff folds under it (LilyPond's Lyrics,
+        // staff-affinity UP), and several in a run stack as verses. A row whose
+        // binding is NOT the adjacent staff's part keeps its place as an
+        // independent band (a part sheet carrying another part's words), and an
+        // unbound lyrics row stays the even-spread lead-sheet row. A CHORDS row
+        // needs no folding: the row already is the LilyPond-ported adhesion
+        // (see FoldAdjacentRows' remarks).
+        // LILYPOND-REF: ly/engraver-init.ly:648-658 Lyrics nonstaff-relatedstaff-spacing,
+        // staff-affinity UP — a LilyPond score is exactly this vertical list, and
+        // the gluing is the affinity, not a clause.
+        FoldAdjacentRows(render, items);
+
         // Ensemble default: with two or more plain staves, each unlabeled
         // staff shows its part name (capitalized) on the first line — writers
         // opt out per staff with `staff ~flute` or rename with
@@ -136,6 +153,108 @@ public static class RenderSpecParser
 
         return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
             [.. headerOverrides]);
+    }
+
+    /// <summary>
+    /// Folds bound lyrics rows into their staff's attachment, in place — the
+    /// reading that makes a score a VERTICAL STACK OF BANDS (see the caller's
+    /// remark): a <c>lyrics NAME</c> row immediately BELOW the staff whose part
+    /// it sings becomes an attached verse (of a group, the LAST staff — the one
+    /// the row stands directly below), and a RUN of such rows stacks as verses
+    /// in written order. MEASURED (2026-08-19, scratch/p216/pins): the folded
+    /// row renders BYTE-IDENTICAL (modulo data-pos) to the old attachment
+    /// clause on all three priority-stack pins, so the fold is the whole port —
+    /// the two spellings were already one mechanism.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately NOT folded, so each keeps its current reading:
+    /// <list type="bullet">
+    /// <item>A CHORDS row — ⚠️ chords glue DOWN in LilyPond too, but here the
+    /// ROW is the literal port: <c>lyrics.chord-row.between-systems.*</c>
+    /// measured LilyPond putting the row INTO the lyric chain
+    /// (page-layout-problem.cc:948-990, ported 2026-07-27, residuals are font
+    /// terms only), and folding it into the attached-chords engraver MOVES that
+    /// geometry away from LilyPond (measured: residual −0.002157 → +0.030400).
+    /// The row IS the adhesion for chords; there is nothing to fold it into.</item>
+    /// <item>A lyrics row after a staff it does not sing — an independent band at
+    /// its written place (the part sheet carrying another part's words).</item>
+    /// <item>An unbound lyrics row — the even-spread lead-sheet row.</item>
+    /// <item>A lyrics row after a tab staff: the attachment plumbing has never
+    /// engraved syllables under a tab (the old clause grammar could not spell it),
+    /// so the row stays a band rather than exercising an untrodden path.</item>
+    /// <item>An intervening non-row item (an ossia, a condensed/combined staff)
+    /// closes the fold window — the band between breaks physical adjacency.</item>
+    /// </list>
+    /// The binding walks are CWT-cached per tree (<see cref="Music.LyricBindings"/>),
+    /// and a score with no rows never reaches them — the per-keystroke spec parse
+    /// (IncrementalCompiler) pays one O(items) scan and nothing else.
+    /// </remarks>
+    private static void FoldAdjacentRows(RenderDeclarationSyntax render, List<RenderItemSpec> items)
+    {
+        SyntaxNode root = render;
+        while (root.Parent != null)
+            root = root.Parent;
+
+        // Lyrics glue UP. `open` is the staff-like item still accepting verses;
+        // a fold keeps it open (the next row is the next verse), anything that
+        // is not a folding row moves or closes it.
+        int open = -1;
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] is LyricsRowSpec row && open >= 0
+                && PartOfFoldTarget(items[open]) is { Length: > 0 } part
+                && RowBindsToPart(root, row.PartName, part))
+            {
+                items[open] = AddFoldedVerse(items[open], row.PartName);
+                items.RemoveAt(i);
+                i--;
+                continue;
+            }
+            open = items[i] is SingleStaffSpec or GrandStaffRenderSpec ? i : -1;
+        }
+    }
+
+    /// <summary>The part a lyrics row below <paramref name="item"/> would sing:
+    /// a single staff's part, or a group's LAST staff's (the one the row stands
+    /// directly below). Null = not a fold target.</summary>
+    private static string? PartOfFoldTarget(RenderItemSpec item) => item switch
+    {
+        SingleStaffSpec s => s.Staff.VoiceName,
+        GrandStaffRenderSpec { GrandStaff.Staves: { Length: > 0 } staves } => staves[^1].VoiceName,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Whether the named lyrics track belongs to the named part — the SAME rule
+    /// the attachment validator applies (LyricSingsValidator): a declared
+    /// <c>sings</c> target naming the part or one of its voices binds; with no
+    /// <c>sings</c> anywhere, the track's NAME being the part or one of its
+    /// voices is the binding (<c>voice sop { } + lyrics sop { }</c>).
+    /// </summary>
+    private static bool RowBindsToPart(SyntaxNode root, string track, string part)
+    {
+        var voices = Music.LyricBindings.VoicesOfPart(root, part);
+        return Music.LyricBindings.TargetOf(root, track) is { } sings
+            ? string.Equals(sings, part, StringComparison.Ordinal) || voices.Contains(sings)
+            : string.Equals(track, part, StringComparison.Ordinal) || voices.Contains(track);
+    }
+
+    private static RenderItemSpec AddFoldedVerse(RenderItemSpec item, string track)
+    {
+        static ImmutableArray<string> Append(ImmutableArray<string> a, string s)
+            => (a.IsDefault ? ImmutableArray<string>.Empty : a).Add(s);
+        return item switch
+        {
+            SingleStaffSpec s => new SingleStaffSpec(
+                s.Staff with { WithLyrics = Append(s.Staff.WithLyrics, track) }),
+            GrandStaffRenderSpec g => new GrandStaffRenderSpec(g.GrandStaff with
+            {
+                Staves = g.GrandStaff.Staves.SetItem(g.GrandStaff.Staves.Length - 1,
+                    g.GrandStaff.Staves[^1] with
+                    { WithLyrics = Append(g.GrandStaff.Staves[^1].WithLyrics, track) }),
+            }),
+            _ => item,
+        };
     }
 
     /// <summary>
