@@ -103,6 +103,23 @@ c4 d e f   // All quarter notes
 c8 d e f   // All eighth notes
 ```
 
+### Bare Durations (repeat the previous event)
+
+A duration standing **alone** repeats the previous note, chord or slash at the
+new length — the same reading LilyPond gives an isolated duration:
+
+```
+bes8 8 8 8 8 8 8 8    // an eighth-note bass pump, written once
+<c e g>4 4 2          // the chord again, quarter then half
+c'4 r4 4              // rests are transparent: the last 4 is c' again
+```
+
+The bare number is a written duration, so it also sets the running default.
+Rests and the empty chord `<>` are transparent to the run; an arpeggio breaks
+it; a bare duration with nothing before it to repeat is an error (LYS0016).
+The repeat keeps the original's absolute pitch (it is transparent to the
+relative frame, like `q`) and takes only its own post-events.
+
 ## Notes, Rests, and Chords
 
 ### Notes
@@ -112,6 +129,22 @@ c4         // C quarter note
 fis8       // F# eighth note
 bes2.      // Bb dotted half note
 ```
+
+### Slash Notes (rhythm notation)
+
+`/` in note position is a pitchless note drawn as a **slash head on the middle
+staff line** — comping rhythm. Duration carry, stems and beams behave as on an
+ordinary note; playback is silent. Combine with a one-line staff
+(`part comp { lines 1 }`) for a rhythm chart:
+
+```
+/4 / / /              // four beat slashes
+/8 8 /4 8 8 /4        // a comping figure (bare durations continue the run)
+/4 4 g8 g /4 /        // ensemble kicks mix with pitched notes
+```
+
+`time 4/4`, `tuplet 3/2` and a chord entry's `c/g` keep their own `/` — only
+the note position reads it as a slash.
 
 ### Rests
 

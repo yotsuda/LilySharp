@@ -158,10 +158,16 @@ c' c,              // C6 C5
 - Numbers: `1`=whole, `2`=half, `4`=quarter, `8`, `16`, `32`, `64`, `128`.
 - Dots after the number: `4.`=dotted quarter, `4..`=double-dotted.
 - Omitting the duration reuses the previous note's duration.
+- A duration standing ALONE repeats the previous note/chord/slash at the new
+  length (LilyPond's isolated-duration reading): `bes8 8 8 8` is a bass pump.
+  It also sets the running default. Rests are transparent; with nothing before
+  it to repeat it is an error (LYS0016).
 
 ```
 c4 d e f    // all quarters
 c8 d e f    // all eighths
+bes8 8 8 8  // bes eighths, written once
+<c e g>4 4  // the chord again
 ```
 
 ## Notes, rests, chords
@@ -183,10 +189,16 @@ overrides that — the rest sits where that pitch would and nothing moves it aga
 which is how two voices' colliding rests get pulled apart. The pitch never sounds and
 prints no accidental. On anything but a note (`r4@rest`, `<c e>4@rest`) it is an error.
 
-A duration is GLUED to what it lengthens — `c4`, `<c e g>4` — never spaced
-(`c 4` is an error, LYS0016), and never on a chord/arpeggio member
-(`<c e g2>` is an error, LYS0015). A SPACED number inside brackets is a
-scale degree: `<c e g 2>`.
+A duration is GLUED to what it lengthens — `c4`, `<c e g>4` — and never sits on
+a chord/arpeggio member (`<c e g2>` is an error, LYS0015). A SPACED number
+inside brackets is a scale degree (`<c e g 2>`); OUTSIDE brackets it is a bare
+duration repeating the previous event (see Durations above).
+
+`/` in note position is a SLASH NOTE — rhythm (comping) notation: a pitchless
+note drawn as a slash head on the middle staff line, silent in playback, with
+ordinary duration/stem/beam behaviour. `/4 4 8 8 4` is a comping figure;
+combine with `part comp { lines 1 }` for a one-line rhythm staff. `time 4/4`,
+`tuplet 3/2` and `c/g` keep their own `/`.
 
 Chord octaves — the ANCHOR model (one rule: a mark moves only what it is attached to):
 the anchor is the first member's bare LETTER (or the key tonic for a degrees-only

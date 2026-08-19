@@ -618,6 +618,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/figbass-below-script" };
         // Staff-less chord+lyric ROW sheet (row spacing, line-break rewind, header ink).
         yield return new object[] { "test/rows-song-sheet" };
+        // Rhythm notation: slash notes (one-line + five-line staves), bare-duration
+        // runs, a pitched kick inside a slash bar, the bass pump, open/dotted slashes.
+        yield return new object[] { "test/rhythm-slashes" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).

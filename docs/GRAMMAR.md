@@ -741,6 +741,7 @@ PartRef        = Identifier ;
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | InlineVolta | PhraseRef
+               | SlashNote | BareDuration
                | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand | NavMark ;
 
 (* NavMark (see §6) is the SAME bare token in a section's music as in a form — it is a
@@ -763,6 +764,41 @@ Note           = PitchToken , [ DurationToken ] , { Annotation } ;
 Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
                  (* r = plain rest, s = invisible spacer, R = full-measure rest *)
 
+(* RHYTHM (COMPING) NOTATION, 2026-08-19. A SLASH NOTE is a pitchless note drawn
+   as a slash head on the MIDDLE staff line — the token depicts the printed ink,
+   the way '|' depicts a barline (HANDOFF §3 records the sigil-rule decision).
+   Duration carry, stems, beams, ties and post-events behave as on an ordinary
+   note; playback is SILENT; on a one-line staff (part property `lines 1`) the
+   head sits on the line. The other spellings of '/' are untouched: `time 4/4`,
+   `tuplet 3/2` and a chord entry's `c/g` never reach the note position.
+   LILYPOND-REF: ly/property-init.ly improvisationOn — LilyPond's spelling of
+   the same page (slash heads, no accidentals) on a written pitch; the twin
+   exports exactly that form on the clef's middle-line pitch. *)
+SlashNote      = '/' , [ DurationToken ] , { Annotation } ;
+
+(* A BARE DURATION repeats the previous note, chord or slash at the new length:
+   `bes8 8 8 8` is the electric-bass pump written once. The number is a WRITTEN
+   duration — it sets the running default like any other. Rests and the empty
+   chord <> are transparent to the run; a `q` threads as the chord it resolves
+   to; an ARPEGGIO breaks the run (its members subdivide a total, so "again at
+   a new length" has no single answer — LYS0016, loudly, instead of a guess);
+   a bare duration with nothing before it to repeat is LYS0016. The repeated
+   event carries the ORIGINAL's absolute pitches (expansion happens after
+   relative resolution, like `q`), re-derives accidentals through the measure's
+   own state, and takes only its OWN post-events.
+   LILYPOND-REF: lily/parser.yy music_embedded — "duration post_events" builds a
+   NoteEvent with no pitch; MEASURED against 2.26.0 (byte-identical SVGs): the
+   pitch of a note, the FULL chord of a chord, and reads through rests.
+   ⚠️ What this spelling trades away, decided knowingly (HANDOFF §3): `c 4` is
+   no longer the detached-duration error — a dropped pitch letter (`4 g f e`
+   meant as `a4 g f e`) now compiles as a repeat. The extra-time class still
+   trips the bar check; the duration-preserving class is the price LilyPond
+   pays for the same spelling.
+   ⚠️ '[' , Integer , '.' stays an INLINE VOLTA: a beamed run that opens on a
+   DOTTED bare duration spells the slash or the pitch (`[/4. 8]`, `[bes4. 8]`). *)
+BareDuration   = DurationToken , { Annotation } ;
+                 (* spaced — a GLUED number is the previous item's duration *)
+
 (* A PITCHED rest is a Note carrying the '@rest' annotation: it prints as a rest, at
    the height the written pitch would have had. The pitch is a POSITION and nothing
    else — it does not sound, prints no accidental, and does not enter the measure's
@@ -775,11 +811,12 @@ Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
      voice { g'8 g' g' r8 r2 | } { a,4@rest c r2 | } *)
 
 (* ADJACENCY RULE: a DurationToken (number + dots) is GLUED to what it lengthens —
-   c4, r2., <c e g>4, << c e g >>2 — never spaced. A spaced number is a detached
-   duration (LYS0016: 'c 4' is the note c and a meaningless 4), and a glued number
-   on a chord/arpeggio MEMBER is a misplaced duration (LYS0015: members share one,
-   written after the bracket). A SPACED number inside brackets is a scale degree —
-   the adjacency is what tells <c e g2> (mistake) from <c e g 2> (degree). *)
+   c4, r2., <c e g>4, << c e g >>2. A glued number on a chord/arpeggio MEMBER is a
+   misplaced duration (LYS0015: members share one, written after the bracket). A
+   SPACED number inside brackets is a scale degree — the adjacency is what tells
+   <c e g2> (mistake) from <c e g 2> (degree). A spaced number OUTSIDE brackets is
+   a BARE DURATION (above; until 2026-08-19 it was the detached-duration error,
+   whose code LYS0016 survives for a bare duration with nothing to repeat). *)
 (* A chord is EITHER letter mode — a pitch anchor followed by any mix of pitches and
    scale degrees ('<c e g>', '<c 3 5>', '<c 3 g>'; every degree measures from the
    ANCHOR, so '<c e 5>' == '<c e g>') — or degree mode: degrees only, anchored on the

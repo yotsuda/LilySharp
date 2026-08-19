@@ -16,7 +16,10 @@ the product rather than a delta.
   (named music); pitches, durations, tuplets, grace notes, slurs (including over
   chords), ties, articulations and dynamics; lyrics; chord rows and staff-less
   lead sheets; volta repeats with inline endings; parallel voices; mid-piece key,
-  time and clef changes. The complete grammar is in
+  time and clef changes; rhythm (comping) notation — `/` slash notes on the
+  middle line, bare durations that repeat the previous note or chord
+  (`bes8 8 8 8`), and one-line rhythm staves via `lines 1`. The complete
+  grammar is in
   [`docs/GRAMMAR.md`](docs/GRAMMAR.md), with a tutorial in
   [`docs/TUTORIAL.md`](docs/TUTORIAL.md). Lily# is deliberately **not**
   LilyPond's language: backslash constructs are rejected.
@@ -25,7 +28,7 @@ the product rather than a delta.
   ported file is listed in
   [`LILYPOND-ATTRIBUTION.md`](LILYPOND-ATTRIBUTION.md)), and the output is
   continuously measured against LilyPond 2.26.0 through a ledger of 529 recorded
-  geometric quantities and 218 SVG snapshots.
+  geometric quantities and 219 SVG snapshots.
 - **Outputs**: SVG, PDF, PNG, MIDI and MusicXML from one source file.
 - **`lysc` CLI** — `check`, `layout`, `svg`, `pdf`, `png`, `midi`, `xml`; see
   [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md).
@@ -40,7 +43,7 @@ the product rather than a delta.
   Heros for text, with all text measured from the bundled files: the engraved
   page does not depend on which fonts a machine has installed.
 - **Cross-platform** — .NET 10; binaries are published for win-x64, linux-x64,
-  osx-x64 and osx-arm64. The full test suite (5,600 tests) runs green on both
+  osx-x64 and osx-arm64. The full test suite (5,600+ tests) runs green on both
   CI legs, Windows and Linux; macOS binaries are built but not CI-tested.
 
 ### Known limitations

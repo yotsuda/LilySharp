@@ -1,0 +1,24 @@
+// Rhythm (comping) notation end-to-end: slash notes on a ONE-LINE staff and on
+// the default five lines, bare durations continuing a slash run and a pitched
+// bass pump, an ensemble kick mixing pitched notes into a slash bar, the open
+// (half and whole) slash heads, and a dotted slash.
+title "Rhythm slashes"
+time 4/4
+
+part comp { lines 1 }
+part gtr { }
+part bass { clef bass }
+
+section Main {
+  comp { /4 4 8 8 4 | /8 8 8 8 /2 | /4 4 c'8 d' /4 | /1 | }
+  gtr  { /4 4 4 4 | /2 2 | /4. 8 /2 | /1 | }
+  bass { c8 8 8 8 8 8 8 8 | f8 8 8 8 g8 8 8 8 | c8 8 8 8 g,8 8 8 8 | c1 | }
+}
+
+form main { Main }
+
+score main "rhythm-slashes" {
+  staff comp
+  staff gtr
+  staff bass
+}

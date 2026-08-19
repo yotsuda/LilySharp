@@ -354,6 +354,11 @@
             "patterns": [
                 {
                     "name": "variable.other.pitch.lilysharp",
+                    "comment": "A slash note: '/' in note position (rhythm notation). Not preceded by a word character, so `time 4/4`, `tuplet 3/2` and a chord entry's `c/g` keep their own '/'.",
+                    "match": "(?<!\\w)/(?=\\d|[\\s|])"
+                },
+                {
+                    "name": "variable.other.pitch.lilysharp",
                     "comment": "Accidentals: is/es (sharp/flat), isis/eses (double), isih/eseh + ih/eh (quarter-tones) — the lexer produces no 'as'. Trailing (?![A-Za-z]) so a pitch letter that merely starts a longer word (g in grandStaff, b in bass, c in clef) is NOT mis-highlighted as a note.",
                     "match": "\\b[a-g](isih|eseh|isis|eses|is|es|ih|eh)?[',]*(?![A-Za-z])"
                 }
