@@ -984,7 +984,7 @@ internal static class OutsideStaffStacker
         var adjTrills = PlaceTrills(trills, trackers, measureToSystem);
         var adjArticulations = PlaceArticulations(
             articulations, trackers, measureToSystem, systems);
-        var adjBarNumbers = PlaceBarNumbers(fonts, barNumbers, trackers, measureToSystem, topStaff);
+        var adjBarNumbers = PlaceBarNumbers(fonts, barNumbers, trackers, measureToSystem, topStaff, systems);
         var adjDynamics = PlaceAboveDynamics(fonts, aboveDynamics, trackers, measureToSystem, systems);
         var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
@@ -1454,7 +1454,8 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<BarNumberLayout> PlaceBarNumbers(
         ScoreTextMetrics fonts,
         ImmutableArray<BarNumberLayout> barNumbers, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, int[] topStaff)
+        Dictionary<int, int> measureToSystem, int[] topStaff,
+        ImmutableArray<SystemLayout> systems)
     {
         if (barNumbers.IsDefaultOrEmpty)
             return barNumbers;
@@ -1490,7 +1491,14 @@ internal static class OutsideStaffStacker
                 bn.Text, BarNumberEngraver.FontSize,
                 fonts.Face(TextRole.BarNumber, FontStyle.Bold),
                 originX, bn.YUp);
-            double move = trackers(sysIdx, topStaff[sysIdx])
+            // The tracker of the staff the number HANGS ON — its anchor staff (the top
+            // SPACEABLE one), which is the top PLACED staff except on a lead sheet, where
+            // the top placed \"staff\" is the chords/lyrics row the number tucks below.
+            // One spelling with the engraver: BarNumberEngraver.AnchorStaff.
+            int anchorStaff = sysIdx < systems.Length
+                && BarNumberEngraver.AnchorStaff(systems[sysIdx]) is { } anchor
+                ? anchor.StaffIndex : topStaff[sysIdx];
+            double move = trackers(sysIdx, anchorStaff)
                 .Place(bnUp, bnDown, OutsideStaffPadding);
             b[i] = bn with { YUp = bn.YUp + move };
         }

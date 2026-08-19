@@ -74,6 +74,45 @@ internal static class BarNumberEngraver
     public static readonly double FontSize = 2.2 * Math.Pow(2, -2.0 / 6.0);
 
     /// <summary>
+    /// The staff a system's bar number hangs on: the topmost non-hidden SPACEABLE staff.
+    /// Null on a staffless sheet.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:320-321 BarNumber after-line-breaking =
+    /// ly:side-position-interface::move-to-extremal-staff — the number is re-parented onto
+    /// the topmost alignment element whose X-extent intersects the number's own widened by
+    /// 1.0 (lily/side-position-interface.cc:510-563). A line-start number hangs INTO the
+    /// left margin (X −0.956..0, the probe header on barnumber-chord-row.ly) while a
+    /// leading ChordNames/lyrics row's ink starts at the first note, so the two are
+    /// X-disjoint and LilyPond leaves the number on the STAFF, tucked BELOW the row —
+    /// measured 2026-08-20 on 2.26.0: ink bottom 3.050000 over the staff refpoint with the
+    /// chords 5.045 above it. Anchoring on the SYSTEM top instead put the number a whole
+    /// band too high on every lead sheet (ledger barnumber.chord-row.staff-to-ink-bottom,
+    /// +5.945; the user saw it first).
+    /// ⚠️ The X test itself is NOT ported: a row's ink X-range is not on StaffLayout, and
+    /// no measured book needs it — a mid-line number (period &gt; 0) directly under a row's
+    /// ink is the shape that would, and it should start from a probe.
+    /// </remarks>
+    internal static StaffLayout? AnchorStaff(SystemLayout system)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty) return null;
+        StaffLayout? best = null;
+        foreach (var group in system.StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var st in group.Staves)
+            {
+                if (st.IsHidden || !StaffAffinity.IsSpaceable(st.StaffAffinity))
+                    continue;
+                // st.Y is Y-up from the system top (0 or negative): topmost = largest.
+                if (best == null || st.Y > best.Y)
+                    best = st;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
     /// Calculates bar number layouts. When <paramref name="period"/> is greater
     /// than 1, also numbers every Nth measure within a system; default 0 means
     /// system starts only. <paramref name="numberFirstMeasure"/> set to false (LP
@@ -180,7 +219,12 @@ internal static class BarNumberEngraver
                 string text = displayedNumber.ToString();
                 double overshoot = -fonts.Ink(
                     text, FontSize, Rendering.TextRole.BarNumber, Rendering.FontStyle.Bold).Bottom;
-                double yUp = EngravingDefaults.StaffLineThickness / 2 + padding + overshoot;
+                // ...measured from the ANCHOR STAFF's top line, not the system top: the two
+                // are the same place only until a chords/lyrics row leads the system. See
+                // AnchorStaff for the LilyPond mechanism and the measurement.
+                double anchorTopUp = AnchorStaff(system)?.Y ?? 0;
+                double yUp = anchorTopUp
+                    + EngravingDefaults.StaffLineThickness / 2 + padding + overshoot;
 
                 builder.Add(new BarNumberLayout(
                     MeasureIndex: measureIndex,
