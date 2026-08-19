@@ -2249,11 +2249,14 @@ internal sealed class MultiStaffLayouter
         ImmutableArray<TupletBracketLayout> TupletBrackets);
 
     /// <summary>One system's per-staff skylines and the inside-staff spanners they were
-    /// built from, both indexed by global staff index.</summary>
+    /// built from, both indexed by global staff index. <c>PedalLines</c> is the pedal
+    /// brackets the DOWN profiles were solved WITH -- the draw reads these instead of
+    /// re-deriving (one computation, two readers; see PedalEngraver.SolveAndSeed).</summary>
     internal readonly record struct StaffSkylineSet(
         List<(VerticalSkyline Up, VerticalSkyline Down)> Skylines,
         List<StaffInsideSpanners> Spanners,
-        List<(VerticalSkyline Up, VerticalSkyline Down)> Inside);
+        List<(VerticalSkyline Up, VerticalSkyline Down)> Inside,
+        List<ImmutableArray<PedalEngraver.SolvedPedalLine>> PedalLines);
 
     /// <summary>
     /// Builds UP/DOWN skylines for every staff in the score.
@@ -2266,6 +2269,7 @@ internal sealed class MultiStaffLayouter
         var result = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
         var spanners = new List<StaffInsideSpanners>();
         var inside = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
+        var pedalLines = new List<ImmutableArray<PedalEngraver.SolvedPedalLine>>();
 
         // Each staff's own dynamics (tagged by StaffIndex) hang below it and must
         // widen the gap to the staff below; filter so a staff reserves room only
@@ -2404,12 +2408,19 @@ internal sealed class MultiStaffLayouter
                         sky.Down.Merge(fbInk);
                 }
 
+                // Pedal brackets LAST among the below-staff occupants: priority 1000
+                // clears the figures (25) and the dynamics (250) already merged above,
+                // which is LilyPond's ascending-priority order. The solved lines travel
+                // with the set so the draw uses the exact Y this profile reserved.
+                pedalLines.Add(PedalEngraver.SolveAndSeed(
+                    score, staff, thisStaff, measureLayouts, sky.Down));
+
                 result.Add(sky);
                 staffIndex++;
             }
         }
 
-        return new StaffSkylineSet(result, spanners, inside);
+        return new StaffSkylineSet(result, spanners, inside, pedalLines);
     }
 
     /// <summary>

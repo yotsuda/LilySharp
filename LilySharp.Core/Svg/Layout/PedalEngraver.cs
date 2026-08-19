@@ -77,6 +77,155 @@ internal static class PedalEngraver
     // LILYPOND-REF: define-grobs.scm:2860 edge-height = (1.0 . 1.0)
     private const double EdgeHeight = 1.0;
 
+    // LILYPOND-REF: define-grobs.scm:3593-3606 SustainPedalLineSpanner -- the axis group a
+    // pedal bracket hangs in: direction DOWN, side-position y-aligned-side, padding 1.2
+    // (staff-padding 1.2 is not spelled separately: the staff symbol is in the support
+    // profile, so 2.05 + 1.2 emerges from the same walk -- measured indistinguishable on
+    // 2.26.0, scratch probe PLF, 2026-08-20).
+    private const double SpannerPadding = 1.2;
+
+    // Half the bracket's line thickness (thickness 1.0 x the 0.1 staff line).
+    private const double HalfThickness = 0.05;
+
+    // The hook's own width in the bracket's up-profile -- the line thickness. Only its X
+    // placement matters (a hook pushes the bracket by its full height exactly where the
+    // support ink is under an END, not mid-span).
+    private const double HookWidth = 0.1;
+
+    /// <summary>One solved bracket line of one system: which bracket (by its start
+    /// measure and pedal type) and where its LINE sits, Y-up about the staff's middle
+    /// line. Solved once, at skyline-build time, and read by the draw -- one computation,
+    /// two readers (HANDOFF 7.7).</summary>
+    internal readonly record struct SolvedPedalLine(
+        PedalType Type, int StartMeasureIndex, double LineYUp);
+
+    /// <summary>
+    /// A bracket portion's own UP profile about a trial line at the middle line --
+    /// LilyPond's spanner element stencil, pointwise: support ink under a HOOK pushes the
+    /// line by the hook's full height, mid-span ink only by the line's half thickness.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry probes/pedal-lyric-stack.ly PLB, 2.26.0): the bracket
+    /// refpoint sits 5.295000 below the staff refpoint = the engaging note's ink bottom
+    /// 3.045 + padding 1.2 + hook 1.05, to the digit.
+    /// </remarks>
+    internal static VerticalSkyline BracketUpProfile(
+        double startX, double endX, bool leftHook, bool rightHook)
+    {
+        // The bracket's own UP profile with its line at the middle line (0), to be pushed
+        // down by the same collision move the dynamics run (one spelling, DynamicEngraver).
+        var up = VerticalSkyline.FromBox(
+            startX, endX, -HalfThickness, HalfThickness, VerticalDirection.Up);
+        if (leftHook)
+            up.Merge(VerticalSkyline.FromBox(
+                startX, startX + HookWidth,
+                -HalfThickness, EdgeHeight + HalfThickness, VerticalDirection.Up));
+        if (rightHook)
+            up.Merge(VerticalSkyline.FromBox(
+                endX - HookWidth, endX,
+                -HalfThickness, EdgeHeight + HalfThickness, VerticalDirection.Up));
+        return up;
+    }
+
+    /// <summary>
+    /// Solves this staff's bracket lines for ONE system and merges their ink into the
+    /// staff's down profile -- the seed the lyric floor and the staff-to-staff springs
+    /// read. Bracket style only: mixed keeps its leading "Ped." text on the below-mark
+    /// baseline, so moving its line alone would tear the two apart (the text-row port is
+    /// the PLT half of the same ledger family and goes with MusicMarkEngraver).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-950 skyline_spacing -- the inside
+    /// profile first, then each priority in ascending order; SustainPedalLineSpanner is
+    /// priority 1000, so it clears the dynamics (250) and the figured bass (25) that were
+    /// merged before this call.
+    /// An ossia's mixed scale has no measured pedal regime -- same guard as
+    /// <c>SkylineBuilder.AddDynamicsToSkyline</c>'s pointwise pass: full size only.
+    /// </remarks>
+    internal static ImmutableArray<SolvedPedalLine> SolveAndSeed(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts, VerticalSkyline downProfile)
+    {
+        if (staff.PedalStyle != PedalStyle.Bracket || score.MusicMarks.IsDefaultOrEmpty
+            || measureLayouts.IsDefaultOrEmpty
+            || StaffSize.Of(staff).Span(1.0) != 1.0)
+            return ImmutableArray<SolvedPedalLine>.Empty;
+
+        var staffMarks = score.MusicMarks
+            .Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
+        var brackets = DetectPedalBrackets(staffMarks);
+        if (brackets.IsDefaultOrEmpty)
+            return ImmutableArray<SolvedPedalLine>.Empty;
+
+        int loMeasure = measureLayouts[0].MeasureIndex;
+        int hiMeasure = measureLayouts[^1].MeasureIndex;
+        MeasureLayout? LayoutOf(int measureIndex)
+        {
+            foreach (var m in measureLayouts)
+                if (m.MeasureIndex == measureIndex) return m;
+            return null;
+        }
+
+        // ONE LINE PER FAMILY, not per bracket: LilyPond hangs every bracket of a pedal
+        // family in ONE SustainPedalLineSpanner, so a system's sustain brackets share one
+        // Y -- a pedal CHANGE's abutting pair must, or the "/\" notch tears (measured:
+        // per-bracket solving dropped the second bracket below the first's own seeded
+        // ink). Families solve in the nearest-first order pedal-three.ly measured
+        // (una corda, sostenuto, sustain -- MusicMarkEngraver.PedalFamilyRank), each
+        // clearing the ink of the family before it.
+        var solved = ImmutableArray.CreateBuilder<SolvedPedalLine>();
+        var portions = new List<(PedalType Type, int StartMeasureIndex,
+            double StartX, double EndX, bool LeftHook, bool RightHook)>();
+        foreach (var bracket in brackets)
+        {
+            if (bracket.EndMeasureIndex < loMeasure || bracket.StartMeasureIndex > hiMeasure)
+                continue; // not on this system
+            var startLayout = LayoutOf(bracket.StartMeasureIndex);
+            var endLayout = LayoutOf(bracket.EndMeasureIndex);
+            // The portion on THIS system: a broken end runs to the system edge, hook-less,
+            // exactly as the drawn spanner breaks.
+            double startX = startLayout != null
+                ? AnchorX(startLayout, bracket.StartItemIndex, bracket.StartTiming)
+                : measureLayouts[0].X;
+            double endX = endLayout != null
+                ? AnchorX(endLayout, bracket.EndItemIndex, bracket.EndTiming)
+                : measureLayouts[^1].X + measureLayouts[^1].Width;
+            if (endX - startX < 2.0)
+                endX = startX + 2.0; // the same minimum Calculate applies
+            portions.Add((bracket.Type, bracket.StartMeasureIndex, startX, endX,
+                startLayout != null, endLayout != null));
+        }
+        static int FamilyRank(PedalType t) => t switch
+        {
+            PedalType.UnaCorda => 0,
+            PedalType.Sostenuto => 1,
+            _ => 2,
+        };
+        foreach (var family in portions.GroupBy(p => p.Type)
+                     .OrderBy(g => FamilyRank(g.Key)))
+        {
+            // The family's whole up-profile about a trial line at the middle line, then
+            // one collision move for the lot -- the group solve.
+            VerticalSkyline? up = null;
+            foreach (var p in family)
+            {
+                var one = BracketUpProfile(p.StartX, p.EndX, p.LeftHook, p.RightHook);
+                if (up == null) up = one; else up.Merge(one);
+            }
+            double lineYUp = downProfile.IsEmpty
+                ? -(2.05 + SpannerPadding + EdgeHeight + HalfThickness)
+                : DynamicEngraver.BelowCollisionMove(downProfile, up!, SpannerPadding);
+            foreach (var p in family)
+            {
+                downProfile.Merge(VerticalSkyline.FromBox(
+                    p.StartX, p.EndX, lineYUp - HalfThickness,
+                    lineYUp + EdgeHeight + HalfThickness, VerticalDirection.Down));
+                solved.Add(new SolvedPedalLine(p.Type, p.StartMeasureIndex, lineYUp));
+            }
+        }
+        return solved.ToImmutable();
+    }
+
     /// <summary>
     /// Detects pedal bracket spans from music marks.
     /// Pairs pedal-on marks with their corresponding pedal-off marks.
@@ -161,7 +310,9 @@ internal static class PedalEngraver
         ImmutableArray<PedalBracketItem> brackets,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        bool isMixed = false)
+        bool isMixed = false,
+        Func<int, PedalType, double?>? solvedLineUpOf = null,
+        double? staffTopDown = null)
     {
         if (brackets.IsDefaultOrEmpty)
             return ImmutableArray<PedalBracketLayout>.Empty;
@@ -198,6 +349,16 @@ internal static class PedalEngraver
                 bracket.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
+            // The SOLVED line, when the room solved one: the same Y the staff's down
+            // profile reserved at skyline-build time (SolveAndSeed), converted from
+            // Y-up-about-the-middle-line to device-down from the system top. The
+            // below-the-whole-system baseline above stays as the fallback -- a staff the
+            // seed declined (ossia scale, text/mixed style) keeps the legacy row.
+            double y = bracketY;
+            if (solvedLineUpOf?.Invoke(bracket.StartMeasureIndex, bracket.Type) is { } lineYUp
+                && staffTopDown is { } topDown)
+                y = topDown + 2.0 - lineYUp;
+
             var startMeasure = measureLayouts[bracket.StartMeasureIndex];
             var endMeasure = measureLayouts[bracket.EndMeasureIndex];
 
@@ -213,7 +374,7 @@ internal static class PedalEngraver
             layouts.Add(new PedalBracketLayout(
                 startX,
                 endX,
-                bracketY,
+                y,
                 EdgeHeight,
                 bracket.StartMeasureIndex,
                 bracket.SourcePosition,

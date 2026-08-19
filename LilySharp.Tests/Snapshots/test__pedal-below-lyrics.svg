@@ -66,8 +66,8 @@
   <text x="29.29" y="25.82" font-size="2.47" text-anchor="middle" data-pos="548">la</text>
   <rect x="8.84" y="13.64" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="475"/>
   <text x="9.87" y="15.84" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="475">A</text>
-  <line x1="21.04" y1="34.36" x2="28.64" y2="34.36" stroke="#000000" stroke-width="0.100" data-pos="567"/>
-  <line x1="28.64" y1="34.36" x2="28.64" y2="33.36" stroke="#000000" stroke-width="0.100" data-pos="567"/>
-  <line x1="21.04" y1="34.36" x2="21.04" y2="33.36" stroke="#000000" stroke-width="0.100" data-pos="567"/>
+  <line x1="21.04" y1="35.94" x2="28.64" y2="35.94" stroke="#000000" stroke-width="0.100" data-pos="567"/>
+  <line x1="28.64" y1="35.94" x2="28.64" y2="34.94" stroke="#000000" stroke-width="0.100" data-pos="567"/>
+  <line x1="21.04" y1="35.94" x2="21.04" y2="34.94" stroke="#000000" stroke-width="0.100" data-pos="567"/>
   </g>
 </svg>

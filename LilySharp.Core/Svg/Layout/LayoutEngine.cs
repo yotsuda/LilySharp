@@ -351,6 +351,7 @@ internal sealed class LayoutEngine
             StaffSkylines = placed.StaffSkylines,
             StaffSpanners = placed.StaffSpanners,
             StaffInside = placed.StaffInside,
+            PedalLines = placed.PedalLines,
             // The room's own memo, not a second call: see AnnotationLayoutContext.RestCollisionsOf.
             RestCollisionsOf = multiStaffLayouter.RestCollisionsOf,
             TupletForceStemUp = primaryStaff.IsMultiVoice,
@@ -467,7 +468,8 @@ internal sealed class LayoutEngine
         List<double> LyricBands,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines,
         List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners,
-        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside);
+        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside,
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>> PedalLines);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -507,6 +509,7 @@ internal sealed class LayoutEngine
         var perSystemStaffSkylines = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         var perSystemStaffSpanners = new List<List<MultiStaffLayouter.StaffInsideSpanners>>();
         var perSystemStaffInside = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
+        var perSystemPedalLines = new List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -619,6 +622,7 @@ internal sealed class LayoutEngine
             perSystemStaffSkylines.Add(sysStaffSkylines.Skylines);
             perSystemStaffSpanners.Add(sysStaffSkylines.Spanners);
             perSystemStaffInside.Add(sysStaffSkylines.Inside);
+            perSystemPedalLines.Add(sysStaffSkylines.PedalLines);
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
@@ -626,7 +630,7 @@ internal sealed class LayoutEngine
         return new SystemPlacements(
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
             perSystemLyricBands, perSystemStaffSkylines, perSystemStaffSpanners,
-            perSystemStaffInside);
+            perSystemStaffInside, perSystemPedalLines);
     }
 
 
@@ -3344,6 +3348,12 @@ internal sealed class LayoutEngine
         /// </remarks>
         public IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? StaffSkylines { get; init; }
 
+        /// <summary>Per system, per staff: the pedal bracket lines the DOWN profiles in
+        /// <see cref="StaffSkylines"/> were solved with (Y-up about each staff's middle
+        /// line). The pedal draw reads these so the drawn line is the reserved line --
+        /// one computation, two readers (PedalEngraver.SolveAndSeed).</summary>
+        public IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? PedalLines { get; init; }
+
         /// <summary>
         /// Per system, the inside-staff spanners each staff's skyline was built from,
         /// indexed by global staff index — the slurs, ties and tuplet brackets
@@ -3750,6 +3760,16 @@ internal sealed class LayoutEngine
         var pedalBracketBuilder = ImmutableArray.CreateBuilder<PedalBracketLayout>();
         if (!musicMarks.IsDefaultOrEmpty && staffByIndex != null)
         {
+            // measure -> system INDEX, to find the solved line of the system a bracket
+            // starts on (the profile that reserved it).
+            Dictionary<int, int>? measureToSysIdx = null;
+            if (ctx.PedalLines != null)
+            {
+                measureToSysIdx = new Dictionary<int, int>();
+                for (int si = 0; si < systems.Length; si++)
+                    foreach (var m in systems[si].Measures)
+                        measureToSysIdx[m.MeasureIndex] = si;
+            }
             foreach (var staffIndex in musicMarks
                 .Where(m => IsPedalMark(m.Type)).Select(m => m.StaffIndex).Distinct())
             {
@@ -3758,8 +3778,28 @@ internal sealed class LayoutEngine
                     continue;
                 var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
                 var brackets = PedalEngraver.DetectPedalBrackets(staffMarks);
+                // The line the staff's down profile was solved with -- null (fallback to
+                // the legacy below-the-system baseline) when the seed declined this staff
+                // or this pass has no per-staff skylines (the preliminary pass).
+                int sIdx = staffIndex;
+                Func<int, PedalType, double?>? solvedLineUpOf = null;
+                if (ctx.PedalLines is { } pl && measureToSysIdx != null)
+                    solvedLineUpOf = (startMeasure, type) =>
+                    {
+                        if (!measureToSysIdx.TryGetValue(startMeasure, out int si)
+                            || si >= pl.Count || sIdx >= pl[si].Count)
+                            return null;
+                        foreach (var line in pl[si][sIdx])
+                            if (line.StartMeasureIndex == startMeasure && line.Type == type)
+                                return line.LineYUp;
+                        return null;
+                    };
+                double? staffTopDown =
+                    staffYByIndex != null && staffYByIndex.TryGetValue(staffIndex, out var td)
+                        ? td : null;
                 pedalBracketBuilder.AddRange(
-                    PedalEngraver.Calculate(brackets, systems, ml, isMixed: style == PedalStyle.Mixed));
+                    PedalEngraver.Calculate(brackets, systems, ml,
+                        isMixed: style == PedalStyle.Mixed, solvedLineUpOf, staffTopDown));
             }
         }
         var pedalBracketLayouts = pedalBracketBuilder.ToImmutable();
