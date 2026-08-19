@@ -154,7 +154,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ユーザーの目的は **0.3.0**。この便は全てユーザーの名指し／委任で、文法・工具の磨きに使った——タグはまだ打っていない。
 
 ★ **開始時裏取り（§0 通し）**: HEAD `8d91c8ec`・未 push 18・作業ツリー 0・Windows 5641/0/4・Core 0 警告＝引継ぎと全一致。
-終了時 **未追跡 0・作業ツリー項目 0・未 push 22**（**この行を書く commit を含めて 22・commit の*あと*に数えた**）・
+終了時 **未追跡 0・作業ツリー項目 0・未 push 5**（**この行を書く commit を含めて 5・commit の*あと*に数えた**。**開始時の 18 はセッション中にユーザーが push 済み**——origin/master は `8d91c8ec`・残りはこの便の 4＋この訂正）・
 suite **Windows 5659 / 0 / 4・Linux（この機械の WSL）5659 / 0 / 4**＝**両 OS 完全緑**・
 **台帳 529 点・exact 454・総和 3.644109・count 110/112**（不動）・**snapshot 220 枚**（枚数不変・1 枚差替え＝ink 恒等）・
 **追跡コーパス 569 冊**・**Core 0 警告**・**alloc 162.6/45.2 で桁まで不動**（3 回・§7.9——parser に足した selector は打鍵に乗っていない）。
@@ -171,7 +171,7 @@ suite **Windows 5659 / 0 / 4・Linux（この機械の WSL）5659 / 0 / 4**＝**
 - **⑵ `with` はキーワードごと退役**（ユーザー指示「補完に出すな・LYS0031 を除去せよ」）: LYS8007/`font` の前例と同じ形。旧綴り `staff vocal with lyrics ja` は「表示名 "with"＋fold する行」と読まれる（`ScoreRowFoldingTests` がピン・byte 恒等の来歴は remark に保存）。**道連れの発見: tab の `with chords` は第216 の除去から漏れて黙って通っていた**——退役で消え、generic 網（Undefined part）へ。退役番号は台帳・GRAMMAR.md・テスト remark の 3 箇所同文。**補完の `with` の出所は LSP ではなく VS Code の word-based suggestions**＝`[lilysharp]` 既定 off（package.json）・tmLanguage からも削除。
 - **⑶ `lines` は part ヘッダから score 項目へ**（ユーザー起案・綴りも原案どおり・§3）: `staff [clef] part [表示名] as lines N`（1..5）。ossia も取る（ユーザー決定）。part 側は既存 unknown-property 網が一覧ごと自動で正しく拒む（新 code 0）・値域チェックは parser が同文・同 code（UnknownSymbolCase）で継承。トークンの切り出しは `RenderSpecParser.CutLinesSelector` の 1 軒（spec 読み・rename・双子が同じ切り方）。同族の removeEmpty/pedal は **⒣（§2F）に別便起票**（ユーザー指示）。
 - **⑷ 補完**: `lyrics NAME`→`sings`・`sings`→part/voice 名（**歌詞本体の英単語 "sings"/"lyrics" では発火しないガード**が本体と同格・ピン済み）・グループ内 `staff NAME`→`as lines`＋**グループ固有の狭い続き**（score 全体リストは出さない・LYS6011）・`as`→`lines`→値 1..5。
-- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: **⓪ 拡張の再配備**（`deploy-extension.ps1`・VS Code を殺すのでユーザー在席時に。⑵⑶⑷は配備するまでエディタに効かない）→ push（未 push 22・`master` を先に）→ CI 緑 → タグ。CHANGELOG は `as lines` の綴りまで反映済み・最上段=0.3.0・未署名行は残す（§3）。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
+- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: **⓪ 拡張の再配備**（`deploy-extension.ps1`・VS Code を殺すのでユーザー在席時に。⑵⑶⑷は配備するまでエディタに効かない）→ push（未 push 5・`master` を先に）→ CI 緑 → タグ。CHANGELOG は `as lines` の綴りまで反映済み・最上段=0.3.0・未署名行は残す（§3）。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
   **タグ後の残債**: **⒢ ペダル・強弱 vs 歌詞の優先順位スタック**（§2F・probe 観察 ⒜⒝）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（§2F・別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出（従来から）。
 
 > ## ★★★ 骨 1＝**「見えているものを直す」委任は、成果物の面から狩る**
