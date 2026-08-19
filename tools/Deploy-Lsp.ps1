@@ -2,7 +2,7 @@
 #
 # `dotnet publish -o editors/vscode/server` alone only updates the repo copy;
 # the editor launches its own copy under
-# %USERPROFILE%\.vscode\extensions\ytsuda.lilysharp-<ver>\server.
+# %USERPROFILE%\.vscode\extensions\yotsuda.lilysharp-<ver>\server.
 # The language client restarts a killed server within milliseconds and the
 # fresh process re-locks the DLLs, so the copy runs in a kill->copy loop:
 # after ~5 crashes the client gives up restarting and the copy goes through.
@@ -71,7 +71,7 @@ $extRoots = @(
 ) | Where-Object { $_ -and (Test-Path $_) }
 
 $extDir = $extRoots |
-    ForEach-Object { Get-ChildItem $_ -Directory -Filter 'ytsuda.lilysharp-*' -ErrorAction SilentlyContinue } |
+    ForEach-Object { Get-ChildItem $_ -Directory -Filter 'yotsuda.lilysharp-*' -ErrorAction SilentlyContinue } |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $extDir) {
     Write-Host 'No installed lilysharp extension found - repo publish only.' -ForegroundColor Yellow
@@ -89,7 +89,7 @@ $ok = $false
 for ($round = 1; $round -le 10 -and -not $ok; $round++) {
     # Kill every server process launched from the installed extension.
     Get-CimInstance Win32_Process -Filter "Name='dotnet.exe' OR Name='lilysharp-lsp.exe'" |
-        Where-Object { $_.CommandLine -like '*ytsuda.lilysharp*' } |
+        Where-Object { $_.CommandLine -like '*yotsuda.lilysharp*' } |
         ForEach-Object {
             Write-Host "  kill $($_.Name) $($_.ProcessId)"
             Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue

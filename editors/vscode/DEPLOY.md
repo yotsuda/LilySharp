@@ -63,7 +63,7 @@ cd C:\MyProj\LilySharp\editors\vscode
 npm run vscode:prepublish
 
 # Copy to installed extension
-$ext = "$env:USERPROFILE\.vscode\extensions\ytsuda.lilysharp-0.3.0"
+$ext = "$env:USERPROFILE\.vscode\extensions\yotsuda.lilysharp-0.3.0"
 Copy-Item "server" $ext -Recurse -Force
 Copy-Item "out\extension.js" "$ext\out\" -Force
 Copy-Item "out\extension.js.map" "$ext\out\" -Force
@@ -86,19 +86,19 @@ Note: This requires `lilysharp.serverPath` to point to Debug build.
 
 ## Publishing to Marketplace
 
-The Marketplace listing is `ytsuda.lilysharp`. It is published as **platform-specific,
+The Marketplace listing is `yotsuda.lilysharp`. It is published as **platform-specific,
 self-contained** VSIXs (one per VS Code target, each bundling its own .NET runtime),
 so users need nothing but VS Code. `publish-marketplace.ps1` does all of this.
 
 ### Prerequisites (once per machine)
 
-1. A Personal Access Token for the `ytsuda` publisher:
+1. A Personal Access Token for the `yotsuda` publisher:
    - https://dev.azure.com/ -> User settings -> Personal access tokens -> New Token
    - Organization: **All accessible organizations**, Scopes: **Marketplace -> Manage**
 2. Store it for vsce (kept in `~/.vsce`, never in the repo):
    ```bash
    cd editors/vscode
-   npx @vscode/vsce login ytsuda
+   npx @vscode/vsce login yotsuda
    ```
    (or export it as `VSCE_PAT` for the session instead)
 

@@ -67,7 +67,7 @@ try {
 
     if ($Clean) {
         Write-Host 'Uninstalling existing lilysharp extension...'
-        & $code --uninstall-extension ytsuda.lilysharp 2>&1 | Out-Host
+        & $code --uninstall-extension yotsuda.lilysharp 2>&1 | Out-Host
     }
 
     Write-Host 'Installing VSIX...' -ForegroundColor Cyan
