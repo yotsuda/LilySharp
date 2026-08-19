@@ -1950,6 +1950,34 @@
       "residual": 0.0,
       "why": "THE FOOT OF THE PAGE'S SPRING CHAIN, which the corpus has never read. Page_layout_problem appends one last spring after every system (page-layout-problem.cc:538-545) and what it spans is the LAST SPACEABLE STAFF's refpoint to the bottom of the page's band -- not the system origin, not the ink -- so the reading is paper-height minus that refpoint, and it is the term that closes the chain whose middle the six entries above read. WHY IT IS WORTH AN ENTRY: every one of those six reads a GAP, i.e. a spring's length at the page's force, and a force is the page's slack over the chain's total strength. An error in a FIXED term therefore lands in all of them at once, each scaled by its own spring, and the corpus shows N residuals for ONE cause with nothing to attribute them to. That is not hypothetical -- page.{stretched,compressed}.staff-staff-inside and their two system twins stood at four residuals for a session and were TWO forces, and naming the cause took dividing each residual by its own strength and then solving the chain from both regimes at once, precisely because there was no reading down here. LILYPOND'S NUMBER IS THE SAME IN BOTH REGIMES, 10.023885 stretched and compressed alike, and that is a mechanism rather than a coincidence to pin: the spring is ideal 1 with stretchability 30 (ly/paper-defaults-init.ly:84-87), and ensure_min_distance raises only its FLOOR -- to padding 1 + the last staff's own ink 3.333333 -- without recomputing that strength (spring.cc:156-159), so it blocks at f = (4.333333 - 1) / 30 = 0.111111 and neither page reaches it (stretched f = 0.099092, compressed f = -0.174101). It is rigid for a reason that stops being true on a page that stretches harder: a book that opens this reading above f = 0.111111 is measuring a different quantity and needs its own entry. PREDICTION, written before running: EXACT, here and on the compressed twin. The four gap entries closed to within 5e-7 in 96641db7, and they can only be that close if the term they close against is already right -- read as a force the stretched page now agrees with LilyPond to seven digits, and agreeing on the force means agreeing on the slack, which is this. AN ENTRY THAT OPENS EXACT IS THE POINT HERE (HANDOFF 5.2.1④): this is not a hunt for a new defect but the net under the one just fixed -- the middle-line down stem that was reserved at 3.5 instead of 20/3 half-spaces moved THIS number by 0.166667, and no reading in the corpus could say so directly. If it opens non-zero the prediction fails in a useful direction: the gaps would agree while the chain's ENDS did not, which puts the fault in the top spring or in the floor arithmetic and not in any spring between them. THE PREDICTION HELD: Lily# reads 10.023884333 against a recorded 10.023885, i.e. -6.67e-7, and that residual is not a defect at all -- it is the F6 the probe script prints, since LilyPond's own value is bottom-margin 5.690551 + padding 1 + ink 3.333333 = 10.0238843 and the ledger can only carry six digits of it. Recorded as 0 for that reason, which is also the entry's own limit: it cannot resolve a fault smaller than 1e-6, and the fault it was opened to guard against was 0.166667."
     },
+    "lyrics.pedal-bracket.control.staff-to-lyric": {
+      "probe": "pedal-lyric-stack.ly",
+      "score": "PLC",
+      "lilypond": 5.865115015225148,
+      "residual": -0.00015505,
+      "why": "THE CONTROL, and it binds on the FLOOR by construction: LilyPond reads 5.865115, not the basic 5.5, so the quantity is staff down-ink + syllable ascender + padding 0.5 and the -0.000155 is the two faces' ink differing at the sliver level -- the same family as lyrics.two-staff.staff-to-lyric's -0.000101. It exists so the three books beside it can be read as DELTAS with the face term cancelling: every one of their residuals is exactly this number plus the LilyPond ink term Lily# is missing."
+    },
+    "lyrics.pedal-bracket.staff-to-lyric": {
+      "probe": "pedal-lyric-stack.ly",
+      "score": "PLB",
+      "lilypond": 7.665115015225147,
+      "residual": -1.80015505,
+      "why": "THE PEDAL BRACKET IS INVISIBLE TO THE LYRIC FLOOR. Lily# reads the SAME 5.864960 as the control -- the bracket adds zero -- so the residual is the control's -0.000155 plus LilyPond's bracket term -1.800000 to the last digit. LilyPond hangs the bracket inside the staff's VerticalAxisGroup (PLB dump: PianoPedalBracket rel -5.295 from the refpoint, ext (-0.05 . 1.05)), so nonstaff-relatedstaff-spacing's floor grows by its row and the LYRICS yield; Lily#'s skyline drop reads a staff down profile that no pedal ink ever enters, and the drawn bracket passes through the syllables (session 216, r216-*.png). ⚠️ THE FIX MUST NOT MOVE THE BRACKET'S OWN ROW (LP keeps it at 5.295 below the refpoint) and must not re-open the test/pedal-below-lyrics snapshot -- a pedal on a DIFFERENT staff stays put."
+    },
+    "lyrics.pedal-text.staff-to-lyric": {
+      "probe": "pedal-lyric-stack.ly",
+      "score": "PLT",
+      "lilypond": 8.313115015225147,
+      "residual": -2.44815505,
+      "why": "THE SAME BLINDNESS THROUGH THE TEXT-STYLE PATH: control -0.000155 plus LilyPond's Ped.-glyph term -2.448000 exactly. The 'Ped.' row is drawn by MusicMarkEngraver (pedal text style), whose below-stack clamp EXEMPTS pedal text from the lyric band on purpose -- classic notation puts Ped. near the staff -- but LilyPond resolves the same tension the other way around: the pedal stays near the staff AND the lyrics drop below it (PLT dump: SustainPedal rows at 4.806/5.997 below the refpoint, lyrics at 8.313). One fix family with the bracket entry: the pedal ink has to enter the profile the lyric drop reads."
+    },
+    "lyrics.dynamic.staff-to-lyric": {
+      "probe": "pedal-lyric-stack.ly",
+      "score": "PLD",
+      "lilypond": 7.533308661509536,
+      "residual": -1.668348696,
+      "why": "THE DYNAMIC TOO: control -0.000155 plus LilyPond's f-glyph term -1.668194 to the digit. DynamicText hangs inside the staff's group (PLD dump: rel -4.546 from the refpoint, ext (-0.692 . 1.896) -- the outline ink staff.staff.dynamic-under-whole-note already pinned), so the lyric floor grows by it; Lily# draws the f AT the lyric height, on the 'ho' (session 216). Same fix family as the two pedal entries."
+    },
     "lyrics.natural.staff-to-lyric": {
       "probe": "page-vertical.ly",
       "score": "LYRC",

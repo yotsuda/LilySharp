@@ -738,6 +738,66 @@ internal static class LpGeometryProbes
     internal static string LyricVerseScore => LYRV;
 
     /// <summary>
+    /// A sung staff with pedal or dynamic ink hanging under it — the Lily# half of
+    /// pedal-lyric-stack.ly's books PLC / PLB / PLT / PLD.
+    /// </summary>
+    /// <remarks>
+    /// THE STACK UNDER A SUNG STAFF. LilyPond piles staff → pedal/dynamic → lyrics and the
+    /// LYRICS move down (measured 2026-08-20, all four books): the pedal and the dynamic
+    /// live INSIDE the staff's VerticalAxisGroup, so the lyric spring's floor — the staff's
+    /// down-skyline plus the syllable's ascender plus padding 0.5 — grows by exactly their
+    /// ink. Lily# draws both at the lyric's height instead (session 216's r216-*.png: the
+    /// bracket through the syllables, the f on "ho").
+    /// <para>
+    /// THE PAIR: PLC is the same music with the pedal/dynamic deleted, and on this shape its
+    /// floor already binds (5.865115 beats the basic 5.5 — the LilyPond side confirms to the
+    /// digit), so PLB−PLC and PLD−PLC read the ink term alone with both faces cancelling.
+    /// ⚠️ LilyPond <c>c'</c> is Lily# <c>c</c> (HANDOFF 5.5).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE PEDAL'S OWN ROW MUST NOT MOVE when this closes: LilyPond keeps the bracket at
+    /// 5.295000 below the refpoint (PLB's PianoPedalBracket rel) — the lyric yields, the
+    /// pedal stands. The different-staff behaviour is pinned separately by the
+    /// test/pedal-below-lyrics snapshot (a piano's Ped. must NOT drop below a vocalist's
+    /// lyrics elsewhere in the system).
+    /// </para>
+    /// </remarks>
+    private static string PedalLyricScore(string name, string music, string pedal = "") => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef treble{{(pedal.Length > 0 ? " " + pedal : "")}} }
+
+        section Main {
+          melody { {{music}} }
+          lyrics words sings melody { la la la la | ho ho | }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff melody  lyrics words
+        }
+        """;
+
+    /// <summary>The control — the mirror of book PLC.</summary>
+    private static readonly string PLYC =
+        PedalLyricScore("PLYC", "c4 d e f | g2 g |");
+
+    /// <summary>Bracket-style sustain (Lily#'s default) — the mirror of book PLB.</summary>
+    private static readonly string PLYB =
+        PedalLyricScore("PLYB", "c4 d@sustainOn e f@sustainOff | g2 g |");
+
+    /// <summary>Text-style sustain ("Ped." / "*") — the mirror of book PLT.</summary>
+    private static readonly string PLYT =
+        PedalLyricScore("PLYT", "c4 d@sustainOn e f@sustainOff | g2 g |", "pedal text");
+
+    /// <summary>A forte on the sung staff — the mirror of book PLD.</summary>
+    private static readonly string PLYD =
+        PedalLyricScore("PLYD", "c4 d e f | g2@f g |");
+
+    /// <summary>
     /// A notation staff over a LOWER staff that is either a TAB staff or an ordinary one —
     /// the Lily# half of books TABS / NST.
     /// </summary>
@@ -9203,6 +9263,21 @@ internal static class LpGeometryProbes
         // single entry could not distinguish "does not move" from "was never stretched".
         new("lyrics.natural.staff-to-lyric", LYRC, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPageRagged),
         new("lyrics.stretched.staff-to-lyric", LYRS, g => g.FirstStaffToLyricBaseline(), FourSystemsPerPage),
+
+        // THE STACK UNDER A SUNG STAFF (books PLC/PLB/PLT/PLD, pedal-lyric-stack.ly).
+        // LilyPond piles staff → pedal/dynamic → lyrics and the LYRICS move down: both grobs
+        // live inside the staff's VerticalAxisGroup, so the lyric spring's floor grows by
+        // their ink (bracket +1.800000, Ped. text +2.448000, f +1.668194 over the control —
+        // measured 2026-08-20 on 2.26.0). The control binds on its FLOOR (5.865115, not the
+        // basic 5.5) by construction, so the deltas carry no font term; see PedalLyricScore.
+        new("lyrics.pedal-bracket.control.staff-to-lyric", PLYC,
+            g => g.FirstStaffToLyricBaseline(), RaggedBottomPaper),
+        new("lyrics.pedal-bracket.staff-to-lyric", PLYB,
+            g => g.FirstStaffToLyricBaseline(), RaggedBottomPaper),
+        new("lyrics.pedal-text.staff-to-lyric", PLYT,
+            g => g.FirstStaffToLyricBaseline(), RaggedBottomPaper),
+        new("lyrics.dynamic.staff-to-lyric", PLYD,
+            g => g.FirstStaffToLyricBaseline(), RaggedBottomPaper),
 
         // The step to a SECOND verse (book LYRV), which comes from a different LilyPond spec
         // than everything above it: with two loose lines, get_spacing_spec takes its
