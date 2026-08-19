@@ -20,7 +20,10 @@ the product rather than a delta.
   middle line, bare durations that repeat the previous note or chord
   (`bes8 8 8 8`), and one-line rhythm staves via `lines 1`; lyric tracks bind
   to their own melody (`lyrics ja sings vocal`) and can print as words-only
-  rows at that melody's rhythm — chorus words on an instrumental part. The
+  rows at that melody's rhythm — chorus words on an instrumental part. A
+  score is a vertical stack of bands: a bound `lyrics` row directly below
+  its staff is that staff's verse, a `chords` row directly above a staff
+  aligns the symbols over it. The
   complete grammar is in
   [`docs/GRAMMAR.md`](docs/GRAMMAR.md), with a tutorial in
   [`docs/TUTORIAL.md`](docs/TUTORIAL.md). Lily# is deliberately **not**
