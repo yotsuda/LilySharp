@@ -75,9 +75,9 @@ public class LooseLineTests
         var layoutWith = engine.Layout(scoreWith);
         var layoutWithout = engine.Layout(scoreWithout);
 
-        // The page with lyrics should be at least as tall as without
+        // The page  lyrics should be at least as tall as without
         Assert.True(layoutWith.Pages[0].Height >= layoutWithout.Pages[0].Height,
-            $"Page with lyrics ({layoutWith.Pages[0].Height:F1}) should be >= without ({layoutWithout.Pages[0].Height:F1})");
+            $"Page  lyrics ({layoutWith.Pages[0].Height:F1}) should be >= without ({layoutWithout.Pages[0].Height:F1})");
     }
 
     [Fact]

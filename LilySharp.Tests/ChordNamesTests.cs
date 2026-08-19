@@ -160,24 +160,31 @@ public sealed class ChordNamesTests
 
     // ---- Parsing + collection + timing alignment ---------------------------
 
+    /// <summary>A chord ROW rides the multi-staff pipeline (RenderSpec.HasChordRow);
+    /// the single-staff Collect() never sees one, so these tests collect through
+    /// the score's spec the way the renderer does.</summary>
+    private static Core.Svg.Model.MultiStaffScore CollectWithRow(SyntaxTree tree)
+        => new MeasureCollector().CollectMultiStaff(
+            tree, Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+
     private const string LeadSheet =
         "key c major\npart m { clef treble }\n" +
         "section Main {\n  m {\n    time 4/4\n    c4 d e f | g a b c |\n  }\n" +
-        "  chords {\n    c2 a2:m | f2 g2:7 |\n  }\n}\n" +
-        "form main { Main }\nscore \"x\" { staff m }\n";
+        "  chords prog {\n    c2 a2:m | f2 g2:7 |\n  }\n}\n" +
+        "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
 
     [Fact]
     public void ChordNames_ParseWithoutErrors()
     {
         var tree = SyntaxTree.Parse(LeadSheet);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
-        Assert.Single(tree.GetRoot().DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == null));
+        Assert.Single(tree.GetRoot().DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == "prog"));
     }
 
     [Fact]
     public void Collector_EmitsTimingAlignedAutoNamedChords()
     {
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(LeadSheet));
+        var score = CollectWithRow(SyntaxTree.Parse(LeadSheet));
         var chords = score.ChordNames.OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble()).ToList();
 
         Assert.Equal(4, chords.Count);
@@ -199,12 +206,12 @@ public sealed class ChordNamesTests
         // pitch opened a NEW entry (f:maj7/+e → "Fmaj7" plus a phantom "E"
         // chord), with no diagnostic.
         var src = "section Main {\n  m { time 4/4 c2 d2 | }\n" +
-                  "  chords { f2:maj7/e f2:maj7/+e | }\n}\n" +
-                  "form main { Main }\nscore \"x\" { staff m }\n";
+                  "  chords prog { f2:maj7/e f2:maj7/+e | }\n}\n" +
+                  "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
 
-        var score = new MeasureCollector().Collect(tree);
+        var score = CollectWithRow(tree);
         var chords = score.ChordNames.OrderBy(c => c.Timing.ToDouble()).ToList();
         Assert.Equal(2, chords.Count);
         // LP prints the SAME name for both forms — only the (future) realization
@@ -228,16 +235,16 @@ public sealed class ChordNamesTests
     }
 
     [Fact]
-    public void AnonymousChords_OnMultiStaff_AttachToTheTopStaff()
+    public void ChordRowAboveAGroup_StandsAboveTheTopStaff()
     {
         // corpus: chord-names-in-grand-staff.ly — the name prints above the TOP
-        // staff. Pre-fix the collector passed _currentStaffIndex, which after the
-        // per-staff loop held the LAST staff, hanging the name between the staves.
+        // staff. The row is the group's leading band (staff index 0), never hung
+        // between the staves. (The nameless auto-attach form is gone - LYS0032.)
         var src = "part rh { clef treble }\npart lh { clef bass }\n" +
                   "section Main {\n  rh { a4 a a a | }\n  lh { a,,4 a,, a,, a,, | }\n" +
-                  "  chords { f1 | }\n}\n" +
+                  "  chords prog { f1 | }\n}\n" +
                   "form main { Main }\n" +
-                  "score \"x\" { grandStaff { staff rh staff lh } }\n";
+                  "score \"x\" { chords prog  grandStaff { staff rh staff lh } }\n";
         var tree = SyntaxTree.Parse(src);
         var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
         var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
@@ -253,11 +260,11 @@ public sealed class ChordNamesTests
         // ("N.C."), s prints nothing; all three advance the row. Pre-fix, rests
         // in a chords{} block were silently dropped by stray-token recovery.
         var src = "section Main {\n  m { time 4/4 r1 | s1 | R1 | }\n" +
-                  "  chords { r1 | s1 | R1 | }\n}\n" +
-                  "form main { Main }\nscore \"x\" { staff m }\n";
+                  "  chords prog { r1 | s1 | R1 | }\n}\n" +
+                  "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
-        var score = new MeasureCollector().Collect(tree);
+        var score = CollectWithRow(tree);
         var items = score.ChordNames.OrderBy(c => c.MeasureIndex).ToList();
         Assert.Equal(2, items.Count);
         Assert.All(items, c => Assert.Equal("N.C.", c.ChordText));
@@ -308,9 +315,9 @@ public sealed class ChordNamesTests
     [InlineData("g:m7.5-7", "Gm7.5-7")]    // unknown extended chord → full text, not "Gm7"
     public void MultiTokenQuality_IsCapturedWhole(string entry, string expected)
     {
-        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords { " + entry + " }\n}\n" +
-                  "form main { Main }\nscore \"x\" { staff m }\n";
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
+        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { " + entry + " }\n}\n" +
+                  "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
+        var score = CollectWithRow(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);
         Assert.Equal(expected, chord.ChordText);
     }
@@ -321,9 +328,9 @@ public sealed class ChordNamesTests
         // An extended chord not in the vocabulary still displays (root + raw token)
         // and now resolves a Roman degree from its root, but carries no interval set
         // (unknown tones → no note expansion).
-        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords { c1:weird9 }\n}\n" +
-                  "form main { Main }\nscore main \"x\" { staff m }\n";
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
+        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { c1:weird9 }\n}\n" +
+                  "form main { Main }\nscore main \"x\" { chords prog  staff m }\n";
+        var score = CollectWithRow(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);
         Assert.Equal("Cweird9", chord.ChordText);
         Assert.NotNull(chord.Structure);

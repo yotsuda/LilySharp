@@ -445,8 +445,8 @@ SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
 SectionItem    = SectionSetting
                | PartBlock                        (* partName MusicBlock *)
                | VoiceBlock                       (* multi-voice on one staff *)
-               | LyricsBlock                      (* named lyrics track; attach via 'with lyrics NAME' or a 'lyrics NAME' row *)
-               | ChordsBlock                      (* note-aligned OR named chord row *)
+               | LyricsBlock                      (* named lyrics track; a score places it as a 'lyrics NAME' row *)
+               | ChordsBlock                      (* named chord part; a score places it as a 'chords NAME' row *)
                ;
 
 (* A section-level setting applies to the WHOLE section — its key / meter / tempo / pickup
@@ -461,19 +461,21 @@ PartBlock      = Identifier , MusicBlock ;
 
 (* A lyrics track BINDS TO ITS OWN MELODY AT THE DEFINITION (user decision,
    2026-08-19, closed before the first tag): 'lyrics ja sings vocal { ... }' says the
-   track ja sings the part vocal, and the SCORE only PLACES it —
-     - 'staff vocal with lyrics ja'  puts the syllables under the engraved melody;
-     - 'lyrics ja' as a score item   puts them on a ROW at the melody's rhythm
-       WITHOUT engraving the melody (a part sheet carrying the chorus words —
+   track ja sings the part vocal, and the SCORE only PLACES its row (§7) —
+     - directly BELOW the staff engraving the part it sings, the row IS that
+       staff's verse: the syllables sit under the engraved melody, and a run of
+       such rows stacks as verses in written order;
+     - anywhere else, it is an independent ROW at the melody's rhythm WITHOUT
+       engraving the melody (a part sheet carrying the chorus words —
        LilyPond's shape is \lyricsto over a NullVoice: the moments join the
        spacing, the notes print nothing).
    The binding is a property of the TRACK NAME, stated once; later same-name blocks
    may repeat it identically or omit it (a different target is LYS7005; an unknown
-   one LYS7004). Attaching a track that sings NOTHING is LYS6009 unless its name
-   IS the binding — the part itself, or one of that part's voices ('voice sop { }'
-   + 'lyrics sop { }'); attaching one to a staff it does not sing is LYS6010:
-   placement cannot re-decide the association. A track with no 'sings' placed as a
-   ROW keeps the even-spread lead-sheet reading — see §7. *)
+   one LYS7004). With no 'sings' anywhere the NAME can be the binding — the part
+   itself, or one of that part's voices ('voice sop { }' + 'lyrics sop { }') —
+   and a track that binds to nothing placed as a row keeps the even-spread
+   lead-sheet reading (§7). Placement cannot re-decide the association: a row
+   after a staff it does not sing simply stays an independent band. *)
 LyricsBlock    = 'lyrics' , Identifier , [ 'sings' , PartRef ] , '{' , { LyricMeasure } , '}' ;
 LyricMeasure   = { LyricSyllable } , '|' ;
 LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
@@ -485,9 +487,13 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     folds them — so the difference is only which node holds the text.
                     '~' GLUED on both sides ("va~ga") is an elision, otherwise a melisma. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordEntry | Barline } , '}' ;
-                 (* WITH a name: an independent chord part for a score row (lead sheet).
-                    WITHOUT a name: symbols align above the co-written part's staff. *)
+ChordsBlock    = 'chords' , Identifier , '{' , { ChordEntry | Barline } , '}' ;
+                 (* A named chord part; a score places it as a 'chords NAME' row —
+                    directly above a staff, or as a lead-sheet row on its own.
+                    The NAMELESS form (auto-attach above "the co-written part's
+                    staff") was removed before the first tag (LYS0032): its
+                    association was stated nowhere and broke down the moment a
+                    section held two parts. *)
 ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Quality ] , [ '/' , PitchBase ] ;
                  (* c=C, a:m=Am, g:7=G7, g:m7.5-=Gm7b5, c/g=C over a G bass *)
 
@@ -500,7 +506,7 @@ ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Q
      lyrics words sings melody { Twin- kle twin- kle | lit- tle star | }
    }
    form main { Verse }
-   score main { staff melody with lyrics words }
+   score main { staff melody  lyrics words }
 *)
 
 ### 5.1 Multi-voice (one staff)
@@ -621,9 +627,13 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
 
-StaffGroupBody = '{' , { StaffRender } , '}' ;
-                 (* Several staves engraved as ONE GROUP. All three take `staff` items and
-                    nothing else; they differ only in what is drawn down the left edge, and
+StaffGroupBody = '{' , { StaffRender | 'lyrics' PartRef } , '}' ;
+                 (* Several staves engraved as ONE GROUP. All three take `staff` items
+                    with `lyrics NAME` rows between them — inside the braces as outside,
+                    a bound row directly below the staff it sings is that staff's verse
+                    (the chorale writes its words between the sopranos and the altos),
+                    and a row that sings no adjacent staff is LYS6012, anything else
+                    LYS6011. They differ only in what is drawn down the left edge, and
                     each is the LilyPond context of the same name (engraver-init.ly):
 
                       grandStaff    a BRACE, and bar lines drawn through the gap between
@@ -683,12 +693,16 @@ CombinedStaff  = 'combinedStaff' , '{' , PartRef , PartRef , '}' ;
                       score full  { combinedStaff { fl1 fl2 } }
                       score parts { staff fl1  staff fl2 } *)
 
-StaffRender    = 'staff' , [ ClefName ] , PartRef , { 'with' ( 'chords' PartRef | 'lyrics' PartRef ) } ;
-                 (* Each 'with' clause ADDS to the staff: 'with chords NAME' aligns the
-                    named chord part's symbols ABOVE the staff; 'with lyrics NAME' aligns
-                    the named lyrics track's syllables BELOW it (repeat 'with lyrics' to
-                    stack verses). The same chord part can also feed a lead-sheet row
-                    ('chords NAME'), so a progression is written once. *)
+StaffRender    = 'staff' , [ ClefName ] , PartRef ;
+                 (* A staff renders ONE part; everything that used to hang off it by
+                    clause hangs by ORDER instead — score = a vertical stack of bands
+                    (user decision, 2026-08-19, before the first tag). A bound
+                    'lyrics NAME' row directly below the staff is its verse; a
+                    'chords NAME' row directly above it aligns the symbols over it.
+                    The removed 'with chords NAME' / 'with lyrics NAME' clauses are
+                    LYS0031, and the message spells the row replacement. The same
+                    chord part can also feed a lead-sheet row, so a progression is
+                    written once. *)
 PartRef        = Identifier ;
 
 (* THIS SCORE'S OWN HEADER: 'title' / 'composer' written inside a score restate the file's
@@ -1118,7 +1132,7 @@ section Sheet {
 form main  { Verse }
 form sheet { Sheet }
 
-score main  "demo"  { staff melody with lyrics words }
+score main  "demo"  { staff melody  lyrics words }
 score sheet "sheet" { chords prog lyrics sheetWords }
 ```
 

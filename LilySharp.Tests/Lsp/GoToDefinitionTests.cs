@@ -136,7 +136,7 @@ public class GoToDefinitionTests
         "chords harmony { section A { c1 } }\n" +          // chord part `harmony`
         "form main { A }\n" +
         "score main {\n" +
-        "  staff melody with lyrics verse\n" +             // attaches lyrics `verse`
+        "  staff melody  lyrics verse\n" +             // attaches lyrics `verse`
         "  chords harmony\n" +                             // chord row -> `harmony`
         "}\n";
 
@@ -144,7 +144,7 @@ public class GoToDefinitionTests
     public void LyricsNameInWithClause_JumpsToLyricsBlock()
     {
         int declName = WithSource.IndexOf("verse");                 // lyrics verse
-        int reference = WithSource.IndexOf("verse", declName + 1);  // with lyrics verse
+        int reference = WithSource.IndexOf("verse", declName + 1);  //  lyrics verse
         AssertJumps(WithSource, reference, declName, "verse".Length);
     }
 

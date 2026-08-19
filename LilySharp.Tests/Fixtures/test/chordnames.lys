@@ -1,5 +1,5 @@
-// Coverage: a 'chords { }' block — symbolic chord entry displayed as chord
-// symbols above the staff, aligned by timing to the melody. Roots auto-name from
+// Coverage: a named 'chords NAME { }' block placed as a row directly above the
+// staff — symbolic chord entry displayed as chord symbols, aligned by timing. Roots auto-name from
 // root+quality (c -> "C", a:m -> "Am"); mid-bar changes land at their musical
 // moment. Also exercises a MULTI-TOKEN quality (g:m7.5- -> "Gm7♭5") and the
 // chord-row CLEARANCE over a tall chord the wide symbol overhangs (the last
@@ -17,9 +17,9 @@ section Main {
     time 4/4
     c4 d e f | g a b <c ees ges bes> |
   }
-  chords {
+  chords prog {
     c2 a2:m | f2 g2:m7.5- |
   }
 }
 form main { Main }
-score main "chordnames" { staff m }
+score main "chordnames" { chords prog  staff m }

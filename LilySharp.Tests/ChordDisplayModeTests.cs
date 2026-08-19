@@ -37,9 +37,9 @@ public class ChordDisplayModeTests
         section A { melody { e'4 e' f' g' | a' g' e' d' | } }
         chords harmony { c1 | a1:m | }
         form main { A }
-        score main "names" { staff melody with chords harmony }
-        score main "roman" { staff melody with chords harmony as roman }
-        score main "both"  { staff melody with chords harmony as both }
+        score main "names" { chords harmony  staff melody }
+        score main "roman" { chords harmony as roman  staff melody }
+        score main "both"  { chords harmony as both  staff melody }
         score main "row"   { chords harmony as roman }
         """;
 
@@ -90,7 +90,7 @@ public class ChordDisplayModeTests
             section A { melody { c'4@chord(c:maj7) c' g' g' | } }
             chords harmony { c:maj7 | }
             form main { A }
-            score main { staff melody with chords harmony as roman }
+            score main { chords harmony as roman  staff melody }
             """);
         var score = new MeasureCollector()
             .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);
@@ -111,7 +111,7 @@ public class ChordDisplayModeTests
             section A { melody { c'4 c' c' c' | key g major d' d' d' d' | } }
             chords harmony { c1 | g1 | }
             form main { A }
-            score main { staff melody with chords harmony as roman }
+            score main { chords harmony as roman  staff melody }
             """);
         var score = new MeasureCollector()
             .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);

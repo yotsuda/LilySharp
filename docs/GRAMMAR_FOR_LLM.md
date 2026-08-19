@@ -343,15 +343,16 @@ voice { c'2 d } { e2 f }     // each voice { } is a simultaneous voice
 ## Lyrics (a named track that SINGS a part)
 
 A lyric track binds to its melody at the definition: `lyrics NAME sings PART`.
-The score places it: `staff PART with lyrics NAME` under the engraved melody, or
-`lyrics NAME` as a score item = only the words, at the melody's rhythm, without
-engraving the melody. Multiple tracks may sing one part (two languages = two
-names). A track named after the part or one of its voices is bound by the name.
-Attaching an unbound track to a staff is an error (LYS6009); to a staff it does
-not sing, LYS6010.
+The score places its row by ORDER (score = a vertical stack of bands): a
+`lyrics NAME` row directly below the staff engraving PART is that staff's verse
+(a run of rows stacks as verses); anywhere else it shows only the words, at the
+melody's rhythm, without engraving the melody. Multiple tracks may sing one part
+(two languages = two names). A track named after the part or one of its voices
+is bound by the name. An unbound row is the even-spread lead-sheet row; inside a
+staff group a row must sing the staff directly above it (LYS6012).
 
 A `lyrics NAME { … }` track sits in a section next to the part it sings; the score
-attaches it under a staff with `staff X with lyrics NAME`. Syllables are separated by
+places it with a `lyrics NAME` row under the staff. Syllables are separated by
 spaces; `-` joins syllables of one word; `|` mirrors the music's barlines. Barlines
 follow the music rule: a lone leading `|` only anchors the start (`| きら | ひかる |`
 == `きら | ひかる`), a bar with no syllables is the explicit `| |` pair (e.g. a
@@ -364,15 +365,15 @@ section Main {
   lyrics words sings melody { Hap- py birth- day | to you | }
 }
 form main { Main }
-score main { staff melody with lyrics words }
+score main { staff melody  lyrics words }
 ```
 
 ## Lead sheet (chords and/or lyrics, no staff)
 
-A NAMELESS `chords { … }` block inside a section aligns its symbols above the
-co-written part's staff by timing; a NAMED part can be aligned the same way with
-`staff melody with chords prog` in the score - and the SAME `prog` can also be a
-lead-sheet row, written once. An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
+A `chords NAME { … }` part's symbols align above a staff by timing when its row
+stands directly above that staff in the score (`chords prog` then `staff melody`)
+- and the SAME `prog` can also be a lead-sheet row, written once. (The nameless
+`chords { }` auto-attach form was removed - LYS0032: name it and place it.) An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
 `score` with `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders WITHOUT
 a staff: just a grid of measure barlines, the chord symbols between them and the
 lyrics below. A chord entry is `root[duration][:quality][/bass]` (`c`=C, `a:m`=Am,

@@ -131,15 +131,16 @@ public class ScoreRowFoldingTests
     }
 
     /// <summary>
-    /// A chords row is NOT folded: the row already is the LilyPond-ported
-    /// adhesion. <c>lyrics.chord-row.between-systems.*</c> measured LilyPond
-    /// putting the row INTO the lyric loose chain (page-layout-problem.cc,
-    /// ported 2026-07-27, residuals are font terms only); folding it into the
+    /// A LEADING chords row (nothing staff-like above it) is NOT folded: the row
+    /// already is the LilyPond-ported adhesion for the system-opening regime.
+    /// <c>lyrics.chord-row.between-systems.*</c> measured LilyPond putting the
+    /// row INTO the lyric loose chain (page-layout-problem.cc, ported
+    /// 2026-07-27, residuals are font terms only); folding it into the
     /// attached-chords engraver measurably moved that geometry AWAY from
     /// LilyPond (residual −0.002157 → +0.030400, 2026-08-19).
     /// </summary>
     [Fact]
-    public void ChordRowAboveAStaff_IsAlreadyTheAdhesion_NotFolded()
+    public void LeadingChordRow_IsAlreadyTheAdhesion_NotFolded()
     {
         var spec = SpecOf("""
             time 4/4
@@ -154,6 +155,32 @@ public class ScoreRowFoldingTests
         Assert.Equal(2, spec.Items.Length);
         Assert.IsType<ChordRowSpec>(spec.Items[0]);
         Assert.Null(Assert.IsType<SingleStaffSpec>(spec.Items[1]).Staff.WithChords);
+    }
+
+    /// <summary>
+    /// An INTERIOR chords row (a staff above, a staff below) folds into the
+    /// staff below as its attached symbols — the between-staves band placement
+    /// reads no up-skyline, and the attached engraver's reservation is the
+    /// machinery that was measured to clear the staff-below's pushed-out ink
+    /// (ChordRowOnALowerStaff_ClearsARestAnotherVoicePushedOutOfIt).
+    /// </summary>
+    [Fact]
+    public void InteriorChordRow_FoldsIntoTheStaffBelow()
+    {
+        var spec = SpecOf("""
+            time 4/4
+            section A {
+              hi { c'4 d' e' f' | }
+              lo { c4 d e f | }
+              chords prog { c1 | }
+            }
+            form main { A }
+            score main { staff hi  chords prog  staff lo }
+            """);
+
+        Assert.Equal(2, spec.Items.Length);
+        Assert.Null(Assert.IsType<SingleStaffSpec>(spec.Items[0]).Staff.WithChords);
+        Assert.Equal("prog", Assert.IsType<SingleStaffSpec>(spec.Items[1]).Staff.WithChords);
     }
 
     [Fact]
@@ -223,52 +250,49 @@ public class ScoreRowFoldingTests
         Assert.Contains("cannot contain 'tab'", d.Message);
     }
 
-    /// <summary>The chorale identity — the group fold renders the ink the old
-    /// in-group attachment clause rendered (the 08-chorale migration is a pure
-    /// respelling).</summary>
+    /// <summary>
+    /// THE CLOSED DOOR SAYS WHERE THE NEW ONE IS: a `with lyrics` / `with chords`
+    /// clause is LYS0031, and the message spells the row replacement. (The
+    /// identity that made the removal safe — the row spelling rendering the
+    /// clause spelling's ink byte-for-byte — was proven by machine while both
+    /// spellings existed: commits 6d6d1b92 / 228c6108, three priority-stack pins
+    /// and the chorale, all identical modulo data-pos.)
+    /// </summary>
     [Fact]
-    public void TheGroupRowSpelling_RendersTheInGroupAttachmentSpellingsInk()
+    public void TheRemovedWithClause_ReportsItsRowReplacement()
     {
-        string attach = Render(ChoraleBody
-            + "score main { choirStaff { staff sop with lyrics words  staff alt } }");
-        string rows = Render(ChoraleBody
-            + "score main { choirStaff { staff sop  lyrics words  staff alt } }");
+        var tree = SyntaxTree.Parse(BoundBody
+            + "score main { staff vocal with lyrics ja }");
+        var d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS0031");
+        Assert.Contains("'lyrics ja'", d.Message);
+        Assert.Contains("after this staff", d.Message);
 
-        Assert.Equal(attach, rows);
-
-        static string Render(string src) => System.Text.RegularExpressions.Regex.Replace(
-            SvgGenerator.Generate(SyntaxTree.Parse(src)), " data-pos=\"[0-9:]*\"", "");
+        tree = SyntaxTree.Parse(BoundBody + "score main { staff vocal with chords prog }");
+        d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS0031");
+        Assert.Contains("'chords prog'", d.Message);
+        Assert.Contains("before this staff", d.Message);
     }
 
     /// <summary>
-    /// THE IDENTITY THAT MAKES THE FOLD THE WHOLE PORT: the row spelling and the
-    /// attachment spelling of the same music render the same ink — only the
-    /// source positions differ, because the sources do. Verses, a below-staff
-    /// marcato (the skyline drop), and a second staff are all in the book so the
-    /// claim covers the placement machinery, not just the happy path.
+    /// The nameless <c>chords { }</c> block is LYS0032 (user decision,
+    /// 2026-08-19): its association was co-writing — stated nowhere, and
+    /// hard-coded to staff 0 the moment a section held two parts. The message
+    /// spells the replacement: name it, place it.
     /// </summary>
     [Fact]
-    public void TheRowSpelling_RendersTheAttachmentSpellingsInk()
+    public void TheNamelessChordsBlock_ReportsItsNamedRowReplacement()
     {
-        const string body = """
+        var tree = SyntaxTree.Parse("""
             time 4/4
-            part voc { clef treble }
-            part pno { clef bass }
             section A {
-              voc { c'4@marcato d' e' f' | g'2 g' | }
-              lyrics ja sings voc { la la la la | ho ho | }
-              lyrics en sings voc { na na na na | go go | }
-              pno { c4 d e f | c2 c | }
+              melody { c'4 d' e' f' | }
+              chords { c1 | }
             }
             form main { A }
-            """;
-
-        string attach = Render(body + "score main { staff voc with lyrics ja with lyrics en  staff pno }");
-        string rows = Render(body + "score main { staff voc  lyrics ja  lyrics en  staff pno }");
-
-        Assert.Equal(attach, rows);
-
-        static string Render(string src) => System.Text.RegularExpressions.Regex.Replace(
-            SvgGenerator.Generate(SyntaxTree.Parse(src)), " data-pos=\"[0-9:]*\"", "");
+            score main { staff melody }
+            """);
+        var d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS0032");
+        Assert.Contains("needs a name", d.Message);
+        Assert.Contains("above the staff", d.Message);
     }
 }

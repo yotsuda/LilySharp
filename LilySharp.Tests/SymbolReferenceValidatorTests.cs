@@ -353,18 +353,18 @@ $undefined2
         Assert.Contains("'m'", undef[0].Message);
     }
 
-    // ── staff/tab ATTACHMENTS: `with chords NAME` / `with lyrics NAME` ──
+    // ── ROWS BESIDE STAVES: the placements the old `with` clauses spelled ──
 
     /// <summary>
-    /// The attachment form names the same two track namespaces as a row, and had the same
-    /// silence: `staff m with chords progg` passed `lysc check` clean and drew no chord line
-    /// — MEASURED, the typo's SVG is byte-identical to the same score with the clause
-    /// deleted, for all three spellings (`with chords`, `with lyrics`, `tab … with chords`).
+    /// A row beside a staff names the same two track namespaces as a lead-sheet
+    /// row, and had the same silence once: a typo'd track name passed
+    /// <c>lysc check</c> clean and drew no line — MEASURED (2026-08-17, in the
+    /// clause spelling of the day): the typo's SVG was byte-identical to the same
+    /// score with the reference deleted.
     /// </summary>
     /// <remarks>
-    /// A TIGHTENING, which is why it lands before 0.3.0: a spelling accepted at release
-    /// cannot be taken back afterwards. Measured over every .lys in the tree before and
-    /// after — see the commit message.
+    /// A TIGHTENING, which is why it landed before 0.3.0: a spelling accepted at
+    /// release cannot be taken back afterwards.
     /// </remarks>
     private const string AttachSheet = """
         time 4/4
@@ -372,26 +372,25 @@ $undefined2
         section Main {
           m { c4 d e f | }
           chords prog { c1 | }
-          lyrics words { la la la la | }
+          lyrics words sings m { la la la la | }
         }
         form main { Main }
         score main "x" {
         """;
 
     [Theory]
-    [InlineData("staff m with chords progg", "progg")]
-    [InlineData("staff m with lyrics wordz", "wordz")]
-    // The tab form spells the same attachment and was equally unchecked.
-    [InlineData("tab m with chords progg", "progg")]
-    // A stack of verses: the SECOND one is the typo, so a scan that stops at the first
-    // `with` would pass this.
-    [InlineData("staff m with lyrics words with lyrics wordz", "wordz")]
-    // Any order, and past a chord-display selector — the `as both` must not be read as the
-    // name of the clause after it.
-    [InlineData("staff m with chords prog as both with lyrics wordz", "wordz")]
-    // Inside a grand staff, whose staves are the same node kind.
-    [InlineData("grandStaff { staff m with chords progg  staff m }", "progg")]
-    public void Validate_AttachmentNamesUndefinedTrack_ReportsError(string scoreBody, string bad)
+    [InlineData("chords progg  staff m", "progg")]
+    [InlineData("staff m  lyrics wordz", "wordz")]
+    // The row above a tab spells the same placement and was equally unchecked.
+    [InlineData("chords progg  tab m", "progg")]
+    // A stack of verses: the SECOND one is the typo, so a scan that stops at the
+    // first row would pass this.
+    [InlineData("staff m  lyrics words  lyrics wordz", "wordz")]
+    // Past a chord-display selector — the `as both` must not be read as a name.
+    [InlineData("chords prog as both  staff m  lyrics wordz", "wordz")]
+    // Inside a grand staff, whose rows are the same node kind as top-level rows.
+    [InlineData("grandStaff { staff m  lyrics wordz  staff m }", "wordz")]
+    public void Validate_RowBesideAStaff_UndefinedTrack_ReportsError(string scoreBody, string bad)
     {
         var undef = Refs(AttachSheet + scoreBody + " }")
             .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
@@ -400,26 +399,23 @@ $undefined2
     }
 
     [Theory]
-    [InlineData("staff m with chords prog")]
-    [InlineData("staff m with lyrics words")]
-    [InlineData("tab m with chords prog")]
-    [InlineData("staff m with chords prog as roman with lyrics words")]
-    [InlineData("staff m with lyrics words with chords prog")]
-    // A suppressed label and a per-score display name both sit BEFORE the first `with`, so
-    // neither shifts the clause — the reason the raw token run can be read positionally.
-    [InlineData("staff ~m with chords prog")]
-    [InlineData("staff m \"Melody\" with lyrics words")]
-    [InlineData("staff treble m with chords prog")]
-    public void Validate_AttachmentNamesDefinedTrack_NoError(string scoreBody)
+    [InlineData("chords prog  staff m")]
+    [InlineData("staff m  lyrics words")]
+    [InlineData("chords prog  tab m")]
+    [InlineData("chords prog as roman  staff m  lyrics words")]
+    [InlineData("chords prog  staff ~m")]
+    [InlineData("staff m \"Melody\"  lyrics words")]
+    [InlineData("chords prog  staff treble m")]
+    public void Validate_RowBesideAStaff_DefinedTrack_NoError(string scoreBody)
         => Assert.DoesNotContain(Refs(AttachSheet + scoreBody + " }"),
             d => d.Code == DiagnosticCodes.UndefinedPart);
 
-    /// <summary>The two namespaces stay apart in the attachment form as well.</summary>
+    /// <summary>The two namespaces stay apart beside a staff as well.</summary>
     [Theory]
-    [InlineData("staff m with chords words", "words")]
-    [InlineData("staff m with lyrics prog", "prog")]
-    [InlineData("staff m with chords m", "m")]  // …and a staff part is not a chord track
-    public void Validate_AttachedTracksKeepTheirNamespaces(string scoreBody, string bad)
+    [InlineData("chords words  staff m", "words")]
+    [InlineData("staff m  lyrics prog", "prog")]
+    [InlineData("chords m  staff m", "m")]  // …and a staff part is not a chord track
+    public void Validate_RowsBesideStavesKeepTheirNamespaces(string scoreBody, string bad)
     {
         var undef = Refs(AttachSheet + scoreBody + " }")
             .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
@@ -428,13 +424,13 @@ $undefined2
     }
 
     /// <summary>
-    /// A `with chords` with NO name already reports "'with chords' needs a name" from the
-    /// parser and attaches nothing. Adding "Undefined chords part: ''" under it would say
-    /// less than the message already there, so the zero-width token is not a reference —
-    /// the same rule the row targets follow.
+    /// A removed `with chords NAME` clause (LYS0031) keeps its tokens on the
+    /// staff node for width — those tokens are NOT track references, so the one
+    /// error the writer sees is the removal with its replacement, not an
+    /// "Undefined chords part" under it.
     /// </summary>
     [Fact]
-    public void Validate_AttachmentWithNoName_ReportsNoUndefinedTrack()
-        => Assert.DoesNotContain(Refs(AttachSheet + "staff m with chords }"),
+    public void Validate_RemovedWithClauseTokens_AreNotTrackReferences()
+        => Assert.DoesNotContain(Refs(AttachSheet + "staff m with chords progg }"),
             d => d.Code == DiagnosticCodes.UndefinedPart);
 }

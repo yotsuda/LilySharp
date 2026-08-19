@@ -858,14 +858,13 @@ c4 d e f |       // 'once' applies to the next note only
 ## Lyrics
 
 Lyrics bind to their **own melody at the definition** — `lyrics NAME sings PART`
-— and the score only places them. Attach the track under the engraved melody
-(`staff PART with lyrics NAME`), or place it as a bare `lyrics NAME` score item:
-that draws **only the words, at the melody's rhythm**, without engraving the
-melody — a part sheet carrying the chorus words. Several tracks may sing the
-same part (Japanese and English words, a parody); same-name blocks stack as
-verses. A track whose name matches the part (or one of its voices) is bound by
-the name alone. A track with no binding can still be an even-spread lead-sheet
-row, but cannot be attached to a staff (LYS6009).
+— and the score only places them, by ORDER: a `lyrics NAME` row directly below
+the staff engraving PART is that staff's verse (a run of rows stacks as
+verses); anywhere else it draws **only the words, at the melody's rhythm**,
+without engraving the melody — a part sheet carrying the chorus words. Several
+tracks may sing the same part (Japanese and English words, a parody). A track
+whose name matches the part (or one of its voices) is bound by the name alone;
+a track with no binding is the even-spread lead-sheet row.
 
 ```
 part melody
@@ -877,7 +876,7 @@ section Main {
   }
 }
 form main { Main }
-score main { staff melody with lyrics words }
+score main { staff melody  lyrics words }
 ```
 
 Barlines in a lyrics block follow the music rule: a lone leading `|` only

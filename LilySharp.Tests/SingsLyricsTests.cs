@@ -87,19 +87,17 @@ public class SingsLyricsTests
     [Fact]
     public void TheDecidedErrors_FireWhereTheDesignSaysTheyDo()
     {
-        // Unbound track attached to a staff: the closed door.
-        Assert.Contains(Validate("""
-            section A { m { c4 d | } lyrics words { la la | } }
-            form main { A }
-            score main { staff m with lyrics words }
-            """), d => d.Code == DiagnosticCodes.LyricsAttachmentUnbound);
-
-        // Bound to a DIFFERENT part than the staff it is attached to.
+        // (LYS6009/LYS6010 are RETIRED with the `with lyrics` clause — LYS0031.
+        // The spellings that used to trip them are legal by construction now: an
+        // unbound row after a staff is the lead-sheet row, and a row bound to
+        // another part is an independent band at its written place. The one
+        // surviving refusal is the GROUP case, where no band exists to fall
+        // back to.)
         Assert.Contains(Validate("""
             section A { m { c4 d | } v { e4 f | } lyrics w sings v { la la | } }
             form main { A }
-            score main { staff m with lyrics w }
-            """), d => d.Code == DiagnosticCodes.LyricsAttachmentWrongStaff);
+            score main { grandStaff { staff m  lyrics w  staff v } }
+            """), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
 
         // sings target that names nothing.
         Assert.Contains(Validate("""
@@ -114,7 +112,7 @@ public class SingsLyricsTests
               lyrics w sings m { la la | }
               lyrics w sings v { lo lo | } }
             form main { A }
-            score main { staff m with lyrics w }
+            score main { staff m  lyrics w }
             """), d => d.Code == DiagnosticCodes.SingsConflict);
     }
 
@@ -127,7 +125,7 @@ public class SingsLyricsTests
             """
             section A { m { c4 d | } lyrics w sings m { la la | } }
             form main { A }
-            score main { staff m with lyrics w }
+            score main { staff m  lyrics w }
             """,
             // sings + the bound ROW (the melody is not engraved).
             PartSheet,
@@ -135,13 +133,13 @@ public class SingsLyricsTests
             """
             section A { m { voice sop { c'4 d' | } { e4 f | } } lyrics sop { la la | } }
             form main { A }
-            score main { staff m with lyrics sop }
+            score main { staff m  lyrics sop }
             """,
             // A track named after the part itself.
             """
             section A { m { c4 d | } lyrics m { la la | } }
             form main { A }
-            score main { staff m with lyrics m }
+            score main { staff m  lyrics m }
             """,
             // An unbound row stays the even-spread lead sheet.
             """
@@ -152,8 +150,7 @@ public class SingsLyricsTests
         ];
         foreach (var src in clean)
             Assert.DoesNotContain(Validate(src), d =>
-                d.Code is DiagnosticCodes.LyricsAttachmentUnbound
-                       or DiagnosticCodes.LyricsAttachmentWrongStaff
+                d.Code is DiagnosticCodes.GroupRowNotBoundToStaffAbove
                        or DiagnosticCodes.SingsTargetUnknown
                        or DiagnosticCodes.SingsConflict);
     }
@@ -167,7 +164,7 @@ public class SingsLyricsTests
               lyrics w { lo lo | }
               lyrics w sings m { le le | } }
             form main { A }
-            score main { staff m with lyrics w }
+            score main { staff m  lyrics w }
             """;
         Assert.DoesNotContain(Validate(src), d => d.Code == DiagnosticCodes.SingsConflict);
     }
@@ -182,7 +179,7 @@ public class SingsLyricsTests
               lyrics w sings m { la la la la | }
             }
             form main { A }
-            score main { staff m with lyrics w }
+            score main { staff m  lyrics w }
             """;
         var pm = PartSectionLayoutConverter.Convert(sectionMajor);
         Assert.NotNull(pm);

@@ -310,30 +310,32 @@ public class PartReferenceFinderTests
         Assert.Equal(3, PartReferenceFinder.Occurrences(root, "fl1").Count);
     }
 
-    // ── staff/tab attachments: the same two namespaces, from the tail the part
-    //    selection cuts off ──
+    // ── rows beside staves: the same two namespaces, in written order ──
 
     private const string AttachSheet = """
         part m { clef treble }
         section Main {
           m { c4 d e f | }
           chords prog { c1 | }
-          lyrics words { la la la la | }
+          lyrics words sings m { la la la la | }
         }
         form main { Main }
         score main "x" {
-          staff ~m "Melody" with chords prog as roman with lyrics words
-          tab m with chords prog
+          chords prog as roman
+          staff ~m "Melody"
+          lyrics words
+          chords prog
+          tab m
         }
         """;
 
     /// <summary>
-    /// <c>with chords NAME</c> / <c>with lyrics NAME</c> are track references too, tagged
-    /// by namespace — and nothing else in the clause is: not the display selector after a
-    /// chord attachment, not the per-score display string, not the part.
+    /// <c>chords NAME</c> / <c>lyrics NAME</c> rows are track references, tagged
+    /// by namespace — and nothing else on the row is: not the display selector,
+    /// not the per-score display string, not the part.
     /// </summary>
     [Fact]
-    public void AttachedTracksAreCollectedAndTagged()
+    public void RowTracksAreCollectedAndTagged()
     {
         var refs = PartReferenceFinder.Tracks(Root(AttachSheet)).References;
 
@@ -344,18 +346,19 @@ public class PartReferenceFinderTests
     }
 
     /// <summary>
-    /// And they stay OUT of the part-rename set for the same reason the rows do — the
-    /// language server resolves those names itself, and more completely.
+    /// And they stay OUT of the part-rename set — the language server resolves
+    /// those names itself, and more completely.
     /// </summary>
     [Fact]
-    public void AttachedTrackNamesAreNotPartNames()
+    public void RowTracksBesideStaves_AreNotPartNames()
     {
         var root = Root(AttachSheet);
         Assert.Empty(PartReferenceFinder.Occurrences(root, "prog"));
         Assert.Empty(PartReferenceFinder.Occurrences(root, "words"));
         Assert.Empty(PartReferenceFinder.Occurrences(root, "roman"));
         Assert.Empty(PartReferenceFinder.Occurrences(root, "Melody"));
-        // header, section block, staff render, tab render — and nothing from the tails.
+        // header, section block, staff render, tab render — and nothing from
+        // the rows (a `sings` target is not a part-rename site either).
         Assert.Equal(4, PartReferenceFinder.Occurrences(root, "m").Count);
     }
 

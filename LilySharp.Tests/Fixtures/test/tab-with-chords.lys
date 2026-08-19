@@ -1,5 +1,5 @@
-// `tab part with chords CHORDPART [as …]` attaches a chord part's symbols above
-// a TAB staff, exactly like the notation-staff `staff … with chords …` form.
+// A `chords NAME` row directly above a `tab` staff: the chord part's symbols
+// stand above the tablature, exactly like the notation-staff form.
 // Here the guitar tab carries the fingering while the harmony row prints C / F
 // above it.
 octave absolute
@@ -9,5 +9,6 @@ part melody { clef treble_8 tuning guitar section A { c'4 e' g' e' | f' a' c'' a
 chords harmony { section A { c1 | f1 | } }
 form main { A }
 score main {
-  tab melody with chords harmony
+  chords harmony
+  tab melody
 }

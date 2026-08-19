@@ -98,8 +98,11 @@ internal static class LysWriter
             WriteFlatSection(sb, doc, report, useRelative);
 
         // ---- score: one staff per part; split staves regroup into a grand staff ----
-        // The part carrying lyrics attaches them EXPLICITLY (`staff X with lyrics NAME`) —
-        // there is no auto-attach, and an unreferenced block would be a LYS4006 error.
+        // The part carrying lyrics places them EXPLICITLY, by band order — one
+        // `lyrics NAME` row per verse directly under the part's staff (score = a
+        // vertical stack of bands: the binding is the track's `sings`, the row's
+        // position is the placement). No auto-attach; an unreferenced block would
+        // be a LYS4006 error.
         var scoreLyricPart = doc.Parts.FirstOrDefault(HasLyrics);
         sb.Append("score main \"imported\" {\n");
         for (int gi = 0; gi < doc.Parts.Count;)
@@ -108,7 +111,7 @@ internal static class LysWriter
             if (group == null)
             {
                 sb.Append("  staff ").Append(doc.Parts[gi].SafeName)
-                    .Append(WithLyricsSuffix(doc.Parts[gi], scoreLyricPart)).Append('\n');
+                    .Append(LyricRowLines(doc.Parts[gi], scoreLyricPart, "  ")).Append('\n');
                 gi++;
                 continue;
             }
@@ -117,7 +120,7 @@ internal static class LysWriter
             while (gi < doc.Parts.Count && doc.Parts[gi].StaffGroup == group)
             {
                 sb.Append("    staff ").Append(doc.Parts[gi].SafeName)
-                    .Append(WithLyricsSuffix(doc.Parts[gi], scoreLyricPart)).Append('\n');
+                    .Append(LyricRowLines(doc.Parts[gi], scoreLyricPart, "    ")).Append('\n');
                 gi++;
             }
             sb.Append("  }\n");
@@ -665,21 +668,22 @@ internal static class LysWriter
             .SelectMany(n => n.Lyrics).Select(l => l.Verse).Distinct().OrderBy(v => v);
 
     /// <summary>The name a verse's lyric track is written under, so the score can
-    /// reference it (<c>staff X with lyrics NAME</c>) — there is no auto-attach. Stable
-    /// across sections (keyed on the verse number) so one <c>with lyrics</c> collects
-    /// every section's cell for that verse.</summary>
+    /// place its row (<c>lyrics NAME</c> under the staff) — there is no auto-attach.
+    /// Stable across sections (keyed on the verse number) so one row collects every
+    /// section's cell for that verse.</summary>
     private static string LyricTrackName(int verse) => verse <= 1 ? "words" : "words" + verse;
 
-    /// <summary>The <c>with lyrics NAME [with lyrics NAME2 …]</c> clauses a staff needs
-    /// when its part carries the score's lyrics (each verse is its own stacked track);
-    /// empty for any other staff.</summary>
-    private static string WithLyricsSuffix(ImportPart part, ImportPart? lyricPart)
+    /// <summary>The <c>lyrics NAME</c> row lines a staff needs directly under it when
+    /// its part carries the score's lyrics (each verse is its own row, stacking as
+    /// verses in written order); empty for any other staff. Starts with a newline so
+    /// it appends after the staff's own line at the given indent.</summary>
+    private static string LyricRowLines(ImportPart part, ImportPart? lyricPart, string indent)
     {
         if (part != lyricPart || lyricPart == null)
             return "";
         var sb = new StringBuilder();
         foreach (int verse in LyricVerses(lyricPart))
-            sb.Append(" with lyrics ").Append(LyricTrackName(verse));
+            sb.Append('\n').Append(indent).Append("lyrics ").Append(LyricTrackName(verse));
         return sb.ToString();
     }
 
@@ -695,7 +699,7 @@ internal static class LysWriter
         foreach (int verse in verses)
         {
             // The track sings the part whose notes carried the syllables — the
-            // binding lives at the definition (LYS6009 refuses an unbound attach).
+            // binding lives at the definition; the score row only places it.
             var sb = new StringBuilder("lyrics " + LyricTrackName(verse) + " sings " + part.SafeName + " { ");
             foreach (var measure in measures)
             {

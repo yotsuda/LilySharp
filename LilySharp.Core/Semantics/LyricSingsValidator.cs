@@ -27,12 +27,13 @@ namespace LilySharp.Core.Semantics;
 /// <list type="bullet">
 /// <item>LYS7004 — <c>sings T</c> where T names no part or voice in the file.</item>
 /// <item>LYS7005 — two blocks of one track name different targets.</item>
-/// <item>LYS6009 — <c>staff X with lyrics N</c> where N sings nothing and its
-/// name matches neither X nor one of X's voices (the voice-binding rule
-/// <c>voice sop { } + lyrics sop { }</c> is a binding, kept).</item>
-/// <item>LYS6010 — <c>staff X with lyrics N</c> where N sings a DIFFERENT part:
-/// placement cannot re-decide the association.</item>
+/// <item>LYS6012 — a row inside a staff group that does not sing the staff
+/// directly above it (a group has no independent band to fall back to).</item>
 /// </list>
+/// (LYS6009/LYS6010 guarded the <c>with lyrics</c> clause against unbound and
+/// wrong-staff tracks; both RETIRED with the clause — LYS0031. At top level a
+/// bound row folds only onto the staff it sings, a row for another part is a
+/// legal independent band, and an unbound row is the lead-sheet row.)
 /// </summary>
 internal sealed class LyricSingsValidator : ISemanticValidator
 {
@@ -85,41 +86,10 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                 $"'{block.VoiceName}' already sings '{first}' - a track sings ONE part; "
                 + "state the binding once (later blocks may repeat it identically or omit it).");
 
-        // Attachment checks: `staff X with lyrics N`.
-        foreach (var staff in root.DescendantNodes().OfType<StaffRenderSyntax>())
-        {
-            if (RenderSpecParser.ParseStaffSpec(staff) is not { } spec
-                || spec.WithLyrics.IsDefaultOrEmpty)
-                continue;
-            var staffVoices = LyricBindings.VoicesOfPart(root, spec.VoiceName);
-            foreach (var attached in spec.WithLyrics)
-            {
-                string? sings = LyricBindings.TargetOf(root, attached);
-                if (sings != null)
-                {
-                    if (!string.Equals(sings, spec.VoiceName, StringComparison.Ordinal)
-                        && !staffVoices.Contains(sings))
-                        _diagnostics.Error(
-                            staff.StaffKeyword.Span,
-                            DiagnosticCodes.LyricsAttachmentWrongStaff,
-                            $"lyrics '{attached}' sings '{sings}', not '{spec.VoiceName}' - "
-                            + "the binding is the track's; place it under the part it sings.");
-                    continue;
-                }
-                // Unbound: the name itself must be the binding (the part, or one
-                // of its voices). Anything else used to silently align to
-                // whatever staff it was attached to; that door is closed.
-                if (string.Equals(attached, spec.VoiceName, StringComparison.Ordinal)
-                    || staffVoices.Contains(attached))
-                    continue;
-                _diagnostics.Error(
-                    staff.StaffKeyword.Span,
-                    DiagnosticCodes.LyricsAttachmentUnbound,
-                    $"lyrics '{attached}' does not sing any part - write "
-                    + $"'lyrics {attached} sings {spec.VoiceName} {{ ... }}' so the words "
-                    + "and their melody are bound where the track is defined.");
-            }
-        }
+        // (The `with lyrics` attachment checks — LYS6009/LYS6010 — died with the
+        // clause, LYS0031: a bound row folds only onto the staff it sings, so a
+        // wrong-staff or unbound attachment can no longer be SPELLED at top level;
+        // what remains checkable is the group case below.)
 
         // Rows inside a staff group: inside the braces a row IS the staff above's
         // attached verse (score = a vertical stack of bands), so a row that sings

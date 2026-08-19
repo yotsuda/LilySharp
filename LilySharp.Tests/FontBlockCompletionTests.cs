@@ -195,7 +195,9 @@ public class FontBlockCompletionTests
 
         score main "out" {
           title "A Title"
-          staff m with lyrics w with chords prog
+          chords prog
+          staff m
+          lyrics w
         }
         """;
 

@@ -156,7 +156,6 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
             CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
-            CompletionContext.AfterWith => GetWithCompletions(),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
             CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),
@@ -584,7 +583,6 @@ public sealed partial class LilySharpLanguageServer
         AfterChordsRef,
         AfterLyricsRef,
         AfterLyricsName,
-        AfterWith,
         AfterChordAttachName,
         AfterChordDisplayAs,
         AfterTabDisplayAs,
@@ -787,13 +785,12 @@ public sealed partial class LilySharpLanguageServer
             return CompletionContext.FormBlock;
 
         // Inside score "name" { } / grandStaff { }: the body is a render spec.
-        // After its reference keywords only the declared part names fit; a
-        // `with` continues into `with chords PART`.
+        // After its reference keywords only the declared part names fit.
         if (IsInsideScoreBlock(text, offset))
         {
             // `… as |` → a display selector, but which one depends on what the `as`
-            // governs: `tab … as` takes numbers|full, every other form (`chords … as`,
-            // `[staff|tab] … with chords … as`) takes roman|both|names.
+            // governs: `tab … as` takes numbers|full, `chords … as` takes
+            // roman|both|names.
             if (prevWord == "as")
                 return AsSelectorContext(text, offset);
             switch (prevWord)
@@ -806,13 +803,12 @@ public sealed partial class LilySharpLanguageServer
                 case "ossia": return CompletionContext.AfterStaffRef;
                 case "chords": return CompletionContext.AfterChordsRef;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
-                case "with": return CompletionContext.AfterWith;
             }
             // What a staff GROUP's body accepts is narrower than the score's, and the
             // parser says so with its own diagnostics — so the popup must not offer the
-            // wider list inside one. Measured 2026-08-11:
+            // wider list inside one:
             //   condensedStaff { combinedStaff … } → LYS6004 "cannot contain"
-            //   grandStaff     { combinedStaff … } → LYS0002 "Expected 'CloseBrace'"
+            //   grandStaff     { combinedStaff … } → LYS6011 "cannot contain"
             var openBlocks = ScanOpenBlocks(text, offset, ReadFrame);
             if (openBlocks.Count > 0)
             {
@@ -820,13 +816,13 @@ public sealed partial class LilySharpLanguageServer
                 // condensedStaff / combinedStaff take BARE PART NAMES only.
                 if (IsBarePartNameGroup(block))
                     return CompletionContext.AfterStaffRef;
-                // grandStaff / staffGroup / choirStaff take `staff` ITEMS only
-                // (ParseGrandStaffRender loops on StaffKeyword and nothing else).
+                // grandStaff / staffGroup / choirStaff take `staff` items and
+                // `lyrics NAME` verse rows (ParseGrandStaffRender; else LYS6011).
                 if (IsStaffGroupKeyword(block))
                     return CompletionContext.StaffGroupBlock;
             }
-            // `chords NAME |` / `with chords NAME |`: after the attached chord part's
-            // name, offer the `as roman|both|names` display selector (plus the normal
+            // `chords NAME |`: after the chord row's name, offer the
+            // `as roman|both|names` display selector (plus the normal
             // continuations, so a following render item is not blocked).
             if (SecondWordBeforeCursor(text, offset) == "chords")
                 return CompletionContext.AfterChordAttachName;
@@ -1031,13 +1027,11 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Which display selector an <c>as</c> in a score block governs. <c>tab … as</c>
-    /// takes <c>numbers | full</c>; every other <c>as</c> (a <c>chords</c> row, or a
-    /// <c>with chords …</c> attachment on a staff or tab) takes <c>roman | both | names</c>.
-    /// The word right before <c>as</c> is the target NAME in every case, so it can't
-    /// disambiguate — scan the words before <c>as</c> for the nearest governing keyword.
-    /// A <c>chords</c> seen first means a chord attachment (its <c>as</c> wins even on a
-    /// <c>tab</c> line); a <c>tab</c> seen first with no intervening <c>chords</c> is the
-    /// tab style. Anything else keeps the chord default.
+    /// takes <c>numbers | full</c>; a <c>chords</c> row's <c>as</c> takes
+    /// <c>roman | both | names</c>. The word right before <c>as</c> is the target NAME
+    /// in every case, so it can't disambiguate — scan the words before <c>as</c> for
+    /// the nearest governing keyword. A <c>chords</c> seen first is the chord display;
+    /// a <c>tab</c> seen first is the tab style. Anything else keeps the chord default.
     /// </summary>
     internal static CompletionContext AsSelectorContext(string text, int offset)
     {
@@ -1706,15 +1700,10 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Inside <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c>: the body is a
-    /// run of <c>staff</c> items and NOTHING else, so that is the whole list.
+    /// run of <c>staff</c> items with <c>lyrics NAME</c> rows between them (a bound row
+    /// is the staff above's verse — LYS6012 refuses any other), so that is the whole
+    /// list. Anything else is LYS6011.
     /// </summary>
-    /// <remarks>
-    /// ParseGrandStaffRender loops <c>while (Check(StaffKeyword))</c> and then demands
-    /// the closing brace, so any other render keyword here is a syntax error — measured:
-    /// <c>grandStaff { combinedStaff { … } }</c> reports LYS0002 "Expected 'CloseBrace',
-    /// found 'CombinedStaffKeyword'". Offering the score's wider list here would be
-    /// suggesting what the parser rejects.
-    /// </remarks>
     internal static CompletionList GetStaffGroupBlockCompletions() => new()
     {
         Items =
@@ -1733,27 +1722,24 @@ public sealed partial class LilySharpLanguageServer
                     CommandIdentifier = "editor.action.triggerSuggest",
                 },
             },
+            new CompletionItem
+            {
+                Label = "lyrics",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "lyrics $0",
+                Detail = "A verse row under the staff above (the track must sing that staff's part)",
+                SortText = "1",
+                Command = new Command
+                {
+                    Title = "Suggest lyrics name",
+                    CommandIdentifier = "editor.action.triggerSuggest",
+                },
+            },
         ]
     };
 
-    /// <summary>After <c>staff NAME with</c> the only continuation is <c>chords</c>.</summary>
-    internal static CompletionList GetWithCompletions()
-    {
-        return new CompletionList
-        {
-            Items =
-            [
-                new CompletionItem
-                {
-                    Label = "chords",
-                    Kind = CompletionItemKind.Keyword,
-                    Detail = "Attach a chord part's symbols above this staff",
-                },
-            ]
-        };
-    }
-
-    /// <summary>After <c>chords NAME</c> / <c>with chords NAME</c>: the chord DISPLAY
+    /// <summary>After <c>chords NAME</c>: the chord DISPLAY
     /// selector (<c>as roman | as both | as names</c>), then the ordinary render-item
     /// continuations so a following <c>staff</c>/<c>chords</c>/… is not blocked.</summary>
     internal static CompletionList GetChordAttachNameCompletions()
@@ -2554,7 +2540,7 @@ public sealed partial class LilySharpLanguageServer
                     FilterText = "template scoretemplate score twinkle new",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\n// Named lyrics block, attached under the staff with `with lyrics verse`.\nlyrics verse {\n\tsection A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }\n\tsection B {\n\t\t[~1. Up a- bove the | world so high |]\n\t\t[~2. Like a dia- mond | in the sky |]\n\t}\n}\n\nform main { A |: B :| A \"A2\" }\n\nscore main {\n\tstaff melody with lyrics verse\n}\n$0",
+                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\n// The track sings its melody; the score places its row under the staff.\nlyrics verse sings melody {\n\tsection A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }\n\tsection B {\n\t\t[~1. Up a- bove the | world so high |]\n\t\t[~2. Like a dia- mond | in the sky |]\n\t}\n}\n\nform main { A |: B :| A \"A2\" }\n\nscore main {\n\tstaff melody\n\tlyrics verse\n}\n$0",
                     Detail = "Score template — single-staff + lyrics (Twinkle, Twinkle, Little Star)",
                 },
                 new CompletionItem
@@ -2566,7 +2552,7 @@ public sealed partial class LilySharpLanguageServer
                     InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c2 g | c2 c | f2 c | g2 c | }\n}\n\nform main { A }\n\nscore main {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
                     Detail = "Score template — piano / grand staff (Twinkle, Twinkle, Little Star)",
                 },
-                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics ${1:verse} {\n\t$0\n}", Detail = "Named lyrics block (a score attaches it with `with lyrics NAME`)" },
+                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics ${1:verse} sings ${2:part} {\n\t$0\n}", Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)" },
         };
 
         // Drop the singleton globals (metadata + piece-wide defaults) already written at the

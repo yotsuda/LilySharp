@@ -36,12 +36,12 @@ public class LyricSyllableValidatorTests
         return validator.Diagnostics;
     }
 
-    // Lyrics attach EXPLICITLY (`staff m with lyrics w`) — there is no auto-attach, so a
+    // Lyrics attach EXPLICITLY (`staff m  lyrics w`) — there is no auto-attach, so a
     // scored form is the only way the collector aligns syllables to notes and records the
     // overflow this validator reads back.
     private static string Scored(string music, string lyrics) =>
-        $"time 4/4\nsection S {{\n  m {{ {music} }}\n  lyrics w {{ {lyrics} }}\n}}\n"
-        + "form main { S }\nscore main { staff m with lyrics w }\n";
+        $"time 4/4\nsection S {{\n  m {{ {music} }}\n  lyrics w sings m {{ {lyrics} }}\n}}\n"
+        + "form main { S }\nscore main { staff m  lyrics w }\n";
 
     private static Diagnostic? Overflow(IReadOnlyList<Diagnostic> diags) =>
         diags.FirstOrDefault(d => d.Code == DiagnosticCodes.LyricSyllableOverflow);

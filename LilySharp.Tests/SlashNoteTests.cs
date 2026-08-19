@@ -126,7 +126,7 @@ public class SlashNoteTests
         // `/` is claimed only in note position: the time signature's and a chord
         // entry's `/` never reach the music-item dispatch.
         var tree = SyntaxTree.Parse("time 6/8\npart m\nsection A {\n"
-            + "  m { time 3/4 c4 d e | }\n  chords { c2/g g:7 | }\n}\n");
+            + "  m { time 3/4 c4 d e | }\n  chords prog { c2/g g:7 | }\n}\n");
         Assert.Empty(tree.Diagnostics);
         Assert.DoesNotContain(tree.GetRoot().DescendantNodes(), n => n is SlashNoteSyntax);
     }

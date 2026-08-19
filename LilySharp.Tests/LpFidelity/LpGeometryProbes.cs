@@ -593,12 +593,12 @@ internal static class LpGeometryProbes
     /// </remarks>
     /// <param name="scoreBody">
     /// How the lyric line is SPELLED — the one thing the three books built from this differ
-    /// in. <c>staff melody with lyrics words</c> is note-bound; a bare <c>lyrics words</c>
+    /// in. <c>staff melody  lyrics words</c> is note-bound; a bare <c>lyrics words</c>
     /// under the staff is an independent ROW, which Lily# lays out through a different model
     /// entirely. LilyPond has one model for both, which is what makes the third book a
     /// LilyPond-side identity (see the <c>lyrics.row.*</c> entry).
     /// </param>
-    private static string LyricRowPageScore(string name, string scoreBody) => $$"""
+    private static string LyricRowPageScore(string name, string scoreBody, bool bound) => $$"""
         octave absolute
         time 4/4
         key c major
@@ -607,7 +607,7 @@ internal static class LpGeometryProbes
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
-          lyrics words { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
+          lyrics words{{(bound ? " sings melody" : "")}} { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
         }
 
         form main { ~Main }
@@ -619,12 +619,12 @@ internal static class LpGeometryProbes
 
     /// <summary>The justified twin — the mirror of book LYRS.</summary>
     private static readonly string LYRS =
-        LyricRowPageScore("LYRS", "  staff melody with lyrics words");
+        LyricRowPageScore("LYRS", "  staff melody  lyrics words", bound: true);
 
     /// <summary>The ragged-bottom control — the mirror of book LYRC.</summary>
     /// <remarks>Same music, built by the same call (HANDOFF 5.0).</remarks>
     private static readonly string LYRC =
-        LyricRowPageScore("LYRC", "  staff melody with lyrics words");
+        LyricRowPageScore("LYRC", "  staff melody  lyrics words", bound: true);
 
     /// <summary>
     /// The same music and the same paper as <see cref="LYRC"/>, with the lyric line spelled
@@ -641,7 +641,7 @@ internal static class LpGeometryProbes
     /// the identity itself, which no single entry can.
     /// </remarks>
     internal static readonly string LYRR =
-        LyricRowPageScore("LYRR", "  staff melody\n  lyrics words");
+        LyricRowPageScore("LYRR", "  staff melody\n  lyrics words", bound: false);
 
     /// <summary>
     /// The same music and paper again with a SECOND verse — the mirror of book LYRV.
@@ -669,14 +669,14 @@ internal static class LpGeometryProbes
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
-          lyrics one { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
-          lyrics two { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
+          lyrics one sings melody { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
+          lyrics two sings melody { {{string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim()}} }
         }
 
         form main { ~Main }
 
         score main "{{name}}" {
-          staff melody with lyrics one with lyrics two
+          staff melody  lyrics one  lyrics two
         }
         """;
 
@@ -908,7 +908,7 @@ internal static class LpGeometryProbes
     /// <summary>The notation control — book NTL.</summary>
     private static readonly string NTL = TabPageScore("NTL", "staff");
 
-    private static string CoexistScore(string name, string scoreBlock) => $$"""
+    private static string CoexistScore(string name, string scoreBlock, bool secondBound) => $$"""
         octave absolute
         time 4/4
         key c major
@@ -917,8 +917,8 @@ internal static class LpGeometryProbes
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 40)).Trim()}} }
-          lyrics one { {{string.Concat(Enumerable.Repeat("no no no no | ", 40)).Trim()}} }
-          lyrics two { {{string.Concat(Enumerable.Repeat("no no no no | ", 40)).Trim()}} }
+          lyrics one sings melody { {{string.Concat(Enumerable.Repeat("no no no no | ", 40)).Trim()}} }
+          lyrics two{{(secondBound ? " sings melody" : "")}} { {{string.Concat(Enumerable.Repeat("no no no no | ", 40)).Trim()}} }
         }
 
         form main { ~Main }
@@ -941,12 +941,12 @@ internal static class LpGeometryProbes
     /// as well, which is what makes LilyPond's side of the comparison an identity.
     /// </remarks>
     internal static readonly string RowUnderNoteBoundScore = CoexistScore(
-        "coexist-row", "  staff melody with lyrics one\n  lyrics two");
+        "coexist-row", "  staff melody  lyrics one\n  lyrics two", secondBound: false);
 
     /// <summary>The same music with BOTH lines note-bound — the twin of
     /// <see cref="RowUnderNoteBoundScore"/>.</summary>
     internal static readonly string NoteBoundVersesScore = CoexistScore(
-        "coexist-bound", "  staff melody with lyrics one with lyrics two");
+        "coexist-bound", "  staff melody  lyrics one  lyrics two", secondBound: true);
 
     /// <summary>Four systems to a page, so page 1 keeps real slack and STRETCHES.</summary>
     private static readonly LayoutOptions FourSystemsPerPage =
@@ -1015,14 +1015,14 @@ internal static class LpGeometryProbes
             section Main {
               upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
               melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim()}} }
-              lyrics one { {{syllables}} }{{(secondVerse ? $"\n  lyrics two {{ {syllables} }}" : "")}}
+              lyrics one sings melody { {{syllables}} }{{(secondVerse ? $"\n  lyrics two sings melody {{ {syllables} }}" : "")}}
             }
 
             form main { ~Main }
 
             score main "{{name}}" {
               staff upper
-              staff melody with lyrics one{{(secondVerse ? " with lyrics two" : "")}}
+              staff melody  lyrics one{{(secondVerse ? "  lyrics two" : "")}}
             }
             """;
     }
@@ -1088,7 +1088,7 @@ internal static class LpGeometryProbes
             section Main {
               upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
               melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim()}} }
-              lyrics one { {{syllables}} }
+              lyrics one sings melody { {{syllables}} }
               chords prog { {{string.Concat(Enumerable.Repeat("c1 | ", 120)).Trim()}} }
             }
 
@@ -1097,7 +1097,7 @@ internal static class LpGeometryProbes
             score main "{{name}}" {
               chords prog
               staff upper
-              staff melody with lyrics one
+              staff melody  lyrics one
             }
             """;
     }
@@ -1176,13 +1176,13 @@ internal static class LpGeometryProbes
             section Main {
               melody { {{bars}} }
               lower { {{bars}} }
-              lyrics one { {{syllables}} }{{(secondVerse ? $"\n  lyrics two {{ {syllables} }}" : "")}}
+              lyrics one sings melody { {{syllables}} }{{(secondVerse ? $"\n  lyrics two sings melody {{ {syllables} }}" : "")}}
             }
 
             form main { ~Main }
 
             score main "{{name}}" {
-              staff melody with lyrics one{{(secondVerse ? " with lyrics two" : "")}}
+              staff melody  lyrics one{{(secondVerse ? "  lyrics two" : "")}}
               staff lower
             }
             """;
@@ -1244,7 +1244,7 @@ internal static class LpGeometryProbes
             section Main {
               melody { {{bars}} }
               lower { {{bars}} }
-              lyrics one { {{syllables}} }
+              lyrics one sings melody { {{syllables}} }
               chords prog { {{chords}} }
             }
 
@@ -1252,7 +1252,7 @@ internal static class LpGeometryProbes
 
             score main "{{name}}" {
               chords prog
-              staff melody with lyrics one
+              staff melody  lyrics one
               staff lower
             }
             """;
@@ -1296,13 +1296,13 @@ internal static class LpGeometryProbes
               melody { {{bars}} }
               ossia_mel { {{bars}} }
               lower { {{bars}} }
-              lyrics one { {{syllables}} }
+              lyrics one sings melody { {{syllables}} }
             }
 
             form main { ~Main }
 
             score main "{{name}}" {
-              staff melody with lyrics one
+              staff melody  lyrics one
               ossia ossia_mel
               staff lower
             }
@@ -1442,15 +1442,15 @@ internal static class LpGeometryProbes
               top { {{upper.Trim()}} }
               inner { {{inner.Trim()}} }
               melody { {{melody.Trim()}} }
-              lyrics one { {{syllables.Trim()}} }
-              lyrics two { {{syllables.Trim()}} }
+              lyrics one sings melody { {{syllables.Trim()}} }
+              lyrics two sings melody { {{syllables.Trim()}} }
             }
 
             form main { ~Main }
 
             score main "LYRHKG" {
               grandStaff { staff top staff inner }
-              staff melody with lyrics one with lyrics two
+              staff melody  lyrics one  lyrics two
             }
             """;
     }
@@ -1471,15 +1471,15 @@ internal static class LpGeometryProbes
             section Main {
               upper { {{upper.Trim()}} }
               melody { {{melody.Trim()}} }
-              lyrics one { {{syllables.Trim()}} }
-              lyrics two { {{syllables.Trim()}} }
+              lyrics one sings melody { {{syllables.Trim()}} }
+              lyrics two sings melody { {{syllables.Trim()}} }
             }
 
             form main { ~Main }
 
             score main "{{(declareRemoveEmpty ? "LYRHKD" : "LYRHKN")}}" {
               staff upper
-              staff melody with lyrics one with lyrics two
+              staff melody  lyrics one  lyrics two
             }
             """;
     }
@@ -1633,15 +1633,15 @@ internal static class LpGeometryProbes
             section Main {
               upper { {{upper.Trim()}} }
               melody { {{melody.Trim()}} }
-              lyrics one { {{syllables.Trim()}} }
-              lyrics two { {{syllables.Trim()}} }
+              lyrics one sings melody { {{syllables.Trim()}} }
+              lyrics two sings melody { {{syllables.Trim()}} }
             }
 
             form main { ~Main }
 
             score main "LYRHK" {
               staff upper
-              staff melody with lyrics one with lyrics two
+              staff melody  lyrics one  lyrics two
             }
             """;
     }
@@ -8693,7 +8693,8 @@ internal static class LpGeometryProbes
         form main { ~Main }
 
         score main "SCS" {
-          staff melody with chords prog
+          chords prog
+          staff melody
         }
         """;
 
@@ -8771,13 +8772,13 @@ internal static class LpGeometryProbes
 
         section Main {
           melody { c2 a | f2 g | c1 | }
-          lyrics words { I no | oh no | yes | }
+          lyrics words sings melody { I no | oh no | yes | }
         }
 
         form main { ~Main }
 
         score main "SLSH" {
-          staff melody with lyrics words
+          staff melody  lyrics words
         }
         """;
 

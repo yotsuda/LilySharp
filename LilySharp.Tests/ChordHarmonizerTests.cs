@@ -41,9 +41,9 @@ public class ChordHarmonizerTests
         Assert.NotNull(block);
 
         // Placed back into the section as a sibling chord part, the generated block
-        // must parse cleanly (a chords part lives inside a section, referenced by
-        // 'staff … with chords <name>').
-        var reparsed = SyntaxTree.Parse(Doc(block!, "staff melody with chords harmony"));
+        // must parse cleanly (a chords part lives inside a section, placed by the
+        // score as a row above the staff).
+        var reparsed = SyntaxTree.Parse(Doc(block!, "chords harmony  staff melody"));
         Assert.False(reparsed.HasErrors, string.Join("\n", reparsed.Diagnostics));
         return block!;
     }
@@ -131,7 +131,7 @@ public class ChordHarmonizerTests
         Assert.Contains("part melody {", result.Value.Text);   // the part is untouched
         Assert.Contains("chords harmony {", result.Value.Text);
         Assert.Contains("section A", result.Value.Text);
-        Assert.Contains("with chords harmony", result.Value.Text);
+        Assert.Contains("chords harmony  staff melody", result.Value.Text);
         Assert.Contains("c1", result.Value.Text);      // section A -> C
         Assert.Contains("g1:7", result.Value.Text);    // section B -> G7
     }

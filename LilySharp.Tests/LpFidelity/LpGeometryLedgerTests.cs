@@ -207,7 +207,8 @@ public class LpGeometryLedgerTests
             form main { ~Main }
 
             score main "anchor" {
-              staff melody with chords prog
+              chords prog
+              staff melody
             }
             """);
 

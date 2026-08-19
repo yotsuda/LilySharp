@@ -290,18 +290,18 @@ public class ChordNameTests
     }
 
     [Fact]
-    public void WithChords_KeptInMultiVoiceScore()
+    public void ChordRow_KeptInMultiVoiceScore()
     {
-        // Regression: `staff NAME with chords PART` on a multi-voice single staff
-        // used to drop the whole chord progression (Collect returned to
-        // BuildMultiVoiceScore before CollectAttached ran). Both single- and
-        // multi-voice must surface the attached chords. Uses the real render path.
+        // Regression (kept in row spelling): a chords row above a multi-voice
+        // single staff used to drop the whole progression (Collect returned to
+        // BuildMultiVoiceScore before the chords were collected). Both single-
+        // and multi-voice must surface the chords. Uses the real render path.
         string Doc(string body) => $@"
 part m {{ clef treble }}
 chords prog {{ c1 | d1 | }}
 section A {{ m {{ {body} }} }}
 form main {{ A }}
-score main {{ staff m with chords prog }}
+score main {{ chords prog  staff m }}
 ";
         var sTree = SyntaxTree.Parse(Doc("c'4 d' e' f' | g'4 a' b' c'' |"));
         var mTree = SyntaxTree.Parse(Doc("voice { c'4 d' e' f' | } { c4 d e f | }"));
@@ -422,7 +422,7 @@ score main {{ staff m with chords prog }}
             "section Main {\n  hi { b4 b b b | }\n" +
             $"  lo {{ voice {{ {firstVoice} }} {{ b4 b b b }} | }}\n}}\n" +
             "form main { Main }\n" +
-            "score main \"o\" { staff hi staff lo with chords prog }\n";
+            "score main \"o\" { staff hi  chords prog  staff lo }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

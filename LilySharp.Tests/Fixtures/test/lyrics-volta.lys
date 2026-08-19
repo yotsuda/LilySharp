@@ -16,4 +16,4 @@ lyrics words sings melody {
   }
 }
 form main { A |: ~B :| A "A2" }
-score main { staff melody with lyrics words }
+score main { staff melody  lyrics words }

@@ -131,7 +131,7 @@ public class PartSectionLayoutConverterTests
             section A { melody { c4 c g' g | } chords harmony { c1 | f1 | } }
             section B { melody { g'4 g f f | } chords harmony { c1 | } }
             form main { A B }
-            score main "s" { staff melody with chords harmony }
+            score main "s" { chords harmony  staff melody }
             """;
         Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
 
@@ -160,7 +160,7 @@ public class PartSectionLayoutConverterTests
             section A { melody { c4 c g' g | } lyrics w { Twin- kle twin- kle | } }
             section B { melody { g'4 g f f | } lyrics w { how I won- der | } }
             form main { A B }
-            score main "s" { staff melody with lyrics w }
+            score main "s" { staff melody  lyrics w }
             """;
         Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
 

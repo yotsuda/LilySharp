@@ -20,4 +20,4 @@ section Main {
   }
 }
 form main { Main }
-score main "lyrics-skyline" { staff melody with lyrics words }
+score main "lyrics-skyline" { staff melody  lyrics words }

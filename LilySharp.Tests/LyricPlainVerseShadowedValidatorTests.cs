@@ -51,9 +51,9 @@ public class LyricPlainVerseShadowedValidatorTests
         // A is sung twice; [1.] and [2.] cover both occurrences, so the plain
         // "zz zz zz zz" line can never render.
         Assert.True(PlainShadowed(Melody + """
-            lyrics w { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
             form main { A A }
-            score main { staff melody with lyrics w }
+            score main { staff melody  lyrics w }
             """));
     }
 
@@ -63,9 +63,9 @@ public class LyricPlainVerseShadowedValidatorTests
         // A is sung three times; [1.] and [2.] cover the first two, so the third
         // occurrence falls back to the plain line — it is used, not shadowed.
         Assert.False(PlainShadowed(Melody + """
-            lyrics w { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
             form main { A A A }
-            score main { staff melody with lyrics w }
+            score main { staff melody  lyrics w }
             """));
     }
 
@@ -74,9 +74,9 @@ public class LyricPlainVerseShadowedValidatorTests
     {
         // No brackets at all: the plain line repeats under every occurrence as before.
         Assert.False(PlainShadowed(Melody + """
-            lyrics w { section A { do re mi fa | } }
+            lyrics w sings melody { section A { do re mi fa | } }
             form main { A A }
-            score main { staff melody with lyrics w }
+            score main { staff melody  lyrics w }
             """));
     }
 }

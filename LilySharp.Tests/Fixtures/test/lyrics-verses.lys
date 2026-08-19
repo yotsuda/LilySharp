@@ -16,5 +16,5 @@ section Main {
 form main { Main }
 
 score main "lyrics-verses" {
-  staff melody with lyrics words
+  staff melody  lyrics words
 }

@@ -11,9 +11,9 @@ part lh { clef bass }
 section Main {
   rh { a4 a a a | }
   lh { a,,4 a,, a,, a,, | }
-  chords { f1 | }
+  chords prog { f1 | }
 }
 
 form main { ~Main }
 
-score main { grandStaff { staff rh staff lh } }
+score main { chords prog  grandStaff { staff rh staff lh } }

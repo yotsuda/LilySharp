@@ -538,31 +538,6 @@ internal sealed partial class Parser
         return new SyntaxToken(SyntaxKind.Identifier, "", null, null);
     }
 
-    /// <summary>
-    /// Expect the NAME after <c>with chords</c> / <c>with lyrics</c>. Lyrics and
-    /// chords are named symbols in Lily#: a score attaches them by the name the
-    /// block was given, so the name is required. When it is missing this reports a
-    /// clause-specific message anchored ON the <c>chords</c>/<c>lyrics</c> keyword
-    /// (span <paramref name="keywordInkStart"/>/<paramref name="keywordInkLength"/>)
-    /// — the plain <see cref="ExpectPartName"/> would instead land its opaque
-    /// "Expected a name, found 'CloseBrace'" on the score's closing brace, since a
-    /// trailing bare <c>with lyrics</c> leaves the next token a whole line away.
-    /// </summary>
-    private SyntaxToken ExpectAttachmentName(SyntaxKind attachKind, int keywordInkStart, int keywordInkLength)
-    {
-        if (IsPartNameStart())
-            return Advance();
-
-        string word = attachKind == SyntaxKind.LyricsKeyword ? "lyrics" : "chords";
-        _diagnostics.Error(new TextSpan(keywordInkStart, keywordInkLength),
-            DiagnosticCodes.ExpectedToken,
-            $"'with {word}' needs a name: name the block '{word} NAME {{ … }}' and "
-            + $"reference it here as 'with {word} NAME'.");
-
-        // Zero-width missing name; the render item recovers and the staff still parses.
-        return new SyntaxToken(SyntaxKind.Identifier, "", null, null);
-    }
-
     private GreenNode? ParseRenderItem()
     {
         return Current.Kind switch
@@ -627,24 +602,31 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
             tokens.Add(Advance());
 
-        // Attachments compose with the single operator `with X`, repeatable and in
-        // any order: `with chords NAME [as roman|both|names]` (symbols above the staff)
-        // and `with lyrics NAME` (syllables note-aligned below the staff). The tokens
-        // are read positionally by RenderSpecParser.ParseStaff. `with lyrics` takes no
-        // `as` selector; multiple `with lyrics` stack as verses.
+        // `with chords NAME` / `with lyrics NAME` clauses were REMOVED (user
+        // decision, 2026-08-19, before the first tag — score = a vertical stack
+        // of bands: a score attaches a band by ORDER, not by clause). The old
+        // spelling is reported with its replacement and its tokens are KEPT on
+        // the node, width-preserving, so later source offsets do not shift.
         while (Check(SyntaxKind.WithKeyword)
             && Peek(1)?.Kind is SyntaxKind.ChordsKeyword or SyntaxKind.LyricsKeyword)
         {
+            bool lyrics = Peek(1)!.Kind == SyntaxKind.LyricsKeyword;
+            string name = Peek(2) is { Kind: var k } t && IsPartNameKind(k) ? t.Text : "NAME";
+            _diagnostics.Error(
+                new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                DiagnosticCodes.WithClauseRemoved,
+                lyrics
+                    ? $"'with lyrics' was removed - a score stacks bands in order: write "
+                      + $"'lyrics {name}' as its own item after this staff (verses in "
+                      + "written order)."
+                    : $"'with chords' was removed - a score stacks bands in order: write "
+                      + $"'chords {name}' as its own item before this staff.");
+
             tokens.Add(Advance()); // with
-            var attachKind = Current.Kind;
-            // Ink span of the `chords` / `lyrics` keyword, captured before it is
-            // consumed, so a missing name can be reported ON the keyword.
-            int kwInk = _textPosition + Current.LeadingTriviaWidth;
-            int kwLen = Current.Text.Length;
             tokens.Add(Advance()); // chords | lyrics
-            tokens.Add(ExpectAttachmentName(attachKind, kwInk, kwLen));
-            if (attachKind == SyntaxKind.ChordsKeyword)
-                ConsumeAsSelector(tokens); // chords only: `... as roman | both | names`
+            if (IsPartNameStart())
+                tokens.Add(Advance()); // NAME
+            ConsumeAsSelector(tokens); // tolerate a trailing `as roman|both|names`
         }
 
         return new StaffRenderGreen([.. tokens]);

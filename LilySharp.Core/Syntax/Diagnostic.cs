@@ -170,7 +170,13 @@ public sealed class DiagnosticBag
 /// <c>LYS0001</c> UnexpectedToken · <c>LYS0005</c> InvalidNumber · <c>LYS0013</c> the
 /// removed <c>version</c> directive · <c>LYS1002</c> DuplicateVariable · <c>LYS1003</c>
 /// InvalidPitch · <c>LYS1006</c> UndefinedPhrase · <c>LYS1015</c> MultipleFormDeclarations
-/// · <c>LYS2003</c> NoTimeSignature · <c>LYS8007</c> FontOneLinerRemoved.
+/// · <c>LYS2003</c> NoTimeSignature · <c>LYS8007</c> FontOneLinerRemoved ·
+/// <c>LYS6009</c> LyricsAttachmentUnbound and <c>LYS6010</c> LyricsAttachmentWrongStaff
+/// (both guarded the <c>with lyrics</c> clause and died with it, 2026-08-19 — see
+/// <see cref="WithClauseRemoved"/>: at top level a bound row folds only onto the staff it
+/// sings, a row for another part is a legal independent band, an unbound row is the
+/// lead-sheet row; the surviving refusal is the group case,
+/// <see cref="GroupRowNotBoundToStaffAbove"/>).
 /// </para>
 /// <para>
 /// LYS8007 lived for one day. It refused the one-line <c>font "NAME"</c> and told the
@@ -518,6 +524,32 @@ public static class DiagnosticCodes
     /// </para>
     /// </remarks>
     public const string StrayItemToken = "LYS0030";
+
+    /// <summary>Syntax error: a <c>with chords NAME</c> / <c>with lyrics NAME</c> clause
+    /// on a staff or tab item. The clauses were REMOVED before the first tag (user
+    /// decision, 2026-08-19 — score = a vertical stack of bands): a score attaches a
+    /// band by ORDER, not by clause. The message spells the replacement — the lyrics
+    /// row goes after the staff (<c>staff vocal  lyrics ja</c>, verses in written
+    /// order), the chords row before it (<c>chords prog  staff melody</c>).</summary>
+    /// <remarks>
+    /// ⚠️ What the clause's nets caught moved with the spelling, not away from it
+    /// (HANDOFF §3 records the ledger): LYS6009/LYS6010 guarded attachment against
+    /// unbound and wrong-staff tracks, and both died with the clause — a row that
+    /// sings another part is now simply an independent band at its written place
+    /// (legal), and an unbound row is the lead-sheet row (legal). The one place a
+    /// misplaced row is still an ERROR is inside a staff group (LYS6012), where no
+    /// independent band exists to fall back to.
+    /// </remarks>
+    public const string WithClauseRemoved = "LYS0031";
+
+    /// <summary>Syntax error: a nameless <c>chords { … }</c> block. Removed before the
+    /// first tag (user decision, 2026-08-19): the nameless form associated by
+    /// CO-WRITING — "the part in the same section" — which is not written anywhere and
+    /// stopped being well-defined the moment a section held two parts (the
+    /// implementation hard-coded staff 0). Name the progression and place it:
+    /// <c>chords prog { … }</c> in the section, <c>chords prog</c> above the staff in
+    /// the score.</summary>
+    public const string NamelessChordsRemoved = "LYS0032";
 
     // Semantic errors (LYS1xxx)
 
@@ -894,16 +926,8 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string VoltaEndingWithoutRepeat = "LYS6008";
 
-    /// <summary>Render error: <c>staff X with lyrics N</c> where the track N sings
-    /// nothing — no <c>sings</c> declaration and its name matches neither the part nor
-    /// one of its voices. Lyrics bind to their OWN melody at the definition
-    /// (<c>lyrics N sings X { … }</c>); the score only places them (user decision,
-    /// 2026-08-19 — attachment-decides-association closed before the first tag).</summary>
-    public const string LyricsAttachmentUnbound = "LYS6009";
-
-    /// <summary>Render error: <c>staff X with lyrics N</c> where N sings a DIFFERENT
-    /// part — the association is the track's, and placement cannot re-decide it.</summary>
-    public const string LyricsAttachmentWrongStaff = "LYS6010";
+    // LYS6009 (LyricsAttachmentUnbound) and LYS6010 (LyricsAttachmentWrongStaff)
+    // are RETIRED — see the class remarks' retired-numbers list.
 
     /// <summary>Render error: a staff group (<c>grandStaff</c> / <c>staffGroup</c> /
     /// <c>choirStaff</c>) contains something other than a <c>staff</c> item or a

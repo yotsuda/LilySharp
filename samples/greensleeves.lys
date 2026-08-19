@@ -2,7 +2,7 @@
 //
 // ONE progression (`chords prog`), used TWICE without duplication:
 //   "greensleeves"      — melody staff with the chord symbols aligned above it
-//                         (`staff melody with chords prog`) and verse lyrics
+//                         (`chords prog` above the melody’s staff) and verse lyrics
 //   "greensleeves-grid" — the same progression as a staff-less chord grid
 title "Greensleeves"
 composer "Traditional"
@@ -66,7 +66,9 @@ section Chorus {
 form main { Verse Chorus }
 
 score main "greensleeves" {
-  staff melody with chords prog with lyrics words
+  chords prog
+  staff melody
+  lyrics words
 }
 
 score main "greensleeves-grid" {

@@ -18,5 +18,5 @@ section Main {
 
 form main { ~Main }
 
-score main { staff ~one with lyrics wa staff ~two with lyrics wb }
+score main { staff ~one  lyrics wa staff ~two  lyrics wb }
 

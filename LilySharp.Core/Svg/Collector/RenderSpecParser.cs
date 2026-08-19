@@ -169,33 +169,71 @@ public static class RenderSpecParser
     /// the two spellings were already one mechanism.
     /// </summary>
     /// <remarks>
-    /// Deliberately NOT folded, so each keeps its current reading:
+    /// A CHORDS row glues DOWN, and WHICH machinery carries it follows the regime,
+    /// because each was ported and measured separately:
     /// <list type="bullet">
-    /// <item>A CHORDS row — ⚠️ chords glue DOWN in LilyPond too, but here the
-    /// ROW is the literal port: <c>lyrics.chord-row.between-systems.*</c>
-    /// measured LilyPond putting the row INTO the lyric chain
+    /// <item>A LEADING chords row (no staff-like item above it) stays a ROW — the
+    /// loose-chain port: <c>lyrics.chord-row.between-systems.*</c> measured
+    /// LilyPond putting the system-opening row INTO the lyric chain
     /// (page-layout-problem.cc:948-990, ported 2026-07-27, residuals are font
     /// terms only), and folding it into the attached-chords engraver MOVES that
-    /// geometry away from LilyPond (measured: residual −0.002157 → +0.030400).
-    /// The row IS the adhesion for chords; there is nothing to fold it into.</item>
+    /// geometry away from LilyPond (measured: residual −0.002157 → +0.030400).</item>
+    /// <item>An INTERIOR chords row (a staff-like item above it, a staff or tab
+    /// below) folds into the staff below as its attached symbols — the engraver
+    /// port: the between-staves band placement reads no up-skyline, so an
+    /// unfolded interior row sat ON the rest another voice pushed out of the
+    /// staff below (ChordRowOnALowerStaff_ClearsARest…, measured 2026-08-19),
+    /// while the attached engraver's reservation clears it.</item>
+    /// </list>
+    /// Deliberately NOT folded, so each keeps its current reading:
+    /// <list type="bullet">
     /// <item>A lyrics row after a staff it does not sing — an independent band at
     /// its written place (the part sheet carrying another part's words).</item>
     /// <item>An unbound lyrics row — the even-spread lead-sheet row.</item>
     /// <item>A lyrics row after a tab staff: the attachment plumbing has never
     /// engraved syllables under a tab (the old clause grammar could not spell it),
     /// so the row stays a band rather than exercising an untrodden path.</item>
+    /// <item>An interior chords row whose next item already carries chords, or is
+    /// a group/condensed/combined item — it keeps its band.</item>
     /// <item>An intervening non-row item (an ossia, a condensed/combined staff)
-    /// closes the fold window — the band between breaks physical adjacency.</item>
+    /// closes the lyrics fold window — the band between breaks adjacency.</item>
     /// </list>
     /// The binding walks are CWT-cached per tree (<see cref="Music.LyricBindings"/>),
     /// and a score with no rows never reaches them — the per-keystroke spec parse
-    /// (IncrementalCompiler) pays one O(items) scan and nothing else.
+    /// (IncrementalCompiler) pays two O(items) scans and nothing else.
     /// </remarks>
     private static void FoldAdjacentRows(RenderDeclarationSyntax render, List<RenderItemSpec> items)
     {
         SyntaxNode root = render;
         while (root.Parent != null)
             root = root.Parent;
+
+        // Interior chords rows glue DOWN into the staff below (see remarks).
+        bool seenStaffLike = false;
+        for (int i = 0; i < items.Count; i++)
+        {
+            bool staffLike = items[i] is SingleStaffSpec or TabStaffSpec
+                or GrandStaffRenderSpec or CondensedStaffSpec or CombinedStaffSpec;
+            if (items[i] is ChordRowSpec row && seenStaffLike && i + 1 < items.Count)
+            {
+                switch (items[i + 1])
+                {
+                    case SingleStaffSpec { Staff.WithChords: null } s:
+                        items[i + 1] = new SingleStaffSpec(s.Staff with
+                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode });
+                        items.RemoveAt(i);
+                        i--;
+                        continue;
+                    case TabStaffSpec { WithChords: null } tab:
+                        items[i + 1] = tab with
+                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode };
+                        items.RemoveAt(i);
+                        i--;
+                        continue;
+                }
+            }
+            seenStaffLike |= staffLike;
+        }
 
         // Lyrics glue UP. `open` is the staff-like item still accepting verses;
         // a fold keeps it open (the next row is the next verse), anything that
@@ -456,51 +494,14 @@ public static class RenderSpecParser
         }
         if (toks.Count == 0) return null;
 
-        // Scan every `with X` clause (repeatable, any order): `with chords NAME
-        // [as roman|both|names]` and `with lyrics NAME`. Everything before the first
-        // `with` is the [clef?] part [display]. `with lyrics` stacks (verses).
-        string? withChords = null;
-        var chordDisplay = ChordDisplayMode.Names;
-        var withLyrics = ImmutableArray.CreateBuilder<string>();
+        // A removed `with …` clause (LYS0031) keeps its tokens on the node for
+        // width only — cut them here so the error-recovery render does not read
+        // the clause's NAME as a display-name override. The spec's
+        // WithChords/WithLyrics are set by the ROW FOLD alone (FoldAdjacentRows,
+        // ParseGrandStaff), never from clause tokens.
         int firstWith = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
-        if (firstWith >= 1)
-        {
-            int i = firstWith;
-            while (i < toks.Count)
-            {
-                if (toks[i].Kind != SyntaxKind.WithKeyword || i + 2 >= toks.Count)
-                {
-                    i++;
-                    continue;
-                }
-                var kind = toks[i + 1].Kind;   // chords | lyrics
-                string name = toks[i + 2].Text;
-                if (kind == SyntaxKind.ChordsKeyword)
-                {
-                    withChords = name;
-                    if (i + 4 < toks.Count && toks[i + 3].Text == "as")
-                    {
-                        chordDisplay = ParseChordMode(toks[i + 4].Text);
-                        i += 5;
-                    }
-                    else
-                    {
-                        i += 3;
-                    }
-                }
-                else if (kind == SyntaxKind.LyricsKeyword)
-                {
-                    if (name.Length > 0)
-                        withLyrics.Add(name);
-                    i += 3;
-                }
-                else
-                {
-                    i++;
-                }
-            }
+        if (firstWith >= 0)
             toks = toks.GetRange(0, firstWith);
-        }
         if (toks.Count == 0) return null;
 
         // [clef?] part [bare display name] — the clef is a distinct keyword
@@ -565,10 +566,11 @@ public static class RenderSpecParser
             RemoveEmpty: removeEmpty is "true" or "all",
             RemoveFirst: removeEmpty is "all",
             Lines: lines,
-            WithChords: withChords,
             NameSuppressed: nameSuppressed,
-            ChordDisplay: chordDisplay,
-            WithLyrics: withLyrics.ToImmutable(),
+            // Empty, not default: readers Assert/iterate without an IsDefault
+            // guard. The row fold (FoldAdjacentRows / ParseGrandStaff) is the
+            // only writer.
+            WithLyrics: ImmutableArray<string>.Empty,
             PedalStyle: pedalStyle);
     }
 
@@ -582,25 +584,17 @@ public static class RenderSpecParser
 
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
     {
-        // [tuning?] part [as numbers|full] [with chords NAME [as roman|both|names]];
-        // braces (if any) are skipped.
+        // [tuning?] part [as numbers|full]; braces (if any) are skipped.
         var toks = RenderTargetTokens(tab);
         if (toks.Count == 0) return null;
 
-        // `with chords NAME [as roman|both|names]` — a chord attachment, same as the
-        // notation-staff form. Split it off FIRST so the tab-style `as` below can't
-        // grab the chord-display `as` (both selectors can coexist:
-        // `tab m as numbers with chords h as both`).
-        string? withChords = null;
-        var chordDisplay = ChordDisplayMode.Names;
+        // A removed `with chords …` clause (LYS0031) keeps its tokens for width
+        // only — cut them BEFORE the tab-style `as` scan below so the clause's
+        // own `as roman|both|names` cannot be read as the tab style. A chord row
+        // above the tab (`chords NAME  tab part`) is the spelling now.
         int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
-        if (wi >= 0 && toks.Count >= wi + 3)
-        {
-            withChords = toks[wi + 2].Text; // [with][chords][NAME]
-            if (toks.Count >= wi + 5 && toks[wi + 3].Text == "as")
-                chordDisplay = ParseChordMode(toks[wi + 4].Text);
+        if (wi >= 0)
             toks = toks.GetRange(0, wi);
-        }
         if (toks.Count == 0) return null;
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
@@ -639,7 +633,7 @@ public static class RenderSpecParser
         var sourceClef = GetPartClef(tab, voiceName) ?? ClefType.Treble;
         var transposition = ResolvePartTransposition(tab, voiceName, tuning);
         var staffSpec = new StaffSpec(sourceClef, voiceName);
-        return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly, withChords, chordDisplay);
+        return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly);
     }
 
     /// <summary>

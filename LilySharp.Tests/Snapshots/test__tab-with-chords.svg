@@ -7,24 +7,24 @@
   <rect x="0" y="0" width="119.50" height="25.59" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text class="music" x="0.60" y="16.10" font-size="4.00"></text>
-  <text class="music" x="4.92" y="16.10" font-size="4.00" data-pos="273"></text>
-  <rect x="20.64" y="12.35" width="0.19" height="7.50" data-pos="356"/>
-  <rect x="34.00" y="12.35" width="0.19" height="7.50" data-pos="371"/>
-  <text x="9.27" y="14.91" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="343">1</text>
+  <text class="music" x="4.92" y="16.10" font-size="4.00" data-pos="260"></text>
+  <rect x="20.64" y="12.35" width="0.19" height="7.50" data-pos="343"/>
+  <rect x="34.00" y="12.35" width="0.19" height="7.50" data-pos="358"/>
+  <text x="9.27" y="14.91" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="330">1</text>
   <line x1="9.27" y1="15.14" x2="9.27" y2="19.64" stroke="#000000" stroke-width="0.130"/>
-  <text x="12.52" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="347">0</text>
+  <text x="12.52" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="334">0</text>
   <line x1="12.52" y1="13.64" x2="12.52" y2="18.14" stroke="#000000" stroke-width="0.130"/>
-  <text x="15.78" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="350">3</text>
+  <text x="15.78" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="337">3</text>
   <line x1="15.78" y1="13.64" x2="15.78" y2="18.14" stroke="#000000" stroke-width="0.130"/>
-  <text x="18.53" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="353">0</text>
+  <text x="18.53" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="340">0</text>
   <line x1="18.53" y1="13.64" x2="18.53" y2="18.14" stroke="#000000" stroke-width="0.130"/>
-  <text x="22.57" y="13.41" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="358">1</text>
+  <text x="22.57" y="13.41" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="345">1</text>
   <line x1="22.57" y1="13.64" x2="22.57" y2="18.14" stroke="#000000" stroke-width="0.130"/>
-  <text x="25.83" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="361">5</text>
+  <text x="25.83" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="348">5</text>
   <line x1="25.83" y1="13.64" x2="25.83" y2="18.14" stroke="#000000" stroke-width="0.130"/>
-  <text x="29.08" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="364">8</text>
+  <text x="29.08" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="351">8</text>
   <line x1="29.08" y1="13.64" x2="29.08" y2="18.14" stroke="#000000" stroke-width="0.130"/>
-  <text x="31.83" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="368">5</text>
+  <text x="31.83" y="13.39" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="355">5</text>
   <line x1="31.83" y1="13.64" x2="31.83" y2="18.14" stroke="#000000" stroke-width="0.130"/>
   <line x1="0.00" y1="12.35" x2="11.67" y2="12.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="13.38" y1="12.35" x2="14.92" y2="12.35" stroke="#000000" stroke-width="0.100"/>
@@ -40,9 +40,9 @@
   <line x1="0.00" y1="16.85" x2="34.19" y2="16.85" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="18.35" x2="34.19" y2="18.35" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="19.85" x2="34.19" y2="19.85" stroke="#000000" stroke-width="0.100"/>
-  <text x="8.62" y="10.67" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="406">C</text>
-  <text x="21.92" y="10.67" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="411">F</text>
-  <rect x="0.30" y="7.49" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="331"/>
-  <text x="1.34" y="9.69" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="331">A</text>
+  <text x="8.62" y="10.77" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="393">C</text>
+  <text x="21.92" y="10.77" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="398">F</text>
+  <rect x="0.30" y="3.01" width="2.07" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="318"/>
+  <text x="1.34" y="5.21" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="318">A</text>
   </g>
 </svg>

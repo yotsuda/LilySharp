@@ -1435,8 +1435,8 @@ public sealed partial class MeasureCollector
                 _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
-        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionState.StartMeasure, _currentStaffIndex);
-        // `staff NAME with chords CHORDPART [as roman|both]` on a single-staff score.
+        // (The nameless `chords { }` auto-attach is gone — LYS0032. A chord part
+        // renders only where a score places its row.)
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
@@ -1828,11 +1828,9 @@ public sealed partial class MeasureCollector
         }
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
-        // Anonymous chords{} on a multi-staff score go above the TOP staff (index
-        // 0), not whatever staff the collect loop ended on — _currentStaffIndex
-        // still holds the LAST staff here, which hung the names between the
-        // staves of a grand staff (corpus: chord-names-in-grand-staff.ly).
-        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionState.StartMeasure, staffIndex: 0);
+        // (The nameless `chords { }` auto-attach is gone — LYS0032. It was the one
+        // band a score never placed, and its "co-written staff" association was a
+        // hard-coded staff 0 on any multi-staff score.)
         foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff, attachedMode);
@@ -2470,17 +2468,16 @@ public sealed partial class MeasureCollector
             }
         }
 
-        // Explicit `staff NAME with lyrics L` attach — no implicit auto-attach (see Collect).
-        // Named blocks whose name is a `voice NAME` bind to that voice; the rest align to voice 1.
+        // Explicit attach by band order (`staff NAME  lyrics L`, folded into
+        // WithLyrics) — no implicit auto-attach (see Collect). Named blocks whose
+        // name is a `voice NAME` bind to that voice; the rest align to voice 1.
         if (attachedLyricParts is { Count: > 0 })
             _lyricsCollector.CollectAttached(root, attachedLyricParts, track0, 0,
                 _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
-        _chordNameCollector.CollectBlocks(root, _sectionState.StartMeasure, _currentStaffIndex);
-        // `staff NAME with chords CHORDPART [as roman|both]` on a multi-voice single
-        // staff — collected here (after CollectBlocks, matching the single-voice order),
-        // because Collect's own CollectAttached is skipped by the multi-voice early return.
+        // Attached chords on a multi-voice single staff — collected here because
+        // Collect's own CollectAttached is skipped by the multi-voice early return.
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
                 root, attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,

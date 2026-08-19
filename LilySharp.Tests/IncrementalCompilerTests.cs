@@ -265,14 +265,14 @@ public class IncrementalCompilerTests
             form main { A }
             score main "x" {
               grandStaff {
-                staff sop "Soprano" with lyrics verse
-                staff alt "Alto" with lyrics verse
-                staff ten "Tenor" with lyrics verse
-                staff bas "Bass" with lyrics verse
+                staff sop "Soprano"  lyrics verse
+                staff alt "Alto"  lyrics verse
+                staff ten "Tenor"  lyrics verse
+                staff bas "Bass"  lyrics verse
               }
             }
             """;
-        const string line = "    staff bas \"Bass\" with lyrics verse";
+        const string line = "    staff bas \"Bass\"  lyrics verse";
         int at = src.IndexOf(line, System.StringComparison.Ordinal);
         Assert.True(at >= 0, "anchor line not found");
 

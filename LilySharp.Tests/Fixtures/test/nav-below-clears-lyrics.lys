@@ -13,4 +13,4 @@ lyrics words sings melody {
   section B { up up up up | }
 }
 form main { A |: B :| dc A "A2" }
-score main { staff melody with lyrics words }
+score main { staff melody  lyrics words }

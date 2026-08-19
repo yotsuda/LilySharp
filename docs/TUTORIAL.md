@@ -155,11 +155,12 @@ tuplet 5/4 { c16 d e f g } a4 b c' |
 
 ## Lyrics
 
-A `lyrics NAME { … }` track sits in the section beside the part it sings; the score
-attaches it under the staff with `staff X with lyrics NAME`. The `sings` word is
-the binding: the words belong to that melody wherever the score places them —
-write `lyrics words` alone among the score items and you get ONLY the words, at
-the melody's rhythm, without the melody's staff (chorus words on a horn part).
+A `lyrics NAME { … }` track sits in the section beside the part it sings; the
+score places it as a `lyrics NAME` row directly under the staff. The `sings`
+word is the binding: the words belong to that melody wherever the score places
+them — write the row under another part's staff (or alone) and you get ONLY the
+words, at the melody's rhythm, without the melody's staff (chorus words on a
+horn part).
 
 ```
 part melody
@@ -171,7 +172,7 @@ section Verse {
   }
 }
 form main { Verse }
-score main { staff melody with lyrics words }
+score main { staff melody  lyrics words }
 ```
 
 ## Output Formats

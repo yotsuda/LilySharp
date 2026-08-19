@@ -16,7 +16,7 @@ section Main {
     <e f a c'>4@text(":maj7/e").down <f, a c' e'>4@text(":maj7/f").down <g, f a c' e'>2@text(":maj7/g").down |
     <e f a c' e'>4@text(":maj7/+e").down <f, f a c' e'>4@text(":maj7/+f").down <g, f a c' e'>2@text(":maj7/+g").down |
   }
-  chords {
+  chords prog {
     f4:maj7/e f4:maj7/f f2:maj7/g |
     f4:maj7/+e f4:maj7/+f f2:maj7/+g |
   }
@@ -24,4 +24,4 @@ section Main {
 
 form main { ~Main }
 
-score main { staff v }
+score main { chords prog  staff v }

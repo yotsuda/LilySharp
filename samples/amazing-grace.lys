@@ -2,7 +2,7 @@
 //
 // Lily# features on display:
 //   partial 4            — the one-beat pickup, declared once
-//   staff ... with chords — ONE progression above the staff AND as a grid
+//   chords prog above the staff — ONE progression above the staff AND as a grid
 //   lyrics ~             — melisma: the syllable holds while notes move on
 title "Amazing Grace"
 composer "Traditional / J. Newton"
@@ -41,7 +41,9 @@ section Verse {
 form main { Verse }
 
 score main "amazing-grace" {
-  staff melody with chords prog with lyrics words
+  chords prog
+  staff melody
+  lyrics words
 }
 
 score main "amazing-grace-grid" {

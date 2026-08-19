@@ -91,19 +91,27 @@ public static partial class ChordHarmonizer
         return (AttachWithChords(sb.ToString(), tracks[0].MelodyBlock.PartName.Text), null);
     }
 
-    // Wire the melody staff to the chords once: `staff X` -> `staff X with chords harmony`.
+    // Wire the melody staff to the chords once, by band order:
+    // `staff X` -> `chords harmony  staff X` (the row directly above the staff).
     private static string AttachWithChords(string text, string melodyName)
     {
-        // Match any `staff NAME` (not already `… with`) and pick the melody's, rather than
-        // building a per-name pattern — keeps the regex source-generated (compile-time).
+        // Already wired (a `chords harmony` ROW — the reference, not the block —
+        // exists): re-running the command must not stack a second row.
+        if (HarmonyRowRegex().IsMatch(text))
+            return text;
+        // Match any `staff NAME` and pick the melody's, rather than building a
+        // per-name pattern — keeps the regex source-generated (compile-time).
         foreach (Match staff in StaffDeclRegex().Matches(text))
             if (staff.Groups[1].Value == melodyName)
-                return text.Insert(staff.Index + staff.Length, " with chords harmony");
+                return text.Insert(staff.Index, "chords harmony  ");
         return text;
     }
 
-    [GeneratedRegex(@"\bstaff\s+(\w+)\b(?!\s+with\b)")]
+    [GeneratedRegex(@"\bstaff\s+(\w+)\b")]
     private static partial Regex StaffDeclRegex();
+
+    [GeneratedRegex(@"\bchords\s+harmony\b(?!\s*\{)")]
+    private static partial Regex HarmonyRowRegex();
 
     [GeneratedRegex(@"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)")]
     private static partial Regex KeyDeclRegex();

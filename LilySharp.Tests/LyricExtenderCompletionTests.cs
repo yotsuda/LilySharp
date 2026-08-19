@@ -41,12 +41,12 @@ public class LyricExtenderCompletionTests
             octave absolute
             time 4/4
             part v { }
-            lyrics w { section Main { Ah __ | | | } }
+            lyrics w sings v { section Main { Ah __ | | | } }
             section Main {
               v { g1( | c) | d | }
             }
             form main { ~Main }
-            score main { staff ~v with lyrics w }
+            score main { staff ~v  lyrics w }
             """);
 
         // Note columns: whole-note glyphs with data-pos, one per measure.
@@ -93,12 +93,12 @@ public class LyricExtenderCompletionTests
             octave absolute
             time 4/4
             part v { }
-            lyrics w { section Main { c d e effffffffffff __ | e d c | } }
+            lyrics w sings v { section Main { c d e effffffffffff __ | e d c | } }
             section Main {
               v { c4 d e f~ | break f4 e d c | }
             }
             form main { ~Main }
-            score main { staff ~v with lyrics w }
+            score main { staff ~v  lyrics w }
             """);
 
         // Extender segments: thin (0.100) horizontal lines below the first staff.

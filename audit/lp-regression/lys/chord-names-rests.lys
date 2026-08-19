@@ -10,9 +10,9 @@ part v { clef treble }
 
 section Main {
   v { r1 | s1 | R1 | }
-  chords { r1 | s1 | R1 | }
+  chords prog { r1 | s1 | R1 | }
 }
 
 form main { ~Main }
 
-score main { staff v }
+score main { chords prog  staff v }

@@ -36,7 +36,7 @@ public class ChordPartSectionsTests
         section A { melody { c4 c g' g | a a g2 | } chords harmony { c1 | f1 | } }
         section B { melody { g'4 g f f | } chords harmony { c1 | } }
         form main { A B }
-        score main "s" { staff melody with chords harmony }
+        score main "s" { chords harmony  staff melody }
         """;
 
     private const string PartMajor = """
@@ -51,7 +51,7 @@ public class ChordPartSectionsTests
           section B { c1 | }
         }
         form main { A B }
-        score main "s" { staff melody with chords harmony }
+        score main "s" { chords harmony  staff melody }
         """;
 
     [Fact]
@@ -91,7 +91,7 @@ public class ChordPartSectionsTests
             }
             chords harmony { section A { c1 | f1 | } section B { g1:7 | } }
             form main { A B A "A2" }
-            score main { staff melody with chords harmony }
+            score main { chords harmony  staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", null, "harmony");
         var byMeasure = score.ChordNames

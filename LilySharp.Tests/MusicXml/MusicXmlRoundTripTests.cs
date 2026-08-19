@@ -216,7 +216,7 @@ public class MusicXmlRoundTripTests
 
             form main { A }
 
-            score main "lead-sheet" { staff melody with lyrics words }
+            score main "lead-sheet" { staff melody  lyrics words }
             """);
     }
 
@@ -236,7 +236,7 @@ public class MusicXmlRoundTripTests
               lyrics words sings melody { Mu- sic fills the | }
             }
             form main { A }
-            score main { staff melody with lyrics words }
+            score main { staff melody  lyrics words }
             """)).ToXml();
 
         var firstNote = xml.Descendants("note").First();

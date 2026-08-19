@@ -41,7 +41,7 @@ public class FindReferencesTests
         "chords harm { section Verse { c1 } }\n" +
         "form whole { Verse }\n" +
         "score whole {\n" +
-        "  staff tune with lyrics singwords\n" +
+        "  staff tune  lyrics singwords\n" +
         "  chords harm\n" +
         "}\n";
 

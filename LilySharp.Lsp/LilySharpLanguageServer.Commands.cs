@@ -59,8 +59,8 @@ public sealed partial class LilySharpLanguageServer
     /// Auto-harmonizes each section's melody and returns the edits that add a diatonic
     /// chords part: a <c>chords harmony { … }</c> block after every section's melody
     /// part-block (each aligned to its own section, independent of the structure
-    /// block), and <c>with chords harmony</c> appended to the melody's staff in the
-    /// score. Powers the "Lily#: Add Chord Track" editor command.
+    /// block), and a <c>chords harmony</c> row placed directly above the melody's
+    /// staff in the score. Powers the "Lily#: Add Chord Track" editor command.
     /// </summary>
     [JsonRpcMethod("lilysharp/addChordTrack", UseSingleObjectParameterDeserialization = true)]
     public AddChordTrackResponse AddChordTrack(SvgParams @params)

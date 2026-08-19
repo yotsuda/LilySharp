@@ -1,7 +1,6 @@
-// `staff NAME with chords CHORDPART`: a NAMED chord part's symbols align
-// above the staff - the same progression can also feed a lead-sheet row
-// (score "grid"), written once. Audit follow-up for the nameless/named
-// duplication problem.
+// A `chords NAME` row directly above a staff: the NAMED chord part's symbols
+// align above that staff - the same progression can also feed a lead-sheet row
+// (score "grid"), written once.
 part melody { clef treble }
 
 section Main {
@@ -17,7 +16,8 @@ section Main {
 form main { Main }
 
 score main "chords-attached" {
-  staff melody with chords prog
+  chords prog
+  staff melody
 }
 
 score main "chords-attached-grid" {

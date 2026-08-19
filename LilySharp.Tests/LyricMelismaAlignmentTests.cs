@@ -42,9 +42,9 @@ public class LyricMelismaAlignmentTests
     private const string Source = @"
 time 4/4
 part v { section A { c4 c c16( d e f) g4 | } }
-lyrics w { section A { ha ha looong __ ~ ~ ho | } }
+lyrics w sings v { section A { ha ha looong __ ~ ~ ho | } }
 form main { A }
-score main { staff v with lyrics w }
+score main { staff v  lyrics w }
 ";
 
     [Fact]

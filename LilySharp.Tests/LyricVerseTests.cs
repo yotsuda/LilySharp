@@ -49,7 +49,7 @@ section Main {
   lyrics melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form main { Main }
-score main ""x"" { staff melody with lyrics melody }
+score main ""x"" { staff melody  lyrics melody }
 ");
         var v1 = score.Lyrics.Where(l => l.VerseNumber == 1).ToList();
         var v2 = score.Lyrics.Where(l => l.VerseNumber == 2).ToList();
@@ -172,7 +172,7 @@ score main ""x"" { lyrics verse }
 time 4/4
 section Main { melody { c'4 d e f | } lyrics melody { Mu- sic is here | } }
 form main { Main }
-score main ""x"" { staff melody with lyrics melody }
+score main ""x"" { staff melody  lyrics melody }
 ");
         var mu = noteBound.Lyrics.Single(l => l.Text.StartsWith("Mu"));
         Assert.Equal("Mu", mu.Text);
@@ -222,7 +222,7 @@ section Main {
   lyrics melody { | | Twin- kle twin- kle | lit- tle star | }
 }
 form main { Main }
-score main ""x"" { staff melody with lyrics melody }
+score main ""x"" { staff melody  lyrics melody }
 ");
         Assert.Equal(1, score.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
         Assert.Equal(2, score.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
@@ -243,7 +243,7 @@ section Main {
   lyrics melody { | Twin- kle twin- kle | lit- tle star | }
 }
 form main { Main }
-score main ""x"" { staff melody with lyrics melody }
+score main ""x"" { staff melody  lyrics melody }
 ");
         Assert.Equal(0, fenced.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
         Assert.Equal(1, fenced.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
@@ -256,7 +256,7 @@ section Main {
   lyrics melody { Twin- kle twin- kle | lit- tle star | }
 }
 form main { Main }
-score main ""x"" { staff melody with lyrics melody }
+score main ""x"" { staff melody  lyrics melody }
 ");
         Assert.Equal(
             plain.Lyrics.Select(l => (l.Text, l.MeasureIndex, l.ItemIndex)),
@@ -274,7 +274,7 @@ section Main {
   lyrics melody { Aa bb cc dd | | }
 }
 form main { Main }
-score main ""x"" { staff melody with lyrics melody }
+score main ""x"" { staff melody  lyrics melody }
 ");
         Assert.NotEmpty(score.Lyrics);
         Assert.All(score.Lyrics, l => Assert.Equal(0, l.MeasureIndex));

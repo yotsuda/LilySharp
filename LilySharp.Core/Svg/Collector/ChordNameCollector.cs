@@ -115,26 +115,8 @@ internal sealed class ChordNameCollector
         }
     }
 
-    /// <summary>
-    /// Collects chord symbols from every <c>chordnames { … }</c> block. Each block is
-    /// a parallel stream: entries are walked, split at barlines into measures, and each
-    /// chord's start TIMING within its measure is accumulated from the entry durations
-    /// (default quarter, carried). The symbol is auto-named from the resolved
-    /// <see cref="LilySharp.Core.Music.ChordStructure"/>; an unknown quality token
-    /// falls back to "root + raw text" so any name still displays.
-    /// LILYPOND-REF: ly/engraver-init.ly ChordNames context; scm/chord-entry.scm.
-    /// </summary>
-    public void CollectBlocks(
-        SyntaxNode root, IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex)
-    {
-        // Nameless chords { … } blocks (the former chordnames keyword, folded
-        // into chords pre-release): symbols align above the co-written staff.
-        // A nameless block has no placement selector, so it shows absolute names.
-        CollectAligned(
-            root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>()
-                .Where(b => b.PartName == null),
-            sectionStartMeasure, staffIndex, ChordDisplayMode.Names);
-    }
+    // (CollectBlocks — the nameless `chords { }` auto-attach — was removed with the
+    // form itself, LYS0032: a chord part renders only where a score places it.)
 
     /// <summary>
     /// Aligns a NAMED chord part's symbols above a staff
@@ -344,7 +326,12 @@ internal sealed class ChordNameCollector
         void ProcessRun(IEnumerable<SyntaxNode> items, int startMeasure)
         {
             int localMeasure = 0;
-            var pending = new List<ChordEntrySyntax>();
+            // Chord entries AND rests: r / R print the no-chord symbol at their
+            // moment, s prints nothing; all three advance the timing like an entry
+            // (EmitChordPartMeasure). Same rule as the attached path.
+            // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
+            //   — general-rest-event (r and R, not s) → currentChordText = noChordSymbol.
+            var pending = new List<SyntaxNode>();
             var pendingStart = BarlineType.None;
 
             // Close the current measure with the given end barline (None = trailing
@@ -400,10 +387,10 @@ internal sealed class ChordNameCollector
                         Commit(t);
                     }
                 }
-                else if (item is ChordEntrySyntax entry)
+                else if (item is ChordEntrySyntax or RestSyntax)
                 {
                     atRunStart = false;
-                    pending.Add(entry);
+                    pending.Add(item);
                 }
             }
             // A trailing measure with no closing barline still counts.
@@ -455,10 +442,16 @@ internal sealed class ChordNameCollector
     /// explicit duration present), carry-forward explicit durations.
     /// </summary>
     private ImmutableArray<MusicItem> EmitChordPartMeasure(
-        List<ChordEntrySyntax> entries, int measureIndex, int staffIndex, int timeBeats, int timeBeatType,
+        List<SyntaxNode> entries, int measureIndex, int staffIndex, int timeBeats, int timeBeatType,
         ChordDisplayMode mode = ChordDisplayMode.Names)
     {
-        bool anyExplicit = entries.Any(e => e.Duration != null);
+        static DurationSyntax? DurationOf(SyntaxNode n) => n switch
+        {
+            ChordEntrySyntax e => e.Duration,
+            RestSyntax r => r.Duration,
+            _ => null,
+        };
+        bool anyExplicit = entries.Any(e => DurationOf(e) != null);
         ImmutableArray<Fraction>? table = anyExplicit
             ? null
             : ChordRhythm.DefaultDurations(entries.Count, timeBeats, timeBeatType);
@@ -468,21 +461,39 @@ internal sealed class ChordNameCollector
         var carry = Fraction.Quarter;
         for (int i = 0; i < entries.Count; i++)
         {
-            var entry = entries[i];
-            var (text, structure) = ResolveChordEntry(entry);
-            _items.Add(new ChordNameItem(
-                text, measureIndex, itemIndex: -1, entry.Root.Position,
-                staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
-                isChordRow: true)
+            int position;
+            int measureCount = 1;
+            if (entries[i] is ChordEntrySyntax entry)
             {
-                RomanText = Roman(structure, measureIndex),
-                DisplayMode = mode,
-            });
+                position = entry.Root.Position;
+                var (text, structure) = ResolveChordEntry(entry);
+                _items.Add(new ChordNameItem(
+                    text, measureIndex, itemIndex: -1, position,
+                    staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
+                    isChordRow: true)
+                {
+                    RomanText = Roman(structure, measureIndex),
+                    DisplayMode = mode,
+                });
+            }
+            else
+            {
+                // r / R print "N.C." at their moment; s prints nothing. All three
+                // advance the timing (see ProcessRun's remark).
+                var rest = (RestSyntax)entries[i];
+                position = rest.RestToken.Position;
+                measureCount = rest.MeasureCount;
+                if (rest.RestToken.Text != "s")
+                    _items.Add(new ChordNameItem(
+                        "N.C.", measureIndex, itemIndex: -1, position,
+                        staffIndex: staffIndex, useTiming: true, timing: timing,
+                        isChordRow: true));
+            }
 
             Fraction dur;
-            if (entry.Duration != null)
+            if (DurationOf(entries[i]) is { } d)
             {
-                dur = entry.Duration.ToFraction();
+                dur = d.ToFraction();
                 carry = dur;
             }
             else if (table != null && i < table.Value.Length)
@@ -493,9 +504,10 @@ internal sealed class ChordNameCollector
             {
                 dur = carry; // explicit-mode remainder, or unsupported meter/count
             }
+            dur *= new Fraction(measureCount, 1);
             // BaseDuration = the resolved fraction (Dots 0): only its Duration drives
             // the spacing spring, so a dotted/compound value spaces correctly too.
-            rests.Add(new RestItem(dur, 0, entry.Root.Position) { IsSpacer = true });
+            rests.Add(new RestItem(dur, 0, position) { IsSpacer = true });
             timing += dur;
         }
         return rests.MoveToImmutable();

@@ -131,22 +131,23 @@ public class ParserTests
     [Theory]
     [InlineData("lyrics")]
     [InlineData("chords")]
-    public void BareWithAttachment_ReportsAClauseSpecificError_OnTheKeyword(string word)
+    public void WithClause_ReportsTheRemovalAndItsRowReplacement_OnTheWith(string word)
     {
-        // Lyrics and chords are named symbols: `staff X with lyrics` / `with chords`
-        // must name the block. A missing name reports a message that names the clause
-        // and anchors on the `lyrics`/`chords` keyword — NOT the generic "Expected a
-        // name, found 'CloseBrace'" the plain name-parse lands on the score's `}` a
-        // line away.
+        // The `with lyrics` / `with chords` clauses were REMOVED (LYS0031, user
+        // decision 2026-08-19 — score = a vertical stack of bands). The old
+        // spelling reports ONE clause-specific error anchored on the `with`
+        // keyword — even with no name after it — and the parse recovers (the
+        // score still holds its staff).
         var src = "part m { section A { c1 } }\nform f { A }\nscore f {\n  staff m with " + word + "\n}";
         var tree = SyntaxTree.Parse(src);
         var errors = tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         var err = Assert.Single(errors);
-        Assert.Contains($"'with {word}' needs a name", err.Message);
-        // Anchored on the keyword's own span, not the closing brace.
-        int kw = src.IndexOf("with " + word) + "with ".Length;
+        Assert.Equal("LYS0031", err.Code);
+        Assert.Contains($"'with {word}' was removed", err.Message);
+        // Anchored on the `with` keyword's own span, not the closing brace.
+        int kw = src.IndexOf("with " + word);
         Assert.Equal(kw, err.Span.Start);
-        Assert.Equal(word.Length, err.Span.Length);
+        Assert.Equal("with".Length, err.Span.Length);
     }
 
     [Fact]
@@ -155,7 +156,7 @@ public class ParserTests
         // The named form is the supported spelling; it must not trip the missing-name
         // diagnostic.
         var src = "part m { section A { c1 } }\nlyrics verse { section A { la } }\n"
-            + "form f { A }\nscore f {\n  staff m with lyrics verse\n}";
+            + "form f { A }\nscore f {\n  staff m  lyrics verse\n}";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }

@@ -87,8 +87,8 @@ public sealed partial class LilySharpLanguageServer
         if (TokenAt(FormNameTokens(root), offset) is { } formTok)
             return FindFormDefinition(root, formTok.Text);
 
-        // A `with lyrics NAME` attachment / `lyrics NAME` row → the `lyrics NAME { … }`
-        // block; the chord analog → the `chords NAME { … }` block.
+        // A `lyrics NAME` row → the `lyrics NAME { … }` block; the chord analog →
+        // the `chords NAME { … }` block.
         if (TokenAt(LyricsNameTokens(root), offset) is { } lyrTok)
             return FindLyricsDefinition(root, lyrTok.Text);
         if (TokenAt(ChordNameTokens(root), offset) is { } chordTok)
@@ -191,8 +191,8 @@ public sealed partial class LilySharpLanguageServer
         or PhraseDeclarationSyntax or VariableDeclarationSyntax;
 
     /// <summary>Every <c>lyrics NAME</c> name token — the block declaration plus each
-    /// reference (<c>staff … with lyrics NAME</c> clauses and independent
-    /// <c>lyrics NAME</c> rows) — in document order.</summary>
+    /// <c>lyrics NAME</c> row reference (top level and inside group bodies alike) —
+    /// in document order.</summary>
     private static IEnumerable<SyntaxTokenNode> LyricsNameTokens(SyntaxNode root)
     {
         foreach (var node in root.DescendantNodes())
@@ -206,18 +206,12 @@ public sealed partial class LilySharpLanguageServer
                 case LyricsRowRenderSyntax when node.GetChild(1) is SyntaxTokenNode rt && rt.Text.Length > 0:
                     yield return rt;
                     break;
-                case StaffRenderSyntax staff:
-                    foreach (var t in WithClauseNameTokens(staff, SyntaxKind.LyricsKeyword))
-                        yield return t;
-                    break;
             }
         }
     }
 
-    /// <summary>Every <c>chords NAME</c> name token — the named chord-part block
-    /// declaration plus each reference (<c>with chords NAME</c> clauses and
-    /// <c>chords NAME</c> rows). An unnamed <c>chords { … }</c> (the chord-symbols
-    /// form that aligns above a co-written staff) has no name and is skipped.</summary>
+    /// <summary>Every <c>chords NAME</c> name token — the chord-part block
+    /// declaration plus each <c>chords NAME</c> row reference.</summary>
     private static IEnumerable<SyntaxTokenNode> ChordNameTokens(SyntaxNode root)
     {
         foreach (var node in root.DescendantNodes())
@@ -230,10 +224,6 @@ public sealed partial class LilySharpLanguageServer
                     break;
                 case ChordRowRenderSyntax when node.GetChild(1) is SyntaxTokenNode rt && rt.Text.Length > 0:
                     yield return rt;
-                    break;
-                case StaffRenderSyntax staff:
-                    foreach (var t in WithClauseNameTokens(staff, SyntaxKind.ChordsKeyword))
-                        yield return t;
                     break;
             }
         }
@@ -255,19 +245,6 @@ public sealed partial class LilySharpLanguageServer
                     break;
             }
         }
-    }
-
-    /// <summary>The NAME tokens of every <c>with lyrics</c> / <c>with chords</c> clause
-    /// (per <paramref name="attachKind"/>) in a staff render item. Mirrors
-    /// <c>RenderSpecParser.ParseStaff</c>: the name is two slots past <c>with</c>; a
-    /// trailing <c>as roman|both|names</c> selector sits after it and is untouched.</summary>
-    private static IEnumerable<SyntaxTokenNode> WithClauseNameTokens(StaffRenderSyntax staff, SyntaxKind attachKind)
-    {
-        for (int i = 0; i + 2 < staff.SlotCount; i++)
-            if (staff.GetChild(i) is SyntaxTokenNode w && w.Kind == SyntaxKind.WithKeyword
-                && staff.GetChild(i + 1) is SyntaxTokenNode k && k.Kind == attachKind
-                && staff.GetChild(i + 2) is SyntaxTokenNode n && n.Text.Length > 0)
-                yield return n;
     }
 
     /// <summary>The <c>lyrics NAME { … }</c> block's NAME token for

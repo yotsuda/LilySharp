@@ -79,17 +79,17 @@ public class ChordDisplayCompletionTests
     }
 
     [Theory]
-    // grandStaff / staffGroup / choirStaff take `staff` ITEMS and nothing else —
-    // `grandStaff { combinedStaff … }` is LYS0002 "Expected 'CloseBrace'".
+    // grandStaff / staffGroup / choirStaff take `staff` items and `lyrics NAME`
+    // verse rows, nothing else — anything else is LYS6011 "cannot contain".
     [InlineData("score main { grandStaff { ")]
     [InlineData("score main { staffGroup { ")]
     [InlineData("score main { choirStaff { ")]
-    public void InsideAStaffGroup_OffersOnlyStaff(string text)
+    public void InsideAStaffGroup_OffersStaffAndLyricsRows(string text)
     {
         Assert.Equal(LilySharpLanguageServer.CompletionContext.StaffGroupBlock, Ctx(text));
         var labels = LilySharpLanguageServer.GetStaffGroupBlockCompletions()
             .Items.Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "staff" }, labels);
+        Assert.Equal(new[] { "staff", "lyrics" }, labels);
     }
 
     [Theory]

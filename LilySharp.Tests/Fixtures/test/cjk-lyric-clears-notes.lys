@@ -8,4 +8,4 @@ key c major
 part m { clef treble section A { c4 c d e | } }
 lyrics words sings m { section A { き ら き ら | } }
 form main { A }
-score main "cjk-lyric-clears-notes" { staff m with lyrics words }
+score main "cjk-lyric-clears-notes" { staff m  lyrics words }

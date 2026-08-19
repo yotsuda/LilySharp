@@ -2006,4 +2006,4 @@ section Main {
   }
 }
 form main { ~Main }
-score main { staff ~v with lyrics w }
+score main { staff ~v  lyrics w }

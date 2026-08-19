@@ -69,8 +69,7 @@ public class ValueContextCompletionTests
     [InlineData("score main \"s\" { staff ", "AfterStaffRef")]
     [InlineData("score main \"s\" { tab ", "AfterStaffRef")]
     [InlineData("score main { grandStaff { staff ", "AfterStaffRef")]
-    [InlineData("score main \"s\" { staff melody with ", "AfterWith")]
-    [InlineData("score main \"s\" { staff melody with chords ", "AfterChordsRef")]
+    [InlineData("score main { grandStaff { staff m  lyrics ", "AfterLyricsRef")]
     [InlineData("score main \"s\" { chords ", "AfterChordsRef")]
     [InlineData("score main \"s\" { lyrics ", "AfterLyricsRef")]
     public void InsideAScoreBlock_RenderSpecContexts(string text, string expected)

@@ -40,7 +40,7 @@ form main { Main }
 
 score main "chorale" {
   grandStaff {
-    staff upper with lyrics words
+    staff upper  lyrics words
     staff lower
   }
 }

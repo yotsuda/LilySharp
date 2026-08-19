@@ -47,7 +47,7 @@ public class InputOrderAlignmentTests
               two { <c' b>2 s2 | }
             }
             form main { ~Main }
-            score main { staff ~one with lyrics wa staff ~two with lyrics wb }
+            score main { staff ~one  lyrics wa staff ~two  lyrics wb }
             """);
 
         // Music-text glyphs WITH data-pos: per staff, the (authored) time

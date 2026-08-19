@@ -196,14 +196,25 @@ internal sealed partial class Parser
     }
 
 
-    // chords [name] { c | g:7 c | } — a chord-symbol stream. WITH a name it is an
-    // independent chord part placed in a score via `chords name` (lead-sheet row);
-    // WITHOUT a name it aligns above the co-written part's staff by timing (the
-    // former `chordnames` form, folded into the one keyword pre-release).
+    // chords name { c | g:7 c | } — a chord-symbol stream: an independent chord
+    // part, placed in a score as a row (`chords name` — above the staff it stands
+    // directly over, or a lead-sheet row on its own). The NAMELESS form (the
+    // former `chordnames`, which auto-aligned above "the co-written part's staff")
+    // was removed before the first tag (LYS0032, user decision 2026-08-19): its
+    // association was co-writing, which no text states and which broke down the
+    // moment a section held two parts — the implementation hard-coded staff 0.
     private ChordPartBlockGreen ParseChordPartBlock()
     {
+        int kwInk = _textPosition + Current.LeadingTriviaWidth;
+        int kwLen = Current.Text.Length;
         var keyword = Expect(SyntaxKind.ChordsKeyword);
         var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
+        if (name == null)
+            _diagnostics.Error(new TextSpan(kwInk, kwLen),
+                DiagnosticCodes.NamelessChordsRemoved,
+                "a 'chords' block needs a name - write 'chords prog { ... }' here and "
+                + "place it in the score as its own item ('chords prog' above the staff "
+                + "it belongs to).");
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
 

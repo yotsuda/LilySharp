@@ -36,7 +36,7 @@ public class LyricPartSectionsTests
         section A { melody { c4 c g' g | a a g2 | } lyrics w { Twin- kle twin- kle | lit- tle star | } }
         section B { melody { g'4 g f f | e e d2 | } lyrics w { how I won- der | what you are | } }
         form main { A B }
-        score main "s" { staff melody with lyrics w }
+        score main "s" { staff melody  lyrics w }
         """;
 
     private const string PartMajor = """
@@ -51,10 +51,10 @@ public class LyricPartSectionsTests
           section B { how I won- der | what you are | }
         }
         form main { A B }
-        score main "s" { staff melody with lyrics w }
+        score main "s" { staff melody  lyrics w }
         """;
 
-    // Lyrics attach EXPLICITLY (`staff melody with lyrics w`); collect through the render
+    // Lyrics attach EXPLICITLY (`staff melody  lyrics w`); collect through the render
     // path so the named track binds to the melody's notes exactly as it renders.
     private static LilySharp.Core.Svg.Model.MultiStaffScore CollectScored(string src)
     {
