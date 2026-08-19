@@ -554,4 +554,53 @@ public class HaraKiriTests
         Assert.Equal((false, false), StaffFlagsOf(Book("part m { removeEmpty banana }")));
         Assert.Equal((true, false), StaffFlagsOf(Book("part m { removeEmpty TRUE }")));
     }
+
+    /// <summary>
+    /// A verse row folds onto its staff, so it DIES WITH IT: on a system where the
+    /// staff hara-kiri'd, the verse leaves no syllables and no reserved room — the
+    /// system gap is the same as in the same book with no verse at all. (LilyPond's
+    /// Lyrics carries its own remove-empty, engraver-init.ly:648-658; here the
+    /// question cannot arise per-syllable, because a syllable exists only where its
+    /// melody has a note, and a hidden staff has none — this pins that no OTHER
+    /// piece of the verse machinery, reservation included, survives the staff.)
+    /// </summary>
+    [Fact]
+    public void AVerseOfAHiddenStaff_LeavesNoInkAndNoRoom()
+    {
+        static string VerseBook(bool verse) =>
+            "octave absolute" + Environment.NewLine + "time 4/4" + Environment.NewLine
+            + "part voc { clef treble removeEmpty true }" + Environment.NewLine
+            + "part pno { clef bass }" + Environment.NewLine
+            + "section A { voc { c'4 d' e' f' | } "
+            + (verse ? "lyrics w sings voc { la la la la | } " : "")
+            + "pno { c4 d e f | } }" + Environment.NewLine
+            + "section B { voc { R1 | } pno { g4 a b c' | } }" + Environment.NewLine
+            + "form main { A break B }" + Environment.NewLine
+            + "score main { staff voc " + (verse ? " lyrics w " : "") + " staff pno }"
+            + Environment.NewLine;
+
+        static (double Gap, int SyllablesPastSystem1) Measure(string src)
+        {
+            var tree = SyntaxTree.Parse(src);
+            var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
+                tree, RenderSpecParser.FindFirst(tree));
+            var layout = new LayoutEngine().Layout(score);
+            Assert.Equal(2, layout.Systems.Length);
+            var sys1 = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves).ToList();
+            var sys2 = layout.Systems[1].StaffGroups.SelectMany(g => g.Staves).ToList();
+            // The hidden staff is still in the table (Height 0, IsHidden) — the
+            // suicide really happened on system 2 and only there.
+            Assert.DoesNotContain(sys1, s => s.IsHidden);
+            Assert.Contains(sys2, s => s.IsHidden);
+            double gap = sys2.Where(s => !s.IsHidden).Min(s => s.Y)
+                       - sys1.Where(s => !s.IsHidden).Max(s => s.Y);
+            return (gap, layout.LyricLayouts.Count(l => l.Item.MeasureIndex >= 1));
+        }
+
+        var (withGap, straySyllables) = Measure(VerseBook(verse: true));
+        var (withoutGap, _) = Measure(VerseBook(verse: false));
+
+        Assert.Equal(0, straySyllables);
+        Assert.Equal(withoutGap, withGap, 6);
+    }
 }
