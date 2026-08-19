@@ -74,9 +74,15 @@ jobs:
           else
             tar czf ../../lysc-${{ github.ref_name }}-${{ matrix.rid }}.tar.gz .
           fi
+      - name: Extract release notes
+        # The topmost CHANGELOG section is the version being tagged (stated in
+        # CHANGELOG.md itself). The heading line is dropped — the Release is
+        # already titled with the tag.
+        run: awk '/^## /{n++; next} n==1' CHANGELOG.md > RELEASE_NOTES.md
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
+          body_path: RELEASE_NOTES.md
           files: |
             lysc-*.zip
             lysc-*.tar.gz
@@ -120,9 +126,15 @@ jobs:
           npm ci
           npm run compile
           npx @vscode/vsce package --pre-release
+      - name: Extract release notes
+        # Same extraction as the CLI job: whichever upload step runs first
+        # creates the Release, so both must carry the body or the winner
+        # decides whether the notes exist.
+        run: awk '/^## /{n++; next} n==1' CHANGELOG.md > RELEASE_NOTES.md
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
+          body_path: RELEASE_NOTES.md
           files: editors/vscode/*.vsix
 
       # Marketplace publication is a deliberate, separate decision.
