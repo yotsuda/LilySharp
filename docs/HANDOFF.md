@@ -149,27 +149,29 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第218セッション＝**「私に見えているリリースブロッカー」委任の 3 便目——独立 lyrics 行の verse 消失を直した便**（実装 1 commit・`988ddbc2`）。
-⚠️ **repo の ink は 1 冊も動いていない**——追跡 569 冊 sweep/cmp 0 移動・**snapshot 220 枚不変**。動いたのは**ユーザー自身の楽譜**（scratch・当夜書かれた Twinkle）だけ＝委任の対象そのもの。
+最終更新 第218セッション＝**「私に見えているリリースブロッカー」委任の 3 便目——独立 lyrics 行の verse 消失（⑴）と、行を挟んだ system 間隔の 2 倍化（⑵・ユーザー名指し「y 距離が長すぎる」→「LP 双子で確認して」→着手/中止の委任）を直した便**（実装 2 commit・`988ddbc2`＋`b232d979`）。
+⚠️ **repo の ink**——⑴ は 0 冊・⑵ は **569 冊中ちょうど 2 冊**（lyric-extender の双子配置 2 つ＝同じ本）で、**その 2 冊は LP 双子の上に 6 桁で着地した**（mid-gap 12.000000 vs 12.000000・先頭 refpoint 11.690 vs 11.691）。**snapshot 220 枚は両便とも不変。**
 ユーザーの目的は **0.3.0**——タグはまだ。⓪ 拡張の再配備が先（下の ⑸）。
 
 ★ **開始時裏取り（§0 通し）**: HEAD `3278b89d`・未 push 5・作業ツリー 0・Windows 5659/0/4・Core 0 警告＝引継ぎと全一致。**拡張は 21:05 にユーザー自身が再配備済み**・ユーザー楽譜 318 冊（第217 の 317 から +1＝当夜の Twinkle）。
-終了時 **未追跡 0・作業ツリー項目 0・未 push 7**（**この行を書く commit を含めて 7・commit の*あと*に数えた**）・
-suite **Windows 5662 / 0 / 4・Linux（この機械の WSL）5662 / 0 / 4**＝**両 OS 完全緑**（台帳の pin も全数この中）・
+終了時 **未追跡 0・作業ツリー項目 0・未 push 9**（**この行を書く commit を含めて 9・commit の*あと*に数えた**）・
+suite **Windows 5663 / 0 / 4・Linux（この機械の WSL）5663 / 0 / 4**＝**両 OS 完全緑**（台帳の pin も全数この中）・
 **snapshot 220 枚**（不変）・**追跡コーパス 569 冊**・**Core 0 警告**・
-**alloc 162.6/45.2 で桁まで不動**（plain1k 3 回＋fingstack 1 回・§7.9）・ユーザー楽譜 318 冊 **check 0 赤・svg 彫版 0 失敗**。
+**alloc 162.6/45.2 で桁まで不動**（両便とも plain1k 3 回＋fingstack・§7.9）・ユーザー楽譜 318 冊 **check 0 赤・svg 彫版 0 失敗**（⑴ 後に全数）。
 
 ★ **この便の値段**:
 
 | 便 | 何が動いたか | 射程 |
 |---|---|---|
 | ⑴ 行経路の occurrence/volta 統合（`988ddbc2`） | Core 2 file・網 3 本 | **repo ink 0**（569 冊 cmp 0 移動・snapshot 220 不変）・**ユーザー楽譜に実差** |
+| ⑵ 単一ページ床の帯二重計上を除去（`b232d979`） | Core 1 file（`CreatePages` の床 2 項）・網 1 本 | **repo ink 2/569 冊＝LP に 6 桁で着地**・Twinkle 23.500→15.034（LP 12.225） |
 
 - **見えていたもの**: `lysc check` は 318 冊全緑。**直近 mtime の楽譜を彫版まで目視**したら Twinkle（21:17 編集＝依頼の 6 分前）で 2 つ——**`[~2.]` の 2 番が丸ごと消える**・**A2 リプライズが無歌詞**。最小再現 2 冊で二分し、**束縛経路（`sings`）は両方正しく、非束縛の独立行（`CollectRow`）だけの半読み**と確定。
 - **原因**: `CollectRow` は各 inner section を**初回 start にしか置かず**（`AllStarts` を見ない）、`[N.]` を **`FirstVerse` で 1 番に畳んでいた**（「row は 1 回置き」の旧設計コメントつき＝occurrence 機構より古い読み）。
 - **直し**: 括弧の読みを **`PlaceSectionOccurrences` 1 軒**に統合（§5.2.1②——同じ量を 2 軒で読んでいた）。束縛経路は `ProcessRun`・行経路は `PlaceRun` を callback で差すだけ。行の `PlaceRun` が `HideStanza` を運ぶ・`MeasureCollector` が `AllStarts` を `CollectRow` へ・flat in-section block も全 occurrence 化・verse 積みは start キー（先の section へ戻る block が verse 1 を上書きしなくなる）。網 3 本（row の reprise 復帰・`|: :|` 段積み・per-occurrence 不 bleed＝`LyricPartSectionsTests` の Row* 3 本）。
-- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: **⓪ 拡張の再配備**（`deploy-extension.ps1`・VS Code を殺すのでユーザー在席時に。**21:05 の配備は本便の修理を含まない**——エディタのプレビューはまだ 2 番を落とす）→ push（未 push 7・`master` を先に）→ CI 緑 → タグ。CHANGELOG は第217 時点のまま 0.3.0 最上段。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
-  **タグ後の残債**: 第217 の列挙のまま——⒢ ペダル・強弱 vs 歌詞の優先順位スタック（§2F）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出。
+- **⑵ の測り方と直し**（ユーザー指摘「五線の 1 行目と 2 行目の y 距離が長すぎる」）: 双子は `lysc ly`（**歌詞行は未輸出と警告する**ので旋律は機械輸出のまま・歌詞と改行だけ手で足す）・基準 exe は `C:\bin\lilypond-2.26.0`（RULES §5.5）。**歌詞なし対照は 12.200 vs 12.225（差 0.025）＝土台の鎖は健全**・譜下線→歌詞も 3.87 vs 3.76 でほぼ一致・**過剰は「歌詞帯の下→次 system」の 1 区間に局在**（15.63 vs 4.47）。原因は `CreatePages` 単一ページ床（§2D が「二重実装」と名指していた側）が **`SysHeight`（＝trailing 行の描画帯を既に含む本体高）に帯をもう一度足していた**——`PageLayouter` の鎖が `HalfLast` で直した frame 混同の残り（remark に 1.883400 の前例あり）。直しは**帯の項をアンカー譜の外側線から測る**（`ToLast+HalfLast`／上側は鏡像で `−(ToFirst−HalfFirst)`）＝**行が無い本では構造的に恒等**。ピンは `SystemGap_ReadsARowsBandOnce_TheTwoSpellingsAgree`（row 綴りと sings 綴りの同文歌詞が同じ間隔を出すこと＝修正前は 19.836 vs 14.571 に割れる）。
+- **⑸ ★★★ 次に触るならここ＝① v0.3.0**: **⓪ 拡張の再配備**（`deploy-extension.ps1`・VS Code を殺すのでユーザー在席時に。**21:05 の配備は本便の修理を含まない**——エディタのプレビューはまだ 2 番を落とし・間隔も旧値）→ push（未 push 9・`master` を先に）→ CI 緑 → タグ。CHANGELOG は第217 時点のまま 0.3.0 最上段。⚠️ workflow の初実走はタグの瞬間（第214 ⑶ の宿題 ⒜⒝ を読むこと）。
+  **タグ後の残債**: 第217 の列挙のまま——⒢ ペダル・強弱 vs 歌詞の優先順位スタック（§2F）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／**⒤ 歌詞帯のスカラー床が X 盲目**（§2D・第218 起票＝⑵ の残差 +2.5）／小粒: twin の歌詞行・`lines` twin 未輸出。
 
 > ## ★★★ 骨 1＝**「見えているもの」は check では出ない——彫版まで目視**
 > 3 便目の同文委任。`lysc check` 全 318 冊は 0 赤だったが、**黙って消える歌詞は赤にならない**。
@@ -717,7 +719,18 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   残差 **−0.000042**（＝符頭インク族。§1 の非ゼロ表）。**乖離ではない**
 - **`PageLayouter` は systemDetails の `i == 0` で `vs.SystemSystem`、配置側は `vs.TopSystem`**＝
   ブレーカーと配置で spec が食い違う（本数見積りにしか効かない）
-- **`LayoutEngine` の単一ページ経路が今も自前で積む**（force 0 なので鎖と一致するが二重実装）
+- **`LayoutEngine` の単一ページ経路が今も自前で積む**（二重実装）。⚠️ **「force 0 なので鎖と一致する」は嘘だった**——帯の床を `SysHeight`（trailing 行の描画帯を含む）から測っていて、**行を挟む本で帯を二重計上**（第218 実測: rowgap probe 19.836 vs LP 12.000・Twinkle 23.500 vs 12.225）。**frame は `b232d979` で直した**（帯の項はアンカー譜の外側線から＝PageLayouter の `HalfLast` と同型）。**二重実装そのものは残っている。**
+- ★ **歌詞帯のスカラー床は X 盲目**（2026-08-19・第218 起票・**双子実測・未着手**＝残債⒤）。
+  `LyricReservationBelowSystem` は block の skyline を歩いて**スカラー（deepest）に潰し**、
+  `CreatePages`／`PageLayouter` の床は**それを全 X に敷く**。LP は block を system の down
+  skyline に**minimum のまま入れて X 単位で測る**（page-layout-problem.cc:593-599）ので、
+  音節の隙間や短い行の右側を次 system の高い ink が通れる。**残差の実測**（frame 修正後）:
+  rowgap probe 14.571 vs LP 12.000・Twinkle 15.034/14.484 vs LP 12.225/12.000・
+  **sings 綴りでも同額**（＝row 固有ではなく帯機構全体の性質。床が縛らない本は 6 桁一致
+  ——lyric-extender 双子 12.000000）。**終点の形**: 歩いた profile を返して spring の
+  Distance に X 付きで参加させ、スカラー床を両経路から外す——ただし PageLayouter の
+  remark が言う「2 分岐は同じ frame で書く」を保ったまま。**帯が縛る本は全部動く**ので、
+  snapshot の目視と LP 向きの確認が必要な専用の便。
 - **Y コーパスの拡張**（`page.top-margin` / `page.bottom-margin` / `page.last-page-gap` 等）
 - ★ **歌詞行が譜間の「中で」LP と別の位置に立つ**（2026-08-14・双子実測・**未着手**）。
   ⚠️ **上の「force 0 のまま」とは別件**——あちらは*再配分*の話で、これは*静止位置*。
