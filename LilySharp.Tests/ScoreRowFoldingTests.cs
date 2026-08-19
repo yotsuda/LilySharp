@@ -251,26 +251,25 @@ public class ScoreRowFoldingTests
     }
 
     /// <summary>
-    /// THE CLOSED DOOR SAYS WHERE THE NEW ONE IS: a `with lyrics` / `with chords`
-    /// clause is LYS0031, and the message spells the row replacement. (The
-    /// identity that made the removal safe — the row spelling rendering the
-    /// clause spelling's ink byte-for-byte — was proven by machine while both
-    /// spellings existed: commits 6d6d1b92 / 228c6108, three priority-stack pins
-    /// and the chorale, all identical modulo data-pos.)
+    /// THE DOOR IS GONE, NOT JUST CLOSED: `with` stopped being a keyword when
+    /// its clause-removal error LYS0031 retired (2026-08-19, user decision —
+    /// still before the first tag; the DiagnosticCodes remarks record the
+    /// number). The old clause spelling now reads as ordinary tokens: `staff
+    /// vocal with lyrics ja` is a staff displayed "with" followed by a `lyrics
+    /// ja` row — which folds, so the ink is the attachment the clause used to
+    /// spell. (The identity that made the removal safe — the row spelling
+    /// rendering the clause spelling's ink byte-for-byte — was proven by
+    /// machine while both spellings existed: commits 6d6d1b92 / 228c6108,
+    /// three priority-stack pins and the chorale, all identical modulo
+    /// data-pos.)
     /// </summary>
     [Fact]
-    public void TheRemovedWithClause_ReportsItsRowReplacement()
+    public void TheRetiredWithSpelling_ReadsAsADisplayNameAndARow()
     {
-        var tree = SyntaxTree.Parse(BoundBody
-            + "score main { staff vocal with lyrics ja }");
-        var d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS0031");
-        Assert.Contains("'lyrics ja'", d.Message);
-        Assert.Contains("after this staff", d.Message);
-
-        tree = SyntaxTree.Parse(BoundBody + "score main { staff vocal with chords prog }");
-        d = Assert.Single(tree.Diagnostics, d => d.Code == "LYS0031");
-        Assert.Contains("'chords prog'", d.Message);
-        Assert.Contains("before this staff", d.Message);
+        var spec = SpecOf(BoundBody + "score main { staff vocal with lyrics ja }");
+        var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items)).Staff;
+        Assert.Equal("with", staff.InstrumentName);
+        Assert.Equal(new[] { "ja" }, staff.WithLyrics);
     }
 
     /// <summary>

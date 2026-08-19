@@ -656,7 +656,6 @@ internal sealed class Lexer
             "repeat" => SyntaxKind.RepeatKeyword,
             "volta" => SyntaxKind.VoltaKeyword,
             "alternative" => SyntaxKind.AlternativeKeyword,
-            "with" => SyntaxKind.WithKeyword,
 
             // Metadata keywords
             "title" => SyntaxKind.TitleKeyword,

@@ -304,7 +304,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|repeat|grace|cue|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords|with)\\b"
+                    "match": "\\b(score|part|staff|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|repeat|grace|cue|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords)\\b"
                 },
                 {
                     "comment": "Navigation marks, written bare in a form block: 'A dc al fine', 'to coda', and the run-together 'tocoda'.",

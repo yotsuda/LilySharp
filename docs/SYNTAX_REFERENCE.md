@@ -985,7 +985,7 @@ be declared and referenced).
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
 | Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `cue` `lyrics` `chords` `tuning` |
-| Overrides | `override` `revert` `once` `with` |
+| Overrides | `override` `revert` `once` |
 | Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` `tocoda` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
 

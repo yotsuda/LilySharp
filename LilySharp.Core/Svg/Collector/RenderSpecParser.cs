@@ -494,16 +494,6 @@ public static class RenderSpecParser
         }
         if (toks.Count == 0) return null;
 
-        // A removed `with …` clause (LYS0031) keeps its tokens on the node for
-        // width only — cut them here so the error-recovery render does not read
-        // the clause's NAME as a display-name override. The spec's
-        // WithChords/WithLyrics are set by the ROW FOLD alone (FoldAdjacentRows,
-        // ParseGrandStaff), never from clause tokens.
-        int firstWith = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
-        if (firstWith >= 0)
-            toks = toks.GetRange(0, firstWith);
-        if (toks.Count == 0) return null;
-
         // [clef?] part [bare display name] — the clef is a distinct keyword
         // kind, so the part is the first non-clef token; anything after it is
         // an unquoted display name (`staff flute 津田さん`).
@@ -586,15 +576,6 @@ public static class RenderSpecParser
     {
         // [tuning?] part [as numbers|full]; braces (if any) are skipped.
         var toks = RenderTargetTokens(tab);
-        if (toks.Count == 0) return null;
-
-        // A removed `with chords …` clause (LYS0031) keeps its tokens for width
-        // only — cut them BEFORE the tab-style `as` scan below so the clause's
-        // own `as roman|both|names` cannot be read as the tab style. A chord row
-        // above the tab (`chords NAME  tab part`) is the spelling now.
-        int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
-        if (wi >= 0)
-            toks = toks.GetRange(0, wi);
         if (toks.Count == 0) return null;
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the

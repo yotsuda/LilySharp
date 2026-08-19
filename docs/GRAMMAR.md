@@ -99,7 +99,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'transpose' | 'octave' | 'using' | 'break' | 'nobreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
         | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts'
-        | 'override' | 'revert' | 'once' | 'with'
+        | 'override' | 'revert' | 'once'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
         | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' | 'bass_8'
@@ -699,10 +699,11 @@ StaffRender    = 'staff' , [ ClefName ] , PartRef ;
                     (user decision, 2026-08-19, before the first tag). A bound
                     'lyrics NAME' row directly below the staff is its verse; a
                     'chords NAME' row directly above it aligns the symbols over it.
-                    The removed 'with chords NAME' / 'with lyrics NAME' clauses are
-                    LYS0031, and the message spells the row replacement. The same
-                    chord part can also feed a lead-sheet row, so a progression is
-                    written once. *)
+                    The old 'with chords NAME' / 'with lyrics NAME' clauses are
+                    gone and 'with' is not a keyword at all (its migration error
+                    LYS0031 retired with it; DiagnosticCodes records the number).
+                    The same chord part can also feed a lead-sheet row, so a
+                    progression is written once. *)
 PartRef        = Identifier ;
 
 (* THIS SCORE'S OWN HEADER: 'title' / 'composer' written inside a score restate the file's

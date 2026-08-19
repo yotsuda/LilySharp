@@ -531,7 +531,7 @@ title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
 tuplet grace acciaccatura appoggiatura lyrics chords tuning
-override revert once with
+override revert once
 segno fine coda dc ds al to tocoda
 ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from text)
 ```

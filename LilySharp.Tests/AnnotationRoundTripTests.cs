@@ -137,8 +137,8 @@ public class AnnotationRoundTripTests
         // ⚠️ volta-labels came OFF this list on 2026-08-16: "the '|' before a '[1. …]'
         // label is not stored" was the last island where a token no form rule claimed was
         // consumed by a bare Advance(). ParseFormItem now parses every barline as the
-        // BarlineSyntax it is (LYS0031 warns for the ones nothing engraves yet), and the
-        // three containers around it report and keep what they cannot place (LYS0030).
+        // BarlineSyntax it is, and the three containers around it report and keep
+        // what they cannot place (LYS0030).
         // ⚠️ Closing that island is NOT a one-liner, and it needs a decision before
         // any code: a census of every consumer (2026-08-16) found 17 production
         // sites, of which 12 are live and EVERY live one reads the marker as a

@@ -128,30 +128,24 @@ public class ParserTests
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.NameStartsWithDigit);
     }
 
-    [Theory]
-    [InlineData("lyrics")]
-    [InlineData("chords")]
-    public void WithClause_ReportsTheRemovalAndItsRowReplacement_OnTheWith(string word)
+    [Fact]
+    public void With_IsAnOrdinaryWordNow()
     {
-        // The `with lyrics` / `with chords` clauses were REMOVED (LYS0031, user
-        // decision 2026-08-19 — score = a vertical stack of bands). The old
-        // spelling reports ONE clause-specific error anchored on the `with`
-        // keyword — even with no name after it — and the parse recovers (the
-        // score still holds its staff).
-        var src = "part m { section A { c1 } }\nform f { A }\nscore f {\n  staff m with " + word + "\n}";
+        // `with` stopped being a keyword when its clause-removal error LYS0031
+        // retired (2026-08-19, user decision — the clause era ended before the
+        // first tag, every book already respelled; the retired-numbers ledger in
+        // DiagnosticCodes records both). The letters read as any word does:
+        // here a bare per-score display name (`staff m with` = a staff labelled
+        // "with") and an English lyric syllable. Nothing fires.
+        var src = "part m { section A { c1 } }\n"
+            + "lyrics w sings m { section A { with | } }\n"
+            + "form f { A }\nscore f {\n  staff m with\n  lyrics w\n}";
         var tree = SyntaxTree.Parse(src);
-        var errors = tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
-        var err = Assert.Single(errors);
-        Assert.Equal("LYS0031", err.Code);
-        Assert.Contains($"'with {word}' was removed", err.Message);
-        // Anchored on the `with` keyword's own span, not the closing brace.
-        int kw = src.IndexOf("with " + word);
-        Assert.Equal(kw, err.Span.Start);
-        Assert.Equal("with".Length, err.Span.Length);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 
     [Fact]
-    public void NamedWithLyrics_ParsesClean()
+    public void NamedLyricsRow_ParsesClean()
     {
         // The named form is the supported spelling; it must not trip the missing-name
         // diagnostic.

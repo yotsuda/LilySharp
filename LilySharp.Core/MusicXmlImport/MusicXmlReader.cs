@@ -843,7 +843,7 @@ internal static class MusicXmlReader
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
         "part", "section", "score", "staff", "structure", "chords", "lyrics",
-        "time", "key", "clef", "tempo", "octave", "title", "composer", "with",
+        "time", "key", "clef", "tempo", "octave", "title", "composer",
         "phrase", "drummap", "grace", "partial", "repeat", "tuplet",
         "acciaccatura", "appoggiatura",
         "a", "b", "c", "d", "e", "f", "g", "r",

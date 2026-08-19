@@ -190,8 +190,6 @@ public enum SyntaxKind : ushort
     LyricsKeyword,
     /// <summary>The <c>chords</c> keyword (independent chord part: <c>chords name { ... }</c> plus a score row).</summary>
     ChordsKeyword,
-    /// <summary>The <c>with</c> keyword (staff modifier: <c>staff NAME with chords CHORDPART</c>).</summary>
-    WithKeyword,
     /// <summary>The <c>tuning</c> keyword.</summary>
     TuningKeyword,
     /// <summary>The <c>transpose</c> keyword.</summary>

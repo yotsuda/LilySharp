@@ -41,7 +41,7 @@ public class ReservedWordsTests
         "major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian",
         "tuplet", "grace", "acciaccatura", "appoggiatura", "lyrics", "chords",
         "tuning",
-        "override", "revert", "once", "with",
+        "override", "revert", "once",
         "segno", "fine", "coda", "dc", "ds", "al", "to",
         "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff",
     };

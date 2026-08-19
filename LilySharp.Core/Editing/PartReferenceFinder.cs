@@ -33,8 +33,8 @@ namespace LilySharp.Core.Editing;
 /// The reference-token selection mirrors
 /// <see cref="Svg.Collector.RenderSpecParser"/> (ParseStaff / ParseOssia /
 /// ParseTab): the same rules pick the part token so a rename can never touch a
-/// token the compiler reads as something else — a clef word, a bare per-score
-/// display name, or the kept tokens of a removed `with` clause (LYS0031).
+/// token the compiler reads as something else — a clef word or a bare per-score
+/// display name.
 /// </remarks>
 public static class PartReferenceFinder
 {
@@ -188,9 +188,9 @@ public static class PartReferenceFinder
             switch (node)
             {
                 // A row inside a group body is a LyricsRowRenderSyntax node too, so
-                // it arrives through the same case as a top-level row. (The `with`
-                // clauses this walk also scanned were removed — LYS0031; a row is
-                // the only track reference a score can spell.)
+                // it arrives through the same case as a top-level row. (A row is
+                // the only track reference a score can spell — the removed `with`
+                // clauses this walk once scanned are retired, LYS0031.)
                 case ChordRowRenderSyntax:
                     if (RowTargetToken(node) is { } ct)
                         refs.Add((ct, true));
@@ -230,9 +230,8 @@ public static class PartReferenceFinder
 
     /// <summary>
     /// The part token in a <c>staff</c> render item: skip a leading <c>~</c>
-    /// (label suppression) and the per-score display string, cut off the kept
-    /// tokens of a removed <c>with …</c> clause (LYS0031 — width only), then take
-    /// the first token that is not a clef keyword. LILYPOND-REF is n/a — this
+    /// (label suppression) and the per-score display string, then take the
+    /// first token that is not a clef keyword. LILYPOND-REF is n/a — this
     /// mirrors RenderSpecParser.ParseStaff.
     /// </summary>
     private static SyntaxTokenNode? StaffPartToken(StaffRenderSyntax staff)
@@ -242,9 +241,6 @@ public static class PartReferenceFinder
         int si = toks.FindIndex(t => t.Kind == SyntaxKind.StringLiteral);
         if (si >= 0)
             toks.RemoveAt(si);
-        int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
-        if (wi >= 0)
-            toks = toks.GetRange(0, wi);
         if (toks.Count == 0)
             return null;
         int partIdx = IsClefKeyword(toks[0].Kind) ? 1 : 0;
@@ -261,8 +257,7 @@ public static class PartReferenceFinder
     }
 
     /// <summary>
-    /// The part token in a <c>tab</c> render item: cut off the kept tokens of a
-    /// removed <c>with …</c> clause (LYS0031 — width only), then the trailing
+    /// The part token in a <c>tab</c> render item: cut off the trailing
     /// <c>as numbers | full</c> style selector, and take the last token that
     /// remains. A leading token before it is the tuning override, not the part.
     /// </summary>
@@ -278,9 +273,6 @@ public static class PartReferenceFinder
     private static SyntaxTokenNode? TabPartToken(TabRenderSyntax tab)
     {
         var toks = TargetTokens(tab);
-        int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
-        if (wi >= 0)
-            toks = toks.GetRange(0, wi);
         int asIdx = toks.FindIndex(t => string.Equals(t.Text, "as", System.StringComparison.Ordinal));
         if (asIdx >= 0 && asIdx + 1 < toks.Count)
             toks = toks.GetRange(0, asIdx);

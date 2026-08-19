@@ -602,33 +602,6 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
             tokens.Add(Advance());
 
-        // `with chords NAME` / `with lyrics NAME` clauses were REMOVED (user
-        // decision, 2026-08-19, before the first tag — score = a vertical stack
-        // of bands: a score attaches a band by ORDER, not by clause). The old
-        // spelling is reported with its replacement and its tokens are KEPT on
-        // the node, width-preserving, so later source offsets do not shift.
-        while (Check(SyntaxKind.WithKeyword)
-            && Peek(1)?.Kind is SyntaxKind.ChordsKeyword or SyntaxKind.LyricsKeyword)
-        {
-            bool lyrics = Peek(1)!.Kind == SyntaxKind.LyricsKeyword;
-            string name = Peek(2) is { Kind: var k } t && IsPartNameKind(k) ? t.Text : "NAME";
-            _diagnostics.Error(
-                new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
-                DiagnosticCodes.WithClauseRemoved,
-                lyrics
-                    ? $"'with lyrics' was removed - a score stacks bands in order: write "
-                      + $"'lyrics {name}' as its own item after this staff (verses in "
-                      + "written order)."
-                    : $"'with chords' was removed - a score stacks bands in order: write "
-                      + $"'chords {name}' as its own item before this staff.");
-
-            tokens.Add(Advance()); // with
-            tokens.Add(Advance()); // chords | lyrics
-            if (IsPartNameStart())
-                tokens.Add(Advance()); // NAME
-            ConsumeAsSelector(tokens); // tolerate a trailing `as roman|both|names`
-        }
-
         return new StaffRenderGreen([.. tokens]);
     }
 
@@ -872,16 +845,6 @@ internal sealed partial class Parser
 
         tokens.Add(ExpectPartName());
         ConsumeAsSelector(tokens); // `... as numbers | full` (numbers-only tab)
-
-        // `with chords NAME [as roman|both|names]` attaches a chord part's symbols
-        // above the tab, exactly like the notation-staff form.
-        if (Check(SyntaxKind.WithKeyword) && Peek(1)?.Kind == SyntaxKind.ChordsKeyword)
-        {
-            tokens.Add(Advance()); // with
-            tokens.Add(Advance()); // chords
-            tokens.Add(ExpectPartName());
-            ConsumeAsSelector(tokens); // chord display: `as roman | both | names`
-        }
         return new TabRenderGreen([.. tokens]);
     }
 

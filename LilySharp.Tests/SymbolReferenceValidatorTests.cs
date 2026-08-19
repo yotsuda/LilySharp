@@ -202,9 +202,10 @@ $undefined2
     // snapshot path never runs this validator, which is why the suite stayed green).
     [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { tab melody as numbers }")]
     [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { tab melody as full }")]
-    // Tuning override + style selector, and the chord-display selector after it.
+    // Tuning override + style selector, and a chord row (with its own display
+    // selector) above the tab - the band spelling of the old `with chords` clause.
     [InlineData("section A { melody { c d e f } }\nchords h { c1 }\nform main { A }\n"
-              + "score main { tab bass melody as numbers with chords h as both }")]
+              + "score main { chords h as both  tab bass melody as numbers }")]
     public void Validate_StaffNamesDefinedPart_NoUndefinedPartError(string source)
         => Assert.DoesNotContain(Refs(source), d => d.Code == DiagnosticCodes.UndefinedPart);
 
@@ -424,13 +425,13 @@ $undefined2
     }
 
     /// <summary>
-    /// A removed `with chords NAME` clause (LYS0031) keeps its tokens on the
-    /// staff node for width — those tokens are NOT track references, so the one
-    /// error the writer sees is the removal with its replacement, not an
-    /// "Undefined chords part" under it.
+    /// `with` is an ordinary word since LYS0031 retired (2026-08-19), so the
+    /// old clause spelling's tokens read as real score items: `staff m with`
+    /// is a staff labelled "with", and `chords progg` is a genuine row whose
+    /// undefined target IS reported — the generic net, no clause special case.
     /// </summary>
     [Fact]
-    public void Validate_RemovedWithClauseTokens_AreNotTrackReferences()
-        => Assert.DoesNotContain(Refs(AttachSheet + "staff m with chords progg }"),
+    public void Validate_TheRetiredWithSpelling_RowTargetIsARealReference()
+        => Assert.Contains(Refs(AttachSheet + "staff m with chords progg }"),
             d => d.Code == DiagnosticCodes.UndefinedPart);
 }
