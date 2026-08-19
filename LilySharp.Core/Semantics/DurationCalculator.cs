@@ -55,6 +55,19 @@ public static class DurationCalculator
         => repetition.Duration?.ToFraction() ?? defaultDuration;
 
     /// <summary>
+    /// Gets the duration of a slash note, using default if not specified.
+    /// </summary>
+    public static Fraction GetDuration(SlashNoteSyntax slash, Fraction defaultDuration)
+        => slash.Duration?.ToFraction() ?? defaultDuration;
+
+    /// <summary>
+    /// Gets the duration of a bare duration. Always written — the number IS the
+    /// spelling — so the default is never consulted in practice.
+    /// </summary>
+    public static Fraction GetDuration(BareDurationSyntax bare, Fraction defaultDuration)
+        => bare.Duration.ToFraction();
+
+    /// <summary>
     /// Parses a time signature like "4/4" or "3/4".
     /// </summary>
     public static Fraction ParseTimeSignature(int beats, int beatUnit)

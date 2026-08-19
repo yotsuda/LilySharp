@@ -79,6 +79,11 @@ internal sealed partial class Parser
             // on IsTopLevelMusicStart already said these two must be kept in step.
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
                 or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword => true,
+            // A slash note and a bare duration (2026-08-19) — the same keep-in-step
+            // rule as the navigation marks above: ParseMusicItem claims them, so
+            // this predicate must too.
+            SyntaxKind.Slash => true,
+            SyntaxKind.IntegerLiteral => true,
             SyntaxKind.Identifier => true, // Variable reference
             _ => false
         };
@@ -167,11 +172,19 @@ internal sealed partial class Parser
                 ? ParseDrumNote()
                 : ParseBareVariableReference(),
 
-            // A bare number in a music stream is a DETACHED duration — the
-            // adjacency rule says a duration glues to what it lengthens, so
-            // `c 4` parses as the note c and this stray number. Report it here
-            // (returning no item; the sequence loop advances past it).
-            SyntaxKind.IntegerLiteral => ReportDetachedDuration(),
+            // `/` in note position is a SLASH NOTE — rhythm (comping) notation:
+            // a pitchless note drawn as a slash head on the middle staff line.
+            // Claimed here in the music-item dispatch, so `/` stays an ordinary
+            // token in `time 4/4`, `tuplet 3/2` and a chord entry's `c/g`,
+            // none of which reach this switch.
+            SyntaxKind.Slash => ParseSlashNote(),
+
+            // A bare number in a music stream is a BARE DURATION: it repeats the
+            // previous note, chord or slash with the new length (LILYPOND-REF:
+            // lily/parser.yy music_embedded). With nothing before it to repeat,
+            // the validator reports it (LYS0016) — the parser keeps the node so
+            // later notes keep their source offsets.
+            SyntaxKind.IntegerLiteral => ParseBareDuration(),
 
             // A decimal in a music stream can only have been meant as a duration, and
             // durations are whole. Reported rather than skipped: `c4.5` used to lex as
@@ -214,32 +227,17 @@ internal sealed partial class Parser
             Advance();
     }
 
-    /// <summary>Reports a spaced number where a glued duration was probably meant
-    /// (LYS0016) and yields the number, so the token stays in the tree.</summary>
-    /// <remarks>
-    /// ⚠️ It RETURNS the token as of 2026-08-16. It used to yield null and let the
-    /// caller's loop drop it, on the reasoning that "dropping a spaced 4 leaves the notes
-    /// standing where they stood" — which is true of the ENGRAVING and false of the
-    /// POSITIONS. Measured on <c>melody { c4 4 d e f | }</c>: the report itself landed
-    /// correctly on the stray (it is raised before the token is consumed), and then every
-    /// later node slid two characters left — <c>d</c> reported at 36 where the source has
-    /// it at 38, which is the offset that book has with the <c>4</c> DELETED. Reporting
-    /// and KEEPING are separate repairs (RULES §5.0) and this had only the first.
-    /// </remarks>
-    private GreenNode ReportDetachedDuration()
-    {
-        var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
-        _diagnostics.Error(span, DiagnosticCodes.DetachedDuration,
-            "A duration must be GLUED to what it lengthens - write c4 or <c e g>4; "
-            + "separated by a space, this number means nothing.");
-        return Advance();
-    }
+    // (A spaced number used to be reported here as LYS0016 — the pre-2026-08-19
+    // adjacency rule. It is a BARE DURATION now (ParseBareDuration); LYS0016
+    // survives in BareDurationValidator for the one case that is still an
+    // error: a bare duration with nothing before it to repeat.)
 
     /// <summary>Reports a decimal where a duration was meant (LYS0021) and yields the
     /// number, so the token stays in the tree.</summary>
     /// <remarks>
-    /// ⚠️ It RETURNS the token as of 2026-08-16, for the reason spelled out on
-    /// <see cref="ReportDetachedDuration"/>. Measured on <c>melody { c4.5 d e f | }</c>:
+    /// ⚠️ It RETURNS the token as of 2026-08-16 — reporting and KEEPING are separate
+    /// repairs (RULES §5.0): a dropped token slides every later node's source offset
+    /// left. Measured on <c>melody { c4.5 d e f | }</c>:
     /// the four characters of <c>4.5</c> and its space came off every later node's
     /// position.
     /// </remarks>
@@ -394,6 +392,36 @@ internal sealed partial class Parser
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
         return new ChordRepetitionGreen(qToken, duration, tremolo, articulations);
+    }
+
+    // /4 — ParseNote with a slash in place of the pitch: rhythm (comping)
+    // notation, a pitchless note on the middle staff line. The duration is
+    // glued like any note's; a SPACED number after a slash is simply a bare
+    // duration repeating it, which is the same music.
+    private SlashNoteGreen ParseSlashNote()
+    {
+        var slashToken = Advance();
+        var duration = ParseOptionalDuration();
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
+        var articulations = ParsePostEvents();
+        return new SlashNoteGreen(slashToken, duration, tremolo, articulations);
+    }
+
+    // c4 4 — a spaced duration standing alone repeats the previous note, chord
+    // or slash (LILYPOND-REF: lily/parser.yy music_embedded "duration
+    // post_events"). The number+dots are read directly — ParseOptionalDuration
+    // insists on glued-to-previous, and this number's whole point is that it is
+    // not glued to anything.
+    private BareDurationGreen ParseBareDuration()
+    {
+        var number = Advance();
+        var dots = new List<GreenNode?>();
+        while (Check(SyntaxKind.Dot) && CurrentGluedToPrevious)
+            dots.Add(Advance());
+        var duration = new DurationGreen(number, [.. dots]);
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
+        var articulations = ParsePostEvents();
+        return new BareDurationGreen(duration, tremolo, articulations);
     }
 
     // bd4, sn8@f, hh — same trailing structure as ParseNote.

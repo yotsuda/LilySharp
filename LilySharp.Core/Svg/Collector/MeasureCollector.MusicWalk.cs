@@ -120,7 +120,8 @@ public sealed partial class MeasureCollector
             && nodes[j].Node is MusicMarkSyntax mark
             && (mark.IsInside<NoteSyntax>() || mark.IsInside<ChordSyntax>()
                 || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()
-                || mark.IsInside<ChordRepetitionSyntax>());
+                || mark.IsInside<ChordRepetitionSyntax>()
+                || mark.IsInside<SlashNoteSyntax>() || mark.IsInside<BareDurationSyntax>());
 
     /// <summary>
     /// Lookahead flags. Ties/slurs/beams are written AFTER the note they
@@ -491,7 +492,8 @@ public sealed partial class MeasureCollector
     private static bool BindsASlur(SyntaxNode node) => node switch
     {
         ChordSyntax c => !c.IsEmpty,
-        NoteSyntax or RestSyntax or ChordRepetitionSyntax or ArpeggioSyntax => true,
+        NoteSyntax or RestSyntax or ChordRepetitionSyntax or ArpeggioSyntax
+            or SlashNoteSyntax or BareDurationSyntax => true,
         _ => false,
     };
 
@@ -890,6 +892,122 @@ public sealed partial class MeasureCollector
                         _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, rep.Position, _currentStaffIndex,
                             Bracket: arpBracket));
                     }
+                }
+                break;
+
+            // `/` — a slash note: mirrors the NoteSyntax case minus everything
+            // that needs a pitch (accidentals, courtesy/editorial, fingering,
+            // ledger). Post-events, dynamics and chord names ride it like any
+            // note.
+            case SlashNoteSyntax slash:
+                {
+                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int itemIndex = builder.CurrentItemCount;
+                    Fraction slashAnchorTiming = builder.CurrentDuration;
+                    if (_pendingGrace != null)
+                    {
+                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        _pendingGrace = null;
+                    }
+                    bool isCue = _cueDepth > 0;
+                    var slashItem = CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
+                    if (isCue && TakeCueRegionStart())
+                        slashItem = slashItem with { BeginsCueRegion = true };
+                    if (_tremoloPairShape is { } tps)
+                    {
+                        slashItem = slashItem with
+                        {
+                            TimeScale = slashItem.TimeScale * new Fraction(1, 2),
+                            TremoloPairBeams = tps.Beams,
+                            TremoloGapCount = tps.GapCount,
+                            HasBeamStart = _tremoloPairFirst,
+                            HasBeamEnd = !_tremoloPairFirst,
+                        };
+                        _tremoloPairFirst = false;
+                    }
+                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    {
+                        slashItem = slashItem with { LeadingGrace = _pendingLeadingGrace };
+                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                    }
+                    builder.AddItem(slashItem);
+                    CollectDynamics(slash, measureIndex, itemIndex);
+                    CollectArticulations(slash, measureIndex, itemIndex, slashItem.StemUp, anchorTiming: slashAnchorTiming);
+                    CollectFiguredBass(slash, measureIndex, itemIndex);
+                    CollectChordNames(slash, measureIndex, itemIndex);
+                    CollectCrossStaff(slash, measureIndex, itemIndex);
+                }
+                break;
+
+            // A bare duration — the previous note/chord/slash again at the new
+            // length. Mirrors the `q` case; the octave frame is NOT touched (the
+            // copy carries the original's absolute spelling).
+            case BareDurationSyntax bare:
+                {
+                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int itemIndex = builder.CurrentItemCount;
+                    Fraction bareAnchorTiming = builder.CurrentDuration;
+                    if (_pendingGrace != null)
+                    {
+                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        _pendingGrace = null;
+                    }
+                    bool isCue = _cueDepth > 0;
+                    var bareItem = CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
+                    if (isCue && TakeCueRegionStart() && bareItem is NoteItem or ChordItem)
+                        bareItem = bareItem switch
+                        {
+                            NoteItem n => n with { BeginsCueRegion = true },
+                            ChordItem c => c with { BeginsCueRegion = true },
+                            _ => bareItem,
+                        };
+                    if (_tremoloPairShape is { } tpb)
+                    {
+                        bareItem = bareItem switch
+                        {
+                            NoteItem n => n with
+                            {
+                                TimeScale = n.TimeScale * new Fraction(1, 2),
+                                TremoloPairBeams = tpb.Beams,
+                                TremoloGapCount = tpb.GapCount,
+                                HasBeamStart = _tremoloPairFirst,
+                                HasBeamEnd = !_tremoloPairFirst,
+                            },
+                            ChordItem c => c with
+                            {
+                                TimeScale = c.TimeScale * new Fraction(1, 2),
+                                TremoloPairBeams = tpb.Beams,
+                                TremoloGapCount = tpb.GapCount,
+                                HasBeamStart = _tremoloPairFirst,
+                                HasBeamEnd = !_tremoloPairFirst,
+                            },
+                            _ => bareItem,
+                        };
+                        if (bareItem is NoteItem or ChordItem)
+                            _tremoloPairFirst = false;
+                    }
+                    if (!_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is NoteItem bn)
+                    {
+                        bareItem = bn with { LeadingGrace = _pendingLeadingGrace };
+                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                    }
+                    else if (!_pendingLeadingGrace.IsDefaultOrEmpty && bareItem is ChordItem bc)
+                    {
+                        bareItem = bc with { LeadingGrace = _pendingLeadingGrace };
+                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                    }
+                    builder.AddItem(bareItem);
+                    bool bareStemUp = bareItem switch
+                    {
+                        NoteItem n => n.StemUp,
+                        ChordItem c => c.StemUp,
+                        _ => false,
+                    };
+                    CollectDynamics(bare, measureIndex, itemIndex);
+                    CollectArticulations(bare, measureIndex, itemIndex, bareStemUp, anchorTiming: bareAnchorTiming);
+                    CollectFiguredBass(bare, measureIndex, itemIndex);
+                    CollectChordNames(bare, measureIndex, itemIndex);
+                    CollectCrossStaff(bare, measureIndex, itemIndex);
                 }
                 break;
 
@@ -1394,6 +1512,42 @@ public sealed partial class MeasureCollector
                 var spacer = (RestItem)repItem;
                 builder.AddItemWithoutDuration(spacer with { TimeScale = scale });
                 return spacer.Duration;
+            }
+            case SlashNoteSyntax slash:
+            {
+                var slashItem = CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter,
+                    hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                builder.AddItemWithoutDuration(slashItem with { TimeScale = scale });
+                CollectDynamics(slash, annMeasureIndex, annItemIndex);
+                CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
+                CollectChordNames(slash, annMeasureIndex, annItemIndex);
+                return slashItem.Duration;
+            }
+            case BareDurationSyntax bare:
+            {
+                // Same late-expansion rule as `q`: the tuplet scale applies to
+                // the copy, whatever it resolved to.
+                var bareItem = CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter,
+                    hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                switch (bareItem)
+                {
+                    case NoteItem n:
+                        builder.AddItemWithoutDuration(n with { TimeScale = scale });
+                        CollectDynamics(bare, annMeasureIndex, annItemIndex);
+                        CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
+                        CollectChordNames(bare, annMeasureIndex, annItemIndex);
+                        return n.Duration;
+                    case ChordItem c:
+                        builder.AddItemWithoutDuration(c with { TimeScale = scale });
+                        CollectDynamics(bare, annMeasureIndex, annItemIndex);
+                        CollectArticulations(bare, annMeasureIndex, annItemIndex, c.StemUp, anchorTiming: annAnchor);
+                        CollectChordNames(bare, annMeasureIndex, annItemIndex);
+                        return c.Duration;
+                    default:
+                        var bareSpacer = (RestItem)bareItem;
+                        builder.AddItemWithoutDuration(bareSpacer with { TimeScale = scale });
+                        return bareSpacer.Duration;
+                }
             }
         }
         return Fraction.Zero;

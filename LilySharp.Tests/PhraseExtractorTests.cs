@@ -156,7 +156,9 @@ public class PhraseExtractorTests
     [Fact]
     public void SyntaxErrors_RefuseWithoutChanges()
     {
-        var src = "part m { section A { c4 d 4 } }\nform main { A }\nscore main { staff m }";
+        // `d 4` stopped being a syntax error on 2026-08-19 (bare-duration repeat);
+        // an unclaimed dot (LYS0023) is still one.
+        var src = "part m { section A { c4 d . } }\nform main { A }\nscore main { staff m }";
         var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), "x");
         Assert.Null(result.NewText);
         Assert.Contains("syntax errors", result.Error);

@@ -464,6 +464,14 @@ public sealed class MidiExporter
                 ProcessChordRepetition(rep, track);
                 break;
 
+            case SlashNoteSyntax slash:
+                ProcessSlashNote(slash);
+                break;
+
+            case BareDurationSyntax bare:
+                ProcessBareDuration(bare, track);
+                break;
+
             case ArpeggioSyntax arpeggio:
                 ProcessArpeggio(arpeggio, track, conductorTrack);
                 break;
@@ -1540,6 +1548,10 @@ public sealed class MidiExporter
         // to merge a tie the page draws.
         midiPitch = SoundKey(midiPitch, note.Position);
 
+        // What a following bare duration copies (same contract as
+        // _resolvedChordNotes): the SOUNDING key, resolved by this walk.
+        _resolvedNoteSound[note] = (midiPitch, note.Pitch.QuarterOffset);
+
         // If the previous onset tied into this one (same pitch on the same track),
         // extend that note instead of emitting a new note-on/off pair.
         var targets = OpenTieTargets(track);
@@ -1607,6 +1619,111 @@ public sealed class MidiExporter
     /// node — what a following <c>q</c> copies (resolved ABSOLUTE pitches; LP
     /// expands repetitions after \relative, so a q never re-reads the frame).</summary>
     private readonly Dictionary<ChordSyntax, List<(int MidiPitch, int QuarterBend, bool IsDrum)>> _resolvedChordNotes = new();
+
+    /// <summary>The sounding key of every pitched note this walk has emitted -
+    /// what a following bare duration copies. Same contract as
+    /// <see cref="_resolvedChordNotes"/>.</summary>
+    private readonly Dictionary<NoteSyntax, (int MidiPitch, int QuarterBend)> _resolvedNoteSound = new();
+
+    /// <summary>A slash note is SILENT - it has no pitch to sound - and, like a
+    /// rest, breaks any pending tie. It still occupies its time and carries the
+    /// running duration forward.</summary>
+    private void ProcessSlashNote(SlashNoteSyntax slash)
+    {
+        _tiePending = false;
+        var duration = GetDuration(slash.Duration);
+        int durationTicks = FractionToTicks(duration);
+        durationTicks -= ConsumeGraceSteal(durationTicks);
+        _currentTick += durationTicks;
+    }
+
+    /// <summary>A bare duration - the previous note, chord or slash again at the
+    /// written length (LILYPOND-REF: lily/parser.yy music_embedded). Pitches come
+    /// from this walk's recorded resolutions, exactly as a <c>q</c>'s do; the
+    /// repetition's OWN post-events (dynamics, tie) apply, the original's do not.</summary>
+    private void ProcessBareDuration(BareDurationSyntax bare, MidiTrack track)
+    {
+        var duration = GetDuration(bare.Duration);
+        int durationTicks = FractionToTicks(duration);
+        durationTicks -= ConsumeGraceSteal(durationTicks);
+        int startTick = _currentTick;
+
+        int velocity = _velocity;
+        int durationPercent = 100;
+        foreach (var child in bare.Articulations)
+        {
+            switch (child)
+            {
+                case DynamicSyntax dynamic:
+                    velocity = dynamic.Velocity;
+                    _velocity = velocity;
+                    break;
+                case ArticulationSyntax articulation:
+                    (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
+                    break;
+            }
+        }
+        int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
+        bool startsTie = bare.Articulations.OfType<TieSyntax>().Any();
+
+        switch (Music.BareDurations.OriginalOf(bare))
+        {
+            case NoteSyntax note when _resolvedNoteSound.TryGetValue(note, out var sound):
+            {
+                var targets = OpenTieTargets(track);
+                int tiedInto = ExtendTied(track, targets, sound.MidiPitch, durationTicks);
+                if (tiedInto >= 0)
+                {
+                    CloseOnset(track, [tiedInto], startsTie);
+                    break;
+                }
+                track.Notes.Add(new MidiNote(track.Channel, sound.MidiPitch, velocity,
+                    startTick, actualDuration, bare.Position,
+                    QuarterBend: sound.QuarterBend,
+                    SourceOrdinal: NextOrdinal(bare.Position), Timbre: _currentTimbre));
+                CloseOnset(track, [track.Notes.Count - 1], startsTie);
+                break;
+            }
+            case ChordSyntax chord when _resolvedChordNotes.TryGetValue(chord, out var notes):
+            {
+                // The full chord again - same emission as ProcessChordRepetition.
+                var tieTargets = OpenTieTargets(track);
+                var onset = new List<int>();
+                int ordinal = NextOrdinal(bare.Position);
+                foreach (var n in notes)
+                {
+                    if (n.IsDrum)
+                    {
+                        track.Notes.Add(new MidiNote(9, n.MidiPitch, velocity, startTick, actualDuration,
+                            bare.Position, SourceOrdinal: ordinal, Timbre: 9));
+                        continue;
+                    }
+                    int tiedInto = ExtendTied(track, tieTargets, n.MidiPitch, durationTicks);
+                    if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
+                    track.Notes.Add(new MidiNote(track.Channel, n.MidiPitch, velocity, startTick, actualDuration,
+                        bare.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre));
+                    onset.Add(track.Notes.Count - 1);
+                }
+                CloseOnset(track, onset, startsTie);
+                break;
+            }
+            case DrumNoteSyntax drum:
+            {
+                var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
+                track.Notes.Add(new MidiNote(9, info.GmKey, velocity, startTick, actualDuration,
+                    bare.Position, SourceOrdinal: NextOrdinal(bare.Position), Timbre: 9));
+                CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
+                break;
+            }
+            default:
+                // A slash (silent) or an unresolved repeat (validator reports it):
+                // occupy the time, sound nothing, break any pending tie.
+                _tiePending = false;
+                break;
+        }
+
+        _currentTick = startTick + durationTicks;
+    }
 
     private void ProcessChord(ChordSyntax chord, MidiTrack track, int extraOctave = 0)
     {

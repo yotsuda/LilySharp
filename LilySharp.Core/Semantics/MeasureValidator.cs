@@ -528,6 +528,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             switch (item)
             {
                 case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
+                    or SlashNoteSyntax or BareDurationSyntax
                     or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
                     or CueExpressionSyntax or BarlineSyntax:
                     continue;

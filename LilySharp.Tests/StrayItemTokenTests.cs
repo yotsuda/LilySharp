@@ -74,7 +74,10 @@ public class StrayItemTokenTests
     [Theory]
     [InlineData("section", "\"oops\"")]
     [InlineData("section", "part")]      // the confusion a reader actually makes
-    [InlineData("section", "42")]
+    // ("section", "42") left this list on 2026-08-19: a bare number is a music
+    // item now (the bare-duration repeat), so in a section body it takes the
+    // same road `c4` does — accepted by the parser and named by the
+    // music-needs-a-part / nothing-to-repeat validators, not by the stray net.
     [InlineData("form", "\"oops\"")]
     [InlineData("form", "section")]      // measured: this one corrupted the NEXT diagnostic
     [InlineData("form", "42")]
@@ -229,8 +232,9 @@ public class StrayItemTokenTests
     /// width off every node after it. The width is what the round trip measures.
     /// </summary>
     [Theory]
-    // LYS0016: a duration separated from what it lengthens. Measured: two characters.
-    [InlineData("part melody\nsection A { melody { c4 4 d e f | } }\n")]
+    // (The LYS0016 row left this list on 2026-08-19: `c4 4` is the bare-duration
+    // repeat now, parsed with no report at all - its round trip is pinned by
+    // BareDurationTests instead.)
     // LYS0021: a decimal where a duration was meant. Measured: four characters.
     [InlineData("part melody\nsection A { melody { c4.5 d e f | } }\n")]
     // LYS0025: a token a part header cannot place. Measured (第183): fourteen.

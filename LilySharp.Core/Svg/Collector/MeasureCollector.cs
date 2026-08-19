@@ -4681,7 +4681,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     internal static bool IsCollectableMusicNode(SyntaxNode node) =>
         node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
-            or ChordRepetitionSyntax or ArpeggioSyntax
+            or ChordRepetitionSyntax or SlashNoteSyntax or BareDurationSyntax or ArpeggioSyntax
             or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or CueExpressionSyntax
             or TupletExpressionSyntax or RepeatExpressionSyntax
@@ -4784,7 +4784,8 @@ public sealed partial class MeasureCollector
     /// MusicSitesEquivalenceTests plus the full snapshot suite.</summary>
     private static bool IsMusicCandidateKind(SyntaxKind kind) => kind is
         SyntaxKind.Note or SyntaxKind.DrumNote or SyntaxKind.Rest or SyntaxKind.Chord
-            or SyntaxKind.ChordRepetition or SyntaxKind.Arpeggio
+            or SyntaxKind.ChordRepetition or SyntaxKind.SlashNote or SyntaxKind.BareDuration
+            or SyntaxKind.Arpeggio
             or SyntaxKind.Barline or SyntaxKind.Break or SyntaxKind.Tie or SyntaxKind.Slur
             or SyntaxKind.BeamMarker
             or SyntaxKind.GraceExpression or SyntaxKind.CueExpression
@@ -5019,6 +5020,8 @@ public sealed partial class MeasureCollector
         NoteSyntax note => note.Articulations,
         ChordSyntax chord => chord.Articulations,
         ChordRepetitionSyntax rep => rep.Articulations,
+        SlashNoteSyntax slash => slash.Articulations,
+        BareDurationSyntax bare => bare.Articulations,
         DrumNoteSyntax drum => drum.Articulations,
         ArpeggioSyntax arpeggio => arpeggio.Articulations,
         // A rest carries post-events too (r2\p) — this arm was missing, so
@@ -5199,7 +5202,8 @@ public sealed partial class MeasureCollector
             }
         }
         else if (type == "tremolo" && bodyNodes.Count == 2
-            && bodyNodes.All(b => b.Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax)
+            && bodyNodes.All(b => b.Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
+                or SlashNoteSyntax or BareDurationSyntax)
             && TremoloPairShape(count, bodyNodes[0].Node, bodyNodes[1].Node) is { } pairShape)
         {
             // Two-note (chord) tremolo: both notes are WRITTEN with the
@@ -5213,6 +5217,7 @@ public sealed partial class MeasureCollector
         }
         else if (type == "tremolo" && bodyNodes.Count == 1
             && bodyNodes[0].Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
+                or SlashNoteSyntax or BareDurationSyntax
             && TremoloTotalIsPrintable(count, bodyNodes[0].Node))
         {
             // LILYPOND-REF: lily/chord-tremolo-engraver.cc +
@@ -5259,6 +5264,8 @@ public sealed partial class MeasureCollector
         NoteSyntax ns => ns.Duration?.Value ?? 0,
         ChordSyntax cs => cs.Duration?.Value ?? 0,
         ChordRepetitionSyntax rep => rep.Duration?.Value ?? 0,
+        SlashNoteSyntax slash => slash.Duration?.Value ?? 0,
+        BareDurationSyntax bare => bare.Duration.Value,
         _ => 0
     };
 

@@ -782,6 +782,78 @@ public sealed class ChordRepetitionSyntax : SyntaxNode
 }
 
 /// <summary>
+/// A slash note (<c>/4</c>): a pitchless note drawn as a slash head on the
+/// middle staff line — rhythm (comping) notation. Duration, stems, beams and
+/// post-events behave as on an ordinary note; playback is silent.
+/// </summary>
+public sealed class SlashNoteSyntax : SyntaxNode
+{
+    internal SlashNoteSyntax(SlashNoteGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>/</c> token.</summary>
+    public SyntaxTokenNode SlashToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The note's duration, or null when inherited from the previous note.</summary>
+    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+    /// <summary>The tremolo suffix (:8, :16, :32), or null.</summary>
+    public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
+
+    /// <summary>The articulations and dynamics attached to this note.</summary>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 3; i < Green.SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// A bare duration (<c>c4 4</c>): a spaced duration standing alone, repeating
+/// the previous note, chord or slash with the new length. The tree holds no
+/// pitches — the shared resolver (<see cref="Music.BareDurations"/>) maps each
+/// bare duration to the event it repeats at walk time, like
+/// <see cref="ChordRepetitionSyntax"/>.
+/// LILYPOND-REF: lily/parser.yy music_embedded — "duration post_events" builds
+/// a NoteEvent with no pitch property; the preceding note's or chord's pitches
+/// are used when typeset.
+/// </summary>
+public sealed class BareDurationSyntax : SyntaxNode
+{
+    internal BareDurationSyntax(BareDurationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The duration — always present (it is the whole spelling).</summary>
+    public DurationSyntax Duration => (DurationSyntax)GetChild(0)!;
+    /// <summary>The tremolo suffix (:8, :16, :32), or null.</summary>
+    public SyntaxTokenNode? Tremolo => GetChild(1) as SyntaxTokenNode;
+
+    /// <summary>The articulations and dynamics attached to this repetition itself
+    /// (the original's post-events are NOT copied — same rule as <c>q</c>).</summary>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 2; i < Green.SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+}
+
+/// <summary>
 /// A barline: |, ||, |., etc.
 /// </summary>
 public sealed class BarlineSyntax : SyntaxNode

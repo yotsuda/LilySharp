@@ -659,6 +659,8 @@ public sealed partial class MeasureCollector
                 case SyntaxKind.Rest:
                 case SyntaxKind.Chord:
                 case SyntaxKind.ChordRepetition:
+                case SyntaxKind.SlashNote:
+                case SyntaxKind.BareDuration:
                 case SyntaxKind.ChordEntry:
                     pendingMusic = true;
                     break;
@@ -731,6 +733,8 @@ public sealed partial class MeasureCollector
                 case RestSyntax:
                 case ChordSyntax:
                 case ChordRepetitionSyntax:
+                case SlashNoteSyntax:
+                case BareDurationSyntax:
                 case ChordEntrySyntax:
                     pendingMusic = true;
                     break;

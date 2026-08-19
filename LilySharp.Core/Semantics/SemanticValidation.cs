@@ -73,6 +73,7 @@ public static class SemanticValidation
         new TabTieStringValidator(),        // a tie naming two tab strings
         new TieTargetValidator(),           // a tie whose next note is not the tied pitch
         new ChordRepetitionValidator(),     // a `q` with no chord before it to repeat
+        new BareDurationValidator(),        // a bare duration with nothing before it to repeat
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
         new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)

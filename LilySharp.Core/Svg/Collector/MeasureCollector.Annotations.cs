@@ -122,6 +122,9 @@ public sealed partial class MeasureCollector
                     // A `q` names what it repeats — derive from the original chord.
                     ChordRepetitionSyntax rep when ChordRepetitions.OriginalOf(rep) is { } orig
                         && TryNameChord(orig, out var s) => s,
+                    // A bare duration likewise, when what it repeats is a chord.
+                    BareDurationSyntax bd when BareDurations.OriginalOf(bd) is ChordSyntax bdOrig
+                        && TryNameChord(bdOrig, out var s) => s,
                     _ => null,
                 };
                 if (structure == null)
@@ -380,6 +383,8 @@ public sealed partial class MeasureCollector
                 .Concat(chord.Pitches.SelectMany(
                     p => p.Articulations.Select(a => (Node: a, IsMember: true)))),
             ChordRepetitionSyntax rep => rep.Articulations.Select(a => (Node: a, IsMember: false)),
+            SlashNoteSyntax slashNote => slashNote.Articulations.Select(a => (Node: a, IsMember: false)),
+            BareDurationSyntax bareDur => bareDur.Articulations.Select(a => (Node: a, IsMember: false)),
             RestSyntax rest => rest.Articulations.Select(a => (Node: a, IsMember: false)),
             _ => Enumerable.Empty<(SyntaxNode Node, bool IsMember)>()
         };

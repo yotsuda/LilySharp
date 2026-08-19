@@ -459,6 +459,14 @@ public enum SyntaxKind : ushort
     /// notes with its own duration and post-events.
     /// LILYPOND-REF: scm/music-functions.scm expand-repeat-chords!</summary>
     ChordRepetition,
+    /// <summary>A slash note (<c>/4</c>): a pitchless note drawn as a slash head on
+    /// the middle staff line — rhythm (comping) notation. Silent in playback.</summary>
+    SlashNote,
+    /// <summary>A bare-duration node (<c>c4 4</c>, <c>&lt;c e g&gt;4 4</c>, <c>/4 4</c>):
+    /// repeats the previous note, chord or slash with its own duration.
+    /// LILYPOND-REF: lily/parser.yy music_embedded — a duration alone makes a
+    /// pitchless NoteEvent whose pitch is the preceding note's or chord's.</summary>
+    BareDuration,
     /// <summary>An arpeggio node (<c>&lt;&lt; c e g &gt;&gt;</c>): sequential notes with
     /// chord-style octave anchoring to the first note.</summary>
     Arpeggio,

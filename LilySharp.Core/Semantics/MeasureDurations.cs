@@ -94,6 +94,19 @@ internal static class MeasureDurations
                 if (rep.Duration != null) defaultDuration = repDuration;
                 return repDuration;
 
+            case SlashNoteSyntax slash:
+                var slashDuration = DurationCalculator.GetDuration(slash, defaultDuration);
+                if (slash.Duration != null) defaultDuration = slashDuration;
+                return slashDuration;
+
+            case BareDurationSyntax bare:
+                // A bare duration occupies its written time whether or not it
+                // resolves (same rule as a bad `q`), and ALWAYS sets the running
+                // default — LP: music_embedded assigns parser->default_duration_.
+                var bareDuration = DurationCalculator.GetDuration(bare, defaultDuration);
+                defaultDuration = bareDuration;
+                return bareDuration;
+
             case TupletExpressionSyntax tuplet:
                 // actual = written * BaseDivision / TupletRatio
                 // (\tuplet 3/2 { c8 c c } -> 3 * 1/8 * 2/3 = 1/4).

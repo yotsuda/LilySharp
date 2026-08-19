@@ -151,6 +151,8 @@ public abstract class SyntaxNode
             SyntaxKind.Rest => new RestSyntax((RestGreen)green, this, position),
             SyntaxKind.Chord => new ChordSyntax((ChordGreen)green, this, position),
             SyntaxKind.ChordRepetition => new ChordRepetitionSyntax((ChordRepetitionGreen)green, this, position),
+            SyntaxKind.SlashNote => new SlashNoteSyntax((SlashNoteGreen)green, this, position),
+            SyntaxKind.BareDuration => new BareDurationSyntax((BareDurationGreen)green, this, position),
             SyntaxKind.Arpeggio => new ArpeggioSyntax((ArpeggioGreen)green, this, position),
             SyntaxKind.Pitch => new PitchSyntax((PitchGreen)green, this, position),
             SyntaxKind.ChordDegree => new ScaleDegreeSyntax((ScaleDegreeGreen)green, this, position),

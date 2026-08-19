@@ -207,6 +207,38 @@ internal sealed class ChordRepetitionGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A slash note: <c>/</c> + optional duration + optional tremolo + articulations —
+/// the same trailing shape as NoteGreen, with the slash token in place of a pitch.
+/// A pitchless note drawn as a slash head on the middle staff line (rhythm /
+/// comping notation). Silent in playback.
+/// </summary>
+internal sealed class SlashNoteGreen : GreenSyntaxNode
+{
+    public SlashNoteGreen(SyntaxToken slashToken, DurationGreen? duration, SyntaxToken? tremolo, GreenNode?[] articulations)
+        : base(SyntaxKind.SlashNote, [slashToken, duration, tremolo, .. articulations])
+    {
+    }
+}
+
+/// <summary>
+/// A bare duration: a spaced duration standing alone in a music sequence,
+/// repeating the previous note, chord or slash with the new length. The tree
+/// holds no pitches — the shared resolver maps the node to its original at
+/// walk time, like <see cref="ChordRepetitionGreen"/>.
+/// LILYPOND-REF: lily/parser.yy music_embedded — "duration post_events" builds
+/// a NoteEvent with no pitch property; the preceding note's or chord's pitches
+/// are used when typeset (measured 2.26.0: byte-identical to the explicit
+/// spelling for a note, for a chord, and across intervening rests).
+/// </summary>
+internal sealed class BareDurationGreen : GreenSyntaxNode
+{
+    public BareDurationGreen(DurationGreen duration, SyntaxToken? tremolo, GreenNode?[] articulations)
+        : base(SyntaxKind.BareDuration, [duration, tremolo, .. articulations])
+    {
+    }
+}
+
+/// <summary>
 /// An arpeggio: <c>&lt;&lt; note note ... &gt;&gt;</c> — the inner notes play in SEQUENCE
 /// (each with its own duration), but their octaves anchor to the FIRST note like a chord.
 /// An optional duration after <c>&gt;&gt;</c> is the group's target total (auto-tuplet).

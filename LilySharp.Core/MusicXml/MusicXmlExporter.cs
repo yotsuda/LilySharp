@@ -1039,6 +1039,14 @@ public sealed class MusicXmlExporter
                 ProcessChordRepetition(rep);
                 break;
 
+            case SlashNoteSyntax slash:
+                ProcessSlashNote(slash);
+                break;
+
+            case BareDurationSyntax bare:
+                ProcessBareDuration(bare);
+                break;
+
             case ArpeggioSyntax arpeggio:
                 ProcessArpeggio(arpeggio);
                 break;
@@ -1729,6 +1737,10 @@ public sealed class MusicXmlExporter
             return;
         }
 
+        // What a following bare duration copies (same contract as
+        // _resolvedChordXmlNotes): the spelling this walk resolved.
+        _resolvedNoteXml[note] = (step, alter, targetOctave, quarter);
+
         // Emit pending dynamic as direction before the note
         EmitPendingDynamic();
 
@@ -2015,6 +2027,179 @@ public sealed class MusicXmlExporter
     /// node — what a following <c>q</c> copies (post-transpose spelling; LP
     /// expands repetitions after \relative, so a q never re-reads the frame).</summary>
     private readonly Dictionary<ChordSyntax, List<(string Step, int Alter, int Octave)>> _resolvedChordXmlNotes = new();
+
+    /// <summary>The resolved spelling of every pitched note this walk has
+    /// emitted - what a following bare duration copies. Same contract as
+    /// <see cref="_resolvedChordXmlNotes"/>.</summary>
+    private readonly Dictionary<NoteSyntax, (string Step, int Alter, int Octave, int Quarter)> _resolvedNoteXml = new();
+
+    /// <summary>A slash note: MusicXML's own reading is an UNPITCHED note with a
+    /// slash head displayed on the middle line (B4 in every staff's display
+    /// space), the same shape a drum note takes.</summary>
+    private void ProcessSlashNote(SlashNoteSyntax slash)
+    {
+        if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
+
+        var duration = GetDuration(slash.Duration);
+        int durationTicks = FractionToTicks(duration);
+        var (type, dots) = GetNoteType(duration);
+        EmitPendingDynamic();
+
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
+        var xmlNote = new MusicXmlNote
+        {
+            IsUnpitched = true,
+            Step = "B",
+            Octave = 4,
+            Duration = durationTicks,
+            Type = type,
+            Dots = dots,
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal,
+            Notehead = "slash",
+        };
+        ProcessArticulations(slash.Articulations, xmlNote);
+        _currentMeasure.Notes.Add(xmlNote);
+        _lastPitchedNote = null;
+        _lastEmittedNotes.Clear();
+        MaybeClosePickup(duration);
+    }
+
+    /// <summary>A bare duration - the previous note, chord or slash again at the
+    /// written length (LILYPOND-REF: lily/parser.yy music_embedded). The shape
+    /// mirrors <see cref="ProcessChordRepetition"/>: resolved spellings recorded
+    /// by this walk, the repetition's own post-events only.</summary>
+    private void ProcessBareDuration(BareDurationSyntax bare)
+    {
+        if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
+
+        var duration = GetDuration(bare.Duration);
+        int durationTicks = FractionToTicks(duration);
+        var (type, dots) = GetNoteType(duration);
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
+
+        switch (Music.BareDurations.OriginalOf(bare))
+        {
+            case NoteSyntax note when _resolvedNoteXml.TryGetValue(note, out var m):
+            {
+                EmitPendingDynamic();
+                var xmlNote = new MusicXmlNote
+                {
+                    Step = m.Step,
+                    Alter = m.Quarter == 0 ? m.Alter : m.Alter + 0.5 * m.Quarter,
+                    Octave = m.Octave,
+                    Duration = durationTicks,
+                    Type = type,
+                    Dots = dots,
+                    ActualNotes = tupletActual,
+                    NormalNotes = tupletNormal
+                };
+                ProcessArticulations(bare.Articulations, xmlNote);
+                CloseTies([xmlNote]);
+                if (bare.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
+                _currentMeasure.Notes.Add(xmlNote);
+                _lastPitchedNote = xmlNote;
+                _lastEmittedNotes.Clear();
+                _lastEmittedNotes.Add(xmlNote);
+                MaybeClosePickup(duration);
+                return;
+            }
+            case ChordSyntax chord when _resolvedChordXmlNotes.TryGetValue(chord, out var members)
+                && members.Count > 0:
+            {
+                EmitPendingDynamic();
+                bool isFirst = true;
+                foreach (var m in members)
+                {
+                    var xmlNote = new MusicXmlNote
+                    {
+                        Step = m.Step,
+                        Alter = m.Alter,
+                        Octave = m.Octave,
+                        Duration = durationTicks,
+                        Type = type,
+                        Dots = dots,
+                        IsChord = !isFirst,
+                        ActualNotes = tupletActual,
+                        NormalNotes = tupletNormal
+                    };
+                    if (isFirst)
+                    {
+                        ProcessArticulations(bare.Articulations, xmlNote);
+                        isFirst = false;
+                    }
+                    _currentMeasure.Notes.Add(xmlNote);
+                    _chordMembers.Add(xmlNote);
+                }
+                CloseTies(_chordMembers);
+                if (bare.Articulations.OfType<TieSyntax>().Any()) OpenTies(_chordMembers);
+                _lastEmittedNotes.Clear();
+                _lastEmittedNotes.AddRange(_chordMembers);
+                _chordMembers.Clear();
+                MaybeClosePickup(duration);
+                return;
+            }
+            case DrumNoteSyntax drum:
+            {
+                var info = DrumOverrides.Resolve(DrumOverridesMap, drum.DrumName);
+                int idx = 6 + info.StaffPosition;
+                int oct = 4 + (int)Math.Floor(idx / 7.0);
+                string step = "CDEFGAB"[((idx % 7) + 7) % 7].ToString();
+                EmitPendingDynamic();
+                _currentMeasure.Notes.Add(new MusicXmlNote
+                {
+                    IsUnpitched = true,
+                    Step = step,
+                    Octave = oct,
+                    Duration = durationTicks,
+                    Type = type,
+                    Dots = dots,
+                    ActualNotes = tupletActual,
+                    NormalNotes = tupletNormal,
+                    Notehead = NoteheadName(info.Notehead),
+                });
+                _lastPitchedNote = null;
+                _lastEmittedNotes.Clear();
+                MaybeClosePickup(duration);
+                return;
+            }
+            case SlashNoteSyntax:
+            {
+                EmitPendingDynamic();
+                _currentMeasure.Notes.Add(new MusicXmlNote
+                {
+                    IsUnpitched = true,
+                    Step = "B",
+                    Octave = 4,
+                    Duration = durationTicks,
+                    Type = type,
+                    Dots = dots,
+                    ActualNotes = tupletActual,
+                    NormalNotes = tupletNormal,
+                    Notehead = "slash",
+                });
+                _lastPitchedNote = null;
+                _lastEmittedNotes.Clear();
+                MaybeClosePickup(duration);
+                return;
+            }
+            default:
+                // Nothing to repeat (the validator reports it): keep the time.
+                _lastPitchedNote = null;
+                _lastEmittedNotes.Clear();
+                _currentMeasure.Notes.Add(new MusicXmlNote
+                {
+                    IsRest = true,
+                    Duration = durationTicks,
+                    Type = type,
+                    Dots = dots
+                });
+                MaybeClosePickup(duration);
+                return;
+        }
+    }
 
     private void ProcessChord(ChordSyntax chord, int extraOctave = 0)
     {

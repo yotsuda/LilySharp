@@ -34,6 +34,14 @@ public sealed partial class MeasureCollector
         _octave.CurrentOctave = rp.RelativeOctave;
         int staffPosition = rp.StaffPosition;
 
+        // What a following bare duration copies (same contract as
+        // _resolvedChordMembers): the ABSOLUTE spelling, resolved by THIS walk —
+        // a repetition must not re-run the written pitch through the relative
+        // frame, whose anchor has moved on to this very note.
+        _resolvedNotes[note] = new ResolvedChordMember(
+            staffPosition, rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave,
+            NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave));
+
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
         // An undurated note takes the whole default — dots included (`c8. c` is two
         // dotted eighths). LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration.
@@ -269,6 +277,13 @@ public sealed partial class MeasureCollector
     /// replays re-enter with a reset frame and resolve to the same values), so the
     /// entry a <c>q</c> reads is always the one its own walk just wrote.</summary>
     private readonly Dictionary<ChordSyntax, ImmutableArray<ResolvedChordMember>> _resolvedChordMembers = new();
+
+    /// <summary>The resolved spelling of every pitched note this walk has built,
+    /// keyed by node — what a following bare duration copies. Same refill-per-walk
+    /// contract as <see cref="_resolvedChordMembers"/>. (Chords and drum notes need
+    /// no twin: chords are in <see cref="_resolvedChordMembers"/>, and a drum or
+    /// slash resolves statelessly from its own syntax.)</summary>
+    private readonly Dictionary<NoteSyntax, ResolvedChordMember> _resolvedNotes = new();
 
     private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0)
     {
@@ -621,6 +636,205 @@ public sealed partial class MeasureCollector
             ForcedStemUp = GetStemDirectionOverride(rep),
             HasGlissando = HasGlissandoArticulation(rep),
         };
+    }
+
+    /// <summary>
+    /// <c>/4</c> — a slash note: a pitchless NoteItem with a slash head on the
+    /// MIDDLE staff line (staff position 0), silent in playback. Rhythm
+    /// (comping) notation; duration carry, stems and beams behave as on an
+    /// ordinary note.
+    /// LILYPOND-REF: ly/property-init.ly improvisationOn — LilyPond spells this
+    /// NoteHead.style = #'slash on a written pitch; Lily# carries no pitch, so
+    /// the head sits where charts put it, the middle line, under any clef.
+    /// </summary>
+    private NoteItem CreateSlashNoteItem(SlashNoteSyntax slash, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool isCue = false, (int Value, int Dots)? forcedDuration = null)
+    {
+        int noteValue = forcedDuration?.Value ?? slash.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        int dots = forcedDuration?.Dots ?? slash.Duration?.DotCount ?? _defaultDots;
+        if (forcedDuration == null && slash.Duration != null)
+        {
+            _defaultDuration = Fraction.FromNoteValue(noteValue);
+            _defaultDots = dots;
+        }
+        int tremoloBeams = ParseTremoloBeams(slash.Tremolo);
+        if (_tremoloRepeatCount > 1
+            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        {
+            tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
+            noteValue = combined.Value;
+            dots = combined.Dots;
+        }
+        if (_tremoloPairShape is { } pairDisp)
+        {
+            noteValue = pairDisp.Value;
+            dots = pairDisp.Dots;
+        }
+
+        return new NoteItem(
+            staffPosition: 0,
+            Fraction.FromNoteValue(noteValue),
+            dots,
+            accidental: null,
+            needsLedgerLines: false,
+            slash.Position,
+            tremoloBeams,
+            hasTieStart: hasTieAfter,
+            hasSlurStart: hasSlurStartAfter,
+            hasSlurEnd: hasSlurEndAfter,
+            hasBeamStart: hasBeamStartAfter,
+            hasBeamEnd: hasBeamEndAfter,
+            isCue: isCue)
+        {
+            Notehead = NoteheadStyle.Slash,
+            // Silent: no pitch exists. The only NoteItem.Midi consumers are the
+            // tab renderers, where 0 falls outside every tuning and the range
+            // validator says so — a slash has no place on a fretboard.
+            Midi = 0,
+            ForcedStemUp = GetStemDirectionOverride(slash),
+        };
+    }
+
+    /// <summary>
+    /// <c>c4 4</c> — a bare duration: the previous note, chord or slash again at
+    /// the written length. Resolution comes from the shared
+    /// <see cref="Music.BareDurations"/> map plus this walk's recorded spellings
+    /// (<see cref="_resolvedNotes"/> / <see cref="_resolvedChordMembers"/>) — the
+    /// same two-step a <c>q</c> uses, for the same reason: the relative frame has
+    /// moved on, so the original must be copied, never re-resolved.
+    /// LILYPOND-REF: lily/parser.yy music_embedded; behaviour pinned against
+    /// 2.26.0 (note / full chord / through rests — byte-identical to the
+    /// explicit spellings).
+    /// </summary>
+    private MusicItem CreateBareDurationItem(BareDurationSyntax bare, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool isCue = false, (int Value, int Dots)? forcedDuration = null)
+    {
+        // Same checkpoint/resume rule as `q`: the copy reads state recorded when
+        // the original was walked, which an adopted resume prefix would not have.
+        _probeRecording?.MarkIneligible("bare-duration");
+
+        int noteValue = forcedDuration?.Value ?? bare.Duration.Value;
+        int dots = forcedDuration?.Dots ?? bare.Duration.DotCount;
+        if (forcedDuration == null)
+        {
+            // A bare duration ALWAYS sets the running default — it IS a written
+            // duration (LP: music_embedded assigns parser->default_duration_).
+            _defaultDuration = Fraction.FromNoteValue(noteValue);
+            _defaultDots = dots;
+        }
+        int tremoloBeams = ParseTremoloBeams(bare.Tremolo);
+        if (_tremoloRepeatCount > 1
+            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        {
+            tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
+            noteValue = combined.Value;
+            dots = combined.Dots;
+        }
+        if (_tremoloPairShape is { } pairDisp)
+        {
+            noteValue = pairDisp.Value;
+            dots = pairDisp.Dots;
+        }
+
+        switch (Music.BareDurations.OriginalOf(bare))
+        {
+            case ChordSyntax chord when _resolvedChordMembers.TryGetValue(chord, out var members):
+            {
+                // The full chord again — same copy a `q` makes (accidentals
+                // re-derived through the measure's own state, post-events not
+                // copied).
+                var notes = new List<ChordNoteInfo>(members.Length);
+                foreach (var m in members)
+                {
+                    string? accidental = m.Step is { } step
+                        ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
+                        : null;
+                    notes.Add(new ChordNoteInfo(
+                        m.StaffPosition, accidental,
+                        m.StaffPosition is <= -6 or >= 6,
+                        IsCourtesy: false,
+                        Notehead: m.Notehead,
+                        Midi: m.Midi,
+                        SourcePosition: bare.Position));
+                }
+                return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, bare.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio: false, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
+                {
+                    ForcedStemUp = GetStemDirectionOverride(bare),
+                    HasGlissando = HasGlissandoArticulation(bare),
+                };
+            }
+
+            case NoteSyntax note when _resolvedNotes.TryGetValue(note, out var m):
+                return new NoteItem(
+                    m.StaffPosition,
+                    Fraction.FromNoteValue(noteValue),
+                    dots,
+                    m.Step is { } noteStep ? GetDisplayAccidental(noteStep, m.Alter!.Value, m.Octave!.Value) : null,
+                    needsLedgerLines: m.StaffPosition is <= -6 or >= 6,
+                    bare.Position,
+                    tremoloBeams,
+                    hasTieStart: hasTieAfter,
+                    hasSlurStart: hasSlurStartAfter,
+                    hasSlurEnd: hasSlurEndAfter,
+                    hasBeamStart: hasBeamStartAfter,
+                    hasBeamEnd: hasBeamEndAfter,
+                    hasGlissando: HasGlissandoArticulation(bare),
+                    isCue: isCue)
+                {
+                    Midi = m.Midi,
+                    ForcedStemUp = GetStemDirectionOverride(bare),
+                };
+
+            case DrumNoteSyntax drum:
+            {
+                // Stateless from the original's own syntax — the drummap does not
+                // move between the original and the repeat.
+                var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
+                return new NoteItem(
+                    info.StaffPosition,
+                    Fraction.FromNoteValue(noteValue),
+                    dots,
+                    accidental: null,
+                    needsLedgerLines: info.StaffPosition is <= -6 or >= 6,
+                    bare.Position,
+                    tremoloBeams,
+                    hasTieStart: hasTieAfter,
+                    hasSlurStart: hasSlurStartAfter,
+                    hasSlurEnd: hasSlurEndAfter,
+                    hasBeamStart: hasBeamStartAfter,
+                    hasBeamEnd: hasBeamEndAfter,
+                    isCue: isCue)
+                {
+                    Notehead = info.Notehead,
+                    Midi = info.GmKey,
+                    ForcedStemUp = GetStemDirectionOverride(bare),
+                };
+            }
+
+            case SlashNoteSyntax:
+                return new NoteItem(
+                    staffPosition: 0,
+                    Fraction.FromNoteValue(noteValue),
+                    dots,
+                    accidental: null,
+                    needsLedgerLines: false,
+                    bare.Position,
+                    tremoloBeams,
+                    hasTieStart: hasTieAfter,
+                    hasSlurStart: hasSlurStartAfter,
+                    hasSlurEnd: hasSlurEndAfter,
+                    hasBeamStart: hasBeamStartAfter,
+                    hasBeamEnd: hasBeamEndAfter,
+                    isCue: isCue)
+                {
+                    Notehead = NoteheadStyle.Slash,
+                    Midi = 0,
+                    ForcedStemUp = GetStemDirectionOverride(bare),
+                };
+
+            default:
+                // Nothing to repeat: a spacer keeps the time; the validator
+                // reports it (LYS0016 — nothing is silent).
+                return new RestItem(Fraction.FromNoteValue(noteValue), dots, bare.Position) { IsSpacer = true };
+        }
     }
 
     /// <summary>

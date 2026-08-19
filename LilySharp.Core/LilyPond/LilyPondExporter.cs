@@ -180,6 +180,11 @@ public sealed class LilyPondExporter
     private readonly HashSet<string> _drumParts = new(StringComparer.Ordinal);
     private bool _drumMode;
 
+    /// <summary>Whether the twin currently has <c>\improvisationOn</c> open — the
+    /// LilyPond spelling of a slash-note run. Opened by the first slash, closed
+    /// by the next pitched event.</summary>
+    private bool _improvisationOpen;
+
     /// <summary>The note value Lily# would give an event that writes no duration — its own
     /// rule, not LilyPond's. See <see cref="EmitEventDuration"/>.</summary>
     private string _lastWrittenValue = "4";
@@ -275,6 +280,14 @@ public sealed class LilyPondExporter
                 _anchorOctave = part != null
                     ? AnchorOctaveOf(part)
                     : InstrumentDefaults.GetDefaultOctave(ClefType.Treble);
+                // The clef a slash note's middle-line pitch is spelled against.
+                // Read from the part's own `clef` property (the same source
+                // AnchorOctaveOf reads); a preset-implied or staff-level clef is
+                // not seen here, which only moves which LINE the twin's slash
+                // sits on - Lily#'s page pins it to the middle regardless.
+                _lysClef = part != null && PartProperty(part, "clef") is { } partClefWord
+                    ? Svg.Collector.MeasureCollector.ParseClefType(partClefWord.ToLowerInvariant())
+                    : ClefType.Treble;
                 // The RELATIVE anchor above and the ABSOLUTE one here answer different
                 // questions and resolve differently: the relative one follows the clef and
                 // the instrument preset, the absolute one is middle C unless the part states
@@ -306,6 +319,7 @@ public sealed class LilyPondExporter
             // No part at all — neither declared nor named by a score: treat the whole
             // file's music stream as one voice.
             partVars["music"] = "music";
+            _lysClef = ClefType.Treble;
             _partTranspose = EffectiveTranspose(root, "music", render);
             EmitPartVariable("music", TopLevelMusic(root), root);
         }
@@ -732,6 +746,10 @@ public sealed class LilyPondExporter
         // (MeasureCollector resets _defaultDuration to a quarter per part).
         _lastWrittenValue = "4";
         _forceNextDuration = false;
+        // Each part's music variable is its own scope - a slash run cannot stay
+        // open across the boundary (the next part opened with a stray
+        // improvisationOff when it did).
+        _improvisationOpen = false;
 
         // …and from its own octave frame and the score's home key, for the same reason
         // (MeasureCollector.cs sets LastPitchName = 'c' and re-arms the ambient tonic per
@@ -1389,11 +1407,13 @@ public sealed class LilyPondExporter
 
     private string EmitItem(SyntaxNode item) => item switch
     {
-        NoteSyntax n => EmitNote(n),
-        DrumNoteSyntax dn => EmitDrumNote(dn),
+        NoteSyntax n => CloseImprovisation() + EmitNote(n),
+        DrumNoteSyntax dn => CloseImprovisation() + EmitDrumNote(dn),
         RestSyntax r => EmitRest(r),
-        ChordSyntax c => EmitChord(c),
+        ChordSyntax c => CloseImprovisation() + EmitChord(c),
         ChordRepetitionSyntax q => EmitChordRepetition(q),
+        SlashNoteSyntax sl => EmitSlashNote(sl),
+        BareDurationSyntax bd => EmitBareDuration(bd),
         BarlineSyntax b => EmitBarline(b),
         BreakSyntax br => br.IsNoBreak ? "\\noBreak" : "\\break",
         TieSyntax => "~",
@@ -1518,6 +1538,74 @@ public sealed class LilyPondExporter
         return prefix + "q" + EmitEventDuration(q.Duration) + trem + suffix;
     }
 
+    /// <summary>The written pitch that sits on the MIDDLE staff line of a clef -
+    /// where Lily# draws every slash note. Step index per
+    /// <see cref="Semantics.RelativeOctave.StepIndex"/>, octave in the c'=4
+    /// convention.</summary>
+    private static (int Step, int Octave) MiddleLinePitch(ClefType clef) => clef switch
+    {
+        ClefType.Bass => (1, 3),   // d
+        ClefType.Alto => (0, 4),   // c'
+        ClefType.Tenor => (5, 3),  // a
+        _ => (6, 4),               // b' - treble, treble_8, and anything unmapped
+    };
+
+    /// <summary>
+    /// A slash note. LilyPond has no pitchless slash token, so the twin spells it
+    /// the way LilyPond users do: <c>\improvisationOn</c> (slash heads, no
+    /// accidentals - ly/property-init.ly) around a pitch on the clef's middle
+    /// line. The pitch moves LILYPOND's relative frame and not Lily#'s (a slash
+    /// has no pitch), so only <see cref="_lyStep"/>/<see cref="_lyOctave"/>
+    /// advance; <see cref="EmitMusicPitch"/> already compensates the next real
+    /// pitch for diverged frames.
+    /// </summary>
+    private string EmitSlashNote(SlashNoteSyntax slash)
+    {
+        var (prefix, suffix) = SplitAttachments(slash.Articulations);
+        string trem = slash.Tremolo is { } t ? t.Text : "";
+        var (step, octave) = MiddleLinePitch(_lysClef);
+        string pitchText;
+        if (_octaveAbsolute)
+        {
+            pitchText = StepName(step) + OctaveMarks(octave - _absoluteBaseOctave);
+        }
+        else
+        {
+            int marks = octave - Semantics.RelativeOctave.Resolve(_lyStep, _lyOctave, step, 0);
+            pitchText = StepName(step) + OctaveMarks(marks);
+            _lyStep = step;
+            _lyOctave = octave;
+        }
+        string on = _improvisationOpen ? "" : "\\improvisationOn ";
+        _improvisationOpen = true;
+        return on + prefix + pitchText + EmitEventDuration(slash.Duration) + trem + suffix;
+    }
+
+    /// <summary>Closes an open slash run before a pitched event; empty otherwise.</summary>
+    private string CloseImprovisation()
+    {
+        if (!_improvisationOpen) return "";
+        _improvisationOpen = false;
+        return "\\improvisationOff ";
+    }
+
+    private static string StepName(int step) => "cdefgab"[step].ToString();
+
+    /// <summary>
+    /// A bare duration passes through verbatim - LilyPond 2.20+ reads an isolated
+    /// duration as the previous note or chord again (LILYPOND-REF: lily/parser.yy
+    /// music_embedded), which is Lily#'s reading too; both engines fill the pitch
+    /// after relative resolution, so the octave frames are untouched. The number
+    /// takes the normal written-duration carry, and the repetition's own
+    /// post-events ride along.
+    /// </summary>
+    private string EmitBareDuration(BareDurationSyntax bare)
+    {
+        var (prefix, suffix) = SplitAttachments(bare.Articulations);
+        string trem = bare.Tremolo is { } t ? t.Text : "";
+        return prefix + EmitEventDuration(bare.Duration) + trem + suffix;
+    }
+
     /// <summary>
     /// A pitch in the music stream: the source's own token, and the octave frames advanced
     /// past it. See <see cref="_lysStep"/> for why the marks are not always the source's.
@@ -1575,6 +1663,8 @@ public sealed class LilyPondExporter
         // container, and the value stops being unobserved with the line above.
         buf._absoluteBaseOctave = _absoluteBaseOctave;
         buf._drumMode = _drumMode;
+        buf._improvisationOpen = _improvisationOpen;
+        buf._lysClef = _lysClef;
         buf._lysStep = _lysStep;
         buf._lysOctave = _lysOctave;
         buf._lyStep = _lyStep;
@@ -1594,6 +1684,8 @@ public sealed class LilyPondExporter
     /// </summary>
     private void CarryFrameBack(LilyPondExporter buf)
     {
+        _improvisationOpen = buf._improvisationOpen;
+        _lysClef = buf._lysClef;
         _lysStep = buf._lysStep;
         _lysOctave = buf._lysOctave;
         _lyStep = buf._lyStep;
@@ -3129,7 +3221,7 @@ public sealed class LilyPondExporter
         foreach (var child in EnumerateChildren(section))
         {
             if (child is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
-                or ChordRepetitionSyntax
+                or ChordRepetitionSyntax or SlashNoteSyntax or BareDurationSyntax
                 or ArpeggioSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax
                 or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax
                 or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax

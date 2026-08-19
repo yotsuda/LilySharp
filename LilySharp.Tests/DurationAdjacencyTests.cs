@@ -17,6 +17,7 @@
 using System.Linq;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -45,11 +46,38 @@ public class DurationAdjacencyTests
     public void GluedNumberOnAMember_IsADurationError(string source)
         => Assert.True(Has(source, DiagnosticCodes.DurationInsideChord));
 
+    // ===== A spaced number outside brackets (bare duration, 2026-08-19) =====
+
+    /// <summary>
+    /// A spaced number OUTSIDE brackets stopped being an error when the bare
+    /// duration landed: it repeats the previous note/chord/slash
+    /// (LILYPOND-REF: lily/parser.yy music_embedded). LYS0016 survives for the
+    /// one shape that still means nothing - a bare duration with no event
+    /// before it to repeat (reported by the semantic validator, since the
+    /// parser now builds a node either way).
+    /// </summary>
     [Theory]
-    [InlineData("{ c 4 }")]           // the spaced number is not a duration...
-    [InlineData("{ <c e g> 2 }")]     // ...on a chord either
-    public void SpacedNumberInMusic_IsADetachedDurationError(string source)
-        => Assert.True(Has(source, DiagnosticCodes.DetachedDuration));
+    [InlineData("{ c 4 }")]           // repeats c as a quarter
+    [InlineData("{ <c e g> 2 }")]     // repeats the chord as a half
+    [InlineData("{ c4 r4 4 }")]       // rests are transparent to the run
+    public void SpacedNumberAfterAnEvent_IsARepeat_NotAnError(string source)
+    {
+        Assert.False(Has(source, DiagnosticCodes.DetachedDuration), source);
+        var tree = SyntaxTree.Parse(source);
+        Assert.DoesNotContain(SemanticValidation.Run(tree),
+            d => d.Code == DiagnosticCodes.DetachedDuration);
+    }
+
+    [Theory]
+    [InlineData("{ 4 c d }")]         // nothing before it in the body
+    [InlineData("{ r4 4 }")]          // a rest alone is not a repeatable event
+    [InlineData("{ << c e g >>4 4 }")] // an arpeggio breaks the run (no single answer)
+    public void BareDurationWithNothingToRepeat_IsStillLYS0016(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.Contains(SemanticValidation.Run(tree),
+            d => d.Code == DiagnosticCodes.DetachedDuration);
+    }
 
     [Theory]
     [InlineData("{ c4 d4. e2 }")]     // glued durations, the normal form
