@@ -707,6 +707,35 @@ internal sealed class VerticalSkyline
     /// - Right-outer: 45° slope from (xR+P, h) to (xR+2P, h-P)
     /// These are merged with the original to form the padded skyline.
     /// </remarks>
+    /// <summary>
+    /// A copy restricted to the horizon interval [<paramref name="xLeft"/>,
+    /// <paramref name="xRight"/>]: ink outside the range is dropped, a building
+    /// straddling a boundary is trimmed at it. Distances against the result read only
+    /// the in-range ink — a gap is no constraint, exactly as an unbuilt stretch is.
+    /// </summary>
+    /// <remarks>
+    /// Built for the pedal support set (PedalEngraver): LilyPond side-positions a pedal
+    /// item against the note columns its spanner ACKNOWLEDGED, not against the whole
+    /// staff profile, and the cheapest faithful spelling of "those columns' ink" is the
+    /// staff's inside profile clipped to their allocated span. ⚠️ Requires a RESOLVED
+    /// skyline (no open batch): the trim reads each building's roof as final.
+    /// </remarks>
+    public VerticalSkyline ClippedToRange(double xLeft, double xRight)
+    {
+        if (_deferResolve)
+            throw new InvalidOperationException(
+                "ClippedToRange on an open batch — EndBatch first, the roofs are not final.");
+        var clipped = new List<SkylineBuilding>();
+        foreach (var b in _buildings)
+        {
+            double s = Math.Max(b.Start, xLeft), e = Math.Min(b.End, xRight);
+            if (s >= e)
+                continue;
+            clipped.Add(s <= b.Start && e >= b.End ? b : b.WithRange(s, e));
+        }
+        return new VerticalSkyline(clipped, _direction);
+    }
+
     public VerticalSkyline Padded(double horizonPadding)
     {
         if (horizonPadding <= 0.0)

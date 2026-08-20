@@ -181,7 +181,8 @@ internal static class PedalEngraver
         // grobs: family rank first (the measured nearest-first order — una corda,
         // sostenuto, sustain — which is what stacks same-X families the way
         // pedal-three.ly reads), then document order within a family.
-        var words = new List<(int Rank, int Order, MusicMarkItem Mark, double X)>();
+        var words = new List<(int Rank, int Order, MusicMarkItem Mark, double X,
+            (double Left, double Right) Span)>();
         int order = 0;
         foreach (var mark in score.MusicMarks)
         {
@@ -194,21 +195,24 @@ internal static class PedalEngraver
             if (ml == null)
                 continue; // another system's word
             double x = AnchorX(ml, mark.AnchorItemIndex, mark.AnchorTiming);
-            words.Add((MusicMarkEngraver.PedalFamilyRank(mark.Type), order, mark, x));
+            var span = AnchorColumnSpan(ml, mark.AnchorItemIndex, mark.AnchorTiming);
+            words.Add((MusicMarkEngraver.PedalFamilyRank(mark.Type), order, mark, x, span));
         }
         if (words.Count == 0)
             return ImmutableArray<SolvedPedalRow>.Empty;
 
         var solved = ImmutableArray.CreateBuilder<SolvedPedalRow>(words.Count);
-        foreach (var (rank, _, mark, x) in words
+        foreach (var (rank, _, mark, x, span) in words
                      .OrderBy(w => w.Rank).ThenBy(w => w.Order))
         {
             var word = WordProfiles(fonts, mark.Type, mark.Text, x);
-            // Quiet: the spanner's own side-position against the staff's INSIDE profile
-            // (staff, notes, scripts — its support) at padding 1.2...
-            double quiet = insideDown.IsEmpty
-                ? -(2.05 + SpannerPadding)
-                : DynamicEngraver.BelowCollisionMove(insideDown, word.Up, SpannerPadding);
+            // Quiet: the spanner's own side-position against its SUPPORT at padding 1.2 —
+            // the staff plus the word's OWN column's ink, not the whole inside profile: a
+            // text-style word's spanner lives one timestep, so that column is its whole
+            // acknowledged support (SupportProfile's remark carries the LilyPond source
+            // and the +0.157 a whole-profile read charged on PLT).
+            double quiet = DynamicEngraver.BelowCollisionMove(
+                SupportProfile(insideDown, span.Left, span.Right), word.Up, SpannerPadding);
             word.Up.Raise(quiet);
             word.Down.Raise(quiet);
             // ...then the collision pass against everything already placed below —
@@ -315,7 +319,8 @@ internal static class PedalEngraver
         var solved = ImmutableArray.CreateBuilder<SolvedPedalLine>();
         var solvedRows = ImmutableArray.CreateBuilder<SolvedPedalRow>();
         var portions = new List<(PedalType Type, int StartMeasureIndex,
-            double StartX, double EndX, bool LeftHook, bool RightHook, int SourcePosition)>();
+            double StartX, double EndX, bool LeftHook, bool RightHook, int SourcePosition,
+            double SupportLeft, double SupportRight)>();
         foreach (var bracket in brackets)
         {
             if (bracket.EndMeasureIndex < loMeasure || bracket.StartMeasureIndex > hiMeasure)
@@ -332,10 +337,19 @@ internal static class PedalEngraver
                 : measureLayouts[^1].X + measureLayouts[^1].Width;
             if (endX - startX < 2.0)
                 endX = startX + 2.0; // the same minimum Calculate applies
+            // The episode's SUPPORT span: engage column to release column — the columns
+            // this spanner acknowledged (SupportProfile's remark). A broken end's support
+            // runs to the system edge, like the drawn portion.
+            double supportLeft = startLayout != null
+                ? AnchorColumnSpan(startLayout, bracket.StartItemIndex, bracket.StartTiming).Left
+                : measureLayouts[0].X;
+            double supportRight = endLayout != null
+                ? AnchorColumnSpan(endLayout, bracket.EndItemIndex, bracket.EndTiming).Right
+                : measureLayouts[^1].X + measureLayouts[^1].Width;
             portions.Add((bracket.Type, bracket.StartMeasureIndex, startX, endX,
                 // MIXED draws the leading word where a bracket-style LEFT hook would be.
                 startLayout != null && !mixed, endLayout != null,
-                bracket.SourcePosition));
+                bracket.SourcePosition, supportLeft, supportRight));
         }
         static int FamilyRank(PedalType t) => t switch
         {
@@ -359,10 +373,16 @@ internal static class PedalEngraver
             // and their LineSpanner all dump one relY, pedal-mixed.ly) — so their
             // outlines join the group's profile and the group solves ONCE.
             var mixedWords = new List<(MusicMarkItem Mark, double X)>();
+            // The family's acknowledged support: the union of its episodes' column spans
+            // (SupportProfile's remark — ink outside the pedal's own timesteps is never
+            // a support, whatever the group's overhang covers).
+            double supLeft = double.PositiveInfinity, supRight = double.NegativeInfinity;
             foreach (var p in family)
             {
                 var one = BracketUpProfile(p.StartX, p.EndX, p.LeftHook, p.RightHook);
                 if (up == null) up = one; else up.Merge(one);
+                supLeft = Math.Min(supLeft, p.SupportLeft);
+                supRight = Math.Max(supRight, p.SupportRight);
                 if (mixed && p.StartMeasureIndex >= loMeasure
                     && p.StartMeasureIndex <= hiMeasure)
                 {
@@ -376,9 +396,8 @@ internal static class PedalEngraver
                         }
                 }
             }
-            double lineYUp = insideDown.IsEmpty
-                ? -(2.05 + SpannerPadding + EdgeHeight + HalfThickness)
-                : DynamicEngraver.BelowCollisionMove(insideDown, up!, SpannerPadding);
+            double lineYUp = DynamicEngraver.BelowCollisionMove(
+                SupportProfile(insideDown, supLeft, supRight), up!, SpannerPadding);
             up!.Raise(lineYUp);
             double move = DynamicEngraver.BelowCollisionMove(
                 downProfile, up, SkylineBuilder.OutsideStaffPaddingValue);
@@ -586,5 +605,64 @@ internal static class PedalEngraver
         if (itemIndex >= 0 && itemIndex < ml.Items.Length)
             return ml.X + ml.Items[itemIndex].X;
         return ml.X + BoundPadding;
+    }
+
+    /// <summary>
+    /// The allocated span of the anchor's own column — the X range of the ink that
+    /// SUPPORTS a pedal item there. Same resolution order as <see cref="AnchorX"/>.
+    /// </summary>
+    private static (double Left, double Right) AnchorColumnSpan(
+        MeasureLayout ml, int itemIndex, Fraction timing)
+    {
+        if (!ml.Columns.IsDefaultOrEmpty)
+        {
+            foreach (var c in ml.Columns)
+                if (c.Timing == timing)
+                    return (ml.X + c.X, ml.X + c.X + c.Width);
+            double x = ml.X + ml.GetXForTiming(timing);
+            return (x, x);
+        }
+        if (itemIndex >= 0 && itemIndex < ml.Items.Length)
+        {
+            var it = ml.Items[itemIndex];
+            return (ml.X + it.X, ml.X + it.X + it.Width);
+        }
+        double fx = ml.X + BoundPadding;
+        return (fx, fx);
+    }
+
+    /// <summary>
+    /// The SUPPORT a pedal item side-positions against: the staff's inside profile
+    /// CLIPPED to the pedal's own columns' span, over a staff-line floor everywhere else.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/piano-pedal-align-engraver.cc:198-200 acknowledge_note_column,
+    /// :106-109 start_translation_timestep, :139-142 stop_translation_timestep —
+    /// <c>supports_</c> is cleared every timestep and the acknowledged NOTE COLUMNS are
+    /// added to the line spanner, so a pedal item's support is the note columns of its
+    /// spanner's own timesteps (a text-style word's spanner lives one timestep: its own
+    /// column alone; a bracket's lives engage→release: the episode's columns) plus the
+    /// staff symbol through <c>staff-padding</c>. Ink OUTSIDE the pedal's timesteps is
+    /// never a support, whatever the item's overhang covers — measured on 2.26.0
+    /// (pedal-lyric-stack.ly PLT): the engage word's left overhang stands over the first
+    /// bar's c and LilyPond still reads Ped. at 5.997 = d's ink + 1.2, while a
+    /// whole-profile support charges the c for +0.157258364
+    /// (mark.pedal-text.staff-to-ped-baseline's 2026-08-20 record).
+    /// ⚠️ ONE NAMED APPROXIMATION: LilyPond lists the note columns themselves; this
+    /// clips the merged inside profile to their allocated span, so non-column ink that
+    /// stands INSIDE the span (a tie's dip, a script under a period note) still counts
+    /// where LilyPond's support would not have it. No measured book separates the two.
+    /// </remarks>
+    private static VerticalSkyline SupportProfile(
+        VerticalSkyline insideDown, double xLeft, double xRight)
+    {
+        // The staff symbol's own floor: bottom line 2 + half a line thickness — the same
+        // 2.05 the empty-profile fallbacks spell. Wide enough for any word overhang; the
+        // clip supplies everything deeper.
+        var support = VerticalSkyline.FromBox(
+            -1e9, 1e9, -2.05, 0.0, VerticalDirection.Down);
+        if (!insideDown.IsEmpty && xRight > xLeft)
+            support.Merge(insideDown.ClippedToRange(xLeft, xRight));
+        return support;
     }
 }
