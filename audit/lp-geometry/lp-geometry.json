@@ -2091,6 +2091,34 @@
       "residual": 0.0,
       "why": "EXACT from the moment it opened: quarter-only columns on both sides of the step, so neither sliver of no-bind.skip-gap can reach it, and nothing binds. With this at zero and skip-gap decomposed, everything step-gap (the binding book) reads below D is the missing reservation and nothing else -- the attribution the no-bind pair exists to give."
     },
+    "lyrics.melisma-span.width": {
+      "probe": "lyric-melisma-span.ly",
+      "score": "LMS",
+      "lilypond": 12.294350393700784,
+      "residual": 2.796089998269224,
+      "why": "THE SPAN-BUMP MODEL, isolated in a single-voice book (HANDOFF 1 residual item J, opened 2026-08-20 the same day the bound-voice skip-gap named the term): LilyPond's LyricSpace rod between the held 'mumum' (columns 0-2, slur melisma) and 'mum' (column 3) is a RANGE constraint the spacer solves -- its width reads max(natural 9.006735, need 12.294350) = the need, the two inks landing exactly 0.450000 apart in the dump, and the stretch distributes equally (first-gap = width/3 to the last digit, see lyrics.melisma-span.first-gap). Lily#'s BumpSpanMin counts its have in spring MINIMUMS and puts the deficit on the LAST spring, but a ragged line stands at IDEALS -- so the drawn span over-opens by (ideal - min) of each non-final spring: +2.796089998269224 = 2 x (3.002244999134612 - 1.604200), predicted in the probe header before LilyPond ran and landed to the last digit. The need arithmetic itself carries NO sliver (Lily# width = LP width + the two spring terms exactly): melisma left-alignment, ink and the 0.45 are identical on both engines -- this point is PURE span-bump, which is what makes it the landing site for the port. goes away when: multi-spring reservations become true range rods in the per-measure solve (the cross-bar rod's shape, ApplyRods) with the break gate priced accordingly -- a design session (gate x layout, the in-measure quantity is measure-local so no cross-measure key is needed); adjacent pairs (every lyrics.column.* exact point) are max(ideal, need) either way and must not move."
+    },
+    "lyrics.melisma-span.first-gap": {
+      "probe": "lyric-melisma-span.ly",
+      "score": "LMS",
+      "lilypond": 4.098116797900262,
+      "residual": -1.0958717987656503,
+      "why": "THE OTHER FACE of lyrics.melisma-span.width's defect: LilyPond distributes the range rod's stretch over the spanned springs (three identical quarter springs -> first-gap = width/3 = 4.098117 exactly), while Lily#'s last-spring bump leaves every intermediate spring at its natural ideal -- this gap reads 3.002244999134612, the same digit as the no-bind control, as if no lyric were there at all. -1.0958717987656503 = 3.002244999 - 4.098116798, arithmetic. The pair (width over, first-gap under) is the span-bump's signature: the reservation is all in the wrong place, not merely too large. goes away when: width's port lands (the spacer distributes, nothing to distribute by hand)."
+    },
+    "lyrics.melisma-span.no-bind.width": {
+      "probe": "lyric-melisma-span.ly",
+      "score": "LMN",
+      "lilypond": 9.006734997403837,
+      "residual": 0.0,
+      "why": "EXACT from the moment it opened: 'u' held the same way needs ~2.1 against the natural 9.006735, so the lyric terms leave no trace on either engine -- and the slur that makes the melisma leaves none either (this book carries it too). With this at zero, everything the span book reads away from its rod need is the bump model and nothing else."
+    },
+    "lyrics.melisma-span.no-bind.first-gap": {
+      "probe": "lyric-melisma-span.ly",
+      "score": "LMN",
+      "lilypond": 3.002244999134613,
+      "residual": 0.0,
+      "why": "EXACT: the natural quarter gap, the bound-voice family's digit -- the in-book control that makes first-gap's 3.002245 reading meaningful (the span book's intermediate gap IS the no-lyric gap)."
+    },
     "lyrics.natural.staff-to-lyric": {
       "probe": "page-vertical.ly",
       "score": "LYRC",

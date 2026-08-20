@@ -718,6 +718,59 @@ internal static class LpGeometryProbes
         "LBIC", "alt", "u u u |");
 
     /// <summary>
+    /// One slurred bar for the MELISMA-SPAN RESERVATION — the shared shape of books
+    /// LMS / LMN in probes/lyric-melisma-span.ly (HANDOFF 1's residual item ⒥, named
+    /// when the bound-voice skip-gap refused to close past +1.507845). The books differ
+    /// only in the words.
+    /// </summary>
+    /// <remarks>
+    /// THE BAR: four slurred quarters, the first syllable held over columns 0–2 (the
+    /// slur so BOTH engines treat it as a melisma and LEFT-align it; this grammar spells
+    /// the holds <c>~ ~</c>), the second word on column 3 — so the between-syllable
+    /// reservation spans springs 1..3 with springs 1,2 INTERMEDIATE. LilyPond's
+    /// LyricSpace rod is a RANGE constraint the spacer solves: the span reads
+    /// max(natural, need) and the stretch distributes over the springs (measured
+    /// 2026-08-20 on 2.26.0: LMS width 12.294350393700784 = the rod's need — the two
+    /// inks land exactly 0.450000 apart — and first-gap = width/3 to the last digit).
+    /// Lily#'s <see cref="LilySharp.Core.Svg.Layout.LyricSpacing"/> BumpSpanMin sums the
+    /// spanned springs' MINIMUMS and puts the deficit on the LAST spring, but a ragged
+    /// line stands at the IDEALS — so the drawn span over-opens by (ideal − min) of each
+    /// non-final spring, and the intermediate gaps stay at natural instead of
+    /// stretching. Adjacent pairs (one spring) cannot see this — max(ideal, need) —
+    /// which is why every lyrics.column.* point closed exact while this regime waited.
+    /// LilyPond twin: books LMS/LMN in probes/lyric-melisma-span.ly.
+    /// </remarks>
+    private static string MelismaSpanScore(string name, string words) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody {
+          section A { a4( a a) a | }
+        }
+
+        lyrics w sings melody {
+          section A { {{words}} }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff melody
+          lyrics w
+        }
+        """;
+
+    /// <summary>A wide syllable held over two columns, then a word — the span book
+    /// (mirror of LMS): the reservation binds on both engines and the two models fork.</summary>
+    private static readonly string LMS = MelismaSpanScore("LMS", "mumum ~ ~ mum |");
+
+    /// <summary>The same span, too narrow to bind — the no-bind control (mirror of LMN):
+    /// need ~2.1 under the natural 9.007, so the lyric terms (and the slur) must leave
+    /// no trace.</summary>
+    private static readonly string LMN = MelismaSpanScore("LMN", "u ~ ~ u |");
+
+    /// <summary>
     /// TWO STAVES over several pages — the mirror of books JSS (justified) and JSSC
     /// (ragged-bottom control). The two entries built from it measure the staff spring
     /// LilyPond puts INSIDE a system and Lily# does not have.
@@ -9738,6 +9791,21 @@ internal static class LpGeometryProbes
             g => g.SyllableInkCentre(1) - g.SyllableInkCentre(0)),
         new("lyrics.column.bound-voice.no-bind.step-gap", LBIC,
             g => g.SyllableInkCentre(2) - g.SyllableInkCentre(1)),
+
+        // THE MELISMA-SPAN RESERVATION (books LMS/LMN, lyric-melisma-span.ly — HANDOFF
+        // 1's ⒥, the span-bump term the bound-voice skip-gap named). Notehead anchor
+        // steps — single voice, the syllable alignment cancels out of head positions.
+        // LilyPond's range rod: width = max(natural, need) = 12.294350 (the inks land
+        // exactly 0.45 apart) and first-gap = width/3 to the digit (equal quarter
+        // springs stretch equally). Lily#'s min-counted last-spring bump: the
+        // intermediate gaps stay at natural (first-gap 3.002245) and the width
+        // over-opens by 2 × (ideal 3.002245 − min 1.604200) = +2.796090.
+        new("lyrics.melisma-span.width", LMS,
+            g => g.NoteheadAnchor(3) - g.NoteheadAnchor(0)),
+        new("lyrics.melisma-span.first-gap", LMS, g => g.NoteheadAnchorStep(0)),
+        new("lyrics.melisma-span.no-bind.width", LMN,
+            g => g.NoteheadAnchor(3) - g.NoteheadAnchor(0)),
+        new("lyrics.melisma-span.no-bind.first-gap", LMN, g => g.NoteheadAnchorStep(0)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a
