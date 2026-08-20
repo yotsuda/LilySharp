@@ -149,7 +149,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
-最終更新 第220セッション＝**Marketplace 公開の下拵え（publisher を `yotsuda` に統一・8 プラットフォーム VSIX 実証・PAT 待ちで保留）＋ §2F ⒢ を両方閉じた便**（`2afd1b50`→`14b2ffcd`→`69ba0d20`＝台帳 4 点起票 → 歌詞床の `-1` family → ペダル括弧の再ホーム）。
+最終更新 第220セッション＝**長い委任便**——Marketplace 下拵え（publisher `yotsuda` 統一・8 VSIX 実証・**PAT 待ちで保留**）→ §2F ⒢ 両方 → 小節番号のリードシート浮き（ユーザー報告・0 ちょうどで閉幕）→ **ペダル島 完結**（text 語ごと 1 スパナ・mixed 1 群 1 解・系またぎ×増分鍵の毒→修理）→ **音節プロファイルの輪郭化**（台帳唯一の OPEN を閉じ、alloc の代償は 3 段返済＋perf 島へ分解起票）。台帳は **546 点・うち今日 0.000000 ちょうどが 9 点**。マーク＋テンポの縦積みは §3 に決定（現状維持）。
 ✅ **ユーザー報告「小節番号の y 位置が高い」は同便で特定・修理**（`d7098514`→`fe43b73e`）: 素の本は LP 一致だったが、**リードシート（コード行が先頭）では帯 1 本分浮いていた**——`BarNumberLayout.YUp` が system 天辺基準で、行が先頭だと天辺＝帯の上端。LP は move-to-extremal-staff で X が交わる最上段要素に付け替え、行頭の番号は左マージンに垂れて行と X が交わらないので**譜に留まりコード行の下**（実測: インク底 2.05+padding 1.0＝3.050000 ちょうど・行があっても不動）。`BarNumberEngraver.AnchorStaff`（最上段の spaceable 譜・stacker の tracker 選択と 1 軒共有）に載せ替え、台帳 `barnumber.chord-row.staff-to-ink-bottom` **+5.945 → 0.000000**（両側 book 体項なし）。射程はリードシート 2 冊（amazing-grace/greensleeves・番号が帯 1 本分下がる）のみ・snapshot 不動。⚠️ **X 交差判定そのものは未移植**——period>0 の行中番号が行インクの真下に来る形だけが要る形で、probe から始めること（台帳 why・remark に記載）。
 
 ★ **開始時裏取り**: リリース直後の続き便（§0 の全数はリリース便で実施済み・HEAD `d910bf07`）。この便の開始時 suite は Windows 5673/0/4 相当（変更前）。
