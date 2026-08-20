@@ -326,6 +326,28 @@ internal sealed class VerticalSkyline
     /// Begin/End (callers only merge boxes in during construction).</summary>
     public void BeginBatch() => _deferResolve = true;
 
+    /// <summary>
+    /// Reserves room for <paramref name="additional"/> more buildings before a batch of
+    /// <c>Merge</c> appends. Capacity only — the arithmetic, the order and the resolved
+    /// result are untouched.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE POINT IS THE DOUBLING STEP, NOT THE LAST FEW PERCENT. A sung line's verse
+    /// skyline is ~50 outline buildings per syllable, so a 5-measure line (~950) sits
+    /// just under <see cref="List{T}"/>'s 1024-capacity rung and a 6-measure line
+    /// (~1,140) just over it — and crossing the rung DOUBLES the allocate-and-discard
+    /// copies behind <c>Add</c> (cumulative 4+8+…+1024 ≈ 2k elements vs …+2048 ≈ 4k).
+    /// MEASURED (session 224, perf-lyrplain1k keystroke): the verse-skyline appends read
+    /// 52.2 MB at 5-measure lines and 84.9 MB at 6-measure lines for byte-identical merge
+    /// input (15,984 calls / 1,518,480 buildings, counted) — the whole difference is this
+    /// rung. Reserving the exact count makes the append cost the buildings themselves.
+    /// ⚠️ Per-call <c>EnsureCapacity(count + next)</c> is NOT this fix: List's
+    /// EnsureCapacity grows by doubling too, so incremental reservations replay the same
+    /// rungs. Only a caller that can COUNT the batch up front can retire them.
+    /// </remarks>
+    internal void ReserveForBatch(int additional) =>
+        _buildings.EnsureCapacity(_buildings.Count + additional);
+
     /// <summary>Resolve all buildings accumulated since <see cref="BeginBatch"/> in a
     /// single sort+rebuild, restoring the normal (fully resolved) invariant.</summary>
     public void EndBatch()

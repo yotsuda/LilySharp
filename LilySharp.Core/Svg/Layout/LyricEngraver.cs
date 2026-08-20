@@ -1277,8 +1277,22 @@ internal sealed class LyricEngraver
             // per-merge resolving is quadratic in the accumulated line (MergeInternal's
             // full-length sort) — measured 71.7 → 1235.2 MB on perf-lyrplain1k's
             // keystroke before this batch, back to the outline's own cost with it.
+            // PRE-SIZED to the exact outline building count — see
+            // VerticalSkyline.ReserveForBatch for the doubling rung this retires.
             up.BeginBatch();
             down.BeginBatch();
+            int upCount = 0, downCount = 0;
+            foreach (var lay in laid)
+            {
+                if (OutlineSyllable(_fonts, lay) is { } o)
+                {
+                    upCount += o.Up.Length;
+                    downCount += o.Down.Length;
+                }
+                else { upCount++; downCount++; }
+            }
+            up.ReserveForBatch(upCount);
+            down.ReserveForBatch(downCount);
             foreach (var lay in laid)
                 MergeSyllableInto(_fonts, lay, up, down);
             up.EndBatch();
@@ -1322,22 +1336,38 @@ internal sealed class LyricEngraver
         Rendering.ScoreTextMetrics fonts, LyricLayout lay,
         VerticalSkyline? up, VerticalSkyline? down)
     {
-        string text = lay.Item.Text;
-        bool cjk = false;
-        foreach (char c in text)
-            if (IsFullHeightGlyph(c)) { cjk = true; break; }
-        if (!cjk && text.Length > 0)
+        if (OutlineSyllable(fonts, lay) is { } o)
         {
-            double w = fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
-            var (u, d) = TextOutlineSkylines.ResolvedProfile(
-                text, LyricFontSize, fonts.Face(Rendering.TextRole.LyricText),
-                LyricSkylineHorizontalPadding);
-            up?.Merge(u, lay.X - w / 2.0, 0);
-            down?.Merge(d, lay.X - w / 2.0, 0);
+            up?.Merge(o.Up, o.Dx, 0);
+            down?.Merge(o.Down, o.Dx, 0);
             return;
         }
         up?.Merge(SyllableUpBox(fonts, lay));
         down?.Merge(SyllableDownBox(fonts, lay));
+    }
+
+    /// <summary>
+    /// The syllable's resolved outline profiles and their placement shift — the mass
+    /// (non-CJK, non-empty) case of <see cref="MergeSyllableInto"/>, exposed so a batch
+    /// caller can COUNT the buildings it is about to append
+    /// (<see cref="VerticalSkyline.ReserveForBatch"/>) with the same branch that will
+    /// merge them. Null means the box fallback — those count as one building each and may
+    /// cost the reservation a single growth, which is the cheap and rare side.
+    /// The arrays are <see cref="TextOutlineSkylines.ResolvedProfile"/>'s cached
+    /// instances: counting here is dictionary lookups, not profile building.
+    /// </summary>
+    internal static (SkylineBuilding[] Up, SkylineBuilding[] Down, double Dx)? OutlineSyllable(
+        Rendering.ScoreTextMetrics fonts, LyricLayout lay)
+    {
+        string text = lay.Item.Text;
+        foreach (char c in text)
+            if (IsFullHeightGlyph(c)) return null;
+        if (text.Length == 0) return null;
+        double w = fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
+        var (u, d) = TextOutlineSkylines.ResolvedProfile(
+            text, LyricFontSize, fonts.Face(Rendering.TextRole.LyricText),
+            LyricSkylineHorizontalPadding);
+        return (u, d, lay.X - w / 2.0);
     }
 
     /// <summary>The outline-or-box body shared by the two directions.</summary>
@@ -1391,8 +1421,18 @@ internal sealed class LyricEngraver
         var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
         // BATCHED per line, merging the cached resolved profiles straight in — see
         // NoteBoundBlockSkylines' batch note and TextOutlineSkylines.ResolvedProfile for
-        // the two measurements.
-        foreach (var lay in layouts)
+        // the two measurements. PRE-SIZED per line to the exact outline building count —
+        // see VerticalSkyline.ReserveForBatch for the doubling rung this retires.
+        var lays = layouts as IReadOnlyList<LyricLayout> ?? layouts.ToList();
+        var counts = new Dictionary<(int System, int Line, int Verse), int>();
+        foreach (var lay in lays)
+        {
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
+            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
+            counts[key] = counts.GetValueOrDefault(key)
+                + (OutlineSyllable(fonts, lay) is { } o ? o.Up.Length : 1);
+        }
+        foreach (var lay in lays)
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
             var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
@@ -1400,6 +1440,7 @@ internal sealed class LyricEngraver
             {
                 sky = new VerticalSkyline(VerticalDirection.Up);
                 sky.BeginBatch();
+                sky.ReserveForBatch(counts[key]);
                 result[key] = sky;
             }
             MergeSyllableInto(fonts, lay, sky, null);
@@ -1424,9 +1465,19 @@ internal sealed class LyricEngraver
         Func<LyricItem, int> lineKeyOf)
     {
         var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
-        // BATCHED per line, merging the cached resolved profiles straight in — the
-        // mirror of BuildVerseUpSkylines.
-        foreach (var lay in layouts)
+        // BATCHED per line, merging the cached resolved profiles straight in, and
+        // PRE-SIZED to the exact outline building count — the mirror of
+        // BuildVerseUpSkylines, reservation included.
+        var lays = layouts as IReadOnlyList<LyricLayout> ?? layouts.ToList();
+        var counts = new Dictionary<(int System, int Line, int Verse), int>();
+        foreach (var lay in lays)
+        {
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
+            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
+            counts[key] = counts.GetValueOrDefault(key)
+                + (OutlineSyllable(fonts, lay) is { } o ? o.Down.Length : 1);
+        }
+        foreach (var lay in lays)
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
             var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
@@ -1434,6 +1485,7 @@ internal sealed class LyricEngraver
             {
                 sky = new VerticalSkyline(VerticalDirection.Down);
                 sky.BeginBatch();
+                sky.ReserveForBatch(counts[key]);
                 result[key] = sky;
             }
             MergeSyllableInto(fonts, lay, null, sky);
