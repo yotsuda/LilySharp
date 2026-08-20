@@ -1186,10 +1186,8 @@ internal sealed class MultiStaffLayouter
             // BarLine semi-shrink. The prefix width itself ends at the ink.
             // LILYPOND-REF: scm/define-grobs.scm Clef/KeySignature/
             //   TimeSignature space-alist (first-note . ...).
-            // Each column's own centred ink, for the keep-inside-line rods below. Measured
-            // BEFORE spring 0 is replaced: the extents do not depend on the spring, but the
-            // by-item/by-column choice reads springs.Length, exactly as the lyric reservation
-            // above does.
+            // Each column's own centred ink, for the keep-inside-line rods below (every
+            // syllable on its TIMING column — the one map since 2026-08-20).
             // Where a CENTER-aligned grob stands on each column — the note heads'/rests'
             // centre, or the placeholder's when the column has neither. The syllable reaches
             // from there, not from the column.
@@ -1197,7 +1195,7 @@ internal sealed class MultiStaffLayouter
             var alignmentEdges = SpacingRules.ParentAlignmentEdgesPerColumn(
                 allMeasures, allTimings);
             var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
-                score.TextMetrics, springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet,
+                score.TextMetrics, springs, allTimings, i, score.Lyrics, score.IsLeadSheet,
                 alignmentEdges);
             // The measure's lyric line edges, for the cross-bar rods below and the
             // line-start lyric floor — read off the FINAL reserved springs, the same
@@ -1613,20 +1611,16 @@ internal sealed class MultiStaffLayouter
         // FirstNoteSpring tweak, which Math.Max-preserves the widened minimum.
         if (!score.Lyrics.IsDefaultOrEmpty)
         {
-            // On a lead sheet the chords change at most every quarter note, so
-            // the chord (primary) row has far fewer columns than the syllable
-            // grid; reserving lyric width against IT under-counts and the
-            // syllables crowd. Reserve against the DENSEST row at this bar (the
-            // lyrics), whose item count matches the timing columns the springs
-            // were built from. Staff-backed scores keep the primary measure.
+            // Both reserve on the union TIMING columns the springs were built from —
+            // the map the engraver draws with. The fork is the INCLUDE: a lead sheet
+            // reserves its lyrics row only (chords and lyrics subdivide the bar
+            // differently), a staff-backed score reserves every verse.
             springs = score.IsLeadSheet
-                // The union timing columns don't match the syllable count on a lead sheet
-                // (chords and lyrics subdivide the bar differently), so reserve by column.
                 ? LyricSpacing.ApplyLeadSheetLyricSpacing(
                     score.TextMetrics, springs, allTimings, measureIndex, score.Lyrics,
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings))
                 : LyricSpacing.ApplyLyricSpacing(
-                    score.TextMetrics, springs, primaryMeasure, allTimings, measureIndex, score.Lyrics,
+                    score.TextMetrics, springs, allTimings, measureIndex, score.Lyrics,
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings));
         }
         if (score.IsLeadSheet)

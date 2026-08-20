@@ -38,51 +38,30 @@ internal static class LyricSpacing
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-spacing.cc:80-85 skyline-based min_distance.
-    /// The spring chain is [start→col0, col0→col1, …, colLast→end]; for a
-    /// single-voice measure the timing columns coincide with the note items, so
-    /// spring i+1 spans item i → item i+1. When the column count does not match
-    /// the item count (extra voices), the mapping breaks down and the chain is
-    /// returned unchanged — lyrics are only engraved on single-voice staves.
+    /// The spring chain is [start→col0, col0→col1, …, colLast→end], and every syllable is
+    /// matched to its column by <see cref="LyricItem.Timing"/> — the map the engraver
+    /// DRAWS with and the cross-bar rod edges read (<see cref="MeasureLineEdges"/>).
+    /// ⚠️ Until 2026-08-20 a staff-backed bar whose union column count equalled the
+    /// primary voice's item count reserved BY ITEM INDEX instead. On a single-voice bar
+    /// the two maps are the same function, but a BOUND voice's ItemIndex counts its own
+    /// notes, so on a multi-voice bar with differing rhythms every reservation landed
+    /// one-or-more columns LEFT of the column the syllable is drawn on — the pair
+    /// lyrics.column.bound-voice.* priced it: the skipped-column span collected BOTH
+    /// mis-mapped word reservations (2D + sliver against LilyPond's one rod D) while the
+    /// pair that needed D got nothing and its inks overlapped by 6.56 ss
+    /// (named-voice-lyrics' 'deep'-on-'slow' overlap, at full size). LilyPond has no
+    /// item-index map anywhere in lyric spacing: a LyricSpace rods the two SYLLABLES' ink
+    /// apart (lily/lyric-hyphen.cc:163-179), whichever columns carry them.
     /// </remarks>
     public static ImmutableArray<Spring> ApplyLyricSpacing(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
-        Measure measure,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
-    {
-        // Where a self-aligned grob stands on column c — the syllable's ink is placed
-        // THERE (centred on the extent's centre, or left-aligned on its left edge for a
-        // melisma), not on the column, so every extent below is measured from it.
-        // LILYPOND-REF: lily/self-alignment-interface.cc:121-139.
-        // ⚠️ A column past the end of the supplied list falls back to the PLACEHOLDER, which
-        // is what LilyPond does for a column with no note heads — NOT to 0, which is a model
-        // that exists nowhere in LilyPond (it would mean an alignment extent of zero width).
-        (double Left, double Centre) Edge(int column) => AlignmentEdge(parentAlignmentEdges, column);
-
-        // The springs are built from TIMING COLUMNS. In a plain measure those columns
-        // coincide with the note items, so the item-index reservation below lines up. But
-        // when the bar opens with a non-note item (a mid-piece time/clef change) the item
-        // slots no longer match the columns — the item-index chain would bail and leave the
-        // syllables to crowd. Reserve by timing column instead.
-        if (measure.Items.Length == 0 || springs.Length != measure.Items.Length + 1)
-            return ReserveLyricWidthByColumn(
-                fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges);
-
-        var lines = GroupByLine(lyrics, measureIndex, ly => ly.ItemIndex, _ => true,
-            out var prevKeys, out var nextKeys);
-        if (lines.Count == 0)
-            return springs;
-
-        var result = springs.ToBuilder();
-        foreach (var (key, byCol) in lines)
-            ReserveLyricLine(result, fonts, byCol, measure.Items.Length, Edge,
-                continuesFromPrev: prevKeys?.Contains(key) == true,
-                continuesIntoNext: nextKeys?.Contains(key) == true);
-        return result.ToImmutable();
-    }
+        => ReserveLyricWidthByColumn(
+            fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges);
 
     /// <summary>
     /// One lyric line's syllables per column, one entry per LINE — a verse of a voice's (or
@@ -343,7 +322,6 @@ internal static class LyricSpacing
     internal static (double[] Left, double[] Right) InkReachPerColumn(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
-        Measure measure,
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
@@ -355,30 +333,21 @@ internal static class LyricSpacing
         if (lyrics.Count == 0 || columnTimings.Count == 0)
             return (leftReach, rightReach);
 
-        // Staff-backed bars whose items line up with the springs reserve BY ITEM INDEX, so
-        // column c carries item c's syllables (ApplyLyricSpacing:77-95). Everything else — a
-        // lead sheet, an empty bar, a bar opening with a time/clef change — reserves BY
-        // TIMING COLUMN (ReserveLyricWidthByColumn:150-163).
-        bool byItem = !isLeadSheet
-                      && measure.Items.Length > 0
-                      && springs.Length == measure.Items.Length + 1;
-
+        // Every syllable sits on its TIMING COLUMN — the one map the reservations, the
+        // rod edges and the engraver share (a lead sheet reserves its row only, the same
+        // include the reservations apply). ⚠️ Until 2026-08-20 a staff-backed bar mirrored
+        // the reservations' by-item alias here; see ApplyLyricSpacing's remark for the
+        // multi-voice defect that retired both.
         var perColumn = new List<LyricItem>[columnTimings.Count];
         foreach (var ly in lyrics)
         {
             if (ly.MeasureIndex != measureIndex)
                 continue;
+            if (isLeadSheet && !ly.IsLyricsRow)
+                continue;
             int col = -1;
-            if (byItem)
-            {
-                if (ly.ItemIndex >= 0 && ly.ItemIndex < columnTimings.Count)
-                    col = ly.ItemIndex;
-            }
-            else if (!isLeadSheet || ly.IsLyricsRow)
-            {
-                for (int c = 0; c < columnTimings.Count; c++)
-                    if (columnTimings[c].Equals(ly.Timing)) { col = c; break; }
-            }
+            for (int c = 0; c < columnTimings.Count; c++)
+                if (columnTimings[c].Equals(ly.Timing)) { col = c; break; }
             if (col < 0)
                 continue;
             (perColumn[col] ??= new List<LyricItem>()).Add(ly);
@@ -419,14 +388,16 @@ internal static class LyricSpacing
     /// The lyric line edges of one measure, one entry per line — the input to the
     /// cross-bar lyric rods (MultiStaffLayouter) and to the break gate's pair pricing
     /// (SystemBreaker). Mapped BY TIMING COLUMN — the springs' native frame and the X
-    /// model the engraver DRAWS with (the syllable follows its note's musical moment) —
-    /// deliberately NOT the reservations' by-item alias: on a multi-voice bar whose
+    /// model the engraver DRAWS with (the syllable follows its note's musical moment).
+    /// This was the FIRST home to drop the by-item alias: on a multi-voice bar whose
     /// column count happens to equal the primary voice's item count, a non-primary
     /// voice's ItemIndex points at the wrong union column (named-voice-lyrics: alto's
     /// 'deep' is item 2 but column 3), and a rod anchored there under-reserves by the
     /// intervening spring — the forgiving halves hid exactly that, the exact rod paid it
-    /// ('deep' overlapped 'slow' by 0.06 the day the rod landed). On a single-voice bar
-    /// the two mappings are the same function.
+    /// ('deep' overlapped 'slow' by 0.06 the day the rod landed). The in-measure
+    /// reservations followed on 2026-08-20 once the pair lyrics.column.bound-voice.*
+    /// priced their side (see <see cref="ApplyLyricSpacing"/>); every consumer now reads
+    /// the one TIMING map. On a single-voice bar the two mappings were the same function.
     /// </summary>
     internal static ImmutableArray<LyricLineEdge> MeasureLineEdges(
         Rendering.ScoreTextMetrics fonts,

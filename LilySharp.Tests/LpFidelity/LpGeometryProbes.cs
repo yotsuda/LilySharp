@@ -659,11 +659,11 @@ internal static class LpGeometryProbes
     /// <remarks>
     /// THE BAR: primary voice four quarters (columns 0 1 2 3), bound voice half + two
     /// quarters (items 0 1 2 on columns 0 2 3). The union column count EQUALS the primary
-    /// voice's item count, so <see cref="LilySharp.Core.Svg.Layout.LyricSpacing"/>'s
-    /// by-item gate passes — and a bound syllable's ItemIndex counts its OWN voice's
-    /// notes, so its reservation lands one column LEFT of the column the syllable is
-    /// DRAWN on (the engraver and, since 2026-08-20, the cross-bar rod edges both map by
-    /// TIMING; MeasureLineEdges' doc names this by-item alias as the residue).
+    /// voice's item count — the gate <see cref="LilySharp.Core.Svg.Layout.LyricSpacing"/>'s
+    /// by-item reservation map passed until 2026-08-20, when this pair priced it and the
+    /// branch was retired the same day (a bound syllable's ItemIndex counts its OWN
+    /// voice's notes, so its reservation landed one column LEFT of the column the
+    /// syllable is DRAWN on; every consumer now shares the TIMING map).
     /// <para>
     /// LilyPond has no second map: a LyricSpace rods consecutive syllables' INK apart by
     /// 0.45 (lily/hyphen-engraver.cc:107, lily/lyric-hyphen.cc:163-179), whichever
@@ -700,7 +700,8 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>Wide words on the BOUND voice — the divergence book (mirror of LBI): both
-    /// word rods bind, and the by-item reservation prices them one column left.</summary>
+    /// word rods bind, and its skipped-column span is where the by-item map used to pile
+    /// both reservations (now the spanning-bump + sliver leftovers, see the ledger).</summary>
     private static readonly string LBI = BoundVoiceScore(
         "LBI", "alt", "mumum mumum mumum |");
 
@@ -9714,15 +9715,16 @@ internal static class LpGeometryProbes
         // THE BOUND VOICE'S SYLLABLE-TO-COLUMN MAP (books LBI/LBIP/LBIC,
         // lyric-bound-voice-mapping.ly — HANDOFF 1's "多声小節の byItem 予約写像"). One
         // multi-voice bar: primary voice four quarters (columns 0 1 2 3), bound voice
-        // half + two quarters (items 0 1 2 on columns 0 2 3) — the union column count
-        // equals the primary item count, so the by-item reservation gate passes while the
-        // bound syllables are DRAWN on columns 0 2 3. All syllable-ink-centre STEPS of one
-        // repeated word, so the face cancels. The LP-identity pair: LilyPond reads ONE
-        // number D = ink + 0.45 = 10.010126 on every binding gap of LBI and LBIP alike
-        // (the rod is between the syllables, whichever columns carry them); the by-item
-        // map forks LBI both ways at once — the skipped-column step gets BOTH mis-mapped
-        // reservations (≈2D) and the adjacent step gets none (≈ the natural 3.0, the two
-        // inks overlapping — named-voice-lyrics' 'deep'-on-'slow' face at full size).
+        // half + two quarters (items 0 1 2 DRAWN on columns 0 2 3). All syllable-ink-
+        // centre STEPS of one repeated word, so the face cancels. The LP-identity pair:
+        // LilyPond reads ONE number D = ink + 0.45 = 10.010126 on every binding gap of
+        // LBI and LBIP alike (the rod is between the syllables, whichever columns carry
+        // them). The by-item reservation map this pair opened on forked LBI both ways at
+        // once (skip-gap +10.05 = both mis-mapped reservations, step-gap −7.01 = none and
+        // the inks overlapping) and was RETIRED the day the pair landed — every
+        // reservation now on the TIMING map. What the points still hold open: skip-gap's
+        // two named leftovers (BumpSpanMin's min-counted have across an intermediate
+        // column, and the union-edge sliver primary-control isolates).
         new("lyrics.column.bound-voice.skip-gap", LBI,
             g => g.SyllableInkCentre(1) - g.SyllableInkCentre(0)),
         new("lyrics.column.bound-voice.step-gap", LBI,
