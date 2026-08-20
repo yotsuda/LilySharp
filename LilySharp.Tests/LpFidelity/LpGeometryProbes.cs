@@ -443,6 +443,106 @@ internal static class LpGeometryProbes
         };
 
     /// <summary>
+    /// A four-bar sung system over a second system whose only tall ink is ONE bar of g'' —
+    /// the Lily# half of books LBL and LBR in probes/lyric-band-x.ly, which differ in
+    /// nothing but WHERE that bar stands.
+    /// </summary>
+    /// <remarks>
+    /// THE LYRIC BAND IN THE INTER-SYSTEM FLOOR, READ WITH X (HANDOFF 2D, the scalar-floor
+    /// island). LilyPond puts the loose block INTO the system's down skyline at its
+    /// alignment minimum (LILYPOND-REF: lily/page-layout-problem.cc:593-599
+    /// <c>build_system_skyline</c> is handed <c>Align_interface::get_minimum_translations</c>)
+    /// and the inter-system spring's floor is <c>up.distance(down, padding)</c> — an
+    /// X-resolved minimum (:625-632). Lily# walks the same block
+    /// (<c>LayoutEngine.LyricReservationBelowSystem</c>) but flattens the profile to its
+    /// deepest point, and both page paths spread that scalar under every X.
+    /// <para>
+    /// THE PAIR IS ONE VARIABLE APART: the same first system (syllables under bar 1 only,
+    /// all four with descenders), the same second-system note content (one bar of g'',
+    /// three of a), and only the g'' bar's PLACE differs — bar 5 (leftmost X, straight
+    /// under the band) in LBL, bar 8 (rightmost X, a system-width away) in LBR. On
+    /// <see cref="ClefFloorPaper"/> the spring's ideal and minimum are gone, so the gap IS
+    /// the floor plus the shipping padding 1, and LilyPond's fork is the mechanism itself:
+    /// LBL 12.362129 (band bottom 4.824531 below the refpoint + g'' head top 6.545 + 1,
+    /// less an 0.007402 sliver where the deepest descender and the nearest head part in X)
+    /// against LBR 10.090000 (the band is out of the story entirely: e head bottom 2.545 +
+    /// g'' head top 6.545 + 1 — measured 2026-08-20 on 2.26.0). An X-blind floor cannot
+    /// split these books.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE DRAWN LYRIC IS PART OF THE MEASUREMENT on this paper: with the inter-system
+    /// ideal gone, LilyPond squeezes the loose line to its MINIMUM — staff line 2.05 +
+    /// padding 0.5 + ascender 1.765782 = 4.315782 below the refpoint, not the basic 5.5 —
+    /// and the band the floor reads hangs from exactly there. That is what
+    /// lyrics.band-floor.staff-to-lyric pins.
+    /// </para>
+    /// LilyPond twin: books LBL/LBR in probes/lyric-band-x.ly.
+    /// </remarks>
+    private static string BandFloorScore(string name, string secondSystem) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody {
+          section A { e4 f g f | e4 e e2 | e4 f g f | e2 e2 | }
+          section B { {{secondSystem}} }
+        }
+
+        lyrics w sings melody {
+          section A { gyp jog pyx pug }
+        }
+
+        form main { A break B }
+
+        score main "{{name}}" {
+          staff melody
+          lyrics w
+        }
+        """;
+
+    /// <summary>The g'' bar OVER the band (bar 5) — the mirror of book LBL.</summary>
+    private static readonly string LBL = BandFloorScore(
+        "LBL", "g''4 g'' g'' g'' | a4 a a a | a4 a a a | a2 a2 |");
+
+    /// <summary>The g'' bar PAST the band (bar 8) — the mirror of book LBR.</summary>
+    private static readonly string LBR = BandFloorScore(
+        "LBR", "a4 a a a | a4 a a a | a4 a a a | g''4 g'' g'' g'' |");
+
+    /// <summary>
+    /// The same island's REAL-WORLD FACE on shipping spacing — the mirror of book LBS,
+    /// which is the exact music of the <c>SystemGap_ReadsARowsBandOnce</c> pin.
+    /// </summary>
+    /// <remarks>
+    /// Two 2-bar sung systems on <see cref="ClefFloorControlPaper"/> (ragged bottom,
+    /// spacing left alone). LilyPond reads 12.000000 — the ideal: its X-resolved band
+    /// distance is under basic-distance 12, so the skyline term leaves no trace. The
+    /// scalar floor overshoots that (14.571, session 218), which is the number the pin's
+    /// comment cites and this entry puts where numbers live.
+    /// </remarks>
+    private static readonly string LBS = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody {
+          section A { e'4 f' g' f' | e' e' e'2 | }
+          section B { g'4 g' f' f' | e' e' e'2 | }
+        }
+
+        lyrics w sings melody {
+          section A { One two three four | five six se- ven }
+          section B { Aa bb cc dd | ee ff gg }
+        }
+
+        form main { A break B }
+
+        score main "LBS" {
+          staff melody
+          lyrics w
+        }
+        """;
+
+    /// <summary>
     /// TWO STAVES over several pages — the mirror of books JSS (justified) and JSSC
     /// (ragged-bottom control). The two entries built from it measure the staff spring
     /// LilyPond puts INSIDE a system and Lily# does not have.
@@ -9399,6 +9499,23 @@ internal static class LpGeometryProbes
         // floored by the reservation. So the non-uniformity IS the residual this entry
         // records, seen from another side, and index 0 names the wider of the two.
         new("lyrics.two-verse.system-gap", LYRV, g => g.StaffGapAt(0), FourSystemsPerPageRagged),
+
+        // THE LYRIC BAND IN THE INTER-SYSTEM FLOOR, READ WITH X (books LBL/LBR/LBS,
+        // lyric-band-x.ly — HANDOFF 2D's scalar-floor island). LilyPond's fork between LBL
+        // and LBR (12.362129 vs 10.090000, one variable apart: WHERE the g'' bar stands) is
+        // the X-resolved floor itself; an X-blind scalar reads the same number on both.
+        // LBS is the same island on shipping paper: 12.000000, the ideal — the number the
+        // scalar floor overshoots on the SystemGap_ReadsARowsBandOnce pin's music.
+        new("lyrics.band-floor.ink-over-band.system-gap", LBL,
+            g => g.StaffGapAt(0), ClefFloorPaper),
+        new("lyrics.band-floor.ink-past-band.system-gap", LBR,
+            g => g.StaffGapAt(0), ClefFloorPaper),
+        new("lyrics.band-floor.staff-to-lyric", LBL,
+            g => g.FirstStaffToLyricBaseline(), ClefFloorPaper),
+        new("lyrics.band-floor.staves-on-first-page", LBR,
+            g => g.StavesOnPage(0), ClefFloorPaper),
+        new("lyrics.band-shipping.system-gap", LBS,
+            g => g.StaffGapAt(0), ClefFloorControlPaper),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a
