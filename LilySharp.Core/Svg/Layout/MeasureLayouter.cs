@@ -477,12 +477,23 @@ internal sealed class MeasureLayouter
             {
                 // The rod's two arms are the same wish minimums the change gaps carry:
                 // Note_spacing's skyline minimum on the left, Staff_spacing's
-                // Paper_column::minimum_distance on the right — summed over next_door.
+                // Paper_column::minimum_distance on the right — summed over next_door,
+                // the loose column's OWN-STAFF neighbours. The left arm is therefore
+                // re-priced from the own-staff previous ITEM: `pruned` read the UNION
+                // previous column, which mid-clique is another staff's intervening
+                // note (sploose's A4 half) — the wrong column, masked while item M
+                // priced every scaled head as black (see LooseChangeOwnPrevItem).
                 // LILYPOND-REF: lily/spacing-determine-loose-columns.cc:135-185
-                //   set_distances_for_loose_col.
+                //   set_distances_for_loose_col — r.item_drul_ = next_door.
                 int leftIndex = timings.IndexOf(ownLeft!.Value);
                 if (leftIndex >= 0)
-                    looseRods.Add((leftIndex + 1, i + 1, pruned.MinDistance));
+                {
+                    var ownPrev = SpacingRules.LooseChangeOwnPrevItem(measuresToScan, nextItems);
+                    var ownArms = SpacingRules.MidMeasureChangeGaps(
+                        nextItems, ownPrev != null ? new[] { ownPrev } : null,
+                        spring.IdealDistance);
+                    looseRods.Add((leftIndex + 1, i + 1, (ownArms ?? pruned).MinDistance));
+                }
                 changeGaps = null;
             }
         }

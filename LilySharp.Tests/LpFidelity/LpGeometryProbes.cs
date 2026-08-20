@@ -758,6 +758,38 @@ internal static class LpGeometryProbes
     private static readonly string MVQ = MultiVoiceHeadScore("MVQ", "e4 e4 e4 e4");
 
     /// <summary>
+    /// The DOTTED arm of item M (probes/dotted-head-spacing.ly, opened 2026-08-21 when
+    /// item L's trial port unmasked GetNoteValue's scaled-duration glyph lookup): a
+    /// dotted half DRAWS the half head 1.3774 but its left-head refinement priced the
+    /// BLACK head 1.3042 (3/4 → denominator 4) — the −0.0732 fork this pair prices in a
+    /// single-voice book, next to a plain-half control whose drawn and priced heads
+    /// agree either way.
+    /// </summary>
+    private static string DottedHeadScore(string name, string bar) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section A {
+          m { {{bar}} | }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff m
+        }
+        """;
+
+    /// <summary>The dotted-head book: the gap after a dotted half.</summary>
+    private static readonly string DHD = DottedHeadScore("DHD", "c'2. c'4");
+
+    /// <summary>The plain-half control: drawn == priced today on every head.</summary>
+    private static readonly string DHC = DottedHeadScore("DHC", "c'2 c'4 c'4");
+
+    /// <summary>
     /// One slurred bar for the MELISMA-SPAN RESERVATION — the shared shape of books
     /// LMS / LMN in probes/lyric-melisma-span.ly (HANDOFF 1's residual item ⒥, named
     /// when the bound-voice skip-gap refused to close past +1.507845). The books differ
@@ -9861,6 +9893,15 @@ internal static class LpGeometryProbes
             g => g.NoteheadAnchor(3) - g.NoteheadAnchor(2)),
         new("multi-voice.natural.control-gap", MVQ,
             g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
+
+        // THE DOTTED NOTE'S LEFT HEAD (books DHD/DHC, dotted-head-spacing.ly — item M's
+        // dotted arm; the tuplet arm is the MVH family's 1.3042-under-drawn-wholes dump).
+        // LilyPond prices the DRAWN head (note-spacing.cc:46-70 first_head); Lily#'s
+        // GetNoteValue derives the glyph from the scaled duration, so the dotted half
+        // prices the black head — the −0.0732 head-width fork.
+        new("dotted.natural.dotted-half-gap", DHD, g => g.NoteheadAnchorStep(0)),
+        new("dotted.natural.half-gap", DHC, g => g.NoteheadAnchorStep(0)),
+        new("dotted.natural.quarter-gap", DHC, g => g.NoteheadAnchorStep(1)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a

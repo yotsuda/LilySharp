@@ -1107,8 +1107,23 @@ internal static class SpacingRules
         // Clef/key/time change items have zero duration — treat as quarter note for glyph lookup
         if (item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem)
             return 4;
-        var duration = item.Duration;
-        return (int)duration.Denominator;
+        // The NOTATED value — the glyph that is DRAWN. Every consumer of this is a
+        // drawn-ink reader (head/rest bboxes for extents, skylines and the left-head
+        // refinement), and the scaled duration is the wrong frame for a glyph: a
+        // tuplet whole (2/3 → denominator 3) priced as a BLACK head under 42 drawn
+        // whole heads (books TSU/TSD, dumped 2026-08-21), and a dotted half (3/4 → 4)
+        // as a black under a drawn half — MEASURED, dotted.natural.dotted-half-gap
+        // −0.073200 = the half-vs-black head width, to the digit (LilyPond prices the
+        // drawn stencil, note-spacing.cc:46-70 first_head). The renderer always read
+        // the notated side (LayoutUtilities.GetNoteValueFromFraction over
+        // BaseDuration, its 15 call sites); this was the drawn-ink walk that did not.
+        return item switch
+        {
+            NoteItem n => LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration),
+            ChordItem c => LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration),
+            RestItem r => LayoutUtilities.GetNoteValueFromFraction(r.BaseDuration),
+            _ => (int)item.Duration.Denominator,
+        };
     }
     /// <summary>
     /// Creates a spring between two music items.
@@ -3202,6 +3217,39 @@ internal static class SpacingRules
                     return true;
             return false;
         }
+    }
+
+    /// <summary>
+    /// The loose change's OWN-STAFF left-neighbour ITEM — the left bound of LilyPond's
+    /// next_door pair, whose ink the pruned column's rod arms are measured from
+    /// (lily/spacing-determine-loose-columns.cc:135-185 set_distances_for_loose_col:
+    /// <c>r.item_drul_ = next_door</c>, the loose column's own-staff neighbours).
+    /// ⚠️ Until 2026-08-21 the rod's left arm read the furthest reach of the UNION
+    /// previous column instead — another staff's intervening note (sploose's A4). The
+    /// two spellings agreed byte-for-byte while item M priced every scaled head as
+    /// black; the notated-head fix split them (the A4 is a DRAWN half, the own C#3 an
+    /// eighth), and the LP-pinned loose net moved +0.08 the moment the wrong column's
+    /// head got its true width — which is how the wrong input was found.
+    /// </summary>
+    internal static MusicItem? LooseChangeOwnPrevItem(
+        IReadOnlyList<Model.Measure> measures, IReadOnlyList<MusicItem> columnItems)
+    {
+        foreach (var m in measures)
+        {
+            MusicItem? lastMusical = null;
+            foreach (var item in m.Items)
+            {
+                if (IsChangeItem(item))
+                {
+                    foreach (var candidate in columnItems)
+                        if (ReferenceEquals(candidate, item))
+                            return lastMusical;
+                    continue;
+                }
+                lastMusical = item;
+            }
+        }
+        return null;
     }
 
     /// <summary>

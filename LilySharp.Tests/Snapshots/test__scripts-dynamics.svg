@@ -6,11 +6,11 @@
 </style>
   <rect x="0" y="0" width="119.50" height="27.16" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="12.35" x2="74.40" y2="12.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.35" x2="74.40" y2="13.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.35" x2="74.40" y2="14.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.35" x2="74.40" y2="15.35" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.35" x2="74.40" y2="16.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.35" x2="74.59" y2="12.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.35" x2="74.59" y2="13.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.35" x2="74.59" y2="14.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.35" x2="74.59" y2="15.35" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.35" x2="74.59" y2="16.35" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="15.35" font-size="4.00" data-pos="218"></text>
   <text class="music" x="4.88" y="14.35" font-size="4.00"></text>
   <line x1="8.26" y1="17.35" x2="10.22" y2="17.35" stroke="#000000" stroke-width="0.200"/>
@@ -63,7 +63,7 @@
   <rect x="47.19" y="12.35" width="0.19" height="4.00" data-pos="395"/>
   <rect x="57.06" y="12.35" width="0.19" height="4.00" data-pos="437"/>
   <rect x="65.21" y="12.35" width="0.19" height="4.00" data-pos="454"/>
-  <rect x="74.21" y="12.35" width="0.19" height="4.00" data-pos="497"/>
+  <rect x="74.40" y="12.35" width="0.19" height="4.00" data-pos="497"/>
   <text x="9.24" y="20.39" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="260">sfz</text>
   <text x="12.24" y="20.77" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="266">fp</text>
   <text x="15.24" y="19.14" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="271">sf</text>

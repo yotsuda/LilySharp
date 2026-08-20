@@ -2119,6 +2119,27 @@
       "residual": 0.0,
       "why": "EXACT: the all-quarter twin's col0->col1 -- LilyPond reads MVQ == MVH gap-for-gap to the last digit (the strong identity form: the changed variable, one head's glyph and the alt rhythm, is one LilyPond does not read), so everything the wide-head book diverges by is the foreign head's charge and nothing else."
     },
+    "dotted.natural.dotted-half-gap": {
+      "probe": "dotted-head-spacing.ly",
+      "score": "DHD",
+      "lilypond": 4.977399999999999,
+      "residual": 0.0,
+      "why": "OPENED at -0.073200000 and CLOSED the same day by the port it was opened for (item M, 2026-08-21): GetNoteValue derived the head glyph from the SCALED duration (dotted half 3/4 -> denominator 4 -> the BLACK head 1.3042) while the renderer draws the HALF head 1.3774 -- the residual was the head-width difference to the digit, LilyPond pricing the drawn stencil (note-spacing.cc:46-70 first_head). GetNoteValue now reads the NOTATED value (BaseDuration through GetNoteValueFromFraction -- the same reading the renderer's 15 call sites always had); all six of its consumers are drawn-ink readers, audited. The tuplet arm of the same defect is the MVH family's 1.3042-under-drawn-wholes dump (multi-voice-head-spacing.ly)."
+    },
+    "dotted.natural.half-gap": {
+      "probe": "dotted-head-spacing.ly",
+      "score": "DHC",
+      "lilypond": 4.275444999134611,
+      "residual": 0.0,
+      "why": "EXACT before and after the port: a plain half's notated and scaled denominators agree (1/2 -> 2 either way), so this is the frame control that makes the dotted book's -0.0732 attributable to the dot's scaling alone."
+    },
+    "dotted.natural.quarter-gap": {
+      "probe": "dotted-head-spacing.ly",
+      "score": "DHC",
+      "lilypond": 3.002244999134613,
+      "residual": 0.0,
+      "why": "EXACT: the family digit, in-book."
+    },
     "lyrics.melisma-span.no-bind.first-gap": {
       "probe": "lyric-melisma-span.ly",
       "score": "LMN",
