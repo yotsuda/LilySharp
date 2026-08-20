@@ -382,6 +382,15 @@ internal sealed class LyricsCollector
         int maxIndex = -1;
         var measureLen = new Fraction(timeBeats, timeBeatType);
 
+        // The row bars' WRITTEN barline types: the end type per target measure, and the
+        // measures a `|:` opens as a repeat. Spellings map through the music path's own
+        // table (MeasureCollector.ParseBarlineType — one table, never two), and stacked
+        // verses / reprises landing on one bar merge via Stronger, the same one-answer
+        // rule the cross-voice sync applies. See LyricSyllableReader.ClosingBarToken for
+        // the pre-2026-08-20 behaviour this replaces (every row bar drew plain).
+        var barEnds = new Dictionary<int, BarlineType>();
+        var repeatOpens = new HashSet<int>();
+
         // Spreads one run of lyric-measure nodes across the bars from absolute bar
         // `startMeasure`, wrapping every `wrapBars` bars into stacked verses counted
         // from `verseBase`. Returns the bar count (for the caller's verse bookkeeping).
@@ -406,6 +415,25 @@ internal sealed class LyricsCollector
                 int barInVerse = wrapBars > 0 ? j % wrapBars : j;
                 int v = verseBase + (wrapBars > 0 ? j / wrapBars : 0);
                 int mi = startMeasure + barInVerse;
+
+                if (LyricSyllableReader.ClosingBarToken(measureNode) is { } barTok)
+                {
+                    BarlineType barEnd;
+                    if (barTok == "|:")
+                    {
+                        // `|:` closes THIS bar plain and opens the NEXT one — the music
+                        // path's HandleBarline semantic, mirrored.
+                        barEnd = BarlineType.Single;
+                        repeatOpens.Add(mi + 1);
+                    }
+                    else
+                    {
+                        barEnd = MeasureCollector.ParseBarlineType(barTok);
+                    }
+                    barEnds[mi] = barEnds.TryGetValue(mi, out var prevEnd)
+                        ? MeasureCollector.Stronger(prevEnd, barEnd)
+                        : barEnd;
+                }
 
                 var sylls = RowSyllables(measureNode);
                 if (sylls.Count > 0)
@@ -527,13 +555,26 @@ internal sealed class LyricsCollector
         for (int i = 0; i <= maxIndex; i++)
         {
             var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
-            // A lyrics row separates measures with plain `|` so a standalone lyrics-only
-            // lead sheet shows a measure grid. The score-wide barline sync merges these
-            // harmlessly with any music staff (which dominates via Stronger).
+            // A row bar keeps its WRITTEN barline type (plain `|` = Single, so a
+            // standalone lyrics-only lead sheet still shows its measure grid). The
+            // score-wide barline sync merges these harmlessly with any music staff
+            // (Stronger picks the significant one at each boundary).
             // ⚠️ The last measure used to get BarlineType.Final here — removed with the
             // same rule in MeasureCollector.FinalizeMeasures: `|.` is written, not inferred.
-            var end = BarlineType.Single;
-            measures.Add(new Measure(items, BarlineType.None, end, null, 0, 0));
+            var end = barEnds.TryGetValue(i, out var typed) ? typed : BarlineType.Single;
+            var start = repeatOpens.Contains(i) ? BarlineType.RepeatStart : BarlineType.None;
+            // `:|` meeting `|:` at one boundary is ONE combined glyph — the same
+            // back-to-back fold the music path applies in FinalizeMeasures
+            // (LILYPOND-REF: scm/bar-line.scm ":|.|:" is a single declared bar line).
+            if (start == BarlineType.RepeatStart && i > 0
+                && measures[i - 1].EndBarline
+                    is BarlineType.RepeatEnd or BarlineType.RepeatBoth)
+            {
+                if (measures[i - 1].EndBarline == BarlineType.RepeatEnd)
+                    measures[i - 1] = measures[i - 1] with { EndBarline = BarlineType.RepeatBoth };
+                start = BarlineType.None;
+            }
+            measures.Add(new Measure(items, start, end, null, 0, 0));
         }
         return measures.MoveToImmutable();
     }

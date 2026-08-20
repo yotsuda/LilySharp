@@ -142,23 +142,29 @@ internal static partial class SharedRenderer
             lineStart = false;
             // Line-start start barline clears the redrawn tab clef (see DrawBarlines).
             // Both ends are clickable/highlightable, like the notation staff's.
-            if (measure.StartBarline != BarlineType.None)
+            var startType = StartBarWithBreakPieces(measure, primaryVoice, ml.MeasureIndex, atLineStart);
+            if (startType != BarlineType.None)
             {
                 double sx = atLineStart ? ml.X + LineStartBarClearance : ml.X;
                 using (gc.Source(measure.SourceStart))
                 {
-                    DrawBarline(measure.StartBarline, sx, staffY, tabHeight, gc, tabDots: tabDots);
+                    DrawBarline(startType, sx, staffY, tabHeight, gc, tabDots: tabDots);
                     gc.DrawHitRect(sx - BarlineHitPad, staffY,
-                        GetVisualBarlineWidth(measure.StartBarline) + 2 * BarlineHitPad, tabHeight);
+                        GetVisualBarlineWidth(startType) + 2 * BarlineHitPad, tabHeight);
                 }
             }
+            var endType = EndBarWithBreakPieces(measure, system, ml.MeasureIndex);
             double endX = ml.X + ml.Width;
-            double width = GetVisualBarlineWidth(measure.EndBarline);
-            if (measure.EndBarline != BarlineType.None)
+            double width = GetVisualBarlineWidth(endType);
+            // A plain Single immediately before a repeat-start in the SAME system
+            // yields to it -- the boundary is ONE bar line (EndBarYieldsToRepeatStart).
+            bool endYields = endType == BarlineType.Single
+                && EndBarYieldsToRepeatStart(primaryVoice, system, ml.MeasureIndex);
+            if (endType != BarlineType.None && !endYields)
             {
                 using (gc.Source(measure.SourceEnd))
                 {
-                    DrawBarline(measure.EndBarline, endX - width, staffY, tabHeight, gc, tabDots: tabDots);
+                    DrawBarline(endType, endX - width, staffY, tabHeight, gc, tabDots: tabDots);
                     gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
                         width + 2 * BarlineHitPad, tabHeight);
                 }

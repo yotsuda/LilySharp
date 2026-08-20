@@ -11408,10 +11408,15 @@ internal static class LpGeometryProbes
         // convention and the symbol's width cancel. The second render is taken here rather
         // than inside RenderedGeometry: a ledger point is a quantity, and this one is
         // genuinely a quantity over two scores.
-        new("staffless.line-start.chords-vs-staff", SCS,
-            g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
-        new("staffless.line-start.meter-identity", SCO3,
-            g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
+        // ⚠️ TWO POINTS RETIRED 2026-08-20 with the lead-sheet meter DECISION (HANDOFF §3):
+        // staffless.line-start.chords-vs-staff and staffless.line-start.meter-identity
+        // pinned "a staffless system books NO meter width" (LilyPond, measured: CO and CO3
+        // put the first chord on 0.500000 identically, and CS - CO carried the whole
+        // staff prefix). The user decided a lead sheet's grid row ENGRAVES the meter
+        // (SpacingRules.AnyStaffEngravesTime's lead-sheet clause), so both differences
+        // now deliberately diverge from LilyPond and a decided divergence stays OUT of
+        // this ledger (the lyrics-row band's precedent). The LP numbers live in the
+        // probe header (staffless-system.ly) and in git history.
         new("staffless.line-start.key-identity", SCOK,
             g => g.FirstChordSymbolAnchor() - ChordAnchorOf(SCO)),
         // The one point that needs a single render: over a staff, LilyPond's ChordName and

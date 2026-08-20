@@ -429,6 +429,16 @@ internal static class SpacingRules
     /// </remarks>
     public static bool AnyStaffEngravesTime(MultiStaffScore score)
     {
+        // LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
+        // a staff-less lead sheet ENGRAVES the score meter on its grid row — the row
+        // that carries the measure barlines prints it at the line-start prefix, so the
+        // time column books width exactly as a staff score's would. LilyPond books no
+        // meter width for a ChordNames/Lyrics-only system (measured: probe
+        // staffless-system.ly, the former staffless.line-start.meter-identity point —
+        // retired WITH this decision; the lead-sheet grid is Lily#'s own surface and
+        // reads as a chart, where the meter belongs).
+        if (score.IsLeadSheet)
+            return true;
         foreach (var (_, staff, _) in score.EnumerateStaves())
             if (ContributesToTimeColumnWidth(staff))
                 return true;

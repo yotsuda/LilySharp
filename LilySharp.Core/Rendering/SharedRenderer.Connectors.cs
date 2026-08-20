@@ -220,9 +220,14 @@ internal static partial class SharedRenderer
                 bool atLineStart = lineStart;
                 lineStart = false;
 
-                bool suppressEnd = measure.EndBarline == BarlineType.Single
-                    && IsMmrInnerEndBarline(layout, ml.MeasureIndex);
-                double endWidth = GetVisualBarlineWidth(measure.EndBarline);
+                var startType = StartBarWithBreakPieces(measure, voice, ml.MeasureIndex, atLineStart);
+                var endType = EndBarWithBreakPieces(measure, system, ml.MeasureIndex);
+                bool suppressEnd = endType == BarlineType.Single
+                    && (IsMmrInnerEndBarline(layout, ml.MeasureIndex)
+                        // ...or the bar yields to a same-system repeat-start, as on
+                        // the staff itself (EndBarYieldsToRepeatStart).
+                        || EndBarYieldsToRepeatStart(voice, system, ml.MeasureIndex));
+                double endWidth = GetVisualBarlineWidth(endType);
                 // Keep the inter-staff connector aligned with the staff barlines,
                 // which clear the line-start clef by LineStartBarClearance.
                 double startX = atLineStart ? ml.X + LineStartBarClearance : ml.X;
@@ -235,11 +240,11 @@ internal static partial class SharedRenderer
                     if (gapHeight <= 0)
                         continue;
 
-                    if (measure.StartBarline != BarlineType.None)
-                        DrawBarline(measure.StartBarline, startX, gapTop, gapHeight,
+                    if (startType != BarlineType.None)
+                        DrawBarline(startType, startX, gapTop, gapHeight,
                             gc, withDots: false);
                     if (!suppressEnd)
-                        DrawBarline(measure.EndBarline, ml.X + ml.Width - endWidth,
+                        DrawBarline(endType, ml.X + ml.Width - endWidth,
                             gapTop, gapHeight, gc, withDots: false);
                 }
             }

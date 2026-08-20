@@ -41,7 +41,6 @@
   <line x1="45.32" y1="13.00" x2="45.32" y2="16.35" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.26" y="12.35" font-size="4.00" data-pos="334"></text>
   <line x1="48.32" y1="12.50" x2="48.32" y2="15.85" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.36" y="12.35" width="0.19" height="4.00" data-pos="337"/>
   <rect x="20.55" y="12.35" width="0.60" height="4.00" data-pos="479"/>
   <rect x="21.45" y="12.35" width="0.19" height="4.00" data-pos="479"/>
   <circle cx="22.14" cy="13.85" r="0.20" data-pos="479"/>

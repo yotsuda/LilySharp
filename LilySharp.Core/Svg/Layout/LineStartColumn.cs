@@ -520,10 +520,26 @@ internal static class LineStartColumn
         // so it belongs with the spacer, not here. See docs/HANDOFF.md section 1.
         if (wishes.Count == 0)
         {
-            var standard = StandardBreakableColumnSpacing(minDistance);
-            return new Spring(
-                standard.IdealDistance - columns.Right, standard.MinDistance - columns.Right,
-                standard.InverseStretchStrength);
+            // LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+            // SpacingRules.AnyStaffEngravesTime): when the prefix DOES engrave a time
+            // signature — the grid row of a staff-less lead sheet — the row takes the
+            // SAME wish a staff whose prefix ends on the meter would (semi-shrink off
+            // the meter's ink), not LilyPond's bare standard spacing: LilyPond has no
+            // meter here at all, so its measured 0.5 is the meterless regime's number
+            // and cannot price a column the decision added. The floor still carries the
+            // first syllable's leading reach (ownFixedFloor), exactly as on a staff.
+            if (columns.HasTime && timeInkWidth > 0.0)
+            {
+                wishes.Add(WishFrom(BreakAlignSymbol.TimeSignature,
+                    columns.TimeX, columns.TimeX + timeInkWidth, floor, minDistance));
+            }
+            else
+            {
+                var standard = StandardBreakableColumnSpacing(minDistance);
+                return new Spring(
+                    standard.IdealDistance - columns.Right, standard.MinDistance - columns.Right,
+                    standard.InverseStretchStrength);
+            }
         }
 
         var merged = Spring.MergeSprings(wishes);

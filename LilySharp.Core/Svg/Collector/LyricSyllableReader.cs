@@ -134,6 +134,33 @@ internal static class LyricSyllableReader
     }
 
     /// <summary>
+    /// The barline token a lyric measure CLOSES with — the LAST barline-classified
+    /// token in the node — or null when the bar has none (a run's final bar written
+    /// without its closing <c>|</c>). The caller maps it with the music path's own
+    /// <c>MeasureCollector.ParseBarlineType</c> (one spelling table, never two) and
+    /// applies the music path's <c>|:</c> semantic: a repeat-start token closes THIS
+    /// bar plain and opens the NEXT one (<c>MeasureCollector.HandleBarline</c>).
+    /// Until 2026-08-20 the row path dropped the token's TYPE entirely, so a
+    /// lyrics-only lead sheet drew <c>|:</c>/<c>:|</c>/<c>||</c>/<c>|.</c> as plain
+    /// bars while a chords-only grid (whose measures come from the music path)
+    /// kept them.
+    /// </summary>
+    public static string? ClosingBarToken(SyntaxNode measure)
+    {
+        string? last = null;
+        for (int i = 0; i < measure.SlotCount; i++)
+        {
+            var child = measure.GetChild(i);
+            if (child == null)
+                continue;
+            var (text, _) = ReadToken(child);
+            if (!string.IsNullOrEmpty(text) && IsBarline(text))
+                last = text;
+        }
+        return last;
+    }
+
+    /// <summary>
     /// True for a lyric measure that is nothing but a lone bare <c>|</c> — the
     /// parse of a run that OPENS with a barline. Under the bare-barline rule
     /// (GRAMMAR.md "BARE-BARLINE SEMANTICS", the same rule music follows) that

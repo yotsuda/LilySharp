@@ -432,8 +432,31 @@ internal static partial class SharedRenderer
                     // barlines run the ordinary staff height — extended by one
                     // verse-spacing per extra stacked verse on a lyric row —
                     // whether the grid carries words or chord symbols.
+                    double rowTopY = LayoutUtilities.StaffTopYUp(system, globalIdx);
                     double h = StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing;
-                    DrawBarlines(system, staff, LayoutUtilities.StaffTopYUp(system, globalIdx), layout, gc, barHeight: h);
+                    DrawBarlines(system, staff, rowTopY, layout, gc, barHeight: h);
+
+                    // The grid row ENGRAVES the score meter at the line-start
+                    // prefix — LILYSHARP-OWN, a decided divergence (user decision
+                    // 2026-08-20; see SpacingRules.AnyStaffEngravesTime, whose
+                    // lead-sheet clause is what books this column's width). The X
+                    // is the same SolvePrefixColumns table the layout reserved
+                    // from — one derivation, so the drawn meter lands where the
+                    // first bar was spaced from (a lead sheet has no clef and no
+                    // key, so TimeX is the LeftEdge→prefix gap alone). The glyphs
+                    // hang from the grid band's top — the same 4-ss frame the
+                    // barlines run.
+                    if (isFirstSystem && !score.TimeSignature.SenzaMisura)
+                    {
+                        var pc = BreakAlignSpacing.SolvePrefixColumns(
+                            SpacingRules.MaxClefWidth(score),
+                            SpacingRules.WidestActiveKeyInk(
+                                score, system.Measures.Length > 0 ? system.Measures[0].MeasureIndex : 0),
+                            includeTimeSignature: true,
+                            score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
+                        using (SourceScope(gc, score.Header.Time))
+                            DrawTimeSignature(score.TimeSignature, systemStartX + pc.TimeX, rowTopY, gc);
+                    }
                 }
                 continue;
             }

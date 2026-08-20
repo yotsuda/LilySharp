@@ -54,7 +54,8 @@ internal static partial class SharedRenderer
             // extra-space (1.15 ss) — otherwise a `|:` opening a line overprints
             // the clef. LILYPOND-REF: scm/define-grobs.scm BarLine space-alist
             // (clef/key-signature/time-signature . (extra-space . 1.15)).
-            if (measure.StartBarline != BarlineType.None)
+            var startType = StartBarWithBreakPieces(measure, voice, ml.MeasureIndex, atLineStart);
+            if (startType != BarlineType.None)
             {
                 double sx = atLineStart ? ml.X + LineStartBarClearance : ml.X;
                 // The barline is clickable/highlightable in the preview: it carries
@@ -63,9 +64,9 @@ internal static partial class SharedRenderer
                 // comfortable click target.
                 using (gc.Source(measure.SourceStart))
                 {
-                    DrawBarline(measure.StartBarline, sx, staffY, height, gc);
+                    DrawBarline(startType, sx, staffY, height, gc);
                     gc.DrawHitRect(sx - BarlineHitPad, staffY,
-                        GetVisualBarlineWidth(measure.StartBarline) + 2 * BarlineHitPad, height);
+                        GetVisualBarlineWidth(startType) + 2 * BarlineHitPad, height);
                 }
             }
 
@@ -81,11 +82,19 @@ internal static partial class SharedRenderer
                 && IsMmrInnerEndBarline(layout, ml.MeasureIndex))
                 continue;
 
+            // A plain Single immediately before a repeat-start in the SAME system
+            // yields to it -- the boundary is ONE bar line (see
+            // EndBarYieldsToRepeatStart).
+            if (measure.EndBarline == BarlineType.Single
+                && EndBarYieldsToRepeatStart(voice, system, ml.MeasureIndex))
+                continue;
+
             if (measure.EndBarline == BarlineType.None)
                 continue;
 
+            var endType = EndBarWithBreakPieces(measure, system, ml.MeasureIndex);
             double endX = ml.X + ml.Width;
-            double width = GetVisualBarlineWidth(measure.EndBarline);
+            double width = GetVisualBarlineWidth(endType);
             // Clickable/highlightable like the start barline: SourceEnd is the
             // written `|` token's position (or, for an auto-filled close, the
             // point just after the bar's last note — still the boundary).
@@ -96,12 +105,73 @@ internal static partial class SharedRenderer
                 ? gc.Source(measure.SourceEnd)
                 : gc.Source(measure.SourceEnd, measure.EndHighlightAliases))
             {
-                DrawBarline(measure.EndBarline, endX - width, staffY, height, gc);
+                DrawBarline(endType, endX - width, staffY, height, gc);
                 gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
                     width + 2 * BarlineHitPad, height);
             }
         }
     }
+
+    /// <summary>
+    /// True when a measure's END bar must not print: a plain Single immediately
+    /// before a repeat-start in the SAME system. LilyPond's start repeat is ONE bar
+    /// line at the boundary (".|:" = thick + thin + dots) — MEASURED on 2.26.0
+    /// (scratch/p226/lprep.ly, c1 \repeat volta 2 { c1 c1 } c1: the SVG carries
+    /// exactly 4 thin + 2 thick rects; no leading thin exists before the ".|:") —
+    /// where Lily#'s split model (End piece + Start piece) printed the previous
+    /// bar's Single too, fusing thin against thick into one over-heavy blob (user
+    /// report 2026-08-20, first seen on the lead-sheet grid). At a LINE BREAK the
+    /// two pieces separate exactly as LilyPond's break pieces do — the end-of-line
+    /// piece of ".|:" is the plain thin bar — so a Single ENDING the system before
+    /// a next-system repeat-start keeps printing, which is why the test is "the
+    /// next measure is rendered in THIS system", not merely "starts a repeat".
+    /// LILYPOND-REF: scm/bar-line.scm define-bar-line ".|:" — begin-of-line piece
+    /// ".|:", end-of-line piece "|".
+    /// </summary>
+    private static bool EndBarYieldsToRepeatStart(Voice voice, SystemLayout system, int measureIndex)
+    {
+        if (measureIndex + 1 >= voice.Measures.Length)
+            return false;
+        // The system's measures are contiguous, so "in this system" is one compare
+        // against its last index; the system's own last measure ends at a break.
+        if (system.Measures.Length == 0 || measureIndex >= system.Measures[^1].MeasureIndex)
+            return false;
+        return voice.Measures[measureIndex + 1].StartBarline == BarlineType.RepeatStart;
+    }
+
+    /// <summary>
+    /// The end barline TYPE a measure prints at its position in the system — the
+    /// break-piece substitution: a combined repeat (RepeatBoth) ENDING a system
+    /// prints only its end-of-line piece, the repeat-END, and its begin piece
+    /// moves to the next system's start (<see cref="StartBarWithBreakPieces"/>).
+    /// Mid-line the combined glyph prints whole.
+    /// LILYPOND-REF: scm/bar-line.scm define-bar-line ":|.|:" / ":|.:" — end-of-line
+    /// piece ":|.", begin-of-line piece ".|:" (user report 2026-08-20: the whole
+    /// combined glyph used to print at the line end and nothing opened the next line).
+    /// </summary>
+    private static BarlineType EndBarWithBreakPieces(
+        Measure measure, SystemLayout system, int measureIndex)
+        => measure.EndBarline == BarlineType.RepeatBoth
+           && system.Measures.Length > 0
+           && measureIndex >= system.Measures[^1].MeasureIndex
+            ? BarlineType.RepeatEnd
+            : measure.EndBarline;
+
+    /// <summary>
+    /// The start barline TYPE a measure prints — the other half of
+    /// <see cref="EndBarWithBreakPieces"/>: a measure OPENING a system whose
+    /// predecessor carries the combined repeat prints the begin-of-line piece, the
+    /// repeat-START (the collector folded the pair into the predecessor's end, so
+    /// this measure's own record says None).
+    /// </summary>
+    private static BarlineType StartBarWithBreakPieces(
+        Measure measure, Voice voice, int measureIndex, bool atLineStart)
+        => measure.StartBarline == BarlineType.None
+           && atLineStart && measureIndex > 0
+           && measureIndex - 1 < voice.Measures.Length
+           && voice.Measures[measureIndex - 1].EndBarline == BarlineType.RepeatBoth
+            ? BarlineType.RepeatStart
+            : measure.StartBarline;
 
     /// <summary>Extra clickable margin on each side of a barline's ink (staff
     /// spaces) — the interactive hit rect only; the drawn ink is unchanged.</summary>
