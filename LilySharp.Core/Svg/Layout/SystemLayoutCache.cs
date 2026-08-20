@@ -108,6 +108,12 @@ internal sealed class SystemLayoutCache
     /// (see <see cref="PreliminaryFingScripts"/>).</summary>
     public FingScriptMemo FinalFingScripts { get; } = new();
 
+    /// <summary>The per-system lyric verse-skyline memo — ONE instance for BOTH
+    /// annotation passes, deliberately (the value is X-only and both passes hold the
+    /// same measure-layout instances; see <see cref="VerseSkylineMemo"/> for why that
+    /// sharing is sound here and not for the stacking memos above).</summary>
+    public VerseSkylineMemo VerseSkylines { get; } = new();
+
     /// <summary>Whether the most recent <see cref="GetOrComputeMeasures"/> call was a
     /// hit (reused) rather than a miss (computed). For diagnostics / tests.</summary>
     public bool LastWasHit { get; private set; }

@@ -69,6 +69,12 @@ public class LyricBandMemoTests
         var (hits0, misses0) = cache!.LyricBandStats;
         Assert.True(misses0 >= 2, $"expected a multi-system book (first render missed {misses0})");
         Assert.Equal(0, hits0);
+        // The verse-skyline memo is SHARED between the two annotation passes: the first
+        // render's preliminary pass computes every system (misses) and the final pass
+        // serves them (hits) — the pass-sharing half of the win, asserted.
+        var (vHits0, vMisses0) = cache.VerseSkylines.Stats;
+        Assert.True(vMisses0 >= 2 && vHits0 >= vMisses0,
+            $"first render: verse memo hits {vHits0} / misses {vMisses0} — the final pass should serve the preliminary's entries");
 
         // Re-pitch one note in ONE measure: the content key moves for that measure's
         // neighbourhood only, so every other system's band must be a HIT.
@@ -78,6 +84,13 @@ public class LyricBandMemoTests
         var (hits1, misses1) = cache.LyricBandStats;
         Assert.True(hits1 - hits0 >= misses0 - 2,
             $"keystroke served {hits1 - hits0} bands of {misses0} systems (misses {misses1 - misses0})");
+        // ...and the verse memo re-fed only the edited system (a miss in the preliminary
+        // pass; the final pass hits the freshly stored entry), serving everything else.
+        var (vHits1, vMisses1) = cache.VerseSkylines.Stats;
+        Assert.True(vMisses1 - vMisses0 <= 2,
+            $"the note keystroke recomputed {vMisses1 - vMisses0} systems' verse skylines — expected at most the edited one per pass");
+        Assert.True(vHits1 - vHits0 >= 2 * (vMisses0 - 2),
+            $"keystroke served {vHits1 - vHits0} verse-skyline entries of ~{2 * vMisses0} lookups");
     }
 
     [Fact]
@@ -88,6 +101,7 @@ public class LyricBandMemoTests
         var cache = session.SystemCache;
         Assert.NotNull(cache);
         var (_, misses0) = cache!.LyricBandStats;
+        var (_, vMisses0) = cache.VerseSkylines.Stats;
 
         // Change one syllable's TEXT (wider ink): the edited system's band must
         // recompute — the syllables reach the key through the side-table buckets —
@@ -99,5 +113,12 @@ public class LyricBandMemoTests
         var (_, misses1) = cache.LyricBandStats;
         Assert.True(misses1 > misses0,
             $"the lyric edit recomputed no band (misses {misses0} -> {misses1})");
+        // The syllable edit must also re-feed the edited system's verse skylines — the
+        // content key folds the lyrics, so the measures memo hands out NEW instances
+        // there and the reference key declines (a stale profile would space the verse
+        // against the old text's ink).
+        var (_, vMisses1) = cache.VerseSkylines.Stats;
+        Assert.True(vMisses1 > vMisses0,
+            $"the lyric edit recomputed no verse skyline (misses {vMisses0} -> {vMisses1})");
     }
 }

@@ -397,7 +397,8 @@ internal sealed class LyricEngraver
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd = null,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
         double lastSpaceableStaffY = 0,
-        Func<int, IReadOnlyList<int>>? trailingRowStaves = null)
+        Func<int, IReadOnlyList<int>>? trailingRowStaves = null,
+        VerseSkylineMemo? verseSkylineMemo = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -491,7 +492,7 @@ internal sealed class LyricEngraver
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
                 noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd, betweenStavesEnd,
-                lastSpaceableStaffY, trailingRowStaves);
+                lastSpaceableStaffY, trailingRowStaves, verseSkylineMemo);
 
         return layouts.ToImmutableArray();
     }
@@ -606,7 +607,8 @@ internal sealed class LyricEngraver
         Func<int, LooseLineSpacer.ChainEnd?>? looseChainEnd,
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
         double lastSpaceableStaffY,
-        Func<int, IReadOnlyList<int>>? trailingRowStaves)
+        Func<int, IReadOnlyList<int>>? trailingRowStaves,
+        VerseSkylineMemo? verseSkylineMemo)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -652,8 +654,8 @@ internal sealed class LyricEngraver
         // the verse alone: a row and a note-bound block can stand under the SAME anchor
         // (`staff X with lyrics a` + `lyrics b`), and keying by verse would have their verse 1
         // read each other's ink.
-        var up = BuildVerseUpSkylines(_fonts, layouts, measureToSystem, LineKeyOf);
-        var down = BuildVerseDownSkylines(_fonts, layouts, measureToSystem, LineKeyOf);
+        var (up, down) = BuildVerseSkylines(
+            _fonts, layouts, measureToSystem, LineKeyOf, systems, verseSkylineMemo);
 
         var newY = new Dictionary<(int Family, int System, int Line, int Verse), double>();
 
@@ -1397,7 +1399,8 @@ internal sealed class LyricEngraver
     }
 
     /// <summary>
-    /// One merged UP-skyline per (system, VERSE) — each verse's own ink, in its own frame.
+    /// The merged UP and DOWN skylines per (system, line, VERSE) — each verse's own ink,
+    /// in its own frame — through the per-system memo when the session has one.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:1315-1332 <c>get_spacing_spec</c> — a
@@ -1409,44 +1412,103 @@ internal sealed class LyricEngraver
     /// THE TEXT. Measuring that needs each verse's ink separately, which is what this
     /// returns; the flat <see cref="LyricParameters.VerseSpacing"/> cannot express it.
     /// <para>
-    /// Every verse is read now: <see cref="DistributeLooseLines"/> takes verse k's up-skyline
-    /// against verse k-1's <see cref="BuildVerseDownSkylines"/> for that spring's minimum,
-    /// and verse 1's against the staff for the spring above it.
+    /// Every verse is read: <see cref="DistributeLooseLines"/> takes verse k's up-skyline
+    /// against verse k-1's down-skyline for that spring's minimum, and verse 1's against
+    /// the staff for the spring above it.
+    /// </para>
+    /// <para>
+    /// ONE builder for both directions and every system — the per-system unit exists so
+    /// <see cref="VerseSkylineMemo"/> can serve unchanged systems across keystrokes (and
+    /// across the two annotation passes); a null memo (the full-render path, tests) runs
+    /// the same per-system builds uncached, so there is exactly one spelling of the
+    /// quantity either way.
     /// </para>
     /// </remarks>
-    internal static Dictionary<(int System, int Line, int Verse), VerticalSkyline> BuildVerseUpSkylines(
-        Rendering.ScoreTextMetrics fonts, IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
+    internal static (Dictionary<(int System, int Line, int Verse), VerticalSkyline> Up,
+        Dictionary<(int System, int Line, int Verse), VerticalSkyline> Down) BuildVerseSkylines(
+        Rendering.ScoreTextMetrics fonts, IEnumerable<LyricLayout> layouts,
+        IReadOnlyDictionary<int, int> measureToSystem, Func<LyricItem, int> lineKeyOf,
+        ImmutableArray<SystemLayout> systems, VerseSkylineMemo? memo)
+    {
+        // Group per system, preserving document order within each — the same order the
+        // flat walk merged in (EndBatch resolves order-independently, but stating it
+        // costs nothing).
+        var bySystem = new Dictionary<int, List<LyricLayout>>();
+        var systemOrder = new List<int>();
+        foreach (var lay in layouts)
+        {
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
+            if (!bySystem.TryGetValue(s, out var list))
+            {
+                bySystem[s] = list = new List<LyricLayout>();
+                systemOrder.Add(s);
+            }
+            list.Add(lay);
+        }
+
+        var up = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
+        var down = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
+        foreach (int s in systemOrder)
+        {
+            var lays = bySystem[s];
+            var value = memo != null && !systems.IsDefaultOrEmpty && s < systems.Length
+                ? memo.GetOrCompute(s, systems[s].Measures,
+                    () => BuildSystemVerseSkylines(fonts, lays, lineKeyOf))
+                : BuildSystemVerseSkylines(fonts, lays, lineKeyOf);
+            foreach (var v in value)
+            {
+                up[(s, v.Line, v.Verse)] = v.Up;
+                down[(s, v.Line, v.Verse)] = v.Down;
+            }
+        }
+        return (up, down);
+    }
+
+    /// <summary>One system's verse skylines, both directions in one walk — the memo's
+    /// unit of work (<see cref="VerseSkylineMemo"/>).</summary>
+    private static ImmutableArray<VerseSkylineMemo.VerseSkylines> BuildSystemVerseSkylines(
+        Rendering.ScoreTextMetrics fonts, IReadOnlyList<LyricLayout> lays,
         Func<LyricItem, int> lineKeyOf)
     {
-        var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
         // BATCHED per line, merging the cached resolved profiles straight in — see
-        // NoteBoundBlockSkylines' batch note and TextOutlineSkylines.ResolvedProfile for
-        // the two measurements. PRE-SIZED per line to the exact outline building count —
-        // see VerticalSkyline.ReserveForBatch for the doubling rung this retires.
-        var lays = layouts as IReadOnlyList<LyricLayout> ?? layouts.ToList();
-        var counts = new Dictionary<(int System, int Line, int Verse), int>();
+        // NoteBoundBlockSkylines' batch note — and PRE-SIZED to the exact outline
+        // building count (VerticalSkyline.ReserveForBatch's doubling rung).
+        var counts = new Dictionary<(int Line, int Verse), (int Up, int Down)>();
         foreach (var lay in lays)
         {
-            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            counts[key] = counts.GetValueOrDefault(key)
-                + (OutlineSyllable(fonts, lay) is { } o ? o.Up.Length : 1);
+            var key = (lineKeyOf(lay.Item), lay.Item.VerseNumber);
+            var (u, d) = OutlineSyllable(fonts, lay) is { } o
+                ? (o.Up.Length, o.Down.Length)
+                : (1, 1);
+            counts[key] = counts.TryGetValue(key, out var c) ? (c.Up + u, c.Down + d) : (u, d);
         }
+        var skys = new Dictionary<(int Line, int Verse), (VerticalSkyline Up, VerticalSkyline Down)>();
+        var order = new List<(int Line, int Verse)>();
         foreach (var lay in lays)
         {
-            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            if (!result.TryGetValue(key, out var sky))
+            var key = (lineKeyOf(lay.Item), lay.Item.VerseNumber);
+            if (!skys.TryGetValue(key, out var pair))
             {
-                sky = new VerticalSkyline(VerticalDirection.Up);
-                sky.BeginBatch();
-                sky.ReserveForBatch(counts[key]);
-                result[key] = sky;
+                pair = (new VerticalSkyline(VerticalDirection.Up),
+                        new VerticalSkyline(VerticalDirection.Down));
+                pair.Up.BeginBatch();
+                pair.Up.ReserveForBatch(counts[key].Up);
+                pair.Down.BeginBatch();
+                pair.Down.ReserveForBatch(counts[key].Down);
+                skys[key] = pair;
+                order.Add(key);
             }
-            MergeSyllableInto(fonts, lay, sky, null);
+            MergeSyllableInto(fonts, lay, pair.Up, pair.Down);
         }
-        foreach (var sky in result.Values) sky.EndBatch();
-        return result;
+        var builder = ImmutableArray.CreateBuilder<VerseSkylineMemo.VerseSkylines>(order.Count);
+        foreach (var key in order)
+        {
+            var (u, d) = skys[key];
+            u.EndBatch();
+            d.EndBatch();
+            builder.Add(new VerseSkylineMemo.VerseSkylines(key.Line, key.Verse, u, d));
+        }
+        return builder.MoveToImmutable();
     }
 
     /// <summary>
@@ -1455,44 +1517,6 @@ internal sealed class LyricEngraver
     /// </summary>
     internal static VerticalSkyline SyllableDownBox(Rendering.ScoreTextMetrics fonts, LyricLayout lay)
         => SyllableProfile(fonts, lay, VerticalDirection.Down);
-
-    /// <summary>
-    /// One merged DOWN-skyline per (system, VERSE) — the descenders the verse below has to
-    /// clear. The mirror of <see cref="BuildVerseUpSkylines"/>.
-    /// </summary>
-    internal static Dictionary<(int System, int Line, int Verse), VerticalSkyline> BuildVerseDownSkylines(
-        Rendering.ScoreTextMetrics fonts, IEnumerable<LyricLayout> layouts, IReadOnlyDictionary<int, int> measureToSystem,
-        Func<LyricItem, int> lineKeyOf)
-    {
-        var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
-        // BATCHED per line, merging the cached resolved profiles straight in, and
-        // PRE-SIZED to the exact outline building count — the mirror of
-        // BuildVerseUpSkylines, reservation included.
-        var lays = layouts as IReadOnlyList<LyricLayout> ?? layouts.ToList();
-        var counts = new Dictionary<(int System, int Line, int Verse), int>();
-        foreach (var lay in lays)
-        {
-            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            counts[key] = counts.GetValueOrDefault(key)
-                + (OutlineSyllable(fonts, lay) is { } o ? o.Down.Length : 1);
-        }
-        foreach (var lay in lays)
-        {
-            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
-            var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            if (!result.TryGetValue(key, out var sky))
-            {
-                sky = new VerticalSkyline(VerticalDirection.Down);
-                sky.BeginBatch();
-                sky.ReserveForBatch(counts[key]);
-                result[key] = sky;
-            }
-            MergeSyllableInto(fonts, lay, null, sky);
-        }
-        foreach (var sky in result.Values) sky.EndBatch();
-        return result;
-    }
 
     /// <summary>
     /// Resolves overlapping syllables by shifting them apart.

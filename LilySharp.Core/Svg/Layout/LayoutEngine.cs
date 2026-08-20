@@ -374,6 +374,9 @@ internal sealed class LayoutEngine
             AboveStackMemo = systemCache?.FinalAboveStack,
             // Likewise its own fingering memo (see the preliminary pass's site).
             FingScriptMemo = systemCache?.FinalFingScripts,
+            // The verse-skyline memo is the SAME instance the preliminary pass used —
+            // X-only values, so the final pass hits what the preliminary computed.
+            VerseSkylines = systemCache?.VerseSkylines,
         };
         var annotations = CalculateAnnotationLayouts(annotationContext);
 
@@ -892,6 +895,9 @@ internal sealed class LayoutEngine
             // two passes memoize DIFFERENT systems every keystroke, so a shared store
             // would be overwritten twice per keystroke and never hit.
             FingScriptMemo = systemCache?.PreliminaryFingScripts,
+            // The verse-skyline memo is deliberately SHARED with the final pass — its
+            // values are X-only, which is what the per-pass stores above are not.
+            VerseSkylines = systemCache?.VerseSkylines,
         });
         EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
@@ -3498,6 +3504,11 @@ internal sealed class LayoutEngine
         /// and walk it always ran. See <see cref="FingScriptMemo"/>.</summary>
         public FingScriptMemo? FingScriptMemo { get; init; }
 
+        /// <summary>The SHARED per-system lyric verse-skyline memo (one instance serves
+        /// both passes — see <see cref="VerseSkylineMemo"/>), or null outside the
+        /// incremental session, where the skylines are built fresh as always.</summary>
+        public VerseSkylineMemo? VerseSkylines { get; init; }
+
         /// <summary>
         /// A staff's rest/note collision shifts — <c>MultiStaffLayouter.RestCollisionsOf</c>
         /// itself, so this pass reserves each rest where the ROOM reserved it and where the
@@ -4433,7 +4444,8 @@ internal sealed class LayoutEngine
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
             ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
-            betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves);
+            betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
+            ctx.VerseSkylines);
 
         // The rows the chain solved travel back out through the context — see
         // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards
