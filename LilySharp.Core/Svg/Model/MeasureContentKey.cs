@@ -384,6 +384,16 @@ public readonly record struct MeasureContentKey(long Hash)
         // position-independent (no absolute indices).
         BucketSpan(score.VoltaBrackets, buckets);
         BucketSpan(score.TrillSpanners, buckets);
+        // A pedal bracket SPANS measures its own marks are not in: the skyline seed puts
+        // its ink into every system the span crosses (PedalEngraver.SolveAndSeed), so
+        // deleting the RELEASE — whose mark sits in the LAST measure — must invalidate
+        // the middle and start too, or a cached system keeps the bracket's ink under its
+        // lyrics after the bracket is gone (MEASURED: the page height went stale;
+        // IncrementalCompilerTests.DeletingAPedalRelease_RedrawsTheSystemsTheBracketSpanned).
+        // Re-derived rather than read from a side table because the spans are a pure,
+        // deterministic function of the marks — the same argument
+        // PedalBracketLayout.SourceIndex makes for whole-layout reuse.
+        BucketSpan(Svg.Layout.PedalEngraver.DetectPedalBrackets(score.MusicMarks), buckets);
 
         return buckets;
     }
@@ -413,6 +423,8 @@ public readonly record struct MeasureContentKey(long Hash)
         BucketSingle(score.GrobReverts, buckets);
         BucketSpan(score.VoltaBrackets, buckets);
         BucketSpan(score.TrillSpanners, buckets);
+        // The pedal SPANS, for the reason the Score overload gives above.
+        BucketSpan(Svg.Layout.PedalEngraver.DetectPedalBrackets(score.MusicMarks), buckets);
 
         return buckets;
     }

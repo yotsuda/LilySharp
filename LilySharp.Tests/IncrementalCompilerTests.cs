@@ -134,6 +134,43 @@ public class IncrementalCompilerTests
         return text[..at] + rep + text[(at + find.Length)..];
     }
 
+    /// <summary>
+    /// A pedal bracket SPANS measures its own marks are not in: SolveAndSeed puts its ink
+    /// into every system the span crosses, but the content key buckets a pedal MARK into
+    /// its own measure only — so deleting the RELEASE (whose measure sits on system 2)
+    /// must still re-derive system 1, where the bracket's ink was seeded under the
+    /// lyrics. Written the day the seed landed, as the falsifier for exactly that
+    /// staleness (HANDOFF 2F(g) leftover ⑶).
+    /// </summary>
+    [Fact]
+    public void DeletingAPedalRelease_RedrawsTheSystemsTheBracketSpanned()
+    {
+        string bars =
+            "c4 d e f | g4 a@sustainOn b c' | d4 e f g | a4 b c' d' | "
+            + "c'4 b a g | f4 e d c | c4 d e f | g4 a b c' | "
+            + "d4 e f g | a4 b c' d' | c'4 b@sustainOff a g | f4 e d c |";
+        string sylls = string.Concat(System.Linq.Enumerable.Repeat("la la la la | ", 12)).TrimEnd();
+        string text = $$"""
+            time 4/4
+            part melody { clef treble }
+            section Main {
+              melody { {{bars}} }
+              lyrics w sings melody { {{sylls}} }
+            }
+            form main { Main }
+            score main "x" { staff melody  lyrics w }
+            """.Replace("\r\n", "\n");
+
+        var tree = SyntaxTree.Parse(text);
+        var session = new IncrementalCompiler(tree, Opt);
+        Assert.Equal(Full(text), Norm(session.RenderIncremental(tree)));
+
+        var change = Replace(text, "@sustainOff", "");
+        tree = tree.WithChange(change);
+        text = ApplyFirst(text, "@sustainOff", "");
+        Assert.Equal(Full(text), Norm(session.RenderIncremental(tree)));
+    }
+
     [Fact]
     public void RenderIncremental_OnExternallyEditedTrees_MatchesFullEachTime()
     {
