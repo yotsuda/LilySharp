@@ -1194,9 +1194,12 @@ internal sealed class MultiStaffLayouter
             // LILYPOND-REF: lily/self-alignment-interface.cc:121-139.
             var alignmentEdges = SpacingRules.ParentAlignmentEdgesPerColumn(
                 allMeasures, allTimings);
+            // The per-voice edge a lyric actually aligns on; the union above is its
+            // fallback (rows, the placeholder). See LyricSpacing.OwnVoiceEdgeProvider.
+            var ownEdge = LyricSpacing.OwnVoiceEdgeProvider(score);
             var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
                 score.TextMetrics, springs, allTimings, i, score.Lyrics, score.IsLeadSheet,
-                alignmentEdges);
+                alignmentEdges, ownEdge);
             // The measure's lyric line edges, for the cross-bar rods below and the
             // line-start lyric floor — read off the FINAL reserved springs, the same
             // chain ApplyRods will span.
@@ -1204,7 +1207,7 @@ internal sealed class MultiStaffLayouter
                 ? ImmutableArray<LyricSpacing.LyricLineEdge>.Empty
                 : LyricSpacing.MeasureLineEdges(
                     score.TextMetrics, springs, allTimings, i, score.Lyrics,
-                    score.IsLeadSheet, alignmentEdges));
+                    score.IsLeadSheet, alignmentEdges, ownEdge));
             var chordWidth = SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics, 
                 allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
             var leftOverhangs = new double[allTimings.Count];
@@ -1631,7 +1634,11 @@ internal sealed class MultiStaffLayouter
                     SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings))
                 : LyricSpacing.ApplyLyricSpacing(
                     score.TextMetrics, springs, allTimings, measureIndex, score.Lyrics,
-                    SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings));
+                    SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings),
+                    // Per-voice edges — the same provider the ink reaches, the line
+                    // edges and the drawn X read (a row has no voice, so the lead-sheet
+                    // arm keeps the union/placeholder table).
+                    LyricSpacing.OwnVoiceEdgeProvider(score));
         }
         if (score.IsLeadSheet)
         {

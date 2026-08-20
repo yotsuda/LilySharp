@@ -4480,9 +4480,20 @@ internal static class SpacingRules
     /// LILYPOND-REF: lily/self-alignment-interface.cc:117-141 <c>aligned_on_parent</c> —
     /// <c>he = Paper_column::get_interface_extent (him, note-column-interface, a)</c>, and when
     /// that is empty on X it falls back to the column's <c>X-alignment-extent</c>
-    /// (<see cref="EngravingDefaults.PaperColumnXAlignmentExtentWidth"/>). The extent is unioned over
-    /// EVERY note column on the paper column — a paper column is shared by all staves and
-    /// voices — which is the same walk <see cref="MusicalInkOverhangsPerColumn"/> makes.
+    /// (<see cref="EngravingDefaults.PaperColumnXAlignmentExtentWidth"/>). The extent here is
+    /// unioned over EVERY note column on the paper column, the same walk
+    /// <see cref="MusicalInkOverhangsPerColumn"/> makes.
+    /// ⚠️ FOR A LYRIC THE UNION IS THE WRONG SET — MEASURED (probe
+    /// lyric-bound-voice-mapping.ly, 2.26.0): a syllable centres on its OWN voice's head
+    /// (LBIP's on the primary quarter's 0.6521, LBI/LBIC's on the bound half's 0.6887 —
+    /// per-voice, not the union of both), because a LyricText's X parent is the note head
+    /// of its ASSOCIATED voice, not the shared paper column. The per-voice reading is
+    /// <see cref="OwnVoiceAlignmentEdgeAt"/>; lyric consumers take it first and fall back
+    /// here only where no own-voice item exists (a row's finer grid, the placeholder).
+    /// Until 2026-08-20 the reservations read this union (the +0.0366 sliver
+    /// lyrics.column.bound-voice.primary-control priced) while the engraver read a
+    /// per-staff PRIMARY-only walk (the same sliver on the drawn side of a BOUND voice) —
+    /// two spellings, both voice-blind a different way.
     /// <para>
     /// ⚠️ WHAT IS IN THAT EXTENT WAS MEASURED, NOT ASSUMED (audit/lp-geometry/probes/
     /// staffless-system.ly, scores LSH / LSA / LSD / LSR). A NoteColumn's X-extent is its whole
@@ -4535,6 +4546,25 @@ internal static class SpacingRules
                 ? (left[t], (left[t] + right[t]) / 2)
                 : (0.0, EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2);
         return edges;
+    }
+
+    /// <summary>
+    /// The alignment edge pair on ONE VOICE's bar at a moment — the per-voice reading a
+    /// LYRIC aligns on (its X parent is its own voice's note head; see the union
+    /// function's remark for the probe that measured it). Null when the voice has no
+    /// rhythmic item at that moment — the caller falls back to the union/placeholder.
+    /// </summary>
+    internal static (double Left, double Centre)? OwnVoiceAlignmentEdgeAt(
+        Model.Measure measure, Fraction timing)
+    {
+        var onset = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            if (onset == timing && RhythmicHeadExtent(item) is { } ext)
+                return (ext.Left, (ext.Left + ext.Right) / 2);
+            onset += item.Duration;
+        }
+        return null;
     }
 
     /// <summary>

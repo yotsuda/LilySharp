@@ -59,9 +59,11 @@ internal static class LyricSpacing
         IReadOnlyList<Fraction> columnTimings,
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
-        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
+        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
+        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
         => ReserveLyricWidthByColumn(
-            fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges);
+            fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges,
+            ownEdge: ownEdge);
 
     /// <summary>
     /// One lyric line's syllables per column, one entry per LINE — a verse of a voice's (or
@@ -254,6 +256,41 @@ internal static class LyricSpacing
             keepEdgeHalves: true);
 
     /// <summary>
+    /// The per-voice alignment-edge provider — the edge a LYRIC aligns on is its OWN
+    /// voice's head at its moment (MEASURED, probe lyric-bound-voice-mapping.ly: LBIP's
+    /// syllable centres on the primary quarter's 0.6521, LBI/LBIC's on the bound half's
+    /// 0.6887; the union table read 0.6887 for both and the engraver's primary-only walk
+    /// 0.6521 for both — each voice-blind a different way, the +0.0366 sliver family).
+    /// Null for a ROW lyric (no voice — the union/placeholder fallback stands) and for
+    /// any lyric whose voice/measure cannot be resolved. ONE construction for every
+    /// consumer — the reservations, the ink reaches, the line edges and (through
+    /// LyricEngraver.ParentAlignmentEdge) the drawn X read the same function.
+    /// </summary>
+    internal static System.Func<LyricItem, (double Left, double Centre)?> OwnVoiceEdgeProvider(
+        MultiStaffScore score)
+    {
+        System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>? byStaff = null;
+        return lyric =>
+        {
+            if (lyric.IsLyricsRow)
+                return null;
+            if (byStaff == null)
+            {
+                byStaff = new System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>();
+                foreach (var (_, st, idx) in score.EnumerateStaves())
+                    byStaff[idx] = st.Voices;
+            }
+            if (!byStaff.TryGetValue(lyric.StaffIndex, out var vs)
+                || lyric.VoiceId < 0 || lyric.VoiceId >= vs.Length)
+                return null;
+            var ms = vs[lyric.VoiceId].Measures;
+            if (lyric.MeasureIndex < 0 || lyric.MeasureIndex >= ms.Length)
+                return null;
+            return SpacingRules.OwnVoiceAlignmentEdgeAt(ms[lyric.MeasureIndex], lyric.Timing);
+        };
+    }
+
+    /// <summary>
     /// The alignment edge pair for a column, with LilyPond's own fallback for a column the
     /// list does not cover: the PLACEHOLDER, never zero.
     /// </summary>
@@ -286,7 +323,8 @@ internal static class LyricSpacing
         IReadOnlyList<LyricItem> lyrics,
         System.Func<LyricItem, bool> include,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
-        bool keepEdgeHalves = false)
+        bool keepEdgeHalves = false,
+        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
     {
         (double Left, double Centre) Edge(int column) => AlignmentEdge(parentAlignmentEdges, column);
 
@@ -311,10 +349,22 @@ internal static class LyricSpacing
         var result = springs.ToBuilder();
         var rods = new List<(int Left, int Right, double Distance)>();
         foreach (var (key, byCol) in lines)
-            ReserveLyricLine(result, fonts, byCol, cols, Edge,
+        {
+            // The line's edges are its OWN VOICE's (see OwnVoiceEdgeProvider): every
+            // syllable in byCol belongs to one line, so the provider resolves one edge
+            // per carrier column, and the union/placeholder stands where it answers
+            // null (a row, an unresolvable voice).
+            var lineByCol = byCol;
+            System.Func<int, (double Left, double Centre)> lineEdge = ownEdge == null
+                ? Edge
+                : c => (lineByCol.TryGetValue(c, out var ls) && ls.Count > 0
+                            ? ownEdge(ls[0]) : null)
+                       ?? AlignmentEdge(parentAlignmentEdges, c);
+            ReserveLyricLine(result, fonts, byCol, cols, lineEdge,
                 continuesFromPrev: prevKeys?.Contains(key) == true,
                 continuesIntoNext: nextKeys?.Contains(key) == true,
                 rods, keepEdgeHalves);
+        }
         // The spanning reservations, as the RANGE rods they are in LilyPond — applied
         // measure-locally through the one Simple_spacer::add_rod port, AFTER every line's
         // bumps (springs first, rods over them, LP's order). Baking the blocking forces
@@ -388,7 +438,8 @@ internal static class LyricSpacing
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
         bool isLeadSheet,
-        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
+        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
+        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
     {
         var leftReach = new double[columnTimings.Count];
         var rightReach = new double[columnTimings.Count];
@@ -419,9 +470,14 @@ internal static class LyricSpacing
         {
             if (perColumn[c] is not { Count: > 0 })
                 continue;
-            var edge = AlignmentEdge(parentAlignmentEdges, c);
-            leftReach[c] = GetLyricLeftExtent(fonts, perColumn[c], edge);
-            rightReach[c] = GetLyricRightExtent(fonts, perColumn[c], edge);
+            // Per SYLLABLE, not per column: two voices' syllables can share a column
+            // and each aligns on its OWN voice's head (OwnVoiceEdgeProvider).
+            foreach (var ly in perColumn[c])
+            {
+                var edge = ownEdge?.Invoke(ly) ?? AlignmentEdge(parentAlignmentEdges, c);
+                leftReach[c] = Math.Max(leftReach[c], LyricLeftExtent(fonts, ly, edge));
+                rightReach[c] = Math.Max(rightReach[c], LyricRightExtent(fonts, ly, edge));
+            }
         }
         return (leftReach, rightReach);
     }
@@ -468,7 +524,8 @@ internal static class LyricSpacing
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
         bool isLeadSheet,
-        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
+        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
+        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
     {
         if (lyrics.Count == 0 || columnTimings.Count == 0
             || springs.Length != columnTimings.Count + 1)
@@ -506,10 +563,15 @@ internal static class LyricSpacing
             // Which minimum a rod after the LAST syllable takes is that syllable's own
             // connector — the same rule CalculateLyricDistance applies within the bar.
             bool hyphen = byCol[last].TrueForAll(l => l.ConnectorType == LyricConnectorType.Hyphen);
+            // The line's own voice's edges, as in ReserveLyricWidthByColumn.
+            (double Left, double Centre) LineEdge(int c)
+                => (ownEdge != null && byCol.TryGetValue(c, out var ls) && ls.Count > 0
+                        ? ownEdge(ls[0]) : null)
+                   ?? Edge(c);
             edges.Add(new LyricLineEdge(
                 key,
-                first, GetLyricLeftExtent(fonts, byCol[first], Edge(first)),
-                last, GetLyricRightExtent(fonts, byCol[last], Edge(last)),
+                first, GetLyricLeftExtent(fonts, byCol[first], LineEdge(first)),
+                last, GetLyricRightExtent(fonts, byCol[last], LineEdge(last)),
                 hyphen,
                 ContinuesFromPrev: prevKeys?.Contains(key) == true,
                 ContinuesIntoNext: nextKeys?.Contains(key) == true));
@@ -783,13 +845,19 @@ internal static class LyricSpacing
         // Find the widest lyric (for multiple verses)
         double maxExtent = 0;
         foreach (var lyric in lyrics)
-        {
-            double width = EstimateLyricTextWidth(fonts, lyric.Text);
-            maxExtent = Math.Max(maxExtent, lyric.MelismaAlignLeft
-                ? alignmentEdge.Left + width
-                : width / 2 + alignmentEdge.Centre);
-        }
+            maxExtent = Math.Max(maxExtent, LyricRightExtent(fonts, lyric, alignmentEdge));
         return maxExtent;
+    }
+
+    /// <summary>One syllable's right reach on one edge — the single-item core the list
+    /// form and the per-voice ink walk share (one spelling of the extent formula).</summary>
+    private static double LyricRightExtent(
+        Rendering.ScoreTextMetrics fonts, LyricItem lyric, (double Left, double Centre) alignmentEdge)
+    {
+        double width = EstimateLyricTextWidth(fonts, lyric.Text);
+        return lyric.MelismaAlignLeft
+            ? alignmentEdge.Left + width
+            : width / 2 + alignmentEdge.Centre;
     }
 
     /// <summary>
@@ -810,13 +878,18 @@ internal static class LyricSpacing
         // Find the widest lyric (for multiple verses)
         double maxExtent = 0;
         foreach (var lyric in lyrics)
-        {
-            double width = EstimateLyricTextWidth(fonts, lyric.Text);
-            maxExtent = Math.Max(maxExtent, lyric.MelismaAlignLeft
-                ? -alignmentEdge.Left
-                : width / 2 - alignmentEdge.Centre);
-        }
+            maxExtent = Math.Max(maxExtent, LyricLeftExtent(fonts, lyric, alignmentEdge));
         return maxExtent;
+    }
+
+    /// <summary>One syllable's left reach on one edge — the single-item core, as above.</summary>
+    private static double LyricLeftExtent(
+        Rendering.ScoreTextMetrics fonts, LyricItem lyric, (double Left, double Centre) alignmentEdge)
+    {
+        double width = EstimateLyricTextWidth(fonts, lyric.Text);
+        return lyric.MelismaAlignLeft
+            ? -alignmentEdge.Left
+            : width / 2 - alignmentEdge.Centre;
     }
 
     // The syllable's width as spacing sees it: the ADVANCE at the DRAWN lyric size.

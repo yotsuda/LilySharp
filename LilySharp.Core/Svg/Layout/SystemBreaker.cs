@@ -233,7 +233,9 @@ internal sealed class SystemBreaker
                 edges = LyricSpacing.MeasureLineEdges(
                     score.TextMetrics, springs, allTimings, i, score.Lyrics,
                     score.IsLeadSheet,
-                    SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings));
+                    SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings),
+                    // The same per-voice edges the layout reads (one list, section 5.4).
+                    LyricSpacing.OwnVoiceEdgeProvider(score));
                 barPricing = LyricSpacing.BuildBarPricing(edges, springs,
                     SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline),
                     SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline));

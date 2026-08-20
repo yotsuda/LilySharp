@@ -140,7 +140,7 @@ internal sealed class LyricEngraver
     /// See <see cref="Svg.Layout.SpacingRules.ParentAlignmentEdgesPerColumn"/> for which
     /// grobs are in that extent (MEASURED — heads and rests yes, accidentals and dots no).
     /// </remarks>
-    private readonly Func<int, Fraction, (double Left, double Centre)> _parentAlignmentEdge;
+    private readonly Func<LyricItem, (double Left, double Centre)> _parentAlignmentEdge;
 
     /// <summary>
     /// <c>system-system-spacing</c>'s padding — the term that rides on the minimum of the
@@ -178,14 +178,14 @@ internal sealed class LyricEngraver
 
     public LyricEngraver(
         LyricParameters? parameters = null,
-        Func<int, Fraction, (double Left, double Centre)>? parentAlignmentEdge = null,
+        Func<LyricItem, (double Left, double Centre)>? parentAlignmentEdge = null,
         double? systemPadding = null,
         Rendering.ScoreTextMetrics? fonts = null)
     {
         _fonts = fonts ?? Rendering.ScoreTextMetrics.Bundled;
         _params = parameters ?? LyricParameters.Default;
         _parentAlignmentEdge = parentAlignmentEdge
-            ?? ((_, _) => (0.0, EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2));
+            ?? (_ => (0.0, EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2));
         _systemPadding = systemPadding ?? VerticalSpacingParameters.Default.SystemSystem.Padding;
     }
 
@@ -1216,10 +1216,14 @@ internal sealed class LyricEngraver
     internal static LyricEngraver ForGeometry(MultiStaffScore score)
     {
         var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+        var voicesByStaff = new Dictionary<int, ImmutableArray<Voice>>();
         foreach (var (_, st, idx) in score.EnumerateStaves())
+        {
             measuresByStaff[idx] = st.PrimaryVoice.Measures;
+            voicesByStaff[idx] = st.Voices;
+        }
         return new LyricEngraver(
-            parentAlignmentEdge: ParentAlignmentEdge(measuresByStaff, null),
+            parentAlignmentEdge: ParentAlignmentEdge(measuresByStaff, null, voicesByStaff),
             fonts: score.TextMetrics);
     }
 
@@ -1241,13 +1245,33 @@ internal sealed class LyricEngraver
     /// the engraver is the thing that has to agree with itself.
     /// </para>
     /// </remarks>
-    internal static Func<int, Fraction, (double Left, double Centre)> ParentAlignmentEdge(
+    internal static Func<LyricItem, (double Left, double Centre)> ParentAlignmentEdge(
         IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
-        ImmutableArray<Measure>? measures)
+        ImmutableArray<Measure>? measures,
+        IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
     {
         const double placeholderCentre = EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
         var alignmentEdgeCache = new Dictionary<int, Dictionary<Fraction, (double Left, double Centre)>>();
-        return Edge;
+        return lyric =>
+        {
+            // The edge a lyric aligns on is its OWN VOICE's head — MEASURED (probe
+            // lyric-bound-voice-mapping.ly: LBIP centres on the primary quarter's
+            // 0.6521, LBI/LBIC on the bound half's 0.6887; this walk used to read the
+            // per-staff PRIMARY bars only, so a bound voice's syllable was drawn on the
+            // primary's centre, the drawn half of the +0.0366 sliver family). The
+            // union/placeholder walk below stands where no own-voice item resolves —
+            // a ROW's finer grid, an unresolvable voice — exactly the placeholder
+            // regime the ledger pins (lyric.syllable-centre.placeholder-column).
+            if (!lyric.IsLyricsRow && voicesByStaff != null
+                && voicesByStaff.TryGetValue(lyric.StaffIndex, out var vs)
+                && lyric.VoiceId >= 0 && lyric.VoiceId < vs.Length
+                && lyric.MeasureIndex >= 0
+                && lyric.MeasureIndex < vs[lyric.VoiceId].Measures.Length
+                && SpacingRules.OwnVoiceAlignmentEdgeAt(
+                    vs[lyric.VoiceId].Measures[lyric.MeasureIndex], lyric.Timing) is { } own)
+                return own;
+            return Edge(lyric.MeasureIndex, lyric.Timing);
+        };
 
         (double Left, double Centre) Edge(int measureIndex, Fraction timing)
         {
@@ -1697,7 +1721,7 @@ internal sealed class LyricEngraver
         // c16 head's ink left, exactly.
         // LILYPOND-REF: lily/lyric-engraver.cc:180-183 melisma_busy →
         //   self-alignment-X = lyricMelismaAlignment (default LEFT).
-        var edge = _parentAlignmentEdge(lyric.MeasureIndex, lyric.Timing);
+        var edge = _parentAlignmentEdge(lyric);
         double syllableX = lyric.MelismaAlignLeft
             ? noteX + edge.Left + textWidth / 2
             : noteX + edge.Centre;
