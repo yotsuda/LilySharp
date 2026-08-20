@@ -2068,7 +2068,7 @@
       "score": "LBIC",
       "lilypond": 5.967889998269225,
       "residual": 0.0732,
-      "why": "THE NO-BIND CONTROL is not zero, and its number decomposes exactly into two named slivers, NEITHER of them the by-item map (the mis-mapped reservations exist here but ink 'u' 1.502 + 0.45 binds nothing): +0.0732 = Lily#'s natural col0->col1 spring charges the column's WIDEST head (the bound voice's half, 1.3774) where LilyPond's reads 3.002245 = the same as its quarter gaps (heads 8.585/11.587/14.590/17.592 in the dump -- the wide head leaves no trace in LP's ideal); the +0.0366 drawn-syllable sliver CLOSED 2026-08-20 with the per-voice edge port (the syllable now centres on its own half head's 0.6887, matching LP's dump) -- what remains is +0.0732 ALONE, landing to the digit; Lily#'s col1->col2 and col2->col3 are 3.002245 EXACT (see no-bind.step-gap). The ONE open question left (was two; the aligning-head one closed with the port): which head LilyPond's multi-voice natural spacing measures -- Lily#'s natural col0->col1 spring charges the column's widest head (the bound half, 1.3774) where LP's ideal reads 3.002245, the same as its quarter gaps, blind to the wider foreign head. That is the note-spacing model (SpacingRules), not the lyric edge family; it needs its own pair in the multi-voice natural-spacing regime before any port."
+      "why": "THE NO-BIND CONTROL is not zero, and its number decomposes exactly into two named slivers, NEITHER of them the by-item map (the mis-mapped reservations exist here but ink 'u' 1.502 + 0.45 binds nothing): +0.0732 = Lily#'s natural col0->col1 spring charges the column's WIDEST head (the bound voice's half, 1.3774) where LilyPond's reads 3.002245 = the same as its quarter gaps (heads 8.585/11.587/14.590/17.592 in the dump -- the wide head leaves no trace in LP's ideal); the +0.0366 drawn-syllable sliver CLOSED 2026-08-20 with the per-voice edge port (the syllable now centres on its own half head's 0.6887, matching LP's dump) -- what remains is +0.0732 ALONE, landing to the digit; Lily#'s col1->col2 and col2->col3 are 3.002245 EXACT (see no-bind.step-gap). The ONE open question left (was two; the aligning-head one closed with the port): which head LilyPond's multi-voice natural spacing measures -- Lily#'s natural col0->col1 spring charges the column's widest head (the bound half, 1.3774) where LP's ideal reads 3.002245, the same as its quarter gaps, blind to the wider foreign head. That is the note-spacing model, not the lyric edge family -- and it HAS its own pair now: multi-voice.natural.wide-head-gap (multi-voice-head-spacing.ly, no lyrics anywhere) reads the same +0.0732 with quarter-gap/control-gap pinning the boundary, so this point is the lyric-side witness of that defect, not its home."
     },
     "lyrics.column.bound-voice.no-bind.step-gap": {
       "probe": "lyric-bound-voice-mapping.ly",
@@ -2097,6 +2097,27 @@
       "lilypond": 9.006734997403837,
       "residual": 0.0,
       "why": "EXACT from the moment it opened: 'u' held the same way needs ~2.1 against the natural 9.006735, so the lyric terms leave no trace on either engine -- and the slur that makes the melisma leaves none either (this book carries it too). With this at zero, everything the span book reads away from its rod need is the bump model and nothing else."
+    },
+    "multi-voice.natural.wide-head-gap": {
+      "probe": "multi-voice-head-spacing.ly",
+      "score": "MVH",
+      "lilypond": 3.002244999134613,
+      "residual": 0.0732,
+      "why": "ITEM K's LEFTOVER, RE-TAKEN WITHOUT LYRICS (opened 2026-08-20, the same session the lyric sliver family closed): whose head does the natural gap read when two voices share a column? LilyPond, predictions written first and landed to the digit: MVH's three gaps are EQUAL at 3.002244999134613 and MVQ matches gap-for-gap -- the natural gap is BLIND to the wide foreign half head on column 0. Lily# reads 3.075444999 = +0.073200000 = the head-width difference (half 1.3774 - quarter 1.3042) exactly, the same number the bound-voice pair measured from the lyric side (no-bind.skip-gap's surviving term -- one defect, two observers, the other in a lyric book). ATTRIBUTION, one suspect eliminated WITH A LIVE POISON: disabling ApplyCrossVoiceColumnSpacing turns 10 nets red (the poison reaches the engine) yet THIS point does not move -- the cross-voice column floor is NOT the mechanism. Next suspects for the port session: the per-staff NoteSpacing wish pipeline (the wish is keyed by parent Staff and may price the union column's ink where LP's wish comes from each voice's own note column) or the spring's shortest-playing model. goes away when: the mechanism is named with this pair as the instrument and the charge is retired; the port must NOT touch single-voice books (every note-to-note point) -- quarter-gap and control-gap pin that boundary from inside the same pair."
+    },
+    "multi-voice.natural.quarter-gap": {
+      "probe": "multi-voice-head-spacing.ly",
+      "score": "MVH",
+      "lilypond": 3.002244999134612,
+      "residual": 0.0,
+      "why": "EXACT from the moment it opened: the wide-head book's own col1->col2 gap, quarter heads on both sides -- the in-book control that makes wide-head-gap's +0.0732 attributable to the half head alone and, with control-gap, pins the boundary a port must not cross."
+    },
+    "multi-voice.natural.control-gap": {
+      "probe": "multi-voice-head-spacing.ly",
+      "score": "MVQ",
+      "lilypond": 3.002244999134613,
+      "residual": 0.0,
+      "why": "EXACT: the all-quarter twin's col0->col1 -- LilyPond reads MVQ == MVH gap-for-gap to the last digit (the strong identity form: the changed variable, one head's glyph and the alt rhythm, is one LilyPond does not read), so everything the wide-head book diverges by is the foreign head's charge and nothing else."
     },
     "lyrics.melisma-span.no-bind.first-gap": {
       "probe": "lyric-melisma-span.ly",

@@ -718,6 +718,46 @@ internal static class LpGeometryProbes
         "LBIC", "alt", "u u u |");
 
     /// <summary>
+    /// The LBI family's MUSIC with the lyrics struck — the MULTI-VOICE NATURAL-SPACING
+    /// pair (probes/multi-voice-head-spacing.ly, opened 2026-08-20 as item K's leftover):
+    /// whose head does the natural gap read when two voices share a column? MEASURED on
+    /// 2.26.0 with the predictions written first: MVH's three gaps are EQUAL at
+    /// 3.002244999134613 and MVQ matches gap-for-gap to the last digit — LilyPond's
+    /// natural spacing is blind to the wider foreign half head. Lily#'s col0→col1 reads
+    /// +0.0732 = the head-width difference (1.3774 − 1.3042), the same number the
+    /// bound-voice pair measured from the lyric side (no-bind.skip-gap's surviving term).
+    /// </summary>
+    private static string MultiVoiceHeadScore(string name, string altLine) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section A {
+          m {
+            voice sop { c'4 c' c' c' | }
+            alt { {{altLine}} | }
+          }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff m
+        }
+        """;
+
+    /// <summary>The wide-head book: a half under the first quarter — its head is 0.0732
+    /// wider than a quarter's, and the alt voice skips column 1 entirely.</summary>
+    private static readonly string MVH = MultiVoiceHeadScore("MVH", "e2 e4 e4");
+
+    /// <summary>The head-width control: quarters everywhere — the changed variable is
+    /// only the first alt head's glyph (and the alt rhythm), which LilyPond reads into
+    /// no gap (MVQ ≡ MVH gap-for-gap on 2.26.0).</summary>
+    private static readonly string MVQ = MultiVoiceHeadScore("MVQ", "e4 e4 e4 e4");
+
+    /// <summary>
     /// One slurred bar for the MELISMA-SPAN RESERVATION — the shared shape of books
     /// LMS / LMN in probes/lyric-melisma-span.ly (HANDOFF 1's residual item ⒥, named
     /// when the bound-voice skip-gap refused to close past +1.507845). The books differ
@@ -9806,6 +9846,21 @@ internal static class LpGeometryProbes
         new("lyrics.melisma-span.no-bind.width", LMN,
             g => g.NoteheadAnchor(3) - g.NoteheadAnchor(0)),
         new("lyrics.melisma-span.no-bind.first-gap", LMN, g => g.NoteheadAnchorStep(0)),
+
+        // THE MULTI-VOICE NATURAL GAP vs THE FOREIGN HEAD (books MVH/MVQ,
+        // multi-voice-head-spacing.ly — item K's leftover, re-taken with NO lyrics so
+        // the number is the note-spacing model's alone). Column X = notehead anchors
+        // with the two-voice duplicates stepped over by raw index: MVH's heads sort
+        // [c0,c0,c1,c2,c2,c3,c3] (the alt voice skips column 1), MVQ's [c0,c0,c1,c1,…].
+        // LilyPond: all gaps 3.002244999134613, both books, to the digit — blind to the
+        // wide half head. Lily#: the wide-head gap alone reads +0.0732, the head-width
+        // difference.
+        new("multi-voice.natural.wide-head-gap", MVH,
+            g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
+        new("multi-voice.natural.quarter-gap", MVH,
+            g => g.NoteheadAnchor(3) - g.NoteheadAnchor(2)),
+        new("multi-voice.natural.control-gap", MVQ,
+            g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a
