@@ -59,6 +59,11 @@ public sealed class IncrementalCompiler
     private readonly SvgRenderOptions _options;
     private SyntaxTree _tree;
 
+    // The font plan the cached geometry below was measured with. Metrics are an input
+    // to every layout stage but to none of the reuse keys, so a plan change sheds the
+    // lot (see the guard in Compile). Null until the first compile.
+    private Rendering.TextFontPlan? _fontPlan;
+
     // Cached line-break gate and its solution. _lineSizes != null marks a warm
     // cache. _springs is internal MeasureSpringData (this type lives in Core).
     private MeasureSpringData[]? _springs;
@@ -199,6 +204,32 @@ public sealed class IncrementalCompiler
         // detections serve this one; anything older ages out.
         _beamMemo.BeginCollect();
         var score = CollectWithResume(tree, spec, allowResume: allowSkip);
+
+        // A `fonts { }` edit changes the TEXT METRICS every layout stage measures with —
+        // an input that lives OUTSIDE every reuse key this session keeps: the per-measure
+        // content key folds the resolved model and side-tables (never the face), and the
+        // global tuple below folds title/tempo/swing. So on a font-plan change EVERY
+        // geometry cache here is stale at once — the spring vector, the line sizes, the
+        // per-system layouts, the whole cached ScoreLayout, and the recorded SVG fragments
+        // (whose replayed text carries the old face's family attribute AND its glyph
+        // geometry) — and the only sound answer is to drop them and recompile as if this
+        // were the first render. MEASURED before this guard existed (session 224,
+        // FontEditIncrementalTests): a serif face edit re-rendered byte-identical to the
+        // OLD face's layout, with only the family attribute and data-pos re-derived live —
+        // stale geometry served as a hit, exactly the shape the content key cannot see.
+        // The plan is compared by value (TextFontPlan.Equals folds the signature), so a
+        // trivia edit near the block does not shed the caches.
+        if (_fontPlan is null || !_fontPlan.Equals(score.Fonts))
+        {
+            _fontPlan = score.Fonts;
+            _springs = null;
+            _lineSizes = null;
+            _shortest = null;
+            _systemCache = null;
+            _cachedLayout = null;
+            _contentKeys = default;
+            _fragments = null;
+        }
 
         // F3/S5-3: install/refresh the per-system layout cache for scores without
         // grob overrides (overrides can change spacing GLOBALLY, so a per-measure key
