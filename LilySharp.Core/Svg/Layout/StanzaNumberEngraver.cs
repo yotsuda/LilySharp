@@ -63,7 +63,8 @@ internal static class StanzaNumberEngraver
     public static ImmutableArray<StanzaNumberLayout> Calculate(
         ImmutableArray<LyricLayout> lyrics,
         ImmutableArray<SystemLayout> systems,
-        bool emitForFirstVerse = false)
+        bool emitForFirstVerse = false,
+        bool leadSheet = false)
     {
         if (lyrics.IsDefaultOrEmpty || systems.IsDefaultOrEmpty)
             return ImmutableArray<StanzaNumberLayout>.Empty;
@@ -129,9 +130,18 @@ internal static class StanzaNumberEngraver
             // Position at the system's left margin (where staff lines begin).
             // LP places StanzaNumber to the LEFT of the lyric, anchored to the system start.
             // Use (system.Y + first measure X) less a small offset.
-            double x = system.Measures.IsDefaultOrEmpty
-                ? lyric.X - 4.0
-                : system.Measures[0].X - 4.0;
+            // ⚠️ On a LEAD SHEET the anchor is the LINE START (the indent), not the
+            // first measure's X: the grid opens every line with a bar line and the
+            // first line's measures start past the bar + meter prefix, so hanging the
+            // label off measures[0].X put the "1."'s DOT on the line-start bar (user
+            // report 2026-08-20) — and only on the first line, tearing the labels out
+            // of their column. One anchor per sheet keeps every verse number in the
+            // same column, clear of the bar (the label ends ~2 ss left of it).
+            double x = leadSheet
+                ? system.Indent - 4.0
+                : system.Measures.IsDefaultOrEmpty
+                    ? lyric.X - 4.0
+                    : system.Measures[0].X - 4.0;
             builder.Add(new StanzaNumberLayout(
                 VerseNumber: verseNumber,
                 SystemIndex: sysIdx,

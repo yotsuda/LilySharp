@@ -315,6 +315,7 @@ internal sealed class LayoutEngine
         var annotationContext = new AnnotationLayoutContext
         {
             Score = primaryScore,
+            IsLeadSheet = score.IsLeadSheet,
             Fonts = score.TextMetrics,
             Systems = systemsArray,
             Dynamics = score.Dynamics,
@@ -842,6 +843,7 @@ internal sealed class LayoutEngine
         var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = prelimScore,
+            IsLeadSheet = score.IsLeadSheet,
             Fonts = score.TextMetrics,
             Systems = prelimSystems,
             Dynamics = score.Dynamics,
@@ -3317,6 +3319,12 @@ internal sealed class LayoutEngine
     private sealed class AnnotationLayoutContext
     {
         public required Score? Score { get; init; }
+        /// <summary>Whether the laid-out score is a staff-less lead sheet — carried
+        /// here because <see cref="Score"/> is the FLAT model and cannot answer it;
+        /// both builders read <c>MultiStaffScore.IsLeadSheet</c>. The stanza-number
+        /// engraver anchors its labels at the line start on a lead sheet (the grid
+        /// opens every line with a bar line the label must clear).</summary>
+        public bool IsLeadSheet { get; init; }
 
         /// <summary>
         /// The faces this score's text is measured against — the whole-score answer, not
@@ -4234,7 +4242,8 @@ internal sealed class LayoutEngine
             // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
             BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
-            StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
+            StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems,
+                leadSheet: ctx.IsLeadSheet));
     }
 
     /// <summary>
