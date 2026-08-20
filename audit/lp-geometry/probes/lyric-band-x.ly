@@ -21,10 +21,13 @@
 %% are taken away (the system-clef-floor recipe) so the gap IS the X-resolved floor plus
 %% the shipping padding 1 — no 12.000000 to hide behind.
 %%
-%% LBS is the REAL-WORLD FACE on shipping spacing: the exact music of Lily#'s
-%% SystemGap_ReadsARowsBandOnce pin (session 218 measured its machine-exported twin at
-%% 12.000 in LilyPond against 14.571 in Lily#), re-measured here so the number the port
-%% must land on is recorded in the ledger and not only in a test comment.
+%% LBS is the SHIPPING-SPACING GUARD: the music of Lily#'s SystemGap_ReadsARowsBandOnce
+%% pin with its section labels suppressed (the pin's books print A/B marks; these books
+%% have none). ⚠️ The Lily# twins must spell `~A break ~B` for the same reason — the
+%% pair's first opening measured mark-bearing twins against these mark-free books, and
+%% every Lily#-side number it recorded was an artifact of that (the ledger whys carry
+%% the incident). The pin's 14.571 is a different quantity-frame (origin-to-origin step)
+%% on those mark-bearing books.
 %%
 %% PREDICTIONS, written before running (HANDOFF 5.0-2), mechanism first:
 %%  * LBL — the g''' faces the band at the SAME X: gap ≈ band depth below the first
@@ -98,7 +101,7 @@
                                (for-each
                                 (lambda (g)
                                   (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
-                                    (if (memq nm '(LyricText Clef NoteHead))
+                                    (if (memq nm '(LyricText Clef NoteHead BarNumber))
                                         (format #t "PROBEY GROB ~a ~a name=~a rel=~a ext=(~a . ~a) x=(~a . ~a)\n"
                                                 n i nm
                                                 (ly:grob-relative-coordinate g sg Y)

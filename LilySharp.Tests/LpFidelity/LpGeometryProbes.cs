@@ -467,7 +467,15 @@ internal static class LpGeometryProbes
     /// less an 0.007402 sliver where the deepest descender and the nearest head part in X)
     /// against LBR 10.090000 (the band is out of the story entirely: e head bottom 2.545 +
     /// g'' head top 6.545 + 1 — measured 2026-08-20 on 2.26.0). An X-blind floor cannot
-    /// split these books.
+    /// split these books — the scalar read one number on both (12.277483), and on LBL that
+    /// number coincides with the X-resolved answer by construction (the band's deepest X
+    /// faces the g'' bar), which is why the fork book exists.
+    /// </para>
+    /// <para>
+    /// ⚠️ <c>~A break ~B</c>, NOT <c>A break B</c>: a plain form reference prints a
+    /// section-label MARK, and the LilyPond books have none — the pair's first opening was
+    /// broken exactly there (the ledger whys carry the incident). A twin that must match a
+    /// mark-free .ly book suppresses its labels.
     /// </para>
     /// <para>
     /// ⚠️ THE DRAWN LYRIC IS PART OF THE MEASUREMENT on this paper: with the inter-system
@@ -492,7 +500,7 @@ internal static class LpGeometryProbes
           section A { gyp jog pyx pug }
         }
 
-        form main { A break B }
+        form main { ~A break ~B }
 
         score main "{{name}}" {
           staff melody
@@ -509,15 +517,17 @@ internal static class LpGeometryProbes
         "LBR", "a4 a a a | a4 a a a | a4 a a a | g''4 g'' g'' g'' |");
 
     /// <summary>
-    /// The same island's REAL-WORLD FACE on shipping spacing — the mirror of book LBS,
-    /// which is the exact music of the <c>SystemGap_ReadsARowsBandOnce</c> pin.
+    /// The same island's SHIPPING-SPACING GUARD — the mirror of book LBS: the music of the
+    /// <c>SystemGap_ReadsARowsBandOnce</c> pin with its section labels suppressed
+    /// (the pin's own books print A/B marks; the LilyPond book never had any).
     /// </summary>
     /// <remarks>
     /// Two 2-bar sung systems on <see cref="ClefFloorControlPaper"/> (ragged bottom,
     /// spacing left alone). LilyPond reads 12.000000 — the ideal: its X-resolved band
-    /// distance is under basic-distance 12, so the skyline term leaves no trace. The
-    /// scalar floor overshoots that (14.571, session 218), which is the number the pin's
-    /// comment cites and this entry puts where numbers live.
+    /// distance is under basic-distance 12, so the skyline term leaves no trace — and so
+    /// does Lily#, on either floor: with the marks gone even the scalar sat under 12. The
+    /// 14.571 the pin's comment cites is a different quantity-frame (origin-to-origin
+    /// system step) on mark-bearing books; the entry's why carries the full account.
     /// </remarks>
     private static readonly string LBS = """
         octave absolute
@@ -534,7 +544,7 @@ internal static class LpGeometryProbes
           section B { Aa bb cc dd | ee ff gg }
         }
 
-        form main { A break B }
+        form main { ~A break ~B }
 
         score main "LBS" {
           staff melody
