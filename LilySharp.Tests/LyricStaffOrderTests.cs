@@ -202,6 +202,56 @@ public class LyricStaffOrderTests
             + $"latin gap {latin:F6}, cjk gap {cjk:F6}");
     }
 
+    /// <summary>
+    /// The page's reservation for a lyric block is read WITH X: tall ink in the next system
+    /// comes closer when it stands where the band has no syllable.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> holds
+    /// the block at its alignment minimum, and :625-632 floors the inter-system spring by
+    /// <c>up_skyline.distance(bottom_skyline_)</c>, an X-resolved minimum.
+    /// <para>
+    /// ⚠️ THE RULE, NOT A VALUE (HANDOFF 5.4): the two books are one variable apart — WHERE
+    /// the second system's single tall bar stands — and only an X-reading floor can split
+    /// them. The scalar this replaced read ONE number on both (audit/lp-geometry
+    /// lyrics.band-floor.*, which pins the values against LilyPond 2.26.0's fork
+    /// 12.362129 / 10.090000). ⚠️ <c>~A break ~B</c>: a plain form reference prints a
+    /// section-label mark, which is ink of its own in the gap — the pair must differ by
+    /// the one variable only.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void SystemGap_ReadsTheBandWithX_TallInkPastTheBandComesCloser()
+    {
+        string Src(string sys2) =>
+            "part melody {\n"
+            + "  section A { e4 f g f | e4 e e2 | e4 f g f | e2 e2 | }\n"
+            + $"  section B {{ {sys2} }}\n"
+            + "}\n"
+            + "lyrics w sings melody {\n"
+            + "  section A { gyp jog pyx pug }\n"
+            + "}\n"
+            + "form main { ~A break ~B }\n"
+            + "score main {\n  staff melody\n  lyrics w\n}\n";
+        const string overBand = "g''4 g'' g'' g'' | a4 a a a | a4 a a a | a2 a2 |";
+        const string pastBand = "a4 a a a | a4 a a a | a4 a a a | g''4 g'' g'' g'' |";
+
+        // The floor regime: the inter-system spring's ideal and minimum taken away, ragged
+        // bottom — the system-clef-floor recipe, so the gap IS the floor plus padding.
+        var floorPaper = FloorBindingPaper with
+        {
+            PageBreaking = LayoutOptions.Default.PageBreaking with { RaggedBottom = true },
+        };
+
+        double over = SystemGapOf(Src(overBand), floorPaper);
+        double past = SystemGapOf(Src(pastBand), floorPaper);
+
+        Assert.True(over > 0 && past > 0, "both books must break into two systems");
+        Assert.True(over > past + 1.5,
+            "moving the tall bar past the band must let the systems close by the band's "
+            + $"share of the floor: over-band {over:F6}, past-band {past:F6}");
+    }
+
     [Fact]
     public void SystemGap_ReadsARowsBandOnce_TheTwoSpellingsAgree()
     {
@@ -211,21 +261,26 @@ public class LyricStaffOrderTests
         // staff's bottom line plus the block's own ink (LyricReservationBelowSystem).
         // The row spelling used to add the band on top of the system's BODY height,
         // which already contains the row's drawn band — a frame mix that priced the
-        // gap 19.836 where the verse spelling (and the intended floor) says 14.571,
-        // against LilyPond 2.26.0's 12.000 on the machine-exported twin (the residual
-        // is the scalar band vs LilyPond's in-skyline X-aware distance — HANDOFF §2D).
-        // Notes stay inside the staff so the anchor's down skyline is flat and the
-        // walk cannot split the two spellings by X.
+        // gap about 5 ss over the verse spelling; this is that repair's net.
+        // ⚠️ RESHAPED 2026-08-20, when the floor started reading the band WITH X
+        // (audit/lp-geometry lyrics.band-*): the two spellings draw their syllables at
+        // DIFFERENT X (measured: "ff" at 83.668 as a row, 80.783 as a verse — LilyPond
+        // reads the two spellings line-for-line identical, so the drift is an island of
+        // its own, and this test cannot pin it). An X-reading floor prices an X drift,
+        // so the book keeps the drift away from the floor instead of relying on the
+        // floor not to look: ONE uniform syllable everywhere (the band has one depth at
+        // any X), a FLAT lyric-free second system (the facing ink has one height at any
+        // X), and no section marks — the floor reads band + staff + padding at every X
+        // and the equality tests the Y frames alone, which is what it was born for.
         string body =
             "part melody {\n"
             + "  section A { e'4 f' g' f' | e' e' e'2 | }\n"
-            + "  section B { g'4 g' f' f' | e' e' e'2 | }\n"
+            + "  section B { a4 a a a | a a a2 | }\n"
             + "}\n"
             + "lyrics w{SINGS} {\n"
-            + "  section A { One two three four | five six se- ven | }\n"
-            + "  section B { Aa bb cc dd | ee ff gg | }\n"
+            + "  section A { gyp gyp gyp gyp | gyp gyp gyp | }\n"
             + "}\n"
-            + "form main { A break B }\n"
+            + "form main { ~A break ~B }\n"
             + "score main {\n  staff melody\n  lyrics w\n}\n";
 
         double row = SystemGapOf(body.Replace("{SINGS}", ""));

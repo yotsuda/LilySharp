@@ -230,11 +230,15 @@ internal sealed class SkylineBuilder
     /// nothing there. Changing it to "the outermost SPACEABLE staff" was tried and MEASURED on
     /// 2026-07-28: it drops book LYRHKG's inter-system floor from 8.900000 to 1.707200 and the
     /// staves interleave, because the lyric rows Lily# leaves OUT of the skyline are then no
-    /// longer standing in for the staff that was left out with them. The two exclusions are
-    /// one quantity and no corpus point measures either — that is the ▶ item, not this one.
-    /// IT GOES the day a point measures a system whose outer element is a row, and the two
-    /// exclusions (the staff here, the rows in <c>AugmentExtentsWithLooseLines</c>) go
-    /// together or neither.
+    /// longer standing in for the staff that was left out with them.
+    /// ⚠️ HALF THE PAIR WENT 2026-08-20: the rows (and the note-bound verses) are IN the
+    /// paging silhouette now, X-resolved at their alignment minimum
+    /// (<c>LayoutEngine.LyricReservationBelowSystem</c> →
+    /// <c>PagingAugmentProgram.Builder.AddLyricBand</c>, audit/lp-geometry
+    /// lyrics.band-floor.*), so they stand for themselves. The STAFF half remains: a
+    /// multi-staff system whose outer element is a row still puts no staff in its own
+    /// silhouette, guarded by the four LYRHKG points (lyrics.hara-kiri.grouper.*, all
+    /// exact) — closing it is a measured move on those, not a side effect.
     /// <para>
     /// ⚠️ WHAT DID CHANGE is the HEIGHT, not the choice: the middle line and the line span now
     /// come from the layout, so a staff that is not four staff spaces tall is seeded where it

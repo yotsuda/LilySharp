@@ -70,6 +70,7 @@ internal sealed class PagingAugmentProgram
         VoltaBox,
         MarkBox,
         BarNumberBox,
+        LyricBand,
     }
 
     private readonly Kind[] _kinds;
@@ -78,16 +79,19 @@ internal sealed class PagingAugmentProgram
     // Execution payloads — NOT part of the key; see the class remark for why that is sound.
     private readonly ArticulationLayout[] _scripts;
     private readonly ImmutableArray<TupletBracketLayout>[] _tupletGroups;
+    private readonly VerticalSkyline[] _lyricBands;
 
     private PagingAugmentProgram(
         Kind[] kinds, double[] args, string?[] texts,
-        ArticulationLayout[] scripts, ImmutableArray<TupletBracketLayout>[] tupletGroups)
+        ArticulationLayout[] scripts, ImmutableArray<TupletBracketLayout>[] tupletGroups,
+        VerticalSkyline[] lyricBands)
     {
         _kinds = kinds;
         _args = args;
         _texts = texts;
         _scripts = scripts;
         _tupletGroups = tupletGroups;
+        _lyricBands = lyricBands;
     }
 
     public bool IsEmpty => _kinds.Length == 0;
@@ -173,7 +177,7 @@ internal sealed class PagingAugmentProgram
             return cur.down;
         }
 
-        int a = 0, t = 0, sc = 0, tg = 0;
+        int a = 0, t = 0, sc = 0, tg = 0, lb = 0;
         foreach (var kind in _kinds)
         {
             switch (kind)
@@ -246,6 +250,18 @@ internal sealed class PagingAugmentProgram
                     a += BoxArgs;
                     break;
                 }
+                case Kind.LyricBand:
+                {
+                    // ONE merge of an already-resolved profile, appended after every other
+                    // family. ⚠️ This is not the batching the class remark forbids: that
+                    // finding re-associated EXISTING merges (seeding a batch instead of a
+                    // sequence, 4,878 ULPs); this appends one NEW merge at the end and
+                    // leaves the family sequence exactly as it was.
+                    int count = (int)_args[a++];
+                    a += count * LyricBandArgsPerBuilding;
+                    Down().Merge(_lyricBands[lb++]);
+                    break;
+                }
                 default:
                     throw new InvalidOperationException($"unknown paging op {kind}");
             }
@@ -257,6 +273,7 @@ internal sealed class PagingAugmentProgram
     private const int TupletArgsPerItem = 10;
     private const int BowArgsPerItem = 8;
     private const int BoxArgs = 4;
+    private const int LyricBandArgsPerBuilding = 4;  // start, valueAtStart, valueAtEnd, end
 
     /// <summary>Accumulates one system's steps in merge order.</summary>
     public sealed class Builder
@@ -266,6 +283,7 @@ internal sealed class PagingAugmentProgram
         private readonly List<string?> _texts = new();
         private readonly List<ArticulationLayout> _scripts = new();
         private readonly List<ImmutableArray<TupletBracketLayout>> _tupletGroups = new();
+        private readonly List<VerticalSkyline> _lyricBands = new();
 
         public void AddScript(in ArticulationLayout script, double anchorY)
         {
@@ -344,8 +362,35 @@ internal sealed class PagingAugmentProgram
             _args.Add(top);
         }
 
+        /// <summary>
+        /// The system's lyric-band profile — the loose block at its alignment minimum, in
+        /// the system-origin frame (<c>LayoutEngine.LyricReservationBelowSystem</c>) — as
+        /// one DOWN merge. The key is the profile's own resolved buildings (four doubles
+        /// each), so an unchanged block on a keystroke still hits the memo; the skyline
+        /// instance rides outside the key like the script and tuplet payloads do.
+        /// </summary>
+        /// <remarks>
+        /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c>
+        /// is handed the alignment MINIMUM translations, so a loose line IS in the system's
+        /// down silhouette; this step is where Lily# puts it there.
+        /// </remarks>
+        public void AddLyricBand(VerticalSkyline profile)
+        {
+            var buildings = profile.Buildings;
+            _kinds.Add(Kind.LyricBand);
+            _args.Add(buildings.Count);
+            foreach (var b in buildings)
+            {
+                _args.Add(b.Start);
+                _args.Add(b.ValueAt(b.Start));
+                _args.Add(b.ValueAt(b.End));
+                _args.Add(b.End);
+            }
+            _lyricBands.Add(profile);
+        }
+
         public PagingAugmentProgram Build() => new(
             _kinds.ToArray(), _args.ToArray(), _texts.ToArray(),
-            _scripts.ToArray(), _tupletGroups.ToArray());
+            _scripts.ToArray(), _tupletGroups.ToArray(), _lyricBands.ToArray());
     }
 }

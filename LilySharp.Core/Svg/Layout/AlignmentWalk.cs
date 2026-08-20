@@ -80,7 +80,10 @@ namespace LilySharp.Core.Svg.Layout;
 /// again (HANDOFF 5.2.1⑥ — an unread member reads to the next person as a used one). The
 /// reservation wants a LENGTH, which is <see cref="Where"/> plus a closing
 /// <see cref="Distance"/>; whoever needs the silhouette itself can put it back with a
-/// caller attached.
+/// caller attached. ★ 2026-08-20: the page reservation now wants a PROFILE, and it
+/// accumulates the BLOCK's own beside this walk (<c>LyricReservationBelowSystem</c>,
+/// block-only — the anchor staff stays the system skyline's business), so the walk's
+/// accumulation, which carries the seed too, remains unexposed.
 /// </para>
 /// <para>
 /// ⚠️ NO SKYLINE-HORIZONTAL-PADDING ON THE DISTANCES, and that is LilyPond's reading rather

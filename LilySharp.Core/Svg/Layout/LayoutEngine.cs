@@ -231,7 +231,7 @@ internal sealed class LayoutEngine
         var perSystemHeights = placed.Heights;
 
         // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
-        var perSystemBands = new List<(double bandUp, double bandDown)>();
+        var perSystemBandUps = new List<double>();
         var multiMeasureRanges = new List<(int startMeasure, int measureCount)>();
         int multiMeasStart = 0;
         foreach (var sysMeasures in systemMeasures)
@@ -243,7 +243,7 @@ internal sealed class LayoutEngine
             .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
         AugmentExtentsWithLooseLines(score.TextMetrics, perSystemExtents,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
-            inlineChordNames, perSystemBands, placed.LyricBands);
+            inlineChordNames, perSystemBandUps);
 
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
@@ -257,11 +257,12 @@ internal sealed class LayoutEngine
         var prelim = RunPreliminaryAnnotationPass(
             score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
             perSystemSkylines, multiStaffLayouter.RestCollisionsOf, systemCache,
-            commonShortestDuration, placed.StaffSpanners, placed.StaffInside);
+            commonShortestDuration, placed.StaffSpanners, placed.StaffInside,
+            placed.LyricBands);
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            lyricsRowStaves, prelim.PagingSkylines, perSystemHeights, perSystemBands);
+            lyricsRowStaves, prelim.PagingSkylines, perSystemHeights, perSystemBandUps);
 
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents, lyricsRowStaves,
@@ -445,10 +446,12 @@ internal sealed class LayoutEngine
     /// <see cref="SkylineBuilder.BuildSystemSkylines"/> returned — the silhouette paging
     /// springs against, as opposed to the per-staff tables below.</param>
     /// <param name="Heights">Per system, the height it was laid out at.</param>
-    /// <param name="LyricBands">Per system, its loose lyric block's ALIGNMENT MINIMUM below the
-    /// last spaceable staff's bottom line — the note-bound verses AND the independent rows
-    /// standing under them; see <see cref="LyricReservationBelowSystem"/>. Produced here
-    /// because only this pass has the system's own staff skylines.</param>
+    /// <param name="LyricBands">Per system, its loose lyric block at its ALIGNMENT MINIMUM as
+    /// a DOWN profile in the system-origin frame — the note-bound verses AND the independent
+    /// rows standing under them; see <see cref="LyricReservationBelowSystem"/>. Produced here
+    /// because only this pass has the system's own staff skylines; its deepest point is
+    /// already folded into <see cref="Extents"/>, and the profile itself joins the paging
+    /// silhouette through <see cref="PagingAugmentProgram.Builder.AddLyricBand"/>.</param>
     /// <param name="StaffSkylines">Per system, the per-staff UP/DOWN skylines that system was
     /// placed and sprung against, indexed by global staff index. Carried out of the pass rather
     /// than rebuilt because a note-bound lyric line is DRAWN against the same
@@ -466,7 +469,7 @@ internal sealed class LayoutEngine
         List<(double upExtent, double downExtent)> Extents,
         List<(VerticalSkyline up, VerticalSkyline down)> Skylines,
         List<double> Heights,
-        List<double> LyricBands,
+        List<VerticalSkyline?> LyricBands,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines,
         List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside,
@@ -507,7 +510,7 @@ internal sealed class LayoutEngine
         // tall as its OWN surviving staves). CreatePages spaces systems by this so a
         // hara-kiri'd system's gap is not over-reserved at the full height.
         var perSystemHeights = new List<double>();
-        var perSystemLyricBands = new List<double>();
+        var perSystemLyricBands = new List<VerticalSkyline?>();
         var perSystemStaffSkylines = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         var perSystemStaffSpanners = new List<List<MultiStaffLayouter.StaffInsideSpanners>>();
         var perSystemStaffInside = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
@@ -578,13 +581,23 @@ internal sealed class LayoutEngine
                         edgeBeams.first, edgeBeams.last, sysStaffGroups);
                 });
             perSystemSkylines.Add((upSky, downSky));
+            // The loose block's minimum profile, in the system-origin frame. Its deepest
+            // point joins the down EXTENT here (the page-fill and fallback arithmetic are
+            // scalars); the profile itself joins the paging silhouette as a program step
+            // (AugmentSkylinesForPaging), so the inter-system floor reads it WITH X —
+            // audit/lp-geometry lyrics.band-floor.*.
+            var lyricBand = LyricReservationBelowSystem(
+                score, measureLayouts, sysStaffSkylines.Skylines, sysStaffGroups,
+                firstMeasureIndex, firstMeasureIndex + measureCount);
+            perSystemLyricBands.Add(lyricBand);
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),
-                LayoutUtilities.CalculateDownExtent(downSky, sysHeight)));
+                Math.Max(
+                    LayoutUtilities.CalculateDownExtent(downSky, sysHeight),
+                    lyricBand is null
+                        ? 0
+                        : LayoutUtilities.CalculateDownExtent(lyricBand, sysHeight))));
             perSystemHeights.Add(sysHeight);
-            perSystemLyricBands.Add(LyricReservationBelowSystem(
-                score, measureLayouts, sysStaffSkylines.Skylines, sysStaffGroups,
-                firstMeasureIndex, firstMeasureIndex + measureCount));
 
             systems.Add(new SystemLayout(
                 SystemIndex: sysIdx, Y: currentY,
@@ -707,7 +720,8 @@ internal sealed class LayoutEngine
         Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
         SystemLayoutCache? systemCache, double commonShortestDuration,
         List<List<MultiStaffLayouter.StaffInsideSpanners>> staffSpanners,
-        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> staffInside)
+        List<List<(VerticalSkyline Up, VerticalSkyline Down)>> staffInside,
+        List<VerticalSkyline?>? lyricBands = null)
     {
         var (prelimStaff, prelimStaffIndex) = score.PrimaryContentStaffWithIndex();
         var prelimScore = new Score(
@@ -886,7 +900,7 @@ internal sealed class LayoutEngine
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
                 prelimAnn.Dynamics,
                 prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
-                prelimTies.ToImmutableArray(), systemCache),
+                prelimTies.ToImmutableArray(), systemCache, lyricBands),
             prelimBeamsByStaff,
             annotationBeamGroups,
             prelimTiesByStaff,
@@ -1460,18 +1474,24 @@ internal sealed class LayoutEngine
         IReadOnlySet<int> lyricsRowStaves,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
         List<double>? perSystemHeights = null,
-        List<(double bandUp, double bandDown)>? perSystemBands = null)
+        List<double>? perSystemBandUps = null)
     {
-        // Whole-line annotation bands (lyric lines below, chord-symbol rows
-        // above). They lay out only after the page Y is fixed, so they are
-        // absent from the skylines — the skyline distance must be floored by
-        // them or adjacent systems overprint them (found by the Greensleeves
-        // sample). Local annotations (dynamics, ties, …) are NOT banded: the
-        // X-aware skyline distance is the better model for those.
-        (double up, double down) AnnBand(int i) =>
-            perSystemBands == null || i >= perSystemBands.Count
-                ? (0, 0)
-                : (perSystemBands[i].bandUp, perSystemBands[i].bandDown);
+        // Whole-line CHORD-SYMBOL row band above a system. It lays out only after the page
+        // Y is fixed, so it is absent from the skylines — the skyline distance must be
+        // floored by it or adjacent systems overprint it (found by the Greensleeves
+        // sample). Local annotations (dynamics, ties, …) are NOT banded: the X-aware
+        // skyline distance is the better model for those.
+        // ⚠️ THE LYRIC BAND BELOW IS NOT HERE ANY MORE (2026-08-20): its minimum profile is
+        // IN the paging skylines (LyricReservationBelowSystem → AddLyricBand), so the
+        // X-aware Distance() below reads it the way LilyPond's floor does
+        // (page-layout-problem.cc:593-599 build_system_skyline's minimum translations,
+        // :625-632 append_system's distance floor) — the scalar spread it under every X
+        // (audit/lp-geometry lyrics.band-floor.*). The chord row keeps this shape until a
+        // point measures it the same way.
+        double BandUp(int i) =>
+            perSystemBandUps == null || i >= perSystemBandUps.Count
+                ? 0
+                : perSystemBandUps[i];
         // Per-system body height, defaulting to the scalar systemHeight when the
         // caller has none (single-staff path, or no hara-kiri) — in that case every
         // entry equals systemHeight, so the result is byte-identical.
@@ -1500,7 +1520,7 @@ internal sealed class LayoutEngine
                 .ToImmutableArray();
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
-                perSystemBands?.ToImmutableArray(), perSystemHeights, anchors,
+                perSystemBandUps?.ToImmutableArray(), perSystemHeights, anchors,
                 BuildLineShapes(systems, perSystemSkylines, perSystemExtents, SysHeight));
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
@@ -1578,34 +1598,19 @@ internal sealed class LayoutEngine
                         EngravingDefaults.SystemSkylineHorizontalPadding);
                     if (!double.IsNegativeInfinity(dist))
                     {
-                        // A whole-line annotation band clears against the OTHER
-                        // side's full extent (the band spans every X, so the
-                        // X-disjoint argument for preferring Distance() does not
-                        // apply to it).
+                        // The chord-row band above the NEXT system clears against this
+                        // system's full extent (the band spans every X, so the X-disjoint
+                        // argument for preferring Distance() does not apply to it).
                         // ⚠️ A BAND IS MEASURED FROM THE STAFF IT HANGS OFF (see
-                        // PageAnchorOffsets' remark), so the term that reaches it is
-                        // origin→that staff's OUTER LINE — NOT the system's body height,
-                        // which already contains a trailing lyrics ROW's drawn band and
-                        // counts it twice. Same frame mix PageLayouter's chain repaired
-                        // with HalfLast; this path kept the old spelling. MEASURED
-                        // (rowgap probe, one staff + a lyrics row, forced break):
-                        // origin step 19.836 against LilyPond 2.26.0's 12.000; with the
-                        // anchor frame it is the intended body + band + next-up floor.
-                        // Identical where no row leads/trails: there origin→outer line
-                        // IS the body height, so rowless books cannot move.
-                        var annPrev = AnnBand(i);
-                        var annNext = AnnBand(i + 1);
-                        if (annPrev.down > 0)
-                        {
-                            var aPrev = PageAnchorOffsets(systems[i].StaffGroups, lyricsRowStaves);
-                            dist = Math.Max(dist, aPrev.ToLast + aPrev.HalfLast + annPrev.down
-                                + perSystemExtents[i + 1].upExtent);
-                        }
-                        if (annNext.up > 0)
+                        // PageAnchorOffsets' remark). The lyric band's mirror-image floor
+                        // stood here until 2026-08-20; it is in the skylines now, so
+                        // Distance() above already priced it — see BandUp's remark.
+                        double bandUpNext = BandUp(i + 1);
+                        if (bandUpNext > 0)
                         {
                             var aNext = PageAnchorOffsets(systems[i + 1].StaffGroups, lyricsRowStaves);
                             dist = Math.Max(dist, SysHeight(i)
-                                + perSystemExtents[i].downExtent + annNext.up
+                                + perSystemExtents[i].downExtent + bandUpNext
                                 - (aNext.ToFirst - aNext.HalfFirst));
                         }
                         skylineDistance = dist;
@@ -2244,7 +2249,8 @@ internal sealed class LayoutEngine
         ImmutableArray<TupletBracketLayout> tupletBrackets = default,
         ImmutableArray<SlurLayout> slurs = default,
         ImmutableArray<TieLayout> ties = default,
-        SystemLayoutCache? systemCache = null)
+        SystemLayoutCache? systemCache = null,
+        IReadOnlyList<VerticalSkyline?>? lyricBands = null)
     {
         if (skylines == null)
             return null;
@@ -2545,6 +2551,19 @@ internal sealed class LayoutEngine
             }
         }
 
+        // The lyric block at its ALIGNMENT MINIMUM — the last family, appended after every
+        // other step so the existing families keep their association (the program remark's
+        // ULP discipline). This is what makes the inter-system floor read the band WITH X:
+        // LilyPond has the block in build_system_skyline's input (:593-599) and its floor is
+        // up.distance(down) (:625-632); the scalar that used to stand in for this spread the
+        // band's deepest point under every X — audit/lp-geometry lyrics.band-floor.*.
+        if (lyricBands is not null)
+        {
+            for (int s = 0; s < systemCount && s < lyricBands.Count; s++)
+                if (lyricBands[s] is { IsEmpty: false } band)
+                    BuilderAt(s).AddLyricBand(band);
+        }
+
         // Replay each system's program — through the memo when a cache rides along, so an
         // unchanged system's merges are skipped entirely. A system no step touched keeps
         // its ORIGINAL skyline pair, exactly as the family-major loops left it.
@@ -2571,31 +2590,25 @@ internal sealed class LayoutEngine
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         List<(int startMeasure, int measureCount)> systemMeasureRanges,
         ImmutableArray<ChordNameItem> chordNames,
-        List<(double bandUp, double bandDown)>? perSystemBands,
-        IReadOnlyList<double> lyricBands)
+        List<double>? perSystemBandUps)
     {
+        // ⚠️ THE UP SIDE ONLY, since 2026-08-20. The lyric block's DOWN reservation is no
+        // longer a scalar anywhere: its minimum profile joins the paging silhouette itself
+        // (LyricReservationBelowSystem → PagingAugmentProgram.Builder.AddLyricBand) and its
+        // deepest point joins the down extent where that extent is built (LayoutSystems) —
+        // audit/lp-geometry lyrics.band-floor.* measured the scalar spreading the band
+        // under every X. The chord-row band above keeps this shape until a point measures
+        // it the same way.
         for (int i = 0; i < perSystemExtents.Count && i < systemMeasureRanges.Count; i++)
         {
             var (start, count) = systemMeasureRanges[i];
             var (looseUp, bandUp) = EstimateAboveStaffExtents(
                 fonts, musicMarks, voltaBrackets, start, start + count, chordNames);
-
-            // The lyric block's reservation is the WALK's, computed per system by
-            // LyricReservationBelowSystem where the staff skylines live — not an estimate
-            // made from the items alone. ⚠️ IT IS NOW THE ONLY BELOW-STAFF TERM here: every
-            // other class reserves through its own placed ink (see EstimateAboveStaffExtents'
-            // remarks for the four constants that went and what measured each one out).
-            double lyricBand = i < lyricBands.Count ? lyricBands[i] : 0;
-            double looseDown = lyricBand;
-            perSystemBands?.Add((bandUp, lyricBand));
+            perSystemBandUps?.Add(bandUp);
 
             var ext = perSystemExtents[i];
-            if (looseDown > 0 || looseUp > 0)
-            {
-                perSystemExtents[i] = (
-                    Math.Max(ext.upExtent, looseUp),
-                    Math.Max(ext.downExtent, looseDown));
-            }
+            if (looseUp > 0)
+                perSystemExtents[i] = (Math.Max(ext.upExtent, looseUp), ext.downExtent);
         }
     }
 
@@ -2740,10 +2753,12 @@ internal sealed class LayoutEngine
     /// ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
     /// Lily#-only quantity does. LilyPond has one frame — <c>min_offsets</c> off the system's
     /// own reference point, every element in it (page-layout-problem.cc:896-901) — and no
-    /// "band": a loose line is IN the skyline it is spaced against. Lily# estimates lyric and
-    /// chord-row bands OUTSIDE the skyline and measures them from the STAFF, so the two frames
-    /// have to be carried separately until those bands are elements like any other. It goes
-    /// with them.
+    /// "band": a loose line is IN the skyline it is spaced against. ★ THE LYRIC BAND BELOW
+    /// became such an element on 2026-08-20 (its minimum profile rides the paging skylines —
+    /// <c>LyricReservationBelowSystem</c>), so the DOWN half of this pair lost its band
+    /// consumer; what keeps the pair alive is the CHORD-ROW band above, still estimated
+    /// outside the skyline and measured from the staff. It goes when that one is an element
+    /// too.
     /// ⚠️ Quantities floored by a whole-line BAND need the
     /// half span, because a band is already measured from the staff it hangs off; quantities
     /// floored by a skyline or a scalar extent need the origin distance, because those are
@@ -4438,15 +4453,17 @@ internal sealed class LayoutEngine
     /// </para>
     /// </remarks>
     /// <summary>
-    /// How far below the system's LAST SPACEABLE staff's bottom line its LOOSE BLOCK reaches
-    /// when every line of it is at its ALIGNMENT MINIMUM — what the page reserves for it, as
-    /// opposed to the distance it is eventually drawn at. The block is the note-bound verses
-    /// and the independent lyrics ROWS standing under them, in alignment order.
+    /// The system's LOOSE BLOCK — the note-bound verses and the independent lyrics ROWS
+    /// standing under them, in alignment order — as a DOWN profile in the SYSTEM-ORIGIN
+    /// frame, every line at its ALIGNMENT MINIMUM: what the page reserves for it, as
+    /// opposed to the distance it is eventually drawn at. Null when the system has no
+    /// such block.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:593-599 — <c>build_system_skyline</c> is
     /// handed <c>Align_interface::get_minimum_translations</c>, so a loose line IS in the
-    /// system's skyline, at its minimum.
+    /// system's skyline, at its minimum, and the inter-system floor that reads it is
+    /// X-RESOLVED (:625-632 <c>up_skyline.distance(bottom_skyline_, …)</c>).
     /// LILYPOND-REF: lily/align-interface.cc:235-238 — that minimum does NOT contain the
     /// spec's basic-distance: it is added only behind <c>INT_MAX == end &amp;&amp; 0 == start</c>,
     /// the pure branch, and the call that feeds the skyline passes <c>start = end = 0</c>.
@@ -4454,9 +4471,14 @@ internal sealed class LayoutEngine
     /// <c>distribute_loose_lines</c>, INSIDE the room this reservation left.
     /// <para>
     /// It is <see cref="AlignmentWalk"/>, the same walk the placement and the inter-staff
-    /// room run — the whole point of the island. It replaces TWO estimates of this quantity:
-    /// <c>LyricEngraver.AlignmentMinimumBand</c>'s extent sum, and the DRAWN baseline the
-    /// enrich pass used to fold into the same <c>downExtent</c>.
+    /// room run — the whole point of the island. ⚠️ IT RETURNED A SCALAR (the profile's
+    /// deepest point) until 2026-08-20, and both page paths spread that scalar under every
+    /// X — the blindness audit/lp-geometry's <c>lyrics.band-floor.*</c> pair measured:
+    /// Lily# read 13.392483 on two books LilyPond forks 12.362129 / 10.090000 apart, the
+    /// fork being nothing but WHERE the next system's tall ink stands in X. The profile
+    /// reaches the floors through <see cref="PagingAugmentProgram.Builder.AddLyricBand"/>;
+    /// the extents keep its deepest point (<c>LayoutSystems</c>), which is the one reading
+    /// of it that IS a scalar.
     /// </para>
     /// <para>
     /// ⚠️ ONLY THE BLOCK THAT HANGS BELOW THE SYSTEM, which is the one attached to a staff of
@@ -4466,13 +4488,13 @@ internal sealed class LayoutEngine
     /// would count it twice, which the extent sum did.
     /// </para>
     /// </remarks>
-    private double LyricReservationBelowSystem(
+    private VerticalSkyline? LyricReservationBelowSystem(
         MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         ImmutableArray<StaffGroupLayout> groups, int startMeasure, int endMeasure)
     {
         if (score.Lyrics.IsDefaultOrEmpty || groups.IsDefaultOrEmpty)
-            return 0;
+            return null;
 
         var lyricsRows = new HashSet<int>();
         foreach (var (_, st, idx) in score.EnumerateStaves())
@@ -4484,7 +4506,7 @@ internal sealed class LayoutEngine
         var alignment = ClassifySystem(groups, lyricsRows);
         if (alignment.LastSpaceable is not { } anchorStaff
             || anchorStaff.StaffIndex >= staffSkylines.Count)
-            return 0;
+            return null;
 
         // ⚠️ THE ANCHOR STAFF'S OWN LINES, and this is the THIRD spelling of the split — the
         // other two are BuildStaffAnchorTables' anchor table and BuildLooseLinesBetween's
@@ -4513,19 +4535,17 @@ internal sealed class LayoutEngine
                 lines.AddRange(engraver.RowBlockSkylines(
                     score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff));
         if (lines.Count == 0)
-            return 0;
+            return null;
 
         var walk = new AlignmentWalk();
         walk.Seed(staffSkylines[anchorStaff.StaffIndex].Down);
 
-        // ⚠️ THE DEEPEST POINT OVER EVERY LINE, not the last line's. LilyPond's
-        // build_system_skyline merges each element's skyline RAISED BY ITS OWN TRANSLATION
-        // (page-layout-problem.cc:1093-1108) and the profile's maximum is what the page
-        // reserves, so a line with a deeper descender than the one under it still owns the
-        // band. Taking the last line's descent gives the same number on every book in the
-        // corpus — the verse step is at least 2.800000 and a descender is a tenth of that —
-        // which is exactly why it would have gone unnoticed.
-        double deepest = 0;
+        // EVERY LINE AT ITS OWN TRANSLATION, exactly LilyPond's build_system_skyline
+        // (page-layout-problem.cc:1093-1108 merges each element's skyline RAISED BY ITS OWN
+        // TRANSLATION), so a line with a deeper descender than the one under it still owns
+        // its stretch of the band — and a stretch of X no syllable reaches holds NOTHING,
+        // which is the whole difference from the scalar this used to flatten to.
+        var profile = new VerticalSkyline(VerticalDirection.Down);
         for (int k = 0; k < lines.Count; k++)
         {
             walk.Advance(
@@ -4534,18 +4554,28 @@ internal sealed class LayoutEngine
                 k == 0
                     ? LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance
                     : LooseLineSpacer.NonStaffNonStaff.MinimumDistance);
-            deepest = Math.Max(deepest, walk.Where + -lines[k].Down.MaxHeight());
+            if (lines[k].Down is { IsEmpty: false } lineDown)
+                profile.Merge(lineDown.Buildings, 0, -walk.Where);
         }
+        if (profile.IsEmpty)
+            return null;
 
-        // ...and a down extent is measured below the anchor's BOTTOM LINE, half a staff
-        // under the reference point the walk runs from.
-        // ⚠️ THE STAFF'S OWN INK IS DELIBERATELY NOT IN THIS. The accumulated profile also
-        // carries the anchor staff raised into each line's frame — its clef hangs 3.550000
-        // under its reference point — but that ink is already in the system's own extents
-        // (SkylineBuilder.BuildSystemSkylines), and this figure is max-ed into the same
-        // downExtent. Reading the profile whole would count the staff twice; what the page
-        // needs here is the BLOCK's reach.
-        return Math.Max(0, deepest - anchorStaff.Height / 2.0);
+        // ⚠️ THE ANCHOR STAFF'S OWN INK IS DELIBERATELY NOT IN THIS — it stays the system
+        // skyline's business (SkylineBuilder.AddEdgeStaffInk seeds the edge staff for the
+        // row and verse spellings alike, since a one-staff-plus-row system's first staff IS
+        // the staff). A first draft merged staffSkylines[anchor].Down here for the row-outer
+        // case, and the PER-STAFF profile is a richer silhouette than the edge model, so the
+        // two spellings priced the same gap 0.915000 apart and the
+        // SystemGap_ReadsARowsBandOnce pin went red — one quantity, two representations,
+        // HANDOFF 5.2.1②. What OuterStaff still leaves unseeded (the LAST spaceable staff
+        // of a multi-staff system whose outer element is a row) is that remark's own ▶
+        // item, unchanged by this island.
+
+        // The walk ran in the anchor staff's REFPOINT frame; the paging silhouette lives in
+        // the SYSTEM-ORIGIN frame. One shift, stated once — the same conversion
+        // PageAnchorOffsets' ToLast carries for the springs.
+        profile.Raise(MultiStaffLayouter.StaffRefpoint(anchorStaff));
+        return profile;
     }
 
     /// <summary>A lyric engraver configured for geometry only — one X model, no layout.</summary>

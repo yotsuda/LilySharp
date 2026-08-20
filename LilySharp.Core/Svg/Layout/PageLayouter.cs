@@ -45,7 +45,9 @@ namespace LilySharp.Core.Svg.Layout;
 ///   ALIGNMENT MINIMUM by LayoutEngine.LyricReservationBelowSystem, which is AlignmentWalk
 ///   over the real syllable ink and the real staff skyline — LilyPond's own reservation
 ///   (:593-599 hands build_system_skyline the minimum translations). The estimate and the
-///   drawn-distance reading that used to stand beside it are both gone.
+///   drawn-distance reading that used to stand beside it are both gone; since 2026-08-20 the
+///   reservation is a PROFILE in the paging skylines (X-resolved, audit/lp-geometry
+///   lyrics.band-floor.*), not a scalar spread under every X.
 /// build_system_skyline (page-layout-problem.cc:1070-1127):
 ///   per-system UP/DOWN skylines are passed to PositionSystemsOnPage for inter-system collision avoidance
 /// IMPLEMENTED — fixed_force_solution for ragged-last (page-layout-problem.cc:1057-1061,
@@ -141,7 +143,7 @@ internal sealed class PageLayouter
         double headerHeight,
         ImmutableArray<(double upExtent, double downExtent)> systemExtents,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
-        ImmutableArray<(double bandUp, double bandDown)>? systemBands = null,
+        ImmutableArray<double>? systemBandUps = null,
         IReadOnlyList<double>? systemBodyHeights = null,
         ImmutableArray<(double toFirst, double toLast, double halfFirst, double halfLast)>?
             systemAnchors = null,
@@ -333,7 +335,7 @@ internal sealed class PageLayouter
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
                 isFirstPage, headerHeight, isRagged, useFixedForce, lastPageForce,
-                vs, systemSkylines, systemBands, Anchor, out double pageForce);
+                vs, systemSkylines, systemBandUps, Anchor, out double pageForce);
 
             // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
             // after every page, so "the previous page" always means the immediately
@@ -375,7 +377,7 @@ internal sealed class PageLayouter
         bool isRagged, bool useFixedForce, double fixedForce,
         VerticalSpacingParameters vs,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
-        ImmutableArray<(double bandUp, double bandDown)>? systemBands,
+        ImmutableArray<double>? systemBandUps,
         Func<int, (double ToFirst, double ToLast, double HalfFirst, double HalfLast)> anchor,
         out double pageForce)
     {
@@ -529,24 +531,26 @@ internal sealed class PageLayouter
                         // and its fallback gap differently.
                         dist += anchor(sysIdx + 1).ToFirst - originToLast[local];
 
-                        // Whole-line annotation bands (lyric lines below,
-                        // chord-symbol rows above) lay out after the page Y is
-                        // fixed and are absent from the skylines; they floor
-                        // the distance (a band spans every X, so the X-disjoint
-                        // argument for preferring Distance() does not apply).
-                        if (systemBands is { } bands && sysIdx + 1 < bands.Length)
+                        // The whole-line CHORD-SYMBOL row band above the next system lays
+                        // out after the page Y is fixed and is absent from the skylines;
+                        // it floors the distance (a band spans every X, so the X-disjoint
+                        // argument for preferring Distance() does not apply to it).
+                        // ⚠️ THE LYRIC BAND BELOW IS NOT HERE ANY MORE (2026-08-20): its
+                        // minimum profile is IN systemSkylines' down side
+                        // (LayoutEngine.LyricReservationBelowSystem → AddLyricBand), so
+                        // Distance() above prices it per X, the way LilyPond's floor does
+                        // (page-layout-problem.cc:593-599 build_system_skyline's minimum
+                        // translations, :625-632 append_system's distance floor). The scalar mirror
+                        // that stood here spread it under every X — audit/lp-geometry
+                        // lyrics.band-floor.* has the fork it could not see.
+                        if (systemBandUps is { } bands && sysIdx + 1 < bands.Length)
                         {
-                            double bandDownPrev = bands[sysIdx].bandDown;
-                            double bandUpNext = bands[sysIdx + 1].bandUp;
+                            double bandUpNext = bands[sysIdx + 1];
                             // A BAND IS MEASURED FROM THE STAFF IT HANGS OFF, so the term that
                             // reaches its refpoint is that staff's own half span; the OTHER
-                            // side of each max is an extent measured from the origin and takes
+                            // side of the max is an extent measured from the origin and takes
                             // the origin distance. Reaching for ToFirst/ToLast on both sides
                             // counts a leading chord row twice.
-                            if (bandDownPrev > 0)
-                                dist = Math.Max(dist, anchor(sysIdx).HalfLast + bandDownPrev
-                                    + systemExtents[sysIdx + 1].upExtent
-                                    + anchor(sysIdx + 1).HalfFirst);
                             if (bandUpNext > 0)
                                 dist = Math.Max(dist, InkBelowLastRefpoint(d, sysIdx)
                                     + anchor(sysIdx + 1).HalfFirst + bandUpNext);

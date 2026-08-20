@@ -450,10 +450,10 @@ internal static class LpGeometryProbes
     /// <remarks>
     /// THE LYRIC BAND IN THE INTER-SYSTEM FLOOR, READ WITH X (HANDOFF 2D, the scalar-floor
     /// island). LilyPond puts the loose block INTO the system's down skyline at its
-    /// alignment minimum (LILYPOND-REF: lily/page-layout-problem.cc:593-599
-    /// <c>build_system_skyline</c> is handed <c>Align_interface::get_minimum_translations</c>)
+    /// alignment minimum (LILYPOND-REF: lily/page-layout-problem.cc:593-599 build_system_skyline
+    /// is handed <c>Align_interface::get_minimum_translations</c>)
     /// and the inter-system spring's floor is <c>up.distance(down, padding)</c> — an
-    /// X-resolved minimum (:625-632). Lily# walks the same block
+    /// X-resolved minimum (:625-632 <c>append_system</c>). Lily# walks the same block
     /// (<c>LayoutEngine.LyricReservationBelowSystem</c>) but flattens the profile to its
     /// deepest point, and both page paths spread that scalar under every X.
     /// <para>
