@@ -277,21 +277,24 @@ internal static class PedalEngraver
     /// An ossia's mixed scale has no measured pedal regime -- same guard as
     /// <c>SkylineBuilder.AddDynamicsToSkyline</c>'s pointwise pass: full size only.
     /// </remarks>
-    internal static ImmutableArray<SolvedPedalLine> SolveAndSeed(
+    internal static (ImmutableArray<SolvedPedalLine> Lines, ImmutableArray<SolvedPedalRow> Rows)
+        SolveAndSeed(
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts,
         VerticalSkyline insideDown, VerticalSkyline downProfile)
     {
-        if (staff.PedalStyle != PedalStyle.Bracket || score.MusicMarks.IsDefaultOrEmpty
+        bool mixed = staff.PedalStyle == PedalStyle.Mixed;
+        if ((staff.PedalStyle != PedalStyle.Bracket && !mixed)
+            || score.MusicMarks.IsDefaultOrEmpty
             || measureLayouts.IsDefaultOrEmpty
             || StaffSize.Of(staff).Span(1.0) != 1.0)
-            return ImmutableArray<SolvedPedalLine>.Empty;
+            return (ImmutableArray<SolvedPedalLine>.Empty, ImmutableArray<SolvedPedalRow>.Empty);
 
         var staffMarks = score.MusicMarks
             .Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
         var brackets = DetectPedalBrackets(staffMarks);
         if (brackets.IsDefaultOrEmpty)
-            return ImmutableArray<SolvedPedalLine>.Empty;
+            return (ImmutableArray<SolvedPedalLine>.Empty, ImmutableArray<SolvedPedalRow>.Empty);
 
         int loMeasure = measureLayouts[0].MeasureIndex;
         int hiMeasure = measureLayouts[^1].MeasureIndex;
@@ -310,8 +313,9 @@ internal static class PedalEngraver
         // (una corda, sostenuto, sustain -- MusicMarkEngraver.PedalFamilyRank), each
         // clearing the ink of the family before it.
         var solved = ImmutableArray.CreateBuilder<SolvedPedalLine>();
+        var solvedRows = ImmutableArray.CreateBuilder<SolvedPedalRow>();
         var portions = new List<(PedalType Type, int StartMeasureIndex,
-            double StartX, double EndX, bool LeftHook, bool RightHook)>();
+            double StartX, double EndX, bool LeftHook, bool RightHook, int SourcePosition)>();
         foreach (var bracket in brackets)
         {
             if (bracket.EndMeasureIndex < loMeasure || bracket.StartMeasureIndex > hiMeasure)
@@ -329,7 +333,9 @@ internal static class PedalEngraver
             if (endX - startX < 2.0)
                 endX = startX + 2.0; // the same minimum Calculate applies
             portions.Add((bracket.Type, bracket.StartMeasureIndex, startX, endX,
-                startLayout != null, endLayout != null));
+                // MIXED draws the leading word where a bracket-style LEFT hook would be.
+                startLayout != null && !mixed, endLayout != null,
+                bracket.SourcePosition));
         }
         static int FamilyRank(PedalType t) => t switch
         {
@@ -348,10 +354,27 @@ internal static class PedalEngraver
             // One step until 2026-08-20 — indistinguishable while nothing outside sat
             // under the span (the PLB ledger point covers that shape either way).
             VerticalSkyline? up = null;
+            // MIXED: the leading words are elements of the same group as the line — the
+            // word's BASELINE is the line's Y (measured: SustainPedal, PianoPedalBracket
+            // and their LineSpanner all dump one relY, pedal-mixed.ly) — so their
+            // outlines join the group's profile and the group solves ONCE.
+            var mixedWords = new List<(MusicMarkItem Mark, double X)>();
             foreach (var p in family)
             {
                 var one = BracketUpProfile(p.StartX, p.EndX, p.LeftHook, p.RightHook);
                 if (up == null) up = one; else up.Merge(one);
+                if (mixed && p.StartMeasureIndex >= loMeasure
+                    && p.StartMeasureIndex <= hiMeasure)
+                {
+                    foreach (var mark in staffMarks)
+                        if (mark.SourcePosition == p.SourcePosition)
+                        {
+                            mixedWords.Add((mark, p.StartX));
+                            var w = WordProfiles(score.TextMetrics, mark.Type, mark.Text, p.StartX);
+                            up.Merge(w.Up);
+                            break;
+                        }
+                }
             }
             double lineYUp = insideDown.IsEmpty
                 ? -(2.05 + SpannerPadding + EdgeHeight + HalfThickness)
@@ -367,8 +390,15 @@ internal static class PedalEngraver
                     lineYUp + EdgeHeight + HalfThickness, VerticalDirection.Down));
                 solved.Add(new SolvedPedalLine(p.Type, p.StartMeasureIndex, lineYUp));
             }
+            foreach (var (mark, x) in mixedWords)
+            {
+                var w = WordProfiles(score.TextMetrics, mark.Type, mark.Text, x);
+                w.Down.Raise(lineYUp);
+                downProfile.Merge(w.Down);
+                solvedRows.Add(new SolvedPedalRow(mark.SourcePosition, lineYUp));
+            }
         }
-        return solved.ToImmutable();
+        return (solved.ToImmutable(), solvedRows.ToImmutable());
     }
 
     /// <summary>

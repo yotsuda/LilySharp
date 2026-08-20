@@ -2417,10 +2417,15 @@ internal sealed class MultiStaffLayouter
                 // the INSIDE profile (its support), then the collision pass against the
                 // accumulated one. The solved lines and rows travel with the set so the
                 // draw uses the exact Y this profile reserved.
-                pedalLines.Add(PedalEngraver.SolveAndSeed(
-                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down));
-                pedalRows.Add(PedalEngraver.SolveAndSeedText(
-                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down));
+                var (bracketLines, mixedRows) = PedalEngraver.SolveAndSeed(
+                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down);
+                pedalLines.Add(bracketLines);
+                var textRows = PedalEngraver.SolveAndSeedText(
+                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down);
+                // Mutually exclusive by style (mixed emits mixedRows, text emits
+                // textRows), so the union is whichever is non-empty.
+                pedalRows.Add(mixedRows.IsDefaultOrEmpty || mixedRows.Length == 0
+                    ? textRows : mixedRows);
 
                 result.Add(sky);
                 staffIndex++;

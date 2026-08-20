@@ -3656,22 +3656,22 @@
       "probe": "pedal-mixed.ly",
       "score": "PMBL",
       "lilypond": 5.997,
-      "residual": -1.997,
-      "why": "OPENING STATE: the mixed word sits on the legacy below-the-system baseline (4.000 on this book), 1.997 above where LilyPond holds the group. The word and the line at least agree with each other (both 4.000, the coherence the bracket port deliberately preserved by leaving mixed alone) -- the port must move them TOGETHER: one group profile (the Ped. outline + the line + the right hook), one solve, the same two-step the bracket and text styles now run."
+      "residual": 0.0,
+      "why": "CLOSED TO ZERO EXACTLY, same day: the mixed group is ONE solve -- the leading word's outline joins the family's bracket profile in PedalEngraver.SolveAndSeed (no left hook; the word stands where it would be), the group runs the same two-step (inside profile at padding 1.2, collision at 0.46), and the solved Y feeds BOTH the bracket layout (PedalLines) and the kept text (PedalRows, by the On mark's source position). The binding ink is the Ped. outline over the engaging note -- the same 5.997 the text style reads, which is LilyPond's own identity across the two styles reproduced."
     },
     "mark.pedal-mixed.staff-to-line": {
       "probe": "pedal-mixed.ly",
       "score": "PMBL",
       "lilypond": 5.997,
-      "residual": -1.997,
-      "why": "OPENING STATE, the other half of the same group: see mark.pedal-mixed.staff-to-ped-baseline. LilyPond holds word, bracket and their LineSpanner on ONE relY (-9.773, the PMB/PMBL dump), so these two entries closing to the same number is the mechanism, not a coincidence."
+      "residual": 0.0,
+      "why": "CLOSED TO ZERO with the word, in one solve -- see mark.pedal-mixed.staff-to-ped-baseline. The two entries are one grob group read twice; either drifting alone would say the group tore."
     },
     "lyrics.pedal-mixed.staff-to-lyric": {
       "probe": "pedal-mixed.ly",
       "score": "PMBL",
       "lilypond": 8.367115015225147,
-      "residual": -2.502155050,
-      "why": "OPENING STATE: the mixed group's ink is in no skyline, so the lyric floor reads the control's 5.864960 -- the same blindness the bracket (-1.800) and text (-2.448) entries opened with, one style later. LilyPond: 8.367115 = the line's ink bottom 6.047 + relatedstaff padding 0.5 + the syllable's ascender."
+      "residual": -0.000155050,
+      "why": "CLOSED TO THE CONTROL'S FACE SLIVER (-0.000155, lyrics.pedal-bracket.control's number): the mixed group's ink -- the line's box and the word's outline -- joins the staff's down profile at seed time, so the lyric floor drops below the line's bottom + 0.5 exactly as LilyPond does (8.367115). Better than the text-style entry's +0.0038 because the binding element here is the LINE, whose box is exact, not a text outline."
     },
     "mark.pedal.width.sostenuto": {
       "probe": "jump-mark-em.ly",
