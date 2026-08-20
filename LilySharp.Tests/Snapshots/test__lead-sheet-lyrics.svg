@@ -7,19 +7,19 @@
   <rect x="0" y="0" width="119.50" height="22.81" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="265">Lyrics only</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="28.32" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="45.36" y="13.12" width="0.19" height="4.00" data-pos="0"/>
-  <text x="3.82" y="15.72" font-size="2.47" text-anchor="middle" data-pos="320">Twin</text>
-  <text x="11.42" y="15.72" font-size="2.47" text-anchor="middle" data-pos="326">kle</text>
-  <text x="18.54" y="15.72" font-size="2.47" text-anchor="middle" data-pos="330">twin</text>
-  <text x="25.65" y="15.72" font-size="2.47" text-anchor="middle" data-pos="336">kle</text>
-  <text x="30.55" y="15.72" font-size="2.47" text-anchor="middle" data-pos="342">lit</text>
-  <text x="35.62" y="15.72" font-size="2.47" text-anchor="middle" data-pos="347">tle</text>
-  <text x="42.00" y="15.72" font-size="2.47" text-anchor="middle" data-pos="351">star</text>
+  <rect x="20.66" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="33.84" y="13.12" width="0.19" height="4.00" data-pos="0"/>
+  <text x="2.95" y="15.72" font-size="2.47" text-anchor="middle" data-pos="320">Twin</text>
+  <text x="8.25" y="15.72" font-size="2.47" text-anchor="middle" data-pos="326">kle</text>
+  <text x="13.52" y="15.72" font-size="2.47" text-anchor="middle" data-pos="330">twin</text>
+  <text x="18.44" y="15.72" font-size="2.47" text-anchor="middle" data-pos="336">kle</text>
+  <text x="22.51" y="15.72" font-size="2.47" text-anchor="middle" data-pos="342">lit</text>
+  <text x="26.41" y="15.72" font-size="2.47" text-anchor="middle" data-pos="347">tle</text>
+  <text x="31.11" y="15.72" font-size="2.47" text-anchor="middle" data-pos="351">star</text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="288"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="288">Main</text>
-  <line x1="7.90" y1="15.23" x2="8.56" y2="15.23" stroke="#000000" stroke-width="0.130"/>
-  <line x1="22.18" y1="15.23" x2="22.84" y2="15.23" stroke="#000000" stroke-width="0.130"/>
-  <line x1="32.64" y1="15.23" x2="33.30" y2="15.23" stroke="#000000" stroke-width="0.130"/>
+  <line x1="5.98" y1="15.23" x2="6.44" y2="15.23" stroke="#000000" stroke-width="0.130"/>
+  <line x1="16.17" y1="15.23" x2="16.63" y2="15.23" stroke="#000000" stroke-width="0.130"/>
+  <line x1="24.02" y1="15.23" x2="24.68" y2="15.23" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

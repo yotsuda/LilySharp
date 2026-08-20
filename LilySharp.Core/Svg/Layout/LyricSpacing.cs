@@ -71,48 +71,99 @@ internal static class LyricSpacing
             return ReserveLyricWidthByColumn(
                 fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges);
 
-        var lyricsByItem = new Dictionary<int, List<LyricItem>>();
-        foreach (var lyric in lyrics)
-        {
-            if (lyric.MeasureIndex != measureIndex)
-                continue;
-            if (!lyricsByItem.TryGetValue(lyric.ItemIndex, out var list))
-                lyricsByItem[lyric.ItemIndex] = list = new List<LyricItem>();
-            list.Add(lyric);
-        }
-        if (lyricsByItem.Count == 0)
+        var lines = GroupByLine(lyrics, measureIndex, ly => ly.ItemIndex, _ => true);
+        if (lines.Count == 0)
             return springs;
 
         var result = springs.ToBuilder();
-        var lyricItems = lyricsByItem.Keys.OrderBy(i => i).ToList();
+        foreach (var (_, byCol) in lines)
+            ReserveLyricLine(result, fonts, byCol, measure.Items.Length, Edge);
+        return result.ToImmutable();
+    }
 
-        // Reserve ink across the SPANS between lyric-carrying items, exactly as the
-        // by-column variant does — NOT per adjacent item pair. A wide syllable held
-        // over following notes (a melisma) overlaps THEIR columns freely in LilyPond;
-        // only the next SYLLABLE's ink (or the barline) binds. The old per-pair form
-        // pushed the melisma's first held note out by the whole syllable width.
-        // (For two syllables on consecutive items the span is a single spring, so
-        // this is byte-identical to the per-pair form there.)
-
-        // Leading extent: the first syllable clears the start barline.
-        int firstItem = lyricItems[0];
-        BumpSpanMin(result, 0, firstItem,
-            GetLyricLeftExtent(fonts, lyricsByItem[firstItem], Edge(firstItem)) + GlyphMetrics.MinItemGap);
-
-        // Between consecutive syllables (across any held/silent items in between).
-        for (int p = 0; p + 1 < lyricItems.Count; p++)
+    /// <summary>
+    /// One lyric line's syllables per column, one entry per LINE — a verse of a voice's (or
+    /// row's) lyrics. Sorted both ways so the reservation below is deterministic.
+    /// </summary>
+    /// <remarks>
+    /// The line, not the column set, is the rod's unit: LilyPond's Hyphen_engraver lives per
+    /// Lyrics context (LILYPOND-REF: lily/hyphen-engraver.cc — one <c>hyphen_</c> chain per
+    /// engraver instance), so a LyricSpace/LyricHyphen never spans from one verse's syllable
+    /// to another's, and the connector that picks 0.45 or 0.1 is always the same line's.
+    /// Grouping ALL verses into one chain — the pre-2026-08-20 shape — let verse 1's ink be
+    /// priced against verse 2's connector.
+    /// </remarks>
+    private static SortedDictionary<(int Voice, int Verse, int Staff, bool Row),
+        SortedDictionary<int, List<LyricItem>>> GroupByLine(
+        IReadOnlyList<LyricItem> lyrics, int measureIndex,
+        System.Func<LyricItem, int> columnOf, System.Func<LyricItem, bool> include)
+    {
+        var lines = new SortedDictionary<(int, int, int, bool),
+            SortedDictionary<int, List<LyricItem>>>();
+        foreach (var lyric in lyrics)
         {
-            int a = lyricItems[p], b = lyricItems[p + 1];
+            if (lyric.MeasureIndex != measureIndex || !include(lyric))
+                continue;
+            int col = columnOf(lyric);
+            if (col < 0)
+                continue;
+            var key = (lyric.VoiceId, lyric.VerseNumber, lyric.StaffIndex, lyric.IsLyricsRow);
+            if (!lines.TryGetValue(key, out var byCol))
+                lines[key] = byCol = new SortedDictionary<int, List<LyricItem>>();
+            if (!byCol.TryGetValue(col, out var list))
+                byCol[col] = list = new List<LyricItem>();
+            list.Add(lyric);
+        }
+        return lines;
+    }
+
+    /// <summary>
+    /// One lyric line's reservations over a measure's spring chain: the leading extent to
+    /// the opening bar, the word/hyphen distance between consecutive syllables, the
+    /// trailing extent to the closing bar. Reserves across the SPANS between
+    /// syllable-carrying columns — a wide syllable held over following notes (a melisma)
+    /// overlaps THEIR columns freely in LilyPond; only the next SYLLABLE's ink binds.
+    /// Verses rod independently (one call per line) and <see cref="BumpSpanMin"/>'s
+    /// have-check makes the effective reservation their max, as separate rods would be.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN, the leading/trailing halves: LilyPond reserves NOTHING between a
+    /// syllable and a bar line (their spacing boxes never overlap in Y — LyricText even
+    /// recedes 0.2 each side, extra-spacing-height (0.2 . -0.2)) and rods the next
+    /// SYLLABLE's ink straight across the bar instead. Lily# prices measures one at a time
+    /// for breaking and laying out, so the cross-bar pair has no chain to rod over and the
+    /// reservation is cut at the bar line with <see cref="GlyphMetrics.MinItemGap"/> on
+    /// each side. The ledger point lyrics.column.word-gap.cross-barline carries the cost
+    /// (+0.54-class: 0.4 + bar ink + 0.4 against LilyPond's 0.45 spanning it); the port
+    /// would be a line-level rod in MultiStaffLayouter's rods list PLUS the same quantity
+    /// in the break gate's pricing — HANDOFF 2H holds the item.
+    /// </remarks>
+    private static void ReserveLyricLine(
+        ImmutableArray<Spring>.Builder result,
+        Rendering.ScoreTextMetrics fonts,
+        SortedDictionary<int, List<LyricItem>> byCol,
+        int endColumn,
+        System.Func<int, (double Left, double Centre)> edge)
+    {
+        var cols = new List<int>(byCol.Keys);
+
+        // Leading extent: the line's first syllable clears the start barline.
+        int first = cols[0];
+        BumpSpanMin(result, 0, first,
+            GetLyricLeftExtent(fonts, byCol[first], edge(first)) + GlyphMetrics.MinItemGap);
+
+        // Between consecutive syllables (across any held/silent columns in between).
+        for (int p = 0; p + 1 < cols.Count; p++)
+        {
+            int a = cols[p], b = cols[p + 1];
             BumpSpanMin(result, a + 1, b,
-                CalculateLyricDistance(fonts, lyricsByItem[a], lyricsByItem[b], Edge(a), Edge(b)));
+                CalculateLyricDistance(fonts, byCol[a], byCol[b], edge(a), edge(b)));
         }
 
-        // Trailing extent: the last syllable clears the end barline.
-        int lastItem = lyricItems[^1];
-        BumpSpanMin(result, lastItem + 1, measure.Items.Length,
-            GetLyricRightExtent(fonts, lyricsByItem[lastItem], Edge(lastItem)) + GlyphMetrics.MinItemGap);
-
-        return result.ToImmutable();
+        // Trailing extent: the line's last syllable clears the end barline.
+        int last = cols[^1];
+        BumpSpanMin(result, last + 1, endColumn,
+            GetLyricRightExtent(fonts, byCol[last], edge(last)) + GlyphMetrics.MinItemGap);
     }
 
     /// <summary>
@@ -181,44 +232,21 @@ internal static class LyricSpacing
         if (cols == 0 || springs.Length != cols + 1)
             return springs;
 
-        var lyricsByCol = new Dictionary<int, List<LyricItem>>();
-        foreach (var ly in lyrics)
+        int ColumnOf(LyricItem ly)
         {
-            if (ly.MeasureIndex != measureIndex || !include(ly))
-                continue;
-            int col = -1;
             for (int c = 0; c < cols; c++)
-                if (columnTimings[c].Equals(ly.Timing)) { col = c; break; }
-            if (col < 0)
-                continue;
-            if (!lyricsByCol.TryGetValue(col, out var list))
-                lyricsByCol[col] = list = new List<LyricItem>();
-            list.Add(ly);
+                if (columnTimings[c].Equals(ly.Timing))
+                    return c;
+            return -1;
         }
-        if (lyricsByCol.Count == 0)
+
+        var lines = GroupByLine(lyrics, measureIndex, ColumnOf, include);
+        if (lines.Count == 0)
             return springs;
 
         var result = springs.ToBuilder();
-        var lyricCols = lyricsByCol.Keys.OrderBy(c => c).ToList();
-
-        // Leading extent: the first syllable clears the start barline.
-        int firstCol = lyricCols[0];
-        BumpSpanMin(result, 0, firstCol,
-            GetLyricLeftExtent(fonts, lyricsByCol[firstCol], Edge(firstCol)) + GlyphMetrics.MinItemGap);
-
-        // Between consecutive syllables (across any note/chord-only columns in between).
-        for (int p = 0; p + 1 < lyricCols.Count; p++)
-        {
-            int a = lyricCols[p], b = lyricCols[p + 1];
-            BumpSpanMin(result, a + 1, b,
-                CalculateLyricDistance(fonts, lyricsByCol[a], lyricsByCol[b], Edge(a), Edge(b)));
-        }
-
-        // Trailing extent: the last syllable clears the end barline.
-        int lastCol = lyricCols[^1];
-        BumpSpanMin(result, lastCol + 1, cols,
-            GetLyricRightExtent(fonts, lyricsByCol[lastCol], Edge(lastCol)) + GlyphMetrics.MinItemGap);
-
+        foreach (var (_, byCol) in lines)
+            ReserveLyricLine(result, fonts, byCol, cols, Edge);
         return result.ToImmutable();
     }
 
@@ -316,13 +344,43 @@ internal static class LyricSpacing
     }
 
     /// <summary>
-    /// Calculates the minimum distance between two notes based on their lyrics.
+    /// LyricSpace's minimum-distance — the ink-to-ink floor between two WORDS.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/separation-item.cc:49-70 set_distance()
-    ///
-    /// The distance is: prevLyricRightExtent + nextLyricLeftExtent + padding
-    /// where each extent is half the lyric text width (centered under note).
+    /// LILYPOND-REF: scm/define-grobs.scm LyricSpace <c>(minimum-distance . 0.45)</c>.
+    /// lily/hyphen-engraver.cc:107 makes a LyricSpace spanner wherever a syllable follows
+    /// with no hyphen between; lily/lyric-hyphen.cc:163-179 <c>set_spacing_rods</c> turns it
+    /// into a rod of minimum-distance + <c>bounds_protrusion</c>, i.e. ink edge to ink edge.
+    /// Measured: probe LCW's word gap 6.322649 = advance("mum") 5.872649 + 0.45, to the digit.
+    /// </remarks>
+    internal const double WordSpaceMinimum = 0.45;
+
+    /// <summary>
+    /// LyricHyphen's minimum-distance — the floor between two syllables of ONE word.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm LyricHyphen <c>(minimum-distance . 0.1)</c>, through
+    /// the same <c>set_spacing_rods</c>. The dash itself claims NO space mid-line — print
+    /// returns empty when it cannot fit (lily/lyric-hyphen.cc:108-121; probe LCH dumps all six
+    /// mid-line hyphens with empty stencils) — so the rod is the whole story. Measured: LCH's
+    /// hyphen gap 5.972649 = the same advance + 0.1, a 0.35 fork on one changed connector.
+    /// </remarks>
+    internal const double HyphenSpaceMinimum = 0.1;
+
+    /// <summary>
+    /// The minimum distance between two syllable-carrying columns of ONE lyric line: the
+    /// syllables' reaches toward each other plus LilyPond's word or hyphen space.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-hyphen.cc:163-179 <c>Lyric_hyphen::set_spacing_rods</c> —
+    /// <c>minimum-distance + bounds_protrusion()</c>, where the protrusion is each bound's
+    /// ink toward the other, converted to column frame by <c>Rod::add_to_cols</c> (the
+    /// syllable's alignment offset — the edge pairs here). Which minimum applies is the
+    /// PREVIOUS syllable's connector: a hyphen after it makes the spanner a LyricHyphen
+    /// (0.1), anything else — including an extender, which suppresses nothing — leaves the
+    /// LyricSpace (0.45). ⚠️ Callers pass ONE lyric line's syllables (hyphen-engraver is
+    /// per Lyrics context); a mixed-verse list would let one verse's connector price
+    /// another verse's ink.
     /// </remarks>
     internal static double CalculateLyricDistance(
         Rendering.ScoreTextMetrics fonts,
@@ -335,18 +393,10 @@ internal static class LyricSpacing
         double prevRight = GetLyricRightExtent(fonts, prevLyrics, prevAlignmentEdge);
         double nextLeft = GetLyricLeftExtent(fonts, nextLyrics, nextAlignmentEdge);
 
-        // LILYSHARP-OWN: minimum INK gap between syllables. ⚠️ The rationale this
-        // carried ("headroom for the renderer's actual serif face ... we cannot
-        // measure it at layout time") is FALSE since the bundled-face port: the very
-        // functions below measure the real face through fonts.Advance. LilyPond's
-        // counterpart is the lyric-word space through LyricSpace / separation-item's
-        // set_distance, unmeasured here — HANDOFF 2H names this constant, with the
-        // 3.2 below, as the lyric column spacing's two remaining inventions; both go
-        // together, from a ledger pair, in a dedicated session (every lyric book's
-        // columns move).
-        const double lyricPadding = 1.0;  // staff spaces
+        bool hyphen = prevLyrics is { Count: > 0 }
+            && prevLyrics.TrueForAll(l => l.ConnectorType == LyricConnectorType.Hyphen);
 
-        return prevRight + nextLeft + lyricPadding;
+        return prevRight + nextLeft + (hyphen ? HyphenSpaceMinimum : WordSpaceMinimum);
     }
 
     /// <summary>
@@ -406,17 +456,22 @@ internal static class LyricSpacing
         return maxExtent;
     }
 
-    // Real serif-regular advances (TextFontMetrics, from the bundled face's own outlines)
-    // — but ⚠️ LILYSHARP-OWN at the WRONG SIZE: 3.2 ss is the pre-em-correction lyric
-    // font, while the syllable is DRAWN at LyricTextFontSize = 2.469417, so every
-    // column reservation is ~30% wider than the drawn ink (found 2026-08-20 while
-    // diagnosing the row-vs-sings X drift; HANDOFF 2H carries the island). It stays
-    // until the LP column-spacing pair lands, because shrinking it alone re-tunes
-    // every lyric book's columns against an invented padding (the 1.0 above) instead
-    // of against LilyPond.
-    // (The 3.2 replaced a crude 3-bucket table that under-measured capitals — "Up"
-    // by ~0.7 ss — so the springs reserved too little and wide syllables overlapped
-    // their neighbours in lyric rows.)
+    // The syllable's width as spacing sees it: the ADVANCE at the DRAWN lyric size.
+    // LILYPOND-REF: lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil — a
+    // text stencil's X extent is Pango's LOGICAL rectangle (the advance, quantised to
+    // whole 1200-dpi pixels), and that stencil extent is what joins the paper column's
+    // spacing boxes and the LyricSpace rod's bounds_protrusion. fonts.Advance carries the
+    // same quantisation, so the two engines read one number: probe LCW dumps 5.872649 for
+    // "mum" and lyrics.column.word-gap closes to the ninth digit on it. (The 3.2-era
+    // readings were 0.0012 em wider than LilyPond's — that offset was the QUANTISATION
+    // measured at the wrong size, not a side bearing: the ledger pair's fork ratio 1.2941
+    // vs the size ratio 1.2959 is the same fact from the outside.)
+    // ⚠️ Sized at EngravingDefaults.LyricTextFontSize — the size the syllable is DRAWN at.
+    // This was 3.2, the pre-em-correction lyric size, until 2026-08-20, so every column
+    // reservation was ~30% wider than the drawn ink; the lyrics.column.* pair is what
+    // pinned the size to the drawn em. (The 3.2 had itself replaced a crude 3-bucket table
+    // that under-measured capitals — "Up" by ~0.7 ss — so the springs reserved too little
+    // and wide syllables overlapped.)
     private static double EstimateLyricTextWidth(Rendering.ScoreTextMetrics fonts, string text)
-        => fonts.Advance(text, 3.2, Rendering.TextRole.LyricText);
+        => fonts.Advance(text, EngravingDefaults.LyricTextFontSize, Rendering.TextRole.LyricText);
 }

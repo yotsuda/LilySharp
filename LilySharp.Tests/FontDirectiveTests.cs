@@ -539,16 +539,25 @@ public class FontDirectiveTests
     [Fact]
     public void ANamedFaceMovesThePage_NotOnlyTheFontFamilyAttribute()
     {
+        // ⚠️ The syllables must BIND at the drawn size for the face to be observable:
+        // when the lyric column port landed (2026-08-20, ledger lyrics.column.*), "la"
+        // fell out of the binding regime — its ink + the word space 0.45 sits under the
+        // natural quarter gap in EITHER face, so the page stopped moving and this case
+        // went red for a regime reason, not a binding one (RULES 5.0 trap 7: assert the
+        // regime, or the case silently stops measuring). "mum" binds in both faces and
+        // the two faces disagree about its width, which is what the case needs.
+        string book = Book.Replace("la la la la", "mum mum mum mum");
+
         // Everything that is not geometry: the face the reader is told to use, and the
         // source offsets, which differ because the two books are not the same length.
         static string GeometryOnly(string svg) => Regex.Replace(
             svg, " (font-family=\"[^\"]*\"|data-pos=\"[^\"]*\"|data-alt=\"[^\"]*\")", "");
 
-        string bound = Svg(BoundLyrics + Book);
-        string plain = Svg(Book);
+        string bound = Svg(BoundLyrics + book);
+        string plain = Svg(book);
 
         // The page holds the syllables this case is about — an empty comparison would pass.
-        Assert.Contains(">la<", plain, StringComparison.Ordinal);
+        Assert.Contains(">mum<", plain, StringComparison.Ordinal);
         // The attribute IS emitted, so a failure below cannot be "the binding did nothing".
         Assert.Contains("TeX Gyre Heros", bound, StringComparison.Ordinal);
 
