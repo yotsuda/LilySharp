@@ -19,6 +19,49 @@
 ---
 
 
+## 以下は第220セッションの経緯
+
+最終更新 第220セッション＝**長い委任便**——Marketplace 下拵え（publisher `yotsuda` 統一・8 VSIX 実証・**PAT 待ちで保留**）→ §2F ⒢ 両方 → 小節番号のリードシート浮き（ユーザー報告・0 ちょうどで閉幕）→ **ペダル島 完結**（text 語ごと 1 スパナ・mixed 1 群 1 解・系またぎ×増分鍵の毒→修理）→ **音節プロファイルの輪郭化**（台帳唯一の OPEN を閉じ、alloc の代償は 3 段返済＋perf 島へ分解起票）。台帳は **546 点・うち今日 0.000000 ちょうどが 9 点**。マーク＋テンポの縦積みは §3 に決定（現状維持）。
+✅ **ユーザー報告「小節番号の y 位置が高い」は同便で特定・修理**（`d7098514`→`fe43b73e`）: 素の本は LP 一致だったが、**リードシート（コード行が先頭）では帯 1 本分浮いていた**——`BarNumberLayout.YUp` が system 天辺基準で、行が先頭だと天辺＝帯の上端。LP は move-to-extremal-staff で X が交わる最上段要素に付け替え、行頭の番号は左マージンに垂れて行と X が交わらないので**譜に留まりコード行の下**（実測: インク底 2.05+padding 1.0＝3.050000 ちょうど・行があっても不動）。`BarNumberEngraver.AnchorStaff`（最上段の spaceable 譜・stacker の tracker 選択と 1 軒共有）に載せ替え、台帳 `barnumber.chord-row.staff-to-ink-bottom` **+5.945 → 0.000000**（両側 book 体項なし）。射程はリードシート 2 冊（amazing-grace/greensleeves・番号が帯 1 本分下がる）のみ・snapshot 不動。⚠️ **X 交差判定そのものは未移植**——period>0 の行中番号が行インクの真下に来る形だけが要る形で、probe から始めること（台帳 why・remark に記載）。
+
+★ **開始時裏取り**: リリース直後の続き便（§0 の全数はリリース便で実施済み・HEAD `d910bf07`）。この便の開始時 suite は Windows 5673/0/4 相当（変更前）。
+終了時 **未追跡 0・作業ツリー項目 0**・suite **Windows 5677/0/4（台帳 +4 点でテスト数も +4）・Linux（この機械の WSL）5677/0/4＝両 OS 完全緑**・snapshot **220 枚中 4 枚だけ動き再承認**（pedal-below-lyrics／pedal-change／pedal-note-anchor／03-piano）・追跡コーパス 569 冊・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① publisher 統一（`cc02c286`+`5c2ee91a`+`c6640c0f`・push 済み） | docs/スクリプト/package.json の `ytsuda`→`yotsuda`・.gitignore | 拡張 ID が `yotsuda.lilysharp` に（github と同綴り）。旧 ID はこの PC からアンインストール済み・新 VSIX を install 済み |
+| ② 台帳起票（`2afd1b50`） | probes/pedal-lyric-stack.ly＋4 点（PLC/PLB/PLT/PLD・LP 2.26.0 ローカル実測） | Lily# は 4 冊とも同じ 5.864960＝3 種のインクに盲目、残差が桁まで分解 |
+| ③ 歌詞床（`14b2ffcd`） | LyricEngraver の `-1` family が anchor 譜自身の Down を読む（系ごと・`LastSpaceableStaffOf` 1 軒） | dynamic 点 −1.668349→+0.024651・実コーパス 2 冊（amazing-grace/greensleeves・締まる向き）・snapshot 不動 |
+| ④ ペダル括弧（`69ba0d20`） | 族ごと系ごとに skyline 構築時に解いて seed（`SolveAndSeed`・解は `StaffSkylineSet.PedalLines` で draw へ） | PLB −1.800155→−0.000155・snapshot 4 枚のみ・LP 実測 5.295＝3.045+1.2+1.05 に桁一致 |
+| ⑤ 小節番号のリードシート浮き（`d7098514`→`fe43b73e`） | anchor を「最上段の spaceable 譜」へ（`BarNumberEngraver.AnchorStaff`・stacker と 1 軒） | 台帳 +5.945→**0.000000 ちょうど**・射程 2 冊（ag/gs の番号が帯 1 本分下がる） |
+| ⑥ text スタイルのペダル語（`3e21dfa9`） | **語ごとに 1 スパナ**（LP の align-engraver 実装どおり）・pointwise 輪郭（pedal グリフ 3 種を抽出器へ追加）・2 段階（支え+1.2 → 衝突 0.46）・解は `StaffSkylineSet.PedalRows` で MusicMarkEngraver へ | 台帳 6 点: Ped./★ **0.000000 ちょうど**×2・3 段 −4e-5/+4.5e-3/+4.4e-3（輪郭スライバ族）・PLT 歌詞床 −2.448155→+0.003845・射程 pedal-text 1 冊のみ |
+| ⑦ mixed スタイル（`35a95758`→`ec3c3363`＝**ペダル島 完結**） | 語は括弧と**同じ群の要素**（LP 実測: 3 grob が同一 relY）＝群 profile に語の輪郭を merge して 1 回で解き、線は PedalLines・語は PedalRows で両読者へ | 台帳 3 点: 語 5.997→**0.000000**・線 5.997→**0.000000**・歌詞床 −2.502155→**−0.000155**（対照と同値）・射程 pedal-mixed 1 冊のみ |
+
+- **Marketplace（保留・ユーザー PC 復帰待ち）**: publisher **`yotsuda` は登録済み・拡張 0 件**（`ytsuda` も本人のものだが github と綴りが揃う側を採用＝ユーザー決定）。`publish-marketplace.ps1` のドライランで **8 target 全 VSIX 成功**（win x64/arm64・linux x64/arm64/armhf/alpine・mac x64/arm64＝自己完結 44〜52 MB）。**残る 1 手はユーザーの PAT**: `https://dev.azure.com/ytsuda/_usersSettings/tokens` に**既存トークン `vsce-marketplace-publish`**（Marketplace Manage・Org=ytsuda・期限 2026/10/5）があるので **Regenerate → `npx @vscode/vsce login yotsuda`**（値は二度と表示されないため再生成が早い。元の開発機の `%USERPROFILE%\.vsce` コピーでも可）。login 後は `./publish-marketplace.ps1 -Publish` で 8 本公開 → Marketplace 検索確認。⚠️ **この回線は IPv6 経路で dev.azure.com/marketplace が TLS で死ぬ**（IPv4 は通る・実測）——ユーザーが IPv6 を無効化して回避中。vsce をスクリプト外で使うなら `NODE_OPTIONS=--dns-result-order=ipv4first`。
+- **⒢ の閉じ方は §2F の ✅ 項に**。同便の続きで **PLT（text スタイル）と ⒝（段間隔）も閉じた**——段は語の輪郭から定数なしで出る（1.961/2.443 は各行のインク+0.46 だった）。**pedal-rows.ly の 9 桁 dump が旧 SVG 読みの 3 段値を 0.0939 stale と暴いた**（Lily# が先に dump と一致していた＝計器の勝ち）。残債: dynamic +0.024651 box-vs-outline（OPEN）／系またぎ括弧×増分鍵（未測定）。**mixed も同便で移した**（⑦）——ペダルの 3 スタイル全部が skyline 構築時の 1 計算に載り、下段スタックの旧 below-mark 基線を読むペダルは無くなった（nav マーク等は従来どおり）。
+- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（⒢・小節番号とも同便で閉じた）: ⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D）／小粒: twin の歌詞行・`lines` twin 未輸出・**マークの X（LP は箱左端を拍子記号位置に・Lily# は行頭寄り・差 約2 ss＝§3 第220 の副産物・対から起票）**。
+
+> ## ★★ 骨 1＝**シルエット読みは anchor の Y を打ち消していた——読みを変えるなら frame の相棒も変わる**
+> `-1` family を per-staff Down に切り替えた最初の一手は hara-kiri の本で**ちょうど system 間隔 1 本分**
+> 回帰した。旧式は `newY = −(anchorBase+…+position)` の anchorBase が gap[0] の引き算と相殺して
+> 「anchorBase が系ごとに間違っていても効かない」形だった——**per-staff にすると相殺が消える**。
+> 正しい形は LP と同じ「**その系の** last_spaceable_line」＝`LastSpaceableStaffOf`（1 軒・
+> BuildStaffAnchorTables も同じ関数を読む）。**打ち消しに守られていた誤りは、読みを直すと露出する。**
+
+> ## ★★ 骨 2＝**ペダルは族で 1 本——括弧ごとに解くと change の対が裂ける**
+> 最初の実装は括弧単位で解いて seed し、abutting な 2 本目が 1 本目の ink を避けて 1 段落ちた
+> （pedal-change で目視）。LP は族の全括弧を **1 つの SustainPedalLineSpanner** に入れる＝系ごと族ごとに
+> Y は 1 つ。**grob の単位はスパナの単位で、描画要素の単位ではない。**
+
+> ## ★ 骨 3＝**stale バイナリの絵で 2 回誤診しかけた**
+> `--no-build` は「最後に誰がどこを build したか」を知らない。pre/post 比較で 1 回（両方 post の絵）、
+> 修理後の検分で 1 回（修理前の絵）。**比較の絵を作る前に、その exe を作った build を同じ手で打つ。**
+
+---
+
+
 ## 以下は第219セッションの経緯
 
 最終更新 第219セッション＝**v0.3.0 を出荷した便**——⓪ 拡張の再配備 → push 13 → CI 緑 → タグ `v0.3.0` → Release workflow 初実走が一発で全 job 緑・**GitHub Release v0.3.0 成立**（コード変更はスクリプト防御 1 行のみ）。

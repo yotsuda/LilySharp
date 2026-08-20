@@ -149,6 +149,48 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第222セッション＝**§2H「歌詞列間隔の発明 2 つ」を専用便で閉じた**——対の起票（probe `lyric-column-spacing.ly`・5 冊: LCW の小節内 vs 小節またぎ＝**LP 恒等**・LCN/LCC＝**LP 恒等**・LCH＝connector 1 変数 fork 0.35）→ 移植＝**音節は描画サイズ（2.469417）の advance・語間 0.45／ハイフン 0.1 を `ConnectorType` が選ぶ・予約は歌詞 LINE ごと**（`c7beded3`）→ **対の食い違いが第2の欠陥を出した**（§5.0-4 の教科書形）＝**ペダル支えの集合違い**（LP は「そのペダル自身の列＋staff」だけを支えに acknowledge・Lily# は staff 全 profile を読んでいた）→ 同便で移植（`SupportProfile`／`VerticalSkyline.ClippedToRange`・`7ec437de`）。台帳 **553 点**（+6）: word/hyphen/no-bind/control **exact**・narrow **+0.034143307＝Pango pixel 1 個ちょうど**（顔の kern データ差＝§3 の計量双子族の**水平初 member**）・cross-barline **+0.540000000 ちょうど＝named OPEN**（§2H に移植の形まで記載）。**第221 ⓐ の音節 X ドリフトはこの移植で解消**（row==sings・音符格子まで F2 同一）。
+
+★ **開始時裏取り**: HEAD `15fbbf33`・未 push 0・未追跡 0/木 0・Windows suite **5693/0/4**・CI 全緑（32331566865 success を読んだ）・台帳 547 点・追跡コーパス 569 冊・Core 0 警告。
+終了時 **未追跡 0・木 0**・commit 4 本（`b5a973ee` 起票 → `c7beded3` 列移植 → `7ec437de` ペダル支え → handoff）・suite **Windows 5699/0/4・Linux（この機械の WSL）5699/0/4＝両 OS 完全緑**・snapshot **220 枚中 18 枚だけ動き再承認**（列移植・全部歌詞本・全部締まる向き。ペダル支え移植は snapshot 0 枚＝露出 regime の fixture が無い）・台帳 553 点・追跡コーパス 569 冊・Core 0 警告。push とCI はこの handoff commit の後に実施（§1 のこの行は push 前に書いた——`git log origin/master` で裏取りすること）。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① 起票（`b5a973ee`） | probes/lyric-column-spacing.ly＋台帳 6 点（LP 2.26.0 実測: word 6.322649＝ink 5.872649+0.45・hyphen −0.35 ちょうど・小節内/またぎ恒等・LCN==LCC 桁一致） | 「LP は小節線に何も予約しない」「hyphen は 0.1」「dash は場所を取らない」を全部実測で固定。LCN の第1測定（"nun"）は regime 外し＝probe header に自白 |
+| ② 列移植（`c7beded3`） | EstimateLyricTextWidth＝描画サイズの advance（Pango LOGICAL rect・量子化込み）・CalculateLyricDistance＝ConnectorType が 0.45/0.1・GroupByLine/ReserveLyricLine＝LINE 単位（verse 越しの connector 誤請求を封じる） | **18/220 snapshot**（全部歌詞本・"la" の列 step 3.80→3.00＝自然幅）・word/hyphen/no-bind exact・FontDirective の 1 case は regime 落ち（"la"→"mum"・罠7 の族） |
+| ③ ペダル支え（`7ec437de`） | SupportProfile＝staff 床 2.05＋inside profile を「そのペダルの列 span」に clip（text 語＝自列のみ・bracket/mixed＝engage..release）。ClippedToRange が新 primitive | 台帳 5 点が桁まで復帰（3 点 0.000000000・2 点 −0.000155050）・snapshot 0 枚・★（release star）と bracket 族は終始不動＝in-book 対照 |
+
+- **台帳の帳尻**: lyrics.column 6 点＝5 exact + cross-barline 0.540000000（named・§2H）／narrow +0.034143307＝**Schola "ru" kern +20 vs C059 +18**（fontTools GPOS 実測）が hinting で pixel 1 個に増幅（33.56→34px vs 33.41→33px・mum/nu は kern 対なしで exact）／band-floor ink-over-band −0.0846→**−0.092054432＝X スリバーが消えて純粋な j-dot 顔差だけに**（staff-to-lyric と同数）。
+- **alloc の代価（実測・▶ にも掛かる）**: perf-lyrplain1k **打鍵 405.2→372.5 MB（−8%）**・full 741.9／perf-plain1k 694.8/45.3＝桁まで不動。第221 の「帯 profile の毎打鍵構築」の +10% は列予約の縮小で一部返った形。
+- **⑸ ★★★ 次に触るなら＝残債**: **小節線またぎの歌詞 rod**（§2H・+0.54/小節線・rods リスト＋折りの門の両側＝1 リスト規律）／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★★ 骨 1＝**予測の外れは 2 段に分解できた——「ink を測れ」は誤りで、外れの中身が住所だった**
+> 起票は narrow の fork 比 1.2941 から「LP は ink・Lily# は advance」と書いた。移植で word が
+> exact になった瞬間その説明は死に（LP の LyricText の X extent は Pango **LOGICAL** rect＝
+> advance。コード自身の InkX 削除記録が言っていた）、残った +0.034143307 は **Pango pixel
+> 1 個ちょうど**＝サイズ差でも ink 差でもなく**顔の kern データ差**（"ru" 20 vs 18）が
+> per-glyph hinting で増幅されたもの。**強い言明は 1 つずつ殺して残った桁が犯人を名指す**。
+
+> ## ★★ 骨 2＝**読みを正すと盲目が無料にしていた乖離が課金される（第221 骨 2 の再演・支えの集合版）**
+> 列が LP 幅に締まった瞬間、Ped. の左張り出しが第1小節の c の ink に届いて +0.157258364。
+> 犯人は解く場所ではなく**支えの集合**（LP は acknowledge した列だけ・Lily# は全 profile）で、
+> それを名指したのは **in-book 対照＝★が 1 桁も動かなかったこと**。widened 列は 214 便のあいだ
+> この違いを無料にしていた。
+> ⚠️ **同形はまだある**: SupportProfile の named approximation（span 内の非列 ink——タイの
+> 垂れ・script——は LP の列リスト支えなら数えない）。測る本が出たらそこが次の露出点。
+
+> ## ★ 骨 3＝**対の片側だけ書き換える罠を、起票の同便でまた踏んで拾った（band-floor の前科の小節線版）**
+> LCH の LP 側第1稿は全 7 gap をハイフンで綴り、.lys 側は小節境界で語が切れていた——
+> 対が 1 connector ずれた別音楽。Lily# 側を測る前に「.lys の綴りは何か」を見て直した。
+> **対を作ったら、まず両側の音高・小節線・そして今回は connector を突き合わせる**（§5.0 の
+> 検算リストに connector が加わった形）。
+
+---
+
+## 以下は第221セッションの経緯
+
 最終更新 第221セッション＝**残債⒤「歌詞帯のスカラー床が X 盲目」を専用便で閉じた**——対の起票（probe `lyric-band-x.ly`・LBL/LBR＝g''' の小節位置だけが違う 1 変数 fork・LBS＝出荷紙の番人）→ **対が対でなかった**（双子の form 素参照が section マークを刷り、LP 側の本には無い——§5.0 の罠を起票の同便で踏み、診断自身の falsifier が拾った）→ 対を修理して再起票 → 移植＝**帯の最小 profile が paging skyline の要素になり、床が X で読む**（スカラー床は CreatePages / PageLayouter の両経路から消えた）。台帳 **547 点**（+5）・`lyrics.band-floor.ink-past-band.system-gap` は **0.000000000 ちょうど**。**続き便（同セッション・ユーザーの「有利なら着手」委任）で j-dot も解決**＝顔のデータ差と確定（下の ⓑ）。X ドリフト（ⓐ）は温かさの差が無いので次便へ。
 
 ★ **開始時裏取り**: HEAD `2dc943e2`・未 push 0・未追跡 0/木 0・Windows suite **5687/0/4**（⚠️ 引継ぎの「5677」「台帳 546」はどちらも誤記＝実測 5687・542。台帳は直近 4 commit とも 542 で数え直して確認）・CI 全緑・Core 0 警告・追跡コーパス 569 冊。
@@ -183,48 +225,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > ## ★ 骨 3＝**禁止の札と自分の操作を 1 行で照合してから進む**（RULES §5.1）
 > `PagingAugmentProgram` の「バッチ化するな」は既存 merge の**再結合**の禁止。末尾に新 family を
 > 1 つ足すのは別の操作で、鍵を building の数値列にすれば増分 memo とも両立する（program 不変→hit）。
-
----
-
-## 以下は第220セッションの経緯
-
-最終更新 第220セッション＝**長い委任便**——Marketplace 下拵え（publisher `yotsuda` 統一・8 VSIX 実証・**PAT 待ちで保留**）→ §2F ⒢ 両方 → 小節番号のリードシート浮き（ユーザー報告・0 ちょうどで閉幕）→ **ペダル島 完結**（text 語ごと 1 スパナ・mixed 1 群 1 解・系またぎ×増分鍵の毒→修理）→ **音節プロファイルの輪郭化**（台帳唯一の OPEN を閉じ、alloc の代償は 3 段返済＋perf 島へ分解起票）。台帳は **546 点・うち今日 0.000000 ちょうどが 9 点**。マーク＋テンポの縦積みは §3 に決定（現状維持）。
-✅ **ユーザー報告「小節番号の y 位置が高い」は同便で特定・修理**（`d7098514`→`fe43b73e`）: 素の本は LP 一致だったが、**リードシート（コード行が先頭）では帯 1 本分浮いていた**——`BarNumberLayout.YUp` が system 天辺基準で、行が先頭だと天辺＝帯の上端。LP は move-to-extremal-staff で X が交わる最上段要素に付け替え、行頭の番号は左マージンに垂れて行と X が交わらないので**譜に留まりコード行の下**（実測: インク底 2.05+padding 1.0＝3.050000 ちょうど・行があっても不動）。`BarNumberEngraver.AnchorStaff`（最上段の spaceable 譜・stacker の tracker 選択と 1 軒共有）に載せ替え、台帳 `barnumber.chord-row.staff-to-ink-bottom` **+5.945 → 0.000000**（両側 book 体項なし）。射程はリードシート 2 冊（amazing-grace/greensleeves・番号が帯 1 本分下がる）のみ・snapshot 不動。⚠️ **X 交差判定そのものは未移植**——period>0 の行中番号が行インクの真下に来る形だけが要る形で、probe から始めること（台帳 why・remark に記載）。
-
-★ **開始時裏取り**: リリース直後の続き便（§0 の全数はリリース便で実施済み・HEAD `d910bf07`）。この便の開始時 suite は Windows 5673/0/4 相当（変更前）。
-終了時 **未追跡 0・作業ツリー項目 0**・suite **Windows 5677/0/4（台帳 +4 点でテスト数も +4）・Linux（この機械の WSL）5677/0/4＝両 OS 完全緑**・snapshot **220 枚中 4 枚だけ動き再承認**（pedal-below-lyrics／pedal-change／pedal-note-anchor／03-piano）・追跡コーパス 569 冊・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① publisher 統一（`cc02c286`+`5c2ee91a`+`c6640c0f`・push 済み） | docs/スクリプト/package.json の `ytsuda`→`yotsuda`・.gitignore | 拡張 ID が `yotsuda.lilysharp` に（github と同綴り）。旧 ID はこの PC からアンインストール済み・新 VSIX を install 済み |
-| ② 台帳起票（`2afd1b50`） | probes/pedal-lyric-stack.ly＋4 点（PLC/PLB/PLT/PLD・LP 2.26.0 ローカル実測） | Lily# は 4 冊とも同じ 5.864960＝3 種のインクに盲目、残差が桁まで分解 |
-| ③ 歌詞床（`14b2ffcd`） | LyricEngraver の `-1` family が anchor 譜自身の Down を読む（系ごと・`LastSpaceableStaffOf` 1 軒） | dynamic 点 −1.668349→+0.024651・実コーパス 2 冊（amazing-grace/greensleeves・締まる向き）・snapshot 不動 |
-| ④ ペダル括弧（`69ba0d20`） | 族ごと系ごとに skyline 構築時に解いて seed（`SolveAndSeed`・解は `StaffSkylineSet.PedalLines` で draw へ） | PLB −1.800155→−0.000155・snapshot 4 枚のみ・LP 実測 5.295＝3.045+1.2+1.05 に桁一致 |
-| ⑤ 小節番号のリードシート浮き（`d7098514`→`fe43b73e`） | anchor を「最上段の spaceable 譜」へ（`BarNumberEngraver.AnchorStaff`・stacker と 1 軒） | 台帳 +5.945→**0.000000 ちょうど**・射程 2 冊（ag/gs の番号が帯 1 本分下がる） |
-| ⑥ text スタイルのペダル語（`3e21dfa9`） | **語ごとに 1 スパナ**（LP の align-engraver 実装どおり）・pointwise 輪郭（pedal グリフ 3 種を抽出器へ追加）・2 段階（支え+1.2 → 衝突 0.46）・解は `StaffSkylineSet.PedalRows` で MusicMarkEngraver へ | 台帳 6 点: Ped./★ **0.000000 ちょうど**×2・3 段 −4e-5/+4.5e-3/+4.4e-3（輪郭スライバ族）・PLT 歌詞床 −2.448155→+0.003845・射程 pedal-text 1 冊のみ |
-| ⑦ mixed スタイル（`35a95758`→`ec3c3363`＝**ペダル島 完結**） | 語は括弧と**同じ群の要素**（LP 実測: 3 grob が同一 relY）＝群 profile に語の輪郭を merge して 1 回で解き、線は PedalLines・語は PedalRows で両読者へ | 台帳 3 点: 語 5.997→**0.000000**・線 5.997→**0.000000**・歌詞床 −2.502155→**−0.000155**（対照と同値）・射程 pedal-mixed 1 冊のみ |
-
-- **Marketplace（保留・ユーザー PC 復帰待ち）**: publisher **`yotsuda` は登録済み・拡張 0 件**（`ytsuda` も本人のものだが github と綴りが揃う側を採用＝ユーザー決定）。`publish-marketplace.ps1` のドライランで **8 target 全 VSIX 成功**（win x64/arm64・linux x64/arm64/armhf/alpine・mac x64/arm64＝自己完結 44〜52 MB）。**残る 1 手はユーザーの PAT**: `https://dev.azure.com/ytsuda/_usersSettings/tokens` に**既存トークン `vsce-marketplace-publish`**（Marketplace Manage・Org=ytsuda・期限 2026/10/5）があるので **Regenerate → `npx @vscode/vsce login yotsuda`**（値は二度と表示されないため再生成が早い。元の開発機の `%USERPROFILE%\.vsce` コピーでも可）。login 後は `./publish-marketplace.ps1 -Publish` で 8 本公開 → Marketplace 検索確認。⚠️ **この回線は IPv6 経路で dev.azure.com/marketplace が TLS で死ぬ**（IPv4 は通る・実測）——ユーザーが IPv6 を無効化して回避中。vsce をスクリプト外で使うなら `NODE_OPTIONS=--dns-result-order=ipv4first`。
-- **⒢ の閉じ方は §2F の ✅ 項に**。同便の続きで **PLT（text スタイル）と ⒝（段間隔）も閉じた**——段は語の輪郭から定数なしで出る（1.961/2.443 は各行のインク+0.46 だった）。**pedal-rows.ly の 9 桁 dump が旧 SVG 読みの 3 段値を 0.0939 stale と暴いた**（Lily# が先に dump と一致していた＝計器の勝ち）。残債: dynamic +0.024651 box-vs-outline（OPEN）／系またぎ括弧×増分鍵（未測定）。**mixed も同便で移した**（⑦）——ペダルの 3 スタイル全部が skyline 構築時の 1 計算に載り、下段スタックの旧 below-mark 基線を読むペダルは無くなった（nav マーク等は従来どおり）。
-- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（⒢・小節番号とも同便で閉じた）: ⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D）／小粒: twin の歌詞行・`lines` twin 未輸出・**マークの X（LP は箱左端を拍子記号位置に・Lily# は行頭寄り・差 約2 ss＝§3 第220 の副産物・対から起票）**。
-
-> ## ★★ 骨 1＝**シルエット読みは anchor の Y を打ち消していた——読みを変えるなら frame の相棒も変わる**
-> `-1` family を per-staff Down に切り替えた最初の一手は hara-kiri の本で**ちょうど system 間隔 1 本分**
-> 回帰した。旧式は `newY = −(anchorBase+…+position)` の anchorBase が gap[0] の引き算と相殺して
-> 「anchorBase が系ごとに間違っていても効かない」形だった——**per-staff にすると相殺が消える**。
-> 正しい形は LP と同じ「**その系の** last_spaceable_line」＝`LastSpaceableStaffOf`（1 軒・
-> BuildStaffAnchorTables も同じ関数を読む）。**打ち消しに守られていた誤りは、読みを直すと露出する。**
-
-> ## ★★ 骨 2＝**ペダルは族で 1 本——括弧ごとに解くと change の対が裂ける**
-> 最初の実装は括弧単位で解いて seed し、abutting な 2 本目が 1 本目の ink を避けて 1 段落ちた
-> （pedal-change で目視）。LP は族の全括弧を **1 つの SustainPedalLineSpanner** に入れる＝系ごと族ごとに
-> Y は 1 つ。**grob の単位はスパナの単位で、描画要素の単位ではない。**
-
-> ## ★ 骨 3＝**stale バイナリの絵で 2 回誤診しかけた**
-> `--no-build` は「最後に誰がどこを build したか」を知らない。pre/post 比較で 1 回（両方 post の絵）、
-> 修理後の検分で 1 回（修理前の絵）。**比較の絵を作る前に、その exe を作った build を同じ手で打つ。**
 
 ---
 
@@ -328,6 +328,8 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > ⚠️ **歌詞本の打鍵は第221 で +10%**（perf-lyrplain1k 368.0→405.2 MB・full +21%。plain1k/fingstack は桁まで不動）＝
 > **帯 profile の毎打鍵構築**（`LyricReservationBelowSystem`）。**memo するなら「その鍵は歌詞の内容を
 > 含むか」を先に確かめる**——含まない鍵に畳むと sweep に見えない増分穴（第192 の族）。
+> ★ **第222 の列移植で一部返った**: perf-lyrplain1k **打鍵 405.2→372.5 MB（−8%）**・full 741.9・
+> plain1k 対照 694.8/45.3＝桁不動（列予約の縮小と LINE 単位の grouping の正味）。
 > ⚠️ **ビルド費用は測ってある**: solution の full が **3.81〜4.01 秒**（5 project のとき 3.63〜4.03）・
 > **noop は 0.90 秒で不変**＝実質ゼロ。**打鍵の*時間*はここに入れていない**——
 > `EditKeystrokeBench` / `PreviewUpdateBench` が既に持っており、**同じ量の 3 軒目**を作らないため。
@@ -2040,20 +2042,18 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 が **1.604200 で exact**。`SeparatingPaddingTests` は LP 由来の期待値に書き直し済みで、
 「`MinItemGap` を何に設定しても音符間が動かない」ことを主張するテストを追加＝**戻ってこない**。
 
-- ★ **歌詞の列間隔は発明が 2 つ**（2026-08-20・第221続き便が X ドリフトの診断中に発見・**未着手**）:
-  **⑴ `LyricSpacing.EstimateLyricTextWidth` は音節幅を 3.2 ss で測る**——描画は
-  `LyricTextFontSize`＝**2.469417**（em 修正後）なので**全歌詞本の列予約が約 30% 過大**。
-  3.2 は em 修正前の旧サイズの取り残し。**⑵ `CalculateLyricDistance` の `lyricPadding = 1.0`**
-  は「layout 時に実フェイスを測れない」という**今は偽の理由**を添えた定数（同じ関数が
-  `fonts.Advance` で実フェイスを測っている）。LP の対応物は separation-item の
-  set_distance（ink＋padding）と LyricSpace/LyricHyphen の族＝**対の起票から**（列 X の
-  台帳点を LP 双子で開く。全歌詞本の snapshot が動くので専用の便）。
-  ⚠️ **row vs sings の音節 X ドリフト（§1 第221 ⓐ）はこの島の窓から測るのが早い**——
-  診断済みの事実: ドリフトは spacing 段（音符列が列ごと累積 ≈0.587 で動く・sings が広い）、
-  両綴りとも予約経路には入る（by-item / by-column）、**row の時間格子は小節を音節数で
-  均等割り＝LILYSHARP-OWN**（行は音価を持たない文法なので、音節数≠音符数の小節は両綴りが
-  構造的に別音楽になる——LP 同一性は「行に音価を書いた twin」についての言明）。
-  判別器: LP の sings 双子の列 X を基準に、Lily# の sings / row を両方読む。
+- ✅ **歌詞の列間隔の発明 2 つ＝第222 で移植完了**（`b5a973ee` 起票 → `c7beded3` 移植）。
+  音節は **描画サイズ（`LyricTextFontSize` 2.469417）の advance** で測り（LP の LyricText の
+  X extent は Pango LOGICAL rect＝1200dpi 量子化つき advance・pango-font.cc:351-362）、対の間隔は
+  **語間 0.45（LyricSpace）／語内ハイフン 0.1（LyricHyphen）を `ConnectorType` が選ぶ**。
+  予約は**歌詞 LINE ごと**（`GroupByLine`/`ReserveLyricLine`＝LP の Hyphen_engraver が
+  context ごとに 1 本なのの鏡）。台帳 `lyrics.column.*` 6 点: word/hyphen/no-bind/control
+  **exact**・narrow **+0.034143307＝Pango pixel 1 個ちょうど**（顔の kern データ差:
+  Schola "ru" +20 vs C059 +18・§3 の 2026-08-02 計量双子族の**水平初 member**）。
+  **残る 1 点＝下の「小節線またぎ」**。
+  ✅ **row vs sings の音節 X ドリフト（第221 ⓐ）はこの移植で解消**——音節数＝音符数の本では
+  両綴りの音符格子・音節 X とも一致（第222 実測・F2 同一。旧ドリフトは列あたり ≈0.587）。
+  音節数≠音符数の小節は**文法上別音楽**（row は均等割り・LILYSHARP-OWN）のまま＝欠陥ではない。
 
 ⚠️ このとき **§2H の旧記述は 2 つとも外れていた**ので、同じ推論を繰り返さないこと:
 
@@ -2065,12 +2065,18 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 **残っている発明**:
 
-- **`LyricSpacing` の `MinItemGap` 4 箇所**（歌詞 extent＝**横**）。⚠️ **音符間と同じ発明だと
-  決めつけない。** Lily# の歌詞モデルは LP と違い（音符に束縛され、**小節線で区切る**）、
-  LP に対応物が無い可能性がある＝**必要な独自量かもしれない**。どちらかを確かめてから触ること。
-  ⚠️ **縦の基本距離は 2026-07-26 に発明と確定し、移植して片付いた**（旧 `StaffPadding = 2.5` →
-  `LyricParameters.RelatedStaffBasicDistance = 5.5`・`2b901484`）。
-  **横も同じとは限らないので、この結論を横へ流用しないこと**
+- ★ **歌詞の小節線またぎ＝barline-split モデル**（第222 で**測定済み・0.540000000 ちょうどの
+  named OPEN**＝`lyrics.column.word-gap.cross-barline`）。**LP は音節と小節線のあいだに何も
+  予約しない**（LyricText の箱と小節線の箱は Y で交わらない——extra-spacing-height (0.2 . -0.2)）
+  ——**次の音節との LyricSpace 0.45 が小節線をまたいで直接 rod する**（LCW 実測: 小節内と
+  小節またぎが桁まで同数）。Lily# は小節ごとに値付けするので予約を小節線で切る＝
+  `ReserveLyricLine` の leading/trailing（`MinItemGap` 0.4×2＋小節線 ink 0.19＝0.99 対 LP 0.45）。
+  **旧 §2H の「MinItemGap 4 箇所・独自量かも」への答えがこれ**——LP に対応物は無く、
+  per-measure 値付けの都合＝「今の構造では表現できないから畳む」型。
+  **移植の形は決まっている**: `MultiStaffLayouter` の rods リスト（ApplyRods＝Simple_spacer 移植）
+  に line レベルの歌詞対 rod を足す＋**同じ量を折りの門（SystemBreaker）の値付けにも**
+  （ApplySharedColumnReservations の「1 リスト」規律。門に入れないと歌の小節が広く折れて
+  レイアウトで溢れる）。射程: 小節線をまたいで語が詰まる本すべて（+0.54/小節線 の締まり）。
 - **行頭 wish の `ownFixedFloor` ガード**（`LineStartSpringForLine` → `LineStartColumn.LineStartSpring`）
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
@@ -2226,7 +2232,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 | **休符の実インク化はやらない** | 実測で棄却。休符は中央線に座るので縦インクが極値にならず、LP でも 1 ビット違わない＝箱が名目なのは事実だが**不活性** |
 | **単一ページは紙面サイズにしない**（意図的乖離） | Lily# は 1 ページに収まるスコアを内容サイズで出す（明示的な設計）。台帳に載せると total が ~109 になり指標が壊れるので**載せない** |
 | **本数（count）の点は ss の総和に入れない** | 距離ではないから（`unit` フィールドで分離） |
-| ★ **セリフ体は TeX Gyre Schola のまま同梱する。LP の C059 には合わせない**（ユーザー判断・2026-08-02） | **量を測ったうえでの決定**。LP は `"LilyPond Serif"` を **C059** に解決し（`ly:stencil-expr` がファイルパスごと吐く）、C059 は **AGPLv3**（URW の例外は PS/PDF への埋め込み限定で**フォントプログラムの同梱は覆わない**）。**両者は advance は完全一致するが、カーンと合字が違う**: カーン値は **471 有効ペア中 438 が食い違い**、丸め後に予約幅が変わるのは **2 文字組の 11.2%（475/4225）**。合字は**両方とも合字にするがグリフ幅が違う**（`ff` 605 対 686＝5px、`ffi` 878 対 904、`fi` は一致）。**現実の文字列で 0〜4px＝0〜0.137 ss**（`Violoncello` が最大・`Allegro` +1px・`Ave verum corpus` は 0）。⇒ **0.03〜0.14 ss の恒久差**を受け入れ、**AGPL を持ち込まない**。⚠️ **帰結**: `text.width.{aa,va}` は**永久に非ゼロ**（原因は台帳に完全記述）、**今後テキスト幅の点は 1/9 の確率で非ゼロで開く**、そして**紙面そのものが LP と字送りで違う**（測定だけの話ではない）。⚠️ **測っていないのは regular/bold/bold-italic 面**（italic だけ全ペア走査した）。★ **第221 追記＝垂直 ink の初 member**: **i/j の点だけ 0.135818 ss 違う**（C059 1.765633 / Schola 1.629815・**h/x/g/p は bit 同一**・fontTools bbox 実測）。歌詞床が i/j 頂点の音節で縛る本は恒久差——最初の顔は台帳 `lyrics.band-floor.staff-to-lyric` −0.092。★ **差し替えは後からできる**——`TextFontMetrics.SerifFamily` と `Fonts/` とライセンス表記だけで、対照本 `TS1`/`TS2` が効果を即座に示す |
+| ★ **セリフ体は TeX Gyre Schola のまま同梱する。LP の C059 には合わせない**（ユーザー判断・2026-08-02） | **量を測ったうえでの決定**。LP は `"LilyPond Serif"` を **C059** に解決し（`ly:stencil-expr` がファイルパスごと吐く）、C059 は **AGPLv3**（URW の例外は PS/PDF への埋め込み限定で**フォントプログラムの同梱は覆わない**）。**両者は advance は完全一致するが、カーンと合字が違う**: カーン値は **471 有効ペア中 438 が食い違い**、丸め後に予約幅が変わるのは **2 文字組の 11.2%（475/4225）**。合字は**両方とも合字にするがグリフ幅が違う**（`ff` 605 対 686＝5px、`ffi` 878 対 904、`fi` は一致）。**現実の文字列で 0〜4px＝0〜0.137 ss**（`Violoncello` が最大・`Allegro` +1px・`Ave verum corpus` は 0）。⇒ **0.03〜0.14 ss の恒久差**を受け入れ、**AGPL を持ち込まない**。⚠️ **帰結**: `text.width.{aa,va}` は**永久に非ゼロ**（原因は台帳に完全記述）、**今後テキスト幅の点は 1/9 の確率で非ゼロで開く**、そして**紙面そのものが LP と字送りで違う**（測定だけの話ではない）。⚠️ **測っていないのは regular/bold/bold-italic 面**（italic だけ全ペア走査した）。★ **第221 追記＝垂直 ink の初 member**: **i/j の点だけ 0.135818 ss 違う**（C059 1.765633 / Schola 1.629815・**h/x/g/p は bit 同一**・fontTools bbox 実測）。歌詞床が i/j 頂点の音節で縛る本は恒久差——最初の顔は台帳 `lyrics.band-floor.staff-to-lyric` −0.092。★ **第222 追記＝列間隔に出た初 member**: **"ru" の kern が Schola +20 / C059 +18**（fontTools GPOS 実測）で、per-glyph hinting が 2/1000em を **Pango pixel 1 個（0.034143307 ss）**に増幅——台帳 `lyrics.column.word-gap.narrow` が恒久 +1px（この行の「丸め後に予約幅が変わる 11.2%」の列間隔側の最初の顔。mum/nu は kern 対を持たず exact）。★ **差し替えは後からできる**——`TextFontMetrics.SerifFamily` と `Fonts/` とライセンス表記だけで、対照本 `TS1`/`TS2` が効果を即座に示す |
 | **LP の「正」は 2.26.0** | 版で PUA コードポイントも Emmentaler も動く。**必ず feta 名で引く** |
 | **cross-staff beam は skyline から除外**（LP の字面） | `axis-group-interface.cc:850-858` の LP 自身のコメント。Lily# の「固定 3.5 stem を残す」は発明だった |
 | ★ **和音記号は LP に合わせる＝中心合わせしない**（ユーザー判断・2026-07-25 明示） | 意図的乖離かを問うたうえでの決定。`ChordName` は X-offset も self-alignment も持たない（`define-grobs.scm:837-855`）＝ink 左が列。`dcbf08e9` で移植し `staffless.line-start.chords-vs-staff` が閉じた。⚠️ **和音グリッドは別 grob（`GridChordName`）で LP も中心合わせする**が、中心を取る相手は小節の四角。Lily# に四角は無いので chords-only シートは ChordName 経路のまま＝**「グリッドも直す」で触らない** |
