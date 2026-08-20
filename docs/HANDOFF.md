@@ -152,7 +152,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 最終更新 第221セッション＝**残債⒤「歌詞帯のスカラー床が X 盲目」を専用便で閉じた**——対の起票（probe `lyric-band-x.ly`・LBL/LBR＝g''' の小節位置だけが違う 1 変数 fork・LBS＝出荷紙の番人）→ **対が対でなかった**（双子の form 素参照が section マークを刷り、LP 側の本には無い——§5.0 の罠を起票の同便で踏み、診断自身の falsifier が拾った）→ 対を修理して再起票 → 移植＝**帯の最小 profile が paging skyline の要素になり、床が X で読む**（スカラー床は CreatePages / PageLayouter の両経路から消えた）。台帳 **547 点**（+5）・`lyrics.band-floor.ink-past-band.system-gap` は **0.000000000 ちょうど**で閉幕。
 
 ★ **開始時裏取り**: HEAD `2dc943e2`・未 push 0・未追跡 0/木 0・Windows suite **5687/0/4**（⚠️ 引継ぎの「5677」「台帳 546」はどちらも誤記＝実測 5687・542。台帳は直近 4 commit とも 542 で数え直して確認）・CI 全緑・Core 0 警告・追跡コーパス 569 冊。
-終了時 **未追跡 0・木 0・未 push 3**（`c207b25c` 起票 → `5c3df019` 対の修理 → `ef838197` 移植）・suite **Windows 5693/0/4・Linux（この機械の WSL）5693/0/4＝両 OS 完全緑**・snapshot **220 枚中 1 枚だけ動き再承認**（sings-chorus-row・最終 system 下の余白のみ）・台帳 547 点・追跡コーパス 569 冊・Core 0 警告。
+終了時 **未追跡 0・木 0・未 push 0**（`c207b25c` 起票 → `5c3df019` 対の修理 → `ef838197` 移植 → handoff まで **4 commit とも push 済み**・CI run 32329616359 を見てから閉幕）・suite **Windows 5693/0/4・Linux（この機械の WSL）5693/0/4＝両 OS 完全緑**・snapshot **220 枚中 1 枚だけ動き再承認**（sings-chorus-row・最終 system 下の余白のみ）・台帳 547 点・追跡コーパス 569 冊・Core 0 警告。
 
 ★ **この便の値段**:
 
