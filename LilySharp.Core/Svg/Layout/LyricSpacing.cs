@@ -132,8 +132,24 @@ internal static class LyricSpacing
     /// trailing extent to the closing bar. Reserves across the SPANS between
     /// syllable-carrying columns — a wide syllable held over following notes (a melisma)
     /// overlaps THEIR columns freely in LilyPond; only the next SYLLABLE's ink binds.
-    /// Verses rod independently (one call per line) and <see cref="BumpSpanMin"/>'s
-    /// have-check makes the effective reservation their max, as separate rods would be.
+    /// An ADJACENT pair (one spring) takes a min bump on that spring; a pair whose span
+    /// crosses INTERMEDIATE columns is collected into <paramref name="rods"/> as a RANGE
+    /// rod the caller feeds to <see cref="SpringSolver.ApplyRods"/>. LILYPOND-REF:
+    /// lily/lyric-hyphen.cc:163-179 set_spacing_rods → Rod::add_to_cols →
+    /// lily/simple-spacer.cc:90-128 add_rod — the LyricSpace/LyricHyphen rod is a range
+    /// constraint the spacer solves, so the span reads max(natural, need) and the stretch
+    /// DISTRIBUTES over the spanned springs (probe lyric-melisma-span.ly: LP's first-gap
+    /// = width/3 to the last digit, equal springs stretching equally). Until 2026-08-20
+    /// the span took <see cref="BumpSpanMin"/> instead, whose min-counted deficit lands
+    /// on the LAST spring: the same total at full compression, but a RAGGED line stands
+    /// at the ideals, so the drawn span over-opened by Σ(ideal − min) of the non-final
+    /// springs while the intermediate gaps stayed natural (lyrics.melisma-span.width
+    /// +2.796090 / first-gap −1.095872). On ONE spring the two models agree —
+    /// max(ideal, need) — which is why every adjacent lyrics.column.* point was exact
+    /// throughout, and why the adjacent case deliberately KEEPS the bump: its ideal-raise
+    /// is measured-exact there, and no ledger point prices replacing it.
+    /// Verses rod independently (one call per line): separate rods over one span converge
+    /// on their max in ApplyRods, as the adjacent bumps' have-checks do on one spring.
     /// </summary>
     /// <remarks>
     /// ⚠️ LILYSHARP-OWN, the leading/trailing halves: LilyPond reserves NOTHING between a
@@ -165,7 +181,8 @@ internal static class LyricSpacing
         int endColumn,
         System.Func<int, (double Left, double Centre)> edge,
         bool continuesFromPrev,
-        bool continuesIntoNext)
+        bool continuesIntoNext,
+        List<(int Left, int Right, double Distance)> rods)
     {
         var cols = new List<int>(byCol.Keys);
 
@@ -177,12 +194,19 @@ internal static class LyricSpacing
             BumpSpanMin(result, 0, first,
                 GetLyricLeftExtent(fonts, byCol[first], edge(first)) + GlyphMetrics.MinItemGap);
 
-        // Between consecutive syllables (across any held/silent columns in between).
+        // Between consecutive syllables. Adjacent pair: a bump on the one spring (the
+        // models agree there — see the summary). Across held/silent columns: a range rod,
+        // ApplyRods' half-open [a+1, b+1) covering exactly springs a+1..b — LilyPond's
+        // add_rod only records a positive distance (lily/separation-item.cc:57).
         for (int p = 0; p + 1 < cols.Count; p++)
         {
             int a = cols[p], b = cols[p + 1];
-            BumpSpanMin(result, a + 1, b,
-                CalculateLyricDistance(fonts, byCol[a], byCol[b], edge(a), edge(b)));
+            double need = CalculateLyricDistance(
+                fonts, byCol[a], byCol[b], edge(a), edge(b));
+            if (b == a + 1)
+                BumpSpanMin(result, a + 1, b, need);
+            else if (need > 0)
+                rods.Add((a + 1, b + 1, need));
         }
 
         // Trailing extent: the line's last syllable clears the end barline — unless the
@@ -274,11 +298,26 @@ internal static class LyricSpacing
             return springs;
 
         var result = springs.ToBuilder();
+        var rods = new List<(int Left, int Right, double Distance)>();
         foreach (var (key, byCol) in lines)
             ReserveLyricLine(result, fonts, byCol, cols, Edge,
                 continuesFromPrev: prevKeys?.Contains(key) == true,
-                continuesIntoNext: nextKeys?.Contains(key) == true);
-        return result.ToImmutable();
+                continuesIntoNext: nextKeys?.Contains(key) == true,
+                rods);
+        // The spanning reservations, as the RANGE rods they are in LilyPond — applied
+        // measure-locally through the one Simple_spacer::add_rod port, AFTER every line's
+        // bumps (springs first, rods over them, LP's order). Baking the blocking forces
+        // into the measure's own chain serves BOTH consumers of the one reservation list
+        // (MultiStaffLayouter.ApplySharedColumnReservations): the layout's system chain
+        // carries the distributed minima a system-level rod would produce (ApplyRods'
+        // effect is local to the spanned springs), and the break gate's Σ MinDistance
+        // BECOMES the per-measure solve — Σ(ideal + f·inv) over the span is the rod's
+        // distance exactly, where the last-spring bump priced the same total but let the
+        // ragged line stand wrong. In-measure spans stay measure-local, so no gate key
+        // widens (IncrementalCompiler.SpringReusable's inventory is untouched).
+        return rods.Count > 0
+            ? SpringSolver.ApplyRods(result.ToImmutable(), rods)
+            : result.ToImmutable();
     }
 
     /// <summary>
@@ -286,6 +325,18 @@ internal static class LyricSpacing
     /// (inclusive) is at least <paramref name="need"/>, adding any deficit to the last spring of
     /// the span so the right-hand column is pushed out (the syllable X follows its column).
     /// </summary>
+    /// <remarks>
+    /// ⚠️ Since 2026-08-20 the between-syllable reservations use this for ADJACENT pairs
+    /// only, where it equals a rod at every force — max(ideal, need) ragged, the same
+    /// deficit compressed. A MULTI-spring span must be a range rod instead
+    /// (<see cref="ReserveLyricLine"/>): counting the have in minimums while a ragged
+    /// line stands at ideals over-opens the span by Σ(ideal − min) of the non-final
+    /// springs and leaves the intermediate gaps undistributed — the lyrics.melisma-span.*
+    /// pair priced both faces. The remaining multi-spring callers are the LILYSHARP-OWN
+    /// leading/trailing halves, kept deliberately: their regime is unmeasured, and the
+    /// leading bump's last-spring landing is what the line-start substitution's
+    /// keep-the-interior-spring guarantee relies on.
+    /// </remarks>
     private static void BumpSpanMin(ImmutableArray<Spring>.Builder springs, int from, int to, double need)
     {
         if (from > to || from < 0 || to >= springs.Count)
