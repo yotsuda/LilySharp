@@ -2014,6 +2014,48 @@
       "residual": 0.0,
       "why": "THE SHIPPING-SPACING GUARD: the music of the SystemGap_ReadsARowsBandOnce pin with its section labels suppressed (the pin's own books print A/B marks; the LilyPond book never had any). LilyPond reads the IDEAL -- its X-resolved band distance is under basic-distance 12, so the skyline term leaves no trace: 12.000000 measured. Lily# reads 12.000000 EXACT TOO, before the port and after it: on this music even the scalar band floor sat under 12. WARNING, THE ENTRY'S FIRST TWO NUMBERS WERE BOTH ARTIFACTS -- the opening +1.076310 was the twins' section marks colliding with the band, and the 14.571 the pin's comment cites is a different quantity-frame (origin-to-origin system step) on those same mark-bearing books. What survives: this entry pins that the shipping ideal masks the band floor on both sides, which is why the X-blindness needed the floor-regime pair beside it to be measurable at all."
     },
+    "lyrics.column.word-gap": {
+      "probe": "lyric-column-spacing.ly",
+      "score": "LCW",
+      "lilypond": 6.322648818897639,
+      "residual": 2.291308661,
+      "why": "THE TWO COLUMN-SPACING INVENTIONS, both in one number. LilyPond: the syllable's INK at the DRAWN size plus the LyricSpace word minimum -- 5.872649 (ink of 'mum' at the 2.469417 lyric em, read off the probe's own LyricText extents) + 0.45 (LyricSpace minimum-distance, hyphen-engraver.cc:107 / lyric-hyphen.cc:163-179) = 6.322649, closing to the digit. Lily#: advance('mum' at the pre-em-correction 3.2 ss) + lyricPadding 1.0 = 7.613957 + 1.0 = 8.613957480 (LyricSpacing.CalculateLyricDistance / EstimateLyricTextWidth). The 3.2 is the old lyric size left behind by the em-correction port -- the syllable is DRAWN at 2.469417 -- and the 1.0 carries a rationale ('cannot measure the face at layout time') that has been false since the bundled-face port: the same function measures the face through fonts.Advance two lines away. Regime guard: the all-quarter natural gap is ~3.0 (note-to-note.quarter-shortest's shape), far under both engines' lyric terms, so the lyric rod is what both sides read."
+    },
+    "lyrics.column.word-gap.cross-barline": {
+      "probe": "lyric-column-spacing.ly",
+      "score": "LCW",
+      "lilypond": 6.322648818897640,
+      "residual": 2.281308661,
+      "why": "THE SAME GAP ACROSS THE BAR LINE -- where LilyPond reads the IDENTICAL number (6.322649, to the digit of the in-bar point) because a bar line does not participate in lyric spacing at all: a syllable's spacing box and a bar line's do not overlap in Y (LyricText recedes 0.2 each side, extra-spacing-height (0.2 . -0.2)), so the skyline distance between them is minus infinity and only the next SYLLABLE's LyricSpace binds, straight across the bar. Lily# instead cuts the reservation AT the bar line -- trailing extent + MinItemGap 0.4 into the bar, then 0.4 + leading extent out of it -- so it reads advance@3.2 + 0.4 + 0.19 (the bar line's ink) + 0.4 = 8.603957480, exactly 0.010000000 under its own in-bar number (0.99 vs the invented 1.0, decomposing to the digit). THE CHIASMUS IS THE FINDING: Lily# forks in-bar vs cross-bar where LilyPond is identical, and is identical word vs hyphen where LilyPond forks (see lyrics.column.hyphen-gap)."
+    },
+    "lyrics.column.hyphen-gap": {
+      "probe": "lyric-column-spacing.ly",
+      "score": "LCH",
+      "lilypond": 5.972648818897637,
+      "residual": 2.641308661,
+      "why": "THE CONNECTOR-BLINDNESS, isolated: LCH is LCW with ONE variable changed inside the bar (the connectors), and LilyPond forks by 0.35 exactly -- between hyphenated syllables the LyricSpace gives way to a LyricHyphen whose minimum-distance is 0.1 (scm/define-grobs.scm), and the dash itself claims no space mid-line (lyric-hyphen.cc:108-121 print returns empty when it cannot fit; the probe dump shows all six mid-line hyphens with empty stencils): 5.872649 + 0.1 = 5.972649. Lily# reads 8.613957480 -- THE SAME NUMBER AS lyrics.column.word-gap TO THE NINTH DIGIT -- because its lyricPadding 1.0 never looks at LyricItem.ConnectorType, which the model has carried all along. One number for two connector arrangements: the same signature as the band-floor pair's one-number-for-two-X-arrangements, one axis over."
+    },
+    "lyrics.column.word-gap.narrow": {
+      "probe": "lyric-column-spacing.ly",
+      "score": "LCM",
+      "lilypond": 4.581340157480314,
+      "residual": 1.779159055,
+      "why": "THE SIZE INVENTION, isolated by the fork: LCM is LCW with a narrower word ('run' inks 4.131340 at the drawn size where 'mum' inks 5.872649), so the word-space constant cancels in LCW - LCM and only the size term remains. LilyPond forks by the drawn-size ink difference, 1.741309; Lily# forks by 2.253458 -- the same width difference measured at 3.2 instead of 2.469417, ratio 1.2941 against 3.2/2.469417 = 1.2959 (the last 0.002 is advance-vs-ink: Lily# measures advances, LilyPond's rod reads stencil ink, and the two differ by the side bearings). This point is what pins the port's size to the DRAWN em rather than to any constant that happens to fit one word."
+    },
+    "lyrics.column.no-bind": {
+      "probe": "lyric-column-spacing.ly",
+      "score": "LCN",
+      "lilypond": 4.275444999134611,
+      "residual": 0.616892009,
+      "why": "THE REAL-CORPUS FACE: a book where LilyPond's lyric terms leave NO trace ('nu' inks 3.004611, + 0.45 = 3.454611, under the natural half gap 4.275445 -- LCN reads its lyric-free control LCC to the last digit, 4.275444999134611 both) and Lily# still widens every gap: advance('nu' at 3.2) + 1.0 = 3.892337 + 1.0 = 4.892337008, which BEATS the natural gap its own spacing produces (the control point is exact, so the natural gap itself is not the suspect). This is the shape on shipping songbooks: reservations ~30% wider than the drawn ink bind where LilyPond's true ones would not, and every lyric book's columns sit wider than the engraving they hold. FIRST TAKE OF THIS BOOK WAS IN THE WRONG REGIME ('nun' inks 4.506917 and bound on BOTH sides -- the probe header carries the incident): the no-bind claim must be verified against the book's OWN control, not a natural gap borrowed from another shortest-context."
+    },
+    "lyrics.column.no-bind.control": {
+      "probe": "lyric-column-spacing.ly",
+      "score": "LCC",
+      "lilypond": 4.275444999134611,
+      "residual": 0.000000000,
+      "why": "LCN's notes with no lyrics -- the identity control, EXACT from the moment it opened: the all-half natural gap is 4.275445 on both engines (this book's shortest IS the half, so its natural gap is smaller than note-to-note.half's 4.7-class reading, which lives in a quarter-shortest book -- the difference that caught the first 'nun' take of LCN). Kept so lyrics.column.no-bind means what it says: with this at zero, everything the no-bind point reads above 4.275445 is lyric reservation and nothing else."
+    },
     "lyrics.natural.staff-to-lyric": {
       "probe": "page-vertical.ly",
       "score": "LYRC",

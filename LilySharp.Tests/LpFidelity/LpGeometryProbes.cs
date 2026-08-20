@@ -553,6 +553,104 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// One sung line for the LYRIC COLUMN DISTANCE — the shared shape of books LCW / LCH /
+    /// LCM / LCN in probes/lyric-column-spacing.ly (HANDOFF 2H's two column-spacing
+    /// inventions). The books differ only in duration and words.
+    /// </summary>
+    /// <remarks>
+    /// THE QUANTITY. LilyPond's distance between two syllable-carrying columns is built
+    /// from ported facts, not a knob: syllable INK at the DRAWN size joins the column's
+    /// spacing boxes verbatim (extra-spacing-width <c>(0.0 . 0.0)</c>,
+    /// scm/define-grobs.scm LyricText) and adjacent columns rod at skyline distance +
+    /// padding 0.1 (LILYPOND-REF: lily/spacing-spanner.cc:315-316 <c>set_column_rods</c> →
+    /// separation-item.cc:56 <c>Separation_item::set_distance</c>);
+    /// BETWEEN WORDS a LyricSpace spanner rods the two inks apart by minimum-distance 0.45
+    /// (lily/hyphen-engraver.cc:107, lily/lyric-hyphen.cc:163-179 set_spacing_rods = the
+    /// minimum plus <c>bounds_protrusion</c>); BETWEEN HYPHENATED SYLLABLES the LyricSpace
+    /// gives way to a LyricHyphen whose minimum-distance is 0.1, and the dash itself claims
+    /// no space mid-line (lyric-hyphen.cc:108-121 print returns empty when it cannot fit —
+    /// the probe's dump shows all six mid-line hyphens with empty stencils). Lily# instead
+    /// reserves EVERY pair as <c>advance(text at 3.2 ss)</c> halves + <c>lyricPadding</c>
+    /// 1.0 (LyricSpacing.CalculateLyricDistance) — the 3.2 is the pre-em-correction size
+    /// (the syllable is DRAWN at 2.469417) and the 1.0 is connector-blind.
+    /// <para>
+    /// AND THE BAR LINE: a syllable's spacing box and a bar line's do not overlap in Y
+    /// (LyricText even recedes 0.2 each side, extra-spacing-height <c>(0.2 . -0.2)</c>),
+    /// so LilyPond reserves NOTHING between a syllable and a bar line — only the next
+    /// SYLLABLE binds, straight across the bar: LCW's cross-barline gap reads its in-bar
+    /// gap to the digit (6.322649, measured 2026-08-20 on 2.26.0). Lily# cuts every
+    /// reservation AT the bar line (leading/trailing extents + MinItemGap) — it forks
+    /// where LilyPond is identical, and is identical (word vs hyphen) where LilyPond
+    /// forks.
+    /// </para>
+    /// LilyPond twin: books LCW/LCH/LCM/LCN in probes/lyric-column-spacing.ly.
+    /// </remarks>
+    private static string LyricColumnScore(string name, string notes, string words) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody {
+          section A { {{notes}} }
+        }
+
+        lyrics w sings melody {
+          section A { {{words}} }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff melody
+          lyrics w
+        }
+        """;
+
+    /// <summary>Eight sung quarters, every "mum" its own word — the mirror of book LCW.</summary>
+    private static readonly string LCW = LyricColumnScore(
+        "LCW", "a4 a a a | a4 a a a |", "mum mum mum mum | mum mum mum mum");
+
+    /// <summary>
+    /// The same eight quarters hyphenated within each bar (a word boundary across it, which
+    /// is how this grammar spells that bar) — the mirror of book LCH, ONE variable from
+    /// <see cref="LCW"/> inside the bar: the connectors.
+    /// </summary>
+    private static readonly string LCH = LyricColumnScore(
+        "LCH", "a4 a a a | a4 a a a |",
+        "mum -- mum -- mum -- mum | mum -- mum -- mum -- mum");
+
+    /// <summary>A narrower word, "run" — the mirror of book LCM. The LCW−LCM fork is the
+    /// ink width difference at the drawn size, with the word-space constant cancelled.</summary>
+    private static readonly string LCM = LyricColumnScore(
+        "LCM", "a4 a a a | a4 a a a |", "run run run run | run run run run");
+
+    /// <summary>
+    /// Four sung halves, "nu" under each — the mirror of book LCN: TRUE ink + 0.45 sits
+    /// UNDER the natural half gap (LilyPond's lyric terms leave no trace) while Lily#'s
+    /// 3.2-size measure + 1.0 sits OVER it. The real-corpus face of the island.
+    /// </summary>
+    private static readonly string LCN = LyricColumnScore(
+        "LCN", "a2 a | a2 a |", "nu nu | nu nu");
+
+    /// <summary>LCN's notes with no lyrics — the identity control (LilyPond reads LCN ==
+    /// LCC to the digit: 4.275445 both).</summary>
+    private static readonly string LCC = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody {
+          section A { a2 a | a2 a | }
+        }
+
+        form main { ~A }
+
+        score main "LCC" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// TWO STAVES over several pages — the mirror of books JSS (justified) and JSSC
     /// (ragged-bottom control). The two entries built from it measure the staff spring
     /// LilyPond puts INSIDE a system and Lily# does not have.
@@ -9526,6 +9624,26 @@ internal static class LpGeometryProbes
             g => g.StavesOnPage(0), ClefFloorPaper),
         new("lyrics.band-shipping.system-gap", LBS,
             g => g.StaffGapAt(0), ClefFloorControlPaper),
+
+        // THE LYRIC COLUMN DISTANCE (books LCW/LCH/LCM/LCN/LCC, lyric-column-spacing.ly —
+        // HANDOFF 2H's two inventions: syllables measured at the pre-em-correction 3.2 ss
+        // and one connector-blind lyricPadding 1.0, where LilyPond has ink at the DRAWN
+        // size + 0.45 between words / 0.1 between hyphenated syllables, and NOTHING at a
+        // bar line). All ragged single lines, head-anchor steps — the same reading every
+        // note-to-note point uses. The cross-check pattern: LilyPond forks word-vs-hyphen
+        // by 0.35 and is IDENTICAL in-bar vs cross-barline; Lily# is identical where
+        // LilyPond forks and forks where LilyPond is identical.
+        new("lyrics.column.word-gap", LCW, g => g.NoteheadAnchorStep(0)),
+        new("lyrics.column.word-gap.cross-barline", LCW,
+            g => g.NoteheadAnchor(4) - g.NoteheadAnchor(3)),
+        new("lyrics.column.hyphen-gap", LCH, g => g.NoteheadAnchorStep(0)),
+        new("lyrics.column.word-gap.narrow", LCM, g => g.NoteheadAnchorStep(0)),
+        // The no-bind pair: a syllable narrow enough that LilyPond's lyric terms leave no
+        // trace (LCN == LCC to the digit there), measured against the book's OWN control —
+        // the real-corpus face: books where Lily#'s oversized reservation binds where
+        // LilyPond's true one does not.
+        new("lyrics.column.no-bind", LCN, g => g.NoteheadAnchorStep(0)),
+        new("lyrics.column.no-bind.control", LCC, g => g.NoteheadAnchorStep(0)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a
