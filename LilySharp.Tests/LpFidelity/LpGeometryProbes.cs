@@ -793,6 +793,14 @@ internal static class LpGeometryProbes
     private static readonly string PLYT =
         PedalLyricScore("PLYT", "c4 d@sustainOn e f@sustainOff | g2 g |", "pedal text");
 
+    /// <summary>Mixed-style sustain ("Ped." then a line) — the mirror of book PMBL
+    /// (pedal-mixed.ly). LilyPond keeps the word, the bracket and their LineSpanner on
+    /// ONE Y (all three dump rel −9.773 = 5.997 below the refpoint, with or without
+    /// lyrics), because a mixed stretch is one group — the word and the line must move
+    /// together or the classic "Ped.____" tears apart.</summary>
+    private static readonly string PLYM =
+        PedalLyricScore("PLYM", "c4 d@sustainOn e f@sustainOff | g2 g |", "pedal mixed");
+
     /// <summary>A forte on the sung staff — the mirror of book PLD.</summary>
     private static readonly string PLYD =
         PedalLyricScore("PLYD", "c4 d e f | g2@f g |");
@@ -9354,6 +9362,17 @@ internal static class LpGeometryProbes
             g => g.PedalTextRowBaselineBelowStaff("Sost. Ped."), RaggedBottomPaper),
         new("mark.pedal.rows.sustain", PT3,
             g => g.PedalGlyphWordBaselineBelowStaff("Ped."), RaggedBottomPaper),
+
+        // MIXED STYLE (book PLYM): the word, the LINE and the lyric floor. LilyPond holds
+        // the word and the line on one Y — 5.997, the same number the text-style word
+        // reads, because the group's binding ink is the same Ped. outline over the same
+        // note — and the lyrics drop below the line's bottom + 0.5 (8.367115).
+        new("mark.pedal-mixed.staff-to-ped-baseline", PLYM,
+            g => g.PedalGlyphWordBaselineBelowStaff("Ped."), RaggedBottomPaper),
+        new("mark.pedal-mixed.staff-to-line", PLYM,
+            g => g.PedalBracketLineBelowStaff(), RaggedBottomPaper),
+        new("lyrics.pedal-mixed.staff-to-lyric", PLYM,
+            g => g.FirstStaffToLyricBaseline(), RaggedBottomPaper),
 
         // The step to a SECOND verse (book LYRV), which comes from a different LilyPond spec
         // than everything above it: with two loose lines, get_spacing_spec takes its

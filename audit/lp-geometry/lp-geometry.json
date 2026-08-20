@@ -3652,6 +3652,27 @@
       "residual": 0.004411793,
       "why": "THE OUTERMOST ROW = the sostenuto word's ink bottom + 0.46 + the Ped. glyph word's ascender 2.0. +0.0044 is the same face-ink sliver the sostenuto row carries one step earlier (the Ped. glyph itself contributes zero -- its outline is baked from the same font LilyPond reads, and the PLT points sit at 0.000000); the step from the sostenuto row is exact."
     },
+    "mark.pedal-mixed.staff-to-ped-baseline": {
+      "probe": "pedal-mixed.ly",
+      "score": "PMBL",
+      "lilypond": 5.997,
+      "residual": -1.997,
+      "why": "OPENING STATE: the mixed word sits on the legacy below-the-system baseline (4.000 on this book), 1.997 above where LilyPond holds the group. The word and the line at least agree with each other (both 4.000, the coherence the bracket port deliberately preserved by leaving mixed alone) -- the port must move them TOGETHER: one group profile (the Ped. outline + the line + the right hook), one solve, the same two-step the bracket and text styles now run."
+    },
+    "mark.pedal-mixed.staff-to-line": {
+      "probe": "pedal-mixed.ly",
+      "score": "PMBL",
+      "lilypond": 5.997,
+      "residual": -1.997,
+      "why": "OPENING STATE, the other half of the same group: see mark.pedal-mixed.staff-to-ped-baseline. LilyPond holds word, bracket and their LineSpanner on ONE relY (-9.773, the PMB/PMBL dump), so these two entries closing to the same number is the mechanism, not a coincidence."
+    },
+    "lyrics.pedal-mixed.staff-to-lyric": {
+      "probe": "pedal-mixed.ly",
+      "score": "PMBL",
+      "lilypond": 8.367115015225147,
+      "residual": -2.502155050,
+      "why": "OPENING STATE: the mixed group's ink is in no skyline, so the lyric floor reads the control's 5.864960 -- the same blindness the bracket (-1.800) and text (-2.448) entries opened with, one style later. LilyPond: 8.367115 = the line's ink bottom 6.047 + relatedstaff padding 0.5 + the syllable's ascender."
+    },
     "mark.pedal.width.sostenuto": {
       "probe": "jump-mark-em.ly",
       "score": "PSO",

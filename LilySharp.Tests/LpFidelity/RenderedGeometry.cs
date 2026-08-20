@@ -911,6 +911,36 @@ internal sealed class RenderedGeometry
         return y - above.Max();
     }
 
+    /// <summary>
+    /// The sole horizontal pedal-bracket LINE below the first staff, measured from that
+    /// staff's reference point — the drawn mirror of the PianoPedalBracket grob's own
+    /// relative coordinate (the hooks rise from it; DrawPedalBrackets puts the line at
+    /// PedalBracketLayout.Y).
+    /// </summary>
+    /// <remarks>
+    /// Identified as a horizontal rule of staff-line thickness BELOW the bottom staff
+    /// line that is not a staff line (it starts to the right of the system's left edge)
+    /// and is at least 1 ss long — a lyric EXTENDER satisfies none of the probes that use
+    /// this (their melismas are none), and the count guard fails loudly if a second such
+    /// rule appears down there.
+    /// </remarks>
+    public double PedalBracketLineBelowStaff(int page = 0)
+    {
+        double staffBottomEdge = StaffRefpoints(page).Min() + 2.0;
+        var rules = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                && Math.Abs(l.X2 - l.X1) >= 1.0
+                && l.Y1 > staffBottomEdge)
+            .Select(l => l.Y1).Distinct().ToList();
+        if (rules.Count != 1)
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE pedal bracket line below the staff, "
+                + $"found {rules.Count}.\nDrawn geometry:\n" + Describe());
+        var above = StaffRefpoints(page).Where(r => r < rules[0]).ToList();
+        return rules[0] - above.Max();
+    }
+
     /// <summary>The sole drawn pedal glyph run spelling <paramref name="word"/> — the
     /// run-splitting half shared by the width and baseline readings.</summary>
     private List<DrawnGlyph> SoleSustainPedalRun(string? word)
