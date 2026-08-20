@@ -586,9 +586,12 @@ internal sealed class LayoutEngine
             // scalars); the profile itself joins the paging silhouette as a program step
             // (AugmentSkylinesForPaging), so the inter-system floor reads it WITH X —
             // audit/lp-geometry lyrics.band-floor.*.
-            var lyricBand = LyricReservationBelowSystem(
-                score, measureLayouts, sysStaffSkylines.Skylines, sysStaffGroups,
-                firstMeasureIndex, firstMeasureIndex + measureCount);
+            var lyricBand = ComputeLyricBand(systemCache, firstMeasureIndex, measureCount,
+                isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent,
+                commonShortestDuration,
+                () => LyricReservationBelowSystem(
+                    score, measureLayouts, sysStaffSkylines.Skylines, sysStaffGroups,
+                    firstMeasureIndex, firstMeasureIndex + measureCount));
             perSystemLyricBands.Add(lyricBand);
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),
@@ -1312,6 +1315,18 @@ internal sealed class LayoutEngine
             ? compute()
             : cache.GetOrComputeMeasures(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
                 indent, commonShortestDuration, compute);
+
+    /// <summary>The below-system lyric band, through the per-system cache when the session
+    /// has one — see <see cref="SystemLayoutCache.GetOrComputeLyricBand"/> for the key's
+    /// coverage claim. Null cache (the full-render path) computes live, as everywhere.</summary>
+    private static VerticalSkyline? ComputeLyricBand(
+        SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
+        bool isLastSystem, double indent, double commonShortestDuration,
+        Func<VerticalSkyline?> compute)
+        => cache == null
+            ? compute()
+            : cache.GetOrComputeLyricBand(firstMeasureIndex, measureCount, isFirstSystem,
+                isLastSystem, indent, commonShortestDuration, compute);
 
     /// <summary>
     /// One (system, staff)'s inside-staff spanners out of the per-system lists the room

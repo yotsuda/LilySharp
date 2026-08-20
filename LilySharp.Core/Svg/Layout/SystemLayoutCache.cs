@@ -68,6 +68,7 @@ internal sealed class SystemLayoutCache
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new();
     private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new();
     private readonly TypedCache<ImmutableArray<BeamLayout>> _staffSystemBeams = new();
+    private readonly TypedCache<VerticalSkyline?> _lyricBands = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -80,6 +81,7 @@ internal sealed class SystemLayoutCache
         _skylines.NextGeneration();
         _staffSkylines.NextGeneration();
         _staffSystemBeams.NextGeneration();
+        _lyricBands.NextGeneration();
     }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
@@ -157,6 +159,59 @@ internal sealed class SystemLayoutCache
         Func<MultiStaffLayouter.StaffSkylineSet> compute)
         => _staffSkylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: 0, compute, out _);
+
+    /// <summary>Hits and misses of <see cref="GetOrComputeLyricBand"/> over this cache's
+    /// lifetime (diagnostics / tests) — what lets a net assert the memo actually served
+    /// rather than silently recomputing forever.</summary>
+    public (int Hits, int Misses) LyricBandStats { get; private set; }
+
+    /// <summary>Reuses or computes the system's below-system lyric reservation band
+    /// (<c>LayoutEngine.LyricReservationBelowSystem</c>) — the loose lyric block's minimum
+    /// profile, session 224's largest single per-keystroke recompute on sung books
+    /// (135 MB of a 347 MB keystroke on perf-lyrplain1k, measured by region).</summary>
+    /// <remarks>
+    /// Keyed exactly like <see cref="GetOrComputeStaffSkylines"/>, and the coverage claim
+    /// has the same shape — every input is either a value under this same key or folded
+    /// into it:
+    /// <list type="bullet">
+    /// <item>the system's measure layouts and per-staff skylines ARE the values cached
+    /// under this key (<see cref="GetOrComputeMeasures"/> /
+    /// <see cref="GetOrComputeStaffSkylines"/>), and the staff-group placement the band
+    /// walks from is recomputed each pass from those same values;</item>
+    /// <item>the syllables themselves — <c>score.Lyrics</c> bucketed by measure — are in
+    /// the content key (<c>MeasureContentKey.BucketSideTables</c>), which is what moves
+    /// the key when a syllable is edited;</item>
+    /// <item>which staves exist, which are lyric rows, and the anchor-staff choice are
+    /// functions of staff identity (<c>AddStaffIdentity</c>) and the group shape
+    /// (<c>AddGroupIdentity</c>);</item>
+    /// <item>the text metrics are NOT in the key, exactly as for every other memo here —
+    /// the session sheds this cache whole on a font-plan change
+    /// (<c>IncrementalCompiler.Compile</c>'s guard, pinned by FontEditIncrementalTests).</item>
+    /// </list>
+    /// ⚠️ THE CACHED VALUE IS SHARED AND MUTABLE (<see cref="VerticalSkyline"/>), so
+    /// nothing downstream may mutate it. Verified at the two consumers: the extent read
+    /// (<c>LayoutUtilities.CalculateDownExtent</c>) only walks buildings, and
+    /// <c>PagingAugmentProgram.Builder.AddLyricBand</c> copies the profile into the
+    /// program's numeric argument stream and keeps the reference for read-only replay.
+    /// A stable instance is strictly BETTER for the paging-augment memo above: its
+    /// baseline comparison is by reference, so a served band keeps the program equal.
+    /// ⚠️ NULL IS A VALUE HERE, not an absence: an unsung system's band is null and the
+    /// memo serves that null on a hit (TypedCache stores it like any other value), so
+    /// the unsung case costs one lookup, never a recompute.
+    /// </remarks>
+    public VerticalSkyline? GetOrComputeLyricBand(
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        Func<VerticalSkyline?> compute)
+    {
+        var result = _lyricBands.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+            isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
+            compute, out bool hit);
+        LyricBandStats = hit
+            ? (LyricBandStats.Hits + 1, LyricBandStats.Misses)
+            : (LyricBandStats.Hits, LyricBandStats.Misses + 1);
+        return result;
+    }
 
     /// <summary>Reuses or computes the system's up/down skyline. Keyed additionally
     /// on <paramref name="systemHeight"/>, which the skyline depends on.</summary>
