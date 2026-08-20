@@ -70,7 +70,7 @@ internal static class TextOutlineSkylines
     // so it runs once per (face, style, string, size) and every placement is a
     // shift/raise copy of the resolved buildings (a monotone transform, which
     // commutes with the resolve — byte-identical to resolving after placing).
-    private static readonly ConcurrentDictionary<(TextFace Face, string Text, double Size),
+    private static readonly ConcurrentDictionary<(TextFace Face, string Text, double Size, double Pad),
         (SkylineBuilding[] Up, SkylineBuilding[] Down)> ProfileCache = new();
 
     /// <summary>
@@ -86,19 +86,43 @@ internal static class TextOutlineSkylines
     /// neighbours are simply stacked against the wrong silhouette.
     /// </param>
     public static (VerticalSkyline Up, VerticalSkyline Down) Place(
-        string text, double fontSize, TextFace face, double x, double yBaseline)
+        string text, double fontSize, TextFace face, double x, double yBaseline,
+        // The grob's own skyline-horizontal-padding, folded into the cached profile
+        // exactly as LilyPond folds it into the grob's vertical-skylines
+        // (lily/stencil-integral.cc:883-893 vertical_skylines_from_stencil pads the
+        // stencil's skyline before anyone reads it). LyricText declares 0.1; most text
+        // grobs declare none.
+        double horizonPadding = 0.0)
     {
-        var (up, down) = ProfileCache.GetOrAdd((face, text, fontSize),
+        var (up, down) = ProfileCache.GetOrAdd((face, text, fontSize, horizonPadding),
             static key =>
             {
                 var (upQuads, downQuads) = BuildQuads(key.Text, key.Size, key.Face);
                 return (
-                    Resolve(VerticalDirection.Up, upQuads),
-                    Resolve(VerticalDirection.Down, downQuads));
+                    Pad(VerticalDirection.Up, Resolve(VerticalDirection.Up, upQuads), key.Pad),
+                    Pad(VerticalDirection.Down, Resolve(VerticalDirection.Down, downQuads), key.Pad));
             });
         return (PlaceResolved(VerticalDirection.Up, up, x, yBaseline),
                 PlaceResolved(VerticalDirection.Down, down, x, yBaseline));
     }
+
+    /// <summary>
+    /// The cached RESOLVED profiles themselves, baseline-origin and unplaced — for the
+    /// mass consumers (a verse's hundreds of syllables) that merge them straight into a
+    /// batched skyline via <c>VerticalSkyline.Merge(resolved, dx, dy)</c> instead of
+    /// materialising a placed copy per syllable per pass. MEASURED: the placed-copy
+    /// spelling cost 84 MB per lyric pass on perf-lyrplain1k's keystroke.
+    /// </summary>
+    public static (SkylineBuilding[] Up, SkylineBuilding[] Down) ResolvedProfile(
+        string text, double fontSize, TextFace face, double horizonPadding = 0.0)
+        => ProfileCache.GetOrAdd((face, text, fontSize, horizonPadding),
+            static key =>
+            {
+                var (upQuads, downQuads) = BuildQuads(key.Text, key.Size, key.Face);
+                return (
+                    Pad(VerticalDirection.Up, Resolve(VerticalDirection.Up, upQuads), key.Pad),
+                    Pad(VerticalDirection.Down, Resolve(VerticalDirection.Down, downQuads), key.Pad));
+            });
 
     // Music-glyph profiles, one per (glyph, size, design) — the metronome mark's note
     // pieces, the scripts. The DESIGN is in the key because Emmentaler is optically sized:

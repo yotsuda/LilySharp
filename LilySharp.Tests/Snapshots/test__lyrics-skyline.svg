@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="306.7" viewBox="0 0 119.50 30.67" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="300.4" viewBox="0 0 119.50 30.04" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="30.67" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="30.04" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="370">Lyrics clear low notes</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="13.12" x2="69.93" y2="13.12" stroke="#000000" stroke-width="0.100"/>
@@ -66,18 +66,18 @@
   <rect x="26.19" y="13.12" width="0.19" height="4.00" data-pos="468"/>
   <rect x="50.40" y="13.12" width="0.19" height="4.00" data-pos="484"/>
   <rect x="69.74" y="13.12" width="0.19" height="4.00" data-pos="500"/>
-  <text x="9.24" y="24.48" font-size="2.47" text-anchor="middle" data-pos="540">up</text>
-  <text x="14.03" y="24.48" font-size="2.47" text-anchor="middle" data-pos="543">up</text>
-  <text x="18.82" y="24.48" font-size="2.47" text-anchor="middle" data-pos="546">up</text>
-  <text x="23.61" y="24.48" font-size="2.47" text-anchor="middle" data-pos="549">up</text>
-  <text x="29.31" y="24.48" font-size="2.47" text-anchor="middle" data-pos="558">low</text>
-  <text x="35.36" y="24.48" font-size="2.47" text-anchor="middle" data-pos="562">low</text>
-  <text x="41.42" y="24.48" font-size="2.47" text-anchor="middle" data-pos="566">low</text>
-  <text x="47.47" y="24.48" font-size="2.47" text-anchor="middle" data-pos="570">low</text>
-  <text x="52.88" y="24.48" font-size="2.47" text-anchor="middle" data-pos="580">up</text>
-  <text x="57.67" y="24.48" font-size="2.47" text-anchor="middle" data-pos="583">up</text>
-  <text x="62.46" y="24.48" font-size="2.47" text-anchor="middle" data-pos="586">up</text>
-  <text x="67.25" y="24.48" font-size="2.47" text-anchor="middle" data-pos="589">up</text>
+  <text x="9.24" y="23.85" font-size="2.47" text-anchor="middle" data-pos="540">up</text>
+  <text x="14.03" y="23.85" font-size="2.47" text-anchor="middle" data-pos="543">up</text>
+  <text x="18.82" y="23.85" font-size="2.47" text-anchor="middle" data-pos="546">up</text>
+  <text x="23.61" y="23.85" font-size="2.47" text-anchor="middle" data-pos="549">up</text>
+  <text x="29.31" y="23.85" font-size="2.47" text-anchor="middle" data-pos="558">low</text>
+  <text x="35.36" y="23.85" font-size="2.47" text-anchor="middle" data-pos="562">low</text>
+  <text x="41.42" y="23.85" font-size="2.47" text-anchor="middle" data-pos="566">low</text>
+  <text x="47.47" y="23.85" font-size="2.47" text-anchor="middle" data-pos="570">low</text>
+  <text x="52.88" y="23.85" font-size="2.47" text-anchor="middle" data-pos="580">up</text>
+  <text x="57.67" y="23.85" font-size="2.47" text-anchor="middle" data-pos="583">up</text>
+  <text x="62.46" y="23.85" font-size="2.47" text-anchor="middle" data-pos="586">up</text>
+  <text x="67.25" y="23.85" font-size="2.47" text-anchor="middle" data-pos="589">up</text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="428"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="428">Main</text>
   </g>

@@ -316,6 +316,20 @@ internal sealed class LyricEngraver
     /// <summary>Minimum X-width of a syllable's skyline box (narrow glyphs).</summary>
     private const double MinSyllableBoxWidth = 0.8;
 
+    /// <summary>
+    /// LyricText's own <c>skyline-horizontal-padding</c> — the flat 0.1 with 45° shoulders
+    /// LilyPond bakes into every syllable's vertical-skylines before anything reads them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2185 LyricText skyline-horizontal-padding 0.1;
+    /// lily/stencil-integral.cc:883-893 Grob::vertical_skylines_from_stencil pads the
+    /// stencil's own skyline with it. MEASURED before porting: the shoulder is visible in
+    /// the dumped profile itself (the "la" UP list opens with a 45° ramp 1.693 → 1.793
+    /// over exactly 0.1), and WITHOUT it the outline port overshot LilyPond the other way
+    /// (lyrics.dynamic.staff-to-lyric +0.0247 as a box, −0.0313 as a bare outline).
+    /// </remarks>
+    private const double LyricSkylineHorizontalPadding = 0.1;
+
 
     /// <summary>Baseline of an independent lyrics ROW's verse 1 below the row band's
     /// top, so the text sits inside the reserved band (cf. ChordRow text baseline).</summary>
@@ -1259,30 +1273,97 @@ internal sealed class LyricEngraver
 
             var up = new VerticalSkyline(VerticalDirection.Up);
             var down = new VerticalSkyline(VerticalDirection.Down);
+            // BATCHED: a syllable's profile is ~50 buildings since the outline port, and
+            // per-merge resolving is quadratic in the accumulated line (MergeInternal's
+            // full-length sort) — measured 71.7 → 1235.2 MB on perf-lyrplain1k's
+            // keystroke before this batch, back to the outline's own cost with it.
+            up.BeginBatch();
+            down.BeginBatch();
             foreach (var lay in laid)
-            {
-                up.Merge(SyllableUpBox(_fonts, lay));
-                down.Merge(SyllableDownBox(_fonts, lay));
-            }
+                MergeSyllableInto(_fonts, lay, up, down);
+            up.EndBatch();
+            down.EndBatch();
             result.Add((up, down));
         }
         return result;
     }
 
     /// <summary>
-    /// The UP-skyline box of one syllable, self-relative to its own baseline: anchor at
-    /// y = 0, ink top at <see cref="LyricUpExtent"/> above it in the Y-up frame.
+    /// The UP profile of one syllable, self-relative to its own baseline: anchor at
+    /// y = 0, each GLYPH's own outline at its pen position.
     /// </summary>
     /// <remarks>
-    /// A font-metric height, so the clearance it produces reflects a tall CJK glyph as well
-    /// as a low note. LilyPond builds the LyricText skyline from the grob's true stencil
-    /// bounding box; the em-fraction extents stand in for that here.
+    /// PER GLYPH, NOT A BOX, because that is what LilyPond measures: a text stencil's
+    /// vertical-skylines add every glyph's real outline at its pen
+    /// (lily/stencil-integral.cc:566-650 add_glyph_string_segments →
+    /// add_outline_to_skyline). ⚠️ This remark said "LilyPond builds the LyricText
+    /// skyline from the grob's true stencil bounding box" until 2026-08-20, and that was
+    /// an UNMEASURED claim that hid a defect: with a whole-syllable box, the "ho" under a
+    /// below-staff f carried the h's ascender across the o too, and the lyric floor came
+    /// out +0.024651 deeper than LilyPond's — the ledger's one OPEN residual
+    /// (lyrics.dynamic.staff-to-lyric), which reading the LilyPond source closed.
+    /// <para>
+    /// The CJK floor stays a BOX: the bundled face has no CJK outlines, so those strings
+    /// keep the em-fraction extents over the syllable's width
+    /// (<see cref="LyricUpExtent"/>'s receptacle, unchanged).
+    /// </para>
     /// </remarks>
     internal static VerticalSkyline SyllableUpBox(Rendering.ScoreTextMetrics fonts, LyricLayout lay)
+        => SyllableProfile(fonts, lay, VerticalDirection.Up);
+
+    /// <summary>
+    /// Merges one syllable's profiles into a batched (up, down) pair without
+    /// materialising placed copies — the mass-site spelling of
+    /// <see cref="SyllableUpBox"/>/<see cref="SyllableDownBox"/> (one profile source,
+    /// two calling shapes; the boxes remain for the CJK receptacle and any single-use
+    /// reader).
+    /// </summary>
+    internal static void MergeSyllableInto(
+        Rendering.ScoreTextMetrics fonts, LyricLayout lay,
+        VerticalSkyline? up, VerticalSkyline? down)
     {
+        string text = lay.Item.Text;
+        bool cjk = false;
+        foreach (char c in text)
+            if (IsFullHeightGlyph(c)) { cjk = true; break; }
+        if (!cjk && text.Length > 0)
+        {
+            double w = fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
+            var (u, d) = TextOutlineSkylines.ResolvedProfile(
+                text, LyricFontSize, fonts.Face(Rendering.TextRole.LyricText),
+                LyricSkylineHorizontalPadding);
+            up?.Merge(u, lay.X - w / 2.0, 0);
+            down?.Merge(d, lay.X - w / 2.0, 0);
+            return;
+        }
+        up?.Merge(SyllableUpBox(fonts, lay));
+        down?.Merge(SyllableDownBox(fonts, lay));
+    }
+
+    /// <summary>The outline-or-box body shared by the two directions.</summary>
+    private static VerticalSkyline SyllableProfile(
+        Rendering.ScoreTextMetrics fonts, LyricLayout lay, VerticalDirection dir)
+    {
+        string text = lay.Item.Text;
+        bool cjk = false;
+        foreach (char c in text)
+            if (IsFullHeightGlyph(c)) { cjk = true; break; }
+        if (!cjk && text.Length > 0)
+        {
+            double w = fonts.Advance(text, LyricFontSize, Rendering.TextRole.LyricText);
+            var (up, down) = TextOutlineSkylines.Place(
+                text, LyricFontSize, fonts.Face(Rendering.TextRole.LyricText),
+                lay.X - w / 2.0, 0, LyricSkylineHorizontalPadding);
+            return dir == VerticalDirection.Up ? up : down;
+        }
         double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
-        return VerticalSkyline.FromBox(
-            lay.X - halfW, lay.X + halfW, 0, LyricUpExtent(fonts, lay.Item.Text), VerticalDirection.Up);
+        return dir == VerticalDirection.Up
+            ? VerticalSkyline.FromBox(
+                lay.X - halfW, lay.X + halfW, 0, LyricUpExtent(fonts, text),
+                VerticalDirection.Up)
+            : VerticalSkyline.FromBox(
+                lay.X - halfW, lay.X + halfW, -LyricDownExtent(fonts, text), 0,
+                VerticalDirection.Down);
     }
 
     /// <summary>
@@ -1308,28 +1389,31 @@ internal sealed class LyricEngraver
         Func<LyricItem, int> lineKeyOf)
     {
         var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
+        // BATCHED per line, merging the cached resolved profiles straight in — see
+        // NoteBoundBlockSkylines' batch note and TextOutlineSkylines.ResolvedProfile for
+        // the two measurements.
         foreach (var lay in layouts)
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
             var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            var box = SyllableUpBox(fonts, lay);
-            if (result.TryGetValue(key, out var sky)) sky.Merge(box);
-            else result[key] = box;
+            if (!result.TryGetValue(key, out var sky))
+            {
+                sky = new VerticalSkyline(VerticalDirection.Up);
+                sky.BeginBatch();
+                result[key] = sky;
+            }
+            MergeSyllableInto(fonts, lay, sky, null);
         }
+        foreach (var sky in result.Values) sky.EndBatch();
         return result;
     }
 
     /// <summary>
-    /// The DOWN-skyline box of one syllable, self-relative to its own baseline: anchor at
-    /// y = 0, ink bottom at <see cref="LyricDownExtent"/> below it.
+    /// The DOWN profile of one syllable — the mirror of <see cref="SyllableUpBox"/>, the
+    /// same per-glyph outlines (or the same CJK box floor).
     /// </summary>
     internal static VerticalSkyline SyllableDownBox(Rendering.ScoreTextMetrics fonts, LyricLayout lay)
-    {
-        double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
-        return VerticalSkyline.FromBox(
-            lay.X - halfW, lay.X + halfW, -LyricDownExtent(fonts, lay.Item.Text), 0,
-            VerticalDirection.Down);
-    }
+        => SyllableProfile(fonts, lay, VerticalDirection.Down);
 
     /// <summary>
     /// One merged DOWN-skyline per (system, VERSE) — the descenders the verse below has to
@@ -1340,14 +1424,21 @@ internal sealed class LyricEngraver
         Func<LyricItem, int> lineKeyOf)
     {
         var result = new Dictionary<(int System, int Line, int Verse), VerticalSkyline>();
+        // BATCHED per line, merging the cached resolved profiles straight in — the
+        // mirror of BuildVerseUpSkylines.
         foreach (var lay in layouts)
         {
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)) continue;
             var key = (System: s, Line: lineKeyOf(lay.Item), Verse: lay.Item.VerseNumber);
-            var box = SyllableDownBox(fonts, lay);
-            if (result.TryGetValue(key, out var sky)) sky.Merge(box);
-            else result[key] = box;
+            if (!result.TryGetValue(key, out var sky))
+            {
+                sky = new VerticalSkyline(VerticalDirection.Down);
+                sky.BeginBatch();
+                result[key] = sky;
+            }
+            MergeSyllableInto(fonts, lay, null, sky);
         }
+        foreach (var sky in result.Values) sky.EndBatch();
         return result;
     }
 

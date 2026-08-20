@@ -332,7 +332,37 @@ internal sealed class VerticalSkyline
     {
         _deferResolve = false;
         if (_buildings.Count > 1)
+        {
             RebuildKeepingHighest(new List<SkylineBuilding>(_buildings));
+            CoalesceColinear();
+        }
+    }
+
+    /// <summary>
+    /// Merges adjacent buildings that are one straight line — same slope, same intercept,
+    /// touching ends — into one. LOSSLESS by construction: a building's height at x is
+    /// Slope·x + Intercept, so the merged building computes bit-identical values
+    /// everywhere the two did. The mass case is a glyph outline's flat top, which the
+    /// flattener splits at every control point: a verse line of fifty-building syllables
+    /// walks and re-merges far fewer segments after this (the walk's MergeInternal is
+    /// linear in building count per step, and the lyric chain steps once per line per
+    /// system per pass).
+    /// </summary>
+    private void CoalesceColinear()
+    {
+        if (_buildings.Count < 2) return;
+        int w = 0;
+        for (int i = 1; i < _buildings.Count; i++)
+        {
+            var a = _buildings[w];
+            var b = _buildings[i];
+            if (a.End == b.Start && a.Slope == b.Slope && a.Intercept == b.Intercept)
+                _buildings[w] = new SkylineBuilding(
+                    a.Start, a.ValueAt(a.Start), b.ValueAt(b.End), b.End);
+            else
+                _buildings[++w] = b;
+        }
+        _buildings.RemoveRange(w + 1, _buildings.Count - w - 1);
     }
 
     /// <summary>

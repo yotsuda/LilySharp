@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="343.0" viewBox="0 0 119.50 34.30" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="341.1" viewBox="0 0 119.50 34.11" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="34.30" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="34.11" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="491">Named Voices</text>
   <text x="110.97" y="9.18" font-size="2.20" font-style="italic" text-anchor="end" data-pos="515">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -39,19 +39,19 @@
   <line x1="47.49" y1="17.82" x2="47.49" y2="21.32" stroke="#000000" stroke-width="0.130"/>
   <rect x="37.02" y="16.32" width="0.19" height="4.00" data-pos="620"/>
   <rect x="51.63" y="16.32" width="0.19" height="4.00" data-pos="629"/>
-  <text x="10.29" y="25.31" font-size="2.47" text-anchor="middle" data-pos="689">Sing</text>
-  <text x="17.84" y="25.31" font-size="2.47" text-anchor="middle" data-pos="694">a</text>
-  <text x="25.44" y="25.31" font-size="2.47" text-anchor="middle" data-pos="696">love</text>
-  <text x="33.25" y="25.31" font-size="2.47" text-anchor="middle" data-pos="701">song</text>
-  <text x="40.87" y="25.31" font-size="2.47" text-anchor="middle" data-pos="708">soft</text>
-  <text x="48.12" y="25.31" font-size="2.47" text-anchor="middle" data-pos="713">now</text>
-  <text x="10.29" y="28.11" font-size="2.47" text-anchor="middle" data-pos="736">Low</text>
-  <text x="25.44" y="28.11" font-size="2.47" text-anchor="middle" data-pos="740">part</text>
-  <text x="33.25" y="28.11" font-size="2.47" text-anchor="middle" data-pos="745">deep</text>
-  <text x="40.87" y="28.11" font-size="2.47" text-anchor="middle" data-pos="754">slow</text>
-  <text x="48.12" y="28.11" font-size="2.47" text-anchor="middle" data-pos="759">now</text>
-  <text x="2.58" y="25.31" font-size="2.40" font-weight="bold">1.</text>
-  <text x="2.58" y="28.11" font-size="2.40" font-weight="bold">2.</text>
+  <text x="10.29" y="25.12" font-size="2.47" text-anchor="middle" data-pos="689">Sing</text>
+  <text x="17.84" y="25.12" font-size="2.47" text-anchor="middle" data-pos="694">a</text>
+  <text x="25.44" y="25.12" font-size="2.47" text-anchor="middle" data-pos="696">love</text>
+  <text x="33.25" y="25.12" font-size="2.47" text-anchor="middle" data-pos="701">song</text>
+  <text x="40.87" y="25.12" font-size="2.47" text-anchor="middle" data-pos="708">soft</text>
+  <text x="48.12" y="25.12" font-size="2.47" text-anchor="middle" data-pos="713">now</text>
+  <text x="10.29" y="27.92" font-size="2.47" text-anchor="middle" data-pos="736">Low</text>
+  <text x="25.44" y="27.92" font-size="2.47" text-anchor="middle" data-pos="740">part</text>
+  <text x="33.25" y="27.92" font-size="2.47" text-anchor="middle" data-pos="745">deep</text>
+  <text x="40.87" y="27.92" font-size="2.47" text-anchor="middle" data-pos="754">slow</text>
+  <text x="48.12" y="27.92" font-size="2.47" text-anchor="middle" data-pos="759">now</text>
+  <text x="2.58" y="25.12" font-size="2.40" font-weight="bold">1.</text>
+  <text x="2.58" y="27.92" font-size="2.40" font-weight="bold">2.</text>
   <rect x="0.30" y="11.46" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="570"/>
   <text x="3.40" y="13.66" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="570">Main</text>
   </g>
