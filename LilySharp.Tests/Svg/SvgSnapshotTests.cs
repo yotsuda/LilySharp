@@ -86,6 +86,13 @@ public class SvgSnapshotTests
         yield return new object[] { "test/pedal-change" };
         // Structure navigation marks incl. composite forms (to coda, ds al coda…).
         yield return new object[] { "test/navigation-marks" };
+        // A boundary "To Coda" and the next section's label priced as ONE union
+        // extent: the pair rides above the second ending's volta bracket together
+        // (the sign's ink through the bracket's hook was the owner-reported defect).
+        yield return new object[] { "test/tocoda-volta-clearance" };
+        // ...and the mirror: ink that is not the sign (a segno target glyph) at the
+        // pair's barline — the pair rides above it together, one shared line.
+        yield return new object[] { "test/tocoda-label-mirror" };
         // Staff-group types: bracket + spanning barlines (staffGroup) and bracket
         // + disconnected barlines (choirStaff).
         yield return new object[] { "test/staff-group" };

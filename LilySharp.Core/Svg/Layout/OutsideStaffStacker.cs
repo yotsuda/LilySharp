@@ -1799,11 +1799,30 @@ internal static class OutsideStaffStacker
     {
         if (musicMarks.IsDefaultOrEmpty)
             return musicMarks;
+        // A boundary "To Coda" and the section label it shares a barline with are one
+        // arrangement, not two grobs: pair them and move the sign beside the label
+        // BEFORE anything is priced, then place each pair as ONE union extent below —
+        // so whatever stands under either drawn column (a second ending's volta
+        // bracket under the sign, high ink under the label) raises the pair together,
+        // and the members never price each other (their inks overlap by design).
+        // See CoPlaceToCodaWithLabels' remarks for why the post-stack shape failed.
+        musicMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(
+            musicMarks,
+            (ma, mb) => measureToSystem.TryGetValue(ma, out int sa)
+                     && measureToSystem.TryGetValue(mb, out int sb) && sa == sb,
+            out var toCodaPairs);
+        var signOfLabel = new Dictionary<int, int>(); // label index -> its sign's index
+        foreach (var (sign, label) in toCodaPairs)
+            signOfLabel[label] = sign;
+        var pairedSigns = new HashSet<int>(signOfLabel.Values);
         var b = musicMarks.ToBuilder();
         for (int i = 0; i < b.Count; i++)
         {
             var m = b[i];
             if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
+                continue;
+            // A paired sign rides its label: the union placement below moves both.
+            if (pairedSigns.Contains(i))
                 continue;
             // Spanner-handled marks (cresc./rit./ottava ...) are never
             // drawn by DrawMusicMarks — registering them would reserve
@@ -1955,11 +1974,31 @@ internal static class OutsideStaffStacker
                 continue;
             }
             var (x0, x1, top, bottom) = MusicMarkExtents(fonts, m);
+            // A label with a co-placed "To Coda" is priced as the pair's union: the
+            // sign sits inside the label's vertical band (baseline at the box's
+            // bottom edge, cap height under the box top), so the union is the
+            // label's box widened to the sign's left edge. The sign's width is the
+            // same advance its stand-alone placement branch above would reserve.
+            if (signOfLabel.TryGetValue(i, out int signIdx))
+            {
+                var sign = b[signIdx];
+                // The DRAWN composition's width ("To " + the coda glyph), from the
+                // same home the renderer reads — Advance(sign.Text) prices the word
+                // "Coda" nobody draws and its extra reach cleared neighbouring
+                // labels the ink never touches (ToCodaStencilWidths' remarks).
+                var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(fonts);
+                double signHalfW = (textW + glyphW) / 2;
+                x0 = Math.Min(x0, sign.X - signHalfW - m.X);
+            }
             // The whole mark family declares the horizontal 0.2 (see the constant).
             double newRel = Place(trackers(sysIdx, m.StaffIndex), m.X + x0, m.X + x1,
                 m.YUp + midUp, topOffset: top, bottomOffset: bottom,
                 horizonPadding: OutsideStaffHorizontalPadding);
             b[i] = m with { YUp = newRel - midUp };
+            // The pair moves as one: the sign keeps its tucked offset under the
+            // label's line wherever the union landed.
+            if (signOfLabel.TryGetValue(i, out int si2))
+                b[si2] = b[si2] with { YUp = b[si2].YUp + (newRel - midUp - m.YUp) };
         }
         return b.ToImmutable();
     }

@@ -1,0 +1,31 @@
+// Guards the MIRROR side of the To-Coda/label co-placement, the case the
+// post-stack device (2026-08-18, rebuilt session 227) could not cover: ink that
+// is NOT the sign stands at the pair's shared barline — here a SEGNO target
+// glyph, engraved at the start of the very section the label opens. The pair is
+// priced as ONE union extent (OutsideStaffStacker.PlaceMusicMarks +
+// MusicMarkEngraver.CoPlaceToCodaWithLabels), so it rides above that ink
+// together, sign and label on one line; the old device dropped a raised label
+// back to the common rehearsal line, into the very ink the stacker had cleared,
+// because behind the stack "raised" and "raised by the sign" looked alike.
+// (⚠️ The form deliberately has NO `||` at the boundary: a form-level `||`
+// trips a pre-existing collect-resume address drift — `A B || C` alone
+// reproduces it, `A B C` does not. That defect is recorded in HANDOFF §1
+// session 227; this book guards engraving geometry only.)
+title "To Coda beside a segno target"
+time 4/4
+
+part m { clef treble }
+
+section A {
+  m { c4 d e f | }
+}
+section B {
+  m { g4 a b c' | }
+}
+section C {
+  m { segno e4 d c d | e1 | }
+}
+
+form main { A B to coda C }
+
+score main "tocoda-label-mirror" { staff m }

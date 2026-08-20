@@ -4187,12 +4187,11 @@ internal sealed class LayoutEngine
             memo: ctx.AboveStackMemo, profileIdentity: profileIdentity);
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
-        // After stacking, sit a boundary "To Coda" on the adjacent section label's
-        // line (the two straddle one barline) instead of stacking them apart.
-        // musicMarkLayouts is the SAME list before the pass above moved anything, which is
-        // how the co-placement can tell a sign that was raised over something (a volta
-        // bracket at the end of a second ending) from one that simply sits at its default.
-        stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks, musicMarkLayouts);
+        // (No To-Coda/label co-placement here any more: the pass above owns it. A
+        // boundary "To Coda" is paired with the section label it shares a barline
+        // with INSIDE PlaceMusicMarks — moved beside it before either is priced,
+        // then placed as ONE union extent so whatever stands under either drawn
+        // column raises the pair together. See MusicMarkEngraver's remarks.)
         // (No tempo/label co-placement any more: the metronome mark and the section
         // label each break-align to their own anchor and the priority pass above
         // already stacked them pointwise, LilyPond's shape. The chart-pair device

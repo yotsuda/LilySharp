@@ -1,0 +1,34 @@
+// Guards the To-Coda/label co-placement (OutsideStaffStacker.PlaceMusicMarks +
+// MusicMarkEngraver.CoPlaceToCodaWithLabels): a boundary "To Coda" at the end of a
+// SECOND ENDING sits exactly where that ending's volta bracket is, so the pair
+// (sign + the next section's label) is priced as ONE union extent and rides
+// ABOVE the bracket's closing segment together — the sign's ink through the
+// bracket's hook is the defect an owner's book (scratch/ベースタブLy/blogger.lys)
+// showed in the post-stack device. LilyPond cannot print a mark inside the
+// bracket: VoltaBracketSpanner is outside-staff-priority 600, the mark family
+// 1350-1500 (scm/define-grobs.scm) — the side-by-side line itself is
+// LILYSHARP-OWN (HANDOFF §3).
+title "To Coda over a second ending"
+time 4/4
+
+part m { clef treble }
+
+section A {
+  m { c4 d e f | }
+}
+section B {
+  m { g4 a b c' | }
+}
+section C {
+  m { e4 d c d | }
+}
+section D {
+  m { g2 e2 | }
+}
+section E {
+  m { e1 | }
+}
+
+form main { segno A |: B [1. C ] :| [2. D ] to coda || E ds al coda coda A }
+
+score main "tocoda-volta-clearance" { staff m }

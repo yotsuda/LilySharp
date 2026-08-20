@@ -902,47 +902,61 @@ internal static class MusicMarkEngraver
     // re-deriving it by hand.)
 
     /// <summary>
-    /// Co-places a boundary "To Coda" with the section label it shares a barline
-    /// with: lifts the sign to the label's (post-stacking) line and tucks it a
-    /// fixed gap to the LEFT of the label, so the two sit side by side instead of
-    /// colliding. The sign keeps its own measure — it stays logically at the end
-    /// of the previous section (left of the barline), the label stays at the start
-    /// of the next; only the outside-staff LINE is shared (the stacker raises the
-    /// label, so the sign just adopts that height). Matched by X proximity, which
-    /// also means a label on the NEXT system (far X) is never matched. Run AFTER
-    /// outside-staff stacking so the label's line is final.
+    /// Pairs each boundary "To Coda" with the section label it shares a barline with
+    /// and moves the sign beside it — a fixed gap to the label's LEFT, baseline tucked
+    /// to the label box's bottom edge. The sign keeps its own measure: it stays
+    /// logically at the end of the previous section (left of the barline), the label
+    /// at the start of the next; the drawn column and the outside-staff LINE are
+    /// shared. Matched by X proximity within one system, so a label across a line
+    /// break is never matched.
     /// </summary>
-    /// <param name="unstacked">
-    /// The SAME marks as <paramref name="marks"/> before the outside-staff pass moved them,
-    /// positionally matched. It answers one question and only one: was this sign RAISED, i.e.
-    /// does something stand under its column? A sign that was raised must not be sunk back
-    /// into it (see the clamp below); a sign that was not raised may sink to the label's line
-    /// exactly as before, which is what keeps every other book's rehearsal line unmoved.
-    /// Pass <c>default</c> and the clamp is off — the pre-2026-08-18 behaviour.
+    /// <remarks>
+    /// Called by the outside-staff pass (<c>OutsideStaffStacker.PlaceMusicMarks</c>)
+    /// BEFORE any mark is priced, and the pair is then placed as ONE union extent and
+    /// moved together, deliberately. The post-stack device this replaced (2026-08-18 —
+    /// session 227) had two structural faults its own comments named: ⑴ it moved the
+    /// sign to a new X after the tracker had been asked about the old one, so nothing
+    /// ever priced what stood under the DRAWN column; ⑵ it could not tell a label
+    /// raised BY THE SIGN (which must drop back when the sign steps aside) from a
+    /// label raised by an obstacle of its own (which must not — its "mirror case",
+    /// left uncovered). Both vanish under one-union placement: the members never
+    /// price each other (their inks overlap by design — the 4.0 gap is less than the
+    /// two half-widths — so stacking them separately would make each a phantom
+    /// obstacle for the other), and whatever really stands under EITHER drawn column
+    /// raises the pair as a whole.
+    /// LILYPOND-REF: scm/define-grobs.scm — VoltaBracketSpanner outside-staff-priority
+    /// 600 and every member of the mark family 1350-1500 (JumpScript 1350, CodaMark/
+    /// SegnoMark 1400, SectionLabel 1450, RehearsalMark 1500): a mark is ALWAYS outside
+    /// the bracket, and this device must not be the thing that puts one in. (The
+    /// side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
+    /// "To Coda" break-visible at the previous line's END, and the owner decided the
+    /// sign stays on the new line at the barline instead — HANDOFF §3.)
+    /// </remarks>
+    /// <param name="sameSystem">
+    /// Whether two measure indices lie on the same system. The stacker's core pass
+    /// sees every system's marks in one array, and a sign at a line's end must not
+    /// pair with the label opening the next line — absolute X keeps adjacent measures
+    /// close across the break, so the X window alone cannot tell them apart.
     /// </param>
+    /// <param name="pairs">The (sign, label) index pairs this pass matched.</param>
     public static ImmutableArray<MusicMarkLayout> CoPlaceToCodaWithLabels(
         ImmutableArray<MusicMarkLayout> marks,
-        ImmutableArray<MusicMarkLayout> unstacked)
+        Func<int, int, bool> sameSystem,
+        out ImmutableArray<(int Sign, int Label)> pairs)
     {
+        pairs = ImmutableArray<(int Sign, int Label)>.Empty;
         if (marks.IsDefaultOrEmpty || !marks.Any(m => m.MarkType == MusicMarkType.ToCoda))
             return marks;
-        // Positional match or nothing: a length mismatch means the two arrays are not the
-        // same marks, and guessing which is which would be worse than not clamping.
-        bool canTellRaised = !unstacked.IsDefault && unstacked.Length == marks.Length;
 
-        var result = marks.ToBuilder();
         var labelIdx = new List<int>();
-        for (int i = 0; i < result.Count; i++)
-            if (result[i].MarkType is MusicMarkType.SectionLabel or MusicMarkType.Rehearsal)
+        for (int i = 0; i < marks.Length; i++)
+            if (marks[i].MarkType is MusicMarkType.SectionLabel or MusicMarkType.Rehearsal)
                 labelIdx.Add(i);
         if (labelIdx.Count == 0)
             return marks;
 
-        // The common rehearsal line: the labels closest to the staff (smallest Y-up),
-        // i.e. those NOT raised to clear something. An un-raised label sits at the
-        // same staff-relative Y in every system, so this is system-agnostic.
-        double commonYUp = labelIdx.Min(j => result[j].YUp);
-
+        var result = marks.ToBuilder();
+        var found = ImmutableArray.CreateBuilder<(int Sign, int Label)>();
         for (int i = 0; i < result.Count; i++)
         {
             if (result[i].MarkType != MusicMarkType.ToCoda)
@@ -953,61 +967,60 @@ internal static class MusicMarkEngraver
             foreach (int j in labelIdx)
             {
                 double dx = result[j].X - tc.X;
-                if (dx >= -1.0 && dx < 5.0 && dx < bestDx) { bestDx = dx; bestJ = j; }
+                if (dx >= -1.0 && dx < 5.0 && dx < bestDx
+                    && sameSystem(result[j].MeasureIndex, tc.MeasureIndex))
+                { bestDx = dx; bestJ = j; }
             }
             if (bestJ >= 0)
             {
-                // The label was raised only to clear this sign. With the sign
-                // moving beside it, drop the label back to the common line, then
-                // sit the sign just to its left and LOW enough that its baseline
-                // meets the label box's bottom edge (the box extends half its
-                // height below the shared centre line).
+                // Sit the sign just to the label's left, LOW enough that its baseline
+                // meets the label box's bottom edge (the box extends half its height
+                // below the shared centre line). Both are at their un-stacked default
+                // lines here, so this is the ordinary-book geometry already; the
+                // union placement then raises the pair together over whatever really
+                // stands under it, keeping this relative arrangement.
                 var lab = result[bestJ];
-                double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
-                double boxHalf = (labelFs + 2 * 0.2) / 2; // box height = fs + 2*pad(0.2)
-                // ⚠️ ...ONLY WHEN THE SIGN IS WHAT RAISED IT. A label can also have been
-                // raised by something this co-placement knows nothing about — and the one
-                // that matters is the VOLTA BRACKET, because a boundary "To Coda" sits at
-                // the end of a second ending exactly where its bracket does. Dropping to
-                // commonYUp then puts BOTH inside the bracket, which is what an owner's book
-                // showed: the sign's ink through the bracket's closing hook.
-                // commonYUp is the smallest YUp of ANY label in the score, so it is the line
-                // of some label that had nothing over it — a number that is right only when
-                // this label had nothing over it either.
-                // ⇒ THE SHARED LINE IS THE OUTERMOST OF THE TWO, never the global minimum.
-                // The sign's own YUp arrives here already cleared of the bracket by the
-                // outside-staff pass, which is where LilyPond's answer lives:
-                // VoltaBracketSpanner is priority 600 and every member of the mark family is
-                // 1350-1500 (scm/define-grobs.scm: JumpScript 1350, Coda/SegnoMark 1400,
-                // SectionLabel 1450, RehearsalMark 1500), so in LilyPond a mark is ALWAYS
-                // outside the bracket and this device must not be the thing that puts it in.
-                // ⚠️ It is a clamp and not a re-placement: the sign moves to a new X here,
-                // and nothing re-asks the tracker what stands under THAT column. It is the
-                // same column to within ToCodaLabelGap in every book that reaches this, and
-                // making it exact means co-placing BEFORE the stacking pass rather than
-                // after — the shape CoPlaceTempoWithLabels was deleted in favour of.
-                // ⚠️⚠️ AND IT FIRES ONLY WHEN THE SIGN WAS ACTUALLY RAISED. Clamping on the
-                // placed YUp alone lifts the LABEL off the common rehearsal line in ordinary
-                // books too — measured: a to-coda beside a label with nothing above either of
-                // them moved the label 1.3 out, so labels in one score would no longer share
-                // a line. The stacker's own answer to "is something under this sign" is the
-                // only thing that separates the two cases, and it is whether it moved the
-                // sign at all.
-                double raisedFloor = canTellRaised && tc.YUp > unstacked[i].YUp + 1e-9
-                    ? tc.YUp
-                    : double.NegativeInfinity;
-                // ⚠️ STILL NOT COVERED, and said out loud rather than left to be rediscovered:
-                // the mirror case, where the LABEL was raised by something that is not this
-                // sign. It is dropped to commonYUp exactly as before, because "raised" and
-                // "raised BY THE SIGN" cannot be told apart from here for the label — the sign
-                // genuinely was beside it before this ran. Separating them means co-placing
-                // BEFORE the stacking pass, which is the same rewrite the X clamp above wants.
-                double sharedYUp = Math.Max(commonYUp, raisedFloor + boxHalf);
-                result[bestJ] = lab with { YUp = sharedYUp };
-                result[i] = tc with { YUp = sharedYUp - boxHalf, X = lab.X - ToCodaLabelGap };
+                result[i] = tc with
+                {
+                    X = lab.X - ToCodaLabelGap,
+                    YUp = lab.YUp - LabelBoxHalf(lab.MarkType),
+                };
+                found.Add((i, bestJ));
             }
         }
+        pairs = found.ToImmutable();
         return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// Half the drawn height of a boxed label (box = font size + 2 × 0.2 pad): the
+    /// co-placement sits the sign's baseline this far below the label's centre line,
+    /// i.e. at the label box's bottom edge.
+    /// </summary>
+    private static double LabelBoxHalf(MusicMarkType labelType)
+    {
+        double labelFs = labelType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
+        return (labelFs + 2 * 0.2) / 2;
+    }
+
+    /// <summary>
+    /// The two advances of a drawn boundary "To Coda" — the "To " prefix in the
+    /// navigation face and the coda GLYPH (not the word "Coda") — the composition
+    /// <c>SharedRenderer</c> draws, centred as a group on the mark's anchor. ONE
+    /// HOME, deliberately: the union placement (<c>OutsideStaffStacker.
+    /// PlaceMusicMarks</c>) prices the co-placed sign by this so the reservation
+    /// cannot outreach the ink — pricing it by <c>Advance("To Coda")</c> reached
+    /// ~1 staff space further left than anything drawn and made the pair clear a
+    /// neighbouring label the ink never touches (session 227, measured on
+    /// scratch/p206/v4.lys: the pair floated 3 ss over the line every other label
+    /// shared).
+    /// </summary>
+    internal static (double TextW, double GlyphW) ToCodaStencilWidths(ScoreTextMetrics fonts)
+    {
+        double textW = fonts.Advance("To ", PlainTextFontSize, TextRole.Navigation,
+            TextStyleOf(MusicMarkType.ToCoda));
+        double glyphW = 4.0 * 0.8 * 0.42; // approx advance of scripts.coda at the draw's size
+        return (textW, glyphW);
     }
 
     // Centre-to-centre gap between a boundary "To Coda" and the section label it

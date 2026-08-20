@@ -118,83 +118,65 @@ public class FormNavigationTests
         Assert.Empty(Marks("A B C D"));
     }
 
+    /// <summary>
+    /// The pairing half of the co-placement (session 227 rebuilt it INSIDE the
+    /// stacking pass): a boundary "To Coda" and the next section's label share a
+    /// barline (close X), so the sign is tucked to the label's left — a fixed 4.0
+    /// centre-to-centre gap, baseline at the label box's bottom edge — while the
+    /// label itself is untouched. The stacker then prices the pair as ONE union
+    /// extent and moves both together, which is what makes a raise over a volta
+    /// bracket under the sign (blogger.lys) and a raise over ink under the label
+    /// (the old device's uncovered "mirror case") the same, direction-free story —
+    /// guarded end to end by the tocoda-volta-clearance / tocoda-label-mirror
+    /// fixtures' snapshots.
+    /// </summary>
     [Fact]
-    public void CoPlaceToCoda_SitsLeftOfTheLabelOnTheCommonLine()
+    public void CoPlaceToCoda_TucksTheSignBesideTheLabel()
     {
-        // A "To Coda" (end of one section) and the next section's label sit on the
-        // same barline (close X); label C was raised to clear the sign, while B
-        // sits on the common line. Co-placement drops C back to the common line,
-        // keeps the sign in its own measure, and tucks it to C's left.
-        // Y-up (frame B): device baselines -2.50 / -6.36 -> 4.50 / 8.36 above the
-        // (top) staff middle.
         var marks = System.Collections.Immutable.ImmutableArray.Create(
-            new MusicMarkLayout(1, 39.65, 4.50, MusicMarkType.ToCoda, "To Coda", false, 0),
-            new MusicMarkLayout(2, 41.15, 8.36, MusicMarkType.SectionLabel, "C", false, 0),
-            new MusicMarkLayout(1, 23.93, 4.50, MusicMarkType.SectionLabel, "B", false, 0));
-        // The pre-stacking list: NOTHING stands under the sign here, so the stacker left it
-        // where it was (4.50 both times) and only C was pushed out — by the sign. That is the
-        // case where the sign may sink to the label's line, and this test is what says the
-        // 2026-08-18 clamp did not disturb it.
-        var unstacked = System.Collections.Immutable.ImmutableArray.Create(
             new MusicMarkLayout(1, 39.65, 4.50, MusicMarkType.ToCoda, "To Coda", false, 0),
             new MusicMarkLayout(2, 41.15, 4.50, MusicMarkType.SectionLabel, "C", false, 0),
             new MusicMarkLayout(1, 23.93, 4.50, MusicMarkType.SectionLabel, "B", false, 0));
 
-        var result = MusicMarkEngraver.CoPlaceToCodaWithLabels(marks, unstacked);
-        var tc = result.First(m => m.MarkType == MusicMarkType.ToCoda);
-        var cLabel = result.First(m => m.MarkType == MusicMarkType.SectionLabel && m.Text == "C");
+        var placed = MusicMarkEngraver.CoPlaceToCodaWithLabels(
+            marks, (_, _) => true, out var pairs);
+        var tc = placed.First(m => m.MarkType == MusicMarkType.ToCoda);
+        var cLabel = placed.First(m => m.MarkType == MusicMarkType.SectionLabel && m.Text == "C");
 
+        Assert.Single(pairs);
+        Assert.Equal(MusicMarkType.ToCoda, placed[pairs[0].Sign].MarkType);
+        Assert.Equal("C", placed[pairs[0].Label].Text);
         Assert.Equal(1, tc.MeasureIndex);   // keeps its own (prev-section) measure
-        // Y-up (frame B): device -2.50 -> 4.50 above the (top) staff middle.
-        Assert.Equal(4.50, cLabel.YUp, 3);  // C drops to the common (B) line
-        // Sign baseline meets the box bottom: device commonY + boxHalf, boxHalf =
-        // (4.0*0.55 + 0.4)/2 = 1.3, so device -1.20 -> Y-up 3.20.
+        // Centre-to-centre gap 4.0, to the label's LEFT.
+        Assert.Equal(41.15 - 4.0, tc.X, 3);
+        // Sign baseline meets the box bottom: label line − boxHalf, boxHalf =
+        // (4.0*0.55 + 0.4)/2 = 1.3, so 4.50 − 1.30 = 3.20.
         Assert.Equal(3.20, tc.YUp, 3);
-        Assert.True(tc.X < cLabel.X, "To Coda should sit left of the label");
+        // The label is untouched — the union placement decides the pair's line.
+        Assert.Equal(4.50, cLabel.YUp, 3);
+        Assert.Equal(41.15, cLabel.X, 3);
+        // B is a different barline (far X) and is not part of any pair.
+        Assert.Equal(4.50, placed.First(m => m.Text == "B").YUp, 3);
     }
 
     /// <summary>
-    /// ⚠️ THE SIGN MAY SINK TO THE LABEL'S LINE ONLY IF NOTHING IS UNDER IT. A boundary
-    /// "To Coda" sits at the end of a second ending, which is exactly where that ending's
-    /// VOLTA BRACKET is, so the outside-staff pass raises it over the bracket — and the
-    /// co-placement then dropped it, and the label with it, back inside.
+    /// ⚠️ A sign at a line's END must not pair with the label OPENING the next line:
+    /// absolute X keeps adjacent measures close across a break, so the X window alone
+    /// cannot tell — the same-system gate is what says no.
     /// </summary>
-    /// <remarks>
-    /// LilyPond cannot produce that: VoltaBracketSpanner is outside-staff-priority 600 and
-    /// every member of the mark family is 1350-1500 (scm/define-grobs.scm — JumpScript 1350,
-    /// CodaMark/SegnoMark 1400, SectionLabel 1450, RehearsalMark 1500), so a mark is always
-    /// engraved outside the bracket. Reported by the owner on a real book
-    /// (scratch/ベースタブLy/blogger.lys): the sign's ink through the bracket's closing hook.
-    /// <para>
-    /// Here the stacker moved the sign 4.50 -> 7.00 (a bracket under its column) while the
-    /// label was never moved. The shared line must be the sign's, so the LABEL rises to meet
-    /// it -- the opposite of the case above, and the reason the two are separate tests.
-    /// </para>
-    /// </remarks>
     [Fact]
-    public void CoPlaceToCoda_DoesNotSinkASignThatWasRaisedOverSomething()
+    public void CoPlaceToCoda_DoesNotPairAcrossALineBreak()
     {
-        var unstacked = System.Collections.Immutable.ImmutableArray.Create(
-            new MusicMarkLayout(1, 39.65, 4.50, MusicMarkType.ToCoda, "To Coda", false, 0),
-            new MusicMarkLayout(2, 41.15, 4.50, MusicMarkType.SectionLabel, "C", false, 0),
-            new MusicMarkLayout(1, 23.93, 4.50, MusicMarkType.SectionLabel, "B", false, 0));
         var marks = System.Collections.Immutable.ImmutableArray.Create(
-            new MusicMarkLayout(1, 39.65, 7.00, MusicMarkType.ToCoda, "To Coda", false, 0),
-            new MusicMarkLayout(2, 41.15, 4.50, MusicMarkType.SectionLabel, "C", false, 0),
-            new MusicMarkLayout(1, 23.93, 4.50, MusicMarkType.SectionLabel, "B", false, 0));
+            new MusicMarkLayout(1, 39.65, 4.50, MusicMarkType.ToCoda, "To Coda", false, 0),
+            new MusicMarkLayout(2, 41.15, 4.50, MusicMarkType.SectionLabel, "C", false, 0));
 
-        var result = MusicMarkEngraver.CoPlaceToCodaWithLabels(marks, unstacked);
-        var tc = result.First(m => m.MarkType == MusicMarkType.ToCoda);
-        var cLabel = result.First(m => m.MarkType == MusicMarkType.SectionLabel && m.Text == "C");
+        // Measure 1 ends one system, measure 2 opens the next.
+        var placed = MusicMarkEngraver.CoPlaceToCodaWithLabels(
+            marks, (ma, mb) => ma == mb, out var pairs);
 
-        // The sign keeps the height the stacker gave it -- it is NOT pushed back down to
-        // commonYUp (4.50) - boxHalf = 3.20, which is what it used to read.
-        Assert.Equal(7.00, tc.YUp, 3);
-        // ...and the label rides up to it, box bottom still meeting the sign's baseline.
-        Assert.Equal(7.00 + 1.30, cLabel.YUp, 3);
-        Assert.True(tc.X < cLabel.X, "To Coda should still sit left of the label");
-        // B is a different barline and must not be dragged along.
-        Assert.Equal(4.50, result.First(m => m.Text == "B").YUp, 3);
+        Assert.Empty(pairs);
+        Assert.Equal(marks, placed);
     }
 
     // --- A SIGN THAT OPENS A LINE BREAK-ALIGNS ON THE BAR LINE DRAWN THERE (session 206) ---

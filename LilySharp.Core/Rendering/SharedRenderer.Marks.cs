@@ -695,13 +695,13 @@ internal static partial class SharedRenderer
             double ts = MusicMarkEngraver.PlainTextFontSize;
             double gs = FontSize * 0.8;
             const string prefix = "To ";
-            // The centring measures what the next line draws — one style, read from the one
-            // home. It measured Bold against a BoldItalic draw until 2026-08-18, which put
-            // the pair 0.068286614 staff spaces left of centre (the "To " advance differs by
-            // 0.136573228 between the two faces at this size).
+            // The centring measures what the next line draws — one composition, read
+            // from the one home (ToCodaStencilWidths), which the union placement's
+            // reservation reads too, so the box and the ink cannot drift apart. (It
+            // measured Bold against a BoldItalic draw until 2026-08-18, which put the
+            // pair 0.068286614 staff spaces left of centre.)
             var style = MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda);
-            double textW = fonts.Advance(prefix, ts, TextRole.Navigation, style);
-            double glyphW = gs * 0.42;   // approx advance of scripts.coda
+            var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(fonts);
             double left = m.X - (textW + glyphW) / 2;
             gc.DrawText(prefix, left, absY, ts, TextRole.Navigation,
                 style, TextAnchor.Start, Color.Black);
