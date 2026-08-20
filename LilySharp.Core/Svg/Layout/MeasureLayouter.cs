@@ -390,6 +390,17 @@ internal sealed class MeasureLayouter
         double maxSkyDist = 0;
         double maxRod = 0;
         bool anyWish = false;
+        // The left items of the PAIRS that actually carry a wish — one per voice
+        // whose notes occupy BOTH columns. The left-head refinement below prices
+        // THESE heads (each wish reads its own voice's first_head,
+        // note-spacing.cc:46-70), not the widest head any voice parks on the left
+        // column: a half held under a quarter has no wish into the quarter's next
+        // column (its own wish spans to ITS next note), and LilyPond's gap is blind
+        // to it — MEASURED, probe multi-voice-head-spacing.ly (MVH's three gaps
+        // equal to the digit; charging the widest head instead was the whole of
+        // multi-voice.natural.wide-head-gap's +0.073200 = the half-vs-quarter
+        // head-width difference).
+        List<MusicItem>? wishLefts = null;
         foreach (var vm in measuresToScan)
         {
             var prev = ItemStartingAt(vm, timings[i - 1]);
@@ -397,6 +408,7 @@ internal sealed class MeasureLayouter
             if (prev == null || next == null)
                 continue;
             anyWish = true;
+            (wishLefts ??= new List<MusicItem>()).Add(prev);
             // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the
             //   spring's own minimum, taken with the right column's skyline-vertical-padding
             //   and with NO spanner padding.
@@ -448,7 +460,16 @@ internal sealed class MeasureLayouter
         // where LilyPond's bare ideals are 0.80/1.60. The cue check stays on top of this:
         // see SpacingRules.CrossesVoiceBoundary (spacing-spanner.cc:352-358).
         if (anyWish && prevItems != null)
-            spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems, nextItems);
+            spring = SpacingRules.ApplyLeftHeadWidth(
+                spring,
+                // Per-voice wish lefts when the per-voice scan found the wishes;
+                // the staff-level branch above can set anyWish with none collected
+                // (a same-staff cross-voice pair) — that regime is UNMEASURED and
+                // keeps the pre-port aggregate reading.
+                wishLefts ?? (IEnumerable<MusicItem>)prevItems, nextItems,
+                // Several wishes merge as LilyPond merges them — by AVERAGING the
+                // ideals (merge_springs) — not by taking the widest head.
+                mergeWishAverage: wishLefts != null);
 
         // A mid-measure clef/key/time change (zero duration, so it shares the NEXT
         // column's timing) gets its own non-musical column in LilyPond, and the gaps

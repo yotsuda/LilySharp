@@ -4071,12 +4071,25 @@ internal static class SpacingRules
     }
 
     internal static Spring ApplyLeftHeadWidth(
-        Spring spring, IEnumerable<MusicItem> leftItems, IEnumerable<MusicItem>? rightItems = null)
+        Spring spring, IEnumerable<MusicItem> leftItems, IEnumerable<MusicItem>? rightItems = null,
+        bool mergeWishAverage = false)
     {
         if (CrossesVoiceBoundary(leftItems, rightItems))
             return spring;
 
+        // mergeWishAverage: the caller passed ONE left item per WISH (per voice
+        // occupying both columns), and LilyPond merges simultaneous wishes by
+        // AVERAGING their ideals — spring.cc merge_springs, whose avg_distance the
+        // repo already cites for the +0.3 headroom — so the refinement's head term
+        // is the wishes' MEAN, not their max. With a single wish (every single-voice
+        // book, i.e. the whole note-to-note ledger) mean == max == the voice's own
+        // head, so only multi-wish columns can read differently. The max arm remains
+        // for the aggregate callers (the closing spring reads the column's grobs
+        // through different LilyPond machinery, Staff_spacing, and is unmeasured
+        // multi-voice; the same-staff cross-voice fallback likewise).
         double leftHeadEnd = 0;
+        double headSum = 0;
+        int headCount = 0;
         bool any = false;
         foreach (var p in leftItems)
         {
@@ -4115,10 +4128,14 @@ internal static class SpacingRules
             if (double.IsNaN(w))
                 continue;
             leftHeadEnd = Math.Max(leftHeadEnd, w);
+            headSum += w;
+            headCount++;
             any = true;
         }
         if (!any)
             return spring;
+        if (mergeWishAverage)
+            leftHeadEnd = headSum / headCount;
 
         double ideal = Math.Max(EngravingDefaults.SpacingIncrement,
             spring.IdealDistance + leftHeadEnd - EngravingDefaults.SpacingIncrement);
