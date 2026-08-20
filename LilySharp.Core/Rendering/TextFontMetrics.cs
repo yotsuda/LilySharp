@@ -59,6 +59,15 @@ public static class TextFontMetrics
     /// 2.26.0, C059 and TeX Gyre Schola agree on every advance and on the digit's ink to
     /// six digits, so this is LilyPond's text face; C059 itself is AGPL and Schola is
     /// LPPL/GUST, which is why the twin is the one bundled.
+    /// ⚠️ "AGREE ON THE DIGIT'S INK" DOES NOT GENERALISE TO EVERY GLYPH: the i/j DOT is the
+    /// first measured VERTICAL-INK divergence (2026-08-20, fontTools bbox over both .otf
+    /// files). h, x, g, p are BIT-IDENTICAL between the two faces; i and j top 0.135818 ss
+    /// apart at LyricText size (C059 1.765633, Schola 1.629815 — the dot alone), bottoms
+    /// identical. The outline walk is not the cause (Lily#'s ink box and outline profile
+    /// agree to the digit); the FACE is. First observed as audit/lp-geometry
+    /// lyrics.band-floor.staff-to-lyric's -0.092000: a lyric floor that binds on an
+    /// i/j-topped syllable carries this as a permanent residual, under the same 2026-08-02
+    /// decision that accepted the kerns.
     /// <para>
     /// ⚠️ "AGREE ON EVERY ADVANCE" IS TRUE AND IS NOT THE WHOLE STORY — they do NOT agree on
     /// KERNS, found 2026-08-02 when the shaping port left two entries open. Shaped through
