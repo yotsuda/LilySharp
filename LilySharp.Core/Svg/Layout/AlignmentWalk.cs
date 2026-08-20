@@ -108,6 +108,27 @@ internal sealed class AlignmentWalk
     /// <summary>How far below the walk's origin the last line placed sits.</summary>
     public double Where { get; private set; }
 
+    private AlignmentWalk(VerticalSkyline accumulated, double where)
+    {
+        _downSkyline = accumulated;
+        Where = where;
+    }
+
+    public AlignmentWalk()
+    {
+    }
+
+    /// <summary>
+    /// An independent copy of the walk at its current position — for a caller that must
+    /// <see cref="Advance"/> past a CACHED snapshot without mutating it
+    /// (<see cref="LyricChainMemo"/>'s closing over next-system leading rows). The
+    /// accumulation is copied wholesale; <see cref="Distance"/>-only readers of a shared
+    /// snapshot need no fork.
+    /// </summary>
+    internal AlignmentWalk Fork() => new(
+        VerticalSkyline.FromResolvedBuildings(VerticalDirection.Down, _downSkyline.Buildings),
+        Where);
+
     /// <summary>
     /// Starts the walk at an element that is already positioned — the anchor staff. Its
     /// skyline enters the accumulation at distance 0: the walk's origin IS that element's

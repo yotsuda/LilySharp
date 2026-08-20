@@ -114,6 +114,20 @@ internal sealed class SystemLayoutCache
     /// sharing is sound here and not for the stacking memos above).</summary>
     public VerseSkylineMemo VerseSkylines { get; } = new();
 
+    /// <summary>The PRELIMINARY annotation pass's lyric chain-prefix memo — one store
+    /// per pass, like <see cref="PreliminaryAboveStack"/> and unlike
+    /// <see cref="VerseSkylines"/>: the walk's SEED reads the pass's anchor profile
+    /// (the scripted system silhouette on the fallback path, the staff profile
+    /// otherwise), and the two passes' profiles are not the same object nor always the
+    /// same value — MEASURED, session 224: one shared store served the preliminary
+    /// pass's walk to the final pass and two incremental==full nets went red with
+    /// syllables 0.6-0.9 ss deep. See <see cref="LyricChainMemo"/>.</summary>
+    public LyricChainMemo PreliminaryLyricChains { get; } = new();
+
+    /// <summary>The FINAL annotation pass's lyric chain-prefix memo
+    /// (see <see cref="PreliminaryLyricChains"/>).</summary>
+    public LyricChainMemo FinalLyricChains { get; } = new();
+
     /// <summary>Whether the most recent <see cref="GetOrComputeMeasures"/> call was a
     /// hit (reused) rather than a miss (computed). For diagnostics / tests.</summary>
     public bool LastWasHit { get; private set; }

@@ -377,6 +377,7 @@ internal sealed class LayoutEngine
             // The verse-skyline memo is the SAME instance the preliminary pass used —
             // X-only values, so the final pass hits what the preliminary computed.
             VerseSkylines = systemCache?.VerseSkylines,
+            LyricChains = systemCache?.FinalLyricChains,
         };
         var annotations = CalculateAnnotationLayouts(annotationContext);
 
@@ -898,6 +899,7 @@ internal sealed class LayoutEngine
             // The verse-skyline memo is deliberately SHARED with the final pass — its
             // values are X-only, which is what the per-pass stores above are not.
             VerseSkylines = systemCache?.VerseSkylines,
+            LyricChains = systemCache?.PreliminaryLyricChains,
         });
         EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
@@ -3509,6 +3511,10 @@ internal sealed class LayoutEngine
         /// incremental session, where the skylines are built fresh as always.</summary>
         public VerseSkylineMemo? VerseSkylines { get; init; }
 
+        /// <summary>The SHARED per-(family, system) lyric chain-prefix memo (see
+        /// <see cref="LyricChainMemo"/>), or null outside the incremental session.</summary>
+        public LyricChainMemo? LyricChains { get; init; }
+
         /// <summary>
         /// A staff's rest/note collision shifts — <c>MultiStaffLayouter.RestCollisionsOf</c>
         /// itself, so this pass reserves each rest where the ROOM reserved it and where the
@@ -4445,7 +4451,7 @@ internal sealed class LayoutEngine
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
             ctx.NoteBoundAnchorY, noteBoundStaffDownSkyline, ctx.LooseChainEnd,
             betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
-            ctx.VerseSkylines);
+            ctx.VerseSkylines, ctx.LyricChains);
 
         // The rows the chain solved travel back out through the context — see
         // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards

@@ -398,7 +398,8 @@ internal sealed class LyricEngraver
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd = null,
         double lastSpaceableStaffY = 0,
         Func<int, IReadOnlyList<int>>? trailingRowStaves = null,
-        VerseSkylineMemo? verseSkylineMemo = null)
+        VerseSkylineMemo? verseSkylineMemo = null,
+        LyricChainMemo? chainMemo = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -492,7 +493,7 @@ internal sealed class LyricEngraver
         if (!systems.IsDefaultOrEmpty)
             layouts = DistributeLooseLines(layouts, systems, systemSkylines, staffBottom,
                 noteBoundAnchorY, noteBoundStaffDownSkyline, looseChainEnd, betweenStavesEnd,
-                lastSpaceableStaffY, trailingRowStaves, verseSkylineMemo);
+                lastSpaceableStaffY, trailingRowStaves, verseSkylineMemo, chainMemo);
 
         return layouts.ToImmutableArray();
     }
@@ -608,7 +609,8 @@ internal sealed class LyricEngraver
         Func<int, int, (double Room, VerticalSkyline NextStaffUp)?>? betweenStavesEnd,
         double lastSpaceableStaffY,
         Func<int, IReadOnlyList<int>>? trailingRowStaves,
-        VerseSkylineMemo? verseSkylineMemo)
+        VerseSkylineMemo? verseSkylineMemo,
+        LyricChainMemo? chainMemo)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -690,37 +692,14 @@ internal sealed class LyricEngraver
                     if (IsTrailingRow(lay, out int s))
                         chainSystems.Add(s);
 
-            foreach (int system in chainSystems)
-            {
-                // THIS block's lines, in the order the alignment walks them: the note-bound
-                // verses that hang under the anchor staff, and then — below the system —
-                // every independent row standing under it, verse by verse. A row's verses are
-                // separate Lyrics contexts to LilyPond (the LYRV/LYRRV pair is exactly that
-                // spelling difference), so they are separate elements here.
-                var elements = new List<(int Line, int Verse)>();
-                var rowFirstElement = new List<(int RowStaff, int Index)>();
-                foreach (int v in family.Lines
-                             .Where(l => measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
-                                         && s == system)
-                             .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
-                    elements.Add((familyKey, v));
-                if (!isUpperFamily)
-                {
-                    foreach (int rowStaff in TrailingRows(system))
-                    {
-                        int before = elements.Count;
-                        foreach (int v in layouts
-                                     .Where(l => l.Item.IsLyricsRow && l.Item.StaffIndex == rowStaff
-                                                 && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
-                                                 && s == system)
-                                     .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
-                            elements.Add((rowStaff, v));
-                        if (elements.Count > before)
-                            rowFirstElement.Add((rowStaff, before));
-                    }
-                }
-                if (elements.Count == 0) continue;
 
+            // ── The chain PREFIX (elements, pre-closing gap minima, the walk's
+            // accumulated profile) is per-system local and cached across keystrokes
+            // (LyricChainMemo); the anchor-table scalars are deliberately NOT in it and
+            // are resolved live by ResolveAnchor — the one spelling both sides read.
+            (VerticalSkyline? AnchorDown, double SysAnchorBase, double SkylineToAnchor)
+                ResolveAnchor(int sysIdx)
+            {
                 // The staff this block hangs from — ITS OWN down-skyline, whichever block it
                 // is. LILYPOND-REF: lily/align-interface.cc:272-273 — the walk measures each
                 // element against what has accumulated ABOVE it, and at the first loose line
@@ -729,23 +708,23 @@ internal sealed class LyricEngraver
                 // the one with its dynamics, slurs, ties and figured bass merged in — because
                 // that is the grob LilyPond measures (a staff's `vertical-skylines` is its
                 // VerticalAxisGroup's, outside-staff grobs included; align-interface.cc:71-87).
-                // The system silhouette carries only the edge staves' base ink plus scripts,
+                // The sysIdx silhouette carries only the edge staves' base ink plus scripts,
                 // so a sung staff's f was engraved over the syllable it should have pushed
                 // down: MEASURED, audit/lp-geometry lyrics.dynamic.staff-to-lyric read
                 // −1.668349 against the control's −0.000155, and the difference is LilyPond's
                 // f-glyph term to the digit. The silhouette remains the FALLBACK for the case
                 // with no anchor to name (a staffless sheet).
-                var sysAnchor = isUpperFamily || system >= systems.Length
-                    ? null : LastSpaceableStaffOf(systems[system]);
+                var sysAnchor = isUpperFamily || sysIdx >= systems.Length
+                    ? null : LastSpaceableStaffOf(systems[sysIdx]);
                 var perStaffAnchorDown = isUpperFamily
-                    ? noteBoundStaffDownSkyline?.Invoke(system, familyKey)
+                    ? noteBoundStaffDownSkyline?.Invoke(sysIdx, familyKey)
                     : sysAnchor is { } a
-                        ? noteBoundStaffDownSkyline?.Invoke(system, a.StaffIndex)
+                        ? noteBoundStaffDownSkyline?.Invoke(sysIdx, a.StaffIndex)
                         : null;
                 var anchorDown = perStaffAnchorDown
-                    ?? (systemSkylines != null && system < systemSkylines.Count
-                        ? systemSkylines[system].down : (VerticalSkyline?)null);
-                // The anchor's Y is per-system with it: only the profile read keeps the two
+                    ?? (systemSkylines != null && sysIdx < systemSkylines.Count
+                        ? systemSkylines[sysIdx].down : (VerticalSkyline?)null);
+                // The anchor's Y is per-sysIdx with it: only the profile read keeps the two
                 // honest, because the silhouette arithmetic cancels anchorBase and the
                 // per-staff arithmetic does not.
                 double sysAnchorBase = !isUpperFamily && perStaffAnchorDown != null
@@ -756,7 +735,7 @@ internal sealed class LyricEngraver
                 // frame the anchor's skyline is in has to be stepped to that. A per-staff
                 // skyline is ALREADY about its staff's reference point
                 // (SkylineBuilder.BuildStaffSkylines: the middle line is its origin), so a
-                // block between two staves needs NO step at all; a system skyline is measured
+                // block between two staves needs NO step at all; a sysIdx skyline is measured
                 // from the SYSTEM ORIGIN, so the legacy placement steps past every staff above
                 // the anchor and then the half-staff to its reference point.
                 // Getting this wrong drops the block by exactly the inter-staff distance —
@@ -770,8 +749,43 @@ internal sealed class LyricEngraver
                 // the anchor's skyline in HERE is gone with it. One silhouette, one reader.
                 double skylineToAnchor = perStaffAnchorDown != null || isUpperFamily
                     ? 0 : sysAnchorBase + anchorOffset;
+                return (anchorDown, sysAnchorBase, skylineToAnchor);
+            }
 
-                var gaps = new List<LooseLineSpacer.Gap>(elements.Count + 2);
+            LyricChainMemo.ChainPrefix? BuildChainPrefix(int sysIdx)
+            {
+                // THIS block's lines, in the order the alignment walks them: the note-bound
+                // verses that hang under the anchor staff, and then — below the sysIdx —
+                // every independent row standing under it, verse by verse. A row's verses are
+                // separate Lyrics contexts to LilyPond (the LYRV/LYRRV pair is exactly that
+                // spelling difference), so they are separate elements here.
+                var elements = new List<(int Line, int Verse)>();
+                var rowFirstElement = new List<(int RowStaff, int Index)>();
+                foreach (int v in family.Lines
+                             .Where(l => measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
+                                         && s == sysIdx)
+                             .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
+                    elements.Add((familyKey, v));
+                if (!isUpperFamily)
+                {
+                    foreach (int rowStaff in TrailingRows(sysIdx))
+                    {
+                        int before = elements.Count;
+                        foreach (int v in layouts
+                                     .Where(l => l.Item.IsLyricsRow && l.Item.StaffIndex == rowStaff
+                                                 && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int s)
+                                                 && s == sysIdx)
+                                     .Select(l => l.Item.VerseNumber).Distinct().OrderBy(v => v))
+                            elements.Add((rowStaff, v));
+                        if (elements.Count > before)
+                            rowFirstElement.Add((rowStaff, before));
+                    }
+                }
+                if (elements.Count == 0) return null;
+
+
+                var (anchorDown, _, _) = ResolveAnchor(sysIdx);
+                var gaps = ImmutableArray.CreateBuilder<LooseLineSpacer.Gap>(elements.Count);
 
                 // ⚠️ ONE RUNNING DOWN-SKYLINE, NOT A PAIR PER GAP, because that is what the
                 // alignment is: it walks the group once, and after fixing each distance it
@@ -805,8 +819,8 @@ internal sealed class LyricEngraver
                 // reservation and the chain literally one walk rather than two spellings.
                 double Advance((int Line, int Verse) element, double padding, double minimumDistance)
                 {
-                    up.TryGetValue((system, element.Line, element.Verse), out var lineUp);
-                    down.TryGetValue((system, element.Line, element.Verse), out var lineDown);
+                    up.TryGetValue((sysIdx, element.Line, element.Verse), out var lineUp);
+                    down.TryGetValue((sysIdx, element.Line, element.Verse), out var lineDown);
                     return walk.Advance(lineUp, lineDown, padding, minimumDistance);
                 }
 
@@ -814,11 +828,12 @@ internal sealed class LyricEngraver
                 // REFERENCE POINT, which is what skylineToAnchor converts to.
                 // nonstaff-relatedstaff-spacing declares no minimum-distance, which
                 // read_spacing_spec leaves as no raise.
+                // RAW: the frame step (skylineToAnchor) is subtracted LIVE by the caller —
+                // it is an anchor-table scalar and must not be baked into a cached value.
                 gaps.Add(new LooseLineSpacer.Gap(
                     LooseLineSpacer.NonStaffRelatedStaff,
                     Advance(elements[0], SkylineDrop.RelatedStaffPadding,
-                            LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance)
-                        - skylineToAnchor));
+                            LooseLineSpacer.NonStaffRelatedStaff.MinimumDistance)));
 
                 // Line to line, whose spec DOES declare one (2.8). ⚠️ THE SAME SPEC WHETHER
                 // THE STEP IS VERSE-TO-VERSE OR BLOCK-TO-ROW: get_spacing_spec's loose-loose
@@ -831,6 +846,37 @@ internal sealed class LyricEngraver
                         Advance(elements[i], SkylineDrop.NonStaffNonStaffPadding,
                                 LooseLineSpacer.NonStaffNonStaff.MinimumDistance)));
                 }
+
+                return new LyricChainMemo.ChainPrefix(
+                    elements.ToImmutableArray(), rowFirstElement.ToImmutableArray(),
+                    gaps.MoveToImmutable(), walk);
+            }
+            foreach (int system in chainSystems)
+            {
+                // THIS block's chain: the cached PREFIX (elements in walk order, the
+                // pre-closing gap minima with the first stored RAW, the walk at its
+                // post-prefix position) plus the LIVE frame scalars and closing — see
+                // LyricChainMemo for where the cacheable/live boundary runs and why.
+                var prefix = chainMemo != null && system < systems.Length
+                    ? chainMemo.GetOrCompute(familyKey, system, systems[system].Measures,
+                        () => BuildChainPrefix(system))
+                    : BuildChainPrefix(system);
+                if (prefix is null) continue;
+                var elements = prefix.Elements;
+                var rowFirstElement = prefix.RowFirstElement;
+                var walk = prefix.Walk;
+                var (_, sysAnchorBase, skylineToAnchor) = ResolveAnchor(system);
+
+                // The closing gaps go onto a COPY — the cached list stays pristine — and
+                // the first gap gets its live frame step here.
+                var gaps = new List<LooseLineSpacer.Gap>(prefix.RawGaps.Length + 4)
+                {
+                    new LooseLineSpacer.Gap(
+                        prefix.RawGaps[0].Spec,
+                        prefix.RawGaps[0].MinDistance - skylineToAnchor),
+                };
+                for (int i = 1; i < prefix.RawGaps.Length; i++)
+                    gaps.Add(prefix.RawGaps[i]);
 
                 // What closes the chain, and how much room it has.
                 double room = double.PositiveInfinity;
@@ -911,6 +957,9 @@ internal sealed class LyricEngraver
                         // above the staff's reference point instead of 3.576200).
                         firstLeadingPosition = gaps.Count + 1;
 
+                        // Advancing past the CACHED walk snapshot needs an independent
+                        // copy; Distance-only readers above did not.
+                        walk = walk.Fork();
                         for (int k = 0; k < chainEnd.Lines.Length; k++)
                         {
                             var line = chainEnd.Lines[k];
@@ -949,7 +998,7 @@ internal sealed class LyricEngraver
                 // honest spelling of "this chain is not solved yet".
 
                 var positions = LooseLineSpacer.Distribute(gaps, room);
-                for (int i = 0; i < elements.Count; i++)
+                for (int i = 0; i < elements.Length; i++)
                 {
                     // Y-up: a line below the anchor is negative.
                     newY[(familyKey, system, elements[i].Line, elements[i].Verse)] =
@@ -962,7 +1011,7 @@ internal sealed class LyricEngraver
                 // baseline — in page Y-up, which is the frame ApplySolvedRowPositions works in.
                 // LILYPOND-REF: lily/page-layout-problem.cc:1046-1053 — distribute_loose_lines
                 // ends by translating every loose line to its solved position.
-                if (rowFirstElement.Count > 0 && system < systems.Length && !systems.IsDefaultOrEmpty)
+                if (rowFirstElement.Length > 0 && system < systems.Length && !systems.IsDefaultOrEmpty)
                 {
                     double rowAnchorPageY = systems[system].Y - (sysAnchorBase + anchorOffset);
                     foreach (var (rowStaff, index) in rowFirstElement)

@@ -91,6 +91,11 @@ public class LyricBandMemoTests
             $"the note keystroke recomputed {vMisses1 - vMisses0} systems' verse skylines — expected at most the edited one per pass");
         Assert.True(vHits1 - vHits0 >= 2 * (vMisses0 - 2),
             $"keystroke served {vHits1 - vHits0} verse-skyline entries of ~{2 * vMisses0} lookups");
+        // ...and each pass's chain-prefix memo served every unchanged system's walk
+        // (one store per pass — the walk's seed is pass-dependent; see LyricChainMemo).
+        var (cHits1, cMisses1) = cache.FinalLyricChains.Stats;
+        Assert.True(cHits1 >= misses0 - 2 && cMisses1 <= misses0 + 2,
+            $"final-pass chain memo hits {cHits1} / misses {cMisses1} over ~{misses0} systems");
     }
 
     [Fact]
@@ -102,6 +107,7 @@ public class LyricBandMemoTests
         Assert.NotNull(cache);
         var (_, misses0) = cache!.LyricBandStats;
         var (_, vMisses0) = cache.VerseSkylines.Stats;
+        var (_, cMisses0) = cache.FinalLyricChains.Stats;
 
         // Change one syllable's TEXT (wider ink): the edited system's band must
         // recompute — the syllables reach the key through the side-table buckets —
@@ -120,5 +126,8 @@ public class LyricBandMemoTests
         var (_, vMisses1) = cache.VerseSkylines.Stats;
         Assert.True(vMisses1 > vMisses0,
             $"the lyric edit recomputed no verse skyline (misses {vMisses0} -> {vMisses1})");
+        var (_, cMisses1) = cache.FinalLyricChains.Stats;
+        Assert.True(cMisses1 > cMisses0,
+            $"the lyric edit recomputed no chain prefix (misses {cMisses0} -> {cMisses1})");
     }
 }
