@@ -151,6 +151,50 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第227セッション＝**残債筆頭 ⒞「CoPlaceToCodaWithLabels の鏡像」を装置ごと再設計して閉じた**（`d33d0be2`・専用便）——**post-stack の共同配置を捨て、PlaceMusicMarks の内側で「対を 1 つの union」として置く**：sign は価格付けの前にラベルの左へ動き（`CoPlaceToCodaWithLabels`＝matching＋tuck だけの純関数・same-system 述語で改行跨ぎを遮断）、**ラベル配置時に union extent（ラベル箱を sign の描画左端まで広げた 1 箱）で 1 回 Place・delta を両者に適用**。**どちらの描画列の下に何が立っていても対ごと持ち上がり（volta bracket 下の sign＝blogger 形／ラベル下の target グリフ＝鏡像）、鏡像は「方向」ごと消滅**。旧装置の 2 綴りの自壊——⑴ X を priced の後に動かす（描画列を誰も価格付けしない）⑵「raised」と「raised by the sign」を stack の背後から区別できない——は**構造ごと不在**。**2 相案（pre-move→個別 stack→post-align）は実装して実測で棄却した**：gap 4.0 ＜ 両半幅和＝sign とラベルの ink は設計上重なるので、別々に stack すると**互いが phantom 障害物**になる（v4 で対が共有線から 3 ss 浮いた）。**修理の連鎖＝reserve≠draw を 1 つ閉じた**：union の sign 幅を `Advance("To Coda")`（誰も描かない "Coda" の語幅・描画実 ink より左へ ~1 ss 過大）から **`ToCodaStencilWidths`（"To "＋coda グリフ＝renderer とレイアウトが読む 1 家）**へ——旧装置は再価格しないのでこの過大予約は 200 便無害のまま眠っていた。**sweep 10/1237 全帰属（全冊 To-Coda 族・MIDI 0）**：追跡 corpus で動いたのは**本便が起こした fixture 2 冊だけ**・blogger／p206 probe は**対の 4 要素が 0.030 ss** 動くのみ（旧 sign-outline 清算→union 箱清算の差）・v5 は同一化。**fixture 2 冊新設**（`tocoda-volta-clearance`＝blogger 形・`tocoda-label-mirror`＝segno target が対の小節線に立つ鏡像形。**装置を踏む corpus 本はこれまで 0 冊だった**）・snapshot 220→**222 枚**（新規 2 枚承認・承認前の重なり目視 0）・毒（装置 off）で両冊の絵が動くことを確認。**台帳 566 点・ss 非ゼロ 110／総和 3.876038461＝完全不動**（LILYSHARP-OWN 装置＝台帳非接触）。両 OS **5719/0/4 完全緑**・push 済み（CI は課金停止で赤＝既知）。
+> ⚠️ **計器の罠（本便が踏んで直した）**：**「fixture の SVG が毒で動いた」を CLI 出力 vs `Snapshots/*.svg` で測ってはいけない**——CLI は font 埋込みで**毒が無くても常に不一致**＝MOVED は何の証拠でもなかった（§5.3「同じ答えを 2 度出す計器」の毒版）。**CLI 同士（毒 build の render vs 非毒 build の render）で比べる**。
+
+**対の起票が別系統の欠陥を掘った（§5.0 step 4・修理せず記録）**：**form の `||` 境界だけで collect-resume の address が drift する**——`form main { A B || C }` で `CollectResumeTests.ResumedCollect_MatchesFullCollect_OnEveryFixture` が赤（`collect resume address drifted`）・`{ A B C }` は緑・**nav マーク不要**・base `acad49af` で再現＝既存欠陥。ただし volta fixture の完全形（`to coda || E ds al coda coda A`＋repeat）は**通る**＝`||` 単独が常に赤ではなく、これが見つかった最小の赤い綴り。**再現本 `scratch/p227/resume-drift-repro.lys`**（mirror fixture はこれを避けるため線形 form＝`A B to coda C`・music 経路の segno を障害物に使う）。
+
+★ **開始時裏取り**: HEAD `acad49af`・未 push 0・未追跡 0/木 0・Windows suite **5717/0/4**・WSL **5717/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 点 107／非ゼロ 2・追跡コーパス 569 冊・Core 0 警告＝**前便の閉幕数と全一致**（CI は課金停止＝読まない・前便 ★★★ 注記のとおり）。
+終了時: HEAD `d33d0be2`・**未 push 0（本便で push・CI run は課金停止の赤＝既知・調査しない）**・未追跡 0/木 0・suite **Windows 5719/0/4・WSL 5719/0/4＝両 OS 完全緑**（+2＝新 snapshot 網 2 冊ちょうど）・snapshot **222 枚**（新規 2 枚承認・既存 220 は不動）・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **571 冊**（+2＝新 fixture）・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① ⒞ union 再設計＋幅の 1 家化（`d33d0be2`） | CoPlaceToCodaWithLabels＝pure matching+tuck・PlaceMusicMarks が union で 1 回 Place・post-align/unstacked 引数は廃止・ToCodaStencilWidths（renderer と共有）・fixture 2 冊＋snapshot 2 枚・FormNavigationTests 2 本（pairing／改行跨ぎ） | sweep 10/1237 全帰属（追跡は自前 fixture 2 のみ・blogger 0.030×4 要素・MIDI 0）・両 OS 完全緑・台帳不動・鏡像は方向ごと消滅 |
+
+- **⑸ ★★★ 次に触るなら＝残債**: **collect-resume の `||` drift（新規 2026-08-21・第227 起票＝再現本 scratch/p227/resume-drift-repro.lys・base 再現・最小綴り `A B || C`。incremental compiler の regime＝専用便。修理前に「`||` が通る形（volta fixture の完全 nav form）と赤い形の境界」を先に測ると帰属が立つ）**／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／✅ **⒞ は本便で閉じた**（`d33d0be2`）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・**非ペア ToCoda の reserve≠draw（新規 2026-08-21・第227 起票＝PlaceMusicMarks の plain-text 分岐は今も outline("To Coda") で予約・描画は "To "＋グリフ。ペア側は 1 家に揃えた・非ペア側は届いていない——navigation-marks 等の単独 To Coda が対象・症状未観測なので点が先）**・lead-sheet 音節×縦線の対（2026-08-20 起票・LP twin で点を開くのが先）・lead-sheet の mid-piece `time` 変更の表示（2026-08-20 起票）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★★ 骨 1＝**「対」は 2 つの grob ではなく 1 つの配置——2 相の共同配置は自分の予約に躓く**
+> pre-move→個別 stack→post-align の 2 相案は、単体テストでは全緑のまま**実本の実測で自壊が出た**：
+> sign とラベルの ink は設計上重なる（gap 4.0 ＜ 半幅和 4.55）ので、別々に stack した瞬間に
+> **互いが相手の phantom 障害物**になり、順序依存で片方が浮く。union（1 箱・1 Place・1 delta）に
+> したら「どちらが raised か」という問い自体が消えた。⇒ **共同配置の設計は「誰が誰に合わせるか」
+> ではなく「stack の単位をどこで切るか」**——単位を対に切れば、方向の場合分けは全部消える。
+
+> ## ★★ 骨 2＝**reserve≠draw は「再価格しない装置」の下で何百便も眠る——新しい消費者が初めて起こす**
+> `Advance("To Coda")` の過大予約（描画は "To "＋グリフ）は旧装置が X 移動後に再価格しないので
+> 200 便のあいだ観測不能だった。union が初めてその幅を**読んだ**瞬間、v4 で対が隣のラベルの箱を
+> 掠って 3 ss 浮いた。⇒ **幅・extent を新しく読む消費者を足すときは、その値が「描画と同じ家」から
+> 来ているかを先に確かめる**（この repo の reserve-vs-draw 分裂の一般形。閉じ方も毎回同じ＝1 家）。
+
+> ## ★★ 骨 3＝**毒の計器は「毒が無いときに同一」を先に見せる——形式の違う 2 出力の diff は毒の証拠にならない**
+> CLI render と snapshot ファイルの比較は font 埋込みで**常に**不一致＝「毒で動いた」が 2 冊とも
+> 無意味だった。非毒 CLI vs baseline の MISMATCH（あるべき同一が出ない）で計器の嘘が割れ、
+> CLI 同士に組み替えて証拠が立った。⇒ **毒 A/B の前に「毒なし A/B＝同一」を 1 回見せる**
+> （§5.4「動く証明つきの否定」の計器版——同一を確かめていない diff は測っていない）。
+
+> ## ★ 骨 4＝**LILYSHARP-OWN 装置の観測者は fixture しかいない——「装置を踏む corpus 本 0 冊」をまず数える**
+> ⒞ は台帳（LP 対）の外に居るので、単体テスト以外の観測者が 1 冊も無いまま 20 便生きていた
+> （blogger は scratch＝suite の外）。装置を再設計する便は、**先に「この装置を踏む追跡本は何冊か」を
+> 数える**——0 なら fixture の新設が修理と同格の deliverable（本便は 2 冊・毒で絵が動くことまで確認）。
+
+---
+
+## 以下は第226セッションの経緯
+
 最終更新 第226セッション＝**残債筆頭 ⒥「スパン予約の rod 化」を §5.0-3 の移植で閉じた**（対は前便 `558920fd` が開いた・本便は移植そのものから・`e3a190dc`）——**中間列を跨ぐ音節間予約は BumpSpanMin をやめて真の range rod**：`ReserveLyricLine` が rod を集め、`ReserveLyricWidthByColumn` が**小節ローカルに `SpringSolver.ApplyRods`**（lyric-hyphen.cc:163-179 set_spacing_rods → simple-spacer.cc:90-128 add_rod）。**予告されていた本丸「門×レイアウトの設計」は消滅した**——rod を小節自身の chain に焼き込むと ApplyRods の効果はスパンされた spring に局所なので **system レベルで与えるのと同値**、そして**門の Σ MinDistance がそのまま per-measure solve になる**（Σ(ideal+f·inv)＝rod の距離ちょうど）＝ **1 リスト（ApplySharedColumnReservations）の内側に置いただけで両消費者が正しくなる**。鍵は 1 つも広がらない（in-measure＝小節局所・SpringReusable の目録非接触）。**隣接（1 spring）は bump のまま**（max(ideal,need) で同値・全 lyrics.column.* exact 点は不動で確認）・**leading/trailing halves も bump のまま**（未測定 regime・line-start 置換が interior-spring 落着に依存＝ReserveLyricLine の remark）。**予測 3 本とも最終桁まで着地**：melisma-span.width +2.796089998→**0.000000000**（両 ink ちょうど 0.450000 離れる）・first-gap −1.095871799→**0.000000000**（=width/3＝等 spring 均等分配を ApplyRods の blocking force が実装）・bound-voice.skip-gap +1.507844999→**+0.036600000**（span-bump 項 1.471245 が消え、union-edge sliver（⒦ 族）だけが桁まで残った＝帰属替えして記録）。no-bind 2 点 0 不動。**sweep A/B 5/569・全冊同族で帰属済み**（lyrics-verses／amazing-grace／greensleeves／perf-lyrmel1k＝単声 melisma スパン・lead-sheet＝行歌詞が chord-only union 列を跨ぐ）。snapshot **220 中 2 枚だけ動き承認**（test/lead-sheet・test/lyrics-verses・承認前の音節重なり目視 0＝第223 骨 2 の作法・commit に台帳キーを名指し）。台帳 562 点のまま **3 点更新（2 点 exact 化・skip-gap 0.0366）・ss 非ゼロ 115→113／総和 9.423182122→4.059975326**（引き算 5.363206796 と桁一致で検算）・count 点 107／非ゼロ 2。
 > ⚠️ **環境の罠 2 つ（本便が踏んで名指した）**：⑴ **台帳 json を `json.dump` で書き戻さない**——数値表記が全域で変わり（0.900000→0.9・1e-6→1e-06）**1091 行のノイズ diff** になる。**テキストの外科置換で当該エントリだけ**（この便は 3 エントリ＝diff 6 行）。⑵ before 画像の取り直しは `git stash push -- <file>` → build → render → pop → build（§0 6例目の 15 秒手順）。**PNG ハッシュで before/after 全冊が違うことを見てから読む**（前便骨 3「同一と出た A/B は何の証拠でもない」の画像版）。
 
@@ -216,63 +260,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > 2 点は残しても永遠に赤いだけ——**残差に「決定」という why を書くのではなく、点ごと退役**
 > （probe 側に退役の理由と LP 数値の在処をコメントで残す）。台帳の ss 総和は
 > 「LP に向かう残債」の計器であり、**向かわないと決めた量を混ぜると計器が壊れる**。
-
----
-
-## 以下は第225セッションの経緯
-
-
-最終更新 第225セッション＝**残債の小粒筆頭「多声小節の byItem 予約写像」を §5.0 の型どおり専用便で閉じた**——**対の起票**（probe `lyric-bound-voice-mapping.ly`・3 冊・`04b40fb1`＝engine 非接触）→ **移植**（byItem 分岐退役・`c3b0b32f`）→ **対の食い違いが第2・第3の欠陥を名指した**。対の設計＝**LP 恒等対**：1 小節・primary 4 分×4（列 0..3）＋bound 声部 2 分+4 分×2（item 0 1 2＝列 0 2 3）・同語反復で顔が相殺（音節 ink 中心の step）。**LP は「rod は音節間・どの列が運んでいても」なので LBI（bound）と LBIP（primary）の全 binding gap が 1 数 D＝ink+0.45＝10.010125984251968**——2.26.0 実測で桁まで的中。**Lily# は LBI を両向きに fork**（skip-gap +10.0467＝両予約が 1 列左に堆積＝2D+0.0366／step-gap −7.0079＝必要な対に予約ゼロ＝自然 3.002245 のまま **ink 9.56 が 6.56 重なる**＝named-voice-lyrics の 'deep'-on-'slow' の実寸版）。**移植＝`ApplyLyricSpacing` と `InkReachPerColumn` の byItem 分岐を退役し、全予約を TIMING 列へ**（描画・cross-bar rod edge と同じ 1 写像・3 消費者）。**step-gap 0.000000000・重なり解消**。**skip-gap は +1.507844999 に着地（予測 +0.0366 は外れ＝収穫）**：残差が**名前付き 2 項に桁まで分解**＝⑴ **+1.471245＝スパン予約の bump モデル**——`BumpSpanMin` は have を spring **min** で数えるが ragged の行は **ideal** で立つので、**中間列を跨ぐ予約は非最終 spring の Σ(ideal−min) だけ過開**（LP の spanning rod は max(natural, need)。修理は cross-bar rod と同じ形＝ApplyRods の真 rod 化。**ただしこの regime は単声の melisma スパン全部を含み未測定→対から**）⑵ **+0.0366＝union edge sliver**（下記）。**sweep A/B 3/569・全冊同族で帰属済み**：named-voice-lyrics（snapshot 220 中この 1 枚だけ承認・sung 小節が LP 向きに 3.45 締・**承認前チェックの音節重なり目視 0**＝第223 骨 2 の作法）＋ **lymelmel／perf-lyrmel1k＝行歌詞（IsLyricsRow）も同じ欠陥を共有していた**——**行の Timing は均等スロット・ItemIndex はスロット番号**（`LyricsCollector.PlaceRun`）なので旧予約は 'ho'（slot 3・描画は t=3/4＝col6）を col3 に置き、**16 分群を 2.96 ss 無駄に開いていた**。予約＝描画列は行でも一致した。台帳 **553→558 点**（+5）：step-gap／no-bind.step-gap＝exact・**開いたままの 3 点が第2欠陥の観測者**＝`primary-control` **+0.0366**（**予約の alignment-edge 表（`ParentAlignmentEdgesPerColumn`）は全声 union・描画と LP は自声の頭**——LP 実測: LBIP の音節は 4 分の 0.6521・LBI/LBIC は自声 2 分の 0.6887 に中心）・`no-bind.skip-gap` **+0.1098＝0.0732+0.0366**（**Lily# の自然 spring は列の最太頭を課金・LP の ideal は外声の太頭に盲目**＝実測 LP 全 gap 3.002245 等値）・skip-gap **+1.5078**（↑の 2 項和）。**ss 総和 3.877→5.531 は悪化ではなく「測っていなかった量の可視化」**（README の前例と同じ）——+1.654 は全部この便が開いた名前付き残差。
-> ⚠️ **環境の罠 2 つを踏んで名指した（RULES §5.5 に収載済み）**：⑴ **`LilySharp.slnx` の既定ビルドは Debug**——§0 の solution build は `LilySharp.Cli\bin\Release` を**一度も**更新せず、`lysc.exe` は任意に stale（**A/B に使う前に `dotnet build LilySharp.Cli -c Release` を明示**。この便の CLI A/B は「同一バイナリ同士の比較」で 2 度「差なし」と嘘をつき、**sweep（dotnet run が Core を自前ビルド）だけが真実を言い続けた**）⑵ **pwsh コンソールで repo DLL を `Assembly.LoadFrom` するとロックが残り、以後のビルドが静かに stale コピーを残す**（コンソール再起動＋bin 削除で解放）。
-
-**続き便（同セッション・委任「有利なら着手」→着手＝範囲は ⒥ の対起票まで・移植はしない）**＝**melisma スパンの対を開いた**（probe `lyric-melisma-span.ly`・LMS/LMN・`558920fd`＝engine 非接触）。着手の理由＝span-bump の算術（ideal 3.002245／min 1.604200＝頭 1.3042+0.3）はこの便の実測で手元にあり、probe 骨格・測定管路も温かい。**移植を断った理由＝in-measure の range rod は「門×レイアウト」の設計問題**（門は per-spring min しか読まない・第223 の cross-bar rod が専用便を要したのと同型。ただし in-measure 量は**小節局所**なので cross-measure 鍵は不要＝cross-bar より易しいはず）。**予測は probe ヘッダに先に書き、LP 実測で全部最終桁まで着地**：LP width＝max(natural, need)＝**12.294350393700784**（dump で両 ink がちょうど **0.450000** 離れる）・**first-gap＝width/3 を最終桁まで**（等 spring への均等分配＝**range rod の分配則そのものを実測**・移植の設計入力）・Lily# width **+2.796089998269224＝2×(ideal−min) ちょうど**（**need 算術に sliver ゼロ**＝melisma 左揃え・ink・0.45 とも両エンジン同一→**この点は純粋な bump モデル**）・first-gap **−1.095872**＝中間 spring は自然のまま（no-bind と同桁＝「歌詞が居ないかのよう」）・LMN 両点 **0.000000000**。台帳 **558→562 点**（+4）。**⒥ は「対はもう開いた」状態**——次の専用便は移植そのものから始められる。
-
-★ **開始時裏取り**: HEAD `118bf6f5`・未 push 0・未追跡 0/木 0・Windows suite **5704/0/4**・CI＝**前便閉幕 `118bf6f5` の 32357553370 success を本便で読んだ**・台帳 553 点・追跡コーパス 569 冊・ss 非ゼロ 110／総和 3.876975326・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時 **未追跡 0・木 0**（probe-out は git 外）・commit 5 本（`04b40fb1` 対 → `c3b0b32f` 移植 → `d50fd55d` handoff → `558920fd` melisma 対 → 閉幕 handoff）・suite **Windows 5713/0/4・Linux（この機械の WSL）5713/0/4＝両 OS 完全緑**（+9＝新台帳点 5+4 ちょうど）・snapshot **220 枚中 1 枚だけ動き承認**（named-voice-lyrics）・台帳 **562 点・ss 非ゼロ 115／総和 9.42318212203487**（**前便比 +5.55 は悪化ではなく可視化**——全部この便が開いた名前付き残差：byItem 族 1.654（skip-gap 1.508＋sliver 0.0366＋0.1098）＋melisma スパン族 3.892（width 2.796＋first-gap 1.096）。closed 側は step-gap 等 4 点が exact）・追跡コーパス 569 冊・Core 0 警告。**push 済み 4 commit の CI success を全部同便で読んだ**（`04b40fb1`＝32359470723・`c3b0b32f`＝32361420921・`d50fd55d`＝32362016256・`558920fd`＝32363279717）。閉幕 handoff 自身の CI は次便が読む（docs のみ・毎便同じ形）。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① 対の起票（`04b40fb1`） | probe `lyric-bound-voice-mapping.ly`（LBI/LBIP/LBIC・予測を先に書き 2.26.0 で実測）＋`LpGeometryProbes` 3 冊 5 点＋`RenderedGeometry.SyllableInkCentre(i)` | LP 恒等対が的中（LBI==LBIP＝D 1 数）・byItem の両バレルを数値化（+10.05／−7.01）・engine 非接触 |
-| ② 移植（`c3b0b32f`） | `ApplyLyricSpacing`／`InkReachPerColumn` の byItem 分岐退役＝全予約 TIMING 列（描画・rod edge と 1 写像） | step-gap **0.000000000**・重なり解消・**sweep 3/569 全帰属**（行歌詞も同欠陥だった）・snapshot 1/220・両 OS 完全緑・残 2 項を台帳に名前付きで記録 |
-| ③ melisma スパンの対（`558920fd`） | probe `lyric-melisma-span.ly`（LMS/LMN・予測を probe ヘッダに先書き）＋4 点。移植はせず（門×レイアウトの設計＝専用便へ） | 予測全的中：LP width＝need（ink 間ちょうど 0.45）・first-gap＝width/3 最終桁・Lily# **+2.796089998269224＝2×(ideal−min) ちょうど**（need sliver ゼロ＝純粋な bump モデル）・LMN 2 点 exact |
-
-- **⑸ ★★★ 次に触るなら＝残債**: ⒞ CoPlaceToCodaWithLabels 鏡像／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／**新規 2 つ（この便が開いた・どちらも観測者が台帳に居る）**: **⒥ スパン予約の rod 化**（BumpSpanMin の min-have→per-measure solve の真 range rod。**対はもう開いた＝`lyrics.melisma-span.*` 4 点（`558920fd`）——次の専用便は移植そのものから始められる**。着地予測: melisma width +2.796090→0・first-gap −1.095872→0・bound-voice skip-gap 1.5078→0.0366（sliver のみ残る）。設計入力を対が実測済み: **LP の range rod は等 spring に均等分配＝first-gap は width/3 を最終桁まで**。門は per-spring min しか読まないので gate 側の価格付けが本丸——ただし in-measure 量は小節局所＝cross-measure 鍵不要で cross-bar（第223）より易しいはず。隣接対＝全 lyrics.column.* exact 点は max(ideal,need) で両モデル同値＝**動いてはいけない**）・**⒦ 歌詞 sliver 族＝多声列の voice-blind 表**（予約 edge 表の union vs 自声の頭 +0.0366・自然 spring の最太頭課金 +0.0732。`primary-control`/`no-bind.skip-gap` が観測者。**per-voice の alignment extent は 1 列 1 値の表では表現できない**——LyricEngraver 側の per-bar edge cache と MultiStaffLayouter 側で別の measure 集合から同じ関数を呼んでいる疑いも同便で見ること）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★★ 骨 1＝**LP 恒等対は「相手の不変量」を恒等に使うと最強になる**
-> LBI と LBIP は音楽も歌詞の載る声部も違うのに、LP では全 binding gap が同じ 1 数 D になる
-> ——「rod は音節間であり、どの列が運んでいるかを LP は読まない」という**性質そのもの**を
-> 恒等にしたから。おかげで Lily# の fork（+10.05／−7.01）が**そのまま欠陥の量**になり、
-> 帰属は測る前に書けた。⇒ **恒等対を設計するときは「同じ音楽を二通りに書く」だけでなく、
-> 「相手が読まない変数だけを変える」を探す**（§5.0 の対の設計の 3 つ目の形）。
-
-> ## ★★ 骨 2＝**予測が外れた 1 本（移植後 +0.0366 のはず→実際 +1.5078）が第3の欠陥を掘った**
-> 差 1.471245 は spring col0→col1 の ideal−min（3.075445−1.604200）に桁まで一致し、
-> **BumpSpanMin が have を min で数える一方、ragged の行は ideal で立つ**ことを名指した。
-> 隣接対（スパン 1 spring）では max(ideal, need) と等価なので**単声の隣接歌詞では永久に見えない**
-> ——中間列を跨いだ瞬間だけ課金される。⇒ **「span を跨ぐ min の総和」を根拠にする式は、
-> 描画が ideal で立つ regime で必ず過開する**。melisma スパンが同族（未測定・対から）。
-
-> ## ★★ 骨 3＝**A/B の前に「両側のバイナリが違う」ことを確かめる——同一と出た A/B は何の証拠でもない**
-> CLI での before/after 比較が 2 度「バイト同一」と出たが、**同一だったのはバイナリのほう**
-> （slnx 既定 Debug で Release の lysc が stale＋LoadFrom ロックでコピーが静かに落ちる）。
-> sweep（dotnet run が Core を project 参照で自前ビルド）だけが一貫して「3 冊動いた」と言い、
-> 最後に DLL ハッシュを取って嘘が割れた。⇒ **A/B が「差なし」と言ったら、まず両側の
-> DLL ハッシュを比べる**（§5.5 の旧 Core 罠の一般形＝「同じ答えを 2 度出す計器は、
-> 測っていない計器かもしれない」）。
-
-> ## ★ 骨 4＝**control は 0 でなくても仕事をする——非 0 の control は残差算術の名前付き項になる**
-> primary-control（+0.0366）と no-bind.skip-gap（+0.1098＝0.0732+0.0366）は exact に
-> ならなかったが、その値が skip-gap の残差 1.5078＝1.4712+0.0366 を桁まで分解する部品に
-> なった。⇒ **「control が緑になるまで対を作り直す」のではなく、非 0 の control には
-> 名前を付けて台帳に置く**——次の残差がその項で割れる。
-
-> ## ★ 骨 5＝**1 つの量に消費者が 3 軒揃った瞬間、残っていた第 4 の綴りが sweep に出た**
-> 予約を TIMING 写像に揃えたら、sweep が行歌詞の 2 冊を出した——**行の ItemIndex は
-> スロット番号で、音符列とは何の関係も無かった**（描画だけが正しい列に居た）。
-> §5.2.1②「同じ量を計算する場所が 2 つ」は**写像にも当てはまる**：写像を統一する便は、
-> 統一そのものが残りの別綴りを掃き出す計器になる。
 
 ---
 

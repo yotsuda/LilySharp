@@ -18,6 +18,63 @@
 
 ---
 
+## 以下は第225セッションの経緯
+
+
+最終更新 第225セッション＝**残債の小粒筆頭「多声小節の byItem 予約写像」を §5.0 の型どおり専用便で閉じた**——**対の起票**（probe `lyric-bound-voice-mapping.ly`・3 冊・`04b40fb1`＝engine 非接触）→ **移植**（byItem 分岐退役・`c3b0b32f`）→ **対の食い違いが第2・第3の欠陥を名指した**。対の設計＝**LP 恒等対**：1 小節・primary 4 分×4（列 0..3）＋bound 声部 2 分+4 分×2（item 0 1 2＝列 0 2 3）・同語反復で顔が相殺（音節 ink 中心の step）。**LP は「rod は音節間・どの列が運んでいても」なので LBI（bound）と LBIP（primary）の全 binding gap が 1 数 D＝ink+0.45＝10.010125984251968**——2.26.0 実測で桁まで的中。**Lily# は LBI を両向きに fork**（skip-gap +10.0467＝両予約が 1 列左に堆積＝2D+0.0366／step-gap −7.0079＝必要な対に予約ゼロ＝自然 3.002245 のまま **ink 9.56 が 6.56 重なる**＝named-voice-lyrics の 'deep'-on-'slow' の実寸版）。**移植＝`ApplyLyricSpacing` と `InkReachPerColumn` の byItem 分岐を退役し、全予約を TIMING 列へ**（描画・cross-bar rod edge と同じ 1 写像・3 消費者）。**step-gap 0.000000000・重なり解消**。**skip-gap は +1.507844999 に着地（予測 +0.0366 は外れ＝収穫）**：残差が**名前付き 2 項に桁まで分解**＝⑴ **+1.471245＝スパン予約の bump モデル**——`BumpSpanMin` は have を spring **min** で数えるが ragged の行は **ideal** で立つので、**中間列を跨ぐ予約は非最終 spring の Σ(ideal−min) だけ過開**（LP の spanning rod は max(natural, need)。修理は cross-bar rod と同じ形＝ApplyRods の真 rod 化。**ただしこの regime は単声の melisma スパン全部を含み未測定→対から**）⑵ **+0.0366＝union edge sliver**（下記）。**sweep A/B 3/569・全冊同族で帰属済み**：named-voice-lyrics（snapshot 220 中この 1 枚だけ承認・sung 小節が LP 向きに 3.45 締・**承認前チェックの音節重なり目視 0**＝第223 骨 2 の作法）＋ **lymelmel／perf-lyrmel1k＝行歌詞（IsLyricsRow）も同じ欠陥を共有していた**——**行の Timing は均等スロット・ItemIndex はスロット番号**（`LyricsCollector.PlaceRun`）なので旧予約は 'ho'（slot 3・描画は t=3/4＝col6）を col3 に置き、**16 分群を 2.96 ss 無駄に開いていた**。予約＝描画列は行でも一致した。台帳 **553→558 点**（+5）：step-gap／no-bind.step-gap＝exact・**開いたままの 3 点が第2欠陥の観測者**＝`primary-control` **+0.0366**（**予約の alignment-edge 表（`ParentAlignmentEdgesPerColumn`）は全声 union・描画と LP は自声の頭**——LP 実測: LBIP の音節は 4 分の 0.6521・LBI/LBIC は自声 2 分の 0.6887 に中心）・`no-bind.skip-gap` **+0.1098＝0.0732+0.0366**（**Lily# の自然 spring は列の最太頭を課金・LP の ideal は外声の太頭に盲目**＝実測 LP 全 gap 3.002245 等値）・skip-gap **+1.5078**（↑の 2 項和）。**ss 総和 3.877→5.531 は悪化ではなく「測っていなかった量の可視化」**（README の前例と同じ）——+1.654 は全部この便が開いた名前付き残差。
+> ⚠️ **環境の罠 2 つを踏んで名指した（RULES §5.5 に収載済み）**：⑴ **`LilySharp.slnx` の既定ビルドは Debug**——§0 の solution build は `LilySharp.Cli\bin\Release` を**一度も**更新せず、`lysc.exe` は任意に stale（**A/B に使う前に `dotnet build LilySharp.Cli -c Release` を明示**。この便の CLI A/B は「同一バイナリ同士の比較」で 2 度「差なし」と嘘をつき、**sweep（dotnet run が Core を自前ビルド）だけが真実を言い続けた**）⑵ **pwsh コンソールで repo DLL を `Assembly.LoadFrom` するとロックが残り、以後のビルドが静かに stale コピーを残す**（コンソール再起動＋bin 削除で解放）。
+
+**続き便（同セッション・委任「有利なら着手」→着手＝範囲は ⒥ の対起票まで・移植はしない）**＝**melisma スパンの対を開いた**（probe `lyric-melisma-span.ly`・LMS/LMN・`558920fd`＝engine 非接触）。着手の理由＝span-bump の算術（ideal 3.002245／min 1.604200＝頭 1.3042+0.3）はこの便の実測で手元にあり、probe 骨格・測定管路も温かい。**移植を断った理由＝in-measure の range rod は「門×レイアウト」の設計問題**（門は per-spring min しか読まない・第223 の cross-bar rod が専用便を要したのと同型。ただし in-measure 量は**小節局所**なので cross-measure 鍵は不要＝cross-bar より易しいはず）。**予測は probe ヘッダに先に書き、LP 実測で全部最終桁まで着地**：LP width＝max(natural, need)＝**12.294350393700784**（dump で両 ink がちょうど **0.450000** 離れる）・**first-gap＝width/3 を最終桁まで**（等 spring への均等分配＝**range rod の分配則そのものを実測**・移植の設計入力）・Lily# width **+2.796089998269224＝2×(ideal−min) ちょうど**（**need 算術に sliver ゼロ**＝melisma 左揃え・ink・0.45 とも両エンジン同一→**この点は純粋な bump モデル**）・first-gap **−1.095872**＝中間 spring は自然のまま（no-bind と同桁＝「歌詞が居ないかのよう」）・LMN 両点 **0.000000000**。台帳 **558→562 点**（+4）。**⒥ は「対はもう開いた」状態**——次の専用便は移植そのものから始められる。
+
+★ **開始時裏取り**: HEAD `118bf6f5`・未 push 0・未追跡 0/木 0・Windows suite **5704/0/4**・CI＝**前便閉幕 `118bf6f5` の 32357553370 success を本便で読んだ**・台帳 553 点・追跡コーパス 569 冊・ss 非ゼロ 110／総和 3.876975326・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時 **未追跡 0・木 0**（probe-out は git 外）・commit 5 本（`04b40fb1` 対 → `c3b0b32f` 移植 → `d50fd55d` handoff → `558920fd` melisma 対 → 閉幕 handoff）・suite **Windows 5713/0/4・Linux（この機械の WSL）5713/0/4＝両 OS 完全緑**（+9＝新台帳点 5+4 ちょうど）・snapshot **220 枚中 1 枚だけ動き承認**（named-voice-lyrics）・台帳 **562 点・ss 非ゼロ 115／総和 9.42318212203487**（**前便比 +5.55 は悪化ではなく可視化**——全部この便が開いた名前付き残差：byItem 族 1.654（skip-gap 1.508＋sliver 0.0366＋0.1098）＋melisma スパン族 3.892（width 2.796＋first-gap 1.096）。closed 側は step-gap 等 4 点が exact）・追跡コーパス 569 冊・Core 0 警告。**push 済み 4 commit の CI success を全部同便で読んだ**（`04b40fb1`＝32359470723・`c3b0b32f`＝32361420921・`d50fd55d`＝32362016256・`558920fd`＝32363279717）。閉幕 handoff 自身の CI は次便が読む（docs のみ・毎便同じ形）。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① 対の起票（`04b40fb1`） | probe `lyric-bound-voice-mapping.ly`（LBI/LBIP/LBIC・予測を先に書き 2.26.0 で実測）＋`LpGeometryProbes` 3 冊 5 点＋`RenderedGeometry.SyllableInkCentre(i)` | LP 恒等対が的中（LBI==LBIP＝D 1 数）・byItem の両バレルを数値化（+10.05／−7.01）・engine 非接触 |
+| ② 移植（`c3b0b32f`） | `ApplyLyricSpacing`／`InkReachPerColumn` の byItem 分岐退役＝全予約 TIMING 列（描画・rod edge と 1 写像） | step-gap **0.000000000**・重なり解消・**sweep 3/569 全帰属**（行歌詞も同欠陥だった）・snapshot 1/220・両 OS 完全緑・残 2 項を台帳に名前付きで記録 |
+| ③ melisma スパンの対（`558920fd`） | probe `lyric-melisma-span.ly`（LMS/LMN・予測を probe ヘッダに先書き）＋4 点。移植はせず（門×レイアウトの設計＝専用便へ） | 予測全的中：LP width＝need（ink 間ちょうど 0.45）・first-gap＝width/3 最終桁・Lily# **+2.796089998269224＝2×(ideal−min) ちょうど**（need sliver ゼロ＝純粋な bump モデル）・LMN 2 点 exact |
+
+- **⑸ ★★★ 次に触るなら＝残債**: ⒞ CoPlaceToCodaWithLabels 鏡像／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／**新規 2 つ（この便が開いた・どちらも観測者が台帳に居る）**: **⒥ スパン予約の rod 化**（BumpSpanMin の min-have→per-measure solve の真 range rod。**対はもう開いた＝`lyrics.melisma-span.*` 4 点（`558920fd`）——次の専用便は移植そのものから始められる**。着地予測: melisma width +2.796090→0・first-gap −1.095872→0・bound-voice skip-gap 1.5078→0.0366（sliver のみ残る）。設計入力を対が実測済み: **LP の range rod は等 spring に均等分配＝first-gap は width/3 を最終桁まで**。門は per-spring min しか読まないので gate 側の価格付けが本丸——ただし in-measure 量は小節局所＝cross-measure 鍵不要で cross-bar（第223）より易しいはず。隣接対＝全 lyrics.column.* exact 点は max(ideal,need) で両モデル同値＝**動いてはいけない**）・**⒦ 歌詞 sliver 族＝多声列の voice-blind 表**（予約 edge 表の union vs 自声の頭 +0.0366・自然 spring の最太頭課金 +0.0732。`primary-control`/`no-bind.skip-gap` が観測者。**per-voice の alignment extent は 1 列 1 値の表では表現できない**——LyricEngraver 側の per-bar edge cache と MultiStaffLayouter 側で別の measure 集合から同じ関数を呼んでいる疑いも同便で見ること）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★★ 骨 1＝**LP 恒等対は「相手の不変量」を恒等に使うと最強になる**
+> LBI と LBIP は音楽も歌詞の載る声部も違うのに、LP では全 binding gap が同じ 1 数 D になる
+> ——「rod は音節間であり、どの列が運んでいるかを LP は読まない」という**性質そのもの**を
+> 恒等にしたから。おかげで Lily# の fork（+10.05／−7.01）が**そのまま欠陥の量**になり、
+> 帰属は測る前に書けた。⇒ **恒等対を設計するときは「同じ音楽を二通りに書く」だけでなく、
+> 「相手が読まない変数だけを変える」を探す**（§5.0 の対の設計の 3 つ目の形）。
+
+> ## ★★ 骨 2＝**予測が外れた 1 本（移植後 +0.0366 のはず→実際 +1.5078）が第3の欠陥を掘った**
+> 差 1.471245 は spring col0→col1 の ideal−min（3.075445−1.604200）に桁まで一致し、
+> **BumpSpanMin が have を min で数える一方、ragged の行は ideal で立つ**ことを名指した。
+> 隣接対（スパン 1 spring）では max(ideal, need) と等価なので**単声の隣接歌詞では永久に見えない**
+> ——中間列を跨いだ瞬間だけ課金される。⇒ **「span を跨ぐ min の総和」を根拠にする式は、
+> 描画が ideal で立つ regime で必ず過開する**。melisma スパンが同族（未測定・対から）。
+
+> ## ★★ 骨 3＝**A/B の前に「両側のバイナリが違う」ことを確かめる——同一と出た A/B は何の証拠でもない**
+> CLI での before/after 比較が 2 度「バイト同一」と出たが、**同一だったのはバイナリのほう**
+> （slnx 既定 Debug で Release の lysc が stale＋LoadFrom ロックでコピーが静かに落ちる）。
+> sweep（dotnet run が Core を project 参照で自前ビルド）だけが一貫して「3 冊動いた」と言い、
+> 最後に DLL ハッシュを取って嘘が割れた。⇒ **A/B が「差なし」と言ったら、まず両側の
+> DLL ハッシュを比べる**（§5.5 の旧 Core 罠の一般形＝「同じ答えを 2 度出す計器は、
+> 測っていない計器かもしれない」）。
+
+> ## ★ 骨 4＝**control は 0 でなくても仕事をする——非 0 の control は残差算術の名前付き項になる**
+> primary-control（+0.0366）と no-bind.skip-gap（+0.1098＝0.0732+0.0366）は exact に
+> ならなかったが、その値が skip-gap の残差 1.5078＝1.4712+0.0366 を桁まで分解する部品に
+> なった。⇒ **「control が緑になるまで対を作り直す」のではなく、非 0 の control には
+> 名前を付けて台帳に置く**——次の残差がその項で割れる。
+
+> ## ★ 骨 5＝**1 つの量に消費者が 3 軒揃った瞬間、残っていた第 4 の綴りが sweep に出た**
+> 予約を TIMING 写像に揃えたら、sweep が行歌詞の 2 冊を出した——**行の ItemIndex は
+> スロット番号で、音符列とは何の関係も無かった**（描画だけが正しい列に居た）。
+> §5.2.1②「同じ量を計算する場所が 2 つ」は**写像にも当てはまる**：写像を統一する便は、
+> 統一そのものが残りの別綴りを掃き出す計器になる。
+
+---
+
 ## 以下は第224セッションの経緯
 
 最終更新 第224セッション＝**残債⒟「perf-lyrplain1k alloc 退行の帰属」を閉じ、同便で返した**（`a7e6c0d0`）——**帰属＝100% 本の形・rod コード 0%**。決め手は**形だけを固定する実験**：`LayoutEngine.Layout` の `precomputedLineSizes` に旧の行組（199×5＋4）を注入して新バイナリを走らせると、**打鍵 372.6・verse skyline・帯とも旧バイナリと 0.01 MB 一致**（rod で sung 行が 5→約 6 小節に詰まり 200→167 系統・42→34 ページ。rod 自身の段は打鍵で L1-break 0.02／springs 0.23 MB＝ほぼ 0）。**形感度の最大項の正体は算法ではなく `List<SkylineBuilding>` の倍化 1024 段跨ぎ**：verse skyline は音節あたり（上下計）約 95 建物で、**5 小節行（約 950）は容量 1024 に収まり、6 小節行（約 1,140）は 2048 へもう 1 段＝`Add` の裏の確保捨てがほぼ倍**（52.2→84.9 MB。**merge 入力は 15,984 呼び／1,518,480 建物で両形バイト一致＝カウンタ実測**・32B×リスト数×段の算術が 52.3/87.4 を予測して 4 桁一致）。**返済＝バッチ 3 地点（`BuildVerseUp/DownSkylines`・`BlockSkylines`）がキャッシュ済み resolved profile から建物数を先に数え、`VerticalSkyline.ReserveForBatch` が 1 回で確保**（数える枝＝merge する枝を `OutlineSyllable` に括り出し。⚠️ **per-call の `EnsureCapacity` はこの直しではない**——List はそれも倍化で伸ばす。remark に実測ごと記載）。**打鍵 436.7 → 347.3 MB（−20.5%・rod 前 372.5 をも下回る）・full 825.9 → 706.8**。容量のみ＝算術・順序・出力に非接触：**sweep 569 冊 0 移動**（変更経路は歌詞本の full render で走ることを region 実測で確認済み＝「届いた 0」・第192 骨 ⑴ の作法）・両 OS 5701/0/4。対照：**plain1k 45.3 桁不動・fingstack 162.7→162.0（同日 A/B・自前の揺れ）——どちらも歌詞 0 冊＝届き得ない本で、歌詞本の対照は存在しない（第191 骨 3 の形・commit に明記）**。計器は一時 region＋カウンタ（第191 と同じ手口・IncrementalCompiler／LayoutEngine／LyricEngraver に L1..L10・ann.*・dl.*）＝**全部撤去済み、commit は fix のみ 2 ファイル +90/−16**。前便が ARCHIVE へ移しそこねて消えていた**第221 ブロックも git から復元して ARCHIVE に戻した**（df2715db で消失・8cdeca0e から逐語復元）。**続き便（同セッション・委任「有利なら着手」→着手＝計器・地図・検証管路が温かいうちに帯を返す）**＝⑴ **band memo の健全性目録（入力は全部鍵の圏内か）が既存の増分欠陥を先に出した**：**`fonts { }` 編集はどの reuse 鍵にも畳まれていない**——実顔（Arial）で測ると **skip=true・reuse=true のまま旧顔の幾何を配った**（縦線 x1=14.00 vs full 12.56。family 属性と data-pos だけ live 再導出なので幾何が同じ本では見えない）。**修理＝session が font plan（値等値＝Signature）を比べ、変化で幾何 cache を全部落とす**（`5af72975`・pin `FontEditIncrementalTests`。**この欠陥は今日の memo ではなく F3 以来の全 cache が同じ賭けをしていた**）。⑵ **band（打鍵 135 MB＝第1便 region 実測の単独最大項）を `SystemLayoutCache.GetOrComputeLyricBand` に載せた**（`1b42fd74`）——入力は全部既存鍵の圏内（measureLayouts／staffSkylines＝同鍵の memo 値・音節＝side-table bucket・譜の同一性＝AddStaffIdentity・font＝↑の番人）。値は可変 class＝**消費者 2 軒の読み取り専用を検証して remark に記載**（extent 読み・paging program は数値列に写す＝served 参照は augment memo にむしろ有利）。**打鍵 347.3 → 211.9 MB（−39%・本日通算 436.7→211.9＝−51.5%）**・full 706.0 不変・対照 2 冊桁不動。**同一性の網は sweep ではなく nets が持つ**（sweep の full 経路は session cache に届かない）＝`LyricBandMemoTests`：**hit を主張する網**（黙って毎回再計算する memo は correctness 網に見えない退行）・歌詞編集で再計算する網・両方 incremental==full。**第3便（同・委任）＝ann.lyrics の地図を region で確定し、verse skylines を memo に載せた**（`2f02a5cd`）——地図: **chain walk 106.6 MB が本体・cross-system 部分（solve/elems）は 0.2 MB 級**＝予測どおり「系統横断は鍵の問題であって alloc の住所ではない」。**verse skylines（51.0 MB・両パス×2 方向）は `VerseSkylineMemo` へ**：鍵は **FingScriptMemo の条項の再利用＝system の MeasureLayout インスタンス参照同一**（歌詞は content key の side-table bucket に畳まれているので、音節編集→measures memo miss→新インスタンス→decline。参照同一＝音節の内容同一）。**値が X-only なので 1 store を両パスで共有**（per-pass 縛りの AboveStackMemo と違う理由を remark に明記）＝初回 render から final パスがヒット。flat 綴り 2 本は per-system 1 本に統合（memo null＝full 経路も同じ綴り・§7.7 の二重綴りを作らない）。**打鍵 211.9 → 161.4 MB（本日通算 436.7→161.4＝−63%）**・full 不変・対照 2 冊桁不動・sweep 0/569・nets 拡張（初回 render で final パスが serve・音符打鍵は編集系統だけ re-feed・音節編集で decline）。**第4便（同・委任）＝chain walk 106.6 MB を prefix/live に切って memo に載せた**（`d0a1e489`）——**prefix**（elements・trailing-row 簿記・closing 前の gap 最小値・walk の蓄積 profile）は per-system 局所＝`LyricChainMemo`（鍵＝MeasureLayout 参照同一・verse memo と同条項）、**closing は live**（room・隣系統 up-skyline の Distance・leading 行の Advance は cached snapshot を `AlignmentWalk.Fork()` してから・solve・publish）。**境界の目録が罠を 2 つ出した**：⑴ anchor テーブル系スカラー（anchorBase／lastSpaceableStaffY／DeviceDown・skylineToAnchor）は**系統 0・placement 基準**＝この系統の measures が参照同一のまま動き得る→**値に入れず live で読み直す**（`ResolveAnchor` に 1 綴り化・gap0 は生値で cache）。⑵ **store は per-pass**——walk の seed はパスの anchor profile（fallback は scripted silhouette）を読み、**共有 1 store の第1稿は final パスに prelim の walk を配って incremental==full 網が 2 本、数分で赤**（音節が 0.6〜0.9 ss 深い・script/pedal 本）→ AboveStackMemo と同じ分割で緑。**打鍵 161.4 → 55.1 MB（−66%・本日通算 436.7→55.1＝−87%・非歌詞対照 45.3 の +22% まで到達）**・full 不変・対照 2 冊桁不動・sweep 0/569・chain memo の hit/decline を網に追加。
