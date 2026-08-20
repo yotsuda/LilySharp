@@ -163,10 +163,12 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 | ② 台帳起票（`2afd1b50`） | probes/pedal-lyric-stack.ly＋4 点（PLC/PLB/PLT/PLD・LP 2.26.0 ローカル実測） | Lily# は 4 冊とも同じ 5.864960＝3 種のインクに盲目、残差が桁まで分解 |
 | ③ 歌詞床（`14b2ffcd`） | LyricEngraver の `-1` family が anchor 譜自身の Down を読む（系ごと・`LastSpaceableStaffOf` 1 軒） | dynamic 点 −1.668349→+0.024651・実コーパス 2 冊（amazing-grace/greensleeves・締まる向き）・snapshot 不動 |
 | ④ ペダル括弧（`69ba0d20`） | 族ごと系ごとに skyline 構築時に解いて seed（`SolveAndSeed`・解は `StaffSkylineSet.PedalLines` で draw へ） | PLB −1.800155→−0.000155・snapshot 4 枚のみ・LP 実測 5.295＝3.045+1.2+1.05 に桁一致 |
+| ⑤ 小節番号のリードシート浮き（`d7098514`→`fe43b73e`） | anchor を「最上段の spaceable 譜」へ（`BarNumberEngraver.AnchorStaff`・stacker と 1 軒） | 台帳 +5.945→**0.000000 ちょうど**・射程 2 冊（ag/gs の番号が帯 1 本分下がる） |
+| ⑥ text スタイルのペダル語（`3e21dfa9`） | **語ごとに 1 スパナ**（LP の align-engraver 実装どおり）・pointwise 輪郭（pedal グリフ 3 種を抽出器へ追加）・2 段階（支え+1.2 → 衝突 0.46）・解は `StaffSkylineSet.PedalRows` で MusicMarkEngraver へ | 台帳 6 点: Ped./★ **0.000000 ちょうど**×2・3 段 −4e-5/+4.5e-3/+4.4e-3（輪郭スライバ族）・PLT 歌詞床 −2.448155→+0.003845・射程 pedal-text 1 冊のみ |
 
 - **Marketplace（保留・ユーザー PC 復帰待ち）**: publisher **`yotsuda` は登録済み・拡張 0 件**（`ytsuda` も本人のものだが github と綴りが揃う側を採用＝ユーザー決定）。`publish-marketplace.ps1` のドライランで **8 target 全 VSIX 成功**（win x64/arm64・linux x64/arm64/armhf/alpine・mac x64/arm64＝自己完結 44〜52 MB）。**残る 1 手はユーザーの PAT**: `https://dev.azure.com/ytsuda/_usersSettings/tokens` に**既存トークン `vsce-marketplace-publish`**（Marketplace Manage・Org=ytsuda・期限 2026/10/5）があるので **Regenerate → `npx @vscode/vsce login yotsuda`**（値は二度と表示されないため再生成が早い。元の開発機の `%USERPROFILE%\.vsce` コピーでも可）。login 後は `./publish-marketplace.ps1 -Publish` で 8 本公開 → Marketplace 検索確認。⚠️ **この回線は IPv6 経路で dev.azure.com/marketplace が TLS で死ぬ**（IPv4 は通る・実測）——ユーザーが IPv6 を無効化して回避中。vsce をスクリプト外で使うなら `NODE_OPTIONS=--dns-result-order=ipv4first`。
-- **⒢ の閉じ方は §2F の ✅ 項に**（台帳 4 点・スナップ 4 枚・残債 3 つ＝PLT text スタイル／dynamic +0.024651 box-vs-outline／系またぎ括弧×増分鍵）。
-- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（⒢・小節番号とも同便で閉じた）: ⒝ ペダル段間隔（テキスト行の step 1.961/2.443 未移植——PLT と同じ島）／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D）／小粒: twin の歌詞行・`lines` twin 未輸出・**マークの X（LP は箱左端を拍子記号位置に・Lily# は行頭寄り・差 約2 ss＝§3 第220 の副産物・対から起票）**。
+- **⒢ の閉じ方は §2F の ✅ 項に**。同便の続きで **PLT（text スタイル）と ⒝（段間隔）も閉じた**——段は語の輪郭から定数なしで出る（1.961/2.443 は各行のインク+0.46 だった）。**pedal-rows.ly の 9 桁 dump が旧 SVG 読みの 3 段値を 0.0939 stale と暴いた**（Lily# が先に dump と一致していた＝計器の勝ち）。残債: dynamic +0.024651 box-vs-outline（OPEN）／系またぎ括弧×増分鍵（未測定）／**mixed スタイルは旧 below-mark 基線のまま**（text・bracket が新機構、mixed だけ 3 軒目＝Ped. 文字と括弧線の同座が旧式で保たれている。移すなら両方一度に）。
+- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（⒢・小節番号とも同便で閉じた）: ⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D）／小粒: twin の歌詞行・`lines` twin 未輸出・**マークの X（LP は箱左端を拍子記号位置に・Lily# は行頭寄り・差 約2 ss＝§3 第220 の副産物・対から起票）**。
 
 > ## ★★ 骨 1＝**シルエット読みは anchor の Y を打ち消していた——読みを変えるなら frame の相棒も変わる**
 > `-1` family を per-staff Down に切り替えた最初の一手は hara-kiri の本で**ちょうど system 間隔 1 本分**
@@ -824,8 +826,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > `StaffSkylineSet.PedalLines` で draw に渡る（1 計算 2 読者）。PLB −1.800155 → **−0.000155**（対照と同値の書体スライバ）。
 > LP 実測 5.295 ＝ 支え 3.045 + 1.2 + フック 1.05 と桁一致。snapshot 4 枚だけ動き再承認（pedal-below-lyrics は
 > 「別譜のペダルは落ちない」を保ったまま自譜に寄った）。射程: sweep 569 冊中、⒝ で 2 冊（歌詞床が締まる向き）＋⒜ で snapshot 4 冊のみ。
-> **残債 3 つ（この島の続き）**: ⑴ **PLT＝text スタイルの Ped./* 行は未移植**（−2.448155 のまま台帳に open。
-> MusicMarkEngraver の below-stack 再ホーム＋`LyricClearance` の pedal 免除の撤去とセット）／
+> **残債（この島の続き）**: ⑴ ✅ **PLT＝text スタイルは同便の続きで閉じた**（`3e21dfa9`・語ごと 1 スパナ・
+> `LyricClearance` の pedal 免除は**残す**＝LP も「ペダルは譜側・歌詞が下がる」）／
 > ⑵ **dynamic の残差 +0.024651 は box-vs-outline の形状項**（台帳 why に分解済み・OPEN＝どちら側の輪郭かは未測定）／
 > ⑶ **系をまたぐ括弧 × 増分**: seed は中間小節にも ink を置くが、`MeasureContentKey` はペダル印を
 > **その小節にだけ** bucket する（BucketSingle）ので、**Off の小節を動かす編集で中間系の skyline cache が
