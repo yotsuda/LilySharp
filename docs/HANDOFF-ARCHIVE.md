@@ -19,6 +19,42 @@
 ---
 
 
+## 以下は第219セッションの経緯
+
+最終更新 第219セッション＝**v0.3.0 を出荷した便**——⓪ 拡張の再配備 → push 13 → CI 緑 → タグ `v0.3.0` → Release workflow 初実走が一発で全 job 緑・**GitHub Release v0.3.0 成立**（コード変更はスクリプト防御 1 行のみ）。
+⚠️ **彫版・snapshot・台帳・alloc はこの便では動かしても測ってもいない**（Core は 1 行も触れていない）。**snapshot 枚数・台帳の値は第218 の記載のまま。**
+ユーザーの目的だった **0.3.0 は出た**。次はタグ後の残債（下の ⑸）。
+
+★ **開始時裏取り（§0 通し）**: HEAD `69ea5e3f`・未 push 13・未追跡 0/作業ツリー 0・**Windows 5673/0/4・Linux（この機械の WSL）5673/0/4**＝両 OS 完全緑・Core 0 警告・追跡コーパス 569 冊・CI 直近（`8d91c8ec`）緑＝**引継ぎと全一致**。
+終了時 **未追跡 0・作業ツリー項目 0・未 push 0**（**handoff commit まで push した**——リリース直後なので remote と完全同期させた。commit の*あと*に数えた）。**suite はコード無変更のため開始時の両 OS 5673/0/4 が最終測定。**
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ⓪ 拡張の再配備（commit 外） | `0.3.0-dev.1` を build・install・VS Code 再起動 | エディタのみ（第218 の修理 4 件がプレビューに乗った） |
+| ① push→CI→タグ→Release | push 13（`8d91c8ec..69ea5e3f`）・CI 緑（run `32262687847`）・タグ `v0.3.0` | **GitHub Release v0.3.0 成立** |
+| ② `deploy-extension.ps1` に `#Requires -Version 7` | スクリプト 1 行＋注記 | 5.1 では VS Code を殺す前に 1 行も走らない（骨 1） |
+
+- **Release workflow 初実走は一発緑**（run `32263417689`＝test 2m23s → cli×4 RID・vsix とも ~1m48s）。**資産 5 点**＝`lysc-v0.3.0-{win-x64.zip / linux-x64・osx-x64・osx-arm64.tar.gz}`＋`lilysharp-0.3.0.vsix`。**ノートは CHANGELOG 最上段が verbatim で付いた**（awk 抽出・見出し落とし・両 job の body_path 二重化とも第214 ⑶ の設計どおり）。draft でも prerelease でもない。
+- **宿題 ⒜⒝（第214 ⑶）はどちらも読むだけで閉じた**: ⒜ CHANGELOG 最上段 = 0.3.0 = タグ（`Directory.Build.props`・`editors/vscode/package.json`・CHANGELOG の三面一致を実測）・⒝ Known limitations の未署名行は §3 の第215 決定どおり**残したまま出した**。
+- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（第217 の列挙から変わらず）: ⒢ ペダル・強弱 vs 歌詞の優先順位スタック（§2F）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D・第218 起票）／小粒: twin の歌詞行・`lines` twin 未輸出。**Marketplace 公開は別の手動判断**（`release.yml` 末尾のコメント・VSCE_PAT 未設定＝ユーザーの資産と本人確認が要る）。
+
+> ## ★★ 骨 1＝**deploy-extension.ps1 は pwsh 7 専用——5.1 は BOM を書いて vsce に拒まれる**
+> 1 回目を `powershell`（5.1）で走らせたら、Step 2 の `Set-Content -Encoding UTF8` が
+> package.json に BOM を書き、vsce が「not a valid JSON」で落ちた。**失敗地点は
+> Step 3＝VS Code を殺した*あと***（半走行が最悪の形）。finally が package.json を
+> byte 復元したので木は無傷。`#Requires -Version 7` を頭に置き、**5.1 では殺す前に
+> 1 行も走らない**形にした。pwsh 7 での再走は一発成功。
+
+> ## ★ 骨 2＝**リリースの門は全部前便までに造られていて、この便は読むだけで通れた**
+> workflow の初実走（awk 抽出・両置き body_path・タグからの版導出）は「初回リリースが
+> 初回実走」の賭けだったが、第214 ⑶ が宿題 ⒜⒝ という 2 行を読み手に残していたので、
+> タグの前に確かめるべきものが列挙済みだった。**引継ぎに宿題を書く形式の勝ち。**
+
+---
+
+
 ## 以下は第218セッションの経緯
 
 最終更新 第218セッション＝**「私に見えているリリースブロッカー」委任の 3 便目——独立 lyrics 行の verse 消失（⑴）・行を挟んだ system 間隔の 2 倍化（⑵・「LP 双子で確認して」→着手/中止の委任）・percent 小節の R1 重ね描き（⑶・ユーザー名指し）・score 行の `sings`（⑷・ユーザー名指し＝文法拡張 1 件・補完つき）を直した便**（実装 4 commit・`988ddbc2`＋`b232d979`＋`b600e9e5`＋`98bbfddd`）。

@@ -149,6 +149,45 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第221セッション＝**残債⒤「歌詞帯のスカラー床が X 盲目」を専用便で閉じた**——対の起票（probe `lyric-band-x.ly`・LBL/LBR＝g''' の小節位置だけが違う 1 変数 fork・LBS＝出荷紙の番人）→ **対が対でなかった**（双子の form 素参照が section マークを刷り、LP 側の本には無い——§5.0 の罠を起票の同便で踏み、診断自身の falsifier が拾った）→ 対を修理して再起票 → 移植＝**帯の最小 profile が paging skyline の要素になり、床が X で読む**（スカラー床は CreatePages / PageLayouter の両経路から消えた）。台帳 **547 点**（+5）・`lyrics.band-floor.ink-past-band.system-gap` は **0.000000000 ちょうど**で閉幕。
+
+★ **開始時裏取り**: HEAD `2dc943e2`・未 push 0・未追跡 0/木 0・Windows suite **5687/0/4**（⚠️ 引継ぎの「5677」「台帳 546」はどちらも誤記＝実測 5687・542。台帳は直近 4 commit とも 542 で数え直して確認）・CI 全緑・Core 0 警告・追跡コーパス 569 冊。
+終了時 **未追跡 0・木 0・未 push 3**（`c207b25c` 起票 → `5c3df019` 対の修理 → `ef838197` 移植）・suite **Windows 5693/0/4・Linux（この機械の WSL）5693/0/4＝両 OS 完全緑**・snapshot **220 枚中 1 枚だけ動き再承認**（sings-chorus-row・最終 system 下の余白のみ）・台帳 547 点・追跡コーパス 569 冊・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① 起票（`c207b25c`） | probes/lyric-band-x.ly＋台帳 5 点（LP 2.26.0 実測: LBL 12.362129 / LBR 10.090000＝fork 2.272129 / LBS 12.000000 ちょうど） | 「Lily# は fork の両側で同じ数を読む」を書いてから測定 |
+| ② 対の修理（`5c3df019`） | 双子を `~A break ~B` へ（素参照は section マークを刷る＝LP 側の本に無い ink）・全数値を取り直し | 署名（両側同数 12.277483）は修理を生き延び、量は 1 つも生き延びなかった |
+| ③ 移植（`ef838197`） | `LyricReservationBelowSystem` が profile を返す → `PagingAugmentProgram` の最終 family（`AddLyricBand`・鍵は building の数値＝augment memo と両立）→ スカラー床を両経路から除去・extents は profile の最深点 | **12/569 冊**（全部歌詞本・系間 gap が LP 側へ 0.8〜1.0 縮む／内容寸ページの余白が締まる）・snapshot 1 枚・両 OS 緑 |
+
+- **台帳の帳尻**: ink-past-band **+2.187483 → 0.000000000**（閉じる算術が font-free＝予測どおり ちょうど）／ink-over-band **−0.084646 不動**（この本ではスカラーと X 解が構造的に一致＝残差は j-dot 島が gap 越しに見えているだけ）／band-shipping **exact**（出荷紙は両側とも ideal 12 が勝つ——pin が引いていた「14.571」は origin 枠＋マーク付き双子の数だった）／staff-to-lyric **−0.092 不動**＝描かれた歌詞は動いていない（開いた時の要求どおり）。
+- **露出した島 2 つ（未着手・名前だけ）**: ⓐ **row と sings の音節 X ドリフト**——"ff" が row 83.668 / sings 80.783。**LP は両綴りの dump が行単位で同一**なので Lily# 固有。X を読む床が初めて課金した。pin `SystemGap_ReadsARowsBandOnce` は X が床に届かない形（一様音節・平板な次系・ラベル抑制）に再構成済み。／ⓑ **j-dot**——`lyrics.band-floor.staff-to-lyric` −0.092 の分解: Lily# の床の勝者が gyp×e頭（2.545+0.5+1.178783）に落ちるには j の立ち上がりが 1.674 未満のはず（LP は 1.765782＝点込み）＝**音節 up-profile の j の点**が容疑。face sliver は e-4 なので 3 桁大きい＝機構。
+- **alloc の代価（実測・▶ にも記帳）**: plain1k 694.9/45.2・fingstack 2413.8/162.0 **桁まで不動**／**perf-lyrplain1k は full +21%・打鍵 +10%**（368.0→405.2 MB）＝帯 profile の毎打鍵構築。memo するなら「その鍵は歌詞の内容を含むか」を先に確かめること（含まない鍵に畳むと sweep に見えない増分穴＝第192 の族）。
+- **⑸ ★★★ 次に触るなら＝残債**: ⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X（対から）・**音節 X ドリフト（ⓐ・対から起票）・j-dot（ⓑ・音節 up-profile を dump して j を見る）・chord-row の上帯スカラー（下帯と同じ島の上側・対から）**。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★★ 骨 1＝**対が対であることを、診断自身の falsifier が言った**
+> 双子の `form main { A break B }` は section マークを刷り、LP の本は刷らない。起票の
+> 「Lily# は fork の両側で同じ 13.392」という強い言明は**マーク込みの数**だった。拾ったのは
+> 「歌詞も g''' も無い本が 12.200 を読む」＝診断のどの項も作れない数。**署名（両側同数）は
+> 対の修理を生き延び、量は 1 つも生き延びなかった。**§5.0「強い言明ほど先に対を検算」を、
+> その規則を引いた commit の直後に踏んだ形——罠は引用しても踏む。falsifier を仕込んであれば拾える。
+
+> ## ★★ 骨 2＝**読みを正すと、盲目が無料にしていた乖離が課金される**（第220 骨 1 と同族）
+> スカラー床は X を見ないから、row と sings の音節 X ドリフトはずっと無料だった。X を読む床に
+> した瞬間、その差が 0.915 の gap 差になって pin が割れた。1 手目の修理（row-outer に per-staff
+> Down を重ねる）は「1 つの量に 2 つの表現」でもう 1 枚割った（§5.2.1②）——正しい形は**表現を
+> 増やさない**: 譜は system skyline の edge model のまま、帯だけが新しい要素。
+
+> ## ★ 骨 3＝**禁止の札と自分の操作を 1 行で照合してから進む**（RULES §5.1）
+> `PagingAugmentProgram` の「バッチ化するな」は既存 merge の**再結合**の禁止。末尾に新 family を
+> 1 つ足すのは別の操作で、鍵を building の数値列にすれば増分 memo とも両立する（program 不変→hit）。
+
+---
+
+## 以下は第220セッションの経緯
+
 最終更新 第220セッション＝**長い委任便**——Marketplace 下拵え（publisher `yotsuda` 統一・8 VSIX 実証・**PAT 待ちで保留**）→ §2F ⒢ 両方 → 小節番号のリードシート浮き（ユーザー報告・0 ちょうどで閉幕）→ **ペダル島 完結**（text 語ごと 1 スパナ・mixed 1 群 1 解・系またぎ×増分鍵の毒→修理）→ **音節プロファイルの輪郭化**（台帳唯一の OPEN を閉じ、alloc の代償は 3 段返済＋perf 島へ分解起票）。台帳は **546 点・うち今日 0.000000 ちょうどが 9 点**。マーク＋テンポの縦積みは §3 に決定（現状維持）。
 ✅ **ユーザー報告「小節番号の y 位置が高い」は同便で特定・修理**（`d7098514`→`fe43b73e`）: 素の本は LP 一致だったが、**リードシート（コード行が先頭）では帯 1 本分浮いていた**——`BarNumberLayout.YUp` が system 天辺基準で、行が先頭だと天辺＝帯の上端。LP は move-to-extremal-staff で X が交わる最上段要素に付け替え、行頭の番号は左マージンに垂れて行と X が交わらないので**譜に留まりコード行の下**（実測: インク底 2.05+padding 1.0＝3.050000 ちょうど・行があっても不動）。`BarNumberEngraver.AnchorStaff`（最上段の spaceable 譜・stacker の tracker 選択と 1 軒共有）に載せ替え、台帳 `barnumber.chord-row.staff-to-ink-bottom` **+5.945 → 0.000000**（両側 book 体項なし）。射程はリードシート 2 冊（amazing-grace/greensleeves・番号が帯 1 本分下がる）のみ・snapshot 不動。⚠️ **X 交差判定そのものは未移植**——period>0 の行中番号が行インクの真下に来る形だけが要る形で、probe から始めること（台帳 why・remark に記載）。
 
@@ -186,41 +225,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > ## ★ 骨 3＝**stale バイナリの絵で 2 回誤診しかけた**
 > `--no-build` は「最後に誰がどこを build したか」を知らない。pre/post 比較で 1 回（両方 post の絵）、
 > 修理後の検分で 1 回（修理前の絵）。**比較の絵を作る前に、その exe を作った build を同じ手で打つ。**
-
----
-
-## 以下は第219セッションの経緯
-
-最終更新 第219セッション＝**v0.3.0 を出荷した便**——⓪ 拡張の再配備 → push 13 → CI 緑 → タグ `v0.3.0` → Release workflow 初実走が一発で全 job 緑・**GitHub Release v0.3.0 成立**（コード変更はスクリプト防御 1 行のみ）。
-⚠️ **彫版・snapshot・台帳・alloc はこの便では動かしても測ってもいない**（Core は 1 行も触れていない）。**snapshot 枚数・台帳の値は第218 の記載のまま。**
-ユーザーの目的だった **0.3.0 は出た**。次はタグ後の残債（下の ⑸）。
-
-★ **開始時裏取り（§0 通し）**: HEAD `69ea5e3f`・未 push 13・未追跡 0/作業ツリー 0・**Windows 5673/0/4・Linux（この機械の WSL）5673/0/4**＝両 OS 完全緑・Core 0 警告・追跡コーパス 569 冊・CI 直近（`8d91c8ec`）緑＝**引継ぎと全一致**。
-終了時 **未追跡 0・作業ツリー項目 0・未 push 0**（**handoff commit まで push した**——リリース直後なので remote と完全同期させた。commit の*あと*に数えた）。**suite はコード無変更のため開始時の両 OS 5673/0/4 が最終測定。**
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ⓪ 拡張の再配備（commit 外） | `0.3.0-dev.1` を build・install・VS Code 再起動 | エディタのみ（第218 の修理 4 件がプレビューに乗った） |
-| ① push→CI→タグ→Release | push 13（`8d91c8ec..69ea5e3f`）・CI 緑（run `32262687847`）・タグ `v0.3.0` | **GitHub Release v0.3.0 成立** |
-| ② `deploy-extension.ps1` に `#Requires -Version 7` | スクリプト 1 行＋注記 | 5.1 では VS Code を殺す前に 1 行も走らない（骨 1） |
-
-- **Release workflow 初実走は一発緑**（run `32263417689`＝test 2m23s → cli×4 RID・vsix とも ~1m48s）。**資産 5 点**＝`lysc-v0.3.0-{win-x64.zip / linux-x64・osx-x64・osx-arm64.tar.gz}`＋`lilysharp-0.3.0.vsix`。**ノートは CHANGELOG 最上段が verbatim で付いた**（awk 抽出・見出し落とし・両 job の body_path 二重化とも第214 ⑶ の設計どおり）。draft でも prerelease でもない。
-- **宿題 ⒜⒝（第214 ⑶）はどちらも読むだけで閉じた**: ⒜ CHANGELOG 最上段 = 0.3.0 = タグ（`Directory.Build.props`・`editors/vscode/package.json`・CHANGELOG の三面一致を実測）・⒝ Known limitations の未署名行は §3 の第215 決定どおり**残したまま出した**。
-- **⑸ ★★★ 次に触るならここ＝タグ後の残債**（第217 の列挙から変わらず）: ⒢ ペダル・強弱 vs 歌詞の優先順位スタック（§2F）／⒝ ペダル段間隔／⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／⒤ 歌詞帯のスカラー床が X 盲目（§2D・第218 起票）／小粒: twin の歌詞行・`lines` twin 未輸出。**Marketplace 公開は別の手動判断**（`release.yml` 末尾のコメント・VSCE_PAT 未設定＝ユーザーの資産と本人確認が要る）。
-
-> ## ★★ 骨 1＝**deploy-extension.ps1 は pwsh 7 専用——5.1 は BOM を書いて vsce に拒まれる**
-> 1 回目を `powershell`（5.1）で走らせたら、Step 2 の `Set-Content -Encoding UTF8` が
-> package.json に BOM を書き、vsce が「not a valid JSON」で落ちた。**失敗地点は
-> Step 3＝VS Code を殺した*あと***（半走行が最悪の形）。finally が package.json を
-> byte 復元したので木は無傷。`#Requires -Version 7` を頭に置き、**5.1 では殺す前に
-> 1 行も走らない**形にした。pwsh 7 での再走は一発成功。
-
-> ## ★ 骨 2＝**リリースの門は全部前便までに造られていて、この便は読むだけで通れた**
-> workflow の初実走（awk 抽出・両置き body_path・タグからの版導出）は「初回リリースが
-> 初回実走」の賭けだったが、第214 ⑶ が宿題 ⒜⒝ という 2 行を読み手に残していたので、
-> タグの前に確かめるべきものが列挙済みだった。**引継ぎに宿題を書く形式の勝ち。**
 
 ---
 
@@ -321,6 +325,9 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > ⇒ ★★ **0 冊を証拠として引く前に、毒を 1 つ当てて「届く」ことを見せる**（第192 の骨 ⑴）。
 > ⚠️ **`alloc` の床は本によって決定的でない**（`perf-v2bow1k` は run 間で約 4% 揺れ、
 > `perf-plain1k` は厳密）。**詳細と読み方は `Alloc` の remarks。**
+> ⚠️ **歌詞本の打鍵は第221 で +10%**（perf-lyrplain1k 368.0→405.2 MB・full +21%。plain1k/fingstack は桁まで不動）＝
+> **帯 profile の毎打鍵構築**（`LyricReservationBelowSystem`）。**memo するなら「その鍵は歌詞の内容を
+> 含むか」を先に確かめる**——含まない鍵に畳むと sweep に見えない増分穴（第192 の族）。
 > ⚠️ **ビルド費用は測ってある**: solution の full が **3.81〜4.01 秒**（5 project のとき 3.63〜4.03）・
 > **noop は 0.90 秒で不変**＝実質ゼロ。**打鍵の*時間*はここに入れていない**——
 > `EditKeystrokeBench` / `PreviewUpdateBench` が既に持っており、**同じ量の 3 軒目**を作らないため。
@@ -703,17 +710,14 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 - **`PageLayouter` は systemDetails の `i == 0` で `vs.SystemSystem`、配置側は `vs.TopSystem`**＝
   ブレーカーと配置で spec が食い違う（本数見積りにしか効かない）
 - **`LayoutEngine` の単一ページ経路が今も自前で積む**（二重実装）。⚠️ **「force 0 なので鎖と一致する」は嘘だった**——帯の床を `SysHeight`（trailing 行の描画帯を含む）から測っていて、**行を挟む本で帯を二重計上**（第218 実測: rowgap probe 19.836 vs LP 12.000・Twinkle 23.500 vs 12.225）。**frame は `b232d979` で直した**（帯の項はアンカー譜の外側線から＝PageLayouter の `HalfLast` と同型）。**二重実装そのものは残っている。**
-- ★ **歌詞帯のスカラー床は X 盲目**（2026-08-19・第218 起票・**双子実測・未着手**＝残債⒤）。
-  `LyricReservationBelowSystem` は block の skyline を歩いて**スカラー（deepest）に潰し**、
-  `CreatePages`／`PageLayouter` の床は**それを全 X に敷く**。LP は block を system の down
-  skyline に**minimum のまま入れて X 単位で測る**（page-layout-problem.cc:593-599）ので、
-  音節の隙間や短い行の右側を次 system の高い ink が通れる。**残差の実測**（frame 修正後）:
-  rowgap probe 14.571 vs LP 12.000・Twinkle 15.034/14.484 vs LP 12.225/12.000・
-  **sings 綴りでも同額**（＝row 固有ではなく帯機構全体の性質。床が縛らない本は 6 桁一致
-  ——lyric-extender 双子 12.000000）。**終点の形**: 歩いた profile を返して spring の
-  Distance に X 付きで参加させ、スカラー床を両経路から外す——ただし PageLayouter の
-  remark が言う「2 分岐は同じ frame で書く」を保ったまま。**帯が縛る本は全部動く**ので、
-  snapshot の目視と LP 向きの確認が必要な専用の便。
+- ✅ **歌詞帯のスカラー床は X 盲目 — 閉じた**（第221・`ef838197`。起票 `c207b25c`＋対の修理 `5c3df019`）。
+  帯の最小 profile が paging skyline の要素になり（`LyricReservationBelowSystem` が profile を返し
+  `PagingAugmentProgram.Builder.AddLyricBand` が最終 family として merge・鍵は building の数値＝augment memo と両立）、
+  床は X で読む。スカラー床は CreatePages / PageLayouter の両経路から消え、extents は profile の最深点。
+  台帳 `lyrics.band-floor.*`（fork の 2.272129 を LP 実測・ink-past-band **0.000000000 ちょうど**）・
+  射程 12/569 冊（全部歌詞本・LP 側へ縮む向き）・snapshot 1 枚（余白のみ）。
+  **露出して残った島**: row/sings の音節 X ドリフト・j-dot（→§1 第221 ⓐⓑ）・**上側の chord-row 帯は
+  今もスカラー**（`EstimateAboveStaffExtents` の bandUp・同じ形の島の上側・対から起票）。
 - **Y コーパスの拡張**（`page.top-margin` / `page.bottom-margin` / `page.last-page-gap` 等）
 - ★ **歌詞行が譜間の「中で」LP と別の位置に立つ**（2026-08-14・双子実測・**未着手**）。
   ⚠️ **上の「force 0 のまま」とは別件**——あちらは*再配分*の話で、これは*静止位置*。
