@@ -335,12 +335,15 @@ internal static class LyricSpacing
         double prevRight = GetLyricRightExtent(fonts, prevLyrics, prevAlignmentEdge);
         double nextLeft = GetLyricLeftExtent(fonts, nextLyrics, nextAlignmentEdge);
 
-        // Minimum INK gap between syllables: a word-space at the lyric font
-        // (~0.31 em at 3.2 ss), which is also what LP's lyric spacing yields
-        // between words. It doubles as headroom for the renderer's actual
-        // serif face, whose advances differ from the Times table by a few
-        // percent either way (the face behind generic "serif" is the
-        // viewer's choice; we cannot measure it at layout time).
+        // LILYSHARP-OWN: minimum INK gap between syllables. ⚠️ The rationale this
+        // carried ("headroom for the renderer's actual serif face ... we cannot
+        // measure it at layout time") is FALSE since the bundled-face port: the very
+        // functions below measure the real face through fonts.Advance. LilyPond's
+        // counterpart is the lyric-word space through LyricSpace / separation-item's
+        // set_distance, unmeasured here — HANDOFF 2H names this constant, with the
+        // 3.2 below, as the lyric column spacing's two remaining inventions; both go
+        // together, from a ledger pair, in a dedicated session (every lyric book's
+        // columns move).
         const double lyricPadding = 1.0;  // staff spaces
 
         return prevRight + nextLeft + lyricPadding;
@@ -404,10 +407,16 @@ internal static class LyricSpacing
     }
 
     // Real serif-regular advances (TextFontMetrics, from the bundled face's own outlines)
-    // at the 3.2 ss lyric font —
-    // this used to be a crude 3-bucket table that under-measured capitals
-    // ("Up" by ~0.7 ss), so the springs reserved too little and wide syllables
-    // overlapped their neighbours in lyric rows.
+    // — but ⚠️ LILYSHARP-OWN at the WRONG SIZE: 3.2 ss is the pre-em-correction lyric
+    // font, while the syllable is DRAWN at LyricTextFontSize = 2.469417, so every
+    // column reservation is ~30% wider than the drawn ink (found 2026-08-20 while
+    // diagnosing the row-vs-sings X drift; HANDOFF 2H carries the island). It stays
+    // until the LP column-spacing pair lands, because shrinking it alone re-tunes
+    // every lyric book's columns against an invented padding (the 1.0 above) instead
+    // of against LilyPond.
+    // (The 3.2 replaced a crude 3-bucket table that under-measured capitals — "Up"
+    // by ~0.7 ss — so the springs reserved too little and wide syllables overlapped
+    // their neighbours in lyric rows.)
     private static double EstimateLyricTextWidth(Rendering.ScoreTextMetrics fonts, string text)
         => fonts.Advance(text, 3.2, Rendering.TextRole.LyricText);
 }

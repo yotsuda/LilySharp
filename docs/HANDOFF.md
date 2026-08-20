@@ -163,7 +163,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 | ③ 移植（`ef838197`） | `LyricReservationBelowSystem` が profile を返す → `PagingAugmentProgram` の最終 family（`AddLyricBand`・鍵は building の数値＝augment memo と両立）→ スカラー床を両経路から除去・extents は profile の最深点 | **12/569 冊**（全部歌詞本・系間 gap が LP 側へ 0.8〜1.0 縮む／内容寸ページの余白が締まる）・snapshot 1 枚・両 OS 緑 |
 
 - **台帳の帳尻**: ink-past-band **+2.187483 → 0.000000000**（閉じる算術が font-free＝予測どおり ちょうど）／ink-over-band **−0.084646 不動**（この本ではスカラーと X 解が構造的に一致＝残差は j-dot 島が gap 越しに見えているだけ）／band-shipping **exact**（出荷紙は両側とも ideal 12 が勝つ——pin が引いていた「14.571」は origin 枠＋マーク付き双子の数だった）／staff-to-lyric **−0.092 不動**＝描かれた歌詞は動いていない（開いた時の要求どおり）。
-- **露出した島 2 つ（未着手・名前だけ）**: ⓐ **row と sings の音節 X ドリフト**——"ff" が row 83.668 / sings 80.783。**LP は両綴りの dump が行単位で同一**なので Lily# 固有。X を読む床が初めて課金した。pin `SystemGap_ReadsARowsBandOnce` は X が床に届かない形（一様音節・平板な次系・ラベル抑制）に再構成済み。／ⓑ **j-dot——同便の続きで解決＝顔のデータ差**（コード無罪）: 両フォントファイルを fontTools bbox で直接比較し、**C059 と Schola は h/x/g/p が bit 同一・i/j の点だけ 0.135818 違う**（C059 1.765633 / Schola 1.629815。Lily# の Ink 箱と輪郭歩きは自フェイスと桁一致＝歩きは正しい）。−0.092 は**計量双子の点が床越しに見えた恒久差**＝§3 の 2026-08-02 決定（Schola のまま）の族に垂直 ink の初 member として記載。追うものは無い（差し替えの時だけ動く）。
+- **露出した島 2 つ（未着手・名前だけ）**: ⓐ **row と sings の音節 X ドリフト**——"ff" が row 83.668 / sings 80.783。**LP は両綴りの dump が行単位で同一**なので Lily# 固有。X を読む床が初めて課金した。pin `SystemGap_ReadsARowsBandOnce` は X が床に届かない形（一様音節・平板な次系・ラベル抑制）に再構成済み。**続き便で診断済み＝spacing 段**（音符列ごと累積 ≈0.587・sings が広い・両綴りとも予約経路には入る・row の均等割り格子は LILYSHARP-OWN）。**§2H の新島「歌詞列間隔の発明 2 つ」（幅を 3.2 で測る／padding 1.0）の窓から測るのが早い**——そちらが先。／ⓑ **j-dot——同便の続きで解決＝顔のデータ差**（コード無罪）: 両フォントファイルを fontTools bbox で直接比較し、**C059 と Schola は h/x/g/p が bit 同一・i/j の点だけ 0.135818 違う**（C059 1.765633 / Schola 1.629815。Lily# の Ink 箱と輪郭歩きは自フェイスと桁一致＝歩きは正しい）。−0.092 は**計量双子の点が床越しに見えた恒久差**＝§3 の 2026-08-02 決定（Schola のまま）の族に垂直 ink の初 member として記載。追うものは無い（差し替えの時だけ動く）。
 - **alloc の代価（実測・▶ にも記帳）**: plain1k 694.9/45.2・fingstack 2413.8/162.0 **桁まで不動**／**perf-lyrplain1k は full +21%・打鍵 +10%**（368.0→405.2 MB）＝帯 profile の毎打鍵構築。memo するなら「その鍵は歌詞の内容を含むか」を先に確かめること（含まない鍵に畳むと sweep に見えない増分穴＝第192 の族）。
 - **⑸ ★★★ 次に触るなら＝残債**: ⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X（対から）・**音節 X ドリフト（ⓐ・対から起票）・chord-row の上帯スカラー（下帯と同じ島の上側・対から）**（j-dot ⓑ は解決済み＝§3 の顔差の族）。Marketplace は PAT 待ちのまま（第220 ①）。
 
@@ -2039,6 +2039,21 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 `separation-item.cc:47-68` ＋ `spacing-spanner.cc:315-316`）に置換。`compressed.note-to-note.quarter`
 が **1.604200 で exact**。`SeparatingPaddingTests` は LP 由来の期待値に書き直し済みで、
 「`MinItemGap` を何に設定しても音符間が動かない」ことを主張するテストを追加＝**戻ってこない**。
+
+- ★ **歌詞の列間隔は発明が 2 つ**（2026-08-20・第221続き便が X ドリフトの診断中に発見・**未着手**）:
+  **⑴ `LyricSpacing.EstimateLyricTextWidth` は音節幅を 3.2 ss で測る**——描画は
+  `LyricTextFontSize`＝**2.469417**（em 修正後）なので**全歌詞本の列予約が約 30% 過大**。
+  3.2 は em 修正前の旧サイズの取り残し。**⑵ `CalculateLyricDistance` の `lyricPadding = 1.0`**
+  は「layout 時に実フェイスを測れない」という**今は偽の理由**を添えた定数（同じ関数が
+  `fonts.Advance` で実フェイスを測っている）。LP の対応物は separation-item の
+  set_distance（ink＋padding）と LyricSpace/LyricHyphen の族＝**対の起票から**（列 X の
+  台帳点を LP 双子で開く。全歌詞本の snapshot が動くので専用の便）。
+  ⚠️ **row vs sings の音節 X ドリフト（§1 第221 ⓐ）はこの島の窓から測るのが早い**——
+  診断済みの事実: ドリフトは spacing 段（音符列が列ごと累積 ≈0.587 で動く・sings が広い）、
+  両綴りとも予約経路には入る（by-item / by-column）、**row の時間格子は小節を音節数で
+  均等割り＝LILYSHARP-OWN**（行は音価を持たない文法なので、音節数≠音符数の小節は両綴りが
+  構造的に別音楽になる——LP 同一性は「行に音価を書いた twin」についての言明）。
+  判別器: LP の sings 双子の列 X を基準に、Lily# の sings / row を両方読む。
 
 ⚠️ このとき **§2H の旧記述は 2 つとも外れていた**ので、同じ推論を繰り返さないこと:
 
