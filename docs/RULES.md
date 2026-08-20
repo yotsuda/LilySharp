@@ -2584,6 +2584,20 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 
 ### 5.5 環境の落とし穴
 
+- ★★★ ⚠️⚠️ **`LilySharp.slnx` の既定ビルドは Debug＝`LilySharp.Cli\bin\Release` の
+  lysc.exe は §0 の solution build では一度も更新されない**（2026-08-20・第225セッション実測）。
+  **stash を跨いで A/B したのに DLL ハッシュが 1 度も変わっていなかった**——CLI 比較は
+  「同一バイナリ同士の比較」で 2 度「差なし」と嘘をつき、**sweep（`dotnet run` が Core を
+  project 参照で自前ビルドする）だけが真実を言い続けた**。
+  ⇒ **lysc を測定・A/B に使う前に `dotnet build LilySharp.Cli -c Release` を明示する。**
+  ⇒ ★★ **一般形: A/B が「差なし」と言ったら、結論の前に両側の DLL ハッシュを比べる**
+  （「旧 Core を抱く」罠の親戚——同じ答えを 2 度出す計器は、測っていない計器かもしれない）。
+- ★★ ⚠️ **pwsh コンソール（MCP）で repo の DLL を `Assembly.LoadFrom` すると、その
+  コンソールが生きている限りロックが残る**（2026-08-20・第225セッション実測）——以後の
+  ビルドは **MSB3027 を出すこともあれば、コピーだけ静かに落として成功と報告することもある**
+  （bin の DLL が stale のまま「0 エラー」）。⇒ **repo の DLL をコンソールに読み込んだら、
+  測定が済み次第コンソールを再起動して bin を建て直す**。読み込む前に別プロセス
+  （`pwsh -NoProfile -Command …`）で済まないか考えること。
 - ★★★ ⚠️⚠️ **再現環境は「同じ OS」ではなく「同じ*母集団*」で選ぶ**（2026-08-19・第213セッション）。
   **CI の ubuntu 脚を WSL2 で再現したら、CI に無い赤が 2 件出た**
   （`FontBlockCompletionTests`）——**この機械の WSL は LilyPond をビルドするために
@@ -2841,6 +2855,8 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 #          ——無変更の増分ビルドは何もコンパイルせず警告 0 を自明に報告する）
 # ⚠️ project 単体で建てないこと: Core だけ建てても LilySharp.Cli\bin の Core.dll は
 #    更新されず、そのあと lysc を打つと旧 Core を抱く（上の §5.5 の項）。
+# ⚠️ この build の既定は Debug＝LilySharp.Cli\bin\Release の lysc.exe は更新されない。
+#    lysc を測定に使う前に `dotnet build LilySharp.Cli -c Release`（上の §5.5 の項）。
 dotnet build LilySharp.slnx --no-incremental -v q 2>&1 |
   Select-String 'エラー|error|LilySharp\.Core.*warning'   # Core は 0 警告が期待値
 #    （solution 全体には Tests の analyzer 警告が在る。Core の行だけ見る）
