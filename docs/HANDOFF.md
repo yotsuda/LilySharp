@@ -830,9 +830,10 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > **残債（この島の続き）**: ⑴ ✅ **PLT＝text スタイルは同便の続きで閉じた**（`3e21dfa9`・語ごと 1 スパナ・
 > `LyricClearance` の pedal 免除は**残す**＝LP も「ペダルは譜側・歌詞が下がる」）／
 > ⑵ **dynamic の残差 +0.024651 は box-vs-outline の形状項**（台帳 why に分解済み・OPEN＝どちら側の輪郭かは未測定）／
-> ⑶ **系をまたぐ括弧 × 増分**: seed は中間小節にも ink を置くが、`MeasureContentKey` はペダル印を
-> **その小節にだけ** bucket する（BucketSingle）ので、**Off の小節を動かす編集で中間系の skyline cache が
-> stale になり得る**（未測定・毒 1 冊で確かめてから Volta と同じ BucketSpan にするか決める）。
+> ⑶ ✅ **系をまたぐ括弧 × 増分は同便で毒→修理**（`620cc81c` 後続 commit）: 毒は実在した——Off を消す編集で
+> On 側 system の cache が死んだ括弧の ink を保持（増分ページ高 793.7 vs full 782.8）。修理は Volta と同形＝
+> **検出済みスパンを両 overload の鍵に BucketSpan**（印の純関数なので再導出）。毒はテストとして常設
+> （`DeletingAPedalRelease_RedrawsTheSystemsTheBracketSpanned`）・full render は 0/569 不動。
 
 > ## ✅ **`with lyrics`/`with chords` の除去＝「score は帯の縦列」は第216 で完成した**（`6d6d1b92`→`5d7a8ef1` の 4 commit。**起票・決定は第215**）
 > **残る作業 4 つを全部閉じた**: ⑴ bound 行は譜の直後で fold（byte 恒等を機械証明してから構文を除去）
