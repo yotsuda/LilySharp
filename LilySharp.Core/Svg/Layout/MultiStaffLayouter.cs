@@ -1195,8 +1195,10 @@ internal sealed class MultiStaffLayouter
             var alignmentEdges = SpacingRules.ParentAlignmentEdgesPerColumn(
                 allMeasures, allTimings);
             // The per-voice edge a lyric actually aligns on; the union above is its
-            // fallback (rows, the placeholder). See LyricSpacing.OwnVoiceEdgeProvider.
-            var ownEdge = LyricSpacing.OwnVoiceEdgeProvider(score);
+            // fallback (rows, the placeholder). See LyricSpacing.OwnVoiceEdgeProvider —
+            // memoized per score, and not asked for at all on an unsung book.
+            var ownEdge = score.Lyrics.IsDefaultOrEmpty
+                ? null : LyricSpacing.OwnVoiceEdgeProvider(score);
             var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
                 score.TextMetrics, springs, allTimings, i, score.Lyrics, score.IsLeadSheet,
                 alignmentEdges, ownEdge);

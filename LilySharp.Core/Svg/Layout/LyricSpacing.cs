@@ -268,18 +268,31 @@ internal static class LyricSpacing
     /// </summary>
     internal static System.Func<LyricItem, (double Left, double Centre)?> OwnVoiceEdgeProvider(
         MultiStaffScore score)
+        // MEMOIZED PER SCORE (ConditionalWeakTable): the provider is asked for per
+        // measure by two callers (layout and gate) and per system by the ink walk —
+        // constructing a closure and rebuilding its staff→voices table each time
+        // allocated ~1–2 MB per 1k-bar full render, measured on the perf-lyr* books
+        // the day this landed (user: no perf cost for a 0.037-ss number). One
+        // provider per score keeps the table build to once.
+        => _ownEdgeByScore.GetValue(score, BuildOwnVoiceEdgeProvider);
+
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, System.Func<LyricItem, (double Left, double Centre)?>>
+        _ownEdgeByScore = new();
+
+    private static System.Func<LyricItem, (double Left, double Centre)?> BuildOwnVoiceEdgeProvider(
+        MultiStaffScore score)
     {
-        System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>? byStaff = null;
+        // Built EAGERLY: the provider is shared across every caller of one score
+        // (ConditionalWeakTable), so the table must be complete before the closure
+        // escapes — a lazily built dictionary would be check-then-assign shared state.
+        var byStaff = new System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>();
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            byStaff[idx] = st.Voices;
         return lyric =>
         {
             if (lyric.IsLyricsRow)
                 return null;
-            if (byStaff == null)
-            {
-                byStaff = new System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>();
-                foreach (var (_, st, idx) in score.EnumerateStaves())
-                    byStaff[idx] = st.Voices;
-            }
             if (!byStaff.TryGetValue(lyric.StaffIndex, out var vs)
                 || lyric.VoiceId < 0 || lyric.VoiceId >= vs.Length)
                 return null;
