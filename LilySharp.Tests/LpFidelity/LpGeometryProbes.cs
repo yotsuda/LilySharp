@@ -651,6 +651,72 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// One multi-voice bar for the BOUND VOICE'S SYLLABLE-TO-COLUMN MAP — the shared shape
+    /// of books LBI / LBIP / LBIC in probes/lyric-bound-voice-mapping.ly (HANDOFF 1's
+    /// "多声小節の byItem 予約写像" small item, named by the cross-bar rod port). The books
+    /// differ only in which voice carries the lyrics and in the words.
+    /// </summary>
+    /// <remarks>
+    /// THE BAR: primary voice four quarters (columns 0 1 2 3), bound voice half + two
+    /// quarters (items 0 1 2 on columns 0 2 3). The union column count EQUALS the primary
+    /// voice's item count, so <see cref="LilySharp.Core.Svg.Layout.LyricSpacing"/>'s
+    /// by-item gate passes — and a bound syllable's ItemIndex counts its OWN voice's
+    /// notes, so its reservation lands one column LEFT of the column the syllable is
+    /// DRAWN on (the engraver and, since 2026-08-20, the cross-bar rod edges both map by
+    /// TIMING; MeasureLineEdges' doc names this by-item alias as the residue).
+    /// <para>
+    /// LilyPond has no second map: a LyricSpace rods consecutive syllables' INK apart by
+    /// 0.45 (lily/hyphen-engraver.cc:107, lily/lyric-hyphen.cc:163-179), whichever
+    /// columns carry them — so with one word repeated, every binding gap in every book
+    /// reads the SAME number D = ink("mumum") + 0.45 = 10.010126 (measured 2026-08-20 on
+    /// 2.26.0: LBI's two steps and LBIP's three all read 10.010125984251968 — the
+    /// LP-identity pair). The syllable centres on its own voice's head, so the
+    /// half-vs-quarter he.centre sliver (0.6887 − 0.6521 = 0.0366) appears only in the
+    /// no-bind book's skipped-column step.
+    /// </para>
+    /// LilyPond twin: books LBI/LBIP/LBIC in probes/lyric-bound-voice-mapping.ly.
+    /// </remarks>
+    private static string BoundVoiceScore(string name, string lyricVoice, string words) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+
+        part m { clef treble }
+
+        section A {
+          m {
+            voice sop { c'4 c' c' c' | }
+            alt { e2 e4 e4 | }
+          }
+          lyrics {{lyricVoice}} { {{words}} }
+        }
+
+        form main { ~A }
+
+        score main "{{name}}" {
+          staff m
+          lyrics {{lyricVoice}}
+        }
+        """;
+
+    /// <summary>Wide words on the BOUND voice — the divergence book (mirror of LBI): both
+    /// word rods bind, and the by-item reservation prices them one column left.</summary>
+    private static readonly string LBI = BoundVoiceScore(
+        "LBI", "alt", "mumum mumum mumum |");
+
+    /// <summary>The same words on the PRIMARY voice — the map-identity control (mirror of
+    /// LBIP): the primary voice's ItemIndex IS its column, so the two maps coincide.</summary>
+    private static readonly string LBIP = BoundVoiceScore(
+        "LBIP", "sop", "mumum mumum mumum mumum |");
+
+    /// <summary>Narrow words on the bound voice — the no-bind control (mirror of LBIC):
+    /// ink("u") + 0.45 sits under every natural gap on both engines, so the mis-mapped
+    /// reservations exist but cannot bind; any residual here is the multi-voice bar's
+    /// natural spacing, not the map.</summary>
+    private static readonly string LBIC = BoundVoiceScore(
+        "LBIC", "alt", "u u u |");
+
+    /// <summary>
     /// TWO STAVES over several pages — the mirror of books JSS (justified) and JSSC
     /// (ragged-bottom control). The two entries built from it measure the staff spring
     /// LilyPond puts INSIDE a system and Lily# does not have.
@@ -9644,6 +9710,32 @@ internal static class LpGeometryProbes
         // LilyPond's true one does not.
         new("lyrics.column.no-bind", LCN, g => g.NoteheadAnchorStep(0)),
         new("lyrics.column.no-bind.control", LCC, g => g.NoteheadAnchorStep(0)),
+
+        // THE BOUND VOICE'S SYLLABLE-TO-COLUMN MAP (books LBI/LBIP/LBIC,
+        // lyric-bound-voice-mapping.ly — HANDOFF 1's "多声小節の byItem 予約写像"). One
+        // multi-voice bar: primary voice four quarters (columns 0 1 2 3), bound voice
+        // half + two quarters (items 0 1 2 on columns 0 2 3) — the union column count
+        // equals the primary item count, so the by-item reservation gate passes while the
+        // bound syllables are DRAWN on columns 0 2 3. All syllable-ink-centre STEPS of one
+        // repeated word, so the face cancels. The LP-identity pair: LilyPond reads ONE
+        // number D = ink + 0.45 = 10.010126 on every binding gap of LBI and LBIP alike
+        // (the rod is between the syllables, whichever columns carry them); the by-item
+        // map forks LBI both ways at once — the skipped-column step gets BOTH mis-mapped
+        // reservations (≈2D) and the adjacent step gets none (≈ the natural 3.0, the two
+        // inks overlapping — named-voice-lyrics' 'deep'-on-'slow' face at full size).
+        new("lyrics.column.bound-voice.skip-gap", LBI,
+            g => g.SyllableInkCentre(1) - g.SyllableInkCentre(0)),
+        new("lyrics.column.bound-voice.step-gap", LBI,
+            g => g.SyllableInkCentre(2) - g.SyllableInkCentre(1)),
+        new("lyrics.column.bound-voice.primary-control", LBIP,
+            g => g.SyllableInkCentre(1) - g.SyllableInkCentre(0)),
+        // The no-bind pair of this island: the mis-mapped reservations exist in LBIC too
+        // but are too narrow to bind, so any residual here is the multi-voice bar's
+        // natural spacing itself, not the map — the attribution control.
+        new("lyrics.column.bound-voice.no-bind.skip-gap", LBIC,
+            g => g.SyllableInkCentre(1) - g.SyllableInkCentre(0)),
+        new("lyrics.column.bound-voice.no-bind.step-gap", LBIC,
+            g => g.SyllableInkCentre(2) - g.SyllableInkCentre(1)),
 
         // ★ THE ROW'S OWN DISTANCE FROM ITS STAFF, a ledger point since 2026-07-27, when it
         // stopped being a decision. Lily# used to place an independent lyrics row as a

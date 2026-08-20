@@ -2499,19 +2499,28 @@ internal sealed class RenderedGeometry
     /// centre and no width has to be added back here.
     /// </para>
     /// </remarks>
-    public double FirstSyllableInkCentre()
+    public double FirstSyllableInkCentre() => SyllableInkCentre(0);
+
+    /// <summary>
+    /// The <paramref name="index"/>-th syllable's ink CENTRE (left to right), with
+    /// <see cref="FirstSyllableInkCentre"/>'s width-cancelling rationale and anchor guard.
+    /// A STEP of these between same-word syllables is the quantity in which the face
+    /// cancels entirely — what the bound-voice mapping points read.
+    /// </summary>
+    public double SyllableInkCentre(int index)
     {
         var syllables = LyricSyllables;
-        if (syllables.Count == 0)
+        if (syllables.Count <= index)
             throw new InvalidOperationException(
-                "the probe drew no lyric syllable (no serif text run at the lyric em size)."
+                $"the probe drew {syllables.Count} lyric syllable(s), so there is no index "
+                + $"{index} (no serif text run at the lyric em size)."
                 + "\nDrawn geometry:\n" + Describe());
-        var first = syllables[0];
-        return first.Anchor == LilySharp.Core.Rendering.TextAnchor.Middle
-            ? first.X
+        var syllable = syllables[index];
+        return syllable.Anchor == LilySharp.Core.Rendering.TextAnchor.Middle
+            ? syllable.X
             : throw new InvalidOperationException(
-                $"a syllable was drawn with TextAnchor.{first.Anchor}, so its recorded X is not "
-                + "its ink centre and this measurement would be silently wrong.");
+                $"a syllable was drawn with TextAnchor.{syllable.Anchor}, so its recorded X is "
+                + "not its ink centre and this measurement would be silently wrong.");
     }
 
     /// <summary>

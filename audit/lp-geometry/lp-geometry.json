@@ -2056,6 +2056,41 @@
       "residual": 0.000000000,
       "why": "LCN's notes with no lyrics -- the identity control, EXACT from the moment it opened: the all-half natural gap is 4.275445 on both engines (this book's shortest IS the half, so its natural gap is smaller than note-to-note.half's 4.7-class reading, which lives in a quarter-shortest book -- the difference that caught the first 'nun' take of LCN). Kept so lyrics.column.no-bind means what it says: with this at zero, everything the no-bind point reads above 4.275445 is lyric reservation and nothing else."
     },
+    "lyrics.column.bound-voice.skip-gap": {
+      "probe": "lyric-bound-voice-mapping.ly",
+      "score": "LBI",
+      "lilypond": 10.010125984251968,
+      "residual": 10.046725984251968,
+      "why": "THE BY-ITEM MAP, both barrels at once (HANDOFF 1 '多声小節の byItem 予約写像', the residue the cross-bar rod port named in MeasureLineEdges' doc): ApplyLyricSpacing maps a syllable to its spring-chain column by ItemIndex whenever union columns == primary items, but a BOUND voice's ItemIndex counts its own notes -- here items 0 1 2 stand on columns 0 2 3, so both word reservations land one column left (spring col0->col1 gets D+0.0366, col1->col2 gets D; D = ink 9.560126 + LyricSpace 0.45 = 10.010126, the 0.0366 = the reservation edge table's union centre 0.6887 at col0 vs the drawn quarter centre 0.6521 -- see primary-control). The syllables are DRAWN by Timing on columns 0 and 2, so this skipped-column step collects BOTH mis-mapped springs: 2D + 0.0366 = 20.056852 against LilyPond's one rod D (a LyricSpace rods the two SYLLABLES' ink apart by 0.45 whichever columns carry them, lyric-hyphen.cc:163-179 -- LBI and LBIP read ONE number, the LP-identity pair). Every digit above is arithmetic: 20.056851968503936 = 2*10.010125984251968 + 0.0366. goes away when: the reservation maps by TIMING COLUMN like the engraver and the cross-bar edges already do (ReserveLyricWidthByColumn is that map; the by-item branch is the one to retire) -- whether that porting also needs the per-voice alignment edge is the sliver family's question, not this point's."
+    },
+    "lyrics.column.bound-voice.step-gap": {
+      "probe": "lyric-bound-voice-mapping.ly",
+      "score": "LBI",
+      "lilypond": 10.010125984251968,
+      "residual": -7.007880985117356,
+      "why": "THE OTHER BARREL of skip-gap's defect: the pair that NEEDED the rod (syllables drawn on columns 2 and 3) got no reservation at all -- both mis-mapped springs landed left of it -- so the step reads the bar's NATURAL quarter gap 3.002245 to the digit (= LilyPond's own natural gap, and = this book's no-bind.step-gap), and the two 9.560126-wide inks OVERLAP by 6.558 ss. This is named-voice-lyrics' 'deep'-on-'slow' 0.06 overlap at full size: the forgiving halves used to eat the mis-map's error, the exact cross-bar rod paid it on 2026-08-20, and this point prices the in-measure remainder. -7.007880985 = 3.002244999 - 10.010125984, arithmetic. goes away when: skip-gap's port lands (one TIMING map for reservation, drawing and rod alike)."
+    },
+    "lyrics.column.bound-voice.primary-control": {
+      "probe": "lyric-bound-voice-mapping.ly",
+      "score": "LBIP",
+      "lilypond": 10.010125984251968,
+      "residual": 0.0366,
+      "why": "THE MAP-IDENTITY CONTROL did its job -- the by-item error is gone (primary ItemIndex IS the column) and what remains is the SECOND defect the pair surfaced: the reservation's alignment-edge table (SpacingRules.ParentAlignmentEdgesPerColumn) UNIONS every voice's head at a column, while the syllable is DRAWN centred on 0.6521 (the quarter) and LilyPond centres on the syllable's OWN note column (measured in this probe: LBIP's first syllable sits at col+0.6521 on the quarter, LBI/LBIC's at col+0.6887 on the bound half -- per-voice, not the union). So col0's reservation prices the union centre 0.6887 into the spring while the drawn syllable stands on 0.6521: +0.0366 = 0.6887-0.6521 = half the half-vs-quarter head width difference (1.3774-1.3042)/2, on exactly the one gap whose column carries the wider foreign head -- the book's OWN gaps 2 and 3 (quarter-only columns) read D = 10.010125984251968 EXACT, this probe's dump shows both. goes away when: the reservation reads the aligning extent of the syllable's own voice's head, which is also what the drawn side already does here -- the union table cannot express two voices (one (Left,Centre) per column)."
+    },
+    "lyrics.column.bound-voice.no-bind.skip-gap": {
+      "probe": "lyric-bound-voice-mapping.ly",
+      "score": "LBIC",
+      "lilypond": 5.967889998269225,
+      "residual": 0.1098,
+      "why": "THE NO-BIND CONTROL is not zero, and its number decomposes exactly into two named slivers, NEITHER of them the by-item map (the mis-mapped reservations exist here but ink 'u' 1.502 + 0.45 binds nothing): +0.0732 = Lily#'s natural col0->col1 spring charges the column's WIDEST head (the bound voice's half, 1.3774) where LilyPond's reads 3.002245 = the same as its quarter gaps (heads 8.585/11.587/14.590/17.592 in the dump -- the wide head leaves no trace in LP's ideal); +0.0366 = the drawn syllable: Lily# centres the bound voice's syllable on the PRIMARY quarter's centre 0.6521 where LilyPond centres it on its OWN half head's 0.6887 (dump: LBIC first syllable at col+0.652100 vs LP col+0.688700). 0.0732 + 0.0366 = 0.1098 to the digit; Lily#'s col1->col2 and col2->col3 are 3.002245 EXACT (see no-bind.step-gap). Two OPEN questions deliberately kept apart from the map point: (1) which head LilyPond's multi-voice natural spacing measures (its ideal here is blind to the wider foreign head), (2) the engraver's aligning head for a bound voice (own head, per this measurement). Both are voice-blindness in per-column single-valued tables -- the same family as primary-control's sliver."
+    },
+    "lyrics.column.bound-voice.no-bind.step-gap": {
+      "probe": "lyric-bound-voice-mapping.ly",
+      "score": "LBIC",
+      "lilypond": 3.002244999134615,
+      "residual": 0.0,
+      "why": "EXACT from the moment it opened: quarter-only columns on both sides of the step, so neither sliver of no-bind.skip-gap can reach it, and nothing binds. With this at zero and skip-gap decomposed, everything step-gap (the binding book) reads below D is the missing reservation and nothing else -- the attribution the no-bind pair exists to give."
+    },
     "lyrics.natural.staff-to-lyric": {
       "probe": "page-vertical.ly",
       "score": "LYRC",
