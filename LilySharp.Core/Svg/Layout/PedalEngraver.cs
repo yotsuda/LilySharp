@@ -99,6 +99,141 @@ internal static class PedalEngraver
     internal readonly record struct SolvedPedalLine(
         PedalType Type, int StartMeasureIndex, double LineYUp);
 
+    /// <summary>One solved TEXT-style pedal WORD of one system: which mark (by its
+    /// source position) and where its BASELINE sits, Y-up about the staff's middle
+    /// line. Solved at skyline-build time, read by the mark draw. Per WORD, not per
+    /// family: LilyPond side-positions each pedal item independently — measured on
+    /// 2.26.0 (PLT), the release star sits at 4.806 (staff + padding 1.2 + its own ink)
+    /// while the engage word is pushed to 5.997 by the note under it.</summary>
+    internal readonly record struct SolvedPedalRow(int SourcePosition, double BaselineYUp);
+
+    /// <summary>
+    /// A pedal word's own (Up, Down) outline profiles about its baseline, centred on
+    /// <paramref name="xCentre"/> — the element stencil LilyPond's spanner measures with.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3580 SustainPedal always-vertical-skylines-from-stencil / :3204 SostenutoPedal /
+    /// :4162 UnaCordaPedal — vertical-skylines from the stencil; the sustain word is
+    /// Emmentaler glyphs pasted extent-to-extent (lily/sustain-pedal.cc:47-76 Sustain_pedal::print), the other
+    /// two are italic text. Outlines, not boxes, because the pedal.Ped ligature's ink is
+    /// a staff space lower over its middle than at the P and LilyPond's y-aligned-side
+    /// measures pointwise — with boxes the Ped. row lands 0.248 too low on the PLT book.
+    /// </remarks>
+    internal static (VerticalSkyline Up, VerticalSkyline Down) WordProfiles(
+        Rendering.ScoreTextMetrics fonts, MusicMarkType type, string text, double xCentre)
+    {
+        if (MusicMarkEngraver.IsGlyphPedal(type))
+        {
+            var (glyphs, width, _) = MusicMarkEngraver.SustainPedalStencil(text);
+            double x0 = xCentre - width / 2;
+            var up = new VerticalSkyline(VerticalDirection.Up);
+            var down = new VerticalSkyline(VerticalDirection.Down);
+            foreach (var g in glyphs)
+            {
+                var (dQ, uQ) = GlyphMetrics.PedalGlyphVerticalSkylineQuads(g.Glyph);
+                up.Merge(VerticalSkyline.FromGlyphOutline(
+                    VerticalDirection.Up, uQ, StaffSize.FullSize, x0 + g.X, 0));
+                down.Merge(VerticalSkyline.FromGlyphOutline(
+                    VerticalDirection.Down, dQ, StaffSize.FullSize, x0 + g.X, 0));
+            }
+            return (up, down);
+        }
+        double w = fonts.Advance(text, MusicMarkEngraver.PlainTextFontSize,
+            MusicMarkEngraver.TextRoleOf(type), MusicMarkEngraver.TextStyleOf(type));
+        return TextOutlineSkylines.Place(
+            text, MusicMarkEngraver.PlainTextFontSize,
+            fonts.Face(MusicMarkEngraver.TextRoleOf(type), MusicMarkEngraver.TextStyleOf(type)),
+            xCentre - w / 2, 0);
+    }
+
+    /// <summary>
+    /// Solves a TEXT-style staff's pedal rows for ONE system and merges their ink into
+    /// the staff's down profile — the same one-computation-two-readers shape the bracket
+    /// takes, with the words as the spanner's elements. One row per FAMILY per system,
+    /// nearest-first in the order pedal-three.ly measured (una corda, sostenuto,
+    /// sustain), each clearing the family before it at outside-staff padding.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: the two-step every below-staff outside grob runs — the spanner's
+    /// own y-aligned-side against its support at padding 1.2
+    /// (SustainPedalLineSpanner, define-grobs.scm:3599), then
+    /// avoid_outside_staff_collisions against everything already placed at 0.46
+    /// (axis-group-interface.cc:648-676). MEASURED on 2.26.0 (probes/pedal-three.ly):
+    /// the three-family steps 1.961 / 2.443 are exactly each row's own ink + 0.46, so
+    /// the steps fall out of the profiles and no step constant exists here.
+    /// ⚠️ The words' X is the pedal arm of MusicMarkEngraver.CalculateXPosition spelled
+    /// through AnchorX — the same timing-column read, asserted by the ledger points
+    /// rather than by a shared function (the draw's arm needs `systems`, which do not
+    /// exist yet at skyline-build time).
+    /// </remarks>
+    internal static ImmutableArray<SolvedPedalRow> SolveAndSeedText(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        VerticalSkyline insideDown, VerticalSkyline downProfile)
+    {
+        if (staff.PedalStyle != PedalStyle.Text || score.MusicMarks.IsDefaultOrEmpty
+            || measureLayouts.IsDefaultOrEmpty
+            || StaffSize.Of(staff).Span(1.0) != 1.0)
+            return ImmutableArray<SolvedPedalRow>.Empty;
+
+        var fonts = score.TextMetrics;
+        // Every pedal word on this system, in the order the pass places equal-priority
+        // grobs: family rank first (the measured nearest-first order — una corda,
+        // sostenuto, sustain — which is what stacks same-X families the way
+        // pedal-three.ly reads), then document order within a family.
+        var words = new List<(int Rank, int Order, MusicMarkItem Mark, double X)>();
+        int order = 0;
+        foreach (var mark in score.MusicMarks)
+        {
+            order++;
+            if (mark.StaffIndex != staffIndex || !IsPedalMarkType(mark.Type))
+                continue;
+            MeasureLayout? ml = null;
+            foreach (var m in measureLayouts)
+                if (m.MeasureIndex == mark.MeasureIndex) { ml = m; break; }
+            if (ml == null)
+                continue; // another system's word
+            double x = AnchorX(ml, mark.AnchorItemIndex, mark.AnchorTiming);
+            words.Add((MusicMarkEngraver.PedalFamilyRank(mark.Type), order, mark, x));
+        }
+        if (words.Count == 0)
+            return ImmutableArray<SolvedPedalRow>.Empty;
+
+        var solved = ImmutableArray.CreateBuilder<SolvedPedalRow>(words.Count);
+        foreach (var (rank, _, mark, x) in words
+                     .OrderBy(w => w.Rank).ThenBy(w => w.Order))
+        {
+            var word = WordProfiles(fonts, mark.Type, mark.Text, x);
+            // Quiet: the spanner's own side-position against the staff's INSIDE profile
+            // (staff, notes, scripts — its support) at padding 1.2...
+            double quiet = insideDown.IsEmpty
+                ? -(2.05 + SpannerPadding)
+                : DynamicEngraver.BelowCollisionMove(insideDown, word.Up, SpannerPadding);
+            word.Up.Raise(quiet);
+            word.Down.Raise(quiet);
+            // ...then the collision pass against everything already placed below —
+            // the dynamics, the figures, the words solved before this one. An
+            // X-disjoint word keeps its own quiet row (the PLT star), an overlapping
+            // one stacks (the pedal-three families).
+            double move = DynamicEngraver.BelowCollisionMove(
+                downProfile, word.Up, SkylineBuilder.OutsideStaffPaddingValue);
+            if (move != 0)
+            {
+                word.Up.Raise(move);
+                word.Down.Raise(move);
+            }
+            downProfile.Merge(word.Down);
+            solved.Add(new SolvedPedalRow(mark.SourcePosition, quiet + move));
+        }
+        return solved.ToImmutable();
+    }
+
+    /// <summary>Every pedal mark type, engage and release, all three families.</summary>
+    internal static bool IsPedalMarkType(MusicMarkType t) =>
+        t is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+          or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+          or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
+
     /// <summary>
     /// A bracket portion's own UP profile about a trial line at the middle line --
     /// LilyPond's spanner element stencil, pointwise: support ink under a HOOK pushes the
@@ -144,7 +279,8 @@ internal static class PedalEngraver
     /// </remarks>
     internal static ImmutableArray<SolvedPedalLine> SolveAndSeed(
         MultiStaffScore score, Staff staff, int staffIndex,
-        ImmutableArray<MeasureLayout> measureLayouts, VerticalSkyline downProfile)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        VerticalSkyline insideDown, VerticalSkyline downProfile)
     {
         if (staff.PedalStyle != PedalStyle.Bracket || score.MusicMarks.IsDefaultOrEmpty
             || measureLayouts.IsDefaultOrEmpty
@@ -205,16 +341,25 @@ internal static class PedalEngraver
                      .OrderBy(g => FamilyRank(g.Key)))
         {
             // The family's whole up-profile about a trial line at the middle line, then
-            // one collision move for the lot -- the group solve.
+            // the two-step every below-staff outside grob runs: the spanner's own
+            // side-position against its SUPPORT (the inside profile: staff, notes,
+            // scripts) at padding 1.2, then the collision pass against everything
+            // already placed below (dynamics, figures, earlier families) at 0.46.
+            // One step until 2026-08-20 — indistinguishable while nothing outside sat
+            // under the span (the PLB ledger point covers that shape either way).
             VerticalSkyline? up = null;
             foreach (var p in family)
             {
                 var one = BracketUpProfile(p.StartX, p.EndX, p.LeftHook, p.RightHook);
                 if (up == null) up = one; else up.Merge(one);
             }
-            double lineYUp = downProfile.IsEmpty
+            double lineYUp = insideDown.IsEmpty
                 ? -(2.05 + SpannerPadding + EdgeHeight + HalfThickness)
-                : DynamicEngraver.BelowCollisionMove(downProfile, up!, SpannerPadding);
+                : DynamicEngraver.BelowCollisionMove(insideDown, up!, SpannerPadding);
+            up!.Raise(lineYUp);
+            double move = DynamicEngraver.BelowCollisionMove(
+                downProfile, up, SkylineBuilder.OutsideStaffPaddingValue);
+            lineYUp += move;
             foreach (var p in family)
             {
                 downProfile.Merge(VerticalSkyline.FromBox(

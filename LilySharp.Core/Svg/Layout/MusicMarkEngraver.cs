@@ -218,6 +218,20 @@ internal static class MusicMarkEngraver
     internal static bool IsGlyphPedal(MusicMarkType type)
         => type is MusicMarkType.SustainOn or MusicMarkType.SustainOff;
 
+    /// <summary>
+    /// Which ROW a pedal family occupies below the staff, nearest first — the order
+    /// pedal-three.ly measured on 2.26.0 (una corda 2.7775, sostenuto 4.7387, sustain
+    /// 7.1813 below the bottom line; the guess it replaced had una corda outermost).
+    /// ONE HOME: the legacy row stack here and the skyline-time solver
+    /// (PedalEngraver.SolveAndSeedText) order families through this same method.
+    /// </summary>
+    internal static int PedalFamilyRank(MusicMarkType t) => t switch
+    {
+        MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => 0,
+        MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => 1,
+        _ => 2,
+    };
+
     /// <summary>One glyph of a sustain-pedal word, and its LEFT edge in staff spaces from
     /// the word's own origin.</summary>
     internal readonly record struct PedalGlyphPlacement(char Glyph, double X);
@@ -420,7 +434,13 @@ internal static class MusicMarkEngraver
         //   (time-signature), self-alignment-X LEFT,
         //   X-offset self-alignment-interface::self-aligned-on-breakable.
         Func<int, double>? prefixTimeSignatureX = null,
-        Func<int, double>? lineStartBarlineX = null)
+        Func<int, double>? lineStartBarlineX = null,
+        // TEXT-style pedal words solved at skyline-build time: (staff, system, the
+        // mark's SOURCE POSITION) -> the word's baseline, Y-up about that STAFF's middle
+        // line. Null (or a null answer) keeps the legacy below-the-system stack — the
+        // bracket/mixed styles, an ossia's scale, and callers without per-staff
+        // skylines.
+        Func<int, int, int, double?>? solvedPedalRowUp = null)
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
@@ -726,13 +746,6 @@ internal static class MusicMarkEngraver
             //   — each row's own ink — where Lily# uses one StackGap for both (2.46 measured).
             //   Only the ORDER is fixed here; the step model is a separate quantity and has no
             //   ledger point yet.
-            static int PedalFamilyRank(MusicMarkType t) => t switch
-            {
-                MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => 0,
-                MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => 1,
-                _ => 2,
-            };
-
             // The row each pedal family occupies in this group, stacked outward.
             var pedalRowYUp = new Dictionary<int, double>();
             {
@@ -777,10 +790,25 @@ internal static class MusicMarkEngraver
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
                 double yUp;
+                bool solvedPedalRow = false;
                 if (IsPedal(mark.Type))
                 {
+                    // The row the staff's own down profile was SOLVED with, when the
+                    // skyline-time pass ran for this staff (text style, full size): the
+                    // same Y the lyric floor and the staff below already cleared. Y-up
+                    // about the mark's OWN staff middle — the layout carries StaffIndex
+                    // so the draw and the reservations read the right frame.
+                    if (solvedPedalRowUp != null
+                        && measureToSystemIdx.TryGetValue(mark.MeasureIndex, out int pedalSys)
+                        && solvedPedalRowUp(mark.StaffIndex, pedalSys,
+                               mark.SourcePosition) is { } solvedRow)
+                    {
+                        yUp = solvedRow;
+                        solvedPedalRow = true;
+                    }
                     // One baseline per pedal FAMILY (see PedalFamilyRank); the innermost is
                     // the plain pedal baseline, Padding below it = −Padding Y-up.
+                    else
                     yUp = pedalRowYUp.TryGetValue(PedalFamilyRank(mark.Type), out double rowYUp)
                         ? rowYUp
                         : belowBaseUp - Padding;
@@ -855,7 +883,10 @@ internal static class MusicMarkEngraver
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
-                    mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
+                    mark.TempoText, mark.TempoBeatUnit, mark.TempoDots,
+                    // A solved pedal row's yUp is about ITS OWN staff's middle; the
+                    // legacy stack stays in the top-staff frame (StaffIndex −1).
+                    StaffIndex: solvedPedalRow ? mark.StaffIndex : -1));
             }
         }
 

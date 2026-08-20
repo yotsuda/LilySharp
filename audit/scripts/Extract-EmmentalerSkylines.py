@@ -209,6 +209,23 @@ SCRIPTS = [
     ("trillElement", "scripts.trill_element"),
 ]
 
+# The sustain pedal's word glyphs, baked on the vertical axis like the clefs.
+#
+# WHY. "Ped." and "*" are MUSIC glyphs (lily/sustain-pedal.cc pastes pedal.Ped /
+# pedal.. / pedal.* extent-to-extent), the SustainPedal grob declares
+# vertical-skylines from that stencil (scm/define-grobs.scm:3580), and the
+# SustainPedalLineSpanner side-positions its group POINTWISE against the support
+# (y-aligned-side). The pedal.Ped ligature's ink varies a full staff space across its
+# own width (the P tall at the left, the e/d lower), so a bounding box overstates the
+# row's clearance exactly where the support's deepest ink sits under the word's low
+# middle — measured on 2.26.0 (probes/pedal-lyric-stack.ly PLT): the Ped. baseline
+# lands 5.997 below the refpoint where the box arithmetic says 6.245.
+PEDALS = [
+    ("Ped", "pedal.Ped"),
+    ("Dot", "pedal.."),
+    ("Star", "pedal.*"),
+]
+
 
 def glyph_outline_scale(glyphset, glyph):
     """LilyPond's `scale` at lily/stencil-integral.cc:551-557 add_named_glyph_segments,
@@ -629,6 +646,18 @@ def main():
         L.append("")
         dyn_kinds.append((kind, cap))
 
+    pedal_kinds = []
+    for kind, glyph in PEDALS:
+        if glyph not in order:
+            sys.stderr.write("ERROR: glyph name not in font: " + glyph + chr(10))
+            return 1
+        down, up = build(glyphset, glyph, horizon_axis=0)
+        L.append(f"    // ===== pedal glyph {kind} ({glyph}): {len(down)} DOWN + {len(up)} UP buildings =====")
+        L.extend(emit_side(f"PedSky{kind}D", down))
+        L.extend(emit_side(f"PedSky{kind}U", up))
+        L.append("")
+        pedal_kinds.append(kind)
+
     script_kinds = []
     for kind, glyph in SCRIPTS:
         if glyph not in order:
@@ -748,6 +777,25 @@ def main():
         if kind == "trillElement":
             L.append(f"        => (ScrSky{cap}D, ScrSky{cap}U);")
     L.append("")
+    L.append("    /// <summary>The (DOWN, UP) VERTICAL skyline of one sustain-pedal word glyph")
+    L.append("    /// (pedal.Ped / pedal.. / pedal.*), as raw sign-framed buildings in the glyph's own")
+    L.append("    /// frame (X from the glyph origin, Y from its baseline). The word composes them at")
+    L.append("    /// LILC-width pen steps — LilyPond's add_at_edge, extent to extent, zero padding")
+    L.append("    /// (lily/sustain-pedal.cc:47-76 Sustain_pedal::print) — so a pedal row's clearance is the outline's,")
+    L.append("    /// not a box's: the pedal.Ped ligature is a staff space lower over its middle than")
+    L.append("    /// at the P, and LilyPond's y-aligned-side measures that pointwise.")
+    L.append("    /// LILYPOND-REF: scm/define-grobs.scm:3580 SustainPedal always-vertical-skylines-from-stencil;")
+    L.append("    /// <c>grob::always-vertical-skylines-from-stencil</c>; the outline walk is")
+    L.append("    /// lily/stencil-integral.cc:562 add_named_glyph_segments and")
+    L.append("    /// lily/freetype.cc:174-202 Path_interpreter, as for the clefs above.</summary>")
+    L.append("    public static (double[] Down, double[] Up) PedalGlyphVerticalSkylineQuads(char glyph) => glyph switch")
+    L.append("    {")
+    L.append("        EmmentalerGlyphs.PedalPed => (PedSkyPedD, PedSkyPedU),")
+    L.append("        EmmentalerGlyphs.PedalDot => (PedSkyDotD, PedSkyDotU),")
+    L.append("        EmmentalerGlyphs.PedalStar => (PedSkyStarD, PedSkyStarU),")
+    L.append("        _ => default,")
+    L.append("    };")
+    L.append("")
     L.append("    /// <summary>GPOS pair kern between two adjacent fetaText dynamic letters, in staff")
     L.append("    /// spaces (negative pulls the second letter in; 0 for every pair the font does not")
     L.append("    /// kern). Pango applies exactly these when it shapes a dynamic string, so a label's")
@@ -805,6 +853,7 @@ def main():
     out_path.write_text("\n".join(L), encoding="utf-8")
     print(f"Wrote {out_path} ({len(ACCIDENTALS)} accidentals + {len(PARENS)} parens "
           f"x {len(DESIGNS)} designs + {len(CLEFS)} clefs + {len(DYNAMICS)} dynamic letters "
+          f"+ {len(PEDALS)} pedal glyphs "
           f"in the {BASE_DESIGN}, {len(kerns)} letter + {len(digit_kerns)} digit kern pairs)")
     return 0
 

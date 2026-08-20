@@ -65,7 +65,8 @@ public class SystemLayoutCacheTests
                 new List<(VerticalSkyline Up, VerticalSkyline Down)>(),
                 new List<MultiStaffLayouter.StaffInsideSpanners>(),
                 new List<(VerticalSkyline Up, VerticalSkyline Down)>(),
-                new List<System.Collections.Immutable.ImmutableArray<PedalEngraver.SolvedPedalLine>>());
+                new List<System.Collections.Immutable.ImmutableArray<PedalEngraver.SolvedPedalLine>>(),
+                new List<System.Collections.Immutable.ImmutableArray<PedalEngraver.SolvedPedalRow>>());
         };
 
         var first = cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);

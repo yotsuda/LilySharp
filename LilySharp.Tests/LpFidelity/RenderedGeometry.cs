@@ -871,6 +871,50 @@ internal sealed class RenderedGeometry
     /// </remarks>
     private double SoleSustainPedalDrawnWidth(string? word)
     {
+        var run = SoleSustainPedalRun(word);
+        return run[^1].X + MusicMarkEngraver.PedalGlyphBox(run[^1].Glyph).Width - run[0].X;
+    }
+
+    /// <summary>
+    /// The BASELINE of the sole drawn sustain-pedal glyph word spelling
+    /// <paramref name="word"/>, below the staff reference point above it.
+    /// </summary>
+    public double PedalGlyphWordBaselineBelowStaff(string word, int page = 0)
+    {
+        var run = SoleSustainPedalRun(word);
+        double y = run[0].Y;
+        var above = StaffRefpoints(page).Where(r => r < y).ToList();
+        if (above.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: the pedal word \"{word}\" at {y:F6} has no staff above it."
+                + "\nDrawn geometry:\n" + Describe());
+        return y - above.Max();
+    }
+
+    /// <summary>
+    /// The BASELINE of the sole drawn TEXT pedal row (a sostenuto / una corda word)
+    /// spelling <paramref name="text"/>, below the staff reference point above it.
+    /// </summary>
+    public double PedalTextRowBaselineBelowStaff(string text, int page = 0)
+    {
+        var rows = Texts.Where(t => t.Text == text).ToList();
+        if (rows.Count != 1)
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE drawn text \"{text}\", found "
+                + $"{rows.Count}.\nDrawn geometry:\n" + Describe());
+        double y = rows[0].Y;
+        var above = StaffRefpoints(page).Where(r => r < y).ToList();
+        if (above.Count == 0)
+            throw new InvalidOperationException(
+                $"page {page}: the pedal text \"{text}\" at {y:F6} has no staff above it."
+                + "\nDrawn geometry:\n" + Describe());
+        return y - above.Max();
+    }
+
+    /// <summary>The sole drawn pedal glyph run spelling <paramref name="word"/> — the
+    /// run-splitting half shared by the width and baseline readings.</summary>
+    private List<DrawnGlyph> SoleSustainPedalRun(string? word)
+    {
         var wanted = word is null
             ? null
             : MusicMarkEngraver.SustainPedalStencil(word).Glyphs.Select(g => g.Glyph).ToList();
@@ -903,8 +947,7 @@ internal sealed class RenderedGeometry
                 + $", found {matching.Count} among {runs.Count} pedal glyph run(s) — the "
                 + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
         }
-        var run = matching[0];
-        return run[^1].X + MusicMarkEngraver.PedalGlyphBox(run[^1].Glyph).Width - run[0].X;
+        return matching[0];
     }
 
     /// <summary>

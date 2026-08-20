@@ -1968,8 +1968,8 @@
       "probe": "pedal-lyric-stack.ly",
       "score": "PLT",
       "lilypond": 8.313115015225147,
-      "residual": -2.44815505,
-      "why": "THE SAME BLINDNESS THROUGH THE TEXT-STYLE PATH: control -0.000155 plus LilyPond's Ped.-glyph term -2.448000 exactly. The 'Ped.' row is drawn by MusicMarkEngraver (pedal text style), whose below-stack clamp EXEMPTS pedal text from the lyric band on purpose -- classic notation puts Ped. near the staff -- but LilyPond resolves the same tension the other way around: the pedal stays near the staff AND the lyrics drop below it (PLT dump: SustainPedal rows at 4.806/5.997 below the refpoint, lyrics at 8.313). One fix family with the bracket entry: the pedal ink has to enter the profile the lyric drop reads."
+      "residual": 0.00384495,
+      "why": "CLOSED FROM -2.448155 TO +0.003845 on 2026-08-20, the text-style half of the same port as the bracket entry: the Ped. and * words are solved at skyline-build time (PedalEngraver.SolveAndSeedText, one LineSpanner per ITEM, pointwise outlines, padding 1.2 then 0.46) and their ink joins the staff's down profile, so the lyric floor drops below them -- and the words' own rows are pinned EXACT beside this (mark.pedal-text.staff-to-{ped,star}-baseline, both 0.000000). The MusicMarkEngraver draw reads the solved baselines through StaffSkylineSet.PedalRows (one computation, two readers), and its LyricClearance pedal exemption stays: LilyPond keeps the pedal near the staff AND drops the lyrics, which is now exactly what happens. The remaining +0.0038 is the text-outline sliver family (the star's ink bottom and the syllable faces, e-3 order), the same residue the PT3 row points carry."
     },
     "lyrics.dynamic.staff-to-lyric": {
       "probe": "pedal-lyric-stack.ly",
@@ -3616,6 +3616,41 @@
       "residual": 0.0,
       "why": "OPENED AND CLOSED 2026-08-18 (session 204) with mark.jump.width.fine, and it is the reason that one is not alone: a SIZE error scales with the string and a per-glyph one does not, so two lengths of the same family are what tell them apart without subtracting anything. MEASURED (LilyPond): 12.906170078740160 ss = 378 pixels, C059-Italic at the same 3.865234375 mm. Its italic control TIJ reads 12.906170078740157 (the same number; the last digit is float noise on two different code paths) and its bold-italic control TBJ reads 13.964612598425195, so LilyPond's weight costs +1.058442520 on this string and +0.512149606 on Fine -- NOT one ratio (1.082 against 1.114), which is what a face TABLE looks like and a scalar does not, and it is why neither string's weight may be borrowed for another's. THE OPENING RESIDUAL WAS +5.053209449 (Lily# 17.959379528). DECOMPOSED BY POISON: em 2.2 left +1.092585827 and em 2.2 + Italic left 0.000000000, so SIZE 3.960623622 and STYLE 1.092585827. ⚠️ Lily#'s style term is ONE PIXEL (0.034143307086614) larger than LilyPond's own +1.058442520 for the same twelve glyphs -- the per-glyph rounding text-advance.ly named -- and it CANCELS in the full port, which is why the end state is exact and the halfway state was not. A session that ports only one of the two will see that pixel and must not chase it. ⇒ CLOSED by the port in the same session. EXACT.",
       "$comment": "This is the string HANDOFF section 1 measured the largest reservation error on (4.233770079 ss) when MarkXExtent still priced the neighbouring boxed case. That error was Lily#-against-Lily#; this entry is the same string against LilyPond, and the two numbers are unrelated -- one was a reservation that disagreed with its own draw, this is a draw that disagrees with LilyPond."
+    },
+    "mark.pedal-text.staff-to-ped-baseline": {
+      "probe": "pedal-lyric-stack.ly",
+      "score": "PLT",
+      "lilypond": 5.997,
+      "residual": 0.0,
+      "why": "EXACT ON THE DAY IT OPENED, and it is the verification of the whole text-pedal port: the Ped. word is solved where the room is built (PedalEngraver.SolveAndSeedText) -- ONE LineSpanner per pedal ITEM (lily/piano-pedal-align-engraver.cc is_finished ends the spanner at the first timestep without an item), each word side-positioned POINTWISE off the staff's inside profile at the spanner's padding 1.2, then the outside-staff collision pass at 0.46 -- with the word's REAL OUTLINE (pedal.Ped baked in GlyphSkylinesGenerated; a bounding box lands 0.248 too low because the ligature's ink is a staff space lower over its middle than at the P, and the engaging note sits under the middle). 5.997000 to the digit against the PLT dump."
+    },
+    "mark.pedal-text.staff-to-star-baseline": {
+      "probe": "pedal-lyric-stack.ly",
+      "score": "PLT",
+      "lilypond": 4.806,
+      "residual": 0.0,
+      "why": "EXACT, and it is the point that DECIDED the solve's unit: the release star keeps its OWN quiet row (staff 2.05 + padding 1.2 + its ink 1.5556 = 4.806) instead of sharing the engage word's 5.997 -- each pedal item's LineSpanner is its own group, so an X-disjoint word never inherits a neighbour's clearance. The first cut solved ONE row per family and read +1.191 here; the per-word rewrite closed it to zero. Same-column words still stack (the PT3 engage column)."
+    },
+    "mark.pedal.rows.una-corda": {
+      "probe": "pedal-rows.ly",
+      "score": "P3S",
+      "lilypond": 4.871443687149476,
+      "residual": -0.000043687,
+      "why": "THE NEAREST FAMILY'S ROW over a plain staff: quiet = staff ink 2.05 + padding 1.2 + the word's own ascender. -0.000044 is the text-outline sliver family (Lily#'s baked serif outlines vs LilyPond's Pango-hinted extents). ⚠️ The first LP value here was 4.7775, read off pedal-three.ly's drawn SVG -- 0.0939 away from the 9-digit dump this book now carries (pedal-rows.ly): the SVG read was anchored a line-thickness off. Lily# agreed with the DUMP before any tuning, which is what caught the stale value."
+    },
+    "mark.pedal.rows.sostenuto": {
+      "probe": "pedal-rows.ly",
+      "score": "P3S",
+      "lilypond": 6.976481097428875,
+      "residual": 0.004536625,
+      "why": "THE SECOND ROW = the una corda word's ink bottom + outside-staff padding 0.46 + Sost. Ped.'s own ascender -- the STEP the old below-mark stack spelled as one 2.46 constant now falls out of the profiles with no constant at all. +0.0045 is the accumulated text-ink sliver of the two faces (una corda's bottom overshoot and Sost. Ped.'s ascender, both outline-vs-Pango differences of order e-3); the mechanism term is exact by the same arithmetic that lands the sustain row at the same sliver."
+    },
+    "mark.pedal.rows.sustain": {
+      "probe": "pedal-rows.ly",
+      "score": "P3S",
+      "lilypond": 9.419590182685228,
+      "residual": 0.004411793,
+      "why": "THE OUTERMOST ROW = the sostenuto word's ink bottom + 0.46 + the Ped. glyph word's ascender 2.0. +0.0044 is the same face-ink sliver the sostenuto row carries one step earlier (the Ped. glyph itself contributes zero -- its outline is baked from the same font LilyPond reads, and the PLT points sit at 0.000000); the step from the sostenuto row is exact."
     },
     "mark.pedal.width.sostenuto": {
       "probe": "jump-mark-em.ly",

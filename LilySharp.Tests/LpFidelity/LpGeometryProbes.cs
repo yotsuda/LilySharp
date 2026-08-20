@@ -798,6 +798,34 @@ internal static class LpGeometryProbes
         PedalLyricScore("PLYD", "c4 d e f | g2@f g |");
 
     /// <summary>
+    /// All three pedal families struck together, text style, bass clef whole notes —
+    /// the mirror of pedal-rows.ly's book P3S. The staff is the only support (the whole
+    /// notes have no stems and sit inside it), so the engage column reads the family
+    /// STACK: each word's own ink + outside-staff padding, nearest-first in the measured
+    /// order (una corda, sostenuto, sustain). The SPACER bar keeps the release words'
+    /// ink clear of the engage words' in both engines — without it the two columns
+    /// overlap on Lily#'s narrower page and the reading becomes the collision pass
+    /// instead of the quiet rows. ⚠️ Lily# <c>c,</c> is LilyPond <c>c</c> (HANDOFF 5.5).
+    /// </summary>
+    private static readonly string PT3 = """
+        octave absolute
+        time 4/4
+        key c major
+
+        part melody { clef bass pedal text }
+
+        section Main {
+          melody { c,1@sustainOn@sostenutoOn@unaCorda | c,1 | c,1@sustainOff@sostenutoOff@treCorde | }
+        }
+
+        form main { ~Main }
+
+        score main "PT3" {
+          staff melody
+        }
+        """;
+
+    /// <summary>
     /// A notation staff over a LOWER staff that is either a TAB staff or an ordinary one —
     /// the Lily# half of books TABS / NST.
     /// </summary>
@@ -9306,6 +9334,26 @@ internal static class LpGeometryProbes
             g => g.FirstStaffToLyricBaseline(), RaggedBottomPaper),
         new("lyrics.dynamic.staff-to-lyric", PLYD,
             g => g.FirstStaffToLyricBaseline(), RaggedBottomPaper),
+
+        // THE TEXT-STYLE PEDAL WORDS THEMSELVES (books PLYT / PT3). PLYT reads the Ped.
+        // and * rows on the sung-staff book (LilyPond: 5.997 / 4.806 below the refpoint,
+        // pointwise off the notes at the spanner's padding 1.2 — the Ped. ligature's own
+        // outline is why 5.997 is less than box arithmetic's 6.245; the star keeps its
+        // OWN quiet row because every pedal ITEM gets a LineSpanner of its own,
+        // lily/piano-pedal-align-engraver.cc is_finished). PT3 reads the engage column's
+        // three-family stack (pedal-rows.ly P3S, 9-digit dump): each word's own ink +
+        // outside-staff padding, nearest-first una corda / sostenuto / sustain — the
+        // STEP model the old below-mark stack replaced with one 2.46 constant.
+        new("mark.pedal-text.staff-to-ped-baseline", PLYT,
+            g => g.PedalGlyphWordBaselineBelowStaff("Ped."), RaggedBottomPaper),
+        new("mark.pedal-text.staff-to-star-baseline", PLYT,
+            g => g.PedalGlyphWordBaselineBelowStaff("*"), RaggedBottomPaper),
+        new("mark.pedal.rows.una-corda", PT3,
+            g => g.PedalTextRowBaselineBelowStaff("una corda"), RaggedBottomPaper),
+        new("mark.pedal.rows.sostenuto", PT3,
+            g => g.PedalTextRowBaselineBelowStaff("Sost. Ped."), RaggedBottomPaper),
+        new("mark.pedal.rows.sustain", PT3,
+            g => g.PedalGlyphWordBaselineBelowStaff("Ped."), RaggedBottomPaper),
 
         // The step to a SECOND verse (book LYRV), which comes from a different LilyPond spec
         // than everything above it: with two loose lines, get_spacing_spec takes its

@@ -1666,6 +1666,10 @@ internal sealed class SkylineBuilder
     //   (lily/axis-group-interface.cc:45 default_outside_staff_padding_).
     private const double OutsideStaffPadding = 0.46;
 
+    /// <summary>The same 0.46, readable by the pedal solver (PedalEngraver) so the
+    /// collision step it runs at skyline-build time is spelled from the one home.</summary>
+    internal const double OutsideStaffPaddingValue = OutsideStaffPadding;
+
     /// <summary>
     /// Adds a music item's bounding boxes to the skylines.
     /// Dispatches to appropriate handler based on item type.

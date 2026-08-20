@@ -352,6 +352,7 @@ internal sealed class LayoutEngine
             StaffSpanners = placed.StaffSpanners,
             StaffInside = placed.StaffInside,
             PedalLines = placed.PedalLines,
+            PedalRows = placed.PedalRows,
             // The room's own memo, not a second call: see AnnotationLayoutContext.RestCollisionsOf.
             RestCollisionsOf = multiStaffLayouter.RestCollisionsOf,
             TupletForceStemUp = primaryStaff.IsMultiVoice,
@@ -469,7 +470,8 @@ internal sealed class LayoutEngine
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffSkylines,
         List<List<MultiStaffLayouter.StaffInsideSpanners>> StaffSpanners,
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside,
-        List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>> PedalLines);
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>> PedalLines,
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>> PedalRows);
 
     /// <summary>
     /// Lays out every system: its measures, its staves, its height and its skyline.
@@ -510,6 +512,7 @@ internal sealed class LayoutEngine
         var perSystemStaffSpanners = new List<List<MultiStaffLayouter.StaffInsideSpanners>>();
         var perSystemStaffInside = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
         var perSystemPedalLines = new List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>();
+        var perSystemPedalRows = new List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -623,6 +626,7 @@ internal sealed class LayoutEngine
             perSystemStaffSpanners.Add(sysStaffSkylines.Spanners);
             perSystemStaffInside.Add(sysStaffSkylines.Inside);
             perSystemPedalLines.Add(sysStaffSkylines.PedalLines);
+            perSystemPedalRows.Add(sysStaffSkylines.PedalRows);
             currentY += sysHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;
         }
@@ -630,7 +634,7 @@ internal sealed class LayoutEngine
         return new SystemPlacements(
             systems, perSystemExtents, perSystemSkylines, perSystemHeights,
             perSystemLyricBands, perSystemStaffSkylines, perSystemStaffSpanners,
-            perSystemStaffInside, perSystemPedalLines);
+            perSystemStaffInside, perSystemPedalLines, perSystemPedalRows);
     }
 
 
@@ -3354,6 +3358,12 @@ internal sealed class LayoutEngine
         /// one computation, two readers (PedalEngraver.SolveAndSeed).</summary>
         public IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? PedalLines { get; init; }
 
+        /// <summary>Per system, per staff: the TEXT-style pedal rows the DOWN profiles were
+        /// solved with (family rank → baseline, Y-up about that staff's middle line). The
+        /// mark draw reads these — one computation, two readers
+        /// (PedalEngraver.SolveAndSeedText).</summary>
+        public IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>? PedalRows { get; init; }
+
         /// <summary>
         /// Per system, the inside-staff spanners each staff's skyline was built from,
         /// indexed by global staff index — the slurs, ties and tuplet brackets
@@ -4073,11 +4083,28 @@ internal sealed class LayoutEngine
             forceStemUp: tupletForceStemUp,
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt,
             staffByIndex: staffByIndex, scripts: tupletScripts);
+        // TEXT-style pedal words were solved where the room was built (the same
+        // skyline-time solve the brackets take); hand the draw those baselines, keyed
+        // (staff, system, the mark's source position), Y-up about the mark's OWN staff
+        // middle.
+        Func<int, int, int, double?>? solvedPedalRowUp = null;
+        if (ctx.PedalRows is { } pedalRows)
+            solvedPedalRowUp = (staffIdx, sysIdx, sourcePosition) =>
+            {
+                if (sysIdx < 0 || sysIdx >= pedalRows.Count
+                    || staffIdx < 0 || staffIdx >= pedalRows[sysIdx].Count)
+                    return null;
+                foreach (var row in pedalRows[sysIdx][staffIdx])
+                    if (row.SourcePosition == sourcePosition)
+                        return row.BaselineYUp;
+                return null;
+            };
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             ctx.Fonts, score, musicMarks, systems, ml, measures, default,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
-            lineStartBarlineX: ctx.LineStartBarlineX);
+            lineStartBarlineX: ctx.LineStartBarlineX,
+            solvedPedalRowUp: solvedPedalRowUp);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.

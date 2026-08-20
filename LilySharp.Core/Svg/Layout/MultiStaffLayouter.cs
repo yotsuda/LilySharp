@@ -2256,7 +2256,8 @@ internal sealed class MultiStaffLayouter
         List<(VerticalSkyline Up, VerticalSkyline Down)> Skylines,
         List<StaffInsideSpanners> Spanners,
         List<(VerticalSkyline Up, VerticalSkyline Down)> Inside,
-        List<ImmutableArray<PedalEngraver.SolvedPedalLine>> PedalLines);
+        List<ImmutableArray<PedalEngraver.SolvedPedalLine>> PedalLines,
+        List<ImmutableArray<PedalEngraver.SolvedPedalRow>> PedalRows);
 
     /// <summary>
     /// Builds UP/DOWN skylines for every staff in the score.
@@ -2270,6 +2271,7 @@ internal sealed class MultiStaffLayouter
         var spanners = new List<StaffInsideSpanners>();
         var inside = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
         var pedalLines = new List<ImmutableArray<PedalEngraver.SolvedPedalLine>>();
+        var pedalRows = new List<ImmutableArray<PedalEngraver.SolvedPedalRow>>();
 
         // Each staff's own dynamics (tagged by StaffIndex) hang below it and must
         // widen the gap to the staff below; filter so a staff reserves room only
@@ -2408,19 +2410,24 @@ internal sealed class MultiStaffLayouter
                         sky.Down.Merge(fbInk);
                 }
 
-                // Pedal brackets LAST among the below-staff occupants: priority 1000
-                // clears the figures (25) and the dynamics (250) already merged above,
-                // which is LilyPond's ascending-priority order. The solved lines travel
-                // with the set so the draw uses the exact Y this profile reserved.
+                // Pedal brackets and text rows LAST among the below-staff occupants:
+                // priority 1000 clears the figures (25) and the dynamics (250) already
+                // merged above, which is LilyPond's ascending-priority order. Each solve
+                // is the two-step every outside grob runs — its own side-position against
+                // the INSIDE profile (its support), then the collision pass against the
+                // accumulated one. The solved lines and rows travel with the set so the
+                // draw uses the exact Y this profile reserved.
                 pedalLines.Add(PedalEngraver.SolveAndSeed(
-                    score, staff, thisStaff, measureLayouts, sky.Down));
+                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down));
+                pedalRows.Add(PedalEngraver.SolveAndSeedText(
+                    score, staff, thisStaff, measureLayouts, insideSky.Down, sky.Down));
 
                 result.Add(sky);
                 staffIndex++;
             }
         }
 
-        return new StaffSkylineSet(result, spanners, inside, pedalLines);
+        return new StaffSkylineSet(result, spanners, inside, pedalLines, pedalRows);
     }
 
     /// <summary>
