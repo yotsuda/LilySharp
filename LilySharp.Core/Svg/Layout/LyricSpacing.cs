@@ -182,15 +182,22 @@ internal static class LyricSpacing
         System.Func<int, (double Left, double Centre)> edge,
         bool continuesFromPrev,
         bool continuesIntoNext,
-        List<(int Left, int Right, double Distance)> rods)
+        List<(int Left, int Right, double Distance)> rods,
+        bool keepEdgeHalves = false)
     {
         var cols = new List<int>(byCol.Keys);
 
         // Leading extent: the line's first syllable clears the start barline — unless the
         // line continues from the previous measure, where the cross-bar rod binds instead
         // (and, at a line START, LineStartLyricFloor re-supplies this same quantity).
+        // LILYSHARP-OWN, keepEdgeHalves: on a LEAD SHEET the halves are kept even for a
+        // continuing line (user report 2026-08-20, "the bar and the next word overlap"):
+        // the grid's bar lines run THROUGH the lyric band, so ink flowing over a bar —
+        // LilyPond's own behaviour for lyrics under a staff, where the bar is elsewhere
+        // — reads as a collision on the grid. The cross-bar rod still applies; halves
+        // and rod are both minima, so the effective constraint is their max.
         int first = cols[0];
-        if (!(continuesFromPrev && first == 0))
+        if (keepEdgeHalves || !(continuesFromPrev && first == 0))
             BumpSpanMin(result, 0, first,
                 GetLyricLeftExtent(fonts, byCol[first], edge(first)) + GlyphMetrics.MinItemGap);
 
@@ -213,7 +220,7 @@ internal static class LyricSpacing
         // line continues into the next measure, where the cross-bar rod binds instead
         // (and, at a line END, LineEndLyricReservation re-supplies this same quantity).
         int last = cols[^1];
-        if (!continuesIntoNext)
+        if (keepEdgeHalves || !continuesIntoNext)
             BumpSpanMin(result, last + 1, endColumn,
                 GetLyricRightExtent(fonts, byCol[last], edge(last)) + GlyphMetrics.MinItemGap);
     }
@@ -241,7 +248,10 @@ internal static class LyricSpacing
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
         => ReserveLyricWidthByColumn(
             fonts, springs, columnTimings, measureIndex, lyrics, ly => ly.IsLyricsRow,
-            parentAlignmentEdges);
+            parentAlignmentEdges,
+            // The grid's bars run through the lyric band — keep the bar-clearance
+            // halves even for a continuing line (see ReserveLyricLine's remark).
+            keepEdgeHalves: true);
 
     /// <summary>
     /// The alignment edge pair for a column, with LilyPond's own fallback for a column the
@@ -275,7 +285,8 @@ internal static class LyricSpacing
         int measureIndex,
         IReadOnlyList<LyricItem> lyrics,
         System.Func<LyricItem, bool> include,
-        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
+        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
+        bool keepEdgeHalves = false)
     {
         (double Left, double Centre) Edge(int column) => AlignmentEdge(parentAlignmentEdges, column);
 
@@ -303,7 +314,7 @@ internal static class LyricSpacing
             ReserveLyricLine(result, fonts, byCol, cols, Edge,
                 continuesFromPrev: prevKeys?.Contains(key) == true,
                 continuesIntoNext: nextKeys?.Contains(key) == true,
-                rods);
+                rods, keepEdgeHalves);
         // The spanning reservations, as the RANGE rods they are in LilyPond — applied
         // measure-locally through the one Simple_spacer::add_rod port, AFTER every line's
         // bumps (springs first, rods over them, LP's order). Baking the blocking forces

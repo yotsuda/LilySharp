@@ -7,6 +7,7 @@
   <rect x="0" y="0" width="119.50" height="21.31" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="259">Chords only</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
+  <rect x="0.00" y="13.12" width="0.19" height="4.00"/>
   <rect x="15.52" y="13.12" width="0.19" height="4.00" data-pos="0"/>
   <rect x="27.90" y="13.12" width="0.19" height="4.00" data-pos="0"/>
   <rect x="38.39" y="13.12" width="0.19" height="4.00" data-pos="0"/>

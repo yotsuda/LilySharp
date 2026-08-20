@@ -1290,6 +1290,16 @@ internal sealed class MultiStaffLayouter
         //   (self-alignment-interface.cc:117-176, define-grobs.scm:2749-2750). The ledger
         //   point staffless.line-start.chords-vs-staff (-0.438600) is the first of these.
         {
+            // LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
+            // 2026-08-20, with the meter decision in HANDOFF 3): the grid opens every
+            // line with a bar line, so the line's LEFT EDGE for keep-inside purposes
+            // moves right by the LeftEdge gap — ink that used to sit flush on the
+            // margin (LP's keep-inside puts it at 0) would overprint the new bar
+            // (the user saw 'Up' under it on rows-song-sheet's second line). The gap
+            // is the same LeftEdge→prefix 0.8 the first line's bar→meter shows, so
+            // every line of the grid opens with one rhythm. Inert on any column the
+            // springs already clear — i.e. everywhere but a line's first column.
+            double gridLeftEdge = score.IsLeadSheet ? EngravingDefaults.ClefGlyphXOffset : 0.0;
             int columnOffset = 0;
             for (int m = 0; m < measureColumnOverhangs.Count; m++)
             {
@@ -1301,8 +1311,8 @@ internal sealed class MultiStaffLayouter
                     int column = columnOffset + c + 1;
                     // A rod of 0 is satisfied by construction; LilyPond's own add_rod only
                     // records one when the distance is positive (separation-item.cc:57).
-                    if (left[c] > 0.0 && column >= 1 && column <= allSprings.Length)
-                        rods.Add((0, column, left[c]));
+                    if (left[c] + gridLeftEdge > 0.0 && column >= 1 && column <= allSprings.Length)
+                        rods.Add((0, column, left[c] + gridLeftEdge));
                     // A rod from the LINE's last column to itself is the degenerate one
                     // LilyPond's own `add_rod (i, cols.size (), …)` reduces to; skip it.
                     if (right[c] > 0.0 && column < allSprings.Length)

@@ -7,32 +7,33 @@
   <rect x="0" y="0" width="119.50" height="25.91" fill="#FFFFFF"/>
   <text x="59.75" y="5.69" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="405">Lead sheet</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="21.61" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="35.57" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="52.22" y="16.22" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="62.85" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="0.00" y="16.22" width="0.19" height="4.00"/>
+  <rect x="21.84" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="36.84" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="54.47" y="16.22" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="64.66" y="16.22" width="0.19" height="4.00" data-pos="0"/>
   <text class="music" x="0.80" y="18.22" font-size="4.00" data-pos="423"></text>
-  <text x="5.85" y="18.82" font-size="2.47" text-anchor="middle" data-pos="511">Twin</text>
-  <text x="11.15" y="18.82" font-size="2.47" text-anchor="middle" data-pos="517">kle</text>
-  <text x="15.10" y="18.82" font-size="2.47" text-anchor="middle" data-pos="521">lit</text>
-  <text x="19.22" y="18.82" font-size="2.47" text-anchor="middle" data-pos="526">tle</text>
-  <text x="23.43" y="18.82" font-size="2.47" text-anchor="middle" data-pos="532">star</text>
-  <text x="28.93" y="18.82" font-size="2.47" text-anchor="middle" data-pos="537">how</text>
-  <text x="32.85" y="18.82" font-size="2.47" text-anchor="middle" data-pos="541">I</text>
-  <text x="37.33" y="18.82" font-size="2.47" text-anchor="middle" data-pos="545">won</text>
-  <text x="42.10" y="18.82" font-size="2.47" text-anchor="middle" data-pos="550">der</text>
-  <text x="48.81" y="18.82" font-size="2.47" text-anchor="middle" data-pos="554">what</text>
-  <text x="54.13" y="18.82" font-size="2.47" text-anchor="middle" data-pos="561">you</text>
-  <text x="5.18" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="458">C</text>
-  <text x="14.43" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="461">G7</text>
-  <text x="22.75" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="467">Am</text>
-  <text x="36.66" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="476">F</text>
-  <text x="44.02" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="479">G7</text>
-  <text x="53.45" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="485">C</text>
+  <text x="6.25" y="18.82" font-size="2.47" text-anchor="middle" data-pos="511">Twin</text>
+  <text x="11.55" y="18.82" font-size="2.47" text-anchor="middle" data-pos="517">kle</text>
+  <text x="15.50" y="18.82" font-size="2.47" text-anchor="middle" data-pos="521">lit</text>
+  <text x="19.62" y="18.82" font-size="2.47" text-anchor="middle" data-pos="526">tle</text>
+  <text x="24.70" y="18.82" font-size="2.47" text-anchor="middle" data-pos="532">star</text>
+  <text x="30.21" y="18.82" font-size="2.47" text-anchor="middle" data-pos="537">how</text>
+  <text x="34.12" y="18.82" font-size="2.47" text-anchor="middle" data-pos="541">I</text>
+  <text x="39.72" y="18.82" font-size="2.47" text-anchor="middle" data-pos="545">won</text>
+  <text x="44.49" y="18.82" font-size="2.47" text-anchor="middle" data-pos="550">der</text>
+  <text x="51.20" y="18.82" font-size="2.47" text-anchor="middle" data-pos="554">what</text>
+  <text x="57.06" y="18.82" font-size="2.47" text-anchor="middle" data-pos="561">you</text>
+  <text x="5.58" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="458">C</text>
+  <text x="14.83" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="461">G7</text>
+  <text x="24.03" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="467">Am</text>
+  <text x="39.05" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="476">F</text>
+  <text x="46.41" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="479">G7</text>
+  <text x="56.38" y="14.72" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="485">C</text>
   <rect x="0.30" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="427"/>
   <text x="3.40" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="427">Main</text>
-  <line x1="8.88" y1="18.33" x2="9.34" y2="18.33" stroke="#000000" stroke-width="0.130"/>
-  <line x1="16.72" y1="18.33" x2="17.38" y2="18.33" stroke="#000000" stroke-width="0.130"/>
-  <line x1="39.69" y1="18.33" x2="40.15" y2="18.33" stroke="#000000" stroke-width="0.130"/>
+  <line x1="9.28" y1="18.33" x2="9.74" y2="18.33" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.12" y1="18.33" x2="17.78" y2="18.33" stroke="#000000" stroke-width="0.130"/>
+  <line x1="42.08" y1="18.33" x2="42.54" y2="18.33" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

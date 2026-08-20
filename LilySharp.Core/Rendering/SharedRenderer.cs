@@ -434,6 +434,13 @@ internal static partial class SharedRenderer
                     // whether the grid carries words or chord symbols.
                     double rowTopY = LayoutUtilities.StaffTopYUp(system, globalIdx);
                     double h = StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing;
+                    // The grid OPENS each line with a bar — the staff's left-edge
+                    // system bar in the grid's own cloth (user request 2026-08-20:
+                    // "a bar line right before the meter"). Same X a staff's system
+                    // bar takes; on the first line it stands just left of the meter
+                    // (TimeX = the LeftEdge gap), on a continuation just left of the
+                    // first bar's content, whose line-start floor already clears it.
+                    DrawBarline(BarlineType.Single, systemStartX, rowTopY, h, gc);
                     DrawBarlines(system, staff, rowTopY, layout, gc, barHeight: h);
 
                     // The grid row ENGRAVES the score meter at the line-start
