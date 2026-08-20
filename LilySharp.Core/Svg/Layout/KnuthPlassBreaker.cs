@@ -50,7 +50,19 @@ internal readonly record struct MeasureSpringData(
     // MultiStaffLayouter.LineStartSpringForLine — the same one the layout uses), or null
     // when unknown (the single-staff gate path). ApplyLineStartSpring swaps it for the
     // Spring0* mid-line spring above when this measure is a line's first.
-    Spring? LineStartSpring = null);
+    Spring? LineStartSpring = null,
+    // The cross-bar lyric rod's two gate faces (LyricSpacing, HANDOFF 2H, 2026-08-20) —
+    // both MINIMUM-only, because a rod raises blocking forces and never ideals:
+    // this measure's HALF of the pair pricing (its lyric line edges and the spring
+    // minima toward each bar), combined with the NEXT measure's half at break time
+    // (LyricSpacing.CrossBarPairMinExcess) into the extra line minimum the rod across
+    // their shared bar demands. Carried split so each entry reads only its own measure's
+    // springs — see the class's remarks and IncrementalCompiler.SpringReusable...
+    LyricSpacing.LyricBarPricing? CrossBarLyricPricing = null,
+    // ...and when this measure ENDS the line while a lyric line continues past it (the
+    // re-supplied trailing reservation, less the suffix springs' minima). Zero on every
+    // unsung measure, so both are inert wherever they were before the port.
+    double LineEndLyricMinExcess = 0);
 
 /// <summary>
 /// Knuth-Plass optimal line breaking algorithm for music scores.
@@ -285,12 +297,22 @@ internal sealed class KnuthPlassBreaker
         // is the same predicate: the scan covered k in [i, j-2], which is nonempty exactly
         // when the count over that range is positive.
         var cumForce = new int[n + 1];
+        // Cross-bar lyric pair minima: entry i is the extra MINIMUM paid when measures i
+        // and i+1 share a line — the two halves each entry carries, joined here (this is
+        // the only place the halves meet, so no stored entry ever reads a neighbour's
+        // springs). A line i..j−1 collects the pairs strictly inside it:
+        // cumPairMin[j−1] − cumPairMin[i]. All zero on an unsung score.
+        var cumPairMin = new double[n + 1];
         for (int i = 0; i < n; i++)
         {
             cumIdeal[i + 1] = cumIdeal[i] + springData[i].IdealWidth;
             cumInvStretch[i + 1] = cumInvStretch[i] + springData[i].InverseStretchStrength;
             cumInvCompress[i + 1] = cumInvCompress[i] + springData[i].InverseCompressStrength;
             cumMin[i + 1] = cumMin[i] + springData[i].MinWidth;
+            cumPairMin[i + 1] = cumPairMin[i] + (i + 1 < n
+                ? LyricSpacing.CrossBarPairMinExcess(
+                    springData[i].CrossBarLyricPricing, springData[i + 1].CrossBarLyricPricing)
+                : 0);
             cumForce[i + 1] = cumForce[i]
                 + (springData[i].BreakPermission == BreakPermission.Force ? 1 : 0);
         }
@@ -350,11 +372,17 @@ internal sealed class KnuthPlassBreaker
                 double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
                 double availableWidth = _lineWidth - prefixWidth;
 
-                // Compute line spring totals via cumulative sums
+                // Compute line spring totals via cumulative sums. The minimum also pays
+                // the cross-bar lyric rods this line's interior bars carry, plus the
+                // re-supplied trailing reservation when a lyric line runs past its end —
+                // the same two quantities the layout's ApplyRods will enforce, so a sung
+                // bar is priced for breaking exactly as it will be laid out.
                 double idealSum = cumIdeal[j] - cumIdeal[i];
                 double invStretchSum = cumInvStretch[j] - cumInvStretch[i];
                 double invCompressSum = cumInvCompress[j] - cumInvCompress[i];
-                double minSum = cumMin[j] - cumMin[i];
+                double minSum = cumMin[j] - cumMin[i]
+                    + (cumPairMin[j - 1] - cumPairMin[i])
+                    + springData[j - 1].LineEndLyricMinExcess;
 
                 // The line's FIRST measure is priced with the prefix→first-note spring the
                 // layout will actually give it, not with the bar-line spring it carries as

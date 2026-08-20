@@ -913,8 +913,15 @@ internal sealed class MultiStaffLayouter
     /// grace / lyric widths Lily# prices here that LilyPond puts in separate paper columns;
     /// MEASURED 2026-07-25: dropping it moves 21 snapshots — grace-notes, lyric-break-pricing,
     /// lead-sheet-lyrics, chorale, ornaments — and is inert on a plain line start).</param>
+    /// <param name="lyricLeadingFloor">The column-0 leading lyric width of a line that
+    /// CONTINUES from the previous measure (<see cref="LyricSpacing.LineStartLyricFloor"/>),
+    /// or 0. Since the cross-bar rod port (2026-08-20) that width no longer rides
+    /// <paramref name="measureSpring0"/>'s minimum — mid-line the rod owns it — so a line
+    /// START must be handed it separately or a broken word's opening syllable loses its
+    /// prefix clearance (the lyric-break-pricing snapshot family).</param>
     internal static Spring LineStartSpringForLine(
-        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem, Spring measureSpring0)
+        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem, Spring measureSpring0,
+        double lyricLeadingFloor = 0)
     {
         var prefix = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem);
 
@@ -928,10 +935,14 @@ internal sealed class MultiStaffLayouter
         // spring-0 minimum in place charged its column width A SECOND time and pushed the
         // first note right by the whole cancellation+signature (measured: 5.51 ss on
         // scratch/repro.lys bar 9, where the courtesy is 3 naturals + 3 flats = 5.39 ink).
+        // The lyric floor joins by max, not by replacement: a non-continuing line's leading
+        // half still lives inside spring 0's minimum, so the max is idempotent there. The
+        // hoisted-change branch stays null — the pre-port behaviour, where the whole spring-0
+        // minimum (lyric bump included) was ignored to avoid double-charging the change.
         double? ownFixedFloor =
             prefix.LeadingTimeChange != null || prefix.LeadingKeyChange != null
                 ? null
-                : measureSpring0.MinDistance;
+                : Math.Max(measureSpring0.MinDistance, lyricLeadingFloor);
 
         // ONE Staff_spacing wish per staff, merged — spacing-spanner.cc:492-517. The staves
         // need NOT agree: a NUMBERS-ONLY tab staff ends its prefix on the TAB clef
@@ -1099,6 +1110,9 @@ internal sealed class MultiStaffLayouter
         // the left. Not symmetric: a note head reaches its full width right and nothing left,
         // while a centred chord symbol reaches half its width both ways.
         var measureColumnOverhangs = new List<(double[] Left, double[] Right)>();
+        // Per measure: its lyric lines' edge geometry, for the cross-bar lyric rods below
+        // (empty on every measure of an unsung score — the whole machinery is inert there).
+        var measureLineEdges = new List<ImmutableArray<LyricSpacing.LyricLineEdge>>();
 
         // A compressed multi-measure rest is ONE bar between two bar-line columns,
         // so the measures a run swallows contribute neither springs nor bar lines;
@@ -1119,6 +1133,7 @@ internal sealed class MultiStaffLayouter
                 measureBarlineWidths.Add(0);
                 measureColumnOverhangs.Add(
                     (System.Array.Empty<double>(), System.Array.Empty<double>()));
+                measureLineEdges.Add(ImmutableArray<LyricSpacing.LyricLineEdge>.Empty);
                 continue;
             }
 
@@ -1134,6 +1149,7 @@ internal sealed class MultiStaffLayouter
                 measureBarlineWidths.Add(0);
                 measureColumnOverhangs.Add(
                     (System.Array.Empty<double>(), System.Array.Empty<double>()));
+                measureLineEdges.Add(ImmutableArray<LyricSpacing.LyricLineEdge>.Empty);
                 continue;
             }
 
@@ -1183,6 +1199,14 @@ internal sealed class MultiStaffLayouter
             var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
                 score.TextMetrics, springs, primaryMeasure, allTimings, i, score.Lyrics, score.IsLeadSheet,
                 alignmentEdges);
+            // The measure's lyric line edges, for the cross-bar rods below and the
+            // line-start lyric floor — read off the FINAL reserved springs, the same
+            // chain ApplyRods will span.
+            measureLineEdges.Add(score.Lyrics.IsDefaultOrEmpty
+                ? ImmutableArray<LyricSpacing.LyricLineEdge>.Empty
+                : LyricSpacing.MeasureLineEdges(
+                    score.TextMetrics, springs, allTimings, i, score.Lyrics,
+                    score.IsLeadSheet, alignmentEdges));
             var chordWidth = SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics, 
                 allTimings, i, score.ChordNames, includeAttached: !score.IsLeadSheet);
             var leftOverhangs = new double[allTimings.Count];
@@ -1216,7 +1240,8 @@ internal sealed class MultiStaffLayouter
                 // shared with the break gate so both price a line start identically
                 // (section 5.4). systemIndex == 0 is the first line, which carries the meter.
                 springs = springs.SetItem(0, LineStartSpringForLine(
-                    score, startMeasureIndex, isFirstSystem: systemIndex == 0, springs[0]));
+                    score, startMeasureIndex, isFirstSystem: systemIndex == 0, springs[0],
+                    LyricSpacing.LineStartLyricFloor(measureLineEdges[^1])));
             }
             measureSprings.Add(springs);
             measureTimings.Add(allTimings);
@@ -1327,6 +1352,66 @@ internal sealed class MultiStaffLayouter
                         run.Count, measureLength, minimumDistance, runBarlineWidth)));
             }
             springOffset += springCount;
+        }
+
+        // CROSS-BAR LYRIC RODS: a lyric line that continues into the adjacent measure is
+        // rodded syllable-to-syllable straight across the bar — the LyricSpace/LyricHyphen
+        // minimum the halves ReserveLyricLine dropped stood in for.
+        // LILYPOND-REF: lily/lyric-hyphen.cc:163-179 set_spacing_rods → Rod::add_to_cols →
+        // lily/simple-spacer.cc:90-128 Simple_spacer::add_rod (probe LCW: in-bar and
+        // cross-bar word gaps identical to the digit — a bar line takes no part).
+        // Strictly ADJACENT measures only: a continuing line implies the neighbour carries
+        // its syllable, hence notes, hence springs — an MMR interior or trailing clef
+        // column can carry neither, so no continuing pair ever lands on empty springs.
+        // At the SYSTEM'S END a continuing line's pair is on the next system, so the
+        // dropped trailing half is re-supplied verbatim as a rod to the line's end
+        // (LyricSpacing.LineEndLyricReservation) — pre-port geometry, kept until the
+        // line-end hyphen regime is measured. The break gate prices both quantities from
+        // the same functions (SystemBreaker/LyricSpacing.CrossBarPairMinExcess).
+        if (!score.Lyrics.IsDefaultOrEmpty)
+        {
+            int lyricSpringOffset = 0;
+            for (int m = 0; m < measureSprings.Count; m++)
+            {
+                int springCount = measureSprings[m].Length;
+                var edges = measureLineEdges[m];
+                foreach (var edge in edges)
+                {
+                    if (!edge.ContinuesIntoNext)
+                        continue;
+                    if (m + 1 < measureSprings.Count)
+                    {
+                        foreach (var next in measureLineEdges[m + 1])
+                        {
+                            if (!next.Key.Equals(edge.Key))
+                                continue;
+                            // The drawn distance re-adds the bar-line ink between the two
+                            // chains, so the spring-space rod sheds it (MmrRodDistance's
+                            // convention).
+                            var leftMeasure = primaryVoice.Measures[startMeasureIndex + m];
+                            var rightMeasure = primaryVoice.Measures[startMeasureIndex + m + 1];
+                            double dist = LyricSpacing.CrossBarLyricRodDistance(
+                                edge, next,
+                                SpacingRules.GetBarlineWidth(leftMeasure.EndBarline)
+                                + SpacingRules.GetBarlineWidth(rightMeasure.StartBarline));
+                            if (dist > 0)
+                                rods.Add((lyricSpringOffset + edge.LastCol + 1,
+                                    lyricSpringOffset + springCount + next.FirstCol + 1,
+                                    dist));
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        // Last measure of the system: the pair broke apart, re-supply the
+                        // trailing half as a rod over the same suffix springs it bumped.
+                        rods.Add((lyricSpringOffset + edge.LastCol + 1,
+                            lyricSpringOffset + springCount,
+                            LyricSpacing.LineEndLyricReservation(edge)));
+                    }
+                }
+                lyricSpringOffset += springCount;
+            }
         }
 
         if (rods.Count > 0)

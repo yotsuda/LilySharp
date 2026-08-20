@@ -430,22 +430,30 @@ public sealed class IncrementalCompiler
     /// </summary>
     /// <remarks>
     /// The neighbourhood window is not caution, it is the inventory (session 150 — every
-    /// read of SystemBreaker.ComputeMultiStaffSpringData's loop body traced to its fold):
+    /// read of SystemBreaker.ComputeMultiStaffSpringData's loop body traced to its fold;
+    /// the cross-bar lyric reads added 2026-08-20 land inside the same window):
     /// <list type="bullet">
     /// <item>LEFT (i−1): a multi-measure-rest run OPENING at i whose measure declares no
     /// start bar line reads the previous measure's <c>EndBarline</c> for the run rod
     /// (<see cref="SpacingRules.RunLeftBoundBarline"/>) — that field is folded into key
-    /// i−1, not key i.</item>
+    /// i−1, not key i. And a lyric line CONTINUING from i−1 drops measure i's leading
+    /// half (LyricSpacing.ReserveLyricLine) — the neighbour's lyrics are in key i−1.</item>
     /// <item>RIGHT (i+1): <see cref="MmrRunMap.ForbidsBreakAfter"/> asks whether a break
     /// after i would split a run, i.e. whether i+1 belongs to the SAME run — visible in
     /// key i+1 (its content/interior-ness), not in key i. (The next measure's opening
     /// clef is NOT why: that allowance is already folded into key i.) The last-measure
-    /// case pins the window's edge: i+1 must exist in both vectors or in neither.</item>
+    /// case pins the window's edge: i+1 must exist in both vectors or in neither.
+    /// A lyric line continuing INTO i+1 likewise drops the trailing half and prices the
+    /// line-end excess. (The cross-bar PAIR quantity is deliberately NOT stored combined:
+    /// each entry carries only its own half — LyricBarPricing, read off its own springs —
+    /// and the breaker joins two halves at break time, precisely so no entry reads a
+    /// neighbour's springs and through them a neighbour-of-neighbour's lyrics, which no
+    /// 3-key window could prove.)</item>
     /// <item>Everything else springs[i] reads is folded into key i itself (all
     /// staves/voices at i, side-tables, entry context, run membership/count, the boundary
-    /// clef allowance), is score-global-and-folded-into-every-key (staff structure, clefs,
-    /// lead-sheet-ness), or is the shortest duration, which the caller compares
-    /// separately.</item>
+    /// clef allowance, its lyrics), is score-global-and-folded-into-every-key (staff
+    /// structure, clefs, lead-sheet-ness), or is the shortest duration, which the caller
+    /// compares separately.</item>
     /// </list>
     /// </remarks>
     private static bool SpringReusable(

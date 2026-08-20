@@ -150,13 +150,20 @@ internal sealed class SystemBreaker
     /// driver has proven it unchanged, or null to compute it here. The proof lives with
     /// the caller (<c>IncrementalCompiler.SpringReusable</c>): a measure's springs read
     /// only measure <c>i</c> (all staves/voices, side-tables, entry context — all folded
-    /// into its content key), plus exactly three things from outside it — the previous
-    /// measure's end bar line (<see cref="SpacingRules.RunLeftBoundBarline"/>), the next
-    /// measure's run membership (<see cref="MmrRunMap.ForbidsBreakAfter"/>; its clef
-    /// allowance is already folded into key i), and the score-global common shortest
+    /// into its content key), plus the NEIGHBOURHOOD keys i−1/i+1 (the previous measure's
+    /// end bar line via <see cref="SpacingRules.RunLeftBoundBarline"/>, the next measure's
+    /// run membership via <see cref="MmrRunMap.ForbidsBreakAfter"/>, and — since the
+    /// cross-bar lyric rod port, 2026-08-20 — both neighbours' lyric content: the halves
+    /// ReserveLyricLine drops read whether a line continues into i±1, and the pair excess
+    /// below reads measure i+1's springs outright), and the score-global common shortest
     /// duration. There is deliberately NO second per-measure implementation: the memo
     /// short-circuits THIS loop body, so a reused and a computed entry come from the one
-    /// implementation (§2 A — no second spelling of the same quantity).</param>
+    /// implementation (§2 A — no second spelling of the same quantity). The cross-bar
+    /// PAIR quantity is deliberately carried SPLIT (each measure its own
+    /// <see cref="LyricSpacing.LyricBarPricing"/> half, combined only at break time by
+    /// KnuthPlassBreaker) so that no stored entry ever reads a neighbour's SPRINGS —
+    /// a combined excess would read i+1's springs and through their halves a
+    /// neighbour-of-neighbour's lyrics, outside this 3-key window.</param>
     internal static MeasureSpringData[] ComputeMultiStaffSpringData(MultiStaffScore score,
                                                                     double? baseShortestDuration,
                                                                     Func<int, MeasureSpringData?>? memo = null)
@@ -171,6 +178,8 @@ internal sealed class SystemBreaker
         // compressed MMR is a single spanner between two bar-line columns and cannot
         // span systems — so the interior forbids breaking.
         var runMap = MmrRunMap.Build(MultiMeasureRestEngraver.FindRuns(score));
+
+        bool sung = !score.Lyrics.IsDefaultOrEmpty;
 
         for (int i = 0; i < measures.Length; i++)
         {
@@ -208,6 +217,37 @@ internal sealed class SystemBreaker
             // system and ran past the page edge.
             springs = MultiStaffLayouter.ApplySharedColumnReservations(
                 score, i, springs, primaryMeasure, allTimings, allMeasures);
+
+            // The measure's lyric line edges — the same function the layout reads, off the
+            // same reserved springs — for three prices: its half of the cross-bar PAIR
+            // pricing (combined with the neighbour's half at break time), the line-start
+            // lyric floor, and the line-END excess: when a continuing line's trailing half
+            // was dropped, the layout re-supplies it as a rod at a system's end
+            // (LineEndLyricReservation), so a candidate line ending here must be priced
+            // for the part of that rod the suffix springs' minima do not already cover.
+            var edges = ImmutableArray<LyricSpacing.LyricLineEdge>.Empty;
+            LyricSpacing.LyricBarPricing? barPricing = null;
+            double lineEndLyricMinExcess = 0;
+            if (sung)
+            {
+                edges = LyricSpacing.MeasureLineEdges(
+                    score.TextMetrics, springs, allTimings, i, score.Lyrics,
+                    score.IsLeadSheet,
+                    SpacingRules.ParentAlignmentEdgesPerColumn(allMeasures, allTimings));
+                barPricing = LyricSpacing.BuildBarPricing(edges, springs,
+                    SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline),
+                    SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline));
+                if (barPricing != null)
+                {
+                    // Lines[k] is built from edges[k] (BuildBarPricing preserves order).
+                    for (int k = 0; k < edges.Length; k++)
+                        if (edges[k].ContinuesIntoNext)
+                            lineEndLyricMinExcess = Math.Max(lineEndLyricMinExcess,
+                                LyricSpacing.LineEndLyricReservation(edges[k])
+                                - barPricing.Lines[k].SuffixMin);
+                    lineEndLyricMinExcess = Math.Max(0, lineEndLyricMinExcess);
+                }
+            }
 
             double ideal = 0, min = 0, invStretch = 0, invCompress = 0;
             foreach (var s in springs)
@@ -257,7 +297,8 @@ internal sealed class SystemBreaker
             // continuation — built by the SAME implementation the layout uses, so the gate
             // prices a candidate line start exactly as it will be laid out (section 5.4).
             var lineStartSpring = s0 is { } spring0
-                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0)
+                ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0,
+                    LyricSpacing.LineStartLyricFloor(edges))
                 : null;
             springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
                 primaryMeasure.BreakPenalty,
@@ -266,7 +307,9 @@ internal sealed class SystemBreaker
                 invCompress,
                 s0?.IdealDistance ?? 0, s0?.MinDistance ?? 0,
                 s0?.InverseStretchStrength ?? 0, s0?.InverseCompressStrength ?? 0,
-                lineStartSpring);
+                lineStartSpring,
+                barPricing,
+                lineEndLyricMinExcess);
         }
         return springData;
     }

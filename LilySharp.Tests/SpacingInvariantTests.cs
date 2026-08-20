@@ -605,6 +605,87 @@ public class SpacingInvariantTests
         Assert.Equal(reserved.Sum(s => s.IdealDistance) + barlines, gate.IdealWidth, precision: 9);
     }
 
+    /// <summary>
+    /// The break gate prices the CROSS-BAR LYRIC ROD (HANDOFF 2H, closed 2026-08-20). A
+    /// lyric line continuing across a bar drops the invented halves and is rodded
+    /// syllable-to-syllable in the layout (LyricSpacing.CrossBarLyricRodDistance →
+    /// ApplyRods); the gate carries each measure's LyricBarPricing HALF and the breaker
+    /// joins them per interior bar. A gate that lost the join would book the sung pair
+    /// NARROWER than the layout sets it — sung bars would pack onto lines they overflow,
+    /// the exact failure the ledger's cross-barline entry warned about.
+    /// </summary>
+    /// <remarks>
+    /// The behavioural side is asserted where it is deterministic: RAGGED right, a paper
+    /// width strictly between the pair's natural width and its rod-floored minimum. Ragged
+    /// prefers the fewest settable lines (leftover whitespace only grows with more lines),
+    /// so WITHOUT the join one line wins; WITH it the one-line candidate is unsettable
+    /// (min &gt; available) and the breaker must split. The precondition min+excess &gt;
+    /// ideal is asserted too — it is what makes the window between the two widths real.
+    /// </remarks>
+    [Fact]
+    public void BreakGate_PricesTheCrossBarLyricRod()
+    {
+        var (_, _, _, score) = Collect("""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody {
+              section A { a4 a a a | a4 a a a | }
+            }
+
+            lyrics w sings melody {
+              section A { mum mum mum mum | mum mum mum mum }
+            }
+
+            form main { ~A }
+
+            score main "x" {
+              staff melody
+              lyrics w
+            }
+            """);
+        double shortest = SpacingRules.CalculateCommonShortestDuration(score);
+        var gate = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
+
+        // Both halves are carried, and their join BITES on this book (the same regime the
+        // ledger's lyrics.column.word-gap.cross-barline closed in) — not two nulls agreeing.
+        double excess = LyricSpacing.CrossBarPairMinExcess(
+            gate[0].CrossBarLyricPricing, gate[1].CrossBarLyricPricing);
+        Assert.True(excess > 1.0,
+            $"the cross-bar rod must exceed the bare bar-boundary minima here (excess={excess:F3})");
+        // ...and the line-END face: measure 0's line continues, so a break after it must
+        // price the re-supplied trailing reservation's deficit.
+        Assert.True(gate[0].LineEndLyricMinExcess > 0,
+            $"a continuing line's end must carry the trailing deficit (got {gate[0].LineEndLyricMinExcess:F3})");
+
+        // The one-line candidate's sums as the DP sees them (line-start spring swapped in).
+        double ideal = gate[0].IdealWidth + gate[1].IdealWidth;
+        double min = gate[0].MinWidth + gate[1].MinWidth;
+        if (gate[0].LineStartSpring is { } lineStart)
+        {
+            ideal += lineStart.IdealDistance - gate[0].Spring0Ideal;
+            min += lineStart.MinDistance - gate[0].Spring0Min;
+        }
+        double minWithRod = min + excess + gate[1].LineEndLyricMinExcess;
+        Assert.True(minWithRod > ideal,
+            $"precondition: the rod must exceed the pair's natural width (min+excess={minWithRod:F3}, ideal={ideal:F3})");
+
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        const double prefix = 5.0;
+
+        // Width inside the window: settable without the rod, unsettable with it.
+        var squeezed = new KnuthPlassBreaker(prefix + (ideal + minWithRod) / 2,
+            prefix, prefix, raggedRight: true).BreakIntoLines(measures, gate);
+        Assert.Equal(2, squeezed.Count);
+
+        // Control: grant the rod its width and one line is chosen — two lines above was
+        // the rod's doing, not ragged breaking's default.
+        var granted = new KnuthPlassBreaker(prefix + minWithRod + 0.5,
+            prefix, prefix, raggedRight: true).BreakIntoLines(measures, gate);
+        Assert.Single(granted);
+    }
+
     /// <summary>The three-voice book of test/dot-cross-voice-spacing — a dotted half in
     /// voice three under eighths in voice two, the two mechanisms of that fixture.</summary>
     private const string DottedThirdVoice = """

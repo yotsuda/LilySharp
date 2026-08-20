@@ -961,6 +961,53 @@ public class IncrementalCompilerTests
         Assert.Equal((1, 3), session.LastSpringMemo);
     }
 
+    /// <summary>
+    /// The memo on a SUNG book (the cross-bar lyric rod port, 2026-08-20): each entry
+    /// carries its LyricBarPricing half and the conditional bar-boundary halves read the
+    /// NEIGHBOURS' lyrics — all inside the i−1..i+1 window, which this holds to the same
+    /// standard as the rest: value-identity with a from-scratch build (deep equality runs
+    /// through LyricBarPricing.Equals), reuse liveness, and non-vacuity (the reused tail
+    /// entry really carries lyric pricing, so the equality is not two nulls agreeing).
+    /// </summary>
+    [Fact]
+    public void SpringMemo_OnASungBook_MatchesFromScratch()
+    {
+        const string src = """
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody {
+              section A { a4 a a a | g4 a a a | f4 a a a | e4 a a a | }
+            }
+
+            lyrics w sings melody {
+              section A { mum mum mum mum | mum mum mum mum | mum mum mum mum | mum mum mum mum }
+            }
+
+            form main { ~A }
+
+            score main "x" {
+              staff melody
+              lyrics w
+            }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "g4 a a a", "gis4 a a a");   // measure index 1
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
+        // 4 measures; key 1 moved -> measures 0..2 recomputed, measure 3 reused.
+        Assert.Equal((1, 3), session.LastSpringMemo);
+        // The reused entry is a SUNG measure whose pricing half came back from the
+        // previous vector — the from-scratch equality above compared it deeply.
+        Assert.NotNull(session.SpringsForTest![3].CrossBarLyricPricing);
+    }
+
     // --- ⑶ beamdirs per-measure beam-detection memo (HANDOFF §1) --------------------
     // The collect-phase stem-direction probe (ResolveBeamStemDirections) re-detects, per
     // keystroke, only the measures whose content-key (intrinsic content + effective meter

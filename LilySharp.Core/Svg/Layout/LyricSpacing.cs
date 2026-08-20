@@ -71,13 +71,16 @@ internal static class LyricSpacing
             return ReserveLyricWidthByColumn(
                 fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges);
 
-        var lines = GroupByLine(lyrics, measureIndex, ly => ly.ItemIndex, _ => true);
+        var lines = GroupByLine(lyrics, measureIndex, ly => ly.ItemIndex, _ => true,
+            out var prevKeys, out var nextKeys);
         if (lines.Count == 0)
             return springs;
 
         var result = springs.ToBuilder();
-        foreach (var (_, byCol) in lines)
-            ReserveLyricLine(result, fonts, byCol, measure.Items.Length, Edge);
+        foreach (var (key, byCol) in lines)
+            ReserveLyricLine(result, fonts, byCol, measure.Items.Length, Edge,
+                continuesFromPrev: prevKeys?.Contains(key) == true,
+                continuesIntoNext: nextKeys?.Contains(key) == true);
         return result.ToImmutable();
     }
 
@@ -93,16 +96,43 @@ internal static class LyricSpacing
     /// Grouping ALL verses into one chain — the pre-2026-08-20 shape — let verse 1's ink be
     /// priced against verse 2's connector.
     /// </remarks>
+    /// <param name="prevKeys">Line keys that have a syllable in measure
+    /// <paramref name="measureIndex"/> − 1 (same <paramref name="include"/> filter), or null
+    /// when none — the "does this line CONTINUE across the opening bar" side of the
+    /// cross-bar model, collected in the same pass so it costs no second walk.</param>
+    /// <param name="nextKeys">Same for measure <paramref name="measureIndex"/> + 1 — the
+    /// closing-bar side. ⚠️ Presence is by CONTENT (the neighbour has a syllable of this
+    /// line), not by column-mapping success: a neighbour syllable the reservation there
+    /// bails on (columns ≠ items, col &lt; 0) still counts, so a degenerate bar can drop a
+    /// half without gaining a rod — the regime where syllables already crowd today.</param>
     private static SortedDictionary<(int Voice, int Verse, int Staff, bool Row),
         SortedDictionary<int, List<LyricItem>>> GroupByLine(
         IReadOnlyList<LyricItem> lyrics, int measureIndex,
-        System.Func<LyricItem, int> columnOf, System.Func<LyricItem, bool> include)
+        System.Func<LyricItem, int> columnOf, System.Func<LyricItem, bool> include,
+        out HashSet<(int Voice, int Verse, int Staff, bool Row)>? prevKeys,
+        out HashSet<(int Voice, int Verse, int Staff, bool Row)>? nextKeys)
     {
         var lines = new SortedDictionary<(int, int, int, bool),
             SortedDictionary<int, List<LyricItem>>>();
+        prevKeys = null;
+        nextKeys = null;
         foreach (var lyric in lyrics)
         {
-            if (lyric.MeasureIndex != measureIndex || !include(lyric))
+            if (!include(lyric))
+                continue;
+            if (lyric.MeasureIndex == measureIndex - 1)
+            {
+                (prevKeys ??= new HashSet<(int, int, int, bool)>())
+                    .Add((lyric.VoiceId, lyric.VerseNumber, lyric.StaffIndex, lyric.IsLyricsRow));
+                continue;
+            }
+            if (lyric.MeasureIndex == measureIndex + 1)
+            {
+                (nextKeys ??= new HashSet<(int, int, int, bool)>())
+                    .Add((lyric.VoiceId, lyric.VerseNumber, lyric.StaffIndex, lyric.IsLyricsRow));
+                continue;
+            }
+            if (lyric.MeasureIndex != measureIndex)
                 continue;
             int col = columnOf(lyric);
             if (col < 0)
@@ -131,26 +161,42 @@ internal static class LyricSpacing
     /// syllable and a bar line (their spacing boxes never overlap in Y — LyricText even
     /// recedes 0.2 each side, extra-spacing-height (0.2 . -0.2)) and rods the next
     /// SYLLABLE's ink straight across the bar instead. Lily# prices measures one at a time
-    /// for breaking and laying out, so the cross-bar pair has no chain to rod over and the
-    /// reservation is cut at the bar line with <see cref="GlyphMetrics.MinItemGap"/> on
-    /// each side. The ledger point lyrics.column.word-gap.cross-barline carries the cost
-    /// (+0.54-class: 0.4 + bar ink + 0.4 against LilyPond's 0.45 spanning it); the port
-    /// would be a line-level rod in MultiStaffLayouter's rods list PLUS the same quantity
-    /// in the break gate's pricing — HANDOFF 2H holds the item.
+    /// for breaking and laying out, so a half is applied only where NO cross-bar rod will
+    /// take over: since 2026-08-20 a line that CONTINUES into the adjacent measure drops
+    /// the half on that side, and the pair is rodded across the bar at line level instead
+    /// (<see cref="CrossBarLyricRodDistance(in LyricLineEdge, in LyricLineEdge, double)"/>,
+    /// fed to MultiStaffLayouter's Simple_spacer
+    /// rod list AND — as a minimum excess — to the break gate's pricing; the ledger point
+    /// lyrics.column.word-gap.cross-barline closed on that rod). What the halves still
+    /// stand in for, deliberately: a line's FIRST/LAST syllable against its bar line
+    /// (LilyPond reserves nothing there either, but that regime is UNMEASURED — no probe
+    /// point yet — so the invented 0.4 stays until one exists), and the same quantities
+    /// re-appear at a SYSTEM's edges when a broken line's halves were dropped here
+    /// (LineStartLyricFloor / LineEndLyricReservation — LilyPond's own line-end hyphen
+    /// reservation at a break is likewise unmeasured, so the pre-port numbers are kept
+    /// there rather than guessed).
+    /// ⚠️ The leading half is kept when the first syllable is NOT on column 0 even for a
+    /// continuing line: its bump lands on an interior spring the line-start substitution
+    /// never touches, and no floor could re-supply it at a break.
     /// </remarks>
     private static void ReserveLyricLine(
         ImmutableArray<Spring>.Builder result,
         Rendering.ScoreTextMetrics fonts,
         SortedDictionary<int, List<LyricItem>> byCol,
         int endColumn,
-        System.Func<int, (double Left, double Centre)> edge)
+        System.Func<int, (double Left, double Centre)> edge,
+        bool continuesFromPrev,
+        bool continuesIntoNext)
     {
         var cols = new List<int>(byCol.Keys);
 
-        // Leading extent: the line's first syllable clears the start barline.
+        // Leading extent: the line's first syllable clears the start barline — unless the
+        // line continues from the previous measure, where the cross-bar rod binds instead
+        // (and, at a line START, LineStartLyricFloor re-supplies this same quantity).
         int first = cols[0];
-        BumpSpanMin(result, 0, first,
-            GetLyricLeftExtent(fonts, byCol[first], edge(first)) + GlyphMetrics.MinItemGap);
+        if (!(continuesFromPrev && first == 0))
+            BumpSpanMin(result, 0, first,
+                GetLyricLeftExtent(fonts, byCol[first], edge(first)) + GlyphMetrics.MinItemGap);
 
         // Between consecutive syllables (across any held/silent columns in between).
         for (int p = 0; p + 1 < cols.Count; p++)
@@ -160,10 +206,13 @@ internal static class LyricSpacing
                 CalculateLyricDistance(fonts, byCol[a], byCol[b], edge(a), edge(b)));
         }
 
-        // Trailing extent: the line's last syllable clears the end barline.
+        // Trailing extent: the line's last syllable clears the end barline — unless the
+        // line continues into the next measure, where the cross-bar rod binds instead
+        // (and, at a line END, LineEndLyricReservation re-supplies this same quantity).
         int last = cols[^1];
-        BumpSpanMin(result, last + 1, endColumn,
-            GetLyricRightExtent(fonts, byCol[last], edge(last)) + GlyphMetrics.MinItemGap);
+        if (!continuesIntoNext)
+            BumpSpanMin(result, last + 1, endColumn,
+                GetLyricRightExtent(fonts, byCol[last], edge(last)) + GlyphMetrics.MinItemGap);
     }
 
     /// <summary>
@@ -240,13 +289,16 @@ internal static class LyricSpacing
             return -1;
         }
 
-        var lines = GroupByLine(lyrics, measureIndex, ColumnOf, include);
+        var lines = GroupByLine(lyrics, measureIndex, ColumnOf, include,
+            out var prevKeys, out var nextKeys);
         if (lines.Count == 0)
             return springs;
 
         var result = springs.ToBuilder();
-        foreach (var (_, byCol) in lines)
-            ReserveLyricLine(result, fonts, byCol, cols, Edge);
+        foreach (var (key, byCol) in lines)
+            ReserveLyricLine(result, fonts, byCol, cols, Edge,
+                continuesFromPrev: prevKeys?.Contains(key) == true,
+                continuesIntoNext: nextKeys?.Contains(key) == true);
         return result.ToImmutable();
     }
 
@@ -341,6 +393,284 @@ internal static class LyricSpacing
             rightReach[c] = GetLyricRightExtent(fonts, perColumn[c], edge);
         }
         return (leftReach, rightReach);
+    }
+
+    /// <summary>
+    /// One lyric line's edge geometry over one measure — the ends the CROSS-BAR model
+    /// reads: where the line's first/last syllable stands, how far its ink reaches
+    /// outward, which connector follows the last syllable, and whether the line has a
+    /// syllable in the adjacent measures at all.
+    /// </summary>
+    /// <remarks>
+    /// Columns are in the measure's own spring-chain frame (spring j spans column j−1 →
+    /// column j, chain = [start→col0, …, colLast→end]), the same frame
+    /// <see cref="ReserveLyricLine"/> bumps in — so the springs a cross-bar rod spans are
+    /// LastCol+1..end on the left measure and 0..FirstCol on the right one, exactly the
+    /// spans the dropped halves used to cover.
+    /// </remarks>
+    internal readonly record struct LyricLineEdge(
+        (int Voice, int Verse, int Staff, bool Row) Key,
+        int FirstCol, double LeftExtent,
+        int LastCol, double RightExtent,
+        bool HyphenAfterLast,
+        bool ContinuesFromPrev, bool ContinuesIntoNext);
+
+    /// <summary>
+    /// The lyric line edges of one measure, one entry per line — the input to the
+    /// cross-bar lyric rods (MultiStaffLayouter) and to the break gate's pair pricing
+    /// (SystemBreaker). Mapped BY TIMING COLUMN — the springs' native frame and the X
+    /// model the engraver DRAWS with (the syllable follows its note's musical moment) —
+    /// deliberately NOT the reservations' by-item alias: on a multi-voice bar whose
+    /// column count happens to equal the primary voice's item count, a non-primary
+    /// voice's ItemIndex points at the wrong union column (named-voice-lyrics: alto's
+    /// 'deep' is item 2 but column 3), and a rod anchored there under-reserves by the
+    /// intervening spring — the forgiving halves hid exactly that, the exact rod paid it
+    /// ('deep' overlapped 'slow' by 0.06 the day the rod landed). On a single-voice bar
+    /// the two mappings are the same function.
+    /// </summary>
+    internal static ImmutableArray<LyricLineEdge> MeasureLineEdges(
+        Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> columnTimings,
+        int measureIndex,
+        IReadOnlyList<LyricItem> lyrics,
+        bool isLeadSheet,
+        IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges)
+    {
+        if (lyrics.Count == 0 || columnTimings.Count == 0
+            || springs.Length != columnTimings.Count + 1)
+            return ImmutableArray<LyricLineEdge>.Empty;
+
+        // A lead sheet reserves its row only — the same include the reservations apply.
+        System.Func<LyricItem, bool> include = isLeadSheet
+            ? ly => ly.IsLyricsRow
+            : _ => true;
+        int ColumnOf(LyricItem ly)
+        {
+            for (int c = 0; c < columnTimings.Count; c++)
+                if (columnTimings[c].Equals(ly.Timing))
+                    return c;
+            return -1;
+        }
+
+        var lines = GroupByLine(lyrics, measureIndex, ColumnOf, include,
+            out var prevKeys, out var nextKeys);
+        if (lines.Count == 0)
+            return ImmutableArray<LyricLineEdge>.Empty;
+
+        (double Left, double Centre) Edge(int column) => AlignmentEdge(parentAlignmentEdges, column);
+
+        var edges = ImmutableArray.CreateBuilder<LyricLineEdge>(lines.Count);
+        foreach (var (key, byCol) in lines)
+        {
+            int first = -1, last = -1;
+            foreach (int c in byCol.Keys)
+            {
+                if (first < 0)
+                    first = c;
+                last = c;
+            }
+            // Which minimum a rod after the LAST syllable takes is that syllable's own
+            // connector — the same rule CalculateLyricDistance applies within the bar.
+            bool hyphen = byCol[last].TrueForAll(l => l.ConnectorType == LyricConnectorType.Hyphen);
+            edges.Add(new LyricLineEdge(
+                key,
+                first, GetLyricLeftExtent(fonts, byCol[first], Edge(first)),
+                last, GetLyricRightExtent(fonts, byCol[last], Edge(last)),
+                hyphen,
+                ContinuesFromPrev: prevKeys?.Contains(key) == true,
+                ContinuesIntoNext: nextKeys?.Contains(key) == true));
+        }
+        return edges.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// The cross-bar lyric rod's distance IN SPRING SPACE: the two syllables' reaches
+    /// toward each other plus the word/hyphen minimum — the same quantity
+    /// <see cref="CalculateLyricDistance"/> reserves within a bar — minus the bar-line
+    /// ink the drawn layout re-inserts between the two measures' spring chains.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-hyphen.cc:163-179 set_spacing_rods — the LyricSpace /
+    /// LyricHyphen rod spans the bar because a bar line takes NO part in lyric spacing
+    /// (probe LCW: the cross-bar gap reads the in-bar gap to the digit, 6.322649).
+    /// The bar subtraction is the MmrRodDistance convention: measure widths re-add their
+    /// bar-line widths on top of the springs, so a rod stated over springs alone must
+    /// shed them (a rod that kept the ink would be 0.19 too long on every crossing).
+    /// May go non-positive for narrow syllables — a rod that simply does not bind.
+    /// THE core formula: the layout's rod (edge overload below) and the break gate's
+    /// pair pricing (<see cref="CrossBarPairMinExcess"/>) both spell it here, never twice.
+    /// </remarks>
+    internal static double CrossBarLyricRodDistance(
+        double prevRightExtent, bool hyphenAfterPrev, double nextLeftExtent,
+        double interBarlineInk)
+        => prevRightExtent
+           + (hyphenAfterPrev ? HyphenSpaceMinimum : WordSpaceMinimum)
+           + nextLeftExtent
+           - interBarlineInk;
+
+    /// <summary>The rod between two measures' line edges — the layout-side spelling.</summary>
+    internal static double CrossBarLyricRodDistance(
+        in LyricLineEdge prev, in LyricLineEdge next, double interBarlineInk)
+        => CrossBarLyricRodDistance(
+            prev.RightExtent, prev.HyphenAfterLast, next.LeftExtent, interBarlineInk);
+
+    /// <summary>
+    /// The line-start FIXED-distance floor a system-opening measure needs when its lyric
+    /// lines continue from the previous measure: their column-0 leading halves were
+    /// dropped from spring 0 (the cross-bar rod owns that side mid-line), so the same
+    /// inkL + <see cref="GlyphMetrics.MinItemGap"/> is re-supplied to
+    /// LineStartSpringForLine's ownFixedFloor — the pre-port line-start quantity, kept
+    /// verbatim (HANDOFF 2H's ⑴ paper-column item owns replacing it with a real column).
+    /// </summary>
+    internal static double LineStartLyricFloor(ImmutableArray<LyricLineEdge> edges)
+    {
+        double floor = 0;
+        foreach (var e in edges)
+            if (e.ContinuesFromPrev && e.FirstCol == 0)
+                floor = Math.Max(floor, e.LeftExtent + GlyphMetrics.MinItemGap);
+        return floor;
+    }
+
+    /// <summary>
+    /// The trailing reservation a line-ENDING measure re-supplies for a lyric line whose
+    /// half was dropped (it continues into the next measure, which a break put on the
+    /// next system): inkR + <see cref="GlyphMetrics.MinItemGap"/>, the pre-port trailing
+    /// quantity verbatim — LilyPond's own line-end behaviour there (hyphen reservation at
+    /// a break) is unmeasured, so nothing is guessed.
+    /// </summary>
+    internal static double LineEndLyricReservation(in LyricLineEdge e)
+        => e.RightExtent + GlyphMetrics.MinItemGap;
+
+    /// <summary>
+    /// One sung measure's HALF of the cross-bar pair pricing, as the break gate carries
+    /// it: per lyric line, the ends' extents and the spring minima between each end and
+    /// its bar (plus the measure's own bar-line inks). The gate stores one of these per
+    /// measure and <see cref="CrossBarPairMinExcess"/> combines two neighbours' at
+    /// break time — SPLIT this way on purpose: each half reads only its own measure's
+    /// reserved springs (whose reuse window the spring memo already proves), where a
+    /// combined per-measure excess would read the neighbour's springs and so a
+    /// neighbour-of-neighbour's lyrics, outside every 3-key window
+    /// (IncrementalCompiler.SpringReusable's inventory).
+    /// </summary>
+    /// <remarks>
+    /// A CLASS with structural equality, not a record struct field bag: it hangs off
+    /// MeasureSpringData, whose vector the incremental driver compares element-wise to
+    /// decide whether line-breaking can be skipped — an ImmutableArray field's default
+    /// reference equality there would fail every content-identical rebuild and silently
+    /// kill the skip. Null on every unsung measure, so the comparison stays one null
+    /// check where it was free before.
+    /// </remarks>
+    internal sealed class LyricBarPricing : System.IEquatable<LyricBarPricing?>
+    {
+        /// <summary>Per lyric line: its edges and the spring minima toward each bar.</summary>
+        internal readonly record struct Line(
+            (int Voice, int Verse, int Staff, bool Row) Key,
+            double PrefixMin, double LeftExtent,
+            double SuffixMin, double RightExtent,
+            bool HyphenAfterLast, bool ContinuesIntoNext);
+
+        public LyricBarPricing(ImmutableArray<Line> lines,
+            double startBarlineInk, double endBarlineInk)
+        {
+            Lines = lines;
+            StartBarlineInk = startBarlineInk;
+            EndBarlineInk = endBarlineInk;
+        }
+
+        public ImmutableArray<Line> Lines { get; }
+        public double StartBarlineInk { get; }
+        public double EndBarlineInk { get; }
+
+        public bool Equals(LyricBarPricing? other)
+        {
+            if (other is null)
+                return false;
+            if (StartBarlineInk != other.StartBarlineInk || EndBarlineInk != other.EndBarlineInk
+                || Lines.Length != other.Lines.Length)
+                return false;
+            for (int i = 0; i < Lines.Length; i++)
+                if (!Lines[i].Equals(other.Lines[i]))
+                    return false;
+            return true;
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as LyricBarPricing);
+
+        public override int GetHashCode()
+        {
+            var hc = new System.HashCode();
+            hc.Add(StartBarlineInk);
+            hc.Add(EndBarlineInk);
+            foreach (var line in Lines)
+                hc.Add(line);
+            return hc.ToHashCode();
+        }
+    }
+
+    /// <summary>
+    /// Builds one measure's <see cref="LyricBarPricing"/> from its line edges and its
+    /// FINAL reserved springs — the same chain the layout's ApplyRods will span, so the
+    /// gate's deficit below is the rod's. Null when the measure has no lyric lines.
+    /// </summary>
+    internal static LyricBarPricing? BuildBarPricing(
+        ImmutableArray<LyricLineEdge> edges, ImmutableArray<Spring> springs,
+        double startBarlineInk, double endBarlineInk)
+    {
+        if (edges.IsDefaultOrEmpty)
+            return null;
+        var lines = ImmutableArray.CreateBuilder<LyricBarPricing.Line>(edges.Length);
+        foreach (var e in edges)
+        {
+            double prefixMin = 0;
+            for (int s = 0; s <= e.FirstCol && s < springs.Length; s++)
+                prefixMin += springs[s].MinDistance;
+            double suffixMin = 0;
+            for (int s = e.LastCol + 1; s < springs.Length; s++)
+                suffixMin += springs[s].MinDistance;
+            lines.Add(new LyricBarPricing.Line(
+                e.Key, prefixMin, e.LeftExtent, suffixMin, e.RightExtent,
+                e.HyphenAfterLast, e.ContinuesIntoNext));
+        }
+        return new LyricBarPricing(lines.MoveToImmutable(), startBarlineInk, endBarlineInk);
+    }
+
+    /// <summary>
+    /// The extra MINIMUM a line pays when these two adjacent measures stand on it
+    /// together: the deficit of the spanned springs' minima against each continuing
+    /// line's cross-bar rod, maxed over lines — the break-gate face of the rod
+    /// MultiStaffLayouter feeds to ApplyRods, so a sung bar is priced for breaking
+    /// exactly as it will be laid out (the one-list rule).
+    /// </summary>
+    /// <remarks>
+    /// Exact for one line; for several verses over the same bar it is the max of the
+    /// per-line deficits where ApplyRods converges on the joint solution — equal
+    /// whenever the spans coincide (verses sit on the same columns), an approximation
+    /// in the same spirit as the gate's per-measure sums. A rod is a minimum, so no
+    /// ideal term: ApplyRods raises blocking forces, never ideals.
+    /// </remarks>
+    internal static double CrossBarPairMinExcess(
+        LyricBarPricing? prev, LyricBarPricing? next)
+    {
+        if (prev == null || next == null)
+            return 0;
+        double excess = 0;
+        foreach (var p in prev.Lines)
+        {
+            if (!p.ContinuesIntoNext)
+                continue;
+            foreach (var q in next.Lines)
+            {
+                if (!q.Key.Equals(p.Key))
+                    continue;
+                double rod = CrossBarLyricRodDistance(
+                    p.RightExtent, p.HyphenAfterLast, q.LeftExtent,
+                    prev.EndBarlineInk + next.StartBarlineInk);
+                excess = Math.Max(excess, rod - (p.SuffixMin + q.PrefixMin));
+                break;
+            }
+        }
+        return Math.Max(0, excess);
     }
 
     /// <summary>
