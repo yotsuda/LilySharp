@@ -149,6 +149,46 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
 
+最終更新 第223セッション＝**残債筆頭「小節線またぎの歌詞 rod」を専用便で閉じた**（`lyrics.column.word-gap.cross-barline` **+0.540000000 → 0.000000000 ちょうど**・`8cdeca0e`）——**同じ行を継続する歌詞線は小節境界の発明 halves（0.4＋bar ink＋0.4）を落とし、音節→音節を小節線越しに直接 rod する**（`CrossBarLyricRodDistance`＝inkR＋0.45/0.1＋inkL−bar ink・MmrRodDistance と同じ「spring 空間は bar ink を持たない」規約・rods リスト＝ApplyRods の一港）。**門×レイアウトの設計判断の答え＝pair 量は「両半分に割って各小節が持ち、DP が結合する」**：結合済みの excess をどの 1 小節に置いても **4 鍵量**（相手の springs → その halves → 隣の隣の歌詞）になり **SpringReusable の 3 鍵窓では証明できない**——各小節が自 springs だけから作る `LyricBarPricing` 半分を持ち、`KnuthPlassBreaker` の cumPairMin が break 時に隣接対を結合する（この結合面が「半分同士が出会う唯一の場所」）。**halves は rod が引き取れない場所には残す**（行の最初/最後の音節 vs 小節線・折りで千切れた対の行頭床 `LineStartLyricFloor`（`ownFixedFloor` 経由＝fixed 距離なので rod では代替不可）と行末 rod `LineEndLyricReservation`＋門の line-end excess）——**そこは未測定 regime**（LP の折り行末 hyphen 予約を含む）なので移植前の数を逐語で残した。**正確な rod が halves の寛容が無料にしていた欠陥を即日課金**（第221/222 骨 2 の 3 連目）＝多声小節の非 primary 声部は ItemIndex が union 列を指さない（named-voice-lyrics の 'deep' が 'slow' に 0.06 重なり、重なり番人が検出）→ **edge の写像は描画と同じ TIMING 基準に**（単声では byItem と恒等）。
+
+★ **開始時裏取り**: HEAD `af732e75`・未 push 0・未追跡 0/木 0・Windows suite **5699/0/4**・CI 全緑（前便の閉幕 commit 32338042823 success を読んだ）・台帳 553 点・追跡コーパス 569 冊・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時 **未追跡 0・木 0**・commit 2 本（`8cdeca0e` 移植 → handoff）・suite **Windows 5701/0/4・Linux（この機械の WSL）5701/0/4＝両 OS 完全緑**（+2＝新 pin 2 本）・snapshot **220 枚中 16 枚だけ動き再承認**（全部歌詞本・小節線を越えるたび LP 側へ最大 0.54 締まる向き。named-voice-lyrics だけ 2 段階＝1 度目の承認が重なりを含み、番人が割って TIMING 写像修正後に再承認）・台帳 553 点（点数不変＝閉じただけ）・追跡コーパス 569 冊・Core 0 警告。**`8cdeca0e` は push 済み・CI はこの handoff commit の分と併せて次の数行のとおり読む**（未読なら次便が読む）。台帳の総覧: ss 非ゼロ **110 点／総和 3.876975326**（−1 点／−0.540000000＝閉じた点の分ちょうど）。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① 移植（`8cdeca0e`・1 commit） | ReserveLyricLine＝halves を継続条件付きに（GroupByLine が同じ 1 走査で隣接小節の line key を拾う）・MeasureLineEdges/CrossBarLyricRodDistance/LyricBarPricing/CrossBarPairMinExcess（全部 LyricSpacing＝一軒）・layout は rods リストへ・門は半分を MeasureSpringData に載せ KP の cumPairMin が結合・LineStartLyricFloor が ownFixedFloor に合流・LineEndLyric{Reservation,MinExcess} | cross-barline **0.000000000**・**16/220 snapshot**・両 OS 完全緑・pin 2 本（門が rod で折る behavioral＝ragged 幅窓・sung 本の memo==from-scratch 深比較） |
+
+- **設計の帳尻（次便が蒸し返さないための 3 行）**: ⑴ pair 量の 4 鍵性が split 設計の理由（結合は KP の cumPairMin ただ 1 箇所）。⑵ `LyricBarPricing` は **record struct の既定等値では死ぬ**ので構造等値を手書きした class——`_springs` の SequenceEqual（gate-skip）と memo==full 深比較がこの Equals を通る。⑶ ApplyRods は **min（blocking force）しか上げない**ので門の excess も min のみ＝ideal 項は無い（BumpSpanMin は ideal も上げる——rod 化で行末の ideal が僅かに変わるのは LP 方向）。
+- **alloc の代価（実測・▶ にも掛かる）**: perf-lyrplain1k **full 741.9→825.4（+11%）・打鍵 372.5→436.7 MB（+17%）**＝sung 小節ごとの edge 走査（GroupByLine が予約と edges で計 2〜3 回走る＋HashSet 2 個/回）。**perf-plain1k 694.9/45.3＝桁まで不動＝非 sung 本は無料**。返すなら「予約の GroupByLine 結果を edges と共有する」が第一候補（同じ入力の 2 度作り＝▶ の族）。
+- **⑸ ★★★ 次に触るなら＝残債**: ⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf（↑の edge 走査 2 度作りが新member）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・**多声小節の byItem 予約写像**（named-voice の在庫＝rod は直したが in-measure 予約は今も ItemIndex で列を外す。未測定・対から）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★★ 骨 1＝**「どの 1 小節にも置けない量」は割って持たせ、結合面を 1 箇所にする**
+> pair excess は相手の springs を読み、springs は halves 経由で隣の歌詞を読む——結合済みの量は
+> どの entry に置いても窓（i−1..i+1）から 1 鍵はみ出す。**量を半分に割れば各半分は自小節の窓に
+> 収まり、結合は break 時の純算術**（cumPairMin）**になって memo の証明が要らなくなる**。
+> 最初の 2 案（第2パス＋carry memo／隣 springs のオンデマンド再構築）はどちらも「はみ出しを
+> 運ぶ」仕掛けで、割る案だけが「はみ出し自体を消す」——**窓に入らない量は、運ばず割る**。
+
+> ## ★★ 骨 2＝**正確な rod は寛容な半分が無料にしていた写像欠陥を即日課金した（3 連目）**
+> byItem 写像は多声小節で非 primary 声部の音節を 1 列ずらして予約していたが、halves の
+> 0.4×2 が誤差を呑んでいた。rod は桁まで正確なので 'deep'→'slow' が 0.06 重なり、
+> **書いた覚えのない番人（SnapshotLyricOverlapTests）が commit 済み snapshot を走査して割れた**。
+> 修正は「rod の写像を描画と同じ TIMING 基準へ」——予約側の byItem は未測定なので触っていない。
+> ⚠️ **snapshot の一括承認が重なりを 1 度 commit した**——番人が拾ったから戻せたが、
+> **歌詞本の承認前チェックに「音節重なり」を目視項目として足すこと**。
+
+> ## ★ 骨 3＝**「保存する量」は等値性まで設計の一部**
+> MeasureSpringData の vector は gate-skip（SequenceEqual）と memo==full 深比較の対象。
+> ImmutableArray フィールドの既定等値は参照比較なので、**そこに素直に list を足すと
+> skip が永久に外れる**（穴は静かで、割れるのは perf だけ）。構造等値を手書きした class を
+> 1 枚挟むのが正解で、既存の `Spring` が record（値等値）なのは先人の同じ答え。
+
+---
+
+## 以下は第222セッションの経緯
+
 最終更新 第222セッション＝**§2H「歌詞列間隔の発明 2 つ」を専用便で閉じた**——対の起票（probe `lyric-column-spacing.ly`・5 冊: LCW の小節内 vs 小節またぎ＝**LP 恒等**・LCN/LCC＝**LP 恒等**・LCH＝connector 1 変数 fork 0.35）→ 移植＝**音節は描画サイズ（2.469417）の advance・語間 0.45／ハイフン 0.1 を `ConnectorType` が選ぶ・予約は歌詞 LINE ごと**（`c7beded3`）→ **対の食い違いが第2の欠陥を出した**（§5.0-4 の教科書形）＝**ペダル支えの集合違い**（LP は「そのペダル自身の列＋staff」だけを支えに acknowledge・Lily# は staff 全 profile を読んでいた）→ 同便で移植（`SupportProfile`／`VerticalSkyline.ClippedToRange`・`7ec437de`）。台帳 **553 点**（+6）: word/hyphen/no-bind/control **exact**・narrow **+0.034143307＝Pango pixel 1 個ちょうど**（顔の kern データ差＝§3 の計量双子族の**水平初 member**）・cross-barline **+0.540000000 ちょうど＝named OPEN**（§2H に移植の形まで記載）。**第221 ⓐ の音節 X ドリフトはこの移植で解消**（row==sings・音符格子まで F2 同一）。
 
 ★ **開始時裏取り**: HEAD `15fbbf33`・未 push 0・未追跡 0/木 0・Windows suite **5693/0/4**・CI 全緑（32331566865 success を読んだ）・台帳 547 点・追跡コーパス 569 冊・Core 0 警告。
@@ -186,45 +226,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > 対が 1 connector ずれた別音楽。Lily# 側を測る前に「.lys の綴りは何か」を見て直した。
 > **対を作ったら、まず両側の音高・小節線・そして今回は connector を突き合わせる**（§5.0 の
 > 検算リストに connector が加わった形）。
-
----
-
-## 以下は第221セッションの経緯
-
-最終更新 第221セッション＝**残債⒤「歌詞帯のスカラー床が X 盲目」を専用便で閉じた**——対の起票（probe `lyric-band-x.ly`・LBL/LBR＝g''' の小節位置だけが違う 1 変数 fork・LBS＝出荷紙の番人）→ **対が対でなかった**（双子の form 素参照が section マークを刷り、LP 側の本には無い——§5.0 の罠を起票の同便で踏み、診断自身の falsifier が拾った）→ 対を修理して再起票 → 移植＝**帯の最小 profile が paging skyline の要素になり、床が X で読む**（スカラー床は CreatePages / PageLayouter の両経路から消えた）。台帳 **547 点**（+5）・`lyrics.band-floor.ink-past-band.system-gap` は **0.000000000 ちょうど**。**続き便（同セッション・ユーザーの「有利なら着手」委任）で j-dot も解決**＝顔のデータ差と確定（下の ⓑ）。X ドリフト（ⓐ）は温かさの差が無いので次便へ。
-
-★ **開始時裏取り**: HEAD `2dc943e2`・未 push 0・未追跡 0/木 0・Windows suite **5687/0/4**（⚠️ 引継ぎの「5677」「台帳 546」はどちらも誤記＝実測 5687・542。台帳は直近 4 commit とも 542 で数え直して確認）・CI 全緑・Core 0 警告・追跡コーパス 569 冊。
-終了時 **未追跡 0・木 0・未 push 0**（`c207b25c` 起票 → `5c3df019` 対の修理 → `ef838197` 移植 → handoff → **続き便＝`de22be73` j-dot の解決**まで全部 push 済み・CI は 32329616359 / 32329724934 とも success を読んだ）・suite **Windows 5693/0/4・Linux（この機械の WSL）5693/0/4＝両 OS 完全緑**・snapshot **220 枚中 1 枚だけ動き再承認**（sings-chorus-row・最終 system 下の余白のみ）・台帳 547 点・追跡コーパス 569 冊・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① 起票（`c207b25c`） | probes/lyric-band-x.ly＋台帳 5 点（LP 2.26.0 実測: LBL 12.362129 / LBR 10.090000＝fork 2.272129 / LBS 12.000000 ちょうど） | 「Lily# は fork の両側で同じ数を読む」を書いてから測定 |
-| ② 対の修理（`5c3df019`） | 双子を `~A break ~B` へ（素参照は section マークを刷る＝LP 側の本に無い ink）・全数値を取り直し | 署名（両側同数 12.277483）は修理を生き延び、量は 1 つも生き延びなかった |
-| ③ 移植（`ef838197`） | `LyricReservationBelowSystem` が profile を返す → `PagingAugmentProgram` の最終 family（`AddLyricBand`・鍵は building の数値＝augment memo と両立）→ スカラー床を両経路から除去・extents は profile の最深点 | **12/569 冊**（全部歌詞本・系間 gap が LP 側へ 0.8〜1.0 縮む／内容寸ページの余白が締まる）・snapshot 1 枚・両 OS 緑 |
-
-- **台帳の帳尻**: ink-past-band **+2.187483 → 0.000000000**（閉じる算術が font-free＝予測どおり ちょうど）／ink-over-band **−0.084646 不動**（この本ではスカラーと X 解が構造的に一致＝残差は j-dot 島が gap 越しに見えているだけ）／band-shipping **exact**（出荷紙は両側とも ideal 12 が勝つ——pin が引いていた「14.571」は origin 枠＋マーク付き双子の数だった）／staff-to-lyric **−0.092 不動**＝描かれた歌詞は動いていない（開いた時の要求どおり）。
-- **露出した島 2 つ（未着手・名前だけ）**: ⓐ **row と sings の音節 X ドリフト**——"ff" が row 83.668 / sings 80.783。**LP は両綴りの dump が行単位で同一**なので Lily# 固有。X を読む床が初めて課金した。pin `SystemGap_ReadsARowsBandOnce` は X が床に届かない形（一様音節・平板な次系・ラベル抑制）に再構成済み。**続き便で診断済み＝spacing 段**（音符列ごと累積 ≈0.587・sings が広い・両綴りとも予約経路には入る・row の均等割り格子は LILYSHARP-OWN）。**§2H の新島「歌詞列間隔の発明 2 つ」（幅を 3.2 で測る／padding 1.0）の窓から測るのが早い**——そちらが先。／ⓑ **j-dot——同便の続きで解決＝顔のデータ差**（コード無罪）: 両フォントファイルを fontTools bbox で直接比較し、**C059 と Schola は h/x/g/p が bit 同一・i/j の点だけ 0.135818 違う**（C059 1.765633 / Schola 1.629815。Lily# の Ink 箱と輪郭歩きは自フェイスと桁一致＝歩きは正しい）。−0.092 は**計量双子の点が床越しに見えた恒久差**＝§3 の 2026-08-02 決定（Schola のまま）の族に垂直 ink の初 member として記載。追うものは無い（差し替えの時だけ動く）。
-- **alloc の代価（実測・▶ にも記帳）**: plain1k 694.9/45.2・fingstack 2413.8/162.0 **桁まで不動**／**perf-lyrplain1k は full +21%・打鍵 +10%**（368.0→405.2 MB）＝帯 profile の毎打鍵構築。memo するなら「その鍵は歌詞の内容を含むか」を先に確かめること（含まない鍵に畳むと sweep に見えない増分穴＝第192 の族）。
-- **⑸ ★★★ 次に触るなら＝残債**: ⒞ CoPlaceToCodaWithLabels 鏡像／⒟ §2 ▶ perf／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X（対から）・**音節 X ドリフト（ⓐ・対から起票）・chord-row の上帯スカラー（下帯と同じ島の上側・対から）**（j-dot ⓑ は解決済み＝§3 の顔差の族）。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★★ 骨 1＝**対が対であることを、診断自身の falsifier が言った**
-> 双子の `form main { A break B }` は section マークを刷り、LP の本は刷らない。起票の
-> 「Lily# は fork の両側で同じ 13.392」という強い言明は**マーク込みの数**だった。拾ったのは
-> 「歌詞も g''' も無い本が 12.200 を読む」＝診断のどの項も作れない数。**署名（両側同数）は
-> 対の修理を生き延び、量は 1 つも生き延びなかった。**§5.0「強い言明ほど先に対を検算」を、
-> その規則を引いた commit の直後に踏んだ形——罠は引用しても踏む。falsifier を仕込んであれば拾える。
-
-> ## ★★ 骨 2＝**読みを正すと、盲目が無料にしていた乖離が課金される**（第220 骨 1 と同族）
-> スカラー床は X を見ないから、row と sings の音節 X ドリフトはずっと無料だった。X を読む床に
-> した瞬間、その差が 0.915 の gap 差になって pin が割れた。1 手目の修理（row-outer に per-staff
-> Down を重ねる）は「1 つの量に 2 つの表現」でもう 1 枚割った（§5.2.1②）——正しい形は**表現を
-> 増やさない**: 譜は system skyline の edge model のまま、帯だけが新しい要素。
-
-> ## ★ 骨 3＝**禁止の札と自分の操作を 1 行で照合してから進む**（RULES §5.1）
-> `PagingAugmentProgram` の「バッチ化するな」は既存 merge の**再結合**の禁止。末尾に新 family を
-> 1 つ足すのは別の操作で、鍵を building の数値列にすれば増分 memo とも両立する（program 不変→hit）。
 
 ---
 
@@ -2050,7 +2051,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   context ごとに 1 本なのの鏡）。台帳 `lyrics.column.*` 6 点: word/hyphen/no-bind/control
   **exact**・narrow **+0.034143307＝Pango pixel 1 個ちょうど**（顔の kern データ差:
   Schola "ru" +20 vs C059 +18・§3 の 2026-08-02 計量双子族の**水平初 member**）。
-  **残る 1 点＝下の「小節線またぎ」**。
+  **残っていた 1 点「小節線またぎ」も第223 で閉じた（下の ✅）＝lyrics.column 全 6 点が
+  exact か named**。
   ✅ **row vs sings の音節 X ドリフト（第221 ⓐ）はこの移植で解消**——音節数＝音符数の本では
   両綴りの音符格子・音節 X とも一致（第222 実測・F2 同一。旧ドリフトは列あたり ≈0.587）。
   音節数≠音符数の小節は**文法上別音楽**（row は均等割り・LILYSHARP-OWN）のまま＝欠陥ではない。
@@ -2065,18 +2067,17 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 **残っている発明**:
 
-- ★ **歌詞の小節線またぎ＝barline-split モデル**（第222 で**測定済み・0.540000000 ちょうどの
-  named OPEN**＝`lyrics.column.word-gap.cross-barline`）。**LP は音節と小節線のあいだに何も
-  予約しない**（LyricText の箱と小節線の箱は Y で交わらない——extra-spacing-height (0.2 . -0.2)）
-  ——**次の音節との LyricSpace 0.45 が小節線をまたいで直接 rod する**（LCW 実測: 小節内と
-  小節またぎが桁まで同数）。Lily# は小節ごとに値付けするので予約を小節線で切る＝
-  `ReserveLyricLine` の leading/trailing（`MinItemGap` 0.4×2＋小節線 ink 0.19＝0.99 対 LP 0.45）。
-  **旧 §2H の「MinItemGap 4 箇所・独自量かも」への答えがこれ**——LP に対応物は無く、
-  per-measure 値付けの都合＝「今の構造では表現できないから畳む」型。
-  **移植の形は決まっている**: `MultiStaffLayouter` の rods リスト（ApplyRods＝Simple_spacer 移植）
-  に line レベルの歌詞対 rod を足す＋**同じ量を折りの門（SystemBreaker）の値付けにも**
-  （ApplySharedColumnReservations の「1 リスト」規律。門に入れないと歌の小節が広く折れて
-  レイアウトで溢れる）。射程: 小節線をまたいで語が詰まる本すべて（+0.54/小節線 の締まり）。
+- ✅ **歌詞の小節線またぎ＝barline-split モデル＝第223 で移植完了**（`8cdeca0e`・
+  `lyrics.column.word-gap.cross-barline` **+0.540000000 → 0.000000000 ちょうど**）。
+  **LP は音節と小節線のあいだに何も予約しない**（extra-spacing-height (0.2 . -0.2)）——
+  継続する歌詞線は halves（0.4＋bar ink＋0.4）を落とし、`CrossBarLyricRodDistance`＝
+  inkR＋0.45/0.1＋inkL−bar ink を rods リスト（ApplyRods）へ。**門は各小節の
+  `LyricBarPricing` 半分を持ち、KP の cumPairMin が break 時に結合**（結合済み excess は
+  4 鍵量で memo の 3 鍵窓に入らない——§1 第223 骨 1）。**halves の残り＝行の最初/最後の
+  音節 vs 小節線・折りで千切れた対の行頭床/行末予約は LILYSHARP-OWN のまま**
+  （未測定 regime＝LP の折り行末 hyphen 予約を含む。測るなら `\break` 対から）。
+  **在庫**: 多声小節の byItem 予約写像は in-measure 側が今も ItemIndex で列を外す
+  （rod/edges は TIMING 基準に直した。named-voice-lyrics が現物・未測定・対から）。
 - **行頭 wish の `ownFixedFloor` ガード**（`LineStartSpringForLine` → `LineStartColumn.LineStartSpring`）
   — LP は leading grace と lyrics を**独立した paper column** にするので min_dist がそこまで測る。
   Lily# は spring に畳み込んでいる＝**「今の構造では表現できないから畳み込む」型**（§5.2 が
