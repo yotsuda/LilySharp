@@ -1,10 +1,22 @@
 # Lily#
 
-A modern music notation compiler with real-time preview support.
+A music notation language and engraving engine — publication-quality sheet music
+from plain text, with an IDE-first toolchain.
+
+[![CI](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml/badge.svg)](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
 
 ## Overview
 
-Lily# is a new music notation language, designed for:
+Lily# compiles a `.lys` source file to engraved sheet music (SVG, PDF, PNG), and to
+MIDI, MusicXML and LilyPond source.
+
+Its layout engine is in part a **port of LilyPond**, the GNU music typesetter: beam
+quanting, slur and tie scoring, skylines, springs and page breaking are modified
+translations of LilyPond's own algorithms rather than independent approximations.
+See [Relationship to LilyPond](#relationship-to-lilypond).
+
+The language, by contrast, is deliberately not LilyPond's. It is designed for:
 - **Explicit over implicit**: Clear, readable syntax
 - **Completion-friendly**: IDE-first design with full LSP support
 - **Single-pass incremental compilation**: Using Roslyn-style Red-Green tree pattern
@@ -18,15 +30,22 @@ LilySharp/
 │   ├── Syntax/              # Syntax kinds, green/red tree nodes
 │   ├── Semantics/           # Duration calculation, measure validation
 │   └── Midi/                # MIDI export
-├── LilySharp.Cli/           # Command-line interface
+├── LilySharp.Cli/           # Command-line interface (lysc)
 ├── LilySharp.Lsp/           # Language Server Protocol implementation
-├── LilySharp.Tests/         # Unit + SVG-snapshot tests (1900+ tests)
+├── LilySharp.Tests/         # Unit + SVG-snapshot tests (3,500+ test methods)
+├── LilySharp.Benchmarks/    # Layout and parse benchmarks
 ├── editors/
-│   └── vscode/              # VS Code extension
-├── samples/                 # Example .lys files
+│   └── vscode/              # VS Code extension (bundles the language server)
+├── samples/                 # Complete public-domain pieces — see samples/README.md
+├── audit/                   # LilyPond-fidelity ledger and regression corpus
 └── docs/
-    └── GRAMMAR.md           # Complete grammar specification
+    ├── GRAMMAR_FOR_LLM.md   # Canonical single-file spec
+    ├── GRAMMAR.md           # Formal EBNF
+    ├── SYNTAX_REFERENCE.md  # Browsable reference
+    └── TUTORIAL.md          # Getting started
 ```
+
+[CHANGELOG.md](CHANGELOG.md) records what changed between releases.
 
 ## Language Features
 
@@ -102,10 +121,14 @@ Lyrics live inside a section and align to that part's notes; `-` joins syllables
 one word and `|` mirrors the music's barlines.
 
 ```lilysharp
+part melody { clef treble }
+
 section Main {
     melody { c4 d e f | g2 g | }
-    lyrics { Hap- py birth- day | to you | }
+    lyrics words sings melody { Hap- py birth- day | to you | }
 }
+form main { Main }
+score main { staff melody  lyrics words }   // the row below the staff is its verse
 ```
 
 ### Lead sheets (chords and/or lyrics, no staff)
@@ -140,7 +163,7 @@ volta repeats.)
 ### Parallel Voices (one staff)
 
 ```lilysharp
-voice { c'2 d } voice { e2 f }   // each voice { } is a simultaneous voice
+voice { c'2 d } { e2 f }   // `voice` opens the span ONCE; each further { } is another voice
 ```
 
 ### Named music (phrases)
@@ -156,37 +179,77 @@ form main { Main }
 score main "out" { staff melody }
 ```
 
-## Building
+## Install
+
+### CLI (`lysc`)
+
+Download the archive for your platform from
+[Releases](https://github.com/yotsuda/LilySharp/releases), unpack it, and put `lysc`
+on your `PATH`. Nothing else is required — the runtime and the fonts ship inside.
+
+### VS Code extension
+
+Install the `.vsix` from [Releases](https://github.com/yotsuda/LilySharp/releases)
+(Extensions view → `…` → *Install from VSIX…*). The extension bundles the language
+server, so `lysc` is not needed separately — but unlike the CLI archive it is not
+self-contained, so the **.NET 10 runtime** must be installed.
+
+## Usage
+
+```bash
+lysc svg samples/fur-elise.lys          # engrave -> fur-elise.svg
+lysc pdf samples/greensleeves.lys       # -> greensleeves.pdf
+lysc png samples/amazing-grace.lys      # -> amazing-grace.png
+lysc midi samples/canon-in-d.lys        # -> canon-in-d.mid
+lysc check samples/drunken-sailor.lys   # syntax check only, no output file
+
+lysc svg score.lys out.svg              # name the output file
+lysc --help                             # every command
+lysc svg --help                         # options for one command
+```
+
+| Command | Output |
+|---------|--------|
+| `svg` `pdf` `png` | Engraved sheet music |
+| `midi` | MIDI, with dynamics and articulations |
+| `xml` | MusicXML |
+| `ly` | LilyPond source |
+| `vsqx` | VOCALOID sequence (vocal part + lyrics) |
+| `import` | MusicXML → Lily# source |
+| `harmonize` | Suggests a diatonic chord track for a melody |
+| `check` | Syntax check, no output |
+| `layout` | Text summary of system and line breaks |
+
+[`samples/`](samples/) holds five complete public-domain pieces —
+see [samples/README.md](samples/README.md) for what each one demonstrates.
+
+## Building from source
 
 ### Requirements
 
 - .NET 10 SDK
-- Node.js (for VS Code extension)
+- Node.js (for the VS Code extension)
 
 ### Build
 
 ```bash
-dotnet build
-dotnet test
+dotnet build LilySharp.slnx
+dotnet test  LilySharp.Tests/LilySharp.Tests.csproj
 ```
 
-### CLI
+Run the CLI without installing it:
 
 ```bash
-# Check syntax
-dotnet run --project LilySharp.Cli -- check samples/simple.lys
-
-# Export to MIDI
-dotnet run --project LilySharp.Cli -- midi samples/simple.lys -o output.mid
+dotnet run --project LilySharp.Cli -- svg samples/fur-elise.lys
 ```
 
-### Run LSP Server
+### Run the LSP server
 
 ```bash
 dotnet run --project LilySharp.Lsp
 ```
 
-### VS Code Extension
+### Build the VS Code extension
 
 ```bash
 cd editors/vscode
@@ -259,14 +322,17 @@ The LSP server supports incremental text synchronization:
 - [x] Multi-staff / GrandStaff rendering (cross-staff beam layout is not yet implemented)
 - [x] Lead sheets — staff-less chord rows and lyric rows drawn as a measure grid (chords, lyrics, or both)
 - [x] MusicXML export (notes, ties, slurs, grace notes, dynamics, articulations, ornaments, multi-part) — lyrics and tuplet numbers are not yet emitted
-- [x] CLI tool
+- [x] MusicXML import (`lysc import`)
+- [x] LilyPond (`.ly`) export
+- [x] VOCALOID (`.vsqx`) export — vocal part with lyrics
+- [x] Multi-file sources — `using "other.lys"`, depth-first and de-duplicated
+- [x] CLI tool (`lysc`) — SVG / PDF / PNG / MIDI / MusicXML / LilyPond / VOCALOID, plus `check`, `layout` and `harmonize`
 
 ### Planned
 
 - [ ] Cross-staff beam layout
 - [ ] MusicXML export: lyrics and tuplet output
-- [ ] Multi-file projects
-- [ ] LilyPond → LilySharp conversion tool
+- [ ] LilyPond → Lily# conversion tool
 
 ## Relationship to LilyPond
 
@@ -283,6 +349,15 @@ the LilyPond files they were ported from, and
 Most `LILYPOND-REF` comments elsewhere in the source are citations rather than
 ports: they record where LilyPond decides something so that Lily#'s own code can be
 checked against it.
+
+## Contributing
+
+Bug reports and patches are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+⚠️ Two rules there are not the usual boilerplate and decide whether an engraving
+patch can be merged: layout code is transliterated from LilyPond's source rather
+than measured off its output, and nothing may be engineered to keep the output
+byte-identical. Please read that section before writing layout code.
 
 ## License
 

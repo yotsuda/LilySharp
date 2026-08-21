@@ -8,7 +8,7 @@ lysc svg samples/fur-elise.lys        # or: png / pdf / midi / xml
 
 | Sample | Piece | What it shows off |
 |--------|-------|-------------------|
-| [`fur-elise.lys`](fur-elise.lys) | Beethoven — Für Elise (excerpt) | Grand staff, `octave absolute`, `phrase`/`$ref` reuse, `partial` pickup, *pp* |
+| [`fur-elise.lys`](fur-elise.lys) | Beethoven — Für Elise (excerpt) | Grand staff, `octave absolute`, `phrase` reuse, `partial` pickup, *pp* |
 | [`greensleeves.lys`](greensleeves.lys) | Traditional — Greensleeves | a `chords` row above the staff (one progression above the staff AND as a grid), verse lyrics with `~` melismas, 6/8 |
 | [`amazing-grace.lys`](amazing-grace.lys) | Traditional — Amazing Grace | Lead sheet: melody + chords + lyrics, `partial` pickup, melismas, 3/4 |
 | [`drunken-sailor.lys`](drunken-sailor.lys) | Traditional — Drunken Sailor | STAFF-LESS song sheet: chord grid + stacked verses (1./2.), and a lyrics-only text sheet from the same parts |
