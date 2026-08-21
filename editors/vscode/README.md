@@ -37,13 +37,35 @@ Colors can be customized in settings.
 
 ## Requirements
 
-None. The language server is **self-contained** — each platform's build bundles its
-own .NET runtime, so nothing needs to be installed. Just install the extension and open
-a `.lys` file.
+The **[.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0)**.
+
+The bundled language server is published framework-dependent, so that one `.vsix`
+serves every operating system — which means the runtime is not inside it. If the
+runtime is missing, the extension installs and highlights syntax, but the language
+server does not start and diagnostics, completion and preview stay silent. See
+[Troubleshooting](#troubleshooting).
 
 (Building from source needs the .NET 10 SDK and Node.js 18+.)
 
 ## Installation
+
+### From VS Code
+
+Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Lily#**, and
+install `yotsuda.lilysharp`. Then open any `.lys` file.
+
+Install the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0) as
+well — see [Requirements](#requirements).
+
+### From a `.vsix`
+
+Download the `.vsix` from
+[Releases](https://github.com/yotsuda/LilySharp/releases), then Extensions view →
+`…` → *Install from VSIX…*, or:
+
+```bash
+code --install-extension lilysharp-*.vsix
+```
 
 ### From Source
 
@@ -117,9 +139,15 @@ score main { staff melody }
 
 ### Language server not starting
 
-1. Check if `lilysharp-lsp` is in PATH or configure `lilysharp.serverPath`
-2. Check Output panel (View → Output → Lily# Language Server)
-3. Enable tracing: Set `lilysharp.trace.server` to `verbose`
+1. **Check that the .NET 10 runtime is installed** — `dotnet --list-runtimes` should
+   list a `Microsoft.NETCore.App 10.*`. This is the common cause: the bundled server
+   is framework-dependent, so without the runtime it cannot start. Syntax
+   highlighting still works, which is why the extension looks half-alive rather than
+   broken.
+2. Check the Output panel (View → Output → Lily# Language Server)
+3. Enable tracing: set `lilysharp.trace.server` to `verbose`
+4. If you are running a server built from source, check it is on `PATH` or set
+   `lilysharp.serverPath`
 
 ### No syntax highlighting
 

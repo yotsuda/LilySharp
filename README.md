@@ -181,18 +181,28 @@ score main "out" { staff melody }
 
 ## Install
 
+### VS Code extension (recommended)
+
+Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Lily#**, and
+install `yotsuda.lilysharp`. Then open any `.lys` file: you get diagnostics as you
+type, completion, and a live score preview beside the source.
+
+⚠️ The extension also needs the
+**[.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0)**. The bundled
+language server is published framework-dependent so that one package serves every
+operating system, which means the runtime is not inside it. Without it the extension
+still highlights syntax, but the language server does not start.
+
+See [editors/vscode/README.md](editors/vscode/README.md) for settings and
+troubleshooting.
+
 ### CLI (`lysc`)
 
+Only needed for batch work and scripting — the extension does not require it.
 Download the archive for your platform from
 [Releases](https://github.com/yotsuda/LilySharp/releases), unpack it, and put `lysc`
-on your `PATH`. Nothing else is required — the runtime and the fonts ship inside.
-
-### VS Code extension
-
-Install the `.vsix` from [Releases](https://github.com/yotsuda/LilySharp/releases)
-(Extensions view → `…` → *Install from VSIX…*). The extension bundles the language
-server, so `lysc` is not needed separately — but unlike the CLI archive it is not
-self-contained, so the **.NET 10 runtime** must be installed.
+on your `PATH`. This one **is** self-contained: the runtime and the fonts ship inside,
+so nothing else is required.
 
 ## Usage
 
