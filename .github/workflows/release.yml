@@ -90,6 +90,34 @@ jobs:
   vsix:
     needs: test
     runs-on: ubuntu-latest
+    # ONE VSIX PER PLATFORM, each carrying its own .NET runtime.
+    #
+    # This job published the server framework-dependent until 2026-08-21, so a single
+    # vsix served every OS and every user had to install the .NET 10 runtime first.
+    # On the Marketplace that is the worst possible failure: the extension installs,
+    # syntax highlighting works, and nothing else does - no diagnostics, no completion,
+    # no preview - because the server never starts. Half-alive is harder to diagnose
+    # than broken, and the extension README claimed no runtime was needed anyway.
+    #
+    # extension.ts already prefers this shape: it probes server/ for coreclr and runs
+    # the apphost DIRECTLY when it finds it, falling back to `dotnet <dll>` only for a
+    # framework-dependent build (which is what `dotnet publish` still gives local dev).
+    # Nothing in the TypeScript changed for this - only what the pipeline hands it.
+    #
+    # RID -> VS Code target. The four in the cli job above are proven to cross-compile
+    # R2R from this ubuntu runner; the two arm64 legs are NOT, and are here because
+    # leaving a platform out is worse than the runtime prompt was - VS Code offers such
+    # users nothing at all rather than a fallback. If a leg fails at tag time, drop
+    # PublishReadyToRun for it: R2R is a startup optimisation, not a correctness one.
+    strategy:
+      matrix:
+        include:
+          - { rid: win-x64,    target: win32-x64   }
+          - { rid: win-arm64,  target: win32-arm64 }
+          - { rid: linux-x64,  target: linux-x64   }
+          - { rid: linux-arm64, target: linux-arm64 }
+          - { rid: osx-x64,    target: darwin-x64  }
+          - { rid: osx-arm64,  target: darwin-arm64 }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -98,15 +126,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Publish LSP server into the extension
-        # Framework-dependent (portable): the extension always launches the
-        # server via 'dotnet lilysharp-lsp.dll', so ONE vsix serves every OS.
-        # Users need the .NET 10 runtime - stated in the extension README.
+      - name: Publish LSP server into the extension (${{ matrix.rid }})
+        # Self-contained, so the vsix needs no .NET on the user's machine.
+        # NOT single-file, and ReadyToRun - the same pair the cli job settled on and
+        # for the same measured reason: PublishSingleFile makes the host unpack the
+        # bundle on every launch, and this launches every time a .lys is opened.
         run: >
           dotnet publish LilySharp.Lsp/LilySharp.Lsp.csproj
           -c Release
+          -r ${{ matrix.rid }}
+          --self-contained
+          -p:PublishReadyToRun=true
           -p:Version=${GITHUB_REF_NAME#v}
           -o editors/vscode/server
+      - name: Mark the apphost executable
+        # The mode has to be right BEFORE vsce zips it: a server that ships without
+        # +x fails to spawn on macOS and Linux with a bare EACCES, which reads like a
+        # corrupt install. No-op for the windows legs.
+        run: chmod +x editors/vscode/server/lilysharp-lsp || true
       - name: Bundle the license and third-party notices
         # Same set as the CLI archives: the notices are only complete if the
         # texts they refer to ship beside them.
@@ -125,7 +162,7 @@ jobs:
         run: |
           npm ci
           npm run compile
-          npx @vscode/vsce package --pre-release
+          npx @vscode/vsce package --pre-release --target ${{ matrix.target }}
       - name: Extract release notes
         # Same extraction as the CLI job: whichever upload step runs first
         # creates the Release, so both must carry the body or the winner
@@ -143,4 +180,10 @@ jobs:
       #
       # - name: Publish to VS Code Marketplace
       #   working-directory: editors/vscode
-      #   run: npx @vscode/vsce publish --pre-release -p ${{ secrets.VSCE_PAT }}
+      #   run: >
+      #     npx @vscode/vsce publish --pre-release
+      #     --target ${{ matrix.target }}
+      #     -p ${{ secrets.VSCE_PAT }}
+      #
+      # Each matrix leg publishes its own platform build under one version, which is
+      # how VS Code hands a user the package matching their machine.

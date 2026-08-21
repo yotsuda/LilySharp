@@ -37,13 +37,9 @@ Colors can be customized in settings.
 
 ## Requirements
 
-The **[.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0)**.
-
-The bundled language server is published framework-dependent, so that one `.vsix`
-serves every operating system — which means the runtime is not inside it. If the
-runtime is missing, the extension installs and highlights syntax, but the language
-server does not start and diagnostics, completion and preview stay silent. See
-[Troubleshooting](#troubleshooting).
+None. Each platform's package bundles its own .NET runtime, so nothing has to be
+installed alongside it — install the extension, open a `.lys` file, and the language
+server starts.
 
 (Building from source needs the .NET 10 SDK and Node.js 18+.)
 
@@ -52,10 +48,8 @@ server does not start and diagnostics, completion and preview stay silent. See
 ### From VS Code
 
 Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Lily#**, and
-install `yotsuda.lilysharp`. Then open any `.lys` file.
-
-Install the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0) as
-well — see [Requirements](#requirements).
+install `yotsuda.lilysharp`. Then open any `.lys` file. VS Code picks the package
+built for your platform; nothing else is needed.
 
 ### From a `.vsix`
 
@@ -139,15 +133,13 @@ score main { staff melody }
 
 ### Language server not starting
 
-1. **Check that the .NET 10 runtime is installed** — `dotnet --list-runtimes` should
-   list a `Microsoft.NETCore.App 10.*`. This is the common cause: the bundled server
-   is framework-dependent, so without the runtime it cannot start. Syntax
-   highlighting still works, which is why the extension looks half-alive rather than
-   broken.
-2. Check the Output panel (View → Output → Lily# Language Server)
-3. Enable tracing: set `lilysharp.trace.server` to `verbose`
-4. If you are running a server built from source, check it is on `PATH` or set
-   `lilysharp.serverPath`
+1. Check the Output panel (View → Output → Lily# Language Server) — the first lines
+   name the server it chose and how it launched it.
+2. Enable tracing: set `lilysharp.trace.server` to `verbose`
+3. **Built from source?** A plain `dotnet publish` is framework-dependent, so that
+   server runs via `dotnet` and needs the .NET 10 runtime on `PATH`
+   (`dotnet --list-runtimes` should list a `Microsoft.NETCore.App 10.*`). Released
+   packages are self-contained and do not. Check `lilysharp.serverPath` if you set it.
 
 ### No syntax highlighting
 
