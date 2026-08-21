@@ -3158,6 +3158,17 @@ root に **14 個の未追跡 `HANDOFF-*.md` / `handoff-*.md` / `REVIEW-HANDOFF.
 **回収方針**: 各テーマに着手するとき、そのファイルを読んで**必要な知識を §4 の置き場所へ移し、
 読み終えたファイルを削除する**（削除は都度ユーザー承認）。一気にやらない。
 
-なお `AI_POSITIONING_HANDOFF.md` と `docs/arpeggio-rework-handoff.md` は**追跡済み**で
-別系統。本ファイルの対象外。
+なお `docs/arpeggio-rework-handoff.md` は**追跡済み**で別系統。本ファイルの対象外。
+
+⚠️ `AI_POSITIONING_HANDOFF.md`（root・追跡済み）は **2026-08-21 に削除した**（ユーザー承認）。
+公開準備の走査で、**README の次に目に入る位置に競合調査と戦略が置かれている**ことと、
+宛先が「別 AI セッション」と明記されていることが判明したため。⚠️ **中身は失われていない**——
+文書が挙げた優先1〜4 はいずれも実現済みか記録済みで、回収は不要だった:
+優先1「LLM に丸ごと渡せる仕様 1 枚」＝ `docs/GRAMMAR_FOR_LLM.md`、
+優先2「曖昧さを explicit へ・正規形を 1 つに」＝ `GRAMMAR.md` の設計原則 1・2・7
+（`$` 廃止の判断もこの系譜）、優先3「直し方まで言う診断」＝ `Diagnostic.cs` の 131 コード、
+優先4「LilyPond → Lily# 変換」＝ README の Planned。
+⚠️ **削除は HEAD からのみ。** 文書は初期 import (`bc7bc55`) にも在るので、
+**履歴からは消えていない**（`git log --all -- AI_POSITIONING_HANDOFF.md` で出る）。
+public にする前に履歴からも消すかは別判断（§8 末尾の注記）。
 
