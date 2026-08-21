@@ -10,9 +10,10 @@ summary. It does not re-list syntax — see the references below for that.
 | [`GRAMMAR_FOR_LLM.md`](GRAMMAR_FOR_LLM.md) | **Canonical spec** — compressed, every example parse-verified | Authoring `.lys`; dropping into an LLM's context |
 | [`GRAMMAR.md`](GRAMMAR.md) | **Formal EBNF** of the same language | You want the precise grammar productions |
 | [`SYNTAX_REFERENCE.md`](SYNTAX_REFERENCE.md) | Human reference (tables, longer examples) | A worked, browsable reference |
+| [`GRAMMAR_AUDIT.md`](GRAMMAR_AUDIT.md) | **Open grammar defects** — ambiguities, gaps, and vocabulary that disagrees with the engine | Changing the language, or picking up what is unfinished |
 | this file | Doc index + coverage + known gaps | "Is X implemented?" / "what's missing?" |
 
-The parser is the ultimate authority; the three spec docs above are kept in sync with it.
+The parser is the ultimate authority; the three spec docs (`GRAMMAR_FOR_LLM.md`, `GRAMMAR.md`, `SYNTAX_REFERENCE.md`) are kept in sync with it. `GRAMMAR_AUDIT.md` is the opposite kind of document: it records where they and the engine disagree.
 
 ## Coverage at a glance (syntax in `GRAMMAR_FOR_LLM.md`)
 
