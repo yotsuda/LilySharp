@@ -105,8 +105,29 @@ DisplayName = String | Identifier
 `staff flute piccolo` の `piccolo` が**表示名か MIDI 専用パートかは直前に何があったかで決まる。**
 `GRAMMAR.md` §7 自身が「MIDI 専用パートは staff より前か、括弧グループの後に書け」と回避策を書いている。
 
+⚠️ **パーサの正当化が誤っていた**（2026-08-21 に訂正）。`Parser.Form.cs:583` の
+`ParseStaffRender` には「following render items always begin with a keyword, so a trailing
+identifier is unambiguous」と書かれていたが、**`ScoreItem` には裸の `PartRef`（MIDI 専用パート）
+があり、これはキーワードで始まらない。** `staff flute click` は `click` を flute の表示名として
+食い、クリックトラックが黙って鳴らなくなる。`GRAMMAR.md` §7 は衝突と回避策を明記しており、
+**仕様書がパーサのコメントを反証していた**。コメントは実態に書き換え済み。
+
 ⇒ **`DisplayName` から `Identifier` を落として引用符必須にすれば消える**（`staff X "Piccolo"`）。
-`part X "Violin I"` は既に文字列形式なので統一にもなる。破壊的だが小さい。
+`part X "Violin I"` は既に文字列形式なので統一にもなる。
+
+**費用を測った**（2026-08-21・`samples/` `audit/` `Fixtures/` の `.lys` 571 本）:
+
+| | 使用数 |
+|---|---|
+| 裸形式 `staff X piccolo` | **0**（コーパスに 1 件も無い） |
+| 引用符形式 `staff X "Piccolo"` | **0**（表示名を使うテストは C# 側で組み立てている） |
+
+裸形式を留めている唯一のものは `ScoreRowFoldingTests.TheRetiredWithSpelling_ReadsAsADisplayNameAndARow`——
+**廃止済みの `with` 節が「"with" と名付けられた staff ＋ row」に優雅に劣化する**という挙動のピン留めで、
+誰かが求めた機能ではない。しかも `with` は未リリースのまま廃止された綴りなので、**§1.1 の
+「未リリースにつき移行対象なし」の原則がそのまま当てはまる**——ここが構文エラーになって困る人はいない。
+
+⇒ **費用はテスト 1 本の書き換えだけ。** コーパスは 1 バイトも動かない。⚠️測（未実測）
 
 ### 3.2 `[` の三重定義
 
@@ -176,6 +197,11 @@ whitelist にあり検証を通るのに、`ElementCoordinator.cs:49` の `Force
 ⇒ 現在形の根拠に書き直す。雛形は `LYS0019`（`Diagnostic.cs:227`）——
 「まだ構文として通り、しかも違う音楽になって黙る」と現在形で自分を正当化している。
 
+**2026-08-21 実施済み。** 要約を現在形の 1 文にし、`<remarks>` に (1) `chords` が生きた
+キーワードである以上その位置は必ず答えを要すること、(2) `voice { }` との類推で新規ユーザーが
+やる間違いであること、の 2 つを根拠として置いた。歴史は歴史として残し、
+「なぜこの框が廃番審査を招いたか」も併記した。
+
 ---
 
 ## 5. 完了（`8c54084` で push 済み・doc のみ）
@@ -187,6 +213,11 @@ whitelist にあり検証を通るのに、`ElementCoordinator.cs:49` の `Force
 - `GRAMMAR.md`・`GRAMMAR_FOR_LLM.md`・`SYNTAX_REFERENCE.md` — `force-hshift` が silent no-op である旨
 - `GRAMMAR.md` §11 — 診断表は標本であって全体でない旨（実際は `Diagnostic.cs` に 131 コード）
 - `DrumNameRegistry.cs` — `$` 前提の化石注釈を現状と §1.1 の衝突に置換
+
+**同 2026-08-21・後続コミット**（コメントのみ・挙動不変）:
+
+- `Diagnostic.cs` — `LYS0032` の根拠を現在形に（§4.4）
+- `Parser.Form.cs` — `ParseStaffRender` の誤った正当化を訂正し、§3.1 の実測を併記
 
 ---
 
@@ -238,6 +269,7 @@ LilyPond ですら `-dsafe` を用意しつつ完全でない、
 2. **§1.1 `$` 廃止一式** — コード・テスト・docs 7 本を 1 コミットに。⚠️ 先に `phrase sn` を測る
 3. **§2.2 override の語彙を広げる** — 拡張経路の本体
 4. **§2.1 `paper { }`**
-5. §3.1 `DisplayName`、§3.3 bare duration の診断、§4.4 `LYS0032` のコメント、§1.2 リネーム
+5. §3.1 `DisplayName`（**費用測定済み＝テスト 1 本**）、§3.3 bare duration の診断、§1.2 リネーム
+   （§4.4 は完了）
 
 **1 と 2 はビルドできる環境が要る。** 3〜5 は設計判断が先。

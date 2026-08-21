@@ -597,8 +597,23 @@ internal sealed partial class Parser
 
         // `staff flute "津田さん"` (or a bare single word:
         // `staff flute 津田さん`) overrides the displayed instrument name.
-        // Following render items always begin with a keyword, so a trailing
-        // identifier is unambiguous.
+        //
+        // ⚠️ THE BARE FORM IS NOT UNAMBIGUOUS, and the line that used to stand here said it
+        // was: "following render items always begin with a keyword, so a trailing
+        // identifier is unambiguous". A ScoreItem may also be a BARE PART NAME — the
+        // MIDI-only part, played and never engraved — which begins with no keyword at all.
+        // So `staff flute click` takes `click` as the label of flute's staff, and the click
+        // track silently stops being played. GRAMMAR.md section 7 documents the collision
+        // and tells the writer to put MIDI-only parts before the staves or after a braced
+        // group, which is the workaround, not the absence of the problem.
+        //
+        // Measured 2026-08-21 across the 571 .lys in samples/ audit/ Fixtures/: the bare
+        // form is written NOWHERE, and the quoted form nowhere either (the tests that use a
+        // display name build their source in C#). The one thing pinning the bare spelling is
+        // ScoreRowFoldingTests.TheRetiredWithSpelling_ReadsAsADisplayNameAndARow, where
+        // `staff vocal with lyrics ja` degrades into a staff labelled "with" plus a row —
+        // graceful decay of a retired, never-released clause, not a feature anybody asked
+        // for. docs/GRAMMAR_AUDIT.md section 3.1 carries the proposal to require the quotes.
         if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
             tokens.Add(Advance());
 

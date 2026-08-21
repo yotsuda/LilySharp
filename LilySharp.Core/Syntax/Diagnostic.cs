@@ -529,13 +529,35 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string StrayItemToken = "LYS0030";
 
-    /// <summary>Syntax error: a nameless <c>chords { … }</c> block. Removed before the
-    /// first tag (user decision, 2026-08-19): the nameless form associated by
-    /// CO-WRITING — "the part in the same section" — which is not written anywhere and
-    /// stopped being well-defined the moment a section held two parts (the
-    /// implementation hard-coded staff 0). Name the progression and place it:
-    /// <c>chords prog { … }</c> in the section, <c>chords prog</c> above the staff in
-    /// the score.</summary>
+    /// <summary>Syntax error: a nameless <c>chords { … }</c> block. Name the progression
+    /// and place it: <c>chords prog { … }</c> in the section, <c>chords prog</c> above the
+    /// staff in the score.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ THIS CODE EARNS ITS PLACE IN THE PRESENT TENSE, not as a migration path. Two
+    /// reasons, either one sufficient. First, <c>chords</c> is a live keyword, so
+    /// <c>chords {</c> is a position the parser must answer for whatever the history —
+    /// unlike the retired <c>with</c>-clause error and LYS8007, which became unreachable
+    /// when their keywords stopped being keywords and were retired for it. Second, and the
+    /// reason that would hold even then: <c>voice { … }</c> legitimately takes no name, so
+    /// a writer who has never seen an older Lily# reaches for <c>chords { … }</c> by
+    /// analogy. It is a mistake the language invites, not a spelling it used to have.
+    /// </para>
+    /// <para>
+    /// The history, kept as history: the nameless form associated by CO-WRITING — "the part
+    /// in the same section" — which was written nowhere and stopped being well-defined the
+    /// moment a section held two parts (the implementation hard-coded staff 0). Removed
+    /// before the first tag, user decision, 2026-08-19.
+    /// </para>
+    /// <para>
+    /// ⚠️ The summary above was ONE sentence beginning "Removed before the first tag", and
+    /// that framing invited its own retirement: read against the never-released rule that
+    /// killed LYS0031 and LYS8007 on the same day, a code justified by a removal looks like
+    /// a code for nobody. Rewritten 2026-08-21. <see cref="RepeatedVoiceKeyword"/> is the
+    /// pattern to copy — it argues from what the spelling does today, not from what it used
+    /// to mean.
+    /// </para>
+    /// </remarks>
     public const string NamelessChordsRemoved = "LYS0032";
 
     // Semantic errors (LYS1xxx)
