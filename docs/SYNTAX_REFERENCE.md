@@ -847,6 +847,10 @@ any `Grob.property`, but anything outside that list is refused (LYS1029, "not su
 this version") rather than silently doing nothing; the list grows, and each addition
 removes one error.
 
+⚠️ **Two of the three take effect.** `NoteColumn.force-hshift` passes the validator and is
+then ignored — `ElementCoordinator.cs:49` holds `ForceHshiftEnabled = false` for the
+initial release, so that spelling changes nothing and says nothing.
+
 ```
 override NoteHead.transparent = true
 c4 d e f |

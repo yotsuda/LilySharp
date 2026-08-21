@@ -44,8 +44,15 @@ public readonly record struct DrumInfo(
 /// LILYPOND-REF: ly/drumpitch-init.ly — drumPitchNames (aliases),
 /// midiDrumPitches (GM keys) and the drums-style hash table
 /// (name → (notehead-style articulation staff-position)).
-/// Bare identifiers are otherwise invalid in a music stream (variables are
-/// referenced with '$'), so this vocabulary claims free grammar space.
+/// ⚠️ This said the vocabulary claims FREE grammar space, because bare identifiers were
+/// otherwise invalid in a music stream and a phrase was referenced with a '$' sigil. That
+/// stopped being true when the bare spelling landed: Parser.Music.cs dispatches a plain
+/// Identifier to ParseBareVariableReference, so every name here is taken from the phrase
+/// namespace rather than from free space. The claim is UNCONDITIONAL — the check does not
+/// ask whether the part is a drum kit — so a phrase named bd, sn or hh reads as a drum
+/// note on any staff, and the '$' spelling is currently the only way to reach it. Recorded
+/// 2026-08-21 by reading the dispatch. NOT MEASURED, and it is the one place the sigil
+/// still carries load, so confirm it before the sigil is removed.
 /// </remarks>
 public static class DrumNameRegistry
 {

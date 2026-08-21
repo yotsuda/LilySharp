@@ -38,10 +38,20 @@ All ✅ implemented:
   rows stacks as verses), and **staff-less lead sheets** (`chords name` / `lyrics name` rows drawn
   as a barline grid); `tempo … swing`; `override`/`revert` (**three properties** —
   `NoteHead.transparent`, `Stem.transparent`, `NoteColumn.force-hshift`; anything else is
-  refused by LYS1029 rather than silently ignored, and the list grows).
+  refused by LYS1029 rather than silently ignored, and the list grows. ⚠️ **Two of the
+  three take effect** — `force-hshift` passes the validator and is then ignored, because
+  `ElementCoordinator.cs:49` holds `ForceHshiftEnabled = false` for the initial release).
 - **Output** — SVG / PDF / PNG engraving, MIDI, MusicXML (partial — see gaps).
 
 ## Known gaps (not implemented)
+
+- ⚠️ **`NoteHead.color` / `Stem.color` — implemented but refused.** The readers are live
+  (`SharedRenderer.Noteheads.ResolveColor`) and the score does draw in colour, but the
+  spelling is not in `SupportedGrobOverrides`, so LYS1029 reports it as unsupported and
+  `lysc` exits 1 — the output is written anyway under the best-effort policy. A defect in
+  the whitelist, not a missing feature. Detail and the proposed fix:
+  [`grob-override-scope-design.md`](grob-override-scope-design.md). Recorded 2026-08-21,
+  NOT MEASURED.
 
 - **Cross-staff beam layout** — a beam spanning two staves of a grand staff. (Multi-staff
   rendering otherwise works; the upstream layout does not yet emit cross-staff beams.)

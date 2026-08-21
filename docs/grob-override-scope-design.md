@@ -9,11 +9,36 @@ surprises.
 
 ## Effective overrides
 
-The renderer consumes only these grob properties; this design covers exactly these (other
-grobs parse and store but are no-ops today — a separate gap):
+The renderer consumes these grob properties (corrected 2026-08-21 — the list below was
+incomplete, and the correction that first replaced it was WRONG in the other direction):
 
-- `NoteHead.color`, `Stem.color` — colour
-- `NoteHead.transparent` — hide / show
+- `NoteHead.color`, `Stem.color` — colour. Read by `SharedRenderer.Noteheads.ResolveColor`
+  (`SharedRenderer.Noteheads.cs:919`, four call sites), which takes a named colour or a
+  `#rgb` / `#rrggbb` hex code through `ColorParser`.
+- `NoteHead.transparent`, `Stem.transparent` — hide / show.
+- `NoteColumn.force-hshift` — manual collision resolution, **switched off**
+  (`ElementCoordinator.cs:49`, `ForceHshiftEnabled = false`), resolver kept intact behind it.
+
+⚠️ **THE ENGINE CALLS ITS OWN WORKING FEATURE UNSUPPORTED** (recorded 2026-08-21, NOT
+MEASURED — read off the source). `SupportedGrobOverrides` (`GrobProperty.cs:91-98`) holds
+three pairs and **`color` is not among them**, so `OverrideVocabularyValidator.cs:77`
+reports LYS1029 — an ERROR, exit 1 — for a spelling whose reader is live. The score still
+draws in colour, because LYS1029 is one of the best-effort errors that writes its output
+anyway (`CliBestEffortOutputTests.cs:146`), so the file engraves correctly WHILE being
+told the property "is not supported in this version".
+
+The two lists disagree because they were built from different questions. The validator's
+own MEASURED note names what it tested — `Wibble.wobble`, `Stem.wibble`, `Stem.direction`,
+`Stem.length`, `Beam.thickness`, `stem.direction` — and **`color` is not in that list**, so
+"only the three pairs moved a single byte" was concluded without ever writing a colour.
+`SupportedGrobOverrides` says in its own remarks that adding a property means adding its
+reader AND its row in one commit: here the reader arrived without the row.
+
+⇒ The fix is two rows in `SupportedGrobOverrides`, not two readers. It changes output for
+files that error today (they stop erroring), so it is the user's call. CLAUDE.md's rule
+that a quantity computed in two places is the address of the next defect is exactly what
+produced this: the supported vocabulary is stated once as a whitelist and once as a set of
+readers, and only one of them was updated.
 
 Grob names are **PascalCase, LilyPond-style** (`NoteHead`, not `noteHead`/`Note`),
 case-sensitive. `title` (the keyword) and a future `Title` grob are distinct namespaces.

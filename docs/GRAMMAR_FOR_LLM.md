@@ -440,6 +440,11 @@ score practice { staff melody }
 that list is refused (LYS1029, "not supported in this version") rather than silently
 doing nothing. The list grows; each addition removes one error.
 
+⚠️⚠️ **TWO of the three take effect.** `NoteColumn.force-hshift` is accepted by the
+validator and then IGNORED — `ElementCoordinator.cs:49` holds `ForceHshiftEnabled = false`
+for the initial release. So that one spelling IS the silent no-op the paragraph above says
+the language does not have. Write it and nothing moves, with no diagnostic.
+
 ```
 override NoteHead.transparent = true     // value fits the property: number, identifier (true/up/red), or "string"
 override NoteColumn.force-hshift = 1.5   // fractional values are allowed, and negative ones (-0.5)

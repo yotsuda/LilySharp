@@ -1118,7 +1118,12 @@ Number         = Integer | Decimal ;
    NoteHead.transparent, Stem.transparent, NoteColumn.force-hshift. Anything else is refused
    (LYS1029, "not supported in this version") rather than silently doing nothing, so the
    examples below are limited to the three; the list grows, and each addition removes one
-   error. *)
+   error.
+   ⚠️ TWO OF THE THREE TAKE EFFECT (recorded 2026-08-21). NoteColumn.force-hshift passes
+   OverrideVocabularyValidator and is then ignored — ElementCoordinator.cs:49 holds
+   ForceHshiftEnabled = false for the initial release, with the resolver kept intact behind
+   it. So that one spelling IS the silent no-op this paragraph says the language does not
+   have, and the two force-hshift Examples below draw nothing. *)
 
 (* Example:
    override NoteHead.transparent = true
@@ -1167,6 +1172,12 @@ MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).
 ================================================================================
 ## 11. Error Detection
 ================================================================================
+
+⚠️ **The two tables below are a SAMPLE, not the set** (recorded 2026-08-21).
+`Diagnostic.cs` declares **131 codes**; these twelve rows are the structural ones a reader
+meets first and have never been the whole list — so a rule absent here is not a rule the
+language lacks. The set itself is `LilySharp.Core/Syntax/Diagnostic.cs`, which carries each
+code's reason and the retired numbers.
 
 ### Required / structural
 
