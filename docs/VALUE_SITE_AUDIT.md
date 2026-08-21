@@ -202,11 +202,24 @@ lyrics・chords 行番号の 2（`Sections:350,354`）。
 | 弦番号 `\4` | `Parser.Music.cs:921` | `SyntaxNodes.Attachments.cs:124` |
 | 度数和音の度数 | `Parser.Music.cs:526` | `SyntaxNodes.cs:452` |
 | フレーズ参照の音程 `Melody'(3)` | `Parser.Declarations.cs:400` | `SyntaxNodes.Declarations.cs:574` |
-| part property `octave` / `lines` | `Parser.Declarations.cs:156`・`Sections.cs:582`・`Form.cs:773` | `MeasureCollector.cs:2684`・`RenderSpecParser.cs:412` |
+| part property `octave` ／ `staff … as lines N` | `Parser.Declarations.cs` の `OctaveKeyword` 判定（:236）・`Parser.Form.cs` の `ConsumeLinesSelector`（:662・呼び出しは :620 と :888） | `MeasureCollector.MusicWalk.cs` の `OctaveBase`・`RenderSpecParser.cs` の `CutLinesSelector`（:512） |
 | `override` の数値 | `Parser.Music.cs:587-589,638` | `GrobProperty.cs:218,233`・**`StaffSpacingParameters.cs:284`** |
 | メタデータの整数 | `Parser.Declarations.cs:227`（回復 run） | `SyntaxNodes.Declarations.cs:402` |
 | `drummap` の `position N` 等 | `Parser.Directives.cs:112`（本体丸ごと生） | `DrumNameRegistry.cs`（2 件）＋**`DrummapValidator`（第172第2便）** |
 | 図付き低音 `@fig(3 5)` | `Parser.Music.cs:875`（引数 run・A3） | ~~`FiguredBassItem.cs:144`（内部 mark 名 `fig.3.5` を読む）~~ → **引数トークンを読む**（第172第1便・§9.5.3 ⑴） |
+
+⚠️ **この表の 1 行は 2026-08-21 に書き直した**（`part property octave / lines` の行）。
+旧い引用は **5 つとも別のコードを指していた**——`Form.cs:773` は 2 ファイルに一致して曖昧でもあった
+（`Parser.Form.cs` と `MeasureCollector.Form.cs`）。加えて見出しも古く、**`lines` は 2026-08-19 に
+part property から score item へ移っている**（`GRAMMAR.md` §3 の `lines` 注記）。
+`Sections.cs:582` は現在の位置を再特定できなかったので**落とした**——推測で書き足さない。
+
+⚠️⚠️ **行番号は近傍のポインタであって、正確な位置ではない**（2026-08-21・10 件を無作為抽出して実測）。
+2 件が完全一致、5 件が数行ずれ（`/// </summary>` や `{` に着地）、3 件が無関係。
+docs 全体の 271 件（うち本書 92 件）のうち**ファイル名は 269 件が生きている**——腐るのは行番号のほうで、
+`COORDINATE_AUDIT.md`:216 も自分で「**2 行ドリフト**」と書いている。
+⇒ **新しく引用するときは symbol 名を主、行番号を従にすること。**
+`ConsumeLinesSelector` はドリフトしないが `Parser.Form.cs:662` はドリフトする。
 
 ### 3.2 文字列が入る
 
