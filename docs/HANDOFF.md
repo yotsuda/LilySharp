@@ -151,6 +151,48 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第229セッション＝**残債筆頭 ⑵-b「増分パースが診断を 1 つ落とす」を閉じ（`d1e2eeba`）、開いた出口から §1.1 `$` 廃止一式を完了した（`25d8c5f1`）**——2 便で GRAMMAR_AUDIT §9 の 2 が丸ごと済み。
+**① 欠陥の正体はレキサでも splice でもなく `IncrementalReuseMap.HasDiagnosticIn` の strict 重なり判定**：`Expect` は「見つかったトークン＝**次アイテムの先頭**」の span で LYS0002 を報告するので、**診断は産み手アイテムの span の*外*に、末尾に*接して*立てる**。strict `<`/`>` は接触を見ない→産み手（` r` の Rest・自分の span は無診断）が再利用される→採用は何も発話せず、隣の再パースはそのトークンを普通の先頭として読む→**診断だけが消えて木は全一致**（2026-08-16 の zero-width 修理の幅 2 版。37 編集チェーン（scratch/p228/shrink）を 1 編集ずつ再生して index 36 で分岐を実測・old build で犯人アイテムの ref-採用まで確認）。修理＝**接触も数える非 strict 1 arm**（zero-width arm を包含）。**⚠️ 手順は HANDOFF の警告どおり計器が先**：Probe **`reuse`**（新コマンド・恒久）＝打鍵ごとの採用 top-level 数を `SyntaxTree.AdoptedTopLevelItems`（新設・Parser.AdoptedMembers が給餌）で読む。**before/after 完全同値**（perf-plain1k 4.00・v2bow1k 7.00・fingstack1k 2.00、toggle／type-in 両 regime）＝**診断の無い本の再利用率は 1 bit も払っていない**。費用は境界接触診断 1 つにつき隣 1 アイテムの再パースだけ（最小再現で adopted 2→0）。恒久 pin＝`WithChange_DiagnosticAtItemBoundary_SurvivesDistantEdit`。
+**② `$` 廃止＝第228 の patch（`scratch/p228/dollar/dollar-removal.patch`）を無修正で適用**（clean apply・40 ファイル）。fuzz の Source から `$` を落とし（乱数の当たり先はずれるが、ずれた先の欠陥は ① で閉塞済み＝**$ 無し 300 回 fuzz 全通しを事前に実測**）、**docs を掃いた**：GRAMMAR（PhraseRef 生成規則と remark を書き換え）／GRAMMAR_FOR_LLM／SYNTAX_REFERENCE ×2（**1 箇所は Unicode 識別子例 `$動機` に隠れていて grep `\$[A-Za-z]` をすり抜けた**——DocExamplesParseTests が捕まえた）／TUTORIAL／GRAMMAR_STATUS／ai-collab-design、＋ **VS Code tmLanguage の variable-reference 規則を削除**（裸名は字面でフレーズと判別不能）。**書き換え corpus 4 冊は sweep A/B で幾何不動**：lilypond-ref 3 冊 byte 一致・grammar-tour は data-pos のみ（patch のコメント追加でオフセットが動いた——data-pos 剥がしで byte 一致を実測）。3 族の行き先は audit §1.1 どおり（ドラム語彙＋`q`＝宣言側 LYS1030／強弱＝元から予約語／clef 語＝music stream が裸参照として読む）。`$theme` は LYS0018＋参照。
+
+★ **開始時裏取り**: HEAD `2dcb7540`（第228 の閉幕 handoff・§1 と一致）・未 push 7・未追跡 0/木 0・Windows suite **5719/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時: **未 push 10（push はユーザー＝RULES §5.1）**＝本便 3 本（`d1e2eeba` 修理＋計器／`25d8c5f1` `$` 廃止／この行の handoff）・未追跡 0/木 0・suite **Windows 5720/0/4・WSL 5720/0/4＝両 OS 完全緑**（+1＝新 pin 1 本ちょうど）・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（patch は書き換えのみ・冊数不変）・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① reuse map の接触判定＋計器（`d1e2eeba`） | `HasDiagnosticIn` を非 strict 1 arm に・Probe `reuse` 新設・`SyntaxTree.AdoptedTopLevelItems`／`Parser.AdoptedMembers`・pin 1 本 | 診断が境界に接する木の増分パースのみ（再利用率は before/after 同値を実測）・両 OS 完全緑 |
+| ② `$` 廃止一式（`25d8c5f1`） | 第228 patch 適用＋fuzz Source＋docs 7 本＋tmLanguage・GRAMMAR_AUDIT §1.1/§9 に完了を記録 | 出力不変（sweep A/B：3 冊 byte 一致・1 冊 data-pos のみ）・suite ±0・台帳/snapshot 不動 |
+
+- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 の残り**＝⑴ **§4.2＋§4.3 を対で決める（次の筆頭候補・出力が変わるので*ユーザー承認が要る*・whitelist 2 行）**／⑶ §2.2 override の語彙（拡張経路の本体・設計判断が先）／⑷ §2.1 `paper { }`（設計判断が先）／⑸ §3.1 `DisplayName`（**費用確定済み＝毒で赤は名指しの 1 本だけ**）・§3.3・§1.2 リネーム（ユーザーが MSVS で）。**§8.1 コード記号は仕様確定済み・順位は狙いの持ち主が決める**／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★★ 骨 1＝**診断の span と、それを産んだアイテムの span は別物——「重なり」で所有を推定する装置は、接触の分だけ嘘をつく**
+> `Expect` は「見つかったトークン」の span で報告するので、アイテム末尾で失敗した診断は
+> **産み手の span の外**（次アイテムの先頭）に立つ。reuse map は「span が重なる診断を持つ
+> アイテムは再利用しない」で守っていたつもりが、**産み手そのものを素通し**していた。
+> ⇒ **span から所有を推定する検査は、接触（≦/≧）まで広げるか、産み手を直接記録するか**。
+> class remark の箇条書きは最初から「touches」と書いていた——**文書が正しく、コードが狭かった**。
+
+> ## ★★ 骨 2＝**「安い緑＝再利用を減らす」は計器を建ててから直す——HANDOFF の警告を実行した形**
+> 修理そのもの（比較演算子 2 個）より、**計器（Probe `reuse`・採用数の配管）のほうが大きい**。
+> それが正しい配分——再利用率は正しさのテストに一切映らないので、**計器なしの修理は
+> 「直した」と「再利用をやめた」を区別できない**。before/after 同値の 2 行が、
+> この修理の主張の半分を担っている（commit message に数字ごと収載）。
+
+> ## ★★ 骨 3＝**最小再現は 3 回別の理由で空振りした——「装置を踏んだ」ことは agree ではなく adopted 数で示す**
+> 候補 1: 産み手に別診断（LYS0020）が重なって毒でも除外。候補 2: 産み手が
+> **last-before-damage 規則**で map から消えて採用 0。候補 3: phrase 名 `b`/`c`/`d` が
+> **音高名＝予約語**で宣言ごと壊れた（監査 §1.1 が書いていた事実を自分で踏んだ）。
+> どれも agree=True を返し、**毒との差が無いので「pin になっていない」ことが分からない**——
+> 割ったのは adopted 数と map の中身のダンプ。⚠️ おまけ＝**単トークン item は splice の
+> トークン再利用で ref-共有になる**ので、ReferenceEquals は採用の証拠にならない（第228 骨 1
+> 「網が鳴りうるか」の再利用版）。
+
+---
+
+## 以下は第228セッションの経緯
+
 最終更新 第228セッション＝**残債筆頭「collect-resume の `||` drift」を、装置の住所を三つ組に戻して閉じた**（`139e1db2`・専用便）——**checkpoint の住所は (section visit, invocation, node) の三つ組**で、`TryCaptureWalkCheckpoint` が刻むのも suffix 側が引くのも三つ組なのに、**prefix gate だけが invocation しか比べていなかった**。その省略の根拠は gate の上に書いてある通り「先行 section は `ProcessSection` の入口で丸ごと返る」——**section を*通って*来るものには正しく、`ProcessForm`／`ProcessRepeatBlock` が walk に*直に*渡す小節線には効かない**。repeat block の外に書かれた form の `||` がまさにそれで、**先行 section が入口で返るたびに `_invocationInSection` を 0 に戻していく**ので、bar は「section の無い invocation 0」として ProcessNodes に入り、**目標 section の invocation 0 と衝突**して、1 個しかない node 列に別 section の node index を当てられて**必ず範囲外＝`address drifted`**。修理は **visit を先に比べる 2 行**（suffix lookup は最初から三つ組で引いていた＝**割れていたのは prefix 側だけ**）。
 > ⚠️ **射程は実測して*縮めた*——コメントを 2 度書き直した**。最初「keystroke ごとに full collect」と書いたが**それは推論**で、測ったら**違った**：両冊の全 pitch 打鍵を `CollectResumePlanner` に通して**採られる target を印字**すると、**form bar より先の section が選ばれることは一度も無い**（fixture 最深 visit=0・repro 最深 visit=1）＝bar が来る頃には restore が `_resumePending` を落としている。**毒／修理で cross-edit 側は完全同一（bails 0／adopted 同値）。届くのは Δ=0 の substrate 網だけ。**住所の穴を塞いだのであって、**latency の成果ではない**（コード・fixture の両コメントにそう書いた）。
 
@@ -166,7 +208,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 | ① prefix gate を三つ組に戻す＋観測者の新設（`139e1db2`） | `ProcessNodes` の resume gate が visit を先に比較（overshoot も visit 版を追加）・fixture `test/form-toplevel-bar-resume` 1 冊 | Δ=0 網のみ（cross-edit は毒／修理で同一と実測）・両 OS 完全緑・台帳／snapshot 不動・出力不変 |
 | ② 文法監査の `測` 印を全部走らせた（`5597e89f`・doc のみ） | GRAMMAR_AUDIT §1.1／§3.1／§8.1 の門を実測して各項に結果を差し込み・§10（再現手順）新設・RULES §5.1 に `.md` を LF で書き戻す規則 | **§1.1 確認（ただし壊れ方が悪い＝診断は必須）**・**§3.1 確認（毒で 5718/1/4・赤は名指しの 1 本）**・**§8.1 一部反証（7/8 は `[1]×7`）**・コード変更 0・suite 不動 |
 
-- **⑸ ★★★ 次に触るなら＝残債**: **文法監査 `docs/GRAMMAR_AUDIT.md` §9 の順序**（**2026-08-21 起票・12 commit ぶんの docs 便がここに積んである。✅ 本便の第2便が `測` 印を全部潰した＝§10 に再現手順・次便が最初にやる測定はもう無い**）＝⑴ §4.2＋§4.3 を対で決める（**出力が変わるのでユーザー承認が要る**・whitelist 2 行）／⑵ **§1.1 `$` 廃止＝★★★ 次便の筆頭。本便第3便が通しで実装し、緑にできずに戻した**——**動く実装が `scratch/p228/dollar/dollar-removal.patch`（40 ファイル・207+/161−）に在る**ので `git apply` から始められる。**設計の穴は全部埋まった**（`$` が区別していた族は 3 つ在って監査は 1 つしか見ていなかった＝clef 語は「届かせる」で・ドラム語彙と `q` は新診断 LYS1030 で閉じた・強弱記号は元から拒まれていた）。**残るのは docs 7 本と、出口を塞ぐ判断 1 つだけ**＝`IncrementalParseTests` の決定論 fuzz が、`Source` から `$` を 1 文字消しただけで**当たり先ごとずれ、既存の増分レキサ欠陥（全パース vs 増分で木が 9 対 8）を踏む**（**Core を stash した build でも赤＝本便の作った欠陥ではない**・再現文書 `scratch/p228/dollar/fuzz-diverge.txt`）。**その欠陥は本便第4便が突き止めて起票した（下）**（GRAMMAR_AUDIT §1.1 の第228 欄に全部書いた）／⑵-b **★★★ 増分パースが診断を 1 つ落とす（新規 2026-08-22・第228 起票・⑵ の出口）**＝`IncrementalReuseMap` の green ノード再利用が犯人で、**木の形は全一致のまま `LYS0002` が 1 本だけ増分側から消える**（full=`…|LYS0002@[137..139)|LYS0004…` / inc=その 1 本抜け）。**決定的な切り分け**: `IncrementalReuseMap.Create` を `null` 返しにすると**分岐は消える**＝**レキサ splice ではなくパーサ再利用の側**。**37 編集の決定論再現＋縮小ハーネス**を `scratch/p228/shrink/`（`ShrinkRepro.cs.txt` を `LilySharp.Tests/` に置けば走る・`minimal.txt` が現物）。⚠️ **反証済みの仮説を 1 つ残す**——「splice の再 lex 終端（resync 位置）を reuse map の damage 端に使う」は**実装して測ったが直らなかった**（同じ署名が残る）ので、**同じ道を再走しないこと**。`HasDiagnosticIn` は**旧木の診断**しか見ないので、**新しく生じる診断は構造上見えない**のが本筋の疑い。⚠️⚠️ **★★★ この便に入る前に読む罠**——**緑にする一番安い手は「再利用を減らす」で、それを咎める網が無い**。再利用率は**正しさのテストに一切映らない**（この分岐を捕まえたのは fuzz 1 本だけ・再利用数を見る assert は `IncrementalParseTests.cs:247` の 1 シナリオだけ）。しかも**打鍵レイテンシは製品の性質**（RULES §5.6・`71a57153` で明文化）。⇒ **修理の前に再利用率の計器を建て、before/after を commit message に書く**——`IncrementalReuseMap` の doc 自身が **`perf-plain1k` を 2 section に割って 1 打鍵あたり 4.00 対 5.67 members** という形で測り方の前例を持っている。**「fuzz が緑になった」だけでは、この島では証拠にならない**／⑶ §2.2 override の語彙／⑷ §2.1 `paper { }`／⑸ §3.1 `DisplayName`（✅ **費用は毒で確定＝赤は名指しの 1 本だけ・snapshot 222 緑**）他。⚠️ **§8.1 の「変拍子が無料で正しくなる」は本便が一部反証**（5/8・8/8 は表の上書きで不均等だが **7/8 は `[1]×7`**）。**§8.1 コード記号の書式は仕様確定済み・順位は狙いの持ち主が決める**。／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・**非ペア ToCoda の reserve≠draw**（第227 起票）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示。Marketplace は PAT 待ちのまま（第220 ①）。
+- **⑸ ★★★ 次に触るなら＝残債**: **文法監査 `docs/GRAMMAR_AUDIT.md` §9 の順序**（**2026-08-21 起票・12 commit ぶんの docs 便がここに積んである。✅ 本便の第2便が `測` 印を全部潰した＝§10 に再現手順・次便が最初にやる測定はもう無い**）＝⑴ §4.2＋§4.3 を対で決める（**出力が変わるのでユーザー承認が要る**・whitelist 2 行）／⑵ **§1.1 `$` 廃止＝★★★ 次便の筆頭。✅ 第229 が完了（`25d8c5f1`）。本便第3便が通しで実装し、緑にできずに戻した**——**動く実装が `scratch/p228/dollar/dollar-removal.patch`（40 ファイル・207+/161−）に在る**ので `git apply` から始められる。**設計の穴は全部埋まった**（`$` が区別していた族は 3 つ在って監査は 1 つしか見ていなかった＝clef 語は「届かせる」で・ドラム語彙と `q` は新診断 LYS1030 で閉じた・強弱記号は元から拒まれていた）。**残るのは docs 7 本と、出口を塞ぐ判断 1 つだけ**＝`IncrementalParseTests` の決定論 fuzz が、`Source` から `$` を 1 文字消しただけで**当たり先ごとずれ、既存の増分レキサ欠陥（全パース vs 増分で木が 9 対 8）を踏む**（**Core を stash した build でも赤＝本便の作った欠陥ではない**・再現文書 `scratch/p228/dollar/fuzz-diverge.txt`）。**その欠陥は本便第4便が突き止めて起票した（下）**（GRAMMAR_AUDIT §1.1 の第228 欄に全部書いた）／⑵-b **★★★ 増分パースが診断を 1 つ落とす（新規 2026-08-22・第228 起票・⑵ の出口）✅ 第229 が閉じた（`d1e2eeba`・計器つき）**＝`IncrementalReuseMap` の green ノード再利用が犯人で、**木の形は全一致のまま `LYS0002` が 1 本だけ増分側から消える**（full=`…|LYS0002@[137..139)|LYS0004…` / inc=その 1 本抜け）。**決定的な切り分け**: `IncrementalReuseMap.Create` を `null` 返しにすると**分岐は消える**＝**レキサ splice ではなくパーサ再利用の側**。**37 編集の決定論再現＋縮小ハーネス**を `scratch/p228/shrink/`（`ShrinkRepro.cs.txt` を `LilySharp.Tests/` に置けば走る・`minimal.txt` が現物）。⚠️ **反証済みの仮説を 1 つ残す**——「splice の再 lex 終端（resync 位置）を reuse map の damage 端に使う」は**実装して測ったが直らなかった**（同じ署名が残る）ので、**同じ道を再走しないこと**。`HasDiagnosticIn` は**旧木の診断**しか見ないので、**新しく生じる診断は構造上見えない**のが本筋の疑い。⚠️⚠️ **★★★ この便に入る前に読む罠**——**緑にする一番安い手は「再利用を減らす」で、それを咎める網が無い**。再利用率は**正しさのテストに一切映らない**（この分岐を捕まえたのは fuzz 1 本だけ・再利用数を見る assert は `IncrementalParseTests.cs:247` の 1 シナリオだけ）。しかも**打鍵レイテンシは製品の性質**（RULES §5.6・`71a57153` で明文化）。⇒ **修理の前に再利用率の計器を建て、before/after を commit message に書く**——`IncrementalReuseMap` の doc 自身が **`perf-plain1k` を 2 section に割って 1 打鍵あたり 4.00 対 5.67 members** という形で測り方の前例を持っている。**「fuzz が緑になった」だけでは、この島では証拠にならない**／⑶ §2.2 override の語彙／⑷ §2.1 `paper { }`／⑸ §3.1 `DisplayName`（✅ **費用は毒で確定＝赤は名指しの 1 本だけ・snapshot 222 緑**）他。⚠️ **§8.1 の「変拍子が無料で正しくなる」は本便が一部反証**（5/8・8/8 は表の上書きで不均等だが **7/8 は `[1]×7`**）。**§8.1 コード記号の書式は仕様確定済み・順位は狙いの持ち主が決める**。／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・**非ペア ToCoda の reserve≠draw**（第227 起票）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示。Marketplace は PAT 待ちのまま（第220 ①）。
 
 > ## ★★★ 骨 1＝**「その網はこの本で*鳴りうる*のか」を、緑を読む前に測る**
 > `tocoda-volta-clearance` は 20 便のあいだ CollectResumeTests を緑で通していたが、
@@ -188,50 +230,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > 毒／修理で完全同一**——射程は Δ=0 の substrate 網だけだった。
 > ⇒ **修理の*効果*を書く行は、修理の*正しさ*とは別に測る**（§5.4「動く証明つきの否定」の
 > 射程版）。**測っていない射程は、次便が引用して予算を組む**。
-
----
-
-## 以下は第227セッションの経緯
-
-最終更新 第227セッション＝**残債筆頭 ⒞「CoPlaceToCodaWithLabels の鏡像」を装置ごと再設計して閉じた**（`d33d0be2`・専用便）——**post-stack の共同配置を捨て、PlaceMusicMarks の内側で「対を 1 つの union」として置く**：sign は価格付けの前にラベルの左へ動き（`CoPlaceToCodaWithLabels`＝matching＋tuck だけの純関数・same-system 述語で改行跨ぎを遮断）、**ラベル配置時に union extent（ラベル箱を sign の描画左端まで広げた 1 箱）で 1 回 Place・delta を両者に適用**。**どちらの描画列の下に何が立っていても対ごと持ち上がり（volta bracket 下の sign＝blogger 形／ラベル下の target グリフ＝鏡像）、鏡像は「方向」ごと消滅**。旧装置の 2 綴りの自壊——⑴ X を priced の後に動かす（描画列を誰も価格付けしない）⑵「raised」と「raised by the sign」を stack の背後から区別できない——は**構造ごと不在**。**2 相案（pre-move→個別 stack→post-align）は実装して実測で棄却した**：gap 4.0 ＜ 両半幅和＝sign とラベルの ink は設計上重なるので、別々に stack すると**互いが phantom 障害物**になる（v4 で対が共有線から 3 ss 浮いた）。**修理の連鎖＝reserve≠draw を 1 つ閉じた**：union の sign 幅を `Advance("To Coda")`（誰も描かない "Coda" の語幅・描画実 ink より左へ ~1 ss 過大）から **`ToCodaStencilWidths`（"To "＋coda グリフ＝renderer とレイアウトが読む 1 家）**へ——旧装置は再価格しないのでこの過大予約は 200 便無害のまま眠っていた。**sweep 10/1237 全帰属（全冊 To-Coda 族・MIDI 0）**：追跡 corpus で動いたのは**本便が起こした fixture 2 冊だけ**・blogger／p206 probe は**対の 4 要素が 0.030 ss** 動くのみ（旧 sign-outline 清算→union 箱清算の差）・v5 は同一化。**fixture 2 冊新設**（`tocoda-volta-clearance`＝blogger 形・`tocoda-label-mirror`＝segno target が対の小節線に立つ鏡像形。**装置を踏む corpus 本はこれまで 0 冊だった**）・snapshot 220→**222 枚**（新規 2 枚承認・承認前の重なり目視 0）・毒（装置 off）で両冊の絵が動くことを確認。**台帳 566 点・ss 非ゼロ 110／総和 3.876038461＝完全不動**（LILYSHARP-OWN 装置＝台帳非接触）。両 OS **5719/0/4 完全緑**・push 済み（CI は課金停止で赤＝既知）。
-> ⚠️ **計器の罠（本便が踏んで直した）**：**「fixture の SVG が毒で動いた」を CLI 出力 vs `Snapshots/*.svg` で測ってはいけない**——CLI は font 埋込みで**毒が無くても常に不一致**＝MOVED は何の証拠でもなかった（§5.3「同じ答えを 2 度出す計器」の毒版）。**CLI 同士（毒 build の render vs 非毒 build の render）で比べる**。
-
-**対の起票が別系統の欠陥を掘った（§5.0 step 4・修理せず記録）✅ 第228 が閉じた（`139e1db2`）**：**form の `||` 境界だけで collect-resume の address が drift する**——`form main { A B || C }` で `CollectResumeTests.ResumedCollect_MatchesFullCollect_OnEveryFixture` が赤（`collect resume address drifted`）・`{ A B C }` は緑・**nav マーク不要**・base `acad49af` で再現＝既存欠陥。ただし volta fixture の完全形（`to coda || E ds al coda coda A`＋repeat）は**通る**＝`||` 単独が常に赤ではなく、これが見つかった最小の赤い綴り。**再現本 `scratch/p227/resume-drift-repro.lys`**（mirror fixture はこれを避けるため線形 form＝`A B to coda C`・music 経路の segno を障害物に使う）。 ⚠️ **この段の「volta fixture の完全形は*通る*」は第228 が測り直して意味が変わった**——通っていたのではなく **`form-repeat-block` で walk ごと ineligible＝resume 0 回で空振り**だった（第228 骨 1）。
-
-★ **開始時裏取り**: HEAD `acad49af`・未 push 0・未追跡 0/木 0・Windows suite **5717/0/4**・WSL **5717/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 点 107／非ゼロ 2・追跡コーパス 569 冊・Core 0 警告＝**前便の閉幕数と全一致**（CI は課金停止＝読まない・前便 ★★★ 注記のとおり）。
-終了時: HEAD `d33d0be2`・**未 push 0（本便で push・CI run は課金停止の赤＝既知・調査しない）**・未追跡 0/木 0・suite **Windows 5719/0/4・WSL 5719/0/4＝両 OS 完全緑**（+2＝新 snapshot 網 2 冊ちょうど）・snapshot **222 枚**（新規 2 枚承認・既存 220 は不動）・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **571 冊**（+2＝新 fixture）・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① ⒞ union 再設計＋幅の 1 家化（`d33d0be2`） | CoPlaceToCodaWithLabels＝pure matching+tuck・PlaceMusicMarks が union で 1 回 Place・post-align/unstacked 引数は廃止・ToCodaStencilWidths（renderer と共有）・fixture 2 冊＋snapshot 2 枚・FormNavigationTests 2 本（pairing／改行跨ぎ） | sweep 10/1237 全帰属（追跡は自前 fixture 2 のみ・blogger 0.030×4 要素・MIDI 0）・両 OS 完全緑・台帳不動・鏡像は方向ごと消滅 |
-
-- **⑸ ★★★ 次に触るなら＝残債**: ✅ **collect-resume の `||` drift は第228 が閉じた**（`139e1db2`）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／✅ **⒞ は本便で閉じた**（`d33d0be2`）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・**非ペア ToCoda の reserve≠draw（新規 2026-08-21・第227 起票＝PlaceMusicMarks の plain-text 分岐は今も outline("To Coda") で予約・描画は "To "＋グリフ。ペア側は 1 家に揃えた・非ペア側は届いていない——navigation-marks 等の単独 To Coda が対象・症状未観測なので点が先）**・lead-sheet 音節×縦線の対（2026-08-20 起票・LP twin で点を開くのが先）・lead-sheet の mid-piece `time` 変更の表示（2026-08-20 起票）。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★★ 骨 1＝**「対」は 2 つの grob ではなく 1 つの配置——2 相の共同配置は自分の予約に躓く**
-> pre-move→個別 stack→post-align の 2 相案は、単体テストでは全緑のまま**実本の実測で自壊が出た**：
-> sign とラベルの ink は設計上重なる（gap 4.0 ＜ 半幅和 4.55）ので、別々に stack した瞬間に
-> **互いが相手の phantom 障害物**になり、順序依存で片方が浮く。union（1 箱・1 Place・1 delta）に
-> したら「どちらが raised か」という問い自体が消えた。⇒ **共同配置の設計は「誰が誰に合わせるか」
-> ではなく「stack の単位をどこで切るか」**——単位を対に切れば、方向の場合分けは全部消える。
-
-> ## ★★ 骨 2＝**reserve≠draw は「再価格しない装置」の下で何百便も眠る——新しい消費者が初めて起こす**
-> `Advance("To Coda")` の過大予約（描画は "To "＋グリフ）は旧装置が X 移動後に再価格しないので
-> 200 便のあいだ観測不能だった。union が初めてその幅を**読んだ**瞬間、v4 で対が隣のラベルの箱を
-> 掠って 3 ss 浮いた。⇒ **幅・extent を新しく読む消費者を足すときは、その値が「描画と同じ家」から
-> 来ているかを先に確かめる**（この repo の reserve-vs-draw 分裂の一般形。閉じ方も毎回同じ＝1 家）。
-
-> ## ★★ 骨 3＝**毒の計器は「毒が無いときに同一」を先に見せる——形式の違う 2 出力の diff は毒の証拠にならない**
-> CLI render と snapshot ファイルの比較は font 埋込みで**常に**不一致＝「毒で動いた」が 2 冊とも
-> 無意味だった。非毒 CLI vs baseline の MISMATCH（あるべき同一が出ない）で計器の嘘が割れ、
-> CLI 同士に組み替えて証拠が立った。⇒ **毒 A/B の前に「毒なし A/B＝同一」を 1 回見せる**
-> （§5.4「動く証明つきの否定」の計器版——同一を確かめていない diff は測っていない）。
-
-> ## ★ 骨 4＝**LILYSHARP-OWN 装置の観測者は fixture しかいない——「装置を踏む corpus 本 0 冊」をまず数える**
-> ⒞ は台帳（LP 対）の外に居るので、単体テスト以外の観測者が 1 冊も無いまま 20 便生きていた
-> （blogger は scratch＝suite の外）。装置を再設計する便は、**先に「この装置を踏む追跡本は何冊か」を
-> 数える**——0 なら fixture の新設が修理と同格の deliverable（本便は 2 冊・毒で絵が動くことまで確認）。
 
 ---
 

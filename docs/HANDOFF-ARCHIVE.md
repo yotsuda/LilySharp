@@ -18,6 +18,50 @@
 
 ---
 
+## 以下は第227セッションの経緯
+
+最終更新 第227セッション＝**残債筆頭 ⒞「CoPlaceToCodaWithLabels の鏡像」を装置ごと再設計して閉じた**（`d33d0be2`・専用便）——**post-stack の共同配置を捨て、PlaceMusicMarks の内側で「対を 1 つの union」として置く**：sign は価格付けの前にラベルの左へ動き（`CoPlaceToCodaWithLabels`＝matching＋tuck だけの純関数・same-system 述語で改行跨ぎを遮断）、**ラベル配置時に union extent（ラベル箱を sign の描画左端まで広げた 1 箱）で 1 回 Place・delta を両者に適用**。**どちらの描画列の下に何が立っていても対ごと持ち上がり（volta bracket 下の sign＝blogger 形／ラベル下の target グリフ＝鏡像）、鏡像は「方向」ごと消滅**。旧装置の 2 綴りの自壊——⑴ X を priced の後に動かす（描画列を誰も価格付けしない）⑵「raised」と「raised by the sign」を stack の背後から区別できない——は**構造ごと不在**。**2 相案（pre-move→個別 stack→post-align）は実装して実測で棄却した**：gap 4.0 ＜ 両半幅和＝sign とラベルの ink は設計上重なるので、別々に stack すると**互いが phantom 障害物**になる（v4 で対が共有線から 3 ss 浮いた）。**修理の連鎖＝reserve≠draw を 1 つ閉じた**：union の sign 幅を `Advance("To Coda")`（誰も描かない "Coda" の語幅・描画実 ink より左へ ~1 ss 過大）から **`ToCodaStencilWidths`（"To "＋coda グリフ＝renderer とレイアウトが読む 1 家）**へ——旧装置は再価格しないのでこの過大予約は 200 便無害のまま眠っていた。**sweep 10/1237 全帰属（全冊 To-Coda 族・MIDI 0）**：追跡 corpus で動いたのは**本便が起こした fixture 2 冊だけ**・blogger／p206 probe は**対の 4 要素が 0.030 ss** 動くのみ（旧 sign-outline 清算→union 箱清算の差）・v5 は同一化。**fixture 2 冊新設**（`tocoda-volta-clearance`＝blogger 形・`tocoda-label-mirror`＝segno target が対の小節線に立つ鏡像形。**装置を踏む corpus 本はこれまで 0 冊だった**）・snapshot 220→**222 枚**（新規 2 枚承認・承認前の重なり目視 0）・毒（装置 off）で両冊の絵が動くことを確認。**台帳 566 点・ss 非ゼロ 110／総和 3.876038461＝完全不動**（LILYSHARP-OWN 装置＝台帳非接触）。両 OS **5719/0/4 完全緑**・push 済み（CI は課金停止で赤＝既知）。
+> ⚠️ **計器の罠（本便が踏んで直した）**：**「fixture の SVG が毒で動いた」を CLI 出力 vs `Snapshots/*.svg` で測ってはいけない**——CLI は font 埋込みで**毒が無くても常に不一致**＝MOVED は何の証拠でもなかった（§5.3「同じ答えを 2 度出す計器」の毒版）。**CLI 同士（毒 build の render vs 非毒 build の render）で比べる**。
+
+**対の起票が別系統の欠陥を掘った（§5.0 step 4・修理せず記録）✅ 第228 が閉じた（`139e1db2`）**：**form の `||` 境界だけで collect-resume の address が drift する**——`form main { A B || C }` で `CollectResumeTests.ResumedCollect_MatchesFullCollect_OnEveryFixture` が赤（`collect resume address drifted`）・`{ A B C }` は緑・**nav マーク不要**・base `acad49af` で再現＝既存欠陥。ただし volta fixture の完全形（`to coda || E ds al coda coda A`＋repeat）は**通る**＝`||` 単独が常に赤ではなく、これが見つかった最小の赤い綴り。**再現本 `scratch/p227/resume-drift-repro.lys`**（mirror fixture はこれを避けるため線形 form＝`A B to coda C`・music 経路の segno を障害物に使う）。 ⚠️ **この段の「volta fixture の完全形は*通る*」は第228 が測り直して意味が変わった**——通っていたのではなく **`form-repeat-block` で walk ごと ineligible＝resume 0 回で空振り**だった（第228 骨 1）。
+
+★ **開始時裏取り**: HEAD `acad49af`・未 push 0・未追跡 0/木 0・Windows suite **5717/0/4**・WSL **5717/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 点 107／非ゼロ 2・追跡コーパス 569 冊・Core 0 警告＝**前便の閉幕数と全一致**（CI は課金停止＝読まない・前便 ★★★ 注記のとおり）。
+終了時: HEAD `d33d0be2`・**未 push 0（本便で push・CI run は課金停止の赤＝既知・調査しない）**・未追跡 0/木 0・suite **Windows 5719/0/4・WSL 5719/0/4＝両 OS 完全緑**（+2＝新 snapshot 網 2 冊ちょうど）・snapshot **222 枚**（新規 2 枚承認・既存 220 は不動）・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **571 冊**（+2＝新 fixture）・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① ⒞ union 再設計＋幅の 1 家化（`d33d0be2`） | CoPlaceToCodaWithLabels＝pure matching+tuck・PlaceMusicMarks が union で 1 回 Place・post-align/unstacked 引数は廃止・ToCodaStencilWidths（renderer と共有）・fixture 2 冊＋snapshot 2 枚・FormNavigationTests 2 本（pairing／改行跨ぎ） | sweep 10/1237 全帰属（追跡は自前 fixture 2 のみ・blogger 0.030×4 要素・MIDI 0）・両 OS 完全緑・台帳不動・鏡像は方向ごと消滅 |
+
+- **⑸ ★★★ 次に触るなら＝残債**: ✅ **collect-resume の `||` drift は第228 が閉じた**（`139e1db2`）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／✅ **⒞ は本便で閉じた**（`d33d0be2`）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・**非ペア ToCoda の reserve≠draw（新規 2026-08-21・第227 起票＝PlaceMusicMarks の plain-text 分岐は今も outline("To Coda") で予約・描画は "To "＋グリフ。ペア側は 1 家に揃えた・非ペア側は届いていない——navigation-marks 等の単独 To Coda が対象・症状未観測なので点が先）**・lead-sheet 音節×縦線の対（2026-08-20 起票・LP twin で点を開くのが先）・lead-sheet の mid-piece `time` 変更の表示（2026-08-20 起票）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★★ 骨 1＝**「対」は 2 つの grob ではなく 1 つの配置——2 相の共同配置は自分の予約に躓く**
+> pre-move→個別 stack→post-align の 2 相案は、単体テストでは全緑のまま**実本の実測で自壊が出た**：
+> sign とラベルの ink は設計上重なる（gap 4.0 ＜ 半幅和 4.55）ので、別々に stack した瞬間に
+> **互いが相手の phantom 障害物**になり、順序依存で片方が浮く。union（1 箱・1 Place・1 delta）に
+> したら「どちらが raised か」という問い自体が消えた。⇒ **共同配置の設計は「誰が誰に合わせるか」
+> ではなく「stack の単位をどこで切るか」**——単位を対に切れば、方向の場合分けは全部消える。
+
+> ## ★★ 骨 2＝**reserve≠draw は「再価格しない装置」の下で何百便も眠る——新しい消費者が初めて起こす**
+> `Advance("To Coda")` の過大予約（描画は "To "＋グリフ）は旧装置が X 移動後に再価格しないので
+> 200 便のあいだ観測不能だった。union が初めてその幅を**読んだ**瞬間、v4 で対が隣のラベルの箱を
+> 掠って 3 ss 浮いた。⇒ **幅・extent を新しく読む消費者を足すときは、その値が「描画と同じ家」から
+> 来ているかを先に確かめる**（この repo の reserve-vs-draw 分裂の一般形。閉じ方も毎回同じ＝1 家）。
+
+> ## ★★ 骨 3＝**毒の計器は「毒が無いときに同一」を先に見せる——形式の違う 2 出力の diff は毒の証拠にならない**
+> CLI render と snapshot ファイルの比較は font 埋込みで**常に**不一致＝「毒で動いた」が 2 冊とも
+> 無意味だった。非毒 CLI vs baseline の MISMATCH（あるべき同一が出ない）で計器の嘘が割れ、
+> CLI 同士に組み替えて証拠が立った。⇒ **毒 A/B の前に「毒なし A/B＝同一」を 1 回見せる**
+> （§5.4「動く証明つきの否定」の計器版——同一を確かめていない diff は測っていない）。
+
+> ## ★ 骨 4＝**LILYSHARP-OWN 装置の観測者は fixture しかいない——「装置を踏む corpus 本 0 冊」をまず数える**
+> ⒞ は台帳（LP 対）の外に居るので、単体テスト以外の観測者が 1 冊も無いまま 20 便生きていた
+> （blogger は scratch＝suite の外）。装置を再設計する便は、**先に「この装置を踏む追跡本は何冊か」を
+> 数える**——0 なら fixture の新設が修理と同格の deliverable（本便は 2 冊・毒で絵が動くことまで確認）。
+
+---
+
 ## 以下は第225セッションの経緯
 
 
