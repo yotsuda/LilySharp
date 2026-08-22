@@ -3591,10 +3591,34 @@ public sealed partial class MeasureCollector
             if (_resumePending is { } plan)
             {
                 var target = plan.Checkpoint!; // _resumePending is only armed with a prefix target
-                // Only the TARGET section's invocations (or the section-less root
-                // path's) reach here — earlier sections return whole at
-                // ProcessSection's entry gate. An invocation before the target is
-                // wholly inside the adopted prefix.
+                // A checkpoint's address is the TRIPLE (section visit, invocation,
+                // node) — what TryCaptureWalkCheckpoint stamps and what the suffix
+                // side looks up. The prefix gate compares it in the same order.
+                // ⚠️ The visit half is not redundant with ProcessSection's entry
+                // gate. That gate only guards the walks that come THROUGH a
+                // section; ProcessForm and ProcessRepeatBlock hand their own bars
+                // (a `||` written in the form outside any repeat block, `|:`/`:|`
+                // of a form-level repeat) straight to this walk, with no section
+                // around them. Such a bar arrives holding the invocation counter
+                // the LAST section reset to 0 on its way out of the prefix gate —
+                // so it read as invocation 0 of the target section, and its single
+                // node was compared against the target's address, which names an
+                // unrelated node in an unrelated section: a deterministic
+                // `address drifted` abort on `form main { A B || C }`.
+                // ⚠️ MEASURED SCOPE (2026-08-22): the abort is reachable from the
+                // Δ=0 substrate net only. Sweeping every pitch keystroke of both
+                // books through CollectResumePlanner, the cross-edit planner never
+                // picked a target past a form bar — deepest was visit 1 of `A B ||
+                // C` — so the restore had already cleared _resumePending by the
+                // time the bar arrived, and poisoned/fixed runs were identical
+                // (0 bails either way). This closes the addressing hole; it is NOT
+                // a measured latency win, and nothing here should be cited as one.
+                int visit = _sectionVisit - 1;
+                if (visit < target.SectionVisit)
+                    return;
+                if (visit > target.SectionVisit)
+                    throw new CollectResumeAbortException(
+                        $"collect resume overshot its target section visit ({visit} > {target.SectionVisit})");
                 if (invocation < target.Invocation)
                     return;
                 if (invocation > target.Invocation)

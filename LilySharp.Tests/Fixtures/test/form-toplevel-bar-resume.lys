@@ -1,0 +1,40 @@
+// Guards the collect-resume address gate (MeasureCollector.ProcessNodes' prefix
+// gate, CollectResumeTests): a barline written in the FORM itself, outside any
+// repeat block, is handed straight to the voice walk by ProcessForm — no
+// ProcessSection around it, so it arrives holding the invocation counter the
+// last section reset to 0 on its way out of the resume gate. Until the gate
+// compared the section VISIT as well, that bar read as invocation 0 of the
+// target section and its one node was matched against an address in a different
+// section: a deterministic `collect resume address drifted` abort.
+//
+// ⚠️ WHAT THIS BOOK IS AND IS NOT. It is the Δ=0 substrate observer. The
+// CROSS-EDIT planner was swept over every pitch keystroke in this book and in
+// scratch/p227's repro and never picked a target past a form bar (deepest:
+// visit 1 of `A B || C`), so the restore had already disarmed the gate before
+// the bar arrived and poisoned/fixed runs were identical. Do NOT cite this
+// fixture as a latency result — it holds the ADDRESS, not a measured win.
+//
+// ⚠️ NO REPEAT BLOCK, deliberately. The only tracked book with a form-level bar
+// (test/tocoda-volta-clearance) also carries `|: … :|`, and a form-repeat block
+// marks the whole walk INELIGIBLE — so it never resumes and passed this net
+// vacuously for the 20 sessions the defect was live. This book is the observer
+// that actually reaches the gate: three sections, bars between them, and enough
+// measures that a spread checkpoint lands past each bar.
+title "A form-level barline outside any repeat"
+time 4/4
+
+part m { clef treble }
+
+section A {
+  m { c4 d e f | g4 a b c' | }
+}
+section B {
+  m { c'4 b a g | f4 e d c | }
+}
+section C {
+  m { e4 d c d | e1 | }
+}
+
+form main { A || B || C |. }
+
+score main "form-toplevel-bar-resume" { staff m }
