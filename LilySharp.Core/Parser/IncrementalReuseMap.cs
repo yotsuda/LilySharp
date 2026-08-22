@@ -128,30 +128,38 @@ internal sealed class IncrementalReuseMap
         return map.Count > 0 ? new IncrementalReuseMap(map) : null;
     }
 
-    /// <summary>Whether any diagnostic belongs to the item spanning
+    /// <summary>Whether any diagnostic TOUCHES the item spanning
     /// <paramref name="start"/>..<paramref name="end"/> — such an item must be re-parsed,
     /// so its diagnostics are produced again rather than lost with the reuse.</summary>
     /// <remarks>
-    /// ⚠️ A ZERO-WIDTH span needs its own arm and did not have one until 2026-08-16. The
-    /// overlap test is strict on both sides, so a diagnostic with <c>Start == End</c> sitting
-    /// exactly ON a boundary satisfies neither half — and an empty span is what
-    /// <c>Expect</c> produces when the token it wanted is missing, which at end of file puts
-    /// it exactly at the last item's end. The item was then REUSED and its diagnostic
-    /// vanished from the incremental parse: <c>WithChange_RandomizedEdits_MatchFullParse</c>
-    /// caught it as 17 diagnostics against 16, the missing one being
-    /// "Expected integer measure-count after '*', found 'EndOfFile'". The bug is as old as
-    /// the test above it; it surfaced when unplaceable tokens became members (LYS0030) and
-    /// moved where item boundaries fall. Touching either end counts, which can exclude the
-    /// neighbouring item too — the safe direction, since the cost is one item re-parsed.
+    /// ⚠️ TOUCHING counts, not just overlapping, and each generation of this method learned
+    /// that on a different width. A diagnostic's span and the span of the item whose parse
+    /// PRODUCED it are different things: <c>Expect</c> reports at the FOUND token, which when
+    /// an item's parse fails at its end is the first token of the NEXT item — entirely
+    /// outside the producer's span. Reuse the producer and the diagnostic vanishes from the
+    /// incremental parse while the tree shape stays identical (adoption emits nothing, and
+    /// the neighbour's own re-parse reads that token as its ordinary first token).
+    /// (1) Zero width (2026-08-16): Expect's missing token at end of file put an empty span
+    /// exactly ON the last item's boundary; the then-strict overlap satisfied neither half.
+    /// <c>WithChange_RandomizedEdits_MatchFullParse</c> caught it as 17 diagnostics against
+    /// 16, the missing one "Expected integer measure-count after '*', found 'EndOfFile'".
+    /// (2) Full width (2026-08-22): the same Expect failing mid-file spans the next item's
+    /// first token — Start == the producer's end, so the strict test again said no, the
+    /// producer was reused, and LYS0002 alone disappeared. Caught by the same fuzz once its
+    /// Source lost the '$' sigils (session 228), shrunk to a 37-edit chain
+    /// (scratch/p228/shrink), pinned by
+    /// <c>WithChange_DiagnosticAtItemBoundary_SurvivesDistantEdit</c>.
+    /// The class remark's bullet always said "touches"; the code now finally agrees. Cost:
+    /// at most one extra neighbour re-parsed per boundary-touching diagnostic — and NONE on
+    /// diagnostic-free text, which is why Probe's <c>reuse</c> meter must read unchanged on
+    /// the perf books for any edit to this test.
     /// </remarks>
     private static bool HasDiagnosticIn(
         IReadOnlyList<Diagnostic> diagnostics, int start, int end)
     {
         foreach (var d in diagnostics)
         {
-            if (d.Span.Start < end && d.Span.End > start)
-                return true;
-            if (d.Span.Start == d.Span.End && d.Span.Start >= start && d.Span.Start <= end)
+            if (d.Span.Start <= end && d.Span.End >= start)
                 return true;
         }
         return false;

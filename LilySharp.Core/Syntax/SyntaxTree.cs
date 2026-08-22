@@ -35,15 +35,23 @@ public sealed class SyntaxTree
     private CompilationUnitSyntax? _redRoot;
 
     private SyntaxTree(string text, CompilationUnitGreen root,
-        IReadOnlyList<Diagnostic> diagnostics, IReadOnlyList<SyntaxToken> tokens)
+        IReadOnlyList<Diagnostic> diagnostics, IReadOnlyList<SyntaxToken> tokens,
+        int adoptedTopLevelItems = 0)
     {
         _text = text;
         _greenRoot = root;
         _diagnostics = diagnostics;
         _tokens = tokens;
+        AdoptedTopLevelItems = adoptedTopLevelItems;
     }
 
     internal IReadOnlyList<SyntaxToken> Tokens => _tokens;
+
+    /// <summary>How many top-level items the parse that built THIS tree adopted from the
+    /// previous tree (0 for a full parse). See <c>Parser.AdoptedMembers</c> — the reuse
+    /// rate has no correctness observer, so this is the number a reuse-map change must
+    /// report a before/after of.</summary>
+    internal int AdoptedTopLevelItems { get; }
 
     /// <summary>
     /// The source text.
@@ -149,7 +157,8 @@ public sealed class SyntaxTree
 
         var parser = new Parser.Parser(tokens, reuse);
         var root = parser.ParseCompilationUnit();
-        return new SyntaxTree(newText, root, MergeDiagnostics(tokens, parser.Diagnostics), tokens);
+        return new SyntaxTree(newText, root, MergeDiagnostics(tokens, parser.Diagnostics), tokens,
+            parser.AdoptedMembers);
     }
 
     /// <summary>Combines lexical diagnostics (derived from the final token stream by

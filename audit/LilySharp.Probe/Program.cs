@@ -40,6 +40,9 @@
 //                 where time is not (a same-code time control swings 16% here), so it is
 //                 the only instrument a before/after can actually be read off. Rebuilt in
 //                 scratch\ by sessions 190 AND 191 before it was given a home. See Alloc.cs.
+//   reuse       — HOW MANY TOP-LEVEL ITEMS A KEYSTROKE'S REPARSE ADOPTS from the previous
+//                 tree. No correctness test observes this, so it is the only meter that
+//                 catches a reuse-map "fix" whose real effect is to reuse less. See Reuse.cs.
 //
 // Usage (from the repo root):
 //   dotnet run --project audit/LilySharp.Probe -c Release -- sweep base
@@ -78,6 +81,11 @@ if (args.Length >= 1 && args[0] == "pitches")
     return Outputs.Run(root, args.Length >= 2 && args[1].Length > 0 ? args[1] : null,
         args.Length >= 3 ? args[2] : null);
 }
+if (args.Length >= 2 && args[0] == "reuse")
+{
+    Reuse.Run(root, args.Skip(1).ToArray());
+    return 0;
+}
 if (args.Length >= 1 && args[0] == "census")
 {
     Census.Run(root, args.Length > 1 && int.TryParse(args[1], out int n) ? n : 20);
@@ -93,6 +101,8 @@ Console.Error.WriteLine("""
       census [top-n]             per-book counts from the collected model
       alloc <book>...            MB allocated by a full render and by one keystroke
                                  (books under audit/lpreg; always include a control)
+      reuse <book>...            top-level items ADOPTED per keystroke by the incremental
+                                 reparse — the number a reuse-map change must move (or not)
 
     Sweeps are written to audit/probe-out/<label>.csv (git-ignored).
     """);

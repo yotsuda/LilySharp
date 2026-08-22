@@ -145,6 +145,25 @@ public class IncrementalParseTests
     }
 
     [Fact]
+    public void WithChange_DiagnosticAtItemBoundary_SurvivesDistantEdit()
+    {
+        // `r*` fails its measure-count Expect ON the next item's first token, so the
+        // LYS0002 span TOUCHES the rest's span without overlapping it — the rest's own
+        // span is diagnostic-free. Reusing the rest must still be refused: adoption
+        // emits nothing, and the neighbour's re-parse reads `*/` as its ordinary first
+        // token, so nothing regenerates the diagnostic — it vanishes while the tree
+        // shape stays identical (shrunk from the randomized-edit fuzz once its Source
+        // lost the '$' sigils, session 228, scratch/p228/shrink).
+        var src = "c4 r*/\nphrase zz { d4 }\nphrase yy { e4 }\nphrase xx { f4 }\n";
+        var old = SyntaxTree.Parse(src);
+        Assert.Contains(old.Diagnostics, d => d.Code == DiagnosticCodes.ExpectedToken);
+
+        // The edit is far from the diagnostic: append at the very end of the file.
+        var incremental = Edit(old, src.Length, 0, " c4", out var full);
+        AssertTreesEquivalent(full, incremental);
+    }
+
+    [Fact]
     public void WithChanges_MultipleEdits_MatchesFullParse()
     {
         var old = SyntaxTree.Parse(Source);

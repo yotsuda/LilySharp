@@ -118,8 +118,9 @@ internal static class Alloc
 
     /// <summary>One note re-pitched near the middle of the book. Returns the anchor it
     /// found so the output says WHICH edit was priced — two runs that picked different
-    /// anchors are not comparable.</summary>
-    private static (string Edited, string? Find) Edit(string text)
+    /// anchors are not comparable. Shared with <see cref="Reuse"/> so both instruments
+    /// price the same edit.</summary>
+    internal static (int Index, string Find, string Repl)? PickEdit(string text)
     {
         foreach (var (find, repl) in new[]
                  {
@@ -129,8 +130,15 @@ internal static class Alloc
         {
             int i = text.IndexOf(find, text.Length / 2, StringComparison.Ordinal);
             if (i >= 0)
-                return (text.Remove(i, find.Length).Insert(i, repl), find);
+                return (i, find, repl);
         }
+        return null;
+    }
+
+    private static (string Edited, string? Find) Edit(string text)
+    {
+        if (PickEdit(text) is { } e)
+            return (text.Remove(e.Index, e.Find.Length).Insert(e.Index, e.Repl), e.Find);
         return (text, null);
     }
 }

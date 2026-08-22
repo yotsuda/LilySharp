@@ -154,6 +154,14 @@ internal sealed partial class Parser
 
     public DiagnosticBag Diagnostics => _diagnostics;
 
+    /// <summary>How many top-level items this parse ADOPTED wholesale from the previous
+    /// tree (incremental reuse). Purely an observation — the reuse RATE is invisible to
+    /// every correctness test, yet it is what an over-cautious reuse-map change silently
+    /// spends, so a before/after of this number is the evidence such a change must carry
+    /// (surfaced as <c>SyntaxTree.AdoptedTopLevelItems</c>; Probe's <c>reuse</c> command
+    /// reads it per keystroke).</summary>
+    internal int AdoptedMembers { get; private set; }
+
     private SyntaxToken Current => _position < _tokens.Count
         ? _tokens[_position]
         : _tokens[^1]; // EOF
@@ -262,6 +270,7 @@ internal sealed partial class Parser
                 && TryAdoptTokens(reused))
             {
                 members.Add(reused);
+                AdoptedMembers++;
                 continue;
             }
 
