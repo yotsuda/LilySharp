@@ -151,6 +151,46 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第231セッション＝**残債筆頭 §9-3/4（§2.2 override 語彙・§2.1 `paper { }`）の決定材料を測って監査に置いた**——第230 骨 4 の処方（「§8.1 と同じ形に持ち込む＝決定を先に締め、費用を測ってから実装便を立てる」）の測定半分。**コードは 1 行も動いていない**（動いたのは GRAMMAR_AUDIT.md 1 本だけ）。**判断 3 つがユーザー待ち**（下 ④）。
+**① §2.2 の発見＝§4 の形の 3 例目（今回は文法の門も閉じている）**：`StaffSpacingParameters.ApplyOverrides`（`LayoutEngine.cs:94` から生きている）は `StaffGrouper.staff-staff-spacing.*`／`staffgroup-staff-spacing.*` の **8 綴り（basic/minimum-distance・padding・stretchability × 2 面）を完全実装**しているが、⑴ whitelist（`SupportedGrobOverrides`）に行が無く、⑵ **文法が dotted sub-property を綴れない**（`ParseGrobPropertyName` は hyphen 結合のみ・2 つ目の `.` は `Expect(Equals)` で壊れる）＝**到達者はテストだけ**（`AlignmentDistanceTests` が `GrobOverride` を直接構築）。適用は score-wide 一発（measure／staff scope を見ない）。
+**② 需要 3 面の実測**：⑴ lp-regression **category=override 89 冊の内訳＝`\override` 無し 54（`\set`/`\with` で除外・§2.2 の射程外）／override のみ 28＝全部一点物（綴り首位でも `Score.BarLine.hair-thickness` 7 回・1 冊）／mixed 7** ⇒ **綴り 1 つ実装して戻る本は約 1 冊＝コーパス再開は語彙拡張の動機にならない**。⑵ 追跡 .lys 572 冊で override を書くのは complex-once.lys 1 冊（transparent 対）のみ＝**どんな拡張も既存コーパスの出力・exit code を動かさない**。⑶ LP `\hideNotes` は 6 grob（Dots・NoteHead＋no-ledgers・Stem・Accidental・Rest・TabNoteHead）に transparent を張る——Lily# は inked な 2 grob だけ＝**休符・付点・臨時記号・加線は隠せない**。
+**③ 候補群の値札**（本文は GRAMMAR_AUDIT §2.2 の欄）：**A**＝StaffGrouper 8 綴り（reader 費用 0・要るのは dotted sub-property の文法拡張＋8 行＋pin/completion/docs）／**B**＝transparent/color の面を広げて `\hideNotes` 完成（per grob で draw site に reader 1＋行 1）／**C**＝幾何ノブ（Stem.length 等・per 綴りで本実装・需要は一点物）／**D**＝`\set`/`\with` は override 構文の外＝射程外（89 冊の 54 はこちら・拾うなら別の起票）。
+**④ §2.1 の台帳と判断**：候補台帳＝`LayoutOptions` 全員（用紙・余白・StaffHeight・indent・ragged・spacing 群。**lysc はどれも露出していない**・テスト需要の首位は PageHeight 7／PageWidth 6）。雛形 `fonts { }` より簡単（役割×グループが無い＝フォールバック段不要）。**ユーザー判断 3 つ**＝⑴ 狙い（LP idiom 完成＝B／ハウススタイル＝A＋§2.1／コーパス再開は動機薄）・⑵ 単位の綴り（LP は `210\mm`・Lily# に単位接尾辞の前例なし）・⑶ **§2.2 との分担**（LP の慣習は system-system＝`\paper` 変数・staff-staff＝StaffGrouper grob——**§9 の 3 と 4 は分担を共有するので対で決める**。§4.2/§4.3 の「対で決める」と同族）。
+
+★ **開始時裏取り**: HEAD `020b9d7d`（第230 の閉幕 handoff・§1 と一致）・未 push 18・未追跡 0/木 0・Windows suite **5737/0/4**・WSL **5737/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時: **未 push 19（push はユーザー＝RULES §5.1）**＝本便 1 本（GRAMMAR_AUDIT の測定＋この行の handoff）・未追跡 0/木 0・suite **Windows 5737/0/4＝緑（コード不変・docs のみ。編集後に全数を回して確認済み）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① §2.2＋§2.1 の決定材料（GRAMMAR_AUDIT.md のみ） | §2.2/§2.1 に測定欄（候補 A〜D・判断 3 つ）・§9-3/4 に案内・§10 に数え方 6 行 | コード 0 行＝出力・exit code・snapshot・台帳・テスト数すべて不変・suite 緑 |
+
+- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 の残り＝⑶ §2.2・⑷ §2.1 とも測定済み・判断待ち**（判断 3 つ＝狙い／単位／分担。**判断が出れば §8.1 と同じ「実装だけの便」に持ち込める**）／残り小物＝§1.2 リネーム（ユーザーが MSVS で）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★ 骨 1＝**語彙の監査は「綴れるか」「行が在るか」「reader が在るか」の 3 面を別々に数える——どの 2 面の一致も 3 面目を保証しない**
+> §4.2（color）は「reader 在り・行なし・綴れる」、§4.3（force-hshift）は「reader 無効・行あり・綴れる」、
+> 今回の StaffGrouper は「reader 在り・行なし・**綴れない**」——3 例とも違う面が欠けていた。
+> 第229 が §4 を「両方向一致」で閉じたときの 2 面（reader ⇔ 行）は揃えたが、**文法の門は
+> どちらの数え方にも映らない**（validator は綴られた名前しか見ず、reader の grep は綴りを見ない）。
+> ⇒ **語彙を広げる実装便は、3 面を 1 commit で揃える**（行＋reader＋綴りの pin）。
+
+> ## ★★ 骨 2＝**分類ラベルで数を引かない——ラベルの定義（機械生成の正規表現）まで戻って母集団を再分解する**
+> 「override 89 冊」は「`\override` を書く 89 冊」ではなかった——category は
+> `\override`/`\set`/`\with` の**どれか**を含むで切られており、**54/89 は `\override` を
+> 1 つも書かない**＝§2.2 の射程外。ラベルのまま「89 冊が候補」と書いていたら、
+> 値札が 3 倍近く膨れていた。⇒ **母集団を引き継ぐときは、その母集団を作った述語も書く**
+> （§0「数え方を書く」の分類版）。
+
+> ## ★ 骨 3＝**「決定材料を測る便」の出口は質問の一覧ではなく、値札の付いた選択肢の一覧**
+> 第229 骨 4（承認の質は値札の質）の続き——§2.2/§2.1 は「何を足すか」だけ聞くと開いた
+> 質問になるが、**候補を A〜D に畳んで各々の費用と需要を並べれば、判断は 3 つに縮む**
+> （狙い・単位・分担）。測定はこちらの仕事、判断はユーザーのもの（§5.0）。
+
+---
+
+## 以下は第230セッションの経緯
+
 最終更新 第230セッション＝**第1便で §3.3 bare duration の診断（`18c588b9`・LYS1031）、続き便でユーザーが順位を名指した §8.1「コード記号＝大文字＋小節相対」一式を実装した**（`0ad0c34b`・88 file）——これで GRAMMAR_AUDIT §9 の残りは**設計判断系（⑶ §2.2・⑷ §2.1）と §1.2 リネーム（ユーザーが MSVS で）だけ**。
 **① 発火条件は「小節頭」ではなく「繰り返しの参照先が小節線の向こう」**：直前の*書かれた*繰り返し可能イベント（音符・和音・スラッシュ・ドラム・`q`・先行 bare duration）との間に小節線が立つとき warning（exit 0・絵は不動）。脱字（`4 g f e`＝`a4 g f e`）はどこでも起きるが、**小節内の走行（`bes8 8 8 8`）こそがこの綴りの存在理由**なので、跨ぎだけが疑わしい形。休符は resolver と同じく透過（**`| r4 4` も鳴る**）・連鎖は最初の bare が anchor になり**跨ぎ 1 回につき 1 本**。判定は **`BareDurations` の同じ 1 回の walk に `CrossesBarline` を載せた**（§5.2.1②＝validator は自分で数え直さない）。pin 5 本（`BareDurationTests`）。**ついでに `Diagnostic.cs` の LYS0016 要約が 2026-08-19 以前の言語（「spaced number は無意味」）を記述したままだったのを現行仕様に直した**。docs 4 本（GRAMMAR／GRAMMAR_FOR_LLM／SYNTAX_REFERENCE／AUDIT。**GRAMMAR は EBNF コメント内 `;` 禁止**——DocKeywordListTests が塊を切る・第217 の学びを踏まずに済んだ）。
 **② 値札は実装の前に 3 経路で測った**：textual grep 2 形（小節線直後の数字・行頭の数字＝**0 行／39931 行**）＋**製品面 `lysc check` 全 572 冊＝0 件**（grep に映らない `| r4 4` 形まで含めた最終の数）。⇒ **追跡本の出力・exit code・snapshot・台帳は 1 つも動かない**。承認について：§3.3 は監査が方向（「診断で個別に受ける」）まで書いた残り小物で、§9 の設計判断系とは別枠——**severity（warning）と trigger（跨ぎ）はこの便の判断。変えるなら 2 行**（`BareDurationValidator` の 1 分岐と severity）。
@@ -196,59 +236,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > 15 冊 9 quality の実測＋`R1` 衝突と 7/8 の反証まで）。実装便がやったのは器（run→1 文法・拍格子）と
 > 掃きだけで、**設計判断は 1 つも新たに要らなかった**（唯一の裁量＝LYS2009 の severity と等分 fallback）。
 > ⇒ **§9 の残り（§2.2・§2.1）も同じ形に持ち込むのが最短**——決定を先に締め、費用を測ってから実装便を立てる。
-
----
-
-## 以下は第229セッションの経緯
-
-最終更新 第229セッション＝**残債筆頭 ⑵-b「増分パースが診断を 1 つ落とす」を閉じ（`d1e2eeba`）、開いた出口から §1.1 `$` 廃止一式を完了し（`25d8c5f1`）、続き便でユーザー承認を取って §4.2＋§4.3 の対（`34969715`）と §3.1 DisplayName（`6d0bf3db`）も閉じた**——4 便で GRAMMAR_AUDIT §9 の 1・2・5 の §3.1 まで済み。
-**① 欠陥の正体はレキサでも splice でもなく `IncrementalReuseMap.HasDiagnosticIn` の strict 重なり判定**：`Expect` は「見つかったトークン＝**次アイテムの先頭**」の span で LYS0002 を報告するので、**診断は産み手アイテムの span の*外*に、末尾に*接して*立てる**。strict `<`/`>` は接触を見ない→産み手（` r` の Rest・自分の span は無診断）が再利用される→採用は何も発話せず、隣の再パースはそのトークンを普通の先頭として読む→**診断だけが消えて木は全一致**（2026-08-16 の zero-width 修理の幅 2 版。37 編集チェーン（scratch/p228/shrink）を 1 編集ずつ再生して index 36 で分岐を実測・old build で犯人アイテムの ref-採用まで確認）。修理＝**接触も数える非 strict 1 arm**（zero-width arm を包含）。**⚠️ 手順は HANDOFF の警告どおり計器が先**：Probe **`reuse`**（新コマンド・恒久）＝打鍵ごとの採用 top-level 数を `SyntaxTree.AdoptedTopLevelItems`（新設・Parser.AdoptedMembers が給餌）で読む。**before/after 完全同値**（perf-plain1k 4.00・v2bow1k 7.00・fingstack1k 2.00、toggle／type-in 両 regime）＝**診断の無い本の再利用率は 1 bit も払っていない**。費用は境界接触診断 1 つにつき隣 1 アイテムの再パースだけ（最小再現で adopted 2→0）。恒久 pin＝`WithChange_DiagnosticAtItemBoundary_SurvivesDistantEdit`。
-**② `$` 廃止＝第228 の patch（`scratch/p228/dollar/dollar-removal.patch`）を無修正で適用**（clean apply・40 ファイル）。fuzz の Source から `$` を落とし（乱数の当たり先はずれるが、ずれた先の欠陥は ① で閉塞済み＝**$ 無し 300 回 fuzz 全通しを事前に実測**）、**docs を掃いた**：GRAMMAR（PhraseRef 生成規則と remark を書き換え）／GRAMMAR_FOR_LLM／SYNTAX_REFERENCE ×2（**1 箇所は Unicode 識別子例 `$動機` に隠れていて grep `\$[A-Za-z]` をすり抜けた**——DocExamplesParseTests が捕まえた）／TUTORIAL／GRAMMAR_STATUS／ai-collab-design、＋ **VS Code tmLanguage の variable-reference 規則を削除**（裸名は字面でフレーズと判別不能）。**書き換え corpus 4 冊は sweep A/B で幾何不動**：lilypond-ref 3 冊 byte 一致・grammar-tour は data-pos のみ（patch のコメント追加でオフセットが動いた——data-pos 剥がしで byte 一致を実測）。3 族の行き先は audit §1.1 どおり（ドラム語彙＋`q`＝宣言側 LYS1030／強弱＝元から予約語／clef 語＝music stream が裸参照として読む）。`$theme` は LYS0018＋参照。
-**③ §4.2＋§4.3＝「whitelist は実装済みの一覧」を両方向に一致させた**（続き便・委任「有利なら着手」→着手。**方向はユーザーが「対で閉じる」を選択**——質問には値札を付けた＝コーパス使用 **color 0 冊・force-hshift 0 冊**を先に測ってから聞いた）：color 2 行を `SupportedGrobOverrides` へ（reader は 4 呼び出しで生きていた＝**正しく色が付いた譜面が LYS1029＋exit 1 付きで出ていた**・§4.2）／force-hshift は **whitelist から外して正直な LYS1029 に**（`ForceHshiftEnabled = false` の理由がコード内に明記＝現実装は per-voice shift ができない→「有効化」は 2 行仕事ではなく本実装の便・§4.3。**row と flag は本実装の commit で同時に戻す**——両側のコメントが互いを名指す）。LSP completion も同じ 4 行に（force-hshift を落とし、なぜか居なかった Stem.transparent を追加）・docs 5 本の例文書き換え（例文はテスト網の中＝force-hshift 例は残せない）。**実本の出力・診断・exit code は 1 つも動かない**（override を書く追跡本は complex-once.lys の transparent だけ）。
-**④ §3.1 DisplayName＝引用符必須**（続き便・ユーザー承認）：`ParseStaffRender` の裸識別子の枝を落とした——**裸の後置語は常に MIDI 専用 part 参照**（`staff flute click` が click をラベルに黙って食う位置依存が消え、未宣言なら診断が名指す）。**費用は第228 の毒実測どおりに着地**＝赤は名指しの pin 1 本だけ（`TheRetiredWithSpelling_…` を新しい読みに書き換え・改名）・snapshot 222 不動・コーパス使用 0 冊。docs 3 本の「語順の回避策」段落を削除（位置が意味を変えない、が新しい仕様文）。`part X "Violin I"` と綴りが揃った。
-
-★ **開始時裏取り**: HEAD `2dcb7540`（第228 の閉幕 handoff・§1 と一致）・未 push 7・未追跡 0/木 0・Windows suite **5719/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 14（push はユーザー＝RULES §5.1）**＝本便 7 本（`d1e2eeba` 修理＋計器／`25d8c5f1` `$` 廃止／`add6809e` handoff／`34969715` §4.2+§4.3／`fe609f91` handoff／`6d0bf3db` §3.1／この行の handoff）・未追跡 0/木 0・suite **Windows 5722/0/4・WSL 5722/0/4＝両 OS 完全緑**（開始比 +3＝新 pin 1 本＋validator の InlineData 差引 2・§3.1 は pin の書き換えで ±0）・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（patch は書き換えのみ・冊数不変）・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① reuse map の接触判定＋計器（`d1e2eeba`） | `HasDiagnosticIn` を非 strict 1 arm に・Probe `reuse` 新設・`SyntaxTree.AdoptedTopLevelItems`／`Parser.AdoptedMembers`・pin 1 本 | 診断が境界に接する木の増分パースのみ（再利用率は before/after 同値を実測）・両 OS 完全緑 |
-| ② `$` 廃止一式（`25d8c5f1`） | 第228 patch 適用＋fuzz Source＋docs 7 本＋tmLanguage・GRAMMAR_AUDIT §1.1/§9 に完了を記録 | 出力不変（sweep A/B：3 冊 byte 一致・1 冊 data-pos のみ）・suite ±0・台帳/snapshot 不動 |
-| ③ §4.2＋§4.3 の対（`34969715`・ユーザー承認） | whitelist：color 2 行追加・force-hshift 除去・LSP completion 4 行化・validator/completion の pin・docs 5 本 | 実本 0 冊（両綴りともコーパス使用 0）＝出力・exit code 不変・suite +2・両 OS 完全緑 |
-| ④ §3.1 DisplayName（`6d0bf3db`・ユーザー承認） | `ParseStaffRender` の裸識別子の枝を削除（`DisplayName = String` のみ）・pin 1 本書き換え＋改名・docs 3 本の回避策段落削除 | コーパス使用 0 冊・snapshot 222 不動・suite ±0・両 OS 完全緑 |
-
-- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 の残り＝設計判断系だけになった**——✅ ⑴ §4.2＋§4.3 は本便③・✅ §3.1 は本便④で閉じた／⑶ §2.2 override の語彙（拡張経路の本体・**設計判断が先＝何を足すかは狙いの持ち主**）／⑷ §2.1 `paper { }`（設計判断が先・`fonts { }` の 4 段フォールバックが雛形）／残り小物＝§3.3 bare duration の診断・§1.2 リネーム（ユーザーが MSVS で）。**§8.1 コード記号は仕様確定済み・順位は狙いの持ち主が決める**／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★★ 骨 1＝**診断の span と、それを産んだアイテムの span は別物——「重なり」で所有を推定する装置は、接触の分だけ嘘をつく**
-> `Expect` は「見つかったトークン」の span で報告するので、アイテム末尾で失敗した診断は
-> **産み手の span の外**（次アイテムの先頭）に立つ。reuse map は「span が重なる診断を持つ
-> アイテムは再利用しない」で守っていたつもりが、**産み手そのものを素通し**していた。
-> ⇒ **span から所有を推定する検査は、接触（≦/≧）まで広げるか、産み手を直接記録するか**。
-> class remark の箇条書きは最初から「touches」と書いていた——**文書が正しく、コードが狭かった**。
-
-> ## ★★ 骨 2＝**「安い緑＝再利用を減らす」は計器を建ててから直す——HANDOFF の警告を実行した形**
-> 修理そのもの（比較演算子 2 個）より、**計器（Probe `reuse`・採用数の配管）のほうが大きい**。
-> それが正しい配分——再利用率は正しさのテストに一切映らないので、**計器なしの修理は
-> 「直した」と「再利用をやめた」を区別できない**。before/after 同値の 2 行が、
-> この修理の主張の半分を担っている（commit message に数字ごと収載）。
-
-> ## ★★ 骨 3＝**最小再現は 3 回別の理由で空振りした——「装置を踏んだ」ことは agree ではなく adopted 数で示す**
-> 候補 1: 産み手に別診断（LYS0020）が重なって毒でも除外。候補 2: 産み手が
-> **last-before-damage 規則**で map から消えて採用 0。候補 3: phrase 名 `b`/`c`/`d` が
-> **音高名＝予約語**で宣言ごと壊れた（監査 §1.1 が書いていた事実を自分で踏んだ）。
-> どれも agree=True を返し、**毒との差が無いので「pin になっていない」ことが分からない**——
-> 割ったのは adopted 数と map の中身のダンプ。⚠️ おまけ＝**単トークン item は splice の
-> トークン再利用で ref-共有になる**ので、ReferenceEquals は採用の証拠にならない（第228 骨 1
-> 「網が鳴りうるか」の再利用版）。
-
-> ## ★ 骨 4＝**承認を求める前に、選択肢の値札を測る——そして「有効化」の値札は書いた本人が残している**
-> §4.3 は「force-hshift を有効にする」が自然な直しに見えるが、**無効化コメント自身が
-> 「現実装は per-voice shift ができない」と理由を書いていた**＝有効化は 2 行仕事ではない。
-> 質問はそれを読んでから、**コーパス使用 0 冊／0 冊という費用を測ってから**出した——
-> 承認の質は選択肢の値札の質で決まる（§5.0「測定と判断を混ぜない」の承認版：
-> 測定はこちらの仕事、判断はユーザーのもの）。
 
 ---
 

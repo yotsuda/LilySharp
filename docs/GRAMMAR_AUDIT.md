@@ -156,11 +156,84 @@ could not have reached anyone, since Lily# has never been released」。`LYS0031
 `fonts { }` の 4 段フォールバック（role → group → generic → bundled・狭い方が勝つ）が
 そのまま雛形になる。出版社のハウススタイルという用途では**ここが最大の欠落**。
 
+> **第231 が決定材料を測った（2026-08-23）。判断は未着手＝何を載せるかは狙いの持ち主。**
+>
+> **候補台帳＝`LayoutOptions`**（internal・`Svg/Layout/LayoutOptions.cs`。単位は ss・
+> LP 既定値と 6 桁一致の注記つき）: PageWidth／PageHeight・Margin×4・StaffHeight・
+> Indent／ShortIndent・RaggedRight・SpacingIncrement・VerticalSpacing（system-system 等）・
+> StaffSpacing・UseOptimalPageBreaking／PageBreaking。**CLI（lysc）はどれも露出していない**
+> （フラグ全数: all/combined/crop/debug/help/no-embed-font/output/pitches/relative/scale/
+> score/verbose/version——page 系ゼロ）＝今日これを動かす手段はテストの internal 構築だけ。
+> **テスト・ツール側の需要実測**（非既定で組んだ site 数）: PageHeight 7・PageWidth 6・
+> VerticalSpacing 3・StaffSpacing 3・UseOptimalPageBreaking 3・SpacingIncrement 2・
+> Margin 系 6・Indent 2・SystemSpacing 1。
+>
+> **雛形**: `fonts { }`（GRAMMAR の `FontDecl`）。`paper { }` は PaperDecl →
+> LayoutOptions overlay の 1 対 1 写像で、役割×グループの構造が無いぶんフォールバック段は
+> 要らない＝fonts より簡単。**設計判断が要る点は 3 つ**:
+> ⑴ **語彙の範囲**（用紙・余白だけか、indent／ragged／spacing まで載せるか）。
+> ⑵ **単位の綴り**（LP は `210\mm`。Lily# に単位接尾辞の前例が無い——mm 固定か、ss か、
+> `a4` のような紙名か）。⑶ **§2.2 との分担**——段間隔は LP では **system-system が
+> `\paper` 変数・staff-staff が StaffGrouper grob** という分担。LP に合わせるなら
+> `paper { }` と override の両方に 1 つずつ載る。全部 `paper { }` に寄せる案は
+> 「1 構文で完結」だが LP の慣習から外れる。⚠️ HANDOFF §2F の恒久注意
+> （page 系を override に載せない）はどちらの案でも守られる。
+
 ### 2.2 override の語彙が狭い ★
 
 C# 埋め込みを捨てた以上、**これが唯一の拡張経路**。構文の形（`Grob.property = value`、
 LilyPond と同じ語彙、予約語にしない）は正しいので、問題は設計ではなく中身。
 現状の実態は §4.1 に。
+
+> **第231 が決定材料を測った（2026-08-23）。判断は未着手＝何を足すかは狙いの持ち主。**
+>
+> **現状の器**: 語彙 4 行（`NoteHead`／`Stem` × `transparent`／`color`）。scope 機構
+> （staff/voice タグ・`once`／`revert`・replay する timeline＝`GrobPropertyResolver`）は
+> 実装済みで語彙から独立——**行を 1 つ足せば scope 一式が付いてくる**。値は typed
+> （`LysValue`・小数/負数/文字列/識別子）。
+>
+> **発見＝§4 の形の 3 例目（今回は文法の門も閉じている）**:
+> `StaffSpacingParameters.ApplyOverrides`（`LayoutEngine.cs:94` から生きている）は
+> `StaffGrouper.staff-staff-spacing.*`／`staffgroup-staff-spacing.*` の **8 綴り**
+> （basic-distance／minimum-distance／padding／stretchability）を完全実装している。だが
+> ⑴ whitelist に行が無く（書けても LYS1029 error）、⑵ **文法が dotted sub-property を
+> 綴れない**（`ParseGrobPropertyName`（`Parser.Music.cs:812`）は hyphen 結合のみ・
+> 2 つ目の `.` は `Expect(Equals)` で壊れる）。到達者はテストだけ
+> （`AlignmentDistanceTests` が `GrobOverride` を直接構築）。⚠️ 適用は **score-wide 一発**
+> （`ApplyOverrides` は measure／staff scope を見ない）＝載せるなら positional 意味論なしを
+> 明記するか、位置を配管するかの判断が要る。
+>
+> **需要の実測 3 面**:
+> 1. **lp-regression category=override 89 冊**（README「Lily# が同じ override を持てば
+>    個別判断で拾ってよい」の母集団）: **54 冊は `\override` を 1 つも書かない**
+>    （`\set`／`\with` で除外＝§2.2 の射程外）・**override のみの 28 冊は全部一点物**
+>    （首位でも `Score.BarLine.hair-thickness` 7 回・1 冊）・mixed 7 冊。
+>    ⇒ **綴りを 1 つ実装して戻る本は約 1 冊——コーパス再開は語彙拡張の動機にならない。**
+>    StaffGrouper を書く唯一の本（page-spacing-staff-group-nested.ly）も `\with` で
+>    塞がったまま。
+> 2. **追跡 .lys 572 冊**: override を書くのは complex-once.lys 1 冊（transparent 対）＝
+>    どんな拡張も既存コーパスの出力・exit code を動かさない。
+> 3. **LP 語彙との距離**: `\hideNotes`（ly/property-init.ly）は **6 grob**
+>    （Dots・NoteHead＋no-ledgers・Stem・Accidental・Rest・TabNoteHead）に transparent を
+>    張る。Lily# は「inked な 2 grob」だけ＝**休符・付点・臨時記号・加線は隠せない**。
+>
+> **候補群と値札**:
+> - **A. StaffGrouper spacing 8 綴り** — reader 費用 0（実装済み）。要るのは文法
+>   （dotted sub-property・`ParseGrobPropertyName` の拡張）＋ 8 行＋ pin／completion／docs。
+>   ⚠️ 段間隔は §2.1 `paper { }` の候補でもある——**§2.1 と対で決める**（§4.2／§4.3 の
+>   「対で決める」と同族。片方だけ決めると同じ量の家が 2 つできる）。
+> - **B. transparent／color の面を広げる**（Dots・Accidental・Rest・加線・Beam…）—
+>   per grob で draw site に reader 1 つ＋行 1 つ（resolver が届いていない site は配管も）。
+>   `\hideNotes` 対応が完成する。
+> - **C. 幾何ノブ**（Stem.length・Beam.thickness・StaffSymbol.staff-space・font-size…）—
+>   per 綴りで本実装（幾何配管）。需要は一点物（89 冊表の長い尾）。force-hshift と同じく
+>   「本実装の便」の族。
+> - **D. `\set`／`\with` は override 構文の外**＝§2.2 の射程外（89 冊のうち 54 はこちら。
+>   別の起票が要る）。
+>
+> **ユーザーに要る判断**: ⑴ 狙いはどれか（LP idiom 完成＝B／ハウススタイル＝A＋§2.1／
+> コーパス再開＝測定上動機薄）。⑵ A を採るなら dotted sub-property が GRAMMAR に入る。
+> ⑶ §2.1 との分担（段間隔をどちらの構文に置くか）。
 
 ---
 
@@ -651,8 +724,10 @@ snapshot の再ベースは**不要**であり、**してはならない**。再
    診断落ち（`IncrementalReuseMap` の接触判定）を先に閉じ（`d1e2eeba`・再利用率の計器つき）、
    第228 の patch を適用、docs 7 本と tmLanguage の `$` 規則も掃いた。
    書き換え 4 冊は sweep A/B で**幾何不動**（grammar-tour は data-pos のみ＝コメント追加ぶん）
-3. **§2.2 override の語彙を広げる** — 拡張経路の本体
-4. **§2.1 `paper { }`**
+3. **§2.2 override の語彙を広げる** — 拡張経路の本体。**決定材料は第231 が測った
+   （§2.2 の欄）——残るは判断（候補 A〜C の選択・§2.1 との分担）**
+4. **§2.1 `paper { }`** — **決定材料は第231 が測った（§2.1 の欄）——残るは判断
+   （語彙の範囲・単位の綴り・§2.2 との分担）。⚠️ 3 と 4 は分担の判断を共有するので対で決める**
 5. ✅ **§3.1 `DisplayName` — 第229 が完了（2026-08-23・ユーザー承認）**＝引用符必須・裸は常に
    MIDI 専用 part 参照。✅ **§3.3 bare duration の診断は第230 が実装（LYS1031・2026-08-23）**。
    残り＝§1.2 リネーム（ユーザーが MSVS で。§4.4 は完了）
@@ -711,3 +786,14 @@ ew DrumStaff` |
 `title "Lily# 機能ツアー"` のような**文字列の中の製品名**だった。
 **句読点の空きを数えるときは、コメントと文字列リテラルの両方を落とす。**
 （この監査の `#` の主張は正しく、**間違っていたのは検算のほう**だった。）
+
+**第231（2026-08-23・§2.1／§2.2 の決定材料）の数え方**:
+
+| 測ったこと | 道具 | 答え |
+|---|---|---|
+| override 89 冊の内訳 | status.json の category=override を列挙し、各 `.ly`（lilypond-src/input/regression）を `\override Grob(.sub)*.prop` 形・`\set`・`\with` の 3 正規表現で走査 | override 無し 54／override のみ 28（全部一点物）／mixed 7・綴り首位 7 回 |
+| 追跡 .lys の override 使用 | `git ls-files '*.lys'` 全冊を行頭の `once?` ＋ `override`／`revert` で走査 | **1 冊**（complex-once.lys・transparent 対） |
+| StaffGrouper reader の到達性 | `ApplyOverrides` の呼び手を grep（`LayoutEngine.cs:94` のみ）＋ `ParseGrobPropertyName` を読む（dot は 1 段） | 文法から到達不能・テストのみ（`AlignmentDistanceTests`） |
+| `\hideNotes` の LP 語彙 | `lilypond-src/ly/property-init.ly` の定義を読む | 6 grob ＋ no-ledgers |
+| LayoutOptions のテスト需要 | `Prop = ` の綴りを Tests／Cli／audit で grep して集計 | PageHeight 7・PageWidth 6・Vertical/StaffSpacing 各 3 … |
+| lysc の露出フラグ | `"--` を LilySharp.Cli から grep | 13 本・page 系 0 |
