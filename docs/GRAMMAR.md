@@ -852,7 +852,11 @@ SlashNote      = '/' , [ DurationToken ] , { Annotation } ;
    no longer the detached-duration error — a dropped pitch letter (`4 g f e`
    meant as `a4 g f e`) now compiles as a repeat. The extra-time class still
    trips the bar check; the duration-preserving class is the price LilyPond
-   pays for the same spelling.
+   pays for the same spelling. Since 2026-08-23 the CROSS-BARLINE shape of
+   that class warns (LYS1031): a repeat reaching back across a barline is the
+   shape the dropped letter takes, so a measure opening on a bare number is
+   named — a warning, because the repeat is legal. Within-measure runs are
+   the idiom and stay silent (GRAMMAR_AUDIT 3.3).
    ⚠️ '[' , Integer , '.' stays an INLINE VOLTA: a beamed run that opens on a
    DOTTED bare duration spells the slash or the pitch (`[/4. 8]`, `[bes4. 8]`). *)
 BareDuration   = DurationToken , { Annotation } ;

@@ -26,6 +26,12 @@ namespace LilySharp.Core.Semantics;
 /// was that error; now that <c>c4 4</c> is the repeat spelling
 /// (LILYPOND-REF: lily/parser.yy music_embedded), the code survives for the
 /// one shape that still has no meaning.
+/// Also WARNS (LYS1031) when the repeat reaches back across a barline: a
+/// measure opening on a bare number is what a dropped pitch letter looks like
+/// (<c>4 g f e</c> meant as <c>a4 g f e</c>) — the one silent misreading the
+/// repeat spelling traded in (HANDOFF §3, GRAMMAR_AUDIT §3.3). Both facts come
+/// from the ONE shared walk in <see cref="BareDurations"/>; this validator
+/// computes neither.
 /// </summary>
 internal sealed class BareDurationValidator : ISemanticValidator
 {
@@ -37,7 +43,9 @@ internal sealed class BareDurationValidator : ISemanticValidator
     {
         foreach (var node in tree.GetRoot().DescendantNodes())
         {
-            if (node is BareDurationSyntax bare && BareDurations.OriginalOf(bare) is null)
+            if (node is not BareDurationSyntax bare)
+                continue;
+            if (BareDurations.OriginalOf(bare) is null)
                 _diagnostics.Error(
                     bare.Span,
                     DiagnosticCodes.DetachedDuration,
@@ -45,6 +53,15 @@ internal sealed class BareDurationValidator : ISemanticValidator
                     + "and nothing repeatable comes before this one. Write the note "
                     + "itself (c4), or glue the number to what it lengthens (c4, "
                     + "not c 4).");
+            else if (BareDurations.CrossesBarline(bare))
+                _diagnostics.Warning(
+                    bare.Span,
+                    DiagnosticCodes.BareDurationAcrossBarline,
+                    "A bare duration repeats the previous note, chord or slash - "
+                    + "and this one reaches back across a barline for it. That is "
+                    + "also what a dropped pitch letter looks like (4 g f e meant "
+                    + "as a4 g f e), so write the event itself (c4) when the "
+                    + "repeat is meant.");
         }
     }
 }

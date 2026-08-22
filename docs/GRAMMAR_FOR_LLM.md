@@ -161,7 +161,9 @@ c' c,              // C6 C5
 - A duration standing ALONE repeats the previous note/chord/slash at the new
   length (LilyPond's isolated-duration reading): `bes8 8 8 8` is a bass pump.
   It also sets the running default. Rests are transparent; with nothing before
-  it to repeat it is an error (LYS0016).
+  it to repeat it is an error (LYS0016). A repeat reaching back ACROSS a
+  barline warns (LYS1031) — that shape is also a dropped pitch letter
+  (`4 g f e` meant as `a4 g f e`) — so open a measure with the event itself.
 
 ```
 c4 d e f    // all quarters

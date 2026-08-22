@@ -120,6 +120,11 @@ it; a bare duration with nothing before it to repeat is an error (LYS0016).
 The repeat keeps the original's absolute pitch (it is transparent to the
 relative frame, like `q`) and takes only its own post-events.
 
+A repeat that reaches back **across a barline** (`c4 d e f | 4 g f e`) is legal
+but warns (LYS1031): a measure opening on a bare number is also what a dropped
+pitch letter looks like (`4 g f e` meant as `a4 g f e`). Write the event itself
+at the measure head when the repeat is meant; within-measure runs never warn.
+
 ## Notes, Rests, and Chords
 
 ### Notes

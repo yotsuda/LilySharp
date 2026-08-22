@@ -34,7 +34,9 @@ namespace LilySharp.Tests;
 /// transparent. The trade this spelling makes is recorded in HANDOFF §3: a
 /// dropped pitch letter (<c>4 g f e</c> for <c>a4 g f e</c>) now compiles as a
 /// repeat instead of failing — the duration-preserving typo class LYS0016 can no
-/// longer see.
+/// longer see. Since 2026-08-23 the cross-barline shape of that class WARNS
+/// (LYS1031, GRAMMAR_AUDIT §3.3): a measure opening on a bare number is flagged,
+/// within-measure runs stay silent.
 /// </summary>
 [Trait("Category", "Unit")]
 public class BareDurationTests
@@ -153,6 +155,59 @@ public class BareDurationTests
         var spacer = Assert.IsType<RestItem>(Items("4 c' d e")[0]);
         Assert.True(spacer.IsSpacer);
         Assert.Equal(new Fraction(1, 4), spacer.Duration);
+    }
+
+    [Fact]
+    public void RepeatAcrossABarline_Warns_AndStillRenders()
+    {
+        // The typo class HANDOFF §3 traded in: `4 g f e` meant as `a4 g f e`.
+        // The repeat is legal — the warning names it without blocking it.
+        var tree = SyntaxTree.Parse("c'4 d e f | 4 g f e |");
+        var warnings = SemanticValidation.Run(tree)
+            .Where(d => d.Code == DiagnosticCodes.BareDurationAcrossBarline).ToList();
+        var w = Assert.Single(warnings);
+        Assert.Equal(DiagnosticSeverity.Warning, w.Severity);
+
+        var notes = Items("c'4 d e f | 4 g f e |").OfType<NoteItem>().ToList();
+        Assert.Equal(notes[3].Midi, notes[4].Midi); // the repeat itself is untouched
+    }
+
+    [Fact]
+    public void RepeatWithinTheMeasure_DoesNotWarn()
+    {
+        // The idiom the spelling exists for — the electric-bass pump.
+        var tree = SyntaxTree.Parse("bes8 8 8 8 8 8 8 8 |");
+        Assert.DoesNotContain(SemanticValidation.Run(tree),
+            d => d.Code == DiagnosticCodes.BareDurationAcrossBarline);
+    }
+
+    [Fact]
+    public void AChainAfterTheCrossing_WarnsOnce()
+    {
+        // The first bare duration anchors the measure's run; the ones after it
+        // are within-measure repeats and stay silent.
+        var tree = SyntaxTree.Parse("c'2 2 | 4 4 4 4 |");
+        Assert.Single(SemanticValidation.Run(tree)
+            .Where(d => d.Code == DiagnosticCodes.BareDurationAcrossBarline));
+    }
+
+    [Fact]
+    public void ReadingThroughARest_StillWarnsAcrossTheBar()
+    {
+        // Rests are transparent to the run (pinned above), so they are
+        // transparent to the crossing too: the repeated event is still on the
+        // other side of the barline, wherever the rest sits.
+        var tree = SyntaxTree.Parse("c'4 d e f | r4 4 g f |");
+        Assert.Single(SemanticValidation.Run(tree)
+            .Where(d => d.Code == DiagnosticCodes.BareDurationAcrossBarline));
+    }
+
+    [Fact]
+    public void NothingToRepeat_IsTheErrorNotTheWarning()
+    {
+        var diags = SemanticValidation.Run(SyntaxTree.Parse("4 c' d e"));
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.DetachedDuration);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.BareDurationAcrossBarline);
     }
 
     [Fact]

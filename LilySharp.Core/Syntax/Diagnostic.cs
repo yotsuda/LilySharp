@@ -252,9 +252,11 @@ public static class DiagnosticCodes
     /// (<c>g2</c>) is a duration, a spaced one (<c>g 2</c>) is a degree.</summary>
     public const string DurationInsideChord = "LYS0015";
 
-    /// <summary>Parse error: a bare number in a music stream — a DETACHED
-    /// duration. A duration must be glued to what it lengthens (<c>c4</c>,
-    /// <c>&lt;c e g&gt;4</c>); separated by a space it means nothing.</summary>
+    /// <summary>Semantic error: a bare duration with nothing before it to
+    /// repeat. Until 2026-08-19 EVERY spaced number in music was this error;
+    /// now that <c>bes8 8 8</c> is the repeat spelling (GRAMMAR §BareDuration),
+    /// the code survives for the one shape that still has no meaning — a
+    /// repeat with no note, chord or slash before it.</summary>
     public const string DetachedDuration = "LYS0016";
 
     /// <summary>Parse error: a declaration name (part/section/phrase/…) starts with
@@ -664,6 +666,18 @@ public static class DiagnosticCodes
     /// note and emits nothing but a short-measure warning. Naming it here is the only place
     /// the writer is told before the picture changes under them.</para></summary>
     public const string PhraseNameUnreachable = "LYS1030";
+
+    /// <summary>Semantic warning: a bare duration's repeat reaches back across a
+    /// barline — the event it repeats is in an earlier measure. Within a measure
+    /// the spelling is the idiom (<c>bes8 8 8 8</c>); a measure that OPENS on a
+    /// bare number is also exactly what a dropped pitch letter looks like
+    /// (<c>4 g f e</c> meant as <c>a4 g f e</c>) — the one silent misreading the
+    /// spelling bought, accepted knowingly in HANDOFF §3 with this diagnostic as
+    /// the agreed receiver (GRAMMAR_AUDIT §3.3). A warning, not an error: the
+    /// repeat is legal and renders; writing the event itself silences it. A chain
+    /// after the crossing (<c>… | 4 4 4</c>) is anchored by its first bare
+    /// duration, so the crossing is reported once.</summary>
+    public const string BareDurationAcrossBarline = "LYS1031";
 
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
