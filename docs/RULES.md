@@ -1103,6 +1103,11 @@
 - **シェルは pwsh MCP / ripple（bash 禁止）**。ファイル書き込みは Write ツール
   （`Set-Content` 直書き禁止。**PowerShell に heredoc は無い** — commit message は
   ファイルに書いて `git commit -F`）
+  ⚠️ ★★ **スクリプトで `.md` を書き戻すときは LF で書く**（2026-08-22・第228 が踏んだ）。
+  **作業ツリーの `.md` は CRLF だが blob は LF**（`core.autocrlf=true`・`.gitattributes` に
+  `.md` の行が無い）。読んだままの CRLF で書き戻すと `git add` が正規化せず、
+  **97 行の編集が 1124 行の diff** になる。**`--numstat` を見て、編集した行数と合うことを
+  確かめてから commit する**（台帳 json を `json.dump` で書き戻すなの `.md` 版＝同じ欠陥）。
 - **「未使用に見える」≠「消してよい」。** 削除前に `.cs` 以外も横断 grep →`<see cref>` 確認
   → 削除後にヘルパが孤立しないか再 grep →**ユーザー承認**
   ⚠️ ★★★ **名前が*導出*される物では、横断 grep 0 件は根拠にならない**（2026-08-16・第189セッション）。
