@@ -151,6 +151,53 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第232セッション＝**ユーザー判断 4 つを締めて §2.1 `paper { }` を実装した（`1c19d384`・38 file）**——第231 が測った決定材料に対する判断＝⑴ 狙い＝ハウススタイル（§2.1 単独・A/B/C は需要待ちで見送り）⑵ **単位接尾辞を導入**（`210mm`/`29.7cm`/`8.5in`・**数字に糊付け＝1 量**・裸の数値は ss）⑶ 語彙＝寸法系全部（アルゴリズム切替は載せない）⑷ **段間隔の分担＝paper に寄せる**（override 側は「効かない scope」の傷か位置配管の費用・paper は綴り＝意味が一致）。**これで GRAMMAR_AUDIT §9 は全項 ✅**（残りは §1.2 リネームのみ＝ユーザーが MSVS で）。
+**① 形（GRAMMAR §2.5）**：top-level `paper { KEY VALUE… }`＝LP の `\paper` 変数の camelCase。scalar 10（paperWidth/Height・margin×4・indent×2・topSystemPadding・spacingIncrement）＋ flag 1（raggedRight）＋ **spacing spec block 13×4**（systemSystemSpacing…nonStaffNonStaffSpacing × basicDistance/minimumDistance/padding/stretchability）。**mm→ss は ×72.27/127 を 6 桁丸め＝LayoutOptions 既定値の計算と同一**なので**「既定を書いた本は既定と byte 一致」**（PaperBlockTests が pin・空 block／既定明記／無指定の 3 綴りが同一絵）。**露出しなかった**：StaffHeight（単位の枠そのもの・LP も `\paper` 外）・SystemSpacing（不活性の実測札あり）・breaking 切替。
+**② 配管は fonts の完全鏡**：`PaperPlanReader`（ONE HOME・collector＋`PaperValidator` の 2 呼び手）→ `Score.Paper` → **`new LayoutEngine(score.Paper)` ×6 生産 site**（Svg/Pdf/Png×2/Incremental/LayoutReport）・増分の meta 等値・重複 global・診断 **LYS9001〜9006**（spaced unit `210 mm` は「糊付けの綴り」を名指す）・LSP 補完 3 context＋top-level snippet（既定 prefill＝受けて何も変えなければ絵は動かない）・tmLanguage `paper-block`（入れ子 begin/end）＋ EditorColouringTests の両方向網（語彙の家は `LanguageVocabulary.Paper*`＝public 転送）。
+**③ exporter は未輸出を warning で名指す**（drummap 型の「名前の付いた穴」）——**fonts の「書かない」判断と理由が逆向き**：paper は Lily# 側の絵を動かすので、書かない双子は対照でなくなる。追跡本に paper を書く本は 0＝今日盲目の probe は無い。真の `\paper` 変数は 1:1 で写せるが staff-spacing 族は LP では grob/context 側＝`\layout` override が要る——半分だけの輸出は穴の名指しより悪い、で保留。
+**④ 出力同一の証明 3 点**（§5.1）：⑴ lp-regression **A/B 再レンダ＝絵が動いた本 0/81**（stash→旧 build で baseline→pop→新 build で比較）⑵ 台帳 **566 点・残差完全不動** ⑶ suite 全緑＋**snapshot 0 枚**。製品面は **572 冊 `lysc check`＝LYS9 出現 0・exit 非零は既存 3 probe のみ**（lines 未対応×2・repeat volta×1＝本便と無関係）。**旧文言の掃き＝「paper 綴りが無い」と言う生きた 4 箇所**（break.lys・spacing-accidental-stretch.lys・lpreg/spacc-stretch.lys・lp-regression README）**を直し、3 冊とも data-pos 剥がし byte 一致で幾何不動を機械確認**（baseline.json は書き換え後の姿で更新済み）。
+
+★ **開始時裏取り**: HEAD `e658c44f`（第231 の閉幕 handoff・§1 と一致）・未 push 20・未追跡 0/木 0・Windows suite **5737/0/4**・WSL **5737/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時: **未 push 22（push はユーザー＝RULES §5.1）**＝本便 2 本（`1c19d384` 実装一式／この行の handoff）・未追跡 0/木 0・suite **Windows 5761/0/4・WSL 5761/0/4＝両 OS 完全緑（開始比 +24＝PaperBlockTests 23＋彩色網 1）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（冊数不変・3 冊はコメント行のみ書き換え＝幾何不動を機械確認済み）・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① `paper { }` 一式（`1c19d384`・38 file） | 文法＋reader＋validator＋Score→LayoutEngine 配管 6 site＋診断 6 本＋LSP 補完＋tmLanguage＋docs 4 本＋監査 close＋corpus 旧文言 4 箇所 | **既存本の出力ゼロ移動を 3 点証明**（A/B 0/81・台帳不動・snapshot 0）・572 冊 check 新診断 0・両 OS 完全緑・+24 テスト |
+
+- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 は全項 ✅**＝言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**新規の名指し穴**＝⒤ exporter の paper 未輸出（warning 済み・paper を書く本が生まれて probe が要る日に `\paper` 1:1 写像＋staff-spacing 族の `\layout` 輸出）・⒥ MusicXML importer の page-layout → paper 写像（未着手・未起票のまま）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★ 骨 1＝**「値札の付いた選択肢」まで畳んであれば、判断は 1 往復で締まる**
+> 第231 骨 3 の実証側。§2.2/§2.1 は測定済みの候補 A〜D＋判断 3 つの形で置いてあったので、
+> 質問 3 つ（狙い・単位・分担）を 1 度出すだけで実装便に入れた——ただし 1 度目の答えは
+> 「メリデメを整理して。お勧めは？」だった。**表（得るもの／費用／実測需要／難点）と推奨を
+> 添えて出し直すと 3 つとも即決**。⇒ **判断を求めるときは、測定の生データではなく
+> 「推奨付きの比較表」まで畳んでから出す**（§5.0「測定と判断を混ぜない」の運用形）。
+
+> ## ★★★ 骨 2＝**「既定を書いた本は既定」は丸め規則まで揃えて初めて成立する**
+> mm→ss を素朴に全精度で変換すると `paperWidth 210mm` ≠ 既定 `119.501575`（既定値リテラルは
+> 6 桁丸め）＝**同じ量の 2 綴りが 2e-7 だけ違う絵を作る**。変換側にも「×72.27/127 を 6 桁丸め」
+> ＝**既定値が計算された方法そのもの**を敷いて恒等にした（pin あり）。
+> ⇒ **新しい綴りが既存の定数と同じ量を指すときは、値ではなく*計算方法*を共有する**
+> （§5.2.1② の「1 量 2 綴り」の数値版）。
+
+> ## ★★ 骨 3＝**data-pos の罠は Equal 側だけでなく NotEqual 側にも効く**
+> 新テストの「paper で絵が動く／空 paper では動かない」は、素の byte 比較だと**両側とも
+> data-pos で成立してしまう**（ブロックを前置しただけで全 offset がずれる）——NotEqual は
+> 「正しい答えを誤った理由で出す計器」（§0 の 5 例目）になり、Equal は赤くなる。
+> **比較は両方向とも data-pos 剥がしが先**（第230 骨 3 の器具を新規テストに恒久化）。
+
+> ## ★ 骨 4＝**exporter の穴は「知っている等価」と「名指した穴」を区別して書く**
+> fonts は「書かないほうが対照として正しい」（Lily# 側の絵を動かさない）＝知っている等価。
+> paper は逆＝**書かないと双子が対照でなくなる**ので、これは drummap 型の穴として
+> warning で名指した。⇒ **未輸出を決めるときは「Lily# 側の絵を動かす量か」で二分し、
+> 動かす量なら黙らず warning**（動かさない量なら書くほうが比較を壊す）。
+
+---
+
+## 以下は第231セッションの経緯
+
 最終更新 第231セッション＝**残債筆頭 §9-3/4（§2.2 override 語彙・§2.1 `paper { }`）の決定材料を測って監査に置いた**——第230 骨 4 の処方（「§8.1 と同じ形に持ち込む＝決定を先に締め、費用を測ってから実装便を立てる」）の測定半分。**コードは 1 行も動いていない**（動いたのは GRAMMAR_AUDIT.md 1 本だけ）。**判断 3 つがユーザー待ち**（下 ④）。
 **① §2.2 の発見＝§4 の形の 3 例目（今回は文法の門も閉じている）**：`StaffSpacingParameters.ApplyOverrides`（`LayoutEngine.cs:94` から生きている）は `StaffGrouper.staff-staff-spacing.*`／`staffgroup-staff-spacing.*` の **8 綴り（basic/minimum-distance・padding・stretchability × 2 面）を完全実装**しているが、⑴ whitelist（`SupportedGrobOverrides`）に行が無く、⑵ **文法が dotted sub-property を綴れない**（`ParseGrobPropertyName` は hyphen 結合のみ・2 つ目の `.` は `Expect(Equals)` で壊れる）＝**到達者はテストだけ**（`AlignmentDistanceTests` が `GrobOverride` を直接構築）。適用は score-wide 一発（measure／staff scope を見ない）。
 **② 需要 3 面の実測**：⑴ lp-regression **category=override 89 冊の内訳＝`\override` 無し 54（`\set`/`\with` で除外・§2.2 の射程外）／override のみ 28＝全部一点物（綴り首位でも `Score.BarLine.hair-thickness` 7 回・1 冊）／mixed 7** ⇒ **綴り 1 つ実装して戻る本は約 1 冊＝コーパス再開は語彙拡張の動機にならない**。⑵ 追跡 .lys 572 冊で override を書くのは complex-once.lys 1 冊（transparent 対）のみ＝**どんな拡張も既存コーパスの出力・exit code を動かさない**。⑶ LP `\hideNotes` は 6 grob（Dots・NoteHead＋no-ledgers・Stem・Accidental・Rest・TabNoteHead）に transparent を張る——Lily# は inked な 2 grob だけ＝**休符・付点・臨時記号・加線は隠せない**。
@@ -186,56 +233,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > 第229 骨 4（承認の質は値札の質）の続き——§2.2/§2.1 は「何を足すか」だけ聞くと開いた
 > 質問になるが、**候補を A〜D に畳んで各々の費用と需要を並べれば、判断は 3 つに縮む**
 > （狙い・単位・分担）。測定はこちらの仕事、判断はユーザーのもの（§5.0）。
-
----
-
-## 以下は第230セッションの経緯
-
-最終更新 第230セッション＝**第1便で §3.3 bare duration の診断（`18c588b9`・LYS1031）、続き便でユーザーが順位を名指した §8.1「コード記号＝大文字＋小節相対」一式を実装した**（`0ad0c34b`・88 file）——これで GRAMMAR_AUDIT §9 の残りは**設計判断系（⑶ §2.2・⑷ §2.1）と §1.2 リネーム（ユーザーが MSVS で）だけ**。
-**① 発火条件は「小節頭」ではなく「繰り返しの参照先が小節線の向こう」**：直前の*書かれた*繰り返し可能イベント（音符・和音・スラッシュ・ドラム・`q`・先行 bare duration）との間に小節線が立つとき warning（exit 0・絵は不動）。脱字（`4 g f e`＝`a4 g f e`）はどこでも起きるが、**小節内の走行（`bes8 8 8 8`）こそがこの綴りの存在理由**なので、跨ぎだけが疑わしい形。休符は resolver と同じく透過（**`| r4 4` も鳴る**）・連鎖は最初の bare が anchor になり**跨ぎ 1 回につき 1 本**。判定は **`BareDurations` の同じ 1 回の walk に `CrossesBarline` を載せた**（§5.2.1②＝validator は自分で数え直さない）。pin 5 本（`BareDurationTests`）。**ついでに `Diagnostic.cs` の LYS0016 要約が 2026-08-19 以前の言語（「spaced number は無意味」）を記述したままだったのを現行仕様に直した**。docs 4 本（GRAMMAR／GRAMMAR_FOR_LLM／SYNTAX_REFERENCE／AUDIT。**GRAMMAR は EBNF コメント内 `;` 禁止**——DocKeywordListTests が塊を切る・第217 の学びを踏まずに済んだ）。
-**② 値札は実装の前に 3 経路で測った**：textual grep 2 形（小節線直後の数字・行頭の数字＝**0 行／39931 行**）＋**製品面 `lysc check` 全 572 冊＝0 件**（grep に映らない `| r4 4` 形まで含めた最終の数）。⇒ **追跡本の出力・exit code・snapshot・台帳は 1 つも動かない**。承認について：§3.3 は監査が方向（「診断で個別に受ける」）まで書いた残り小物で、§9 の設計判断系とは別枠——**severity（warning）と trigger（跨ぎ）はこの便の判断。変えるなら 2 行**（`BareDurationValidator` の 1 分岐と severity）。
-**③ §8.1＝entry は印字形そのもの**（`ChordEntry = Root [#|b] [Quality] [/Root]`・`Am`/`G7`/`F#m`/`Bb7`/`Gm7-5`/`Cmaj7/E`）。**大文字＝根音が文法**なので `R`（休符）と衝突せず、根音の後の `b` はフラット＝**変化音は全部 `+`/`-`**（`Bb5` が曖昧にならない理由）。パーサは**接着トークン run**（`F#m`＝Identifier+BadToken`#`+Identifier——`#` は chords 本体でも黙許＝@chord/@fig 引数と同じ Parser 序文の領域追跡）を `SymbolText` で結合し、**`ChordStructure.TryParseChordEntry` の 1 文法**へ（@chord・補完・harmonizer・XML importer と共有）。registry は `m7.5-`/`m7b5`→**`m7-5`**・`+`＝aug。**`/+`（added bass）は廃止**（表示は元々同一・BassIsAdded は importer 用に温存）。旧綴りは **LYS1028 が run 単位で 1 回**名指す。
-**④ §8.1＝配置は小節相対・音価なし**：小節の書かれた slot（entry・休符・**`.`＝1 slot 延長**（`ChordExtendSyntax` 新設））が **`BeamingPattern.Options` の拍構造＝梁と同じ 1 格子**で割る（`ChordRhythm.SlotDurations`）。1 slot＝小節・拍数と同数＝拍・整数倍＝細分・約数＝拍の束、**外れは LYS2009（warning・等分 fallback）・小節頭の `.` は LYS2010（error・時間は経過）**——描画と同じ walk が記録し `ChordRowGridValidator` が発話（BeamPairing の型・構造 replay 越しに重複排除）。旧 `ChordRhythm` の 4/4 専用表（3 個→4 4 2）は音価と共に廃止。
-**⑤ 「音楽は動かない」を 3 面で実測**：⑴ 書き換えた snapshot fixture 10 冊＝**全部 data-pos のみ**（監査の「byte 一致するはず」は 1 語だけ狭かった——**SVG はソース位置を data-pos に持つ**ので、書き換えでオフセットがずれた分だけ幾何同一のまま byte が動く。**剥がして byte 一致**を test baseline と git 旧版の両方に対して機械確認してから再ベース）；⑵ 非 snapshot 8 冊（lp-regression 3・lpreg probe 2・samples 3）＝**HEAD worktree の旧ビルド×旧綴り vs 新ビルド×新綴りで data-pos 剥がし byte 一致**（greensleeves は 6/8 なので `a4.:m e4.` がちょうど 2 拍＝`Am E`）；⑶ **全 572 冊 `lysc check` で新診断 0 件**。書き換え＝corpus 15＋inline @chord 3・テスト 24 file・probe 7 site・docs 4 本・completion（挿入＝symbol・`:` 品質補完は廃止）・harmonizer（symbol 生成）・XML importer（重変化音は quoted escape へ fallback）。
-
-★ **開始時裏取り**: HEAD `990c6949`（第229 の閉幕 handoff・§1 と一致）・未 push 14・未追跡 0/木 0・Windows suite **5722/0/4**・WSL **5722/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 18（push はユーザー＝RULES §5.1）**＝本便 4 本（`18c588b9` LYS1031／`2b14ef8a` handoff／`0ad0c34b` §8.1／この行の handoff）・未追跡 0/木 0・suite **Windows 5737/0/4・WSL 5737/0/4＝両 OS 完全緑**（開始比 +15＝LYS1031 pin 5＋§8.1 の格子 pin 群 10）・snapshot **222 枚**（枚数不変・**10 枚は data-pos のみで再ベース**＝⑤ の機械確認つき）・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（書き換えのみ・冊数不変）・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① §3.3 の診断 LYS1031（`18c588b9`） | `BareDurations` の walk に `CrossesBarline`・`BareDurationValidator` に warning 1 分岐・pin 5 本・LYS0016 の stale 要約修正・docs 4 本 | コーパス 0 件（grep 2 形＋ `lysc check` 572 冊の 3 経路実測）＝出力・exit code・snapshot・台帳すべて不動・両 OS 完全緑 |
-| ② §8.1 コード記号一式（`0ad0c34b`・88 file） | 綴り＝symbol run→1 文法・`.`＋拍格子（`ChordRhythm.SlotDurations`）・LYS2009/2010＋`ChordRowGridValidator`・`/+` と `:` 品質と 4/4 表の廃止・corpus 18 冊＋テスト 24 file＋docs 4 本・補完/harmonizer/XML importer も symbol へ | **幾何 18 冊全一致（data-pos 剥がし byte 一致・3 面実測）**・572 冊 check 新診断 0・台帳不動・両 OS 完全緑 |
-
-- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 の残り＝設計判断系だけ**——⑶ §2.2 override の語彙（拡張経路の本体・**設計判断が先＝何を足すかは狙いの持ち主**）／⑷ §2.1 `paper { }`（設計判断が先・`fonts { }` の 4 段フォールバックが雛形）／✅ §3.3・✅ §8.1 は本便で閉じた／残り小物＝§1.2 リネーム（ユーザーが MSVS で）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・**実譜の「前小節と同じ」記号（`%`）は §8.1 のスコープ外として未起票のまま**（audit §8.1 ②）。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★ 骨 1＝**「0 件」は製品面で測り直してから引く——grep の 2 形が両方 0 でも、それは grep が見える形の 0 でしかない**
-> 小節線直後・行頭の 2 つの textual grep は両方 0 行だったが、**`| r4 4`（休符を挟む跨ぎ）は
-> どちらの正規表現にも映らない**。最終の数は `lysc check` を全 572 冊に回して取った（0 件・132 秒）。
-> ⇒ **診断の値札は、その診断を実際に発話する経路で数える**（§0「数え方を書く」の診断版。
-> 第192 の骨 ⑴「0 冊を証拠として引く前に毒を 1 つ当てる」と同族——今回は網ではなく母集団の側）。
-
-> ## ★ 骨 2＝**「疑わしい形」の境界は、綴りの存在理由から引く**
-> 監査の文言は「小節頭の裸の数字」だが、実装した境界は**「参照先が小節線の向こう」**——
-> 脱字はどこでも起きる一方、**小節内の走行はこの綴りがそのために入った idiom**なので、
-> 警告してよいのは跨ぎだけ。連鎖（`| 4 4 4`）は最初の 1 個が anchor になって 1 本で済む。
-> ⇒ **診断の trigger は「間違いが取る形」と「idiom が取る形」の差集合に置く**——
-> どちらも取る形に置くと、正しい書き手への雑音が診断の信用ごと網を殺す。
-
-> ## ★★★ 骨 3＝**「SVG は byte 一致するはず」は 1 語だけ狭い——data-pos はソース位置なので、書き換えは幾何同一のまま byte を動かす**
-> §8.1 の監査は「入力の綴りが変わっても音楽は変わらない → snapshot がそのまま証明になる」と
-> 書いたが、**snapshot 比較は data-pos を mask しない**ので、書き換えた 10 fixture は幾何同一のまま赤。
-> 計器は「**data-pos を剥がして byte 一致**」——test baseline・git 旧版・HEAD worktree の旧ビルド、
-> 3 つの対に同じ 1 本で当てた（第229 の grammar-tour data-pos 剥がしと同じ器具の恒久化）。
-> ⇒ **「出力不変」を主張する書き換えの検証器は最初から data-pos 剥がし比較**。snapshot の再ベースは
-> この機械確認を message に添えて行う（幾何が動いていないことの証明を承認の代わりにしない——並記する）。
-
-> ## ★★ 骨 4＝**40 file 級の言語変更が 1 便で幾何 0 移動で着地したのは、監査が値札を先に測ってあったから**
-> §8.1 は「実装だけが残っている」状態まで監査が持って行っていた（綴り・`.`・細分・小節境界の決定＋
-> 15 冊 9 quality の実測＋`R1` 衝突と 7/8 の反証まで）。実装便がやったのは器（run→1 文法・拍格子）と
-> 掃きだけで、**設計判断は 1 つも新たに要らなかった**（唯一の裁量＝LYS2009 の severity と等分 fallback）。
-> ⇒ **§9 の残り（§2.2・§2.1）も同じ形に持ち込むのが最短**——決定を先に締め、費用を測ってから実装便を立てる。
 
 ---
 
