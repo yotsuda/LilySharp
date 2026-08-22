@@ -727,9 +727,14 @@ StaffRender    = 'staff' , [ ClefName ] , PartRef , [ DisplayName ] ,
                     The same chord part can also feed a lead-sheet row, so a
                     progression is written once. *)
 PartRef        = Identifier ;
-DisplayName    = String | Identifier ;
-                 (* 'staff flute "津田さん"' or a bare word: overrides the instrument
-                    label for THIS score only. *)
+DisplayName    = String ;
+                 (* 'staff flute "津田さん"': overrides the instrument label for THIS
+                    score only. QUOTED ONLY (2026-08-23, user decision — the bare form
+                    was position-dependent: a ScoreItem may also be a bare MIDI-only
+                    part name, so 'staff flute click' silently ate the click track as
+                    a label. A trailing bare identifier is now always that part
+                    reference; GRAMMAR_AUDIT §3.1. Also uniform with 'part X "Violin I"',
+                    which was already quoted-only.) *)
 
 (* THIS SCORE'S OWN HEADER: 'title' / 'composer' written inside a score restate the file's
    metadata for that score alone — the same two words as the top-level MetadataDecl, in a
@@ -740,9 +745,10 @@ DisplayName    = String | Identifier ;
    how a click track or a cue part is carried without appearing on the page. Because it puts
    nothing on the page, a score of nothing but bare names has nothing to engrave and is the
    empty-body error (LYS6002) — a bare name accompanies staves, it does not replace them.
-   ⚠️ Written after 'staff NAME' a bare word is read as that staff's DISPLAY NAME instead
-   ('staff flute piccolo' is ONE staff, labelled "piccolo"), so a MIDI-only part is written
-   before the staves, or after a braced group. *)
+   A bare word after 'staff NAME' is this too — 'staff flute click' is flute's staff plus
+   the click track. (Until 2026-08-23 that word was read as the staff's display name and
+   the click track silently stopped playing; a paragraph here taught word order as the
+   workaround. Display names are quoted-only now, so position no longer matters.) *)
 
 (* A 'score' may carry its OWN 'form main { … }' to render a different arrangement
    (e.g. a practice excerpt); it overrides the top-level structure for that score only. *)

@@ -818,10 +818,10 @@ score winds "winds" {
 }
 ```
 
-⚠️ A bare word written *after* `staff NAME` is read as that staff's display name
-instead (`staff flute piccolo` is ONE staff, labelled "piccolo"), so a MIDI-only part
-goes before the staves or after a braced group. And a score of nothing but bare names
-has nothing to engrave, which is the empty-body error.
+A staff's display name is a quoted string (`staff flute "Piccolo"`) — a bare word after
+`staff NAME` is always another score item (`staff flute click` is flute's staff plus the
+`click` MIDI-only part), so position never changes what a word means. And a score of
+nothing but bare names has nothing to engrave, which is the empty-body error.
 
 ### Multiple forms (excerpts)
 

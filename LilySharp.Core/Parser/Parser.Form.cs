@@ -595,26 +595,23 @@ internal sealed partial class Parser
 
         tokens.Add(ExpectPartName());
 
-        // `staff flute "津田さん"` (or a bare single word:
-        // `staff flute 津田さん`) overrides the displayed instrument name.
-        //
-        // ⚠️ THE BARE FORM IS NOT UNAMBIGUOUS, and the line that used to stand here said it
-        // was: "following render items always begin with a keyword, so a trailing
-        // identifier is unambiguous". A ScoreItem may also be a BARE PART NAME — the
-        // MIDI-only part, played and never engraved — which begins with no keyword at all.
-        // So `staff flute click` takes `click` as the label of flute's staff, and the click
-        // track silently stops being played. GRAMMAR.md section 7 documents the collision
-        // and tells the writer to put MIDI-only parts before the staves or after a braced
-        // group, which is the workaround, not the absence of the problem.
+        // `staff flute "津田さん"` overrides the displayed instrument name. QUOTED ONLY
+        // (2026-08-23, user-approved — GRAMMAR_AUDIT section 3.1): the bare form this
+        // branch used to accept (`staff flute 津田さん`) was position-dependent, because a
+        // ScoreItem may also be a BARE PART NAME — the MIDI-only part, played and never
+        // engraved, beginning with no keyword at all. So `staff flute click` took `click`
+        // as the label of flute's staff and the click track silently stopped being played;
+        // GRAMMAR.md section 7 had to teach a word-order workaround. A trailing bare
+        // identifier now falls through to the ScoreItem loop and reads as that MIDI-only
+        // part reference — the meaning the grammar could never reach from this position.
         //
         // Measured 2026-08-21 across the 571 .lys in samples/ audit/ Fixtures/: the bare
-        // form is written NOWHERE, and the quoted form nowhere either (the tests that use a
-        // display name build their source in C#). The one thing pinning the bare spelling is
-        // ScoreRowFoldingTests.TheRetiredWithSpelling_ReadsAsADisplayNameAndARow, where
-        // `staff vocal with lyrics ja` degrades into a staff labelled "with" plus a row —
-        // graceful decay of a retired, never-released clause, not a feature anybody asked
-        // for. docs/GRAMMAR_AUDIT.md section 3.1 carries the proposal to require the quotes.
-        if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
+        // form was written NOWHERE, and the quoted form nowhere either (the tests that use
+        // a display name build their source in C#). The one pin was
+        // ScoreRowFoldingTests.TheRetiredWithSpelling_ReadsAsADisplayNameAndARow —
+        // `staff vocal with lyrics ja` degrading into a staff labelled "with" plus a row,
+        // graceful decay of a retired, never-released clause; it now pins the new reading.
+        if (Check(SyntaxKind.StringLiteral))
             tokens.Add(Advance());
 
         ConsumeLinesSelector(tokens);

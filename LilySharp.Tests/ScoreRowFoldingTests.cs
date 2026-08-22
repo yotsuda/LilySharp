@@ -254,22 +254,27 @@ public class ScoreRowFoldingTests
     /// THE DOOR IS GONE, NOT JUST CLOSED: `with` stopped being a keyword when
     /// its clause-removal error LYS0031 retired (2026-08-19, user decision —
     /// still before the first tag; the DiagnosticCodes remarks record the
-    /// number). The old clause spelling now reads as ordinary tokens: `staff
-    /// vocal with lyrics ja` is a staff displayed "with" followed by a `lyrics
-    /// ja` row — which folds, so the ink is the attachment the clause used to
-    /// spell. (The identity that made the removal safe — the row spelling
-    /// rendering the clause spelling's ink byte-for-byte — was proven by
-    /// machine while both spellings existed: commits 6d6d1b92 / 228c6108,
-    /// three priority-stack pins and the chorale, all identical modulo
-    /// data-pos.)
+    /// number). And since the bare display name retired too (2026-08-23, user
+    /// decision — GRAMMAR_AUDIT section 3.1: display names are quoted-only, so
+    /// a trailing bare identifier is always the MIDI-only part reference), the
+    /// old clause spelling now reads as a staff, a reference to an undeclared
+    /// part `with` — which is diagnosed, not silently swallowed as a label —
+    /// and a `lyrics ja` row, which still folds onto the staff.
     /// </summary>
     [Fact]
-    public void TheRetiredWithSpelling_ReadsAsADisplayNameAndARow()
+    public void TheRetiredWithSpelling_ReadsAsAPartRefAndARow()
     {
-        var spec = SpecOf(BoundBody + "score main { staff vocal with lyrics ja }");
+        var source = BoundBody + "score main { staff vocal with lyrics ja }";
+        var spec = SpecOf(source);
         var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items)).Staff;
-        Assert.Equal("with", staff.InstrumentName);
+        Assert.Null(staff.InstrumentName);
         Assert.Equal(new[] { "ja" }, staff.WithLyrics);
+
+        // The undeclared `with` is named by a diagnostic — before 2026-08-23 it
+        // was eaten as vocal's display label, in silence.
+        var tree = SyntaxTree.Parse(source);
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+            d => d.Message.Contains("with"));
     }
 
     /// <summary>
