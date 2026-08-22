@@ -435,19 +435,17 @@ score practice { staff melody }
 
 ## Override / revert (engraving properties)
 
-⚠️ The vocabulary is THREE properties — `NoteHead.transparent`, `Stem.transparent`,
-`NoteColumn.force-hshift`. The syntax accepts any `Grob.property`, but anything outside
-that list is refused (LYS1029, "not supported in this version") rather than silently
-doing nothing. The list grows; each addition removes one error.
-
-⚠️⚠️ **TWO of the three take effect.** `NoteColumn.force-hshift` is accepted by the
-validator and then IGNORED — `ElementCoordinator.cs:49` holds `ForceHshiftEnabled = false`
-for the initial release. So that one spelling IS the silent no-op the paragraph above says
-the language does not have. Write it and nothing moves, with no diagnostic.
+⚠️ The vocabulary is FOUR properties — `NoteHead.transparent`, `Stem.transparent`,
+`NoteHead.color`, `Stem.color`. The syntax accepts any `Grob.property`, but anything
+outside that list is refused (LYS1029, "not supported in this version") rather than
+silently doing nothing. The list grows; each addition removes one error. All four take
+effect (`NoteColumn.force-hshift` left the vocabulary 2026-08-23: its implementation is
+disabled for the initial release, so writing it is an honest LYS1029 instead of a silent
+no-op; it returns when the per-voice implementation lands).
 
 ```
 override NoteHead.transparent = true     // value fits the property: number, identifier (true/up/red), or "string"
-override NoteColumn.force-hshift = 1.5   // fractional values are allowed, and negative ones (-0.5)
+override NoteHead.color = red            // named colour, or a "#rrggbb" string
 c4 d e f |
 revert NoteHead.transparent
 once override Stem.transparent = true    // 'once' applies to the next note only

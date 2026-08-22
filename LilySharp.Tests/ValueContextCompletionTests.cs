@@ -143,22 +143,19 @@ public class ValueContextCompletionTests
     public void OverrideCompletions_OfferOnlyTheRenderedProperties()
     {
         // Only the Grob.property pairs the renderer actually consumes are offered
-        // (colour, transparency, force-hshift) — no misleading no-op overrides.
+        // (colour, transparency) — no misleading no-op overrides. force-hshift left the
+        // list 2026-08-23 with its vocabulary row: LYS1029 now refuses it while its
+        // implementation is disabled, and offering a refused spelling would mislead.
         var labels = LilySharpLanguageServer.GetOverrideCompletions().Items
             .Select(i => i.Label).ToArray();
         Assert.Equal(
-            new[] { "NoteHead.color", "Stem.color", "NoteHead.transparent", "NoteColumn.force-hshift" },
+            new[] { "NoteHead.color", "Stem.color", "NoteHead.transparent", "Stem.transparent" },
             labels);
         // Inserts `Grob.property = ` (no value pre-filled) and re-opens the popup so the
         // value list appears next — for an enumerable value (colour, true/false).
         var color = LilySharpLanguageServer.GetOverrideCompletions().Items.First();
         Assert.Equal("NoteHead.color = ", color.InsertText);
         Assert.Equal("editor.action.triggerSuggest", color.Command?.CommandIdentifier);
-        // A numeric value has nothing to enumerate, so it does not retrigger.
-        var hshift = LilySharpLanguageServer.GetOverrideCompletions().Items
-            .Single(i => i.Label == "NoteColumn.force-hshift");
-        Assert.Equal("NoteColumn.force-hshift = ", hshift.InsertText);
-        Assert.Null(hshift.Command);
     }
 
     [Theory]
@@ -186,7 +183,8 @@ public class ValueContextCompletionTests
             .Items.Select(i => i.Label).ToArray();
         Assert.Equal(new[] { "true", "false" }, bools);
 
-        // A numeric property offers nothing to enumerate.
+        // A property outside the offered set (force-hshift is refused by LYS1029 while
+        // its implementation is disabled) enumerates nothing.
         Assert.Empty(LilySharpLanguageServer
             .GetOverrideValueCompletions("override NoteColumn.force-hshift = ", "override NoteColumn.force-hshift = ".Length)
             .Items);

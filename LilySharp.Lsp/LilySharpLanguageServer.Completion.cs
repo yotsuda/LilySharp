@@ -2493,18 +2493,21 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// The grob-property targets the renderer actually CONSUMES: colouring note heads /
-    /// stems, hiding a note head, and the manual note-column shift. Other grobs parse and
-    /// store but currently render as no-ops, so they are deliberately NOT offered — that
-    /// would mislead. Shared by <see cref="GetOverrideCompletions"/> (which appends
-    /// <c>= value</c>) and <see cref="GetRevertCompletions"/> (which does not).
+    /// The grob-property targets the renderer actually CONSUMES: colouring and hiding
+    /// note heads / stems — the same four rows as <c>SupportedGrobOverrides</c>, which
+    /// LYS1029 enforces. Anything else parses and stores but is refused, so it is
+    /// deliberately NOT offered — that would mislead (NoteColumn.force-hshift left this
+    /// list 2026-08-23 together with its vocabulary row: its reader is disabled, see
+    /// ElementCoordinator.ForceHshiftEnabled). Shared by
+    /// <see cref="GetOverrideCompletions"/> (which appends <c>= value</c>) and
+    /// <see cref="GetRevertCompletions"/> (which does not).
     /// </summary>
     private static readonly (string Grob, string Property, string Kind, string Detail)[] RenderedGrobProperties =
     {
         ("NoteHead", "color", "color", "Colour the note heads"),
         ("Stem", "color", "color", "Colour the stems"),
         ("NoteHead", "transparent", "bool", "Show or hide the note head"),
-        ("NoteColumn", "force-hshift", "number", "Manually shift colliding note columns sideways (staff-spaces)"),
+        ("Stem", "transparent", "bool", "Show or hide the stem"),
     };
 
     /// <summary>
@@ -2526,8 +2529,8 @@ public sealed partial class LilySharpLanguageServer
                 InsertText = $"{o.Grob}.{o.Property} = ",
                 Detail = o.Detail,
                 SortText = i.ToString(),
-                // A numeric value (force-hshift) has nothing to enumerate, so it does not
-                // retrigger; colour / true-false do.
+                // Colour / true-false enumerate, so they retrigger; a numeric kind (none
+                // today — force-hshift was the one) would not.
                 Command = o.Kind is "color" or "bool"
                     ? new Command { Title = "Suggest value", CommandIdentifier = "editor.action.triggerSuggest" }
                     : null,

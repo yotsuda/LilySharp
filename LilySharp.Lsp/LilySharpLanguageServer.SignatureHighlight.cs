@@ -111,7 +111,7 @@ public sealed partial class LilySharpLanguageServer
                     ("{ music }", "Notes in the tuplet") }),
         new("override", "override Grob.property = value",
             "Overrides a grob (graphical object) property.",
-            new[] { ("Grob.property", "Grob name and property (e.g., Stem.length, NoteHead.color)"),
+            new[] { ("Grob.property", "Grob name and property (e.g., NoteHead.color, Stem.transparent)"),
                     ("value", "New value (number, string, or identifier)") }),
         new("phrase", "phrase name { music }",
             "Declares a reusable musical phrase. Reference with name.",

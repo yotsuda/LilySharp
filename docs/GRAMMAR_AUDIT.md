@@ -235,11 +235,13 @@ AI 生成を主用途に置く言語で 1 文字の脱落が別の曲になる�
 
 ### 4.1 実態
 
-| プロパティ | reader | whitelist | 結果 |
+| プロパティ | reader | whitelist | 結果（起票時） |
 |---|---|---|---|
 | `NoteHead.color` / `Stem.color` | **生きている** | **無い** | 描画される。**ただし LYS1029 error + exit 1** |
 | `NoteHead.transparent` / `Stem.transparent` | 生きている | ある | 正常 |
 | `NoteColumn.force-hshift` | **無効化** | ある | 通るが何も起きない |
+
+✅ **第229 後の実態**: color は「ある・正常」、force-hshift は「無い・LYS1029」＝両方向一致。
 
 ### 4.2 色 — 動く機能を「非対応」と言っている ★
 
@@ -261,6 +263,10 @@ AI 生成を主用途に置く言語で 1 文字の脱落が別の曲になる�
 ⇒ 修正は **whitelist に 2 行**（reader は既にある）。**出力が変わる**ので RULES に従いユーザー承認が要る。
 `OverrideVocabularyValidatorTests.cs` が `Spellings` をピン留めしている。
 
+> ✅ **第229 が完了（2026-08-23・ユーザー承認済み＝§4.3 と対で「対で閉じる」を選択）。**
+> color 2 行を追加し、pin（validator／completion）と docs 5 本を同便で更新。
+> **コーパスの color override 使用は 0 冊**＝実本の出力・exit code は 1 つも動かない。
+
 ### 4.3 `force-hshift` — 逆向きの同じ欠陥
 
 whitelist にあり検証を通るのに、`ElementCoordinator.cs:49` の `ForceHshiftEnabled = false` で捨てられる
@@ -268,6 +274,14 @@ whitelist にあり検証を通るのに、`ElementCoordinator.cs:49` の `Force
 当の silent no-op がこれ**で、`GRAMMAR.md` の Example 自身が 2 行書いている。
 
 ⚠️ **4.2 と 4.3 は対で決めること。片方だけ直すと欠陥が生き残る。**
+
+> ✅ **第229 が完了（2026-08-23・ユーザー決定）。** 方向は「有効化」ではなく **whitelist から
+> 外して正直な LYS1029 に**——`ForceHshiftEnabled = false` の理由がコード内に明記されている
+> （現実装は値が正規化で消え、列全体に当たる＝per-voice shift ができない）ので、
+> 「有効化」は 2 行仕事ではなく本実装の便。**whitelist＝実装済みの一覧という自らの原則に
+> 両方向で一致させた**：row は本実装が載る commit で flag と同時に戻す（ElementCoordinator の
+> コメントと `SupportedGrobOverrides` の不在コメントが互いを名指す）。
+> **コーパスの force-hshift 使用は 0 冊**・docs の例は 4 本とも書き換え（例文はテストされている）。
 
 ### 4.4 `LYS0032` のコメントが自分から廃番審査を招いている
 
@@ -589,7 +603,9 @@ snapshot の再ベースは**不要**であり、**してはならない**。再
 
 ## 9. 順序
 
-1. **§4.2 + §4.3 を対で決める** — 出力が変わるのでユーザー承認が要る。whitelist 2 行で終わる
+1. ✅ **§4.2 + §4.3 — 第229 が完了（2026-08-23・ユーザー承認）**。color 2 行を whitelist へ、
+   force-hshift は whitelist から外して正直な LYS1029 に（本実装が載る便で row と flag を同時に戻す）。
+   コーパス使用は両者 0 冊＝実本の出力不変
 2. ✅ **§1.1 `$` 廃止一式 — 第229 が完了（2026-08-22）**。出口を塞いでいた増分パースの
    診断落ち（`IncrementalReuseMap` の接触判定）を先に閉じ（`d1e2eeba`・再利用率の計器つき）、
    第228 の patch を適用、docs 7 本と tmLanguage の `$` 規則も掃いた。

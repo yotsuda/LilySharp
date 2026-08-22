@@ -841,20 +841,18 @@ score practice        { staff melody }  // → practice.svg
 
 ## Override/Revert
 
-Modify engraving properties. The vocabulary is three properties —
-`NoteHead.transparent`, `Stem.transparent`, `NoteColumn.force-hshift`. The syntax accepts
-any `Grob.property`, but anything outside that list is refused (LYS1029, "not supported in
-this version") rather than silently doing nothing; the list grows, and each addition
-removes one error.
-
-⚠️ **Two of the three take effect.** `NoteColumn.force-hshift` passes the validator and is
-then ignored — `ElementCoordinator.cs:49` holds `ForceHshiftEnabled = false` for the
-initial release, so that spelling changes nothing and says nothing.
+Modify engraving properties. The vocabulary is four properties —
+`NoteHead.transparent`, `Stem.transparent`, `NoteHead.color`, `Stem.color`. The syntax
+accepts any `Grob.property`, but anything outside that list is refused (LYS1029, "not
+supported in this version") rather than silently doing nothing; the list grows, and each
+addition removes one error. All four take effect (`NoteColumn.force-hshift` left the
+vocabulary 2026-08-23 — its implementation is disabled for the initial release, so it is
+refused honestly until the per-voice implementation lands).
 
 ```
-override NoteHead.transparent = true
+override NoteHead.color = red    // named colour, or a "#rrggbb" string
 c4 d e f |
-revert NoteHead.transparent
+revert NoteHead.color
 
 once override Stem.transparent = true
 c4 d e f |       // 'once' applies to the next note only

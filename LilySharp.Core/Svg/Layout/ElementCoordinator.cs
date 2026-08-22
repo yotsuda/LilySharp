@@ -46,6 +46,11 @@ internal sealed class ElementCoordinator
     // honoring, fractional shift). The resolver / NoteCollision support below is kept
     // intact — flip this to true once that proper implementation lands. Not a `const`, so
     // the disabled query does not read as unreachable code.
+    //
+    // While this is false the spelling is also OUT of SupportedGrobOverrides (removed
+    // 2026-08-23, GRAMMAR_AUDIT §4.3): writing it is an honest LYS1029 instead of the
+    // silent no-op four docs claimed the language does not have. Flip this AND restore
+    // the ("NoteColumn", "force-hshift") row in the same commit.
     private static readonly bool ForceHshiftEnabled = false;
 
     public ElementCoordinator(LayoutOptions options)

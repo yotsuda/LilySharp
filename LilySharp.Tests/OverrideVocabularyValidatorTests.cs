@@ -43,11 +43,14 @@ public class OverrideVocabularyValidatorTests
     }
 
     [Theory]
-    // The three the engine actually reads. Each has a live consumer:
-    // NoteHead/Stem.transparent -> SharedRenderer.Noteheads, force-hshift -> ElementCoordinator.
+    // The four the engine actually reads, all with a live consumer in
+    // SharedRenderer.Noteheads (transparent, and color via ResolveColor). The color rows
+    // were missing until 2026-08-23 while their reader was live — a correctly coloured
+    // score shipped with an LYS1029 error attached (GRAMMAR_AUDIT §4.2).
     [InlineData("override NoteHead.transparent = true c4 d e f")]
     [InlineData("override Stem.transparent = true c4 d e f")]
-    [InlineData("override NoteColumn.force-hshift = 0.5 c4 d e f")]
+    [InlineData("override NoteHead.color = red c4 d e f")]
+    [InlineData("override Stem.color = \"#00ff00\" c4 d e f")]
     [InlineData("override NoteHead.transparent = true c4 revert NoteHead.transparent d e f")]
     [InlineData("once override Stem.transparent = true c4 d e f")]
     [InlineData("c4 d e f")]                                   // no override at all
@@ -64,6 +67,13 @@ public class OverrideVocabularyValidatorTests
     [InlineData("override Stem.wibble = 1 c4 d e f")]
     // No such grob.
     [InlineData("override Wibble.wobble = 5 c4 d e f")]
+    // Deliberately refused while its implementation is disabled (2026-08-23, paired with
+    // adding color — GRAMMAR_AUDIT §4.3): the reader sits behind
+    // ElementCoordinator.ForceHshiftEnabled = false, so with a row in the vocabulary this
+    // spelling was accepted and then silently ignored — the exact no-op LYS1029 exists to
+    // prevent. The row (and this case's move back to the accepted list) returns with the
+    // per-voice implementation.
+    [InlineData("override NoteColumn.force-hshift = 0.5 c4 d e f")]
     // Case matters, as it does for part properties (SymbolCaseValidator). A mis-cased
     // grob name is the easiest way to write a supported property and get nothing.
     [InlineData("override stem.transparent = true c4 d e f")]
@@ -103,7 +113,7 @@ public class OverrideVocabularyValidatorTests
         // A guard on the list itself, so it cannot grow by accident: adding a row here
         // without a reader would re-open the silence this validator closed.
         Assert.Equal(
-            new[] { "NoteColumn.force-hshift", "NoteHead.transparent", "Stem.transparent" },
+            new[] { "NoteHead.color", "NoteHead.transparent", "Stem.color", "Stem.transparent" },
             SupportedGrobOverrides.Spellings.ToArray());
     }
 }

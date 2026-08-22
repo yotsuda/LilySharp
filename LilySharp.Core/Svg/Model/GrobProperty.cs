@@ -80,10 +80,11 @@ public sealed record GrobRevert(
 /// tightened afterwards, while an error can always be relaxed.
 /// </para>
 /// <para>
-/// The five call sites that read these (SharedRenderer.Noteheads.cs ×4,
-/// ElementCoordinator.cs ×1) pass the pair as their lookup KEY, so they are readings of
-/// this list rather than second spellings of it. Adding a property means adding its
-/// reader AND its row here, in one commit.
+/// The call sites that read these (SharedRenderer.Noteheads.cs ×4) pass the pair as
+/// their lookup KEY, so they are readings of this list rather than second spellings of
+/// it. Adding a property means adding its reader AND its row here, in one commit — and
+/// the converse holds too: a reader that is disabled has no row (see the force-hshift
+/// note below), or the row is a silent no-op the diagnostic claims cannot exist.
 /// </para>
 /// </remarks>
 public static class SupportedGrobOverrides
@@ -94,8 +95,19 @@ public static class SupportedGrobOverrides
         // mirrors (ly/property-init.ly). Read by SharedRenderer.Noteheads.
         ("NoteHead", "transparent"),
         ("Stem", "transparent"),
-        // Manual collision resolution. Read by ElementCoordinator.
-        ("NoteColumn", "force-hshift"),
+        // Colour, named or #rgb/#rrggbb. Read by SharedRenderer.Noteheads.ResolveColor
+        // (four call sites). These readers were live for as long as the list existed, yet
+        // the rows were missing — LYS1029 called a working feature unsupported while the
+        // score still drew in colour (best-effort output). GRAMMAR_AUDIT §4.2; the
+        // validator's own MEASURED note had simply never tried `color`.
+        ("NoteHead", "color"),
+        ("Stem", "color"),
+        // NoteColumn.force-hshift is deliberately ABSENT (removed 2026-08-23, user-approved
+        // pair decision with §4.2 above): its reader exists but sits behind
+        // ElementCoordinator.ForceHshiftEnabled = false — the current implementation
+        // cannot do what the property is for — so the spelling was the silent no-op this
+        // list exists to prevent. A row here means IMPLEMENTED; the row returns in the
+        // same commit that lands the per-voice implementation and flips that flag.
     };
 
     /// <summary>True if the engine reads this grob property. Case-SENSITIVE, like every

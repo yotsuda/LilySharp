@@ -19,6 +19,13 @@ incomplete, and the correction that first replaced it was WRONG in the other dir
 - `NoteColumn.force-hshift` — manual collision resolution, **switched off**
   (`ElementCoordinator.cs:49`, `ForceHshiftEnabled = false`), resolver kept intact behind it.
 
+> ✅ **Resolved 2026-08-23 (user-approved pair decision, GRAMMAR_AUDIT §4.2+§4.3).**
+> `NoteHead.color` / `Stem.color` gained their `SupportedGrobOverrides` rows, and
+> `NoteColumn.force-hshift` lost its row while its reader is disabled — the vocabulary
+> now agrees with the engine in both directions (a row means IMPLEMENTED; the
+> force-hshift row returns in the commit that lands the per-voice implementation).
+> The paragraphs below record how the disagreement arose.
+
 ⚠️ **THE ENGINE CALLS ITS OWN WORKING FEATURE UNSUPPORTED** (recorded 2026-08-21, NOT
 MEASURED — read off the source). `SupportedGrobOverrides` (`GrobProperty.cs:91-98`) holds
 three pairs and **`color` is not among them**, so `OverrideVocabularyValidator.cs:77`

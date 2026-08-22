@@ -1118,23 +1118,22 @@ Number         = Integer | Decimal ;
    built once where the value is collected. A quoted value is therefore NOT a number —
    `= "10"` is the string "10" and answers nothing to a consumer asking for a double. *)
 
-(* The SYNTAX above accepts any Grob.property, but the consumed vocabulary is three pairs —
-   NoteHead.transparent, Stem.transparent, NoteColumn.force-hshift. Anything else is refused
-   (LYS1029, "not supported in this version") rather than silently doing nothing, so the
-   examples below are limited to the three; the list grows, and each addition removes one
-   error.
-   ⚠️ TWO OF THE THREE TAKE EFFECT (recorded 2026-08-21). NoteColumn.force-hshift passes
-   OverrideVocabularyValidator and is then ignored — ElementCoordinator.cs:49 holds
-   ForceHshiftEnabled = false for the initial release, with the resolver kept intact behind
-   it. So that one spelling IS the silent no-op this paragraph says the language does not
-   have, and the two force-hshift Examples below draw nothing. *)
+(* The SYNTAX above accepts any Grob.property, but the consumed vocabulary is four pairs —
+   NoteHead.transparent, Stem.transparent, NoteHead.color, Stem.color. Anything else is
+   refused (LYS1029, "not supported in this version") rather than silently doing nothing,
+   so the examples below are limited to the four; the list grows, and each addition removes
+   one error. ALL FOUR TAKE EFFECT — the vocabulary and the engine agree in both
+   directions since 2026-08-23: color's live reader gained its rows (it had been refused
+   while working, GRAMMAR_AUDIT §4.2), and NoteColumn.force-hshift left the vocabulary
+   (its reader sits disabled behind ElementCoordinator's ForceHshiftEnabled = false, so
+   the spelling was accepted and then silently ignored — GRAMMAR_AUDIT §4.3; it errs
+   honestly until the per-voice implementation lands, and then returns). *)
 
 (* Example:
-   override NoteHead.transparent = true
-   override NoteColumn.force-hshift = 1.5      // fractional
-   override NoteColumn.force-hshift = -3       // negative
+   override NoteHead.color = red               // named colour, or a "#rrggbb" string
+   override Stem.color = "#8000ff"
    c4 d e f |
-   revert NoteHead.transparent
+   revert NoteHead.color
    once override Stem.transparent = true       // applies to the next note only
 *)
 
