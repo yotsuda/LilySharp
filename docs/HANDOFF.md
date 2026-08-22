@@ -151,12 +151,13 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
-最終更新 第229セッション＝**残債筆頭 ⑵-b「増分パースが診断を 1 つ落とす」を閉じ（`d1e2eeba`）、開いた出口から §1.1 `$` 廃止一式を完了した（`25d8c5f1`）**——2 便で GRAMMAR_AUDIT §9 の 2 が丸ごと済み。
+最終更新 第229セッション＝**残債筆頭 ⑵-b「増分パースが診断を 1 つ落とす」を閉じ（`d1e2eeba`）、開いた出口から §1.1 `$` 廃止一式を完了し（`25d8c5f1`）、続き便でユーザー承認を取って §4.2＋§4.3 の対も閉じた（`34969715`）**——3 便で GRAMMAR_AUDIT §9 の 1 と 2 が丸ごと済み。
 **① 欠陥の正体はレキサでも splice でもなく `IncrementalReuseMap.HasDiagnosticIn` の strict 重なり判定**：`Expect` は「見つかったトークン＝**次アイテムの先頭**」の span で LYS0002 を報告するので、**診断は産み手アイテムの span の*外*に、末尾に*接して*立てる**。strict `<`/`>` は接触を見ない→産み手（` r` の Rest・自分の span は無診断）が再利用される→採用は何も発話せず、隣の再パースはそのトークンを普通の先頭として読む→**診断だけが消えて木は全一致**（2026-08-16 の zero-width 修理の幅 2 版。37 編集チェーン（scratch/p228/shrink）を 1 編集ずつ再生して index 36 で分岐を実測・old build で犯人アイテムの ref-採用まで確認）。修理＝**接触も数える非 strict 1 arm**（zero-width arm を包含）。**⚠️ 手順は HANDOFF の警告どおり計器が先**：Probe **`reuse`**（新コマンド・恒久）＝打鍵ごとの採用 top-level 数を `SyntaxTree.AdoptedTopLevelItems`（新設・Parser.AdoptedMembers が給餌）で読む。**before/after 完全同値**（perf-plain1k 4.00・v2bow1k 7.00・fingstack1k 2.00、toggle／type-in 両 regime）＝**診断の無い本の再利用率は 1 bit も払っていない**。費用は境界接触診断 1 つにつき隣 1 アイテムの再パースだけ（最小再現で adopted 2→0）。恒久 pin＝`WithChange_DiagnosticAtItemBoundary_SurvivesDistantEdit`。
 **② `$` 廃止＝第228 の patch（`scratch/p228/dollar/dollar-removal.patch`）を無修正で適用**（clean apply・40 ファイル）。fuzz の Source から `$` を落とし（乱数の当たり先はずれるが、ずれた先の欠陥は ① で閉塞済み＝**$ 無し 300 回 fuzz 全通しを事前に実測**）、**docs を掃いた**：GRAMMAR（PhraseRef 生成規則と remark を書き換え）／GRAMMAR_FOR_LLM／SYNTAX_REFERENCE ×2（**1 箇所は Unicode 識別子例 `$動機` に隠れていて grep `\$[A-Za-z]` をすり抜けた**——DocExamplesParseTests が捕まえた）／TUTORIAL／GRAMMAR_STATUS／ai-collab-design、＋ **VS Code tmLanguage の variable-reference 規則を削除**（裸名は字面でフレーズと判別不能）。**書き換え corpus 4 冊は sweep A/B で幾何不動**：lilypond-ref 3 冊 byte 一致・grammar-tour は data-pos のみ（patch のコメント追加でオフセットが動いた——data-pos 剥がしで byte 一致を実測）。3 族の行き先は audit §1.1 どおり（ドラム語彙＋`q`＝宣言側 LYS1030／強弱＝元から予約語／clef 語＝music stream が裸参照として読む）。`$theme` は LYS0018＋参照。
+**③ §4.2＋§4.3＝「whitelist は実装済みの一覧」を両方向に一致させた**（続き便・委任「有利なら着手」→着手。**方向はユーザーが「対で閉じる」を選択**——質問には値札を付けた＝コーパス使用 **color 0 冊・force-hshift 0 冊**を先に測ってから聞いた）：color 2 行を `SupportedGrobOverrides` へ（reader は 4 呼び出しで生きていた＝**正しく色が付いた譜面が LYS1029＋exit 1 付きで出ていた**・§4.2）／force-hshift は **whitelist から外して正直な LYS1029 に**（`ForceHshiftEnabled = false` の理由がコード内に明記＝現実装は per-voice shift ができない→「有効化」は 2 行仕事ではなく本実装の便・§4.3。**row と flag は本実装の commit で同時に戻す**——両側のコメントが互いを名指す）。LSP completion も同じ 4 行に（force-hshift を落とし、なぜか居なかった Stem.transparent を追加）・docs 5 本の例文書き換え（例文はテスト網の中＝force-hshift 例は残せない）。**実本の出力・診断・exit code は 1 つも動かない**（override を書く追跡本は complex-once.lys の transparent だけ）。
 
 ★ **開始時裏取り**: HEAD `2dcb7540`（第228 の閉幕 handoff・§1 と一致）・未 push 7・未追跡 0/木 0・Windows suite **5719/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 10（push はユーザー＝RULES §5.1）**＝本便 3 本（`d1e2eeba` 修理＋計器／`25d8c5f1` `$` 廃止／この行の handoff）・未追跡 0/木 0・suite **Windows 5720/0/4・WSL 5720/0/4＝両 OS 完全緑**（+1＝新 pin 1 本ちょうど）・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（patch は書き換えのみ・冊数不変）・Core 0 警告。
+終了時: **未 push 12（push はユーザー＝RULES §5.1）**＝本便 5 本（`d1e2eeba` 修理＋計器／`25d8c5f1` `$` 廃止／`add6809e` handoff／`34969715` §4.2+§4.3／この行の handoff）・未追跡 0/木 0・suite **Windows 5722/0/4・WSL 5722/0/4＝両 OS 完全緑**（+3＝新 pin 1 本＋validator の InlineData 差引 2 ちょうど）・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（patch は書き換えのみ・冊数不変）・Core 0 警告。
 
 ★ **この便の値段**:
 
@@ -164,8 +165,9 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 |---|---|---|
 | ① reuse map の接触判定＋計器（`d1e2eeba`） | `HasDiagnosticIn` を非 strict 1 arm に・Probe `reuse` 新設・`SyntaxTree.AdoptedTopLevelItems`／`Parser.AdoptedMembers`・pin 1 本 | 診断が境界に接する木の増分パースのみ（再利用率は before/after 同値を実測）・両 OS 完全緑 |
 | ② `$` 廃止一式（`25d8c5f1`） | 第228 patch 適用＋fuzz Source＋docs 7 本＋tmLanguage・GRAMMAR_AUDIT §1.1/§9 に完了を記録 | 出力不変（sweep A/B：3 冊 byte 一致・1 冊 data-pos のみ）・suite ±0・台帳/snapshot 不動 |
+| ③ §4.2＋§4.3 の対（`34969715`・ユーザー承認） | whitelist：color 2 行追加・force-hshift 除去・LSP completion 4 行化・validator/completion の pin・docs 5 本 | 実本 0 冊（両綴りともコーパス使用 0）＝出力・exit code 不変・suite +2・両 OS 完全緑 |
 
-- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 の残り**＝⑴ **§4.2＋§4.3 を対で決める（次の筆頭候補・出力が変わるので*ユーザー承認が要る*・whitelist 2 行）**／⑶ §2.2 override の語彙（拡張経路の本体・設計判断が先）／⑷ §2.1 `paper { }`（設計判断が先）／⑸ §3.1 `DisplayName`（**費用確定済み＝毒で赤は名指しの 1 本だけ**）・§3.3・§1.2 リネーム（ユーザーが MSVS で）。**§8.1 コード記号は仕様確定済み・順位は狙いの持ち主が決める**／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示。Marketplace は PAT 待ちのまま（第220 ①）。
+- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 の残り**＝✅ ⑴ §4.2＋§4.3 は本便③で閉じた／⑶ §2.2 override の語彙（拡張経路の本体・**設計判断が先＝何を足すかは狙いの持ち主**）／⑷ §2.1 `paper { }`（設計判断が先）／⑸ **§3.1 `DisplayName`（費用確定済み＝毒で赤は名指しの 1 本だけ・snapshot 222 緑＝次の実装候補。ただし裸表示名を構文エラーにする文法変更なのでユーザー承認から）**・§3.3・§1.2 リネーム（ユーザーが MSVS で）。**§8.1 コード記号は仕様確定済み・順位は狙いの持ち主が決める**／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示。Marketplace は PAT 待ちのまま（第220 ①）。
 
 > ## ★★★ 骨 1＝**診断の span と、それを産んだアイテムの span は別物——「重なり」で所有を推定する装置は、接触の分だけ嘘をつく**
 > `Expect` は「見つかったトークン」の span で報告するので、アイテム末尾で失敗した診断は
@@ -188,6 +190,13 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > 割ったのは adopted 数と map の中身のダンプ。⚠️ おまけ＝**単トークン item は splice の
 > トークン再利用で ref-共有になる**ので、ReferenceEquals は採用の証拠にならない（第228 骨 1
 > 「網が鳴りうるか」の再利用版）。
+
+> ## ★ 骨 4＝**承認を求める前に、選択肢の値札を測る——そして「有効化」の値札は書いた本人が残している**
+> §4.3 は「force-hshift を有効にする」が自然な直しに見えるが、**無効化コメント自身が
+> 「現実装は per-voice shift ができない」と理由を書いていた**＝有効化は 2 行仕事ではない。
+> 質問はそれを読んでから、**コーパス使用 0 冊／0 冊という費用を測ってから**出した——
+> 承認の質は選択肢の値札の質で決まる（§5.0「測定と判断を混ぜない」の承認版：
+> 測定はこちらの仕事、判断はユーザーのもの）。
 
 ---
 
