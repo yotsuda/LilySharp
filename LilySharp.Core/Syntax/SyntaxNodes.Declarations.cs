@@ -605,12 +605,15 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
     /// <param name="MinusToken">The sign, when the value is negative.</param>
     /// <param name="NumberToken">The value's number token, or null when none followed.</param>
     /// <param name="UnitToken">The glued unit suffix (<c>mm</c>/<c>cm</c>/<c>in</c>), if any.</param>
+    /// <param name="StringToken">A stray quoted value — no sub-key takes one, and the
+    /// reader refuses it where it stands.</param>
     public readonly record struct SubEntry(
         string Key,
         SyntaxTokenNode KeyToken,
         SyntaxTokenNode? MinusToken,
         SyntaxTokenNode? NumberToken,
-        SyntaxTokenNode? UnitToken);
+        SyntaxTokenNode? UnitToken,
+        SyntaxTokenNode? StringToken);
 
     /// <summary>
     /// One entry of the block form: a scalar (<c>paperWidth 210mm</c>), a bare flag
@@ -622,6 +625,13 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
     /// <param name="MinusToken">The sign, when the scalar value is negative.</param>
     /// <param name="NumberToken">The scalar value's number token, or null.</param>
     /// <param name="UnitToken">The glued unit suffix, if any.</param>
+    /// <param name="StringToken">The quoted value, when the entry has one — a paper
+    /// name that carries a space: <c>size "ansi a"</c>.</param>
+    /// <param name="BareValue">The bare word value of a <c>size</c> entry —
+    /// <c>size jisb5</c> — assembled from the glued token run after the key
+    /// (<c>b5</c> lexes as a pitch and a duration, <c>17x11</c> as a number and a
+    /// word; adjacency joins them back into the one name they spell).</param>
+    /// <param name="BareValueSpan">Where that run stands, for a diagnostic.</param>
     /// <param name="HasBlock">True when the key is followed by a nested block.</param>
     /// <param name="SubEntries">The nested block's lines; empty otherwise.</param>
     public readonly record struct Entry(
@@ -630,6 +640,9 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
         SyntaxTokenNode? MinusToken,
         SyntaxTokenNode? NumberToken,
         SyntaxTokenNode? UnitToken,
+        SyntaxTokenNode? StringToken,
+        string? BareValue,
+        TextSpan BareValueSpan,
         bool HasBlock,
         IReadOnlyList<SubEntry> SubEntries);
 
@@ -650,25 +663,30 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
             if (!IsBlock)
                 return [];
             var entries = new List<Entry>();
-            SyntaxTokenNode? keyToken = null, minus = null, number = null, unit = null;
+            SyntaxTokenNode? keyToken = null, minus = null, number = null, unit = null, str = null;
             bool hasBlock = false;
+            string? bare = null;
+            int bareStart = 0, bareEnd = 0;
             List<SubEntry> subEntries = [];
-            SyntaxTokenNode? subKeyToken = null, subMinus = null, subNumber = null, subUnit = null;
+            SyntaxTokenNode? subKeyToken = null, subMinus = null, subNumber = null, subUnit = null, subStr = null;
             int depth = 0;
 
             void FlushSub()
             {
                 if (subKeyToken != null)
-                    subEntries.Add(new SubEntry(subKeyToken.Text, subKeyToken, subMinus, subNumber, subUnit));
-                subKeyToken = null; subMinus = null; subNumber = null; subUnit = null;
+                    subEntries.Add(new SubEntry(subKeyToken.Text, subKeyToken, subMinus, subNumber, subUnit, subStr));
+                subKeyToken = null; subMinus = null; subNumber = null; subUnit = null; subStr = null;
             }
 
             void Flush()
             {
                 FlushSub();
                 if (keyToken != null)
-                    entries.Add(new Entry(keyToken.Text, keyToken, minus, number, unit, hasBlock, [.. subEntries]));
-                keyToken = null; minus = null; number = null; unit = null;
+                    entries.Add(new Entry(keyToken.Text, keyToken, minus, number, unit, str,
+                        bare, new TextSpan(bareStart, Math.Max(0, bareEnd - bareStart)),
+                        hasBlock, [.. subEntries]));
+                keyToken = null; minus = null; number = null; unit = null; str = null;
+                bare = null; bareStart = 0; bareEnd = 0;
                 hasBlock = false;
                 subEntries = [];
             }
@@ -677,6 +695,28 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
             {
                 if (GetChild(i) is not SyntaxTokenNode token)
                     continue;
+
+                // The bare word value of a `size` entry: `size b5` — its FIRST token is
+                // whatever stands after the key (b5 lexes as a pitch and a duration,
+                // 17x11 as a number and a word), and the run extends while each token is
+                // GLUED to the last, so the one name comes back as the one word it
+                // spells. `size` is matched by TEXT, the way the fonts walker asks
+                // TextRoles about a family word: only the key knows a word is a value.
+                if (depth == 0 && keyToken != null
+                    && string.Equals(keyToken.Text, "size", StringComparison.OrdinalIgnoreCase)
+                    && number == null && str == null && !hasBlock
+                    && token.Kind != SyntaxKind.OpenBrace
+                    && token.Kind != SyntaxKind.CloseBrace
+                    && token.Kind != SyntaxKind.StringLiteral
+                    && (bare == null || token.Span.Start == bareEnd))
+                {
+                    if (bare == null)
+                        bareStart = token.Span.Start;
+                    bare = (bare ?? "") + token.Text;
+                    bareEnd = token.Span.End;
+                    continue;
+                }
+
                 switch (token.Kind)
                 {
                     case SyntaxKind.OpenBrace:
@@ -694,6 +734,9 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
                     case SyntaxKind.IntegerLiteral:
                     case SyntaxKind.DecimalLiteral:
                         if (depth == 1) subNumber ??= token; else number ??= token;
+                        continue;
+                    case SyntaxKind.StringLiteral:
+                        if (depth == 1) subStr ??= token; else str ??= token;
                         continue;
                 }
                 // A word. Glued to the entry's number it is that number's UNIT;

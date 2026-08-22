@@ -225,7 +225,7 @@
                 },
                 {
                     "name": "keyword.other.paper-key.lilysharp",
-                    "match": "\\b(paperWidth|paperHeight|leftMargin|rightMargin|topMargin|bottomMargin|indent|shortIndent|topSystemPadding|spacingIncrement|raggedRight)\\b"
+                    "match": "\\b(size|paperWidth|paperHeight|leftMargin|rightMargin|topMargin|bottomMargin|indent|shortIndent|topSystemPadding|spacingIncrement|raggedRight)\\b"
                 },
                 { "include": "#paper-length" }
             ]

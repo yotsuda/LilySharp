@@ -136,6 +136,142 @@ public class PaperBlockTests
     }
 
     // ================================================================================
+    // size "NAME" — the whole page by name
+    // ================================================================================
+
+    [Fact]
+    public void SizeA4_IsTheIdentity()
+    {
+        // LilyPond's set-paper-size scales the margin defaults by the size's ratio to
+        // a4 and rounds to whole millimetres (scm/paper.scm:303-351) — so a4 itself
+        // lands exactly on 15mm/10mm and `size a4` must equal the defaults, byte for
+        // byte, the same claim StatingTheDefaults_IsTheDefaults makes for the units.
+        Assert.Equal(LayoutOptions.Default, ReadClean("paper { size a4 }"));
+    }
+
+    [Fact]
+    public void SizeSetsTheDimensions_AndTheScaledMargins()
+    {
+        // b5 (ISO, 176 x 250): sides round(176*15/210) = 13mm, top/bottom
+        // round(250*10/297) = 8mm — LilyPond's arithmetic, then the one mm-to-ss
+        // conversion the defaults use. ⚠️ The name is BARE, and `b5` reaches the
+        // reader through the glued-run reading: it lexes as a pitch and a duration,
+        // and adjacency joins the two tokens back into the name they spell.
+        var p = ReadClean("paper { size b5 }");
+        Assert.Equal(100.153701, p.PageWidth);
+        Assert.Equal(142.26378, p.PageHeight);
+        Assert.Equal(7.397717, p.MarginLeft);   // 13mm
+        Assert.Equal(7.397717, p.MarginRight);
+        Assert.Equal(4.552441, p.MarginTop);    // 8mm
+        Assert.Equal(4.552441, p.MarginBottom);
+        // …and nothing else moves.
+        Assert.Equal(LayoutOptions.Default.VerticalSpacing, p.VerticalSpacing);
+        Assert.Equal(LayoutOptions.Default.Indent, p.Indent);
+    }
+
+    [Fact]
+    public void Jisb5_IsTheJapaneseB5_NotTheIsoOne()
+    {
+        // ⚠️ Lily#-OWN (user decision 2026-08-23): ISO b5 is 176 x 250, while the
+        // Japanese JIS P 0138 B5 — what Japanese sheet music is commonly printed on —
+        // is 182 x 257, and LilyPond's table has no JIS entries. Sides land on exactly
+        // 13mm (182*15/210 = 13.0), top/bottom on 9mm (round(257*10/297)).
+        var p = ReadClean("paper { size jisb5 }");
+        Assert.Equal(103.568031, p.PageWidth);
+        Assert.Equal(146.247165, p.PageHeight);
+        Assert.Equal(7.397717, p.MarginLeft);   // 13mm
+        Assert.Equal(5.121496, p.MarginTop);    // 9mm
+    }
+
+    [Fact]
+    public void AnInchSize_ConvertsThroughMm()
+    {
+        // letter = 8.5 x 11 in = 215.9 x 279.4 mm; sides round(215.9*15/210) = 15mm
+        // (unchanged), top/bottom round(279.4*10/297) = 9mm.
+        var p = ReadClean("paper { size letter }");
+        Assert.Equal(122.859, p.PageWidth);
+        Assert.Equal(158.994, p.PageHeight);
+        Assert.Equal(LayoutOptions.Default.MarginLeft, p.MarginLeft); // 15mm still
+        Assert.Equal(5.121496, p.MarginTop);                          // 9mm
+    }
+
+    [Fact]
+    public void SizeReadsTopToBottom_LikeEveryOtherKey()
+    {
+        // `size` behaves exactly as if its width, height and margins were written at
+        // its position — so a later key overrides part of it, and a later `size`
+        // overrides an earlier margin. ⚠️ The second half is a KEPT DIVERGENCE from
+        // LilyPond, whose set-paper-size preserves an earlier left-margin but clobbers
+        // an earlier top-margin (an asymmetry of its module mechanics); Lily# keeps
+        // the block's one rule — later wins — for every key alike (ApplySize's remark).
+        var after = ReadClean("paper { size b5  topMargin 12mm }");
+        Assert.Equal(6.828661, after.MarginTop);        // the later key wins
+        Assert.Equal(100.153701, after.PageWidth);      // the size's width survives
+
+        var before = ReadClean("paper { topMargin 12mm  size b5 }");
+        Assert.Equal(4.552441, before.MarginTop);       // the later size wins
+    }
+
+    [Fact]
+    public void TheQuotedEscape_CarriesWhatABareWordCannot()
+    {
+        // The bare word is the canonical spelling; the quoted form exists for the few
+        // table names that carry a SPACE (the lyric syllable's rule), and a quoted
+        // single word is accepted the same way — the two spellings are one name.
+        var ansiA = ReadClean("paper { size \"ansi a\" }"); // 8.5 x 11 in, like letter
+        Assert.Equal(122.859, ansiA.PageWidth);
+        Assert.Equal(ReadClean("paper { size b5 }"), ReadClean("paper { size \"b5\" }"));
+    }
+
+    [Fact]
+    public void AGluedRunSpellsOneName()
+    {
+        // 17x11 lexes as a number and a word; adjacency joins them back. The control
+        // beside it: the same tokens SPACED are not one name — the 17 reads as a
+        // (refused) numeric value of size.
+        Assert.Equal(ReadClean("paper { size ledger }").PageWidth,
+                     ReadClean("paper { size 17x11 }").PageWidth);
+        Read("paper { size 17 x11 }", out var problems);
+        Assert.NotEmpty(problems);
+    }
+
+    [Fact]
+    public void AnUnknownSizeName_IsAnError_NamingTheTable()
+    {
+        var p = Read("paper { size b5x }", out var problems);
+        var problem = Assert.Single(problems);
+        Assert.Equal(DiagnosticCodes.UnknownPaperSizeName, problem.Code);
+        Assert.Contains("jisb5", problem.Message, StringComparison.Ordinal);
+        Assert.Equal(LayoutOptions.Default, p); // the entry bound nothing
+    }
+
+    [Theory]
+    [InlineData("paper { size }")]        // no value at all
+    [InlineData("paper { size { } }")]    // not a block key
+    public void SizeWithoutAName_IsRefused(string block)
+    {
+        Read(block, out var problems);
+        Assert.Contains(problems,
+            x => x.Code == DiagnosticCodes.PaperEntryMissingValue && x.IsError);
+    }
+
+    [Fact]
+    public void SizeWorksInNamedBlocksAndOverrides()
+    {
+        // The size key rides the same reader everywhere: a named declaration can be a
+        // one-word page, and a score's override block can restate the size.
+        var tree = SyntaxTree.Parse(
+            "paper concert { size b4 }\n"
+            + "section Main { melody { c'4 d e f | } }\nform main { Main }\n"
+            + "score main { paper concert { size jisb5 }  staff melody }\n");
+        var render = tree.GetRoot().DescendantNodes()
+            .OfType<RenderDeclarationSyntax>().First();
+        var score = SvgGenerator.CollectScore(tree,
+            LilySharp.Core.Svg.Collector.RenderSpecParser.Parse(render));
+        Assert.Equal(103.568031, score.Paper.PageWidth); // the override's jisb5 wins
+    }
+
+    // ================================================================================
     // Refusals
     // ================================================================================
 

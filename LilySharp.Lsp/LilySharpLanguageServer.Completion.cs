@@ -151,6 +151,9 @@ public sealed partial class LilySharpLanguageServer
             // `score { fonts |` / `score { paper |` — the declared block names.
             CompletionContext.AfterFontsBlockRef => GetDeclaredNameCompletions(doc.Text, "fonts", "Fonts block"),
             CompletionContext.AfterPaperBlockRef => GetDeclaredNameCompletions(doc.Text, "paper", "Paper block"),
+            // `size |` / `size "…"` — the paper-size table, spelled for its position.
+            CompletionContext.AfterPaperSizeName => GetPaperSizeNameCompletions(insideString: false),
+            CompletionContext.AfterPaperSizeNameQuoted => GetPaperSizeNameCompletions(insideString: true),
             // The key the caret sits after decides which values fit: a generic family takes
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>
@@ -611,6 +614,8 @@ public sealed partial class LilySharpLanguageServer
         PaperSpecBlock,
         AfterFontsBlockRef,
         AfterPaperBlockRef,
+        AfterPaperSizeName,
+        AfterPaperSizeNameQuoted,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -777,12 +782,26 @@ public sealed partial class LilySharpLanguageServer
             return CompletionContext.FontBlock;
         }
 
-        // Inside `paper { … }` a KEY is what belongs (a value is a number, which no list
-        // serves); inside a nested spacing block, its four sub-keys. Intercepted before
-        // the fallthroughs for the reason the fonts block is: without this the popup
-        // offers pitches and articulations at every caret inside the block.
+        // Inside `paper { … }` a KEY is what belongs (a length value is a number, which
+        // no list serves); inside a nested spacing block, its four sub-keys; inside the
+        // one quoted value — `size "…"` — the paper-size names. Intercepted before the
+        // fallthroughs for the reason the fonts block is: without this the popup offers
+        // pitches and articulations at every caret inside the block.
         if (IsInsidePaperBlock(text, offset, out bool inSpacingBlock))
+        {
+            // `size |` — the size names, bare (the canonical spelling); and inside
+            // `size "…"` — the same names, for the quoted escape that carries a space.
+            if (IsInsideStringLiteral(text, offset))
+            {
+                if (KeywordBeforeCurrentString(text, offset) == "size")
+                    return CompletionContext.AfterPaperSizeNameQuoted;
+            }
+            else if (prevWord == "size")
+            {
+                return CompletionContext.AfterPaperSizeName;
+            }
             return inSpacingBlock ? CompletionContext.PaperSpecBlock : CompletionContext.PaperBlock;
+        }
 
         // Inside a "…" string value, the directive that OWNS the string decides the
         // completion. A `title`/`composer` string keeps its snippet (so the caret is served
@@ -1586,6 +1605,21 @@ public sealed partial class LilySharpLanguageServer
         {
             Items =
             [
+                // `size` first: the one-word way to a whole page. Re-triggers so the
+                // size-name list opens at the value position.
+                new CompletionItem
+                {
+                    Label = "size",
+                    Kind = CompletionItemKind.Property,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "size $0",
+                    Detail = PaperKeyDetail("size"),
+                    Command = new Command
+                    {
+                        Title = "Suggest paper size",
+                        CommandIdentifier = "editor.action.triggerSuggest",
+                    },
+                },
                 .. LanguageVocabulary.PaperScalarKeys.Select(key => new CompletionItem
                 {
                     Label = key,
@@ -1642,9 +1676,36 @@ public sealed partial class LilySharpLanguageServer
             ],
         };
 
+    /// <summary>
+    /// The paper-size names, offered after <c>size</c>. In the BARE position a name
+    /// that carries a space inserts itself QUOTED (the only spelling that can carry
+    /// it); inside <c>size "…"</c> every name inserts bare — the quotes are already
+    /// around the caret.
+    /// </summary>
+    internal static CompletionList GetPaperSizeNameCompletions(bool insideString)
+        => new()
+        {
+            Items =
+            [
+                .. LanguageVocabulary.PaperSizeNames.Select((name, i) => new CompletionItem
+                {
+                    Label = name,
+                    Kind = CompletionItemKind.Value,
+                    InsertText = !insideString && name.Contains(' ') ? "\"" + name + "\"" : name,
+                    // Table order, so a4/a5 and b5/jisb5 sit where a reader expects
+                    // them rather than alphabetized apart.
+                    SortText = i.ToString("D3"),
+                    Detail = name == "jisb5"
+                        ? "JIS B5, 182 x 257 mm (Lily#-own; ISO b5 is 176 x 250)"
+                        : "Paper size (LilyPond's table)",
+                }),
+            ],
+        };
+
     /// <summary>One line of help per paper key — what the key reaches, and its default.</summary>
     private static string PaperKeyDetail(string key) => key switch
     {
+        "size" => "Whole page by name: width, height and scaled margins (size jisb5)",
         "paperWidth" => "Page width (default 210mm, a4). Bare numbers are staff spaces",
         "paperHeight" => "Page height (default 297mm, a4); 0 for one content-driven page",
         "leftMargin" => "Left margin (default 15mm)",

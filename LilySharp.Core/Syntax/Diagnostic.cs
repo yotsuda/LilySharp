@@ -1147,4 +1147,9 @@ public static class DiagnosticCodes
     /// <summary>Paper warning: one score references paper twice; the LAST one wins.
     /// Mirrors <see cref="DuplicateFontsReference"/>.</summary>
     public const string DuplicatePaperReference = "LYS9012";
+
+    /// <summary>Paper error: <c>size "NAME"</c> names a paper size that is not in the
+    /// table (LilyPond's documented-paper-alist, plus the Lily#-own jisb5). The
+    /// message lists every name, so the fix is one read.</summary>
+    public const string UnknownPaperSizeName = "LYS9013";
 }

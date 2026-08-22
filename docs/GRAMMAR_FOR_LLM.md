@@ -542,6 +542,8 @@ defaults) changes nothing.
 
 ```
 paper {
+  size b5                  // a whole page by name: width, height AND scaled margins
+                           // (bare; quote only a name with a space: size "ansi a")
   paperWidth 210mm         // bare numbers are staff spaces; a unit is GLUED (210mm, 29.7cm, 8.5in)
   paperHeight 297mm        // 0 = one content-driven page
   leftMargin 15mm  rightMargin 15mm  topMargin 10mm  bottomMargin 10mm
@@ -561,6 +563,13 @@ Rules worth knowing before emitting one:
   staffGroupStaffSpacing defaultStaffStaffSpacing nonStaffRelatedStaffSpacing
   nonStaffUnrelatedStaffSpacing nonStaffNonStaffSpacing`, each taking `basicDistance /
   minimumDistance / padding / stretchability` lines.
+- `size NAME` (bare) sets width, height and the four margins (LilyPond's
+  set-paper-size scaling: margin defaults × the size's ratio to a4, rounded to whole
+  mm — `size a4` is the identity). Names: LilyPond's paper table (`a0`..`a10`,
+  `b0`..`b10`, `c0`..`c10`, `letter`, `legal`, `tabloid`, …) plus Lily#-own `jisb5`
+  (182×257mm, the Japanese B5 — ISO `b5` is 176×250). Quote only a name that carries
+  a space (`size "ansi a"`). It reads at its position: a later `topMargin` refines
+  it, a later `size` overrides earlier keys. Prefer writing `size` first.
 - ⚠️ A unit is glued to its number: `210 mm` (spaced) is an error naming the glued
   spelling. `stretchability` is unitless.
 - ⚠️ The staff-spacing family lives HERE, not in `override` (applied score-wide in one

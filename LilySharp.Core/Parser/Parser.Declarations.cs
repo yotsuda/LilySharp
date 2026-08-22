@@ -611,8 +611,12 @@ internal sealed partial class Parser
                 tokens.Add(Advance());
                 continue;
             }
+            // A quoted string is a value too: `size "b5"` takes the paper NAME quoted,
+            // because `b5` bare would lex as a pitch and a duration — and LilyPond
+            // quotes the same name in #(set-paper-size "b5").
             if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral) ||
-                Check(SyntaxKind.Minus) || IsWordLikeToken(Current))
+                Check(SyntaxKind.Minus) || Check(SyntaxKind.StringLiteral) ||
+                IsWordLikeToken(Current))
             {
                 tokens.Add(Advance());
                 continue;
@@ -622,8 +626,9 @@ internal sealed partial class Parser
             var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.PaperEntryMissingValue,
                 "A 'paper { }' entry is a key followed by a number (paperWidth 210mm), a "
-                + "bare flag (raggedRight), or a spacing block (systemSystemSpacing { "
-                + "basicDistance 12 }) — '" + Current.Text + "' is none of these.");
+                + "quoted paper name (size \"a4\"), a bare flag (raggedRight), or a "
+                + "spacing block (systemSystemSpacing { basicDistance 12 }) — '"
+                + Current.Text + "' is none of these.");
             tokens.Add(Advance());
         }
         _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,

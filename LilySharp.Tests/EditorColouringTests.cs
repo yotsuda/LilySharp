@@ -564,7 +564,7 @@ public class EditorColouringTests
         // The fonts-block fact again, in the paper vocabulary: none of these words is
         // reserved (`part indent { … }` compiles), so the reserved-word check above cannot
         // reach them and only the #paper-block context may paint them.
-        string[] keys = [.. LanguageVocabulary.PaperScalarKeys, "raggedRight",
+        string[] keys = [.. LanguageVocabulary.PaperScalarKeys, "raggedRight", "size",
             .. LanguageVocabulary.PaperSpacingKeys, .. LanguageVocabulary.PaperSpacingSubKeys];
         Assert.True(keys.Length > 25, $"only {keys.Length} key spellings came back");
 

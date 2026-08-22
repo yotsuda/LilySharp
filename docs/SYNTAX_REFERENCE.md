@@ -534,6 +534,18 @@ the glued spelling. The conversion is the one the engine's defaults were compute
 (1 staff space = 5 TeX points), rounded the same way — so writing a default out **is**
 the default, byte for byte.
 
+**A whole page by name**: `size b5` sets the width, the height **and** the four
+margins, scaled the way LilyPond's `set-paper-size` scales them — each margin default by
+the size's ratio to a4, rounded to whole millimetres, so `size a4` is the identity and
+`size b5` gives 13mm sides and 8mm top/bottom. The name is **bare**, like every closed
+vocabulary's values (`clef treble`, `tuning standard`); quote only a name that carries a
+space (`size "ansi a"`) — the lyric syllable's rule. The names are LilyPond's paper
+table — `a0`…`a10`, `b0`…`b10`, `c0`…`c10`, `letter`, `legal`, `tabloid`, `ledger`, and
+the rest — plus **`jisb5`** (182 × 257 mm), which is Lily#-own: ISO `b5` (176 × 250) is
+not the Japanese B5, and Japanese sheet music commonly uses JIS B5. `size` reads at its
+position like every other key — write it first, then refine
+(`size b5  topMargin 12mm`).
+
 The spacing blocks, each taking `basicDistance` / `minimumDistance` / `padding` /
 `stretchability` lines (`stretchability` is unitless):
 

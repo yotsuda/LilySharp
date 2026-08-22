@@ -103,6 +103,10 @@ public static class LanguageVocabulary
     /// <summary>The sub-keys a spacing block takes (<c>basicDistance 12</c>).</summary>
     public static IReadOnlyCollection<string> PaperSpacingSubKeys => PaperPlanReader.AllSubKeySpellings();
 
+    /// <summary>Every paper-size name <c>size "NAME"</c> accepts — LilyPond's table
+    /// plus the Lily#-own <c>jisb5</c>, in table order.</summary>
+    public static IReadOnlyCollection<string> PaperSizeNames => Svg.Layout.PaperSizes.AllNames();
+
     // ===== The MUSIC / SCORE position (GRAMMAR.md: ClefName) =====
 
     /// <summary>

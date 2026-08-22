@@ -341,9 +341,15 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
 
 PaperDecl      = 'paper' , [ Identifier ] , PaperBlock ;
 PaperBlock     = '{' , { PaperEntry } , '}' ;
-PaperEntry     = PaperScalarKey , Length
+PaperEntry     = 'size' , ( SizeName | String ) (* a whole page by name - see below *)
+               | PaperScalarKey , Length
                | 'raggedRight'
                | SpacingKey , SpacingBlock ;
+SizeName       = Word-run ;                     (* the GLUED tokens after 'size' read
+                                                   as one word - b5 lexes as a pitch
+                                                   and a duration, 17x11 as a number
+                                                   and a word, and adjacency joins
+                                                   them back into the name they spell *)
 PaperScalarKey = 'paperWidth' | 'paperHeight'
                | 'leftMargin' | 'rightMargin' | 'topMargin' | 'bottomMargin'
                | 'indent' | 'shortIndent'
@@ -374,6 +380,31 @@ SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
 
    The vocabulary is LilyPond's \paper variables camelCased, and every
    default equals LilyPond's a4 default.
+
+   SIZE IS A WHOLE PAGE BY NAME: `size b5` sets the width, the height, AND the four
+   margins, scaled the way LilyPond's set-paper-size scales them (scm/paper.scm
+   set-paper-dimensions) — each margin default multiplied by the size's ratio to a4
+   (horizontal by width, vertical by height) and rounded to whole millimetres. So
+   `size a4` is the identity, and `size b5` gives 13mm sides and 8mm top/bottom.
+   The name is BARE — a closed vocabulary's values are bare in this language, like a
+   clef's or a tuning's — and the quoted form is the escape for the few names that
+   carry a SPACE (`size "ansi a"`), the lyric syllable's rule (a quoted single word
+   is accepted the same way). The names are LilyPond's documented-paper-alist,
+   transcribed whole (a4..a10, b0..b10, c0..c10, letter, legal, tabloid, and the
+   rest), PLUS `jisb5` (182 x 257) which is Lily#-OWN: the ISO b5 is not the
+   Japanese B5, Japanese sheet music commonly uses JIS B5, and LilyPond has no JIS
+   entries. An unknown name is an error listing the table.
+
+   `size` reads at its position like every other key — a later `topMargin` overrides
+   its margin, a later `size` overrides an earlier margin. That second half is a
+   deliberate divergence from LilyPond, whose set-paper-size preserves an earlier
+   left-margin while clobbering an earlier top-margin (an artifact of its module
+   mechanics): Lily# keeps the block's one rule, later wins, for every key alike.
+   Write `size` first and the two engines agree everywhere.
+
+     paper { size jisb5 }
+     paper concert { size b4  raggedRight }
+     score parts { paper concert { size a4 } }
 
    A BARE NUMBER IS STAFF SPACES — the unit everything else in this language is
    measured in. A physical unit is a word GLUED to its number, one quantity:

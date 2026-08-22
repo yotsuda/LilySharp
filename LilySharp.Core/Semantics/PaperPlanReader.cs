@@ -91,7 +91,7 @@ internal static class PaperPlanReader
     /// <summary>Every key a <c>paper { }</c> entry can be spelled with, for messages
     /// and for completion.</summary>
     internal static IReadOnlyList<string> AllKeySpellings() =>
-        [.. ScalarKeys, "raggedRight", .. SpecKeys];
+        ["size", .. ScalarKeys, "raggedRight", .. SpecKeys];
 
     /// <summary>The scalar length keys alone — the completion inserts these with a
     /// number position, unlike a flag or a spacing block.</summary>
@@ -200,7 +200,8 @@ internal static class PaperPlanReader
             var span = entry.KeyToken.Span;
             string? key = Canonical(entry.Key, ScalarKeys)
                 ?? Canonical(entry.Key, SpecKeys)
-                ?? (entry.Key.Equals("raggedRight", StringComparison.OrdinalIgnoreCase) ? "raggedRight" : null);
+                ?? (entry.Key.Equals("raggedRight", StringComparison.OrdinalIgnoreCase) ? "raggedRight" : null)
+                ?? (entry.Key.Equals("size", StringComparison.OrdinalIgnoreCase) ? "size" : null);
             if (key == null)
             {
                 found.Add(new Problem(span, DiagnosticCodes.UnknownPaperKey,
@@ -222,6 +223,12 @@ internal static class PaperPlanReader
                     IsError: false));
             }
             boundKeys[key] = span;
+
+            if (key == "size")
+            {
+                options = ApplySize(options, entry, span, found);
+                continue;
+            }
 
             bool isSpec = Canonical(key, SpecKeys) != null;
             if (isSpec)
@@ -277,6 +284,74 @@ internal static class PaperPlanReader
         }
 
         return options;
+    }
+
+    // The a4 defaults the margin scaling is computed FROM, in millimetres — the same
+    // quantities LayoutOptions' ss literals were computed from (its header).
+    // LILYPOND-REF: ly/paper-defaults-init.ly:53-54,93-94 (10mm top/bottom, 15mm
+    // left/right) and scm/paper.scm:167 (a4 = 210 x 297).
+    private const double A4WidthMm = 210.0;
+    private const double A4HeightMm = 297.0;
+    private const double SideMarginDefaultMm = 15.0;
+    private const double VerticalMarginDefaultMm = 10.0;
+
+    /// <summary>
+    /// Applies one <c>size "NAME"</c> entry: the named paper's width and height, and
+    /// the four margins scaled the way LilyPond's <c>set-paper-size</c> scales them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/paper.scm:303-351 <c>set-paper-dimensions</c> — each margin
+    /// default is scaled by the size's ratio to a4 (horizontal margins by width,
+    /// vertical by height) and ROUNDED TO WHOLE MILLIMETRES (Guile's <c>round</c> is
+    /// half-to-even, which is <c>Math.Round</c>'s default). So <c>size "a4"</c> is the
+    /// identity, and <c>size "b5"</c> gives 13mm sides and 8mm top/bottom.
+    /// <para>
+    /// ⚠️ KEPT DIVERGENCE, one corner: LilyPond stores the scaled HORIZONTAL margins
+    /// under renamed defaults so a left-margin the writer set BEFORE set-paper-size
+    /// survives it, while a top-margin set before it is overwritten. Lily# does not
+    /// port that asymmetry: a block reads top to bottom and the later entry wins, for
+    /// every key alike — <c>size</c> behaves exactly as if its width, height and four
+    /// margins were written at its position. Write <c>size</c> first (the completion
+    /// and every example do) and the two engines agree everywhere.
+    /// </para>
+    /// </remarks>
+    private static LayoutOptions ApplySize(
+        LayoutOptions options, PaperDeclarationSyntax.Entry entry, TextSpan span, List<Problem> found)
+    {
+        // The bare word is the canonical spelling (size jisb5 — a closed vocabulary's
+        // values are bare in this language, like a clef's or a tuning's); the quoted
+        // form carries the names a bare word cannot, the ones with a space in them
+        // (size "ansi a") — the lyric syllable's rule, and a quoted single word is
+        // accepted the same way.
+        string? name = entry.StringToken != null
+            ? entry.StringToken.Text.Trim('"')
+            : entry.BareValue;
+        if (entry.HasBlock || entry.NumberToken != null || name == null)
+        {
+            found.Add(new Problem(span, DiagnosticCodes.PaperEntryMissingValue,
+                "'size' takes a paper name: size jisb5 — quoted when the name carries "
+                + "a space, size \"ansi a\".", IsError: true));
+            return options;
+        }
+        if (!PaperSizes.TryGet(name, out double widthMm, out double heightMm))
+        {
+            var nameSpan = entry.StringToken?.Span ?? entry.BareValueSpan;
+            found.Add(new Problem(nameSpan, DiagnosticCodes.UnknownPaperSizeName,
+                $"'{name}' is not a paper size. Known sizes: "
+                + string.Join(", ", PaperSizes.AllNames()) + ".", IsError: true));
+            return options;
+        }
+        double sideMm = Math.Round(widthMm * SideMarginDefaultMm / A4WidthMm);
+        double verticalMm = Math.Round(heightMm * VerticalMarginDefaultMm / A4HeightMm);
+        return options with
+        {
+            PageWidth = MmToSs(widthMm),
+            PageHeight = MmToSs(heightMm),
+            MarginLeft = MmToSs(sideMm),
+            MarginRight = MmToSs(sideMm),
+            MarginTop = MmToSs(verticalMm),
+            MarginBottom = MmToSs(verticalMm),
+        };
     }
 
     /// <summary>The canonical spelling <paramref name="word"/> matches in
