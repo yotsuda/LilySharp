@@ -86,6 +86,40 @@ ew DrumStaff { \m }` ＝**staff ごとドラム譜に化け、フレーズ本体
 > （`Fixtures/showcase/grammar-tour.lys` の `$theme`、`audit/lilypond-ref/cases/` の `$top`／`$bottom` 3 冊）
 > ＝**書き換えの対象はこの 4 冊。**
 
+> ### ⚠️⚠️ 第228 第3便が**実装を通しでやって、緑にできずに戻した**（2026-08-22）
+> **`scratch/p228/dollar/dollar-removal.patch`（40 ファイル・207+/161−）が動く実装**。
+> **設計上の穴は全部埋まった**が、**無関係な既存欠陥 1 つが出口を塞いでいる**。次便はこの patch を
+> 当てるところから始められる（`git apply`）。**残っているのは docs 7 本と、下の ⑷ の判断だけ。**
+>
+> **⑴ 「`$` が区別しているものは無い」は 3 回反証された。** 監査は読解で「技術的必然は無い」と
+> 断じたが、実測は**3 つの族**を出した——**⒜ ドラム語彙＋`q`**（監査自身の ⚠️測。静かに壊れる）・
+> **⒝ clef 語 `bass`/`treble`/`alto`/`tenor`**（**監査は見落とし**。宣言は通り、裸参照は LYS0030）・
+> **⒞ 強弱記号 `p`/`f`/`mf`…**（**宣言側で既に「予約語」として拒まれていた**——つまり
+> `phrase p` は元から不正で、**テストは `$` とエラー回復の陰でだけ通っていた**）。
+>
+> **⑵ ⒝ は「拒む」ではなく「届かせる」で閉じた**（実装済み・patch 内）。`ParserTests` が
+> **「`bass` パートは宣言・参照・section 化・構造化できる」を意図的に pin している**ので、
+> `$` を外した副作用でその保証の phrase 半分を黙って失うのは誤り。**music stream で裸の clef 語を
+> 参照として読む**（`clef bass`/`tuning bass` は自分のキーワード経由なので曖昧さは無い）。
+> ⚠️ **⒜ は同じ手が使えない**——`q` とドラム名は*本物の music item* なので、宣言側で拒むしかない
+> ＝**LYS1030（新設・patch 内）**。⒞ は既存の「予約語」診断がそのまま効く。
+>
+> **⑶ 監査のインベントリは code 側も test 側も過小だった。** code は 5 者ではなく **8 者**
+> （＋`SyntaxKind.Dollar`・`DrumNameRegistry` の doc・`Parser.Directives` の hint）。
+> test は「`ParserTests.cs:1560` の 1 本」ではなく **30 ファイル・101 行**（テストは `.lys` を
+> C# 文字列で組み立てる）。**docs 7 本は当たっていた**——しかも **docs の例はテストされている**
+> （`GRAMMAR.md`／`GRAMMAR_FOR_LLM.md`／`SYNTAX_REFERENCE.md`／`TUTORIAL.md` の 4 本が赤くなった）。
+>
+> **⑷ ★★★ 出口を塞いでいるもの＝`IncrementalParseTests.WithChange_RandomizedEdits_MatchFullParse`。**
+> このテストは `Source` を種にした**決定論的 fuzz** なので、`Source` から `$` を 1 文字消すと
+> **乱数の当たり先が全部ずれる**。ずれた先で**全パースと増分パースの木が食い違う**（子 9 対 8）。
+> ⚠️ **これは本便が作った欠陥ではない**——**Core の変更を stash して戻した build でも同じ赤**＝
+> **既存欠陥**。再現文書は `scratch/p228/dollar/fuzz-diverge.txt`（`/*` `*/` が不均衡な fuzz 文書
+> ＝テスト自身のコメントが「増分レキサの最悪ケース」と名指す regime）。
+> ⇒ **次便の判断はここだけ**: ⒳ その増分レキサの欠陥を先に閉じる（別島・§5.1「1 島 1 関心」）か、
+> ⒴ fuzz の当たり先を動かさない形で `Source` を書き換えるか。**⒴ を選ぶなら「欠陥を隠した」に
+> ならないよう、⑷ の起票を残したまま**にすること。**本便は勝手に決めずに戻した。**
+
 **移行診断は入れない**（2026-08-21・ユーザー決定）。未リリースにつき移行対象が存在しない。
 `Diagnostic.cs:186-190` の LYS8007 の前例と同じ理由——「a migration path for a spelling that
 could not have reached anyone, since Lily# has never been released」。`LYS0031`・`LYS0013` も同様に廃番済み。
