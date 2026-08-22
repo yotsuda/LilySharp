@@ -632,7 +632,7 @@ key g major
     public void ParseVariableReference()
     {
         var tree = SyntaxTree.Parse(@"phrase theme { c d e f }
-$theme");
+theme");
 
         var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
         Assert.NotNull(varRef);
@@ -730,7 +730,7 @@ $theme");
         var tree = SyntaxTree.Parse(
             "part bass { clef bass }\n" +
             "phrase bass { c2 c | }\n" +
-            "section bass { bass { $bass } }\n" +
+            "section bass { bass { bass } }\n" +
             "form main { bass }\n" +
             "score main \"out\" { staff bass }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
@@ -1559,7 +1559,7 @@ form main { Verse }
     [Fact]
     public void ParseDollarVariableReference()
     {
-        var tree = MusicSource.Parse("$theme", "phrase theme { c d e f }");
+        var tree = MusicSource.Parse("theme", "phrase theme { c d e f }");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         // Wrapped, so the reference is no longer a root slot — search the whole tree.
         var varRef = tree.GetNodes<VariableReferenceSyntax>().Single();
@@ -1576,7 +1576,7 @@ form main { Verse }
 part melody
 phrase intro { c4 d e f | }
 section Main {
-  melody { $intro }
+  melody { intro }
 }
 form main { Main }
 ";
@@ -1611,9 +1611,9 @@ form main { Main }
     [InlineData("intro''", 2)]
     [InlineData("intro,", -1)]
     [InlineData("intro,,", -2)]
-    [InlineData("$intro", 0)]
-    [InlineData("$intro'", 1)]
-    [InlineData("$intro,,", -2)]
+    [InlineData("intro", 0)]
+    [InlineData("intro'", 1)]
+    [InlineData("intro,,", -2)]
     public void PhraseReference_OctaveMarks_CountAsOffset(string reference, int expected)
     {
         // A phrase reference carries the SAME trailing octave marks as a pitch —
@@ -1629,7 +1629,7 @@ form main { Main }
     [Theory]
     [InlineData("intro'")]
     [InlineData("intro,,")]
-    [InlineData("$intro'")]
+    [InlineData("intro'")]
     public void PhraseReference_OctaveMarks_RoundTrip(string reference)
     {
         // Marks live on the green node's tokens, so ToFullString reproduces the

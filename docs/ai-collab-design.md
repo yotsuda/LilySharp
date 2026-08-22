@@ -20,7 +20,7 @@ Ctrl+Z undoes it).
 | Milestone | Scope | State |
 |---|---|---|
 | **M1** | `Ctrl+I` inline transform: context (selection + grammar + resolved facts) → `vscode.lm` → validate/self-repair → candidate score preview → version/range-guarded apply | **Implemented** |
-| M2 | Richer resolved facts (time/key at point, surrounding `$phrase`); already injects resolved absolute pitches | Partial (pitches done) |
+| M2 | Richer resolved facts (time/key at point, surrounding phrase reference); already injects resolved absolute pitches | Partial (pitches done) |
 | **M3** | Score-side selection (click a note, shift-click to extend → same prompt) via the `data-pos` bridge | **Implemented** |
 | **M4** | Ghost-text "next measure" completion (`InlineCompletionItemProvider`, validated) | **Implemented** (opt-in) |
 | **M5** | Before/after score diff, BYO-key, iteration, soft-lock, quality log | **Implemented** |

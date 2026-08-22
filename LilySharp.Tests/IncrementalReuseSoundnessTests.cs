@@ -68,8 +68,8 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase p { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
-        section Main { melody { $p } }
+        phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;
@@ -81,8 +81,8 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase p { c8 d e f g a b c | g4 a b c | }
-        section Main { melody { $p } }
+        phrase mel { c8 d e f g a b c | g4 a b c | }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;
@@ -250,8 +250,8 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody
-        phrase p { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
-        section Main { melody { $p } }
+        phrase mel { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;
@@ -298,8 +298,8 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody
-        phrase p { override Stem.length = 10 c4 d e f | revert Stem.length g4 a b c | }
-        section Main { melody { $p } }
+        phrase mel { override Stem.length = 10 c4 d e f | revert Stem.length g4 a b c | }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;
@@ -378,13 +378,13 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase p {
+        phrase mel {
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |
         }
-        section Main { melody { $p } }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;
@@ -392,7 +392,7 @@ public class IncrementalReuseSoundnessTests
     // Offset of the first character of bar `bar` inside the phrase body.
     private static int BarStart(string source, int bar)
     {
-        int at = source.IndexOf('{', source.IndexOf("phrase p", StringComparison.Ordinal)) + 1;
+        int at = source.IndexOf('{', source.IndexOf("phrase mel", StringComparison.Ordinal)) + 1;
         for (int i = 0; i < bar; i++)
             at = source.IndexOf('|', at) + 1;
         while (at < source.Length && char.IsWhiteSpace(source[at]))

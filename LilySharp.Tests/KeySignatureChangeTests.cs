@@ -62,7 +62,7 @@ public class KeySignatureChangeTests
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -94,7 +94,7 @@ score main ""test"" { staff melody }
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | key bes major bes4 a g f | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -141,7 +141,7 @@ score main ""test"" { staff melody }
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -163,7 +163,7 @@ score main ""test"" { staff melody }
 part melody { clef treble }
 key d major
 phrase m { fis4 g a b | key f major c'4 bes a g | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -188,7 +188,7 @@ score main ""test"" { staff melody }
 part melody { clef treble }
 key d major
 phrase m { fis4 g a b | key c major c'4 d e f | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -210,7 +210,7 @@ score main ""test"" { staff melody }
 part melody { clef treble }
 key d major
 phrase m { fis4 g a b | key g major c'4 d e fis | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";

@@ -464,7 +464,7 @@ public sealed partial class LilySharpLanguageServer
                                     Start = new Position { Line = line, Character = character },
                                     End = new Position { Line = endLine, Character = endChar }
                                 },
-                                NewText = "$melody"
+                                NewText = "melody"
                             }
                         }
                     }

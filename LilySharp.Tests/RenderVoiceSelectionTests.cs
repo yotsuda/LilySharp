@@ -36,8 +36,8 @@ public class RenderVoiceSelectionTests
         phrase pa { c4 d e f | }
         phrase pb { <c e g>1 | }
         section Main {
-          melody { $pa }
-          harmony { $pb }
+          melody { pa }
+          harmony { pb }
         }
         form main { Main }
         score main "first" { staff melody }

@@ -52,7 +52,7 @@ public class TopLevelMusicRejectedTests
     [InlineData("grace { c16 d e } c4")]
     [InlineData("acciaccatura { c16 } d4")]
     [InlineData("break")]
-    [InlineData("phrase theme { c d e f }\n$theme")]
+    [InlineData("phrase theme { c d e f }\ntheme")]
     public void TopLevelMusic_IsRejected(string source)
         => Assert.True(RejectsAsTopLevelMusic(source), $"expected LYS0020 for: {source}");
 

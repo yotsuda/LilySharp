@@ -128,8 +128,6 @@ internal sealed partial class Parser
             SyntaxKind.OpenBracket => ParseBeamOrInlineVolta(),
             SyntaxKind.CloseBracket => ParseBeamMarker(),
 
-            SyntaxKind.Dollar => ParseVariableReference(),
-
 
             SyntaxKind.RepeatKeyword => ParseRepeatExpression(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
@@ -171,6 +169,22 @@ internal sealed partial class Parser
             SyntaxKind.Identifier => DrumNameRegistry.Contains(Current.Text)
                 ? ParseDrumNote()
                 : ParseBareVariableReference(),
+
+            // The four clef words lex as their own keywords, so they never reached the
+            // Identifier arm above and a bare `bass` in music was LYS0030 — reachable only
+            // as `$bass`. ExpectPartName has always accepted them (SyntaxFacts.IsPartNameKind),
+            // and ParserTests.PartAndSectionNames_AcceptClefWords pins that a `bass` part can
+            // be declared, referenced, sectioned and structured; when the `$` sigil was
+            // removed (2026-08-22) that guarantee would have silently lost its phrase half.
+            // Nothing else claims a bare clef word here — `clef bass` and `tuning bass` are
+            // reached through their own directive keyword — so reading it as a reference is
+            // unambiguous, and an undefined one is reported by SymbolReferenceValidator like
+            // any other name. ⚠️ `q` and the drum vocabulary are NOT like this: they ARE real
+            // music items here, so their names stay unreachable and are refused at the
+            // declaration instead (DiagnosticCodes.PhraseNameUnreachable).
+            SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
+                or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
+                => ParseBareVariableReference(),
 
             // `/` in note position is a SLASH NOTE — rhythm (comping) notation:
             // a pitchless note drawn as a slash head on the middle staff line.

@@ -30,7 +30,7 @@ All ✅ implemented:
   `@text("…")`, hairpins, `@stemUp/@stemDown`, `@courtesy`/`@editorial`, arpeggio,
   glissando, figured bass, inline chord names, half ties, cue/cross/dead, feathered
   beams.
-- **Structure** — parts, phrases (`$ref`), sections, named `form`s bound by `score <Name>`,
+- **Structure** — parts, phrases (bare-name refs), sections, named `form`s bound by `score <Name>`,
   repeats `|: :|` (`:|*N`), volta endings, navigation marks & spanners (segno/coda/fine/
   D.S./D.C., rit/accel, ottava, trill spanner, pedals), `break`.
 - **Render targets** — staff, grandStaff, tab, ossia, rows placed by ORDER (score =

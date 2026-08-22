@@ -31,12 +31,12 @@ part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
                                 // (bass/treble/melody-as-keyword etc. are taken)
 
-phrase motif { c4 d e f | }     // optional reusable music, referenced as $motif
+phrase motif { c4 d e f | }     // optional reusable music, referenced by bare name
 
 section Main {                  // a section binds music to each part by name
   partial 8                     // optional pickup: shortens THIS section's opening bar
                                 // for every part at once (top level rejects it)
-  rightHand { $motif g2 g | }
+  rightHand { motif g2 g | }
   leftHand  { c2 c | g2 g | }
 }
 
@@ -128,7 +128,7 @@ score main "out" { staff melody }
 
 **Music always lives inside a part.** A file is a set of declarations; a note stream at the
 top level is an error (LYS0020), as are a top-level `{ … }` block, `grace`/`tuplet` group,
-`break`, or `$phrase` reference. This is what makes a top-level `clef`/`key`/`time`/`tempo`
+`break`, or phrase reference. This is what makes a top-level `clef`/`key`/`time`/`tempo`
 unambiguous: with no music able to stand beside them they are always the FILE DEFAULTS, and
 a directive written among the notes is always a mid-music change.
 
@@ -322,7 +322,7 @@ tuplet 3/2 { c8 d tuplet 3/2 { e16 f g } | }   // nesting allowed
 
 ```
 phrase ground { d2 a,2 | b,2 fis,2 | }
-repeat unfold 8 { $ground }              // 32 bars from one line
+repeat unfold 8 { ground }               // 32 bars from one line
 ```
 
 

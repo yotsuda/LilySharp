@@ -194,7 +194,6 @@ internal sealed class Lexer
             case '*': _position++; return (SyntaxKind.Asterisk, "*");
             case '=': _position++; return (SyntaxKind.Equals, "=");
             case '@': _position++; return (SyntaxKind.At, "@");
-            case '$': _position++; return (SyntaxKind.Dollar, "$");
             case '\'': _position++; return (SyntaxKind.Apostrophe, "'");
             case ',': _position++; return (SyntaxKind.Comma, ",");
             case '-': _position++; return (SyntaxKind.Minus, "-");

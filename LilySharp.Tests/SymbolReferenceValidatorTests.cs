@@ -28,7 +28,7 @@ public class SymbolReferenceValidatorTests
     [Fact]
     public void Validate_UndefinedVariable_ReportsError()
     {
-        var source = "$undefined";
+        var source = "undefined";
         var tree = SyntaxTree.Parse(source);
         
         var validator = new SymbolReferenceValidator();
@@ -44,7 +44,7 @@ public class SymbolReferenceValidatorTests
     {
         var source = @"
 phrase melody { c4 d e f | }
-$melody
+melody
 ";
         var tree = SyntaxTree.Parse(source);
         
@@ -59,7 +59,7 @@ $melody
     {
         var source = @"
 phrase intro { c4 d e f | }
-$intro
+intro
 ";
         var tree = SyntaxTree.Parse(source);
         
@@ -160,8 +160,8 @@ form main {
     Section1
     Section2
 }
-$undefined1
-$undefined2
+undefined1
+undefined2
 ";
         var tree = SyntaxTree.Parse(source);
 

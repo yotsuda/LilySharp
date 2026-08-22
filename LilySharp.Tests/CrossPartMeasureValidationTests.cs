@@ -119,8 +119,8 @@ public class CrossPartMeasureValidationTests
             phrase pa { c4 | c4 d e f | }
             phrase pb { c2 | c4 d e f | }
             section Main {
-              rh { $pa }
-              lh { $pb }
+              rh { pa }
+              lh { pb }
             }
             form main { Main }
             """);

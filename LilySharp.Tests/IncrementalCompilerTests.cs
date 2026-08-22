@@ -39,8 +39,8 @@ public class IncrementalCompilerTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase p { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
-        section Main { melody { $p } }
+        phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;
@@ -829,8 +829,8 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part melody { clef treble }
-            phrase p { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
-            section Main { melody { $p } }
+            phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
+            section Main { melody { mel } }
             form main { Main }
             score main "x" { staff melody }
             """;

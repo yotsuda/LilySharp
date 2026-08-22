@@ -143,8 +143,8 @@ public sealed class MidiRepeatTests
             "part mel\n" +
             "phrase pa { c'4 }\n" +
             "phrase pb { g'4 }\n" +
-            "section A { mel { $pa } }\n" +
-            "section B { mel { $pb } }\n" +
+            "section A { mel { pa } }\n" +
+            "section B { mel { pb } }\n" +
             "form main { A |: B | [1. B \"x\"] :| [2. B \"y\"] | A }\n" +
             "score main \"s\" { staff mel }\n";
         Assert.Equal(new[] { 0, 1, 0, 2 }, Ordinals(src, 79)); // section B (g' = 79)

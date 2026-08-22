@@ -132,7 +132,7 @@ key c major
 phrase guitar_riff { c4 d e f | g a b c' }
 
 section Intro {
-    guitar { $guitar_riff }
+    guitar { guitar_riff }
     bass { c,4 g, c, g, }
 }
 

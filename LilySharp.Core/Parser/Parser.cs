@@ -423,7 +423,6 @@ internal sealed partial class Parser
     private bool IsTopLevelMusicStart() => Current.Kind switch
     {
         SyntaxKind.OpenBrace => true,                                    // { … } music block
-        SyntaxKind.Dollar => true,                                       // $phrase reference
         SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword
             or SyntaxKind.AppoggiaturaKeyword => true,
         SyntaxKind.TupletKeyword => true,
@@ -487,8 +486,6 @@ internal sealed partial class Parser
 
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
-
-            SyntaxKind.Dollar => ParseVariableReference(),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
             SyntaxKind.FontsKeyword => ParseFontDeclaration(),

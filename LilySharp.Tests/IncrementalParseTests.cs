@@ -37,7 +37,7 @@ public class IncrementalParseTests
 
         phrase theme { e4 d c d | e1 | }
 
-        section Main { melody { $intro $theme } }
+        section Main { melody { intro theme } }
 
         form main { Main }
 

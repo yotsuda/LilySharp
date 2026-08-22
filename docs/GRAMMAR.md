@@ -159,7 +159,7 @@ TopLevelItem   = MetadataDecl                     (* title, composer *)
                ;
 
 (* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
-   '{ … }' block, a grace/tuplet group, a 'break', and a '$phrase' reference all belong
+   '{ … }' block, a grace/tuplet group, a 'break', and a phrase reference all belong
    inside a part, reached through a section. The parser accepted a headerless note stream
    for a long time without the grammar ever listing it; that permissiveness is closed.
 
@@ -422,8 +422,8 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
 ## 4. Phrase Definition
 ================================================================================
 
-(* Reusable music fragments, referenced as $name. Defined before use. A phrase body
-   evaluates in a fresh frame (default octave/pitch/duration), so $name means the same
+(* Reusable music fragments, referenced by bare name. Defined before use. A phrase body
+   evaluates in a fresh frame (default octave/pitch/duration), so a reference means the same
    notes at every call. A phrase body MAY reference other phrases (phrase x { y }); the
    reference expands in place (its own fresh frame). What it must NOT do is reference
    itself, directly or around a ring (x -> y -> x, x -> y -> z -> x): a cycle would never
@@ -433,7 +433,7 @@ PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
 
 (* Example:
    phrase theme { c4 d e f | g a b c' | }
-   section Main { melody { $theme g2 g | } }
+   section Main { melody { theme g2 g | } }
 *)
 
 ================================================================================
@@ -979,15 +979,19 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    ']' is OPTIONAL — present draws the right cap (closed ending), absent leaves it open. *)
 InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , [ ']' ] ;
 Beam           = '[' | ']' ;
-PhraseRef      = [ '$' ] , Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
-                 (* ⚠️ The '$' is OPTIONAL and the two spellings are the same thing —
-                    measured 2026-08-16 over eight forms in both octave modes ($theme,
-                    theme, theme', theme'(3), … all identical). This production named
-                    only the bare form while SYNTAX_REFERENCE.md and GRAMMAR_FOR_LLM.md
-                    teach '$name' and every example here writes '$'. Both compile, so
-                    DocExamplesParseTests cannot see three documents disagreeing; WHICH
-                    one to teach is a decision, filed in HANDOFF §2F. This line says what
-                    the parser accepts, which is not the same question.
+PhraseRef      = Identifier , { "'" | ',' } , [ '(' , Integer , ')' ] ;
+                 (* ⚠️ The '$' sigil was REMOVED 2026-08-22. The two spellings had been
+                    measured identical 2026-08-16 (eight forms, both octave modes), so the
+                    sigil distinguished nothing — except three name families, each now
+                    closed on its own terms: drum vocabulary and 'q' are refused as
+                    phrase names at the DECLARATION (LYS1030, since a bare reference
+                    would read as a drum note and silently turn the staff into a
+                    DrumStaff); dynamics (p, f, mf, …) were already reserved words
+                    there; and the clef words (bass, treble, alto, tenor) are
+                    reachable bare because 'clef bass' reaches its clef through its
+                    own keyword, so the music stream reads them as references.
+                    Unreleased, so no migration diagnostic ('$theme' is now an
+                    unexpected character followed by a reference — LYS0018 names it).
                     A movable phrase: it lands in the AMBIENT key at the reference
                     site; trailing marks shift whole octaves (Chorus' / Chorus,).
                     The marks shift in BOTH octave modes: relative moves the running
@@ -1149,7 +1153,7 @@ part melody { clef treble }
 phrase riff { c4 d e f | }
 
 section Verse {
-  melody { $riff | g4@p a( b c') | }
+  melody { riff | g4@p a( b c') | }
   lyrics words sings melody { Sing a song now | one two three four | }
 }
 

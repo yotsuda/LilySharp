@@ -2,7 +2,7 @@ time 4/4
 part rh { clef treble }
 phrase top { g'4 a b c | }
 section Main {
-  rh { $top }
+  rh { top }
 }
 form main { Main }
 score main "x" { staff rh }

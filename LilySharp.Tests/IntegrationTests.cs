@@ -135,7 +135,7 @@ phrase finale {
 }
 
 section Main {
-  melody { $intro $bridge $finale }
+  melody { intro bridge finale }
 }
 
 form main { Main }

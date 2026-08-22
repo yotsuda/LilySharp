@@ -115,7 +115,7 @@ phrase variation {
 }
 
 section Main {
-  melody { $theme $variation $theme }
+  melody { theme variation theme }
 }
 ```
 

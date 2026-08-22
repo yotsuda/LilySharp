@@ -657,7 +657,7 @@ phrase theme {
 ### Phrase Reference
 
 ```
-$theme             // Insert the phrase's music here
+theme              // Insert the phrase's music here (bare name)
 ```
 
 ## Sections and Parts
@@ -729,7 +729,7 @@ form main { Intro Main Main "Main (reprise)" Coda }
 Identifiers (sections, parts, phrases) may use any Unicode letters:
 
 ```
-section イントロ { メロディ { $動機 } }
+section イントロ { メロディ { 動機 } }
 form main { イントロ イントロ "イントロ(再現)" }
 ```
 

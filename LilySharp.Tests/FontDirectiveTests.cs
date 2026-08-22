@@ -400,7 +400,7 @@ public class FontDirectiveTests
             part serif { clef treble }
             part header { clef bass }
             phrase chordName { c'4 d e f | }
-            section A { serif { $chordName } header { c1 | } }
+            section A { serif { chordName } header { c1 | } }
             score main { staff serif  staff header }
             form main { A }
             """);

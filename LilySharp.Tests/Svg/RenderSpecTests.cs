@@ -35,8 +35,8 @@ public class RenderSpecTests
             phrase lh { c4 e g c' | }
 
             section Main {
-              melody { $rh }
-              bass { $lh }
+              melody { rh }
+              bass { lh }
             }
 
             form main { Main }
@@ -206,7 +206,7 @@ public class RenderSpecTests
             phrase melody { c'4 d' e' f' | }
 
             section Main {
-              melody { $melody }
+              melody { melody }
             }
 
             form main { Main }
@@ -257,7 +257,7 @@ public class RenderSpecTests
             phrase melody { c'4 d' e' f' | }
 
             section Main {
-              guitar { $melody }
+              guitar { melody }
             }
 
             form main { Main }
@@ -310,9 +310,9 @@ public class RenderSpecTests
             phrase vocal { g'4 a' b' c'' | }
 
             section Main {
-              singer { $vocal }
-              melody { $rh }
-              bass { $lh }
+              singer { vocal }
+              melody { rh }
+              bass { lh }
             }
 
             form main { Main }
@@ -358,9 +358,9 @@ public class RenderSpecTests
             phrase dummy { c'4 | }
 
             section Main {
-              singer { $dummy }
-              rightHand { $dummy }
-              leftHand { $dummy }
+              singer { dummy }
+              rightHand { dummy }
+              leftHand { dummy }
             }
 
             form main { Main }
@@ -398,8 +398,8 @@ public class RenderSpecTests
             phrase lh { c4 | }
 
             section Main {
-              melody { $rh }
-              bass { $lh }
+              melody { rh }
+              bass { lh }
             }
 
             form main { Main }
@@ -437,8 +437,8 @@ public class RenderSpecTests
             phrase lh { c4 | }
 
             section Main {
-              melody { $rh }
-              bass { $lh }
+              melody { rh }
+              bass { lh }
             }
 
             form main { Main }

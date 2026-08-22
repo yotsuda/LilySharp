@@ -114,7 +114,7 @@ public sealed partial class LilySharpLanguageServer
             new[] { ("Grob.property", "Grob name and property (e.g., Stem.length, NoteHead.color)"),
                     ("value", "New value (number, string, or identifier)") }),
         new("phrase", "phrase name { music }",
-            "Declares a reusable musical phrase. Reference with $name.",
+            "Declares a reusable musical phrase. Reference with name.",
             new[] { ("name", "Phrase name (identifier)"),
                     ("{ music }", "Music content") }),
         new("section", "section Name { parts... }",

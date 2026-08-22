@@ -37,8 +37,8 @@ public class GrandStaffRenderTests
             phrase lh { c4 e g c' | }
 
             section Main {
-              melody { $rh }
-              bass { $lh }
+              melody { rh }
+              bass { lh }
             }
 
             form main { Main }
@@ -81,8 +81,8 @@ public class GrandStaffRenderTests
             phrase lh { c4 | }
 
             section Main {
-              melody { $rh }
-              bass { $lh }
+              melody { rh }
+              bass { lh }
             }
 
             form main { Main }
@@ -127,8 +127,8 @@ public class GrandStaffRenderTests
             phrase lh { c4 e g c' | d e f g | }
 
             section Main {
-              melody { $rh }
-              bass { $lh }
+              melody { rh }
+              bass { lh }
             }
 
             form main { Main }

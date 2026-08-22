@@ -90,7 +90,7 @@ public class SwingTempoTests
         var tree = SyntaxTree.Parse(
             "part swing { clef treble }\n" +
             "phrase shuffle { c'4 d' e' f' | }\n" +
-            "section A { swing { $shuffle } }\n" +
+            "section A { swing { shuffle } }\n" +
             "form main { A }\n" +
             "score main \"s\" { staff swing }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

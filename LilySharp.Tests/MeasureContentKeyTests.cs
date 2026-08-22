@@ -62,13 +62,13 @@ public class MeasureContentKeyTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase p {
+        phrase mel {
           c4 d e f |
           {{bar2}} |
           d4 e f g |
           a4 b c d |
         }
-        section Main { melody { $p } }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;
@@ -97,13 +97,13 @@ public class MeasureContentKeyTests
             time 4/4
             key c major
             part melody { clef treble }
-            phrase p {
+            phrase mel {
               r1 |
               c4 d e f |
               c4 d e f |
               r1 |
             }
-            section Main { melody { $p } }
+            section Main { melody { mel } }
             form main { Main }
             score main "x" { staff melody }
             """;

@@ -39,8 +39,8 @@ public class SectionLabelTests
     private const string ReuseSource = """
         part melody
         phrase pa { c4 d e f | }
-        section First { melody { $pa } }
-        section Second { melody { $pa } }
+        section First { melody { pa } }
+        section Second { melody { pa } }
         form main { First Second First "First (reprise)" }
         score main "x" { staff melody }
         """;
@@ -71,7 +71,7 @@ public class SectionLabelTests
         var labels = SectionLabels("""
             part メロディ
             phrase 動機 { c4 d e f | }
-            section イントロ { メロディ { $動機 } }
+            section イントロ { メロディ { 動機 } }
             form main { イントロ イントロ "イントロ(再現)" }
             score main "x" { staff メロディ }
             """);
@@ -118,7 +118,7 @@ public class SectionLabelTests
         var tree = SyntaxTree.Parse("""
             part メロディ
             phrase 動機 { c4 d e f | }
-            section イントロ { メロディ { $動機 } }
+            section イントロ { メロディ { 動機 } }
             form main { イントロ }
             score main "x" { staff メロディ }
             """);

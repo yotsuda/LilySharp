@@ -601,7 +601,7 @@ public sealed class PartDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Variable reference: use name or $name
+/// Variable reference: a bare phrase name (<c>Chorus</c>).
 /// </summary>
 public sealed class VariableReferenceSyntax : SyntaxNode
 {
@@ -610,13 +610,12 @@ public sealed class VariableReferenceSyntax : SyntaxNode
     {
     }
 
-    // The optional leading `$` keyword is the only Dollar token; when present the
-    // name sits at index 1, otherwise at index 0. Trailing octave marks (' / ,)
-    // follow the name, so slot count alone can no longer locate it.
-    private int NameIndex => GetChild(0) is SyntaxTokenNode { Kind: SyntaxKind.Dollar } ? 1 : 0;
-
+    // The name is child 0. Trailing octave marks (' / ,) follow it, so slot count
+    // alone cannot locate it — the index can, now that nothing precedes the name.
+    // (The `$` sigil that used to sit at index 0 was removed 2026-08-22; see
+    // DiagnosticCodes.PhraseNameUnreachable for what it had been reaching.)
     /// <summary>The referenced variable name token.</summary>
-    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(NameIndex)!;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(0)!;
 
     // Raw trailing tokens: the net '/, mark count and the optional glued
     // interval argument (`'(3)`) parsed after them.
@@ -624,7 +623,7 @@ public sealed class VariableReferenceSyntax : SyntaxNode
     {
         int marks = 0;
         int? interval = null;
-        for (int i = NameIndex + 1; i < SlotCount; i++)
+        for (int i = 1; i < SlotCount; i++)   // the name is child 0
         {
             var child = GetChild(i) as SyntaxTokenNode;
             if (child?.Kind == SyntaxKind.Apostrophe)

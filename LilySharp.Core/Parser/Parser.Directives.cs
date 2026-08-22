@@ -287,7 +287,7 @@ internal sealed partial class Parser
             // on, and it is written bare (or with '$'), so that is what the general hint
             // says. It is right for any word: nothing in Lily# takes a leading backslash.
             _ => $"Lily# has no leading backslash — write '{word}', not '\\{word}' "
-                + "(a phrase reference is bare, or '$name').",
+                + "(a phrase reference is bare, or 'name').",
         };
 
         int startPos = _textPosition;
@@ -529,9 +529,48 @@ internal sealed partial class Parser
     private PhraseDeclarationGreen ParsePhraseDeclaration()
     {
         var keyword = Expect(SyntaxKind.PhraseKeyword);
+        int namePosition = _textPosition + Current.LeadingTriviaWidth;
         var name = ExpectPartName();
+        RejectUnreachablePhraseName(name, namePosition);
         var body = ParseMusicBlock();
 
         return new PhraseDeclarationGreen(keyword, name, body);
+    }
+
+    /// <summary>
+    /// A phrase whose name a bare reference cannot reach is reported HERE (LYS1030) — the
+    /// declaration is the only point at which the writer is told.
+    /// </summary>
+    /// <remarks>
+    /// The set is the gap between the two sides of the same name: <c>ExpectPartName</c>
+    /// (<see cref="SyntaxFacts.IsPartNameKind"/>) accepts an identifier or one of the four
+    /// clef words, while a music stream turns only an IDENTIFIER into a reference — and
+    /// claims <c>q</c> and the drum vocabulary out of that before it gets there
+    /// (Parser.Music.cs, the music-item dispatch). So the unreachable names are exactly the
+    /// clef words plus <c>q</c> plus <see cref="DrumNameRegistry"/>. Both halves are read
+    /// from their own source here rather than listed, so the set cannot drift from them.
+    /// ⚠️ The two failure modes differ and the message says which: a clef word is a loud
+    /// LYS0030 at the reference, a drum name silently rewrites the staff (measured
+    /// 2026-08-22 — see <see cref="DiagnosticCodes.PhraseNameUnreachable"/>).
+    /// </remarks>
+    private void RejectUnreachablePhraseName(SyntaxToken name, int position)
+    {
+        string text = name.Text;
+        if (text.Length == 0)   // a synthesized name token is zero-width; the caller already reported it
+            return;
+
+        string? why =
+            text == "q"
+                ? "'q' repeats the previous chord in a music stream, so it can never be "
+                  + "read as a phrase to play"
+            : DrumNameRegistry.Contains(text)
+                ? $"'{text}' is a drum-kit name, so a music stream reads it as a drum note "
+                  + "on ANY part — the staff would silently become a drum staff"
+            : null;
+
+        if (why != null)
+            _diagnostics.Error(new TextSpan(position, text.Length),
+                DiagnosticCodes.PhraseNameUnreachable,
+                $"a phrase cannot be named '{text}' — {why}. Pick another name.");
     }
 }

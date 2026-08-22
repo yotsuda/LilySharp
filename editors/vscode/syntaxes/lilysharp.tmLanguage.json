@@ -10,7 +10,6 @@
         { "include": "#lyrics-block" },
         { "include": "#fonts-block" },
         { "include": "#part-body" },
-        { "include": "#variable-reference" },
         { "include": "#instrument-value" },
         { "include": "#directive-value" },
         { "include": "#tab-tuning" },
@@ -253,17 +252,6 @@
                     "captures": {
                         "1": { "name": "keyword.control.lilysharp" },
                         "2": { "name": "support.constant.tuning.lilysharp" }
-                    }
-                }
-            ]
-        },
-        "variable-reference": {
-            "patterns": [
-                {
-                    "match": "(\\$)([A-Za-z_][A-Za-z0-9_]*)",
-                    "captures": {
-                        "1": { "name": "punctuation.definition.variable.lilysharp" },
-                        "2": { "name": "variable.other.reference.lilysharp" }
                     }
                 }
             ]

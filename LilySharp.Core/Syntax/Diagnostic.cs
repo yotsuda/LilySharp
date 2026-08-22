@@ -646,6 +646,25 @@ public static class DiagnosticCodes
     /// spelling, so a file rejected today compiles unchanged the day its property lands.</summary>
     public const string OverridePropertyUnsupported = "LYS1029";
 
+    /// <summary>Semantic: a <c>phrase</c> is declared under a name a bare reference in a
+    /// music stream cannot reach, so the phrase could never be played. The music-item
+    /// dispatch claims some bare words before they can be a reference: <c>q</c> repeats the
+    /// previous chord and the drum vocabulary (<c>sn</c>, <c>bd</c>, <c>hh</c>, …) becomes a
+    /// drum note — on ANY part, not just a percussion one. The declaration side accepts
+    /// both (a drum name is an ordinary identifier to <c>ExpectPartName</c>), which is how
+    /// the name gets written in the first place.
+    /// <para>The four clef words are deliberately NOT here. They were unreachable for the
+    /// same reason until 2026-08-22, but nothing claims a bare clef word in a music stream,
+    /// so the fix there was to make the stream read it as a reference rather than to refuse
+    /// the name (Parser.Music.cs). <c>q</c> and the drum vocabulary are real music items, so
+    /// no such fix exists for them and the declaration is the only place left to speak.</para>
+    /// <para>⚠️ This is reported at the DECLARATION, not the reference, on purpose: the
+    /// reference does not fail loudly. Measured 2026-08-22 — <c>phrase sn { c4 d e f | }</c>
+    /// played as bare <c>sn</c> turns the whole staff into a <c>DrumStaff</c> holding one
+    /// note and emits nothing but a short-measure warning. Naming it here is the only place
+    /// the writer is told before the picture changes under them.</para></summary>
+    public const string PhraseNameUnreachable = "LYS1030";
+
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 

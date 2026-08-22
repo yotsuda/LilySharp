@@ -37,7 +37,7 @@ public class InstrumentNameTests
         var source = @"
 part violin ""Violin""
 phrase m { c4 d e f }
-section A { violin { $m } }
+section A { violin { m } }
 form main { A }
 score main ""test"" { staff violin }
 ";
@@ -54,7 +54,7 @@ score main ""test"" { staff violin }
         var source = @"
 part vln1 ""Violin I""
 phrase m { c4 d e f }
-section A { vln1 { $m } }
+section A { vln1 { m } }
 form main { A }
 score main ""test"" { staff vln1 }
 ";
@@ -71,7 +71,7 @@ score main ""test"" { staff vln1 }
         var source = @"
 part melody { clef treble }
 phrase m { c4 d e f }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -90,7 +90,7 @@ part rh ""Piano"" { clef treble }
 part lh { clef bass }
 phrase rhM { c4 d e f }
 phrase lhM { c,4 d e f }
-section A { rh { $rhM } lh { $lhM } }
+section A { rh { rhM } lh { lhM } }
 form main { A }
 score main ""test"" { grandStaff { staff rh staff lh } }
 ";
@@ -113,7 +113,7 @@ score main ""test"" { grandStaff { staff rh staff lh } }
 part vln ""Violin"" { clef treble }
 part vla ""Viola"" { clef alto }
 phrase m { c4 d e f }
-section A { vln { $m } vla { $m } }
+section A { vln { m } vla { m } }
 form main { A }
 score main ""test"" { staff vln staff vla }
 ";
@@ -133,7 +133,7 @@ score main ""test"" { staff vln staff vla }
 part vln ""Violin I"" { clef treble }
 part vla ""Viola"" { clef alto }
 phrase m { c4 d e f }
-section A { vln { $m } vla { $m } }
+section A { vln { m } vla { m } }
 form main { A }
 score main ""test"" { staff vln staff vla }
 ";

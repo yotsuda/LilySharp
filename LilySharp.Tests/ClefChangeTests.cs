@@ -42,7 +42,7 @@ public class ClefChangeTests
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d clef bass c,4 d | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -83,7 +83,7 @@ score main ""test"" { staff melody }
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d clef treble_8 c4 d | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""x"" { staff melody }
 ";
@@ -107,7 +107,7 @@ score main ""x"" { staff melody }
         var source = @"
 part gtr { clef treble_8 }
 phrase m { c'4 d e f | }
-section A { gtr { $m } }
+section A { gtr { m } }
 form main { A }
 score main ""x"" { staff gtr }
 ";
@@ -128,7 +128,7 @@ score main ""x"" { staff gtr }
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d clef treble_8 c4 d | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""x"" { staff melody }
 ";
@@ -154,7 +154,7 @@ score main ""x"" { staff melody }
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d e f | clef bass c,4 d e f | clef treble c'4 d e f | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -201,7 +201,7 @@ score main ""test"" { staff melody }
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d e f | g4 a clef bass c,4 d | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
@@ -227,7 +227,7 @@ score main ""test"" { staff melody }
         var source = @"
 part melody { clef treble }
 phrase m { c'4 d e f | g4 a b c' | clef bass c,4 d e f | g4 a b c | break e4 f g a | b4 c d e | g4 a b c | e4 f g a | }
-section A { melody { $m } }
+section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";

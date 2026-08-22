@@ -57,8 +57,8 @@ public class LineBreakGateTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase p { {{phraseBody}} }
-        section Main { melody { $p } }
+        phrase mel { {{phraseBody}} }
+        section Main { melody { mel } }
         form main { Main }
         score main "x" { staff melody }
         """;

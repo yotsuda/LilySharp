@@ -4,8 +4,8 @@ part lh { clef bass }
 phrase top { tuplet 3/2 { g'8 a b } tuplet 3/2 { c d e } d2 | }
 phrase bottom { g4 a b c | }
 section Main {
-  rh { $top }
-  lh { $bottom }
+  rh { top }
+  lh { bottom }
 }
 form main { Main }
 score main "x" { grandStaff { staff rh staff lh } }
