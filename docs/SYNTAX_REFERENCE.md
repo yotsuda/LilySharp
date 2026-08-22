@@ -486,6 +486,27 @@ A face this machine does not have is a **warning**, with or without `embedded` �
 font is installed is a property of the machine and not of the source, so a score that is
 right on your box must not fail to compile on a runner that has no fonts.
 
+**A named block is per-score.** `fonts NAME { … }` at the top level declares a reusable
+block that binds nothing by itself; a score references it as `fonts NAME`, or overrides
+part of it with `fonts NAME { lyricText "…" }`:
+
+```
+fonts house { serif "Georgia"  lyricText "Charis SIL" }
+
+score main  { fonts house  staff melody }
+score parts { fonts house { lyricText "Noto Serif CJK JP" }  staff melody }
+```
+
+The reference **replaces** the file's unnamed default for that score, and the override
+block reads as if its entries were written at the end of the named block — the same key
+written again wins, with no duplicate warning across the two blocks. ⚠️ **The
+narrower-spelling rule keeps winning whichever block a binding came from**: the house
+block's `lyricText` (a role) beats the score's `lyrics` (its group) — deliberately, so a
+house style's role choices survive a score swapping the broad base. Override a role with
+the same or a narrower key. An unknown reference name is an error naming the declared
+blocks; a named block no score references is a warning; a second reference in one score
+warns and the last wins.
+
 ## Paper
 
 The page's dimensions — paper size, margins, indents, and the vertical spacing specs.
@@ -542,7 +563,14 @@ it is a different feature) and **no algorithm switch** (line/page-breaking strat
 engine tuning, not a dimension of the picture).
 
 Unknown keys are an error, a key set twice in one block is a warning and the last wins,
-and a second `paper { }` block warns like every repeated global setting.
+and a second unnamed `paper { }` block warns like every repeated global setting.
+
+**A named block is per-score**, the same shape as a named fonts block: declare
+`paper wide { paperWidth 250mm }` at the top level, reference it as `paper wide` inside
+a score, or override part of it there (`paper wide { topMargin 12mm }`). The reference
+replaces the file's unnamed default for that score; a spacing block's unwritten lines
+keep the named block's values. One file can then carry a wide conductor page and
+default part pages.
 
 ## Grace Notes
 
@@ -885,6 +913,22 @@ A staff's display name is a quoted string (`staff flute "Piccolo"`) — a bare w
 `staff NAME` is always another score item (`staff flute click` is flute's staff plus the
 `click` MIDI-only part), so position never changes what a word means. And a score of
 nothing but bare names has nothing to engrave, which is the empty-body error.
+
+### This score's own page and faces
+
+A score may also reference a **named** `fonts` / `paper` block (declared at the top
+level — see those sections) and override part of it in place:
+
+```
+paper wide  { paperWidth 250mm }
+fonts house { serif "Georgia"  lyricText "Charis SIL" }
+
+score main  { paper wide  fonts house  staff melody }        // the conductor page
+score parts { paper wide { topMargin 12mm }  staff melody }  // same paper, wider top
+```
+
+The reference replaces the file's unnamed default for that score alone; the override
+block reads as if its entries were written at the end of the named block.
 
 ### Multiple forms (excerpts)
 

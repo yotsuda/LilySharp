@@ -525,6 +525,14 @@ Rules worth knowing before emitting one:
   measuring or drawing.
 - No weight/slant/size here — those belong to the engraving.
 - `mono` is not a key. Unknown keys are an error; a key bound twice is a warning (last wins).
+- **Named blocks, per score**: `fonts NAME { … }` at the top level declares a reusable
+  block (it binds nothing by itself); a score references it as `fonts NAME`, or overrides
+  part of it with `fonts NAME { lyricText "…" }`. The reference REPLACES the file's
+  unnamed default; the override block reads as if written at the end of the named block
+  (same key → the override wins, no cross-block duplicate warning). ⚠️ Narrower still
+  wins across blocks: a house block's `lyricText` (role) beats a score's `lyrics`
+  (group) override — override a role with the same or a narrower key. An unknown
+  reference name is an error; an unreferenced named block warns.
 
 ## Paper (`paper { … }`)
 
@@ -558,6 +566,11 @@ Rules worth knowing before emitting one:
 - ⚠️ The staff-spacing family lives HERE, not in `override` (applied score-wide in one
   pass). There is no staff-size key and no algorithm switch.
 - Unknown keys are an error; a key set twice is a warning (last wins).
+- **Named blocks, per score** — same shape as fonts: `paper wide { paperWidth 250mm }`
+  at the top level, then `score main { paper wide staff melody }`, or
+  `paper wide { topMargin 12mm }` inside the score to override part of it. The
+  reference replaces the file's unnamed default; a spacing block's unwritten lines
+  keep the named block's values.
 
 - Comments: `// line` and `/* block */`.
 - `@name` is the canonical annotation prefix. `\name` annotations are rejected (use `@`);

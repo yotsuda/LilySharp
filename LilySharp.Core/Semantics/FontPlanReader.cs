@@ -50,6 +50,7 @@ internal static class FontPlanReader
     internal static TextFontPlan Read(FontDeclarationSyntax font, out IReadOnlyList<Problem> problems)
     {
         var found = new List<Problem>();
+        problems = found;
         var builder = new TextFontPlan.Builder();
         builder.Embed(font.Embedded);
 
@@ -57,16 +58,99 @@ internal static class FontPlanReader
         {
             // The one-line `font "NAME"` was removed 2026-08-18; the parser reports it
             // (LYS8007) and keeps its tokens so no source position slides. It binds
-            // NOTHING here.
+            // NOTHING here. (A blockless NAMED node — a score's pure reference — reads
+            // through ReadReference instead, never here.)
             //
             // ⚠️ Applying the old meaning anyway would be worse than either choice: the
             // score would engrave in the named face while the editor underlined the line
             // as an error, and the writer would have no reason to believe the message.
             // A refused directive has to be refused all the way through.
-            problems = found;
             return builder.Build();
         }
 
+        ReadEntriesInto(builder, font, found);
+        return builder.Build();
+    }
+
+    /// <summary>True when <paramref name="node"/> stands inside a score block — where a
+    /// fonts or paper node is a REFERENCE rather than a declaration.</summary>
+    internal static bool IsInsideRender(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is RenderDeclarationSyntax)
+                return true;
+        return false;
+    }
+
+    /// <summary>Every named top-level fonts declaration, in document order.</summary>
+    internal static IReadOnlyList<FontDeclarationSyntax> NamedDeclarations(SyntaxNode root) =>
+        [.. root.DescendantNodes().OfType<FontDeclarationSyntax>()
+            .Where(f => f.NameToken != null && f.IsBlock && !IsInsideRender(f))];
+
+    /// <summary>
+    /// Resolves a score reference's name to its top-level declaration. ONE HOME for the
+    /// unknown-name sentence — the validator reports what this hands back, and the
+    /// collector discards it, so the two cannot disagree about which names exist.
+    /// </summary>
+    /// <returns>False when the name resolves to nothing (or the node has no name — the
+    /// parser already spoke); <paramref name="problem"/> carries the sentence when the
+    /// name is unknown.</returns>
+    internal static bool TryResolve(SyntaxNode root, FontDeclarationSyntax reference,
+        out FontDeclarationSyntax? declaration, out Problem? problem)
+    {
+        declaration = null;
+        problem = null;
+        if (reference.NameToken is not { } nameToken)
+            return false;
+        string name = nameToken.Text;
+        var declarations = NamedDeclarations(root);
+        declaration = declarations.FirstOrDefault(d => d.NameToken!.Text == name);
+        if (declaration != null)
+            return true;
+        var declared = declarations.Select(d => d.NameToken!.Text)
+            .Distinct(StringComparer.Ordinal).ToList();
+        problem = new Problem(nameToken.Span, DiagnosticCodes.UnknownFontsBlockName,
+            $"No fonts block is named '{name}'." + (declared.Count > 0
+                ? " Declared: " + string.Join(", ", declared) + "."
+                : $" Declare one at the top level: fonts {name} {{ serif \"Georgia\" }}."),
+            IsError: true);
+        return false;
+    }
+
+    /// <summary>
+    /// The plan a score's <c>fonts NAME [{ … }]</c> reference asks for: the named
+    /// block's entries with the reference's own entries laid over them — the same
+    /// reading as ONE merged block, so the last same-key entry wins (the override) and
+    /// the narrower spelling wins WHICHEVER block it came from. A reference that
+    /// resolves to nothing keeps <paramref name="fallback"/>: refused all the way
+    /// through, like every other refused directive.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Entry problems are NOT surfaced here — each block's own entries are validated
+    /// where the block stands (the validator walks every node) — and the cross-block
+    /// same-key repeat is deliberately not a warning: overriding a key is the whole
+    /// point of the override block.
+    /// </remarks>
+    internal static TextFontPlan ReadReference(SyntaxNode root, FontDeclarationSyntax reference,
+        TextFontPlan fallback)
+    {
+        if (!TryResolve(root, reference, out var declaration, out _))
+            return fallback;
+        var builder = new TextFontPlan.Builder();
+        builder.Embed(declaration!.Embedded || reference.Embedded);
+        var discard = new List<Problem>();
+        ReadEntriesInto(builder, declaration, discard);
+        if (reference.IsBlock)
+            ReadEntriesInto(builder, reference, discard);
+        return builder.Build();
+    }
+
+    /// <summary>Reads one block's entries into <paramref name="builder"/> — the loop
+    /// <see cref="Read"/> and <see cref="ReadReference"/> share, so a directive and a
+    /// merged reference cannot disagree about what an entry means. Duplicate-key
+    /// detection is scoped to the one block: a repeat ACROSS blocks is an override.</summary>
+    private static void ReadEntriesInto(TextFontPlan.Builder builder, FontDeclarationSyntax font, List<Problem> found)
+    {
         var boundKeys = new Dictionary<string, TextSpan>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in font.Entries)
         {
@@ -144,8 +228,5 @@ internal static class FontPlanReader
             else
                 builder.Role(role!.Value, entry.Family!.Value);
         }
-
-        problems = found;
-        return builder.Build();
     }
 }

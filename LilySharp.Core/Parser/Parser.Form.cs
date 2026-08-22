@@ -558,6 +558,12 @@ internal sealed partial class Parser
             // an unrecognised token here falls to ParseList's Advance(), which drops
             // the token's width and shifts every following source offset.
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
+            // `fonts NAME` / `paper NAME` — this score's reference to a named top-level
+            // block, optionally with an override block of its own. Parsed by the same
+            // functions as the declarations (the node is one shape; position says which
+            // reading it gets), with the in-score flag choosing the shape errors.
+            SyntaxKind.FontsKeyword => ParseFontDeclaration(inScore: true),
+            SyntaxKind.PaperKeyword => ParsePaperDeclaration(inScore: true),
             // The same drop this comment names, for the one keyword that reads most like it
             // belongs here: `using` includes a FILE, not a staff (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a score"),
@@ -572,8 +578,9 @@ internal sealed partial class Parser
                     "A score body holds render items — 'staff NAME', 'tab NAME', "
                     + "'grandStaff { … }', 'staffGroup { … }', 'choirStaff { … }', "
                     + "'condensedStaff { … }', 'combinedStaff { … }', 'ossia NAME', "
-                    + "'chords NAME', 'lyrics NAME' — its own 'title'/'composer', and a "
-                    + "bare part name to render that part to MIDI only.")
+                    + "'chords NAME', 'lyrics NAME' — its own 'title'/'composer', a "
+                    + "'fonts NAME' / 'paper NAME' reference, and a bare part name to "
+                    + "render that part to MIDI only.")
         };
     }
 

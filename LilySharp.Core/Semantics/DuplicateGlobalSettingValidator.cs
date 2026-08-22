@@ -46,8 +46,11 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
                 TimeSignatureSyntax => "time",
                 KeySignatureSyntax => "key",
                 OctaveDirectiveSyntax => "octave",
-                FontDeclarationSyntax => "font",
-                PaperDeclarationSyntax => "paper",
+                // A NAMED fonts/paper block is a declaration, not the singleton file
+                // default — several may coexist (name collisions are the
+                // FontBinding/Paper validators' job), so only the unnamed form groups.
+                FontDeclarationSyntax { NameToken: null } => "font",
+                PaperDeclarationSyntax { NameToken: null } => "paper",
                 MetadataDeclarationSyntax m => m.Keyword.ToLowerInvariant(), // title / composer
                 _ => null,
             };

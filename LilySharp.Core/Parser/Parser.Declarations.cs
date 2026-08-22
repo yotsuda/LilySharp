@@ -352,7 +352,9 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// <c>fonts { KEY VALUE… }</c> — the only form.
+    /// <c>fonts { KEY VALUE… }</c>, optionally named — <c>fonts NAME { … }</c> declares
+    /// a reusable block at the top level, and inside a score <c>fonts NAME</c>
+    /// references one (with an optional override block).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -369,13 +371,55 @@ internal sealed partial class Parser
     /// "Expected 'OpenBrace'", which describes the parser's predicament and not the
     /// writer's mistake.
     /// </para>
+    /// <para>
+    /// ⚠️ The shape errors that are POSITIONAL are anchored after the keyword, not on
+    /// it: <c>score main {{ fonts }}</c> reports on the token where the name belongs,
+    /// the same convention as <c>staff</c> missing its part — a word with a real branch
+    /// that lacks its arguments is not a stray item (DocKeywordListTests reads exactly
+    /// this distinction).
+    /// </para>
     /// </remarks>
-    private FontDeclarationGreen ParseFontDeclaration()
+    private FontDeclarationGreen ParseFontDeclaration(bool inScore = false)
     {
         var keyword = Advance(); // fonts
 
+        // `fonts NAME` — a declaration's name at the top level, a reference in a score.
+        // A bare word can never be the removed one-line form's face (faces are quoted),
+        // so the reading is unambiguous.
+        SyntaxToken? name = null;
+        if (!Check(SyntaxKind.OpenBrace) && !Check(SyntaxKind.EmbeddedKeyword)
+            && IsWordLikeToken(Current))
+            name = Advance();
+
         if (Check(SyntaxKind.OpenBrace))
-            return ParseFontBlock(keyword);
+        {
+            if (inScore && name == null)
+            {
+                // The block still parses so its tokens keep their spans; it binds
+                // nothing (a refused directive is refused all the way through).
+                var braceSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
+                _diagnostics.Error(braceSpan, DiagnosticCodes.ScoreFontsNeedsAName,
+                    "A score's fonts item references a named top-level block: fonts NAME, "
+                    + "or fonts NAME { role \"FACE\" } to override part of it here.");
+            }
+            return ParseFontBlock(keyword, name);
+        }
+
+        if (name != null)
+        {
+            if (inScore)
+                return new FontDeclarationGreen(keyword, [name]); // a pure reference
+
+            // At the top level a named block is a DECLARATION, so it takes a block.
+            var nameSpan = new TextSpan(_textPosition - name.FullWidth + name.LeadingTriviaWidth,
+                Math.Max(1, name.Text.Length));
+            _diagnostics.Error(nameSpan, DiagnosticCodes.NamedFontsNeedsABlock,
+                $"A named fonts block is a declaration, so it takes a block: fonts "
+                + $"{name.Text} {{ serif \"Georgia\" }} — a score then references it as "
+                + $"'fonts {name.Text}'. (A quoted face belongs inside a block: "
+                + $"fonts {{ serif \"{name.Text}\" }}.)");
+            return new FontDeclarationGreen(keyword, [name]);
+        }
 
         // The tokens are KEPT, not dropped: a declaration that loses them slides every
         // later `data-pos`, the LSP's jump targets and the columns of the diagnostics that
@@ -385,13 +429,18 @@ internal sealed partial class Parser
 
         var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
             Math.Max(1, Current.Text.Length));
-        _diagnostics.Error(span, DiagnosticCodes.FontsNeedsABlock,
-            face is { Length: > 0 }
-                // The writer's own face name, so the fix is a copy rather than a reading.
-                ? $"'fonts' binds a face per text role, so it takes a block: "
-                  + $"fonts {{ serif \"{face}\"  sans \"{face}\" }} for the whole document's "
-                  + "text, or one role at a time, e.g. lyricText \"Charis SIL\"."
-                : "'fonts' takes a block of role bindings: fonts { serif \"Georgia\" }.");
+        if (inScore)
+            _diagnostics.Error(span, DiagnosticCodes.ScoreFontsNeedsAName,
+                "A score's fonts item references a named top-level block: fonts NAME, "
+                + "or fonts NAME { role \"FACE\" } to override part of it here.");
+        else
+            _diagnostics.Error(span, DiagnosticCodes.FontsNeedsABlock,
+                face is { Length: > 0 }
+                    // The writer's own face name, so the fix is a copy rather than a reading.
+                    ? $"'fonts' binds a face per text role, so it takes a block: "
+                      + $"fonts {{ serif \"{face}\"  sans \"{face}\" }} for the whole document's "
+                      + "text, or one role at a time, e.g. lyricText \"Charis SIL\"."
+                    : "'fonts' takes a block of role bindings: fonts { serif \"Georgia\" }.");
 
         // Consume the stray value so one mistake does not cascade into the rest of the file.
         while (Check(SyntaxKind.StringLiteral) ||
@@ -413,9 +462,12 @@ internal sealed partial class Parser
     // extent is found by looking for the NEXT key rather than by a terminator — there
     // isn't one, and inventing a ';' here would be a second punctuation convention in a
     // language that has none.
-    private FontDeclarationGreen ParseFontBlock(SyntaxToken keyword)
+    private FontDeclarationGreen ParseFontBlock(SyntaxToken keyword, SyntaxToken? name = null)
     {
-        var tokens = new List<GreenNode?> { Advance() }; // {
+        var tokens = new List<GreenNode?>();
+        if (name != null)
+            tokens.Add(name);
+        tokens.Add(Advance()); // {
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
             // A key is any word: role names like `text` and `mark` lex as identifiers,
@@ -446,7 +498,10 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// <c>paper { KEY VALUE… }</c> — the only form.
+    /// <c>paper { KEY VALUE… }</c>, optionally named — <c>paper NAME { … }</c> declares
+    /// a reusable block at the top level, and inside a score <c>paper NAME</c>
+    /// references one (with an optional override block). Same shape as the fonts
+    /// directive, including where the positional errors anchor.
     /// </summary>
     /// <remarks>
     /// The block's tokens are kept FLAT, like the font block's: the entries are read back
@@ -455,21 +510,54 @@ internal sealed partial class Parser
     /// jobs are the block's extent, the one nested brace level a spacing entry may open,
     /// and refusing a token that could never be a key, a number, or a sign.
     /// </remarks>
-    private PaperDeclarationGreen ParsePaperDeclaration()
+    private PaperDeclarationGreen ParsePaperDeclaration(bool inScore = false)
     {
         var keyword = Advance(); // paper
 
+        // `paper NAME` — a declaration's name at the top level, a reference in a score.
+        SyntaxToken? name = null;
+        if (!Check(SyntaxKind.OpenBrace) && IsWordLikeToken(Current))
+            name = Advance();
+
         if (Check(SyntaxKind.OpenBrace))
-            return ParsePaperBlock(keyword);
+        {
+            if (inScore && name == null)
+            {
+                var braceSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
+                _diagnostics.Error(braceSpan, DiagnosticCodes.ScorePaperNeedsAName,
+                    "A score's paper item references a named top-level block: paper NAME, "
+                    + "or paper NAME { topMargin 12mm } to override part of it here.");
+            }
+            return ParsePaperBlock(keyword, name);
+        }
+
+        if (name != null)
+        {
+            if (inScore)
+                return new PaperDeclarationGreen(keyword, [name]); // a pure reference
+
+            var nameSpan = new TextSpan(_textPosition - name.FullWidth + name.LeadingTriviaWidth,
+                Math.Max(1, name.Text.Length));
+            _diagnostics.Error(nameSpan, DiagnosticCodes.NamedPaperNeedsABlock,
+                $"A named paper block is a declaration, so it takes a block: paper "
+                + $"{name.Text} {{ paperWidth 210mm }} — a score then references it as "
+                + $"'paper {name.Text}'.");
+            return new PaperDeclarationGreen(keyword, [name]);
+        }
 
         // The tokens are KEPT, not dropped, for the same reason the font one-liner keeps
         // its own: a declaration that loses them slides every later `data-pos` (RULES §5.1).
         var tokens = new List<GreenNode?>();
         var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
             Math.Max(1, Current.Text.Length));
-        _diagnostics.Error(span, DiagnosticCodes.PaperNeedsABlock,
-            "'paper' sets the page's dimensions, so it takes a block: "
-            + "paper { paperWidth 210mm  paperHeight 297mm }.");
+        if (inScore)
+            _diagnostics.Error(span, DiagnosticCodes.ScorePaperNeedsAName,
+                "A score's paper item references a named top-level block: paper NAME, "
+                + "or paper NAME { topMargin 12mm } to override part of it here.");
+        else
+            _diagnostics.Error(span, DiagnosticCodes.PaperNeedsABlock,
+                "'paper' sets the page's dimensions, so it takes a block: "
+                + "paper { paperWidth 210mm  paperHeight 297mm }.");
 
         // Consume the stray value so one mistake does not cascade into the rest of the file.
         while (Check(SyntaxKind.StringLiteral) ||
@@ -489,9 +577,12 @@ internal sealed partial class Parser
     // commas, entries separated by nothing but whitespace. A unit is a word GLUED to its
     // number (210mm — one quantity, LilyPond's 210\mm); gluedness is judged by the
     // reader from token spans, so here a unit word is just another word.
-    private PaperDeclarationGreen ParsePaperBlock(SyntaxToken keyword)
+    private PaperDeclarationGreen ParsePaperBlock(SyntaxToken keyword, SyntaxToken? name = null)
     {
-        var tokens = new List<GreenNode?> { Advance() }; // {
+        var tokens = new List<GreenNode?>();
+        if (name != null)
+            tokens.Add(name);
+        tokens.Add(Advance()); // {
         int depth = 0; // nested spacing blocks: at most one level
         while (!Check(SyntaxKind.EndOfFile))
         {

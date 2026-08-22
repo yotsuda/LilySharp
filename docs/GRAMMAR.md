@@ -222,7 +222,7 @@ Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
 
 ### 2.4 Text Fonts
 
-FontDecl       = 'fonts' , FontBlock ;
+FontDecl       = 'fonts' , [ Identifier ] , FontBlock ;
 FontBlock      = '{' , { FontEntry } , '}' ;
 FontEntry      = FontKey , ( String , { String } | GenericFamily )
                | 'embedded' ;
@@ -303,6 +303,30 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    Weight and slant are the engraving's, not the score's: there is no way to ask for
    italic here. *)
 
+(* NAMED BLOCKS, AND THE PER-SCORE REFERENCE (fonts and paper share this shape).
+   Without a name the block is the FILE DEFAULT — one per file, every score that
+   references nothing inherits it. With a name it is a DECLARATION and binds nothing
+   by itself: a score references it as a ScoreItem, optionally overriding part of it —
+
+     fonts house { serif "Georgia"  lyricText "Charis SIL" }
+     score main  { fonts house  staff melody }
+     score parts { fonts house { lyricText "Noto Serif CJK JP" }  staff melody }
+
+   The reference REPLACES the file default (resolved = built-in defaults + the named
+   block + the override block, never a hidden chain through the unnamed default), and
+   the override block reads as if its entries were written at the END of the named
+   block: the last same-key entry wins, with no duplicate warning across the two
+   blocks — overriding a key is the block's purpose. ⚠️ The narrower-spelling rule
+   keeps winning WHICHEVER block a binding came from: a house block's role binding
+   (lyricText) survives a score overriding the group (lyrics), deliberately — a house
+   style's deliberate role choices outlive a score swapping the broad base, and a
+   role is overridden by writing the same or a narrower key.
+
+   An unknown reference name is an error naming the declared blocks, a reference
+   that resolves to nothing binds nothing (the score keeps the file default), two
+   declarations sharing a name is an error, a named block no score references is a
+   warning, and a second reference in one score warns — the last wins. *)
+
 (* Example:
    fonts {
      serif     "Georgia"
@@ -315,7 +339,7 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
 
 ### 2.5 Paper
 
-PaperDecl      = 'paper' , PaperBlock ;
+PaperDecl      = 'paper' , [ Identifier ] , PaperBlock ;
 PaperBlock     = '{' , { PaperEntry } , '}' ;
 PaperEntry     = PaperScalarKey , Length
                | 'raggedRight'
@@ -339,8 +363,16 @@ LengthUnit     = 'mm' | 'cm' | 'in' ;
 SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
 
 (* THE PAGE'S DIMENSIONS — paper size, margins, indents, and the vertical spacing
-   specs. One per file (a second one warns and the last wins, like every repeated
-   global). The vocabulary is LilyPond's \paper variables camelCased, and every
+   specs. One UNNAMED block per file (a second one warns and the last wins, like
+   every repeated global). A NAMED block is a per-score declaration — the reference
+   shape, the replace-the-default rule and the override reading are the fonts
+   block's, spelled out in the note at the end of 2.4:
+
+     paper wide { paperWidth 250mm }
+     score main  { paper wide  staff melody }
+     score parts { paper wide { topMargin 12mm }  staff melody }
+
+   The vocabulary is LilyPond's \paper variables camelCased, and every
    default equals LilyPond's a4 default.
 
    A BARE NUMBER IS STAFF SPACES — the unit everything else in this language is
@@ -725,6 +757,10 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         'sings' anywhere - the even-spread
                                                         lead-sheet row. *)
                | ( 'title' | 'composer' ) , String   (* THIS score's own header — see below *)
+               | 'fonts' , Identifier , [ FontBlock ] (* THIS score's faces: a reference to a
+                                                        named top-level block, the optional
+                                                        block overriding part of it *)
+               | 'paper' , Identifier , [ PaperBlock ] (* THIS score's page, same shape *)
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
 

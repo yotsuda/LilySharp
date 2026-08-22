@@ -360,8 +360,13 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
 
 /// <summary>
 /// Font directive — <c>fonts { KEY VALUE… }</c>, binding a face per text role.
-/// ⚠️ A node whose <c>IsBlock</c> is false is the REMOVED one-line form, kept in the tree
-/// (with its diagnostic) so no source position slides — it binds nothing.
+/// With a name it is a DECLARATION at the top level (<c>fonts house { … }</c>) and a
+/// REFERENCE inside a score (<c>fonts house</c>, optionally with an override block) —
+/// which of the two is decided by position, the way a <c>title</c> is the file's or the
+/// score's.
+/// ⚠️ A node whose <c>IsBlock</c> is false and whose <c>NameToken</c> is null is the
+/// REMOVED one-line form, kept in the tree (with its diagnostic) so no source position
+/// slides — it binds nothing.
 /// </summary>
 /// <remarks>
 /// The green node holds the block's tokens FLAT (the parser only found the extent), so
@@ -378,9 +383,34 @@ public sealed class FontDeclarationSyntax : SyntaxNode
     /// <summary>The <c>font</c> keyword token.</summary>
     public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>True when this directive is written as <c>fonts { … }</c>.</summary>
-    public bool IsBlock =>
-        SlotCount > 1 && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+    /// <summary>
+    /// The block's name — <c>house</c> in <c>fonts house { … }</c> — or null for the
+    /// unnamed file default (and for the refused bare-value form, whose first stray
+    /// token is a quoted string or a number, never a word).
+    /// </summary>
+    public SyntaxTokenNode? NameToken
+    {
+        get
+        {
+            if (SlotCount > 1 && GetChild(1) is SyntaxTokenNode t
+                && t.Kind != SyntaxKind.OpenBrace
+                && t.Kind != SyntaxKind.StringLiteral
+                && t.Text.Length > 0 && char.IsLetter(t.Text[0]))
+                return t;
+            return null;
+        }
+    }
+
+    /// <summary>True when this directive carries a <c>{ … }</c> block (after its name,
+    /// when it has one).</summary>
+    public bool IsBlock
+    {
+        get
+        {
+            int i = NameToken != null ? 2 : 1;
+            return SlotCount > i && GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+        }
+    }
 
     /// <summary>
     /// The font name — the first quoted string literal's unquoted value, or null if
@@ -482,7 +512,7 @@ public sealed class FontDeclarationSyntax : SyntaxNode
                 redirect = null;
             }
 
-            for (int i = 2; i < SlotCount; i++)
+            for (int i = NameToken != null ? 3 : 2; i < SlotCount; i++)
             {
                 if (GetChild(i) is not SyntaxTokenNode token)
                     continue;
@@ -537,9 +567,35 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
     /// <summary>The <c>paper</c> keyword token.</summary>
     public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
 
-    /// <summary>True when this directive is written as <c>paper { … }</c>.</summary>
-    public bool IsBlock =>
-        SlotCount > 1 && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+    /// <summary>
+    /// The block's name — <c>partbook</c> in <c>paper partbook { … }</c> — or null for
+    /// the unnamed file default (and for the refused bare-value form, whose stray
+    /// tokens are numbers or strings, never a word). A named node is a DECLARATION at
+    /// the top level and a REFERENCE inside a score, like the fonts one.
+    /// </summary>
+    public SyntaxTokenNode? NameToken
+    {
+        get
+        {
+            if (SlotCount > 1 && GetChild(1) is SyntaxTokenNode t
+                && t.Kind != SyntaxKind.OpenBrace
+                && t.Kind != SyntaxKind.StringLiteral
+                && t.Text.Length > 0 && char.IsLetter(t.Text[0]))
+                return t;
+            return null;
+        }
+    }
+
+    /// <summary>True when this directive carries a <c>{ … }</c> block (after its name,
+    /// when it has one).</summary>
+    public bool IsBlock
+    {
+        get
+        {
+            int i = NameToken != null ? 2 : 1;
+            return SlotCount > i && GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+        }
+    }
 
     /// <summary>
     /// One <c>KEY value</c> line of a nested spacing block.
@@ -617,7 +673,7 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
                 subEntries = [];
             }
 
-            for (int i = 2; i < SlotCount; i++)
+            for (int i = NameToken != null ? 3 : 2; i < SlotCount; i++)
             {
                 if (GetChild(i) is not SyntaxTokenNode token)
                     continue;

@@ -151,10 +151,11 @@
         },
         "fonts-block": {
             "comment": "`fonts { serif \"Georgia\"  barNumber sans }`. ⚠️ The KEYS are a vocabulary of their own (LilySharp.Core TextRole.AllKeySpellings) and are NOT reserved words — `part barNumber { … }` compiles — so nothing outside this block may colour them, and only a rule that knows it is INSIDE one can. That is what begin/end is for: it carries CONTEXT, which is a claim about what a word IS. (It is not licence to claim a word is WRONG; see the #keywords comment.) A key the parser knows and this list omits comes out plain, which is what `serif`/`sans`/`barNumber` did until 2026-08-18 while `tempo` next to them was coloured — by the keyword rule, for an unrelated reason. EditorColouringTests holds this list to TextRole.AllKeySpellings in both directions.",
-            "begin": "\\b(fonts)\\s*(\\{)",
+            "begin": "\\b(fonts)(?:\\s+([A-Za-z][A-Za-z0-9_-]*))?\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.other.lilysharp" },
-                "2": { "name": "punctuation.definition.block.lilysharp" }
+                "2": { "name": "entity.name.section.lilysharp" },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
             },
             "end": "\\}",
             "endCaptures": {
@@ -184,10 +185,11 @@
         },
         "paper-block": {
             "comment": "`paper { paperWidth 210mm  systemSystemSpacing { basicDistance 12 } }`. Same device as #fonts-block and for the same reason: the KEYS are a vocabulary of their own (LilySharp.Core LanguageVocabulary.PaperScalarKeys / PaperSpacingKeys / PaperSpacingSubKeys) and are NOT reserved words — `part indent { … }` compiles — so only a rule that knows it is INSIDE the block may colour them. The nested spacing block is its OWN begin/end so that its `}` does not close the outer region early. A number's GLUED unit (210mm — one quantity) is coloured with its number by #paper-length; the units are not reserved either. EditorColouringTests holds these lists to LanguageVocabulary in both directions.",
-            "begin": "\\b(paper)\\s*(\\{)",
+            "begin": "\\b(paper)(?:\\s+([A-Za-z][A-Za-z0-9_-]*))?\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.other.lilysharp" },
-                "2": { "name": "punctuation.definition.block.lilysharp" }
+                "2": { "name": "entity.name.section.lilysharp" },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
             },
             "end": "\\}",
             "endCaptures": {

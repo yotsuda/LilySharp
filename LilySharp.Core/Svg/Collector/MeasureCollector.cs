@@ -929,6 +929,18 @@ public sealed partial class MeasureCollector
     /// </summary>
     public ImmutableArray<MetadataDeclarationSyntax> HeaderOverrides { get; set; }
 
+    /// <summary>
+    /// The score's <c>fonts NAME [{ … }]</c> reference, when it wrote one. Set by the
+    /// render pipeline before collecting, resolved by <see cref="CollectDefinitions"/>
+    /// after the file-level walk — the same road as <see cref="HeaderOverrides"/> — so
+    /// a score that references nothing inherits the file's unnamed default.
+    /// </summary>
+    public FontDeclarationSyntax? FontsOverride { get; set; }
+
+    /// <summary>The score's <c>paper NAME [{ … }]</c> reference, same contract as
+    /// <see cref="FontsOverride"/>.</summary>
+    public PaperDeclarationSyntax? PaperOverride { get; set; }
+
     // The relative-octave chain plus the part transpose that composes on top of
     // it, bundled into one named collaborator (see OctaveContext). The main walk
     // drives this in place on every note / chord / grace / tuplet.
@@ -3072,15 +3084,20 @@ public sealed partial class MeasureCollector
                     // (FontPlanReader) so the two cannot disagree about what is legal;
                     // the problems it reports are that validator's job, not the
                     // collector's, and an entry it refused is simply absent from the plan.
-                    _meta.Fonts = Semantics.FontPlanReader.Read(font, out _);
+                    // ⚠️ Only the UNNAMED top-level block is the file default: a named
+                    // block is a declaration (read when a score references it, below),
+                    // and a node inside a score is that score's reference.
+                    if (font.NameToken == null && !IsInsideRenderDeclaration(font))
+                        _meta.Fonts = Semantics.FontPlanReader.Read(font, out _);
                     break;
 
                 case PaperDeclarationSyntax paper:
                     // `paper { KEY VALUE… }` sets the page's dimensions. Same contract
                     // as fonts: the reading is shared with PaperValidator, the problems
                     // are that validator's job, and a refused entry is simply absent
-                    // from the overlay.
-                    _meta.Paper = Semantics.PaperPlanReader.Read(paper, out _);
+                    // from the overlay. Same named/reference guard as fonts.
+                    if (paper.NameToken == null && !IsInsideRenderDeclaration(paper))
+                        _meta.Paper = Semantics.PaperPlanReader.Read(paper, out _);
                     break;
 
                 case TempoDeclarationSyntax tempoDecl:
@@ -3241,6 +3258,17 @@ public sealed partial class MeasureCollector
         if (!HeaderOverrides.IsDefaultOrEmpty)
             foreach (var meta in HeaderOverrides)
                 CollectMetadata(meta);
+
+        // The score's fonts/paper references ride the same road, and RESOLVED values
+        // land in _meta — deliberately, for the incremental gate: MetaMatchesShifted
+        // compares _meta, so an edit inside a referenced named block changes what is
+        // compared and forces the recollect it needs. A reference REPLACES the file's
+        // unnamed default (the audit's decision: no hidden three-layer chain); one
+        // that resolves to nothing keeps it, refused all the way through.
+        if (FontsOverride is { } fontsRef)
+            _meta.Fonts = Semantics.FontPlanReader.ReadReference(root, fontsRef, _meta.Fonts);
+        if (PaperOverride is { } paperRef)
+            _meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _meta.Paper);
     }
 
     /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s

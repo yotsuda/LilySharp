@@ -1059,6 +1059,37 @@ public static class DiagnosticCodes
     /// in it, rather than "Expected 'OpenBrace'".</summary>
     public const string FontsNeedsABlock = "LYS8008";
 
+    /// <summary>Font error: a score references a fonts block name no top-level
+    /// <c>fonts NAME { }</c> declares. Refused rather than ignored — a reference that
+    /// reaches nothing looks exactly like one that works; the message lists the
+    /// declared names.</summary>
+    public const string UnknownFontsBlockName = "LYS8009";
+
+    /// <summary>Font error: two top-level <c>fonts NAME { }</c> declarations share a
+    /// name, so a reference would bind to whichever the reader finds first — the same
+    /// reasoning as a duplicate score name.</summary>
+    public const string DuplicateFontsBlockName = "LYS8010";
+
+    /// <summary>Font warning: a named <c>fonts NAME { }</c> block no score references.
+    /// A declaration nobody reads looks exactly like one that works — every page just
+    /// comes out in the default faces.</summary>
+    public const string UnreferencedNamedFonts = "LYS8011";
+
+    /// <summary>Font error: a top-level <c>fonts NAME</c> without a block. A named
+    /// block at the top level is a DECLARATION, so it takes a block; the reference
+    /// form (<c>fonts NAME</c>, optionally with an override block) lives inside a
+    /// score.</summary>
+    public const string NamedFontsNeedsABlock = "LYS8012";
+
+    /// <summary>Font error: an unnamed <c>fonts { }</c> inside a score. A score's
+    /// fonts item REFERENCES a named top-level block — <c>fonts NAME</c>, or
+    /// <c>fonts NAME { role "FACE" }</c> to override part of it for this score.</summary>
+    public const string ScoreFontsNeedsAName = "LYS8013";
+
+    /// <summary>Font warning: one score references fonts twice; the LAST one wins,
+    /// like every other repeated single-value setting.</summary>
+    public const string DuplicateFontsReference = "LYS8014";
+
     // Paper diagnostics (LYS9xxx)
 
     /// <summary>Paper error: a <c>paper { }</c> entry names a key that is not in the paper
@@ -1090,4 +1121,30 @@ public static class DiagnosticCodes
     /// <summary>Paper error: a physical unit on a unitless quantity —
     /// <c>stretchability</c> is a spring flexibility, not a length.</summary>
     public const string PaperUnitOnUnitless = "LYS9006";
+
+    /// <summary>Paper error: a score references a paper block name no top-level
+    /// <c>paper NAME { }</c> declares. Mirrors <see cref="UnknownFontsBlockName"/>.</summary>
+    public const string UnknownPaperBlockName = "LYS9007";
+
+    /// <summary>Paper error: two top-level <c>paper NAME { }</c> declarations share a
+    /// name. Mirrors <see cref="DuplicateFontsBlockName"/>.</summary>
+    public const string DuplicatePaperBlockName = "LYS9008";
+
+    /// <summary>Paper warning: a named <c>paper NAME { }</c> block no score references.
+    /// Mirrors <see cref="UnreferencedNamedFonts"/>.</summary>
+    public const string UnreferencedNamedPaper = "LYS9009";
+
+    /// <summary>Paper error: a top-level <c>paper NAME</c> without a block — a named
+    /// declaration takes a block; the reference form lives inside a score. Mirrors
+    /// <see cref="NamedFontsNeedsABlock"/>.</summary>
+    public const string NamedPaperNeedsABlock = "LYS9010";
+
+    /// <summary>Paper error: an unnamed <c>paper { }</c> inside a score — a score's
+    /// paper item references a named top-level block. Mirrors
+    /// <see cref="ScoreFontsNeedsAName"/>.</summary>
+    public const string ScorePaperNeedsAName = "LYS9011";
+
+    /// <summary>Paper warning: one score references paper twice; the LAST one wins.
+    /// Mirrors <see cref="DuplicateFontsReference"/>.</summary>
+    public const string DuplicatePaperReference = "LYS9012";
 }

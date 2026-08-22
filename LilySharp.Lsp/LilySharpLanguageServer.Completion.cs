@@ -148,6 +148,9 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterPaperKeyword => GetPaperDeclarationCompletions(),
             CompletionContext.PaperBlock => GetPaperBlockCompletions(),
             CompletionContext.PaperSpecBlock => GetPaperSpecBlockCompletions(),
+            // `score { fonts |` / `score { paper |` — the declared block names.
+            CompletionContext.AfterFontsBlockRef => GetDeclaredNameCompletions(doc.Text, "fonts", "Fonts block"),
+            CompletionContext.AfterPaperBlockRef => GetDeclaredNameCompletions(doc.Text, "paper", "Paper block"),
             // The key the caret sits after decides which values fit: a generic family takes
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>
@@ -233,7 +236,14 @@ public sealed partial class LilySharpLanguageServer
     /// block never nests, so the innermost frame is the whole test.
     /// </remarks>
     internal static bool IsInsideFontBlock(string text, int offset)
-        => InnermostOpenBlock(text, offset) == "fonts";
+    {
+        // Unnamed: the word before `{` is `fonts` (the frame's Name). NAMED —
+        // `fonts house {` — the word before `{` is the NAME and `fonts` is one
+        // word further back (the frame's Prefix), the same shape as a part block.
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
+        return frames.Count > 0
+            && (frames[^1].Name == "fonts" || frames[^1].Prefix == "fonts");
+    }
 
     /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>paper { … }</c> block;
@@ -243,13 +253,17 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     internal static bool IsInsidePaperBlock(string text, int offset, out bool inSpacingBlock)
     {
+        // A frame is a paper block when `paper` is the word before its `{` (unnamed)
+        // or one word further back (named — `paper wide {`, the part-block shape).
+        static bool IsPaperFrame(BlockFrame f) => f.Name == "paper" || f.Prefix == "paper";
+
         inSpacingBlock = false;
         var frames = ScanOpenBlocks(text, offset, ReadFrame);
         if (frames.Count == 0)
             return false;
-        if (frames[^1].Name == "paper")
+        if (IsPaperFrame(frames[^1]))
             return true;
-        if (frames.Count >= 2 && frames[^2].Name == "paper")
+        if (frames.Count >= 2 && IsPaperFrame(frames[^2]))
         {
             inSpacingBlock = true;
             return true;
@@ -595,6 +609,8 @@ public sealed partial class LilySharpLanguageServer
         AfterPaperKeyword,
         PaperBlock,
         PaperSpecBlock,
+        AfterFontsBlockRef,
+        AfterPaperBlockRef,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -711,10 +727,17 @@ public sealed partial class LilySharpLanguageServer
                 case "time": return CompletionContext.AfterTime;
                 case "partial": return CompletionContext.AfterPartial;
                 case "title" or "composer": return CompletionContext.AfterTitleText;
-                // `fonts |` with no block yet: offer the block forms.
-                case "fonts": return CompletionContext.AfterFontKeyword;
+                // `fonts |` with no block yet: offer the block forms — except inside a
+                // score, where the item is a REFERENCE and the declared names fit.
+                case "fonts":
+                    return IsInsideScoreBlock(text, offset)
+                        ? CompletionContext.AfterFontsBlockRef
+                        : CompletionContext.AfterFontKeyword;
                 // `paper |` with no block yet: same motion.
-                case "paper": return CompletionContext.AfterPaperKeyword;
+                case "paper":
+                    return IsInsideScoreBlock(text, offset)
+                        ? CompletionContext.AfterPaperBlockRef
+                        : CompletionContext.AfterPaperKeyword;
                 // `override |` (and `once override |`, whose previous word is also
                 // `override`): offer the grob properties that actually affect the
                 // rendered output as `Grob.property = value` fill-ins.
@@ -1934,6 +1957,8 @@ public sealed partial class LilySharpLanguageServer
             ("lyrics", "lyrics $0", "Lyrics row (no staff) for the named lyrics part", true),
             ("title", "title \"$0\"", "This score's own title, overriding the file's", false),
             ("composer", "composer \"$0\"", "This score's own composer, overriding the file's", false),
+            ("fonts", "fonts $0", "This score's faces: reference a named top-level fonts block", true),
+            ("paper", "paper $0", "This score's page: reference a named top-level paper block", true),
         };
         return new CompletionList
         {

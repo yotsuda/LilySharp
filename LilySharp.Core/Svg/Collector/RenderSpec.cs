@@ -187,7 +187,14 @@ public sealed record RenderSpec(
     // Empty when the score states none, and applied over the file's own values by
     // MeasureCollector.CollectDefinitions — so a score that restates nothing keeps
     // them and no score can leak its header to another.
-    ImmutableArray<MetadataDeclarationSyntax> HeaderOverrides = default
+    ImmutableArray<MetadataDeclarationSyntax> HeaderOverrides = default,
+    // `fonts NAME [{ … }]` written inside this score block — a reference to a named
+    // top-level fonts block, with an optional override block of its own. Null when
+    // the score references none (it then keeps the file's unnamed default). Resolved
+    // by MeasureCollector.CollectDefinitions, the same road as HeaderOverrides.
+    FontDeclarationSyntax? FontsRef = null,
+    // `paper NAME [{ … }]`, same contract as FontsRef.
+    PaperDeclarationSyntax? PaperRef = null
 )
 {
     /// <summary>

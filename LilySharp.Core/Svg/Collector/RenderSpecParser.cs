@@ -33,6 +33,8 @@ public static class RenderSpecParser
     {
         var items = new List<RenderItemSpec>();
         var headerOverrides = new List<MetadataDeclarationSyntax>();
+        FontDeclarationSyntax? fontsRef = null;
+        PaperDeclarationSyntax? paperRef = null;
 
         // Header: `score <FormName> ["basename"] [transpose …]`. The form name says
         // WHICH form to render; the basename names the OUTPUT file.
@@ -102,6 +104,17 @@ public static class RenderSpecParser
                 case MetadataDeclarationSyntax meta:
                     headerOverrides.Add(meta);
                     break;
+
+                // `fonts NAME [{ … }]` / `paper NAME [{ … }]`: this score's reference
+                // to a named top-level block. The LAST wins, like every repeated
+                // single-value setting (the validator names the earlier ones).
+                case FontDeclarationSyntax fonts:
+                    fontsRef = fonts;
+                    break;
+
+                case PaperDeclarationSyntax paper:
+                    paperRef = paper;
+                    break;
             }
         }
 
@@ -154,7 +167,7 @@ public static class RenderSpecParser
         var form = ResolveForm(render, formName);
 
         return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
-            [.. headerOverrides]);
+            [.. headerOverrides], fontsRef, paperRef);
     }
 
     /// <summary>

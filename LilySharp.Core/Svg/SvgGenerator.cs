@@ -152,6 +152,10 @@ public static class SvgGenerator
         // on either branch below because BOTH collect definitions, and the single-staff
         // path takes no RenderSpec at all.
         collector.HeaderOverrides = renderSpec?.HeaderOverrides ?? default;
+        // The score's fonts/paper references ride the same road (resolved by
+        // CollectDefinitions after the file-level walk).
+        collector.FontsOverride = renderSpec?.FontsRef;
+        collector.PaperOverride = renderSpec?.PaperRef;
 
         // CollectMultiStaff blanks its own result (MeterStencil, applied there so a caller
         // that reaches for the collector directly gets the same model the render path does).

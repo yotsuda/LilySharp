@@ -116,18 +116,84 @@ internal static class PaperPlanReader
     internal static LayoutOptions Read(PaperDeclarationSyntax paper, out IReadOnlyList<Problem> problems)
     {
         var found = new List<Problem>();
-        var options = LayoutOptions.Default;
+        problems = found;
 
         if (!paper.IsBlock)
         {
-            // The blockless form is refused by the parser (LYS9005) and keeps its
-            // tokens so no source position slides. It sets NOTHING here — a refused
+            // The blockless form is refused by the parser (LYS9005 and kin) and keeps
+            // its tokens so no source position slides. It sets NOTHING here — a refused
             // directive has to be refused all the way through (the fonts one-liner's
-            // reasoning, verbatim).
-            problems = found;
-            return options;
+            // reasoning, verbatim). A blockless NAMED node — a score's pure reference —
+            // reads through ReadReference instead, never here.
+            return LayoutOptions.Default;
         }
 
+        return ReadEntriesInto(LayoutOptions.Default, paper, found);
+    }
+
+    /// <summary>Every named top-level paper declaration, in document order.</summary>
+    internal static IReadOnlyList<PaperDeclarationSyntax> NamedDeclarations(SyntaxNode root) =>
+        [.. root.DescendantNodes().OfType<PaperDeclarationSyntax>()
+            .Where(p => p.NameToken != null && p.IsBlock && !FontPlanReader.IsInsideRender(p))];
+
+    /// <summary>
+    /// Resolves a score reference's name to its top-level declaration — ONE HOME for
+    /// the unknown-name sentence, the same contract as the fonts one.
+    /// </summary>
+    internal static bool TryResolve(SyntaxNode root, PaperDeclarationSyntax reference,
+        out PaperDeclarationSyntax? declaration, out Problem? problem)
+    {
+        declaration = null;
+        problem = null;
+        if (reference.NameToken is not { } nameToken)
+            return false;
+        string name = nameToken.Text;
+        var declarations = NamedDeclarations(root);
+        declaration = declarations.FirstOrDefault(d => d.NameToken!.Text == name);
+        if (declaration != null)
+            return true;
+        var declared = declarations.Select(d => d.NameToken!.Text)
+            .Distinct(StringComparer.Ordinal).ToList();
+        problem = new Problem(nameToken.Span, DiagnosticCodes.UnknownPaperBlockName,
+            $"No paper block is named '{name}'." + (declared.Count > 0
+                ? " Declared: " + string.Join(", ", declared) + "."
+                : $" Declare one at the top level: paper {name} {{ paperWidth 210mm }}."),
+            IsError: true);
+        return false;
+    }
+
+    /// <summary>
+    /// The options a score's <c>paper NAME [{ … }]</c> reference asks for: the named
+    /// block overlaid on the defaults, then the reference's own override entries
+    /// overlaid on THAT — the same reading as one merged block, so a key the override
+    /// writes wins and a spacing block's unwritten lines keep the named block's
+    /// values. A reference that resolves to nothing keeps <paramref name="fallback"/> —
+    /// refused all the way through, like every other refused directive.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Entry problems are NOT surfaced here — each block's entries are validated
+    /// where the block stands — and a same-key repeat ACROSS the two blocks is
+    /// deliberately not a warning: overriding a key is the override block's purpose.
+    /// </remarks>
+    internal static LayoutOptions ReadReference(SyntaxNode root, PaperDeclarationSyntax reference,
+        LayoutOptions fallback)
+    {
+        if (!TryResolve(root, reference, out var declaration, out _))
+            return fallback;
+        var discard = new List<Problem>();
+        var options = ReadEntriesInto(LayoutOptions.Default, declaration!, discard);
+        if (reference.IsBlock)
+            options = ReadEntriesInto(options, reference, discard);
+        return options;
+    }
+
+    /// <summary>Overlays one block's entries onto <paramref name="options"/> — the loop
+    /// <see cref="Read"/> and <see cref="ReadReference"/> share, so a directive and a
+    /// merged reference cannot disagree about what an entry means. Duplicate-key
+    /// detection is scoped to the one block: a repeat across blocks is an override.</summary>
+    private static LayoutOptions ReadEntriesInto(
+        LayoutOptions options, PaperDeclarationSyntax paper, List<Problem> found)
+    {
         var boundKeys = new Dictionary<string, TextSpan>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in paper.Entries)
         {
@@ -210,7 +276,6 @@ internal static class PaperPlanReader
             };
         }
 
-        problems = found;
         return options;
     }
 
