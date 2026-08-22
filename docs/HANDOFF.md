@@ -151,6 +151,47 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+最終更新 第233セッション＝**fonts/paper の名前付き宣言と score 内参照＋部分上書きを実装した（ユーザー発案 → 設計往復で推奨案を承認 → 実装だけの便）**。意味論の決定 3 つ＝⑴ **参照は無名既定を置換**（隠れた 3 層チェーンを作らない）⑵ **patch は「名前付き block の末尾に書いたのと同じ」**＝同キーは後勝ち・**層またぎの重複 warning は出さない**（上書きが目的）⑶ **narrower-wins は出所不問**＝house の role 束縛は score の group 上書きに勝つ（**意図した驚き・名指しで pin**＝`TheNarrowerSpellingWins_WhicheverBlockItCameFrom`）。
+**① 形（GRAMMAR §2.4 末尾の注記・§2.5・§7 ScoreItem）**：top-level `fonts NAME { }`／`paper NAME { }`＝**宣言**（単独では何も束ねない・未参照は warning）・score 内 `fonts NAME [{ patch }]`＝**参照＋部分上書き**。node は 1 形（`NameToken` 追加・**位置が宣言/参照を決める**＝title の file/score と同じ構造的文脈）。無名 block は従来どおりファイル既定で挙動完全不変。
+**② 配管は HeaderOverrides の完全鏡**：`RenderSpec.FontsRef/PaperRef` → collector の `FontsOverride/PaperOverride` → **定義 walk の後に解決して「解決値を `_meta` に置く」**——増分 gate（`MetaMatchesShifted`）は `_meta` を比べるので、**named block の中身の編集が自動的に recollect を強制する**（cache キーの追加ゼロで正しい）。reader は `TryResolve`（未知名の文の ONE HOME）＋`ReadReference`（merge＝**entry 連結**——builder の dict 代入と既存の後勝ち・narrower-wins が全部面倒を見るので、**新しい解決規則をひとつも書いていない**）。
+**③ 診断は fonts LYS8009〜8014／paper LYS9007〜9012 の対**（未知名〈宣言名を列挙〉・重複名 error・未参照 warning・top-level 名前付き無 block・score 内無名・1 score 内重複参照 warning 後勝ち）。DuplicateGlobalSetting は**無名のみ**が対象に。**形エラーの anchor は語の上に置かない**（`score { fonts }` は名前が立つ位置に報告——DocKeywordListTests の機械が「拒否された語」と「引数不足の枝」を span で区別するため。この機械は production・stray message・**span の置き場**の 3 点を同時に要求する）。
+**④ LSP**：score 内 `fonts `/`paper ` → **宣言名補完**（`GetDeclaredNameCompletions` の道・score item 一覧にも 2 項追加）・named block 内のキー補完は **Prefix 検出**（part block と同じ器＝`fonts house {` は Name=house/Prefix=fonts）。tmLanguage は begin に optional name（`entity.name.section`）。docs 3 本更新。
+**⑤ 証明**：lp-regression **A/B 再レンダ 0/81**・**572 冊 `lysc check` 新診断 0**（exit 非零は既存 3 probe のみ）・台帳 **566 点完全不動**・snapshot **0 枚**・suite **+15＝5776/0/4**（新テスト＝`NamedBlockReferenceTests` 15 本：置換・merge・層またぎ pin・E2E 2 score 2 紙幅・診断全種・round trip）。
+
+★ **開始時裏取り**: HEAD `1e3847eb`（第232 の閉幕 handoff・§1 と一致）・未 push 22・未追跡 0/木 0・Windows suite **5761/0/4**・WSL **5761/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
+終了時: **未 push 24（push はユーザー＝RULES §5.1）**＝本便 2 本（実装一式／handoff）・未追跡 0/木 0・suite **Windows 5776/0/4・WSL 5776/0/4＝両 OS 完全緑（開始比 +15）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊（1 冊も触っていない）**・Core 0 警告。
+
+★ **この便の値段**:
+
+| 便 | 何が動いたか | 射程 |
+|---|---|---|
+| ① 名前付き fonts/paper＋score 参照・部分上書き一式 | parser 2 本（名前＋inScore）・NameToken・reader の TryResolve/ReadReference・RenderSpec→collector 配線・診断 12 本・validator 2 本の名前層・LSP・tmLanguage・docs 3 本・新テスト 15 本 | **既存本の出力ゼロ移動を再証明**（A/B 0/81・台帳不動・snapshot 0・572 冊 check 新診断 0）・両 OS 完全緑 |
+
+- **⑸ ★★★ 次に触るなら＝残債**: 言語仕様の宿題は §1.2 リネーム（ユーザーが MSVS で）だけ／**名指し穴**＝⒤ exporter の paper 未輸出（named 参照も同じ warning が受ける・paper を書く本が生まれて probe が要る日に）・⒥ MusicXML importer の page-layout → paper 写像（未起票のまま）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
+
+> ## ★★ 骨 1＝**層を足すときは、新しい規則ではなく「既存の 1 規則に足し込める表現」を探す**
+> merge を「entry 列の連結（宣言→patch の順）」に落とした瞬間、後勝ち・narrower-wins・
+> builder の dict 代入という既存機構が全部面倒を見て、**新しい解決規則をひとつも書かずに済んだ**
+> （15/15 一発緑の主因）。対案の「score 層が幅によらず勝つ」は解決規則が 2 軸になる——
+> 設計往復でそこまで畳んで承認を取ってから書いたので、実装は器だけだった（第232 骨 1 の続き）。
+
+> ## ★★ 骨 2＝**score item を足すときは、エラーの anchoring から設計する**
+> DocKeywordListTests の機械は「production に載る・stray message が名指す」だけでなく
+> **「引数不足のエラーが*語の上*に立たない」**を要求する（`IsStrayInsideAScore` は span 重なりで
+> 「拒否された語」と「枝はあるが引数が無い」を区別する）。`score { fonts }` の名前欠落を
+> 語の上に報告していたら、機械は fonts を「score が拒む語」と数え、production に載せることと矛盾した。
+> ⇒ **新 item の shape エラーは keyword の後ろ（引数の立つ位置）に anchor する**——staff の欠落と同じ規約。
+
+> ## ★★ 骨 3＝**per-score 状態は「解決済みの値」を比較面（_meta）に置く**
+> 参照の解決を _meta の外でやると、named block の編集が増分の再収集を起こさない穴になる。
+> HeaderOverrides と同じ道で **walk の後に解決し、解決値を _meta に置いた**ので、
+> `MetaMatchesShifted` が**無料で**正しくなった（cache キーの追加ゼロ）。
+> ⇒ **キャッシュ等値の面には「参照」ではなく「解決結果」を置く**——参照を置くと参照先の変更が見えない。
+
+---
+
+## 以下は第232セッションの経緯
+
 最終更新 第232セッション＝**ユーザー判断 4 つを締めて §2.1 `paper { }` を実装した（`1c19d384`・38 file）**——第231 が測った決定材料に対する判断＝⑴ 狙い＝ハウススタイル（§2.1 単独・A/B/C は需要待ちで見送り）⑵ **単位接尾辞を導入**（`210mm`/`29.7cm`/`8.5in`・**数字に糊付け＝1 量**・裸の数値は ss）⑶ 語彙＝寸法系全部（アルゴリズム切替は載せない）⑷ **段間隔の分担＝paper に寄せる**（override 側は「効かない scope」の傷か位置配管の費用・paper は綴り＝意味が一致）。**これで GRAMMAR_AUDIT §9 は全項 ✅**（残りは §1.2 リネームのみ＝ユーザーが MSVS で）。
 **① 形（GRAMMAR §2.5）**：top-level `paper { KEY VALUE… }`＝LP の `\paper` 変数の camelCase。scalar 10（paperWidth/Height・margin×4・indent×2・topSystemPadding・spacingIncrement）＋ flag 1（raggedRight）＋ **spacing spec block 13×4**（systemSystemSpacing…nonStaffNonStaffSpacing × basicDistance/minimumDistance/padding/stretchability）。**mm→ss は ×72.27/127 を 6 桁丸め＝LayoutOptions 既定値の計算と同一**なので**「既定を書いた本は既定と byte 一致」**（PaperBlockTests が pin・空 block／既定明記／無指定の 3 綴りが同一絵）。**露出しなかった**：StaffHeight（単位の枠そのもの・LP も `\paper` 外）・SystemSpacing（不活性の実測札あり）・breaking 切替。
 **② 配管は fonts の完全鏡**：`PaperPlanReader`（ONE HOME・collector＋`PaperValidator` の 2 呼び手）→ `Score.Paper` → **`new LayoutEngine(score.Paper)` ×6 生産 site**（Svg/Pdf/Png×2/Incremental/LayoutReport）・増分の meta 等値・重複 global・診断 **LYS9001〜9006**（spaced unit `210 mm` は「糊付けの綴り」を名指す）・LSP 補完 3 context＋top-level snippet（既定 prefill＝受けて何も変えなければ絵は動かない）・tmLanguage `paper-block`（入れ子 begin/end）＋ EditorColouringTests の両方向網（語彙の家は `LanguageVocabulary.Paper*`＝public 転送）。
@@ -193,46 +234,6 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 > paper は逆＝**書かないと双子が対照でなくなる**ので、これは drummap 型の穴として
 > warning で名指した。⇒ **未輸出を決めるときは「Lily# 側の絵を動かす量か」で二分し、
 > 動かす量なら黙らず warning**（動かさない量なら書くほうが比較を壊す）。
-
----
-
-## 以下は第231セッションの経緯
-
-最終更新 第231セッション＝**残債筆頭 §9-3/4（§2.2 override 語彙・§2.1 `paper { }`）の決定材料を測って監査に置いた**——第230 骨 4 の処方（「§8.1 と同じ形に持ち込む＝決定を先に締め、費用を測ってから実装便を立てる」）の測定半分。**コードは 1 行も動いていない**（動いたのは GRAMMAR_AUDIT.md 1 本だけ）。**判断 3 つがユーザー待ち**（下 ④）。
-**① §2.2 の発見＝§4 の形の 3 例目（今回は文法の門も閉じている）**：`StaffSpacingParameters.ApplyOverrides`（`LayoutEngine.cs:94` から生きている）は `StaffGrouper.staff-staff-spacing.*`／`staffgroup-staff-spacing.*` の **8 綴り（basic/minimum-distance・padding・stretchability × 2 面）を完全実装**しているが、⑴ whitelist（`SupportedGrobOverrides`）に行が無く、⑵ **文法が dotted sub-property を綴れない**（`ParseGrobPropertyName` は hyphen 結合のみ・2 つ目の `.` は `Expect(Equals)` で壊れる）＝**到達者はテストだけ**（`AlignmentDistanceTests` が `GrobOverride` を直接構築）。適用は score-wide 一発（measure／staff scope を見ない）。
-**② 需要 3 面の実測**：⑴ lp-regression **category=override 89 冊の内訳＝`\override` 無し 54（`\set`/`\with` で除外・§2.2 の射程外）／override のみ 28＝全部一点物（綴り首位でも `Score.BarLine.hair-thickness` 7 回・1 冊）／mixed 7** ⇒ **綴り 1 つ実装して戻る本は約 1 冊＝コーパス再開は語彙拡張の動機にならない**。⑵ 追跡 .lys 572 冊で override を書くのは complex-once.lys 1 冊（transparent 対）のみ＝**どんな拡張も既存コーパスの出力・exit code を動かさない**。⑶ LP `\hideNotes` は 6 grob（Dots・NoteHead＋no-ledgers・Stem・Accidental・Rest・TabNoteHead）に transparent を張る——Lily# は inked な 2 grob だけ＝**休符・付点・臨時記号・加線は隠せない**。
-**③ 候補群の値札**（本文は GRAMMAR_AUDIT §2.2 の欄）：**A**＝StaffGrouper 8 綴り（reader 費用 0・要るのは dotted sub-property の文法拡張＋8 行＋pin/completion/docs）／**B**＝transparent/color の面を広げて `\hideNotes` 完成（per grob で draw site に reader 1＋行 1）／**C**＝幾何ノブ（Stem.length 等・per 綴りで本実装・需要は一点物）／**D**＝`\set`/`\with` は override 構文の外＝射程外（89 冊の 54 はこちら・拾うなら別の起票）。
-**④ §2.1 の台帳と判断**：候補台帳＝`LayoutOptions` 全員（用紙・余白・StaffHeight・indent・ragged・spacing 群。**lysc はどれも露出していない**・テスト需要の首位は PageHeight 7／PageWidth 6）。雛形 `fonts { }` より簡単（役割×グループが無い＝フォールバック段不要）。**ユーザー判断 3 つ**＝⑴ 狙い（LP idiom 完成＝B／ハウススタイル＝A＋§2.1／コーパス再開は動機薄）・⑵ 単位の綴り（LP は `210\mm`・Lily# に単位接尾辞の前例なし）・⑶ **§2.2 との分担**（LP の慣習は system-system＝`\paper` 変数・staff-staff＝StaffGrouper grob——**§9 の 3 と 4 は分担を共有するので対で決める**。§4.2/§4.3 の「対で決める」と同族）。
-
-★ **開始時裏取り**: HEAD `020b9d7d`（第230 の閉幕 handoff・§1 と一致）・未 push 18・未追跡 0/木 0・Windows suite **5737/0/4**・WSL **5737/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 20（push はユーザー＝RULES §5.1）**＝本便 2 本（`31ed5919` 測定＋handoff／この行の handoff 確定）・未追跡 0/木 0・suite **Windows 5737/0/4・WSL 5737/0/4＝両 OS 完全緑（コード不変・docs のみ。編集後に全数を回して確認済み）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**・Core 0 警告。
-
-★ **この便の値段**:
-
-| 便 | 何が動いたか | 射程 |
-|---|---|---|
-| ① §2.2＋§2.1 の決定材料（GRAMMAR_AUDIT.md のみ） | §2.2/§2.1 に測定欄（候補 A〜D・判断 3 つ）・§9-3/4 に案内・§10 に数え方 6 行 | コード 0 行＝出力・exit code・snapshot・台帳・テスト数すべて不変・suite 緑 |
-
-- **⑸ ★★★ 次に触るなら＝残債**: **GRAMMAR_AUDIT §9 の残り＝⑶ §2.2・⑷ §2.1 とも測定済み・判断待ち**（判断 3 つ＝狙い／単位／分担。**判断が出れば §8.1 と同じ「実装だけの便」に持ち込める**）／残り小物＝§1.2 リネーム（ユーザーが MSVS で）／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・非ペア ToCoda の reserve≠draw（第227 起票・症状未観測なので点が先）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示・実譜の `%` 記号（audit §8.1 ②・未起票のまま）。Marketplace は PAT 待ちのまま（第220 ①）。
-
-> ## ★★ 骨 1＝**語彙の監査は「綴れるか」「行が在るか」「reader が在るか」の 3 面を別々に数える——どの 2 面の一致も 3 面目を保証しない**
-> §4.2（color）は「reader 在り・行なし・綴れる」、§4.3（force-hshift）は「reader 無効・行あり・綴れる」、
-> 今回の StaffGrouper は「reader 在り・行なし・**綴れない**」——3 例とも違う面が欠けていた。
-> 第229 が §4 を「両方向一致」で閉じたときの 2 面（reader ⇔ 行）は揃えたが、**文法の門は
-> どちらの数え方にも映らない**（validator は綴られた名前しか見ず、reader の grep は綴りを見ない）。
-> ⇒ **語彙を広げる実装便は、3 面を 1 commit で揃える**（行＋reader＋綴りの pin）。
-
-> ## ★★ 骨 2＝**分類ラベルで数を引かない——ラベルの定義（機械生成の正規表現）まで戻って母集団を再分解する**
-> 「override 89 冊」は「`\override` を書く 89 冊」ではなかった——category は
-> `\override`/`\set`/`\with` の**どれか**を含むで切られており、**54/89 は `\override` を
-> 1 つも書かない**＝§2.2 の射程外。ラベルのまま「89 冊が候補」と書いていたら、
-> 値札が 3 倍近く膨れていた。⇒ **母集団を引き継ぐときは、その母集団を作った述語も書く**
-> （§0「数え方を書く」の分類版）。
-
-> ## ★ 骨 3＝**「決定材料を測る便」の出口は質問の一覧ではなく、値札の付いた選択肢の一覧**
-> 第229 骨 4（承認の質は値札の質）の続き——§2.2/§2.1 は「何を足すか」だけ聞くと開いた
-> 質問になるが、**候補を A〜D に畳んで各々の費用と需要を並べれば、判断は 3 つに縮む**
-> （狙い・単位・分担）。測定はこちらの仕事、判断はユーザーのもの（§5.0）。
 
 ---
 
