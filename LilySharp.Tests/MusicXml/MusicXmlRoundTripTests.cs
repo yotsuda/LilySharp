@@ -208,8 +208,8 @@ public class MusicXmlRoundTripTests
 
             section A {
               melody {
-                e'4@chord(c) e' f' g' | a'4@chord(a:m) g' e' d' |
-                f'4@chord(f) a' g' f' | e'4@chord(g:7) d' c'2 |
+                e'4@chord(C) e' f' g' | a'4@chord(Am) g' e' d' |
+                f'4@chord(F) a' g' f' | e'4@chord(G7) d' c'2 |
               }
               lyrics words sings melody { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
             }
@@ -232,7 +232,7 @@ public class MusicXmlRoundTripTests
             key c major
             part melody { clef treble }
             section A {
-              melody { e'4@chord(c) e' f' g' | }
+              melody { e'4@chord(C) e' f' g' | }
               lyrics words sings melody { Mu- sic fills the | }
             }
             form main { A }
@@ -308,7 +308,7 @@ public class MusicXmlRoundTripTests
         var (lys, report) = new MusicXmlImporter().ImportBytes(BuildMxl(xml));
         var importedTree = SyntaxTree.Parse(lys);
         Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}\nwarnings: {string.Join("; ", report.Warnings)}");
-        Assert.Contains("@chord(c)", lys);      // harmony
+        Assert.Contains("@chord(C)", lys);      // harmony
         Assert.Contains("@staccato", lys);       // articulation
         Assert.Contains("tuplet 3/2 {", lys);    // triplet
     }

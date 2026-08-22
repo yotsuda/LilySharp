@@ -52,14 +52,17 @@ internal sealed partial class Parser
         // clean and simply lost the "??"). Flag each one up front.
         //
         // Exception: '#' (a BadToken everywhere, since Lily# deliberately avoids
-        // Scheme's '#') is LEGAL inside a @chord(...) / @fig(...) argument, where
-        // it means "sharp" — sharp roots (C#/F#), altered tensions (7#9, #11), and
-        // sharp figures (#6). It flows through MusicMarkSyntax.MarkName to the
-        // chord / figured-bass parsers. Track those argument regions so a '#'
-        // there is not flagged; every other BadToken (and '#' anywhere else) is.
+        // Scheme's '#') is LEGAL inside a @chord(...) / @fig(...) argument AND in
+        // a chords { } body, where it means "sharp" — sharp roots (C#/F#),
+        // altered tensions (7#9, #11), and sharp figures (#6). It flows through
+        // MusicMarkSyntax.MarkName / the chord-symbol token run to the chord /
+        // figured-bass parsers. Track those regions so a '#' there is not
+        // flagged; every other BadToken (and '#' anywhere else) is.
         int scanPos = 0;
         int argDepth = 0;  // paren depth inside a @chord/@fig argument (0 = outside)
         int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@fig' name
+        int chordsDepth = 0;   // brace depth inside a chords { } body (0 = outside)
+        int chordsStage = 0;   // 0 = idle, 1 = saw 'chords', 2 = saw its name
         SyntaxToken? previous = null;
         bool afterNote = false;  // the previous token was the tail of a note
         foreach (var t in _tokens)
@@ -77,7 +80,7 @@ internal sealed partial class Parser
             // right (`d? e` pointed at the space, not the '?').
             int inkPos = scanPos + t.LeadingTriviaWidth;
 
-            bool inChordFigArg = argDepth > 0;
+            bool inChordFigArg = argDepth > 0 || chordsDepth > 0;
             if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#"))
             {
                 // '?' is LilyPond's cautionary accidental; Lily# has no such
@@ -128,7 +131,7 @@ internal sealed partial class Parser
                 || (afterNote && glued && t.Kind is SyntaxKind.Apostrophe
                     or SyntaxKind.Comma or SyntaxKind.IntegerLiteral or SyntaxKind.Dot);
 
-            if (inChordFigArg)
+            if (argDepth > 0)
             {
                 if (t.Kind == SyntaxKind.OpenParen) argDepth++;
                 else if (t.Kind == SyntaxKind.CloseParen) argDepth--;
@@ -146,6 +149,26 @@ internal sealed partial class Parser
             }
             else
                 stage = 0;
+
+            // A chords { } BODY (braces included: inner `section X { }` blocks are
+            // part of it). A `chords NAME` score row has no brace, so the region
+            // arms only when the brace actually follows the keyword (+ its name).
+            if (chordsDepth > 0)
+            {
+                if (t.Kind == SyntaxKind.OpenBrace) chordsDepth++;
+                else if (t.Kind == SyntaxKind.CloseBrace) chordsDepth--;
+            }
+            else if (t.Kind == SyntaxKind.ChordsKeyword)
+                chordsStage = 1;
+            else if (chordsStage >= 1 && t.Kind == SyntaxKind.OpenBrace)
+            {
+                chordsDepth = 1;
+                chordsStage = 0;
+            }
+            else if (chordsStage == 1 && t.Kind == SyntaxKind.Identifier)
+                chordsStage = 2;
+            else
+                chordsStage = 0;
 
             scanPos += t.FullWidth;
             previous = t;

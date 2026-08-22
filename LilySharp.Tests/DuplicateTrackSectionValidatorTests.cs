@@ -76,7 +76,7 @@ public class DuplicateTrackSectionValidatorTests
     public void ChordsTrack_RepeatingASectionName_Errors()
     {
         Assert.True(HasDuplicate(Parts + """
-            chords harmony { section A { c1 | } section A { g1 | } }
+            chords harmony { section A { C | } section A { g1 | } }
             form main { A }
             score main { staff melody  chords harmony }
             """));

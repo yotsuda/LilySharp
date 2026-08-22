@@ -96,10 +96,9 @@ public sealed partial class LilySharpLanguageServer
             wordStart--;
         string word = doc.Text.Substring(wordStart, offset - wordStart);
 
-        // Inside a chords { } block (or its inner sections), right after a chord's
-        // ':', complete the quality tokens (m, m7, maj7, sus4, …).
-        if (wordStart > 0 && doc.Text[wordStart - 1] == ':' && IsInsideChordsBlock(doc.Text, offset))
-            return GetChordQualityCompletions();
+        // (The ':'-triggered quality completion went with the ':' entry format —
+        // a chord is written as it prints, so the diatonic list below carries the
+        // qualities inside its symbols.)
 
         // Inside an @name(…) argument the annotation's own vocabulary takes over,
         // so the shapes/fingers/… are a SECOND list rather than dozens of
@@ -449,26 +448,8 @@ public sealed partial class LilySharpLanguageServer
         return new BlockFrame(prefix, name);
     }
 
-    /// <summary>Quality-token completions offered after a chord's ':' inside a chords block.</summary>
-    private static CompletionList GetChordQualityCompletions()
-    {
-        var items = ChordQualityRegistry.Tokens
-            .OrderBy(t => t)
-            .Select(t =>
-            {
-                ChordQualityRegistry.TryResolve(t, out var q);
-                return new CompletionItem
-                {
-                    Label = t,
-                    Kind = CompletionItemKind.EnumMember,
-                    Detail = new ChordStructure(0, 0, q).DisplayName.Length == 0
-                        ? "major triad"
-                        : "C" + ChordQualityRegistry.GetSuffix(q),
-                };
-            })
-            .ToArray();
-        return new CompletionList { Items = items };
-    }
+    // (GetChordQualityCompletions retired with the ':' entry format, 2026-08-23:
+    // a chord is written as it prints, so there is no ':' to complete after.)
 
     /// <summary>
     /// Completions for a <c>structure { … }</c> block: everything a structure body
@@ -2954,12 +2935,12 @@ public sealed partial class LilySharpLanguageServer
 
         // Each diatonic degree offers its triad, seventh, and suspended chords —
         // sorted in scale order (degree), then triad < 7th < sus4 < sus2 per root.
-        // The label is the display symbol ("Dm7"); the inserted text is the shared
-        // chords{}-style form ("d:m7") so @chord and chords{} stay in one format.
-        static CompletionItem Item(string label, string insert, string detail, int degree, int rank) => new()
+        // The SYMBOL is both the label and the insert (GRAMMAR_AUDIT 8.1: the
+        // entry is the printed form — "Dm7" — for @chord and chords{} alike).
+        static CompletionItem Item(string symbol, string detail, int degree, int rank) => new()
         {
-            Label = label,
-            InsertText = insert,
+            Label = symbol,
+            InsertText = symbol,
             Kind = CompletionItemKind.Value,
             Detail = detail,
             SortText = $"{degree:D2}{rank}",
@@ -2968,10 +2949,10 @@ public sealed partial class LilySharpLanguageServer
         var items = DiatonicChords.ForKey(tonic, sharps)
             .SelectMany(c => new[]
             {
-                Item(c.Symbol, c.LilyRoot + c.LilyQualitySuffix, $"Diatonic triad ({c.Roman})", c.Degree, 0),
-                Item(c.SeventhSymbol, $"{c.LilyRoot}:{c.SeventhQuality}", "Diatonic 7th", c.Degree, 1),
-                Item(c.SusFourthSymbol, $"{c.LilyRoot}:sus4", "Suspended 4th", c.Degree, 2),
-                Item(c.SusSecondSymbol, $"{c.LilyRoot}:sus2", "Suspended 2nd", c.Degree, 3),
+                Item(c.Symbol, $"Diatonic triad ({c.Roman})", c.Degree, 0),
+                Item(c.SeventhSymbol, "Diatonic 7th", c.Degree, 1),
+                Item(c.SusFourthSymbol, "Suspended 4th", c.Degree, 2),
+                Item(c.SusSecondSymbol, "Suspended 2nd", c.Degree, 3),
             })
             .ToArray();
         return new CompletionList { Items = items };

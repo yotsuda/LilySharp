@@ -6,7 +6,7 @@ octave absolute
 time 4/4
 key c major
 part melody { clef treble_8 tuning guitar section A { c'4 e' g' e' | f' a' c'' a' | } }
-chords harmony { section A { c1 | f1 | } }
+chords harmony { section A { C | F | } }
 form main { A }
 score main {
   chords harmony

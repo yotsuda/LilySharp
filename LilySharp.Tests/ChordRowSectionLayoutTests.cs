@@ -53,7 +53,7 @@ public class ChordRowSectionLayoutTests
     public void TwoSingleBarSections_ChordsOnly_KeepTwoMeasures()
         => Assert.Equal(2, MeasureCount("""
             time 4/4
-            chords prog { section A { c1 } section B { g1 } }
+            chords prog { section A { C } section B { G } }
             form main { A B }
             score main { chords prog }
             """));
@@ -62,7 +62,7 @@ public class ChordRowSectionLayoutTests
     public void TwoTwoBarSections_ChordsOnly_KeepFourMeasures()
         => Assert.Equal(4, MeasureCount("""
             time 4/4
-            chords prog { section A { c1 | f1 } section B { g1 | c1 } }
+            chords prog { section A { C | F } section B { G | C } }
             form main { A B }
             score main { chords prog }
             """));
@@ -71,7 +71,7 @@ public class ChordRowSectionLayoutTests
     public void SectionLabels_LandAtEachSectionStart_NotStackedAtBarZero()
         => Assert.Equal(new[] { 0, 2 }, SectionLabelMeasures("""
             time 4/4
-            chords prog { section A { c1 | f1 } section B { g1 | c1 } }
+            chords prog { section A { C | F } section B { G | C } }
             form main { A B }
             score main { chords prog }
             """));
@@ -83,13 +83,13 @@ public class ChordRowSectionLayoutTests
         // so a chord row is exactly its unfenced spelling — two bars, not three.
         Assert.Equal(2, MeasureCount("""
             time 4/4
-            chords prog { | c1 | f1 | }
+            chords prog { | C | F | }
             form main { }
             score main { chords prog }
             """));
         Assert.Equal(2, MeasureCount("""
             time 4/4
-            chords prog { c1 | f1 | }
+            chords prog { C | F | }
             form main { }
             score main { chords prog }
             """));
@@ -101,7 +101,7 @@ public class ChordRowSectionLayoutTests
         // survives, so the run is three bars (empty, C, F).
         => Assert.Equal(3, MeasureCount("""
             time 4/4
-            chords prog { | | c1 | f1 | }
+            chords prog { | | C | F | }
             form main { }
             score main { chords prog }
             """));

@@ -201,7 +201,7 @@ public class LpGeometryLedgerTests
 
             section Main {
               melody { c2 a | f2 g | c1 | }
-              chords prog { c2 a:m | f2 g:7 | c1 | }
+              chords prog { C Am | F G7 | C | }
             }
 
             form main { ~Main }

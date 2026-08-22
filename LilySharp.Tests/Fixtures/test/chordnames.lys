@@ -1,7 +1,7 @@
 // Coverage: a named 'chords NAME { }' block placed as a row directly above the
-// staff — symbolic chord entry displayed as chord symbols, aligned by timing. Roots auto-name from
-// root+quality (c -> "C", a:m -> "Am"); mid-bar changes land at their musical
-// moment. Also exercises a MULTI-TOKEN quality (g:m7.5- -> "Gm7♭5") and the
+// staff — chord symbols written as they print (C, Am), placed on the bar's beat
+// grid (two slots in 4/4 = the two halves); mid-bar changes land at their musical
+// moment. Also exercises an ALTERED quality (Gm7-5 -> "Gm7♭5") and the
 // chord-row CLEARANCE over a tall chord the wide symbol overhangs (the last
 // beat's <c ees ges bes> reaches above the staff, so the whole row is raised to
 // clear it). Verified against LilyPond \chords / \chordmode.
@@ -18,7 +18,7 @@ section Main {
     c4 d e f | g a b <c ees ges bes> |
   }
   chords prog {
-    c2 a2:m | f2 g2:m7.5- |
+    C Am | F Gm7-5 |
   }
 }
 form main { Main }

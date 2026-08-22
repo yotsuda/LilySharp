@@ -966,8 +966,19 @@ c4@fig(6) d@fig(6 4) e@fig(5 3) |
 
 ## Chord Names
 
+Written as they print — an UPPERCASE root, `#`/`b`, a bare quality (`C`, `Am`,
+`G7`, `F#m`, `Bb7/D`; altered tensions spell `+`/`-`: `Gm7-5`):
+
 ```
-c4@chord(c) d@chord(d:m) e@chord(e:m) f@chord(f) |
+c4@chord(C) d@chord(Dm) e@chord(Em) f@chord(F) |
+```
+
+In a `chords NAME { }` row the same symbols place themselves on the bar's beat
+grid (no durations): one entry takes the bar, two in 4/4 are halves, and `.`
+holds the previous chord one more beat:
+
+```
+chords prog { C | F G | C . . G7 | }
 ```
 
 ## Comments

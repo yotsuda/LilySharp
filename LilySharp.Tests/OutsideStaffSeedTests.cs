@@ -211,20 +211,20 @@ public class OutsideStaffSeedTests
     public void ChordRowOnALowerStaff_ClearsTheInsideStaffSpanners()
     {
         // CONTROL: this row reads its own staff's profile at all. Two pitches, nothing else.
-        double high = ChordRowAboveItsStaff("b1 b1 b1", "b'1 b'1@chord(c:m7) b'1", "12/4");
-        double low = ChordRowAboveItsStaff("b1 b1 b1", "d,1 d,1@chord(c:m7) d,1", "12/4");
+        double high = ChordRowAboveItsStaff("b1 b1 b1", "b'1 b'1@chord(Cm7) b'1", "12/4");
+        double low = ChordRowAboveItsStaff("b1 b1 b1", "d,1 d,1@chord(Cm7) d,1", "12/4");
         Assert.True(high > low + 1.0,
             $"control: the row must rise for its own staff's ink: high {high:F6}, low {low:F6}");
 
-        double slurWith = ChordRowAboveItsStaff("b1 b1 b1", "b1( b1@chord(c:m7) b1)", "12/4");
-        double slurWithout = ChordRowAboveItsStaff("b1 b1 b1", "b1 b1@chord(c:m7) b1", "12/4");
+        double slurWith = ChordRowAboveItsStaff("b1 b1 b1", "b1( b1@chord(Cm7) b1)", "12/4");
+        double slurWithout = ChordRowAboveItsStaff("b1 b1 b1", "b1 b1@chord(Cm7) b1", "12/4");
         Assert.True(slurWith > slurWithout + 0.1,
             $"the row must clear the slur: with {slurWith:F6}, without {slurWithout:F6}");
 
         double tupWith = ChordRowAboveItsStaff(
-            "b1", "voice { tuplet 3/2 { b'4@chord(c:m7) b' b' } b'2 } { d4 d d d }", "4/4");
+            "b1", "voice { tuplet 3/2 { b'4@chord(Cm7) b' b' } b'2 } { d4 d d d }", "4/4");
         double tupWithout = ChordRowAboveItsStaff(
-            "b1", "voice { b'4@chord(c:m7) b' b'2 } { d4 d d d }", "4/4");
+            "b1", "voice { b'4@chord(Cm7) b' b'2 } { d4 d d d }", "4/4");
         Assert.True(tupWith > tupWithout + 0.1,
             $"the row must clear the tuplet bracket: with {tupWith:F6}, without {tupWithout:F6}");
     }

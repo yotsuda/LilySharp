@@ -44,7 +44,7 @@ public class ChordPartTests
 time 4/4
 section Main {
   melody { c'4 d e f | g a b c'' | }
-  chords riff { c | g:7 c | }
+  chords riff { C | G7 C | }
 }
 form main { Main }
 score main ""x"" { chords riff  staff melody }
@@ -66,7 +66,7 @@ score main ""x"" { chords riff  staff melody }
         var source = @"
 time 4/4
 section Main {
-  chords riff { c | a:m | f | g:7 | }
+  chords riff { C | Am | F | G7 | }
 }
 form main { Main }
 score main ""x"" { chords riff }
@@ -96,7 +96,7 @@ score main ""x"" { chords riff }
         // counts, so the following chords land in the right measures.
         var source = @"
 time 4/4
-section Main { chords riff { c | | f | g:7 | } }
+section Main { chords riff { C | | F | G7 | } }
 form main { Main }
 score main ""x"" { chords riff }
 ";
@@ -118,7 +118,7 @@ score main ""x"" { chords riff }
 time 4/4
 section Main {
   melody { c'4 d e f | }
-  chords riff { g4:m7 c4 a:m d:m | }
+  chords riff { Gm7 C Am Dm | }
 }
 form main { Main }
 score main ""x"" { chords riff  staff melody }

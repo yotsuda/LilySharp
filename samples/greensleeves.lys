@@ -28,8 +28,8 @@ section Verse {
   }
   chords prog {
     |
-    a2.:m | g2. | a2.:m | e2. |
-    a2.:m | g2. | a4.:m e4. | a2.:m |
+    Am | G | Am | E |
+    Am | G | Am E | Am |
   }
   lyrics words sings melody {
     A- |
@@ -52,8 +52,8 @@ section Chorus {
     a4. a4. |
   }
   chords prog {
-    c2. | g2. | a2.:m | e2. |
-    c2. | g2. | a4.:m e4. | a2.:m |
+    C | G | Am | E |
+    C | G | Am E | Am |
   }
   lyrics words sings melody {
     Green- sleeves ~ was | all my joy ~ Green- |

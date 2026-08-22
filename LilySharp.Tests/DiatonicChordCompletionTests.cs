@@ -22,8 +22,9 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// The '@chord(…)' completion offers the current key's diatonic chords — each
-/// degree's triad, seventh, and suspended chords — labelled as chord symbols
-/// (C, Cmaj7, Csus4, …) but inserting the shared chords{}-style form (c, c:maj7).
+/// degree's triad, seventh, and suspended chords — as chord symbols (C, Cmaj7,
+/// Csus4, …), which since GRAMMAR_AUDIT 8.1 are both the label AND the insert:
+/// the entry format IS the printed form.
 /// </summary>
 [Trait("Category", "Unit")]
 public class DiatonicChordCompletionTests
@@ -43,23 +44,21 @@ public class DiatonicChordCompletionTests
         var labels = Labels("key c major\nc'4@chord()");
         foreach (var triad in new[] { "C", "Dm", "Em", "F", "G", "Am", "Bdim" })
             Assert.Contains(triad, labels);
-        foreach (var seventh in new[] { "Cmaj7", "Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7b5" })
+        foreach (var seventh in new[] { "Cmaj7", "Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7-5" })
             Assert.Contains(seventh, labels);
         Assert.Contains("Csus4", labels);
         Assert.Contains("Gsus2", labels);
     }
 
     [Fact]
-    public void InsertsSharedChordsBlockForm()
+    public void InsertsTheSymbolItself()
     {
+        // The symbol is the entry format (GRAMMAR_AUDIT 8.1), so the insert text
+        // IS the label — one spelling for the display, the completion, @chord and
+        // the chords { } block.
         var items = Items("key c major\nc'4@chord()");
-        string Insert(string label) => items.First(i => i.Label == label).InsertText;
-        Assert.Equal("c", Insert("C"));          // major triad: bare root
-        Assert.Equal("d:m", Insert("Dm"));       // minor triad
-        Assert.Equal("g:7", Insert("G7"));       // dominant seventh
-        Assert.Equal("d:m7", Insert("Dm7"));
-        Assert.Equal("b:m7b5", Insert("Bm7b5")); // half-diminished vii
-        Assert.Equal("c:sus4", Insert("Csus4"));
+        foreach (var label in new[] { "C", "Dm", "G7", "Dm7", "Bm7-5", "Csus4" })
+            Assert.Equal(label, items.First(i => i.Label == label).InsertText);
     }
 
     [Fact]
@@ -68,7 +67,7 @@ public class DiatonicChordCompletionTests
         var labels = Labels("key d major\nc'4@chord()");
         foreach (var triad in new[] { "D", "Em", "F#m", "G", "A", "Bm", "C#dim" })
             Assert.Contains(triad, labels);
-        Assert.Contains("C#m7b5", labels);   // vii of D major
+        Assert.Contains("C#m7-5", labels);   // vii of D major
     }
 
     [Fact]
@@ -95,8 +94,8 @@ public class DiatonicChordCompletionTests
     [Fact]
     public void IsInsideChordAnnotation_TracksPosition()
     {
-        var t = "c'4@chord(c:m) d'4@fig(6)";
-        Assert.True(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf("c:m") + 1));   // inside @chord
+        var t = "c'4@chord(Cm) d'4@fig(6)";
+        Assert.True(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf("Cm") + 1));   // inside @chord
         Assert.False(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf(") d") + 2)); // after ')'
         Assert.False(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf("6)")));       // inside @fig, not @chord
     }

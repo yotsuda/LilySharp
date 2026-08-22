@@ -38,20 +38,20 @@
   <text class="music" x="13.54" y="24.62" font-size="4.00" data-pos="314"></text>
   <text class="music" x="17.24" y="25.12" font-size="4.00" data-pos="430"></text>
   <line x1="18.48" y1="24.97" x2="18.48" y2="21.62" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.25" y="24.62" font-size="4.00" data-pos="445"></text>
+  <text class="music" x="20.25" y="24.62" font-size="4.00" data-pos="444"></text>
   <line x1="20.32" y1="24.77" x2="20.32" y2="27.95" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.25" y="24.12" font-size="4.00" data-pos="454"></text>
+  <text class="music" x="23.25" y="24.12" font-size="4.00" data-pos="453"></text>
   <line x1="23.32" y1="24.27" x2="23.32" y2="27.62" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.26" y="23.62" font-size="4.00" data-pos="465"></text>
+  <text class="music" x="26.26" y="23.62" font-size="4.00" data-pos="464"></text>
   <line x1="26.32" y1="23.77" x2="26.32" y2="27.12" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="31.13" y="23.12" font-size="4.00" data-pos="469"></text>
-  <rect x="29.04" y="22.62" width="0.19" height="4.00" data-pos="467"/>
-  <rect x="37.19" y="22.62" width="0.19" height="4.00" data-pos="483"/>
+  <text class="music" x="31.13" y="23.12" font-size="4.00" data-pos="468"></text>
+  <rect x="29.04" y="22.62" width="0.19" height="4.00" data-pos="466"/>
+  <rect x="37.19" y="22.62" width="0.19" height="4.00" data-pos="481"/>
   <text x="17.24" y="21.02" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="432">Cm7</text>
-  <text x="31.13" y="21.02" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="471">G7</text>
-  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="20.25" y="29.57" font-size="2.24" data-pos="446"></text>
-  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="23.25" y="29.57" font-size="2.24" data-pos="455"></text>
-  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="23.25" y="31.07" font-size="2.24" data-pos="455"></text>
+  <text x="31.13" y="21.02" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="470">G7</text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="20.25" y="29.57" font-size="2.24" data-pos="445"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="23.25" y="29.57" font-size="2.24" data-pos="454"></text>
+  <text class="music" font-family="Emmentaler-11, Emmentaler, serif" x="23.25" y="31.07" font-size="2.24" data-pos="454"></text>
   <rect x="8.84" y="8.26" width="6.20" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="380"/>
   <text x="11.94" y="10.46" font-size="2.20" font-weight="bold" text-anchor="middle" data-pos="380">Main</text>
   </g>

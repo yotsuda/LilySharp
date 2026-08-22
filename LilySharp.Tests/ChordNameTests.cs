@@ -47,8 +47,8 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_SimpleChord()
     {
-        // @chord(c) — a Lily# root pitch, major triad.
-        Assert.Equal("C", Chord("c4@chord(c) |"));
+        // @chord(C) — a Lily# root pitch, major triad.
+        Assert.Equal("C", Chord("c4@chord(C) |"));
     }
 
     [Fact]
@@ -56,33 +56,33 @@ public class ChordNameTests
     {
         // The sub-language: 'c' arrives as a PITCH token, ':' and 'm7' as their own,
         // and the three are ONE argument because they were written adjacent.
-        Assert.Equal("Cm7", Chord("c4@chord(c:m7) |"));
+        Assert.Equal("Cm7", Chord("c4@chord(Cm7) |"));
     }
 
     [Fact]
     public void ParseChordName_FlatRoot()
     {
-        // @chord(bes:7) — the flat root spells B-flat in the symbol.
-        Assert.Equal("B\u266D7", Chord("c4@chord(bes:7) |"));  // B♭7
+        // @chord(Bb7) — the flat root spells B-flat in the symbol.
+        Assert.Equal("B\u266D7", Chord("c4@chord(Bb7) |"));  // B♭7
     }
 
     [Fact]
     public void ParseChordName_FlatRoot_Eb()
     {
-        Assert.Equal("E\u266Dmaj7", Chord("c4@chord(ees:maj7) |"));  // E♭maj7
+        Assert.Equal("E\u266Dmaj7", Chord("c4@chord(Ebmaj7) |"));  // E♭maj7
     }
 
     [Fact]
     public void ParseChordName_NaturalB()
     {
-        // @chord(b) — B natural major, not B-flat.
-        Assert.Equal("B", Chord("c4@chord(b) |"));
+        // @chord(B) — B natural major, not B-flat.
+        Assert.Equal("B", Chord("c4@chord(B) |"));
     }
 
     [Theory]
-    [InlineData("c4@chord(c:sus4) |", "Csus4")]
-    [InlineData("c4@chord(c:dim) |", "Cdim")]
-    [InlineData("c4@chord(c:aug) |", "Caug")]
+    [InlineData("c4@chord(Csus4) |", "Csus4")]
+    [InlineData("c4@chord(Cdim) |", "Cdim")]
+    [InlineData("c4@chord(Caug) |", "Caug")]
     public void ParseChordName_Qualities(string music, string symbol)
         => Assert.Equal(symbol, Chord(music));
 
@@ -91,14 +91,14 @@ public class ChordNameTests
     {
         // Several tokens, ONE run: the argument's text is the written "g:7/b", with
         // no reassembly. (MarkName spells the same thing "chord.g.:.7./.b".)
-        Assert.Equal("G7/B", Chord("c4@chord(g:7/b) |"));  // slash bass
+        Assert.Equal("G7/B", Chord("c4@chord(G7/B) |"));  // slash bass
     }
 
     [Fact]
     public void ParseChordName_SharpRoot()
     {
         // The sharp root spells C-sharp.
-        Assert.Equal("C♯m7", Chord("c4@chord(cis:m7) |"));  // C-sharp m7
+        Assert.Equal("C♯m7", Chord("c4@chord(C#m7) |"));  // C-sharp m7
     }
 
     [Fact]
@@ -123,9 +123,9 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_SharpRootWithFlatTension()
     {
-        // @chord(fis:m7b5) resolves to the half-diminished quality; the canonical
+        // @chord(F#m7-5) resolves to the half-diminished quality; the canonical
         // symbol spells both accidentals (root sharp, the b5 as flat).
-        Assert.Equal("F♯m7♭5", Chord("c4@chord(fis:m7b5) |"));  // half-diminished
+        Assert.Equal("F♯m7♭5", Chord("c4@chord(F#m7-5) |"));  // half-diminished
     }
 
     [Theory]
@@ -194,11 +194,13 @@ public class ChordNameTests
     /// ★ Positive control for the change above, and the measurement that decided the
     /// reader's shape: an argument written with a SPACE is still accepted, because ALL
     /// the runs are joined and not just the first. (Every <c>@chord(</c> in the corpus
-    /// is a single run, so the spaced form is unexercised, not impossible.)
+    /// is a single run, so the spaced form is unexercised, not impossible.) A comma
+    /// joins the same way — the reader concatenates every argument's text.
     /// </summary>
     [Theory]
-    [InlineData("c4@chord(c :m7) |", "Cm7")]
-    [InlineData("c4@chord(c, m7) |", null)]   // as before: "cm7" is no chord entry
+    [InlineData("c4@chord(C m7) |", "Cm7")]
+    [InlineData("c4@chord(C, m7) |", "Cm7")]
+    [InlineData("c4@chord(x, m7) |", null)]   // "xm7" is no chord entry
     public void ArgumentsWrittenApart_AreJoined(string music, string? symbol)
         => Assert.Equal(symbol, Chord(music));
 
@@ -260,7 +262,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_SingleChord()
     {
-        var source = "c4 @chord(c) d e f";
+        var source = "c4 @chord(C) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -278,7 +280,7 @@ public class ChordNameTests
         // Regression: a single-staff score with voice { } polyphony used to drop
         // chord names (BuildMultiVoiceScore omitted them). It must keep them, just
         // like the single-voice case above.
-        var source = "c4 @chord(c) voice { d e } { d e } f";
+        var source = "c4 @chord(C) voice { d e } { d e } f";
         var tree = MusicSource.Parse(source);
         Assert.Empty(tree.Diagnostics); // supported syntax, no rejection
 
@@ -298,7 +300,7 @@ public class ChordNameTests
         // and multi-voice must surface the chords. Uses the real render path.
         string Doc(string body) => $@"
 part m {{ clef treble }}
-chords prog {{ c1 | d1 | }}
+chords prog {{ C | D | }}
 section A {{ m {{ {body} }} }}
 form main {{ A }}
 score main {{ chords prog  staff m }}
@@ -318,7 +320,7 @@ score main {{ chords prog  staff m }}
     [Fact]
     public void Collector_ChordName_MinorSeventh()
     {
-        var source = "c4 @chord(c:m7) d e f";
+        var source = "c4 @chord(Cm7) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -330,7 +332,7 @@ score main {{ chords prog  staff m }}
     [Fact]
     public void Collector_ChordName_FlatRoot()
     {
-        var source = "c4 @chord(bes:7) d e f";
+        var source = "c4 @chord(Bb7) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -342,7 +344,7 @@ score main {{ chords prog  staff m }}
     [Fact]
     public void Collector_ChordName_SharpChord()
     {
-        var source = "c4 @chord(cis:m7) d e f";
+        var source = "c4 @chord(C#m7) d e f";
         var tree = MusicSource.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -372,7 +374,7 @@ score main {{ chords prog  staff m }}
     [Fact]
     public void Collector_ChordName_MultipleChords()
     {
-        var source = "c4 @chord(c) d @chord(a:m) e @chord(f) f";
+        var source = "c4 @chord(C) d @chord(Am) e @chord(F) f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -398,7 +400,7 @@ score main {{ chords prog  staff m }}
     public void Collector_ChordName_WithFiguredBass_BothCollected()
     {
         // Chord name and figured bass on the same note
-        var source = "c4 @chord(c) @fig(6) d e f";
+        var source = "c4 @chord(C) @fig(6) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -418,7 +420,7 @@ score main {{ chords prog  staff m }}
         var src =
             "octave absolute\n" +
             "part hi { clef treble }\npart lo { clef treble }\n" +
-            "chords prog { c1 | }\n" +
+            "chords prog { C | }\n" +
             "section Main {\n  hi { b4 b b b | }\n" +
             $"  lo {{ voice {{ {firstVoice} }} {{ b4 b b b }} | }}\n}}\n" +
             "form main { Main }\n" +

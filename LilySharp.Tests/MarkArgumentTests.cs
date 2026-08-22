@@ -39,7 +39,7 @@ public class MarkArgumentTests
     /// </summary>
     [Theory]
     [InlineData("c4@fig(6) |", "fig")]
-    [InlineData("c4@chord(c:m7) |", "chord")]
+    [InlineData("c4@chord(Cm7) |", "chord")]
     [InlineData("c4@finger(3) |", "finger")]
     [InlineData("c4@text(\"dolce\") |", "text")]
     [InlineData("c4@chord |", "chord")]
@@ -100,17 +100,16 @@ public class MarkArgumentTests
     }
 
     /// <summary>
-    /// ★ The other constraint: a chord argument borrows the MUSIC grammar, so it
-    /// arrives as several tokens (<c>c</c> is a pitch token, not an identifier).
-    /// Adjacent tokens are ONE argument, so its text is the written sub-language —
-    /// which is exactly the string the chord parser reconstructs today by splitting
-    /// MarkName on '.' and rejoining with "" (§9.3, the third of three round trips).
+    /// ★ The other constraint: a chord argument is a SUB-LANGUAGE, so it can
+    /// arrive as several tokens (<c>F#m</c> is Identifier '#' Identifier — the
+    /// '#' a BadToken the chords region tolerates; <c>G7/B</c> crosses a '/').
+    /// Adjacent tokens are ONE argument, so its text is the written symbol.
     /// It denotes no single value, and says so.
     /// </summary>
     [Theory]
-    [InlineData("c4@chord(c:m7) |", "c:m7")]
-    [InlineData("c4@chord(a:m) |", "a:m")]
-    [InlineData("c4@chord(g:7) |", "g:7")]
+    [InlineData("c4@chord(F#m) |", "F#m")]
+    [InlineData("c4@chord(G7/B) |", "G7/B")]
+    [InlineData("c4@chord(C7-9) |", "C7-9")]
     public void ASubLanguageArgument_IsOneRunWithNoValue(string music, string text)
     {
         var argument = Assert.Single(Mark(music).Arguments);
@@ -215,7 +214,7 @@ public class MarkArgumentTests
     [InlineData("c4@fig(3 5) |", "fig.3.5")]
     [InlineData("c4@finger(3) |", "finger.3")]
     [InlineData("c4@frame(032010) |", "frame.032010")]
-    [InlineData("c4@chord(c:m7) |", "chord.c.:.m7")]
+    [InlineData("c4@chord(Cm7) |", "chord.Cm7")]
     [InlineData("c4@text(\"dolce\").up |", "text.\"dolce\".up")]
     [InlineData("c4@notehead(triangle) |", "notehead.triangle")]
     public void TheDottedMarkName_IsUnchanged(string music, string markName)

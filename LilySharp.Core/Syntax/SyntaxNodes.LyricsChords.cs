@@ -192,9 +192,13 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
 }
 
 /// <summary>
-/// A single chord entry: root[duration][:quality][/bass] (e.g. c1, a:m, g2:7,
-/// d:m7/f, f:maj7/+e). The quality token is the raw text after the colon
-/// (resolved against <c>ChordQualityRegistry</c> by the collector).
+/// A single chord entry: the SYMBOL as it prints (<c>Am</c>, <c>G7</c>,
+/// <c>F#m7-5/C#</c>) — a glued token run (GRAMMAR_AUDIT 8.1, decided
+/// 2026-08-21). <see cref="SymbolText"/> re-joins the run; the collector hands
+/// it to <c>ChordStructure.TryParseChordEntry</c>, so the block and
+/// <c>@chord</c> read one format. Entries carry NO duration: a chord row is
+/// measure-relative — the entries and <c>.</c> extensions of a bar divide it on
+/// the meter's beat grid (<see cref="Svg.Collector.ChordRhythm"/>).
 /// </summary>
 public sealed class ChordEntrySyntax : SyntaxNode
 {
@@ -203,33 +207,35 @@ public sealed class ChordEntrySyntax : SyntaxNode
     {
     }
 
-    // Slots: 0 root, 1 duration?, 2 colon?, [quality tokens…], slash?, plus?,
-    // bass? (slash/plus/bass are always the final three slots, null when absent).
-    /// <summary>The chord root pitch.</summary>
-    public PitchSyntax Root => (PitchSyntax)GetChild(0)!;
-    /// <summary>The chord's duration, or null when unspecified.</summary>
-    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
-
-    /// <summary>The full quality text after the <c>:</c> (e.g. "m7", "maj7", "7",
-    /// "m7.5-"), joined from its token run, or null for a plain major triad.</summary>
-    public string? QualityText
+    /// <summary>The symbol exactly as written — the run's token texts joined
+    /// (adjacent by construction, so this is the source slice).</summary>
+    public string SymbolText
     {
         get
         {
             var sb = new System.Text.StringBuilder();
-            for (int i = 3; i < SlotCount - 3; i++)
+            for (int i = 0; i < SlotCount; i++)
                 if (GetChild(i) is SyntaxTokenNode t)
                     sb.Append(t.Text);
-            return sb.Length > 0 ? sb.ToString() : null;
+            return sb.ToString();
         }
     }
+}
 
-    /// <summary>The slash-bass pitch (<c>c/g</c> or <c>c/+g</c>), or null.</summary>
-    public PitchSyntax? Bass => GetChild(SlotCount - 1) as PitchSyntax;
+/// <summary>
+/// A chord-row slot extension: a lone <c>.</c> in a <c>chords</c> body. The
+/// previous entry (or rest) holds through one more slot of the measure's beat
+/// grid — <c>| C . . G7 |</c> in 4/4 is C for three beats, then G7. A <c>.</c>
+/// never crosses a barline; one at the head of a measure has nothing to extend
+/// and is reported (the slot still counts, so the grid stays honest).
+/// </summary>
+public sealed class ChordExtendSyntax : SyntaxNode
+{
+    internal ChordExtendSyntax(InternalSyntax.ChordExtendGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
 
-    /// <summary>True for the ADDED-bass form <c>/+bass</c> (LP: the bass is added
-    /// below the full chord; the plain <c>/bass</c> is an inversion). The printed
-    /// name is identical either way — the flag records entry intent (and feeds a
-    /// future realization).</summary>
-    public bool BassIsAdded => GetChild(SlotCount - 2) != null;
+    /// <summary>The <c>.</c> token.</summary>
+    public SyntaxTokenNode DotToken => (SyntaxTokenNode)GetChild(0)!;
 }

@@ -235,7 +235,7 @@ Attach with `@`. One note may take several: `c4@staccato@p`. Two suffixes:
 `.up` / `.down` forces an articulation/dynamic above / below the note (default is
 automatic, opposite the stem): `c4@staccato.up`, `d4@accent.down`, `@f.up`.
 An annotation that takes a VALUE puts it in parentheses (space- or comma-separated):
-`@chord(d:m)`, `@fig(6 4)`, `@mark("A")`, `@finger(3)`.
+`@chord(Dm)`, `@fig(6 4)`, `@mark("A")`, `@finger(3)`.
 
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
@@ -248,9 +248,10 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Arpeggio: `<c e g>4@arpeggio`
 - Glissando: `c4@glissando d` (line from this note to the next)
 - Figured bass: `c4@fig(6)` , `d4@fig(6 4)`
-- Chord names: `c4@chord(c)` , `d4@chord(d:m)` , `e4@chord(a:m7)` — Lily# pitch spelling,
-  LOWER case, quality after a `:`. LilyPond's `@chord(C)` / `@chord(Dm)` are not recognised
-  (LYS1008 warns, no symbol is engraved). A bare `@chord` derives it from the notes.
+- Chord names: `c4@chord(C)` , `d4@chord(Dm)` , `e4@chord(Am7)` — the SYMBOL as it
+  prints (`F#m`, `Bb7/D`, `Gm7-5`), the same format as a chords row. The retired
+  lowercase `:` entry (`@chord(a:m)`) is not recognised (LYS1008 warns, no symbol is
+  engraved). A bare `@chord` derives it from the notes.
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
@@ -380,15 +381,18 @@ stands directly above that staff in the score (`chords prog` then `staff melody`
 `chords { }` auto-attach form was removed - LYS0032: name it and place it.) An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
 `score` with `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders WITHOUT
 a staff: just a grid of measure barlines, the chord symbols between them and the
-lyrics below. A chord entry is `root[duration][:quality][/bass]` (`c`=C, `a:m`=Am,
-`g:7`=G7, `c/g`=C over a G bass) and honours its duration; lyric syllables fill each
-bar. Barlines in the source (`|` `|:` `:|` `||` `|.`) are drawn, and follow the same
-bare-barline rule as music and lyrics: a lone leading `|` only anchors the start
-(`| c1 | f1 |` == `c1 | f1 |`), an empty bar is the explicit `| |` pair.
+lyrics below. A chord entry is the SYMBOL as it prints — `C`, `Am`, `G7`, `F#m`,
+`Bb7`, `Gm7-5`, `C/G` — with NO durations: a bar's entries divide it on the meter's
+beat grid (one entry = the bar, two in 4/4 = halves, four = beats), and `.` holds
+the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline).
+`r`/`R` print "N.C." in their slot, `s` prints nothing. Barlines in the source
+(`|` `|:` `:|` `||` `|.`) are drawn, and follow the same bare-barline rule as music
+and lyrics: a lone leading `|` only anchors the start (`| C | F |` == `C | F |`),
+an empty bar is the explicit `| |` pair.
 
 ```
 section Main {
-  chords prog  { c2 g:7 | a:m f | c1 :| }     // C G7 | Am F | C (repeat)
+  chords prog  { C G7 | Am F | C :| }     // two halves | two halves | whole (repeat)
   lyrics words { Twin- kle | lit- tle | star | }
 }
 form main { Main }

@@ -391,8 +391,12 @@ public enum SyntaxKind : ushort
     ChordNamesBlock,
     /// <summary>A chord part block node (<c>chords name { ... }</c> inside a section; an independent chord part).</summary>
     ChordPartBlock,
-    /// <summary>A chord entry node (<c>root[dur][:quality][/bass]</c> inside chordnames / chords).</summary>
+    /// <summary>A chord entry node — the symbol as it prints (<c>Am</c>, <c>G7</c>,
+    /// <c>F#m7-5/C#</c>), a glued token run inside a <c>chords</c> body.</summary>
     ChordEntry,
+    /// <summary>A chord-row slot extension (<c>.</c> inside a <c>chords</c> body):
+    /// the previous entry holds through one more slot of the measure's beat grid.</summary>
+    ChordExtend,
     /// <summary>A staff render node (<c>staff { guitar }</c> inside render).</summary>
     StaffRender,
     /// <summary>A grand-staff render node (<c>grandStaff { staff staff }</c> inside render).</summary>

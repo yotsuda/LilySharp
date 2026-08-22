@@ -51,30 +51,30 @@ public class ChordHarmonizerTests
     [Fact]
     public void CMajor_ArpeggiosPickTheOutlinedChord_DominantIsV7()
         // C, Dm, G, C outlined measure by measure; the dominant is emitted as G7.
-        => Assert.Contains("c1 | d1:m | g1:7 | c1",
+        => Assert.Contains("C | Dm | G7 | C",
             Harmonize("c'4 e' g' c'' | d'4 f' a' d'' | g'4 b' d'' g'' | c''4 e'' g'' c''' |"));
 
     [Fact]
     public void AMinor_MinorVIsNotMadeASeventh()
         // a c e a -> Am (i); d f a d -> Dm (iv); e g b e -> Em (the v, a MINOR triad —
         // left as-is, NOT a weak v7); a c e a -> Am.
-        => Assert.Contains("a1:m | d1:m | e1:m | a1:m",
+        => Assert.Contains("Am | Dm | Em | Am",
             Harmonize("a4 c' e' a' | d'4 f' a' d'' | e'4 g' b' e'' | a'4 c'' e'' a'' |",
                 key: "key a minor"));
 
     [Fact]
-    public void DMajor_SpellsSharpRootsAsLilyPitches()
-        // vii° of D major is C#dim -> lily 'cis…:dim'.
+    public void DMajor_SpellsSharpRootsWithHash()
+        // vii° of D major is C#dim — the symbol spells the sharp with '#'.
     {
         var block = Harmonize("cis'4 e' g' cis'' |", key: "key d major");
-        Assert.Contains("cis1:dim", block);
+        Assert.Contains("C#dim", block);
     }
 
     [Fact]
     public void RestOnlyMeasure_HoldsThePreviousChord()
     {
         var block = Harmonize("c'4 e' g' c'' | r1 |");
-        Assert.Contains("c1 | c1", block);   // 2nd (rest) measure repeats C
+        Assert.Contains("C | C", block);   // 2nd (rest) measure repeats C
     }
 
     [Fact]
@@ -93,8 +93,8 @@ public class ChordHarmonizerTests
             """);
         var tracks = ChordHarmonizer.HarmonizeBySections(tree);
         Assert.Equal(2, tracks.Count);
-        Assert.Contains("c1", tracks[0].ChordsBlock);      // section A outlines C
-        Assert.Contains("g1:7", tracks[1].ChordsBlock);    // section B outlines G -> V7
+        Assert.Contains("C |", tracks[0].ChordsBlock);      // section A outlines C
+        Assert.Contains("G7", tracks[1].ChordsBlock);    // section B outlines G -> V7
         Assert.Equal("melody", tracks[0].MelodyBlock.PartName.Text);
     }
 
@@ -132,8 +132,8 @@ public class ChordHarmonizerTests
         Assert.Contains("chords harmony {", result.Value.Text);
         Assert.Contains("section A", result.Value.Text);
         Assert.Contains("chords harmony  staff melody", result.Value.Text);
-        Assert.Contains("c1", result.Value.Text);      // section A -> C
-        Assert.Contains("g1:7", result.Value.Text);    // section B -> G7
+        Assert.Contains("C |", result.Value.Text);      // section A -> C
+        Assert.Contains("G7", result.Value.Text);    // section B -> G7
     }
 
     [Fact]

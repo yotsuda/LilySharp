@@ -91,7 +91,8 @@ public sealed class ChordNamesTests
     [InlineData("m7", ChordQuality.Minor7)]
     [InlineData("7", ChordQuality.Dominant7)]
     [InlineData("sus4", ChordQuality.Sus4)]
-    [InlineData("m7b5", ChordQuality.HalfDiminished7)]
+    [InlineData("m7-5", ChordQuality.HalfDiminished7)] // alterations spell +/- (audit 8.1)
+    [InlineData("+", ChordQuality.Augmented)]          // the jazz augmented triad, C+
     public void Registry_ResolvesQualityTokens(string token, ChordQuality expected)
     {
         Assert.True(ChordQualityRegistry.TryResolve(token, out var q));
@@ -170,7 +171,7 @@ public sealed class ChordNamesTests
     private const string LeadSheet =
         "key c major\npart m { clef treble }\n" +
         "section Main {\n  m {\n    time 4/4\n    c4 d e f | g a b c |\n  }\n" +
-        "  chords prog {\n    c2 a2:m | f2 g2:7 |\n  }\n}\n" +
+        "  chords prog {\n    C Am | F G7 |\n  }\n}\n" +
         "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
 
     [Fact]
@@ -197,16 +198,13 @@ public sealed class ChordNamesTests
         Assert.Equal(new[] { 0, 4, 7, 10 }, chords[3].Structure!.Intervals); // G7
     }
 
-    // ---- Slash bass: inversion (/e) vs added (/+e) — corpus: chord-names-bass.ly
+    // ---- Slash bass — corpus: chord-names-bass.ly
 
     [Fact]
-    public void SlashAndAddedBass_ParseAsOneEntryEach()
+    public void SlashBass_ParsesAsOneEntry_AndCrossesTheSlashGlued()
     {
-        // Pre-fix the '/+' plus token fell to stray-token recovery and the bass
-        // pitch opened a NEW entry (f:maj7/+e → "Fmaj7" plus a phantom "E"
-        // chord), with no diagnostic.
         var src = "section Main {\n  m { time 4/4 c2 d2 | }\n" +
-                  "  chords prog { f2:maj7/e f2:maj7/+e | }\n}\n" +
+                  "  chords prog { Fmaj7/E Fmaj7/G | }\n}\n" +
                   "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -214,24 +212,22 @@ public sealed class ChordNamesTests
         var score = CollectWithRow(tree);
         var chords = score.ChordNames.OrderBy(c => c.Timing.ToDouble()).ToList();
         Assert.Equal(2, chords.Count);
-        // LP prints the SAME name for both forms — only the (future) realization
-        // differs, recorded by BassIsAdded.
-        Assert.Equal(new[] { "Fmaj7/E", "Fmaj7/E" }, chords.Select(c => c.ChordText));
-        Assert.False(chords[0].Structure!.BassIsAdded);
-        Assert.True(chords[1].Structure!.BassIsAdded);
+        Assert.Equal(new[] { "Fmaj7/E", "Fmaj7/G" }, chords.Select(c => c.ChordText));
     }
 
     [Fact]
-    public void TryParseChordEntry_AcceptsAddedBass()
+    public void TryParseChordEntry_AddedBassWentWithTheColonFormat()
     {
-        Assert.True(ChordStructure.TryParseChordEntry("f:maj7/+e", out var added));
-        Assert.True(added.BassIsAdded);
-        Assert.Equal("Fmaj7/E", added.DisplayName);
-        Assert.True(ChordStructure.TryParseChordEntry("f:maj7/e", out var inv));
+        // '/+' (LP's CHORD_BASS) retired with the ':' entry: '+' spells altered
+        // tensions and the augmented triad now, and LP prints /bass and /+bass
+        // identically anyway. BassIsAdded stays on the model for the MusicXML
+        // importer, but no Lily# spelling sets it.
+        Assert.True(ChordStructure.TryParseChordEntry("Fmaj7/E", out var inv));
         Assert.False(inv.BassIsAdded);
         Assert.Equal("Fmaj7/E", inv.DisplayName);
-        // '+' with no pitch after it is not an entry.
-        Assert.False(ChordStructure.TryParseChordEntry("f:maj7/+", out _));
+        Assert.False(ChordStructure.TryParseChordEntry("Fmaj7/+E", out _));
+        // '/' with no pitch after it is not an entry either.
+        Assert.False(ChordStructure.TryParseChordEntry("Fmaj7/", out _));
     }
 
     [Fact]
@@ -242,7 +238,7 @@ public sealed class ChordNamesTests
         // between the staves. (The nameless auto-attach form is gone - LYS0032.)
         var src = "part rh { clef treble }\npart lh { clef bass }\n" +
                   "section Main {\n  rh { a4 a a a | }\n  lh { a,,4 a,, a,, a,, | }\n" +
-                  "  chords prog { f1 | }\n}\n" +
+                  "  chords prog { F | }\n}\n" +
                   "form main { Main }\n" +
                   "score \"x\" { chords prog  grandStaff { staff rh staff lh } }\n";
         var tree = SyntaxTree.Parse(src);
@@ -260,7 +256,7 @@ public sealed class ChordNamesTests
         // ("N.C."), s prints nothing; all three advance the row. Pre-fix, rests
         // in a chords{} block were silently dropped by stray-token recovery.
         var src = "section Main {\n  m { time 4/4 r1 | s1 | R1 | }\n" +
-                  "  chords prog { r1 | s1 | R1 | }\n}\n" +
+                  "  chords prog { r | s | R | }\n}\n" +
                   "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -308,12 +304,14 @@ public sealed class ChordNamesTests
     }
 
     [Theory]
-    // A quality that lexes as several tokens (dot + minus, or number + word) must
-    // be captured WHOLE, not truncated to its first token (the "Gm7" bug).
-    [InlineData("g:m7.5-", "Gm7♭5")] // half-diminished, dot+minus → resolves
-    [InlineData("g:7sus4", "G7sus4")]      // number + word → resolves
-    [InlineData("g:m7.5-7", "Gm7.5-7")]    // unknown extended chord → full text, not "Gm7"
-    public void MultiTokenQuality_IsCapturedWhole(string entry, string expected)
+    // A symbol that lexes as several tokens (identifier + minus + number, or a
+    // '#' BadToken in the middle) must be captured WHOLE as one glued run, not
+    // truncated to its first token (the "Gm7" bug, in its symbol-format form).
+    [InlineData("Gm7-5", "Gm7♭5")]     // half-diminished, minus+number → resolves
+    [InlineData("G7sus4", "G7sus4")]   // number + word, one identifier → resolves
+    [InlineData("F#m7-5", "F♯m7♭5")]   // '#' splits the run and is re-joined
+    [InlineData("Gm7-5-7", "Gm7-5-7")] // unknown extended chord → full text, not "Gm7"
+    public void MultiTokenSymbol_IsCapturedWhole(string entry, string expected)
     {
         var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { " + entry + " }\n}\n" +
                   "form main { Main }\nscore \"x\" { chords prog  staff m }\n";
@@ -328,7 +326,7 @@ public sealed class ChordNamesTests
         // An extended chord not in the vocabulary still displays (root + raw token)
         // and now resolves a Roman degree from its root, but carries no interval set
         // (unknown tones → no note expansion).
-        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { c1:weird9 }\n}\n" +
+        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { Cweird9 }\n}\n" +
                   "form main { Main }\nscore main \"x\" { chords prog  staff m }\n";
         var score = CollectWithRow(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);

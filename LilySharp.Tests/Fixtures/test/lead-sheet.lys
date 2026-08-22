@@ -6,7 +6,7 @@
 title "Lead sheet"
 time 4/4
 section Main {
-  chords prog { c2 g:7 | a:m    | f2 g:7 | c1   | }
+  chords prog { C G7 | Am    | F G7 | C   | }
   lyrics words { Twin- kle lit- tle | star how I | won- der what | you~ | }
 }
 form main { Main }

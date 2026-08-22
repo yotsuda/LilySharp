@@ -23,8 +23,9 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A token a chord block cannot read — a chord symbol written the way it PRINTS
-/// (<c>C</c>) where a root is lowercase — must be REPORTED and KEPT. It used to be
+/// A token a chord block cannot read — since 2026-08-23 (GRAMMAR_AUDIT 8.1) that
+/// is the RETIRED lowercase entry (<c>c</c>, <c>a:m</c>), the exact inverse of the
+/// mistake this net was built on — must be REPORTED and KEPT. It used to be
 /// consumed by a bare Advance(), which said nothing and dropped the token's width, so
 /// every source offset after the block shifted left. The visible damage was elsewhere
 /// entirely: a later score's title carried a data-pos 8 short, and clicking that title
@@ -34,14 +35,14 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class ChordBlockStrayTokenTests
 {
-    // Four uppercase roots, each one character plus its trailing space: the 8 characters
-    // that used to vanish. The `score main "another"` after it is what made it visible.
+    // Four lowercase roots, each one character plus its trailing space: the 8 characters
+    // that would vanish. The `score main "another"` after it is what made it visible.
     private const string Source =
         "octave absolute\n"
         + "part melody\n"
         + "section A {\n"
         + "  melody { c'4 d' e' f' }\n"
-        + "  chords prog { C | F | G | C }\n"
+        + "  chords prog { c | f | g | c }\n"
         + "}\n"
         + "form main { ~A }\n"
         + "score main { staff melody }\n"
@@ -59,18 +60,25 @@ public class ChordBlockStrayTokenTests
     }
 
     [Fact]
-    public void StrayChordToken_IsReported_NamingTheLowercaseSpelling()
+    public void StrayChordToken_IsReported_NamingTheRetiredSpelling()
     {
         var tree = SyntaxTree.Parse(Source);
         var reported = tree.Diagnostics
             .Where(d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.ChordBlockBadMember)
             .ToList();
-        // One per uppercase root: C, F, G, C.
+        // One per lowercase root: c, f, g, c.
         Assert.Equal(4, reported.Count);
-        Assert.All(reported, d => Assert.Contains("LOWERCASE", d.Message));
-        Assert.Contains(reported, d => d.Message.Contains("'c' is what prints as 'C'"));
-        Assert.Contains(reported, d => d.Message.Contains("'f' is what prints as 'F'"));
-        Assert.Contains(reported, d => d.Message.Contains("'g' is what prints as 'G'"));
+        Assert.All(reported, d => Assert.Contains("UPPERCASE", d.Message));
+    }
+
+    [Fact]
+    public void ARetiredColonEntry_IsOneReport_NotThreePerChord()
+    {
+        // 'a:m' strays as three glued tokens; three errors would bury the one
+        // message that matters, so the glued run reports once.
+        var tree = SyntaxTree.Parse(Source.Replace("{ c | f | g | c }", "{ a:m | g2:7 | }"));
+        Assert.Equal(2, tree.Diagnostics
+            .Count(d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.ChordBlockBadMember));
     }
 
     [Fact]
@@ -91,10 +99,10 @@ public class ChordBlockStrayTokenTests
     }
 
     [Fact]
-    public void LowercaseRoots_ParseCleanly()
+    public void UppercaseSymbols_ParseCleanly()
     {
-        // The spelling the grammar defines (§ChordEntry: `c` = C) stays silent.
-        var tree = SyntaxTree.Parse(Source.Replace("{ C | F | G | C }", "{ c | f | g | c }"));
+        // The spelling the grammar defines (§ChordEntry: the symbol as it prints).
+        var tree = SyntaxTree.Parse(Source.Replace("{ c | f | g | c }", "{ C | F | G | C }"));
         Assert.DoesNotContain(tree.Diagnostics,
             d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.ChordBlockBadMember);
     }

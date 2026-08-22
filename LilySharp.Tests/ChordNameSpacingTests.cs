@@ -45,7 +45,7 @@ public class ChordNameSpacingTests
             time 4/4
             key c major
             part m { clef treble section A { a4 a g2 | } }
-            chords h { section A { f4 g d:m e:m | } }
+            chords h { section A { F G Dm Em | } }
             form main { A }
             score main { chords h  staff m }
             """);
@@ -71,7 +71,7 @@ public class ChordNameSpacingTests
             time 4/4
             key c major
             part m { clef treble section A { a4 a g2 | c'4 c c c | } }
-            chords h { section A { f4 g d:m e:m | f g c d | } }
+            chords h { section A { F G Dm Em | F G C D | } }
             form main { A }
             score main { chords h  staff m }
             """);

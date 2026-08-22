@@ -204,7 +204,7 @@ undefined2
     [InlineData("section A { melody { c d e f } }\nform main { A }\nscore main { tab melody as full }")]
     // Tuning override + style selector, and a chord row (with its own display
     // selector) above the tab - the band spelling of the old `with chords` clause.
-    [InlineData("section A { melody { c d e f } }\nchords h { c1 }\nform main { A }\n"
+    [InlineData("section A { melody { c d e f } }\nchords h { C }\nform main { A }\n"
               + "score main { chords h as both  tab bass melody as numbers }")]
     public void Validate_StaffNamesDefinedPart_NoUndefinedPartError(string source)
         => Assert.DoesNotContain(Refs(source), d => d.Code == DiagnosticCodes.UndefinedPart);
@@ -292,7 +292,7 @@ undefined2
     private const string RowSheet = """
         time 4/4
         section Main {
-          chords prog { c1 | g1 | }
+          chords prog { C | G | }
           lyrics words { la la | la la | }
         }
         form main { Main }
@@ -372,7 +372,7 @@ undefined2
         part m { clef treble }
         section Main {
           m { c4 d e f | }
-          chords prog { c1 | }
+          chords prog { C | }
           lyrics words sings m { la la la la | }
         }
         form main { Main }

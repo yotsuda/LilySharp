@@ -402,7 +402,7 @@ public class SkylineStaffSpacingTests
 
             section Main {
               melody { g4 a g a | g4 a g a | }
-              chords prog { c1 | c1 | }
+              chords prog { C | C | }
             }
 
             form main { ~Main }

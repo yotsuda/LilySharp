@@ -33,7 +33,7 @@ public class UnrenderedPartStructureMarkTests
     private const string Source = """
         time 4/4
         part piano { clef treble  section Main { segno c4 d e f | g a b c } }
-        chords prog { section Main { c1 | g1 } }
+        chords prog { section Main { C | G } }
         lyrics words { section Main { Twin- kle lit- tle | star how I } }
         form main { Main }
         score main { chords prog  lyrics words }
@@ -80,7 +80,7 @@ public class UnrenderedPartStructureMarkTests
         var src = """
             time 4/4
             part piano { clef treble  section A { |: c4 d e f | g a b c :| } section B { c1 | g1 } }
-            chords prog { section A { c1 | g1 } section B { c1 | g1 } }
+            chords prog { section A { C | G } section B { C | G } }
             form main { A B }
             score main { chords prog }
             """;
@@ -100,7 +100,7 @@ public class UnrenderedPartStructureMarkTests
         var src = """
             time 4/4
             part piano { clef treble  section A { |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] } }
-            chords prog { section A { c1 | g1 | a1 } }
+            chords prog { section A { C | G | A } }
             form main { A }
             score main { chords prog }
             """;

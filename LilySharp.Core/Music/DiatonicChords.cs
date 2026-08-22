@@ -28,13 +28,13 @@ public readonly record struct DiatonicChord(
     char RootLetter,     // 'c'..'b'
     int RootAlter,       // -2..+2 semitones from the natural letter
     string Quality,      // "" major, "m" minor, "dim", "aug"
-    string SeventhQuality,   // the diatonic 7-chord suffix: "maj7", "7", "m7", "m7b5", …
+    string SeventhQuality,   // the diatonic 7-chord suffix: "maj7", "7", "m7", "m7-5", …
     ImmutableArray<int> PitchClasses)   // root, third, fifth (0..11)
 {
     /// <summary>Chord-symbol display: "C", "Dm", "F#m", "Bdim".</summary>
     public string Symbol => RootDisplay + Quality;
 
-    /// <summary>The diatonic seventh chord: "Cmaj7", "Dm7", "G7", "Bm7b5".</summary>
+    /// <summary>The diatonic seventh chord: "Cmaj7", "Dm7", "G7", "Bm7-5".</summary>
     public string SeventhSymbol => RootDisplay + SeventhQuality;
 
     /// <summary>The suspended-fourth chord on this root ("Csus4").</summary>
@@ -48,12 +48,9 @@ public readonly record struct DiatonicChord(
         char.ToUpperInvariant(RootLetter)
         + RootAlter switch { 2 => "##", 1 => "#", -1 => "b", -2 => "bb", _ => "" };
 
-    /// <summary>The root as a Lily# chord-entry pitch ("c", "fis", "bes").</summary>
-    public string LilyRoot =>
-        RootLetter + RootAlter switch { 2 => "isis", 1 => "is", -1 => "es", -2 => "eses", _ => "" };
-
-    /// <summary>The Lily# chord-entry quality suffix ("" / ":m" / ":dim" / ":aug").</summary>
-    public string LilyQualitySuffix => Quality.Length == 0 ? "" : ":" + Quality;
+    // (The Dutch-pitch entry spellings — LilyRoot / LilyQualitySuffix — retired with
+    // the ':' entry format: the SYMBOL is the entry now, so Symbol/SeventhSymbol/…
+    // are both the display and the insert text.)
 
     /// <summary>Roman-numeral degree: uppercase major, lowercase minor/dim, with °/+.</summary>
     public string Roman
@@ -106,17 +103,19 @@ public static class DiatonicChords
                 _ => "",
             };
             // Seventh-chord quality from the triad + the seventh's interval
-            // (11 = major 7th, 10 = minor 7th, 9 = diminished 7th).
+            // (11 = major 7th, 10 = minor 7th, 9 = diminished 7th). Altered
+            // tensions spell '+'/'-' — '#'/'b' belong to the root alone
+            // (GRAMMAR_AUDIT 8.1), so the half-diminished is m7-5.
             string seventhQuality = (quality, t7) switch
             {
                 ("", 11) => "maj7",
                 ("", 10) => "7",
                 ("m", 10) => "m7",
                 ("m", 11) => "mmaj7",
-                ("dim", 10) => "m7b5",
+                ("dim", 10) => "m7-5",
                 ("dim", 9) => "dim7",
-                ("aug", 11) => "maj7#5",
-                ("aug", 10) => "7#5",
+                ("aug", 11) => "maj7+5",
+                ("aug", 10) => "7+5",
                 _ => "7",
             };
 

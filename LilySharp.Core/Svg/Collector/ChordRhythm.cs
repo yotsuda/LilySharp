@@ -16,54 +16,87 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
-/// Default per-measure rhythm for an independent chord part when the user writes
-/// no explicit durations: the chords are spread across the measure by a fixed
-/// per-count table (a lead-sheet convention — "just type the chords"). Only 4/4
-/// is tabulated for now; other meters require explicit durations (null result).
+/// The chord row's measure-relative grid (GRAMMAR_AUDIT 8.1, decided
+/// 2026-08-21): a bar's written slots — chord entries, rests, and <c>.</c>
+/// extensions — divide it on the METER'S OWN BEAT GRID, the one
+/// <see cref="BeamingPattern.Options.For"/> holds and the melody's beams are
+/// grouped by. One slot takes the whole bar; a slot count equal to the beat
+/// count sits one per beat; an integer MULTIPLE k of it splits every beat into
+/// k equal parts; an integer DIVISOR groups whole beats. Anything else matches
+/// no beat and returns null — the caller divides the bar equally and warns
+/// (LYS2009), so the picture stays deterministic while the writer is told.
 /// </summary>
 /// <remarks>
-/// Agreed table (4/4), favouring quarters then eighths (longer value last for 3):
-///   1: 1            2: 2 2            3: 4 4 2          4: 4 4 4 4
-///   5: 4 4 4 8 8    6: 4 4 8 8 8 8    7: 4 8 8 8 8 8 8  8: 8 8 8 8 8 8 8 8
-/// 9+ chords in a measure are rare; the user supplies explicit durations there.
+/// The beat grid is LilyPond's <c>beatStructure</c> — reusing it is the point:
+/// a second "beat" notion here would be the same quantity in two places
+/// (CLAUDE.md's next-defect address), and a 5/8 bar whose melody beams [3,2]
+/// would grid its chords another way. Consequences, measured (2026-08-22, the
+/// audit's 8.1 table): 5/8 and 8/8 get their uneven groups ([3,2] / [3,3,2]);
+/// 7/8 has no table entry and grids as seven single eighths. In an uneven
+/// meter the subdivision k splits each beat of ITS OWN length (5/8, k=2:
+/// 3/16 3/16 1/8 1/8) — unusual, but the only reading in which the grid and
+/// the beams agree.
 /// </remarks>
 public static class ChordRhythm
 {
     /// <summary>
-    /// The default duration for each of <paramref name="count"/> chords in a
-    /// measure of the given time signature, or null when no default applies
-    /// (unsupported meter, or count outside the tabulated 1..8 range).
+    /// The slot lengths of a chord-row bar with <paramref name="slotCount"/>
+    /// written slots in the given meter, or null when the count fits no grid
+    /// shape (see the class remarks; the caller falls back to equal division
+    /// and warns).
     /// </summary>
-    public static ImmutableArray<Fraction>? DefaultDurations(int count, int beats, int beatType)
+    public static ImmutableArray<Fraction>? SlotDurations(int slotCount, int beats, int beatType)
     {
-        // Only common time (a whole-note measure) is tabulated for now.
-        if (beats != 4 || beatType != 4)
-            return null;
-        if (count < 1 || count > 8)
+        if (slotCount < 1)
             return null;
 
-        return count switch
+        var options = BeamingPattern.Options.For(new TimeSignature(beats, beatType));
+        var structure = options.BeatStructure;
+        int beatCount = structure.Length;
+
+        // One slot is the whole bar in ANY meter — "| Am |" needs no grid.
+        if (slotCount == 1)
         {
-            1 => ImmutableArray.Create(Fraction.Whole),
-            2 => ImmutableArray.Create(Fraction.Half, Fraction.Half),
-            3 => ImmutableArray.Create(Fraction.Quarter, Fraction.Quarter, Fraction.Half),
-            4 => ImmutableArray.Create(Fraction.Quarter, Fraction.Quarter, Fraction.Quarter, Fraction.Quarter),
-            // 5..8: (8 - count) quarters, then the rest as eighths (sum = one whole).
-            _ => BuildQuartersThenEighths(count),
-        };
-    }
+            var whole = Fraction.Zero;
+            foreach (int g in structure)
+                whole += options.BeatBase * new Fraction(g);
+            return ImmutableArray.Create(whole);
+        }
 
-    private static ImmutableArray<Fraction> BuildQuartersThenEighths(int count)
-    {
-        int quarters = 8 - count;       // 5→3, 6→2, 7→1, 8→0
-        int eighths = count - quarters; // the remainder
-        var b = ImmutableArray.CreateBuilder<Fraction>(count);
-        for (int i = 0; i < quarters; i++) b.Add(Fraction.Quarter);
-        for (int i = 0; i < eighths; i++) b.Add(Fraction.Eighth);
-        return b.MoveToImmutable();
+        var slots = ImmutableArray.CreateBuilder<Fraction>(slotCount);
+
+        // k slots per beat: each beat splits into k equal parts of its own length.
+        if (slotCount % beatCount == 0)
+        {
+            int k = slotCount / beatCount;
+            foreach (int g in structure)
+            {
+                var part = options.BeatBase * new Fraction(g, k);
+                for (int i = 0; i < k; i++)
+                    slots.Add(part);
+            }
+            return slots.MoveToImmutable();
+        }
+
+        // m beats per slot: whole beats grouped, never a beat split across slots.
+        if (beatCount % slotCount == 0)
+        {
+            int m = beatCount / slotCount;
+            for (int s = 0; s < slotCount; s++)
+            {
+                var len = Fraction.Zero;
+                for (int b = 0; b < m; b++)
+                    len += options.BeatBase * new Fraction(structure[s * m + b]);
+                slots.Add(len);
+            }
+            return slots.MoveToImmutable();
+        }
+
+        return null;
     }
 }

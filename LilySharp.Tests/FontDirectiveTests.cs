@@ -139,7 +139,7 @@ public class FontDirectiveTests
         composer "C"
         time 4/4
         section Main {
-          chords prog { c2 a:m | }
+          chords prog { C Am | }
           melody { c'4 d e f | }
           lyrics words { la la la la | }
         }

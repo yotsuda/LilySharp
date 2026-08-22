@@ -146,7 +146,7 @@ public class ScoreRowFoldingTests
             time 4/4
             section A {
               melody { c'4 d' e' f' | }
-              chords prog { c1 | }
+              chords prog { C | }
             }
             form main { A }
             score main { chords prog  staff melody }
@@ -172,7 +172,7 @@ public class ScoreRowFoldingTests
             section A {
               hi { c'4 d' e' f' | }
               lo { c4 d e f | }
-              chords prog { c1 | }
+              chords prog { C | }
             }
             form main { A }
             score main { staff hi  chords prog  staff lo }

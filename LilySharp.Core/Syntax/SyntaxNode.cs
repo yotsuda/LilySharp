@@ -185,6 +185,7 @@ public abstract class SyntaxNode
             SyntaxKind.LyricsBlock => new LyricsBlockSyntax((LyricsBlockGreen)green, this, position),
             SyntaxKind.ChordPartBlock => new ChordPartBlockSyntax((ChordPartBlockGreen)green, this, position),
             SyntaxKind.ChordEntry => new ChordEntrySyntax((ChordEntryGreen)green, this, position),
+            SyntaxKind.ChordExtend => new ChordExtendSyntax((ChordExtendGreen)green, this, position),
             SyntaxKind.Articulation => new ArticulationSyntax((ArticulationGreen)green, this, position),
             SyntaxKind.Dynamic => new DynamicSyntax((DynamicGreen)green, this, position),
             SyntaxKind.StringNumberAnnotation => new StringNumberAnnotationSyntax((StringNumberAnnotationGreen)green, this, position),

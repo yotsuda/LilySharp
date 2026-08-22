@@ -6,7 +6,7 @@ part v { clef treble }
 
 section Main {
   v { <e f a c'>4 <f, a c' e'>4 <g, f a c' e'>2 | }
-  chords prog { f4:maj7/e f4:maj7/f f2:maj7/g | }
+  chords prog { Fmaj7/E Fmaj7/F Fmaj7/G . | }
 }
 
 form main { ~Main }

@@ -4,7 +4,7 @@
 title "Repeat"
 time 4/4
 section Main {
-  chords prog { c2 a:m |: f2 g:7 | c1 :| }
+  chords prog { C Am |: F G7 | C :| }
 }
 form main { Main }
 score main "lead-sheet-repeat" { chords prog }

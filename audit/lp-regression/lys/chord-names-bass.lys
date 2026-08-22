@@ -17,8 +17,8 @@ section Main {
     <e f a c' e'>4@text(":maj7/+e").down <f, f a c' e'>4@text(":maj7/+f").down <g, f a c' e'>2@text(":maj7/+g").down |
   }
   chords prog {
-    f4:maj7/e f4:maj7/f f2:maj7/g |
-    f4:maj7/+e f4:maj7/+f f2:maj7/+g |
+    Fmaj7/E Fmaj7/F Fmaj7/G . |
+    Fmaj7/E Fmaj7/F Fmaj7/G . |
   }
 }
 

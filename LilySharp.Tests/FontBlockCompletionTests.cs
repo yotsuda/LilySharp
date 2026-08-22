@@ -188,7 +188,7 @@ public class FontBlockCompletionTests
         section A {
           m { c4 d e f | g2 g | }
           lyrics w sings m { la la la la | la la | }
-          chords prog { c1 | g1 | }
+          chords prog { C | G | }
         }
 
         form main { A }

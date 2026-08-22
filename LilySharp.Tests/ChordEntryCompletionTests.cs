@@ -31,7 +31,7 @@ public class ChordEntryCompletionTests
     [InlineData("chords harmony { ", true)]
     [InlineData("chords { ", true)]
     [InlineData("chords harmony { section A { ", true)]  // part-major inner section
-    [InlineData("chords harmony { c1 | ", true)]
+    [InlineData("chords harmony { C | ", true)]
     [InlineData("part melody { section A { ", false)]    // music, not chords
     [InlineData("lyrics { section A { ", false)]
     [InlineData("section A { melody { ", false)]
@@ -44,9 +44,9 @@ public class ChordEntryCompletionTests
     public void DiatonicCompletions_ForCMajor_OfferTheKeysChords()
     {
         var items = LilySharpLanguageServer.GetDiatonicChordCompletions("key c major\n", "key c major\n".Length);
-        // C major diatonic triads/sevenths, in the shared chords{}/@chord format.
+        // C major diatonic triads/sevenths — the symbol is both label and insert.
         Assert.Contains(items.Items, i => i.Label == "Dm");   // ii
         Assert.Contains(items.Items, i => i.Label == "G7");   // V7
-        Assert.Contains(items.Items, i => i.InsertText == "g:7");
+        Assert.Contains(items.Items, i => i.InsertText == "G7");
     }
 }

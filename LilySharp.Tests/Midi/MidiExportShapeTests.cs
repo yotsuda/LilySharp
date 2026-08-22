@@ -67,7 +67,7 @@ public class MidiExportShapeTests
             octave absolute
             part melody { clef treble section A { c'4 d' e' f' | } }
             part bass { clef bass section A { c4 d e f | } }
-            chords harmony { section A { c1 | } }
+            chords harmony { section A { C | } }
             form main { A }
             score main { staff melody with chords harmony
             staff bass }

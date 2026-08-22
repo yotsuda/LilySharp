@@ -36,53 +36,53 @@ public class RomanNumeralTests
     public void CMajor_DiatonicDegrees()
     {
         // tonic C = step 0, 0 sharps.
-        Assert.Equal("I", Roman("c", 0, 0));
-        Assert.Equal("IIm7", Roman("d:m7", 0, 0));
-        Assert.Equal("IV", Roman("f", 0, 0));
-        Assert.Equal("V7", Roman("g:7", 0, 0));
-        Assert.Equal("VIm", Roman("a:m", 0, 0));
-        Assert.Equal("Imaj7", Roman("c:maj7", 0, 0));
+        Assert.Equal("I", Roman("C", 0, 0));
+        Assert.Equal("IIm7", Roman("Dm7", 0, 0));
+        Assert.Equal("IV", Roman("F", 0, 0));
+        Assert.Equal("V7", Roman("G7", 0, 0));
+        Assert.Equal("VIm", Roman("Am", 0, 0));
+        Assert.Equal("Imaj7", Roman("Cmaj7", 0, 0));
     }
 
     [Fact]
     public void AMinor_MeasuredFromItsOwnTonic()
     {
         // tonic A = step 5, 0 sharps: Am = I, Dm = IV, E7 = V7.
-        Assert.Equal("Im", Roman("a:m", 5, 0));
-        Assert.Equal("IVm", Roman("d:m", 5, 0));
-        Assert.Equal("V7", Roman("e:7", 5, 0));
+        Assert.Equal("Im", Roman("Am", 5, 0));
+        Assert.Equal("IVm", Roman("Dm", 5, 0));
+        Assert.Equal("V7", Roman("E7", 5, 0));
     }
 
     [Fact]
     public void FlatKey_TonicIsI()
     {
         // E-flat major: tonic step E = 2, 3 flats.
-        Assert.Equal("I", Roman("ees", 2, -3));
-        Assert.Equal("IV", Roman("aes", 2, -3));
-        Assert.Equal("V7", Roman("bes:7", 2, -3));
+        Assert.Equal("I", Roman("Eb", 2, -3));
+        Assert.Equal("IV", Roman("Ab", 2, -3));
+        Assert.Equal("V7", Roman("Bb7", 2, -3));
     }
 
     [Fact]
     public void ChromaticRoot_GetsAccidentalPrefix()
     {
         // In C major: a D-flat root is ♭II; an F-sharp root is ♯IV.
-        Assert.Equal("♭II", Roman("des", 0, 0));
-        Assert.Equal("♯IV", Roman("fis", 0, 0));
+        Assert.Equal("♭II", Roman("Db", 0, 0));
+        Assert.Equal("♯IV", Roman("F#", 0, 0));
     }
 
     [Fact]
     public void SlashBass_ShownAsDegree()
     {
-        Assert.Equal("V7/VII", Roman("g:7/b", 0, 0));
+        Assert.Equal("V7/VII", Roman("G7/B", 0, 0));
     }
 
     [Fact]
     public void DiminishedAugmentedHalfDim_UseSymbolStyle()
     {
         // ° / +  / ø read better as Roman numerals than dim / aug / m7♭5.
-        Assert.Equal("VII°", Roman("b:dim", 0, 0));
-        Assert.Equal("VII°7", Roman("b:dim7", 0, 0));
-        Assert.Equal("VIIø7", Roman("b:m7b5", 0, 0));
-        Assert.Equal("I+", Roman("c:aug", 0, 0));
+        Assert.Equal("VII°", Roman("Bdim", 0, 0));
+        Assert.Equal("VII°7", Roman("Bdim7", 0, 0));
+        Assert.Equal("VIIø7", Roman("Bm7-5", 0, 0));
+        Assert.Equal("I+", Roman("Caug", 0, 0));
     }
 }

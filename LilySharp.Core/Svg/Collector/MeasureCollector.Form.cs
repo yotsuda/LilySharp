@@ -662,6 +662,7 @@ public sealed partial class MeasureCollector
                 case SyntaxKind.SlashNote:
                 case SyntaxKind.BareDuration:
                 case SyntaxKind.ChordEntry:
+                case SyntaxKind.ChordExtend:
                     pendingMusic = true;
                     break;
                 case SyntaxKind.ParallelExpression:
@@ -736,6 +737,7 @@ public sealed partial class MeasureCollector
                 case SlashNoteSyntax:
                 case BareDurationSyntax:
                 case ChordEntrySyntax:
+                case ChordExtendSyntax:
                     pendingMusic = true;
                     break;
                 case ParallelExpressionSyntax parallel:

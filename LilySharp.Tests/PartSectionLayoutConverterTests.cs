@@ -128,8 +128,8 @@ public class PartSectionLayoutConverterTests
         // (`chords name { section .. }`) and back — no data loss.
         var sm = """
             part melody { clef treble }
-            section A { melody { c4 c g' g | } chords harmony { c1 | f1 | } }
-            section B { melody { g'4 g f f | } chords harmony { c1 | } }
+            section A { melody { c4 c g' g | } chords harmony { C | F | } }
+            section B { melody { g'4 g f f | } chords harmony { C | } }
             form main { A B }
             score main "s" { chords harmony  staff melody }
             """;
@@ -139,15 +139,15 @@ public class PartSectionLayoutConverterTests
         Assert.NotNull(pm);
         Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
         Assert.Contains("chords harmony {", pm);
-        Assert.Contains("section A { c1 | f1 | }", pm);
-        Assert.Contains("section B { c1 | }", pm);
+        Assert.Contains("section A { C | F | }", pm);
+        Assert.Contains("section B { C | }", pm);
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
 
         // Round-trips back to section-major with the chords folded into the sections.
         var sm2 = PartSectionLayoutConverter.Convert(pm!);
         Assert.NotNull(sm2);
         Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
-        Assert.Contains("chords harmony { c1 | f1 | }", sm2);
+        Assert.Contains("chords harmony { C | F | }", sm2);
         Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
     }
 

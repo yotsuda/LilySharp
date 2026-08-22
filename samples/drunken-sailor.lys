@@ -10,8 +10,8 @@ time 4/4
 
 section Verse {
   chords prog {
-    d1:m | d1:m | c1 | c1 |
-    d1:m | d1:m | c2 d2:m | d1:m |
+    Dm | Dm | C | C |
+    Dm | Dm | C Dm | Dm |
   }
   lyrics words {
     What shall we do with a | drunk- en sail- or |

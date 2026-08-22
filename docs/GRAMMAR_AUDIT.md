@@ -616,6 +616,30 @@ snapshot の再ベースは**不要**であり、**してはならない**。再
 書き換えが誤っているという意味しかない。⇒ **`RULES.md`:474「snapshot は再ベースできるので
 網ではない——承認は観測者ではない」がそのまま当てはまる場面。**
 
+> ⚠️ **上の「byte 一致」は 1 語だけ狭かった（第230 実測）**——SVG は **data-pos（ソース位置）を
+> 属性に持つ**ので、書き換えでオフセットがずれた分だけ snapshot は**幾何同一のまま byte が動く**。
+> 検証は「**data-pos を剥がして byte 一致**」で行った：snapshot 10 冊（git の旧版との対比でも確認）
+> ＋ 非 snapshot 8 冊（HEAD worktree の旧ビルド×旧綴り vs 新ビルド×新綴りの直接レンダ）＝**全 18 冊一致**。
+
+> ✅ **第230 が実装（2026-08-23）＝案 1「大文字コード＋小節相対」一式。**
+> - **綴り**：entry は印字形そのもの（`ChordEntry = Root [#|b] [Quality] [/Root [#|b]]`）。
+>   実装は**トークン run**（`Am`=1 Identifier・`F#m`=Identifier+BadToken`#`+Identifier）を
+>   `ChordEntrySyntax.SymbolText` で結合し、**`ChordStructure.TryParseChordEntry` の 1 文法**へ
+>   （@chord と chords{} は従来どおり 1 書式）。`#` は chords 本体でも黙許（@chord/@fig 引数と同じ
+>   Parser 序文の領域追跡）。registry は `m7.5-`/`m7b5` → **`m7-5`**・`+`＝aug を追加。
+>   **`/+`（added bass）は廃止**（'+' が quality に入ったため。表示は元々同一・BassIsAdded は
+>   XML importer 用にモデルへ残る）。旧綴りは LYS1028 が **run 単位で 1 回**名指す。
+> - **`.` と格子**：`ChordExtendSyntax`（新 kind）＋ `ChordRhythm.SlotDurations`＝
+>   `BeamingPattern.Options` の拍構造（梁と同じ 1 格子）。1 slot＝小節・拍数と同数＝拍・
+>   整数倍 k＝細分・約数＝拍の束。**外れは LYS2009（warning・等分 fallback）**、
+>   **小節頭の `.` は LYS2010（error・時間は経過）**——判定は描画と同じ walk が記録し
+>   `ChordRowGridValidator` が発話（BeamPairing の型）。旧 `ChordRhythm` の 4/4 専用表
+>   （3 個→4 4 2 等）は**廃止**＝3/5/6/7 個は今は診断つき等分。
+> - **費用実測**：書き換え＝corpus 15 冊＋inline @chord 3 冊＋テスト 24 file＋probe 7 site・
+>   docs 4 本・completion（挿入＝symbol そのもの・`:` 品質補完は廃止）・harmonizer（symbol を生成）・
+>   XML importer の @chord 出力。**幾何は上記 18 冊全て同一・suite 全緑**（snapshot 10 枚は
+>   data-pos のみで再ベース）。全 572 冊 `lysc check` で新診断 0 件。
+
 ---
 
 ## 9. 順序
@@ -633,8 +657,9 @@ snapshot の再ベースは**不要**であり、**してはならない**。再
    MIDI 専用 part 参照。✅ **§3.3 bare duration の診断は第230 が実装（LYS1031・2026-08-23）**。
    残り＝§1.2 リネーム（ユーザーが MSVS で。§4.4 は完了）
 
-**§8.1 コード記号の書式**（大文字根音・`#`/`b`・変化音 `+`/`-`・小節相対・`.` = LP の拍）——
-**仕様は確定済み。**順位は狙いの持ち主が決める。技術的には 1〜5 のどこにでも差し込める:
+✅ **§8.1 コード記号の書式 — 第230 が実装（2026-08-23・ユーザーが順位を名指し）**
+（大文字根音・`#`/`b`・変化音 `+`/`-`・小節相対・`.` = LP の拍。詳細と実測は §8.1 の完了欄）。
+起票時の残メモ:
 
 - 費用は測定済み（`chords` を持つ `.lys` は **15 / 571**・quality は **9 種**）
 - **220 枚の snapshot が正しさの証明になる**（出力は変わらないはずなので、動いたら誤り）

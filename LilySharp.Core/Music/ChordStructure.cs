@@ -150,8 +150,14 @@ public static class ChordQualityRegistry
         ["min7"] = ChordQuality.Minor7,
         ["mmaj7"] = ChordQuality.MinorMajor7,
         ["dim7"] = ChordQuality.Diminished7,
-        ["m7b5"] = ChordQuality.HalfDiminished7,
-        ["m7.5-"] = ChordQuality.HalfDiminished7,
+        // The half-diminished spelling follows the symbol grammar's alteration
+        // rule — EVERY altered tension is '+'/'-' (never '#'/'b', which belong
+        // to the root and bass alone, so Bb9 stays unambiguous), and LilyPond's
+        // m7.5- went with the ':' entry format (GRAMMAR_AUDIT 8.1).
+        ["m7-5"] = ChordQuality.HalfDiminished7,
+        // '+' is the jazz spelling of the augmented triad (C+). One canonical
+        // DISPLAY ("Caug") for both entries, like min/m.
+        ["+"] = ChordQuality.Augmented,
         ["6"] = ChordQuality.Major6,
         ["m6"] = ChordQuality.Minor6,
         ["min6"] = ChordQuality.Minor6,
@@ -433,13 +439,23 @@ public sealed record ChordStructure(
 
     /// <summary>
     /// Parses a <c>chords { }</c> chord entry — the ONE chord format Lily# accepts:
-    /// a Lily# (Dutch) root pitch (<c>c</c>, <c>cis</c>, <c>bes</c>), an optional
-    /// <c>:</c> then a quality token (empty = major), and an optional <c>/</c> slash
-    /// bass or <c>/+</c> added bass. So "c", "c:m7", "cis:m7", "bes:7", "g:7/b" and
-    /// "f:maj7/+e" parse; a chord symbol ("Cm7", "C#m7") and an unknown quality
-    /// ("c:7#9") do not. Shared by the <c>chords { }</c> block and @chord
+    /// the SYMBOL as it prints (GRAMMAR_AUDIT 8.1, decided 2026-08-21). An
+    /// UPPERCASE root <c>A</c>–<c>G</c>, an optional <c>#</c>/<c>b</c> accidental,
+    /// a bare quality (empty = major), and an optional <c>/</c> slash bass spelled
+    /// the same way. So "C", "Am", "G7", "F#m", "Bb7", "Cmaj7/E" parse; the
+    /// retired <c>:</c> entry form ("a:m", "g:7") and an unknown quality ("C7-9")
+    /// do not — an unknown quality still DISPLAYS verbatim in a chords row (the
+    /// collector's raw-suffix fallback), this strict parse is what @chord and the
+    /// completion build on. Shared by the <c>chords { }</c> block and @chord
     /// annotations, so the two stay in one format.
     /// </summary>
+    /// <remarks>
+    /// The <c>/+</c> added-bass entry went with the <c>:</c> format: '+' now
+    /// spells altered tensions and the augmented triad inside the quality, and
+    /// LilyPond PRINTS /bass and /+bass identically anyway (the flag recorded
+    /// entry intent only — <see cref="BassIsAdded"/> stays on the model for the
+    /// MusicXML importer's sake, but no Lily# spelling sets it any more).
+    /// </remarks>
     public static bool TryParseChordEntry(string s, out ChordStructure result)
     {
         result = default!;
@@ -449,18 +465,8 @@ public sealed record ChordStructure(
         int slash = s.IndexOf('/');
         string main = slash >= 0 ? s.Substring(0, slash) : s;
         string? bass = slash >= 0 ? s.Substring(slash + 1) : null;
-        bool bassAdded = false;
-        if (bass != null && bass.StartsWith('+'))
-        {
-            bassAdded = true;
-            bass = bass.Substring(1);
-        }
 
-        int colon = main.IndexOf(':');
-        string pitchStr = colon >= 0 ? main.Substring(0, colon) : main;
-        string qualStr = colon >= 0 ? main.Substring(colon + 1) : "";
-
-        if (!TryParseDutchPitch(pitchStr, out int step, out int alter))
+        if (!TryParseSymbolPitch(main, out int step, out int alter, out string qualStr))
             return false;
         if (!ChordQualityRegistry.TryResolve(qualStr, out var quality))
             return false;
@@ -468,33 +474,38 @@ public sealed record ChordStructure(
         int? bassStep = null, bassAlter = null;
         if (bass != null)
         {
-            if (!TryParseDutchPitch(bass, out int bs, out int ba))
+            if (!TryParseSymbolPitch(bass, out int bs, out int ba, out string rest)
+                || rest.Length != 0)
                 return false;
             bassStep = bs;
             bassAlter = ba;
         }
 
-        result = new ChordStructure(step, alter, quality, bassStep, bassAlter,
-            BassIsAdded: bassAdded);
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter);
         return true;
     }
 
-    // A Lily# (Dutch) root pitch: lowercase letter + optional is/isis/es/eses
-    // accidental, nothing else (an uppercase root or a '#'/'b' does not parse).
-    private static bool TryParseDutchPitch(string s, out int step, out int alter)
+    /// <summary>A symbol-format pitch: uppercase letter + optional '#'/'b',
+    /// returning whatever follows (the quality for a root, which must be empty
+    /// for a bass). Lowercase letters do not parse — 'b' is an accidental here,
+    /// so the case IS the grammar (GRAMMAR_AUDIT 8.1: "Bb5" is B♭'s power chord
+    /// precisely because a flat can only follow a root).</summary>
+    public static bool TryParseSymbolPitch(string s, out int step, out int alter, out string rest)
     {
-        step = -1; alter = 0;
+        step = -1; alter = 0; rest = "";
         if (string.IsNullOrEmpty(s))
             return false;
-        step = "cdefgab".IndexOf(s[0]);
+        step = "CDEFGAB".IndexOf(s[0]); // display order == the model's 0=C..6=B
         if (step < 0)
             return false;
-        string rest = s.Substring(1);
-        if (rest.Length == 0)
-            return true;
-        foreach (var (suffix, a) in new[] { ("isis", 2), ("eses", -2), ("is", 1), ("es", -1) })
-            if (rest == suffix) { alter = a; return true; }
-        return false;
+        int i = 1;
+        if (s.Length > 1 && (s[1] == '#' || s[1] == 'b'))
+        {
+            alter = s[1] == '#' ? 1 : -1;
+            i = 2;
+        }
+        rest = s.Substring(i);
+        return true;
     }
 
     /// <summary>Spells a diatonic step + alteration as a note name with a Unicode

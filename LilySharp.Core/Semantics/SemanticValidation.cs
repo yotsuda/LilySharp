@@ -77,6 +77,7 @@ public static class SemanticValidation
         new BareDurationValidator(),        // a bare duration with nothing before it to repeat
         new SlurPairingValidator(),         // a slur mark that pairs with nothing
         new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
+        new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name

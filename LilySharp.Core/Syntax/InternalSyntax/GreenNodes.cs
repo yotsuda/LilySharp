@@ -1275,21 +1275,30 @@ internal sealed class ChordPartBlockGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A single chord entry inside a chordnames block: root[duration][:quality][/bass]
-/// (e.g. c1, a:m, g2:7, d:m7/f, b:m7.5-), where the bass may be the ADDED form
-/// /+bass (f:maj7/+e). Reuses PitchGreen for the root/bass and DurationGreen for
-/// the duration. The quality is a RUN of adjacent tokens (so m7.5- / 7sus4 are
-/// captured whole, not just their first token).
+/// A single chord entry inside a <c>chords</c> body: the SYMBOL as it prints
+/// (GRAMMAR_AUDIT 8.1) — a glued token run such as <c>Am</c> (one Identifier),
+/// <c>F#m</c> (Identifier '#' Identifier) or <c>Cmaj7/E</c>. The tree keeps the
+/// tokens in source order; <c>ChordEntrySyntax.SymbolText</c> re-joins them for
+/// <c>ChordStructure.TryParseChordEntry</c>, so the block and <c>@chord</c> read
+/// one format.
 /// </summary>
 internal sealed class ChordEntryGreen : GreenSyntaxNode
 {
-    // Slots: 0 root, 1 duration?, 2 colon?, then the quality tokens (0+), then
-    // slash?, plus?, bass? as the final three slots (plus = the /+ added-bass
-    // marker). Children stay in SOURCE order so node positions / data-pos
-    // remain correct.
-    public ChordEntryGreen(GreenNode root, GreenNode? duration, SyntaxToken? colon,
-        GreenNode?[] qualityTokens, SyntaxToken? slash, SyntaxToken? plus, GreenNode? bass)
-        : base(SyntaxKind.ChordEntry, [root, duration, colon, .. qualityTokens, slash, plus, bass])
+    public ChordEntryGreen(GreenNode?[] tokens)
+        : base(SyntaxKind.ChordEntry, tokens)
+    {
+    }
+}
+
+/// <summary>
+/// A chord-row slot extension: a lone <c>.</c> in a <c>chords</c> body. The
+/// previous entry (or rest) holds through one more slot of the measure's beat
+/// grid — <c>| C . . G7 |</c> in 4/4 is C for three beats, then G7.
+/// </summary>
+internal sealed class ChordExtendGreen : GreenSyntaxNode
+{
+    public ChordExtendGreen(SyntaxToken dot)
+        : base(SyntaxKind.ChordExtend, [dot])
     {
     }
 }

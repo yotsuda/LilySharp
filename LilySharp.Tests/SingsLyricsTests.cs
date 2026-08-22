@@ -143,7 +143,7 @@ public class SingsLyricsTests
             """,
             // An unbound row stays the even-spread lead sheet.
             """
-            section A { chords prog { c1 | } lyrics words { la la | } }
+            section A { chords prog { C | } lyrics words { la la | } }
             form main { A }
             score main { chords prog lyrics words }
             """,

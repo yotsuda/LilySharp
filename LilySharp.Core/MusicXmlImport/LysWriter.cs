@@ -570,26 +570,38 @@ internal static class LysWriter
 
     private static string ChordAnnotation(ImportHarmony h, ImportReport report)
     {
-        string root = "cdefgab"[((h.RootStep % 7) + 7) % 7].ToString() + AlterSuffix(h.RootAlter);
+        // The entry format is the SYMBOL as it prints (GRAMMAR_AUDIT 8.1):
+        // uppercase root + '#'/'b' + bare quality — "Cm7", "F#m", "Bb7/D".
+        string? root = SymbolPitch(h.RootStep, h.RootAlter);
         string? quality = KindToToken(h.Kind);
-        if (quality == null)
+        string? bass = h.BassStep is int bs ? SymbolPitch(bs, h.BassAlter ?? 0) : "";
+        if (root == null || quality == null || bass == null)
         {
-            // No clean colon-form target: fall back to the quoted free-text escape
-            // hatch so nothing renders wrong.
+            // No clean symbol target (an unknown kind, or a double accidental the
+            // entry grammar does not spell): fall back to the quoted free-text
+            // escape hatch so nothing renders wrong.
             string text = ChordStructure.SpellPitch(h.RootStep, h.RootAlter)
                           + (h.KindText ?? h.Kind);
-            report.Warn($"chord kind '{h.Kind}' has no Lily# quality; emitted as text \"{text}\".");
+            report.Warn($"chord '{text}' has no Lily# entry spelling; emitted as text.");
             return "@chord(\"" + EscapeString(text) + "\")";
         }
 
         var sb = new StringBuilder("@chord(");
-        sb.Append(root);
-        if (quality.Length > 0)
-            sb.Append(':').Append(quality);
-        if (h.BassStep is int bs)
-            sb.Append('/').Append("cdefgab"[((bs % 7) + 7) % 7]).Append(AlterSuffix(h.BassAlter ?? 0));
+        sb.Append(root).Append(quality);
+        if (bass.Length > 0)
+            sb.Append('/').Append(bass);
         sb.Append(')');
         return sb.ToString();
+    }
+
+    /// <summary>A symbol-entry pitch ("C", "F#", "Bb"), or null for an alteration
+    /// the entry grammar cannot spell (double accidentals).</summary>
+    private static string? SymbolPitch(int step, int alter)
+    {
+        if (alter is < -1 or > 1)
+            return null;
+        return "CDEFGAB"[((step % 7) + 7) % 7]
+               + (alter switch { 1 => "#", -1 => "b", _ => "" });
     }
 
     // ---- figured bass (@fig) ---------------------------------------------

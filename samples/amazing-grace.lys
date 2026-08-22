@@ -24,10 +24,10 @@ section Verse {
   }
   chords prog {
     |
-    g2. | g2. | c2. | g2. |
-    g2. | e2.:m | d2. | d2.:7 |
-    g2. | g2. | c2. | g2. |
-    e2.:m | d2.:7 | g2. |
+    G | G | C | G |
+    G | Em | D | D7 |
+    G | G | C | G |
+    Em | D7 | G |
   }
   lyrics words sings melody {
     A- |

@@ -489,15 +489,33 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     folds them — so the difference is only which node holds the text.
                     '~' GLUED on both sides ("va~ga") is an elision, otherwise a melisma. *)
 
-ChordsBlock    = 'chords' , Identifier , '{' , { ChordEntry | Barline } , '}' ;
+ChordsBlock    = 'chords' , Identifier , '{' , { ChordEntry | ChordExtend | Rest | Barline } , '}' ;
                  (* A named chord part; a score places it as a 'chords NAME' row —
                     directly above a staff, or as a lead-sheet row on its own.
                     The NAMELESS form (auto-attach above "the co-written part's
                     staff") was removed before the first tag (LYS0032): its
                     association was stated nowhere and broke down the moment a
                     section held two parts. *)
-ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Quality ] , [ '/' , PitchBase ] ;
-                 (* c=C, a:m=Am, g:7=G7, g:m7.5-=Gm7b5, c/g=C over a G bass *)
+ChordEntry     = ChordRoot , [ Quality ] , [ '/' , ChordRoot ] ;
+ChordRoot      = ( 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' ) , [ '#' | 'b' ] ;
+ChordExtend    = '.' ;
+Quality        = { 'm' | 'maj' | 'dim' | 'aug' | 'sus' | 'add' | Integer
+                 | ( '+' | '-' ) , Integer | '+' | '-' } ;
+                 (* THE ENTRY IS THE SYMBOL AS IT PRINTS (decided 2026-08-21,
+                    GRAMMAR_AUDIT 8.1): C, Am, G7, F#m, Bb7, Gm7-5, Cmaj7/E. The
+                    case is the grammar — an UPPERCASE letter is a root, so 'R'
+                    (the rest) never collides, and 'b' after a root is a FLAT,
+                    which is why every altered tension spells '+'/'-' (Bb5 is
+                    B-flat's power chord; B's flat five is B-5). Placement is
+                    MEASURE-RELATIVE, no durations: a bar's written slots —
+                    entries, rests, '.' — divide it on the meter's own beat grid
+                    (the beams' grid). One slot takes the bar. Slots = beats sit
+                    one per beat, an integer multiple splits each beat equally,
+                    a divisor groups whole beats — anything else warns (LYS2009)
+                    and divides equally. '.' holds the previous chord one more
+                    slot ('| C . . G7 |' in 4/4 = C for three beats) and never
+                    crosses a barline (a bar-head '.' is LYS2010). r/R print
+                    N.C. in their slot, s prints nothing — each occupies one. *)
 
 (* Example (the track sings its melody; the score attaches it under that staff —
    or, as 'lyrics words' among the score items, shows ONLY the words at the
@@ -784,7 +802,7 @@ DisplayName    = String ;
 
 (* Example:
    section Main {
-     chords prog  { c2 g:7 | a:m f | c1 :| }
+     chords prog  { C G7 | Am F | C :| }
      lyrics words { Twin- kle | lit- tle | star | }
    }
    form main { Main }
@@ -936,7 +954,7 @@ ChordNote      = PitchToken , { Annotation } ;
    C5 G4 E4 C4. Each member's own marks are local; marks after '>>' shift the whole group
    and propagate. Members may be pitches, scale degrees, chords or rests.
    Annotations after '>>': a dynamic (@f) applies to the whole group and a chord name
-   (@chord / @chord(a:m7)) labels it; any other annotation on the group or a bare member is not
+   (@chord / @chord(Am7)) labels it; any other annotation on the group or a bare member is not
    applied yet and warns (LYS4008) — nothing is dropped silently. A nested chord member
    keeps its own annotation handling ('<< <c e>@arpeggio g >>' is fine).
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
@@ -1067,10 +1085,10 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Arpeggio:      <c e g>4@arpeggio
    - Glissando:     c4@glissando d
    - Figured bass:  c4@fig(6) , d4@fig(6 4)
-   - Chord name:    c4@chord(c) , d4@chord(d:m)   (* Lily# pitch spelling, lower case:
-                    the quality follows a ':' (a:m7, g:7). '@chord(C)' / '@chord(Dm)' are
-                    LilyPond's spelling and are NOT recognised — LYS1008 warns and the
-                    symbol is not engraved. A bare '@chord' derives it from the notes. *)
+   - Chord name:    c4@chord(C) , d4@chord(Dm)   (* the SYMBOL as it prints — the same
+                    ChordEntry format as a chords row: Am7, G7, F#m, Bb7/D. The retired
+                    lowercase ':' entry ('@chord(a:m)') is NOT recognised — LYS1008 warns
+                    and the symbol is not engraved. A bare '@chord' derives it from the notes. *)
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark("A")   (label is a quoted string)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)
@@ -1169,7 +1187,7 @@ section Verse {
 // A staff-less lead sheet (chords + lyrics, no notes). Its lyric row is its
 // own track (no `sings`): with no melody to sing, the syllables spread evenly.
 section Sheet {
-  chords prog  { c2 a:m |: f2 g:7 | c1 :| }
+  chords prog  { C Am |: F G7 | C :| }
   lyrics sheetWords { Twin- kle twin- kle | lit- tle | star | }
 }
 

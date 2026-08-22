@@ -261,10 +261,11 @@ public static partial class ChordHarmonizer
             var chord = chords[degree];
             // The dominant (V) reads stronger as a dominant seventh (V7) — but only
             // when it is a MAJOR triad (a major-key V); a minor-key v is left alone.
-            string quality = degree == 4 && chord.Quality.Length == 0
-                ? ":7"
-                : chord.LilyQualitySuffix;
-            entries.Add(chord.LilyRoot + ToNoteValue(MeasureDuration(measure)) + quality);
+            // One chord per measure needs no duration: a single slot takes the bar
+            // (GRAMMAR_AUDIT 8.1 — the entry is the symbol as it prints).
+            entries.Add(degree == 4 && chord.Quality.Length == 0
+                ? chord.RootDisplay + "7"
+                : chord.Symbol);
         }
         return entries;
     }
@@ -295,25 +296,6 @@ public static partial class ChordHarmonizer
         int baseSemi = p.BaseName switch
         { 'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5, 'g' => 7, 'a' => 9, 'b' => 11, _ => 0 };
         return ((baseSemi + p.AccidentalOffset) % 12 + 12) % 12;
-    }
-
-    private static Fraction MeasureDuration(Measure measure)
-    {
-        var total = Fraction.Zero;
-        foreach (var item in measure.Items)
-            total += item.Duration;
-        return total;
-    }
-
-    /// <summary>A duration Fraction as a Lily# note value ("1", "2.", "4"); "1" as a
-    /// fallback for an irregular measure the MVP can't express as one dotted value.</summary>
-    private static string ToNoteValue(Fraction f)
-    {
-        foreach (int baseVal in new[] { 1, 2, 4, 8, 16 })
-            foreach (int dots in new[] { 0, 1, 2 })
-                if (Fraction.FromNoteValue(baseVal).Dotted(dots) == f)
-                    return baseVal + new string('.', dots);
-        return "1";
     }
 
     private static (char Tonic, int Sharps) ReadKey(string source)

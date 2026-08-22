@@ -55,7 +55,7 @@ public class AnnotationArgumentVocabularyTests
     [InlineData("c4@finger(3) |", "finger.3")]
     [InlineData("c4@bend(5) |", "bend.5")]
     [InlineData("c4@notehead(x) |", "notehead.x")]
-    [InlineData("c4@chord(c:m7) |", "chord.c.:.m7")]
+    [InlineData("c4@chord(Cm7) |", "chord.Cm7")]
     [InlineData("c4@feather(right) |", "feather.right")]
     [InlineData("c4@arpeggio(bracket) |", "arpeggio.bracket")]
     [InlineData("c4@ottava(bassa) |", "ottava.bassa")]

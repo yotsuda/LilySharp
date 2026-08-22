@@ -82,7 +82,7 @@ public class PartReferenceFinderTests
     {
         var src = """
             part m { clef treble }
-            chords ch { c1 }
+            chords ch { C }
             section A { m { c4 } }
             score main "s" { staff m with chords ch }
             """;
@@ -167,7 +167,7 @@ public class PartReferenceFinderTests
     {
         var src = """
             part m { clef treble }
-            chords h { c1 }
+            chords h { C }
             section A { m { c4 } }
             score main "s" { tab m as numbers with chords h as both }
             """;
@@ -199,7 +199,7 @@ public class PartReferenceFinderTests
 
     private const string RowSheet = """
         section Main {
-          chords prog { c1 | g1 | }
+          chords prog { C | G | }
           lyrics words { la la | la la | }
         }
         form main { Main }
@@ -316,7 +316,7 @@ public class PartReferenceFinderTests
         part m { clef treble }
         section Main {
           m { c4 d e f | }
-          chords prog { c1 | }
+          chords prog { C | }
           lyrics words sings m { la la la la | }
         }
         form main { Main }

@@ -205,8 +205,8 @@ public class AnnotationValuesTests
     [Fact]
     public void AFrameSpecLilySharpRefuses_NoLongerReachesTheXml()
     {
-        Assert.DoesNotContain("<frame>", Xml("c4@chord(c)@frame(zzzz) |"));
-        Assert.Contains("<frame>", Xml("c4@chord(c)@frame(032010) |"));
+        Assert.DoesNotContain("<frame>", Xml("c4@chord(C)@frame(zzzz) |"));
+        Assert.Contains("<frame>", Xml("c4@chord(C)@frame(032010) |"));
     }
 
     private static string Xml(string music) =>

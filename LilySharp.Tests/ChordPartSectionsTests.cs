@@ -22,7 +22,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The part-major chord track form: <c>chords name { section A { c1 } section B { c1 } }</c>
+/// The part-major chord track form: <c>chords name { section A { C } section B { C } }</c>
 /// — a chord progression written per section and replayed by the structure, the dual
 /// of an in-section chords block. It must parse and collect to the SAME chord row as
 /// the equivalent section-major file.
@@ -33,8 +33,8 @@ public class ChordPartSectionsTests
         time 4/4
         key c major
         part melody { clef treble }
-        section A { melody { c4 c g' g | a a g2 | } chords harmony { c1 | f1 | } }
-        section B { melody { g'4 g f f | } chords harmony { c1 | } }
+        section A { melody { c4 c g' g | a a g2 | } chords harmony { C | F | } }
+        section B { melody { g'4 g f f | } chords harmony { C | } }
         form main { A B }
         score main "s" { chords harmony  staff melody }
         """;
@@ -47,8 +47,8 @@ public class ChordPartSectionsTests
           section B { g'4 g f f | }
         }
         chords harmony {
-          section A { c1 | f1 | }
-          section B { c1 | }
+          section A { C | F | }
+          section B { C | }
         }
         form main { A B }
         score main "s" { chords harmony  staff melody }
@@ -89,7 +89,7 @@ public class ChordPartSectionsTests
               section A { c4 c g' g | a a g2 | }
               section B { g'4 g f f | }
             }
-            chords harmony { section A { c1 | f1 | } section B { g1:7 | } }
+            chords harmony { section A { C | F | } section B { G7 | } }
             form main { A B A "A2" }
             score main { chords harmony  staff melody }
             """);

@@ -1056,6 +1056,10 @@ public sealed partial class MeasureCollector
     /// <summary>Manual beam brackets — a <c>[</c> never closed or a <c>]</c> with none
     /// open — whose grouping is discarded. Populated as a side effect of Collect.</summary>
     public IReadOnlyList<UnpairedBeamWarning> UnpairedBeamWarnings => _unpairedBeamWarnings.ToList();
+    /// <summary>Chord-row grid faults — a bar whose slot count fits no beat-grid
+    /// shape, or a '.' at a bar's head. Recorded by the row walk that also places
+    /// the symbols (ChordNameCollector); surfaced by ChordRowGridValidator.</summary>
+    public IReadOnlyList<ChordRowGridWarning> ChordRowGridWarnings => _chordNameCollector.GridWarnings.ToList();
     // Repeat bars ('|:') that no ':|' ever closes. Scanned per finished voice by
     // RepeatPairingScanner; surfaced by RepeatPairingValidator. Scanned HERE rather than on
     // the written text because the pairing crosses layers (a section's '|:' may be closed
@@ -1440,7 +1444,7 @@ public sealed partial class MeasureCollector
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
-                attachedChordDisplay);
+                _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
 
         return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
     }
@@ -1834,7 +1838,8 @@ public sealed partial class MeasureCollector
         // hard-coded staff 0 on any multi-staff score.)
         foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
             _chordNameCollector.CollectAttached(
-                tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff, attachedMode);
+                tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
+                _meta.TimeBeats, _meta.TimeBeatType, attachedMode);
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -2482,7 +2487,7 @@ public sealed partial class MeasureCollector
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
                 root, attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
-                attachedChordDisplay);
+                _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
 
         // A single-staff score surfaces the same annotations whether it has one
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord

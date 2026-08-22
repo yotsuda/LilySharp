@@ -1585,7 +1585,7 @@ internal static class LpGeometryProbes
               upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
               melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim()}} }
               lyrics one sings melody { {{syllables}} }
-              chords prog { {{string.Concat(Enumerable.Repeat("c1 | ", 120)).Trim()}} }
+              chords prog { {{string.Concat(Enumerable.Repeat("C | ", 120)).Trim()}} }
             }
 
             form main { ~Main }
@@ -1728,7 +1728,7 @@ internal static class LpGeometryProbes
     {
         string syllables = string.Concat(Enumerable.Repeat("no no no no | ", 120)).Trim();
         string bars = string.Concat(Enumerable.Repeat("g4 a g a | ", 120)).Trim();
-        string chords = string.Concat(Enumerable.Repeat("c1 | ", 120)).Trim();
+        string chords = string.Concat(Enumerable.Repeat("C | ", 120)).Trim();
         return $$"""
             octave absolute
             time 4/4
@@ -2208,7 +2208,7 @@ internal static class LpGeometryProbes
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | ", 3)).Trim()}} }
-          chords harm { {{string.Concat(Enumerable.Repeat("c1 | g1 | a1:m | f1 | ", 3)).Trim()}} }
+          chords harm { {{string.Concat(Enumerable.Repeat("C | G | Am | F | ", 3)).Trim()}} }
         }
 
         form main { ~Main }
@@ -9211,7 +9211,7 @@ internal static class LpGeometryProbes
 
         section Main {
           melody { c2 a | f2 g | c1 | }
-          chords prog { c2 a:m | f2 g:7 | c1 | }
+          chords prog { C Am | F G7 | C | }
         }
 
         form main { ~Main }
@@ -9258,7 +9258,7 @@ internal static class LpGeometryProbes
         key c major
 
         section Main {
-          chords prog { c2 a:m | f2 g:7 | c1 | }
+          chords prog { C Am | F G7 | C | }
           lyrics words { {{firstSyllable}} no | oh no | yes | }
         }
 
@@ -9313,7 +9313,7 @@ internal static class LpGeometryProbes
         {{key}}
 
         section Main {
-          chords prog { c2 a:m | f2 g:7 | c1 | }
+          chords prog { C Am | F G7 | C | }
         }
 
         form main { ~Main }
@@ -9356,7 +9356,7 @@ internal static class LpGeometryProbes
     /// advance in both weights and would show only the em error.
     /// </summary>
     /// <remarks>LilyPond twin: probe score CWA in chord-symbol-width.ly.</remarks>
-    private static readonly string LCWA = ChordsRowScore("a4:m a:m a:m a:m | a1:m |", "LCWA");
+    private static readonly string LCWA = ChordsRowScore("Am Am Am Am | Am |", "LCWA");
 
     /// <summary>
     /// The same shape on "C" quarters — the SLACK control: w + 1.1 = 2.977882 is under
@@ -9364,14 +9364,14 @@ internal static class LpGeometryProbes
     /// it. Guards the fork: a width claim on CWA is only meaningful while this is exact.
     /// </summary>
     /// <remarks>LilyPond twin: probe score CWC.</remarks>
-    private static readonly string LCWC = ChordsRowScore("c4 c c c | c1 |", "LCWC");
+    private static readonly string LCWC = ChordsRowScore("C C C C | C |", "LCWC");
 
     /// <summary>
     /// "C" halves — the second slack control, one duration step out, so a spring defect
     /// that happened to be exact at quarters would still be caught.
     /// </summary>
     /// <remarks>LilyPond twin: probe score CWH.</remarks>
-    private static readonly string LCWH = ChordsRowScore("c2 c | c1 |", "LCWH");
+    private static readonly string LCWH = ChordsRowScore("C C | C |", "LCWH");
 
     /// <summary>
     /// Every probe is two measures, so thin bar line 0 is the MID-LINE one between them —

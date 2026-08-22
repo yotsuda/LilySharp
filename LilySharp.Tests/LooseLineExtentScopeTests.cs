@@ -123,7 +123,7 @@ public class LooseLineExtentScopeTests
         return
             "octave absolute\n" +
             "part m { clef treble }\npart n { clef bass }\n" +
-            "chords prog { c1 | g1 | c1 | g1 | }\n" +
+            "chords prog { C | G | C | G | }\n" +
             $"section Main {{\n  m {{ {bar} {bar} break {bar} {bar} }}\n" +
             "  n { b4 b b b | b4 b b b | b4 b b b | b4 b b b | }\n" +
             "  lyrics w { la le li lo la le li lo la le li lo la le li lo }\n}\n" +

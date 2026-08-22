@@ -11,7 +11,7 @@ part bot { clef bass }
 
 section Main {
   top { c'4 d e f | g1 | }
-  bot { c4@chord(c:m7) d@fig(6) e@fig(6 4) f | g1@chord(g:7) | }
+  bot { c4@chord(Cm7) d@fig(6) e@fig(6 4) f | g1@chord(G7) | }
 }
 
 form main { Main }

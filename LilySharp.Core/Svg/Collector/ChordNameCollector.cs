@@ -36,6 +36,13 @@ namespace LilySharp.Core.Svg.Collector;
 internal sealed class ChordNameCollector
 {
     private readonly List<ChordNameItem> _items = new();
+    private readonly List<ChordRowGridWarning> _gridWarnings = new();
+
+    /// <summary>What the row's grid walk recorded as a side effect — read back by
+    /// <c>ChordRowGridValidator</c> (the BeamPairingValidator pattern: the warning
+    /// can never disagree with what is drawn, because the walk that draws is the
+    /// walk that recorded it).</summary>
+    public IReadOnlyList<ChordRowGridWarning> GridWarnings => _gridWarnings;
 
     /// <summary>The key timeline for Roman-numeral degrees: (start measure, tonic step
     /// 0=C..6=B, signature ±sharps) sorted ascending, so a chord's degree follows the
@@ -82,7 +89,11 @@ internal sealed class ChordNameCollector
     internal List<ChordNameItem> ItemsList => _items;
 
     /// <summary>Resets between reused collection passes.</summary>
-    public void Clear() => _items.Clear();
+    public void Clear()
+    {
+        _items.Clear();
+        _gridWarnings.Clear();
+    }
 
     /// <summary>Adds one inline chord name (a <c>@chord(c:m)</c> mark on a note). The
     /// main walk parses the mark text/structure and supplies the note's
@@ -126,19 +137,21 @@ internal sealed class ChordNameCollector
     public void CollectAttached(
         SyntaxNode root, string partName,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex,
+        int timeBeats, int timeBeatType,
         ChordDisplayMode mode = ChordDisplayMode.Names)
     {
         CollectAligned(
             root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>()
                 .Where(b => b.PartName == partName),
-            sectionStartMeasure, staffIndex, mode);
+            sectionStartMeasure, staffIndex, mode, timeBeats, timeBeatType);
         // An inline @chord on this staff should follow the same display as the track.
         ApplyDisplayMode(staffIndex, mode);
     }
 
     private void CollectAligned(
         IEnumerable<ChordPartBlockSyntax> alignedBlocks,
-        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex, ChordDisplayMode mode)
+        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex, ChordDisplayMode mode,
+        int timeBeats, int timeBeatType)
     {
         var blocks = alignedBlocks.ToList();
         if (blocks.Count == 0)
@@ -152,10 +165,10 @@ internal sealed class ChordNameCollector
             if (block.HasSections)
                 foreach (var section in block.Sections)
                     foreach (int start in StartsFor(section.SectionName, sectionStartMeasure))
-                        CollectAlignedItems(SectionItems(section), start, staffIndex, mode);
+                        CollectAlignedItems(SectionItems(section), start, staffIndex, mode, timeBeats, timeBeatType);
             else
                 foreach (int start in BlockStarts(block, sectionStartMeasure))
-                    CollectAlignedItems(block.Items, start, staffIndex, mode);
+                    CollectAlignedItems(block.Items, start, staffIndex, mode, timeBeats, timeBeatType);
         }
     }
 
@@ -178,62 +191,115 @@ internal sealed class ChordNameCollector
         return new[] { 0 };
     }
 
-    private void CollectAlignedItems(IEnumerable<SyntaxNode> items, int startMeasure, int staffIndex, ChordDisplayMode mode)
+    private void CollectAlignedItems(IEnumerable<SyntaxNode> items, int startMeasure, int staffIndex,
+        ChordDisplayMode mode, int timeBeats, int timeBeatType)
     {
         int localMeasure = 0;
-        var timing = Fraction.Zero;
-        var defaultDuration = Fraction.Quarter;
+        var pending = new List<SyntaxNode>();
+
+        // One bar's slots, placed on the meter's beat grid. r / R print the
+        // no-chord symbol at their slot; s (a skip) prints nothing; a '.' prints
+        // nothing (the previous slot's symbol holds). All occupy their slot.
+        // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
+        //   — general-rest-event (r and R, not s) → currentChordText = noChordSymbol;
+        // LILYPOND-REF: ly/engraver-init.ly:952 noChordSymbol = "N.C.", below ignatzek-chord-names.
+        void Commit()
+        {
+            if (pending.Count == 0)
+                return;
+            int mi = startMeasure + localMeasure;
+            ForEachSlotGroup(pending, timeBeats, timeBeatType, (node, timing, _) =>
+            {
+                if (node is RestSyntax rest)
+                {
+                    if (rest.RestToken.Text != "s")
+                        _items.Add(new ChordNameItem(
+                            "N.C.", mi, itemIndex: -1, rest.RestToken.Position, staffIndex,
+                            useTiming: true, timing: timing));
+                }
+                else if (node is ChordEntrySyntax entry)
+                {
+                    var (text, structure) = ResolveChordEntry(entry);
+                    _items.Add(new ChordNameItem(
+                        text, mi, itemIndex: -1, entry.Position, staffIndex,
+                        useTiming: true, timing: timing, structure: structure)
+                    {
+                        RomanText = Roman(structure, mi),
+                        DisplayMode = mode,
+                    });
+                }
+            });
+            pending.Clear();
+        }
 
         foreach (var item in items)
         {
             if (item is BarlineSyntax)
             {
+                Commit();
                 localMeasure++;
-                timing = Fraction.Zero;
                 continue;
             }
-            // r / R print the no-chord symbol at their moment; s (a skip) prints
-            // nothing. All three advance the row's timing like an entry.
-            // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
-            //   — general-rest-event (r and R, not s) → currentChordText = noChordSymbol;
-            // LILYPOND-REF: ly/engraver-init.ly:952 noChordSymbol = "N.C.", below ignatzek-chord-names.
-            if (item is RestSyntax rest)
+            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                pending.Add(item);
+        }
+        Commit();
+    }
+
+    /// <summary>
+    /// Walks ONE BAR's written slots — entries, rests, '.' extensions — on the
+    /// meter's beat grid: each entry/rest opens a group that its trailing '.'
+    /// slots extend, and <paramref name="emit"/> receives (node, start timing,
+    /// merged duration) per group. A slot count that fits no grid shape falls
+    /// back to equal division; that, and a '.' at the bar's head (its own silent
+    /// group — the time still passes), are recorded in <see cref="GridWarnings"/>
+    /// for ChordRowGridValidator to surface.
+    /// </summary>
+    private void ForEachSlotGroup(List<SyntaxNode> items, int timeBeats, int timeBeatType,
+        Action<SyntaxNode, Fraction, Fraction> emit)
+    {
+        int slotCount = items.Count;
+        var slots = ChordRhythm.SlotDurations(slotCount, timeBeats, timeBeatType);
+        if (slots == null)
+        {
+            _gridWarnings.Add(new ChordRowGridWarning(
+                PositionOf(items[0]), HeadDot: false, slotCount, timeBeats, timeBeatType));
+            var equal = new Fraction(timeBeats, timeBeatType) * new Fraction(1, slotCount);
+            var eq = System.Collections.Immutable.ImmutableArray.CreateBuilder<Fraction>(slotCount);
+            for (int i = 0; i < slotCount; i++)
+                eq.Add(equal);
+            slots = eq.MoveToImmutable();
+        }
+
+        var timing = Fraction.Zero;
+        int at = 0;
+        while (at < slotCount)
+        {
+            var node = items[at];
+            var dur = slots.Value[at];
+            int next = at + 1;
+            while (next < slotCount && items[next] is ChordExtendSyntax)
             {
-                if (rest.RestToken.Text != "s")
-                    _items.Add(new ChordNameItem(
-                        "N.C.", startMeasure + localMeasure, itemIndex: -1,
-                        rest.RestToken.Position, staffIndex,
-                        useTiming: true, timing: timing));
-                var restDur = rest.Duration?.ToFraction() ?? defaultDuration;
-                if (rest.Duration != null)
-                    defaultDuration = restDur;
-                timing += restDur * new Fraction(rest.MeasureCount, 1);
-                continue;
+                dur += slots.Value[next];
+                next++;
             }
-            if (item is not ChordEntrySyntax entry)
-                continue;
-
-            var (text, structure) = ResolveChordEntry(entry);
-            _items.Add(new ChordNameItem(
-                text,
-                startMeasure + localMeasure,
-                itemIndex: -1,
-                entry.Root.Position,
-                staffIndex,
-                useTiming: true,
-                timing: timing,
-                structure: structure)
-            {
-                RomanText = Roman(structure, startMeasure + localMeasure),
-                DisplayMode = mode,
-            });
-
-            var dur = entry.Duration?.ToFraction() ?? defaultDuration;
-            if (entry.Duration != null)
-                defaultDuration = dur;
+            if (node is ChordExtendSyntax head)
+                // Nothing before it in THIS bar to extend ('.' never crosses a
+                // barline). The group stays silent but keeps its time.
+                _gridWarnings.Add(new ChordRowGridWarning(
+                    head.DotToken.Position, HeadDot: true, slotCount, timeBeats, timeBeatType));
+            emit(node, timing, dur);
             timing += dur;
+            at = next;
         }
     }
+
+    private static int PositionOf(SyntaxNode node) => node switch
+    {
+        RestSyntax rest => rest.RestToken.Position,
+        ChordExtendSyntax dot => dot.DotToken.Position,
+        _ => node.Position,
+    };
 
     /// <summary>The chord entries and barlines of a chord-track inner section (the
     /// nodes between its name and closing brace).</summary>
@@ -247,11 +313,10 @@ internal sealed class ChordNameCollector
 
     /// <summary>
     /// Collects independent chord parts (<c>chords name { … }</c>) into chord-name
-    /// items. Unlike <c>chordnames</c>, a chord part fills each measure by the
-    /// per-count default rhythm table (<see cref="ChordRhythm"/>) when the user omits
-    /// durations. If ANY chord in a measure carries an explicit duration that measure
-    /// is "explicit mode": unspecified chords carry the previous duration forward
-    /// (note-like), so the last chord absorbs whatever fills the bar.
+    /// items. A chord row is measure-relative (GRAMMAR_AUDIT 8.1): each bar's
+    /// written slots — entries, rests, '.' extensions — divide it on the meter's
+    /// beat grid (<see cref="ChordRhythm.SlotDurations"/>); no durations are
+    /// written.
     /// </summary>
     /// <returns>
     /// The chord row's measure skeleton: one measure per bar, each filled with
@@ -292,7 +357,7 @@ internal sealed class ChordNameCollector
                 bars++;
                 pendingEntries = false;
             }
-            else if (item is ChordEntrySyntax or RestSyntax)
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
             {
                 atRunStart = false;
                 pendingEntries = true;
@@ -387,7 +452,7 @@ internal sealed class ChordNameCollector
                         Commit(t);
                     }
                 }
-                else if (item is ChordEntrySyntax or RestSyntax)
+                else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                 {
                     atRunStart = false;
                     pending.Add(item);
@@ -437,35 +502,22 @@ internal sealed class ChordNameCollector
 
     /// <summary>
     /// Emits the chord-name items for one measure of a chord part and returns the
-    /// matching invisible spacer rests. Each chord's start timing / duration comes from
-    /// the default rhythm table (no explicit durations) or, in "explicit mode" (any
-    /// explicit duration present), carry-forward explicit durations.
+    /// matching invisible spacer rests. Timing comes from the bar's slot grid
+    /// (<see cref="ChordRhythm.SlotDurations"/>): each entry/rest takes its slot
+    /// plus its trailing '.' extensions, merged into one spacer, so <c>| C . . G7 |</c>
+    /// carries two spacers (a dotted half and a quarter) just as the explicit
+    /// durations used to.
     /// </summary>
     private ImmutableArray<MusicItem> EmitChordPartMeasure(
         List<SyntaxNode> entries, int measureIndex, int staffIndex, int timeBeats, int timeBeatType,
         ChordDisplayMode mode = ChordDisplayMode.Names)
     {
-        static DurationSyntax? DurationOf(SyntaxNode n) => n switch
+        var rests = ImmutableArray.CreateBuilder<MusicItem>();
+        ForEachSlotGroup(entries, timeBeats, timeBeatType, (node, timing, dur) =>
         {
-            ChordEntrySyntax e => e.Duration,
-            RestSyntax r => r.Duration,
-            _ => null,
-        };
-        bool anyExplicit = entries.Any(e => DurationOf(e) != null);
-        ImmutableArray<Fraction>? table = anyExplicit
-            ? null
-            : ChordRhythm.DefaultDurations(entries.Count, timeBeats, timeBeatType);
-
-        var rests = ImmutableArray.CreateBuilder<MusicItem>(entries.Count);
-        var timing = Fraction.Zero;
-        var carry = Fraction.Quarter;
-        for (int i = 0; i < entries.Count; i++)
-        {
-            int position;
-            int measureCount = 1;
-            if (entries[i] is ChordEntrySyntax entry)
+            int position = PositionOf(node);
+            if (node is ChordEntrySyntax entry)
             {
-                position = entry.Root.Position;
                 var (text, structure) = ResolveChordEntry(entry);
                 _items.Add(new ChordNameItem(
                     text, measureIndex, itemIndex: -1, position,
@@ -476,85 +528,67 @@ internal sealed class ChordNameCollector
                     DisplayMode = mode,
                 });
             }
-            else
+            else if (node is RestSyntax rest && rest.RestToken.Text != "s")
             {
-                // r / R print "N.C." at their moment; s prints nothing. All three
-                // advance the timing (see ProcessRun's remark).
-                var rest = (RestSyntax)entries[i];
-                position = rest.RestToken.Position;
-                measureCount = rest.MeasureCount;
-                if (rest.RestToken.Text != "s")
-                    _items.Add(new ChordNameItem(
-                        "N.C.", measureIndex, itemIndex: -1, position,
-                        staffIndex: staffIndex, useTiming: true, timing: timing,
-                        isChordRow: true));
+                // r / R print "N.C." at their slot; s prints nothing. All three
+                // occupy it (see ProcessRun's remark). A bar-head '.' group prints
+                // nothing either (recorded by the grid walk, LYS2010).
+                _items.Add(new ChordNameItem(
+                    "N.C.", measureIndex, itemIndex: -1, position,
+                    staffIndex: staffIndex, useTiming: true, timing: timing,
+                    isChordRow: true));
             }
-
-            Fraction dur;
-            if (DurationOf(entries[i]) is { } d)
-            {
-                dur = d.ToFraction();
-                carry = dur;
-            }
-            else if (table != null && i < table.Value.Length)
-            {
-                dur = table.Value[i];
-            }
-            else
-            {
-                dur = carry; // explicit-mode remainder, or unsupported meter/count
-            }
-            dur *= new Fraction(measureCount, 1);
             // BaseDuration = the resolved fraction (Dots 0): only its Duration drives
             // the spacing spring, so a dotted/compound value spaces correctly too.
             rests.Add(new RestItem(dur, 0, position) { IsSpacer = true });
-            timing += dur;
-        }
-        return rests.MoveToImmutable();
+        });
+        return rests.ToImmutable();
     }
 
     /// <summary>
-    /// Resolves a chord entry to its display text and (when the quality is known) its
-    /// structure. The root step comes from the pitch letter, the alteration from its
-    /// accidental; an unrecognized quality token is shown verbatim.
+    /// Resolves a chord entry — the printed symbol its token run spells — to its
+    /// display text and (when the quality is registered) its structure, through
+    /// the ONE string grammar <c>@chord</c> uses too
+    /// (<see cref="Music.ChordStructure.TryParseChordEntry"/>). An unregistered
+    /// quality on a valid root keeps the raw suffix: the interval set is unknown
+    /// (no note expansion), but the root resolves to a Roman degree, so
+    /// <c>Cm13</c> shows "Cm13" / "Im13" instead of an un-converted literal.
     /// </summary>
     private static (string Text, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(ChordEntrySyntax entry)
     {
-        int rootStep = "cdefgab".IndexOf(entry.Root.BaseName);
-        int rootAlter = entry.Root.AccidentalOffset;
-        int? bassStep = null, bassAlter = null;
-        if (entry.Bass is { } bass)
-        {
-            bassStep = "cdefgab".IndexOf(bass.BaseName);
-            bassAlter = bass.AccidentalOffset;
-        }
+        string symbol = entry.SymbolText;
+        if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
+            return (parsed.DisplayName, parsed);
 
-        if (rootStep >= 0 && LilySharp.Core.Music.ChordQualityRegistry.TryResolve(entry.QualityText, out var quality))
+        int slash = symbol.IndexOf('/');
+        string main = slash >= 0 ? symbol[..slash] : symbol;
+        string? bassText = slash >= 0 ? symbol[(slash + 1)..] : null;
+        if (LilySharp.Core.Music.ChordStructure.TryParseSymbolPitch(main, out int step, out int alter, out string qual))
         {
-            var structure = new LilySharp.Core.Music.ChordStructure(
-                rootStep, rootAlter, quality, bassStep, bassAlter,
-                BassIsAdded: entry.BassIsAdded);
-            return (structure.DisplayName, structure);
-        }
-
-        // Unknown quality (e.g. "M7" or an extended chord not in the vocabulary). With
-        // a valid root we still carry a structure holding the raw suffix: the interval
-        // set is unknown (no note expansion), but the root resolves to a Roman degree,
-        // so `c:M7` shows "CM7" / "IM7" instead of the un-converted literal.
-        if (rootStep >= 0)
-        {
+            int? bassStep = null, bassAlter = null;
+            if (bassText != null
+                && LilySharp.Core.Music.ChordStructure.TryParseSymbolPitch(
+                    bassText, out int bs, out int ba, out string bassRest)
+                && bassRest.Length == 0)
+            {
+                bassStep = bs;
+                bassAlter = ba;
+            }
             var raw = new LilySharp.Core.Music.ChordStructure(
-                rootStep, rootAlter, LilySharp.Core.Music.ChordQuality.Major,
-                bassStep, bassAlter, RawSuffix: entry.QualityText,
-                BassIsAdded: entry.BassIsAdded);
+                step, alter, LilySharp.Core.Music.ChordQuality.Major,
+                bassStep, bassAlter, RawSuffix: qual);
             return (raw.DisplayName, raw);
         }
 
-        // Unparseable root — show the raw name with no structure at all.
-        var sb = new System.Text.StringBuilder();
-        sb.Append(entry.Root.PitchName).Append(entry.QualityText);
-        if (bassStep is int bs)
-            sb.Append('/').Append(LilySharp.Core.Music.ChordStructure.SpellPitch(bs, bassAlter ?? 0));
-        return (sb.ToString(), null);
+        // Unparseable root — show the raw run with no structure at all.
+        return (symbol, null);
     }
 }
+
+/// <summary>One grid fault a chord-row walk recorded, surfaced by
+/// <c>ChordRowGridValidator</c>: a bar whose slot count fits no beat-grid shape
+/// (<see cref="HeadDot"/> false — the bar fell back to equal division, LYS2009),
+/// or a '.' at the head of a bar with nothing to extend (<see cref="HeadDot"/>
+/// true, LYS2010).</summary>
+public readonly record struct ChordRowGridWarning(
+    int SourcePosition, bool HeadDot, int SlotCount, int Beats, int BeatType);

@@ -694,7 +694,7 @@ public static class DiagnosticCodes
     public const string ChordMixesPitchesAndDegrees = "LYS1019";
 
     /// <summary>Warning: a bare <c>@chord</c> can't name its chord — the notes match
-    /// no known chord quality. Use the explicit form <c>@chord(c:maj7)</c>.</summary>
+    /// no known chord quality. Use the explicit form <c>@chord(Cmaj7)</c>.</summary>
     public const string ChordNotRecognized = "LYS1020";
 
     /// <summary>Syntax error: a scale degree is 1-based (1 = root/unison), so
@@ -717,6 +717,21 @@ public static class DiagnosticCodes
     // LYS2008 (EmptyPlaceholderMeasure) was retired: an empty `| |` measure now
     // reports the ordinary underfull warning (LYS2001, MeasureIncomplete) over the
     // region between the barlines — zero duration is just the extreme underfull case.
+
+    /// <summary>Measure warning: a chord-row bar's slot count does not fit the
+    /// meter's beat grid. Entries and <c>.</c> extensions are measure-relative
+    /// (GRAMMAR_AUDIT 8.1): one slot takes the whole bar, a beat-count multiple
+    /// subdivides each beat, a divisor groups whole beats — anything else (three
+    /// slots in 4/4, say) matches no beat and the row falls back to dividing the
+    /// bar equally, which this warning names (write <c>.</c> to reach a beat
+    /// count: <c>| C F G |</c> → <c>| C F G . |</c>).</summary>
+    public const string ChordSlotMismatch = "LYS2009";
+
+    /// <summary>Measure error: a <c>.</c> at the head of a chord-row bar has no
+    /// entry before it in that bar to extend — a <c>.</c> never crosses a barline
+    /// (write <c>| C | C |</c>, not <c>| C | . |</c>). The slot still counts, so
+    /// the bar's grid stays honest; the slot itself prints nothing.</summary>
+    public const string ChordExtendAtBarHead = "LYS2010";
 
     // Lyric diagnostics (LYS4xxx — warnings, plus one error)
 

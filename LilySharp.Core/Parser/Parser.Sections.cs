@@ -196,7 +196,7 @@ internal sealed partial class Parser
     }
 
 
-    // chords name { c | g:7 c | } — a chord-symbol stream: an independent chord
+    // chords name { C | G7 C | } — a chord-symbol stream: an independent chord
     // part, placed in a score as a row (`chords name` — above the staff it stands
     // directly over, or a lead-sheet row on its own). The NAMELESS form (the
     // former `chordnames`, which auto-aligned above "the co-written part's staff")
@@ -273,88 +273,90 @@ internal sealed partial class Parser
     /// position-based feature downstream, and <c>ToFullString() == source</c> is the
     /// detector.
     /// </remarks>
+    private int _strayChordRunEnd = -1;
+
     private SyntaxToken SkipStrayChordToken()
     {
         string text = Current.Text;
-        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, text.Length);
-        // By far the likeliest mistake: the chord written the way it PRINTS. A root is
-        // written lowercase and printed uppercase (GRAMMAR §ChordEntry — `c` = C).
-        bool looksLikePrintedRoot = text.Length > 0 && text[0] is >= 'A' and <= 'G';
+        int ink = _textPosition + Current.LeadingTriviaWidth;
+        var span = new TextSpan(ink, text.Length);
+        // One report per GLUED run: the retired entry format ('a:m', 'g2:7')
+        // strays as several adjacent tokens, and three errors for one chord
+        // would bury the one message that matters.
+        bool continuesRun = ink == _strayChordRunEnd;
+        _strayChordRunEnd = ink + text.Length;
+        if (continuesRun)
+            return Advance();
+        // By far the likeliest mistake: the RETIRED lowercase entry format (the
+        // LilyPond-shaped 'a:m' / 'g2:7' that Lily# used until 2026-08-23), or a
+        // bare lowercase root by analogy with it.
+        bool looksLikeRetiredEntry = SyntaxFacts.IsPitchKind(Current.Kind);
         _diagnostics.Error(span, DiagnosticCodes.ChordBlockBadMember,
-            looksLikePrintedRoot
-                ? $"A chord root is written in LOWERCASE: '{char.ToLowerInvariant(text[0])}{text[1..]}' "
-                  + $"is what prints as '{text}'."
-                : $"'chords' takes chord entries and barlines; '{text}' is neither.");
+            looksLikeRetiredEntry
+                ? $"A chord is written the way it PRINTS: an UPPERCASE root with '#'/'b' "
+                  + $"and a bare quality ('Am', 'G7', 'F#m', 'Bb'). The lowercase ':' entry "
+                  + $"('a:m', 'g2:7') and its durations were replaced: a bar's entries divide "
+                  + $"it on the beat grid, and '.' holds the previous chord one more beat."
+                : $"'chords' takes chord symbols ('Am', 'G7'), '.', rests and barlines; "
+                  + $"'{text}' is none of these.");
         return Advance();
     }
 
-    /// <summary>One item of a chord-block body: a barline or a chord entry, or null
-    /// for a stray token (the caller reports and keeps it).</summary>
+    /// <summary>One item of a chord-block body: a barline, a chord symbol, a slot
+    /// extension <c>.</c>, or a bare rest — or null for a stray token (the caller
+    /// reports and keeps it).</summary>
     private GreenNode? ParseChordBodyItem()
     {
         if (SyntaxFacts.IsMeasureBarlineKind(Current.Kind))
             return ParseBarline();
-        if (SyntaxFacts.IsPitchKind(Current.Kind))
+        // '.' — the previous entry holds through one more slot of the measure's
+        // beat grid (GRAMMAR_AUDIT 8.1: measure-relative placement, no durations).
+        if (Check(SyntaxKind.Dot))
+            return new ChordExtendGreen(Advance());
+        // A chord symbol as it prints: an UPPERCASE root opens a glued token run
+        // (Am, F#m, C7-9, Cmaj7/E). 'R' is not a root — the rest arm below has it,
+        // which is what keeps "uppercase = root" and "R = rest" out of each
+        // other's way (GRAMMAR_AUDIT 9, the R1 measurement).
+        if (Current.Kind == SyntaxKind.Identifier
+            && Current.Text.Length > 0 && Current.Text[0] is >= 'A' and <= 'G')
             return ParseChordEntry();
         // r / s / R in a chord row: rests print the no-chord symbol, spacers
-        // print nothing; all advance the row's timing (collector side).
+        // print nothing; each occupies ONE SLOT of the grid (no duration — a
+        // glued digit falls to the stray-token report like any other).
         // LILYPOND-REF: scm/scheme-engravers.scm:1520-1527 Current_chord_text_engraver
         //   — general-rest-event sets currentChordText to noChordSymbol.
         if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full)
-            return ParseRest();
+            return new RestGreen(Advance(), null);
         return null;
     }
 
-    private static bool IsQualityToken(SyntaxKind kind) => kind is SyntaxKind.Identifier
-        or SyntaxKind.IntegerLiteral
-        or SyntaxKind.Dot or SyntaxKind.Minus;
+    // A token a chord-symbol run may continue with, GLUED to the previous one:
+    // letters/digits (Am, G7, maj7), '#' (a BadToken everywhere else — sharp
+    // here, tolerated by the Parser constructor's chords-body region), '+'/'-'
+    // alterations (C7-9, C+), '/' bass. The STRING grammar is
+    // ChordStructure.TryParseChordEntry's; this set only bounds the run.
+    private static bool IsChordSymbolToken(SyntaxToken token) => token.Kind switch
+    {
+        SyntaxKind.Identifier or SyntaxKind.IntegerLiteral
+            or SyntaxKind.Minus or SyntaxKind.Plus or SyntaxKind.Slash => true,
+        SyntaxKind.BadToken => token.Text == "#",
+        _ => false,
+    };
 
-    // root[duration][:quality][/bass | /+bass] — reuses the pitch and duration
-    // grammar.
+    // One printed chord symbol: the glued run from its uppercase root. The run,
+    // not the token, is the entry (the MarkArgument rule): ChordEntrySyntax
+    // re-joins the texts and the collector hands them to the ONE string parser.
     private ChordEntryGreen ParseChordEntry()
     {
-        var root = ParsePitch();
-        var duration = ParseOptionalDuration();
-
-        SyntaxToken? colon = null, slash = null, plus = null;
-        GreenNode? bass = null;
-        var qualityTokens = new List<GreenNode?>();
-
-        // ':quality' — the WHOLE run of tokens directly after the colon with no
-        // intervening whitespace, so m7 / maj7 / 7sus4 / m7.5- are captured as one
-        // string instead of just their first token. Whitespace (a token's trailing
-        // trivia), a '/' bass, a barline or '}' ends the run.
-        if (Check(SyntaxKind.Colon))
+        var tokens = new List<GreenNode?>();
+        var prev = Advance();
+        tokens.Add(prev);
+        while (prev.TrailingTriviaWidth == 0 && IsChordSymbolToken(Current))
         {
-            colon = Advance();
-            if (IsQualityToken(Current.Kind))
-            {
-                var prev = Advance();
-                qualityTokens.Add(prev);
-                while (prev.TrailingTriviaWidth == 0 && IsQualityToken(Current.Kind))
-                {
-                    prev = Advance();
-                    qualityTokens.Add(prev);
-                }
-            }
+            prev = Advance();
+            tokens.Add(prev);
         }
-
-        // '/bass' (inversion) or '/+bass' (added bass) — without the '+' branch the
-        // '+' fell to the caller's stray-token recovery and the following pitch
-        // opened a NEW entry, silently mangling the row (no diagnostic).
-        // LILYPOND-REF: lily/parser.yy:324 CHORD_BASS — the "/+" token;
-        // LILYPOND-REF: lily/parser.yy:3877-3882 chord_separator — CHORD_SLASH
-        // steno_tonic_pitch | CHORD_BASS steno_tonic_pitch.
-        if (Check(SyntaxKind.Slash))
-        {
-            slash = Advance();
-            if (Check(SyntaxKind.Plus))
-                plus = Advance();
-            if (SyntaxFacts.IsPitchKind(Current.Kind))
-                bass = ParsePitch();
-        }
-
-        return new ChordEntryGreen(root, duration, colon, [.. qualityTokens], slash, plus, bass);
+        return new ChordEntryGreen([.. tokens]);
     }
 
     /// <summary>Any barline token that ends a lyric measure (excludes the dashed

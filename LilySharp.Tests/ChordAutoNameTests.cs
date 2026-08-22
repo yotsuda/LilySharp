@@ -24,7 +24,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Bare <c>@chord</c> on a chord auto-derives the chord symbol from its notes:
 /// the root is the first member, the remaining members' pitch classes give the
-/// quality. The explicit form stays <c>@chord(c:maj7)</c>.
+/// quality. The explicit form stays <c>@chord(Cmaj7)</c>.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class ChordAutoNameTests

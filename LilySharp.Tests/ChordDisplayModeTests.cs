@@ -35,7 +35,7 @@ public class ChordDisplayModeTests
         key c major
         part melody { clef treble }
         section A { melody { e'4 e' f' g' | a' g' e' d' | } }
-        chords harmony { c1 | a1:m | }
+        chords harmony { C | Am | }
         form main { A }
         score main "names" { chords harmony  staff melody }
         score main "roman" { chords harmony as roman  staff melody }
@@ -87,8 +87,8 @@ public class ChordDisplayModeTests
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { c'4@chord(c:maj7) c' g' g' | } }
-            chords harmony { c:maj7 | }
+            section A { melody { c'4@chord(Cmaj7) c' g' g' | } }
+            chords harmony { Cmaj7 | }
             form main { A }
             score main { chords harmony as roman  staff melody }
             """);
@@ -109,7 +109,7 @@ public class ChordDisplayModeTests
             key c major
             part melody { clef treble }
             section A { melody { c'4 c' c' c' | key g major d' d' d' d' | } }
-            chords harmony { c1 | g1 | }
+            chords harmony { C | G | }
             form main { A }
             score main { chords harmony as roman  staff melody }
             """);
