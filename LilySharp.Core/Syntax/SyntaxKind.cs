@@ -129,6 +129,8 @@ public enum SyntaxKind : ushort
     ComposerKeyword,
     /// <summary>The <c>fonts</c> keyword — the block that binds a face per text role.</summary>
     FontsKeyword,
+    /// <summary>The <c>paper</c> keyword — the block that sets the page's dimensions.</summary>
+    PaperKeyword,
     /// <summary>The <c>embedded</c> keyword.</summary>
     EmbeddedKeyword,
     /// <summary>The <c>tempo</c> keyword.</summary>
@@ -358,6 +360,8 @@ public enum SyntaxKind : ushort
     MetadataDeclaration,
     /// <summary>A font directive declaration node.</summary>
     FontDeclaration,
+    /// <summary>A paper directive declaration node (<c>paper { KEY VALUE… }</c>).</summary>
+    PaperDeclaration,
     /// <summary>A variable declaration node (legacy, <c>name = { ... }</c>).</summary>
     VariableDeclaration,
     /// <summary>A phrase declaration node (<c>phrase name { ... }</c>).</summary>

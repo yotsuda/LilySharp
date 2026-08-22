@@ -516,6 +516,160 @@ public sealed class FontDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Paper directive — <c>paper { KEY VALUE… }</c>, setting the page's dimensions.
+/// ⚠️ A node whose <c>IsBlock</c> is false is the refused blockless form, kept in the
+/// tree (with its diagnostic) so no source position slides — it sets nothing.
+/// </summary>
+/// <remarks>
+/// The green node holds the block's tokens FLAT, like the font block's: the entries are
+/// read back here, so a growing paper vocabulary grows <c>PaperPlanReader</c>'s table
+/// and nothing in the syntax tree. The one shape the font walker does not have is the
+/// NESTED spacing block (<c>systemSystemSpacing { basicDistance 12 }</c>), which this
+/// walker tracks with a brace depth of at most one — the parser refuses a deeper one.
+/// </remarks>
+public sealed class PaperDeclarationSyntax : SyntaxNode
+{
+    internal PaperDeclarationSyntax(PaperDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>paper</c> keyword token.</summary>
+    public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>True when this directive is written as <c>paper { … }</c>.</summary>
+    public bool IsBlock =>
+        SlotCount > 1 && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+
+    /// <summary>
+    /// One <c>KEY value</c> line of a nested spacing block.
+    /// </summary>
+    /// <param name="Key">The sub-key as written (<c>basicDistance</c>, …).</param>
+    /// <param name="KeyToken">The sub-key's token, for a diagnostic's span.</param>
+    /// <param name="MinusToken">The sign, when the value is negative.</param>
+    /// <param name="NumberToken">The value's number token, or null when none followed.</param>
+    /// <param name="UnitToken">The glued unit suffix (<c>mm</c>/<c>cm</c>/<c>in</c>), if any.</param>
+    public readonly record struct SubEntry(
+        string Key,
+        SyntaxTokenNode KeyToken,
+        SyntaxTokenNode? MinusToken,
+        SyntaxTokenNode? NumberToken,
+        SyntaxTokenNode? UnitToken);
+
+    /// <summary>
+    /// One entry of the block form: a scalar (<c>paperWidth 210mm</c>), a bare flag
+    /// (<c>raggedRight</c>), or a nested spacing block
+    /// (<c>systemSystemSpacing { … }</c>).
+    /// </summary>
+    /// <param name="Key">The key as written.</param>
+    /// <param name="KeyToken">The key's token, for a diagnostic's span.</param>
+    /// <param name="MinusToken">The sign, when the scalar value is negative.</param>
+    /// <param name="NumberToken">The scalar value's number token, or null.</param>
+    /// <param name="UnitToken">The glued unit suffix, if any.</param>
+    /// <param name="HasBlock">True when the key is followed by a nested block.</param>
+    /// <param name="SubEntries">The nested block's lines; empty otherwise.</param>
+    public readonly record struct Entry(
+        string Key,
+        SyntaxTokenNode KeyToken,
+        SyntaxTokenNode? MinusToken,
+        SyntaxTokenNode? NumberToken,
+        SyntaxTokenNode? UnitToken,
+        bool HasBlock,
+        IReadOnlyList<SubEntry> SubEntries);
+
+    /// <summary>
+    /// The block's entries. Empty for the blockless form.
+    /// </summary>
+    /// <remarks>
+    /// An entry runs from its key to the next KEY, the same convention as the font
+    /// block — there is no separator in this language. A unit suffix is a word GLUED to
+    /// its number (<c>210mm</c>, one quantity, like LilyPond's <c>210\mm</c>): a spaced
+    /// <c>210 mm</c> reads as a new key named <c>mm</c>, which the reader refuses with
+    /// the glued spelling in the message rather than binding a second spelling silently.
+    /// </remarks>
+    public IReadOnlyList<Entry> Entries
+    {
+        get
+        {
+            if (!IsBlock)
+                return [];
+            var entries = new List<Entry>();
+            SyntaxTokenNode? keyToken = null, minus = null, number = null, unit = null;
+            bool hasBlock = false;
+            List<SubEntry> subEntries = [];
+            SyntaxTokenNode? subKeyToken = null, subMinus = null, subNumber = null, subUnit = null;
+            int depth = 0;
+
+            void FlushSub()
+            {
+                if (subKeyToken != null)
+                    subEntries.Add(new SubEntry(subKeyToken.Text, subKeyToken, subMinus, subNumber, subUnit));
+                subKeyToken = null; subMinus = null; subNumber = null; subUnit = null;
+            }
+
+            void Flush()
+            {
+                FlushSub();
+                if (keyToken != null)
+                    entries.Add(new Entry(keyToken.Text, keyToken, minus, number, unit, hasBlock, [.. subEntries]));
+                keyToken = null; minus = null; number = null; unit = null;
+                hasBlock = false;
+                subEntries = [];
+            }
+
+            for (int i = 2; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode token)
+                    continue;
+                switch (token.Kind)
+                {
+                    case SyntaxKind.OpenBrace:
+                        // The parser refused any deeper brace, so this opens the one
+                        // nested spacing block of the OPEN entry.
+                        depth = 1;
+                        hasBlock = true;
+                        continue;
+                    case SyntaxKind.CloseBrace:
+                        if (depth == 1) { depth = 0; continue; }
+                        continue; // the block's own closer
+                    case SyntaxKind.Minus:
+                        if (depth == 1) subMinus = token; else minus = token;
+                        continue;
+                    case SyntaxKind.IntegerLiteral:
+                    case SyntaxKind.DecimalLiteral:
+                        if (depth == 1) subNumber ??= token; else number ??= token;
+                        continue;
+                }
+                // A word. Glued to the entry's number it is that number's UNIT;
+                // anything else starts the next entry (or sub-entry).
+                if (depth == 1)
+                {
+                    if (subNumber != null && subUnit == null && token.Span.Start == subNumber.Span.End)
+                    {
+                        subUnit = token;
+                        continue;
+                    }
+                    FlushSub();
+                    subKeyToken = token;
+                }
+                else
+                {
+                    if (number != null && unit == null && token.Span.Start == number.Span.End)
+                    {
+                        unit = token;
+                        continue;
+                    }
+                    Flush();
+                    keyToken = token;
+                }
+            }
+            Flush();
+            return entries;
+        }
+    }
+}
+
+/// <summary>
 /// Variable declaration: name = expr
 /// </summary>
 public sealed class VariableDeclarationSyntax : SyntaxNode

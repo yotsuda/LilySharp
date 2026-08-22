@@ -98,7 +98,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
         | 'transpose' | 'octave' | 'using' | 'break' | 'nobreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
-        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts'
+        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper'
         | 'override' | 'revert' | 'once'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
@@ -149,6 +149,7 @@ File           = { TopLevelItem } ;
 
 TopLevelItem   = MetadataDecl                     (* title, composer *)
                | FontDecl                         (* text fonts, per role *)
+               | PaperDecl                        (* page dimensions *)
                | GlobalSetting                    (* tempo, time, key *)
                | PartDecl                         (* part definitions *)
                | PhraseDecl                       (* reusable music fragments *)
@@ -309,6 +310,73 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
      chordName serif
      title     "Cormorant"
      embedded
+   }
+*)
+
+### 2.5 Paper
+
+PaperDecl      = 'paper' , PaperBlock ;
+PaperBlock     = '{' , { PaperEntry } , '}' ;
+PaperEntry     = PaperScalarKey , Length
+               | 'raggedRight'
+               | SpacingKey , SpacingBlock ;
+PaperScalarKey = 'paperWidth' | 'paperHeight'
+               | 'leftMargin' | 'rightMargin' | 'topMargin' | 'bottomMargin'
+               | 'indent' | 'shortIndent'
+               | 'topSystemPadding' | 'spacingIncrement' ;
+SpacingKey     = 'systemSystemSpacing' | 'scoreSystemSpacing' | 'markupSystemSpacing'
+               | 'scoreMarkupSpacing' | 'markupMarkupSpacing' | 'topSystemSpacing'
+               | 'lastBottomSpacing'
+               | 'staffStaffSpacing' | 'staffGroupStaffSpacing'
+               | 'defaultStaffStaffSpacing'
+               | 'nonStaffRelatedStaffSpacing' | 'nonStaffUnrelatedStaffSpacing'
+               | 'nonStaffNonStaffSpacing' ;
+SpacingBlock   = '{' , { SpacingEntry } , '}' ;
+SpacingEntry   = ( 'basicDistance' | 'minimumDistance' | 'padding' ) , Length
+               | 'stretchability' , SignedNumber ;
+Length         = SignedNumber , [ LengthUnit ] ;
+LengthUnit     = 'mm' | 'cm' | 'in' ;
+SignedNumber   = [ '-' ] , ( Integer | Decimal ) ;
+
+(* THE PAGE'S DIMENSIONS — paper size, margins, indents, and the vertical spacing
+   specs. One per file (a second one warns and the last wins, like every repeated
+   global). The vocabulary is LilyPond's \paper variables camelCased, and every
+   default equals LilyPond's a4 default.
+
+   A BARE NUMBER IS STAFF SPACES — the unit everything else in this language is
+   measured in. A physical unit is a word GLUED to its number, one quantity:
+   210mm, 29.7cm, 8.5in (LilyPond spells the same thing 210\mm). A spaced
+   `210 mm` reads as a key named mm and is refused with the glued spelling in the
+   message. The conversion is 1 staff space = 5 TeX points = 127/72.27 mm, rounded
+   to six decimals — exactly how the engine's own defaults were computed, so a book
+   that states a default IS the default, byte for byte.
+
+   THE STAFF-SPACING FAMILY LIVES HERE, not in override, although LilyPond keeps it
+   on grobs (StaffGrouper.staff-staff-spacing) and contexts: every one of these
+   quantities is applied score-wide in one pass, and paper is the spelling whose
+   meaning IS score-wide, while an override would drag in a scope machinery (once,
+   staff tags) that would parse and then silently not apply (user decision
+   2026-08-23, GRAMMAR_AUDIT 2.1/2.2).
+
+   NOT HERE, deliberately: a staff-size knob (the staff space is the unit itself —
+   scaling it is a different feature, LilyPond's set-global-staff-size), and the
+   line/page-breaking algorithm switches (engine tuning, not a dimension of the
+   picture). `raggedRight` is a bare flag — writing it turns it on.
+
+   `stretchability` is unitless (a spring flexibility), so a physical unit on it is
+   refused. paperHeight 0 keeps the single content-driven page.
+
+   An unknown key is an ERROR, the fonts block's reasoning: a setting nobody reads
+   looks exactly like one that works. A key set twice in one block warns and the
+   last one wins. *)
+
+(* Example:
+   paper {
+     paperWidth 210mm
+     paperHeight 297mm
+     leftMargin 15mm
+     raggedRight
+     systemSystemSpacing { basicDistance 12  stretchability 60 }
    }
 *)
 

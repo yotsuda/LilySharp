@@ -559,6 +559,57 @@ public class EditorColouringTests
     }
 
     [Fact]
+    public void EveryPaperBlockKey_IsColoured()
+    {
+        // The fonts-block fact again, in the paper vocabulary: none of these words is
+        // reserved (`part indent { … }` compiles), so the reserved-word check above cannot
+        // reach them and only the #paper-block context may paint them.
+        string[] keys = [.. LanguageVocabulary.PaperScalarKeys, "raggedRight",
+            .. LanguageVocabulary.PaperSpacingKeys, .. LanguageVocabulary.PaperSpacingSubKeys];
+        Assert.True(keys.Length > 25, $"only {keys.Length} key spellings came back");
+
+        string[] plain = keys.Where(k => !IsColoured(k)).ToArray();
+        Assert.True(plain.Length == 0,
+            "a paper block takes these and the editor leaves them plain: " + string.Join(" ", plain));
+
+        // The reverse direction, the one `channel` failed for the part header: a word the
+        // block colours must be one the reader knows, or the grammar's list drifts into
+        // words nobody may write.
+        foreach (string key in PaperBlockWordsInTheGrammar())
+            Assert.Contains(key, keys, StringComparer.Ordinal);
+    }
+
+    /// <summary>The key spellings the <c>paper-block</c> context claims, from its own
+    /// alternations — <c>match</c> AND <c>begin</c>, because the spacing keys open a
+    /// nested block and live in a <c>begin</c>. The outer <c>paper</c> begin is not
+    /// walked (the word is reserved and checked by the keyword direction).</summary>
+    private static string[] PaperBlockWordsInTheGrammar()
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var block = doc.RootElement.GetProperty("repository").GetProperty("paper-block");
+        var found = new List<string>();
+        Walk(block.GetProperty("patterns"), found);
+        Assert.NotEmpty(found);
+        return [.. found.Distinct(StringComparer.Ordinal).OrderBy(w => w, StringComparer.Ordinal)];
+
+        static void Walk(JsonElement e, List<string> into)
+        {
+            if (e.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var x in e.EnumerateArray()) Walk(x, into);
+                return;
+            }
+            if (e.ValueKind != JsonValueKind.Object) return;
+            foreach (string prop in new[] { "match", "begin" })
+                if (e.TryGetProperty(prop, out var rx) && rx.ValueKind == JsonValueKind.String)
+                    foreach (Match group in Regex.Matches(rx.GetString()!, @"\(([A-Za-z][A-Za-z0-9|-]*)\)"))
+                        into.AddRange(group.Groups[1].Value.Split('|'));
+            if (e.TryGetProperty("patterns", out var nested))
+                Walk(nested, into);
+        }
+    }
+
+    [Fact]
     public void EveryPartHeaderWord_IsColoured()
     {
         // ★ The same fact as the fonts block, in five more vocabularies, and reported by the user

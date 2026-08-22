@@ -1058,4 +1058,36 @@ public static class DiagnosticCodes
     /// a plausible first guess and gets the block to write, with the writer's own face name
     /// in it, rather than "Expected 'OpenBrace'".</summary>
     public const string FontsNeedsABlock = "LYS8008";
+
+    // Paper diagnostics (LYS9xxx)
+
+    /// <summary>Paper error: a <c>paper { }</c> entry names a key that is not in the paper
+    /// vocabulary. Refused rather than ignored, the same reasoning as
+    /// <see cref="UnknownFontRole"/>: a setting nobody reads looks exactly like one that
+    /// works. When the stray key is a unit word (<c>mm</c>), the message shows the glued
+    /// spelling (<c>210mm</c>) instead of the vocabulary list.</summary>
+    public const string UnknownPaperKey = "LYS9001";
+
+    /// <summary>Paper warning: one <c>paper { }</c> block sets the same key twice. The
+    /// LAST one takes effect, like every other repeated setting in the language; the
+    /// earlier one is named so it is not silently dropped.</summary>
+    public const string DuplicatePaperKey = "LYS9002";
+
+    /// <summary>Paper error: a <c>paper { }</c> entry has no usable value — a key with
+    /// nothing after it, a scalar where the key wants a nested spacing block (or the
+    /// reverse), or a stray token that is neither a key nor a number.</summary>
+    public const string PaperEntryMissingValue = "LYS9003";
+
+    /// <summary>Paper error: a number carries a glued suffix that is not a unit of this
+    /// language — the units are <c>mm</c>, <c>cm</c> and <c>in</c>, and a bare number is
+    /// staff spaces.</summary>
+    public const string UnknownPaperUnit = "LYS9004";
+
+    /// <summary>Paper error: <c>paper</c> written without a block. Mirrors
+    /// <see cref="FontsNeedsABlock"/> — the block to write is in the message.</summary>
+    public const string PaperNeedsABlock = "LYS9005";
+
+    /// <summary>Paper error: a physical unit on a unitless quantity —
+    /// <c>stretchability</c> is a spring flexibility, not a length.</summary>
+    public const string PaperUnitOnUnitless = "LYS9006";
 }

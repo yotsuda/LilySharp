@@ -90,6 +90,19 @@ public static class LanguageVocabulary
     /// <inheritdoc cref="MinStaffLines"/>
     public static int MaxStaffLines => Svg.Collector.StaffSpec.MaxLines;
 
+    // ===== The PAPER BLOCK's vocabularies (GRAMMAR.md: PaperDecl) =====
+
+    /// <summary>The scalar length keys a <c>paper { }</c> entry takes
+    /// (<c>paperWidth 210mm</c>).</summary>
+    public static IReadOnlyCollection<string> PaperScalarKeys => PaperPlanReader.ScalarKeySpellings();
+
+    /// <summary>The nested spacing-block keys a <c>paper { }</c> entry takes
+    /// (<c>systemSystemSpacing { … }</c>).</summary>
+    public static IReadOnlyCollection<string> PaperSpacingKeys => PaperPlanReader.SpecKeySpellings();
+
+    /// <summary>The sub-keys a spacing block takes (<c>basicDistance 12</c>).</summary>
+    public static IReadOnlyCollection<string> PaperSpacingSubKeys => PaperPlanReader.AllSubKeySpellings();
+
     // ===== The MUSIC / SCORE position (GRAMMAR.md: ClefName) =====
 
     /// <summary>

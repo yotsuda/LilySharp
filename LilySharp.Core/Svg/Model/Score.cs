@@ -147,6 +147,14 @@ public sealed record Score
     public Rendering.TextFontPlan Fonts { get; init; } = Rendering.TextFontPlan.Default;
 
     /// <summary>
+    /// The page's dimensions, from the <c>paper { }</c> header directive. Never null,
+    /// the same convention as <see cref="Fonts"/> — a score without one carries
+    /// <c>LayoutOptions.Default</c>, so handing this to <c>LayoutEngine</c> is always
+    /// right and a book with no directive lays out exactly as before.
+    /// </summary>
+    internal Layout.LayoutOptions Paper { get; init; } = Layout.LayoutOptions.Default;
+
+    /// <summary>
     /// The text measurements this score's <see cref="Fonts"/> imply — see
     /// <see cref="MultiStaffScore.TextMetrics"/>, which is the same property on the shape
     /// the layout usually holds. Both carry it because both are handed to engravers.

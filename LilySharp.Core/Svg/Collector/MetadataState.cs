@@ -33,6 +33,11 @@ internal sealed class MetadataState
     // for" case a second way.
     public Rendering.TextFontPlan Fonts = Rendering.TextFontPlan.Default;
 
+    // The page's dimensions from the top-level `paper { … }` directive, as the
+    // LayoutOptions overlay PaperPlanReader built. Never null, the same convention
+    // as Fonts: a score without one gets LayoutOptions.Default.
+    public Layout.LayoutOptions Paper = Layout.LayoutOptions.Default;
+
     // Source offsets of the header grobs (0 = none), emitted as data-pos so the
     // preview can click-to-jump to the title/composer/time/key/clef declarations.
     public int TitlePosition;
@@ -78,6 +83,7 @@ internal sealed class MetadataState
         Title = other.Title;
         Composer = other.Composer;
         Fonts = other.Fonts;
+        Paper = other.Paper;
         TitlePosition = other.TitlePosition;
         ComposerPosition = other.ComposerPosition;
         TimePosition = other.TimePosition;

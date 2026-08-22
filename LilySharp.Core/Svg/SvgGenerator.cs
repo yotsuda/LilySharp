@@ -125,7 +125,9 @@ public static class SvgGenerator
         SyntaxTree tree, RenderSpec? renderSpec)
     {
         var multiScore = CollectScore(tree, renderSpec);
-        return (multiScore, new LayoutEngine().Layout(multiScore));
+        // score.Paper is LayoutOptions.Default unless the book wrote `paper { … }`,
+        // so a book without one lays out exactly as before.
+        return (multiScore, new LayoutEngine(multiScore.Paper).Layout(multiScore));
     }
 
     /// <summary>

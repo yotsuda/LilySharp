@@ -486,6 +486,64 @@ A face this machine does not have is a **warning**, with or without `embedded` �
 font is installed is a property of the machine and not of the source, so a score that is
 right on your box must not fail to compile on a runner that has no fonts.
 
+## Paper
+
+The page's dimensions — paper size, margins, indents, and the vertical spacing specs.
+One block per file. Every default equals LilyPond's a4 default, so an absent block, an
+empty one, and one that states the defaults all lay out identically:
+
+```
+paper {
+  paperWidth 210mm
+  paperHeight 297mm            // 0 = one content-driven page
+  leftMargin 15mm  rightMargin 15mm
+  topMargin 10mm  bottomMargin 10mm
+  indent 15mm  shortIndent 0
+  raggedRight                  // bare flag: lines keep their ideal width
+  spacingIncrement 1.2         // horizontal note-spacing unit
+  systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
+  staffStaffSpacing   { basicDistance 9 }
+}
+```
+
+**A bare number is staff spaces** — the unit everything else in this language is measured
+in. A physical unit is a word **glued** to its number, one quantity: `210mm`, `29.7cm`,
+`8.5in` (LilyPond spells the same thing `210\mm`). A spaced `210 mm` is an error naming
+the glued spelling. The conversion is the one the engine's defaults were computed with
+(1 staff space = 5 TeX points), rounded the same way — so writing a default out **is**
+the default, byte for byte.
+
+The spacing blocks, each taking `basicDistance` / `minimumDistance` / `padding` /
+`stretchability` lines (`stretchability` is unitless):
+
+| Key | The pair it spaces |
+|---|---|
+| `systemSystemSpacing` | two consecutive systems |
+| `scoreSystemSpacing` | a score boundary, then the next system |
+| `markupSystemSpacing` | a title/markup, then the next system |
+| `scoreMarkupSpacing` | a system, then the next title/markup |
+| `markupMarkupSpacing` | consecutive titles/markups |
+| `topSystemSpacing` | the page top and the first system |
+| `lastBottomSpacing` | the last element and the page bottom |
+| `staffStaffSpacing` | two staves of a group |
+| `staffGroupStaffSpacing` | a group's staff and the next group's |
+| `defaultStaffStaffSpacing` | ungrouped staves |
+| `nonStaffRelatedStaffSpacing` | a lyrics/chord row and its own staff |
+| `nonStaffUnrelatedStaffSpacing` | a lyrics/chord row and an unrelated staff |
+| `nonStaffNonStaffSpacing` | two lyrics/chord rows |
+
+⚠️ **The staff-spacing family lives here, not in `override`**, although LilyPond keeps it
+on grobs (`StaffGrouper.staff-staff-spacing`): these quantities are applied score-wide in
+one pass, and `paper { }` is the spelling whose meaning is score-wide — an override would
+parse a scope (`once`, staff tags) and then silently not apply it.
+
+There is deliberately **no staff-size key** (the staff space is the unit itself; scaling
+it is a different feature) and **no algorithm switch** (line/page-breaking strategy is
+engine tuning, not a dimension of the picture).
+
+Unknown keys are an error, a key set twice in one block is a warning and the last wins,
+and a second `paper { }` block warns like every repeated global setting.
+
 ## Grace Notes
 
 ```
@@ -999,7 +1057,7 @@ be declared and referenced).
 | Group | Words |
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `instrument` `percussion` `drummap` |
-| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `nobreak` `partial` `embedded` `fonts` |
+| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `nobreak` `partial` `embedded` `fonts` `paper` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
@@ -1012,7 +1070,8 @@ be declared and referenced).
 reserved words — they are read inside that block only, against the role vocabulary, so
 they stay free as part / section / phrase names. Several of them (`title`, `lyrics`,
 `chords`, `tempo`, `instrument`, `tuplet`, `volta`) are reserved for other reasons and
-appear above.
+appear above. The `paper { }` keys and units (`paperWidth`, `mm`, `basicDistance`, …)
+are free the same way.
 
 ⚠️ Measured word by word against `Lexer.GetKeywordKind` on 2026-08-16, by asking whether
 each can name a part. Five words this table listed are **not** reserved and name a part

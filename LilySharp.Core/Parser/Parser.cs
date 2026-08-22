@@ -512,6 +512,7 @@ internal sealed partial class Parser
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
             SyntaxKind.FontsKeyword => ParseFontDeclaration(),
+            SyntaxKind.PaperKeyword => ParsePaperDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),

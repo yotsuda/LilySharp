@@ -668,6 +668,11 @@ internal sealed class Lexer
             // been released (user decision 2026-08-18), so a spelling nobody can have
             // written gets no migration path.
             "fonts" => SyntaxKind.FontsKeyword,
+            // `paper`, like `fonts`: a block of KEY VALUE entries, and the word LilyPond
+            // uses for the same block (\paper). Reserving it takes nothing a writer can
+            // have spelled — every `paper` in the tracked corpus sits inside a comment
+            // (measured 2026-08-23), and Lily# has never been released.
+            "paper" => SyntaxKind.PaperKeyword,
             "embedded" => SyntaxKind.EmbeddedKeyword,
             "tempo" => SyntaxKind.TempoKeyword,
             "time" => SyntaxKind.TimeKeyword,

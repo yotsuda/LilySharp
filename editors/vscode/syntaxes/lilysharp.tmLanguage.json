@@ -9,6 +9,7 @@
         { "include": "#phrase-declaration" },
         { "include": "#lyrics-block" },
         { "include": "#fonts-block" },
+        { "include": "#paper-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
         { "include": "#directive-value" },
@@ -181,6 +182,60 @@
                 }
             ]
         },
+        "paper-block": {
+            "comment": "`paper { paperWidth 210mm  systemSystemSpacing { basicDistance 12 } }`. Same device as #fonts-block and for the same reason: the KEYS are a vocabulary of their own (LilySharp.Core LanguageVocabulary.PaperScalarKeys / PaperSpacingKeys / PaperSpacingSubKeys) and are NOT reserved words — `part indent { … }` compiles — so only a rule that knows it is INSIDE the block may colour them. The nested spacing block is its OWN begin/end so that its `}` does not close the outer region early. A number's GLUED unit (210mm — one quantity) is coloured with its number by #paper-length; the units are not reserved either. EditorColouringTests holds these lists to LanguageVocabulary in both directions.",
+            "begin": "\\b(paper)\\s*(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.other.lilysharp" },
+                "2": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#comments" },
+                { "include": "#strings" },
+                {
+                    "begin": "\\b(systemSystemSpacing|scoreSystemSpacing|markupSystemSpacing|scoreMarkupSpacing|markupMarkupSpacing|topSystemSpacing|lastBottomSpacing|staffStaffSpacing|staffGroupStaffSpacing|defaultStaffStaffSpacing|nonStaffRelatedStaffSpacing|nonStaffUnrelatedStaffSpacing|nonStaffNonStaffSpacing)\\s*(\\{)",
+                    "beginCaptures": {
+                        "1": { "name": "keyword.other.paper-key.lilysharp" },
+                        "2": { "name": "punctuation.definition.block.lilysharp" }
+                    },
+                    "end": "\\}",
+                    "endCaptures": {
+                        "0": { "name": "punctuation.definition.block.lilysharp" }
+                    },
+                    "patterns": [
+                        { "include": "#comments" },
+                        { "include": "#strings" },
+                        {
+                            "name": "keyword.other.paper-key.lilysharp",
+                            "match": "\\b(basicDistance|minimumDistance|padding|stretchability)\\b"
+                        },
+                        { "include": "#paper-length" }
+                    ]
+                },
+                {
+                    "comment": "A spacing key still gets its colour while the writer has typed it and not yet its `{` — the begin rule above takes over the moment the brace lands.",
+                    "name": "keyword.other.paper-key.lilysharp",
+                    "match": "\\b(systemSystemSpacing|scoreSystemSpacing|markupSystemSpacing|scoreMarkupSpacing|markupMarkupSpacing|topSystemSpacing|lastBottomSpacing|staffStaffSpacing|staffGroupStaffSpacing|defaultStaffStaffSpacing|nonStaffRelatedStaffSpacing|nonStaffUnrelatedStaffSpacing|nonStaffNonStaffSpacing)\\b"
+                },
+                {
+                    "name": "keyword.other.paper-key.lilysharp",
+                    "match": "\\b(paperWidth|paperHeight|leftMargin|rightMargin|topMargin|bottomMargin|indent|shortIndent|topSystemPadding|spacingIncrement|raggedRight)\\b"
+                },
+                { "include": "#paper-length" }
+            ]
+        },
+        "paper-length": {
+            "comment": "A paper value: a number with its optional GLUED unit — `210mm` is one quantity, so the unit is coloured with its number (captures, like a directive value, never a bare alternation: mm/cm/in are free words everywhere else).",
+            "match": "(-?\\d+(?:\\.\\d+)?)(mm|cm|in)?\\b",
+            "captures": {
+                "1": { "name": "constant.numeric.lilysharp" },
+                "2": { "name": "support.constant.paper-unit.lilysharp" }
+            }
+        },
         "part-body": {
             "comment": "`part vln1 \"Violin I\" { clef treble^8  tuning standard  removeEmpty all }`. ⚠️ These are the part header's OWN vocabulary (LilySharp.Core SymbolCaseValidator) and almost none of them is a reserved word — `part lines { … }`, `part bracket { … }` and `part standard { … }` all compile (measured 2026-08-19) — so nothing outside this block may colour them and only a rule that knows it is INSIDE one can. Same device as #fonts-block and for the same reason: begin/end carries CONTEXT, which is a claim about what a word IS, not licence to claim a word is WRONG. ⚠️ The vocabulary is the PART BODY's, not the language's everywhere: a body takes all eleven clef names while `clef` in music and `staff` in a score take five and refuse the other six (measured). Each value is read WITH the key it belongs to, so `tuning treble` does not come out looking like a tuning — wrongness is the diagnostics'. EditorColouringTests holds every list here to its Core set in both directions.",
             "begin": "\\b(part)\\s+(?:[A-Za-z_][A-Za-z0-9_]*)\\s*(?:\"[^\"]*\"\\s*)?(\\{)",
@@ -301,7 +356,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|tuning|nobreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|tuning|nobreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

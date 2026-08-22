@@ -65,10 +65,11 @@ function global:Set-RegStatus([string]$name, [string]$state, [string]$claim, [st
   塗り polygon（ink = 幾何そのまま）——0.04〜0.08 の系統差はこれ。
 - **段の出力順はエンジン間で不安定**。quant offset の列比較は (system, x) でグループ化
   して**集合**比較（beam-quanting-32nd で 46/78 の偽乖離が消えた）。
-- **Lily# は A4 紙幅（line-width ≈102ss・PaperSettings 既定）に収まらない行を圧縮 justify
-  する**。paper 指定の文法は無いので、幅広の本は**小節ごとに切った .lys / .ly の対**で
-  比較する（自然幅どうしになる）。LP 側は paper-width/line-width を広げれば 1 段に
-  伸ばせる（line-width だけだと紙幅でクランプされる）。
+- **Lily# は A4 紙幅（line-width ≈102ss・LayoutOptions 既定）に収まらない行を圧縮 justify
+  する**。`paper { }` の文法は第232（2026-08-23）で入ったが、**exporter が双子に
+  `\paper` を書かない**（warning で名指す）ので、比較の枠は引き続き**小節ごとに切った
+  .lys / .ly の対**で揃える（自然幅どうしになる）。LP 側は paper-width/line-width を
+  広げれば 1 段に伸ばせる（line-width だけだと紙幅でクランプされる）。
 - **spacing は score 全体の common shortest に依存**（LP spacing-spanner は score 単位）。
   小節を切り出すと最短音価が変わって列間隔ごと変わる——切り出しの対には
   最短音価が同じ小節を選ぶ（bar2 だけ切ると 1/64 が消えて 12.4ss vs 17.2ss を読む）。

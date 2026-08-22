@@ -146,7 +146,7 @@ could not have reached anyone, since Lily# has never been released」。`LYS0031
 
 ## 2. 文法に無いもの（欠落）
 
-### 2.1 `paper { }` / `layout { }` が存在しない ★
+### 2.1 `paper { }` / `layout { }` が存在しない ★ → ✅ **第232 が実装（2026-08-23）**
 
 用紙サイズ・余白・五線サイズ・段間隔・システム間隔を **`.lys` から一切指定できない。**
 `PageLayouter.cs:347` は `_options.PageWidth` を読み、これは API 側にしか無い。
@@ -155,6 +155,20 @@ could not have reached anyone, since Lily# has never been released」。`LYS0031
 **フォントだけ指定できて用紙が指定できない**のは `fonts { }` を作った動機と整合しない。
 `fonts { }` の 4 段フォールバック（role → group → generic → bundled・狭い方が勝つ）が
 そのまま雛形になる。出版社のハウススタイルという用途では**ここが最大の欠落**。
+
+> ✅ **第232 が実装（2026-08-23・ユーザー判断 4 つ→ GRAMMAR §2.5）**。判断＝
+> ⑴ **狙い＝ハウススタイル（§2.1 単独・A/B は需要が現れた日に）** ⑵ **単位接尾辞を導入**
+> （`210mm`/`29.7cm`/`8.5in`・**数字に糊付け**＝1 量。裸の数値は ss）⑶ **語彙＝寸法系全部**
+> （用紙・余白・indent・raggedRight・spacing 群。**アルゴリズム切替は載せない**）
+> ⑷ **段間隔の分担＝paper に寄せる**（§2.2 の欄）。
+> 実装の骨: 語彙は LP の `\paper` 変数の camelCase（scalar 10・flag 1・spacing spec 13×4）、
+> 変換は **mm→ss ×72.27/127 を 6 桁丸め＝既定値の計算と同一**なので**既定を書いた本は既定と
+> byte 一致**（PaperBlockTests が pin）。reader は `PaperPlanReader`（ONE HOME・collector と
+> `PaperValidator` の 2 呼び手＝fonts と同じ契約）、Score.Paper → `new LayoutEngine(score.Paper)`
+> ×6 site。診断は LYS9001〜9006。**露出しなかったもの**: `StaffHeight`（単位の枠そのもの・
+> LP も staff size は `\paper` 外）・`SystemSpacing`（不活性と実測済みの札あり）・breaking 切替。
+> **exporter は未輸出を warning で名指す**（drummap 型の穴＝paper は Lily# の絵を動かすので
+> fonts の「書かない」判断とは逆向き。追跡本に paper を書く本は 0 なので今日盲目の probe は無い）。
 
 > **第231 が決定材料を測った（2026-08-23）。判断は未着手＝何を載せるかは狙いの持ち主。**
 >
@@ -234,6 +248,16 @@ LilyPond と同じ語彙、予約語にしない）は正しいので、問題�
 > **ユーザーに要る判断**: ⑴ 狙いはどれか（LP idiom 完成＝B／ハウススタイル＝A＋§2.1／
 > コーパス再開＝測定上動機薄）。⑵ A を採るなら dotted sub-property が GRAMMAR に入る。
 > ⑶ §2.1 との分担（段間隔をどちらの構文に置くか）。
+>
+> ✅ **判断済み（2026-08-23・ユーザー）＝狙いはハウススタイル・§2.1 単独を実装し、
+> 段間隔は paper { } に寄せる。** 決め手＝⑴ 能力差は今日ゼロ（どちらの綴りも終着は同じ
+> `StaffSpacingParameters`・score-wide）⑵ override 側は「綴りが位置依存に見えて効かない」
+> 傷（scope 一式が付いてくるのに reader は見ない）か位置配管の費用を先に払うことになる
+> ⑶ paper は綴り＝意味が最初から一致し dotted sub-property の文法拡張も不要。
+> **A（StaffGrouper 8 綴り）・B（\hideNotes 完成）・C（幾何ノブ）はどれも見送り＝需要が
+> 現れた日に**（A は「paper＝既定・override＝グループ個別上書き」として後から足せる——
+> 退路は塞がっていない）。**D（`\set`/`\with`）は引き続き別の起票。**
+> §2.2 の器と scope 機構はそのまま（語彙 4 行のまま）。**第232 が §2.1 側を実装**（§2.1 の欄）。
 
 ---
 
@@ -724,10 +748,10 @@ snapshot の再ベースは**不要**であり、**してはならない**。再
    診断落ち（`IncrementalReuseMap` の接触判定）を先に閉じ（`d1e2eeba`・再利用率の計器つき）、
    第228 の patch を適用、docs 7 本と tmLanguage の `$` 規則も掃いた。
    書き換え 4 冊は sweep A/B で**幾何不動**（grammar-tour は data-pos のみ＝コメント追加ぶん）
-3. **§2.2 override の語彙を広げる** — 拡張経路の本体。**決定材料は第231 が測った
-   （§2.2 の欄）——残るは判断（候補 A〜C の選択・§2.1 との分担）**
-4. **§2.1 `paper { }`** — **決定材料は第231 が測った（§2.1 の欄）——残るは判断
-   （語彙の範囲・単位の綴り・§2.2 との分担）。⚠️ 3 と 4 は分担の判断を共有するので対で決める**
+3. ✅ **§2.2 override の語彙 — 判断済み（2026-08-23・ユーザー）＝A/B/C とも見送り・
+   段間隔は paper { } に寄せる**（§2.2 の欄。語彙拡張は需要が現れた日に・D は別の起票）
+4. ✅ **§2.1 `paper { }` — 第232 が実装（2026-08-23・ユーザー判断 4 つ）**＝GRAMMAR §2.5。
+   語彙・単位・分担の決定と実装の骨は §2.1 の欄
 5. ✅ **§3.1 `DisplayName` — 第229 が完了（2026-08-23・ユーザー承認）**＝引用符必須・裸は常に
    MIDI 専用 part 参照。✅ **§3.3 bare duration の診断は第230 が実装（LYS1031・2026-08-23）**。
    残り＝§1.2 リネーム（ユーザーが MSVS で。§4.4 は完了）

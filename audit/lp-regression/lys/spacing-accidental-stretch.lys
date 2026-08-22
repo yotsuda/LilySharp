@@ -1,7 +1,8 @@
 // lilypond-src/input/regression/spacing-accidental-stretch.ly の Lily# 訳。
 // CLAIM: 臨時記号は伸縮空間の量に影響しない（非伸縮の少量だけ足す）。
 // 枠の翻訳: 原本は単一 system を「not ragged-right!! + line-width 18cm」で強制
-// justify する。Lily# に paper 綴りが無いが、既定 line width = 210−15−15 = 180mm
+// justify する。この訳は paper を書かない（訳出時は綴りが無かった。第232 で入ったが
+// この本は既定のまま）——既定 line width = 210−15−15 = 180mm
 // ＝ちょうど 18cm。両側同一の音楽を 12 小節へ延長し、非最終行の justify で同じ
 // 伸縮分配を踏ませる（両側落とし: \accidentalStyle piano-cautionary も落とす＝
 // 既定 style の ♯/♮ で claim の核は立つ）。

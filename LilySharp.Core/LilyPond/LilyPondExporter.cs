@@ -655,6 +655,19 @@ public sealed class LilyPondExporter
     {
         _sb.Append("\\version \"").Append(LilyPondVersion).Append("\"\n\n");
 
+        // ⚠️ `paper { }` is NOT exported, and unlike the font omission above this one is
+        // a drummap-shaped hole, not a knowing equivalence: paper DOES move Lily#'s
+        // layout, so the twin of a book that writes one is laid out on different paper
+        // and stops being a control. The warning is the honest state until a probe
+        // needs such a twin (no tracked book writes paper{} as of 2026-08-23); the true
+        // \paper variables would map 1:1, but the staff-spacing family lives on grobs
+        // and contexts in LilyPond and would need \layout overrides, so half an export
+        // would be worse than a named hole.
+        if (root.DescendantNodes<PaperDeclarationSyntax>().Any())
+            _warnings.Add(
+                "paper { } is not exported — the twin is laid out on LilyPond's default "
+                + "paper, so line and page breaks differ wherever the directive bit");
+
         var meta = root.DescendantNodes<MetadataDeclarationSyntax>().ToList();
         string? title = MetaString(meta, "title");
         string? composer = MetaString(meta, "composer");

@@ -98,6 +98,7 @@ public static class SemanticValidation
         new DuplicatePartPropertyValidator(),  // one part header setting the same property twice
         new FontEmbedWarningValidator(),    // an embedded font with a restricted/unverified license
         new FontBindingValidator(),         // a fonts { } entry naming no such role, or one twice
+        new PaperValidator(),               // a paper { } entry naming no such key, or a bad unit
     };
 
     /// <summary>

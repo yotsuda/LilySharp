@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
 
@@ -73,7 +74,8 @@ public class ScoreAssemblerTests
             TempoText: "Allegro",
             TempoBeatUnit: 2,
             TempoDots: 1,
-            Fonts: new TextFontPlan.Builder().Everything(["Comic Sans MS"]).Build());
+            Fonts: new TextFontPlan.Builder().Everything(["Comic Sans MS"]).Build(),
+            Paper: LayoutOptions.Default with { PageWidth = 96 });
 
     private static ImmutableArray<ChordNameItem> OneChord() =>
         ImmutableArray.Create(new ChordNameItem("C", 0, 0, 0));
@@ -111,6 +113,9 @@ public class ScoreAssemblerTests
         Assert.Equal("Allegro", s.TempoText);
         Assert.Equal(2, s.TempoBeatUnit);
         Assert.Equal(1, s.TempoDots);
+        // The paper overlay rides the same init-only channel as the tempo trio and
+        // Fonts; MakeContent sets a non-default PageWidth so a dropped flow is visible.
+        Assert.Equal(96, s.Paper.PageWidth);
     }
 
     [Fact]
@@ -177,6 +182,7 @@ public class ScoreAssemblerTests
         // Init-only tempo properties flow through here too.
         Assert.Equal("Allegro", ms.TempoText);
         Assert.Equal(2, ms.TempoBeatUnit);
+        Assert.Equal(96, ms.Paper.PageWidth);
     }
 
     [Fact]

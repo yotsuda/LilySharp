@@ -445,6 +445,101 @@ internal sealed partial class Parser
         return new FontDeclarationGreen(keyword, [.. tokens]);
     }
 
+    /// <summary>
+    /// <c>paper { KEY VALUE… }</c> — the only form.
+    /// </summary>
+    /// <remarks>
+    /// The block's tokens are kept FLAT, like the font block's: the entries are read back
+    /// by <c>PaperDeclarationSyntax.Entries</c> and judged by <c>PaperPlanReader</c>, so a
+    /// growing paper vocabulary grows a table and not the green tree. The parser's only
+    /// jobs are the block's extent, the one nested brace level a spacing entry may open,
+    /// and refusing a token that could never be a key, a number, or a sign.
+    /// </remarks>
+    private PaperDeclarationGreen ParsePaperDeclaration()
+    {
+        var keyword = Advance(); // paper
+
+        if (Check(SyntaxKind.OpenBrace))
+            return ParsePaperBlock(keyword);
+
+        // The tokens are KEPT, not dropped, for the same reason the font one-liner keeps
+        // its own: a declaration that loses them slides every later `data-pos` (RULES §5.1).
+        var tokens = new List<GreenNode?>();
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
+            Math.Max(1, Current.Text.Length));
+        _diagnostics.Error(span, DiagnosticCodes.PaperNeedsABlock,
+            "'paper' sets the page's dimensions, so it takes a block: "
+            + "paper { paperWidth 210mm  paperHeight 297mm }.");
+
+        // Consume the stray value so one mistake does not cascade into the rest of the file.
+        while (Check(SyntaxKind.StringLiteral) ||
+               Check(SyntaxKind.IntegerLiteral) ||
+               Check(SyntaxKind.DecimalLiteral) ||
+               Check(SyntaxKind.Identifier))
+        {
+            tokens.Add(Advance());
+        }
+
+        return new PaperDeclarationGreen(keyword, [.. tokens]);
+    }
+
+    // paper { paperWidth 210mm  raggedRight  systemSystemSpacing { basicDistance 12 } }
+    //
+    // House style, the same as the font block: bare KEY, bare VALUEs, no colons and no
+    // commas, entries separated by nothing but whitespace. A unit is a word GLUED to its
+    // number (210mm — one quantity, LilyPond's 210\mm); gluedness is judged by the
+    // reader from token spans, so here a unit word is just another word.
+    private PaperDeclarationGreen ParsePaperBlock(SyntaxToken keyword)
+    {
+        var tokens = new List<GreenNode?> { Advance() }; // {
+        int depth = 0; // nested spacing blocks: at most one level
+        while (!Check(SyntaxKind.EndOfFile))
+        {
+            if (Check(SyntaxKind.CloseBrace))
+            {
+                tokens.Add(Advance());
+                if (depth == 0)
+                    return new PaperDeclarationGreen(keyword, [.. tokens]);
+                depth = 0;
+                continue;
+            }
+            if (Check(SyntaxKind.OpenBrace))
+            {
+                if (depth == 0)
+                {
+                    depth = 1;
+                    tokens.Add(Advance());
+                    continue;
+                }
+                // A second nesting level exists for nothing in the vocabulary; refused
+                // where it stands so the walker upstairs can stay one level deep.
+                var braceSpan = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+                _diagnostics.Error(braceSpan, DiagnosticCodes.PaperEntryMissingValue,
+                    "A spacing block's entry is a key followed by a number, e.g. "
+                    + "basicDistance 12 — it does not open another block.");
+                tokens.Add(Advance());
+                continue;
+            }
+            if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral) ||
+                Check(SyntaxKind.Minus) || IsWordLikeToken(Current))
+            {
+                tokens.Add(Advance());
+                continue;
+            }
+            // Anything else is refused where it stands, and skipped, so one stray token
+            // does not swallow the rest of the score.
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.PaperEntryMissingValue,
+                "A 'paper { }' entry is a key followed by a number (paperWidth 210mm), a "
+                + "bare flag (raggedRight), or a spacing block (systemSystemSpacing { "
+                + "basicDistance 12 }) — '" + Current.Text + "' is none of these.");
+            tokens.Add(Advance());
+        }
+        _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
+            "This 'paper {' has no closing '}'.");
+        return new PaperDeclarationGreen(keyword, [.. tokens]);
+    }
+
     // A token that reads as a bare WORD, judged by its text rather than by its kind:
     // several role keys (title / lyrics / chords / tempo / instrument / tuplet / volta)
     // are already keywords of the language, and `sans-serif` carries a hyphen. Asking

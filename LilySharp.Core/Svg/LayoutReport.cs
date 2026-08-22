@@ -64,7 +64,7 @@ public static class LayoutReport
     private static void AppendScore(StringBuilder sb, SyntaxTree tree, RenderSpec? spec)
     {
         var score = SvgGenerator.CollectScore(tree, spec);
-        var layout = new LayoutEngine().Layout(score);
+        var layout = new LayoutEngine(score.Paper).Layout(score);
 
         // Reconstruct the header as written: `score <form> ["basename"]`. The
         // basename is shown only when it differs from the form name (i.e. it was

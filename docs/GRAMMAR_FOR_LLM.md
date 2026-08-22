@@ -26,6 +26,10 @@ fonts {                  // optional; binds text faces. The two generic families
   serif "Georgia"       // are "the whole document's text"; bind roles separately below
   sans  "Georgia"       // 'embedded' subsets every named face into the PDF
 }
+paper {                  // optional; page dimensions (defaults = LilyPond's a4)
+  paperWidth 210mm      // bare numbers are staff spaces; units mm/cm/in GLUED (210mm)
+  paperHeight 297mm     // see the paper section below for margins/indents/spacing
+}
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -522,6 +526,39 @@ Rules worth knowing before emitting one:
 - No weight/slant/size here — those belong to the engraving.
 - `mono` is not a key. Unknown keys are an error; a key bound twice is a warning (last wins).
 
+## Paper (`paper { … }`)
+
+The page's dimensions — paper size, margins, indents, vertical spacing. One per file;
+every default equals LilyPond's a4 default, so an absent block (or one that states the
+defaults) changes nothing.
+
+```
+paper {
+  paperWidth 210mm         // bare numbers are staff spaces; a unit is GLUED (210mm, 29.7cm, 8.5in)
+  paperHeight 297mm        // 0 = one content-driven page
+  leftMargin 15mm  rightMargin 15mm  topMargin 10mm  bottomMargin 10mm
+  indent 15mm  shortIndent 0
+  raggedRight              // bare flag: do not justify lines
+  spacingIncrement 1.2     // horizontal note-spacing unit (staff spaces)
+  systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
+  staffStaffSpacing   { basicDistance 9 }   // staves of a group
+}
+```
+
+Rules worth knowing before emitting one:
+- Scalar keys: `paperWidth paperHeight leftMargin rightMargin topMargin bottomMargin
+  indent shortIndent topSystemPadding spacingIncrement`. Flag: `raggedRight`. Spacing
+  blocks: `systemSystemSpacing scoreSystemSpacing markupSystemSpacing scoreMarkupSpacing
+  markupMarkupSpacing topSystemSpacing lastBottomSpacing staffStaffSpacing
+  staffGroupStaffSpacing defaultStaffStaffSpacing nonStaffRelatedStaffSpacing
+  nonStaffUnrelatedStaffSpacing nonStaffNonStaffSpacing`, each taking `basicDistance /
+  minimumDistance / padding / stretchability` lines.
+- ⚠️ A unit is glued to its number: `210 mm` (spaced) is an error naming the glued
+  spelling. `stretchability` is unitless.
+- ⚠️ The staff-spacing family lives HERE, not in `override` (applied score-wide in one
+  pass). There is no staff-size key and no algorithm switch.
+- Unknown keys are an error; a key set twice is a warning (last wins).
+
 - Comments: `// line` and `/* block */`.
 - `@name` is the canonical annotation prefix. `\name` annotations are rejected (use `@`);
   backslash is reserved for tablature only (`\3` string numbers, `\tuning`). Lily# is NOT
@@ -537,7 +574,7 @@ part is fine). Keywords:
 ```text
 section form using tab ossia transpose octave instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
-voice phrase repeat volta alternative break nobreak partial cue embedded fonts
+voice phrase repeat volta alternative break nobreak partial cue embedded fonts paper
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone

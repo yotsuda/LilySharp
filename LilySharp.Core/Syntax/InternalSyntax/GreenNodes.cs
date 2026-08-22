@@ -430,6 +430,17 @@ internal sealed class FontDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Paper directive: paper { KEY VALUE… }, tokens kept flat like the font block's.
+/// </summary>
+internal sealed class PaperDeclarationGreen : GreenSyntaxNode
+{
+    public PaperDeclarationGreen(SyntaxToken keyword, GreenNode?[] tokens)
+        : base(SyntaxKind.PaperDeclaration, [keyword, .. tokens])
+    {
+    }
+}
+
+/// <summary>
 /// Variable declaration: name = expr (new style) or let name = expr (legacy)
 /// </summary>
 internal sealed class VariableDeclarationGreen : GreenSyntaxNode

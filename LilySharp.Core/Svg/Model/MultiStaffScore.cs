@@ -95,6 +95,14 @@ public sealed record MultiStaffScore
     public Rendering.TextFontPlan Fonts { get; init; } = Rendering.TextFontPlan.Default;
 
     /// <summary>
+    /// The page's dimensions, from the <c>paper { }</c> header directive. Never null,
+    /// the same convention as <see cref="Fonts"/> — a score without one carries
+    /// <c>LayoutOptions.Default</c>, so <c>new LayoutEngine(score.Paper)</c> is always
+    /// the right construction and a book with no directive lays out exactly as before.
+    /// </summary>
+    internal Layout.LayoutOptions Paper { get; init; } = Layout.LayoutOptions.Default;
+
+    /// <summary>
     /// The text measurements this score's <see cref="Fonts"/> imply — what the LAYOUT asks,
     /// in the same words the drawing asks (<c>role</c> and <c>style</c>).
     /// </summary>
@@ -316,6 +324,7 @@ public sealed record MultiStaffScore
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
             Fonts = score.Fonts,
+            Paper = score.Paper,
         };
     }
 

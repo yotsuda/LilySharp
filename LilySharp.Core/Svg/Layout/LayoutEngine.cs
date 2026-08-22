@@ -43,9 +43,11 @@ internal sealed class LayoutEngine
     /// SystemLayoutCache, MeasureSpringData[])"/>.
     /// <para>
     /// SAFE because an engine lays out ONE score: every production construction is
-    /// <c>new LayoutEngine().Layout(…)</c> — SvgGenerator, PngGenerator (twice),
-    /// PdfGenerator, IncrementalCompiler, LayoutReport, checked 2026-08-18. An engine
-    /// reused across two scores would be the case this breaks, and there is none.
+    /// <c>new LayoutEngine(score.Paper).Layout(score)</c> — SvgGenerator, PngGenerator
+    /// (twice), PdfGenerator, IncrementalCompiler, LayoutReport, checked 2026-08-18
+    /// (and re-checked 2026-08-23 when the paper directive put the score's own options
+    /// into those constructions). An engine reused across two scores would be the case
+    /// this breaks, and there is none.
     /// </para>
     /// </remarks>
     private SkylineBuilder _skylineBuilder;

@@ -60,7 +60,7 @@ public static class PngGenerator
         // its newer behaviours (score transpose, `with chords` attachment) —
         // the PNG of a score could differ from its SVG.
         MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec);
-        ScoreLayout layout = new LayoutEngine().Layout(multiScore);
+        ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
 
         var fontDir = options.FontDirectory ?? FontLocator.Find();
         var docOptions = new PngDocumentOptions
@@ -93,7 +93,7 @@ public static class PngGenerator
             : RenderSpecParser.FindByName(tree, renderName);
 
         MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec);
-        ScoreLayout layout = new LayoutEngine().Layout(multiScore);
+        ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
 
         var fontDir = options.FontDirectory ?? FontLocator.Find();
         var docOptions = new PngDocumentOptions

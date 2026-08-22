@@ -1331,7 +1331,8 @@ public sealed partial class MeasureCollector
         _meta.TempoText,
         _meta.TempoBeatUnit,
         _meta.TempoDots,
-        _meta.Fonts);
+        _meta.Fonts,
+        _meta.Paper);
 
     /// <summary>
     /// Collects a Score from a syntax tree.
@@ -3074,6 +3075,14 @@ public sealed partial class MeasureCollector
                     _meta.Fonts = Semantics.FontPlanReader.Read(font, out _);
                     break;
 
+                case PaperDeclarationSyntax paper:
+                    // `paper { KEY VALUE… }` sets the page's dimensions. Same contract
+                    // as fonts: the reading is shared with PaperValidator, the problems
+                    // are that validator's job, and a refused entry is simply absent
+                    // from the overlay.
+                    _meta.Paper = Semantics.PaperPlanReader.Read(paper, out _);
+                    break;
+
                 case TempoDeclarationSyntax tempoDecl:
                     // Only the top-level (initial) tempo sets the score default;
                     // mid-music tempo changes are handled in the music stream
@@ -3240,6 +3249,7 @@ public sealed partial class MeasureCollector
     /// every fixture book exercises the file defaults).</summary>
     private static bool IsDefinitionKind(SyntaxKind kind) => kind is
         SyntaxKind.MetadataDeclaration or SyntaxKind.FontDeclaration
+        or SyntaxKind.PaperDeclaration
         or SyntaxKind.TempoDeclaration or SyntaxKind.TimeSignature
         or SyntaxKind.KeySignature or SyntaxKind.ClefDeclaration
         or SyntaxKind.OctaveDirective or SyntaxKind.PartialDeclaration
@@ -4301,6 +4311,7 @@ public sealed partial class MeasureCollector
         return _meta.Title == rec.Title
             && _meta.Composer == rec.Composer
             && _meta.Fonts.Equals(rec.Fonts)
+            && _meta.Paper.Equals(rec.Paper)
             && _meta.Tempo == rec.Tempo
             && _meta.TempoText == rec.TempoText
             && _meta.TempoBeatUnit == rec.TempoBeatUnit

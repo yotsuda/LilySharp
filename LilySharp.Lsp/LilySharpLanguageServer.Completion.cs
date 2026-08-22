@@ -145,6 +145,9 @@ public sealed partial class LilySharpLanguageServer
                 GetFontNameCompletions(KeywordBeforeCurrentString(doc.Text, offset)),
             CompletionContext.AfterFontKeyword => GetFontDeclarationCompletions(),
             CompletionContext.FontBlock => GetFontBlockCompletions(),
+            CompletionContext.AfterPaperKeyword => GetPaperDeclarationCompletions(),
+            CompletionContext.PaperBlock => GetPaperBlockCompletions(),
+            CompletionContext.PaperSpecBlock => GetPaperSpecBlockCompletions(),
             // The key the caret sits after decides which values fit: a generic family takes
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>
@@ -231,6 +234,28 @@ public sealed partial class LilySharpLanguageServer
     /// </remarks>
     internal static bool IsInsideFontBlock(string text, int offset)
         => InnermostOpenBlock(text, offset) == "fonts";
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits inside a <c>paper { … }</c> block;
+    /// <paramref name="inSpacingBlock"/> is true when it sits one level deeper, in a
+    /// nested spacing block (<c>systemSystemSpacing { | }</c>) — the innermost frame is
+    /// then the spacing key and <c>paper</c> is the frame outside it.
+    /// </summary>
+    internal static bool IsInsidePaperBlock(string text, int offset, out bool inSpacingBlock)
+    {
+        inSpacingBlock = false;
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
+        if (frames.Count == 0)
+            return false;
+        if (frames[^1].Name == "paper")
+            return true;
+        if (frames.Count >= 2 && frames[^2].Name == "paper")
+        {
+            inSpacingBlock = true;
+            return true;
+        }
+        return false;
+    }
 
     /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>part &lt;name&gt; { … }</c>
@@ -567,6 +592,9 @@ public sealed partial class LilySharpLanguageServer
         AfterFontKeyword,
         FontBlock,
         AfterFontRoleKey,
+        AfterPaperKeyword,
+        PaperBlock,
+        PaperSpecBlock,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -685,6 +713,8 @@ public sealed partial class LilySharpLanguageServer
                 case "title" or "composer": return CompletionContext.AfterTitleText;
                 // `fonts |` with no block yet: offer the block forms.
                 case "fonts": return CompletionContext.AfterFontKeyword;
+                // `paper |` with no block yet: same motion.
+                case "paper": return CompletionContext.AfterPaperKeyword;
                 // `override |` (and `once override |`, whose previous word is also
                 // `override`): offer the grob properties that actually affect the
                 // rendered output as `Grob.property = value` fill-ins.
@@ -723,6 +753,13 @@ public sealed partial class LilySharpLanguageServer
             // Anywhere else in the block a KEY is what belongs.
             return CompletionContext.FontBlock;
         }
+
+        // Inside `paper { … }` a KEY is what belongs (a value is a number, which no list
+        // serves); inside a nested spacing block, its four sub-keys. Intercepted before
+        // the fallthroughs for the reason the fonts block is: without this the popup
+        // offers pitches and articulations at every caret inside the block.
+        if (IsInsidePaperBlock(text, offset, out bool inSpacingBlock))
+            return inSpacingBlock ? CompletionContext.PaperSpecBlock : CompletionContext.PaperBlock;
 
         // Inside a "…" string value, the directive that OWNS the string decides the
         // completion. A `title`/`composer` string keeps its snippet (so the caret is served
@@ -1469,6 +1506,147 @@ public sealed partial class LilySharpLanguageServer
                 },
             ],
         };
+
+    /// <summary>
+    /// At <c>paper |</c> (the keyword typed, nothing after it): the block forms, the
+    /// same motion as <c>fonts</c>.
+    /// </summary>
+    /// <remarks>
+    /// ★ THE PRE-FILLED VALUES ARE THE DEFAULTS (a4, 210mm x 297mm), so accepting the
+    /// completion and changing nothing does not move the page — the reader's conversion
+    /// rounds exactly the way the defaults were computed, and PaperBlockTests pins the
+    /// equality.
+    /// </remarks>
+    internal static CompletionList GetPaperDeclarationCompletions()
+        => new()
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = "{ … }",
+                    FilterText = "paper",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "{\n  paperWidth ${1:210mm}\n  paperHeight ${2:297mm}$0\n}",
+                    Preselect = true,
+                    SortText = "0",
+                    Detail = "Set the page's dimensions (pre-filled with the a4 defaults)",
+                },
+                new CompletionItem
+                {
+                    Label = "{ }",
+                    FilterText = "paper",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "{\n  $0\n}",
+                    SortText = "1",
+                    Detail = "Set page dimensions key by key",
+                    Command = new Command { Title = "Suggest paper key", CommandIdentifier = "editor.action.triggerSuggest" },
+                },
+            ]
+        };
+
+    /// <summary>
+    /// The keys a <c>paper { }</c> body takes: the scalar lengths, the raggedRight
+    /// flag, and the nested spacing blocks.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The vocabulary is read from <see cref="LanguageVocabulary.PaperScalarKeys"/> /
+    /// <see cref="LanguageVocabulary.PaperSpacingKeys"/> — the reader's own table,
+    /// published — and never listed here, for the reason the font key list is not.
+    /// </remarks>
+    private static CompletionList? _paperBlockCompletions;
+
+    internal static CompletionList GetPaperBlockCompletions()
+        => _paperBlockCompletions ??= new CompletionList
+        {
+            Items =
+            [
+                .. LanguageVocabulary.PaperScalarKeys.Select(key => new CompletionItem
+                {
+                    Label = key,
+                    Kind = CompletionItemKind.Property,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = key + " $0",
+                    Detail = PaperKeyDetail(key),
+                }),
+                new CompletionItem
+                {
+                    Label = "raggedRight",
+                    Kind = CompletionItemKind.Keyword,
+                    Detail = "Do not justify lines; measures sit at their ideal width",
+                },
+                .. LanguageVocabulary.PaperSpacingKeys.Select(key => new CompletionItem
+                {
+                    Label = key,
+                    Kind = CompletionItemKind.Property,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = key + " { $0 }",
+                    Detail = PaperKeyDetail(key),
+                    Command = new Command
+                    {
+                        Title = "Suggest spacing sub-key",
+                        CommandIdentifier = "editor.action.triggerSuggest",
+                    },
+                }),
+            ],
+        };
+
+    /// <summary>The four lines of a nested spacing block.</summary>
+    private static CompletionList? _paperSpecBlockCompletions;
+
+    internal static CompletionList GetPaperSpecBlockCompletions()
+        => _paperSpecBlockCompletions ??= new CompletionList
+        {
+            Items =
+            [
+                .. LanguageVocabulary.PaperSpacingSubKeys.Select(key => new CompletionItem
+                {
+                    Label = key,
+                    Kind = CompletionItemKind.Property,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = key + " $0",
+                    Detail = key switch
+                    {
+                        "basicDistance" => "Ideal distance between the pair (staff spaces)",
+                        "minimumDistance" => "Absolute floor, whatever the skylines say",
+                        "padding" => "Safety margin beyond the skyline distance",
+                        "stretchability" => "Spring flexibility (unitless); larger stretches more",
+                        _ => "Spacing sub-key",
+                    },
+                }),
+            ],
+        };
+
+    /// <summary>One line of help per paper key — what the key reaches, and its default.</summary>
+    private static string PaperKeyDetail(string key) => key switch
+    {
+        "paperWidth" => "Page width (default 210mm, a4). Bare numbers are staff spaces",
+        "paperHeight" => "Page height (default 297mm, a4); 0 for one content-driven page",
+        "leftMargin" => "Left margin (default 15mm)",
+        "rightMargin" => "Right margin (default 15mm)",
+        "topMargin" => "Top margin (default 10mm)",
+        "bottomMargin" => "Bottom margin (default 10mm)",
+        "indent" => "First system's indent (default 0 = from instrument names)",
+        "shortIndent" => "Later systems' indent (default 0)",
+        "topSystemPadding" => "Padding between the title and the first system",
+        "spacingIncrement" => "Horizontal note-spacing unit (default 1.2 staff spaces)",
+        "systemSystemSpacing" => "Between two consecutive systems",
+        "scoreSystemSpacing" => "After a score boundary, before the next system",
+        "markupSystemSpacing" => "After a title or markup, before the next system",
+        "scoreMarkupSpacing" => "After a system, before the next title or markup",
+        "markupMarkupSpacing" => "Between consecutive titles or markups",
+        "topSystemSpacing" => "From the page top to the first system",
+        "lastBottomSpacing" => "From the last element to the page bottom",
+        "staffStaffSpacing" => "Between two staves of a group",
+        "staffGroupStaffSpacing" => "Between a group's staff and the next group's",
+        "defaultStaffStaffSpacing" => "Between ungrouped staves",
+        "nonStaffRelatedStaffSpacing" => "A lyrics/chord row and the staff it belongs to",
+        "nonStaffUnrelatedStaffSpacing" => "A lyrics/chord row and an unrelated staff",
+        "nonStaffNonStaffSpacing" => "Between two lyrics/chord rows",
+        _ => "Paper key",
+    };
 
     /// <summary>One line of help per key, so the popup says what the key REACHES rather
     /// than only repeating its spelling.</summary>
@@ -2791,6 +2969,9 @@ public sealed partial class LilySharpLanguageServer
                 // well, the two spellings drift and the keyword path is the one nobody looks
                 // at — which is exactly how it came to be wrong in the first place.
                 new CompletionItem { Label = "fonts", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "fonts " + FontBlockSnippet("$0"), Detail = "Text faces per role, pre-filled with the faces in use; add `embedded` to subset-embed them in the exported PDF" },
+                // ⚠️ Pre-filled with the DEFAULTS (a4), the fonts snippet's rule: accepting
+                // the completion and changing nothing does not move the page.
+                new CompletionItem { Label = "paper", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "paper {\n\tpaperWidth ${1:210mm}\n\tpaperHeight ${2:297mm}$0\n}", Detail = "Page dimensions (paper size, margins, spacing), pre-filled with the a4 defaults" },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)", Command = new Command { Title = "Suggest tempo", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
@@ -2842,10 +3023,10 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Top-level keywords that may appear only ONCE at the global scope — metadata
-    /// (title/composer/font) and the piece-wide defaults (time/key/tempo/octave).
+    /// (title/composer/font/paper) and the piece-wide defaults (time/key/tempo/octave).
     /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "composer", "fonts", "tempo", "time", "key", "octave" };
+        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "tempo", "time", "key", "octave" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>
