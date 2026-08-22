@@ -158,7 +158,7 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 **④ §2.1 の台帳と判断**：候補台帳＝`LayoutOptions` 全員（用紙・余白・StaffHeight・indent・ragged・spacing 群。**lysc はどれも露出していない**・テスト需要の首位は PageHeight 7／PageWidth 6）。雛形 `fonts { }` より簡単（役割×グループが無い＝フォールバック段不要）。**ユーザー判断 3 つ**＝⑴ 狙い（LP idiom 完成＝B／ハウススタイル＝A＋§2.1／コーパス再開は動機薄）・⑵ 単位の綴り（LP は `210\mm`・Lily# に単位接尾辞の前例なし）・⑶ **§2.2 との分担**（LP の慣習は system-system＝`\paper` 変数・staff-staff＝StaffGrouper grob——**§9 の 3 と 4 は分担を共有するので対で決める**。§4.2/§4.3 の「対で決める」と同族）。
 
 ★ **開始時裏取り**: HEAD `020b9d7d`（第230 の閉幕 handoff・§1 と一致）・未 push 18・未追跡 0/木 0・Windows suite **5737/0/4**・WSL **5737/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2・追跡コーパス 572 冊・Core 0 警告＝**前便の閉幕数と全一致**。
-終了時: **未 push 19（push はユーザー＝RULES §5.1）**＝本便 1 本（GRAMMAR_AUDIT の測定＋この行の handoff）・未追跡 0/木 0・suite **Windows 5737/0/4＝緑（コード不変・docs のみ。編集後に全数を回して確認済み）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**・Core 0 警告。
+終了時: **未 push 20（push はユーザー＝RULES §5.1）**＝本便 2 本（`31ed5919` 測定＋handoff／この行の handoff 確定）・未追跡 0/木 0・suite **Windows 5737/0/4・WSL 5737/0/4＝両 OS 完全緑（コード不変・docs のみ。編集後に全数を回して確認済み）**・snapshot **222 枚不動**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**・Core 0 警告。
 
 ★ **この便の値段**:
 
