@@ -157,13 +157,14 @@ git --no-pager log --oneline -1 origin/master   # 自分が今日作った commi
 ★ **なぜ網が 20 便鳴らなかったか（骨 1 を参照）**：**form-level bar を持つ追跡本は 1 冊だけ**（`test/tocoda-volta-clearance`＝前便が建てた）で、**それは `|: … :|` も持つので walk 全体が `form-repeat-block` で ineligible**＝checkpoint 2・resume **0**。**空振りで緑だった。** ⇒ **fixture `test/form-toplevel-bar-resume` を新設**（repeat block 無し・3 section・間に `||`・checkpoint 15／resume 3）。**毒（visit 比較を抜く）で visit 1 inv 0 node 5 で赤**・修理で緑。**snapshot は足していない**——form-level `||` の*描画*は tocoda-volta-clearance が既に持っており、この欠陥は絵を動かさない（abort は full collect に落ちるので出力は常に正しく、**失うのは再利用だけ**）。
 
 ★ **開始時裏取り**: HEAD `5f349902`（**§1 は `d74118f7`＝第227 で止まっており、12 commit stale だった**——間の便は docs／audit のみで `dotnet` の無い環境。**§1 の HEAD を信じずに `git log` を読むこと**）・未 push 0・未追跡 0/木 0・Windows suite **5719/0/4**・台帳 566 点・ss 非ゼロ 110／総和 3.876038461・count 点 107／非ゼロ 2・追跡コーパス 571 冊・Core 0 警告。
-終了時: HEAD `139e1db2`・**未 push 1（push はユーザー＝RULES §5.1）**・未追跡 0/木 0・suite **Windows 5719/0/4・WSL 5719/0/4＝両 OS 完全緑**（**±0＝新 fixture は既存の網に食わせるだけでテストケースを増やさない**）・snapshot **222 枚（不動・新規 0）**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（+1＝新 fixture）・Core 0 警告。
+終了時: **未 push 4（push はユーザー＝RULES §5.1）**＝本便の commit 4 本（`139e1db2` 修理／`6231bc03` handoff／`5597e89f` 監査の実測／**この行を書いた終了時 handoff 自身**——⚠️ **終了時 HEAD の hash をここに書くと必ず 1 つずれる**ので書かない。`git log` を見ること）・・未追跡 0/木 0・suite **Windows 5719/0/4・WSL 5719/0/4＝両 OS 完全緑**（**±0＝新 fixture は既存の網に食わせるだけでテストケースを増やさない**）・snapshot **222 枚（不動・新規 0）**・台帳 **566 点・ss 非ゼロ 110／総和 3.876038461・count 107／非ゼロ 2＝完全不動**・追跡コーパス **572 冊**（+1＝新 fixture）・Core 0 警告。
 
 ★ **この便の値段**:
 
 | 便 | 何が動いたか | 射程 |
 |---|---|---|
 | ① prefix gate を三つ組に戻す＋観測者の新設（`139e1db2`） | `ProcessNodes` の resume gate が visit を先に比較（overshoot も visit 版を追加）・fixture `test/form-toplevel-bar-resume` 1 冊 | Δ=0 網のみ（cross-edit は毒／修理で同一と実測）・両 OS 完全緑・台帳／snapshot 不動・出力不変 |
+| ② 文法監査の `測` 印を全部走らせた（`5597e89f`・doc のみ） | GRAMMAR_AUDIT §1.1／§3.1／§8.1 の門を実測して各項に結果を差し込み・§10（再現手順）新設・RULES §5.1 に `.md` を LF で書き戻す規則 | **§1.1 確認（ただし壊れ方が悪い＝診断は必須）**・**§3.1 確認（毒で 5718/1/4・赤は名指しの 1 本）**・**§8.1 一部反証（7/8 は `[1]×7`）**・コード変更 0・suite 不動 |
 
 - **⑸ ★★★ 次に触るなら＝残債**: **文法監査 `docs/GRAMMAR_AUDIT.md` §9 の順序**（**2026-08-21 起票・12 commit ぶんの docs 便がここに積んである。✅ 本便の第2便が `測` 印を全部潰した＝§10 に再現手順・次便が最初にやる測定はもう無い**）＝⑴ §4.2＋§4.3 を対で決める（**出力が変わるのでユーザー承認が要る**・whitelist 2 行）／⑵ §1.1 `$` フレーズ参照の廃止一式（**ユーザー決定済み・実装が追っていない**・5 者が食い違う・✅ **門は測って開いた**＝裸 `sn` は staff ごと DrumStaff に化けて**エラーも出ない**ので**宣言側の診断が必須**・書き換えは corpus 4 冊 5 箇所＋docs 7 本＋コード 5 者＋テスト 1 本）／⑶ §2.2 override の語彙／⑷ §2.1 `paper { }`／⑸ §3.1 `DisplayName`（✅ **費用は毒で確定＝赤は名指しの 1 本だけ・snapshot 222 緑**）他。⚠️ **§8.1 の「変拍子が無料で正しくなる」は本便が一部反証**（5/8・8/8 は表の上書きで不均等だが **7/8 は `[1]×7`**）。**§8.1 コード記号の書式は仕様確定済み・順位は狙いの持ち主が決める**。／▶ perf（歌詞打鍵の章はほぼ完了＝55.1 vs 非歌詞 45.3。残り ~10 MB は hyphen／apply／非歌詞 L5/L9 等の小粒）／⒡ 配管 6 site／⒣ removeEmpty/pedal の score 移行検討（別便＝ユーザー指示）／小粒: twin の歌詞行・`lines` twin 未輸出・マークの X・chord-row の上帯スカラー・**非ペア ToCoda の reserve≠draw**（第227 起票）・lead-sheet 音節×縦線の対・lead-sheet の mid-piece `time` 変更の表示。Marketplace は PAT 待ちのまま（第220 ①）。
 
