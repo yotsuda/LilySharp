@@ -77,6 +77,73 @@ public sealed class SharedRendererBarlineTests
             "repeat barlines should add thick strokes");
     }
 
+    /// <summary>
+    /// The repeat dots straddle the CENTRE of the band their barline spans, whatever that
+    /// band's height is — LilyPond translates them to <c>center ± dist/2</c> and never refers
+    /// to a top edge (scm/bar-line.scm:360-368). Measured on 2.26.0: the dot pair's centre
+    /// sits exactly on the staff centre, one staff space apart.
+    /// </summary>
+    /// <remarks>
+    /// This is the invariant, not a ledger point, because the member that MOVED has no
+    /// LilyPond counterpart to measure against: the band is Lily#'s lead-sheet row, which
+    /// already diverges from LilyPond's bare row by decision (it prints a meter — HANDOFF §3,
+    /// session 226). What LilyPond settles is the RULE, and the rule is what this pins.
+    ///
+    /// Until session 240 the pair was stored as two constants measured down from the band's
+    /// TOP (1.5 / 2.5) — the five-line staff's own half-height folded into the numbers. Every
+    /// staff is 4.0 tall, so the whole suite, 222 snapshots and 572 tracked books agreed; a
+    /// lyrics row grows by one LyricVerseSpacing per extra verse, and on a two-verse row the
+    /// dots sat 1.6 ss above the centre of the barline drawn around them (user report).
+    /// </remarks>
+    [Theory]
+    // A plain five-line staff: the band is 4.0 and the old constants were already right here.
+    [InlineData("""
+        time 4/4
+        part m { clef treble section A { c4 d e f | } section B { g4 a b c' | } }
+        form main { A |: B :| }
+        score main { staff m }
+        """)]
+    // A staffless lyrics row with TWO verses: the band is taller than a staff, which is the
+    // only shape that can tell "centred" apart from "1.5 below the top".
+    [InlineData("""
+        time 4/4
+        part m { clef treble section A { c4 d e f | } section B { g4 a b c' | } }
+        lyrics v {
+          section A { one two three four | }
+          section B { [~1. five six sev- en |] [~2. eight nine ten e- le- ven |] }
+        }
+        form main { A |: B :| }
+        score main { lyrics v }
+        """)]
+    public void RepeatDots_StraddleTheCentreOfTheBandTheirBarlineSpans(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
+
+        var dots = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<circle cx=\"([0-9.]+)\" cy=\"([0-9.]+)\" r=\"([0-9.]+)\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value), Y: double.Parse(m.Groups[2].Value)))
+            .OrderBy(d => d.X).ThenBy(d => d.Y).ToList();
+        Assert.True(dots.Count >= 2, $"expected repeat dots, found {dots.Count}");
+
+        // The barline the first dot pair belongs to: a narrow, tall rect whose vertical span
+        // contains both dots. (The page background is wide, note ink is short.)
+        var bands = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<rect[^>]*x=\"([0-9.-]+)\"[^>]*y=\"([0-9.-]+)\"[^>]*width=\"([0-9.-]+)\"[^>]*height=\"([0-9.-]+)\"")
+            .Select(m => (Y: double.Parse(m.Groups[2].Value),
+                          W: double.Parse(m.Groups[3].Value),
+                          H: double.Parse(m.Groups[4].Value)))
+            .Where(r => r.W < 1 && r.H > 2).ToList();
+
+        var (d1, d2) = (dots[0], dots[1]);
+        var band = bands.FirstOrDefault(b => b.Y <= d1.Y && b.Y + b.H >= d2.Y);
+        Assert.True(band.H > 0, "no barline band contains the dot pair");
+
+        Assert.Equal(band.Y + band.H / 2, (d1.Y + d2.Y) / 2, 3);
+        Assert.Equal(2 * EngravingDefaults.RepeatDotHalfSpan, d2.Y - d1.Y, 3);
+    }
+
     private static int CountOccurrences(string haystack, string needle)
     {
         int count = 0, i = 0;

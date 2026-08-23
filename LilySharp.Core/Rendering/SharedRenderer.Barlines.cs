@@ -252,37 +252,46 @@ internal static partial class SharedRenderer
             case BarlineType.RepeatStart:
                 gc.DrawRectangle(x, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(x + thick + sep, staffY, thin, height, fill: Color.Black);
-                if (withDots) DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, gc, tabDots);
+                if (withDots) DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, height, gc, tabDots);
                 break;
 
             case BarlineType.RepeatEnd:
-                if (withDots) DrawRepeatDots(x, staffY, gc, tabDots);
+                if (withDots) DrawRepeatDots(x, staffY, height, gc, tabDots);
                 double afterDots = x + dotsOffset;
                 gc.DrawRectangle(afterDots, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(afterDots + thin + sep, staffY, thick, height, fill: Color.Black);
                 break;
 
             case BarlineType.RepeatBoth:
-                if (withDots) DrawRepeatDots(x, staffY, gc, tabDots);
+                if (withDots) DrawRepeatDots(x, staffY, height, gc, tabDots);
                 double pos = x + dotsOffset;
                 gc.DrawRectangle(pos, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
-                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc, tabDots);
+                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, height, gc, tabDots);
                 break;
         }
     }
 
-    // LILYPOND-REF: scm/bar-line.scm make-colon-bar-line — two repeat dots centred on
-    // the middle of the staff, one falling into each space adjacent to the centre line.
-    private static void DrawRepeatDots(double x, double staffY, IDrawingContext gc,
-        (double Y1, double Y2)? tabDots = null)
+    // LILYPOND-REF: scm/bar-line.scm:360-368 make-colon-bar-line — the two dots are
+    // translated to `center ± dist/2`, i.e. they straddle the CENTRE of the band the
+    // barline spans; nothing in that procedure refers to its top edge.
+    // ⚠️ `height` is what makes that true here. The default pair used to be two stored
+    // constants measured DOWN FROM THE TOP LINE (1.5 / 2.5), which is the same answer only
+    // while the band is a five-line staff. A lead-sheet row grows by one LyricVerseSpacing
+    // per extra verse, so on a two-verse row the dots sat 1.6 ss above the row's centre
+    // while the barline around them had already grown past them (user report, session 240).
+    private static void DrawRepeatDots(double x, double staffY, double height,
+        IDrawingContext gc, (double Y1, double Y2)? tabDots = null)
     {
         double r = EngravingDefaults.RepeatDotRadius;
+        double half = EngravingDefaults.RepeatDotHalfSpan;
         // On a tab staff the dots straddle the centre, each centred in a string
-        // space (passed in); otherwise the notation 2nd/3rd-space positions.
-        double y1 = tabDots?.Y1 ?? EngravingDefaults.RepeatDotPosition1;
-        double y2 = tabDots?.Y2 ?? EngravingDefaults.RepeatDotPosition2;
+        // space (passed in, already in this frame); otherwise they straddle the band's own
+        // centre — which for a five-line staff is 2.0 below its top line, giving back the
+        // 1.5 / 2.5 this used to store.
+        double y1 = tabDots?.Y1 ?? (height / 2.0 - half);
+        double y2 = tabDots?.Y2 ?? (height / 2.0 + half);
         // staffY is the Y-up top edge; the dot rows sit below it (device down =
         // smaller Y-up).
         gc.DrawCircle(x + r, staffY - y1, r, Color.Black);

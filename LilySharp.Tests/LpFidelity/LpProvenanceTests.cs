@@ -108,6 +108,10 @@ public class LpProvenanceTests
     /// <c>PageWidth</c>, <c>StaffHeight</c>, <c>SystemSpacing</c> in LayoutOptions.
     /// ⚠️ <c>DotGap</c> has no constant to cite: LilyPond's DotColumn padding is the callback
     /// <c>dot-column-interface::pad-by-one-dot-width</c>, so that one is a measurement.
+    /// ⚠️ <c>RepeatDotPosition1</c>/<c>RepeatDotPosition2</c> no longer exist under those names:
+    /// session 240 folded the pair into the single centre-relative <c>RepeatDotHalfSpan</c>,
+    /// because storing them below the TOP line had baked a five-line staff's half-height into
+    /// the numbers. The provenance they carried is unchanged and moved with them.
     /// </para>
     /// <para>
     /// ⚠️⚠️ 13 → 0 ON 2026-08-04. The backlog is paid and the baseline is a real zero, so the

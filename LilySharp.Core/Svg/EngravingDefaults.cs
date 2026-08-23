@@ -782,14 +782,29 @@ internal static class EngravingDefaults
     // LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — LilyPond does not
     //   declare dot positions. It folds the staff about its centre, finds the first space
     //   wide enough for a dot plus a staff line, and translates one dot to each side of the
-    //   centre by half that span (`(* dist (/ staff-space 2))`). The two constants below are
-    //   that procedure's answer for the ordinary five-line staff.
+    //   centre by half that span (`(* dist (/ staff-space 2))`). The constant below is that
+    //   procedure's answer for the ordinary five-line staff.
     // ⚠️ MEASURED, NOT DERIVED (2026-08-04). Calling the procedure on 2.26.0 and reading the
     //   stencil it returns gives a Y extent of (-0.725 . 0.725) with a dot half-height of
     //   0.225 — i.e. dot centres at exactly -0.5 and +0.5 staff spaces from the staff
-    //   CENTRE. The top line is 2.0 above the centre, so in this file's top-line frame that
-    //   is 1.5 and 2.5. Walking the folded-staff `any` by hand gives the same answer, but
-    //   only measuring says the walk was read right.
+    //   CENTRE. Walking the folded-staff `any` by hand gives the same answer, but only
+    //   measuring says the walk was read right.
+    // ⚠️⚠️ ★ THE FRAME IS THE WHOLE POINT (2026-08-23). This pair used to be stored as 1.5
+    //   and 2.5 "below the top line" — the same two dots, with the staff's own half-height
+    //   (2.0) folded into the numbers. That fold is only valid while the band the barline
+    //   spans IS a five-line staff. A lead-sheet row is taller by one LyricVerseSpacing per
+    //   extra verse, so the dots stayed pinned to the row's top edge and drifted
+    //   (height - StaffHeight)/2 above its centre — 1.6 ss on a two-verse row (user report,
+    //   session 240; measured against a 2.26.0 render of the same music, where the dot pair
+    //   centre sits exactly on the staff centre). Stored from the CENTRE, the arithmetic is
+    //   the procedure's own and no band height can fold into it.
+    // ⚠️ NOT PORTED: the fold-and-search itself. `dist` is a per-staff search over
+    //   `line-positions` (scm/bar-line.scm:317-358), so a staff whose lines are unevenly
+    //   spaced, or a context with NO staff symbol, gets a different span — a bare row takes
+    //   the "dots should go outside" branch, dist = 4*dot-y-length/staff-space, i.e. ±0.45 ss
+    //   rather than ±0.5. Lily#'s renderer carries no line-positions model to search, and its
+    //   lead-sheet row is already a decided divergence from LilyPond's bare row (it prints a
+    //   meter; HANDOFF §3, session 226). Porting the search starts from that model.
 
     /// <summary>
     /// Radius of the drawn repeat-barline dot (staff spaces).
@@ -808,17 +823,14 @@ internal static class EngravingDefaults
     /// </remarks>
     public const double RepeatDotRadius = 0.2;
 
-    /// <summary>Y of the upper repeat dot (staff spaces below the top line): the staff
-    /// centre, 2.0 below that line, minus the half-space the procedure translates by.</summary>
-    /// <remarks>LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — measured at a dot
-    /// centre of -0.5 from the staff centre on 2.26.0; see the section remark above.</remarks>
-    public const double RepeatDotPosition1 = 1.5;
-
-    /// <summary>Y of the lower repeat dot (staff spaces below the top line): the staff
-    /// centre plus the same half-space, so the pair straddles the middle line.</summary>
-    /// <remarks>LILYPOND-REF: scm/bar-line.scm:296-368 make-colon-bar-line — measured at a dot
-    /// centre of +0.5 from the staff centre on 2.26.0; see the section remark above.</remarks>
-    public const double RepeatDotPosition2 = 2.5;
+    /// <summary>Half the span between the two repeat dots (staff spaces), measured from the
+    /// CENTRE of the band the barline spans — one dot falls into each space adjacent to a
+    /// five-line staff's middle line.</summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm:360-368 make-colon-bar-line — the stencil is
+    /// translated to <c>center ± dist/2</c> line positions, measured at ±0.5 staff spaces from
+    /// the staff centre on 2.26.0; see the section remark above for the measurement and for
+    /// why this is stored from the centre rather than from the top line.</remarks>
+    public const double RepeatDotHalfSpan = 0.5;
 
     // === Spacing (Lilypond-compatible) ===
     // See: lily/spacing-options.cc, lily/spacing-spanner.cc
