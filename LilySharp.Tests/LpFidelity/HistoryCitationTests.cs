@@ -103,7 +103,7 @@ public class HistoryCitationTests
     /// observation at the end of a long session.
     /// <para>
     /// Raised as sessions cite: 510 when written, then 515, 517 and 518 across the handoff
-    /// commits of the session after it, and 520 by the one after that. Follow the measured
+    /// commits of the session after it, and 520 then 523 by the one after that. Follow the measured
     /// number up in the same commit that raises it — leaving the floor behind means a later
     /// fall back to it is exactly the silent drop the ratchet exists to catch.
     /// <para>
@@ -115,7 +115,7 @@ public class HistoryCitationTests
     /// </para>
     /// </para>
     /// </remarks>
-    private const int LiveCitationsWhenWritten = 520;
+    private const int LiveCitationsWhenWritten = 523;
 
     /// <summary>
     /// The number of citation-shaped tokens whose commit is not in the history, when this
