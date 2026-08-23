@@ -1640,6 +1640,29 @@ internal sealed class LayoutEngine
                                 + perSystemExtents[i].downExtent + bandUpNext
                                 - (aNext.ToFirst - aNext.HalfFirst));
                         }
+                        // ⚠️ A SYSTEM WITH NO SPACEABLE STAFF HAS NO DOWN SILHOUETTE TO REFINE.
+                        // BuildSystemSkylines seeds the down side from the BOTTOM STAFF'S INK,
+                        // and a rows-only lead sheet (chords row + lyrics row, no staff) has
+                        // none — its content is text the lyric and chord engravers draw. The
+                        // lyric reservation does not cover it either: that profile is the rows
+                        // hanging BELOW the last spaceable staff, and here there is no such
+                        // staff for them to hang below. MEASURED on the reported book
+                        // (scratch/ベースタブLy/Untitled-6.lys, user report session 240): the
+                        // down skyline reached 1.900 under a body of 10.300, so Distance()
+                        // answered 6.395 where the true origin-to-origin need was 14.900, the
+                        // 12.000 basic distance won the max below, and the next system's
+                        // section label and bar number printed 1.8 into the system above.
+                        // ⇒ Keep the SCALAR sum for such a system. It is the same quantity the
+                        // line above computes and needs no silhouette: body + this system's
+                        // downward protrusion + the next system's upward one. Distance() is a
+                        // refinement of that sum and cannot refine what it cannot see.
+                        // ⚠️ This CANNOT reach a book with a staff: the test is exactly
+                        // PageAnchorOffsets' own fallback condition, whose remark already says
+                        // the nominal anchor stands there only until a corpus point measures
+                        // it. This is that point, for the silhouette half of the same hole.
+                        if (ClassifySystem(systems[i].StaffGroups, lyricsRowStaves)
+                                .FirstSpaceable is null)
+                            dist = Math.Max(dist, skylineDistance);
                         skylineDistance = dist;
                     }
                 }
