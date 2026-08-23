@@ -87,50 +87,38 @@ function migratePreviewKey(oldUri: string, newUri: string) {
     if (timer !== undefined) { clearTimeout(timer); debounceTimers.delete(oldUri); }
 }
 
-// Content for the "Lily#: New Score" command — a complete, valid, recognizable
-// piece (public-domain Twinkle, Twinkle) so a new file shows real notation at once
-// and demonstrates relative octaves (' / ,), the |: :| repeat, and form replay.
-// (The same content is offered as a `score` snippet for files that already exist.)
-const NEW_SCORE_TEMPLATE = `// Twinkle, Twinkle, Little Star (public domain).
-// Relative octave (the default): each note sits in the octave nearest the
-// previous one. Add ' to jump up an octave (the leap to G is g'), , to jump down (g,).
-title "Twinkle, Twinkle, Little Star"
-composer "Jane Taylor"
+// Content for the "Lily#: New Score" command (File ▸ New File… ▸ Lily# Score).
+//
+// The SMALLEST complete piece: one part, one section, one score — a blank page a
+// writer overwrites, not a worked example to delete. It used to be the whole of
+// Twinkle, Twinkle with lyrics, verses, a |: :| repeat and six paragraphs of
+// teaching comments, which is a fine thing to READ and a poor thing to start from:
+// the first act on a new file was deleting 40 lines.
+//
+// The worked examples did not go away — they are the `template-…` completions
+// (Ctrl+Space at the top level), which replace the file rather than joining it.
+// That is what the one comment line below points at, and it is the only line here
+// that is not score.
+//
+// ⚠️ Two spaces, no tabs: 545 of the 548 tracked .lys files that indent at all use
+// two spaces and not one uses a tab (measured 2026-08-23). The formatter cannot
+// settle this — it takes the indent from the client's formatting options.
+const NEW_SCORE_TEMPLATE = `// Ctrl+Space at the top level offers fuller score templates.
+title "Untitled"
 
 tempo 100
 time 4/4
 key c major
 
-// A single part can hold its sections inline (part-major). For several parts,
-// section-major often reads better (see the grand-staff template); the editor's
-// "Lily#: Convert Layout" command switches between the two.
 part melody {
   clef treble
-  section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
-  section B { g'4 g f f | e e d2 | }
+  section A { c'4 d e f | g2 g | }
 }
 
-// Lyrics align one syllable per note. A trailing '-' hyphenates within a word
-// (Twin- kle), '|' marks a bar. Plain words repeat every time a section is sung;
-// to sing DIFFERENT words each pass, number the verses with [1. …] [2. …] (a
-// leading ~ as in [~1. …] hides the printed stanza number) — here B's |: :|
-// repeat is sung "Up above…" then "Like a diamond…".
-// The track is NAMED ('verse') and sings its melody; the score places its row
-// directly under the staff. (Give a second lyrics block a different name.)
-lyrics verse sings melody {
-  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
-  section B {
-    [~1. Up a- bove the | world so high |]
-    [~2. Like a dia- mond | in the sky |]
-  }
-}
-
-// |: B :| repeats B; the reprise of A is re-labelled "A2".
-form main { A |: B :| A "A2" }
+form main { A }
 
 score main {
   staff melody
-  lyrics verse
 }
 `;
 let debounceTimers = new Map<string, NodeJS.Timeout>();
@@ -347,8 +335,30 @@ export function activate(context: vscode.ExtensionContext) {
                 language: 'lilysharp',
                 content: NEW_SCORE_TEMPLATE,
             });
-            await vscode.window.showTextDocument(doc);
+            const editor = await vscode.window.showTextDocument(doc);
+            // Land on the one word in the template that is a placeholder rather than
+            // score: selected, so the first keystroke names the piece instead of having
+            // to find "Untitled" and pick it out from between the quotes.
+            const title = newScoreTitleRange(doc);
+            if (title) {
+                editor.selection = new vscode.Selection(title.start, title.end);
+                editor.revealRange(title);
+            }
         }),
+        // A score template is a WHOLE FILE — title, parts, form, score — so the two
+        // `template-…` completions cannot simply insert at the caret: dropping a complete
+        // second piece into a file that already has one produces duplicate globals, and
+        // that is what they did until this command existed. The LSP item accepts as a
+        // no-op edit (it re-types the word being completed, unchanged) and names this
+        // command; everything the template needs travels in the arguments, so the server
+        // stays the one home for the text and a new template needs no change here.
+        // Not in contributes.commands: it takes arguments, so the Command Palette has
+        // nothing sensible to hand it.
+        vscode.commands.registerCommand('lilysharp.applyScoreTemplate',
+            (label: string, template: string, ...range: number[]) => {
+                outputChannel.appendLine(`applyScoreTemplate command triggered (${label})`);
+                return applyScoreTemplate(label, template, range);
+            }),
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
             outputChannel.appendLine('importMusicXml command triggered');
             importMusicXml(context, uri);
@@ -1035,6 +1045,85 @@ async function exportPreview(
     } catch (err) {
         vscode.window.showErrorMessage(`Lily# export failed: ${err}`);
     }
+}
+
+/**
+ * The text INSIDE the quotes of the document's `title "…"` line, or null if it has none.
+ *
+ * Read out of the document rather than counted off the template constant: the offset of a
+ * hard-coded line and column is a second spelling of the template's shape, and the two
+ * would drift the first time a line moved above it. A title with nothing between its quotes
+ * returns null — selecting a zero-width range would look exactly like nothing happened.
+ */
+function newScoreTitleRange(doc: vscode.TextDocument): vscode.Range | null {
+    const match = /^title "([^"]*)"/m.exec(doc.getText());
+    if (!match || match[1].length === 0) {
+        return null;
+    }
+    const at = match.index + match[0].indexOf('"') + 1;
+    return new vscode.Range(doc.positionAt(at), doc.positionAt(at + match[1].length));
+}
+
+/**
+ * Put a score template into the editor, as the WHOLE file.
+ *
+ * The `template-…` completion items name this command (see the registration above).
+ * Accepting one of those items does not edit the document — it re-types the word the
+ * writer was completing, unchanged — so everything the writer had is still there when
+ * the question below is asked, and answering "no" leaves it that way.
+ *
+ * `range` is that re-typed word (startLine, startChar, endLine, endChar), and it is
+ * excluded from the "is there anything to lose here?" test: a brand-new file where the
+ * writer typed `temp` to find the item is empty, and asking permission to clear an empty
+ * file is a dialog with no question in it. The server omits the four numbers when it has
+ * no caret position (its unit tests call it that way), which just makes the test read
+ * the whole document.
+ */
+async function applyScoreTemplate(label: string, template: string, range: number[]) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys file to apply a score template.');
+        return;
+    }
+
+    const doc = editor.document;
+    const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+
+    let existing = doc.getText();
+    if (range.length === 4) {
+        const typed = new vscode.Range(range[0], range[1], range[2], range[3]);
+        existing = doc.getText(new vscode.Range(fullRange.start, typed.start))
+                 + doc.getText(new vscode.Range(typed.end, fullRange.end));
+    }
+
+    if (existing.trim().length > 0) {
+        const replace = 'Replace';
+        const choice = await vscode.window.showWarningMessage(
+            `Lily#: replace the whole file with the "${label}" template?`,
+            {
+                modal: true,
+                detail: 'A score template is a complete piece, so it takes the place of what '
+                      + 'is here rather than joining it. Everything currently in this file is '
+                      + 'discarded (Ctrl+Z brings it back).'
+            },
+            replace);
+        if (choice !== replace) {
+            return;
+        }
+    }
+
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(doc.uri, fullRange, template);
+    const ok = await vscode.workspace.applyEdit(edit);
+    if (!ok) {
+        vscode.window.showErrorMessage('Lily#: the score template could not be applied.');
+        return;
+    }
+    // The caret is left wherever the replaced text put it — park it at the top of the
+    // template, which is where a writer starts reading (and editing) a fresh score.
+    const start = new vscode.Position(0, 0);
+    editor.selection = new vscode.Selection(start, start);
+    editor.revealRange(new vscode.Range(start, start));
 }
 
 interface ConvertLayoutResponse {

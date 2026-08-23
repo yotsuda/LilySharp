@@ -103,8 +103,9 @@
             "pitch": "#4EC9B0",
             "articulation": "#DCDCAA",
             "dynamic": "#C586C0",
-            "section": "#4FC1FF",
-            "phrase": "#DCDCAA"
+            "part": "#4FC1FF",
+            "section": "#FFA657",
+            "phrase": "#D2A8FF"
           }
         }
       },

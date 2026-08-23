@@ -103,20 +103,21 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 _definedVariables.Add(phraseDecl.Name.Text);
                 break;
                 
-            case SectionDeclarationSyntax sectionDecl:
-                _definedSections.Add(sectionDecl.SectionName);
-                break;
-                
-            case PartDeclarationSyntax partDecl:
-                _definedParts.Add(partDecl.Name.Text);
-                break;
-
-            // A section-body part block `melody { … }` DEFINES the part `melody` (its
-            // music), so a staff may render it even with no `part melody { … }` header.
-            case PartBlockSyntax partBlock:
-                _definedParts.Add(partBlock.PartName.Text);
-                break;
         }
+
+        // ⚠️ Not cases in the switch above, and deliberately: the language server's semantic
+        // tokens have to answer the SAME two questions — is this name a declared section? a
+        // declared part? — to decide whether a name in a `form { }` or a `score { }` gets a
+        // colour. A name this validator squiggles as undefined must never come out painted
+        // as resolved, so both callers ask one predicate rather than keeping a list each.
+        //
+        // ⚠️ A part has TWO declaring spellings: the header `part NAME { … }` and the
+        // section-body block `NAME { … }`, which carries the music and so lets a staff
+        // render the part with no header at all. Both live in PartReferenceFinder.
+        if (SectionSymbols.DeclaredName(node) is { } declaredSection)
+            _definedSections.Add(declaredSection.Text);
+        if (PartReferenceFinder.DeclaredName(node) is { } declaredPart)
+            _definedParts.Add(declaredPart.Text);
     }
 
     private void ValidateReferences(SyntaxNode node)
@@ -134,20 +135,19 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 }
                 break;
                 
-            case SectionReferenceSyntax sectionRef:
-                ValidateSectionName(sectionRef.SectionName, sectionRef.Span);
-                break;
-
-            // `~Name` is the same reference with its rehearsal label hidden, so the NAME is
-            // checked the same way. It was not, and the failure was silent in the worst
-            // sense: `form main { ~Nope }` passed `lysc check` clean and simply never
-            // played, where `form main { Nope }` reported the typo. A '~' hides a label,
-            // not a mistake.
-            case { Kind: SyntaxKind.SilentSectionReference } silentRef
-                when silentRef.GetChild(1) is SyntaxTokenNode silentName:
-                ValidateSectionName(silentName.Text, silentRef.Span);
-                break;
         }
+
+        // Both spellings of a form's section reference — `A` and the label-hiding `~A` —
+        // live in SectionSymbols, for the reason its remark gives: `form main { ~Nope }`
+        // passed `lysc check` clean until the silent one was added HERE, and the next
+        // spelling should have one place to be added rather than two.
+        //
+        // ⚠️ The span underlined is the NODE's, not the name token's, so `~Nope` is
+        // squiggled with its '~' — the thing the author has to look at. The semantic-token
+        // caller wants the other one, which is why the helper hands back the token and
+        // leaves the span to whoever asked.
+        if (SectionSymbols.ReferencedName(node) is { } referencedSection)
+            ValidateSectionName(referencedSection.Text, node.Span);
     }
 
     /// <summary>

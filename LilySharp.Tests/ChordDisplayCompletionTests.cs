@@ -78,6 +78,50 @@ public class ChordDisplayCompletionTests
             Assert.Contains(kw, labels);
     }
 
+    [Fact]
+    public void TheTopLevel_OffersBothTrackDeclarations()
+    {
+        // ⚠️ Reported 2026-08-23: only one of the pair was there. `chords` WAS offered inside
+        // a score — the `chords NAME` row — so the word read as known, and the declaration
+        // that gives that row something to name was the one no popup mentioned. A track kind
+        // that can be placed but not declared is half a feature.
+        var labels = LilySharpLanguageServer.GetTopLevelCompletions()
+            .Items.Select(i => i.Label).ToArray();
+
+        Assert.Contains("lyrics", labels);
+        Assert.Contains("chords", labels);
+    }
+
+    [Fact]
+    public void TheChordTrackSnippet_IsWhatTheCompilerAccepts()
+    {
+        // ⚠️ Measured, not copied from the `lyrics` item beside it. Two things differ and
+        // both would have taught an error: a chord track takes NO `sings` clause, and its
+        // name is NOT optional — `chords { … }` is refused with LYS0032 ("a 'chords' block
+        // needs a name"), so the placeholder has to carry one.
+        var snippet = LilySharpLanguageServer.GetTopLevelCompletions()
+            .Items.Single(i => i.Label == "chords").InsertText!;
+
+        Assert.DoesNotContain("sings", snippet);
+        Assert.Contains("${1:", snippet);
+
+        // …and what it leaves in the document compiles — tab stops resolved to their
+        // defaults and the final caret dropped, which is the file a writer has after
+        // accepting the item and pressing nothing else.
+        var expanded = System.Text.RegularExpressions.Regex
+            .Replace(snippet, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "");
+        var book = "part melody { section A { c'4 d e f } }\n" + expanded
+                 + "\nform main { A }\nscore main { staff melody  chords prog }\n";
+
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors,
+            "the chords snippet does not parse: "
+            + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error)
+            .Select(d => d.Message));
+    }
+
     [Theory]
     // grandStaff / staffGroup / choirStaff take `staff` items and `lyrics NAME`
     // verse rows, nothing else — anything else is LYS6011 "cannot contain".

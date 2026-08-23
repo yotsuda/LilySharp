@@ -114,7 +114,9 @@ public sealed partial class LilySharpLanguageServer
 
         return context switch
         {
-            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text, offset),
+            // The position goes with the text: the `template-…` items need a RANGE (not just
+            // an offset) to re-type the word being completed without changing it.
+            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text, offset, position),
             // A percussion part's music block offers the drum-kit vocabulary,
             // not pitch letters (LILYPOND-REF: \drummode note names).
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
@@ -3036,7 +3038,168 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    internal static CompletionList GetTopLevelCompletions(string? text = null, int offset = 0)
+    // ========== Score templates ==========
+    // A template is a WHOLE FILE, not a fragment: it declares title/composer, the parts,
+    // the form and the score. Landing one at the caret — what these items did until
+    // 2026-08-23 — drops a complete second piece into whatever the writer already had,
+    // and every one of those files is then a pile of duplicate globals (LYS8xxx). So the
+    // item accepts as a NO-OP edit and hands `lilysharp.applyScoreTemplate` the text; the
+    // editor asks before it clears the file. See ScoreTemplateItem.
+    //
+    // ⚠️ These strings are the ONE home for the template text — it travels to the editor
+    // as a command argument, so adding a template here needs no change in the extension.
+    // (`editors/vscode/src/extension.ts` has its OWN Twinkle in NEW_SCORE_TEMPLATE: that
+    // one seeds an untitled document for "Lily#: New Score" and carries the teaching
+    // comments this one does not. Two texts, two jobs — but they are two spellings of one
+    // song, and the pair will drift.)
+    //
+    // ⚠️ No `$0` and no other snippet markers: the client applies these as plain text.
+    //
+    // ⚠️⚠️ …and for the same reason, NO TABS. Every OTHER item in this file is a snippet,
+    // and VS Code re-indents snippet text to the editor's own insertSpaces/tabSize — so a
+    // `\t` in a snippet is the PORTABLE spelling and those items keep theirs. These two are
+    // the only completion items that are not snippets, so their whitespace is written into
+    // the document verbatim. The corpus settles what to write instead: of the 548 tracked
+    // `.lys` files that indent at all, 545 use TWO SPACES and NOT ONE uses a tab (measured
+    // 2026-08-23). ⚠️ The formatter has no opinion to inherit — `Format` takes the indent
+    // from the client's DocumentFormattingParams, so it would rewrite whatever went in.
+    //
+    // ⚠️ Written as joined lines rather than a raw string literal ("""…"""), whose newlines
+    // are the ones in THIS file — CRLF on Windows, LF elsewhere. `.gitattributes` pins
+    // `*.lys` to LF on every platform because snapshot data-pos offsets are byte offsets
+    // into the source, so a template must not carry the .cs file's line endings. It also
+    // makes the indentation VISIBLE: as one escaped line, `\t` read as "indent" for as long
+    // as these were snippets and it was.
+
+    private static readonly string TwinkleTemplate = string.Join("\n", [
+        "// Twinkle, Twinkle, Little Star (public domain).",
+        "title \"Twinkle, Twinkle, Little Star\"",
+        "composer \"Jane Taylor\"",
+        "",
+        "tempo 100",
+        "time 4/4",
+        "key c major",
+        "",
+        "part melody {",
+        "  clef treble",
+        "  section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }",
+        "  section B { g'4 g f f | e e d2 | }",
+        "}",
+        "",
+        "// The track sings its melody; the score places its row under the staff.",
+        "lyrics verse sings melody {",
+        "  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }",
+        "  section B {",
+        "    [~1. Up a- bove the | world so high |]",
+        "    [~2. Like a dia- mond | in the sky |]",
+        "  }",
+        "}",
+        "",
+        "form main { A |: B :| A \"A2\" }",
+        "",
+        "score main {",
+        "  staff melody",
+        "  lyrics verse",
+        "}",
+        "",
+    ]);
+
+    private static readonly string TwinklePianoTemplate = string.Join("\n", [
+        "// Twinkle, Twinkle, Little Star (public domain) — piano.",
+        "title \"Twinkle, Twinkle, Little Star\"",
+        "composer \"Jane Taylor\"",
+        "",
+        "tempo 100",
+        "time 4/4",
+        "key c major",
+        "",
+        "part rh { clef treble }",
+        "part lh { clef bass }",
+        "",
+        "section A {",
+        "  rh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }",
+        "  lh { c2 g | c2 c | f2 c | g2 c | }",
+        "}",
+        "",
+        "form main { A }",
+        "",
+        "score main {",
+        "  grandStaff {",
+        "    staff rh",
+        "    staff lh",
+        "  }",
+        "}",
+        "",
+    ]);
+
+    /// <summary>The command identifier the two <c>template-…</c> items name. The VS Code
+    /// extension registers it (see the note on <see cref="Command"/>); it takes the label,
+    /// the template text, and — when the caret position was supplied — the four numbers of
+    /// the range the identity edit below rewrote, so the editor can tell "the file is
+    /// empty" from "the file holds the word the writer just typed".</summary>
+    internal const string ApplyScoreTemplateCommand = "lilysharp.applyScoreTemplate";
+
+    /// <summary>One <c>template-…</c> item: a no-op text edit plus the command that does
+    /// the real work.
+    /// <para>The edit re-types the word being completed <b>as it already stands</b>, so
+    /// ACCEPTING THE ITEM CHANGES NOTHING. That is the point: the editor asks before it
+    /// clears the file, and declining has to leave the document exactly as the writer left
+    /// it — including the "temp" they typed to find this item. (Inserting <c>""</c> instead
+    /// would delete that word before the question is asked, and a "No" would then have
+    /// silently eaten it.)</para>
+    /// <para>An explicit range is also what makes the client filter against the full
+    /// hyphenated prefix, the same reason <see cref="GetInstrumentCompletions"/> carries
+    /// one.</para>
+    /// <para>With no <paramref name="position"/> (the unit tests call it that way) there is
+    /// no range to build: the item then inserts the empty string rather than falling back
+    /// to the label — a completion must never be able to type "template-twinkle" into a
+    /// score.</para></summary>
+    private static CompletionItem ScoreTemplateItem(
+        string label, string filterText, string detail, string template,
+        string? text, int offset, Position? position)
+    {
+        LspRange? wordRange = null;
+        string typed = "";
+        if (text != null && position != null)
+        {
+            int start = offset;
+            while (start > 0 && (char.IsLetterOrDigit(text[start - 1])
+                                 || text[start - 1] == '_' || text[start - 1] == '-'))
+                start--;
+            typed = text.Substring(start, offset - start);
+            wordRange = new LspRange
+            {
+                Start = new Position(position.Line, position.Character - (offset - start)),
+                End = position,
+            };
+        }
+
+        return new CompletionItem
+        {
+            Label = label,
+            FilterText = filterText,
+            Kind = CompletionItemKind.Snippet,
+            InsertTextFormat = InsertTextFormat.Plaintext,
+            InsertText = "",
+            TextEdit = wordRange == null
+                ? null
+                : new TextEdit { Range = wordRange, NewText = typed },
+            Command = new Command
+            {
+                Title = "Apply score template",
+                CommandIdentifier = ApplyScoreTemplateCommand,
+                Arguments = wordRange == null
+                    ? [label, template]
+                    : [label, template,
+                       wordRange.Start.Line, wordRange.Start.Character,
+                       wordRange.End.Line, wordRange.End.Character],
+            },
+            Detail = detail,
+        };
+    }
+
+    internal static CompletionList GetTopLevelCompletions(
+        string? text = null, int offset = 0, Position? position = null)
     {
         var items = new System.Collections.Generic.List<CompletionItem>
         {
@@ -3067,25 +3230,27 @@ public sealed partial class LilySharpLanguageServer
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
                 // the piece (LYS1024); it appears in the section-level list instead.
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property (global default)", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem
-                {
-                    Label = "template-twinkle",
-                    FilterText = "template scoretemplate score twinkle new",
-                    Kind = CompletionItemKind.Snippet,
-                    InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\n// The track sings its melody; the score places its row under the staff.\nlyrics verse sings melody {\n\tsection A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }\n\tsection B {\n\t\t[~1. Up a- bove the | world so high |]\n\t\t[~2. Like a dia- mond | in the sky |]\n\t}\n}\n\nform main { A |: B :| A \"A2\" }\n\nscore main {\n\tstaff melody\n\tlyrics verse\n}\n$0",
-                    Detail = "Score template — single-staff + lyrics (Twinkle, Twinkle, Little Star)",
-                },
-                new CompletionItem
-                {
-                    Label = "template-twinkle-piano",
-                    FilterText = "template scoretemplate score twinkle piano",
-                    Kind = CompletionItemKind.Snippet,
-                    InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c2 g | c2 c | f2 c | g2 c | }\n}\n\nform main { A }\n\nscore main {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
-                    Detail = "Score template — piano / grand staff (Twinkle, Twinkle, Little Star)",
-                },
+                ScoreTemplateItem(
+                    "template-twinkle",
+                    "template scoretemplate score twinkle new",
+                    "Score template — REPLACES the whole file (it asks first): single-staff + lyrics (Twinkle, Twinkle, Little Star)",
+                    TwinkleTemplate, text, offset, position),
+                ScoreTemplateItem(
+                    "template-twinkle-piano",
+                    "template scoretemplate score twinkle piano",
+                    "Score template — REPLACES the whole file (it asks first): piano / grand staff (Twinkle, Twinkle, Little Star)",
+                    TwinklePianoTemplate, text, offset, position),
                 new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics ${1:verse} sings ${2:part} {\n\t$0\n}", Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)" },
+                // ⚠️ The two track kinds are a pair and only one of them was here (reported
+                // 2026-08-23): `chords` was offered in a SCORE body — the `chords NAME` row —
+                // so it read as a known word, and the declaration that gives that row
+                // something to name was the one nobody could reach from the top level.
+                // ⚠️ The name is not optional. `chords { … }` is refused (LYS0032: "a
+                // 'chords' block needs a name"), so the placeholder is ${1:prog} and not an
+                // empty slot the writer might tab past — measured, like the body below,
+                // rather than copied from the lyrics item beside it: a chord track takes NO
+                // `sings` clause, and offering one would have taught a spelling that errors.
+                new CompletionItem { Label = "chords", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "chords ${1:prog} {\n\t$0\n}", Detail = "Named chord track (a score places it with a `chords NAME` row)" },
         };
 
         // Drop the singleton globals (metadata + piece-wide defaults) already written at the

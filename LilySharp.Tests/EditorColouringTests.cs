@@ -683,6 +683,95 @@ public class EditorColouringTests
             + "that way: " + string.Join(" ", strayKeys));
     }
 
+    /// <summary>The regex of one <c>match</c> rule, read out of the shipped grammar rather
+    /// than copied — a test that carries its own copy of the pattern tests the copy.</summary>
+    private static string MatchPatternOf(string rule, int index = 0)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        return doc.RootElement.GetProperty("repository").GetProperty(rule)
+            .GetProperty("patterns")[index].GetProperty("match").GetString()!;
+    }
+
+    [Theory]
+    // The duration a writer types after a bare pitch letter — the ordinary case, and the one
+    // that was never coloured: `\b` between `d` and `2` is false, so only a pitch carrying an
+    // octave mark ever handed the rule a word boundary to stand on.
+    [InlineData("d2", "2")]
+    [InlineData("e4", "4")]
+    [InlineData("g16", "16")]
+    [InlineData("b64", "64")]
+    // …and with one, which always worked. Both spellings, one rule, same answer.
+    [InlineData("c'4", "4")]
+    // Dots belong to the duration. The old trailing `\b` sat AFTER them, and `.` followed by
+    // a space is not a boundary, so a dotted duration was coloured up to its dot and no
+    // further — `c'2.` lit the 2 and left the dot plain.
+    [InlineData("c'2.", "2.")]
+    [InlineData("d4..", "4..")]
+    public void TheDurationPattern_ColoursTheWholeDuration(string source, string expected)
+    {
+        var match = Regex.Match(source, MatchPatternOf("durations"));
+
+        Assert.True(match.Success, $"no duration found in `{source}`");
+        Assert.Equal(expected, match.Value);
+    }
+
+    [Theory]
+    // ⚠️ The other half, and the reason the guards are lookarounds rather than nothing at all.
+    // Each of these contains a digit run that IS a duration spelling, and none of them is a
+    // duration: the clef's octave transposition, the transposition markers, a five-string
+    // tuning, and a tempo whose first digit is the whole note.
+    [InlineData("clef treble_8")]
+    [InlineData("transposition 8va")]
+    [InlineData("transposition 15ma")]
+    [InlineData("tuning bass5")]
+    [InlineData("tempo 100")]
+    public void TheDurationPattern_LeavesTheseAlone(string source)
+    {
+        var match = Regex.Match(source, MatchPatternOf("durations"));
+
+        Assert.False(match.Success,
+            $"`{source}` is not a duration, but the rule painted `{match.Value}` as one.");
+    }
+
+    [Fact]
+    public void ASectionInsideAPart_IsColouredLikeOneAtTheTopLevel()
+    {
+        // ⚠️ Reported 2026-08-23: in `part melody { section A { … } }` the name `A` was plain.
+        // #part-body is a begin/end block carrying the part HEADER's vocabulary, and a section
+        // is not in it, so `section` fell through to the generic keyword rule and its name to
+        // nothing. ⚠️ The half that did not show: #part-body ends at `\}` and nothing inside
+        // it balanced a brace, so the part body ENDED at that first section's closing brace —
+        // which is why the SECOND section in the same part looked right, having already fallen
+        // back to the top level. A fix that only added the name would have left that.
+        //
+        // This is structural, not a tokenizer run: the suite has no TextMate engine. What it
+        // can say is that the part body reaches the rule, that the rule says the same two
+        // things the top-level one says, and that it balances braces.
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var repository = doc.RootElement.GetProperty("repository");
+
+        string?[] partBody = [.. repository.GetProperty("part-body").GetProperty("patterns")
+            .EnumerateArray()
+            .Where(p => p.TryGetProperty("include", out _))
+            .Select(p => p.GetProperty("include").GetString())];
+        Assert.Contains("#part-inner-section", partBody);
+
+        var atTopLevel = repository.GetProperty("section-declaration")
+            .GetProperty("patterns")[0].GetProperty("captures");
+        var insideAPart = repository.GetProperty("part-inner-section").GetProperty("beginCaptures");
+        foreach (var group in new[] { "1", "2" })
+            Assert.Equal(
+                atTopLevel.GetProperty(group).GetProperty("name").GetString(),
+                insideAPart.GetProperty(group).GetProperty("name").GetString());
+
+        string?[] insideASection = [.. repository.GetProperty("part-inner-section")
+            .GetProperty("patterns").EnumerateArray()
+            .Select(p => p.GetProperty("include").GetString())];
+        Assert.True(insideASection.FirstOrDefault() == "#nested-braces",
+            "a section inside a part must claim its nested `{ … }` before $self does, or "
+            + "`repeat 2 { … }` ends the section the way the section was ending the part.");
+    }
+
     [Fact]
     public void TheGrammarCallsNothingInvalid()
     {

@@ -38,10 +38,15 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     private bool HasName =>
         GetChild(1) is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier;
 
+    /// <summary>The token carrying this block's track name, or null when it writes none.
+    /// The editor colours THIS; <see cref="VoiceName"/> is the same slot read once, so a
+    /// name that is coloured and a name that is resolved can never be different tokens.
+    /// </summary>
+    public SyntaxTokenNode? NameToken => HasName ? (SyntaxTokenNode)GetChild(1)! : null;
+
     /// <summary>The voice name this lyrics block binds to, or null for the default
     /// (first voice).</summary>
-    public string? VoiceName =>
-        HasName ? ((SyntaxTokenNode)GetChild(1)!).Text : null;
+    public string? VoiceName => NameToken?.Text;
 
     /// <summary>The <c>sings</c> keyword token of a melody-bound track
     /// (<c>lyrics ja sings vocal { … }</c>), or null when the block writes none.</summary>
@@ -49,13 +54,17 @@ public sealed class LyricsBlockSyntax : SyntaxNode
         HasName && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
             && s.Text == "sings" ? s : null;
 
+    /// <summary>The token naming the part this track sings, or null when this block
+    /// declares no binding.</summary>
+    public SyntaxTokenNode? SingsTargetToken =>
+        SingsKeyword != null && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t2
+            ? t2 : null;
+
     /// <summary>The part this track sings (<c>lyrics ja sings vocal</c> → "vocal"),
     /// or null when this block declares no binding. The binding is a property of
     /// the TRACK name — see <see cref="Music.LyricBindings"/> for the resolved
     /// answer across all of a track's blocks.</summary>
-    public string? SingsTarget =>
-        SingsKeyword != null && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t2
-            ? t2.Text : null;
+    public string? SingsTarget => SingsTargetToken?.Text;
 
     private int OpenBraceIndex
     {
@@ -137,9 +146,12 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
     private bool HasName =>
         GetChild(1) is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier;
 
+    /// <summary>The token carrying this block's track name, or null when it writes none —
+    /// what the editor colours. <see cref="PartName"/> reads the same slot.</summary>
+    public SyntaxTokenNode? NameToken => HasName ? (SyntaxTokenNode)GetChild(1)! : null;
+
     /// <summary>The chord part name this block contributes to.</summary>
-    public string? PartName =>
-        HasName ? ((SyntaxTokenNode)GetChild(1)!).Text : null;
+    public string? PartName => NameToken?.Text;
 
     private int OpenBraceIndex => HasName ? 2 : 1;
 

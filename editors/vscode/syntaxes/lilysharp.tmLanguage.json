@@ -252,6 +252,7 @@
             "patterns": [
                 { "include": "#comments" },
                 { "include": "#strings" },
+                { "include": "#part-inner-section" },
                 {
                     "comment": "⚠️ Longest spelling first, in every list below: TextMate takes the first alternative that matches and \\b succeeds before `_` is not true — but it DOES succeed before `^`, so a bare `treble` would colour the head of `treble^8` and leave `^8` plain. `treble_8`/`bass_8` are the same trap with the boundary inside the word.",
                     "match": "\\b(clef)\\s+(treble\\^8|treble_8|bass_8|treble|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b",
@@ -299,6 +300,38 @@
                 { "include": "#keywords" },
                 { "include": "#pitches" },
                 { "include": "#numbers" }
+            ]
+        },
+        "part-inner-section": {
+            "comment": "Part-major music: `section NAME { … }` written inside part { }. Sibling of #lyrics-inner-section, and it exists for the same two reasons at once. ⚠️ FIRST, the name: #part-body's list is the part HEADER's vocabulary and reaches nothing else, so `section` was coloured by the generic keyword rule and the NAME beside it was plain — the whole visible symptom (reported 2026-08-23). ⚠️ SECOND, and this is what made it more than a missing colour: #part-body ends at `\\}` and nothing inside it balanced a brace, so the part body ENDED AT THE FIRST SECTION'S CLOSING BRACE. Measured before the fix: in a part with sections A and B, A's name was plain and its music was read by the header rules (`|` plain, `4` a bare number), while B — which the tokenizer had already fallen back to the top level for — came out fully coloured. ⇒ The tell for this shape is that the SECOND one looks right. The body includes $self (music is the same language here as anywhere) behind #nested-braces, which keeps `repeat 2 { … }` from ending the section the way the section was ending the part.",
+            "begin": "\\b(section)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.control.section.lilysharp" },
+                "2": { "name": "entity.name.section.lilysharp" },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#nested-braces" },
+                { "include": "$self" }
+            ]
+        },
+        "nested-braces": {
+            "comment": "A `{ … }` inside a block that must not end at it — `repeat 2 { … }`, `grace { … }`, a voice or a music block. The top level needs nothing like this because it is FLAT: braces there are punctuation (#structures) and no rule is waiting for one. It is only inside a begin/end block that an unclaimed `}` is a real event, and this rule claims the balanced ones first. ⚠️ Listed BEFORE $self wherever it is used: $self paints `{` as punctuation and moves on, which is the same thing this does except that it does not remember.",
+            "begin": "\\{",
+            "end": "\\}",
+            "beginCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#nested-braces" },
+                { "include": "$self" }
             ]
         },
         "tab-tuning": {
@@ -420,8 +453,9 @@
         "durations": {
             "patterns": [
                 {
+                    "comment": "⚠️ The leading guard is NOT \\b, which is what this was until 2026-08-23 — and \\b between `d` and `2` is false, both being word characters, so a duration was coloured only when the pitch happened to carry an octave mark (`c'4` yes, `d4` NO). Measured on `c'1 d2 e4 f8 g16 a32 b64`: two of seven, and the two were the ones written with `'`. What the guard has to say instead is `not in the middle of a number` (so `100` is not a `1`) and `not after an underscore` (so `treble_8` keeps its `_8`). ⚠️ The trailing guard replaces a \\b that came AFTER the dots, where a `.` followed by a space is not a boundary — `c'2.` coloured the 2 and left the dot, `d4..` coloured nothing. It also has to refuse a following letter, which is what keeps `8va` and `15ma` out. ⚠️ And the alternation is now longest-first, the habit #part-body's comment already preaches: the old one read `1|2|4|8|16|…`, where `16` matched as `1` and only the trailing \\b made it backtrack — remove that \\b without reordering and `16` silently becomes `1`.",
                     "name": "constant.numeric.duration.lilysharp",
-                    "match": "\\b(1|2|4|8|16|32|64|128)\\.{0,3}\\b"
+                    "match": "(?<![0-9_])(128|64|32|16|8|4|2|1)\\.{0,3}(?![0-9A-Za-z_])"
                 }
             ]
         },

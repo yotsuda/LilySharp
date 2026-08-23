@@ -691,14 +691,18 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
         SlotCount > 2 && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
             && s.Text == "sings" ? s : null;
 
+    /// <summary>The token naming the part this row says its track sings, or null when the
+    /// row states no binding — what the editor colours.</summary>
+    public SyntaxTokenNode? SingsTargetToken =>
+        SingsKeyword != null && SlotCount > 3
+            && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2
+            ? t2 : null;
+
     /// <summary>The part this row says its track sings (<c>lyrics verse sings
     /// melody</c> → "melody"), or null when the row states no binding. Same
     /// quantity as the definition's — the binding is a property of the TRACK
     /// name; see <see cref="Music.LyricBindings"/> for the resolved answer.</summary>
-    public string? SingsTarget =>
-        SingsKeyword != null && SlotCount > 3
-            && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2
-            ? t2.Text : null;
+    public string? SingsTarget => SingsTargetToken?.Text;
 }
 
 /// <summary>

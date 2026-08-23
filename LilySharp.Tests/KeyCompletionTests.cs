@@ -94,6 +94,8 @@ public class KeyCompletionTests
         // merged into EVERY completion popup, even after `key a`) into the LSP's
         // top-level items, where the context dispatch scopes them. They are named
         // `template-…` so they read as templates, not keywords.
+        // ⚠️ This asks only WHERE they are offered. What accepting one does — it replaces
+        // the file rather than landing at the caret — is ScoreTemplateCompletionTests.
         var items = LilySharpLanguageServer.GetTopLevelCompletions().Items;
         Assert.Contains(items, i => i.Label == "template-twinkle");
         Assert.Contains(items, i => i.Label == "template-twinkle-piano");

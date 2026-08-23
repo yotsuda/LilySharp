@@ -109,34 +109,70 @@ public static class PartReferenceFinder
     {
         var tokens = new List<SyntaxTokenNode>();
         foreach (var node in root.DescendantNodes())
-        {
-            switch (node)
-            {
-                case MidiPartRenderSyntax midi:
-                    tokens.Add(midi.PartName);
-                    break;
-                case StaffRenderSyntax staff:
-                    if (StaffPartToken(staff) is { } st)
-                        tokens.Add(st);
-                    break;
-                case OssiaRenderSyntax ossia:
-                    if (LastTargetToken(ossia) is { } ot)
-                        tokens.Add(ot);
-                    break;
-                case TabRenderSyntax tab:
-                    if (TabPartToken(tab) is { } tt)
-                        tokens.Add(tt);
-                    break;
-                case CondensedStaffRenderSyntax condensed:
-                    tokens.AddRange(condensed.PartNameTokens);
-                    break;
-                case CombinedStaffRenderSyntax combined:
-                    tokens.AddRange(combined.PartNameTokens);
-                    break;
-            }
-        }
+            CollectReferenceTokens(node, tokens);
         return tokens;
     }
+
+    /// <summary>
+    /// The part references ONE node spells, appended to <paramref name="into"/> — the same
+    /// question <see cref="ReferenceTokens"/> asks, asked of a single node.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Split out so a caller already walking the tree pays nothing to ask. The language
+    /// server's semantic tokens need this list to decide which part names in a
+    /// <c>score { }</c> resolve and may be coloured, and they run on the keystroke path
+    /// (RULES §7.9), where an extra <c>DescendantNodes()</c> pass is the whole cost. Both
+    /// callers reach the same six spellings through this one switch, so a seventh render
+    /// form has one place to be added rather than two — and a spelling that reached only
+    /// one of them would colour a name the diagnostics call undefined, or leave plain a
+    /// name they accept.
+    /// </remarks>
+    public static void CollectReferenceTokens(SyntaxNode node, List<SyntaxTokenNode> into)
+    {
+        switch (node)
+        {
+            case MidiPartRenderSyntax midi:
+                into.Add(midi.PartName);
+                break;
+            case StaffRenderSyntax staff:
+                if (StaffPartToken(staff) is { } st)
+                    into.Add(st);
+                break;
+            case OssiaRenderSyntax ossia:
+                if (LastTargetToken(ossia) is { } ot)
+                    into.Add(ot);
+                break;
+            case TabRenderSyntax tab:
+                if (TabPartToken(tab) is { } tt)
+                    into.Add(tt);
+                break;
+            case CondensedStaffRenderSyntax condensed:
+                into.AddRange(condensed.PartNameTokens);
+                break;
+            case CombinedStaffRenderSyntax combined:
+                into.AddRange(combined.PartNameTokens);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The name token by which this node DECLARES a part, or null. Two spellings declare
+    /// one: the header <c>part NAME { … }</c> and the section-body block
+    /// <c>NAME { … }</c>, which carries the part's music and so lets a staff render it
+    /// with no header at all.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The set these build is what a reference has to be found in — it is what
+    /// <c>SymbolReferenceValidator</c> checks LYS1007 against and what the language server
+    /// checks before colouring a name in a <c>score { }</c>. One predicate for both, so the
+    /// editor cannot paint a name blue in the same pass that underlines it as undefined.
+    /// </remarks>
+    public static SyntaxTokenNode? DeclaredName(SyntaxNode node) => node switch
+    {
+        PartDeclarationSyntax header => header.Name,
+        PartBlockSyntax block => block.PartName,
+        _ => null,
+    };
 
     /// <summary>
     /// Every place a score names a chord or lyric TRACK, and the tracks those names can
@@ -185,28 +221,70 @@ public static class PartReferenceFinder
         var chords = new HashSet<string>();
         var lyrics = new HashSet<string>();
         foreach (var node in root.DescendantNodes())
-            switch (node)
-            {
-                // A row inside a group body is a LyricsRowRenderSyntax node too, so
-                // it arrives through the same case as a top-level row. (A row is
-                // the only track reference a score can spell — the removed `with`
-                // clauses this walk once scanned are retired, LYS0031.)
-                case ChordRowRenderSyntax:
-                    if (RowTargetToken(node) is { } ct)
-                        refs.Add((ct, true));
-                    break;
-                case LyricsRowRenderSyntax:
-                    if (RowTargetToken(node) is { } lt)
-                        refs.Add((lt, false));
-                    break;
-                case ChordPartBlockSyntax c when c.PartName is { Length: > 0 } cn:
-                    chords.Add(cn);
-                    break;
-                case LyricsBlockSyntax l when l.VoiceName is { Length: > 0 } ln:
-                    lyrics.Add(ln);
-                    break;
-            }
+        {
+            if (ReferencedTrackName(node) is { } reference)
+                refs.Add((reference.Token, reference.IsChord));
+            if (DeclaredTrackName(node) is { } declaration)
+                (declaration.IsChord ? chords : lyrics).Add(declaration.Token.Text);
+        }
         return new TrackReferences(refs, chords, lyrics);
+    }
+
+    /// <summary>A chord- or lyric-track name and which of the two namespaces it is in —
+    /// they are separate, so a name must be checked against its own.</summary>
+    public readonly record struct TrackName(SyntaxTokenNode Token, bool IsChord);
+
+    /// <summary>The track name this node DECLARES, or null. A named
+    /// <c>chords NAME { … }</c> block declares a chord track and a named
+    /// <c>lyrics NAME { … }</c> block a lyric one; a nameless block (LYS0032, kept by
+    /// recovery) declares nothing — its slot 1 is the opening BRACE, and a flat reading
+    /// collects that as a track called "{".</summary>
+    public static TrackName? DeclaredTrackName(SyntaxNode node) => node switch
+    {
+        ChordPartBlockSyntax c when c.NameToken is { } t => new TrackName(t, true),
+        LyricsBlockSyntax l when l.NameToken is { } t => new TrackName(t, false),
+        _ => null,
+    };
+
+    /// <summary>The track name this node REFERS to, or null — the score rows
+    /// <c>chords NAME</c> / <c>lyrics NAME</c>. A row inside a staff group is the same
+    /// node as a top-level one, so both arrive here. (A row is the only track reference a
+    /// score can spell: the <c>with</c> clauses this once scanned are retired, LYS0031.)
+    /// </summary>
+    public static TrackName? ReferencedTrackName(SyntaxNode node) => node switch
+    {
+        ChordRowRenderSyntax when RowTargetToken(node) is { } t => new TrackName(t, true),
+        LyricsRowRenderSyntax when RowTargetToken(node) is { } t => new TrackName(t, false),
+        _ => null,
+    };
+
+    /// <summary>The token naming the part a lyric track sings, or null. Both spellings
+    /// state the same track property — the definition <c>lyrics verse sings melody { … }</c>
+    /// and the score row <c>lyrics verse sings melody</c> — so both answer here.</summary>
+    /// <remarks>
+    /// ⚠️ This target resolves against a WIDER set than the score's part references do:
+    /// parts AND the named voices of a <c>&lt;&lt; … &gt;&gt;</c>, which is what
+    /// <c>LyricSingsValidator</c> checks (LYS6011). A caller colouring it must use
+    /// <see cref="CollectVoiceNames"/> as well, or it will leave plain a name the
+    /// diagnostics accept.
+    /// </remarks>
+    public static SyntaxTokenNode? SingsTargetToken(SyntaxNode node) => node switch
+    {
+        LyricsBlockSyntax block => block.SingsTargetToken,
+        LyricsRowRenderSyntax row => row.SingsTargetToken,
+        _ => null,
+    };
+
+    /// <summary>The named voices this node introduces, appended to
+    /// <paramref name="into"/> — the second half of what a <c>sings</c> target may name.
+    /// </summary>
+    public static void CollectVoiceNames(SyntaxNode node, HashSet<string> into)
+    {
+        if (node is not ParallelExpressionSyntax parallel)
+            return;
+        foreach (var (name, _) in parallel.NamedVoices)
+            if (name is { Length: > 0 })
+                into.Add(name);
     }
 
     /// <summary>

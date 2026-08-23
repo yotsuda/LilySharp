@@ -152,7 +152,24 @@ public sealed partial class LilySharpLanguageServer
                             SemanticTokenTypes.Operator,
                             "pitch",           // Custom: note pitches
                             "articulation",    // Custom: @staccato, @accent
-                            "dynamic"          // Custom: \p, \f
+                            "dynamic",         // Custom: \p, \f
+                            // The three DECLARED NAMES. ⚠️ package.json pinned colours for
+                            // `section` and `phrase` from the beginning and this legend did
+                            // not declare them, so those two rules named types nothing ever
+                            // emitted: a section name took whatever the theme gave its
+                            // TextMate scope, which is orange in the 2026 default themes and
+                            // NOTHING AT ALL in Dark+ (measured 2026-08-23). A pinned colour
+                            // and an unwired legend look identical from the file that pins it.
+                            //
+                            // ⚠️ A name is also not something the TextMate grammar could
+                            // resolve. It reads a line at a time, so it can see that
+                            // `form main { A }` writes an A and cannot see whether a
+                            // `section A { … }` exists to give it meaning. The tree can, and
+                            // that is why the form's names are coloured from here.
+                            "part",            // Custom: the name in `part NAME { … }`
+                            "section",         // Custom: `section NAME { … }`, and each
+                                               //         RESOLVED reference to it in a form
+                            "phrase"           // Custom: the name in `phrase NAME { … }`
                         },
                         TokenModifiers = Array.Empty<string>()
                     }

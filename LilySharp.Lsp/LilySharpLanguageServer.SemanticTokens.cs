@@ -67,16 +67,150 @@ public sealed partial class LilySharpLanguageServer
 
     internal record SemanticToken(int Line, int Character, int Length, int TokenType);
 
+    /// <summary>Token-type indices, matching the legend order in
+    /// <see cref="Initialize"/>. Written down because what goes on the wire is a NUMBER: the
+    /// three name types were appended after the six standard and three music ones, and an
+    /// index that disagrees with the legend paints the WRONG colour rather than none — the
+    /// harder of the two to notice.</summary>
+    private const int TokenTypePart = 9;
+    private const int TokenTypeSection = 10;
+    private const int TokenTypePhrase = 11;
+
     internal static IEnumerable<SemanticToken> CollectSemanticTokens(SyntaxNode root, string text)
     {
         var tokens = new List<SemanticToken>();
-        CollectTokensRecursive(root, text, tokens);
+
+        // A name that REFERS to something — a section in a `form { }`, a part in a
+        // `score { }` — is coloured only when it resolves, and what it refers to may be
+        // declared further down the file, so the answer is not knowable at the moment the
+        // reference is walked past. The references are set aside and filtered once the walk
+        // has seen every declaration.
+        //
+        // ⚠️ One walk, not three. Semantic tokens are re-requested on every edit (RULES §7.9:
+        // the diagnostics path IS the perf path, and this sits beside it), so collecting the
+        // declared names in separate DescendantNodes() passes would multiply the cost of
+        // every keystroke to save two lists holding the few names a file mentions.
+        var names = new DeclaredNames();
+        CollectTokensRecursive(root, text, tokens, names);
+
+        // ⚠️ An unresolved name gets NO token (the user's call, 2026-08-23), and this is the
+        // one place the colour says something a grammar could not: a form naming a section
+        // that does not exist, or a staff naming a part that does not, stays plain beside
+        // the squiggle LYS1005 / LYS1007 puts under it. Colouring it would have the editor
+        // assert the name means something at the same moment the diagnostics say it does not.
+        Resolve(names.SectionReferences, names.Sections, TokenTypeSection);
+        Resolve(names.PartReferences, names.Parts, TokenTypePart);
+        Resolve(names.ChordTrackReferences, names.ChordTracks, TokenTypePart);
+        Resolve(names.LyricTrackReferences, names.LyricTracks, TokenTypePart);
+        // ⚠️ The wider set: a `sings` target may name a part OR a named voice, which is what
+        // LYS6011 checks it against. Resolving it against the parts alone would leave plain
+        // a name the diagnostics accept — a quieter disagreement than colouring a bad one,
+        // and the reason PartReferenceFinder.SingsTargetToken carries the warning it does.
+        Resolve(names.SingsTargets, [.. names.Parts, .. names.Voices], TokenTypePart);
+
         return tokens.OrderBy(t => t.Line).ThenBy(t => t.Character);
+
+        void Resolve(List<SyntaxTokenNode> references, HashSet<string> declared, int tokenType)
+        {
+            foreach (var reference in references)
+            {
+                if (!declared.Contains(reference.Text))
+                    continue;
+                var (line, character) = GetLineAndCharacter(text, reference.Span.Start);
+                tokens.Add(new SemanticToken(line, character, reference.Width, tokenType));
+            }
+        }
     }
 
-    private static void CollectTokensRecursive(SyntaxNode node, string text, List<SemanticToken> tokens)
+    /// <summary>What the walk learns about names as it goes: which are declared, and which
+    /// referred to a declaration it may not have reached yet.</summary>
+    private sealed class DeclaredNames
     {
-        // Token types: 0=keyword, 1=variable, 2=number, 3=string, 4=comment, 5=operator, 6=pitch, 7=articulation, 8=dynamic
+        public readonly HashSet<string> Sections = new(StringComparer.Ordinal);
+        public readonly HashSet<string> Parts = new(StringComparer.Ordinal);
+        // Chord and lyric tracks are SEPARATE namespaces — `staff prog` on a chord track is
+        // the empty staff LYS1007 exists to catch — so a row is resolved against its own.
+        public readonly HashSet<string> ChordTracks = new(StringComparer.Ordinal);
+        public readonly HashSet<string> LyricTracks = new(StringComparer.Ordinal);
+        // What a `sings` target may name: a part OR a named voice of a `<< … >>`. A wider
+        // set than the score's part references get, and LyricSingsValidator's (LYS6011).
+        public readonly HashSet<string> Voices = new(StringComparer.Ordinal);
+
+        public readonly List<SyntaxTokenNode> SectionReferences = [];
+        public readonly List<SyntaxTokenNode> PartReferences = [];
+        public readonly List<SyntaxTokenNode> ChordTrackReferences = [];
+        public readonly List<SyntaxTokenNode> LyricTrackReferences = [];
+        public readonly List<SyntaxTokenNode> SingsTargets = [];
+    }
+
+    private static void CollectTokensRecursive(
+        SyntaxNode node, string text, List<SemanticToken> tokens, DeclaredNames names)
+    {
+        // Token types: 0=keyword, 1=variable, 2=number, 3=string, 4=comment, 5=operator,
+        // 6=pitch, 7=articulation, 8=dynamic, 9=part, 10=section, 11=phrase
+
+        // ⚠️ Every question here goes through the SAME predicate SymbolReferenceValidator
+        // asks — SectionSymbols for a section, PartReferenceFinder for a part — so a name
+        // squiggled as undefined can never also come out painted as resolved. Neither side
+        // keeps its own list of the spellings that count.
+        if (SectionSymbols.DeclaredName(node) is { } sectionName)
+        {
+            names.Sections.Add(sectionName.Text);
+            Paint(sectionName, TokenTypeSection);
+        }
+        else if (SectionSymbols.ReferencedName(node) is { } sectionReference)
+        {
+            names.SectionReferences.Add(sectionReference);
+        }
+        else if (PartReferenceFinder.DeclaredName(node) is { } partName)
+        {
+            // Both declaring spellings: the header `part NAME { … }` and the section-body
+            // block `NAME { … }`. A declaration is always coloured — it is what the
+            // references are checked against, so it cannot itself fail to resolve.
+            names.Parts.Add(partName.Text);
+            Paint(partName, TokenTypePart);
+        }
+        else if (node is PhraseDeclarationSyntax phraseDeclaration)
+        {
+            Paint(phraseDeclaration.Name, TokenTypePhrase);
+        }
+        else if (PartReferenceFinder.DeclaredTrackName(node) is { } track)
+        {
+            // `lyrics NAME { … }` / `chords NAME { … }`. A track is a part-shaped thing —
+            // a named strand a score places as a row — so it takes the part's colour (the
+            // user's call, 2026-08-23) and keeps its own namespace for resolving.
+            (track.IsChord ? names.ChordTracks : names.LyricTracks).Add(track.Token.Text);
+            Paint(track.Token, TokenTypePart);
+        }
+        else
+        {
+            // `staff NAME`, `ossia NAME`, `tab NAME`, the members of a condensed or combined
+            // staff, and a bare part name — every place a score names a part. Deferred: the
+            // part may be declared below the score.
+            PartReferenceFinder.CollectReferenceTokens(node, names.PartReferences);
+
+            // The score's track rows, deferred and resolved against their own namespace.
+            if (PartReferenceFinder.ReferencedTrackName(node) is { } row)
+                (row.IsChord ? names.ChordTrackReferences : names.LyricTrackReferences)
+                    .Add(row.Token);
+        }
+
+        // ⚠️ NOT in the chain above, and that was a real defect for one build: a `sings`
+        // target sits on the SAME node as the track name it belongs to
+        // (`lyrics verse sings melody { … }`), so an else-branch that had already claimed
+        // the node as a declaration never looked for it — `verse` came out blue and the
+        // `melody` beside it plain, which is the half-coloured line this whole run has been
+        // closing. Asked of every node, like the voices below.
+        if (PartReferenceFinder.SingsTargetToken(node) is { } sings)
+            names.SingsTargets.Add(sings);
+
+        PartReferenceFinder.CollectVoiceNames(node, names.Voices);
+
+        void Paint(SyntaxTokenNode name, int tokenType)
+        {
+            var (line, character) = GetLineAndCharacter(text, name.Span.Start);
+            tokens.Add(new SemanticToken(line, character, name.Width, tokenType));
+        }
 
         if (node is SyntaxTokenNode tokenNode)
         {
@@ -239,7 +373,7 @@ public sealed partial class LilySharpLanguageServer
         {
             var child = node.GetChild(i);
             if (child != null)
-                CollectTokensRecursive(child, text, tokens);
+                CollectTokensRecursive(child, text, tokens, names);
         }
     }
 

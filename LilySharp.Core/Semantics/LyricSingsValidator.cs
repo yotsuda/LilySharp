@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Editing;
 using LilySharp.Core.Music;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
@@ -49,22 +50,16 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         // (implicit parts), and named voices anywhere in music.
         var partNames = new HashSet<string>(StringComparer.Ordinal);
         var voiceNames = new HashSet<string>(StringComparer.Ordinal);
+        // ⚠️ Both sets are read through PartReferenceFinder, which the language server's
+        // semantic tokens also ask: a `sings` target the editor paints as resolved while
+        // this validator calls it unknown would be the editor contradicting itself inside
+        // one line. Two callers, one answer — and the wider set (parts AND voices) is the
+        // half a caller is most likely to get wrong on its own.
         foreach (var n in root.DescendantNodes())
         {
-            switch (n)
-            {
-                case PartDeclarationSyntax pd:
-                    partNames.Add(pd.Name.Text);
-                    break;
-                case PartBlockSyntax pb:
-                    partNames.Add(pb.PartName.Text);
-                    break;
-                case ParallelExpressionSyntax par:
-                    foreach (var (vn, _) in par.NamedVoices)
-                        if (vn is { Length: > 0 })
-                            voiceNames.Add(vn);
-                    break;
-            }
+            if (PartReferenceFinder.DeclaredName(n) is { } part)
+                partNames.Add(part.Text);
+            PartReferenceFinder.CollectVoiceNames(n, voiceNames);
         }
 
         // Both spellings of the declaration — the definition block and the score
