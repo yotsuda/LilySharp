@@ -733,6 +733,13 @@ public static class DiagnosticCodes
     /// the bar's grid stays honest; the slot itself prints nothing.</summary>
     public const string ChordExtendAtBarHead = "LYS2010";
 
+    /// <summary>Chord error: a top-level chords track in a part-major file is written
+    /// flat; it must group its bars by section (<c>chords prog { section A { … } }</c>).
+    /// The lyrics twin is <see cref="LyricTrackNeedsSections"/> — one validator emits both,
+    /// because a flat top-level track of either kind has the same defect: no section to
+    /// anchor to, so its bars run from bar 0 across whatever the form plays.</summary>
+    public const string ChordTrackNeedsSections = "LYS2011";
+
     // Lyric diagnostics (LYS4xxx — warnings, plus one error)
 
     /// <summary>Lyric warning: more lyric syllables than available notes.</summary>

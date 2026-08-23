@@ -1095,6 +1095,14 @@ holds the previous chord one more beat:
 chords prog { C | F G | C . . G7 | }
 ```
 
+That fragment is the row's *contents*. Where it may sit depends on the file's layout:
+inside the section whose bars it fills (`section A { chords prog { … } }`), or — in a
+part-major file, where the parts carry their own sections — at the top level with the
+sections named inside it (`chords prog { section A { … } }`). A **flat top-level track
+in a part-major file is an error** (LYS2011 for chords, LYS4002 for lyrics): it has no
+section to anchor to, so its bars would run from bar 0 across whatever the form plays,
+and every section after the first would get nothing.
+
 ## Comments
 
 ```

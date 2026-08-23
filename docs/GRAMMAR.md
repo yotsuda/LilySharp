@@ -944,6 +944,19 @@ DisplayName    = String ;
    score main "sheet" { chords prog lyrics words }
 *)
 
+(* WHERE A TRACK'S CELLS GO. The example above is SECTION-major: each track block sits
+   inside the section whose bars it fills, so the binding is where it is written. The
+   PART-major spelling puts the track at the top level and names the sections inside it:
+
+     chords prog  { section A { C G7 | } section B { Am F | } }
+     lyrics words { section A { Twin- kle | } section B { lit- tle | } }
+
+   In a part-major file a top-level track MUST be written that way. A flat top-level
+   track has no section to anchor to, so its cells would run from bar 0 across whatever
+   the form plays and every section after the first would get nothing. That is an error:
+   LYS4002 for lyrics, LYS2011 for chords. A section-major or structureless file is not
+   affected, and neither is a track block written inside a part or a section. *)
+
 ================================================================================
 ## 8. Music Expression
 ================================================================================

@@ -3240,7 +3240,17 @@ public sealed partial class LilySharpLanguageServer
                     "template scoretemplate score twinkle piano",
                     "Score template — REPLACES the whole file (it asks first): piano / grand staff (Twinkle, Twinkle, Little Star)",
                     TwinklePianoTemplate, text, offset, position),
-                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics ${1:verse} sings ${2:part} {\n\t$0\n}", Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)" },
+                // ⚠️ BOTH track items scaffold a `section` (reported 2026-08-23, session 240).
+                // A top-level TRACK written flat has no section to anchor to, so its cells run
+                // from bar 0 across whatever the form plays — an error in part-major layout
+                // (LYS4002 for lyrics, LYS2011 for chords). The sectioned body is also right in
+                // a SECTION-major file, measured rather than assumed: a track declaring its own
+                // sections there places each cell on that section's bars. One body fits both
+                // layouts, so neither item can teach the spelling the compiler rejects.
+                // ⚠️ Only the CHORDS half had a net (TheChordTrackSnippet_IsWhatTheCompilerAccepts).
+                // The lyrics item had been offering the flat body since LYS4002 shipped, and the
+                // twin test was written in the same commit as this fix.
+                new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics ${1:verse} sings ${2:part} {\n\tsection ${3:A} {\n\t\t$0\n\t}\n}", Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)" },
                 // ⚠️ The two track kinds are a pair and only one of them was here (reported
                 // 2026-08-23): `chords` was offered in a SCORE body — the `chords NAME` row —
                 // so it read as a known word, and the declaration that gives that row
@@ -3250,7 +3260,7 @@ public sealed partial class LilySharpLanguageServer
                 // empty slot the writer might tab past — measured, like the body below,
                 // rather than copied from the lyrics item beside it: a chord track takes NO
                 // `sings` clause, and offering one would have taught a spelling that errors.
-                new CompletionItem { Label = "chords", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "chords ${1:prog} {\n\t$0\n}", Detail = "Named chord track (a score places it with a `chords NAME` row)" },
+                new CompletionItem { Label = "chords", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "chords ${1:prog} {\n\tsection ${2:A} {\n\t\t$0\n\t}\n}", Detail = "Named chord track (a score places it with a `chords NAME` row)" },
         };
 
         // Drop the singleton globals (metadata + piece-wide defaults) already written at the

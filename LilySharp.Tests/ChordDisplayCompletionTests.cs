@@ -122,6 +122,38 @@ public class ChordDisplayCompletionTests
             .Select(d => d.Message));
     }
 
+    /// <summary>
+    /// The twin of the test above, written in session 240 because its absence is what let
+    /// the defect stand: the two track items are a pair, only the chords half had a net, and
+    /// the lyrics half had been offering a FLAT top-level track — the very shape LYS4002
+    /// rejects in part-major layout — for as long as that item existed. A rule that applies
+    /// to two items needs its net on both, or the unwatched one teaches the error.
+    /// </summary>
+    [Fact]
+    public void TheLyricsTrackSnippet_IsWhatTheCompilerAccepts()
+    {
+        var snippet = LilySharpLanguageServer.GetTopLevelCompletions()
+            .Items.Single(i => i.Label == "lyrics").InsertText!;
+
+        // Unlike a chord track, a lyrics track DOES take `sings` — the difference the
+        // chords test pins from its side.
+        Assert.Contains("sings", snippet);
+
+        var expanded = System.Text.RegularExpressions.Regex
+            .Replace(snippet, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "la");
+        var book = "part melody { section A { c'4 d e f } }\n"
+                 + expanded.Replace("sings part", "sings melody")
+                 + "\nform main { A }\nscore main { staff melody  lyrics verse }\n";
+
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors,
+            "the lyrics snippet does not parse: "
+            + string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree)
+            .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error)
+            .Select(d => d.Message));
+    }
+
     [Theory]
     // grandStaff / staffGroup / choirStaff take `staff` items and `lyrics NAME`
     // verse rows, nothing else — anything else is LYS6011 "cannot contain".

@@ -67,7 +67,7 @@ public static class SemanticValidation
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
-        new LyricTrackSectionValidator(),   // part-major lyrics track must use sections
+        new TrackNeedsSectionsValidator(),  // part-major lyrics/chords track must use sections
         new LyricSingsValidator(),          // sings bindings: unknown target / conflict / attachment
         new LyricPlainVerseShadowedValidator(), // a plain verse fully shadowed by [N.] verses
         new NavigationPlacementValidator(), // a nav mark placed mid-measure
